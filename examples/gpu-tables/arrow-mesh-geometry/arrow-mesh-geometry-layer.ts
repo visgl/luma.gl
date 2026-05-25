@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ArrowModel,
   expandArrowVector,
+  makeArrowGPUTable,
   makeArrowGPUVector,
   makeArrowFixedSizeListVector,
   makeArrowMatrix4x4Vector,
@@ -12,7 +12,7 @@ import {
   type ArrowTableGeometry,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
-import {GPUVector} from '@luma.gl/tables';
+import {GPUTable, GPUTableModel, GPUVector} from '@luma.gl/tables';
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -203,8 +203,9 @@ type CubeTransform = {
 export class ArrowMeshGeometryLayer {
   readonly device: Device;
   readonly geometry: ArrowTableGeometry;
-  readonly model: ArrowModel;
-  readonly pickingModel: ArrowModel | null;
+  readonly model: GPUTableModel;
+  readonly pickingModel: GPUTableModel | null;
+  readonly matrixTable: GPUTable;
   readonly picker: PickingManager;
   readonly faceColors?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
   readonly faceNames: arrow.Vector<arrow.Utf8>;
@@ -232,11 +233,15 @@ export class ArrowMeshGeometryLayer {
 
     this.updateInstanceMatrices(0);
     this.geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
-    this.model = new ArrowModel(device, {
+    this.matrixTable = makeArrowGPUTable(device, makeInstanceArrowTable(this.matrixValues), {
+      shaderLayout: device.type === 'webgpu' ? WEBGPU_MESH_SHADER_LAYOUT : WEBGL_MESH_SHADER_LAYOUT,
+      arrowPaths: MATRIX_ARROW_PATHS
+    });
+    this.model = new GPUTableModel(device, {
       id: 'arrow-mesh-geometry',
       geometry: this.geometry,
-      arrowTable: makeInstanceArrowTable(this.matrixValues),
-      arrowPaths: MATRIX_ARROW_PATHS,
+      table: this.matrixTable,
+      tableCount: 'instance',
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
@@ -293,6 +298,7 @@ export class ArrowMeshGeometryLayer {
     this.picker.destroy();
     this.pickingModel?.destroy();
     this.model.destroy();
+    this.matrixTable.destroy();
     this.faceColors?.destroy();
   }
 
@@ -317,7 +323,7 @@ export class ArrowMeshGeometryLayer {
       }
     }
 
-    this.model?.arrowGPUTable?.gpuVectors.matrix?.buffer.write(this.matrixValues);
+    this.matrixTable?.gpuVectors.matrix?.buffer.write(this.matrixValues);
   }
 
   pickFace(mousePosition: number[] | null | undefined): void {
@@ -333,15 +339,15 @@ export class ArrowMeshGeometryLayer {
     void this.picker.updatePickInfo(mousePosition as [number, number]);
   }
 
-  createPickingModel(): ArrowModel {
-    if (!this.model.arrowGPUTable) {
+  createPickingModel(): GPUTableModel {
+    if (!this.model.table) {
       throw new Error('Matrices picking requires prepared instance Arrow data');
     }
-    return new ArrowModel(this.device, {
+    return new GPUTableModel(this.device, {
       id: `${this.model.id || 'arrow-mesh-geometry'}-picking`,
       geometry: this.geometry,
-      arrowGPUTable: this.model.arrowGPUTable,
-      arrowPaths: MATRIX_ARROW_PATHS,
+      table: this.model.table,
+      tableCount: 'instance',
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,

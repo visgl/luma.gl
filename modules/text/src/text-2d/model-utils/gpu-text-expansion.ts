@@ -79,6 +79,8 @@ export type GpuExpandedGeneratedState = {
   compactGlyphVertexData: Buffer;
   /** Logical bytes occupied by generated compact glyph vertices. */
   byteLength: number;
+  /** Whether generated records include one additional u32 source-row index. */
+  hasGlyphRowIndices: boolean;
 };
 
 /** Stable resource naming options shared by GPU text expansion helpers. */
@@ -197,6 +199,11 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
 }
 `;
 
+const GPU_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE = addGeneratedGlyphRowIndices(
+  GPU_EXPANDED_TEXT_COMPUTE_SOURCE,
+  'rowIndex + u32(max(textExpansionConfig[2], 0))'
+);
+
 const GPU_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   bindings: [
     {name: 'textGlyphRanges', type: 'read-only-storage', group: 0, location: 0},
@@ -308,6 +315,11 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
   }
 }
 `;
+
+const GPU_UTF8_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE = addGeneratedGlyphRowIndices(
+  GPU_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
+  'rowIndex + u32(max(textExpansionConfig[3], 0))'
+);
 
 const GPU_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   bindings: [
@@ -477,6 +489,12 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
   }
 }
 `;
+
+const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE =
+  addGeneratedGlyphRowIndices(
+    GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
+    'rowIndex + u32(max(textExpansionConfig[3], 0))'
+  );
 
 const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   bindings: [
@@ -725,17 +743,20 @@ export function createGpuDictionaryUtf8ExpansionConfig(
 export function createGpuExpandedGeneratedState(
   device: Device,
   options: GpuTextExpansionResourceOptions,
-  glyphCount: number
+  glyphCount: number,
+  hasGlyphRowIndices = false
 ): GpuExpandedGeneratedState {
   const outputRecordCount = Math.max(glyphCount, 1);
-  const byteLength = glyphCount * Uint32Array.BYTES_PER_ELEMENT * 2;
+  const recordWordCount = hasGlyphRowIndices ? 3 : 2;
+  const byteLength = glyphCount * Uint32Array.BYTES_PER_ELEMENT * recordWordCount;
   return {
     compactGlyphVertexData: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-generated-glyph-vertices`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: new Uint32Array(outputRecordCount * 2)
+      data: new Uint32Array(outputRecordCount * recordWordCount)
     }),
-    byteLength
+    byteLength,
+    hasGlyphRowIndices
   };
 }
 
@@ -756,7 +777,9 @@ export function dispatchGpuExpandedTextCompute(
 ): void {
   const computation = new Computation(device, {
     id: `${options.id || 'gpu-expanded-text-model'}-compute`,
-    source: GPU_EXPANDED_TEXT_COMPUTE_SOURCE,
+    source: state.generated.hasGlyphRowIndices
+      ? GPU_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE
+      : GPU_EXPANDED_TEXT_COMPUTE_SOURCE,
     shaderLayout: GPU_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT,
     bindings: {
       textGlyphRanges: state.compactInput.glyphRangesBuffer,
@@ -795,7 +818,9 @@ export function dispatchGpuUtf8ExpandedTextCompute(
 ): void {
   const computation = new Computation(device, {
     id: `${options.id || 'gpu-expanded-text-model'}-utf8-compute`,
-    source: GPU_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
+    source: state.generated.hasGlyphRowIndices
+      ? GPU_UTF8_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE
+      : GPU_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
     shaderLayout: GPU_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT,
     bindings: {
       textRowByteRanges: state.utf8Input.rowByteRangesBuffer,
@@ -836,7 +861,9 @@ export function dispatchGpuDictionaryUtf8ExpandedTextCompute(
 ): void {
   const computation = new Computation(device, {
     id: `${options.id || 'gpu-expanded-text-model'}-dictionary-utf8-compute`,
-    source: GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
+    source: state.generated.hasGlyphRowIndices
+      ? GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE
+      : GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
     shaderLayout: GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT,
     bindings: {
       textDictionaryValueByteRanges: state.dictionaryInput.dictionaryValueByteRangesBuffer,
@@ -858,4 +885,26 @@ export function dispatchGpuDictionaryUtf8ExpandedTextCompute(
     device.submit();
   }
   computation.destroy();
+}
+
+function addGeneratedGlyphRowIndices(source: string, rowIndexExpression: string): string {
+  return source
+    .replace(
+      `struct GeneratedGlyphVertex {
+  glyphOffsets : u32,
+  glyphIndices : u32,
+}`,
+      `struct GeneratedGlyphVertex {
+  glyphOffsets : u32,
+  glyphIndices : u32,
+  rowIndices : u32,
+}`
+    )
+    .replaceAll(
+      `glyphId & 0xffffu
+    )`,
+      `glyphId & 0xffffu,
+      ${rowIndexExpression}
+    )`
+    );
 }

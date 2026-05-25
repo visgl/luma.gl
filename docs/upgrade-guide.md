@@ -27,16 +27,6 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   - `appendArrowBatchToGPUTable(...)`
   - `resetLastBatch()`
   - `makeArrowGPURecordBatch(device, recordBatch, ...)` plus `gpuTable.addBatch(...)` when source batch boundaries should stay explicit
-- `ArrowModel` no longer accepts `streamingArrowGPUTable`; pass the appendable table through `arrowGPUTable`.
-
-**@luma.gl/text**
-- `ArrowTextModel.labelVectors` has been removed. Pass supported row vectors as top-level props instead:
-  - `positions`
-  - `colors`
-  - `angles`
-  - `sizes`
-  - `pixelOffsets`
-- Storage text keeps the same top-level input convention and continues to expose storage-only row vectors such as `textAnchors` and `alignmentBaselines`.
 
 ## Upgrading to v9.3
 

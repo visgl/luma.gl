@@ -22,7 +22,7 @@ import {
   type ArrowAttributeTextModelStateProps,
   type ArrowTextModelProps,
   type ResolvedCharacterMapping
-} from './arrow-text-model';
+} from '../arrow-conversion/convert-arrow-text-vectors';
 import {
   CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE,
   EXPANDED_GLYPH_VERTEX_BYTE_STRIDE
@@ -30,6 +30,12 @@ import {
 import {AttributeTextModel} from '../models/attribute-text-model';
 import {updateArrowTextDefaultFragmentShaderUniforms} from '../model-utils/text-fragment-uniforms';
 
+/**
+ * Deprecated Arrow-aware wrapper around {@link AttributeTextModel}.
+ *
+ * @deprecated Kept only for internal transition coverage. New layer code should call Arrow
+ * conversion helpers, then construct {@link AttributeTextModel} with prepared attribute state.
+ */
 export class ArrowAttributeTextModel extends AttributeTextModel {
   /** Expanded Arrow table containing glyph-instance columns. */
   glyphTable: Table;
@@ -142,10 +148,7 @@ export class ArrowAttributeTextModel extends AttributeTextModel {
       for (const recordBatch of renderTable.batches) {
         gpuTable.addBatch(
           makeArrowGPURecordBatch(this.device, recordBatch, {
-            shaderLayout,
-            arrowPaths: nextProps.arrowPaths,
-            bufferProps: nextProps.arrowBufferProps,
-            allowWebGLOnlyFormats: nextProps.allowWebGLOnlyFormats
+            shaderLayout
           })
         );
       }

@@ -7,7 +7,7 @@
   Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
-import {ArrowModel, makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+import {makeArrowGPUTable, makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
 import type {
   NumberArray,
   ShaderLayout,
@@ -26,6 +26,7 @@ import {
 } from '@luma.gl/engine';
 import {dofShaderPassPipeline} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
+import {GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 
@@ -277,7 +278,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   appShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
 
-  sceneModel: ArrowModel;
+  sceneModel: GPUTableModel;
+  sceneTable: GPUTable;
   cubeTexture: DynamicTexture;
   shaderPassRenderer: ShaderPassRenderer;
 
@@ -308,18 +310,24 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })
     });
 
-    this.sceneModel = new ArrowModel(device, {
-      id: 'dof-scene',
-      shaderInputs: this.appShaderInputs,
+    this.sceneTable = makeArrowGPUTable(device, makeDofInstanceTable(this.instanceModelMatrices), {
       shaderLayout:
         device.type === 'webgpu' ? SCENE_STORAGE_SHADER_LAYOUT : SCENE_ATTRIBUTE_SHADER_LAYOUT,
-      arrowTable: makeDofInstanceTable(this.instanceModelMatrices),
       arrowPaths: {
         instanceModelMatrixCol0: 'instanceModelMatrix',
         instanceModelMatrixCol1: 'instanceModelMatrix',
         instanceModelMatrixCol2: 'instanceModelMatrix',
         instanceModelMatrixCol3: 'instanceModelMatrix'
-      },
+      }
+    });
+
+    this.sceneModel = new GPUTableModel(device, {
+      id: 'dof-scene',
+      shaderInputs: this.appShaderInputs,
+      shaderLayout:
+        device.type === 'webgpu' ? SCENE_STORAGE_SHADER_LAYOUT : SCENE_ATTRIBUTE_SHADER_LAYOUT,
+      table: this.sceneTable,
+      tableCount: 'instance',
       ...(device.info.shadingLanguage === 'wgsl'
         ? {
             source: SCENE_WGSL,
@@ -371,6 +379,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.controlCleanup = [];
 
     this.sceneModel.destroy();
+    this.sceneTable.destroy();
     this.cubeTexture.destroy();
     this.shaderPassRenderer.destroy();
     this.sceneFramebuffer.destroy();
@@ -491,9 +500,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   writeInstanceMatrices(): void {
-    this.sceneModel.arrowGPUTable?.gpuVectors.instanceModelMatrix?.buffer.write(
-      this.instanceModelMatrices
-    );
+    this.sceneTable.gpuVectors.instanceModelMatrix?.buffer.write(this.instanceModelMatrices);
   }
 
   initializeControls(): void {

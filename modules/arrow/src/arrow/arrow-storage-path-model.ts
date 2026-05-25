@@ -10,10 +10,9 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
-import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {DynamicBuffer, Model, type ModelProps} from '@luma.gl/engine';
 import {GPUVector, planGeneratedBufferBatches} from '@luma.gl/tables';
 import {DataType, FixedSizeList, Float32, List, Uint8, Vector, vectorFromArray} from 'apache-arrow';
-import type {ArrowModelProps} from './arrow-model';
 import {makeArrowFixedSizeListVector} from './arrow-fixed-size-list';
 import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
 import {
@@ -190,10 +189,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 `;
 
 /** GPU vectors used by the storage-backed path model. */
-export type ArrowStoragePathInputProps = Omit<
-  ArrowModelProps,
-  'arrowTable' | 'arrowGPUTable' | 'arrowCount'
-> & {
+export type ArrowStoragePathInputProps = Omit<ModelProps, 'instanceCount'> & {
   /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one Arrow row per path. */
   paths: GPUVector<ArrowPathCoordinateType>;
   /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
@@ -642,7 +638,7 @@ export function createArrowStoragePathState(
 function createArrowStoragePathModelProps(
   props: ArrowStoragePathModelProps,
   storageState: ArrowStoragePathState
-): ArrowModelProps {
+): ModelProps {
   const shaderLayout = props.shaderLayout ?? DEFAULT_STORAGE_ARROW_PATH_SHADER_LAYOUT;
   const firstBatch = getFirstArrowStoragePathBatch(storageState);
   const firstRenderBatch = getFirstArrowStoragePathRenderBatch(storageState);
@@ -668,7 +664,7 @@ function createArrowStoragePathModelProps(
 function createArrowStoragePathBindings(
   props: ArrowStoragePathModelProps,
   batch: ArrowStoragePathBatchState
-): NonNullable<ArrowModelProps['bindings']> {
+): NonNullable<ModelProps['bindings']> {
   return {
     ...(props.bindings || {}),
     pathValues: batch.pathValuesBinding,

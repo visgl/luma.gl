@@ -8,14 +8,19 @@ import {
   createArrowStorageTextState,
   type ArrowStorageTextInputProps,
   type ArrowStorageTextState
-} from './arrow-text-model';
+} from './convert-arrow-text-vectors';
 import {
   convertArrowTextToAttribute,
   type ConvertedArrowTextData,
   type ConvertArrowTextProps
 } from './convert-arrow-text-to-attribute';
 
-/** Converts Arrow text columns into GPU inputs consumed by {@link StorageTextModel}. */
+/**
+ * Uploads Arrow text source vectors to GPUVectors for storage text preparation.
+ *
+ * Storage text supports row colors only; per-character color lists are rejected because storage
+ * models bind row style buffers and do not expand per-character color attributes.
+ */
 export function convertArrowTextToStorage(
   device: Device,
   props: ConvertArrowTextProps
@@ -26,7 +31,13 @@ export function convertArrowTextToStorage(
   return convertArrowTextToAttribute(device, props);
 }
 
-/** Builds prepared storage text state from Arrow-backed GPU inputs. */
+/**
+ * Builds prepared WebGPU storage text state from Arrow-backed GPU inputs.
+ *
+ * The returned state owns row binding buffers, generated glyph buffers, atlas resources, and
+ * render-batch control buffers. Pass it to {@link StorageTextModel} or
+ * {@link RowIndexedStorageTextModel}.
+ */
 export function convertArrowTextToStorageState(
   device: Device,
   props: ArrowStorageTextInputProps

@@ -23,6 +23,7 @@ import {
 
 export type {DictionaryTextModelProps};
 
+/** Render-only props left after dictionary text state has been prepared. */
 export type DictionaryTextRenderProps = Omit<
   DictionaryTextModelProps,
   | 'positions'
@@ -43,6 +44,7 @@ export type DictionaryTextRenderProps = Omit<
 
 export type {DictionaryTextBatchState, DictionaryTextRenderBatchState, DictionaryTextState};
 
+/** Constructor props for the pure dictionary text renderer. */
 export type PreparedDictionaryTextModelProps = DictionaryTextRenderProps & {
   /** Prepared dictionary text state consumed by the renderer. */
   storageState: DictionaryTextState;
@@ -50,7 +52,12 @@ export type PreparedDictionaryTextModelProps = DictionaryTextRenderProps & {
   ownsStorageState?: boolean;
 };
 
-/** Dictionary text renderer that consumes prepared GPUVector-backed state. */
+/**
+ * Dictionary text renderer that consumes prepared GPUVector-backed state.
+ *
+ * This WebGPU model does not accept Arrow source vectors. Layer/data-preparation code should build
+ * a {@link DictionaryTextState} first, then pass it here for rendering.
+ */
 export class DictionaryTextModel extends Model {
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
@@ -132,6 +139,10 @@ export class DictionaryTextModel extends Model {
 
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
+    if (this.storageState.renderBatches.length === 1) {
+      return super.draw(renderPass);
+    }
+
     let drawSuccess = true;
     const usePreparedDraw =
       this.device.type === 'webgpu' && this.storageState.renderBatches.length > 1;

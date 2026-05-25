@@ -117,7 +117,7 @@ function getPathStyleGpuByteLength(
   if (isStoragePathModel(pathModel)) {
     return sourceStyleGpuBytes + pathModel.rowStorageByteLength;
   }
-  const expandedStyleGpuBytes = Object.values(pathModel.arrowGPUTable?.gpuVectors || {}).reduce(
+  const expandedStyleGpuBytes = Object.values(pathModel.table?.gpuVectors || {}).reduce(
     (byteLength, vector) => byteLength + getGpuVectorByteLength(vector),
     0
   );

@@ -9,6 +9,7 @@ import {GPUVector, GPUTable} from '@luma.gl/tables';
 import {
   AttributeTextModel,
   DictionaryTextModel,
+  RowIndexedStorageTextModel,
   StorageTextModel,
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
@@ -18,19 +19,21 @@ import {
   convertArrowTextToDictionaryState,
   convertArrowTextToStorage,
   convertArrowTextToStorageState,
+  type ArrowAttributeTextInputProps,
   type ArrowDictionaryStorageTextInputProps,
   type ArrowStorageTextInputProps,
-  type ArrowTextModelProps,
   type ConvertedArrowTextData,
-  type PreparedAttributeTextModelProps,
-  type PreparedDictionaryTextModelProps,
-  type PreparedStorageTextModelProps,
   type FontSettings
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 import {STREAMING_TEXT_INPUT_SHADER_LAYOUT} from './arrow-text-shaders';
 
-export type ArrowTextLayerModel = 'attribute' | 'storage' | 'dictionary' | 'auto';
+export type ArrowTextLayerModel =
+  | 'attribute'
+  | 'storage'
+  | 'storage-row-indexed'
+  | 'dictionary'
+  | 'auto';
 export type ArrowTextLayerResolvedModel = Exclude<ArrowTextLayerModel, 'auto'>;
 export type ArrowTextRowColorType = arrow.FixedSizeList<arrow.Uint8>;
 export type ArrowTextCharacterColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
@@ -105,6 +108,8 @@ export type ArrowTextLayerProps = {
   parameters?: Record<string, unknown>;
   storageSource?: string;
   storageShaderLayout?: ShaderLayout;
+  rowIndexedStorageSource?: string;
+  rowIndexedStorageShaderLayout?: ShaderLayout;
   dictionarySource?: string;
   dictionaryShaderLayout?: ShaderLayout;
 };
@@ -450,8 +455,6 @@ export class ArrowTextLayer {
       return new DictionaryTextModel(this.device, {
         id: props.id,
         color: props.color,
-        characterSet: props.characterSet,
-        fontSettings: props.fontSettings,
         source: props.dictionarySource ?? props.storageSource ?? props.source,
         shaderLayout:
           props.dictionaryShaderLayout ?? props.storageShaderLayout ?? props.shaderLayout,
@@ -460,40 +463,49 @@ export class ArrowTextLayer {
         parameters: props.parameters,
         storageState,
         ownsStorageState: true
-      } as PreparedDictionaryTextModelProps);
+      });
     }
 
-    if (modelKind === 'storage') {
+    if (modelKind === 'storage' || modelKind === 'storage-row-indexed') {
       const storageInputProps = {
         ...this.getStorageInputProps(props.data, props),
         ...commonProps,
-        color: props.color
+        color: props.color,
+        rowIndexColumn: modelKind === 'storage-row-indexed'
       } as unknown as ArrowStorageTextInputProps;
       const storageState = convertArrowTextToStorageState(this.device, storageInputProps);
-      return new StorageTextModel(this.device, {
+      const StorageModel =
+        modelKind === 'storage-row-indexed' ? RowIndexedStorageTextModel : StorageTextModel;
+      return new StorageModel(this.device, {
         id: props.id,
         color: props.color,
-        characterSet: props.characterSet,
-        fontSettings: props.fontSettings,
-        source: props.storageSource ?? props.source,
-        shaderLayout: props.storageShaderLayout ?? props.shaderLayout,
+        source:
+          modelKind === 'storage-row-indexed'
+            ? (props.rowIndexedStorageSource ?? props.storageSource ?? props.source)
+            : (props.storageSource ?? props.source),
+        shaderLayout:
+          modelKind === 'storage-row-indexed'
+            ? (props.rowIndexedStorageShaderLayout ??
+              props.storageShaderLayout ??
+              props.shaderLayout)
+            : (props.storageShaderLayout ?? props.shaderLayout),
         shaderInputs: props.shaderInputs,
         modules: props.modules as never,
         parameters: props.parameters,
         storageState,
         ownsStorageState: true
-      } as PreparedStorageTextModelProps);
+      });
     }
 
     const attributeInputProps = {
       ...this.getInputProps(props.data, props),
       ...commonProps
-    } as unknown as ArrowTextModelProps;
+    } as unknown as ArrowAttributeTextInputProps;
     const attributeState = convertArrowTextToAttributeState(this.device, attributeInputProps);
     return new AttributeTextModel(this.device, {
-      ...commonProps,
-      attributeState
-    } as PreparedAttributeTextModelProps);
+      attributeState,
+      ownsAttributeState: true
+    });
   }
 
   private resolveModel(
@@ -527,7 +539,7 @@ export class ArrowTextLayer {
   private getInputProps(
     data: ArrowTextLayerData,
     props: ArrowTextLayerProps
-  ): Partial<ArrowTextModelProps> {
+  ): Partial<ArrowAttributeTextInputProps> {
     const inputProps = {
       positions: data.positions,
       texts: data.texts,
@@ -538,7 +550,7 @@ export class ArrowTextLayer {
       ...(props.sizesEnabled !== false && data.sizes ? {sizes: data.sizes} : {}),
       ...(data.pixelOffsets ? {pixelOffsets: data.pixelOffsets} : {})
     };
-    return inputProps as unknown as Partial<ArrowTextModelProps>;
+    return inputProps as unknown as Partial<ArrowAttributeTextInputProps>;
   }
 
   private getStorageInputProps(

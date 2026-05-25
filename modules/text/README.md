@@ -1,43 +1,54 @@
 # @luma.gl/text
 
-Experimental Arrow-native 2D text utilities for luma.gl. The package contains:
+Experimental 2D text utilities for luma.gl. The package contains:
 
-- Arrow-native 2D text utilities adapted from deck.gl's atlas and text layout internals.
-- `ArrowTextModel`, an `ArrowModel`-derived one-line label renderer that expands UTF-8 or dictionary-encoded UTF-8 `GPUVector` rows into glyph instances.
-- `ArrowStorageTextModel`, a WebGPU-only renderer that consumes storage-backed glyph state generated from UTF-8 or dictionary-encoded UTF-8 `GPUVector` input or supplied as reusable `ArrowStorageTextState`.
-- `ArrowDictionaryTextModel`, a WebGPU-only dictionary text renderer that keeps repeated dictionary strings compressed in generated glyph storage.
+- Arrow-aware text conversion helpers that prepare GPUVector rows, glyph layout, and generated GPU state.
+- `AttributeTextModel`, a one-line label renderer that renders prepared attribute vertex buffers.
+- `StorageTextModel`, a WebGPU-only renderer that renders prepared storage-backed glyph state.
+- `DictionaryTextModel`, a WebGPU-only renderer that renders prepared dictionary-compressed glyph state.
 
 ## Usage
 
 ```ts
-import * as arrow from 'apache-arrow'
-import {makeArrowGPUVector, makeArrowVectorFromArray} from '@luma.gl/arrow'
-import {ArrowTextModel} from '@luma.gl/text'
+import * as arrow from 'apache-arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {
+  AttributeTextModel,
+  convertArrowTextToAttribute,
+  convertArrowTextToAttributeState
+} from '@luma.gl/text';
 
-const positionSource = makeArrowVectorFromArray([0, 0, 0.5, 0.25], new arrow.Float32(), 2)
-const textSource = makeArrowVectorFromArray(['hello', 'luma.gl'], new arrow.Utf8())
-const positions = makeArrowGPUVector(device, positionSource, {name: 'positions'})
-const texts = makeArrowGPUVector(device, textSource, {name: 'texts'})
+const sourceVectors = {
+  positions: makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 0.5, 0.25])
+  ),
+  texts: arrow.vectorFromArray(['hello', 'luma.gl'], new arrow.Utf8())
+};
 
-const model = new ArrowTextModel(device, {
-  id: 'arrow-text',
-  positions,
-  texts,
-  sourceVectors: {positions: positionSource, texts: textSource},
+const convertedText = convertArrowTextToAttribute(device, {
+  sourceVectors
+});
+
+const attributeState = convertArrowTextToAttributeState(device, {
+  ...convertedText,
   characterSet: 'auto',
   fontSettings: {sdf: true}
-})
+});
+
+const model = new AttributeTextModel(device, {
+  id: 'text',
+  attributeState,
+  ownsAttributeState: true
+});
 ```
 
-`ArrowTextModel` accepts top-level GPU-resident row vectors such as `positions`, `colors`, `angles`, `sizes`, and `pixelOffsets`, with `texts` supplied as `GPUVector<Utf8 | Dictionary<Utf8, Int>>`. CPU-side glyph expansion is explicit through aligned `sourceVectors`, so generic GPU wrappers do not retain the uploaded Arrow value arrays. The model repeats compatible Arrow-backed row attributes for each glyph, emits generated `rowIndices` for source-row picking, and delegates GPU upload/update behavior to `ArrowModel`. Pass optional `clipRects` as `GPUVector<FixedSizeList<Int16>[4]>` rows containing `[x, y, width, height]` glyph-layout units and provide the matching source vector when clipping participates in glyph generation; negative width or height disables clipping on that axis. The generated per-glyph clipping attribute stays packed at 8 bytes per glyph. When the built-in fragment shader is used, `fontSettings.sdf`, `cutoff`, and `smoothing` also drive SDF atlas decoding automatically; custom fragment shaders remain responsible for their own atlas-alpha interpretation.
+Layer and data-preparation code owns Arrow source vectors and tables. It calls helpers such as `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()`, `createArrowAttributeTextState()`, `createArrowStorageTextState()`, and `createArrowDictionaryStorageTextState()` to produce prepared GPU resources. Renderer models consume only GPUVector-backed or prepared GPU state.
 
-`ArrowStorageTextModel` is the WebGPU storage-backed path. It requires top-level `positions` as `GPUVector<FixedSizeList<Float32>[2]>` plus `texts`, accepts optional row-style `colors`, `angles`, `sizes`, `pixelOffsets`, `textAnchors`, and `alignmentBaselines` GPUVectors, and falls back to constant deck-like props when a style vector is absent. Storage expansion receives explicit CPU `sourceVectors` for plain or dictionary-encoded UTF-8 text rows and optional clip rectangles only; GPU-only row style and position vectors stay GPU-resident. Storage inputs keep their existing aligned GPUData batches; the model binds each batch directly, renders interleaved `compactGlyphVertexData` buffers containing offsets, glyph indexes, and global source `rowIndices`, and only allocates model-owned storage for generated glyph state, small fallback/style config buffers, glyph definitions, and optional packed clip rectangles. Large generated glyph payloads are split into multiple render batches when device buffer limits require it. Text anchors use `Uint8` row enums `0=start`, `1=middle`, `2=end`; alignment baselines use `0=center`, `1=top`, `2=bottom`.
+Text input vector support:
 
-Both render paths keep caller-owned row vectors separate from model-generated per-glyph data. The attribute path stores generated offsets, inline glyph frames, and row ids in `expandedGlyphVertexData`; the storage path stores generated offsets, glyph ids, and row ids in `compactGlyphVertexData`. That split keeps style vectors independently updateable while reducing generated glyph buffer fan-out.
-
-Text input vectors:
-
-| Input Vector | `ArrowTextModel` | `ArrowStorageTextModel` |
+| Input Vector | Attribute State | Storage State |
 | --- | --- | --- |
 | positions | `GPUVector<FixedSizeList<Float32>[2]>` | `GPUVector<FixedSizeList<Float32>[2]>` |
 | texts | `GPUVector<Utf8 \| Dictionary<Utf8, Int>>` | `GPUVector<Utf8 \| Dictionary<Utf8, Int>>` |
@@ -45,13 +56,13 @@ Text input vectors:
 | angles? | `GPUVector<Float32>` | `GPUVector<Float32>` |
 | sizes? | `GPUVector<Float32>` | `GPUVector<Float32>` |
 | pixel offsets? | `GPUVector<FixedSizeList<Float32>[2]>` | `GPUVector<FixedSizeList<Float32>[2]>` |
-| clip rects? | `GPUVector<FixedSizeList<Int16>[4]>`; expanded into generated per-glyph vertex data. | `GPUVector<FixedSizeList<Int16>[4]>`; packed into row storage. |
+| clip rects? | Expanded into generated per-glyph vertex data. | Packed into row storage. |
 | text anchors? | Custom label attribute/shader responsibility. | `GPUVector<Uint8>` |
 | alignment baselines? | Custom label attribute/shader responsibility. | `GPUVector<Uint8>` |
 
 Text column support:
 
-| Text Vector | `ArrowTextModel` | `ArrowStorageTextModel` | `ArrowDictionaryTextModel` |
+| Text Vector | Attribute State | Storage State | Dictionary State |
 | --- | --- | --- | --- |
 | `Vector<Utf8>` | Supported | Supported | Not supported |
 | `Vector<Dictionary<Utf8, Int8 \| Int16 \| Int32 \| Uint8 \| Uint16 \| Uint32>>` | Supported | Supported | Supported with compressed dictionary glyph storage |
@@ -66,15 +77,11 @@ Text draw buffers:
 | row sizes | vertex | row | Optional per-label text sizes, or a one-row storage fallback buffer. |
 | row pixel offsets | vertex | row | Optional per-label pixel offsets, or a one-row storage fallback buffer. |
 | row clip rects | - | row | Optional packed `Int16[4]` clip rectangles remain row storage in the storage model; the attribute model expands them into `expandedGlyphVertexData`. |
-| expandedGlyphVertexData | vertex | - | Expanded 16-byte per-glyph vertex payload for the attribute model: model-generated offsets, inline glyph frames, and global source-row ids. Optional generated packed clip rectangles add 8 bytes per glyph. User-supplied row/style columns stay separate. Multiple buffers are emitted when device limits require batching. |
-| compactGlyphVertexData | - | vertex | Compact 12-byte storage-path glyph payload: packed signed `Int16[2]` offsets, packed `Uint16[2]` glyph index word, and global source-row id. Multiple buffers are emitted when device limits require batching. |
+| expandedGlyphVertexData | vertex | - | Expanded per-glyph vertex payload for the attribute model: model-generated offsets, inline glyph frames, and global source-row ids. |
+| compactGlyphVertexData | - | vertex | Compact storage-path glyph payload: packed offsets, glyph ids, and optional global source-row ids. |
 | glyph frames | vertex | data | Per-glyph atlas frame attributes in the attribute model; shared atlas-frame storage indexed by glyph id in the storage model. |
 | atlas texture | data | data | Font atlas sampled by the fragment shader. |
 | sampler | data | data | Sampler paired with the atlas texture. |
-| style config uniform | - | data | Per-draw fallback style values, row-style presence flags, clip flag, `batchRowIndexBase`, and SDF alpha threshold/smoothing. |
+| style config uniform | - | data | Per-draw fallback style values, row-style presence flags, clip flag, row bases, and SDF alpha threshold/smoothing. |
 
-Call `createArrowStorageTextState(device, props)` when storage-state construction should be decoupled from rendering. The returned `ArrowStorageTextState` owns its storage buffers, atlas texture, generated render buffers, byte/timing diagnostics, row-binding batches, generated render batches, and a `destroy()` method. `ArrowStorageTextModel` accepts either the original GPUVector input props and owns the generated state, or `{storageState}` plus render overrides when the caller wants to reuse and manage that state directly. With `characterSet: 'auto'`, the CPU builds compact glyph IDs and spans before compute expansion. With an explicit non-auto character set, the state builder uploads normalized Arrow UTF-8 bytes plus row byte ranges and decodes glyph IDs directly on the GPU, avoiding CPU UTF-8/glyph-stream construction.
-
-For streamed Arrow tables that retain source `GPURecordBatch` boundaries, `ArrowTextModel.appendTextBatches(...)` and `ArrowStorageTextModel.appendTextBatches(...)` convert only the newly arrived row batches into generated glyph render batches. Append calls must include source-vector bundles with matching new CPU Arrow chunks. Previously generated glyph buffers stay resident; one source batch may still fan out into multiple generated render batches when device buffer limits require splitting.
-
-`getGpuUtf8MapShaderSource()` and `getGpuUtf8MapShaderBindings()` expose the reusable WebGPU UTF-8 mapping fragment behind that explicit-character-set path. Consumers can compose the shared sparse byte-indexed UTF-8 row traversal, code point decoding, and lookup-table mapping into a one-pass text-oriented compute shader without taking on a separate compact-output stage.
+`getGpuUtf8MapShaderSource()` and `getGpuUtf8MapShaderBindings()` expose reusable WebGPU UTF-8 mapping helpers. Consumers can compose sparse UTF-8 byte traversal, code point decode, and lookup-table mapping into text-oriented compute shaders.

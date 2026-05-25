@@ -13,10 +13,13 @@ import {GPUVector} from '@luma.gl/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
+import {ArrowAttributeTextModel} from '../../src/text-2d/deprecated/arrow-attribute-text-model';
+import {ArrowDictionaryTextModel} from '../../src/text-2d/deprecated/arrow-dictionary-text-model';
 import {
-  ArrowAttributeTextModel,
-  ArrowDictionaryTextModel,
-  ArrowStorageTextModel,
+  ArrowRowIndexedStorageTextModel,
+  ArrowStorageTextModel
+} from '../../src/text-2d/deprecated/arrow-storage-text-model';
+import {
   buildArrowTextGlyphTable,
   createArrowStorageTextState,
   packStorageTextClipRects,
@@ -147,7 +150,7 @@ test('packStorageTextClipRects preserves signed Int16 clip lanes', t => {
   t.end();
 });
 
-test('ArrowAttributeTextModel derives from ArrowModel and updates glyph instance counts', t => {
+test('ArrowAttributeTextModel derives from GPUTableModel and updates glyph instance counts', t => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const model = new ArrowAttributeTextModel(device, {
@@ -525,6 +528,63 @@ test('ArrowStorageTextModel interleaves compact glyph vertex records', async t =
   const renderConfig = new Uint32Array(renderConfigBytes.buffer, renderConfigBytes.byteOffset, 4);
   t.deepEqual(Array.from(rowGlyphStarts), [0, 2, 3], 'row glyph starts map glyphs back to rows');
   t.deepEqual(Array.from(renderConfig), [0, 0, 2, 0], 'render config scopes row lookup');
+
+  model.destroy();
+  destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowRowIndexedStorageTextModel stores row indices in compact glyph records', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const model = new ArrowRowIndexedStorageTextModel(device, {
+    id: 'arrow-row-indexed-storage-text-generated-glyph-vertices-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  const glyphVertexBytes = await model.compactGlyphVertexData.readAsync();
+  const generatedGlyphVertexWords = new Uint32Array(
+    glyphVertexBytes.buffer,
+    glyphVertexBytes.byteOffset,
+    model.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
+  );
+  const generatedGlyphVertexLayout = model.bufferLayout.find(
+    layout => layout.name === 'compactGlyphVertexData'
+  );
+
+  t.equal(model.generatedRenderBufferByteLength, 36, 'three glyphs keep a 12-byte record budget');
+  t.equal(generatedGlyphVertexLayout?.byteStride, 12, 'generated records use a 12-byte stride');
+  t.deepEqual(
+    generatedGlyphVertexLayout?.attributes,
+    [
+      {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
+      {attribute: 'glyphIndices', format: 'uint16x2', byteOffset: 4},
+      {attribute: 'glyphRowIndices', format: 'uint32', byteOffset: 8}
+    ],
+    'row-indexed records expose glyph offset, id, and source row attributes'
+  );
+  t.deepEqual(
+    Array.from(generatedGlyphVertexWords),
+    [
+      packSignedInt16Pair(2, 5),
+      1,
+      0,
+      packSignedInt16Pair(7, 5),
+      2,
+      0,
+      packSignedInt16Pair(2, 5),
+      1,
+      1
+    ],
+    'generated records store source row indices next to glyph data'
+  );
 
   model.destroy();
   destroyStorageGpuTextProps(textProps);

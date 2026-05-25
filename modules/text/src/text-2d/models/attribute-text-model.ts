@@ -12,6 +12,7 @@ import type {AttributeTextModelProps} from '../model-utils/text-model-props';
 
 export type {AttributeTextModelProps};
 
+/** Generated glyph batch consumed by one attribute-model draw call. */
 export type AttributeTextRenderBatchState = {
   /** First source text row included in this generated render batch. */
   rowStart: number;
@@ -23,6 +24,7 @@ export type AttributeTextRenderBatchState = {
   expandedGlyphVertexData: Buffer;
 };
 
+/** Prepared GPU table and generated glyph resources consumed by {@link AttributeTextModel}. */
 export type AttributeTextState = {
   /** Model props with a GPU table containing label/style attributes. */
   modelProps: GPUTableModelProps;
@@ -48,6 +50,7 @@ export type AttributeTextState = {
   defaultFragmentShaderUniforms?: Record<string, unknown>;
 };
 
+/** Constructor props for the pure attribute text renderer. */
 export type PreparedAttributeTextModelProps = {
   /** Prepared attribute text state produced by an adapter layer. */
   attributeState: AttributeTextState;
@@ -55,7 +58,12 @@ export type PreparedAttributeTextModelProps = {
   ownsAttributeState?: boolean;
 };
 
-/** Attribute text renderer that consumes GPUVector-backed model state. */
+/**
+ * Attribute text renderer that consumes prepared GPUVector-backed model state.
+ *
+ * This model does not accept Arrow source vectors. Layer/data-preparation code should build an
+ * {@link AttributeTextState} first, then pass it here for rendering.
+ */
 export class AttributeTextModel extends GPUTableModel {
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;

@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ArrowModel,
   makeArrowFixedSizeListVector,
   makeArrowGPUVector,
   prepareArrowTemporalGPUVectors,
@@ -11,7 +10,7 @@ import {
 } from '@luma.gl/arrow';
 import {type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {GPUTable, type GPUVector} from '@luma.gl/tables';
+import {GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -69,7 +68,7 @@ type TimeColumnsTableInput = {
   destroy: () => void;
 };
 
-type ActiveTimeColumnsModel = ArrowModel | Model;
+type ActiveTimeColumnsModel = GPUTableModel | Model;
 
 export class ArrowTimeColumnsLayer {
   readonly device: Device;
@@ -169,10 +168,10 @@ export class ArrowTimeColumnsLayer {
       });
     }
 
-    return new ArrowModel(this.device, {
+    return new GPUTableModel(this.device, {
       id: 'arrow-time-columns-events-attributes',
-      arrowGPUTable: timeColumnsTableInput.table,
-      arrowCount: 'instance',
+      table: timeColumnsTableInput.table,
+      tableCount: 'instance',
       source: EVENT_ATTRIBUTE_WGSL_SHADER,
       vs: EVENT_VERTEX_GLSL_SHADER,
       fs: EVENT_FRAGMENT_GLSL_SHADER,

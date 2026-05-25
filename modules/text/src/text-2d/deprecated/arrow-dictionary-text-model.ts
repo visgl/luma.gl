@@ -11,9 +11,14 @@ import {
   type ArrowDictionaryStorageTextModelProps,
   type ArrowDictionaryStorageTextRenderProps,
   type ArrowDictionaryStorageTextState
-} from './arrow-text-model';
+} from '../arrow-conversion/convert-arrow-text-vectors';
 
-/** Arrow adapter that prepares dictionary text state, then delegates rendering to DictionaryTextModel. */
+/**
+ * Deprecated Arrow-aware wrapper around {@link DictionaryTextModel}.
+ *
+ * @deprecated Kept only for internal transition coverage. New layer code should call Arrow
+ * conversion helpers, then construct {@link DictionaryTextModel} with prepared dictionary state.
+ */
 export class ArrowDictionaryTextModel extends DictionaryTextModel {
   private textProps: ArrowDictionaryStorageTextModelProps;
 

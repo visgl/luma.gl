@@ -34,9 +34,7 @@ const DECK_GPU_BYTES_ID = 'arrow-path-model-deck-gpu-bytes';
 const DECK_GPU_EXPANSION_ID = 'arrow-path-model-deck-gpu-expansion';
 
 export type ArrowPathControlPanelRowLabels = {
-  '240': string;
-  '960': string;
-  '2400': string;
+  '240-stream': string;
   '2400-stream': string;
 };
 
@@ -366,9 +364,7 @@ export function makeArrowPathModelControlPanelHtml({
       <div style="display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
         <label for="${ROW_COUNT_SELECTOR_ID}">Rows</label>
         <select id="${ROW_COUNT_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="240">${rowLabels['240']}</option>
-          <option value="960">${rowLabels['960']}</option>
-          <option value="2400">${rowLabels['2400']}</option>
+          <option value="240-stream">${rowLabels['240-stream']}</option>
           <option value="2400-stream">${rowLabels['2400-stream']}</option>
         </select>
         <label for="${COORDINATE_SELECTOR_ID}">Paths</label>
@@ -384,6 +380,7 @@ export function makeArrowPathModelControlPanelHtml({
         </select>
         <label for="${TIME_COLUMN_SELECTOR_ID}">Time</label>
         <select id="${TIME_COLUMN_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+          <option value="none">None</option>
           <option value="xyzm">M coordinate - XYZM</option>
           <option value="timestamps">timestamp - List&lt;TimestampMillisecond&gt;</option>
         </select>
@@ -496,7 +493,7 @@ function makeMetricRow(label: string, id: string): string {
 function isArrowPathControlPanelRowCountKind(
   value: string | undefined
 ): value is ArrowPathControlPanelRowCountKind {
-  return value === '240' || value === '960' || value === '2400' || value === '2400-stream';
+  return value === '240-stream' || value === '2400-stream';
 }
 
 function isArrowPathControlPanelCoordinateKind(
@@ -514,7 +511,7 @@ function isArrowPathControlPanelColorKind(
 function isArrowPathControlPanelTimeKind(
   value: string | undefined
 ): value is ArrowPathControlPanelTimeKind {
-  return value === 'xyzm' || value === 'timestamps';
+  return value === 'none' || value === 'xyzm' || value === 'timestamps';
 }
 
 function isArrowPathLayerModel(value: string | undefined): value is ArrowPathLayerModel {
