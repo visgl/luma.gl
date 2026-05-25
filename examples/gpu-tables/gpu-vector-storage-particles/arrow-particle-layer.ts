@@ -17,7 +17,6 @@ import {
   TableTransform
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
-import {makeArrowParticleTable} from './arrow-particle-data';
 import {
   COMPUTE_SHADER_LAYOUT,
   RENDER_SHADER_LAYOUT,
@@ -39,7 +38,7 @@ export type ArrowParticleLayerColumns = {
 };
 
 export type ArrowParticleLayerProps = {
-  data?: arrow.Table;
+  data?: arrow.Table | null;
   columns?: ArrowParticleLayerColumns;
   resetIntervalMilliseconds?: number;
 };
@@ -62,7 +61,7 @@ export type ArrowParticleLayerRecordBatchStreamProps = {
 type ArrowParticleVectorType = arrow.FixedSizeList<arrow.Float32>;
 
 type ArrowParticleLayerResolvedProps = {
-  data: arrow.Table;
+  data: arrow.Table | null;
   columns: Required<ArrowParticleLayerColumns>;
   resetIntervalMilliseconds: number;
 };
@@ -106,12 +105,14 @@ export class ArrowParticleLayer {
 
     this.device = device;
     this.props = {
-      data: props.data ?? makeArrowParticleTable(),
+      data: props.data ?? null,
       columns: {...DEFAULT_COLUMNS, ...props.columns},
       resetIntervalMilliseconds:
         props.resetIntervalMilliseconds ?? DEFAULT_RESET_INTERVAL_MILLISECONDS
     };
-    this.replaceArrowTable(this.props.data);
+    if (this.props.data) {
+      this.replaceArrowTable(this.props.data);
+    }
   }
 
   setProps(props: ArrowParticleLayerProps): void {
@@ -125,7 +126,14 @@ export class ArrowParticleLayer {
 
     if (shouldRecreate) {
       this.cancelRecordBatchStream();
-      this.replaceArrowTable(this.props.data);
+      if (this.props.data) {
+        this.replaceArrowTable(this.props.data);
+      } else {
+        this.destroyDeviceResources();
+        this.destroyParticleTable();
+        this.particleCount = 0;
+        this.lastResetTime = null;
+      }
     }
   }
 

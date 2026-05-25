@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ArrowModel,
   getArrowFixedSizeListValues,
   isArrowFixedSizeListVector,
   makeArrowFixedSizeListVector,
@@ -13,7 +12,7 @@ import {
 } from '@luma.gl/arrow';
 import {type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
+import {GPURecordBatch, GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -98,7 +97,7 @@ type TemporalStarfieldRecordBatchVectors = {
   eventColors: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>;
 };
 
-type ActiveTemporalStarfieldModel = ArrowModel | Model;
+type ActiveTemporalStarfieldModel = GPUTableModel | Model;
 
 export class ArrowTemporalStarfieldLayer {
   readonly device: Device;
@@ -239,10 +238,10 @@ export class ArrowTemporalStarfieldLayer {
       });
     }
 
-    return new ArrowModel(this.device, {
+    return new GPUTableModel(this.device, {
       id: 'arrow-temporal-starfield-attributes',
-      arrowGPUTable: temporalStarfieldTableInput.table,
-      arrowCount: 'instance',
+      table: temporalStarfieldTableInput.table,
+      tableCount: 'instance',
       source: STAR_ATTRIBUTE_WGSL_SHADER,
       vs: STAR_VERTEX_GLSL_SHADER,
       fs: STAR_FRAGMENT_GLSL_SHADER,
@@ -375,7 +374,7 @@ export class ArrowTemporalStarfieldLayer {
     }
 
     const table = this.temporalStarfieldTableInput.table;
-    if (this.starModel instanceof ArrowModel) {
+    if (this.starModel instanceof GPUTableModel) {
       this.starModel.drawBatches(renderPass);
       return;
     }

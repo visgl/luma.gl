@@ -410,7 +410,7 @@ bindings of type `'storage'` or `'read-only-storage'`. Selected storage columns:
 - appear in `gpuVectors` by binding name;
 - appear in `bindings` by binding name;
 - contribute fields to the GPU-facing Arrow schema;
-- are rebound batch-by-batch by `ArrowModel.drawBatches(renderPass)`.
+- are rebound batch-by-batch by `GPUTableModel.drawBatches(renderPass)`.
 
 This keeps table-backed WebGPU render paths compact. A column such as
 `instanceModelMatrix` can be uploaded once through the table machinery and bound
@@ -531,10 +531,8 @@ six-word segment record layout.
 
 `GPUTableModel` is the generic tables-layer wrapper that combines `GPUTable`
 with `Model`. It draws preserved GPU batches, syncs table row counts into the
-selected draw count, and leaves table ownership with the caller. `ArrowModel`
-keeps the Arrow-facing convenience surface: it accepts an Arrow table as an
-update source, replaces the GPU representation when `setProps({arrowTable})`
-is called, and can also consume an existing `arrowGPUTable`.
+selected draw count, and leaves table ownership with the caller. Convert Arrow
+tables explicitly with `makeArrowGPUTable()` before constructing the model.
 
 Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with one
 pipeline layout while rebinding only batch-local attribute buffers and storage
@@ -550,11 +548,11 @@ support mesh and point-cloud tables that use glTF-style column names such as
 
 ```ts
 import {
-  ArrowModel,
   ArrowTableGeometry,
   makeGPUGeometryFromArrow,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
+import {Model} from '@luma.gl/engine';
 
 const geometry = new ArrowTableGeometry(device, {
   arrowMesh,
@@ -566,11 +564,11 @@ const equivalentGeometry = makeGPUGeometryFromArrow(device, {
   interleaved: true
 });
 
-const model = new ArrowModel(device, {
+const model = new Model(device, {
   vs,
   fs,
   shaderLayout,
-  arrowMesh
+  geometry
 });
 ```
 
@@ -617,17 +615,17 @@ import {
   makeAppendableArrowGPUTable
 } from '@luma.gl/arrow';
 
-const arrowGPUTable = makeAppendableArrowGPUTable({
+const gpuTable = makeAppendableArrowGPUTable({
   device,
   schema,
   shaderLayout
 });
 
-model.setBufferLayout(arrowGPUTable.bufferLayout);
-model.setAttributes(arrowGPUTable.attributes);
+model.setBufferLayout(gpuTable.bufferLayout);
+model.setAttributes(gpuTable.attributes);
 
-appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
-model.setInstanceCount(arrowGPUTable.numRows);
+appendArrowBatchToGPUTable(gpuTable, recordBatch);
+model.setInstanceCount(gpuTable.numRows);
 ```
 
 Asynchronous sources stay application-owned. Append yielded record batches into
@@ -635,8 +633,8 @@ the same appendable table as they arrive:
 
 ```ts
 for await (const recordBatch of asyncRecordBatches) {
-  appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
-  model.setInstanceCount(arrowGPUTable.numRows);
+  appendArrowBatchToGPUTable(gpuTable, recordBatch);
+  model.setInstanceCount(gpuTable.numRows);
 }
 ```
 
@@ -647,12 +645,12 @@ resulting GPU batch:
 ```ts
 import {makeArrowGPURecordBatch, makeArrowGPUTable} from '@luma.gl/arrow';
 
-const arrowGPUTable = makeArrowGPUTable(device, new arrow.Table([firstRecordBatch]), {
+const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstRecordBatch]), {
   shaderLayout
 });
 
 for await (const recordBatch of remainingRecordBatches) {
-  arrowGPUTable.addBatch(makeArrowGPURecordBatch(device, recordBatch, {shaderLayout}));
+  gpuTable.addBatch(makeArrowGPURecordBatch(device, recordBatch, {shaderLayout}));
 }
 ```
 

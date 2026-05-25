@@ -26,20 +26,20 @@ The object model is batch-preserving by default:
   `GPUVector.data[]`.
 - `GPUData` is the chunk/range primitive. It always points at a
   `DynamicBuffer`, even when that wrapper adopts an existing static GPU buffer.
-- `ArrowModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one
+- `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one
   compatible layout/pipeline and rebinding only each batch's attribute buffers.
 
 This means a multi-batch Arrow table stays multi-batch after GPU upload. If the
 application prefers fewer draw units, it packs explicitly:
 
 ```ts
-const arrowGPUTable = makeArrowGPUTable(device, table, {shaderLayout});
+const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
 
 // Replace preserved batches with one packed batch.
-arrowGPUTable.packBatches();
+gpuTable.packBatches();
 
 // Or greedily merge adjacent batches until each emitted batch reaches the threshold.
-arrowGPUTable.packBatches({minBatchSize: 50_000});
+gpuTable.packBatches({minBatchSize: 50_000});
 ```
 
 Packing mutates the table in place. It rebuilds `batches[]`, table-level
@@ -226,46 +226,50 @@ Public methods:
 | `destroy()` | Destroys owned batches and their vectors |
 
 Low-level incremental assembly can stay ownership-explicit with
-`arrowGPUTable.addBatch(gpuRecordBatch)` and
+`gpuTable.addBatch(gpuRecordBatch)` and
 `arrowGPUVector.addData(gpuData)`, which aggregate existing GPU objects instead
 of allocating replacement tables.
 
 Appendable regular tables use the same table and batch classes:
 
 ```ts
-const arrowGPUTable = makeAppendableArrowGPUTable({
+const gpuTable = makeAppendableArrowGPUTable({
   device,
   schema,
   shaderLayout,
   initialCapacityRows: 4_096
 });
 
-appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
-appendArrowBatchToGPUTable(arrowGPUTable, nextArrowTable);
+appendArrowBatchToGPUTable(gpuTable, recordBatch);
+appendArrowBatchToGPUTable(gpuTable, nextArrowTable);
 ```
 
 ```ts
 import {makeArrowGPUTable} from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/tables';
 
-const arrowGPUTable = makeArrowGPUTable(device, table, {shaderLayout});
+const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
 
 // The schema describes the selected GPU columns, not necessarily the full table.
-const [colorField] = arrowGPUTable.schema.fields;
+const [colorField] = gpuTable.schema.fields;
 
 // Each GPU vector exposes Arrow-derived type/shape metadata plus GPU data chunks.
-const colorVector: GPUVector = arrowGPUTable.gpuVectors.instanceColors;
+const colorVector: GPUVector = gpuTable.gpuVectors.instanceColors;
 ```
 
 ## Table-Backed Render, Transform, and Compute Helpers
 
 The table APIs are meant to feed more than one execution style.
 
-### `GPUTableModel` and `ArrowModel`
+### `GPUTableModel`
 
-Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering:
+Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering.
+If the source data starts as an Arrow table, convert it first with
+`makeArrowGPUTable()` in layer/data-preparation code:
 
 ```ts
+const table = makeArrowGPUTable(device, arrowTable, {shaderLayout});
+
 const model = new GPUTableModel(device, {
   source,
   shaderLayout,
@@ -274,22 +278,8 @@ const model = new GPUTableModel(device, {
 });
 ```
 
-Use `ArrowModel` when selected Arrow table columns should first be adapted into
-GPU table storage:
-
-```ts
-const model = new ArrowModel(device, {
-  source,
-  shaderLayout,
-  arrowTable,
-  arrowCount: 'instance'
-});
-```
-
-`tableCount` and Arrow's compatibility `arrowCount` choose whether table row
-counts become `instanceCount`, `vertexCount`, or neither. Existing `GPUTable`
-instances can be supplied through `arrowGPUTable` when ownership should stay
-with the caller.
+`tableCount` chooses whether table row counts become `instanceCount`,
+`vertexCount`, or neither. The converted `GPUTable` stays caller-owned.
 
 ### `TableTransform`
 

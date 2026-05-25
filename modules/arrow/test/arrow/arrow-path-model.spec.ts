@@ -4,9 +4,9 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  ArrowPathModel,
-  ArrowStoragePathModel,
-  ArrowStorageTripsPathModel,
+  AttributePathModel,
+  StoragePathModel,
+  StorageTripsPathModel,
   buildArrowPathSegmentTable,
   createArrowStoragePathState,
   makeArrowFixedSizeListVector,
@@ -168,10 +168,10 @@ test('buildArrowPathSegmentTable preserves XYZ and XYZM coordinate lanes', t => 
   t.end();
 });
 
-test('ArrowPathModel derives from ArrowModel and packs generated segment records', async t => {
+test('AttributePathModel derives from GPUTableModel and packs generated segment records', async t => {
   const device = new NullDevice({});
   const pathProps = await makeGpuArrowPathProps(device);
-  const model = new ArrowPathModel(device, {
+  const model = new AttributePathModel(device, {
     id: 'arrow-path-model-test',
     ...pathProps.pathProps
   });
@@ -235,14 +235,14 @@ test('ArrowPathModel derives from ArrowModel and packs generated segment records
   t.end();
 });
 
-test('ArrowPathModel requires prepared path state', t => {
+test('AttributePathModel requires prepared path state', t => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowPathSourceVectors();
   const paths = makeGpuArrowPathVector(device, 'paths', sourceVectors.paths);
 
   t.throws(
     () =>
-      new ArrowPathModel(device, {
+      new AttributePathModel(device, {
         id: 'arrow-path-model-missing-sources-test',
         paths
       } as never),
@@ -254,7 +254,7 @@ test('ArrowPathModel requires prepared path state', t => {
   t.end();
 });
 
-test('ArrowPathModel rejects prepared state row mismatches', async t => {
+test('AttributePathModel rejects prepared state row mismatches', async t => {
   const device = new NullDevice({});
   const pathProps = await makeGpuArrowPathProps(device);
   const sourceVectors = makeArrowPathSourceVectors();
@@ -262,7 +262,7 @@ test('ArrowPathModel rejects prepared state row mismatches', async t => {
 
   t.throws(
     () =>
-      new ArrowPathModel(device, {
+      new AttributePathModel(device, {
         id: 'arrow-path-model-source-batch-alignment-test',
         ...pathProps.pathProps,
         colors: undefined,
@@ -278,11 +278,11 @@ test('ArrowPathModel rejects prepared state row mismatches', async t => {
   t.end();
 });
 
-test('ArrowPathModel splits generated path buffers by source-row boundaries', async t => {
+test('AttributePathModel splits generated path buffers by source-row boundaries', async t => {
   const device = new NullDevice({});
   Object.defineProperty(device.limits, 'maxBufferSize', {value: 300});
   const pathProps = await makeGpuArrowPathProps(device);
-  const model = new ArrowPathModel(device, {
+  const model = new AttributePathModel(device, {
     id: 'arrow-path-model-buffer-batching-test',
     ...pathProps.pathProps
   });
@@ -300,10 +300,10 @@ test('ArrowPathModel splits generated path buffers by source-row boundaries', as
   t.end();
 });
 
-test('ArrowPathModel.prepareGPUVectors keeps Float32 paths unchanged without closure', async t => {
+test('AttributePathModel.prepareGPUVectors keeps Float32 paths unchanged without closure', async t => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowPathSourceVectors();
-  const prepared = await ArrowPathModel.prepareGPUVectors(device, sourceVectors);
+  const prepared = await AttributePathModel.prepareGPUVectors(device, sourceVectors);
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.equal(prepared.sourceOrigins, undefined, 'Float32 preparation does not create source origins');
@@ -327,7 +327,7 @@ test('ArrowPathModel.prepareGPUVectors keeps Float32 paths unchanged without clo
   t.end();
 });
 
-test('ArrowPathModel.prepareGPUVectors converts Float64 paths to per-row Float32 deltas', async t => {
+test('AttributePathModel.prepareGPUVectors converts Float64 paths to per-row Float32 deltas', async t => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3, 5]),
@@ -336,7 +336,7 @@ test('ArrowPathModel.prepareGPUVectors converts Float64 paths to per-row Float32
       20_000_000_000, 10, 19_999_999_999.75, 10.75
     ])
   );
-  const prepared = await ArrowPathModel.prepareGPUVectors(device, {paths});
+  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.deepEqual(
@@ -355,7 +355,7 @@ test('ArrowPathModel.prepareGPUVectors converts Float64 paths to per-row Float32
   t.end();
 });
 
-test('ArrowStoragePathModel.prepareGPUVectors converts Float64 paths to per-row Float32 deltas on WebGPU', async t => {
+test('StoragePathModel.prepareGPUVectors converts Float64 paths to per-row Float32 deltas on WebGPU', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -370,7 +370,7 @@ test('ArrowStoragePathModel.prepareGPUVectors converts Float64 paths to per-row 
       20_000_000_000, 10, 19_999_999_999.75, 10.75
     ])
   );
-  const prepared = await ArrowStoragePathModel.prepareGPUVectors(device, {paths});
+  const prepared = await StoragePathModel.prepareGPUVectors(device, {paths});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.deepEqual(
@@ -389,14 +389,14 @@ test('ArrowStoragePathModel.prepareGPUVectors converts Float64 paths to per-row 
   t.end();
 });
 
-test('ArrowPathModel.prepareGPUVectors closes Float64 delta paths by appending the first delta', async t => {
+test('AttributePathModel.prepareGPUVectors closes Float64 delta paths by appending the first delta', async t => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3]),
     new Float64Array([10_000_000, -10_000_000, 10_000_001, -10_000_000, 10_000_001, -9_999_999])
   );
   const closed = arrow.vectorFromArray([true], new arrow.Bool());
-  const prepared = await ArrowPathModel.prepareGPUVectors(device, {paths, closed});
+  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths, closed});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.deepEqual(Array.from(getPathOffsets(preparedPaths)), [0, 4], 'closure appends one delta point');
@@ -415,13 +415,13 @@ test('ArrowPathModel.prepareGPUVectors closes Float64 delta paths by appending t
   t.end();
 });
 
-test('ArrowPathModel.prepareGPUVectors updates view origins without rewriting path deltas', async t => {
+test('AttributePathModel.prepareGPUVectors updates view origins without rewriting path deltas', async t => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3]),
     new Float64Array([100, 200, 101, 200, 102, 201])
   );
-  const prepared = await ArrowPathModel.prepareGPUVectors(device, {paths});
+  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
   const pathBytesBefore = await prepared.paths.buffer.readAsync();
   const deltaSegmentBytesBefore =
     await prepared.pathProps.pathState.expandedPathVertexData.readAsync();
@@ -494,7 +494,7 @@ test('ArrowPathModel.prepareGPUVectors updates view origins without rewriting pa
   t.end();
 });
 
-test('ArrowPathModel.prepareGPUVectors split Float64 transform matches CPU full transform', async t => {
+test('AttributePathModel.prepareGPUVectors split Float64 transform matches CPU full transform', async t => {
   const device = new NullDevice({});
   const sourceOrigin = [1_000_000_000, -1_000_000_000, 100];
   const deltas = [
@@ -509,7 +509,7 @@ test('ArrowPathModel.prepareGPUVectors split Float64 transform matches CPU full 
     ),
     3
   );
-  const prepared = await ArrowPathModel.prepareGPUVectors(device, {paths});
+  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
   const modelViewMatrix = makeOriginRelativeModelViewMatrix(sourceOrigin);
 
   prepared.updateViewOrigins({modelViewMatrix});
@@ -549,7 +549,7 @@ test('ArrowPathModel.prepareGPUVectors split Float64 transform matches CPU full 
   t.end();
 });
 
-test('ArrowPathModel.prepareGPUVectors rejects unsupported path inputs', async t => {
+test('AttributePathModel.prepareGPUVectors rejects unsupported path inputs', async t => {
   const device = new NullDevice({});
   const invalidDimensionPaths = makeFloat64PathVector(
     new Int32Array([0, 1]),
@@ -560,7 +560,7 @@ test('ArrowPathModel.prepareGPUVectors rejects unsupported path inputs', async t
   const mismatchedClosed = arrow.vectorFromArray([true], new arrow.Bool());
 
   try {
-    await ArrowPathModel.prepareGPUVectors(device, {paths: invalidDimensionPaths});
+    await AttributePathModel.prepareGPUVectors(device, {paths: invalidDimensionPaths});
     t.fail('invalid path dimensions should be rejected');
   } catch (error) {
     t.ok(
@@ -570,7 +570,10 @@ test('ArrowPathModel.prepareGPUVectors rejects unsupported path inputs', async t
   }
 
   try {
-    await ArrowPathModel.prepareGPUVectors(device, {...sourceVectors, closed: mismatchedClosed});
+    await AttributePathModel.prepareGPUVectors(device, {
+      ...sourceVectors,
+      closed: mismatchedClosed
+    });
     t.fail('closed flag row mismatches should be rejected');
   } catch (error) {
     t.ok(
@@ -582,7 +585,7 @@ test('ArrowPathModel.prepareGPUVectors rejects unsupported path inputs', async t
   t.end();
 });
 
-test('ArrowStoragePathModel emits indexed compute-generated segment records', async t => {
+test('StoragePathModel emits indexed compute-generated segment records', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -591,7 +594,7 @@ test('ArrowStoragePathModel emits indexed compute-generated segment records', as
   }
 
   const pathProps = makeStorageGpuArrowPathProps(device);
-  const model = new ArrowStoragePathModel(device, {
+  const model = new StoragePathModel(device, {
     id: 'arrow-storage-path-generated-segments-test',
     ...pathProps
   });
@@ -644,7 +647,7 @@ test('ArrowStoragePathModel emits indexed compute-generated segment records', as
   t.end();
 });
 
-test('ArrowStoragePathModel binds path-aligned vertex colors', async t => {
+test('StoragePathModel binds path-aligned vertex colors', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -663,7 +666,7 @@ test('ArrowStoragePathModel binds path-aligned vertex colors', async t => {
       ])
     )
   });
-  const model = new ArrowStoragePathModel(device, {
+  const model = new StoragePathModel(device, {
     id: 'arrow-storage-path-vertex-color-test',
     ...pathProps
   });
@@ -684,7 +687,7 @@ test('ArrowStoragePathModel binds path-aligned vertex colors', async t => {
   t.end();
 });
 
-test('ArrowStoragePathModel preserves legacy segment records when requested by shader layout', async t => {
+test('StoragePathModel preserves legacy segment records when requested by shader layout', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -694,7 +697,7 @@ test('ArrowStoragePathModel preserves legacy segment records when requested by s
 
   const legacyShaderLayout = makeLegacyStoragePathShaderLayout();
   const pathProps = makeStorageGpuArrowPathProps(device);
-  const model = new ArrowStoragePathModel(device, {
+  const model = new StoragePathModel(device, {
     id: 'arrow-storage-path-legacy-generated-segments-test',
     ...pathProps,
     shaderLayout: legacyShaderLayout
@@ -739,7 +742,7 @@ test('ArrowStoragePathModel preserves legacy segment records when requested by s
   t.end();
 });
 
-test('ArrowStoragePathModel compact records derive the same neighbors as legacy records', async t => {
+test('StoragePathModel compact records derive the same neighbors as legacy records', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -752,11 +755,11 @@ test('ArrowStoragePathModel compact records derive the same neighbors as legacy 
   const legacyPathProps = makeStorageGpuArrowPathProps(device);
   const sourceVectors = makeArrowPathSourceVectors();
   const pathOffsets = getPathOffsets(sourceVectors.paths);
-  const compactModel = new ArrowStoragePathModel(device, {
+  const compactModel = new StoragePathModel(device, {
     id: 'arrow-storage-path-compact-neighbor-parity-test',
     ...compactPathProps
   });
-  const legacyModel = new ArrowStoragePathModel(device, {
+  const legacyModel = new StoragePathModel(device, {
     id: 'arrow-storage-path-legacy-neighbor-parity-test',
     ...legacyPathProps,
     shaderLayout: legacyShaderLayout
@@ -791,7 +794,7 @@ test('ArrowStoragePathModel compact records derive the same neighbors as legacy 
   t.end();
 });
 
-test('ArrowStoragePathModel uses a shared zero origin when view origins are absent', async t => {
+test('StoragePathModel uses a shared zero origin when view origins are absent', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -800,7 +803,7 @@ test('ArrowStoragePathModel uses a shared zero origin when view origins are abse
   }
 
   const pathProps = makeStorageGpuArrowPathProps(device);
-  const model = new ArrowStoragePathModel(device, {
+  const model = new StoragePathModel(device, {
     id: 'arrow-storage-path-default-origin-test',
     ...pathProps
   });
@@ -813,7 +816,7 @@ test('ArrowStoragePathModel uses a shared zero origin when view origins are abse
   t.end();
 });
 
-test('ArrowStoragePathModel refreshes row styles without rebuilding segment buffers', async t => {
+test('StoragePathModel refreshes row styles without rebuilding segment buffers', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -822,7 +825,7 @@ test('ArrowStoragePathModel refreshes row styles without rebuilding segment buff
   }
 
   const pathProps = makeStorageGpuArrowPathProps(device);
-  const model = new ArrowStoragePathModel(device, {
+  const model = new StoragePathModel(device, {
     id: 'arrow-storage-path-row-style-refresh-test',
     ...pathProps
   });
@@ -851,7 +854,7 @@ test('ArrowStoragePathModel refreshes row styles without rebuilding segment buff
   t.end();
 });
 
-test('ArrowStorageTripsPathModel binds prepared path-aligned timestamps', async t => {
+test('StorageTripsPathModel binds prepared path-aligned timestamps', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -867,8 +870,8 @@ test('ArrowStorageTripsPathModel binds prepared path-aligned timestamps', async 
       new Int32Array([0, 3, 7])
     )
   };
-  const prepared = await ArrowStoragePathModel.prepareGPUVectors(device, sourceVectors);
-  const model = new ArrowStorageTripsPathModel(device, {
+  const prepared = await StoragePathModel.prepareGPUVectors(device, sourceVectors);
+  const model = new StorageTripsPathModel(device, {
     ...prepared.storagePathProps,
     timestamps: prepared.timestamps!,
     currentTime: 25,
@@ -885,7 +888,7 @@ test('ArrowStorageTripsPathModel binds prepared path-aligned timestamps', async 
   t.end();
 });
 
-test('ArrowStoragePathModel splits compute-generated segment buffers by storage limits', async t => {
+test('StoragePathModel splits compute-generated segment buffers by storage limits', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -900,7 +903,7 @@ test('ArrowStoragePathModel splits compute-generated segment buffers by storage 
 
   try {
     const pathProps = makeStorageGpuArrowPathProps(device);
-    const model = new ArrowStoragePathModel(device, {
+    const model = new StoragePathModel(device, {
       id: 'arrow-storage-path-buffer-batching-test',
       ...pathProps
     });
@@ -929,13 +932,13 @@ test('ArrowStoragePathModel splits compute-generated segment buffers by storage 
   t.end();
 });
 
-test('ArrowStoragePathModel rejects non-WebGPU devices', t => {
+test('StoragePathModel rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
   const pathProps = makeStorageGpuArrowPathProps(device);
 
   t.throws(
     () =>
-      new ArrowStoragePathModel(device, {
+      new StoragePathModel(device, {
         id: 'arrow-storage-path-model-test',
         ...pathProps
       }),
@@ -967,7 +970,7 @@ test('createArrowStoragePathState rejects non-WebGPU devices', t => {
 
 async function makeGpuArrowPathProps(device: Device): Promise<PreparedArrowPathGPUVectors> {
   const sourceVectors = makeArrowPathSourceVectors();
-  return ArrowPathModel.prepareGPUVectors(device, sourceVectors);
+  return AttributePathModel.prepareGPUVectors(device, sourceVectors);
 }
 
 function makeStorageGpuArrowPathProps(

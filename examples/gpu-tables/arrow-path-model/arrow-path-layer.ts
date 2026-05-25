@@ -18,7 +18,7 @@ import * as arrow from 'apache-arrow';
 
 export type ArrowPathLayerModel = 'attribute' | 'storage' | 'trips' | 'auto';
 export type ArrowPathLayerResolvedModel = Exclude<ArrowPathLayerModel, 'auto'>;
-export type ArrowPathLayerTimeColumn = 'xyzm' | 'timestamps';
+export type ArrowPathLayerTimeColumn = 'none' | 'xyzm' | 'timestamps';
 export type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 export type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
 export type ArrowPathSourceCoordinateType =

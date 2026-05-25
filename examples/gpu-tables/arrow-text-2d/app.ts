@@ -14,9 +14,7 @@ import {
   createStreamingRecordBatchIterator,
   getEagerTextDatasetKind,
   getTextDatasetKind,
-  getTextDatasetRowCountKind,
   getTextDatasetSourceKind,
-  getTextInputKind,
   getTextTableSizeKind,
   isArrowTextCharacterColorType,
   isArrowTextDictionarySource,
@@ -25,15 +23,12 @@ import {
   LABEL_COLUMN_COUNT,
   LABEL_FIELD_WIDTH,
   LABEL_ROW_SPACING,
-  makeArrowTextSourceAsync,
   makeStreamingArrowTextSourceAsync,
   STREAMING_TEXT_BATCH_COUNT,
   TEXT_DATASETS,
-  type EagerTextDatasetKind,
   type StreamingTextDatasetKind,
   type TextColorKind,
   type TextDatasetKind,
-  type TextInputKind,
   type TextSourceKind,
   type TextTableSizeKind
 } from './arrow-text-data';
@@ -66,7 +61,8 @@ import {
 } from './arrow-text-shaders';
 import {
   ArrowTextLayer,
-  prepareArrowTextInput,
+  createArrowTextGPUTable,
+  prepareArrowTextInputFromGPUTable,
   type ArrowTextLayerActiveModel,
   type ArrowTextLayerInput,
   type ArrowTextLayerModel,
@@ -97,15 +93,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   readonly shaderInputs = createArrowTextShaderInputs();
   readonly device: Device;
-  readonly textInputs: Partial<Record<TextInputKind, ArrowTextLayerInput>> = {};
-  readonly textInputPromises: Partial<Record<TextInputKind, Promise<ArrowTextLayerInput>>> = {};
   textInput!: ArrowTextLayerInput;
+  initialStreamingTextInput: ArrowTextLayerInput | null = null;
   textLayer!: ArrowTextLayer;
   controlPanel!: ArrowText2DControlPanel;
   pickingModel: Model | null = null;
   picker: PickingManager | null = null;
   textModelKind: TextModelKind = 'auto';
-  textDatasetKind: TextDatasetKind = '100k';
+  textDatasetKind: TextDatasetKind = '100k-stream';
   textColorKind: TextColorKind = 'string-colors';
   animate = true;
   isFinalized = false;
@@ -175,16 +170,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   override async onInitialize(): Promise<void> {
-    this.setActiveTextInput(
-      await this.getOrCreateTextInput(
-        getEagerTextDatasetKind(this.textDatasetKind),
-        this.textColorKind
-      )
+    const {textInput, streamingSource} = await this.createInitialStreamingTextInput(
+      this.textDatasetKind as StreamingTextDatasetKind
     );
     if (this.isFinalized) {
+      textInput.destroy();
       return;
     }
 
+    this.initialStreamingTextInput = textInput;
+    this.setActiveTextInput(textInput);
     this.textLayer = this.createTextLayer(this.textModelKind);
     this.pickingModel = this.createPickingModel();
     this.picker = createArrowTextPickingManager(
@@ -195,38 +190,32 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
     this.initializeControlPanel();
     this.updateMetricLabels();
-    this.updateStreamingBatchStatus(null);
-
-    void this.getOrCreateTextInput('500k', this.textColorKind);
-    void this.getOrCreateTextInput('1m', this.textColorKind);
+    this.startStreamingTextDatasetFromSource(
+      this.textDatasetKind as StreamingTextDatasetKind,
+      this.textColorKind,
+      streamingSource,
+      this.textLayer.beginRecordBatchStream()
+    );
   }
 
-  async getOrCreateTextInput(
-    textDatasetKind: EagerTextDatasetKind,
-    textColorKind: TextColorKind
-  ): Promise<ArrowTextLayerInput> {
-    const textInputKind = getTextInputKind(textDatasetKind, textColorKind);
-    const cachedTextInput = this.textInputs[textInputKind];
-    if (cachedTextInput) {
-      return cachedTextInput;
+  async createInitialStreamingTextInput(textDatasetKind: StreamingTextDatasetKind): Promise<{
+    textInput: ArrowTextLayerInput;
+    streamingSource: Awaited<ReturnType<typeof makeStreamingArrowTextSourceAsync>>;
+  }> {
+    const streamingSource = await makeStreamingArrowTextSourceAsync(
+      TEXT_DATASETS[getEagerTextDatasetKind(textDatasetKind)]
+    );
+    const firstRecordBatch = streamingSource.recordBatches[0];
+    if (!firstRecordBatch) {
+      throw new Error('Arrow text streaming example requires at least one record batch');
     }
-
-    const cachedPromise = this.textInputPromises[textInputKind];
-    if (cachedPromise) {
-      return cachedPromise;
-    }
-
-    const textInputPromise = makeArrowTextSourceAsync(TEXT_DATASETS[textDatasetKind], textColorKind)
-      .then(textSource => prepareArrowTextInput(this.device, textSource))
-      .then(textInput => {
-        this.textInputs[textInputKind] = textInput;
-        delete this.textInputPromises[textInputKind];
-        this.syncControlPanel();
-        return textInput;
-      });
-    this.textInputPromises[textInputKind] = textInputPromise;
-    this.syncControlPanel();
-    return textInputPromise;
+    const gpuTable = createArrowTextGPUTable(this.device, firstRecordBatch);
+    const textInput = prepareArrowTextInputFromGPUTable(
+      gpuTable,
+      [firstRecordBatch],
+      streamingSource.arrowVectorBuildTimeMs
+    );
+    return {textInput, streamingSource};
   }
 
   setActiveTextInput(textInput: ArrowTextLayerInput): void {
@@ -335,9 +324,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.picker?.destroy();
     this.pickingModel?.destroy();
     this.textLayer?.destroy();
-    for (const textInput of Object.values(this.textInputs)) {
-      textInput?.destroy();
-    }
+    this.initialStreamingTextInput?.destroy();
+    this.initialStreamingTextInput = null;
   }
 
   pickLabel(mousePosition: number[] | null | undefined): void {
@@ -403,13 +391,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   };
 
   handleTextColorSelection = async (textColorKind: TextColorKind): Promise<void> => {
+    if (textColorKind === 'character-colors') {
+      this.syncControlPanel();
+      return;
+    }
     const sourceKind = getTextDatasetSourceKind(this.textDatasetKind);
     const tableSizeKind = getTextTableSizeKind(this.textDatasetKind);
-    const nextTableSizeKind =
-      textColorKind === 'character-colors' && isStreamingTextDatasetKind(tableSizeKind)
-        ? getTextDatasetRowCountKind(this.textDatasetKind)
-        : tableSizeKind;
-    await this.selectTextInput(getTextDatasetKind(nextTableSizeKind, sourceKind), textColorKind);
+    await this.selectTextInput(getTextDatasetKind(tableSizeKind, sourceKind), textColorKind);
   };
 
   async selectTextInput(
@@ -426,26 +414,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
     if (isStreamingTextDatasetKind(nextDatasetKind)) {
       const streamingSession = this.textLayer.beginRecordBatchStream();
+      this.updateStreamingBatchStatus(0);
       await this.startStreamingTextDataset(nextDatasetKind, 'string-colors', streamingSession);
       return;
     }
 
-    this.textLayer.cancelRecordBatchStream();
-    this.setActiveTextInput(await this.getOrCreateTextInput(nextDatasetKind, nextColorKind));
-    if (this.isFinalized) {
-      return;
-    }
-    this.textDatasetKind = nextDatasetKind;
-    this.textColorKind = nextColorKind;
-    this.updateStreamingBatchStatus(null);
-    this.updateTextLayerProps(
-      {
-        data: this.textInput,
-        model: this.resolveAvailableModelKind(this.textModelKind)
-      },
-      'text dataset selector changed',
-      {resetPickedLabel: true}
-    );
+    this.syncControlPanel();
   }
 
   async startStreamingTextDataset(
@@ -459,7 +433,21 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.isFinalized) {
       return;
     }
+    this.startStreamingTextDatasetFromSource(
+      textDatasetKind,
+      textColorKind,
+      streamingSource,
+      streamingSession
+    );
+  }
 
+  startStreamingTextDatasetFromSource(
+    textDatasetKind: StreamingTextDatasetKind,
+    textColorKind: TextColorKind,
+    streamingSource: Awaited<ReturnType<typeof makeStreamingArrowTextSourceAsync>>,
+    streamingSession: ArrowTextLayerStreamingSession
+  ): void {
+    this.updateStreamingBatchStatus(0);
     const recordBatchIterator = createStreamingRecordBatchIterator(streamingSource.recordBatches)[
       Symbol.asyncIterator
     ]();
@@ -488,6 +476,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.setActiveTextInput(update.textInput);
     if (update.isFirstBatch) {
       this.textModelKind = this.textLayer.props.model ?? this.textModelKind;
+      this.initialStreamingTextInput?.destroy();
+      this.initialStreamingTextInput = null;
     }
     this.handleTextLayerUpdate(update.setPropsResult, {
       resetPickedLabel: update.isFirstBatch,

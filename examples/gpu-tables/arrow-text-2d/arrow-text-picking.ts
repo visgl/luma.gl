@@ -93,7 +93,7 @@ export function createArrowTextPickingModel(
     shaderLayout: TEXT_SHADER_LAYOUT,
     bufferLayout: textModel.bufferLayout,
     attributes: {
-      ...textModel.arrowGPUTable!.attributes,
+      ...textModel.table!.attributes,
       expandedGlyphVertexData: textModel.expandedGlyphVertexData
     },
     instanceCount: textModel.instanceCount,
@@ -123,7 +123,7 @@ function drawArrowTextPickingBatches(
   pickingModel: Model,
   textModel: AttributeTextModel
 ): void {
-  const arrowBatches = textModel.arrowGPUTable?.batches || [];
+  const arrowBatches = textModel.table?.batches || [];
   for (const [batchIndex, renderBatch] of textModel.renderBatches.entries()) {
     const arrowBatch = arrowBatches[batchIndex];
     if (!arrowBatch) {
@@ -137,7 +137,7 @@ function drawArrowTextPickingBatches(
     pickingModel.draw(pickingPass);
   }
   pickingModel.setAttributes({
-    ...(textModel.arrowGPUTable?.attributes || {}),
+    ...(textModel.table?.attributes || {}),
     expandedGlyphVertexData: textModel.expandedGlyphVertexData
   });
   pickingModel.setInstanceCount(textModel.glyphLayout.glyphCount);

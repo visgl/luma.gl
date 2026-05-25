@@ -144,7 +144,7 @@ boundary, while `BufferSchema` provides the local row interpretation needed by a
 particular render path.
 
 For complete Arrow table workflows, including `GPUVector`, `GPUTable`,
-`ArrowModel`, storage-buffer bindings, and table-backed compute helpers, see
+`GPUTableModel`, storage-buffer bindings, and table-backed compute helpers, see
 [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types) and
 [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model).
 

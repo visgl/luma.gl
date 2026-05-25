@@ -147,7 +147,7 @@ test('packStorageTextClipRects preserves signed Int16 clip lanes', t => {
   t.end();
 });
 
-test('ArrowTextModel derives from ArrowModel and updates glyph instance counts', t => {
+test('ArrowTextModel derives from GPUTableModel and updates glyph instance counts', t => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const model = new ArrowTextModel(device, {
@@ -342,11 +342,7 @@ test('ArrowTextModel splits expanded glyph vertex buffers by device limits', t =
     [2, 1],
     'batching preserves whole source-label rows'
   );
-  t.equal(
-    model.arrowGPUTable?.batches.length,
-    2,
-    'Arrow render rows split to matching GPU batches'
-  );
+  t.equal(model.table?.batches.length, 2, 'Arrow render rows split to matching GPU batches');
   t.equal(model.instanceCount, 3, 'aggregate glyph count remains unchanged');
 
   model.destroy();

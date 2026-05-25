@@ -3,9 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import {type Buffer, type Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
-import {ArrowModel, makeArrowGPURecordBatch, type ArrowModelProps} from '@luma.gl/arrow';
+import {makeArrowGPURecordBatch} from '@luma.gl/arrow';
 import {DynamicBuffer, DynamicTexture, Model} from '@luma.gl/engine';
-import {planGeneratedBufferBatches} from '@luma.gl/tables';
+import {
+  GPUTableModel,
+  planGeneratedBufferBatches,
+  type GPUTable,
+  type GPUTableModelProps
+} from '@luma.gl/tables';
 import {Table, type Vector} from 'apache-arrow';
 import FontAtlasManager from './font-atlas-manager';
 import type {
@@ -658,7 +663,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 `;
 
 /** Arrow-backed one-line text model that expands labels into glyph attribute instances. */
-export class ArrowAttributeTextModel extends ArrowModel {
+export class ArrowAttributeTextModel extends GPUTableModel {
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this model. */
@@ -677,6 +682,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
   expandedGlyphVertexData: Buffer;
   /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: ArrowTextRenderBatchState[];
+  private glyphGPUTable: GPUTable;
   private defaultFragmentShaderUniforms?: Record<string, unknown>;
   private textProps: ArrowTextModelProps;
   private mappingState: ResolvedCharacterMapping;
@@ -689,6 +695,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
       ? props.attributeState
       : createArrowAttributeTextState(device, props);
     super(device, prepared.modelProps);
+    this.glyphGPUTable = prepared.modelProps.table!;
     this.textProps = prepared.textProps;
     this.fontAtlasManager = prepared.fontAtlasManager;
     this.atlasTexture = prepared.atlasTexture;
@@ -730,6 +737,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
     }
 
     const prepared = createArrowAttributeTextState(this.device, nextProps);
+    const previousGlyphGPUTable = this.glyphGPUTable;
     this.atlasTexture?.destroy();
     destroyArrowTextRenderBatches(this.renderBatches);
     this.fontAtlasManager = prepared.fontAtlasManager;
@@ -750,7 +758,9 @@ export class ArrowAttributeTextModel extends ArrowModel {
         prepared.sdfRenderSettings
       );
     }
-    super.setProps({arrowTable: prepared.modelProps.arrowTable as Table});
+    this.glyphGPUTable = prepared.modelProps.table!;
+    super.setProps({table: this.glyphGPUTable});
+    previousGlyphGPUTable.destroy();
     this.setAttributes({[EXPANDED_GLYPH_VERTEX_DATA]: prepared.expandedGlyphVertexData});
     if (prepared.atlasTexture) {
       this.setBindings({fontAtlasTexture: prepared.atlasTexture});
@@ -780,9 +790,9 @@ export class ArrowAttributeTextModel extends ArrowModel {
       this.textProps = nextProps;
       return;
     }
-    const arrowGPUTable = this.arrowGPUTable;
-    if (!arrowGPUTable) {
-      throw new Error('ArrowTextModel appended text batches require an Arrow GPU render table');
+    const glyphGPUTable = this.table;
+    if (!glyphGPUTable) {
+      throw new Error('ArrowTextModel appended text batches require a GPU render table');
     }
 
     const shaderLayout = resolveArrowTextShaderLayout(nextProps);
@@ -810,12 +820,9 @@ export class ArrowAttributeTextModel extends ArrowModel {
       const renderTable = createArrowTextRenderTable(glyphTable.table, generatedBufferBatches);
 
       for (const recordBatch of renderTable.batches) {
-        arrowGPUTable.addBatch(
+        glyphGPUTable.addBatch(
           makeArrowGPURecordBatch(this.device, recordBatch, {
-            shaderLayout,
-            arrowPaths: nextProps.arrowPaths,
-            bufferProps: nextProps.arrowBufferProps,
-            allowWebGLOnlyFormats: nextProps.allowWebGLOnlyFormats
+            shaderLayout
           })
         );
       }
@@ -854,7 +861,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
 
   /** Draws each generated glyph render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    const arrowBatches = this.arrowGPUTable?.batches;
+    const arrowBatches = this.table?.batches;
     if (!arrowBatches || arrowBatches.length !== this.renderBatches.length) {
       throw new Error('ArrowTextModel draw batches must align with generated glyph render batches');
     }
@@ -875,7 +882,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
       }
     } finally {
       this.setAttributes({
-        ...(this.arrowGPUTable?.attributes || {}),
+        ...(this.table?.attributes || {}),
         [EXPANDED_GLYPH_VERTEX_DATA]: this.expandedGlyphVertexData
       });
       this.setInstanceCount(this.glyphLayout.glyphCount);
@@ -889,6 +896,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
     this.atlasTexture?.destroy();
     destroyArrowTextRenderBatches(this.renderBatches);
     super.destroy();
+    this.glyphGPUTable.destroy();
   }
 }
 
@@ -1442,7 +1450,7 @@ function drawPreparedStorageTextModelBatch(model: Model, renderPass: RenderPass)
 function createArrowStorageTextModelProps(
   props: ArrowStorageTextModelProps,
   storageState: ArrowStorageTextState
-): ArrowModelProps {
+): GPUTableModelProps {
   const firstBatch = getFirstArrowStorageTextBatch(storageState);
   const firstRenderBatch = getFirstArrowStorageTextRenderBatch(storageState);
   return {
@@ -1480,7 +1488,7 @@ function createArrowStorageTextBindings(
   storageState: ArrowStorageTextState,
   batch: ArrowStorageTextBatchState,
   renderBatch: ArrowStorageTextRenderBatchState
-): NonNullable<ArrowModelProps['bindings']> {
+): NonNullable<GPUTableModelProps['bindings']> {
   return {
     ...(props.bindings || {}),
     textRowPositions: batch.rowPositionsBuffer,
@@ -1500,7 +1508,7 @@ function createArrowStorageTextBindings(
 function createArrowDictionaryStorageTextModelProps(
   props: ArrowDictionaryStorageTextModelProps,
   storageState: ArrowDictionaryStorageTextState
-): ArrowModelProps {
+): GPUTableModelProps {
   const firstBatch = getFirstArrowDictionaryStorageTextBatch(storageState);
   const firstRenderBatch = getFirstArrowDictionaryStorageTextRenderBatch(storageState);
   return {
@@ -1525,7 +1533,7 @@ function createArrowDictionaryStorageTextBindings(
   storageState: ArrowDictionaryStorageTextState,
   batch: ArrowDictionaryStorageTextBatchState,
   renderBatch: ArrowDictionaryStorageTextRenderBatchState
-): NonNullable<ArrowModelProps['bindings']> {
+): NonNullable<GPUTableModelProps['bindings']> {
   return {
     ...(props.bindings || {}),
     textRowPositions: batch.rowPositionsBuffer,

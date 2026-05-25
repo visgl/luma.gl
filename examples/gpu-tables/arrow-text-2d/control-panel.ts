@@ -348,12 +348,9 @@ export function makeArrowText2DControlPanelHtml({
       <div style="display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
         <label for="${ROW_COUNT_SELECTOR_ID}">Rows</label>
         <select id="${ROW_COUNT_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="100k">100K rows</option>
-          <option value="500k">500K rows</option>
-          <option value="1m">1M rows</option>
-          <option value="100k-stream">100K rows streamed</option>
-          <option value="500k-stream">500K rows streamed</option>
-          <option value="1m-stream">1M rows streamed</option>
+          <option value="100k-stream">100K rows streamed in ${streamingBatchCount} batches</option>
+          <option value="500k-stream">500K rows streamed in ${streamingBatchCount} batches</option>
+          <option value="1m-stream">1M rows streamed in ${streamingBatchCount} batches</option>
         </select>
         <label for="${SOURCE_SELECTOR_ID}">Text</label>
         <select id="${SOURCE_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
@@ -484,14 +481,7 @@ export function makeArrowText2DControlPanelHtml({
 function isArrowText2DControlPanelRowCountKind(
   value: string | undefined
 ): value is ArrowText2DControlPanelRowCountKind {
-  return (
-    value === '100k' ||
-    value === '500k' ||
-    value === '1m' ||
-    value === '100k-stream' ||
-    value === '500k-stream' ||
-    value === '1m-stream'
-  );
+  return value === '100k-stream' || value === '500k-stream' || value === '1m-stream';
 }
 
 function isArrowText2DControlPanelSourceKind(

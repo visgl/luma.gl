@@ -133,7 +133,8 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
     isGlyphVertexClipped(glyphVertexOffset, inputs.glyphClipRects)
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
-  outputs.textColor = inputs.colors;
+  let neutralTextColor = vec4<f32>(0.78, 0.86, 0.96, 1.0);
+  outputs.textColor = mix(neutralTextColor, inputs.colors, textViewport.colorsEnabled);
   outputs.objectIndex = i32(inputs.rowIndices);
   return outputs;
 }
@@ -142,9 +143,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
 fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
   let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
   let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
-  let neutralTextColor = vec4<f32>(0.78, 0.86, 0.96, 1.0);
-  let textColor = mix(neutralTextColor, inputs.textColor, textViewport.colorsEnabled);
-  let fragColor = vec4<f32>(textColor.rgb, textColor.a * glyphAlpha);
+  let fragColor = vec4<f32>(inputs.textColor.rgb, inputs.textColor.a * glyphAlpha);
   return picking_filterHighlightColor(fragColor, inputs.objectIndex);
 }
 
@@ -723,7 +722,8 @@ void main() {
     ? vec4(0.0)
     : vec4(clipPosition, 0.0, 1.0);
   vTextureCoordinate = atlasPixel / atlasSize;
-  vTextColor = colors;
+  vec4 neutralTextColor = vec4(0.78, 0.86, 0.96, 1.0);
+  vTextColor = mix(neutralTextColor, colors, textViewport.colorsEnabled);
 }
 `;
 
@@ -740,9 +740,7 @@ out vec4 fragColor;
 void main() {
   float sampledAlpha = texture(fontAtlasTexture, vTextureCoordinate).a;
   float glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
-  vec4 neutralTextColor = vec4(0.78, 0.86, 0.96, 1.0);
-  vec4 textColor = mix(neutralTextColor, vTextColor, textViewport.colorsEnabled);
-  fragColor = vec4(textColor.rgb, textColor.a * glyphAlpha);
+  fragColor = vec4(vTextColor.rgb, vTextColor.a * glyphAlpha);
   fragColor = picking_filterColor(fragColor);
 }
 `;

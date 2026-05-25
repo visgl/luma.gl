@@ -93,8 +93,8 @@ but DGGS boundary math still runs in Float32 today, so the low components are
 zero until true higher-precision decode math is added. The `dggs` shader module
 provides the matching WGSL Uint64 word and DGGS boundary helpers.
 
-`ArrowTableGeometry`, `makeGPUGeometryFromArrow()`, and `ArrowModel` can also
-consume loaders.gl-compatible Mesh Arrow tables through the local structural
+`ArrowTableGeometry` and `makeGPUGeometryFromArrow()` can convert
+loaders.gl-compatible Mesh Arrow tables through the local structural
 `ArrowMeshTable` type. Mesh Arrow attributes are uploaded as table-backed GPU
 geometry, defaulting to one interleaved vertex buffer plus a separate optional
 index buffer. `ArrowGeometry` remains as a deprecated compatibility alias for

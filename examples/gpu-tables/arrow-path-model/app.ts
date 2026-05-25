@@ -5,14 +5,12 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
+import type * as arrow from 'apache-arrow';
 import {ArrowPathModelControlPanel, makeArrowPathModelControlPanelHtml} from './control-panel';
 import {
   createStreamingPathRecordBatchIterator,
-  getArrowPathInputKind,
-  getBaseArrowPathRowCountKind,
   getTemporalCurrentTimeMilliseconds,
   getValidPathModelKindForTimeKind,
-  isStreamingArrowPathRowCountKind,
   makeArrowPathRecordBatches,
   makeArrowPathSourceData,
   MEASURE_SWEEP_DURATION,
@@ -23,7 +21,6 @@ import {
   type ArrowPathCapKind,
   type ArrowPathColorKind,
   type ArrowPathCoordinateKind,
-  type ArrowPathInputKind,
   type ArrowPathJointKind,
   type ArrowPathRowCountKind,
   type ArrowPathTimeKind
@@ -41,7 +38,7 @@ import {
 import {DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT, getArrowPathMetrics} from './arrow-path-metrics';
 import {
   ArrowPathLayer,
-  prepareArrowPathInput,
+  prepareArrowPathInputFromRecordBatches,
   type ArrowPathLayerInput,
   type ArrowPathLayerModel,
   type ArrowPathLayerProps,
@@ -62,10 +59,8 @@ type PathLayerUpdateOptions = {
 export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowPathModelControlPanelHtml({
     rowLabels: {
-      '240': PATH_DATASETS['240'].label,
-      '960': PATH_DATASETS['960'].label,
-      '2400': PATH_DATASETS['2400'].label,
-      '2400-stream': `${PATH_DATASETS['2400'].label} streamed`
+      '240-stream': `${PATH_DATASETS['240'].label} streamed in ${formatStreamingPathBatchCount(getStreamingPathBatchCount('240'))}`,
+      '2400-stream': `${PATH_DATASETS['2400'].label} streamed in ${formatStreamingPathBatchCount(STREAMING_PATH_BATCH_COUNT)}`
     },
     deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT
   });
@@ -74,13 +69,13 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
 
   readonly device: Device;
   readonly shaderInputs = createArrowPathShaderInputs();
-  readonly pathInputs: Partial<Record<ArrowPathInputKind, ArrowPathLayerInput>> = {};
-  activeRowCountKind: ArrowPathRowCountKind = '240';
+  activeRowCountKind: ArrowPathRowCountKind = '240-stream';
   activeCoordinateKind: ArrowPathCoordinateKind = 'float32';
   activeColorKind: ArrowPathColorKind = 'vertex-colors';
   activeTimeKind: ArrowPathTimeKind = 'xyzm';
   activePathModelKind: ArrowPathLayerModel = 'auto';
   activePathInput!: ArrowPathLayerInput;
+  initialStreamingPathInput: ArrowPathLayerInput | null = null;
   pathLayer!: ArrowPathLayer;
   measureSweepEnabled = true;
   widthsEnabled = true;
@@ -89,7 +84,6 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
   miterLimit = 4;
   measureTime = 0;
   lastRenderSeconds: number | null = null;
-  pathInputRequestVersion = 0;
   isFinalized = false;
   controlPanel!: ArrowPathModelControlPanel;
 
@@ -99,15 +93,28 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
   }
 
   override async onInitialize(): Promise<void> {
-    this.activePathInput = await this.getOrCreatePathInput(
+    const {pathInput, recordBatches, arrowVectorBuildTimeMs} = await this.createInitialPathInput(
       this.activeRowCountKind,
       this.activeCoordinateKind,
       this.activeColorKind,
       this.activeTimeKind
     );
+    if (this.isFinalized) {
+      pathInput.destroy();
+      return;
+    }
+    this.activePathInput = pathInput;
+    this.initialStreamingPathInput = pathInput;
     this.pathLayer = this.createPathLayer(this.activePathModelKind);
     this.initializeControlPanel();
     this.updateMetricLabels();
+    this.streamPathRecordBatches(
+      recordBatches,
+      arrowVectorBuildTimeMs,
+      this.activeTimeKind,
+      this.activePathModelKind,
+      this.pathLayer.beginRecordBatchStream()
+    );
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
@@ -136,7 +143,7 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
     this.shaderInputs.setProps({
       pathViewport: {
         viewportScale: [1 / Math.max(aspect, 0.2), 1],
-        time: this.measureTime,
+        time: this.activeTimeKind === 'none' ? -1 : this.measureTime,
         colorsEnabled: this.activeColorKind === 'none' ? 0 : 1,
         widthsEnabled: this.widthsEnabled ? 1 : 0,
         capRounded: this.capKind === 'round' ? 1 : 0,
@@ -154,12 +161,10 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
 
   override onFinalize(): void {
     this.isFinalized = true;
-    this.pathInputRequestVersion++;
     this.controlPanel?.destroy();
     this.pathLayer?.destroy();
-    for (const pathInput of Object.values(this.pathInputs)) {
-      pathInput?.destroy();
-    }
+    this.initialStreamingPathInput?.destroy();
+    this.initialStreamingPathInput = null;
   }
 
   createPathLayer(modelKind: ArrowPathLayerModel): ArrowPathLayer {
@@ -196,28 +201,55 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
     });
   }
 
-  async getOrCreatePathInput(
+  async createInitialPathInput(
     rowCountKind: ArrowPathRowCountKind,
     coordinateKind: ArrowPathCoordinateKind,
     colorKind: ArrowPathColorKind,
     timeKind: ArrowPathTimeKind
-  ): Promise<ArrowPathLayerInput> {
-    const inputKind = getArrowPathInputKind(rowCountKind, coordinateKind, colorKind, timeKind);
-    const cachedPathInput = this.pathInputs[inputKind];
-    if (cachedPathInput) {
-      return cachedPathInput;
-    }
-    const pathInput = await prepareArrowPathInput(
-      this.device,
-      makeArrowPathSourceData(
-        PATH_DATASETS[getBaseArrowPathRowCountKind(rowCountKind)],
-        coordinateKind,
-        colorKind,
-        timeKind
-      )
+  ): Promise<{
+    pathInput: ArrowPathLayerInput;
+    recordBatches: arrow.RecordBatch[];
+    arrowVectorBuildTimeMs: number;
+  }> {
+    const {recordBatches, arrowVectorBuildTimeMs} = this.createPathStreamSource(
+      rowCountKind,
+      coordinateKind,
+      colorKind,
+      timeKind
     );
-    this.pathInputs[inputKind] = pathInput;
-    return pathInput;
+    const firstRecordBatch = recordBatches[0];
+    if (!firstRecordBatch) {
+      throw new Error('Arrow path streaming example requires at least one record batch');
+    }
+    const pathInput = await prepareArrowPathInputFromRecordBatches(
+      this.device,
+      [firstRecordBatch],
+      arrowVectorBuildTimeMs
+    );
+    return {pathInput, recordBatches, arrowVectorBuildTimeMs};
+  }
+
+  createPathStreamSource(
+    rowCountKind: ArrowPathRowCountKind,
+    coordinateKind: ArrowPathCoordinateKind,
+    colorKind: ArrowPathColorKind,
+    timeKind: ArrowPathTimeKind
+  ): {
+    recordBatches: arrow.RecordBatch[];
+    arrowVectorBuildTimeMs: number;
+  } {
+    const datasetKind = getStreamingPathDatasetKind(rowCountKind);
+    const sourceData = makeArrowPathSourceData(
+      PATH_DATASETS[datasetKind],
+      coordinateKind,
+      colorKind,
+      timeKind,
+      STREAMING_PATH_ROWS_PER_CHUNK
+    );
+    return {
+      recordBatches: makeArrowPathRecordBatches(sourceData).slice(0, STREAMING_PATH_BATCH_COUNT),
+      arrowVectorBuildTimeMs: sourceData.arrowVectorBuildTimeMs
+    };
   }
 
   initializeControlPanel(): void {
@@ -330,39 +362,23 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
     nextTimeKind: ArrowPathTimeKind,
     nextPathModelKind = this.activePathModelKind
   ): Promise<void> {
-    const requestVersion = ++this.pathInputRequestVersion;
     const resolvedPathModelKind = getValidPathModelKindForTimeKind(nextPathModelKind, nextTimeKind);
-
-    if (isStreamingArrowPathRowCountKind(nextRowCountKind)) {
-      this.startStreamingPathInput(
-        nextCoordinateKind,
-        nextColorKind,
-        nextTimeKind,
-        resolvedPathModelKind,
-        this.pathLayer.beginRecordBatchStream()
-      );
-      this.updateActiveSelection(
-        nextRowCountKind,
-        nextCoordinateKind,
-        nextColorKind,
-        nextTimeKind,
-        resolvedPathModelKind
-      );
-      return;
-    }
-
-    this.pathLayer.cancelRecordBatchStream();
-    const nextPathInput = await this.getOrCreatePathInput(
+    const {recordBatches, arrowVectorBuildTimeMs} = this.createPathStreamSource(
       nextRowCountKind,
       nextCoordinateKind,
       nextColorKind,
       nextTimeKind
     );
-    if (this.isFinalized || requestVersion !== this.pathInputRequestVersion) {
+    if (this.isFinalized) {
       return;
     }
-
-    this.activePathInput = nextPathInput;
+    this.streamPathRecordBatches(
+      recordBatches,
+      arrowVectorBuildTimeMs,
+      nextTimeKind,
+      resolvedPathModelKind,
+      this.pathLayer.beginRecordBatchStream()
+    );
     this.updateActiveSelection(
       nextRowCountKind,
       nextCoordinateKind,
@@ -370,34 +386,18 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
       nextTimeKind,
       resolvedPathModelKind
     );
-    this.updatePathLayerProps({
-      data: this.activePathInput,
-      model: resolvedPathModelKind,
-      timeColumn: nextTimeKind
-    });
   }
 
-  startStreamingPathInput(
-    coordinateKind: ArrowPathCoordinateKind,
-    colorKind: ArrowPathColorKind,
+  streamPathRecordBatches(
+    recordBatches: arrow.RecordBatch[],
+    arrowVectorBuildTimeMs: number,
     timeKind: ArrowPathTimeKind,
     modelKind: ArrowPathLayerModel,
     streamingSession: ArrowPathLayerStreamingSession
   ): void {
-    const sourceData = makeArrowPathSourceData(
-      PATH_DATASETS['2400'],
-      coordinateKind,
-      colorKind,
-      timeKind,
-      STREAMING_PATH_ROWS_PER_CHUNK
-    );
-    const recordBatches = makeArrowPathRecordBatches(sourceData).slice(
-      0,
-      STREAMING_PATH_BATCH_COUNT
-    );
     void this.pathLayer.streamRecordBatches({
       recordBatchIterator: createStreamingPathRecordBatchIterator(recordBatches),
-      arrowVectorBuildTimeMs: sourceData.arrowVectorBuildTimeMs,
+      arrowVectorBuildTimeMs,
       model: modelKind,
       timeColumn: timeKind,
       streamingSession,
@@ -410,6 +410,10 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
     this.activePathInput = update.pathInput;
+    if (update.isFirstBatch) {
+      this.initialStreamingPathInput?.destroy();
+      this.initialStreamingPathInput = null;
+    }
     this.handlePathLayerUpdate(update.setPropsResult, {syncControls: update.isFirstBatch});
   }
 
@@ -476,4 +480,16 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
     this.miterLimit = nextMiterLimit;
     this.controlPanel.syncControls(this.getControlPanelState());
   };
+}
+
+function getStreamingPathDatasetKind(rowCountKind: ArrowPathRowCountKind): '240' | '2400' {
+  return rowCountKind === '240-stream' ? '240' : '2400';
+}
+
+function getStreamingPathBatchCount(datasetKind: '240' | '2400'): number {
+  return Math.ceil(PATH_DATASETS[datasetKind].pathCount / STREAMING_PATH_ROWS_PER_CHUNK);
+}
+
+function formatStreamingPathBatchCount(batchCount: number): string {
+  return `${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}`;
 }

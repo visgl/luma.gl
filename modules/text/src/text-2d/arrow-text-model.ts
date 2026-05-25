@@ -7,14 +7,15 @@ import {
   GPUVector,
   planGeneratedBufferBatches,
   type GeneratedBufferBatch,
-  type GPUData
+  type GPUData,
+  type GPUTableModelProps
 } from '@luma.gl/tables';
 import {
   getArrowVectorBufferSource,
   isNumericArrowType,
+  makeArrowGPUTable,
   makeArrowGPUVector,
   makeArrowFixedSizeListVector,
-  type ArrowModelProps,
   type NumericArrowType
 } from '@luma.gl/arrow';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
@@ -162,10 +163,7 @@ export type ArrowStorageTextSourceVectors = {
 };
 
 /** Props for the attribute-backed Arrow text renderer. */
-export type ArrowTextModelProps = Omit<
-  ArrowModelProps,
-  'arrowTable' | 'arrowGPUTable' | 'arrowCount'
-> & {
+export type ArrowTextModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> & {
   /** GPU-resident label origins aligned one-for-one with `texts`. */
   positions: GPUVector<FixedSizeList<Float32>>;
   /** Optional packed RGBA8 text colors, consumed as label or character attributes when declared by the shader. */
@@ -274,7 +272,7 @@ export type ArrowAttributeTextState = {
   /** Props used to build the prepared attribute state. */
   textProps: ArrowTextModelProps;
   /** Model props produced from the prepared glyph table. */
-  modelProps: ArrowModelProps;
+  modelProps: GPUTableModelProps;
   /** Expanded glyph table and layout diagnostics. */
   glyphTable: ArrowTextGlyphTable;
   /** First generated expanded glyph vertex attribute buffer. */
@@ -1336,7 +1334,7 @@ function prepareArrowTextModel(
   device: Device,
   props: ArrowTextModelProps
 ): {
-  modelProps: ArrowModelProps;
+  modelProps: GPUTableModelProps;
   glyphTable: ArrowTextGlyphTable;
   expandedGlyphVertexData: Buffer;
   renderBatches: ArrowTextRenderBatchState[];
@@ -1415,8 +1413,13 @@ function prepareArrowTextModel(
       },
       bufferLayout: [...(props.bufferLayout || []), expandedGlyphVertexState.bufferLayout],
       vertexCount: props.vertexCount ?? 6,
-      arrowTable: createArrowTextRenderTable(glyphTable.table, generatedBufferBatches),
-      arrowCount: 'instance'
+      instanceCount: glyphTable.glyphLayout.glyphCount,
+      table: makeArrowGPUTable(
+        device,
+        createArrowTextRenderTable(glyphTable.table, generatedBufferBatches),
+        {shaderLayout}
+      ),
+      tableCount: 'none'
     },
     glyphTable,
     expandedGlyphVertexData: expandedGlyphVertexState.buffer,
