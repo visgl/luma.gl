@@ -1,7 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
-import {getDataTypeFromTypedArray, getTypedArrayFromDataType} from '../utils/vertex-data-types';
 import {
   Device,
   Buffer,
@@ -10,23 +9,17 @@ import {
   type VertexFormat
 } from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
-import {GPUVector} from '@luma.gl/tables';
-import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {
-  Binary,
-  DataType,
-  Field,
-  FixedSizeList,
-  Float32,
-  Int16,
-  Int32,
-  Int8,
-  Precision,
-  Uint16,
-  Uint32,
-  Uint8,
-  util
-} from 'apache-arrow';
+  GPUVector,
+  getArrowDataType,
+  getArrowScalarByteLength,
+  getDataTypeFromTypedArray,
+  getScalarArrowType,
+  getSignedDataType,
+  getTypedArrayFromDataType
+} from '@luma.gl/tables';
+import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
+import {Binary, DataType, Precision, util} from 'apache-arrow';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 
@@ -473,10 +466,6 @@ function validatePackedNumericGPUVector(vector: GPUVector): void {
   if (DataType.isInt(scalarType) && scalarType.bitWidth === 64) {
     throw new Error('GPUTableEvaluator.fromGPUVector() does not support 64-bit integer input');
   }
-  if (DataType.isFloat(scalarType) && scalarType.precision === Precision.HALF) {
-    throw new Error('GPUTableEvaluator.fromGPUVector() does not support float16 input');
-  }
-
   const expectedRowByteLength = getArrowScalarByteLength(scalarType) * vector.stride;
   if (vector.rowByteLength !== expectedRowByteLength) {
     throw new Error(
@@ -575,70 +564,4 @@ function getVertexFormat(
     return `${baseFormat}x3-webgl` as VertexFormat;
   }
   return `${baseFormat}${size === 1 ? '' : `x${size}`}` as VertexFormat;
-}
-
-function getArrowDataType(type: SignedDataType, size: number): DataType {
-  const scalarType = getArrowScalarType(type);
-  return size === 1 ? scalarType : new FixedSizeList(size, new Field('value', scalarType, false));
-}
-
-function getArrowScalarType(type: SignedDataType): DataType {
-  switch (type) {
-    case 'uint8':
-      return new Uint8();
-    case 'sint8':
-      return new Int8();
-    case 'uint16':
-      return new Uint16();
-    case 'sint16':
-      return new Int16();
-    case 'uint32':
-      return new Uint32();
-    case 'sint32':
-      return new Int32();
-    case 'float32':
-      return new Float32();
-    default:
-      throw new Error(`Cannot synthesize an Arrow type for ${type}`);
-  }
-}
-
-function getScalarArrowType(type: DataType): DataType {
-  return DataType.isFixedSizeList(type) ? type.children[0].type : type;
-}
-
-function getSignedDataType(type: DataType): SignedDataType {
-  if (DataType.isInt(type)) {
-    switch (type.bitWidth) {
-      case 8:
-        return type.isSigned ? 'sint8' : 'uint8';
-      case 16:
-        return type.isSigned ? 'sint16' : 'uint16';
-      case 32:
-        return type.isSigned ? 'sint32' : 'uint32';
-    }
-  }
-
-  if (DataType.isFloat(type) && type.precision === Precision.SINGLE) {
-    return 'float32';
-  }
-
-  throw new Error(`Unsupported GPUVector logical type ${type}`);
-}
-
-function getArrowScalarByteLength(type: DataType): number {
-  if (DataType.isInt(type)) {
-    return type.bitWidth / 8;
-  }
-  if (DataType.isFloat(type)) {
-    switch (type.precision) {
-      case Precision.HALF:
-        return 2;
-      case Precision.SINGLE:
-        return 4;
-      case Precision.DOUBLE:
-        return 8;
-    }
-  }
-  throw new Error(`Unsupported GPUVector logical type ${type}`);
 }

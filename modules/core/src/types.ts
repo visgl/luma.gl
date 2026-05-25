@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 /** TypeScript type covering all typed arrays */
-import {TypedArray, NumberArray} from '@math.gl/types';
+import type {TypedArray, NumberArray} from '@math.gl/types';
 
-export {TypedArray, NumberArray};
+export type {TypedArray, NumberArray};
 
 export type BigTypedArray = TypedArray | BigIntTypedArray;
 
@@ -30,3 +30,15 @@ export type BigTypedArrayConstructor =
   | TypedArrayConstructor
   | BigInt64ArrayConstructor
   | BigUint64ArrayConstructor;
+
+export const NativeFloat16ArrayConstructor: TypedArrayConstructor | undefined = (
+  globalThis as typeof globalThis & {Float16Array?: TypedArrayConstructor}
+).Float16Array;
+
+export function getFloat16ArrayConstructor(): TypedArrayConstructor {
+  return NativeFloat16ArrayConstructor ?? Uint16Array;
+}
+
+export function isFloat16ArrayConstructor(value: unknown): boolean {
+  return Boolean(NativeFloat16ArrayConstructor && value === NativeFloat16ArrayConstructor);
+}
