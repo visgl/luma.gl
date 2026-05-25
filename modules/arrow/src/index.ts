@@ -38,6 +38,12 @@ export {
   type ConvertArrowMatrixToGPUVectorOptions
 } from './arrow/vectors/arrow-matrix-gpu-vector';
 export {
+  canConvertColors,
+  convertColors,
+  convertArrowColors,
+  type ArrowColorType
+} from './arrow/arrow-colors';
+export {
   getArrowMatrixVectorInfo,
   makeArrowMatrixVector,
   makeArrowMatrix2x2Vector,

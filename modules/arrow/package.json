@@ -43,6 +43,7 @@
   "dependencies": {
     "@luma.gl/core": "~9.3.0",
     "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/gpgpu": "~9.3.0",
     "@luma.gl/shadertools": "~9.3.0",
     "@luma.gl/tables": "~9.3.0",
     "@luma.gl/text": "~9.3.0",
