@@ -21,10 +21,10 @@ import {
   type ArrowDictionaryStorageTextInputProps,
   type ArrowStorageTextInputProps,
   type ArrowTextModelProps,
-  type AttributeTextModelProps,
   type ConvertedArrowTextData,
-  type DictionaryTextModelProps,
-  type StorageTextModelProps,
+  type PreparedAttributeTextModelProps,
+  type PreparedDictionaryTextModelProps,
+  type PreparedStorageTextModelProps,
   type FontSettings
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
@@ -460,7 +460,7 @@ export class ArrowTextLayer {
         parameters: props.parameters,
         storageState,
         ownsStorageState: true
-      } as unknown as DictionaryTextModelProps);
+      } as PreparedDictionaryTextModelProps);
     }
 
     if (modelKind === 'storage') {
@@ -482,7 +482,7 @@ export class ArrowTextLayer {
         parameters: props.parameters,
         storageState,
         ownsStorageState: true
-      } as unknown as StorageTextModelProps);
+      } as PreparedStorageTextModelProps);
     }
 
     const attributeInputProps = {
@@ -493,7 +493,7 @@ export class ArrowTextLayer {
     return new AttributeTextModel(this.device, {
       ...commonProps,
       attributeState
-    } as unknown as AttributeTextModelProps);
+    } as PreparedAttributeTextModelProps);
   }
 
   private resolveModel(

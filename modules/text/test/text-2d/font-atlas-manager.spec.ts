@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {isBrowser} from '@probe.gl/env';
-import FontAtlasManager, {type FontSettings} from '../../src/text-2d/font-atlas-manager';
+import FontAtlasManager, {type FontSettings} from '../../src/text-2d/atlas/font-atlas-manager';
 
 function createImageData(width: number, height: number): ImageData {
   return new ImageData(width, height);

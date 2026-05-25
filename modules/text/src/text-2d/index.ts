@@ -10,7 +10,7 @@ export {
   type FontAtlasBuildMetrics,
   type FontRenderer,
   type FontSettings
-} from './font-atlas-manager';
+} from './atlas/font-atlas-manager';
 export {
   autoWrapping,
   buildMapping,
@@ -19,7 +19,7 @@ export {
   transformParagraph,
   type Character,
   type CharacterMapping
-} from './text-utils';
+} from './atlas/text-utils';
 export {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
@@ -42,12 +42,19 @@ export {
   type ArrowUtf8TextIndexAccessor,
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
+  type Utf8TextIndexTarget
+} from './arrow-attributes/arrow-text';
+export {
   type GpuDictionaryCompressedTextStream,
   type GpuDictionaryUtf8TextInput,
   type GpuExpandedTextStream,
   type GpuUtf8TextInput,
-  type Utf8TextIndexTarget
-} from './arrow-text';
+  type TextGlyphLayout,
+  type Utf8Dictionary,
+  type Utf8DictionaryIndexType,
+  type Utf8TextType,
+  type Utf8TextVector
+} from './model-utils/gpu-text-types';
 export {
   createGpuDictionaryUtf8ExpandedInput,
   createGpuDictionaryUtf8ExpansionConfig,
@@ -68,7 +75,7 @@ export {
   type GpuUtf8ExpandedInputState,
   type StorageGlyphLookupState,
   type StorageGlyphMetricState
-} from './gpu-text-expansion';
+} from './model-utils/gpu-text-expansion';
 export {
   DEFAULT_GPU_UTF8_MAP_BINDING_NAMES,
   getGpuUtf8MapShaderBindings,
@@ -76,14 +83,22 @@ export {
   type GpuUtf8MapBindingNames,
   type GpuUtf8MapBindingOptions,
   type GpuUtf8MapShaderSourceOptions
-} from './gpu-utf8-map';
+} from './model-utils/gpu-utf8-map';
+export {ArrowAttributeTextModel} from './arrow-attributes/arrow-attribute-text-model';
+export {ArrowStorageTextModel} from './arrow-attributes/arrow-storage-text-model';
+export {ArrowDictionaryTextModel} from './arrow-attributes/arrow-dictionary-text-model';
 export {
-  ArrowAttributeTextModel,
-  ArrowDictionaryStorageTextModel,
-  ArrowDictionaryTextModel,
-  ArrowTextModel,
-  ArrowStorageTextModel
-} from './arrow-text-render-models';
+  DEFAULT_ARROW_TEXT_FS,
+  DEFAULT_ARROW_TEXT_SHADER_LAYOUT,
+  DEFAULT_ARROW_TEXT_VS,
+  DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT,
+  DEFAULT_CLIPPED_ARROW_TEXT_VS,
+  DEFAULT_DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
+  DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE,
+  DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
+  DEFAULT_STORAGE_INDEXED_TEXT_SOURCE
+} from './model-utils/text-shaders';
+export {createArrowTextDefaultFragmentShaderUniforms} from './model-utils/text-fragment-uniforms';
 export {
   buildArrowTextGlyphTable,
   createArrowAttributeTextState,
@@ -120,48 +135,51 @@ export {
   type ArrowTextModelProps,
   type ArrowTextRenderBatchState,
   type ArrowTextSourceVectors
-} from './arrow-text-model';
+} from './arrow-attributes/arrow-text-model';
 export {
   AttributeTextModel,
-  createArrowAttributeTextState as createAttributeTextState,
   type AttributeTextModelProps,
-  type AttributeTextRenderProps,
   type AttributeTextRenderBatchState,
   type AttributeTextState,
-  type AttributeTextSourceVectors
-} from './attribute-text-model';
+  type PreparedAttributeTextModelProps
+} from './models/attribute-text-model';
 export {
   StorageTextModel,
-  createArrowStorageTextState as createStorageTextState,
   type StorageTextBatchState,
-  type StorageTextInputProps,
   type StorageTextModelProps,
+  type PreparedStorageTextModelProps,
   type StorageTextRenderBatchState,
-  type StorageTextSourceVectors,
+  type StorageTextRenderProps,
   type StorageTextState
-} from './storage-text-model';
+} from './models/storage-text-model';
 export {
   DictionaryTextModel,
-  createArrowDictionaryStorageTextState as createDictionaryTextState,
   type DictionaryTextBatchState,
-  type DictionaryTextInputProps,
   type DictionaryTextModelProps,
+  type PreparedDictionaryTextModelProps,
   type DictionaryTextRenderBatchState,
-  type DictionaryTextSourceVectors,
+  type DictionaryTextRenderProps,
   type DictionaryTextState
-} from './dictionary-text-model';
+} from './models/dictionary-text-model';
+export {
+  type StorageTextAlignmentProps,
+  type TextCharacterColorType,
+  type TextColorType,
+  type TextRowColorType,
+  type TextStyleModelProps
+} from './model-utils/text-model-props';
 export {
   convertArrowTextToAttribute,
   convertArrowTextToAttributeState,
   type ArrowTextConversionColumns,
   type ConvertedArrowTextData,
   type ConvertArrowTextProps
-} from './convert-arrow-text-to-attribute';
+} from './arrow-attributes/convert-arrow-text-to-attribute';
 export {
   convertArrowTextToStorage,
   convertArrowTextToStorageState
-} from './convert-arrow-text-to-storage';
+} from './arrow-attributes/convert-arrow-text-to-storage';
 export {
   convertArrowTextToDictionary,
   convertArrowTextToDictionaryState
-} from './convert-arrow-text-to-dictionary';
+} from './arrow-attributes/convert-arrow-text-to-dictionary';
