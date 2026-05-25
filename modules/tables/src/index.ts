@@ -73,3 +73,14 @@ export {
   type GeneratedBufferBatch,
   type GeneratedBufferBatchPlannerProps
 } from './table/generated-buffer-batches';
+export {
+  getArrowDataType,
+  getArrowScalarByteLength,
+  getArrowScalarType,
+  getDataTypeFromTypedArray,
+  getScalarArrowType,
+  getSignedDataType,
+  getTypedArrayFromDataType,
+  validateArrowDataType,
+  type ArrowDataType
+} from './table/arrow-type-utils';
