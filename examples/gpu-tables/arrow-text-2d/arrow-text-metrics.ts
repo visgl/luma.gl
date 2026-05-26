@@ -18,6 +18,7 @@ export const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
 export type ArrowTextMetricProps = {
   textModel: ArrowTextLayerActiveModel;
   textInput: ArrowTextLayerInput;
+  arrowVectorBuildTimeMs: number;
   colorEnabled: boolean;
   angleEnabled: boolean;
   sizeEnabled: boolean;
@@ -25,20 +26,23 @@ export type ArrowTextMetricProps = {
 
 export function getArrowTextLayerMetrics(
   textLayer: ArrowTextLayer,
-  textInput: ArrowTextLayerInput
+  textInput: ArrowTextLayerInput,
+  arrowVectorBuildTimeMs: number
 ): ArrowText2DControlPanelMetrics {
   return getArrowTextMetrics({
     textModel: textLayer.model,
     textInput,
-    colorEnabled: textLayer.colorsEnabled,
-    angleEnabled: textLayer.anglesEnabled,
-    sizeEnabled: textLayer.sizesEnabled
+    arrowVectorBuildTimeMs,
+    colorEnabled: Boolean(textInput.colors),
+    angleEnabled: Boolean(textInput.angles),
+    sizeEnabled: Boolean(textInput.sizes)
   });
 }
 
 export function getArrowTextMetrics({
   textModel,
   textInput,
+  arrowVectorBuildTimeMs,
   colorEnabled,
   angleEnabled,
   sizeEnabled
@@ -77,31 +81,30 @@ export function getArrowTextMetrics({
         rowStorageByteLength +
         glyphDefinitionStorageByteLength +
         compressedDictionaryStorageByteLength;
-  const peakTextPathGpuByteLength = textGpuByteLength + transientComputeInputByteLength;
+  const totalArrowByteLength = textInput.arrowVectorByteLength + styleArrowByteLength;
+  const totalGpuByteLength = textGpuByteLength + styleGpuByteLength;
+  const totalBuildTimeMs = textModel.glyphAttributeBuildTimeMs + arrowVectorBuildTimeMs;
   const deckAttributeByteLength =
     getTextModelGlyphCount(textModel) * DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH;
 
   return {
     arrowVectorBytes: formatByteLength(textInput.arrowVectorByteLength),
     styleArrowBytes: formatByteLength(styleArrowByteLength),
-    arrowVectorBuildTime: textInput.arrowVectorBuildTimeMs.toFixed(1) + ' ms',
-    cpuGenerationTime: textModel.glyphAttributeBuildTimeMs.toFixed(1) + ' ms',
-    totalGpuBytes:
-      transientComputeInputByteLength > 0
-        ? formatByteLength(textGpuByteLength) +
-          '\n' +
-          formatByteLength(peakTextPathGpuByteLength) +
-          ' peak'
-        : formatByteLength(textGpuByteLength),
-    textGpuExpansion:
-      transientComputeInputByteLength > 0
-        ? formatExpansionRatio(textGpuByteLength, textInput.arrowVectorByteLength) +
-          '\n' +
-          formatExpansionRatio(peakTextPathGpuByteLength, textInput.arrowVectorByteLength) +
-          ' peak'
-        : formatExpansionRatio(textGpuByteLength, textInput.arrowVectorByteLength),
+    arrowVectorBuildTime: arrowVectorBuildTimeMs.toFixed(1) + 'ms',
+    cpuGenerationTime: textModel.glyphAttributeBuildTimeMs.toFixed(1) + 'ms',
+    totalGpuBytes: formatByteLength(textGpuByteLength),
+    textGpuExpansion: formatExpansionRatio(textGpuByteLength, textInput.arrowVectorByteLength),
     gpuStyleVectorBytes: formatByteLength(styleGpuByteLength),
     styleGpuExpansion: formatExpansionRatio(styleGpuByteLength, styleArrowByteLength),
+    computeGpuBytes: formatByteLength(transientComputeInputByteLength),
+    computeGpuExpansion:
+      transientComputeInputByteLength > 0
+        ? formatExpansionRatio(transientComputeInputByteLength, totalArrowByteLength)
+        : '-',
+    totalArrowBytes: formatByteLength(totalArrowByteLength),
+    totalLumaGpuBytes: formatByteLength(totalGpuByteLength),
+    totalLumaGpuExpansion: formatExpansionRatio(totalGpuByteLength, totalArrowByteLength),
+    totalBuildTime: totalBuildTimeMs.toFixed(1) + 'ms',
     deckAttributeSize: formatByteLength(deckAttributeByteLength),
     deckGpuExpansion: formatExpansionRatio(
       deckAttributeByteLength,
@@ -131,9 +134,9 @@ function getSelectedStyleColumnGpuByteLength(
   }
 
   return (
-    (colorEnabled ? getGpuVectorByteLength(textInput.colors) : 0) +
-    (angleEnabled ? getGpuVectorByteLength(textInput.angles) : 0) +
-    (sizeEnabled ? getGpuVectorByteLength(textInput.sizes) : 0)
+    (colorEnabled && textInput.colors ? getGpuVectorByteLength(textInput.colors) : 0) +
+    (angleEnabled && textInput.angles ? getGpuVectorByteLength(textInput.angles) : 0) +
+    (sizeEnabled && textInput.sizes ? getGpuVectorByteLength(textInput.sizes) : 0)
   );
 }
 
@@ -146,9 +149,15 @@ function getSelectedExpandedAttributeStyleVectorByteLength(
 ): number {
   const glyphCount = getTextModelGlyphCount(textModel);
   return (
-    (colorEnabled ? getExpandedAttributeVectorByteLength(textInput.colors, glyphCount) : 0) +
-    (angleEnabled ? getExpandedAttributeVectorByteLength(textInput.angles, glyphCount) : 0) +
-    (sizeEnabled ? getExpandedAttributeVectorByteLength(textInput.sizes, glyphCount) : 0)
+    (colorEnabled && textInput.colors
+      ? getExpandedAttributeVectorByteLength(textInput.colors, glyphCount)
+      : 0) +
+    (angleEnabled && textInput.angles
+      ? getExpandedAttributeVectorByteLength(textInput.angles, glyphCount)
+      : 0) +
+    (sizeEnabled && textInput.sizes
+      ? getExpandedAttributeVectorByteLength(textInput.sizes, glyphCount)
+      : 0)
   );
 }
 
@@ -182,7 +191,7 @@ function getGpuVectorByteLength(vector: GPUVector): number {
 }
 
 function getExpandedAttributeVectorByteLength(vector: GPUVector, glyphCount: number): number {
-  return vector.data.reduce((byteLength, data) => byteLength + data.byteStride * glyphCount, 0);
+  return (vector.data[0]?.byteStride ?? 0) * glyphCount;
 }
 
 function formatExpansionRatio(byteLength: number, arrowByteLength: number): string {

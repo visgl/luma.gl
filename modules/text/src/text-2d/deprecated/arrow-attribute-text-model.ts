@@ -133,7 +133,10 @@ export class ArrowAttributeTextModel extends AttributeTextModel {
         baselineOffset: this.mappingState.baselineOffset,
         lineHeight: this.mappingState.lineHeight,
         characterSet: this.mappingState.characterSet,
-        rowIndexBase: batchRowIndexBase
+        rowIndexBase: batchRowIndexBase,
+        color: nextProps.color,
+        angle: nextProps.angle,
+        size: nextProps.size
       });
       const generatedBufferBatches = planGeneratedBufferBatches({
         device: this.device,

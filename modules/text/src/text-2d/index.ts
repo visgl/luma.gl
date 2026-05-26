@@ -61,6 +61,7 @@ export {
   createGpuExpandedCompactInput,
   createGpuExpandedGeneratedState,
   createGpuUtf8ExpandedInput,
+  createGpuUtf8ExpandedInputFromBuffers,
   createStorageGlyphLookup,
   createStorageGlyphMetrics,
   dispatchGpuDictionaryUtf8ExpandedTextCompute,
@@ -101,6 +102,7 @@ export {
   createArrowAttributeTextState,
   createArrowDictionaryStorageTextState,
   createArrowStorageTextState,
+  createStorageTextStateFromGPUVectors,
   packStorageTextClipRects,
   type ArrowAttributeTextInputProps,
   type ArrowAttributeTextRenderProps,
@@ -119,7 +121,9 @@ export {
   type ArrowStorageTextState,
   type ArrowTextGlyphTable,
   type ArrowTextRenderBatchState,
-  type ArrowTextSourceVectors
+  type ArrowTextSourceVectors,
+  type GPUVectorStorageTextBatch,
+  type GPUVectorStorageTextInputProps
 } from './arrow-conversion/convert-arrow-text-vectors';
 export {
   AttributeTextModel,

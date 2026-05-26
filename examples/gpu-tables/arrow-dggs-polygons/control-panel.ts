@@ -4,22 +4,22 @@
 
 import type {DggsCellEncoding} from '@luma.gl/arrow';
 
-const ENCODING_SELECTOR_ID = 'dggs-gpu-polygons-encoding';
-const SOURCE_SELECTOR_ID = 'dggs-gpu-polygons-source';
-const ROW_COUNT_ID = 'dggs-gpu-polygons-row-count';
-const KEY_BYTES_ID = 'dggs-gpu-polygons-key-bytes';
-const PATH_BYTES_ID = 'dggs-gpu-polygons-path-bytes';
-const TRANSIENT_BYTES_ID = 'dggs-gpu-polygons-transient-bytes';
-const ACTIVE_COLUMN_ID = 'dggs-gpu-polygons-active-column';
+const ENCODING_SELECTOR_ID = 'arrow-dggs-polygons-encoding';
+const SOURCE_SELECTOR_ID = 'arrow-dggs-polygons-source';
+const ROW_COUNT_ID = 'arrow-dggs-polygons-row-count';
+const KEY_BYTES_ID = 'arrow-dggs-polygons-key-bytes';
+const PATH_BYTES_ID = 'arrow-dggs-polygons-path-bytes';
+const TRANSIENT_BYTES_ID = 'arrow-dggs-polygons-transient-bytes';
+const ACTIVE_COLUMN_ID = 'arrow-dggs-polygons-active-column';
 
 export type DggsSourceKind = 'uint64' | 'utf8';
 
-export type DggsGpuPolygonsControlPanelState = {
+export type ArrowDggsPolygonsControlPanelState = {
   encoding: DggsCellEncoding;
   sourceKind: DggsSourceKind;
 };
 
-export type DggsGpuPolygonsControlPanelMetrics = {
+export type ArrowDggsPolygonsControlPanelMetrics = {
   activeColumn: string;
   rowCount: string;
   keyBytes: string;
@@ -27,19 +27,19 @@ export type DggsGpuPolygonsControlPanelMetrics = {
   transientBytes: string;
 };
 
-export type DggsGpuPolygonsControlPanelHandlers = {
+export type ArrowDggsPolygonsControlPanelHandlers = {
   onEncodingChange: (encoding: DggsCellEncoding) => void;
   onSourceChange: (sourceKind: DggsSourceKind) => void;
 };
 
-export type DggsGpuPolygonsControlPanelOptions = {
-  initialState: DggsGpuPolygonsControlPanelState;
-  handlers: DggsGpuPolygonsControlPanelHandlers;
+export type ArrowDggsPolygonsControlPanelOptions = {
+  initialState: ArrowDggsPolygonsControlPanelState;
+  handlers: ArrowDggsPolygonsControlPanelHandlers;
 };
 
-export class DggsGpuPolygonsControlPanel {
-  private readonly handlers: DggsGpuPolygonsControlPanelHandlers;
-  private state: DggsGpuPolygonsControlPanelState;
+export class ArrowDggsPolygonsControlPanel {
+  private readonly handlers: ArrowDggsPolygonsControlPanelHandlers;
+  private state: ArrowDggsPolygonsControlPanelState;
   private encodingSelector: HTMLSelectElement | null = null;
   private sourceSelector: HTMLSelectElement | null = null;
   private rowCountLabel: HTMLElement | null = null;
@@ -48,7 +48,7 @@ export class DggsGpuPolygonsControlPanel {
   private transientBytesLabel: HTMLElement | null = null;
   private activeColumnLabel: HTMLElement | null = null;
 
-  constructor({initialState, handlers}: DggsGpuPolygonsControlPanelOptions) {
+  constructor({initialState, handlers}: ArrowDggsPolygonsControlPanelOptions) {
     this.state = initialState;
     this.handlers = handlers;
   }
@@ -85,7 +85,7 @@ export class DggsGpuPolygonsControlPanel {
     this.activeColumnLabel = null;
   }
 
-  syncControls(state: Partial<DggsGpuPolygonsControlPanelState>): void {
+  syncControls(state: Partial<ArrowDggsPolygonsControlPanelState>): void {
     this.state = {...this.state, ...state};
     if (this.encodingSelector) {
       this.encodingSelector.value = this.state.encoding;
@@ -95,7 +95,7 @@ export class DggsGpuPolygonsControlPanel {
     }
   }
 
-  setMetricValues(metrics: DggsGpuPolygonsControlPanelMetrics): void {
+  setMetricValues(metrics: ArrowDggsPolygonsControlPanelMetrics): void {
     setMetricText(this.activeColumnLabel, metrics.activeColumn);
     setMetricText(this.rowCountLabel, metrics.rowCount);
     setMetricText(this.keyBytesLabel, metrics.keyBytes);
@@ -118,7 +118,7 @@ export class DggsGpuPolygonsControlPanel {
   };
 }
 
-export function makeDggsGpuPolygonsControlPanelHtml(): string {
+export function makeArrowDggsPolygonsControlPanelHtml(): string {
   return `\
   <div style="min-width: 280px; max-width: 420px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 10px; background: rgba(255, 255, 255, 0.96); color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
     <div style="display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; align-items: center;">

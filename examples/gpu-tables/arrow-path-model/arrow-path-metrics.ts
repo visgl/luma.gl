@@ -16,7 +16,8 @@ export const DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT = 60;
 
 export function getArrowPathMetrics(
   pathLayer: ArrowPathLayer,
-  pathInput: ArrowPathLayerInput
+  pathInput: ArrowPathLayerInput,
+  arrowVectorBuildTimeMs: number
 ): ArrowPathControlPanelMetrics {
   const pathModel = pathLayer.model;
   const pathArrowBytes = pathInput.pathArrowByteLength;
@@ -24,45 +25,30 @@ export function getArrowPathMetrics(
   const segmentCount = getGeneratedPathSegmentCount(pathModel);
   const pathGpuBytes = getPathCoordinateGpuByteLength(pathInput, pathModel);
   const transientPathGpuBytes = getTransientPathGpuByteLength(pathModel);
-  const peakPathGpuBytes = pathGpuBytes + transientPathGpuBytes;
   const styleGpuBytes = getPathStyleGpuByteLength(pathInput, pathModel);
   const totalArrowBytes = pathArrowBytes + styleArrowBytes;
   const totalGpuBytes = pathGpuBytes + styleGpuBytes;
-  const peakTotalGpuBytes = peakPathGpuBytes + styleGpuBytes;
   const deckGpuBytes = segmentCount * DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT;
 
   return {
     pathCount: formatInteger(pathInput.paths.length),
     segmentCount: formatInteger(segmentCount),
     pathArrowBytes: formatByteLength(pathArrowBytes),
-    pathGpuBytes:
-      transientPathGpuBytes > 0
-        ? `${formatByteLength(pathGpuBytes)}\n${formatByteLength(peakPathGpuBytes)} peak`
-        : formatByteLength(pathGpuBytes),
-    pathGpuExpansion:
-      transientPathGpuBytes > 0
-        ? `${formatExpansionRatio(pathGpuBytes, pathArrowBytes)}\n${formatExpansionRatio(
-            peakPathGpuBytes,
-            pathArrowBytes
-          )} peak`
-        : formatExpansionRatio(pathGpuBytes, pathArrowBytes),
-    pathPrepTime: `${getPathModelPrepTimeMs(pathModel).toFixed(1)} ms`,
+    pathGpuBytes: formatByteLength(pathGpuBytes),
+    pathGpuExpansion: formatExpansionRatio(pathGpuBytes, pathArrowBytes),
+    pathPrepTime: `${getPathModelPrepTimeMs(pathModel).toFixed(1)}ms`,
     styleArrowBytes: formatByteLength(styleArrowBytes),
     styleGpuBytes: formatByteLength(styleGpuBytes),
     styleGpuExpansion: formatExpansionRatio(styleGpuBytes, styleArrowBytes),
-    styleBuildTime: `${pathInput.arrowVectorBuildTimeMs.toFixed(1)} ms`,
+    styleBuildTime: `${arrowVectorBuildTimeMs.toFixed(1)}ms`,
+    computeGpuBytes: formatByteLength(transientPathGpuBytes),
+    computeGpuExpansion:
+      transientPathGpuBytes > 0
+        ? formatExpansionRatio(transientPathGpuBytes, totalArrowBytes)
+        : '-',
     totalArrowBytes: formatByteLength(totalArrowBytes),
-    totalGpuBytes:
-      transientPathGpuBytes > 0
-        ? `${formatByteLength(totalGpuBytes)}\n${formatByteLength(peakTotalGpuBytes)} peak`
-        : formatByteLength(totalGpuBytes),
-    totalGpuExpansion:
-      transientPathGpuBytes > 0
-        ? `${formatExpansionRatio(totalGpuBytes, totalArrowBytes)}\n${formatExpansionRatio(
-            peakTotalGpuBytes,
-            totalArrowBytes
-          )} peak`
-        : formatExpansionRatio(totalGpuBytes, totalArrowBytes),
+    totalGpuBytes: formatByteLength(totalGpuBytes),
+    totalGpuExpansion: formatExpansionRatio(totalGpuBytes, totalArrowBytes),
     deckGpuBytes: formatByteLength(deckGpuBytes),
     deckGpuExpansion: formatExpansionRatio(deckGpuBytes, totalArrowBytes)
   };

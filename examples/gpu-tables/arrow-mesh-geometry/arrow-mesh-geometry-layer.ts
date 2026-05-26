@@ -200,7 +200,45 @@ type CubeTransform = {
   matrix: Matrix4;
 };
 
-export class ArrowMeshGeometryLayer {
+/** Public configuration for the Arrow mesh/matrix example layer. */
+export type ArrowMeshLayerProps = {
+  /** Debug label used for generated model and picking resources. */
+  id?: string;
+  /** Optional per-face RGBA colors. Defaults to the example face metadata colors. */
+  faceColors?: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  /** Camera eye position used to build the view matrix. */
+  cameraEye?: [number, number, number];
+  /** Camera target used to build the view matrix. */
+  cameraCenter?: [number, number, number];
+  /** Perspective field of view in degrees. */
+  fieldOfViewDegrees?: number;
+  /** Perspective near plane. */
+  near?: number;
+  /** Perspective far plane. */
+  far?: number;
+  /** Render pass clear color. */
+  clearColor?: [number, number, number, number];
+  /** Render pass clear depth. */
+  clearDepth?: number;
+  /** Render parameters forwarded to generated models. */
+  parameters?: Record<string, unknown>;
+};
+
+const DEFAULT_MESH_LAYER_ID = 'arrow-mesh-geometry';
+const DEFAULT_CAMERA_EYE: [number, number, number] = [6.4, 4.8, 7.4];
+const DEFAULT_CAMERA_CENTER: [number, number, number] = [0, 0, 0];
+const DEFAULT_FIELD_OF_VIEW_DEGREES = 60;
+const DEFAULT_NEAR = 0.1;
+const DEFAULT_FAR = 30;
+const DEFAULT_CLEAR_COLOR: [number, number, number, number] = [0.03, 0.04, 0.08, 1];
+const DEFAULT_CLEAR_DEPTH = 1;
+const DEFAULT_RENDER_PARAMETERS = {
+  depthWriteEnabled: true,
+  depthCompare: 'less-equal'
+} as const satisfies Record<string, unknown>;
+
+/** Example layer that renders Arrow mesh attributes with an instanced Arrow matrix column. */
+export class ArrowMeshLayer {
   readonly device: Device;
   readonly geometry: ArrowTableGeometry;
   readonly model: GPUTableModel;
@@ -215,15 +253,18 @@ export class ArrowMeshGeometryLayer {
     app: typeof app.props;
     picking: typeof indexPicking.props;
   }>({app, picking: indexPicking});
+  props: ArrowMeshLayerProps;
 
-  constructor(device: Device) {
+  constructor(device: Device, props: ArrowMeshLayerProps = {}) {
     this.device = device;
+    this.props = props;
     this.shaderInputs.setProps({picking: {indexMode: 'attribute', batchIndex: 0}});
 
     const faceMetadata = makeFaceMetadataTable();
-    const faceColors = faceMetadata.getChild('COLOR_0') as arrow.Vector<
+    const defaultFaceColors = faceMetadata.getChild('COLOR_0') as arrow.Vector<
       arrow.FixedSizeList<arrow.Float32>
     >;
+    const faceColors = props.faceColors ?? defaultFaceColors;
     const arrowMesh = makeArrowMeshTable(device.type, faceColors);
     this.faceNames = faceMetadata.getChild('name') as arrow.Vector<arrow.Utf8>;
     this.faceColors =
@@ -238,7 +279,7 @@ export class ArrowMeshGeometryLayer {
       arrowPaths: MATRIX_ARROW_PATHS
     });
     this.model = new GPUTableModel(device, {
-      id: 'arrow-mesh-geometry',
+      id: props.id ?? DEFAULT_MESH_LAYER_ID,
       geometry: this.geometry,
       table: this.matrixTable,
       tableCount: 'instance',
@@ -249,10 +290,7 @@ export class ArrowMeshGeometryLayer {
       shaderInputs: this.shaderInputs,
       modules: [supportsIndexPicking(device) ? indexPicking : indexColorPicking] as ShaderModule[],
       ...(this.faceColors ? {bindings: {faceColors: this.faceColors.buffer}} : {}),
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal'
-      }
+      parameters: props.parameters ?? DEFAULT_RENDER_PARAMETERS
     });
     this.pickingModel = supportsIndexPicking(device) ? this.createPickingModel() : null;
     this.picker = new PickingManager(device, {
@@ -270,24 +308,31 @@ export class ArrowMeshGeometryLayer {
     });
   }
 
+  setProps(props: Partial<ArrowMeshLayerProps>): void {
+    this.props = {...this.props, ...props};
+  }
+
   draw({aspect, device, tick, _mousePosition}: AnimationProps): void {
     this.updateInstanceMatrices(tick);
     this.shaderInputs.setProps({
       app: {
-        viewMatrix: new Matrix4().lookAt({eye: [6.4, 4.8, 7.4], center: [0, 0, 0]}),
+        viewMatrix: new Matrix4().lookAt({
+          eye: this.props.cameraEye ?? DEFAULT_CAMERA_EYE,
+          center: this.props.cameraCenter ?? DEFAULT_CAMERA_CENTER
+        }),
         projectionMatrix: new Matrix4().perspective({
-          fovy: radians(60),
+          fovy: radians(this.props.fieldOfViewDegrees ?? DEFAULT_FIELD_OF_VIEW_DEGREES),
           aspect,
-          near: 0.1,
-          far: 30
+          near: this.props.near ?? DEFAULT_NEAR,
+          far: this.props.far ?? DEFAULT_FAR
         })
       }
     });
     this.shaderInputs.setProps({picking: {isActive: false, batchIndex: 0}});
 
     const renderPass = device.beginRenderPass({
-      clearColor: [0.03, 0.04, 0.08, 1],
-      clearDepth: 1
+      clearColor: this.props.clearColor ?? DEFAULT_CLEAR_COLOR,
+      clearDepth: this.props.clearDepth ?? DEFAULT_CLEAR_DEPTH
     });
     this.model.draw(renderPass);
     renderPass.end();
@@ -344,7 +389,7 @@ export class ArrowMeshGeometryLayer {
       throw new Error('Matrices picking requires prepared instance Arrow data');
     }
     return new GPUTableModel(this.device, {
-      id: `${this.model.id || 'arrow-mesh-geometry'}-picking`,
+      id: `${this.model.id || DEFAULT_MESH_LAYER_ID}-picking`,
       geometry: this.geometry,
       table: this.model.table,
       tableCount: 'instance',
@@ -359,10 +404,7 @@ export class ArrowMeshGeometryLayer {
       shaderInputs: this.shaderInputs,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal'
-      }
+      parameters: this.props.parameters ?? DEFAULT_RENDER_PARAMETERS
     });
   }
 }

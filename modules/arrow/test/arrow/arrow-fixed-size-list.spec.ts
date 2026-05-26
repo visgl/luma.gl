@@ -285,6 +285,90 @@ test('expandArrowVector gathers scalar numeric vectors', t => {
   t.end();
 });
 
+test('expandArrowVector applies scalar nullValue to null source rows', t => {
+  const sourceVector = arrow.vectorFromArray([10, null, 30], new arrow.Int32());
+  const expandedVector = expandArrowVector(sourceVector, new Uint32Array([1, 2, 0, 1]), 99);
+
+  t.deepEqual(
+    Array.from(expandedVector.toArray()),
+    [99, 30, 10, 99],
+    'uses scalar nullValue wherever mapped source rows are null'
+  );
+
+  t.end();
+});
+
+test('expandArrowVector applies FixedSizeList nullValue to null source rows', t => {
+  const sourceVector = arrow.vectorFromArray(
+    [[1, 2], null, [3, 4]],
+    new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false))
+  ) as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  const expandedVector = expandArrowVector(sourceVector, new Uint32Array([1, 2, 0]), [9, 8]);
+
+  t.deepEqual(
+    getArrowFixedSizeListValues(expandedVector),
+    new Float32Array([9, 8, 3, 4, 1, 2]),
+    'uses vector nullValue wherever mapped source rows are null'
+  );
+
+  t.end();
+});
+
+test('expandArrowVector checks null rows across chunked vectors', t => {
+  const firstChunk = arrow.vectorFromArray([1, 2], new arrow.Int32());
+  const secondChunk = arrow.vectorFromArray([null, 4], new arrow.Int32());
+  const sourceVector = new arrow.Vector([firstChunk.data[0]!, secondChunk.data[0]!]);
+  const expandedVector = expandArrowVector(sourceVector, new Uint32Array([0, 2, 3]), 99);
+
+  t.deepEqual(
+    Array.from(expandedVector.toArray()),
+    [1, 99, 4],
+    'uses nullValue for null rows in later chunks'
+  );
+
+  t.end();
+});
+
+test('expandArrowVector validates nullValue shape and type', t => {
+  const scalarVector = arrow.makeVector(new Float32Array([10, 20]));
+  const listVector = makeArrowFixedSizeListVector(
+    new arrow.Uint8(),
+    4,
+    new Uint8Array([10, 20, 30, 255])
+  );
+
+  t.throws(
+    () => expandArrowVector(scalarVector, new Uint32Array([0]), [1]),
+    /scalar nullValue must be a number/,
+    'rejects array nullValue for scalar vectors'
+  );
+  t.throws(
+    () => expandArrowVector(listVector, new Uint32Array([0]), 1),
+    /FixedSizeList nullValue must be an array/,
+    'rejects scalar nullValue for FixedSizeList vectors'
+  );
+  t.throws(
+    () => expandArrowVector(listVector, new Uint32Array([0]), [1, 2, 3]),
+    /nullValue length 3 must match listSize 4/,
+    'rejects FixedSizeList nullValue with the wrong width'
+  );
+
+  t.end();
+});
+
+test('expandArrowVector preserves null-row values-buffer behavior without nullValue', t => {
+  const sourceVector = arrow.vectorFromArray([10, null, 30], new arrow.Int32());
+  const expandedVector = expandArrowVector(sourceVector, new Uint32Array([1]));
+
+  t.deepEqual(
+    Array.from(expandedVector.toArray()),
+    [0],
+    'omitted nullValue preserves existing values-buffer expansion behavior'
+  );
+
+  t.end();
+});
+
 test('expandArrowVector rejects invalid mappings and unsupported vectors', t => {
   const sourceVector = arrow.makeVector(new Float32Array([10, 20]));
 

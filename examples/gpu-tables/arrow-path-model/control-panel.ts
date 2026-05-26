@@ -27,11 +27,16 @@ const STYLE_ARROW_BYTES_ID = 'arrow-path-model-style-arrow-bytes';
 const STYLE_GPU_BYTES_ID = 'arrow-path-model-style-gpu-bytes';
 const STYLE_GPU_EXPANSION_ID = 'arrow-path-model-style-gpu-expansion';
 const STYLE_BUILD_TIME_ID = 'arrow-path-model-style-build-time';
+const COMPUTE_GPU_BYTES_ID = 'arrow-path-model-compute-gpu-bytes';
+const COMPUTE_GPU_EXPANSION_ID = 'arrow-path-model-compute-gpu-expansion';
 const TOTAL_ARROW_BYTES_ID = 'arrow-path-model-total-arrow-bytes';
 const TOTAL_GPU_BYTES_ID = 'arrow-path-model-total-gpu-bytes';
 const TOTAL_GPU_EXPANSION_ID = 'arrow-path-model-total-gpu-expansion';
 const DECK_GPU_BYTES_ID = 'arrow-path-model-deck-gpu-bytes';
 const DECK_GPU_EXPANSION_ID = 'arrow-path-model-deck-gpu-expansion';
+const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-path-model-streaming-batch-status-row';
+const STREAMING_BATCH_FILL_ID = 'arrow-path-model-streaming-batch-fill';
+const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-path-model-streaming-batch-status-label';
 
 export type ArrowPathControlPanelRowLabels = {
   '240-stream': string;
@@ -72,6 +77,8 @@ export type ArrowPathControlPanelMetrics = {
   styleGpuBytes: string;
   styleGpuExpansion: string;
   styleBuildTime: string;
+  computeGpuBytes: string;
+  computeGpuExpansion: string;
   totalArrowBytes: string;
   totalGpuBytes: string;
   totalGpuExpansion: string;
@@ -123,11 +130,16 @@ export class ArrowPathModelControlPanel {
   private styleGpuBytesLabel: HTMLElement | null = null;
   private styleGpuExpansionLabel: HTMLElement | null = null;
   private styleBuildTimeLabel: HTMLElement | null = null;
+  private computeGpuBytesLabel: HTMLElement | null = null;
+  private computeGpuExpansionLabel: HTMLElement | null = null;
   private totalArrowBytesLabel: HTMLElement | null = null;
   private totalGpuBytesLabel: HTMLElement | null = null;
   private totalGpuExpansionLabel: HTMLElement | null = null;
   private deckGpuBytesLabel: HTMLElement | null = null;
   private deckGpuExpansionLabel: HTMLElement | null = null;
+  private streamingBatchStatusRow: HTMLElement | null = null;
+  private streamingBatchFill: HTMLElement | null = null;
+  private streamingBatchStatusLabel: HTMLElement | null = null;
 
   constructor({device, initialState, handlers}: ArrowPathModelControlPanelOptions) {
     this.device = device;
@@ -169,11 +181,16 @@ export class ArrowPathModelControlPanel {
     this.styleGpuBytesLabel = document.getElementById(STYLE_GPU_BYTES_ID);
     this.styleGpuExpansionLabel = document.getElementById(STYLE_GPU_EXPANSION_ID);
     this.styleBuildTimeLabel = document.getElementById(STYLE_BUILD_TIME_ID);
+    this.computeGpuBytesLabel = document.getElementById(COMPUTE_GPU_BYTES_ID);
+    this.computeGpuExpansionLabel = document.getElementById(COMPUTE_GPU_EXPANSION_ID);
     this.totalArrowBytesLabel = document.getElementById(TOTAL_ARROW_BYTES_ID);
     this.totalGpuBytesLabel = document.getElementById(TOTAL_GPU_BYTES_ID);
     this.totalGpuExpansionLabel = document.getElementById(TOTAL_GPU_EXPANSION_ID);
     this.deckGpuBytesLabel = document.getElementById(DECK_GPU_BYTES_ID);
     this.deckGpuExpansionLabel = document.getElementById(DECK_GPU_EXPANSION_ID);
+    this.streamingBatchStatusRow = document.getElementById(STREAMING_BATCH_STATUS_ROW_ID);
+    this.streamingBatchFill = document.getElementById(STREAMING_BATCH_FILL_ID);
+    this.streamingBatchStatusLabel = document.getElementById(STREAMING_BATCH_STATUS_LABEL_ID);
 
     this.syncControls(this.state);
     this.modelSelector?.addEventListener('change', this.handleModelSelection);
@@ -242,11 +259,45 @@ export class ArrowPathModelControlPanel {
     setMetricText(this.styleGpuBytesLabel, metrics.styleGpuBytes);
     setMetricText(this.styleGpuExpansionLabel, metrics.styleGpuExpansion);
     setMetricText(this.styleBuildTimeLabel, metrics.styleBuildTime);
+    setMetricText(this.computeGpuBytesLabel, metrics.computeGpuBytes);
+    setMetricText(this.computeGpuExpansionLabel, metrics.computeGpuExpansion);
     setMetricText(this.totalArrowBytesLabel, metrics.totalArrowBytes);
     setMetricText(this.totalGpuBytesLabel, metrics.totalGpuBytes);
     setMetricText(this.totalGpuExpansionLabel, metrics.totalGpuExpansion);
     setMetricText(this.deckGpuBytesLabel, metrics.deckGpuBytes);
     setMetricText(this.deckGpuExpansionLabel, metrics.deckGpuExpansion);
+  }
+
+  setStreamingBatchStatus(loadedBatchCount: number | null, streamingBatchCount: number): void {
+    if (
+      !this.streamingBatchStatusRow ||
+      !this.streamingBatchFill ||
+      !this.streamingBatchStatusLabel
+    ) {
+      return;
+    }
+
+    if (loadedBatchCount === null) {
+      this.streamingBatchStatusRow.style.display = 'none';
+      this.streamingBatchStatusLabel.textContent = `Loaded 0 of ${streamingBatchCount} batches`;
+      this.streamingBatchFill.style.width = '0%';
+      this.streamingBatchStatusRow.setAttribute('aria-valuenow', '0');
+      return;
+    }
+
+    const safeLoadedBatchCount = Math.min(
+      streamingBatchCount,
+      Math.max(0, Math.trunc(loadedBatchCount))
+    );
+    const progressPercent = getStreamingBatchProgressPercent(
+      safeLoadedBatchCount,
+      streamingBatchCount
+    );
+    this.streamingBatchStatusRow.style.display = 'block';
+    this.streamingBatchStatusRow.setAttribute('aria-valuenow', String(safeLoadedBatchCount));
+    this.streamingBatchStatusRow.setAttribute('aria-valuemax', String(streamingBatchCount));
+    this.streamingBatchFill.style.width = `${progressPercent}%`;
+    this.streamingBatchStatusLabel.textContent = `Loaded ${safeLoadedBatchCount} of ${streamingBatchCount} batches`;
   }
 
   private readonly handleRowCountSelection = (): void => {
@@ -353,12 +404,7 @@ export function makeArrowPathModelControlPanelHtml({
 }: ArrowPathControlPanelProps): string {
   return `\
   <p>Renders nested Arrow coordinate lists through a deck-style <code>ArrowPathLayer</code> POC, one logical Arrow row per path.</p>
-  <style>
-    #${INFO_DETAILS_ID}[open] {
-      min-height: 196px;
-    }
-  </style>
-  <div style="min-height: 640px; max-height: calc(100vh - 72px); overflow: visible; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
+  <div style="max-height: calc(100vh - 72px); overflow-y: auto; overflow-x: hidden; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <section style="overflow: visible; margin-bottom: 12px; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Table</h3>
       <div style="display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
@@ -367,6 +413,11 @@ export function makeArrowPathModelControlPanelHtml({
           <option value="240-stream">${rowLabels['240-stream']}</option>
           <option value="2400-stream">${rowLabels['2400-stream']}</option>
         </select>
+        <span>Batches</span>
+        <div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" style="box-sizing: border-box; display: none; position: relative; width: 100%; min-width: 0; height: 34px; overflow: hidden; border: 1px solid rgba(37, 99, 235, 0.32); border-radius: 6px; background: #dbeafe; color: #0f172a; font-size: 13px; line-height: 1.4;">
+          <span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #93c5fd 0%, #2563eb 100%); transition: width 220ms ease;"></span>
+          <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 8px; color: #0f172a; font-weight: 700; font-variant-numeric: tabular-nums;">Loaded 0 batches</span>
+        </div>
         <label for="${COORDINATE_SELECTOR_ID}">Paths</label>
         <select id="${COORDINATE_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
           <option value="float32">Float32 - List&lt;FixedSizeList&lt;Float32, 4&gt;&gt;</option>
@@ -383,13 +434,6 @@ export function makeArrowPathModelControlPanelHtml({
           <option value="none">None</option>
           <option value="xyzm">M coordinate - XYZM</option>
           <option value="timestamps">timestamp - List&lt;TimestampMillisecond&gt;</option>
-        </select>
-        <label for="${MODEL_SELECTOR_ID}">Model</label>
-        <select id="${MODEL_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="attribute">attribute</option>
-          <option value="storage">storage</option>
-          <option value="trips">trips</option>
-          <option value="auto">auto</option>
         </select>
       </div>
     </section>
@@ -425,6 +469,15 @@ export function makeArrowPathModelControlPanelHtml({
     </section>
     <section style="overflow: visible; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Metrics</h3>
+      <div style="display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
+        <label for="${MODEL_SELECTOR_ID}">Model</label>
+        <select id="${MODEL_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+          <option value="attribute">attribute</option>
+          <option value="storage">storage</option>
+          <option value="trips">trips</option>
+          <option value="auto">auto</option>
+        </select>
+      </div>
       ${makeMetricRow('Arrow path rows', PATH_COUNT_ID)}
       ${makeMetricRow('Generated segment rows', SEGMENT_COUNT_ID)}
       <table style="display: table; width: 100%; min-width: 100%; table-layout: fixed; box-sizing: border-box; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); border-collapse: collapse; color: #334155; font-size: 13px; line-height: 1.4;">
@@ -433,16 +486,23 @@ export function makeArrowPathModelControlPanelHtml({
             <th style="width: 20%; padding: 8px 8px 6px 0; text-align: left; font-weight: 700; white-space: nowrap;">columns</th>
             <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">Arrow</th>
             <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">GPU</th>
-            <th style="width: 16%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">expansion</th>
-            <th style="width: 20%; padding: 8px 0 6px 8px; text-align: right; font-weight: 700; white-space: nowrap;">prep time</th>
+            <th style="width: 16%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">exp</th>
+            <th style="width: 20%; padding: 8px 0 6px 8px; text-align: right; font-weight: 700; white-space: nowrap;">time</th>
           </tr>
         </thead>
         <tbody>
           <tr>
+            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 700;">total</th>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
+            <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
+          </tr>
+          <tr>
             <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">paths + time</th>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">-</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
             <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${PATH_PREP_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
           </tr>
           <tr>
@@ -453,13 +513,13 @@ export function makeArrowPathModelControlPanelHtml({
             <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${STYLE_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
           </tr>
           <tr>
-            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">total</th>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">-</strong></td>
+            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">compute</th>
+            <td style="padding: 6px 8px; text-align: right;">-</td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${COMPUTE_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${COMPUTE_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
             <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
           </tr>
-          <tr>
+          <tr style="font-style: italic;">
             <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">deck.gl</th>
             <td style="padding: 6px 8px; text-align: right;">-</td>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${DECK_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
@@ -516,6 +576,13 @@ function isArrowPathControlPanelTimeKind(
 
 function isArrowPathLayerModel(value: string | undefined): value is ArrowPathLayerModel {
   return value === 'attribute' || value === 'storage' || value === 'trips' || value === 'auto';
+}
+
+function getStreamingBatchProgressPercent(
+  loadedBatchCount: number,
+  streamingBatchCount: number
+): number {
+  return streamingBatchCount > 0 ? (loadedBatchCount / streamingBatchCount) * 100 : 0;
 }
 
 function getAutoPathModelLabel(device: Device, timeKind: ArrowPathControlPanelTimeKind): string {

@@ -5,13 +5,13 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
-import DggsGpuPolygonsApp from '../../examples/gpu-tables/dggs-gpu-polygons/app';
+import ArrowDggsPolygonsApp from '../../examples/gpu-tables/arrow-dggs-polygons/app';
 import ArrowColumnLayerApp from '../../examples/gpu-tables/arrow-column-layer/app';
 import ArrowMeshGeometryApp from '../../examples/gpu-tables/arrow-mesh-geometry/app';
 import ArrowPathModelApp from '../../examples/gpu-tables/arrow-path-model/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
-import GPUVectorStorageParticlesApp from '../../examples/gpu-tables/gpu-vector-storage-particles/app';
+import ArrowParticlesApp from '../../examples/gpu-tables/arrow-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import TextureTesterApp from '../../examples/api/texture-tester/app';
@@ -192,12 +192,12 @@ export const ArrowColumnLayerExample: React.FC = props => (
   />
 );
 
-export const DggsGpuPolygonsExample: React.FC = props => (
+export const ArrowDggsPolygonsExample: React.FC = props => (
   <LumaExample
-    id="dggs-gpu-polygons"
+    id="arrow-dggs-polygons"
     title="Global Grids: Uint64, Utf8"
     directory="gpu-tables"
-    template={DggsGpuPolygonsApp}
+    template={ArrowDggsPolygonsApp}
     config={exampleConfig}
     devices={['webgpu']}
     showStats
@@ -281,12 +281,12 @@ export const ArrowMeshGeometryExample: React.FC = props => (
   />
 );
 
-export const GPUVectorStorageParticlesExample: React.FC = props => (
+export const ArrowParticlesExample: React.FC = props => (
   <LumaExample
-    id="gpu-vector-storage-particles"
+    id="arrow-particles"
     title="Particles: FixedSizeList<Float32, 3>"
     directory="gpu-tables"
-    template={GPUVectorStorageParticlesApp}
+    template={ArrowParticlesApp}
     config={exampleConfig}
     {...props}
   />

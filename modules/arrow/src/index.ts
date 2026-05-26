@@ -75,6 +75,7 @@ export {
 export {
   expandArrowVector,
   getArrowVectorByteLength,
+  type ArrowVectorNullValue,
   type ArrowVectorRowMapping
 } from './arrow/arrow-vector-utils';
 

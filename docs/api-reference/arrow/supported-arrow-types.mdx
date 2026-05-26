@@ -400,7 +400,7 @@ compatibility layout only: DGGS boundary math currently remains Float32, so low
 components are zero until true higher-precision decode math is added. The `dggs`
 shader module exposes the matching WGSL Uint64 word order and cell-boundary
 helpers when a shader should read keys directly. See the [Global Grids
-example](/examples/gpu-tables/dggs-gpu-polygons).
+example](/examples/gpu-tables/arrow-dggs-polygons).
 
 ## Storage-Selected Table Columns
 
@@ -422,9 +422,9 @@ one `GPURecordBatch`.
 
 ## Expanding Compact Column Values
 
-`expandArrowVector(vector, rowMapping)` gathers rows from one numeric Arrow
-vector into a new contiguous Arrow vector. It accepts either an integer typed
-array or an integer Arrow vector as the row mapping.
+`expandArrowVector(vector, rowMapping, nullValue?)` gathers rows from one numeric
+Arrow vector into a new contiguous Arrow vector. It accepts either an integer
+typed array or an integer Arrow vector as the row mapping.
 
 Use it when a compact table should become vertex- or instance-aligned data for an
 attribute path. The Matrices: `FixedSizeList<Float32, 16>` example uses
@@ -440,6 +440,15 @@ The helper rejects unsupported vector types, non-integer row mappings, negative
 indices, and out-of-range indices.
 
 `ArrowVectorRowMapping` is the exported type name for the accepted mapping input.
+`ArrowVectorNullValue` is the exported type name for the optional null-row
+fallback. Scalar numeric vectors accept a numeric `nullValue`.
+`FixedSizeList` numeric vectors accept an array-like `nullValue` with exactly the
+list size number of components. If `nullValue` is omitted, null source rows keep
+the existing values-buffer copy behavior.
+
+For `FixedSizeList` vectors, the parent row may be nullable and will expand to
+the supplied constant fallback. Nullable child values inside valid rows are not
+supported by this helper.
 
 ## Closing Nested Arrow Paths
 

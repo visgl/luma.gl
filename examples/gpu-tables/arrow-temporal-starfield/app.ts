@@ -33,6 +33,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
   layer: ArrowTemporalStarfieldLayer | null = null;
+  inputRequestVersion = 0;
   isFinalized = false;
 
   constructor({device}: AnimationProps) {
