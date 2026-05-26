@@ -21,6 +21,12 @@ export {
   getArrowVectorBufferSource
 } from './arrow/arrow-fixed-size-list';
 export {
+  canConvertColors,
+  convertColors,
+  convertArrowColors,
+  type ArrowColorType
+} from './arrow/arrow-colors';
+export {
   prepareArrowMatrixGPUVector,
   type PreparedArrowMatrixGPUVector,
   type PrepareArrowMatrixGPUVectorOptions
