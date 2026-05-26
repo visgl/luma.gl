@@ -32,29 +32,39 @@ import {
 
 const DEFAULT_RESET_INTERVAL_MILLISECONDS = 8_000;
 
-export type ArrowParticleLayerColumns = {
-  positions?: string;
-  velocities?: string;
-};
-
+/** Public configuration for the Arrow particle layer. */
 export type ArrowParticleLayerProps = {
+  /** Optional source table. If omitted, data can be streamed later by record batch. */
   data?: arrow.Table | null;
-  columns?: ArrowParticleLayerColumns;
+  /** Source table column name for initial particle positions. */
+  positions?: string;
+  /** Source table column name for particle velocities. */
+  velocities?: string;
+  /** Interval for resetting simulated particles back to their source Arrow rows. */
   resetIntervalMilliseconds?: number;
 };
 
+/** Token used to cancel stale particle streaming work. */
 export type ArrowParticleLayerStreamingSession = {
+  /** Monotonic stream version owned by the layer. */
   version: number;
 };
 
+/** Notification emitted after a particle record batch is uploaded. */
 export type ArrowParticleLayerRecordBatchStreamUpdate = {
+  /** Number of record batches loaded so far. */
   loadedBatchCount: number;
+  /** Total particle count after the batch. */
   particleCount: number;
 };
 
+/** Props for incrementally streaming Arrow particle record batches. */
 export type ArrowParticleLayerRecordBatchStreamProps = {
+  /** Async iterator that yields Arrow particle record batches. */
   recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
+  /** Optional stream session used to cancel stale async streams. */
   streamingSession?: ArrowParticleLayerStreamingSession;
+  /** Callback fired after each batch is uploaded and applied. */
   onBatch?: (update: ArrowParticleLayerRecordBatchStreamUpdate) => void;
 };
 
@@ -62,7 +72,8 @@ type ArrowParticleVectorType = arrow.FixedSizeList<arrow.Float32>;
 
 type ArrowParticleLayerResolvedProps = {
   data: arrow.Table | null;
-  columns: Required<ArrowParticleLayerColumns>;
+  positions: string;
+  velocities: string;
   resetIntervalMilliseconds: number;
 };
 
@@ -76,11 +87,10 @@ type ParticleTransformOutputBuffers = {
   nextParticleVelocities: Buffer;
 };
 
-const DEFAULT_COLUMNS: Required<ArrowParticleLayerColumns> = {
-  positions: 'positions',
-  velocities: 'velocities'
-};
+const DEFAULT_POSITIONS_COLUMN = 'positions';
+const DEFAULT_VELOCITIES_COLUMN = 'velocities';
 
+/** Example layer that updates Arrow particle GPUVectors through compute or transform feedback. */
 export class ArrowParticleLayer {
   readonly device: Device;
   props: ArrowParticleLayerResolvedProps;
@@ -106,7 +116,8 @@ export class ArrowParticleLayer {
     this.device = device;
     this.props = {
       data: props.data ?? null,
-      columns: {...DEFAULT_COLUMNS, ...props.columns},
+      positions: props.positions ?? DEFAULT_POSITIONS_COLUMN,
+      velocities: props.velocities ?? DEFAULT_VELOCITIES_COLUMN,
       resetIntervalMilliseconds:
         props.resetIntervalMilliseconds ?? DEFAULT_RESET_INTERVAL_MILLISECONDS
     };
@@ -116,10 +127,12 @@ export class ArrowParticleLayer {
   }
 
   setProps(props: ArrowParticleLayerProps): void {
-    const shouldRecreate = props.data !== undefined || props.columns !== undefined;
+    const shouldRecreate =
+      props.data !== undefined || props.positions !== undefined || props.velocities !== undefined;
     this.props = {
       data: props.data ?? this.props.data,
-      columns: {...this.props.columns, ...props.columns},
+      positions: props.positions ?? this.props.positions,
+      velocities: props.velocities ?? this.props.velocities,
       resetIntervalMilliseconds:
         props.resetIntervalMilliseconds ?? this.props.resetIntervalMilliseconds
     };
@@ -302,7 +315,7 @@ export class ArrowParticleLayer {
     initialValues: InitialParticleBatchValues;
   } {
     const sourceTable = new arrow.Table([recordBatch]);
-    const sourceVectors = getArrowParticleSourceVectors(sourceTable, this.props.columns);
+    const sourceVectors = getArrowParticleSourceVectors(sourceTable, this.props);
     if (sourceVectors.velocities.length !== sourceVectors.positions.length) {
       throw new Error(
         `ArrowParticleLayer positions and velocities rows must match (${sourceVectors.positions.length} !== ${sourceVectors.velocities.length})`
@@ -313,8 +326,8 @@ export class ArrowParticleLayer {
       gpuRecordBatch: makeArrowGPURecordBatch(this.device, recordBatch, {
         shaderLayout: WEBGL_TRANSFORM_SHADER_LAYOUT,
         arrowPaths: {
-          particlePositions: this.props.columns.positions,
-          particleVelocities: this.props.columns.velocities
+          particlePositions: this.props.positions,
+          particleVelocities: this.props.velocities
         }
       }),
       initialValues: {
@@ -342,14 +355,14 @@ export class ArrowParticleLayer {
 
     if (this.device.type === 'webgpu') {
       this.computation = new GPUTableComputation(this.device, {
-        id: 'gpu-vector-storage-particles-compute',
+        id: 'arrow-particles-compute',
         source: makeComputeShader(),
         shaderLayout: COMPUTE_SHADER_LAYOUT,
         inputVectors: this.particleTable.gpuVectors
       });
 
       this.model = new Model(this.device, {
-        id: 'gpu-vector-storage-particles-render',
+        id: 'arrow-particles-render',
         source: WEBGPU_RENDER_SHADER,
         shaderLayout: RENDER_SHADER_LAYOUT,
         bindings: {
@@ -363,7 +376,7 @@ export class ArrowParticleLayer {
     }
 
     this.transform = new TableTransform(this.device, {
-      id: 'gpu-vector-storage-particles-transform',
+      id: 'arrow-particles-transform',
       vs: WEBGL_TRANSFORM_SHADER,
       shaderLayout: WEBGL_TRANSFORM_SHADER_LAYOUT,
       table: this.particleTable,
@@ -371,7 +384,7 @@ export class ArrowParticleLayer {
     });
 
     this.model = new Model(this.device, {
-      id: 'gpu-vector-storage-particles-render',
+      id: 'arrow-particles-render',
       vs: WEBGL_RENDER_VERTEX_SHADER,
       fs: WEBGL_RENDER_FRAGMENT_SHADER,
       shaderLayout: WEBGL_RENDER_SHADER_LAYOUT,
@@ -419,7 +432,7 @@ export class ArrowParticleLayer {
     label: string
   ): Buffer {
     return this.device.createBuffer({
-      id: `gpu-vector-storage-particles-${label}-output-${this.particleTable?.batches.indexOf(batch) ?? 0}`,
+      id: `arrow-particles-${label}-output-${this.particleTable?.batches.indexOf(batch) ?? 0}`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST,
       byteLength: Math.max(1, vector.length * vector.byteStride)
     });
@@ -480,14 +493,14 @@ export class ArrowParticleLayer {
 
 function getArrowParticleSourceVectors(
   data: arrow.Table,
-  columns: Required<ArrowParticleLayerColumns>
+  props: Pick<ArrowParticleLayerResolvedProps, 'positions' | 'velocities'>
 ): {
   positions: arrow.Vector<ArrowParticleVectorType>;
   velocities: arrow.Vector<ArrowParticleVectorType>;
 } {
   return {
-    positions: getRequiredParticleVector(data, columns.positions),
-    velocities: getRequiredParticleVector(data, columns.velocities)
+    positions: getRequiredParticleVector(data, props.positions),
+    velocities: getRequiredParticleVector(data, props.velocities)
   };
 }
 

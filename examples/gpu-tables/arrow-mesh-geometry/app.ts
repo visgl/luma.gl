@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {ARROW_MESH_GEOMETRY_CUBE_COUNT, ArrowMeshGeometryLayer} from './arrow-mesh-geometry-layer';
+import {ARROW_MESH_GEOMETRY_CUBE_COUNT, ArrowMeshLayer} from './arrow-mesh-geometry-layer';
 import {makeArrowMeshGeometryControlPanelHtml} from './control-panel';
 
 export const title = 'Matrices: FixedSizeList<Float32, 16>';
@@ -15,11 +15,11 @@ export const description =
 export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowMeshGeometryControlPanelHtml(ARROW_MESH_GEOMETRY_CUBE_COUNT);
 
-  readonly layer: ArrowMeshGeometryLayer;
+  readonly layer: ArrowMeshLayer;
 
   constructor({device}: AnimationProps) {
     super();
-    this.layer = new ArrowMeshGeometryLayer(device as Device);
+    this.layer = new ArrowMeshLayer(device as Device);
   }
 
   onRender(animationProps: AnimationProps): void {

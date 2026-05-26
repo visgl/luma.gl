@@ -20,18 +20,36 @@ import {ShaderInputs} from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import * as arrow from 'apache-arrow';
 
+/** Source key representation used by the DGGS polygon example. */
 export type DggsSourceKind = 'uint64' | 'utf8';
 
+/** Public configuration for the Arrow DGGS polygon layer. */
 export type ArrowDggsPolygonLayerProps = {
+  /** Active DGGS encoding column. */
   encoding?: DggsCellEncoding;
+  /** Whether to prepare cells from packed Uint64 keys or UTF-8 tokens. */
   sourceKind?: DggsSourceKind;
+  /** View center in longitude/latitude. */
+  center?: [number, number];
+  /** Map scale applied by the DGGS viewport shader. */
+  scale?: number;
+  /** Constant polygon stroke color. Defaults to the active encoding color. */
+  color?: [number, number, number, number];
+  /** Constant polygon stroke width. */
+  width?: number;
 };
 
+/** Metrics displayed by the Arrow DGGS polygon example control panel. */
 export type ArrowDggsPolygonLayerMetrics = {
+  /** Active DGGS encoding column. */
   activeColumn: DggsCellEncoding;
+  /** Number of DGGS cells in the sample table. */
   rowCount: number;
+  /** Bytes used by the active key representation. */
   keyBytes: number;
+  /** Bytes used by prepared boundary path data. */
   pathBytes: number;
+  /** Transient bytes used while preparing keys and paths. */
   transientBytes: number;
 };
 
@@ -132,6 +150,19 @@ const ENCODING_COLORS: Record<DggsCellEncoding, [number, number, number, number]
   a5: [238, 128, 255, 235],
   h3: [255, 112, 112, 235]
 };
+const DEFAULT_DGGS_CENTER: [number, number] = [0, 18];
+const DEFAULT_DGGS_SCALE = 1.25;
+const DEFAULT_DGGS_WIDTH = 1;
+const DEFAULT_DGGS_RENDER_PARAMETERS = {
+  depthWriteEnabled: false,
+  blend: true,
+  blendColorOperation: 'add',
+  blendAlphaOperation: 'add',
+  blendColorSrcFactor: 'src-alpha',
+  blendColorDstFactor: 'one-minus-src-alpha',
+  blendAlphaSrcFactor: 'one',
+  blendAlphaDstFactor: 'one-minus-src-alpha'
+} as const satisfies Record<string, unknown>;
 
 const dggsViewport: ShaderModule<DggsViewportUniforms> = {
   name: 'dggsViewport',
@@ -224,6 +255,7 @@ fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
 }
 `;
 
+/** Example layer that prepares Arrow DGGS cell keys and renders their GPU-decoded boundaries. */
 export class ArrowDggsPolygonLayer {
   readonly device: Device;
   readonly uint64Table = makeDggsUint64Table();
@@ -236,12 +268,14 @@ export class ArrowDggsPolygonLayer {
   activeSourceKind: DggsSourceKind;
   activeInput!: DggsPreparedInput;
   pathModel!: StoragePathModel;
+  props: ArrowDggsPolygonLayerProps;
 
   constructor(device: Device, props: ArrowDggsPolygonLayerProps = {}) {
     if (device.type !== 'webgpu') {
       throw new Error('Global Grids example requires WebGPU');
     }
     this.device = device;
+    this.props = props;
     this.activeEncoding = props.encoding ?? 'geohash';
     this.activeSourceKind = props.sourceKind ?? 'uint64';
     this.activeInput = this.getOrCreatePreparedInput(this.activeEncoding, this.activeSourceKind);
@@ -249,9 +283,17 @@ export class ArrowDggsPolygonLayer {
   }
 
   setProps(props: ArrowDggsPolygonLayerProps): void {
+    const previousColor = this.props.color;
+    const previousWidth = this.props.width;
+    this.props = {...this.props, ...props};
     const nextEncoding = props.encoding ?? this.activeEncoding;
     const nextSourceKind = props.sourceKind ?? this.activeSourceKind;
-    if (nextEncoding === this.activeEncoding && nextSourceKind === this.activeSourceKind) {
+    if (
+      nextEncoding === this.activeEncoding &&
+      nextSourceKind === this.activeSourceKind &&
+      props.color === previousColor &&
+      props.width === previousWidth
+    ) {
       return;
     }
     const previousModel = this.pathModel;
@@ -265,8 +307,8 @@ export class ArrowDggsPolygonLayer {
   draw(renderPass: RenderPass, props: {aspect: number}): void {
     this.shaderInputs.setProps({
       dggsViewport: {
-        center: [0, 18],
-        scale: 1.25,
+        center: this.props.center ?? DEFAULT_DGGS_CENTER,
+        scale: this.props.scale ?? DEFAULT_DGGS_SCALE,
         aspect: props.aspect
       }
     });
@@ -337,24 +379,15 @@ export class ArrowDggsPolygonLayer {
 
   createPathModel(input: DggsPreparedInput, encoding: DggsCellEncoding): StoragePathModel {
     return new StoragePathModel(this.device, {
-      id: `dggs-gpu-polygons-${encoding}`,
+      id: `arrow-dggs-polygons-${encoding}`,
       paths: input.paths.paths,
       source: DGGS_PATH_SOURCE,
       shaderInputs: this.shaderInputs,
       topology: 'line-list',
       vertexCount: 2,
-      color: ENCODING_COLORS[encoding],
-      width: 1,
-      parameters: {
-        depthWriteEnabled: false,
-        blend: true,
-        blendColorOperation: 'add',
-        blendAlphaOperation: 'add',
-        blendColorSrcFactor: 'src-alpha',
-        blendColorDstFactor: 'one-minus-src-alpha',
-        blendAlphaSrcFactor: 'one',
-        blendAlphaDstFactor: 'one-minus-src-alpha'
-      }
+      color: this.props.color ?? ENCODING_COLORS[encoding],
+      width: this.props.width ?? DEFAULT_DGGS_WIDTH,
+      parameters: DEFAULT_DGGS_RENDER_PARAMETERS
     });
   }
 

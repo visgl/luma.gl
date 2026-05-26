@@ -16,7 +16,8 @@ export const DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT = 60;
 
 export function getArrowPathMetrics(
   pathLayer: ArrowPathLayer,
-  pathInput: ArrowPathLayerInput
+  pathInput: ArrowPathLayerInput,
+  arrowVectorBuildTimeMs: number
 ): ArrowPathControlPanelMetrics {
   const pathModel = pathLayer.model;
   const pathArrowBytes = pathInput.pathArrowByteLength;
@@ -50,7 +51,7 @@ export function getArrowPathMetrics(
     styleArrowBytes: formatByteLength(styleArrowBytes),
     styleGpuBytes: formatByteLength(styleGpuBytes),
     styleGpuExpansion: formatExpansionRatio(styleGpuBytes, styleArrowBytes),
-    styleBuildTime: `${pathInput.arrowVectorBuildTimeMs.toFixed(1)} ms`,
+    styleBuildTime: `${arrowVectorBuildTimeMs.toFixed(1)} ms`,
     totalArrowBytes: formatByteLength(totalArrowBytes),
     totalGpuBytes:
       transientPathGpuBytes > 0

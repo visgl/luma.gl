@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-const STREAMING_BATCH_STATUS_ROW_ID = 'gpu-vector-storage-particles-streaming-status-row';
-const STREAMING_BATCH_FILL_ID = 'gpu-vector-storage-particles-streaming-fill';
-const STREAMING_BATCH_STATUS_LABEL_ID = 'gpu-vector-storage-particles-streaming-status-label';
+const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-particles-streaming-status-row';
+const STREAMING_BATCH_FILL_ID = 'arrow-particles-streaming-fill';
+const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-particles-streaming-status-label';
 
-export class GPUVectorStorageParticlesControlPanel {
+export class ArrowParticlesControlPanel {
   private streamingBatchStatusRow: HTMLElement | null = null;
   private streamingBatchFill: HTMLElement | null = null;
   private streamingBatchStatusLabel: HTMLElement | null = null;
@@ -53,7 +53,7 @@ export class GPUVectorStorageParticlesControlPanel {
   }
 }
 
-export function makeGPUVectorStorageParticlesControlPanelHtml(): string {
+export function makeArrowParticlesControlPanelHtml(): string {
   return `\
   <div style="min-width: 280px; max-width: 420px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 10px; background: rgba(255, 255, 255, 0.96); color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
     <p style="margin: 0 0 12px;">Runs an example-level <code>ArrowParticleLayer</code> over <code>positions</code> and <code>velocities</code> Arrow columns, then updates GPU batches with storage compute on WebGPU or transform feedback on WebGL.</p>

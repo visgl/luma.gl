@@ -3,11 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import type {ArrowDggsPolygonLayerMetrics} from './arrow-dggs-polygon-layer';
-import type {DggsGpuPolygonsControlPanelMetrics} from './control-panel';
+import type {ArrowDggsPolygonsControlPanelMetrics} from './control-panel';
 
 export function formatDggsPolygonMetrics(
   metrics: ArrowDggsPolygonLayerMetrics
-): DggsGpuPolygonsControlPanelMetrics {
+): ArrowDggsPolygonsControlPanelMetrics {
   return {
     activeColumn: metrics.activeColumn,
     rowCount: formatInteger(metrics.rowCount),

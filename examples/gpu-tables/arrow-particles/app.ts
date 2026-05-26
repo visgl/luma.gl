@@ -11,28 +11,25 @@ import {
   STREAMING_PARTICLE_BATCH_COUNT
 } from './arrow-particle-data';
 import {ArrowParticleLayer} from './arrow-particle-layer';
-import {
-  GPUVectorStorageParticlesControlPanel,
-  makeGPUVectorStorageParticlesControlPanelHtml
-} from './control-panel';
+import {ArrowParticlesControlPanel, makeArrowParticlesControlPanelHtml} from './control-panel';
 
 export const title = 'Particles: FixedSizeList<Float32, 2>';
 export const description =
   'Arrow table columns uploaded to GPUVectors and updated through storage compute or transform feedback.';
 
-export default class GPUVectorStorageParticlesAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeGPUVectorStorageParticlesControlPanelHtml();
+export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = makeArrowParticlesControlPanelHtml();
 
   readonly device: Device;
   readonly layer: ArrowParticleLayer;
-  readonly controlPanel: GPUVectorStorageParticlesControlPanel;
+  readonly controlPanel: ArrowParticlesControlPanel;
   isFinalized = false;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
     this.layer = new ArrowParticleLayer(this.device);
-    this.controlPanel = new GPUVectorStorageParticlesControlPanel();
+    this.controlPanel = new ArrowParticlesControlPanel();
   }
 
   override async onInitialize(): Promise<void> {
