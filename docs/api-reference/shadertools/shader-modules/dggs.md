@@ -37,5 +37,5 @@ true higher-precision DGGS decode math is added.
 - Canonical DGGS helper word order is `vec2<u32>(high, low)`.
 - Arrow Uint64 storage reads should pass through
   `dggs_u64_from_little_endian_words()` before DGGS comparisons or decoders.
-- The [Global Grids example](/examples/gpu-tables/dggs-gpu-polygons) shows UTF-8
+- The [Global Grids example](/examples/gpu-tables/arrow-dggs-polygons) shows UTF-8
   DGGS IDs parsed into Uint64 GPU keys and expanded into Float32 cell boundaries.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ArrowModel, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {makeArrowFixedSizeListVector, makeArrowGPUTable} from '@luma.gl/arrow';
 import {Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {ModelProps} from '@luma.gl/engine';
 import {
@@ -18,6 +18,7 @@ import {
   indexPicking
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
+import {GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {Matrix4} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 
@@ -199,14 +200,20 @@ function makeInstanceArrowTable(instancesPerSide: number): InstanceArrowTable {
 }
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
-class InstancedCube extends ArrowModel {
+class InstancedCube extends GPUTableModel {
+  private instanceTable: GPUTable;
+
   constructor(device: Device, instancesPerSide: number, props?: Partial<ModelProps>) {
     const instanceArrowTable = makeInstanceArrowTable(instancesPerSide);
+    const instanceTable = makeArrowGPUTable(device, instanceArrowTable, {
+      shaderLayout: CUBE_SHADER_LAYOUT
+    });
 
     // Model
     super(device, {
       ...props,
-      arrowTable: instanceArrowTable,
+      table: instanceTable,
+      tableCount: 'instance',
       shaderLayout: CUBE_SHADER_LAYOUT,
       source: WGSL_SHADER,
       vs: VS_GLSL,
@@ -219,6 +226,17 @@ class InstancedCube extends ArrowModel {
         depthCompare: 'less-equal'
       }
     });
+    this.instanceTable = instanceTable;
+  }
+
+  setInstanceTable(instanceArrowTable: InstanceArrowTable): void {
+    const nextInstanceTable = makeArrowGPUTable(this.device, instanceArrowTable, {
+      shaderLayout: CUBE_SHADER_LAYOUT
+    });
+    const previousInstanceTable = this.instanceTable;
+    this.setProps({table: nextInstanceTable});
+    this.instanceTable = nextInstanceTable;
+    previousInstanceTable.destroy();
   }
 
   createPickingModel(props?: Partial<ModelProps>): Model {
@@ -247,7 +265,7 @@ class InstancedCube extends ArrowModel {
       bufferLayout: instanceBufferLayout,
       instanceCount: this.instanceCount,
       geometry: pickingGeometry,
-      attributes: this.arrowGPUTable!.attributes,
+      attributes: this.table!.attributes,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
       parameters: {
@@ -255,6 +273,11 @@ class InstancedCube extends ArrowModel {
         depthCompare: 'less-equal'
       }
     });
+  }
+
+  override destroy(): void {
+    super.destroy();
+    this.instanceTable.destroy();
   }
 }
 
@@ -322,9 +345,9 @@ export class ArrowInstancedMeshLayer {
       return;
     }
     this.instancesPerSide = props.instancesPerSide;
-    this.cube.setProps({arrowTable: makeInstanceArrowTable(props.instancesPerSide)});
+    this.cube.setInstanceTable(makeInstanceArrowTable(props.instancesPerSide));
     if (this.pickingCube) {
-      this.pickingCube.setAttributes(this.cube.arrowGPUTable!.attributes);
+      this.pickingCube.setAttributes(this.cube.table!.attributes);
       this.pickingCube.setInstanceCount(this.cube.instanceCount);
     }
   }

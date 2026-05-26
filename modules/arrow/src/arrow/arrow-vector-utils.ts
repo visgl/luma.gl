@@ -27,6 +27,14 @@ type IntegerTypedArray =
 /** Row indices accepted when expanding compact Arrow rows into aligned rows. */
 export type ArrowVectorRowMapping = IntegerTypedArray | Vector<Int>;
 
+/**
+ * Constant value used when `expandArrowVector()` maps a null source row.
+ *
+ * Scalar numeric vectors accept a number. FixedSizeList numeric vectors accept an array-like value
+ * with exactly one entry per list component.
+ */
+export type ArrowVectorNullValue = number | ArrayLike<number>;
+
 const makeNumericData = makeData as <T extends NumericArrowType>(props: {
   type: T;
   length: number;
@@ -103,14 +111,21 @@ function getBufferByteLength(buffer: unknown): number {
  * Gather scalar or FixedSizeList Arrow rows into a new contiguous vector.
  *
  * This is useful when compact table data needs to be expanded into vertex-aligned data.
+ * If `nullValue` is supplied, mapped null source rows expand to that constant value; otherwise
+ * null rows preserve the existing values-buffer copy behavior.
  */
 export function expandArrowVector<T extends AttributeArrowType>(
   vector: Vector<T>,
-  rowMapping: ArrowVectorRowMapping
+  rowMapping: ArrowVectorRowMapping,
+  nullValue?: ArrowVectorNullValue
 ): Vector<T> {
   const {numericType, rowStride} = getExpansionVectorInfo(vector);
   const sourceValues = getArrowVectorBufferSource(vector);
   const rowIndices = getRowIndices(rowMapping);
+  const nullValueRow = normalizeNullValue(vector, rowStride, sourceValues, nullValue);
+  if (nullValueRow && DataType.isFixedSizeList(vector.type)) {
+    assertFixedSizeListChildValuesAreNonNullable(vector);
+  }
   const expandedValues = createTypedArrayLike(
     sourceValues,
     rowIndices.length * rowStride
@@ -122,10 +137,17 @@ export function expandArrowVector<T extends AttributeArrowType>(
 
     const sourceOffset = sourceRowIndex * rowStride;
     const targetOffset = targetRowIndex * rowStride;
-    expandedValues.set(
-      sourceValues.subarray(sourceOffset, sourceOffset + rowStride) as never,
-      targetOffset
-    );
+    const sourceRow = isArrowVectorRowValid(vector, sourceRowIndex)
+      ? sourceValues.subarray(sourceOffset, sourceOffset + rowStride)
+      : nullValueRow;
+    if (!sourceRow) {
+      expandedValues.set(
+        sourceValues.subarray(sourceOffset, sourceOffset + rowStride) as never,
+        targetOffset
+      );
+      continue;
+    }
+    expandedValues.set(sourceRow as never, targetOffset);
   }
 
   if (DataType.isFixedSizeList(vector.type)) {
@@ -142,6 +164,91 @@ export function expandArrowVector<T extends AttributeArrowType>(
     data: expandedValues as never
   });
   return makeVector(data) as Vector<T>;
+}
+
+function normalizeNullValue<T extends AttributeArrowType>(
+  vector: Vector<T>,
+  rowStride: number,
+  sourceValues: NumericArrowType['TArray'],
+  nullValue: ArrowVectorNullValue | undefined
+): NumericArrowType['TArray'] | undefined {
+  if (nullValue === undefined) {
+    return undefined;
+  }
+  const typedNullValue = createTypedArrayLike(sourceValues, rowStride);
+  if (DataType.isFixedSizeList(vector.type)) {
+    if (typeof nullValue === 'number') {
+      throw new Error('expandArrowVector FixedSizeList nullValue must be an array');
+    }
+    if (nullValue.length !== rowStride) {
+      throw new Error(
+        `expandArrowVector FixedSizeList nullValue length ${nullValue.length} must match listSize ${rowStride}`
+      );
+    }
+    for (let component = 0; component < rowStride; component++) {
+      typedNullValue[component] = nullValue[component] ?? 0;
+    }
+    return typedNullValue;
+  }
+
+  if (typeof nullValue !== 'number') {
+    throw new Error('expandArrowVector scalar nullValue must be a number');
+  }
+  typedNullValue[0] = nullValue;
+  return typedNullValue;
+}
+
+function assertFixedSizeListChildValuesAreNonNullable<T extends AttributeArrowType>(
+  vector: Vector<T>
+): void {
+  for (const data of vector.data) {
+    const childData = data.children[0];
+    if (
+      !DataType.isFixedSizeList(data.type) ||
+      !childData ||
+      childData.nullCount === 0 ||
+      !childData.nullBitmap
+    ) {
+      continue;
+    }
+    for (let localRowIndex = 0; localRowIndex < data.length; localRowIndex++) {
+      if (!isArrowDataRowValid(data, localRowIndex)) {
+        continue;
+      }
+      for (let component = 0; component < data.type.listSize; component++) {
+        const childRowIndex = localRowIndex * data.type.listSize + component;
+        if (!isArrowDataRowValid(childData, childRowIndex)) {
+          throw new Error('expandArrowVector does not support nullable FixedSizeList child values');
+        }
+      }
+    }
+  }
+}
+
+function isArrowVectorRowValid<T extends AttributeArrowType>(
+  vector: Vector<T>,
+  rowIndex: number
+): boolean {
+  let rowStart = 0;
+  for (const data of vector.data) {
+    const rowEnd = rowStart + data.length;
+    if (rowIndex < rowStart || rowIndex >= rowEnd) {
+      rowStart = rowEnd;
+      continue;
+    }
+    const localRowIndex = rowIndex - rowStart;
+    return isArrowDataRowValid(data, localRowIndex);
+  }
+  return true;
+}
+
+function isArrowDataRowValid(data: Data, localRowIndex: number): boolean {
+  if (data.nullCount === 0 || !data.nullBitmap) {
+    return true;
+  }
+  const bitmapIndex = (data.offset ?? 0) + localRowIndex;
+  const bitmapByte = data.nullBitmap[bitmapIndex >> 3] ?? 0;
+  return (bitmapByte & (1 << (bitmapIndex & 7))) !== 0;
 }
 
 function makeFixedSizeListVector<T extends NumericArrowType>(

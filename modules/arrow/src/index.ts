@@ -81,6 +81,7 @@ export {
 export {
   expandArrowVector,
   getArrowVectorByteLength,
+  type ArrowVectorNullValue,
   type ArrowVectorRowMapping
 } from './arrow/arrow-vector-utils';
 
@@ -113,9 +114,7 @@ export {
   type ArrowTableGeometryProps
 } from './arrow/arrow-geometry';
 export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';
-export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow/arrow-model';
 export {
-  ArrowPathModel,
   buildArrowPathSegmentTable,
   createArrowPathPreparedState,
   prepareArrowPathGPUVectors,
@@ -147,7 +146,6 @@ export {
   type PrepareArrowPathGPUVectorsOptions as ConvertArrowPathsToAttributeOptions
 } from './arrow/convert-arrow-paths-to-attribute';
 export {
-  ArrowStoragePathModel,
   createArrowStoragePathState,
   prepareArrowStoragePathGPUVectors,
   type ArrowStoragePathBatchState,
@@ -172,10 +170,6 @@ export {
   type PreparedArrowStoragePathGPUVectors as ConvertedArrowStoragePathData,
   type PrepareArrowPathGPUVectorsOptions as ConvertArrowPathsToStorageOptions
 } from './arrow/convert-arrow-paths-to-storage';
-export {
-  ArrowStorageTripsPathModel,
-  type ArrowStorageTripsPathModelProps
-} from './arrow/arrow-storage-trips-path-model';
 export {
   StorageTripsPathModel,
   type StorageTripsPathModelProps

@@ -22,12 +22,10 @@ export const STREAMING_PATH_ROWS_PER_CHUNK = 240;
 
 type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
 export type ArrowPathBaseRowCountKind = '240' | '960' | '2400';
-export type ArrowPathRowCountKind = ArrowPathBaseRowCountKind | '2400-stream';
+export type ArrowPathRowCountKind = '240-stream' | '2400-stream';
 export type ArrowPathCoordinateKind = 'float32' | 'float64';
 export type ArrowPathColorKind = 'none' | 'row-colors' | 'vertex-colors';
 export type ArrowPathTimeKind = ArrowPathLayerTimeColumn;
-export type ArrowPathInputKind =
-  `${ArrowPathRowCountKind}-${ArrowPathCoordinateKind}-${ArrowPathColorKind}-${ArrowPathTimeKind}`;
 export type ArrowPathCapKind = 'square' | 'round';
 export type ArrowPathJointKind = 'miter' | 'round';
 export type ArrowPathDataset = {
@@ -53,27 +51,6 @@ export const PATH_DATASETS: Record<ArrowPathBaseRowCountKind, ArrowPathDataset> 
     label: '2.4K paths, 60K segments'
   }
 };
-
-export function getArrowPathInputKind(
-  rowCountKind: ArrowPathRowCountKind,
-  coordinateKind: ArrowPathCoordinateKind,
-  colorKind: ArrowPathColorKind,
-  timeKind: ArrowPathTimeKind
-): ArrowPathInputKind {
-  return `${rowCountKind}-${coordinateKind}-${colorKind}-${timeKind}`;
-}
-
-export function isStreamingArrowPathRowCountKind(
-  rowCountKind: ArrowPathRowCountKind
-): rowCountKind is '2400-stream' {
-  return rowCountKind === '2400-stream';
-}
-
-export function getBaseArrowPathRowCountKind(
-  rowCountKind: ArrowPathRowCountKind
-): ArrowPathBaseRowCountKind {
-  return isStreamingArrowPathRowCountKind(rowCountKind) ? '2400' : rowCountKind;
-}
 
 export function getValidPathModelKindForTimeKind(
   modelKind: ArrowPathLayerModel,

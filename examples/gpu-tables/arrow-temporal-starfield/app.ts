@@ -30,7 +30,6 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
 
   readonly device: Device;
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
-  activeInputKind: 'eager' | 'streaming' = 'eager';
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
   layer: ArrowTemporalStarfieldLayer | null = null;
@@ -43,13 +42,11 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
     this.activeRenderMode = this.device.type === 'webgpu' ? 'storage' : 'attributes';
     this.controlPanel = new ArrowTemporalStarfieldControlPanel({
       initialState: {
-        inputKind: this.activeInputKind,
         renderMode: this.activeRenderMode,
         timeColumn: this.activeTimeColumn,
         supportsStorage: this.device.type === 'webgpu'
       },
       handlers: {
-        onInputKindChange: this.handleInputKindSelection,
         onRenderModeChange: this.handleRenderModeSelection,
         onTimeColumnChange: this.handleTimeColumnSelection
       }
@@ -61,10 +58,8 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
       renderMode: this.activeRenderMode,
       timeColumn: this.activeTimeColumn
     });
-    await this.layer.initialize();
     this.controlPanel.initialize();
-    this.controlPanel.setLabels(this.layer.getLabels());
-    this.controlPanel.setStreamingBatchStatus(null, STREAMING_STARFIELD_BATCH_COUNT);
+    this.startStreamingStarfield();
   }
 
   override onRender({device, time}: AnimationProps): void {
@@ -80,24 +75,9 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
 
   override onFinalize(): void {
     this.isFinalized = true;
-    this.inputRequestVersion++;
     this.controlPanel.destroy();
     this.layer?.destroy();
   }
-
-  handleInputKindSelection = (inputKind: 'eager' | 'streaming'): void => {
-    if (inputKind === this.activeInputKind) {
-      return;
-    }
-
-    this.activeInputKind = inputKind;
-    this.controlPanel.syncControls({inputKind});
-    if (inputKind === 'streaming') {
-      this.startStreamingStarfield();
-      return;
-    }
-    void this.showEagerStarfield();
-  };
 
   handleRenderModeSelection = (requestedRenderMode: 'attributes' | 'storage'): void => {
     const nextRenderMode =
@@ -120,23 +100,8 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
     this.activeTimeColumn = timeColumn;
     this.controlPanel.syncControls({timeColumn});
     this.layer?.setProps({timeColumn});
-    if (this.activeInputKind === 'streaming') {
-      this.startStreamingStarfield();
-      return;
-    }
-    void this.showEagerStarfield();
+    this.startStreamingStarfield();
   };
-
-  private async showEagerStarfield(): Promise<void> {
-    const requestVersion = ++this.inputRequestVersion;
-    this.layer?.cancelRecordBatchStream();
-    await this.layer?.initialize();
-    if (this.isFinalized || requestVersion !== this.inputRequestVersion || !this.layer) {
-      return;
-    }
-    this.controlPanel.setLabels(this.layer.getLabels());
-    this.controlPanel.setStreamingBatchStatus(null, STREAMING_STARFIELD_BATCH_COUNT);
-  }
 
   private startStreamingStarfield(): void {
     const layer = this.layer;
@@ -163,7 +128,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   private readonly handleStreamingStarfieldBatch = (
     update: ArrowTemporalStarfieldLayerRecordBatchStreamUpdate
   ): void => {
-    if (this.isFinalized || this.activeInputKind !== 'streaming' || !this.layer) {
+    if (this.isFinalized || !this.layer) {
       return;
     }
     if (update.isFirstBatch) {

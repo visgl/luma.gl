@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 const RENDER_MODE_SELECTOR_ID = 'arrow-temporal-starfield-render-mode';
-const INPUT_KIND_SELECTOR_ID = 'arrow-temporal-starfield-input-kind';
 const TIME_COLUMN_SELECTOR_ID = 'arrow-temporal-starfield-time-column';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-temporal-starfield-streaming-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-temporal-starfield-streaming-fill';
@@ -17,7 +16,6 @@ const DURATION_ORIGIN_ID = 'arrow-temporal-starfield-duration-origin';
 const PULSE_PERIOD_ORIGIN_ID = 'arrow-temporal-starfield-pulse-period-origin';
 
 export type ArrowTemporalStarfieldControlPanelState = {
-  inputKind: 'eager' | 'streaming';
   renderMode: 'attributes' | 'storage';
   timeColumn: 'timestamp' | 'xyzm';
   supportsStorage: boolean;
@@ -34,7 +32,6 @@ export type ArrowTemporalStarfieldControlPanelLabels = {
 };
 
 export type ArrowTemporalStarfieldControlPanelHandlers = {
-  onInputKindChange: (inputKind: 'eager' | 'streaming') => void;
   onRenderModeChange: (renderMode: 'attributes' | 'storage') => void;
   onTimeColumnChange: (timeColumn: 'timestamp' | 'xyzm') => void;
 };
@@ -47,7 +44,6 @@ export type ArrowTemporalStarfieldControlPanelOptions = {
 export class ArrowTemporalStarfieldControlPanel {
   private readonly handlers: ArrowTemporalStarfieldControlPanelHandlers;
   private state: ArrowTemporalStarfieldControlPanelState;
-  private inputKindSelector: HTMLSelectElement | null = null;
   private renderModeSelector: HTMLSelectElement | null = null;
   private timeColumnSelector: HTMLSelectElement | null = null;
   private streamingBatchStatusRow: HTMLElement | null = null;
@@ -67,13 +63,6 @@ export class ArrowTemporalStarfieldControlPanel {
   }
 
   initialize(): void {
-    if (!this.inputKindSelector) {
-      this.inputKindSelector = document.getElementById(
-        INPUT_KIND_SELECTOR_ID
-      ) as HTMLSelectElement | null;
-      this.inputKindSelector?.addEventListener('change', this.handleInputKindSelection);
-    }
-
     if (!this.renderModeSelector) {
       this.renderModeSelector = document.getElementById(
         RENDER_MODE_SELECTOR_ID
@@ -102,10 +91,8 @@ export class ArrowTemporalStarfieldControlPanel {
   }
 
   destroy(): void {
-    this.inputKindSelector?.removeEventListener('change', this.handleInputKindSelection);
     this.renderModeSelector?.removeEventListener('change', this.handleRenderModeSelection);
     this.timeColumnSelector?.removeEventListener('change', this.handleTimeColumnSelection);
-    this.inputKindSelector = null;
     this.renderModeSelector = null;
     this.timeColumnSelector = null;
     this.streamingBatchStatusRow = null;
@@ -122,10 +109,6 @@ export class ArrowTemporalStarfieldControlPanel {
 
   syncControls(state: Partial<ArrowTemporalStarfieldControlPanelState>): void {
     this.state = {...this.state, ...state};
-    if (this.inputKindSelector) {
-      this.inputKindSelector.value = this.state.inputKind;
-    }
-
     if (this.timeColumnSelector) {
       this.timeColumnSelector.value = this.state.timeColumn;
     }
@@ -185,15 +168,6 @@ export class ArrowTemporalStarfieldControlPanel {
     this.streamingBatchStatusLabel.textContent = `Loaded ${safeLoadedBatchCount} of ${streamingBatchCount} batches`;
   }
 
-  private readonly handleInputKindSelection = (): void => {
-    const requestedInputKind = this.inputKindSelector?.value;
-    if (!isTemporalStarfieldInputKind(requestedInputKind)) {
-      return;
-    }
-    this.syncControls({inputKind: requestedInputKind});
-    this.handlers.onInputKindChange(requestedInputKind);
-  };
-
   private readonly handleTimeColumnSelection = (): void => {
     const requestedTimeColumn = this.timeColumnSelector?.value;
     if (!isTemporalStarfieldTimeColumn(requestedTimeColumn)) {
@@ -221,11 +195,6 @@ export function makeArrowTemporalStarfieldControlPanelHtml(): string {
   return `
 <p>Prepares Arrow <code>Timestamp</code> and <code>Duration</code> columns as relative <code>Float32</code> GPU rows, then uses them as per-star animation inputs.</p>
 <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.7rem; align-items: center;">
-  <label for="${INPUT_KIND_SELECTOR_ID}">Input</label>
-  <select id="${INPUT_KIND_SELECTOR_ID}">
-    <option value="eager">Arrow table</option>
-    <option value="streaming">RecordBatch stream</option>
-  </select>
   <label for="${TIME_COLUMN_SELECTOR_ID}">Time</label>
   <select id="${TIME_COLUMN_SELECTOR_ID}">
     <option value="timestamp">timestamp - TimestampMillisecond</option>
@@ -270,10 +239,6 @@ function getStreamingBatchProgressPercent(
     return 0;
   }
   return (loadedBatchCount / streamingBatchCount) * 100;
-}
-
-function isTemporalStarfieldInputKind(value: string | undefined): value is 'eager' | 'streaming' {
-  return value === 'eager' || value === 'streaming';
 }
 
 function isTemporalStarfieldRenderMode(

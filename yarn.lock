@@ -15358,6 +15358,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-arrow-dggs-polygons@workspace:examples/gpu-tables/arrow-dggs-polygons":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-dggs-polygons@workspace:examples/gpu-tables/arrow-dggs-polygons"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-arrow-instancing@workspace:examples/gpu-tables/arrow-instancing":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-instancing@workspace:examples/gpu-tables/arrow-instancing"
@@ -15387,6 +15403,22 @@ __metadata:
     "@luma.gl/webgl": "npm:~9.3.0"
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-arrow-particles@workspace:examples/gpu-tables/arrow-particles":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-particles@workspace:examples/gpu-tables/arrow-particles"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15478,22 +15510,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-dggs-gpu-polygons@workspace:examples/gpu-tables/dggs-gpu-polygons":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-dggs-gpu-polygons@workspace:examples/gpu-tables/dggs-gpu-polygons"
-  dependencies:
-    "@luma.gl/arrow": "npm:~9.3.0"
-    "@luma.gl/core": "npm:~9.3.0"
-    "@luma.gl/engine": "npm:~9.3.0"
-    "@luma.gl/shadertools": "npm:~9.3.0"
-    "@luma.gl/tables": "npm:~9.3.0"
-    "@luma.gl/webgpu": "npm:~9.3.0"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^5.9.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
 "luma.gl-examples-experimental-bloom@workspace:examples/experimental/bloom":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-bloom@workspace:examples/experimental/bloom"
@@ -15557,22 +15573,6 @@ __metadata:
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.5.0"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-gpu-vector-storage-particles@workspace:examples/gpu-tables/gpu-vector-storage-particles":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-gpu-vector-storage-particles@workspace:examples/gpu-tables/gpu-vector-storage-particles"
-  dependencies:
-    "@luma.gl/arrow": "npm:~9.3.0"
-    "@luma.gl/core": "npm:~9.3.0"
-    "@luma.gl/engine": "npm:~9.3.0"
-    "@luma.gl/shadertools": "npm:~9.3.0"
-    "@luma.gl/tables": "npm:~9.3.0"
-    "@luma.gl/webgpu": "npm:~9.3.0"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
   linkType: soft

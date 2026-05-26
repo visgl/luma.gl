@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ArrowModel,
   makeArrowFixedSizeListVector,
   makeArrowGPUVector,
   prepareArrowTemporalGPUVectors,
@@ -11,7 +10,7 @@ import {
 } from '@luma.gl/arrow';
 import {type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {GPUTable, type GPUVector} from '@luma.gl/tables';
+import {GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -44,16 +43,29 @@ import {
 } from './arrow-time-columns-shaders';
 import type {TimeColumnsRenderMode} from './control-panel';
 
+/** Public configuration for the Arrow time-columns schedule layer. */
 export type ArrowTimeColumnsLayerProps = {
+  /** Rendering path. `storage` requires WebGPU; WebGL falls back to attributes. */
   renderMode?: TimeColumnsRenderMode;
+  /** Synthetic clock rate used to sweep through the schedule. */
+  currentTimeRateMillisecondsPerSecond?: number;
+  /** Initial synthetic schedule time in milliseconds. */
+  initialScheduleMilliseconds?: number;
 };
 
+/** Labels displayed by the Arrow time-columns example control panel. */
 export type ArrowTimeColumnsLayerLabels = {
+  /** Active preparation path label. */
   preparationPath: string;
+  /** Current synthetic timestamp label. */
   currentTimestamp: string;
+  /** Date column origin label. */
   dateOrigin: string;
+  /** Time column origin label. */
   timeOrigin: string;
+  /** Timestamp column origin label. */
   timestampOrigin: string;
+  /** Duration column origin label. */
   durationOrigin: string;
 };
 
@@ -69,8 +81,19 @@ type TimeColumnsTableInput = {
   destroy: () => void;
 };
 
-type ActiveTimeColumnsModel = ArrowModel | Model;
+type ActiveTimeColumnsModel = GPUTableModel | Model;
 
+const DEFAULT_TIME_COLUMNS_LAYER_PROPS = {
+  currentTimeRateMillisecondsPerSecond: CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
+  initialScheduleMilliseconds: 0
+} as const satisfies Required<
+  Pick<
+    ArrowTimeColumnsLayerProps,
+    'currentTimeRateMillisecondsPerSecond' | 'initialScheduleMilliseconds'
+  >
+>;
+
+/** Example layer that renders Arrow date/time/timestamp/duration columns as a schedule board. */
 export class ArrowTimeColumnsLayer {
   readonly device: Device;
   readonly shaderInputs = new ShaderInputs<{timeColumns: typeof timeColumns.props}>({
@@ -83,11 +106,16 @@ export class ArrowTimeColumnsLayer {
   cursorModel: Model | null = null;
   currentScheduleMilliseconds = 0;
   lastRenderSeconds: number | null = null;
+  props: ArrowTimeColumnsLayerProps;
 
   constructor(device: Device, props: ArrowTimeColumnsLayerProps = {}) {
     this.device = device;
+    this.props = props;
     this.activeRenderMode =
       props.renderMode ?? (this.device.type === 'webgpu' ? 'storage' : 'attributes');
+    this.currentScheduleMilliseconds =
+      props.initialScheduleMilliseconds ??
+      DEFAULT_TIME_COLUMNS_LAYER_PROPS.initialScheduleMilliseconds;
   }
 
   async initialize(): Promise<void> {
@@ -110,7 +138,9 @@ export class ArrowTimeColumnsLayer {
     this.lastRenderSeconds = seconds;
     this.currentScheduleMilliseconds =
       (this.currentScheduleMilliseconds +
-        elapsedSeconds * CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND) %
+        elapsedSeconds *
+          (this.props.currentTimeRateMillisecondsPerSecond ??
+            DEFAULT_TIME_COLUMNS_LAYER_PROPS.currentTimeRateMillisecondsPerSecond)) %
       SCHEDULE_SWEEP_MILLISECONDS;
     const currentTimestamp = getCurrentTimestampMilliseconds(this.currentScheduleMilliseconds);
 
@@ -169,10 +199,10 @@ export class ArrowTimeColumnsLayer {
       });
     }
 
-    return new ArrowModel(this.device, {
+    return new GPUTableModel(this.device, {
       id: 'arrow-time-columns-events-attributes',
-      arrowGPUTable: timeColumnsTableInput.table,
-      arrowCount: 'instance',
+      table: timeColumnsTableInput.table,
+      tableCount: 'instance',
       source: EVENT_ATTRIBUTE_WGSL_SHADER,
       vs: EVENT_VERTEX_GLSL_SHADER,
       fs: EVENT_FRAGMENT_GLSL_SHADER,
@@ -224,6 +254,10 @@ export class ArrowTimeColumnsLayer {
   }
 
   setProps(props: ArrowTimeColumnsLayerProps): void {
+    this.props = {...this.props, ...props};
+    if (props.initialScheduleMilliseconds !== undefined) {
+      this.currentScheduleMilliseconds = props.initialScheduleMilliseconds;
+    }
     if (!this.timeColumnsTableInput || props.renderMode === undefined) {
       return;
     }

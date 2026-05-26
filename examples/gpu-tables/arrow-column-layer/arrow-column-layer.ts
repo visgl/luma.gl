@@ -28,29 +28,74 @@ import {
   columnLayer
 } from './column-layer-shaders';
 
+/** Prepared render input and projection settings for the internal WebGPU column model. */
 export type ColumnLayerProps = {
+  /** GPU table containing aggregated H3/time/count columns. */
   table: GPUTable;
+  /** GPU-decoded H3 cell boundary geometry shared by all columns. */
   geometry: ColumnLayerGeometry;
+  /** Maximum aggregate count used to normalize column height. */
   maxCount: number;
+  /** Duration of one synthetic time cycle in milliseconds. */
   cycleDurationMilliseconds: number;
+  /** Map center in longitude/latitude used by the column shader. */
+  center: [number, number];
+  /** Column height multiplier. */
+  heightScale: number;
+  /** World scale applied after projecting H3 cell geometry. */
+  scale: number;
+  /** Tilt factor applied by the column shader. */
+  tilt: number;
 };
 
+/** Per-frame draw inputs for the internal WebGPU column model. */
 export type ColumnLayerDrawProps = {
+  /** Current canvas aspect ratio. */
   aspect: number;
+  /** Synthetic timestamp used to filter active time buckets. */
   currentTimestampMilliseconds: number;
 };
 
+/** Metrics displayed by the Arrow column example control panel. */
 export type ArrowColumnLayerMetrics = {
+  /** Number of source CSV rows before aggregation. */
   sourceRowCount: number;
+  /** Number of aggregated Arrow rows uploaded to the GPU. */
   aggregateRowCount: number;
+  /** Number of unique H3 cells in the source data. */
   uniqueH3CellCount: number;
+  /** H3 resolution used to aggregate source coordinates. */
   h3Resolution: number;
+  /** Number of temporal buckets in one synthetic cycle. */
   timeBucketCount: number;
+  /** Duration of one time bucket in milliseconds. */
   timeBucketDurationMilliseconds: number;
+  /** Maximum aggregate count in any rendered column. */
   maxCount: number;
+  /** Approximate GPU bytes used by uploaded table and geometry buffers. */
   gpuColumnBytes: number;
+  /** CPU time spent building Arrow aggregate columns. */
   arrowBuildTimeMilliseconds: number;
+  /** CPU/GPU time spent preparing H3 column geometry. */
   geometryDecodeTimeMilliseconds: number;
+};
+
+/** Public configuration for the Arrow-backed animated H3 column layer. */
+export type ArrowColumnLayerProps = {
+  /** Optional preloaded source data. Defaults to loading the bundled deck.gl CSV source. */
+  sourceData?: ArrowColumnSourceData;
+  /** Map center in longitude/latitude used by the column shader. */
+  center?: [number, number];
+  /** Column height multiplier. */
+  heightScale?: number;
+  /** World scale applied after projecting H3 cell geometry. */
+  scale?: number;
+  /** Tilt factor applied by the column shader. */
+  tilt?: number;
+  /** Synthetic clock rate used to advance through the time buckets. */
+  currentTimeRateMillisecondsPerSecond?: number;
+  /** Initial synthetic timestamp within the data cycle. */
+  initialTimestampMilliseconds?: number;
 };
 
 type ArrowColumnTableInput = {
@@ -65,6 +110,16 @@ type PreparedColumnTemporalVectors = {
   timeDurations: PreparedArrowTemporalGPUVector;
 };
 
+const DEFAULT_COLUMN_LAYER_PROPS = {
+  center: [-1.42, 52.23],
+  heightScale: 0.22,
+  scale: 16.8,
+  tilt: 1.16,
+  currentTimeRateMillisecondsPerSecond: CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
+  initialTimestampMilliseconds: 0
+} as const satisfies Required<Omit<ArrowColumnLayerProps, 'sourceData'>>;
+
+/** Internal low-level column renderer used by {@link ArrowColumnLayer}. */
 export class ColumnLayer {
   readonly device: Device;
   readonly shaderInputs = new ShaderInputs<{columnLayer: typeof columnLayer.props}>({
@@ -95,13 +150,13 @@ export class ColumnLayer {
   draw(renderPass: RenderPass, props: ColumnLayerDrawProps): void {
     this.shaderInputs.setProps({
       columnLayer: {
-        center: [-1.42, 52.23],
+        center: this.props.center,
         currentTimestamp: props.currentTimestampMilliseconds,
         cycleDuration: this.props.cycleDurationMilliseconds,
         maxCount: this.props.maxCount,
-        heightScale: 0.22,
-        scale: 16.8,
-        tilt: 1.16,
+        heightScale: this.props.heightScale,
+        scale: this.props.scale,
+        tilt: this.props.tilt,
         aspect: props.aspect
       }
     });
@@ -127,30 +182,52 @@ export class ColumnLayer {
   }
 }
 
+/** Example layer that loads Arrow H3/time/count columns and renders animated WebGPU columns. */
 export class ArrowColumnLayer {
   readonly device: Device;
+  props: ArrowColumnLayerProps;
   tableInput: ArrowColumnTableInput | null = null;
   columnLayer: ColumnLayer | null = null;
   currentTimestampMilliseconds = 0;
   lastRenderSeconds: number | null = null;
 
-  constructor(device: Device) {
+  constructor(device: Device, props: ArrowColumnLayerProps = {}) {
     if (device.type !== 'webgpu') {
       throw new Error('ArrowColumnLayer requires WebGPU');
     }
     this.device = device;
+    this.props = props;
+    this.currentTimestampMilliseconds =
+      props.initialTimestampMilliseconds ?? DEFAULT_COLUMN_LAYER_PROPS.initialTimestampMilliseconds;
   }
 
   async initialize(): Promise<void> {
-    const sourceData = await loadArrowColumnSourceData();
+    const sourceData = this.props.sourceData ?? (await loadArrowColumnSourceData());
     const tableInput = await makeArrowColumnTableInput(this.device, sourceData);
     this.tableInput = tableInput;
     this.columnLayer = new ColumnLayer(this.device, {
       table: tableInput.table,
       geometry: tableInput.geometry,
       maxCount: sourceData.maxCount,
-      cycleDurationMilliseconds: sourceData.cycleDurationMilliseconds
+      cycleDurationMilliseconds: sourceData.cycleDurationMilliseconds,
+      center: this.props.center ?? DEFAULT_COLUMN_LAYER_PROPS.center,
+      heightScale: this.props.heightScale ?? DEFAULT_COLUMN_LAYER_PROPS.heightScale,
+      scale: this.props.scale ?? DEFAULT_COLUMN_LAYER_PROPS.scale,
+      tilt: this.props.tilt ?? DEFAULT_COLUMN_LAYER_PROPS.tilt
     });
+  }
+
+  setProps(props: Partial<ArrowColumnLayerProps>): void {
+    this.props = {...this.props, ...props};
+    this.columnLayer?.setProps({
+      ...(props.center ? {center: props.center} : {}),
+      ...(props.heightScale !== undefined ? {heightScale: props.heightScale} : {}),
+      ...(props.scale !== undefined ? {scale: props.scale} : {}),
+      ...(props.tilt !== undefined ? {tilt: props.tilt} : {})
+    });
+    if (props.initialTimestampMilliseconds !== undefined) {
+      this.currentTimestampMilliseconds = props.initialTimestampMilliseconds;
+    }
   }
 
   draw(renderPass: RenderPass, props: {time: number; aspect: number}): void {
@@ -166,7 +243,9 @@ export class ArrowColumnLayer {
     this.lastRenderSeconds = seconds;
     this.currentTimestampMilliseconds =
       (this.currentTimestampMilliseconds +
-        elapsedSeconds * CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND) %
+        elapsedSeconds *
+          (this.props.currentTimeRateMillisecondsPerSecond ??
+            DEFAULT_COLUMN_LAYER_PROPS.currentTimeRateMillisecondsPerSecond)) %
       this.tableInput.sourceData.cycleDurationMilliseconds;
 
     this.columnLayer.draw(renderPass, {

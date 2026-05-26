@@ -13,32 +13,69 @@ import {
   type ArrowTextColorType,
   type ArrowTextModelProps,
   type ArrowTextSourceVectors
-} from './arrow-text-model';
+} from './convert-arrow-text-vectors';
 
+/**
+ * Arrow source column names used when uploading text vectors to GPUVectors.
+ *
+ * These names become GPUVector/buffer labels and are used by conversion helpers only. Renderer
+ * models receive the prepared GPUVector objects and do not inspect Arrow table column names.
+ */
 export type ArrowTextConversionColumns = {
+  /** Source column containing `FixedSizeList<Float32>[2]` label origins. */
   positions?: string;
+  /** Source column containing plain or dictionary-encoded UTF-8 labels. */
   text?: string;
+  /** Optional source column containing `FixedSizeList<Int16>[4]` clip rectangles. */
   clipRects?: string;
+  /** Optional source column containing packed row or character RGBA8 colors. */
   colors?: string;
+  /** Optional source column containing per-row rotation angles in degrees. */
   angles?: string;
+  /** Optional source column containing per-row deck-style text sizes. */
   sizes?: string;
+  /** Optional source column containing `FixedSizeList<Float32>[2]` pixel offsets. */
   pixelOffsets?: string;
 };
 
+/**
+ * GPUVector bundle produced from Arrow text source vectors.
+ *
+ * Layer/data-preparation code owns this object and should call `destroy()` when the prepared
+ * vectors are no longer used by a model or prepared state. The original CPU Arrow vectors are
+ * retained in `sourceVectors` so glyph-layout helpers can still expand UTF-8 rows explicitly.
+ */
 export type ConvertedArrowTextData = {
+  /** GPU-resident label origins aligned row-for-row with `texts`. */
   positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  /** GPU-resident plain or dictionary-encoded UTF-8 labels. */
   texts: GPUVector<ArrowUtf8TextType>;
+  /** Optional GPU-resident packed clip rectangles aligned with text rows. */
   clipRects?: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
+  /** Optional GPU-resident row or character colors. */
   colors?: GPUVector<ArrowTextColorType>;
+  /** Optional GPU-resident per-row angles in degrees. */
   angles?: GPUVector<arrow.Float32>;
+  /** Optional GPU-resident per-row deck-style text sizes. */
   sizes?: GPUVector<arrow.Float32>;
+  /** Optional GPU-resident per-row pixel offsets. */
   pixelOffsets?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  /** CPU Arrow vectors retained for glyph expansion and batch alignment. */
   sourceVectors: ArrowTextSourceVectors;
+  /** Releases every GPUVector created by this conversion result. */
   destroy: () => void;
 };
 
+/**
+ * Arrow-to-GPUVector conversion input accepted by all text conversion helpers.
+ *
+ * Callers pass explicit source vectors instead of an Arrow table so layer code owns column mapping,
+ * filtering, streaming, and resource lifetime before constructing pure GPUVector models.
+ */
 export type ConvertArrowTextProps = {
+  /** CPU Arrow vectors to upload and retain for later glyph expansion. */
   sourceVectors: ArrowTextSourceVectors;
+  /** Optional column names used when naming uploaded GPU resources. */
   columns?: ArrowTextConversionColumns;
 };
 
@@ -52,7 +89,13 @@ const DEFAULT_COLUMNS: Required<ArrowTextConversionColumns> = {
   pixelOffsets: 'pixelOffsets'
 };
 
-/** Converts Arrow text columns into GPU inputs consumed by {@link AttributeTextModel}. */
+/**
+ * Uploads Arrow text source vectors to GPUVectors for attribute text preparation.
+ *
+ * This does not construct a renderer. It is intended for layer/data-preparation code that will
+ * then call {@link convertArrowTextToAttributeState} and pass the prepared state to
+ * {@link AttributeTextModel}.
+ */
 export function convertArrowTextToAttribute(
   device: Device,
   props: ConvertArrowTextProps
@@ -123,7 +166,13 @@ export function convertArrowTextToAttribute(
   };
 }
 
-/** Builds prepared attribute text state from Arrow-backed GPU inputs. */
+/**
+ * Builds prepared attribute text state from Arrow-backed GPU inputs.
+ *
+ * The returned state contains generated glyph vertex buffers and the GPU table consumed by
+ * {@link AttributeTextModel}. The caller decides whether the model owns that state by setting
+ * `ownsAttributeState` on the model props.
+ */
 export function convertArrowTextToAttributeState(
   device: Device,
   props: ArrowTextModelProps

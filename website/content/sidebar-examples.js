@@ -26,8 +26,8 @@ const sidebars = {
         'gpu-tables/arrow-temporal-starfield',
         'gpu-tables/arrow-path-model',
         'gpu-tables/arrow-mesh-geometry',
-        'gpu-tables/gpu-vector-storage-particles',
-        'gpu-tables/dggs-gpu-polygons'
+        'gpu-tables/arrow-particles',
+        'gpu-tables/arrow-dggs-polygons'
       ]
     },
     {

@@ -8,19 +8,22 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {formatDggsPolygonMetrics} from './arrow-dggs-polygon-metrics';
 import {ArrowDggsPolygonLayer, type DggsSourceKind} from './arrow-dggs-polygon-layer';
-import {DggsGpuPolygonsControlPanel, makeDggsGpuPolygonsControlPanelHtml} from './control-panel';
+import {
+  ArrowDggsPolygonsControlPanel,
+  makeArrowDggsPolygonsControlPanelHtml
+} from './control-panel';
 
 export const title = 'Global Grids: Uint64, Utf8';
 export const description =
   'Parses geohash, quadkey, S2, A5, and H3 cell ids into Uint64 keys on the GPU, generates boundary paths, and renders them through the storage-backed Arrow path model.';
 
-export default class DggsGpuPolygonsAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeDggsGpuPolygonsControlPanelHtml();
+export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = makeArrowDggsPolygonsControlPanelHtml();
 
   static props = {useDevicePixels: true};
 
   readonly device: Device;
-  readonly controlPanel: DggsGpuPolygonsControlPanel;
+  readonly controlPanel: ArrowDggsPolygonsControlPanel;
   activeEncoding: DggsCellEncoding = 'geohash';
   activeSourceKind: DggsSourceKind = 'uint64';
   layer: ArrowDggsPolygonLayer | null = null;
@@ -28,7 +31,7 @@ export default class DggsGpuPolygonsAnimationLoopTemplate extends AnimationLoopT
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.controlPanel = new DggsGpuPolygonsControlPanel({
+    this.controlPanel = new ArrowDggsPolygonsControlPanel({
       initialState: {
         encoding: this.activeEncoding,
         sourceKind: this.activeSourceKind

@@ -93,8 +93,8 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `Utf8` | 🟡 | 🟡 | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `prepareDggsCellKeyGPUVector()` when the encoding is supplied. | `ArrowTextModel`, `ArrowStorageTextModel`, and DGGS key parsing. |
-| `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br/>`Uint8 \| Uint16 \| Uint32>` | 🟡 | ❌ | Dictionary index rows.<br/>Callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | `ArrowTextModel`, `ArrowStorageTextModel`, and dictionary text models. |
+| `Utf8` | 🟡 | 🟡 | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `prepareDggsCellKeyGPUVector()` when the encoding is supplied. | Arrow text conversion helpers, pure text models, and DGGS key parsing. |
+| `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br/>`Uint8 \| Uint16 \| Uint32>` | 🟡 | ❌ | Dictionary index rows.<br/>Callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | Arrow text conversion helpers and dictionary text models. |
 
 ### Other Columns
 
@@ -400,7 +400,7 @@ compatibility layout only: DGGS boundary math currently remains Float32, so low
 components are zero until true higher-precision decode math is added. The `dggs`
 shader module exposes the matching WGSL Uint64 word order and cell-boundary
 helpers when a shader should read keys directly. See the [Global Grids
-example](/examples/gpu-tables/dggs-gpu-polygons).
+example](/examples/gpu-tables/arrow-dggs-polygons).
 
 ## Storage-Selected Table Columns
 
@@ -410,7 +410,7 @@ bindings of type `'storage'` or `'read-only-storage'`. Selected storage columns:
 - appear in `gpuVectors` by binding name;
 - appear in `bindings` by binding name;
 - contribute fields to the GPU-facing Arrow schema;
-- are rebound batch-by-batch by `ArrowModel.drawBatches(renderPass)`.
+- are rebound batch-by-batch by `GPUTableModel.drawBatches(renderPass)`.
 
 This keeps table-backed WebGPU render paths compact. A column such as
 `instanceModelMatrix` can be uploaded once through the table machinery and bound
@@ -422,9 +422,9 @@ one `GPURecordBatch`.
 
 ## Expanding Compact Column Values
 
-`expandArrowVector(vector, rowMapping)` gathers rows from one numeric Arrow
-vector into a new contiguous Arrow vector. It accepts either an integer typed
-array or an integer Arrow vector as the row mapping.
+`expandArrowVector(vector, rowMapping, nullValue?)` gathers rows from one numeric
+Arrow vector into a new contiguous Arrow vector. It accepts either an integer
+typed array or an integer Arrow vector as the row mapping.
 
 Use it when a compact table should become vertex- or instance-aligned data for an
 attribute path. The Matrices: `FixedSizeList<Float32, 16>` example uses
@@ -440,6 +440,15 @@ The helper rejects unsupported vector types, non-integer row mappings, negative
 indices, and out-of-range indices.
 
 `ArrowVectorRowMapping` is the exported type name for the accepted mapping input.
+`ArrowVectorNullValue` is the exported type name for the optional null-row
+fallback. Scalar numeric vectors accept a numeric `nullValue`.
+`FixedSizeList` numeric vectors accept an array-like `nullValue` with exactly the
+list size number of components. If `nullValue` is omitted, null source rows keep
+the existing values-buffer copy behavior.
+
+For `FixedSizeList` vectors, the parent row may be nullable and will expand to
+the supplied constant fallback. Nullable child values inside valid rows are not
+supported by this helper.
 
 ## Closing Nested Arrow Paths
 
@@ -531,10 +540,8 @@ six-word segment record layout.
 
 `GPUTableModel` is the generic tables-layer wrapper that combines `GPUTable`
 with `Model`. It draws preserved GPU batches, syncs table row counts into the
-selected draw count, and leaves table ownership with the caller. `ArrowModel`
-keeps the Arrow-facing convenience surface: it accepts an Arrow table as an
-update source, replaces the GPU representation when `setProps({arrowTable})`
-is called, and can also consume an existing `arrowGPUTable`.
+selected draw count, and leaves table ownership with the caller. Convert Arrow
+tables explicitly with `makeArrowGPUTable()` before constructing the model.
 
 Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with one
 pipeline layout while rebinding only batch-local attribute buffers and storage
@@ -550,11 +557,11 @@ support mesh and point-cloud tables that use glTF-style column names such as
 
 ```ts
 import {
-  ArrowModel,
   ArrowTableGeometry,
   makeGPUGeometryFromArrow,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
+import {Model} from '@luma.gl/engine';
 
 const geometry = new ArrowTableGeometry(device, {
   arrowMesh,
@@ -566,11 +573,11 @@ const equivalentGeometry = makeGPUGeometryFromArrow(device, {
   interleaved: true
 });
 
-const model = new ArrowModel(device, {
+const model = new Model(device, {
   vs,
   fs,
   shaderLayout,
-  arrowMesh
+  geometry
 });
 ```
 
@@ -617,17 +624,17 @@ import {
   makeAppendableArrowGPUTable
 } from '@luma.gl/arrow';
 
-const arrowGPUTable = makeAppendableArrowGPUTable({
+const gpuTable = makeAppendableArrowGPUTable({
   device,
   schema,
   shaderLayout
 });
 
-model.setBufferLayout(arrowGPUTable.bufferLayout);
-model.setAttributes(arrowGPUTable.attributes);
+model.setBufferLayout(gpuTable.bufferLayout);
+model.setAttributes(gpuTable.attributes);
 
-appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
-model.setInstanceCount(arrowGPUTable.numRows);
+appendArrowBatchToGPUTable(gpuTable, recordBatch);
+model.setInstanceCount(gpuTable.numRows);
 ```
 
 Asynchronous sources stay application-owned. Append yielded record batches into
@@ -635,8 +642,8 @@ the same appendable table as they arrive:
 
 ```ts
 for await (const recordBatch of asyncRecordBatches) {
-  appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
-  model.setInstanceCount(arrowGPUTable.numRows);
+  appendArrowBatchToGPUTable(gpuTable, recordBatch);
+  model.setInstanceCount(gpuTable.numRows);
 }
 ```
 
@@ -647,12 +654,12 @@ resulting GPU batch:
 ```ts
 import {makeArrowGPURecordBatch, makeArrowGPUTable} from '@luma.gl/arrow';
 
-const arrowGPUTable = makeArrowGPUTable(device, new arrow.Table([firstRecordBatch]), {
+const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstRecordBatch]), {
   shaderLayout
 });
 
 for await (const recordBatch of remainingRecordBatches) {
-  arrowGPUTable.addBatch(makeArrowGPURecordBatch(device, recordBatch, {shaderLayout}));
+  gpuTable.addBatch(makeArrowGPURecordBatch(device, recordBatch, {shaderLayout}));
 }
 ```
 

@@ -9,7 +9,14 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
-import {GPUVector, planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/tables';
+import {
+  GPUTableModel,
+  GPUVector,
+  planGeneratedBufferBatches,
+  type GeneratedBufferBatch,
+  type GPUTable,
+  type GPUTableModelProps
+} from '@luma.gl/tables';
 import {
   Bool,
   BufferType,
@@ -28,8 +35,11 @@ import {
   makeData,
   makeVector
 } from 'apache-arrow';
-import {ArrowModel, type ArrowModelProps} from './arrow-model';
-import {makeArrowGPUVector, readArrowGPUVectorAsync} from './arrow-gpu-table-adapters';
+import {
+  makeArrowGPUTable,
+  makeArrowGPUVector,
+  readArrowGPUVectorAsync
+} from './arrow-gpu-table-adapters';
 import {expandArrowVector} from './arrow-vector-utils';
 import {
   getArrowDataBufferSource,
@@ -44,6 +54,7 @@ import {
   isVariableLengthAttributeArrowType,
   type NumericArrowType
 } from './arrow-types';
+import type {ArrowVertexFormatOptions} from './arrow-shader-layout';
 
 const SEGMENT_START_POSITIONS_COLUMN = 'segmentStartPositions';
 const SEGMENT_END_POSITIONS_COLUMN = 'segmentEndPositions';
@@ -205,21 +216,19 @@ export type PreparedArrowPathGPUVectors = {
 };
 
 /** Props for the CPU-expanded attribute-backed Arrow path renderer. */
-export type ArrowPathModelProps = Omit<
-  ArrowModelProps,
-  'arrowTable' | 'arrowGPUTable' | 'arrowCount'
-> & {
-  /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one Arrow row per path. */
-  paths: GPUVector<ArrowPathCoordinateType>;
-  /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
-  colors?: GPUVector<ArrowPathColorType>;
-  /** Optional per-path widths, one Arrow row per path. */
-  widths?: GPUVector<Float32>;
-  /** Optional per-path view-space origins, one Arrow row per path. */
-  viewOrigins?: GPUVector<ArrowPathViewOriginType>;
-  /** Prepared path expansion state produced by `prepareArrowPathGPUVectors()`. */
-  pathState: ArrowPathPreparedState;
-};
+export type ArrowPathModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> &
+  ArrowVertexFormatOptions & {
+    /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one Arrow row per path. */
+    paths: GPUVector<ArrowPathCoordinateType>;
+    /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
+    colors?: GPUVector<ArrowPathColorType>;
+    /** Optional per-path widths, one Arrow row per path. */
+    widths?: GPUVector<Float32>;
+    /** Optional per-path view-space origins, one Arrow row per path. */
+    viewOrigins?: GPUVector<ArrowPathViewOriginType>;
+    /** Prepared path expansion state produced by `prepareArrowPathGPUVectors()`. */
+    pathState: ArrowPathPreparedState;
+  };
 
 /** CPU-generated segment geometry for one expanded Arrow path table. */
 export type ArrowPathSegmentLayout = {
@@ -284,7 +293,7 @@ export type ArrowPathPreparedState = {
 };
 
 /** Arrow-backed path renderer that expands one logical path row into segment instances. */
-export class ArrowPathModel extends ArrowModel {
+export class ArrowPathModel extends GPUTableModel {
   /** Prepares raw Arrow path/style vectors for attribute-backed or storage-backed consumers. */
   static async prepareGPUVectors(
     device: Device,
@@ -310,11 +319,13 @@ export class ArrowPathModel extends ArrowModel {
   renderBatches: ArrowPathRenderBatchState[];
   private pathProps: ArrowPathModelProps;
   private pathShaderLayout: ShaderLayout;
+  private pathTable: GPUTable;
 
   /** Creates an attribute-backed Arrow path model from prepared path props. */
   constructor(device: Device, props: ArrowPathModelProps) {
     const prepared = prepareArrowPathModel(device, props);
     super(device, prepared.modelProps);
+    this.pathTable = prepared.modelProps.table!;
     this.pathProps = props;
     this.pathShaderLayout = prepared.modelProps.shaderLayout!;
     this.segmentLayout = prepared.segmentTable.segmentLayout;
@@ -347,7 +358,10 @@ export class ArrowPathModel extends ArrowModel {
     this.renderBatches = prepared.renderBatches;
     this.pathShaderLayout = prepared.modelProps.shaderLayout!;
 
-    super.setProps({arrowTable: prepared.modelProps.arrowTable as Table});
+    const previousPathTable = this.pathTable;
+    this.pathTable = prepared.modelProps.table!;
+    super.setProps({table: this.pathTable});
+    previousPathTable.destroy();
     this.setAttributes(getArrowPathModelAttributes(prepared.modelProps.shaderLayout!, prepared));
     this.setInstanceCount(prepared.segmentTable.segmentLayout.segmentCount);
     this.setNeedsRedraw('Arrow path segment table updated');
@@ -355,17 +369,17 @@ export class ArrowPathModel extends ArrowModel {
 
   /** Draws each generated path render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    const arrowBatches = this.arrowGPUTable?.batches || [];
-    if (arrowBatches.length > 0 && arrowBatches.length !== this.renderBatches.length) {
+    const tableBatches = this.table?.batches || [];
+    if (tableBatches.length > 0 && tableBatches.length !== this.renderBatches.length) {
       throw new Error('ArrowPathModel draw batches must align with generated path render batches');
     }
 
     let drawSuccess = true;
     try {
       for (const [batchIndex, renderBatch] of this.renderBatches.entries()) {
-        const arrowBatch = arrowBatches[batchIndex];
+        const tableBatch = tableBatches[batchIndex];
         this.setAttributes({
-          ...(arrowBatch?.attributes || {}),
+          ...(tableBatch?.attributes || {}),
           ...getArrowPathModelBatchAttributes(this.pathShaderLayout, renderBatch)
         });
         this.setInstanceCount(renderBatch.segmentCount);
@@ -373,7 +387,7 @@ export class ArrowPathModel extends ArrowModel {
       }
     } finally {
       this.setAttributes({
-        ...(this.arrowGPUTable?.attributes || {}),
+        ...(this.table?.attributes || {}),
         ...getArrowPathModelAttributes(this.pathShaderLayout, {
           expandedPathVertexData: this.expandedPathVertexData,
           pathViewOriginData: this.pathViewOriginData
@@ -388,6 +402,7 @@ export class ArrowPathModel extends ArrowModel {
   /** Releases inherited model resources. Prepared path state remains caller-owned. */
   override destroy(): void {
     super.destroy();
+    this.pathTable.destroy();
   }
 }
 
@@ -669,7 +684,7 @@ function prepareArrowPathModel(
   _device: Device,
   props: ArrowPathModelProps
 ): {
-  modelProps: ArrowModelProps;
+  modelProps: GPUTableModelProps;
   segmentTable: ArrowPathSegmentTable;
   expandedPathVertexData: Buffer;
   pathViewOriginData: Buffer;
@@ -699,11 +714,12 @@ function prepareArrowPathModel(
       topology: props.topology ?? 'line-list',
       vertexCount: props.vertexCount ?? 2,
       instanceCount: segmentTable.segmentLayout.segmentCount,
-      arrowTable: createArrowPathRenderTable(
-        segmentTable.table,
-        props.pathState.generatedBufferBatches
+      table: makeArrowGPUTable(
+        _device,
+        createArrowPathRenderTable(segmentTable.table, props.pathState.generatedBufferBatches),
+        {shaderLayout, allowWebGLOnlyFormats: props.allowWebGLOnlyFormats}
       ),
-      arrowCount: 'none'
+      tableCount: 'none'
     },
     segmentTable,
     expandedPathVertexData: firstRenderBatch.expandedPathVertexData,
