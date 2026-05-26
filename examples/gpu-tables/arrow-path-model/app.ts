@@ -49,8 +49,8 @@ type PathLayerUpdateOptions = {
 export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowPathModelControlPanelHtml({
     rowLabels: {
-      '240-stream': `${PATH_DATASETS['240'].label} streamed in ${formatStreamingPathBatchCount(getStreamingPathBatchCount('240'))}`,
-      '2400-stream': `${PATH_DATASETS['2400'].label} streamed in ${formatStreamingPathBatchCount(STREAMING_PATH_BATCH_COUNT)}`
+      '240-stream': PATH_DATASETS['240'].label,
+      '2400-stream': PATH_DATASETS['2400'].label
     },
     deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT
   });
@@ -65,6 +65,7 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
   activePathModelKind: ArrowPathLayerModel = 'auto';
   activePathInput!: ArrowPathLayerInput;
   activeArrowVectorBuildTimeMs = 0;
+  activeStreamingPathBatchCount = 0;
   initialStreamingPathInput: ArrowPathLayerInput | null = null;
   pathLayer!: ArrowPathLayer;
   measureSweepEnabled = true;
@@ -364,6 +365,8 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
     streamingSession: ArrowPathLayerStreamingSession
   ): void {
     this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
+    this.activeStreamingPathBatchCount = recordBatches.length;
+    this.controlPanel?.setStreamingBatchStatus(0, this.activeStreamingPathBatchCount);
     void this.pathLayer.streamRecordBatches({
       recordBatchIterator: createStreamingPathRecordBatchIterator(recordBatches),
       model: modelKind,
@@ -378,6 +381,10 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
     this.activePathInput = update.pathInput;
+    this.controlPanel?.setStreamingBatchStatus(
+      update.loadedBatchCount,
+      this.activeStreamingPathBatchCount
+    );
     if (update.isFirstBatch) {
       this.initialStreamingPathInput?.destroy();
       this.initialStreamingPathInput = null;
@@ -452,12 +459,4 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
 
 function getStreamingPathDatasetKind(rowCountKind: ArrowPathRowCountKind): '240' | '2400' {
   return rowCountKind === '240-stream' ? '240' : '2400';
-}
-
-function getStreamingPathBatchCount(datasetKind: '240' | '2400'): number {
-  return Math.ceil(PATH_DATASETS[datasetKind].pathCount / STREAMING_PATH_ROWS_PER_CHUNK);
-}
-
-function formatStreamingPathBatchCount(batchCount: number): string {
-  return `${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}`;
 }

@@ -31,11 +31,11 @@ export type ArrowUtf8DictionaryIndexType =
 export type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, ArrowUtf8DictionaryIndexType>;
 export type ArrowUtf8TextType = arrow.Utf8 | ArrowUtf8Dictionary;
 export type ArrowUtf8TextVector = arrow.Vector<ArrowUtf8TextType>;
-export type TextRowCountKind = '100k' | '500k' | '1m';
+export type TextRowCountKind = '10k' | '100k' | '1m';
 export type TextSourceKind = 'utf8' | 'dictionary';
 export type TextColorKind = 'constant' | 'string-colors' | 'character-colors';
 export type Utf8TextDatasetKind = TextRowCountKind;
-export type DictionaryTextDatasetKind = '100k-dict' | '500k-dict' | '1m-dict';
+export type DictionaryTextDatasetKind = '10k-dict' | '100k-dict' | '1m-dict';
 export type EagerTextDatasetKind = Utf8TextDatasetKind | DictionaryTextDatasetKind;
 export type StreamingTextDatasetKind = `${EagerTextDatasetKind}-stream`;
 export type StreamingTextTableSizeKind = `${Utf8TextDatasetKind}-stream`;
@@ -61,17 +61,17 @@ type ExampleArrowTextSourceVectors = Pick<
 >;
 
 export const TEXT_DATASETS: Record<EagerTextDatasetKind, TextDataset> = {
+  '10k': {labelCount: 10_000, label: '10K Utf8 texts, 300K glyphs', textType: 'utf8'},
   '100k': {labelCount: 100_000, label: '100K Utf8 texts, 3M glyphs', textType: 'utf8'},
-  '500k': {labelCount: 500_000, label: '500K Utf8 texts, 16M glyphs', textType: 'utf8'},
   '1m': {labelCount: 1_000_000, label: '1M Utf8 texts, 31M glyphs', textType: 'utf8'},
+  '10k-dict': {
+    labelCount: 10_000,
+    label: '10K Dictionary<Utf8>, 1K strings / 10K rows',
+    textType: 'dictionary'
+  },
   '100k-dict': {
     labelCount: 100_000,
     label: '100K Dictionary<Utf8>, 1K strings / 100K rows',
-    textType: 'dictionary'
-  },
-  '500k-dict': {
-    labelCount: 500_000,
-    label: '500K Dictionary<Utf8>, 1K strings / 100K rows',
     textType: 'dictionary'
   },
   '1m-dict': {

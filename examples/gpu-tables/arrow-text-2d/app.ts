@@ -66,7 +66,7 @@ import {
   type ArrowTextLayerStreamingSession
 } from './arrow-text-layer';
 
-export const title = 'Text: Utf8/Dictionary<Utf8>';
+export const title = 'Text: Strings/Dictionary strings';
 export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
 
 type ActiveTextModel = ArrowTextLayerActiveModel;
@@ -94,7 +94,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   loadedRecordBatches: arrow.RecordBatch[] = [];
   arrowVectorBuildTimeMs = 0;
   textModelKind: TextModelKind = 'auto';
-  textDatasetKind: TextDatasetKind = '100k-stream';
+  textDatasetKind: TextDatasetKind = '10k-stream';
   textColorKind: TextColorKind = 'string-colors';
   textClipRectsKind: ArrowText2DControlPanelClipRectsKind = 'row-clip-rects';
   textSizeKind: ArrowText2DControlPanelSizeKind = 'row-sizes';

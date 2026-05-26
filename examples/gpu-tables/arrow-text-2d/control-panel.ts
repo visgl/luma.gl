@@ -23,6 +23,12 @@ const TOTAL_GPU_BYTES_ID = 'arrow-text-2d-total-gpu-bytes';
 const TEXT_GPU_EXPANSION_ID = 'arrow-text-2d-text-gpu-expansion';
 const GPU_STYLE_VECTOR_BYTES_ID = 'arrow-text-2d-gpu-style-vector-bytes';
 const STYLE_GPU_EXPANSION_ID = 'arrow-text-2d-style-gpu-expansion';
+const COMPUTE_GPU_BYTES_ID = 'arrow-text-2d-compute-gpu-bytes';
+const COMPUTE_GPU_EXPANSION_ID = 'arrow-text-2d-compute-gpu-expansion';
+const TOTAL_ARROW_BYTES_ID = 'arrow-text-2d-total-arrow-bytes';
+const TOTAL_LUMA_GPU_BYTES_ID = 'arrow-text-2d-total-luma-gpu-bytes';
+const TOTAL_LUMA_GPU_EXPANSION_ID = 'arrow-text-2d-total-luma-gpu-expansion';
+const TOTAL_BUILD_TIME_ID = 'arrow-text-2d-total-build-time';
 const DECK_ATTRIBUTE_SIZE_ID = 'arrow-text-2d-deck-attribute-size';
 const DECK_GPU_EXPANSION_ID = 'arrow-text-2d-deck-gpu-expansion';
 const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
@@ -31,11 +37,11 @@ const STREAMING_BATCH_FILL_ID = 'arrow-text-2d-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-text-2d-streaming-batch-status-label';
 
 export type ArrowText2DControlPanelRowCountKind =
+  | '10k'
   | '100k'
-  | '500k'
   | '1m'
+  | '10k-stream'
   | '100k-stream'
-  | '500k-stream'
   | '1m-stream';
 export type ArrowText2DControlPanelSourceKind = 'utf8' | 'dictionary';
 export type ArrowText2DControlPanelColorKind = 'constant' | 'string-colors' | 'character-colors';
@@ -63,6 +69,12 @@ export type ArrowText2DControlPanelMetrics = {
   textGpuExpansion: string;
   gpuStyleVectorBytes: string;
   styleGpuExpansion: string;
+  computeGpuBytes: string;
+  computeGpuExpansion: string;
+  totalArrowBytes: string;
+  totalLumaGpuBytes: string;
+  totalLumaGpuExpansion: string;
+  totalBuildTime: string;
   deckAttributeSize: string;
   deckGpuExpansion: string;
 };
@@ -111,6 +123,12 @@ export class ArrowText2DControlPanel {
   private textGpuExpansionLabel: HTMLElement | null = null;
   private gpuStyleVectorBytesLabel: HTMLElement | null = null;
   private styleGpuExpansionLabel: HTMLElement | null = null;
+  private computeGpuBytesLabel: HTMLElement | null = null;
+  private computeGpuExpansionLabel: HTMLElement | null = null;
+  private totalArrowBytesLabel: HTMLElement | null = null;
+  private totalLumaGpuBytesLabel: HTMLElement | null = null;
+  private totalLumaGpuExpansionLabel: HTMLElement | null = null;
+  private totalBuildTimeLabel: HTMLElement | null = null;
   private deckAttributeSizeLabel: HTMLElement | null = null;
   private deckGpuExpansionLabel: HTMLElement | null = null;
   private pickedLabel: HTMLElement | null = null;
@@ -151,6 +169,12 @@ export class ArrowText2DControlPanel {
     this.textGpuExpansionLabel = document.getElementById(TEXT_GPU_EXPANSION_ID);
     this.gpuStyleVectorBytesLabel = document.getElementById(GPU_STYLE_VECTOR_BYTES_ID);
     this.styleGpuExpansionLabel = document.getElementById(STYLE_GPU_EXPANSION_ID);
+    this.computeGpuBytesLabel = document.getElementById(COMPUTE_GPU_BYTES_ID);
+    this.computeGpuExpansionLabel = document.getElementById(COMPUTE_GPU_EXPANSION_ID);
+    this.totalArrowBytesLabel = document.getElementById(TOTAL_ARROW_BYTES_ID);
+    this.totalLumaGpuBytesLabel = document.getElementById(TOTAL_LUMA_GPU_BYTES_ID);
+    this.totalLumaGpuExpansionLabel = document.getElementById(TOTAL_LUMA_GPU_EXPANSION_ID);
+    this.totalBuildTimeLabel = document.getElementById(TOTAL_BUILD_TIME_ID);
     this.deckAttributeSizeLabel = document.getElementById(DECK_ATTRIBUTE_SIZE_ID);
     this.deckGpuExpansionLabel = document.getElementById(DECK_GPU_EXPANSION_ID);
     this.pickedLabel = document.getElementById(PICKED_LABEL_ID);
@@ -218,6 +242,12 @@ export class ArrowText2DControlPanel {
     setTextContent(this.textGpuExpansionLabel, metrics.textGpuExpansion);
     setTextContent(this.gpuStyleVectorBytesLabel, metrics.gpuStyleVectorBytes);
     setTextContent(this.styleGpuExpansionLabel, metrics.styleGpuExpansion);
+    setTextContent(this.computeGpuBytesLabel, metrics.computeGpuBytes);
+    setTextContent(this.computeGpuExpansionLabel, metrics.computeGpuExpansion);
+    setTextContent(this.totalArrowBytesLabel, metrics.totalArrowBytes);
+    setTextContent(this.totalLumaGpuBytesLabel, metrics.totalLumaGpuBytes);
+    setTextContent(this.totalLumaGpuExpansionLabel, metrics.totalLumaGpuExpansion);
+    setTextContent(this.totalBuildTimeLabel, metrics.totalBuildTime);
     setTextContent(this.deckAttributeSizeLabel, metrics.deckAttributeSize);
     setTextContent(this.deckGpuExpansionLabel, metrics.deckGpuExpansion);
   }
@@ -341,30 +371,27 @@ export function makeArrowText2DControlPanelHtml({
 }: ArrowText2DControlPanelHtmlProps): string {
   return `\
   <p>
-  Renders <code>arrow.Vector&lt;Utf8&gt;</code> and <code>arrow.Vector&lt;Dictionary&lt;Utf8&gt;&gt;</code>, 30 characters / row.
+  Renders Arrow strings and dictionary strings, 30 characters / row.
   </p>
-  <div style="min-height: 920px; max-height: calc(100vh - 72px); overflow: visible; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
+  <div style="max-height: calc(100vh - 72px); overflow-y: auto; overflow-x: hidden; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <section style="overflow: visible; margin-bottom: 12px; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Table</h3>
       <div style="display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
-        <label for="${ROW_COUNT_SELECTOR_ID}">Data</label>
+        <label for="${ROW_COUNT_SELECTOR_ID}">Rows</label>
         <select id="${ROW_COUNT_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="100k-stream">100K rows streamed in ${streamingBatchCount} batches</option>
-          <option value="500k-stream">500K rows streamed in ${streamingBatchCount} batches</option>
-          <option value="1m-stream">1M rows streamed in ${streamingBatchCount} batches</option>
+          <option value="10k-stream">10K, 30 chars per row</option>
+          <option value="100k-stream">100K, 30 chars per row</option>
+          <option value="1m-stream">1M, 30 chars per row</option>
         </select>
-        <label for="${MODEL_SELECTOR_ID}">Model</label>
-        <select id="${MODEL_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="attribute">attribute</option>
-          <option value="storage">storage</option>
-          <option value="storage-row-indexed">storage row-indexed</option>
-          <option value="dictionary">dictionary</option>
-          <option value="auto">auto</option>
-        </select>
+        <span>Batches</span>
+        <div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="${streamingBatchCount}" aria-valuenow="0" style="box-sizing: border-box; display: none; position: relative; width: 100%; min-width: 0; height: 34px; overflow: hidden; border: 1px solid rgba(37, 99, 235, 0.32); border-radius: 6px; background: #dbeafe; color: #0f172a; font-size: 13px; line-height: 1.4;">
+          <span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #93c5fd 0%, #2563eb 100%); transition: width 220ms ease;"></span>
+          <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 8px; color: #0f172a; font-weight: 700; font-variant-numeric: tabular-nums;">Loaded 0 of ${streamingBatchCount} batches</span>
+        </div>
         <label for="${SOURCE_SELECTOR_ID}">Text</label>
         <select id="${SOURCE_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="utf8">Utf8 - Utf8</option>
-          <option value="dictionary">Dictionary - Dictionary&lt;Utf8&gt;</option>
+          <option value="utf8">Strings - Utf8</option>
+          <option value="dictionary">Dictionary strings - Dictionary&lt;Utf8&gt;</option>
         </select>
         <label for="${TEXT_COLOR_SELECTOR_ID}">Colors</label>
         <select id="${TEXT_COLOR_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
@@ -397,29 +424,41 @@ export function makeArrowText2DControlPanelHtml({
           <span>Animate</span>
         </label>
       </div>
-      <div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="${streamingBatchCount}" aria-valuenow="0" style="display: none; position: relative; width: 100%; height: 28px; margin-top: 12px; overflow: hidden; border: 1px solid rgba(37, 99, 235, 0.32); border-radius: 8px; background: #dbeafe; color: #0f172a; font-size: 13px; line-height: 1.4;">
-        <span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #93c5fd 0%, #2563eb 100%); transition: width 220ms ease;"></span>
-        <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 8px; color: #0f172a; font-weight: 700; font-variant-numeric: tabular-nums;">Loaded 0 of ${streamingBatchCount} batches</span>
-      </div>
     </section>
     <section style="overflow: visible; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Metrics</h3>
+      <div style="display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
+        <label for="${MODEL_SELECTOR_ID}">Model</label>
+        <select id="${MODEL_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+          <option value="attribute">attribute</option>
+          <option value="storage">storage</option>
+          <option value="dictionary">dictionary</option>
+          <option value="auto">auto</option>
+        </select>
+      </div>
       <table style="display: table; width: 100%; min-width: 100%; table-layout: fixed; box-sizing: border-box; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); border-collapse: collapse; color: #334155; font-size: 13px; line-height: 1.4;">
         <thead>
           <tr style="color: #64748b; text-transform: uppercase; letter-spacing: 0.02em; font-size: 11px;">
             <th style="width: 20%; padding: 8px 8px 6px 0; text-align: left; font-weight: 700; white-space: nowrap;">columns</th>
             <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">Arrow</th>
             <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">GPU</th>
-            <th style="width: 16%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">expansion</th>
-            <th style="width: 20%; padding: 8px 0 6px 8px; text-align: right; font-weight: 700; white-space: nowrap;">prep time</th>
+            <th style="width: 16%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">exp</th>
+            <th style="width: 20%; padding: 8px 0 6px 8px; text-align: right; font-weight: 700; white-space: nowrap;">time</th>
           </tr>
         </thead>
         <tbody>
           <tr>
+            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 700;">total</th>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_LUMA_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_LUMA_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
+            <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${TOTAL_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+          </tr>
+          <tr>
             <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">text</th>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${ARROW_VECTOR_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TEXT_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">-</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${TEXT_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
             <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${CPU_GENERATION_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
           </tr>
           <tr>
@@ -430,6 +469,13 @@ export function makeArrowText2DControlPanelHtml({
             <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${ARROW_VECTOR_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
           </tr>
           <tr>
+            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">compute</th>
+            <td style="padding: 6px 8px; text-align: right;">-</td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${COMPUTE_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 8px; text-align: right;"><strong id="${COMPUTE_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
+            <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
+          </tr>
+          <tr style="font-style: italic;">
             <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">deck.gl</th>
             <td style="padding: 6px 8px; text-align: right;">-</td>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${DECK_ATTRIBUTE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
@@ -483,7 +529,7 @@ export function makeArrowText2DControlPanelHtml({
 function isArrowText2DControlPanelRowCountKind(
   value: string | undefined
 ): value is ArrowText2DControlPanelRowCountKind {
-  return value === '100k-stream' || value === '500k-stream' || value === '1m-stream';
+  return value === '10k-stream' || value === '100k-stream' || value === '1m-stream';
 }
 
 function isArrowText2DControlPanelSourceKind(
@@ -517,13 +563,7 @@ function isArrowText2DControlPanelClipRectsKind(
 }
 
 function isTextModelKind(value: string | undefined): value is TextModelKind {
-  return (
-    value === 'attribute' ||
-    value === 'storage' ||
-    value === 'storage-row-indexed' ||
-    value === 'dictionary' ||
-    value === 'auto'
-  );
+  return value === 'attribute' || value === 'storage' || value === 'dictionary' || value === 'auto';
 }
 
 function getAutoTextModelLabel(
