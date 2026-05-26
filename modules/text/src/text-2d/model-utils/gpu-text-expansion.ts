@@ -297,6 +297,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
   }
   let anchorShift = getAnchorShift(width, getTextAnchor(rowIndex));
   let baselineShift = getBaselineShift(getAlignmentBaseline(rowIndex));
+  let outputByteBase = u32(max(textExpansionConfig[10], 0));
   width = 0i;
   byteIndex = rowByteRange.x;
   loop {
@@ -305,7 +306,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
     if (isGpuUtf8MapCodePointStart(firstByte)) {
       let glyphId = mapGpuUtf8CodePoint(decodeGpuUtf8MapCodePoint(byteIndex));
       let metrics = textGlyphMetrics[glyphId];
-      generatedGlyphVertices[byteIndex] = GeneratedGlyphVertex(
+      generatedGlyphVertices[byteIndex - outputByteBase] = GeneratedGlyphVertex(
         packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
         glyphId & 0xffffu
       );
@@ -602,6 +603,7 @@ export function createGpuUtf8ExpandedInput(
     labelCount,
     batchRowIndexBase = 0,
     rowStorageIndexBase = 0,
+    outputByteBase = 0,
     alignment = {}
   }: {
     utf8TextInput: GpuUtf8TextInput;
@@ -610,6 +612,7 @@ export function createGpuUtf8ExpandedInput(
     labelCount: number;
     batchRowIndexBase?: number;
     rowStorageIndexBase?: number;
+    outputByteBase?: number;
     alignment?: GpuTextAlignmentExpansionOptions;
   }
 ): GpuUtf8ExpandedInputState {
@@ -623,7 +626,8 @@ export function createGpuUtf8ExpandedInput(
     alignment.useRowTextAnchors ? 1 : 0,
     alignment.alignmentBaseline ?? 0,
     alignment.useRowAlignmentBaselines ? 1 : 0,
-    alignment.lineHeight ?? 0
+    alignment.lineHeight ?? 0,
+    outputByteBase
   ]);
   return {
     rowByteRangesBuffer: device.createBuffer({
@@ -648,6 +652,59 @@ export function createGpuUtf8ExpandedInput(
       data: expansionConfig
     }),
     byteLength: utf8TextInput.inputByteLength + expansionConfig.byteLength
+  };
+}
+
+/** Creates read-only storage inputs for plain UTF-8 text expansion from existing GPU buffers. */
+export function createGpuUtf8ExpandedInputFromBuffers(
+  device: Device,
+  options: GpuTextExpansionResourceOptions,
+  {
+    rowByteRangesBuffer,
+    utf8BytesBuffer,
+    inputByteLength,
+    baselineOffsetY,
+    glyphLookupCount,
+    labelCount,
+    batchRowIndexBase = 0,
+    rowStorageIndexBase = 0,
+    outputByteBase = 0,
+    alignment = {}
+  }: {
+    rowByteRangesBuffer: Buffer;
+    utf8BytesBuffer: Buffer;
+    inputByteLength: number;
+    baselineOffsetY: number;
+    glyphLookupCount: number;
+    labelCount: number;
+    batchRowIndexBase?: number;
+    rowStorageIndexBase?: number;
+    outputByteBase?: number;
+    alignment?: GpuTextAlignmentExpansionOptions;
+  }
+): GpuUtf8ExpandedInputState {
+  const expansionConfig = new Int32Array([
+    baselineOffsetY,
+    labelCount,
+    glyphLookupCount,
+    batchRowIndexBase,
+    rowStorageIndexBase,
+    alignment.textAnchor ?? 0,
+    alignment.useRowTextAnchors ? 1 : 0,
+    alignment.alignmentBaseline ?? 0,
+    alignment.useRowAlignmentBaselines ? 1 : 0,
+    alignment.lineHeight ?? 0,
+    outputByteBase
+  ]);
+  return {
+    rowByteRangesBuffer,
+    utf8BytesBuffer,
+    expansionConfigBuffer: device.createBuffer({
+      id: `${options.id || 'gpu-expanded-text-model'}-utf8-expansion-config`,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data: expansionConfig
+    }),
+    byteLength: inputByteLength + expansionConfig.byteLength
   };
 }
 

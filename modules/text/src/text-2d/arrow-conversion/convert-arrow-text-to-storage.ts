@@ -3,11 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
+import type {GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createArrowStorageTextState,
+  createStorageTextStateFromGPUVectors,
   type ArrowStorageTextInputProps,
-  type ArrowStorageTextState
+  type ArrowStorageTextState,
+  type GPUVectorStorageTextInputProps
 } from './convert-arrow-text-vectors';
 import {
   convertArrowTextToAttribute,
@@ -42,7 +45,36 @@ export function convertArrowTextToStorageState(
   device: Device,
   props: ArrowStorageTextInputProps
 ): ArrowStorageTextState {
+  if (canUseGPUVectorStorageTextState(device, props)) {
+    try {
+      return createStorageTextStateFromGPUVectors(device, props);
+    } catch (error) {
+      if (!isGPUVectorStorageTextFallbackError(error)) {
+        throw error;
+      }
+    }
+  }
   return createArrowStorageTextState(device, props);
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};
+
+function canUseGPUVectorStorageTextState(
+  device: Device,
+  props: ArrowStorageTextInputProps
+): props is ArrowStorageTextInputProps &
+  GPUVectorStorageTextInputProps & {texts: GPUVector<arrow.Utf8>} {
+  return (
+    device.type === 'webgpu' &&
+    props.texts.type instanceof arrow.Utf8 &&
+    props.characterSet !== 'auto' &&
+    (props.characterMapping !== undefined || props.characterSet !== undefined)
+  );
+}
+
+function isGPUVectorStorageTextFallbackError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /row offset metadata|zero-offset byte buffers|textBatches|clipRects batches/.test(error.message)
+  );
+}

@@ -18,6 +18,7 @@ export const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
 export type ArrowTextMetricProps = {
   textModel: ArrowTextLayerActiveModel;
   textInput: ArrowTextLayerInput;
+  arrowVectorBuildTimeMs: number;
   colorEnabled: boolean;
   angleEnabled: boolean;
   sizeEnabled: boolean;
@@ -25,20 +26,23 @@ export type ArrowTextMetricProps = {
 
 export function getArrowTextLayerMetrics(
   textLayer: ArrowTextLayer,
-  textInput: ArrowTextLayerInput
+  textInput: ArrowTextLayerInput,
+  arrowVectorBuildTimeMs: number
 ): ArrowText2DControlPanelMetrics {
   return getArrowTextMetrics({
     textModel: textLayer.model,
     textInput,
-    colorEnabled: textLayer.colorsEnabled,
-    angleEnabled: textLayer.anglesEnabled,
-    sizeEnabled: textLayer.sizesEnabled
+    arrowVectorBuildTimeMs,
+    colorEnabled: Boolean(textInput.colors),
+    angleEnabled: Boolean(textInput.angles),
+    sizeEnabled: Boolean(textInput.sizes)
   });
 }
 
 export function getArrowTextMetrics({
   textModel,
   textInput,
+  arrowVectorBuildTimeMs,
   colorEnabled,
   angleEnabled,
   sizeEnabled
@@ -84,7 +88,7 @@ export function getArrowTextMetrics({
   return {
     arrowVectorBytes: formatByteLength(textInput.arrowVectorByteLength),
     styleArrowBytes: formatByteLength(styleArrowByteLength),
-    arrowVectorBuildTime: textInput.arrowVectorBuildTimeMs.toFixed(1) + ' ms',
+    arrowVectorBuildTime: arrowVectorBuildTimeMs.toFixed(1) + ' ms',
     cpuGenerationTime: textModel.glyphAttributeBuildTimeMs.toFixed(1) + ' ms',
     totalGpuBytes:
       transientComputeInputByteLength > 0
@@ -131,9 +135,9 @@ function getSelectedStyleColumnGpuByteLength(
   }
 
   return (
-    (colorEnabled ? getGpuVectorByteLength(textInput.colors) : 0) +
-    (angleEnabled ? getGpuVectorByteLength(textInput.angles) : 0) +
-    (sizeEnabled ? getGpuVectorByteLength(textInput.sizes) : 0)
+    (colorEnabled && textInput.colors ? getGpuVectorByteLength(textInput.colors) : 0) +
+    (angleEnabled && textInput.angles ? getGpuVectorByteLength(textInput.angles) : 0) +
+    (sizeEnabled && textInput.sizes ? getGpuVectorByteLength(textInput.sizes) : 0)
   );
 }
 
@@ -146,9 +150,15 @@ function getSelectedExpandedAttributeStyleVectorByteLength(
 ): number {
   const glyphCount = getTextModelGlyphCount(textModel);
   return (
-    (colorEnabled ? getExpandedAttributeVectorByteLength(textInput.colors, glyphCount) : 0) +
-    (angleEnabled ? getExpandedAttributeVectorByteLength(textInput.angles, glyphCount) : 0) +
-    (sizeEnabled ? getExpandedAttributeVectorByteLength(textInput.sizes, glyphCount) : 0)
+    (colorEnabled && textInput.colors
+      ? getExpandedAttributeVectorByteLength(textInput.colors, glyphCount)
+      : 0) +
+    (angleEnabled && textInput.angles
+      ? getExpandedAttributeVectorByteLength(textInput.angles, glyphCount)
+      : 0) +
+    (sizeEnabled && textInput.sizes
+      ? getExpandedAttributeVectorByteLength(textInput.sizes, glyphCount)
+      : 0)
   );
 }
 

@@ -22,6 +22,8 @@ import {
 import {
   buildArrowTextGlyphTable,
   createArrowStorageTextState,
+  createStorageTextStateFromGPUVectors,
+  convertArrowTextToStorageState,
   packStorageTextClipRects,
   type ArrowUtf8Dictionary,
   type ArrowUtf8TextType,
@@ -31,7 +33,8 @@ import {
 
 const CHARACTER_MAPPING: CharacterMapping = {
   A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
-  B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7}
+  B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7},
+  '🙂': {x: 8, y: 0, width: 8, height: 8, anchorX: 4, anchorY: 4, advance: 9}
 };
 
 const APPENDABLE_TEXT_INPUT_SHADER_LAYOUT = {
@@ -133,6 +136,43 @@ test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
     Array.from(result.table.getChild('glyphClipRects')!.data[0]!.children[0]!.values as Int16Array),
     [0, 1, 12, -1, 0, 1, 12, -1, 3, 4, -1, 9],
     'packed i16x4 clip rectangles repeat for each generated glyph'
+  );
+  t.end();
+});
+
+test('buildArrowTextGlyphTable expands nullable row colors with constant color fallback', t => {
+  const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
+  const colorData = new arrow.Data(
+    colorType,
+    0,
+    2,
+    1,
+    {
+      [arrow.BufferType.VALIDITY]: new Uint8Array([0b00000001])
+    },
+    [
+      new arrow.Data(new arrow.Uint8(), 0, 8, 0, {
+        [arrow.BufferType.DATA]: new Uint8Array([255, 0, 0, 255, 0, 0, 0, 0])
+      })
+    ]
+  );
+  const labelTable = new arrow.Table({
+    positions: makeArrowPositions(2),
+    colors: new arrow.Vector([colorData]) as arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>
+  });
+  const result = buildArrowTextGlyphTable({
+    labelTable,
+    texts: arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8()),
+    mapping: CHARACTER_MAPPING,
+    baselineOffset: 1,
+    lineHeight: 10,
+    color: [10, 20, 30, 255]
+  });
+
+  t.deepEqual(
+    Array.from(result.table.getChild('colors')!.data[0]!.children[0]!.values as Uint8Array),
+    [255, 0, 0, 255, 255, 0, 0, 255, 10, 20, 30, 255],
+    'null row colors expand to the constant color fallback'
   );
   t.end();
 });
@@ -531,6 +571,108 @@ test('ArrowStorageTextModel interleaves compact glyph vertex records', async t =
 
   model.destroy();
   destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('createStorageTextStateFromGPUVectors prepares storage text without sourceVectors', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const storageState = createStorageTextStateFromGPUVectors(device, {
+    id: 'gpu-vector-storage-text-state-test',
+    positions: textProps.positions,
+    texts: textProps.texts as GPUVector<arrow.Utf8>,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  const glyphVertexBytes = await storageState.compactGlyphVertexData.readAsync();
+  const generatedGlyphVertexWords = new Uint32Array(
+    glyphVertexBytes.buffer,
+    glyphVertexBytes.byteOffset,
+    storageState.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
+  );
+
+  t.equal(storageState.glyphCount, 3, 'GPUVector state reserves one glyph slot per UTF-8 byte');
+  t.equal(
+    storageState.glyphStream,
+    undefined,
+    'GPUVector state does not retain a CPU glyph stream'
+  );
+  t.deepEqual(
+    Array.from(generatedGlyphVertexWords),
+    [packSignedInt16Pair(2, 5), 1, packSignedInt16Pair(7, 5), 2, packSignedInt16Pair(2, 5), 1],
+    'GPUVector state generates the same compact glyph records'
+  );
+
+  storageState.destroy();
+  destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('convertArrowTextToStorageState uses GPUVector path for fixed UTF-8 text', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuTextProps(device, ['AB', '🙂']);
+  const storageState = convertArrowTextToStorageState(device, {
+    id: 'arrow-storage-text-gpu-vector-adapter-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+
+  t.equal(
+    storageState.glyphStream,
+    undefined,
+    'fixed plain UTF-8 input uses GPUVector preparation'
+  );
+  t.equal(storageState.glyphCount, 6, 'multi-byte labels match the GPU UTF-8 byte-slot path');
+
+  storageState.destroy();
+  destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('convertArrowTextToStorageState keeps CPU fallbacks for auto and dictionary text', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const autoTextProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const autoStorageState = convertArrowTextToStorageState(device, {
+    id: 'arrow-storage-text-auto-fallback-test',
+    ...autoTextProps,
+    characterMapping: CHARACTER_MAPPING,
+    characterSet: 'auto',
+    fontSettings: {fontSize: 10}
+  });
+  t.ok(autoStorageState.glyphStream, 'auto characterSet keeps CPU glyph expansion');
+
+  const dictionaryTextProps = makeStorageGpuDictionaryTextProps(device, ['AB', 'A', 'AB']);
+  const dictionaryStorageState = convertArrowTextToStorageState(device, {
+    id: 'arrow-storage-text-dictionary-fallback-test',
+    ...dictionaryTextProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  t.ok(dictionaryStorageState.glyphStream, 'dictionary text keeps CPU glyph expansion');
+
+  autoStorageState.destroy();
+  dictionaryStorageState.destroy();
+  destroyStorageGpuTextProps(autoTextProps);
+  destroyStorageGpuTextProps(dictionaryTextProps);
   t.end();
 });
 
@@ -1184,7 +1326,7 @@ function makeChunkedStorageGpuDictionaryTextProps(
   };
 }
 
-function destroyStorageGpuTextProps(props: ReturnType<typeof makeStorageGpuTextProps>): void {
+function destroyStorageGpuTextProps(props: {positions: GPUVector; texts: GPUVector}): void {
   props.positions.destroy();
   props.texts.destroy();
 }

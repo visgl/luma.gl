@@ -5,10 +5,9 @@
 import {getArrowVectorByteLength, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 import type {
-  ArrowTextCharacterColorType,
-  ArrowTextColorType,
   ArrowTextLayerSource,
-  ArrowTextLayerSourceVectors
+  CharacterColorDataType,
+  RowColorColumnDataType
 } from './arrow-text-layer';
 
 export const LABEL_COLUMN_COUNT = 400;
@@ -20,6 +19,7 @@ export const STREAMING_TEXT_BATCH_COUNT = 10;
 const STREAMING_TEXT_BATCH_DELAY_MS = 1000;
 const DICTIONARY_TEXT_ROWS_PER_CHUNK = 100_000;
 const DICTIONARY_LABEL_COUNT_PER_CHUNK = 1_000;
+const ARROW_UTF8_DICTIONARY_TYPE = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32(), 0);
 
 export type ArrowUtf8DictionaryIndexType =
   | arrow.Int8
@@ -33,7 +33,7 @@ export type ArrowUtf8TextType = arrow.Utf8 | ArrowUtf8Dictionary;
 export type ArrowUtf8TextVector = arrow.Vector<ArrowUtf8TextType>;
 export type TextRowCountKind = '100k' | '500k' | '1m';
 export type TextSourceKind = 'utf8' | 'dictionary';
-export type TextColorKind = 'string-colors' | 'character-colors';
+export type TextColorKind = 'constant' | 'string-colors' | 'character-colors';
 export type Utf8TextDatasetKind = TextRowCountKind;
 export type DictionaryTextDatasetKind = '100k-dict' | '500k-dict' | '1m-dict';
 export type EagerTextDatasetKind = Utf8TextDatasetKind | DictionaryTextDatasetKind;
@@ -47,12 +47,18 @@ export type TextDataset = {
   label: string;
   textType: 'utf8' | 'dictionary';
 };
-export type ArrowTextSource = ArrowTextLayerSource;
+export type ArrowTextSource = ArrowTextLayerSource & {
+  /** Time spent building the CPU Arrow source vectors before layer upload. */
+  arrowVectorBuildTimeMs: number;
+};
 export type StreamingArrowTextSource = {
   recordBatches: arrow.RecordBatch[];
   arrowVectorBuildTimeMs: number;
 };
-type ExampleArrowTextSourceVectors = ArrowTextLayerSourceVectors;
+type ExampleArrowTextSourceVectors = Pick<
+  ArrowTextLayerSource,
+  'positions' | 'texts' | 'clipRects' | 'colors' | 'angles' | 'sizes' | 'pixelOffsets'
+>;
 
 export const TEXT_DATASETS: Record<EagerTextDatasetKind, TextDataset> = {
   '100k': {labelCount: 100_000, label: '100K Utf8 texts, 3M glyphs', textType: 'utf8'},
@@ -117,20 +123,29 @@ export function makeArrowTextSource(
     >,
     rowChunkSize
   );
-  const colorVector = makeArrowTextColorVector(dataset, textColorKind, rowChunkSize);
+  const colorVector =
+    textColorKind === 'constant'
+      ? undefined
+      : makeArrowTextColorVector(
+          dataset,
+          dataset.labelCount,
+          labelIndex => labelIndex,
+          textColorKind,
+          rowChunkSize
+        );
   const angleVector = splitArrowVectorByRows(makeFloat32ArrowVector(angles), rowChunkSize);
   const sizeVector = splitArrowVectorByRows(makeFloat32ArrowVector(sizes), rowChunkSize);
   const sourceVectors: ExampleArrowTextSourceVectors = {
     positions: positionVector,
     texts,
     clipRects: clipRectVector,
-    colors: colorVector,
+    ...(colorVector ? {colors: colorVector} : {}),
     angles: angleVector,
     sizes: sizeVector
   };
 
   return {
-    sourceVectors,
+    ...sourceVectors,
     arrowVectorByteLength: getArrowVectorByteLength(texts),
     arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
   };
@@ -145,13 +160,17 @@ export async function makeArrowTextSourceAsync(
 }
 
 export async function makeStreamingArrowTextSourceAsync(
-  dataset: TextDataset
+  dataset: TextDataset,
+  textColorKind: TextColorKind
 ): Promise<StreamingArrowTextSource> {
   await waitForBrowserPaint();
-  return makeStreamingArrowTextSource(dataset);
+  return makeStreamingArrowTextSource(dataset, textColorKind);
 }
 
-function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextSource {
+function makeStreamingArrowTextSource(
+  dataset: TextDataset,
+  textColorKind: TextColorKind
+): StreamingArrowTextSource {
   const arrowVectorBuildStartTime = getNow();
   const recordBatches = new Array<arrow.RecordBatch>(STREAMING_TEXT_BATCH_COUNT);
   const labelRowCount = dataset.labelCount / LABEL_COLUMN_COUNT;
@@ -163,7 +182,8 @@ function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextS
     const batchLabelCount = batchRowIndices.length * LABEL_COLUMN_COUNT;
     const positions = new Float32Array(batchLabelCount * 2);
     const clipRects = new Int16Array(batchLabelCount * 4);
-    const colors = new Uint8Array(batchLabelCount * 4);
+    const colors =
+      textColorKind === 'string-colors' ? new Uint8Array(batchLabelCount * 4) : undefined;
     const angles = new Float32Array(batchLabelCount);
     const sizes = new Float32Array(batchLabelCount);
 
@@ -174,7 +194,6 @@ function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextS
       const labelIndex = rowIndex * LABEL_COLUMN_COUNT + columnIndex;
       const positionIndex = localLabelIndex * 2;
       const clipRectIndex = localLabelIndex * 4;
-      const colorIndex = localLabelIndex * 4;
 
       positions[positionIndex] = (columnIndex - centerColumn) * LABEL_COLUMN_SPACING;
       positions[positionIndex + 1] = (rowIndex - centerRow) * LABEL_ROW_SPACING;
@@ -182,14 +201,27 @@ function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextS
       clipRects[clipRectIndex + 1] = 0;
       clipRects[clipRectIndex + 2] = LABEL_CLIP_WIDTH;
       clipRects[clipRectIndex + 3] = -1;
-      colors[colorIndex] = 96 + ((labelIndex * 17) % 128);
-      colors[colorIndex + 1] = 172 + ((labelIndex * 11) % 72);
-      colors[colorIndex + 2] = 210 + ((labelIndex * 7) % 45);
-      colors[colorIndex + 3] = 255;
+      if (colors) {
+        const colorIndex = localLabelIndex * 4;
+        colors[colorIndex] = 96 + ((labelIndex * 17) % 128);
+        colors[colorIndex + 1] = 172 + ((labelIndex * 11) % 72);
+        colors[colorIndex + 2] = 210 + ((labelIndex * 7) % 45);
+        colors[colorIndex + 3] = 255;
+      }
       angles[localLabelIndex] = ((labelIndex % 9) - 4) * 2;
       sizes[localLabelIndex] = 24 + (labelIndex % 5) * 4;
     }
 
+    const colorVector =
+      textColorKind === 'constant'
+        ? undefined
+        : textColorKind === 'string-colors'
+          ? makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors!)
+          : makeArrowTextCharacterColorVector(dataset, batchLabelCount, localLabelIndex => {
+              const localRowIndex = Math.floor(localLabelIndex / LABEL_COLUMN_COUNT);
+              const columnIndex = localLabelIndex % LABEL_COLUMN_COUNT;
+              return batchRowIndices[localRowIndex] * LABEL_COLUMN_COUNT + columnIndex;
+            });
     const table = new arrow.Table({
       positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
       texts: makeArrowTextVector(dataset, batchLabelCount, localLabelIndex => {
@@ -198,7 +230,7 @@ function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextS
         return batchRowIndices[localRowIndex] * LABEL_COLUMN_COUNT + columnIndex;
       }),
       clipRects: makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects),
-      colors: makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors),
+      ...(colorVector ? {colors: colorVector} : {}),
       angles: makeFloat32ArrowVector(angles),
       sizes: makeFloat32ArrowVector(sizes)
     });
@@ -278,7 +310,6 @@ function makeArrowDictionaryTextVector(
   labelCount: number,
   getGlobalLabelIndex: (localLabelIndex: number) => number
 ): arrow.Vector<ArrowUtf8Dictionary> {
-  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
   const dataChunks: arrow.Data<ArrowUtf8Dictionary>[] = [];
   let localStartIndex = 0;
 
@@ -309,7 +340,7 @@ function makeArrowDictionaryTextVector(
     }
     dataChunks.push(
       arrow.makeData({
-        type: dictionaryType,
+        type: ARROW_UTF8_DICTIONARY_TYPE,
         length: chunkLabelCount,
         data: indices,
         dictionary
@@ -323,35 +354,40 @@ function makeArrowDictionaryTextVector(
 
 function makeArrowTextColorVector(
   dataset: TextDataset,
+  labelCount: number,
+  getGlobalLabelIndex: (localLabelIndex: number) => number,
   textColorKind: TextColorKind,
   rowChunkSize: number
-): arrow.Vector<ArrowTextColorType> {
+): arrow.Vector<RowColorColumnDataType | CharacterColorDataType> {
   if (textColorKind === 'character-colors') {
     return splitArrowVectorByRows(
-      makeArrowTextCharacterColorVector(dataset),
+      makeArrowTextCharacterColorVector(dataset, labelCount, getGlobalLabelIndex),
       rowChunkSize
-    ) as arrow.Vector<ArrowTextColorType>;
+    ) as arrow.Vector<RowColorColumnDataType | CharacterColorDataType>;
   }
   return splitArrowVectorByRows(
-    makeArrowFixedSizeListVector(new arrow.Uint8(), 4, makeTextRowColors(dataset.labelCount)),
+    makeArrowFixedSizeListVector(new arrow.Uint8(), 4, makeTextRowColors(labelCount)),
     rowChunkSize
-  ) as arrow.Vector<ArrowTextColorType>;
+  ) as arrow.Vector<RowColorColumnDataType | CharacterColorDataType>;
 }
 
 function makeArrowTextCharacterColorVector(
-  dataset: TextDataset
-): arrow.Vector<ArrowTextCharacterColorType> {
-  const valueOffsets = new Int32Array(dataset.labelCount + 1);
+  dataset: TextDataset,
+  labelCount: number,
+  getGlobalLabelIndex: (localLabelIndex: number) => number
+): arrow.Vector<CharacterColorDataType> {
+  const valueOffsets = new Int32Array(labelCount + 1);
   const colorValues: number[] = [];
 
-  for (let labelIndex = 0; labelIndex < dataset.labelCount; labelIndex++) {
-    valueOffsets[labelIndex] = colorValues.length / 4;
-    const textLength = getTextLabelLength(dataset, labelIndex);
+  for (let localLabelIndex = 0; localLabelIndex < labelCount; localLabelIndex++) {
+    valueOffsets[localLabelIndex] = colorValues.length / 4;
+    const globalLabelIndex = getGlobalLabelIndex(localLabelIndex);
+    const textLength = getTextLabelLength(dataset, globalLabelIndex);
     for (let characterIndex = 0; characterIndex < textLength; characterIndex++) {
-      appendTextCharacterColor(colorValues, labelIndex, characterIndex);
+      appendTextCharacterColor(colorValues, globalLabelIndex, characterIndex);
     }
   }
-  valueOffsets[dataset.labelCount] = colorValues.length / 4;
+  valueOffsets[labelCount] = colorValues.length / 4;
 
   const values = Uint8Array.from(colorValues);
   const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
@@ -363,12 +399,12 @@ function makeArrowTextCharacterColorVector(
   const textColorData = new arrow.Data(
     textColorType,
     0,
-    dataset.labelCount,
+    labelCount,
     0,
     {[arrow.BufferType.OFFSET]: valueOffsets},
     [colorData]
   );
-  return new arrow.Vector([textColorData]) as arrow.Vector<ArrowTextCharacterColorType>;
+  return new arrow.Vector([textColorData]) as arrow.Vector<CharacterColorDataType>;
 }
 
 function makeTextRowColors(labelCount: number): Uint8Array {
@@ -538,11 +574,13 @@ export function isTextDatasetKind(value: string): value is TextDatasetKind {
 
 export function isArrowTextCharacterColorType(
   type: arrow.DataType | undefined
-): type is ArrowTextCharacterColorType {
+): type is CharacterColorDataType {
   return Boolean(type) && arrow.DataType.isList(type);
 }
 
-export function isArrowTextDictionarySource(sourceVectors: ArrowTextLayerSourceVectors): boolean {
+export function isArrowTextDictionarySource(
+  sourceVectors: Pick<ArrowTextLayerSource, 'texts'>
+): boolean {
   return arrow.DataType.isDictionary(sourceVectors.texts.type);
 }
 
