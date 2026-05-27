@@ -817,20 +817,21 @@ function normalizeDenseUnionPointPositions(
   let sourceDimension = 0;
 
   for (const data of positions.data) {
-    const typeIds = data.typeIds as Int8Array | Int32Array;
-    const valueOffsets = data.valueOffsets as Int32Array;
+    const typeIds = data.typeIds as ArrayLike<number>;
+    const valueOffsets = data.valueOffsets as ArrayLike<number>;
     const type = data.type as arrow.DenseUnion & {
       typeIdToChildIndex: Record<number, number | undefined>;
     };
 
     for (let localRowIndex = 0; localRowIndex < data.length; localRowIndex++) {
-      const typeId = typeIds[localRowIndex];
+      const dataRowIndex = (data.offset ?? 0) + localRowIndex;
+      const typeId = typeIds[dataRowIndex];
       const childIndex = type.typeIdToChildIndex[typeId];
       if (childIndex === undefined) {
         throw new Error(`ArrowPointRenderer DenseUnion has unsupported type id ${typeId}`);
       }
       const childData = data.children[childIndex] as arrow.Data<arrow.FixedSizeList<arrow.Float32>>;
-      const childRowIndex = valueOffsets[localRowIndex];
+      const childRowIndex = valueOffsets[dataRowIndex];
       const childDimension = getFixedSizeListPointDimensionFromData(childData);
       const childValues = getFixedSizeListDataValues(childData);
       const sourceOffset = ((childData.offset ?? 0) + childRowIndex) * childDimension;

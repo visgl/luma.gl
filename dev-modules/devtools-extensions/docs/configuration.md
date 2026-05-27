@@ -12,6 +12,7 @@ export default {
       tsconfigProjects: ['./tsconfig.json'],
       browserName: 'chromium',
       testTimeout: 60000,
+      fileParallelism: true,
       channel: 'chromium',
       softwareGpu: false,
       launchOptions: {}

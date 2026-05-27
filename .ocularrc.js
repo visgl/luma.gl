@@ -72,6 +72,8 @@ const config = {
       // Force Chromium browser projects onto SwiftShader in CI for deterministic rendering.
       // Local runs should use the machine GPU unless explicitly overridden.
       softwareGpu: Boolean(process.env.CI),
+      // CI runners intermittently close Chromium under high parallel WebGL/WebGPU load.
+      fileParallelism: !process.env.CI,
       // Repo-owned exclusions that should not live in reusable devtools code.
       excludePatterns: [
         '**/*.disabled.*',
