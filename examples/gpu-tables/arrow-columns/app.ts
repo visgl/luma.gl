@@ -6,25 +6,28 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {
-  ArrowColumnLayer,
+  ArrowColumnRenderer,
   formatActiveTimeBucket,
-  getDefaultColumnLayerMetricDefaults
-} from './arrow-column-layer';
-import {formatArrowColumnLayerMetrics} from './arrow-column-metrics';
-import {ArrowColumnLayerControlPanel, makeArrowColumnLayerControlPanelHtml} from './control-panel';
+  getDefaultColumnRendererMetricDefaults
+} from './arrow-column-renderer';
+import {formatArrowColumnRendererMetrics} from './arrow-column-metrics';
+import {
+  ArrowColumnRendererControlPanel,
+  makeArrowColumnRendererControlPanelHtml
+} from './control-panel';
 
 export const title = 'DGGS + time';
 export const description =
   'Fetches the deck.gl HexagonLayer accident dataset, converts it to Arrow H3/time/count columns, and renders animated GPU-decoded H3 columns.';
 
-export default class ArrowColumnLayerAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowColumnLayerControlPanelHtml();
+export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = makeArrowColumnRendererControlPanelHtml();
 
   static props = {useDevicePixels: true, createFramebuffer: true};
 
   readonly device: Device;
-  readonly controlPanel = new ArrowColumnLayerControlPanel();
-  layer: ArrowColumnLayer | null = null;
+  readonly controlPanel = new ArrowColumnRendererControlPanel();
+  layer: ArrowColumnRenderer | null = null;
   isFinalized = false;
 
   constructor({device}: AnimationProps) {
@@ -36,10 +39,10 @@ export default class ArrowColumnLayerAnimationLoopTemplate extends AnimationLoop
     this.controlPanel.initialize();
     this.controlPanel.setStatus('Loading deck.gl CSV');
     this.controlPanel.setMetrics(
-      formatArrowColumnLayerMetrics(getDefaultColumnLayerMetricDefaults())
+      formatArrowColumnRendererMetrics(getDefaultColumnRendererMetricDefaults())
     );
 
-    const layer = new ArrowColumnLayer(this.device);
+    const layer = new ArrowColumnRenderer(this.device);
     this.layer = layer;
     try {
       await layer.initialize();
@@ -53,7 +56,7 @@ export default class ArrowColumnLayerAnimationLoopTemplate extends AnimationLoop
       return;
     }
     this.controlPanel.setStatus('Rendering WebGPU columns');
-    this.controlPanel.setMetrics(formatArrowColumnLayerMetrics(layer.getMetrics()));
+    this.controlPanel.setMetrics(formatArrowColumnRendererMetrics(layer.getMetrics()));
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {

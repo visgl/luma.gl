@@ -12,8 +12,8 @@ import {
   type ArrowTableGeometry,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
-import {GPUTable, GPUTableModel, GPUVector} from '@luma.gl/tables';
-import type {Device, ShaderLayout} from '@luma.gl/core';
+import {GPURenderable, GPUTable, GPUTableModel, GPUVector} from '@luma.gl/tables';
+import type {CommandEncoder, Device, ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   CubeGeometry,
@@ -201,7 +201,7 @@ type CubeTransform = {
 };
 
 /** Public configuration for the Arrow mesh/matrix example layer. */
-export type ArrowMeshLayerProps = {
+export type ArrowMeshRendererProps = {
   /** Debug label used for generated model and picking resources. */
   id?: string;
   /** Optional per-face RGBA colors. Defaults to the example face metadata colors. */
@@ -224,7 +224,7 @@ export type ArrowMeshLayerProps = {
   parameters?: Record<string, unknown>;
 };
 
-const DEFAULT_MESH_LAYER_ID = 'arrow-mesh-geometry';
+const DEFAULT_MESH_RENDERER_ID = 'arrow-mesh-geometry';
 const DEFAULT_CAMERA_EYE: [number, number, number] = [6.4, 4.8, 7.4];
 const DEFAULT_CAMERA_CENTER: [number, number, number] = [0, 0, 0];
 const DEFAULT_FIELD_OF_VIEW_DEGREES = 60;
@@ -238,7 +238,7 @@ const DEFAULT_RENDER_PARAMETERS = {
 } as const satisfies Record<string, unknown>;
 
 /** Example layer that renders Arrow mesh attributes with an instanced Arrow matrix column. */
-export class ArrowMeshLayer {
+export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
   readonly device: Device;
   readonly geometry: ArrowTableGeometry;
   readonly model: GPUTableModel;
@@ -253,9 +253,10 @@ export class ArrowMeshLayer {
     app: typeof app.props;
     picking: typeof indexPicking.props;
   }>({app, picking: indexPicking});
-  props: ArrowMeshLayerProps;
+  props: ArrowMeshRendererProps;
 
-  constructor(device: Device, props: ArrowMeshLayerProps = {}) {
+  constructor(device: Device, props: ArrowMeshRendererProps = {}) {
+    super();
     this.device = device;
     this.props = props;
     this.shaderInputs.setProps({picking: {indexMode: 'attribute', batchIndex: 0}});
@@ -279,7 +280,7 @@ export class ArrowMeshLayer {
       arrowPaths: MATRIX_ARROW_PATHS
     });
     this.model = new GPUTableModel(device, {
-      id: props.id ?? DEFAULT_MESH_LAYER_ID,
+      id: props.id ?? DEFAULT_MESH_RENDERER_ID,
       geometry: this.geometry,
       table: this.matrixTable,
       tableCount: 'instance',
@@ -308,11 +309,16 @@ export class ArrowMeshLayer {
     });
   }
 
-  setProps(props: Partial<ArrowMeshLayerProps>): void {
+  setProps(props: Partial<ArrowMeshRendererProps>): void {
     this.props = {...this.props, ...props};
   }
 
-  draw({aspect, device, tick, _mousePosition}: AnimationProps): void {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.model.predraw(commandEncoder);
+    this.pickingModel?.predraw(commandEncoder);
+  }
+
+  override draw({aspect, device, tick, _mousePosition}: AnimationProps): void {
     this.updateInstanceMatrices(tick);
     this.shaderInputs.setProps({
       app: {
@@ -389,7 +395,7 @@ export class ArrowMeshLayer {
       throw new Error('Matrices picking requires prepared instance Arrow data');
     }
     return new GPUTableModel(this.device, {
-      id: `${this.model.id || DEFAULT_MESH_LAYER_ID}-picking`,
+      id: `${this.model.id || DEFAULT_MESH_RENDERER_ID}-picking`,
       geometry: this.geometry,
       table: this.model.table,
       tableCount: 'instance',

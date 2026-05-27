@@ -12,7 +12,7 @@ import {
   type ShaderInputs
 } from '@luma.gl/engine';
 import {AttributeTextModel, DictionaryTextModel, StorageTextModel} from '@luma.gl/text';
-import type {ArrowTextLayerActiveModel} from './arrow-text-layer';
+import type {ArrowTextRendererActiveModel} from './arrow-text-renderer';
 import {
   DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
   DICTIONARY_STORAGE_WGSL_SHADER,
@@ -45,7 +45,7 @@ export function createArrowTextPickingManager(
 
 export function createArrowTextPickingModel(
   device: Device,
-  textModel: ArrowTextLayerActiveModel,
+  textModel: ArrowTextRendererActiveModel,
   shaderInputs: ShaderInputs<any>
 ): Model {
   if (textModel instanceof DictionaryTextModel) {
@@ -109,7 +109,7 @@ export function createArrowTextPickingModel(
 export function drawArrowTextPickingPass(
   pickingPass: RenderPass,
   pickingModel: Model,
-  textModel: ArrowTextLayerActiveModel
+  textModel: ArrowTextRendererActiveModel
 ): void {
   if (textModel instanceof AttributeTextModel) {
     drawArrowTextPickingBatches(pickingPass, pickingModel, textModel);

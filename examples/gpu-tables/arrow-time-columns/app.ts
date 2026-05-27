@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {ArrowTimeColumnsLayer} from './arrow-time-columns-layer';
+import {ArrowTimeColumnsRenderer} from './arrow-time-columns-renderer';
 import {
   ArrowTimeColumnsControlPanel,
   makeArrowTimeColumnsControlPanelHtml,
@@ -22,7 +22,7 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
   readonly device: Device;
   readonly controlPanel: ArrowTimeColumnsControlPanel;
   activeRenderMode: TimeColumnsRenderMode;
-  layer: ArrowTimeColumnsLayer | null = null;
+  layer: ArrowTimeColumnsRenderer | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -38,7 +38,7 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
   }
 
   override async onInitialize(): Promise<void> {
-    this.layer = new ArrowTimeColumnsLayer(this.device, {
+    this.layer = new ArrowTimeColumnsRenderer(this.device, {
       renderMode: this.activeRenderMode
     });
     await this.layer.initialize();

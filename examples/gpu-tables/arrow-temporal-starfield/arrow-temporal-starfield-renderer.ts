@@ -10,9 +10,15 @@ import {
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
-import {type Device, type RenderPass} from '@luma.gl/core';
+import {type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {GPURecordBatch, GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
+import {
+  GPURenderable,
+  GPURecordBatch,
+  GPUTable,
+  GPUTableModel,
+  type GPUVector
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -33,7 +39,7 @@ import {
 } from './arrow-temporal-starfield-shaders';
 
 /** Public configuration for the Arrow temporal starfield layer. */
-export type ArrowTemporalStarfieldLayerProps = {
+export type ArrowTemporalStarfieldRendererProps = {
   /** Rendering path. `storage` requires WebGPU; WebGL falls back to attributes. */
   renderMode?: 'attributes' | 'storage';
   /** Source time representation used for event starts. */
@@ -47,13 +53,13 @@ export type ArrowTemporalStarfieldLayerProps = {
 };
 
 /** Token used to cancel stale temporal starfield streaming work. */
-export type ArrowTemporalStarfieldLayerStreamingSession = {
+export type ArrowTemporalStarfieldRendererStreamingSession = {
   /** Monotonic stream version owned by the layer. */
   version: number;
 };
 
 /** Notification emitted after a temporal starfield record batch is uploaded. */
-export type ArrowTemporalStarfieldLayerRecordBatchStreamUpdate = {
+export type ArrowTemporalStarfieldRendererRecordBatchStreamUpdate = {
   /** Number of record batches loaded so far. */
   loadedBatchCount: number;
   /** Total rendered star count after the batch. */
@@ -63,17 +69,17 @@ export type ArrowTemporalStarfieldLayerRecordBatchStreamUpdate = {
 };
 
 /** Props for incrementally streaming Arrow starfield record batches. */
-export type ArrowTemporalStarfieldLayerRecordBatchStreamProps = {
+export type ArrowTemporalStarfieldRendererRecordBatchStreamProps = {
   /** Async iterator that yields Arrow starfield record batches. */
   recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
   /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowTemporalStarfieldLayerStreamingSession;
+  streamingSession?: ArrowTemporalStarfieldRendererStreamingSession;
   /** Callback fired after each batch is prepared and applied. */
-  onBatch?: (update: ArrowTemporalStarfieldLayerRecordBatchStreamUpdate) => void;
+  onBatch?: (update: ArrowTemporalStarfieldRendererRecordBatchStreamUpdate) => void;
 };
 
 /** Labels displayed by the temporal starfield example control panel. */
-export type ArrowTemporalStarfieldLayerLabels = {
+export type ArrowTemporalStarfieldRendererLabels = {
   /** Active preparation path label. */
   preparationPath: string;
   /** Current synthetic timestamp label. */
@@ -131,13 +137,13 @@ const DEFAULT_TEMPORAL_STARFIELD_PROPS = {
   initialTimestampMilliseconds: 0
 } as const satisfies Required<
   Pick<
-    ArrowTemporalStarfieldLayerProps,
+    ArrowTemporalStarfieldRendererProps,
     'currentTimeRateMillisecondsPerSecond' | 'initialTimestampMilliseconds'
   >
 >;
 
 /** Example layer that renders timestamp/duration Arrow columns as blinking star instances. */
-export class ArrowTemporalStarfieldLayer {
+export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {time: number}]> {
   readonly device: Device;
   readonly shaderInputs = new ShaderInputs<{temporalStarfield: typeof temporalStarfield.props}>({
     temporalStarfield
@@ -148,11 +154,12 @@ export class ArrowTemporalStarfieldLayer {
   starModel: ActiveTemporalStarfieldModel | null = null;
   currentTimestampMilliseconds = 0;
   lastRenderSeconds: number | null = null;
-  props: ArrowTemporalStarfieldLayerProps;
+  props: ArrowTemporalStarfieldRendererProps;
   private streamingSessionVersion = 0;
   private isDestroyed = false;
 
-  constructor(device: Device, props: ArrowTemporalStarfieldLayerProps = {}) {
+  constructor(device: Device, props: ArrowTemporalStarfieldRendererProps = {}) {
+    super();
     this.device = device;
     this.props = props;
     this.activeRenderMode =
@@ -170,7 +177,7 @@ export class ArrowTemporalStarfieldLayer {
     );
   }
 
-  beginRecordBatchStream(): ArrowTemporalStarfieldLayerStreamingSession {
+  beginRecordBatchStream(): ArrowTemporalStarfieldRendererStreamingSession {
     this.streamingSessionVersion++;
     this.destroyStarModel();
     this.destroyTableInput();
@@ -185,7 +192,7 @@ export class ArrowTemporalStarfieldLayer {
     recordBatchIterator,
     streamingSession = this.beginRecordBatchStream(),
     onBatch
-  }: ArrowTemporalStarfieldLayerRecordBatchStreamProps): Promise<void> {
+  }: ArrowTemporalStarfieldRendererRecordBatchStreamProps): Promise<void> {
     let loadedBatchCount = 0;
 
     if (!this.isRecordBatchStreamActive(streamingSession)) {
@@ -222,7 +229,11 @@ export class ArrowTemporalStarfieldLayer {
     }
   }
 
-  draw(renderPass: RenderPass, props: {time: number}): void {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.starModel?.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: RenderPass, props: {time: number}): void {
     if (!this.starModel || !this.temporalStarfieldTableInput) {
       return;
     }
@@ -299,7 +310,7 @@ export class ArrowTemporalStarfieldLayer {
     });
   }
 
-  getLabels(): ArrowTemporalStarfieldLayerLabels {
+  getLabels(): ArrowTemporalStarfieldRendererLabels {
     const temporalStarfieldTableInput = this.getTemporalStarfieldTableInput();
     const {temporalColumns} = temporalStarfieldTableInput;
     return {
@@ -332,7 +343,7 @@ export class ArrowTemporalStarfieldLayer {
     );
   }
 
-  setProps(props: ArrowTemporalStarfieldLayerProps): void {
+  setProps(props: ArrowTemporalStarfieldRendererProps): void {
     this.props = {...this.props, ...props};
     if (props.initialTimestampMilliseconds !== undefined) {
       this.currentTimestampMilliseconds = props.initialTimestampMilliseconds;
@@ -362,15 +373,9 @@ export class ArrowTemporalStarfieldLayer {
     this.starModel = nextStarModel;
   }
 
-  setNeedsRedraw(_reason: string): void {}
-
-  needsRedraw(): false {
-    return false;
-  }
-
   private getTemporalStarfieldTableInput(): TemporalStarfieldTableInput {
     if (!this.temporalStarfieldTableInput) {
-      throw new Error('ArrowTemporalStarfieldLayer has not been initialized');
+      throw new Error('ArrowTemporalStarfieldRenderer has not been initialized');
     }
     return this.temporalStarfieldTableInput;
   }
@@ -450,7 +455,7 @@ export class ArrowTemporalStarfieldLayer {
   }
 
   private isRecordBatchStreamActive(
-    streamingSession: ArrowTemporalStarfieldLayerStreamingSession
+    streamingSession: ArrowTemporalStarfieldRendererStreamingSession
   ): boolean {
     return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }

@@ -7,30 +7,30 @@ import type {GPUVector} from '@luma.gl/tables';
 import {AttributeTextModel, DictionaryTextModel, StorageTextModel} from '@luma.gl/text';
 import type {ArrowText2DControlPanelMetrics} from './control-panel';
 import type {
-  ArrowTextLayer,
-  ArrowTextLayerActiveModel,
-  ArrowTextLayerInput
-} from './arrow-text-layer';
+  ArrowTextRenderer,
+  ArrowTextRendererActiveModel,
+  ArrowTextRendererInput
+} from './arrow-text-renderer';
 
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 export const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
 
 export type ArrowTextMetricProps = {
-  textModel: ArrowTextLayerActiveModel;
-  textInput: ArrowTextLayerInput;
+  textModel: ArrowTextRendererActiveModel;
+  textInput: ArrowTextRendererInput;
   arrowVectorBuildTimeMs: number;
   colorEnabled: boolean;
   angleEnabled: boolean;
   sizeEnabled: boolean;
 };
 
-export function getArrowTextLayerMetrics(
-  textLayer: ArrowTextLayer,
-  textInput: ArrowTextLayerInput,
+export function getArrowTextRendererMetrics(
+  textRenderer: ArrowTextRenderer,
+  textInput: ArrowTextRendererInput,
   arrowVectorBuildTimeMs: number
 ): ArrowText2DControlPanelMetrics {
   return getArrowTextMetrics({
-    textModel: textLayer.model,
+    textModel: textRenderer.model,
     textInput,
     arrowVectorBuildTimeMs,
     colorEnabled: Boolean(textInput.colors),
@@ -114,8 +114,8 @@ export function getArrowTextMetrics({
 }
 
 function getSelectedStyleColumnGpuByteLength(
-  textModel: ArrowTextLayerActiveModel,
-  textInput: ArrowTextLayerInput,
+  textModel: ArrowTextRendererActiveModel,
+  textInput: ArrowTextRendererInput,
   colorEnabled: boolean,
   angleEnabled: boolean,
   sizeEnabled: boolean
@@ -141,8 +141,8 @@ function getSelectedStyleColumnGpuByteLength(
 }
 
 function getSelectedExpandedAttributeStyleVectorByteLength(
-  textModel: ArrowTextLayerActiveModel,
-  textInput: ArrowTextLayerInput,
+  textModel: ArrowTextRendererActiveModel,
+  textInput: ArrowTextRendererInput,
   colorEnabled: boolean,
   angleEnabled: boolean,
   sizeEnabled: boolean
@@ -162,7 +162,7 @@ function getSelectedExpandedAttributeStyleVectorByteLength(
 }
 
 function getSelectedArrowStyleVectorByteLength(
-  textInput: ArrowTextLayerInput,
+  textInput: ArrowTextRendererInput,
   colorEnabled: boolean,
   angleEnabled: boolean,
   sizeEnabled: boolean
@@ -180,7 +180,7 @@ function getSelectedArrowStyleVectorByteLength(
   );
 }
 
-function getTextModelGlyphCount(textModel: ArrowTextLayerActiveModel): number {
+function getTextModelGlyphCount(textModel: ArrowTextRendererActiveModel): number {
   return textModel instanceof StorageTextModel || textModel instanceof DictionaryTextModel
     ? textModel.glyphCount
     : textModel.glyphLayout.glyphCount;

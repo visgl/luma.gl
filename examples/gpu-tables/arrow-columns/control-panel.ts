@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ArrowColumnLayerFormattedMetrics} from './arrow-column-metrics';
+import type {ArrowColumnRendererFormattedMetrics} from './arrow-column-metrics';
 
-const STATUS_ID = 'arrow-column-layer-status';
-const SOURCE_ROWS_ID = 'arrow-column-layer-source-rows';
-const AGGREGATE_ROWS_ID = 'arrow-column-layer-aggregate-rows';
-const DECODED_CELLS_ID = 'arrow-column-layer-decoded-cells';
-const H3_RESOLUTION_ID = 'arrow-column-layer-h3-resolution';
-const TIME_BUCKETS_ID = 'arrow-column-layer-time-buckets';
-const ACTIVE_BUCKET_ID = 'arrow-column-layer-active-bucket';
-const MAX_COUNT_ID = 'arrow-column-layer-max-count';
-const GPU_BYTES_ID = 'arrow-column-layer-gpu-bytes';
-const ARROW_BUILD_TIME_ID = 'arrow-column-layer-arrow-build-time';
-const GEOMETRY_DECODE_TIME_ID = 'arrow-column-layer-geometry-decode-time';
+const STATUS_ID = 'arrow-columns-status';
+const SOURCE_ROWS_ID = 'arrow-columns-source-rows';
+const AGGREGATE_ROWS_ID = 'arrow-columns-aggregate-rows';
+const DECODED_CELLS_ID = 'arrow-columns-decoded-cells';
+const H3_RESOLUTION_ID = 'arrow-columns-h3-resolution';
+const TIME_BUCKETS_ID = 'arrow-columns-time-buckets';
+const ACTIVE_BUCKET_ID = 'arrow-columns-active-bucket';
+const MAX_COUNT_ID = 'arrow-columns-max-count';
+const GPU_BYTES_ID = 'arrow-columns-gpu-bytes';
+const ARROW_BUILD_TIME_ID = 'arrow-columns-arrow-build-time';
+const GEOMETRY_DECODE_TIME_ID = 'arrow-columns-geometry-decode-time';
 
-export class ArrowColumnLayerControlPanel {
+export class ArrowColumnRendererControlPanel {
   private statusLabel: HTMLElement | null = null;
   private sourceRowsLabel: HTMLElement | null = null;
   private aggregateRowsLabel: HTMLElement | null = null;
@@ -65,7 +65,7 @@ export class ArrowColumnLayerControlPanel {
     setText(this.activeBucketLabel, activeTimeBucket);
   }
 
-  setMetrics(metrics: ArrowColumnLayerFormattedMetrics): void {
+  setMetrics(metrics: ArrowColumnRendererFormattedMetrics): void {
     setText(this.sourceRowsLabel, metrics.sourceRows);
     setText(this.aggregateRowsLabel, metrics.aggregateRows);
     setText(this.decodedCellsLabel, metrics.decodedCells);
@@ -78,7 +78,7 @@ export class ArrowColumnLayerControlPanel {
   }
 }
 
-export function makeArrowColumnLayerControlPanelHtml(): string {
+export function makeArrowColumnRendererControlPanelHtml(): string {
   return `\
   <div style="min-width: 300px; max-width: 430px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 8px; background: rgba(255, 255, 255, 0.96); color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
     <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Arrow H3 Columns</h3>

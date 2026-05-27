@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {ArrowTextLayerProps} from './arrow-text-layer';
+import type {ArrowTextRendererProps} from './arrow-text-renderer';
 
-type TextModelKind = NonNullable<ArrowTextLayerProps['model']>;
+type TextModelKind = NonNullable<ArrowTextRendererProps['model']>;
 
 const ANIMATE_TOGGLE_ID = 'arrow-text-2d-animate';
 const MODEL_SELECTOR_ID = 'arrow-text-2d-model';

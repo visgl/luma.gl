@@ -7,9 +7,9 @@ import {
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
-import {type Device, type RenderPass} from '@luma.gl/core';
+import {type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
+import {GPURenderable, GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -19,21 +19,21 @@ import {
   loadArrowColumnSourceData,
   type ArrowColumnSourceData
 } from './arrow-column-data';
-import {makeColumnLayerGeometry, type ColumnLayerGeometry} from './column-layer-geometry';
+import {makeColumnRendererGeometry, type ColumnRendererGeometry} from './column-renderer-geometry';
 import {
-  COLUMN_LAYER_SHADER_LAYOUT,
-  COLUMN_LAYER_WGSL_SHADER,
+  COLUMN_RENDERER_SHADER_LAYOUT,
+  COLUMN_RENDERER_WGSL_SHADER,
   COLUMN_VERTEX_COUNT,
   RENDER_PARAMETERS,
-  columnLayer
-} from './column-layer-shaders';
+  columnRenderer
+} from './column-renderer-shaders';
 
 /** Prepared render input and projection settings for the internal WebGPU column model. */
-export type ColumnLayerProps = {
+export type ColumnRendererProps = {
   /** GPU table containing aggregated H3/time/count columns. */
   table: GPUTable;
   /** GPU-decoded H3 cell boundary geometry shared by all columns. */
-  geometry: ColumnLayerGeometry;
+  geometry: ColumnRendererGeometry;
   /** Maximum aggregate count used to normalize column height. */
   maxCount: number;
   /** Duration of one synthetic time cycle in milliseconds. */
@@ -49,7 +49,7 @@ export type ColumnLayerProps = {
 };
 
 /** Per-frame draw inputs for the internal WebGPU column model. */
-export type ColumnLayerDrawProps = {
+export type ColumnRendererDrawProps = {
   /** Current canvas aspect ratio. */
   aspect: number;
   /** Synthetic timestamp used to filter active time buckets. */
@@ -57,7 +57,7 @@ export type ColumnLayerDrawProps = {
 };
 
 /** Metrics displayed by the Arrow column example control panel. */
-export type ArrowColumnLayerMetrics = {
+export type ArrowColumnRendererMetrics = {
   /** Number of source CSV rows before aggregation. */
   sourceRowCount: number;
   /** Number of aggregated Arrow rows uploaded to the GPU. */
@@ -81,7 +81,7 @@ export type ArrowColumnLayerMetrics = {
 };
 
 /** Public configuration for the Arrow-backed animated H3 column layer. */
-export type ArrowColumnLayerProps = {
+export type ArrowColumnRendererProps = {
   /** Optional preloaded source data. Defaults to loading the bundled deck.gl CSV source. */
   sourceData?: ArrowColumnSourceData;
   /** Map center in longitude/latitude used by the column shader. */
@@ -101,7 +101,7 @@ export type ArrowColumnLayerProps = {
 type ArrowColumnTableInput = {
   sourceData: ArrowColumnSourceData;
   table: GPUTable;
-  geometry: ColumnLayerGeometry;
+  geometry: ColumnRendererGeometry;
   destroy: () => void;
 };
 
@@ -110,46 +110,51 @@ type PreparedColumnTemporalVectors = {
   timeDurations: PreparedArrowTemporalGPUVector;
 };
 
-const DEFAULT_COLUMN_LAYER_PROPS = {
+const DEFAULT_COLUMN_RENDERER_PROPS = {
   center: [-1.42, 52.23],
   heightScale: 0.22,
   scale: 16.8,
   tilt: 1.16,
   currentTimeRateMillisecondsPerSecond: CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
   initialTimestampMilliseconds: 0
-} as const satisfies Required<Omit<ArrowColumnLayerProps, 'sourceData'>>;
+} as const satisfies Required<Omit<ArrowColumnRendererProps, 'sourceData'>>;
 
-/** Internal low-level column renderer used by {@link ArrowColumnLayer}. */
-export class ColumnLayer {
+/** Internal low-level column renderer used by {@link ArrowColumnRenderer}. */
+export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDrawProps]> {
   readonly device: Device;
-  readonly shaderInputs = new ShaderInputs<{columnLayer: typeof columnLayer.props}>({
-    columnLayer
+  readonly shaderInputs = new ShaderInputs<{columnRenderer: typeof columnRenderer.props}>({
+    columnRenderer
   });
-  props: ColumnLayerProps;
+  props: ColumnRendererProps;
   model: Model;
 
-  constructor(device: Device, props: ColumnLayerProps) {
+  constructor(device: Device, props: ColumnRendererProps) {
+    super();
     if (device.type !== 'webgpu') {
-      throw new Error('ColumnLayer requires WebGPU');
+      throw new Error('ColumnRenderer requires WebGPU');
     }
     this.device = device;
     this.props = props;
     this.model = this.createModel(props);
   }
 
-  setProps(props: Partial<ColumnLayerProps>): void {
+  setProps(props: Partial<ColumnRendererProps>): void {
     this.props = {...this.props, ...props};
     if (props.table || props.geometry) {
-      this.model.setBindings(getColumnLayerBindings(this.props.table, this.props.geometry));
+      this.model.setBindings(getColumnRendererBindings(this.props.table, this.props.geometry));
       if (props.table) {
         this.model.setInstanceCount(props.table.numRows);
       }
     }
   }
 
-  draw(renderPass: RenderPass, props: ColumnLayerDrawProps): void {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.model.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: RenderPass, props: ColumnRendererDrawProps): void {
     this.shaderInputs.setProps({
-      columnLayer: {
+      columnRenderer: {
         center: this.props.center,
         currentTimestamp: props.currentTimestampMilliseconds,
         cycleDuration: this.props.cycleDurationMilliseconds,
@@ -167,13 +172,13 @@ export class ColumnLayer {
     this.model.destroy();
   }
 
-  private createModel(props: ColumnLayerProps): Model {
+  private createModel(props: ColumnRendererProps): Model {
     return new Model(this.device, {
-      id: 'arrow-column-layer-columns',
-      source: COLUMN_LAYER_WGSL_SHADER,
-      shaderLayout: COLUMN_LAYER_SHADER_LAYOUT,
+      id: 'arrow-columns-columns',
+      source: COLUMN_RENDERER_WGSL_SHADER,
+      shaderLayout: COLUMN_RENDERER_SHADER_LAYOUT,
       shaderInputs: this.shaderInputs,
-      bindings: getColumnLayerBindings(props.table, props.geometry),
+      bindings: getColumnRendererBindings(props.table, props.geometry),
       topology: 'triangle-list',
       vertexCount: COLUMN_VERTEX_COUNT,
       instanceCount: props.table.numRows,
@@ -183,43 +188,47 @@ export class ColumnLayer {
 }
 
 /** Example layer that loads Arrow H3/time/count columns and renders animated WebGPU columns. */
-export class ArrowColumnLayer {
+export class ArrowColumnRenderer extends GPURenderable<
+  [RenderPass, {time: number; aspect: number}]
+> {
   readonly device: Device;
-  props: ArrowColumnLayerProps;
+  props: ArrowColumnRendererProps;
   tableInput: ArrowColumnTableInput | null = null;
-  columnLayer: ColumnLayer | null = null;
+  columnRenderer: ColumnRenderer | null = null;
   currentTimestampMilliseconds = 0;
   lastRenderSeconds: number | null = null;
 
-  constructor(device: Device, props: ArrowColumnLayerProps = {}) {
+  constructor(device: Device, props: ArrowColumnRendererProps = {}) {
+    super();
     if (device.type !== 'webgpu') {
-      throw new Error('ArrowColumnLayer requires WebGPU');
+      throw new Error('ArrowColumnRenderer requires WebGPU');
     }
     this.device = device;
     this.props = props;
     this.currentTimestampMilliseconds =
-      props.initialTimestampMilliseconds ?? DEFAULT_COLUMN_LAYER_PROPS.initialTimestampMilliseconds;
+      props.initialTimestampMilliseconds ??
+      DEFAULT_COLUMN_RENDERER_PROPS.initialTimestampMilliseconds;
   }
 
   async initialize(): Promise<void> {
     const sourceData = this.props.sourceData ?? (await loadArrowColumnSourceData());
     const tableInput = await makeArrowColumnTableInput(this.device, sourceData);
     this.tableInput = tableInput;
-    this.columnLayer = new ColumnLayer(this.device, {
+    this.columnRenderer = new ColumnRenderer(this.device, {
       table: tableInput.table,
       geometry: tableInput.geometry,
       maxCount: sourceData.maxCount,
       cycleDurationMilliseconds: sourceData.cycleDurationMilliseconds,
-      center: this.props.center ?? DEFAULT_COLUMN_LAYER_PROPS.center,
-      heightScale: this.props.heightScale ?? DEFAULT_COLUMN_LAYER_PROPS.heightScale,
-      scale: this.props.scale ?? DEFAULT_COLUMN_LAYER_PROPS.scale,
-      tilt: this.props.tilt ?? DEFAULT_COLUMN_LAYER_PROPS.tilt
+      center: this.props.center ?? DEFAULT_COLUMN_RENDERER_PROPS.center,
+      heightScale: this.props.heightScale ?? DEFAULT_COLUMN_RENDERER_PROPS.heightScale,
+      scale: this.props.scale ?? DEFAULT_COLUMN_RENDERER_PROPS.scale,
+      tilt: this.props.tilt ?? DEFAULT_COLUMN_RENDERER_PROPS.tilt
     });
   }
 
-  setProps(props: Partial<ArrowColumnLayerProps>): void {
+  setProps(props: Partial<ArrowColumnRendererProps>): void {
     this.props = {...this.props, ...props};
-    this.columnLayer?.setProps({
+    this.columnRenderer?.setProps({
       ...(props.center ? {center: props.center} : {}),
       ...(props.heightScale !== undefined ? {heightScale: props.heightScale} : {}),
       ...(props.scale !== undefined ? {scale: props.scale} : {}),
@@ -230,8 +239,12 @@ export class ArrowColumnLayer {
     }
   }
 
-  draw(renderPass: RenderPass, props: {time: number; aspect: number}): void {
-    if (!this.columnLayer || !this.tableInput) {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.columnRenderer?.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: RenderPass, props: {time: number; aspect: number}): void {
+    if (!this.columnRenderer || !this.tableInput) {
       return;
     }
 
@@ -245,21 +258,21 @@ export class ArrowColumnLayer {
       (this.currentTimestampMilliseconds +
         elapsedSeconds *
           (this.props.currentTimeRateMillisecondsPerSecond ??
-            DEFAULT_COLUMN_LAYER_PROPS.currentTimeRateMillisecondsPerSecond)) %
+            DEFAULT_COLUMN_RENDERER_PROPS.currentTimeRateMillisecondsPerSecond)) %
       this.tableInput.sourceData.cycleDurationMilliseconds;
 
-    this.columnLayer.draw(renderPass, {
+    this.columnRenderer.draw(renderPass, {
       aspect: props.aspect,
       currentTimestampMilliseconds: this.currentTimestampMilliseconds
     });
   }
 
   destroy(): void {
-    this.columnLayer?.destroy();
+    this.columnRenderer?.destroy();
     this.tableInput?.destroy();
   }
 
-  getMetrics(): ArrowColumnLayerMetrics {
+  getMetrics(): ArrowColumnRendererMetrics {
     const tableInput = this.getTableInput();
     return {
       sourceRowCount: tableInput.sourceData.sourceRowCount,
@@ -286,7 +299,7 @@ export class ArrowColumnLayer {
 
   private getTableInput(): ArrowColumnTableInput {
     if (!this.tableInput) {
-      throw new Error('ArrowColumnLayer has not been initialized');
+      throw new Error('ArrowColumnRenderer has not been initialized');
     }
     return this.tableInput;
   }
@@ -299,23 +312,23 @@ async function makeArrowColumnTableInput(
   const h3Cells = makeArrowGPUVector(
     device,
     getRequiredArrowVector<arrow.Uint64>(sourceData.table, 'h3Cells'),
-    {name: 'h3Cells', id: 'arrow-column-layer-h3-cells'}
+    {name: 'h3Cells', id: 'arrow-columns-h3-cells'}
   );
   const counts = makeArrowGPUVector(
     device,
     getRequiredArrowVector<arrow.Float32>(sourceData.table, 'counts'),
-    {name: 'counts', id: 'arrow-column-layer-counts'}
+    {name: 'counts', id: 'arrow-columns-counts'}
   );
   const cellGeometryIndices = makeArrowGPUVector(
     device,
     getRequiredArrowVector<arrow.Uint32>(sourceData.table, 'cellGeometryIndices'),
-    {name: 'cellGeometryIndices', id: 'arrow-column-layer-cell-geometry-indices'}
+    {name: 'cellGeometryIndices', id: 'arrow-columns-cell-geometry-indices'}
   );
-  let geometry: ColumnLayerGeometry | null = null;
+  let geometry: ColumnRendererGeometry | null = null;
   let temporalVectors: PreparedColumnTemporalVectors | null = null;
 
   try {
-    geometry = await makeColumnLayerGeometry(device, sourceData.geometryTable);
+    geometry = await makeColumnRendererGeometry(device, sourceData.geometryTable);
     temporalVectors = (await prepareArrowTemporalGPUVectors(
       device,
       {
@@ -330,8 +343,8 @@ async function makeArrowColumnTableInput(
       },
       {
         columns: {
-          timeStarts: {id: 'arrow-column-layer-time-starts'},
-          timeDurations: {id: 'arrow-column-layer-time-durations'}
+          timeStarts: {id: 'arrow-columns-time-starts'},
+          timeDurations: {id: 'arrow-columns-time-durations'}
         }
       }
     )) as unknown as PreparedColumnTemporalVectors;
@@ -382,14 +395,14 @@ function getPreparedFloat32Vector(
   preparedTemporalVector: PreparedArrowTemporalGPUVector
 ): GPUVector<arrow.Float32> {
   if (!(preparedTemporalVector.temporal.type instanceof arrow.Float32)) {
-    throw new Error('ArrowColumnLayer requires scalar prepared Float32 temporal columns');
+    throw new Error('ArrowColumnRenderer requires scalar prepared Float32 temporal columns');
   }
   return preparedTemporalVector.temporal as GPUVector<arrow.Float32>;
 }
 
-function getColumnLayerBindings(
+function getColumnRendererBindings(
   table: GPUTable,
-  geometry: ColumnLayerGeometry
+  geometry: ColumnRendererGeometry
 ): Record<string, GPUVector['buffer']> {
   return {
     ...getColumnVectorBindings({
@@ -416,7 +429,7 @@ function getColumnVectorBindings(
 function getRequiredTableVector(table: GPUTable, columnName: string): GPUVector {
   const vector = table.gpuVectors[columnName];
   if (!vector) {
-    throw new Error(`ArrowColumnLayer table is missing GPU column "${columnName}"`);
+    throw new Error(`ArrowColumnRenderer table is missing GPU column "${columnName}"`);
   }
   return vector;
 }
@@ -427,7 +440,7 @@ function getRequiredArrowVector<T extends arrow.DataType>(
 ): arrow.Vector<T> {
   const vector = table.getChild(columnName);
   if (!vector) {
-    throw new Error(`ArrowColumnLayer data is missing Arrow column "${columnName}"`);
+    throw new Error(`ArrowColumnRenderer data is missing Arrow column "${columnName}"`);
   }
   return vector as arrow.Vector<T>;
 }
@@ -448,7 +461,7 @@ export function formatActiveTimeBucket(bucketIndex: number): string {
   return `${hour.toString().padStart(2, '0')}:00 synthetic UTC`;
 }
 
-export function getDefaultColumnLayerMetricDefaults(): ArrowColumnLayerMetrics {
+export function getDefaultColumnRendererMetricDefaults(): ArrowColumnRendererMetrics {
   return {
     sourceRowCount: 0,
     aggregateRowCount: 0,

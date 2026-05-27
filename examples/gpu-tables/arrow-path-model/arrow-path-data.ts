@@ -5,12 +5,12 @@
 import {getArrowVectorByteLength, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 import type {
-  ArrowPathLayerModel,
-  ArrowPathLayerSourceData,
-  ArrowPathLayerTimeColumn,
+  ArrowPathRendererModel,
+  ArrowPathRendererSourceData,
+  ArrowPathRendererTimeColumn,
   ArrowPathSourceCoordinateType,
   ArrowPathSourceTimestampType
-} from './arrow-path-layer';
+} from './arrow-path-renderer';
 
 export const TEMPORAL_EPOCH_MILLISECONDS = 1_700_000_000_000n;
 export const TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT = 1000;
@@ -25,7 +25,7 @@ export type ArrowPathBaseRowCountKind = '240' | '960' | '2400';
 export type ArrowPathRowCountKind = '240-stream' | '2400-stream';
 export type ArrowPathCoordinateKind = 'float32' | 'float64';
 export type ArrowPathColorKind = 'none' | 'row-colors' | 'vertex-colors';
-export type ArrowPathTimeKind = ArrowPathLayerTimeColumn;
+export type ArrowPathTimeKind = ArrowPathRendererTimeColumn;
 export type ArrowPathCapKind = 'square' | 'round';
 export type ArrowPathJointKind = 'miter' | 'round';
 export type ArrowPathDataset = {
@@ -53,9 +53,9 @@ export const PATH_DATASETS: Record<ArrowPathBaseRowCountKind, ArrowPathDataset> 
 };
 
 export function getValidPathModelKindForTimeKind(
-  modelKind: ArrowPathLayerModel,
+  modelKind: ArrowPathRendererModel,
   timeKind: ArrowPathTimeKind
-): ArrowPathLayerModel {
+): ArrowPathRendererModel {
   if (timeKind === 'timestamps') {
     return modelKind === 'auto' ? 'auto' : 'trips';
   }
@@ -68,7 +68,7 @@ export function makeArrowPathSourceData(
   colorKind: ArrowPathColorKind,
   timeKind: ArrowPathTimeKind,
   rowsPerChunk: number | null = null
-): ArrowPathLayerSourceData {
+): ArrowPathRendererSourceData {
   const buildStartTime = getNow();
   const paths = makePathVector(dataset.pathCount, dataset.pointCount, coordinateKind, rowsPerChunk);
   const timestamps =
@@ -101,7 +101,7 @@ export function makeArrowPathSourceData(
 }
 
 export function makeArrowPathRecordBatches(
-  sourceData: ArrowPathLayerSourceData
+  sourceData: ArrowPathRendererSourceData
 ): arrow.RecordBatch[] {
   return new arrow.Table(sourceData.sourceVectors).batches;
 }

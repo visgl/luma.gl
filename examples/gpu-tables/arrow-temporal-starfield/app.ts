@@ -13,9 +13,9 @@ import {
   STREAMING_STARFIELD_ROWS_PER_BATCH
 } from './arrow-temporal-starfield-data';
 import {
-  ArrowTemporalStarfieldLayer,
-  type ArrowTemporalStarfieldLayerRecordBatchStreamUpdate
-} from './arrow-temporal-starfield-layer';
+  ArrowTemporalStarfieldRenderer,
+  type ArrowTemporalStarfieldRendererRecordBatchStreamUpdate
+} from './arrow-temporal-starfield-renderer';
 import {
   ArrowTemporalStarfieldControlPanel,
   makeArrowTemporalStarfieldControlPanelHtml
@@ -32,7 +32,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
-  layer: ArrowTemporalStarfieldLayer | null = null;
+  layer: ArrowTemporalStarfieldRenderer | null = null;
   inputRequestVersion = 0;
   isFinalized = false;
 
@@ -54,7 +54,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   }
 
   override async onInitialize(): Promise<void> {
-    this.layer = new ArrowTemporalStarfieldLayer(this.device, {
+    this.layer = new ArrowTemporalStarfieldRenderer(this.device, {
       renderMode: this.activeRenderMode,
       timeColumn: this.activeTimeColumn
     });
@@ -126,7 +126,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   }
 
   private readonly handleStreamingStarfieldBatch = (
-    update: ArrowTemporalStarfieldLayerRecordBatchStreamUpdate
+    update: ArrowTemporalStarfieldRendererRecordBatchStreamUpdate
   ): void => {
     if (this.isFinalized || !this.layer) {
       return;

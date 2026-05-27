@@ -4321,6 +4321,7 @@ __metadata:
     "@luma.gl/engine": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/tables": "npm:~9.3.0"
+    "@math.gl/geoarrow": "workspace:*"
     "@math.gl/polygon": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     apache-arrow: "npm:^17.0.0"
@@ -4732,6 +4733,14 @@ __metadata:
   checksum: 10c0/ae5bb6592239b4e7f397ff335e7d120c6c1aebadb9cfc74ad7bfeb5eae775af41b34baae6cf848f9e80f6329d3b94ee578b2890e21aadcd6cfea77f3c95b7e22
   languageName: node
   linkType: hard
+
+"@math.gl/geoarrow@workspace:*, @math.gl/geoarrow@workspace:modules/geoarrow":
+  version: 0.0.0-use.local
+  resolution: "@math.gl/geoarrow@workspace:modules/geoarrow"
+  dependencies:
+    apache-arrow: "npm:^17.0.0"
+  languageName: unknown
+  linkType: soft
 
 "@math.gl/polygon@npm:^4.1.0":
   version: 4.1.0
@@ -15340,9 +15349,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-column-layer@workspace:examples/gpu-tables/arrow-column-layer":
+"luma.gl-examples-arrow-columns@workspace:examples/gpu-tables/arrow-columns":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-column-layer@workspace:examples/gpu-tables/arrow-column-layer"
+  resolution: "luma.gl-examples-arrow-columns@workspace:examples/gpu-tables/arrow-columns"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15427,6 +15436,23 @@ __metadata:
 "luma.gl-examples-arrow-path-model@workspace:examples/gpu-tables/arrow-path-model":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-path-model@workspace:examples/gpu-tables/arrow-path-model"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-arrow-polygons@workspace:examples/gpu-tables/arrow-polygons":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-polygons@workspace:examples/gpu-tables/arrow-polygons"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"

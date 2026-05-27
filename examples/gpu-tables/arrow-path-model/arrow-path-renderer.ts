@@ -11,8 +11,8 @@ import {
   prepareArrowTemporalGPUVector,
   type ArrowPathPreparedState
 } from '@luma.gl/arrow';
-import {type Device} from '@luma.gl/core';
-import {type GPUVector} from '@luma.gl/tables';
+import {type CommandEncoder, type Device} from '@luma.gl/core';
+import {GPURenderable, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createArrowPathShaderInputs,
@@ -26,11 +26,11 @@ import {
 } from './arrow-path-shaders';
 
 /** Path rendering path selected by the Arrow path example layer. */
-export type ArrowPathLayerModel = 'attribute' | 'storage' | 'trips' | 'auto';
+export type ArrowPathRendererModel = 'attribute' | 'storage' | 'trips' | 'auto';
 /** Concrete path rendering path after resolving `auto`. */
-export type ArrowPathLayerResolvedModel = Exclude<ArrowPathLayerModel, 'auto'>;
+export type ArrowPathRendererResolvedModel = Exclude<ArrowPathRendererModel, 'auto'>;
 /** Source time column mode used by the Arrow path example. */
-export type ArrowPathLayerTimeColumn = 'none' | 'xyzm' | 'timestamps';
+export type ArrowPathRendererTimeColumn = 'none' | 'xyzm' | 'timestamps';
 /** GPU-ready Float32 variable-length path coordinate type. */
 export type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 /** CPU Float64 source path coordinate type converted before rendering. */
@@ -49,14 +49,14 @@ export type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
 export type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
 /** Row or per-vertex path color source type. */
 export type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
-/** Concrete luma.gl path models owned by {@link ArrowPathLayer}. */
-export type ArrowPathLayerActiveModel =
+/** Concrete luma.gl path models owned by {@link ArrowPathRenderer}. */
+export type ArrowPathRendererActiveModel =
   | AttributePathModel
   | StoragePathModel
   | StorageTripsPathModel;
 
 /** CPU Arrow vectors accepted by Arrow path preparation helpers. */
-export type ArrowPathLayerSourceVectors = {
+export type ArrowPathRendererSourceVectors = {
   /** Variable-length path coordinate rows. */
   paths: arrow.Vector<ArrowPathSourceCoordinateType>;
   /** Optional row or per-vertex packed path colors. */
@@ -68,7 +68,7 @@ export type ArrowPathLayerSourceVectors = {
 };
 
 /** Prepared GPUVector data consumed by Arrow path models. */
-export type ArrowPathLayerData = {
+export type ArrowPathRendererData = {
   /** GPU path coordinate rows. */
   paths: GPUVector<ArrowPathCoordinateType>;
   /** Optional GPU row or per-vertex colors. */
@@ -86,7 +86,7 @@ export type ArrowPathLayerData = {
 };
 
 /** Prepared path data plus byte-size metrics shown by the example control panel. */
-export type ArrowPathLayerInput = ArrowPathLayerData & {
+export type ArrowPathRendererInput = ArrowPathRendererData & {
   /** Required prepared widths vector for the example metrics and render paths. */
   widths: GPUVector<arrow.Float32>;
   /** Bytes occupied by path coordinate and timestamp Arrow source vectors. */
@@ -96,9 +96,9 @@ export type ArrowPathLayerInput = ArrowPathLayerData & {
 };
 
 /** CPU Arrow source plus metric metadata used by example data generation helpers. */
-export type ArrowPathLayerSourceData = {
+export type ArrowPathRendererSourceData = {
   /** Source vectors with required widths included by the example data generator. */
-  sourceVectors: ArrowPathLayerSourceVectors & {
+  sourceVectors: ArrowPathRendererSourceVectors & {
     widths: arrow.Vector<arrow.Float32>;
   };
   /** Bytes occupied by path coordinate and timestamp Arrow source vectors. */
@@ -110,69 +110,69 @@ export type ArrowPathLayerSourceData = {
 };
 
 /** Props for preparing GPUVector path data from explicit Arrow source vectors. */
-export type ArrowPathLayerPrepareDataProps = {
+export type ArrowPathRendererPrepareDataProps = {
   /** Source Arrow vectors to prepare. */
-  sourceVectors: ArrowPathLayerSourceVectors;
+  sourceVectors: ArrowPathRendererSourceVectors;
   /** Optional resource id prefix. */
   id?: string;
 };
 
 /** Notification emitted when a path record batch stream updates the layer. */
-export type ArrowPathLayerRecordBatchStreamUpdate = {
+export type ArrowPathRendererRecordBatchStreamUpdate = {
   /** Full prepared input for all batches loaded so far. */
-  pathInput: ArrowPathLayerInput;
+  pathInput: ArrowPathRendererInput;
   /** Number of loaded record batches. */
   loadedBatchCount: number;
   /** True for the first batch in a stream. */
   isFirstBatch: boolean;
   /** Result of applying the batch to layer props. */
-  setPropsResult: ArrowPathLayerSetPropsResult;
+  setPropsResult: ArrowPathRendererSetPropsResult;
 };
 
 /** Props for incrementally streaming Arrow path record batches. */
-export type ArrowPathLayerRecordBatchStreamProps = {
+export type ArrowPathRendererRecordBatchStreamProps = {
   /** Async iterator that yields Arrow path record batches. */
   recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
   /** Optional model selection applied when the first batch arrives. */
-  model?: ArrowPathLayerModel;
+  model?: ArrowPathRendererModel;
   /** Optional time-column mode applied when the first batch arrives. */
-  timeColumn?: ArrowPathLayerTimeColumn;
+  timeColumn?: ArrowPathRendererTimeColumn;
   /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowPathLayerStreamingSession;
+  streamingSession?: ArrowPathRendererStreamingSession;
   /** Redraw reason used for the first batch. */
   startRedrawReason?: string;
   /** Redraw reason used for appended batches. */
   appendRedrawReason?: string;
   /** Callback fired after each batch is prepared and applied. */
-  onBatch?: (update: ArrowPathLayerRecordBatchStreamUpdate) => void;
+  onBatch?: (update: ArrowPathRendererRecordBatchStreamUpdate) => void;
 };
 
 /** Result returned by Arrow path layer prop updates. */
-export type ArrowPathLayerSetPropsResult = {
+export type ArrowPathRendererSetPropsResult = {
   /** True when a new underlying path model was constructed. */
   modelChanged: boolean;
 };
 
 /** Token used to cancel stale Arrow path streaming work. */
-export type ArrowPathLayerStreamingSession = {
+export type ArrowPathRendererStreamingSession = {
   /** Monotonic stream version owned by the layer. */
   version: number;
 };
 
-type ArrowPathLayerSetPropsOptions = {
+type ArrowPathRendererSetPropsOptions = {
   preserveStreaming?: boolean;
 };
 
 /** Public configuration for the Arrow path example layer. */
-export type ArrowPathLayerProps = {
+export type ArrowPathRendererProps = {
   /** Debug label used for generated model resources. */
   id?: string;
   /** Prepared path data consumed by the layer. */
-  data: ArrowPathLayerData;
+  data: ArrowPathRendererData;
   /** Path rendering path. */
-  model?: ArrowPathLayerModel;
+  model?: ArrowPathRendererModel;
   /** Source time column mode. */
-  timeColumn?: ArrowPathLayerTimeColumn;
+  timeColumn?: ArrowPathRendererTimeColumn;
   /** Current Trips timestamp in relative milliseconds. */
   currentTime?: number;
   /** Trips trail length in relative milliseconds. */
@@ -199,17 +199,20 @@ const DEFAULT_RENDER_PARAMETERS = {
 } as const satisfies Record<string, unknown>;
 
 /** Example layer that renders variable-length Arrow paths through attribute or storage models. */
-export class ArrowPathLayer {
+export class ArrowPathRenderer extends GPURenderable<
+  [Parameters<ArrowPathRendererActiveModel['draw']>[0]]
+> {
   readonly device: Device;
   readonly shaderInputs = createArrowPathShaderInputs();
-  props: ArrowPathLayerProps;
-  model: ArrowPathLayerActiveModel;
-  resolvedModel: ArrowPathLayerResolvedModel;
-  private activeStreamingPathInput: ArrowPathLayerInput | null = null;
+  props: ArrowPathRendererProps;
+  model: ArrowPathRendererActiveModel;
+  resolvedModel: ArrowPathRendererResolvedModel;
+  private activeStreamingPathInput: ArrowPathRendererInput | null = null;
   private streamingSessionVersion = 0;
   private isDestroyed = false;
 
-  constructor(device: Device, props: ArrowPathLayerProps) {
+  constructor(device: Device, props: ArrowPathRendererProps) {
+    super();
     this.device = device;
     this.props = props;
     this.resolvedModel = this.resolveModel(props.model ?? 'auto', props.timeColumn ?? 'xyzm');
@@ -218,12 +221,12 @@ export class ArrowPathLayer {
 
   static async prepareData(
     device: Device,
-    props: ArrowPathLayerPrepareDataProps
-  ): Promise<ArrowPathLayerData> {
+    props: ArrowPathRendererPrepareDataProps
+  ): Promise<ArrowPathRendererData> {
     const preparedTimestamps = props.sourceVectors.timestamps
       ? await prepareArrowTemporalGPUVector(device, props.sourceVectors.timestamps, {
           name: 'timestamps',
-          id: `${props.id ?? 'arrow-path-layer'}-timestamps`
+          id: `${props.id ?? 'arrow-path-renderer'}-timestamps`
         })
       : null;
     const prepared = await convertArrowPathsToAttribute(
@@ -234,7 +237,7 @@ export class ArrowPathLayer {
         ...(props.sourceVectors.widths ? {widths: props.sourceVectors.widths} : {})
       },
       {
-        id: props.id ?? 'arrow-path-layer'
+        id: props.id ?? 'arrow-path-renderer'
       }
     );
 
@@ -255,9 +258,9 @@ export class ArrowPathLayer {
   }
 
   setProps(
-    props: Partial<ArrowPathLayerProps>,
-    options: ArrowPathLayerSetPropsOptions = {}
-  ): ArrowPathLayerSetPropsResult {
+    props: Partial<ArrowPathRendererProps>,
+    options: ArrowPathRendererSetPropsOptions = {}
+  ): ArrowPathRendererSetPropsResult {
     const nextProps = {...this.props, ...props};
     const shouldCancelStreaming =
       !options.preserveStreaming && props.data !== undefined && props.data !== this.props.data;
@@ -297,7 +300,7 @@ export class ArrowPathLayer {
     return {modelChanged};
   }
 
-  beginRecordBatchStream(): ArrowPathLayerStreamingSession {
+  beginRecordBatchStream(): ArrowPathRendererStreamingSession {
     this.streamingSessionVersion++;
     return {version: this.streamingSessionVersion};
   }
@@ -312,7 +315,7 @@ export class ArrowPathLayer {
     timeColumn,
     streamingSession = this.beginRecordBatchStream(),
     onBatch
-  }: ArrowPathLayerRecordBatchStreamProps): Promise<void> {
+  }: ArrowPathRendererRecordBatchStreamProps): Promise<void> {
     const sourceRecordBatches: arrow.RecordBatch[] = [];
 
     if (!this.isRecordBatchStreamActive(streamingSession)) {
@@ -359,7 +362,22 @@ export class ArrowPathLayer {
     }
   }
 
-  draw(renderPass: Parameters<ArrowPathLayerActiveModel['draw']>[0]): void {
+  override needsRedraw(): false | string {
+    const rendererNeedsRedraw = super.needsRedraw();
+    const modelNeedsRedraw = this.model.needsRedraw();
+    return rendererNeedsRedraw || modelNeedsRedraw;
+  }
+
+  override setNeedsRedraw(reason: string): void {
+    super.setNeedsRedraw(reason);
+    this.model.setNeedsRedraw(reason);
+  }
+
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.model.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: Parameters<ArrowPathRendererActiveModel['draw']>[0]): void {
     this.model.draw(renderPass);
   }
 
@@ -373,9 +391,9 @@ export class ArrowPathLayer {
   }
 
   private resolveModel(
-    modelKind: ArrowPathLayerModel,
-    timeColumn: ArrowPathLayerTimeColumn
-  ): ArrowPathLayerResolvedModel {
+    modelKind: ArrowPathRendererModel,
+    timeColumn: ArrowPathRendererTimeColumn
+  ): ArrowPathRendererResolvedModel {
     if (modelKind === 'auto') {
       if (this.device.type !== 'webgpu') {
         return 'attribute';
@@ -391,14 +409,14 @@ export class ArrowPathLayer {
     return modelKind;
   }
 
-  private isRecordBatchStreamActive(streamingSession: ArrowPathLayerStreamingSession): boolean {
+  private isRecordBatchStreamActive(streamingSession: ArrowPathRendererStreamingSession): boolean {
     return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
 
   private createModel(
-    modelKind: ArrowPathLayerResolvedModel,
-    props: ArrowPathLayerProps
-  ): ArrowPathLayerActiveModel {
+    modelKind: ArrowPathRendererResolvedModel,
+    props: ArrowPathRendererProps
+  ): ArrowPathRendererActiveModel {
     const commonProps = {
       id: props.id,
       paths: props.data.paths,
@@ -423,7 +441,7 @@ export class ArrowPathLayer {
 
     if (modelKind === 'trips') {
       if (!props.data.timestamps) {
-        throw new Error('ArrowPathLayer trips model requires a timestamps column');
+        throw new Error('ArrowPathRenderer trips model requires a timestamps column');
       }
       return new StorageTripsPathModel(this.device, {
         ...commonProps,
@@ -450,10 +468,10 @@ export class ArrowPathLayer {
 
 export async function prepareArrowPathInput(
   device: Device,
-  sourceData: ArrowPathLayerSourceData
-): Promise<ArrowPathLayerInput> {
+  sourceData: ArrowPathRendererSourceData
+): Promise<ArrowPathRendererInput> {
   const {sourceVectors} = sourceData;
-  const prepared = await ArrowPathLayer.prepareData(device, {
+  const prepared = await ArrowPathRenderer.prepareData(device, {
     id: 'arrow-path-model',
     sourceVectors
   });
@@ -480,7 +498,7 @@ export async function prepareArrowPathInput(
 export async function prepareArrowPathInputFromRecordBatches(
   device: Device,
   recordBatches: arrow.RecordBatch[]
-): Promise<ArrowPathLayerInput> {
+): Promise<ArrowPathRendererInput> {
   const sourceTable = new arrow.Table(recordBatches);
   const paths = getRequiredArrowVector<ArrowPathSourceCoordinateType>(sourceTable, 'paths');
   const colors = getOptionalArrowVector<ArrowPathColorType>(sourceTable, 'colors');
@@ -510,7 +528,7 @@ function getRequiredArrowVector<T extends arrow.DataType>(
 ): arrow.Vector<T> {
   const vector = table.getChild(columnName);
   if (!vector) {
-    throw new Error(`ArrowPathLayer data is missing Arrow column "${columnName}"`);
+    throw new Error(`ArrowPathRenderer data is missing Arrow column "${columnName}"`);
   }
   return vector as arrow.Vector<T>;
 }

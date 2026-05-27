@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {makeArrowFixedSizeListVector, makeArrowGPUTable} from '@luma.gl/arrow';
-import {Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
+import {Device, type CommandEncoder, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {ModelProps} from '@luma.gl/engine';
 import {
   CubeGeometry,
@@ -18,7 +18,7 @@ import {
   indexPicking
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
-import {GPUTable, GPUTableModel} from '@luma.gl/tables';
+import {GPURenderable, GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {Matrix4} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 
@@ -300,11 +300,11 @@ const app: ShaderModule<AppUniforms> = {
   }
 };
 
-export type ArrowInstancedMeshLayerProps = {
+export type ArrowInstancedMeshRendererProps = {
   instancesPerSide?: number;
 };
 
-export type ArrowInstancedMeshLayerUniforms = {
+export type ArrowInstancedMeshRendererUniforms = {
   modelMatrix: Matrix4;
   viewMatrix: Matrix4;
   projectionMatrix: Matrix4;
@@ -312,7 +312,9 @@ export type ArrowInstancedMeshLayerUniforms = {
   time: number;
 };
 
-export class ArrowInstancedMeshLayer {
+export class ArrowInstancedMeshRenderer extends GPURenderable<
+  [RenderPass, ArrowInstancedMeshRendererUniforms]
+> {
   readonly device: Device;
   readonly picker: PickingManager;
   cube: InstancedCube;
@@ -329,7 +331,8 @@ export class ArrowInstancedMeshLayer {
     picking
   });
 
-  constructor(device: Device, props: ArrowInstancedMeshLayerProps = {}) {
+  constructor(device: Device, props: ArrowInstancedMeshRendererProps = {}) {
+    super();
     this.device = device;
     this.instancesPerSide = props.instancesPerSide ?? DEFAULT_INSTANCES_PER_SIDE;
     this.cube = this.createCube();
@@ -340,7 +343,7 @@ export class ArrowInstancedMeshLayer {
     });
   }
 
-  setProps(props: ArrowInstancedMeshLayerProps): void {
+  setProps(props: ArrowInstancedMeshRendererProps): void {
     if (props.instancesPerSide === undefined || props.instancesPerSide === this.instancesPerSide) {
       return;
     }
@@ -352,7 +355,12 @@ export class ArrowInstancedMeshLayer {
     }
   }
 
-  draw(renderPass: RenderPass, uniforms: ArrowInstancedMeshLayerUniforms): void {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.cube.predraw(commandEncoder);
+    this.pickingCube?.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: RenderPass, uniforms: ArrowInstancedMeshRendererUniforms): void {
     this.shaderInputs.setProps({
       app: uniforms
     });
@@ -396,11 +404,5 @@ export class ArrowInstancedMeshLayer {
       // @ts-ignore
       shaderInputs: this.shaderInputs
     });
-  }
-
-  setNeedsRedraw(_reason: string): void {}
-
-  needsRedraw(): false {
-    return false;
   }
 }

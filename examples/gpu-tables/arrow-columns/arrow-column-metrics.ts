@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ArrowColumnLayerMetrics} from './arrow-column-layer';
+import type {ArrowColumnRendererMetrics} from './arrow-column-renderer';
 
-export type ArrowColumnLayerFormattedMetrics = {
+export type ArrowColumnRendererFormattedMetrics = {
   sourceRows: string;
   aggregateRows: string;
   decodedCells: string;
@@ -16,9 +16,9 @@ export type ArrowColumnLayerFormattedMetrics = {
   geometryDecodeTime: string;
 };
 
-export function formatArrowColumnLayerMetrics(
-  metrics: ArrowColumnLayerMetrics
-): ArrowColumnLayerFormattedMetrics {
+export function formatArrowColumnRendererMetrics(
+  metrics: ArrowColumnRendererMetrics
+): ArrowColumnRendererFormattedMetrics {
   return {
     sourceRows: formatInteger(metrics.sourceRowCount),
     aggregateRows: formatInteger(metrics.aggregateRowCount),

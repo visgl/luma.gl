@@ -43,6 +43,7 @@ export {
   type GPUTableModelCount,
   type GPUTableModelProps
 } from './table/gpu-table-model';
+export {GPURenderable} from './table/gpu-renderable';
 export {
   TableTransform,
   type TableTransformBatchOptions,

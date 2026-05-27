@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ArrowDggsPolygonLayerMetrics} from './arrow-dggs-polygon-layer';
+import type {ArrowDggsPolygonRendererMetrics} from './arrow-dggs-polygon-renderer';
 import type {ArrowDggsPolygonsControlPanelMetrics} from './control-panel';
 
 export function formatDggsPolygonMetrics(
-  metrics: ArrowDggsPolygonLayerMetrics
+  metrics: ArrowDggsPolygonRendererMetrics
 ): ArrowDggsPolygonsControlPanelMetrics {
   return {
     activeColumn: metrics.activeColumn,

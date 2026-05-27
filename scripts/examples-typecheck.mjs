@@ -11,8 +11,10 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'api/multi-canvas',
   'api/texture-compressed',
   'api/texture-tester',
+  'gpu-tables/arrow-columns',
   'gpu-tables/arrow-mesh-geometry',
   'gpu-tables/arrow-particles',
+  'gpu-tables/arrow-polygons',
   'integrations/hello-react',
   'showcase/dof',
   'showcase/persistence',
@@ -44,7 +46,12 @@ const SHARED_COMPILER_OPTIONS = {
   noUnusedLocals: false,
   moduleResolution: 'bundler',
   jsx: 'react-jsx',
-  paths: {}
+  paths: {
+    '@luma.gl/arrow': ['modules/arrow/src/index.ts'],
+    '@luma.gl/arrow/*': ['modules/arrow/src/*'],
+    '@math.gl/geoarrow': ['modules/geoarrow/src/index.ts'],
+    '@math.gl/geoarrow/*': ['modules/geoarrow/src/*']
+  }
 };
 
 const AMBIENT_MODULE_DECLARATIONS = `declare module '*.css';

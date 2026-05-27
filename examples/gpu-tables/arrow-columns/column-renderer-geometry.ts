@@ -8,7 +8,7 @@ import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {GPUVector} from '@luma.gl/tables';
 import {dggs, type ShaderModule} from '@luma.gl/shadertools';
 import * as arrow from 'apache-arrow';
-import {CELL_GEOMETRY_POINT_COUNT, COLUMN_GEOMETRY_WORKGROUP_SIZE} from './column-layer-shaders';
+import {CELL_GEOMETRY_POINT_COUNT, COLUMN_GEOMETRY_WORKGROUP_SIZE} from './column-renderer-shaders';
 
 const COLUMN_GEOMETRY_SHADER_LAYOUT = {
   bindings: [
@@ -67,32 +67,32 @@ fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
 }
 `;
 
-export type ColumnLayerGeometry = {
+export type ColumnRendererGeometry = {
   points: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
   cellCount: number;
   decodeTimeMilliseconds: number;
   destroy: () => void;
 };
 
-export async function makeColumnLayerGeometry(
+export async function makeColumnRendererGeometry(
   device: Device,
   geometryTable: arrow.Table
-): Promise<ColumnLayerGeometry> {
+): Promise<ColumnRendererGeometry> {
   const startedAt = performance.now();
   const h3Cells = makeArrowGPUVector(
     device,
     getRequiredArrowVector<arrow.Uint64>(geometryTable, 'h3Cells'),
-    {name: 'geometryH3Cells', id: 'arrow-column-layer-geometry-h3-cells'}
+    {name: 'geometryH3Cells', id: 'arrow-columns-geometry-h3-cells'}
   );
   const cellCount = geometryTable.numRows;
   const pointCount = cellCount * CELL_GEOMETRY_POINT_COUNT;
   const cellGeometryBuffer = new DynamicBuffer(device, {
-    id: 'arrow-column-layer-cell-geometry-points',
+    id: 'arrow-columns-cell-geometry-points',
     usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
     byteLength: Math.max(Float32Array.BYTES_PER_ELEMENT * 2, pointCount * 2 * 4)
   });
   const geometryConfig = device.createBuffer({
-    id: 'arrow-column-layer-cell-geometry-config',
+    id: 'arrow-columns-cell-geometry-config',
     usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
     data: new Uint32Array([cellCount])
   });
@@ -140,7 +140,7 @@ function dispatchColumnGeometryDecode(
   }
 ): void {
   const computation = new Computation(device, {
-    id: 'arrow-column-layer-cell-geometry-compute',
+    id: 'arrow-columns-cell-geometry-compute',
     source: COLUMN_GEOMETRY_WGSL_SHADER,
     modules: [dggs as ShaderModule],
     shaderLayout: COLUMN_GEOMETRY_SHADER_LAYOUT,
@@ -170,7 +170,7 @@ function getRequiredArrowVector<T extends arrow.DataType>(
 ): arrow.Vector<T> {
   const vector = table.getChild(columnName);
   if (!vector) {
-    throw new Error(`ArrowColumnLayer geometry is missing Arrow column "${columnName}"`);
+    throw new Error(`ArrowColumnRenderer geometry is missing Arrow column "${columnName}"`);
   }
   return vector as arrow.Vector<T>;
 }

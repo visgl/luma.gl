@@ -7,9 +7,10 @@ import {
   isArrowFixedSizeListVector,
   makeArrowGPURecordBatch
 } from '@luma.gl/arrow';
-import {Buffer, type Device, type RenderPass} from '@luma.gl/core';
+import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {
+  GPURenderable,
   GPUTableComputation,
   GPURecordBatch,
   GPUTable,
@@ -33,7 +34,7 @@ import {
 const DEFAULT_RESET_INTERVAL_MILLISECONDS = 8_000;
 
 /** Public configuration for the Arrow particle layer. */
-export type ArrowParticleLayerProps = {
+export type ArrowParticleRendererProps = {
   /** Optional source table. If omitted, data can be streamed later by record batch. */
   data?: arrow.Table | null;
   /** Source table column name for initial particle positions. */
@@ -45,13 +46,13 @@ export type ArrowParticleLayerProps = {
 };
 
 /** Token used to cancel stale particle streaming work. */
-export type ArrowParticleLayerStreamingSession = {
+export type ArrowParticleRendererStreamingSession = {
   /** Monotonic stream version owned by the layer. */
   version: number;
 };
 
 /** Notification emitted after a particle record batch is uploaded. */
-export type ArrowParticleLayerRecordBatchStreamUpdate = {
+export type ArrowParticleRendererRecordBatchStreamUpdate = {
   /** Number of record batches loaded so far. */
   loadedBatchCount: number;
   /** Total particle count after the batch. */
@@ -59,18 +60,18 @@ export type ArrowParticleLayerRecordBatchStreamUpdate = {
 };
 
 /** Props for incrementally streaming Arrow particle record batches. */
-export type ArrowParticleLayerRecordBatchStreamProps = {
+export type ArrowParticleRendererRecordBatchStreamProps = {
   /** Async iterator that yields Arrow particle record batches. */
   recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
   /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowParticleLayerStreamingSession;
+  streamingSession?: ArrowParticleRendererStreamingSession;
   /** Callback fired after each batch is uploaded and applied. */
-  onBatch?: (update: ArrowParticleLayerRecordBatchStreamUpdate) => void;
+  onBatch?: (update: ArrowParticleRendererRecordBatchStreamUpdate) => void;
 };
 
 type ArrowParticleVectorType = arrow.FixedSizeList<arrow.Float32>;
 
-type ArrowParticleLayerResolvedProps = {
+type ArrowParticleRendererResolvedProps = {
   data: arrow.Table | null;
   positions: string;
   velocities: string;
@@ -91,9 +92,9 @@ const DEFAULT_POSITIONS_COLUMN = 'positions';
 const DEFAULT_VELOCITIES_COLUMN = 'velocities';
 
 /** Example layer that updates Arrow particle GPUVectors through compute or transform feedback. */
-export class ArrowParticleLayer {
+export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
   readonly device: Device;
-  props: ArrowParticleLayerResolvedProps;
+  props: ArrowParticleRendererResolvedProps;
   particleTable: GPUTable | null = null;
   computation: GPUTableComputation | null = null;
   transform: TableTransform | null = null;
@@ -108,7 +109,8 @@ export class ArrowParticleLayer {
   private streamingSessionVersion = 0;
   private isDestroyed = false;
 
-  constructor(device: Device, props: ArrowParticleLayerProps = {}) {
+  constructor(device: Device, props: ArrowParticleRendererProps = {}) {
+    super();
     if (device.type !== 'webgpu' && device.type !== 'webgl') {
       throw new Error('Particles: FixedSizeList<Float32, 2> requires WebGPU or WebGL2');
     }
@@ -126,7 +128,7 @@ export class ArrowParticleLayer {
     }
   }
 
-  setProps(props: ArrowParticleLayerProps): void {
+  setProps(props: ArrowParticleRendererProps): void {
     const shouldRecreate =
       props.data !== undefined || props.positions !== undefined || props.velocities !== undefined;
     this.props = {
@@ -150,7 +152,7 @@ export class ArrowParticleLayer {
     }
   }
 
-  beginRecordBatchStream(): ArrowParticleLayerStreamingSession {
+  beginRecordBatchStream(): ArrowParticleRendererStreamingSession {
     this.streamingSessionVersion++;
     this.destroyDeviceResources();
     this.destroyParticleTable();
@@ -167,7 +169,7 @@ export class ArrowParticleLayer {
     recordBatchIterator,
     streamingSession = this.beginRecordBatchStream(),
     onBatch
-  }: ArrowParticleLayerRecordBatchStreamProps): Promise<void> {
+  }: ArrowParticleRendererRecordBatchStreamProps): Promise<void> {
     let loadedBatchCount = 0;
 
     if (!this.isRecordBatchStreamActive(streamingSession)) {
@@ -234,7 +236,11 @@ export class ArrowParticleLayer {
     return didReset;
   }
 
-  draw(renderPass: RenderPass): void {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.model?.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: RenderPass): void {
     if (!this.model || !this.particleTable) {
       return;
     }
@@ -259,12 +265,6 @@ export class ArrowParticleLayer {
     this.cancelRecordBatchStream();
     this.destroyDeviceResources();
     this.destroyParticleTable();
-  }
-
-  setNeedsRedraw(_reason: string): void {}
-
-  needsRedraw(): false {
-    return false;
   }
 
   private replaceArrowTable(data: arrow.Table): void {
@@ -318,7 +318,7 @@ export class ArrowParticleLayer {
     const sourceVectors = getArrowParticleSourceVectors(sourceTable, this.props);
     if (sourceVectors.velocities.length !== sourceVectors.positions.length) {
       throw new Error(
-        `ArrowParticleLayer positions and velocities rows must match (${sourceVectors.positions.length} !== ${sourceVectors.velocities.length})`
+        `ArrowParticleRenderer positions and velocities rows must match (${sourceVectors.positions.length} !== ${sourceVectors.velocities.length})`
       );
     }
 
@@ -486,14 +486,16 @@ export class ArrowParticleLayer {
     this.initialBatchValues.clear();
   }
 
-  private isRecordBatchStreamActive(streamingSession: ArrowParticleLayerStreamingSession): boolean {
+  private isRecordBatchStreamActive(
+    streamingSession: ArrowParticleRendererStreamingSession
+  ): boolean {
     return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
 }
 
 function getArrowParticleSourceVectors(
   data: arrow.Table,
-  props: Pick<ArrowParticleLayerResolvedProps, 'positions' | 'velocities'>
+  props: Pick<ArrowParticleRendererResolvedProps, 'positions' | 'velocities'>
 ): {
   positions: arrow.Vector<ArrowParticleVectorType>;
   velocities: arrow.Vector<ArrowParticleVectorType>;
@@ -510,10 +512,12 @@ function getRequiredParticleVector(
 ): arrow.Vector<ArrowParticleVectorType> {
   const vector = table.getChild(columnName);
   if (!vector) {
-    throw new Error(`ArrowParticleLayer data is missing Arrow column "${columnName}"`);
+    throw new Error(`ArrowParticleRenderer data is missing Arrow column "${columnName}"`);
   }
   if (!isArrowFixedSizeListVector(vector, new arrow.Float32(), 2)) {
-    throw new Error(`ArrowParticleLayer column "${columnName}" must be FixedSizeList<Float32, 2>`);
+    throw new Error(
+      `ArrowParticleRenderer column "${columnName}" must be FixedSizeList<Float32, 2>`
+    );
   }
   return vector;
 }
@@ -525,7 +529,7 @@ function getInitialParticleValues(vector: arrow.Vector<ArrowParticleVectorType>)
 function getRequiredBatchVector(batch: GPURecordBatch, name: string): GPUVector {
   const vector = batch.gpuVectors[name];
   if (!vector) {
-    throw new Error(`ArrowParticleLayer GPU batch is missing vector "${name}"`);
+    throw new Error(`ArrowParticleRenderer GPU batch is missing vector "${name}"`);
   }
   return vector;
 }

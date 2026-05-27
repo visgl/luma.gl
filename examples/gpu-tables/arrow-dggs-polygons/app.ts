@@ -7,7 +7,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {formatDggsPolygonMetrics} from './arrow-dggs-polygon-metrics';
-import {ArrowDggsPolygonLayer, type DggsSourceKind} from './arrow-dggs-polygon-layer';
+import {ArrowDggsPolygonRenderer, type DggsSourceKind} from './arrow-dggs-polygon-renderer';
 import {
   ArrowDggsPolygonsControlPanel,
   makeArrowDggsPolygonsControlPanelHtml
@@ -26,7 +26,7 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
   readonly controlPanel: ArrowDggsPolygonsControlPanel;
   activeEncoding: DggsCellEncoding = 'geohash';
   activeSourceKind: DggsSourceKind = 'uint64';
-  layer: ArrowDggsPolygonLayer | null = null;
+  layer: ArrowDggsPolygonRenderer | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -44,7 +44,7 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
   }
 
   override async onInitialize(): Promise<void> {
-    this.layer = new ArrowDggsPolygonLayer(this.device, {
+    this.layer = new ArrowDggsPolygonRenderer(this.device, {
       encoding: this.activeEncoding,
       sourceKind: this.activeSourceKind
     });

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {ArrowPathLayerModel, ArrowPathLayerTimeColumn} from './arrow-path-layer';
+import type {ArrowPathRendererModel, ArrowPathRendererTimeColumn} from './arrow-path-renderer';
 
 const MODEL_SELECTOR_ID = 'arrow-path-model-model';
 const ROW_COUNT_SELECTOR_ID = 'arrow-path-model-row-count';
@@ -51,7 +51,7 @@ export type ArrowPathControlPanelProps = {
 export type ArrowPathControlPanelRowCountKind = keyof ArrowPathControlPanelRowLabels;
 export type ArrowPathControlPanelCoordinateKind = 'float32' | 'float64';
 export type ArrowPathControlPanelColorKind = 'none' | 'row-colors' | 'vertex-colors';
-export type ArrowPathControlPanelTimeKind = ArrowPathLayerTimeColumn;
+export type ArrowPathControlPanelTimeKind = ArrowPathRendererTimeColumn;
 export type ArrowPathControlPanelCapKind = 'square' | 'round';
 export type ArrowPathControlPanelJointKind = 'miter' | 'round';
 
@@ -60,7 +60,7 @@ export type ArrowPathControlPanelState = {
   coordinateKind: ArrowPathControlPanelCoordinateKind;
   colorKind: ArrowPathControlPanelColorKind;
   timeKind: ArrowPathControlPanelTimeKind;
-  modelKind: ArrowPathLayerModel;
+  modelKind: ArrowPathRendererModel;
   capKind: ArrowPathControlPanelCapKind;
   jointKind: ArrowPathControlPanelJointKind;
   miterLimit: number;
@@ -91,7 +91,7 @@ export type ArrowPathControlPanelHandlers = {
   onCoordinateChange: (coordinateKind: ArrowPathControlPanelCoordinateKind) => void | Promise<void>;
   onColorChange: (colorKind: ArrowPathControlPanelColorKind) => void | Promise<void>;
   onTimeChange: (timeKind: ArrowPathControlPanelTimeKind) => void | Promise<void>;
-  onModelChange: (modelKind: ArrowPathLayerModel) => void;
+  onModelChange: (modelKind: ArrowPathRendererModel) => void;
   onMeasureSweepChange: (enabled: boolean) => void;
   onWidthChange: (enabled: boolean) => void;
   onCapChange: (capKind: ArrowPathControlPanelCapKind) => void;
@@ -334,7 +334,7 @@ export class ArrowPathModelControlPanel {
   private readonly handleModelSelection = (): void => {
     const nextModelKind = this.modelSelector?.value;
     if (
-      isArrowPathLayerModel(nextModelKind) &&
+      isArrowPathRendererModel(nextModelKind) &&
       (nextModelKind !== 'storage' || this.device.type === 'webgpu') &&
       (nextModelKind !== 'attribute' || this.state.timeKind !== 'timestamps')
     ) {
@@ -403,7 +403,7 @@ export function makeArrowPathModelControlPanelHtml({
   deckPathAttributeBytesPerSegment
 }: ArrowPathControlPanelProps): string {
   return `\
-  <p>Renders nested Arrow coordinate lists through a deck-style <code>ArrowPathLayer</code> POC, one logical Arrow row per path.</p>
+  <p>Renders nested Arrow coordinate lists through a deck-style <code>ArrowPathRenderer</code> POC, one logical Arrow row per path.</p>
   <div style="max-height: calc(100vh - 72px); overflow-y: auto; overflow-x: hidden; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <section style="overflow: visible; margin-bottom: 12px; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Table</h3>
@@ -574,7 +574,7 @@ function isArrowPathControlPanelTimeKind(
   return value === 'none' || value === 'xyzm' || value === 'timestamps';
 }
 
-function isArrowPathLayerModel(value: string | undefined): value is ArrowPathLayerModel {
+function isArrowPathRendererModel(value: string | undefined): value is ArrowPathRendererModel {
   return value === 'attribute' || value === 'storage' || value === 'trips' || value === 'auto';
 }
 

@@ -10,7 +10,7 @@ import {
   makeArrowParticleRecordBatches,
   STREAMING_PARTICLE_BATCH_COUNT
 } from './arrow-particle-data';
-import {ArrowParticleLayer} from './arrow-particle-layer';
+import {ArrowParticleRenderer} from './arrow-particle-renderer';
 import {ArrowParticlesControlPanel, makeArrowParticlesControlPanelHtml} from './control-panel';
 
 export const title = 'Particles: FixedSizeList<Float32, 2>';
@@ -21,14 +21,14 @@ export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTe
   static info = makeArrowParticlesControlPanelHtml();
 
   readonly device: Device;
-  readonly layer: ArrowParticleLayer;
+  readonly layer: ArrowParticleRenderer;
   readonly controlPanel: ArrowParticlesControlPanel;
   isFinalized = false;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.layer = new ArrowParticleLayer(this.device);
+    this.layer = new ArrowParticleRenderer(this.device);
     this.controlPanel = new ArrowParticlesControlPanel();
   }
 

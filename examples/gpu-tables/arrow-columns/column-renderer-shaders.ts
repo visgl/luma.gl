@@ -10,7 +10,7 @@ export const CELL_GEOMETRY_POINT_COUNT = 7;
 export const CELL_CENTROID_POINT_INDEX = 6;
 export const COLUMN_GEOMETRY_WORKGROUP_SIZE = 64;
 
-type ColumnLayerUniforms = {
+type ColumnRendererUniforms = {
   center: [number, number];
   currentTimestamp: number;
   cycleDuration: number;
@@ -21,8 +21,8 @@ type ColumnLayerUniforms = {
   aspect: number;
 };
 
-export const columnLayer: ShaderModule<ColumnLayerUniforms> = {
-  name: 'columnLayer',
+export const columnRenderer: ShaderModule<ColumnRendererUniforms> = {
+  name: 'columnRenderer',
   uniformTypes: {
     center: 'vec2<f32>',
     currentTimestamp: 'f32',
@@ -35,7 +35,7 @@ export const columnLayer: ShaderModule<ColumnLayerUniforms> = {
   }
 };
 
-export const COLUMN_LAYER_SHADER_LAYOUT = {
+export const COLUMN_RENDERER_SHADER_LAYOUT = {
   attributes: [],
   bindings: [
     {name: 'cellGeometryIndices', type: 'read-only-storage', group: 1, location: 0},
@@ -58,8 +58,8 @@ export const RENDER_PARAMETERS = {
   blendAlphaDstFactor: 'one-minus-src-alpha'
 } as const;
 
-export const COLUMN_LAYER_WGSL_SHADER = /* wgsl */ `\
-struct ColumnLayerUniforms {
+export const COLUMN_RENDERER_WGSL_SHADER = /* wgsl */ `\
+struct ColumnRendererUniforms {
   center : vec2<f32>,
   currentTimestamp : f32,
   cycleDuration : f32,
@@ -70,7 +70,7 @@ struct ColumnLayerUniforms {
   aspect : f32,
 };
 
-@group(0) @binding(auto) var<uniform> columnLayer : ColumnLayerUniforms;
+@group(0) @binding(auto) var<uniform> columnRenderer : ColumnRendererUniforms;
 @group(1) @binding(0) var<storage, read> cellGeometryIndices : array<u32>;
 @group(1) @binding(1) var<storage, read> timeStarts : array<f32>;
 @group(1) @binding(2) var<storage, read> timeDurations : array<f32>;
@@ -101,15 +101,15 @@ fn latitudeToMercator(latitude : f32) -> f32 {
 }
 
 fn projectLngLat(lngLat : vec2<f32>) -> vec2<f32> {
-  let x = (lngLat.x - columnLayer.center.x) / 180.0;
-  let y = (latitudeToMercator(lngLat.y) - latitudeToMercator(columnLayer.center.y)) / PI;
-  return vec2<f32>(x / max(columnLayer.aspect, 0.2), y) * columnLayer.scale;
+  let x = (lngLat.x - columnRenderer.center.x) / 180.0;
+  let y = (latitudeToMercator(lngLat.y) - latitudeToMercator(columnRenderer.center.y)) / PI;
+  return vec2<f32>(x / max(columnRenderer.aspect, 0.2), y) * columnRenderer.scale;
 }
 
 fn getTiltedDepth(projectedPosition : vec2<f32>, topOffset : f32) -> f32 {
   return clamp(
     0.5 + projectedPosition.y * VIEW_TILT_DEPTH_SCALE -
-      topOffset * columnLayer.tilt * VIEW_TILT_HEIGHT_DEPTH_SCALE,
+      topOffset * columnRenderer.tilt * VIEW_TILT_HEIGHT_DEPTH_SCALE,
     0.0,
     1.0
   );
@@ -144,9 +144,9 @@ fn getSideIsTop(localVertexIndex : u32) -> bool {
 }
 
 fn getTimeActivation(eventStart : f32, eventDuration : f32) -> f32 {
-  var elapsed = columnLayer.currentTimestamp - eventStart;
+  var elapsed = columnRenderer.currentTimestamp - eventStart;
   if (elapsed < 0.0) {
-    elapsed += columnLayer.cycleDuration;
+    elapsed += columnRenderer.cycleDuration;
   }
   if (elapsed < 0.0 || elapsed > eventDuration) {
     return 0.015;
@@ -158,12 +158,12 @@ fn getTimeActivation(eventStart : f32, eventDuration : f32) -> f32 {
 }
 
 fn getColumnHeight(count : f32, activation : f32) -> f32 {
-  let normalizedCount = sqrt(max(count, 0.0) / max(columnLayer.maxCount, 1.0));
-  return 0.006 + normalizedCount * activation * columnLayer.heightScale;
+  let normalizedCount = sqrt(max(count, 0.0) / max(columnRenderer.maxCount, 1.0));
+  return 0.006 + normalizedCount * activation * columnRenderer.heightScale;
 }
 
 fn getColumnColor(count : f32, activation : f32, isTop : bool) -> vec4<f32> {
-  let normalizedCount = sqrt(max(count, 0.0) / max(columnLayer.maxCount, 1.0));
+  let normalizedCount = sqrt(max(count, 0.0) / max(columnRenderer.maxCount, 1.0));
   let coolColor = vec3<f32>(0.05, 0.56, 0.92);
   let warmColor = vec3<f32>(1.0, 0.72, 0.18);
   let hotColor = vec3<f32>(1.0, 0.18, 0.22);
@@ -201,7 +201,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   }
 
   let projectedPosition = projectLngLat(lngLat);
-  let screenTopOffset = topOffset * columnLayer.tilt;
+  let screenTopOffset = topOffset * columnRenderer.tilt;
   let depth = getTiltedDepth(projectedPosition, topOffset);
   var outputs : FragmentInputs;
   outputs.Position = vec4<f32>(projectedPosition + vec2<f32>(0.0, screenTopOffset), depth, 1.0);

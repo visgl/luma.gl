@@ -123,6 +123,28 @@ export {
   type PrepareArrowPathGPUVectorsOptions
 } from './arrow/arrow-path-model';
 export {
+  prepareArrowPolygonGPUVectorsAsync,
+  prepareArrowPolygonGPUVectors,
+  tesselateAsync,
+  tessellateArrowPolygons,
+  type ArrowMultiPolygonType,
+  type ArrowMultiPolygonVertexColorType,
+  type ArrowGeoArrowGeometryType,
+  type ArrowPolygonColorType,
+  type ArrowPolygonCoordinateType,
+  type ArrowPolygonInputType,
+  type ArrowPolygonRowColorType,
+  type ArrowPolygonSourceVectors,
+  type ArrowPolygonTessellationOptions,
+  type ArrowPolygonTessellationResult,
+  type ArrowPolygonType,
+  type ArrowPolygonVertexColorType,
+  type ArrowTessellatedPolygonType,
+  type ArrowTessellatedPolygonVertexColorType,
+  type PreparedArrowPolygonGPUVectors,
+  type PrepareArrowPolygonGPUVectorsOptions
+} from './arrow/arrow-polygon-model';
+export {
   AttributePathModel,
   buildArrowPathSegmentTable as buildAttributePathSegmentTable,
   createArrowPathPreparedState as createAttributePathPreparedState,

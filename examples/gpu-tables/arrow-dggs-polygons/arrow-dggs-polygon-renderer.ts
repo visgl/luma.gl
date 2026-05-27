@@ -15,16 +15,17 @@ import {
   type PreparedDggsCellKeyGPUVector,
   type PreparedDggsCellPathGPUVector
 } from '@luma.gl/arrow';
-import type {Device, RenderPass} from '@luma.gl/core';
+import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
+import {GPURenderable} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 
 /** Source key representation used by the DGGS polygon example. */
 export type DggsSourceKind = 'uint64' | 'utf8';
 
 /** Public configuration for the Arrow DGGS polygon layer. */
-export type ArrowDggsPolygonLayerProps = {
+export type ArrowDggsPolygonRendererProps = {
   /** Active DGGS encoding column. */
   encoding?: DggsCellEncoding;
   /** Whether to prepare cells from packed Uint64 keys or UTF-8 tokens. */
@@ -40,7 +41,7 @@ export type ArrowDggsPolygonLayerProps = {
 };
 
 /** Metrics displayed by the Arrow DGGS polygon example control panel. */
-export type ArrowDggsPolygonLayerMetrics = {
+export type ArrowDggsPolygonRendererMetrics = {
   /** Active DGGS encoding column. */
   activeColumn: DggsCellEncoding;
   /** Number of DGGS cells in the sample table. */
@@ -256,7 +257,7 @@ fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
 `;
 
 /** Example layer that prepares Arrow DGGS cell keys and renders their GPU-decoded boundaries. */
-export class ArrowDggsPolygonLayer {
+export class ArrowDggsPolygonRenderer extends GPURenderable<[RenderPass, {aspect: number}]> {
   readonly device: Device;
   readonly uint64Table = makeDggsUint64Table();
   readonly stringTable = makeDggsStringTable();
@@ -268,9 +269,10 @@ export class ArrowDggsPolygonLayer {
   activeSourceKind: DggsSourceKind;
   activeInput!: DggsPreparedInput;
   pathModel!: StoragePathModel;
-  props: ArrowDggsPolygonLayerProps;
+  props: ArrowDggsPolygonRendererProps;
 
-  constructor(device: Device, props: ArrowDggsPolygonLayerProps = {}) {
+  constructor(device: Device, props: ArrowDggsPolygonRendererProps = {}) {
+    super();
     if (device.type !== 'webgpu') {
       throw new Error('Global Grids example requires WebGPU');
     }
@@ -282,7 +284,7 @@ export class ArrowDggsPolygonLayer {
     this.pathModel = this.createPathModel(this.activeInput, this.activeEncoding);
   }
 
-  setProps(props: ArrowDggsPolygonLayerProps): void {
+  setProps(props: ArrowDggsPolygonRendererProps): void {
     const previousColor = this.props.color;
     const previousWidth = this.props.width;
     this.props = {...this.props, ...props};
@@ -304,7 +306,11 @@ export class ArrowDggsPolygonLayer {
     previousModel.destroy();
   }
 
-  draw(renderPass: RenderPass, props: {aspect: number}): void {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.pathModel.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: RenderPass, props: {aspect: number}): void {
     this.shaderInputs.setProps({
       dggsViewport: {
         center: this.props.center ?? DEFAULT_DGGS_CENTER,
@@ -322,7 +328,7 @@ export class ArrowDggsPolygonLayer {
     }
   }
 
-  getMetrics(): ArrowDggsPolygonLayerMetrics {
+  getMetrics(): ArrowDggsPolygonRendererMetrics {
     const keyBytes = this.activeInput.keys?.keyByteLength ?? this.uint64Table.numRows * 8;
     const transientBytes =
       this.activeInput.paths.transientByteLength +
@@ -389,12 +395,6 @@ export class ArrowDggsPolygonLayer {
       width: this.props.width ?? DEFAULT_DGGS_WIDTH,
       parameters: DEFAULT_DGGS_RENDER_PARAMETERS
     });
-  }
-
-  setNeedsRedraw(_reason: string): void {}
-
-  needsRedraw(): false {
-    return false;
   }
 }
 

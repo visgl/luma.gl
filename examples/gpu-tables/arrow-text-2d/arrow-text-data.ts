@@ -5,10 +5,10 @@
 import {getArrowVectorByteLength, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 import type {
-  ArrowTextLayerSource,
+  ArrowTextRendererSource,
   CharacterColorDataType,
   RowColorColumnDataType
-} from './arrow-text-layer';
+} from './arrow-text-renderer';
 
 export const LABEL_COLUMN_COUNT = 400;
 export const LABEL_COLUMN_SPACING = 540;
@@ -47,7 +47,7 @@ export type TextDataset = {
   label: string;
   textType: 'utf8' | 'dictionary';
 };
-export type ArrowTextSource = ArrowTextLayerSource & {
+export type ArrowTextSource = ArrowTextRendererSource & {
   /** Time spent building the CPU Arrow source vectors before layer upload. */
   arrowVectorBuildTimeMs: number;
 };
@@ -56,7 +56,7 @@ export type StreamingArrowTextSource = {
   arrowVectorBuildTimeMs: number;
 };
 type ExampleArrowTextSourceVectors = Pick<
-  ArrowTextLayerSource,
+  ArrowTextRendererSource,
   'positions' | 'texts' | 'clipRects' | 'colors' | 'angles' | 'sizes' | 'pixelOffsets'
 >;
 
@@ -579,7 +579,7 @@ export function isArrowTextCharacterColorType(
 }
 
 export function isArrowTextDictionarySource(
-  sourceVectors: Pick<ArrowTextLayerSource, 'texts'>
+  sourceVectors: Pick<ArrowTextRendererSource, 'texts'>
 ): boolean {
   return arrow.DataType.isDictionary(sourceVectors.texts.type);
 }

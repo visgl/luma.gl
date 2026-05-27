@@ -6,20 +6,20 @@ import {StoragePathModel, StorageTripsPathModel} from '@luma.gl/arrow';
 import type {GPUVector} from '@luma.gl/tables';
 import type {ArrowPathControlPanelMetrics} from './control-panel';
 import type {
-  ArrowPathLayer,
-  ArrowPathLayerActiveModel,
-  ArrowPathLayerInput
-} from './arrow-path-layer';
+  ArrowPathRenderer,
+  ArrowPathRendererActiveModel,
+  ArrowPathRendererInput
+} from './arrow-path-renderer';
 
 // PathLayer-style estimate: four vec3 position attributes plus width, color, picking, and type.
 export const DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT = 60;
 
 export function getArrowPathMetrics(
-  pathLayer: ArrowPathLayer,
-  pathInput: ArrowPathLayerInput,
+  pathRenderer: ArrowPathRenderer,
+  pathInput: ArrowPathRendererInput,
   arrowVectorBuildTimeMs: number
 ): ArrowPathControlPanelMetrics {
-  const pathModel = pathLayer.model;
+  const pathModel = pathRenderer.model;
   const pathArrowBytes = pathInput.pathArrowByteLength;
   const styleArrowBytes = pathInput.styleArrowByteLength;
   const segmentCount = getGeneratedPathSegmentCount(pathModel);
@@ -55,8 +55,8 @@ export function getArrowPathMetrics(
 }
 
 function getPathCoordinateGpuByteLength(
-  pathInput: ArrowPathLayerInput,
-  pathModel: ArrowPathLayerActiveModel
+  pathInput: ArrowPathRendererInput,
+  pathModel: ArrowPathRendererActiveModel
 ): number {
   const storagePathRangeGpuBytes = isStoragePathModel(pathModel)
     ? pathModel.pathRangeByteLength
@@ -70,7 +70,7 @@ function getPathCoordinateGpuByteLength(
   );
 }
 
-function getGeneratedPathGpuByteLength(pathModel: ArrowPathLayerActiveModel): number {
+function getGeneratedPathGpuByteLength(pathModel: ArrowPathRendererActiveModel): number {
   if (isStoragePathModel(pathModel)) {
     return pathModel.generatedRenderBufferByteLength;
   }
@@ -83,19 +83,19 @@ function getGeneratedPathGpuByteLength(pathModel: ArrowPathLayerActiveModel): nu
   );
 }
 
-function getTransientPathGpuByteLength(pathModel: ArrowPathLayerActiveModel): number {
+function getTransientPathGpuByteLength(pathModel: ArrowPathRendererActiveModel): number {
   return isStoragePathModel(pathModel) ? pathModel.transientComputeInputByteLength : 0;
 }
 
-function getGeneratedPathSegmentCount(pathModel: ArrowPathLayerActiveModel): number {
+function getGeneratedPathSegmentCount(pathModel: ArrowPathRendererActiveModel): number {
   return isStoragePathModel(pathModel)
     ? pathModel.segmentCount
     : pathModel.segmentLayout.segmentCount;
 }
 
 function getPathStyleGpuByteLength(
-  pathInput: ArrowPathLayerInput,
-  pathModel: ArrowPathLayerActiveModel
+  pathInput: ArrowPathRendererInput,
+  pathModel: ArrowPathRendererActiveModel
 ): number {
   const sourceStyleGpuBytes =
     (pathInput.colors ? getGpuVectorByteLength(pathInput.colors) : 0) +
@@ -110,14 +110,14 @@ function getPathStyleGpuByteLength(
   return sourceStyleGpuBytes + expandedStyleGpuBytes;
 }
 
-function getPathModelPrepTimeMs(pathModel: ArrowPathLayerActiveModel): number {
+function getPathModelPrepTimeMs(pathModel: ArrowPathRendererActiveModel): number {
   return isStoragePathModel(pathModel)
     ? pathModel.pathRangeBuildTimeMs
     : pathModel.segmentAttributeBuildTimeMs;
 }
 
 function isStoragePathModel(
-  pathModel: ArrowPathLayerActiveModel
+  pathModel: ArrowPathRendererActiveModel
 ): pathModel is StoragePathModel | StorageTripsPathModel {
   return pathModel instanceof StoragePathModel || pathModel instanceof StorageTripsPathModel;
 }

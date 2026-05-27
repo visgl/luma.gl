@@ -8,9 +8,9 @@ import {
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
-import {type Device, type RenderPass} from '@luma.gl/core';
+import {type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
+import {GPURenderable, GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -44,7 +44,7 @@ import {
 import type {TimeColumnsRenderMode} from './control-panel';
 
 /** Public configuration for the Arrow time-columns schedule layer. */
-export type ArrowTimeColumnsLayerProps = {
+export type ArrowTimeColumnsRendererProps = {
   /** Rendering path. `storage` requires WebGPU; WebGL falls back to attributes. */
   renderMode?: TimeColumnsRenderMode;
   /** Synthetic clock rate used to sweep through the schedule. */
@@ -54,7 +54,7 @@ export type ArrowTimeColumnsLayerProps = {
 };
 
 /** Labels displayed by the Arrow time-columns example control panel. */
-export type ArrowTimeColumnsLayerLabels = {
+export type ArrowTimeColumnsRendererLabels = {
   /** Active preparation path label. */
   preparationPath: string;
   /** Current synthetic timestamp label. */
@@ -83,18 +83,18 @@ type TimeColumnsTableInput = {
 
 type ActiveTimeColumnsModel = GPUTableModel | Model;
 
-const DEFAULT_TIME_COLUMNS_LAYER_PROPS = {
+const DEFAULT_TIME_COLUMNS_RENDERER_PROPS = {
   currentTimeRateMillisecondsPerSecond: CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
   initialScheduleMilliseconds: 0
 } as const satisfies Required<
   Pick<
-    ArrowTimeColumnsLayerProps,
+    ArrowTimeColumnsRendererProps,
     'currentTimeRateMillisecondsPerSecond' | 'initialScheduleMilliseconds'
   >
 >;
 
 /** Example layer that renders Arrow date/time/timestamp/duration columns as a schedule board. */
-export class ArrowTimeColumnsLayer {
+export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: number}]> {
   readonly device: Device;
   readonly shaderInputs = new ShaderInputs<{timeColumns: typeof timeColumns.props}>({
     timeColumns
@@ -106,16 +106,17 @@ export class ArrowTimeColumnsLayer {
   cursorModel: Model | null = null;
   currentScheduleMilliseconds = 0;
   lastRenderSeconds: number | null = null;
-  props: ArrowTimeColumnsLayerProps;
+  props: ArrowTimeColumnsRendererProps;
 
-  constructor(device: Device, props: ArrowTimeColumnsLayerProps = {}) {
+  constructor(device: Device, props: ArrowTimeColumnsRendererProps = {}) {
+    super();
     this.device = device;
     this.props = props;
     this.activeRenderMode =
       props.renderMode ?? (this.device.type === 'webgpu' ? 'storage' : 'attributes');
     this.currentScheduleMilliseconds =
       props.initialScheduleMilliseconds ??
-      DEFAULT_TIME_COLUMNS_LAYER_PROPS.initialScheduleMilliseconds;
+      DEFAULT_TIME_COLUMNS_RENDERER_PROPS.initialScheduleMilliseconds;
   }
 
   async initialize(): Promise<void> {
@@ -125,7 +126,13 @@ export class ArrowTimeColumnsLayer {
     this.cursorModel = this.createCursorModel();
   }
 
-  draw(renderPass: RenderPass, props: {time: number}): void {
+  override predraw(commandEncoder: CommandEncoder): void {
+    this.boardModel?.predraw(commandEncoder);
+    this.eventModel?.predraw(commandEncoder);
+    this.cursorModel?.predraw(commandEncoder);
+  }
+
+  override draw(renderPass: RenderPass, props: {time: number}): void {
     if (!this.boardModel || !this.eventModel || !this.cursorModel || !this.timeColumnsTableInput) {
       return;
     }
@@ -140,7 +147,7 @@ export class ArrowTimeColumnsLayer {
       (this.currentScheduleMilliseconds +
         elapsedSeconds *
           (this.props.currentTimeRateMillisecondsPerSecond ??
-            DEFAULT_TIME_COLUMNS_LAYER_PROPS.currentTimeRateMillisecondsPerSecond)) %
+            DEFAULT_TIME_COLUMNS_RENDERER_PROPS.currentTimeRateMillisecondsPerSecond)) %
       SCHEDULE_SWEEP_MILLISECONDS;
     const currentTimestamp = getCurrentTimestampMilliseconds(this.currentScheduleMilliseconds);
 
@@ -228,7 +235,7 @@ export class ArrowTimeColumnsLayer {
     });
   }
 
-  getLabels(): ArrowTimeColumnsLayerLabels {
+  getLabels(): ArrowTimeColumnsRendererLabels {
     const timeColumnsTableInput = this.getTimeColumnsTableInput();
     const {temporalColumns} = timeColumnsTableInput;
     return {
@@ -253,7 +260,7 @@ export class ArrowTimeColumnsLayer {
     );
   }
 
-  setProps(props: ArrowTimeColumnsLayerProps): void {
+  setProps(props: ArrowTimeColumnsRendererProps): void {
     this.props = {...this.props, ...props};
     if (props.initialScheduleMilliseconds !== undefined) {
       this.currentScheduleMilliseconds = props.initialScheduleMilliseconds;
@@ -274,15 +281,9 @@ export class ArrowTimeColumnsLayer {
     this.activeRenderMode = nextRenderMode;
   }
 
-  setNeedsRedraw(_reason: string): void {}
-
-  needsRedraw(): false {
-    return false;
-  }
-
   private getTimeColumnsTableInput(): TimeColumnsTableInput {
     if (!this.timeColumnsTableInput) {
-      throw new Error('ArrowTimeColumnsLayer has not been initialized');
+      throw new Error('ArrowTimeColumnsRenderer has not been initialized');
     }
     return this.timeColumnsTableInput;
   }

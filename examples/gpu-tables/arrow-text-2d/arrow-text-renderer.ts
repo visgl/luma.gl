@@ -5,7 +5,7 @@
 import {type CommandEncoder, type Device} from '@luma.gl/core';
 import {indexColorPicking, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
 import {getArrowVectorByteLength, makeArrowGPURecordBatch, makeArrowGPUTable} from '@luma.gl/arrow';
-import {GPUVector, GPUTable} from '@luma.gl/tables';
+import {GPURenderable, GPUVector, GPUTable} from '@luma.gl/tables';
 import {
   AttributeTextModel,
   DictionaryTextModel,
@@ -49,11 +49,11 @@ import {
  * source is provided. Optional style behavior is inferred from the presence of the corresponding
  * source prop; set an optional source prop to `null` to disable it.
  */
-export type ArrowTextLayerProps = {
+export type ArrowTextRendererProps = {
   /** Debug label used for generated model and GPU resources. */
   id?: string;
   /** Optional Arrow table, table promise, iterable, async iterable, iterator, or async iterator. */
-  data?: ArrowTextLayerRecordBatchSource;
+  data?: ArrowTextRendererRecordBatchSource;
   /** Label origins, or the source table column name. Defaults to `positions` when `data` exists. */
   positions?: string | arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
   /** Text labels, or the source table column name. Defaults to `texts` when `data` exists. */
@@ -88,14 +88,17 @@ export type RowColorColumnDataType = arrow.FixedSizeList<arrow.Uint8>;
 /** Arrow character color column type: one packed RGBA8 color per glyph in each text row. */
 export type CharacterColorDataType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
 
-/** Concrete luma.gl text model instances owned by {@link ArrowTextLayer}. */
-export type ArrowTextLayerActiveModel = AttributeTextModel | StorageTextModel | DictionaryTextModel;
+/** Concrete luma.gl text model instances owned by {@link ArrowTextRenderer}. */
+export type ArrowTextRendererActiveModel =
+  | AttributeTextModel
+  | StorageTextModel
+  | DictionaryTextModel;
 
 /** Prepared GPUVector text data returned by Arrow conversion helpers. */
-export type ArrowTextLayerData = ConvertedArrowTextData;
+export type ArrowTextRendererData = ConvertedArrowTextData;
 
 /** CPU Arrow source plus byte-size metadata used by legacy preparation helpers. */
-export type ArrowTextLayerSource = {
+export type ArrowTextRendererSource = {
   /** Label origins aligned row-for-row with `texts`. */
   positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
   /** Plain UTF-8 or dictionary-encoded UTF-8 labels. */
@@ -115,13 +118,13 @@ export type ArrowTextLayerSource = {
 };
 
 /** Prepared layer data plus source byte-size metadata shown by the example control panel. */
-export type ArrowTextLayerInput = ArrowTextLayerData & {
+export type ArrowTextRendererInput = ArrowTextRendererData & {
   /** Byte length of the primary Arrow text vector. */
   arrowVectorByteLength: number;
 };
 
 /** Arrow table or record-batch source accepted by async preparation and streaming helpers. */
-export type ArrowTextLayerRecordBatchSource =
+export type ArrowTextRendererRecordBatchSource =
   | arrow.Table
   | Promise<arrow.Table>
   | Iterable<arrow.RecordBatch>
@@ -130,79 +133,79 @@ export type ArrowTextLayerRecordBatchSource =
   | AsyncIterator<arrow.RecordBatch>;
 
 /** Props for preparing GPUVector text input from an Arrow table or record-batch source. */
-export type ArrowTextLayerPrepareInputProps = Pick<
-  ArrowTextLayerProps,
+export type ArrowTextRendererPrepareInputProps = Pick<
+  ArrowTextRendererProps,
   'data' | 'positions' | 'texts' | 'clipRects' | 'colors' | 'angles' | 'sizes' | 'pixelOffsets'
 >;
 
 /** Props for preparing GPUVector text data from explicit Arrow vectors. */
-export type ArrowTextLayerPrepareDataProps = Pick<
-  ArrowTextLayerSource,
+export type ArrowTextRendererPrepareDataProps = Pick<
+  ArrowTextRendererSource,
   'positions' | 'texts' | 'clipRects' | 'colors' | 'angles' | 'sizes' | 'pixelOffsets'
 >;
 
 /** Props for preparing layer data from an existing GPU table and matching Arrow batches. */
-export type ArrowTextLayerPrepareGPUTableDataProps = {
+export type ArrowTextRendererPrepareGPUTableDataProps = {
   /** GPU table containing uploaded columns selected by `columns`. */
   gpuTable: GPUTable;
   /** CPU Arrow batches that back `gpuTable` and provide text metadata. */
   recordBatches: arrow.RecordBatch[];
   /** Source vector or column selector props. */
-  props: ArrowTextLayerPrepareInputProps;
+  props: ArrowTextRendererPrepareInputProps;
 };
 
 /** Result returned by prop updates and streaming appends. */
-export type ArrowTextLayerSetPropsResult = {
+export type ArrowTextRendererSetPropsResult = {
   /** True when a new underlying text model was constructed. */
   modelChanged: boolean;
 };
 
 /** Token used to cancel stale async streaming work. */
-export type ArrowTextLayerStreamingSession = {
+export type ArrowTextRendererStreamingSession = {
   /** Monotonic version owned by the layer. */
   version: number;
 };
 
 /** Notification emitted when a streaming record batch is uploaded and applied. */
-export type ArrowTextLayerRecordBatchStreamUpdate = {
+export type ArrowTextRendererRecordBatchStreamUpdate = {
   /** Full prepared input for all batches loaded so far. */
-  textInput: ArrowTextLayerInput;
+  textInput: ArrowTextRendererInput;
   /** Number of uploaded GPU table batches. */
   loadedBatchCount: number;
   /** True for the first batch in a stream. */
   isFirstBatch: boolean;
   /** Result of applying the batch to layer props. */
-  setPropsResult: ArrowTextLayerSetPropsResult;
+  setPropsResult: ArrowTextRendererSetPropsResult;
 };
 
 /** Props for incrementally uploading record batches into a text layer. */
-export type ArrowTextLayerRecordBatchStreamProps = {
+export type ArrowTextRendererRecordBatchStreamProps = {
   /** Preferred record-batch source. */
-  data?: ArrowTextLayerRecordBatchSource;
+  data?: ArrowTextRendererRecordBatchSource;
   /** Deprecated alias retained for existing example code. Prefer `data`. */
   recordBatchIterator?: Iterator<arrow.RecordBatch> | AsyncIterator<arrow.RecordBatch>;
   /** Fixed model selection or callback invoked after each batch is prepared. */
   model?:
-    | ArrowTextLayerProps['model']
-    | ((textInput: ArrowTextLayerInput) => ArrowTextLayerProps['model']);
+    | ArrowTextRendererProps['model']
+    | ((textInput: ArrowTextRendererInput) => ArrowTextRendererProps['model']);
   /** Optional adapter for deriving render input, for example by omitting disabled style vectors. */
-  mapTextInput?: (textInput: ArrowTextLayerInput) => ArrowTextLayerInput;
+  mapTextInput?: (textInput: ArrowTextRendererInput) => ArrowTextRendererInput;
   /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowTextLayerStreamingSession;
+  streamingSession?: ArrowTextRendererStreamingSession;
   /** Redraw reason used for the first batch. */
   startRedrawReason?: string;
   /** Redraw reason used for appended batches. */
   appendRedrawReason?: string;
   /** Callback fired after a batch is prepared and applied. */
-  onBatch?: (update: ArrowTextLayerRecordBatchStreamUpdate) => void;
+  onBatch?: (update: ArrowTextRendererRecordBatchStreamUpdate) => void;
 };
 
-type ArrowTextLayerSetPropsOptions = {
+type ArrowTextRendererSetPropsOptions = {
   preserveStreaming?: boolean;
 };
 
-type ArrowTextLayerResolvedModel = Exclude<NonNullable<ArrowTextLayerProps['model']>, 'auto'>;
-type ResolvedArrowTextLayerColumns = {
+type ArrowTextRendererResolvedModel = Exclude<NonNullable<ArrowTextRendererProps['model']>, 'auto'>;
+type ResolvedArrowTextRendererColumns = {
   positions: string;
   texts: string;
   clipRects: string | null;
@@ -223,7 +226,7 @@ const DEFAULT_RENDER_PARAMETERS = {
   blendAlphaDstFactor: 'one-minus-src-alpha'
 } as const satisfies Record<string, unknown>;
 
-const DEFAULT_COLUMNS: ResolvedArrowTextLayerColumns = {
+const DEFAULT_COLUMNS: ResolvedArrowTextRendererColumns = {
   positions: 'positions',
   texts: 'texts',
   clipRects: 'clipRects',
@@ -240,25 +243,32 @@ const DEFAULT_TEXT_SIZE = 32;
  * Small example-layer wrapper that chooses between attribute, WebGPU storage, row-indexed
  * storage, and dictionary text models from prepared Arrow/GPUVector inputs.
  */
-export class ArrowTextLayer {
+export class ArrowTextRenderer extends GPURenderable<
+  [Parameters<ArrowTextRendererActiveModel['draw']>[0]]
+> {
   /** Device used for all GPU resources owned by this layer. */
   readonly device: Device;
   /** Shared shader inputs used by rendering, picking, and viewport uniforms. */
   readonly shaderInputs = createArrowTextShaderInputs();
   /** Last applied layer props. */
-  props: ArrowTextLayerProps;
+  props: ArrowTextRendererProps;
   /** Prepared GPUVector text input currently consumed by the active model. */
-  textInput: ArrowTextLayerInput;
+  textInput: ArrowTextRendererInput;
   /** Active luma.gl text model. Recreated when data or model selection changes. */
-  model: ArrowTextLayerActiveModel;
+  model: ArrowTextRendererActiveModel;
   /** Concrete model path after resolving `props.model === 'auto'`. */
-  resolvedModel: ArrowTextLayerResolvedModel;
+  resolvedModel: ArrowTextRendererResolvedModel;
   private activeStreamingTextTable: GPUTable | null = null;
   private streamingSessionVersion = 0;
   private isDestroyed = false;
 
   /** Creates a layer from Arrow source props after GPUVector preparation. */
-  private constructor(device: Device, props: ArrowTextLayerProps, textInput: ArrowTextLayerInput) {
+  private constructor(
+    device: Device,
+    props: ArrowTextRendererProps,
+    textInput: ArrowTextRendererInput
+  ) {
+    super();
     this.device = device;
     this.props = props;
     this.textInput = textInput;
@@ -267,12 +277,15 @@ export class ArrowTextLayer {
   }
 
   /** Resolves table or record-batch source props, prepares GPUVectors, and constructs a layer. */
-  static async create(device: Device, props: ArrowTextLayerProps): Promise<ArrowTextLayer> {
-    return new ArrowTextLayer(device, props, await prepareArrowTextInputFromData(device, props));
+  static async create(device: Device, props: ArrowTextRendererProps): Promise<ArrowTextRenderer> {
+    return new ArrowTextRenderer(device, props, await prepareArrowTextInputFromData(device, props));
   }
 
   /** Uploads explicit Arrow source vectors and selects the best prepared data representation. */
-  static prepareData(device: Device, props: ArrowTextLayerPrepareDataProps): ArrowTextLayerData {
+  static prepareData(
+    device: Device,
+    props: ArrowTextRendererPrepareDataProps
+  ): ArrowTextRendererData {
     const sourceVectors = getArrowTextSourceVectors(props);
     const hasCharacterColors = isArrowTextCharacterColorType(sourceVectors.colors?.type);
     if (arrow.DataType.isDictionary(sourceVectors.texts.type) && !hasCharacterColors) {
@@ -286,8 +299,8 @@ export class ArrowTextLayer {
 
   /** Wraps an existing GPU table plus matching Arrow batches as prepared layer data. */
   static prepareDataFromGPUTable(
-    props: ArrowTextLayerPrepareGPUTableDataProps
-  ): ArrowTextLayerData {
+    props: ArrowTextRendererPrepareGPUTableDataProps
+  ): ArrowTextRendererData {
     const columns = getResolvedColumnSelectors(props.props);
     const sourceTable = new arrow.Table(props.recordBatches);
     const positions = getRequiredArrowVector<arrow.FixedSizeList<arrow.Float32>>(
@@ -362,10 +375,10 @@ export class ArrowTextLayer {
    * the active model when data, model selection, or constant style fallbacks change.
    */
   async setProps(
-    props: Partial<ArrowTextLayerProps>,
-    redrawReason = 'ArrowTextLayer props changed',
-    options: ArrowTextLayerSetPropsOptions = {}
-  ): Promise<ArrowTextLayerSetPropsResult> {
+    props: Partial<ArrowTextRendererProps>,
+    redrawReason = 'ArrowTextRenderer props changed',
+    options: ArrowTextRendererSetPropsOptions = {}
+  ): Promise<ArrowTextRendererSetPropsResult> {
     const previousProps = this.props;
     const nextProps = {...this.props, ...props};
     const hasModelPropChanged = props.model !== undefined && props.model !== previousProps.model;
@@ -424,14 +437,14 @@ export class ArrowTextLayer {
 
   /** Replaces layer data with appended text batches. */
   appendTextBatches(
-    data: ArrowTextLayerRecordBatchSource,
+    data: ArrowTextRendererRecordBatchSource,
     redrawReason: string
-  ): Promise<ArrowTextLayerSetPropsResult> {
+  ): Promise<ArrowTextRendererSetPropsResult> {
     return this.setProps({data}, redrawReason);
   }
 
   /** Starts a new streaming session and invalidates any older session token. */
-  beginRecordBatchStream(): ArrowTextLayerStreamingSession {
+  beginRecordBatchStream(): ArrowTextRendererStreamingSession {
     this.streamingSessionVersion++;
     return {version: this.streamingSessionVersion};
   }
@@ -451,7 +464,7 @@ export class ArrowTextLayer {
     startRedrawReason = 'streaming text dataset started',
     appendRedrawReason = 'streaming Arrow record batch appended',
     onBatch
-  }: ArrowTextLayerRecordBatchStreamProps): Promise<void> {
+  }: ArrowTextRendererRecordBatchStreamProps): Promise<void> {
     const resolvedRecordBatchIterator = getArrowRecordBatchAsyncIterator(
       data ?? recordBatchIterator
     );
@@ -543,11 +556,11 @@ export class ArrowTextLayer {
   }
 
   private setPreparedTextInput(
-    nextProps: ArrowTextLayerProps,
-    nextTextInput: ArrowTextLayerInput,
+    nextProps: ArrowTextRendererProps,
+    nextTextInput: ArrowTextRendererInput,
     redrawReason: string,
-    options: ArrowTextLayerSetPropsOptions = {}
-  ): ArrowTextLayerSetPropsResult {
+    options: ArrowTextRendererSetPropsOptions = {}
+  ): ArrowTextRendererSetPropsResult {
     const previousProps = this.props;
     const shouldCancelStreaming =
       !options.preserveStreaming &&
@@ -592,22 +605,25 @@ export class ArrowTextLayer {
   }
 
   /** Returns the active model redraw reason, or `false` when no redraw is needed. */
-  needsRedraw(): string | false {
-    return this.model.needsRedraw();
+  override needsRedraw(): string | false {
+    const rendererNeedsRedraw = super.needsRedraw();
+    const modelNeedsRedraw = this.model.needsRedraw();
+    return rendererNeedsRedraw || modelNeedsRedraw;
   }
 
   /** Marks the active model as needing redraw. */
-  setNeedsRedraw(reason: string): void {
+  override setNeedsRedraw(reason: string): void {
+    super.setNeedsRedraw(reason);
     this.model.setNeedsRedraw(reason);
   }
 
   /** Runs active model pre-draw work such as compute expansion. */
-  predraw(commandEncoder: CommandEncoder): void {
+  override predraw(commandEncoder: CommandEncoder): void {
     this.model.predraw(commandEncoder);
   }
 
   /** Draws the active text model into a render pass. */
-  draw(renderPass: Parameters<ArrowTextLayerActiveModel['draw']>[0]): void {
+  override draw(renderPass: Parameters<ArrowTextRendererActiveModel['draw']>[0]): void {
     this.model.draw(renderPass);
   }
 
@@ -622,10 +638,10 @@ export class ArrowTextLayer {
   }
 
   private createModel(
-    modelKind: ArrowTextLayerResolvedModel,
-    props: ArrowTextLayerProps,
-    data: ArrowTextLayerData
-  ): ArrowTextLayerActiveModel {
+    modelKind: ArrowTextRendererResolvedModel,
+    props: ArrowTextRendererProps,
+    data: ArrowTextRendererData
+  ): ArrowTextRendererActiveModel {
     const color = props.color ?? DEFAULT_TEXT_COLOR;
     const angle = props.angle ?? DEFAULT_TEXT_ANGLE;
     const size = props.size ?? DEFAULT_TEXT_SIZE;
@@ -708,9 +724,9 @@ export class ArrowTextLayer {
   }
 
   private resolveModel(
-    modelKind: NonNullable<ArrowTextLayerProps['model']>,
-    data: ArrowTextLayerData
-  ): ArrowTextLayerResolvedModel {
+    modelKind: NonNullable<ArrowTextRendererProps['model']>,
+    data: ArrowTextRendererData
+  ): ArrowTextRendererResolvedModel {
     const hasCharacterColors = isArrowTextCharacterColorType(data.sourceVectors.colors?.type);
     const hasDictionaryText = arrow.DataType.isDictionary(data.sourceVectors.texts.type);
     if (modelKind === 'auto') {
@@ -731,11 +747,11 @@ export class ArrowTextLayer {
     return modelKind;
   }
 
-  private isRecordBatchStreamActive(streamingSession: ArrowTextLayerStreamingSession): boolean {
+  private isRecordBatchStreamActive(streamingSession: ArrowTextRendererStreamingSession): boolean {
     return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
 
-  private getInputProps(data: ArrowTextLayerData): Partial<ArrowAttributeTextInputProps> {
+  private getInputProps(data: ArrowTextRendererData): Partial<ArrowAttributeTextInputProps> {
     const inputProps = {
       positions: data.positions,
       texts: data.texts,
@@ -750,7 +766,7 @@ export class ArrowTextLayer {
   }
 
   private getStorageInputProps(
-    data: ArrowTextLayerData
+    data: ArrowTextRendererData
   ): Partial<ArrowStorageTextInputProps & ArrowDictionaryStorageTextInputProps> {
     const inputProps = {
       positions: data.positions,
@@ -774,9 +790,9 @@ export class ArrowTextLayer {
 /** Uploads explicit Arrow source vectors and attaches example metric metadata. */
 export function prepareArrowTextInput(
   device: Device,
-  textSource: ArrowTextLayerSource
-): ArrowTextLayerInput {
-  const prepared = ArrowTextLayer.prepareData(device, textSource);
+  textSource: ArrowTextRendererSource
+): ArrowTextRendererInput {
+  const prepared = ArrowTextRenderer.prepareData(device, textSource);
   return {
     ...prepared,
     arrowVectorByteLength: textSource.arrowVectorByteLength
@@ -787,7 +803,7 @@ export function prepareArrowTextInput(
 export function createArrowTextGPUTable(
   device: Device,
   recordBatch: arrow.RecordBatch,
-  props: ArrowTextLayerPrepareInputProps = {}
+  props: ArrowTextRendererPrepareInputProps = {}
 ): GPUTable {
   return makeArrowGPUTable(device, new arrow.Table([recordBatch]), {
     shaderLayout: getStreamingTextInputShaderLayout(props)
@@ -798,7 +814,7 @@ export function createArrowTextGPUTable(
 export function createArrowTextGPUTableFromTable(
   device: Device,
   table: arrow.Table,
-  props: ArrowTextLayerPrepareInputProps = {}
+  props: ArrowTextRendererPrepareInputProps = {}
 ): GPUTable {
   return makeArrowGPUTable(device, table, {
     shaderLayout: getStreamingTextInputShaderLayout(props)
@@ -810,7 +826,7 @@ export function appendArrowTextGPUTableBatch(
   device: Device,
   gpuTable: GPUTable,
   recordBatch: arrow.RecordBatch,
-  props: ArrowTextLayerPrepareInputProps = {}
+  props: ArrowTextRendererPrepareInputProps = {}
 ): void {
   gpuTable.addBatch(
     makeArrowGPURecordBatch(device, recordBatch, {
@@ -823,15 +839,15 @@ export function appendArrowTextGPUTableBatch(
 export function prepareArrowTextInputFromGPUTable(
   gpuTable: GPUTable,
   recordBatches: arrow.RecordBatch[],
-  props: ArrowTextLayerPrepareInputProps = {}
-): ArrowTextLayerInput {
+  props: ArrowTextRendererPrepareInputProps = {}
+): ArrowTextRendererInput {
   const sourceTable = new arrow.Table(recordBatches);
   const resolvedColumns = getResolvedColumnSelectors(props);
   const texts = sourceTable.getChild(resolvedColumns.texts);
   if (!texts) {
     throw new Error('Streaming Arrow text input requires complete CPU source vectors');
   }
-  const prepared = ArrowTextLayer.prepareDataFromGPUTable({
+  const prepared = ArrowTextRenderer.prepareDataFromGPUTable({
     gpuTable,
     recordBatches,
     props
@@ -845,10 +861,10 @@ export function prepareArrowTextInputFromGPUTable(
 function prepareArrowTextInputFromRecordBatches(
   device: Device,
   recordBatches: arrow.RecordBatch[],
-  props: ArrowTextLayerPrepareInputProps
-): ArrowTextLayerInput {
+  props: ArrowTextRendererPrepareInputProps
+): ArrowTextRendererInput {
   const sourceVectors = getArrowTextSourceVectorsFromTable(new arrow.Table(recordBatches), props);
-  const prepared = ArrowTextLayer.prepareData(device, sourceVectors);
+  const prepared = ArrowTextRenderer.prepareData(device, sourceVectors);
   return {
     ...prepared,
     arrowVectorByteLength: getArrowVectorByteLength(sourceVectors.texts)
@@ -857,9 +873,9 @@ function prepareArrowTextInputFromRecordBatches(
 
 function prepareArrowTextInputFromSourceVectors(
   device: Device,
-  textInput: ArrowTextLayerInput
-): ArrowTextLayerInput {
-  const prepared = ArrowTextLayer.prepareData(device, textInput.sourceVectors);
+  textInput: ArrowTextRendererInput
+): ArrowTextRendererInput {
+  const prepared = ArrowTextRenderer.prepareData(device, textInput.sourceVectors);
   return {
     ...prepared,
     arrowVectorByteLength: textInput.arrowVectorByteLength
@@ -869,11 +885,11 @@ function prepareArrowTextInputFromSourceVectors(
 /** Resolves table or record-batch source data, uploads it, and returns prepared text input. */
 export async function prepareArrowTextInputFromData(
   device: Device,
-  props: ArrowTextLayerPrepareInputProps
-): Promise<ArrowTextLayerInput> {
+  props: ArrowTextRendererPrepareInputProps
+): Promise<ArrowTextRendererInput> {
   if (!props.data) {
     const sourceVectors = getArrowTextSourceVectors(props);
-    const prepared = ArrowTextLayer.prepareData(device, sourceVectors);
+    const prepared = ArrowTextRenderer.prepareData(device, sourceVectors);
     return {
       ...prepared,
       arrowVectorByteLength: getArrowVectorByteLength(sourceVectors.texts)
@@ -882,7 +898,7 @@ export async function prepareArrowTextInputFromData(
 
   const recordBatches = await getArrowRecordBatches(props.data);
   if (recordBatches.length === 0) {
-    throw new Error('ArrowTextLayer data requires at least one Arrow record batch');
+    throw new Error('ArrowTextRenderer data requires at least one Arrow record batch');
   }
   if (shouldPrepareRecordBatchesFromArrowVectors(recordBatches, props)) {
     return prepareArrowTextInputFromRecordBatches(device, recordBatches, props);
@@ -913,7 +929,7 @@ function getRequiredArrowVector<T extends arrow.DataType>(
 ): arrow.Vector<T> {
   const vector = table.getChild(columnName);
   if (!vector) {
-    throw new Error(`ArrowTextLayer data is missing Arrow column "${columnName}"`);
+    throw new Error(`ArrowTextRenderer data is missing Arrow column "${columnName}"`);
   }
   return vector as arrow.Vector<T>;
 }
@@ -935,7 +951,7 @@ function getRequiredGPUVector<T extends arrow.DataType>(
 ): GPUVector<T> {
   const vector = gpuTable.gpuVectors[columnName];
   if (!vector) {
-    throw new Error(`ArrowTextLayer data is missing GPU column "${columnName}"`);
+    throw new Error(`ArrowTextRenderer data is missing GPU column "${columnName}"`);
   }
   return vector as GPUVector<T>;
 }
@@ -952,8 +968,8 @@ function getOptionalGPUVector<T extends arrow.DataType>(
 }
 
 function getResolvedColumnSelectors(
-  props: ArrowTextLayerPrepareInputProps
-): ResolvedArrowTextLayerColumns {
+  props: ArrowTextRendererPrepareInputProps
+): ResolvedArrowTextRendererColumns {
   return {
     positions: typeof props.positions === 'string' ? props.positions : DEFAULT_COLUMNS.positions,
     texts: typeof props.texts === 'string' ? props.texts : DEFAULT_COLUMNS.texts,
@@ -966,7 +982,7 @@ function getResolvedColumnSelectors(
 }
 
 function getStreamingTextInputShaderLayout(
-  props: ArrowTextLayerPrepareInputProps
+  props: ArrowTextRendererPrepareInputProps
 ): typeof STREAMING_TEXT_INPUT_SHADER_LAYOUT {
   const columns = getResolvedColumnSelectors(props);
   const enabledAttributeNames = new Set([
@@ -996,13 +1012,13 @@ function getOptionalColumnSelector(
 }
 
 function getArrowTextSourceVectors(
-  props: ArrowTextLayerPrepareDataProps | ArrowTextLayerPrepareInputProps
-): ArrowTextLayerPrepareDataProps {
+  props: ArrowTextRendererPrepareDataProps | ArrowTextRendererPrepareInputProps
+): ArrowTextRendererPrepareDataProps {
   if (typeof props.positions === 'string' || !props.positions) {
-    throw new Error('ArrowTextLayer requires a positions vector or table data');
+    throw new Error('ArrowTextRenderer requires a positions vector or table data');
   }
   if (typeof props.texts === 'string' || !props.texts) {
-    throw new Error('ArrowTextLayer requires a texts vector or table data');
+    throw new Error('ArrowTextRenderer requires a texts vector or table data');
   }
   return {
     positions: props.positions,
@@ -1019,8 +1035,8 @@ function getArrowTextSourceVectors(
 
 function getArrowTextSourceVectorsFromTable(
   table: arrow.Table,
-  props: ArrowTextLayerPrepareInputProps
-): ArrowTextLayerPrepareDataProps {
+  props: ArrowTextRendererPrepareInputProps
+): ArrowTextRendererPrepareDataProps {
   const columns = getResolvedColumnSelectors(props);
   const positions = getRequiredArrowVector<arrow.FixedSizeList<arrow.Float32>>(
     table,
@@ -1055,7 +1071,7 @@ function getArrowTextSourceVectorsFromTable(
 
 function shouldPrepareRecordBatchesFromArrowVectors(
   recordBatches: arrow.RecordBatch[],
-  props: ArrowTextLayerPrepareInputProps
+  props: ArrowTextRendererPrepareInputProps
 ): boolean {
   const table = new arrow.Table(recordBatches);
   const columns = getResolvedColumnSelectors(props);
@@ -1066,7 +1082,7 @@ function shouldPrepareRecordBatchesFromArrowVectors(
   return isArrowTextCharacterColorType(colors?.type);
 }
 
-function hasArrowTextSourcePropsChanged(props: Partial<ArrowTextLayerProps>): boolean {
+function hasArrowTextSourcePropsChanged(props: Partial<ArrowTextRendererProps>): boolean {
   return (
     props.data !== undefined ||
     props.positions !== undefined ||
@@ -1080,8 +1096,8 @@ function hasArrowTextSourcePropsChanged(props: Partial<ArrowTextLayerProps>): bo
 }
 
 function hasArrowTextConstantStylePropsChanged(
-  props: Partial<ArrowTextLayerProps>,
-  previousProps: ArrowTextLayerProps
+  props: Partial<ArrowTextRendererProps>,
+  previousProps: ArrowTextRendererProps
 ): boolean {
   return (
     (props.color !== undefined && !areTextColorsEqual(props.color, previousProps.color)) ||
@@ -1112,7 +1128,7 @@ function isArrowTextCharacterColorType(
 }
 
 async function getArrowRecordBatches(
-  data: ArrowTextLayerRecordBatchSource
+  data: ArrowTextRendererRecordBatchSource
 ): Promise<arrow.RecordBatch[]> {
   const recordBatches: arrow.RecordBatch[] = [];
   const recordBatchIterator = getArrowRecordBatchAsyncIterator(data);
@@ -1128,13 +1144,13 @@ async function getArrowRecordBatches(
 
 function getArrowRecordBatchAsyncIterator(
   data:
-    | ArrowTextLayerRecordBatchSource
+    | ArrowTextRendererRecordBatchSource
     | Iterator<arrow.RecordBatch>
     | AsyncIterator<arrow.RecordBatch>
     | undefined
 ): AsyncIterator<arrow.RecordBatch> {
   if (!data) {
-    throw new Error('ArrowTextLayer streaming requires data or recordBatchIterator');
+    throw new Error('ArrowTextRenderer streaming requires data or recordBatchIterator');
   }
 
   return iterateArrowRecordBatches(data)[Symbol.asyncIterator]();
@@ -1142,7 +1158,7 @@ function getArrowRecordBatchAsyncIterator(
 
 async function* iterateArrowRecordBatches(
   data:
-    | ArrowTextLayerRecordBatchSource
+    | ArrowTextRendererRecordBatchSource
     | Iterator<arrow.RecordBatch>
     | AsyncIterator<arrow.RecordBatch>
 ): AsyncIterableIterator<arrow.RecordBatch> {
@@ -1192,7 +1208,7 @@ async function* iterateArrowRecordBatches(
     return;
   }
 
-  throw new Error('ArrowTextLayer data must be an Arrow table or record batch iterator');
+  throw new Error('ArrowTextRenderer data must be an Arrow table or record batch iterator');
 }
 
 function isAsyncIterableRecordBatchSource(data: unknown): data is AsyncIterable<arrow.RecordBatch> {

@@ -7,10 +7,10 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Timeline} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 import {
-  ArrowInstancedMeshLayer,
+  ArrowInstancedMeshRenderer,
   DEFAULT_INSTANCES_PER_SIDE,
   INSTANCES_PER_SIDE_OPTIONS
-} from './arrow-instanced-mesh-layer';
+} from './arrow-instanced-mesh-renderer';
 import {ArrowInstancingControlPanel, makeArrowInstancingControlPanelHtml} from './control-panel';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -22,7 +22,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly timeline: Timeline;
   readonly timelineChannels: Record<string, number>;
   readonly controlPanel: ArrowInstancingControlPanel;
-  readonly layer: ArrowInstancedMeshLayer;
+  readonly layer: ArrowInstancedMeshRenderer;
   instancesPerSide = DEFAULT_INSTANCES_PER_SIDE;
 
   constructor({device, animationLoop}: AnimationProps) {
@@ -40,7 +40,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       eyeZChannel: this.timeline.addChannel({rate: 0.0002})
     };
 
-    this.layer = new ArrowInstancedMeshLayer(this.device, {
+    this.layer = new ArrowInstancedMeshRenderer(this.device, {
       instancesPerSide: this.instancesPerSide
     });
     this.controlPanel = new ArrowInstancingControlPanel({
