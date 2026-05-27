@@ -37,9 +37,9 @@ import {
   type ArrowPathRendererStreamingSession
 } from './arrow-path-renderer';
 
-export const title = 'Paths: XYZM + List<Timestamp>';
+export const title = 'Paths: XYZM + DenseUnion';
 export const description =
-  'Variable-length Arrow XYZM path rows rendered through attribute-backed and storage-backed path models, plus aligned List<Timestamp> rows for Trips-style temporal filtering.';
+  'Variable-length Arrow XYZM and DenseUnion path rows rendered through attribute-backed and storage-backed path models, plus aligned List<Timestamp> rows for Trips-style temporal filtering.';
 
 type PathRendererUpdateOptions = {
   syncControls?: boolean;

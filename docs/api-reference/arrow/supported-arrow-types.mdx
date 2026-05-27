@@ -63,10 +63,16 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ❌ | Fixed-width GPU rows.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ❌ | Fixed-width GPU rows.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, point rows, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
 | `List<FixedSizeList<Float32,`<br/>`2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute.<br/>`ArrowPathModel` expands to segment attributes; `ArrowStoragePathModel` keeps values in storage. | `ArrowPathModel.prepareGPUVectors()` uploads unchanged unless closed-path normalization is requested.<br/>Outputs feed `ArrowPathModel` and `ArrowStoragePathModel`. |
 | `List<FixedSizeList<Float64,`<br/>`2 \| 3 \| 4>>` | 🟡 | ❌ | Path preparation emits per-row Float32 deltas plus copied list-offset metadata.<br/>CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute.<br/>Attribute paths prepare deltas on CPU; WebGPU storage paths can prepare them on GPU before rendering. | `ArrowPathModel.prepareGPUVectors()` and `prepareArrowPathGPUVectors()` prepare attribute paths.<br/>`ArrowStoragePathModel.prepareGPUVectors()` prepares storage paths. |
 | `List<numeric \|`<br/>`FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
+
+The [Points example](/examples/arrow/arrow-points) demonstrates `FixedSizeList<Float32, 2 | 3 | 4>`
+and DenseUnion point rows, including M-coordinate or timestamp animation and hover
+identity labels. The [Paths example](/examples/arrow/arrow-path-model) demonstrates
+DenseUnion LineString rows by normalizing them one-for-one into prepared path rows before
+the path models consume them.
 
 ### Matrix-valued Columns
 
@@ -84,7 +90,7 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `Date \| Time \| Timestamp \| Duration` | 🟡 | ❌ | Through `prepareArrowTemporalGPUVector()`.<br/>Emits relative `Float32` values plus persisted temporal origin metadata. | Scalar relative-time attributes or storage rows in the source Arrow unit. | Animated or filtered rows; see [Time Columns](/examples/gpu-tables/arrow-time-columns) and [Blinking Stars](/examples/gpu-tables/arrow-temporal-starfield). |
+| `Date \| Time \| Timestamp \| Duration` | 🟡 | ❌ | Through `prepareArrowTemporalGPUVector()`.<br/>Emits relative `Float32` values plus persisted temporal origin metadata. | Scalar relative-time attributes or storage rows in the source Arrow unit. | Animated or filtered rows; see [Time Columns](/examples/arrow/arrow-time-columns) and [Blinking Stars](/examples/arrow/arrow-temporal-starfield). |
 | `List<Date \| Time \|`<br/>`Timestamp \| Duration>` | 🟡 | ❌ | Through `prepareArrowTemporalGPUVector()`.<br/>Preserves list offsets while emitting relative `List<Float32>` values. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Trips-style per-path timestamp streams aligned with path vertices, including `ArrowStorageTripsPathModel`. |
 | `Interval` | ❌ | ❌ | `Interval` is compound calendar/time data, not one scalar time value.<br/>There is no single preserved unit or origin subtraction rule for `prepareArrowTemporalGPUVector()`. | Not supported as a generic scalar temporal attribute or storage row. | Deferred; callers should lower intervals into application-defined scalar columns. |
 | `List<Interval>` | ❌ | ❌ | The leaf interval has unresolved compound/calendar semantics, and the list form needs a model-specific variable-length consumption path. | Not supported as generic temporal storage or Trips-style timestamps. | Deferred; Trips-style streams require scalar `Date`, `Time`, `Timestamp`, or `Duration` leaves. |
@@ -108,16 +114,16 @@ schema fields with `nullCount: 0`.
 | `LargeUtf8` | ❌ | ❌ | Uses 64-bit offsets; current text paths assume regular `Utf8` offsets. Support could downcast offsets when value buffers fit `Uint32`, or add 64-bit offset helpers. | Text shaders could consume after offset normalization; not a generic vertex attribute. | Large text columns once normalized to `Utf8`-style offset buffers. |
 | `Dictionary` non-`Utf8` | ❌ | ❌ | Uploading only dictionary indices loses value semantics. Support needs an adapter that uploads indices plus dictionary value buffers, or lowers values to numeric/text columns. | Shader use depends on the decoded value type or explicit lookup tables. | Categorical values, palettes, and enums after dictionary-specific lowering. |
 
-The [Time Columns example](/examples/gpu-tables/arrow-time-columns) prepares aligned
+The [Time Columns example](/examples/arrow/arrow-time-columns) prepares aligned
 `DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and
 `DurationMillisecond` event rows together with `prepareArrowTemporalGPUVectors()`,
 then renders the same relative `Float32` columns as instanced attributes or
-WebGPU storage rows. The [Blinking Stars example](/examples/gpu-tables/arrow-temporal-starfield)
+WebGPU storage rows. The [Blinking Stars example](/examples/arrow/arrow-temporal-starfield)
 uses aligned `TimestampMillisecond` and `DurationMillisecond` rows as per-instance
 visibility windows and pulse periods through the same attribute/storage modes.
 The path example remains the separate variable-length
-`List<FixedSizeList<Float32, 4>>` plus `List<Timestamp>` Trips-style stream
-example.
+`List<FixedSizeList<Float32, 4>>`, DenseUnion LineString, and `List<Timestamp>`
+Trips-style stream example.
 
 ## Shader and Buffer Layout Preliminaries
 
@@ -400,7 +406,7 @@ compatibility layout only: DGGS boundary math currently remains Float32, so low
 components are zero until true higher-precision decode math is added. The `dggs`
 shader module exposes the matching WGSL Uint64 word order and cell-boundary
 helpers when a shader should read keys directly. See the [Global Grids
-example](/examples/gpu-tables/arrow-dggs-polygons).
+example](/examples/arrow/arrow-dggs-polygons).
 
 ## Storage-Selected Table Columns
 

@@ -49,7 +49,7 @@ export type ArrowPathControlPanelProps = {
 };
 
 export type ArrowPathControlPanelRowCountKind = keyof ArrowPathControlPanelRowLabels;
-export type ArrowPathControlPanelCoordinateKind = 'float32' | 'float64';
+export type ArrowPathControlPanelCoordinateKind = 'float32' | 'float64' | 'dense-union';
 export type ArrowPathControlPanelColorKind = 'none' | 'row-colors' | 'vertex-colors';
 export type ArrowPathControlPanelTimeKind = ArrowPathRendererTimeColumn;
 export type ArrowPathControlPanelCapKind = 'square' | 'round';
@@ -422,6 +422,7 @@ export function makeArrowPathModelControlPanelHtml({
         <select id="${COORDINATE_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
           <option value="float32">Float32 - List&lt;FixedSizeList&lt;Float32, 4&gt;&gt;</option>
           <option value="float64">Float64 - List&lt;FixedSizeList&lt;Float64, 4&gt;&gt;</option>
+          <option value="dense-union">DenseUnion - LineString XYM/XYZM</option>
         </select>
         <label for="${COLOR_COLUMN_SELECTOR_ID}">Colors</label>
         <select id="${COLOR_COLUMN_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
@@ -532,7 +533,7 @@ export function makeArrowPathModelControlPanelHtml({
         <summary style="cursor: pointer; color: #0f172a; font-weight: 700;">What this example isolates</summary>
         <table style="width: 100%; margin-top: 10px; border-collapse: collapse; color: #334155; font-size: 12px; line-height: 1.4;">
           <tbody>
-            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Input</td><td style="padding: 7px 0;">Nested Float32 XYZM Arrow lists or CPU-prepared Float64 lists plus selectable row color columns, path-aligned color lists, and aligned List&lt;Timestamp&gt; rows</td></tr>
+            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Input</td><td style="padding: 7px 0;">Nested Float32 XYZM Arrow lists, CPU-prepared Float64 lists, or DenseUnion LineString rows plus selectable row color columns, path-aligned color lists, and aligned List&lt;Timestamp&gt; rows</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Time</td><td style="padding: 7px 0;">AttributePathModel and StoragePathModel read numeric M from XYZM; StorageTripsPathModel normalizes List&lt;Timestamp&gt; to relative Float32 milliseconds and filters the trail in storage</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Shared drawing</td><td style="padding: 7px 0;">All modes render the same miter/round joins and square/round caps; storage modes keep generated segment records indexed</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Attribute model</td><td style="padding: 7px 0;">CPU expansion builds segment records and repeats selected style rows into render attributes</td></tr>
@@ -559,7 +560,7 @@ function isArrowPathControlPanelRowCountKind(
 function isArrowPathControlPanelCoordinateKind(
   value: string | undefined
 ): value is ArrowPathControlPanelCoordinateKind {
-  return value === 'float32' || value === 'float64';
+  return value === 'float32' || value === 'float64' || value === 'dense-union';
 }
 
 function isArrowPathControlPanelColorKind(

@@ -15349,9 +15349,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-columns@workspace:examples/gpu-tables/arrow-columns":
+"luma.gl-examples-arrow-columns@workspace:examples/arrow/arrow-columns":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-columns@workspace:examples/gpu-tables/arrow-columns"
+  resolution: "luma.gl-examples-arrow-columns@workspace:examples/arrow/arrow-columns"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15366,9 +15366,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-dggs-polygons@workspace:examples/gpu-tables/arrow-dggs-polygons":
+"luma.gl-examples-arrow-dggs-polygons@workspace:examples/arrow/arrow-dggs-polygons":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-dggs-polygons@workspace:examples/gpu-tables/arrow-dggs-polygons"
+  resolution: "luma.gl-examples-arrow-dggs-polygons@workspace:examples/arrow/arrow-dggs-polygons"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15382,9 +15382,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-instancing@workspace:examples/gpu-tables/arrow-instancing":
+"luma.gl-examples-arrow-instancing@workspace:examples/arrow/arrow-instancing":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-instancing@workspace:examples/gpu-tables/arrow-instancing"
+  resolution: "luma.gl-examples-arrow-instancing@workspace:examples/arrow/arrow-instancing"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15399,9 +15399,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-mesh-geometry@workspace:examples/gpu-tables/arrow-mesh-geometry":
+"luma.gl-examples-arrow-mesh-geometry@workspace:examples/arrow/arrow-mesh-geometry":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-mesh-geometry@workspace:examples/gpu-tables/arrow-mesh-geometry"
+  resolution: "luma.gl-examples-arrow-mesh-geometry@workspace:examples/arrow/arrow-mesh-geometry"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15417,9 +15417,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-particles@workspace:examples/gpu-tables/arrow-particles":
+"luma.gl-examples-arrow-particles@workspace:examples/arrow/arrow-particles":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-particles@workspace:examples/gpu-tables/arrow-particles"
+  resolution: "luma.gl-examples-arrow-particles@workspace:examples/arrow/arrow-particles"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15433,26 +15433,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-path-model@workspace:examples/gpu-tables/arrow-path-model":
+"luma.gl-examples-arrow-path-model@workspace:examples/arrow/arrow-path-model":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-path-model@workspace:examples/gpu-tables/arrow-path-model"
-  dependencies:
-    "@luma.gl/arrow": "npm:~9.3.0"
-    "@luma.gl/core": "npm:~9.3.0"
-    "@luma.gl/engine": "npm:~9.3.0"
-    "@luma.gl/shadertools": "npm:~9.3.0"
-    "@luma.gl/tables": "npm:~9.3.0"
-    "@luma.gl/webgl": "npm:~9.3.0"
-    "@luma.gl/webgpu": "npm:~9.3.0"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^5.9.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-arrow-polygons@workspace:examples/gpu-tables/arrow-polygons":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-polygons@workspace:examples/gpu-tables/arrow-polygons"
+  resolution: "luma.gl-examples-arrow-path-model@workspace:examples/arrow/arrow-path-model"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15467,9 +15450,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-temporal-starfield@workspace:examples/gpu-tables/arrow-temporal-starfield":
+"luma.gl-examples-arrow-points@workspace:examples/arrow/arrow-points":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-temporal-starfield@workspace:examples/gpu-tables/arrow-temporal-starfield"
+  resolution: "luma.gl-examples-arrow-points@workspace:examples/arrow/arrow-points"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15484,9 +15467,43 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-text-2d@workspace:examples/gpu-tables/arrow-text-2d":
+"luma.gl-examples-arrow-polygons@workspace:examples/arrow/arrow-polygons":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-text-2d@workspace:examples/gpu-tables/arrow-text-2d"
+  resolution: "luma.gl-examples-arrow-polygons@workspace:examples/arrow/arrow-polygons"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-arrow-temporal-starfield@workspace:examples/arrow/arrow-temporal-starfield":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-temporal-starfield@workspace:examples/arrow/arrow-temporal-starfield"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-arrow-text-2d@workspace:examples/arrow/arrow-text-2d":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-text-2d@workspace:examples/arrow/arrow-text-2d"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15502,9 +15519,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-time-columns@workspace:examples/gpu-tables/arrow-time-columns":
+"luma.gl-examples-arrow-time-columns@workspace:examples/arrow/arrow-time-columns":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-time-columns@workspace:examples/gpu-tables/arrow-time-columns"
+  resolution: "luma.gl-examples-arrow-time-columns@workspace:examples/arrow/arrow-time-columns"
   dependencies:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"

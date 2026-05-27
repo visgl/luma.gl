@@ -19,11 +19,13 @@ export const TEMPORAL_TRAIL_LENGTH_MILLISECONDS = 220;
 export const STREAMING_PATH_BATCH_COUNT = 10;
 export const STREAMING_PATH_BATCH_INTERVAL_MS = 1000;
 export const STREAMING_PATH_ROWS_PER_CHUNK = 240;
+const GEOARROW_LINESTRING_XYM_TYPE_ID = 12;
+const GEOARROW_LINESTRING_XYZM_TYPE_ID = 13;
 
 type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
 export type ArrowPathBaseRowCountKind = '240' | '960' | '2400';
 export type ArrowPathRowCountKind = '240-stream' | '2400-stream';
-export type ArrowPathCoordinateKind = 'float32' | 'float64';
+export type ArrowPathCoordinateKind = 'float32' | 'float64' | 'dense-union';
 export type ArrowPathColorKind = 'none' | 'row-colors' | 'vertex-colors';
 export type ArrowPathTimeKind = ArrowPathRendererTimeColumn;
 export type ArrowPathCapKind = 'square' | 'round';
@@ -132,52 +134,150 @@ function makePathVector(
   coordinateKind: ArrowPathCoordinateKind,
   rowsPerChunk: number | null = null
 ): arrow.Vector<ArrowPathSourceCoordinateType> {
+  if (coordinateKind === 'dense-union') {
+    return makeDenseUnionPathVector(pathCount, pointCount, rowsPerChunk);
+  }
+
   const coordinateValueType =
     coordinateKind === 'float64' ? new arrow.Float64() : new arrow.Float32();
-  const coordinateType = new arrow.FixedSizeList(
-    4,
-    new arrow.Field('values', coordinateValueType, false)
-  );
-  const pathType = new arrow.List(new arrow.Field('coordinates', coordinateType, false));
   const dataChunks: arrow.Data<ArrowPathSourceCoordinateType>[] = [];
   forEachPathChunk(pathCount, rowsPerChunk, (pathStart, chunkPathCount) => {
-    const valueOffsets = new Int32Array(chunkPathCount + 1);
-    const values =
-      coordinateKind === 'float64'
-        ? new Float64Array(chunkPathCount * pointCount * 4)
-        : new Float32Array(chunkPathCount * pointCount * 4);
-    for (let localPathIndex = 0; localPathIndex < chunkPathCount; localPathIndex++) {
-      const pathIndex = pathStart + localPathIndex;
-      valueOffsets[localPathIndex] = localPathIndex * pointCount;
-      const normalizedPathIndex = pathCount <= 1 ? 0 : pathIndex / (pathCount - 1);
-      const baseY = -0.92 + normalizedPathIndex * 1.84;
-      const phase = pathIndex * 0.13;
-      for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
-        const pathProgress = pointCount <= 1 ? 0 : pointIndex / (pointCount - 1);
-        const coordinateIndex = (localPathIndex * pointCount + pointIndex) * 4;
-        values[coordinateIndex] = -1.24 + pathProgress * 2.48;
-        values[coordinateIndex + 1] =
-          baseY +
-          Math.sin(pathProgress * 11.5 + phase) * 0.028 +
-          Math.cos(pathProgress * 4.2 - phase * 0.55) * 0.014;
-        values[coordinateIndex + 2] = 0;
-        values[coordinateIndex + 3] = getPathMeasure(pathIndex, pointIndex, pointCount);
-      }
-    }
-    valueOffsets[chunkPathCount] = chunkPathCount * pointCount;
-    const coordinateValueData = new arrow.Data(coordinateValueType, 0, values.length, 0, {
-      [arrow.BufferType.DATA]: values
-    });
-    const coordinateData = new arrow.Data(coordinateType, 0, values.length / 4, 0, {}, [
-      coordinateValueData
-    ]);
     dataChunks.push(
-      new arrow.Data(pathType, 0, chunkPathCount, 0, {[arrow.BufferType.OFFSET]: valueOffsets}, [
-        coordinateData
-      ]) as arrow.Data<ArrowPathSourceCoordinateType>
+      makePathListDataChunk(
+        makePathIndexRange(pathStart, chunkPathCount),
+        pathCount,
+        pointCount,
+        coordinateValueType,
+        4
+      )
     );
   });
   return new arrow.Vector(dataChunks) as arrow.Vector<ArrowPathSourceCoordinateType>;
+}
+
+function makeDenseUnionPathVector(
+  pathCount: number,
+  pointCount: number,
+  rowsPerChunk: number | null = null
+): arrow.Vector<ArrowPathSourceCoordinateType> {
+  const dataChunks: arrow.Data<arrow.DenseUnion>[] = [];
+  forEachPathChunk(pathCount, rowsPerChunk, (pathStart, chunkPathCount) => {
+    const typeIds = new Int8Array(chunkPathCount);
+    const valueOffsets = new Int32Array(chunkPathCount);
+    const lineStringXYMPathIndices: number[] = [];
+    const lineStringXYZMPathIndices: number[] = [];
+
+    for (let localPathIndex = 0; localPathIndex < chunkPathCount; localPathIndex++) {
+      const pathIndex = pathStart + localPathIndex;
+      if (pathIndex % 2 === 0) {
+        typeIds[localPathIndex] = GEOARROW_LINESTRING_XYM_TYPE_ID;
+        valueOffsets[localPathIndex] = lineStringXYMPathIndices.length;
+        lineStringXYMPathIndices.push(pathIndex);
+      } else {
+        typeIds[localPathIndex] = GEOARROW_LINESTRING_XYZM_TYPE_ID;
+        valueOffsets[localPathIndex] = lineStringXYZMPathIndices.length;
+        lineStringXYZMPathIndices.push(pathIndex);
+      }
+    }
+
+    const lineStringXYMData = makePathListDataChunk(
+      lineStringXYMPathIndices,
+      pathCount,
+      pointCount,
+      new arrow.Float32(),
+      3
+    );
+    const lineStringXYZMData = makePathListDataChunk(
+      lineStringXYZMPathIndices,
+      pathCount,
+      pointCount,
+      new arrow.Float64(),
+      4
+    );
+    const unionType = new arrow.DenseUnion(
+      [GEOARROW_LINESTRING_XYM_TYPE_ID, GEOARROW_LINESTRING_XYZM_TYPE_ID],
+      [
+        new arrow.Field('LineStringXYM', lineStringXYMData.type, true),
+        new arrow.Field('LineStringXYZM', lineStringXYZMData.type, true)
+      ]
+    );
+
+    dataChunks.push(
+      arrow.makeData({
+        type: unionType,
+        length: chunkPathCount,
+        nullCount: 0,
+        typeIds,
+        valueOffsets,
+        children: [lineStringXYMData, lineStringXYZMData]
+      }) as arrow.Data<arrow.DenseUnion>
+    );
+  });
+  return new arrow.Vector(dataChunks) as arrow.Vector<ArrowPathSourceCoordinateType>;
+}
+
+function makePathListDataChunk(
+  pathIndices: number[],
+  pathCount: number,
+  pointCount: number,
+  coordinateValueType: arrow.Float32 | arrow.Float64,
+  coordinateComponentCount: 3 | 4
+): arrow.Data<ArrowPathSourceCoordinateType> {
+  const coordinateType = new arrow.FixedSizeList(
+    coordinateComponentCount,
+    new arrow.Field('values', coordinateValueType, false)
+  );
+  const pathType = new arrow.List(new arrow.Field('coordinates', coordinateType, false));
+  const valueOffsets = new Int32Array(pathIndices.length + 1);
+  const values =
+    coordinateValueType instanceof arrow.Float64
+      ? new Float64Array(pathIndices.length * pointCount * coordinateComponentCount)
+      : new Float32Array(pathIndices.length * pointCount * coordinateComponentCount);
+
+  for (let localPathIndex = 0; localPathIndex < pathIndices.length; localPathIndex++) {
+    const pathIndex = pathIndices[localPathIndex];
+    valueOffsets[localPathIndex] = localPathIndex * pointCount;
+    for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
+      writePathCoordinate(
+        values,
+        (localPathIndex * pointCount + pointIndex) * coordinateComponentCount,
+        pathIndex,
+        pathCount,
+        pointIndex,
+        pointCount,
+        coordinateComponentCount
+      );
+    }
+  }
+
+  valueOffsets[pathIndices.length] = pathIndices.length * pointCount;
+  const coordinateValueData = new arrow.Data(coordinateValueType, 0, values.length, 0, {
+    [arrow.BufferType.DATA]: values
+  });
+  const coordinateData = new arrow.Data(
+    coordinateType,
+    0,
+    values.length / coordinateComponentCount,
+    0,
+    {},
+    [coordinateValueData]
+  );
+  return new arrow.Data(
+    pathType,
+    0,
+    pathIndices.length,
+    0,
+    {[arrow.BufferType.OFFSET]: valueOffsets},
+    [coordinateData]
+  ) as arrow.Data<ArrowPathSourceCoordinateType>;
+}
+
+function makePathIndexRange(pathStart: number, pathCount: number): number[] {
+  const pathIndices: number[] = [];
+  for (let localPathIndex = 0; localPathIndex < pathCount; localPathIndex++) {
+    pathIndices.push(pathStart + localPathIndex);
+  }
+  return pathIndices;
 }
 
 function makePathTimestampVector(
@@ -302,6 +402,32 @@ function forEachPathChunk(
   for (let pathStart = 0; pathStart < pathCount; pathStart += safeRowsPerChunk) {
     visitor(pathStart, Math.min(safeRowsPerChunk, pathCount - pathStart));
   }
+}
+
+function writePathCoordinate(
+  values: Float32Array | Float64Array,
+  targetOffset: number,
+  pathIndex: number,
+  pathCount: number,
+  pointIndex: number,
+  pointCount: number,
+  coordinateComponentCount: 3 | 4
+): void {
+  const pathProgress = pointCount <= 1 ? 0 : pointIndex / (pointCount - 1);
+  const normalizedPathIndex = pathCount <= 1 ? 0 : pathIndex / (pathCount - 1);
+  const baseY = -0.92 + normalizedPathIndex * 1.84;
+  const phase = pathIndex * 0.13;
+  values[targetOffset] = -1.24 + pathProgress * 2.48;
+  values[targetOffset + 1] =
+    baseY +
+    Math.sin(pathProgress * 11.5 + phase) * 0.028 +
+    Math.cos(pathProgress * 4.2 - phase * 0.55) * 0.014;
+  if (coordinateComponentCount === 3) {
+    values[targetOffset + 2] = getPathMeasure(pathIndex, pointIndex, pointCount);
+    return;
+  }
+  values[targetOffset + 2] = 0;
+  values[targetOffset + 3] = getPathMeasure(pathIndex, pointIndex, pointCount);
 }
 
 function getPathMeasure(pathIndex: number, pointIndex: number, pointCount: number): number {

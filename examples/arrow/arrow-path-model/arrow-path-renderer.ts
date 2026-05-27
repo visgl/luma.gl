@@ -8,6 +8,7 @@ import {
   StorageTripsPathModel,
   convertArrowPathsToAttribute,
   getArrowVectorByteLength,
+  makeArrowFixedSizeListVector,
   prepareArrowTemporalGPUVector,
   type ArrowPathPreparedState
 } from '@luma.gl/arrow';
@@ -35,10 +36,23 @@ export type ArrowPathRendererTimeColumn = 'none' | 'xyzm' | 'timestamps';
 export type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 /** CPU Float64 source path coordinate type converted before rendering. */
 export type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
-/** CPU source path coordinate type accepted by preparation helpers. */
+/**
+ * DenseUnion source path coordinate type normalized by the example renderer.
+ *
+ * Top-level DenseUnion rows are converted one-for-one into prepared list rows so generated
+ * segment row indices continue to refer to the full source table row.
+ */
+export type ArrowPathDenseUnionCoordinateType = arrow.DenseUnion;
+/**
+ * CPU source path coordinate type accepted by preparation helpers.
+ *
+ * DenseUnion inputs are accepted at the example renderer boundary and normalized into
+ * `List<FixedSizeList<Float32, 4>>` before the core path models prepare GPU vectors.
+ */
 export type ArrowPathSourceCoordinateType =
   | ArrowPathCoordinateType
-  | ArrowPathFloat64CoordinateType;
+  | ArrowPathFloat64CoordinateType
+  | ArrowPathDenseUnionCoordinateType;
 /** GPU-ready per-vertex relative timestamp type. */
 export type ArrowPathTimestampType = arrow.List<arrow.Float32>;
 /** CPU source per-vertex absolute timestamp type. */
@@ -57,7 +71,7 @@ export type ArrowPathRendererActiveModel =
 
 /** CPU Arrow vectors accepted by Arrow path preparation helpers. */
 export type ArrowPathRendererSourceVectors = {
-  /** Variable-length path coordinate rows. */
+  /** Variable-length path coordinate rows, or DenseUnion rows normalized by this example layer. */
   paths: arrow.Vector<ArrowPathSourceCoordinateType>;
   /** Optional row or per-vertex packed path colors. */
   colors?: arrow.Vector<ArrowPathColorType>;
@@ -65,6 +79,10 @@ export type ArrowPathRendererSourceVectors = {
   widths?: arrow.Vector<arrow.Float32>;
   /** Optional per-vertex absolute timestamp rows. */
   timestamps?: arrow.Vector<ArrowPathSourceTimestampType>;
+};
+
+type ArrowPathRendererNormalizedSourceVectors = Omit<ArrowPathRendererSourceVectors, 'paths'> & {
+  paths: arrow.Vector<ArrowPathCoordinateType | ArrowPathFloat64CoordinateType>;
 };
 
 /** Prepared GPUVector data consumed by Arrow path models. */
@@ -219,12 +237,19 @@ export class ArrowPathRenderer extends GPURenderable<
     this.model = this.createModel(this.resolvedModel, props);
   }
 
+  /**
+   * Prepares Arrow source vectors for path rendering.
+   *
+   * DenseUnion path coordinates are normalized to one prepared path row per top-level DenseUnion
+   * row. Row-aligned style and timestamp columns remain unchanged.
+   */
   static async prepareData(
     device: Device,
     props: ArrowPathRendererPrepareDataProps
   ): Promise<ArrowPathRendererData> {
-    const preparedTimestamps = props.sourceVectors.timestamps
-      ? await prepareArrowTemporalGPUVector(device, props.sourceVectors.timestamps, {
+    const sourceVectors = normalizeArrowPathSourceVectors(props.sourceVectors);
+    const preparedTimestamps = sourceVectors.timestamps
+      ? await prepareArrowTemporalGPUVector(device, sourceVectors.timestamps, {
           name: 'timestamps',
           id: `${props.id ?? 'arrow-path-renderer'}-timestamps`
         })
@@ -232,9 +257,9 @@ export class ArrowPathRenderer extends GPURenderable<
     const prepared = await convertArrowPathsToAttribute(
       device,
       {
-        paths: props.sourceVectors.paths,
-        ...(props.sourceVectors.colors ? {colors: props.sourceVectors.colors} : {}),
-        ...(props.sourceVectors.widths ? {widths: props.sourceVectors.widths} : {})
+        paths: sourceVectors.paths,
+        ...(sourceVectors.colors ? {colors: sourceVectors.colors} : {}),
+        ...(sourceVectors.widths ? {widths: sourceVectors.widths} : {})
       },
       {
         id: props.id ?? 'arrow-path-renderer'
@@ -466,6 +491,7 @@ export class ArrowPathRenderer extends GPURenderable<
   }
 }
 
+/** Prepares generated Arrow path source data into the renderer input used by the example. */
 export async function prepareArrowPathInput(
   device: Device,
   sourceData: ArrowPathRendererSourceData
@@ -495,6 +521,12 @@ export async function prepareArrowPathInput(
   };
 }
 
+/**
+ * Builds a source table from record batches, then prepares it for path rendering.
+ *
+ * This preserves full-table row identity because each input record-batch row remains one logical
+ * path row after DenseUnion normalization.
+ */
 export async function prepareArrowPathInputFromRecordBatches(
   device: Device,
   recordBatches: arrow.RecordBatch[]
@@ -520,6 +552,163 @@ export async function prepareArrowPathInputFromRecordBatches(
     styleArrowByteLength:
       (colors ? getArrowVectorByteLength(colors) : 0) + getArrowVectorByteLength(widths)
   });
+}
+
+function normalizeArrowPathSourceVectors(
+  sourceVectors: ArrowPathRendererSourceVectors
+): ArrowPathRendererNormalizedSourceVectors {
+  if (!arrow.DataType.isDenseUnion(sourceVectors.paths.type)) {
+    return sourceVectors as ArrowPathRendererNormalizedSourceVectors;
+  }
+  return {
+    ...sourceVectors,
+    paths: normalizeDenseUnionPathVector(
+      sourceVectors.paths as arrow.Vector<ArrowPathDenseUnionCoordinateType>
+    )
+  };
+}
+
+function normalizeDenseUnionPathVector(
+  paths: arrow.Vector<ArrowPathDenseUnionCoordinateType>
+): arrow.Vector<ArrowPathCoordinateType> {
+  const dataChunks = paths.data.map(data => normalizeDenseUnionPathData(data));
+  return new arrow.Vector(dataChunks);
+}
+
+function normalizeDenseUnionPathData(
+  data: arrow.Data<ArrowPathDenseUnionCoordinateType>
+): arrow.Data<ArrowPathCoordinateType> {
+  const valueOffsets = new Int32Array(data.length + 1);
+  let coordinateCount = 0;
+
+  for (let localPathIndex = 0; localPathIndex < data.length; localPathIndex++) {
+    valueOffsets[localPathIndex] = coordinateCount;
+    const childRow = getDenseUnionPathChildRow(data, localPathIndex);
+    coordinateCount += childRow.pointEnd - childRow.pointStart;
+  }
+  valueOffsets[data.length] = coordinateCount;
+
+  const values = new Float32Array(coordinateCount * 4);
+  for (let localPathIndex = 0; localPathIndex < data.length; localPathIndex++) {
+    const childRow = getDenseUnionPathChildRow(data, localPathIndex);
+    let targetPointIndex = valueOffsets[localPathIndex];
+    for (let pointIndex = childRow.pointStart; pointIndex < childRow.pointEnd; pointIndex++) {
+      const sourceOffset =
+        ((childRow.coordinateData.offset ?? 0) + pointIndex) * childRow.coordinateComponentCount;
+      const targetOffset = targetPointIndex * 4;
+      values[targetOffset] = Number(childRow.coordinateValues[sourceOffset] ?? 0);
+      values[targetOffset + 1] = Number(childRow.coordinateValues[sourceOffset + 1] ?? 0);
+      if (childRow.coordinateComponentCount === 3) {
+        values[targetOffset + 2] = 0;
+        values[targetOffset + 3] = Number(childRow.coordinateValues[sourceOffset + 2] ?? 0);
+      } else {
+        values[targetOffset + 2] =
+          childRow.coordinateComponentCount >= 4
+            ? Number(childRow.coordinateValues[sourceOffset + 2] ?? 0)
+            : 0;
+        values[targetOffset + 3] =
+          childRow.coordinateComponentCount >= 4
+            ? Number(childRow.coordinateValues[sourceOffset + 3] ?? 0)
+            : 0;
+      }
+      targetPointIndex++;
+    }
+  }
+
+  return makePathListData(valueOffsets, values);
+}
+
+function getDenseUnionPathChildRow(
+  data: arrow.Data<ArrowPathDenseUnionCoordinateType>,
+  localPathIndex: number
+): {
+  coordinateData: arrow.Data<arrow.FixedSizeList<arrow.Float32 | arrow.Float64>>;
+  coordinateValues: Float32Array | Float64Array;
+  coordinateComponentCount: 2 | 3 | 4;
+  pointStart: number;
+  pointEnd: number;
+} {
+  const typeIds = data.typeIds as ArrayLike<number>;
+  const denseUnionValueOffsets = data.valueOffsets as ArrayLike<number>;
+  const denseUnionType = data.type as arrow.DenseUnion & {
+    typeIdToChildIndex: Record<number, number | undefined>;
+  };
+  const dataRowIndex = (data.offset ?? 0) + localPathIndex;
+  const typeId = typeIds[dataRowIndex];
+  const childIndex = denseUnionType.typeIdToChildIndex[typeId];
+  if (childIndex === undefined) {
+    throw new Error(`ArrowPathRenderer DenseUnion has unsupported type id ${typeId}`);
+  }
+
+  const childPathData = data.children[childIndex] as arrow.Data<
+    arrow.List<arrow.FixedSizeList<arrow.Float32 | arrow.Float64>>
+  >;
+  const childValueOffsets = childPathData.valueOffsets as ArrayLike<number>;
+  const childPathRowIndex = (childPathData.offset ?? 0) + denseUnionValueOffsets[dataRowIndex];
+  const pointStart = childValueOffsets[childPathRowIndex] ?? 0;
+  const pointEnd = childValueOffsets[childPathRowIndex + 1] ?? pointStart;
+  const {coordinateData, coordinateValues, coordinateComponentCount} =
+    getDenseUnionChildCoordinateData(childPathData);
+
+  return {coordinateData, coordinateValues, coordinateComponentCount, pointStart, pointEnd};
+}
+
+function getDenseUnionChildCoordinateData(
+  childPathData: arrow.Data<arrow.List<arrow.FixedSizeList<arrow.Float32 | arrow.Float64>>>
+): {
+  coordinateData: arrow.Data<arrow.FixedSizeList<arrow.Float32 | arrow.Float64>>;
+  coordinateValues: Float32Array | Float64Array;
+  coordinateComponentCount: 2 | 3 | 4;
+} {
+  if (!arrow.DataType.isList(childPathData.type)) {
+    throw new Error('ArrowPathRenderer DenseUnion children must be List path rows');
+  }
+  const coordinateType = childPathData.type.children[0]?.type;
+  if (!arrow.DataType.isFixedSizeList(coordinateType)) {
+    throw new Error('ArrowPathRenderer DenseUnion path children must contain FixedSizeList rows');
+  }
+  const coordinateComponentCount = coordinateType.listSize;
+  const coordinateValueType = coordinateType.children[0]?.type;
+  if (
+    (coordinateComponentCount !== 2 &&
+      coordinateComponentCount !== 3 &&
+      coordinateComponentCount !== 4) ||
+    (!(coordinateValueType instanceof arrow.Float32) &&
+      !(coordinateValueType instanceof arrow.Float64))
+  ) {
+    throw new Error(
+      'ArrowPathRenderer DenseUnion path children must be List<FixedSizeList<Float32|Float64, 2 | 3 | 4>>'
+    );
+  }
+
+  const coordinateData = childPathData.children[0] as arrow.Data<
+    arrow.FixedSizeList<arrow.Float32 | arrow.Float64>
+  >;
+  const coordinateValueData = coordinateData.children[0] as
+    | arrow.Data<arrow.Float32>
+    | arrow.Data<arrow.Float64>;
+  const coordinateValues = coordinateValueData.values;
+  if (!(coordinateValues instanceof Float32Array) && !(coordinateValues instanceof Float64Array)) {
+    throw new Error('ArrowPathRenderer DenseUnion path child values must be Float32 or Float64');
+  }
+  return {coordinateData, coordinateValues, coordinateComponentCount};
+}
+
+function makePathListData(
+  valueOffsets: Int32Array,
+  values: Float32Array
+): arrow.Data<ArrowPathCoordinateType> {
+  const coordinateData = makeArrowFixedSizeListVector(new arrow.Float32(), 4, values)
+    .data[0] as arrow.Data<arrow.FixedSizeList<arrow.Float32>>;
+  const pathType = new arrow.List(new arrow.Field('coordinates', coordinateData.type, false));
+  return new arrow.Data(
+    pathType,
+    0,
+    valueOffsets.length - 1,
+    0,
+    {[arrow.BufferType.OFFSET]: valueOffsets},
+    [coordinateData]
+  ) as arrow.Data<ArrowPathCoordinateType>;
 }
 
 function getRequiredArrowVector<T extends arrow.DataType>(
