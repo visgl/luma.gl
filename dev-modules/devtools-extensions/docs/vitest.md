@@ -18,6 +18,7 @@ Repo customization:
 - `devtools.vitest.tsconfigProjects`
 - `devtools.vitest.browserName`
 - `devtools.vitest.testTimeout`
+- `devtools.vitest.fileParallelism`
 - `devtools.vitest.channel`
 - `devtools.vitest.softwareGpu`
 - `devtools.vitest.launchOptions`

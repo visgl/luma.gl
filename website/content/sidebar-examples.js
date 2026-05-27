@@ -20,15 +20,16 @@ const sidebars = {
       type: 'category',
       label: 'Apache Arrow',
       items: [
-        'gpu-tables/arrow-text-2d',
-        'gpu-tables/arrow-path-model',
-        'gpu-tables/arrow-polygons',
-        'gpu-tables/arrow-temporal-starfield',
-        'gpu-tables/arrow-time-columns',
-        'gpu-tables/arrow-instancing',
-        'gpu-tables/arrow-mesh-geometry',
-        'gpu-tables/arrow-particles',
-        'gpu-tables/arrow-dggs-polygons'
+        'arrow/arrow-points',
+        'arrow/arrow-path-model',
+        'arrow/arrow-polygons',
+        'arrow/arrow-text-2d',
+        'arrow/arrow-temporal-starfield',
+        'arrow/arrow-time-columns',
+        'arrow/arrow-instancing',
+        'arrow/arrow-mesh-geometry',
+        'arrow/arrow-particles',
+        'arrow/arrow-dggs-polygons'
       ]
     },
     {

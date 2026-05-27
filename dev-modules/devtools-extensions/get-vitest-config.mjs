@@ -24,6 +24,7 @@ export async function getVitestConfig(options = {}) {
   const excludePatterns = vitestConfig.excludePatterns || [];
   const browserName = vitestConfig.browserName || 'chromium';
   const testTimeout = vitestConfig.testTimeout || 60_000;
+  const fileParallelism = vitestConfig.fileParallelism;
   const softwareGpu = Boolean(vitestConfig.softwareGpu);
   const tsconfigAliases = getTsconfigAliases(tsconfigProjects);
 
@@ -66,6 +67,7 @@ export async function getVitestConfig(options = {}) {
             name: 'browser',
             color: 'green',
             environment: 'node',
+            fileParallelism,
             testTimeout,
             setupFiles: [BROWSER_PROCESS_SHIM_PATH],
             include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
@@ -83,6 +85,7 @@ export async function getVitestConfig(options = {}) {
             name: 'headless',
             color: 'cyan',
             environment: 'node',
+            fileParallelism,
             testTimeout,
             setupFiles: [BROWSER_PROCESS_SHIM_PATH],
             include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
