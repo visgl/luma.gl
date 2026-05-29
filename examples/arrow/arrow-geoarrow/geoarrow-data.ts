@@ -60,24 +60,6 @@ const ANKH_HOLE_COORDINATES: readonly [number, number][] = [
   [-0.26, 0.66],
   [-0.15, 0.8]
 ];
-const EYE_OF_HORUS_STROKES: readonly (readonly [number, number][])[] = [
-  [
-    [-0.78, 0.05],
-    [-0.42, 0.22],
-    [0, 0.2],
-    [0.42, 0.05]
-  ],
-  [
-    [-0.7, -0.16],
-    [-0.35, -0.32],
-    [0.08, -0.31],
-    [0.44, -0.18]
-  ]
-];
-const EYE_OF_HORUS_COORDINATE_COUNT = EYE_OF_HORUS_STROKES.reduce(
-  (total, stroke) => total + stroke.length,
-  0
-);
 const EYE_OF_HORUS_POLYGON_RINGS: readonly (readonly (readonly [number, number][])[])[] = [
   [
     [
@@ -309,33 +291,32 @@ function makeLineStringData(
 function makeMultiLineStringData(
   rows: GeometryRow[]
 ): arrow.Data<arrow.List<arrow.List<arrow.FixedSizeList<arrow.Float32>>>> {
-  const lineCount = rows.length * EYE_OF_HORUS_STROKES.length;
+  const lineCount = rows.length * 2;
+  const pointCount = 4;
   const rowOffsets = new Int32Array(rows.length + 1);
   const lineOffsets = new Int32Array(lineCount + 1);
-  const values = new Float32Array(
-    rows.length * EYE_OF_HORUS_COORDINATE_COUNT * COORDINATE_COMPONENTS
-  );
-  let lineIndex = 0;
-  let coordinateIndex = 0;
+  const values = new Float32Array(lineCount * pointCount * COORDINATE_COMPONENTS);
 
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
-    const eyeScale = row.radius * 1.12;
-    rowOffsets[rowIndex] = lineIndex;
-    for (const stroke of EYE_OF_HORUS_STROKES) {
-      lineOffsets[lineIndex++] = coordinateIndex;
-      for (const [x, y] of stroke) {
-        writeCoordinate(
-          values,
-          coordinateIndex++,
-          row.centerX + x * eyeScale,
-          row.centerY + y * eyeScale
-        );
+    rowOffsets[rowIndex] = rowIndex * 2;
+    for (let linePartIndex = 0; linePartIndex < 2; linePartIndex++) {
+      const lineIndex = rowIndex * 2 + linePartIndex;
+      const yOffset = linePartIndex === 0 ? -row.radius * 0.26 : row.radius * 0.26;
+      lineOffsets[lineIndex] = lineIndex * pointCount;
+      for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
+        const progress = pointIndex / (pointCount - 1);
+        const x = row.centerX - row.radius * 0.78 + progress * row.radius * 1.56;
+        const y =
+          row.centerY +
+          yOffset +
+          Math.cos(progress * Math.PI * 2 + row.sourceRowIndex * 0.17) * row.radius * 0.16;
+        writeCoordinate(values, lineIndex * pointCount + pointIndex, x, y);
       }
     }
   }
-  rowOffsets[rows.length] = lineIndex;
-  lineOffsets[lineIndex] = coordinateIndex;
+  rowOffsets[rows.length] = lineCount;
+  lineOffsets[lineCount] = lineCount * pointCount;
   return makeListData(makeListData(makeCoordinateData(values), lineOffsets), rowOffsets);
 }
 
@@ -384,12 +365,9 @@ function makeMultiPolygonData(
   rows: GeometryRow[]
 ): arrow.Data<arrow.List<arrow.List<arrow.List<arrow.FixedSizeList<arrow.Float32>>>>> {
   const rowOffsets = new Int32Array(rows.length + 1);
-  const polygonOffsets = new Int32Array(rows.length * 2 + 1);
-  const ringOffsets = new Int32Array(rows.length * 2 + 1);
-  const coordinateCount = rows.reduce(
-    (total, row) => total + getMultiPolygonVertexCount(row, 0) + getMultiPolygonVertexCount(row, 1),
-    0
-  );
+  const polygonOffsets = new Int32Array(rows.length * EYE_OF_HORUS_POLYGON_COUNT + 1);
+  const ringOffsets = new Int32Array(rows.length * EYE_OF_HORUS_RING_COUNT + 1);
+  const coordinateCount = rows.length * EYE_OF_HORUS_POLYGON_COORDINATE_COUNT;
   const values = new Float32Array(coordinateCount * COORDINATE_COMPONENTS);
   let polygonIndex = 0;
   let ringIndex = 0;
@@ -397,22 +375,21 @@ function makeMultiPolygonData(
 
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
+    const eyeScale = row.radius * 1.0;
     rowOffsets[rowIndex] = polygonIndex;
-    for (let polygonPartIndex = 0; polygonPartIndex < 2; polygonPartIndex++) {
+    for (const polygonRings of EYE_OF_HORUS_POLYGON_RINGS) {
       polygonOffsets[polygonIndex++] = ringIndex;
-      ringOffsets[ringIndex++] = coordinateIndex;
-      coordinateIndex = writeRing(
-        values,
-        coordinateIndex,
-        {
-          ...row,
-          centerX: row.centerX + (polygonPartIndex === 0 ? -row.radius * 0.44 : row.radius * 0.44),
-          centerY: row.centerY + (polygonPartIndex === 0 ? -row.radius * 0.12 : row.radius * 0.12)
-        },
-        row.radius * 0.43,
-        polygonPartIndex + 2,
-        false
-      );
+      for (const ring of polygonRings) {
+        ringOffsets[ringIndex++] = coordinateIndex;
+        for (const [x, y] of ring) {
+          writeCoordinate(
+            values,
+            coordinateIndex++,
+            row.centerX + x * eyeScale,
+            row.centerY + y * eyeScale
+          );
+        }
+      }
     }
   }
   rowOffsets[rows.length] = polygonIndex;
@@ -471,13 +448,13 @@ function getGeometryMetrics(rows: GeometryRow[]): GeoArrowRendererMetrics {
         lineRowCount++;
         break;
       case 'MultiLineString':
-        lineRowCount += EYE_OF_HORUS_STROKES.length;
+        lineRowCount += 2;
         break;
       case 'Polygon':
         polygonRowCount++;
         break;
       case 'MultiPolygon':
-        polygonRowCount += 2;
+        polygonRowCount += EYE_OF_HORUS_POLYGON_COUNT;
         break;
       default:
         skippedRowCount++;
@@ -533,41 +510,6 @@ function getPolygonOuterVertexCount(_row: GeometryRow): number {
 
 function getPolygonHoleVertexCount(_row: GeometryRow): number {
   return ANKH_HOLE_COORDINATES.length;
-}
-
-function getMultiPolygonVertexCount(row: GeometryRow, polygonPartIndex: number): number {
-  return 6 + ((row.sourceRowIndex + polygonPartIndex) % 4);
-}
-
-function writeRing(
-  values: Float32Array,
-  coordinateIndex: number,
-  row: GeometryRow,
-  radius: number,
-  ringKind: number,
-  clockwise: boolean
-): number {
-  const vertexCount =
-    ringKind === 0
-      ? getPolygonOuterVertexCount(row)
-      : ringKind === 1
-        ? getPolygonHoleVertexCount(row)
-        : getMultiPolygonVertexCount(row, ringKind - 2);
-  const angleOffset = -Math.PI / 2 + getJitter(row.sourceRowIndex, 47 + ringKind) * 0.36;
-  const stretchX = 0.82 + getJitter(row.sourceRowIndex, 61 + ringKind) * 0.1;
-  const stretchY = 0.78 + getJitter(row.sourceRowIndex, 73 + ringKind) * 0.1;
-  for (let vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++) {
-    const orderedVertexIndex = clockwise ? vertexCount - vertexIndex : vertexIndex;
-    const angle = angleOffset + (orderedVertexIndex / vertexCount) * Math.PI * 2;
-    const wave = Math.sin(angle * 3 + row.sourceRowIndex * 0.21) * 0.08;
-    writeCoordinate(
-      values,
-      coordinateIndex++,
-      row.centerX + Math.cos(angle) * radius * stretchX * (1 + wave),
-      row.centerY + Math.sin(angle) * radius * stretchY * (1 - wave)
-    );
-  }
-  return coordinateIndex;
 }
 
 function writeCoordinate(
