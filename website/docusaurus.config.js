@@ -29,6 +29,10 @@ const config = getDocusaurusConfig({
       {
         redirects: [
           {
+            from: ['/examples/arrow/arrow-path-model'],
+            to: '/examples/arrow/arrow-lines'
+          },
+          {
             from: [
               '/docs/api-guide/gpu/arrow-table-columns',
               '/docs/api-reference/arrow/arrow-table-columns',

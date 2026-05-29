@@ -11,17 +11,23 @@ import {
   Float64,
   List,
   Precision,
+  Struct,
   Table,
   Uint8,
   Vector
 } from 'apache-arrow';
 import {dehydrateArrowTable, type DehydratedArrowTable} from './arrow-table-transport';
+import {convertGeoArrowVectorToInterleaved} from './geoarrow-interleaving';
 import {triangulatePolygon} from './optimized-earcut';
 
 export type ArrowPolygonCoordinateType = FixedSizeList<Float32> | FixedSizeList<Float64>;
-export type ArrowTessellatedPolygonType = List<ArrowPolygonCoordinateType>;
-export type ArrowPolygonType = List<List<ArrowPolygonCoordinateType>>;
-export type ArrowMultiPolygonType = List<List<List<ArrowPolygonCoordinateType>>>;
+export type ArrowSeparatedPolygonCoordinateType = Struct;
+export type ArrowPolygonInputCoordinateType =
+  | ArrowPolygonCoordinateType
+  | ArrowSeparatedPolygonCoordinateType;
+export type ArrowTessellatedPolygonType = List<ArrowPolygonInputCoordinateType>;
+export type ArrowPolygonType = List<List<ArrowPolygonInputCoordinateType>>;
+export type ArrowMultiPolygonType = List<List<List<ArrowPolygonInputCoordinateType>>>;
 export type ArrowGeoArrowGeometryType = DenseUnion;
 export type ArrowPolygonInputType =
   | ArrowTessellatedPolygonType
@@ -138,7 +144,10 @@ export function tessellateArrowPolygons(
   sourceVectors: ArrowPolygonSourceVectors,
   options: ArrowPolygonTessellationOptions = {}
 ): ArrowPolygonTessellationResult {
-  const polygonInfo = getPolygonTypeInfo(sourceVectors.polygons.type);
+  const polygons = convertGeoArrowVectorToInterleaved(
+    sourceVectors.polygons
+  ) as Vector<ArrowPolygonInputType>;
+  const polygonInfo = getPolygonTypeInfo(polygons.type);
   if (options.tessellated && polygonInfo.nesting !== 1) {
     throw new Error('tessellated ArrowPolygonRenderer input must be List<FixedSizeList<...>>');
   }
@@ -161,7 +170,7 @@ export function tessellateArrowPolygons(
   let rowIndex = 0;
   let polygonCount = 0;
 
-  for (const data of sourceVectors.polygons.data) {
+  for (const data of polygons.data) {
     if (options.tessellated) {
       polygonCount += appendTessellatedRows({
         data: data as Data<ArrowTessellatedPolygonType>,
@@ -225,7 +234,7 @@ export function tessellateArrowPolygons(
     sourceDimension: polygonInfo.sourceDimension,
     vertexCount,
     triangleCount: indexArray.length / 3,
-    rowCount: sourceVectors.polygons.length,
+    rowCount: polygons.length,
     polygonCount
   };
 }

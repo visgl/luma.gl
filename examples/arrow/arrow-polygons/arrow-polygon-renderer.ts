@@ -469,7 +469,9 @@ export class ArrowPolygonRenderer {
       shaderLayout: POLYGON_SHADER_LAYOUT,
       shaderInputs: this.shaderInputs,
       table: prepared.table,
-      tableCount: 'vertex',
+      tableCount: 'none',
+      // Indexed WebGL draws use Model.vertexCount as the drawElements index count.
+      vertexCount: prepared.tessellation.indices.length,
       indexBuffer: prepared.indices,
       ...(picking && indexPickingSupported
         ? {
