@@ -3,70 +3,77 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {ArrowPathRendererModel, ArrowPathRendererTimeColumn} from './arrow-path-renderer';
+import type {
+  ArrowLineRendererMode,
+  ArrowLineRendererModel,
+  ArrowLineRendererTimeColumn
+} from './arrow-line-renderer';
 
-const MODEL_SELECTOR_ID = 'arrow-path-model-model';
-const ROW_COUNT_SELECTOR_ID = 'arrow-path-model-row-count';
-const COORDINATE_SELECTOR_ID = 'arrow-path-model-coordinates';
-const COLOR_COLUMN_SELECTOR_ID = 'arrow-path-model-color-column';
-const TIME_COLUMN_SELECTOR_ID = 'arrow-path-model-time-column';
-const MEASURE_SWEEP_TOGGLE_ID = 'arrow-path-model-measure-sweep';
-const WIDTH_TOGGLE_ID = 'arrow-path-model-widths';
-const CAP_SELECTOR_ID = 'arrow-path-model-cap-style';
-const JOINT_SELECTOR_ID = 'arrow-path-model-joint-style';
-const MITER_LIMIT_INPUT_ID = 'arrow-path-model-miter-limit';
-const MITER_LIMIT_VALUE_ID = 'arrow-path-model-miter-limit-value';
-const INFO_DETAILS_ID = 'arrow-path-model-details';
-const PATH_COUNT_ID = 'arrow-path-model-path-count';
-const SEGMENT_COUNT_ID = 'arrow-path-model-segment-count';
-const PATH_ARROW_BYTES_ID = 'arrow-path-model-path-arrow-bytes';
-const PATH_GPU_BYTES_ID = 'arrow-path-model-path-gpu-bytes';
-const PATH_GPU_EXPANSION_ID = 'arrow-path-model-path-gpu-expansion';
-const PATH_PREP_TIME_ID = 'arrow-path-model-path-prep-time';
-const STYLE_ARROW_BYTES_ID = 'arrow-path-model-style-arrow-bytes';
-const STYLE_GPU_BYTES_ID = 'arrow-path-model-style-gpu-bytes';
-const STYLE_GPU_EXPANSION_ID = 'arrow-path-model-style-gpu-expansion';
-const STYLE_BUILD_TIME_ID = 'arrow-path-model-style-build-time';
-const COMPUTE_GPU_BYTES_ID = 'arrow-path-model-compute-gpu-bytes';
-const COMPUTE_GPU_EXPANSION_ID = 'arrow-path-model-compute-gpu-expansion';
-const TOTAL_ARROW_BYTES_ID = 'arrow-path-model-total-arrow-bytes';
-const TOTAL_GPU_BYTES_ID = 'arrow-path-model-total-gpu-bytes';
-const TOTAL_GPU_EXPANSION_ID = 'arrow-path-model-total-gpu-expansion';
-const DECK_GPU_BYTES_ID = 'arrow-path-model-deck-gpu-bytes';
-const DECK_GPU_EXPANSION_ID = 'arrow-path-model-deck-gpu-expansion';
-const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-path-model-streaming-batch-status-row';
-const STREAMING_BATCH_FILL_ID = 'arrow-path-model-streaming-batch-fill';
-const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-path-model-streaming-batch-status-label';
+const MODEL_SELECTOR_ID = 'arrow-lines-model';
+const ROW_COUNT_SELECTOR_ID = 'arrow-lines-row-count';
+const MODE_SELECTOR_ID = 'arrow-lines-mode';
+const COORDINATE_SELECTOR_ID = 'arrow-lines-coordinates';
+const COLOR_COLUMN_SELECTOR_ID = 'arrow-lines-color-column';
+const TIME_COLUMN_SELECTOR_ID = 'arrow-lines-time-column';
+const MEASURE_SWEEP_TOGGLE_ID = 'arrow-lines-measure-sweep';
+const WIDTH_TOGGLE_ID = 'arrow-lines-widths';
+const CAP_SELECTOR_ID = 'arrow-lines-cap-style';
+const JOINT_SELECTOR_ID = 'arrow-lines-joint-style';
+const MITER_LIMIT_INPUT_ID = 'arrow-lines-miter-limit';
+const MITER_LIMIT_VALUE_ID = 'arrow-lines-miter-limit-value';
+const INFO_DETAILS_ID = 'arrow-lines-details';
+const PATH_COUNT_ID = 'arrow-lines-path-count';
+const SEGMENT_COUNT_ID = 'arrow-lines-segment-count';
+const PATH_ARROW_BYTES_ID = 'arrow-lines-path-arrow-bytes';
+const PATH_GPU_BYTES_ID = 'arrow-lines-path-gpu-bytes';
+const PATH_GPU_EXPANSION_ID = 'arrow-lines-path-gpu-expansion';
+const PATH_PREP_TIME_ID = 'arrow-lines-path-prep-time';
+const STYLE_ARROW_BYTES_ID = 'arrow-lines-style-arrow-bytes';
+const STYLE_GPU_BYTES_ID = 'arrow-lines-style-gpu-bytes';
+const STYLE_GPU_EXPANSION_ID = 'arrow-lines-style-gpu-expansion';
+const STYLE_BUILD_TIME_ID = 'arrow-lines-style-build-time';
+const COMPUTE_GPU_BYTES_ID = 'arrow-lines-compute-gpu-bytes';
+const COMPUTE_GPU_EXPANSION_ID = 'arrow-lines-compute-gpu-expansion';
+const TOTAL_ARROW_BYTES_ID = 'arrow-lines-total-arrow-bytes';
+const TOTAL_GPU_BYTES_ID = 'arrow-lines-total-gpu-bytes';
+const TOTAL_GPU_EXPANSION_ID = 'arrow-lines-total-gpu-expansion';
+const DECK_GPU_BYTES_ID = 'arrow-lines-deck-gpu-bytes';
+const DECK_GPU_EXPANSION_ID = 'arrow-lines-deck-gpu-expansion';
+const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-lines-streaming-batch-status-row';
+const STREAMING_BATCH_FILL_ID = 'arrow-lines-streaming-batch-fill';
+const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-lines-streaming-batch-status-label';
 
-export type ArrowPathControlPanelRowLabels = {
+export type ArrowLineControlPanelRowLabels = {
   '240-stream': string;
   '2400-stream': string;
 };
 
-export type ArrowPathControlPanelProps = {
-  rowLabels: ArrowPathControlPanelRowLabels;
+export type ArrowLineControlPanelProps = {
+  rowLabels: ArrowLineControlPanelRowLabels;
   deckPathAttributeBytesPerSegment: number;
 };
 
-export type ArrowPathControlPanelRowCountKind = keyof ArrowPathControlPanelRowLabels;
-export type ArrowPathControlPanelCoordinateKind = 'float32' | 'float64' | 'dense-union';
-export type ArrowPathControlPanelColorKind = 'none' | 'row-colors' | 'vertex-colors';
-export type ArrowPathControlPanelTimeKind = ArrowPathRendererTimeColumn;
-export type ArrowPathControlPanelCapKind = 'square' | 'round';
-export type ArrowPathControlPanelJointKind = 'miter' | 'round';
+export type ArrowLineControlPanelRowCountKind = keyof ArrowLineControlPanelRowLabels;
+export type ArrowLineControlPanelMode = ArrowLineRendererMode;
+export type ArrowLineControlPanelCoordinateKind = 'float32' | 'float64' | 'dense-union';
+export type ArrowLineControlPanelColorKind = 'none' | 'row-colors' | 'vertex-colors';
+export type ArrowLineControlPanelTimeKind = ArrowLineRendererTimeColumn;
+export type ArrowLineControlPanelCapKind = 'square' | 'round';
+export type ArrowLineControlPanelJointKind = 'miter' | 'round';
 
-export type ArrowPathControlPanelState = {
-  rowCountKind: ArrowPathControlPanelRowCountKind;
-  coordinateKind: ArrowPathControlPanelCoordinateKind;
-  colorKind: ArrowPathControlPanelColorKind;
-  timeKind: ArrowPathControlPanelTimeKind;
-  modelKind: ArrowPathRendererModel;
-  capKind: ArrowPathControlPanelCapKind;
-  jointKind: ArrowPathControlPanelJointKind;
+export type ArrowLineControlPanelState = {
+  mode: ArrowLineControlPanelMode;
+  rowCountKind: ArrowLineControlPanelRowCountKind;
+  coordinateKind: ArrowLineControlPanelCoordinateKind;
+  colorKind: ArrowLineControlPanelColorKind;
+  timeKind: ArrowLineControlPanelTimeKind;
+  modelKind: ArrowLineRendererModel;
+  capKind: ArrowLineControlPanelCapKind;
+  jointKind: ArrowLineControlPanelJointKind;
   miterLimit: number;
 };
 
-export type ArrowPathControlPanelMetrics = {
+export type ArrowLineControlPanelMetrics = {
   pathCount: string;
   segmentCount: string;
   pathArrowBytes: string;
@@ -86,31 +93,33 @@ export type ArrowPathControlPanelMetrics = {
   deckGpuExpansion: string;
 };
 
-export type ArrowPathControlPanelHandlers = {
-  onRowCountChange: (rowCountKind: ArrowPathControlPanelRowCountKind) => void | Promise<void>;
-  onCoordinateChange: (coordinateKind: ArrowPathControlPanelCoordinateKind) => void | Promise<void>;
-  onColorChange: (colorKind: ArrowPathControlPanelColorKind) => void | Promise<void>;
-  onTimeChange: (timeKind: ArrowPathControlPanelTimeKind) => void | Promise<void>;
-  onModelChange: (modelKind: ArrowPathRendererModel) => void;
+export type ArrowLineControlPanelHandlers = {
+  onRowCountChange: (rowCountKind: ArrowLineControlPanelRowCountKind) => void | Promise<void>;
+  onModeChange: (mode: ArrowLineControlPanelMode) => void | Promise<void>;
+  onCoordinateChange: (coordinateKind: ArrowLineControlPanelCoordinateKind) => void | Promise<void>;
+  onColorChange: (colorKind: ArrowLineControlPanelColorKind) => void | Promise<void>;
+  onTimeChange: (timeKind: ArrowLineControlPanelTimeKind) => void | Promise<void>;
+  onModelChange: (modelKind: ArrowLineRendererModel) => void;
   onMeasureSweepChange: (enabled: boolean) => void;
   onWidthChange: (enabled: boolean) => void;
-  onCapChange: (capKind: ArrowPathControlPanelCapKind) => void;
-  onJointChange: (jointKind: ArrowPathControlPanelJointKind) => void;
+  onCapChange: (capKind: ArrowLineControlPanelCapKind) => void;
+  onJointChange: (jointKind: ArrowLineControlPanelJointKind) => void;
   onMiterLimitChange: (miterLimit: number) => void;
 };
 
-export type ArrowPathModelControlPanelOptions = {
+export type ArrowLineControlPanelOptions = {
   device: Device;
-  initialState: ArrowPathControlPanelState;
-  handlers: ArrowPathControlPanelHandlers;
+  initialState: ArrowLineControlPanelState;
+  handlers: ArrowLineControlPanelHandlers;
 };
 
-export class ArrowPathModelControlPanel {
+export class ArrowLineControlPanel {
   private readonly device: Device;
-  private readonly handlers: ArrowPathControlPanelHandlers;
-  private state: ArrowPathControlPanelState;
+  private readonly handlers: ArrowLineControlPanelHandlers;
+  private state: ArrowLineControlPanelState;
   private modelSelector: HTMLSelectElement | null = null;
   private rowCountSelector: HTMLSelectElement | null = null;
+  private modeSelector: HTMLSelectElement | null = null;
   private coordinateSelector: HTMLSelectElement | null = null;
   private colorColumnSelector: HTMLSelectElement | null = null;
   private timeColumnSelector: HTMLSelectElement | null = null;
@@ -141,7 +150,7 @@ export class ArrowPathModelControlPanel {
   private streamingBatchFill: HTMLElement | null = null;
   private streamingBatchStatusLabel: HTMLElement | null = null;
 
-  constructor({device, initialState, handlers}: ArrowPathModelControlPanelOptions) {
+  constructor({device, initialState, handlers}: ArrowLineControlPanelOptions) {
     this.device = device;
     this.state = initialState;
     this.handlers = handlers;
@@ -152,6 +161,7 @@ export class ArrowPathModelControlPanel {
     this.rowCountSelector = document.getElementById(
       ROW_COUNT_SELECTOR_ID
     ) as HTMLSelectElement | null;
+    this.modeSelector = document.getElementById(MODE_SELECTOR_ID) as HTMLSelectElement | null;
     this.coordinateSelector = document.getElementById(
       COORDINATE_SELECTOR_ID
     ) as HTMLSelectElement | null;
@@ -195,6 +205,7 @@ export class ArrowPathModelControlPanel {
     this.syncControls(this.state);
     this.modelSelector?.addEventListener('change', this.handleModelSelection);
     this.rowCountSelector?.addEventListener('change', this.handleRowCountSelection);
+    this.modeSelector?.addEventListener('change', this.handleModeSelection);
     this.coordinateSelector?.addEventListener('change', this.handleCoordinateSelection);
     this.colorColumnSelector?.addEventListener('change', this.handleColorColumnSelection);
     this.timeColumnSelector?.addEventListener('change', this.handleTimeColumnSelection);
@@ -208,6 +219,7 @@ export class ArrowPathModelControlPanel {
   destroy(): void {
     this.modelSelector?.removeEventListener('change', this.handleModelSelection);
     this.rowCountSelector?.removeEventListener('change', this.handleRowCountSelection);
+    this.modeSelector?.removeEventListener('change', this.handleModeSelection);
     this.coordinateSelector?.removeEventListener('change', this.handleCoordinateSelection);
     this.colorColumnSelector?.removeEventListener('change', this.handleColorColumnSelection);
     this.timeColumnSelector?.removeEventListener('change', this.handleTimeColumnSelection);
@@ -218,10 +230,13 @@ export class ArrowPathModelControlPanel {
     this.miterLimitInput?.removeEventListener('input', this.handleMiterLimitInput);
   }
 
-  syncControls(state: Partial<ArrowPathControlPanelState>): void {
+  syncControls(state: Partial<ArrowLineControlPanelState>): void {
     this.state = {...this.state, ...state};
     if (this.rowCountSelector) {
       this.rowCountSelector.value = this.state.rowCountKind;
+    }
+    if (this.modeSelector) {
+      this.modeSelector.value = this.state.mode;
     }
     if (this.coordinateSelector) {
       this.coordinateSelector.value = this.state.coordinateKind;
@@ -248,7 +263,7 @@ export class ArrowPathModelControlPanel {
     this.syncMiterLimitControls();
   }
 
-  setMetricValues(metrics: ArrowPathControlPanelMetrics): void {
+  setMetricValues(metrics: ArrowLineControlPanelMetrics): void {
     setMetricText(this.pathCountLabel, metrics.pathCount);
     setMetricText(this.segmentCountLabel, metrics.segmentCount);
     setMetricText(this.pathArrowBytesLabel, metrics.pathArrowBytes);
@@ -302,21 +317,28 @@ export class ArrowPathModelControlPanel {
 
   private readonly handleRowCountSelection = (): void => {
     const nextRowCountKind = this.rowCountSelector?.value;
-    if (isArrowPathControlPanelRowCountKind(nextRowCountKind)) {
+    if (isArrowLineControlPanelRowCountKind(nextRowCountKind)) {
       void this.handlers.onRowCountChange(nextRowCountKind);
+    }
+  };
+
+  private readonly handleModeSelection = (): void => {
+    const nextMode = this.modeSelector?.value;
+    if (isArrowLineControlPanelMode(nextMode)) {
+      void this.handlers.onModeChange(nextMode);
     }
   };
 
   private readonly handleCoordinateSelection = (): void => {
     const nextCoordinateKind = this.coordinateSelector?.value;
-    if (isArrowPathControlPanelCoordinateKind(nextCoordinateKind)) {
+    if (isArrowLineControlPanelCoordinateKind(nextCoordinateKind)) {
       void this.handlers.onCoordinateChange(nextCoordinateKind);
     }
   };
 
   private readonly handleColorColumnSelection = (): void => {
     const nextColorKind = this.colorColumnSelector?.value;
-    if (isArrowPathControlPanelColorKind(nextColorKind)) {
+    if (isArrowLineControlPanelColorKind(nextColorKind)) {
       void this.handlers.onColorChange(nextColorKind);
     }
   };
@@ -324,7 +346,7 @@ export class ArrowPathModelControlPanel {
   private readonly handleTimeColumnSelection = (): void => {
     const nextTimeKind = this.timeColumnSelector?.value;
     if (
-      isArrowPathControlPanelTimeKind(nextTimeKind) &&
+      isArrowLineControlPanelTimeKind(nextTimeKind) &&
       (nextTimeKind !== 'timestamps' || this.device.type === 'webgpu')
     ) {
       void this.handlers.onTimeChange(nextTimeKind);
@@ -334,7 +356,7 @@ export class ArrowPathModelControlPanel {
   private readonly handleModelSelection = (): void => {
     const nextModelKind = this.modelSelector?.value;
     if (
-      isArrowPathRendererModel(nextModelKind) &&
+      isArrowLineRendererModel(nextModelKind) &&
       (nextModelKind !== 'storage' || this.device.type === 'webgpu') &&
       (nextModelKind !== 'attribute' || this.state.timeKind !== 'timestamps')
     ) {
@@ -366,9 +388,22 @@ export class ArrowPathModelControlPanel {
   };
 
   private updateSelectorAvailability(): void {
+    const isPolygonMode = this.state.mode === 'polygons';
+    if (this.coordinateSelector) {
+      for (const option of Array.from(this.coordinateSelector.options)) {
+        option.disabled = isPolygonMode && option.value !== 'dense-union';
+      }
+    }
+    if (this.colorColumnSelector) {
+      for (const option of Array.from(this.colorColumnSelector.options)) {
+        option.disabled = isPolygonMode && option.value === 'vertex-colors';
+      }
+    }
     if (this.timeColumnSelector) {
       for (const option of Array.from(this.timeColumnSelector.options)) {
-        option.disabled = option.value === 'timestamps' && this.device.type !== 'webgpu';
+        option.disabled =
+          (isPolygonMode && option.value !== 'none') ||
+          (option.value === 'timestamps' && this.device.type !== 'webgpu');
       }
     }
     if (!this.modelSelector) {
@@ -380,7 +415,7 @@ export class ArrowPathModelControlPanel {
           (this.device.type !== 'webgpu' || this.state.timeKind === 'timestamps')) ||
         (option.value === 'attribute' && this.state.timeKind === 'timestamps') ||
         (option.value === 'trips' &&
-          (this.device.type !== 'webgpu' || this.state.timeKind !== 'timestamps'));
+          (this.device.type !== 'webgpu' || this.state.timeKind !== 'timestamps' || isPolygonMode));
       if (option.value === 'auto') {
         option.textContent = `auto (${getAutoPathModelLabel(this.device, this.state.timeKind)})`;
       }
@@ -398,12 +433,12 @@ export class ArrowPathModelControlPanel {
   }
 }
 
-export function makeArrowPathModelControlPanelHtml({
+export function makeArrowLineControlPanelHtml({
   rowLabels,
   deckPathAttributeBytesPerSegment
-}: ArrowPathControlPanelProps): string {
+}: ArrowLineControlPanelProps): string {
   return `\
-  <p>Renders nested Arrow coordinate lists through a deck-style <code>ArrowPathRenderer</code> POC, one logical Arrow row per path.</p>
+  <p>Renders Arrow line rows through <code>ArrowLineRenderer</code>, including DenseUnion line strings and polygon outlines.</p>
   <div style="max-height: calc(100vh - 72px); overflow-y: auto; overflow-x: hidden; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <section style="overflow: visible; margin-bottom: 12px; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Table</h3>
@@ -413,16 +448,21 @@ export function makeArrowPathModelControlPanelHtml({
           <option value="240-stream">${rowLabels['240-stream']}</option>
           <option value="2400-stream">${rowLabels['2400-stream']}</option>
         </select>
+        <label for="${MODE_SELECTOR_ID}">Mode</label>
+        <select id="${MODE_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+          <option value="lines">Lines</option>
+          <option value="polygons">Polygon outlines</option>
+        </select>
         <span>Batches</span>
         <div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" style="box-sizing: border-box; display: none; position: relative; width: 100%; min-width: 0; height: 34px; overflow: hidden; border: 1px solid rgba(37, 99, 235, 0.32); border-radius: 6px; background: #dbeafe; color: #0f172a; font-size: 13px; line-height: 1.4;">
           <span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #93c5fd 0%, #2563eb 100%); transition: width 220ms ease;"></span>
           <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 8px; color: #0f172a; font-weight: 700; font-variant-numeric: tabular-nums;">Loaded 0 batches</span>
         </div>
-        <label for="${COORDINATE_SELECTOR_ID}">Paths</label>
+        <label for="${COORDINATE_SELECTOR_ID}">Lines</label>
         <select id="${COORDINATE_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
           <option value="float32">Float32 - List&lt;FixedSizeList&lt;Float32, 4&gt;&gt;</option>
           <option value="float64">Float64 - List&lt;FixedSizeList&lt;Float64, 4&gt;&gt;</option>
-          <option value="dense-union">DenseUnion - LineString XYM/XYZM</option>
+          <option value="dense-union">DenseUnion - LineString/MultiLineString or Polygon/MultiPolygon</option>
         </select>
         <label for="${COLOR_COLUMN_SELECTOR_ID}">Colors</label>
         <select id="${COLOR_COLUMN_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
@@ -479,7 +519,7 @@ export function makeArrowPathModelControlPanelHtml({
           <option value="auto">auto</option>
         </select>
       </div>
-      ${makeMetricRow('Arrow path rows', PATH_COUNT_ID)}
+      ${makeMetricRow('Arrow line rows', PATH_COUNT_ID)}
       ${makeMetricRow('Generated segment rows', SEGMENT_COUNT_ID)}
       <table style="display: table; width: 100%; min-width: 100%; table-layout: fixed; box-sizing: border-box; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); border-collapse: collapse; color: #334155; font-size: 13px; line-height: 1.4;">
         <thead>
@@ -500,7 +540,7 @@ export function makeArrowPathModelControlPanelHtml({
             <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
           </tr>
           <tr>
-            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">paths + time</th>
+            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">lines + time</th>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
@@ -533,7 +573,7 @@ export function makeArrowPathModelControlPanelHtml({
         <summary style="cursor: pointer; color: #0f172a; font-weight: 700;">What this example isolates</summary>
         <table style="width: 100%; margin-top: 10px; border-collapse: collapse; color: #334155; font-size: 12px; line-height: 1.4;">
           <tbody>
-            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Input</td><td style="padding: 7px 0;">Nested Float32 XYZM Arrow lists, CPU-prepared Float64 lists, or DenseUnion LineString rows plus selectable row color columns, path-aligned color lists, and aligned List&lt;Timestamp&gt; rows</td></tr>
+            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Input</td><td style="padding: 7px 0;">Nested Float32 XYZM Arrow lists, CPU-prepared Float64 lists, DenseUnion LineString/MultiLineString rows, or DenseUnion Polygon/MultiPolygon outline rings plus selectable row color columns, line-aligned color lists, and aligned List&lt;Timestamp&gt; rows</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Time</td><td style="padding: 7px 0;">AttributePathModel and StoragePathModel read numeric M from XYZM; StorageTripsPathModel normalizes List&lt;Timestamp&gt; to relative Float32 milliseconds and filters the trail in storage</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Shared drawing</td><td style="padding: 7px 0;">All modes render the same miter/round joins and square/round caps; storage modes keep generated segment records indexed</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Attribute model</td><td style="padding: 7px 0;">CPU expansion builds segment records and repeats selected style rows into render attributes</td></tr>
@@ -551,31 +591,37 @@ function makeMetricRow(label: string, id: string): string {
   return `<div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(226, 232, 240, 0.9); color: #334155; font-size: 13px; line-height: 1.4;"><span>${label}</span><strong id="${id}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></div>`;
 }
 
-function isArrowPathControlPanelRowCountKind(
+function isArrowLineControlPanelRowCountKind(
   value: string | undefined
-): value is ArrowPathControlPanelRowCountKind {
+): value is ArrowLineControlPanelRowCountKind {
   return value === '240-stream' || value === '2400-stream';
 }
 
-function isArrowPathControlPanelCoordinateKind(
+function isArrowLineControlPanelMode(
   value: string | undefined
-): value is ArrowPathControlPanelCoordinateKind {
+): value is ArrowLineControlPanelMode {
+  return value === 'lines' || value === 'polygons';
+}
+
+function isArrowLineControlPanelCoordinateKind(
+  value: string | undefined
+): value is ArrowLineControlPanelCoordinateKind {
   return value === 'float32' || value === 'float64' || value === 'dense-union';
 }
 
-function isArrowPathControlPanelColorKind(
+function isArrowLineControlPanelColorKind(
   value: string | undefined
-): value is ArrowPathControlPanelColorKind {
+): value is ArrowLineControlPanelColorKind {
   return value === 'none' || value === 'row-colors' || value === 'vertex-colors';
 }
 
-function isArrowPathControlPanelTimeKind(
+function isArrowLineControlPanelTimeKind(
   value: string | undefined
-): value is ArrowPathControlPanelTimeKind {
+): value is ArrowLineControlPanelTimeKind {
   return value === 'none' || value === 'xyzm' || value === 'timestamps';
 }
 
-function isArrowPathRendererModel(value: string | undefined): value is ArrowPathRendererModel {
+function isArrowLineRendererModel(value: string | undefined): value is ArrowLineRendererModel {
   return value === 'attribute' || value === 'storage' || value === 'trips' || value === 'auto';
 }
 
@@ -586,7 +632,7 @@ function getStreamingBatchProgressPercent(
   return streamingBatchCount > 0 ? (loadedBatchCount / streamingBatchCount) * 100 : 0;
 }
 
-function getAutoPathModelLabel(device: Device, timeKind: ArrowPathControlPanelTimeKind): string {
+function getAutoPathModelLabel(device: Device, timeKind: ArrowLineControlPanelTimeKind): string {
   if (device.type !== 'webgpu') {
     return 'attribute';
   }

@@ -21,8 +21,9 @@ const sidebars = {
       label: 'Apache Arrow',
       items: [
         'arrow/arrow-points',
-        'arrow/arrow-path-model',
+        'arrow/arrow-lines',
         'arrow/arrow-polygons',
+        'arrow/arrow-geoarrow',
         'arrow/arrow-text-2d',
         'arrow/arrow-temporal-starfield',
         'arrow/arrow-time-columns',

@@ -5,7 +5,7 @@
 import type {ShaderLayout} from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT} from './arrow-path-data';
+import {TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT} from './arrow-line-data';
 
 export const PATH_SHADER_LAYOUT = {
   attributes: [
@@ -884,7 +884,7 @@ export const pathViewport: ShaderModule<PathViewportUniforms> = {
   }
 };
 
-export function createArrowPathShaderInputs(): ShaderInputs<{
+export function createArrowLineShaderInputs(): ShaderInputs<{
   pathViewport: typeof pathViewport.props;
 }> {
   return new ShaderInputs<{pathViewport: typeof pathViewport.props}>({

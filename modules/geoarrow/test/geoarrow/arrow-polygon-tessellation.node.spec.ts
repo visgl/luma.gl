@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {readFileSync} from 'node:fs';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {tesselateAsync, tessellateArrowPolygons} from '@math.gl/geoarrow';
 import * as arrow from 'apache-arrow';
@@ -371,6 +372,118 @@ test('tessellateArrowPolygons normalizes Float64 source coordinates to Float32 p
   t.end();
 });
 
+test('tessellateArrowPolygons normalizes separated GeoArrow polygon fixtures', t => {
+  const separatedPolygons = getGeoArrowFixtureGeometry('example_polygon.arrows');
+  const interleavedPolygons = getGeoArrowFixtureGeometry('example_polygon_interleaved.arrows');
+
+  const separatedResult = tessellateArrowPolygons({polygons: separatedPolygons});
+  const interleavedResult = tessellateArrowPolygons({polygons: interleavedPolygons});
+
+  t.equal(separatedResult.sourceDimension, 2, 'tracks the separated XY source dimension');
+  t.deepEqual(
+    Array.from(separatedResult.positions),
+    Array.from(interleavedResult.positions),
+    'matches interleaved polygon positions'
+  );
+  t.deepEqual(
+    Array.from(separatedResult.indices),
+    Array.from(interleavedResult.indices),
+    'matches interleaved polygon indices'
+  );
+  t.end();
+});
+
+test('tessellateArrowPolygons normalizes separated GeoArrow multipolygon fixtures', t => {
+  const separatedPolygons = getGeoArrowFixtureGeometry('example_multipolygon.arrows');
+  const interleavedPolygons = getGeoArrowFixtureGeometry('example_multipolygon_interleaved.arrows');
+
+  const separatedResult = tessellateArrowPolygons({polygons: separatedPolygons});
+  const interleavedResult = tessellateArrowPolygons({polygons: interleavedPolygons});
+
+  t.equal(separatedResult.sourceDimension, 2, 'tracks the separated XY source dimension');
+  t.equal(separatedResult.polygonCount, interleavedResult.polygonCount, 'matches polygon count');
+  t.deepEqual(
+    Array.from(separatedResult.positions),
+    Array.from(interleavedResult.positions),
+    'matches interleaved multipolygon positions'
+  );
+  t.deepEqual(
+    Array.from(separatedResult.indices),
+    Array.from(interleavedResult.indices),
+    'matches interleaved multipolygon indices'
+  );
+  t.end();
+});
+
+test('tessellateArrowPolygons preserves separated GeoArrow ZM coordinates', t => {
+  const separatedPolygons = getGeoArrowFixtureGeometry('example_polygon-zm.arrows');
+  const interleavedPolygons = getGeoArrowFixtureGeometry('example_polygon-zm_interleaved.arrows');
+
+  const separatedResult = tessellateArrowPolygons({polygons: separatedPolygons});
+  const interleavedResult = tessellateArrowPolygons({polygons: interleavedPolygons});
+
+  t.equal(separatedResult.sourceDimension, 4, 'tracks separated XYZM source dimensions');
+  t.deepEqual(
+    Array.from(separatedResult.positions),
+    Array.from(interleavedResult.positions),
+    'matches interleaved ZM polygon positions'
+  );
+  t.end();
+});
+
+test('tessellateArrowPolygons accepts separated GeoArrow DenseUnion polygon rows', t => {
+  const polygons = makeSeparatedDenseUnionGeometryVector(
+    [[99, 99]],
+    [
+      [
+        [
+          [0, 0],
+          [2, 0],
+          [2, 2],
+          [0, 2]
+        ]
+      ]
+    ],
+    [
+      [
+        [
+          [
+            [3, 0],
+            [4, 0],
+            [4, 1],
+            [3, 1]
+          ]
+        ],
+        [
+          [
+            [5, 0],
+            [6, 0],
+            [6, 1],
+            [5, 1]
+          ]
+        ]
+      ]
+    ],
+    [
+      {typeId: 1, valueOffset: 0},
+      {typeId: 3, valueOffset: 0},
+      {typeId: 6, valueOffset: 0}
+    ]
+  );
+
+  const result = tessellateArrowPolygons({polygons});
+
+  t.equal(result.rowCount, 3, 'keeps the DenseUnion row count');
+  t.equal(result.polygonCount, 3, 'counts only Polygon and MultiPolygon primitive polygons');
+  t.deepEqual(Array.from(result.rowIndices.slice(0, 4)), [1, 1, 1, 1], 'skips point row 0');
+  t.deepEqual(
+    Array.from(result.rowIndices.slice(4)),
+    new Array(8).fill(2),
+    'uses union row 2 for all MultiPolygon vertices'
+  );
+  t.end();
+});
+
 test('tessellateArrowPolygons tessellates large polygons with holes', t => {
   const outerRing = makeCircleRing(10, 96);
   const holeRing = makeCircleRing(3, 32, true);
@@ -498,6 +611,84 @@ function makeDenseUnionGeometryVector(
   return arrow.makeVector(unionData);
 }
 
+function makeSeparatedDenseUnionGeometryVector(
+  pointRows: Coordinate[],
+  polygonRows: Coordinate[][][],
+  multiPolygonRows: Coordinate[][][][],
+  rows: {typeId: 1 | 3 | 6; valueOffset: number}[]
+): arrow.Vector<any> {
+  const pointVector = makeSeparatedPointVector(pointRows);
+  const polygonVector = makeSeparatedNestedVector(polygonRows, 2);
+  const multiPolygonVector = makeSeparatedNestedVector(multiPolygonRows, 3);
+  const unionType = new arrow.DenseUnion(
+    [1, 3, 6],
+    [
+      new arrow.Field('Point', pointVector.type, true),
+      new arrow.Field('Polygon', polygonVector.type, true),
+      new arrow.Field('MultiPolygon', multiPolygonVector.type, true)
+    ]
+  );
+  const unionData = arrow.makeData({
+    type: unionType,
+    length: rows.length,
+    nullCount: 0,
+    typeIds: Int8Array.from(rows.map(row => row.typeId)),
+    valueOffsets: Int32Array.from(rows.map(row => row.valueOffset)),
+    children: [pointVector.data[0], polygonVector.data[0], multiPolygonVector.data[0]]
+  });
+
+  return arrow.makeVector(unionData);
+}
+
+function makeSeparatedPointVector(rows: Coordinate[]): arrow.Vector<any> {
+  const dimension = rows[0].length;
+  const coordinateData = makeSeparatedCoordinateData(dimension, flattenCoordinates(rows));
+  return new arrow.Vector([coordinateData]);
+}
+
+function makeSeparatedNestedVector(
+  rows: Coordinate[][][] | Coordinate[][][][],
+  nesting: 2 | 3
+): arrow.Vector<any> {
+  const dimension = getFirstCoordinate(rows).length;
+  const coordinateData = makeSeparatedCoordinateData(dimension, flattenCoordinates(rows));
+
+  if (nesting === 2) {
+    const ringOffsets = getDepth2RingOffsets(rows as Coordinate[][][]);
+    const polygonOffsets = getDepth2RowOffsets(rows as Coordinate[][][]);
+    const ringData = makeListData(coordinateData, ringOffsets);
+    return new arrow.Vector([makeListData(ringData, polygonOffsets)]);
+  }
+
+  const ringOffsets = getDepth3RingOffsets(rows as Coordinate[][][][]);
+  const polygonOffsets = getDepth3PolygonOffsets(rows as Coordinate[][][][]);
+  const rowOffsets = getDepth3RowOffsets(rows as Coordinate[][][][]);
+  const ringData = makeListData(coordinateData, ringOffsets);
+  const polygonData = makeListData(ringData, polygonOffsets);
+  return new arrow.Vector([makeListData(polygonData, rowOffsets)]);
+}
+
+function makeSeparatedCoordinateData(
+  dimension: number,
+  coordinates: number[]
+): arrow.Data<arrow.Struct> {
+  const fields = ['x', 'y', 'z', 'm']
+    .slice(0, dimension)
+    .map(name => new arrow.Field(name, new arrow.Float64(), false));
+  const coordinateCount = coordinates.length / dimension;
+  const children = fields.map((field, componentIndex) => {
+    const values = new Float64Array(coordinateCount);
+    for (let coordinateIndex = 0; coordinateIndex < coordinateCount; coordinateIndex++) {
+      values[coordinateIndex] = coordinates[coordinateIndex * dimension + componentIndex];
+    }
+    return new arrow.Data(field.type, 0, coordinateCount, 0, {
+      [arrow.BufferType.DATA]: values
+    });
+  });
+
+  return new arrow.Data(new arrow.Struct(fields), 0, coordinateCount, 0, {}, children);
+}
+
 function makeRowColorVector(colors: Color[]): arrow.Vector<any> {
   return new arrow.Vector([
     makeFixedSizeListData(new arrow.Uint8(), 4, Uint8Array.from(colors.flat()))
@@ -603,4 +794,10 @@ function flattenNumbers(value: unknown): number[] {
     return [Number(value)];
   }
   return value.flatMap(item => flattenNumbers(item));
+}
+
+function getGeoArrowFixtureGeometry(name: string): arrow.Vector<any> {
+  const url = new URL(`../data/geoarrow-data/${name}`, import.meta.url);
+  const table = arrow.tableFromIPC(readFileSync(url));
+  return table.getChild('geometry')!;
 }

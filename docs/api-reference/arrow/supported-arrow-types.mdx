@@ -70,9 +70,10 @@ schema fields with `nullCount: 0`.
 
 The [Points example](/examples/arrow/arrow-points) demonstrates `FixedSizeList<Float32, 2 | 3 | 4>`
 and DenseUnion point rows, including M-coordinate or timestamp animation and hover
-identity labels. The [Paths example](/examples/arrow/arrow-path-model) demonstrates
-DenseUnion LineString rows by normalizing them one-for-one into prepared path rows before
-the path models consume them.
+identity labels. The [Lines example](/examples/arrow/arrow-lines) demonstrates
+DenseUnion line rows and polygon outlines by normalizing them into prepared line rows
+before the path models consume them. The [GeoArrow example](/examples/arrow/arrow-geoarrow)
+routes a mixed DenseUnion geometry column through point, line, and polygon renderers.
 
 ### Matrix-valued Columns
 

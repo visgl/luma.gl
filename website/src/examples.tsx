@@ -8,7 +8,8 @@ import CubemapApp from '../../examples/api/cubemap/app';
 import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
 import ArrowColumnRendererApp from '../../examples/arrow/arrow-columns/app';
 import ArrowMeshGeometryApp from '../../examples/arrow/arrow-mesh-geometry/app';
-import ArrowPathModelApp from '../../examples/arrow/arrow-path-model/app';
+import ArrowGeoArrowApp from '../../examples/arrow/arrow-geoarrow/app';
+import ArrowLinesApp from '../../examples/arrow/arrow-lines/app';
 import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
 import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
@@ -169,12 +170,24 @@ export const ArrowTemporalStarfieldExample: React.FC = props => (
   />
 );
 
-export const ArrowPathModelExample: React.FC = props => (
+export const ArrowLinesExample: React.FC = props => (
   <LumaExample
-    id="arrow-path-model"
-    title="Paths"
+    id="arrow-lines"
+    title="Lines"
     directory="arrow"
-    template={ArrowPathModelApp}
+    template={ArrowLinesApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowGeoArrowExample: React.FC = props => (
+  <LumaExample
+    id="arrow-geoarrow"
+    title="GeoArrow"
+    directory="arrow"
+    template={ArrowGeoArrowApp}
     config={exampleConfig}
     showStats
     {...props}
