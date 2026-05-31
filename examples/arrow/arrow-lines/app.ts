@@ -202,7 +202,11 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     const pathInput = await prepareArrowLineInputFromRecordBatches(
       this.device,
       [firstRecordBatch],
-      mode
+      {
+        mode,
+        model: this.activePathModelKind,
+        timeColumn: timeKind
+      }
     );
     return {pathInput, recordBatches, arrowVectorBuildTimeMs};
   }
@@ -357,7 +361,9 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     );
   };
 
-  readonly handleModelSelection = (requestedPathModelKind: ArrowLineRendererModel): void => {
+  readonly handleModelSelection = async (
+    requestedPathModelKind: ArrowLineRendererModel
+  ): Promise<void> => {
     const nextPathModelKind = getValidPathModelKindForTimeKind(
       requestedPathModelKind,
       this.activeTimeKind
@@ -365,7 +371,14 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     if (nextPathModelKind === this.activePathModelKind) {
       return;
     }
-    this.updatePathRendererProps({model: nextPathModelKind});
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      this.activeMode,
+      this.activeCoordinateKind,
+      this.activeColorKind,
+      this.activeTimeKind,
+      nextPathModelKind
+    );
   };
 
   async replacePathInput(

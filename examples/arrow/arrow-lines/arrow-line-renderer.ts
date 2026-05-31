@@ -6,14 +6,17 @@ import {
   AttributePathModel,
   StoragePathModel,
   StorageTripsPathModel,
+  convertArrowPathsToStorage,
   convertArrowPathsToAttribute,
+  convertArrowTripsToStorage,
   getArrowVectorByteLength,
   makeArrowFixedSizeListVector,
   prepareArrowTemporalGPUVector,
-  type ArrowPathPreparedState
+  type ArrowPathPreparedState,
+  type ArrowStoragePathInputProps
 } from '@luma.gl/arrow';
 import {type CommandEncoder, type Device} from '@luma.gl/core';
-import {GPURenderable, type GPUVector, type VertexList} from '@luma.gl/tables';
+import {GPURenderable, GPUVector, type GPUVectorFormat, type VertexList} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createArrowLineShaderInputs,
@@ -102,33 +105,70 @@ type DenseUnionGeometryKind =
   | 'MultiPolygon'
   | 'GeometryCollection';
 
-/** Prepared GPUVector data consumed by Arrow path models. */
-export type ArrowLineRendererData = {
+/** Prepared GPUVector data consumed by the attribute path model. */
+export type ArrowLineAttributeRendererData = {
+  /** Resolved model this data was prepared for. */
+  model: 'attribute';
   /** GPU path coordinate rows. */
   paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
   /** Optional GPU row or per-vertex colors. */
   colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
   /** Optional GPU per-row widths. */
-  widths?: GPUVector<'float32'>;
+  widths?: GPUVector;
   /** Optional GPU per-vertex relative timestamps. */
   timestamps?: GPUVector<'vertex-list<float32>'>;
   /** Optional view origins generated during coordinate normalization. */
   viewOrigins?: GPUVector<'float32x4'>;
   /** Prepared path state shared by attribute path rendering. */
   pathState: ArrowPathPreparedState;
+  /** Global source row index assigned to local path row zero. */
+  rowIndexOffset?: number;
   /** Releases all resources owned by this prepared data object. */
   destroy: () => void;
 };
 
-/** Prepared path data plus byte-size metrics shown by the example control panel. */
-export type ArrowLineRendererInput = ArrowLineRendererData & {
+/** Prepared GPUVector data consumed by storage-backed path models. */
+export type ArrowLineStorageRendererData = {
+  /** Resolved model this data was prepared for. */
+  model: 'storage' | 'trips';
+  /** GPU path coordinate rows. */
+  paths: GPUVector;
+  /** Optional GPU row or per-vertex colors. */
+  colors?: GPUVector;
+  /** Optional GPU per-row widths. */
+  widths?: GPUVector;
+  /** Optional GPU per-vertex relative timestamps. */
+  timestamps?: GPUVector;
+  /** Optional view origins generated during coordinate normalization. */
+  viewOrigins?: GPUVector;
+  /** Props ready for storage-backed path model construction. */
+  storagePathProps: ArrowStoragePathInputProps;
+  /** Global source row index assigned to local path row zero. */
+  rowIndexOffset?: number;
+  /** Releases all resources owned by this prepared data object. */
+  destroy: () => void;
+};
+
+/** Prepared GPUVector data consumed by Arrow path models. */
+export type ArrowLineRendererData = ArrowLineAttributeRendererData | ArrowLineStorageRendererData;
+
+type ArrowLineRendererInputMetadata = {
   /** Required prepared widths vector for the example metrics and render paths. */
-  widths: GPUVector<'float32'>;
+  widths: GPUVector;
+  /** Global source row index assigned to local path row zero. */
+  rowIndexOffset: number;
   /** Bytes occupied by path coordinate and timestamp Arrow source vectors. */
   pathArrowByteLength: number;
   /** Bytes occupied by style Arrow source vectors. */
   styleArrowByteLength: number;
 };
+
+/** Prepared path data plus byte-size metrics shown by the example control panel. */
+export type ArrowLineRendererInput =
+  | (Omit<ArrowLineAttributeRendererData, 'widths' | 'rowIndexOffset'> &
+      ArrowLineRendererInputMetadata)
+  | (Omit<ArrowLineStorageRendererData, 'widths' | 'rowIndexOffset'> &
+      ArrowLineRendererInputMetadata);
 
 /** CPU Arrow source plus metric metadata used by example data generation helpers. */
 export type ArrowLineRendererSourceData = {
@@ -148,15 +188,35 @@ export type ArrowLineRendererSourceData = {
 export type ArrowLineRendererPrepareDataProps = {
   /** Source Arrow vectors to prepare. */
   sourceVectors: ArrowLineRendererSourceVectors;
+  /** Path rendering path. Defaults to `auto`. */
+  model?: ArrowLineRendererModel;
+  /** Source time column mode. Defaults to `xyzm`. */
+  timeColumn?: ArrowLineRendererTimeColumn;
   /** DenseUnion extraction mode. Defaults to `lines`. */
   mode?: ArrowLineRendererMode;
   /** Optional resource id prefix. */
   id?: string;
+  /** Global source row index assigned to local path row zero. */
+  rowIndexOffset?: number;
+};
+
+/** Options for preparing one Arrow line source or record-batch group. */
+export type ArrowLineRendererPreparationOptions = {
+  /** Path rendering path. Defaults to `auto`. */
+  model?: ArrowLineRendererModel;
+  /** Source time column mode. Defaults to `xyzm`. */
+  timeColumn?: ArrowLineRendererTimeColumn;
+  /** DenseUnion extraction mode. Defaults to `lines`. */
+  mode?: ArrowLineRendererMode;
+  /** Optional resource id prefix. */
+  id?: string;
+  /** Global source row index assigned to local path row zero. */
+  rowIndexOffset?: number;
 };
 
 /** Notification emitted when a path record batch stream updates the layer. */
 export type ArrowLineRendererRecordBatchStreamUpdate = {
-  /** Full prepared input for all batches loaded so far. */
+  /** Current retained prepared input for all loaded batches in the active stream. */
   pathInput: ArrowLineRendererInput;
   /** Number of loaded record batches. */
   loadedBatchCount: number;
@@ -192,12 +252,6 @@ export type ArrowLineRendererSetPropsResult = {
   modelChanged: boolean;
 };
 
-/** Arrow or prepared GPU data accepted by {@link ArrowLineRenderer}. */
-export type ArrowLineRendererDataInput =
-  | ArrowLineRendererData
-  | ArrowLineRendererSourceVectors
-  | ArrowLineRendererSourceData;
-
 /** Token used to cancel stale Arrow path streaming work. */
 export type ArrowLineRendererStreamingSession = {
   /** Monotonic stream version owned by the layer. */
@@ -212,8 +266,8 @@ type ArrowLineRendererSetPropsOptions = {
 export type ArrowLineRendererProps = {
   /** Debug label used for generated model resources. */
   id?: string;
-  /** Arrow source vectors or prepared GPU path data consumed by the layer. */
-  data: ArrowLineRendererDataInput;
+  /** Prepared GPU path data consumed by the renderer. */
+  data?: ArrowLineRendererData;
   /** Path rendering path. */
   model?: ArrowLineRendererModel;
   /** Source time column mode. */
@@ -258,10 +312,8 @@ export class ArrowLineRenderer extends GPURenderable<
   props: ArrowLineRendererProps;
   model: ArrowLineRendererActiveModel | null = null;
   resolvedModel: ArrowLineRendererResolvedModel;
-  private ownedPathInput: ArrowLineRendererData | null = null;
-  private activeStreamingPathInput: ArrowLineRendererInput | null = null;
+  private activeStreamingPathInputs: ArrowLineRendererInput[] = [];
   private streamingSessionVersion = 0;
-  private preparationVersion = 0;
   private isDestroyed = false;
 
   constructor(device: Device, props: ArrowLineRendererProps) {
@@ -269,7 +321,9 @@ export class ArrowLineRenderer extends GPURenderable<
     this.device = device;
     this.props = props;
     this.resolvedModel = this.resolveModel(props.model ?? 'auto', props.timeColumn ?? 'xyzm');
-    this.setPreparedOrPendingProps(props, true);
+    if (props.data) {
+      this.setPreparedProps({...props, data: props.data});
+    }
   }
 
   /**
@@ -282,40 +336,13 @@ export class ArrowLineRenderer extends GPURenderable<
     device: Device,
     props: ArrowLineRendererPrepareDataProps
   ): Promise<ArrowLineRendererData> {
-    const sourceVectors = normalizeArrowLineSourceVectors(
-      props.sourceVectors,
-      props.mode ?? 'lines'
-    );
-    const preparedTimestamps = sourceVectors.timestamps
-      ? await prepareArrowTemporalGPUVector(device, sourceVectors.timestamps, {
-          name: 'timestamps',
-          id: `${props.id ?? 'arrow-line-renderer'}-timestamps`
-        })
-      : null;
-    const prepared = await convertArrowPathsToAttribute(
-      device,
-      {
-        paths: sourceVectors.paths,
-        ...(sourceVectors.colors ? {colors: sourceVectors.colors} : {}),
-        ...(sourceVectors.widths ? {widths: sourceVectors.widths} : {})
-      },
-      {
-        id: props.id ?? 'arrow-line-renderer'
-      }
-    );
-
-    return {
-      paths: prepared.paths,
-      ...(prepared.colors ? {colors: prepared.colors} : {}),
-      ...(prepared.widths ? {widths: prepared.widths} : {}),
-      ...(preparedTimestamps ? {timestamps: preparedTimestamps.temporal} : {}),
-      ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
-      pathState: prepared.pathProps.pathState,
-      destroy: () => {
-        prepared.destroy();
-        preparedTimestamps?.destroy();
-      }
-    };
+    return convertArrowLineColumnsToGPUVectors(device, props.sourceVectors, {
+      model: props.model,
+      timeColumn: props.timeColumn,
+      id: props.id,
+      mode: props.mode,
+      rowIndexOffset: props.rowIndexOffset
+    });
   }
 
   setProps(
@@ -323,14 +350,23 @@ export class ArrowLineRenderer extends GPURenderable<
     options: ArrowLineRendererSetPropsOptions = {}
   ): ArrowLineRendererSetPropsResult {
     const nextProps = {...this.props, ...props};
-    const shouldCancelStreaming =
-      !options.preserveStreaming && props.data !== undefined && props.data !== this.props.data;
-    const streamingPathInputToDestroy = shouldCancelStreaming
-      ? this.activeStreamingPathInput
+    const nextModel = this.resolveModel(nextProps.model ?? 'auto', nextProps.timeColumn ?? 'xyzm');
+    const hasDataProp = Object.prototype.hasOwnProperty.call(props, 'data');
+    const dataChanged = hasDataProp && props.data !== this.props.data;
+    const modelChanged =
+      dataChanged ||
+      props.model !== undefined ||
+      props.timeColumn !== undefined ||
+      nextModel !== this.resolvedModel;
+    const shouldReplaceStreamingData =
+      !options.preserveStreaming &&
+      (dataChanged || props.model !== undefined || props.timeColumn !== undefined);
+    const streamingPathInputsToDestroy = shouldReplaceStreamingData
+      ? this.activeStreamingPathInputs
       : null;
-    if (shouldCancelStreaming) {
+    if (shouldReplaceStreamingData) {
       this.streamingSessionVersion++;
-      this.activeStreamingPathInput = null;
+      this.activeStreamingPathInputs = [];
     }
     this.props = nextProps;
 
@@ -338,23 +374,29 @@ export class ArrowLineRenderer extends GPURenderable<
       this.model.setProps({currentTime: props.currentTime});
     }
 
-    const nextModel = this.resolveModel(
-      nextProps.model ?? this.props.model ?? 'auto',
-      nextProps.timeColumn ?? this.props.timeColumn ?? 'xyzm'
-    );
-    const modelChanged =
-      props.data !== undefined ||
-      props.model !== undefined ||
-      props.timeColumn !== undefined ||
-      nextModel !== this.resolvedModel;
-
     if (!modelChanged) {
-      streamingPathInputToDestroy?.destroy();
+      destroyArrowLineInputs(streamingPathInputsToDestroy);
       return {modelChanged};
     }
 
-    this.setPreparedOrPendingProps(nextProps, true);
-    streamingPathInputToDestroy?.destroy();
+    if (
+      props.data === undefined &&
+      (hasDataProp || props.model !== undefined || props.timeColumn !== undefined)
+    ) {
+      this.clearPreparedProps(nextModel);
+      this.props = {...nextProps, data: undefined};
+      destroyArrowLineInputs(streamingPathInputsToDestroy);
+      return {modelChanged};
+    }
+
+    if (nextProps.data === undefined) {
+      this.clearPreparedProps(nextModel);
+      destroyArrowLineInputs(streamingPathInputsToDestroy);
+      return {modelChanged};
+    }
+
+    this.setPreparedProps({...nextProps, data: nextProps.data});
+    destroyArrowLineInputs(streamingPathInputsToDestroy);
     return {modelChanged};
   }
 
@@ -375,7 +417,8 @@ export class ArrowLineRenderer extends GPURenderable<
     streamingSession = this.beginRecordBatchStream(),
     onBatch
   }: ArrowLineRendererRecordBatchStreamProps): Promise<void> {
-    const sourceRecordBatches: arrow.RecordBatch[] = [];
+    let rowIndexOffset = 0;
+    let loadedBatchCount = 0;
 
     if (!this.isRecordBatchStreamActive(streamingSession)) {
       return;
@@ -390,33 +433,45 @@ export class ArrowLineRenderer extends GPURenderable<
         return;
       }
 
-      sourceRecordBatches.push(recordBatchResult.value);
       const pathInput = await prepareArrowLineInputFromRecordBatches(
         this.device,
-        sourceRecordBatches,
-        mode ?? 'lines'
+        [recordBatchResult.value],
+        {
+          model: model ?? this.props.model,
+          timeColumn: timeColumn ?? this.props.timeColumn,
+          mode: mode ?? this.props.mode ?? 'lines',
+          rowIndexOffset,
+          id: `${this.props.id ?? 'arrow-lines'}-${loadedBatchCount}`
+        }
       );
       if (!this.isRecordBatchStreamActive(streamingSession)) {
         pathInput.destroy();
         return;
       }
 
-      const previousStreamingPathInput = this.activeStreamingPathInput;
-      this.activeStreamingPathInput = pathInput;
-      const isFirstBatch = sourceRecordBatches.length === 1;
+      const isFirstBatch = loadedBatchCount === 0;
+      const previousStreamingPathInputs = isFirstBatch ? this.activeStreamingPathInputs : [];
+      if (isFirstBatch) {
+        this.activeStreamingPathInputs = [pathInput];
+      } else {
+        this.activeStreamingPathInputs.push(pathInput);
+      }
+      const retainedPathInput = makeRetainedArrowLineInput(this.activeStreamingPathInputs);
+      loadedBatchCount++;
+      rowIndexOffset += pathInput.paths.length;
       const setPropsResult = this.setProps(
         {
-          data: pathInput,
-          ...(isFirstBatch && model ? {model} : {}),
-          ...(isFirstBatch && timeColumn ? {timeColumn} : {}),
-          ...(isFirstBatch && mode ? {mode} : {})
+          data: retainedPathInput,
+          ...(model ? {model} : {}),
+          ...(timeColumn ? {timeColumn} : {}),
+          ...(mode ? {mode} : {})
         },
         {preserveStreaming: true}
       );
-      previousStreamingPathInput?.destroy();
+      destroyArrowLineInputs(previousStreamingPathInputs);
       onBatch?.({
-        pathInput,
-        loadedBatchCount: sourceRecordBatches.length,
+        pathInput: retainedPathInput,
+        loadedBatchCount,
         isFirstBatch,
         setPropsResult
       });
@@ -445,75 +500,42 @@ export class ArrowLineRenderer extends GPURenderable<
   destroy(): void {
     this.isDestroyed = true;
     this.streamingSessionVersion++;
-    const streamingPathInput = this.activeStreamingPathInput;
-    this.activeStreamingPathInput = null;
+    const streamingPathInputs = this.activeStreamingPathInputs;
+    this.activeStreamingPathInputs = [];
     this.model?.destroy();
-    this.ownedPathInput?.destroy();
-    streamingPathInput?.destroy();
+    this.model = null;
+    destroyArrowLineInputs(streamingPathInputs);
   }
 
   private resolveModel(
     modelKind: ArrowLineRendererModel,
     timeColumn: ArrowLineRendererTimeColumn
   ): ArrowLineRendererResolvedModel {
-    if (modelKind === 'auto') {
-      if (this.device.type !== 'webgpu') {
-        return 'attribute';
-      }
-      return timeColumn === 'timestamps' ? 'trips' : 'storage';
-    }
-    if (modelKind !== 'attribute' && this.device.type !== 'webgpu') {
-      return 'attribute';
-    }
-    if (modelKind === 'storage' && timeColumn === 'timestamps') {
-      return 'trips';
-    }
-    return modelKind;
+    return resolveArrowLineRendererModel(this.device, modelKind, timeColumn);
   }
 
   private isRecordBatchStreamActive(streamingSession: ArrowLineRendererStreamingSession): boolean {
     return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
 
-  private setPreparedOrPendingProps(
-    props: ArrowLineRendererProps,
-    preservePreparedInput: boolean
-  ): void {
-    const preparationVersion = ++this.preparationVersion;
-    if (isPreparedArrowLineRendererData(props.data)) {
-      this.setPreparedProps({...props, data: props.data}, preservePreparedInput);
-      return;
-    }
-
-    void this.prepareAndSetProps(props, preparationVersion);
-  }
-
-  private async prepareAndSetProps(
-    props: ArrowLineRendererProps,
-    preparationVersion: number
-  ): Promise<void> {
-    const preparedData = await prepareArrowLineRendererDataInput(this.device, props);
-    if (this.isDestroyed || preparationVersion !== this.preparationVersion) {
-      preparedData.destroy();
-      return;
-    }
-    this.setPreparedProps({...props, data: preparedData}, false);
-  }
-
-  private setPreparedProps(
-    props: PreparedArrowLineRendererProps,
-    preservePreparedInput: boolean
-  ): void {
+  private setPreparedProps(props: PreparedArrowLineRendererProps): void {
     const nextModel = this.resolveModel(props.model ?? 'auto', props.timeColumn ?? 'xyzm');
+    if (props.data.model !== nextModel) {
+      throw new Error(
+        `ArrowLineRenderer data was prepared for ${props.data.model} but ${nextModel} was selected`
+      );
+    }
     const previousModel = this.model;
-    const previousOwnedPathInput = this.ownedPathInput;
     this.resolvedModel = nextModel;
     this.model = this.createModel(nextModel, props);
     previousModel?.destroy();
-    this.ownedPathInput = preservePreparedInput ? null : props.data;
-    if (previousOwnedPathInput && previousOwnedPathInput !== props.data) {
-      previousOwnedPathInput.destroy();
-    }
+  }
+
+  private clearPreparedProps(resolvedModel: ArrowLineRendererResolvedModel): void {
+    const previousModel = this.model;
+    this.model = null;
+    this.resolvedModel = resolvedModel;
+    previousModel?.destroy();
   }
 
   private createModel(
@@ -533,31 +555,41 @@ export class ArrowLineRenderer extends GPURenderable<
     };
 
     if (modelKind === 'storage') {
+      if (!('storagePathProps' in props.data)) {
+        throw new Error('ArrowLineRenderer storage model requires storage-prepared data');
+      }
       return new StoragePathModel(this.device, {
+        ...props.data.storagePathProps,
         ...commonProps,
         color: props.color ?? DEFAULT_PATH_COLOR,
         width: props.width ?? DEFAULT_PATH_WIDTH,
+        rowIndexBase: props.data.rowIndexOffset ?? 0,
         source: STORAGE_WGSL_SHADER,
         shaderLayout: STORAGE_PATH_SHADER_LAYOUT
       });
     }
 
     if (modelKind === 'trips') {
-      if (!props.data.timestamps) {
+      if (!('storagePathProps' in props.data) || !props.data.timestamps) {
         throw new Error('ArrowLineRenderer trips model requires a timestamps column');
       }
       return new StorageTripsPathModel(this.device, {
+        ...props.data.storagePathProps,
         ...commonProps,
         timestamps: props.data.timestamps,
         currentTime: props.currentTime ?? 0,
         trailLength: props.trailLength ?? 0,
         color: props.color ?? DEFAULT_PATH_COLOR,
         width: props.width ?? DEFAULT_PATH_WIDTH,
+        rowIndexBase: props.data.rowIndexOffset ?? 0,
         source: TRIPS_STORAGE_WGSL_SHADER,
         shaderLayout: STORAGE_PATH_SHADER_LAYOUT
       });
     }
 
+    if (!('pathState' in props.data)) {
+      throw new Error('ArrowLineRenderer attribute model requires attribute-prepared data');
+    }
     return new AttributePathModel(this.device, {
       ...commonProps,
       pathState: props.data.pathState,
@@ -569,64 +601,129 @@ export class ArrowLineRenderer extends GPURenderable<
   }
 }
 
-async function prepareArrowLineRendererDataInput(
+/** Converts Arrow line columns into GPU vectors without adding example metrics. */
+export async function convertArrowLineColumnsToGPUVectors(
   device: Device,
-  props: ArrowLineRendererProps
+  columns: ArrowLineRendererSourceVectors,
+  options: ArrowLineRendererPreparationOptions = {}
 ): Promise<ArrowLineRendererData> {
-  if (isPreparedArrowLineRendererData(props.data)) {
-    return props.data;
-  }
-  if (isArrowLineRendererSourceData(props.data)) {
-    return prepareArrowLineInput(device, props.data, props.mode ?? 'lines');
-  }
-  return ArrowLineRenderer.prepareData(device, {
-    id: props.id ?? 'arrow-line-renderer',
-    sourceVectors: props.data,
-    mode: props.mode
-  });
-}
+  const sourceVectors = normalizeArrowLineSourceVectors(columns, options.mode ?? 'lines');
+  const id = options.id ?? 'arrow-line-renderer';
+  const resolvedModel = resolveArrowLineRendererModel(
+    device,
+    options.model ?? 'auto',
+    options.timeColumn ?? 'xyzm'
+  );
 
-function isPreparedArrowLineRendererData(
-  data: ArrowLineRendererDataInput
-): data is ArrowLineRendererData {
-  return 'pathState' in data;
-}
+  if (resolvedModel === 'storage' || resolvedModel === 'trips') {
+    const prepared =
+      resolvedModel === 'trips'
+        ? await convertArrowTripsToStorage(
+            device,
+            {
+              paths: sourceVectors.paths,
+              ...(sourceVectors.colors ? {colors: sourceVectors.colors} : {}),
+              ...(sourceVectors.widths ? {widths: sourceVectors.widths} : {}),
+              ...(sourceVectors.timestamps ? {timestamps: sourceVectors.timestamps} : {})
+            },
+            {
+              id,
+              rowIndexBase: options.rowIndexOffset
+            }
+          )
+        : await convertArrowPathsToStorage(
+            device,
+            {
+              paths: sourceVectors.paths,
+              ...(sourceVectors.colors ? {colors: sourceVectors.colors} : {}),
+              ...(sourceVectors.widths ? {widths: sourceVectors.widths} : {})
+            },
+            {
+              id,
+              rowIndexBase: options.rowIndexOffset
+            }
+          );
 
-function isArrowLineRendererSourceData(
-  data: ArrowLineRendererDataInput
-): data is ArrowLineRendererSourceData {
-  return 'sourceVectors' in data;
+    return {
+      model: resolvedModel,
+      paths: prepared.paths,
+      ...(prepared.colors ? {colors: prepared.colors} : {}),
+      ...(prepared.widths ? {widths: prepared.widths} : {}),
+      ...(prepared.timestamps ? {timestamps: prepared.timestamps} : {}),
+      ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
+      storagePathProps: prepared.storagePathProps,
+      rowIndexOffset: options.rowIndexOffset ?? 0,
+      destroy: prepared.destroy
+    };
+  }
+
+  const preparedTimestamps = sourceVectors.timestamps
+    ? await prepareArrowTemporalGPUVector(device, sourceVectors.timestamps, {
+        name: 'timestamps',
+        id: `${id}-timestamps`
+      })
+    : null;
+  const prepared = await convertArrowPathsToAttribute(
+    device,
+    {
+      paths: sourceVectors.paths,
+      ...(sourceVectors.colors ? {colors: sourceVectors.colors} : {}),
+      ...(sourceVectors.widths ? {widths: sourceVectors.widths} : {})
+    },
+    {
+      id,
+      rowIndexBase: options.rowIndexOffset
+    }
+  );
+
+  return {
+    model: 'attribute',
+    paths: prepared.paths,
+    ...(prepared.colors ? {colors: prepared.colors} : {}),
+    ...(prepared.widths ? {widths: prepared.widths} : {}),
+    ...(preparedTimestamps ? {timestamps: preparedTimestamps.temporal} : {}),
+    ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
+    pathState: prepared.pathProps.pathState,
+    rowIndexOffset: options.rowIndexOffset ?? 0,
+    destroy: () => {
+      prepared.destroy();
+      preparedTimestamps?.destroy();
+    }
+  };
 }
 
 /** Prepares generated Arrow path source data into the renderer input used by the example. */
 export async function prepareArrowLineInput(
   device: Device,
   sourceData: ArrowLineRendererSourceData,
-  mode: ArrowLineRendererMode = 'lines'
+  options: ArrowLineRendererMode | ArrowLineRendererPreparationOptions = 'lines'
 ): Promise<ArrowLineRendererInput> {
+  const prepareOptions = normalizeArrowLineRendererPreparationOptions(options);
   const {sourceVectors} = sourceData;
-  const prepared = await ArrowLineRenderer.prepareData(device, {
-    id: 'arrow-lines',
-    sourceVectors,
-    mode
+  const prepared = await convertArrowLineColumnsToGPUVectors(device, sourceVectors, {
+    id: prepareOptions.id ?? 'arrow-lines',
+    model: prepareOptions.model,
+    timeColumn: prepareOptions.timeColumn,
+    mode: prepareOptions.mode,
+    rowIndexOffset: prepareOptions.rowIndexOffset
   });
   if (!prepared.widths) {
     throw new Error('Arrow path example expected prepared width GPU vectors');
   }
-  if (sourceVectors.timestamps && !prepared.timestamps) {
+  if (
+    sourceVectors.timestamps &&
+    prepareOptions.timeColumn === 'timestamps' &&
+    !prepared.timestamps
+  ) {
     throw new Error('Arrow path example expected prepared timestamp GPU vectors');
   }
 
   return {
-    paths: prepared.paths,
-    ...(prepared.colors ? {colors: prepared.colors} : {}),
+    ...prepared,
     widths: prepared.widths,
-    ...(prepared.timestamps ? {timestamps: prepared.timestamps} : {}),
-    ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
-    pathState: prepared.pathState,
+    rowIndexOffset: prepared.rowIndexOffset ?? 0,
     pathArrowByteLength: sourceData.pathArrowByteLength,
-    styleArrowByteLength: sourceData.styleArrowByteLength,
-    destroy: prepared.destroy
+    styleArrowByteLength: sourceData.styleArrowByteLength
   };
 }
 
@@ -639,8 +736,9 @@ export async function prepareArrowLineInput(
 export async function prepareArrowLineInputFromRecordBatches(
   device: Device,
   recordBatches: arrow.RecordBatch[],
-  mode: ArrowLineRendererMode = 'lines'
+  options: ArrowLineRendererMode | ArrowLineRendererPreparationOptions = 'lines'
 ): Promise<ArrowLineRendererInput> {
+  const prepareOptions = normalizeArrowLineRendererPreparationOptions(options);
   const sourceTable = new arrow.Table(recordBatches);
   const paths = getRequiredArrowVector<ArrowLineSourceCoordinateType>(sourceTable, 'paths');
   const colors = getOptionalArrowVector<ArrowLineColorType>(sourceTable, 'colors');
@@ -664,8 +762,349 @@ export async function prepareArrowLineInputFromRecordBatches(
       styleArrowByteLength:
         (colors ? getArrowVectorByteLength(colors) : 0) + getArrowVectorByteLength(widths)
     },
-    mode
+    prepareOptions
   );
+}
+
+function makeRetainedArrowLineInput(
+  pathInputs: readonly ArrowLineRendererInput[]
+): ArrowLineRendererInput {
+  const firstPathInput = pathInputs[0];
+  if (!firstPathInput) {
+    throw new Error('ArrowLineRenderer retained stream requires at least one prepared path batch');
+  }
+  if (pathInputs.length === 1) {
+    return firstPathInput;
+  }
+  for (const pathInput of pathInputs) {
+    if (pathInput.model !== firstPathInput.model) {
+      throw new Error('ArrowLineRenderer retained stream batches must use one prepared model');
+    }
+  }
+
+  const pathArrowByteLength = pathInputs.reduce(
+    (byteLength, pathInput) => byteLength + pathInput.pathArrowByteLength,
+    0
+  );
+  const styleArrowByteLength = pathInputs.reduce(
+    (byteLength, pathInput) => byteLength + pathInput.styleArrowByteLength,
+    0
+  );
+  const rowIndexOffset = firstPathInput.rowIndexOffset;
+
+  if (firstPathInput.model === 'attribute') {
+    const attributePathInputs = pathInputs.filter(
+      (pathInput): pathInput is Extract<ArrowLineRendererInput, {model: 'attribute'}> =>
+        pathInput.model === 'attribute'
+    );
+    const paths = makeAggregateGPUVector(
+      'paths',
+      attributePathInputs.map(pathInput => pathInput.paths)
+    );
+    const colors = makeAggregateOptionalGPUVector(
+      'colors',
+      attributePathInputs,
+      pathInput => pathInput.colors
+    );
+    const widths = makeAggregateRequiredGPUVector(
+      'widths',
+      attributePathInputs,
+      pathInput => pathInput.widths
+    );
+    const timestamps = makeAggregateOptionalGPUVector(
+      'timestamps',
+      attributePathInputs,
+      pathInput => pathInput.timestamps
+    );
+    const viewOrigins = makeAggregateOptionalGPUVector(
+      'viewOrigins',
+      attributePathInputs,
+      pathInput => pathInput.viewOrigins
+    );
+    return {
+      model: 'attribute',
+      paths,
+      ...(colors ? {colors} : {}),
+      widths,
+      ...(timestamps ? {timestamps} : {}),
+      ...(viewOrigins ? {viewOrigins} : {}),
+      pathState: makeRetainedAttributePathState(attributePathInputs),
+      rowIndexOffset,
+      pathArrowByteLength,
+      styleArrowByteLength,
+      destroy: () => {}
+    };
+  }
+
+  const storagePathInputs = pathInputs.filter(
+    (pathInput): pathInput is Extract<ArrowLineRendererInput, {model: 'storage' | 'trips'}> =>
+      pathInput.model === 'storage' || pathInput.model === 'trips'
+  );
+  const paths = makeAggregateGPUVector(
+    'paths',
+    storagePathInputs.map(pathInput => pathInput.paths)
+  );
+  const colors = makeAggregateOptionalGPUVector(
+    'colors',
+    storagePathInputs,
+    pathInput => pathInput.colors
+  );
+  const widths = makeAggregateRequiredGPUVector(
+    'widths',
+    storagePathInputs,
+    pathInput => pathInput.widths
+  );
+  const timestamps = makeAggregateOptionalGPUVector(
+    'timestamps',
+    storagePathInputs,
+    pathInput => pathInput.timestamps
+  );
+  const viewOrigins = makeAggregateOptionalGPUVector(
+    'viewOrigins',
+    storagePathInputs,
+    pathInput => pathInput.viewOrigins
+  );
+  const firstStoragePathInput = storagePathInputs[0];
+  if (!firstStoragePathInput) {
+    throw new Error('ArrowLineRenderer retained stream requires storage path batches');
+  }
+
+  return {
+    model: firstStoragePathInput.model,
+    paths,
+    ...(colors ? {colors} : {}),
+    widths,
+    ...(timestamps ? {timestamps} : {}),
+    ...(viewOrigins ? {viewOrigins} : {}),
+    storagePathProps: {
+      ...firstStoragePathInput.storagePathProps,
+      paths,
+      ...(colors ? {colors} : {}),
+      widths,
+      ...(timestamps ? {timestamps} : {}),
+      ...(viewOrigins ? {viewOrigins} : {}),
+      rowIndexBase: rowIndexOffset
+    },
+    rowIndexOffset,
+    pathArrowByteLength,
+    styleArrowByteLength,
+    destroy: () => {}
+  };
+}
+
+function makeAggregateGPUVector<T extends GPUVectorFormat>(
+  name: string,
+  vectors: readonly GPUVector<T>[]
+): GPUVector<T> {
+  const firstVector = vectors[0];
+  if (!firstVector) {
+    throw new Error(`ArrowLineRenderer cannot aggregate empty ${name} vectors`);
+  }
+  return new GPUVector({
+    type: 'data',
+    name,
+    ...(firstVector.format ? {format: firstVector.format} : {}),
+    dataType: firstVector.dataType,
+    data: vectors.flatMap(vector => vector.data),
+    stride: firstVector.stride,
+    byteStride: firstVector.byteStride,
+    rowByteLength: firstVector.rowByteLength,
+    bufferLayout: firstVector.bufferLayout,
+    ownsData: false
+  });
+}
+
+function makeAggregateRequiredGPUVector<Input, T extends GPUVectorFormat>(
+  name: string,
+  pathInputs: readonly Input[],
+  getVector: (pathInput: Input) => GPUVector<T>
+): GPUVector<T> {
+  return makeAggregateGPUVector(name, pathInputs.map(getVector));
+}
+
+function makeAggregateOptionalGPUVector<Input, T extends GPUVectorFormat>(
+  name: string,
+  pathInputs: readonly Input[],
+  getVector: (pathInput: Input) => GPUVector<T> | undefined
+): GPUVector<T> | undefined {
+  const vectors = pathInputs.map(getVector);
+  if (vectors.every(vector => vector === undefined)) {
+    return undefined;
+  }
+  const definedVectors = vectors.filter(isDefinedGPUVector);
+  if (definedVectors.length !== pathInputs.length) {
+    throw new Error(`ArrowLineRenderer retained stream has inconsistent ${name} vectors`);
+  }
+  return makeAggregateGPUVector(name, definedVectors);
+}
+
+function isDefinedGPUVector<T extends GPUVectorFormat>(
+  vector: GPUVector<T> | undefined
+): vector is GPUVector<T> {
+  return vector !== undefined;
+}
+
+function makeRetainedAttributePathState(
+  pathInputs: readonly Extract<ArrowLineRendererInput, {model: 'attribute'}>[]
+): ArrowPathPreparedState {
+  const segmentTables = pathInputs.map(pathInput => pathInput.pathState.segmentTable);
+  const firstSegmentTable = segmentTables[0];
+  if (!firstSegmentTable) {
+    throw new Error('ArrowLineRenderer cannot aggregate empty attribute path state');
+  }
+
+  let segmentStartIndex = 0;
+  let rowStartIndex = 0;
+  const startIndices = [0];
+  const generatedBufferBatches: ArrowPathPreparedState['generatedBufferBatches'] = [];
+  const renderBatches: ArrowPathPreparedState['renderBatches'] = [];
+
+  for (const pathInput of pathInputs) {
+    const {segmentLayout} = pathInput.pathState.segmentTable;
+    for (const startIndex of segmentLayout.startIndices.slice(1)) {
+      startIndices.push(startIndex + segmentStartIndex);
+    }
+    for (const generatedBufferBatch of pathInput.pathState.generatedBufferBatches) {
+      generatedBufferBatches.push({
+        ...generatedBufferBatch,
+        rowStart: generatedBufferBatch.rowStart + rowStartIndex,
+        rowEnd: generatedBufferBatch.rowEnd + rowStartIndex,
+        recordStart: generatedBufferBatch.recordStart + segmentStartIndex,
+        recordEnd: generatedBufferBatch.recordEnd + segmentStartIndex
+      });
+    }
+    for (const renderBatch of pathInput.pathState.renderBatches) {
+      renderBatches.push({
+        ...renderBatch,
+        rowStart: renderBatch.rowStart + rowStartIndex,
+        rowEnd: renderBatch.rowEnd + rowStartIndex
+      });
+    }
+    segmentStartIndex += segmentLayout.segmentCount;
+    rowStartIndex += pathInput.paths.length;
+  }
+
+  const segmentLayout: ArrowPathPreparedState['segmentTable']['segmentLayout'] = {
+    startIndices,
+    segmentCount: segmentStartIndex,
+    segmentStartPositions: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentStartPositions),
+      Float32Array
+    ),
+    segmentEndPositions: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentEndPositions),
+      Float32Array
+    ),
+    segmentPreviousPositions: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentPreviousPositions),
+      Float32Array
+    ),
+    segmentNextPositions: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentNextPositions),
+      Float32Array
+    ),
+    segmentViewOrigins: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentViewOrigins),
+      Float32Array
+    ),
+    segmentFlags: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentFlags),
+      Uint32Array
+    ),
+    segmentStartColors: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentStartColors),
+      Uint32Array
+    ),
+    segmentEndColors: concatTypedArrays(
+      segmentTables.map(table => table.segmentLayout.segmentEndColors),
+      Uint32Array
+    )
+  };
+  const segmentTable: ArrowPathPreparedState['segmentTable'] = {
+    table: new arrow.Table(segmentTables.flatMap(table => table.table.batches)),
+    segmentLayout,
+    segmentAttributeBuildTimeMs: segmentTables.reduce(
+      (timeMs, table) => timeMs + table.segmentAttributeBuildTimeMs,
+      0
+    ),
+    attributeByteLength: segmentTables.reduce(
+      (byteLength, table) => byteLength + table.attributeByteLength,
+      0
+    )
+  };
+  const firstRenderBatch = renderBatches[0];
+  if (!firstRenderBatch) {
+    throw new Error('ArrowLineRenderer retained stream requires one attribute render batch');
+  }
+
+  return {
+    segmentTable,
+    expandedPathVertexData: firstRenderBatch.expandedPathVertexData,
+    pathViewOriginData: firstRenderBatch.pathViewOriginData,
+    renderBatches,
+    generatedBufferBatches,
+    destroy: () => {}
+  };
+}
+
+function concatTypedArrays<TypedArray extends Float32Array | Uint32Array>(
+  arrays: readonly TypedArray[],
+  TypedArrayConstructor: {
+    new (length: number): TypedArray;
+  }
+): TypedArray {
+  const length = arrays.reduce((totalLength, array) => totalLength + array.length, 0);
+  const result = new TypedArrayConstructor(length);
+  let offset = 0;
+  for (const array of arrays) {
+    result.set(array, offset);
+    offset += array.length;
+  }
+  return result;
+}
+
+function destroyArrowLineInputs(pathInputs: readonly ArrowLineRendererInput[] | null): void {
+  if (!pathInputs) {
+    return;
+  }
+  for (const pathInput of pathInputs) {
+    pathInput.destroy();
+  }
+}
+
+function normalizeArrowLineRendererPreparationOptions(
+  options: ArrowLineRendererMode | ArrowLineRendererPreparationOptions
+): Required<Pick<ArrowLineRendererPreparationOptions, 'mode' | 'rowIndexOffset'>> &
+  Pick<ArrowLineRendererPreparationOptions, 'id' | 'model' | 'timeColumn'> {
+  return typeof options === 'string'
+    ? {mode: options, rowIndexOffset: 0}
+    : {
+        mode: options.mode ?? 'lines',
+        rowIndexOffset: options.rowIndexOffset ?? 0,
+        id: options.id,
+        model: options.model,
+        timeColumn: options.timeColumn
+      };
+}
+
+function resolveArrowLineRendererModel(
+  device: Device,
+  modelKind: ArrowLineRendererModel,
+  timeColumn: ArrowLineRendererTimeColumn
+): ArrowLineRendererResolvedModel {
+  if (modelKind === 'auto') {
+    if (device.type !== 'webgpu') {
+      return 'attribute';
+    }
+    return timeColumn === 'timestamps' ? 'trips' : 'storage';
+  }
+  if (modelKind !== 'attribute' && device.type !== 'webgpu') {
+    return 'attribute';
+  }
+  if (modelKind === 'storage' && timeColumn === 'timestamps') {
+    return 'trips';
+  }
+  return modelKind;
 }
 
 function normalizeArrowLineSourceVectors(

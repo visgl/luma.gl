@@ -32,7 +32,7 @@ export const EVENT_ATTRIBUTE_SHADER_LAYOUT = {
     {name: 'eventTimes', location: 1, type: 'f32', stepMode: 'instance'},
     {name: 'eventStarts', location: 2, type: 'f32', stepMode: 'instance'},
     {name: 'eventDurations', location: 3, type: 'f32', stepMode: 'instance'},
-    {name: 'eventColors', location: 4, type: 'vec4<u32>', stepMode: 'instance'}
+    {name: 'eventColors', location: 4, type: 'vec4<f32>', stepMode: 'instance'}
   ],
   bindings: []
 } satisfies ShaderLayout;
@@ -82,7 +82,7 @@ struct VertexInputs {
   @location(1) eventTimes : f32,
   @location(2) eventStarts : f32,
   @location(3) eventDurations : f32,
-  @location(4) eventColors : vec4<u32>,
+  @location(4) eventColors : vec4<f32>,
 };
 
 struct FragmentInputs {
@@ -97,10 +97,6 @@ fn getQuadCorner(vertexIndex : u32) -> vec2<f32> {
   if (vertexIndex == 3u) { return vec2<f32>(-1.0, -1.0); }
   if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
   return vec2<f32>(-1.0, 1.0);
-}
-
-fn unpackEventColor(eventColor : vec4<u32>) -> vec4<f32> {
-  return vec4<f32>(eventColor) / 255.0;
 }
 
 fn getEventColor(
@@ -142,7 +138,7 @@ fn getEventPosition(
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
   let corner = getQuadCorner(inputs.vertexIndex % 6u);
-  let eventColor = unpackEventColor(inputs.eventColors);
+  let eventColor = inputs.eventColors;
   let eventPosition = getEventPosition(
     inputs.eventDates,
     inputs.eventTimes,
@@ -259,7 +255,7 @@ in float eventDates;
 in float eventTimes;
 in float eventStarts;
 in float eventDurations;
-in uvec4 eventColors;
+in vec4 eventColors;
 
 uniform timeColumnsUniforms {
   float currentTimestamp;
@@ -274,10 +270,6 @@ vec2 getQuadCorner(int vertexIndex) {
   if (vertexIndex == 3) { return vec2(-1.0, -1.0); }
   if (vertexIndex == 4) { return vec2(1.0, 1.0); }
   return vec2(-1.0, 1.0);
-}
-
-vec4 unpackEventColor(uvec4 eventColor) {
-  return vec4(eventColor) / 255.0;
 }
 
 vec4 getEventColor(vec4 eventColor, float eventStart, float eventDuration) {
@@ -308,7 +300,7 @@ vec2 getEventPosition(float eventDate, float eventTime, float eventDuration, vec
 
 void main() {
   vec2 corner = getQuadCorner(gl_VertexID % 6);
-  vec4 eventColor = unpackEventColor(eventColors);
+  vec4 eventColor = eventColors;
   vec2 eventPosition = getEventPosition(eventDates, eventTimes, eventDurations, corner);
 
   gl_Position = vec4(eventPosition, 0.0, 1.0);

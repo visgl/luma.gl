@@ -53,7 +53,9 @@ const SHARED_COMPILER_OPTIONS = {
     '@luma.gl/arrow': ['modules/arrow/src/index.ts'],
     '@luma.gl/arrow/*': ['modules/arrow/src/*'],
     '@math.gl/geoarrow': ['modules/geoarrow/src/index.ts'],
-    '@math.gl/geoarrow/*': ['modules/geoarrow/src/*']
+    '@math.gl/geoarrow/*': ['modules/geoarrow/src/*'],
+    '@luma.gl/tables': ['modules/tables/src/index.ts'],
+    '@luma.gl/tables/*': ['modules/tables/src/*']
   }
 };
 

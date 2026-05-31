@@ -318,7 +318,7 @@ async function makeArrowColumnTableInput(
   const h3Cells = makeGPUVectorFromArrow(
     device,
     getRequiredArrowVector<arrow.Uint64>(sourceData.table, 'h3Cells'),
-    {name: 'h3Cells', id: 'arrow-columns-h3-cells'}
+    {name: 'h3Cells', id: 'arrow-columns-h3-cells', format: 'uint32x2'}
   );
   const counts = makeGPUVectorFromArrow(
     device,

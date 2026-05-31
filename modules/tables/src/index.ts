@@ -13,11 +13,9 @@ export {
   type GPUVectorCreateProps,
   type GPUVectorDynamicBufferProps,
   type GPUVectorFromAppendableProps,
-  type GPUVectorFromArrowProps,
   type GPUVectorFromBufferProps,
   type GPUVectorFromDataProps,
-  type GPUVectorFromInterleavedProps,
-  type GPUVectorProps
+  type GPUVectorFromInterleavedProps
 } from './table/gpu-vector';
 export {
   getGPUVectorElementFormat,
@@ -26,7 +24,6 @@ export {
   isVertexListGPUVectorFormat,
   type GPUVectorFormat,
   type GPUVectorFormatInfo,
-  type GPUVectorVertexListFormat,
   type VertexList
 } from './table/gpu-vector-format';
 export {type GPUField, type GPUSchema, type GPUTypeMap} from './table/gpu-schema';
@@ -37,13 +34,11 @@ export {
 } from './table/gpu-vector-collection';
 export {
   GPURecordBatch,
-  type GPURecordBatchAppendableProps,
   type GPURecordBatchFromVectorsProps,
   type GPURecordBatchProps
 } from './table/gpu-record-batch';
 export {
   GPUTable,
-  type GPUTableAppendableProps,
   type GPUTableDetachBatchesOptions,
   type GPUTableFromBatchesProps,
   type GPUTableFromVectorsProps,
@@ -57,6 +52,7 @@ export {
 export {
   GPUTableModel,
   type GPUTableModelCount,
+  type GPUTableModelDrawBatchesOptions,
   type GPUTableModelProps
 } from './engine/gpu-table-model';
 export {GPURenderable} from './engine/gpu-renderable';

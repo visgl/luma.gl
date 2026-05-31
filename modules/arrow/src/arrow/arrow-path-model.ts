@@ -177,6 +177,8 @@ export type PrepareArrowPathGPUVectorsOptions = {
   id?: string;
   /** Endpoint epsilon used when appending explicit closing vertices. Defaults to `0`. */
   closeEpsilon?: number;
+  /** Global source row index assigned to the first prepared path row. Defaults to `0`. */
+  rowIndexBase?: number;
 };
 
 /** View transform used to refresh Float64 path view-origin buffers. */
@@ -500,12 +502,15 @@ export function createArrowPathPreparedState(
     paths: Vector<ArrowPathCoordinateType>;
     /** Optional Float32 view-space origins aligned with source path rows. */
     viewOrigins?: Vector<ArrowPathViewOriginType>;
+    /** Global source row index assigned to the first prepared path row. */
+    rowIndexBase?: number;
   }
 ): ArrowPathPreparedState {
   const segmentTable = buildArrowPathSegmentTable({
     rowTable: props.rowTable,
     paths: props.paths,
-    viewOrigins: props.viewOrigins
+    viewOrigins: props.viewOrigins,
+    rowIndexBase: props.rowIndexBase
   });
   const generatedBufferBatches = planGeneratedBufferBatches({
     device,
@@ -635,7 +640,8 @@ export async function prepareArrowPathGPUVectors(
     id,
     rowTable: new Table(rowColumns),
     paths: pathsForSegmentTable,
-    viewOrigins: viewOriginVector
+    viewOrigins: viewOriginVector,
+    rowIndexBase: options.rowIndexBase
   });
 
   const pathProps: ArrowPathModelProps = {

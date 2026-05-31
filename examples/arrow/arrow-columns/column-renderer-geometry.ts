@@ -82,7 +82,7 @@ export async function makeColumnRendererGeometry(
   const h3Cells = makeGPUVectorFromArrow(
     device,
     getRequiredArrowVector<arrow.Uint64>(geometryTable, 'h3Cells'),
-    {name: 'geometryH3Cells', id: 'arrow-columns-geometry-h3-cells'}
+    {name: 'geometryH3Cells', id: 'arrow-columns-geometry-h3-cells', format: 'uint32x2'}
   );
   const cellCount = geometryTable.numRows;
   const pointCount = cellCount * CELL_GEOMETRY_POINT_COUNT;

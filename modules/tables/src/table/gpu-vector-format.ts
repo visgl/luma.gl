@@ -20,9 +20,6 @@ import {shaderTypeDecoder, vertexFormatDecoder} from '@luma.gl/core';
  */
 export type VertexList<Format extends VertexFormat = VertexFormat> = `vertex-list<${Format}>`;
 
-/** @deprecated Use {@link VertexList}. */
-export type GPUVectorVertexListFormat = VertexList;
-
 /**
  * Memory-layout string used by GPUVector.
  *

@@ -112,6 +112,8 @@ export class GeoArrowRenderer {
     const polygonTable = makePolygonTable(geometries, colors);
     const lineData = await ArrowLineRenderer.prepareData(this.device, {
       id: 'arrow-geoarrow-lines',
+      model: 'attribute',
+      timeColumn: 'none',
       mode: 'lines',
       sourceVectors: {
         paths: geometries,
