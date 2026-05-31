@@ -789,12 +789,14 @@ test('GPUVector addData aggregates GPU chunks without adopting their buffers', t
   const firstData = new GPUData({
     buffer: new DynamicBuffer(device, {buffer: firstBuffer, ownsBuffer: false}),
     dataType: new arrow.Float32(),
+    format: 'float32',
     length: 2,
     byteStride: 4
   });
   const secondData = new GPUData({
     buffer: new DynamicBuffer(device, {buffer: secondBuffer, ownsBuffer: false}),
     dataType: new arrow.Float32(),
+    format: 'float32',
     length: 2,
     byteStride: 4
   });

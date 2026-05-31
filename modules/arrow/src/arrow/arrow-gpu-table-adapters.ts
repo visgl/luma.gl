@@ -288,13 +288,17 @@ export function makeGPUVectorFromArrow<T extends DataType>(
   const arrowType = vector.type as T;
   const matrixInfo = getArrowMatrixVectorInfo(vector);
   const isCanonicalFloat32Matrix = matrixInfo && isCanonicalFloat32ArrowMatrixInfo(matrixInfo);
+  const requiresChunkedUpload =
+    DataType.isUtf8(arrowType) ||
+    isArrowUtf8DictionaryType(arrowType) ||
+    isVariableLengthAttributeArrowType(arrowType);
   if (matrixInfo && !isCanonicalFloat32Matrix) {
     throw new Error(
       'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
     );
   }
 
-  if (!isInstanceArrowType(arrowType) && !isCanonicalFloat32Matrix) {
+  if (!isInstanceArrowType(arrowType) && !isCanonicalFloat32Matrix && !requiresChunkedUpload) {
     throw new Error(`GPUVector does not support Arrow type ${arrowType}`);
   }
 
@@ -309,11 +313,6 @@ export function makeGPUVectorFromArrow<T extends DataType>(
     DataType.isUtf8(arrowType) || isArrowUtf8DictionaryType(arrowType)
       ? 1
       : getArrowTypeStride(arrowType);
-  const requiresChunkedUpload =
-    DataType.isUtf8(arrowType) ||
-    isArrowUtf8DictionaryType(arrowType) ||
-    isVariableLengthAttributeArrowType(arrowType);
-
   if (preserveDataChunks || requiresChunkedUpload) {
     return new GPUVector({
       type: 'data',
