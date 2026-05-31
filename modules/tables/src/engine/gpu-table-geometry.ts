@@ -4,7 +4,7 @@
 
 import {Buffer, type PrimitiveTopology} from '@luma.gl/core';
 import {DynamicBuffer, GPUGeometry} from '@luma.gl/engine';
-import {GPUTable} from './gpu-table';
+import {GPUTable} from '../table/gpu-table';
 
 /** Props for exposing one packed GPU table as GPU geometry. */
 export type GPUTableGeometryProps = {

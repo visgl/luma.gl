@@ -152,14 +152,13 @@ export {
   type DictionaryTextState
 } from './models/dictionary-text-model';
 export {
-  type StorageTextAlignmentProps,
-  type TextCharacterColorType,
-  type TextColorType,
-  type TextRowColorType,
-  type TextStyleModelProps
+  type AttributeTextInputProps,
+  type DictionaryTextInputProps,
+  type StorageTextInputProps
 } from './model-utils/text-model-props';
 export {
   convertArrowTextToAttribute,
+  convertArrowTextToAttributeModelProps,
   convertArrowTextToAttributeState,
   type ArrowTextConversionColumns,
   type ConvertedArrowTextData,
@@ -167,9 +166,11 @@ export {
 } from './arrow-conversion/convert-arrow-text-to-attribute';
 export {
   convertArrowTextToStorage,
+  convertArrowTextToStorageModelProps,
   convertArrowTextToStorageState
 } from './arrow-conversion/convert-arrow-text-to-storage';
 export {
   convertArrowTextToDictionary,
+  convertArrowTextToDictionaryModelProps,
   convertArrowTextToDictionaryState
 } from './arrow-conversion/convert-arrow-text-to-dictionary';

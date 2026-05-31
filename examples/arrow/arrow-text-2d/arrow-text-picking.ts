@@ -49,7 +49,7 @@ export function createArrowTextPickingModel(
   shaderInputs: ShaderInputs<any>
 ): Model {
   if (textModel instanceof DictionaryTextModel) {
-    return new DictionaryTextModel(device, {
+    return DictionaryTextModel.fromState(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
       storageState: textModel.storageState,
       source: DICTIONARY_STORAGE_WGSL_SHADER,
@@ -66,7 +66,7 @@ export function createArrowTextPickingModel(
   }
 
   if (textModel instanceof StorageTextModel) {
-    return new StorageTextModel(device, {
+    return StorageTextModel.fromState(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
       storageState: textModel.storageState,
       source: STORAGE_INDEXED_WGSL_SHADER,

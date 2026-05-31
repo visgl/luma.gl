@@ -9,7 +9,7 @@ import {
   type ArrowPointRowCountKind,
   type ArrowPointSourceKind,
   type ArrowPointTimeKind
-} from './arrow-point-data';
+} from './arrow-point-generator';
 import type {ArrowPointRendererMetrics} from './arrow-point-renderer';
 
 const ROW_COUNT_SELECTOR_ID = 'arrow-point-row-count-selector';

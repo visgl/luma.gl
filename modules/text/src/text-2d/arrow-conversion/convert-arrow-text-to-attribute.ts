@@ -6,6 +6,7 @@ import {makeArrowGPUVector} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
+import type {AttributeTextModelProps} from '../models/attribute-text-model';
 import type {ArrowUtf8TextType, ArrowUtf8TextVector} from './arrow-text';
 import {
   createArrowAttributeTextState,
@@ -178,4 +179,23 @@ export function convertArrowTextToAttributeState(
   props: ArrowTextModelProps
 ): ArrowAttributeTextState {
   return createArrowAttributeTextState(device, props);
+}
+
+/**
+ * Builds model-ready attribute text props from Arrow-backed GPU inputs.
+ *
+ * CPU Arrow source vectors are consumed only by this conversion step and are not exposed on the
+ * returned {@link AttributeTextModelProps}.
+ */
+export function convertArrowTextToAttributeModelProps(
+  device: Device,
+  props: ArrowTextModelProps
+): AttributeTextModelProps {
+  const attributeState = convertArrowTextToAttributeState(device, props);
+  const {sourceVectors: _sourceVectors, fontAtlasManager: _fontAtlasManager, ...modelProps} = props;
+  return {
+    ...modelProps,
+    attributeState,
+    ownsAttributeState: true
+  } as AttributeTextModelProps;
 }

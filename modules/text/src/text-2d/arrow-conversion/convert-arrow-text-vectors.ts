@@ -182,8 +182,8 @@ export type ArrowStorageTextSourceVectors = {
 /**
  * Arrow-to-attribute conversion input consumed by layer/data-preparation code.
  *
- * @internal Kept for internal conversion and deprecated wrapper compatibility. Public callers
- * should use {@link ArrowAttributeTextInputProps}.
+ * CPU source vectors are retained here only for Arrow conversion helpers. This is not a text model
+ * constructor type.
  */
 export type ArrowTextModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> & {
   /** GPU-resident label origins aligned one-for-one with `texts`. */
@@ -351,18 +351,8 @@ export type ArrowAttributeTextState = AttributeTextState & {
   glyphTable: ArrowTextGlyphTable;
   /** SDF render settings retained for built-in fragment shader uniforms. */
   sdfRenderSettings: TextSdfRenderSettings;
-  /** Character mapping retained for append compatibility. */
+  /** Character mapping retained for follow-on conversion diagnostics. */
   mappingState: ResolvedCharacterMapping;
-};
-
-/**
- * Props accepted by the deprecated Arrow attribute wrapper when state is precomputed.
- *
- * @internal Deprecated wrapper compatibility only.
- */
-export type ArrowAttributeTextModelStateProps = ArrowAttributeTextRenderProps & {
-  /** Prepared attribute text state produced by the Arrow adapter layer. */
-  attributeState: ArrowAttributeTextState;
 };
 
 /** Render-only props left after Arrow storage conversion has produced prepared state. */
@@ -509,17 +499,6 @@ export type ArrowStorageTextState = {
   destroy: () => void;
 };
 
-/**
- * Props for constructing or rebinding a WebGPU storage-backed Arrow text model.
- *
- * @internal Kept for deprecated wrapper compatibility. Public layer code should use
- * {@link ArrowStorageTextInputProps} with {@link createArrowStorageTextState}, then pass the
- * prepared state to {@link StorageTextModel}.
- */
-export type ArrowStorageTextModelProps =
-  | (ArrowStorageTextInputProps & {storageState?: never})
-  | (ArrowStorageTextRenderProps & {storageState: ArrowStorageTextState});
-
 /** Render-only props left after Arrow dictionary conversion has produced prepared state. */
 export type ArrowDictionaryStorageTextRenderProps = Omit<
   ArrowDictionaryStorageTextInputProps,
@@ -647,17 +626,6 @@ export type ArrowDictionaryStorageTextState = {
   /** Releases owned atlas, row, dictionary, and generated render resources. */
   destroy: () => void;
 };
-
-/**
- * Props for constructing or rebinding a WebGPU compressed dictionary Arrow text model.
- *
- * @internal Kept for deprecated wrapper compatibility. Public layer code should use
- * {@link ArrowDictionaryStorageTextInputProps} with {@link createArrowDictionaryStorageTextState},
- * then pass the prepared state to {@link DictionaryTextModel}.
- */
-export type ArrowDictionaryStorageTextModelProps =
-  | (ArrowDictionaryStorageTextInputProps & {storageState?: never})
-  | (ArrowDictionaryStorageTextRenderProps & {storageState: ArrowDictionaryStorageTextState});
 
 /** Generated attribute text render-batch state. */
 export type ArrowTextRenderBatchState = {
@@ -977,84 +945,6 @@ function getArrowTextRowInputs(props: ArrowTextModelProps): Array<[string, GPUVe
     ['pixelOffsets', props.pixelOffsets],
     ['clipRects', props.clipRects]
   ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
-}
-
-/** Validates that an attribute text append update only changes appendable row inputs. */
-export function assertArrowTextAppendProps(props: Partial<ArrowTextModelProps>): void {
-  const appendablePropNames = new Set([
-    'positions',
-    'texts',
-    'colors',
-    'angles',
-    'sizes',
-    'pixelOffsets',
-    'clipRects',
-    'sourceVectors'
-  ]);
-  for (const propName of Object.keys(props)) {
-    if (!appendablePropNames.has(propName)) {
-      throw new Error(
-        `ArrowTextModel appendTextBatches() cannot update non-row prop "${propName}"`
-      );
-    }
-  }
-}
-
-/** Validates that previously processed GPUVector batches remain identical during append. */
-export function assertArrowTextAppendPrefixStable(
-  previousProps: ArrowTextModelProps,
-  nextProps: ArrowTextModelProps,
-  processedBatchCount: number
-): void {
-  const previousInputs = new Map(getArrowTextRowInputs(previousProps));
-  for (const [name, nextVector] of getArrowTextRowInputs(nextProps)) {
-    const previousVector = previousInputs.get(name);
-    if (!previousVector && processedBatchCount > 0) {
-      throw new Error(`ArrowTextModel appendTextBatches() cannot add prior ${name} rows`);
-    }
-    for (let batchIndex = 0; batchIndex < processedBatchCount; batchIndex++) {
-      if (previousVector?.data[batchIndex] !== nextVector.data[batchIndex]) {
-        throw new Error(
-          `ArrowTextModel appendTextBatches() requires existing ${name} batches to stay unchanged`
-        );
-      }
-    }
-  }
-}
-
-/** Validates that previously processed CPU Arrow source batches remain identical during append. */
-export function assertArrowTextSourceAppendPrefixStable(
-  previousProps: ArrowTextModelProps,
-  nextProps: ArrowTextModelProps,
-  processedBatchCount: number
-): void {
-  const previousSourceVectors = previousProps.sourceVectors;
-  const nextSourceVectors = nextProps.sourceVectors;
-  const sourceInputs: Array<[string, Vector | undefined, Vector | undefined]> = [
-    ['positions', previousSourceVectors.positions, nextSourceVectors.positions],
-    ['texts', previousSourceVectors.texts, nextSourceVectors.texts],
-    ['colors', previousSourceVectors.colors, nextSourceVectors.colors],
-    ['angles', previousSourceVectors.angles, nextSourceVectors.angles],
-    ['sizes', previousSourceVectors.sizes, nextSourceVectors.sizes],
-    ['pixelOffsets', previousSourceVectors.pixelOffsets, nextSourceVectors.pixelOffsets],
-    ['clipRects', previousSourceVectors.clipRects, nextSourceVectors.clipRects]
-  ];
-
-  for (const [name, previousVector, nextVector] of sourceInputs) {
-    if (!previousVector && nextVector && processedBatchCount > 0) {
-      throw new Error(`ArrowTextModel appendTextBatches() cannot add prior ${name} sources`);
-    }
-    if (!previousVector || !nextVector) {
-      continue;
-    }
-    for (let batchIndex = 0; batchIndex < processedBatchCount; batchIndex++) {
-      if (previousVector.data[batchIndex] !== nextVector.data[batchIndex]) {
-        throw new Error(
-          `ArrowTextModel appendTextBatches() requires existing ${name} source batches to stay unchanged`
-        );
-      }
-    }
-  }
 }
 
 function assertSourceVectorMatchesGPUVector(

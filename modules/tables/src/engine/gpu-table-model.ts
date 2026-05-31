@@ -4,7 +4,7 @@
 
 import {Device, type BufferLayout, type CommandEncoder, type RenderPass} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';
-import {GPUTable} from './gpu-table';
+import {GPUTable} from '../table/gpu-table';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */
 export type GPUTableModelCount = 'instance' | 'vertex' | 'none';

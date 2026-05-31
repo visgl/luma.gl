@@ -4,9 +4,9 @@
 
 import {Buffer, type BufferLayout, Device, type RenderPassProps} from '@luma.gl/core';
 import {BufferTransform, DynamicBuffer, type BufferTransformProps} from '@luma.gl/engine';
-import {GPUVector} from './gpu-vector';
-import {GPURecordBatch} from './gpu-record-batch';
-import {GPUTable} from './gpu-table';
+import {GPUVector} from '../table/gpu-vector';
+import {GPURecordBatch} from '../table/gpu-record-batch';
+import {GPUTable} from '../table/gpu-table';
 
 type TableTransformBufferMap = NonNullable<Parameters<BufferTransform['run']>[0]>['outputBuffers'];
 type TableTransformRunOptions = Parameters<BufferTransform['run']>[0];

@@ -5,8 +5,8 @@
 import {type Binding, type ComputePass, Device} from '@luma.gl/core';
 import {Computation, type ComputationProps} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/engine';
-import type {GPUData} from './gpu-data';
-import type {GPUVector} from './gpu-vector';
+import type {GPUData} from '../table/gpu-data';
+import type {GPUVector} from '../table/gpu-vector';
 
 /** Metadata supplied to one GPU table computation batch dispatch. */
 export type GPUTableComputationBatch = {
