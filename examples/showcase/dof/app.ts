@@ -500,7 +500,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   writeInstanceMatrices(): void {
-    this.sceneTable.gpuVectors.instanceModelMatrix?.buffer.write(this.instanceModelMatrices);
+    this.sceneTable.gpuVectors.instanceModelMatrix?.data[0]?.buffer.write(
+      this.instanceModelMatrices
+    );
   }
 
   initializeControls(): void {

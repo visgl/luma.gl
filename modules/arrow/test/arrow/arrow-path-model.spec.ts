@@ -10,7 +10,7 @@ import {
   buildArrowPathSegmentTable,
   createArrowStoragePathState,
   makeArrowFixedSizeListVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   readArrowGPUVectorAsync,
   type ArrowPathSourceVectors,
   type PreparedArrowPathGPUVectors
@@ -308,6 +308,12 @@ test('AttributePathModel.prepareGPUVectors keeps Float32 paths unchanged without
 
   t.equal(prepared.sourceOrigins, undefined, 'Float32 preparation does not create source origins');
   t.equal(
+    prepared.paths.format,
+    'vertex-list<float32x2>',
+    'path coordinates use vertex-list format'
+  );
+  t.equal(prepared.colors?.format, 'unorm8x4', 'row colors use normalized RGBA8 format');
+  t.equal(
     prepared.viewOrigins,
     undefined,
     'Float32 preparation does not create view-origin vectors'
@@ -321,6 +327,30 @@ test('AttributePathModel.prepareGPUVectors keeps Float32 paths unchanged without
     Array.from(getPathOffsets(preparedPaths)),
     Array.from(getPathOffsets(sourceVectors.paths)),
     'Float32 path offsets are preserved'
+  );
+
+  prepared.destroy();
+  t.end();
+});
+
+test('AttributePathModel.prepareGPUVectors tags path-aligned vertex colors', async t => {
+  const device = new NullDevice({});
+  const sourceVectors = makeArrowPathSourceVectors();
+  const prepared = await AttributePathModel.prepareGPUVectors(device, {
+    ...sourceVectors,
+    colors: makeColorListVector(
+      new Int32Array([0, 3, 7]),
+      new Uint8Array([
+        255, 0, 0, 255, 255, 128, 0, 255, 255, 255, 0, 255, 0, 255, 0, 255, 0, 255, 255, 255, 0, 0,
+        255, 255, 255, 0, 255, 255
+      ])
+    )
+  });
+
+  t.equal(
+    prepared.colors?.format,
+    'vertex-list<unorm8x4>',
+    'path-aligned colors use vertex-list normalized RGBA8 format'
   );
 
   prepared.destroy();
@@ -422,7 +452,7 @@ test('AttributePathModel.prepareGPUVectors updates view origins without rewritin
     new Float64Array([100, 200, 101, 200, 102, 201])
   );
   const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
-  const pathBytesBefore = await prepared.paths.buffer.readAsync();
+  const pathBytesBefore = await prepared.paths.data[0].buffer.readAsync();
   const deltaSegmentBytesBefore =
     await prepared.pathProps.pathState.expandedPathVertexData.readAsync();
   const viewOriginBytesBefore = await prepared.pathProps.pathState.pathViewOriginData.readAsync();
@@ -431,7 +461,7 @@ test('AttributePathModel.prepareGPUVectors updates view origins without rewritin
     modelViewMatrix: [2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 10, 20, 30, 1]
   });
 
-  const pathBytesAfter = await prepared.paths.buffer.readAsync();
+  const pathBytesAfter = await prepared.paths.data[0].buffer.readAsync();
   const deltaSegmentBytesAfter =
     await prepared.pathProps.pathState.expandedPathVertexData.readAsync();
   const viewOriginBytesAfter = await prepared.pathProps.pathState.pathViewOriginData.readAsync();
@@ -989,7 +1019,7 @@ function makeGpuArrowPathVector<TypeT extends arrow.DataType>(
   name: string,
   vector: arrow.Vector<TypeT>
 ): GPUVector<TypeT> {
-  return makeArrowGPUVector(device, vector, {name});
+  return makeGPUVectorFromArrow(device, vector, {name});
 }
 
 function destroyStorageGpuArrowPathProps(

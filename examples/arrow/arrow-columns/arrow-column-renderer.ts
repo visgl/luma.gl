@@ -3,13 +3,19 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
-import {type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
-import {Model, ShaderInputs} from '@luma.gl/engine';
-import {GPURenderable, GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
+import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
+import {Model, ShaderInputs, type DynamicBuffer} from '@luma.gl/engine';
+import {
+  GPURenderable,
+  GPURecordBatch,
+  GPUTable,
+  type GPUTypeMap,
+  type GPUVector
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -106,8 +112,8 @@ type ArrowColumnTableInput = {
 };
 
 type PreparedColumnTemporalVectors = {
-  timeStarts: PreparedArrowTemporalGPUVector;
-  timeDurations: PreparedArrowTemporalGPUVector;
+  timeStarts: PreparedArrowTemporalGPUVector<'float32'>;
+  timeDurations: PreparedArrowTemporalGPUVector<'float32'>;
 };
 
 const DEFAULT_COLUMN_RENDERER_PROPS = {
@@ -309,27 +315,27 @@ async function makeArrowColumnTableInput(
   device: Device,
   sourceData: ArrowColumnSourceData
 ): Promise<ArrowColumnTableInput> {
-  const h3Cells = makeArrowGPUVector(
+  const h3Cells = makeGPUVectorFromArrow(
     device,
     getRequiredArrowVector<arrow.Uint64>(sourceData.table, 'h3Cells'),
     {name: 'h3Cells', id: 'arrow-columns-h3-cells'}
   );
-  const counts = makeArrowGPUVector(
+  const counts = makeGPUVectorFromArrow(
     device,
     getRequiredArrowVector<arrow.Float32>(sourceData.table, 'counts'),
-    {name: 'counts', id: 'arrow-columns-counts'}
+    {name: 'counts', id: 'arrow-columns-counts', format: 'float32'}
   );
-  const cellGeometryIndices = makeArrowGPUVector(
+  const cellGeometryIndices = makeGPUVectorFromArrow(
     device,
     getRequiredArrowVector<arrow.Uint32>(sourceData.table, 'cellGeometryIndices'),
-    {name: 'cellGeometryIndices', id: 'arrow-columns-cell-geometry-indices'}
+    {name: 'cellGeometryIndices', id: 'arrow-columns-cell-geometry-indices', format: 'uint32'}
   );
   let geometry: ColumnRendererGeometry | null = null;
   let temporalVectors: PreparedColumnTemporalVectors | null = null;
 
   try {
     geometry = await makeColumnRendererGeometry(device, sourceData.geometryTable);
-    temporalVectors = (await prepareArrowTemporalGPUVectors(
+    temporalVectors = await prepareArrowTemporalGPUVectors(
       device,
       {
         timeStarts: getRequiredArrowVector<arrow.TimestampMillisecond>(
@@ -347,7 +353,7 @@ async function makeArrowColumnTableInput(
           timeDurations: {id: 'arrow-columns-time-durations'}
         }
       }
-    )) as unknown as PreparedColumnTemporalVectors;
+    );
 
     const vectors = {
       h3Cells,
@@ -359,13 +365,13 @@ async function makeArrowColumnTableInput(
     const fields = Object.entries(vectors).map(
       ([name, vector]) => new arrow.Field(name, vector.type, false)
     );
-    const batch = new GPURecordBatch({
+    const batch = new GPURecordBatch<GPUTypeMap>({
       vectors,
       fields,
       bufferLayout: [],
       bindings: getColumnVectorBindings(vectors)
     });
-    const table = new GPUTable({
+    const table = new GPUTable<GPUTypeMap>({
       batches: [batch],
       schema: batch.schema,
       bufferLayout: []
@@ -392,18 +398,18 @@ async function makeArrowColumnTableInput(
 }
 
 function getPreparedFloat32Vector(
-  preparedTemporalVector: PreparedArrowTemporalGPUVector
-): GPUVector<arrow.Float32> {
+  preparedTemporalVector: PreparedArrowTemporalGPUVector<'float32'>
+): GPUVector<'float32'> {
   if (!(preparedTemporalVector.temporal.type instanceof arrow.Float32)) {
     throw new Error('ArrowColumnRenderer requires scalar prepared Float32 temporal columns');
   }
-  return preparedTemporalVector.temporal as GPUVector<arrow.Float32>;
+  return preparedTemporalVector.temporal;
 }
 
 function getColumnRendererBindings(
   table: GPUTable,
   geometry: ColumnRendererGeometry
-): Record<string, GPUVector['buffer']> {
+): Record<string, Buffer | DynamicBuffer> {
   return {
     ...getColumnVectorBindings({
       cellGeometryIndices: getRequiredTableVector(table, 'cellGeometryIndices'),
@@ -411,19 +417,27 @@ function getColumnRendererBindings(
       timeDurations: getRequiredTableVector(table, 'timeDurations'),
       counts: getRequiredTableVector(table, 'counts')
     }),
-    cellGeometryPoints: geometry.points.buffer
+    cellGeometryPoints: getGPUVectorBuffer(geometry.points)
   };
 }
 
 function getColumnVectorBindings(
   vectors: Record<'cellGeometryIndices' | 'timeStarts' | 'timeDurations' | 'counts', GPUVector>
-): Record<string, GPUVector['buffer']> {
+): Record<string, Buffer | DynamicBuffer> {
   return {
-    cellGeometryIndices: vectors.cellGeometryIndices.buffer,
-    timeStarts: vectors.timeStarts.buffer,
-    timeDurations: vectors.timeDurations.buffer,
-    counts: vectors.counts.buffer
+    cellGeometryIndices: getGPUVectorBuffer(vectors.cellGeometryIndices),
+    timeStarts: getGPUVectorBuffer(vectors.timeStarts),
+    timeDurations: getGPUVectorBuffer(vectors.timeDurations),
+    counts: getGPUVectorBuffer(vectors.counts)
   };
+}
+
+function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`ArrowColumnRenderer vector "${vector.name}" requires one GPUData chunk`);
+  }
+  return data.buffer;
 }
 
 function getRequiredTableVector(table: GPUTable, columnName: string): GPUVector {

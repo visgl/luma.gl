@@ -6,8 +6,9 @@
 </p>
 
 `GPURecordBatch` represents one preserved GPU batch. It owns batch-local
-[`GPUVector`](/docs/api-reference/tables/gpu-vector) objects, selected schema
-metadata, model-ready attributes, and WebGPU storage bindings.
+[`GPUVector`](/docs/api-reference/tables/gpu-vector) objects,
+[`GPUSchema`](/docs/api-reference/tables/gpu-schema) metadata, model-ready
+attributes, and WebGPU storage bindings.
 
 ## Usage
 
@@ -34,7 +35,7 @@ When the source is an Arrow `RecordBatch`, prefer
 | --- | --- | --- | --- |
 | `vectors` | `Record<string, GPUVector> \| GPUVector[]` | Required | Batch-local GPU vectors keyed by name or supplied as named vectors. |
 | `bufferLayout` | `BufferLayout[]` | Derived | Precomputed batch buffer layouts. |
-| `fields` | `arrow.Field[]` | Derived | Selected schema fields. |
+| `fields` | `GPUField[]` | Derived | Selected schema fields. |
 | `numRows` | `number` | Derived | Explicit row count for intentionally vector-less batches. |
 | `metadata` | `Map<string, string>` | `undefined` | Batch-level schema metadata. |
 | `nullCount` | `number` | `0` | Number of null rows retained in batch metadata. |
@@ -44,7 +45,7 @@ When the source is an Arrow `RecordBatch`, prefer
 
 | Property | Type | Meaning |
 | --- | --- | --- |
-| `schema` | `arrow.Schema` | GPU-facing schema for selected columns. |
+| `schema` | `GPUSchema` | GPU-facing schema for selected columns. |
 | `numRows` | `number` | Number of logical rows in the batch. |
 | `numCols` | `number` | Number of selected GPU columns. |
 | `nullCount` | `number` | Number of null rows retained in metadata. |

@@ -39,6 +39,39 @@
 - Always import individual symbols from `'apache-arrow'` in `modules/*/src`.
 - It is preferred to use `import * as arrow from 'apache-arrow'` in tests, examples, and docs.
 
+## GPU table API boundaries
+- `@luma.gl/tables` owns generic GPU concepts only: `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`, `GPUSchema`, and `GPUVectorFormat`.
+- `@luma.gl/tables` and `@luma.gl/gpgpu` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
+- `GPUVector.format` is the canonical type metadata. Arrow `dataType` is adapter/readback compatibility metadata, not the primary GPU type.
+- Keep memory layout and shader value types separate. `GPUVectorFormat` describes stored bytes such as `float32x3`, `unorm8x4`, and `vertex-list<float32x3>`; `ShaderLayout` describes shader-facing values such as `vec3<f32>` and `vec4<f32>`.
+- Use compatibility checks at adapter and model boundaries instead of encoding shader semantics into vector formats.
+
+## GPU table storage and batching
+- Each `GPUData` owns or borrows exactly one buffer.
+- `GPUVector` does not own a raw buffer directly; it is an ordered list of `GPUData` chunks.
+- Streaming should preserve source batch and chunk boundaries. Do not combine streaming batches or repack buffers implicitly.
+- Packing is explicit table behavior, not a side effect of append or streaming.
+- Destruction must follow ownership. Borrowed `GPUData` chunks must not be destroyed by aggregate vectors.
+
+## GPU table typing style
+- Prefer precise generics: `GPUVector<T extends GPUVectorFormat = GPUVectorFormat>` and `GPUData<T extends GPUVectorFormat = GPUVectorFormat>`.
+- Use `VertexList<Format>` for `vertex-list<format>` typing instead of hand-written string aliases.
+- Avoid shallow alias chains such as `ArrowLinePathFormat = ArrowPathCoordinateFormat`. Prefer spelling concrete `GPUVector<...>` types at the boundary unless an alias adds real domain meaning.
+- Avoid casts in renderer and example code. If a helper creates a known format, type the helper overload or generic so the return type is precise.
+- Keep casts localized inside low-level adapter implementation only when TypeScript cannot express the runtime invariant cleanly.
+
+## GPU table naming
+- Use source-to-target helper names such as `makeGPUVectorFromArrow(...)`.
+- Avoid mixed names like `ArrowPathColorGPUVectorFormat` when the type is just a GPU memory format. Arrow names should describe Arrow source types; GPU names should describe GPU objects and formats.
+- Do not define old parallel Arrow-side `GPUData` or `GPUVector` types. Arrow utilities should create the shared table types.
+
+## GPU table metadata and validation
+- Prefer explicit object metadata over side tables or hidden state. Do not use `WeakMap` for core vector/table metadata.
+- Centralize vertex format knowledge in the core vertex-format decoder. Do not add duplicate bundled vertex format arrays in multiple modules.
+- Runtime format strings are lowercase, exact, and whitespace-free.
+- `vertex-list<format>` means variable-length per-row vertex elements; `length` is row count, `valueLength` is flattened element count, and byte stride describes one flattened element.
+- Generic layout synthesis should reject `vertex-list<...>` unless a model or adapter explicitly handles expansion or storage consumption.
+
 ## Documentation
 - `docs/upgrade-guide.md` should focus on breaking changes and deprecations only.
 - Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.

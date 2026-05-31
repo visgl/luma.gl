@@ -5,7 +5,7 @@
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {dggs} from '@luma.gl/shadertools';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {
   Data,
   DataType,
@@ -17,7 +17,7 @@ import {
   Utf8,
   Vector
 } from 'apache-arrow';
-import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from './arrow-gpu-table-adapters';
 import {getArrowUtf8DataBufferSource} from './arrow-gpu-data';
 
 type DggsCellPathCoordinateType = List<FixedSizeList<Float32>>;
@@ -51,7 +51,7 @@ export type DggsCellKeyGPUVectorOptions = {
 /** Prepared DGGS Uint64 keys plus transient allocation accounting. */
 export type PreparedDggsCellKeyGPUVector = {
   /** GPU-only Uint64 keys, encoded for the selected DGGS format. */
-  keys: GPUVector<Uint64>;
+  keys: GPUVector;
   /** Bytes in the generated key buffer. */
   keyByteLength: number;
   /** Bytes in transient string byte, offset, and config buffers. */
@@ -63,7 +63,7 @@ export type PreparedDggsCellKeyGPUVector = {
 /** Prepared DGGS polygon paths plus generated allocation accounting. */
 export type PreparedDggsCellPathGPUVector = {
   /** GPU-only List<FixedSizeList<Float32>[2|4]> path polygons, one row per cell key. */
-  paths: GPUVector<DggsCellPathCoordinateType>;
+  paths: GPUVector;
   /** Boundary points generated per input cell, including the closing point. */
   pointCount: number;
   /** Bytes in the generated path coordinate buffer. */
@@ -190,7 +190,7 @@ function packDggsHexCellKey(
 /** Expands prepared DGGS Uint64 keys into closed Float32 polygon paths on WebGPU. */
 export function prepareDggsCellPathGPUVector(
   device: Device,
-  keys: Vector<Uint64> | GPUVector<Uint64>,
+  keys: Vector<Uint64> | GPUVector,
   options: DggsCellPathGPUVectorOptions
 ): PreparedDggsCellPathGPUVector {
   if (device.type !== 'webgpu') {
@@ -201,17 +201,19 @@ export function prepareDggsCellPathGPUVector(
   const cellPolygonPointCount = getDggsCellPolygonPointCount(options.encoding);
   const coordinateFormat = options.coordinateFormat || 'float32';
   const pathValueComponentCount = getDggsCellPathCoordinateComponentCount(coordinateFormat);
+  const pathFormat = `vertex-list<float32x${pathValueComponentCount}>` as GPUVectorFormat;
   const pathType = makeDggsCellPathCoordinateType(pathValueComponentCount);
   const ownsKeyVector = !(keys instanceof GPUVector);
   const keyVector = ownsKeyVector
-    ? makeArrowGPUVector(device, keys, {
+    ? makeGPUVectorFromArrow(device, keys, {
         id: `${resourceIdentifier}-keys`,
-        name: `${options.encoding}Keys`
+        name: `${options.encoding}Keys`,
+        format: 'uint32x2'
       })
     : keys;
   assertDggsCellKeyVector(keyVector, 'prepareDggsCellPathGPUVector');
 
-  const pathDataChunks: Array<GPUData<DggsCellPathCoordinateType>> = [];
+  const pathDataChunks: Array<GPUData> = [];
   let pathByteLength = 0;
   let transientByteLength = ownsKeyVector ? getUint64KeyVectorByteLength(keyVector) : 0;
 
@@ -247,9 +249,10 @@ export function prepareDggsCellPathGPUVector(
     transientByteLength += Uint32Array.BYTES_PER_ELEMENT;
     pathByteLength += generatedPathByteLength;
     pathDataChunks.push(
-      new GPUData<DggsCellPathCoordinateType>({
+      new GPUData({
         buffer: pathValuesBuffer,
         dataType: pathType,
+        format: pathFormat,
         length: keyData.length,
         stride: pathValueComponentCount,
         byteStride: pathValueComponentCount * Float32Array.BYTES_PER_ELEMENT,
@@ -269,10 +272,11 @@ export function prepareDggsCellPathGPUVector(
     keyVector.destroy();
   }
 
-  const paths = new GPUVector<DggsCellPathCoordinateType>({
+  const paths = new GPUVector({
     type: 'data',
     name: 'paths',
     dataType: pathType,
+    format: pathFormat,
     data: pathDataChunks,
     stride: pathValueComponentCount,
     byteStride: pathValueComponentCount * Float32Array.BYTES_PER_ELEMENT,
@@ -311,7 +315,7 @@ export function prepareDggsCellKeyGPUVector(
 
   const resourceIdentifier = options.id || `dggs-${options.encoding}-cell-keys`;
   const keyType = new Uint64();
-  const keyDataChunks: Array<GPUData<Uint64>> = [];
+  const keyDataChunks: Array<GPUData> = [];
   let keyByteLength = 0;
   let transientByteLength = 0;
 
@@ -359,9 +363,10 @@ export function prepareDggsCellKeyGPUVector(
     transientByteLength +=
       packedStringBytes.byteLength + stringOffsets.byteLength + Uint32Array.BYTES_PER_ELEMENT;
     keyDataChunks.push(
-      new GPUData<Uint64>({
+      new GPUData({
         buffer: keyBuffer,
         dataType: keyType,
+        format: 'uint32x2',
         length: stringData.length,
         stride: 1,
         byteStride: BigUint64Array.BYTES_PER_ELEMENT,
@@ -371,10 +376,11 @@ export function prepareDggsCellKeyGPUVector(
     );
   }
 
-  const keys = new GPUVector<Uint64>({
+  const keys = new GPUVector({
     type: 'data',
     name: `${options.encoding}Keys`,
     dataType: keyType,
+    format: 'uint32x2',
     data: keyDataChunks,
     stride: 1,
     byteStride: BigUint64Array.BYTES_PER_ELEMENT,
@@ -750,13 +756,13 @@ function getDggsCellPolygonPointCount(encoding: DggsCellEncoding): number {
   }
 }
 
-function assertDggsCellKeyVector(keys: GPUVector<Uint64>, callerName: string): void {
+function assertDggsCellKeyVector(keys: GPUVector, callerName: string): void {
   if (!DataType.isInt(keys.type) || keys.type.bitWidth !== 64 || keys.type.isSigned !== false) {
     throw new Error(`${callerName} requires Uint64 keys`);
   }
 }
 
-function getUint64KeyVectorByteLength(keys: GPUVector<Uint64>): number {
+function getUint64KeyVectorByteLength(keys: GPUVector): number {
   return keys.data.reduce((byteLength, data) => byteLength + data.length * data.byteStride, 0);
 }
 
@@ -771,10 +777,14 @@ export function getDggsUint64Words(value: bigint): [number, number] {
 
 function getGPUDataBinding(data: GPUData, size?: number): Binding {
   return {
-    buffer: data.buffer.buffer,
+    buffer: getGPUDataBuffer(data),
     offset: data.byteOffset,
     ...(size && size > 0 ? {size} : {})
   };
+}
+
+function getGPUDataBuffer(data: GPUData): Buffer {
+  return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
 }
 
 function getNormalizedUtf8Offsets(data: Data<Utf8>): Uint32Array {

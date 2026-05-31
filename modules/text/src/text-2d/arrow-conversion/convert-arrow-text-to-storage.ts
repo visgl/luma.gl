@@ -87,8 +87,7 @@ export type {ConvertedArrowTextData, ConvertArrowTextProps};
 function canUseGPUVectorStorageTextState(
   device: Device,
   props: ArrowStorageTextInputProps
-): props is ArrowStorageTextInputProps &
-  GPUVectorStorageTextInputProps & {texts: GPUVector<arrow.Utf8>} {
+): props is ArrowStorageTextInputProps & GPUVectorStorageTextInputProps & {texts: GPUVector} {
   return (
     device.type === 'webgpu' &&
     props.rowIndexColumn !== true &&

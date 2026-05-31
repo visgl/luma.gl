@@ -10,10 +10,9 @@ import {
   type GPUTable,
   type GPUVector
 } from '@luma.gl/tables';
-import type {FixedSizeList, Float32, Int16, List, Uint8} from 'apache-arrow';
 import FontAtlasManager, {type FontAtlas, type FontSettings} from '../atlas/font-atlas-manager';
 import type {CharacterMapping} from '../atlas/text-utils';
-import type {TextGlyphLayout, Utf8TextType} from '../model-utils/gpu-text-types';
+import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
 import type {AttributeTextInputProps} from '../model-utils/text-model-props';
 
@@ -68,22 +67,22 @@ export interface AttributeTextRenderProps extends ModelProps {}
 /** Constructor props for the attribute text renderer. */
 export interface AttributeTextModelProps extends ModelProps {
   /** GPU-resident label origins aligned one-for-one with `texts`; each row is `[x, y]`. */
-  positions: GPUVector<FixedSizeList<Float32>>;
+  positions: GPUVector;
   /** GPU UTF-8 or dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector<Utf8TextType>;
+  texts: GPUVector;
   /** Optional GPU packed RGBA8 text colors aligned with label rows or label characters. */
-  colors?: GPUVector<FixedSizeList<Uint8> | List<FixedSizeList<Uint8>>>;
+  colors?: GPUVector;
   /** Optional GPU per-row angles in degrees. */
-  angles?: GPUVector<Float32>;
+  angles?: GPUVector;
   /** Optional GPU per-row deck-style text sizes. */
-  sizes?: GPUVector<Float32>;
+  sizes?: GPUVector;
   /** Optional GPU per-row pixel offsets; each row is `[x, y]`. */
-  pixelOffsets?: GPUVector<FixedSizeList<Float32>>;
+  pixelOffsets?: GPUVector;
   /**
    * Optional GPU packed per-label clip rectangles `[x, y, width, height]`.
    * Negative width or height disables clipping on that axis.
    */
-  clipRects?: GPUVector<FixedSizeList<Int16>>;
+  clipRects?: GPUVector;
   /** Character set for atlas generation. Pass `'auto'` when the adapter should derive it. */
   characterSet?: FontSettings['characterSet'] | 'auto';
   /** Font atlas generation settings. */

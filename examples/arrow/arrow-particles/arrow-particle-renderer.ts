@@ -251,9 +251,9 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       }
       const positions = getRequiredBatchVector(batch, 'particlePositions');
       if (this.device.type === 'webgpu') {
-        this.model.setBindings({particlePositions: positions.buffer});
+        this.model.setBindings({particlePositions: getGPUVectorBuffer(positions)});
       } else {
-        this.model.setAttributes({particlePositions: positions.buffer});
+        this.model.setAttributes({particlePositions: getGPUVectorBuffer(positions)});
       }
       this.model.setInstanceCount(batch.numRows);
       this.model.draw(renderPass);
@@ -366,7 +366,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
         source: WEBGPU_RENDER_SHADER,
         shaderLayout: RENDER_SHADER_LAYOUT,
         bindings: {
-          particlePositions: firstPositions.buffer
+          particlePositions: getGPUVectorBuffer(firstPositions)
         },
         topology: 'triangle-list',
         vertexCount: 6,
@@ -389,7 +389,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       fs: WEBGL_RENDER_FRAGMENT_SHADER,
       shaderLayout: WEBGL_RENDER_SHADER_LAYOUT,
       attributes: {
-        particlePositions: firstPositions.buffer
+        particlePositions: getGPUVectorBuffer(firstPositions)
       },
       bufferLayout: [{name: 'particlePositions', format: 'float32x2', stepMode: 'instance'}],
       topology: 'triangle-list',
@@ -405,8 +405,12 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       if (!initialValues) {
         continue;
       }
-      getRequiredBatchVector(batch, 'particlePositions').buffer.write(initialValues.positions);
-      getRequiredBatchVector(batch, 'particleVelocities').buffer.write(initialValues.velocities);
+      getGPUVectorBuffer(getRequiredBatchVector(batch, 'particlePositions')).write(
+        initialValues.positions
+      );
+      getGPUVectorBuffer(getRequiredBatchVector(batch, 'particleVelocities')).write(
+        initialValues.velocities
+      );
     }
   }
 
@@ -549,10 +553,18 @@ function copyOutputToBatchVector({
   }
   commandEncoder.copyBufferToBuffer({
     sourceBuffer,
-    destinationBuffer: getConcreteBuffer(targetVector.buffer),
+    destinationBuffer: getConcreteBuffer(getGPUVectorBuffer(targetVector)),
     size
   });
   return 1;
+}
+
+function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`ArrowParticleRenderer vector "${vector.name}" requires one GPUData chunk`);
+  }
+  return data.buffer;
 }
 
 function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {

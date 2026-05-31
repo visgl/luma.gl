@@ -6,9 +6,9 @@
 </p>
 
 `GPUVector` represents one logical typed table column over one or more
-[`GPUData`](/docs/api-reference/tables/gpu-data) chunks. It can wrap an existing
-GPU buffer, describe an interleaved buffer, aggregate existing chunks, or create
-appendable `DynamicBuffer` storage.
+[`GPUData`](/docs/api-reference/tables/gpu-data) chunks. It does not own a
+buffer directly; every concrete buffer lives on a `GPUData` object in
+`GPUVector.data[]`.
 
 ## Usage
 
@@ -19,14 +19,16 @@ const gpuVector = new GPUVector({
   type: 'buffer',
   name: 'positions',
   buffer,
-  dataType,
+  format: 'float32x3',
   length,
-  byteStride
+  byteStride: 12
 });
+
+gpuVector.data[0].buffer; // the bindable storage
 ```
 
 When the input starts as Apache Arrow, prefer
-[`makeArrowGPUVector()`](/docs/api-reference/arrow/supported-arrow-types) from
+[`makeGPUVectorFromArrow()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`.
 
 ## Constructor Modes
@@ -35,61 +37,63 @@ When the input starts as Apache Arrow, prefer
 
 | Mode | Key props | Use when |
 | --- | --- | --- |
-| `{type: 'buffer'}` | `name`, `buffer`, `dataType`, `length`, `byteStride` | One typed column is stored in one existing GPU buffer. |
-| `{type: 'interleaved'}` | `name`, `buffer`, `dataType`, `length`, `byteStride`, `attributes` | One GPU buffer contains several attribute views per row. |
-| `{type: 'data'}` | `name`, `dataType`, `data[]` | Existing `GPUData` chunks should be exposed as one logical column. |
-| `{type: 'appendable'}` | `name`, `device`, `dataType`, `stride`, `byteStride` | The vector should own growable `DynamicBuffer` storage for later append writes. |
+| `{type: 'buffer'}` | `name`, `buffer`, `format`, `length` | Wrap one existing typed GPU buffer as one `GPUData` chunk. |
+| `{type: 'interleaved'}` | `name`, `buffer`, `byteStride`, `attributes` | Wrap one existing interleaved row buffer as one `GPUData` chunk plus a `BufferLayout`. |
+| `{type: 'data'}` | `name`, `format`, `data[]` | Expose existing `GPUData` chunks as one logical column. |
+| `{type: 'appendable'}` | `name`, `device`, `format`, `byteStride` | Create an initially empty logical vector that adapter code can append to with new `GPUData` chunks. |
 
 ## Properties
 
 | Property | Type | Meaning |
 | --- | --- | --- |
 | `name` | `string` | Stable vector/table column name. |
-| `type` | `arrow.DataType` | Logical schema/type descriptor. |
+| `format` | `GPUVectorFormat \| undefined` | Canonical memory-layout descriptor for uploaded bytes. |
+| `type` | `unknown` | Deprecated adapter-owned logical metadata. |
+| `dataType` | `unknown` | Deprecated adapter-owned logical metadata. |
 | `length` | `number` | Aggregate logical row count. |
-| `stride` | `number` | Number of scalar values represented by one row. |
-| `byteOffset` | `number` | Byte offset of the first row when a direct backing surface exists. |
-| `byteStride` | `number` | Bytes between adjacent logical rows. |
-| `rowByteLength` | `number` | Bytes occupied by one row payload. |
+| `valueLength` | `number` | Aggregate fixed-row or flattened vertex-list element count. |
+| `stride` | `number` | Number of scalar values represented by one fixed row or flattened element. |
+| `byteOffset` | `number` | Compatibility metadata for the first row when this vector has one chunk. |
+| `byteStride` | `number` | Bytes between adjacent fixed rows or flattened elements. |
+| `rowByteLength` | `number` | Bytes occupied by one fixed row or flattened element payload. |
 | `bufferLayout` | `BufferLayout \| undefined` | Interleaved buffer layout, when this vector describes multiple attribute views. |
-| `data` | `GPUData[]` | Ordered chunk views that define the logical column. |
-| `buffer` | `Buffer \| DynamicBuffer` | Directly bindable buffer; throws for multi-buffer aggregate vectors. |
+| `data` | `GPUData[]` | Ordered chunks that define the logical column. Each chunk has its own buffer. |
 | `ownsBuffer` | `boolean` | Whether destroying this vector releases retained GPU storage. |
-| `capacityRows` | `number \| undefined` | Appendable row capacity when backed by `DynamicBuffer`. |
-| `appendedByteLength` | `number` | Bytes occupied by appendable payloads. |
+| `capacityRows` | `number \| undefined` | Current logical rows for appendable vectors. |
+| `appendedByteLength` | `number` | Adapter-reported bytes occupied by appended chunks. |
 
 ## Methods
 
 ### `addData(data): this`
 
 Adds an existing `GPUData` chunk to this logical vector. The chunk must have the
-same logical type, `byteStride`, and `rowByteLength`.
-
-### `writeAppendableBytes(data, byteOffset, requiredByteLength): void`
-
-Reserves appendable storage and writes raw bytes supplied by a format-specific
-adapter. This requires the vector to be appendable.
+same `format`, `byteStride`, and `rowByteLength`.
 
 ### `appendDataChunk(data, appendedByteLength): this`
 
-Adds one appendable `GPUData` view while preserving the concrete appendable
-backing buffer.
+Adds one adapter-created `GPUData` chunk to an appendable logical vector.
 
 ### `resetLastBatch(): this`
 
-Clears appendable logical rows while retaining the `DynamicBuffer` allocation.
+Clears appendable logical rows and destroys appended `GPUData` buffers.
 
 ### `transferBufferOwnership(target): void`
 
-Transfers same-buffer ownership to another vector view. Both vectors must refer
-to the same concrete buffer.
+Transfers same-buffer ownership between two single-chunk vector views. This is a
+migration helper for adapters that create short-lived views.
 
 ### `destroy(): void`
 
-Releases owned concrete buffers, retained detached vectors, and owned data
-chunks. Borrowed storage is left alive.
+Destroys owned `GPUData` chunks and retained detached vectors. Borrowed storage
+is left alive.
 
 ## Notes
 
-Use `data[]` for batch-aware code. The `buffer` convenience accessor is only
-available when the vector has exactly one concrete backing surface.
+Use `data[]` for binding, copying, batching, and ownership. A single-buffer
+consumer should explicitly require `vector.data.length === 1` and then bind
+`vector.data[0].buffer`.
+
+For `vertex-list<...>` vectors, `length` remains the source row count and
+`valueLength` is the flattened element count. `byteStride` and `rowByteLength`
+describe one flattened element, not one source row. Offsets and other
+variable-length metadata are adapter-owned.

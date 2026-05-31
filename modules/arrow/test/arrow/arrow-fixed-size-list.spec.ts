@@ -17,7 +17,7 @@ import {
   makeArrowMatrix3x3Vector,
   makeArrowMatrixVector,
   makeArrowFixedSizeListVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
@@ -411,13 +411,14 @@ test('GPUVector creates a GPU buffer from an Arrow vector', t => {
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = makeArrowGPUVector(device, vector);
+  const gpuVector = makeGPUVectorFromArrow(device, vector);
 
   t.notOk('vector' in gpuVector, 'does not retain the source Arrow vector');
   t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
+  t.equal(gpuVector.format, 'float32x2', 'maps FixedSizeList<Float32, 2> to float32x2');
   t.equal(gpuVector.length, 2, 'exposes the Arrow vector length');
   t.equal(gpuVector.stride, 2, 'exposes the FixedSizeList stride');
-  t.equal(gpuVector.buffer.byteLength, 16, 'creates a buffer from the vector values');
+  t.equal(gpuVector.data[0].buffer.byteLength, 16, 'creates a buffer from the vector values');
 
   gpuVector.destroy();
   t.end();
@@ -428,7 +429,7 @@ test('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vect
   const sourceVector = makeArrowMatrix4x4Vector(
     new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 3, 4, 1])
   );
-  const gpuVector = makeArrowGPUVector(device, sourceVector, {name: 'matrix'});
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector, {name: 'matrix'});
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.equal(gpuVector.stride, 16, 'preserves one mat4x4 scalar stride');
@@ -446,7 +447,7 @@ test('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vect
 test('GPUVector readAsync round-trips scalar numeric vectors', async t => {
   const device = new NullDevice({});
   const sourceVector = arrow.makeVector(new Int32Array([1, -2, 3]));
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
@@ -458,31 +459,37 @@ test('GPUVector readAsync round-trips scalar numeric vectors', async t => {
   t.end();
 });
 
-test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer', async t => {
+test('GPUVector uploads Arrow Data chunks into separate GPUData buffers', async t => {
   const device = new NullDevice({});
   const type = new arrow.Float32();
   const sourceVector = new arrow.Vector([
     arrow.makeData({type, length: 2, data: new Float32Array([1, 2])}),
     arrow.makeData({type, length: 1, data: new Float32Array([3])})
   ]);
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const vectorResult = await readArrowGPUVectorAsync(gpuVector);
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
 
-  t.equal(gpuVector.buffer.byteLength, 12, 'uploads every vector chunk into one GPU buffer');
-  t.equal(gpuVector.data.length, 2, 'exposes one GPUData view per source chunk');
-  t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunk views');
+  t.equal(gpuVector.data.length, 2, 'exposes one GPUData chunk per source chunk');
+  t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunks');
+  t.notEqual(
+    gpuVector.data[0].buffer,
+    gpuVector.data[1].buffer,
+    'keeps each GPUData chunk on its own GPU buffer'
+  );
+  t.equal(gpuVector.data[0].buffer.byteLength, 8, 'uploads the first source chunk buffer');
+  t.equal(gpuVector.data[1].buffer.byteLength, 4, 'uploads the second source chunk buffer');
   t.notOk(
     gpuVector.data[0].readbackMetadata,
     'fixed-width chunks do not retain extra readback metadata'
   );
-  t.equal(gpuVector.data[1].byteOffset, 8, 'tracks packed byte offsets across chunks');
-  t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every packed row');
+  t.equal(gpuVector.data[1].byteOffset, 0, 'later chunks start at their own GPUData buffer');
+  t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every chunk row');
   t.deepEqual(
     Array.from(arrow.makeVector(firstChunkResult).toArray()),
     [1, 2],
-    'reads one GPU data chunk through its view'
+    'reads one GPU data chunk'
   );
 
   gpuVector.destroy();
@@ -494,7 +501,7 @@ test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t =>
   const firstChunk = arrow.vectorFromArray(['alpha', null], new arrow.Utf8());
   const secondChunk = arrow.vectorFromArray(['beta'], new arrow.Utf8());
   const sourceVector = new arrow.Vector([...firstChunk.data, ...secondChunk.data]);
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const vectorResult = await readArrowGPUVectorAsync(gpuVector);
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
@@ -524,7 +531,7 @@ test('GPUVector UTF-8 readAsync normalizes sliced offsets without retaining sour
   const device = new NullDevice({});
   const sourceVector = arrow.vectorFromArray(['skip', null, 'kept'], new arrow.Utf8());
   const slicedVector = sourceVector.slice(1) as arrow.Vector<arrow.Utf8>;
-  const gpuVector = makeArrowGPUVector(device, slicedVector);
+  const gpuVector = makeGPUVectorFromArrow(device, slicedVector);
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
@@ -547,7 +554,7 @@ test('GPUVector Dictionary<Utf8> upload uses sliced index rows', async t => {
     1,
     2
   );
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const indexBytes = await gpuVector.data[0].buffer.readAsync(
     gpuVector.data[0].byteOffset,
@@ -576,7 +583,7 @@ test('GPUVector readAsync round-trips FixedSizeList vectors', async t => {
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
@@ -599,7 +606,7 @@ test('GPUVector infers Arrow-vector object construction from vector props', t =>
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = makeArrowGPUVector(device, vector, {name: 'positions'});
+  const gpuVector = makeGPUVectorFromArrow(device, vector, {name: 'positions'});
 
   t.equal(gpuVector.name, 'positions', 'exposes vector name');
   t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
@@ -637,9 +644,8 @@ test('GPUVector wraps existing typed buffers', t => {
   t.equal(gpuVector.length, 4, 'exposes supplied length');
   t.equal(gpuVector.stride, 1, 'deduces scalar stride');
   t.equal(gpuVector.byteStride, 4, 'deduces byte stride');
-  t.equal(gpuVector.data.length, 1, 'exposes one GPU data view for the wrapped buffer');
-  t.ok(gpuVector.data[0].buffer instanceof DynamicBuffer, 'data view keeps a dynamic wrapper');
-  t.equal(gpuVector.data[0].buffer.buffer, buffer, 'data view resolves to the wrapped buffer');
+  t.equal(gpuVector.data.length, 1, 'exposes one GPUData chunk for the wrapped buffer');
+  t.equal(gpuVector.data[0].buffer, buffer, 'GPUData keeps the wrapped buffer');
 
   gpuVector.destroy();
   t.equal(destroyed, false, 'does not destroy non-owned buffers');
@@ -694,10 +700,9 @@ test('GPUVector wraps interleaved buffers', t => {
   t.ok(arrow.DataType.isBinary(gpuVector.type), 'uses Arrow Binary for interleaved storage');
   t.equal(gpuVector.length, 2, 'exposes row count');
   t.equal(gpuVector.stride, 16, 'uses byte stride as opaque row stride');
-  t.equal(gpuVector.data.length, 1, 'exposes one opaque GPU data view');
-  t.ok(arrow.DataType.isBinary(gpuVector.data[0].type), 'data view uses Arrow Binary');
-  t.ok(gpuVector.data[0].buffer instanceof DynamicBuffer, 'data view keeps a dynamic wrapper');
-  t.equal(gpuVector.data[0].buffer.buffer, buffer, 'data view resolves to the interleaved buffer');
+  t.equal(gpuVector.data.length, 1, 'exposes one opaque GPUData chunk');
+  t.ok(arrow.DataType.isBinary(gpuVector.data[0].type), 'GPUData uses Arrow Binary');
+  t.equal(gpuVector.data[0].buffer, buffer, 'GPUData keeps the interleaved buffer');
   t.deepEqual(
     gpuVector.bufferLayout,
     {
@@ -784,12 +789,14 @@ test('GPUVector addData aggregates GPU chunks without adopting their buffers', t
   const firstData = new GPUData({
     buffer: new DynamicBuffer(device, {buffer: firstBuffer, ownsBuffer: false}),
     dataType: new arrow.Float32(),
+    format: 'float32',
     length: 2,
     byteStride: 4
   });
   const secondData = new GPUData({
     buffer: new DynamicBuffer(device, {buffer: secondBuffer, ownsBuffer: false}),
     dataType: new arrow.Float32(),
+    format: 'float32',
     length: 2,
     byteStride: 4
   });
@@ -804,10 +811,10 @@ test('GPUVector addData aggregates GPU chunks without adopting their buffers', t
 
   t.equal(gpuVector.length, 4, 'updates aggregate row count');
   t.equal(gpuVector.data.length, 2, 'preserves each appended GPU data chunk');
-  t.throws(
-    () => gpuVector.buffer,
-    /multi-buffer vectors/,
-    'does not expose a misleading single direct buffer'
+  t.notEqual(
+    gpuVector.data[0].buffer,
+    gpuVector.data[1].buffer,
+    'keeps aggregate vector storage on its GPUData chunks'
   );
 
   gpuVector.destroy();
@@ -830,18 +837,22 @@ test('appendArrowDataToGPUVector appends Arrow data into appendable vector stora
   appendArrowDataToGPUVector(gpuVector, firstData);
   appendArrowDataToGPUVector(gpuVector, secondData);
 
-  t.ok(gpuVector.buffer instanceof DynamicBuffer, 'uses stable DynamicBuffer storage');
   t.equal(gpuVector.length, 4, 'tracks rows appended into the final mutable batch');
-  t.equal(gpuVector.data.length, 2, 'exposes one GPU data range per appended Arrow chunk');
-  t.equal(gpuVector.data[1].byteOffset, 8, 'tracks the later append byte offset');
+  t.equal(gpuVector.data.length, 2, 'exposes one GPUData buffer per appended Arrow chunk');
+  t.equal(gpuVector.data[1].byteOffset, 0, 'later appends start at the new GPUData buffer');
+  t.notEqual(
+    gpuVector.data[0].buffer,
+    gpuVector.data[1].buffer,
+    'appended chunks do not share one backing buffer'
+  );
   t.notOk(
     gpuVector.data[0].readbackMetadata,
     'fixed-width append chunks do not retain reconstruction metadata'
   );
-  t.ok((gpuVector.capacityRows ?? 0) >= 4, 'grows appendable capacity as needed');
+  t.equal(gpuVector.capacityRows, 4, 'reports appended row capacity without over-allocation');
 
   gpuVector.resetLastBatch();
-  t.equal(gpuVector.length, 0, 'clears logical rows without dropping the allocation');
+  t.equal(gpuVector.length, 0, 'clears logical rows and appended GPUData buffers');
   gpuVector.destroy();
   t.end();
 });
@@ -870,11 +881,11 @@ test('appendArrowDataToGPUVector appends UTF-8 Arrow data into appendable vector
     'utf8',
     'retains copied UTF-8 offsets for the later append chunk'
   );
-  t.ok(gpuVector.data[1].byteOffset > 0, 'writes later UTF-8 bytes after earlier bytes');
-  t.equal(
-    gpuVector.data[1].byteOffset % 4,
-    0,
-    'aligns later UTF-8 chunk offsets for WebGPU buffer writes'
+  t.equal(gpuVector.data[1].byteOffset, 0, 'later UTF-8 appends start at the new GPUData buffer');
+  t.notEqual(
+    gpuVector.data[0].buffer,
+    gpuVector.data[1].buffer,
+    'UTF-8 append chunks do not share one backing buffer'
   );
 
   gpuVector.destroy();
@@ -921,7 +932,7 @@ test('appendArrowDataToGPUVector appends sliced Dictionary<Utf8> index rows', as
 test('GPUVector exposes primitive vector length and stride', t => {
   const device = new NullDevice({});
   const vector = arrow.makeVector(new Float32Array([1, 2, 3]));
-  const gpuVector = makeArrowGPUVector(device, vector);
+  const gpuVector = makeGPUVectorFromArrow(device, vector);
 
   t.equal(gpuVector.length, 3, 'exposes the primitive vector length');
   t.equal(gpuVector.stride, 1, 'exposes primitive vector stride as 1');

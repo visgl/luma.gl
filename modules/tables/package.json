@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@luma.gl/core": "~9.3.0",
-    "@luma.gl/engine": "~9.3.0",
-    "apache-arrow": "^17.0.0"
+    "@luma.gl/engine": "~9.3.0"
   }
 }

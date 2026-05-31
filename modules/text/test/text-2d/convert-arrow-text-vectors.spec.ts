@@ -7,7 +7,7 @@ import {
   makeArrowFixedSizeListVector,
   makeArrowGPURecordBatch,
   makeArrowGPUTable,
-  makeArrowGPUVector
+  makeGPUVectorFromArrow
 } from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/tables';
 import type {Device, ShaderLayout} from '@luma.gl/core';
@@ -437,7 +437,7 @@ test('AttributeTextModel expands chunked UTF-8 GPUVector data', t => {
   const textProps = makeGpuTextProps(device, ['A', 'A']);
   textProps.texts.destroy();
   const sourceTexts = new arrow.Vector<arrow.Utf8>([...firstChunk.data, ...secondChunk.data]);
-  textProps.texts = makeArrowGPUVector(device, sourceTexts, {name: 'texts'});
+  textProps.texts = makeGPUVectorFromArrow(device, sourceTexts, {name: 'texts'});
   textProps.sourceVectors = {...textProps.sourceVectors, texts: sourceTexts};
 
   const model = createAttributeTextModel(device, {
@@ -467,8 +467,8 @@ test('AttributeTextModel rebuilds from appended GPUTable-backed text batches', t
 
   const model = createAttributeTextModel(device, {
     id: 'arrow-text-model-appendable-gpu-table-test',
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    positions: gpuTable.gpuVectors.positions,
+    texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -482,8 +482,8 @@ test('AttributeTextModel rebuilds from appended GPUTable-backed text batches', t
   );
   const rebuiltModel = createAttributeTextModel(device, {
     id: 'arrow-text-model-appendable-gpu-table-test-rebuilt',
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    positions: gpuTable.gpuVectors.positions,
+    texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowTextSourceVectorsFromBatches([firstBatch, secondBatch]),
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -606,7 +606,7 @@ test('createStorageTextStateFromGPUVectors prepares storage text without sourceV
   const storageState = createStorageTextStateFromGPUVectors(device, {
     id: 'gpu-vector-storage-text-state-test',
     positions: textProps.positions,
-    texts: textProps.texts as GPUVector<arrow.Utf8>,
+    texts: textProps.texts,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
   });
@@ -964,10 +964,10 @@ test('DictionaryTextModel draws every dictionary source batch', async t => {
       styleConfigRows,
       [
         {batchRowIndexBase: 0, rowStorageIndexBase: 0},
-        {batchRowIndexBase: 1, rowStorageIndexBase: 1},
-        {batchRowIndexBase: 2, rowStorageIndexBase: 2}
+        {batchRowIndexBase: 1, rowStorageIndexBase: 0},
+        {batchRowIndexBase: 2, rowStorageIndexBase: 0}
       ],
-      'style configs preserve global picking row base and row storage buffer offset per batch'
+      'style configs preserve global picking row base and per-buffer row storage offset'
     );
   } finally {
     privateModel._syncAttachmentFormats = syncAttachmentFormats;
@@ -994,8 +994,8 @@ test('StorageTextModel rebuilds from appended GPUTable-backed text batches', asy
 
   const model = createStorageTextModel(device, {
     id: 'arrow-storage-text-appendable-gpu-table-test',
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    positions: gpuTable.gpuVectors.positions,
+    texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -1008,8 +1008,8 @@ test('StorageTextModel rebuilds from appended GPUTable-backed text batches', asy
   );
   const rebuiltModel = createStorageTextModel(device, {
     id: 'arrow-storage-text-appendable-gpu-table-test-rebuilt',
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    positions: gpuTable.gpuVectors.positions,
+    texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch]),
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -1049,8 +1049,8 @@ test('StorageTextModel rebuilds dictionary GPUTable-backed text batches', async 
 
   const model = createStorageTextModel(device, {
     id: 'arrow-storage-text-dictionary-appendable-gpu-table-test',
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<ArrowUtf8TextType>,
+    positions: gpuTable.gpuVectors.positions,
+    texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -1063,8 +1063,8 @@ test('StorageTextModel rebuilds dictionary GPUTable-backed text batches', async 
   );
   const rebuiltModel = createStorageTextModel(device, {
     id: 'arrow-storage-text-dictionary-appendable-gpu-table-test-rebuilt',
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<ArrowUtf8TextType>,
+    positions: gpuTable.gpuVectors.positions,
+    texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch]),
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -1273,7 +1273,7 @@ function makeGpuTextProps(device: NullDevice, labels: string[]) {
   const positions = makeArrowPositions(labels.length);
   const texts = makeArrowTexts(labels);
   return {
-    positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
+    positions: makeGPUVectorFromArrow(device, positions, {name: 'positions'}),
     texts: makeGpuTexts(device, texts),
     sourceVectors: {positions, texts}
   };
@@ -1283,7 +1283,7 @@ function makeGpuDictionaryTextProps(device: NullDevice, labels: readonly (string
   const positions = makeArrowPositions(labels.length);
   const texts = makeArrowDictionaryTexts(labels);
   return {
-    positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
+    positions: makeGPUVectorFromArrow(device, positions, {name: 'positions'}),
     texts: makeGpuTexts(device, texts),
     sourceVectors: {positions, texts}
   };
@@ -1303,8 +1303,8 @@ function makeArrowDictionaryTexts(
 function makeGpuTexts<TextTypeT extends ArrowUtf8TextType>(
   device: NullDevice,
   vector: arrow.Vector<TextTypeT>
-): GPUVector<TextTypeT> {
-  return makeArrowGPUVector(device, vector, {name: 'texts'});
+): GPUVector {
+  return makeGPUVectorFromArrow(device, vector, {name: 'texts'});
 }
 
 function destroyGpuTextProps(props: ReturnType<typeof makeGpuTextProps>): void {
@@ -1316,7 +1316,7 @@ function makeStorageGpuTextProps(device: NullDevice, labels: string[]) {
   const positions = makeArrowPositions(labels.length);
   const texts = makeArrowTexts(labels);
   return {
-    positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
+    positions: makeGPUVectorFromArrow(device, positions, {name: 'positions'}),
     texts: makeGpuTexts(device, texts),
     sourceVectors: {texts}
   };
@@ -1326,7 +1326,7 @@ function makeStorageGpuDictionaryTextProps(device: NullDevice, labels: readonly 
   const positions = makeArrowPositions(labels.length);
   const texts = makeArrowDictionaryTexts(labels);
   return {
-    positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
+    positions: makeGPUVectorFromArrow(device, positions, {name: 'positions'}),
     texts: makeGpuTexts(device, texts),
     sourceVectors: {texts}
   };
@@ -1348,7 +1348,10 @@ function makeChunkedStorageGpuDictionaryTextProps(
   const positions = new arrow.Vector<arrow.FixedSizeList<arrow.Float32>>(positionDataChunks);
   const texts = new arrow.Vector<ArrowUtf8Dictionary>(textDataChunks);
   return {
-    positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
+    positions: makeGPUVectorFromArrow(device, positions, {
+      name: 'positions',
+      preserveDataChunks: true
+    }),
     texts: makeGpuTexts(device, texts),
     sourceVectors: {texts}
   };

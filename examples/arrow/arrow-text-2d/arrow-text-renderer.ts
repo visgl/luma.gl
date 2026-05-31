@@ -324,37 +324,23 @@ export class ArrowTextRenderer extends GPURenderable<
     );
 
     return {
-      positions: getRequiredGPUVector<arrow.FixedSizeList<arrow.Float32>>(
-        props.gpuTable,
-        columns.positions
-      ),
-      texts: getRequiredGPUVector<ArrowUtf8TextType>(props.gpuTable, columns.texts),
+      positions: getRequiredGPUVector(props.gpuTable, columns.positions),
+      texts: getRequiredGPUVector(props.gpuTable, columns.texts),
       ...(clipRects
         ? {
-            clipRects: getOptionalGPUVector<arrow.FixedSizeList<arrow.Int16>>(
-              props.gpuTable,
-              columns.clipRects
-            )
+            clipRects: getOptionalGPUVector(props.gpuTable, columns.clipRects)
           }
         : {}),
       ...(colors
         ? {
-            colors: getOptionalGPUVector<RowColorColumnDataType | CharacterColorDataType>(
-              props.gpuTable,
-              columns.colors
-            )
+            colors: getOptionalGPUVector(props.gpuTable, columns.colors)
           }
         : {}),
-      ...(angles
-        ? {angles: getOptionalGPUVector<arrow.Float32>(props.gpuTable, columns.angles)}
-        : {}),
-      ...(sizes ? {sizes: getOptionalGPUVector<arrow.Float32>(props.gpuTable, columns.sizes)} : {}),
+      ...(angles ? {angles: getOptionalGPUVector(props.gpuTable, columns.angles)} : {}),
+      ...(sizes ? {sizes: getOptionalGPUVector(props.gpuTable, columns.sizes)} : {}),
       ...(pixelOffsets
         ? {
-            pixelOffsets: getOptionalGPUVector<arrow.FixedSizeList<arrow.Float32>>(
-              props.gpuTable,
-              columns.pixelOffsets
-            )
+            pixelOffsets: getOptionalGPUVector(props.gpuTable, columns.pixelOffsets)
           }
         : {}),
       sourceVectors: {
@@ -757,7 +743,7 @@ export class ArrowTextRenderer extends GPURenderable<
         ...(data.sourceVectors.clipRects ? {clipRects: data.sourceVectors.clipRects} : {})
       },
       ...(data.clipRects ? {clipRects: data.clipRects} : {}),
-      ...(data.colors ? {colors: data.colors as GPUVector<arrow.FixedSizeList<arrow.Uint8>>} : {}),
+      ...(data.colors ? {colors: data.colors} : {}),
       ...(data.angles ? {angles: data.angles} : {}),
       ...(data.sizes ? {sizes: data.sizes} : {}),
       ...(data.pixelOffsets ? {pixelOffsets: data.pixelOffsets} : {})
@@ -926,26 +912,23 @@ function getOptionalArrowVector<T extends arrow.DataType>(
   return vector ? (vector as arrow.Vector<T>) : undefined;
 }
 
-function getRequiredGPUVector<T extends arrow.DataType>(
-  gpuTable: GPUTable,
-  columnName: string
-): GPUVector<T> {
+function getRequiredGPUVector(gpuTable: GPUTable, columnName: string): GPUVector {
   const vector = gpuTable.gpuVectors[columnName];
   if (!vector) {
     throw new Error(`ArrowTextRenderer data is missing GPU column "${columnName}"`);
   }
-  return vector as GPUVector<T>;
+  return vector;
 }
 
-function getOptionalGPUVector<T extends arrow.DataType>(
+function getOptionalGPUVector(
   gpuTable: GPUTable,
   columnName: string | null
-): GPUVector<T> | undefined {
+): GPUVector | undefined {
   if (columnName === null) {
     return undefined;
   }
   const vector = gpuTable.gpuVectors[columnName];
-  return vector ? (vector as GPUVector<T>) : undefined;
+  return vector ?? undefined;
 }
 
 function getResolvedColumnSelectors(

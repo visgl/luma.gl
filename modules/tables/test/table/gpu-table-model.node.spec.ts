@@ -6,7 +6,6 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPURecordBatch, GPUTable, GPUTableModel, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
 
 const TABLE_MODEL_SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
@@ -126,7 +125,6 @@ test('GPUTableModel binds interleaved table buffers by layout name', t => {
         type: 'interleaved',
         name: 'matrices',
         buffer: matrixBuffer,
-        dataType: new arrow.Binary(),
         length: 2,
         byteStride: 32,
         attributes: [
@@ -167,7 +165,7 @@ test('GPUTableModel draws preserved batches and restores table-level bindings', 
   const table = makeBatchedPositionsTable(device, [1, 2]);
   const model = makeTableModel(device, table);
   const renderPass = device.getDefaultRenderPass();
-  const batchBuffers = table.batches.map(batch => batch.gpuVectors['positions'].buffer);
+  const batchBuffers = table.batches.map(batch => batch.gpuVectors['positions'].data[0].buffer);
   const drawCalls: Array<{instanceCount?: number; buffer?: unknown}> = [];
   const draw = model.pipeline.draw.bind(model.pipeline);
 
@@ -253,7 +251,7 @@ function makePositionsVector(device: NullDevice, rowCount: number): GPUVector {
     type: 'buffer',
     name: 'positions',
     buffer: device.createBuffer({data: new Float32Array(rowCount * 2)}),
-    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false)),
+    format: 'float32x2',
     length: rowCount,
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2,

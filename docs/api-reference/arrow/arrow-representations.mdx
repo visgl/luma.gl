@@ -18,6 +18,12 @@ The recommended Arrow shape depends on the data's meaning, not only its scalar
 storage type. A `FixedSizeList<Uint8, 4>` can be a row color, a vertex color, or
 unrelated bytes; the consuming layer or adapter decides the semantic role.
 
+When these columns are uploaded, adapters assign `GPUVectorFormat` strings:
+fixed-size rows become formats such as `float32x3` or `unorm8x4`; variable-length
+per-vertex rows become `vertex-list<...>` formats such as
+`vertex-list<float32x3>`. The `vertex-list` format describes flattened element
+memory; offsets and topology remain adapter metadata.
+
 ## Recommended Encodings
 
 ### Positions

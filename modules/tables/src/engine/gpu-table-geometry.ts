@@ -71,10 +71,13 @@ function getStaticGeometryAttributes(table: GPUTable): Record<string, Buffer> {
   const attributes: Record<string, Buffer> = {};
   for (const layout of table.bufferLayout) {
     const vector = table.gpuVectors[layout.name];
-    const buffer = vector?.buffer;
-    if (!buffer) {
+    if (!vector) {
       throw new Error(`GPUTableGeometry requires GPU vector "${layout.name}"`);
     }
+    if (vector.data.length !== 1) {
+      throw new Error('GPUTableGeometry requires static single-buffer attributes');
+    }
+    const buffer = vector.data[0].buffer;
     if (buffer instanceof DynamicBuffer) {
       throw new Error('GPUTableGeometry does not support DynamicBuffer-backed attributes');
     }

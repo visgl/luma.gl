@@ -6,7 +6,6 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPURecordBatch, GPUTable, GPUTableGeometry, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
 
 test('GPUTableGeometry exposes one static table batch as geometry', t => {
   const device = new NullDevice({});
@@ -17,13 +16,13 @@ test('GPUTableGeometry exposes one static table batch as geometry', t => {
   t.deepEqual(Object.keys(geometry.attributes), ['positions'], 'uses layout-named buffers');
   t.equal(
     geometry.attributes['positions'],
-    table.gpuVectors['positions'].buffer,
+    table.gpuVectors['positions'].data[0].buffer,
     'borrows the static table buffer'
   );
 
   geometry.destroy();
   t.notOk(
-    table.gpuVectors['positions'].buffer.destroyed,
+    table.gpuVectors['positions'].data[0].buffer.destroyed,
     'borrowed table storage survives geometry destruction'
   );
   table.destroy();
@@ -70,7 +69,7 @@ test('GPUTableGeometry rejects appendable DynamicBuffer attributes', t => {
     type: 'appendable',
     name: 'positions',
     device,
-    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false)),
+    format: 'float32x2',
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2
   });
@@ -78,7 +77,7 @@ test('GPUTableGeometry rejects appendable DynamicBuffer attributes', t => {
 
   t.throws(
     () => new GPUTableGeometry({table, topology: 'triangle-list'}),
-    /DynamicBuffer-backed attributes/,
+    /static single-buffer attributes/,
     'geometry conversion documents the static-buffer-only contract'
   );
 
@@ -89,7 +88,7 @@ test('GPUTableGeometry rejects appendable DynamicBuffer attributes', t => {
 test('GPUTableGeometry can take ownership of backing table storage', t => {
   const device = new NullDevice({});
   const table = makePositionsTable(device, 2);
-  const positionsBuffer = table.gpuVectors['positions'].buffer;
+  const positionsBuffer = table.gpuVectors['positions'].data[0].buffer;
   const geometry = new GPUTableGeometry({
     table,
     topology: 'triangle-list',
@@ -110,7 +109,7 @@ function makePositionsVector(device: NullDevice, rowCount: number): GPUVector {
     type: 'buffer',
     name: 'positions',
     buffer: device.createBuffer({data: new Float32Array(rowCount * 2)}),
-    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false)),
+    format: 'float32x2',
     length: rowCount,
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2,

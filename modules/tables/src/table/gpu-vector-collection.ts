@@ -4,162 +4,194 @@
 
 import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
-import {DataType, Field, Precision} from 'apache-arrow';
+import type {GPUField, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';
+import {getGPUVectorElementFormat, isVertexListGPUVectorFormat} from './gpu-vector-format';
 
-type GPUVectorMap = Record<string, GPUVector>;
+type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
+  [Name in keyof T & string]: GPUVector<T[Name]>;
+};
 
-/** Inputs shared by vector-backed Arrow GPU table-like objects. */
-export type GPUVectorCollectionProps = {
-  /** Error prefix for the owning public object. */
+/** Options for normalizing named GPU vectors into table/batch columns. */
+export type GPUVectorCollectionProps<T extends GPUTypeMap = GPUTypeMap> = {
+  /** Name of the owning structure, used in errors. */
   ownerName: 'GPUTable' | 'GPURecordBatch';
-  /** GPU vectors keyed by name, or a list of named GPU vectors. */
-  vectors: GPUVectorMap | GPUVector[];
-  /** Optional precomputed buffer layouts keyed by layout name. */
+  /** GPU vectors keyed by name, or a list of already-named GPU vectors. */
+  vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
+  /** Optional precomputed buffer layouts. */
   bufferLayout?: BufferLayout[];
-  /** Optional selected schema fields keyed by field name. */
-  fields?: Field[];
-  /** Explicit row count for collections that intentionally have no vectors. */
+  /** Optional selected schema fields. Defaults to fields synthesized from vector names and formats. */
+  fields?: GPUField[];
+  /** Explicit row count for intentionally vector-less collections. */
   numRows?: number;
 };
 
-/** Shared metadata synthesized from one named GPU vector collection. */
-export type GPUVectorCollection = {
-  /** Normalized vector map keyed by vector name. */
-  gpuVectors: GPUVectorMap;
+/** Normalized GPU vector collection metadata shared by GPUTable and GPURecordBatch. */
+export type GPUVectorCollection<T extends GPUTypeMap = GPUTypeMap> = {
+  /** GPU vectors keyed by shader/table column name. */
+  gpuVectors: GPUVectorMap<T> | Record<string, GPUVector>;
   /** Model-ready attribute buffers keyed by buffer layout name. */
   attributes: Record<string, Buffer | DynamicBuffer>;
-  /** Buffer layouts preserving the normalized vector iteration order. */
+  /** Buffer layouts for fixed vectors. */
   bufferLayout: BufferLayout[];
-  /** Selected schema fields preserving the normalized vector iteration order. */
-  fields: Field[];
-  /** Common row count shared by every vector. */
+  /** Schema fields for selected vectors. */
+  fields: GPUField[];
+  /** Logical row count. */
   numRows: number;
 };
 
-/** Builds shared schema/layout/attribute metadata for vector-backed GPU objects. */
-export function createGPUVectorCollection(props: GPUVectorCollectionProps): GPUVectorCollection {
-  const gpuVectors = normalizeGPUVectorMap(props.vectors);
-  const vectorEntries = Object.entries(gpuVectors);
-  const firstVector = vectorEntries[0]?.[1];
-
-  if (!firstVector && props.numRows === undefined) {
-    throw new Error(`${props.ownerName} requires at least one GPU vector`);
-  }
-
-  const numRows = firstVector?.length ?? props.numRows ?? 0;
-  const attributes: Record<string, Buffer | DynamicBuffer> = {};
-  const bufferLayout: BufferLayout[] = [];
-  const fields: Field[] = [];
-
-  for (const [name, gpuVector] of vectorEntries) {
-    if (gpuVector.length !== numRows) {
-      throw new Error(
-        `${props.ownerName} vector "${name}" length ${gpuVector.length} does not match ${numRows}`
-      );
-    }
-
-    fields.push(
-      props.fields?.find(field => field.name === name) ?? new Field(name, gpuVector.type, false)
-    );
-
-    const vectorBufferLayout = props.bufferLayout
-      ? props.bufferLayout.find(layout => layout.name === name)
-      : getGPUVectorBufferLayout(props.ownerName, name, gpuVector);
-    if (vectorBufferLayout) {
-      bufferLayout.push(vectorBufferLayout);
-      addGPUVectorAttributes(attributes, vectorBufferLayout, gpuVector.buffer);
-    }
-  }
+/** Normalizes GPU vectors and derives fixed-vector schema/layout metadata. */
+export function createGPUVectorCollection<T extends GPUTypeMap = GPUTypeMap>(
+  props: GPUVectorCollectionProps<T>
+): GPUVectorCollection<T> {
+  const gpuVectors = normalizeGPUVectors(props.vectors);
+  const numRows = getGPUVectorCollectionRowCount(gpuVectors, props.numRows);
+  const bufferLayout = getGPUVectorCollectionBufferLayout(props, gpuVectors);
+  const fields = getGPUVectorCollectionFields(props, gpuVectors);
+  const attributes = getGPUVectorCollectionAttributes(bufferLayout, gpuVectors);
 
   return {
-    gpuVectors,
+    gpuVectors: gpuVectors as GPUVectorMap<T>,
     attributes,
     bufferLayout,
-    fields: vectorEntries.length === 0 ? (props.fields ?? []) : fields,
+    fields,
     numRows
   };
 }
 
-function normalizeGPUVectorMap(vectors: GPUVectorMap | GPUVector[]): GPUVectorMap {
-  return Array.isArray(vectors)
-    ? Object.fromEntries(vectors.map(vector => [vector.name, vector]))
-    : vectors;
-}
-
-function addGPUVectorAttributes(
-  attributes: Record<string, Buffer | DynamicBuffer>,
-  bufferLayout: BufferLayout,
-  buffer: Buffer | DynamicBuffer
-): void {
-  attributes[bufferLayout.name] = buffer;
-}
-
-function getGPUVectorBufferLayout(
-  ownerName: GPUVectorCollectionProps['ownerName'],
-  name: string,
-  vector: GPUVector
-): BufferLayout {
-  if (vector.bufferLayout) {
-    return vector.bufferLayout;
+function normalizeGPUVectors(
+  vectors: Record<string, GPUVector> | GPUVector[]
+): Record<string, GPUVector> {
+  if (!Array.isArray(vectors)) {
+    return vectors;
   }
 
-  const format = getGPUVectorVertexFormat(ownerName, vector);
-  return vector.byteOffset > 0
-    ? {
-        name,
-        byteStride: vector.byteStride,
-        attributes: [{attribute: name, format, byteOffset: vector.byteOffset}]
+  return Object.fromEntries(vectors.map(vector => [vector.name, vector]));
+}
+
+function getGPUVectorCollectionRowCount(
+  gpuVectors: Record<string, GPUVector>,
+  explicitNumRows?: number
+): number {
+  const firstVector = Object.values(gpuVectors)[0];
+  if (!firstVector) {
+    return explicitNumRows ?? 0;
+  }
+
+  const numRows = explicitNumRows ?? firstVector.length;
+  const mismatchedVector = Object.values(gpuVectors).find(vector => vector.length !== numRows);
+  if (mismatchedVector) {
+    throw new Error('GPUVectorCollection requires matching vector row counts');
+  }
+  return numRows;
+}
+
+function getGPUVectorCollectionBufferLayout<T extends GPUTypeMap>(
+  props: GPUVectorCollectionProps<T>,
+  gpuVectors: Record<string, GPUVector>
+): BufferLayout[] {
+  if (props.bufferLayout) {
+    for (const layout of props.bufferLayout) {
+      if (!gpuVectors[layout.name]) {
+        throw new Error(
+          `${props.ownerName} buffer layout references missing vector "${layout.name}"`
+        );
       }
-    : {
-        name,
-        byteStride: vector.byteStride,
-        format
-      };
+    }
+    return props.bufferLayout;
+  }
+
+  return Object.values(gpuVectors).flatMap(vector =>
+    synthesizeGPUVectorBufferLayout(props, vector)
+  );
 }
 
-function getGPUVectorVertexFormat(
-  ownerName: GPUVectorCollectionProps['ownerName'],
+function synthesizeGPUVectorBufferLayout<T extends GPUTypeMap>(
+  props: GPUVectorCollectionProps<T>,
   vector: GPUVector
-): VertexFormat {
-  const arrowType = vector.type;
-  const numericType = DataType.isFixedSizeList(arrowType) ? arrowType.children[0].type : arrowType;
-  const components = DataType.isFixedSizeList(arrowType) ? arrowType.listSize : 1;
-
-  if (!DataType.isInt(numericType) && !DataType.isFloat(numericType)) {
-    throw new Error(`${ownerName} cannot synthesize a layout for Arrow type ${arrowType}`);
+): BufferLayout[] {
+  if (vector.bufferLayout) {
+    return [vector.bufferLayout];
   }
-
-  let componentType: string;
-  if (DataType.isInt(numericType)) {
-    if (numericType.bitWidth === 64) {
-      throw new Error(`${ownerName} does not support 64-bit integer GPU buffers`);
+  if (!vector.format) {
+    throw new Error(
+      `${props.ownerName} cannot synthesize a buffer layout for vector "${vector.name}" without a format`
+    );
+  }
+  if (isVertexListGPUVectorFormat(vector.format)) {
+    throw new Error(
+      `${props.ownerName} cannot synthesize a generic buffer layout for vertex-list vector "${vector.name}"`
+    );
+  }
+  return [
+    {
+      name: vector.name,
+      byteStride: vector.byteStride,
+      format: getGPUVectorElementFormat(vector.format) as VertexFormat
     }
-    componentType = `${numericType.isSigned ? 'sint' : 'uint'}${numericType.bitWidth}`;
-  } else {
-    switch (numericType.precision) {
-      case Precision.HALF:
-        componentType = 'float16';
-        break;
-      case Precision.SINGLE:
-        componentType = 'float32';
-        break;
-      default:
-        throw new Error(`${ownerName} does not support float64 GPU buffers`);
+  ];
+}
+
+function getGPUVectorCollectionFields<T extends GPUTypeMap>(
+  props: GPUVectorCollectionProps<T>,
+  gpuVectors: Record<string, GPUVector>
+): GPUField[] {
+  if (props.fields) {
+    for (const field of props.fields) {
+      if (!gpuVectors[field.name]) {
+        throw new Error(`${props.ownerName} schema references missing vector "${field.name}"`);
+      }
     }
+    return props.fields;
   }
 
-  if (componentType === 'float16' && components === 3) {
-    throw new Error(`${ownerName} cannot synthesize a float16x3 buffer layout`);
+  return Object.values(gpuVectors).map(vector => {
+    if (!vector.format) {
+      if (vector.bufferLayout) {
+        return {
+          name: vector.name,
+          nullable: false,
+          metadata: new Map()
+        };
+      }
+      throw new Error(
+        `${props.ownerName} cannot synthesize a schema field for vector "${vector.name}" without a format`
+      );
+    }
+    return {
+      name: vector.name,
+      format: vector.format,
+      nullable: false,
+      metadata: new Map()
+    };
+  });
+}
+
+function getGPUVectorCollectionAttributes(
+  bufferLayout: BufferLayout[],
+  gpuVectors: Record<string, GPUVector>
+): Record<string, Buffer | DynamicBuffer> {
+  const attributes: Record<string, Buffer | DynamicBuffer> = {};
+  for (const layout of bufferLayout) {
+    const vector = gpuVectors[layout.name];
+    if (!vector) {
+      throw new Error(`Buffer layout references missing GPU vector "${layout.name}"`);
+    }
+    if (vector.data.length === 0) {
+      continue;
+    }
+    attributes[layout.name] = getSingleGPUVectorDataBuffer(vector, layout.name);
   }
-  if (
-    (componentType === 'uint8' ||
-      componentType === 'sint8' ||
-      componentType === 'uint16' ||
-      componentType === 'sint16') &&
-    components === 3
-  ) {
-    return `${componentType}x3-webgl` as VertexFormat;
+  return attributes;
+}
+
+function getSingleGPUVectorDataBuffer(
+  vector: GPUVector,
+  attributeName: string
+): Buffer | DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`Attribute "${attributeName}" requires exactly one GPUData chunk`);
   }
-  return `${componentType}${components === 1 ? '' : `x${components}`}` as VertexFormat;
+  return data.buffer;
 }

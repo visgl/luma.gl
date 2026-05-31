@@ -33,6 +33,10 @@ const config = getDocusaurusConfig({
             to: '/examples/arrow/arrow-lines'
           },
           {
+            from: ['/docs/api-reference/tables/gpu-table-object-model'],
+            to: '/docs/api-reference/tables/gpu-table-lifecycle'
+          },
+          {
             from: [
               '/docs/api-guide/gpu/arrow-table-columns',
               '/docs/api-reference/arrow/arrow-table-columns',

@@ -15,7 +15,7 @@ import {
   getArrowVectorBufferSource,
   isNumericArrowType,
   makeArrowGPUTable,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   makeArrowFixedSizeListVector,
   type NumericArrowType
 } from '@luma.gl/arrow';
@@ -58,7 +58,6 @@ import {
   populateUtf8TextIndices,
   type ArrowGlyphLayout,
   type ArrowUtf8Dictionary,
-  type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
   type GpuDictionaryCompressedTextStream,
   type GpuExpandedTextStream,
@@ -187,17 +186,17 @@ export type ArrowStorageTextSourceVectors = {
  */
 export type ArrowTextModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> & {
   /** GPU-resident label origins aligned one-for-one with `texts`. */
-  positions: GPUVector<FixedSizeList<Float32>>;
+  positions: GPUVector;
   /** Optional packed RGBA8 text colors, consumed as label or character attributes when declared by the shader. */
-  colors?: GPUVector<ArrowTextColorType>;
+  colors?: GPUVector;
   /** Optional per-row angles in degrees, consumed as label attributes when declared by the shader. */
-  angles?: GPUVector<Float32>;
+  angles?: GPUVector;
   /** Optional per-row deck-style text sizes, consumed as label attributes when declared by the shader. */
-  sizes?: GPUVector<Float32>;
+  sizes?: GPUVector;
   /** Optional per-row pixel offsets, consumed as label attributes when declared by the shader. */
-  pixelOffsets?: GPUVector<FixedSizeList<Float32>>;
+  pixelOffsets?: GPUVector;
   /** GPU UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector<ArrowUtf8TextType>;
+  texts: GPUVector;
   /** CPU Arrow vectors explicitly retained by the caller for glyph/layout expansion. */
   sourceVectors: ArrowTextSourceVectors;
   /**
@@ -205,7 +204,7 @@ export type ArrowTextModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount
    * Values are signed 16-bit glyph-layout units relative to the label origin.
    * Negative width or height disables clipping on that axis.
    */
-  clipRects?: GPUVector<FixedSizeList<Int16>>;
+  clipRects?: GPUVector;
   /** Constant fallback color used when nullable row or character color rows are null. */
   color?: [number, number, number, number];
   /** Constant fallback angle in degrees used when nullable angle rows are null. */
@@ -253,11 +252,11 @@ type ArrowStorageTextSharedInputProps = Omit<
    */
   rowIndexColumn?: boolean;
   /** Optional packed RGBA8 text colors aligned with label rows. */
-  colors?: GPUVector<FixedSizeList<Uint8>>;
+  colors?: GPUVector;
   /** Optional per-row text anchor enum: 0=start, 1=middle, 2=end. */
-  textAnchors?: GPUVector<Uint8>;
+  textAnchors?: GPUVector;
   /** Optional per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
-  alignmentBaselines?: GPUVector<Uint8>;
+  alignmentBaselines?: GPUVector;
   /** Constant fallback color used when `colors` is absent. */
   color?: [number, number, number, number];
   /** Constant fallback angle in degrees used when `angles` is absent. */
@@ -275,7 +274,7 @@ type ArrowStorageTextSharedInputProps = Omit<
 /** Arrow-to-storage conversion input consumed by layer/data-preparation code. */
 export type ArrowStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   /** GPU UTF-8 or dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector<ArrowUtf8TextType>;
+  texts: GPUVector;
   /** CPU Arrow vectors explicitly retained by the caller for storage glyph expansion. */
   sourceVectors: ArrowStorageTextSourceVectors;
 };
@@ -303,7 +302,7 @@ export type GPUVectorStorageTextBatch = {
 /** GPUVector-only input for WebGPU storage text preparation. */
 export type GPUVectorStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   /** GPU plain UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector<Utf8>;
+  texts: GPUVector;
   /** Optional prepared UTF-8 GPU batches. Defaults to batches derived from `texts` metadata. */
   textBatches?: GPUVectorStorageTextBatch[];
 };
@@ -319,7 +318,7 @@ export type ArrowDictionaryStorageTextSourceVectors = {
 /** Arrow-to-dictionary-storage conversion input consumed by layer/data-preparation code. */
 export type ArrowDictionaryStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   /** GPU dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector<ArrowUtf8Dictionary>;
+  texts: GPUVector;
   /** CPU Arrow vectors explicitly retained by the caller for compressed dictionary glyph layout. */
   sourceVectors: ArrowDictionaryStorageTextSourceVectors;
 };
@@ -832,7 +831,7 @@ function getArrowTextSourceBatch<T extends DataType>(
 /** Validates the GPUVector Arrow types accepted by attribute text conversion. */
 export function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
   if (!isArrowUtf8TextVector(props.texts)) {
-    throw new Error('ArrowTextModel texts must be GPUVector<Utf8 | Dictionary<Utf8>>');
+    throw new Error('ArrowTextModel texts must be GPUVector');
   }
   if (!isArrowUtf8TextVector(props.sourceVectors.texts)) {
     throw new Error('ArrowTextModel sourceVectors.texts must be Utf8 or Dictionary<Utf8>');
@@ -845,18 +844,18 @@ export function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
     props.positions.type.listSize !== 2 ||
     !(props.positions.type.children[0]?.type instanceof Float32)
   ) {
-    throw new Error('ArrowTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>');
+    throw new Error('ArrowTextModel positions must be GPUVector');
   }
   if (props.colors && !isArrowTextColorType(props.colors.type)) {
     throw new Error(
-      'ArrowTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]> or GPUVector<List<FixedSizeList<Uint8>[4]>>'
+      'ArrowTextModel colors must be GPUVector or GPUVector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
   if (props.angles && !(props.angles.type instanceof Float32)) {
-    throw new Error('ArrowTextModel angles must be GPUVector<Float32>');
+    throw new Error('ArrowTextModel angles must be GPUVector');
   }
   if (props.sizes && !(props.sizes.type instanceof Float32)) {
-    throw new Error('ArrowTextModel sizes must be GPUVector<Float32>');
+    throw new Error('ArrowTextModel sizes must be GPUVector');
   }
   if (
     props.pixelOffsets &&
@@ -864,12 +863,12 @@ export function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
       props.pixelOffsets.type.listSize !== 2 ||
       !(props.pixelOffsets.type.children[0]?.type instanceof Float32))
   ) {
-    throw new Error('ArrowTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>');
+    throw new Error('ArrowTextModel pixelOffsets must be GPUVector');
   }
 }
 
 function assertArrowTextVectorRowAlignment(props: ArrowTextModelProps): void {
-  const rowInputs: Array<[string, GPUVector<any> | undefined]> = [
+  const rowInputs: Array<[string, GPUVector | undefined]> = [
     ['positions', props.positions],
     ['texts', props.texts],
     ['colors', props.colors],
@@ -879,7 +878,7 @@ function assertArrowTextVectorRowAlignment(props: ArrowTextModelProps): void {
     ['clipRects', props.clipRects]
   ];
   const suppliedInputs = rowInputs.filter(([, vector]) => vector !== undefined) as Array<
-    [string, GPUVector<any>]
+    [string, GPUVector]
   >;
   const [referenceName, referenceVector] = suppliedInputs[0];
   for (const [name, vector] of suppliedInputs.slice(1)) {
@@ -911,7 +910,7 @@ export function assertArrowTextVectorBatchAlignment(props: ArrowTextModelProps):
 }
 
 function assertArrowTextSourceVectorAlignment(props: ArrowTextModelProps): void {
-  const sourceInputs: Array<[string, GPUVector<any> | undefined, Vector | undefined]> = [
+  const sourceInputs: Array<[string, GPUVector | undefined, Vector | undefined]> = [
     ['positions', props.positions, props.sourceVectors.positions],
     ['texts', props.texts, props.sourceVectors.texts],
     ['colors', props.colors, props.sourceVectors.colors],
@@ -935,7 +934,7 @@ function assertArrowTextSourceVectorAlignment(props: ArrowTextModelProps): void 
   }
 }
 
-function getArrowTextRowInputs(props: ArrowTextModelProps): Array<[string, GPUVector<any>]> {
+function getArrowTextRowInputs(props: ArrowTextModelProps): Array<[string, GPUVector]> {
   return [
     ['positions', props.positions],
     ['texts', props.texts],
@@ -944,13 +943,13 @@ function getArrowTextRowInputs(props: ArrowTextModelProps): Array<[string, GPUVe
     ['sizes', props.sizes],
     ['pixelOffsets', props.pixelOffsets],
     ['clipRects', props.clipRects]
-  ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
+  ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector]>;
 }
 
 function assertSourceVectorMatchesGPUVector(
   ownerName: 'ArrowTextModel' | 'ArrowStorageTextModel' | 'ArrowDictionaryStorageTextModel',
   vectorName: string,
-  gpuVector: GPUVector<any>,
+  gpuVector: GPUVector,
   sourceVector: Vector
 ): void {
   if (sourceVector.length !== gpuVector.length) {
@@ -1130,7 +1129,7 @@ function resolveGPUVectorStorageTextInputs(
 
 function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
   if (!isArrowUtf8TextVector(props.texts)) {
-    throw new Error('ArrowStorageTextModel texts must be GPUVector<Utf8 | Dictionary<Utf8>>');
+    throw new Error('ArrowStorageTextModel texts must be GPUVector');
   }
   if (!isArrowUtf8TextVector(props.sourceVectors.texts)) {
     throw new Error('ArrowStorageTextModel sourceVectors.texts must be Utf8 or Dictionary<Utf8>');
@@ -1143,7 +1142,7 @@ function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
     props.positions.type.listSize !== 2 ||
     !(props.positions.type.children[0]?.type instanceof Float32)
   ) {
-    throw new Error('ArrowStorageTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>');
+    throw new Error('ArrowStorageTextModel positions must be GPUVector');
   }
   if (
     props.colors &&
@@ -1151,13 +1150,13 @@ function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
       props.colors.type.listSize !== 4 ||
       !(props.colors.type.children[0]?.type instanceof Uint8))
   ) {
-    throw new Error('ArrowStorageTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
+    throw new Error('ArrowStorageTextModel colors must be GPUVector');
   }
   if (props.angles && !(props.angles.type instanceof Float32)) {
-    throw new Error('ArrowStorageTextModel angles must be GPUVector<Float32>');
+    throw new Error('ArrowStorageTextModel angles must be GPUVector');
   }
   if (props.sizes && !(props.sizes.type instanceof Float32)) {
-    throw new Error('ArrowStorageTextModel sizes must be GPUVector<Float32>');
+    throw new Error('ArrowStorageTextModel sizes must be GPUVector');
   }
   if (
     props.pixelOffsets &&
@@ -1165,15 +1164,13 @@ function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
       props.pixelOffsets.type.listSize !== 2 ||
       !(props.pixelOffsets.type.children[0]?.type instanceof Float32))
   ) {
-    throw new Error(
-      'ArrowStorageTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>'
-    );
+    throw new Error('ArrowStorageTextModel pixelOffsets must be GPUVector');
   }
   if (props.textAnchors && !(props.textAnchors.type instanceof Uint8)) {
-    throw new Error('ArrowStorageTextModel textAnchors must be GPUVector<Uint8>');
+    throw new Error('ArrowStorageTextModel textAnchors must be GPUVector');
   }
   if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof Uint8)) {
-    throw new Error('ArrowStorageTextModel alignmentBaselines must be GPUVector<Uint8>');
+    throw new Error('ArrowStorageTextModel alignmentBaselines must be GPUVector');
   }
   const clipRects = props.sourceVectors.clipRects;
   assertClipRects(clipRects as Vector<FixedSizeList<Int16>> | undefined, props.texts.length);
@@ -1181,7 +1178,7 @@ function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
 
 function assertGPUVectorStorageTextInputTypes(props: GPUVectorStorageTextInputProps): void {
   if (!(props.texts.type instanceof Utf8)) {
-    throw new Error('StorageTextModel texts must be GPUVector<Utf8>');
+    throw new Error('StorageTextModel texts must be GPUVector');
   }
   if (props.characterSet === 'auto') {
     throw new Error('StorageTextModel GPUVector preparation does not support characterSet: auto');
@@ -1196,7 +1193,7 @@ function assertGPUVectorStorageTextInputTypes(props: GPUVectorStorageTextInputPr
     props.positions.type.listSize !== 2 ||
     !(props.positions.type.children[0]?.type instanceof Float32)
   ) {
-    throw new Error('StorageTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>');
+    throw new Error('StorageTextModel positions must be GPUVector');
   }
   if (
     props.colors &&
@@ -1204,13 +1201,13 @@ function assertGPUVectorStorageTextInputTypes(props: GPUVectorStorageTextInputPr
       props.colors.type.listSize !== 4 ||
       !(props.colors.type.children[0]?.type instanceof Uint8))
   ) {
-    throw new Error('StorageTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
+    throw new Error('StorageTextModel colors must be GPUVector');
   }
   if (props.angles && !(props.angles.type instanceof Float32)) {
-    throw new Error('StorageTextModel angles must be GPUVector<Float32>');
+    throw new Error('StorageTextModel angles must be GPUVector');
   }
   if (props.sizes && !(props.sizes.type instanceof Float32)) {
-    throw new Error('StorageTextModel sizes must be GPUVector<Float32>');
+    throw new Error('StorageTextModel sizes must be GPUVector');
   }
   if (
     props.pixelOffsets &&
@@ -1218,13 +1215,13 @@ function assertGPUVectorStorageTextInputTypes(props: GPUVectorStorageTextInputPr
       props.pixelOffsets.type.listSize !== 2 ||
       !(props.pixelOffsets.type.children[0]?.type instanceof Float32))
   ) {
-    throw new Error('StorageTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>');
+    throw new Error('StorageTextModel pixelOffsets must be GPUVector');
   }
   if (props.textAnchors && !(props.textAnchors.type instanceof Uint8)) {
-    throw new Error('StorageTextModel textAnchors must be GPUVector<Uint8>');
+    throw new Error('StorageTextModel textAnchors must be GPUVector');
   }
   if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof Uint8)) {
-    throw new Error('StorageTextModel alignmentBaselines must be GPUVector<Uint8>');
+    throw new Error('StorageTextModel alignmentBaselines must be GPUVector');
   }
   if (
     props.clipRects &&
@@ -1232,7 +1229,7 @@ function assertGPUVectorStorageTextInputTypes(props: GPUVectorStorageTextInputPr
       props.clipRects.type.listSize !== 4 ||
       !(props.clipRects.type.children[0]?.type instanceof Int16))
   ) {
-    throw new Error('StorageTextModel clipRects must be GPUVector<FixedSizeList<Int16>[4]>');
+    throw new Error('StorageTextModel clipRects must be GPUVector');
   }
 }
 
@@ -1297,7 +1294,7 @@ function isGPUVectorStorageTextRowValid(
 }
 
 function getGPUVectorStorageTextClipRectsBuffer(
-  clipRects: GPUVector<FixedSizeList<Int16>>,
+  clipRects: GPUVector,
   batchIndex: number
 ): StorageTextBuffer {
   const clipRectsData = clipRects.data[batchIndex];
@@ -1322,7 +1319,7 @@ function assertStorageVectorBatchAlignment(
     | 'ArrowDictionaryStorageTextModel'
     | 'StorageTextModel' = 'ArrowStorageTextModel'
 ): void {
-  const rowInputs: Array<[string, GPUVector<any> | undefined]> = [
+  const rowInputs: Array<[string, GPUVector | undefined]> = [
     ['positions', props.positions],
     ['texts', props.texts],
     ['colors', props.colors],
@@ -1334,7 +1331,7 @@ function assertStorageVectorBatchAlignment(
     ['clipRects', props.clipRects]
   ];
   const suppliedInputs = rowInputs.filter(([, vector]) => vector !== undefined) as Array<
-    [string, GPUVector<any>]
+    [string, GPUVector]
   >;
   const [referenceName, referenceVector] = suppliedInputs[0];
   for (const [name, vector] of suppliedInputs.slice(1)) {
@@ -1383,7 +1380,7 @@ function assertStorageSourceVectorAlignment(props: ArrowStorageTextInputProps): 
 
 function assertDictionaryStorageVectorTypes(props: ArrowDictionaryStorageTextInputProps): void {
   if (!isArrowUtf8DictionaryVector(props.texts)) {
-    throw new Error('ArrowDictionaryStorageTextModel texts must be GPUVector<Dictionary<Utf8>>');
+    throw new Error('ArrowDictionaryStorageTextModel texts must be GPUVector');
   }
   if (!isArrowUtf8DictionaryVector(props.sourceVectors.texts)) {
     throw new Error('ArrowDictionaryStorageTextModel sourceVectors.texts must be Dictionary<Utf8>');
@@ -1398,9 +1395,7 @@ function assertDictionaryStorageVectorTypes(props: ArrowDictionaryStorageTextInp
     props.positions.type.listSize !== 2 ||
     !(props.positions.type.children[0]?.type instanceof Float32)
   ) {
-    throw new Error(
-      'ArrowDictionaryStorageTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>'
-    );
+    throw new Error('ArrowDictionaryStorageTextModel positions must be GPUVector');
   }
   if (
     props.colors &&
@@ -1408,15 +1403,13 @@ function assertDictionaryStorageVectorTypes(props: ArrowDictionaryStorageTextInp
       props.colors.type.listSize !== 4 ||
       !(props.colors.type.children[0]?.type instanceof Uint8))
   ) {
-    throw new Error(
-      'ArrowDictionaryStorageTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>'
-    );
+    throw new Error('ArrowDictionaryStorageTextModel colors must be GPUVector');
   }
   if (props.angles && !(props.angles.type instanceof Float32)) {
-    throw new Error('ArrowDictionaryStorageTextModel angles must be GPUVector<Float32>');
+    throw new Error('ArrowDictionaryStorageTextModel angles must be GPUVector');
   }
   if (props.sizes && !(props.sizes.type instanceof Float32)) {
-    throw new Error('ArrowDictionaryStorageTextModel sizes must be GPUVector<Float32>');
+    throw new Error('ArrowDictionaryStorageTextModel sizes must be GPUVector');
   }
   if (
     props.pixelOffsets &&
@@ -1424,15 +1417,13 @@ function assertDictionaryStorageVectorTypes(props: ArrowDictionaryStorageTextInp
       props.pixelOffsets.type.listSize !== 2 ||
       !(props.pixelOffsets.type.children[0]?.type instanceof Float32))
   ) {
-    throw new Error(
-      'ArrowDictionaryStorageTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>'
-    );
+    throw new Error('ArrowDictionaryStorageTextModel pixelOffsets must be GPUVector');
   }
   if (props.textAnchors && !(props.textAnchors.type instanceof Uint8)) {
-    throw new Error('ArrowDictionaryStorageTextModel textAnchors must be GPUVector<Uint8>');
+    throw new Error('ArrowDictionaryStorageTextModel textAnchors must be GPUVector');
   }
   if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof Uint8)) {
-    throw new Error('ArrowDictionaryStorageTextModel alignmentBaselines must be GPUVector<Uint8>');
+    throw new Error('ArrowDictionaryStorageTextModel alignmentBaselines must be GPUVector');
   }
   const clipRects = props.sourceVectors.clipRects;
   assertClipRects(clipRects as Vector<FixedSizeList<Int16>> | undefined, props.texts.length);
@@ -2953,8 +2944,8 @@ function createStorageTextOwnedGpuVector<T extends DataType>(
   device: Device,
   name: string,
   vector: Vector<T>
-): GPUVector<T> {
-  return makeArrowGPUVector(device, vector, {
+): GPUVector {
+  return makeGPUVectorFromArrow(device, vector, {
     name,
     id: name,
     usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
@@ -2962,7 +2953,11 @@ function createStorageTextOwnedGpuVector<T extends DataType>(
 }
 
 function getStorageTextGpuVectorBuffer(vector: GPUVector): Buffer {
-  const buffer = vector.buffer;
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`Storage text vector "${vector.name}" requires exactly one GPUData chunk`);
+  }
+  const buffer = data.buffer;
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 

@@ -7,7 +7,6 @@ import type {Device} from '@luma.gl/core';
 import {indexColorPicking, indexPicking, ShaderInputs, supportsIndexPicking} from '@luma.gl/engine';
 import {GPUTableModel, type GPUTable, type GPUVector} from '@luma.gl/tables';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import * as arrow from 'apache-arrow';
 import {
   FS_GLSL,
   PICKING_FS_GLSL,
@@ -35,7 +34,7 @@ export type MeshGeometryModelProps = {
   geometry: ArrowTableGeometry;
   table: GPUTable;
   shaderInputs: MeshGeometryShaderInputs;
-  faceColors?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  faceColors?: GPUVector<'float32x4'>;
   parameters?: Record<string, unknown>;
 };
 
@@ -67,7 +66,7 @@ export function createMeshGeometryModel(
     shaderLayout: getMeshGeometryShaderLayout(device),
     shaderInputs,
     modules: [getMeshGeometryPickingModule(device)] as ShaderModule[],
-    ...(faceColors ? {bindings: {faceColors: faceColors.buffer}} : {}),
+    ...(faceColors ? {bindings: {faceColors: getGPUVectorBuffer(faceColors)}} : {}),
     parameters: parameters ?? DEFAULT_RENDER_PARAMETERS
   });
 }
@@ -91,7 +90,7 @@ export function createMeshGeometryPickingModel(
     fragmentEntryPoint: 'fragmentPicking',
     modules: [indexPicking] as ShaderModule[],
     shaderLayout: getMeshGeometryShaderLayout(device),
-    ...(faceColors ? {bindings: {faceColors: faceColors.buffer}} : {}),
+    ...(faceColors ? {bindings: {faceColors: getGPUVectorBuffer(faceColors)}} : {}),
     shaderInputs,
     colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
     depthStencilAttachmentFormat: 'depth24plus',
@@ -101,6 +100,14 @@ export function createMeshGeometryPickingModel(
 
 function getMeshGeometryPickingModule(device: Device): typeof indexPicking {
   return (supportsIndexPicking(device) ? indexPicking : indexColorPicking) as typeof indexPicking;
+}
+
+function getGPUVectorBuffer(vector: GPUVector) {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`ArrowMeshRenderer vector "${vector.name}" requires one GPUData chunk`);
+  }
+  return data.buffer;
 }
 
 const DEFAULT_RENDER_PARAMETERS = {

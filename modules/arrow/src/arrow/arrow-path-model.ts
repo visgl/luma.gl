@@ -15,7 +15,8 @@ import {
   planGeneratedBufferBatches,
   type GeneratedBufferBatch,
   type GPUTable,
-  type GPUTableModelProps
+  type GPUTableModelProps,
+  type VertexList
 } from '@luma.gl/tables';
 import {
   Bool,
@@ -37,7 +38,7 @@ import {
 } from 'apache-arrow';
 import {
   makeArrowGPUTable,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
 } from './arrow-gpu-table-adapters';
 import {expandArrowVector} from './arrow-vector-utils';
@@ -187,13 +188,13 @@ export type ArrowPathViewOriginUpdateProps = {
 /** Prepared attribute/storage path vectors plus retained generated path state. */
 export type PreparedArrowPathGPUVectors = {
   /** Prepared Float32 path coordinates, one Arrow row per path. */
-  paths: GPUVector<ArrowPathCoordinateType>;
+  paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
   /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
-  colors?: GPUVector<ArrowPathColorType>;
+  colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
   /** Optional Float32 path widths aligned with source path rows. */
-  widths?: GPUVector<Float32>;
+  widths?: GPUVector<'float32'>;
   /** Optional Float32 view-space origins aligned with source path rows. */
-  viewOrigins?: GPUVector<ArrowPathViewOriginType>;
+  viewOrigins?: GPUVector<'float32x4'>;
   /** Optional retained Float64 source origins used to refresh view-space origins. */
   sourceOrigins?: Float64Array;
   /** Props ready for {@link ArrowPathModel}. */
@@ -201,13 +202,13 @@ export type PreparedArrowPathGPUVectors = {
   /** Props ready for storage-backed path consumers. */
   storagePathProps: {
     /** Prepared Float32 path coordinates, one Arrow row per path. */
-    paths: GPUVector<ArrowPathCoordinateType>;
+    paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
     /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
-    colors?: GPUVector<ArrowPathColorType>;
+    colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
     /** Optional Float32 path widths aligned with source path rows. */
-    widths?: GPUVector<Float32>;
+    widths?: GPUVector<'float32'>;
     /** Optional Float32 view-space origins aligned with source path rows. */
-    viewOrigins?: GPUVector<ArrowPathViewOriginType>;
+    viewOrigins?: GPUVector<'float32x4'>;
   };
   /** Refreshes prepared Float32 view origins after a model-view matrix change. */
   updateViewOrigins: (props: ArrowPathViewOriginUpdateProps) => void;
@@ -219,13 +220,13 @@ export type PreparedArrowPathGPUVectors = {
 export type ArrowPathModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> &
   ArrowVertexFormatOptions & {
     /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one Arrow row per path. */
-    paths: GPUVector<ArrowPathCoordinateType>;
+    paths: GPUVector;
     /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
-    colors?: GPUVector<ArrowPathColorType>;
+    colors?: GPUVector;
     /** Optional per-path widths, one Arrow row per path. */
-    widths?: GPUVector<Float32>;
+    widths?: GPUVector;
     /** Optional per-path view-space origins, one Arrow row per path. */
-    viewOrigins?: GPUVector<ArrowPathViewOriginType>;
+    viewOrigins?: GPUVector;
     /** Prepared path expansion state produced by `prepareArrowPathGPUVectors()`. */
     pathState: ArrowPathPreparedState;
   };
@@ -568,9 +569,11 @@ export async function prepareArrowPathGPUVectors(
   const preparedCoordinateData = prepareArrowPathCoordinateData(sourceVectors.paths);
   const sourceOriginValues = preparedCoordinateData.sourceOrigins;
   const pathChunkRowCounts = preparedCoordinateData.paths.data.map(data => data.length);
-  let paths = makeArrowGPUVector(device, preparedCoordinateData.paths, {
+  const pathFormat = getArrowPathCoordinateFormat(preparedCoordinateData.paths.type);
+  let paths = makeGPUVectorFromArrow(device, preparedCoordinateData.paths, {
     name: 'paths',
-    id: `${id}-paths`
+    id: `${id}-paths`,
+    format: pathFormat
   });
   let pathsForSegmentTable = preparedCoordinateData.paths;
 
@@ -587,16 +590,18 @@ export async function prepareArrowPathGPUVectors(
   }
 
   const colors = sourceVectors.colors
-    ? makeArrowGPUVector(device, sourceVectors.colors, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.colors, {
         name: 'colors',
         id: `${id}-colors`,
+        format: getArrowPathColorFormat(sourceVectors.colors.type),
         preserveDataChunks: true
       })
     : undefined;
   const widths = sourceVectors.widths
-    ? makeArrowGPUVector(device, sourceVectors.widths, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.widths, {
         name: 'widths',
         id: `${id}-widths`,
+        format: 'float32',
         preserveDataChunks: true
       })
     : undefined;
@@ -605,9 +610,10 @@ export async function prepareArrowPathGPUVectors(
     ? makeArrowPathViewOriginVector(viewOriginValues, pathChunkRowCounts)
     : undefined;
   const viewOrigins = sourceOriginValues
-    ? makeArrowGPUVector(device, viewOriginVector!, {
+    ? makeGPUVectorFromArrow(device, viewOriginVector!, {
         name: PATH_VIEW_ORIGINS_COLUMN,
         id: `${id}-view-origins`,
+        format: 'float32x4',
         preserveDataChunks: true
       })
     : undefined;
@@ -732,11 +738,11 @@ function assertArrowPathVectorTypes(props: ArrowPathModelProps): void {
   assertArrowPathCoordinateType(props.paths.type, 'paths');
   if (props.colors && !isArrowPathColorType(props.colors.type)) {
     throw new Error(
-      'ArrowPathModel colors must be GPUVector<FixedSizeList<Uint8>[4]> or GPUVector<List<FixedSizeList<Uint8>[4]>>'
+      'ArrowPathModel colors must be GPUVector or GPUVector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
   if (props.widths && !(props.widths.type instanceof Float32)) {
-    throw new Error('ArrowPathModel widths must be GPUVector<Float32>');
+    throw new Error('ArrowPathModel widths must be GPUVector');
   }
   if (
     props.viewOrigins &&
@@ -744,7 +750,7 @@ function assertArrowPathVectorTypes(props: ArrowPathModelProps): void {
       props.viewOrigins.type.listSize !== 4 ||
       !(props.viewOrigins.type.children[0]?.type instanceof Float32))
   ) {
-    throw new Error('ArrowPathModel viewOrigins must be GPUVector<FixedSizeList<Float32>[4]>');
+    throw new Error('ArrowPathModel viewOrigins must be GPUVector');
   }
 }
 
@@ -838,20 +844,17 @@ function assertArrowPathVectorRowAlignment(props: ArrowPathModelProps): void {
     }
   }
   if (props.colors && isArrowPathVertexColorType(props.colors.type)) {
-    assertArrowPathVertexColorGpuVectorAlignment(
-      props.paths,
-      props.colors as GPUVector<ArrowPathVertexColorType>
-    );
+    assertArrowPathVertexColorGpuVectorAlignment(props.paths, props.colors as GPUVector);
   }
 }
 
-function getArrowPathRowInputs(props: ArrowPathModelProps): Array<[string, GPUVector<any>]> {
+function getArrowPathRowInputs(props: ArrowPathModelProps): Array<[string, GPUVector]> {
   return [
     ['paths', props.paths],
     ['colors', props.colors],
     ['widths', props.widths],
     ['viewOrigins', props.viewOrigins]
-  ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
+  ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector]>;
 }
 
 function getArrowPathColorVector(rowTable: Table): Vector<ArrowPathColorType> | undefined {
@@ -1035,6 +1038,25 @@ function isArrowPathColorType(type: DataType): type is ArrowPathColorType {
   return isArrowPathRowColorType(type) || isArrowPathVertexColorType(type);
 }
 
+function getArrowPathCoordinateFormat(
+  type: ArrowPathCoordinateType
+): VertexList<'float32x2' | 'float32x3' | 'float32x4'> {
+  switch (getArrowPathCoordinateComponentCount(type)) {
+    case 2:
+      return 'vertex-list<float32x2>';
+    case 3:
+      return 'vertex-list<float32x3>';
+    case 4:
+      return 'vertex-list<float32x4>';
+    default:
+      throw new Error('ArrowPathModel paths require 2, 3, or 4 coordinate components');
+  }
+}
+
+function getArrowPathColorFormat(type: ArrowPathColorType): 'unorm8x4' | VertexList<'unorm8x4'> {
+  return isArrowPathVertexColorType(type) ? 'vertex-list<unorm8x4>' : 'unorm8x4';
+}
+
 function assertArrowPathColorVector(
   colors: Vector<ArrowPathColorType>,
   paths: Vector<ArrowPathCoordinateType>
@@ -1070,10 +1092,7 @@ function assertArrowPathVertexColorVectorAlignment(
   }
 }
 
-function assertArrowPathVertexColorGpuVectorAlignment(
-  paths: GPUVector<ArrowPathCoordinateType>,
-  colors: GPUVector<ArrowPathVertexColorType>
-): void {
+function assertArrowPathVertexColorGpuVectorAlignment(paths: GPUVector, colors: GPUVector): void {
   for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
     const pathMetadata = paths.data[batchIndex]?.readbackMetadata;
     const colorMetadata = colors.data[batchIndex]?.readbackMetadata;
@@ -1259,7 +1278,7 @@ export function makeArrowPathViewOriginVector(
 
 /** Writes full view-origin values into a chunk-preserving GPU vector. */
 export function writeArrowPathViewOriginGPUVector(
-  viewOrigins: GPUVector<ArrowPathViewOriginType>,
+  viewOrigins: GPUVector,
   values: Float32Array
 ): void {
   let rowStart = 0;

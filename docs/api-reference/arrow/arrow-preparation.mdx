@@ -117,7 +117,20 @@ descriptors while respecting device vertex and storage buffer limits.
 
 The module can derive GPU `BufferLayout` entries from Arrow schemas and create
 `@luma.gl/tables` objects from compatible Arrow columns through
-`makeArrowGPUData()`, `makeArrowGPUVector()`, `makeArrowGPURecordBatch()`, and
+`makeArrowGPUData()`, `makeGPUVectorFromArrow()`, `makeArrowGPURecordBatch()`, and
 `makeArrowGPUTable()`. The generic GPU table object model is documented in
 [`@luma.gl/tables`](/docs/api-reference/tables), with an object model overview
 in [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure).
+
+Arrow upload helpers now produce format-first GPU objects:
+
+- fixed Arrow columns become `GPUVector.format` values such as `float32x3` or
+  `unorm8x4`;
+- list-of-vertex Arrow columns become `vertex-list<...>` formats;
+- `GPUSchema` records the selected GPU fields;
+- Arrow `DataType` values remain adapter metadata for migration and readback.
+
+Streaming append helpers preserve batch and buffer boundaries. Each appended
+Arrow data chunk is uploaded into a new `GPUData` with its own buffer, and
+`GPUTable` aggregate vectors expose the logical column through `GPUVector.data[]`
+instead of merging previous batches into one larger buffer.

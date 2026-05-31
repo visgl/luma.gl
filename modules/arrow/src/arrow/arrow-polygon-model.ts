@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPURecordBatch, GPUTable, GPUVector} from '@luma.gl/tables';
+import {GPURecordBatch, GPUTable, GPUVector, type GPUTypeMap} from '@luma.gl/tables';
 import {
   tesselateAsync,
   tessellateArrowPolygons,
@@ -43,11 +43,11 @@ export type PreparedArrowPolygonGPUVectors = {
   /** GPU table with positions, colors, and rowIndices attributes. */
   table: GPUTable;
   /** Output positions vector, padded to vec4 Float32 rows. */
-  positions: GPUVector<FixedSizeList<Float32>>;
+  positions: GPUVector;
   /** Output per-vertex RGBA8 colors. */
-  colors: GPUVector<FixedSizeList<Uint8>>;
+  colors: GPUVector;
   /** Output source row indices. */
-  rowIndices: GPUVector<Uint32>;
+  rowIndices: GPUVector;
   /** Triangle index buffer. */
   indices: Buffer;
   /** CPU tessellation metadata and generated arrays. */
@@ -93,6 +93,7 @@ function makePreparedArrowPolygonGPUVectors(
       data: tessellation.positions
     }),
     dataType: makeFixedSizeListType(new Float32(), OUTPUT_POSITION_COMPONENTS),
+    format: 'float32x3',
     length: tessellation.vertexCount,
     stride: OUTPUT_POSITION_COMPONENTS,
     byteStride: Float32Array.BYTES_PER_ELEMENT * OUTPUT_POSITION_COMPONENTS,
@@ -106,6 +107,7 @@ function makePreparedArrowPolygonGPUVectors(
       data: tessellation.colors
     }),
     dataType: makeFixedSizeListType(new Uint8(), 4),
+    format: 'unorm8x4',
     length: tessellation.vertexCount,
     stride: 4,
     byteStride: Uint8Array.BYTES_PER_ELEMENT * 4,
@@ -119,6 +121,7 @@ function makePreparedArrowPolygonGPUVectors(
       data: tessellation.rowIndices
     }),
     dataType: new Uint32(),
+    format: 'uint32',
     length: tessellation.vertexCount,
     stride: 1,
     byteStride: Uint32Array.BYTES_PER_ELEMENT,
@@ -129,8 +132,10 @@ function makePreparedArrowPolygonGPUVectors(
     usage: Buffer.INDEX,
     data: tessellation.indices
   });
-  const batch = new GPURecordBatch({vectors: {positions, colors, rowIndices}});
-  const table = new GPUTable({
+  const batch: GPURecordBatch = new GPURecordBatch<GPUTypeMap>({
+    vectors: {positions, colors, rowIndices}
+  });
+  const table: GPUTable = new GPUTable<GPUTypeMap>({
     batches: [batch],
     schema: batch.schema,
     bufferLayout: batch.bufferLayout

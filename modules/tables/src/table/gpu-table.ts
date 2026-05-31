@@ -4,18 +4,23 @@
 
 import {Buffer, type BufferLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
-import {Field, Schema, TypeMap, util} from 'apache-arrow';
+import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
+import type {GPUData} from './gpu-data';
 import {GPUVector} from './gpu-vector';
 import {GPURecordBatch} from './gpu-record-batch';
 import {createGPUVectorCollection} from './gpu-vector-collection';
+
+type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
+  [Name in keyof T & string]: GPUVector<T[Name]>;
+};
 
 /** Props retained as a migration alias for Arrow appendable-table adapters. */
 export type GPUTableAppendableProps = never;
 
 /** Options for constructing a GPU table from existing GPU vectors. */
-export type GPUTableFromVectorsProps = {
+export type GPUTableFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU vectors keyed by name, or a list of named GPU vectors. */
-  vectors: Record<string, GPUVector> | GPUVector[];
+  vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
   /** Optional table-level schema metadata. */
   metadata?: Map<string, string>;
   /** Number of null rows in the generated GPU table. */
@@ -23,11 +28,11 @@ export type GPUTableFromVectorsProps = {
 };
 
 /** Options for constructing a GPU table from already-built record batches. */
-export type GPUTableFromBatchesProps = {
+export type GPUTableFromBatchesProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU batches preserved by the table. */
   batches: GPURecordBatch[];
   /** Selected schema fields and metadata for the table. */
-  schema: Schema;
+  schema: GPUSchema<T>;
   /** Optional layout retained when `batches` is empty. */
   bufferLayout?: BufferLayout[];
   /** Explicit row count retained when `batches` is empty. */
@@ -37,7 +42,9 @@ export type GPUTableFromBatchesProps = {
 };
 
 /** Generic GPU table construction props. */
-export type GPUTableProps = GPUTableFromVectorsProps | GPUTableFromBatchesProps;
+export type GPUTableProps<T extends GPUTypeMap = GPUTypeMap> =
+  | GPUTableFromVectorsProps<T>
+  | GPUTableFromBatchesProps<T>;
 
 /** Options for replacing preserved GPU batches with larger packed batches. */
 export type GPUTablePackBatchesOptions = {
@@ -54,9 +61,9 @@ export type GPUTableDetachBatchesOptions = {
 };
 
 /** GPU memory and schema metadata for one logical table. */
-export class GPUTable<T extends TypeMap = any> {
+export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
   /** GPU-facing schema for the selected columns. */
-  schema: Schema<T>;
+  schema: GPUSchema<T>;
   /** Number of logical rows in the table. */
   numRows: number;
   /** Number of selected GPU columns in {@link schema}. */
@@ -75,7 +82,7 @@ export class GPUTable<T extends TypeMap = any> {
   readonly batches: GPURecordBatch[] = [];
 
   /** Creates one logical GPU table from vectors or already-preserved GPU record batches. */
-  constructor(props: GPUTableProps) {
+  constructor(props: GPUTableProps<T>) {
     if ('batches' in props) {
       this.schema = props.schema;
       this.numCols = props.schema.fields.length;
@@ -91,12 +98,12 @@ export class GPUTable<T extends TypeMap = any> {
     }
 
     const {vectors, metadata, nullCount = 0} = props;
-    const vectorCollection = createGPUVectorCollection({
+    const vectorCollection = createGPUVectorCollection<T>({
       ownerName: 'GPUTable',
       vectors
     });
-    const batch = new GPURecordBatch({
-      vectors: vectorCollection.gpuVectors,
+    const batch: GPURecordBatch = new GPURecordBatch<GPUTypeMap>({
+      vectors: vectorCollection.gpuVectors as GPUVectorMap<T>,
       bufferLayout: vectorCollection.bufferLayout,
       fields: vectorCollection.fields,
       metadata,
@@ -105,7 +112,10 @@ export class GPUTable<T extends TypeMap = any> {
 
     this.numRows = vectorCollection.numRows;
     this.nullCount = nullCount;
-    this.schema = new Schema(vectorCollection.fields, metadata);
+    this.schema = {
+      fields: vectorCollection.fields,
+      metadata: metadata ?? new Map()
+    };
     this.numCols = vectorCollection.fields.length;
     this.bufferLayout.push(...vectorCollection.bufferLayout);
     this.batches.push(batch);
@@ -127,7 +137,9 @@ export class GPUTable<T extends TypeMap = any> {
         nextBatches.push(batchGroup[0]);
         continue;
       }
-      nextBatches.push(createPackedGPURecordBatch(batchGroup, this.bufferLayout, this.schema));
+      nextBatches.push(
+        createPackedGPURecordBatch(batchGroup, this.bufferLayout, this.schema as GPUSchema)
+      );
       supersededBatches.push(...batchGroup);
     }
 
@@ -154,7 +166,9 @@ export class GPUTable<T extends TypeMap = any> {
   refreshFromBatches(): this {
     this.numRows = this.batches.reduce((numRows, batch) => numRows + batch.numRows, 0);
     this.nullCount = this.batches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0);
-    this.rebuildAggregateVectors();
+    if (this.batches.length <= 1 || !this.trySynchronizeAggregateVectors()) {
+      this.rebuildAggregateVectors();
+    }
     return this;
   }
 
@@ -196,11 +210,15 @@ export class GPUTable<T extends TypeMap = any> {
     if (!firstVector) {
       throw new Error(`GPUTable.detachVector() column "${columnName}" has no GPU data`);
     }
+    if (!firstVector.format) {
+      throw new Error(`GPUTable.detachVector() column "${columnName}" has no GPUVector format`);
+    }
 
     const detachedVector = new GPUVector({
       type: 'data',
       name: columnName,
-      dataType: firstVector.type,
+      dataType: firstVector.dataType,
+      format: firstVector.format,
       data: [...firstVector.data],
       stride: firstVector.stride,
       byteStride: firstVector.byteStride,
@@ -214,8 +232,8 @@ export class GPUTable<T extends TypeMap = any> {
     }
     detachedVector.retainOwnedVectors(detachedVectors);
 
-    const remainingColumnNames = this.bufferLayout
-      .map(layout => layout.name)
+    const remainingColumnNames = this.schema.fields
+      .map(field => field.name)
       .filter(name => name !== columnName);
     for (const batch of this.batches) {
       rebuildGPURecordBatchColumns(batch, remainingColumnNames);
@@ -282,10 +300,14 @@ export class GPUTable<T extends TypeMap = any> {
       if (!firstVector) {
         throw new Error(`GPUTable batch is missing GPU vector "${vectorName}"`);
       }
+      if (!firstVector.format) {
+        throw new Error(`GPUTable aggregate vector "${vectorName}" has no GPUVector format`);
+      }
       const aggregateVector = new GPUVector({
         type: 'data',
         name: vectorName,
-        dataType: firstVector.type,
+        dataType: firstVector.dataType,
+        format: firstVector.format,
         data: [...firstVector.data],
         stride: firstVector.stride,
         byteStride: firstVector.byteStride,
@@ -303,6 +325,83 @@ export class GPUTable<T extends TypeMap = any> {
     Object.assign(this.attributes, firstBatch.attributes);
     Object.assign(this.bindings, firstBatch.bindings);
   }
+
+  private trySynchronizeAggregateVectors(): boolean {
+    const firstBatch = this.batches[0];
+    if (!firstBatch) {
+      return false;
+    }
+
+    for (const vectorName of Object.keys(firstBatch.gpuVectors)) {
+      const aggregateVector = this.gpuVectors[vectorName];
+      const batchVectors = this.batches.map(batch => batch.gpuVectors[vectorName]);
+      if (
+        !aggregateVector ||
+        isBatchLocalAggregateVector(aggregateVector, vectorName, this.batches) ||
+        !canSynchronizeAggregateVector(aggregateVector, batchVectors)
+      ) {
+        return false;
+      }
+    }
+
+    for (const vectorName of Object.keys(firstBatch.gpuVectors)) {
+      const aggregateVector = this.gpuVectors[vectorName];
+      const batchData = getBatchVectorData(this.batches.map(batch => batch.gpuVectors[vectorName]));
+      for (const data of batchData.slice(aggregateVector.data.length)) {
+        aggregateVector.addData(data);
+      }
+    }
+
+    for (const name of Object.keys(this.attributes)) {
+      delete this.attributes[name];
+    }
+    for (const name of Object.keys(this.bindings)) {
+      delete this.bindings[name];
+    }
+    Object.assign(this.attributes, firstBatch.attributes);
+    Object.assign(this.bindings, firstBatch.bindings);
+    return true;
+  }
+}
+
+function isBatchLocalAggregateVector(
+  aggregateVector: GPUVector,
+  vectorName: string,
+  batches: GPURecordBatch[]
+): boolean {
+  return batches.some(batch => batch.gpuVectors[vectorName] === aggregateVector);
+}
+
+function canSynchronizeAggregateVector(
+  aggregateVector: GPUVector,
+  batchVectors: Array<GPUVector | undefined>
+): batchVectors is GPUVector[] {
+  const firstVector = batchVectors[0];
+  if (!firstVector) {
+    return false;
+  }
+  if (
+    aggregateVector.format !== firstVector.format ||
+    aggregateVector.stride !== firstVector.stride ||
+    aggregateVector.byteStride !== firstVector.byteStride ||
+    aggregateVector.rowByteLength !== firstVector.rowByteLength ||
+    aggregateVector.bufferLayout !== firstVector.bufferLayout
+  ) {
+    return false;
+  }
+  if (batchVectors.some(vector => !vector)) {
+    return false;
+  }
+
+  const batchData = getBatchVectorData(batchVectors as GPUVector[]);
+  if (aggregateVector.data.length > batchData.length) {
+    return false;
+  }
+  return aggregateVector.data.every((data, index) => data === batchData[index]);
+}
+
+function getBatchVectorData(batchVectors: GPUVector[]): GPUData[] {
+  return batchVectors.flatMap(vector => vector.data);
 }
 
 function createGPUPackGroups(batches: GPURecordBatch[], minBatchSize?: number): GPURecordBatch[][] {
@@ -336,7 +435,7 @@ function createGPUPackGroups(batches: GPURecordBatch[], minBatchSize?: number): 
 function createPackedGPURecordBatch(
   batchGroup: GPURecordBatch[],
   bufferLayout: BufferLayout[],
-  schema: Schema
+  schema: GPUSchema
 ): GPURecordBatch {
   const firstBatch = batchGroup[0];
   const device = getGPURecordBatchDevice(firstBatch);
@@ -351,7 +450,7 @@ function createPackedGPURecordBatch(
     }
 
     const byteLength = sourceVectors.reduce(
-      (totalByteLength, vector) => totalByteLength + vector.length * vector.byteStride,
+      (totalByteLength, vector) => totalByteLength + getGPUVectorPackedByteLength(vector),
       0
     );
     const buffer = device.createBuffer({
@@ -360,18 +459,20 @@ function createPackedGPURecordBatch(
     });
     let destinationOffset = 0;
     for (const vector of sourceVectors) {
-      const copyByteLength = getGPUVectorCopyByteLength(vector);
-      if (copyByteLength > 0) {
+      for (const data of vector.data) {
+        const copyByteLength = getGPUDataCopyByteLength(data);
+        if (copyByteLength === 0) {
+          continue;
+        }
         commandEncoder.copyBufferToBuffer({
-          sourceBuffer:
-            vector.buffer instanceof DynamicBuffer ? vector.buffer.buffer : vector.buffer,
-          sourceOffset: vector.byteOffset,
+          sourceBuffer: getGPUDataConcreteBuffer(data),
+          sourceOffset: data.byteOffset,
           destinationBuffer: buffer,
           destinationOffset,
           size: copyByteLength
         });
+        destinationOffset += data.length * data.byteStride;
       }
-      destinationOffset += vector.length * vector.byteStride;
     }
 
     packedVectors[layout.name] = firstVector.bufferLayout
@@ -379,7 +480,8 @@ function createPackedGPURecordBatch(
           type: 'interleaved',
           name: firstVector.name,
           buffer,
-          dataType: firstVector.type,
+          dataType: firstVector.dataType,
+          format: firstVector.format,
           length: sourceVectors.reduce((length, vector) => length + vector.length, 0),
           byteStride: firstVector.byteStride,
           attributes: firstVector.bufferLayout.attributes ?? [],
@@ -389,7 +491,8 @@ function createPackedGPURecordBatch(
           type: 'buffer',
           name: firstVector.name,
           buffer,
-          dataType: firstVector.type,
+          dataType: firstVector.dataType,
+          format: requireGPUVectorFormat(firstVector),
           length: sourceVectors.reduce((length, vector) => length + vector.length, 0),
           stride: firstVector.stride,
           byteStride: firstVector.byteStride,
@@ -408,22 +511,41 @@ function createPackedGPURecordBatch(
   });
 }
 
-function getGPURecordBatchDevice(batch: GPURecordBatch) {
+function getGPURecordBatchDevice<T extends GPUTypeMap>(batch: GPURecordBatch<T>) {
   const firstVector = Object.values(batch.gpuVectors)[0];
-  if (!firstVector) {
+  const firstData = firstVector?.data[0];
+  if (!firstData) {
     throw new Error('GPUTable cannot pack an empty GPU record batch');
   }
-  return firstVector.buffer.device;
+  return firstData.buffer.device;
 }
 
-function getGPUVectorCopyByteLength(vector: GPUVector): number {
-  if (vector.length === 0) {
+function getGPUVectorPackedByteLength(vector: GPUVector): number {
+  return vector.data.reduce((byteLength, data) => byteLength + data.length * data.byteStride, 0);
+}
+
+function getGPUDataCopyByteLength(data: GPUData): number {
+  if (data.length === 0) {
     return 0;
   }
-  return (vector.length - 1) * vector.byteStride + vector.rowByteLength;
+  return (data.length - 1) * data.byteStride + data.rowByteLength;
 }
 
-function assertCompatibleGPURecordBatch(table: GPUTable, batch: GPURecordBatch): void {
+function getGPUDataConcreteBuffer(data: GPUData): Buffer {
+  return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
+}
+
+function requireGPUVectorFormat(vector: GPUVector) {
+  if (!vector.format) {
+    throw new Error(`GPUVector "${vector.name}" requires a format`);
+  }
+  return vector.format;
+}
+
+function assertCompatibleGPURecordBatch<T extends GPUTypeMap>(
+  table: GPUTable<T>,
+  batch: GPURecordBatch<T>
+): void {
   if (!deepEqualBufferLayouts(table.bufferLayout, batch.bufferLayout)) {
     throw new Error('GPUTable.addBatch() requires matching buffer layouts');
   }
@@ -436,7 +558,7 @@ function assertCompatibleGPURecordBatch(table: GPUTable, batch: GPURecordBatch):
     if (
       !batchField ||
       tableField.name !== batchField.name ||
-      !util.compareTypes(tableField.type, batchField.type)
+      tableField.format !== batchField.format
     ) {
       throw new Error('GPUTable.addBatch() requires matching selected schema fields');
     }
@@ -450,8 +572,11 @@ function deepEqualBufferLayouts(
   return JSON.stringify(expectedBufferLayout) === JSON.stringify(candidateBufferLayout);
 }
 
-function normalizeSelectedColumnNames(table: GPUTable, columnNames: string[]): string[] {
-  const knownColumnNames = new Set(table.bufferLayout.map(layout => layout.name));
+function normalizeSelectedColumnNames<T extends GPUTypeMap>(
+  table: GPUTable<T>,
+  columnNames: string[]
+): string[] {
+  const knownColumnNames = new Set(table.schema.fields.map(field => field.name));
   const selectedColumnNames = Array.from(new Set(columnNames));
   for (const columnName of selectedColumnNames) {
     if (!knownColumnNames.has(columnName)) {
@@ -461,23 +586,29 @@ function normalizeSelectedColumnNames(table: GPUTable, columnNames: string[]): s
   return selectedColumnNames;
 }
 
-function assertGPUTableColumn(table: GPUTable, columnName: string): void {
-  if (!table.bufferLayout.some(layout => layout.name === columnName)) {
+function assertGPUTableColumn<T extends GPUTypeMap>(table: GPUTable<T>, columnName: string): void {
+  if (!table.schema.fields.some(field => field.name === columnName)) {
     throw new Error(`GPUTable column "${columnName}" does not exist`);
   }
 }
 
-function rebuildGPUTableColumns(table: GPUTable, columnNames: string[]): void {
+function rebuildGPUTableColumns<T extends GPUTypeMap>(
+  table: GPUTable<T>,
+  columnNames: string[]
+): void {
   const selectedColumnSet = new Set(columnNames);
   const selectedLayouts = columnNames
     .map(columnName => table.bufferLayout.find(layout => layout.name === columnName))
     .filter((layout): layout is BufferLayout => Boolean(layout));
   const selectedFields = columnNames
     .map(columnName => table.schema.fields.find(field => field.name === columnName))
-    .filter((field): field is Field => Boolean(field));
+    .filter((field): field is GPUField => Boolean(field));
 
   table.bufferLayout.splice(0, table.bufferLayout.length, ...selectedLayouts);
-  table.schema = new Schema(selectedFields, new Map(table.schema.metadata));
+  table.schema = {
+    fields: selectedFields,
+    metadata: new Map(table.schema.metadata)
+  };
   table.numCols = selectedFields.length;
 
   for (const name of Object.keys(table.gpuVectors)) {
@@ -487,18 +618,26 @@ function rebuildGPUTableColumns(table: GPUTable, columnNames: string[]): void {
   }
 }
 
-function rebuildGPURecordBatchColumns(batch: GPURecordBatch, columnNames: string[]): void {
+function rebuildGPURecordBatchColumns<T extends GPUTypeMap>(
+  batch: GPURecordBatch<T>,
+  columnNames: string[]
+): void {
   const selectedColumnSet = new Set(columnNames);
   const selectedLayouts = columnNames
     .map(columnName => batch.bufferLayout.find(layout => layout.name === columnName))
     .filter((layout): layout is BufferLayout => Boolean(layout));
   const selectedFields = columnNames
     .map(columnName => batch.schema.fields.find(field => field.name === columnName))
-    .filter((field): field is Field => Boolean(field));
+    .filter((field): field is GPUField => Boolean(field));
 
   for (const name of Object.keys(batch.gpuVectors)) {
     if (!selectedColumnSet.has(name)) {
       delete batch.gpuVectors[name];
+    }
+  }
+  for (const name of Object.keys(batch.bindings)) {
+    if (!selectedColumnSet.has(name)) {
+      delete batch.bindings[name];
     }
   }
   for (const name of Object.keys(batch.attributes)) {
@@ -509,10 +648,29 @@ function rebuildGPURecordBatchColumns(batch: GPURecordBatch, columnNames: string
     if (!vector) {
       throw new Error(`GPURecordBatch column "${layout.name}" has no GPU vector`);
     }
-    batch.attributes[layout.name] = vector.buffer;
+    if (vector.data.length === 0) {
+      continue;
+    }
+    batch.attributes[layout.name] = getSingleGPUVectorDataBuffer(vector, layout.name);
   }
 
   batch.bufferLayout.splice(0, batch.bufferLayout.length, ...selectedLayouts);
-  batch.schema = new Schema(selectedFields, new Map(batch.schema.metadata));
+  batch.schema = {
+    fields: selectedFields,
+    metadata: new Map(batch.schema.metadata)
+  };
   batch.numCols = selectedFields.length;
+}
+
+function getSingleGPUVectorDataBuffer(
+  vector: GPUVector,
+  attributeName: string
+): Buffer | DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(
+      `GPURecordBatch attribute "${attributeName}" requires exactly one GPUData chunk`
+    );
+  }
+  return data.buffer;
 }

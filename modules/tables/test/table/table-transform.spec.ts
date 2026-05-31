@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {makeArrowGPUVector, readArrowGPUVectorAsync} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {GPUVector, TableTransform} from '@luma.gl/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
@@ -28,7 +28,7 @@ const TRANSFORM_SHADER_LAYOUT = {
 
 test('TableTransform copies dense outputs back into inputVectors', async t => {
   const device = await getWebGLTestDevice();
-  const values = makeArrowGPUVector(device, arrow.makeVector(new Float32Array([1, 2, 3])), {
+  const values = makeGPUVectorFromArrow(device, arrow.makeVector(new Float32Array([1, 2, 3])), {
     name: 'values'
   });
   const transform = new TableTransform(device, {
@@ -41,9 +41,9 @@ test('TableTransform copies dense outputs back into inputVectors', async t => {
   t.ok(transform.outputVectors.nextValues, 'allocates an output vector for writeback');
   transform.run();
 
-  const transformedValues = await readArrowGPUVectorAsync(values);
+  const transformedValues = await readFloat32GPUVector(values);
   t.deepEqual(
-    Array.from(transformedValues.toArray() as Float32Array),
+    Array.from(transformedValues),
     [2, 4, 6],
     'copies transform outputs back into the input vector buffer'
   );
@@ -60,7 +60,7 @@ test('TableTransform rejects padded automatic writeback vectors', async t => {
     type: 'buffer',
     name: 'values',
     buffer,
-    dataType: new arrow.Float32(),
+    format: 'float32',
     length: 2,
     stride: 1,
     byteStride: 8,
@@ -83,3 +83,9 @@ test('TableTransform rejects padded automatic writeback vectors', async t => {
   values.destroy();
   t.end();
 });
+
+async function readFloat32GPUVector(vector: GPUVector): Promise<Float32Array> {
+  const data = vector.data[0];
+  const bytes = await data.buffer.readAsync(data.byteOffset, data.length * data.byteStride);
+  return new Float32Array(bytes.buffer, bytes.byteOffset, vector.length);
+}

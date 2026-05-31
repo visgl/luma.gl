@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '../../types';
-import type {NormalizedDataType, PrimitiveDataType, SignedDataType} from '../data-types/data-types';
+import type {
+  DataTypeInfo,
+  NormalizedDataType,
+  PrimitiveDataType,
+  SignedDataType
+} from '../data-types/data-types';
 import type {VertexFormat, VertexFormatInfo} from './vertex-formats';
 import {dataTypeDecoder} from '../data-types/data-type-decoder';
 
@@ -12,18 +17,43 @@ export class VertexFormatDecoder {
    * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
    */
   getVertexFormatInfo<T extends VertexFormat = VertexFormat>(format: T): VertexFormatInfo<T> {
-    // Strip the -webgl ending if present
+    if (format === 'unorm10-10-10-2') {
+      return {
+        type: 'unorm8',
+        components: 4,
+        byteLength: 4,
+        integer: false,
+        signed: false,
+        normalized: true
+      } as VertexFormatInfo<T>;
+    }
+
+    let normalizedFormat = format === 'unorm8x4-bgra' ? 'unorm8x4' : (format as string);
     let webglOnly: boolean | undefined;
-    if (format.endsWith('-webgl')) {
-      format.replace('-webgl', '');
+    if (normalizedFormat.endsWith('-webgl')) {
+      normalizedFormat = normalizedFormat.slice(0, -'-webgl'.length);
       webglOnly = true;
     }
-    // split components from type
-    const [type_, count] = format.split('x');
-    const type = type_ as NormalizedDataType;
-    const components = (count ? parseInt(count) : 1) as 1 | 2 | 3 | 4;
-    // decode the type
-    const decodedType = dataTypeDecoder.getDataTypeInfo(type);
+
+    const formatParts = normalizedFormat.split('x');
+    if (formatParts.length > 2) {
+      throw new Error(`Unsupported vertex format: ${format}`);
+    }
+    const [typeString, componentString] = formatParts;
+    const type = typeString as NormalizedDataType;
+    const components = getVertexFormatComponents(format, componentString);
+    const decodedType = getVertexFormatDataTypeInfo(format, type);
+    let expectedFormat: VertexFormat;
+    try {
+      expectedFormat = webglOnly
+        ? getWebGLOnlyVertexFormat(format, type, components)
+        : this.makeVertexFormat(decodedType.signedType, components, decodedType.normalized);
+    } catch {
+      throw new Error(`Unsupported vertex format: ${format}`);
+    }
+    if (expectedFormat !== (webglOnly ? format : normalizedFormat)) {
+      throw new Error(`Unsupported vertex format: ${format}`);
+    }
     const result: VertexFormatInfo = {
       type,
       components,
@@ -35,7 +65,7 @@ export class VertexFormatDecoder {
     if (webglOnly) {
       result.webglOnly = true;
     }
-    return result;
+    return result as VertexFormatInfo<T>;
   }
 
   /** Build a vertex format from a signed data type and a component */
@@ -173,3 +203,50 @@ export class VertexFormatDecoder {
 
 /** Decoder for luma.gl vertex types */
 export const vertexFormatDecoder = new VertexFormatDecoder();
+
+function getVertexFormatDataTypeInfo(format: string, type: NormalizedDataType): DataTypeInfo {
+  try {
+    return dataTypeDecoder.getDataTypeInfo(type);
+  } catch {
+    throw new Error(`Unsupported vertex format: ${format}`);
+  }
+}
+
+function getVertexFormatComponents(
+  format: string,
+  componentString: string | undefined
+): 1 | 2 | 3 | 4 {
+  if (!componentString) {
+    return 1;
+  }
+
+  const components = Number(componentString);
+  if (components === 2 || components === 3 || components === 4) {
+    return components;
+  }
+  throw new Error(`Unsupported vertex format: ${format}`);
+}
+
+function getWebGLOnlyVertexFormat(
+  format: string,
+  type: NormalizedDataType,
+  components: 1 | 2 | 3 | 4
+): VertexFormat {
+  if (components !== 3) {
+    throw new Error(`Unsupported vertex format: ${format}`);
+  }
+
+  switch (type) {
+    case 'uint8':
+    case 'sint8':
+    case 'unorm8':
+    case 'snorm8':
+    case 'uint16':
+    case 'sint16':
+    case 'unorm16':
+    case 'snorm16':
+      return `${type}x3-webgl`;
+    default:
+      throw new Error(`Unsupported vertex format: ${format}`);
+  }
+}

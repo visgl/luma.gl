@@ -12,7 +12,7 @@ import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 This page documents how Apache Arrow columns map to luma.gl GPU upload, vertex
 attributes, WebGPU storage bindings, and model-specific preparation helpers.
 For the generic GPU table ownership model, see
-[GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model).
+[GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle).
 
 ## Apache Arrow Preliminaries
 
@@ -45,6 +45,24 @@ deltas on the GPU before rendering.
 
 Support depends on how the column is consumed. A column can be uploadable as a
 `GPUVector` without also being usable as a generic vertex attribute.
+
+Arrow adapters publish `GPUVector.format` strings from
+[`@luma.gl/tables`](/docs/api-reference/tables/gpu-vector-format). Arrow
+`DataType` values are retained only as adapter/readback metadata during
+migration.
+
+| Arrow column pattern | GPUVector format | Generic `BufferLayout` |
+| --- | --- | --- |
+| `Float32` | `float32` | yes |
+| `FixedSizeList<Float32, 3>` | `float32x3` | yes |
+| `FixedSizeList<Uint8, 4>` as normalized color | `unorm8x4` | yes |
+| `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>` | no |
+| `List<FixedSizeList<Uint8, 4>>` vertex colors | `vertex-list<unorm8x4>` | no |
+
+`vertex-list<...>` vectors keep source row boundaries through list-offset
+metadata owned by the producing adapter. They are not automatically exposed as
+ordinary vertex attributes; path, text, polygon, and geometry adapters must
+expand them or bind their flattened values explicitly.
 
 Status: ✅ directly supported, 🟡 conditionally supported, ❌ not supported.
 The `nullable` column refers to columns with actual null rows, not just nullable
@@ -730,7 +748,7 @@ For portable WebGPU layouts, prefer `Float32` for `vec3<f32>` attributes or pad
 
 ## Related References
 
-- [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)
+- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
 - [Attributes](/docs/api-guide/gpu/gpu-attributes)
 - [Storage Buffers](/docs/api-guide/gpu/gpu-storage-buffers)
 - [Buffer Schemas and Columnar Records](/docs/api-guide/gpu/buffer-schemas)

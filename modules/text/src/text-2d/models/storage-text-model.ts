@@ -5,7 +5,6 @@
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture, Model, type ModelProps} from '@luma.gl/engine';
 import type {GPUVector} from '@luma.gl/tables';
-import type {FixedSizeList, Float32, Int16, Uint8} from 'apache-arrow';
 import FontAtlasManager, {type FontAtlas, type FontSettings} from '../atlas/font-atlas-manager';
 import type {CharacterMapping} from '../atlas/text-utils';
 import {
@@ -17,7 +16,7 @@ import {
   type StorageTextRenderBatchState,
   type StorageTextState
 } from '../model-utils/storage-text-state';
-import type {GpuExpandedTextStream, Utf8TextType} from '../model-utils/gpu-text-types';
+import type {GpuExpandedTextStream} from '../model-utils/gpu-text-types';
 import {drawPreparedStorageTextModelBatch} from '../model-utils/storage-model-draw';
 import type {StorageTextInputProps} from '../model-utils/text-model-props';
 import {
@@ -48,23 +47,23 @@ export type {StorageTextBatchState, StorageTextRenderBatchState, StorageTextStat
 /** Constructor props for the storage text renderer. */
 export interface StorageTextModelProps extends ModelProps {
   /** GPU-resident label origins aligned one-for-one with `texts`; each row is `[x, y]`. */
-  positions: GPUVector<FixedSizeList<Float32>>;
+  positions: GPUVector;
   /** GPU UTF-8 or dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector<Utf8TextType>;
+  texts: GPUVector;
   /** Optional GPU packed RGBA8 text colors aligned with label rows. */
-  colors?: GPUVector<FixedSizeList<Uint8>>;
+  colors?: GPUVector;
   /** Optional GPU per-row angles in degrees. */
-  angles?: GPUVector<Float32>;
+  angles?: GPUVector;
   /** Optional GPU per-row deck-style text sizes. */
-  sizes?: GPUVector<Float32>;
+  sizes?: GPUVector;
   /** Optional GPU per-row pixel offsets; each row is `[x, y]`. */
-  pixelOffsets?: GPUVector<FixedSizeList<Float32>>;
+  pixelOffsets?: GPUVector;
   /** Optional GPU per-row text anchor enum: 0=start, 1=middle, 2=end. */
-  textAnchors?: GPUVector<Uint8>;
+  textAnchors?: GPUVector;
   /** Optional GPU per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
-  alignmentBaselines?: GPUVector<Uint8>;
+  alignmentBaselines?: GPUVector;
   /** Optional GPU packed per-label clip rectangles `[x, y, width, height]`. Negative width or height disables clipping on that axis. */
-  clipRects?: GPUVector<FixedSizeList<Int16>>;
+  clipRects?: GPUVector;
   /** Constant fallback color used when `colors` is absent. */
   color?: [number, number, number, number];
   /** Constant fallback angle in degrees used when `angles` is absent. */

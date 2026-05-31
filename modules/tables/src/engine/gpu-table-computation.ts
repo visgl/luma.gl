@@ -124,12 +124,7 @@ function getGPUTableComputationBatchState(
 }
 
 function requiresBatchBinding(vector: GPUVector): boolean {
-  try {
-    vector.buffer;
-    return false;
-  } catch {
-    return true;
-  }
+  return vector.data.length !== 1;
 }
 
 function getDirectVectorBindings(inputVectors: Record<string, GPUVector>): Record<string, Binding> {
@@ -143,8 +138,7 @@ function getDirectVectorBindings(inputVectors: Record<string, GPUVector>): Recor
 }
 
 function getDirectVectorBinding(vector: GPUVector): Binding {
-  const buffer = vector.buffer;
-  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+  return getGPUDataBinding(getSingleGPUVectorData(vector));
 }
 
 function getBatchVectorBindings(
@@ -167,10 +161,24 @@ function getBatchVectorBindings(
 
 function getGPUDataBinding(data: GPUData): Binding {
   return {
-    buffer: data.buffer.buffer,
+    buffer: getGPUDataBuffer(data),
     offset: data.byteOffset,
     size: data.length * data.byteStride
   };
+}
+
+function getGPUDataBuffer(data: GPUData) {
+  return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
+}
+
+function getSingleGPUVectorData(vector: GPUVector): GPUData {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(
+      `GPUTableComputation vector "${vector.name}" requires exactly one GPUData chunk`
+    );
+  }
+  return data;
 }
 
 function assertNoDuplicateBindingNames(

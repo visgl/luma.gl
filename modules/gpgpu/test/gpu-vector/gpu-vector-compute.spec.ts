@@ -4,9 +4,8 @@
 
 import {Buffer} from '@luma.gl/core';
 import {add, fround, GPUTableEvaluator, interleave} from '@luma.gl/gpgpu';
-import {GPUVector} from '@luma.gl/tables';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {getTestDevice} from '@luma.gl/test-utils';
-import * as arrow from 'apache-arrow';
 import {expect, test} from 'vitest';
 import '../operations/fixtures';
 
@@ -24,7 +23,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     const result = await sum.evaluate(device, {name: 'sum'});
 
     expect(result.name).toBe('sum');
-    expect(arrow.util.compareTypes(result.type, x.type)).toBe(true);
+    expect(result.format).toBe(x.format);
     expect(Array.from(await readFloat32Vector(result))).toEqual([10, 21, 32, 43, 54, 65]);
 
     const xBuffer = getBuffer(x);
@@ -50,7 +49,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     const sum = add(x, y);
     const result = await sum.evaluate(device, {name: 'sum'});
 
-    expect(arrow.util.compareTypes(result.type, makeDataType(new arrow.Float32(), 2))).toBe(true);
+    expect(result.format).toBe('float32x2');
     expect(Array.from(await readFloat32Vector(result))).toEqual([11, 21, 32, 42, 53, 63]);
 
     sum.destroy();
@@ -81,7 +80,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     });
 
     expect(result.name).toBe('packed');
-    expect(arrow.DataType.isBinary(result.type)).toBe(true);
+    expect(result.format).toBeUndefined();
     expect(result.bufferLayout).toEqual({
       name: 'packed',
       byteStride: 12,
@@ -190,7 +189,7 @@ function makeFloat32Vector(
     type: 'buffer',
     name,
     buffer,
-    dataType: makeDataType(new arrow.Float32(), stride),
+    format: getFloat32VectorFormat(stride),
     length: values.length / stride,
     stride,
     byteStride: stride * Float32Array.BYTES_PER_ELEMENT,
@@ -214,7 +213,7 @@ function makeFloat64Vector(
     type: 'buffer',
     name,
     buffer,
-    dataType: makeDataType(new arrow.Float64(), stride),
+    format: getUint32VectorFormat(stride * 2),
     length: values.length / stride,
     stride,
     byteStride: stride * Float64Array.BYTES_PER_ELEMENT,
@@ -223,10 +222,12 @@ function makeFloat64Vector(
   });
 }
 
-function makeDataType(type: arrow.DataType, stride: number): arrow.DataType {
-  return stride === 1
-    ? type
-    : new arrow.FixedSizeList(stride, new arrow.Field('value', type, false));
+function getFloat32VectorFormat(stride: number): GPUVectorFormat {
+  return (stride === 1 ? 'float32' : `float32x${stride}`) as GPUVectorFormat;
+}
+
+function getUint32VectorFormat(stride: number): GPUVectorFormat {
+  return (stride === 1 ? 'uint32' : `uint32x${stride}`) as GPUVectorFormat;
 }
 
 async function readFloat32Vector(vector: GPUVector): Promise<Float32Array> {
@@ -237,7 +238,7 @@ async function readFloat32Vector(vector: GPUVector): Promise<Float32Array> {
 }
 
 function getBuffer(vector: GPUVector): Buffer {
-  const buffer = vector.buffer;
+  const buffer = vector.data[0].buffer;
   return buffer instanceof Buffer ? buffer : buffer.buffer;
 }
 

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getCompatibleGPUTableEvaluatorDataType,
+  getCompatibleGPUTableEvaluatorFormat,
   getGPUTableEvaluator,
   GPUTableEvaluator,
   type GPUTableEvaluatorInput
@@ -81,8 +81,8 @@ export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
       type,
       size,
       length,
-      dataType: firstInput
-        ? getCompatibleGPUTableEvaluatorDataType(firstInput, type, size)
+      format: firstInput
+        ? getCompatibleGPUTableEvaluatorFormat(firstInput, type, size, firstInput.normalized)
         : undefined,
       source: this
     });

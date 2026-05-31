@@ -55,7 +55,7 @@ backendRegistry.add('webgpu', webgpuBackend);
 ## Concepts
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
-- [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations.
+- [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations. It can borrow packed single-chunk `GPUVector` inputs from `@luma.gl/tables`.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate) evaluates final result tables and cleans up intermediate dependencies in one step.
 
 ## Related Engine APIs

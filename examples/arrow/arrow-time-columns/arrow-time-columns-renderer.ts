@@ -4,7 +4,7 @@
 
 import {
   makeArrowFixedSizeListVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
@@ -71,7 +71,7 @@ export type ArrowTimeColumnsRendererLabels = {
 
 type PreparedTemporalColumns = Record<
   TimeColumnsTemporalColumnName,
-  PreparedArrowTemporalGPUVector
+  PreparedArrowTemporalGPUVector<'float32'>
 >;
 
 type TimeColumnsTableInput = {
@@ -291,20 +291,20 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
 
 async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTableInput> {
   const temporalSourceVectors = makeTimeColumnsTemporalSourceVectors();
-  const temporalColumns = (await prepareArrowTemporalGPUVectors(device, temporalSourceVectors, {
+  const temporalColumns = await prepareArrowTemporalGPUVectors(device, temporalSourceVectors, {
     columns: {
       eventDates: {id: 'arrow-time-columns-event-dates'},
       eventTimes: {id: 'arrow-time-columns-event-times'},
       eventStarts: {id: 'arrow-time-columns-event-starts'},
       eventDurations: {id: 'arrow-time-columns-event-durations'}
     }
-  })) as unknown as PreparedTemporalColumns;
+  });
 
   try {
-    const eventColors = makeArrowGPUVector(
+    const eventColors = makeGPUVectorFromArrow(
       device,
       makeArrowFixedSizeListVector(new arrow.Uint8(), 4, makeTimeColumnsEventColorValues()),
-      {name: 'eventColors', id: 'arrow-time-columns-event-colors'}
+      {name: 'eventColors', id: 'arrow-time-columns-event-colors', format: 'unorm8x4'}
     );
     const table = new GPUTable({
       vectors: {
@@ -332,12 +332,12 @@ async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTab
 }
 
 function getPreparedScalarTemporalVector(
-  preparedTemporalColumn: PreparedArrowTemporalGPUVector
-): GPUVector<arrow.Float32> {
+  preparedTemporalColumn: PreparedArrowTemporalGPUVector<'float32'>
+): GPUVector<'float32'> {
   if (!(preparedTemporalColumn.temporal.type instanceof arrow.Float32)) {
     throw new Error('Time columns example requires scalar prepared Float32 temporal rows');
   }
-  return preparedTemporalColumn.temporal as GPUVector<arrow.Float32>;
+  return preparedTemporalColumn.temporal;
 }
 
 function getTimeColumnsStorageBindings(
