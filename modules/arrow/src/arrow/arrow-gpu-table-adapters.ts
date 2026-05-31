@@ -10,7 +10,8 @@ import {
   GPUTable,
   GPUVector,
   type GPUVectorBufferProps,
-  type GPUVectorDynamicBufferProps
+  type GPUVectorDynamicBufferProps,
+  type GPUVectorFormat
 } from '@luma.gl/tables';
 import {
   Data,
@@ -38,7 +39,6 @@ import {
   type AppendableGPUColumn
 } from './arrow-gpu-appendable';
 import {
-  GPUData as LegacyArrowGPUData,
   getArrowDataBufferSource,
   getArrowGPUDataReadbackMetadata,
   getArrowTypeByteStride,
@@ -46,7 +46,6 @@ import {
   getArrowUtf8DataBufferSource,
   getArrowVariableLengthAttributeDataBufferSource,
   getArrowVectorBufferSource,
-  readArrowGPUVectorAsync as readPackedArrowGPUVectorAsync,
   validateArrowGPUDataDirectUpload,
   type GPUDataReadbackMetadata
 } from './arrow-gpu-data';
@@ -57,8 +56,11 @@ import {
   type VariableLengthAttributeArrowType
 } from './arrow-types';
 import {getArrowMatrixVectorInfo} from './arrow-matrix-vector';
+import {getArrowGPUVectorFormatFromDataType} from './arrow-gpu-vector-format';
 
-const appendableColumnsByBatch = new WeakMap<GPURecordBatch, AppendableGPUColumn[]>();
+type AppendableArrowGPURecordBatch = GPURecordBatch & {
+  __arrowAppendableColumns?: AppendableGPUColumn[];
+};
 
 type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
 type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
@@ -67,8 +69,15 @@ type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
 export type ArrowGPUVectorProps = GPUVectorBufferProps & {
   /** Stable vector name. */
   name?: string;
+  /** Canonical GPUVector memory-layout descriptor. */
+  format?: GPUVectorFormat;
   /** Upload each Arrow Data chunk into its own GPUData buffer instead of packing one buffer. */
   preserveDataChunks?: boolean;
+};
+
+type ArrowGPUDataProps = GPUVectorBufferProps & {
+  /** Canonical GPUVector memory-layout descriptor. */
+  format?: GPUVectorFormat;
 };
 
 /** Props for uploading one Arrow record batch into a generic GPU record batch. */
@@ -121,9 +130,10 @@ export type AppendableArrowGPUVectorProps = {
 export function makeArrowGPUData<T extends DataType>(
   device: Device,
   data: Data<T>,
-  props: GPUVectorBufferProps = {}
-): GPUData<T> {
+  props: ArrowGPUDataProps = {}
+): GPUData {
   const arrowType = data.type as T;
+  const {format = getGPUVectorFormatForArrowType(arrowType), ...bufferProps} = props;
   const readbackMetadata = getArrowGPUDataReadbackMetadata(data) as GPUDataReadbackMetadata;
 
   if (isArrowUtf8DictionaryType(arrowType)) {
@@ -131,26 +141,28 @@ export function makeArrowGPUData<T extends DataType>(
     return new GPUData({
       buffer: new DynamicBuffer(device, {
         usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-        ...props,
+        ...bufferProps,
         data: getArrowDictionaryIndexBufferSource(data as unknown as Data<ArrowUtf8Dictionary>)
       }),
       dataType: arrowType,
+      format,
       length: data.length,
       stride: 1,
       byteStride,
       rowByteLength: byteStride,
       ownsBuffer: true
-    }) as GPUData<T>;
+    }) as GPUData;
   }
 
   if (DataType.isUtf8(arrowType)) {
     return new GPUData({
       buffer: new DynamicBuffer(device, {
         usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-        ...props,
+        ...bufferProps,
         data: getArrowUtf8DataBufferSource(data as Data<Utf8>)
       }),
       dataType: arrowType,
+      format,
       length: data.length,
       stride: 1,
       byteStride: 1,
@@ -169,13 +181,15 @@ export function makeArrowGPUData<T extends DataType>(
     return new GPUData({
       buffer: new DynamicBuffer(device, {
         usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-        ...props,
+        ...bufferProps,
         data: getArrowVariableLengthAttributeDataBufferSource(
           data as unknown as Data<VariableLengthAttributeArrowType>
         )
       }),
       dataType: arrowType,
+      format,
       length: data.length,
+      valueLength: getArrowDataValueLength(data),
       stride: getArrowTypeStride(arrowType),
       byteStride,
       rowByteLength: byteStride,
@@ -188,10 +202,11 @@ export function makeArrowGPUData<T extends DataType>(
   return new GPUData({
     buffer: new DynamicBuffer(device, {
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      ...props,
+      ...bufferProps,
       data: getArrowDataBufferSource(data as unknown as Data<AttributeArrowType>)
     }),
     dataType: arrowType,
+    format,
     length: data.length,
     stride: getArrowTypeStride(arrowType),
     byteStride,
@@ -206,9 +221,10 @@ export function makeArrowGPUVector<T extends DataType>(
   device: Device,
   vector: Vector<T>,
   props: ArrowGPUVectorProps = {}
-): GPUVector<T> {
-  const {name = 'vector', preserveDataChunks = false, ...bufferProps} = props;
+): GPUVector {
+  const {name = 'vector', format, preserveDataChunks = false, ...bufferProps} = props;
   const arrowType = vector.type as T;
+  const vectorFormat = format ?? getGPUVectorFormatForArrowType(arrowType);
 
   if (
     DataType.isUtf8(arrowType) ||
@@ -228,7 +244,10 @@ export function makeArrowGPUVector<T extends DataType>(
       type: 'data',
       name,
       dataType: arrowType,
-      data: vector.data.map(data => makeArrowGPUData(device, data as Data<T>, bufferProps)),
+      format: vectorFormat,
+      data: vector.data.map(data =>
+        makeArrowGPUData(device, data as Data<T>, {...bufferProps, format: vectorFormat})
+      ),
       stride,
       byteStride,
       rowByteLength: byteStride,
@@ -257,7 +276,10 @@ export function makeArrowGPUVector<T extends DataType>(
       type: 'data',
       name,
       dataType: arrowType,
-      data: vector.data.map(data => makeArrowGPUData(device, data as Data<T>, bufferProps)),
+      format: vectorFormat,
+      data: vector.data.map(data =>
+        makeArrowGPUData(device, data as Data<T>, {...bufferProps, format: vectorFormat})
+      ),
       stride: getArrowTypeStride(arrowType),
       byteStride,
       rowByteLength: byteStride,
@@ -270,32 +292,30 @@ export function makeArrowGPUVector<T extends DataType>(
     ...bufferProps,
     data: getArrowVectorBufferSource(vector as unknown as Vector<AttributeArrowType>)
   });
-  const dynamicBuffer = createDynamicBufferView(buffer);
-  let byteOffset = 0;
-  const data = vector.data.map(chunk => {
-    const gpuData = new GPUData({
-      buffer: dynamicBuffer,
-      dataType: chunk.type as T,
-      length: chunk.length,
-      stride: getArrowTypeStride(chunk.type),
-      byteOffset,
-      byteStride,
-      rowByteLength: byteStride,
-      ownsBuffer: false
-    }) as GPUData<T>;
-    byteOffset += chunk.length * byteStride;
-    return gpuData;
-  });
   return new GPUVector({
     type: 'data',
     name,
     dataType: arrowType,
-    data,
-    buffer,
+    format: vectorFormat,
+    data: [
+      new GPUData({
+        buffer,
+        dataType: arrowType,
+        format: vectorFormat,
+        length: vector.length,
+        valueLength: vector.data.reduce(
+          (totalValueLength, chunk) => totalValueLength + getArrowDataValueLength(chunk),
+          0
+        ),
+        stride: getArrowTypeStride(arrowType),
+        byteStride,
+        rowByteLength: byteStride,
+        ownsBuffer: true
+      }) as GPUData
+    ],
     stride: getArrowTypeStride(arrowType),
     byteStride,
-    rowByteLength: byteStride,
-    ownsBuffer: true
+    rowByteLength: byteStride
   });
 }
 
@@ -304,7 +324,7 @@ export function makeAppendableArrowGPUVector<T extends DataType>(
   device: Device,
   dataType: T,
   props: AppendableArrowGPUVectorProps = {}
-): GPUVector<T> {
+): GPUVector {
   const isUtf8Type = DataType.isUtf8(dataType);
   const isUtf8DictionaryType = isArrowUtf8DictionaryType(dataType);
   const byteStride = isUtf8Type
@@ -317,6 +337,7 @@ export function makeAppendableArrowGPUVector<T extends DataType>(
     name: props.name ?? 'vector',
     device,
     dataType,
+    format: getGPUVectorFormatForArrowType(dataType),
     stride: isUtf8Type || isUtf8DictionaryType ? 1 : getArrowTypeStride(dataType),
     byteStride,
     rowByteLength: byteStride,
@@ -349,7 +370,8 @@ export function makeArrowGPURecordBatch(
     const sourceField = getArrowFieldByPath(table, arrowPath);
     const gpuVector = makeArrowGPUVector(device, vector as Vector, {
       ...options.bufferProps,
-      name: layout.name
+      name: layout.name,
+      format: layout.format
     });
     fields.push(
       new Field(layout.name, vector.type, sourceField.nullable, new Map(sourceField.metadata))
@@ -465,6 +487,7 @@ export function makeAppendableArrowGPURecordBatch(
       name: attributeName,
       device: options.device,
       dataType: field.type,
+      format: columnLayout?.format ?? getGPUVectorFormatForArrowType(field.type),
       stride: isUtf8Type || isUtf8DictionaryType ? 1 : getArrowTypeStride(field.type),
       byteStride,
       rowByteLength: byteStride,
@@ -477,8 +500,8 @@ export function makeAppendableArrowGPURecordBatch(
     vectors[attributeName] = gpuVector;
     if (columnLayout) {
       bufferLayout.push(columnLayout);
-    } else {
-      bindings[attributeName] = gpuVector.buffer;
+    } else if (gpuVector.data.length > 0) {
+      bindings[attributeName] = getSingleGPUVectorDataBuffer(gpuVector, attributeName);
     }
   }
 
@@ -490,7 +513,7 @@ export function makeAppendableArrowGPURecordBatch(
     metadata: new Map(options.schema.metadata),
     bindings
   });
-  appendableColumnsByBatch.set(batch, appendableColumns);
+  (batch as AppendableArrowGPURecordBatch).__arrowAppendableColumns = appendableColumns;
   return batch;
 }
 
@@ -499,7 +522,7 @@ export function makeAppendableArrowGPUTable(options: AppendableArrowGPUTableProp
   const batch = makeAppendableArrowGPURecordBatch(options);
   return new GPUTable({
     batches: [batch],
-    schema: new Schema(batch.schema.fields, new Map(options.schema.metadata)),
+    schema: new Schema(batch.schema.fields as Field[], new Map(options.schema.metadata)),
     bufferLayout: batch.bufferLayout,
     numRows: 0,
     nullCount: 0
@@ -508,62 +531,32 @@ export function makeAppendableArrowGPUTable(options: AppendableArrowGPUTableProp
 
 /** Appends one Arrow `Data` chunk into appendable GPU vector storage. */
 export function appendArrowDataToGPUVector<T extends DataType>(
-  vector: GPUVector<T>,
+  vector: GPUVector,
   data: Data<T>
-): GPUVector<T> {
-  if (!(vector.buffer instanceof DynamicBuffer)) {
-    throw new Error('appendArrowDataToGPUVector() requires appendable DynamicBuffer storage');
+): GPUVector {
+  if (!vector.device) {
+    throw new Error('appendArrowDataToGPUVector() requires appendable GPUVector device metadata');
   }
   if (!util.compareTypes(data.type, vector.type)) {
     throw new Error('appendArrowDataToGPUVector() requires matching Arrow data types');
   }
-  const isUtf8DictionaryData = isArrowUtf8DictionaryType(data.type);
-  if (!isUtf8DictionaryData) {
-    validateArrowGPUDataDirectUpload(
-      vector.name,
-      data as unknown as Data<AttributeArrowType | VariableLengthAttributeArrowType | Utf8>
-    );
+  if (!vector.format) {
+    throw new Error('appendArrowDataToGPUVector() requires GPUVector format metadata');
   }
-
-  const isUtf8Data = DataType.isUtf8(data.type);
-  const isVariableLengthData = isVariableLengthAttributeArrowType(data.type);
-  const uploadData = isUtf8Data
-    ? getArrowUtf8DataBufferSource(data as Data<Utf8>)
-    : isUtf8DictionaryData
-      ? getArrowDictionaryIndexBufferSource(data as unknown as Data<ArrowUtf8Dictionary>)
-      : isVariableLengthData
-        ? getArrowVariableLengthAttributeDataBufferSource(
-            data as unknown as Data<VariableLengthAttributeArrowType>
-          )
-        : getArrowDataBufferSource(data as unknown as Data<AttributeArrowType>);
-  const byteOffset = isUtf8Data
-    ? alignAppendableByteLength(vector.appendedByteLength)
-    : vector.appendedByteLength;
-  const writeData = isUtf8Data ? padAppendableUtf8UploadData(uploadData as Uint8Array) : uploadData;
-  const requiredByteLength = byteOffset + writeData.byteLength;
-  vector.writeAppendableBytes(writeData, byteOffset, requiredByteLength);
   vector.appendDataChunk(
-    new GPUData({
-      buffer: vector.buffer,
-      dataType: data.type as T,
-      length: data.length,
-      stride: vector.stride,
-      byteOffset,
-      byteStride: vector.byteStride,
-      rowByteLength: vector.rowByteLength,
-      ownsBuffer: false,
-      readbackMetadata: getArrowGPUDataReadbackMetadata(data)
-    }) as GPUData<T>,
-    requiredByteLength
+    makeArrowGPUData(vector.device, data, {
+      ...(vector.bufferProps ?? {}),
+      format: vector.format
+    }) as GPUData
   );
   return vector;
 }
 
 /** Appends every Arrow chunk in a vector into appendable GPU vector storage. */
 export function appendArrowVectorToGPUVector<T extends DataType>(
-  gpuVector: GPUVector<T>,
+  gpuVector: GPUVector,
   vector: Vector<T>
-): GPUVector<T> {
+): GPUVector {
   if (!util.compareTypes(vector.type, gpuVector.type)) {
     throw new Error('appendArrowVectorToGPUVector() requires matching Arrow data types');
   }
@@ -578,10 +571,15 @@ export function appendArrowRecordBatchToGPURecordBatch(
   batch: GPURecordBatch,
   recordBatch: RecordBatch
 ): GPURecordBatch {
-  const appendableColumns = appendableColumnsByBatch.get(batch);
+  const appendableColumns = (batch as AppendableArrowGPURecordBatch).__arrowAppendableColumns;
   if (!appendableColumns) {
     throw new Error(
       'appendArrowRecordBatchToGPURecordBatch() requires an appendable Arrow GPU record batch'
+    );
+  }
+  if (batch.numRows > 0) {
+    throw new Error(
+      'appendArrowRecordBatchToGPURecordBatch() does not combine record batches; append a new GPURecordBatch instead'
     );
   }
   const pendingData = getAppendableGPUColumnData(
@@ -592,6 +590,7 @@ export function appendArrowRecordBatchToGPURecordBatch(
   for (const {column, data} of pendingData) {
     appendArrowDataToGPUVector(batch.gpuVectors[column.attributeName], data as Data);
   }
+  refreshAppendableGPURecordBatchBindings(batch, appendableColumns);
   return batch.appendRows(recordBatch.numRows, recordBatch.nullCount);
 }
 
@@ -610,57 +609,105 @@ export function appendArrowBatchToGPUTable(
   if (!lastBatch) {
     throw new Error('appendArrowBatchToGPUTable() requires an existing trailing batch');
   }
-  appendArrowRecordBatchToGPURecordBatch(lastBatch, recordBatchOrTable);
-  return table.refreshFromBatches();
+  if (lastBatch.numRows === 0) {
+    appendArrowRecordBatchToGPURecordBatch(lastBatch, recordBatchOrTable);
+    return table.refreshFromBatches();
+  }
+  const nextBatch = createAppendableGPURecordBatchFromTemplate(lastBatch);
+  appendArrowRecordBatchToGPURecordBatch(nextBatch, recordBatchOrTable);
+  return table.addBatch(nextBatch);
+}
+
+function createAppendableGPURecordBatchFromTemplate(templateBatch: GPURecordBatch): GPURecordBatch {
+  const appendableColumns = (templateBatch as AppendableArrowGPURecordBatch)
+    .__arrowAppendableColumns;
+  if (!appendableColumns) {
+    throw new Error('appendArrowBatchToGPUTable() requires an appendable trailing batch');
+  }
+  const device = getAppendableGPURecordBatchDevice(templateBatch);
+  const vectors: Record<string, GPUVector> = {};
+  const bufferLayout: BufferLayout[] = [];
+
+  for (const column of appendableColumns) {
+    const templateVector = templateBatch.gpuVectors[column.attributeName];
+    if (!templateVector?.format) {
+      throw new Error(
+        `appendArrowBatchToGPUTable() cannot append column "${column.attributeName}" without GPUVector format metadata`
+      );
+    }
+    vectors[column.attributeName] = new GPUVector({
+      type: 'appendable',
+      name: column.attributeName,
+      device,
+      dataType: templateVector.dataType,
+      format: templateVector.format,
+      stride: templateVector.stride,
+      byteStride: templateVector.byteStride,
+      rowByteLength: templateVector.rowByteLength,
+      bufferProps: templateVector.bufferProps
+    });
+    if (column.bufferLayout) {
+      bufferLayout.push(column.bufferLayout);
+    }
+  }
+
+  const batch = new GPURecordBatch({
+    vectors,
+    bufferLayout,
+    fields: templateBatch.schema.fields,
+    metadata: new Map(templateBatch.schema.metadata),
+    numRows: 0
+  });
+  (batch as AppendableArrowGPURecordBatch).__arrowAppendableColumns = appendableColumns;
+  return batch;
+}
+
+function getAppendableGPURecordBatchDevice(batch: GPURecordBatch): Device {
+  const vector = Object.values(batch.gpuVectors)[0];
+  const device = vector?.device ?? vector?.data[0]?.buffer.device;
+  if (!device) {
+    throw new Error('appendArrowBatchToGPUTable() requires appendable GPUVector device metadata');
+  }
+  return device;
+}
+
+function refreshAppendableGPURecordBatchBindings(
+  batch: GPURecordBatch,
+  appendableColumns: AppendableGPUColumn[]
+): void {
+  for (const column of appendableColumns) {
+    const vector = batch.gpuVectors[column.attributeName];
+    if (!vector || vector.data.length !== 1) {
+      continue;
+    }
+    if (column.bufferLayout) {
+      batch.attributes[column.attributeName] = getSingleGPUVectorDataBuffer(
+        vector,
+        column.attributeName
+      );
+    } else {
+      batch.bindings[column.attributeName] = getSingleGPUVectorDataBuffer(
+        vector,
+        column.attributeName
+      );
+    }
+  }
 }
 
 /** Reads one generic GPU data range back into Arrow `Data`. */
-export async function readArrowGPUDataAsync<T extends DataType>(
-  data: GPUData<T>
-): Promise<Data<T>> {
-  const legacyData = new LegacyArrowGPUData({
-    buffer: data.buffer,
-    arrowType: data.type,
-    length: data.length,
-    byteOffset: data.byteOffset,
-    byteStride: data.byteStride,
-    ownsBuffer: false,
-    readbackMetadata: data.readbackMetadata as GPUDataReadbackMetadata
-  });
-  return legacyData.readAsync() as Promise<Data<T>>;
+export async function readArrowGPUDataAsync<T extends DataType>(_data: GPUData): Promise<Data<T>> {
+  throw new Error(
+    'readArrowGPUDataAsync() is temporarily disabled after the format-first GPUVector refactor'
+  );
 }
 
 /** Reads one generic GPU vector back into an Arrow vector. */
 export async function readArrowGPUVectorAsync<T extends DataType>(
-  vector: GPUVector<T>
+  _vector: GPUVector
 ): Promise<Vector<T>> {
-  if (vector.bufferLayout) {
-    throw new Error('readArrowGPUVectorAsync() does not support interleaved vectors');
-  }
-  if (
-    DataType.isUtf8(vector.type) ||
-    isVariableLengthAttributeArrowType(vector.type) ||
-    vector.data.length > 1
-  ) {
-    const data = await Promise.all(vector.data.map(chunk => readArrowGPUDataAsync(chunk)));
-    return new Vector(data) as Vector<T>;
-  }
-  return readPackedArrowGPUVectorAsync({
-    type: vector.type as unknown as AttributeArrowType,
-    buffer: vector.buffer,
-    length: vector.length,
-    byteOffset: vector.byteOffset,
-    byteStride: vector.byteStride
-  }) as unknown as Promise<Vector<T>>;
-}
-
-function createDynamicBufferView(buffer: Buffer | DynamicBuffer): DynamicBuffer {
-  return buffer instanceof DynamicBuffer
-    ? buffer
-    : new DynamicBuffer(buffer.device, {
-        buffer,
-        ownsBuffer: false
-      });
+  throw new Error(
+    'readArrowGPUVectorAsync() is temporarily disabled after the format-first GPUVector refactor'
+  );
 }
 
 function getSingleGPUVectorDataBuffer(
@@ -699,20 +746,6 @@ function tryGetArrowFieldByPath(table: Table, path: string): Field | null {
   }
 }
 
-function alignAppendableByteLength(byteLength: number): number {
-  return Math.ceil(byteLength / 4) * 4;
-}
-
-function padAppendableUtf8UploadData(uploadData: Uint8Array): Uint8Array {
-  const paddedByteLength = alignAppendableByteLength(uploadData.byteLength);
-  if (paddedByteLength === uploadData.byteLength) {
-    return uploadData;
-  }
-  const paddedUploadData = new Uint8Array(paddedByteLength);
-  paddedUploadData.set(uploadData);
-  return paddedUploadData;
-}
-
 function isArrowUtf8DictionaryType(type: DataType): type is ArrowUtf8Dictionary {
   return (
     DataType.isDictionary(type) &&
@@ -720,6 +753,31 @@ function isArrowUtf8DictionaryType(type: DataType): type is ArrowUtf8Dictionary 
     DataType.isInt(type.indices) &&
     type.indices.bitWidth <= 32
   );
+}
+
+function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
+  if (DataType.isUtf8(type)) {
+    return 'uint8';
+  }
+  if (isArrowUtf8DictionaryType(type)) {
+    return getArrowGPUVectorFormatFromDataType(type.indices);
+  }
+  return getArrowGPUVectorFormatFromDataType(type);
+}
+
+function getArrowDataValueLength(data: Data): number {
+  if (!isVariableLengthAttributeArrowType(data.type)) {
+    return data.length;
+  }
+
+  const valueOffsets = data.valueOffsets as Int32Array | undefined;
+  if (!valueOffsets) {
+    return 0;
+  }
+
+  const firstValueOffset = valueOffsets[0] ?? 0;
+  const lastValueOffset = valueOffsets[data.length] ?? firstValueOffset;
+  return Math.max(0, lastValueOffset - firstValueOffset);
 }
 
 function getArrowDictionaryIndexBufferSource(data: Data<ArrowUtf8Dictionary>): ArrayBufferView {

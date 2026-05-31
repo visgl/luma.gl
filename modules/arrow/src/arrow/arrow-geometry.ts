@@ -450,6 +450,7 @@ function createSeparateGPUTable(
           data: attribute.value
         }),
         dataType: attribute.dataType,
+        format: attribute.format,
         length: rowCount,
         stride: attribute.size,
         byteStride,

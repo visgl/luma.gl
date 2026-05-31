@@ -38,6 +38,48 @@ test('shadertypes#vertexFormatDecoder.getVertexFormatInfo', t => {
   t.end();
 });
 
+test('shadertypes#vertexFormatDecoder.getVertexFormatInfo validates parsed formats', t => {
+  t.deepEqual(
+    vertexFormatDecoder.getVertexFormatInfo('unorm10-10-10-2'),
+    {type: 'unorm8', components: 4, byteLength: 4, integer: false, signed: false, normalized: true},
+    'decodes packed unorm10-10-10-2'
+  );
+  t.deepEqual(
+    vertexFormatDecoder.getVertexFormatInfo('uint8x3-webgl'),
+    {
+      type: 'uint8',
+      components: 3,
+      byteLength: 3,
+      integer: true,
+      signed: false,
+      normalized: false,
+      webglOnly: true
+    },
+    'decodes webgl-only x3 formats'
+  );
+  t.deepEqual(
+    vertexFormatDecoder.getVertexFormatInfo('unorm8x4-bgra'),
+    {type: 'unorm8', components: 4, byteLength: 4, integer: false, signed: false, normalized: true},
+    'decodes bgra using the same layout metadata as unorm8x4'
+  );
+  t.throws(
+    () => vertexFormatDecoder.getVertexFormatInfo('float16x3' as VertexFormat),
+    /Unsupported vertex format/,
+    'rejects unsupported float16x3'
+  );
+  t.throws(
+    () => vertexFormatDecoder.getVertexFormatInfo('float32x5' as VertexFormat),
+    /Unsupported vertex format/,
+    'rejects unsupported component counts'
+  );
+  t.throws(
+    () => vertexFormatDecoder.getVertexFormatInfo('float32x3-webgl' as VertexFormat),
+    /Unsupported vertex format/,
+    'rejects invalid webgl-only suffixes'
+  );
+  t.end();
+});
+
 const TEST_CASES_2: {
   typedArray: TypedArray;
   size: number;

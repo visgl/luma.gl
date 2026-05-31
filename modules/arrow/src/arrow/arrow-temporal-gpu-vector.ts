@@ -87,9 +87,9 @@ export type PrepareArrowTemporalGPUVectorsOptions = {
 /** Prepared relative Float32 temporal GPU vector plus persisted metadata. */
 export type PreparedArrowTemporalGPUVector = {
   /** Prepared relative Float32 GPU vector. */
-  temporal: GPUVector<ArrowRelativeTemporalType>;
+  temporal: GPUVector;
   /** Alias for callers that prefer the generic vector name. */
-  vector: GPUVector<ArrowRelativeTemporalType>;
+  vector: GPUVector;
   /** Output Arrow field carrying prepared temporal metadata. */
   field: Field;
   /** Recovered source temporal metadata and chosen origin. */
@@ -101,7 +101,7 @@ export type PreparedArrowTemporalGPUVector = {
   destroy: () => void;
 };
 
-type ArrowTemporalSource = Vector<ArrowTemporalColumnType> | GPUVector<ArrowTemporalColumnType>;
+type ArrowTemporalSource = Vector<ArrowTemporalColumnType> | GPUVector;
 
 type TemporalListGPUReadbackMetadata = {
   kind: 'temporal-list';
@@ -249,7 +249,7 @@ function assertArrowTemporalVectorAlignment(
 }
 
 function createPreparedArrowTemporalGPUVector(
-  temporal: GPUVector<ArrowRelativeTemporalType>,
+  temporal: GPUVector,
   field: Field,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
   ownsTemporal: boolean
@@ -272,13 +272,13 @@ function createPreparedArrowTemporalGPUVector(
 
 async function prepareArrowTemporalGPUVectorOnGPU(
   device: Device,
-  source: GPUVector<ArrowTemporalColumnType>,
+  source: GPUVector,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
   field: Field,
   options: Required<Pick<PrepareArrowTemporalGPUVectorOptions, 'name' | 'id'>>
 ): Promise<PreparedArrowTemporalGPUVector> {
   const outputType = getPreparedArrowTemporalType(field);
-  const outputData: GPUData<ArrowRelativeTemporalType>[] = [];
+  const outputData: GPUData[] = [];
   const transientResources: Array<{destroy: () => void}> = [];
 
   for (const [chunkIndex, sourceData] of source.data.entries()) {
@@ -311,6 +311,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
       new GPUData({
         buffer: outputBuffer,
         dataType: outputType,
+        format: DataType.isList(outputType) ? 'vertex-list<float32>' : 'float32',
         length: sourceData.length,
         stride: 1,
         byteStride: Float32Array.BYTES_PER_ELEMENT,
@@ -340,6 +341,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
     type: 'data',
     name: options.name,
     dataType: outputType,
+    format: DataType.isList(outputType) ? 'vertex-list<float32>' : 'float32',
     data: outputData,
     stride: 1,
     byteStride: Float32Array.BYTES_PER_ELEMENT,
@@ -353,7 +355,7 @@ function makeArrowTemporalSourceGPUVector(
   device: Device,
   source: Vector<ArrowTemporalColumnType>,
   options: Required<Pick<PrepareArrowTemporalGPUVectorOptions, 'name' | 'id'>>
-): GPUVector<ArrowTemporalColumnType> {
+): GPUVector {
   const sourceInfo = getRequiredArrowTemporalVectorInfo(source);
   const data = source.data.map((sourceData, chunkIndex) => {
     validateArrowTemporalData(sourceData);
@@ -366,6 +368,7 @@ function makeArrowTemporalSourceGPUVector(
         data: sourceValues
       }),
       dataType: sourceData.type as ArrowTemporalColumnType,
+      format: DataType.isList(sourceData.type) ? 'vertex-list<float32>' : 'float32',
       length: sourceData.length,
       stride: 1,
       byteStride,
@@ -386,6 +389,7 @@ function makeArrowTemporalSourceGPUVector(
     type: 'data',
     name: options.name,
     dataType: source.type,
+    format: DataType.isList(source.type) ? 'vertex-list<float32>' : 'float32',
     data,
     stride: 1,
     byteStride: sourceInfo.bitWidth / 8,
@@ -661,7 +665,7 @@ function getNormalizedArrowValueOffsets(data: Data<List<any>>): Int32Array {
 
 function getTemporalValueOffsets(
   type: ArrowTemporalColumnType,
-  data: GPUData<ArrowTemporalColumnType>
+  data: GPUData
 ): Int32Array | undefined {
   if (!DataType.isList(type)) {
     return undefined;
@@ -673,7 +677,7 @@ function getTemporalValueOffsets(
   return metadata.valueOffsets;
 }
 
-function getTemporalSourceByteLength(data: GPUData<ArrowTemporalColumnType>): number {
+function getTemporalSourceByteLength(data: GPUData): number {
   const metadata = data.readbackMetadata as TemporalListGPUReadbackMetadata | undefined;
   return metadata?.kind === 'temporal-list'
     ? metadata.valueByteLength
@@ -773,12 +777,16 @@ fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
 `;
 }
 
-function getGPUDataBinding(data: GPUData<any>, size: number): Binding {
+function getGPUDataBinding(data: GPUData, size: number): Binding {
   return {
-    buffer: data.buffer.buffer,
+    buffer: getGPUDataBuffer(data),
     offset: data.byteOffset,
     ...(size > 0 ? {size} : {})
   };
+}
+
+function getGPUDataBuffer(data: GPUData): Buffer {
+  return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
 }
 
 async function waitForSubmittedWork(device: Device): Promise<void> {

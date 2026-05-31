@@ -308,6 +308,12 @@ test('AttributePathModel.prepareGPUVectors keeps Float32 paths unchanged without
 
   t.equal(prepared.sourceOrigins, undefined, 'Float32 preparation does not create source origins');
   t.equal(
+    prepared.paths.format,
+    'vertex-list<float32x2>',
+    'path coordinates use vertex-list format'
+  );
+  t.equal(prepared.colors?.format, 'unorm8x4', 'row colors use normalized RGBA8 format');
+  t.equal(
     prepared.viewOrigins,
     undefined,
     'Float32 preparation does not create view-origin vectors'
@@ -321,6 +327,30 @@ test('AttributePathModel.prepareGPUVectors keeps Float32 paths unchanged without
     Array.from(getPathOffsets(preparedPaths)),
     Array.from(getPathOffsets(sourceVectors.paths)),
     'Float32 path offsets are preserved'
+  );
+
+  prepared.destroy();
+  t.end();
+});
+
+test('AttributePathModel.prepareGPUVectors tags path-aligned vertex colors', async t => {
+  const device = new NullDevice({});
+  const sourceVectors = makeArrowPathSourceVectors();
+  const prepared = await AttributePathModel.prepareGPUVectors(device, {
+    ...sourceVectors,
+    colors: makeColorListVector(
+      new Int32Array([0, 3, 7]),
+      new Uint8Array([
+        255, 0, 0, 255, 255, 128, 0, 255, 255, 255, 0, 255, 0, 255, 0, 255, 0, 255, 255, 255, 0, 0,
+        255, 255, 255, 0, 255, 255
+      ])
+    )
+  });
+
+  t.equal(
+    prepared.colors?.format,
+    'vertex-list<unorm8x4>',
+    'path-aligned colors use vertex-list normalized RGBA8 format'
   );
 
   prepared.destroy();

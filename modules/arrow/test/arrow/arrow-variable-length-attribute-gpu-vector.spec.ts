@@ -25,6 +25,13 @@ test('GPUVector uploads nested scalar attributes and round-trips Arrow offsets',
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.equal(gpuVector.length, 2, 'retains one logical GPU row per nested list row');
+  t.equal(gpuVector.valueLength, 5, 'tracks flattened nested scalar count');
+  t.equal(gpuVector.data[0].valueLength, 5, 'tracks flattened scalar count on the data chunk');
+  t.equal(
+    gpuVector.format,
+    'vertex-list<sint16>',
+    'maps scalar nested values to vertex-list format'
+  );
   t.equal(gpuVector.stride, 1, 'reports scalar nested elements as stride one');
   t.equal(gpuVector.byteStride, 2, 'reports one Int16 scalar byte stride');
   t.equal(gpuVector.data[0].buffer.byteLength, 10, 'uploads flattened scalar bytes');
@@ -59,6 +66,12 @@ test('GPUVector supports fixed nested attribute widths from one to four componen
     const result = await readArrowGPUVectorAsync(gpuVector);
 
     t.equal(gpuVector.stride, dimension, `reports vec${dimension} nested element stride`);
+    t.equal(gpuVector.valueLength, 3, `tracks vec${dimension} flattened element count`);
+    t.equal(
+      gpuVector.format,
+      dimension === 1 ? 'vertex-list<float32>' : `vertex-list<float32x${dimension}>`,
+      `reports vec${dimension} nested element format`
+    );
     t.equal(
       gpuVector.byteStride,
       dimension * Float32Array.BYTES_PER_ELEMENT,
@@ -101,6 +114,12 @@ test('GPUVector preserves chunked tuple nested attribute batches', async t => {
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.equal(gpuVector.data.length, 2, 'keeps one GPUData chunk per Arrow list chunk');
+  t.equal(gpuVector.valueLength, 5, 'tracks flattened vec3 element count across chunks');
+  t.deepEqual(
+    gpuVector.data.map(data => data.valueLength),
+    [2, 3],
+    'tracks flattened vec3 element count per chunk'
+  );
   t.equal(
     gpuVector.data[0].readbackMetadata?.kind,
     'variable-length-attribute',
@@ -170,6 +189,7 @@ test('GPUVector appendable nested lists retain compact readback metadata', async
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.equal(gpuVector.length, 2, 'tracks appended nested list rows');
+  t.equal(gpuVector.valueLength, 3, 'tracks appended flattened nested elements');
   t.equal(gpuVector.data.length, 2, 'keeps one GPUData chunk per nested append');
   t.equal(
     gpuVector.data[0].readbackMetadata?.kind,

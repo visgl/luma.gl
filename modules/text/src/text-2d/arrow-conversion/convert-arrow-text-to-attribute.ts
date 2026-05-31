@@ -5,13 +5,11 @@
 import {makeArrowGPUVector} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
 import type {AttributeTextModelProps} from '../models/attribute-text-model';
-import type {ArrowUtf8TextType, ArrowUtf8TextVector} from './arrow-text';
+import type {ArrowUtf8TextVector} from './arrow-text';
 import {
   createArrowAttributeTextState,
   type ArrowAttributeTextState,
-  type ArrowTextColorType,
   type ArrowTextModelProps,
   type ArrowTextSourceVectors
 } from './convert-arrow-text-vectors';
@@ -48,19 +46,19 @@ export type ArrowTextConversionColumns = {
  */
 export type ConvertedArrowTextData = {
   /** GPU-resident label origins aligned row-for-row with `texts`. */
-  positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  positions: GPUVector;
   /** GPU-resident plain or dictionary-encoded UTF-8 labels. */
-  texts: GPUVector<ArrowUtf8TextType>;
+  texts: GPUVector;
   /** Optional GPU-resident packed clip rectangles aligned with text rows. */
-  clipRects?: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: GPUVector;
   /** Optional GPU-resident row or character colors. */
-  colors?: GPUVector<ArrowTextColorType>;
+  colors?: GPUVector;
   /** Optional GPU-resident per-row angles in degrees. */
-  angles?: GPUVector<arrow.Float32>;
+  angles?: GPUVector;
   /** Optional GPU-resident per-row deck-style text sizes. */
-  sizes?: GPUVector<arrow.Float32>;
+  sizes?: GPUVector;
   /** Optional GPU-resident per-row pixel offsets. */
-  pixelOffsets?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  pixelOffsets?: GPUVector;
   /** CPU Arrow vectors retained for glyph expansion and batch alignment. */
   sourceVectors: ArrowTextSourceVectors;
   /** Releases every GPUVector created by this conversion result. */

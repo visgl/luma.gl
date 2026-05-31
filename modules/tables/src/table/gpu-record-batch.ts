@@ -4,21 +4,25 @@
 
 import {Buffer, type BufferLayout} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
-import {Field, Schema} from 'apache-arrow';
+import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';
 import {createGPUVectorCollection} from './gpu-vector-collection';
+
+type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
+  [Name in keyof T & string]: GPUVector<T[Name]>;
+};
 
 /** Props retained as a migration alias for adapters that synthesize appendable batches. */
 export type GPURecordBatchAppendableProps = never;
 
 /** Props for constructing a GPU record batch from existing vectors and metadata. */
-export type GPURecordBatchFromVectorsProps = {
+export type GPURecordBatchFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU vectors keyed by name, or a list of named GPU vectors. */
-  vectors: Record<string, GPUVector> | GPUVector[];
+  vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
   /** Optional precomputed batch buffer layouts. */
   bufferLayout?: BufferLayout[];
-  /** Optional selected schema fields. Defaults to fields synthesized from vector names and types. */
-  fields?: Field[];
+  /** Optional selected schema fields. Defaults to fields synthesized from vector names and formats. */
+  fields?: GPUField[];
   /** Explicit row count for intentionally vector-less batches. */
   numRows?: number;
   /** Optional batch-level schema metadata. */
@@ -30,12 +34,13 @@ export type GPURecordBatchFromVectorsProps = {
 };
 
 /** Generic record-batch construction props. */
-export type GPURecordBatchProps = GPURecordBatchFromVectorsProps;
+export type GPURecordBatchProps<T extends GPUTypeMap = GPUTypeMap> =
+  GPURecordBatchFromVectorsProps<T>;
 
 /** GPU memory and schema metadata for one selected record batch. */
-export class GPURecordBatch {
+export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   /** GPU-facing schema for the selected columns. */
-  schema: Schema;
+  schema: GPUSchema<T>;
   /** Number of logical rows represented by the batch. */
   numRows: number;
   /** Number of selected GPU columns in {@link schema}. */
@@ -60,8 +65,8 @@ export class GPURecordBatch {
     metadata,
     nullCount = 0,
     bindings = {}
-  }: GPURecordBatchFromVectorsProps) {
-    const vectorCollection = createGPUVectorCollection({
+  }: GPURecordBatchFromVectorsProps<T>) {
+    const vectorCollection = createGPUVectorCollection<T>({
       ownerName: 'GPURecordBatch',
       vectors,
       bufferLayout,
@@ -75,7 +80,10 @@ export class GPURecordBatch {
     Object.assign(this.attributes, vectorCollection.attributes);
     Object.assign(this.bindings, bindings);
     this.bufferLayout.push(...vectorCollection.bufferLayout);
-    this.schema = new Schema(vectorCollection.fields, metadata);
+    this.schema = {
+      fields: vectorCollection.fields,
+      metadata: metadata ?? new Map()
+    };
     this.numCols = vectorCollection.fields.length;
   }
 

@@ -72,7 +72,7 @@ test('makeArrowGPUTable converts Arrow tables for GPUTableModel rendering', t =>
     shaderLayout: SHADER_LAYOUT,
     table
   });
-  const positionsBuffer = table.batches[0].gpuVectors.positions.buffer;
+  const positionsBuffer = table.batches[0].gpuVectors.positions.data[0].buffer;
 
   t.ok(table instanceof GPUTable, 'creates a GPUTable');
   t.deepEqual(
@@ -241,7 +241,7 @@ test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', 
   const renderPass = device.getDefaultRenderPass();
   const previousPipeline = model.pipeline;
   const previousBufferLayout = model.bufferLayout;
-  const positionsBuffers = table.batches.map(batch => batch.gpuVectors.positions.buffer);
+  const positionsBuffers = table.batches.map(batch => batch.gpuVectors.positions.data[0].buffer);
   const drawCalls: {
     instanceCount?: number;
     buffer?: unknown;

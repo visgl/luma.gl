@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Device, type BigTypedArray} from '@luma.gl/core';
-import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
+import type {BigTypedArray, Buffer} from '@luma.gl/core';
+import type {GPUData} from '@luma.gl/tables';
 import {
   BufferType,
   Data,
@@ -21,8 +21,6 @@ import {
   type NumericArrowType,
   type VariableLengthAttributeArrowType
 } from './arrow-types';
-
-type GPUDataBufferProps = Omit<DynamicBufferProps, 'byteLength' | 'data' | 'buffer' | 'ownsBuffer'>;
 
 /** Compact CPU metadata required to reconstruct variable-width Arrow chunks after GPU readback. */
 export type GPUDataReadbackMetadata =
@@ -50,24 +48,6 @@ export type GPUDataReadbackMetadata =
       /** Number of flattened numeric value bytes to read back from the GPU buffer. */
       valueByteLength: number;
     };
-
-/** Constructor props that wrap one existing typed GPU data buffer. */
-export type GPUDataFromBufferProps<T extends DataType = AttributeArrowType> = {
-  /** Stable dynamic GPU buffer wrapper for this data range. */
-  buffer: DynamicBuffer;
-  /** Arrow type that describes the values in the data chunk. */
-  arrowType: T;
-  /** Number of logical rows in the data chunk. */
-  length: number;
-  /** Byte offset of the first logical row. */
-  byteOffset?: number;
-  /** Bytes between adjacent logical rows. Defaults to the byte width of `arrowType`. */
-  byteStride?: number;
-  /** Whether this data view should destroy the buffer. */
-  ownsBuffer?: boolean;
-  /** Optional compact metadata for reconstructing variable-width Arrow chunks after GPU readback. */
-  readbackMetadata?: GPUDataReadbackMetadata;
-};
 
 type GPUVectorReadableBuffer = Pick<Buffer, 'readAsync'>;
 
@@ -97,161 +77,6 @@ const makeFixedSizeListData = makeData as <T extends NumericArrowType>(props: {
   nullBitmap: null;
   child: Data<T>;
 }) => Data<FixedSizeList<T>>;
-
-/**
- * GPU memory and Arrow type metadata for one Arrow Data chunk.
- *
- * GPUData can own a dedicated buffer when constructed from Arrow Data, or
- * describe a byte-range view into a shared static or dynamic GPU buffer.
- */
-export class GPUData<T extends DataType = AttributeArrowType> {
-  /** GPU buffer containing the Arrow data chunk's attribute-compatible value memory. */
-  readonly buffer: DynamicBuffer;
-  /** Arrow type that describes the uploaded data chunk. */
-  readonly type: T;
-  /** Number of logical Arrow rows in this chunk. */
-  readonly length: number;
-  /** Number of scalar values per logical row. */
-  readonly stride: number;
-  /** Byte offset of the first logical row in {@link buffer}. */
-  readonly byteOffset: number;
-  /** Bytes between adjacent logical rows in {@link buffer}. */
-  readonly byteStride: number;
-  /** Optional compact metadata for reconstructing variable-width Arrow chunks after GPU readback. */
-  readonly readbackMetadata?: GPUDataReadbackMetadata;
-  /** Whether this data view is responsible for destroying {@link buffer}. */
-  private _ownsBuffer: boolean;
-
-  /** Creates a GPU representation from one Arrow Data chunk. */
-  constructor(device: Device, data: Data<T>, props?: GPUDataBufferProps);
-  /** Creates a data view over an existing GPU buffer. */
-  constructor(props: GPUDataFromBufferProps<T>);
-  constructor(
-    deviceOrProps: Device | GPUDataFromBufferProps<any>,
-    data?: Data<T>,
-    props: GPUDataBufferProps = {}
-  ) {
-    if (deviceOrProps instanceof Device) {
-      const arrowData = data!;
-      this.type = arrowData.type as T;
-      this.length = arrowData.length;
-      this.readbackMetadata = getArrowGPUDataReadbackMetadata(arrowData);
-      if (DataType.isUtf8(arrowData.type)) {
-        this.stride = 1;
-        this.byteOffset = 0;
-        this.byteStride = 1;
-        this.buffer = new DynamicBuffer(deviceOrProps, {
-          usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-          ...props,
-          data: getArrowUtf8DataBufferSource(arrowData as Data<Utf8>)
-        });
-        this._ownsBuffer = true;
-        return;
-      }
-      if (isVariableLengthAttributeArrowType(arrowData.type)) {
-        this.stride = getArrowVariableLengthAttributeElementStride(arrowData.type);
-        this.byteOffset = 0;
-        this.byteStride = getArrowVariableLengthAttributeElementByteStride(arrowData.type);
-        this.buffer = new DynamicBuffer(deviceOrProps, {
-          usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-          ...props,
-          data: getArrowVariableLengthAttributeDataBufferSource(
-            arrowData as unknown as Data<VariableLengthAttributeArrowType>
-          )
-        });
-        this._ownsBuffer = true;
-        return;
-      }
-      this.stride = getArrowTypeStride(arrowData.type);
-      this.byteOffset = 0;
-      this.byteStride = getArrowTypeByteStride(arrowData.type);
-      this.buffer = new DynamicBuffer(deviceOrProps, {
-        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-        ...props,
-        data: getArrowDataBufferSource(arrowData as any)
-      });
-      this._ownsBuffer = true;
-      return;
-    }
-
-    const {
-      buffer,
-      arrowType,
-      length,
-      byteOffset = 0,
-      byteStride = getArrowTypeByteStride(arrowType),
-      ownsBuffer = false,
-      readbackMetadata
-    } = deviceOrProps;
-    this.buffer = buffer;
-    this.type = arrowType as T;
-    this.length = length;
-    this.stride = getArrowTypeStride(arrowType);
-    this.byteOffset = byteOffset;
-    this.byteStride = byteStride;
-    this.readbackMetadata = readbackMetadata;
-    this._ownsBuffer = ownsBuffer;
-  }
-
-  /** Whether this GPU data range is responsible for destroying its backing `DynamicBuffer`. */
-  get ownsBuffer(): boolean {
-    return this._ownsBuffer;
-  }
-
-  /** Reads this GPU chunk back into a single non-null Arrow Data chunk. */
-  async readAsync(): Promise<Data<T>> {
-    if (DataType.isUtf8(this.type)) {
-      const metadata = this.readbackMetadata;
-      if (metadata?.kind !== 'utf8') {
-        throw new Error('GPUData.readAsync() requires UTF-8 readback metadata');
-      }
-      const bytes =
-        metadata.valueByteLength === 0
-          ? new Uint8Array(0)
-          : await this.buffer.readAsync(this.byteOffset, metadata.valueByteLength);
-      return makeData({
-        type: new Utf8(),
-        length: this.length,
-        nullCount: metadata.nullCount,
-        nullBitmap: metadata.nullBitmap,
-        valueOffsets: metadata.valueOffsets,
-        data: bytes
-      }) as Data<T>;
-    }
-    if (isVariableLengthAttributeArrowType(this.type)) {
-      const metadata = this.readbackMetadata;
-      if (metadata?.kind !== 'variable-length-attribute') {
-        throw new Error('GPUData.readAsync() requires variable-length attribute readback metadata');
-      }
-      const bytes =
-        metadata.valueByteLength === 0
-          ? new Uint8Array(0)
-          : await this.buffer.readAsync(this.byteOffset, metadata.valueByteLength);
-      return makeArrowVariableLengthAttributeDataFromPackedBytes(
-        this.type,
-        this.length,
-        metadata,
-        bytes
-      ) as unknown as Data<T>;
-    }
-    const vector = await readArrowGPUVectorAsync({
-      type: this.type as unknown as AttributeArrowType,
-      buffer: this.buffer,
-      length: this.length,
-      byteOffset: this.byteOffset,
-      byteStride: this.byteStride
-    });
-    return vector.data[0] as unknown as Data<T>;
-  }
-
-  /** Releases the backing buffer when this range owns it. */
-  destroy(): void {
-    if (this._ownsBuffer) {
-      this.buffer.destroy();
-      this._ownsBuffer = false;
-    }
-  }
-}
 
 /** Returns the uploadable typed-array view for one Arrow Data chunk. */
 export function getArrowDataBufferSource<T extends NumericArrowType>(data: Data<T>): T['TArray'];
@@ -460,6 +285,56 @@ export async function readArrowGPUVectorAsync<T extends AttributeArrowType>(
       : compactStridedRows(bytes, length, byteStride, rowByteWidth);
 
   return makeArrowVectorFromPackedBytes(type, length, packedBytes);
+}
+
+/** Read one generic GPU data range back into one Arrow `Data` chunk. */
+export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): Promise<Data<T>> {
+  if (DataType.isUtf8(data.type)) {
+    const metadata = data.readbackMetadata as GPUDataReadbackMetadata | undefined;
+    if (metadata?.kind !== 'utf8') {
+      throw new Error('readArrowGPUDataAsync() requires UTF-8 readback metadata');
+    }
+    const bytes =
+      metadata.valueByteLength === 0
+        ? new Uint8Array(0)
+        : await data.buffer.readAsync(data.byteOffset, metadata.valueByteLength);
+    return makeData({
+      type: new Utf8(),
+      length: data.length,
+      nullCount: metadata.nullCount,
+      nullBitmap: metadata.nullBitmap,
+      valueOffsets: metadata.valueOffsets,
+      data: bytes
+    }) as Data<T>;
+  }
+
+  if (isVariableLengthAttributeArrowType(data.type)) {
+    const metadata = data.readbackMetadata as GPUDataReadbackMetadata | undefined;
+    if (metadata?.kind !== 'variable-length-attribute') {
+      throw new Error(
+        'readArrowGPUDataAsync() requires variable-length attribute readback metadata'
+      );
+    }
+    const bytes =
+      metadata.valueByteLength === 0
+        ? new Uint8Array(0)
+        : await data.buffer.readAsync(data.byteOffset, metadata.valueByteLength);
+    return makeArrowVariableLengthAttributeDataFromPackedBytes(
+      data.type,
+      data.length,
+      metadata,
+      bytes
+    ) as unknown as Data<T>;
+  }
+
+  const vector = await readArrowGPUVectorAsync({
+    type: data.type as unknown as AttributeArrowType,
+    buffer: data.buffer,
+    length: data.length,
+    byteOffset: data.byteOffset,
+    byteStride: data.byteStride
+  });
+  return vector.data[0] as unknown as Data<T>;
 }
 
 function getArrowDataValueRange(data: Data): {

@@ -5,15 +5,12 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {GPUVector} from '@luma.gl/tables';
-import {Float32, List} from 'apache-arrow';
 import {ArrowStoragePathModel, type ArrowStoragePathModelProps} from './arrow-storage-path-model';
-
-type ArrowPathTimestampType = List<Float32>;
 
 /** Props for storage-backed Trips-style path rendering. */
 export type ArrowStorageTripsPathModelProps = ArrowStoragePathModelProps & {
   /** Prepared per-path Float32 temporal stream aligned with path vertices. */
-  timestamps: GPUVector<ArrowPathTimestampType>;
+  timestamps: GPUVector;
   /** Current animation time in the same unit as prepared timestamps. */
   currentTime: number;
   /** Visible trail length in the same unit as prepared timestamps. */

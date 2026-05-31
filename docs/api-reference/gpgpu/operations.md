@@ -7,7 +7,8 @@ Each operation returns a new [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu
 ## Common Behavior
 
 - Each operation returns a new `GPUTableEvaluator`.
-- Inputs can be `GPUTableEvaluator` instances or packed numeric `GPUVector` instances.
+- Inputs can be `GPUTableEvaluator` instances or packed single-chunk numeric
+  `GPUVector` instances.
 - Arithmetic operations can also use scalar literals or literal row values.
 - Multi-input operations deduce output `type`, `length`, and constant-ness from their inputs.
 - Output evaluation is backend-driven through `backendRegistry`.
@@ -223,7 +224,8 @@ const result = fround(source);
 ## Remarks
 
 - `add()` and `interleave()` accept multiple arguments and fold from left to right.
-- `GPUVector` inputs are adapted into evaluator views and their buffers remain externally owned.
+- `GPUVector` inputs are adapted into evaluator views through
+  `vector.data[0].buffer`; their buffers remain externally owned.
 - `fround()` is specialized and only accepts one input.
 - As new operations are added to `@luma.gl/gpgpu`, this page should remain the top-level reference for them.
 - Arithmetic operations can mix tables and literals in the same expression.

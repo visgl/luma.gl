@@ -58,12 +58,8 @@ const COMPACT_ROW_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 2;
 const DEFAULT_STORAGE_PATH_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 const DEFAULT_STORAGE_PATH_WIDTH = 1;
 
-type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
 type ArrowPathRowColorType = FixedSizeList<Uint8>;
 type ArrowPathVertexColorType = List<FixedSizeList<Uint8>>;
-type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
-type ArrowPathViewOriginType = FixedSizeList<Float32>;
-type ArrowPathTimestampType = List<Float32>;
 type StoragePathOwnedResource =
   | Pick<GPUVector, 'destroy'>
   | Pick<DynamicBuffer, 'destroy'>
@@ -191,15 +187,15 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 /** GPU vectors used by the storage-backed path model. */
 export type ArrowStoragePathInputProps = Omit<ModelProps, 'instanceCount'> & {
   /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one Arrow row per path. */
-  paths: GPUVector<ArrowPathCoordinateType>;
+  paths: GPUVector;
   /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
-  colors?: GPUVector<ArrowPathColorType>;
+  colors?: GPUVector;
   /** Optional per-path widths, one Arrow row per path. */
-  widths?: GPUVector<Float32>;
+  widths?: GPUVector;
   /** Optional per-path Float32 temporal stream aligned with path vertices. */
-  timestamps?: GPUVector<ArrowPathTimestampType>;
+  timestamps?: GPUVector;
   /** Optional per-path view-space origins, one Arrow row per path. */
-  viewOrigins?: GPUVector<ArrowPathViewOriginType>;
+  viewOrigins?: GPUVector;
   /** Constant fallback path color used when `colors` is absent. */
   color?: [number, number, number, number];
   /** Constant fallback path width used when `widths` is absent. */
@@ -818,7 +814,7 @@ function createStoragePathOwnedGpuVector<T extends DataType>(
   device: Device,
   name: string,
   vector: Vector<T>
-): GPUVector<T> {
+): GPUVector {
   return makeArrowGPUVector(device, vector, {
     name,
     id: name,
@@ -827,7 +823,11 @@ function createStoragePathOwnedGpuVector<T extends DataType>(
 }
 
 function getStoragePathGpuVectorBinding(vector: GPUVector): Binding {
-  const buffer = vector.buffer;
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`Storage path vector "${vector.name}" requires exactly one GPUData chunk`);
+  }
+  const buffer = data.buffer;
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 

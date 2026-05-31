@@ -33,20 +33,20 @@ When the source is an Arrow `Table`, prefer
 | Mode | Key props | Use when |
 | --- | --- | --- |
 | `{vectors}` | `vectors`, `metadata`, `nullCount` | Build one GPU table and one GPU record batch from existing vectors. |
-| `{batches}` | `batches`, `schema`, `bufferLayout`, `numRows`, `nullCount` | Preserve already-created GPU record batches. |
+| `{batches}` | `batches`, `schema`, `bufferLayout`, `numRows`, `nullCount` | Preserve already-created GPU record batches. `schema` is a `GPUSchema`. |
 
 ## Properties
 
 | Property | Type | Meaning |
 | --- | --- | --- |
-| `schema` | `arrow.Schema` | GPU-facing schema for selected columns. |
+| `schema` | `GPUSchema` | GPU-facing schema for selected columns. |
 | `numRows` | `number` | Aggregate logical row count. |
 | `numCols` | `number` | Number of selected GPU columns. |
 | `nullCount` | `number` | Aggregate null row count. |
 | `bufferLayout` | `BufferLayout[]` | Buffer layout shared by compatible preserved batches. |
 | `gpuVectors` | `Record<string, GPUVector>` | Aggregate vectors keyed by table/shader column name. |
-| `attributes` | `Record<string, Buffer \| DynamicBuffer>` | Attribute buffers for the first directly drawable batch surface. |
-| `bindings` | `Record<string, Buffer \| DynamicBuffer>` | Storage bindings for the first directly bindable batch surface. |
+| `attributes` | `Record<string, Buffer \| DynamicBuffer>` | Attribute buffers for the first directly drawable batch. |
+| `bindings` | `Record<string, Buffer \| DynamicBuffer>` | Storage bindings for the first directly bindable batch. |
 | `batches` | `GPURecordBatch[]` | Preserved batch-local GPU storage. |
 
 ## Methods
@@ -65,8 +65,9 @@ fields.
 
 ### `refreshFromBatches(): this`
 
-Recomputes aggregate row counts and aggregate vector views from preserved
-batches.
+Recomputes aggregate row counts and aggregate vector chunk lists from preserved
+batches. Existing aggregate vectors are extended with new `GPUData` chunks when
+possible.
 
 ### `resetLastBatch(): this`
 
@@ -97,3 +98,7 @@ Destroys retained GPU batches and follows their vector-level ownership graphs.
 out of the table instead of destroying them. Packing allocates replacement GPU
 buffers and destroys superseded owned batches after the table has swapped to the
 new packed representation.
+
+`GPUTable` does not merge streaming batches automatically. `addBatch()` preserves
+the supplied `GPURecordBatch`; aggregate `gpuVectors` expose the combined
+logical column through `GPUVector.data[]`.

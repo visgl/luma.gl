@@ -178,6 +178,8 @@
           "api-reference/tables/gpu-record-batch",
           "api-reference/tables/gpu-vector",
           "api-reference/tables/gpu-data",
+          "api-reference/tables/gpu-schema",
+          "api-reference/tables/gpu-vector-format",
           "api-reference/tables/gpu-table-buffer-planner",
           "api-reference/tables/gpu-table-object-model"
         ]
@@ -188,6 +190,7 @@
         "items": [
           "api-reference/arrow/README",
           "api-reference/arrow/arrow-representations",
+          "api-reference/arrow/arrow-preparation",
           "api-reference/arrow/supported-arrow-types",
           "api-reference/arrow/deck-target-api",
           "api-reference/arrow/arrow-utils"

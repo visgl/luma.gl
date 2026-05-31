@@ -15,6 +15,7 @@ Apache Arrow utilities for luma.gl.
 
 - [Arrow Utilities](/docs/api-reference/arrow/arrow-utils)
 - [Arrow Representations](/docs/api-reference/arrow/arrow-representations)
+- [Arrow Table Preparation](/docs/api-reference/arrow/arrow-preparation)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [deck.gl v10 API Directions](/docs/api-reference/arrow/deck-target-api)
 
@@ -45,5 +46,21 @@ Float32 or Float64 Arrow path vectors into prepared attribute-path inputs. Use
 when WebGPU storage rendering should convert Float64 path payloads into Float32
 deltas on the GPU before rendering.
 
+## GPU Table Interop
+
+`@luma.gl/arrow` is the adapter layer from Apache Arrow objects into the generic
+types in [`@luma.gl/tables`](/docs/api-reference/tables):
+
+- `makeArrowGPUData()` uploads one Arrow `Data` chunk into a `GPUData`.
+- `makeArrowGPUVector()` uploads one Arrow `Vector` into a `GPUVector`.
+- `makeArrowGPURecordBatch()` uploads one Arrow `RecordBatch`.
+- `makeArrowGPUTable()` uploads one Arrow `Table` while preserving source record
+  batch boundaries.
+
+The resulting table schema is `GPUSchema`, and each vector has a
+`GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or
+`vertex-list<float32x3>`. Arrow `DataType` metadata may still be retained by
+adapter/readback paths, but `@luma.gl/tables` itself does not depend on
+`apache-arrow`.
 
 See [luma.gl](http://luma.gl) for documentation.

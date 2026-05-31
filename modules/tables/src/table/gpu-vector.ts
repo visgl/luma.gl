@@ -3,15 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  Buffer,
-  Device,
+  type Buffer,
+  type Device,
   type BufferAttributeLayout,
   type BufferLayout,
   type BufferProps
 } from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
-import {DataType, util} from 'apache-arrow';
 import {GPUData} from './gpu-data';
+import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
 
 /** Buffer creation props used by format-specific producers before wrapping storage in a GPUVector. */
 export type GPUVectorBufferProps = Omit<BufferProps, 'byteLength' | 'data'>;
@@ -21,44 +21,50 @@ export type GPUVectorDynamicBufferProps = Omit<DynamicBufferProps, 'byteLength' 
 export type GPUVectorProps = GPUVectorBufferProps;
 
 /** Arrow upload props moved to `@luma.gl/arrow`; retained only as a typed migration sentinel. */
-export type GPUVectorFromArrowProps<_T extends DataType = DataType> = never;
+export type GPUVectorFromArrowProps<_T extends GPUVectorFormat = GPUVectorFormat> = never;
 
 /** Constructor props that wrap an existing typed GPU buffer. */
-export type GPUVectorFromBufferProps<T extends DataType = DataType> = {
+export type GPUVectorFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> = {
   /** Discriminator for existing-buffer construction. */
   type: 'buffer';
   /** Stable vector name. */
   name: string;
   /** Existing GPU buffer. */
   buffer: Buffer | DynamicBuffer;
-  /** Logical schema/type descriptor for values stored in the buffer. */
-  dataType: T;
+  /** Canonical memory-layout descriptor for values stored in the buffer. */
+  format: T;
   /** Number of logical rows in the buffer. */
   length: number;
-  /** Number of scalar values represented by one logical row. */
+  /** Number of fixed rows or flattened vertex-list values in the buffer. */
+  valueLength?: number;
+  /** Number of scalar values represented by one fixed row or flattened element. */
   stride?: number;
   /** Byte offset of the first logical row. */
   byteOffset?: number;
-  /** Bytes between adjacent logical rows. */
-  byteStride: number;
-  /** Number of bytes occupied by one logical row payload. */
+  /** Bytes between adjacent fixed rows or flattened elements. */
+  byteStride?: number;
+  /** Number of bytes occupied by one fixed row or flattened element payload. */
   rowByteLength?: number;
   /** Whether this vector should destroy the wrapped buffer. */
   ownsBuffer?: boolean;
+  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  dataType?: unknown;
 };
 
 /** Constructor props that wrap one interleaved GPU buffer. */
-export type GPUVectorFromInterleavedProps<T extends DataType = DataType> = {
+export type GPUVectorFromInterleavedProps<T extends GPUVectorFormat = GPUVectorFormat> = {
   /** Discriminator for interleaved-buffer construction. */
   type: 'interleaved';
   /** Stable vector name. */
   name: string;
   /** Existing interleaved GPU buffer. */
   buffer: Buffer | DynamicBuffer;
-  /** Logical schema/type descriptor for the interleaved rows. */
-  dataType: T;
+  /** Optional canonical memory-layout descriptor when the interleaved row also has one value view. */
+  format?: T;
   /** Number of logical rows in the buffer. */
   length: number;
+  /** Number of fixed rows or flattened vertex-list values in the buffer. */
+  valueLength?: number;
   /** Byte offset of the first logical row. */
   byteOffset?: number;
   /** Bytes between adjacent logical rows. */
@@ -67,95 +73,108 @@ export type GPUVectorFromInterleavedProps<T extends DataType = DataType> = {
   attributes: BufferAttributeLayout[];
   /** Whether this vector should destroy the wrapped buffer. */
   ownsBuffer?: boolean;
+  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  dataType?: unknown;
 };
 
 /** Constructor props that expose existing GPU data chunks as one logical vector. */
-export type GPUVectorFromDataProps<T extends DataType = DataType> = {
+export type GPUVectorFromDataProps<T extends GPUVectorFormat = GPUVectorFormat> = {
   /** Discriminator for chunk-backed construction. */
   type: 'data';
   /** Stable vector name. */
   name: string;
-  /** Logical schema/type descriptor shared by every chunk. */
-  dataType: T;
+  /** Canonical memory-layout descriptor shared by every chunk. Defaults to the first chunk format. */
+  format?: T;
   /** Existing GPU data chunks to expose through this vector. */
   data: GPUData<T>[];
-  /** Optional concrete aggregate buffer shared by the supplied data chunks. */
-  buffer?: Buffer | DynamicBuffer;
-  /** Number of scalar values represented by one logical row. */
+  /** Number of scalar values represented by one fixed row or flattened element. */
   stride?: number;
-  /** Bytes between adjacent logical rows. Defaults to the first chunk stride when available. */
+  /** Number of fixed rows or flattened vertex-list values across all chunks. */
+  valueLength?: number;
+  /** Bytes between adjacent fixed rows or flattened elements. Defaults to the first chunk stride. */
   byteStride?: number;
-  /** Number of bytes occupied by one logical row payload. */
+  /** Number of bytes occupied by one fixed row or flattened element payload. */
   rowByteLength?: number;
   /** Optional buffer layout retained for interleaved chunk collections. */
   bufferLayout?: BufferLayout;
   /** Whether this vector should destroy the supplied GPU data chunks. */
   ownsData?: boolean;
-  /** Whether this vector should destroy the optional aggregate buffer. */
-  ownsBuffer?: boolean;
+  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  dataType?: unknown;
 };
 
-/** Constructor props for an appendable DynamicBuffer-backed vector. */
-export type GPUVectorFromAppendableProps<T extends DataType = DataType> = {
-  /** Discriminator for appendable DynamicBuffer-backed construction. */
+/** Constructor props for an appendable vector that accepts future GPUData chunks. */
+export type GPUVectorFromAppendableProps<T extends GPUVectorFormat = GPUVectorFormat> = {
+  /** Discriminator for appendable GPUData-backed construction. */
   type: 'appendable';
   /** Stable vector name. */
   name: string;
   /** Device that creates the DynamicBuffer. */
   device: Device;
-  /** Logical schema/type descriptor for appended data. */
-  dataType: T;
-  /** Number of scalar values represented by one logical row. */
-  stride: number;
-  /** Bytes between adjacent logical rows. */
-  byteStride: number;
-  /** Number of bytes occupied by one logical row payload. */
+  /** Canonical memory-layout descriptor for appended data. */
+  format: T;
+  /** Number of scalar values represented by one fixed row or flattened element. */
+  stride?: number;
+  /** Initial number of flattened vertex-list values. Defaults to `0`. */
+  valueLength?: number;
+  /** Bytes between adjacent fixed rows or flattened elements. */
+  byteStride?: number;
+  /** Number of bytes occupied by one fixed row or flattened element payload. */
   rowByteLength?: number;
   /** Initial row capacity. Defaults to `0`. */
   initialCapacityRows?: number;
   /** Capacity growth multiplier. Defaults to `1.5`. */
   capacityGrowthFactor?: number;
-  /** DynamicBuffer construction props. */
+  /** Buffer props forwarded when adapter code creates appended GPUData buffers. */
   bufferProps?: GPUVectorDynamicBufferProps;
+  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  dataType?: unknown;
 };
 
 /** Discriminated constructor props for {@link GPUVector}. */
-export type GPUVectorCreateProps<T extends DataType = DataType> =
+export type GPUVectorCreateProps<T extends GPUVectorFormat = GPUVectorFormat> =
   | GPUVectorFromBufferProps<T>
   | GPUVectorFromInterleavedProps<T>
   | GPUVectorFromDataProps<T>
   | GPUVectorFromAppendableProps<T>;
 
 /**
- * GPU memory and logical type metadata for one vector-valued table column.
+ * GPU memory and format metadata for one vector-valued table column.
  *
  * Format-specific modules upload bytes and use these vectors to expose shared
  * lifecycle, chunking, batching, and ownership semantics.
  */
-export class GPUVector<T extends DataType = DataType> {
+export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   /** Stable vector name. */
   readonly name: string;
-  /** Logical schema/type descriptor for the uploaded bytes. */
-  readonly type: T;
+  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  readonly type?: any;
+  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  readonly dataType?: unknown;
+  /** Canonical memory-layout descriptor for the uploaded bytes. */
+  readonly format?: T;
   /** Number of logical rows represented by the vector. */
   length: number;
-  /** Number of scalar values represented by one logical row. */
+  /** Number of fixed rows or flattened vertex-list values represented by the vector. */
+  valueLength: number;
+  /** Number of scalar values represented by one fixed row or flattened element. */
   readonly stride: number;
-  /** Byte offset of the first logical row in {@link buffer}. */
+  /** Byte offset of the first logical row when this vector has a single GPUData chunk. */
   readonly byteOffset: number;
-  /** Bytes between adjacent logical rows in {@link buffer}. */
+  /** Bytes between adjacent fixed rows or flattened elements in {@link buffer}. */
   readonly byteStride: number;
-  /** Bytes occupied by one logical row payload. */
+  /** Bytes occupied by one fixed row or flattened element payload. */
   readonly rowByteLength: number;
   /** Optional GPU buffer layout described by this vector. */
   readonly bufferLayout?: BufferLayout;
-  /** GPU data chunk views preserved across table/batch aggregation. */
+  /** GPU data chunks preserved across table/batch aggregation. Each chunk owns or borrows its buffer. */
   readonly data: GPUData<T>[] = [];
-  private concreteBuffer?: Buffer | DynamicBuffer;
-  private ownsConcreteBuffer: boolean;
-  private ownsDataChunks = false;
+  /** Device retained by appendable vectors so adapters can create future GPUData chunks. */
+  readonly device?: Device;
+  /** Buffer props retained by appendable vectors for future GPUData chunks. */
+  readonly bufferProps?: GPUVectorDynamicBufferProps;
+  private isAppendable = false;
   private readonly ownedVectors: GPUVector[] = [];
-  private readonly capacityGrowthFactor?: number;
   private appendableByteLength = 0;
 
   constructor(props: GPUVectorCreateProps<T>) {
@@ -164,34 +183,36 @@ export class GPUVector<T extends DataType = DataType> {
         const {
           name,
           buffer,
-          dataType,
+          format,
           length,
-          stride = 1,
+          valueLength = length,
           byteOffset = 0,
-          byteStride,
-          rowByteLength = byteStride,
           ownsBuffer = false
         } = props;
+        const {stride, byteStride, rowByteLength} = getResolvedGPUVectorLayout(props);
         this.name = name;
-        this.type = dataType;
+        this.type = props.dataType ?? format;
+        this.dataType = props.dataType;
+        this.format = format;
         this.length = length;
+        this.valueLength = valueLength;
         this.stride = stride;
         this.byteOffset = byteOffset;
         this.byteStride = byteStride;
         this.rowByteLength = rowByteLength;
-        this.concreteBuffer = buffer;
-        this.ownsConcreteBuffer = ownsBuffer;
         this.data.push(
           new GPUData({
-            buffer: createGPUDataBuffer(buffer),
-            dataType,
+            buffer,
+            format,
             length,
+            valueLength,
             stride,
             byteOffset,
             byteStride,
             rowByteLength,
-            ownsBuffer: false
-          }) as GPUData<T>
+            ownsBuffer,
+            dataType: props.dataType
+          })
         );
         return;
       }
@@ -200,34 +221,38 @@ export class GPUVector<T extends DataType = DataType> {
         const {
           name,
           buffer,
-          dataType,
+          format,
           length,
+          valueLength = length,
           byteOffset = 0,
           byteStride,
           attributes,
           ownsBuffer = false
         } = props;
         this.name = name;
-        this.type = dataType;
+        this.type = props.dataType ?? format;
+        this.dataType = props.dataType;
+        this.format = format;
         this.length = length;
+        this.valueLength = valueLength;
         this.stride = byteStride;
         this.byteOffset = byteOffset;
         this.byteStride = byteStride;
         this.rowByteLength = byteStride;
         this.bufferLayout = {name, byteStride, attributes};
-        this.concreteBuffer = buffer;
-        this.ownsConcreteBuffer = ownsBuffer;
         this.data.push(
           new GPUData({
-            buffer: createGPUDataBuffer(buffer),
-            dataType,
+            buffer,
+            format,
             length,
+            valueLength,
             stride: byteStride,
             byteOffset,
             byteStride,
             rowByteLength: byteStride,
-            ownsBuffer: false
-          }) as GPUData<T>
+            ownsBuffer,
+            dataType: props.dataType
+          })
         );
         return;
       }
@@ -235,84 +260,64 @@ export class GPUVector<T extends DataType = DataType> {
       case 'data': {
         const {
           name,
-          dataType,
+          format = getFirstGPUVectorDataFormat(props.data),
           data,
-          buffer,
-          stride = data[0]?.stride ?? 1,
-          byteStride = data[0]?.byteStride ?? 0,
-          rowByteLength = data[0]?.rowByteLength ?? byteStride,
-          bufferLayout,
-          ownsData = false,
-          ownsBuffer = false
+          stride = data[0]?.stride ?? getGPUVectorFormatInfo(format).components,
+          valueLength = data.reduce(
+            (totalValueLength, chunk) => totalValueLength + chunk.valueLength,
+            0
+          ),
+          byteStride = data[0]?.byteStride ?? getGPUVectorFormatInfo(format).byteLength,
+          rowByteLength = data[0]?.rowByteLength ?? getGPUVectorFormatInfo(format).byteLength,
+          bufferLayout
         } = props;
-        if (data.some(chunk => !util.compareTypes(chunk.type, dataType))) {
-          throw new Error('GPUVector data chunks must share the declared logical type');
-        }
+        validateGPUVectorDataFormats(data, format);
         this.name = name;
-        this.type = dataType;
+        this.type = props.dataType ?? format;
+        this.dataType = props.dataType;
+        this.format = format;
         this.length = data.reduce((totalLength, chunk) => totalLength + chunk.length, 0);
+        this.valueLength = valueLength;
         this.stride = stride;
         this.byteOffset = data.length === 1 ? data[0].byteOffset : 0;
         this.byteStride = byteStride;
         this.rowByteLength = rowByteLength;
         this.bufferLayout = bufferLayout;
         this.data.push(...data);
-        this.concreteBuffer = buffer ?? (data.length === 1 ? data[0].buffer : undefined);
-        this.ownsConcreteBuffer = ownsBuffer;
-        this.ownsDataChunks = ownsData;
         return;
       }
 
       case 'appendable': {
-        const {
-          name,
-          device,
-          dataType,
-          stride,
-          byteStride,
-          rowByteLength = byteStride,
-          initialCapacityRows = 0,
-          capacityGrowthFactor = 1.5,
-          bufferProps
-        } = props;
+        const {name, device, format, valueLength = 0, bufferProps} = props;
+        const {stride, byteStride, rowByteLength} = getResolvedGPUVectorLayout(props);
         this.name = name;
-        this.type = dataType;
+        this.type = props.dataType ?? format;
+        this.dataType = props.dataType;
+        this.format = format;
         this.length = 0;
+        this.valueLength = valueLength;
         this.stride = stride;
         this.byteOffset = 0;
         this.byteStride = byteStride;
         this.rowByteLength = rowByteLength;
-        this.concreteBuffer = new DynamicBuffer(device, {
-          usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-          ...bufferProps,
-          id: bufferProps?.id ?? `${name}-appendable-gpu-vector`,
-          byteLength: Math.max(1, initialCapacityRows * byteStride)
-        });
-        this.capacityGrowthFactor = capacityGrowthFactor;
-        this.ownsConcreteBuffer = true;
+        this.device = device;
+        this.bufferProps = bufferProps;
+        this.isAppendable = true;
         return;
       }
     }
   }
 
-  /** Directly bindable GPU buffer when this vector has one concrete backing buffer. */
-  get buffer(): Buffer | DynamicBuffer {
-    if (!this.concreteBuffer) {
-      throw new Error('GPUVector.buffer is unavailable for multi-buffer vectors; use data[]');
-    }
-    return this.concreteBuffer;
-  }
-
   /** Whether destroying this vector releases any retained GPU storage. */
   get ownsBuffer(): boolean {
-    return this.ownsConcreteBuffer || this.ownedVectors.some(vector => vector.ownsBuffer);
+    return (
+      this.data.some(data => data.ownsBuffer) || this.ownedVectors.some(vector => vector.ownsBuffer)
+    );
   }
 
-  /** Number of rows the appendable backing DynamicBuffer can hold without reallocating. */
+  /** Number of rows available in retained GPUData chunks. */
   get capacityRows(): number | undefined {
-    return this.concreteBuffer instanceof DynamicBuffer
-      ? Math.floor(this.concreteBuffer.byteLength / this.byteStride)
-      : undefined;
+    return this.isAppendable ? this.length : undefined;
   }
 
   /** Bytes occupied by already-appended payloads in appendable storage. */
@@ -322,8 +327,8 @@ export class GPUVector<T extends DataType = DataType> {
 
   /** Adds one already-materialized GPU data chunk to this logical vector. */
   addData(data: GPUData<T>): this {
-    if (!util.compareTypes(data.type, this.type)) {
-      throw new Error('GPUVector.addData() requires matching logical types');
+    if (this.format && data.format !== this.format) {
+      throw new Error('GPUVector.addData() requires matching formats');
     }
     if (data.byteStride !== this.byteStride) {
       throw new Error('GPUVector.addData() requires matching byteStride');
@@ -334,56 +339,42 @@ export class GPUVector<T extends DataType = DataType> {
 
     this.data.push(data);
     this.length += data.length;
-    if (this.data.length > 1) {
-      this.concreteBuffer = undefined;
-    }
+    this.valueLength += data.valueLength;
     return this;
   }
 
-  /**
-   * Reserves appendable storage and writes raw bytes supplied by a format-specific adapter.
-   */
-  writeAppendableBytes(
-    data: ArrayBufferView,
-    byteOffset: number,
-    requiredByteLength: number
-  ): void {
-    if (!(this.concreteBuffer instanceof DynamicBuffer)) {
-      throw new Error('GPUVector append writes require appendable DynamicBuffer storage');
+  /** Adds one adapter-created GPUData chunk to an appendable logical vector. */
+  appendDataChunk(
+    data: GPUData<T>,
+    appendedByteLength = this.appendableByteLength + data.buffer.byteLength
+  ): this {
+    if (!this.isAppendable) {
+      throw new Error('GPUVector.appendDataChunk() requires appendable vector storage');
     }
-    this.ensureAppendableByteCapacity(requiredByteLength);
-    if (data.byteLength > 0) {
-      this.concreteBuffer.write(data, byteOffset);
-    }
-  }
-
-  /**
-   * Adds one appendable data view while preserving the concrete backing buffer.
-   */
-  appendDataChunk(data: GPUData<T>, appendedByteLength: number): this {
-    if (!(this.concreteBuffer instanceof DynamicBuffer)) {
-      throw new Error('GPUVector append views require appendable DynamicBuffer storage');
-    }
-    if (!util.compareTypes(data.type, this.type)) {
-      throw new Error('GPUVector.appendDataChunk() requires matching logical types');
+    if (this.format && data.format !== this.format) {
+      throw new Error('GPUVector.appendDataChunk() requires matching formats');
     }
     if (data.byteStride !== this.byteStride || data.rowByteLength !== this.rowByteLength) {
       throw new Error('GPUVector.appendDataChunk() requires matching byte layout metadata');
     }
     this.data.push(data);
     this.length += data.length;
+    this.valueLength += data.valueLength;
     this.appendableByteLength = appendedByteLength;
     return this;
   }
 
-  /** Clears appendable logical rows while retaining the DynamicBuffer allocation. */
+  /** Clears appendable logical rows and releases appended GPUData buffers. */
   resetLastBatch(): this {
-    if (!(this.concreteBuffer instanceof DynamicBuffer)) {
+    if (!this.isAppendable) {
       throw new Error('GPUVector.resetLastBatch() requires appendable vector storage');
     }
+    for (const data of this.data.splice(0)) {
+      data.destroy();
+    }
     this.length = 0;
+    this.valueLength = 0;
     this.appendableByteLength = 0;
-    this.data.length = 0;
     return this;
   }
 
@@ -395,59 +386,54 @@ export class GPUVector<T extends DataType = DataType> {
 
   /** Transfers same-buffer ownership to another vector view. */
   transferBufferOwnership(target: GPUVector): void {
-    if (
-      !this.concreteBuffer ||
-      !target.concreteBuffer ||
-      target.concreteBuffer !== this.concreteBuffer
-    ) {
+    const sourceData = this.data[0];
+    const targetData = target.data[0];
+    if (!sourceData || !targetData || sourceData.buffer !== targetData.buffer) {
       throw new Error('GPUVector ownership can only be transferred to the same buffer');
     }
-    target.ownsConcreteBuffer = this.ownsConcreteBuffer;
-    this.ownsConcreteBuffer = false;
+    sourceData.transferBufferOwnership(targetData);
   }
 
-  /** Releases owned GPU data, detached ownership handles, and appendable storage. */
+  /** Releases owned GPU data and detached ownership handles. */
   destroy(): void {
-    if (this.ownsConcreteBuffer && this.concreteBuffer) {
-      this.concreteBuffer.destroy();
-      this.ownsConcreteBuffer = false;
+    for (const data of this.data) {
+      data.destroy();
     }
     for (const vector of this.ownedVectors.splice(0)) {
       vector.destroy();
     }
-    if (this.ownsDataChunks) {
-      for (const data of this.data) {
-        data.destroy();
-      }
-      this.ownsDataChunks = false;
-    }
-  }
-
-  private ensureAppendableByteCapacity(requiredByteLength: number): void {
-    if (!(this.concreteBuffer instanceof DynamicBuffer)) {
-      throw new Error('GPUVector append capacity requires DynamicBuffer storage');
-    }
-    const capacityByteLength = this.concreteBuffer.byteLength;
-    if (requiredByteLength <= capacityByteLength) {
-      return;
-    }
-    const grownByteLength = Math.ceil(
-      Math.max(capacityByteLength, 1) * (this.capacityGrowthFactor ?? 1.5)
-    );
-    const nextCapacityByteLength = Math.max(requiredByteLength, grownByteLength);
-    this.concreteBuffer.resize({
-      byteLength: nextCapacityByteLength,
-      preserveData: this.appendableByteLength > 0,
-      copyByteLength: this.appendableByteLength
-    });
   }
 }
 
-function createGPUDataBuffer(buffer: Buffer | DynamicBuffer): DynamicBuffer {
-  return buffer instanceof DynamicBuffer
-    ? buffer
-    : new DynamicBuffer(buffer.device, {
-        buffer,
-        ownsBuffer: false
-      });
+function getResolvedGPUVectorLayout<T extends GPUVectorFormat>(props: {
+  format: T;
+  stride?: number;
+  byteStride?: number;
+  rowByteLength?: number;
+}): {stride: number; byteStride: number; rowByteLength: number} {
+  const formatInfo = getGPUVectorFormatInfo(props.format);
+  const rowByteLength = props.rowByteLength ?? formatInfo.byteLength;
+  return {
+    stride: props.stride ?? formatInfo.components,
+    byteStride: props.byteStride ?? rowByteLength,
+    rowByteLength
+  };
+}
+
+function getFirstGPUVectorDataFormat<T extends GPUVectorFormat>(data: GPUData<T>[]): T {
+  const format = data[0]?.format;
+  if (!format) {
+    throw new Error('GPUVector requires format or at least one GPUData chunk');
+  }
+  return format;
+}
+
+function validateGPUVectorDataFormats<T extends GPUVectorFormat>(
+  data: GPUData<T>[],
+  format: T
+): void {
+  const mismatchedChunk = data.find(chunk => chunk.format !== format);
+  if (mismatchedChunk) {
+    throw new Error('GPUVector data chunks must share the declared format');
+  }
 }

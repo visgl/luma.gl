@@ -46,6 +46,24 @@ deltas on the GPU before rendering.
 Support depends on how the column is consumed. A column can be uploadable as a
 `GPUVector` without also being usable as a generic vertex attribute.
 
+Arrow adapters publish `GPUVector.format` strings from
+[`@luma.gl/tables`](/docs/api-reference/tables/gpu-vector-format). Arrow
+`DataType` values are retained only as adapter/readback metadata during
+migration.
+
+| Arrow column pattern | GPUVector format | Generic `BufferLayout` |
+| --- | --- | --- |
+| `Float32` | `float32` | yes |
+| `FixedSizeList<Float32, 3>` | `float32x3` | yes |
+| `FixedSizeList<Uint8, 4>` as normalized color | `unorm8x4` | yes |
+| `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>` | no |
+| `List<FixedSizeList<Uint8, 4>>` vertex colors | `vertex-list<unorm8x4>` | no |
+
+`vertex-list<...>` vectors keep source row boundaries through list-offset
+metadata owned by the producing adapter. They are not automatically exposed as
+ordinary vertex attributes; path, text, polygon, and geometry adapters must
+expand them or bind their flattened values explicitly.
+
 Status: ✅ directly supported, 🟡 conditionally supported, ❌ not supported.
 The `nullable` column refers to columns with actual null rows, not just nullable
 schema fields with `nullCount: 0`.

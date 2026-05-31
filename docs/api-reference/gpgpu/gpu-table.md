@@ -1,6 +1,9 @@
 # GPUTableEvaluator
 
-`GPUTableEvaluator` is the core data container in `@luma.gl/gpgpu`. It describes a 2D table of numeric values that can be backed by CPU data, by another `GPUTableEvaluator`, by a packed `GPUVector`, or by the output of a lazy operation.
+`GPUTableEvaluator` is the core data container in `@luma.gl/gpgpu`. It
+describes a 2D table of numeric values that can be backed by CPU data, by
+another `GPUTableEvaluator`, by a packed single-chunk `GPUVector`, or by the
+output of a lazy operation.
 
 Each row contains `size` elements of the same numeric type. Tables can represent tightly packed rows or strided data with a byte `offset` and `stride`.
 
@@ -35,8 +38,8 @@ const values = await translated.readValue();
 | `stride?` | `number` | Byte distance between adjacent rows. Defaults to `ValueType.BYTES_PER_ELEMENT * size`. |
 | `value?` | `TypedArray` | CPU-side data for the table. Required unless `source` is provided. |
 | `buffer?` | `Buffer` | Borrowed GPU buffer backing this evaluator. |
-| `gpuVector?` | `GPUVector` | Borrowed GPUVector resource backing this evaluator. |
-| `dataType?` | `arrow.DataType` | Optional logical schema metadata used when exposing the evaluator as a `GPUVector`. |
+| `gpuVector?` | `GPUVector` | Borrowed single-chunk numeric GPUVector resource backing this evaluator. |
+| `format?` | `GPUVectorFormat` | Optional memory format preserved for GPUVector interop. |
 | `source?` | `Operation \| GPUTableEvaluator \| null` | Lazy data source for this table. |
 | `isConstant?` | `boolean` | Whether every row shares the same value. Defaults to `false`. |
 | `length?` | `number` | Row count. Optional when `isConstant` is `true` or `value` is provided. |
@@ -55,7 +58,10 @@ Creates a constant table with one shared row value. A scalar becomes a one-eleme
 
 ### `GPUTableEvaluator.fromGPUVector(vector): GPUTableEvaluator`
 
-Creates an evaluator view over a packed numeric `GPUVector`. The evaluator borrows the vector buffer and does not destroy it.
+Creates an evaluator view over a packed numeric `GPUVector`. The input must have
+one `GPUData` chunk, a fixed non-`vertex-list` `GPUVector.format`, and tightly
+packed rows. The evaluator borrows `vector.data[0].buffer` and does not destroy
+it.
 
 ## Properties
 
@@ -124,5 +130,6 @@ Releases any cached GPU buffer and prevents future evaluation.
 - `GPUTableEvaluator` is immutable in shape. To produce a new table, create another `GPUTableEvaluator` or use an operation that returns one.
 - Evaluation is lazy. Creating operation chains does not allocate GPU resources until `evaluate()` is called on an output table.
 - Operation outputs are evaluators backed by immutable materialized buffers, not scratch buffers.
-- `GPUVector` inputs are borrowed; operation outputs own their materialized `GPUVector` backing resources.
+- `GPUVector` inputs are borrowed through their `GPUData` buffers; operation
+  outputs own their materialized `GPUVector` backing resources.
 - Constant tables are useful for broadcasting values across every row of a non-constant input.

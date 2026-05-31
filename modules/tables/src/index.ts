@@ -20,6 +20,22 @@ export {
   type GPUVectorProps
 } from './table/gpu-vector';
 export {
+  getGPUVectorElementFormat,
+  getGPUVectorFormatInfo,
+  isGPUVectorFormatCompatibleWithShaderType,
+  isVertexListGPUVectorFormat,
+  type GPUVectorFormat,
+  type GPUVectorFormatInfo,
+  type GPUVectorVertexListFormat,
+  type VertexList
+} from './table/gpu-vector-format';
+export {type GPUField, type GPUSchema, type GPUTypeMap} from './table/gpu-schema';
+export {
+  createGPUVectorCollection,
+  type GPUVectorCollection,
+  type GPUVectorCollectionProps
+} from './table/gpu-vector-collection';
+export {
   GPURecordBatch,
   type GPURecordBatchAppendableProps,
   type GPURecordBatchFromVectorsProps,
@@ -75,13 +91,7 @@ export {
   type GeneratedBufferBatchPlannerProps
 } from './utils/generated-buffer-batches';
 export {
-  getArrowDataType,
-  getArrowScalarByteLength,
-  getArrowScalarType,
+  getDataTypeByteLength,
   getDataTypeFromTypedArray,
-  getScalarArrowType,
-  getSignedDataType,
-  getTypedArrayFromDataType,
-  validateArrowDataType,
-  type ArrowDataType
+  getTypedArrayFromDataType
 } from './utils/arrow-type-utils';

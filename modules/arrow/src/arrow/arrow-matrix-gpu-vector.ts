@@ -16,7 +16,7 @@ import {
 } from './arrow-matrix-vector';
 
 type ArrowMatrixVector = Vector<FixedSizeList<ArrowMatrixValueType>>;
-type ArrowMatrixGPUVector = GPUVector<FixedSizeList<ArrowMatrixValueType>>;
+type ArrowMatrixGPUVector = GPUVector;
 
 /** Options used when preparing one Arrow matrix column for GPU consumption. */
 export type PrepareArrowMatrixGPUVectorOptions = {
@@ -29,9 +29,9 @@ export type PrepareArrowMatrixGPUVectorOptions = {
 /** Canonical Float32 matrix GPU vector plus recovered source/output metadata. */
 export type PreparedArrowMatrixGPUVector = {
   /** Canonical column-major WGSL-storage matrix GPU vector. */
-  matrix: GPUVector<FixedSizeList<Float32>>;
+  matrix: GPUVector;
   /** Alias for callers that prefer the generic vector name. */
-  vector: GPUVector<FixedSizeList<Float32>>;
+  vector: GPUVector;
   /** Source matrix metadata recovered before preparation. */
   sourceInfo: ArrowMatrixVectorInfo;
   /** Canonical output matrix metadata. */
@@ -61,7 +61,7 @@ export async function prepareArrowMatrixGPUVector(
 
   if (source instanceof GPUVector) {
     if (isCanonicalFloat32Matrix(sourceInfo)) {
-      const matrix = source as GPUVector<FixedSizeList<Float32>>;
+      const matrix = source as GPUVector;
       return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, false);
     }
     if (device.type !== 'webgpu') {
@@ -78,7 +78,7 @@ export async function prepareArrowMatrixGPUVector(
 }
 
 function createPreparedArrowMatrixGPUVector(
-  matrix: GPUVector<FixedSizeList<Float32>>,
+  matrix: GPUVector,
   sourceInfo: ArrowMatrixVectorInfo,
   ownsMatrix: boolean
 ): PreparedArrowMatrixGPUVector {
@@ -110,7 +110,7 @@ async function prepareArrowMatrixGPUVectorOnGPU(
     new Float32Array(sourceInfo.logicalComponentCount)
   ).type;
   const outputInfo = getRequiredArrowMatrixVectorInfo({type: outputType});
-  const outputData: GPUData<FixedSizeList<Float32>>[] = [];
+  const outputData: GPUData[] = [];
   const transientResources: Array<{destroy: () => void}> = [];
 
   for (const [chunkIndex, sourceData] of source.data.entries()) {
@@ -148,6 +148,7 @@ async function prepareArrowMatrixGPUVectorOnGPU(
       new GPUData({
         buffer: outputBuffer,
         dataType: outputType,
+        format: 'float32x4',
         length: sourceData.length,
         stride: outputInfo.physicalComponentCount,
         byteStride: outputInfo.byteStride,
@@ -167,6 +168,7 @@ async function prepareArrowMatrixGPUVectorOnGPU(
     type: 'data',
     name: options.name,
     dataType: outputType,
+    format: 'float32x4',
     data: outputData,
     stride: outputInfo.physicalComponentCount,
     byteStride: outputInfo.byteStride,
@@ -295,38 +297,37 @@ function makeArrowMatrixGPUVector(
   device: Device,
   vector: Vector<FixedSizeList<Float32>>,
   options: Required<Pick<PrepareArrowMatrixGPUVectorOptions, 'name' | 'id'>>
-): GPUVector<FixedSizeList<Float32>> {
+): GPUVector {
   const matrixInfo = getRequiredArrowMatrixVectorInfo(vector);
   const buffer = new DynamicBuffer(device, {
     id: options.id,
     usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
     data: getArrowVectorBufferSource(vector as Vector<any>) as Float32Array
   });
-  let byteOffset = 0;
-  const data = vector.data.map(chunk => {
-    const gpuData = new GPUData({
-      buffer,
-      dataType: chunk.type as FixedSizeList<Float32>,
-      length: chunk.length,
-      stride: matrixInfo.physicalComponentCount,
-      byteOffset,
-      byteStride: matrixInfo.byteStride,
-      rowByteLength: matrixInfo.byteStride,
-      ownsBuffer: false
-    });
-    byteOffset += chunk.length * matrixInfo.byteStride;
-    return gpuData;
-  });
   return new GPUVector({
     type: 'data',
     name: options.name,
     dataType: vector.type,
-    data,
-    buffer,
+    format: 'float32x4',
+    data: [
+      new GPUData({
+        buffer,
+        dataType: vector.type,
+        format: 'float32x4',
+        length: vector.length,
+        valueLength: vector.data.reduce(
+          (totalValueLength, chunk) => totalValueLength + chunk.length,
+          0
+        ),
+        stride: matrixInfo.physicalComponentCount,
+        byteStride: matrixInfo.byteStride,
+        rowByteLength: matrixInfo.byteStride,
+        ownsBuffer: true
+      })
+    ],
     stride: matrixInfo.physicalComponentCount,
     byteStride: matrixInfo.byteStride,
-    rowByteLength: matrixInfo.byteStride,
-    ownsBuffer: true
+    rowByteLength: matrixInfo.byteStride
   });
 }
 
@@ -362,12 +363,16 @@ function isCanonicalFloat32Matrix(matrixInfo: ArrowMatrixVectorInfo): boolean {
   );
 }
 
-function getGPUDataBinding(data: GPUData<any>): Binding {
+function getGPUDataBinding(data: GPUData): Binding {
   return {
-    buffer: data.buffer.buffer,
+    buffer: getGPUDataBuffer(data),
     offset: data.byteOffset,
     size: data.length * data.byteStride
   };
+}
+
+function getGPUDataBuffer(data: GPUData): Buffer {
+  return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
 }
 
 async function waitForSubmittedWork(device: Device): Promise<void> {

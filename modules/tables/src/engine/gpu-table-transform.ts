@@ -4,6 +4,7 @@
 
 import {Buffer, type BufferLayout, Device, type RenderPassProps} from '@luma.gl/core';
 import {BufferTransform, DynamicBuffer, type BufferTransformProps} from '@luma.gl/engine';
+import type {GPUData} from '../table/gpu-data';
 import {GPUVector} from '../table/gpu-vector';
 import {GPURecordBatch} from '../table/gpu-record-batch';
 import {GPUTable} from '../table/gpu-table';
@@ -192,7 +193,7 @@ export class TableTransform extends BufferTransform {
     return Object.fromEntries(
       Object.entries(this.outputVectors).map(([outputName, vector]) => [
         outputName,
-        getConcreteBuffer(vector.buffer)
+        getConcreteGPUDataBuffer(getSingleGPUVectorData(vector))
       ])
     );
   }
@@ -212,8 +213,8 @@ export class TableTransform extends BufferTransform {
         continue;
       }
       commandEncoder.copyBufferToBuffer({
-        sourceBuffer: getConcreteBuffer(outputVector.buffer),
-        destinationBuffer: getConcreteBuffer(inputVector.buffer),
+        sourceBuffer: getConcreteGPUDataBuffer(getSingleGPUVectorData(outputVector)),
+        destinationBuffer: getConcreteGPUDataBuffer(getSingleGPUVectorData(inputVector)),
         size
       });
       copyCount++;
@@ -351,6 +352,11 @@ function createAutomaticOutputVectors(
         );
       }
       validateAutomaticWritebackVector(inputName, inputVector);
+      if (!inputVector.format) {
+        throw new Error(
+          `TableTransform copyOutputToInputVectors requires input vector "${inputName}" to have a format`
+        );
+      }
 
       const byteLength = inputVector.length * inputVector.byteStride;
       const outputBuffer = device.createBuffer({
@@ -361,7 +367,7 @@ function createAutomaticOutputVectors(
         type: 'buffer',
         name: outputName,
         buffer: outputBuffer,
-        dataType: inputVector.type,
+        format: inputVector.format,
         length: inputVector.length,
         stride: inputVector.stride,
         byteStride: inputVector.byteStride,
@@ -393,7 +399,7 @@ function validateAutomaticWritebackVector(name: string, vector: GPUVector): void
       `TableTransform copyOutputToInputVectors requires tightly packed input vector "${name}"`
     );
   }
-  getConcreteBuffer(vector.buffer);
+  getConcreteGPUDataBuffer(getSingleGPUVectorData(vector));
 }
 
 function getTableTransformOutputs(
@@ -433,8 +439,16 @@ function assertNoExplicitOutputBuffers(
   }
 }
 
-function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {
-  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+function getConcreteGPUDataBuffer(data: GPUData): Buffer {
+  return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
+}
+
+function getSingleGPUVectorData(vector: GPUVector): GPUData {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`TableTransform vector "${vector.name}" requires exactly one GPUData chunk`);
+  }
+  return data;
 }
 
 function destroyGPUVectors(vectors: Record<string, GPUVector>): void {

@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {makeArrowGPUVector, readArrowGPUVectorAsync} from '@luma.gl/arrow';
+import {makeArrowGPUVector} from '@luma.gl/arrow';
+import type {GPUVector} from '@luma.gl/tables';
 import {GPUTableComputation} from '@luma.gl/tables';
 import type {ComputeShaderLayout, Device} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -44,9 +45,9 @@ test('GPUTableComputation binds inputVectors for storage compute', async t => {
   computePass.end();
   device.submit();
 
-  const computedValues = await readArrowGPUVectorAsync(values);
+  const computedValues = await readInt32GPUVector(values);
   t.deepEqual(
-    Array.from(computedValues.toArray() as Int32Array),
+    Array.from(computedValues),
     [6, 12, 18],
     'dispatches with input vector storage bindings'
   );
@@ -60,4 +61,10 @@ function isSoftwareBackedDevice(device: Device): boolean {
   return (
     device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
   );
+}
+
+async function readInt32GPUVector(vector: GPUVector): Promise<Int32Array> {
+  const data = vector.data[0];
+  const bytes = await data.buffer.readAsync(data.byteOffset, data.length * data.byteStride);
+  return new Int32Array(bytes.buffer, bytes.byteOffset, vector.length);
 }

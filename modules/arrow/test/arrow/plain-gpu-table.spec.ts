@@ -11,7 +11,6 @@ import {
   makeArrowGPUTable
 } from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
 import {GPURecordBatch, GPUVector, GPUTable} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -66,12 +65,12 @@ test('GPUTable creates GPU vectors from shader-compatible Arrow table columns', 
   );
   t.equal(
     gpuTable.attributes.positions,
-    gpuTable.batches[0].gpuVectors.positions.buffer,
+    gpuTable.batches[0].gpuVectors.positions.data[0].buffer,
     'exposes positions as a Model attribute buffer'
   );
   t.equal(
     gpuTable.attributes.colors,
-    gpuTable.batches[0].gpuVectors.colors.buffer,
+    gpuTable.batches[0].gpuVectors.colors.data[0].buffer,
     'exposes colors as a Model attribute buffer'
   );
   t.notOk(gpuTable.attributes.missing, 'skips missing table columns');
@@ -192,6 +191,10 @@ test('GPUTable preserves record batch boundaries with real batch-owned GPU buffe
   t.equal(gpuTable.batches.length, 2, 'exposes one GPU record batch per Arrow batch');
   t.ok(gpuTable.batches[0] instanceof GPURecordBatch, 'creates GPURecordBatch views');
   t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'keeps vector data chunk boundaries');
+  t.ok(
+    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.type as arrow.DataType),
+    'aggregate vectors preserve adapter data type metadata'
+  );
   t.equal(gpuTable.batches[1].numRows, 2, 'tracks rows per record batch');
   t.deepEqual(
     gpuTable.batches[1].bufferLayout,
@@ -199,25 +202,21 @@ test('GPUTable preserves record batch boundaries with real batch-owned GPU buffe
     'retains table buffer layout metadata on GPU batches'
   );
   t.notEqual(
-    gpuTable.batches[1].gpuVectors.positions.buffer,
-    gpuTable.batches[0].gpuVectors.positions.buffer,
+    gpuTable.batches[1].gpuVectors.positions.data[0].buffer,
+    gpuTable.batches[0].gpuVectors.positions.data[0].buffer,
     'record batches keep separate GPU buffers'
   );
   t.equal(
-    gpuTable.gpuVectors.positions.data[0].buffer.buffer,
-    gpuTable.batches[0].gpuVectors.positions.buffer,
+    gpuTable.gpuVectors.positions.data[0].buffer,
+    gpuTable.batches[0].gpuVectors.positions.data[0].buffer,
     'aggregate vectors expose the first batch chunk'
   );
   t.equal(
-    gpuTable.gpuVectors.positions.data[1].buffer.buffer,
-    gpuTable.batches[1].gpuVectors.positions.buffer,
+    gpuTable.gpuVectors.positions.data[1].buffer,
+    gpuTable.batches[1].gpuVectors.positions.data[0].buffer,
     'aggregate vectors expose the second batch chunk'
   );
-  t.throws(
-    () => gpuTable.gpuVectors.positions.buffer,
-    /multi-buffer vectors/,
-    'aggregate multi-batch vectors do not expose a misleading single buffer'
-  );
+  t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'aggregate vector has no direct buffer');
 
   gpuTable.destroy();
   t.end();
@@ -236,17 +235,21 @@ test('GPUTable packBatches collapses owned batches in place', t => {
     bindings: []
   };
   const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
-  const firstPositionsBuffer = gpuTable.batches[0].gpuVectors.positions.buffer;
-  const secondPositionsBuffer = gpuTable.batches[1].gpuVectors.positions.buffer;
+  const firstPositionsBuffer = gpuTable.batches[0].gpuVectors.positions.data[0].buffer;
+  const secondPositionsBuffer = gpuTable.batches[1].gpuVectors.positions.data[0].buffer;
 
   gpuTable.packBatches();
 
   t.equal(gpuTable.batches.length, 1, 'replaces all preserved batches with one packed batch');
   t.equal(gpuTable.batches[0].numRows, 4, 'preserves the packed row count');
   t.equal(gpuTable.gpuVectors.positions.data.length, 1, 'exposes one packed aggregate chunk');
+  t.ok(
+    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.type as arrow.DataType),
+    'packed vectors preserve adapter data type metadata'
+  );
   t.equal(
     gpuTable.attributes.positions,
-    gpuTable.batches[0].gpuVectors.positions.buffer,
+    gpuTable.batches[0].gpuVectors.positions.data[0].buffer,
     'updates direct table attributes to the packed batch buffer'
   );
   t.ok(firstPositionsBuffer.destroyed, 'destroys the first superseded owned batch buffer');
@@ -299,7 +302,7 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
   };
   const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {shaderLayout});
   const gpuRecordBatch = makeArrowGPURecordBatch(device, secondBatch, {shaderLayout});
-  const appendedPositionsBuffer = gpuRecordBatch.gpuVectors.positions.buffer;
+  const appendedPositionsBuffer = gpuRecordBatch.gpuVectors.positions.data[0].buffer;
 
   gpuTable.addBatch(gpuRecordBatch);
 
@@ -307,7 +310,7 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
   t.equal(gpuTable.numRows, 4, 'updates the aggregate row count');
   t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'extends aggregate vector chunks');
   t.equal(
-    gpuTable.gpuVectors.positions.data[1].buffer.buffer,
+    gpuTable.gpuVectors.positions.data[1].buffer,
     appendedPositionsBuffer,
     'keeps the appended batch buffer identity visible through data[]'
   );
@@ -320,7 +323,7 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
   t.end();
 });
 
-test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GPU batch', t => {
+test('GPUTable append creates preserved GPU batches without merging buffers', t => {
   const device = new NullDevice({});
   const sourceTable = makeGpuMetadataTable();
   const shaderLayout: ShaderLayout = {
@@ -340,22 +343,24 @@ test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GP
   appendArrowBatchToGPUTable(gpuTable, sourceTable.batches[0]);
   appendArrowBatchToGPUTable(gpuTable, sourceTable.batches[0]);
 
-  t.equal(gpuTable.batches.length, 1, 'keeps one mutable trailing batch');
+  t.equal(gpuTable.batches.length, 2, 'keeps appended record batches separate');
   t.equal(gpuTable.numRows, 4, 'updates table rows across append operations');
-  t.equal(gpuTable.batches[0].numRows, 4, 'updates trailing batch row count');
+  t.equal(gpuTable.batches[0].numRows, 2, 'keeps first appended batch row count');
+  t.equal(gpuTable.batches[1].numRows, 2, 'keeps second appended batch row count');
   t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'restitches aggregate GPU ranges');
   t.notOk(
     gpuTable.gpuVectors.positions.data[0].readbackMetadata,
     'aggregate fixed-width table vectors do not retain Arrow source payload metadata'
   );
-  t.ok(
-    gpuTable.attributes.positions instanceof DynamicBuffer,
-    'exposes DynamicBuffer attributes through the regular table API'
+  t.equal(
+    gpuTable.attributes.positions,
+    gpuTable.batches[0].gpuVectors.positions.data[0].buffer,
+    'table attributes reference the first preserved batch buffer'
   );
 
   gpuTable.resetLastBatch();
-  t.equal(gpuTable.numRows, 0, 'resetLastBatch clears mutable rows from the table count');
-  t.equal(gpuTable.batches[0].numRows, 0, 'resetLastBatch clears mutable batch rows');
+  t.equal(gpuTable.numRows, 2, 'resetLastBatch clears only the trailing batch rows');
+  t.equal(gpuTable.batches[1].numRows, 0, 'resetLastBatch clears trailing batch rows');
 
   gpuTable.destroy();
   t.end();
@@ -403,7 +408,10 @@ test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers',
     new Float32Array([0, 0, 1, 1])
   );
   const texts = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
-  const sourceTable = new arrow.Table({positions, texts});
+  const sourceTable = new arrow.Table([
+    new arrow.Table({positions, texts}).batches[0],
+    new arrow.Table({positions, texts}).batches[0]
+  ]);
   const shaderLayout: ShaderLayout = {
     attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
     bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
@@ -414,6 +422,11 @@ test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers',
     gpuTable.bindings.texts,
     gpuTable.batches[0].gpuVectors.texts.data[0].buffer,
     'batch-local UTF-8 storage binding resolves through GPUData'
+  );
+  t.equal(gpuTable.gpuVectors.texts.data.length, 2, 'keeps UTF-8 aggregate chunk boundaries');
+  t.ok(
+    arrow.DataType.isUtf8(gpuTable.gpuVectors.texts.type as arrow.DataType),
+    'aggregate UTF-8 vectors preserve adapter data type metadata'
   );
 
   gpuTable.destroy();
@@ -431,7 +444,7 @@ test('GPUTable select keeps requested columns and destroys dropped batch vectors
     bindings: []
   };
   const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
-  const droppedColorsBuffer = gpuTable.batches[0].gpuVectors.colors.buffer;
+  const droppedColorsBuffer = gpuTable.batches[0].gpuVectors.colors.data[0].buffer;
 
   gpuTable.select('positions');
 
@@ -466,7 +479,7 @@ test('GPUTable detachVector removes one live column and transfers its ownership'
     bindings: []
   };
   const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
-  const colorsBuffers = gpuTable.batches.map(batch => batch.gpuVectors.colors.buffer);
+  const colorsBuffers = gpuTable.batches.map(batch => batch.gpuVectors.colors.data[0].buffer);
 
   const detachedColors = gpuTable.detachVector('colors');
 
@@ -476,6 +489,10 @@ test('GPUTable detachVector removes one live column and transfers its ownership'
     'removes the detached table column'
   );
   t.equal(detachedColors.data.length, 2, 'returns all detached batch data chunks');
+  t.ok(
+    arrow.DataType.isFixedSizeList(detachedColors.type as arrow.DataType),
+    'detached vectors preserve adapter data type metadata'
+  );
   t.ok(detachedColors.ownsBuffer, 'detached vector retains the removed GPU ownership');
 
   gpuTable.destroy();
@@ -503,7 +520,7 @@ test('GPUTable detachBatches removes a live batch range and restitches aggregate
     bindings: []
   };
   const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
-  const detachedBatchBuffer = gpuTable.batches[1].gpuVectors.positions.buffer;
+  const detachedBatchBuffer = gpuTable.batches[1].gpuVectors.positions.data[0].buffer;
 
   const detachedBatches = gpuTable.detachBatches({first: 1, last: 2});
 
@@ -580,8 +597,8 @@ test('GPUTable creates metadata from existing GPU vectors', t => {
     ],
     'synthesizes buffer layouts for regular vectors'
   );
-  t.equal(gpuTable.attributes.positions, positions.buffer, 'maps positions attribute');
-  t.equal(gpuTable.attributes.weights, weights.buffer, 'maps weights attribute');
+  t.equal(gpuTable.attributes.positions, positions.data[0].buffer, 'maps positions attribute');
+  t.equal(gpuTable.attributes.weights, weights.data[0].buffer, 'maps weights attribute');
 
   gpuTable.destroy();
   t.end();

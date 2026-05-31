@@ -5,7 +5,7 @@
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {Data, DataType, Field, FixedSizeList, Float32, Float64, List, Vector} from 'apache-arrow';
 import {getArrowVariableLengthAttributeDataBufferSource} from './arrow-gpu-data';
 
@@ -21,7 +21,7 @@ export type GpuPathFloat64DeltaPreparationOptions = {
 /** Prepared Float32 path deltas plus retained Float64 source origins. */
 export type GpuPathFloat64DeltaPreparation = {
   /** Prepared Float32 path deltas, one Arrow row per path. */
-  paths: GPUVector<ArrowPathCoordinateType>;
+  paths: GPUVector;
   /** First Float64 source point per path row, padded to four components. */
   sourceOrigins: Float64Array;
 };
@@ -98,7 +98,8 @@ export async function prepareGpuPathFloat64DeltaVector(
 
   const componentCount = getArrowPathCoordinateComponentCount(paths.type);
   const pathType = makeArrowPathCoordinateType(componentCount);
-  const outputData: GPUData<ArrowPathCoordinateType>[] = [];
+  const pathFormat = `vertex-list<float32x${componentCount}>` as GPUVectorFormat;
+  const outputData: GPUData[] = [];
   const sourceOrigins = new Float64Array(paths.length * 4);
   const transientResources: Array<{destroy: () => void}> = [];
   let rowIndexBase = 0;
@@ -148,6 +149,7 @@ export async function prepareGpuPathFloat64DeltaVector(
       new GPUData({
         buffer: outputPathValuesBuffer,
         dataType: pathType,
+        format: pathFormat,
         length: data.length,
         stride: componentCount,
         byteStride: componentCount * Float32Array.BYTES_PER_ELEMENT,
@@ -179,6 +181,7 @@ export async function prepareGpuPathFloat64DeltaVector(
       type: 'data',
       name: 'paths',
       dataType: pathType,
+      format: pathFormat,
       data: outputData,
       stride: componentCount,
       byteStride: componentCount * Float32Array.BYTES_PER_ELEMENT,

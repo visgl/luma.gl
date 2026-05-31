@@ -149,6 +149,25 @@ const EYE_OF_HORUS_POLYGON_COORDINATE_COUNT = EYE_OF_HORUS_POLYGON_RINGS.reduce(
   (total, polygon) => total + polygon.reduce((polygonTotal, ring) => polygonTotal + ring.length, 0),
   0
 );
+const REED_COORDINATES: readonly [number, number][] = [
+  [0.0, -1.06],
+  [-0.02, -0.72],
+  [-0.13, -0.5],
+  [-0.25, -0.34],
+  [-0.28, 0.02],
+  [-0.22, 0.42],
+  [-0.13, 0.78],
+  [-0.04, 1.02],
+  [0.05, 1.08],
+  [0.08, 0.88],
+  [0.09, 0.52],
+  [0.08, 0.16],
+  [0.06, -0.16],
+  [0.05, -0.48],
+  [0.03, -0.76],
+  [0.0, -1.06]
+];
+const MULTILINESTRING_POINT_COUNT = REED_COORDINATES.length;
 
 type GeometryKind = 'Point' | 'LineString' | 'MultiLineString' | 'Polygon' | 'MultiPolygon';
 
@@ -292,7 +311,7 @@ function makeMultiLineStringData(
   rows: GeometryRow[]
 ): arrow.Data<arrow.List<arrow.List<arrow.FixedSizeList<arrow.Float32>>>> {
   const lineCount = rows.length * 2;
-  const pointCount = 4;
+  const pointCount = MULTILINESTRING_POINT_COUNT;
   const rowOffsets = new Int32Array(rows.length + 1);
   const lineOffsets = new Int32Array(lineCount + 1);
   const values = new Float32Array(lineCount * pointCount * COORDINATE_COMPONENTS);
@@ -302,15 +321,9 @@ function makeMultiLineStringData(
     rowOffsets[rowIndex] = rowIndex * 2;
     for (let linePartIndex = 0; linePartIndex < 2; linePartIndex++) {
       const lineIndex = rowIndex * 2 + linePartIndex;
-      const yOffset = linePartIndex === 0 ? -row.radius * 0.26 : row.radius * 0.26;
       lineOffsets[lineIndex] = lineIndex * pointCount;
       for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
-        const progress = pointIndex / (pointCount - 1);
-        const x = row.centerX - row.radius * 0.78 + progress * row.radius * 1.56;
-        const y =
-          row.centerY +
-          yOffset +
-          Math.cos(progress * Math.PI * 2 + row.sourceRowIndex * 0.17) * row.radius * 0.16;
+        const [x, y] = getMultiLineStringCoordinate(row, linePartIndex, pointIndex, pointCount);
         writeCoordinate(values, lineIndex * pointCount + pointIndex, x, y);
       }
     }
@@ -318,6 +331,33 @@ function makeMultiLineStringData(
   rowOffsets[rows.length] = lineCount;
   lineOffsets[lineCount] = lineCount * pointCount;
   return makeListData(makeListData(makeCoordinateData(values), lineOffsets), rowOffsets);
+}
+
+function getMultiLineStringCoordinate(
+  row: GeometryRow,
+  linePartIndex: number,
+  pointIndex: number,
+  pointCount: number
+): [number, number] {
+  if (isReedRow(row)) {
+    const reedScale = row.radius * 1.28;
+    const xOffset = (linePartIndex === 0 ? -0.25 : 0.25) * reedScale;
+    const [reedX, reedY] = REED_COORDINATES[pointIndex];
+    return [row.centerX + xOffset + reedX * reedScale, row.centerY + reedY * reedScale];
+  }
+
+  const progress = pointIndex / (pointCount - 1);
+  const yOffset = linePartIndex === 0 ? -row.radius * 0.26 : row.radius * 0.26;
+  return [
+    row.centerX - row.radius * 0.78 + progress * row.radius * 1.56,
+    row.centerY +
+      yOffset +
+      Math.cos(progress * Math.PI * 2 + row.sourceRowIndex * 0.17) * row.radius * 0.16
+  ];
+}
+
+function isReedRow(row: GeometryRow): boolean {
+  return Math.floor(row.sourceRowIndex / 5) % 2 === 0;
 }
 
 function makePolygonData(

@@ -11,15 +11,13 @@ import {
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
   GPUVector,
-  getArrowDataType,
-  getArrowScalarByteLength,
   getDataTypeFromTypedArray,
-  getScalarArrowType,
-  getSignedDataType,
-  getTypedArrayFromDataType
+  getGPUVectorFormatInfo,
+  getTypedArrayFromDataType,
+  isVertexListGPUVectorFormat,
+  type GPUVectorFormat
 } from '@luma.gl/tables';
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
-import {Binary, DataType, Precision, util} from 'apache-arrow';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 
@@ -29,8 +27,8 @@ type GPUTableEvaluatorBufferOwnership = 'owned' | 'borrowed';
 export type GPUTableEvaluatorEvaluateOptions = {
   /** Output vector name. */
   name?: string;
-  /** Logical data type for the materialized GPUVector. Defaults to the evaluator's type and size. */
-  dataType?: DataType;
+  /** Memory format for the materialized GPUVector. Defaults to the evaluator's type and size. */
+  format?: GPUVectorFormat;
   /** Whether to materialize the GPUVector as an interleaved vector. */
   interleaved?:
     | boolean
@@ -64,8 +62,8 @@ export type GPUTableEvaluatorProps = {
   buffer?: Buffer;
   /** External GPUVector resource that backs this evaluator and is not owned by it. */
   gpuVector?: GPUVector;
-  /** Optional logical schema/type metadata preserved for GPUVector interop. */
-  dataType?: DataType;
+  /** Optional memory format preserved for GPUVector interop. */
+  format?: GPUVectorFormat;
   /** Lazy operation or table whose output initializes this table, required unless `value` is supplied. */
   source?: Operation | GPUTableEvaluator | null;
   /** Whether every row should read the same value. */
@@ -102,8 +100,8 @@ export class GPUTableEvaluator {
   readonly ValueType: TypedArrayConstructor;
   /** Operation whose output is used to fill the vector, required unless `value` is supplied */
   readonly source: Operation | GPUTableEvaluator | null = null;
-  /** Optional logical schema/type metadata preserved for GPUVector interop. */
-  readonly dataType?: DataType;
+  /** Optional memory format preserved for GPUVector interop. */
+  readonly format?: GPUVectorFormat;
 
   /** User-assigned id for easy debugging */
   protected _id?: string;
@@ -134,29 +132,32 @@ export class GPUTableEvaluator {
       normalized = false
     }: Partial<Pick<GPUTableEvaluatorProps, 'type' | 'size' | 'offset' | 'stride' | 'normalized'>>
   ): GPUTableEvaluator {
+    let resolvedType = type;
+    let typedValue: TypedArray;
     if (Array.isArray(value)) {
-      type = type || 'float32';
-      const ArrayType = getTypedArrayFromDataType(type);
-      value = new ArrayType(value);
+      resolvedType = resolvedType || 'float32';
+      const ArrayType = getTypedArrayFromDataType(resolvedType);
+      typedValue = new ArrayType(value) as TypedArray;
     } else if (value instanceof Float64Array) {
       // This is not really supported by GPU buffer, treat it as 2 uints
-      type = 'uint32';
+      resolvedType = 'uint32';
       size *= 2;
       offset *= 2;
       stride *= 2;
-      value = new Uint32Array(value.buffer);
+      typedValue = new Uint32Array(value.buffer);
     } else {
-      type = type || getDataTypeFromTypedArray(value);
+      resolvedType = resolvedType || getDataTypeFromTypedArray(value);
+      typedValue = value;
     }
-    const id = `<${type} * ${size}>`;
+    const id = `<${resolvedType} * ${size}>`;
     return new GPUTableEvaluator({
       id,
-      type,
+      type: resolvedType,
       size,
       offset,
       stride,
       normalized,
-      value
+      value: typedValue
     });
   }
 
@@ -191,16 +192,17 @@ export class GPUTableEvaluator {
   static fromGPUVector(vector: GPUVector): GPUTableEvaluator {
     validatePackedNumericGPUVector(vector);
     const {type, size} = getGPUTablePropsFromGPUVector(vector);
+    const data = getSingleGPUVectorData(vector);
 
     return new GPUTableEvaluator({
       id: vector.name,
       type,
       size,
-      offset: vector.byteOffset,
+      offset: data.byteOffset,
       stride: vector.byteStride,
       length: vector.length,
       gpuVector: vector,
-      dataType: vector.type
+      format: vector.format
     });
   }
 
@@ -213,7 +215,7 @@ export class GPUTableEvaluator {
    * Prefer {@link GPUTableEvaluator.fromArray} or {@link GPUTableEvaluator.fromConstant} for CPU-backed tables.
    */
   constructor(props: GPUTableEvaluatorProps) {
-    const {id, value, buffer, gpuVector, dataType, source = null, isConstant = false} = props;
+    const {id, value, buffer, gpuVector, format, source = null, isConstant = false} = props;
     if (!source && !value && !buffer && !gpuVector) {
       throw new Error('OperationResource must have a value source');
     }
@@ -243,7 +245,7 @@ export class GPUTableEvaluator {
     this.stride = stride || this.ValueType.BYTES_PER_ELEMENT * size;
     this.normalized = normalized;
     this.source = source;
-    this.dataType = dataType;
+    this.format = format;
     if (length === undefined) {
       if (isConstant) {
         length = 1;
@@ -266,7 +268,7 @@ export class GPUTableEvaluator {
       this._gpuVector = this.createGPUVectorView({
         buffer,
         name: this._id,
-        dataType: this.dataType
+        format: this.format
       });
     }
   }
@@ -344,7 +346,8 @@ export class GPUTableEvaluator {
     options: GPUTableEvaluatorEvaluateOptions & {buffer: Buffer}
   ): GPUVector {
     const name = options.name ?? this._id ?? 'vector';
-    const dataType = options.dataType ?? this.dataType ?? getArrowDataType(this.type, this.size);
+    const format =
+      options.format ?? this.format ?? getVertexFormat(this.type, this.size, this.normalized);
 
     if (options.interleaved) {
       const attributes =
@@ -355,7 +358,7 @@ export class GPUTableEvaluator {
         type: 'interleaved',
         name,
         buffer: options.buffer,
-        dataType: new Binary(),
+        format: options.format ?? this.format,
         length: this.length,
         byteOffset: this.offset,
         byteStride: this.stride,
@@ -368,7 +371,7 @@ export class GPUTableEvaluator {
       type: 'buffer',
       name,
       buffer: options.buffer,
-      dataType,
+      format,
       length: this.length,
       stride: this.size,
       byteOffset: this.offset,
@@ -440,16 +443,15 @@ export function getGPUTableEvaluator(input: GPUTableEvaluatorInput): GPUTableEva
   return input instanceof GPUTableEvaluator ? input : GPUTableEvaluator.fromGPUVector(input);
 }
 
-/** Returns source dataType only when it exactly matches the requested evaluator layout. */
-export function getCompatibleGPUTableEvaluatorDataType(
+/** Returns source format only when it exactly matches the requested evaluator layout. */
+export function getCompatibleGPUTableEvaluatorFormat(
   input: GPUTableEvaluator,
   type: SignedDataType,
-  size: number
-): DataType | undefined {
-  const expectedDataType = getArrowDataType(type, size);
-  return input.dataType && util.compareTypes(input.dataType, expectedDataType)
-    ? input.dataType
-    : undefined;
+  size: number,
+  normalized: boolean = false
+): GPUVectorFormat | undefined {
+  const expectedFormat = getVertexFormat(type, size, normalized);
+  return input.format === expectedFormat ? input.format : undefined;
 }
 
 function validatePackedNumericGPUVector(vector: GPUVector): void {
@@ -458,15 +460,15 @@ function validatePackedNumericGPUVector(vector: GPUVector): void {
       `GPUTableEvaluator.fromGPUVector() does not accept interleaved vector "${vector.name}"`
     );
   }
-
-  const scalarType = getScalarArrowType(vector.type);
-  if (!DataType.isFloat(scalarType) && !DataType.isInt(scalarType)) {
-    throw new Error('GPUTableEvaluator.fromGPUVector() requires numeric GPUVector input');
+  getSingleGPUVectorData(vector);
+  if (!vector.format) {
+    throw new Error('GPUTableEvaluator.fromGPUVector() requires GPUVector format metadata');
   }
-  if (DataType.isInt(scalarType) && scalarType.bitWidth === 64) {
-    throw new Error('GPUTableEvaluator.fromGPUVector() does not support 64-bit integer input');
+  if (isVertexListGPUVectorFormat(vector.format)) {
+    throw new Error('GPUTableEvaluator.fromGPUVector() does not support vertex-list input');
   }
-  const expectedRowByteLength = getArrowScalarByteLength(scalarType) * vector.stride;
+  const formatInfo = getGPUVectorFormatInfo(vector.format);
+  const expectedRowByteLength = formatInfo.byteLength;
   if (vector.rowByteLength !== expectedRowByteLength) {
     throw new Error(
       `GPUTableEvaluator.fromGPUVector() requires rowByteLength ${expectedRowByteLength} for vector "${vector.name}"`
@@ -478,17 +480,25 @@ function validatePackedNumericGPUVector(vector: GPUVector): void {
 }
 
 function getGPUTablePropsFromGPUVector(vector: GPUVector): {type: SignedDataType; size: number} {
-  const scalarType = getScalarArrowType(vector.type);
-  if (DataType.isFloat(scalarType) && scalarType.precision === Precision.DOUBLE) {
-    return {type: 'uint32', size: vector.stride * 2};
+  if (!vector.format) {
+    throw new Error('GPUTableEvaluator.fromGPUVector() requires GPUVector format metadata');
   }
-  return {type: getSignedDataType(scalarType), size: vector.stride};
+  const formatInfo = getGPUVectorFormatInfo(vector.format);
+  return {type: formatInfo.signedDataType, size: formatInfo.components};
 }
 
 /** Returns the concrete Buffer for a GPUVector, unwrapping DynamicBuffer when needed. */
 export function getGPUVectorBuffer(vector: GPUVector): Buffer {
-  const buffer = vector.buffer;
+  const buffer = getSingleGPUVectorData(vector).buffer;
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+}
+
+function getSingleGPUVectorData(vector: GPUVector) {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`GPUTableEvaluator requires exactly one GPUData chunk for "${vector.name}"`);
+  }
+  return data;
 }
 
 function getInterleavedAttributes(evaluator: GPUTableEvaluator): BufferAttributeLayout[] {
