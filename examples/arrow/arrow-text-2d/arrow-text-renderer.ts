@@ -8,20 +8,20 @@ import {getArrowVectorByteLength, makeArrowGPURecordBatch, makeArrowGPUTable} fr
 import {GPURenderable, GPUVector, GPUTable} from '@luma.gl/tables';
 import {
   AttributeTextModel,
+  type ArrowUtf8TextType,
+  type ArrowUtf8TextVector,
   DictionaryTextModel,
   RowIndexedStorageTextModel,
   StorageTextModel,
-  type ArrowUtf8TextType,
-  type ArrowUtf8TextVector,
-  convertArrowTextToAttribute,
-  convertArrowTextToAttributeState,
-  convertArrowTextToDictionary,
-  convertArrowTextToDictionaryState,
-  convertArrowTextToStorage,
-  convertArrowTextToStorageState,
   type ArrowAttributeTextInputProps,
   type ArrowDictionaryStorageTextInputProps,
   type ArrowStorageTextInputProps,
+  convertArrowTextToAttribute,
+  convertArrowTextToAttributeModelProps,
+  convertArrowTextToDictionary,
+  convertArrowTextToDictionaryModelProps,
+  convertArrowTextToStorage,
+  convertArrowTextToStorageModelProps,
   type ConvertedArrowTextData,
   type FontSettings
 } from '@luma.gl/text';
@@ -634,6 +634,7 @@ export class ArrowTextRenderer extends GPURenderable<
     const streamingTextTable = this.activeStreamingTextTable;
     this.activeStreamingTextTable = null;
     this.model.destroy();
+    this.textInput.destroy();
     streamingTextTable?.destroy();
   }
 
@@ -649,12 +650,8 @@ export class ArrowTextRenderer extends GPURenderable<
       id: props.id,
       characterSet: props.characterSet,
       fontSettings: props.fontSettings,
-      source: WGSL_SHADER,
-      vs: VS_GLSL,
-      fs: FS_GLSL,
-      shaderLayout: TEXT_SHADER_LAYOUT,
       shaderInputs: this.shaderInputs,
-      modules: this.getRenderModules() as never,
+      modules: getArrowTextRenderModules(this.device) as never,
       parameters: DEFAULT_RENDER_PARAMETERS,
       color,
       angle,
@@ -662,65 +659,49 @@ export class ArrowTextRenderer extends GPURenderable<
     };
 
     if (modelKind === 'dictionary') {
-      const dictionaryInputProps = {
-        ...this.getStorageInputProps(data),
-        ...commonProps
-      } as unknown as ArrowDictionaryStorageTextInputProps;
-      const storageState = convertArrowTextToDictionaryState(this.device, dictionaryInputProps);
-      return new DictionaryTextModel(this.device, {
-        id: props.id,
-        color,
-        source: DICTIONARY_STORAGE_WGSL_SHADER,
-        shaderLayout: DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
-        shaderInputs: this.shaderInputs,
-        modules: this.getRenderModules() as never,
-        parameters: DEFAULT_RENDER_PARAMETERS,
-        storageState,
-        ownsStorageState: true
-      });
+      return new DictionaryTextModel(
+        this.device,
+        convertArrowTextToDictionaryModelProps(this.device, {
+          ...this.getStorageInputProps(data),
+          ...commonProps,
+          source: DICTIONARY_STORAGE_WGSL_SHADER,
+          shaderLayout: DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT
+        } as unknown as ArrowDictionaryStorageTextInputProps)
+      );
     }
 
     if (modelKind === 'storage' || modelKind === 'storage-row-indexed') {
-      const storageInputProps = {
-        ...this.getStorageInputProps(data),
-        ...commonProps,
-        rowIndexColumn: modelKind === 'storage-row-indexed'
-      } as unknown as ArrowStorageTextInputProps;
-      const storageState = convertArrowTextToStorageState(this.device, storageInputProps);
       const StorageModel =
         modelKind === 'storage-row-indexed' ? RowIndexedStorageTextModel : StorageTextModel;
-      return new StorageModel(this.device, {
-        id: props.id,
-        color,
-        source:
-          modelKind === 'storage-row-indexed'
-            ? ROW_INDEXED_STORAGE_WGSL_SHADER
-            : STORAGE_INDEXED_WGSL_SHADER,
-        shaderLayout:
-          modelKind === 'storage-row-indexed'
-            ? ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT
-            : STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
-        shaderInputs: this.shaderInputs,
-        modules: this.getRenderModules() as never,
-        parameters: DEFAULT_RENDER_PARAMETERS,
-        storageState,
-        ownsStorageState: true
-      });
+      return new StorageModel(
+        this.device,
+        convertArrowTextToStorageModelProps(this.device, {
+          ...this.getStorageInputProps(data),
+          ...commonProps,
+          rowIndexColumn: modelKind === 'storage-row-indexed',
+          source:
+            modelKind === 'storage-row-indexed'
+              ? ROW_INDEXED_STORAGE_WGSL_SHADER
+              : STORAGE_INDEXED_WGSL_SHADER,
+          shaderLayout:
+            modelKind === 'storage-row-indexed'
+              ? ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT
+              : STORAGE_INDEXED_TEXT_SHADER_LAYOUT
+        } as unknown as ArrowStorageTextInputProps)
+      );
     }
 
-    const attributeInputProps = {
-      ...this.getInputProps(data),
-      ...commonProps
-    } as unknown as ArrowAttributeTextInputProps;
-    const attributeState = convertArrowTextToAttributeState(this.device, attributeInputProps);
-    return new AttributeTextModel(this.device, {
-      attributeState,
-      ownsAttributeState: true
-    });
-  }
-
-  private getRenderModules(): unknown[] {
-    return [supportsIndexPicking(this.device) ? indexPicking : indexColorPicking];
+    return new AttributeTextModel(
+      this.device,
+      convertArrowTextToAttributeModelProps(this.device, {
+        ...this.getInputProps(data),
+        ...commonProps,
+        source: WGSL_SHADER,
+        vs: VS_GLSL,
+        fs: FS_GLSL,
+        shaderLayout: TEXT_SHADER_LAYOUT
+      } as unknown as ArrowAttributeTextInputProps)
+    );
   }
 
   private resolveModel(
@@ -981,9 +962,7 @@ function getResolvedColumnSelectors(
   };
 }
 
-function getStreamingTextInputShaderLayout(
-  props: ArrowTextRendererPrepareInputProps
-): typeof STREAMING_TEXT_INPUT_SHADER_LAYOUT {
+function getStreamingTextInputShaderLayout(props: ArrowTextRendererPrepareInputProps) {
   const columns = getResolvedColumnSelectors(props);
   const enabledAttributeNames = new Set([
     columns.positions,
@@ -1125,6 +1104,10 @@ function isArrowTextCharacterColorType(
   type: arrow.DataType | undefined
 ): type is CharacterColorDataType {
   return Boolean(type) && arrow.DataType.isList(type);
+}
+
+function getArrowTextRenderModules(device: Device): unknown[] {
+  return [supportsIndexPicking(device) ? indexPicking : indexColorPicking];
 }
 
 async function getArrowRecordBatches(

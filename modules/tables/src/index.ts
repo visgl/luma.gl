@@ -37,24 +37,24 @@ export {
 export {
   GPUTableGeometry,
   type GPUTableGeometryProps
-} from './table/gpu-table-geometry';
+} from './engine/gpu-table-geometry';
 export {
   GPUTableModel,
   type GPUTableModelCount,
   type GPUTableModelProps
-} from './table/gpu-table-model';
-export {GPURenderable} from './table/gpu-renderable';
+} from './engine/gpu-table-model';
+export {GPURenderable} from './engine/gpu-renderable';
 export {
   TableTransform,
   type TableTransformBatchOptions,
   type TableTransformOutputCopyMap,
   type TableTransformProps
-} from './table/table-transform';
+} from './engine/gpu-table-transform';
 export {
   GPUTableComputation,
   type GPUTableComputationBatch,
   type GPUTableComputationProps
-} from './table/table-computation';
+} from './engine/gpu-table-computation';
 export {
   GPUTableBufferPlanner,
   type GPUTableBufferGroupKind,
@@ -67,13 +67,13 @@ export {
   type GPUTableBufferPlannerProps,
   type GPUTableColumnDescriptor,
   type GPUTableColumnPriority
-} from './table/table-buffer-planner';
+} from './utils/gpu-table-buffer-planner';
 export {
   getGeneratedBufferBatchByteLimit,
   planGeneratedBufferBatches,
   type GeneratedBufferBatch,
   type GeneratedBufferBatchPlannerProps
-} from './table/generated-buffer-batches';
+} from './utils/generated-buffer-batches';
 export {
   getArrowDataType,
   getArrowScalarByteLength,
@@ -84,4 +84,4 @@ export {
   getTypedArrayFromDataType,
   validateArrowDataType,
   type ArrowDataType
-} from './table/arrow-type-utils';
+} from './utils/arrow-type-utils';

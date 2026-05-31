@@ -9,18 +9,15 @@ import {
   type ArrowPolygonInputType,
   type PreparedArrowPolygonGPUVectors
 } from '@luma.gl/arrow';
-import type {CommandEncoder, Device, RenderPass, ShaderLayout} from '@luma.gl/core';
-import {GPUTableModel} from '@luma.gl/tables';
-import {
-  indexColorPicking,
-  indexPicking,
-  PickingManager,
-  ShaderInputs,
-  supportsIndexPicking,
-  type PickInfo
-} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
+import {PickingManager, type PickInfo} from '@luma.gl/engine';
+import type {GPUTableModel} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
+import {
+  createPolygonModel,
+  createPolygonShaderInputs,
+  type PolygonShaderInputs
+} from './polygon-model';
 
 export type ArrowPolygonRendererPickingInfo = {
   batchIndex: number | null;
@@ -75,149 +72,9 @@ export type ArrowPolygonRendererRecordBatchStreamProps = {
   onBatch?: (update: ArrowPolygonRendererRecordBatchStreamUpdate) => void;
 };
 
-type PolygonViewportUniforms = {
-  center: [number, number];
-  scale: number;
-  aspect: number;
-};
-
 const DEFAULT_POLYGON_RENDERER_COLOR: [number, number, number, number] = [0, 96, 255, 255];
 const DEFAULT_POLYGON_RENDERER_CENTER: [number, number] = [0, 0];
 const DEFAULT_POLYGON_RENDERER_SCALE = 1;
-const DEFAULT_RENDER_PARAMETERS = {
-  depthWriteEnabled: false,
-  blend: true,
-  blendColorOperation: 'add',
-  blendAlphaOperation: 'add',
-  blendColorSrcFactor: 'src-alpha',
-  blendColorDstFactor: 'one-minus-src-alpha',
-  blendAlphaSrcFactor: 'one',
-  blendAlphaDstFactor: 'one-minus-src-alpha'
-} as const satisfies Record<string, unknown>;
-const PICKING_RENDER_PARAMETERS = {
-  depthWriteEnabled: false,
-  blend: false
-} as const satisfies Record<string, unknown>;
-
-const polygonViewport: ShaderModule<PolygonViewportUniforms> = {
-  name: 'polygonViewport',
-  uniformTypes: {
-    center: 'vec2<f32>',
-    scale: 'f32',
-    aspect: 'f32'
-  }
-};
-
-const POLYGON_SHADER_LAYOUT = {
-  attributes: [
-    {name: 'positions', location: 0, type: 'vec4<f32>'},
-    {name: 'colors', location: 1, type: 'vec4<u32>'},
-    {name: 'rowIndices', location: 2, type: 'u32'}
-  ],
-  bindings: []
-} satisfies ShaderLayout;
-
-const WGSL_SHADER = /* wgsl */ `\
-struct PolygonViewportUniforms {
-  center : vec2<f32>,
-  scale : f32,
-  aspect : f32,
-};
-
-@group(0) @binding(auto) var<uniform> polygonViewport : PolygonViewportUniforms;
-
-struct VertexInputs {
-  @location(0) positions : vec4<f32>,
-  @location(1) colors : vec4<u32>,
-  @location(2) rowIndices : u32,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec4<f32>,
-  @interpolate(flat)
-  @location(1) objectIndex : i32,
-};
-
-struct PickingFragmentOutputs {
-  @location(0) fragColor : vec4<f32>,
-  @location(1) pickingColor : vec2<i32>,
-};
-
-@vertex
-fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
-  let centered = (inputs.positions.xy - polygonViewport.center) * polygonViewport.scale;
-  var outputs : FragmentInputs;
-  outputs.Position = vec4<f32>(centered.x / max(polygonViewport.aspect, 0.2), centered.y, 0.0, 1.0);
-  outputs.color = vec4<f32>(inputs.colors) / 255.0;
-  outputs.objectIndex = i32(inputs.rowIndices);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  return picking_filterHighlightColor(inputs.color, inputs.objectIndex);
-}
-
-@fragment
-fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
-  var outputs : PickingFragmentOutputs;
-  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
-  return outputs;
-}
-`;
-
-const VS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-in vec4 positions;
-in uvec4 colors;
-in uint rowIndices;
-
-uniform polygonViewportUniforms {
-  vec2 center;
-  float scale;
-  float aspect;
-} polygonViewport;
-
-out vec4 vColor;
-
-void main(void) {
-  vec2 centered = (positions.xy - polygonViewport.center) * polygonViewport.scale;
-  gl_Position = vec4(centered.x / max(polygonViewport.aspect, 0.2), centered.y, 0.0, 1.0);
-  vColor = vec4(colors) / 255.0;
-  picking_setObjectIndex(int(rowIndices));
-}
-`;
-
-const FS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec4 vColor;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = picking_filterColor(vColor);
-}
-`;
-
-const PICKING_FS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-layout(location = 0) out vec4 fragColor;
-layout(location = 1) out ivec4 pickingColor;
-
-void main(void) {
-  fragColor = vec4(0.0);
-  pickingColor = picking_getPickingColor();
-}
-`;
 
 type PreparedPolygonBatch = {
   prepared: PreparedArrowPolygonGPUVectors;
@@ -230,10 +87,7 @@ type PreparedPolygonBatch = {
 
 export class ArrowPolygonRenderer {
   readonly device: Device;
-  readonly shaderInputs: ShaderInputs<{
-    polygonViewport: typeof polygonViewport.props;
-    picking: typeof indexPicking.props;
-  }>;
+  readonly shaderInputs: PolygonShaderInputs;
   readonly picker: PickingManager;
   props: ArrowPolygonRendererProps;
   preparedBatches: PreparedPolygonBatch[] = [];
@@ -244,14 +98,7 @@ export class ArrowPolygonRenderer {
   constructor(device: Device, props: ArrowPolygonRendererProps = {}) {
     this.device = device;
     this.props = props;
-    this.shaderInputs = new ShaderInputs<{
-      polygonViewport: typeof polygonViewport.props;
-      picking: typeof indexPicking.props;
-    }>({
-      polygonViewport,
-      picking: getPolygonPickingModule(device)
-    });
-    this.shaderInputs.setProps({picking: {indexMode: 'attribute', batchIndex: 0}});
+    this.shaderInputs = createPolygonShaderInputs(device);
     this.picker = new PickingManager(device, {
       shaderInputs: this.shaderInputs,
       mode: 'auto',
@@ -451,36 +298,6 @@ export class ArrowPolygonRenderer {
     );
   }
 
-  private createModel(
-    prepared: PreparedArrowPolygonGPUVectors,
-    batchIndex: number,
-    picking = false
-  ): GPUTableModel {
-    const indexPickingSupported = supportsIndexPicking(this.device);
-    return new GPUTableModel(this.device, {
-      id: `arrow-polygons-${batchIndex}${picking ? '-picking' : ''}`,
-      source: WGSL_SHADER,
-      vs: VS_GLSL,
-      fs: picking && indexPickingSupported ? PICKING_FS_GLSL : FS_GLSL,
-      ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
-      modules: [
-        picking && indexPickingSupported ? indexPicking : getPolygonPickingModule(this.device)
-      ] as never,
-      shaderLayout: POLYGON_SHADER_LAYOUT,
-      shaderInputs: this.shaderInputs,
-      table: prepared.table,
-      tableCount: 'vertex',
-      indexBuffer: prepared.indices,
-      ...(picking && indexPickingSupported
-        ? {
-            colorAttachmentFormats: ['rgba8unorm', 'rg32sint'] as const,
-            depthStencilAttachmentFormat: 'depth24plus' as const
-          }
-        : {}),
-      parameters: picking ? PICKING_RENDER_PARAMETERS : DEFAULT_RENDER_PARAMETERS
-    });
-  }
-
   private async createPreparedBatch(
     props: ArrowPolygonRendererProps,
     rowIndexOffset: number,
@@ -507,8 +324,17 @@ export class ArrowPolygonRenderer {
     );
     return {
       prepared,
-      model: this.createModel(prepared, batchIndex),
-      pickingModel: this.createModel(prepared, batchIndex, true),
+      model: createPolygonModel(this.device, {
+        id: `arrow-polygons-${batchIndex}`,
+        prepared,
+        shaderInputs: this.shaderInputs
+      }),
+      pickingModel: createPolygonModel(this.device, {
+        id: `arrow-polygons-${batchIndex}-picking`,
+        prepared,
+        shaderInputs: this.shaderInputs,
+        picking: true
+      }),
       polygonArrowByteLength,
       stylingArrowByteLength,
       tessellationTimeMs: getTimestampMilliseconds() - startedAt
@@ -543,10 +369,6 @@ export class ArrowPolygonRenderer {
     this.pickedRowIndex = objectIndex;
     this.props.onPick?.({batchIndex, rowIndex: objectIndex});
   };
-}
-
-function getPolygonPickingModule(device: Device): typeof indexPicking {
-  return (supportsIndexPicking(device) ? indexPicking : indexColorPicking) as typeof indexPicking;
 }
 
 function getPolygonPickingTooltip({batchIndex, objectIndex}: PickInfo): string | null {

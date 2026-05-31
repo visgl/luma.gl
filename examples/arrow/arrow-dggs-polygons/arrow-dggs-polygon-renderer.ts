@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  StoragePathModel,
   packDggsA5CellKey,
   packDggsGeohashKey,
   packDggsH3CellKey,
@@ -13,13 +12,17 @@ import {
   prepareDggsCellPathGPUVector,
   type DggsCellEncoding,
   type PreparedDggsCellKeyGPUVector,
-  type PreparedDggsCellPathGPUVector
+  type PreparedDggsCellPathGPUVector,
+  type StoragePathModel
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {ShaderInputs} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
 import {GPURenderable} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
+import {
+  createDggsPolygonPathModel,
+  createDggsPolygonShaderInputs,
+  type DggsPolygonShaderInputs
+} from './dggs-polygon-model';
 
 /** Source key representation used by the DGGS polygon example. */
 export type DggsSourceKind = 'uint64' | 'utf8';
@@ -58,11 +61,6 @@ type DggsPreparedInput = {
   keys?: PreparedDggsCellKeyGPUVector;
   paths: PreparedDggsCellPathGPUVector;
   destroy: () => void;
-};
-type DggsViewportUniforms = {
-  center: [number, number];
-  scale: number;
-  aspect: number;
 };
 
 const SAMPLE_GEOHASH_PRECISION = 2;
@@ -154,116 +152,13 @@ const ENCODING_COLORS: Record<DggsCellEncoding, [number, number, number, number]
 const DEFAULT_DGGS_CENTER: [number, number] = [0, 18];
 const DEFAULT_DGGS_SCALE = 1.25;
 const DEFAULT_DGGS_WIDTH = 1;
-const DEFAULT_DGGS_RENDER_PARAMETERS = {
-  depthWriteEnabled: false,
-  blend: true,
-  blendColorOperation: 'add',
-  blendAlphaOperation: 'add',
-  blendColorSrcFactor: 'src-alpha',
-  blendColorDstFactor: 'one-minus-src-alpha',
-  blendAlphaSrcFactor: 'one',
-  blendAlphaDstFactor: 'one-minus-src-alpha'
-} as const satisfies Record<string, unknown>;
-
-const dggsViewport: ShaderModule<DggsViewportUniforms> = {
-  name: 'dggsViewport',
-  uniformTypes: {
-    center: 'vec2<f32>',
-    scale: 'f32',
-    aspect: 'f32'
-  }
-};
-
-const DGGS_PATH_SOURCE = /* wgsl */ `\
-@group(0) @binding(auto) var<storage, read> pathValues : array<f32>;
-@group(0) @binding(auto) var<storage, read> pathRanges : array<vec4<u32>>;
-@group(0) @binding(auto) var<storage, read> pathViewOrigins : array<vec4<f32>>;
-@group(0) @binding(auto) var<storage, read> pathRowColors : array<u32>;
-@group(0) @binding(auto) var<storage, read> pathVertexColors : array<u32>;
-@group(0) @binding(auto) var<storage, read> pathRowWidths : array<f32>;
-
-struct PathStorageStyleConfig {
-  constantColor : vec4<f32>,
-  constantWidth : f32,
-  useRowColors : u32,
-  useRowWidths : u32,
-  batchRowIndexBase : u32,
-  pathComponentCount : u32,
-  useViewOrigins : u32,
-  useVertexColors : u32,
-  _padding1 : u32,
-};
-
-struct DggsViewportUniforms {
-  center : vec2<f32>,
-  scale : f32,
-  aspect : f32,
-};
-
-@group(0) @binding(auto) var<uniform> pathStorageStyleConfig : PathStorageStyleConfig;
-@group(0) @binding(auto) var<uniform> dggsViewport : DggsViewportUniforms;
-
-struct VertexInputs {
-  @builtin(vertex_index) vertexIndex : u32,
-  @location(0) segmentStartPointIndices : u32,
-  @location(1) segmentFlags : u32,
-  @location(2) rowIndices : u32,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec4<f32>,
-};
-
-const PI : f32 = 3.141592653589793;
-const DEGREES_TO_RADIANS : f32 = 0.017453292519943295;
-
-fn readPathComponent(pointIndex : u32, componentIndex : u32) -> f32 {
-  if (componentIndex >= pathStorageStyleConfig.pathComponentCount) {
-    return 0.0;
-  }
-  return pathValues[pointIndex * pathStorageStyleConfig.pathComponentCount + componentIndex];
-}
-
-fn readPathPoint(pointIndex : u32) -> vec2<f32> {
-  return vec2<f32>(readPathComponent(pointIndex, 0u), readPathComponent(pointIndex, 1u));
-}
-
-fn latitudeToMercator(latitude : f32) -> f32 {
-  let clampedLatitude = clamp(latitude, -85.0, 85.0) * DEGREES_TO_RADIANS;
-  return log(tan(PI * 0.25 + clampedLatitude * 0.5));
-}
-
-fn projectLngLat(lngLat : vec2<f32>) -> vec2<f32> {
-  let x = (lngLat.x - dggsViewport.center.x) / 180.0;
-  let y = (latitudeToMercator(lngLat.y) - latitudeToMercator(dggsViewport.center.y)) / PI;
-  return vec2<f32>(x / max(dggsViewport.aspect, 0.2), y) * dggsViewport.scale;
-}
-
-@vertex
-fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
-  let pointIndex = inputs.segmentStartPointIndices + (inputs.vertexIndex & 1u);
-  let lngLat = readPathPoint(pointIndex);
-  var outputs : FragmentInputs;
-  outputs.Position = vec4<f32>(projectLngLat(lngLat), 0.0, 1.0);
-  outputs.color = pathStorageStyleConfig.constantColor;
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  return inputs.color;
-}
-`;
 
 /** Example layer that prepares Arrow DGGS cell keys and renders their GPU-decoded boundaries. */
 export class ArrowDggsPolygonRenderer extends GPURenderable<[RenderPass, {aspect: number}]> {
   readonly device: Device;
   readonly uint64Table = makeDggsUint64Table();
   readonly stringTable = makeDggsStringTable();
-  readonly shaderInputs = new ShaderInputs<{dggsViewport: typeof dggsViewport.props}>({
-    dggsViewport
-  });
+  readonly shaderInputs: DggsPolygonShaderInputs = createDggsPolygonShaderInputs();
   readonly preparedInputs: Partial<Record<string, DggsPreparedInput>> = {};
   activeEncoding: DggsCellEncoding;
   activeSourceKind: DggsSourceKind;
@@ -384,16 +279,12 @@ export class ArrowDggsPolygonRenderer extends GPURenderable<[RenderPass, {aspect
   }
 
   createPathModel(input: DggsPreparedInput, encoding: DggsCellEncoding): StoragePathModel {
-    return new StoragePathModel(this.device, {
+    return createDggsPolygonPathModel(this.device, {
       id: `arrow-dggs-polygons-${encoding}`,
       paths: input.paths.paths,
-      source: DGGS_PATH_SOURCE,
       shaderInputs: this.shaderInputs,
-      topology: 'line-list',
-      vertexCount: 2,
       color: this.props.color ?? ENCODING_COLORS[encoding],
-      width: this.props.width ?? DEFAULT_DGGS_WIDTH,
-      parameters: DEFAULT_DGGS_RENDER_PARAMETERS
+      width: this.props.width ?? DEFAULT_DGGS_WIDTH
     });
   }
 }

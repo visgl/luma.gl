@@ -4,7 +4,7 @@
 
 import {Buffer, type BufferLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
-import {Field, Schema, util} from 'apache-arrow';
+import {Field, Schema, TypeMap, util} from 'apache-arrow';
 import {GPUVector} from './gpu-vector';
 import {GPURecordBatch} from './gpu-record-batch';
 import {createGPUVectorCollection} from './gpu-vector-collection';
@@ -54,9 +54,9 @@ export type GPUTableDetachBatchesOptions = {
 };
 
 /** GPU memory and schema metadata for one logical table. */
-export class GPUTable {
+export class GPUTable<T extends TypeMap = any> {
   /** GPU-facing schema for the selected columns. */
-  schema: Schema;
+  schema: Schema<T>;
   /** Number of logical rows in the table. */
   numRows: number;
   /** Number of selected GPU columns in {@link schema}. */

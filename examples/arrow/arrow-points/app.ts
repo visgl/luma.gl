@@ -18,7 +18,7 @@ import {
   type ArrowPointRowCountKind,
   type ArrowPointSourceKind,
   type ArrowPointTimeKind
-} from './arrow-point-data';
+} from './arrow-point-generator';
 import {ArrowPointRenderer, type ArrowPointRendererPickingInfo} from './arrow-point-renderer';
 import {ArrowPointControlPanel, makeArrowPointControlPanelHtml} from './control-panel';
 

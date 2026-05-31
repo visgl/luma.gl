@@ -123,6 +123,19 @@ export {
   type PrepareArrowPathGPUVectorsOptions
 } from './arrow/arrow-path-model';
 export {
+  convertGeoArrowTableToDenseUnion,
+  convertGeoArrowVectorToDenseUnion,
+  type GeoArrowDenseUnionTableOptions,
+  type GeoArrowDenseUnionVectorOptions,
+  type GeoArrowSerializedEncoding,
+  convertGeoArrowTableToInterleaved,
+  convertGeoArrowTableToInterleavedAsync,
+  convertGeoArrowVectorToInterleaved,
+  type GeoArrowInterleaveOptions,
+  type GeoArrowNativeEncoding
+} from '@math.gl/geoarrow';
+
+export {
   prepareArrowPolygonGPUVectorsAsync,
   prepareArrowPolygonGPUVectors,
   tesselateAsync,

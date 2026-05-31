@@ -1,0 +1,552 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import type {Device} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate} from '@luma.gl/engine';
+import type * as arrow from 'apache-arrow';
+import {ArrowLineControlPanel, makeArrowLineControlPanelHtml} from './control-panel';
+import {
+  createStreamingPathRecordBatchIterator,
+  getTemporalCurrentTimeMilliseconds,
+  getValidPathModelKindForTimeKind,
+  makeArrowLineRecordBatches,
+  makeArrowLineSourceData,
+  MEASURE_SWEEP_DURATION,
+  PATH_DATASETS,
+  STREAMING_PATH_BATCH_COUNT,
+  STREAMING_PATH_ROWS_PER_CHUNK,
+  TEMPORAL_TRAIL_LENGTH_MILLISECONDS,
+  type ArrowLineCapKind,
+  type ArrowLineColorKind,
+  type ArrowLineCoordinateKind,
+  type ArrowLineJointKind,
+  type ArrowLineMode,
+  type ArrowLineRowCountKind,
+  type ArrowLineTimeKind
+} from './arrow-line-data';
+import {DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT, getArrowLineMetrics} from './arrow-line-metrics';
+import {
+  ArrowLineRenderer,
+  prepareArrowLineInputFromRecordBatches,
+  type ArrowLineRendererInput,
+  type ArrowLineRendererModel,
+  type ArrowLineRendererProps,
+  type ArrowLineRendererRecordBatchStreamUpdate,
+  type ArrowLineRendererSetPropsResult,
+  type ArrowLineRendererStreamingSession
+} from './arrow-line-renderer';
+
+export const title = 'Lines: DenseUnion outlines';
+export const description =
+  'Variable-length Arrow XYZM line rows and DenseUnion line or polygon-outline rows rendered through attribute-backed and storage-backed path models, plus aligned List<Timestamp> rows for Trips-style temporal filtering.';
+
+type LineRendererUpdateOptions = {
+  syncControls?: boolean;
+  updateMetrics?: boolean;
+};
+
+export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = makeArrowLineControlPanelHtml({
+    rowLabels: {
+      '240-stream': PATH_DATASETS['240'].label,
+      '2400-stream': PATH_DATASETS['2400'].label
+    },
+    deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT
+  });
+
+  static props = {useDevicePixels: true};
+
+  readonly device: Device;
+  activeMode: ArrowLineMode = 'lines';
+  activeRowCountKind: ArrowLineRowCountKind = '240-stream';
+  activeCoordinateKind: ArrowLineCoordinateKind = 'float32';
+  activeColorKind: ArrowLineColorKind = 'vertex-colors';
+  activeTimeKind: ArrowLineTimeKind = 'xyzm';
+  activePathModelKind: ArrowLineRendererModel = 'auto';
+  activePathInput!: ArrowLineRendererInput;
+  activeArrowVectorBuildTimeMs = 0;
+  activeStreamingPathBatchCount = 0;
+  initialStreamingPathInput: ArrowLineRendererInput | null = null;
+  pathRenderer!: ArrowLineRenderer;
+  measureSweepEnabled = true;
+  widthsEnabled = true;
+  capKind: ArrowLineCapKind = 'square';
+  jointKind: ArrowLineJointKind = 'miter';
+  miterLimit = 4;
+  measureTime = 0;
+  lastRenderSeconds: number | null = null;
+  isFinalized = false;
+  controlPanel!: ArrowLineControlPanel;
+
+  constructor({device}: AnimationProps) {
+    super();
+    this.device = device as Device;
+  }
+
+  override async onInitialize(): Promise<void> {
+    const {pathInput, recordBatches, arrowVectorBuildTimeMs} = await this.createInitialPathInput(
+      this.activeRowCountKind,
+      this.activeMode,
+      this.activeCoordinateKind,
+      this.activeColorKind,
+      this.activeTimeKind
+    );
+    if (this.isFinalized) {
+      pathInput.destroy();
+      return;
+    }
+    this.activePathInput = pathInput;
+    this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
+    this.initialStreamingPathInput = pathInput;
+    this.pathRenderer = this.createPathRenderer(this.activePathModelKind);
+    this.initializeControlPanel();
+    this.updateMetricLabels();
+    this.streamPathRecordBatches(
+      recordBatches,
+      arrowVectorBuildTimeMs,
+      this.activeMode,
+      this.activeTimeKind,
+      this.activePathModelKind,
+      this.pathRenderer.beginRecordBatchStream()
+    );
+  }
+
+  override onRender({aspect, device, time}: AnimationProps): void {
+    if (!this.pathRenderer) {
+      return;
+    }
+
+    const seconds = time / 1000;
+    if (this.lastRenderSeconds === null) {
+      this.lastRenderSeconds = seconds;
+    }
+    const elapsedSeconds = Math.max(seconds - this.lastRenderSeconds, 0);
+    this.lastRenderSeconds = seconds;
+    if (this.measureSweepEnabled) {
+      this.measureTime += elapsedSeconds * 0.24;
+      if (this.measureTime > MEASURE_SWEEP_DURATION) {
+        this.measureTime -= MEASURE_SWEEP_DURATION;
+      }
+    }
+    if (this.pathRenderer.resolvedModel === 'trips') {
+      this.pathRenderer.setProps({
+        currentTime: getTemporalCurrentTimeMilliseconds(this.measureTime)
+      });
+    }
+
+    this.pathRenderer.shaderInputs.setProps({
+      pathViewport: {
+        viewportScale: [1 / Math.max(aspect, 0.2), 1],
+        time: this.activeTimeKind === 'none' ? -1 : this.measureTime,
+        colorsEnabled: this.activeColorKind === 'none' ? 0 : 1,
+        widthsEnabled: this.widthsEnabled ? 1 : 0,
+        capRounded: this.capKind === 'round' ? 1 : 0,
+        jointRounded: this.jointKind === 'round' ? 1 : 0,
+        miterLimit: this.miterLimit
+      }
+    });
+
+    const renderPass = device.beginRenderPass({
+      clearColor: [0.015, 0.035, 0.07, 1]
+    });
+    this.pathRenderer.draw(renderPass);
+    renderPass.end();
+  }
+
+  override onFinalize(): void {
+    this.isFinalized = true;
+    this.controlPanel?.destroy();
+    this.pathRenderer?.destroy();
+    this.initialStreamingPathInput?.destroy();
+    this.initialStreamingPathInput = null;
+  }
+
+  createPathRenderer(modelKind: ArrowLineRendererModel): ArrowLineRenderer {
+    return new ArrowLineRenderer(this.device, {
+      id: 'arrow-lines',
+      data: this.activePathInput,
+      mode: this.activeMode,
+      model: modelKind,
+      timeColumn: this.activeTimeKind,
+      currentTime: getTemporalCurrentTimeMilliseconds(this.measureTime),
+      trailLength: TEMPORAL_TRAIL_LENGTH_MILLISECONDS,
+      color: [199, 219, 245, 235],
+      width: 0.0035
+    });
+  }
+
+  async createInitialPathInput(
+    rowCountKind: ArrowLineRowCountKind,
+    mode: ArrowLineMode,
+    coordinateKind: ArrowLineCoordinateKind,
+    colorKind: ArrowLineColorKind,
+    timeKind: ArrowLineTimeKind
+  ): Promise<{
+    pathInput: ArrowLineRendererInput;
+    recordBatches: arrow.RecordBatch[];
+    arrowVectorBuildTimeMs: number;
+  }> {
+    const {recordBatches, arrowVectorBuildTimeMs} = this.createPathStreamSource(
+      rowCountKind,
+      mode,
+      coordinateKind,
+      colorKind,
+      timeKind
+    );
+    const firstRecordBatch = recordBatches[0];
+    if (!firstRecordBatch) {
+      throw new Error('Arrow path streaming example requires at least one record batch');
+    }
+    const pathInput = await prepareArrowLineInputFromRecordBatches(
+      this.device,
+      [firstRecordBatch],
+      mode
+    );
+    return {pathInput, recordBatches, arrowVectorBuildTimeMs};
+  }
+
+  createPathStreamSource(
+    rowCountKind: ArrowLineRowCountKind,
+    mode: ArrowLineMode,
+    coordinateKind: ArrowLineCoordinateKind,
+    colorKind: ArrowLineColorKind,
+    timeKind: ArrowLineTimeKind
+  ): {
+    recordBatches: arrow.RecordBatch[];
+    arrowVectorBuildTimeMs: number;
+  } {
+    const datasetKind = getStreamingPathDatasetKind(rowCountKind);
+    const sourceData = makeArrowLineSourceData(
+      PATH_DATASETS[datasetKind],
+      mode,
+      coordinateKind,
+      colorKind,
+      timeKind,
+      STREAMING_PATH_ROWS_PER_CHUNK
+    );
+    return {
+      recordBatches: makeArrowLineRecordBatches(sourceData).slice(0, STREAMING_PATH_BATCH_COUNT),
+      arrowVectorBuildTimeMs: sourceData.arrowVectorBuildTimeMs ?? 0
+    };
+  }
+
+  initializeControlPanel(): void {
+    this.controlPanel = new ArrowLineControlPanel({
+      device: this.device,
+      initialState: this.getControlPanelState(),
+      handlers: {
+        onRowCountChange: this.handleRowCountSelection,
+        onModeChange: this.handleModeSelection,
+        onCoordinateChange: this.handleCoordinateSelection,
+        onColorChange: this.handleColorColumnSelection,
+        onTimeChange: this.handleTimeColumnSelection,
+        onModelChange: this.handleModelSelection,
+        onMeasureSweepChange: this.handleMeasureSweepToggle,
+        onWidthChange: this.handleWidthToggle,
+        onCapChange: this.handleCapSelection,
+        onJointChange: this.handleJointSelection,
+        onMiterLimitChange: this.handleMiterLimitInput
+      }
+    });
+    this.controlPanel.initialize();
+  }
+
+  getControlPanelState() {
+    return {
+      mode: this.activeMode,
+      rowCountKind: this.activeRowCountKind,
+      coordinateKind: this.activeCoordinateKind,
+      colorKind: this.activeColorKind,
+      timeKind: this.activeTimeKind,
+      modelKind: this.activePathModelKind,
+      capKind: this.capKind,
+      jointKind: this.jointKind,
+      miterLimit: this.miterLimit
+    };
+  }
+
+  updateMetricLabels(): void {
+    this.controlPanel?.setMetricValues(
+      getArrowLineMetrics(
+        this.pathRenderer,
+        this.activePathInput,
+        this.activeArrowVectorBuildTimeMs
+      )
+    );
+  }
+
+  readonly handleRowCountSelection = async (
+    nextRowCountKind: ArrowLineRowCountKind
+  ): Promise<void> => {
+    if (nextRowCountKind === this.activeRowCountKind) {
+      return;
+    }
+    await this.replacePathInput(
+      nextRowCountKind,
+      this.activeMode,
+      this.activeCoordinateKind,
+      this.activeColorKind,
+      this.activeTimeKind
+    );
+  };
+
+  readonly handleModeSelection = async (nextMode: ArrowLineMode): Promise<void> => {
+    if (nextMode === this.activeMode) {
+      return;
+    }
+    const nextSelection = getEffectiveLineSelection(
+      nextMode,
+      this.activeCoordinateKind,
+      this.activeColorKind,
+      this.activeTimeKind,
+      this.activePathModelKind
+    );
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      nextMode,
+      nextSelection.coordinateKind,
+      nextSelection.colorKind,
+      nextSelection.timeKind,
+      nextSelection.modelKind
+    );
+  };
+
+  readonly handleCoordinateSelection = async (
+    nextCoordinateKind: ArrowLineCoordinateKind
+  ): Promise<void> => {
+    if (nextCoordinateKind === this.activeCoordinateKind) {
+      return;
+    }
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      this.activeMode,
+      nextCoordinateKind,
+      this.activeColorKind,
+      this.activeTimeKind
+    );
+  };
+
+  readonly handleColorColumnSelection = async (
+    nextColorKind: ArrowLineColorKind
+  ): Promise<void> => {
+    if (nextColorKind === this.activeColorKind) {
+      return;
+    }
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      this.activeMode,
+      this.activeCoordinateKind,
+      nextColorKind,
+      this.activeTimeKind
+    );
+  };
+
+  readonly handleTimeColumnSelection = async (nextTimeKind: ArrowLineTimeKind): Promise<void> => {
+    if (nextTimeKind === this.activeTimeKind) {
+      return;
+    }
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      this.activeMode,
+      this.activeCoordinateKind,
+      this.activeColorKind,
+      nextTimeKind,
+      getValidPathModelKindForTimeKind(this.activePathModelKind, nextTimeKind)
+    );
+  };
+
+  readonly handleModelSelection = (requestedPathModelKind: ArrowLineRendererModel): void => {
+    const nextPathModelKind = getValidPathModelKindForTimeKind(
+      requestedPathModelKind,
+      this.activeTimeKind
+    );
+    if (nextPathModelKind === this.activePathModelKind) {
+      return;
+    }
+    this.updatePathRendererProps({model: nextPathModelKind});
+  };
+
+  async replacePathInput(
+    nextRowCountKind: ArrowLineRowCountKind,
+    nextMode: ArrowLineMode,
+    nextCoordinateKind: ArrowLineCoordinateKind,
+    nextColorKind: ArrowLineColorKind,
+    nextTimeKind: ArrowLineTimeKind,
+    nextPathModelKind = this.activePathModelKind
+  ): Promise<void> {
+    const effectiveSelection = getEffectiveLineSelection(
+      nextMode,
+      nextCoordinateKind,
+      nextColorKind,
+      nextTimeKind,
+      nextPathModelKind
+    );
+    const resolvedPathModelKind = getValidPathModelKindForTimeKind(
+      effectiveSelection.modelKind,
+      effectiveSelection.timeKind
+    );
+    const {recordBatches, arrowVectorBuildTimeMs} = this.createPathStreamSource(
+      nextRowCountKind,
+      nextMode,
+      effectiveSelection.coordinateKind,
+      effectiveSelection.colorKind,
+      effectiveSelection.timeKind
+    );
+    if (this.isFinalized) {
+      return;
+    }
+    this.streamPathRecordBatches(
+      recordBatches,
+      arrowVectorBuildTimeMs,
+      nextMode,
+      effectiveSelection.timeKind,
+      resolvedPathModelKind,
+      this.pathRenderer.beginRecordBatchStream()
+    );
+    this.updateActiveSelection(
+      nextRowCountKind,
+      nextMode,
+      effectiveSelection.coordinateKind,
+      effectiveSelection.colorKind,
+      effectiveSelection.timeKind,
+      resolvedPathModelKind
+    );
+  }
+
+  streamPathRecordBatches(
+    recordBatches: arrow.RecordBatch[],
+    arrowVectorBuildTimeMs: number,
+    mode: ArrowLineMode,
+    timeKind: ArrowLineTimeKind,
+    modelKind: ArrowLineRendererModel,
+    streamingSession: ArrowLineRendererStreamingSession
+  ): void {
+    this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
+    this.activeStreamingPathBatchCount = recordBatches.length;
+    this.controlPanel?.setStreamingBatchStatus(0, this.activeStreamingPathBatchCount);
+    void this.pathRenderer.streamRecordBatches({
+      recordBatchIterator: createStreamingPathRecordBatchIterator(recordBatches),
+      model: modelKind,
+      timeColumn: timeKind,
+      mode,
+      streamingSession,
+      onBatch: update => this.handleStreamingPathBatch(update)
+    });
+  }
+
+  handleStreamingPathBatch(update: ArrowLineRendererRecordBatchStreamUpdate): void {
+    if (this.isFinalized) {
+      return;
+    }
+    this.activePathInput = update.pathInput;
+    this.controlPanel?.setStreamingBatchStatus(
+      update.loadedBatchCount,
+      this.activeStreamingPathBatchCount
+    );
+    if (update.isFirstBatch) {
+      this.initialStreamingPathInput?.destroy();
+      this.initialStreamingPathInput = null;
+    }
+    this.handlePathRendererUpdate(update.setPropsResult, {syncControls: update.isFirstBatch});
+  }
+
+  updateActiveSelection(
+    rowCountKind: ArrowLineRowCountKind,
+    mode: ArrowLineMode,
+    coordinateKind: ArrowLineCoordinateKind,
+    colorKind: ArrowLineColorKind,
+    timeKind: ArrowLineTimeKind,
+    modelKind: ArrowLineRendererModel
+  ): void {
+    this.activeRowCountKind = rowCountKind;
+    this.activeMode = mode;
+    this.activeCoordinateKind = coordinateKind;
+    this.activeColorKind = colorKind;
+    this.activeTimeKind = timeKind;
+    this.activePathModelKind = modelKind;
+    this.controlPanel?.syncControls(this.getControlPanelState());
+  }
+
+  updatePathRendererProps(
+    props: Partial<ArrowLineRendererProps>,
+    options: LineRendererUpdateOptions = {}
+  ): void {
+    const updateResult = this.pathRenderer.setProps(props);
+    if (props.model !== undefined) {
+      this.activePathModelKind = props.model;
+    }
+    if (props.timeColumn !== undefined) {
+      this.activeTimeKind = props.timeColumn;
+    }
+    this.handlePathRendererUpdate(updateResult, options);
+  }
+
+  handlePathRendererUpdate(
+    _updateResult: ArrowLineRendererSetPropsResult,
+    {syncControls = true, updateMetrics = true}: LineRendererUpdateOptions = {}
+  ): void {
+    if (syncControls) {
+      this.controlPanel?.syncControls(this.getControlPanelState());
+    }
+    if (updateMetrics) {
+      this.updateMetricLabels();
+    }
+  }
+
+  readonly handleMeasureSweepToggle = (enabled: boolean): void => {
+    this.measureSweepEnabled = enabled;
+  };
+
+  readonly handleWidthToggle = (enabled: boolean): void => {
+    this.widthsEnabled = enabled;
+  };
+
+  readonly handleCapSelection = (nextCapKind: ArrowLineCapKind): void => {
+    this.capKind = nextCapKind;
+    this.controlPanel.syncControls(this.getControlPanelState());
+  };
+
+  readonly handleJointSelection = (nextJointKind: ArrowLineJointKind): void => {
+    this.jointKind = nextJointKind;
+    this.controlPanel.syncControls(this.getControlPanelState());
+  };
+
+  readonly handleMiterLimitInput = (nextMiterLimit: number): void => {
+    this.miterLimit = nextMiterLimit;
+    this.controlPanel.syncControls(this.getControlPanelState());
+  };
+}
+
+function getStreamingPathDatasetKind(rowCountKind: ArrowLineRowCountKind): '240' | '2400' {
+  return rowCountKind === '240-stream' ? '240' : '2400';
+}
+
+function getEffectiveLineSelection(
+  mode: ArrowLineMode,
+  coordinateKind: ArrowLineCoordinateKind,
+  colorKind: ArrowLineColorKind,
+  timeKind: ArrowLineTimeKind,
+  modelKind: ArrowLineRendererModel
+): {
+  coordinateKind: ArrowLineCoordinateKind;
+  colorKind: ArrowLineColorKind;
+  timeKind: ArrowLineTimeKind;
+  modelKind: ArrowLineRendererModel;
+} {
+  if (mode === 'polygons') {
+    return {
+      coordinateKind: 'dense-union',
+      colorKind: colorKind === 'none' ? 'none' : 'row-colors',
+      timeKind: 'none',
+      modelKind: getValidPathModelKindForTimeKind(modelKind, 'none')
+    };
+  }
+  return {
+    coordinateKind,
+    colorKind,
+    timeKind,
+    modelKind: getValidPathModelKindForTimeKind(modelKind, timeKind)
+  };
+}

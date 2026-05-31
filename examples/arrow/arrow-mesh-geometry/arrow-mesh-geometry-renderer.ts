@@ -12,20 +12,20 @@ import {
   type ArrowTableGeometry,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
-import {GPURenderable, GPUTable, GPUTableModel, GPUVector} from '@luma.gl/tables';
-import type {CommandEncoder, Device, ShaderLayout} from '@luma.gl/core';
+import type {CommandEncoder, Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {
-  CubeGeometry,
-  PickingManager,
-  ShaderInputs,
-  indexColorPicking,
-  indexPicking,
-  supportsIndexPicking
-} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import {CubeGeometry, PickingManager} from '@luma.gl/engine';
+import {GPURenderable, type GPUTable, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
+import {
+  MESH_GEOMETRY_MATRIX_ARROW_PATHS,
+  createMeshGeometryModel,
+  createMeshGeometryPickingModel,
+  createMeshGeometryShaderInputs,
+  getMeshGeometryShaderLayout,
+  type MeshGeometryShaderInputs
+} from './mesh-geometry-model';
 
 const FACE_NAMES = ['Front', 'Back', 'Top', 'Bottom', 'Right', 'Left'] as const;
 const CUBE_COLUMNS = 3;
@@ -33,164 +33,6 @@ const CUBE_ROWS = 2;
 const CUBE_COUNT = CUBE_COLUMNS * CUBE_ROWS;
 export const ARROW_MESH_GEOMETRY_CUBE_COUNT = CUBE_COUNT;
 const MATRIX_COMPONENT_COUNT = 16;
-const MATRIX_ARROW_PATHS = {
-  matrixColumn0: 'matrix',
-  matrixColumn1: 'matrix',
-  matrixColumn2: 'matrix',
-  matrixColumn3: 'matrix'
-};
-
-const WGSL_SHADER = /* wgsl */ `\
-struct AppUniforms {
-  viewMatrix : mat4x4<f32>,
-  projectionMatrix : mat4x4<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app : AppUniforms;
-@group(0) @binding(auto) var<storage, read> faceColors : array<vec4<f32>>;
-@group(0) @binding(auto) var<storage, read> matrix : array<mat4x4<f32>>;
-
-struct VertexInputs {
-  @builtin(instance_index) instanceIndex : u32,
-  @location(0) positions : vec3<f32>,
-  @location(1) faceIndex : u32,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec4<f32>,
-  @interpolate(flat)
-  @location(1) objectIndex : i32,
-};
-
-struct PickingFragmentOutputs {
-  @location(0) fragColor : vec4<f32>,
-  @location(1) pickingColor : vec2<i32>,
-};
-
-@vertex
-fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
-  let modelMatrix = matrix[inputs.instanceIndex];
-  var outputs : FragmentInputs;
-  outputs.Position =
-    app.projectionMatrix *
-    app.viewMatrix *
-    modelMatrix *
-    vec4<f32>(inputs.positions, 1.0);
-  outputs.color = faceColors[inputs.faceIndex];
-  outputs.objectIndex = i32(inputs.instanceIndex * ${FACE_NAMES.length}u + inputs.faceIndex);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  return picking_filterHighlightColor(inputs.color, inputs.objectIndex);
-}
-
-@fragment
-fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
-  var outputs : PickingFragmentOutputs;
-  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
-  return outputs;
-}
-`;
-
-const VS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  mat4 viewMatrix;
-  mat4 projectionMatrix;
-} app;
-
-in vec3 positions;
-in vec4 colors;
-in uint faceIndices;
-in vec4 matrixColumn0;
-in vec4 matrixColumn1;
-in vec4 matrixColumn2;
-in vec4 matrixColumn3;
-
-out vec4 vColor;
-
-void main(void) {
-  mat4 modelMatrix = mat4(
-    matrixColumn0,
-    matrixColumn1,
-    matrixColumn2,
-    matrixColumn3
-  );
-  gl_Position =
-    app.projectionMatrix *
-    app.viewMatrix *
-    modelMatrix *
-    vec4(positions, 1.0);
-  vColor = colors;
-  picking_setObjectIndex(gl_InstanceID * ${FACE_NAMES.length} + int(faceIndices));
-}
-`;
-
-const FS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec4 vColor;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = picking_filterColor(vColor);
-}
-`;
-
-const PICKING_FS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-layout(location = 0) out vec4 fragColor;
-layout(location = 1) out ivec4 pickingColor;
-
-void main(void) {
-  fragColor = vec4(0.0);
-  pickingColor = picking_getPickingColor();
-}
-`;
-
-type AppUniforms = {
-  viewMatrix: Matrix4;
-  projectionMatrix: Matrix4;
-};
-
-const app: ShaderModule<AppUniforms> = {
-  name: 'app',
-  uniformTypes: {
-    viewMatrix: 'mat4x4<f32>',
-    projectionMatrix: 'mat4x4<f32>'
-  }
-};
-
-const WEBGPU_MESH_SHADER_LAYOUT = {
-  attributes: [
-    {name: 'positions', location: 0, type: 'vec3<f32>'},
-    {name: 'faceIndex', location: 1, type: 'u32'}
-  ],
-  bindings: [{name: 'matrix', type: 'read-only-storage', group: 0, location: 2}]
-} satisfies ShaderLayout;
-
-const WEBGL_MESH_SHADER_LAYOUT = {
-  attributes: [
-    {name: 'positions', location: 0, type: 'vec3<f32>'},
-    {name: 'colors', location: 1, type: 'vec4<f32>'},
-    {name: 'faceIndices', location: 2, type: 'u32'},
-    {name: 'matrixColumn0', location: 3, type: 'vec4<f32>', stepMode: 'instance'},
-    {name: 'matrixColumn1', location: 4, type: 'vec4<f32>', stepMode: 'instance'},
-    {name: 'matrixColumn2', location: 5, type: 'vec4<f32>', stepMode: 'instance'},
-    {name: 'matrixColumn3', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
-  ],
-  bindings: []
-} satisfies ShaderLayout;
 
 type CubeTransform = {
   translation: [number, number, number];
@@ -232,10 +74,6 @@ const DEFAULT_NEAR = 0.1;
 const DEFAULT_FAR = 30;
 const DEFAULT_CLEAR_COLOR: [number, number, number, number] = [0.03, 0.04, 0.08, 1];
 const DEFAULT_CLEAR_DEPTH = 1;
-const DEFAULT_RENDER_PARAMETERS = {
-  depthWriteEnabled: true,
-  depthCompare: 'less-equal'
-} as const satisfies Record<string, unknown>;
 
 /** Example layer that renders Arrow mesh attributes with an instanced Arrow matrix column. */
 export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
@@ -249,17 +87,13 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
   readonly faceNames: arrow.Vector<arrow.Utf8>;
   readonly matrixValues = new Float32Array(CUBE_COUNT * MATRIX_COMPONENT_COUNT);
   readonly cubeTransforms = makeCubeTransforms();
-  readonly shaderInputs = new ShaderInputs<{
-    app: typeof app.props;
-    picking: typeof indexPicking.props;
-  }>({app, picking: indexPicking});
+  readonly shaderInputs: MeshGeometryShaderInputs = createMeshGeometryShaderInputs();
   props: ArrowMeshRendererProps;
 
   constructor(device: Device, props: ArrowMeshRendererProps = {}) {
     super();
     this.device = device;
     this.props = props;
-    this.shaderInputs.setProps({picking: {indexMode: 'attribute', batchIndex: 0}});
 
     const faceMetadata = makeFaceMetadataTable();
     const defaultFaceColors = faceMetadata.getChild('COLOR_0') as arrow.Vector<
@@ -276,24 +110,25 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
     this.updateInstanceMatrices(0);
     this.geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
     this.matrixTable = makeArrowGPUTable(device, makeInstanceArrowTable(this.matrixValues), {
-      shaderLayout: device.type === 'webgpu' ? WEBGPU_MESH_SHADER_LAYOUT : WEBGL_MESH_SHADER_LAYOUT,
-      arrowPaths: MATRIX_ARROW_PATHS
+      shaderLayout: getMeshGeometryShaderLayout(device),
+      arrowPaths: MESH_GEOMETRY_MATRIX_ARROW_PATHS
     });
-    this.model = new GPUTableModel(device, {
+    this.model = createMeshGeometryModel(device, {
       id: props.id ?? DEFAULT_MESH_RENDERER_ID,
       geometry: this.geometry,
       table: this.matrixTable,
-      tableCount: 'instance',
-      source: WGSL_SHADER,
-      vs: VS_GLSL,
-      fs: FS_GLSL,
-      shaderLayout: device.type === 'webgpu' ? WEBGPU_MESH_SHADER_LAYOUT : WEBGL_MESH_SHADER_LAYOUT,
       shaderInputs: this.shaderInputs,
-      modules: [supportsIndexPicking(device) ? indexPicking : indexColorPicking] as ShaderModule[],
-      ...(this.faceColors ? {bindings: {faceColors: this.faceColors.buffer}} : {}),
-      parameters: props.parameters ?? DEFAULT_RENDER_PARAMETERS
+      faceColors: this.faceColors,
+      parameters: props.parameters
     });
-    this.pickingModel = supportsIndexPicking(device) ? this.createPickingModel() : null;
+    this.pickingModel = createMeshGeometryPickingModel(device, {
+      id: `${this.model.id || DEFAULT_MESH_RENDERER_ID}-picking`,
+      geometry: this.geometry,
+      table: this.matrixTable,
+      shaderInputs: this.shaderInputs,
+      faceColors: this.faceColors,
+      parameters: props.parameters
+    });
     this.picker = new PickingManager(device, {
       shaderInputs: this.shaderInputs,
       mode: 'auto',
@@ -388,30 +223,6 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
     pickingPass.end();
     this.shaderInputs.setProps({picking: {isActive: false}});
     void this.picker.updatePickInfo(mousePosition as [number, number]);
-  }
-
-  createPickingModel(): GPUTableModel {
-    if (!this.model.table) {
-      throw new Error('Matrices picking requires prepared instance Arrow data');
-    }
-    return new GPUTableModel(this.device, {
-      id: `${this.model.id || DEFAULT_MESH_RENDERER_ID}-picking`,
-      geometry: this.geometry,
-      table: this.model.table,
-      tableCount: 'instance',
-      source: WGSL_SHADER,
-      vs: VS_GLSL,
-      fs: PICKING_FS_GLSL,
-      fragmentEntryPoint: 'fragmentPicking',
-      modules: [indexPicking] as ShaderModule[],
-      shaderLayout:
-        this.device.type === 'webgpu' ? WEBGPU_MESH_SHADER_LAYOUT : WEBGL_MESH_SHADER_LAYOUT,
-      ...(this.faceColors ? {bindings: {faceColors: this.faceColors.buffer}} : {}),
-      shaderInputs: this.shaderInputs,
-      colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
-      depthStencilAttachmentFormat: 'depth24plus',
-      parameters: this.props.parameters ?? DEFAULT_RENDER_PARAMETERS
-    });
   }
 }
 

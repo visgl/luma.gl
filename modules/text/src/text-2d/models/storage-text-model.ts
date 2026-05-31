@@ -4,7 +4,10 @@
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture, Model, type ModelProps} from '@luma.gl/engine';
-import FontAtlasManager from '../atlas/font-atlas-manager';
+import type {GPUVector} from '@luma.gl/tables';
+import type {FixedSizeList, Float32, Int16, Uint8} from 'apache-arrow';
+import FontAtlasManager, {type FontAtlas, type FontSettings} from '../atlas/font-atlas-manager';
+import type {CharacterMapping} from '../atlas/text-utils';
 import {
   getFirstStorageTextBatch,
   getFirstStorageTextRenderBatch,
@@ -14,9 +17,9 @@ import {
   type StorageTextRenderBatchState,
   type StorageTextState
 } from '../model-utils/storage-text-state';
-import type {GpuExpandedTextStream} from '../model-utils/gpu-text-types';
+import type {GpuExpandedTextStream, Utf8TextType} from '../model-utils/gpu-text-types';
 import {drawPreparedStorageTextModelBatch} from '../model-utils/storage-model-draw';
-import type {StorageTextModelProps} from '../model-utils/text-model-props';
+import type {StorageTextInputProps} from '../model-utils/text-model-props';
 import {
   COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
   COMPACT_GLYPH_VERTEX_DATA,
@@ -30,42 +33,80 @@ import {
   ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE
 } from '../model-utils/text-shaders';
 
-export type {StorageTextModelProps};
+export type {StorageTextInputProps};
 
-/** Render-only props left after storage text state has been prepared. */
-export type StorageTextRenderProps = Omit<
-  StorageTextModelProps,
-  | 'positions'
-  | 'texts'
-  | 'colors'
-  | 'angles'
-  | 'sizes'
-  | 'pixelOffsets'
-  | 'textAnchors'
-  | 'alignmentBaselines'
-  | 'clipRects'
-  | 'characterSet'
-  | 'fontSettings'
-  | 'lineHeight'
-  | 'characterMapping'
-  | 'fontAtlas'
->;
+/**
+ * Render and shader options for a storage text model that reuses prepared state.
+ *
+ * These are standard luma.gl model options; draw counts, storage bindings, and generated glyph
+ * buffers come from the prepared {@link StorageTextState}.
+ */
+export interface StorageTextRenderProps extends ModelProps {}
 
 export type {StorageTextBatchState, StorageTextRenderBatchState, StorageTextState};
 
-/** Constructor props for the pure storage text renderer. */
-export type PreparedStorageTextModelProps = StorageTextRenderProps & {
+/** Constructor props for the storage text renderer. */
+export interface StorageTextModelProps extends ModelProps {
+  /** GPU-resident label origins aligned one-for-one with `texts`; each row is `[x, y]`. */
+  positions: GPUVector<FixedSizeList<Float32>>;
+  /** GPU UTF-8 or dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
+  texts: GPUVector<Utf8TextType>;
+  /** Optional GPU packed RGBA8 text colors aligned with label rows. */
+  colors?: GPUVector<FixedSizeList<Uint8>>;
+  /** Optional GPU per-row angles in degrees. */
+  angles?: GPUVector<Float32>;
+  /** Optional GPU per-row deck-style text sizes. */
+  sizes?: GPUVector<Float32>;
+  /** Optional GPU per-row pixel offsets; each row is `[x, y]`. */
+  pixelOffsets?: GPUVector<FixedSizeList<Float32>>;
+  /** Optional GPU per-row text anchor enum: 0=start, 1=middle, 2=end. */
+  textAnchors?: GPUVector<Uint8>;
+  /** Optional GPU per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
+  alignmentBaselines?: GPUVector<Uint8>;
+  /** Optional GPU packed per-label clip rectangles `[x, y, width, height]`. Negative width or height disables clipping on that axis. */
+  clipRects?: GPUVector<FixedSizeList<Int16>>;
+  /** Constant fallback color used when `colors` is absent. */
+  color?: [number, number, number, number];
+  /** Constant fallback angle in degrees used when `angles` is absent. */
+  angle?: number;
+  /** Constant fallback deck-style text size used when `sizes` is absent. */
+  size?: number;
+  /** Constant fallback pixel offset used when `pixelOffsets` is absent. */
+  pixelOffset?: [number, number];
+  /** Constant fallback text anchor used when `textAnchors` is absent. */
+  textAnchor?: 'start' | 'middle' | 'end';
+  /** Constant fallback alignment baseline used when `alignmentBaselines` is absent. */
+  alignmentBaseline?: 'center' | 'top' | 'bottom';
+  /** Character set for atlas generation. Pass `'auto'` when the adapter should derive it. */
+  characterSet?: FontSettings['characterSet'] | 'auto';
+  /** Font atlas generation settings. */
+  fontSettings?: FontSettings;
+  /** Multiplier applied to the atlas font size for one-line baseline layout. */
+  lineHeight?: number;
+  /** Optional deterministic mapping, mainly useful when atlas generation is managed externally. */
+  characterMapping?: CharacterMapping;
+  /** Optional prebuilt atlas for texture binding when `characterMapping` is injected. */
+  fontAtlas?: FontAtlas;
+  /** Prepared storage text state produced by a conversion helper. */
+  storageState: StorageTextState;
+  /** Whether this model owns and should destroy the prepared storage state. */
+  ownsStorageState?: boolean;
+}
+
+/** Explicit prepared-state constructor props, used when sharing state with a companion model. */
+export interface PreparedStorageTextModelProps extends StorageTextRenderProps {
   /** Prepared storage text state consumed by the renderer. */
   storageState: StorageTextState;
   /** Whether this model owns and should destroy the prepared storage state. */
   ownsStorageState?: boolean;
-};
+}
 
 /**
- * Storage text renderer that consumes prepared GPUVector-backed state.
+ * Storage text renderer that consumes typed GPUVector model props plus prepared render state.
  *
- * This WebGPU model does not accept Arrow source vectors. Layer/data-preparation code should build
- * a {@link StorageTextState} first, then pass it here for rendering.
+ * This WebGPU model does not accept Arrow source vectors. Arrow/data adapters should do CPU layout
+ * work before constructing the model, then pass the prepared state through
+ * {@link StorageTextModelProps}.
  */
 export class StorageTextModel extends Model {
   /** Optional atlas manager retained when this model built the atlas. */
@@ -131,15 +172,21 @@ export class StorageTextModel extends Model {
   protected ownsStorageState: boolean;
   protected renderProps: StorageTextRenderProps;
 
-  constructor(device: Device, props: PreparedStorageTextModelProps) {
+  constructor(device: Device, props: StorageTextModelProps) {
     if (device.type !== 'webgpu') {
       throw new Error('StorageTextModel is WebGPU-only');
     }
-    super(device, createStorageTextModelProps(props, props.storageState));
-    this.renderProps = props;
+    const renderProps = getStorageTextRenderProps(props);
+    super(device, createStorageTextModelProps(renderProps, props.storageState));
+    this.renderProps = renderProps;
     this.storageState = props.storageState;
     this.ownsStorageState = props.ownsStorageState === true;
     this.applyStorageState(props.storageState);
+  }
+
+  /** Constructs a render-only model from an existing prepared storage state. */
+  static fromState(device: Device, props: PreparedStorageTextModelProps): StorageTextModel {
+    return new StorageTextModel(device, props as StorageTextModelProps);
   }
 
   /** Draws each generated storage text render batch against the supplied render pass. */
@@ -306,11 +353,19 @@ function createStorageTextModelProps(
  * style data directly instead of binary-searching cumulative row glyph starts.
  */
 export class RowIndexedStorageTextModel extends StorageTextModel {
-  constructor(device: Device, props: PreparedStorageTextModelProps) {
+  constructor(device: Device, props: StorageTextModelProps) {
     if (props.storageState.hasGlyphRowIndices !== true) {
       throw new Error('RowIndexedStorageTextModel requires storageState.hasGlyphRowIndices');
     }
     super(device, props);
+  }
+
+  /** Constructs a row-indexed render-only model from an existing prepared storage state. */
+  static override fromState(
+    device: Device,
+    props: PreparedStorageTextModelProps
+  ): RowIndexedStorageTextModel {
+    return new RowIndexedStorageTextModel(device, props as StorageTextModelProps);
   }
 }
 
@@ -346,4 +401,33 @@ function createStorageTextBindings(
     textStorageRenderConfig: renderBatch.storageRenderConfigBuffer,
     ...(storageState.atlasTexture ? {fontAtlasTexture: storageState.atlasTexture} : {})
   };
+}
+
+function getStorageTextRenderProps(props: StorageTextModelProps): StorageTextRenderProps {
+  const {
+    positions: _positions,
+    texts: _texts,
+    colors: _colors,
+    angles: _angles,
+    sizes: _sizes,
+    pixelOffsets: _pixelOffsets,
+    textAnchors: _textAnchors,
+    alignmentBaselines: _alignmentBaselines,
+    clipRects: _clipRects,
+    color: _color,
+    angle: _angle,
+    size: _size,
+    pixelOffset: _pixelOffset,
+    textAnchor: _textAnchor,
+    alignmentBaseline: _alignmentBaseline,
+    characterSet: _characterSet,
+    fontSettings: _fontSettings,
+    lineHeight: _lineHeight,
+    characterMapping: _characterMapping,
+    fontAtlas: _fontAtlas,
+    storageState: _storageState,
+    ownsStorageState: _ownsStorageState,
+    ...renderProps
+  } = props;
+  return renderProps;
 }

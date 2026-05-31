@@ -12,6 +12,8 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'api/texture-compressed',
   'api/texture-tester',
   'arrow/arrow-columns',
+  'arrow/arrow-geoarrow',
+  'arrow/arrow-lines',
   'arrow/arrow-mesh-geometry',
   'arrow/arrow-particles',
   'arrow/arrow-points',

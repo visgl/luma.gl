@@ -4,6 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
+import type {DictionaryTextModelProps} from '../models/dictionary-text-model';
 import {
   createArrowDictionaryStorageTextState,
   type ArrowDictionaryStorageTextInputProps,
@@ -42,6 +43,30 @@ export function convertArrowTextToDictionaryState(
   props: ArrowDictionaryStorageTextInputProps
 ): ArrowDictionaryStorageTextState {
   return createArrowDictionaryStorageTextState(device, props);
+}
+
+/**
+ * Builds model-ready dictionary text props from Arrow-backed GPU inputs.
+ *
+ * CPU Arrow source vectors are consumed only by this conversion step and are not exposed on the
+ * returned {@link DictionaryTextModelProps}.
+ */
+export function convertArrowTextToDictionaryModelProps(
+  device: Device,
+  props: ArrowDictionaryStorageTextInputProps
+): DictionaryTextModelProps {
+  const storageState = convertArrowTextToDictionaryState(device, props);
+  const {
+    sourceVectors: _sourceVectors,
+    rowIndexColumn: _rowIndexColumn,
+    fontAtlasManager: _fontAtlasManager,
+    ...modelProps
+  } = props;
+  return {
+    ...modelProps,
+    storageState,
+    ownsStorageState: true
+  } as DictionaryTextModelProps;
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};
