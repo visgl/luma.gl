@@ -3,7 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {convertGeoArrowTableToInterleavedAsync} from '@math.gl/geoarrow';
+import {
+  convertGeoArrowTableToInterleavedAsync,
+  convertGeoArrowVectorToInterleaved
+} from '@math.gl/geoarrow';
 import * as arrow from 'apache-arrow';
 
 test('convertGeoArrowTableToInterleavedAsync converts separated coordinates', async t => {
@@ -24,6 +27,28 @@ test('convertGeoArrowTableToInterleavedAsync converts separated coordinates', as
       [4, 5, 6]
     ],
     'returns interleaved coordinates'
+  );
+  t.end();
+});
+
+test('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate offsets', t => {
+  const vector = makeSeparatedPointVector(
+    [
+      [10, 20, 30],
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9]
+    ],
+    [true, false, true, true]
+  );
+  const slicedVector = vector.slice(1, 4);
+  const convertedVector = convertGeoArrowVectorToInterleaved(slicedVector);
+
+  t.equal(convertedVector.data[0].offset, 0, 'resets the compacted FixedSizeList chunk offset');
+  t.deepEqual(
+    getVectorRows(convertedVector),
+    [null, [4, 5, 6], [7, 8, 9]],
+    'preserves sliced validity and coordinate rows'
   );
   t.end();
 });
@@ -52,7 +77,7 @@ function makeSeparatedPointTable(): arrow.Table {
   return new arrow.Table(schema, [new arrow.RecordBatch(schema, recordBatchData)]);
 }
 
-function makeSeparatedPointVector(coordinates: number[][]): arrow.Vector {
+function makeSeparatedPointVector(coordinates: number[][], validRows?: boolean[]): arrow.Vector {
   const dimension = coordinates[0].length;
   const fields = ['x', 'y', 'z', 'm']
     .slice(0, dimension)
@@ -64,8 +89,16 @@ function makeSeparatedPointVector(coordinates: number[][]): arrow.Vector {
     });
   });
   const type = new arrow.Struct(fields);
+  const buffers = validRows ? {[arrow.BufferType.VALIDITY]: arrow.util.packBools(validRows)} : {};
+  const nullCount = validRows ? validRows.filter(isInvalidRow).length : 0;
 
-  return new arrow.Vector([new arrow.Data(type, 0, coordinates.length, 0, {}, children)]);
+  return new arrow.Vector([
+    new arrow.Data(type, 0, coordinates.length, nullCount, buffers, children)
+  ]);
+}
+
+function isInvalidRow(valid: boolean): boolean {
+  return !valid;
 }
 
 function getVectorRows(vector: arrow.Vector): unknown[] {

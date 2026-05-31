@@ -216,16 +216,34 @@ function convertSeparatedCoordinateDataToInterleaved(data: arrow.Data<arrow.Stru
     [arrow.BufferType.DATA]: values
   });
   const listType = new arrow.FixedSizeList(dimension, new arrow.Field('value', childType, false));
+  const buffers = makeCompactFixedSizeListBuffers(data);
 
   return new arrow.Data(
     listType,
-    data.offset,
+    0,
     data.length,
     data.nullCount,
-    data.buffers as unknown as Partial<Buffers<arrow.FixedSizeList<arrow.Float>>>,
+    buffers,
     [valueData],
     data.dictionary
   );
+}
+
+function makeCompactFixedSizeListBuffers(
+  data: arrow.Data<arrow.Struct>
+): Partial<Buffers<arrow.FixedSizeList<arrow.Float>>> {
+  if (data.nullCount <= 0) {
+    return {};
+  }
+
+  const nullBitmap = data.nullBitmap;
+  if (!nullBitmap) {
+    return {};
+  }
+
+  return {
+    [arrow.BufferType.VALIDITY]: arrow.util.truncateBitmap(data.offset, data.length, nullBitmap)
+  };
 }
 
 function makeInterleavedCoordinateValues(
@@ -249,9 +267,8 @@ function makeInterleavedCoordinateValues(
     if (!(childValues instanceof Float32Array) && !(childValues instanceof Float64Array)) {
       throw new Error('GeoArrow coordinates must be backed by Float32Array or Float64Array');
     }
-    const childOffset = childData.offset + data.offset;
     for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
-      values[rowIndex * dimension + componentIndex] = childValues[childOffset + rowIndex];
+      values[rowIndex * dimension + componentIndex] = childValues[rowIndex];
     }
   }
 
