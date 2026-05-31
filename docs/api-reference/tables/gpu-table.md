@@ -25,7 +25,7 @@ const table = new GPUTable({
 ```
 
 When the source is an Arrow `Table`, prefer
-[`makeArrowGPUTable()`](/docs/api-reference/arrow/supported-arrow-types) from
+[`makeGPUTableFromArrowTable()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`.
 
 ## Constructor Modes

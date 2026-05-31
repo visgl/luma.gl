@@ -5,7 +5,7 @@
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
-import {GPUVector} from '@luma.gl/tables';
+import {GPUVector, getGPUVectorBuffer} from '@luma.gl/tables';
 import {dggs, type ShaderModule} from '@luma.gl/shadertools';
 import * as arrow from 'apache-arrow';
 import {CELL_GEOMETRY_POINT_COUNT, COLUMN_GEOMETRY_WORKGROUP_SIZE} from './column-renderer-shaders';
@@ -178,16 +178,6 @@ function getRequiredArrowVector<T extends arrow.DataType>(
 
 function getBufferBinding(buffer: Buffer | DynamicBuffer): Binding {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
-}
-
-function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(
-      `ArrowColumnRenderer geometry vector "${vector.name}" requires one GPUData chunk`
-    );
-  }
-  return data.buffer;
 }
 
 async function waitForSubmittedWork(device: Device): Promise<void> {

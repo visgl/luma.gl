@@ -29,16 +29,27 @@ export type ArrowRecordBatchStreamUpdate<Metrics> = {
   metrics: Metrics;
 };
 
+/** Source-position metadata for one record batch in an active Arrow stream. */
+export type ArrowRecordBatchStreamContext = {
+  /** Zero-based batch index within the active stream. */
+  batchIndex: number;
+  /** Zero-based row offset for the first row in this source batch. */
+  rowIndexOffset: number;
+  /** True when this is the first yielded record batch in the stream. */
+  isFirstBatch: boolean;
+};
+
 type StreamArrowRecordBatchesProps<PreparedBatch, Metrics> = {
   recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
   streamingSession: ArrowRecordBatchStreamingSession;
   isActive: (streamingSession: ArrowRecordBatchStreamingSession) => boolean;
   prepareBatch: (
     recordBatch: arrow.RecordBatch,
-    loadedBatchCount: number
+    context: ArrowRecordBatchStreamContext
   ) => Promise<PreparedBatch>;
   appendBatch: (preparedBatch: PreparedBatch) => void;
   destroyBatch: (preparedBatch: PreparedBatch) => void;
+  getRowCount: (preparedBatch: PreparedBatch) => number;
   getMetrics: () => Metrics;
   onBatch?: (update: ArrowRecordBatchStreamUpdate<Metrics>) => void;
 };
@@ -97,10 +108,12 @@ export async function streamArrowRecordBatches<PreparedBatch, Metrics>({
   prepareBatch,
   appendBatch,
   destroyBatch,
+  getRowCount,
   getMetrics,
   onBatch
 }: StreamArrowRecordBatchesProps<PreparedBatch, Metrics>): Promise<void> {
   let loadedBatchCount = 0;
+  let rowIndexOffset = 0;
 
   if (!isActive(streamingSession)) {
     return;
@@ -115,7 +128,12 @@ export async function streamArrowRecordBatches<PreparedBatch, Metrics>({
       return;
     }
 
-    const preparedBatch = await prepareBatch(recordBatchResult.value, loadedBatchCount);
+    const context: ArrowRecordBatchStreamContext = {
+      batchIndex: loadedBatchCount,
+      rowIndexOffset,
+      isFirstBatch: loadedBatchCount === 0
+    };
+    const preparedBatch = await prepareBatch(recordBatchResult.value, context);
     if (!isActive(streamingSession)) {
       destroyBatch(preparedBatch);
       return;
@@ -123,9 +141,10 @@ export async function streamArrowRecordBatches<PreparedBatch, Metrics>({
 
     appendBatch(preparedBatch);
     loadedBatchCount++;
+    rowIndexOffset += getRowCount(preparedBatch);
     onBatch?.({
       loadedBatchCount,
-      isFirstBatch: loadedBatchCount === 1,
+      isFirstBatch: context.isFirstBatch,
       metrics: getMetrics()
     });
   }

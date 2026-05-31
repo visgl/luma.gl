@@ -108,7 +108,7 @@ adapter/readback metadata during migration, but tables and record batches expose
 For example:
 
 ```ts
-const gpuTable = makeArrowGPUTable(device, arrowTable, {shaderLayout});
+const gpuTable = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
 
 gpuTable.schema.fields[0].name; // shader/table column name
 gpuTable.schema.fields[0].format; // GPUVectorFormat, e.g. 'unorm8x4'

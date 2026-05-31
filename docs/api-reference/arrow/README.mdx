@@ -51,10 +51,10 @@ deltas on the GPU before rendering.
 `@luma.gl/arrow` is the adapter layer from Apache Arrow objects into the generic
 types in [`@luma.gl/tables`](/docs/api-reference/tables):
 
-- `makeArrowGPUData()` uploads one Arrow `Data` chunk into a `GPUData`.
+- `makeGPUDataFromArrowData()` uploads one Arrow `Data` chunk into a `GPUData`.
 - `makeGPUVectorFromArrow()` uploads one Arrow `Vector` into a `GPUVector`.
-- `makeArrowGPURecordBatch()` uploads one Arrow `RecordBatch`.
-- `makeArrowGPUTable()` uploads one Arrow `Table` while preserving source record
+- `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
+- `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record
   batch boundaries.
 
 The resulting table schema is `GPUSchema`, and each vector has a

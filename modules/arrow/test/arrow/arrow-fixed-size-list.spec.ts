@@ -4,14 +4,12 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  appendArrowDataToGPUVector,
   expandArrowVector,
   getArrowFixedSizeListValues,
   getArrowMatrixVectorInfo,
   getArrowVectorBufferSource,
   getArrowVectorByteLength,
   isArrowFixedSizeListVector,
-  makeAppendableArrowGPUVector,
   makeArrowVectorFromArray,
   makeArrowMatrix4x4Vector,
   makeArrowMatrix3x3Vector,
@@ -822,110 +820,6 @@ test('GPUVector addData aggregates GPU chunks without adopting their buffers', t
   t.notOk(secondBuffer.destroyed, 'does not adopt ownership of the appended data buffer');
   firstBuffer.destroy();
   secondBuffer.destroy();
-  t.end();
-});
-
-test('appendArrowDataToGPUVector appends Arrow data into appendable vector storage', t => {
-  const device = new NullDevice({});
-  const firstData = arrow.makeVector(new Float32Array([1, 2])).data[0];
-  const secondData = arrow.makeVector(new Float32Array([3, 4])).data[0];
-  const gpuVector = makeAppendableArrowGPUVector(device, new arrow.Float32(), {
-    name: 'values',
-    initialCapacityRows: 1
-  });
-
-  appendArrowDataToGPUVector(gpuVector, firstData);
-  appendArrowDataToGPUVector(gpuVector, secondData);
-
-  t.equal(gpuVector.length, 4, 'tracks rows appended into the final mutable batch');
-  t.equal(gpuVector.data.length, 2, 'exposes one GPUData buffer per appended Arrow chunk');
-  t.equal(gpuVector.data[1].byteOffset, 0, 'later appends start at the new GPUData buffer');
-  t.notEqual(
-    gpuVector.data[0].buffer,
-    gpuVector.data[1].buffer,
-    'appended chunks do not share one backing buffer'
-  );
-  t.notOk(
-    gpuVector.data[0].readbackMetadata,
-    'fixed-width append chunks do not retain reconstruction metadata'
-  );
-  t.equal(gpuVector.capacityRows, 4, 'reports appended row capacity without over-allocation');
-
-  gpuVector.resetLastBatch();
-  t.equal(gpuVector.length, 0, 'clears logical rows and appended GPUData buffers');
-  gpuVector.destroy();
-  t.end();
-});
-
-test('appendArrowDataToGPUVector appends UTF-8 Arrow data into appendable vector storage', t => {
-  const device = new NullDevice({});
-  const firstData = arrow.vectorFromArray(['alpha'], new arrow.Utf8()).data[0];
-  const secondData = arrow.vectorFromArray(['beta', 'g'], new arrow.Utf8()).data[0];
-  const gpuVector = makeAppendableArrowGPUVector(device, new arrow.Utf8(), {
-    name: 'texts',
-    initialCapacityRows: 1
-  });
-
-  appendArrowDataToGPUVector(gpuVector, firstData);
-  appendArrowDataToGPUVector(gpuVector, secondData);
-
-  t.equal(gpuVector.length, 3, 'tracks UTF-8 logical rows across appends');
-  t.equal(gpuVector.data.length, 2, 'preserves UTF-8 append chunk boundaries');
-  t.equal(
-    gpuVector.data[0].readbackMetadata?.kind,
-    'utf8',
-    'retains copied UTF-8 offsets for the first append chunk'
-  );
-  t.equal(
-    gpuVector.data[1].readbackMetadata?.kind,
-    'utf8',
-    'retains copied UTF-8 offsets for the later append chunk'
-  );
-  t.equal(gpuVector.data[1].byteOffset, 0, 'later UTF-8 appends start at the new GPUData buffer');
-  t.notEqual(
-    gpuVector.data[0].buffer,
-    gpuVector.data[1].buffer,
-    'UTF-8 append chunks do not share one backing buffer'
-  );
-
-  gpuVector.destroy();
-  t.end();
-});
-
-test('appendArrowDataToGPUVector appends sliced Dictionary<Utf8> index rows', async t => {
-  const device = new NullDevice({});
-  const sourceVector = makeExplicitArrowDictionaryVector(
-    ['skip', 'alpha', 'beta'],
-    new Int32Array([0, 1, 2, 1]),
-    1,
-    2
-  );
-  const slicedData = sourceVector.data[0]!;
-  const gpuVector = makeAppendableArrowGPUVector(device, sourceVector.type, {
-    name: 'dictionary-texts',
-    initialCapacityRows: 1
-  });
-
-  appendArrowDataToGPUVector(gpuVector, slicedData);
-
-  const indexBytes = await gpuVector.data[0].buffer.readAsync(
-    gpuVector.data[0].byteOffset,
-    gpuVector.data[0].length * gpuVector.data[0].byteStride
-  );
-  const uploadedIndices = new Int32Array(
-    indexBytes.buffer,
-    indexBytes.byteOffset,
-    slicedData.length
-  );
-
-  t.equal(gpuVector.length, 2, 'tracks appended sliced dictionary rows');
-  t.deepEqual(
-    Array.from(uploadedIndices),
-    [1, 2],
-    'append writes the sliced logical dictionary index range'
-  );
-
-  gpuVector.destroy();
   t.end();
 });
 

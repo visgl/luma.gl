@@ -18,6 +18,8 @@ type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
 export type GPUTableFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU vectors keyed by name, or a list of named GPU vectors. */
   vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
+  /** Optional model-ready storage bindings keyed by shader binding name. */
+  bindings?: Record<string, Buffer | DynamicBuffer>;
   /** Optional table-level schema metadata. */
   metadata?: Map<string, string>;
   /** Number of null rows in the generated GPU table. */
@@ -94,7 +96,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
       return;
     }
 
-    const {vectors, metadata, nullCount = 0} = props;
+    const {vectors, bindings = {}, metadata, nullCount = 0} = props;
     const vectorCollection = createGPUVectorCollection<T>({
       ownerName: 'GPUTable',
       vectors
@@ -103,6 +105,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
       vectors: vectorCollection.gpuVectors as GPUVectorMap<T>,
       bufferLayout: vectorCollection.bufferLayout,
       fields: vectorCollection.fields,
+      bindings,
       metadata,
       nullCount
     });

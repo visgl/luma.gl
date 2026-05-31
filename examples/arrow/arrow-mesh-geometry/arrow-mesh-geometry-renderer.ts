@@ -4,7 +4,7 @@
 
 import {
   expandArrowVector,
-  makeArrowGPUTable,
+  makeGPUTableFromArrowTable,
   makeArrowFixedSizeListVector,
   makeArrowMatrix4x4Vector,
   makeGPUVectorFromArrow,
@@ -109,10 +109,14 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
 
     this.updateInstanceMatrices(0);
     this.geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
-    this.matrixTable = makeArrowGPUTable(device, makeInstanceArrowTable(this.matrixValues), {
-      shaderLayout: getMeshGeometryShaderLayout(device),
-      arrowPaths: MESH_GEOMETRY_MATRIX_ARROW_PATHS
-    });
+    this.matrixTable = makeGPUTableFromArrowTable(
+      device,
+      makeInstanceArrowTable(this.matrixValues),
+      {
+        shaderLayout: getMeshGeometryShaderLayout(device),
+        arrowPaths: MESH_GEOMETRY_MATRIX_ARROW_PATHS
+      }
+    );
     this.model = createMeshGeometryModel(device, {
       id: props.id ?? DEFAULT_MESH_RENDERER_ID,
       geometry: this.geometry,

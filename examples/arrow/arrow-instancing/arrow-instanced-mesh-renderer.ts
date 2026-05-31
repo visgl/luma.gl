@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {makeArrowFixedSizeListVector, makeArrowGPUTable} from '@luma.gl/arrow';
+import {makeArrowFixedSizeListVector, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 import {Device, type CommandEncoder, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {ModelProps} from '@luma.gl/engine';
 import {
@@ -205,7 +205,7 @@ class InstancedCube extends GPUTableModel {
 
   constructor(device: Device, instancesPerSide: number, props?: Partial<ModelProps>) {
     const instanceArrowTable = makeInstanceArrowTable(instancesPerSide);
-    const instanceTable = makeArrowGPUTable(device, instanceArrowTable, {
+    const instanceTable = makeGPUTableFromArrowTable(device, instanceArrowTable, {
       shaderLayout: CUBE_SHADER_LAYOUT
     });
 
@@ -230,7 +230,7 @@ class InstancedCube extends GPUTableModel {
   }
 
   setInstanceTable(instanceArrowTable: InstanceArrowTable): void {
-    const nextInstanceTable = makeArrowGPUTable(this.device, instanceArrowTable, {
+    const nextInstanceTable = makeGPUTableFromArrowTable(this.device, instanceArrowTable, {
       shaderLayout: CUBE_SHADER_LAYOUT
     });
     const previousInstanceTable = this.instanceTable;

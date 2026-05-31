@@ -5,7 +5,7 @@
 import type {ArrowTableGeometry} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {indexColorPicking, indexPicking, ShaderInputs, supportsIndexPicking} from '@luma.gl/engine';
-import {GPUTableModel, type GPUTable, type GPUVector} from '@luma.gl/tables';
+import {GPUTableModel, getGPUVectorBuffer, type GPUTable, type GPUVector} from '@luma.gl/tables';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {
   FS_GLSL,
@@ -100,14 +100,6 @@ export function createMeshGeometryPickingModel(
 
 function getMeshGeometryPickingModule(device: Device): typeof indexPicking {
   return (supportsIndexPicking(device) ? indexPicking : indexColorPicking) as typeof indexPicking;
-}
-
-function getGPUVectorBuffer(vector: GPUVector) {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(`ArrowMeshRenderer vector "${vector.name}" requires one GPUData chunk`);
-  }
-  return data.buffer;
 }
 
 const DEFAULT_RENDER_PARAMETERS = {

@@ -24,6 +24,7 @@ import {
   hasArrowTableOrVectorSource,
   streamArrowRecordBatches,
   type ArrowColumnSelector,
+  type ArrowRecordBatchStreamContext,
   type ArrowRecordBatchStreamingSession,
   type ArrowRecordBatchStreamUpdate,
   type OptionalArrowColumnSelector
@@ -172,10 +173,10 @@ export class ArrowPolygonRenderer {
       recordBatchIterator,
       streamingSession,
       isActive: session => this.isRecordBatchStreamActive(session),
-      prepareBatch: recordBatch =>
-        this.createPreparedRecordBatch(recordBatch, this.getMetrics().rowCount),
+      prepareBatch: (recordBatch, context) => this.createPreparedRecordBatch(recordBatch, context),
       appendBatch: preparedBatch => this.appendPreparedBatch(preparedBatch),
       destroyBatch: destroyPreparedPolygonBatch,
+      getRowCount: preparedBatch => preparedBatch.prepared.tessellation.rowCount,
       getMetrics: () => this.getMetrics(),
       onBatch
     });
@@ -294,14 +295,13 @@ export class ArrowPolygonRenderer {
 
   private async createPreparedRecordBatch(
     recordBatch: arrow.RecordBatch,
-    rowIndexOffset: number
+    context: ArrowRecordBatchStreamContext
   ): Promise<PreparedPolygonBatch> {
     const data = new arrow.Table([recordBatch]);
-    const batchIndex = this.preparedBatches.length;
     return await this.createPreparedBatch(
       {...this.props, data},
-      rowIndexOffset,
-      `arrow-polygons-${batchIndex}`
+      context.rowIndexOffset,
+      `arrow-polygons-${context.batchIndex}`
     );
   }
 

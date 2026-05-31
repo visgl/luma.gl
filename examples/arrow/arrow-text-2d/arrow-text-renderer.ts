@@ -4,8 +4,12 @@
 
 import {type CommandEncoder, type Device} from '@luma.gl/core';
 import {indexColorPicking, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
-import {getArrowVectorByteLength, makeArrowGPURecordBatch, makeArrowGPUTable} from '@luma.gl/arrow';
-import {GPURenderable, GPUVector, GPUTable} from '@luma.gl/tables';
+import {
+  getArrowVectorByteLength,
+  makeGPURecordBatchFromArrowRecordBatch,
+  makeGPUTableFromArrowTable
+} from '@luma.gl/arrow';
+import {GPURenderable, GPUVector, GPUTable, getRequiredGPUVector} from '@luma.gl/tables';
 import {
   AttributeTextModel,
   type ArrowUtf8TextType,
@@ -324,8 +328,8 @@ export class ArrowTextRenderer extends GPURenderable<
     );
 
     return {
-      positions: getRequiredGPUVector(props.gpuTable, columns.positions),
-      texts: getRequiredGPUVector(props.gpuTable, columns.texts),
+      positions: getRequiredGPUVector(props.gpuTable, columns.positions, 'ArrowTextRenderer data'),
+      texts: getRequiredGPUVector(props.gpuTable, columns.texts, 'ArrowTextRenderer data'),
       ...(clipRects
         ? {
             clipRects: getOptionalGPUVector(props.gpuTable, columns.clipRects)
@@ -518,7 +522,7 @@ export class ArrowTextRenderer extends GPURenderable<
       }
 
       if (!isSourceVectorStreaming) {
-        appendArrowTextGPUTableBatch(this.device, streamingTextTable!, recordBatch, this.props);
+        addArrowTextGPUTableBatch(this.device, streamingTextTable!, recordBatch, this.props);
       }
       const textInput = isSourceVectorStreaming
         ? prepareArrowTextInputFromRecordBatches(this.device, sourceRecordBatches, this.props)
@@ -772,7 +776,7 @@ export function createArrowTextGPUTable(
   recordBatch: arrow.RecordBatch,
   props: ArrowTextRendererPrepareInputProps = {}
 ): GPUTable {
-  return makeArrowGPUTable(device, new arrow.Table([recordBatch]), {
+  return makeGPUTableFromArrowTable(device, new arrow.Table([recordBatch]), {
     shaderLayout: getStreamingTextInputShaderLayout(props)
   });
 }
@@ -783,20 +787,20 @@ export function createArrowTextGPUTableFromTable(
   table: arrow.Table,
   props: ArrowTextRendererPrepareInputProps = {}
 ): GPUTable {
-  return makeArrowGPUTable(device, table, {
+  return makeGPUTableFromArrowTable(device, table, {
     shaderLayout: getStreamingTextInputShaderLayout(props)
   });
 }
 
-/** Appends one Arrow record batch to an existing streaming GPU table. */
-export function appendArrowTextGPUTableBatch(
+/** Converts one Arrow record batch and adds it to an existing streaming GPU table. */
+export function addArrowTextGPUTableBatch(
   device: Device,
   gpuTable: GPUTable,
   recordBatch: arrow.RecordBatch,
   props: ArrowTextRendererPrepareInputProps = {}
 ): void {
   gpuTable.addBatch(
-    makeArrowGPURecordBatch(device, recordBatch, {
+    makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {
       shaderLayout: getStreamingTextInputShaderLayout(props)
     })
   );
@@ -910,14 +914,6 @@ function getOptionalArrowVector<T extends arrow.DataType>(
   }
   const vector = table.getChild(columnName);
   return vector ? (vector as arrow.Vector<T>) : undefined;
-}
-
-function getRequiredGPUVector(gpuTable: GPUTable, columnName: string): GPUVector {
-  const vector = gpuTable.gpuVectors[columnName];
-  if (!vector) {
-    throw new Error(`ArrowTextRenderer data is missing GPU column "${columnName}"`);
-  }
-  return vector;
 }
 
 function getOptionalGPUVector(

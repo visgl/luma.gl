@@ -5,8 +5,8 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   makeArrowFixedSizeListVector,
-  makeArrowGPURecordBatch,
-  makeArrowGPUTable,
+  makeGPURecordBatchFromArrowRecordBatch,
+  makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow
 } from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/tables';
@@ -38,7 +38,7 @@ const CHARACTER_MAPPING: CharacterMapping = {
   '🙂': {x: 8, y: 0, width: 8, height: 8, anchorX: 4, anchorY: 4, advance: 9}
 };
 
-const APPENDABLE_TEXT_INPUT_SHADER_LAYOUT = {
+const STREAMING_TEXT_INPUT_SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
   bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
 } satisfies ShaderLayout;
@@ -456,32 +456,32 @@ test('AttributeTextModel expands chunked UTF-8 GPUVector data', t => {
   t.end();
 });
 
-test('AttributeTextModel rebuilds from appended GPUTable-backed text batches', t => {
+test('AttributeTextModel rebuilds from streamed GPUTable-backed text batches', t => {
   const device = new NullDevice({});
-  const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
-  const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
-  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
-    shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+  const firstBatch = makeStreamingTextRecordBatch(['AB'], new Float32Array([0, 0]));
+  const secondBatch = makeStreamingTextRecordBatch(['A'], new Float32Array([1, 1]));
+  const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstBatch]), {
+    shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowTextSourceVectorsFromBatches([firstBatch]);
 
   const model = createAttributeTextModel(device, {
-    id: 'arrow-text-model-appendable-gpu-table-test',
+    id: 'arrow-text-model-streaming-gpu-table-test',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
   });
-  t.equal(model.glyphLayout.glyphCount, 2, 'starts from the first appended text batch');
+  t.equal(model.glyphLayout.glyphCount, 2, 'starts from the first streamed text batch');
 
   gpuTable.addBatch(
-    makeArrowGPURecordBatch(device, secondBatch, {
-      shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+    makeGPURecordBatchFromArrowRecordBatch(device, secondBatch, {
+      shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
     })
   );
   const rebuiltModel = createAttributeTextModel(device, {
-    id: 'arrow-text-model-appendable-gpu-table-test-rebuilt',
+    id: 'arrow-text-model-streaming-gpu-table-test-rebuilt',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowTextSourceVectorsFromBatches([firstBatch, secondBatch]),
@@ -978,22 +978,22 @@ test('DictionaryTextModel draws every dictionary source batch', async t => {
   t.end();
 });
 
-test('StorageTextModel rebuilds from appended GPUTable-backed text batches', async t => {
+test('StorageTextModel rebuilds from streamed GPUTable-backed text batches', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
     t.end();
     return;
   }
-  const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
-  const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
-  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
-    shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+  const firstBatch = makeStreamingTextRecordBatch(['AB'], new Float32Array([0, 0]));
+  const secondBatch = makeStreamingTextRecordBatch(['A'], new Float32Array([1, 1]));
+  const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstBatch]), {
+    shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowStorageTextSourceVectorsFromBatches([firstBatch]);
 
   const model = createStorageTextModel(device, {
-    id: 'arrow-storage-text-appendable-gpu-table-test',
+    id: 'arrow-storage-text-streaming-gpu-table-test',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
@@ -1002,12 +1002,12 @@ test('StorageTextModel rebuilds from appended GPUTable-backed text batches', asy
   });
 
   gpuTable.addBatch(
-    makeArrowGPURecordBatch(device, secondBatch, {
-      shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+    makeGPURecordBatchFromArrowRecordBatch(device, secondBatch, {
+      shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
     })
   );
   const rebuiltModel = createStorageTextModel(device, {
-    id: 'arrow-storage-text-appendable-gpu-table-test-rebuilt',
+    id: 'arrow-storage-text-streaming-gpu-table-test-rebuilt',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch]),
@@ -1032,23 +1032,19 @@ test('StorageTextModel rebuilds dictionary GPUTable-backed text batches', async 
     return;
   }
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
-  const firstBatch = makeAppendableTextRecordBatch(
-    ['AB'],
-    new Float32Array([0, 0]),
-    dictionaryType
-  );
-  const secondBatch = makeAppendableTextRecordBatch(
+  const firstBatch = makeStreamingTextRecordBatch(['AB'], new Float32Array([0, 0]), dictionaryType);
+  const secondBatch = makeStreamingTextRecordBatch(
     ['A', 'AB'],
     new Float32Array([1, 1, 2, 2]),
     dictionaryType
   );
-  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
-    shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+  const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstBatch]), {
+    shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowStorageTextSourceVectorsFromBatches([firstBatch]);
 
   const model = createStorageTextModel(device, {
-    id: 'arrow-storage-text-dictionary-appendable-gpu-table-test',
+    id: 'arrow-storage-text-dictionary-streaming-gpu-table-test',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
@@ -1057,12 +1053,12 @@ test('StorageTextModel rebuilds dictionary GPUTable-backed text batches', async 
   });
 
   gpuTable.addBatch(
-    makeArrowGPURecordBatch(device, secondBatch, {
-      shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+    makeGPURecordBatchFromArrowRecordBatch(device, secondBatch, {
+      shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
     })
   );
   const rebuiltModel = createStorageTextModel(device, {
-    id: 'arrow-storage-text-dictionary-appendable-gpu-table-test-rebuilt',
+    id: 'arrow-storage-text-dictionary-streaming-gpu-table-test-rebuilt',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch]),
@@ -1231,7 +1227,7 @@ function makeLabelTable(): arrow.Table {
   });
 }
 
-function makeAppendableTextRecordBatch(
+function makeStreamingTextRecordBatch(
   labels: readonly (string | null)[],
   positions: Float32Array,
   textType: arrow.Utf8 | ArrowUtf8Dictionary = new arrow.Utf8()

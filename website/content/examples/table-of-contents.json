@@ -22,6 +22,7 @@
     "items": [
       "arrow/arrow-points",
       "arrow/arrow-lines",
+      "arrow/arrow-float64-precision",
       "arrow/arrow-polygons",
       "arrow/arrow-geoarrow",
       "arrow/arrow-text-2d",

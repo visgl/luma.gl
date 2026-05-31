@@ -17,6 +17,8 @@ import {
   GPURecordBatch,
   GPUTable,
   GPUTableModel,
+  getGPUVectorBuffer,
+  getRequiredGPUVector,
   type GPUVector
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
@@ -696,36 +698,25 @@ function getTemporalStarfieldStorageBindings(
   temporalStarfieldTable: GPUTable | GPURecordBatch
 ): Record<string, Buffer | DynamicBuffer> {
   return {
-    positions: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'positions')),
-    eventStarts: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'eventStarts')),
+    positions: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'positions', 'Temporal starfield table')
+    ),
+    eventStarts: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'eventStarts', 'Temporal starfield table')
+    ),
     eventDurations: getGPUVectorBuffer(
-      getRequiredTableVector(temporalStarfieldTable, 'eventDurations')
+      getRequiredGPUVector(temporalStarfieldTable, 'eventDurations', 'Temporal starfield table')
     ),
     pulsePeriods: getGPUVectorBuffer(
-      getRequiredTableVector(temporalStarfieldTable, 'pulsePeriods')
+      getRequiredGPUVector(temporalStarfieldTable, 'pulsePeriods', 'Temporal starfield table')
     ),
-    starSizes: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'starSizes')),
-    eventColors: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'eventColors'))
+    starSizes: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'starSizes', 'Temporal starfield table')
+    ),
+    eventColors: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'eventColors', 'Temporal starfield table')
+    )
   };
-}
-
-function getRequiredTableVector(
-  temporalStarfieldTable: GPUTable | GPURecordBatch,
-  columnName: string
-): GPUVector {
-  const gpuVector = temporalStarfieldTable.gpuVectors[columnName];
-  if (!gpuVector) {
-    throw new Error(`Temporal starfield table is missing ${columnName}`);
-  }
-  return gpuVector;
-}
-
-function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(`Temporal starfield vector "${vector.name}" requires one GPUData chunk`);
-  }
-  return data.buffer;
 }
 
 function formatTimestampOriginMilliseconds(origin: number | bigint): string {

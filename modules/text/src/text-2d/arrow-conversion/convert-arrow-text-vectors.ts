@@ -14,7 +14,7 @@ import {
   expandArrowVector,
   getArrowVectorBufferSource,
   isNumericArrowType,
-  makeArrowGPUTable,
+  makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow,
   makeArrowFixedSizeListVector,
   type NumericArrowType
@@ -1577,7 +1577,7 @@ function prepareArrowTextModel(
       bufferLayout: [...(props.bufferLayout || []), expandedGlyphVertexState.bufferLayout],
       vertexCount: props.vertexCount ?? 6,
       instanceCount: glyphTable.glyphLayout.glyphCount,
-      table: makeArrowGPUTable(
+      table: makeGPUTableFromArrowTable(
         device,
         createArrowTextRenderTable(glyphTable.table, generatedBufferBatches),
         {shaderLayout}

@@ -5,10 +5,14 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   GPUData,
+  GPURecordBatch,
   GPUVector,
   GPUTable,
+  getGPUVectorBuffer,
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
+  getGPUVectorData,
+  getRequiredGPUVector,
   isGPUVectorFormatCompatibleWithShaderType,
   isVertexListGPUVectorFormat
 } from '@luma.gl/tables';
@@ -191,5 +195,99 @@ test('GPUVector honors borrowed GPUData chunk ownership', t => {
   ownedVector.destroy();
 
   t.ok(ownedBuffer.destroyed, 'owned data vector destroy releases the buffer');
+  t.end();
+});
+
+test('GPUVector table helpers expose single-chunk vectors and required columns', t => {
+  const device = new NullDevice({});
+  const firstData = new GPUData({
+    buffer: device.createBuffer({byteLength: 8}),
+    format: 'float32x2',
+    length: 1,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const secondData = new GPUData({
+    buffer: device.createBuffer({byteLength: 8}),
+    format: 'float32x2',
+    length: 1,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const positions = new GPUVector({
+    type: 'data',
+    name: 'positions',
+    data: [firstData],
+    ownsData: false
+  });
+  const chunkedPositions = new GPUVector({
+    type: 'data',
+    name: 'chunkedPositions',
+    data: [firstData, secondData],
+    ownsData: false
+  });
+  const batch = new GPURecordBatch({vectors: {positions}});
+  const table = new GPUTable({
+    batches: [batch],
+    schema: batch.schema,
+    bufferLayout: batch.bufferLayout
+  });
+
+  t.equal(getRequiredGPUVector(table, 'positions'), positions, 'finds a table vector by name');
+  t.equal(getRequiredGPUVector(batch, 'positions'), positions, 'finds a batch vector by name');
+  t.equal(getGPUVectorData(positions), firstData, 'returns the single retained GPUData chunk');
+  t.equal(getGPUVectorBuffer(positions), firstData.buffer, 'returns the single retained buffer');
+  t.throws(
+    () => getRequiredGPUVector(table, 'missing', 'test table'),
+    /test table is missing GPU vector "missing"/,
+    'reports missing required columns with owner context'
+  );
+  t.throws(
+    () => getGPUVectorData(chunkedPositions),
+    /GPUVector "chunkedPositions" requires exactly one GPUData chunk/,
+    'single-chunk helpers reject aggregate vectors'
+  );
+
+  table.destroy();
+  chunkedPositions.destroy();
+  firstData.destroy();
+  secondData.destroy();
+  t.end();
+});
+
+test('GPUTable forwards vector-construction bindings to its generated record batch', t => {
+  const device = new NullDevice({});
+  const positions = new GPUVector({
+    type: 'buffer',
+    name: 'positions',
+    buffer: device.createBuffer({byteLength: 8}),
+    format: 'float32x2',
+    length: 1,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const weightsBuffer = device.createBuffer({byteLength: 4});
+  const weights = new GPUVector({
+    type: 'buffer',
+    name: 'weights',
+    buffer: weightsBuffer,
+    format: 'float32',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const table = new GPUTable({
+    vectors: {positions, weights},
+    bindings: {weights: weightsBuffer}
+  });
+
+  t.equal(table.bindings.weights, weightsBuffer, 'exposes the forwarded binding on the table');
+  t.equal(
+    table.batches[0].bindings.weights,
+    weightsBuffer,
+    'forwards bindings to the generated record batch'
+  );
+
+  table.destroy();
   t.end();
 });
