@@ -319,27 +319,6 @@ test('getArrowBufferLayout validates Arrow source options', t => {
     'explicit missing table paths throw'
   );
 
-  t.deepEqual(
-    getArrowBufferLayout(arrowTable, shaderLayout),
-    [{name: 'colors', format: 'unorm8x4'}],
-    'legacy positional table overload remains supported'
-  );
-
-  t.deepEqual(
-    getArrowBufferLayout(
-      arrowTable,
-      {
-        attributes: [{name: 'instanceColors', location: 0, type: 'vec4<f32>'}],
-        bindings: []
-      },
-      {
-        attributeNameToArrowPath: {instanceColors: 'colors'}
-      }
-    ),
-    [{name: 'instanceColors', format: 'unorm8x4'}],
-    'legacy attributeNameToArrowPath remains supported'
-  );
-
   t.end();
 });
 

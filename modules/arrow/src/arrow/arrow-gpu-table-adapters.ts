@@ -140,7 +140,14 @@ export type ArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
 };
 
 /** Props for uploading one Arrow table into a generic GPU table. */
-export type ArrowGPUTableProps = ArrowGPURecordBatchProps;
+export type ArrowGPUTableProps = ArrowVertexFormatOptions & {
+  /** Shader layout that selects which Arrow columns should be uploaded. */
+  shaderLayout: ShaderLayout;
+  /** Maps shader attribute names to Arrow column paths. */
+  arrowPaths?: Record<string, string>;
+  /** Buffer props applied to Arrow-backed GPU vectors. */
+  bufferProps?: GPUVectorBufferProps;
+};
 
 /** Props for constructing appendable Arrow GPU storage from an Arrow schema. */
 export type AppendableArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
@@ -161,7 +168,22 @@ export type AppendableArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
 };
 
 /** Props for constructing one appendable Arrow GPU table. */
-export type AppendableArrowGPUTableProps = AppendableArrowGPURecordBatchProps;
+export type AppendableArrowGPUTableProps = ArrowVertexFormatOptions & {
+  /** Device that creates appendable vector storage. */
+  device: Device;
+  /** Source schema used to select shader-compatible columns. */
+  schema: Schema;
+  /** Shader layout that selects which Arrow columns should be uploaded. */
+  shaderLayout: ShaderLayout;
+  /** Maps shader attribute names to Arrow column paths. */
+  arrowPaths?: Record<string, string>;
+  /** Initial row capacity for each appendable vector. */
+  initialCapacityRows?: number;
+  /** Appendable vector capacity growth multiplier. */
+  capacityGrowthFactor?: number;
+  /** Dynamic buffer props forwarded to appendable vectors. */
+  bufferProps?: GPUVectorDynamicBufferProps;
+};
 
 /** Props for constructing one appendable Arrow-backed GPU vector. */
 export type AppendableArrowGPUVectorProps = {
@@ -176,7 +198,7 @@ export type AppendableArrowGPUVectorProps = {
 };
 
 /** Uploads one Arrow `Data` chunk into generic GPU storage. */
-export function makeArrowGPUData<T extends DataType>(
+export function makeGPUDataFromArrowData<T extends DataType>(
   device: Device,
   data: Data<T>,
   props: ArrowGPUDataProps = {}
@@ -223,7 +245,7 @@ export function makeArrowGPUData<T extends DataType>(
 
   if (isVariableLengthAttributeArrowType(arrowType)) {
     validateArrowGPUDataDirectUpload(
-      'makeArrowGPUData',
+      'makeGPUDataFromArrowData',
       data as unknown as Data<VariableLengthAttributeArrowType>
     );
     const byteStride = getArrowTypeByteStride(arrowType);
@@ -320,7 +342,7 @@ export function makeGPUVectorFromArrow<T extends DataType>(
       dataType: arrowType,
       format: vectorFormat,
       data: vector.data.map(data =>
-        makeArrowGPUData(device, data as Data<T>, {...bufferProps, format: vectorFormat})
+        makeGPUDataFromArrowData(device, data as Data<T>, {...bufferProps, format: vectorFormat})
       ),
       stride,
       byteStride,
@@ -587,7 +609,7 @@ export function appendArrowDataToGPUVector<T extends DataType>(
     throw new Error('appendArrowDataToGPUVector() requires GPUVector format metadata');
   }
   vector.appendDataChunk(
-    makeArrowGPUData(vector.device, data, {
+    makeGPUDataFromArrowData(vector.device, data, {
       ...(vector.bufferProps ?? {}),
       format: vector.format
     }) as GPUData

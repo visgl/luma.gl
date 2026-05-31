@@ -23,7 +23,7 @@ export const polygonViewport: ShaderModule<PolygonViewportUniforms> = {
 export const POLYGON_SHADER_LAYOUT = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec4<f32>'},
-    {name: 'colors', location: 1, type: 'vec4<u32>'},
+    {name: 'colors', location: 1, type: 'vec4<f32>'},
     {name: 'rowIndices', location: 2, type: 'u32'}
   ],
   bindings: []
@@ -40,7 +40,7 @@ struct PolygonViewportUniforms {
 
 struct VertexInputs {
   @location(0) positions : vec4<f32>,
-  @location(1) colors : vec4<u32>,
+  @location(1) colors : vec4<f32>,
   @location(2) rowIndices : u32,
 };
 
@@ -61,7 +61,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   let centered = (inputs.positions.xy - polygonViewport.center) * polygonViewport.scale;
   var outputs : FragmentInputs;
   outputs.Position = vec4<f32>(centered.x / max(polygonViewport.aspect, 0.2), centered.y, 0.0, 1.0);
-  outputs.color = vec4<f32>(inputs.colors) / 255.0;
+  outputs.color = inputs.colors;
   outputs.objectIndex = i32(inputs.rowIndices);
   return outputs;
 }
@@ -86,7 +86,7 @@ precision highp float;
 precision highp int;
 
 in vec4 positions;
-in uvec4 colors;
+in vec4 colors;
 in uint rowIndices;
 
 uniform polygonViewportUniforms {
@@ -100,7 +100,7 @@ out vec4 vColor;
 void main(void) {
   vec2 centered = (positions.xy - polygonViewport.center) * polygonViewport.scale;
   gl_Position = vec4(centered.x / max(polygonViewport.aspect, 0.2), centered.y, 0.0, 1.0);
-  vColor = vec4(colors) / 255.0;
+  vColor = colors;
   picking_setObjectIndex(int(rowIndices));
 }
 `;

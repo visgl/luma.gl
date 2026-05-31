@@ -12,9 +12,6 @@ type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
 };
 
-/** Props retained as a migration alias for adapters that synthesize appendable batches. */
-export type GPURecordBatchAppendableProps = never;
-
 /** Props for constructing a GPU record batch from existing vectors and metadata. */
 export type GPURecordBatchFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU vectors keyed by name, or a list of named GPU vectors. */

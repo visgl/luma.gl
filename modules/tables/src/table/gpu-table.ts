@@ -14,9 +14,6 @@ type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
 };
 
-/** Props retained as a migration alias for Arrow appendable-table adapters. */
-export type GPUTableAppendableProps = never;
-
 /** Options for constructing a GPU table from existing GPU vectors. */
 export type GPUTableFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU vectors keyed by name, or a list of named GPU vectors. */

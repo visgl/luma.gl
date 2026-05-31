@@ -196,6 +196,8 @@ export type ArrowStoragePathInputProps = Omit<ModelProps, 'instanceCount'> & {
   timestamps?: GPUVector;
   /** Optional per-path view-space origins, one Arrow row per path. */
   viewOrigins?: GPUVector;
+  /** Global source row index assigned to the first prepared path row. */
+  rowIndexBase?: number;
   /** Constant fallback path color used when `colors` is absent. */
   color?: [number, number, number, number];
   /** Constant fallback path width used when `widths` is absent. */
@@ -383,7 +385,8 @@ export class ArrowStoragePathModel extends Model {
     const shouldReplaceState =
       shouldReplaceExternalState ||
       pathProps.paths !== undefined ||
-      pathProps.shaderLayout !== undefined;
+      pathProps.shaderLayout !== undefined ||
+      pathProps.rowIndexBase !== undefined;
     const shouldRefreshRowBindings =
       !nextUsesExternalState &&
       (pathProps.colors !== undefined ||

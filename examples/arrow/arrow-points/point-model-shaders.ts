@@ -31,7 +31,7 @@ export const POINT_SHADER_LAYOUT = {
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
     {name: 'eventTimes', location: 1, type: 'f32', stepMode: 'instance'},
     {name: 'radii', location: 2, type: 'f32', stepMode: 'instance'},
-    {name: 'colors', location: 3, type: 'vec4<u32>', stepMode: 'instance'},
+    {name: 'colors', location: 3, type: 'vec4<f32>', stepMode: 'instance'},
     {name: 'rowIndices', location: 4, type: 'u32', stepMode: 'instance'}
   ],
   bindings: []
@@ -54,7 +54,7 @@ struct VertexInputs {
   @location(0) positions : vec2<f32>,
   @location(1) eventTimes : f32,
   @location(2) radii : f32,
-  @location(3) colors : vec4<u32>,
+  @location(3) colors : vec4<f32>,
   @location(4) rowIndices : u32,
 };
 
@@ -104,7 +104,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
 
   var outputs : FragmentInputs;
   outputs.Position = vec4<f32>(clipCenter + clipOffset, 0.0, 1.0);
-  outputs.color = vec4<f32>(inputs.colors) / 255.0;
+  outputs.color = inputs.colors;
   outputs.color.a = outputs.color.a * temporalAlpha;
   outputs.localPosition = corner;
   outputs.objectIndex = i32(inputs.rowIndices);
@@ -140,7 +140,7 @@ precision highp int;
 in vec2 positions;
 in float eventTimes;
 in float radii;
-in uvec4 colors;
+in vec4 colors;
 in uint rowIndices;
 
 uniform pointViewportUniforms {
@@ -186,7 +186,7 @@ void main(void) {
   float temporalAlpha = getTemporalAlpha(eventTimes);
 
   gl_Position = vec4(clipCenter + clipOffset, 0.0, 1.0);
-  vColor = vec4(colors) / 255.0;
+  vColor = colors;
   vColor.a *= temporalAlpha;
   vLocalPosition = corner;
   picking_setObjectIndex(int(rowIndices));

@@ -4,6 +4,7 @@
 
 import {Device, type BufferLayout, type CommandEncoder, type RenderPass} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';
+import type {GPURecordBatch} from '../table/gpu-record-batch';
 import {GPUTable} from '../table/gpu-table';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */
@@ -15,6 +16,11 @@ export type GPUTableModelProps = ModelProps & {
   table?: GPUTable;
   /** Controls whether table rows infer `instanceCount`, `vertexCount`, or neither. */
   tableCount?: GPUTableModelCount;
+};
+
+export type GPUTableModelDrawBatchesOptions = {
+  /** Called immediately before drawing each preserved GPU record batch. */
+  onBatch?: (batch: GPURecordBatch, batchIndex: number) => void;
 };
 
 type GPUTableModelState = {
@@ -75,7 +81,7 @@ export class GPUTableModel extends Model {
    *
    * The table-level attributes and bindings are restored before returning.
    */
-  drawBatches(renderPass: RenderPass): boolean {
+  drawBatches(renderPass: RenderPass, options: GPUTableModelDrawBatchesOptions = {}): boolean {
     const table = this.table;
     if (!(table instanceof GPUTable)) {
       throw new Error('GPUTableModel.drawBatches() requires a GPUTable');
@@ -91,7 +97,7 @@ export class GPUTableModel extends Model {
     let drawSuccess = true;
     this.drawingTableBatches = true;
     try {
-      for (const batch of table.batches) {
+      for (const [batchIndex, batch] of table.batches.entries()) {
         assertMatchingBufferLayouts(
           table.bufferLayout,
           [],
@@ -107,6 +113,7 @@ export class GPUTableModel extends Model {
           ...batch.bindings
         });
         this.setTableRowCount(batch.numRows);
+        options.onBatch?.(batch, batchIndex);
         drawSuccess = super.draw(renderPass) && drawSuccess;
       }
     } finally {

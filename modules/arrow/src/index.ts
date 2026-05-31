@@ -87,7 +87,7 @@ export {
   makeAppendableArrowGPUVector,
   makeAppendableArrowGPURecordBatch,
   makeAppendableArrowGPUTable,
-  makeArrowGPUData,
+  makeGPUDataFromArrowData,
   makeArrowGPURecordBatch,
   makeArrowGPUTable,
   makeGPUVectorFromArrow,
@@ -102,10 +102,8 @@ export {
   type GPUVectorFormatForArrowType
 } from './arrow/arrow-gpu-table-adapters';
 export {
-  ArrowGeometry,
   ArrowTableGeometry,
   makeGPUGeometryFromArrow,
-  type ArrowGeometryProps,
   type ArrowTableGeometryProps
 } from './arrow/arrow-geometry';
 export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';

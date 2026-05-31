@@ -17,11 +17,6 @@ import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format'
 export type GPUVectorBufferProps = Omit<BufferProps, 'byteLength' | 'data'>;
 /** Dynamic buffer props used when creating appendable GPU vectors. */
 export type GPUVectorDynamicBufferProps = Omit<DynamicBufferProps, 'byteLength' | 'data'>;
-/** @deprecated Use {@link GPUVectorBufferProps}. */
-export type GPUVectorProps = GPUVectorBufferProps;
-
-/** Arrow upload props moved to `@luma.gl/arrow`; retained only as a typed migration sentinel. */
-export type GPUVectorFromArrowProps<_T extends GPUVectorFormat = GPUVectorFormat> = never;
 
 /** Constructor props that wrap an existing typed GPU buffer. */
 export type GPUVectorFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> = {

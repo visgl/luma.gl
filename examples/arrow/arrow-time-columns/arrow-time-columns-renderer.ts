@@ -8,8 +8,8 @@ import {
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
-import {type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
-import {Model, ShaderInputs} from '@luma.gl/engine';
+import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
+import {type DynamicBuffer, Model, ShaderInputs} from '@luma.gl/engine';
 import {GPURenderable, GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
@@ -342,13 +342,13 @@ function getPreparedScalarTemporalVector(
 
 function getTimeColumnsStorageBindings(
   timeColumnsTable: GPUTable
-): Record<string, GPUVector['buffer']> {
+): Record<string, Buffer | DynamicBuffer> {
   return {
-    eventDates: getRequiredTableVector(timeColumnsTable, 'eventDates').buffer,
-    eventTimes: getRequiredTableVector(timeColumnsTable, 'eventTimes').buffer,
-    eventStarts: getRequiredTableVector(timeColumnsTable, 'eventStarts').buffer,
-    eventDurations: getRequiredTableVector(timeColumnsTable, 'eventDurations').buffer,
-    eventColors: getRequiredTableVector(timeColumnsTable, 'eventColors').buffer
+    eventDates: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventDates')),
+    eventTimes: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventTimes')),
+    eventStarts: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventStarts')),
+    eventDurations: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventDurations')),
+    eventColors: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventColors'))
   };
 }
 
@@ -358,6 +358,14 @@ function getRequiredTableVector(timeColumnsTable: GPUTable, columnName: string):
     throw new Error(`Time columns table is missing ${columnName}`);
   }
   return gpuVector;
+}
+
+function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`Time columns vector "${vector.name}" requires one GPUData chunk`);
+  }
+  return data.buffer;
 }
 
 function getCurrentTimestampMilliseconds(currentScheduleMilliseconds: number): number {

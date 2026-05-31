@@ -4,7 +4,6 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  ArrowGeometry,
   ArrowTableGeometry,
   makeArrowFixedSizeListVector,
   makeGPUGeometryFromArrow,
@@ -137,17 +136,14 @@ test('ArrowTableGeometry validates Mesh Arrow input', t => {
   t.end();
 });
 
-test('Arrow geometry factory and legacy alias keep the Mesh Arrow surface available', t => {
+test('Arrow geometry factory keeps the Mesh Arrow surface available', t => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowMeshTable();
   const geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
-  const legacyGeometry = new ArrowGeometry(device, {arrowMesh});
 
   t.ok(geometry instanceof ArrowTableGeometry, 'factory returns ArrowTableGeometry');
-  t.ok(legacyGeometry instanceof ArrowTableGeometry, 'legacy ArrowGeometry aliases the new class');
 
   geometry.destroy();
-  legacyGeometry.destroy();
   t.end();
 });
 

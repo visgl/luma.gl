@@ -164,7 +164,8 @@ export async function prepareArrowStoragePathGPUVectors(
     ...(colors ? {colors} : {}),
     ...(widths ? {widths} : {}),
     ...(timestamps ? {timestamps} : {}),
-    ...(viewOrigins ? {viewOrigins} : {})
+    ...(viewOrigins ? {viewOrigins} : {}),
+    rowIndexBase: options.rowIndexBase
   };
   let destroyed = false;
 
@@ -207,7 +208,7 @@ export function resolveArrowStoragePathInputs(
   assertArrowStoragePathVectorRowAlignment(props);
   const batches: ResolvedArrowStoragePathBatchInputs[] = [];
   const componentCount = getArrowStoragePathCoordinateComponentCount(props.paths.type);
-  let batchRowIndexBase = 0;
+  let batchRowIndexBase = props.rowIndexBase ?? 0;
 
   for (let batchIndex = 0; batchIndex < props.paths.data.length; batchIndex++) {
     const pathData = props.paths.data[batchIndex] as GPUData;

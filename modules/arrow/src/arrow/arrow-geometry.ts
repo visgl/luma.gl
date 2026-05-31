@@ -92,12 +92,6 @@ export class ArrowTableGeometry extends GPUTableGeometry {
   }
 }
 
-/** @deprecated Use {@link ArrowTableGeometry}. */
-export type ArrowGeometryProps = ArrowTableGeometryProps;
-
-/** @deprecated Use {@link ArrowTableGeometry}. */
-export class ArrowGeometry extends ArrowTableGeometry {}
-
 /** Creates GPU table geometry directly from Mesh Arrow input. */
 export function makeGPUGeometryFromArrow(
   device: Device,
@@ -131,7 +125,7 @@ function getArrowMeshAttributes(
   const attributes: ArrowMeshAttributeData[] = [];
   const positionVector = table.getChild('POSITION');
   if (!positionVector) {
-    throw new Error('ArrowGeometry requires a POSITION column');
+    throw new Error('ArrowTableGeometry requires a POSITION column');
   }
 
   const requestedColumns = new Set(Object.values(arrowPaths || {}));
@@ -209,11 +203,13 @@ function getArrowAttributeType(
   if (DataType.isFixedSizeList(type)) {
     const listSize = type.listSize;
     if (listSize < 1 || listSize > 4) {
-      throw new Error(`ArrowGeometry column "${sourceName}" list size must be between 1 and 4`);
+      throw new Error(
+        `ArrowTableGeometry column "${sourceName}" list size must be between 1 and 4`
+      );
     }
     const childType = type.children[0].type;
     if (!DataType.isInt(childType) && !DataType.isFloat(childType)) {
-      throw new Error(`ArrowGeometry column "${sourceName}" must contain numeric values`);
+      throw new Error(`ArrowTableGeometry column "${sourceName}" must contain numeric values`);
     }
     validateSupportedNumericType(sourceName, childType);
     return {childType, size: listSize as 1 | 2 | 3 | 4};
@@ -224,15 +220,17 @@ function getArrowAttributeType(
     return {childType: type, size: 1};
   }
 
-  throw new Error(`ArrowGeometry column "${sourceName}" must be numeric or FixedSizeList numeric`);
+  throw new Error(
+    `ArrowTableGeometry column "${sourceName}" must be numeric or FixedSizeList numeric`
+  );
 }
 
 function validateSupportedNumericType(sourceName: string, type: Int | Float): void {
   if (DataType.isInt(type) && type.bitWidth === 64) {
-    throw new Error(`ArrowGeometry column "${sourceName}" cannot use 64-bit integer values`);
+    throw new Error(`ArrowTableGeometry column "${sourceName}" cannot use 64-bit integer values`);
   }
   if (DataType.isFloat(type) && type.precision === Precision.DOUBLE) {
-    throw new Error(`ArrowGeometry column "${sourceName}" cannot use float64 values`);
+    throw new Error(`ArrowTableGeometry column "${sourceName}" cannot use float64 values`);
   }
 }
 
@@ -284,7 +282,7 @@ function makeTypedArray(type: Int | Float, length: number): TypedArray {
     }
   }
 
-  throw new Error(`ArrowGeometry does not support Arrow type ${type}`);
+  throw new Error(`ArrowTableGeometry does not support Arrow type ${type}`);
 }
 
 function getArrowAttributeVertexFormat(
@@ -312,7 +310,7 @@ function getArrowAttributeVertexFormat(
     return vertexFormatDecoder.makeVertexFormat(signedDataType, size, normalized);
   }
 
-  throw new Error(`ArrowGeometry does not support Arrow type ${type}`);
+  throw new Error(`ArrowTableGeometry does not support Arrow type ${type}`);
 }
 
 function getArrowMeshIndices(
@@ -327,17 +325,17 @@ function getArrowMeshIndices(
     return null;
   }
   if (!DataType.isList(indexVector.type)) {
-    throw new Error('ArrowGeometry indices column must be a List column');
+    throw new Error('ArrowTableGeometry indices column must be a List column');
   }
 
   const childType = indexVector.type.children[0].type;
   if (!DataType.isInt(childType) || childType.bitWidth > 32) {
-    throw new Error('ArrowGeometry indices column must contain 32-bit integer values');
+    throw new Error('ArrowTableGeometry indices column must contain 32-bit integer values');
   }
 
   const firstRow = indexVector.get(0);
   if (!firstRow || typeof (firstRow as Iterable<unknown>)[Symbol.iterator] !== 'function') {
-    throw new Error('ArrowGeometry indices column row 0 must contain the index list');
+    throw new Error('ArrowTableGeometry indices column row 0 must contain the index list');
   }
 
   return normalizeIndexArray(Array.from(firstRow as Iterable<number>, Number));
@@ -347,7 +345,7 @@ function normalizeIndexArray(indices: number[]): Uint16Array | Uint32Array {
   let maxIndex = 0;
   for (const index of indices) {
     if (!Number.isInteger(index) || index < 0) {
-      throw new Error('ArrowGeometry indices must be non-negative integers');
+      throw new Error('ArrowTableGeometry indices must be non-negative integers');
     }
     maxIndex = Math.max(maxIndex, index);
   }

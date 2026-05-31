@@ -31,8 +31,6 @@ export type ArrowBufferLayoutOptions = ArrowVertexFormatOptions & {
   arrowTable?: Table;
   /** Maps shader attribute names to Arrow column paths. Defaults to using the attribute name. */
   arrowPaths?: Record<string, string>;
-  /** @deprecated Use arrowPaths. */
-  attributeNameToArrowPath?: Record<string, string>;
 };
 
 type ArrowBufferLayoutSource =
@@ -87,21 +85,13 @@ export function getArrowBufferLayout(
   shaderLayout: ShaderLayout,
   options: ArrowBufferLayoutOptions
 ): BufferLayout[];
-/** @deprecated Use getArrowBufferLayout(shaderLayout, {arrowTable, arrowPaths}). */
 export function getArrowBufferLayout(
-  arrowTable: Table,
-  shaderLayout: ShaderLayout,
-  options?: ArrowBufferLayoutOptions
-): BufferLayout[];
-export function getArrowBufferLayout(
-  firstArgument: ShaderLayout | Table,
-  secondArgument: ShaderLayout | ArrowBufferLayoutOptions,
-  thirdArgument?: ArrowBufferLayoutOptions
+  firstArgument: ShaderLayout,
+  secondArgument: ArrowBufferLayoutOptions
 ): BufferLayout[] {
   const {shaderLayout, options, source} = normalizeArrowBufferLayoutArguments(
     firstArgument,
-    secondArgument,
-    thirdArgument
+    secondArgument
   );
   const bufferLayout: BufferLayout[] = [];
   const matrixSelections = getArrowMatrixBufferLayouts(shaderLayout, source);
@@ -214,39 +204,15 @@ function getArrowMatrixBufferLayouts(
 }
 
 function normalizeArrowBufferLayoutArguments(
-  firstArgument: ShaderLayout | Table,
-  secondArgument: ShaderLayout | ArrowBufferLayoutOptions,
-  thirdArgument?: ArrowBufferLayoutOptions
+  firstArgument: ShaderLayout,
+  secondArgument: ArrowBufferLayoutOptions
 ): {
   shaderLayout: ShaderLayout;
   options: ArrowBufferLayoutOptions;
   source: ArrowBufferLayoutSource;
 } {
-  if (firstArgument instanceof Table) {
-    const arrowTable = firstArgument;
-    const shaderLayout = secondArgument as ShaderLayout;
-    const options = thirdArgument || {};
-
-    if (options.arrowTable || options.arrowVectors) {
-      throw new Error(
-        'Do not provide arrowTable or arrowVectors when using the legacy table overload'
-      );
-    }
-
-    return {
-      shaderLayout,
-      options,
-      source: {
-        type: 'table',
-        arrowTable,
-        arrowTablePaths: new Set(getArrowPaths(arrowTable)),
-        arrowPaths: options.arrowPaths || options.attributeNameToArrowPath
-      }
-    };
-  }
-
   const shaderLayout = firstArgument;
-  const options = secondArgument as ArrowBufferLayoutOptions;
+  const options = secondArgument;
   const hasArrowTable = Boolean(options.arrowTable);
   const hasArrowVectors = Boolean(options.arrowVectors);
 

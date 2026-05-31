@@ -24,7 +24,7 @@ export const STAR_ATTRIBUTE_SHADER_LAYOUT = {
     {name: 'eventDurations', location: 2, type: 'f32', stepMode: 'instance'},
     {name: 'pulsePeriods', location: 3, type: 'f32', stepMode: 'instance'},
     {name: 'starSizes', location: 4, type: 'f32', stepMode: 'instance'},
-    {name: 'eventColors', location: 5, type: 'vec4<u32>', stepMode: 'instance'}
+    {name: 'eventColors', location: 5, type: 'vec4<f32>', stepMode: 'instance'}
   ],
   bindings: []
 } satisfies ShaderLayout;
@@ -66,7 +66,7 @@ struct VertexInputs {
   @location(2) eventDurations : f32,
   @location(3) pulsePeriods : f32,
   @location(4) starSizes : f32,
-  @location(5) eventColors : vec4<u32>,
+  @location(5) eventColors : vec4<f32>,
 };
 
 struct FragmentInputs {
@@ -82,10 +82,6 @@ fn getQuadCorner(vertexIndex : u32) -> vec2<f32> {
   if (vertexIndex == 3u) { return vec2<f32>(-1.0, -1.0); }
   if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
   return vec2<f32>(-1.0, 1.0);
-}
-
-fn unpackEventColor(eventColor : vec4<u32>) -> vec4<f32> {
-  return vec4<f32>(eventColor) / 255.0;
 }
 
 fn getStarVisibility(currentTimestamp : f32, eventStart : f32, eventDuration : f32) -> f32 {
@@ -130,7 +126,7 @@ fn getStarColor(eventColor : vec4<f32>, visibility : f32, pulse : f32) -> vec4<f
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
   let corner = getQuadCorner(inputs.vertexIndex % 6u);
-  let eventColor = unpackEventColor(inputs.eventColors);
+  let eventColor = inputs.eventColors;
   let visibility = getStarVisibility(
     temporalStarfield.currentTimestamp,
     inputs.eventStarts,
@@ -283,7 +279,7 @@ in float eventStarts;
 in float eventDurations;
 in float pulsePeriods;
 in float starSizes;
-in uvec4 eventColors;
+in vec4 eventColors;
 
 uniform temporalStarfieldUniforms {
   float currentTimestamp;
@@ -299,10 +295,6 @@ vec2 getQuadCorner(int vertexIndex) {
   if (vertexIndex == 3) { return vec2(-1.0, -1.0); }
   if (vertexIndex == 4) { return vec2(1.0, 1.0); }
   return vec2(-1.0, 1.0);
-}
-
-vec4 unpackEventColor(uvec4 eventColor) {
-  return vec4(eventColor) / 255.0;
 }
 
 float getStarVisibility(float currentTimestamp, float eventStart, float eventDuration) {
@@ -345,7 +337,7 @@ vec4 getStarColor(vec4 eventColor, float visibility, float pulse) {
 
 void main() {
   vec2 corner = getQuadCorner(gl_VertexID % 6);
-  vec4 eventColor = unpackEventColor(eventColors);
+  vec4 eventColor = eventColors;
   float visibility = getStarVisibility(
     temporalStarfield.currentTimestamp,
     eventStarts,

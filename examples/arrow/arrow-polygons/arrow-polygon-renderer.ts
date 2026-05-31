@@ -18,6 +18,16 @@ import {
   createPolygonShaderInputs,
   type PolygonShaderInputs
 } from './polygon-model';
+import {
+  getOptionalArrowColumn,
+  getRequiredArrowColumn,
+  hasArrowTableOrVectorSource,
+  streamArrowRecordBatches,
+  type ArrowColumnSelector,
+  type ArrowRecordBatchStreamingSession,
+  type ArrowRecordBatchStreamUpdate,
+  type OptionalArrowColumnSelector
+} from '../arrow-renderer-utils';
 
 export type ArrowPolygonRendererPickingInfo = {
   batchIndex: number | null;
@@ -26,11 +36,11 @@ export type ArrowPolygonRendererPickingInfo = {
 
 export type ArrowPolygonRendererProps = {
   /** Optional Arrow source table. */
-  data?: arrow.Table;
+  data?: arrow.Table | null;
   /** Polygon column or source table column name. Defaults to `polygons` when data is supplied. */
-  polygons?: string | arrow.Vector<ArrowPolygonInputType>;
+  polygons?: ArrowColumnSelector<ArrowPolygonInputType>;
   /** Row/vertex color column, source table column name, or null to force constant color. */
-  colors?: string | arrow.Vector<ArrowPolygonColorType> | null;
+  colors?: OptionalArrowColumnSelector<ArrowPolygonColorType>;
   /** Treat `List<FixedSizeList<...>>` rows as pre-tessellated triangle vertices. */
   tessellated?: boolean;
   /** Constant fallback RGBA color. */
@@ -56,15 +66,10 @@ export type ArrowPolygonRendererMetrics = {
   tessellationTimeMs: number;
 };
 
-export type ArrowPolygonRendererStreamingSession = {
-  version: number;
-};
+export type ArrowPolygonRendererStreamingSession = ArrowRecordBatchStreamingSession;
 
-export type ArrowPolygonRendererRecordBatchStreamUpdate = {
-  loadedBatchCount: number;
-  isFirstBatch: boolean;
-  metrics: ArrowPolygonRendererMetrics;
-};
+export type ArrowPolygonRendererRecordBatchStreamUpdate =
+  ArrowRecordBatchStreamUpdate<ArrowPolygonRendererMetrics>;
 
 export type ArrowPolygonRendererRecordBatchStreamProps = {
   recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
@@ -76,14 +81,31 @@ const DEFAULT_POLYGON_RENDERER_COLOR: [number, number, number, number] = [0, 96,
 const DEFAULT_POLYGON_RENDERER_CENTER: [number, number] = [0, 0];
 const DEFAULT_POLYGON_RENDERER_SCALE = 1;
 
-type PreparedPolygonBatch = {
+export type ArrowPolygonColumns = {
+  polygons: arrow.Vector<ArrowPolygonInputType>;
+  colors?: arrow.Vector<ArrowPolygonColorType> | null;
+};
+
+export type ConvertArrowPolygonColumnsToGPUVectorsOptions = Pick<
+  ArrowPolygonRendererProps,
+  'tessellated' | 'color'
+> & {
+  rowIndexOffset?: number;
+  id?: string;
+};
+
+export type ArrowPolygonGPUVectors = {
   prepared: PreparedArrowPolygonGPUVectors;
-  model: GPUTableModel;
-  pickingModel: GPUTableModel;
+  destroy: () => void;
+};
+
+export type ArrowPolygonRendererInput = ArrowPolygonGPUVectors & {
   polygonArrowByteLength: number;
   stylingArrowByteLength: number;
   tessellationTimeMs: number;
 };
+
+type PreparedPolygonBatch = ArrowPolygonRendererInput;
 
 export class ArrowPolygonRenderer {
   readonly device: Device;
@@ -91,6 +113,8 @@ export class ArrowPolygonRenderer {
   readonly picker: PickingManager;
   props: ArrowPolygonRendererProps;
   preparedBatches: PreparedPolygonBatch[] = [];
+  model: GPUTableModel | null = null;
+  pickingModel: GPUTableModel | null = null;
   private streamingSessionVersion = 0;
   private pickedBatchIndex: number | null = null;
   private pickedRowIndex: number | null = null;
@@ -144,48 +168,22 @@ export class ArrowPolygonRenderer {
     streamingSession = this.beginRecordBatchStream(),
     onBatch
   }: ArrowPolygonRendererRecordBatchStreamProps): Promise<void> {
-    let loadedBatchCount = 0;
-
-    if (!this.isRecordBatchStreamActive(streamingSession)) {
-      return;
-    }
-
-    for (
-      let recordBatchResult = await recordBatchIterator.next();
-      !recordBatchResult.done;
-      recordBatchResult = await recordBatchIterator.next()
-    ) {
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        return;
-      }
-
-      const rowIndexOffset = this.getMetrics().rowCount;
-      const preparedBatch = await this.createPreparedRecordBatch(
-        recordBatchResult.value,
-        rowIndexOffset
-      );
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        preparedBatch.model.destroy();
-        preparedBatch.pickingModel.destroy();
-        preparedBatch.prepared.destroy();
-        return;
-      }
-
-      this.preparedBatches.push(preparedBatch);
-      loadedBatchCount++;
-      onBatch?.({
-        loadedBatchCount,
-        isFirstBatch: loadedBatchCount === 1,
-        metrics: this.getMetrics()
-      });
-    }
+    await streamArrowRecordBatches({
+      recordBatchIterator,
+      streamingSession,
+      isActive: session => this.isRecordBatchStreamActive(session),
+      prepareBatch: recordBatch =>
+        this.createPreparedRecordBatch(recordBatch, this.getMetrics().rowCount),
+      appendBatch: preparedBatch => this.appendPreparedBatch(preparedBatch),
+      destroyBatch: destroyPreparedPolygonBatch,
+      getMetrics: () => this.getMetrics(),
+      onBatch
+    });
   }
 
   predraw(commandEncoder: CommandEncoder): void {
-    for (const preparedBatch of this.preparedBatches) {
-      preparedBatch.model.predraw(commandEncoder);
-      preparedBatch.pickingModel.predraw(commandEncoder);
-    }
+    this.model?.predraw(commandEncoder);
+    this.pickingModel?.predraw(commandEncoder);
   }
 
   draw(renderPass: RenderPass, props: {aspect: number}): void {
@@ -196,9 +194,14 @@ export class ArrowPolygonRenderer {
         aspect: props.aspect
       }
     });
+    const model = this.model;
+    if (!model) {
+      return;
+    }
     for (const [batchIndex, preparedBatch] of this.preparedBatches.entries()) {
       this.shaderInputs.setProps({picking: {isActive: false, batchIndex}});
-      preparedBatch.model.draw(renderPass);
+      setPolygonModelPreparedBatch(model, preparedBatch);
+      model.draw(renderPass);
     }
   }
 
@@ -212,9 +215,15 @@ export class ArrowPolygonRenderer {
     }
 
     const pickingPass = this.picker.beginRenderPass();
+    const pickingModel = this.pickingModel;
+    if (!pickingModel) {
+      pickingPass.end();
+      return;
+    }
     for (const [batchIndex, preparedBatch] of this.preparedBatches.entries()) {
       this.shaderInputs.setProps({picking: {batchIndex}});
-      preparedBatch.pickingModel.draw(pickingPass);
+      setPolygonModelPreparedBatch(pickingModel, preparedBatch);
+      pickingModel.draw(pickingPass);
     }
     pickingPass.end();
 
@@ -277,12 +286,10 @@ export class ArrowPolygonRenderer {
     const streamingSessionVersion = this.streamingSessionVersion;
     const preparedBatch = await this.createPreparedBatch(props, 0, 'arrow-polygons');
     if (streamingSessionVersion !== this.streamingSessionVersion) {
-      preparedBatch.model.destroy();
-      preparedBatch.pickingModel.destroy();
-      preparedBatch.prepared.destroy();
+      destroyPreparedPolygonBatch(preparedBatch);
       return;
     }
-    this.preparedBatches.push(preparedBatch);
+    this.appendPreparedBatch(preparedBatch);
   }
 
   private async createPreparedRecordBatch(
@@ -303,51 +310,48 @@ export class ArrowPolygonRenderer {
     rowIndexOffset: number,
     id: string
   ): Promise<PreparedPolygonBatch> {
-    const batchIndex = this.preparedBatches.length;
-    const polygons = getPolygonVector(props);
-    const colors = getColorVector(props);
-    const polygonArrowByteLength = getArrowVectorByteLength(polygons);
-    const stylingArrowByteLength = colors ? getArrowVectorByteLength(colors) : 0;
-    const startedAt = getTimestampMilliseconds();
-    const prepared = await prepareArrowPolygonGPUVectorsAsync(
-      this.device,
-      {
-        polygons,
-        ...(colors ? {colors} : {})
-      },
-      {
-        id,
-        tessellated: props.tessellated,
-        color: props.color ?? DEFAULT_POLYGON_RENDERER_COLOR,
-        rowIndexOffset
-      }
-    );
-    return {
-      prepared,
-      model: createPolygonModel(this.device, {
-        id: `arrow-polygons-${batchIndex}`,
-        prepared,
-        shaderInputs: this.shaderInputs
-      }),
-      pickingModel: createPolygonModel(this.device, {
-        id: `arrow-polygons-${batchIndex}-picking`,
-        prepared,
-        shaderInputs: this.shaderInputs,
-        picking: true
-      }),
-      polygonArrowByteLength,
-      stylingArrowByteLength,
-      tessellationTimeMs: getTimestampMilliseconds() - startedAt
-    };
+    const preparedInput = await prepareArrowPolygonInput(this.device, props, {
+      rowIndexOffset,
+      id
+    });
+    return preparedInput;
+  }
+
+  private appendPreparedBatch(preparedBatch: PreparedPolygonBatch): void {
+    this.preparedBatches.push(preparedBatch);
+    this.createModels(preparedBatch);
   }
 
   private destroyPreparedBatches(): void {
+    this.destroyModels();
     for (const preparedBatch of this.preparedBatches) {
-      preparedBatch.model.destroy();
-      preparedBatch.pickingModel.destroy();
-      preparedBatch.prepared.destroy();
+      destroyPreparedPolygonBatch(preparedBatch);
     }
     this.preparedBatches = [];
+  }
+
+  private createModels(preparedBatch: PreparedPolygonBatch): void {
+    if (this.model && this.pickingModel) {
+      return;
+    }
+    this.model = createPolygonModel(this.device, {
+      id: 'arrow-polygons',
+      prepared: preparedBatch.prepared,
+      shaderInputs: this.shaderInputs
+    });
+    this.pickingModel = createPolygonModel(this.device, {
+      id: 'arrow-polygons-picking',
+      prepared: preparedBatch.prepared,
+      shaderInputs: this.shaderInputs,
+      picking: true
+    });
+  }
+
+  private destroyModels(): void {
+    this.model?.destroy();
+    this.pickingModel?.destroy();
+    this.model = null;
+    this.pickingModel = null;
   }
 
   private isRecordBatchStreamActive(
@@ -371,6 +375,78 @@ export class ArrowPolygonRenderer {
   };
 }
 
+/** Wraps polygon conversion with example metrics and timing. */
+export async function prepareArrowPolygonInput(
+  device: Device,
+  props: ArrowPolygonRendererProps,
+  options: {rowIndexOffset?: number; id?: string} = {}
+): Promise<ArrowPolygonRendererInput> {
+  const polygons = getPolygonVector(props);
+  const colors = getColorVector(props);
+  const polygonArrowByteLength = getArrowVectorByteLength(polygons);
+  const stylingArrowByteLength = colors ? getArrowVectorByteLength(colors) : 0;
+  const startedAt = getTimestampMilliseconds();
+  const converted = await convertArrowPolygonColumnsToGPUVectors(
+    device,
+    {polygons, colors},
+    {
+      rowIndexOffset: options.rowIndexOffset,
+      id: options.id,
+      tessellated: props.tessellated,
+      color: props.color
+    }
+  );
+
+  return {
+    ...converted,
+    polygonArrowByteLength,
+    stylingArrowByteLength,
+    tessellationTimeMs: getTimestampMilliseconds() - startedAt
+  };
+}
+
+/** Converts Arrow polygon columns into GPU vectors without creating render models or metrics. */
+export async function convertArrowPolygonColumnsToGPUVectors(
+  device: Device,
+  columns: ArrowPolygonColumns,
+  options: ConvertArrowPolygonColumnsToGPUVectorsOptions = {}
+): Promise<ArrowPolygonGPUVectors> {
+  const rowIndexOffset = options.rowIndexOffset ?? 0;
+  const id = options.id ?? 'arrow-polygons';
+  const {polygons, colors = null} = columns;
+  const prepared = await prepareArrowPolygonGPUVectorsAsync(
+    device,
+    {
+      polygons,
+      ...(colors ? {colors} : {})
+    },
+    {
+      id,
+      tessellated: options.tessellated,
+      color: options.color ?? DEFAULT_POLYGON_RENDERER_COLOR,
+      rowIndexOffset
+    }
+  );
+
+  return {
+    prepared,
+    destroy: () => prepared.destroy()
+  };
+}
+
+function destroyPreparedPolygonBatch(preparedBatch: PreparedPolygonBatch): void {
+  preparedBatch.destroy();
+}
+
+function setPolygonModelPreparedBatch(
+  model: GPUTableModel,
+  preparedBatch: PreparedPolygonBatch
+): void {
+  model.setProps({table: preparedBatch.prepared.table});
+  model.setIndexBuffer(preparedBatch.prepared.indices);
+  model.setVertexCount(preparedBatch.prepared.tessellation.indices.length);
+}
+
 function getPolygonPickingTooltip({batchIndex, objectIndex}: PickInfo): string | null {
   if (batchIndex === null || objectIndex === null) {
     return null;
@@ -379,15 +455,12 @@ function getPolygonPickingTooltip({batchIndex, objectIndex}: PickInfo): string |
 }
 
 function getPolygonVector(props: ArrowPolygonRendererProps): arrow.Vector<ArrowPolygonInputType> {
-  if (typeof props.polygons === 'string' || !props.polygons) {
-    const columnName = typeof props.polygons === 'string' ? props.polygons : 'polygons';
-    const vector = props.data?.getChild(columnName);
-    if (!vector) {
-      throw new Error(`ArrowPolygonRenderer data is missing polygon column "${columnName}"`);
-    }
-    return vector as arrow.Vector<ArrowPolygonInputType>;
-  }
-  return props.polygons;
+  return getRequiredArrowColumn({
+    data: props.data,
+    selector: props.polygons,
+    defaultColumnName: 'polygons',
+    ownerName: 'ArrowPolygonRenderer'
+  });
 }
 
 function getColorVector(
@@ -396,16 +469,17 @@ function getColorVector(
   if (props.colors === null) {
     return undefined;
   }
-  if (typeof props.colors === 'string' || props.colors === undefined) {
-    const columnName = typeof props.colors === 'string' ? props.colors : 'colors';
-    const vector = props.data?.getChild(columnName);
-    return vector as arrow.Vector<ArrowPolygonColorType> | undefined;
-  }
-  return props.colors;
+  return (
+    getOptionalArrowColumn({
+      data: props.data,
+      selector: props.colors,
+      defaultColumnName: 'colors'
+    }) ?? undefined
+  );
 }
 
 function hasPolygonSource(props: ArrowPolygonRendererProps): boolean {
-  return Boolean(props.data || (props.polygons && typeof props.polygons !== 'string'));
+  return hasArrowTableOrVectorSource({data: props.data, selector: props.polygons});
 }
 
 function getTimestampMilliseconds(): number {
