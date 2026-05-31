@@ -4,11 +4,16 @@
 
 // Resources
 export {getGPUTableEvaluator, GPUTableEvaluator} from './operation/gpu-table-evaluator';
+export {
+  getInterleavedGPUTableEvaluatorFromGPUVector,
+  InterleavedGPUTableEvaluator
+} from './operation/interleaved-gpu-table-evaluator';
 export type {
   GPUTableEvaluatorEvaluateOptions,
   GPUTableEvaluatorInput,
   GPUTableEvaluatorProps
 } from './operation/gpu-table-evaluator';
+export type {InterleavedGPUTableEvaluatorProps} from './operation/interleaved-gpu-table-evaluator';
 
 // Operations
 export {
@@ -29,6 +34,11 @@ export {extent} from './operations/extent';
 export {interleave} from './operations/interleave';
 export {fround} from './operations/fround';
 export {gather} from './operations/gather';
+export {
+  pickInterleaved,
+  scatterInterleaved,
+  type ScatterInterleavedOptions
+} from './operations/scatter-interleaved';
 export {sequence} from './operations/sequence';
 
 // Backends

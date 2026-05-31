@@ -4,6 +4,8 @@
 
 import type {
   AttributeShaderType,
+  BufferAttributeLayout,
+  BufferLayout,
   NormalizedDataType,
   PrimitiveDataType,
   SignedDataType,
@@ -23,6 +25,16 @@ export type VertexList<Format extends VertexFormat = VertexFormat> = `vertex-lis
 /** @deprecated Use {@link VertexList}. */
 export type GPUVectorVertexListFormat = VertexList;
 
+/** Named fields stored in one interleaved GPU vector row. */
+export type InterleavedFields = Record<string, VertexFormat>;
+
+declare const INTERLEAVED_GPU_VECTOR_TYPE: unique symbol;
+
+/** Heterogeneous row format for one interleaved GPU vector. */
+export type Interleaved<Fields extends InterleavedFields = InterleavedFields> = {
+  readonly [INTERLEAVED_GPU_VECTOR_TYPE]: Fields;
+};
+
 /**
  * Memory-layout string used by GPUVector.
  *
@@ -30,6 +42,9 @@ export type GPUVectorVertexListFormat = VertexList;
  * vertex-aligned formats use `vertex-list<${VertexFormat}>`.
  */
 export type GPUVectorFormat = VertexFormat | VertexList;
+
+/** Type-level GPUVector format, including heterogeneous interleaved rows. */
+export type GPUVectorType = GPUVectorFormat | Interleaved;
 
 /** Decoded memory-layout information for a GPUVector format string. */
 export type GPUVectorFormatInfo = {
@@ -59,11 +74,75 @@ export type GPUVectorFormatInfo = {
   webglOnly?: boolean;
 };
 
+/** Options for generating a BufferLayout from interleaved GPU vector fields. */
+export type InterleavedGPUVectorLayoutProps<Fields extends InterleavedFields = InterleavedFields> =
+  {
+    /** Name of the interleaved buffer. */
+    name: string;
+    /** Named fields stored in declaration order. */
+    fields: Fields;
+    /** Step mode shared by all generated attribute views. */
+    stepMode?: 'vertex' | 'instance';
+    /**
+     * Minimum byte alignment for each field and the final row stride.
+     *
+     * Defaults to 4 bytes to match vertex-buffer alignment constraints.
+     */
+    minAttributeAlignment?: number;
+  };
+
+/** Computed layout metadata for one interleaved GPU vector row. */
+export type InterleavedGPUVectorLayout<Fields extends InterleavedFields = InterleavedFields> = {
+  /** Name of the interleaved buffer. */
+  name: string;
+  /** Named fields stored in declaration order. */
+  fields: Fields;
+  /** Bytes between adjacent interleaved rows. */
+  byteStride: number;
+  /** Attribute views inside each row. */
+  attributes: BufferAttributeLayout[];
+  /** BufferLayout consumed by Model/GPUTable attribute binding. */
+  bufferLayout: BufferLayout;
+};
+
 const VERTEX_LIST_FORMAT_REGEXP = /^vertex-list<([^<>]+)>$/;
 
 /** Returns true when a GPUVector format describes row-offset vertex lists. */
 export function isVertexListGPUVectorFormat(format: string): format is VertexList {
   return VERTEX_LIST_FORMAT_REGEXP.test(format);
+}
+
+/** Computes an interleaved GPU vector row layout from named field formats. */
+export function getInterleavedGPUVectorLayout<Fields extends InterleavedFields = InterleavedFields>(
+  options: InterleavedGPUVectorLayoutProps<Fields>
+): InterleavedGPUVectorLayout<Fields> {
+  const {name, fields, stepMode, minAttributeAlignment = 4} = options;
+  assertPositiveInteger(minAttributeAlignment, 'minAttributeAlignment');
+
+  const fieldEntries = Object.entries(fields) as Array<[keyof Fields & string, VertexFormat]>;
+  if (fieldEntries.length === 0) {
+    throw new Error('Interleaved GPU vector fields must declare at least one field');
+  }
+
+  const attributes: BufferAttributeLayout[] = [];
+  let byteOffset = 0;
+
+  for (const [attribute, format] of fieldEntries) {
+    const formatInfo = vertexFormatDecoder.getVertexFormatInfo(format);
+    byteOffset = alignTo(byteOffset, minAttributeAlignment);
+    attributes.push({attribute, format, byteOffset});
+    byteOffset += formatInfo.byteLength;
+  }
+
+  const byteStride = alignTo(byteOffset, minAttributeAlignment);
+  const bufferLayout: BufferLayout = {
+    name,
+    ...(stepMode ? {stepMode} : {}),
+    byteStride,
+    attributes
+  };
+
+  return {name, fields, byteStride, attributes, bufferLayout};
 }
 
 /** Returns the fixed element memory format for fixed and vertex-list vectors. */
@@ -167,5 +246,15 @@ function getSignedDataType(elementFormat: VertexFormat, type: NormalizedDataType
       return 'sint16';
     default:
       return type;
+  }
+}
+
+function alignTo(byteOffset: number, alignment: number): number {
+  return Math.ceil(byteOffset / alignment) * alignment;
+}
+
+function assertPositiveInteger(value: number, label: string): void {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive integer`);
   }
 }
