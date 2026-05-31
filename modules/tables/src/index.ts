@@ -20,15 +20,25 @@ export {
   type GPUVectorProps
 } from './table/gpu-vector';
 export {
+  getInterleavedGPUVectorLayout,
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
   isGPUVectorFormatCompatibleWithShaderType,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat,
   type GPUVectorFormatInfo,
+  type GPUVectorType,
   type GPUVectorVertexListFormat,
+  type Interleaved,
+  type InterleavedFields,
+  type InterleavedGPUVectorLayout,
+  type InterleavedGPUVectorLayoutProps,
   type VertexList
 } from './table/gpu-vector-format';
+export {
+  makeInterleavedGPUVector,
+  type MakeInterleavedGPUVectorProps
+} from './table/interleaved-gpu-vector';
 export {type GPUField, type GPUSchema, type GPUTypeMap} from './table/gpu-schema';
 export {
   createGPUVectorCollection,

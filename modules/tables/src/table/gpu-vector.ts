@@ -11,7 +11,13 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import {GPUData} from './gpu-data';
-import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
+import {
+  getGPUVectorFormatInfo,
+  type GPUVectorFormat,
+  type GPUVectorType,
+  type Interleaved,
+  type InterleavedFields
+} from './gpu-vector-format';
 
 /** Buffer creation props used by format-specific producers before wrapping storage in a GPUVector. */
 export type GPUVectorBufferProps = Omit<BufferProps, 'byteLength' | 'data'>;
@@ -21,7 +27,7 @@ export type GPUVectorDynamicBufferProps = Omit<DynamicBufferProps, 'byteLength' 
 export type GPUVectorProps = GPUVectorBufferProps;
 
 /** Arrow upload props moved to `@luma.gl/arrow`; retained only as a typed migration sentinel. */
-export type GPUVectorFromArrowProps<_T extends GPUVectorFormat = GPUVectorFormat> = never;
+export type GPUVectorFromArrowProps<_T extends GPUVectorType = GPUVectorType> = never;
 
 /** Constructor props that wrap an existing typed GPU buffer. */
 export type GPUVectorFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> = {
@@ -52,7 +58,7 @@ export type GPUVectorFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat
 };
 
 /** Constructor props that wrap one interleaved GPU buffer. */
-export type GPUVectorFromInterleavedProps<T extends GPUVectorFormat = GPUVectorFormat> = {
+export type GPUVectorFromInterleavedProps<_T extends GPUVectorType = GPUVectorType> = {
   /** Discriminator for interleaved-buffer construction. */
   type: 'interleaved';
   /** Stable vector name. */
@@ -60,7 +66,9 @@ export type GPUVectorFromInterleavedProps<T extends GPUVectorFormat = GPUVectorF
   /** Existing interleaved GPU buffer. */
   buffer: Buffer | DynamicBuffer;
   /** Optional canonical memory-layout descriptor when the interleaved row also has one value view. */
-  format?: T;
+  format?: GPUVectorFormat;
+  /** Named field formats stored in this interleaved row. */
+  interleavedFields?: InterleavedFields;
   /** Number of logical rows in the buffer. */
   length: number;
   /** Number of fixed rows or flattened vertex-list values in the buffer. */
@@ -132,11 +140,17 @@ export type GPUVectorFromAppendableProps<T extends GPUVectorFormat = GPUVectorFo
 };
 
 /** Discriminated constructor props for {@link GPUVector}. */
-export type GPUVectorCreateProps<T extends GPUVectorFormat = GPUVectorFormat> =
-  | GPUVectorFromBufferProps<T>
+type NonInterleavedGPUVectorFormat<T extends GPUVectorType> =
+  Extract<T, GPUVectorFormat> extends never ? GPUVectorFormat : Extract<T, GPUVectorFormat>;
+
+type InterleavedGPUVectorFields<T extends GPUVectorType> =
+  T extends Interleaved<infer Fields> ? Fields : InterleavedFields;
+
+export type GPUVectorCreateProps<T extends GPUVectorType = GPUVectorType> =
+  | GPUVectorFromBufferProps<NonInterleavedGPUVectorFormat<T>>
   | GPUVectorFromInterleavedProps<T>
-  | GPUVectorFromDataProps<T>
-  | GPUVectorFromAppendableProps<T>;
+  | GPUVectorFromDataProps<NonInterleavedGPUVectorFormat<T>>
+  | GPUVectorFromAppendableProps<NonInterleavedGPUVectorFormat<T>>;
 
 /**
  * GPU memory and format metadata for one vector-valued table column.
@@ -144,7 +158,7 @@ export type GPUVectorCreateProps<T extends GPUVectorFormat = GPUVectorFormat> =
  * Format-specific modules upload bytes and use these vectors to expose shared
  * lifecycle, chunking, batching, and ownership semantics.
  */
-export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
+export class GPUVector<T extends GPUVectorType = GPUVectorType> {
   /** Stable vector name. */
   readonly name: string;
   /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
@@ -152,7 +166,9 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
   readonly dataType?: unknown;
   /** Canonical memory-layout descriptor for the uploaded bytes. */
-  readonly format?: T;
+  readonly format?: NonInterleavedGPUVectorFormat<T>;
+  /** Named field formats stored in this interleaved vector row, when applicable. */
+  readonly interleavedFields?: InterleavedGPUVectorFields<T>;
   /** Number of logical rows represented by the vector. */
   length: number;
   /** Number of fixed rows or flattened vertex-list values represented by the vector. */
@@ -168,7 +184,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   /** Optional GPU buffer layout described by this vector. */
   readonly bufferLayout?: BufferLayout;
   /** GPU data chunks preserved across table/batch aggregation. Each chunk owns or borrows its buffer. */
-  readonly data: GPUData<T>[] = [];
+  readonly data: GPUData<NonInterleavedGPUVectorFormat<T>>[] = [];
   /** Device retained by appendable vectors so adapters can create future GPUData chunks. */
   readonly device?: Device;
   /** Buffer props retained by appendable vectors for future GPUData chunks. */
@@ -194,7 +210,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         this.name = name;
         this.type = props.dataType ?? format;
         this.dataType = props.dataType;
-        this.format = format;
+        this.format = format as NonInterleavedGPUVectorFormat<T> | undefined;
         this.length = length;
         this.valueLength = valueLength;
         this.stride = stride;
@@ -202,9 +218,9 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         this.byteStride = byteStride;
         this.rowByteLength = rowByteLength;
         this.data.push(
-          new GPUData({
+          new GPUData<NonInterleavedGPUVectorFormat<T>>({
             buffer,
-            format,
+            format: format as NonInterleavedGPUVectorFormat<T> | undefined,
             length,
             valueLength,
             stride,
@@ -223,6 +239,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
           name,
           buffer,
           format,
+          interleavedFields,
           length,
           valueLength = length,
           byteOffset = 0,
@@ -233,7 +250,8 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         this.name = name;
         this.type = props.dataType ?? format;
         this.dataType = props.dataType;
-        this.format = format;
+        this.format = format as NonInterleavedGPUVectorFormat<T> | undefined;
+        this.interleavedFields = interleavedFields as InterleavedGPUVectorFields<T> | undefined;
         this.length = length;
         this.valueLength = valueLength;
         this.stride = byteStride;
@@ -242,9 +260,9 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         this.rowByteLength = byteStride;
         this.bufferLayout = {name, byteStride, attributes};
         this.data.push(
-          new GPUData({
+          new GPUData<NonInterleavedGPUVectorFormat<T>>({
             buffer,
-            format,
+            format: format as NonInterleavedGPUVectorFormat<T> | undefined,
             length,
             valueLength,
             stride: byteStride,
@@ -330,7 +348,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   }
 
   /** Adds one already-materialized GPU data chunk to this logical vector. */
-  addData(data: GPUData<T>): this {
+  addData(data: GPUData<NonInterleavedGPUVectorFormat<T>>): this {
     if (this.format && data.format !== this.format) {
       throw new Error('GPUVector.addData() requires matching formats');
     }
@@ -349,7 +367,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
 
   /** Adds one adapter-created GPUData chunk to an appendable logical vector. */
   appendDataChunk(
-    data: GPUData<T>,
+    data: GPUData<NonInterleavedGPUVectorFormat<T>>,
     appendedByteLength = this.appendableByteLength + data.buffer.byteLength
   ): this {
     if (!this.isAppendable) {

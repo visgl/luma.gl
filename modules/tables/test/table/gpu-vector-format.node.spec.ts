@@ -9,8 +9,10 @@ import {
   GPUTable,
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
+  getInterleavedGPUVectorLayout,
   isGPUVectorFormatCompatibleWithShaderType,
-  isVertexListGPUVectorFormat
+  isVertexListGPUVectorFormat,
+  makeInterleavedGPUVector
 } from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 
@@ -74,6 +76,80 @@ test('GPUVector accepts format as canonical metadata and synthesizes table layou
   t.equal(colors.format, 'unorm8x4', 'stores the canonical GPUVector format');
   t.equal(colors.type, 'unorm8x4', 'retains the deprecated type alias as format metadata');
   t.equal(table.bufferLayout[0].format, 'unorm8x4', 'table layout uses GPUVector.format');
+
+  table.destroy();
+  t.end();
+});
+
+test('Interleaved GPUVector helpers compute aligned field layouts', t => {
+  const layout = getInterleavedGPUVectorLayout({
+    name: 'vertices',
+    fields: {
+      colors: 'unorm8x4',
+      positions: 'float32x3'
+    }
+  });
+
+  t.equal(layout.byteStride, 16, 'computes packed four-byte-aligned stride');
+  t.deepEqual(
+    layout.attributes,
+    [
+      {attribute: 'colors', format: 'unorm8x4', byteOffset: 0},
+      {attribute: 'positions', format: 'float32x3', byteOffset: 4}
+    ],
+    'computes field offsets in declaration order'
+  );
+  t.deepEqual(
+    layout.bufferLayout,
+    {
+      name: 'vertices',
+      byteStride: 16,
+      attributes: layout.attributes
+    },
+    'returns a model-ready BufferLayout'
+  );
+  t.throws(
+    () => getInterleavedGPUVectorLayout({name: 'empty', fields: {}}),
+    /at least one field/,
+    'rejects empty interleaved field maps'
+  );
+  t.end();
+});
+
+test('makeInterleavedGPUVector wraps field metadata and synthesizes table layouts', t => {
+  const device = new NullDevice({});
+  const vertices = makeInterleavedGPUVector({
+    name: 'vertices',
+    buffer: device.createBuffer({byteLength: 32}),
+    length: 2,
+    fields: {
+      colors: 'unorm8x4',
+      positions: 'float32x3'
+    },
+    ownsBuffer: true
+  });
+  const table = new GPUTable({vectors: {vertices}});
+
+  t.equal(vertices.format, undefined, 'does not force a scalar format on interleaved rows');
+  t.deepEqual(
+    vertices.interleavedFields,
+    {colors: 'unorm8x4', positions: 'float32x3'},
+    'stores named interleaved field metadata'
+  );
+  t.deepEqual(
+    table.bufferLayout,
+    [
+      {
+        name: 'vertices',
+        byteStride: 16,
+        attributes: [
+          {attribute: 'colors', format: 'unorm8x4', byteOffset: 0},
+          {attribute: 'positions', format: 'float32x3', byteOffset: 4}
+        ]
+      }
+    ],
+    'table layout uses the interleaved vector buffer layout'
+  );
 
   table.destroy();
   t.end();

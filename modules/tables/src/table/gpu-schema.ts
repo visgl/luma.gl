@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {VertexFormat} from '@luma.gl/core';
-import type {GPUVectorFormat, VertexList} from './gpu-vector-format';
+import type {GPUVectorType, VertexList} from './gpu-vector-format';
 
 /**
  * Named GPU table columns mapped to their canonical memory formats.
@@ -12,7 +12,7 @@ import type {GPUVectorFormat, VertexList} from './gpu-vector-format';
  * `unorm8x4`, or `vertex-list<float32x3>`. Shader value declarations live in
  * `ShaderLayout`; compatibility is checked at adapter boundaries.
  */
-export type GPUTypeMap = Record<string, GPUVectorFormat>;
+export type GPUTypeMap = Record<string, GPUVectorType>;
 
 /**
  * One GPU table schema field.
@@ -21,14 +21,11 @@ export type GPUTypeMap = Record<string, GPUVectorFormat>;
  * Adapter modules can store source-schema metadata in `metadata`, but table core
  * only uses `name` and `format`.
  */
-export type GPUField<
-  Name extends string = string,
-  Format extends VertexFormat | VertexList<VertexFormat> = GPUVectorFormat
-> = {
+export type GPUField<Name extends string = string, Format extends GPUVectorType = GPUVectorType> = {
   /** Field/column name. */
   name: Name;
   /** Canonical GPU memory-layout descriptor for this field. */
-  format?: Format;
+  format?: Extract<Format, VertexFormat | VertexList<VertexFormat>>;
   /** Whether this logical field may contain null values in the source adapter. */
   nullable?: boolean;
   /** Adapter-owned field metadata. */
