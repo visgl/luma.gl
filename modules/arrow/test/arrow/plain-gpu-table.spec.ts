@@ -594,6 +594,7 @@ test('GPUTable creates metadata from existing GPU vectors', t => {
     name: 'positions',
     buffer: device.createBuffer({byteLength: 16}),
     dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
+    format: 'float32x2',
     length: 2,
     stride: 2,
     byteStride: 8,
@@ -604,6 +605,7 @@ test('GPUTable creates metadata from existing GPU vectors', t => {
     name: 'weights',
     buffer: device.createBuffer({byteLength: 8}),
     dataType: new arrow.Float32(),
+    format: 'float32',
     length: 2,
     byteStride: 4,
     ownsBuffer: true
@@ -652,7 +654,7 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
   const gpuTable = new GPUTable({vectors: [instances]});
 
   t.equal(gpuTable.schema.fields[0].name, 'instances', 'uses vector name in schema');
-  t.ok(arrow.DataType.isBinary(gpuTable.schema.fields[0].type), 'uses binary schema for storage');
+  t.notOk(gpuTable.schema.fields[0].format, 'does not synthesize one format for interleaved rows');
   t.deepEqual(
     gpuTable.bufferLayout,
     [
@@ -668,7 +670,7 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
     'uses interleaved buffer layout from vector'
   );
   t.deepEqual(Object.keys(gpuTable.attributes), ['instances'], 'keeps shared layout buffer');
-  t.equal(gpuTable.attributes.instances, instances.buffer, 'maps layout to shared buffer');
+  t.equal(gpuTable.attributes.instances, instances.data[0].buffer, 'maps layout to shared buffer');
 
   gpuTable.destroy();
   t.end();

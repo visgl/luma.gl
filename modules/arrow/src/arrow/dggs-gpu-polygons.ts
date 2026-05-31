@@ -207,7 +207,8 @@ export function prepareDggsCellPathGPUVector(
   const keyVector = ownsKeyVector
     ? makeGPUVectorFromArrow(device, keys, {
         id: `${resourceIdentifier}-keys`,
-        name: `${options.encoding}Keys`
+        name: `${options.encoding}Keys`,
+        format: 'uint32x2'
       })
     : keys;
   assertDggsCellKeyVector(keyVector, 'prepareDggsCellPathGPUVector');

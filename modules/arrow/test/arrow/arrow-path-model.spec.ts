@@ -452,7 +452,7 @@ test('AttributePathModel.prepareGPUVectors updates view origins without rewritin
     new Float64Array([100, 200, 101, 200, 102, 201])
   );
   const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
-  const pathBytesBefore = await prepared.paths.buffer.readAsync();
+  const pathBytesBefore = await prepared.paths.data[0].buffer.readAsync();
   const deltaSegmentBytesBefore =
     await prepared.pathProps.pathState.expandedPathVertexData.readAsync();
   const viewOriginBytesBefore = await prepared.pathProps.pathState.pathViewOriginData.readAsync();
@@ -461,7 +461,7 @@ test('AttributePathModel.prepareGPUVectors updates view origins without rewritin
     modelViewMatrix: [2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 10, 20, 30, 1]
   });
 
-  const pathBytesAfter = await prepared.paths.buffer.readAsync();
+  const pathBytesAfter = await prepared.paths.data[0].buffer.readAsync();
   const deltaSegmentBytesAfter =
     await prepared.pathProps.pathState.expandedPathVertexData.readAsync();
   const viewOriginBytesAfter = await prepared.pathProps.pathState.pathViewOriginData.readAsync();

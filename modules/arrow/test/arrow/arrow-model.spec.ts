@@ -11,8 +11,8 @@ import {
   makeGPUGeometryFromArrow,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
-import type {ShaderLayout} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import type {Buffer, ShaderLayout} from '@luma.gl/core';
+import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -85,7 +85,7 @@ test('makeArrowGPUTable converts Arrow tables for GPUTableModel rendering', t =>
   );
   t.equal(
     model.vertexArray.attributes[0],
-    table.attributes.positions,
+    getConcreteTestBuffer(table.attributes.positions),
     'sets Model vertex array attributes from GPU table buffers'
   );
   t.equal(model.instanceCount, arrowTable.numRows, 'infers instanceCount from table row count');
@@ -183,7 +183,7 @@ test('GPUTableModel updates converted GPU table props', t => {
   );
   t.equal(
     model.vertexArray.attributes[0],
-    nextTable.attributes.positions,
+    getConcreteTestBuffer(nextTable.attributes.positions),
     'sets vertex array attributes from the updated GPU table buffers'
   );
 
@@ -241,7 +241,9 @@ test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', 
   const renderPass = device.getDefaultRenderPass();
   const previousPipeline = model.pipeline;
   const previousBufferLayout = model.bufferLayout;
-  const positionsBuffers = table.batches.map(batch => batch.gpuVectors.positions.data[0].buffer);
+  const positionsBuffers = table.batches.map(batch =>
+    getConcreteTestBuffer(batch.gpuVectors.positions.data[0].buffer)
+  );
   const drawCalls: {
     instanceCount?: number;
     buffer?: unknown;
@@ -273,7 +275,7 @@ test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', 
   t.equal(model.instanceCount, arrowTable.numRows, 'restores the table-level inferred row count');
   t.equal(
     model.vertexArray.attributes[0],
-    table.attributes.positions,
+    getConcreteTestBuffer(table.attributes.positions),
     'restores table-level model attributes after batched drawing'
   );
 
@@ -457,4 +459,8 @@ function makeArrowModelIndicesVector(indices: Int32Array, vertexCount: number): 
   );
 
   return new arrow.Vector([indicesData]);
+}
+
+function getConcreteTestBuffer(buffer: Buffer | DynamicBuffer): Buffer {
+  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
