@@ -17,7 +17,7 @@ import {
   Utf8,
   Vector
 } from 'apache-arrow';
-import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from './arrow-gpu-table-adapters';
 import {getArrowUtf8DataBufferSource} from './arrow-gpu-data';
 
 type DggsCellPathCoordinateType = List<FixedSizeList<Float32>>;
@@ -205,7 +205,7 @@ export function prepareDggsCellPathGPUVector(
   const pathType = makeDggsCellPathCoordinateType(pathValueComponentCount);
   const ownsKeyVector = !(keys instanceof GPUVector);
   const keyVector = ownsKeyVector
-    ? makeArrowGPUVector(device, keys, {
+    ? makeGPUVectorFromArrow(device, keys, {
         id: `${resourceIdentifier}-keys`,
         name: `${options.encoding}Keys`
       })

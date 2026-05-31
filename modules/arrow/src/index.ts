@@ -90,7 +90,7 @@ export {
   makeArrowGPUData,
   makeArrowGPURecordBatch,
   makeArrowGPUTable,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
   type AppendableArrowGPUVectorProps,
@@ -98,7 +98,8 @@ export {
   type AppendableArrowGPUTableProps,
   type ArrowGPURecordBatchProps,
   type ArrowGPUTableProps,
-  type ArrowGPUVectorProps
+  type GPUVectorFromArrowProps,
+  type GPUVectorFormatForArrowType
 } from './arrow/arrow-gpu-table-adapters';
 export {
   ArrowGeometry,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {makeArrowGPUVector} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {GPUVector} from '@luma.gl/tables';
@@ -68,7 +68,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
 `;
 
 export type ColumnRendererGeometry = {
-  points: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  points: GPUVector<'float32x2'>;
   cellCount: number;
   decodeTimeMilliseconds: number;
   destroy: () => void;
@@ -79,7 +79,7 @@ export async function makeColumnRendererGeometry(
   geometryTable: arrow.Table
 ): Promise<ColumnRendererGeometry> {
   const startedAt = performance.now();
-  const h3Cells = makeArrowGPUVector(
+  const h3Cells = makeGPUVectorFromArrow(
     device,
     getRequiredArrowVector<arrow.Uint64>(geometryTable, 'h3Cells'),
     {name: 'geometryH3Cells', id: 'arrow-columns-geometry-h3-cells'}
@@ -100,7 +100,7 @@ export async function makeColumnRendererGeometry(
   try {
     dispatchColumnGeometryDecode(device, {
       cellCount,
-      h3Cells: getBufferBinding(h3Cells.buffer),
+      h3Cells: getBufferBinding(getGPUVectorBuffer(h3Cells)),
       geometryConfig,
       cellGeometryPoints: getBufferBinding(cellGeometryBuffer)
     });
@@ -115,6 +115,7 @@ export async function makeColumnRendererGeometry(
     name: 'cellGeometryPoints',
     buffer: cellGeometryBuffer,
     dataType: makeCellGeometryPointType(),
+    format: 'float32x2',
     length: pointCount,
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2,
@@ -177,6 +178,16 @@ function getRequiredArrowVector<T extends arrow.DataType>(
 
 function getBufferBinding(buffer: Buffer | DynamicBuffer): Binding {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+}
+
+function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(
+      `ArrowColumnRenderer geometry vector "${vector.name}" requires one GPUData chunk`
+    );
+  }
+  return data.buffer;
 }
 
 async function waitForSubmittedWork(device: Device): Promise<void> {

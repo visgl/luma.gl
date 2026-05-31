@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   appendArrowDataToGPUVector,
   makeAppendableArrowGPUVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -21,7 +21,7 @@ test('GPUVector uploads nested scalar attributes and round-trips Arrow offsets',
     new Int32Array([0, 3, 5]),
     new Int16Array([10, 20, 30, 40, 50])
   );
-  const gpuVector = makeArrowGPUVector(device, sourceVector, {name: 'nestedScalars'});
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector, {name: 'nestedScalars'});
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.equal(gpuVector.length, 2, 'retains one logical GPU row per nested list row');
@@ -60,7 +60,7 @@ test('GPUVector supports fixed nested attribute widths from one to four componen
       new Int32Array([0, 2, 3]),
       expectedValues
     );
-    const gpuVector = makeArrowGPUVector(device, sourceVector, {
+    const gpuVector = makeGPUVectorFromArrow(device, sourceVector, {
       name: `nestedTuple${dimension}`
     });
     const result = await readArrowGPUVectorAsync(gpuVector);
@@ -110,7 +110,7 @@ test('GPUVector preserves chunked tuple nested attribute batches', async t => {
     ...(firstChunk.data as arrow.Data<TupleNestedAttributeType>[]),
     ...(secondChunk.data as arrow.Data<TupleNestedAttributeType>[])
   ]);
-  const gpuVector = makeArrowGPUVector(device, sourceVector, {name: 'nestedTuples'});
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector, {name: 'nestedTuples'});
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.equal(gpuVector.data.length, 2, 'keeps one GPUData chunk per Arrow list chunk');
@@ -149,7 +149,7 @@ test('GPUVector nested list readAsync normalizes sliced offsets', async t => {
     new Float32Array([0, 0, 1, 1, 2, 2])
   );
   const slicedVector = sourceVector.slice(1) as arrow.Vector<TupleNestedAttributeType>;
-  const gpuVector = makeArrowGPUVector(device, slicedVector, {name: 'slicedNestedTuples'});
+  const gpuVector = makeGPUVectorFromArrow(device, slicedVector, {name: 'slicedNestedTuples'});
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.deepEqual(
@@ -226,7 +226,7 @@ test('GPUVector rejects nullable variable-length nested attribute rows', t => {
   const vector = new arrow.Vector<TupleNestedAttributeType>([nullableData]);
 
   t.throws(
-    () => makeArrowGPUVector(device, vector, {name: 'nestedTuples'}),
+    () => makeGPUVectorFromArrow(device, vector, {name: 'nestedTuples'}),
     /does not support nullable data/,
     'nested uploads fail before GPU allocation when top-level row nulls are present'
   );

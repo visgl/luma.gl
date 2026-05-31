@@ -16,7 +16,7 @@ import {
   writeArrowPathViewOriginGPUVector
 } from './arrow-path-model';
 import {prepareGpuPathFloat64DeltaVector} from './gpu-path-float64-deltas';
-import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from './arrow-gpu-table-adapters';
 import {isVariableLengthAttributeArrowType} from './arrow-types';
 import type {ArrowStoragePathInputProps} from './arrow-storage-path-model';
 import {prepareArrowTemporalGPUVector} from './arrow-temporal-gpu-vector';
@@ -113,15 +113,15 @@ export async function prepareArrowStoragePathGPUVectors(
   }
 
   const colors = sourceVectors.colors
-    ? makeArrowGPUVector(device, sourceVectors.colors, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.colors, {
         name: 'colors',
         id: `${id}-colors`,
-        format: getArrowPathColorGPUVectorFormat(sourceVectors.colors.type),
+        format: getArrowPathColorFormat(sourceVectors.colors.type),
         preserveDataChunks: true
       })
     : undefined;
   const widths = sourceVectors.widths
-    ? makeArrowGPUVector(device, sourceVectors.widths, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.widths, {
         name: 'widths',
         id: `${id}-widths`,
         preserveDataChunks: true
@@ -143,7 +143,7 @@ export async function prepareArrowStoragePathGPUVectors(
       )
     : undefined;
   const viewOrigins = sourceOrigins
-    ? makeArrowGPUVector(device, viewOriginVector!, {
+    ? makeGPUVectorFromArrow(device, viewOriginVector!, {
         name: 'pathViewOrigins',
         id: `${id}-view-origins`,
         preserveDataChunks: true
@@ -302,9 +302,7 @@ function isArrowPathColorType(type: DataType): type is ArrowPathColorType {
   return isArrowPathRowColorType(type) || isArrowPathVertexColorType(type);
 }
 
-function getArrowPathColorGPUVectorFormat(
-  type: ArrowPathColorType
-): 'unorm8x4' | 'vertex-list<unorm8x4>' {
+function getArrowPathColorFormat(type: ArrowPathColorType): 'unorm8x4' | 'vertex-list<unorm8x4>' {
   return isArrowPathVertexColorType(type) ? 'vertex-list<unorm8x4>' : 'unorm8x4';
 }
 
@@ -518,7 +516,7 @@ async function prepareArrowStoragePathCoordinateData(
   const coordinateValueType = getArrowStoragePathCoordinateValueType(paths.type);
   if (coordinateValueType instanceof Float32) {
     return {
-      paths: makeArrowGPUVector(device, paths as Vector<ArrowPathCoordinateType>, {
+      paths: makeGPUVectorFromArrow(device, paths as Vector<ArrowPathCoordinateType>, {
         name: 'paths',
         id: `${options.id || 'arrow-storage-path-model'}-paths`,
         preserveDataChunks: true

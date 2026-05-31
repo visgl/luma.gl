@@ -5,7 +5,6 @@
 import type {Device} from '@luma.gl/core';
 import {indexColorPicking, indexPicking, ShaderInputs, supportsIndexPicking} from '@luma.gl/engine';
 import {GPUTableModel, type GPUTable, type GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
 import {
   FS_GLSL,
   PICKING_FS_GLSL,
@@ -15,20 +14,19 @@ import {
   pointViewport
 } from './point-model-shaders';
 
-export type PointModelSchema = {
-  positions: arrow.FixedSizeList<arrow.Float32>;
-  eventTimes: arrow.Float32;
-  radii: arrow.Float32;
-  colors: arrow.FixedSizeList<arrow.Uint8>;
-  rowIndices: arrow.Uint32;
+export type PointModelGPUTypeMap = {
+  positions: 'float32x2';
+  eventTimes: 'float32';
+  radii: 'float32';
+  colors: 'unorm8x4';
+  rowIndices: 'uint32';
 };
 
 export type PointModelVectors = Record<string, GPUVector> & {
-  [ColumnName in keyof PointModelSchema]: GPUVector<PointModelSchema[ColumnName]>;
+  [ColumnName in keyof PointModelGPUTypeMap]: GPUVector<PointModelGPUTypeMap[ColumnName]>;
 };
 
 export type PointModelTable = GPUTable & {
-  schema: arrow.Schema<PointModelSchema>;
   readonly gpuVectors: PointModelVectors;
 };
 

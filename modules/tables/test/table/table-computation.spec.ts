@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {makeArrowGPUVector} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import type {GPUVector} from '@luma.gl/tables';
 import {GPUTableComputation} from '@luma.gl/tables';
 import type {ComputeShaderLayout, Device} from '@luma.gl/core';
@@ -31,7 +31,7 @@ test('GPUTableComputation binds inputVectors for storage compute', async t => {
     return;
   }
 
-  const values = makeArrowGPUVector(device, arrow.makeVector(new Int32Array([2, 4, 6])), {
+  const values = makeGPUVectorFromArrow(device, arrow.makeVector(new Int32Array([2, 4, 6])), {
     name: 'values'
   });
   const computation = new GPUTableComputation(device, {

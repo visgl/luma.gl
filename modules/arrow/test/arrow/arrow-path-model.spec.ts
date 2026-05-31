@@ -10,7 +10,7 @@ import {
   buildArrowPathSegmentTable,
   createArrowStoragePathState,
   makeArrowFixedSizeListVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   readArrowGPUVectorAsync,
   type ArrowPathSourceVectors,
   type PreparedArrowPathGPUVectors
@@ -1019,7 +1019,7 @@ function makeGpuArrowPathVector<TypeT extends arrow.DataType>(
   name: string,
   vector: arrow.Vector<TypeT>
 ): GPUVector<TypeT> {
-  return makeArrowGPUVector(device, vector, {name});
+  return makeGPUVectorFromArrow(device, vector, {name});
 }
 
 function destroyStorageGpuArrowPathProps(

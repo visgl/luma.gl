@@ -147,3 +147,49 @@ test('GPUVector rejects explicitly mismatched chunk formats', t => {
   secondBuffer.destroy();
   t.end();
 });
+
+test('GPUVector honors borrowed GPUData chunk ownership', t => {
+  const device = new NullDevice({});
+  const borrowedBuffer = device.createBuffer({byteLength: 4});
+  const borrowedData = new GPUData({
+    buffer: borrowedBuffer,
+    format: 'unorm8x4',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const borrowedVector = new GPUVector({
+    type: 'data',
+    name: 'borrowedColors',
+    data: [borrowedData],
+    ownsData: false
+  });
+
+  borrowedVector.destroy();
+
+  t.notOk(borrowedVector.ownsBuffer, 'borrowed data vectors do not report retained GPU ownership');
+  t.notOk(borrowedBuffer.destroyed, 'borrowed data vector destroy leaves the buffer alive');
+
+  borrowedData.destroy();
+  t.ok(borrowedBuffer.destroyed, 'original GPUData owner can still destroy the buffer');
+
+  const ownedBuffer = device.createBuffer({byteLength: 4});
+  const ownedData = new GPUData({
+    buffer: ownedBuffer,
+    format: 'unorm8x4',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const ownedVector = new GPUVector({
+    type: 'data',
+    name: 'ownedColors',
+    data: [ownedData],
+    ownsData: true
+  });
+
+  ownedVector.destroy();
+
+  t.ok(ownedBuffer.destroyed, 'owned data vector destroy releases the buffer');
+  t.end();
+});

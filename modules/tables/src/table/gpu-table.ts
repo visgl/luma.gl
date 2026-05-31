@@ -635,6 +635,11 @@ function rebuildGPURecordBatchColumns<T extends GPUTypeMap>(
       delete batch.gpuVectors[name];
     }
   }
+  for (const name of Object.keys(batch.bindings)) {
+    if (!selectedColumnSet.has(name)) {
+      delete batch.bindings[name];
+    }
+  }
   for (const name of Object.keys(batch.attributes)) {
     delete batch.attributes[name];
   }

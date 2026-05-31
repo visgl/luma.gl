@@ -9,9 +9,9 @@ import {
   getArrowVectorByteLength,
   isArrowFixedSizeListVector,
   makeArrowFixedSizeListVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   prepareArrowTemporalGPUVector,
-  type ArrowTemporalColumnType
+  type ArrowTemporalType
 } from '@luma.gl/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
 import {PickingManager, type PickInfo} from '@luma.gl/engine';
@@ -381,9 +381,10 @@ export class ArrowPointRenderer {
     const normalizedPositions = normalizePointPositions(positions);
     const rowCount = normalizedPositions.positions.length;
 
-    const pointPositions = makeArrowGPUVector(this.device, normalizedPositions.positions, {
+    const pointPositions = makeGPUVectorFromArrow(this.device, normalizedPositions.positions, {
       name: 'positions',
-      id: `${id}-positions`
+      id: `${id}-positions`,
+      format: 'float32x2'
     });
     const eventTimes = await makeEventTimesGPUVector(this.device, {
       timeColumn: props.timeColumn,
@@ -393,20 +394,20 @@ export class ArrowPointRenderer {
       timeOrigin: props.timeOrigin,
       id: `${id}-event-times`
     });
-    const pointRadii = makeArrowGPUVector(
+    const pointRadii = makeGPUVectorFromArrow(
       this.device,
       radii ?? makeConstantRadiusVector(rowCount, props.radius ?? DEFAULT_POINT_RENDERER_RADIUS),
-      {name: 'radii', id: `${id}-radii`}
+      {name: 'radii', id: `${id}-radii`, format: 'float32'}
     );
-    const pointColors = makeArrowGPUVector(
+    const pointColors = makeGPUVectorFromArrow(
       this.device,
       colors ?? makeConstantColorVector(rowCount, props.color ?? DEFAULT_POINT_RENDERER_COLOR),
-      {name: 'colors', id: `${id}-colors`}
+      {name: 'colors', id: `${id}-colors`, format: 'unorm8x4'}
     );
-    const rowIndices = makeArrowGPUVector(
+    const rowIndices = makeGPUVectorFromArrow(
       this.device,
       makeRowIndexVector(rowCount, rowIndexOffset),
-      {name: 'rowIndices', id: `${id}-row-indices`}
+      {name: 'rowIndices', id: `${id}-row-indices`, format: 'uint32'}
     );
     const vectors: PointModelVectors = {
       positions: pointPositions,
@@ -593,15 +594,20 @@ async function makeEventTimesGPUVector(
     timeOrigin: ArrowPointRendererProps['timeOrigin'];
     id: string;
   }
-): Promise<GPUVector<arrow.Float32>> {
+): Promise<GPUVector<'float32'>> {
   if (!props.timeColumn) {
-    return makeArrowGPUVector(device, makeFloat32Vector(new Float32Array(props.rowCount)), {
+    return makeGPUVectorFromArrow(device, makeFloat32Vector(new Float32Array(props.rowCount)), {
       name: 'eventTimes',
-      id: props.id
+      id: props.id,
+      format: 'float32'
     });
   }
   if (props.timeColumn === 'm') {
-    return makeArrowGPUVector(device, props.measureTimes, {name: 'eventTimes', id: props.id});
+    return makeGPUVectorFromArrow(device, props.measureTimes, {
+      name: 'eventTimes',
+      id: props.id,
+      format: 'float32'
+    });
   }
   if (!props.separateTimeColumn) {
     throw new Error('ArrowPointRenderer time column is missing');
@@ -611,10 +617,10 @@ async function makeEventTimesGPUVector(
       `ArrowPointRenderer time column rows must match point rows (${props.separateTimeColumn.length} !== ${props.rowCount})`
     );
   }
-  if (getArrowTemporalVectorInfo(props.separateTimeColumn)) {
+  if (isScalarArrowTemporalVector(props.separateTimeColumn)) {
     const preparedTimeColumn = await prepareArrowTemporalGPUVector(
       device,
-      props.separateTimeColumn as arrow.Vector<ArrowTemporalColumnType>,
+      props.separateTimeColumn,
       {
         name: 'eventTimes',
         id: props.id,
@@ -625,12 +631,23 @@ async function makeEventTimesGPUVector(
       preparedTimeColumn.destroy();
       throw new Error('ArrowPointRenderer temporal time column did not prepare as Float32');
     }
-    return preparedTimeColumn.temporal as GPUVector<arrow.Float32>;
+    return preparedTimeColumn.temporal;
   }
-  return makeArrowGPUVector(device, makeFloat32VectorFromNumeric(props.separateTimeColumn), {
+  if (getArrowTemporalVectorInfo(props.separateTimeColumn)) {
+    throw new Error('ArrowPointRenderer time column must be scalar temporal values');
+  }
+  return makeGPUVectorFromArrow(device, makeFloat32VectorFromNumeric(props.separateTimeColumn), {
     name: 'eventTimes',
-    id: props.id
+    id: props.id,
+    format: 'float32'
   });
+}
+
+function isScalarArrowTemporalVector(
+  vector: arrow.Vector<arrow.DataType>
+): vector is arrow.Vector<ArrowTemporalType> {
+  const temporalInfo = getArrowTemporalVectorInfo(vector);
+  return Boolean(temporalInfo && !temporalInfo.variableLength);
 }
 
 function getPositionVector(props: ArrowPointRendererProps): arrow.Vector<ArrowPointCoordinateType> {

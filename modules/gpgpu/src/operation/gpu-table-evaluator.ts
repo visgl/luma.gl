@@ -347,7 +347,7 @@ export class GPUTableEvaluator {
   ): GPUVector {
     const name = options.name ?? this._id ?? 'vector';
     const format =
-      options.format ?? this.format ?? getVertexFormat(this.type, this.size, this.normalized);
+      options.format ?? this.format ?? tryGetVertexFormat(this.type, this.size, this.normalized);
 
     if (options.interleaved) {
       const attributes =
@@ -450,7 +450,7 @@ export function getCompatibleGPUTableEvaluatorFormat(
   size: number,
   normalized: boolean = false
 ): GPUVectorFormat | undefined {
-  const expectedFormat = getVertexFormat(type, size, normalized);
+  const expectedFormat = tryGetVertexFormat(type, size, normalized);
   return input.format === expectedFormat ? input.format : undefined;
 }
 
@@ -574,4 +574,12 @@ function getVertexFormat(
     return `${baseFormat}x3-webgl` as VertexFormat;
   }
   return `${baseFormat}${size === 1 ? '' : `x${size}`}` as VertexFormat;
+}
+
+function tryGetVertexFormat(
+  type: SignedDataType,
+  size: number,
+  normalized: boolean = false
+): VertexFormat | undefined {
+  return size >= 1 && size <= 4 ? getVertexFormat(type, size, normalized) : undefined;
 }

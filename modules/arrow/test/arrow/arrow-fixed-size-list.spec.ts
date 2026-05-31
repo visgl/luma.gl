@@ -17,7 +17,7 @@ import {
   makeArrowMatrix3x3Vector,
   makeArrowMatrixVector,
   makeArrowFixedSizeListVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
@@ -411,7 +411,7 @@ test('GPUVector creates a GPU buffer from an Arrow vector', t => {
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = makeArrowGPUVector(device, vector);
+  const gpuVector = makeGPUVectorFromArrow(device, vector);
 
   t.notOk('vector' in gpuVector, 'does not retain the source Arrow vector');
   t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
@@ -429,7 +429,7 @@ test('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vect
   const sourceVector = makeArrowMatrix4x4Vector(
     new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 3, 4, 1])
   );
-  const gpuVector = makeArrowGPUVector(device, sourceVector, {name: 'matrix'});
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector, {name: 'matrix'});
   const result = await readArrowGPUVectorAsync(gpuVector);
 
   t.equal(gpuVector.stride, 16, 'preserves one mat4x4 scalar stride');
@@ -447,7 +447,7 @@ test('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vect
 test('GPUVector readAsync round-trips scalar numeric vectors', async t => {
   const device = new NullDevice({});
   const sourceVector = arrow.makeVector(new Int32Array([1, -2, 3]));
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
@@ -466,7 +466,7 @@ test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer
     arrow.makeData({type, length: 2, data: new Float32Array([1, 2])}),
     arrow.makeData({type, length: 1, data: new Float32Array([3])})
   ]);
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const vectorResult = await readArrowGPUVectorAsync(gpuVector);
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
@@ -499,7 +499,7 @@ test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t =>
   const firstChunk = arrow.vectorFromArray(['alpha', null], new arrow.Utf8());
   const secondChunk = arrow.vectorFromArray(['beta'], new arrow.Utf8());
   const sourceVector = new arrow.Vector([...firstChunk.data, ...secondChunk.data]);
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const vectorResult = await readArrowGPUVectorAsync(gpuVector);
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
@@ -529,7 +529,7 @@ test('GPUVector UTF-8 readAsync normalizes sliced offsets without retaining sour
   const device = new NullDevice({});
   const sourceVector = arrow.vectorFromArray(['skip', null, 'kept'], new arrow.Utf8());
   const slicedVector = sourceVector.slice(1) as arrow.Vector<arrow.Utf8>;
-  const gpuVector = makeArrowGPUVector(device, slicedVector);
+  const gpuVector = makeGPUVectorFromArrow(device, slicedVector);
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
@@ -552,7 +552,7 @@ test('GPUVector Dictionary<Utf8> upload uses sliced index rows', async t => {
     1,
     2
   );
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const indexBytes = await gpuVector.data[0].buffer.readAsync(
     gpuVector.data[0].byteOffset,
@@ -581,7 +581,7 @@ test('GPUVector readAsync round-trips FixedSizeList vectors', async t => {
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = makeArrowGPUVector(device, sourceVector);
+  const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
@@ -604,7 +604,7 @@ test('GPUVector infers Arrow-vector object construction from vector props', t =>
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = makeArrowGPUVector(device, vector, {name: 'positions'});
+  const gpuVector = makeGPUVectorFromArrow(device, vector, {name: 'positions'});
 
   t.equal(gpuVector.name, 'positions', 'exposes vector name');
   t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
@@ -928,7 +928,7 @@ test('appendArrowDataToGPUVector appends sliced Dictionary<Utf8> index rows', as
 test('GPUVector exposes primitive vector length and stride', t => {
   const device = new NullDevice({});
   const vector = arrow.makeVector(new Float32Array([1, 2, 3]));
-  const gpuVector = makeArrowGPUVector(device, vector);
+  const gpuVector = makeGPUVectorFromArrow(device, vector);
 
   t.equal(gpuVector.length, 3, 'exposes the primitive vector length');
   t.equal(gpuVector.stride, 1, 'exposes primitive vector stride as 1');

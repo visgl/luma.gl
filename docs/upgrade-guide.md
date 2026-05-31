@@ -18,7 +18,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   - `TableTransform`, `GPUTableComputation`
   - `GPUTableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
 - Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
-  - `makeArrowGPUData(...)`, `makeArrowGPUVector(...)`, `makeArrowGPURecordBatch(...)`, and `makeArrowGPUTable(...)`
+  - `makeArrowGPUData(...)`, `makeGPUVectorFromArrow(...)`, `makeArrowGPURecordBatch(...)`, and `makeArrowGPUTable(...)`
   - `makeAppendableArrowGPUVector(...)`, `makeAppendableArrowGPURecordBatch(...)`, and `makeAppendableArrowGPUTable(...)`
   - `appendArrowDataToGPUVector(...)`, `appendArrowVectorToGPUVector(...)`, `appendArrowRecordBatchToGPURecordBatch(...)`, and `appendArrowBatchToGPUTable(...)`
   - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`

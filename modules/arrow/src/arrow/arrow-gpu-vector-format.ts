@@ -6,8 +6,8 @@ import type {SignedDataType} from '@luma.gl/core';
 import type {GPUVectorFormat} from '@luma.gl/tables';
 import {DataType, Precision} from 'apache-arrow';
 
-/** Returns the raw GPUVector memory format implied by an Arrow type. */
-export function getArrowGPUVectorFormatFromDataType(type: DataType): GPUVectorFormat {
+/** Returns the GPUVector memory format implied by an Arrow data type. */
+export function getGPUVectorFormatFromArrowDataType(type: DataType): GPUVectorFormat {
   const isVertexList = DataType.isList(type);
   const elementType = isVertexList ? type.children[0].type : type;
   const scalarType = DataType.isFixedSizeList(elementType)

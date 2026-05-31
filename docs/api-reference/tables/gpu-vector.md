@@ -28,7 +28,7 @@ gpuVector.data[0].buffer; // the bindable storage
 ```
 
 When the input starts as Apache Arrow, prefer
-[`makeArrowGPUVector()`](/docs/api-reference/arrow/supported-arrow-types) from
+[`makeGPUVectorFromArrow()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`.
 
 ## Constructor Modes

@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Device, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
+import {
+  Buffer,
+  Device,
+  type BufferLayout,
+  type ShaderLayout,
+  type VertexFormat
+} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
   GPUData,
@@ -11,16 +17,20 @@ import {
   GPUVector,
   type GPUVectorBufferProps,
   type GPUVectorDynamicBufferProps,
-  type GPUVectorFormat
+  type GPUVectorFormat,
+  type VertexList
 } from '@luma.gl/tables';
 import {
   Data,
   DataType,
   Dictionary,
   Field,
+  FixedSizeList,
+  Float32,
   Int16,
   Int32,
   Int8,
+  List,
   RecordBatch,
   Schema,
   Table,
@@ -46,6 +56,7 @@ import {
   getArrowUtf8DataBufferSource,
   getArrowVariableLengthAttributeDataBufferSource,
   getArrowVectorBufferSource,
+  readArrowGPUDataAsync as readArrowGPUDataChunkAsync,
   validateArrowGPUDataDirectUpload,
   type GPUDataReadbackMetadata
 } from './arrow-gpu-data';
@@ -56,7 +67,7 @@ import {
   type VariableLengthAttributeArrowType
 } from './arrow-types';
 import {getArrowMatrixVectorInfo} from './arrow-matrix-vector';
-import {getArrowGPUVectorFormatFromDataType} from './arrow-gpu-vector-format';
+import {getGPUVectorFormatFromArrowDataType} from './arrow-gpu-vector-format';
 
 type AppendableArrowGPURecordBatch = GPURecordBatch & {
   __arrowAppendableColumns?: AppendableGPUColumn[];
@@ -64,16 +75,54 @@ type AppendableArrowGPURecordBatch = GPURecordBatch & {
 
 type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
 type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
+type VertexFormatForArrowScalarType<T extends DataType> = T extends Float32
+  ? 'float32'
+  : T extends Uint8
+    ? 'uint8'
+    : T extends Int8
+      ? 'sint8'
+      : T extends Uint16
+        ? 'uint16'
+        : T extends Int16
+          ? 'sint16'
+          : T extends Uint32
+            ? 'uint32'
+            : T extends Int32
+              ? 'sint32'
+              : never;
+type VertexFormatForArrowFixedSizeListType<T extends DataType> =
+  VertexFormatForArrowScalarType<T> extends infer Format extends string
+    ? Extract<
+        Format | `${Format}x2` | `${Format}x3` | `${Format}x3-webgl` | `${Format}x4`,
+        VertexFormat
+      >
+    : never;
+type VertexFormatForArrowType<T extends DataType> =
+  T extends FixedSizeList<infer ChildType>
+    ? VertexFormatForArrowFixedSizeListType<ChildType>
+    : VertexFormatForArrowScalarType<T>;
+export type GPUVectorFormatForArrowType<T extends DataType = DataType> = T extends Utf8
+  ? 'uint8'
+  : T extends Dictionary
+    ? GPUVectorFormat
+    : T extends List<infer ChildType>
+      ? VertexFormatForArrowType<ChildType> extends never
+        ? GPUVectorFormat
+        : VertexList<VertexFormatForArrowType<ChildType>>
+      : VertexFormatForArrowType<T> extends never
+        ? GPUVectorFormat
+        : VertexFormatForArrowType<T>;
 
 /** Props for uploading one Arrow vector into GPU storage. */
-export type ArrowGPUVectorProps = GPUVectorBufferProps & {
-  /** Stable vector name. */
-  name?: string;
-  /** Canonical GPUVector memory-layout descriptor. */
-  format?: GPUVectorFormat;
-  /** Upload each Arrow Data chunk into its own GPUData buffer instead of packing one buffer. */
-  preserveDataChunks?: boolean;
-};
+export type GPUVectorFromArrowProps<Format extends GPUVectorFormat = GPUVectorFormat> =
+  GPUVectorBufferProps & {
+    /** Stable vector name. */
+    name?: string;
+    /** Canonical GPUVector memory-layout descriptor. */
+    format?: Format;
+    /** Upload each Arrow Data chunk into its own GPUData buffer instead of packing one buffer. */
+    preserveDataChunks?: boolean;
+  };
 
 type ArrowGPUDataProps = GPUVectorBufferProps & {
   /** Canonical GPUVector memory-layout descriptor. */
@@ -217,10 +266,23 @@ export function makeArrowGPUData<T extends DataType>(
 }
 
 /** Uploads one Arrow vector into a generic GPU vector. */
-export function makeArrowGPUVector<T extends DataType>(
+export function makeGPUVectorFromArrow<
+  Format extends GPUVectorFormat,
+  T extends DataType = DataType
+>(
   device: Device,
   vector: Vector<T>,
-  props: ArrowGPUVectorProps = {}
+  props: GPUVectorFromArrowProps<Format> & {format: Format}
+): GPUVector<Format>;
+export function makeGPUVectorFromArrow<T extends DataType>(
+  device: Device,
+  vector: Vector<T>,
+  props?: GPUVectorFromArrowProps
+): GPUVector<GPUVectorFormatForArrowType<T>>;
+export function makeGPUVectorFromArrow<T extends DataType>(
+  device: Device,
+  vector: Vector<T>,
+  props: GPUVectorFromArrowProps = {}
 ): GPUVector {
   const {name = 'vector', format, preserveDataChunks = false, ...bufferProps} = props;
   const arrowType = vector.type as T;
@@ -315,7 +377,8 @@ export function makeArrowGPUVector<T extends DataType>(
     ],
     stride: getArrowTypeStride(arrowType),
     byteStride,
-    rowByteLength: byteStride
+    rowByteLength: byteStride,
+    ownsData: true
   });
 }
 
@@ -368,7 +431,7 @@ export function makeArrowGPURecordBatch(
     const arrowPath = options.arrowPaths?.[layout.name] || layout.name;
     const vector = getArrowVectorByPath(table, arrowPath);
     const sourceField = getArrowFieldByPath(table, arrowPath);
-    const gpuVector = makeArrowGPUVector(device, vector as Vector, {
+    const gpuVector = makeGPUVectorFromArrow(device, vector as Vector, {
       ...options.bufferProps,
       name: layout.name,
       format: layout.format
@@ -392,7 +455,7 @@ export function makeArrowGPURecordBatch(
     if (!vector || !sourceField) {
       continue;
     }
-    const gpuVector = makeArrowGPUVector(device, vector as Vector, {
+    const gpuVector = makeGPUVectorFromArrow(device, vector as Vector, {
       ...options.bufferProps,
       name: storageBinding.name
     });
@@ -695,19 +758,19 @@ function refreshAppendableGPURecordBatchBindings(
 }
 
 /** Reads one generic GPU data range back into Arrow `Data`. */
-export async function readArrowGPUDataAsync<T extends DataType>(_data: GPUData): Promise<Data<T>> {
-  throw new Error(
-    'readArrowGPUDataAsync() is temporarily disabled after the format-first GPUVector refactor'
-  );
+export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): Promise<Data<T>> {
+  return readArrowGPUDataChunkAsync(data) as Promise<Data<T>>;
 }
 
 /** Reads one generic GPU vector back into an Arrow vector. */
 export async function readArrowGPUVectorAsync<T extends DataType>(
-  _vector: GPUVector
+  vector: GPUVector
 ): Promise<Vector<T>> {
-  throw new Error(
-    'readArrowGPUVectorAsync() is temporarily disabled after the format-first GPUVector refactor'
-  );
+  if (vector.bufferLayout) {
+    throw new Error('readArrowGPUVectorAsync() does not support interleaved vectors');
+  }
+  const data = await Promise.all(vector.data.map(chunk => readArrowGPUDataAsync<T>(chunk)));
+  return new Vector(data) as Vector<T>;
 }
 
 function getSingleGPUVectorDataBuffer(
@@ -760,9 +823,9 @@ function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
     return 'uint8';
   }
   if (isArrowUtf8DictionaryType(type)) {
-    return getArrowGPUVectorFormatFromDataType(type.indices);
+    return getGPUVectorFormatFromArrowDataType(type.indices);
   }
-  return getArrowGPUVectorFormatFromDataType(type);
+  return getGPUVectorFormatFromArrowDataType(type);
 }
 
 function getArrowDataValueLength(data: Data): number {

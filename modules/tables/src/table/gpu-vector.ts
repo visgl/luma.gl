@@ -31,8 +31,8 @@ export type GPUVectorFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat
   name: string;
   /** Existing GPU buffer. */
   buffer: Buffer | DynamicBuffer;
-  /** Canonical memory-layout descriptor for values stored in the buffer. */
-  format: T;
+  /** Canonical memory-layout descriptor for values stored in the buffer, when representable. */
+  format?: T;
   /** Number of logical rows in the buffer. */
   length: number;
   /** Number of fixed rows or flattened vertex-list values in the buffer. */
@@ -174,6 +174,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   /** Buffer props retained by appendable vectors for future GPUData chunks. */
   readonly bufferProps?: GPUVectorDynamicBufferProps;
   private isAppendable = false;
+  private ownsDataChunks = true;
   private readonly ownedVectors: GPUVector[] = [];
   private appendableByteLength = 0;
 
@@ -269,7 +270,8 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
           ),
           byteStride = data[0]?.byteStride ?? getGPUVectorFormatInfo(format).byteLength,
           rowByteLength = data[0]?.rowByteLength ?? getGPUVectorFormatInfo(format).byteLength,
-          bufferLayout
+          bufferLayout,
+          ownsData = false
         } = props;
         validateGPUVectorDataFormats(data, format);
         this.name = name;
@@ -283,6 +285,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         this.byteStride = byteStride;
         this.rowByteLength = rowByteLength;
         this.bufferLayout = bufferLayout;
+        this.ownsDataChunks = ownsData;
         this.data.push(...data);
         return;
       }
@@ -311,7 +314,8 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   /** Whether destroying this vector releases any retained GPU storage. */
   get ownsBuffer(): boolean {
     return (
-      this.data.some(data => data.ownsBuffer) || this.ownedVectors.some(vector => vector.ownsBuffer)
+      (this.ownsDataChunks && this.data.some(data => data.ownsBuffer)) ||
+      this.ownedVectors.some(vector => vector.ownsBuffer)
     );
   }
 
@@ -396,8 +400,10 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
 
   /** Releases owned GPU data and detached ownership handles. */
   destroy(): void {
-    for (const data of this.data) {
-      data.destroy();
+    if (this.ownsDataChunks) {
+      for (const data of this.data) {
+        data.destroy();
+      }
     }
     for (const vector of this.ownedVectors.splice(0)) {
       vector.destroy();
@@ -406,15 +412,18 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
 }
 
 function getResolvedGPUVectorLayout<T extends GPUVectorFormat>(props: {
-  format: T;
+  format?: T;
   stride?: number;
   byteStride?: number;
   rowByteLength?: number;
 }): {stride: number; byteStride: number; rowByteLength: number} {
-  const formatInfo = getGPUVectorFormatInfo(props.format);
-  const rowByteLength = props.rowByteLength ?? formatInfo.byteLength;
+  const formatInfo = props.format ? getGPUVectorFormatInfo(props.format) : undefined;
+  const rowByteLength = props.rowByteLength ?? props.byteStride ?? formatInfo?.byteLength;
+  if (rowByteLength === undefined) {
+    throw new Error('GPUVector requires format or explicit rowByteLength');
+  }
   return {
-    stride: props.stride ?? formatInfo.components,
+    stride: props.stride ?? formatInfo?.components ?? 1,
     byteStride: props.byteStride ?? rowByteLength,
     rowByteLength
   };

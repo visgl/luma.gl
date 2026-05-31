@@ -5,9 +5,9 @@
 import {
   expandArrowVector,
   makeArrowGPUTable,
-  makeArrowGPUVector,
   makeArrowFixedSizeListVector,
   makeArrowMatrix4x4Vector,
+  makeGPUVectorFromArrow,
   makeGPUGeometryFromArrow,
   type ArrowTableGeometry,
   type ArrowMeshTable
@@ -83,7 +83,7 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
   readonly pickingModel: GPUTableModel | null;
   readonly matrixTable: GPUTable;
   readonly picker: PickingManager;
-  readonly faceColors?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  readonly faceColors?: GPUVector<'float32x4'>;
   readonly faceNames: arrow.Vector<arrow.Utf8>;
   readonly matrixValues = new Float32Array(CUBE_COUNT * MATRIX_COMPONENT_COUNT);
   readonly cubeTransforms = makeCubeTransforms();
@@ -104,7 +104,7 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
     this.faceNames = faceMetadata.getChild('name') as arrow.Vector<arrow.Utf8>;
     this.faceColors =
       device.type === 'webgpu'
-        ? makeArrowGPUVector(device, faceColors, {name: 'faceColors'})
+        ? makeGPUVectorFromArrow(device, faceColors, {name: 'faceColors', format: 'float32x4'})
         : undefined;
 
     this.updateInstanceMatrices(0);
@@ -209,7 +209,7 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
       }
     }
 
-    this.matrixTable?.gpuVectors.matrix?.buffer.write(this.matrixValues);
+    this.matrixTable?.gpuVectors.matrix?.data[0]?.buffer.write(this.matrixValues);
   }
 
   pickFace(mousePosition: number[] | null | undefined): void {

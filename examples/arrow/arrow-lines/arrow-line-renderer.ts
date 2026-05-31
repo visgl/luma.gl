@@ -6,14 +6,14 @@ import {
   AttributePathModel,
   StoragePathModel,
   StorageTripsPathModel,
-  convertArrowPathsToAttribute as convertArrowLinesToAttribute,
+  convertArrowPathsToAttribute,
   getArrowVectorByteLength,
   makeArrowFixedSizeListVector,
   prepareArrowTemporalGPUVector,
-  type ArrowPathPreparedState as ArrowLinePreparedState
+  type ArrowPathPreparedState
 } from '@luma.gl/arrow';
 import {type CommandEncoder, type Device} from '@luma.gl/core';
-import {GPURenderable, type GPUVector} from '@luma.gl/tables';
+import {GPURenderable, type GPUVector, type VertexList} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createArrowLineShaderInputs,
@@ -105,17 +105,17 @@ type DenseUnionGeometryKind =
 /** Prepared GPUVector data consumed by Arrow path models. */
 export type ArrowLineRendererData = {
   /** GPU path coordinate rows. */
-  paths: GPUVector<ArrowLineCoordinateType>;
+  paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
   /** Optional GPU row or per-vertex colors. */
-  colors?: GPUVector<ArrowLineColorType>;
+  colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
   /** Optional GPU per-row widths. */
-  widths?: GPUVector<arrow.Float32>;
+  widths?: GPUVector<'float32'>;
   /** Optional GPU per-vertex relative timestamps. */
-  timestamps?: GPUVector<ArrowLineTimestampType>;
+  timestamps?: GPUVector<'vertex-list<float32>'>;
   /** Optional view origins generated during coordinate normalization. */
-  viewOrigins?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  viewOrigins?: GPUVector<'float32x4'>;
   /** Prepared path state shared by attribute path rendering. */
-  pathState: ArrowLinePreparedState;
+  pathState: ArrowPathPreparedState;
   /** Releases all resources owned by this prepared data object. */
   destroy: () => void;
 };
@@ -123,7 +123,7 @@ export type ArrowLineRendererData = {
 /** Prepared path data plus byte-size metrics shown by the example control panel. */
 export type ArrowLineRendererInput = ArrowLineRendererData & {
   /** Required prepared widths vector for the example metrics and render paths. */
-  widths: GPUVector<arrow.Float32>;
+  widths: GPUVector<'float32'>;
   /** Bytes occupied by path coordinate and timestamp Arrow source vectors. */
   pathArrowByteLength: number;
   /** Bytes occupied by style Arrow source vectors. */
@@ -192,6 +192,12 @@ export type ArrowLineRendererSetPropsResult = {
   modelChanged: boolean;
 };
 
+/** Arrow or prepared GPU data accepted by {@link ArrowLineRenderer}. */
+export type ArrowLineRendererDataInput =
+  | ArrowLineRendererData
+  | ArrowLineRendererSourceVectors
+  | ArrowLineRendererSourceData;
+
 /** Token used to cancel stale Arrow path streaming work. */
 export type ArrowLineRendererStreamingSession = {
   /** Monotonic stream version owned by the layer. */
@@ -206,8 +212,8 @@ type ArrowLineRendererSetPropsOptions = {
 export type ArrowLineRendererProps = {
   /** Debug label used for generated model resources. */
   id?: string;
-  /** Prepared path data consumed by the layer. */
-  data: ArrowLineRendererData;
+  /** Arrow source vectors or prepared GPU path data consumed by the layer. */
+  data: ArrowLineRendererDataInput;
   /** Path rendering path. */
   model?: ArrowLineRendererModel;
   /** Source time column mode. */
@@ -222,6 +228,10 @@ export type ArrowLineRendererProps = {
   color?: [number, number, number, number];
   /** Constant fallback path width. */
   width?: number;
+};
+
+type PreparedArrowLineRendererProps = Omit<ArrowLineRendererProps, 'data'> & {
+  data: ArrowLineRendererData;
 };
 
 const DEFAULT_PATH_COLOR: [number, number, number, number] = [199, 219, 245, 235];
@@ -246,10 +256,12 @@ export class ArrowLineRenderer extends GPURenderable<
   readonly device: Device;
   readonly shaderInputs = createArrowLineShaderInputs();
   props: ArrowLineRendererProps;
-  model: ArrowLineRendererActiveModel;
+  model: ArrowLineRendererActiveModel | null = null;
   resolvedModel: ArrowLineRendererResolvedModel;
+  private ownedPathInput: ArrowLineRendererData | null = null;
   private activeStreamingPathInput: ArrowLineRendererInput | null = null;
   private streamingSessionVersion = 0;
+  private preparationVersion = 0;
   private isDestroyed = false;
 
   constructor(device: Device, props: ArrowLineRendererProps) {
@@ -257,7 +269,7 @@ export class ArrowLineRenderer extends GPURenderable<
     this.device = device;
     this.props = props;
     this.resolvedModel = this.resolveModel(props.model ?? 'auto', props.timeColumn ?? 'xyzm');
-    this.model = this.createModel(this.resolvedModel, props);
+    this.setPreparedOrPendingProps(props, true);
   }
 
   /**
@@ -280,7 +292,7 @@ export class ArrowLineRenderer extends GPURenderable<
           id: `${props.id ?? 'arrow-line-renderer'}-timestamps`
         })
       : null;
-    const prepared = await convertArrowLinesToAttribute(
+    const prepared = await convertArrowPathsToAttribute(
       device,
       {
         paths: sourceVectors.paths,
@@ -296,9 +308,7 @@ export class ArrowLineRenderer extends GPURenderable<
       paths: prepared.paths,
       ...(prepared.colors ? {colors: prepared.colors} : {}),
       ...(prepared.widths ? {widths: prepared.widths} : {}),
-      ...(preparedTimestamps
-        ? {timestamps: preparedTimestamps.temporal as GPUVector<ArrowLineTimestampType>}
-        : {}),
+      ...(preparedTimestamps ? {timestamps: preparedTimestamps.temporal} : {}),
       ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
       pathState: prepared.pathProps.pathState,
       destroy: () => {
@@ -322,16 +332,16 @@ export class ArrowLineRenderer extends GPURenderable<
       this.streamingSessionVersion++;
       this.activeStreamingPathInput = null;
     }
-    const nextModel = this.resolveModel(
-      nextProps.model ?? this.props.model ?? 'auto',
-      nextProps.timeColumn ?? this.props.timeColumn ?? 'xyzm'
-    );
     this.props = nextProps;
 
     if (props.currentTime !== undefined && this.model instanceof StorageTripsPathModel) {
       this.model.setProps({currentTime: props.currentTime});
     }
 
+    const nextModel = this.resolveModel(
+      nextProps.model ?? this.props.model ?? 'auto',
+      nextProps.timeColumn ?? this.props.timeColumn ?? 'xyzm'
+    );
     const modelChanged =
       props.data !== undefined ||
       props.model !== undefined ||
@@ -343,10 +353,7 @@ export class ArrowLineRenderer extends GPURenderable<
       return {modelChanged};
     }
 
-    const previousModel = this.model;
-    this.resolvedModel = nextModel;
-    this.model = this.createModel(nextModel, nextProps);
-    previousModel.destroy();
+    this.setPreparedOrPendingProps(nextProps, true);
     streamingPathInputToDestroy?.destroy();
     return {modelChanged};
   }
@@ -418,21 +425,21 @@ export class ArrowLineRenderer extends GPURenderable<
 
   override needsRedraw(): false | string {
     const rendererNeedsRedraw = super.needsRedraw();
-    const modelNeedsRedraw = this.model.needsRedraw();
+    const modelNeedsRedraw = this.model?.needsRedraw() ?? false;
     return rendererNeedsRedraw || modelNeedsRedraw;
   }
 
   override setNeedsRedraw(reason: string): void {
     super.setNeedsRedraw(reason);
-    this.model.setNeedsRedraw(reason);
+    this.model?.setNeedsRedraw(reason);
   }
 
   override predraw(commandEncoder: CommandEncoder): void {
-    this.model.predraw(commandEncoder);
+    this.model?.predraw(commandEncoder);
   }
 
   override draw(renderPass: Parameters<ArrowLineRendererActiveModel['draw']>[0]): void {
-    this.model.draw(renderPass);
+    this.model?.draw(renderPass);
   }
 
   destroy(): void {
@@ -440,7 +447,8 @@ export class ArrowLineRenderer extends GPURenderable<
     this.streamingSessionVersion++;
     const streamingPathInput = this.activeStreamingPathInput;
     this.activeStreamingPathInput = null;
-    this.model.destroy();
+    this.model?.destroy();
+    this.ownedPathInput?.destroy();
     streamingPathInput?.destroy();
   }
 
@@ -467,9 +475,50 @@ export class ArrowLineRenderer extends GPURenderable<
     return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
 
+  private setPreparedOrPendingProps(
+    props: ArrowLineRendererProps,
+    preservePreparedInput: boolean
+  ): void {
+    const preparationVersion = ++this.preparationVersion;
+    if (isPreparedArrowLineRendererData(props.data)) {
+      this.setPreparedProps({...props, data: props.data}, preservePreparedInput);
+      return;
+    }
+
+    void this.prepareAndSetProps(props, preparationVersion);
+  }
+
+  private async prepareAndSetProps(
+    props: ArrowLineRendererProps,
+    preparationVersion: number
+  ): Promise<void> {
+    const preparedData = await prepareArrowLineRendererDataInput(this.device, props);
+    if (this.isDestroyed || preparationVersion !== this.preparationVersion) {
+      preparedData.destroy();
+      return;
+    }
+    this.setPreparedProps({...props, data: preparedData}, false);
+  }
+
+  private setPreparedProps(
+    props: PreparedArrowLineRendererProps,
+    preservePreparedInput: boolean
+  ): void {
+    const nextModel = this.resolveModel(props.model ?? 'auto', props.timeColumn ?? 'xyzm');
+    const previousModel = this.model;
+    const previousOwnedPathInput = this.ownedPathInput;
+    this.resolvedModel = nextModel;
+    this.model = this.createModel(nextModel, props);
+    previousModel?.destroy();
+    this.ownedPathInput = preservePreparedInput ? null : props.data;
+    if (previousOwnedPathInput && previousOwnedPathInput !== props.data) {
+      previousOwnedPathInput.destroy();
+    }
+  }
+
   private createModel(
     modelKind: ArrowLineRendererResolvedModel,
-    props: ArrowLineRendererProps
+    props: PreparedArrowLineRendererProps
   ): ArrowLineRendererActiveModel {
     const commonProps = {
       id: props.id,
@@ -518,6 +567,35 @@ export class ArrowLineRenderer extends GPURenderable<
       shaderLayout: PATH_SHADER_LAYOUT
     });
   }
+}
+
+async function prepareArrowLineRendererDataInput(
+  device: Device,
+  props: ArrowLineRendererProps
+): Promise<ArrowLineRendererData> {
+  if (isPreparedArrowLineRendererData(props.data)) {
+    return props.data;
+  }
+  if (isArrowLineRendererSourceData(props.data)) {
+    return prepareArrowLineInput(device, props.data, props.mode ?? 'lines');
+  }
+  return ArrowLineRenderer.prepareData(device, {
+    id: props.id ?? 'arrow-line-renderer',
+    sourceVectors: props.data,
+    mode: props.mode
+  });
+}
+
+function isPreparedArrowLineRendererData(
+  data: ArrowLineRendererDataInput
+): data is ArrowLineRendererData {
+  return 'pathState' in data;
+}
+
+function isArrowLineRendererSourceData(
+  data: ArrowLineRendererDataInput
+): data is ArrowLineRendererSourceData {
+  return 'sourceVectors' in data;
 }
 
 /** Prepares generated Arrow path source data into the renderer input used by the example. */

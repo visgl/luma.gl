@@ -4,7 +4,7 @@
 
 import {Buffer, Framebuffer, type ShaderLayout} from '@luma.gl/core';
 import {makeArrowFixedSizeListVector, makeArrowGPUTable} from '@luma.gl/arrow';
-import {TableTransform} from '@luma.gl/tables';
+import {TableTransform, type GPUVector} from '@luma.gl/tables';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -252,11 +252,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.instancePositionBuffers = new Swap({
-      current: getCoreBuffer(this.transform.table.gpuVectors['oldPositions'].buffer),
+      current: getCoreBuffer(getGPUVectorBuffer(this.transform.table.gpuVectors['oldPositions'])),
       next: device.createBuffer({data: instancePositions})
     });
     this.instanceRotationBuffers = new Swap({
-      current: getCoreBuffer(this.transform.table.gpuVectors['oldRotations'].buffer),
+      current: getCoreBuffer(getGPUVectorBuffer(this.transform.table.gpuVectors['oldRotations'])),
       next: device.createBuffer({data: instanceRotations})
     });
 
@@ -323,6 +323,14 @@ function makeAgentTransformTable(
 
 function getCoreBuffer(buffer: Buffer | DynamicBuffer): Buffer {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+}
+
+function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(`Transform example vector "${vector.name}" requires one GPUData chunk`);
+  }
+  return data.buffer;
 }
 
 /*

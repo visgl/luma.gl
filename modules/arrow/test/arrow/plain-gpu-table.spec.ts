@@ -466,6 +466,35 @@ test('GPUTable select keeps requested columns and destroys dropped batch vectors
   t.end();
 });
 
+test('GPUTable select prunes dropped storage bindings', t => {
+  const device = new NullDevice({});
+  const positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 1, 1])
+  );
+  const texts = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
+  const table = new arrow.Table({positions, texts});
+  const shaderLayout: ShaderLayout = {
+    attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
+    bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
+  };
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
+  const droppedTextsBuffer = gpuTable.batches[0].gpuVectors.texts.data[0].buffer;
+
+  t.ok(gpuTable.bindings.texts, 'starts with the storage binding exposed on the table');
+
+  gpuTable.select('positions');
+
+  t.notOk(gpuTable.gpuVectors.texts, 'removes the dropped aggregate storage vector');
+  t.notOk(gpuTable.bindings.texts, 'removes the dropped table storage binding');
+  t.notOk(gpuTable.batches[0].bindings.texts, 'removes the dropped batch storage binding');
+  t.ok(droppedTextsBuffer.destroyed, 'destroys the dropped storage vector buffer');
+
+  gpuTable.destroy();
+  t.end();
+});
+
 test('GPUTable detachVector removes one live column and transfers its ownership', t => {
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];

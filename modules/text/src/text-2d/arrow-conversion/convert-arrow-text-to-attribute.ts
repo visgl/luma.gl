@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {makeArrowGPUVector} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
 import type {AttributeTextModelProps} from '../models/attribute-text-model';
@@ -101,39 +101,39 @@ export function convertArrowTextToAttribute(
 ): ConvertedArrowTextData {
   const columns = {...DEFAULT_COLUMNS, ...props.columns};
   const {sourceVectors} = props;
-  const positions = makeArrowGPUVector(device, sourceVectors.positions, {
+  const positions = makeGPUVectorFromArrow(device, sourceVectors.positions, {
     name: columns.positions,
     preserveDataChunks: true
   });
-  const texts = makeArrowGPUVector(device, sourceVectors.texts as ArrowUtf8TextVector, {
+  const texts = makeGPUVectorFromArrow(device, sourceVectors.texts as ArrowUtf8TextVector, {
     name: columns.text
   });
   const clipRects = sourceVectors.clipRects
-    ? makeArrowGPUVector(device, sourceVectors.clipRects, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.clipRects, {
         name: columns.clipRects,
         preserveDataChunks: true
       })
     : undefined;
   const colors = sourceVectors.colors
-    ? makeArrowGPUVector(device, sourceVectors.colors, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.colors, {
         name: columns.colors,
         preserveDataChunks: true
       })
     : undefined;
   const angles = sourceVectors.angles
-    ? makeArrowGPUVector(device, sourceVectors.angles, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.angles, {
         name: columns.angles,
         preserveDataChunks: true
       })
     : undefined;
   const sizes = sourceVectors.sizes
-    ? makeArrowGPUVector(device, sourceVectors.sizes, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.sizes, {
         name: columns.sizes,
         preserveDataChunks: true
       })
     : undefined;
   const pixelOffsets = sourceVectors.pixelOffsets
-    ? makeArrowGPUVector(device, sourceVectors.pixelOffsets, {
+    ? makeGPUVectorFromArrow(device, sourceVectors.pixelOffsets, {
         name: columns.pixelOffsets,
         preserveDataChunks: true
       })

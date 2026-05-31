@@ -6,7 +6,7 @@ import {
   getArrowFixedSizeListValues,
   isArrowFixedSizeListVector,
   makeArrowFixedSizeListVector,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
@@ -97,15 +97,15 @@ export type ArrowTemporalStarfieldRendererLabels = {
 };
 
 type PreparedEventStartsColumn = {
-  vector: GPUVector<arrow.Float32>;
+  vector: GPUVector<'float32'>;
   originMilliseconds: number;
   destroy: () => void;
 };
 
 type PreparedTemporalColumns = {
   eventStarts: PreparedEventStartsColumn;
-  eventDurations: PreparedArrowTemporalGPUVector;
-  pulsePeriods: PreparedArrowTemporalGPUVector;
+  eventDurations: PreparedArrowTemporalGPUVector<'float32'>;
+  pulsePeriods: PreparedArrowTemporalGPUVector<'float32'>;
 };
 
 type TemporalStarfieldTableInput = {
@@ -491,7 +491,7 @@ async function makeTemporalStarfieldGPURecordBatchInput(
 ): Promise<TemporalStarfieldGPURecordBatchInput> {
   const sourceTable = new arrow.Table([recordBatch]);
   const sourceVectors = getTemporalStarfieldRecordBatchVectors(sourceTable, timeColumn);
-  const preparedDurationColumns = (await prepareArrowTemporalGPUVectors(
+  const preparedDurationColumns = await prepareArrowTemporalGPUVectors(
     device,
     {
       eventDurations: sourceVectors.eventDurations,
@@ -503,7 +503,7 @@ async function makeTemporalStarfieldGPURecordBatchInput(
         pulsePeriods: {id: `arrow-temporal-starfield-pulse-periods-${batchIndex}`}
       }
     }
-  )) as unknown as Pick<PreparedTemporalColumns, 'eventDurations' | 'pulsePeriods'>;
+  );
 
   let positions: GPUVector | null = null;
   let preparedEventStarts: PreparedEventStartsColumn | null = null;
@@ -527,17 +527,20 @@ async function makeTemporalStarfieldGPURecordBatchInput(
         batchIndex
       );
     }
-    positions = makeArrowGPUVector(device, modelPositions, {
+    positions = makeGPUVectorFromArrow(device, modelPositions, {
       name: 'positions',
-      id: `arrow-temporal-starfield-positions-${batchIndex}`
+      id: `arrow-temporal-starfield-positions-${batchIndex}`,
+      format: 'float32x2'
     });
-    starSizes = makeArrowGPUVector(device, sourceVectors.starSizes, {
+    starSizes = makeGPUVectorFromArrow(device, sourceVectors.starSizes, {
       name: 'starSizes',
-      id: `arrow-temporal-starfield-star-sizes-${batchIndex}`
+      id: `arrow-temporal-starfield-star-sizes-${batchIndex}`,
+      format: 'float32'
     });
-    eventColors = makeArrowGPUVector(device, sourceVectors.eventColors, {
+    eventColors = makeGPUVectorFromArrow(device, sourceVectors.eventColors, {
       name: 'eventColors',
-      id: `arrow-temporal-starfield-event-colors-${batchIndex}`
+      id: `arrow-temporal-starfield-event-colors-${batchIndex}`,
+      format: 'unorm8x4'
     });
     const temporalColumns: PreparedTemporalColumns = {
       eventStarts: preparedEventStarts,
@@ -668,9 +671,10 @@ function makeXYZMEventStartsGPUVector(
   eventStarts: arrow.Vector<arrow.Float32>,
   batchIndex: number
 ): PreparedEventStartsColumn {
-  const vector = makeArrowGPUVector(device, eventStarts, {
+  const vector = makeGPUVectorFromArrow(device, eventStarts, {
     name: 'eventStarts',
-    id: `arrow-temporal-starfield-event-starts-${batchIndex}`
+    id: `arrow-temporal-starfield-event-starts-${batchIndex}`,
+    format: 'float32'
   });
   return {
     vector,
@@ -680,12 +684,12 @@ function makeXYZMEventStartsGPUVector(
 }
 
 function getPreparedScalarTemporalVector(
-  preparedTemporalColumn: PreparedArrowTemporalGPUVector
-): GPUVector<arrow.Float32> {
+  preparedTemporalColumn: PreparedArrowTemporalGPUVector<'float32'>
+): GPUVector<'float32'> {
   if (!(preparedTemporalColumn.temporal.type instanceof arrow.Float32)) {
     throw new Error('Temporal starfield requires scalar prepared Float32 temporal rows');
   }
-  return preparedTemporalColumn.temporal as GPUVector<arrow.Float32>;
+  return preparedTemporalColumn.temporal;
 }
 
 function getTemporalStarfieldStorageBindings(

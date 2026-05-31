@@ -144,8 +144,8 @@ Construction modes:
 
 | Mode | Use case |
 | --- | --- |
-| `makeArrowGPUVector(device, arrowVector)` | Upload an Arrow vector into owned GPU storage |
-| `makeArrowGPUVector(device, arrowVector, {name})` | Named Arrow upload form used by table helpers |
+| `makeGPUVectorFromArrow(device, arrowVector)` | Upload an Arrow vector into owned GPU storage |
+| `makeGPUVectorFromArrow(device, arrowVector, {name})` | Named Arrow upload form used by table helpers |
 | `{type: 'buffer', ...}` | Wrap an existing typed GPU buffer as one `GPUData` chunk |
 | `{type: 'interleaved', ...}` | Wrap one interleaved opaque binary row buffer as one `GPUData` chunk plus `BufferLayout` |
 | `{type: 'data', ...}` | Aggregate existing `GPUData[]` chunks |

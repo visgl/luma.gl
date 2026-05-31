@@ -20,7 +20,7 @@ import {
   Vector,
   makeData
 } from 'apache-arrow';
-import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from './arrow-gpu-table-adapters';
 
 /** Supported Arrow temporal logical kinds. */
 export type ArrowTemporalKind = 'date' | 'time' | 'timestamp' | 'duration';
@@ -34,6 +34,7 @@ export type ArrowTemporalType = Date_ | Time | Timestamp | Duration;
 export type ArrowTemporalColumnType = ArrowTemporalType | List<ArrowTemporalType>;
 /** Prepared relative temporal output types. */
 export type ArrowRelativeTemporalType = Float32 | List<Float32>;
+type RelativeTemporalFormat = 'float32' | 'vertex-list<float32>';
 
 /** Arrow field metadata key for the prepared temporal logical kind. */
 export const TEMPORAL_KIND_METADATA_KEY = 'visgl:temporal-kind';
@@ -85,11 +86,13 @@ export type PrepareArrowTemporalGPUVectorsOptions = {
 };
 
 /** Prepared relative Float32 temporal GPU vector plus persisted metadata. */
-export type PreparedArrowTemporalGPUVector = {
+export type PreparedArrowTemporalGPUVector<
+  Format extends RelativeTemporalFormat = RelativeTemporalFormat
+> = {
   /** Prepared relative Float32 GPU vector. */
-  temporal: GPUVector;
+  temporal: GPUVector<Format>;
   /** Alias for callers that prefer the generic vector name. */
-  vector: GPUVector;
+  vector: GPUVector<Format>;
   /** Output Arrow field carrying prepared temporal metadata. */
   field: Field;
   /** Recovered source temporal metadata and chosen origin. */
@@ -102,6 +105,18 @@ export type PreparedArrowTemporalGPUVector = {
 };
 
 type ArrowTemporalSource = Vector<ArrowTemporalColumnType> | GPUVector;
+type PreparedArrowTemporalFormatForSource<Source> =
+  Source extends Vector<List<ArrowTemporalType>>
+    ? 'vertex-list<float32>'
+    : Source extends Vector<ArrowTemporalType>
+      ? 'float32'
+      : RelativeTemporalFormat;
+type PreparedArrowTemporalGPUVectorMap<SourceVectors extends Record<string, ArrowTemporalSource>> =
+  {
+    [Name in keyof SourceVectors]: PreparedArrowTemporalGPUVector<
+      PreparedArrowTemporalFormatForSource<SourceVectors[Name]>
+    >;
+  };
 
 type TemporalListGPUReadbackMetadata = {
   kind: 'temporal-list';
@@ -161,6 +176,26 @@ export function getArrowTemporalVectorInfo(
 }
 
 /** Prepare one scalar or variable-length Arrow temporal column as relative Float32 GPU values. */
+export function prepareArrowTemporalGPUVector(
+  device: Device,
+  source: Vector<List<ArrowTemporalType>>,
+  options?: PrepareArrowTemporalGPUVectorOptions
+): Promise<PreparedArrowTemporalGPUVector<'vertex-list<float32>'>>;
+export function prepareArrowTemporalGPUVector(
+  device: Device,
+  source: Vector<ArrowTemporalType>,
+  options?: PrepareArrowTemporalGPUVectorOptions
+): Promise<PreparedArrowTemporalGPUVector<'float32'>>;
+export function prepareArrowTemporalGPUVector(
+  device: Device,
+  source: Vector<ArrowTemporalColumnType>,
+  options?: PrepareArrowTemporalGPUVectorOptions
+): Promise<PreparedArrowTemporalGPUVector>;
+export function prepareArrowTemporalGPUVector(
+  device: Device,
+  source: GPUVector,
+  options?: PrepareArrowTemporalGPUVectorOptions
+): Promise<PreparedArrowTemporalGPUVector>;
 export async function prepareArrowTemporalGPUVector(
   device: Device,
   source: ArrowTemporalSource,
@@ -203,27 +238,34 @@ export async function prepareArrowTemporalGPUVector(
   }
 
   const preparedVector = makePreparedArrowTemporalVector(source, temporalInfo, field);
-  const temporal = makeArrowGPUVector(device, preparedVector, {name, id});
+  const temporal = makeGPUVectorFromArrow(device, preparedVector, {
+    name,
+    id,
+    format: getPreparedArrowTemporalFormat(temporalInfo)
+  });
   return createPreparedArrowTemporalGPUVector(temporal, field, temporalInfo, true);
 }
 
 /** Prepare several named temporal columns with the same scalar/list normalization rules. */
-export async function prepareArrowTemporalGPUVectors(
+export async function prepareArrowTemporalGPUVectors<
+  SourceVectors extends Record<string, ArrowTemporalSource>
+>(
   device: Device,
-  sourceVectors: Record<string, ArrowTemporalSource>,
+  sourceVectors: SourceVectors,
   options: PrepareArrowTemporalGPUVectorsOptions = {}
-): Promise<Record<string, PreparedArrowTemporalGPUVector>> {
+): Promise<PreparedArrowTemporalGPUVectorMap<SourceVectors>> {
   assertArrowTemporalVectorAlignment(sourceVectors);
   const entries = await Promise.all(
     Object.entries(sourceVectors).map(async ([name, source]) => {
-      const prepared = await prepareArrowTemporalGPUVector(device, source, {
-        name,
-        ...(options.columns?.[name] || {})
-      });
+      const columnOptions = {name, ...(options.columns?.[name] || {})};
+      const prepared =
+        source instanceof GPUVector
+          ? await prepareArrowTemporalGPUVector(device, source, columnOptions)
+          : await prepareArrowTemporalGPUVector(device, source, columnOptions);
       return [name, prepared] as const;
     })
   );
-  return Object.fromEntries(entries);
+  return Object.fromEntries(entries) as unknown as PreparedArrowTemporalGPUVectorMap<SourceVectors>;
 }
 
 function assertArrowTemporalVectorAlignment(
@@ -248,12 +290,12 @@ function assertArrowTemporalVectorAlignment(
   }
 }
 
-function createPreparedArrowTemporalGPUVector(
-  temporal: GPUVector,
+function createPreparedArrowTemporalGPUVector<Format extends RelativeTemporalFormat>(
+  temporal: GPUVector<Format>,
   field: Field,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
   ownsTemporal: boolean
-): PreparedArrowTemporalGPUVector {
+): PreparedArrowTemporalGPUVector<Format> {
   let destroyed = false;
   return {
     temporal,
@@ -270,6 +312,12 @@ function createPreparedArrowTemporalGPUVector(
   };
 }
 
+function getPreparedArrowTemporalFormat(
+  temporalInfo: Pick<ArrowTemporalVectorInfo, 'variableLength'>
+): RelativeTemporalFormat {
+  return temporalInfo.variableLength ? 'vertex-list<float32>' : 'float32';
+}
+
 async function prepareArrowTemporalGPUVectorOnGPU(
   device: Device,
   source: GPUVector,
@@ -278,7 +326,8 @@ async function prepareArrowTemporalGPUVectorOnGPU(
   options: Required<Pick<PrepareArrowTemporalGPUVectorOptions, 'name' | 'id'>>
 ): Promise<PreparedArrowTemporalGPUVector> {
   const outputType = getPreparedArrowTemporalType(field);
-  const outputData: GPUData[] = [];
+  const outputFormat = getPreparedArrowTemporalFormat(temporalInfo);
+  const outputData: GPUData<typeof outputFormat>[] = [];
   const transientResources: Array<{destroy: () => void}> = [];
 
   for (const [chunkIndex, sourceData] of source.data.entries()) {
@@ -311,7 +360,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
       new GPUData({
         buffer: outputBuffer,
         dataType: outputType,
-        format: DataType.isList(outputType) ? 'vertex-list<float32>' : 'float32',
+        format: outputFormat,
         length: sourceData.length,
         stride: 1,
         byteStride: Float32Array.BYTES_PER_ELEMENT,
@@ -341,7 +390,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
     type: 'data',
     name: options.name,
     dataType: outputType,
-    format: DataType.isList(outputType) ? 'vertex-list<float32>' : 'float32',
+    format: outputFormat,
     data: outputData,
     stride: 1,
     byteStride: Float32Array.BYTES_PER_ELEMENT,

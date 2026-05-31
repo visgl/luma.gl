@@ -327,7 +327,8 @@ function makeArrowMatrixGPUVector(
     ],
     stride: matrixInfo.physicalComponentCount,
     byteStride: matrixInfo.byteStride,
-    rowByteLength: matrixInfo.byteStride
+    rowByteLength: matrixInfo.byteStride,
+    ownsData: true
   });
 }
 

@@ -15,7 +15,7 @@ import {
   getArrowVectorBufferSource,
   isNumericArrowType,
   makeArrowGPUTable,
-  makeArrowGPUVector,
+  makeGPUVectorFromArrow,
   makeArrowFixedSizeListVector,
   type NumericArrowType
 } from '@luma.gl/arrow';
@@ -2945,7 +2945,7 @@ function createStorageTextOwnedGpuVector<T extends DataType>(
   name: string,
   vector: Vector<T>
 ): GPUVector {
-  return makeArrowGPUVector(device, vector, {
+  return makeGPUVectorFromArrow(device, vector, {
     name,
     id: name,
     usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC

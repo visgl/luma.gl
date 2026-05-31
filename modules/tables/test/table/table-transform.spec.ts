@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {makeArrowGPUVector} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {GPUVector, TableTransform} from '@luma.gl/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
@@ -28,7 +28,7 @@ const TRANSFORM_SHADER_LAYOUT = {
 
 test('TableTransform copies dense outputs back into inputVectors', async t => {
   const device = await getWebGLTestDevice();
-  const values = makeArrowGPUVector(device, arrow.makeVector(new Float32Array([1, 2, 3])), {
+  const values = makeGPUVectorFromArrow(device, arrow.makeVector(new Float32Array([1, 2, 3])), {
     name: 'values'
   });
   const transform = new TableTransform(device, {

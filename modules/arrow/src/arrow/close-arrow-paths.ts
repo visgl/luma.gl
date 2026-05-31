@@ -4,13 +4,13 @@
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {Bool, BufferType, Data, DataType, FixedSizeList, Float32, List, Vector} from 'apache-arrow';
 import {
   getArrowVariableLengthAttributeDataBufferSource,
   type GPUDataReadbackMetadata
 } from './arrow-gpu-data';
-import {makeArrowGPUVector, readArrowGPUVectorAsync} from './arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from './arrow-gpu-table-adapters';
 import {isVariableLengthAttributeArrowType} from './arrow-types';
 
 type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
@@ -22,9 +22,9 @@ type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
  * components per vertex. Closed flags stay CPU-side Arrow booleans so callers can
  * reuse existing row metadata while the path payload remains GPU-resident.
  */
-export type CloseArrowPathsProps = {
+export type CloseArrowPathsProps<Format extends GPUVectorFormat = GPUVectorFormat> = {
   /** Variable-length Float32 path coordinates, one GPU-resident Arrow row per path. */
-  paths: GPUVector;
+  paths: GPUVector<Format>;
   /** Non-null closed-path flags, one Arrow Bool row per path. */
   closed: Vector<Bool>;
   /** Non-negative per-component absolute tolerance used to compare the first and last vertex. */
@@ -33,8 +33,8 @@ export type CloseArrowPathsProps = {
   id?: string;
 };
 
-type CloseArrowPathChunkState = {
-  pathData: GPUData;
+type CloseArrowPathChunkState<Format extends GPUVectorFormat = GPUVectorFormat> = {
+  pathData: GPUData<Format>;
   valueOffsets: Int32Array;
   valueByteLength: number;
   closedFlags: Uint32Array;
@@ -216,10 +216,10 @@ const CLOSED_PATH_SCATTER_SHADER_LAYOUT: ShaderLayout = {
  *
  * @returns A new GPU vector that preserves Arrow chunk boundaries and owns its generated output data.
  */
-export async function closeArrowPaths(
+export async function closeArrowPaths<Format extends GPUVectorFormat = GPUVectorFormat>(
   device: Device,
-  props: CloseArrowPathsProps
-): Promise<GPUVector> {
+  props: CloseArrowPathsProps<Format>
+): Promise<GPUVector<Format>> {
   const epsilon = assertCloseArrowPathsProps(props);
   const chunkStates = getCloseArrowPathChunkStates(props.paths, props.closed);
 
@@ -233,10 +233,11 @@ export async function closeArrowPaths(
     )
   );
 
-  return new GPUVector({
+  return new GPUVector<Format>({
     type: 'data',
     name: props.paths.name,
     dataType: props.paths.type,
+    format: props.paths.format,
     data: outputData,
     stride: props.paths.stride,
     byteStride: props.paths.byteStride,
@@ -276,15 +277,15 @@ function assertCloseArrowPathCoordinateType(type: DataType): void {
   }
 }
 
-function getCloseArrowPathChunkStates(
-  paths: GPUVector,
+function getCloseArrowPathChunkStates<Format extends GPUVectorFormat>(
+  paths: GPUVector<Format>,
   closed: Vector<Bool>
-): CloseArrowPathChunkState[] {
+): CloseArrowPathChunkState<Format>[] {
   const allClosedFlags = makeClosedFlagValues(closed);
-  const chunkStates: CloseArrowPathChunkState[] = [];
+  const chunkStates: CloseArrowPathChunkState<Format>[] = [];
   let rowIndexBase = 0;
 
-  for (const pathData of paths.data as GPUData[]) {
+  for (const pathData of paths.data) {
     const metadata = pathData.readbackMetadata;
     if (metadata?.kind !== 'variable-length-attribute') {
       throw new Error('closeArrowPaths paths require copied variable-length Arrow offset metadata');
@@ -328,13 +329,13 @@ function validateValueOffsets(valueOffsets: Int32Array, rowCount: number): void 
   }
 }
 
-async function closeArrowPathChunkOnGPU(
+async function closeArrowPathChunkOnGPU<Format extends GPUVectorFormat>(
   device: Device,
-  props: CloseArrowPathsProps,
-  chunkState: CloseArrowPathChunkState,
+  props: CloseArrowPathsProps<Format>,
+  chunkState: CloseArrowPathChunkState<Format>,
   chunkIndex: number,
   epsilon: number
-): Promise<GPUData> {
+): Promise<GPUData<Format>> {
   const componentCount = getPathComponentCount(props.paths.type);
   const classificationState = createClosedPathClassificationState(
     device,
@@ -385,7 +386,7 @@ async function closeArrowPathChunkOnGPU(
     (outputOffsets[outputOffsets.length - 1] ?? 0) *
     componentCount *
     Float32Array.BYTES_PER_ELEMENT;
-  return new GPUData({
+  return new GPUData<Format>({
     buffer: scatterState.outputPathValuesBuffer,
     dataType: props.paths.type,
     format: chunkState.pathData.format,
@@ -603,12 +604,12 @@ function makeClosedPathReadbackMetadata(
   };
 }
 
-async function closeArrowPathsOnCPU(
+async function closeArrowPathsOnCPU<Format extends GPUVectorFormat>(
   device: Device,
-  props: CloseArrowPathsProps,
-  chunkStates: CloseArrowPathChunkState[],
+  props: CloseArrowPathsProps<Format>,
+  chunkStates: CloseArrowPathChunkState<Format>[],
   epsilon: number
-): Promise<GPUVector> {
+): Promise<GPUVector<Format>> {
   const sourcePaths = (await readArrowGPUVectorAsync(
     props.paths
   )) as Vector<ArrowPathCoordinateType>;
@@ -622,10 +623,17 @@ async function closeArrowPathsOnCPU(
     )
   );
   const outputPaths = new Vector<ArrowPathCoordinateType>(outputData);
-  return makeArrowGPUVector(device, outputPaths, {
-    name: props.paths.name,
-    ...(props.id ? {id: `${props.id}-cpu-closed-paths`} : {})
-  });
+  const outputVector = props.paths.format
+    ? makeGPUVectorFromArrow(device, outputPaths, {
+        name: props.paths.name,
+        format: props.paths.format,
+        ...(props.id ? {id: `${props.id}-cpu-closed-paths`} : {})
+      })
+    : makeGPUVectorFromArrow(device, outputPaths, {
+        name: props.paths.name,
+        ...(props.id ? {id: `${props.id}-cpu-closed-paths`} : {})
+      });
+  return outputVector as GPUVector<Format>;
 }
 
 function closeArrowPathDataOnCPU(
