@@ -146,7 +146,7 @@ particular render path.
 For complete Arrow table workflows, including `GPUVector`, `GPUTable`,
 `GPUTableModel`, storage-buffer bindings, and table-backed compute helpers, see
 [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types) and
-[GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model).
+[GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle).
 
 ## Related References
 
@@ -154,4 +154,4 @@ For complete Arrow table workflows, including `GPUVector`, `GPUTable`,
 - [GPU Memory Layouts](./gpu-memory-layouts)
 - [Storage Buffers](./gpu-storage-buffers)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
-- [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)
+- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)

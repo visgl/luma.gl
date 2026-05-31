@@ -284,44 +284,10 @@ export function makeGPUVectorFromArrow<T extends DataType>(
   vector: Vector<T>,
   props: GPUVectorFromArrowProps = {}
 ): GPUVector {
-  const {name = 'vector', format, preserveDataChunks = false, ...bufferProps} = props;
+  const {name = 'vector', format, preserveDataChunks = true, ...bufferProps} = props;
   const arrowType = vector.type as T;
-  const vectorFormat = format ?? getGPUVectorFormatForArrowType(arrowType);
-
-  if (
-    DataType.isUtf8(arrowType) ||
-    isArrowUtf8DictionaryType(arrowType) ||
-    isVariableLengthAttributeArrowType(arrowType)
-  ) {
-    const byteStride = DataType.isUtf8(arrowType)
-      ? 1
-      : isArrowUtf8DictionaryType(arrowType)
-        ? getArrowTypeByteStride(arrowType.indices)
-        : getArrowTypeByteStride(arrowType);
-    const stride =
-      DataType.isUtf8(arrowType) || isArrowUtf8DictionaryType(arrowType)
-        ? 1
-        : getArrowTypeStride(arrowType);
-    return new GPUVector({
-      type: 'data',
-      name,
-      dataType: arrowType,
-      format: vectorFormat,
-      data: vector.data.map(data =>
-        makeArrowGPUData(device, data as Data<T>, {...bufferProps, format: vectorFormat})
-      ),
-      stride,
-      byteStride,
-      rowByteLength: byteStride,
-      ownsData: true
-    });
-  }
-
   const matrixInfo = getArrowMatrixVectorInfo(vector);
-  const isCanonicalFloat32Matrix =
-    matrixInfo?.valueType === 'float32' &&
-    matrixInfo.order === 'column-major' &&
-    matrixInfo.layout === 'wgsl-storage';
+  const isCanonicalFloat32Matrix = matrixInfo && isCanonicalFloat32ArrowMatrixInfo(matrixInfo);
   if (matrixInfo && !isCanonicalFloat32Matrix) {
     throw new Error(
       'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
@@ -332,8 +298,23 @@ export function makeGPUVectorFromArrow<T extends DataType>(
     throw new Error(`GPUVector does not support Arrow type ${arrowType}`);
   }
 
-  const byteStride = getArrowTypeByteStride(arrowType);
-  if (preserveDataChunks && !matrixInfo) {
+  const vectorFormat =
+    format ?? (matrixInfo ? 'float32x4' : getGPUVectorFormatForArrowType(arrowType));
+  const byteStride = DataType.isUtf8(arrowType)
+    ? 1
+    : isArrowUtf8DictionaryType(arrowType)
+      ? getArrowTypeByteStride(arrowType.indices)
+      : getArrowTypeByteStride(arrowType);
+  const stride =
+    DataType.isUtf8(arrowType) || isArrowUtf8DictionaryType(arrowType)
+      ? 1
+      : getArrowTypeStride(arrowType);
+  const requiresChunkedUpload =
+    DataType.isUtf8(arrowType) ||
+    isArrowUtf8DictionaryType(arrowType) ||
+    isVariableLengthAttributeArrowType(arrowType);
+
+  if (preserveDataChunks || requiresChunkedUpload) {
     return new GPUVector({
       type: 'data',
       name,
@@ -342,7 +323,7 @@ export function makeGPUVectorFromArrow<T extends DataType>(
       data: vector.data.map(data =>
         makeArrowGPUData(device, data as Data<T>, {...bufferProps, format: vectorFormat})
       ),
-      stride: getArrowTypeStride(arrowType),
+      stride,
       byteStride,
       rowByteLength: byteStride,
       ownsData: true
@@ -369,13 +350,13 @@ export function makeGPUVectorFromArrow<T extends DataType>(
           (totalValueLength, chunk) => totalValueLength + getArrowDataValueLength(chunk),
           0
         ),
-        stride: getArrowTypeStride(arrowType),
+        stride,
         byteStride,
         rowByteLength: byteStride,
         ownsBuffer: true
       }) as GPUData
     ],
-    stride: getArrowTypeStride(arrowType),
+    stride,
     byteStride,
     rowByteLength: byteStride,
     ownsData: true
@@ -819,6 +800,15 @@ function isArrowUtf8DictionaryType(type: DataType): type is ArrowUtf8Dictionary 
 }
 
 function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
+  const matrixInfo = getArrowMatrixVectorInfo({type});
+  if (matrixInfo) {
+    if (!isCanonicalFloat32ArrowMatrixInfo(matrixInfo)) {
+      throw new Error(
+        'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
+      );
+    }
+    return 'float32x4';
+  }
   if (DataType.isUtf8(type)) {
     return 'uint8';
   }
@@ -826,6 +816,16 @@ function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
     return getGPUVectorFormatFromArrowDataType(type.indices);
   }
   return getGPUVectorFormatFromArrowDataType(type);
+}
+
+function isCanonicalFloat32ArrowMatrixInfo(
+  matrixInfo: NonNullable<ReturnType<typeof getArrowMatrixVectorInfo>>
+): boolean {
+  return (
+    matrixInfo.valueType === 'float32' &&
+    matrixInfo.order === 'column-major' &&
+    matrixInfo.layout === 'wgsl-storage'
+  );
 }
 
 function getArrowDataValueLength(data: Data): number {

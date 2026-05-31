@@ -964,10 +964,10 @@ test('DictionaryTextModel draws every dictionary source batch', async t => {
       styleConfigRows,
       [
         {batchRowIndexBase: 0, rowStorageIndexBase: 0},
-        {batchRowIndexBase: 1, rowStorageIndexBase: 1},
-        {batchRowIndexBase: 2, rowStorageIndexBase: 2}
+        {batchRowIndexBase: 1, rowStorageIndexBase: 0},
+        {batchRowIndexBase: 2, rowStorageIndexBase: 0}
       ],
-      'style configs preserve global picking row base and row storage buffer offset per batch'
+      'style configs preserve global picking row base and per-buffer row storage offset'
     );
   } finally {
     privateModel._syncAttachmentFormats = syncAttachmentFormats;

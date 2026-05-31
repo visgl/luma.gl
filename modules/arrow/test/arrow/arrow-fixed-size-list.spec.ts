@@ -459,7 +459,7 @@ test('GPUVector readAsync round-trips scalar numeric vectors', async t => {
   t.end();
 });
 
-test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer', async t => {
+test('GPUVector uploads Arrow Data chunks into separate GPUData buffers', async t => {
   const device = new NullDevice({});
   const type = new arrow.Float32();
   const sourceVector = new arrow.Vector([
@@ -471,23 +471,25 @@ test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer
   const vectorResult = await readArrowGPUVectorAsync(gpuVector);
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
 
-  t.equal(
-    gpuVector.data[0].buffer.byteLength,
-    12,
-    'uploads every vector chunk into one GPU buffer'
+  t.equal(gpuVector.data.length, 2, 'exposes one GPUData chunk per source chunk');
+  t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunks');
+  t.notEqual(
+    gpuVector.data[0].buffer,
+    gpuVector.data[1].buffer,
+    'keeps each GPUData chunk on its own GPU buffer'
   );
-  t.equal(gpuVector.data.length, 2, 'exposes one GPUData view per source chunk');
-  t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunk views');
+  t.equal(gpuVector.data[0].buffer.byteLength, 8, 'uploads the first source chunk buffer');
+  t.equal(gpuVector.data[1].buffer.byteLength, 4, 'uploads the second source chunk buffer');
   t.notOk(
     gpuVector.data[0].readbackMetadata,
     'fixed-width chunks do not retain extra readback metadata'
   );
-  t.equal(gpuVector.data[1].byteOffset, 8, 'tracks packed byte offsets across chunks');
-  t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every packed row');
+  t.equal(gpuVector.data[1].byteOffset, 0, 'later chunks start at their own GPUData buffer');
+  t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every chunk row');
   t.deepEqual(
     Array.from(arrow.makeVector(firstChunkResult).toArray()),
     [1, 2],
-    'reads one GPU data chunk through its view'
+    'reads one GPU data chunk'
   );
 
   gpuVector.destroy();

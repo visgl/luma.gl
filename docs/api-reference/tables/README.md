@@ -10,6 +10,7 @@ GPU-resident table primitives for luma.gl.
 ## API Reference
 
 - [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure)
+- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
 - [GPUTable](/docs/api-reference/tables/gpu-table)
 - [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch)
 - [GPUVector](/docs/api-reference/tables/gpu-vector)
@@ -17,7 +18,6 @@ GPU-resident table primitives for luma.gl.
 - [GPUSchema](/docs/api-reference/tables/gpu-schema)
 - [GPUVectorFormat](/docs/api-reference/tables/gpu-vector-format)
 - [GPUTableBufferPlanner](/docs/api-reference/tables/gpu-table-buffer-planner)
-- [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 
 The `@luma.gl/tables` module owns reusable table-side GPU objects such as

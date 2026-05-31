@@ -174,14 +174,14 @@
         "items": [
           "api-reference/tables/README",
           "api-reference/tables/gpu-table-structure",
+          "api-reference/tables/gpu-table-lifecycle",
           "api-reference/tables/gpu-table",
           "api-reference/tables/gpu-record-batch",
           "api-reference/tables/gpu-vector",
           "api-reference/tables/gpu-data",
           "api-reference/tables/gpu-schema",
           "api-reference/tables/gpu-vector-format",
-          "api-reference/tables/gpu-table-buffer-planner",
-          "api-reference/tables/gpu-table-object-model"
+          "api-reference/tables/gpu-table-buffer-planner"
         ]
       },
       {

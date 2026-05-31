@@ -93,7 +93,7 @@ That supports patterns such as:
 - batch-preserving compute dispatch through `GPUTableComputation`.
 
 See [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types) and
-[GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model) for
+[GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle) for
 the full columnar workflow.
 
 ## Compute Pattern
@@ -138,4 +138,4 @@ batch-by-batch before dispatch.
 - [Attributes](./gpu-attributes)
 - [Buffer Schemas and Columnar Records](./buffer-schemas)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
-- [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)
+- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
