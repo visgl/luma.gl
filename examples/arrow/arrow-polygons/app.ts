@@ -100,15 +100,13 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
     this.controlPanel.syncControls({rowCountKind, sourceKind, colorKind: effectiveColorKind});
     this.controlPanel.setPickedLabel('Hover polygon');
     this.controlPanel.setStreamingBatchStatus(0, sourceData.batchCount);
-    const streamingSession = this.layer.beginRecordBatchStream();
     this.updateMetrics();
 
-    void this.layer.streamRecordBatches({
-      streamingSession,
-      recordBatchIterator: createStreamingPolygonRecordBatchIterator(sourceData.recordBatches)[
+    this.layer.setProps({
+      data: createStreamingPolygonRecordBatchIterator(sourceData.recordBatches)[
         Symbol.asyncIterator
       ](),
-      onBatch: ({loadedBatchCount, metrics}) => {
+      onDataBatch: ({loadedBatchCount, metrics}) => {
         if (this.isFinalized) {
           return;
         }

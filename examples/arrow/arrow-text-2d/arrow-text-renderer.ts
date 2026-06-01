@@ -44,6 +44,10 @@ import {
   VS_GLSL,
   WGSL_SHADER
 } from './arrow-text-shaders';
+import {
+  getArrowRecordBatchAsyncIterator,
+  type ArrowRecordBatchSource
+} from '../arrow-renderer-utils';
 
 /**
  * Public configuration props for an Arrow text layer.
@@ -56,8 +60,8 @@ import {
 export type ArrowTextRendererProps = {
   /** Debug label used for generated model and GPU resources. */
   id?: string;
-  /** Optional Arrow table, table promise, iterable, async iterable, iterator, or async iterator. */
-  data?: ArrowTextRendererRecordBatchSource;
+  /** Optional Arrow table, record-batch iterable, or async record-batch iterator. */
+  data?: ArrowRecordBatchSource;
   /** Label origins, or the source table column name. Defaults to `positions` when `data` exists. */
   positions?: string | arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
   /** Text labels, or the source table column name. Defaults to `texts` when `data` exists. */
@@ -84,6 +88,10 @@ export type ArrowTextRendererProps = {
   angle?: number;
   /** Constant fallback row text size used when no row size vector is present. */
   size?: number;
+  /** Called after one Arrow record batch has been prepared and appended. */
+  onDataBatch?: (update: ArrowTextRendererDataBatchUpdate) => void;
+  /** Called when renderer-owned Arrow batch loading fails. */
+  onDataError?: (error: unknown) => void;
 };
 
 /** Arrow row color column type: one packed RGBA8 color per text row. */
@@ -127,15 +135,6 @@ export type ArrowTextRendererInput = ArrowTextRendererData & {
   arrowVectorByteLength: number;
 };
 
-/** Arrow table or record-batch source accepted by async preparation and streaming helpers. */
-export type ArrowTextRendererRecordBatchSource =
-  | arrow.Table
-  | Promise<arrow.Table>
-  | Iterable<arrow.RecordBatch>
-  | AsyncIterable<arrow.RecordBatch>
-  | Iterator<arrow.RecordBatch>
-  | AsyncIterator<arrow.RecordBatch>;
-
 /** Props for preparing GPUVector text input from an Arrow table or record-batch source. */
 export type ArrowTextRendererPrepareInputProps = Pick<
   ArrowTextRendererProps,
@@ -164,14 +163,8 @@ export type ArrowTextRendererSetPropsResult = {
   modelChanged: boolean;
 };
 
-/** Token used to cancel stale async streaming work. */
-export type ArrowTextRendererStreamingSession = {
-  /** Monotonic version owned by the layer. */
-  version: number;
-};
-
-/** Notification emitted when a streaming record batch is uploaded and applied. */
-export type ArrowTextRendererRecordBatchStreamUpdate = {
+/** Notification emitted after one record batch is uploaded and applied. */
+export type ArrowTextRendererDataBatchUpdate = {
   /** Full prepared input for all batches loaded so far. */
   textInput: ArrowTextRendererInput;
   /** Number of uploaded GPU table batches. */
@@ -182,30 +175,8 @@ export type ArrowTextRendererRecordBatchStreamUpdate = {
   setPropsResult: ArrowTextRendererSetPropsResult;
 };
 
-/** Props for incrementally uploading record batches into a text layer. */
-export type ArrowTextRendererRecordBatchStreamProps = {
-  /** Preferred record-batch source. */
-  data?: ArrowTextRendererRecordBatchSource;
-  /** Deprecated alias retained for existing example code. Prefer `data`. */
-  recordBatchIterator?: Iterator<arrow.RecordBatch> | AsyncIterator<arrow.RecordBatch>;
-  /** Fixed model selection or callback invoked after each batch is prepared. */
-  model?:
-    | ArrowTextRendererProps['model']
-    | ((textInput: ArrowTextRendererInput) => ArrowTextRendererProps['model']);
-  /** Optional adapter for deriving render input, for example by omitting disabled style vectors. */
-  mapTextInput?: (textInput: ArrowTextRendererInput) => ArrowTextRendererInput;
-  /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowTextRendererStreamingSession;
-  /** Redraw reason used for the first batch. */
-  startRedrawReason?: string;
-  /** Redraw reason used for appended batches. */
-  appendRedrawReason?: string;
-  /** Callback fired after a batch is prepared and applied. */
-  onBatch?: (update: ArrowTextRendererRecordBatchStreamUpdate) => void;
-};
-
 type ArrowTextRendererSetPropsOptions = {
-  preserveStreaming?: boolean;
+  preserveDataLoad?: boolean;
 };
 
 type ArrowTextRendererResolvedModel = Exclude<NonNullable<ArrowTextRendererProps['model']>, 'auto'>;
@@ -263,7 +234,7 @@ export class ArrowTextRenderer extends GPURenderable<
   /** Concrete model path after resolving `props.model === 'auto'`. */
   resolvedModel: ArrowTextRendererResolvedModel;
   private activeStreamingTextTable: GPUTable | null = null;
-  private streamingSessionVersion = 0;
+  private dataLoadVersion = 0;
   private isDestroyed = false;
 
   /** Creates a layer from Arrow source props after GPUVector preparation. */
@@ -371,18 +342,26 @@ export class ArrowTextRenderer extends GPURenderable<
   ): Promise<ArrowTextRendererSetPropsResult> {
     const previousProps = this.props;
     const nextProps = {...this.props, ...props};
+    const hasDataProp = Object.prototype.hasOwnProperty.call(props, 'data');
+    const dataChanged = hasDataProp && props.data !== previousProps.data;
     const hasModelPropChanged = props.model !== undefined && props.model !== previousProps.model;
+    const hasSourcePropsChanged = hasArrowTextSourcePropsChanged(props);
+    if (!options.preserveDataLoad && shouldLoadTextDataBatches(nextProps, dataChanged)) {
+      const dataLoadVersion = this.beginDataLoad();
+      this.props = nextProps;
+      void this.loadDataBatches(nextProps, dataLoadVersion, redrawReason);
+      return {modelChanged: true};
+    }
+
     const shouldCancelStreaming =
-      !options.preserveStreaming &&
-      ((props.data !== undefined && props.data !== previousProps.data) || hasModelPropChanged);
+      !options.preserveDataLoad && (dataChanged || hasModelPropChanged || hasSourcePropsChanged);
     const streamingTextTableToDestroy = shouldCancelStreaming
       ? this.activeStreamingTextTable
       : null;
     if (shouldCancelStreaming) {
-      this.streamingSessionVersion++;
+      this.dataLoadVersion++;
       this.activeStreamingTextTable = null;
     }
-    const hasSourcePropsChanged = hasArrowTextSourcePropsChanged(props);
     const shouldPrepareTextInput = hasSourcePropsChanged || hasModelPropChanged;
     const nextTextInput = hasSourcePropsChanged
       ? await prepareArrowTextInputFromData(this.device, nextProps)
@@ -425,123 +404,92 @@ export class ArrowTextRenderer extends GPURenderable<
     return {modelChanged};
   }
 
-  /** Replaces layer data with appended text batches. */
-  appendTextBatches(
-    data: ArrowTextRendererRecordBatchSource,
-    redrawReason: string
-  ): Promise<ArrowTextRendererSetPropsResult> {
-    return this.setProps({data}, redrawReason);
-  }
-
-  /** Starts a new streaming session and invalidates any older session token. */
-  beginRecordBatchStream(): ArrowTextRendererStreamingSession {
-    this.streamingSessionVersion++;
-    return {version: this.streamingSessionVersion};
-  }
-
-  /** Cancels any active record-batch stream. */
-  cancelRecordBatchStream(): void {
-    this.streamingSessionVersion++;
-  }
-
   /** Incrementally uploads record batches and applies the growing prepared data to the layer. */
-  async streamRecordBatches({
-    data,
-    recordBatchIterator,
-    model: requestedModel,
-    mapTextInput,
-    streamingSession = this.beginRecordBatchStream(),
-    startRedrawReason = 'streaming text dataset started',
-    appendRedrawReason = 'streaming Arrow record batch appended',
-    onBatch
-  }: ArrowTextRendererRecordBatchStreamProps): Promise<void> {
-    const resolvedRecordBatchIterator = getArrowRecordBatchAsyncIterator(
-      data ?? recordBatchIterator
-    );
+  private async loadDataBatches(
+    props: ArrowTextRendererProps,
+    dataLoadVersion: number,
+    redrawReason: string
+  ): Promise<void> {
+    if (!props.data) {
+      return;
+    }
+    const resolvedRecordBatchIterator = getArrowRecordBatchAsyncIterator(props.data);
     const sourceRecordBatches: arrow.RecordBatch[] = [];
     let streamingTextTable: GPUTable | null = null;
     let isSourceVectorStreaming = false;
     let hasStartedStreaming = false;
 
-    if (!this.isRecordBatchStreamActive(streamingSession)) {
+    if (!this.isDataLoadActive(dataLoadVersion)) {
       return;
     }
 
-    for (
-      let recordBatchResult = await resolvedRecordBatchIterator.next();
-      !recordBatchResult.done;
-      recordBatchResult = await resolvedRecordBatchIterator.next()
-    ) {
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        return;
-      }
-
-      const recordBatch = recordBatchResult.value;
-      const isFirstBatch = !hasStartedStreaming;
-      sourceRecordBatches.push(recordBatch);
-
-      if (isFirstBatch) {
-        const previousStreamingTextTable = this.activeStreamingTextTable;
-        isSourceVectorStreaming = shouldPrepareRecordBatchesFromArrowVectors(
-          sourceRecordBatches,
-          this.props
-        );
-        if (!isSourceVectorStreaming) {
-          streamingTextTable = createArrowTextGPUTable(this.device, recordBatch, this.props);
-          this.activeStreamingTextTable = streamingTextTable;
-        } else {
-          this.activeStreamingTextTable = null;
+    try {
+      for (
+        let recordBatchResult = await resolvedRecordBatchIterator.next();
+        !recordBatchResult.done;
+        recordBatchResult = await resolvedRecordBatchIterator.next()
+      ) {
+        if (!this.isDataLoadActive(dataLoadVersion)) {
+          return;
         }
-        hasStartedStreaming = true;
+
+        const recordBatch = recordBatchResult.value;
+        const isFirstBatch = !hasStartedStreaming;
+        sourceRecordBatches.push(recordBatch);
+
+        if (isFirstBatch) {
+          const previousStreamingTextTable = this.activeStreamingTextTable;
+          isSourceVectorStreaming = shouldPrepareRecordBatchesFromArrowVectors(
+            sourceRecordBatches,
+            props
+          );
+          if (!isSourceVectorStreaming) {
+            streamingTextTable = createArrowTextGPUTable(this.device, recordBatch, props);
+            this.activeStreamingTextTable = streamingTextTable;
+          } else {
+            this.activeStreamingTextTable = null;
+          }
+          hasStartedStreaming = true;
+          const textInput = isSourceVectorStreaming
+            ? prepareArrowTextInputFromRecordBatches(this.device, sourceRecordBatches, props)
+            : prepareArrowTextInputFromGPUTable(streamingTextTable!, sourceRecordBatches, props);
+          const setPropsResult = this.setPreparedTextInput(props, textInput, redrawReason, {
+            preserveDataLoad: true
+          });
+          previousStreamingTextTable?.destroy();
+          props.onDataBatch?.({
+            textInput,
+            loadedBatchCount: isSourceVectorStreaming
+              ? sourceRecordBatches.length
+              : streamingTextTable!.batches.length,
+            isFirstBatch: true,
+            setPropsResult
+          });
+          continue;
+        }
+
+        if (!isSourceVectorStreaming) {
+          addArrowTextGPUTableBatch(this.device, streamingTextTable!, recordBatch, props);
+        }
         const textInput = isSourceVectorStreaming
-          ? prepareArrowTextInputFromRecordBatches(this.device, sourceRecordBatches, this.props)
-          : prepareArrowTextInputFromGPUTable(streamingTextTable!, sourceRecordBatches, this.props);
-        const model =
-          typeof requestedModel === 'function' ? requestedModel(textInput) : requestedModel;
-        const layerTextInput = mapTextInput?.(textInput) ?? textInput;
-        const setPropsResult = this.setPreparedTextInput(
-          {
-            ...this.props,
-            data: sourceRecordBatches.slice(),
-            ...(model ? {model} : {})
-          },
-          layerTextInput,
-          startRedrawReason,
-          {preserveStreaming: true}
-        );
-        previousStreamingTextTable?.destroy();
-        onBatch?.({
+          ? prepareArrowTextInputFromRecordBatches(this.device, sourceRecordBatches, props)
+          : prepareArrowTextInputFromGPUTable(streamingTextTable!, sourceRecordBatches, props);
+        const setPropsResult = this.setPreparedTextInput(props, textInput, redrawReason, {
+          preserveDataLoad: true
+        });
+        props.onDataBatch?.({
           textInput,
           loadedBatchCount: isSourceVectorStreaming
             ? sourceRecordBatches.length
             : streamingTextTable!.batches.length,
-          isFirstBatch: true,
+          isFirstBatch: false,
           setPropsResult
         });
-        continue;
       }
-
-      if (!isSourceVectorStreaming) {
-        addArrowTextGPUTableBatch(this.device, streamingTextTable!, recordBatch, this.props);
+    } catch (error) {
+      if (this.isDataLoadActive(dataLoadVersion)) {
+        props.onDataError?.(error);
       }
-      const textInput = isSourceVectorStreaming
-        ? prepareArrowTextInputFromRecordBatches(this.device, sourceRecordBatches, this.props)
-        : prepareArrowTextInputFromGPUTable(streamingTextTable!, sourceRecordBatches, this.props);
-      const layerTextInput = mapTextInput?.(textInput) ?? textInput;
-      const setPropsResult = this.setPreparedTextInput(
-        {...this.props, data: sourceRecordBatches.slice()},
-        layerTextInput,
-        appendRedrawReason,
-        {preserveStreaming: true}
-      );
-      onBatch?.({
-        textInput,
-        loadedBatchCount: isSourceVectorStreaming
-          ? sourceRecordBatches.length
-          : streamingTextTable!.batches.length,
-        isFirstBatch: false,
-        setPropsResult
-      });
     }
   }
 
@@ -553,14 +501,14 @@ export class ArrowTextRenderer extends GPURenderable<
   ): ArrowTextRendererSetPropsResult {
     const previousProps = this.props;
     const shouldCancelStreaming =
-      !options.preserveStreaming &&
+      !options.preserveDataLoad &&
       nextProps.data !== undefined &&
       nextProps.data !== previousProps.data;
     const streamingTextTableToDestroy = shouldCancelStreaming
       ? this.activeStreamingTextTable
       : null;
     if (shouldCancelStreaming) {
-      this.streamingSessionVersion++;
+      this.dataLoadVersion++;
       this.activeStreamingTextTable = null;
     }
     const nextModel = this.resolveModel(
@@ -620,7 +568,7 @@ export class ArrowTextRenderer extends GPURenderable<
   /** Destroys owned model resources and cancels active streaming work. */
   destroy(): void {
     this.isDestroyed = true;
-    this.streamingSessionVersion++;
+    this.dataLoadVersion++;
     const streamingTextTable = this.activeStreamingTextTable;
     this.activeStreamingTextTable = null;
     this.model.destroy();
@@ -718,8 +666,13 @@ export class ArrowTextRenderer extends GPURenderable<
     return modelKind;
   }
 
-  private isRecordBatchStreamActive(streamingSession: ArrowTextRendererStreamingSession): boolean {
-    return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
+  private beginDataLoad(): number {
+    this.dataLoadVersion++;
+    return this.dataLoadVersion;
+  }
+
+  private isDataLoadActive(dataLoadVersion: number): boolean {
+    return !this.isDestroyed && dataLoadVersion === this.dataLoadVersion;
   }
 
   private getInputProps(data: ArrowTextRendererData): Partial<ArrowAttributeTextInputProps> {
@@ -1053,6 +1006,10 @@ function hasArrowTextSourcePropsChanged(props: Partial<ArrowTextRendererProps>):
   );
 }
 
+function shouldLoadTextDataBatches(props: ArrowTextRendererProps, dataChanged: boolean): boolean {
+  return Boolean(props.data && dataChanged);
+}
+
 function hasArrowTextConstantStylePropsChanged(
   props: Partial<ArrowTextRendererProps>,
   previousProps: ArrowTextRendererProps
@@ -1089,9 +1046,7 @@ function getArrowTextRenderModules(device: Device): unknown[] {
   return [supportsIndexPicking(device) ? indexPicking : indexColorPicking];
 }
 
-async function getArrowRecordBatches(
-  data: ArrowTextRendererRecordBatchSource
-): Promise<arrow.RecordBatch[]> {
+async function getArrowRecordBatches(data: ArrowRecordBatchSource): Promise<arrow.RecordBatch[]> {
   const recordBatches: arrow.RecordBatch[] = [];
   const recordBatchIterator = getArrowRecordBatchAsyncIterator(data);
   for (
@@ -1102,95 +1057,4 @@ async function getArrowRecordBatches(
     recordBatches.push(recordBatchResult.value);
   }
   return recordBatches;
-}
-
-function getArrowRecordBatchAsyncIterator(
-  data:
-    | ArrowTextRendererRecordBatchSource
-    | Iterator<arrow.RecordBatch>
-    | AsyncIterator<arrow.RecordBatch>
-    | undefined
-): AsyncIterator<arrow.RecordBatch> {
-  if (!data) {
-    throw new Error('ArrowTextRenderer streaming requires data or recordBatchIterator');
-  }
-
-  return iterateArrowRecordBatches(data)[Symbol.asyncIterator]();
-}
-
-async function* iterateArrowRecordBatches(
-  data:
-    | ArrowTextRendererRecordBatchSource
-    | Iterator<arrow.RecordBatch>
-    | AsyncIterator<arrow.RecordBatch>
-): AsyncIterableIterator<arrow.RecordBatch> {
-  const resolvedData = await data;
-
-  if (resolvedData instanceof arrow.Table) {
-    for (const recordBatch of resolvedData.batches) {
-      yield recordBatch;
-    }
-    return;
-  }
-
-  if (isAsyncIterableRecordBatchSource(resolvedData)) {
-    for await (const recordBatch of resolvedData) {
-      yield recordBatch;
-    }
-    return;
-  }
-
-  if (isIterableRecordBatchSource(resolvedData)) {
-    for (const recordBatch of resolvedData) {
-      yield recordBatch;
-    }
-    return;
-  }
-
-  if (isRecordBatchIterator(resolvedData)) {
-    let recordBatchResult = resolvedData.next();
-    if (isPromiseLike(recordBatchResult)) {
-      for (
-        let awaitedRecordBatchResult = await recordBatchResult;
-        !awaitedRecordBatchResult.done;
-        awaitedRecordBatchResult = await (resolvedData as AsyncIterator<arrow.RecordBatch>).next()
-      ) {
-        yield awaitedRecordBatchResult.value;
-      }
-      return;
-    }
-
-    for (
-      let currentRecordBatchResult = recordBatchResult;
-      !currentRecordBatchResult.done;
-      currentRecordBatchResult = (resolvedData as Iterator<arrow.RecordBatch>).next()
-    ) {
-      yield currentRecordBatchResult.value;
-    }
-    return;
-  }
-
-  throw new Error('ArrowTextRenderer data must be an Arrow table or record batch iterator');
-}
-
-function isAsyncIterableRecordBatchSource(data: unknown): data is AsyncIterable<arrow.RecordBatch> {
-  return Boolean(
-    data && typeof (data as AsyncIterable<arrow.RecordBatch>)[Symbol.asyncIterator] === 'function'
-  );
-}
-
-function isIterableRecordBatchSource(data: unknown): data is Iterable<arrow.RecordBatch> {
-  return Boolean(
-    data && typeof (data as Iterable<arrow.RecordBatch>)[Symbol.iterator] === 'function'
-  );
-}
-
-function isRecordBatchIterator(
-  data: unknown
-): data is Iterator<arrow.RecordBatch> | AsyncIterator<arrow.RecordBatch> {
-  return Boolean(data && typeof (data as Iterator<arrow.RecordBatch>).next === 'function');
-}
-
-function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
-  return Boolean(value && typeof (value as PromiseLike<T>).then === 'function');
 }

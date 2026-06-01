@@ -5,6 +5,8 @@
 import {
   getArrowFixedSizeListValues,
   isArrowFixedSizeListVector,
+  makeArrowFixedSizeListVector,
+  makeGPUVectorFromArrow,
   makeGPURecordBatchFromArrowRecordBatch
 } from '@luma.gl/arrow';
 import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
@@ -32,57 +34,60 @@ import {
   WORKGROUP_SIZE,
   makeComputeShader
 } from './arrow-particle-shaders';
+import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '../arrow-renderer-utils';
 
-const DEFAULT_RESET_INTERVAL_MILLISECONDS = 8_000;
+const DEFAULT_RESET_INTERVAL_MILLISECONDS = 12_000;
 
 /** Public configuration for the Arrow particle layer. */
 export type ArrowParticleRendererProps = {
-  /** Optional source table. If omitted, data can be streamed later by record batch. */
-  data?: arrow.Table | null;
+  /** Optional Arrow source table, record-batch iterable, or async record-batch iterator. */
+  data?: ArrowRecordBatchSource | null;
   /** Source table column name for initial particle positions. */
   positions?: string;
   /** Source table column name for particle velocities. */
   velocities?: string;
   /** Interval for resetting simulated particles back to their source Arrow rows. */
   resetIntervalMilliseconds?: number;
-};
-
-/** Token used to cancel stale particle streaming work. */
-export type ArrowParticleRendererStreamingSession = {
-  /** Monotonic stream version owned by the layer. */
-  version: number;
+  /** Called after one Arrow record batch has been prepared and appended. */
+  onDataBatch?: (update: ArrowParticleRendererDataBatchUpdate) => void;
+  /** Called when renderer-owned Arrow batch loading fails. */
+  onDataError?: (error: unknown) => void;
 };
 
 /** Notification emitted after a particle record batch is uploaded. */
-export type ArrowParticleRendererRecordBatchStreamUpdate = {
+export type ArrowParticleRendererDataBatchUpdate = {
   /** Number of record batches loaded so far. */
   loadedBatchCount: number;
   /** Total particle count after the batch. */
   particleCount: number;
-};
-
-/** Props for incrementally streaming Arrow particle record batches. */
-export type ArrowParticleRendererRecordBatchStreamProps = {
-  /** Async iterator that yields Arrow particle record batches. */
-  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
-  /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowParticleRendererStreamingSession;
-  /** Callback fired after each batch is uploaded and applied. */
-  onBatch?: (update: ArrowParticleRendererRecordBatchStreamUpdate) => void;
+  /** True for the first batch in a load. */
+  isFirstBatch: boolean;
 };
 
 type ArrowParticleVectorType = arrow.FixedSizeList<arrow.Float32>;
 
 type ArrowParticleRendererResolvedProps = {
-  data: arrow.Table | null;
+  data: ArrowRecordBatchSource | null;
   positions: string;
   velocities: string;
   resetIntervalMilliseconds: number;
+  onDataBatch?: (update: ArrowParticleRendererDataBatchUpdate) => void;
+  onDataError?: (error: unknown) => void;
 };
 
 type InitialParticleBatchValues = {
   positions: Float32Array;
   velocities: Float32Array;
+};
+
+type ParticleRenderBatchValues = {
+  colors: GPUVector<'unorm8x4'>;
+};
+
+type PreparedParticleBatch = {
+  gpuRecordBatch: GPURecordBatch;
+  initialValues: InitialParticleBatchValues;
+  renderValues: ParticleRenderBatchValues;
 };
 
 type ParticleTransformOutputBuffers = {
@@ -92,6 +97,18 @@ type ParticleTransformOutputBuffers = {
 
 const DEFAULT_POSITIONS_COLUMN = 'positions';
 const DEFAULT_VELOCITIES_COLUMN = 'velocities';
+const PARTICLE_BATCH_COLORS: [number, number, number, number][] = [
+  [0.55, 0.95, 1, 1],
+  [0.36, 0.82, 0.98, 1],
+  [0.22, 0.66, 0.96, 1],
+  [0.16, 0.5, 0.92, 1],
+  [0.12, 0.34, 0.86, 1],
+  [0.1, 0.22, 0.74, 1],
+  [0.08, 0.14, 0.58, 1],
+  [0.05, 0.08, 0.36, 1]
+];
+const PARTICLE_COLOR_HIGHLIGHT = [0.64, 0.96, 1] as const;
+const PARTICLE_COLOR_SHADOW = [0.04, 0.08, 0.34] as const;
 
 /** Example layer that updates Arrow particle GPUVectors through compute or transform feedback. */
 export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
@@ -103,12 +120,13 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
   model: Model | null = null;
   particleCount = 0;
   private readonly initialBatchValues = new Map<GPURecordBatch, InitialParticleBatchValues>();
+  private readonly renderBatchValues = new Map<GPURecordBatch, ParticleRenderBatchValues>();
   private readonly transformOutputBuffers = new Map<
     GPURecordBatch,
     ParticleTransformOutputBuffers
   >();
   private lastResetTime: number | null = null;
-  private streamingSessionVersion = 0;
+  private dataLoadVersion = 0;
   private isDestroyed = false;
 
   constructor(device: Device, props: ArrowParticleRendererProps = {}) {
@@ -123,84 +141,31 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       positions: props.positions ?? DEFAULT_POSITIONS_COLUMN,
       velocities: props.velocities ?? DEFAULT_VELOCITIES_COLUMN,
       resetIntervalMilliseconds:
-        props.resetIntervalMilliseconds ?? DEFAULT_RESET_INTERVAL_MILLISECONDS
+        props.resetIntervalMilliseconds ?? DEFAULT_RESET_INTERVAL_MILLISECONDS,
+      onDataBatch: props.onDataBatch,
+      onDataError: props.onDataError
     };
     if (this.props.data) {
-      this.replaceArrowTable(this.props.data);
+      this.replaceData(this.props, true);
     }
   }
 
   setProps(props: ArrowParticleRendererProps): void {
     const shouldRecreate =
       props.data !== undefined || props.positions !== undefined || props.velocities !== undefined;
+    const hasNewDataSource = props.data !== undefined;
     this.props = {
-      data: props.data ?? this.props.data,
+      data: props.data !== undefined ? props.data : this.props.data,
       positions: props.positions ?? this.props.positions,
       velocities: props.velocities ?? this.props.velocities,
       resetIntervalMilliseconds:
-        props.resetIntervalMilliseconds ?? this.props.resetIntervalMilliseconds
+        props.resetIntervalMilliseconds ?? this.props.resetIntervalMilliseconds,
+      onDataBatch: props.onDataBatch ?? this.props.onDataBatch,
+      onDataError: props.onDataError ?? this.props.onDataError
     };
 
     if (shouldRecreate) {
-      this.cancelRecordBatchStream();
-      if (this.props.data) {
-        this.replaceArrowTable(this.props.data);
-      } else {
-        this.destroyDeviceResources();
-        this.destroyParticleTable();
-        this.particleCount = 0;
-        this.lastResetTime = null;
-      }
-    }
-  }
-
-  beginRecordBatchStream(): ArrowParticleRendererStreamingSession {
-    this.streamingSessionVersion++;
-    this.destroyDeviceResources();
-    this.destroyParticleTable();
-    this.particleCount = 0;
-    this.lastResetTime = null;
-    return {version: this.streamingSessionVersion};
-  }
-
-  cancelRecordBatchStream(): void {
-    this.streamingSessionVersion++;
-  }
-
-  async streamRecordBatches({
-    recordBatchIterator,
-    streamingSession = this.beginRecordBatchStream(),
-    onBatch
-  }: ArrowParticleRendererRecordBatchStreamProps): Promise<void> {
-    let loadedBatchCount = 0;
-
-    if (!this.isRecordBatchStreamActive(streamingSession)) {
-      return;
-    }
-
-    for (
-      let recordBatchResult = await recordBatchIterator.next();
-      !recordBatchResult.done;
-      recordBatchResult = await recordBatchIterator.next()
-    ) {
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        return;
-      }
-
-      const {gpuRecordBatch, initialValues} = this.makeParticleGPURecordBatch(
-        recordBatchResult.value
-      );
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        gpuRecordBatch.destroy();
-        return;
-      }
-
-      this.addParticleGPURecordBatch(gpuRecordBatch, initialValues);
-      loadedBatchCount++;
-      onBatch?.({
-        loadedBatchCount,
-        particleCount: this.particleCount
-      });
+      this.replaceData(this.props, hasNewDataSource);
     }
   }
 
@@ -256,10 +221,15 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
         'particlePositions',
         'ArrowParticleRenderer GPU batch'
       );
+      const renderValues = this.getParticleRenderBatchValues(batch);
       if (this.device.type === 'webgpu') {
         this.model.setBindings({particlePositions: getGPUVectorBuffer(positions)});
+        this.model.setAttributes({particleColors: getGPUVectorBuffer(renderValues.colors)});
       } else {
-        this.model.setAttributes({particlePositions: getGPUVectorBuffer(positions)});
+        this.model.setAttributes({
+          particlePositions: getGPUVectorBuffer(positions),
+          particleColors: getGPUVectorBuffer(renderValues.colors)
+        });
       }
       this.model.setInstanceCount(batch.numRows);
       this.model.draw(renderPass);
@@ -268,40 +238,44 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
 
   destroy(): void {
     this.isDestroyed = true;
-    this.cancelRecordBatchStream();
+    this.dataLoadVersion++;
     this.destroyDeviceResources();
     this.destroyParticleTable();
   }
 
-  private replaceArrowTable(data: arrow.Table): void {
+  private replaceData(props: ArrowParticleRendererResolvedProps, hasNewDataSource: boolean): void {
+    this.dataLoadVersion++;
+    const dataLoadVersion = this.dataLoadVersion;
     this.destroyDeviceResources();
     this.destroyParticleTable();
+    this.particleCount = 0;
+    this.lastResetTime = null;
 
-    const gpuRecordBatchInputs = data.batches.map(recordBatch =>
-      this.makeParticleGPURecordBatch(recordBatch)
-    );
-    const firstRecordBatch = gpuRecordBatchInputs[0]?.gpuRecordBatch;
-    if (!firstRecordBatch) {
+    if (!props.data || !shouldLoadParticleSource(props, hasNewDataSource)) {
       return;
     }
 
-    this.particleTable = new GPUTable({
-      batches: gpuRecordBatchInputs.map(({gpuRecordBatch}) => gpuRecordBatch),
-      schema: firstRecordBatch.schema,
-      bufferLayout: firstRecordBatch.bufferLayout
+    void loadArrowRecordBatches({
+      data: props.data,
+      isActive: () => this.isDataLoadActive(dataLoadVersion),
+      prepareBatch: (recordBatch, context) =>
+        Promise.resolve(this.makeParticleGPURecordBatch(recordBatch, context.batchIndex)),
+      appendBatch: preparedBatch => this.addParticleGPURecordBatch(preparedBatch),
+      destroyBatch: preparedBatch => destroyPreparedParticleBatch(preparedBatch),
+      getRowCount: ({gpuRecordBatch}) => gpuRecordBatch.numRows,
+      getMetrics: () => this.particleCount,
+      onBatch: update =>
+        props.onDataBatch?.({
+          loadedBatchCount: update.loadedBatchCount,
+          particleCount: update.metrics,
+          isFirstBatch: update.isFirstBatch
+        }),
+      onError: props.onDataError
     });
-    for (const {gpuRecordBatch, initialValues} of gpuRecordBatchInputs) {
-      this.initialBatchValues.set(gpuRecordBatch, initialValues);
-    }
-    this.particleCount = this.particleTable.numRows;
-    this.lastResetTime = null;
-    this.createDeviceResources();
   }
 
-  private addParticleGPURecordBatch(
-    gpuRecordBatch: GPURecordBatch,
-    initialValues: InitialParticleBatchValues
-  ): void {
+  private addParticleGPURecordBatch(preparedBatch: PreparedParticleBatch): void {
+    const {gpuRecordBatch, initialValues, renderValues} = preparedBatch;
     if (this.particleTable) {
       this.particleTable.addBatch(gpuRecordBatch);
     } else {
@@ -312,14 +286,15 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       });
     }
     this.initialBatchValues.set(gpuRecordBatch, initialValues);
+    this.renderBatchValues.set(gpuRecordBatch, renderValues);
     this.particleCount = this.particleTable.numRows;
     this.recreateDeviceResources();
   }
 
-  private makeParticleGPURecordBatch(recordBatch: arrow.RecordBatch): {
-    gpuRecordBatch: GPURecordBatch;
-    initialValues: InitialParticleBatchValues;
-  } {
+  private makeParticleGPURecordBatch(
+    recordBatch: arrow.RecordBatch,
+    batchIndex: number
+  ): PreparedParticleBatch {
     const sourceTable = new arrow.Table([recordBatch]);
     const sourceVectors = getArrowParticleSourceVectors(sourceTable, this.props);
     if (sourceVectors.velocities.length !== sourceVectors.positions.length) {
@@ -328,19 +303,41 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       );
     }
 
-    return {
-      gpuRecordBatch: makeGPURecordBatchFromArrowRecordBatch(this.device, recordBatch, {
+    let gpuRecordBatch: GPURecordBatch | null = null;
+    let colors: GPUVector<'unorm8x4'> | null = null;
+    try {
+      gpuRecordBatch = makeGPURecordBatchFromArrowRecordBatch(this.device, recordBatch, {
         shaderLayout: WEBGL_TRANSFORM_SHADER_LAYOUT,
         arrowPaths: {
           particlePositions: this.props.positions,
           particleVelocities: this.props.velocities
         }
-      }),
-      initialValues: {
-        positions: getInitialParticleValues(sourceVectors.positions),
-        velocities: getInitialParticleValues(sourceVectors.velocities)
-      }
-    };
+      });
+      colors = makeGPUVectorFromArrow(
+        this.device,
+        makeParticleBatchColorVector(batchIndex, recordBatch.numRows),
+        {
+          name: 'particleColors',
+          id: `arrow-particles-colors-${batchIndex}`,
+          format: 'unorm8x4'
+        }
+      );
+
+      return {
+        gpuRecordBatch,
+        initialValues: {
+          positions: getInitialParticleValues(sourceVectors.positions),
+          velocities: getInitialParticleValues(sourceVectors.velocities)
+        },
+        renderValues: {
+          colors
+        }
+      };
+    } catch (error) {
+      gpuRecordBatch?.destroy();
+      colors?.destroy();
+      throw error;
+    }
   }
 
   private recreateDeviceResources(): void {
@@ -362,6 +359,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       'particlePositions',
       'ArrowParticleRenderer GPU batch'
     );
+    const firstRenderValues = this.getParticleRenderBatchValues(firstBatch);
 
     if (this.device.type === 'webgpu') {
       this.computation = new GPUTableComputation(this.device, {
@@ -378,6 +376,10 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
         bindings: {
           particlePositions: getGPUVectorBuffer(firstPositions)
         },
+        attributes: {
+          particleColors: getGPUVectorBuffer(firstRenderValues.colors)
+        },
+        bufferLayout: [{name: 'particleColors', format: 'unorm8x4', stepMode: 'instance'}],
         topology: 'triangle-list',
         vertexCount: 6,
         instanceCount: firstBatch.numRows
@@ -399,9 +401,13 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       fs: WEBGL_RENDER_FRAGMENT_SHADER,
       shaderLayout: WEBGL_RENDER_SHADER_LAYOUT,
       attributes: {
-        particlePositions: getGPUVectorBuffer(firstPositions)
+        particlePositions: getGPUVectorBuffer(firstPositions),
+        particleColors: getGPUVectorBuffer(firstRenderValues.colors)
       },
-      bufferLayout: [{name: 'particlePositions', format: 'float32x2', stepMode: 'instance'}],
+      bufferLayout: [
+        {name: 'particlePositions', format: 'float32x2', stepMode: 'instance'},
+        {name: 'particleColors', format: 'unorm8x4', stepMode: 'instance'}
+      ],
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: 6,
@@ -512,15 +518,32 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
 
   private destroyParticleTable(): void {
     this.particleTable?.destroy();
+    for (const renderValues of this.renderBatchValues.values()) {
+      renderValues.colors.destroy();
+    }
     this.particleTable = null;
     this.initialBatchValues.clear();
+    this.renderBatchValues.clear();
   }
 
-  private isRecordBatchStreamActive(
-    streamingSession: ArrowParticleRendererStreamingSession
-  ): boolean {
-    return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
+  private isDataLoadActive(dataLoadVersion: number): boolean {
+    return !this.isDestroyed && dataLoadVersion === this.dataLoadVersion;
   }
+
+  private getParticleRenderBatchValues(batch: GPURecordBatch): ParticleRenderBatchValues {
+    const renderValues = this.renderBatchValues.get(batch);
+    if (!renderValues) {
+      throw new Error('ArrowParticleRenderer GPU batch is missing render colors');
+    }
+    return renderValues;
+  }
+}
+
+function shouldLoadParticleSource(
+  props: ArrowParticleRendererResolvedProps,
+  hasNewDataSource: boolean
+): boolean {
+  return hasNewDataSource || !props.data;
 }
 
 function getArrowParticleSourceVectors(
@@ -554,6 +577,55 @@ function getRequiredParticleVector(
 
 function getInitialParticleValues(vector: arrow.Vector<ArrowParticleVectorType>): Float32Array {
   return new Float32Array(getArrowFixedSizeListValues(vector));
+}
+
+function makeParticleBatchColorVector(
+  batchIndex: number,
+  particleCount: number
+): arrow.Vector<arrow.FixedSizeList<arrow.Uint8>> {
+  const values = new Uint8Array(particleCount * 4);
+  const batchColor = PARTICLE_BATCH_COLORS[batchIndex % PARTICLE_BATCH_COLORS.length];
+
+  for (let particleIndex = 0; particleIndex < particleCount; particleIndex++) {
+    const colorPhase = (particleIndex % 11) / 10;
+    const colorOffset = particleIndex * 4;
+    values[colorOffset] = toUint8Color(getParticleColorComponent(batchColor[0], 0, colorPhase));
+    values[colorOffset + 1] = toUint8Color(getParticleColorComponent(batchColor[1], 1, colorPhase));
+    values[colorOffset + 2] = toUint8Color(getParticleColorComponent(batchColor[2], 2, colorPhase));
+    values[colorOffset + 3] = 255;
+  }
+
+  return makeArrowFixedSizeListVector(new arrow.Uint8(), 4, values);
+}
+
+function getParticleColorComponent(
+  batchColor: number,
+  componentIndex: 0 | 1 | 2,
+  colorPhase: number
+): number {
+  const shadowedColor = mixColorComponent(
+    batchColor,
+    PARTICLE_COLOR_SHADOW[componentIndex],
+    (1 - colorPhase) * 0.12
+  );
+  return mixColorComponent(
+    shadowedColor,
+    PARTICLE_COLOR_HIGHLIGHT[componentIndex],
+    colorPhase * 0.18
+  );
+}
+
+function mixColorComponent(startColor: number, endColor: number, amount: number): number {
+  return startColor * (1 - amount) + endColor * amount;
+}
+
+function toUint8Color(value: number): number {
+  return Math.min(255, Math.max(0, Math.round(value * 255)));
+}
+
+function destroyPreparedParticleBatch(preparedBatch: PreparedParticleBatch): void {
+  preparedBatch.gpuRecordBatch.destroy();
+  preparedBatch.renderValues.colors.destroy();
 }
 
 function copyOutputToBatchVector({

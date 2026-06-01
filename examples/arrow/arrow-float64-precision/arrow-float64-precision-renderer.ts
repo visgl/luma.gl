@@ -97,7 +97,7 @@ export class ArrowFloat64PrecisionRenderer extends GPURenderable<[RenderPass]> {
 
     this.float32View.shaderInputs.setProps({
       precisionViewport: {
-        center,
+        center: pan,
         worldScale,
         paneOffset: LEFT_PANE_OFFSET,
         usePreparedOrigins: 0,
@@ -170,7 +170,7 @@ async function createPreparedPathView(
   const prepared = await prepareArrowPathGPUVectors(
     device,
     {
-      paths: kind === 'float64' ? sourceData.pathsFloat64 : sourceData.pathsFloat32,
+      paths: kind === 'float64' ? sourceData.pathsFloat64 : sourceData.pathsFloat32Local,
       colors: sourceData.colors,
       widths: sourceData.widths
     },

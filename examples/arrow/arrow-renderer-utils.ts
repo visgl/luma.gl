@@ -13,24 +13,27 @@ export type OptionalArrowColumnSelector<T extends arrow.DataType> =
   | null
   | undefined;
 
-/** Token used to cancel stale Arrow record-batch streaming work. */
-export type ArrowRecordBatchStreamingSession = {
-  /** Monotonic stream version owned by the renderer. */
-  version: number;
-};
+/** Arrow record-batch source accepted by the core Arrow example renderers. */
+export type ArrowRecordBatchSource =
+  | arrow.Table
+  | Iterable<arrow.RecordBatch>
+  | AsyncIterator<arrow.RecordBatch>
+  | AsyncIterable<arrow.RecordBatch>;
 
-/** Common stream update fields emitted by Arrow record-batch renderers. */
-export type ArrowRecordBatchStreamUpdate<Metrics> = {
+/** Common update fields emitted after one renderer-owned Arrow batch load. */
+export type ArrowRecordBatchLoadUpdate<Metrics, PreparedBatch = unknown> = {
   /** Number of loaded batches in the active stream. */
   loadedBatchCount: number;
   /** True when the first batch in the stream has been loaded. */
   isFirstBatch: boolean;
   /** Aggregated metrics after the loaded batch has been appended. */
   metrics: Metrics;
+  /** Prepared GPU batch that was just appended. */
+  preparedBatch: PreparedBatch;
 };
 
-/** Source-position metadata for one record batch in an active Arrow stream. */
-export type ArrowRecordBatchStreamContext = {
+/** Source-position metadata for one loaded Arrow record batch. */
+export type ArrowRecordBatchLoadContext = {
   /** Zero-based batch index within the active stream. */
   batchIndex: number;
   /** Zero-based row offset for the first row in this source batch. */
@@ -39,19 +42,19 @@ export type ArrowRecordBatchStreamContext = {
   isFirstBatch: boolean;
 };
 
-type StreamArrowRecordBatchesProps<PreparedBatch, Metrics> = {
-  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
-  streamingSession: ArrowRecordBatchStreamingSession;
-  isActive: (streamingSession: ArrowRecordBatchStreamingSession) => boolean;
+type LoadArrowRecordBatchesProps<PreparedBatch, Metrics> = {
+  data: ArrowRecordBatchSource;
+  isActive: () => boolean;
   prepareBatch: (
     recordBatch: arrow.RecordBatch,
-    context: ArrowRecordBatchStreamContext
+    context: ArrowRecordBatchLoadContext
   ) => Promise<PreparedBatch>;
   appendBatch: (preparedBatch: PreparedBatch) => void;
   destroyBatch: (preparedBatch: PreparedBatch) => void;
   getRowCount: (preparedBatch: PreparedBatch) => number;
   getMetrics: () => Metrics;
-  onBatch?: (update: ArrowRecordBatchStreamUpdate<Metrics>) => void;
+  onBatch?: (update: ArrowRecordBatchLoadUpdate<Metrics, PreparedBatch>) => void;
+  onError?: (error: unknown) => void;
 };
 
 /** Resolves a required Arrow vector from either an explicit vector or a table column selector. */
@@ -94,58 +97,90 @@ export function getOptionalArrowColumn<T extends arrow.DataType>(props: {
 
 /** Returns true when props contain a table or an explicit non-string vector selector. */
 export function hasArrowTableOrVectorSource<T extends arrow.DataType>(props: {
-  data?: arrow.Table | null;
+  data?: ArrowRecordBatchSource | null;
   selector?: ArrowColumnSelector<T>;
 }): boolean {
   return Boolean(props.data) || Boolean(props.selector && typeof props.selector !== 'string');
 }
 
-/** Iterates active record batches and centralizes cancellation cleanup. */
-export async function streamArrowRecordBatches<PreparedBatch, Metrics>({
-  recordBatchIterator,
-  streamingSession,
+/** Normalizes Arrow table, iterable, async iterable, and bare async iterator sources. */
+export function getArrowRecordBatchAsyncIterator(
+  data: ArrowRecordBatchSource
+): AsyncIterator<arrow.RecordBatch> {
+  if (data instanceof arrow.Table) {
+    return getAsyncIterator(data.batches[Symbol.iterator]());
+  }
+  if (Symbol.asyncIterator in data) {
+    return data[Symbol.asyncIterator]();
+  }
+  if (Symbol.iterator in data) {
+    return getAsyncIterator(data[Symbol.iterator]());
+  }
+  return data;
+}
+
+/** Iterates an active Arrow source and centralizes stale-load cleanup. */
+export async function loadArrowRecordBatches<PreparedBatch, Metrics>({
+  data,
   isActive,
   prepareBatch,
   appendBatch,
   destroyBatch,
   getRowCount,
   getMetrics,
-  onBatch
-}: StreamArrowRecordBatchesProps<PreparedBatch, Metrics>): Promise<void> {
+  onBatch,
+  onError
+}: LoadArrowRecordBatchesProps<PreparedBatch, Metrics>): Promise<void> {
   let loadedBatchCount = 0;
   let rowIndexOffset = 0;
 
-  if (!isActive(streamingSession)) {
+  if (!isActive()) {
     return;
   }
 
-  for (
-    let recordBatchResult = await recordBatchIterator.next();
-    !recordBatchResult.done;
-    recordBatchResult = await recordBatchIterator.next()
-  ) {
-    if (!isActive(streamingSession)) {
-      return;
-    }
+  try {
+    const recordBatchIterator = getArrowRecordBatchAsyncIterator(data);
+    for (
+      let recordBatchResult = await recordBatchIterator.next();
+      !recordBatchResult.done;
+      recordBatchResult = await recordBatchIterator.next()
+    ) {
+      if (!isActive()) {
+        return;
+      }
 
-    const context: ArrowRecordBatchStreamContext = {
-      batchIndex: loadedBatchCount,
-      rowIndexOffset,
-      isFirstBatch: loadedBatchCount === 0
-    };
-    const preparedBatch = await prepareBatch(recordBatchResult.value, context);
-    if (!isActive(streamingSession)) {
-      destroyBatch(preparedBatch);
-      return;
-    }
+      const context: ArrowRecordBatchLoadContext = {
+        batchIndex: loadedBatchCount,
+        rowIndexOffset,
+        isFirstBatch: loadedBatchCount === 0
+      };
+      const preparedBatch = await prepareBatch(recordBatchResult.value, context);
+      if (!isActive()) {
+        destroyBatch(preparedBatch);
+        return;
+      }
 
-    appendBatch(preparedBatch);
-    loadedBatchCount++;
-    rowIndexOffset += getRowCount(preparedBatch);
-    onBatch?.({
-      loadedBatchCount,
-      isFirstBatch: context.isFirstBatch,
-      metrics: getMetrics()
-    });
+      appendBatch(preparedBatch);
+      loadedBatchCount++;
+      rowIndexOffset += getRowCount(preparedBatch);
+      onBatch?.({
+        loadedBatchCount,
+        isFirstBatch: context.isFirstBatch,
+        metrics: getMetrics(),
+        preparedBatch
+      });
+    }
+  } catch (error) {
+    if (isActive()) {
+      onError?.(error);
+    }
   }
+}
+
+function getAsyncIterator(iterator: Iterator<arrow.RecordBatch>): AsyncIterator<arrow.RecordBatch> {
+  return {
+    async next(): Promise<IteratorResult<arrow.RecordBatch>> {
+      return iterator.next();
+    }
+  };
 }

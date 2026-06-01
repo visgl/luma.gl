@@ -33,6 +33,7 @@ import {
   makeStreamingArrowTextSourceAsync,
   STREAMING_TEXT_BATCH_COUNT,
   TEXT_DATASETS,
+  type ArrowTextStyleColumnOptions,
   type StreamingTextDatasetKind,
   type TextColorKind,
   type TextDatasetKind,
@@ -59,11 +60,10 @@ import {
 import {
   ArrowTextRenderer,
   type ArrowTextRendererActiveModel,
+  type ArrowTextRendererDataBatchUpdate,
   type ArrowTextRendererInput,
-  type ArrowTextRendererRecordBatchStreamUpdate,
   type ArrowTextRendererProps,
-  type ArrowTextRendererSetPropsResult,
-  type ArrowTextRendererStreamingSession
+  type ArrowTextRendererSetPropsResult
 } from './arrow-text-renderer';
 
 export const title = 'Text: Strings/Dictionary strings';
@@ -91,7 +91,6 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   controlPanel!: ArrowText2DControlPanel;
   pickingModel: Model | null = null;
   picker: PickingManager | null = null;
-  loadedRecordBatches: arrow.RecordBatch[] = [];
   arrowVectorBuildTimeMs = 0;
   textModelKind: TextModelKind = 'auto';
   textDatasetKind: TextDatasetKind = '10k-stream';
@@ -172,9 +171,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
 
-    this.loadedRecordBatches = [firstRecordBatch];
     this.arrowVectorBuildTimeMs = streamingSource.arrowVectorBuildTimeMs;
-    this.textRenderer = await this.createTextRenderer(this.textModelKind);
+    this.textRenderer = await this.createTextRenderer(this.textModelKind, [firstRecordBatch]);
     this.setActiveTextInput(this.textRenderer.textInput);
     this.pickingModel = this.createPickingModel();
     this.picker = createArrowTextPickingManager(
@@ -188,8 +186,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.startStreamingTextDatasetFromSource(
       this.textDatasetKind as StreamingTextDatasetKind,
       this.textColorKind,
-      streamingSource,
-      this.textRenderer.beginRecordBatchStream()
+      streamingSource
     );
   }
 
@@ -199,7 +196,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }> {
     const streamingSource = await makeStreamingArrowTextSourceAsync(
       TEXT_DATASETS[getEagerTextDatasetKind(textDatasetKind)],
-      this.textColorKind
+      this.textColorKind,
+      this.getTextStyleColumnOptions()
     );
     const firstRecordBatch = streamingSource.recordBatches[0];
     if (!firstRecordBatch) {
@@ -221,12 +219,20 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     });
   }
 
-  getRendererSourceProps(): Pick<
+  getRendererSourceProps(
+    data: ArrowTextRendererProps['data']
+  ): Pick<ArrowTextRendererProps, 'data' | 'colors' | 'angles' | 'sizes' | 'clipRects'> {
+    return {
+      data,
+      ...this.getRendererStyleSourceProps()
+    };
+  }
+
+  getRendererStyleSourceProps(): Pick<
     ArrowTextRendererProps,
-    'data' | 'colors' | 'angles' | 'sizes' | 'clipRects'
+    'colors' | 'angles' | 'sizes' | 'clipRects'
   > {
     return {
-      data: this.loadedRecordBatches,
       clipRects: this.clippingEnabled ? 'clipRects' : null,
       colors: this.colorEnabled ? 'colors' : null,
       angles: this.angleEnabled ? 'angles' : null,
@@ -234,10 +240,21 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     };
   }
 
-  async createTextRenderer(modelKind: TextModelKind): Promise<ArrowTextRenderer> {
+  getTextStyleColumnOptions(): ArrowTextStyleColumnOptions {
+    return {
+      clipRects: this.clippingEnabled,
+      angles: this.angleEnabled,
+      sizes: this.sizeEnabled
+    };
+  }
+
+  async createTextRenderer(
+    modelKind: TextModelKind,
+    data: ArrowTextRendererProps['data']
+  ): Promise<ArrowTextRenderer> {
     return await ArrowTextRenderer.create(this.device, {
       id: 'arrow-text-2d',
-      ...this.getRendererSourceProps(),
+      ...this.getRendererSourceProps(data),
       model: modelKind,
       characterSet: CHARACTER_SET,
       fontSettings: {
@@ -364,9 +381,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       this.syncControlPanel();
       return;
     }
-    await this.updateTextRendererProps({model: nextModelKind}, 'text model selector changed', {
-      resetPickedLabel: true
-    });
+    this.textModelKind = nextModelKind;
+    await this.refreshCurrentTextData();
   };
 
   handleRowCountSelection = async (tableSizeKind: TextTableSizeKind): Promise<void> => {
@@ -398,9 +414,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     }
 
     if (isStreamingTextDatasetKind(nextDatasetKind)) {
-      const streamingSession = this.textRenderer.beginRecordBatchStream();
       this.updateStreamingBatchStatus(0);
-      await this.startStreamingTextDataset(nextDatasetKind, nextColorKind, streamingSession);
+      await this.startStreamingTextDataset(nextDatasetKind, nextColorKind);
       return;
     }
 
@@ -409,60 +424,56 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   async startStreamingTextDataset(
     textDatasetKind: StreamingTextDatasetKind,
-    textColorKind: TextColorKind,
-    streamingSession: ArrowTextRendererStreamingSession
+    textColorKind: TextColorKind
   ): Promise<void> {
     const streamingSource = await makeStreamingArrowTextSourceAsync(
       TEXT_DATASETS[getEagerTextDatasetKind(textDatasetKind)],
-      textColorKind
+      textColorKind,
+      this.getTextStyleColumnOptions()
     );
     if (this.isFinalized) {
       return;
     }
-    this.startStreamingTextDatasetFromSource(
-      textDatasetKind,
-      textColorKind,
-      streamingSource,
-      streamingSession
-    );
+    this.startStreamingTextDatasetFromSource(textDatasetKind, textColorKind, streamingSource);
+  }
+
+  async refreshCurrentTextData(): Promise<void> {
+    if (!isStreamingTextDatasetKind(this.textDatasetKind)) {
+      this.syncControlPanel();
+      return;
+    }
+    this.updateStreamingBatchStatus(0);
+    await this.startStreamingTextDataset(this.textDatasetKind, this.textColorKind);
   }
 
   startStreamingTextDatasetFromSource(
     textDatasetKind: StreamingTextDatasetKind,
     textColorKind: TextColorKind,
-    streamingSource: Awaited<ReturnType<typeof makeStreamingArrowTextSourceAsync>>,
-    streamingSession: ArrowTextRendererStreamingSession
+    streamingSource: Awaited<ReturnType<typeof makeStreamingArrowTextSourceAsync>>
   ): void {
     this.updateStreamingBatchStatus(0);
     const recordBatchIterator = createStreamingRecordBatchIterator(streamingSource.recordBatches)[
       Symbol.asyncIterator
     ]();
     this.arrowVectorBuildTimeMs = streamingSource.arrowVectorBuildTimeMs;
-    void this.textRenderer.streamRecordBatches({
+    void this.textRenderer.setProps({
       data: recordBatchIterator,
-      model: textInput => {
-        this.setActiveTextInput(textInput);
-        return this.resolveAvailableModelKind(this.textModelKind);
-      },
-      mapTextInput: textInput => this.getRendererTextInput(textInput),
-      streamingSession,
-      onBatch: update =>
-        this.handleStreamingTextBatch(update, textDatasetKind, textColorKind, streamingSource)
+      model: this.resolveAvailableModelKind(this.textModelKind),
+      ...this.getRendererStyleSourceProps(),
+      onDataBatch: update => this.handleStreamingTextBatch(update, textDatasetKind, textColorKind)
     });
   }
 
   handleStreamingTextBatch(
-    update: ArrowTextRendererRecordBatchStreamUpdate,
+    update: ArrowTextRendererDataBatchUpdate,
     textDatasetKind: StreamingTextDatasetKind,
-    textColorKind: TextColorKind,
-    streamingSource: Awaited<ReturnType<typeof makeStreamingArrowTextSourceAsync>>
+    textColorKind: TextColorKind
   ): void {
     if (this.isFinalized) {
       return;
     }
     this.textDatasetKind = textDatasetKind;
     this.textColorKind = textColorKind;
-    this.loadedRecordBatches = streamingSource.recordBatches.slice(0, update.loadedBatchCount);
     this.setActiveTextInput(update.textInput);
     if (update.isFirstBatch) {
       this.textModelKind = this.textRenderer.props.model ?? this.textModelKind;
@@ -530,23 +541,17 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   handleTextSizeSelection = (sizeKind: ArrowText2DControlPanelSizeKind): void => {
     this.textSizeKind = sizeKind;
-    void this.updateTextRendererProps(this.getRendererSourceProps(), 'text row sizes changed', {
-      resetPickedLabel: true
-    });
+    void this.refreshCurrentTextData();
   };
 
   handleTextAngleSelection = (angleKind: ArrowText2DControlPanelAngleKind): void => {
     this.textAngleKind = angleKind;
-    void this.updateTextRendererProps(this.getRendererSourceProps(), 'text row angles changed', {
-      resetPickedLabel: true
-    });
+    void this.refreshCurrentTextData();
   };
 
   handleTextClipRectsSelection = (clipRectsKind: ArrowText2DControlPanelClipRectsKind): void => {
     this.textClipRectsKind = clipRectsKind;
-    void this.updateTextRendererProps(this.getRendererSourceProps(), 'text clip rects changed', {
-      resetPickedLabel: true
-    });
+    void this.refreshCurrentTextData();
   };
 
   updateStreamingBatchStatus(loadedBatchCount: number | null): void {

@@ -140,13 +140,11 @@ export class ArrowFloat64PrecisionControlPanel {
 
 export function makeArrowFloat64PrecisionControlPanelHtml(): string {
   return `\
-  <div style="min-width: 320px; max-width: 440px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 10px; background: rgba(255, 255, 255, 0.96); color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
-    <p style="margin: 0 0 10px;">Compares survey-style Arrow path rows after an explicit Float32 cast against Float64 source rows prepared as per-path Float32 deltas plus view origins.</p>
-    <p style="margin: 0 0 12px; color: #475569;">This is high-precision local geometry preparation, not deck.gl <code>project64</code> geospatial projection.</p>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end;">
+  <div style="min-width: 280px; max-width: 360px; max-height: 150px; overflow-y: auto; padding: 8px 10px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 10px; background: rgba(255, 255, 255, 0.96); color: #0f172a; font: 12px/1.25 system-ui, sans-serif;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 7px; align-items: end;">
       <label style="display: grid; gap: 4px; font-weight: 700;">
-        Coordinate magnitude
-        <select id="${MAGNITUDE_SELECT_ID}" style="font: inherit; padding: 5px 7px;">
+        Magnitude
+        <select id="${MAGNITUDE_SELECT_ID}" style="font: inherit; padding: 4px 6px;">
           ${Object.entries(COORDINATE_MAGNITUDES)
             .map(([kind, option]) => `<option value="${kind}">${option.label}</option>`)
             .join('')}
@@ -157,32 +155,34 @@ export function makeArrowFloat64PrecisionControlPanelHtml(): string {
         <input id="${ZOOM_RANGE_ID}" type="range" min="0.65" max="3.5" step="0.05" value="1" />
       </label>
     </div>
-    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
+    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 6px;">
       <span style="font-weight: 700;">Pan</span>
       ${makeButton(PAN_LEFT_ID, 'Left')}
       ${makeButton(PAN_RIGHT_ID, 'Right')}
       ${makeButton(PAN_UP_ID, 'Up')}
       ${makeButton(PAN_DOWN_ID, 'Down')}
-      ${makeButton(RESET_VIEW_ID, 'Reset view')}
+      ${makeButton(RESET_VIEW_ID, 'Reset')}
     </div>
-    <div style="margin-top: 6px; color: #64748b; font-size: 12px;">Pan offset <span id="${PAN_LABEL_ID}">0, 0</span></div>
-    <div id="${LOADING_ID}" style="min-height: 18px; margin-top: 6px; color: #1d4ed8; font-weight: 700;"></div>
-    <div style="display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin-top: 12px; border-top: 1px solid rgba(203, 213, 225, 0.9); padding-top: 10px;">
-      ${makeMetricRow('Path rows', PATH_COUNT_ID)}
-      ${makeMetricRow('Generated segments', SEGMENT_COUNT_ID)}
-      ${makeMetricRow('Float64 path Arrow bytes', FLOAT64_ARROW_BYTES_ID)}
-      ${makeMetricRow('Float32 path Arrow bytes', FLOAT32_ARROW_BYTES_ID)}
-      ${makeMetricRow('Style Arrow bytes', STYLE_ARROW_BYTES_ID)}
-      ${makeMetricRow('Float64 prepared GPU bytes', FLOAT64_GPU_BYTES_ID)}
-      ${makeMetricRow('Float32 prepared GPU bytes', FLOAT32_GPU_BYTES_ID)}
-      ${makeMetricRow('Float64 prep time', FLOAT64_PREP_TIME_ID)}
-      ${makeMetricRow('Float32 prep time', FLOAT32_PREP_TIME_ID)}
-      ${makeMetricRow('Max Float32 local error', FLOAT32_ERROR_ID)}
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 3px; color: #64748b; font-size: 11px;">
+      <span>Pan <span id="${PAN_LABEL_ID}">0, 0</span></span>
+      <span id="${LOADING_ID}" style="color: #1d4ed8; font-weight: 700;"></span>
     </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; color: #334155; font-size: 12px;">
-      <div><strong>Left:</strong> explicit Float32 cast</div>
-      <div><strong>Right:</strong> Float64 prepared deltas</div>
-    </div>
+    <details style="margin-top: 6px; border-top: 1px solid rgba(203, 213, 225, 0.9); padding-top: 6px; color: #334155;">
+      <summary style="cursor: pointer; font-weight: 700;">
+        Metrics: F32 error <strong id="${FLOAT32_ERROR_ID}" style="font-variant-numeric: tabular-nums;">-</strong>, F64 prep <strong id="${FLOAT64_PREP_TIME_ID}" style="font-variant-numeric: tabular-nums;">-</strong>
+      </summary>
+      <div style="max-height: 90px; overflow-y: auto; display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin-top: 4px; padding-right: 4px;">
+        ${makeMetricRow('Paths', PATH_COUNT_ID)}
+        ${makeMetricRow('Segments', SEGMENT_COUNT_ID)}
+        ${makeMetricRow('F64 Arrow', FLOAT64_ARROW_BYTES_ID)}
+        ${makeMetricRow('F32 Arrow', FLOAT32_ARROW_BYTES_ID)}
+        ${makeMetricRow('Style', STYLE_ARROW_BYTES_ID)}
+        ${makeMetricRow('F64 GPU', FLOAT64_GPU_BYTES_ID)}
+        ${makeMetricRow('F32 GPU', FLOAT32_GPU_BYTES_ID)}
+        ${makeMetricRow('F32 prep', FLOAT32_PREP_TIME_ID)}
+      </div>
+      <div style="margin-top: 4px; color: #475569; font-size: 11px;">Left: Float32 cast. Right: Float64-prepared local deltas, not <code>project64</code>.</div>
+    </details>
   </div>
   `;
 }
@@ -192,7 +192,7 @@ function makeMetricRow(label: string, id: string): string {
 }
 
 function makeButton(id: string, label: string): string {
-  return `<button id="${id}" type="button" style="border: 1px solid #cbd5e1; border-radius: 7px; background: #f8fafc; color: #0f172a; padding: 5px 8px; font: inherit; cursor: pointer;">${label}</button>`;
+  return `<button id="${id}" type="button" style="border: 1px solid #cbd5e1; border-radius: 7px; background: #f8fafc; color: #0f172a; padding: 3px 6px; font: inherit; cursor: pointer;">${label}</button>`;
 }
 
 function setButtonHandler(id: string, handler: () => void): void {
@@ -214,7 +214,15 @@ function getElement<TElement extends HTMLElement>(id: string): TElement | null {
 }
 
 function isCoordinateMagnitudeKind(value: unknown): value is CoordinateMagnitudeKind {
-  return value === '10k' || value === '10m' || value === '1b';
+  return (
+    value === '1e7' ||
+    value === '1e8' ||
+    value === '1e9' ||
+    value === '1e10' ||
+    value === '1e16' ||
+    value === '1e17' ||
+    value === '1e18'
+  );
 }
 
 function formatInteger(value: number): string {

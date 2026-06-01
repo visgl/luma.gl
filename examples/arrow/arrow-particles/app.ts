@@ -58,13 +58,11 @@ export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTe
 
   private startStreamingParticles(): void {
     this.controlPanel.setStreamingBatchStatus(0, STREAMING_PARTICLE_BATCH_COUNT);
-    const streamingSession = this.layer.beginRecordBatchStream();
     const recordBatches = makeArrowParticleRecordBatches();
 
-    void this.layer.streamRecordBatches({
-      streamingSession,
-      recordBatchIterator: createStreamingParticleRecordBatchIterator(recordBatches),
-      onBatch: ({loadedBatchCount}) => {
+    this.layer.setProps({
+      data: createStreamingParticleRecordBatchIterator(recordBatches),
+      onDataBatch: ({loadedBatchCount}) => {
         if (!this.isFinalized) {
           this.controlPanel.setStreamingBatchStatus(
             loadedBatchCount,

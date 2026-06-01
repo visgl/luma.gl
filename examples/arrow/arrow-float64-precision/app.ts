@@ -22,11 +22,12 @@ export const title = 'Float64 Precision: Survey lines';
 export const description =
   'Large-coordinate Arrow path rows compared as explicit Float32 casts and Float64-prepared per-row deltas plus view origins.';
 
-const DEFAULT_COORDINATE_MAGNITUDE_KIND: CoordinateMagnitudeKind = '1b';
+const DEFAULT_COORDINATE_MAGNITUDE_KIND: CoordinateMagnitudeKind = '1e9';
 const DEFAULT_VIEW_STATE: ArrowFloat64PrecisionViewState = {
   zoom: 1,
   pan: [0, 0]
 };
+const PANE_LABELS_ID = 'arrow-float64-precision-pane-labels';
 
 export default class ArrowFloat64PrecisionAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowFloat64PrecisionControlPanelHtml();
@@ -56,6 +57,7 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   }
 
   override async onInitialize(): Promise<void> {
+    addPaneLabels();
     this.controlPanel.initialize();
     await this.prepareRenderer(this.coordinateMagnitudeKind);
   }
@@ -78,6 +80,7 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   override onFinalize(): void {
     this.isFinalized = true;
     this.rendererGeneration++;
+    removePaneLabels();
     this.controlPanel.destroy();
     scheduleRendererDestroy(this.device, this.renderer);
     this.renderer = null;
@@ -163,4 +166,34 @@ function scheduleRendererDestroy(
   }
 
   setTimeout(() => renderer.destroy(), 0);
+}
+
+function addPaneLabels(): void {
+  removePaneLabels();
+  const paneLabels = document.createElement('div');
+  paneLabels.id = PANE_LABELS_ID;
+  paneLabels.style.cssText = [
+    'position: absolute',
+    'left: 0',
+    'right: 0',
+    'bottom: 18px',
+    'display: grid',
+    'grid-template-columns: 1fr 1fr',
+    'gap: 18px',
+    'padding: 0 34px',
+    'box-sizing: border-box',
+    'pointer-events: none',
+    'color: #d8fbff',
+    'font: 600 13px/1.3 system-ui, sans-serif',
+    'text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8)'
+  ].join('; ');
+  paneLabels.innerHTML = `\
+    <div style="text-align: center;">Float32 cast<br><span style="font-weight: 500; color: #9ed6e8;">expect snapped or collapsed detail</span></div>
+    <div style="text-align: center;">Float64 prepared<br><span style="font-weight: 500; color: #9ed6e8;">local detail preserved</span></div>
+  `;
+  document.body.appendChild(paneLabels);
+}
+
+function removePaneLabels(): void {
+  document.getElementById(PANE_LABELS_ID)?.remove();
 }

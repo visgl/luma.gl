@@ -3253,7 +3253,7 @@ function assertStorageTextAppendCompatible(
       batchInput.positionsBuffer !== existingBatch.rowPositionsBuffer
     ) {
       throw new Error(
-        'ArrowStorageTextModel appendTextBatches() requires existing row batches to stay unchanged'
+        'ArrowStorageTextModel appended text batches require existing row batches to stay unchanged'
       );
     }
   }

@@ -5,7 +5,7 @@
 import {getArrowVectorByteLength, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
-export type CoordinateMagnitudeKind = '10k' | '10m' | '1b';
+export type CoordinateMagnitudeKind = '1e7' | '1e8' | '1e9' | '1e10' | '1e16' | '1e17' | '1e18';
 
 export type CoordinateMagnitudeOption = {
   label: string;
@@ -30,6 +30,7 @@ export type ArrowFloat64PrecisionSourceData = {
   segmentCount: number;
   pathsFloat64: arrow.Vector<ArrowPathFloat64Type>;
   pathsFloat32: arrow.Vector<ArrowPathFloat32Type>;
+  pathsFloat32Local: arrow.Vector<ArrowPathFloat32Type>;
   colors: arrow.Vector<ArrowPathColorType>;
   widths: arrow.Vector<arrow.Float32>;
   sourceArrowByteLength: {
@@ -41,17 +42,33 @@ export type ArrowFloat64PrecisionSourceData = {
 };
 
 export const COORDINATE_MAGNITUDES: Record<CoordinateMagnitudeKind, CoordinateMagnitudeOption> = {
-  '10k': {
-    label: '10k',
-    magnitude: 10_000
+  '1e7': {
+    label: '10^7',
+    magnitude: 1e7
   },
-  '10m': {
-    label: '10M',
-    magnitude: 10_000_000
+  '1e8': {
+    label: '10^8',
+    magnitude: 1e8
   },
-  '1b': {
-    label: '1B',
-    magnitude: 1_000_000_000
+  '1e9': {
+    label: '10^9',
+    magnitude: 1e9
+  },
+  '1e10': {
+    label: '10^10',
+    magnitude: 1e10
+  },
+  '1e16': {
+    label: '10^16',
+    magnitude: 1e16
+  },
+  '1e17': {
+    label: '10^17',
+    magnitude: 1e17
+  },
+  '1e18': {
+    label: '10^18',
+    magnitude: 1e18
   }
 };
 
@@ -74,6 +91,7 @@ export function makeArrowFloat64PrecisionSourceData(
   const pathValueCount = PATH_COUNT * POINT_COUNT * COMPONENT_COUNT;
   const valuesFloat64 = new Float64Array(pathValueCount);
   const valuesFloat32 = new Float32Array(pathValueCount);
+  const valuesFloat32Local = new Float32Array(pathValueCount);
   const pathOffsets = new Int32Array(PATH_COUNT + 1);
   const colors = new Uint8Array(PATH_COUNT * 4);
   const widths = new Float32Array(PATH_COUNT);
@@ -109,16 +127,18 @@ export function makeArrowFloat64PrecisionSourceData(
       const absoluteY = center[1] + localY;
       const float32X = Math.fround(absoluteX);
       const float32Y = Math.fround(absoluteY);
+      const castLocalX = float32X - Math.fround(center[0]);
+      const castLocalY = float32Y - Math.fround(center[1]);
 
       valuesFloat64[valueIndex] = absoluteX;
       valuesFloat32[valueIndex] = float32X;
+      valuesFloat32Local[valueIndex] = castLocalX;
       valueIndex++;
       valuesFloat64[valueIndex] = absoluteY;
       valuesFloat32[valueIndex] = float32Y;
+      valuesFloat32Local[valueIndex] = castLocalY;
       valueIndex++;
 
-      const castLocalX = float32X - Math.fround(center[0]);
-      const castLocalY = float32Y - Math.fround(center[1]);
       maxFloat32LocalError = Math.max(
         maxFloat32LocalError,
         Math.hypot(castLocalX - localX, castLocalY - localY)
@@ -129,6 +149,7 @@ export function makeArrowFloat64PrecisionSourceData(
 
   const pathsFloat64 = makePathVector(new arrow.Float64(), valuesFloat64, pathOffsets);
   const pathsFloat32 = makePathVector(new arrow.Float32(), valuesFloat32, pathOffsets);
+  const pathsFloat32Local = makePathVector(new arrow.Float32(), valuesFloat32Local, pathOffsets);
   const colorVector = makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors);
   const widthVector = arrow.makeVector(widths) as arrow.Vector<arrow.Float32>;
 
@@ -146,6 +167,7 @@ export function makeArrowFloat64PrecisionSourceData(
     segmentCount: PATH_COUNT * (POINT_COUNT - 1),
     pathsFloat64,
     pathsFloat32,
+    pathsFloat32Local,
     colors: colorVector,
     widths: widthVector,
     sourceArrowByteLength: {
