@@ -172,6 +172,106 @@ const points = GPUTableEvaluator.fromArray(
 const result = extent(points);
 ```
 
+## `dot`
+
+### `dot(x: GPUTableEvaluatorInput, y: GPUTableEvaluatorInput): GPUTableEvaluator`
+
+Computes the row-wise dot product of `x` and `y`.
+
+The output:
+
+- uses `type = 'float32'`
+- uses `size = 1`
+- uses `length = max(x.length, y.length)`
+
+Behavior:
+
+- `x` and `y` must have the same row size.
+- Each output row is `sum(x_i * y_i)` over all lanes in the row.
+- Constant inputs broadcast across non-constant inputs as usual.
+
+### Example
+
+```ts
+const x = GPUTableEvaluator.fromArray(
+  [1, 2, 3, 4, 5, 6],
+  {size: 3}
+);
+const y = GPUTableEvaluator.fromArray(
+  [7, 8, 9, -1, -2, -3],
+  {size: 3}
+);
+
+const result = dot(x, y);
+```
+
+## `length`
+
+### `length(x: GPUTableEvaluatorInput): GPUTableEvaluator`
+
+Computes the Euclidean row length of `x`.
+
+The output:
+
+- uses `type = 'float32'`
+- uses `size = 1`
+- uses `length = x.length`
+
+Behavior:
+
+- Each output row is `sqrt(sum(x_i * x_i))` over all lanes in the row.
+- `length()` is a row-reduction operation: it converts each input row to one scalar output row.
+
+### Example
+
+```ts
+const points = GPUTableEvaluator.fromArray(
+  [3, 4, 5, 12],
+  {size: 2}
+);
+
+const result = length(points);
+```
+
+## `equalAll`
+
+### `equalAll(x: GPUTableEvaluatorInput, y: GPUTableEvaluatorInput): GPUTableEvaluator`
+
+Checks row-wise equality across all lanes of `x` and `y`.
+
+The output:
+
+- uses `type = 'uint32'`
+- uses `size = 1`
+- uses `length = max(x.length, y.length)`
+
+Each output row is:
+
+```text
+1 if all lanes are equal, else 0
+```
+
+Behavior:
+
+- `x` and `y` must have the same row size.
+- Constant inputs broadcast across non-constant inputs as usual.
+- `equalAll()` reduces each row pair to a scalar loop/identity-style flag.
+
+### Example
+
+```ts
+const a = GPUTableEvaluator.fromArray(
+  [1, 2, 3, 4, 5, 6],
+  {size: 3}
+);
+const b = GPUTableEvaluator.fromArray(
+  [1, 2, 3, 4, 0, 6],
+  {size: 3}
+);
+
+const result = equalAll(a, b);
+```
+
 ## `sequence`
 
 ### `sequence(count: number, start?: number, step?: number): GPUTableEvaluator`
@@ -197,6 +297,35 @@ Behavior:
 ```ts
 const a = sequence(5);        // 0, 1, 2, 3, 4
 const b = sequence(4, 10, 2); // 10, 12, 14, 16
+```
+
+## `select`
+
+### `select(condition: GPUTableEvaluatorInput, whenTrue: GPUTableEvaluatorInput, whenFalse: GPUTableEvaluatorInput): GPUTableEvaluator`
+
+Selects row or lane values from `whenTrue` or `whenFalse` using non-zero condition values.
+
+The output:
+
+- uses the deduced `type` from `whenTrue` and `whenFalse`
+- uses the deduced `size` from `whenTrue` and `whenFalse`
+- uses `length = max(condition.length, whenTrue.length, whenFalse.length)`
+
+Behavior:
+
+- `condition`, `whenTrue`, and `whenFalse` may each be size `1` or match the resolved output row size.
+- Size `1` inputs broadcast across lanes.
+- Each output lane uses `whenTrue` when the corresponding condition lane is non-zero, otherwise `whenFalse`.
+- A scalar condition selects the entire row.
+
+### Example
+
+```ts
+const condition = GPUTableEvaluator.fromArray([1, 0, 1], {type: 'uint32', size: 1});
+const whenTrue = GPUTableEvaluator.fromArray([10, 11, 20, 21, 30, 31], {size: 2});
+const whenFalse = GPUTableEvaluator.fromArray([100, 101, 200, 201, 300, 301], {size: 2});
+
+const result = select(condition, whenTrue, whenFalse);
 ```
 
 ## `segmentedMap`
@@ -276,6 +405,8 @@ const result = fround(source);
 - As new operations are added to `@luma.gl/gpgpu`, this page should remain the top-level reference for them.
 - Arithmetic operations can mix tables and literals in the same expression.
 - `gather()` is currently a direct row-index gather, not a key-based lookup.
+- `dot()`, `length()`, and `equalAll()` are row-wise operations: they inspect all lanes in each input row and emit one scalar output row.
 - `extent()` is a reduction operation: it collapses many input rows into one `[min, max]` row per channel.
+- `select()` is lane-wise and size-preserving; it uses scalar or per-lane non-zero masks to choose between two inputs.
 - `sequence()` produces data without any table inputs, but still returns a lazy `GPUTableEvaluator`.
 - `segmentedMap()` is a per-vertex segment-annotation operation, not a segmented reduction.
