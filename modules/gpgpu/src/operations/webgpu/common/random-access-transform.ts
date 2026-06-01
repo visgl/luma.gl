@@ -14,9 +14,10 @@ export function getInputBinding(name: string, input: GPUTableEvaluator, index: n
 }
 
 export function getTableAccessor(
-  name: string,
+  bindingName: string,
   input: GPUTableEvaluator,
-  asType: SignedDataType
+  asType: SignedDataType,
+  accessorName: string = bindingName
 ): string {
   const type = getWGSLType(asType);
 
@@ -25,7 +26,7 @@ export function getTableAccessor(
     if (!values) {
       throw new Error(`Constant input ${input} is missing CPU values`);
     }
-    return `fn read_${name}(_sourceIndex: u32) -> array<${type}, ${input.size}> {
+    return `fn read_${accessorName}(_sourceIndex: u32) -> array<${type}, ${input.size}> {
   return array<${type}, ${input.size}>(${Array.from({length: input.size}, (_, index) =>
     getLiteralValue(type, values[index] ?? 0)
   ).join(', ')});
@@ -37,20 +38,20 @@ export function getTableAccessor(
   const inputType = getWGSLType(input.type);
   const cast = inputType === type ? '' : `${type}`;
 
-  return `fn read_${name}(sourceIndex: u32) -> array<${type}, ${input.size}> {
+  return `fn read_${accessorName}(sourceIndex: u32) -> array<${type}, ${input.size}> {
   var value: array<${type}, ${input.size}>;
   let rowOffset = ${offset}u + sourceIndex * ${stride}u;
 ${Array.from({length: input.size}, (_, index) =>
   cast
-    ? `  value[${index}] = ${cast}(${name}[rowOffset + ${index}u]);`
-    : `  value[${index}] = ${name}[rowOffset + ${index}u];`
+    ? `  value[${index}] = ${cast}(${bindingName}[rowOffset + ${index}u]);`
+    : `  value[${index}] = ${bindingName}[rowOffset + ${index}u];`
 ).join('\n')}
   return value;
 }`;
 }
 
 export function getSourceValuesAccessor(input: GPUTableEvaluator, asType: SignedDataType): string {
-  return getTableAccessor('sourceValues', input, asType);
+  return getTableAccessor('sourceValues', input, asType, 'source_values');
 }
 
 export function getOutputBinding(output: GPUTableEvaluator, bindingIndex: number): string {
