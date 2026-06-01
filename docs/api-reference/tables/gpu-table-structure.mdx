@@ -26,7 +26,7 @@ the GPU resource model: `GPUTable`, `GPURecordBatch`, `GPUVector`, and
 | [`GPUSchema`](/docs/api-reference/tables/gpu-schema) | Plain selected-column schema metadata. | `fields`, `metadata` |
 
 The table is intentionally batch-preserving. When an Arrow table has multiple
-record batches, `makeArrowGPUTable()` creates one `GPURecordBatch` per source
+record batches, `makeGPUTableFromArrowTable()` creates one `GPURecordBatch` per source
 batch. Table-level `gpuVectors` aggregate the batch-local chunks so code can
 reason about one logical column, while batch-aware render and compute paths can
 still bind one physical batch at a time.

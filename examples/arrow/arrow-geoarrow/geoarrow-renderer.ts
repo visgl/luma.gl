@@ -10,7 +10,6 @@ import {ArrowPolygonRenderer} from '../arrow-polygons/arrow-polygon-renderer';
 import {
   ArrowLineRenderer,
   type ArrowLineColorType,
-  type ArrowLineRendererData,
   type ArrowLineRowColorType
 } from '../arrow-lines/arrow-line-renderer';
 
@@ -61,7 +60,6 @@ export class GeoArrowRenderer {
   readonly polygonRenderer: ArrowPolygonRenderer;
   props: GeoArrowRendererProps;
   private lineRenderer: ArrowLineRenderer | null = null;
-  private lineData: ArrowLineRendererData | null = null;
   private metrics: GeoArrowRendererMetrics = {
     sourceRowCount: 0,
     pointRowCount: 0,
@@ -110,40 +108,28 @@ export class GeoArrowRenderer {
     const geometrySummary = summarizeGeometries(geometries);
     const pointTable = makePointTable(geometries, colors, radii);
     const polygonTable = makePolygonTable(geometries, colors);
-    const lineData = await ArrowLineRenderer.prepareData(this.device, {
-      id: 'arrow-geoarrow-lines',
-      model: 'attribute',
-      timeColumn: 'none',
-      mode: 'lines',
-      sourceVectors: {
-        paths: geometries,
-        colors: (colors ??
-          makeConstantRowColorVector(
-            geometries.length,
-            nextProps.lineColor ?? DEFAULT_LINE_COLOR
-          )) as arrow.Vector<ArrowLineColorType>,
-        widths:
-          widths ??
-          makeConstantFloat32Vector(geometries.length, nextProps.lineWidth ?? DEFAULT_LINE_WIDTH)
-      }
+    const lineTable = new arrow.Table({
+      paths: geometries,
+      colors: (colors ??
+        makeConstantRowColorVector(
+          geometries.length,
+          nextProps.lineColor ?? DEFAULT_LINE_COLOR
+        )) as arrow.Vector<ArrowLineColorType>,
+      widths:
+        widths ??
+        makeConstantFloat32Vector(geometries.length, nextProps.lineWidth ?? DEFAULT_LINE_WIDTH)
     });
-    if (updateVersion !== this.updateVersion) {
-      lineData.destroy();
-      return;
-    }
 
     await this.preparePointRenderer(pointTable, nextProps);
     if (updateVersion !== this.updateVersion) {
-      lineData.destroy();
       return;
     }
     await this.preparePolygonRenderer(polygonTable, nextProps);
     if (updateVersion !== this.updateVersion) {
-      lineData.destroy();
       return;
     }
 
-    this.replaceLineData(lineData, nextProps);
+    this.replaceLineData(lineTable, nextProps);
     this.metrics = {
       ...geometrySummary,
       preparationTimeMs: getTimestampMilliseconds() - startedAt
@@ -181,8 +167,6 @@ export class GeoArrowRenderer {
     this.polygonRenderer.destroy();
     this.lineRenderer?.destroy();
     this.lineRenderer = null;
-    this.lineData?.destroy();
-    this.lineData = null;
   }
 
   getMetrics(): GeoArrowRendererMetrics {
@@ -194,6 +178,7 @@ export class GeoArrowRenderer {
     props: GeoArrowRendererProps
   ): Promise<void> {
     this.pointRenderer.setProps({
+      data: makeRecordBatchIterator(pointTable.batches),
       positions: 'positions',
       colors: pointTable.getChild('colors') ? 'colors' : null,
       radii: pointTable.getChild('radii') ? 'radii' : null,
@@ -203,11 +188,6 @@ export class GeoArrowRenderer {
       center: props.center ?? DEFAULT_CENTER,
       scale: props.scale ?? DEFAULT_SCALE
     });
-    const streamingSession = this.pointRenderer.beginRecordBatchStream();
-    await this.pointRenderer.streamRecordBatches({
-      streamingSession,
-      recordBatchIterator: makeRecordBatchIterator(pointTable.batches)
-    });
   }
 
   private async preparePolygonRenderer(
@@ -215,6 +195,7 @@ export class GeoArrowRenderer {
     props: GeoArrowRendererProps
   ): Promise<void> {
     this.polygonRenderer.setProps({
+      data: makeRecordBatchIterator(polygonTable.batches),
       polygons: 'geometries',
       colors: polygonTable.getChild('colors') ? 'colors' : null,
       tessellated: false,
@@ -222,20 +203,13 @@ export class GeoArrowRenderer {
       center: props.center ?? DEFAULT_CENTER,
       scale: props.scale ?? DEFAULT_SCALE
     });
-    const streamingSession = this.polygonRenderer.beginRecordBatchStream();
-    await this.polygonRenderer.streamRecordBatches({
-      streamingSession,
-      recordBatchIterator: makeRecordBatchIterator(polygonTable.batches)
-    });
   }
 
-  private replaceLineData(lineData: ArrowLineRendererData, props: GeoArrowRendererProps): void {
+  private replaceLineData(lineTable: arrow.Table, props: GeoArrowRendererProps): void {
     this.lineRenderer?.destroy();
-    this.lineData?.destroy();
-    this.lineData = lineData;
     this.lineRenderer = new ArrowLineRenderer(this.device, {
       id: 'arrow-geoarrow-lines',
-      data: lineData,
+      data: makeRecordBatchIterator(lineTable.batches),
       mode: 'lines',
       model: 'attribute',
       timeColumn: 'none',

@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {
-  Buffer,
-  Device,
-  type BufferLayout,
-  type ShaderLayout,
-  type VertexFormat
-} from '@luma.gl/core';
+import {Buffer, Device, type ShaderLayout, type VertexFormat} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
   GPUData,
@@ -16,7 +10,6 @@ import {
   GPUTable,
   GPUVector,
   type GPUVectorBufferProps,
-  type GPUVectorDynamicBufferProps,
   type GPUVectorFormat,
   type VertexList
 } from '@luma.gl/tables';
@@ -38,16 +31,10 @@ import {
   Uint32,
   Uint8,
   Utf8,
-  Vector,
-  util
+  Vector
 } from 'apache-arrow';
 import {getArrowFieldByPath, getArrowVectorByPath} from './arrow-paths';
 import {getArrowBufferLayout, type ArrowVertexFormatOptions} from './arrow-shader-layout';
-import {
-  getAppendableGPUColumnData,
-  getAppendableGPUColumns,
-  type AppendableGPUColumn
-} from './arrow-gpu-appendable';
 import {
   getArrowDataBufferSource,
   getArrowGPUDataReadbackMetadata,
@@ -68,10 +55,6 @@ import {
 } from './arrow-types';
 import {getArrowMatrixVectorInfo} from './arrow-matrix-vector';
 import {getGPUVectorFormatFromArrowDataType} from './arrow-gpu-vector-format';
-
-type AppendableArrowGPURecordBatch = GPURecordBatch & {
-  __arrowAppendableColumns?: AppendableGPUColumn[];
-};
 
 type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
 type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
@@ -130,7 +113,7 @@ type ArrowGPUDataProps = GPUVectorBufferProps & {
 };
 
 /** Props for uploading one Arrow record batch into a generic GPU record batch. */
-export type ArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
+export type GPURecordBatchFromArrowRecordBatchProps = ArrowVertexFormatOptions & {
   /** Shader layout that selects which Arrow columns should be uploaded. */
   shaderLayout: ShaderLayout;
   /** Maps shader attribute names to Arrow column paths. */
@@ -140,61 +123,13 @@ export type ArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
 };
 
 /** Props for uploading one Arrow table into a generic GPU table. */
-export type ArrowGPUTableProps = ArrowVertexFormatOptions & {
+export type GPUTableFromArrowTableProps = ArrowVertexFormatOptions & {
   /** Shader layout that selects which Arrow columns should be uploaded. */
   shaderLayout: ShaderLayout;
   /** Maps shader attribute names to Arrow column paths. */
   arrowPaths?: Record<string, string>;
   /** Buffer props applied to Arrow-backed GPU vectors. */
   bufferProps?: GPUVectorBufferProps;
-};
-
-/** Props for constructing appendable Arrow GPU storage from an Arrow schema. */
-export type AppendableArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
-  /** Device that creates appendable vector storage. */
-  device: Device;
-  /** Source schema used to select shader-compatible columns. */
-  schema: Schema;
-  /** Shader layout that selects which Arrow columns should be uploaded. */
-  shaderLayout: ShaderLayout;
-  /** Maps shader attribute names to Arrow column paths. */
-  arrowPaths?: Record<string, string>;
-  /** Initial row capacity for each appendable vector. */
-  initialCapacityRows?: number;
-  /** Appendable vector capacity growth multiplier. */
-  capacityGrowthFactor?: number;
-  /** Dynamic buffer props forwarded to appendable vectors. */
-  bufferProps?: GPUVectorDynamicBufferProps;
-};
-
-/** Props for constructing one appendable Arrow GPU table. */
-export type AppendableArrowGPUTableProps = ArrowVertexFormatOptions & {
-  /** Device that creates appendable vector storage. */
-  device: Device;
-  /** Source schema used to select shader-compatible columns. */
-  schema: Schema;
-  /** Shader layout that selects which Arrow columns should be uploaded. */
-  shaderLayout: ShaderLayout;
-  /** Maps shader attribute names to Arrow column paths. */
-  arrowPaths?: Record<string, string>;
-  /** Initial row capacity for each appendable vector. */
-  initialCapacityRows?: number;
-  /** Appendable vector capacity growth multiplier. */
-  capacityGrowthFactor?: number;
-  /** Dynamic buffer props forwarded to appendable vectors. */
-  bufferProps?: GPUVectorDynamicBufferProps;
-};
-
-/** Props for constructing one appendable Arrow-backed GPU vector. */
-export type AppendableArrowGPUVectorProps = {
-  /** Stable vector name. */
-  name?: string;
-  /** Initial row capacity for appendable storage. */
-  initialCapacityRows?: number;
-  /** Appendable vector capacity growth multiplier. */
-  capacityGrowthFactor?: number;
-  /** Dynamic buffer props forwarded to the appendable vector. */
-  bufferProps?: GPUVectorDynamicBufferProps;
 };
 
 /** Uploads one Arrow `Data` chunk into generic GPU storage. */
@@ -384,39 +319,11 @@ export function makeGPUVectorFromArrow<T extends DataType>(
   });
 }
 
-/** Creates one empty appendable Arrow-backed GPU vector. */
-export function makeAppendableArrowGPUVector<T extends DataType>(
-  device: Device,
-  dataType: T,
-  props: AppendableArrowGPUVectorProps = {}
-): GPUVector {
-  const isUtf8Type = DataType.isUtf8(dataType);
-  const isUtf8DictionaryType = isArrowUtf8DictionaryType(dataType);
-  const byteStride = isUtf8Type
-    ? 1
-    : isUtf8DictionaryType
-      ? getArrowTypeByteStride(dataType.indices)
-      : getArrowTypeByteStride(dataType);
-  return new GPUVector({
-    type: 'appendable',
-    name: props.name ?? 'vector',
-    device,
-    dataType,
-    format: getGPUVectorFormatForArrowType(dataType),
-    stride: isUtf8Type || isUtf8DictionaryType ? 1 : getArrowTypeStride(dataType),
-    byteStride,
-    rowByteLength: byteStride,
-    initialCapacityRows: props.initialCapacityRows,
-    capacityGrowthFactor: props.capacityGrowthFactor,
-    bufferProps: props.bufferProps
-  });
-}
-
 /** Uploads one Arrow record batch into a generic GPU record batch. */
-export function makeArrowGPURecordBatch(
+export function makeGPURecordBatchFromArrowRecordBatch(
   device: Device,
   recordBatch: RecordBatch,
-  options: ArrowGPURecordBatchProps
+  options: GPURecordBatchFromArrowRecordBatchProps
 ): GPURecordBatch {
   const table = new Table([recordBatch]);
   const bufferLayout = getArrowBufferLayout(options.shaderLayout, {
@@ -486,13 +393,13 @@ export function makeArrowGPURecordBatch(
 }
 
 /** Uploads one Arrow table into a generic GPU table while preserving record-batch boundaries. */
-export function makeArrowGPUTable(
+export function makeGPUTableFromArrowTable(
   device: Device,
   table: Table,
-  options: ArrowGPUTableProps
+  options: GPUTableFromArrowTableProps
 ): GPUTable {
   const batches = table.batches.map(recordBatch =>
-    makeArrowGPURecordBatch(device, recordBatch, options)
+    makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, options)
   );
   const firstBatch = batches[0];
   const bufferLayout =
@@ -526,237 +433,6 @@ export function makeArrowGPUTable(
     numRows: table.numRows,
     nullCount: table.nullCount
   });
-}
-
-/** Creates one empty appendable GPU record batch from an Arrow schema. */
-export function makeAppendableArrowGPURecordBatch(
-  options: AppendableArrowGPURecordBatchProps
-): GPURecordBatch {
-  const appendableColumns = getAppendableGPUColumns(options);
-  const fields: Field[] = [];
-  const vectors: Record<string, GPUVector> = {};
-  const bufferLayout: BufferLayout[] = [];
-  const bindings: Record<string, Buffer | DynamicBuffer> = {};
-
-  for (const column of appendableColumns) {
-    const {attributeName, field, bufferLayout: columnLayout} = column;
-    const isUtf8Type = DataType.isUtf8(field.type);
-    const isUtf8DictionaryType = isArrowUtf8DictionaryType(field.type);
-    const byteStride = isUtf8Type
-      ? 1
-      : isUtf8DictionaryType
-        ? getArrowTypeByteStride(field.type.indices)
-        : getArrowTypeByteStride(field.type);
-    const gpuVector = new GPUVector({
-      type: 'appendable',
-      name: attributeName,
-      device: options.device,
-      dataType: field.type,
-      format: columnLayout?.format ?? getGPUVectorFormatForArrowType(field.type),
-      stride: isUtf8Type || isUtf8DictionaryType ? 1 : getArrowTypeStride(field.type),
-      byteStride,
-      rowByteLength: byteStride,
-      initialCapacityRows: options.initialCapacityRows,
-      capacityGrowthFactor: options.capacityGrowthFactor,
-      bufferProps: options.bufferProps
-    });
-
-    fields.push(new Field(attributeName, field.type, field.nullable, new Map(field.metadata)));
-    vectors[attributeName] = gpuVector;
-    if (columnLayout) {
-      bufferLayout.push(columnLayout);
-    } else if (gpuVector.data.length > 0) {
-      bindings[attributeName] = getSingleGPUVectorDataBuffer(gpuVector, attributeName);
-    }
-  }
-
-  const batch = new GPURecordBatch({
-    vectors,
-    bufferLayout,
-    fields,
-    numRows: 0,
-    metadata: new Map(options.schema.metadata),
-    bindings
-  });
-  (batch as AppendableArrowGPURecordBatch).__arrowAppendableColumns = appendableColumns;
-  return batch;
-}
-
-/** Creates one empty appendable GPU table from an Arrow schema. */
-export function makeAppendableArrowGPUTable(options: AppendableArrowGPUTableProps): GPUTable {
-  const batch = makeAppendableArrowGPURecordBatch(options);
-  return new GPUTable({
-    batches: [batch],
-    schema: new Schema(batch.schema.fields as Field[], new Map(options.schema.metadata)),
-    bufferLayout: batch.bufferLayout,
-    numRows: 0,
-    nullCount: 0
-  });
-}
-
-/** Appends one Arrow `Data` chunk into appendable GPU vector storage. */
-export function appendArrowDataToGPUVector<T extends DataType>(
-  vector: GPUVector,
-  data: Data<T>
-): GPUVector {
-  if (!vector.device) {
-    throw new Error('appendArrowDataToGPUVector() requires appendable GPUVector device metadata');
-  }
-  if (!util.compareTypes(data.type, vector.type)) {
-    throw new Error('appendArrowDataToGPUVector() requires matching Arrow data types');
-  }
-  if (!vector.format) {
-    throw new Error('appendArrowDataToGPUVector() requires GPUVector format metadata');
-  }
-  vector.appendDataChunk(
-    makeGPUDataFromArrowData(vector.device, data, {
-      ...(vector.bufferProps ?? {}),
-      format: vector.format
-    }) as GPUData
-  );
-  return vector;
-}
-
-/** Appends every Arrow chunk in a vector into appendable GPU vector storage. */
-export function appendArrowVectorToGPUVector<T extends DataType>(
-  gpuVector: GPUVector,
-  vector: Vector<T>
-): GPUVector {
-  if (!util.compareTypes(vector.type, gpuVector.type)) {
-    throw new Error('appendArrowVectorToGPUVector() requires matching Arrow data types');
-  }
-  for (const data of vector.data) {
-    appendArrowDataToGPUVector(gpuVector, data as Data<T>);
-  }
-  return gpuVector;
-}
-
-/** Appends one Arrow record batch into an appendable generic GPU record batch. */
-export function appendArrowRecordBatchToGPURecordBatch(
-  batch: GPURecordBatch,
-  recordBatch: RecordBatch
-): GPURecordBatch {
-  const appendableColumns = (batch as AppendableArrowGPURecordBatch).__arrowAppendableColumns;
-  if (!appendableColumns) {
-    throw new Error(
-      'appendArrowRecordBatchToGPURecordBatch() requires an appendable Arrow GPU record batch'
-    );
-  }
-  if (batch.numRows > 0) {
-    throw new Error(
-      'appendArrowRecordBatchToGPURecordBatch() does not combine record batches; append a new GPURecordBatch instead'
-    );
-  }
-  const pendingData = getAppendableGPUColumnData(
-    recordBatch,
-    appendableColumns,
-    'appendArrowRecordBatchToGPURecordBatch()'
-  );
-  for (const {column, data} of pendingData) {
-    appendArrowDataToGPUVector(batch.gpuVectors[column.attributeName], data as Data);
-  }
-  refreshAppendableGPURecordBatchBindings(batch, appendableColumns);
-  return batch.appendRows(recordBatch.numRows, recordBatch.nullCount);
-}
-
-/** Appends one Arrow record batch or table into the trailing appendable table batch. */
-export function appendArrowBatchToGPUTable(
-  table: GPUTable,
-  recordBatchOrTable: RecordBatch | Table
-): GPUTable {
-  if (recordBatchOrTable instanceof Table) {
-    for (const recordBatch of recordBatchOrTable.batches) {
-      appendArrowBatchToGPUTable(table, recordBatch);
-    }
-    return table;
-  }
-  const lastBatch = table.batches[table.batches.length - 1];
-  if (!lastBatch) {
-    throw new Error('appendArrowBatchToGPUTable() requires an existing trailing batch');
-  }
-  if (lastBatch.numRows === 0) {
-    appendArrowRecordBatchToGPURecordBatch(lastBatch, recordBatchOrTable);
-    return table.refreshFromBatches();
-  }
-  const nextBatch = createAppendableGPURecordBatchFromTemplate(lastBatch);
-  appendArrowRecordBatchToGPURecordBatch(nextBatch, recordBatchOrTable);
-  return table.addBatch(nextBatch);
-}
-
-function createAppendableGPURecordBatchFromTemplate(templateBatch: GPURecordBatch): GPURecordBatch {
-  const appendableColumns = (templateBatch as AppendableArrowGPURecordBatch)
-    .__arrowAppendableColumns;
-  if (!appendableColumns) {
-    throw new Error('appendArrowBatchToGPUTable() requires an appendable trailing batch');
-  }
-  const device = getAppendableGPURecordBatchDevice(templateBatch);
-  const vectors: Record<string, GPUVector> = {};
-  const bufferLayout: BufferLayout[] = [];
-
-  for (const column of appendableColumns) {
-    const templateVector = templateBatch.gpuVectors[column.attributeName];
-    if (!templateVector?.format) {
-      throw new Error(
-        `appendArrowBatchToGPUTable() cannot append column "${column.attributeName}" without GPUVector format metadata`
-      );
-    }
-    vectors[column.attributeName] = new GPUVector({
-      type: 'appendable',
-      name: column.attributeName,
-      device,
-      dataType: templateVector.dataType,
-      format: templateVector.format,
-      stride: templateVector.stride,
-      byteStride: templateVector.byteStride,
-      rowByteLength: templateVector.rowByteLength,
-      bufferProps: templateVector.bufferProps
-    });
-    if (column.bufferLayout) {
-      bufferLayout.push(column.bufferLayout);
-    }
-  }
-
-  const batch = new GPURecordBatch({
-    vectors,
-    bufferLayout,
-    fields: templateBatch.schema.fields,
-    metadata: new Map(templateBatch.schema.metadata),
-    numRows: 0
-  });
-  (batch as AppendableArrowGPURecordBatch).__arrowAppendableColumns = appendableColumns;
-  return batch;
-}
-
-function getAppendableGPURecordBatchDevice(batch: GPURecordBatch): Device {
-  const vector = Object.values(batch.gpuVectors)[0];
-  const device = vector?.device ?? vector?.data[0]?.buffer.device;
-  if (!device) {
-    throw new Error('appendArrowBatchToGPUTable() requires appendable GPUVector device metadata');
-  }
-  return device;
-}
-
-function refreshAppendableGPURecordBatchBindings(
-  batch: GPURecordBatch,
-  appendableColumns: AppendableGPUColumn[]
-): void {
-  for (const column of appendableColumns) {
-    const vector = batch.gpuVectors[column.attributeName];
-    if (!vector || vector.data.length !== 1) {
-      continue;
-    }
-    if (column.bufferLayout) {
-      batch.attributes[column.attributeName] = getSingleGPUVectorDataBuffer(
-        vector,
-        column.attributeName
-      );
-    } else {
-      batch.bindings[column.attributeName] = getSingleGPUVectorDataBuffer(
-        vector,
-        column.attributeName
-      );
-    }
-  }
 }
 
 /** Reads one generic GPU data range back into Arrow `Data`. */

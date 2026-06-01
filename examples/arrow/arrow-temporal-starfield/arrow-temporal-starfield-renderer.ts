@@ -17,6 +17,8 @@ import {
   GPURecordBatch,
   GPUTable,
   GPUTableModel,
+  getGPUVectorBuffer,
+  getRequiredGPUVector,
   type GPUVector
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
@@ -37,6 +39,7 @@ import {
   STAR_VERTEX_GLSL_SHADER,
   temporalStarfield
 } from './arrow-temporal-starfield-shaders';
+import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '../arrow-renderer-utils';
 
 /** Public configuration for the Arrow temporal starfield layer. */
 export type ArrowTemporalStarfieldRendererProps = {
@@ -44,38 +47,26 @@ export type ArrowTemporalStarfieldRendererProps = {
   renderMode?: 'attributes' | 'storage';
   /** Source time representation used for event starts. */
   timeColumn?: 'timestamp' | 'xyzm';
-  /** Optional initial Arrow record batches. Defaults to generated sample star rows. */
-  recordBatches?: arrow.RecordBatch[];
+  /** Optional Arrow source table, record-batch iterable, or async record-batch iterator. */
+  data?: ArrowRecordBatchSource;
   /** Synthetic clock rate used to advance the star pulse timeline. */
   currentTimeRateMillisecondsPerSecond?: number;
   /** Initial synthetic timestamp within the starfield cycle. */
   initialTimestampMilliseconds?: number;
-};
-
-/** Token used to cancel stale temporal starfield streaming work. */
-export type ArrowTemporalStarfieldRendererStreamingSession = {
-  /** Monotonic stream version owned by the layer. */
-  version: number;
+  /** Called after one Arrow record batch has been prepared and appended. */
+  onDataBatch?: (update: ArrowTemporalStarfieldRendererDataBatchUpdate) => void;
+  /** Called when renderer-owned Arrow batch loading fails. */
+  onDataError?: (error: unknown) => void;
 };
 
 /** Notification emitted after a temporal starfield record batch is uploaded. */
-export type ArrowTemporalStarfieldRendererRecordBatchStreamUpdate = {
+export type ArrowTemporalStarfieldRendererDataBatchUpdate = {
   /** Number of record batches loaded so far. */
   loadedBatchCount: number;
   /** Total rendered star count after the batch. */
   starCount: number;
   /** True when this update corresponds to the first batch in a stream. */
   isFirstBatch: boolean;
-};
-
-/** Props for incrementally streaming Arrow starfield record batches. */
-export type ArrowTemporalStarfieldRendererRecordBatchStreamProps = {
-  /** Async iterator that yields Arrow starfield record batches. */
-  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
-  /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowTemporalStarfieldRendererStreamingSession;
-  /** Callback fired after each batch is prepared and applied. */
-  onBatch?: (update: ArrowTemporalStarfieldRendererRecordBatchStreamUpdate) => void;
 };
 
 /** Labels displayed by the temporal starfield example control panel. */
@@ -155,7 +146,7 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
   currentTimestampMilliseconds = 0;
   lastRenderSeconds: number | null = null;
   props: ArrowTemporalStarfieldRendererProps;
-  private streamingSessionVersion = 0;
+  private dataLoadVersion = 0;
   private isDestroyed = false;
 
   constructor(device: Device, props: ArrowTemporalStarfieldRendererProps = {}) {
@@ -171,62 +162,11 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
   }
 
   async initialize(): Promise<void> {
-    await this.replaceRecordBatches(
-      this.props.recordBatches ??
-        makeTemporalStarfieldRecordBatches(undefined, undefined, this.activeTimeColumn)
+    this.replaceData(
+      this.props.data ??
+        makeTemporalStarfieldRecordBatches(undefined, undefined, this.activeTimeColumn),
+      true
     );
-  }
-
-  beginRecordBatchStream(): ArrowTemporalStarfieldRendererStreamingSession {
-    this.streamingSessionVersion++;
-    this.destroyStarModel();
-    this.destroyTableInput();
-    return {version: this.streamingSessionVersion};
-  }
-
-  cancelRecordBatchStream(): void {
-    this.streamingSessionVersion++;
-  }
-
-  async streamRecordBatches({
-    recordBatchIterator,
-    streamingSession = this.beginRecordBatchStream(),
-    onBatch
-  }: ArrowTemporalStarfieldRendererRecordBatchStreamProps): Promise<void> {
-    let loadedBatchCount = 0;
-
-    if (!this.isRecordBatchStreamActive(streamingSession)) {
-      return;
-    }
-
-    for (
-      let recordBatchResult = await recordBatchIterator.next();
-      !recordBatchResult.done;
-      recordBatchResult = await recordBatchIterator.next()
-    ) {
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        return;
-      }
-
-      const batchInput = await makeTemporalStarfieldGPURecordBatchInput(
-        this.device,
-        recordBatchResult.value,
-        loadedBatchCount,
-        this.activeTimeColumn
-      );
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        batchInput.gpuRecordBatch.destroy();
-        return;
-      }
-
-      const isFirstBatch = this.addGPURecordBatchInput(batchInput);
-      loadedBatchCount++;
-      onBatch?.({
-        loadedBatchCount,
-        starCount: this.temporalStarfieldTableInput?.table.numRows ?? 0,
-        isFirstBatch
-      });
-    }
   }
 
   override predraw(commandEncoder: CommandEncoder): void {
@@ -262,7 +202,7 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
 
   destroy(): void {
     this.isDestroyed = true;
-    this.cancelRecordBatchStream();
+    this.dataLoadVersion++;
     this.destroyStarModel();
     this.destroyTableInput();
   }
@@ -344,12 +284,18 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
   }
 
   setProps(props: ArrowTemporalStarfieldRendererProps): void {
+    const previousProps = this.props;
     this.props = {...this.props, ...props};
     if (props.initialTimestampMilliseconds !== undefined) {
       this.currentTimestampMilliseconds = props.initialTimestampMilliseconds;
     }
     if (props.timeColumn !== undefined && props.timeColumn !== this.activeTimeColumn) {
       this.activeTimeColumn = props.timeColumn;
+      this.replaceData(null, false);
+    }
+
+    if (props.data !== undefined) {
+      this.replaceData(props.data, props.data !== previousProps.data);
     }
 
     if (props.renderMode === undefined) {
@@ -380,33 +326,41 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
     return this.temporalStarfieldTableInput;
   }
 
-  private async replaceRecordBatches(recordBatches: arrow.RecordBatch[]): Promise<void> {
+  private replaceData(
+    data: ArrowRecordBatchSource | null | undefined,
+    hasNewDataSource: boolean
+  ): void {
+    this.dataLoadVersion++;
+    const dataLoadVersion = this.dataLoadVersion;
     this.destroyStarModel();
     this.destroyTableInput();
 
-    const batchInputs = await Promise.all(
-      recordBatches.map((recordBatch, batchIndex) =>
-        makeTemporalStarfieldGPURecordBatchInput(
-          this.device,
-          recordBatch,
-          batchIndex,
-          this.activeTimeColumn
-        )
-      )
-    );
-    if (this.isDestroyed) {
-      for (const batchInput of batchInputs) {
-        batchInput.gpuRecordBatch.destroy();
-      }
-      return;
-    }
-    const firstBatchInput = batchInputs[0];
-    if (!firstBatchInput) {
+    if (!data || !shouldLoadTemporalStarfieldSource(data, hasNewDataSource)) {
       return;
     }
 
-    this.temporalStarfieldTableInput = createTemporalStarfieldTableInput(batchInputs);
-    this.starModel = this.createStarModel(this.temporalStarfieldTableInput, this.activeRenderMode);
+    void loadArrowRecordBatches({
+      data,
+      isActive: () => this.isDataLoadActive(dataLoadVersion),
+      prepareBatch: (recordBatch, context) =>
+        makeTemporalStarfieldGPURecordBatchInput(
+          this.device,
+          recordBatch,
+          context.batchIndex,
+          this.activeTimeColumn
+        ),
+      appendBatch: batchInput => this.addGPURecordBatchInput(batchInput),
+      destroyBatch: batchInput => batchInput.gpuRecordBatch.destroy(),
+      getRowCount: batchInput => batchInput.gpuRecordBatch.numRows,
+      getMetrics: () => this.temporalStarfieldTableInput?.table.numRows ?? 0,
+      onBatch: update =>
+        this.props.onDataBatch?.({
+          loadedBatchCount: update.loadedBatchCount,
+          starCount: update.metrics,
+          isFirstBatch: update.isFirstBatch
+        }),
+      onError: this.props.onDataError
+    });
   }
 
   private addGPURecordBatchInput(batchInput: TemporalStarfieldGPURecordBatchInput): boolean {
@@ -454,11 +408,16 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
     this.temporalStarfieldTableInput = null;
   }
 
-  private isRecordBatchStreamActive(
-    streamingSession: ArrowTemporalStarfieldRendererStreamingSession
-  ): boolean {
-    return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
+  private isDataLoadActive(dataLoadVersion: number): boolean {
+    return !this.isDestroyed && dataLoadVersion === this.dataLoadVersion;
   }
+}
+
+function shouldLoadTemporalStarfieldSource(
+  data: ArrowRecordBatchSource,
+  hasNewDataSource: boolean
+): boolean {
+  return hasNewDataSource;
 }
 
 function createTemporalStarfieldTableInput(
@@ -696,36 +655,25 @@ function getTemporalStarfieldStorageBindings(
   temporalStarfieldTable: GPUTable | GPURecordBatch
 ): Record<string, Buffer | DynamicBuffer> {
   return {
-    positions: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'positions')),
-    eventStarts: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'eventStarts')),
+    positions: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'positions', 'Temporal starfield table')
+    ),
+    eventStarts: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'eventStarts', 'Temporal starfield table')
+    ),
     eventDurations: getGPUVectorBuffer(
-      getRequiredTableVector(temporalStarfieldTable, 'eventDurations')
+      getRequiredGPUVector(temporalStarfieldTable, 'eventDurations', 'Temporal starfield table')
     ),
     pulsePeriods: getGPUVectorBuffer(
-      getRequiredTableVector(temporalStarfieldTable, 'pulsePeriods')
+      getRequiredGPUVector(temporalStarfieldTable, 'pulsePeriods', 'Temporal starfield table')
     ),
-    starSizes: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'starSizes')),
-    eventColors: getGPUVectorBuffer(getRequiredTableVector(temporalStarfieldTable, 'eventColors'))
+    starSizes: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'starSizes', 'Temporal starfield table')
+    ),
+    eventColors: getGPUVectorBuffer(
+      getRequiredGPUVector(temporalStarfieldTable, 'eventColors', 'Temporal starfield table')
+    )
   };
-}
-
-function getRequiredTableVector(
-  temporalStarfieldTable: GPUTable | GPURecordBatch,
-  columnName: string
-): GPUVector {
-  const gpuVector = temporalStarfieldTable.gpuVectors[columnName];
-  if (!gpuVector) {
-    throw new Error(`Temporal starfield table is missing ${columnName}`);
-  }
-  return gpuVector;
-}
-
-function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(`Temporal starfield vector "${vector.name}" requires one GPUData chunk`);
-  }
-  return data.buffer;
 }
 
 function formatTimestampOriginMilliseconds(origin: number | bigint): string {

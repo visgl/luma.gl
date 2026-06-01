@@ -29,13 +29,11 @@ import {
 import {DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT, getArrowLineMetrics} from './arrow-line-metrics';
 import {
   ArrowLineRenderer,
-  prepareArrowLineInputFromRecordBatches,
+  type ArrowLineRendererDataBatchUpdate,
   type ArrowLineRendererInput,
   type ArrowLineRendererModel,
   type ArrowLineRendererProps,
-  type ArrowLineRendererRecordBatchStreamUpdate,
-  type ArrowLineRendererSetPropsResult,
-  type ArrowLineRendererStreamingSession
+  type ArrowLineRendererSetPropsResult
 } from './arrow-line-renderer';
 
 export const title = 'Lines: DenseUnion outlines';
@@ -65,10 +63,9 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
   activeColorKind: ArrowLineColorKind = 'vertex-colors';
   activeTimeKind: ArrowLineTimeKind = 'xyzm';
   activePathModelKind: ArrowLineRendererModel = 'auto';
-  activePathInput!: ArrowLineRendererInput;
+  activePathInput: ArrowLineRendererInput | null = null;
   activeArrowVectorBuildTimeMs = 0;
   activeStreamingPathBatchCount = 0;
-  initialStreamingPathInput: ArrowLineRendererInput | null = null;
   pathRenderer!: ArrowLineRenderer;
   measureSweepEnabled = true;
   widthsEnabled = true;
@@ -86,7 +83,7 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
   }
 
   override async onInitialize(): Promise<void> {
-    const {pathInput, recordBatches, arrowVectorBuildTimeMs} = await this.createInitialPathInput(
+    const {recordBatches, arrowVectorBuildTimeMs} = this.createPathStreamSource(
       this.activeRowCountKind,
       this.activeMode,
       this.activeCoordinateKind,
@@ -94,12 +91,9 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
       this.activeTimeKind
     );
     if (this.isFinalized) {
-      pathInput.destroy();
       return;
     }
-    this.activePathInput = pathInput;
     this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
-    this.initialStreamingPathInput = pathInput;
     this.pathRenderer = this.createPathRenderer(this.activePathModelKind);
     this.initializeControlPanel();
     this.updateMetricLabels();
@@ -108,8 +102,7 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
       arrowVectorBuildTimeMs,
       this.activeMode,
       this.activeTimeKind,
-      this.activePathModelKind,
-      this.pathRenderer.beginRecordBatchStream()
+      this.activePathModelKind
     );
   }
 
@@ -159,14 +152,11 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     this.isFinalized = true;
     this.controlPanel?.destroy();
     this.pathRenderer?.destroy();
-    this.initialStreamingPathInput?.destroy();
-    this.initialStreamingPathInput = null;
   }
 
   createPathRenderer(modelKind: ArrowLineRendererModel): ArrowLineRenderer {
     return new ArrowLineRenderer(this.device, {
       id: 'arrow-lines',
-      data: this.activePathInput,
       mode: this.activeMode,
       model: modelKind,
       timeColumn: this.activeTimeKind,
@@ -175,40 +165,6 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
       color: [199, 219, 245, 235],
       width: 0.0035
     });
-  }
-
-  async createInitialPathInput(
-    rowCountKind: ArrowLineRowCountKind,
-    mode: ArrowLineMode,
-    coordinateKind: ArrowLineCoordinateKind,
-    colorKind: ArrowLineColorKind,
-    timeKind: ArrowLineTimeKind
-  ): Promise<{
-    pathInput: ArrowLineRendererInput;
-    recordBatches: arrow.RecordBatch[];
-    arrowVectorBuildTimeMs: number;
-  }> {
-    const {recordBatches, arrowVectorBuildTimeMs} = this.createPathStreamSource(
-      rowCountKind,
-      mode,
-      coordinateKind,
-      colorKind,
-      timeKind
-    );
-    const firstRecordBatch = recordBatches[0];
-    if (!firstRecordBatch) {
-      throw new Error('Arrow path streaming example requires at least one record batch');
-    }
-    const pathInput = await prepareArrowLineInputFromRecordBatches(
-      this.device,
-      [firstRecordBatch],
-      {
-        mode,
-        model: this.activePathModelKind,
-        timeColumn: timeKind
-      }
-    );
-    return {pathInput, recordBatches, arrowVectorBuildTimeMs};
   }
 
   createPathStreamSource(
@@ -272,6 +228,9 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
   }
 
   updateMetricLabels(): void {
+    if (!this.activePathInput) {
+      return;
+    }
     this.controlPanel?.setMetricValues(
       getArrowLineMetrics(
         this.pathRenderer,
@@ -415,8 +374,7 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
       arrowVectorBuildTimeMs,
       nextMode,
       effectiveSelection.timeKind,
-      resolvedPathModelKind,
-      this.pathRenderer.beginRecordBatchStream()
+      resolvedPathModelKind
     );
     this.updateActiveSelection(
       nextRowCountKind,
@@ -433,23 +391,22 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     arrowVectorBuildTimeMs: number,
     mode: ArrowLineMode,
     timeKind: ArrowLineTimeKind,
-    modelKind: ArrowLineRendererModel,
-    streamingSession: ArrowLineRendererStreamingSession
+    modelKind: ArrowLineRendererModel
   ): void {
     this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
+    this.activePathInput = null;
     this.activeStreamingPathBatchCount = recordBatches.length;
     this.controlPanel?.setStreamingBatchStatus(0, this.activeStreamingPathBatchCount);
-    void this.pathRenderer.streamRecordBatches({
-      recordBatchIterator: createStreamingPathRecordBatchIterator(recordBatches),
+    this.pathRenderer.setProps({
+      data: createStreamingPathRecordBatchIterator(recordBatches),
       model: modelKind,
       timeColumn: timeKind,
       mode,
-      streamingSession,
-      onBatch: update => this.handleStreamingPathBatch(update)
+      onDataBatch: update => this.handleStreamingPathBatch(update)
     });
   }
 
-  handleStreamingPathBatch(update: ArrowLineRendererRecordBatchStreamUpdate): void {
+  handleStreamingPathBatch(update: ArrowLineRendererDataBatchUpdate): void {
     if (this.isFinalized) {
       return;
     }
@@ -458,10 +415,6 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
       update.loadedBatchCount,
       this.activeStreamingPathBatchCount
     );
-    if (update.isFirstBatch) {
-      this.initialStreamingPathInput?.destroy();
-      this.initialStreamingPathInput = null;
-    }
     this.handlePathRendererUpdate(update.setPropsResult, {syncControls: update.isFirstBatch});
   }
 

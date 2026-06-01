@@ -14,7 +14,7 @@ import {
 } from './arrow-temporal-starfield-data';
 import {
   ArrowTemporalStarfieldRenderer,
-  type ArrowTemporalStarfieldRendererRecordBatchStreamUpdate
+  type ArrowTemporalStarfieldRendererDataBatchUpdate
 } from './arrow-temporal-starfield-renderer';
 import {
   ArrowTemporalStarfieldControlPanel,
@@ -111,22 +111,20 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
 
     this.inputRequestVersion++;
     this.controlPanel.setStreamingBatchStatus(0, STREAMING_STARFIELD_BATCH_COUNT);
-    const streamingSession = layer.beginRecordBatchStream();
     const recordBatches = makeTemporalStarfieldRecordBatches(
       STAR_COUNT,
       STREAMING_STARFIELD_ROWS_PER_BATCH,
       this.activeTimeColumn
     );
 
-    void layer.streamRecordBatches({
-      streamingSession,
-      recordBatchIterator: createStreamingTemporalStarfieldRecordBatchIterator(recordBatches),
-      onBatch: this.handleStreamingStarfieldBatch
+    layer.setProps({
+      data: createStreamingTemporalStarfieldRecordBatchIterator(recordBatches),
+      onDataBatch: this.handleStreamingStarfieldBatch
     });
   }
 
   private readonly handleStreamingStarfieldBatch = (
-    update: ArrowTemporalStarfieldRendererRecordBatchStreamUpdate
+    update: ArrowTemporalStarfieldRendererDataBatchUpdate
   ): void => {
     if (this.isFinalized || !this.layer) {
       return;

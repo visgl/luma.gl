@@ -13,11 +13,12 @@ export const WEBGPU_RENDER_SHADER = /* wgsl */ `\
 struct VertexInputs {
   @builtin(vertex_index) vertexIndex : u32,
   @builtin(instance_index) instanceIndex : u32,
+  @location(0) particleColors : vec4<f32>,
 };
 
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec3<f32>,
+  @location(0) color : vec4<f32>,
 };
 
 fn getQuadCorner(vertexIndex : u32) -> vec2<f32> {
@@ -34,16 +35,15 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
   let particlePosition = particlePositions[inputs.instanceIndex];
   let corner = getQuadCorner(inputs.vertexIndex % 6u) * ${PARTICLE_SIZE};
-  let colorPhase = f32(inputs.instanceIndex % 11u) / 10.0;
 
   outputs.Position = vec4<f32>(particlePosition + corner, 0.0, 1.0);
-  outputs.color = vec3<f32>(0.25 + colorPhase * 0.7, 0.92 - colorPhase * 0.48, 1.0);
+  outputs.color = inputs.particleColors;
   return outputs;
 }
 
 @fragment
 fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  return vec4<f32>(inputs.color, 1.0);
+  return inputs.color;
 }
 `;
 
@@ -81,7 +81,8 @@ precision highp float;
 precision highp int;
 
 in vec2 particlePositions;
-out vec3 vColor;
+in vec4 particleColors;
+out vec4 vColor;
 
 vec2 getQuadCorner(int vertexIndex) {
   if (vertexIndex == 0) { return vec2(-1.0, -1.0); }
@@ -94,9 +95,8 @@ vec2 getQuadCorner(int vertexIndex) {
 
 void main() {
   vec2 corner = getQuadCorner(gl_VertexID % 6) * ${PARTICLE_SIZE};
-  float colorPhase = float(gl_InstanceID % 11) / 10.0;
   gl_Position = vec4(particlePositions + corner, 0.0, 1.0);
-  vColor = vec3(0.25 + colorPhase * 0.7, 0.92 - colorPhase * 0.48, 1.0);
+  vColor = particleColors;
 }
 `;
 
@@ -104,11 +104,11 @@ export const WEBGL_RENDER_FRAGMENT_SHADER = /* glsl */ `\
 #version 300 es
 precision highp float;
 
-in vec3 vColor;
+in vec4 vColor;
 out vec4 fragColor;
 
 void main() {
-  fragColor = vec4(vColor, 1.0);
+  fragColor = vColor;
 }
 `;
 
@@ -120,7 +120,7 @@ export const COMPUTE_SHADER_LAYOUT = {
 } satisfies ComputeShaderLayout;
 
 export const RENDER_SHADER_LAYOUT = {
-  attributes: [],
+  attributes: [{name: 'particleColors', location: 0, type: 'vec4<f32>', stepMode: 'instance'}],
   bindings: [{name: 'particlePositions', type: 'read-only-storage', group: 0, location: 0}]
 } satisfies ShaderLayout;
 
@@ -133,7 +133,10 @@ export const WEBGL_TRANSFORM_SHADER_LAYOUT = {
 } satisfies ShaderLayout;
 
 export const WEBGL_RENDER_SHADER_LAYOUT = {
-  attributes: [{name: 'particlePositions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
+  attributes: [
+    {name: 'particlePositions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
+    {name: 'particleColors', location: 1, type: 'vec4<f32>', stepMode: 'instance'}
+  ],
   bindings: []
 } satisfies ShaderLayout;
 

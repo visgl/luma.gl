@@ -28,10 +28,11 @@ import {
   getOptionalArrowColumn,
   getRequiredArrowColumn,
   hasArrowTableOrVectorSource,
-  streamArrowRecordBatches,
+  loadArrowRecordBatches,
   type ArrowColumnSelector,
-  type ArrowRecordBatchStreamingSession,
-  type ArrowRecordBatchStreamUpdate,
+  type ArrowRecordBatchLoadContext,
+  type ArrowRecordBatchLoadUpdate,
+  type ArrowRecordBatchSource,
   type OptionalArrowColumnSelector
 } from '../arrow-renderer-utils';
 
@@ -61,8 +62,8 @@ export type ArrowPointRendererPickingInfo = {
 
 /** Public configuration for {@link ArrowPointRenderer}. */
 export type ArrowPointRendererProps = {
-  /** Optional Arrow source table. */
-  data?: arrow.Table | null;
+  /** Optional Arrow source table, record-batch iterable, or async record-batch iterator. */
+  data?: ArrowRecordBatchSource | null;
   /** Point coordinate column or source table column name. Defaults to `positions`. */
   positions?: ArrowColumnSelector<ArrowPointCoordinateType>;
   /** Time column name, vector, `m` for the coordinate measure, or null to disable time filtering. */
@@ -87,6 +88,10 @@ export type ArrowPointRendererProps = {
   trailLength?: number;
   /** Called when the hovered point row changes. */
   onPick?: (info: ArrowPointRendererPickingInfo) => void;
+  /** Called after one Arrow record batch has been prepared and appended. */
+  onDataBatch?: (update: ArrowPointRendererDataBatchUpdate) => void;
+  /** Called when renderer-owned Arrow batch loading fails. */
+  onDataError?: (error: unknown) => void;
 };
 
 /** Prepared Arrow/GPU byte-size diagnostics shown by the Arrow Points example. */
@@ -107,22 +112,9 @@ export type ArrowPointRendererMetrics = {
   preparationTimeMs: number;
 };
 
-/** Token used to cancel stale Arrow point record-batch streams. */
-export type ArrowPointRendererStreamingSession = ArrowRecordBatchStreamingSession;
-
 /** Notification emitted after a point record batch is prepared and appended. */
-export type ArrowPointRendererRecordBatchStreamUpdate =
-  ArrowRecordBatchStreamUpdate<ArrowPointRendererMetrics>;
-
-/** Props for incrementally streaming Arrow point record batches. */
-export type ArrowPointRendererRecordBatchStreamProps = {
-  /** Async iterator that yields Arrow record batches with point columns. */
-  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
-  /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowPointRendererStreamingSession;
-  /** Callback fired after each batch is prepared and appended. */
-  onBatch?: (update: ArrowPointRendererRecordBatchStreamUpdate) => void;
-};
+export type ArrowPointRendererDataBatchUpdate =
+  ArrowRecordBatchLoadUpdate<ArrowPointRendererMetrics>;
 
 type NormalizedPointPositions = {
   positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
@@ -183,7 +175,7 @@ export class ArrowPointRenderer {
   model: GPUTableModel | null = null;
   pickingModel: GPUTableModel | null = null;
   private activeTable: PointModelTable | null = null;
-  private streamingSessionVersion = 0;
+  private dataLoadVersion = 0;
   private pickedBatchIndex: number | null = null;
   private pickedRowIndex: number | null = null;
 
@@ -199,7 +191,7 @@ export class ArrowPointRenderer {
       getTooltip: this.getPointPickingTooltip
     });
     if (hasPointSource(props)) {
-      void this.appendPreparedTable(props);
+      this.replaceData(props);
     }
   }
 
@@ -216,45 +208,8 @@ export class ArrowPointRenderer {
       props.radius !== undefined;
     this.props = {...this.props, ...props};
     if (shouldRecreate) {
-      this.cancelRecordBatchStream();
-      this.clearPickingState();
-      this.destroyPreparedBatches();
-      if (hasPointSource(this.props)) {
-        void this.appendPreparedTable(this.props);
-      }
+      this.replaceData(this.props, props.data !== undefined);
     }
-  }
-
-  /** Starts a new record-batch stream and clears any previously prepared batches. */
-  beginRecordBatchStream(): ArrowPointRendererStreamingSession {
-    this.streamingSessionVersion++;
-    this.clearPickingState();
-    this.destroyPreparedBatches();
-    return {version: this.streamingSessionVersion};
-  }
-
-  /** Invalidates the active record-batch stream without destroying already prepared batches. */
-  cancelRecordBatchStream(): void {
-    this.streamingSessionVersion++;
-  }
-
-  /** Prepares and appends record batches from an async iterator. */
-  async streamRecordBatches({
-    recordBatchIterator,
-    streamingSession = this.beginRecordBatchStream(),
-    onBatch
-  }: ArrowPointRendererRecordBatchStreamProps): Promise<void> {
-    await streamArrowRecordBatches({
-      recordBatchIterator,
-      streamingSession,
-      isActive: session => this.isRecordBatchStreamActive(session),
-      prepareBatch: recordBatch =>
-        this.createPreparedRecordBatch(recordBatch, this.getMetrics().rowCount),
-      appendBatch: preparedBatch => this.appendPreparedBatch(preparedBatch),
-      destroyBatch: destroyPreparedPointBatch,
-      getMetrics: () => this.getMetrics(),
-      onBatch
-    });
   }
 
   /** Draws every prepared point batch into the supplied render pass. */
@@ -290,7 +245,7 @@ export class ArrowPointRenderer {
 
   /** Releases all GPU resources owned by the renderer. */
   destroy(): void {
-    this.cancelRecordBatchStream();
+    this.dataLoadVersion++;
     this.picker.destroy();
     this.destroyPreparedBatches();
   }
@@ -336,26 +291,60 @@ export class ArrowPointRenderer {
     });
   }
 
-  private async appendPreparedTable(props: ArrowPointRendererProps): Promise<void> {
-    const streamingSessionVersion = this.streamingSessionVersion;
+  private replaceData(props: ArrowPointRendererProps, hasNewDataSource = true): void {
+    this.dataLoadVersion++;
+    const dataLoadVersion = this.dataLoadVersion;
+    this.clearPickingState();
+    this.destroyPreparedBatches();
+
+    if (!hasPointSource(props) || !shouldLoadPointSource(props, hasNewDataSource)) {
+      return;
+    }
+
+    void this.loadData(props, dataLoadVersion);
+  }
+
+  private async loadData(props: ArrowPointRendererProps, dataLoadVersion: number): Promise<void> {
+    if (props.data) {
+      await loadArrowRecordBatches<PreparedPointBatch, ArrowPointRendererMetrics>({
+        data: props.data,
+        isActive: () => this.isDataLoadActive(dataLoadVersion),
+        prepareBatch: (recordBatch, context) =>
+          this.createPreparedRecordBatch(recordBatch, context, props),
+        appendBatch: preparedBatch => this.appendPreparedBatch(preparedBatch),
+        destroyBatch: destroyPreparedPointBatch,
+        getRowCount: preparedBatch => preparedBatch.rowCount,
+        getMetrics: () => this.getMetrics(),
+        onBatch: props.onDataBatch,
+        onError: props.onDataError
+      });
+      return;
+    }
+
     const preparedBatch = await this.createPreparedBatch(props, 0, 'arrow-points');
-    if (streamingSessionVersion !== this.streamingSessionVersion) {
+    if (!this.isDataLoadActive(dataLoadVersion)) {
       destroyPreparedPointBatch(preparedBatch);
       return;
     }
     this.appendPreparedBatch(preparedBatch);
+    props.onDataBatch?.({
+      loadedBatchCount: 1,
+      isFirstBatch: true,
+      metrics: this.getMetrics(),
+      preparedBatch
+    });
   }
 
   private async createPreparedRecordBatch(
     recordBatch: arrow.RecordBatch,
-    rowIndexOffset: number
+    context: ArrowRecordBatchLoadContext,
+    props: ArrowPointRendererProps
   ): Promise<PreparedPointBatch> {
     const data = new arrow.Table([recordBatch]);
-    const batchIndex = this.preparedBatches.length;
     return await this.createPreparedBatch(
-      {...this.props, data},
-      rowIndexOffset,
-      `arrow-points-${batchIndex}`
+      {...props, data},
+      context.rowIndexOffset,
+      `arrow-points-${context.batchIndex}`
     );
   }
 
@@ -411,8 +400,8 @@ export class ArrowPointRenderer {
     this.activeTable = null;
   }
 
-  private isRecordBatchStreamActive(streamingSession: ArrowPointRendererStreamingSession): boolean {
-    return streamingSession.version === this.streamingSessionVersion;
+  private isDataLoadActive(dataLoadVersion: number): boolean {
+    return dataLoadVersion === this.dataLoadVersion;
   }
 
   private clearPickingState(): void {
@@ -725,7 +714,7 @@ function isScalarArrowTemporalVector(
 
 function getPositionVector(props: ArrowPointRendererProps): arrow.Vector<ArrowPointCoordinateType> {
   return getRequiredArrowColumn({
-    data: props.data,
+    data: getArrowTableData(props.data),
     selector: props.positions,
     defaultColumnName: DEFAULT_POSITIONS_COLUMN,
     ownerName: 'ArrowPointRenderer'
@@ -739,7 +728,7 @@ function getSeparateTimeColumnVector(props: ArrowPointRendererProps): arrow.Vect
   }
   if (typeof timeColumn === 'string') {
     return getRequiredArrowColumn({
-      data: props.data,
+      data: getArrowTableData(props.data),
       selector: timeColumn,
       defaultColumnName: timeColumn,
       ownerName: 'ArrowPointRenderer'
@@ -755,7 +744,7 @@ function getColorVector(
     return null;
   }
   const colors = getOptionalArrowColumn({
-    data: props.data,
+    data: getArrowTableData(props.data),
     selector: props.colors,
     defaultColumnName: DEFAULT_COLORS_COLUMN
   });
@@ -773,7 +762,7 @@ function getRadiusVector(props: ArrowPointRendererProps): arrow.Vector<arrow.Flo
     return null;
   }
   const radii = getOptionalArrowColumn({
-    data: props.data,
+    data: getArrowTableData(props.data),
     selector: props.radii,
     defaultColumnName: DEFAULT_RADII_COLUMN
   });
@@ -883,6 +872,18 @@ function getGPUVectorByteLength(vector: GPUVector): number {
 
 function hasPointSource(props: ArrowPointRendererProps): boolean {
   return hasArrowTableOrVectorSource({data: props.data, selector: props.positions});
+}
+
+function shouldLoadPointSource(props: ArrowPointRendererProps, hasNewDataSource: boolean): boolean {
+  return (
+    hasNewDataSource ||
+    !props.data ||
+    Boolean(props.positions && typeof props.positions !== 'string')
+  );
+}
+
+function getArrowTableData(data: ArrowPointRendererProps['data']): arrow.Table | null | undefined {
+  return data instanceof arrow.Table ? data : null;
 }
 
 function formatPointPickingLabel(

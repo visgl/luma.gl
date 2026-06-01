@@ -28,6 +28,11 @@ import {
   VS_GLSL,
   WGSL_SHADER
 } from './arrow-line-shaders';
+import {
+  loadArrowRecordBatches,
+  type ArrowRecordBatchLoadUpdate,
+  type ArrowRecordBatchSource
+} from '../arrow-renderer-utils';
 
 /** Path rendering path selected by the Arrow path example layer. */
 export type ArrowLineRendererModel = 'attribute' | 'storage' | 'trips' | 'auto';
@@ -214,8 +219,8 @@ export type ArrowLineRendererPreparationOptions = {
   rowIndexOffset?: number;
 };
 
-/** Notification emitted when a path record batch stream updates the layer. */
-export type ArrowLineRendererRecordBatchStreamUpdate = {
+/** Notification emitted after a line record batch is prepared and appended. */
+export type ArrowLineRendererDataBatchUpdate = {
   /** Current retained prepared input for all loaded batches in the active stream. */
   pathInput: ArrowLineRendererInput;
   /** Number of loaded record batches. */
@@ -226,48 +231,18 @@ export type ArrowLineRendererRecordBatchStreamUpdate = {
   setPropsResult: ArrowLineRendererSetPropsResult;
 };
 
-/** Props for incrementally streaming Arrow path record batches. */
-export type ArrowLineRendererRecordBatchStreamProps = {
-  /** Async iterator that yields Arrow path record batches. */
-  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
-  /** Optional model selection applied when the first batch arrives. */
-  model?: ArrowLineRendererModel;
-  /** Optional time-column mode applied when the first batch arrives. */
-  timeColumn?: ArrowLineRendererTimeColumn;
-  /** DenseUnion extraction mode applied when batches are prepared. */
-  mode?: ArrowLineRendererMode;
-  /** Optional stream session used to cancel stale async streams. */
-  streamingSession?: ArrowLineRendererStreamingSession;
-  /** Redraw reason used for the first batch. */
-  startRedrawReason?: string;
-  /** Redraw reason used for appended batches. */
-  appendRedrawReason?: string;
-  /** Callback fired after each batch is prepared and applied. */
-  onBatch?: (update: ArrowLineRendererRecordBatchStreamUpdate) => void;
-};
-
 /** Result returned by Arrow path layer prop updates. */
 export type ArrowLineRendererSetPropsResult = {
   /** True when a new underlying path model was constructed. */
   modelChanged: boolean;
 };
 
-/** Token used to cancel stale Arrow path streaming work. */
-export type ArrowLineRendererStreamingSession = {
-  /** Monotonic stream version owned by the layer. */
-  version: number;
-};
-
-type ArrowLineRendererSetPropsOptions = {
-  preserveStreaming?: boolean;
-};
-
 /** Public configuration for the Arrow path example layer. */
 export type ArrowLineRendererProps = {
   /** Debug label used for generated model resources. */
   id?: string;
-  /** Prepared GPU path data consumed by the renderer. */
-  data?: ArrowLineRendererData;
+  /** Optional Arrow source table, record-batch iterable, or async record-batch iterator. */
+  data?: ArrowRecordBatchSource | null;
   /** Path rendering path. */
   model?: ArrowLineRendererModel;
   /** Source time column mode. */
@@ -282,9 +257,16 @@ export type ArrowLineRendererProps = {
   color?: [number, number, number, number];
   /** Constant fallback path width. */
   width?: number;
+  /** Called after one Arrow record batch has been prepared and appended. */
+  onDataBatch?: (update: ArrowLineRendererDataBatchUpdate) => void;
+  /** Called when renderer-owned Arrow batch loading fails. */
+  onDataError?: (error: unknown) => void;
 };
 
-type PreparedArrowLineRendererProps = Omit<ArrowLineRendererProps, 'data'> & {
+type PreparedArrowLineRendererProps = Omit<
+  ArrowLineRendererProps,
+  'data' | 'onDataBatch' | 'onDataError'
+> & {
   data: ArrowLineRendererData;
 };
 
@@ -312,8 +294,9 @@ export class ArrowLineRenderer extends GPURenderable<
   props: ArrowLineRendererProps;
   model: ArrowLineRendererActiveModel | null = null;
   resolvedModel: ArrowLineRendererResolvedModel;
-  private activeStreamingPathInputs: ArrowLineRendererInput[] = [];
-  private streamingSessionVersion = 0;
+  private preparedPathInputs: ArrowLineRendererInput[] = [];
+  private retainedPathInput: ArrowLineRendererInput | null = null;
+  private dataLoadVersion = 0;
   private isDestroyed = false;
 
   constructor(device: Device, props: ArrowLineRendererProps) {
@@ -322,7 +305,7 @@ export class ArrowLineRenderer extends GPURenderable<
     this.props = props;
     this.resolvedModel = this.resolveModel(props.model ?? 'auto', props.timeColumn ?? 'xyzm');
     if (props.data) {
-      this.setPreparedProps({...props, data: props.data});
+      this.replaceData(props);
     }
   }
 
@@ -345,137 +328,29 @@ export class ArrowLineRenderer extends GPURenderable<
     });
   }
 
-  setProps(
-    props: Partial<ArrowLineRendererProps>,
-    options: ArrowLineRendererSetPropsOptions = {}
-  ): ArrowLineRendererSetPropsResult {
+  setProps(props: Partial<ArrowLineRendererProps>): ArrowLineRendererSetPropsResult {
     const nextProps = {...this.props, ...props};
     const nextModel = this.resolveModel(nextProps.model ?? 'auto', nextProps.timeColumn ?? 'xyzm');
     const hasDataProp = Object.prototype.hasOwnProperty.call(props, 'data');
     const dataChanged = hasDataProp && props.data !== this.props.data;
-    const modelChanged =
+    const dataDependentChanged =
       dataChanged ||
       props.model !== undefined ||
       props.timeColumn !== undefined ||
+      props.mode !== undefined ||
       nextModel !== this.resolvedModel;
-    const shouldReplaceStreamingData =
-      !options.preserveStreaming &&
-      (dataChanged || props.model !== undefined || props.timeColumn !== undefined);
-    const streamingPathInputsToDestroy = shouldReplaceStreamingData
-      ? this.activeStreamingPathInputs
-      : null;
-    if (shouldReplaceStreamingData) {
-      this.streamingSessionVersion++;
-      this.activeStreamingPathInputs = [];
-    }
     this.props = nextProps;
 
     if (props.currentTime !== undefined && this.model instanceof StorageTripsPathModel) {
       this.model.setProps({currentTime: props.currentTime});
     }
 
-    if (!modelChanged) {
-      destroyArrowLineInputs(streamingPathInputsToDestroy);
-      return {modelChanged};
+    if (!dataDependentChanged) {
+      return {modelChanged: false};
     }
 
-    if (
-      props.data === undefined &&
-      (hasDataProp || props.model !== undefined || props.timeColumn !== undefined)
-    ) {
-      this.clearPreparedProps(nextModel);
-      this.props = {...nextProps, data: undefined};
-      destroyArrowLineInputs(streamingPathInputsToDestroy);
-      return {modelChanged};
-    }
-
-    if (nextProps.data === undefined) {
-      this.clearPreparedProps(nextModel);
-      destroyArrowLineInputs(streamingPathInputsToDestroy);
-      return {modelChanged};
-    }
-
-    this.setPreparedProps({...nextProps, data: nextProps.data});
-    destroyArrowLineInputs(streamingPathInputsToDestroy);
-    return {modelChanged};
-  }
-
-  beginRecordBatchStream(): ArrowLineRendererStreamingSession {
-    this.streamingSessionVersion++;
-    return {version: this.streamingSessionVersion};
-  }
-
-  cancelRecordBatchStream(): void {
-    this.streamingSessionVersion++;
-  }
-
-  async streamRecordBatches({
-    recordBatchIterator,
-    model,
-    timeColumn,
-    mode,
-    streamingSession = this.beginRecordBatchStream(),
-    onBatch
-  }: ArrowLineRendererRecordBatchStreamProps): Promise<void> {
-    let rowIndexOffset = 0;
-    let loadedBatchCount = 0;
-
-    if (!this.isRecordBatchStreamActive(streamingSession)) {
-      return;
-    }
-
-    for (
-      let recordBatchResult = await recordBatchIterator.next();
-      !recordBatchResult.done;
-      recordBatchResult = await recordBatchIterator.next()
-    ) {
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        return;
-      }
-
-      const pathInput = await prepareArrowLineInputFromRecordBatches(
-        this.device,
-        [recordBatchResult.value],
-        {
-          model: model ?? this.props.model,
-          timeColumn: timeColumn ?? this.props.timeColumn,
-          mode: mode ?? this.props.mode ?? 'lines',
-          rowIndexOffset,
-          id: `${this.props.id ?? 'arrow-lines'}-${loadedBatchCount}`
-        }
-      );
-      if (!this.isRecordBatchStreamActive(streamingSession)) {
-        pathInput.destroy();
-        return;
-      }
-
-      const isFirstBatch = loadedBatchCount === 0;
-      const previousStreamingPathInputs = isFirstBatch ? this.activeStreamingPathInputs : [];
-      if (isFirstBatch) {
-        this.activeStreamingPathInputs = [pathInput];
-      } else {
-        this.activeStreamingPathInputs.push(pathInput);
-      }
-      const retainedPathInput = makeRetainedArrowLineInput(this.activeStreamingPathInputs);
-      loadedBatchCount++;
-      rowIndexOffset += pathInput.paths.length;
-      const setPropsResult = this.setProps(
-        {
-          data: retainedPathInput,
-          ...(model ? {model} : {}),
-          ...(timeColumn ? {timeColumn} : {}),
-          ...(mode ? {mode} : {})
-        },
-        {preserveStreaming: true}
-      );
-      destroyArrowLineInputs(previousStreamingPathInputs);
-      onBatch?.({
-        pathInput: retainedPathInput,
-        loadedBatchCount,
-        isFirstBatch,
-        setPropsResult
-      });
-    }
+    this.replaceData(nextProps, hasDataProp);
+    return {modelChanged: true};
   }
 
   override needsRedraw(): false | string {
@@ -499,12 +374,13 @@ export class ArrowLineRenderer extends GPURenderable<
 
   destroy(): void {
     this.isDestroyed = true;
-    this.streamingSessionVersion++;
-    const streamingPathInputs = this.activeStreamingPathInputs;
-    this.activeStreamingPathInputs = [];
+    this.dataLoadVersion++;
+    const preparedPathInputs = this.preparedPathInputs;
+    this.preparedPathInputs = [];
+    this.retainedPathInput = null;
     this.model?.destroy();
     this.model = null;
-    destroyArrowLineInputs(streamingPathInputs);
+    destroyArrowLineInputs(preparedPathInputs);
   }
 
   private resolveModel(
@@ -512,10 +388,6 @@ export class ArrowLineRenderer extends GPURenderable<
     timeColumn: ArrowLineRendererTimeColumn
   ): ArrowLineRendererResolvedModel {
     return resolveArrowLineRendererModel(this.device, modelKind, timeColumn);
-  }
-
-  private isRecordBatchStreamActive(streamingSession: ArrowLineRendererStreamingSession): boolean {
-    return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
 
   private setPreparedProps(props: PreparedArrowLineRendererProps): void {
@@ -536,6 +408,79 @@ export class ArrowLineRenderer extends GPURenderable<
     this.model = null;
     this.resolvedModel = resolvedModel;
     previousModel?.destroy();
+  }
+
+  private replaceData(props: ArrowLineRendererProps, hasNewDataSource = true): void {
+    this.dataLoadVersion++;
+    const dataLoadVersion = this.dataLoadVersion;
+    const nextModel = this.resolveModel(props.model ?? 'auto', props.timeColumn ?? 'xyzm');
+    const preparedPathInputs = this.preparedPathInputs;
+    this.preparedPathInputs = [];
+    this.retainedPathInput = null;
+    this.clearPreparedProps(nextModel);
+    destroyArrowLineInputs(preparedPathInputs);
+
+    if (!props.data || !shouldLoadLineSource(props, hasNewDataSource)) {
+      return;
+    }
+
+    void this.loadData(props, dataLoadVersion);
+  }
+
+  private async loadData(props: ArrowLineRendererProps, dataLoadVersion: number): Promise<void> {
+    let setPropsResult: ArrowLineRendererSetPropsResult = {modelChanged: false};
+    await loadArrowRecordBatches({
+      data: props.data!,
+      isActive: () => this.isDataLoadActive(dataLoadVersion),
+      prepareBatch: (recordBatch, context) =>
+        prepareArrowLineInputFromRecordBatches(this.device, [recordBatch], {
+          model: props.model,
+          timeColumn: props.timeColumn,
+          mode: props.mode ?? 'lines',
+          rowIndexOffset: context.rowIndexOffset,
+          id: `${props.id ?? 'arrow-lines'}-${context.batchIndex}`
+        }),
+      appendBatch: pathInput => {
+        setPropsResult = this.appendPreparedPathInput(pathInput, props);
+      },
+      destroyBatch: pathInput => pathInput.destroy(),
+      getRowCount: pathInput => pathInput.paths.length,
+      getMetrics: () => null,
+      onBatch: update => this.handleDataBatch(update, setPropsResult, props),
+      onError: props.onDataError
+    });
+  }
+
+  private appendPreparedPathInput(
+    pathInput: ArrowLineRendererInput,
+    props: ArrowLineRendererProps
+  ): ArrowLineRendererSetPropsResult {
+    this.preparedPathInputs.push(pathInput);
+    const retainedPathInput = makeRetainedArrowLineInput(this.preparedPathInputs);
+    this.retainedPathInput = retainedPathInput;
+    this.setPreparedProps({...props, data: retainedPathInput});
+    return {modelChanged: true};
+  }
+
+  private handleDataBatch(
+    update: ArrowRecordBatchLoadUpdate<null, ArrowLineRendererInput>,
+    setPropsResult: ArrowLineRendererSetPropsResult,
+    props: ArrowLineRendererProps
+  ): void {
+    const pathInput = this.retainedPathInput;
+    if (!pathInput) {
+      return;
+    }
+    props.onDataBatch?.({
+      pathInput,
+      loadedBatchCount: update.loadedBatchCount,
+      isFirstBatch: update.isFirstBatch,
+      setPropsResult
+    });
+  }
+
+  private isDataLoadActive(dataLoadVersion: number): boolean {
+    return !this.isDestroyed && dataLoadVersion === this.dataLoadVersion;
   }
 
   private createModel(
@@ -942,6 +887,10 @@ function isDefinedGPUVector<T extends GPUVectorFormat>(
   vector: GPUVector<T> | undefined
 ): vector is GPUVector<T> {
   return vector !== undefined;
+}
+
+function shouldLoadLineSource(props: ArrowLineRendererProps, hasNewDataSource: boolean): boolean {
+  return hasNewDataSource || !props.data;
 }
 
 function makeRetainedAttributePathState(

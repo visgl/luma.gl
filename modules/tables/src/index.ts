@@ -18,6 +18,11 @@ export {
   type GPUVectorFromInterleavedProps
 } from './table/gpu-vector';
 export {
+  getGPUVectorBuffer,
+  getGPUVectorData,
+  getRequiredGPUVector
+} from './table/gpu-vector-utils';
+export {
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
   isGPUVectorFormatCompatibleWithShaderType,

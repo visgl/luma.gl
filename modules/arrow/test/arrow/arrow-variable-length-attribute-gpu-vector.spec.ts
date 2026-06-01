@@ -3,12 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {
-  appendArrowDataToGPUVector,
-  makeAppendableArrowGPUVector,
-  makeGPUVectorFromArrow,
-  readArrowGPUVectorAsync
-} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from '@luma.gl/arrow';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -161,53 +156,6 @@ test('GPUVector nested list readAsync normalizes sliced offsets', async t => {
     Array.from(getTupleNestedAttributeValues(result)),
     [2, 2],
     'reads the sliced nested tuple payload'
-  );
-
-  gpuVector.destroy();
-  t.end();
-});
-
-test('GPUVector appendable nested lists retain compact readback metadata', async t => {
-  const device = new NullDevice({});
-  const firstData = makeTupleNestedAttributeData(
-    2,
-    new Int32Array([0, 2]),
-    new Float32Array([0, 0, 1, 1])
-  );
-  const secondData = makeTupleNestedAttributeData(
-    2,
-    new Int32Array([0, 1]),
-    new Float32Array([2, 2])
-  );
-  const gpuVector = makeAppendableArrowGPUVector(device, firstData.type, {
-    name: 'appendableNestedTuples',
-    initialCapacityRows: 1
-  });
-
-  appendArrowDataToGPUVector(gpuVector, firstData);
-  appendArrowDataToGPUVector(gpuVector, secondData);
-  const result = await readArrowGPUVectorAsync(gpuVector);
-
-  t.equal(gpuVector.length, 2, 'tracks appended nested list rows');
-  t.equal(gpuVector.valueLength, 3, 'tracks appended flattened nested elements');
-  t.equal(gpuVector.data.length, 2, 'keeps one GPUData chunk per nested append');
-  t.equal(
-    gpuVector.data[0].readbackMetadata?.kind,
-    'variable-length-attribute',
-    'stores copied nested-list readback metadata'
-  );
-  t.deepEqual(
-    result.data.map(data => Array.from(data.valueOffsets as Int32Array)),
-    [
-      [0, 2],
-      [0, 1]
-    ],
-    'round-trips chunk-local appended nested offsets'
-  );
-  t.deepEqual(
-    Array.from(getTupleNestedAttributeValues(result)),
-    [0, 0, 1, 1, 2, 2],
-    'round-trips appended nested tuple values'
   );
 
   gpuVector.destroy();

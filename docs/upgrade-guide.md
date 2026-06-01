@@ -18,15 +18,9 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   - `TableTransform`, `GPUTableComputation`
   - `GPUTableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
 - Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
-  - `makeArrowGPUData(...)`, `makeGPUVectorFromArrow(...)`, `makeArrowGPURecordBatch(...)`, and `makeArrowGPUTable(...)`
-  - `makeAppendableArrowGPUVector(...)`, `makeAppendableArrowGPURecordBatch(...)`, and `makeAppendableArrowGPUTable(...)`
-  - `appendArrowDataToGPUVector(...)`, `appendArrowVectorToGPUVector(...)`, `appendArrowRecordBatchToGPURecordBatch(...)`, and `appendArrowBatchToGPUTable(...)`
+  - `makeGPUDataFromArrowData(...)`, `makeGPUVectorFromArrow(...)`, `makeGPURecordBatchFromArrowRecordBatch(...)`, and `makeGPUTableFromArrowTable(...)`
   - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`
-- `StreamingArrowGPUTable` and `StreamingArrowGPUVector` have been removed. Use regular GPU table primitives directly instead:
-  - `makeAppendableArrowGPUTable(...)`
-  - `appendArrowBatchToGPUTable(...)`
-  - `resetLastBatch()`
-  - `makeArrowGPURecordBatch(device, recordBatch, ...)` plus `gpuTable.addBatch(...)` when source batch boundaries should stay explicit
+- Arrow append-in-place helpers and streaming wrapper classes have been removed. Convert each Arrow record batch with `makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, ...)` and retain it with `gpuTable.addBatch(...)`.
 
 ## Upgrading to v9.3
 

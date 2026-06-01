@@ -10,7 +10,7 @@ import * as arrow from 'apache-arrow';
 import {
   ArrowLineRenderer,
   prepareArrowLineInputFromRecordBatches,
-  type ArrowLineRendererRecordBatchStreamUpdate
+  type ArrowLineRendererDataBatchUpdate
 } from '../../../../examples/arrow/arrow-lines/arrow-line-renderer';
 import {
   ArrowPointRenderer,
@@ -55,16 +55,14 @@ test('ArrowPointRenderer streaming uses one model over retained GPU batches', as
     radii: null
   });
 
-  await renderer.streamRecordBatches({
-    recordBatchIterator: makeRecordBatchIterator([
-      makePointRecordBatch(
-        makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
-      ),
-      makePointRecordBatch(
-        makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([2, 2]))
-      )
-    ])
-  });
+  await waitForPointBatches(renderer, [
+    makePointRecordBatch(
+      makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
+    ),
+    makePointRecordBatch(
+      makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([2, 2]))
+    )
+  ]);
 
   const firstPositionsBuffer =
     renderer.preparedBatches[0]?.table.gpuVectors.positions.data[0].buffer;
@@ -142,20 +140,21 @@ test('ArrowPolygonRenderer streaming uses one model over retained indexed batche
   const renderModels: unknown[] = [];
   const pickingModels: unknown[] = [];
 
-  await renderer.streamRecordBatches({
-    recordBatchIterator: makeRecordBatchIterator([
+  await waitForPolygonBatches(
+    renderer,
+    [
       makePolygonRecordBatch(
         makePathVector(new Int32Array([0, 3]), new Float32Array([0, 0, 1, 0, 0, 1]))
       ),
       makePolygonRecordBatch(
         makePathVector(new Int32Array([0, 3]), new Float32Array([2, 0, 3, 0, 2, 1]))
       )
-    ]),
-    onBatch: () => {
+    ],
+    () => {
       renderModels.push(renderer.model);
       pickingModels.push(renderer.pickingModel);
     }
-  });
+  );
 
   const firstPositionsBuffer = renderer.preparedBatches[0]?.prepared.positions.data[0].buffer;
   const secondPositionsBuffer = renderer.preparedBatches[1]?.prepared.positions.data[0].buffer;
@@ -246,14 +245,14 @@ test('ArrowLineRenderer streaming keeps one active model and retains same-model 
   );
   const renderer = new ArrowLineRenderer(device, {
     id: 'line-stream-test',
-    data: initialInput,
     model: 'attribute',
     mode: 'lines'
   });
-  const updates: ArrowLineRendererRecordBatchStreamUpdate[] = [];
+  const updates: ArrowLineRendererDataBatchUpdate[] = [];
 
-  await renderer.streamRecordBatches({
-    recordBatchIterator: makeRecordBatchIterator([
+  await waitForLineBatches(
+    renderer,
+    [
       makeLineRecordBatch(
         makePathVector(new Int32Array([0, 2]), new Float32Array([0, 0, 1, 0])),
         arrow.vectorFromArray([2], new arrow.Float32()) as arrow.Vector<arrow.Float32>
@@ -262,11 +261,9 @@ test('ArrowLineRenderer streaming keeps one active model and retains same-model 
         makePathVector(new Int32Array([0, 2, 4]), new Float32Array([2, 0, 3, 0, 4, 0, 5, 0])),
         arrow.vectorFromArray([3, 4], new arrow.Float32()) as arrow.Vector<arrow.Float32>
       )
-    ]),
-    model: 'attribute',
-    mode: 'lines',
-    onBatch: update => updates.push(update)
-  });
+    ],
+    update => updates.push(update)
+  );
 
   const firstInput = updates[0]?.pathInput;
   const secondInput = updates[1]?.pathInput;
@@ -325,23 +322,21 @@ test('ArrowLineRenderer model switch clears active prepared streaming input', as
   );
   const renderer = new ArrowLineRenderer(device, {
     id: 'line-model-switch-test',
-    data: initialInput,
     model: 'attribute',
     mode: 'lines'
   });
-  const updates: ArrowLineRendererRecordBatchStreamUpdate[] = [];
+  const updates: ArrowLineRendererDataBatchUpdate[] = [];
 
-  await renderer.streamRecordBatches({
-    recordBatchIterator: makeRecordBatchIterator([
+  await waitForLineBatches(
+    renderer,
+    [
       makeLineRecordBatch(
         makePathVector(new Int32Array([0, 2]), new Float32Array([2, 0, 3, 0])),
         arrow.vectorFromArray([2], new arrow.Float32()) as arrow.Vector<arrow.Float32>
       )
-    ]),
-    model: 'attribute',
-    mode: 'lines',
-    onBatch: update => updates.push(update)
-  });
+    ],
+    update => updates.push(update)
+  );
 
   const streamedInput = updates[0]?.pathInput;
   if (!streamedInput) {
@@ -442,6 +437,58 @@ function makeRecordBatchIterator(
       return recordBatch ? {done: false, value: recordBatch} : {done: true, value: undefined};
     }
   };
+}
+
+function waitForPointBatches(
+  renderer: ArrowPointRenderer,
+  recordBatches: arrow.RecordBatch[]
+): Promise<void> {
+  return new Promise(resolve => {
+    renderer.setProps({
+      data: makeRecordBatchIterator(recordBatches),
+      onDataBatch: ({loadedBatchCount}) => {
+        if (loadedBatchCount === recordBatches.length) {
+          resolve();
+        }
+      }
+    });
+  });
+}
+
+function waitForPolygonBatches(
+  renderer: ArrowPolygonRenderer,
+  recordBatches: arrow.RecordBatch[],
+  onBatch?: () => void
+): Promise<void> {
+  return new Promise(resolve => {
+    renderer.setProps({
+      data: makeRecordBatchIterator(recordBatches),
+      onDataBatch: ({loadedBatchCount}) => {
+        onBatch?.();
+        if (loadedBatchCount === recordBatches.length) {
+          resolve();
+        }
+      }
+    });
+  });
+}
+
+function waitForLineBatches(
+  renderer: ArrowLineRenderer,
+  recordBatches: arrow.RecordBatch[],
+  onBatch: (update: ArrowLineRendererDataBatchUpdate) => void
+): Promise<void> {
+  return new Promise(resolve => {
+    renderer.setProps({
+      data: makeRecordBatchIterator(recordBatches),
+      onDataBatch: update => {
+        onBatch(update);
+        if (update.loadedBatchCount === recordBatches.length) {
+          resolve();
+        }
+      }
+    });
+  });
 }
 
 async function readGPUDataAsUint32Array(data: GPUData<'uint32'>): Promise<Uint32Array> {

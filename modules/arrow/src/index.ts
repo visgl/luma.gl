@@ -80,24 +80,14 @@ export {
 } from './arrow/arrow-vector-utils';
 
 export {
-  appendArrowBatchToGPUTable,
-  appendArrowDataToGPUVector,
-  appendArrowRecordBatchToGPURecordBatch,
-  appendArrowVectorToGPUVector,
-  makeAppendableArrowGPUVector,
-  makeAppendableArrowGPURecordBatch,
-  makeAppendableArrowGPUTable,
   makeGPUDataFromArrowData,
-  makeArrowGPURecordBatch,
-  makeArrowGPUTable,
+  makeGPURecordBatchFromArrowRecordBatch,
+  makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
-  type AppendableArrowGPUVectorProps,
-  type AppendableArrowGPURecordBatchProps,
-  type AppendableArrowGPUTableProps,
-  type ArrowGPURecordBatchProps,
-  type ArrowGPUTableProps,
+  type GPURecordBatchFromArrowRecordBatchProps,
+  type GPUTableFromArrowTableProps,
   type GPUVectorFromArrowProps,
   type GPUVectorFormatForArrowType
 } from './arrow/arrow-gpu-table-adapters';

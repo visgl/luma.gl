@@ -10,7 +10,14 @@ import {
 } from '@luma.gl/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {type DynamicBuffer, Model, ShaderInputs} from '@luma.gl/engine';
-import {GPURenderable, GPUTable, GPUTableModel, type GPUVector} from '@luma.gl/tables';
+import {
+  GPURenderable,
+  GPUTable,
+  GPUTableModel,
+  getGPUVectorBuffer,
+  getRequiredGPUVector,
+  type GPUVector
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,
@@ -344,28 +351,22 @@ function getTimeColumnsStorageBindings(
   timeColumnsTable: GPUTable
 ): Record<string, Buffer | DynamicBuffer> {
   return {
-    eventDates: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventDates')),
-    eventTimes: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventTimes')),
-    eventStarts: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventStarts')),
-    eventDurations: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventDurations')),
-    eventColors: getGPUVectorBuffer(getRequiredTableVector(timeColumnsTable, 'eventColors'))
+    eventDates: getGPUVectorBuffer(
+      getRequiredGPUVector(timeColumnsTable, 'eventDates', 'Time columns table')
+    ),
+    eventTimes: getGPUVectorBuffer(
+      getRequiredGPUVector(timeColumnsTable, 'eventTimes', 'Time columns table')
+    ),
+    eventStarts: getGPUVectorBuffer(
+      getRequiredGPUVector(timeColumnsTable, 'eventStarts', 'Time columns table')
+    ),
+    eventDurations: getGPUVectorBuffer(
+      getRequiredGPUVector(timeColumnsTable, 'eventDurations', 'Time columns table')
+    ),
+    eventColors: getGPUVectorBuffer(
+      getRequiredGPUVector(timeColumnsTable, 'eventColors', 'Time columns table')
+    )
   };
-}
-
-function getRequiredTableVector(timeColumnsTable: GPUTable, columnName: string): GPUVector {
-  const gpuVector = timeColumnsTable.gpuVectors[columnName];
-  if (!gpuVector) {
-    throw new Error(`Time columns table is missing ${columnName}`);
-  }
-  return gpuVector;
-}
-
-function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(`Time columns vector "${vector.name}" requires one GPUData chunk`);
-  }
-  return data.buffer;
 }
 
 function getCurrentTimestampMilliseconds(currentScheduleMilliseconds: number): number {

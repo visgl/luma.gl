@@ -134,15 +134,13 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
       effectiveTimeKind === 'none' ? '-' : formatPointCurrentTimeLabel(this.currentTimeMilliseconds)
     );
     this.controlPanel.setStreamingBatchStatus(0, sourceData.batchCount);
-    const streamingSession = this.layer.beginRecordBatchStream();
     this.updateMetrics();
 
-    void this.layer.streamRecordBatches({
-      streamingSession,
-      recordBatchIterator: createStreamingPointRecordBatchIterator(sourceData.recordBatches)[
+    this.layer.setProps({
+      data: createStreamingPointRecordBatchIterator(sourceData.recordBatches)[
         Symbol.asyncIterator
       ](),
-      onBatch: ({loadedBatchCount, metrics}) => {
+      onDataBatch: ({loadedBatchCount, metrics}) => {
         if (this.isFinalized) {
           return;
         }

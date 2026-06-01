@@ -34,7 +34,7 @@ This means a multi-batch Arrow table stays multi-batch after GPU upload. If the
 application prefers fewer draw units, it packs explicitly:
 
 ```ts
-const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
+const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
 
 // Replace preserved batches with one packed batch.
 gpuTable.packBatches();
@@ -113,29 +113,29 @@ require `vector.data.length === 1` and bind `vector.data[0].buffer`. Batch-aware
 render and compute paths should iterate `GPUTable.batches[]` or the corresponding
 `GPUVector.data[]` chunks.
 
-## Batching, Append, and Packing
+## Batching and Packing
 
 Low-level incremental assembly stays ownership-explicit with
 `gpuTable.addBatch(gpuRecordBatch)` and `gpuVector.addData(gpuData)`. These
 operations aggregate existing GPU objects instead of allocating replacement
 tables.
 
-Appendable Arrow-backed tables use the same table and batch classes:
+When streaming Arrow data, create one immutable GPU batch per Arrow record batch
+and add it to the table:
 
 ```ts
-const gpuTable = makeAppendableArrowGPUTable({
-  device,
-  schema,
+const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstRecordBatch]), {
   shaderLayout
 });
 
-appendArrowBatchToGPUTable(gpuTable, recordBatch);
-appendArrowBatchToGPUTable(gpuTable, nextArrowTable);
+for await (const recordBatch of remainingRecordBatches) {
+  gpuTable.addBatch(makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {shaderLayout}));
+}
 ```
 
-Each append call uploads source chunks into new `GPUData` buffers and preserves
-previous batches. To reduce draw or dispatch units, call `packBatches()` on the
-table explicitly.
+Each converted batch uploads source chunks into new `GPUData` buffers and
+preserves previous batches. To reduce draw or dispatch units, call
+`packBatches()` on the table explicitly.
 
 ## Table-Backed Render, Transform, and Compute Helpers
 
@@ -145,10 +145,10 @@ The table APIs are meant to feed more than one execution style.
 
 Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering.
 If the source data starts as an Arrow table, convert it first with
-`makeArrowGPUTable()` in layer/data-preparation code:
+`makeGPUTableFromArrowTable()` in layer/data-preparation code:
 
 ```ts
-const table = makeArrowGPUTable(device, arrowTable, {shaderLayout});
+const table = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
 
 const model = new GPUTableModel(device, {
   source,
@@ -166,7 +166,7 @@ const model = new GPUTableModel(device, {
 `TableTransform` is the WebGL transform-feedback counterpart. It consumes a
 generic `GPUTable`, merges the table attribute layouts into the underlying
 `BufferTransform`, accepts already-created `GPUVector` inputs, and can run one
-preserved GPU batch at a time. Use `makeArrowGPUTable()` before construction
+preserved GPU batch at a time. Use `makeGPUTableFromArrowTable()` before construction
 when the source data starts as an Arrow table:
 
 ```ts
@@ -174,7 +174,7 @@ const transform = new TableTransform(device, {
   vs,
   varyings,
   shaderLayout,
-  table: makeArrowGPUTable(device, arrowTable, {shaderLayout}),
+  table: makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout}),
   tableCount: 'vertex'
 });
 

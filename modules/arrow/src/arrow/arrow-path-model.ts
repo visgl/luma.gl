@@ -37,7 +37,7 @@ import {
   makeVector
 } from 'apache-arrow';
 import {
-  makeArrowGPUTable,
+  makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
 } from './arrow-gpu-table-adapters';
@@ -726,7 +726,7 @@ function prepareArrowPathModel(
       topology: props.topology ?? 'line-list',
       vertexCount: props.vertexCount ?? 2,
       instanceCount: segmentTable.segmentLayout.segmentCount,
-      table: makeArrowGPUTable(
+      table: makeGPUTableFromArrowTable(
         _device,
         createArrowPathRenderTable(segmentTable.table, props.pathState.generatedBufferBatches),
         {shaderLayout, allowWebGLOnlyFormats: props.allowWebGLOnlyFormats}

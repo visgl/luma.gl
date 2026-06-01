@@ -24,7 +24,7 @@ const batch = new GPURecordBatch({
 ```
 
 When the source is an Arrow `RecordBatch`, prefer
-[`makeArrowGPURecordBatch()`](/docs/api-reference/arrow/supported-arrow-types) from
+[`makeGPURecordBatchFromArrowRecordBatch()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`.
 
 ## Constructor

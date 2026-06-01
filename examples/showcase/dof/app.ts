@@ -7,7 +7,7 @@
   Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
-import {makeArrowGPUTable, makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable, makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
 import type {
   NumberArray,
   ShaderLayout,
@@ -310,16 +310,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })
     });
 
-    this.sceneTable = makeArrowGPUTable(device, makeDofInstanceTable(this.instanceModelMatrices), {
-      shaderLayout:
-        device.type === 'webgpu' ? SCENE_STORAGE_SHADER_LAYOUT : SCENE_ATTRIBUTE_SHADER_LAYOUT,
-      arrowPaths: {
-        instanceModelMatrixCol0: 'instanceModelMatrix',
-        instanceModelMatrixCol1: 'instanceModelMatrix',
-        instanceModelMatrixCol2: 'instanceModelMatrix',
-        instanceModelMatrixCol3: 'instanceModelMatrix'
+    this.sceneTable = makeGPUTableFromArrowTable(
+      device,
+      makeDofInstanceTable(this.instanceModelMatrices),
+      {
+        shaderLayout:
+          device.type === 'webgpu' ? SCENE_STORAGE_SHADER_LAYOUT : SCENE_ATTRIBUTE_SHADER_LAYOUT,
+        arrowPaths: {
+          instanceModelMatrixCol0: 'instanceModelMatrix',
+          instanceModelMatrixCol1: 'instanceModelMatrix',
+          instanceModelMatrixCol2: 'instanceModelMatrix',
+          instanceModelMatrixCol3: 'instanceModelMatrix'
+        }
       }
-    });
+    );
 
     this.sceneModel = new GPUTableModel(device, {
       id: 'dof-scene',

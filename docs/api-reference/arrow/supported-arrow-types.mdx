@@ -566,7 +566,7 @@ six-word segment record layout.
 `GPUTableModel` is the generic tables-layer wrapper that combines `GPUTable`
 with `Model`. It draws preserved GPU batches, syncs table row counts into the
 selected draw count, and leaves table ownership with the caller. Convert Arrow
-tables explicitly with `makeArrowGPUTable()` before constructing the model.
+tables explicitly with `makeGPUTableFromArrowTable()` before constructing the model.
 
 Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with one
 pipeline layout while rebinding only batch-local attribute buffers and storage
@@ -635,56 +635,22 @@ fallback.
 
 By default, `ArrowTableGeometry` packs all selected vertex attributes into one
 interleaved vertex buffer and keeps indices separate. Pass `interleaved: false`
-to upload one vertex buffer per attribute. `ArrowGeometry` is retained as a
-deprecated compatibility alias.
+to upload one vertex buffer per attribute.
 
-Append-only tables can use the regular `GPUTable` API with one appendable
-trailing GPU batch. The trailing batch keeps `DynamicBuffer` attributes stable
-across reallocations while the table still participates in ordinary batch
-packing, detaching, and `drawBatches()` workflows.
+Streaming sources stay application-owned. Convert each yielded Arrow record
+batch once, keep the resulting immutable `GPURecordBatch`, and add it to the
+retained `GPUTable`:
 
 ```ts
-import {
-  appendArrowBatchToGPUTable,
-  makeAppendableArrowGPUTable
-} from '@luma.gl/arrow';
+import {makeGPURecordBatchFromArrowRecordBatch, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 
-const gpuTable = makeAppendableArrowGPUTable({
-  device,
-  schema,
-  shaderLayout
-});
-
-model.setBufferLayout(gpuTable.bufferLayout);
-model.setAttributes(gpuTable.attributes);
-
-appendArrowBatchToGPUTable(gpuTable, recordBatch);
-model.setInstanceCount(gpuTable.numRows);
-```
-
-Asynchronous sources stay application-owned. Append yielded record batches into
-the same appendable table as they arrive:
-
-```ts
-for await (const recordBatch of asyncRecordBatches) {
-  appendArrowBatchToGPUTable(gpuTable, recordBatch);
-  model.setInstanceCount(gpuTable.numRows);
-}
-```
-
-If downstream work should preserve source batch boundaries instead of extending
-one mutable trailing batch, convert each yielded Arrow batch once and add the
-resulting GPU batch:
-
-```ts
-import {makeArrowGPURecordBatch, makeArrowGPUTable} from '@luma.gl/arrow';
-
-const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstRecordBatch]), {
+const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstRecordBatch]), {
   shaderLayout
 });
 
 for await (const recordBatch of remainingRecordBatches) {
-  gpuTable.addBatch(makeArrowGPURecordBatch(device, recordBatch, {shaderLayout}));
+  gpuTable.addBatch(makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {shaderLayout}));
+  model.setInstanceCount(gpuTable.numRows);
 }
 ```
 

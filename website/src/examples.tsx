@@ -10,6 +10,7 @@ import ArrowColumnRendererApp from '../../examples/arrow/arrow-columns/app';
 import ArrowMeshGeometryApp from '../../examples/arrow/arrow-mesh-geometry/app';
 import ArrowGeoArrowApp from '../../examples/arrow/arrow-geoarrow/app';
 import ArrowLinesApp from '../../examples/arrow/arrow-lines/app';
+import ArrowFloat64PrecisionApp from '../../examples/arrow/arrow-float64-precision/app';
 import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
 import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
@@ -176,6 +177,18 @@ export const ArrowLinesExample: React.FC = props => (
     title="Lines"
     directory="arrow"
     template={ArrowLinesApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowFloat64PrecisionExample: React.FC = props => (
+  <LumaExample
+    id="arrow-float64-precision"
+    title="Float64 Precision"
+    directory="arrow"
+    template={ArrowFloat64PrecisionApp}
     config={exampleConfig}
     showStats
     {...props}

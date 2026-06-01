@@ -13,6 +13,8 @@ import {
   GPURenderable,
   GPURecordBatch,
   GPUTable,
+  getGPUVectorBuffer,
+  getRequiredGPUVector,
   type GPUTypeMap,
   type GPUVector
 } from '@luma.gl/tables';
@@ -412,10 +414,14 @@ function getColumnRendererBindings(
 ): Record<string, Buffer | DynamicBuffer> {
   return {
     ...getColumnVectorBindings({
-      cellGeometryIndices: getRequiredTableVector(table, 'cellGeometryIndices'),
-      timeStarts: getRequiredTableVector(table, 'timeStarts'),
-      timeDurations: getRequiredTableVector(table, 'timeDurations'),
-      counts: getRequiredTableVector(table, 'counts')
+      cellGeometryIndices: getRequiredGPUVector(
+        table,
+        'cellGeometryIndices',
+        'ArrowColumnRenderer table'
+      ),
+      timeStarts: getRequiredGPUVector(table, 'timeStarts', 'ArrowColumnRenderer table'),
+      timeDurations: getRequiredGPUVector(table, 'timeDurations', 'ArrowColumnRenderer table'),
+      counts: getRequiredGPUVector(table, 'counts', 'ArrowColumnRenderer table')
     }),
     cellGeometryPoints: getGPUVectorBuffer(geometry.points)
   };
@@ -430,22 +436,6 @@ function getColumnVectorBindings(
     timeDurations: getGPUVectorBuffer(vectors.timeDurations),
     counts: getGPUVectorBuffer(vectors.counts)
   };
-}
-
-function getGPUVectorBuffer(vector: GPUVector): Buffer | DynamicBuffer {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(`ArrowColumnRenderer vector "${vector.name}" requires one GPUData chunk`);
-  }
-  return data.buffer;
-}
-
-function getRequiredTableVector(table: GPUTable, columnName: string): GPUVector {
-  const vector = table.gpuVectors[columnName];
-  if (!vector) {
-    throw new Error(`ArrowColumnRenderer table is missing GPU column "${columnName}"`);
-  }
-  return vector;
 }
 
 function getRequiredArrowVector<T extends arrow.DataType>(
