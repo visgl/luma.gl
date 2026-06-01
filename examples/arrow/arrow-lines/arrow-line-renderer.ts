@@ -890,6 +890,8 @@ function isDefinedGPUVector<T extends GPUVectorFormat>(
 }
 
 function shouldLoadLineSource(props: ArrowLineRendererProps, hasNewDataSource: boolean): boolean {
+  // Prop-only changes invalidate model-specific prepared paths but do not replay the old source.
+  // Callers must pass `data` again, with a fresh iterator when needed, to start a new ingestion.
   return hasNewDataSource || !props.data;
 }
 

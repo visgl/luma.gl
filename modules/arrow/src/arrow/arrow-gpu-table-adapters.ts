@@ -9,6 +9,7 @@ import {
   GPURecordBatch,
   GPUTable,
   GPUVector,
+  type GPURecordBatchSourceInfo,
   type GPUVectorBufferProps,
   type GPUVectorFormat,
   type VertexList
@@ -120,6 +121,8 @@ export type GPURecordBatchFromArrowRecordBatchProps = ArrowVertexFormatOptions &
   arrowPaths?: Record<string, string>;
   /** Buffer props applied to Arrow-backed GPU vectors. */
   bufferProps?: GPUVectorBufferProps;
+  /** Optional source-row identity retained for picking and diagnostics. */
+  sourceInfo?: GPURecordBatchSourceInfo;
 };
 
 /** Props for uploading one Arrow table into a generic GPU table. */
@@ -387,6 +390,7 @@ export function makeGPURecordBatchFromArrowRecordBatch(
     fields,
     numRows: recordBatch.numRows,
     metadata: new Map(recordBatch.schema.metadata),
+    sourceInfo: options.sourceInfo,
     nullCount: recordBatch.nullCount,
     bindings
   });
@@ -398,9 +402,19 @@ export function makeGPUTableFromArrowTable(
   table: Table,
   options: GPUTableFromArrowTableProps
 ): GPUTable {
-  const batches = table.batches.map(recordBatch =>
-    makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, options)
-  );
+  let sourceRowIndexOffset = 0;
+  const batches = table.batches.map((recordBatch, sourceBatchIndex) => {
+    const batch = makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {
+      ...options,
+      sourceInfo: {
+        sourceBatchIndex,
+        sourceRowIndexOffset,
+        sourceRowCount: recordBatch.numRows
+      }
+    });
+    sourceRowIndexOffset += recordBatch.numRows;
+    return batch;
+  });
   const firstBatch = batches[0];
   const bufferLayout =
     firstBatch?.bufferLayout ??

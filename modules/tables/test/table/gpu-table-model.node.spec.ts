@@ -216,6 +216,92 @@ test('GPUTableModel refreshes inferred counts when a table row count changes', t
   t.end();
 });
 
+test('GPUTable preserves source-row metadata across batch operations', t => {
+  const device = new NullDevice({});
+  const firstBatch = new GPURecordBatch({
+    vectors: {positions: makePositionsVector(device, 1)},
+    sourceInfo: {sourceBatchIndex: 0, sourceRowIndexOffset: 10, sourceRowCount: 1}
+  });
+  const secondBatch = new GPURecordBatch({
+    vectors: {positions: makePositionsVector(device, 2)},
+    sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 11, sourceRowCount: 2}
+  });
+  const table = new GPUTable({
+    batches: [firstBatch],
+    schema: firstBatch.schema,
+    bufferLayout: firstBatch.bufferLayout
+  });
+
+  table.addBatch(secondBatch);
+  t.deepEqual(
+    table.batches[0].sourceInfo,
+    firstBatch.sourceInfo,
+    'retains first batch source info'
+  );
+  t.deepEqual(
+    table.batches[1].sourceInfo,
+    secondBatch.sourceInfo,
+    'retains appended batch source info'
+  );
+
+  const detachedBatches = table.detachBatches({first: 1});
+  t.deepEqual(
+    detachedBatches[0].sourceInfo,
+    secondBatch.sourceInfo,
+    'detach preserves batch source info'
+  );
+
+  table.destroy();
+  for (const batch of detachedBatches) {
+    batch.destroy();
+  }
+  t.end();
+});
+
+test('GPUTable forwards one-batch source info and drops unrepresentable packed metadata', t => {
+  const device = new NullDevice({});
+  const table = new GPUTable({
+    vectors: {positions: makePositionsVector(device, 1)},
+    sourceInfo: {sourceBatchIndex: 3, sourceRowIndexOffset: 20, sourceRowCount: 1}
+  });
+  const batchedTable = makeBatchedPositionsTable(device, [1, 2]);
+
+  t.deepEqual(
+    table.batches[0].sourceInfo,
+    {sourceBatchIndex: 3, sourceRowIndexOffset: 20, sourceRowCount: 1},
+    'forwards one-batch table source info'
+  );
+
+  batchedTable.packBatches();
+  t.equal(batchedTable.batches.length, 1, 'packs adjacent batches');
+  t.equal(
+    batchedTable.batches[0].sourceInfo,
+    undefined,
+    'omits packed source info when multiple source batches were merged'
+  );
+
+  table.destroy();
+  batchedTable.destroy();
+  t.end();
+});
+
+test('GPUTable preserves packed source info for one contiguous source batch', t => {
+  const device = new NullDevice({});
+  const table = makeContiguousSourceBatchedPositionsTable(device);
+
+  table.packBatches();
+
+  t.equal(table.batches.length, 1, 'packs contiguous source rows');
+  t.deepEqual(
+    table.batches[0].sourceInfo,
+    {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 3},
+    'merges source info when the packed batch still represents one source batch'
+  );
+
+  table.destroy();
+  t.end();
+});
+
 function makeTableModel(
   device: NullDevice,
   table: GPUTable,
@@ -236,9 +322,32 @@ function makePositionsTable(device: NullDevice, rowCount: number): GPUTable {
 }
 
 function makeBatchedPositionsTable(device: NullDevice, rowCounts: number[]): GPUTable {
-  const batches = rowCounts.map(
-    rowCount => new GPURecordBatch({vectors: {positions: makePositionsVector(device, rowCount)}})
-  );
+  let sourceRowIndexOffset = 0;
+  const batches = rowCounts.map((rowCount, sourceBatchIndex) => {
+    const batch = new GPURecordBatch({
+      vectors: {positions: makePositionsVector(device, rowCount)},
+      sourceInfo: {sourceBatchIndex, sourceRowIndexOffset, sourceRowCount: rowCount}
+    });
+    sourceRowIndexOffset += rowCount;
+    return batch;
+  });
+  return new GPUTable({
+    batches,
+    schema: batches[0].schema,
+    bufferLayout: batches[0].bufferLayout
+  });
+}
+
+function makeContiguousSourceBatchedPositionsTable(device: NullDevice): GPUTable {
+  let sourceRowIndexOffset = 0;
+  const batches = [1, 2].map(rowCount => {
+    const batch = new GPURecordBatch({
+      vectors: {positions: makePositionsVector(device, rowCount)},
+      sourceInfo: {sourceBatchIndex: 0, sourceRowIndexOffset, sourceRowCount: rowCount}
+    });
+    sourceRowIndexOffset += rowCount;
+    return batch;
+  });
   return new GPUTable({
     batches,
     schema: batches[0].schema,

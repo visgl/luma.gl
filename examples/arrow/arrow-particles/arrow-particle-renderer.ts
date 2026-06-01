@@ -543,6 +543,8 @@ function shouldLoadParticleSource(
   props: ArrowParticleRendererResolvedProps,
   hasNewDataSource: boolean
 ): boolean {
+  // Column changes intentionally do not replay the previous source. Particle callers must supply
+  // `data` again when selected columns require a new GPU table.
   return hasNewDataSource || !props.data;
 }
 

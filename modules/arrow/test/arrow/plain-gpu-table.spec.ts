@@ -195,6 +195,14 @@ test('GPUTable preserves record batch boundaries with real batch-owned GPU buffe
   );
   t.equal(gpuTable.batches[1].numRows, 2, 'tracks rows per record batch');
   t.deepEqual(
+    gpuTable.batches.map(batch => batch.sourceInfo),
+    [
+      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 2}
+    ],
+    'retains source row offsets without retaining the CPU Arrow table'
+  );
+  t.deepEqual(
     gpuTable.batches[1].bufferLayout,
     gpuTable.bufferLayout,
     'retains table buffer layout metadata on GPU batches'
@@ -302,7 +310,8 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
     shaderLayout
   });
   const gpuRecordBatch = makeGPURecordBatchFromArrowRecordBatch(device, secondBatch, {
-    shaderLayout
+    shaderLayout,
+    sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 2}
   });
   const appendedPositionsBuffer = gpuRecordBatch.gpuVectors.positions.data[0].buffer;
 
@@ -315,6 +324,11 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
     gpuTable.gpuVectors.positions.data[1].buffer,
     appendedPositionsBuffer,
     'keeps the appended batch buffer identity visible through data[]'
+  );
+  t.deepEqual(
+    gpuTable.batches[1].sourceInfo,
+    {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 2},
+    'preserves explicit source-row metadata on appended Arrow batches'
   );
 
   gpuTable.destroy();

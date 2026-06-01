@@ -3,14 +3,19 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  clearArrowPickingState,
+  createArrowPickingManager,
   getArrowVectorByteLength,
   prepareArrowPolygonGPUVectorsAsync,
+  resolveArrowPickInfo,
+  runArrowPickingPass,
   type ArrowPolygonColorType,
   type ArrowPolygonInputType,
   type PreparedArrowPolygonGPUVectors
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {PickingManager, type PickInfo} from '@luma.gl/engine';
+import type {PickingManager, PickInfo} from '@luma.gl/engine';
+import type {GPURecordBatchSourceInfo} from '@luma.gl/tables';
 import type {GPUTableModel} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
@@ -33,6 +38,7 @@ import {
 export type ArrowPolygonRendererPickingInfo = {
   batchIndex: number | null;
   rowIndex: number | null;
+  batchRowIndex: number | null;
 };
 
 export type ArrowPolygonRendererProps = {
@@ -88,6 +94,7 @@ export type ConvertArrowPolygonColumnsToGPUVectorsOptions = Pick<
   'tessellated' | 'color'
 > & {
   rowIndexOffset?: number;
+  sourceBatchIndex?: number;
   id?: string;
 };
 
@@ -113,18 +120,15 @@ export class ArrowPolygonRenderer {
   model: GPUTableModel | null = null;
   pickingModel: GPUTableModel | null = null;
   private dataLoadVersion = 0;
-  private pickedBatchIndex: number | null = null;
-  private pickedRowIndex: number | null = null;
 
   constructor(device: Device, props: ArrowPolygonRendererProps = {}) {
     this.device = device;
     this.props = props;
     this.shaderInputs = createPolygonShaderInputs(device);
-    this.picker = new PickingManager(device, {
+    this.picker = createArrowPickingManager(device, {
       shaderInputs: this.shaderInputs,
-      mode: 'auto',
       onObjectPicked: this.handleObjectPicked,
-      getTooltip: getPolygonPickingTooltip
+      getTooltip: this.getPolygonPickingTooltip
     });
     if (hasPolygonSource(props)) {
       this.replaceData(props);
@@ -170,28 +174,26 @@ export class ArrowPolygonRenderer {
 
   pick(mousePosition: number[] | null | undefined): void {
     if (!mousePosition) {
-      this.clearPickingState();
-      return;
-    }
-    if (!this.picker.shouldPick(mousePosition as [number, number] | null)) {
+      clearArrowPickingState(this.picker, this.handleObjectPicked);
       return;
     }
 
-    const pickingPass = this.picker.beginRenderPass();
-    const pickingModel = this.pickingModel;
-    if (!pickingModel) {
-      pickingPass.end();
-      return;
-    }
-    for (const [batchIndex, preparedBatch] of this.preparedBatches.entries()) {
-      this.shaderInputs.setProps({picking: {batchIndex}});
-      setPolygonModelPreparedBatch(pickingModel, preparedBatch);
-      pickingModel.draw(pickingPass);
-    }
-    pickingPass.end();
-
-    this.shaderInputs.setProps({picking: {isActive: false}});
-    void this.picker.updatePickInfo(mousePosition as [number, number]);
+    runArrowPickingPass({
+      picker: this.picker,
+      mousePosition,
+      shaderInputs: this.shaderInputs,
+      draw: pickingPass => {
+        const pickingModel = this.pickingModel;
+        if (!pickingModel) {
+          return false;
+        }
+        for (const [batchIndex, preparedBatch] of this.preparedBatches.entries()) {
+          this.shaderInputs.setProps({picking: {batchIndex}});
+          setPolygonModelPreparedBatch(pickingModel, preparedBatch);
+          pickingModel.draw(pickingPass);
+        }
+      }
+    });
   }
 
   destroy(): void {
@@ -248,7 +250,7 @@ export class ArrowPolygonRenderer {
   private replaceData(props: ArrowPolygonRendererProps, hasNewDataSource = true): void {
     this.dataLoadVersion++;
     const dataLoadVersion = this.dataLoadVersion;
-    this.clearPickingState();
+    clearArrowPickingState(this.picker, this.handleObjectPicked);
     this.destroyPreparedBatches();
 
     if (!hasPolygonSource(props) || !shouldLoadPolygonSource(props, hasNewDataSource)) {
@@ -275,7 +277,7 @@ export class ArrowPolygonRenderer {
       return;
     }
 
-    const preparedBatch = await this.createPreparedBatch(props, 0, 'arrow-polygons');
+    const preparedBatch = await this.createPreparedBatch(props, 0, 0, 'arrow-polygons');
     if (!this.isDataLoadActive(dataLoadVersion)) {
       destroyPreparedPolygonBatch(preparedBatch);
       return;
@@ -298,6 +300,7 @@ export class ArrowPolygonRenderer {
     return await this.createPreparedBatch(
       {...props, data},
       context.rowIndexOffset,
+      context.batchIndex,
       `arrow-polygons-${context.batchIndex}`
     );
   }
@@ -305,10 +308,12 @@ export class ArrowPolygonRenderer {
   private async createPreparedBatch(
     props: ArrowPolygonRendererProps,
     rowIndexOffset: number,
+    sourceBatchIndex: number,
     id: string
   ): Promise<PreparedPolygonBatch> {
     const preparedInput = await prepareArrowPolygonInput(this.device, props, {
       rowIndexOffset,
+      sourceBatchIndex,
       id
     });
     return preparedInput;
@@ -355,26 +360,35 @@ export class ArrowPolygonRenderer {
     return dataLoadVersion === this.dataLoadVersion;
   }
 
-  private clearPickingState(): void {
-    this.picker.clearPickState();
-    this.picker.pickInfo = {batchIndex: null, objectIndex: null};
-    if (this.pickedBatchIndex !== null || this.pickedRowIndex !== null) {
-      this.handleObjectPicked({batchIndex: null, objectIndex: null});
-    }
-  }
-
   private readonly handleObjectPicked = ({batchIndex, objectIndex}: PickInfo): void => {
-    this.pickedBatchIndex = batchIndex;
-    this.pickedRowIndex = objectIndex;
-    this.props.onPick?.({batchIndex, rowIndex: objectIndex});
+    const pickInfo = resolveArrowPickInfo({batchIndex, objectIndex}, this.getPickingSourceInfos());
+    this.props.onPick?.(pickInfo);
   };
+
+  private readonly getPolygonPickingTooltip = ({
+    batchIndex,
+    objectIndex
+  }: PickInfo): string | null => {
+    const pickInfo = resolveArrowPickInfo({batchIndex, objectIndex}, this.getPickingSourceInfos());
+    if (pickInfo.batchIndex === null || pickInfo.rowIndex === null) {
+      return null;
+    }
+    const batchLabel = (pickInfo.batchIndex + 1).toLocaleString();
+    return `row ${pickInfo.rowIndex.toLocaleString()} / batch ${batchLabel}`;
+  };
+
+  private getPickingSourceInfos(): Array<GPURecordBatchSourceInfo | undefined> {
+    return this.preparedBatches.map(
+      preparedBatch => preparedBatch.prepared.table.batches[0]?.sourceInfo
+    );
+  }
 }
 
 /** Wraps polygon conversion with example metrics and timing. */
 export async function prepareArrowPolygonInput(
   device: Device,
   props: ArrowPolygonRendererProps,
-  options: {rowIndexOffset?: number; id?: string} = {}
+  options: {rowIndexOffset?: number; sourceBatchIndex?: number; id?: string} = {}
 ): Promise<ArrowPolygonRendererInput> {
   const polygons = getPolygonVector(props);
   const colors = getColorVector(props);
@@ -386,6 +400,7 @@ export async function prepareArrowPolygonInput(
     {polygons, colors},
     {
       rowIndexOffset: options.rowIndexOffset,
+      sourceBatchIndex: options.sourceBatchIndex,
       id: options.id,
       tessellated: props.tessellated,
       color: props.color
@@ -407,6 +422,7 @@ export async function convertArrowPolygonColumnsToGPUVectors(
   options: ConvertArrowPolygonColumnsToGPUVectorsOptions = {}
 ): Promise<ArrowPolygonGPUVectors> {
   const rowIndexOffset = options.rowIndexOffset ?? 0;
+  const sourceBatchIndex = options.sourceBatchIndex ?? 0;
   const id = options.id ?? 'arrow-polygons';
   const {polygons, colors = null} = columns;
   const prepared = await prepareArrowPolygonGPUVectorsAsync(
@@ -419,7 +435,8 @@ export async function convertArrowPolygonColumnsToGPUVectors(
       id,
       tessellated: options.tessellated,
       color: options.color ?? DEFAULT_POLYGON_RENDERER_COLOR,
-      rowIndexOffset
+      rowIndexOffset,
+      sourceBatchIndex
     }
   );
 
@@ -440,13 +457,6 @@ function setPolygonModelPreparedBatch(
   model.setProps({table: preparedBatch.prepared.table});
   model.setIndexBuffer(preparedBatch.prepared.indices);
   model.setVertexCount(preparedBatch.prepared.tessellation.indices.length);
-}
-
-function getPolygonPickingTooltip({batchIndex, objectIndex}: PickInfo): string | null {
-  if (batchIndex === null || objectIndex === null) {
-    return null;
-  }
-  return `row ${objectIndex.toLocaleString()} / batch ${(batchIndex + 1).toLocaleString()}`;
 }
 
 function getPolygonVector(props: ArrowPolygonRendererProps): arrow.Vector<ArrowPolygonInputType> {

@@ -169,7 +169,7 @@ export function makeArrowFloat64PrecisionControlPanelHtml(): string {
     </div>
     <details style="margin-top: 6px; border-top: 1px solid rgba(203, 213, 225, 0.9); padding-top: 6px; color: #334155;">
       <summary style="cursor: pointer; font-weight: 700;">
-        Metrics: F32 error <strong id="${FLOAT32_ERROR_ID}" style="font-variant-numeric: tabular-nums;">-</strong>, F64 prep <strong id="${FLOAT64_PREP_TIME_ID}" style="font-variant-numeric: tabular-nums;">-</strong>
+        Metrics: F32 error <strong id="${FLOAT32_ERROR_ID}" style="font-variant-numeric: tabular-nums;">-</strong>, rebase prep <strong id="${FLOAT64_PREP_TIME_ID}" style="font-variant-numeric: tabular-nums;">-</strong>
       </summary>
       <div style="max-height: 90px; overflow-y: auto; display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin-top: 4px; padding-right: 4px;">
         ${makeMetricRow('Paths', PATH_COUNT_ID)}
@@ -181,7 +181,7 @@ export function makeArrowFloat64PrecisionControlPanelHtml(): string {
         ${makeMetricRow('F32 GPU', FLOAT32_GPU_BYTES_ID)}
         ${makeMetricRow('F32 prep', FLOAT32_PREP_TIME_ID)}
       </div>
-      <div style="margin-top: 4px; color: #475569; font-size: 11px;">Left: Float32 cast. Right: Float64-prepared local deltas, not <code>project64</code>.</div>
+      <div style="margin-top: 4px; color: #475569; font-size: 11px;">Left: Float32 cast. Right: Float64 origin rebasing, not <code>project64</code>.</div>
     </details>
   </div>
   `;

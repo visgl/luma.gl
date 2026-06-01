@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {makeArrowFixedSizeListVector, resolveArrowPickInfo} from '@luma.gl/arrow';
 import type {GPUData} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -20,6 +20,10 @@ import {
   ArrowPolygonRenderer,
   prepareArrowPolygonInput
 } from '../../../../examples/arrow/arrow-polygons/arrow-polygon-renderer';
+import {
+  addArrowTextGPUTableBatch,
+  createArrowTextGPUTable
+} from '../../../../examples/arrow/arrow-text-2d/arrow-text-renderer';
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 
@@ -33,13 +37,18 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
   const prepared = await prepareArrowPointInput(
     device,
     {positions, colors: null, radii: null},
-    {rowIndexOffset: 5, id: 'point-preparation-test'}
+    {rowIndexOffset: 5, sourceBatchIndex: 3, id: 'point-preparation-test'}
   );
   const rowIndices = await readGPUDataAsUint32Array(prepared.table.gpuVectors.rowIndices.data[0]);
   const positionsBuffer = prepared.table.gpuVectors.positions.data[0].buffer;
 
   t.equal(prepared.rowCount, 2, 'keeps one point row per source row');
   t.equal(prepared.table.batches.length, 1, 'prepares one GPU table batch');
+  t.deepEqual(
+    prepared.table.batches[0].sourceInfo,
+    {sourceBatchIndex: 3, sourceRowIndexOffset: 5, sourceRowCount: 2},
+    'records point source row metadata'
+  );
   t.deepEqual(Array.from(rowIndices), [5, 6], 'applies the row index offset');
 
   prepared.destroy();
@@ -95,6 +104,19 @@ test('ArrowPointRenderer streaming uses one model over retained GPU batches', as
     [2],
     'second batch row indices preserve the global row offset'
   );
+  t.deepEqual(
+    renderer.model?.table?.batches.map(batch => batch.sourceInfo),
+    [
+      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 1}
+    ],
+    'retains point streaming source metadata on render batches'
+  );
+  t.deepEqual(
+    resolveArrowPickInfo({batchIndex: 1, objectIndex: 2}, renderer.model?.table),
+    {batchIndex: 1, rowIndex: 2, batchRowIndex: 0},
+    'resolves point pick info to a source batch row'
+  );
   t.notOk(firstPositionsBuffer.destroyed, 'first retained point batch remains alive');
   t.notOk(secondPositionsBuffer.destroyed, 'second retained point batch remains alive');
 
@@ -110,7 +132,7 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
   const prepared = await prepareArrowPolygonInput(
     device,
     {polygons, colors: null, tessellated: true},
-    {rowIndexOffset: 9, id: 'polygon-preparation-test'}
+    {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-preparation-test'}
   );
   const positionsBuffer = prepared.prepared.positions.data[0].buffer;
   const indexBuffer = prepared.prepared.indices;
@@ -118,6 +140,11 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
   t.equal(prepared.prepared.tessellation.rowCount, 1, 'keeps one polygon row');
   t.equal(prepared.prepared.tessellation.vertexCount, 3, 'keeps tessellated triangle vertices');
   t.equal(prepared.prepared.table.batches.length, 1, 'prepares one GPU table batch');
+  t.deepEqual(
+    prepared.prepared.table.batches[0].sourceInfo,
+    {sourceBatchIndex: 4, sourceRowIndexOffset: 9, sourceRowCount: 1},
+    'records polygon source row metadata'
+  );
   t.deepEqual(
     Array.from(prepared.prepared.tessellation.rowIndices),
     [9, 9, 9],
@@ -163,6 +190,22 @@ test('ArrowPolygonRenderer streaming uses one model over retained indexed batche
 
   t.equal(renderer.preparedBatches.length, 2, 'retains both streamed polygon batches');
   t.equal(renderer.getMetrics().rowCount, 2, 'tracks aggregate polygon rows');
+  t.deepEqual(
+    renderer.preparedBatches.map(batch => batch.prepared.table.batches[0]?.sourceInfo),
+    [
+      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 1},
+      {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
+    ],
+    'retains polygon streaming source metadata on prepared batches'
+  );
+  t.deepEqual(
+    resolveArrowPickInfo(
+      {batchIndex: 1, objectIndex: 1},
+      renderer.preparedBatches.map(batch => batch.prepared.table.batches[0]?.sourceInfo)
+    ),
+    {batchIndex: 1, rowIndex: 1, batchRowIndex: 0},
+    'resolves polygon pick info to a source batch row'
+  );
   t.ok(renderer.model, 'keeps one render model');
   t.ok(renderer.pickingModel, 'keeps one picking model');
   t.equal(renderModels[0], renderModels[1], 'reuses the render model across appended batches');
@@ -183,6 +226,32 @@ test('ArrowPolygonRenderer streaming uses one model over retained indexed batche
   t.ok(secondPositionsBuffer.destroyed, 'destroy releases the second polygon attribute buffer');
   t.ok(firstIndexBuffer.destroyed, 'destroy releases the first polygon index buffer');
   t.ok(secondIndexBuffer.destroyed, 'destroy releases the second polygon index buffer');
+  t.end();
+});
+
+test('ArrowTextRenderer streaming GPU table retains pick source metadata', t => {
+  const device = new NullDevice({});
+  const firstRecordBatch = makeTextRecordBatch(new Float32Array([0, 0, 1, 1]), ['alpha', 'beta']);
+  const secondRecordBatch = makeTextRecordBatch(new Float32Array([2, 2]), ['gamma']);
+  const gpuTable = createArrowTextGPUTable(device, firstRecordBatch);
+
+  addArrowTextGPUTableBatch(device, gpuTable, secondRecordBatch);
+
+  t.deepEqual(
+    gpuTable.batches.map(batch => batch.sourceInfo),
+    [
+      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 1}
+    ],
+    'retains text streaming source metadata on GPU batches'
+  );
+  t.deepEqual(
+    resolveArrowPickInfo({batchIndex: 1, objectIndex: 2}, gpuTable),
+    {batchIndex: 1, rowIndex: 2, batchRowIndex: 0},
+    'resolves text pick info to a source batch row'
+  );
+
+  gpuTable.destroy();
   t.end();
 });
 
@@ -420,6 +489,17 @@ function makePointRecordBatch(
   positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>
 ): arrow.RecordBatch {
   const recordBatch = new arrow.Table({positions}).batches[0];
+  if (!recordBatch) {
+    throw new Error('Expected Arrow table to contain a record batch');
+  }
+  return recordBatch;
+}
+
+function makeTextRecordBatch(positions: Float32Array, texts: string[]): arrow.RecordBatch {
+  const recordBatch = new arrow.Table({
+    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
+    texts: arrow.vectorFromArray(texts, new arrow.Utf8())
+  }).batches[0];
   if (!recordBatch) {
     throw new Error('Expected Arrow table to contain a record batch');
   }

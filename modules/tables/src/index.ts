@@ -40,7 +40,8 @@ export {
 export {
   GPURecordBatch,
   type GPURecordBatchFromVectorsProps,
-  type GPURecordBatchProps
+  type GPURecordBatchProps,
+  type GPURecordBatchSourceInfo
 } from './table/gpu-record-batch';
 export {
   GPUTable,

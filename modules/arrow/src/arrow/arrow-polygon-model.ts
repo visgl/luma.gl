@@ -12,6 +12,7 @@ import {
   type ArrowPolygonTessellationResult
 } from '@math.gl/geoarrow';
 import {Field, FixedSizeList, Float32, Uint8, Uint32} from 'apache-arrow';
+import {makeArrowRecordBatchSourceInfo} from './arrow-picking';
 
 export {
   tesselateAsync,
@@ -37,6 +38,8 @@ export {
 export type PrepareArrowPolygonGPUVectorsOptions = ArrowPolygonTessellationOptions & {
   /** Stable resource id prefix. Defaults to `arrow-polygon-model`. */
   id?: string;
+  /** Zero-based source batch index. Defaults to `0`. */
+  sourceBatchIndex?: number;
 };
 
 export type PreparedArrowPolygonGPUVectors = {
@@ -66,7 +69,7 @@ export function prepareArrowPolygonGPUVectors(
 ): PreparedArrowPolygonGPUVectors {
   const id = options.id ?? 'arrow-polygon-model';
   const tessellation = tessellateArrowPolygons(sourceVectors, options);
-  return makePreparedArrowPolygonGPUVectors(device, tessellation, id);
+  return makePreparedArrowPolygonGPUVectors(device, tessellation, id, options);
 }
 
 /** Async variant that awaits GeoArrow polygon tessellation before creating GPU resources. */
@@ -77,13 +80,14 @@ export async function prepareArrowPolygonGPUVectorsAsync(
 ): Promise<PreparedArrowPolygonGPUVectors> {
   const id = options.id ?? 'arrow-polygon-model';
   const tessellation = await tesselateAsync(sourceVectors, options);
-  return makePreparedArrowPolygonGPUVectors(device, tessellation, id);
+  return makePreparedArrowPolygonGPUVectors(device, tessellation, id, options);
 }
 
 function makePreparedArrowPolygonGPUVectors(
   device: Device,
   tessellation: ArrowPolygonTessellationResult,
-  id: string
+  id: string,
+  options: PrepareArrowPolygonGPUVectorsOptions
 ): PreparedArrowPolygonGPUVectors {
   const positions = new GPUVector({
     type: 'buffer',
@@ -133,7 +137,12 @@ function makePreparedArrowPolygonGPUVectors(
     data: tessellation.indices
   });
   const batch: GPURecordBatch = new GPURecordBatch<GPUTypeMap>({
-    vectors: {positions, colors, rowIndices}
+    vectors: {positions, colors, rowIndices},
+    sourceInfo: makeArrowRecordBatchSourceInfo({
+      sourceBatchIndex: options.sourceBatchIndex,
+      sourceRowIndexOffset: options.rowIndexOffset,
+      sourceRowCount: tessellation.rowCount
+    })
   });
   const table: GPUTable = new GPUTable<GPUTypeMap>({
     batches: [batch],

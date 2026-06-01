@@ -3,9 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import {type CommandEncoder, type Device} from '@luma.gl/core';
-import {indexColorPicking, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
 import {
+  getArrowPickingModules,
   getArrowVectorByteLength,
+  makeArrowRecordBatchSourceInfo,
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable
 } from '@luma.gl/arrow';
@@ -752,9 +753,19 @@ export function addArrowTextGPUTableBatch(
   recordBatch: arrow.RecordBatch,
   props: ArrowTextRendererPrepareInputProps = {}
 ): void {
+  const sourceBatchIndex = gpuTable.batches.length;
+  const sourceRowIndexOffset = gpuTable.batches.reduce(
+    (rowIndexOffset, batch) => rowIndexOffset + (batch.sourceInfo?.sourceRowCount ?? batch.numRows),
+    0
+  );
   gpuTable.addBatch(
     makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {
-      shaderLayout: getStreamingTextInputShaderLayout(props)
+      shaderLayout: getStreamingTextInputShaderLayout(props),
+      sourceInfo: makeArrowRecordBatchSourceInfo({
+        sourceBatchIndex,
+        sourceRowIndexOffset,
+        sourceRowCount: recordBatch.numRows
+      })
     })
   );
 }
@@ -1043,7 +1054,7 @@ function isArrowTextCharacterColorType(
 }
 
 function getArrowTextRenderModules(device: Device): unknown[] {
-  return [supportsIndexPicking(device) ? indexPicking : indexColorPicking];
+  return getArrowPickingModules(device);
 }
 
 async function getArrowRecordBatches(data: ArrowRecordBatchSource): Promise<arrow.RecordBatch[]> {

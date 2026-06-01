@@ -186,7 +186,7 @@ export const ArrowLinesExample: React.FC = props => (
 export const ArrowFloat64PrecisionExample: React.FC = props => (
   <LumaExample
     id="arrow-float64-precision"
-    title="Float64 Precision"
+    title="Float64 Origin Rebasing"
     directory="arrow"
     template={ArrowFloat64PrecisionApp}
     config={exampleConfig}

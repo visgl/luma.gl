@@ -4,13 +4,11 @@
 
 import {type Device, type RenderPass} from '@luma.gl/core';
 import {
-  indexColorPicking,
-  indexPicking,
-  Model,
-  PickingManager,
-  supportsIndexPicking,
-  type ShaderInputs
-} from '@luma.gl/engine';
+  createArrowPickingManager,
+  getArrowPickingModules,
+  supportsArrowIndexPicking
+} from '@luma.gl/arrow';
+import {indexPicking, Model, type PickingManager, type ShaderInputs} from '@luma.gl/engine';
 import {AttributeTextModel, DictionaryTextModel, StorageTextModel} from '@luma.gl/text';
 import type {ArrowTextRendererActiveModel} from './arrow-text-renderer';
 import {
@@ -25,11 +23,11 @@ import {
 } from './arrow-text-shaders';
 
 export function supportsTextIndexPicking(device: Device): boolean {
-  return supportsIndexPicking(device);
+  return supportsArrowIndexPicking(device);
 }
 
 export function getArrowTextRenderModules(device: Device): unknown[] {
-  return [supportsTextIndexPicking(device) ? indexPicking : indexColorPicking];
+  return getArrowPickingModules(device);
 }
 
 export function createArrowTextPickingManager(
@@ -40,7 +38,7 @@ export function createArrowTextPickingManager(
   if (!supportsTextIndexPicking(device)) {
     return null;
   }
-  return new PickingManager(device, {shaderInputs, mode: 'index', onObjectPicked});
+  return createArrowPickingManager(device, {shaderInputs, mode: 'index', onObjectPicked});
 }
 
 export function createArrowTextPickingModel(
@@ -109,19 +107,22 @@ export function createArrowTextPickingModel(
 export function drawArrowTextPickingPass(
   pickingPass: RenderPass,
   pickingModel: Model,
-  textModel: ArrowTextRendererActiveModel
+  textModel: ArrowTextRendererActiveModel,
+  options: {onBatch?: (batchIndex: number) => void} = {}
 ): void {
   if (textModel instanceof AttributeTextModel) {
-    drawArrowTextPickingBatches(pickingPass, pickingModel, textModel);
+    drawArrowTextPickingBatches(pickingPass, pickingModel, textModel, options);
     return;
   }
+  options.onBatch?.(0);
   pickingModel.draw(pickingPass);
 }
 
 function drawArrowTextPickingBatches(
   pickingPass: RenderPass,
   pickingModel: Model,
-  textModel: AttributeTextModel
+  textModel: AttributeTextModel,
+  {onBatch}: {onBatch?: (batchIndex: number) => void}
 ): void {
   const gpuBatches = textModel.table?.batches || [];
   for (const [batchIndex, renderBatch] of textModel.renderBatches.entries()) {
@@ -134,6 +135,7 @@ function drawArrowTextPickingBatches(
       expandedGlyphVertexData: renderBatch.expandedGlyphVertexData
     });
     pickingModel.setInstanceCount(renderBatch.glyphCount);
+    onBatch?.(batchIndex);
     pickingModel.draw(pickingPass);
   }
   pickingModel.setAttributes({

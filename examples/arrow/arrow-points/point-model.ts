@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {getArrowPickingModule, supportsArrowIndexPicking} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
-import {indexColorPicking, indexPicking, ShaderInputs, supportsIndexPicking} from '@luma.gl/engine';
+import {indexPicking, ShaderInputs} from '@luma.gl/engine';
 import {GPUTableModel, type GPUTable, type GPUVector} from '@luma.gl/tables';
 import {
   FS_GLSL,
@@ -64,7 +65,7 @@ export function createPointShaderInputs(device: Device): PointShaderInputs {
     picking: typeof indexPicking.props;
   }>({
     pointViewport,
-    picking: getPointPickingModule(device)
+    picking: getArrowPickingModule(device)
   });
   shaderInputs.setProps({picking: {indexMode: 'attribute', batchIndex: 0}});
   return shaderInputs;
@@ -74,7 +75,7 @@ export function createPointModel(
   device: Device,
   {id, table, shaderInputs, picking = false}: PointModelProps
 ): GPUTableModel {
-  const indexPickingSupported = supportsIndexPicking(device);
+  const indexPickingSupported = supportsArrowIndexPicking(device);
   return new GPUTableModel(device, {
     id,
     source: WGSL_SHADER,
@@ -82,7 +83,7 @@ export function createPointModel(
     fs: picking && indexPickingSupported ? PICKING_FS_GLSL : FS_GLSL,
     ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
     modules: [
-      picking && indexPickingSupported ? indexPicking : getPointPickingModule(device)
+      picking && indexPickingSupported ? indexPicking : getArrowPickingModule(device)
     ] as never,
     shaderLayout: POINT_SHADER_LAYOUT,
     shaderInputs,
@@ -98,8 +99,4 @@ export function createPointModel(
       : {}),
     parameters: picking ? PICKING_RENDER_PARAMETERS : DEFAULT_RENDER_PARAMETERS
   });
-}
-
-function getPointPickingModule(device: Device): typeof indexPicking {
-  return (supportsIndexPicking(device) ? indexPicking : indexColorPicking) as typeof indexPicking;
 }

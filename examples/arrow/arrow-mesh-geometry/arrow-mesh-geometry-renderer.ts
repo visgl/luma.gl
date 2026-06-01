@@ -9,12 +9,14 @@ import {
   makeArrowMatrix4x4Vector,
   makeGPUVectorFromArrow,
   makeGPUGeometryFromArrow,
+  createArrowPickingManager,
+  runArrowPickingPass,
   type ArrowTableGeometry,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {CubeGeometry, PickingManager} from '@luma.gl/engine';
+import {CubeGeometry, type PickingManager} from '@luma.gl/engine';
 import {GPURenderable, type GPUTable, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
@@ -87,13 +89,14 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
   readonly faceNames: arrow.Vector<arrow.Utf8>;
   readonly matrixValues = new Float32Array(CUBE_COUNT * MATRIX_COMPONENT_COUNT);
   readonly cubeTransforms = makeCubeTransforms();
-  readonly shaderInputs: MeshGeometryShaderInputs = createMeshGeometryShaderInputs();
+  readonly shaderInputs: MeshGeometryShaderInputs;
   props: ArrowMeshRendererProps;
 
   constructor(device: Device, props: ArrowMeshRendererProps = {}) {
     super();
     this.device = device;
     this.props = props;
+    this.shaderInputs = createMeshGeometryShaderInputs(device);
 
     const faceMetadata = makeFaceMetadataTable();
     const defaultFaceColors = faceMetadata.getChild('COLOR_0') as arrow.Vector<
@@ -133,9 +136,8 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
       faceColors: this.faceColors,
       parameters: props.parameters
     });
-    this.picker = new PickingManager(device, {
+    this.picker = createArrowPickingManager(device, {
       shaderInputs: this.shaderInputs,
-      mode: 'auto',
       getTooltip: ({batchIndex, objectIndex}) => {
         if (batchIndex === null || objectIndex === null) {
           return null;
@@ -217,16 +219,15 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
   }
 
   pickFace(mousePosition: number[] | null | undefined): void {
-    if (!this.picker.shouldPick(mousePosition as [number, number] | null)) {
-      return;
-    }
-
-    const pickingPass = this.picker.beginRenderPass();
-    this.shaderInputs.setProps({picking: {batchIndex: 0}});
-    (this.pickingModel ?? this.model).draw(pickingPass);
-    pickingPass.end();
-    this.shaderInputs.setProps({picking: {isActive: false}});
-    void this.picker.updatePickInfo(mousePosition as [number, number]);
+    runArrowPickingPass({
+      picker: this.picker,
+      mousePosition,
+      shaderInputs: this.shaderInputs,
+      draw: pickingPass => {
+        this.shaderInputs.setProps({picking: {batchIndex: 0}});
+        (this.pickingModel ?? this.model).draw(pickingPass);
+      }
+    });
   }
 }
 
