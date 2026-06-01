@@ -2,6 +2,7 @@ import {arithmetic} from './arithmetic';
 import {extent} from './extent';
 import {fround} from './fround';
 import {gather} from './gather';
+import {segmentedMap} from './segmented-map';
 import {interleave} from './interleave';
 import {sequence} from './sequence';
 
@@ -12,5 +13,6 @@ export const webgpuBackend = {
   fround,
   gather,
   interleave,
+  segmentedMap,
   sequence
 };
