@@ -199,6 +199,52 @@ const a = sequence(5);        // 0, 1, 2, 3, 4
 const b = sequence(4, 10, 2); // 10, 12, 14, 16
 ```
 
+## `segmentedMap`
+
+### `segmentedMap(segments: GPUTableEvaluatorInput, vertexCount: number): GPUTableEvaluator`
+
+Maps each vertex index to its containing segment and its offset within that segment.
+
+The output:
+
+- uses `type = 'uint32'`
+- uses `size = 2`
+- uses `length = vertexCount`
+
+Each output row stores:
+
+```text
+[segmentIndex, vertexIndexInSegment]
+```
+
+Behavior:
+
+- `segments` must be a scalar `uint32` table of segment start indices.
+- `vertexCount` defines the output row count and the exclusive end of the final segment.
+- Segment starts must be non-decreasing.
+- Duplicate starts are allowed and represent empty segments.
+- `segments[0]` must be `0`.
+
+For segment starts `[0, 3, 3, 6]`, the output rows begin:
+
+```text
+row 0: [0, 0]
+row 1: [0, 1]
+row 2: [0, 2]
+row 3: [2, 0]
+row 4: [2, 1]
+row 5: [2, 2]
+row 6: [3, 0]
+```
+
+### Example
+
+```ts
+const segments = GPUTableEvaluator.fromArray([0, 3, 5], {type: 'uint32', size: 1});
+
+const result = segmentedMap(segments, 7);
+```
+
 ## `fround`
 
 ### `fround(x: GPUTableEvaluatorInput): GPUTableEvaluator`
@@ -232,3 +278,4 @@ const result = fround(source);
 - `gather()` is currently a direct row-index gather, not a key-based lookup.
 - `extent()` is a reduction operation: it collapses many input rows into one `[min, max]` row per channel.
 - `sequence()` produces data without any table inputs, but still returns a lazy `GPUTableEvaluator`.
+- `segmentedMap()` is a per-vertex segment-annotation operation, not a segmented reduction.

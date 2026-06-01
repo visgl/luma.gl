@@ -29,6 +29,7 @@ export {extent} from './operations/extent';
 export {interleave} from './operations/interleave';
 export {fround} from './operations/fround';
 export {gather} from './operations/gather';
+export {segmentedMap} from './operations/segmented-map';
 export {sequence} from './operations/sequence';
 
 // Backends

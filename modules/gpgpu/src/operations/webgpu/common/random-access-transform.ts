@@ -13,7 +13,12 @@ export function getInputBinding(name: string, input: GPUTableEvaluator, index: n
   return `@group(0) @binding(${index}) var<storage, read> ${name}: array<${inputType}>;`;
 }
 
-export function getSourceValuesAccessor(input: GPUTableEvaluator, asType: SignedDataType): string {
+export function getTableAccessor(
+  bindingName: string,
+  input: GPUTableEvaluator,
+  asType: SignedDataType,
+  accessorName: string = bindingName
+): string {
   const type = getWGSLType(asType);
 
   if (input.isConstant) {
@@ -21,7 +26,7 @@ export function getSourceValuesAccessor(input: GPUTableEvaluator, asType: Signed
     if (!values) {
       throw new Error(`Constant input ${input} is missing CPU values`);
     }
-    return `fn read_source_values(_sourceIndex: u32) -> array<${type}, ${input.size}> {
+    return `fn read_${accessorName}(_sourceIndex: u32) -> array<${type}, ${input.size}> {
   return array<${type}, ${input.size}>(${Array.from({length: input.size}, (_, index) =>
     getLiteralValue(type, values[index] ?? 0)
   ).join(', ')});
@@ -33,16 +38,20 @@ export function getSourceValuesAccessor(input: GPUTableEvaluator, asType: Signed
   const inputType = getWGSLType(input.type);
   const cast = inputType === type ? '' : `${type}`;
 
-  return `fn read_source_values(sourceIndex: u32) -> array<${type}, ${input.size}> {
+  return `fn read_${accessorName}(sourceIndex: u32) -> array<${type}, ${input.size}> {
   var value: array<${type}, ${input.size}>;
   let rowOffset = ${offset}u + sourceIndex * ${stride}u;
 ${Array.from({length: input.size}, (_, index) =>
   cast
-    ? `  value[${index}] = ${cast}(sourceValues[rowOffset + ${index}u]);`
-    : `  value[${index}] = sourceValues[rowOffset + ${index}u];`
+    ? `  value[${index}] = ${cast}(${bindingName}[rowOffset + ${index}u]);`
+    : `  value[${index}] = ${bindingName}[rowOffset + ${index}u];`
 ).join('\n')}
   return value;
 }`;
+}
+
+export function getSourceValuesAccessor(input: GPUTableEvaluator, asType: SignedDataType): string {
+  return getTableAccessor('sourceValues', input, asType, 'source_values');
 }
 
 export function getOutputBinding(output: GPUTableEvaluator, bindingIndex: number): string {
