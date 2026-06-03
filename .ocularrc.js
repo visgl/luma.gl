@@ -44,6 +44,7 @@ const config = {
         fp64: '/examples/experimental/fp64',
         'external-context': '/examples/integrations/external-context',
         'arrow-text-2d': '/examples/arrow/arrow-text-2d',
+        'arrow-text-3d': '/examples/arrow/arrow-text-3d',
         gltf: '/examples/showcase/gltf',
         'hello-cube': '/examples/tutorials/hello-cube',
         'hello-instancing': '/examples/tutorials/hello-instancing',

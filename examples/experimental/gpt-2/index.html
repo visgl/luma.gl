@@ -1,0 +1,48 @@
+<!doctype html>
+<style>
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #02070d;
+  }
+</style>
+<body>
+  <script type="module">
+    import {luma} from '@luma.gl/core';
+    import {makeAnimationLoop} from '@luma.gl/engine';
+    import {webgpuAdapter} from '@luma.gl/webgpu';
+    import AnimationLoopTemplate from './app.ts';
+
+    function setDeviceStatus(message) {
+      let deviceStatus = document.getElementById('gpgpu-device');
+      if (!deviceStatus) {
+        deviceStatus = document.createElement('div');
+        deviceStatus.id = 'gpgpu-device';
+        deviceStatus.style.marginBottom = '8px';
+        deviceStatus.style.fontFamily = 'monospace';
+        document.body.prepend(deviceStatus);
+      }
+      deviceStatus.textContent = message;
+    }
+
+    document.body.insertAdjacentHTML('afterbegin', AnimationLoopTemplate.info);
+    try {
+      const device = await luma.createDevice({
+        type: 'webgpu',
+        adapters: [webgpuAdapter],
+        createCanvasContext: true
+      });
+      setDeviceStatus(`Device: ${device.type}`);
+      const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+        device
+      });
+      animationLoop.start();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setDeviceStatus(`Device: failed to create webgpu (${errorMessage})`);
+      throw error;
+    }
+  </script>
+</body>
