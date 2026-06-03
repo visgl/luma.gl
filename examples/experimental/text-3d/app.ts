@@ -157,7 +157,7 @@ const font = parseFont(helvetiker);
 
 const crawlText = [
   'EPISODE IV',
-  'A NEW HOPE',
+  'A NEW VISION',
   '',
   'It is a period of rapid',
   'advancement in GPU',
