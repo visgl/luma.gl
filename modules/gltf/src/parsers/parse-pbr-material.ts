@@ -155,6 +155,25 @@ type TextureParseOptions = {
   textureTransformSlot?: PBRTextureTransformSlot;
 };
 
+type GLTFAttributeName =
+  | 'NORMAL'
+  | 'TANGENT'
+  | 'TEXCOORD_0'
+  | 'TEXCOORD_1'
+  | 'JOINTS_0'
+  | 'WEIGHTS_0'
+  | 'COLOR_0';
+
+const GLTF_ATTRIBUTE_ALIASES: Record<GLTFAttributeName, string[]> = {
+  NORMAL: ['NORMAL', 'normals'],
+  TANGENT: ['TANGENT'],
+  TEXCOORD_0: ['TEXCOORD_0', 'texCoords'],
+  TEXCOORD_1: ['TEXCOORD_1', 'texCoords1'],
+  JOINTS_0: ['JOINTS_0'],
+  WEIGHTS_0: ['WEIGHTS_0'],
+  COLOR_0: ['COLOR_0', 'colors']
+};
+
 export type ParsePBRMaterialOptions = {
   /** Debug PBR shader */
   pbrDebug?: boolean;
@@ -218,12 +237,16 @@ export function parsePBRMaterial(
     parsedMaterial.uniforms.scaleFGDSpec = [0, 0, 0, 0];
   }
 
-  if (attributes['NORMAL']) parsedMaterial.defines['HAS_NORMALS'] = true;
-  if (attributes['TANGENT'] && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = true;
-  if (attributes['TEXCOORD_0']) parsedMaterial.defines['HAS_UV'] = true;
-  if (attributes['TEXCOORD_1']) parsedMaterial.defines['HAS_UV_1'] = true;
-  if (attributes['JOINTS_0'] && attributes['WEIGHTS_0']) parsedMaterial.defines['HAS_SKIN'] = true;
-  if (attributes['COLOR_0']) parsedMaterial.defines['HAS_COLORS'] = true;
+  if (hasGLTFAttribute(attributes, 'NORMAL')) parsedMaterial.defines['HAS_NORMALS'] = true;
+  if (hasGLTFAttribute(attributes, 'TANGENT') && options?.useTangents) {
+    parsedMaterial.defines['HAS_TANGENTS'] = true;
+  }
+  if (hasGLTFAttribute(attributes, 'TEXCOORD_0')) parsedMaterial.defines['HAS_UV'] = true;
+  if (hasGLTFAttribute(attributes, 'TEXCOORD_1')) parsedMaterial.defines['HAS_UV_1'] = true;
+  if (hasGLTFAttribute(attributes, 'JOINTS_0') && hasGLTFAttribute(attributes, 'WEIGHTS_0')) {
+    parsedMaterial.defines['HAS_SKIN'] = true;
+  }
+  if (hasGLTFAttribute(attributes, 'COLOR_0')) parsedMaterial.defines['HAS_COLORS'] = true;
 
   if (options?.imageBasedLightingEnvironment) parsedMaterial.defines['USE_IBL'] = true;
   if (options?.lights) parsedMaterial.defines['USE_LIGHTS'] = true;
@@ -243,20 +266,20 @@ function warnOnMissingExpectedAttributes(
   attributes: Record<string, any>
 ): void {
   const uvDependentTextureSlots = getUvDependentTextureSlots(material, 0);
-  if (uvDependentTextureSlots.length > 0 && !attributes['TEXCOORD_0']) {
+  if (uvDependentTextureSlots.length > 0 && !hasGLTFAttribute(attributes, 'TEXCOORD_0')) {
     log.warn(
       `glTF material uses ${uvDependentTextureSlots.join(', ')} but primitive is missing TEXCOORD_0; textured shading will sample the default UV coordinates`
     )();
   }
   const uv1DependentTextureSlots = getUvDependentTextureSlots(material, 1);
-  if (uv1DependentTextureSlots.length > 0 && !attributes['TEXCOORD_1']) {
+  if (uv1DependentTextureSlots.length > 0 && !hasGLTFAttribute(attributes, 'TEXCOORD_1')) {
     log.warn(
       `glTF material uses ${uv1DependentTextureSlots.join(', ')} with TEXCOORD_1 but primitive is missing TEXCOORD_1; those textures will be skipped`
     )();
   }
 
   const isUnlitMaterial = Boolean(material.unlit || material.extensions?.KHR_materials_unlit);
-  if (isUnlitMaterial || attributes['NORMAL']) {
+  if (isUnlitMaterial || hasGLTFAttribute(attributes, 'NORMAL')) {
     return;
   }
 
@@ -286,6 +309,13 @@ function getUvDependentTextureSlots(
   }
 
   return uvDependentTextureSlots;
+}
+
+function hasGLTFAttribute(
+  attributes: Record<string, any>,
+  attributeName: GLTFAttributeName
+): boolean {
+  return GLTF_ATTRIBUTE_ALIASES[attributeName].some(alias => Boolean(attributes[alias]));
 }
 
 function getNestedTextureInfo(
@@ -879,7 +909,7 @@ function addTexture(
     )();
     return;
   }
-  if (textureCoordinateSet === 1 && !attributes['TEXCOORD_1']) {
+  if (textureCoordinateSet === 1 && !hasGLTFAttribute(attributes, 'TEXCOORD_1')) {
     log.warn(
       `Skipping ${String(uniformName)} because it requires TEXCOORD_1 but the primitive does not provide TEXCOORD_1`
     )();
@@ -1207,10 +1237,10 @@ export class PBRMaterialParser {
       this.uniforms.scaleFGDSpec = [0, 0, 0, 0];
     }
 
-    this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
-    this.defineIfPresent(attributes.TANGENT && useTangents, 'HAS_TANGENTS');
-    this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
-    this.defineIfPresent(attributes.COLOR_0, 'HAS_COLORS');
+    this.defineIfPresent(hasGLTFAttribute(attributes, 'NORMAL'), 'HAS_NORMALS');
+    this.defineIfPresent(hasGLTFAttribute(attributes, 'TANGENT') && useTangents, 'HAS_TANGENTS');
+    this.defineIfPresent(hasGLTFAttribute(attributes, 'TEXCOORD_0'), 'HAS_UV');
+    this.defineIfPresent(hasGLTFAttribute(attributes, 'COLOR_0'), 'HAS_COLORS');
 
     this.defineIfPresent(imageBasedLightingEnvironment, 'USE_IBL');
     this.defineIfPresent(lights, 'USE_LIGHTS');
