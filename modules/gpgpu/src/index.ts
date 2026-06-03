@@ -26,10 +26,14 @@ export {
   tan
 } from './operations/arithmetic';
 export {extent} from './operations/extent';
+export {dot} from './operations/dot';
+export {equalAll} from './operations/equal-all';
 export {interleave} from './operations/interleave';
 export {fround} from './operations/fround';
 export {gather} from './operations/gather';
+export {length} from './operations/length';
 export {segmentedMap} from './operations/segmented-map';
+export {select} from './operations/select';
 export {sequence} from './operations/sequence';
 
 // Backends
