@@ -9,6 +9,26 @@ import {DynamicBuffer} from '../../src';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 
+test('DynamicBuffer JSON debug output stays compact', async t => {
+  for (const device of await getTestDevices(['null'])) {
+    const dynamicBuffer = new DynamicBuffer(device, {
+      id: 'compact-json-dynamic-buffer',
+      byteLength: 4,
+      usage: Buffer.VERTEX
+    });
+
+    t.equal(
+      JSON.stringify(dynamicBuffer),
+      JSON.stringify(dynamicBuffer.toString()),
+      'dynamic buffer JSON uses toString()'
+    );
+
+    dynamicBuffer.destroy();
+  }
+
+  t.end();
+});
+
 test('DynamicBuffer#write/read/debugData', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const dynamicBuffer = new DynamicBuffer(device, {
@@ -98,6 +118,32 @@ test('DynamicBuffer#resize preserveData keeps bytes on WebGL and WebGPU', async 
     t.ok(
       dynamicBuffer.buffer !== initialBuffer,
       `${device.type} preserve resize still replaces the backing buffer`
+    );
+
+    dynamicBuffer.destroy();
+  }
+
+  t.end();
+});
+
+test('DynamicBuffer#resize preserveData keeps unaligned byte counts on WebGL and WebGPU', async t => {
+  for (const device of await getTestDevices(['webgpu', 'webgl'])) {
+    const dynamicBuffer = new DynamicBuffer(device, {
+      data: new Uint8Array([9, 8, 7]),
+      usage: Buffer.COPY_DST | Buffer.COPY_SRC | Buffer.VERTEX,
+      debugData: true
+    });
+
+    t.ok(
+      dynamicBuffer.resize({byteLength: 7, preserveData: true}),
+      `${device.type} unaligned preserve resize reports change`
+    );
+
+    const result = await dynamicBuffer.readAsync(0, 3);
+    t.deepEqual(
+      Array.from(result),
+      [9, 8, 7],
+      `${device.type} unaligned preserve resize copies previous contents`
     );
 
     dynamicBuffer.destroy();

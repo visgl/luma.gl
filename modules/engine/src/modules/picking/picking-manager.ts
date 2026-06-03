@@ -10,12 +10,17 @@ const INDEX_PICKING_ATTACHMENT_INDEX = 1;
 const INDEX_PICKING_CLEAR_COLOR = new Int32Array([INVALID_INDEX, INVALID_INDEX, 0, 0]);
 const COLOR_PICKING_MAX_OBJECT_INDEX = 16777214;
 const COLOR_PICKING_MAX_BATCH_INDEX = 254;
+const TOOLTIP_OFFSET_PIXELS = 14;
+const TOOLTIP_MARGIN_PIXELS = 8;
 
 /** Information about picked object */
 export type PickInfo = {
   batchIndex: number | null;
   objectIndex: number | null;
 };
+
+/** Text shown by `PickingManager` beside the latest picked cursor position. */
+export type PickingTooltip = string | null;
 
 export type PickingMode = 'auto' | 'index' | 'color';
 export type ResolvedPickingMode = Exclude<PickingMode, 'auto'>;
@@ -29,6 +34,11 @@ export type PickingManagerProps = {
   shaderInputs?: ShaderInputs<{picking: typeof pickingUniforms.props}>;
   /** Callback */
   onObjectPicked?: (info: PickInfo) => void;
+  /**
+   * Returns tooltip text for the latest pick result.
+   * Returning `null` hides the tooltip.
+   */
+  getTooltip?: (info: PickInfo) => PickingTooltip;
   /** Select a picking mode. Defaults to `color`. Use `auto` to prefer `index` when supported. */
   mode?: PickingMode;
   /** @deprecated Use `mode`. */
@@ -96,10 +106,15 @@ export class PickingManager {
   pickInfo: PickInfo = {batchIndex: null, objectIndex: null};
   /** Framebuffer used for picking */
   framebuffer: Framebuffer | null = null;
+  /** Last cursor position that triggered a picking render/readback. */
+  protected lastMousePosition: [number, number] | null = null;
+  /** Tooltip element created lazily when `getTooltip` returns visible content. */
+  protected tooltipElement: HTMLDivElement | null = null;
 
   static defaultProps: Required<PickingManagerProps> = {
     shaderInputs: undefined!,
     onObjectPicked: () => {},
+    getTooltip: () => null,
     mode: 'color',
     backend: 'color'
   };
@@ -119,6 +134,8 @@ export class PickingManager {
 
   destroy() {
     this.framebuffer?.destroy();
+    this.tooltipElement?.remove();
+    this.tooltipElement = null;
   }
 
   // TODO - Ask for a cached framebuffer? a Framebuffer factory?
@@ -132,7 +149,33 @@ export class PickingManager {
 
   /** Clear highlighted / picked object */
   clearPickState() {
+    this.lastMousePosition = null;
     this.setPickingProps({highlightedBatchIndex: null, highlightedObjectIndex: null});
+    this.hideTooltip();
+  }
+
+  /** Return whether callers need to render a fresh picking pass for this cursor position. */
+  shouldPick(
+    mousePosition: [number, number] | null | undefined
+  ): mousePosition is [number, number] {
+    if (!mousePosition) {
+      if (this.lastMousePosition) {
+        this.clearPickState();
+      }
+      return false;
+    }
+
+    const [mouseX, mouseY] = mousePosition;
+    if (
+      this.lastMousePosition &&
+      this.lastMousePosition[0] === mouseX &&
+      this.lastMousePosition[1] === mouseY
+    ) {
+      return false;
+    }
+
+    this.lastMousePosition = [mouseX, mouseY];
+    return true;
   }
 
   /** Prepare for rendering picking colors */
@@ -168,6 +211,7 @@ export class PickingManager {
       this.props.onObjectPicked(pickInfo);
     }
 
+    this.updateTooltip(pickInfo, mousePosition);
     this.setPickingProps({
       isActive: false,
       highlightedBatchIndex: pickInfo.batchIndex,
@@ -333,6 +377,97 @@ export class PickingManager {
       pickInfo.objectIndex !== this.pickInfo.objectIndex ||
       pickInfo.batchIndex !== this.pickInfo.batchIndex
     );
+  }
+
+  protected updateTooltip(pickInfo: PickInfo, mousePosition: [number, number]): void {
+    const tooltipText = this.props.getTooltip(pickInfo);
+    if (!tooltipText) {
+      this.hideTooltip();
+      return;
+    }
+
+    const tooltipElement = this.getOrCreateTooltipElement();
+    if (!tooltipElement) {
+      return;
+    }
+
+    tooltipElement.textContent = tooltipText;
+    tooltipElement.style.display = 'block';
+    this.positionTooltip(tooltipElement, mousePosition);
+  }
+
+  protected hideTooltip(): void {
+    if (this.tooltipElement) {
+      this.tooltipElement.style.display = 'none';
+    }
+  }
+
+  protected getOrCreateTooltipElement(): HTMLDivElement | null {
+    if (this.tooltipElement) {
+      return this.tooltipElement;
+    }
+    if (
+      typeof document === 'undefined' ||
+      typeof window === 'undefined' ||
+      typeof HTMLCanvasElement === 'undefined' ||
+      typeof this.device.getDefaultCanvasContext !== 'function'
+    ) {
+      return null;
+    }
+
+    const canvas = this.device.getDefaultCanvasContext().canvas;
+    if (!(canvas instanceof HTMLCanvasElement) || !canvas.parentElement) {
+      return null;
+    }
+
+    const tooltipElement = document.createElement('div');
+    tooltipElement.style.position = 'absolute';
+    tooltipElement.style.zIndex = '12';
+    tooltipElement.style.display = 'none';
+    tooltipElement.style.maxWidth = '220px';
+    tooltipElement.style.padding = '8px 10px';
+    tooltipElement.style.borderRadius = '6px';
+    tooltipElement.style.background = 'rgba(15, 23, 42, 0.92)';
+    tooltipElement.style.color = '#f8fafc';
+    tooltipElement.style.font = '600 13px/1.35 system-ui, sans-serif';
+    tooltipElement.style.pointerEvents = 'none';
+    tooltipElement.style.whiteSpace = 'nowrap';
+    tooltipElement.style.boxShadow = '0 10px 24px rgba(15, 23, 42, 0.22)';
+
+    const tooltipParent = canvas.parentElement;
+    if (window.getComputedStyle(tooltipParent).position === 'static') {
+      tooltipParent.style.position = 'relative';
+    }
+    tooltipParent.appendChild(tooltipElement);
+    this.tooltipElement = tooltipElement;
+    return tooltipElement;
+  }
+
+  protected positionTooltip(tooltipElement: HTMLDivElement, mousePosition: [number, number]): void {
+    if (
+      typeof HTMLCanvasElement === 'undefined' ||
+      typeof this.device.getDefaultCanvasContext !== 'function'
+    ) {
+      return;
+    }
+
+    const canvas = this.device.getDefaultCanvasContext().canvas;
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    const maxLeft = Math.max(
+      TOOLTIP_MARGIN_PIXELS,
+      canvas.clientWidth - tooltipElement.offsetWidth - TOOLTIP_MARGIN_PIXELS
+    );
+    const maxTop = Math.max(
+      TOOLTIP_MARGIN_PIXELS,
+      canvas.clientHeight - tooltipElement.offsetHeight - TOOLTIP_MARGIN_PIXELS
+    );
+    const left = Math.min(mousePosition[0] + TOOLTIP_OFFSET_PIXELS, maxLeft);
+    const top = Math.min(mousePosition[1] + TOOLTIP_OFFSET_PIXELS, maxTop);
+    tooltipElement.style.left = `${Math.max(TOOLTIP_MARGIN_PIXELS, left)}px`;
+    tooltipElement.style.top = `${Math.max(TOOLTIP_MARGIN_PIXELS, top)}px`;
   }
 }
 

@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTable} from '../../operation/gpu-table';
-import {runComputation} from './common';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {runRowComputation} from './common/row-transform';
 
 const source = `\
 fn interleave(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<{TYPE}, {RESULT_LEN}> {
@@ -20,15 +20,16 @@ fn interleave(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<{TY
 }
 `;
 
-export const interleave: OperationHandler<{x: GPUTable; y: GPUTable}> = async ({
+export const interleave: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
   inputs,
   output,
   target
 }) => {
-  runComputation({
+  runRowComputation({
     module: {name: 'interleave', source},
     inputs,
     output,
     outputBuffer: target
   });
+  return {success: true};
 };

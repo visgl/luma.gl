@@ -3,17 +3,21 @@
 // Copyright (c) vis.gl contributors
 
 import type {SignedDataType} from '@luma.gl/core';
-import {GPUTable} from '../operation/gpu-table';
+import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
 
-export function deduceOutputProps(...inputs: GPUTable[]): {
+export function deduceOutputProps(...inputs: GPUTableEvaluator[]): {
   isConstant: boolean;
   type: SignedDataType;
   size: number;
   length: number;
 } {
+  let type = joinTypes(inputs.map(x => x.type));
+  if (type[0] !== 'f' && inputs.some(x => x.normalized)) {
+    type = 'float32';
+  }
   return {
     isConstant: inputs.every(x => x.isConstant),
-    type: joinTypes(inputs.map(x => x.type)),
+    type,
     size: inputs.reduce((s, x) => Math.max(s, x.size), 0),
     length: inputs.reduce((l, x) => Math.max(l, x.length), 0)
   };

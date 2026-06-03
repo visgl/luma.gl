@@ -7,7 +7,7 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
-import {parseFont, TextGeometry} from '@luma.gl/text';
+import {parseFont, TextGeometry} from '@luma.gl/text/text-3d';
 import {helvetiker} from './helvetiker-font';
 
 export const title = '3D Space Crawl';

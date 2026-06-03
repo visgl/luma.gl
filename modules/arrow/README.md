@@ -1,22 +1,10 @@
 # @luma.gl/arrow
 
-Apache Arrow utilities for luma.gl.
+Apache Arrow adapters for luma.gl GPU table objects.
 
-The module can derive GPU `BufferLayout` entries from Arrow schemas and create
-GPU-side `ArrowGPUVector`, `ArrowGPUTable`, and `ArrowModel` objects from
-compatible Arrow columns. Arrow tables and vectors are construction inputs; the
-GPU objects retain GPU buffers plus Arrow-derived type and schema metadata.
-Uploaded vectors own their generated buffers. Wrapped-buffer vectors are
-non-owning by default unless ownership is explicitly requested or transferred by
-an in-place operation.
+This module owns Arrow-specific upload, preparation, and compatibility metadata.
+It creates the generic `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`, and
+`GPUSchema` objects exported by `@luma.gl/tables`; it does not define parallel
+Arrow-side GPU table classes.
 
-`ArrowGeometry` and `ArrowModel` can also consume loaders.gl-compatible Mesh
-Arrow tables through the local structural `ArrowMeshTable` type. Mesh Arrow
-attributes are uploaded as GPU geometry, defaulting to one interleaved vertex
-buffer plus a separate optional index buffer.
-
-For lower-level table pipelines, `TableBufferPlanner` can produce deterministic
-GPU allocation plans from column descriptors while respecting device vertex and
-storage buffer limits.
-
-See [luma.gl](http://luma.gl) for documentation.
+See [luma.gl](https://luma.gl/docs/api-reference/arrow) for documentation.

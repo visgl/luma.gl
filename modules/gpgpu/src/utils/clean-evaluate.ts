@@ -1,0 +1,76 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import type {Buffer, Device} from '@luma.gl/core';
+import {getGPUVectorBuffer, GPUTableEvaluator} from '../operation/gpu-table-evaluator';
+
+type EvaluatorResult = GPUTableEvaluator | GPUTableEvaluator[] | Record<string, unknown>;
+
+export async function cleanEvaluate<ResultT extends EvaluatorResult>(
+  device: Device,
+  result: ResultT
+): Promise<ResultT> {
+  const rootEvaluators = collectReferencedEvaluators(result);
+
+  await Promise.all(rootEvaluators.map(evaluator => evaluator.evaluate(device)));
+
+  const preservedBuffers = new Set<Buffer>(
+    rootEvaluators.map(evaluator => getGPUVectorBuffer(evaluator.gpuVector))
+  );
+
+  const dependencyEvaluators = new Set<GPUTableEvaluator>();
+  for (const evaluator of rootEvaluators) {
+    collectDependencies(evaluator, dependencyEvaluators);
+  }
+
+  for (const evaluator of dependencyEvaluators) {
+    // Multiple evaluators could share the same underlying buffer
+    if (!preservedBuffers.has(getGPUVectorBuffer(evaluator.gpuVector))) {
+      evaluator.destroy();
+    }
+  }
+  return result;
+}
+
+function collectReferencedEvaluators(value: EvaluatorResult): GPUTableEvaluator[] {
+  const evaluators = new Set<GPUTableEvaluator>();
+  if (value instanceof GPUTableEvaluator) {
+    return [value];
+  }
+  let valuesArray: unknown[];
+  if (Array.isArray(value)) {
+    valuesArray = value;
+  } else {
+    valuesArray = Object.values(value);
+  }
+  for (const item of valuesArray) {
+    if (item instanceof GPUTableEvaluator) {
+      evaluators.add(item);
+    }
+  }
+  return Array.from(evaluators);
+}
+
+function collectDependencies(
+  evaluator: GPUTableEvaluator,
+  dependencyEvaluators: Set<GPUTableEvaluator>
+): void {
+  const source = evaluator.source;
+  if (!source) {
+    return;
+  }
+  if (source instanceof GPUTableEvaluator) {
+    if (!dependencyEvaluators.has(source)) {
+      dependencyEvaluators.add(source);
+      collectDependencies(source, dependencyEvaluators);
+    }
+    return;
+  }
+  for (const dependency of source.dependencies) {
+    if (!dependencyEvaluators.has(dependency)) {
+      dependencyEvaluators.add(dependency);
+      collectDependencies(dependency, dependencyEvaluators);
+    }
+  }
+}

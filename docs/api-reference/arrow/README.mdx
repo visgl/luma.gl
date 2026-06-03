@@ -1,0 +1,66 @@
+import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
+
+# Overview
+
+<ArrowDocsTabs active="overview" />
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+Apache Arrow utilities for luma.gl.
+
+## API Reference
+
+- [Arrow Utilities](/docs/api-reference/arrow/arrow-utils)
+- [Arrow Representations](/docs/api-reference/arrow/arrow-representations)
+- [Arrow Table Preparation](/docs/api-reference/arrow/arrow-preparation)
+- [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
+- [deck.gl v10 API Directions](/docs/api-reference/arrow/deck-target-api)
+
+## Apache Arrow Preliminaries
+
+Apache Arrow has a rich type system that can represent a wide variety of binary
+data columns. A subset of these column types can be used directly as GPU vertex
+attribute data, meaning that such arrow columns can be uploaded efficiently to the GPU.
+
+Apache Arrow supports primitive types like `Float32`, `Uint32`, and `Uint8` that
+describe the value stored in each row. It also supports fixed-length vectors of
+these types with `FixedSizeList`. These scalar and fixed-length vector types map
+directly to the memory layouts used by GPU vertex attributes.
+
+Arrow also supports variable-length `List` columns. These are useful for data
+such as polygons and paths, but they do not map directly to a single vertex
+attribute without an additional conversion step. `ArrowPathModel` provides the
+attribute-backed conversion for prepared Float32 XY, XYZ, and XYZM path coordinate
+rows, expanding each logical path into segment instances while keeping row-level
+style columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
+storage-backed form: compute expands GPU-resident path values into compact indexed
+segment records from copied list-offset metadata, render shaders fetch coordinates
+from the original path-value storage buffer, and per-path style rows remain storage
+bindings instead of being repeated for every generated segment. Use
+`ArrowPathModel.prepareGPUVectors()` or `prepareArrowPathGPUVectors()` to turn raw
+Float32 or Float64 Arrow path vectors into prepared attribute-path inputs. Use
+`ArrowStoragePathModel.prepareGPUVectors()` or `prepareArrowStoragePathGPUVectors()`
+when WebGPU storage rendering should convert Float64 path payloads into Float32
+deltas on the GPU before rendering.
+
+## GPU Table Interop
+
+`@luma.gl/arrow` is the adapter layer from Apache Arrow objects into the generic
+types in [`@luma.gl/tables`](/docs/api-reference/tables):
+
+- `makeGPUDataFromArrowData()` uploads one Arrow `Data` chunk into a `GPUData`.
+- `makeGPUVectorFromArrow()` uploads one Arrow `Vector` into a `GPUVector`.
+- `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
+- `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record
+  batch boundaries.
+
+The resulting table schema is `GPUSchema`, and each vector has a
+`GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or
+`vertex-list<float32x3>`. Arrow `DataType` metadata may still be retained by
+adapter/readback paths, but `@luma.gl/tables` itself does not depend on
+`apache-arrow`.
+
+See [luma.gl](http://luma.gl) for documentation.

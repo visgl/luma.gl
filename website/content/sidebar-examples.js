@@ -11,10 +11,26 @@ const sidebars = {
       items: [
         'showcase/gltf',
         'showcase/instancing',
-        'showcase/arrow-instancing',
         'showcase/postprocessing',
         'showcase/dof',
         'showcase/globe'
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Apache Arrow',
+      items: [
+        'arrow/arrow-points',
+        'arrow/arrow-lines',
+        'arrow/arrow-polygons',
+        'arrow/arrow-geoarrow',
+        'arrow/arrow-text-2d',
+        'arrow/arrow-temporal-starfield',
+        'arrow/arrow-time-columns',
+        'arrow/arrow-instancing',
+        'arrow/arrow-mesh-geometry',
+        'arrow/arrow-particles',
+        'arrow/arrow-dggs-polygons'
       ]
     },
     {

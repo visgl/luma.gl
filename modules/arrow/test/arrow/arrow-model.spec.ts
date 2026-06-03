@@ -4,13 +4,15 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  ArrowGPUTable,
-  ArrowModel,
   makeArrowFixedSizeListVector,
-  StreamingArrowGPUTable,
+  makeGPURecordBatchFromArrowRecordBatch,
+  makeGPUTableFromArrowTable,
+  makeGPUGeometryFromArrow,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
-import type {ShaderLayout} from '@luma.gl/core';
+import type {Buffer, ShaderLayout} from '@luma.gl/core';
+import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -20,6 +22,11 @@ const SHADER_LAYOUT: ShaderLayout = {
     {name: 'colors', location: 1, type: 'vec4<f32>', stepMode: 'instance'}
   ],
   bindings: []
+};
+
+const STORAGE_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
+  bindings: [{name: 'colors', type: 'read-only-storage', group: 0, location: 0}]
 };
 
 const DUMMY_VS = `#version 300 es
@@ -53,153 +60,255 @@ void main() {
 }
 `;
 
-test('ArrowModel creates a Model from an Arrow table', t => {
+test('makeGPUTableFromArrowTable converts Arrow tables for GPUTableModel rendering', t => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable();
-  const model = new ArrowModel(device, {
-    id: 'arrow-model-test',
+  const table = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout: SHADER_LAYOUT});
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-model-arrow-test',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     shaderLayout: SHADER_LAYOUT,
-    arrowTable
+    table
   });
-  const positionsBuffer = model.arrowGPUTable!.gpuVectors['positions'].buffer;
+  const positionsBuffer = table.batches[0].gpuVectors.positions.data[0].buffer;
 
-  t.ok(model.arrowGPUTable instanceof ArrowGPUTable, 'creates an ArrowGPUTable');
+  t.ok(table instanceof GPUTable, 'creates a GPUTable');
   t.deepEqual(
     model.bufferLayout,
     [
       {name: 'positions', format: 'float32x2', stepMode: 'instance'},
       {name: 'colors', format: 'unorm8x4', stepMode: 'instance'}
     ],
-    'sets buffer layout from Arrow table columns'
+    'sets buffer layout from converted Arrow columns'
   );
   t.equal(
     model.vertexArray.attributes[0],
-    model.arrowGPUTable!.attributes['positions'],
-    'sets Model vertex array attributes from Arrow buffers'
+    getConcreteTestBuffer(table.attributes.positions),
+    'sets Model vertex array attributes from GPU table buffers'
   );
-  t.equal(model.instanceCount, arrowTable.numRows, 'defaults instanceCount to Arrow row count');
+  t.equal(model.instanceCount, arrowTable.numRows, 'infers instanceCount from table row count');
 
   model.destroy();
-  t.ok(positionsBuffer.destroyed, 'destroys owned Arrow GPU vector buffers');
+  t.notOk(positionsBuffer.destroyed, 'GPUTableModel leaves converted tables caller-owned');
+  table.destroy();
+  t.ok(positionsBuffer.destroyed, 'caller destroys converted table buffers');
   t.end();
 });
 
-test('ArrowModel supports vertex and no count inference', t => {
+test('makeGPUTableFromArrowTable exposes Arrow table rows as storage bindings', t => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable();
+  const table = makeGPUTableFromArrowTable(device, arrowTable, {
+    shaderLayout: STORAGE_SHADER_LAYOUT
+  });
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-model-storage-table-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: STORAGE_SHADER_LAYOUT,
+    table
+  });
+  const colorsBuffer = table.batches[0].gpuVectors.colors.data[0].buffer;
 
-  const vertexModel = new ArrowModel(device, {
-    id: 'arrow-model-vertex-count-test',
+  t.deepEqual(
+    table.schema.fields.map(field => field.name),
+    ['positions', 'colors'],
+    'keeps attribute and storage columns in the selected GPU schema'
+  );
+  t.equal(table.bindings.colors, colorsBuffer, 'table exposes storage rows as a named binding');
+  t.equal(model.bindings.colors, colorsBuffer, 'model receives storage bindings from the table');
+
+  model.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('GPUTableModel supports vertex and no count inference from converted Arrow tables', t => {
+  const device = new NullDevice({});
+  const arrowTable = makeArrowModelTable();
+  const vertexTable = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout: SHADER_LAYOUT});
+  const vertexModel = new GPUTableModel(device, {
+    id: 'gpu-table-model-vertex-count-test',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     shaderLayout: SHADER_LAYOUT,
-    arrowTable,
-    arrowCount: 'vertex'
+    table: vertexTable,
+    tableCount: 'vertex'
   });
 
-  t.equal(vertexModel.vertexCount, arrowTable.numRows, 'sets vertexCount from Arrow row count');
+  t.equal(vertexModel.vertexCount, arrowTable.numRows, 'sets vertexCount from table row count');
   t.equal(vertexModel.instanceCount, 0, 'does not infer instanceCount in vertex mode');
   vertexModel.destroy();
+  vertexTable.destroy();
 
-  const noCountModel = new ArrowModel(device, {
-    id: 'arrow-model-no-count-test',
+  const noCountTable = makeGPUTableFromArrowTable(device, arrowTable, {
+    shaderLayout: SHADER_LAYOUT
+  });
+  const noCountModel = new GPUTableModel(device, {
+    id: 'gpu-table-model-no-count-test',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     shaderLayout: SHADER_LAYOUT,
-    arrowTable,
-    arrowCount: 'none'
+    table: noCountTable,
+    tableCount: 'none'
   });
 
   t.equal(noCountModel.vertexCount, 0, 'does not infer vertexCount in none mode');
   t.equal(noCountModel.instanceCount, 0, 'does not infer instanceCount in none mode');
   noCountModel.destroy();
+  noCountTable.destroy();
   t.end();
 });
 
-test('ArrowModel updates Arrow table props', t => {
+test('GPUTableModel updates converted GPU table props', t => {
   const device = new NullDevice({});
-  const arrowTable = makeArrowModelTable();
-  const nextArrowTable = makeArrowModelTable(3);
-  const model = new ArrowModel(device, {
-    id: 'arrow-model-update-test',
+  const table = makeGPUTableFromArrowTable(device, makeArrowModelTable(), {
+    shaderLayout: SHADER_LAYOUT
+  });
+  const nextTable = makeGPUTableFromArrowTable(device, makeArrowModelTable(3), {
+    shaderLayout: SHADER_LAYOUT
+  });
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-model-update-test',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     shaderLayout: SHADER_LAYOUT,
-    arrowTable
+    table
   });
-  const previousPositionsBuffer = model.arrowGPUTable!.gpuVectors['positions'].buffer;
   const previousPipeline = model.pipeline;
 
-  model.setProps({arrowTable: nextArrowTable});
+  model.setProps({table: nextTable});
 
-  t.equal(model.instanceCount, nextArrowTable.numRows, 'updates inferred instanceCount');
+  t.equal(model.instanceCount, nextTable.numRows, 'updates inferred instanceCount');
   t.equal(
     model.pipeline,
     previousPipeline,
-    'does not rebuild pipeline when Arrow buffer layout is unchanged'
+    'does not rebuild pipeline when GPU table buffer layout is unchanged'
   );
   t.equal(
     model.vertexArray.attributes[0],
-    model.arrowGPUTable!.attributes['positions'],
-    'sets vertex array attributes from the updated Arrow buffers'
+    getConcreteTestBuffer(nextTable.attributes.positions),
+    'sets vertex array attributes from the updated GPU table buffers'
   );
-  t.ok(previousPositionsBuffer.destroyed, 'destroys previous Arrow GPU vector buffers');
 
   model.destroy();
+  table.destroy();
+  nextTable.destroy();
   t.end();
 });
 
-test('ArrowModel consumes a StreamingArrowGPUTable', t => {
+test('GPUTableModel consumes an immutable appended batch and tracks table growth', t => {
   const device = new NullDevice({});
   const firstTable = makeArrowModelTable(1);
   const nextTable = makeArrowModelTable(3);
-  const streamingArrowGPUTable = new StreamingArrowGPUTable({
-    device,
-    schema: firstTable.schema,
-    shaderLayout: SHADER_LAYOUT
-  });
-
-  streamingArrowGPUTable.appendRecordBatch(firstTable.batches[0]);
-  const model = new ArrowModel(device, {
-    id: 'arrow-model-streaming-test',
+  const table = makeGPUTableFromArrowTable(device, firstTable, {shaderLayout: SHADER_LAYOUT});
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-model-immutable-stream-table-test',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     shaderLayout: SHADER_LAYOUT,
-    streamingArrowGPUTable
+    table
   });
-  const positionsBuffer = streamingArrowGPUTable.gpuVectors['positions'].buffer;
   const initialNeedsRedraw = model.needsRedraw();
 
-  streamingArrowGPUTable.appendRecordBatch(nextTable.batches[0]);
+  table.addBatch(
+    makeGPURecordBatchFromArrowRecordBatch(device, nextTable.batches[0], {
+      shaderLayout: SHADER_LAYOUT
+    })
+  );
 
-  t.equal(model.arrowGPUTable, streamingArrowGPUTable, 'uses the provided streaming table');
-  t.equal(model.instanceCount, 1, 'initially infers row count from streaming table');
-  t.ok(model.needsRedraw(), 'detects writes to streaming DynamicBuffer attributes');
-  t.equal(model.instanceCount, 4, 'refreshes inferred row count after streaming append');
+  t.equal(model.table, table, 'uses the GPU table');
+  t.equal(model.instanceCount, 1, 'initially infers rows from the first immutable batch');
+  t.ok(model.needsRedraw(), 'detects appended immutable table batches');
+  t.equal(model.instanceCount, 4, 'refreshes inferred rows after table growth');
 
   model.destroy();
-  t.notOk(positionsBuffer.destroyed, 'does not destroy externally provided streaming table');
-  streamingArrowGPUTable.destroy();
-  t.ok(positionsBuffer.destroyed, 'external owner can destroy the streaming table');
+  table.destroy();
   t.ok(initialNeedsRedraw, 'model starts needing redraw');
   t.end();
 });
 
-test('ArrowModel creates a Model from a Mesh Arrow table', t => {
+test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', t => {
   const device = new NullDevice({});
-  const arrowMesh = makeArrowModelMeshTable();
-  const model = new ArrowModel(device, {
-    id: 'arrow-model-mesh-test',
+  const firstBatch = makeArrowModelTable(1).batches[0];
+  const secondBatch = makeArrowModelTable(2).batches[0];
+  const arrowTable = new arrow.Table([firstBatch, secondBatch]);
+  const table = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout: SHADER_LAYOUT});
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-model-batched-draw-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: SHADER_LAYOUT,
+    table
+  });
+  const renderPass = device.getDefaultRenderPass();
+  const previousPipeline = model.pipeline;
+  const previousBufferLayout = model.bufferLayout;
+  const positionsBuffers = table.batches.map(batch =>
+    getConcreteTestBuffer(batch.gpuVectors.positions.data[0].buffer)
+  );
+  const drawCalls: {
+    instanceCount?: number;
+    buffer?: unknown;
+  }[] = [];
+  const draw = model.pipeline.draw.bind(model.pipeline);
+
+  model.pipeline.draw = options => {
+    const positionsBinding = options.vertexArray.attributes[0];
+    drawCalls.push({
+      instanceCount: options.instanceCount,
+      buffer: positionsBinding
+    });
+    return draw(options);
+  };
+
+  t.ok(model.drawBatches(renderPass), 'draws every retained Arrow record batch');
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.instanceCount),
+    [1, 2],
+    'uses each batch row count as the draw instance count'
+  );
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.buffer),
+    positionsBuffers,
+    'binds each preserved batch GPU buffer directly'
+  );
+  t.equal(model.pipeline, previousPipeline, 'does not rebuild the render pipeline');
+  t.deepEqual(model.bufferLayout, previousBufferLayout, 'keeps the existing buffer layout');
+  t.equal(model.instanceCount, arrowTable.numRows, 'restores the table-level inferred row count');
+  t.equal(
+    model.vertexArray.attributes[0],
+    getConcreteTestBuffer(table.attributes.positions),
+    'restores table-level model attributes after batched drawing'
+  );
+
+  drawCalls.length = 0;
+  table.packBatches();
+  t.ok(model.drawBatches(renderPass), 'draws the explicitly packed table');
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.instanceCount),
+    [3],
+    'packing reduces the preserved table to one draw'
+  );
+
+  renderPass.destroy();
+  model.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('makeGPUGeometryFromArrow converts Mesh Arrow tables for Model rendering', t => {
+  const device = new NullDevice({});
+  const geometry = makeGPUGeometryFromArrow(device, {arrowMesh: makeArrowModelMeshTable()});
+  const model = new Model(device, {
+    id: 'gpu-model-mesh-arrow-test',
     vs: DUMMY_MESH_VS,
     fs: DUMMY_FS,
     shaderLayout: MESH_SHADER_LAYOUT,
-    arrowMesh
+    geometry
   });
 
-  t.ok(model.arrowGeometry, 'creates ArrowGeometry');
-  t.equal(model.arrowGPUTable, undefined, 'does not create ArrowGPUTable for mesh input');
   t.equal(model.vertexCount, 3, 'uses Mesh Arrow index count as vertex count');
   t.ok(model.vertexArray.indexBuffer, 'binds Mesh Arrow index buffer');
   t.deepEqual(
@@ -219,33 +328,25 @@ test('ArrowModel creates a Model from a Mesh Arrow table', t => {
   );
 
   model.destroy();
+  geometry.destroy();
   t.end();
 });
 
-test('ArrowModel validates required shader layout and duplicate attributes', t => {
+test('GPUTableModel validates duplicate explicit GPU table attributes and bindings', t => {
   const device = new NullDevice({});
-  const arrowTable = makeArrowModelTable();
+  const table = makeGPUTableFromArrowTable(device, makeArrowModelTable(), {
+    shaderLayout: STORAGE_SHADER_LAYOUT
+  });
   const duplicateBuffer = device.createBuffer({data: new Float32Array([0, 0, 1, 1])});
 
   t.throws(
     () =>
-      new ArrowModel(device, {
-        id: 'arrow-model-missing-layout-test',
+      new GPUTableModel(device, {
+        id: 'gpu-table-model-duplicate-attribute-test',
         vs: DUMMY_VS,
         fs: DUMMY_FS,
-        arrowTable
-      }),
-    /requires shaderLayout/,
-    'requires shaderLayout'
-  );
-  t.throws(
-    () =>
-      new ArrowModel(device, {
-        id: 'arrow-model-duplicate-attribute-test',
-        vs: DUMMY_VS,
-        fs: DUMMY_FS,
-        shaderLayout: SHADER_LAYOUT,
-        arrowTable,
+        shaderLayout: STORAGE_SHADER_LAYOUT,
+        table,
         attributes: {positions: duplicateBuffer}
       }),
     /duplicates an explicit attribute/,
@@ -253,19 +354,20 @@ test('ArrowModel validates required shader layout and duplicate attributes', t =
   );
   t.throws(
     () =>
-      new ArrowModel(device, {
-        id: 'arrow-model-duplicate-source-test',
-        vs: DUMMY_MESH_VS,
+      new GPUTableModel(device, {
+        id: 'gpu-table-model-duplicate-binding-test',
+        vs: DUMMY_VS,
         fs: DUMMY_FS,
-        shaderLayout: MESH_SHADER_LAYOUT,
-        arrowMesh: makeArrowModelMeshTable(),
-        arrowTable
+        shaderLayout: STORAGE_SHADER_LAYOUT,
+        table,
+        bindings: {colors: duplicateBuffer}
       }),
-    /only one of arrowMesh, arrowTable, or streamingArrowGPUTable/,
-    'rejects duplicate Arrow sources'
+    /duplicates an explicit binding/,
+    'rejects duplicate explicit storage bindings'
   );
 
   duplicateBuffer.destroy();
+  table.destroy();
   t.end();
 });
 
@@ -344,7 +446,9 @@ function makeArrowModelIndicesVector(indices: Int32Array, vertexCount: number): 
     0,
     indices.length,
     0,
-    {[arrow.BufferType.DATA]: indices}
+    {
+      [arrow.BufferType.DATA]: indices
+    }
   );
   const indicesData = new arrow.Data<arrow.List<arrow.Int32>>(
     indicesType,
@@ -359,4 +463,8 @@ function makeArrowModelIndicesVector(indices: Int32Array, vertexCount: number): 
   );
 
   return new arrow.Vector([indicesData]);
+}
+
+function getConcreteTestBuffer(buffer: Buffer | DynamicBuffer): Buffer {
+  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }

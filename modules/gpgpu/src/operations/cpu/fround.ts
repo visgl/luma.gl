@@ -3,13 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTable} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {runCPUTransform} from './common';
 import type {TypedArray} from '@luma.gl/core';
 
-export const fround: OperationHandler<{x: GPUTable}> = async ({inputs, output, target}) => {
-  runCPUTransform({
-    func: (x: TypedArray, out: TypedArray) => {
+export const fround: OperationHandler<{x: GPUTableEvaluator}> = async ({
+  inputs,
+  output,
+  target
+}) => {
+  return runCPUTransform({
+    func: (out: TypedArray, x: TypedArray) => {
       const vertexSize = out.length / 2;
       const f64Arr = new Float64Array(x.buffer);
       for (let i = 0; i < vertexSize; i++) {

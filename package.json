@@ -51,6 +51,9 @@
     "@loaders.gl/gltf": "~4.4.0",
     "@loaders.gl/polyfills": "~4.4.0",
     "@luma.gl/devtools-extensions": "workspace:*",
+    "@math.gl/dggs-geohash": "^4.1.0",
+    "@math.gl/dggs-quadkey": "^4.1.0",
+    "@math.gl/dggs-s2": "^4.1.0",
     "@probe.gl/bench": "^4.1.1",
     "@probe.gl/stats": "^4.1.1",
     "@probe.gl/stats-widget": "^4.1.1",
@@ -61,6 +64,8 @@
     "@vitest/browser": "^4.0.18",
     "@vitest/browser-playwright": "^4.0.18",
     "@vitest/coverage-v8": "^4.0.18",
+    "a5-js": "^0.8.0",
+    "h3-js": "^4.4.0",
     "pre-commit": "^1.2.2",
     "vite": "^8.0.0",
     "vitest": "^4.0.18"
@@ -93,5 +98,5 @@
     "@math.gl/types": "^4.1.0",
     "@types/offscreencanvas": "^2019.7.3"
   },
-  "packageManager": "yarn@4.13.0"
+  "packageManager": "yarn@4.13.0+sha512.5c20ba010c99815433e5c8453112165e673f1c7948d8d2b267f4b5e52097538658388ebc9f9580656d9b75c5cc996f990f611f99304a2197d4c56d21eea370e7"
 }

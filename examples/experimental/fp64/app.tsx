@@ -548,6 +548,7 @@ function getOverlayLines(zoomPreset: ZoomPreset, currentZoomLabel: string): stri
     `y = ${zoomPreset.centerY}`,
     `scale = ${currentZoomLabel}`,
     `zoom = ${INITIAL_PIXEL_SCALE} -> ${MIN_PIXEL_SCALE}`,
+    'fp64 = fp64arithmetic',
     'iterations = adaptive'
   ];
 }
@@ -985,11 +986,11 @@ function getVisualizationSpecs(): VisualizationSpec[] {
     {
       clearColor: [0.01, 0.015, 0.03, 1],
       description:
-        'FP64 Mandelbrot fragment shader using the same zoom path, with center and scale split into hi/lo parts before upload.',
+        'FP64 Mandelbrot fragment shader using fp64arithmetic, with center and scale split into hi/lo parts before upload.',
       fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
       fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
       kind: 'fp64',
-      title: 'Mandelbrot FP64'
+      title: 'Mandelbrot FP64 (fp64arithmetic)'
     }
   ];
 }

@@ -167,6 +167,11 @@ export type {
   BigTypedArray,
   BigTypedArrayConstructor
 } from './types';
+export {
+  getFloat16ArrayConstructor,
+  isFloat16ArrayConstructor,
+  NativeFloat16ArrayConstructor
+} from './types';
 
 // GPU TYPE UTILS - BASIC DATA TYPES
 

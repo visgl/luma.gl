@@ -14,39 +14,206 @@ export {getArrowPaths, getArrowDataByPath, getArrowVectorByPath} from './arrow/a
 export {getArrowColumnInfo} from './arrow/arrow-column-info';
 
 export {
+  makeArrowVectorFromArray,
   makeArrowFixedSizeListVector,
   isArrowFixedSizeListVector,
   getArrowFixedSizeListValues,
   getArrowVectorBufferSource
 } from './arrow/arrow-fixed-size-list';
+export {
+  prepareArrowMatrixGPUVector,
+  type PreparedArrowMatrixGPUVector,
+  type PrepareArrowMatrixGPUVectorOptions
+} from './arrow/arrow-matrix-gpu-vector';
+export {
+  getArrowMatrixVectorInfo,
+  makeArrowMatrixVector,
+  makeArrowMatrix2x2Vector,
+  makeArrowMatrix2x3Vector,
+  makeArrowMatrix3x2Vector,
+  makeArrowMatrix3x3Vector,
+  makeArrowMatrix4x3Vector,
+  makeArrowMatrix3x4Vector,
+  makeArrowMatrix4x4Vector,
+  MATRIX_LAYOUT_METADATA_KEY,
+  MATRIX_ORDER_METADATA_KEY,
+  MATRIX_SHAPE_METADATA_KEY,
+  type ArrowFloat32Matrix2x2,
+  type ArrowFloat32Matrix2x3,
+  type ArrowFloat32Matrix3x2,
+  type ArrowFloat32Matrix3x3,
+  type ArrowFloat32Matrix4x3,
+  type ArrowFloat32Matrix3x4,
+  type ArrowFloat32Matrix4x4,
+  type ArrowMatrixLayout,
+  type ArrowMatrixOrder,
+  type ArrowMatrixShape,
+  type ArrowMatrixValueType,
+  type ArrowMatrixVectorInfo,
+  type ArrowMatrixVectorOptions
+} from './arrow/arrow-matrix-vector';
+export {
+  getArrowTemporalVectorInfo,
+  prepareArrowTemporalGPUVector,
+  prepareArrowTemporalGPUVectors,
+  TEMPORAL_KIND_METADATA_KEY,
+  TEMPORAL_ORIGIN_METADATA_KEY,
+  TEMPORAL_ORIGIN_POLICY_METADATA_KEY,
+  TEMPORAL_TIMEZONE_METADATA_KEY,
+  TEMPORAL_UNIT_METADATA_KEY,
+  type ArrowRelativeTemporalType,
+  type ArrowTemporalColumnType,
+  type ArrowTemporalKind,
+  type ArrowTemporalOriginPolicy,
+  type ArrowTemporalType,
+  type ArrowTemporalUnit,
+  type ArrowTemporalVectorInfo,
+  type PreparedArrowTemporalGPUVector,
+  type PrepareArrowTemporalGPUVectorOptions,
+  type PrepareArrowTemporalGPUVectorsOptions
+} from './arrow/arrow-temporal-gpu-vector';
+export {
+  expandArrowVector,
+  getArrowVectorByteLength,
+  type ArrowVectorNullValue,
+  type ArrowVectorRowMapping
+} from './arrow/arrow-vector-utils';
 
 export {
-  ArrowGPUVector,
-  type ArrowGPUVectorBufferProps,
-  type ArrowGPUVectorCreateProps,
-  type ArrowGPUVectorFromArrowProps,
-  type ArrowGPUVectorFromBufferProps,
-  type ArrowGPUVectorFromInterleavedProps,
-  type ArrowGPUVectorProps
-} from './arrow/arrow-gpu-vector';
+  makeGPUDataFromArrowData,
+  makeGPURecordBatchFromArrowRecordBatch,
+  makeGPUTableFromArrowTable,
+  makeGPUVectorFromArrow,
+  readArrowGPUDataAsync,
+  readArrowGPUVectorAsync,
+  type GPURecordBatchFromArrowRecordBatchProps,
+  type GPUTableFromArrowTableProps,
+  type GPUVectorFromArrowProps,
+  type GPUVectorFormatForArrowType
+} from './arrow/arrow-gpu-table-adapters';
 export {
-  ArrowGPUTable,
-  type ArrowGPUTableFromVectorsProps,
-  type ArrowGPUTableProps
-} from './arrow/plain-gpu-table';
-export {ArrowGeometry, type ArrowGeometryProps} from './arrow/arrow-geometry';
+  ArrowTableGeometry,
+  makeGPUGeometryFromArrow,
+  type ArrowTableGeometryProps
+} from './arrow/arrow-geometry';
 export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';
 export {
-  StreamingArrowGPUTable,
-  StreamingArrowGPUVector,
-  type StreamingArrowAsyncRecordBatchSource,
-  type StreamingArrowGPUTableProps,
-  type StreamingArrowGPUVectorBufferProps,
-  type StreamingArrowGPUVectorProps,
-  type StreamingArrowRecordBatchSource
-} from './arrow/streaming-arrow-gpu-table';
-export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow/arrow-model';
+  buildArrowPathSegmentTable,
+  createArrowPathPreparedState,
+  prepareArrowPathGPUVectors,
+  type ArrowPathModelProps,
+  type ArrowPathPreparedState,
+  type ArrowPathRenderBatchState,
+  type ArrowPathSegmentLayout,
+  type ArrowPathSegmentTable,
+  type ArrowPathSourceVectors,
+  type ArrowPathViewOriginUpdateProps,
+  type PreparedArrowPathGPUVectors,
+  type PrepareArrowPathGPUVectorsOptions
+} from './arrow/arrow-path-model';
+export {
+  convertGeoArrowTableToDenseUnion,
+  convertGeoArrowVectorToDenseUnion,
+  type GeoArrowDenseUnionTableOptions,
+  type GeoArrowDenseUnionVectorOptions,
+  type GeoArrowSerializedEncoding,
+  convertGeoArrowTableToInterleaved,
+  convertGeoArrowTableToInterleavedAsync,
+  convertGeoArrowVectorToInterleaved,
+  type GeoArrowInterleaveOptions,
+  type GeoArrowNativeEncoding
+} from '@math.gl/geoarrow';
 
+export {
+  prepareArrowPolygonGPUVectorsAsync,
+  prepareArrowPolygonGPUVectors,
+  tesselateAsync,
+  tessellateArrowPolygons,
+  type ArrowMultiPolygonType,
+  type ArrowMultiPolygonVertexColorType,
+  type ArrowGeoArrowGeometryType,
+  type ArrowPolygonColorType,
+  type ArrowPolygonCoordinateType,
+  type ArrowPolygonInputType,
+  type ArrowPolygonRowColorType,
+  type ArrowPolygonSourceVectors,
+  type ArrowPolygonTessellationOptions,
+  type ArrowPolygonTessellationResult,
+  type ArrowPolygonType,
+  type ArrowPolygonVertexColorType,
+  type ArrowTessellatedPolygonType,
+  type ArrowTessellatedPolygonVertexColorType,
+  type PreparedArrowPolygonGPUVectors,
+  type PrepareArrowPolygonGPUVectorsOptions
+} from './arrow/arrow-polygon-model';
+export {
+  AttributePathModel,
+  buildArrowPathSegmentTable as buildAttributePathSegmentTable,
+  createArrowPathPreparedState as createAttributePathPreparedState,
+  type AttributePathModelProps,
+  type AttributePathPreparedState,
+  type AttributePathRenderBatchState,
+  type AttributePathSegmentLayout,
+  type AttributePathSegmentTable,
+  type AttributePathViewOriginUpdateProps
+} from './arrow/attribute-path-model';
+export {
+  convertArrowPathsToAttribute,
+  type ArrowPathSourceVectors as ConvertArrowPathsToAttributeSourceVectors,
+  type PreparedArrowPathGPUVectors as ConvertedArrowAttributePathData,
+  type PrepareArrowPathGPUVectorsOptions as ConvertArrowPathsToAttributeOptions
+} from './arrow/convert-arrow-paths-to-attribute';
+export {
+  createArrowStoragePathState,
+  prepareArrowStoragePathGPUVectors,
+  type ArrowStoragePathBatchState,
+  type ArrowStoragePathInputProps,
+  type ArrowStoragePathModelProps,
+  type ArrowStoragePathRenderBatchState,
+  type ArrowStoragePathState,
+  type PreparedArrowStoragePathGPUVectors
+} from './arrow/arrow-storage-path-model';
+export {
+  StoragePathModel,
+  createArrowStoragePathState as createStoragePathState,
+  type StoragePathBatchState,
+  type StoragePathInputProps,
+  type StoragePathModelProps,
+  type StoragePathRenderBatchState,
+  type StoragePathState
+} from './arrow/storage-path-model';
+export {
+  convertArrowPathsToStorage,
+  type ArrowPathSourceVectors as ConvertArrowPathsToStorageSourceVectors,
+  type PreparedArrowStoragePathGPUVectors as ConvertedArrowStoragePathData,
+  type PrepareArrowPathGPUVectorsOptions as ConvertArrowPathsToStorageOptions
+} from './arrow/convert-arrow-paths-to-storage';
+export {
+  StorageTripsPathModel,
+  type StorageTripsPathModelProps
+} from './arrow/storage-trips-path-model';
+export {
+  convertArrowTripsToStorage,
+  type ArrowPathSourceVectors as ConvertArrowTripsToStorageSourceVectors,
+  type PreparedArrowStoragePathGPUVectors as ConvertedArrowStorageTripsPathData,
+  type PrepareArrowPathGPUVectorsOptions as ConvertArrowTripsToStorageOptions
+} from './arrow/convert-arrow-trips-to-storage';
+export {
+  getDggsUint64Words,
+  packDggsA5CellKey,
+  packDggsGeohashKey,
+  packDggsH3CellKey,
+  packDggsQuadkeyKey,
+  packDggsS2CellKey,
+  prepareDggsCellKeyGPUVector,
+  prepareDggsCellPathGPUVector,
+  type DggsCellEncoding,
+  type DggsCellKeyGPUVectorOptions,
+  type DggsCellPathCoordinateFormat,
+  type DggsCellPathGPUVectorOptions,
+  type PreparedDggsCellKeyGPUVector,
+  type PreparedDggsCellPathGPUVector
+} from './arrow/dggs-gpu-polygons';
 export {
   getArrowVertexFormat,
   getArrowBufferLayout,
@@ -57,20 +224,6 @@ export {
 export {analyzeArrowTable} from './arrow/analyze-arrow-table';
 
 export {getArrowListNestingLevel} from './arrow/arrow-utils';
-
-export {
-  TableBufferPlanner,
-  type AllocationGroupKind,
-  type PlannedColumn,
-  type TableBufferGroup,
-  type TableBufferMapping,
-  type TableBufferPlan,
-  type TableBufferPlannerMode,
-  type TableBufferPlannerModelInfo,
-  type TableBufferPlannerProps,
-  type TableColumnDescriptor,
-  type TableColumnPriority
-} from './arrow/table-buffer-planner';
 
 // GEOARROW
 

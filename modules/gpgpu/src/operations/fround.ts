@@ -3,23 +3,27 @@
 // Copyright (c) vis.gl contributors
 
 import {assert} from '@luma.gl/core';
-import {GPUTable} from '../operation/gpu-table';
+import {
+  getGPUTableEvaluator,
+  GPUTableEvaluator,
+  type GPUTableEvaluatorInput
+} from '../operation/gpu-table-evaluator';
 import {Operation} from '../operation/operation';
 
 /** Deferred float64 split operation. */
-class FroundOperation extends Operation<{x: GPUTable}> {
+class FroundOperation extends Operation<{x: GPUTableEvaluator}> {
   /** Operation name used for backend lookup. */
   name = 'fround';
 
   /** Lazy output table for high and low float32 components. */
-  output: GPUTable;
+  output: GPUTableEvaluator;
 
-  constructor(x: GPUTable) {
+  constructor(x: GPUTableEvaluator) {
     assert(x.type === 'uint32');
     super({x});
 
     const {isConstant, size, length} = x;
-    this.output = new GPUTable({isConstant, type: 'float32', size, length, source: this});
+    this.output = new GPUTableEvaluator({isConstant, type: 'float32', size, length, source: this});
   }
 
   /** Returns a compact expression for debug output. */
@@ -32,10 +36,10 @@ class FroundOperation extends Operation<{x: GPUTable}> {
 /**
  * Splits float64 values into high and low float32 components for fp64-style arithmetic.
  *
- * `GPUTable.fromArray()` represents `Float64Array` input as `uint32` pairs; `fround()` consumes
+ * `GPUTableEvaluator.fromArray()` represents `Float64Array` input as `uint32` pairs; `fround()` consumes
  * that representation and returns a lazy `float32` table containing high values followed by
  * residual low values.
  */
-export function fround(x: GPUTable): GPUTable {
-  return new FroundOperation(x).output;
+export function fround(x: GPUTableEvaluatorInput): GPUTableEvaluator {
+  return new FroundOperation(getGPUTableEvaluator(x)).output;
 }

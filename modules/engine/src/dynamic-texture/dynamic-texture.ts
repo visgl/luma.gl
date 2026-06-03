@@ -263,6 +263,7 @@ export class DynamicTexture {
       this._sampler = null;
       this._view = null;
     }
+    this.isReady = false;
     this.destroyed = true;
   }
 

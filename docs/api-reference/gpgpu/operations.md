@@ -1,45 +1,85 @@
 # Operations
 
-This page is the central API reference for the operations supported by `@luma.gl/gpgpu`.
+This page is the top-level API reference for the lazy operations exported by `@luma.gl/gpgpu`.
 
-Operations are lazy. Calling an operation such as `add()` or `interleave()` returns a new [`GPUTable`](/docs/api-reference/gpgpu/gpu-table) that describes the result, but no GPU work is performed until that table is evaluated.
+Each operation returns a new [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table). No GPU work is performed until that output table is evaluated.
 
 ## Common Behavior
 
-- Each operation returns a new `GPUTable`.
-- Input tables can be constant or per-row.
+- Each operation returns a new `GPUTableEvaluator`.
+- Inputs can be `GPUTableEvaluator` instances or packed single-chunk numeric
+  `GPUVector` instances.
+- Arithmetic operations can also use scalar literals or literal row values.
+- Multi-input operations deduce output `type`, `length`, and constant-ness from their inputs.
 - Output evaluation is backend-driven through `backendRegistry`.
 - Operations can be chained to build larger compute graphs.
+- Operation result evaluators own their materialized immutable output buffer.
 - The CPU backend is registered by default. Register `webglBackend` or `webgpuBackend` before evaluating on those device types.
 
-## `add`
+## Arithmetic
 
-### `add(...args: GPUTable[]): GPUTable`
+The arithmetic API is exported from `@luma.gl/gpgpu` as:
 
-Adds corresponding elements from two or more input tables.
+- `add`
+- `subtract`
+- `multiply`
+- `divide`
+- `pow`
+- `sqrt`
+- `abs`
+- `sin`
+- `cos`
+- `tan`
+- `exp`
+- `log`
 
-The output:
-
-- uses the largest input row size among the arguments
-- uses the deduced output type from the inputs
-- uses the deduced row count from the inputs
-- treats missing elements as `0` when smaller inputs are combined with larger ones
-
-#### Example
+### Signatures
 
 ```ts
-const a = GPUTable.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
-const b = GPUTable.fromConstant([10, 20]);
-const c = GPUTable.fromConstant([100, 200]);
+type ArithmeticArgument = GPUTableEvaluatorInput | number | number[];
 
-const result = add(a, b, c);
+add(...args: ArithmeticArgument[]): GPUTableEvaluator
+subtract(...args: ArithmeticArgument[]): GPUTableEvaluator
+multiply(...args: ArithmeticArgument[]): GPUTableEvaluator
+divide(...args: ArithmeticArgument[]): GPUTableEvaluator
+
+pow(base: ArithmeticArgument, exponent: ArithmeticArgument): GPUTableEvaluator
+sqrt(arg: ArithmeticArgument): GPUTableEvaluator
+abs(arg: ArithmeticArgument): GPUTableEvaluator
+sin(arg: ArithmeticArgument): GPUTableEvaluator
+cos(arg: ArithmeticArgument): GPUTableEvaluator
+tan(arg: ArithmeticArgument): GPUTableEvaluator
+exp(arg: ArithmeticArgument): GPUTableEvaluator
+log(arg: ArithmeticArgument): GPUTableEvaluator
+```
+
+### Behavior
+
+- Arithmetic operations accept `GPUTableEvaluator` inputs, scalar literals, or literal row values such as `[1, 2, 3]`.
+- `add`, `subtract`, `multiply`, and `divide` fold left to right across all arguments.
+- The output row size is the largest row size among the table and literal inputs.
+- Missing elements are treated as `0` for elementwise arithmetic when smaller rows are combined with larger rows.
+- `pow`, `sqrt`, `sin`, `cos`, `tan`, `exp`, and `log` always produce `float32` output.
+
+### Example
+
+```ts
+const xyz = GPUTableEvaluator.fromArray(
+  new Float32Array([
+    1, 2, 3,
+    4, 5, 6
+  ]),
+  {size: 3}
+);
+
+const result = add(xyz, [10, 20, 30], 1);
 ```
 
 ## `interleave`
 
-### `interleave(...args: GPUTable[]): GPUTable`
+### `interleave(...args: GPUTableEvaluatorInput[]): GPUTableEvaluator`
 
-Concatenates rows from multiple input tables in argument order.
+Concatenates each input row in argument order.
 
 For two inputs `x` and `y`, each output row is:
 
@@ -53,43 +93,189 @@ The output:
 - uses the deduced output type from the inputs
 - uses the deduced row count from the inputs
 
-#### Example
+### Example
 
 ```ts
-const xyz = GPUTable.fromArray(new Float32Array([
-  0, 0, 0,
-  1, 0, 0
-]), {size: 3});
+const xyz = GPUTableEvaluator.fromArray(
+  new Float32Array([
+    0, 0, 0,
+    1, 0, 0
+  ]),
+  {size: 3}
+);
 
-const id = GPUTable.fromArray(new Float32Array([5, 6]), {size: 1});
+const id = GPUTableEvaluator.fromArray(new Float32Array([5, 6]), {size: 1});
 
 const result = interleave(xyz, id);
 ```
 
-## `fround`
+## `gather`
 
-### `fround(x: GPUTable): GPUTable`
+### `gather(ids: GPUTableEvaluatorInput, sourceValues: GPUTableEvaluatorInput): GPUTableEvaluator`
 
-Splits float64 values into float32 high and low parts.
+Gathers rows from `sourceValues` using 0-based row indices from `ids`.
 
-This operation expects the input table to use `uint32` storage, which is how `GPUTable.fromArray()` represents `Float64Array` input internally.
+The output:
 
-For each float64 value `d`, the output stores all high parts first, followed by all low parts:
+- uses `type = sourceValues.type`
+- uses `size = sourceValues.size`
+- uses `length = ids.length`
+- is constant when `ids` is constant
 
-- `high = Math.fround(d)`
-- `low = d - high`
+Behavior:
 
-This is useful for workflows that need fp64-style precision while running on float32-oriented GPU pipelines.
+- Each row in `ids` must contain one scalar index.
+- Out-of-range indices return a zero row.
+- Indices are interpreted as row indices into `sourceValues`.
 
-#### Example
+### Example
 
 ```ts
-const source = GPUTable.fromArray(new Float64Array([Math.PI, Math.E]), {size: 1});
+const ids = GPUTableEvaluator.fromArray([2, 0, 1], {type: 'uint32', size: 1});
+const values = GPUTableEvaluator.fromArray(
+  [10, 11, 20, 21, 30, 31],
+  {size: 2}
+);
+
+const result = gather(ids, values);
+```
+
+## `extent`
+
+### `extent(sourceValues: GPUTableEvaluatorInput): GPUTableEvaluator`
+
+Computes per-channel extents across all rows in `sourceValues`.
+
+The output:
+
+- uses `type = sourceValues.type`
+- uses `size = 2`
+- uses `length = sourceValues.size`
+
+Each output row stores `[min, max]` for one channel of the input table.
+
+For an input table with `size = 2`, the output rows are:
+
+```text
+row 0: [min(x), max(x)]
+row 1: [min(y), max(y)]
+```
+
+### Example
+
+```ts
+const points = GPUTableEvaluator.fromArray(
+  [4, 9, -1, 8, 7, 3, 2, 12],
+  {size: 2}
+);
+
+const result = extent(points);
+```
+
+## `sequence`
+
+### `sequence(count: number, start?: number, step?: number): GPUTableEvaluator`
+
+Generates a lazy integer sequence.
+
+The output:
+
+- uses `type = 'sint32'`
+- uses `size = 1`
+- uses `length = count`
+
+Behavior:
+
+- `start` defaults to `0`
+- `step` defaults to `1`
+- `count`, `start`, and `step` must be integers
+- `count` must be non-negative
+- `step` must not be `0`
+
+### Example
+
+```ts
+const a = sequence(5);        // 0, 1, 2, 3, 4
+const b = sequence(4, 10, 2); // 10, 12, 14, 16
+```
+
+## `segmentedMap`
+
+### `segmentedMap(segments: GPUTableEvaluatorInput, vertexCount: number): GPUTableEvaluator`
+
+Maps each vertex index to its containing segment and its offset within that segment.
+
+The output:
+
+- uses `type = 'uint32'`
+- uses `size = 2`
+- uses `length = vertexCount`
+
+Each output row stores:
+
+```text
+[segmentIndex, vertexIndexInSegment]
+```
+
+Behavior:
+
+- `segments` must be a scalar `uint32` table of segment start indices.
+- `vertexCount` defines the output row count and the exclusive end of the final segment.
+- Segment starts must be non-decreasing.
+- Duplicate starts are allowed and represent empty segments.
+- `segments[0]` must be `0`.
+
+For segment starts `[0, 3, 3, 6]`, the output rows begin:
+
+```text
+row 0: [0, 0]
+row 1: [0, 1]
+row 2: [0, 2]
+row 3: [2, 0]
+row 4: [2, 1]
+row 5: [2, 2]
+row 6: [3, 0]
+```
+
+### Example
+
+```ts
+const segments = GPUTableEvaluator.fromArray([0, 3, 5], {type: 'uint32', size: 1});
+
+const result = segmentedMap(segments, 7);
+```
+
+## `fround`
+
+### `fround(x: GPUTableEvaluatorInput): GPUTableEvaluator`
+
+Splits float64 values into float32 high and low parts for fp64-style workflows.
+
+`GPUTableEvaluator.fromArray()` represents `Float64Array` input as `uint32` pairs. `fround()` consumes that representation and returns a `float32` table whose row size is doubled:
+
+- the first half of each row stores the high float32 parts
+- the second half stores the low residual parts
+
+### Example
+
+```ts
+const source = GPUTableEvaluator.fromArray(
+  new Float64Array([Math.PI, Math.E]),
+  {size: 1}
+);
+
 const result = fround(source);
 ```
 
 ## Remarks
 
 - `add()` and `interleave()` accept multiple arguments and fold from left to right.
-- `fround()` is specialized and only accepts one input table.
+- `GPUVector` inputs are adapted into evaluator views through
+  `vector.data[0].buffer`; their buffers remain externally owned.
+- `fround()` is specialized and only accepts one input.
 - As new operations are added to `@luma.gl/gpgpu`, this page should remain the top-level reference for them.
+- Arithmetic operations can mix tables and literals in the same expression.
+- `gather()` is currently a direct row-index gather, not a key-based lookup.
+- `extent()` is a reduction operation: it collapses many input rows into one `[min, max]` row per channel.
+- `sequence()` produces data without any table inputs, but still returns a lazy `GPUTableEvaluator`.
+- `segmentedMap()` is a per-vertex segment-annotation operation, not a segmented reduction.

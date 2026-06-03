@@ -1,25 +1,87 @@
 # @luma.gl/text
 
-Experimental text utilities for generating 3D text geometries compatible with the luma.gl engine. The implementation adapts THREE.js text and extrusion utilities for creating vertex data from typeface JSON fonts.
+Experimental 2D text utilities for luma.gl. The package contains:
+
+- Arrow-aware text conversion helpers that prepare GPUVector rows, glyph layout, and generated GPU state.
+- `AttributeTextModel`, a one-line label renderer that renders prepared attribute vertex buffers.
+- `StorageTextModel`, a WebGPU-only renderer that renders prepared storage-backed glyph state.
+- `DictionaryTextModel`, a WebGPU-only renderer that renders prepared dictionary-compressed glyph state.
 
 ## Usage
 
 ```ts
-import {TextGeometry, parseFont} from '@luma.gl/text'
-import helvetiker from './fonts/helvetiker_regular.typeface.json'
+import * as arrow from 'apache-arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {
+  AttributeTextModel,
+  convertArrowTextToAttribute,
+  convertArrowTextToAttributeState
+} from '@luma.gl/text';
 
-const font = parseFont(helvetiker)
-const geometry = new TextGeometry('Hello luma.gl', {
-  font,
-  align: 'center',
-  size: 24,
-  depth: 4,
-  curveSegments: 8,
-  bevelEnabled: true,
-  bevelThickness: 1,
-  bevelSize: 0.5,
-  bevelSegments: 2
-})
+const sourceVectors = {
+  positions: makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 0.5, 0.25])
+  ),
+  texts: arrow.vectorFromArray(['hello', 'luma.gl'], new arrow.Utf8())
+};
+
+const convertedText = convertArrowTextToAttribute(device, {
+  sourceVectors
+});
+
+const attributeState = convertArrowTextToAttributeState(device, {
+  ...convertedText,
+  characterSet: 'auto',
+  fontSettings: {sdf: true}
+});
+
+const model = new AttributeTextModel(device, {
+  id: 'text',
+  attributeState,
+  ownsAttributeState: true
+});
 ```
 
-The resulting `TextGeometry` exposes position, normal, and UV attributes ready for consumption by luma.gl models.
+Layer and data-preparation code owns Arrow source vectors and tables. It calls helpers such as `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()`, `createArrowAttributeTextState()`, `createArrowStorageTextState()`, and `createArrowDictionaryStorageTextState()` to produce prepared GPU resources. Renderer models consume only GPUVector-backed or prepared GPU state.
+
+Text input vector support:
+
+| Input Vector | Attribute State | Storage State |
+| --- | --- | --- |
+| positions | `GPUVector<FixedSizeList<Float32>[2]>` | `GPUVector<FixedSizeList<Float32>[2]>` |
+| texts | `GPUVector<Utf8 \| Dictionary<Utf8, Int>>` | `GPUVector<Utf8 \| Dictionary<Utf8, Int>>` |
+| colors? | `GPUVector<FixedSizeList<Uint8>[4]>` | `GPUVector<FixedSizeList<Uint8>[4]>` |
+| angles? | `GPUVector<Float32>` | `GPUVector<Float32>` |
+| sizes? | `GPUVector<Float32>` | `GPUVector<Float32>` |
+| pixel offsets? | `GPUVector<FixedSizeList<Float32>[2]>` | `GPUVector<FixedSizeList<Float32>[2]>` |
+| clip rects? | Expanded into generated per-glyph vertex data. | Packed into row storage. |
+| text anchors? | Custom label attribute/shader responsibility. | `GPUVector<Uint8>` |
+| alignment baselines? | Custom label attribute/shader responsibility. | `GPUVector<Uint8>` |
+
+Text column support:
+
+| Text Vector | Attribute State | Storage State | Dictionary State |
+| --- | --- | --- | --- |
+| `Vector<Utf8>` | Supported | Supported | Not supported |
+| `Vector<Dictionary<Utf8, Int8 \| Int16 \| Int32 \| Uint8 \| Uint16 \| Uint32>>` | Supported | Supported | Supported with compressed dictionary glyph storage |
+
+Text draw buffers:
+
+| Buffer | Attribute Model | Storage Model | Description |
+| --- | --- | --- | --- |
+| row positions | vertex | row | Per-label anchor positions for the currently bound input rows or storage batch. |
+| row colors | vertex | row | Optional packed RGBA8 per-label colors, or a one-row storage fallback buffer. |
+| row angles | vertex | row | Optional per-label rotation angles, or a one-row storage fallback buffer. |
+| row sizes | vertex | row | Optional per-label text sizes, or a one-row storage fallback buffer. |
+| row pixel offsets | vertex | row | Optional per-label pixel offsets, or a one-row storage fallback buffer. |
+| row clip rects | - | row | Optional packed `Int16[4]` clip rectangles remain row storage in the storage model; the attribute model expands them into `expandedGlyphVertexData`. |
+| expandedGlyphVertexData | vertex | - | Expanded per-glyph vertex payload for the attribute model: model-generated offsets, inline glyph frames, and global source-row ids. |
+| compactGlyphVertexData | - | vertex | Compact storage-path glyph payload: packed offsets, glyph ids, and optional global source-row ids. |
+| glyph frames | vertex | data | Per-glyph atlas frame attributes in the attribute model; shared atlas-frame storage indexed by glyph id in the storage model. |
+| atlas texture | data | data | Font atlas sampled by the fragment shader. |
+| sampler | data | data | Sampler paired with the atlas texture. |
+| style config uniform | - | data | Per-draw fallback style values, row-style presence flags, clip flag, row bases, and SDF alpha threshold/smoothing. |
+
+`getGpuUtf8MapShaderSource()` and `getGpuUtf8MapShaderBindings()` expose reusable WebGPU UTF-8 mapping helpers. Consumers can compose sparse UTF-8 byte traversal, code point decode, and lookup-table mapping into text-oriented compute shaders.

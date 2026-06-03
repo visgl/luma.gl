@@ -16,7 +16,7 @@ const sharedArguments = [
 ];
 
 runBiome('format', mode === 'fix' ? ['--write'] : []);
-runBiome('lint', mode === 'fix' ? ['--write', '--diagnostic-level=error'] : ['--diagnostic-level=error']);
+runBiome('lint', ['--diagnostic-level=error']);
 
 function runBiome(command, commandArguments) {
   const result = spawnSync(

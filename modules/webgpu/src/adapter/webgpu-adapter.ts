@@ -8,6 +8,62 @@
 import {Adapter, DeviceProps, log} from '@luma.gl/core';
 import type {WebGPUDevice} from './webgpu-device';
 
+type WebGPUSupportedLimitName = Exclude<keyof GPUSupportedLimits, '__brand'>;
+
+const WEBGPU_SUPPORTED_LIMIT_NAMES: readonly WebGPUSupportedLimitName[] = [
+  'maxTextureDimension1D',
+  'maxTextureDimension2D',
+  'maxTextureDimension3D',
+  'maxTextureArrayLayers',
+  'maxBindGroups',
+  'maxBindGroupsPlusVertexBuffers',
+  'maxBindingsPerBindGroup',
+  'maxDynamicUniformBuffersPerPipelineLayout',
+  'maxDynamicStorageBuffersPerPipelineLayout',
+  'maxSampledTexturesPerShaderStage',
+  'maxSamplersPerShaderStage',
+  'maxStorageBuffersPerShaderStage',
+  'maxStorageBuffersInVertexStage',
+  'maxStorageBuffersInFragmentStage',
+  'maxStorageTexturesPerShaderStage',
+  'maxStorageTexturesInVertexStage',
+  'maxStorageTexturesInFragmentStage',
+  'maxUniformBuffersPerShaderStage',
+  'maxUniformBufferBindingSize',
+  'maxStorageBufferBindingSize',
+  'minUniformBufferOffsetAlignment',
+  'minStorageBufferOffsetAlignment',
+  'maxVertexBuffers',
+  'maxBufferSize',
+  'maxVertexAttributes',
+  'maxVertexBufferArrayStride',
+  'maxInterStageShaderVariables',
+  'maxColorAttachments',
+  'maxColorAttachmentBytesPerSample',
+  'maxComputeWorkgroupStorageSize',
+  'maxComputeInvocationsPerWorkgroup',
+  'maxComputeWorkgroupSizeX',
+  'maxComputeWorkgroupSizeY',
+  'maxComputeWorkgroupSizeZ',
+  'maxComputeWorkgroupsPerDimension',
+  'maxImmediateSize'
+];
+
+export function getRequiredWebGPULimits(
+  supportedLimits: GPUSupportedLimits
+): Record<string, number> {
+  const requiredLimits: Record<string, number> = {};
+
+  for (const limitName of WEBGPU_SUPPORTED_LIMIT_NAMES) {
+    const limitValue = supportedLimits[limitName];
+    if (typeof limitValue === 'number') {
+      requiredLimits[limitName] = limitValue;
+    }
+  }
+
+  return requiredLimits;
+}
+
 export class WebGPUAdapter extends Adapter {
   /** type of device's created by this adapter */
   readonly type: WebGPUDevice['type'] = 'webgpu';
@@ -58,18 +114,7 @@ export class WebGPUAdapter extends Adapter {
       // Require all features
       requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
 
-      // Require all limits
-      // Filter out chrome specific keys (avoid crash)
-      const limits = Object.keys(adapter.limits).filter(
-        key => !['minSubgroupSize', 'maxSubgroupSize'].includes(key)
-      );
-      for (const key of limits) {
-        const limit = key as keyof GPUSupportedLimits;
-        const value = adapter.limits[limit];
-        if (typeof value === 'number') {
-          requiredLimits[limit] = value;
-        }
-      }
+      Object.assign(requiredLimits, getRequiredWebGPULimits(adapter.limits));
     }
 
     const gpuDevice = await adapter.requestDevice({

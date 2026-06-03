@@ -10,6 +10,18 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
+## Upgrading to v10.0
+
+**@luma.gl/arrow**
+- Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
+  - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
+  - `TableTransform`, `GPUTableComputation`
+  - `GPUTableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
+- Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
+  - `makeGPUDataFromArrowData(...)`, `makeGPUVectorFromArrow(...)`, `makeGPURecordBatchFromArrowRecordBatch(...)`, and `makeGPUTableFromArrowTable(...)`
+  - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`
+- Arrow append-in-place helpers and streaming wrapper classes have been removed. Convert each Arrow record batch with `makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, ...)` and retain it with `gpuTable.addBatch(...)`.
+
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**

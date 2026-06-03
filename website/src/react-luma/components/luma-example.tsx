@@ -1,4 +1,4 @@
-import React, {CSSProperties, FC, useEffect, useMemo, useRef, useState} from 'react'; // eslint-disable-line
+import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {Device, luma} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
@@ -13,6 +13,8 @@ import {logError} from '../utils/error-utils';
 
 // import {VRDisplay} from '@luma.gl/experimental';
 import {
+  createDevice,
+  createPresentationDevice,
   getCanvasContainer,
   getPreferredAvailableDeviceType,
   type DeviceType,
@@ -59,8 +61,8 @@ const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
   'GPU Memory': 'memory',
   'Buffer Memory': 'memory',
   'Texture Memory': 'memory',
-  'Referenced Buffer Memory': 'memory',
-  'Referenced Texture Memory': 'memory',
+  'External Buffer Memory': 'memory',
+  'External Texture Memory': 'memory',
   'Swap Chain Texture': 'memory'
 } as const;
 
@@ -329,8 +331,8 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
   const sourceUrl = getExampleSourceUrl(props);
   const title = getExampleTitle(props.id, props.title);
   const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
-  const maxInfoHeight = 400;
-  const maxInfoContentHeight = 320;
+  const maxInfoHeight = 760;
+  const maxInfoContentHeight = 680;
   const toggleCollapsed = () => setIsCollapsed(value => !value);
 
   useEffect(() => {
@@ -539,52 +541,65 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
   const device = useStore(store => store.device);
-  const setDeviceType = useStore(store => store.setDeviceType);
-  const allowedDeviceTypes = useMemo(
-    () =>
-      props.devices?.map(deviceName =>
-        deviceName === 'webgl2' ? 'webgl' : 'webgpu'
-      ) as DeviceType[] | undefined,
-    [props.devices]
-  );
+  const [effectiveDeviceType, setEffectiveDeviceType] = useState<DeviceType | undefined>();
+  const [effectiveDevice, setEffectiveDevice] = useState<Device | undefined>();
 
   useEffect(() => {
-    if (!allowedDeviceTypes || (deviceType && allowedDeviceTypes.includes(deviceType))) {
-      return;
-    }
+    let isCancelled = false;
+    const requestedDeviceTypes = getRequestedDeviceTypes(props.devices);
 
-    let cancelled = false;
-    const selectSupportedDeviceType = async () => {
-      const preferredDeviceType = await getPreferredAvailableDeviceType(allowedDeviceTypes);
-      if (!cancelled && preferredDeviceType) {
-        await setDeviceType(preferredDeviceType);
+    const selectEffectiveDevice = async () => {
+      if (!deviceType || !device) {
+        if (!isCancelled) {
+          setEffectiveDeviceType(undefined);
+          setEffectiveDevice(undefined);
+        }
+        return;
+      }
+
+      if (!requestedDeviceTypes || requestedDeviceTypes.includes(deviceType)) {
+        if (!isCancelled) {
+          setEffectiveDeviceType(deviceType);
+          setEffectiveDevice(device);
+        }
+        return;
+      }
+
+      const fallbackDeviceType = await getPreferredAvailableDeviceType(requestedDeviceTypes);
+      if (!fallbackDeviceType) {
+        if (!isCancelled) {
+          setEffectiveDeviceType(deviceType);
+          setEffectiveDevice(device);
+        }
+        return;
+      }
+
+      const fallbackDevice = await createDevice(fallbackDeviceType);
+      await createPresentationDevice(fallbackDeviceType);
+      if (!isCancelled) {
+        setEffectiveDeviceType(fallbackDeviceType);
+        setEffectiveDevice(fallbackDevice);
       }
     };
 
-    void selectSupportedDeviceType();
+    void selectEffectiveDevice();
 
     return () => {
-      cancelled = true;
+      isCancelled = true;
     };
-  }, [allowedDeviceTypes, deviceType, setDeviceType]);
+  }, [deviceType, device, props.devices]);
 
   useEffect(() => {
-    if (
-      !canvasContainerRef.current ||
-      !deviceType ||
-      !device ||
-      (allowedDeviceTypes && !allowedDeviceTypes.includes(deviceType))
-    ) {
+    if (!canvasContainerRef.current || !effectiveDeviceType || !effectiveDevice) {
       return;
     }
 
-    let startupTimeoutId: number | null = null;
     let isCancelled = false;
     let animationLoop: AnimationLoop | null = null;
     let statsWidgets: StatsWidget[] = [];
     let statsIntervalId: number | null = null;
     let previousSwapChainTextureMemory = 0;
-    const defaultCanvasContext = device.getDefaultCanvasContext();
+    const defaultCanvasContext = effectiveDevice.getDefaultCanvasContext();
     const deviceCanvas = defaultCanvasContext.canvas;
     let frameRateController: FrameRateController | null = null;
     const asyncCreateLoop = async () => {
@@ -603,11 +618,11 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
       deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
       canvasContainerRef.current?.replaceChildren(deviceCanvas);
-      setActiveCpuHotspotProfilerDevice(device);
+      setActiveCpuHotspotProfilerDevice(effectiveDevice);
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
         stats: luma.stats.get('GPU Time and Memory'),
-        device,
+        device: effectiveDevice,
         autoResizeViewport: true,
         autoResizeDrawingBuffer: true
       });
@@ -634,8 +649,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           previousSwapChainTextureMemory = nextSwapChainTextureMemory;
         };
 
-        if (device) {
-          updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(device));
+        if (effectiveDevice) {
+          updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(effectiveDevice));
         }
 
         statsWidgets = [
@@ -644,7 +659,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             container: statsPanelRef.current,
             css: STAT_STYLES,
             formatters: getGpuTimeAndMemoryStatFormatters(
-              device,
+              effectiveDevice,
               frameRateController.formatFrameRate
             )
           }),
@@ -659,8 +674,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         }
 
         const updateStatsWidget = () => {
-          if (device) {
-            updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(device));
+          if (effectiveDevice) {
+            updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(effectiveDevice));
           }
 
           frameRateController?.update();
@@ -674,32 +689,27 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         statsIntervalId = window.setInterval(updateStatsWidget, 250);
       }
 
-      // Start the actual example
-      animationLoop?.start();
+      if (animationLoop) {
+        await animationLoop.start();
+      }
     };
 
-    // Delay startup one tick so React Strict Mode's development-only warmup mount
-    // can be cancelled before we create and start a duplicate animation loop.
-    startupTimeoutId = window.setTimeout(() => {
-      currentTask.current = Promise.resolve(currentTask.current).then(() => {
+    currentTask.current = Promise.resolve(currentTask.current)
+      .then(() => {
         if (isCancelled) {
           return;
         }
 
-        asyncCreateLoop().catch(error => {
-          if (!isCancelled) {
-            logError(`Example startup failed for ${deviceType}`, error);
-          }
-        });
+        return asyncCreateLoop();
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          logError(`Example startup failed for ${effectiveDeviceType}`, error);
+        }
       });
-    }, 0);
 
     return () => {
       isCancelled = true;
-      if (startupTimeoutId !== null) {
-        window.clearTimeout(startupTimeoutId);
-        startupTimeoutId = null;
-      }
 
       currentTask.current = Promise.resolve(currentTask.current)
         .then(() => {
@@ -728,18 +738,17 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             animationLoop = null;
           }
 
-          clearActiveCpuHotspotProfilerDevice(device);
+          clearActiveCpuHotspotProfilerDevice(effectiveDevice);
           canvasContainerRef.current?.replaceChildren();
           getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
-          logError(`Example cleanup failed for ${deviceType}`, error);
+          logError(`Example cleanup failed for ${effectiveDeviceType}`, error);
         });
     };
   }, [
-    allowedDeviceTypes,
-    deviceType,
-    device,
+    effectiveDeviceType,
+    effectiveDevice,
     showStats,
     props.template,
     props.directory,
@@ -798,7 +807,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           />
         ) : null}
         <div
-          key={deviceType}
+          key={effectiveDeviceType || deviceType}
           ref={canvasContainerRef}
           style={{
             ...EXAMPLE_CANVAS_STYLE,
@@ -824,6 +833,18 @@ function getExampleSourceUrl(props: {
     return `${GITHUB_TREE}/examples/${sourceDirectory}/${props.id}`;
   }
   return null;
+}
+
+function getRequestedDeviceTypes(
+  devices?: ('webgl2' | 'webgpu')[]
+): DeviceType[] | undefined {
+  if (!devices) {
+    return undefined;
+  }
+
+  return devices
+    .map(device => (device === 'webgl2' ? 'webgl' : 'webgpu'))
+    .filter((device, index, array) => array.indexOf(device) === index) as DeviceType[];
 }
 
 function getExampleTitle(id?: string, title?: string): string {

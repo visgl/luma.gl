@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Buffer} from '@luma.gl/core';
-import {GPUTable} from './gpu-table';
+import type {TypedArray} from '@math.gl/types';
+import {GPUTableEvaluator} from './gpu-table-evaluator';
 import {backendRegistry} from './backend-registry';
 
 /** Backend implementation for a single lazy GPGPU operation. */
@@ -13,10 +14,15 @@ export type OperationHandler<InputsT extends Record<string, any> = any> = (args:
   /** Operation inputs. */
   inputs: InputsT;
   /** Logical output table describing the target layout. */
-  output: GPUTable;
+  output: GPUTableEvaluator;
   /** GPU buffer that receives operation output. */
   target: Buffer;
-}) => Promise<void>;
+}) => Promise<OperationHandlerResult>;
+export type OperationHandlerResult = {
+  success: boolean;
+  value?: TypedArray;
+  error?: Error;
+};
 
 /**
  * Base class for deferred GPGPU operations.
@@ -28,49 +34,40 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
   /** Input table map for this operation. */
   inputs: InputsT;
   /** Input tables that need evaluation before this operation can run. */
-  dependencies: GPUTable[];
+  dependencies: GPUTableEvaluator[];
 
   constructor(inputs: InputsT) {
     this.inputs = inputs;
-    this.dependencies = Object.values(inputs).filter(i => i instanceof GPUTable);
+    this.dependencies = Object.values(inputs).filter(i => i instanceof GPUTableEvaluator);
   }
 
   /** Unique identifier of this operation, e.g. 'add' */
   abstract get name(): string;
 
   /** Logical output table produced by this operation. */
-  abstract get output(): GPUTable;
+  abstract get output(): GPUTableEvaluator;
 
   /** Human friendly string that describes this operation */
   abstract toString(): string;
 
   /** Evaluates dependencies and writes this operation's result into `target`. */
-  async execute(device: Device, target: Buffer): Promise<void> {
+  async execute(device: Device, target: Buffer): Promise<OperationHandlerResult> {
     // Resolve dependencies
     for (const dep of this.dependencies) {
       await dep.evaluate(device);
     }
-    if (this.shouldExecuteOnCPU()) {
-      const handler = await backendRegistry.get('cpu', this.name);
-      handler({
-        device: target.device,
-        inputs: this.inputs,
-        output: this.output,
-        target
-      });
-    } else {
-      const handler = await backendRegistry.get(device.type, this.name);
-      await handler({
-        device,
-        inputs: this.inputs,
-        output: this.output,
-        target
-      });
-    }
+    const handlerRegistry = this.shouldExecuteOnCPU() ? 'cpu' : device.type;
+    const handler = await backendRegistry.get(handlerRegistry, this.name);
+    return handler({
+      device: target.device,
+      inputs: this.inputs,
+      output: this.output,
+      target
+    });
   }
 
   /** Returns `true` when all inputs are CPU-backed constants small enough for CPU execution. */
   protected shouldExecuteOnCPU() {
-    return this.output.length <= 1 && Object.values(this.inputs).every(t => Boolean(t.value));
+    return this.output.length <= 1 && Array.from(this.dependencies).every(t => Boolean(t.value));
   }
 }

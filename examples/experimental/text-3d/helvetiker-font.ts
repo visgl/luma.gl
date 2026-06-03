@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 // Adapted from THREE.js helvetiker_regular.typeface.json (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {type TypefaceFontData} from '@luma.gl/text';
+import {type TypefaceFontData} from '@luma.gl/text/text-3d';
 
 export const helvetiker: TypefaceFontData = {
   glyphs: {

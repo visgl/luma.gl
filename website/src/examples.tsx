@@ -5,9 +5,18 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
-import GPT2App from '../../examples/experimental/gpt-2/app';
+import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
+import ArrowColumnRendererApp from '../../examples/arrow/arrow-columns/app';
+import ArrowMeshGeometryApp from '../../examples/arrow/arrow-mesh-geometry/app';
+import ArrowGeoArrowApp from '../../examples/arrow/arrow-geoarrow/app';
+import ArrowLinesApp from '../../examples/arrow/arrow-lines/app';
+import ArrowFloat64PrecisionApp from '../../examples/arrow/arrow-float64-precision/app';
+import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
+import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
+import GPT2App from '../../examples/experimental/gpt-2/app';
+import ArrowParticlesApp from '../../examples/arrow/arrow-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import TextureTesterApp from '../../examples/api/texture-tester/app';
@@ -23,7 +32,10 @@ import DOFApp from '../../examples/showcase/dof/app';
 // import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
-import ArrowInstancingApp from '../../examples/showcase/arrow-instancing/app';
+import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
+import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
+import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
+import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import Text3DApp from '../../examples/experimental/text-3d/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
@@ -116,10 +128,132 @@ export const InstancingExample: React.FC = props => (
 export const ArrowInstancingExample: React.FC = props => (
   <LumaExample
     id="arrow-instancing"
-    title="Arrow Instancing"
-    directory="showcase"
+    title="Instancing"
+    directory="arrow"
     template={ArrowInstancingApp}
     config={exampleConfig}
+    {...props}
+  />
+);
+
+export const ArrowText2DExample: React.FC = props => (
+  <LumaExample
+    id="arrow-text-2d"
+    title="Text"
+    directory="arrow"
+    template={ArrowText2DApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowTimeColumnsExample: React.FC = props => (
+  <LumaExample
+    id="arrow-time-columns"
+    title="Time"
+    directory="arrow"
+    template={ArrowTimeColumnsApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowTemporalStarfieldExample: React.FC = props => (
+  <LumaExample
+    id="arrow-temporal-starfield"
+    title="Durations"
+    directory="arrow"
+    template={ArrowTemporalStarfieldApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowLinesExample: React.FC = props => (
+  <LumaExample
+    id="arrow-lines"
+    title="Lines"
+    directory="arrow"
+    template={ArrowLinesApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowFloat64PrecisionExample: React.FC = props => (
+  <LumaExample
+    id="arrow-float64-precision"
+    title="Float64 Precision"
+    directory="arrow"
+    template={ArrowFloat64PrecisionApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowGeoArrowExample: React.FC = props => (
+  <LumaExample
+    id="arrow-geoarrow"
+    title="GeoArrow"
+    directory="arrow"
+    template={ArrowGeoArrowApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowPointRendererExample: React.FC = props => (
+  <LumaExample
+    id="arrow-points"
+    title="Points"
+    directory="arrow"
+    template={ArrowPointRendererApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowColumnRendererExample: React.FC = props => (
+  <LumaExample
+    id="arrow-columns"
+    title="DGGS + time"
+    directory="arrow"
+    template={ArrowColumnRendererApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowPolygonRendererExample: React.FC = props => (
+  <LumaExample
+    id="arrow-polygons"
+    title="Polygons"
+    directory="arrow"
+    template={ArrowPolygonRendererApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowDggsPolygonsExample: React.FC = props => (
+  <LumaExample
+    id="arrow-dggs-polygons"
+    title="Global Grids"
+    directory="arrow"
+    template={ArrowDggsPolygonsApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    showStats
     {...props}
   />
 );
@@ -184,6 +318,28 @@ export const BloomExample: React.FC = props => (
     title="Bloom"
     directory="experimental"
     template={BloomApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const ArrowMeshGeometryExample: React.FC = props => (
+  <LumaExample
+    id="arrow-mesh-geometry"
+    title="Matrices"
+    directory="arrow"
+    template={ArrowMeshGeometryApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const ArrowParticlesExample: React.FC = props => (
+  <LumaExample
+    id="arrow-particles"
+    title="Particles"
+    directory="arrow"
+    template={ArrowParticlesApp}
     config={exampleConfig}
     {...props}
   />
@@ -520,6 +676,7 @@ export const TransformFeedbackExample: React.FC = props => (
     template={TransformFeedbackApp}
     config={exampleConfig}
     showStats={false}
+    devices={['webgl2']}
     {...props}
   />
 );
@@ -531,6 +688,7 @@ export const TransformExample: React.FC = props => (
     template={TransformApp}
     config={exampleConfig}
     showStats={false}
+    devices={['webgl2']}
     {...props}
   />
 );

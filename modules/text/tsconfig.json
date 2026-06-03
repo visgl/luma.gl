@@ -8,6 +8,9 @@
     "outDir": "dist"
   },
   "references": [
-    {"path": "../engine"}
+    {"path": "../arrow"},
+    {"path": "../core"},
+    {"path": "../engine"},
+    {"path": "../tables"}
   ]
 }

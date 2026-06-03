@@ -2,19 +2,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import * as arrow from 'apache-arrow';
+import {Data, DataType, Field, RecordBatch, Schema, Table, Vector, makeVector} from 'apache-arrow';
 
 /** Returns all leaf column paths in an Arrow object, using dot notation for nested structs. */
-export function getArrowPaths(
-  arrowObject: arrow.Data | arrow.Table | arrow.RecordBatch | arrow.Vector
-): string[] {
+export function getArrowPaths(arrowObject: Data | Table | RecordBatch | Vector): string[] {
   const data = getArrowDataArray(arrowObject)[0];
   return getArrowPathsRecursive(data, []);
 }
 
+/** Returns all leaf field paths in an Arrow schema, using dot notation for nested structs. */
+export function getArrowSchemaPaths(schema: Schema): string[] {
+  return getArrowSchemaPathsRecursive(schema.fields, []);
+}
+
 /** Recursively returns all leaf paths below an Arrow data node. */
-export function getArrowPathsRecursive(arrowData: arrow.Data, currentPath: string[]): string[] {
-  if (!arrow.DataType.isStruct(arrowData.type)) {
+export function getArrowPathsRecursive(arrowData: Data, currentPath: string[]): string[] {
+  if (!DataType.isStruct(arrowData.type)) {
     return [currentPath.join('.')];
   }
 
@@ -31,17 +34,45 @@ export function getArrowPathsRecursive(arrowData: arrow.Data, currentPath: strin
   return nestedPaths;
 }
 
+/** Returns the schema leaf field at a dot-separated path, or `null` when it cannot resolve. */
+export function findArrowFieldByPath(
+  schemaOrTable: Schema | Table,
+  columnPath: string
+): Field | null {
+  const schema = schemaOrTable instanceof Table ? schemaOrTable.schema : schemaOrTable;
+  const path = decomposePath(columnPath);
+  let fields = schema.fields;
+  let resolvedField: Field | null = null;
+
+  for (let pathIndex = 0; pathIndex < path.length; pathIndex++) {
+    const key = path[pathIndex];
+    const isLeafField = pathIndex === path.length - 1;
+    resolvedField = fields.find(field => field.name === key) ?? null;
+    if (!resolvedField) {
+      return null;
+    }
+    if (!isLeafField) {
+      if (!DataType.isStruct(resolvedField.type)) {
+        return null;
+      }
+      fields = resolvedField.type.children;
+    }
+  }
+
+  return resolvedField && !DataType.isStruct(resolvedField.type) ? resolvedField : null;
+}
+
 /** Returns the Arrow data node at a dot-separated column path. */
 export function getArrowDataByPath(
-  arrowObject: arrow.Data | arrow.Table | arrow.RecordBatch | arrow.Vector,
+  arrowObject: Data | Table | RecordBatch | Vector,
   columnPath: string
-): arrow.Data {
+): Data {
   const data = getArrowDataArray(arrowObject)[0];
 
   const path = decomposePath(columnPath);
   let nestedData = data;
   for (const key of path) {
-    if (!arrow.DataType.isStruct(nestedData.type)) {
+    if (!DataType.isStruct(nestedData.type)) {
       throw new Error(
         `Arrow table nested column is a not a struct: '${key} in '${path.join('.')}'`
       );
@@ -58,7 +89,7 @@ export function getArrowDataByPath(
   }
 
   // Check that we resolved all the intermediate structs
-  if (arrow.DataType.isStruct(nestedData.type)) {
+  if (DataType.isStruct(nestedData.type)) {
     throw new Error(`Arrow table nested column '${path.join('.')}' is a struct`);
   }
 
@@ -66,14 +97,14 @@ export function getArrowDataByPath(
 }
 
 /** Returns the Arrow vector at a dot-separated table column path. */
-export function getArrowVectorByPath(arrowTable: arrow.Table, columnPath: string): arrow.Vector {
+export function getArrowVectorByPath(arrowTable: Table, columnPath: string): Vector {
   // Make a temporary vector from the top level struct data.
-  const vector = arrow.makeVector(arrowTable.data);
+  const vector = makeVector(arrowTable.data);
 
   const path = decomposePath(columnPath);
   let nestedVector = vector;
   for (const key of path) {
-    if (!arrow.DataType.isStruct(nestedVector.type)) {
+    if (!DataType.isStruct(nestedVector.type)) {
       throw new Error(
         `Arrow table nested column is a not a struct: '${key} in '${path.join('.')}'`
       );
@@ -90,7 +121,7 @@ export function getArrowVectorByPath(arrowTable: arrow.Table, columnPath: string
   }
 
   // Check that we resolved all the intermediate structs
-  if (arrow.DataType.isStruct(nestedVector.type)) {
+  if (DataType.isStruct(nestedVector.type)) {
     throw new Error(`Arrow table nested column '${path.join('.')}' is a struct`);
   }
 
@@ -98,10 +129,10 @@ export function getArrowVectorByPath(arrowTable: arrow.Table, columnPath: string
 }
 
 /** Returns the Arrow schema field at a dot-separated table column path. */
-export function getArrowFieldByPath(arrowTable: arrow.Table, columnPath: string): arrow.Field {
+export function getArrowFieldByPath(arrowTable: Table, columnPath: string): Field {
   const path = decomposePath(columnPath);
   let fields = arrowTable.schema.fields;
-  let resolvedField: arrow.Field | null = null;
+  let resolvedField: Field | null = null;
 
   for (let pathIndex = 0; pathIndex < path.length; pathIndex++) {
     const key = path[pathIndex];
@@ -115,7 +146,7 @@ export function getArrowFieldByPath(arrowTable: arrow.Table, columnPath: string)
 
     resolvedField = fields[indexByField];
     if (!isLeafField) {
-      if (!arrow.DataType.isStruct(resolvedField.type)) {
+      if (!DataType.isStruct(resolvedField.type)) {
         throw new Error(
           `Arrow table nested column is a not a struct: '${key} in '${path.join('.')}'`
         );
@@ -124,7 +155,7 @@ export function getArrowFieldByPath(arrowTable: arrow.Table, columnPath: string)
     }
   }
 
-  if (!resolvedField || arrow.DataType.isStruct(resolvedField.type)) {
+  if (!resolvedField || DataType.isStruct(resolvedField.type)) {
     throw new Error(`Arrow table nested column '${path.join('.')}' is a struct`);
   }
 
@@ -132,14 +163,12 @@ export function getArrowFieldByPath(arrowTable: arrow.Table, columnPath: string)
 }
 
 /** Returns the data chunks contained by an Arrow object. */
-export function getArrowDataArray(
-  arrowObject: arrow.Data | arrow.Table | arrow.RecordBatch | arrow.Vector
-): arrow.Data[] {
-  if (arrowObject instanceof arrow.Table) {
+export function getArrowDataArray(arrowObject: Data | Table | RecordBatch | Vector): Data[] {
+  if (arrowObject instanceof Table) {
     return arrowObject.data;
-  } else if (arrowObject instanceof arrow.RecordBatch) {
+  } else if (arrowObject instanceof RecordBatch) {
     return [arrowObject.data];
-  } else if (arrowObject instanceof arrow.Vector) {
+  } else if (arrowObject instanceof Vector) {
     // @ts-expect-error for some reason read-only in this context
     return arrowObject.data;
   }
@@ -150,4 +179,17 @@ export function getArrowDataArray(
 
 function decomposePath(path: string): string[] {
   return path.split('.');
+}
+
+function getArrowSchemaPathsRecursive(fields: Field[], currentPath: string[]): string[] {
+  const paths: string[] = [];
+  for (const field of fields) {
+    const fieldPath = [...currentPath, field.name];
+    if (DataType.isStruct(field.type)) {
+      paths.push(...getArrowSchemaPathsRecursive(field.type.children, fieldPath));
+    } else {
+      paths.push(fieldPath.join('.'));
+    }
+  }
+  return paths;
 }

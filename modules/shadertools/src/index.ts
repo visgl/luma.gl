@@ -90,8 +90,26 @@ export {random} from './modules/math/random/random';
 
 export {fp32} from './modules/math/fp32/fp32';
 export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
-export type {FloatColorsProps, FloatColorsUniforms} from './modules/color/float-colors';
-export {floatColors} from './modules/color/float-colors';
+export {dggs} from './modules/geospatial/dggs/dggs';
+export type {
+  ColorsProps,
+  ColorsUniforms,
+  FloatColorsProps,
+  FloatColorsUniforms,
+  StorageColorFormat,
+  StorageColorFormatValue,
+  StorageColorsBindings,
+  StorageColorsProps,
+  StorageColorsUniforms
+} from './modules/color/float-colors';
+export {
+  colors,
+  floatColors,
+  STORAGE_COLOR_DEFAULT_BYTE_STRIDES,
+  STORAGE_COLOR_FORMAT,
+  STORAGE_COLOR_FORMAT_BYTE_LENGTHS,
+  storageColors
+} from './modules/color/float-colors';
 
 // engine shader modules
 

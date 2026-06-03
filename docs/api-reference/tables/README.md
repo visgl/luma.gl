@@ -1,0 +1,40 @@
+# Overview
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+GPU-resident table primitives for luma.gl.
+
+## API Reference
+
+- [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure)
+- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
+- [GPUTable](/docs/api-reference/tables/gpu-table)
+- [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch)
+- [GPUVector](/docs/api-reference/tables/gpu-vector)
+- [GPUData](/docs/api-reference/tables/gpu-data)
+- [GPUSchema](/docs/api-reference/tables/gpu-schema)
+- [GPUVectorFormat](/docs/api-reference/tables/gpu-vector-format)
+- [GPUTableBufferPlanner](/docs/api-reference/tables/gpu-table-buffer-planner)
+- [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
+
+The `@luma.gl/tables` module owns reusable table-side GPU objects such as
+`GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`, plus structural typing
+types such as `GPUSchema`, `GPUField`, `GPUTypeMap`, `GPUVectorFormat`, and
+`VertexList`. Table-oriented execution helpers include `TableTransform`,
+`GPUTableComputation`, `GPUTableBufferPlanner`, and generated-buffer batching
+utilities. `GPUTableModel` renders preserved table batches through one model
+pipeline, while `GPUTableGeometry` exposes a packed static table as ordinary GPU
+geometry.
+
+Arrow-specific construction and analysis helpers live in `@luma.gl/arrow`.
+Applications that ingest Apache Arrow data should use those adapters to build
+the generic GPU table objects exposed here.
+
+## Installing
+
+```bash
+npm install @luma.gl/tables
+```

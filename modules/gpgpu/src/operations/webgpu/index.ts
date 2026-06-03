@@ -1,10 +1,18 @@
-import {add} from './add';
+import {arithmetic} from './arithmetic';
+import {extent} from './extent';
 import {fround} from './fround';
+import {gather} from './gather';
+import {segmentedMap} from './segmented-map';
 import {interleave} from './interleave';
+import {sequence} from './sequence';
 
 /** WebGPU backend for built-in GPGPU operations, implemented with compute pipelines. */
 export const webgpuBackend = {
-  add,
+  arithmetic,
+  extent,
   fround,
-  interleave
+  gather,
+  interleave,
+  segmentedMap,
+  sequence
 };

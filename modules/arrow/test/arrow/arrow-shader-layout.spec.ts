@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ArrowColumnInfo} from '@luma.gl/arrow';
-import {getArrowBufferLayout, getArrowVertexFormat} from '@luma.gl/arrow';
+import {getArrowBufferLayout, getArrowVertexFormat, makeArrowMatrix3x3Vector} from '@luma.gl/arrow';
 import type {AttributeShaderType, ShaderLayout, VertexFormat} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
 
@@ -202,6 +202,48 @@ test('getArrowBufferLayout builds layouts from Arrow table columns', t => {
   t.end();
 });
 
+test('getArrowBufferLayout expands one matrix Arrow column into interleaved vector attributes', t => {
+  const arrowTable = new arrow.Table({
+    instanceModelMatrix: makeArrowMatrix3x3Vector(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]), {
+      order: 'row-major'
+    })
+  });
+  const shaderLayout: ShaderLayout = {
+    attributes: [
+      {name: 'instanceModelMatrixCol0', location: 0, type: 'vec3<f32>', stepMode: 'instance'},
+      {name: 'instanceModelMatrixCol1', location: 1, type: 'vec3<f32>', stepMode: 'instance'},
+      {name: 'instanceModelMatrixCol2', location: 2, type: 'vec3<f32>', stepMode: 'instance'}
+    ],
+    bindings: []
+  };
+
+  t.deepEqual(
+    getArrowBufferLayout(shaderLayout, {
+      arrowTable,
+      arrowPaths: {
+        instanceModelMatrixCol0: 'instanceModelMatrix',
+        instanceModelMatrixCol1: 'instanceModelMatrix',
+        instanceModelMatrixCol2: 'instanceModelMatrix'
+      }
+    }),
+    [
+      {
+        name: 'instanceModelMatrix',
+        byteStride: 48,
+        stepMode: 'instance',
+        attributes: [
+          {attribute: 'instanceModelMatrixCol0', format: 'float32x3', byteOffset: 0},
+          {attribute: 'instanceModelMatrixCol1', format: 'float32x3', byteOffset: 16},
+          {attribute: 'instanceModelMatrixCol2', format: 'float32x3', byteOffset: 32}
+        ]
+      }
+    ],
+    'derives one padded interleaved buffer layout from matrix metadata'
+  );
+
+  t.end();
+});
+
 test('getArrowBufferLayout builds layouts from Arrow vectors', t => {
   const arrowTable = makeShaderAttributeArrowTable();
   const colorsVector = arrowTable.getChild('colors')!;
@@ -275,27 +317,6 @@ test('getArrowBufferLayout validates Arrow source options', t => {
       }),
     /doesNotExist/,
     'explicit missing table paths throw'
-  );
-
-  t.deepEqual(
-    getArrowBufferLayout(arrowTable, shaderLayout),
-    [{name: 'colors', format: 'unorm8x4'}],
-    'legacy positional table overload remains supported'
-  );
-
-  t.deepEqual(
-    getArrowBufferLayout(
-      arrowTable,
-      {
-        attributes: [{name: 'instanceColors', location: 0, type: 'vec4<f32>'}],
-        bindings: []
-      },
-      {
-        attributeNameToArrowPath: {instanceColors: 'colors'}
-      }
-    ),
-    [{name: 'instanceColors', format: 'unorm8x4'}],
-    'legacy attributeNameToArrowPath remains supported'
   );
 
   t.end();

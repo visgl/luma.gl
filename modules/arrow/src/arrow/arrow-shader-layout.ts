@@ -10,10 +10,12 @@ import type {
   VertexFormat
 } from '@luma.gl/core';
 import {shaderTypeDecoder, vertexFormatDecoder} from '@luma.gl/core';
-import * as arrow from 'apache-arrow';
-import {getArrowPaths} from './arrow-paths';
+import {getAttributeLayoutFromBufferSchema, type BufferSchema} from '@luma.gl/engine';
+import {Table, Vector} from 'apache-arrow';
+import {getArrowPaths, getArrowVectorByPath} from './arrow-paths';
 import {getArrowColumnInfo, getInstanceColumnInfo} from './arrow-column-info';
 import {isInstanceArrowType, type ArrowColumnInfo, type AttributeArrowType} from './arrow-types';
+import {getArrowMatrixVectorInfo} from './arrow-matrix-vector';
 
 /** Options that control Arrow column to GPU vertex format selection. */
 export type ArrowVertexFormatOptions = {
@@ -24,23 +26,21 @@ export type ArrowVertexFormatOptions = {
 /** Source options for deriving a BufferLayout from Arrow data and a ShaderLayout. */
 export type ArrowBufferLayoutOptions = ArrowVertexFormatOptions & {
   /** Arrow vectors keyed by shader attribute name. */
-  arrowVectors?: Record<string, arrow.Vector>;
+  arrowVectors?: Record<string, Vector>;
   /** Arrow table containing columns referenced by shader attribute name or arrowPaths. */
-  arrowTable?: arrow.Table;
+  arrowTable?: Table;
   /** Maps shader attribute names to Arrow column paths. Defaults to using the attribute name. */
   arrowPaths?: Record<string, string>;
-  /** @deprecated Use arrowPaths. */
-  attributeNameToArrowPath?: Record<string, string>;
 };
 
 type ArrowBufferLayoutSource =
   | {
       type: 'table';
-      arrowTable: arrow.Table;
+      arrowTable: Table;
       arrowTablePaths: Set<string>;
       arrowPaths?: Record<string, string>;
     }
-  | {type: 'vectors'; arrowVectors: Record<string, arrow.Vector>};
+  | {type: 'vectors'; arrowVectors: Record<string, Vector>};
 
 /**
  * Returns the GPU vertex format needed to expose one Arrow column to one shader attribute.
@@ -85,25 +85,26 @@ export function getArrowBufferLayout(
   shaderLayout: ShaderLayout,
   options: ArrowBufferLayoutOptions
 ): BufferLayout[];
-/** @deprecated Use getArrowBufferLayout(shaderLayout, {arrowTable, arrowPaths}). */
 export function getArrowBufferLayout(
-  arrowTable: arrow.Table,
-  shaderLayout: ShaderLayout,
-  options?: ArrowBufferLayoutOptions
-): BufferLayout[];
-export function getArrowBufferLayout(
-  firstArgument: ShaderLayout | arrow.Table,
-  secondArgument: ShaderLayout | ArrowBufferLayoutOptions,
-  thirdArgument?: ArrowBufferLayoutOptions
+  firstArgument: ShaderLayout,
+  secondArgument: ArrowBufferLayoutOptions
 ): BufferLayout[] {
   const {shaderLayout, options, source} = normalizeArrowBufferLayoutArguments(
     firstArgument,
-    secondArgument,
-    thirdArgument
+    secondArgument
   );
   const bufferLayout: BufferLayout[] = [];
+  const matrixSelections = getArrowMatrixBufferLayouts(shaderLayout, source);
 
   for (const attribute of shaderLayout.attributes) {
+    const matrixSelection = matrixSelections.get(attribute.name);
+    if (matrixSelection) {
+      if (matrixSelection.firstAttributeName === attribute.name) {
+        bufferLayout.push(matrixSelection.layout);
+      }
+      continue;
+    }
+
     const columnInfo = getArrowColumnInfoFromSource(source, attribute.name);
     if (!columnInfo) {
       continue;
@@ -119,40 +120,99 @@ export function getArrowBufferLayout(
   return bufferLayout;
 }
 
+type ArrowMatrixBufferLayoutSelection = {
+  firstAttributeName: string;
+  layout: BufferLayout;
+};
+
+function getArrowMatrixBufferLayouts(
+  shaderLayout: ShaderLayout,
+  source: ArrowBufferLayoutSource
+): Map<string, ArrowMatrixBufferLayoutSelection> {
+  const matrixSelections = new Map<string, ArrowMatrixBufferLayoutSelection>();
+  if (source.type !== 'table') {
+    return matrixSelections;
+  }
+
+  const attributesByArrowPath = new Map<string, ShaderLayout['attributes']>();
+  for (const attribute of shaderLayout.attributes) {
+    const arrowPath = source.arrowPaths?.[attribute.name] || attribute.name;
+    const pathAttributes = attributesByArrowPath.get(arrowPath) || [];
+    pathAttributes.push(attribute);
+    attributesByArrowPath.set(arrowPath, pathAttributes);
+  }
+
+  for (const [arrowPath, attributes] of attributesByArrowPath) {
+    if (attributes.length <= 1) {
+      continue;
+    }
+
+    const vector = getArrowVectorByPath(source.arrowTable, arrowPath);
+    const matrixInfo = getArrowMatrixVectorInfo(vector);
+    if (!matrixInfo) {
+      throw new Error(
+        `Arrow column "${arrowPath}" maps to multiple shader attributes but is not a recognized matrix vector`
+      );
+    }
+    if (attributes.length !== matrixInfo.columns) {
+      throw new Error(
+        `Arrow matrix column "${arrowPath}" expects ${matrixInfo.columns} shader vector attributes`
+      );
+    }
+
+    const declaredStepModes = new Set(
+      attributes.map(attribute => attribute.stepMode).filter(Boolean)
+    );
+    if (declaredStepModes.size > 1) {
+      throw new Error(`Arrow matrix column "${arrowPath}" requires matching attribute step modes`);
+    }
+
+    const format = `float32x${matrixInfo.rows}` as VertexFormat;
+    for (const attribute of attributes) {
+      const attributeInfo = shaderTypeDecoder.getAttributeShaderTypeInfo(attribute.type);
+      if (attributeInfo.primitiveType !== 'f32' || attributeInfo.components !== matrixInfo.rows) {
+        throw new Error(
+          `Arrow matrix column "${arrowPath}" requires vec${matrixInfo.rows}<f32> shader attributes`
+        );
+      }
+    }
+
+    const firstAttributeName = attributes[0].name;
+    const schema: BufferSchema = Object.fromEntries(
+      attributes.map((attribute, columnIndex) => [
+        attribute.name,
+        {
+          format,
+          elementOffset: columnIndex * matrixInfo.columnStride
+        }
+      ])
+    );
+    const layout = getAttributeLayoutFromBufferSchema({
+      name: arrowPath,
+      byteStride: matrixInfo.byteStride,
+      bytesPerElement: Float32Array.BYTES_PER_ELEMENT,
+      schema,
+      ...(attributes[0].stepMode ? {stepMode: attributes[0].stepMode} : {})
+    });
+    const selection = {firstAttributeName, layout};
+    for (const attribute of attributes) {
+      matrixSelections.set(attribute.name, selection);
+    }
+  }
+
+  return matrixSelections;
+}
+
 function normalizeArrowBufferLayoutArguments(
-  firstArgument: ShaderLayout | arrow.Table,
-  secondArgument: ShaderLayout | ArrowBufferLayoutOptions,
-  thirdArgument?: ArrowBufferLayoutOptions
+  firstArgument: ShaderLayout,
+  secondArgument: ArrowBufferLayoutOptions
 ): {
   shaderLayout: ShaderLayout;
   options: ArrowBufferLayoutOptions;
   source: ArrowBufferLayoutSource;
 } {
-  if (firstArgument instanceof arrow.Table) {
-    const arrowTable = firstArgument;
-    const shaderLayout = secondArgument as ShaderLayout;
-    const options = thirdArgument || {};
-
-    if (options.arrowTable || options.arrowVectors) {
-      throw new Error(
-        'Do not provide arrowTable or arrowVectors when using the legacy table overload'
-      );
-    }
-
-    return {
-      shaderLayout,
-      options,
-      source: {
-        type: 'table',
-        arrowTable,
-        arrowTablePaths: new Set(getArrowPaths(arrowTable)),
-        arrowPaths: options.arrowPaths || options.attributeNameToArrowPath
-      }
-    };
-  }
-
   const shaderLayout = firstArgument;
-  const options = secondArgument as ArrowBufferLayoutOptions;
+  const options = secondArgument;
   const hasArrowTable = Boolean(options.arrowTable);
   const hasArrowVectors = Boolean(options.arrowVectors);
 
@@ -206,11 +266,11 @@ function getArrowColumnInfoFromSource(
   }
 }
 
-function getArrowColumnInfoFromVector(vector: arrow.Vector): ArrowColumnInfo {
+function getArrowColumnInfoFromVector(vector: Vector): ArrowColumnInfo {
   if (!isInstanceArrowType(vector.type)) {
     throw new Error('Arrow vector is not compatible with shader attributes');
   }
-  return getInstanceColumnInfo(vector as arrow.Vector<AttributeArrowType>);
+  return getInstanceColumnInfo(vector as Vector<AttributeArrowType>);
 }
 
 function getFloatShaderVertexFormat(

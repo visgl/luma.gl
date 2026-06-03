@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTable} from '../../operation/gpu-table';
-import {runComputation} from './common';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {runRowComputation} from './common/row-transform';
 
 function isLittleEndian() {
   const testNumber = new Uint16Array([0x00ff]);
@@ -154,12 +154,17 @@ fn fround(x: array<u32, {X_LEN}>) -> array<f32, {RESULT_LEN}> {
 }
 `;
 
-export const fround: OperationHandler<{x: GPUTable}> = async ({inputs, output, target}) => {
-  runComputation({
+export const fround: OperationHandler<{x: GPUTableEvaluator}> = async ({
+  inputs,
+  output,
+  target
+}) => {
+  runRowComputation({
     module: {name: 'fround', source},
     inputs,
     output,
     operationType: 'uint32',
     outputBuffer: target
   });
+  return {success: true};
 };

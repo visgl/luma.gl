@@ -12,6 +12,13 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/gpt-2',
   'api/texture-compressed',
   'api/texture-tester',
+  'arrow/arrow-columns',
+  'arrow/arrow-geoarrow',
+  'arrow/arrow-lines',
+  'arrow/arrow-mesh-geometry',
+  'arrow/arrow-particles',
+  'arrow/arrow-points',
+  'arrow/arrow-polygons',
   'integrations/hello-react',
   'showcase/dof',
   'showcase/persistence',
@@ -43,7 +50,14 @@ const SHARED_COMPILER_OPTIONS = {
   noUnusedLocals: false,
   moduleResolution: 'bundler',
   jsx: 'react-jsx',
-  paths: {}
+  paths: {
+    '@luma.gl/arrow': ['modules/arrow/src/index.ts'],
+    '@luma.gl/arrow/*': ['modules/arrow/src/*'],
+    '@math.gl/geoarrow': ['modules/geoarrow/src/index.ts'],
+    '@math.gl/geoarrow/*': ['modules/geoarrow/src/*'],
+    '@luma.gl/tables': ['modules/tables/src/index.ts'],
+    '@luma.gl/tables/*': ['modules/tables/src/*']
+  }
 };
 
 const AMBIENT_MODULE_DECLARATIONS = `declare module '*.css';

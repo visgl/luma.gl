@@ -1,0 +1,228 @@
+import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
+
+# Arrow Representations
+
+<ArrowDocsTabs active="arrow-representations" />
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+This page starts from semantic data types and describes the preferred Apache
+Arrow column encodings for luma.gl GPU table pipelines. For the inverse view,
+see [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types), which
+starts from Arrow physical types and describes GPU support.
+
+The recommended Arrow shape depends on the data's meaning, not only its scalar
+storage type. A `FixedSizeList<Uint8, 4>` can be a row color, a vertex color, or
+unrelated bytes; the consuming layer or adapter decides the semantic role.
+
+When these columns are uploaded, adapters assign `GPUVectorFormat` strings:
+fixed-size rows become formats such as `float32x3` or `unorm8x4`; variable-length
+per-vertex rows become `vertex-list<...>` formats such as
+`vertex-list<float32x3>`. The `vertex-list` format describes flattened element
+memory; offsets and topology remain adapter metadata.
+
+## Recommended Encodings
+
+### Positions
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| Point positions | ✅ | `FixedSizeList<Float32, 2 \| 3 \| 4>` |
+| High-precision positions | ✅ | `FixedSizeList<Float64, 2 \| 3 \| 4>` |
+
+Semantic notes:
+
+- 2, 3, and 4 position components represent XY, XYZ, and XYZM.
+- 4 components is XYZM where the M (Measure) component has semantic meaning, such
+  as M (distance along a path) or time (tracks).
+
+Implementation notes:
+
+- Direct position rows can be consumed as row-aligned attributes or storage rows.
+- Float64 positions preserve source precision in Arrow, then adapters repack to
+  Float32, origin-relative Float32, or word-pair storage at preparation boundaries.
+
+### Colors
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| Normalized RGBA row colors | ✅ | `FixedSizeList<Uint8, 4>` |
+| Normalized RGB row colors | ❌ | `FixedSizeList<Uint8, 3>` |
+| Compact scene-linear/HDR RGBA colors | ✅ | `FixedSizeList<Float16, 4>` |
+| Compact scene-linear/HDR RGB colors | ❌ | `FixedSizeList<Float16, 3>` |
+| Scene-linear/HDR RGBA colors | ✅ | `FixedSizeList<Float32, 4>` |
+| Scene-linear/HDR RGB colors | ❌ | `FixedSizeList<Float32, 3>` |
+
+Semantic notes:
+
+- Normalized `Uint8` RGBA is the preferred compact representation for
+  display/style colors in `[0, 1]`.
+- Scene-linear/HDR RGB channels are linear light values and may exceed `1.0`.
+- Alpha is opacity or coverage, not light intensity. Alpha values above `1.0`
+  have no portable meaning unless a layer explicitly defines application-specific
+  semantics.
+
+Implementation notes:
+
+- Float16 RGBA is the compact scene-linear/HDR form when bandwidth and memory
+  matter more than Float32 precision.
+- RGB source colors are planned but not currently supported by the semantic color
+  adapters. Intended expansion is RGB to RGBA with alpha `255` for `Uint8` and
+  alpha `1.0` for `Float16` and `Float32`.
+
+### Scalars
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| Numeric scalars | ✅ | `Float32`, `Int32`, or `Uint32` |
+| High-precision scalars | ✅ | `Float64` |
+| Boolean flags | ❌ | `Bool` as source, `Uint8` or `Uint32` for GPU use |
+
+Semantic notes:
+
+- `Float32`, `Int32`, and `Uint32` are preferred for sizes, widths, angles,
+  elevations, filters, ids, categories, and other row-level shader values.
+
+Implementation notes:
+
+- Float64 scalar columns are accepted as source data, then repacked before generic
+  rendering because shaders do not have a portable `f64` vertex attribute path.
+- Arrow Bool is bit-packed; adapters should repack flags before shader-facing use.
+
+### Matrices
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| 2D linear transforms | 🟡 | `FixedSizeList<Float32 \| Float64, 4>` with `visgl:matrix-shape` = `mat2x2` |
+| 2D affine transforms | 🟡 | `FixedSizeList<Float32 \| Float64, 6>` with `visgl:matrix-shape` = `mat2x3` or `mat3x2` |
+| 2D/3D rotation-scale bases | 🟡 | `FixedSizeList<Float32 \| Float64, 9>` with `visgl:matrix-shape` = `mat3x3` |
+| 3D affine transforms | 🟡 | `FixedSizeList<Float32 \| Float64, 12>` with `visgl:matrix-shape` = `mat4x3` or `mat3x4` |
+| Full 3D transforms | 🟡 | `FixedSizeList<Float32 \| Float64, 16>` with `visgl:matrix-shape` = `mat4x4` |
+
+Semantic notes:
+
+- One matrix row is one logical matrix, not a set of unrelated vector columns.
+- Matrix shapes use WGSL-style `matCxR` names where `C` is columns and `R` is
+  rows.
+- `mat4x3` is a compact affine transform shape for instance transforms that need
+  three basis columns plus translation.
+
+Implementation notes:
+
+- Matrix columns require vis.gl matrix metadata. The recommended construction path
+  is `makeArrowMatrixVector()` or a shape-specific `makeArrowMatrix*Vector()`.
+- `prepareArrowMatrixGPUVector()` emits canonical Float32 column-major
+  `wgsl-storage` rows. Float64 source matrices preserve source precision in Arrow
+  but truncate to Float32 during preparation.
+- WebGPU storage paths can bind one matrix column as `array<matCxR<f32>>`.
+  Attribute paths lower the same matrix column into multiple vector attributes.
+
+### Time
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| Time in coordinate measure | ✅ | `FixedSizeList<Float32 \| Float64, 4>` or `List<FixedSizeList<Float32 \| Float64, 4>>` using XYZM |
+| Row timestamps | 🟡 | `Date`, `Time`, or `Timestamp` |
+| Row durations or ages | 🟡 | `Duration` |
+| Per-vertex timestamps | 🟡 | `List<Date \| Time \| Timestamp \| Duration>` |
+| Calendar intervals | ❌ | `Interval` or `List<Interval>` |
+
+Semantic notes:
+
+- Time can be encoded as the M component in XYZM coordinates or as a separate
+  Arrow temporal column.
+- `Date`, `Time`, and `Timestamp` represent absolute temporal values. `Duration`
+  represents elapsed time or age.
+- Per-vertex temporal lists should align one-to-one with path or track vertices.
+
+Implementation notes:
+
+- Temporal adapters emit relative Float32 values in the original Arrow unit and
+  preserve temporal origin metadata on the prepared field.
+- Absolute temporal columns use the first valid value as the origin unless an
+  origin is supplied. Duration columns use origin `0`.
+- Temporal columns are not generic vertex attributes; they need temporal
+  preparation or model-specific storage/compute consumption.
+
+### Interleaved Data
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| Attributes to interleave | ✅ | Separate supported scalar/vector columns planned into one GPU buffer |
+| Pre-packed fixed-width row records | 🟡 | `FixedSizeBinary<byteStride>` plus an explicit buffer layout |
+| Nested row records | 🟡 | `Struct` of supported child columns selected or flattened before upload |
+| Variable-width byte payloads | ❌ | `Binary` |
+
+Semantic notes:
+
+- Interleaving is a GPU memory layout choice, not usually the semantic meaning of
+  the source data.
+- Prefer semantic Arrow columns when possible, then let the GPU table planner
+  decide whether to place them in separate buffers or one interleaved buffer.
+- Use `FixedSizeBinary` only when each Arrow row already is an application-defined
+  fixed-width GPU record.
+
+Implementation notes:
+
+- Interleaved GPU vectors need an explicit byte stride and buffer layout that maps
+  shader attributes to byte offsets and formats.
+- `FixedSizeBinary` is not a generic shader column. It needs an adapter or layout
+  that knows how to decode the packed row record.
+- `Struct` values are supported indirectly by selecting supported child columns;
+  the selected children can then be uploaded separately or planned into an
+  interleaved GPU buffer.
+
+### Paths
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| Paths | ✅ | `List<FixedSizeList<Float32, 2 \| 3 \| 4>>` |
+| High-precision paths | ✅ | `List<FixedSizeList<Float64, 2 \| 3 \| 4>>` |
+| Path row colors | ✅ | `FixedSizeList<Uint8 \| Float16 \| Float32, 4>` |
+| Path row RGB colors | ❌ | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>` |
+| Path vertex colors | ✅ | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 4>>` |
+| Path vertex RGB colors | ❌ | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 3>>` |
+
+Semantic notes:
+
+- One path row is one variable-length path.
+- 2, 3, and 4 path coordinate components represent XY, XYZ, and XYZM.
+- 4 components is XYZM where the M (Measure) component has semantic meaning, such
+  as M (distance along a path) or time (tracks).
+- Path row colors are one color per path. Path vertex colors are aligned with the
+  path coordinate list.
+
+Implementation notes:
+
+- Path coordinates are encoded as flattened coordinate values plus list offsets.
+- Float64 path rows preserve precise coordinates in Arrow, then adapters prepare
+  per-row Float32 deltas plus retained origins before rendering.
+- RGB source colors are planned but not currently supported.
+
+### Text
+
+| Semantic data | Supported | Recommended Arrow column |
+| --- | :---: | --- |
+| Text labels | ✅ | `Utf8` |
+| Repeated text labels | ✅ | `Dictionary<Utf8>` |
+| Text row colors | ✅ | `FixedSizeList<Uint8 \| Float16 \| Float32, 4>` |
+| Text row RGB colors | ❌ | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>` |
+| Text character colors | ✅ | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 4>>` |
+| Text character RGB colors | ❌ | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 3>>` |
+
+Semantic notes:
+
+- `Utf8` stores one independent string per row.
+- `Dictionary<Utf8>` is preferred when many rows reuse the same labels,
+  categories, or symbols.
+- Text row colors are one color per string. Text character colors are aligned with
+  text expansion.
+
+Implementation notes:
+
+- Text adapters own UTF-8 layout, glyph expansion, dictionary lookup, and null
+  handling.
+- RGB source colors are planned but not currently supported.

@@ -2,16 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Framebuffer} from '@luma.gl/core';
+import {Buffer, Framebuffer, type ShaderLayout} from '@luma.gl/core';
+import {makeArrowFixedSizeListVector, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {TableTransform, getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/tables';
 import {
   AnimationLoopTemplate,
   AnimationProps,
+  DynamicBuffer,
   Model,
-  BufferTransform,
+  ShaderInputs,
   Swap,
   makeRandomGenerator
 } from '@luma.gl/engine';
-import {picking} from '@luma.gl/shadertools';
+import {picking, type ShaderModule} from '@luma.gl/shadertools';
+import * as arrow from 'apache-arrow';
 
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
@@ -128,6 +132,25 @@ void main()
 
 const NUM_INSTANCES = 1000;
 
+type AppUniforms = {
+  time: number;
+};
+
+const app: ShaderModule<AppUniforms> = {
+  name: 'app',
+  uniformTypes: {
+    time: 'f32'
+  }
+};
+
+const TRANSFORM_SHADER_LAYOUT = {
+  attributes: [
+    {name: 'oldPositions', location: 0, type: 'vec2<f32>'},
+    {name: 'oldRotations', location: 1, type: 'f32'}
+  ],
+  bindings: []
+} satisfies ShaderLayout;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>
@@ -151,8 +174,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   instancePickingColorBuffer: Buffer;
 
   renderModel: Model;
-  transform: BufferTransform;
-  pickingFramebuffer: Framebuffer;
+  transform: TableTransform;
+  pickingFramebuffer?: Framebuffer;
+  readonly transformShaderInputs = new ShaderInputs<{app: typeof app.props}>({app});
 
   // eslint-disable-next-line max-statements
   constructor({device, width, height, animationLoop}: AnimationProps) {
@@ -190,14 +214,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.positionBuffer = device.createBuffer({data: trianglePositions});
     this.instanceColorBuffer = device.createBuffer({data: instanceColors});
-    this.instancePositionBuffers = new Swap({
-      current: device.createBuffer({data: instancePositions}),
-      next: device.createBuffer({data: instancePositions})
-    });
-    this.instanceRotationBuffers = new Swap({
-      current: device.createBuffer({data: instanceRotations}),
-      next: device.createBuffer({data: instanceRotations})
-    });
     this.instancePickingColorBuffer = device.createBuffer({data: pickingColors});
 
     this.renderModel = new Model(device, {
@@ -223,15 +239,33 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       ]
     });
 
-    this.transform = new BufferTransform(device, {
+    this.transform = new TableTransform(device, {
       vs: COMPUTE_VS,
-      vertexCount: NUM_INSTANCES,
-      // elementCount: NUM_INSTANCES,
-      bufferLayout: [
-        {name: 'oldPositions', format: 'float32x2'},
-        {name: 'oldRotations', format: 'float32'}
-      ],
+      shaderLayout: TRANSFORM_SHADER_LAYOUT,
+      shaderInputs: this.transformShaderInputs,
+      table: makeGPUTableFromArrowTable(
+        device,
+        makeAgentTransformTable(instancePositions, instanceRotations),
+        {shaderLayout: TRANSFORM_SHADER_LAYOUT}
+      ),
       outputs: ['newOffsets', 'newRotations']
+    });
+
+    this.instancePositionBuffers = new Swap({
+      current: getCoreBuffer(
+        getGPUVectorBuffer(
+          getRequiredGPUVector(this.transform.table, 'oldPositions', 'Transform example table')
+        )
+      ),
+      next: device.createBuffer({data: instancePositions})
+    });
+    this.instanceRotationBuffers = new Swap({
+      current: getCoreBuffer(
+        getGPUVectorBuffer(
+          getRequiredGPUVector(this.transform.table, 'oldRotations', 'Transform example table')
+        )
+      ),
+      next: device.createBuffer({data: instanceRotations})
     });
 
     // picking
@@ -246,7 +280,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device, width, height, time}: AnimationProps): void {
-    this.transform.model.shaderInputs.setProps({app: {time}});
+    this.transformShaderInputs.setProps({app: {time}});
     this.transform.run({
       inputBuffers: {
         oldPositions: this.instancePositionBuffers.current,
@@ -272,6 +306,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.renderModel.draw(renderPass);
+    renderPass.end();
 
     // if (pickPosition) {
     //   // use the center pixel location in device pixel range
@@ -282,6 +317,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     //   pickInstance(gl, deviceX, deviceY, this.renderModel, this.pickingFramebuffer);
     // }
   }
+}
+
+function makeAgentTransformTable(
+  instancePositions: Float32Array,
+  instanceRotations: Float32Array
+): arrow.Table {
+  return new arrow.Table({
+    oldPositions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, instancePositions),
+    oldRotations: arrow.makeVector(instanceRotations)
+  });
+}
+
+function getCoreBuffer(buffer: Buffer | DynamicBuffer): Buffer {
+  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 
 /*

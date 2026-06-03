@@ -5,7 +5,8 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 ## API Reference
 
 - [`Operations`](/docs/api-reference/gpgpu/operations)
-- [`GPUTable`](/docs/api-reference/gpgpu/gpu-table)
+- [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table)
+- [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
 ## Installing
 
@@ -20,14 +21,14 @@ Interleaving two buffers together
 ```ts
 import {luma} from '@luma.gl/core';
 import {webglAdapter} from '@luma.gl/webgl';
-import {GPUTable, backendRegistry, webglBackend, add, interleave} from '@luma.gl/gpgpu';
+import {GPUTableEvaluator, backendRegistry, webglBackend, add, interleave} from '@luma.gl/gpgpu';
 
-const inputA = GPUTable.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
-const inputB = GPUTable.fromArray(new Float32Array([10, 20]), {size: 1});
+const inputA = GPUTableEvaluator.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
+const inputB = GPUTableEvaluator.fromArray(new Float32Array([10, 20]), {size: 1});
 const output = interleave(inputA, inputB);
 
 // Operations can be chained
-const outputAlt = interleave(inputA, add(inputB, GPUTable.fromConstant(1)));
+const outputAlt = interleave(inputA, add(inputB, GPUTableEvaluator.fromConstant(1)));
 
 // No computation is performed until the output is evaluated
 backendRegistry.add('webgl', webglBackend);
@@ -37,7 +38,7 @@ const device = await luma.createDevice({
   adapters: [webglAdapter]
 });
 
-await output.evaluate(device);
+const outputVector = await output.evaluate(device);
 ```
 
 ## BackendRegistry
@@ -54,7 +55,8 @@ backendRegistry.add('webgpu', webgpuBackend);
 ## Concepts
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
-- [`GPUTable`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations.
+- [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations. It can borrow packed single-chunk `GPUVector` inputs from `@luma.gl/tables`.
+- [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate) evaluates final result tables and cleans up intermediate dependencies in one step.
 
 ## Related Engine APIs
 

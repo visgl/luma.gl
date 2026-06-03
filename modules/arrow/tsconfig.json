@@ -9,6 +9,8 @@
   },
   "references": [
     {"path": "../core"},
-    {"path": "../engine"}
+    {"path": "../engine"},
+    {"path": "../geoarrow"},
+    {"path": "../tables"}
   ]
 }

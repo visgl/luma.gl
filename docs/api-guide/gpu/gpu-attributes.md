@@ -58,6 +58,10 @@ While buffers supplied by applications to define attribute values often contain
 only a contiguous block of memory for a single attribute, a buffer can also be set up to 
 contain the memory for multiple attributes, either in sequence, or interleaved.
 
+When one logical row exposes several named fields from the same buffer, the
+engine [`BufferSchema`](./buffer-schemas) helpers can generate the shared-buffer
+`BufferLayout` instead of requiring every byte offset to be written by hand.
+
 ## Binding Buffers
 
 Attributes define binding points for memory arrays in the form of `Buffer`s. 

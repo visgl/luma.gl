@@ -27,6 +27,25 @@ const config = getDocusaurusConfig({
     [
       '@docusaurus/plugin-client-redirects',
       {
+        redirects: [
+          {
+            from: ['/examples/arrow/arrow-path-model'],
+            to: '/examples/arrow/arrow-lines'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-object-model'],
+            to: '/docs/api-reference/tables/gpu-table-lifecycle'
+          },
+          {
+            from: [
+              '/docs/api-guide/gpu/arrow-table-columns',
+              '/docs/api-reference/arrow/arrow-table-columns',
+              '/docs/api-reference/arrow/arrow-type-mapping',
+              '/docs/api-reference/tables/gpu-tables'
+            ],
+            to: '/docs/api-reference/arrow/supported-arrow-types'
+          }
+        ],
         createRedirects(existingPath) {
           // docs/examples/tutorials/*/api-reference <= /docs/tutorials
           if (existingPath.includes('/docs/examples/tutorials/')) {

@@ -16,8 +16,8 @@ const GPU_TIME_AND_MEMORY_STAT_ORDER = [
   'GPU Memory',
   'Buffer Memory',
   'Texture Memory',
-  'Referenced Buffer Memory',
-  'Referenced Texture Memory',
+  'External Buffer Memory',
+  'External Texture Memory',
   'Swap Chain Texture'
 ] as const;
 const ORDERED_STATS_CACHE = new WeakMap<

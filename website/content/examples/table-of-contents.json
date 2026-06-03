@@ -9,12 +9,30 @@
     "label": "Showcase",
     "items": [
       "showcase/instancing",
-      "showcase/arrow-instancing",
       "showcase/gltf",
       "showcase/postprocessing",
       "showcase/persistence",
       "showcase/dof",
       "showcase/globe"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Apache Arrow",
+    "items": [
+      "arrow/arrow-points",
+      "arrow/arrow-lines",
+      "arrow/arrow-polygons",
+      "arrow/arrow-geoarrow",
+      "arrow/arrow-float64-precision",
+      "arrow/arrow-text-2d",
+      "arrow/arrow-temporal-starfield",
+      "arrow/arrow-time-columns",
+      "arrow/arrow-mesh-geometry",
+      "arrow/arrow-particles",
+      "arrow/arrow-instancing",
+      "arrow/arrow-dggs-polygons",
+      "arrow/arrow-columns"
     ]
   },
   {

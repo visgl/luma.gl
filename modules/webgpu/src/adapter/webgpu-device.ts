@@ -482,9 +482,10 @@ export class WebGPUDevice extends Device {
       `${vendor} ${renderer} ${this.adapterInfo.architecture || ''}`
     );
 
-    const gpu =
-      vendor === 'apple' ? 'apple' : softwareRenderer || fallback ? 'software' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
     const gpuArchitecture = this.adapterInfo.architecture || 'unknown';
+    const gpu =
+      identifyGPUVendor(vendor, renderer) ??
+      (softwareRenderer || fallback ? 'software' : 'unknown');
     const gpuBackend = (this.adapterInfo as any).backend || 'unknown';
     const gpuType =
       ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase() ||
@@ -566,6 +567,30 @@ export class WebGPUDevice extends Device {
     }
     return capabilities;
   }
+}
+
+function identifyGPUVendor(
+  vendor: string,
+  renderer: string
+): 'nvidia' | 'intel' | 'apple' | 'amd' | null {
+  if (/NVIDIA/i.exec(vendor) || /NVIDIA/i.exec(renderer)) {
+    return 'nvidia';
+  }
+  if (/INTEL/i.exec(vendor) || /INTEL/i.exec(renderer)) {
+    return 'intel';
+  }
+  if (/Apple/i.exec(vendor) || /Apple/i.exec(renderer)) {
+    return 'apple';
+  }
+  if (
+    /AMD/i.exec(vendor) ||
+    /AMD/i.exec(renderer) ||
+    /ATI/i.exec(vendor) ||
+    /ATI/i.exec(renderer)
+  ) {
+    return 'amd';
+  }
+  return null;
 }
 
 function scheduleMicrotask(callback: () => void): void {

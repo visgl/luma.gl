@@ -13,6 +13,9 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/webgpu`][webgpu]           | Required \* | `Device` adapter implemented using the WebGL API. Enables creation of WebGL resources.          |
 | [`@luma.gl/engine`][engine]           | Recommended | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
 | [`@luma.gl/shadertools`][shadertools] | Recommended | System for modularizing and composing shader code, shader module system,, shader modules.       |
+| [`@luma.gl/tables`][tables]           | Optional    | GPU-resident table primitives, batching, table-backed rendering, and table-oriented compute.    |
+| [`@luma.gl/arrow`][arrow]             | Optional    | Apache Arrow adapters for deriving GPU layouts and building GPU table objects from Arrow data.  |
+| [`@luma.gl/text`][text]               | Optional    | Experimental GPUVector-based 2D text conversion and renderer models.                           |
 | [`@luma.gl/gltf`][gltf]               | Optional    | glTF scenegraph loading and instantiation etc.                                                  |
 | [`@luma.gl/test-utils`][test-utils]   | Optional    | Test setups, in particular support for rendering and comparing images.                          |
 
@@ -23,6 +26,8 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/engine`][engine] for `Model`, `AnimationLoop`, scenegraph helpers, and compute-oriented utilities.
 - [`@luma.gl/core`][core] for `Device`, buffers, textures, shaders, render passes, and `RenderPipeline`.
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
+- [`@luma.gl/tables`][tables] for `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`.
+- [`@luma.gl/text`][text] for GPUVector-based 2D text conversion and rendering.
 - [`@luma.gl/gltf`][gltf] for glTF scenegraph loading and extensions.
 - [`@luma.gl/webgl`][webgl] and [`@luma.gl/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
 - [`@luma.gl/webgl/constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.
@@ -31,6 +36,9 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 [webgpu]: /docs/api-reference/webgpu
 [core]: /docs/api-reference/core
 [shadertools]: /docs/api-reference/shadertools
+[tables]: /docs/api-reference/tables
+[arrow]: /docs/api-reference/arrow
+[text]: /docs/api-reference/text
 [gltf]: /docs/api-reference/gltf
 [test-utils]: /docs/api-reference/test-utils
 [engine]: /docs/api-reference/engine

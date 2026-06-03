@@ -1,7 +1,9 @@
 [
   "README",
+  "getting-started",
   "whats-new",
   "upgrade-guide",
+  "faq",
   {
     "type": "category",
     "label": "Tutorials",
@@ -13,6 +15,7 @@
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
+      "tutorials/transform",
       "tutorials/transform-feedback",
       "tutorials/external-webgl-context",
       "tutorials/whats-next"
@@ -40,6 +43,7 @@
           "api-guide/gpu/gpu-resources",
           "api-guide/gpu/gpu-memory",
           "api-guide/gpu/gpu-memory-layouts",
+          "api-guide/gpu/buffer-schemas",
           "api-guide/gpu/gpu-commands",
           "api-guide/gpu/gpu-buffers",
           "api-guide/gpu/gpu-textures",
@@ -47,7 +51,6 @@
           "api-guide/gpu/gpu-parameters",
           "api-guide/gpu/gpu-bindings",
           "api-guide/gpu/gpu-attributes",
-          "api-guide/gpu/arrow-table-columns",
           "api-guide/gpu/gpu-uniforms",
           "api-guide/gpu/gpu-storage-buffers"
         ]
@@ -69,6 +72,7 @@
           "api-guide/engine/shader-inputs",
           "api-guide/engine/interactivity",
           "api-guide/engine/scenegraph",
+          "api-guide/engine/materials",
           "api-guide/engine/transforms"
         ]
       }
@@ -93,13 +97,17 @@
           "api-reference/core/canvas-context",
           "api-reference/core/presentation-context",
           "api-reference/core/parameters",
+          "api-reference/core/uniform-store",
           "api-reference/core/pipeline-factory",
           "api-reference/core/shader-factory",
           "api-reference/core/bindings",
+          "api-reference/core/buffer-layout",
           "api-reference/core/shader-layout",
+          "api-reference/core/shader-block-layout",
           "api-reference/core/shader-types",
           "api-reference/core/vertex-formats",
           "api-reference/core/texture-formats",
+          "api-reference/core/resources/resource",
           "api-reference/core/resources/buffer",
           "api-reference/core/resources/command-encoder",
           "api-reference/core/resources/compute-pass",
@@ -113,6 +121,7 @@
           "api-reference/core/shader-logs",
           "api-reference/core/resources/texture",
           "api-reference/core/resources/texture-view",
+          "api-reference/core/resources/external-texture",
           "api-reference/core/resources/transform-feedback",
           "api-reference/core/resources/query-set",
           "api-reference/core/resources/vertex-array"
@@ -127,6 +136,8 @@
           "api-reference/engine/clip-space",
           "api-reference/engine/background-texture-model",
           "api-reference/engine/shader-inputs",
+          "api-reference/engine/buffer-schema",
+          "api-reference/engine/dynamic-buffer",
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",
           "api-reference/engine/dynamic-texture",
@@ -149,6 +160,49 @@
       },
       {
         "type": "category",
+        "label": "@luma.gl/gpgpu",
+        "items": [
+          "api-reference/gpgpu/README",
+          "api-reference/gpgpu/gpu-table",
+          "api-reference/gpgpu/operations",
+          "api-reference/gpgpu/clean-evaluate"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/tables",
+        "items": [
+          "api-reference/tables/README",
+          "api-reference/tables/gpu-table-structure",
+          "api-reference/tables/gpu-table-lifecycle",
+          "api-reference/tables/gpu-table",
+          "api-reference/tables/gpu-record-batch",
+          "api-reference/tables/gpu-vector",
+          "api-reference/tables/gpu-data",
+          "api-reference/tables/gpu-schema",
+          "api-reference/tables/gpu-vector-format",
+          "api-reference/tables/gpu-table-buffer-planner"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/arrow",
+        "items": [
+          "api-reference/arrow/README",
+          "api-reference/arrow/arrow-representations",
+          "api-reference/arrow/arrow-preparation",
+          "api-reference/arrow/supported-arrow-types",
+          "api-reference/arrow/deck-target-api",
+          "api-reference/arrow/arrow-utils"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/text",
+        "items": ["api-reference/text/README"]
+      },
+      {
+        "type": "category",
         "label": "@luma.gl/gltf",
         "items": ["api-reference/gltf/README", "api-reference/gltf/gltf-extensions"]
       },
@@ -161,13 +215,21 @@
             "label": "Shader Modules",
             "items": [
               "api-reference/shadertools/shader-modules/float-colors",
+              "api-reference/shadertools/shader-modules/dggs",
+              "api-reference/shadertools/shader-modules/dirlight",
               "api-reference/shadertools/shader-modules/fp32",
               "api-reference/shadertools/shader-modules/fp64",
+              "api-reference/shadertools/shader-modules/fp64-arithmetic",
+              "api-reference/shadertools/shader-modules/gpu-picking",
+              "api-reference/shadertools/shader-modules/lambert-material",
+              "api-reference/shadertools/shader-modules/lighting",
               "api-reference/shadertools/shader-modules/pbr-material",
               "api-reference/shadertools/shader-modules/phong-material",
               "api-reference/shadertools/shader-modules/gouraud-material",
               "api-reference/shadertools/shader-modules/picking",
-              "api-reference/shadertools/shader-modules/project"
+              "api-reference/shadertools/shader-modules/project",
+              "api-reference/shadertools/shader-modules/random",
+              "api-reference/shadertools/shader-modules/skin"
             ]
           },
           {
@@ -178,7 +240,9 @@
           "api-reference/shadertools/README",
           "api-reference/shadertools/shader-module",
           "api-reference/shadertools/shader-assembler",
-          "api-reference/shadertools/shader-info"
+          "api-reference/shadertools/shader-info",
+          "api-reference/shadertools/shader-conventions",
+          "api-reference/shadertools/wgsl-support"
         ]
       },
       {
@@ -207,6 +271,7 @@
     "items": [
       "developer-guide/README",
       "developer-guide/installing",
+      "developer-guide/editing",
       "developer-guide/debugging",
       "developer-guide/testing",
       "developer-guide/profiling",
