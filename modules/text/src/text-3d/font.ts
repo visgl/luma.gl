@@ -14,6 +14,10 @@ type GlyphCommand = 'm' | 'l' | 'q' | 'b';
 type TypefaceGlyph = {
   /** Horizontal advance after rendering the glyph. */
   ha: number;
+  /** Optional minimum x coordinate included by typeface.js font data. */
+  x_min?: number;
+  /** Optional maximum x coordinate included by typeface.js font data. */
+  x_max?: number;
   /** Outline command sequence describing the glyph. */
   o?: string;
   /** Cached outline tokens for repeated parsing. */
@@ -22,6 +26,8 @@ type TypefaceGlyph = {
 
 /** Typeface JSON font definition accepted by the loader. */
 export type TypefaceFontData = {
+  /** Additional typeface.js metadata retained by source font JSON. */
+  [key: string]: unknown;
   /** Name of the font family. */
   familyName: string;
   /** Glyph table keyed by character. */
@@ -30,8 +36,12 @@ export type TypefaceFontData = {
   resolution: number;
   /** Font bounding box extents. */
   boundingBox: {
+    /** Optional minimum x coordinate included by typeface.js font data. */
+    xMin?: number;
     /** Minimum y coordinate for glyph outlines. */
     yMin: number;
+    /** Optional maximum x coordinate included by typeface.js font data. */
+    xMax?: number;
     /** Maximum y coordinate for glyph outlines. */
     yMax: number;
   };
@@ -73,6 +83,27 @@ export class Font {
     }
     return shapes;
   }
+
+  /** Resolves one source character to a glyph present in this font. */
+  resolveCharacter(character: string): string {
+    return resolveGlyphCharacter(character, this.data);
+  }
+
+  /** Returns one glyph's horizontal advance at the requested font size. */
+  getGlyphAdvance(character: string, size = 100): number {
+    const scale = getFontScale(size, this.data);
+    return getGlyph(character, this.data).ha * scale;
+  }
+
+  /** Returns the font line height at the requested font size. */
+  getLineHeight(size = 100): number {
+    return getLineHeight(this.data, getFontScale(size, this.data));
+  }
+
+  /** Returns one line's horizontal advance width at the requested font size. */
+  measureLineWidth(line: string, size = 100): number {
+    return measureLineWidth(line, this.data, getFontScale(size, this.data));
+  }
 }
 
 /** Parses typeface JSON data into a Font instance. */
@@ -89,9 +120,8 @@ function createPaths(
   options: TextLayoutOptions
 ): ShapePath[] {
   const lines = text.split('\n');
-  const scale = size / data.resolution;
-  const lineHeight =
-    (data.boundingBox.yMax - data.boundingBox.yMin + data.underlineThickness) * scale;
+  const scale = getFontScale(size, data);
+  const lineHeight = getLineHeight(data, scale);
   const align = options.align ?? 'left';
 
   const paths: ShapePath[] = [];
@@ -120,10 +150,7 @@ function measureLineWidth(line: string, data: TypefaceFontData, scale: number): 
   let width = 0;
 
   for (const character of Array.from(line)) {
-    const glyph = data.glyphs[character] ?? data.glyphs['?'];
-    if (!glyph) {
-      throw new Error(`Font: character "${character}" is not available in ${data.familyName}`);
-    }
+    const glyph = getGlyph(character, data);
     width += glyph.ha * scale;
   }
 
@@ -140,10 +167,7 @@ function createPath(
   data: TypefaceFontData,
   divisions: number
 ): {offsetX: number; path: ShapePath} {
-  const glyph = data.glyphs[character] ?? data.glyphs['?'];
-  if (!glyph) {
-    throw new Error(`Font: character "${character}" is not available in ${data.familyName}`);
-  }
+  const glyph = getGlyph(character, data);
 
   const path = new ShapePath();
   let x = 0;
@@ -226,4 +250,30 @@ function closeSubPath(path: ShapePath, start: Vector2, end: Vector2): void {
   if (!start.equals(end)) {
     path.lineTo(start.x, start.y);
   }
+}
+
+/** Returns the normalized font scale for one requested text size. */
+function getFontScale(size: number, data: TypefaceFontData): number {
+  return size / data.resolution;
+}
+
+/** Returns the advance between adjacent font rows. */
+function getLineHeight(data: TypefaceFontData, scale: number): number {
+  return (data.boundingBox.yMax - data.boundingBox.yMin + data.underlineThickness) * scale;
+}
+
+/** Resolves a source character to a glyph stored by the font. */
+function resolveGlyphCharacter(character: string, data: TypefaceFontData): string {
+  if (data.glyphs[character]) {
+    return character;
+  }
+  if (data.glyphs['?']) {
+    return '?';
+  }
+  throw new Error(`Font: character "${character}" is not available in ${data.familyName}`);
+}
+
+/** Returns the font glyph used to render one source character. */
+function getGlyph(character: string, data: TypefaceFontData): TypefaceGlyph {
+  return data.glyphs[resolveGlyphCharacter(character, data)]!;
 }

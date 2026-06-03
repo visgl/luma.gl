@@ -15,6 +15,7 @@ import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
 import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
+import GPT2App from '../../examples/experimental/gpt-2/app';
 import ArrowParticlesApp from '../../examples/arrow/arrow-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
@@ -35,6 +36,7 @@ import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
+import ArrowText3DApp from '../../examples/arrow/arrow-text-3d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import Text3DApp from '../../examples/experimental/text-3d/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
@@ -147,6 +149,18 @@ export const ArrowText2DExample: React.FC = props => (
   />
 );
 
+export const ArrowText3DExample: React.FC = props => (
+  <LumaExample
+    id="arrow-text-3d"
+    title="3D Text"
+    directory="arrow"
+    template={ArrowText3DApp}
+    config={exampleConfig}
+    headerControls={<Text3DControls />}
+    {...props}
+  />
+);
+
 export const ArrowTimeColumnsExample: React.FC = props => (
   <LumaExample
     id="arrow-time-columns"
@@ -253,6 +267,21 @@ export const ArrowDggsPolygonsExample: React.FC = props => (
     config={exampleConfig}
     devices={['webgpu']}
     showStats
+    {...props}
+  />
+);
+
+export const GPT2Example: React.FC = props => (
+  <LumaExample
+    id="gpt-2"
+    title="GPT-2 Transformer"
+    directory="experimental"
+    devices={['webgpu']}
+    showHeader={false}
+    showStats={false}
+    templateInfoPlacement="page"
+    template={GPT2App}
+    config={exampleConfig}
     {...props}
   />
 );

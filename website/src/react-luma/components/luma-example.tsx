@@ -238,6 +238,7 @@ type LumaExampleProps = React.PropsWithChildren<{
   showHeader?: boolean;
   showStats?: boolean;
   devices?: ('webgl2' | 'webgpu')[];
+  templateInfoPlacement?: 'header' | 'page';
   headerControls?: React.ReactNode;
 }>;
 
@@ -774,9 +775,17 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           sourcePath={props.sourcePath}
           devices={props.devices}
         >
-          {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
+          {info && props.templateInfoPlacement !== 'page' ? (
+            <div dangerouslySetInnerHTML={{__html: info}} />
+          ) : null}
           {props.headerControls}
         </ExampleHeader>
+      ) : null}
+      {info && props.templateInfoPlacement === 'page' ? (
+        <div
+          style={{height: '100%', minHeight: 0, position: 'relative', zIndex: 1}}
+          dangerouslySetInnerHTML={{__html: info}}
+        />
       ) : null}
       <div ref={statsContainerRef} style={{minHeight: 0, position: 'absolute', inset: 0}}>
         {showStats ? (
@@ -797,7 +806,14 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             }}
           />
         ) : null}
-        <div key={effectiveDeviceType || deviceType} ref={canvasContainerRef} style={EXAMPLE_CANVAS_STYLE} />
+        <div
+          key={effectiveDeviceType || deviceType}
+          ref={canvasContainerRef}
+          style={{
+            ...EXAMPLE_CANVAS_STYLE,
+            pointerEvents: props.templateInfoPlacement === 'page' ? 'none' : undefined
+          }}
+        />
       </div>
     </ExamplePage>
   );
