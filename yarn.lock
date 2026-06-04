@@ -4451,7 +4451,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/gpgpu@workspace:modules/gpgpu":
+"@luma.gl/gpgpu@npm:~9.3.0, @luma.gl/gpgpu@workspace:modules/gpgpu":
   version: 0.0.0-use.local
   resolution: "@luma.gl/gpgpu@workspace:modules/gpgpu"
   dependencies:
@@ -6139,6 +6139,13 @@ __metadata:
   dependencies:
     defer-to-connect: "npm:^2.0.1"
   checksum: 10c0/4629d2fbb2ea67c2e9dc03af235c0991c79ebdddcbc19aed5d5732fb29ce01c13331e9b1a491584b9069bd6ecde6581dcbf871f11b7eefdebbab34de6cf2197e
+  languageName: node
+  linkType: hard
+
+"@tanstack/virtual-core@npm:^3.16.0":
+  version: 3.16.0
+  resolution: "@tanstack/virtual-core@npm:3.16.0"
+  checksum: 10c0/03016cf464108ce8354d44d89393442e2457e0539933ee5af56691e76c0a351e268faf4f619395c5fabd3f2e4c23e5fc963b7f359d22805f2164be2403d2803e
   languageName: node
   linkType: hard
 
@@ -15898,6 +15905,25 @@ __metadata:
     "@luma.gl/webgl": "npm:9.3.2"
     "@luma.gl/webgpu": "npm:9.3.2"
     "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-gpgpu@workspace:examples/showcase/gpgpu":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-gpgpu@workspace:examples/showcase/gpgpu"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/gpgpu": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    "@tanstack/virtual-core": "npm:^3.16.0"
+    acorn: "npm:^8.16.0"
+    apache-arrow: "npm:^17.0.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
