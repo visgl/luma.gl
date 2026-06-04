@@ -12,7 +12,7 @@ import {sequence} from './sequence';
 import {swizzle} from './swizzle';
 
 /** WebGL backend for built-in GPGPU operations, implemented with transform feedback. */
-export const webglBackend = {
+export {
   arithmetic,
   dot,
   equalAll,

@@ -12,7 +12,7 @@ import {sequence} from './sequence';
 import {swizzle} from './swizzle';
 
 /** CPU fallback backend for built-in GPGPU operations. Registered by default. */
-export const cpuBackend = {
+export {
   arithmetic,
   dot,
   equalAll,

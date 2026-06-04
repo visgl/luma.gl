@@ -3,18 +3,11 @@
 // Copyright (c) vis.gl contributors
 import {SignedDataType, Device} from '@luma.gl/core';
 import {TypedArray, equals} from '@math.gl/core';
-import {
-  GPUTableEvaluator,
-  backendRegistry,
-  webglBackend,
-  webgpuBackend,
-  cpuBackend
-} from '@luma.gl/gpgpu';
+import {GPUTableEvaluator, backendRegistry} from '@luma.gl/gpgpu';
+import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
 import {Stat} from '@probe.gl/stats';
 import {getTestDevice as _getTestDevice} from '@luma.gl/test-utils';
 
-backendRegistry.add('webgl', webglBackend);
-backendRegistry.add('webgpu', webgpuBackend);
 backendRegistry.add('null', cpuBackend);
 
 export type TestData =

@@ -14,7 +14,12 @@ Each operation returns a new [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu
 - Output evaluation is backend-driven through `backendRegistry`.
 - Operations can be chained to build larger compute graphs.
 - Operation result evaluators own their materialized immutable output buffer.
-- The CPU backend is registered by default. Register `webglBackend` or `webgpuBackend` before evaluating on those device types.
+- The CPU backend is available by default. If no backend has been registered for
+  a WebGL or WebGPU device, the matching backend is loaded automatically on
+  first evaluation.
+- Backend operation handlers can also be imported from `@luma.gl/gpgpu/webgl`,
+  `@luma.gl/gpgpu/webgpu`, or `@luma.gl/gpgpu/cpu` for eager loading or custom
+  subset registration.
 
 ## Arithmetic
 

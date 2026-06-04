@@ -23,6 +23,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./cpu": {
+      "types": "./dist/operations/cpu/index.d.ts",
+      "import": "./dist/operations/cpu/index.js",
+      "require": "./dist/operations/cpu/index.cjs"
+    },
+    "./webgl": {
+      "types": "./dist/operations/webgl/index.d.ts",
+      "import": "./dist/operations/webgl/index.js",
+      "require": "./dist/operations/webgl/index.cjs"
+    },
+    "./webgpu": {
+      "types": "./dist/operations/webgpu/index.d.ts",
+      "import": "./dist/operations/webgpu/index.js",
+      "require": "./dist/operations/webgpu/index.cjs"
     }
   },
   "files": [

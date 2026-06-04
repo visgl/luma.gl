@@ -4,7 +4,7 @@
 
 import {log} from '@luma.gl/core';
 import type {OperationHandler} from './operation';
-import {cpuBackend} from '../operations/cpu/index';
+import * as cpuBackend from '../operations/cpu/index';
 
 /** Map from operation names to backend-specific operation handlers. */
 export type BackendModule = Record<string, OperationHandler>;
@@ -16,8 +16,9 @@ export type BackendModule = Record<string, OperationHandler>;
  * unused WebGL or WebGPU implementations can be tree-shaken or loaded lazily.
  */
 class BackendRegistry {
-  private _loading: Promise<BackendModule>[] = [];
-  private _modules: {[deviceType: string]: BackendModule} = {};
+  private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
+    cpu: cpuBackend
+  };
 
   /**
    * Registers operation handlers for a device type.
@@ -25,20 +26,20 @@ class BackendRegistry {
    * @param deviceType - Device type such as `'webgl'`, `'webgpu'`, or `'cpu'`.
    * @param moduleOrPromise - Backend module or a promise that resolves to one.
    */
-  add(deviceType: string, moduleOrPromise: BackendModule | Promise<BackendModule>) {
+  add(
+    deviceType: string,
+    moduleOrPromise: BackendModule | Promise<BackendModule>
+  ): Promise<BackendModule> {
     const loader = Promise.resolve(moduleOrPromise);
-    const pendingLoaders = this._loading;
-    pendingLoaders.push(loader);
+    this._modules[deviceType] = loader;
     loader
       .then(module => {
         this._modules[deviceType] = module;
       })
       .catch(ex => {
         log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-      })
-      .finally(() => {
-        pendingLoaders.splice(pendingLoaders.indexOf(loader), 1);
       });
+    return loader;
   }
 
   /**
@@ -47,17 +48,21 @@ class BackendRegistry {
    * Pending async backend registrations are awaited before lookup.
    */
   async get(deviceType: string, operationName: string): Promise<OperationHandler> {
-    if (this._loading.length) {
-      await Promise.all(this._loading);
-    }
-    const module = this._modules[deviceType];
+    let module = this._modules[deviceType];
     if (!module) {
-      throw new Error(`${deviceType} backend not registered`);
+      if (deviceType === 'webgl') {
+        module = this.add('webgl', import('../operations/webgl/index'));
+      } else if (deviceType === 'webgpu') {
+        module = this.add('webgpu', import('../operations/webgpu/index'));
+      } else {
+        throw new Error(`${deviceType} backend not registered`);
+      }
     }
-    if (!(operationName in module)) {
+    const resolvedModule = await module;
+    if (!(operationName in resolvedModule)) {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }
-    return module[operationName];
+    return resolvedModule[operationName];
   }
 
   /** Removes all registered backend modules. Primarily intended for tests. */
@@ -73,4 +78,3 @@ class BackendRegistry {
  * devices.
  */
 export const backendRegistry = new BackendRegistry();
-backendRegistry.add('cpu', cpuBackend);

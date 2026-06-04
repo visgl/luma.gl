@@ -12,7 +12,7 @@ import {sequence} from './sequence';
 import {swizzle} from './swizzle';
 
 /** WebGPU backend for built-in GPGPU operations, implemented with compute pipelines. */
-export const webgpuBackend = {
+export {
   arithmetic,
   dot,
   equalAll,
