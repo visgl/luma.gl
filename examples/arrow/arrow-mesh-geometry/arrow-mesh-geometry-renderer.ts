@@ -83,6 +83,9 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
   readonly pickingModel: GPUTableModel | null;
   readonly matrixTable: GPUTable;
   readonly picker: PickingManager;
+  readonly faceMetadataTable: arrow.Table;
+  readonly meshTable: arrow.Table;
+  readonly matrixArrowTable: arrow.Table;
   readonly faceColors?: GPUVector<'float32x4'>;
   readonly faceNames: arrow.Vector<arrow.Utf8>;
   readonly matrixValues = new Float32Array(CUBE_COUNT * MATRIX_COMPONENT_COUNT);
@@ -96,11 +99,13 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
     this.props = props;
 
     const faceMetadata = makeFaceMetadataTable();
+    this.faceMetadataTable = faceMetadata;
     const defaultFaceColors = faceMetadata.getChild('COLOR_0') as arrow.Vector<
       arrow.FixedSizeList<arrow.Float32>
     >;
     const faceColors = props.faceColors ?? defaultFaceColors;
     const arrowMesh = makeArrowMeshTable(device.type, faceColors);
+    this.meshTable = arrowMesh.data;
     this.faceNames = faceMetadata.getChild('name') as arrow.Vector<arrow.Utf8>;
     this.faceColors =
       device.type === 'webgpu'
@@ -108,15 +113,12 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
         : undefined;
 
     this.updateInstanceMatrices(0);
+    this.matrixArrowTable = makeInstanceArrowTable(this.matrixValues);
     this.geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
-    this.matrixTable = makeGPUTableFromArrowTable(
-      device,
-      makeInstanceArrowTable(this.matrixValues),
-      {
-        shaderLayout: getMeshGeometryShaderLayout(device),
-        arrowPaths: MESH_GEOMETRY_MATRIX_ARROW_PATHS
-      }
-    );
+    this.matrixTable = makeGPUTableFromArrowTable(device, this.matrixArrowTable, {
+      shaderLayout: getMeshGeometryShaderLayout(device),
+      arrowPaths: MESH_GEOMETRY_MATRIX_ARROW_PATHS
+    });
     this.model = createMeshGeometryModel(device, {
       id: props.id ?? DEFAULT_MESH_RENDERER_ID,
       geometry: this.geometry,

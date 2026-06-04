@@ -153,7 +153,7 @@ const MAX_INSTANCES_PER_SIDE = 2048;
 const DEFAULT_INSTANCE_SPACING = 3;
 export const INSTANCES_PER_SIDE_OPTIONS = [DEFAULT_INSTANCES_PER_SIDE, MAX_INSTANCES_PER_SIDE];
 
-type InstanceArrowTable = arrow.Table<{
+export type InstanceArrowTable = arrow.Table<{
   instancePositions: arrow.FixedSizeList<arrow.Float32>;
   instanceColors: arrow.FixedSizeList<arrow.Uint8>;
 }>;
@@ -203,8 +203,7 @@ function makeInstanceArrowTable(instancesPerSide: number): InstanceArrowTable {
 class InstancedCube extends GPUTableModel {
   private instanceTable: GPUTable;
 
-  constructor(device: Device, instancesPerSide: number, props?: Partial<ModelProps>) {
-    const instanceArrowTable = makeInstanceArrowTable(instancesPerSide);
+  constructor(device: Device, instanceArrowTable: InstanceArrowTable, props?: Partial<ModelProps>) {
     const instanceTable = makeGPUTableFromArrowTable(device, instanceArrowTable, {
       shaderLayout: CUBE_SHADER_LAYOUT
     });
@@ -320,6 +319,7 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
   cube: InstancedCube;
   pickingCube: Model | null = null;
   instancesPerSide: number;
+  instanceArrowTable: InstanceArrowTable;
 
   readonly shaderInputs = new ShaderInputs<{
     app: typeof app.props;
@@ -335,6 +335,7 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
     super();
     this.device = device;
     this.instancesPerSide = props.instancesPerSide ?? DEFAULT_INSTANCES_PER_SIDE;
+    this.instanceArrowTable = makeInstanceArrowTable(this.instancesPerSide);
     this.cube = this.createCube();
     this.pickingCube = this.createPickingCube();
     this.picker = new PickingManager(device, {
@@ -348,7 +349,8 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
       return;
     }
     this.instancesPerSide = props.instancesPerSide;
-    this.cube.setInstanceTable(makeInstanceArrowTable(props.instancesPerSide));
+    this.instanceArrowTable = makeInstanceArrowTable(props.instancesPerSide);
+    this.cube.setInstanceTable(this.instanceArrowTable);
     if (this.pickingCube) {
       this.pickingCube.setAttributes(this.cube.table!.attributes);
       this.pickingCube.setInstanceCount(this.cube.instanceCount);
@@ -388,8 +390,12 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
     this.picker.updatePickInfo(mousePosition as [number, number]);
   }
 
+  getInstanceArrowTable(): InstanceArrowTable {
+    return this.instanceArrowTable;
+  }
+
   createCube(): InstancedCube {
-    return new InstancedCube(this.device, this.instancesPerSide, {
+    return new InstancedCube(this.device, this.instanceArrowTable, {
       // @ts-ignore
       shaderInputs: this.shaderInputs
     });

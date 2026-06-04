@@ -8,18 +8,20 @@ import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {GeoArrowControlPanel, makeGeoArrowControlPanelHtml} from './control-panel';
 import {makeGeoArrowExampleData, type GeoArrowExampleData} from './geoarrow-data';
 import {GeoArrowRenderer} from './geoarrow-renderer';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'GeoArrow';
 export const description =
   'Mixed GeoArrow DenseUnion Point, LineString, MultiLineString, Polygon, and MultiPolygon rows rendered by composing the Arrow point, line, and polygon renderers.';
 
 export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeGeoArrowControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};
 
   readonly device: Device;
   readonly controlPanel = new GeoArrowControlPanel();
+  readonly panels = new ArrowExamplePanelManager({controlsHtml: makeGeoArrowControlPanelHtml()});
   readonly renderer: GeoArrowRenderer;
   exampleData: GeoArrowExampleData | null = null;
   isFinalized = false;
@@ -31,6 +33,7 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
   }
 
   override async onInitialize(): Promise<void> {
+    this.panels.mount();
     this.controlPanel.initialize();
     const exampleData = makeGeoArrowExampleData();
     this.exampleData = exampleData;
@@ -46,6 +49,33 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
     if (this.isFinalized) {
       return;
     }
+    const inspectionTables = this.renderer.getInspectionTables();
+    this.panels.setTableEntries([
+      {
+        id: 'geoarrow-source',
+        label: 'Mixed geometry source',
+        kind: 'source',
+        table: exampleData.table
+      },
+      {
+        id: 'geoarrow-points',
+        label: 'Point rows',
+        kind: 'derived',
+        table: inspectionTables.pointTable
+      },
+      {
+        id: 'geoarrow-lines',
+        label: 'Line rows',
+        kind: 'derived',
+        table: inspectionTables.lineTable
+      },
+      {
+        id: 'geoarrow-polygons',
+        label: 'Polygon rows',
+        kind: 'derived',
+        table: inspectionTables.polygonTable
+      }
+    ]);
     this.controlPanel.setMetrics(this.renderer.getMetrics(), exampleData.arrowByteLength);
   }
 
@@ -57,6 +87,7 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
 
   override onFinalize(): void {
     this.isFinalized = true;
+    this.panels.finalize();
     this.renderer.destroy();
   }
 }

@@ -12,18 +12,22 @@ import {
   ArrowDggsPolygonsControlPanel,
   makeArrowDggsPolygonsControlPanelHtml
 } from './control-panel';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Global Grids: Uint64, Utf8';
 export const description =
   'Parses geohash, quadkey, S2, A5, and H3 cell ids into Uint64 keys on the GPU, generates boundary paths, and renders them through the storage-backed Arrow path model.';
 
 export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowDggsPolygonsControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};
 
   readonly device: Device;
   readonly controlPanel: ArrowDggsPolygonsControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowDggsPolygonsControlPanelHtml()
+  });
   activeEncoding: DggsCellEncoding = 'geohash';
   activeSourceKind: DggsSourceKind = 'uint64';
   layer: ArrowDggsPolygonRenderer | null = null;
@@ -48,7 +52,22 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
       encoding: this.activeEncoding,
       sourceKind: this.activeSourceKind
     });
+    this.panels.mount();
     this.controlPanel.initialize();
+    this.panels.setTableEntries([
+      {
+        id: 'dggs-uint64',
+        label: 'Packed Uint64 keys',
+        kind: 'source',
+        table: this.layer.uint64Table
+      },
+      {
+        id: 'dggs-utf8',
+        label: 'Utf8 keys',
+        kind: 'source',
+        table: this.layer.stringTable
+      }
+    ]);
     this.updateLabels();
   }
 
@@ -60,6 +79,7 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
 
   override onFinalize(): void {
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer?.destroy();
   }
 

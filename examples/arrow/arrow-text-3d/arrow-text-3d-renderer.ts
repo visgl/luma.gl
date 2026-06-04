@@ -23,7 +23,9 @@ import type {Matrix4, NumberArray4, NumberArray16} from '@math.gl/core';
 import {
   makeArrowText3DGlyphData,
   makeArrowText3DTextTable,
-  type ArrowText3DGlyphDrawRange
+  type ArrowText3DGlyphDrawRange,
+  type ArrowText3DGlyphInstanceTable,
+  type ArrowText3DTextTable
 } from './arrow-text-3d-data';
 
 /** Uniforms shared by Arrow 3D text vertex and fragment shaders. */
@@ -189,6 +191,10 @@ const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0
 
 /** Renders grouped Arrow glyph batches through shared 3D glyph geometry vertex ranges. */
 export class ArrowText3DRenderer {
+  /** Arrow Utf8 crawl rows retained before glyph expansion. */
+  readonly textTable: ArrowText3DTextTable;
+  /** Grouped CPU Arrow glyph occurrence batches before GPU upload. */
+  readonly glyphInstanceArrowTable: ArrowText3DGlyphInstanceTable;
   /** Arrow/GPU glyph occurrence batches grouped by atlas glyph. */
   readonly glyphInstanceTable: GPUTable;
   /** Shared glyph geometry ranges aligned with {@link glyphInstanceTable} batches. */
@@ -207,7 +213,9 @@ export class ArrowText3DRenderer {
       makeArrowText3DTextTable(props.textRows),
       glyphAtlas
     );
-    this.glyphInstanceTable = makeGPUTableFromArrowTable(device, glyphData.glyphInstanceTable, {
+    this.textTable = glyphData.textTable;
+    this.glyphInstanceArrowTable = glyphData.glyphInstanceTable;
+    this.glyphInstanceTable = makeGPUTableFromArrowTable(device, this.glyphInstanceArrowTable, {
       shaderLayout: ARROW_TEXT_3D_SHADER_LAYOUT
     });
     this.glyphDrawRanges = glyphData.drawRanges;

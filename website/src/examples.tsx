@@ -156,7 +156,6 @@ export const ArrowText3DExample: React.FC = props => (
     directory="arrow"
     template={ArrowText3DApp}
     config={exampleConfig}
-    headerControls={<Text3DControls />}
     {...props}
   />
 );

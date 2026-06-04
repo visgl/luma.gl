@@ -19,6 +19,7 @@ import {
   GPUTableModel,
   getGPUVectorBuffer,
   getRequiredGPUVector,
+  type GPUTypeMap,
   type GPUVector
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
@@ -100,14 +101,14 @@ type PreparedTemporalColumns = {
 };
 
 type TemporalStarfieldTableInput = {
-  table: GPUTable;
+  table: GPUTable<GPUTypeMap>;
   temporalColumns: PreparedTemporalColumns;
   timestampOriginMilliseconds: number;
   destroy: () => void;
 };
 
 type TemporalStarfieldGPURecordBatchInput = {
-  gpuRecordBatch: GPURecordBatch;
+  gpuRecordBatch: GPURecordBatch<GPUTypeMap>;
   temporalColumns: PreparedTemporalColumns;
   timestampOriginMilliseconds: number;
 };
@@ -428,7 +429,7 @@ function createTemporalStarfieldTableInput(
     throw new Error('Temporal starfield requires at least one GPU record batch');
   }
 
-  const table = new GPUTable({
+  const table = new GPUTable<GPUTypeMap>({
     batches: batchInputs.map(batchInput => batchInput.gpuRecordBatch),
     schema: firstBatchInput.gpuRecordBatch.schema,
     bufferLayout: firstBatchInput.gpuRecordBatch.bufferLayout
@@ -464,10 +465,10 @@ async function makeTemporalStarfieldGPURecordBatchInput(
     }
   );
 
-  let positions: GPUVector | null = null;
+  let positions: GPUVector<'float32x2'> | null = null;
   let preparedEventStarts: PreparedEventStartsColumn | null = null;
-  let starSizes: GPUVector | null = null;
-  let eventColors: GPUVector | null = null;
+  let starSizes: GPUVector<'float32'> | null = null;
+  let eventColors: GPUVector<'unorm8x4'> | null = null;
   try {
     let modelPositions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
     if (timeColumn === 'xyzm') {
@@ -506,7 +507,7 @@ async function makeTemporalStarfieldGPURecordBatchInput(
       eventDurations: preparedDurationColumns.eventDurations,
       pulsePeriods: preparedDurationColumns.pulsePeriods
     };
-    const gpuRecordBatch = new GPURecordBatch({
+    const gpuRecordBatch = new GPURecordBatch<GPUTypeMap>({
       vectors: {
         positions,
         eventStarts: temporalColumns.eventStarts.vector,
@@ -652,7 +653,7 @@ function getPreparedScalarTemporalVector(
 }
 
 function getTemporalStarfieldStorageBindings(
-  temporalStarfieldTable: GPUTable | GPURecordBatch
+  temporalStarfieldTable: GPUTable<GPUTypeMap> | GPURecordBatch<GPUTypeMap>
 ): Record<string, Buffer | DynamicBuffer> {
   return {
     positions: getGPUVectorBuffer(

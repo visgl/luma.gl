@@ -434,6 +434,17 @@ type VisualizationDragState = {
   startViewportRowCount: number;
 };
 
+type VisualizationHoverEventHandlers = {
+  mousemove: (event: MouseEvent) => void;
+  wheel: (event: WheelEvent) => void;
+  pointerdown: (event: PointerEvent) => void;
+  pointermove: (event: PointerEvent) => void;
+  pointerup: (event: PointerEvent) => void;
+  pointercancel: (event: PointerEvent) => void;
+  dblclick: (event: MouseEvent) => void;
+  mouseleave: () => void;
+};
+
 type VisualizationSourceRange = {
   start: number;
   end: number;
@@ -1084,8 +1095,13 @@ export default class GPT2TransformerExample extends AnimationLoopTemplate {
   private displayedVisualizationSpans: VisualizationSpan[] = [];
   private visualizationWriteIndex = 0;
   private visualizationDirty = false;
+  private isFinalized = false;
   private visualizationHoverCanvas: HTMLCanvasElement | null = null;
   private visualizationHoverTooltip: HTMLDivElement | null = null;
+  private visualizationHoverEventHandlers: VisualizationHoverEventHandlers | null = null;
+  private visualizationHoverSetupTimeout: number | null = null;
+  private visualizationHoverCanvasCursor = '';
+  private visualizationHoverCanvasTouchAction = '';
   private visualizationZoom = VISUALIZATION_MINIMUM_ZOOM;
   private visualizationViewportColumn = 0;
   private visualizationViewportRow = 0;
@@ -1094,6 +1110,7 @@ export default class GPT2TransformerExample extends AnimationLoopTemplate {
   private selectedGenerationLogitsStepIndex: number | null = null;
 
   override async onInitialize({device}: AnimationProps): Promise<void> {
+    this.isFinalized = false;
     if (device.type !== 'webgpu') {
       throw new Error(`This example requires a WebGPU device. Received "${device.type}".`);
     }
@@ -1135,7 +1152,9 @@ export default class GPT2TransformerExample extends AnimationLoopTemplate {
   }
 
   override onFinalize(): void {
+    this.isFinalized = true;
     this.generationAbortController?.abort();
+    this.teardownVisualizationHover();
     this.destroyModel();
     this.destroyTensors();
     this.destroyKernels();
@@ -1921,9 +1940,18 @@ export default class GPT2TransformerExample extends AnimationLoopTemplate {
   }
 
   private setupVisualizationHover(): void {
+    if (this.isFinalized) {
+      return;
+    }
+
     const canvasElement = document.querySelector<HTMLCanvasElement>('canvas');
     if (!canvasElement) {
-      window.setTimeout(() => this.setupVisualizationHover(), 100);
+      if (this.visualizationHoverSetupTimeout === null) {
+        this.visualizationHoverSetupTimeout = window.setTimeout(() => {
+          this.visualizationHoverSetupTimeout = null;
+          this.setupVisualizationHover();
+        }, 100);
+      }
       return;
     }
 
@@ -1931,37 +1959,86 @@ export default class GPT2TransformerExample extends AnimationLoopTemplate {
       return;
     }
 
+    this.teardownVisualizationHover();
     this.visualizationHoverCanvas = canvasElement;
     this.visualizationHoverTooltip = this.getOrCreateVisualizationHoverTooltip();
+    this.visualizationHoverCanvasCursor = canvasElement.style.cursor;
+    this.visualizationHoverCanvasTouchAction = canvasElement.style.touchAction;
     canvasElement.style.cursor = 'grab';
     canvasElement.style.touchAction = 'none';
-    canvasElement.addEventListener('mousemove', event =>
-      this.writeVisualizationHover(event, canvasElement)
-    );
-    canvasElement.addEventListener(
-      'wheel',
-      event => this.zoomVisualizationWithWheel(event, canvasElement),
-      {passive: false}
-    );
-    canvasElement.addEventListener('pointerdown', event =>
-      this.beginVisualizationDrag(event, canvasElement)
-    );
-    canvasElement.addEventListener('pointermove', event =>
-      this.updateVisualizationDrag(event, canvasElement)
-    );
-    canvasElement.addEventListener('pointerup', event => this.endVisualizationDrag(event));
-    canvasElement.addEventListener('pointercancel', event => this.endVisualizationDrag(event));
-    canvasElement.addEventListener('dblclick', event => {
-      event.preventDefault();
-      this.resetVisualizationViewport();
-      this.writeVisualizationHover(event, canvasElement);
-    });
-    canvasElement.addEventListener('mouseleave', () => {
-      if (!this.visualizationDragState) {
-        this.clearVisualizationHover();
+    const visualizationHoverEventHandlers: VisualizationHoverEventHandlers = {
+      mousemove: event => this.writeVisualizationHover(event, canvasElement),
+      wheel: event => this.zoomVisualizationWithWheel(event, canvasElement),
+      pointerdown: event => this.beginVisualizationDrag(event, canvasElement),
+      pointermove: event => this.updateVisualizationDrag(event, canvasElement),
+      pointerup: event => this.endVisualizationDrag(event),
+      pointercancel: event => this.endVisualizationDrag(event),
+      dblclick: event => {
+        event.preventDefault();
+        this.resetVisualizationViewport();
+        this.writeVisualizationHover(event, canvasElement);
+      },
+      mouseleave: () => {
+        if (!this.visualizationDragState) {
+          this.clearVisualizationHover();
+        }
       }
+    };
+    this.visualizationHoverEventHandlers = visualizationHoverEventHandlers;
+    canvasElement.addEventListener('mousemove', visualizationHoverEventHandlers.mousemove);
+    canvasElement.addEventListener('wheel', visualizationHoverEventHandlers.wheel, {
+      passive: false
     });
+    canvasElement.addEventListener('pointerdown', visualizationHoverEventHandlers.pointerdown);
+    canvasElement.addEventListener('pointermove', visualizationHoverEventHandlers.pointermove);
+    canvasElement.addEventListener('pointerup', visualizationHoverEventHandlers.pointerup);
+    canvasElement.addEventListener('pointercancel', visualizationHoverEventHandlers.pointercancel);
+    canvasElement.addEventListener('dblclick', visualizationHoverEventHandlers.dblclick);
+    canvasElement.addEventListener('mouseleave', visualizationHoverEventHandlers.mouseleave);
     this.clearVisualizationHover();
+  }
+
+  private teardownVisualizationHover(): void {
+    if (this.visualizationHoverSetupTimeout !== null) {
+      window.clearTimeout(this.visualizationHoverSetupTimeout);
+      this.visualizationHoverSetupTimeout = null;
+    }
+
+    const canvasElement = this.visualizationHoverCanvas;
+    const visualizationHoverEventHandlers = this.visualizationHoverEventHandlers;
+    if (canvasElement && visualizationHoverEventHandlers) {
+      canvasElement.removeEventListener('mousemove', visualizationHoverEventHandlers.mousemove);
+      canvasElement.removeEventListener('wheel', visualizationHoverEventHandlers.wheel);
+      canvasElement.removeEventListener('pointerdown', visualizationHoverEventHandlers.pointerdown);
+      canvasElement.removeEventListener('pointermove', visualizationHoverEventHandlers.pointermove);
+      canvasElement.removeEventListener('pointerup', visualizationHoverEventHandlers.pointerup);
+      canvasElement.removeEventListener(
+        'pointercancel',
+        visualizationHoverEventHandlers.pointercancel
+      );
+      canvasElement.removeEventListener('dblclick', visualizationHoverEventHandlers.dblclick);
+      canvasElement.removeEventListener('mouseleave', visualizationHoverEventHandlers.mouseleave);
+    }
+
+    if (
+      canvasElement &&
+      this.visualizationDragState &&
+      canvasElement.hasPointerCapture(this.visualizationDragState.pointerId)
+    ) {
+      canvasElement.releasePointerCapture(this.visualizationDragState.pointerId);
+    }
+    if (canvasElement) {
+      canvasElement.style.cursor = this.visualizationHoverCanvasCursor;
+      canvasElement.style.touchAction = this.visualizationHoverCanvasTouchAction;
+    }
+
+    this.visualizationDragState = null;
+    this.visualizationHoverCanvas = null;
+    this.visualizationHoverEventHandlers = null;
+    this.visualizationHoverCanvasCursor = '';
+    this.visualizationHoverCanvasTouchAction = '';
+    this.visualizationHoverTooltip?.remove();
+    this.visualizationHoverTooltip = null;
   }
 
   private beginVisualizationDrag(event: PointerEvent, canvasElement: HTMLCanvasElement): void {

@@ -9,6 +9,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels",
     "@luma.gl/arrow": "~9.3.0",
     "@luma.gl/core": "~9.3.0",
     "@luma.gl/engine": "~9.3.0",

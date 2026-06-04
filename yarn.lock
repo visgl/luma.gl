@@ -2482,6 +2482,216 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-columns%40workspace%3Aexamples%2Farrow%2Farrow-columns":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-columns%40workspace%3Aexamples%2Farrow%2Farrow-columns"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-dggs-polygons%40workspace%3Aexamples%2Farrow%2Farrow-dggs-polygons":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-dggs-polygons%40workspace%3Aexamples%2Farrow%2Farrow-dggs-polygons"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-float64-precision%40workspace%3Aexamples%2Farrow%2Farrow-float64-precision":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-float64-precision%40workspace%3Aexamples%2Farrow%2Farrow-float64-precision"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-geoarrow%40workspace%3Aexamples%2Farrow%2Farrow-geoarrow":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-geoarrow%40workspace%3Aexamples%2Farrow%2Farrow-geoarrow"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-instancing%40workspace%3Aexamples%2Farrow%2Farrow-instancing":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-instancing%40workspace%3Aexamples%2Farrow%2Farrow-instancing"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-lines%40workspace%3Aexamples%2Farrow%2Farrow-lines":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-lines%40workspace%3Aexamples%2Farrow%2Farrow-lines"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-mesh-geometry%40workspace%3Aexamples%2Farrow%2Farrow-mesh-geometry":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-mesh-geometry%40workspace%3Aexamples%2Farrow%2Farrow-mesh-geometry"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-particles%40workspace%3Aexamples%2Farrow%2Farrow-particles":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-particles%40workspace%3Aexamples%2Farrow%2Farrow-particles"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-points%40workspace%3Aexamples%2Farrow%2Farrow-points":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-points%40workspace%3Aexamples%2Farrow%2Farrow-points"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-polygons%40workspace%3Aexamples%2Farrow%2Farrow-polygons":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-polygons%40workspace%3Aexamples%2Farrow%2Farrow-polygons"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-temporal-starfield%40workspace%3Aexamples%2Farrow%2Farrow-temporal-starfield":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-temporal-starfield%40workspace%3Aexamples%2Farrow%2Farrow-temporal-starfield"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-text-2d%40workspace%3Aexamples%2Farrow%2Farrow-text-2d":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-text-2d%40workspace%3Aexamples%2Farrow%2Farrow-text-2d"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-text-3d%40workspace%3Aexamples%2Farrow%2Farrow-text-3d":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-text-3d%40workspace%3Aexamples%2Farrow%2Farrow-text-3d"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
+"@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-time-columns%40workspace%3Aexamples%2Farrow%2Farrow-time-columns":
+  version: 0.0.0-use.local
+  resolution: "@deck.gl-community/panels@portal:../../../../deck.gl-community/modules/panels::locator=luma.gl-examples-arrow-time-columns%40workspace%3Aexamples%2Farrow%2Farrow-time-columns"
+  dependencies:
+    "@probe.gl/stats": "npm:^4.1.1"
+    monaco-editor: "npm:^0.53.0"
+    preact: "npm:^10.17.0"
+  peerDependencies:
+    apache-arrow: ">=17"
+  peerDependenciesMeta:
+    apache-arrow:
+      optional: true
+  languageName: node
+  linkType: soft
+
 "@discoveryjs/json-ext@npm:0.5.7":
   version: 0.5.7
   resolution: "@discoveryjs/json-ext@npm:0.5.7"
@@ -6793,6 +7003,13 @@ __metadata:
     "@types/node": "npm:*"
     mock-property: "npm:*"
   checksum: 10c0/8962c5031d005d1d4c0a5a9c388298c0d6116604204ffb68080fa56d2ea4c77a652e6bddf0ddc8b789f4655ebc9a820dfdd079a27640c9455ab71d49ea433f0c
+  languageName: node
+  linkType: hard
+
+"@types/trusted-types@npm:^1.0.6":
+  version: 1.0.6
+  resolution: "@types/trusted-types@npm:1.0.6"
+  checksum: 10c0/4bc61ac65b8e42d17c77a23f29cdf94e498acd2e23f4c00cf15c8281de94263ac313d46cbcd7cd1d03c066d497f9396845e3210ff0074f5f90f212cb3e8aac28
   languageName: node
   linkType: hard
 
@@ -15351,6 +15568,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-columns@workspace:examples/arrow/arrow-columns"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15368,6 +15586,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-dggs-polygons@workspace:examples/arrow/arrow-dggs-polygons"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15384,6 +15603,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-float64-precision@workspace:examples/arrow/arrow-float64-precision"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15401,6 +15621,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-geoarrow@workspace:examples/arrow/arrow-geoarrow"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15418,6 +15639,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-instancing@workspace:examples/arrow/arrow-instancing"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15435,6 +15657,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-lines@workspace:examples/arrow/arrow-lines"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15452,6 +15675,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-mesh-geometry@workspace:examples/arrow/arrow-mesh-geometry"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15470,6 +15694,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-particles@workspace:examples/arrow/arrow-particles"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15486,6 +15711,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-points@workspace:examples/arrow/arrow-points"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15503,6 +15729,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-polygons@workspace:examples/arrow/arrow-polygons"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15520,6 +15747,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-temporal-starfield@workspace:examples/arrow/arrow-temporal-starfield"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15537,6 +15765,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-text-2d@workspace:examples/arrow/arrow-text-2d"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15555,6 +15784,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-text-3d@workspace:examples/arrow/arrow-text-3d"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15574,6 +15804,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-time-columns@workspace:examples/arrow/arrow-time-columns"
   dependencies:
+    "@deck.gl-community/panels": "portal:../../../../deck.gl-community/modules/panels"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -17557,6 +17788,15 @@ __metadata:
   version: 1.0.1
   resolution: "modify-values@npm:1.0.1"
   checksum: 10c0/6acb1b82aaf7a02f9f7b554b20cbfc159f223a79c66b0a257511c5933d50b85e12ea1220b0a90a2af6f80bc29ff784f929a52a51881867a93ae6a12ce87a729a
+  languageName: node
+  linkType: hard
+
+"monaco-editor@npm:^0.53.0":
+  version: 0.53.0
+  resolution: "monaco-editor@npm:0.53.0"
+  dependencies:
+    "@types/trusted-types": "npm:^1.0.6"
+  checksum: 10c0/016495f0b869ea3a4151b660e5b8653999e54da9834001b4e7e88edae5c749aee2f1b56020bfece51cd08fc8e7125cd9732f414e373aea554e2f2812ee8245f1
   languageName: node
   linkType: hard
 
@@ -19911,6 +20151,13 @@ __metadata:
   version: 10.29.0
   resolution: "preact@npm:10.29.0"
   checksum: 10c0/d111381e5b48335e3a797a03adb83521cf5e9bdf880570fb2eff4fe9da9c82e6dedcbdf54538b1ed8f60bf813a0df0f4891b03dc32140ad93f8f720a8812dd5c
+  languageName: node
+  linkType: hard
+
+"preact@npm:^10.17.0":
+  version: 10.29.2
+  resolution: "preact@npm:10.29.2"
+  checksum: 10c0/2ee161274e475804524608d42bba8c79920636b322293248796a9e5bf4c3332336f8c0eca1b1566ed09cdee95e408eb20b5b7613d95820ea6b6eb8fc090ef60a
   languageName: node
   linkType: hard
 
