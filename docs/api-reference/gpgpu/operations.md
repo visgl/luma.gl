@@ -109,6 +109,46 @@ const id = GPUTableEvaluator.fromArray(new Float32Array([5, 6]), {size: 1});
 const result = interleave(xyz, id);
 ```
 
+## `swizzle`
+
+### `swizzle(table: GPUTableEvaluatorInput, columns: number[]): GPUTableEvaluator`
+
+Builds a new table by selecting specific columns from each input row.
+
+For an input row `row`, the output row is:
+
+```text
+[row[columns[0]], row[columns[1]], ...]
+```
+
+The output:
+
+- uses `type = table.type`
+- uses `size = columns.length`
+- uses `length = table.length`
+- preserves `normalized`
+
+Behavior:
+
+- `columns` must be a non-empty array of integer column indices.
+- Each column index must be in the range `[0, table.size)`.
+- Output columns preserve the exact order of `columns`.
+- Duplicate column indices are allowed.
+- Contiguous increasing column ranges such as `[1, 2, 3]` are optimized as a view into the same source table.
+- Non-contiguous selections such as `[2, 0, 2]` materialize a new table through a backend operation.
+
+### Example
+
+```ts
+const values = GPUTableEvaluator.fromArray(
+  [10, 11, 12, 13, 20, 21, 22, 23],
+  {size: 4}
+);
+
+const yz = swizzle(values, [1, 2]);
+const reordered = swizzle(values, [2, 0, 2]);
+```
+
 ## `gather`
 
 ### `gather(ids: GPUTableEvaluatorInput, sourceValues: GPUTableEvaluatorInput): GPUTableEvaluator`
@@ -405,6 +445,7 @@ const result = fround(source);
 - As new operations are added to `@luma.gl/gpgpu`, this page should remain the top-level reference for them.
 - Arithmetic operations can mix tables and literals in the same expression.
 - `gather()` is currently a direct row-index gather, not a key-based lookup.
+- `swizzle()` is a row-shaping operation: it preserves row count while reordering, duplicating, or slicing columns within each row.
 - `dot()`, `length()`, and `equalAll()` are row-wise operations: they inspect all lanes in each input row and emit one scalar output row.
 - `extent()` is a reduction operation: it collapses many input rows into one `[min, max]` row per channel.
 - `select()` is lane-wise and size-preserving; it uses scalar or per-lane non-zero masks to choose between two inputs.
