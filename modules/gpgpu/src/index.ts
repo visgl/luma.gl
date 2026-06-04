@@ -39,7 +39,4 @@ export {swizzle} from './operations/swizzle';
 
 // Backends
 export {backendRegistry} from './operation/backend-registry';
-export {webglBackend} from './operations/webgl/index';
-export {webgpuBackend} from './operations/webgpu/index';
-export {cpuBackend} from './operations/cpu/index';
 export {cleanEvaluate} from './utils/clean-evaluate';

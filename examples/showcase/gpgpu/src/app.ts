@@ -3,13 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {luma, type Device} from '@luma.gl/core';
-import {
-  backendRegistry,
-  cleanEvaluate,
-  type GPUTableEvaluator,
-  webglBackend,
-  webgpuBackend
-} from '@luma.gl/gpgpu';
+import {cleanEvaluate, type GPUTableEvaluator} from '@luma.gl/gpgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {makeShowcaseData} from './arrow-data';
@@ -197,8 +191,6 @@ async function makeOutputTableColumn(
 
 async function getEvaluationDevice(): Promise<Device> {
   if (!evaluationDevicePromise) {
-    backendRegistry.add('webgpu', webgpuBackend);
-    backendRegistry.add('webgl', webglBackend);
     evaluationDevicePromise = luma.createDevice({
       adapters: [webgpuAdapter, webgl2Adapter],
       createCanvasContext:

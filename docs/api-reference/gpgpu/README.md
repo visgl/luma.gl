@@ -21,7 +21,7 @@ Interleaving two buffers together
 ```ts
 import {luma} from '@luma.gl/core';
 import {webglAdapter} from '@luma.gl/webgl';
-import {GPUTableEvaluator, backendRegistry, webglBackend, add, interleave} from '@luma.gl/gpgpu';
+import {GPUTableEvaluator, add, interleave} from '@luma.gl/gpgpu';
 
 const inputA = GPUTableEvaluator.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
 const inputB = GPUTableEvaluator.fromArray(new Float32Array([10, 20]), {size: 1});
@@ -30,8 +30,8 @@ const output = interleave(inputA, inputB);
 // Operations can be chained
 const outputAlt = interleave(inputA, add(inputB, GPUTableEvaluator.fromConstant(1)));
 
-// No computation is performed until the output is evaluated
-backendRegistry.add('webgl', webglBackend);
+// No computation is performed until the output is evaluated.
+// The WebGL backend is loaded automatically on first use.
 
 const device = await luma.createDevice({
   type: 'webgl',
@@ -43,14 +43,42 @@ const outputVector = await output.evaluate(device);
 
 ## BackendRegistry
 
-The `backendRegistry` allows apps to include only the implementations for the device types that they wish to support. The CPU backend is registered by default. Register `webglBackend` or `webgpuBackend` before evaluating operation-backed tables on those device types.
+The `backendRegistry` dispatches lazy operations to the backend module for the
+evaluation device. The CPU backend is available by default. If no backend has
+been registered for a `webgl` or `webgpu` device, `@luma.gl/gpgpu`
+automatically loads the matching backend with a dynamic import, so built-in
+backend registration is not required.
 
 ```ts
-import {backendRegistry, webglBackend, webgpuBackend} from '@luma.gl/gpgpu';
+const outputVector = await output.evaluate(device);
+```
+
+Backend modules are also available from dedicated endpoints. Use these imports
+when you want to eagerly load a backend or register a custom subset of operation
+handlers:
+
+```ts
+import {backendRegistry} from '@luma.gl/gpgpu';
+import * as webglBackend from '@luma.gl/gpgpu/webgl';
+import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
 
 backendRegistry.add('webgl', webglBackend);
 backendRegistry.add('webgpu', webgpuBackend);
 ```
+
+The same endpoints export individual backend operation handlers, so applications
+can choose only the handlers they need. When registering a subset, only those
+operations can be evaluated for that device type:
+
+```ts
+import {backendRegistry} from '@luma.gl/gpgpu';
+import {interleave, swizzle} from '@luma.gl/gpgpu/webgl';
+
+backendRegistry.add('webgl', {interleave, swizzle});
+```
+
+The CPU backend can be imported from `@luma.gl/gpgpu/cpu` when explicitly
+registering CPU handlers for another device type.
 
 ## Concepts
 
