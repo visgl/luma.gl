@@ -6,7 +6,7 @@ import {Buffer, NativeFloat16ArrayConstructor, type Device} from '@luma.gl/core'
 import {GPUTableEvaluator} from '@luma.gl/gpgpu';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 
 test('GPUTableEvaluator.fromGPUVector accepts packed Float16 vectors', () => {
   const device = new NullDevice({});
@@ -69,13 +69,61 @@ test('GPUTableEvaluator.fromGPUVector validates packed numeric vectors', () => {
   device.destroy();
 });
 
+test('GPUTableEvaluator.readValue only reads requested rows from GPU buffers', async () => {
+  const device = new NullDevice({});
+  const packed = makeFloat32Vector(device, 'packed-values', [10, 11, 20, 21, 30, 31, 40, 41], 2);
+  const strided = makeFloat32Vector(
+    device,
+    'strided-values',
+    [10, 11, -1, 20, 21, -1, 30, 31, -1],
+    2,
+    {
+      byteStride: 12,
+      rowByteLength: 8
+    }
+  );
+
+  const packedEvaluator = GPUTableEvaluator.fromGPUVector(packed);
+  const stridedEvaluator = new GPUTableEvaluator({
+    id: 'strided-evaluator',
+    type: 'float32',
+    size: 2,
+    stride: 12,
+    length: 3,
+    buffer: strided.data[0].buffer,
+    format: 'float32x2'
+  });
+
+  const packedBuffer = packed.data[0].buffer;
+  const stridedBuffer = strided.data[0].buffer;
+  const packedReadAsyncSpy = vi.spyOn(packedBuffer, 'readAsync');
+  const stridedReadAsyncSpy = vi.spyOn(stridedBuffer, 'readAsync');
+
+  expect(Array.from(await packedEvaluator.readValue(1, 3))).toEqual([20, 21, 30, 31]);
+  expect(packedReadAsyncSpy).toHaveBeenCalledWith(8, 16);
+
+  expect(Array.from(await stridedEvaluator.readValue(1, 3))).toEqual([20, 21, 30, 31]);
+  expect(stridedReadAsyncSpy).toHaveBeenCalledWith(12, 20);
+
+  packedReadAsyncSpy.mockRestore();
+  stridedReadAsyncSpy.mockRestore();
+  packedEvaluator.destroy();
+  stridedEvaluator.destroy();
+  packed.destroy();
+  strided.destroy();
+  device.destroy();
+});
+
 function makeFloat32Vector(
   device: Device,
   name: string,
   values: number[],
-  stride: number
+  stride: number,
+  options: {byteStride?: number; rowByteLength?: number} = {}
 ): GPUVector {
   const data = new Float32Array(values);
+  const byteStride = options.byteStride ?? stride * Float32Array.BYTES_PER_ELEMENT;
+  const rowByteLength = options.rowByteLength ?? stride * Float32Array.BYTES_PER_ELEMENT;
   const buffer = device.createBuffer({
     usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
     data
@@ -87,8 +135,8 @@ function makeFloat32Vector(
     format: getFloat32VectorFormat(stride),
     length: values.length / stride,
     stride,
-    byteStride: stride * Float32Array.BYTES_PER_ELEMENT,
-    rowByteLength: stride * Float32Array.BYTES_PER_ELEMENT,
+    byteStride,
+    rowByteLength,
     ownsBuffer: true
   });
 }

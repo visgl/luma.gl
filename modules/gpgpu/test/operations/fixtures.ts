@@ -31,11 +31,11 @@ export type TestData =
     };
 
 /** Check table value against definition, returns error if any */
-export function verifyTableValue(
+export async function verifyTableValue(
   table: GPUTableEvaluator,
   expected: TestData,
   epsilon?: number
-): string | null {
+): Promise<string | null> {
   const size = table.size;
 
   if ('type' in expected && expected.type !== table.type) {
@@ -48,7 +48,7 @@ export function verifyTableValue(
     return `isConstant does not match. Expected: ${'constant' in expected}, actual: ${table.isConstant}`;
   }
 
-  const actual = table.value;
+  const actual = table.isConstant ? table.value : await table.readValue();
   const target = 'constant' in expected ? (expected.constant as number[]) : expected.value;
   if (!actual) {
     return `Unexpected empty result`;
