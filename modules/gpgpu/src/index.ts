@@ -35,6 +35,7 @@ export {length} from './operations/length';
 export {segmentedMap} from './operations/segmented-map';
 export {select} from './operations/select';
 export {sequence} from './operations/sequence';
+export {swizzle} from './operations/swizzle';
 
 // Backends
 export {backendRegistry} from './operation/backend-registry';

@@ -9,6 +9,7 @@ import {length} from './length';
 import {segmentedMap} from './segmented-map';
 import {select} from './select';
 import {sequence} from './sequence';
+import {swizzle} from './swizzle';
 
 /** WebGL backend for built-in GPGPU operations, implemented with transform feedback. */
 export const webglBackend = {
@@ -22,5 +23,6 @@ export const webglBackend = {
   length,
   segmentedMap,
   select,
-  sequence
+  sequence,
+  swizzle
 };

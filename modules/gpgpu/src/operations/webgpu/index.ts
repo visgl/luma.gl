@@ -9,6 +9,7 @@ import {interleave} from './interleave';
 import {length} from './length';
 import {select} from './select';
 import {sequence} from './sequence';
+import {swizzle} from './swizzle';
 
 /** WebGPU backend for built-in GPGPU operations, implemented with compute pipelines. */
 export const webgpuBackend = {
@@ -22,5 +23,6 @@ export const webgpuBackend = {
   length,
   segmentedMap,
   select,
-  sequence
+  sequence,
+  swizzle
 };

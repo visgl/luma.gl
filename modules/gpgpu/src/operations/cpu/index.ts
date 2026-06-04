@@ -9,6 +9,7 @@ import {length} from './length';
 import {segmentedMap} from './segmented-map';
 import {select} from './select';
 import {sequence} from './sequence';
+import {swizzle} from './swizzle';
 
 /** CPU fallback backend for built-in GPGPU operations. Registered by default. */
 export const cpuBackend = {
@@ -22,5 +23,6 @@ export const cpuBackend = {
   length,
   segmentedMap,
   select,
-  sequence
+  sequence,
+  swizzle
 };

@@ -9,6 +9,7 @@ import {
   subtract,
   multiply,
   interleave,
+  swizzle,
   log,
   tan,
   cleanEvaluate,
@@ -91,20 +92,8 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
             ]),
             {size: 2}
           );
-          const lon = new GPUTableEvaluator({
-            id: 'x',
-            source: pos,
-            type: 'float32',
-            size: 1,
-            offset: 0
-          });
-          const lat = new GPUTableEvaluator({
-            id: 'y',
-            source: pos,
-            type: 'float32',
-            size: 1,
-            offset: 4
-          });
+          const lon = swizzle(pos, [0]);
+          const lat = swizzle(pos, [1]);
 
           // radians(lon)
           const x = multiply(lon, Math.PI / 180);
