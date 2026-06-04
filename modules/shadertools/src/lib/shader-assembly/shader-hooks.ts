@@ -39,12 +39,14 @@ export type ShaderHooks = {
 /** Generate hook source code */
 export function getShaderHooks(
   hookFunctions: Record<string, ShaderHook>,
-  hookInjections: Record<string, ShaderInjection[]>
+  hookInjections: Record<string, ShaderInjection[]>,
+  shaderLanguage: 'glsl' | 'wgsl' = 'glsl'
 ): string {
   let result = '';
   for (const hookName in hookFunctions) {
     const hookFunction = hookFunctions[hookName];
-    result += `void ${hookFunction.signature} {\n`;
+    const functionPrefix = shaderLanguage === 'wgsl' ? 'fn' : 'void';
+    result += `${functionPrefix} ${hookFunction.signature} {\n`;
     if (hookFunction.header) {
       result += `  ${hookFunction.header}`;
     }
@@ -82,7 +84,9 @@ export function normalizeShaderHooks(hookFunctions: (string | ShaderHook)[]): Sh
       hook = hookFunction;
     }
     hook = hook.trim();
-    const [shaderStage, signature] = hook.split(':');
+    const stageSeparatorIndex = hook.indexOf(':');
+    const shaderStage = hook.slice(0, stageSeparatorIndex);
+    const signature = hook.slice(stageSeparatorIndex + 1);
     const name = hook.replace(/\(.+/, '');
     const normalizedHook: ShaderHook = Object.assign(opts, {signature});
     switch (shaderStage) {

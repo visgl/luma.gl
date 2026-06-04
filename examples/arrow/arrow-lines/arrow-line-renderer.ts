@@ -33,6 +33,7 @@ import {
   type ArrowRecordBatchLoadUpdate,
   type ArrowRecordBatchSource
 } from '../arrow-renderer-utils';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 /** Path rendering path selected by the Arrow path example layer. */
 export type ArrowLineRendererModel = 'attribute' | 'storage' | 'trips' | 'auto';
@@ -274,6 +275,8 @@ const DEFAULT_PATH_COLOR: [number, number, number, number] = [199, 219, 245, 235
 const DEFAULT_PATH_WIDTH = 0.0035;
 const DEFAULT_PATH_TOPOLOGY = 'triangle-list' as const;
 const DEFAULT_PATH_VERTEX_COUNT = 12;
+const STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT = 6;
+const TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT = 7;
 const DEFAULT_RENDER_PARAMETERS = {
   depthWriteEnabled: false,
   blend: true,
@@ -1041,19 +1044,29 @@ function resolveArrowLineRendererModel(
   modelKind: ArrowLineRendererModel,
   timeColumn: ArrowLineRendererTimeColumn
 ): ArrowLineRendererResolvedModel {
+  const canUseStorageModel = supportsVertexStorageBuffers(
+    device,
+    getPathStorageBufferCount(timeColumn)
+  );
   if (modelKind === 'auto') {
-    if (device.type !== 'webgpu') {
+    if (!canUseStorageModel) {
       return 'attribute';
     }
     return timeColumn === 'timestamps' ? 'trips' : 'storage';
   }
-  if (modelKind !== 'attribute' && device.type !== 'webgpu') {
+  if (modelKind !== 'attribute' && !canUseStorageModel) {
     return 'attribute';
   }
   if (modelKind === 'storage' && timeColumn === 'timestamps') {
     return 'trips';
   }
   return modelKind;
+}
+
+function getPathStorageBufferCount(timeColumn: ArrowLineRendererTimeColumn): number {
+  return timeColumn === 'timestamps'
+    ? TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT
+    : STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT;
 }
 
 function normalizeArrowLineSourceVectors(

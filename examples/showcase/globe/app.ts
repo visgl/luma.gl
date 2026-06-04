@@ -753,6 +753,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.tychoSkyTexture = new DynamicTexture(device, {
       dimension: 'cube',
       mipmaps: true,
+      mipLevels: 'auto',
       data: (async () => ({
         '+X': await loadImageBitmap(tychoPosxUrl),
         '-X': await loadImageBitmap(tychoNegxUrl),

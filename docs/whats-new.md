@@ -13,6 +13,10 @@ Target Release Date: Q3, 2026
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUTableEvaluator` operations with CPU/WebGL/WebGPU backends.
 
 
+**@luma.gl/core**
+
+- **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'` or `'max'` WebGPU devices. The effective level is reported as `device.info.featureLevel`.
+
 **@luma.gl/arrow** NEW MODULE
 
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.

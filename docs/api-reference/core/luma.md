@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # luma
+
+<CoreDocsTabs group="device" active="luma" />
 
 The [`luma`](/docs/api-reference/core/luma) namespace provides luma.gl applications 
 with the ability to create `Device` class instances against GPU `Adapters` that bring

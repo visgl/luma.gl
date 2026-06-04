@@ -4,7 +4,7 @@ import {Device, luma} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import type {Stat, Stats} from '@probe.gl/stats';
-import {DeviceTabs} from './device-tabs';
+import {DeviceTabs, type DeviceTabSelection} from './device-tabs';
 import {
   clearActiveCpuHotspotProfilerDevice,
   setActiveCpuHotspotProfilerDevice
@@ -237,7 +237,7 @@ type LumaExampleProps = React.PropsWithChildren<{
   panel?: boolean;
   showHeader?: boolean;
   showStats?: boolean;
-  devices?: ('webgl2' | 'webgpu')[];
+  devices?: DeviceTabSelection[];
   templateInfoPlacement?: 'header' | 'page';
   headerControls?: React.ReactNode;
 }>;
@@ -314,7 +314,7 @@ type ExamplePageProps = React.PropsWithChildren<{
 
 type ExampleHeaderProps = React.PropsWithChildren<
   ExampleInfoProps & {
-    devices?: ('webgl2' | 'webgpu')[];
+    devices?: DeviceTabSelection[];
     style?: CSSProperties;
   }
 >;
@@ -836,15 +836,29 @@ function getExampleSourceUrl(props: {
 }
 
 function getRequestedDeviceTypes(
-  devices?: ('webgl2' | 'webgpu')[]
+  devices?: DeviceTabSelection[]
 ): DeviceType[] | undefined {
   if (!devices) {
     return undefined;
   }
 
-  return devices
-    .map(device => (device === 'webgl2' ? 'webgl' : 'webgpu'))
-    .filter((device, index, array) => array.indexOf(device) === index) as DeviceType[];
+  const requestedDeviceTypes: DeviceType[] = [];
+  for (const device of devices) {
+    const mappedDeviceTypes =
+      device === 'webgpu'
+        ? (['webgpu-core', 'webgpu-max'] as const)
+        : device === 'webgl2'
+          ? (['webgl'] as const)
+          : ([device] as const);
+
+    for (const deviceType of mappedDeviceTypes) {
+      if (!requestedDeviceTypes.includes(deviceType)) {
+        requestedDeviceTypes.push(deviceType);
+      }
+    }
+  }
+
+  return requestedDeviceTypes;
 }
 
 function getExampleTitle(id?: string, title?: string): string {

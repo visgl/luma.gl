@@ -25,11 +25,11 @@
     "type": "category",
     "label": "API Guide",
     "items": [
-      "api-guide/README",
       {
         "type": "category",
-        "label": "Background",
+        "label": "API overview",
         "items": [
+          "api-guide/README",
           "api-guide/background/api-design",
           "api-guide/background/learning-resources",
           "api-guide/background/webgpu-vs-webgl"
@@ -37,7 +37,7 @@
       },
       {
         "type": "category",
-        "label": "GPU Programming",
+        "label": "GPU-Level Programming",
         "items": [
           "api-guide/gpu/gpu-initialization",
           "api-guide/gpu/gpu-resources",
@@ -57,7 +57,7 @@
       },
       {
         "type": "category",
-        "label": "Shader Programming",
+        "label": "Shader-Level Programming",
         "items": [
           "api-guide/shaders/shader-types",
           "api-guide/shaders/shader-modules"
@@ -65,7 +65,7 @@
       },
       {
         "type": "category",
-        "label": "Engine Programming",
+        "label": "Engine-Level Programming",
         "items": [
           "api-guide/engine/engine",
           "api-guide/engine/redraw",

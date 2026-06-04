@@ -1,4 +1,8 @@
+import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
+
 # API Design Philosophy
+
+<ApiOverviewDocsTabs active="api-design" />
 
 This article provides some background on luma.gl's API design philosophy.
 
@@ -37,4 +41,3 @@ While the luma.gl Device API has many similarities to WebGPU API, it is not a tr
 
 - streamlined to be significantly less cumbersome to use.
 - makes the necessary allowances to also enable a reasonable WebGL `Device` implementation.
-

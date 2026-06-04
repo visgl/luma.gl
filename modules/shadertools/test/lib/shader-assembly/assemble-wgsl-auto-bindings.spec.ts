@@ -46,6 +46,23 @@ fn vertexMain() -> @builtin(position) vec4<f32> {
 }
 `;
 
+const APP_VERTEX_STORAGE_LIMIT_WGSL = /* wgsl */ `\
+struct AppAutoUniforms {
+  value: f32
+};
+
+@group(0) @binding(auto) var<uniform> appAuto: AppAutoUniforms;
+
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
+@group(0) @binding(auto) var<storage, read> vertexStorage: array<f32>;
+#endif
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appAuto.value, 0.0, 0.0, 1.0);
+}
+`;
+
 const APP_MULTILINE_GROUP_0_AUTO_WGSL = /* wgsl */ `\
 struct AppAutoUniforms {
   value: f32
@@ -200,6 +217,18 @@ struct Group0DependencyBUniforms {
 };
 
 @group(0) @binding(auto) var<uniform> group0DependencyB: Group0DependencyBUniforms;
+`
+};
+
+const CONDITIONAL_DEPTH_MODULE: ShaderModule = {
+  name: 'conditionalDepthModule',
+  source: /* wgsl */ `\
+#if USE_DEPTH_SAMPLER
+@group(0) @binding(auto) var conditionalDepth: texture_depth_2d;
+@group(0) @binding(auto) var conditionalDepthSampler: sampler;
+#else
+@group(0) @binding(auto) var conditionalDepth: texture_2d<f32>;
+#endif
 `
 };
 
@@ -847,6 +876,90 @@ test('assembleWGSLShader#application group 0 auto bindings reserve low slots bef
     assembledShader.bindingTable.find(row => row.name === 'skin')?.binding,
     101,
     'subsequent module binding remains in reserved group 0 module range'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#preprocesses platform limit conditionals before auto binding relocation', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: {
+      ...PLATFORM_INFO,
+      limits: {maxStorageBuffersInVertexStage: 0}
+    },
+    source: APP_VERTEX_STORAGE_LIMIT_WGSL
+  });
+
+  t.notOk(
+    assembledShader.source.includes('vertexStorage'),
+    'inactive vertex storage binding is stripped from assembled source'
+  );
+  t.deepEqual(
+    assembledShader.bindingTable.map(row => row.name),
+    ['appAuto'],
+    'inactive vertex storage binding is not assigned a binding slot'
+  );
+
+  const storageShader = new ShaderAssembler().assembleWGSLShader({
+    platformInfo: {
+      ...PLATFORM_INFO,
+      limits: {maxStorageBuffersInVertexStage: 1}
+    },
+    source: APP_VERTEX_STORAGE_LIMIT_WGSL
+  });
+  t.ok(
+    storageShader.source.includes('vertexStorage'),
+    'active vertex storage binding remains in assembled source'
+  );
+  t.deepEqual(
+    storageShader.bindingTable.map(row => row.name),
+    ['appAuto', 'vertexStorage'],
+    'active vertex storage binding is assigned after the app uniform'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#preprocesses module conditionals before auto binding relocation', t => {
+  const textureShader = new ShaderAssembler().assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_GROUP_0_AUTO_WGSL,
+    modules: [CONDITIONAL_DEPTH_MODULE],
+    defines: {USE_DEPTH_SAMPLER: false}
+  });
+  t.ok(
+    textureShader.source.includes('var conditionalDepth: texture_2d<f32>'),
+    'inactive depth sampler branch is stripped before relocation'
+  );
+  t.notOk(
+    textureShader.source.includes('texture_depth_2d'),
+    'depth texture branch is stripped before relocation'
+  );
+  t.deepEqual(
+    textureShader.bindingTable.map(row => row.name),
+    ['appAuto', 'conditionalDepth'],
+    'only the active texture binding is assigned'
+  );
+
+  const depthShader = new ShaderAssembler().assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_GROUP_0_AUTO_WGSL,
+    modules: [CONDITIONAL_DEPTH_MODULE],
+    defines: {USE_DEPTH_SAMPLER: true}
+  });
+  t.ok(
+    depthShader.source.includes('var conditionalDepth: texture_depth_2d'),
+    'active depth texture branch remains in assembled source'
+  );
+  t.ok(
+    depthShader.source.includes('var conditionalDepthSampler: sampler'),
+    'active depth sampler remains in assembled source'
+  );
+  t.deepEqual(
+    depthShader.bindingTable.map(row => row.name),
+    ['appAuto', 'conditionalDepth', 'conditionalDepthSampler'],
+    'active depth bindings are assigned after the app uniform'
   );
 
   t.end();

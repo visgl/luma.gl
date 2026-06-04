@@ -88,24 +88,29 @@ export class ShaderAssembler {
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const {source, getUniforms, bindingAssignments} = assembleWGSLShader({
+    const defines = getShaderPreprocessorDefines(props, modules);
+    const preprocessedApplicationSource =
+      props.platformInfo.shaderLanguage === 'wgsl' && props.source
+        ? preprocess(props.source, {defines})
+        : props.source;
+    const {
+      source: assembledSource,
+      getUniforms,
+      bindingAssignments
+    } = assembleWGSLShader({
       ...props,
       // @ts-expect-error
-      source: props.source,
+      source: preprocessedApplicationSource,
+      defines,
       _bindingRegistry: this._wgslBindingRegistry,
       modules,
       hookFunctions
     });
-    const defines = {
-      ...modules.reduce<Record<string, boolean>>((accumulator, module) => {
-        Object.assign(accumulator, module.defines);
-        return accumulator;
-      }, {}),
-      ...props.defines
-    };
     // WGSL does not have built-in preprocessing support (just compile time constants)
     const preprocessedSource =
-      props.platformInfo.shaderLanguage === 'wgsl' ? preprocess(source, {defines}) : source;
+      props.platformInfo.shaderLanguage === 'wgsl'
+        ? preprocess(assembledSource, {defines})
+        : assembledSource;
     return {
       source: preprocessedSource,
       getUniforms,
@@ -171,4 +176,28 @@ export class ShaderAssembler {
     initializeShaderModules(modules);
     return modules;
   }
+}
+
+function getShaderPreprocessorDefines(
+  props: AssembleShaderProps,
+  modules: ShaderModule[]
+): Record<string, boolean | number> {
+  return {
+    ...getPlatformPreprocessorDefines(props.platformInfo),
+    ...modules.reduce<Record<string, boolean | number>>((accumulator, module) => {
+      Object.assign(accumulator, module.defines);
+      return accumulator;
+    }, {}),
+    ...props.defines
+  };
+}
+
+function getPlatformPreprocessorDefines(
+  platformInfo: AssembleShaderProps['platformInfo']
+): Record<string, boolean> {
+  const limits = platformInfo.limits || {};
+  return {
+    LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS:
+      platformInfo.type === 'webgpu' && (limits['maxStorageBuffersInVertexStage'] || 0) > 0
+  };
 }

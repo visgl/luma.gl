@@ -19,7 +19,11 @@ export class WebGLDeviceLimits extends DeviceLimits {
   get maxSampledTexturesPerShaderStage() { return this.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS); } // ) TBD
   get maxSamplersPerShaderStage() { return this.getParameter(GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS); }
   get maxStorageBuffersPerShaderStage() { return 0; } // TBD
+  get maxStorageBuffersInVertexStage() { return 0; }
+  get maxStorageBuffersInFragmentStage() { return 0; }
   get maxStorageTexturesPerShaderStage() { return 0; } // TBD
+  get maxStorageTexturesInVertexStage() { return 0; }
+  get maxStorageTexturesInFragmentStage() { return 0; }
   get maxUniformBuffersPerShaderStage() { return this.getParameter(GL.MAX_UNIFORM_BUFFER_BINDINGS); }
   get maxUniformBufferBindingSize() { return this.getParameter(GL.MAX_UNIFORM_BLOCK_SIZE); }
   get maxStorageBufferBindingSize() { return 0; }

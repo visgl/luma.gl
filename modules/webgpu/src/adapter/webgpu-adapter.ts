@@ -5,10 +5,15 @@
 // biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
 
-import {Adapter, DeviceProps, log} from '@luma.gl/core';
+import {
+  Adapter,
+  type DeviceProps,
+  log
+} from '@luma.gl/core';
 import type {WebGPUDevice} from './webgpu-device';
 
 type WebGPUSupportedLimitName = Exclude<keyof GPUSupportedLimits, '__brand'>;
+type RequestedWebGPUFeatureLevel = NonNullable<DeviceProps['featureLevel']>;
 
 const WEBGPU_SUPPORTED_LIMIT_NAMES: readonly WebGPUSupportedLimitName[] = [
   'maxTextureDimension1D',
@@ -64,9 +69,35 @@ export function getRequiredWebGPULimits(
   return requiredLimits;
 }
 
+export function getWebGPUFeatureLevel(props: DeviceProps): RequestedWebGPUFeatureLevel {
+  return props.featureLevel ?? 'core';
+}
+
+export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAdapterOptions {
+  const options: GPURequestAdapterOptions = {featureLevel: 'core'};
+
+  if (props.powerPreference && props.powerPreference !== 'default') {
+    options.powerPreference = props.powerPreference;
+  }
+
+  return options;
+}
+
+export function getRequiredWebGPUFeatures(
+  supportedFeatures: GPUSupportedFeatures,
+  featureLevel: RequestedWebGPUFeatureLevel
+): GPUFeatureName[] {
+  if (featureLevel === 'max') {
+    return Array.from(supportedFeatures) as GPUFeatureName[];
+  }
+
+  return [];
+}
+
 export class WebGPUAdapter extends Adapter {
   /** type of device's created by this adapter */
   readonly type: WebGPUDevice['type'] = 'webgpu';
+  protected gpuAdapterPromises = new Map<string, Promise<GPUAdapter | null>>();
 
   isSupported(): boolean {
     // Check if WebGPU is available
@@ -91,10 +122,15 @@ export class WebGPUAdapter extends Adapter {
       throw new Error('WebGPU not available. Recent Chrome browsers should work.');
     }
 
-    const adapter = await navigator.gpu.requestAdapter({
-      powerPreference: 'high-performance'
-      // forceSoftware: false
-    });
+    const requestedFeatureLevel = getWebGPUFeatureLevel(props);
+    const requestAdapterOptions = getWebGPURequestAdapterOptions(props);
+    const gpuAdapterCacheKey = this.getGPUAdapterCacheKey(
+      requestedFeatureLevel,
+      requestAdapterOptions
+    );
+    const adapterPromise = this.getGPUAdapterPromise(gpuAdapterCacheKey, requestAdapterOptions);
+
+    const adapter = await adapterPromise;
 
     if (!adapter) {
       throw new Error('Failed to request WebGPU adapter');
@@ -107,28 +143,28 @@ export class WebGPUAdapter extends Adapter {
       (await adapter.requestAdapterInfo?.());
     // log.probe(2, 'Adapter available', adapterInfo)();
 
-    const requiredFeatures: GPUFeatureName[] = [];
-    const requiredLimits: Record<string, number> = {};
+    const deviceDescriptor: GPUDeviceDescriptor = {};
 
-    if (props._requestMaxLimits) {
-      // Require all features
-      requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
-
-      Object.assign(requiredLimits, getRequiredWebGPULimits(adapter.limits));
+    const requiredFeatures = getRequiredWebGPUFeatures(adapter.features, requestedFeatureLevel);
+    if (requiredFeatures.length > 0) {
+      deviceDescriptor.requiredFeatures = requiredFeatures;
     }
 
-    const gpuDevice = await adapter.requestDevice({
-      requiredFeatures,
-      requiredLimits
-    });
+    if (requestedFeatureLevel === 'max') {
+      deviceDescriptor.requiredLimits = getRequiredWebGPULimits(adapter.limits);
+    }
+
+    const gpuDevice = await adapter.requestDevice(deviceDescriptor);
+    this.gpuAdapterPromises.delete(gpuAdapterCacheKey);
 
     // log.probe(1, 'GPUDevice available')();
 
     const {WebGPUDevice} = await import('./webgpu-device');
+    const deviceProps = {...props, featureLevel: requestedFeatureLevel};
 
     log.groupCollapsed(1, 'WebGPUDevice created')();
     try {
-      const device = new WebGPUDevice(props, gpuDevice, adapter, adapterInfo);
+      const device = new WebGPUDevice(deviceProps, gpuDevice, adapter, adapterInfo);
       log.probe(
         1,
         'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features'
@@ -142,6 +178,29 @@ export class WebGPUAdapter extends Adapter {
 
   async attach(handle: GPUDevice): Promise<WebGPUDevice> {
     throw new Error('WebGPUAdapter.attach() not implemented');
+  }
+
+  protected getGPUAdapterPromise(
+    cacheKey: string,
+    requestAdapterOptions: GPURequestAdapterOptions
+  ): Promise<GPUAdapter | null> {
+    let gpuAdapterPromise = this.gpuAdapterPromises.get(cacheKey);
+    if (!gpuAdapterPromise) {
+      gpuAdapterPromise = navigator.gpu.requestAdapter(requestAdapterOptions);
+      this.gpuAdapterPromises.set(cacheKey, gpuAdapterPromise);
+    }
+    return gpuAdapterPromise;
+  }
+
+  protected getGPUAdapterCacheKey(
+    featureLevel: RequestedWebGPUFeatureLevel,
+    requestAdapterOptions: GPURequestAdapterOptions
+  ): string {
+    return [
+      featureLevel,
+      requestAdapterOptions.featureLevel || 'core',
+      requestAdapterOptions.powerPreference || 'default'
+    ].join(':');
   }
 }
 

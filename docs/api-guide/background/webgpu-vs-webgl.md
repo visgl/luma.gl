@@ -1,4 +1,8 @@
+import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
+
 # WebGPU vs WebGL
+
+<ApiOverviewDocsTabs active="webgpu-vs-webgl" />
 
 This page is a collection of developer notes on the differences between WebGPU and WebGL. 
 

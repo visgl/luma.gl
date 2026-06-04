@@ -1,4 +1,8 @@
-# API Overview
+import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
+
+# Overview
+
+<ApiOverviewDocsTabs active="overview" />
 
 The luma.gl API enables the creation of portable GPU applications that can run on top of either WebGPU, or WebGL 2.
 luma.gl is divided into different sub-APIs: the core GPU API, the shader API and the engine API.

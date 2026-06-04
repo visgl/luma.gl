@@ -64,11 +64,19 @@ export type DeviceInfo = {
   gpuBackend?: 'opengl' | 'opengles' | 'metal' | 'd3d11' | 'd3d12' | 'vulkan' | 'unknown';
   /** If this is a fallback adapter */
   fallback?: boolean;
+  /** WebGPU feature level used to create the device */
+  featureLevel?: WebGPUDeviceFeatureLevel;
   /** Shader language supported by device.createShader() */
   shadingLanguage: 'wgsl' | 'glsl';
   /** Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100 */
   shadingLanguageVersion: number;
 };
+
+/** WebGPU feature level / limit profile requested during device creation. */
+export type WebGPUFeatureLevel = 'core' | 'max';
+
+/** Effective WebGPU feature level reported by a created device. */
+export type WebGPUDeviceFeatureLevel = WebGPUFeatureLevel;
 
 /** Limits for a device (max supported sizes of resources, max number of bindings etc) */
 export abstract class DeviceLimits {
@@ -96,8 +104,16 @@ export abstract class DeviceLimits {
   abstract maxSamplersPerShaderStage: number;
   /** max number of StorageBuffers per ShaderStage */
   abstract maxStorageBuffersPerShaderStage: number;
+  /** max number of StorageBuffers visible to the vertex stage */
+  abstract maxStorageBuffersInVertexStage: number;
+  /** max number of StorageBuffers visible to the fragment stage */
+  abstract maxStorageBuffersInFragmentStage: number;
   /** max number of StorageTextures per ShaderStage */
   abstract maxStorageTexturesPerShaderStage: number;
+  /** max number of StorageTextures visible to the vertex stage */
+  abstract maxStorageTexturesInVertexStage: number;
+  /** max number of StorageTextures visible to the fragment stage */
+  abstract maxStorageTexturesInFragmentStage: number;
   /** max number of UniformBuffers per ShaderStage */
   abstract maxUniformBuffersPerShaderStage: number;
   /** max number of UniformBufferBindingSize */
@@ -329,6 +345,8 @@ export type DeviceProps = {
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
+  /** WebGPU specific: selects the WebGPU feature level / limit profile to request. */
+  featureLevel?: WebGPUFeatureLevel;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
@@ -378,8 +396,6 @@ export type DeviceProps = {
 
   /** adapter.create() returns the existing Device if the provided canvas' WebGL context is already associated with a Device.  */
   _reuseDevices?: boolean;
-  /** WebGPU specific - Request a Device with the highest limits supported by platform. On WebGPU devices can be created with minimal limits. */
-  _requestMaxLimits?: boolean;
   /** Disable specific features */
   _disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
   /** WebGL specific - Initialize all features on startup */
@@ -452,6 +468,7 @@ export abstract class Device {
     id: null!,
     powerPreference: 'high-performance',
     failIfMajorPerformanceCaveat: false,
+    featureLevel: undefined!,
     createCanvasContext: undefined!,
     // WebGL specific
     webgl: {},
@@ -484,7 +501,6 @@ export abstract class Device {
 
     // Experimental
     _reuseDevices: false,
-    _requestMaxLimits: true,
     _cacheShaders: true,
     _destroyShaders: false,
     _cachePipelines: true,

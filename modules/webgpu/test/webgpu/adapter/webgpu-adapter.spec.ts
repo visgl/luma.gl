@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getRequiredWebGPULimits} from '../../../src/adapter/webgpu-adapter';
+import {
+  getRequiredWebGPUFeatures,
+  getRequiredWebGPULimits,
+  getWebGPUFeatureLevel,
+  getWebGPURequestAdapterOptions
+} from '../../../src/adapter/webgpu-adapter';
 
 test('WebGPUAdapter imports from the ESM package entry without circular init errors', async t => {
   t.plan(2);
@@ -32,5 +37,40 @@ test('getRequiredWebGPULimits reads non-enumerable supported limits directly', t
     2048,
     'storage binding size is still requested'
   );
+  t.end();
+});
+
+test('WebGPUAdapter feature level helpers map luma props to WebGPU requests', t => {
+  t.equal(getWebGPUFeatureLevel({}), 'core', 'defaults to core');
+  t.equal(getWebGPUFeatureLevel({featureLevel: 'max'}), 'max', 'explicit level is returned');
+
+  t.deepEqual(
+    getWebGPURequestAdapterOptions({powerPreference: 'default'}),
+    {featureLevel: 'core'},
+    'core requests core and omits default power preference'
+  );
+  t.deepEqual(
+    getWebGPURequestAdapterOptions({powerPreference: 'low-power'}),
+    {featureLevel: 'core', powerPreference: 'low-power'},
+    'max requests a core adapter'
+  );
+
+  t.end();
+});
+
+test('WebGPUAdapter feature helpers keep core and max behavior separate', t => {
+  const supportedFeatures = new Set(['texture-compression-bc']) as GPUSupportedFeatures;
+
+  t.deepEqual(
+    getRequiredWebGPUFeatures(supportedFeatures, 'core'),
+    [],
+    'core does not request optional features'
+  );
+  t.deepEqual(
+    getRequiredWebGPUFeatures(supportedFeatures, 'max'),
+    ['texture-compression-bc'],
+    'max requests all adapter features'
+  );
+
   t.end();
 });

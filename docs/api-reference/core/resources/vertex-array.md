@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # VertexArray
+
+<CoreDocsTabs group="pipelines" active="vertex-array" />
 
 A `VertexArray` stores a set of vertex attribute bindings, including the index buffer.
 

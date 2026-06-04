@@ -262,6 +262,20 @@ test('GPUTableBufferPlanner uses WebGPU row-geometry storage groups when enabled
     useStorageBuffers: true,
     columns: [makeColumn('elevations')]
   });
+  const vertexStorageLimitedPlan = GPUTableBufferPlanner.getAllocationPlan({
+    device: createDevice({
+      type: 'webgpu',
+      maxStorageBuffersPerShaderStage: 4,
+      maxStorageBuffersInVertexStage: 0,
+      maxStorageBufferBindingSize: 1024
+    }),
+    modelInfo: {isInstanced: false},
+    useStorageBuffers: true,
+    columns: [
+      makeColumn('positions', {stepMode: 'vertex', isPosition: true}),
+      makeColumn('fillColors', {byteStride: 4, byteLength: 8})
+    ]
+  });
 
   t.deepEqual(
     webgpuPlan.groups
@@ -284,6 +298,12 @@ test('GPUTableBufferPlanner uses WebGPU row-geometry storage groups when enabled
   t.notOk(
     sharedGeometryPlan.groups.some(group => group.kind === 'separate-storage-column'),
     'does not use storage buffers for shared-geometry mode'
+  );
+  t.notOk(
+    vertexStorageLimitedPlan.groups.some(
+      group => group.kind === 'separate-storage-column' || group.kind === 'stacked-storage-columns'
+    ),
+    'does not use storage buffers when the vertex stage storage limit is zero'
   );
 
   t.end();
@@ -398,12 +418,14 @@ function createDevice({
   maxVertexBuffers,
   maxVertexBufferArrayStride,
   maxStorageBuffersPerShaderStage,
+  maxStorageBuffersInVertexStage,
   maxStorageBufferBindingSize
 }: {
   type?: 'webgl' | 'webgpu' | 'null' | 'unknown';
   maxVertexBuffers?: number;
   maxVertexBufferArrayStride?: number;
   maxStorageBuffersPerShaderStage?: number;
+  maxStorageBuffersInVertexStage?: number;
   maxStorageBufferBindingSize?: number;
 } = {}): Device {
   const device = new NullDevice({});
@@ -416,6 +438,12 @@ function createDevice({
   });
   Object.defineProperty(limits, 'maxStorageBuffersPerShaderStage', {
     value: maxStorageBuffersPerShaderStage ?? device.limits.maxStorageBuffersPerShaderStage
+  });
+  Object.defineProperty(limits, 'maxStorageBuffersInVertexStage', {
+    value:
+      maxStorageBuffersInVertexStage ??
+      maxStorageBuffersPerShaderStage ??
+      device.limits.maxStorageBuffersPerShaderStage
   });
   Object.defineProperty(limits, 'maxStorageBufferBindingSize', {
     value: maxStorageBufferBindingSize ?? device.limits.maxStorageBufferBindingSize

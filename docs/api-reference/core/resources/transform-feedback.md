@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # TransformFeedback
+
+<CoreDocsTabs group="pipelines" active="transform-feedback" />
 
 ![WebGPU not supported](https://img.shields.io/badge/webgpu-no-red.svg?style=flat-square")
 

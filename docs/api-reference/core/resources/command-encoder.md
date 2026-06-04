@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # CommandEncoder
+
+<CoreDocsTabs group="commands" active="command-encoder" />
 
 A `CommandEncoder` records GPU commands that can later be sealed into a `CommandBuffer` and submitted to a `Device`.
 
