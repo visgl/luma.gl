@@ -9,6 +9,11 @@ A custom operation has two parts:
 - one or more `OperationHandler` functions registered for the device types that
   will evaluate the operation
 
+This example implements a [Natural Earth projection](https://en.wikipedia.org/wiki/Natural_Earth_projection) operation named
+`projectNaturalEarth`. The input must be `vec2<f32>` rows storing longitude and
+latitude in degrees. The output is `vec2<f32>` rows storing projected `x` and
+`y` coordinates.
+
 ## Define the Operation
 
 The operation `name` is the backend lookup key. It must match the handler key
@@ -16,44 +21,51 @@ registered with `backendRegistry.add()`.
 
 ```ts
 import {
+  getGPUTableEvaluator,
   GPUTableEvaluator,
   Operation,
-  type OperationHandler
+  type GPUTableEvaluatorInput
 } from '@luma.gl/gpgpu';
 
-type RampInputs = {
-  start: number;
-  step: number;
+type ProjectNaturalEarthInputs = {
+  coordinates: GPUTableEvaluator;
 };
 
-class RampOperation extends Operation<RampInputs> {
-  name = 'ramp';
+class ProjectNaturalEarthOperation extends Operation<ProjectNaturalEarthInputs> {
+  name = 'projectNaturalEarth';
 
   output: GPUTableEvaluator;
 
-  constructor(count: number, start: number, step: number) {
-    super({start, step});
+  constructor(coordinates: GPUTableEvaluator) {
+    super({coordinates});
 
     this.output = new GPUTableEvaluator({
+      isConstant: coordinates.isConstant,
       type: 'float32',
-      size: 1,
-      length: count,
+      size: 2,
+      length: coordinates.length,
       source: this
     });
   }
 
   toString(): string {
-    const {start, step} = this.inputs;
-    return `ramp(start=${start}, step=${step}, length=${this.output.length})`;
+    return `projectNaturalEarth(${this.inputs.coordinates})`;
   }
 }
 
-export function ramp(count: number, start = 0, step = 1): GPUTableEvaluator {
-  return new RampOperation(count, start, step).output;
+export function projectNaturalEarth(coordinates: GPUTableEvaluatorInput): GPUTableEvaluator {
+  const coordinatesTable = getGPUTableEvaluator(coordinates);
+  if (coordinatesTable.type !== 'float32' || coordinatesTable.size !== 2) {
+    throw new Error('projectNaturalEarth() requires vec2<f32> longitude/latitude input');
+  }
+
+  return new ProjectNaturalEarthOperation(coordinatesTable).output;
 }
 ```
 
-## Register a Handler
+## Implement Operation Handlers
+
+### CPU Backend
 
 An `OperationHandler` receives the selected device, operation inputs, logical
 output table, and target GPU buffer. It must write the operation result into
@@ -61,17 +73,219 @@ output table, and target GPU buffer. It must write the operation result into
 caches the CPU copy on the output table.
 
 ```ts
-const rampHandler: OperationHandler<RampInputs> = async ({inputs, output, target}) => {
-  const value = new output.ValueType(output.length * output.size);
+import {type OperationHandler} from '@luma.gl/gpgpu';
+
+const RADIANS_PER_DEGREE = Math.PI / 180;
+
+// https://en.wikipedia.org/wiki/Natural_Earth_projection
+function naturalEarth(lon: number, lat: number): [number, number] {
+  const lambda = lon * RADIANS_PER_DEGREE;
+  const phi = lat * RADIANS_PER_DEGREE;
+  const phi2 = phi * phi;
+  const phi4 = phi2 * phi2;
+  return [
+    lambda *
+      (0.8707 -
+        0.131979 * phi2 +
+        phi4 * (-0.013791 + phi4 * (0.003971 * phi2 - 0.001529 * phi4))),
+    phi *
+      (1.007226 +
+        phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 0.005916 * phi4)))
+  ];
+}
+
+export const projectNaturalEarthCPU: OperationHandler<ProjectNaturalEarthInputs> = async ({
+  inputs,
+  output,
+  target
+}) => {
+  const {coordinates} = inputs;
+  const source = await coordinates.readValue();
+  const value = new Float32Array(output.length * output.size);
 
   for (let rowIndex = 0; rowIndex < output.length; rowIndex++) {
-    value[rowIndex] = inputs.start + rowIndex * inputs.step;
+    const [x, y] = naturalEarth(source[rowIndex * 2], source[rowIndex * 2 + 1]);
+    value[rowIndex * 2] = x;
+    value[rowIndex * 2 + 1] = y;
   }
 
   target.write(value);
   return {success: true, value};
 };
 ```
+
+### WebGL Backend
+
+The WebGL handler uses transform feedback through `BufferTransform`.
+
+```ts
+import {type Buffer} from '@luma.gl/core';
+import {BufferTransform, DynamicBuffer} from '@luma.gl/engine';
+import {getGPUVectorBuffer} from '@luma.gl/tables';
+import {type OperationHandler} from '@luma.gl/gpgpu';
+
+const naturalEarth1WebGL = /* glsl */ `\
+#version 300 es
+
+in vec2 coordinates;
+out vec2 projected;
+
+const float RADIANS_PER_DEGREE = 0.017453292519943295;
+
+vec2 naturalEarth(float lon, float lat) {
+  float lambda = lon * RADIANS_PER_DEGREE;
+  float phi = lat * RADIANS_PER_DEGREE;
+  float phi2 = phi * phi;
+  float phi4 = phi2 * phi2;
+  return vec2(
+    lambda * (
+      0.8707 -
+      0.131979 * phi2 +
+      phi4 * (-0.013791 + phi4 * (0.003971 * phi2 - 0.001529 * phi4))
+    ),
+    phi * (
+      1.007226 +
+      phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 0.005916 * phi4))
+    )
+  );
+}
+
+void main() {
+  projected = naturalEarth(coordinates.x, coordinates.y);
+}
+`;
+
+export const projectNaturalEarthWebGL: OperationHandler<ProjectNaturalEarthInputs> = async ({
+  inputs,
+  output,
+  target
+}) => {
+  const {coordinates} = inputs;
+
+  const transform = new BufferTransform(target.device, {
+    vs: naturalEarth1WebGL,
+    bufferLayout: [
+      {
+        name: 'coordinates',
+        stepMode: 'vertex',
+        byteStride: coordinates.stride,
+        attributes: [
+          {
+            attribute: 'coordinates',
+            format: 'float32x2',
+            byteOffset: coordinates.offset
+          }
+        ]
+      }
+    ],
+    vertexCount: output.length,
+    outputs: ['projected']
+  });
+
+  const sourceBuffer = getConcreteBuffer(getGPUVectorBuffer(coordinates.gpuVector));
+  transform.run({
+    inputBuffers: {coordinates: sourceBuffer},
+    outputBuffers: {projected: target}
+  });
+  transform.destroy();
+  return {success: true};
+};
+
+function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {
+  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+}
+```
+
+### WebGPU Backend
+
+The WebGPU handler runs the same projection in a compute shader.
+
+```ts
+import {type Buffer} from '@luma.gl/core';
+import {Computation, DynamicBuffer} from '@luma.gl/engine';
+import {getGPUVectorBuffer} from '@luma.gl/tables';
+import {type OperationHandler} from '@luma.gl/gpgpu';
+
+const WORKGROUP_SIZE = 64;
+
+export const projectNaturalEarthWebGPU: OperationHandler<ProjectNaturalEarthInputs> = async ({
+  inputs,
+  output,
+  target
+}) => {
+  const {coordinates} = inputs;
+  const sourceBuffer = getConcreteBuffer(getGPUVectorBuffer(coordinates.gpuVector));
+  const sourceStride = coordinates.stride / Float32Array.BYTES_PER_ELEMENT;
+  const sourceOffset = coordinates.offset / Float32Array.BYTES_PER_ELEMENT;
+
+  const source = /* wgsl */ `
+@group(0) @binding(0) var<storage, read> coordinates: array<f32>;
+@group(0) @binding(1) var<storage, read_write> projected: array<f32>;
+
+const RADIANS_PER_DEGREE: f32 = 0.017453292519943295;
+
+fn naturalEarth(lon: f32, lat: f32) -> vec2<f32> {
+  let lambda = lon * RADIANS_PER_DEGREE;
+  let phi = lat * RADIANS_PER_DEGREE;
+  let phi2 = phi * phi;
+  let phi4 = phi2 * phi2;
+  return vec2<f32>(
+    lambda * (
+      0.8707 -
+      0.131979 * phi2 +
+      phi4 * (-0.013791 + phi4 * (0.003971 * phi2 - 0.001529 * phi4))
+    ),
+    phi * (
+      1.007226 +
+      phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 0.005916 * phi4))
+    )
+  );
+}
+
+@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>
+) {
+  let rowIndex = globalId.x;
+  if (rowIndex >= ${output.length}u) {
+    return;
+  }
+
+  let inputIndex = ${sourceOffset}u + rowIndex * ${sourceStride}u;
+  let xy = naturalEarth(coordinates[inputIndex], coordinates[inputIndex + 1u]);
+  projected[rowIndex * 2u] = xy.x;
+  projected[rowIndex * 2u + 1u] = xy.y;
+}
+`;
+
+  const computation = new Computation(target.device, {
+    source,
+    shaderLayout: {
+      bindings: [
+        {name: 'coordinates', type: 'storage', group: 0, location: 0},
+        {name: 'projected', type: 'storage', group: 0, location: 1}
+      ]
+    }
+  });
+
+  computation.setBindings({
+    coordinates: sourceBuffer,
+    projected: target
+  });
+
+  const computePass = target.device.beginComputePass({});
+  computation.dispatch(computePass, Math.ceil(output.length / WORKGROUP_SIZE));
+  computePass.end();
+  target.device.submit();
+  computation.destroy();
+  return {success: true};
+};
+
+function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {
+  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+}
+```
+
+## Register the Backends
 
 Register the handler for each device type that should evaluate the operation.
 `backendRegistry.add()` replaces the backend module for that device type, so
@@ -82,21 +296,23 @@ handlers.
 import {backendRegistry, type BackendModule} from '@luma.gl/gpgpu';
 import * as cpuBackend from '@luma.gl/gpgpu/cpu';
 import * as webglBackend from '@luma.gl/gpgpu/webgl';
+import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
 
-const customCPUBackend: BackendModule = {
+backendRegistry.add('cpu', {
   ...cpuBackend,
-  ramp: rampHandler
-};
+  projectNaturalEarth: projectNaturalEarthCPU
+} satisfies BackendModule);
 
-const customWebGLBackend: BackendModule = {
+backendRegistry.add('webgl', {
   ...webglBackend,
-  ramp: rampHandler
-};
+  projectNaturalEarth: projectNaturalEarthWebGL
+} satisfies BackendModule);
 
-backendRegistry.add('cpu', customCPUBackend);
-backendRegistry.add('webgl', customWebGLBackend);
+backendRegistry.add('webgpu', {
+  ...webgpuBackend,
+  projectNaturalEarth: projectNaturalEarthWebGPU
+} satisfies BackendModule);
 ```
-
 
 ## Use the Operation
 
@@ -104,16 +320,23 @@ Custom operations return `GPUTableEvaluator` instances, so they can be evaluated
 or chained with other GPGPU operations.
 
 ```ts
-const values = ramp(4, 10, 2);
-await values.evaluate(device);
+const coordinates = GPUTableEvaluator.fromArray(
+  new Float32Array([
+    -122.4194, 37.7749,
+    -74.006, 40.7128
+  ]),
+  {size: 2}
+);
 
-const result = await values.readValue();
-// Float32Array [10, 12, 14, 16]
+const projected = projectNaturalEarth(coordinates);
+await projected.evaluate(device);
+
+const result = await projected.readValue();
 ```
 
 ## Notes
 
-- `Operation.name` is used as key to retrieve the implementation from the registered backend
+- `Operation.name` and the backend module key must be identical.
 - Dependencies are evaluated before the handler is called.
 - Register a handler for every device type that may evaluate the operation.
 - Registering a custom backend module for `cpu`, `webgl`, or `webgpu` replaces

@@ -73,15 +73,9 @@ only the handlers they need. When registering a subset, only those operations ca
 be evaluated for that device type:
 
 ```ts
-import {backendRegistry, type OperationHandler} from '@luma.gl/gpgpu';
+import {backendRegistry} from '@luma.gl/gpgpu';
 import {interleave, swizzle} from '@luma.gl/gpgpu/webgl';
-
-const zeroRows: OperationHandler = async ({output, target}) => {
-  const value = new output.ValueType(output.length * output.size);
-  // Custom operation implementation. Write the result into `target`.
-  target.write(value);
-  return {success: true, value};
-};
+import {customOpWebGL} from './custom-operation';
 
 backendRegistry.add('webgl', {
   // Built-in operation handlers selected from the WebGL backend.
@@ -89,7 +83,7 @@ backendRegistry.add('webgl', {
   swizzle,
 
   // Custom operation handler. The key must match the custom operation name.
-  zeroRows
+  customOp: customOpWebGL
 });
 ```
 
