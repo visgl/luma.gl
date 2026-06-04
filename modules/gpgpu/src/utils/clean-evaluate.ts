@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Buffer, Device} from '@luma.gl/core';
-import {getGPUVectorBuffer, GPUTableEvaluator} from '../operation/gpu-table-evaluator';
+import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
 
 type EvaluatorResult = GPUTableEvaluator | GPUTableEvaluator[] | Record<string, unknown>;
 
@@ -15,9 +15,7 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
 
   await Promise.all(rootEvaluators.map(evaluator => evaluator.evaluate(device)));
 
-  const preservedBuffers = new Set<Buffer>(
-    rootEvaluators.map(evaluator => getGPUVectorBuffer(evaluator.gpuVector))
-  );
+  const preservedBuffers = new Set<Buffer>(rootEvaluators.map(evaluator => evaluator.buffer));
 
   const dependencyEvaluators = new Set<GPUTableEvaluator>();
   for (const evaluator of rootEvaluators) {
@@ -26,7 +24,7 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
 
   for (const evaluator of dependencyEvaluators) {
     // Multiple evaluators could share the same underlying buffer
-    if (!preservedBuffers.has(getGPUVectorBuffer(evaluator.gpuVector))) {
+    if (!preservedBuffers.has(evaluator.buffer)) {
       evaluator.destroy();
     }
   }

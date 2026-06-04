@@ -101,6 +101,10 @@ CPU-side typed array, when available. This may come from construction or from a 
 
 Materialized GPUVector resource for the table. Accessing this before `evaluate()` throws.
 
+### `buffer`
+
+Materialized `Buffer` backing the table. Accessing this before `evaluate()` throws.
+
 ## Methods
 
 ### `constructor(props: GPUTableEvaluatorProps)`

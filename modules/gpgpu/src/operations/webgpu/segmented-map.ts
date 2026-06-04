@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './common/dispatch';
 import {
   getInputBinding,
@@ -62,7 +62,7 @@ ${getSegmentedMapFunction(segments.length)}
   });
 
   const computationBindings: Record<string, Buffer> = Object.fromEntries(
-    bindings.map(({name, input}) => [name, getGPUVectorBuffer(input.gpuVector)])
+    bindings.map(({name, input}) => [name, input.buffer])
   );
   computationBindings['result'] = target;
   computation.setBindings(computationBindings);

@@ -5,7 +5,7 @@
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {getGPUVectorBuffer, GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
+import {GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 
@@ -93,7 +93,7 @@ ${getComputeBlock(module.name, inputs, output, elementWise, expression)}
   });
 
   const computationBindings: Record<string, Buffer> = Object.fromEntries(
-    storageBindings.map(({name, input}) => [name, getGPUVectorBuffer(input.gpuVector)])
+    storageBindings.map(({name, input}) => [name, input.buffer])
   );
   computationBindings['result'] = outputBuffer;
   computation.setBindings(computationBindings);

@@ -298,6 +298,11 @@ export class GPUTableEvaluator {
     return this._gpuVector;
   }
 
+  /** Materialized GPU buffer backing the table. Only available after {@link GPUTableEvaluator.evaluate} resolves. */
+  get buffer(): Buffer {
+    return getBufferFromGPUVector(this.gpuVector);
+  }
+
   /**
    * Materializes the table on a device and returns the requested output format.
    *
@@ -320,7 +325,7 @@ export class GPUTableEvaluator {
       const sourceGPUVector = await this.source.evaluate(device);
       this._gpuVector = this.createGPUVectorView({
         ...options,
-        buffer: getGPUVectorBuffer(sourceGPUVector)
+        buffer: getBufferFromGPUVector(sourceGPUVector)
       });
       return this._gpuVector;
     }
@@ -406,7 +411,7 @@ export class GPUTableEvaluator {
 
     const byteOffset = offset + startRow * stride;
     const byteLength = stride === width ? rowCount * width : (rowCount - 1) * stride + width;
-    const bytes = await getGPUVectorBuffer(this.gpuVector).readAsync(byteOffset, byteLength);
+    const bytes = await this.buffer.readAsync(byteOffset, byteLength);
     const value = new ValueType(
       bytes.buffer as ArrayBuffer,
       bytes.byteOffset,
@@ -437,7 +442,7 @@ export class GPUTableEvaluator {
   destroy() {
     if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
-        bufferPool.recycle(getGPUVectorBuffer(this._gpuVector));
+        bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));
       }
       this._gpuVector = undefined;
     }
@@ -522,7 +527,7 @@ function getGPUTablePropsFromGPUVector(vector: GPUVector): {type: SignedDataType
 }
 
 /** Returns the concrete Buffer for a GPUVector, unwrapping DynamicBuffer when needed. */
-export function getGPUVectorBuffer(vector: GPUVector): Buffer {
+function getBufferFromGPUVector(vector: GPUVector): Buffer {
   const buffer = getSingleGPUVectorData(vector).buffer;
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }

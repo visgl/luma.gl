@@ -119,9 +119,7 @@ export const projectNaturalEarthCPU: OperationHandler<ProjectNaturalEarthInputs>
 The WebGL handler uses transform feedback through `BufferTransform`.
 
 ```ts
-import {type Buffer} from '@luma.gl/core';
-import {BufferTransform, DynamicBuffer} from '@luma.gl/engine';
-import {getGPUVectorBuffer} from '@luma.gl/tables';
+import {BufferTransform} from '@luma.gl/engine';
 import {type OperationHandler} from '@luma.gl/gpgpu';
 
 const naturalEarth1WebGL = /* glsl */ `\
@@ -182,18 +180,13 @@ export const projectNaturalEarthWebGL: OperationHandler<ProjectNaturalEarthInput
     outputs: ['projected']
   });
 
-  const sourceBuffer = getConcreteBuffer(getGPUVectorBuffer(coordinates.gpuVector));
   transform.run({
-    inputBuffers: {coordinates: sourceBuffer},
+    inputBuffers: {coordinates: coordinates.buffer},
     outputBuffers: {projected: target}
   });
   transform.destroy();
   return {success: true};
 };
-
-function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {
-  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
-}
 ```
 
 ### WebGPU Backend
@@ -201,9 +194,7 @@ function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {
 The WebGPU handler runs the same projection in a compute shader.
 
 ```ts
-import {type Buffer} from '@luma.gl/core';
-import {Computation, DynamicBuffer} from '@luma.gl/engine';
-import {getGPUVectorBuffer} from '@luma.gl/tables';
+import {Computation} from '@luma.gl/engine';
 import {type OperationHandler} from '@luma.gl/gpgpu';
 
 const WORKGROUP_SIZE = 64;
@@ -214,7 +205,6 @@ export const projectNaturalEarthWebGPU: OperationHandler<ProjectNaturalEarthInpu
   target
 }) => {
   const {coordinates} = inputs;
-  const sourceBuffer = getConcreteBuffer(getGPUVectorBuffer(coordinates.gpuVector));
   const sourceStride = coordinates.stride / Float32Array.BYTES_PER_ELEMENT;
   const sourceOffset = coordinates.offset / Float32Array.BYTES_PER_ELEMENT;
 
@@ -268,7 +258,7 @@ fn naturalEarth(lon: f32, lat: f32) -> vec2<f32> {
   });
 
   computation.setBindings({
-    coordinates: sourceBuffer,
+    coordinates: coordinates.buffer,
     projected: target
   });
 
@@ -279,10 +269,6 @@ fn naturalEarth(lon: f32, lat: f32) -> vec2<f32> {
   computation.destroy();
   return {success: true};
 };
-
-function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {
-  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
-}
 ```
 
 ## Register the Backends
@@ -338,6 +324,9 @@ const result = await projected.readValue();
 
 - `Operation.name` and the backend module key must be identical.
 - Dependencies are evaluated before the handler is called.
+- WebGPU compute handlers bind input tables as storage buffers. Buffers
+  materialized by `GPUTableEvaluator.evaluate()` are storage-bindable; externally
+  supplied `GPUVector` buffers must also be created with storage usage.
 - Register a handler for every device type that may evaluate the operation.
 - Registering a custom backend module for `cpu`, `webgl`, or `webgpu` replaces
   the previously registered module for that device type.
