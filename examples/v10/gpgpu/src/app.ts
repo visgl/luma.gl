@@ -28,9 +28,11 @@ const EXPRESSION_QUERY_PARAMETER = 'expression';
 
 let evaluationDevicePromise: Promise<Device> | null = null;
 
-initializeGPGPUShowcase();
+export type GPGPUShowcaseHandle = {
+  destroy: () => void;
+};
 
-function initializeGPGPUShowcase(): void {
+export function initializeGPGPUShowcase(): GPGPUShowcaseHandle {
   const root = document.getElementById('app');
   if (!root) {
     throw new Error('GPGPU showcase requires #app');
@@ -39,11 +41,46 @@ function initializeGPGPUShowcase(): void {
   const elements = getRenderedTableElements();
   const expressionElements = getExpressionElements();
   const requestedExpression = getRequestedExpression();
+  let animationFrameId: number | null = null;
+  let isDestroyed = false;
+  let renderer: VirtualGPUTableRenderer | null = null;
+  let submitHandler: ((event: SubmitEvent) => void) | null = null;
+  let beforeUnloadHandler: (() => void) | null = null;
+
+  const destroy = (): void => {
+    if (isDestroyed) {
+      return;
+    }
+
+    isDestroyed = true;
+    if (animationFrameId !== null) {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    if (submitHandler) {
+      expressionElements.form.removeEventListener('submit', submitHandler);
+      submitHandler = null;
+    }
+    if (beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', beforeUnloadHandler);
+      beforeUnloadHandler = null;
+    }
+    renderer?.destroy();
+    renderer = null;
+    void evaluationDevicePromise?.then(device => device.destroy());
+    evaluationDevicePromise = null;
+  };
+
   if (requestedExpression !== null) {
     expressionElements.input.value = requestedExpression;
   }
 
-  window.requestAnimationFrame(() => {
+  animationFrameId = window.requestAnimationFrame(() => {
+    animationFrameId = null;
+    if (isDestroyed) {
+      return;
+    }
+
     const rowCount = getRequestedRowCount();
     const startedAt = performance.now();
     const data = makeShowcaseData(rowCount);
@@ -54,11 +91,15 @@ function initializeGPGPUShowcase(): void {
       arrowBatches: formatInteger(data.table.batches.length)
     });
 
-    const renderer = new VirtualGPUTableRenderer(elements, data.columns, data.rowCount);
-    renderer.mount();
+    const tableRenderer = new VirtualGPUTableRenderer(elements, data.columns, data.rowCount);
+    renderer = tableRenderer;
+    tableRenderer.mount();
     expressionElements.runButton.disabled = false;
-    expressionElements.form.addEventListener('submit', event => {
+    submitHandler = event => {
       event.preventDefault();
+      if (!renderer || isDestroyed) {
+        return;
+      }
       void runExpression({
         expression: expressionElements.input.value,
         messageElement: expressionElements.message,
@@ -67,13 +108,14 @@ function initializeGPGPUShowcase(): void {
         expressionInputs: data.expressionInputs,
         persistExpression: true
       });
-    });
+    };
+    expressionElements.form.addEventListener('submit', submitHandler);
 
     if (requestedExpression !== null) {
       void runExpression({
         expression: requestedExpression,
         messageElement: expressionElements.message,
-        renderer,
+        renderer: tableRenderer,
         sourceColumns: data.columns,
         expressionInputs: data.expressionInputs,
         persistExpression: false
@@ -87,15 +129,11 @@ function initializeGPGPUShowcase(): void {
       `generated in ${formatDuration(elapsedMilliseconds)}`
     ].join(' · ');
 
-    window.addEventListener(
-      'beforeunload',
-      () => {
-        renderer.destroy();
-        void evaluationDevicePromise?.then(device => device.destroy());
-      },
-      {once: true}
-    );
+    beforeUnloadHandler = destroy;
+    window.addEventListener('beforeunload', beforeUnloadHandler, {once: true});
   });
+
+  return {destroy};
 }
 
 function getRenderedTableElements(): RenderedTableElements {

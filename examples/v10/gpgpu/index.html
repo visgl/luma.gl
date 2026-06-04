@@ -258,5 +258,8 @@
       <div id="table-status" class="status">Generating Arrow table...</div>
     </section>
   </main>
-  <script type="module" src="./src/app.ts"></script>
+  <script type="module">
+    import {initializeGPGPUShowcase} from './src/app.ts';
+    initializeGPGPUShowcase();
+  </script>
 </body>
