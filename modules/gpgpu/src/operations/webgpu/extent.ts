@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
 import {getWebGPUDispatchLayout, getWebGPUDispatchWorkgroupIndex} from './common/dispatch';
 import {getWGSLType} from './common/helper';
@@ -203,7 +203,7 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
 
   const bindings: Record<string, Buffer> = {result: outputBuffer};
   if (!input.isConstant) {
-    bindings['sourceValues'] = getGPUVectorBuffer(input.gpuVector);
+    bindings['sourceValues'] = input.buffer;
   }
   computation.setBindings(bindings);
 

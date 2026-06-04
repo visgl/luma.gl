@@ -98,6 +98,11 @@ test('GPUTableEvaluator.readValue only reads requested rows from GPU buffers', a
   const stridedBuffer = strided.data[0].buffer;
   const packedReadAsyncSpy = vi.spyOn(packedBuffer, 'readAsync');
   const stridedReadAsyncSpy = vi.spyOn(stridedBuffer, 'readAsync');
+  const unevaluatedEvaluator = GPUTableEvaluator.fromArray([1, 2], {size: 1});
+
+  expect(packedEvaluator.buffer).toBe(packedBuffer);
+  expect(stridedEvaluator.buffer).toBe(stridedBuffer);
+  expect(() => unevaluatedEvaluator.buffer).toThrow(/not evaluated/);
 
   expect(Array.from(await packedEvaluator.readValue(1, 3))).toEqual([20, 21, 30, 31]);
   expect(packedReadAsyncSpy).toHaveBeenCalledWith(8, 16);
@@ -107,6 +112,7 @@ test('GPUTableEvaluator.readValue only reads requested rows from GPU buffers', a
 
   packedReadAsyncSpy.mockRestore();
   stridedReadAsyncSpy.mockRestore();
+  unevaluatedEvaluator.destroy();
   packedEvaluator.destroy();
   stridedEvaluator.destroy();
   packed.destroy();

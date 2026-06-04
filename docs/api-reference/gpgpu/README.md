@@ -5,6 +5,7 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 ## API Reference
 
 - [`Operations`](/docs/api-reference/gpgpu/operations)
+- [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation)
 - [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table)
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
@@ -66,16 +67,28 @@ backendRegistry.add('webgl', webglBackend);
 backendRegistry.add('webgpu', webgpuBackend);
 ```
 
-The same endpoints export individual backend operation handlers, so applications
-can choose only the handlers they need. When registering a subset, only those
-operations can be evaluated for that device type:
+The same endpoints export individual backend operation handlers. Applications
+can combine those handlers with their own custom operation handlers, or register
+only the handlers they need. When registering a subset, only those operations can
+be evaluated for that device type:
 
 ```ts
 import {backendRegistry} from '@luma.gl/gpgpu';
 import {interleave, swizzle} from '@luma.gl/gpgpu/webgl';
+import {customOpWebGL} from './custom-operation';
 
-backendRegistry.add('webgl', {interleave, swizzle});
+backendRegistry.add('webgl', {
+  // Built-in operation handlers selected from the WebGL backend.
+  interleave,
+  swizzle,
+
+  // Custom operation handler. The key must match the custom operation name.
+  customOp: customOpWebGL
+});
 ```
+
+See [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) for a full
+operation and backend handler example.
 
 The CPU backend can be imported from `@luma.gl/gpgpu/cpu` when explicitly
 registering CPU handlers for another device type.
@@ -83,6 +96,7 @@ registering CPU handlers for another device type.
 ## Concepts
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
+- [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) shows how to define lazy operations and register backend handlers.
 - [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations. It can borrow packed single-chunk `GPUVector` inputs from `@luma.gl/tables`.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate) evaluates final result tables and cleans up intermediate dependencies in one step.
 

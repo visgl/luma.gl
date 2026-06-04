@@ -39,4 +39,7 @@ export {swizzle} from './operations/swizzle';
 
 // Backends
 export {backendRegistry} from './operation/backend-registry';
+export type {BackendModule} from './operation/backend-registry';
+export {Operation} from './operation/operation';
+export type {OperationHandler, OperationHandlerResult} from './operation/operation';
 export {cleanEvaluate} from './utils/clean-evaluate';
