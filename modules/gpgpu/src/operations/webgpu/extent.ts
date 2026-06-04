@@ -7,6 +7,7 @@ import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
 import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
+import {getWebGPUDispatchLayout, getWebGPUDispatchWorkgroupIndex} from './common/dispatch';
 import {getWGSLType} from './common/helper';
 import {
   getInputBinding,
@@ -119,6 +120,10 @@ function runExtentPass({
   outputOffset: number;
 }): void {
   const wgslType = getWGSLType(outputType);
+  const dispatchLayout = getWebGPUDispatchLayout(
+    outputLength,
+    outputBuffer.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const outputTable = new GPUTableEvaluator({
     buffer: outputBuffer,
     type: outputType,
@@ -141,7 +146,7 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
   @builtin(workgroup_id) workgroupId: vec3<u32>,
   @builtin(local_invocation_id) localId: vec3<u32>
 ) {
-  let outputRowIndex = workgroupId.x;
+  let outputRowIndex = ${getWebGPUDispatchWorkgroupIndex(dispatchLayout)};
   if (outputRowIndex >= ${outputLength}u) {
     return;
   }
@@ -203,7 +208,7 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
   computation.setBindings(bindings);
 
   const computePass = outputBuffer.device.beginComputePass({});
-  computation.dispatch(computePass, outputLength);
+  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
   computePass.end();
   outputBuffer.device.submit();
   computation.destroy();

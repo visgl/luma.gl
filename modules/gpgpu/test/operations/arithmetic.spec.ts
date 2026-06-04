@@ -143,8 +143,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         const stat = getRunStats(device);
         const beforeCount = stat?.count ?? 0;
         await cleanEvaluate(device, testCase);
-        await testCase.eval.readValue();
-        expect(verifyTableValue(testCase.eval, testCase.expected, 1e-6)).toBe(null);
+        expect(await verifyTableValue(testCase.eval, testCase.expected, 1e-6)).toBe(null);
         if (stat) {
           expect(stat.count - beforeCount).toBe(testCase.runCount ?? 1);
         }

@@ -389,33 +389,43 @@ export class GPUTableEvaluator {
    */
   async readValue(startRow: number = 0, endRow?: number): Promise<TypedArray> {
     const {ValueType} = this;
-    if (!this._value) {
-      const bytes = await getGPUVectorBuffer(this.gpuVector).readAsync(
-        this.offset,
-        this.byteLength
-      );
-      this._value = new ValueType(bytes.buffer as ArrayBuffer);
-    }
-
     const {size, offset, stride, length} = this;
     const width = ValueType.BYTES_PER_ELEMENT * size;
     endRow = endRow ?? length;
+    startRow = Math.max(0, Math.min(length, startRow));
+    endRow = Math.max(startRow, Math.min(length, endRow));
+
+    if (this._value) {
+      return getRowsFromValue(this, this._value, startRow, endRow);
+    }
+
+    const rowCount = endRow - startRow;
+    if (rowCount === 0) {
+      return new ValueType(0) as TypedArray;
+    }
+
+    const byteOffset = offset + startRow * stride;
+    const byteLength = stride === width ? rowCount * width : (rowCount - 1) * stride + width;
+    const bytes = await getGPUVectorBuffer(this.gpuVector).readAsync(byteOffset, byteLength);
+    const value = new ValueType(
+      bytes.buffer as ArrayBuffer,
+      bytes.byteOffset,
+      bytes.byteLength / ValueType.BYTES_PER_ELEMENT
+    );
 
     if (stride === width) {
-      const buffer = this._value!.buffer as ArrayBuffer;
-      return new ValueType(buffer, offset + stride * startRow, (endRow - startRow) * size);
+      return value;
     }
 
-    const bytes = new Uint8Array(width * (endRow - startRow));
-    let i0 = offset + startRow * stride,
-      i1 = 0;
-    for (let y = startRow; y < endRow; y++) {
-      for (let x = 0; x < width; x++) {
-        bytes[i1++] = bytes[i0 + x];
-      }
-      i0 += stride;
+    const compactBytes = new Uint8Array(width * rowCount);
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+      const sourceByteOffset = rowIndex * stride;
+      compactBytes.set(
+        bytes.subarray(sourceByteOffset, sourceByteOffset + width),
+        rowIndex * width
+      );
     }
-    return new ValueType(bytes.buffer);
+    return new ValueType(compactBytes.buffer);
   }
 
   /** Returns the debug id, source description, or class name. */
@@ -433,6 +443,30 @@ export class GPUTableEvaluator {
     }
     this._destroyed = true;
   }
+}
+
+function getRowsFromValue(
+  table: GPUTableEvaluator,
+  value: TypedArray,
+  startRow: number,
+  endRow: number
+): TypedArray {
+  const {ValueType, size, offset, stride} = table;
+  const valueStride = stride / ValueType.BYTES_PER_ELEMENT;
+  const valueOffset = offset / ValueType.BYTES_PER_ELEMENT;
+  const rowCount = endRow - startRow;
+
+  if (valueStride === size) {
+    const startIndex = valueOffset + startRow * valueStride;
+    return value.subarray(startIndex, startIndex + rowCount * size) as TypedArray;
+  }
+
+  const result = new ValueType(rowCount * size) as TypedArray;
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    const sourceStart = valueOffset + (startRow + rowIndex) * valueStride;
+    result.set(value.subarray(sourceStart, sourceStart + size), rowIndex * size);
+  }
+  return result;
 }
 
 /** Input accepted by operations that normalize GPUVectors into evaluators. */

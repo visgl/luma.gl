@@ -6,6 +6,7 @@ import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {getGPUVectorBuffer, GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
+import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 
 const WORKGROUP_SIZE = 64;
@@ -43,6 +44,10 @@ export function runRowComputation({
     TYPE: castToType,
     RESULT_LEN: output.size.toString()
   };
+  const dispatchLayout = getWebGPUDispatchLayout(
+    Math.ceil(output.length / WORKGROUP_SIZE),
+    outputBuffer.device.limits.maxComputeWorkgroupsPerDimension
+  );
 
   for (const name in inputs) {
     const input = inputs[name];
@@ -57,9 +62,10 @@ ${getOutputBinding(output, storageBindings.length)}
 ${getOutputWriter(output)}
 
 @compute @workgroup_size(${WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) id: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_id) localId: vec3<u32>
 ) {
-  let rowIndex = id.x;
+  let rowIndex = ${getWebGPUDispatchRowIndex(dispatchLayout, WORKGROUP_SIZE)};
   if (rowIndex >= ${output.length}u) {
     return;
   }
@@ -97,7 +103,7 @@ ${getComputeBlock(module.name, inputs, output, elementWise, expression)}
     .getStats(GPGPU_OPERATION_STATS)
     .get(COMPUTATION_RUNS)
     .incrementCount();
-  computation.dispatch(computePass, Math.ceil(output.length / WORKGROUP_SIZE));
+  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
   computePass.end();
   outputBuffer.device.submit();
   computation.destroy();

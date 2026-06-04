@@ -109,8 +109,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           size: testCase.size * 2
         };
         await cleanEvaluate(device, output);
-        await output.readValue();
-        expect(verifyTableValue(output, expected)).toBe(null);
+        expect(await verifyTableValue(output, expected)).toBe(null);
         output.destroy();
       });
     }
