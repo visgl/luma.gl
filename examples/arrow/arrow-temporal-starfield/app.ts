@@ -17,6 +17,11 @@ import {
   type ArrowTemporalStarfieldRendererDataBatchUpdate
 } from './arrow-temporal-starfield-renderer';
 import {
+  ArrowExamplePanelManager,
+  makeArrowExamplePanelHostHtml,
+  type ArrowExampleLoadedTableStream
+} from '../arrow-example-panels';
+import {
   ArrowTemporalStarfieldControlPanel,
   makeArrowTemporalStarfieldControlPanelHtml
 } from './control-panel';
@@ -26,15 +31,19 @@ export const description =
   'Scalar Arrow Timestamp and Duration columns normalized to relative Float32 GPU rows for blinking star instances.';
 
 export default class ArrowTemporalStarfieldAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowTemporalStarfieldControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   readonly device: Device;
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowTemporalStarfieldControlPanelHtml()
+  });
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
   layer: ArrowTemporalStarfieldRenderer | null = null;
   inputRequestVersion = 0;
   isFinalized = false;
+  activeStarfieldTableStream: ArrowExampleLoadedTableStream | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -58,6 +67,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
       renderMode: this.activeRenderMode,
       timeColumn: this.activeTimeColumn
     });
+    this.panels.mount();
     this.controlPanel.initialize();
     this.startStreamingStarfield();
   }
@@ -76,6 +86,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer?.destroy();
   }
 
@@ -116,6 +127,12 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
       STREAMING_STARFIELD_ROWS_PER_BATCH,
       this.activeTimeColumn
     );
+    this.activeStarfieldTableStream = this.panels.beginLoadedTableStream({
+      id: 'temporal-starfield-source',
+      label: 'Loaded starfield source',
+      kind: 'source',
+      recordBatches
+    });
 
     layer.setProps({
       data: createStreamingTemporalStarfieldRecordBatchIterator(recordBatches),
@@ -132,6 +149,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
     if (update.isFirstBatch) {
       this.controlPanel.setLabels(this.layer.getLabels());
     }
+    this.activeStarfieldTableStream?.setLoadedBatchCount(update.loadedBatchCount);
     this.controlPanel.setStreamingBatchStatus(
       update.loadedBatchCount,
       STREAMING_STARFIELD_BATCH_COUNT

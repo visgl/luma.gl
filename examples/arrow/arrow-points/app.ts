@@ -20,6 +20,7 @@ import {
   type ArrowPointTimeKind
 } from './arrow-point-generator';
 import {ArrowPointRenderer, type ArrowPointRendererPickingInfo} from './arrow-point-renderer';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowPointControlPanel, makeArrowPointControlPanelHtml} from './control-panel';
 
 export const title = 'Points: XY/XYM/XYZM';
@@ -27,13 +28,16 @@ export const description =
   'Arrow FixedSizeList<Float32, 2 | 3 | 4> and DenseUnion point rows rendered as ScatterplotLayer-style circle impostors with temporal M or timestamp animation and picking.';
 
 export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowPointControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};
 
   readonly device: Device;
   readonly controlPanel: ArrowPointControlPanel;
   readonly layer: ArrowPointRenderer;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowPointControlPanelHtml()
+  });
   rowCountKind: ArrowPointRowCountKind = '10k-stream';
   sourceKind: ArrowPointSourceKind = 'xym';
   timeKind: ArrowPointTimeKind = 'm';
@@ -60,6 +64,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   }
 
   override async onInitialize(): Promise<void> {
+    this.panels.mount();
     this.controlPanel.initialize();
     this.streamPointInput(this.rowCountKind, this.sourceKind, this.timeKind, this.colorKind);
   }
@@ -83,6 +88,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer.destroy();
   }
 
@@ -135,6 +141,12 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
     );
     this.controlPanel.setStreamingBatchStatus(0, sourceData.batchCount);
     this.updateMetrics();
+    const pointTableStream = this.panels.beginLoadedTableStream({
+      id: 'points-source',
+      label: 'Loaded point source',
+      kind: 'source',
+      recordBatches: sourceData.recordBatches
+    });
 
     this.layer.setProps({
       data: createStreamingPointRecordBatchIterator(sourceData.recordBatches)[
@@ -144,6 +156,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
         if (this.isFinalized) {
           return;
         }
+        pointTableStream.setLoadedBatchCount(loadedBatchCount);
         this.controlPanel.setStreamingBatchStatus(loadedBatchCount, sourceData.batchCount);
         this.controlPanel.setMetrics(metrics);
       }

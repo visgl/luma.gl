@@ -15,18 +15,22 @@ import {
   ArrowColumnRendererControlPanel,
   makeArrowColumnRendererControlPanelHtml
 } from './control-panel';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'DGGS + time';
 export const description =
   'Fetches the deck.gl HexagonLayer accident dataset, converts it to Arrow H3/time/count columns, and renders animated GPU-decoded H3 columns.';
 
 export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowColumnRendererControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true, createFramebuffer: true};
 
   readonly device: Device;
   readonly controlPanel = new ArrowColumnRendererControlPanel();
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowColumnRendererControlPanelHtml()
+  });
   layer: ArrowColumnRenderer | null = null;
   isFinalized = false;
 
@@ -36,6 +40,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
   }
 
   override async onInitialize(): Promise<void> {
+    this.panels.mount();
     this.controlPanel.initialize();
     this.controlPanel.setStatus('Loading deck.gl CSV');
     this.controlPanel.setMetrics(
@@ -57,6 +62,21 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     }
     this.controlPanel.setStatus('Rendering WebGPU columns');
     this.controlPanel.setMetrics(formatArrowColumnRendererMetrics(layer.getMetrics()));
+    const sourceData = layer.getSourceData();
+    this.panels.setTableEntries([
+      {
+        id: 'columns-aggregate',
+        label: 'Aggregated columns',
+        kind: 'source',
+        table: sourceData.table
+      },
+      {
+        id: 'columns-geometry',
+        label: 'Decoded H3 geometry keys',
+        kind: 'derived',
+        table: sourceData.geometryTable
+      }
+    ]);
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
@@ -77,6 +97,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer?.destroy();
   }
 }

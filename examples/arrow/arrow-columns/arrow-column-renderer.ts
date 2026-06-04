@@ -305,6 +305,10 @@ export class ArrowColumnRenderer extends GPURenderable<
     );
   }
 
+  getSourceData(): ArrowColumnSourceData {
+    return this.getTableInput().sourceData;
+  }
+
   private getTableInput(): ArrowColumnTableInput {
     if (!this.tableInput) {
       throw new Error('ArrowColumnRenderer has not been initialized');

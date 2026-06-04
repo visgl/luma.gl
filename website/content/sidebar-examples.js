@@ -60,6 +60,11 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'GPU Data - luma v10',
+      items: ['v10/gpgpu']
+    },
+    {
+      type: 'category',
       label: 'Apache Arrow - luma.gl v10',
       items: [
         'arrow/arrow-points',

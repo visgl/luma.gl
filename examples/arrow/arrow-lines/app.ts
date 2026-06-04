@@ -35,6 +35,11 @@ import {
   type ArrowLineRendererProps,
   type ArrowLineRendererSetPropsResult
 } from './arrow-line-renderer';
+import {
+  ArrowExamplePanelManager,
+  makeArrowExamplePanelHostHtml,
+  type ArrowExampleLoadedTableStream
+} from '../arrow-example-panels';
 
 export const title = 'Lines: DenseUnion outlines';
 export const description =
@@ -46,17 +51,20 @@ type LineRendererUpdateOptions = {
 };
 
 export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowLineControlPanelHtml({
-    rowLabels: {
-      '240-stream': PATH_DATASETS['240'].label,
-      '2400-stream': PATH_DATASETS['2400'].label
-    },
-    deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT
-  });
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};
 
   readonly device: Device;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowLineControlPanelHtml({
+      rowLabels: {
+        '240-stream': PATH_DATASETS['240'].label,
+        '2400-stream': PATH_DATASETS['2400'].label
+      },
+      deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT
+    })
+  });
   activeMode: ArrowLineMode = 'lines';
   activeRowCountKind: ArrowLineRowCountKind = '240-stream';
   activeCoordinateKind: ArrowLineCoordinateKind = 'float32';
@@ -76,6 +84,7 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
   lastRenderSeconds: number | null = null;
   isFinalized = false;
   controlPanel!: ArrowLineControlPanel;
+  activePathTableStream: ArrowExampleLoadedTableStream | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -95,6 +104,7 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     }
     this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
     this.pathRenderer = this.createPathRenderer(this.activePathModelKind);
+    this.panels.mount();
     this.initializeControlPanel();
     this.updateMetricLabels();
     this.streamPathRecordBatches(
@@ -151,6 +161,7 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel?.destroy();
+    this.panels.finalize();
     this.pathRenderer?.destroy();
   }
 
@@ -396,6 +407,13 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
     this.activePathInput = null;
     this.activeStreamingPathBatchCount = recordBatches.length;
+    this.panels.removeTableEntry('lines-segments');
+    this.activePathTableStream = this.panels.beginLoadedTableStream({
+      id: 'lines-source',
+      label: 'Loaded line source',
+      kind: 'source',
+      recordBatches
+    });
     this.controlPanel?.setStreamingBatchStatus(0, this.activeStreamingPathBatchCount);
     this.pathRenderer.setProps({
       data: createStreamingPathRecordBatchIterator(recordBatches),
@@ -411,6 +429,17 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
       return;
     }
     this.activePathInput = update.pathInput;
+    this.activePathTableStream?.setLoadedBatchCount(update.loadedBatchCount);
+    if (update.pathInput.model === 'attribute') {
+      this.panels.upsertTableEntry({
+        id: 'lines-segments',
+        label: 'Generated path segments',
+        kind: 'derived',
+        table: update.pathInput.pathState.segmentTable.table
+      });
+    } else {
+      this.panels.removeTableEntry('lines-segments');
+    }
     this.controlPanel?.setStreamingBatchStatus(
       update.loadedBatchCount,
       this.activeStreamingPathBatchCount

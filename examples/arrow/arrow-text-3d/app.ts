@@ -5,26 +5,28 @@
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {parseFont} from '@luma.gl/text/text-3d';
-import {Matrix4, type NumberArray4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core';
 import {ArrowText3DRenderer} from './arrow-text-3d-renderer';
 import {CRAWL_TEXT_ROWS} from './arrow-text-3d-data';
+import {
+  ArrowText3DControlPanel,
+  getArrowText3DCrawlColor,
+  makeArrowText3DControlPanelHtml
+} from './control-panel';
 import {helvetiker} from '../../experimental/text-3d/helvetiker-font';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = '3D Text';
 export const description = 'Perspective space crawl built from Apache Arrow Utf8 glyph rows.';
 
-const TEXT_3D_COLOR_STORAGE_KEY = 'text-3d-crawl-color';
-const DEFAULT_CRAWL_COLOR: [number, number, number, number] = [1, 0.62, 0.32, 1];
-const YELLOW_CRAWL_COLOR: [number, number, number, number] = [1, 0.9, 0.32, 1];
 const font = parseFont(helvetiker);
 
 /** Animates grouped Arrow glyph instances through the existing 3D crawl camera. */
 export default class ArrowText3DAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-<p>Stores crawl rows in Apache Arrow Utf8, expands visible glyphs into grouped Arrow instance batches, and reuses one shared extruded glyph atlas.</p>
-<p>Each used glyph draws once with a shared geometry range and its grouped Arrow instance offsets.</p>
-`;
+  static info = makeArrowExamplePanelHostHtml();
 
+  readonly controlPanel = new ArrowText3DControlPanel();
+  readonly panels = new ArrowExamplePanelManager({controlsHtml: makeArrowText3DControlPanelHtml()});
   modelMatrix = new Matrix4();
   normalMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: [0, 40, 980], center: [0, -520, -520]});
@@ -63,6 +65,22 @@ export default class ArrowText3DAnimationLoopTemplate extends AnimationLoopTempl
     this.textMinY = min[1];
     this.textWidth = max[0] - min[0];
     this.textHeight = max[1] - min[1];
+    this.panels.mount();
+    this.controlPanel.initialize();
+    this.panels.setTableEntries([
+      {
+        id: 'text-3d-source',
+        label: 'Crawl rows',
+        kind: 'source',
+        table: this.layer.textTable
+      },
+      {
+        id: 'text-3d-glyphs',
+        label: 'Grouped glyph instances',
+        kind: 'derived',
+        table: this.layer.glyphInstanceArrowTable
+      }
+    ]);
   }
 
   onRender({device, tick, aspect}: AnimationProps): void {
@@ -90,7 +108,7 @@ export default class ArrowText3DAnimationLoopTemplate extends AnimationLoopTempl
         projectionMatrix: this.projectionMatrix,
         normalMatrix: this.normalMatrix,
         time: tick * 0.016,
-        crawlColor: getCrawlColor(),
+        crawlColor: getArrowText3DCrawlColor(),
         fade: [-260, -80, 960, 1360]
       }
     });
@@ -102,18 +120,8 @@ export default class ArrowText3DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   onFinalize(): void {
+    this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer.destroy();
   }
-}
-
-/** Returns the website control-selected crawl color. */
-function getCrawlColor(): NumberArray4 {
-  if (typeof window === 'undefined') {
-    return DEFAULT_CRAWL_COLOR;
-  }
-
-  const searchParams = new URLSearchParams(window.location.search);
-  const crawlColor =
-    searchParams.get('crawlColor') ?? window.localStorage.getItem(TEXT_3D_COLOR_STORAGE_KEY);
-  return crawlColor === 'yellow' ? YELLOW_CRAWL_COLOR : DEFAULT_CRAWL_COLOR;
 }

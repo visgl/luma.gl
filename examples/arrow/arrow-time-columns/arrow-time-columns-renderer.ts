@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  makeArrowFixedSizeListVector,
   makeGPUVectorFromArrow,
   prepareArrowTemporalGPUVectors,
   type PreparedArrowTemporalGPUVector
@@ -16,6 +15,7 @@ import {
   GPUTableModel,
   getGPUVectorBuffer,
   getRequiredGPUVector,
+  type GPUTypeMap,
   type GPUVector
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
@@ -28,8 +28,7 @@ import {
   MINUTE_MILLISECONDS,
   SCHEDULE_SPAN_MILLISECONDS,
   SCHEDULE_SWEEP_MILLISECONDS,
-  makeTimeColumnsEventColorValues,
-  makeTimeColumnsTemporalSourceVectors,
+  makeTimeColumnsSourceTable,
   type TimeColumnsTemporalColumnName
 } from './arrow-time-columns-data';
 import {
@@ -82,7 +81,8 @@ type PreparedTemporalColumns = Record<
 >;
 
 type TimeColumnsTableInput = {
-  table: GPUTable;
+  sourceTable: arrow.Table;
+  table: GPUTable<GPUTypeMap>;
   temporalColumns: PreparedTemporalColumns;
   timestampOriginMilliseconds: number;
   destroy: () => void;
@@ -267,6 +267,10 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
     );
   }
 
+  getSourceTable(): arrow.Table {
+    return this.getTimeColumnsTableInput().sourceTable;
+  }
+
   setProps(props: ArrowTimeColumnsRendererProps): void {
     this.props = {...this.props, ...props};
     if (props.initialScheduleMilliseconds !== undefined) {
@@ -297,7 +301,13 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
 }
 
 async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTableInput> {
-  const temporalSourceVectors = makeTimeColumnsTemporalSourceVectors();
+  const sourceTable = makeTimeColumnsSourceTable();
+  const temporalSourceVectors = {
+    eventDates: getRequiredArrowVector<arrow.DateDay>(sourceTable, 'eventDates'),
+    eventTimes: getRequiredArrowVector<arrow.TimeMillisecond>(sourceTable, 'eventTimes'),
+    eventStarts: getRequiredArrowVector<arrow.TimestampMillisecond>(sourceTable, 'eventStarts'),
+    eventDurations: getRequiredArrowVector<arrow.DurationMillisecond>(sourceTable, 'eventDurations')
+  };
   const temporalColumns = await prepareArrowTemporalGPUVectors(device, temporalSourceVectors, {
     columns: {
       eventDates: {id: 'arrow-time-columns-event-dates'},
@@ -310,10 +320,10 @@ async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTab
   try {
     const eventColors = makeGPUVectorFromArrow(
       device,
-      makeArrowFixedSizeListVector(new arrow.Uint8(), 4, makeTimeColumnsEventColorValues()),
+      getRequiredArrowVector<arrow.FixedSizeList<arrow.Uint8>>(sourceTable, 'eventColors'),
       {name: 'eventColors', id: 'arrow-time-columns-event-colors', format: 'unorm8x4'}
     );
-    const table = new GPUTable({
+    const table = new GPUTable<GPUTypeMap>({
       vectors: {
         eventDates: getPreparedScalarTemporalVector(temporalColumns.eventDates),
         eventTimes: getPreparedScalarTemporalVector(temporalColumns.eventTimes),
@@ -325,6 +335,7 @@ async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTab
     const timestampOriginMilliseconds = Number(temporalColumns.eventStarts.temporalInfo.origin);
 
     return {
+      sourceTable,
       table,
       temporalColumns,
       timestampOriginMilliseconds,
@@ -338,6 +349,17 @@ async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTab
   }
 }
 
+function getRequiredArrowVector<T extends arrow.DataType>(
+  table: arrow.Table,
+  columnName: string
+): arrow.Vector<T> {
+  const vector = table.getChild(columnName);
+  if (!vector) {
+    throw new Error(`Time columns source is missing Arrow column "${columnName}"`);
+  }
+  return vector as arrow.Vector<T>;
+}
+
 function getPreparedScalarTemporalVector(
   preparedTemporalColumn: PreparedArrowTemporalGPUVector<'float32'>
 ): GPUVector<'float32'> {
@@ -348,7 +370,7 @@ function getPreparedScalarTemporalVector(
 }
 
 function getTimeColumnsStorageBindings(
-  timeColumnsTable: GPUTable
+  timeColumnsTable: GPUTable<GPUTypeMap>
 ): Record<string, Buffer | DynamicBuffer> {
   return {
     eventDates: getGPUVectorBuffer(

@@ -179,6 +179,18 @@ export function makeArrowFloat64PrecisionSourceData(
   };
 }
 
+export function makeArrowFloat64PrecisionSourceTable(
+  sourceData: ArrowFloat64PrecisionSourceData
+): arrow.Table {
+  return new arrow.Table({
+    pathsFloat64: sourceData.pathsFloat64,
+    pathsFloat32: sourceData.pathsFloat32,
+    pathsFloat32Local: sourceData.pathsFloat32Local,
+    colors: sourceData.colors,
+    widths: sourceData.widths
+  });
+}
+
 function makePathVector<T extends arrow.Float32 | arrow.Float64>(
   valueType: T,
   values: Float32Array | Float64Array,

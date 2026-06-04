@@ -11,16 +11,20 @@ import {
   makeArrowTimeColumnsControlPanelHtml,
   type TimeColumnsRenderMode
 } from './control-panel';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Time: Date/Time/Timestamp/Duration';
 export const description =
   'Scalar Arrow temporal columns normalized to relative Float32 GPU rows for attribute-backed and storage-backed schedule rendering.';
 
 export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowTimeColumnsControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   readonly device: Device;
   readonly controlPanel: ArrowTimeColumnsControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowTimeColumnsControlPanelHtml()
+  });
   activeRenderMode: TimeColumnsRenderMode;
   layer: ArrowTimeColumnsRenderer | null = null;
 
@@ -42,7 +46,16 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
       renderMode: this.activeRenderMode
     });
     await this.layer.initialize();
+    this.panels.mount();
     this.controlPanel.initialize();
+    this.panels.setTableEntries([
+      {
+        id: 'time-columns-source',
+        label: 'Temporal schedule source',
+        kind: 'source',
+        table: this.layer.getSourceTable()
+      }
+    ]);
     this.controlPanel.setLabels(this.layer.getLabels());
   }
 
@@ -59,6 +72,7 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
 
   override onFinalize(): void {
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer?.destroy();
   }
 
