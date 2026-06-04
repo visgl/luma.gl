@@ -12,8 +12,8 @@ export type BackendModule = Record<string, OperationHandler>;
 /**
  * Registry for operation backends keyed by luma.gl device type.
  *
- * The CPU backend is registered by default. Applications register GPU backends explicitly so
- * unused WebGL or WebGPU implementations can be tree-shaken or loaded lazily.
+ * The CPU backend is available by default. WebGL and WebGPU backends are loaded lazily
+ * with dynamic imports when no backend has been registered for those device types.
  */
 class BackendRegistry {
   private _modules: {[deviceType: string]: BackendModule | Promise<BackendModule>} = {
@@ -74,7 +74,7 @@ class BackendRegistry {
 /**
  * Global backend registry used by lazy GPGPU operations.
  *
- * Register `webglBackend` or `webgpuBackend` before evaluating operation-backed tables on GPU
- * devices.
+ * Applications can use this registry to eagerly load a backend, register a subset of built-in
+ * operation handlers, or add handlers for custom operations.
  */
 export const backendRegistry = new BackendRegistry();
