@@ -6,6 +6,7 @@ import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
 import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './common/dispatch';
 import {getLiteralValue, getWGSLType} from './common/helper';
 import {
   getInputBinding,
@@ -29,6 +30,10 @@ export const gather: OperationHandler<{
   if (!sourceValues.isConstant) {
     bindings.push({name: 'sourceValues', input: sourceValues, index: bindings.length});
   }
+  const dispatchLayout = getWebGPUDispatchLayout(
+    Math.ceil(output.length / RANDOM_ACCESS_WORKGROUP_SIZE),
+    target.device.limits.maxComputeWorkgroupsPerDimension
+  );
 
   const source = /* wgsl */ `
 ${bindings.map(({name, input, index}) => getInputBinding(name, input, index)).join('\n')}
@@ -40,9 +45,10 @@ ${getZeroResultFunction(output.type, output.size)}
 ${getGatherFunction(ids.type, output.type, output.size, sourceValues.length)}
 
 @compute @workgroup_size(${RANDOM_ACCESS_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) id: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_id) localId: vec3<u32>
 ) {
-  let rowIndex = id.x;
+  let rowIndex = ${getWebGPUDispatchRowIndex(dispatchLayout, RANDOM_ACCESS_WORKGROUP_SIZE)};
   if (rowIndex >= ${output.length}u) {
     return;
   }
@@ -79,7 +85,7 @@ ${getGatherFunction(ids.type, output.type, output.size, sourceValues.length)}
   computation.setBindings(computationBindings);
 
   const computePass = target.device.beginComputePass({});
-  computation.dispatch(computePass, Math.ceil(output.length / RANDOM_ACCESS_WORKGROUP_SIZE));
+  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
   computePass.end();
   target.device.submit();
   computation.destroy();
