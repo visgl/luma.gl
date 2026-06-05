@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ArrowTableGeometry} from '@luma.gl/arrow';
+import {
+  getArrowPickingModule,
+  supportsArrowIndexPicking,
+  type ArrowTableGeometry
+} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
-import {indexColorPicking, indexPicking, ShaderInputs, supportsIndexPicking} from '@luma.gl/engine';
+import {indexPicking, ShaderInputs} from '@luma.gl/engine';
 import {GPUTableModel, getGPUVectorBuffer, type GPUTable, type GPUVector} from '@luma.gl/tables';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {
@@ -40,11 +44,11 @@ export type MeshGeometryModelProps = {
   parameters?: Record<string, unknown>;
 };
 
-export function createMeshGeometryShaderInputs(): MeshGeometryShaderInputs {
+export function createMeshGeometryShaderInputs(device: Device): MeshGeometryShaderInputs {
   const shaderInputs: MeshGeometryShaderInputs = new ShaderInputs<{
     app: typeof app.props;
     picking: typeof indexPicking.props;
-  }>({app, picking: indexPicking});
+  }>({app, picking: getArrowPickingModule(device)});
   shaderInputs.setProps({picking: {indexMode: 'attribute', batchIndex: 0}});
   return shaderInputs;
 }
@@ -75,7 +79,7 @@ export function createMeshGeometryModel(
     shaderLayout: getMeshGeometryShaderLayout(device),
     defines: {LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS: supportsStorageRendering},
     shaderInputs,
-    modules: [getMeshGeometryPickingModule(device)] as ShaderModule[],
+    modules: [getArrowPickingModule(device)] as ShaderModule[],
     ...(faceColors ? {bindings: {faceColors: getGPUVectorBuffer(faceColors)}} : {}),
     parameters: parameters ?? DEFAULT_RENDER_PARAMETERS
   });
@@ -85,7 +89,7 @@ export function createMeshGeometryPickingModel(
   device: Device,
   {id, geometry, table, shaderInputs, faceColors, parameters}: MeshGeometryModelProps
 ): GPUTableModel | null {
-  if (!supportsIndexPicking(device)) {
+  if (!supportsArrowIndexPicking(device)) {
     return null;
   }
 
@@ -108,10 +112,6 @@ export function createMeshGeometryPickingModel(
     depthStencilAttachmentFormat: 'depth24plus',
     parameters: parameters ?? DEFAULT_RENDER_PARAMETERS
   });
-}
-
-function getMeshGeometryPickingModule(device: Device): typeof indexPicking {
-  return (supportsIndexPicking(device) ? indexPicking : indexColorPicking) as typeof indexPicking;
 }
 
 const DEFAULT_RENDER_PARAMETERS = {

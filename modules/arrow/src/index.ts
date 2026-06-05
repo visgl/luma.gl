@@ -92,6 +92,23 @@ export {
   type GPUVectorFormatForArrowType
 } from './arrow/arrow-gpu-table-adapters';
 export {
+  clearArrowPickingState,
+  createArrowPickingManager,
+  getArrowPickingModule,
+  getArrowPickingModules,
+  getArrowPickingSourceInfo,
+  makeArrowRecordBatchSourceInfo,
+  makeArrowRowIndexGPUVector,
+  makeArrowRowIndexVector,
+  resolveArrowPickInfo,
+  runArrowPickingPass,
+  supportsArrowIndexPicking,
+  type ArrowPickingInfo,
+  type ArrowPickingSource,
+  type ArrowRowIndexGPUVectorOptions,
+  type ArrowRowIndexVectorOptions
+} from './arrow/arrow-picking';
+export {
   ArrowTableGeometry,
   makeGPUGeometryFromArrow,
   type ArrowTableGeometryProps

@@ -7,6 +7,7 @@ import type {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';
 import {getGPUVectorElementFormat, isVertexListGPUVectorFormat} from './gpu-vector-format';
+import {isGPUTableIndexColumnName} from './gpu-schema';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
@@ -92,6 +93,11 @@ function getGPUVectorCollectionBufferLayout<T extends GPUTypeMap>(
 ): BufferLayout[] {
   if (props.bufferLayout) {
     for (const layout of props.bufferLayout) {
+      if (isGPUTableIndexColumnName(layout.name)) {
+        throw new Error(
+          `${props.ownerName} buffer layout cannot include reserved index column "${layout.name}"`
+        );
+      }
       if (!gpuVectors[layout.name]) {
         throw new Error(
           `${props.ownerName} buffer layout references missing vector "${layout.name}"`
@@ -102,7 +108,7 @@ function getGPUVectorCollectionBufferLayout<T extends GPUTypeMap>(
   }
 
   return Object.values(gpuVectors).flatMap(vector =>
-    synthesizeGPUVectorBufferLayout(props, vector)
+    isGPUTableIndexColumnName(vector.name) ? [] : synthesizeGPUVectorBufferLayout(props, vector)
   );
 }
 

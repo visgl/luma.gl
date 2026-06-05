@@ -3,12 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
+import {clearArrowPickingState, resolveArrowPickInfo, runArrowPickingPass} from '@luma.gl/arrow';
 import {
   AnimationLoopTemplate,
   type AnimationProps,
   type Model,
   type PickingManager
 } from '@luma.gl/engine';
+import type {GPUTable} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   ArrowText2DControlPanel,
@@ -340,19 +342,29 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   pickLabel(mousePosition: number[] | null | undefined): void {
-    if (!this.picker || !this.picker.shouldPick(mousePosition as [number, number] | null)) {
+    if (!this.picker) {
+      return;
+    }
+    if (!mousePosition) {
+      clearArrowPickingState(this.picker, this.handleObjectPicked);
       return;
     }
 
     this.textRenderer.shaderInputs.setProps({picking: {batchIndex: 0}});
     this.pickingModel?.predraw(this.device.commandEncoder);
-    const pickingPass = this.picker.beginRenderPass();
-    if (this.pickingModel) {
-      drawArrowTextPickingPass(pickingPass, this.pickingModel, this.textModel);
-    }
-    pickingPass.end();
-    this.textRenderer.shaderInputs.setProps({picking: {isActive: false}});
-    void this.picker.updatePickInfo(mousePosition as [number, number]);
+    runArrowPickingPass({
+      picker: this.picker,
+      mousePosition,
+      shaderInputs: this.textRenderer.shaderInputs,
+      draw: pickingPass => {
+        if (!this.pickingModel) {
+          return false;
+        }
+        drawArrowTextPickingPass(pickingPass, this.pickingModel, this.textModel, {
+          onBatch: batchIndex => this.textRenderer.shaderInputs.setProps({picking: {batchIndex}})
+        });
+      }
+    });
   }
 
   createPickingModel(): Model | null {
@@ -534,7 +546,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       previousPickingModel?.destroy();
     }
     if (updateResult.modelChanged || resetPickedLabel) {
-      this.picker?.clearPickState();
+      if (this.picker) {
+        clearArrowPickingState(this.picker, this.handleObjectPicked);
+      }
     }
     if (resetPickedLabel) {
       this.controlPanel?.setPickedLabel('Hover text');
@@ -592,13 +606,34 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     batchIndex: number | null;
     objectIndex: number | null;
   }): void => {
+    const pickInfo = resolveArrowPickInfo(
+      {batchIndex, objectIndex},
+      getTextModelTable(this.textModel)
+    );
     this.textRenderer.setNeedsRedraw('picked Arrow row changed');
     this.controlPanel?.setPickedLabel(
-      batchIndex === null || objectIndex === null
+      pickInfo.rowIndex === null
         ? 'Hover text'
-        : 'row ' + objectIndex.toLocaleString()
+        : formatTextPickingLabel(pickInfo.batchIndex, pickInfo.rowIndex, pickInfo.batchRowIndex)
     );
   };
+}
+
+function getTextModelTable(textModel: ActiveTextModel): Pick<GPUTable, 'batches'> | null {
+  const table = (textModel as {table?: Pick<GPUTable, 'batches'>}).table;
+  return table ?? null;
+}
+
+function formatTextPickingLabel(
+  batchIndex: number | null,
+  rowIndex: number,
+  batchRowIndex: number | null
+): string {
+  if (batchIndex === null) {
+    return 'row ' + rowIndex.toLocaleString();
+  }
+  const batchRowLabel = batchRowIndex === null ? '-' : batchRowIndex.toLocaleString();
+  return `row ${rowIndex.toLocaleString()} / batch ${(batchIndex + 1).toLocaleString()} / batch row ${batchRowLabel}`;
 }
 
 function deriveArrowTextRendererData(

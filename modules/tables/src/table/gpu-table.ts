@@ -7,8 +7,9 @@ import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import type {GPUData} from './gpu-data';
 import {GPUVector} from './gpu-vector';
-import {GPURecordBatch} from './gpu-record-batch';
+import {GPURecordBatch, type GPURecordBatchSourceInfo} from './gpu-record-batch';
 import {createGPUVectorCollection} from './gpu-vector-collection';
+import {GPU_TABLE_INDEX_COLUMN_NAME} from './gpu-schema';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
@@ -22,6 +23,8 @@ export type GPUTableFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   bindings?: Record<string, Buffer | DynamicBuffer>;
   /** Optional table-level schema metadata. */
   metadata?: Map<string, string>;
+  /** Optional source-row identity forwarded to the generated one-batch GPU table. */
+  sourceInfo?: GPURecordBatchSourceInfo;
   /** Number of null rows in the generated GPU table. */
   nullCount?: number;
 };
@@ -96,7 +99,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
       return;
     }
 
-    const {vectors, bindings = {}, metadata, nullCount = 0} = props;
+    const {vectors, bindings = {}, metadata, sourceInfo, nullCount = 0} = props;
     const vectorCollection = createGPUVectorCollection<T>({
       ownerName: 'GPUTable',
       vectors
@@ -107,6 +110,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
       fields: vectorCollection.fields,
       bindings,
       metadata,
+      sourceInfo,
       nullCount
     });
 
@@ -126,6 +130,9 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
   packBatches(options: GPUTablePackBatchesOptions = {}): this {
     if (this.batches.length <= 1) {
       return this;
+    }
+    if (this.batches.some(batch => batch.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME])) {
+      throw new Error('GPUTable.packBatches() does not support indexed tables');
     }
 
     const batchGroups = createGPUPackGroups(this.batches, options.minBatchSize);
@@ -507,8 +514,39 @@ function createPackedGPURecordBatch(
     bufferLayout,
     fields: schema.fields,
     metadata: new Map(schema.metadata),
+    sourceInfo: getPackedGPURecordBatchSourceInfo(batchGroup),
     nullCount: batchGroup.reduce((nullCount, batch) => nullCount + batch.nullCount, 0)
   });
+}
+
+function getPackedGPURecordBatchSourceInfo(
+  batchGroup: GPURecordBatch[]
+): GPURecordBatchSourceInfo | undefined {
+  const firstSourceInfo = batchGroup[0]?.sourceInfo;
+  if (!firstSourceInfo) {
+    return undefined;
+  }
+
+  let sourceRowCount = firstSourceInfo.sourceRowCount;
+  let nextSourceRowIndex = firstSourceInfo.sourceRowIndexOffset + firstSourceInfo.sourceRowCount;
+  for (const batch of batchGroup.slice(1)) {
+    const sourceInfo = batch.sourceInfo;
+    if (
+      !sourceInfo ||
+      sourceInfo.sourceBatchIndex !== firstSourceInfo.sourceBatchIndex ||
+      sourceInfo.sourceRowIndexOffset !== nextSourceRowIndex
+    ) {
+      return undefined;
+    }
+    sourceRowCount += sourceInfo.sourceRowCount;
+    nextSourceRowIndex += sourceInfo.sourceRowCount;
+  }
+
+  return {
+    sourceBatchIndex: firstSourceInfo.sourceBatchIndex,
+    sourceRowIndexOffset: firstSourceInfo.sourceRowIndexOffset,
+    sourceRowCount
+  };
 }
 
 function getGPURecordBatchDevice<T extends GPUTypeMap>(batch: GPURecordBatch<T>) {

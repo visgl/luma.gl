@@ -58,6 +58,15 @@ When the source is an Arrow `RecordBatch`, prefer
 | `attributes` | `Record<string, Buffer \| DynamicBuffer>` | Model-ready attribute buffers keyed by buffer layout name. |
 | `bindings` | `Record<string, Buffer \| DynamicBuffer>` | Model-ready storage bindings keyed by shader binding name. |
 
+## Reserved Draw Columns
+
+`gpuVectors.indices` is reserved for batch-local indexed rendering. It is a
+`vertex-list<uint32>` vector whose flattened `valueLength` is the index count
+for this batch. The vector remains part of `gpuVectors` and `schema`, but it is
+not emitted as an attribute buffer layout; its single `GPUData` buffer must be
+created with `Buffer.INDEX` usage so `GPUTableModel` can bind it as the model
+index buffer.
+
 ## Methods
 
 ### `appendRows(numRows, nullCount?): this`

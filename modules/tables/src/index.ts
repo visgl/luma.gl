@@ -31,7 +31,13 @@ export {
   type GPUVectorFormatInfo,
   type VertexList
 } from './table/gpu-vector-format';
-export {type GPUField, type GPUSchema, type GPUTypeMap} from './table/gpu-schema';
+export {
+  GPU_TABLE_INDEX_COLUMN_NAME,
+  isGPUTableIndexColumnName,
+  type GPUField,
+  type GPUSchema,
+  type GPUTypeMap
+} from './table/gpu-schema';
 export {
   createGPUVectorCollection,
   type GPUVectorCollection,
@@ -40,7 +46,8 @@ export {
 export {
   GPURecordBatch,
   type GPURecordBatchFromVectorsProps,
-  type GPURecordBatchProps
+  type GPURecordBatchProps,
+  type GPURecordBatchSourceInfo
 } from './table/gpu-record-batch';
 export {
   GPUTable,

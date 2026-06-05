@@ -13,7 +13,12 @@ export type OptionalArrowColumnSelector<T extends arrow.DataType> =
   | null
   | undefined;
 
-/** Arrow record-batch source accepted by the core Arrow example renderers. */
+/**
+ * Arrow record-batch source accepted by the core Arrow example renderers.
+ *
+ * Renderers do not replay a previous source on prop-only changes. Pass a fresh source, or pass the
+ * same replayable table/iterable again, whenever changed props require data preparation.
+ */
 export type ArrowRecordBatchSource =
   | arrow.Table
   | Iterable<arrow.RecordBatch>

@@ -3,9 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import type {ShaderLayout} from '@luma.gl/core';
+import {Buffer, type ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
-import {GPURecordBatch, GPUTable, GPUTableModel, GPUVector} from '@luma.gl/tables';
+import {
+  GPURecordBatch,
+  GPU_TABLE_INDEX_COLUMN_NAME,
+  GPUTable,
+  GPUTableModel,
+  GPUVector
+} from '@luma.gl/tables';
 
 const TABLE_MODEL_SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
@@ -200,6 +206,106 @@ test('GPUTableModel draws preserved batches and restores table-level bindings', 
   t.end();
 });
 
+test('GPUTableModel binds reserved table indices for indexed draws', t => {
+  const device = new NullDevice({});
+  const indexValues = new Uint32Array([0, 1, 2, 2, 1, 0]);
+  const table = makeIndexedPositionsTable(device, 3, indexValues);
+  const model = makeTableModel(device, table, {tableCount: 'none'});
+  const renderPass = device.getDefaultRenderPass();
+  const indexBuffer = table.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME].data[0].buffer;
+  const drawCalls: Array<{indexBuffer?: unknown; vertexCount?: number; indexCount?: number}> = [];
+  const draw = model.pipeline.draw.bind(model.pipeline);
+
+  model.pipeline.draw = options => {
+    drawCalls.push({
+      indexBuffer: options.vertexArray.indexBuffer,
+      vertexCount: options.vertexCount,
+      indexCount: options.indexCount
+    });
+    return draw(options);
+  };
+
+  t.deepEqual(
+    table.bufferLayout.map(layout => layout.name),
+    ['positions'],
+    'keeps the reserved indices column out of the attribute layout'
+  );
+  t.equal(model.vertexArray.indexBuffer, indexBuffer, 'binds the reserved indices buffer');
+  t.equal(model.vertexCount, indexValues.length, 'uses flattened index count as vertex count');
+  t.ok(model.draw(renderPass), 'draws the indexed table');
+  t.deepEqual(
+    drawCalls,
+    [{indexBuffer, vertexCount: indexValues.length, indexCount: indexValues.length}],
+    'passes indexed draw state to the render pipeline'
+  );
+
+  renderPass.destroy();
+  model.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('GPUTableModel draws preserved indexed batches and restores aggregate state', t => {
+  const device = new NullDevice({});
+  const table = makeBatchedIndexedPositionsTable(device, [
+    {rowCount: 3, indices: new Uint32Array([0, 1, 2])},
+    {rowCount: 4, indices: new Uint32Array([0, 1, 2, 2, 1, 3])}
+  ]);
+  const model = makeTableModel(device, table, {tableCount: 'none'});
+  const renderPass = device.getDefaultRenderPass();
+  const batchIndexBuffers = table.batches.map(
+    batch => batch.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME].data[0].buffer
+  );
+  const drawCalls: Array<{indexBuffer?: unknown; vertexCount?: number; indexCount?: number}> = [];
+  const draw = model.pipeline.draw.bind(model.pipeline);
+
+  model.pipeline.draw = options => {
+    drawCalls.push({
+      indexBuffer: options.vertexArray.indexBuffer,
+      vertexCount: options.vertexCount,
+      indexCount: options.indexCount
+    });
+    return draw(options);
+  };
+
+  t.ok(model.drawBatches(renderPass), 'draws every preserved indexed GPU record batch');
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.indexBuffer),
+    batchIndexBuffers,
+    'rebinds batch-local index buffers'
+  );
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.vertexCount),
+    [3, 6],
+    'uses each batch flattened index count as vertex count'
+  );
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.indexCount),
+    [3, 6],
+    'passes each batch flattened index count to indexed draws'
+  );
+  t.equal(model.vertexArray.indexBuffer, null, 'restores the unbound aggregate index state');
+
+  renderPass.destroy();
+  model.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('GPUTableModel requires reserved table indices to use INDEX buffers', t => {
+  const device = new NullDevice({});
+  const table = makeIndexedPositionsTable(device, 3, new Uint32Array([0, 1, 2]), Buffer.VERTEX);
+
+  t.throws(
+    () => makeTableModel(device, table, {tableCount: 'none'}),
+    /requires Buffer\.INDEX usage/,
+    'rejects reserved indices buffers without INDEX usage'
+  );
+
+  table.destroy();
+  t.end();
+});
+
 test('GPUTableModel refreshes inferred counts when a table row count changes', t => {
   const device = new NullDevice({});
   const table = makePositionsTable(device, 1);
@@ -212,6 +318,109 @@ test('GPUTableModel refreshes inferred counts when a table row count changes', t
   t.equal(model.instanceCount, 4, 'syncs inferred row counts before redraw checks');
 
   model.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('GPUTable preserves source-row metadata across batch operations', t => {
+  const device = new NullDevice({});
+  const firstBatch = new GPURecordBatch({
+    vectors: {positions: makePositionsVector(device, 1)},
+    sourceInfo: {sourceBatchIndex: 0, sourceRowIndexOffset: 10, sourceRowCount: 1}
+  });
+  const secondBatch = new GPURecordBatch({
+    vectors: {positions: makePositionsVector(device, 2)},
+    sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 11, sourceRowCount: 2}
+  });
+  const table = new GPUTable({
+    batches: [firstBatch],
+    schema: firstBatch.schema,
+    bufferLayout: firstBatch.bufferLayout
+  });
+
+  table.addBatch(secondBatch);
+  t.deepEqual(
+    table.batches[0].sourceInfo,
+    firstBatch.sourceInfo,
+    'retains first batch source info'
+  );
+  t.deepEqual(
+    table.batches[1].sourceInfo,
+    secondBatch.sourceInfo,
+    'retains appended batch source info'
+  );
+
+  const detachedBatches = table.detachBatches({first: 1});
+  t.deepEqual(
+    detachedBatches[0].sourceInfo,
+    secondBatch.sourceInfo,
+    'detach preserves batch source info'
+  );
+
+  table.destroy();
+  for (const batch of detachedBatches) {
+    batch.destroy();
+  }
+  t.end();
+});
+
+test('GPUTable forwards one-batch source info and drops unrepresentable packed metadata', t => {
+  const device = new NullDevice({});
+  const table = new GPUTable({
+    vectors: {positions: makePositionsVector(device, 1)},
+    sourceInfo: {sourceBatchIndex: 3, sourceRowIndexOffset: 20, sourceRowCount: 1}
+  });
+  const batchedTable = makeBatchedPositionsTable(device, [1, 2]);
+
+  t.deepEqual(
+    table.batches[0].sourceInfo,
+    {sourceBatchIndex: 3, sourceRowIndexOffset: 20, sourceRowCount: 1},
+    'forwards one-batch table source info'
+  );
+
+  batchedTable.packBatches();
+  t.equal(batchedTable.batches.length, 1, 'packs adjacent batches');
+  t.equal(
+    batchedTable.batches[0].sourceInfo,
+    undefined,
+    'omits packed source info when multiple source batches were merged'
+  );
+
+  table.destroy();
+  batchedTable.destroy();
+  t.end();
+});
+
+test('GPUTable preserves packed source info for one contiguous source batch', t => {
+  const device = new NullDevice({});
+  const table = makeContiguousSourceBatchedPositionsTable(device);
+
+  table.packBatches();
+
+  t.equal(table.batches.length, 1, 'packs contiguous source rows');
+  t.deepEqual(
+    table.batches[0].sourceInfo,
+    {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 3},
+    'merges source info when the packed batch still represents one source batch'
+  );
+
+  table.destroy();
+  t.end();
+});
+
+test('GPUTable rejects packing indexed batches', t => {
+  const device = new NullDevice({});
+  const table = makeBatchedIndexedPositionsTable(device, [
+    {rowCount: 3, indices: new Uint32Array([0, 1, 2])},
+    {rowCount: 3, indices: new Uint32Array([0, 1, 2])}
+  ]);
+
+  t.throws(
+    () => table.packBatches(),
+    /does not support indexed tables/,
+    'does not pack local batch indices without rebasing'
+  );
+
   table.destroy();
   t.end();
 });
@@ -235,10 +444,67 @@ function makePositionsTable(device: NullDevice, rowCount: number): GPUTable {
   return new GPUTable({vectors: {positions: makePositionsVector(device, rowCount)}});
 }
 
+function makeIndexedPositionsTable(
+  device: NullDevice,
+  rowCount: number,
+  indices: Uint32Array,
+  indexBufferUsage = Buffer.INDEX
+): GPUTable {
+  return new GPUTable({
+    vectors: {
+      positions: makePositionsVector(device, rowCount),
+      [GPU_TABLE_INDEX_COLUMN_NAME]: makeIndicesVector(device, rowCount, indices, indexBufferUsage)
+    }
+  });
+}
+
 function makeBatchedPositionsTable(device: NullDevice, rowCounts: number[]): GPUTable {
-  const batches = rowCounts.map(
-    rowCount => new GPURecordBatch({vectors: {positions: makePositionsVector(device, rowCount)}})
+  let sourceRowIndexOffset = 0;
+  const batches = rowCounts.map((rowCount, sourceBatchIndex) => {
+    const batch = new GPURecordBatch({
+      vectors: {positions: makePositionsVector(device, rowCount)},
+      sourceInfo: {sourceBatchIndex, sourceRowIndexOffset, sourceRowCount: rowCount}
+    });
+    sourceRowIndexOffset += rowCount;
+    return batch;
+  });
+  return new GPUTable({
+    batches,
+    schema: batches[0].schema,
+    bufferLayout: batches[0].bufferLayout
+  });
+}
+
+function makeBatchedIndexedPositionsTable(
+  device: NullDevice,
+  batchProps: Array<{rowCount: number; indices: Uint32Array}>
+): GPUTable {
+  const batches = batchProps.map(
+    ({rowCount, indices}) =>
+      new GPURecordBatch({
+        vectors: {
+          positions: makePositionsVector(device, rowCount),
+          [GPU_TABLE_INDEX_COLUMN_NAME]: makeIndicesVector(device, rowCount, indices)
+        }
+      })
   );
+  return new GPUTable({
+    batches,
+    schema: batches[0].schema,
+    bufferLayout: batches[0].bufferLayout
+  });
+}
+
+function makeContiguousSourceBatchedPositionsTable(device: NullDevice): GPUTable {
+  let sourceRowIndexOffset = 0;
+  const batches = [1, 2].map(rowCount => {
+    const batch = new GPURecordBatch({
+      vectors: {positions: makePositionsVector(device, rowCount)},
+      sourceInfo: {sourceBatchIndex: 0, sourceRowIndexOffset, sourceRowCount: rowCount}
+    });
+    sourceRowIndexOffset += rowCount;
+    return batch;
+  });
   return new GPUTable({
     batches,
     schema: batches[0].schema,
@@ -255,6 +521,25 @@ function makePositionsVector(device: NullDevice, rowCount: number): GPUVector {
     length: rowCount,
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2,
+    ownsBuffer: true
+  });
+}
+
+function makeIndicesVector(
+  device: NullDevice,
+  rowCount: number,
+  indices: Uint32Array,
+  indexBufferUsage = Buffer.INDEX
+): GPUVector {
+  return new GPUVector({
+    type: 'buffer',
+    name: GPU_TABLE_INDEX_COLUMN_NAME,
+    buffer: device.createBuffer({usage: indexBufferUsage, data: indices}),
+    format: 'vertex-list<uint32>',
+    length: rowCount,
+    valueLength: indices.length,
+    stride: 1,
+    byteStride: Uint32Array.BYTES_PER_ELEMENT,
     ownsBuffer: true
   });
 }
