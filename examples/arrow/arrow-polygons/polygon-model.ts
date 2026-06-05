@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {
-  getArrowPickingModule,
-  supportsArrowIndexPicking,
-  type PreparedArrowPolygonGPUVectors
-} from '@luma.gl/arrow';
+import {getArrowPickingModule, supportsArrowIndexPicking} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {indexPicking, ShaderInputs} from '@luma.gl/engine';
-import {GPUTableModel} from '@luma.gl/tables';
+import {GPUTableModel, type GPUTable} from '@luma.gl/tables';
 import {
   FS_GLSL,
   PICKING_FS_GLSL,
@@ -26,7 +22,7 @@ export type PolygonShaderInputs = ShaderInputs<{
 
 export type PolygonModelProps = {
   id: string;
-  prepared: PreparedArrowPolygonGPUVectors;
+  table: GPUTable;
   shaderInputs: PolygonShaderInputs;
   picking?: boolean;
 };
@@ -45,7 +41,7 @@ export function createPolygonShaderInputs(device: Device): PolygonShaderInputs {
 
 export function createPolygonModel(
   device: Device,
-  {id, prepared, shaderInputs, picking = false}: PolygonModelProps
+  {id, table, shaderInputs, picking = false}: PolygonModelProps
 ): GPUTableModel {
   const indexPickingSupported = supportsArrowIndexPicking(device);
   return new GPUTableModel(device, {
@@ -59,11 +55,8 @@ export function createPolygonModel(
     ] as never,
     shaderLayout: POLYGON_SHADER_LAYOUT,
     shaderInputs,
-    table: prepared.table,
+    table,
     tableCount: 'none',
-    // Indexed WebGL draws use Model.vertexCount as the drawElements index count.
-    vertexCount: prepared.tessellation.indices.length,
-    indexBuffer: prepared.indices,
     ...(picking && indexPickingSupported
       ? {
           colorAttachmentFormats: ['rgba8unorm', 'rg32sint'] as const,

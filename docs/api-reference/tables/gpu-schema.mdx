@@ -82,6 +82,25 @@ Compatibility between `GPUField.format` and shader values is checked separately
 with
 [`isGPUVectorFormatCompatibleWithShaderType()`](/docs/api-reference/tables/gpu-vector-format).
 
+### Reserved `indices` Column
+
+Table-backed indexed rendering reserves the GPU table column name `indices`.
+It is a draw column, not a shader attribute:
+
+- `gpuVectors.indices` stays in the table or batch schema and vector map;
+- `indices` is excluded from synthesized `bufferLayout` entries and
+  `attributes`;
+- `GPUTableModel` binds it through `Model.setIndexBuffer()` instead of matching
+  it against `ShaderLayout.attributes`.
+
+The tables-core format is `vertex-list<uint32>`. The vector represents one
+batch-local flattened index payload: adapters that start from row-oriented data
+store that payload logically in row `0` of the batch, usually as
+`List<Uint32>` in Arrow, while `GPUVector.valueLength` records the flattened
+index count used for drawing. The backing `GPUData` must contain exactly one
+directly bindable buffer for that batch, and that buffer must be created with
+`Buffer.INDEX` usage.
+
 `nullable` and `metadata` are adapter-owned. Table core preserves them but does
 not interpret Arrow null bitmaps, temporal origins, matrix metadata, or text
 dictionary information.

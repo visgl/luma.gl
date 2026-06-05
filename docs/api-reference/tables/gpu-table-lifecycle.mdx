@@ -32,7 +32,8 @@ The object model is batch-preserving by default:
 - `GPUData` is the chunk primitive. It owns or borrows one `Buffer` or
   `DynamicBuffer`.
 - `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one
-  compatible layout/pipeline and rebinding only each batch's attribute buffers.
+  compatible layout/pipeline and rebinding each batch's attribute buffers,
+  bindings, and reserved `indices` index buffer when present.
 
 This means a multi-batch Arrow table stays multi-batch after GPU upload. If the
 application prefers fewer draw units, it packs explicitly:
@@ -50,6 +51,8 @@ gpuTable.packBatches({minBatchSize: 50_000});
 Packing mutates the table in place. It rebuilds `batches[]`, table-level
 `gpuVectors`, and `attributes`, then destroys only superseded GPU buffers that
 were owned by the removed batches. Borrowed external buffers are not destroyed.
+Indexed tables are rejected because packed index buffers would need their
+batch-local vertex indices rebased.
 
 ### Ownership Rules
 
@@ -164,6 +167,19 @@ const model = new GPUTableModel(device, {
 
 `tableCount` chooses whether table row counts become `instanceCount`,
 `vertexCount`, or neither. The converted `GPUTable` stays caller-owned.
+
+When `table.gpuVectors.indices` exists, `GPUTableModel` treats it as the
+reserved indexed-draw column rather than an attribute. The vector must use
+`vertex-list<uint32>`, contain exactly one directly bindable `GPUData` chunk per
+batch, and use a buffer created with `Buffer.INDEX`. `GPUTableModel` binds that
+buffer with `Model.setIndexBuffer()` and sets the indexed draw count from
+`indices.valueLength`.
+
+For preserved indexed batches, call `drawBatches(renderPass)`. Each batch keeps
+its own local index payload, so `drawBatches()` rebinds the batch-local index
+buffer and count before drawing, then restores the table-level state afterward.
+All batches in an indexed table must include `indices`; `packBatches()` rejects
+indexed tables until packing can rebase those local indices correctly.
 
 ### `TableTransform`
 

@@ -9,6 +9,7 @@ import type {GPUData} from './gpu-data';
 import {GPUVector} from './gpu-vector';
 import {GPURecordBatch, type GPURecordBatchSourceInfo} from './gpu-record-batch';
 import {createGPUVectorCollection} from './gpu-vector-collection';
+import {GPU_TABLE_INDEX_COLUMN_NAME} from './gpu-schema';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
@@ -129,6 +130,9 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
   packBatches(options: GPUTablePackBatchesOptions = {}): this {
     if (this.batches.length <= 1) {
       return this;
+    }
+    if (this.batches.some(batch => batch.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME])) {
+      throw new Error('GPUTable.packBatches() does not support indexed tables');
     }
 
     const batchGroups = createGPUPackGroups(this.batches, options.minBatchSize);

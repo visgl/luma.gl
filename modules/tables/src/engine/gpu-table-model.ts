@@ -2,9 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, type BufferLayout, type CommandEncoder, type RenderPass} from '@luma.gl/core';
-import {Model, type ModelProps} from '@luma.gl/engine';
+import {
+  Buffer,
+  Device,
+  type BufferLayout,
+  type CommandEncoder,
+  type RenderPass
+} from '@luma.gl/core';
+import {DynamicBuffer, Model, type ModelProps} from '@luma.gl/engine';
 import type {GPURecordBatch} from '../table/gpu-record-batch';
+import {GPU_TABLE_INDEX_COLUMN_NAME} from '../table/gpu-schema';
 import {GPUTable} from '../table/gpu-table';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */
@@ -27,6 +34,8 @@ type GPUTableModelState = {
   explicitAttributes: NonNullable<ModelProps['attributes']>;
   explicitBindings: NonNullable<ModelProps['bindings']>;
   explicitBufferLayout: BufferLayout[];
+  explicitIndexBuffer: Buffer | DynamicBuffer | null;
+  explicitVertexCount: number;
   inferInstanceCount: boolean;
   inferVertexCount: boolean;
 };
@@ -35,6 +44,13 @@ type GPUTableModelConstructorState = {
   table?: GPUTable;
   modelProps: ModelProps;
   state: GPUTableModelState;
+};
+
+type GPUTableDrawSource = GPUTable | GPURecordBatch;
+
+type GPUTableIndexDrawState = {
+  indexBuffer: Buffer | DynamicBuffer;
+  indexCount: number;
 };
 
 /**
@@ -55,6 +71,9 @@ export class GPUTableModel extends Model {
     super(device, modelProps);
     this.table = table;
     this.tableState = state;
+    if (table) {
+      this.setTableDrawState(table);
+    }
   }
 
   /** Replaces the bound GPU table when one is supplied. */
@@ -64,15 +83,15 @@ export class GPUTableModel extends Model {
     }
   }
 
-  /** Query redraw status after synchronizing inferred table row counts. */
+  /** Query redraw status after synchronizing inferred table draw state. */
   override needsRedraw(): false | string {
-    this.syncTableCount();
+    this.syncTableDrawState();
     return super.needsRedraw();
   }
 
-  /** Synchronizes inferred table row counts before opening a render pass. */
+  /** Synchronizes inferred table draw state before opening a render pass. */
   override predraw(commandEncoder: CommandEncoder): void {
-    this.syncTableCount();
+    this.syncTableDrawState();
     super.predraw(commandEncoder);
   }
 
@@ -112,7 +131,7 @@ export class GPUTableModel extends Model {
           ...this.tableState.explicitBindings,
           ...batch.bindings
         });
-        this.setTableRowCount(batch.numRows);
+        this.setTableDrawState(batch);
         options.onBatch?.(batch, batchIndex);
         drawSuccess = super.draw(renderPass) && drawSuccess;
       }
@@ -126,7 +145,7 @@ export class GPUTableModel extends Model {
         ...this.tableState.explicitBindings,
         ...table.bindings
       });
-      this.setTableRowCount(table.numRows);
+      this.setTableDrawState(table);
     }
 
     return drawSuccess;
@@ -134,6 +153,8 @@ export class GPUTableModel extends Model {
 
   /** Rebinds the model to a replacement table while preserving explicit model state. */
   protected setTable(nextTable: GPUTable): void {
+    assertNoExplicitIndexBuffer(nextTable, this.tableState.explicitIndexBuffer);
+    validateGPUTableIndexBatches(nextTable);
     assertNoDuplicateNames(
       Object.keys(this.tableState.explicitAttributes),
       Object.keys(nextTable.attributes),
@@ -159,33 +180,60 @@ export class GPUTableModel extends Model {
       ...this.tableState.explicitBindings,
       ...nextTable.bindings
     });
-    this.setTableRowCount(nextTable.numRows);
+    this.setTableDrawState(nextTable);
     this.table = nextTable;
   }
 
-  /** Disables table-backed count synchronization without disturbing current model buffers. */
+  /** Disables table-backed draw state and restores any explicit index buffer. */
   protected clearTable(): void {
     this.table = undefined;
+    this.restoreExplicitIndexDrawState();
   }
 
-  private syncTableCount(): void {
+  private syncTableDrawState(): void {
     if (!this.table || this.drawingTableBatches) {
       return;
     }
-    if (this.tableState.inferInstanceCount && this.instanceCount !== this.table.numRows) {
-      this.setTableRowCount(this.table.numRows);
+    this.setTableDrawState(this.table);
+  }
+
+  private setTableDrawState(source: GPUTableDrawSource): void {
+    this.setTableRowCount(source.numRows);
+    const indexDrawState = getGPUTableIndexDrawState(source);
+    if (indexDrawState) {
+      this.setTableIndexDrawState(indexDrawState);
+      return;
     }
-    if (this.tableState.inferVertexCount && this.vertexCount !== this.table.numRows) {
-      this.setTableRowCount(this.table.numRows);
-    }
+    this.restoreExplicitIndexDrawState();
   }
 
   private setTableRowCount(rowCount: number): void {
-    if (this.tableState.inferInstanceCount) {
+    if (this.tableState.inferInstanceCount && this.instanceCount !== rowCount) {
       this.setInstanceCount(rowCount);
     }
-    if (this.tableState.inferVertexCount) {
+    if (this.tableState.inferVertexCount && this.vertexCount !== rowCount) {
       this.setVertexCount(rowCount);
+    }
+  }
+
+  private setTableIndexDrawState({indexBuffer, indexCount}: GPUTableIndexDrawState): void {
+    if (this.indexBuffer !== getConcreteIndexBuffer(indexBuffer)) {
+      this.setIndexBuffer(indexBuffer);
+    }
+    if (this.vertexCount !== indexCount) {
+      this.setVertexCount(indexCount);
+    }
+  }
+
+  private restoreExplicitIndexDrawState(): void {
+    if (this.indexBuffer !== getConcreteIndexBuffer(this.tableState.explicitIndexBuffer)) {
+      this.setIndexBuffer(this.tableState.explicitIndexBuffer);
+    }
+    if (
+      !this.tableState.inferVertexCount &&
+      this.vertexCount !== this.tableState.explicitVertexCount
+    ) {
+      this.setVertexCount(this.tableState.explicitVertexCount);
     }
   }
 }
@@ -197,6 +245,8 @@ function getGPUTableModelConstructorState(
   const explicitAttributes = modelProps.attributes || {};
   const explicitBindings = modelProps.bindings || {};
   const explicitBufferLayout = modelProps.bufferLayout || [];
+  const explicitIndexBuffer = modelProps.indexBuffer ?? null;
+  const explicitVertexCount = modelProps.vertexCount ?? 0;
   const inferInstanceCount =
     Boolean(table) && tableCount === 'instance' && modelProps.instanceCount === undefined;
   const inferVertexCount =
@@ -210,6 +260,8 @@ function getGPUTableModelConstructorState(
         explicitAttributes,
         explicitBindings,
         explicitBufferLayout,
+        explicitIndexBuffer,
+        explicitVertexCount,
         inferInstanceCount,
         inferVertexCount
       }
@@ -227,6 +279,8 @@ function getGPUTableModelConstructorState(
     'buffer layout'
   );
   assertNoDuplicateNames(Object.keys(explicitBindings), Object.keys(table.bindings), 'binding');
+  assertNoExplicitIndexBuffer(table, explicitIndexBuffer);
+  validateGPUTableIndexBatches(table);
 
   return {
     table,
@@ -234,6 +288,8 @@ function getGPUTableModelConstructorState(
       explicitAttributes,
       explicitBindings,
       explicitBufferLayout,
+      explicitIndexBuffer,
+      explicitVertexCount,
       inferInstanceCount,
       inferVertexCount
     },
@@ -265,6 +321,57 @@ function assertNoDuplicateNames(
       );
     }
   }
+}
+
+function assertNoExplicitIndexBuffer(
+  table: Pick<GPUTable, 'gpuVectors'>,
+  explicitIndexBuffer: Buffer | DynamicBuffer | null
+): void {
+  if (explicitIndexBuffer && table.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME]) {
+    throw new Error('GPUTableModel indices column duplicates an explicit indexBuffer');
+  }
+}
+
+function validateGPUTableIndexBatches(table: GPUTable): void {
+  const tableHasIndices = Boolean(table.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME]);
+  for (const batch of table.batches) {
+    const batchHasIndices = Boolean(batch.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME]);
+    if (batchHasIndices !== tableHasIndices) {
+      throw new Error('GPUTableModel indexed tables require every batch to include indices');
+    }
+    getGPUTableIndexDrawState(batch);
+  }
+}
+
+function getGPUTableIndexDrawState(source: GPUTableDrawSource): GPUTableIndexDrawState | null {
+  const indexVector = source.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME];
+  if (!indexVector) {
+    return null;
+  }
+  if (source instanceof GPUTable && source.batches.length > 1) {
+    return null;
+  }
+  if (indexVector.format !== 'vertex-list<uint32>') {
+    throw new Error('GPUTableModel indices column requires vertex-list<uint32> format');
+  }
+
+  const [indexData, ...remainingIndexData] = indexVector.data;
+  if (!indexData || remainingIndexData.length > 0) {
+    throw new Error('GPUTableModel indices column requires exactly one GPUData chunk');
+  }
+  const indexBuffer = indexData.buffer;
+  const concreteIndexBuffer = getConcreteIndexBuffer(indexBuffer);
+  if (!concreteIndexBuffer || !(concreteIndexBuffer.usage & Buffer.INDEX)) {
+    throw new Error('GPUTableModel indices column requires Buffer.INDEX usage');
+  }
+  return {
+    indexBuffer,
+    indexCount: indexVector.valueLength
+  };
+}
+
+function getConcreteIndexBuffer(indexBuffer: Buffer | DynamicBuffer | null): Buffer | null {
+  return indexBuffer instanceof DynamicBuffer ? indexBuffer.buffer : indexBuffer;
 }
 
 function assertMatchingBufferLayouts(

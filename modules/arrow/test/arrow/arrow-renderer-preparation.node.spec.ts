@@ -4,6 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {makeArrowFixedSizeListVector, resolveArrowPickInfo} from '@luma.gl/arrow';
+import {Buffer} from '@luma.gl/core';
 import type {GPUData} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -135,11 +136,15 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
     {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-preparation-test'}
   );
   const positionsBuffer = prepared.prepared.positions.data[0].buffer;
-  const indexBuffer = prepared.prepared.indices;
+  const indexVector = prepared.prepared.table.gpuVectors.indices;
+  const indexBuffer = indexVector.data[0].buffer;
 
   t.equal(prepared.prepared.tessellation.rowCount, 1, 'keeps one polygon row');
   t.equal(prepared.prepared.tessellation.vertexCount, 3, 'keeps tessellated triangle vertices');
   t.equal(prepared.prepared.table.batches.length, 1, 'prepares one GPU table batch');
+  t.equal(indexVector.format, 'vertex-list<uint32>', 'stores polygon indices as a list vector');
+  t.equal(indexVector.valueLength, 3, 'stores the flattened triangle index count');
+  t.ok(indexBuffer.usage & Buffer.INDEX, 'creates the polygon index column with INDEX usage');
   t.deepEqual(
     prepared.prepared.table.batches[0].sourceInfo,
     {sourceBatchIndex: 4, sourceRowIndexOffset: 9, sourceRowCount: 1},
@@ -185,10 +190,18 @@ test('ArrowPolygonRenderer streaming uses one model over retained indexed batche
 
   const firstPositionsBuffer = renderer.preparedBatches[0]?.prepared.positions.data[0].buffer;
   const secondPositionsBuffer = renderer.preparedBatches[1]?.prepared.positions.data[0].buffer;
-  const firstIndexBuffer = renderer.preparedBatches[0]?.prepared.indices;
-  const secondIndexBuffer = renderer.preparedBatches[1]?.prepared.indices;
+  const firstIndexBuffer =
+    renderer.preparedBatches[0]?.prepared.table.gpuVectors.indices.data[0].buffer;
+  const secondIndexBuffer =
+    renderer.preparedBatches[1]?.prepared.table.gpuVectors.indices.data[0].buffer;
 
   t.equal(renderer.preparedBatches.length, 2, 'retains both streamed polygon batches');
+  t.equal(renderer.model?.table?.batches.length, 2, 'uses one render model over both batches');
+  t.equal(
+    renderer.pickingModel?.table?.batches.length,
+    2,
+    'uses one picking model over both batches'
+  );
   t.equal(renderer.getMetrics().rowCount, 2, 'tracks aggregate polygon rows');
   t.deepEqual(
     renderer.preparedBatches.map(batch => batch.prepared.table.batches[0]?.sourceInfo),

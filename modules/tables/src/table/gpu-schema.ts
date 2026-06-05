@@ -5,6 +5,16 @@
 import type {VertexFormat} from '@luma.gl/core';
 import type {GPUVectorFormat, VertexList} from './gpu-vector-format';
 
+/** Reserved GPU table column used as an indexed draw buffer instead of a shader input. */
+export const GPU_TABLE_INDEX_COLUMN_NAME = 'indices';
+
+/** Returns whether a GPU table column is the reserved indexed draw column. */
+export function isGPUTableIndexColumnName(
+  columnName: string
+): columnName is typeof GPU_TABLE_INDEX_COLUMN_NAME {
+  return columnName === GPU_TABLE_INDEX_COLUMN_NAME;
+}
+
 /**
  * Named GPU table columns mapped to their canonical memory formats.
  *

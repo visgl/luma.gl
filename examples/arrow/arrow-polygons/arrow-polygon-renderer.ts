@@ -15,8 +15,7 @@ import {
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo} from '@luma.gl/engine';
-import type {GPURecordBatchSourceInfo} from '@luma.gl/tables';
-import type {GPUTableModel} from '@luma.gl/tables';
+import {GPUTable, type GPURecordBatchSourceInfo, type GPUTableModel} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createPolygonModel,
@@ -117,6 +116,7 @@ export class ArrowPolygonRenderer {
   readonly picker: PickingManager;
   props: ArrowPolygonRendererProps;
   preparedBatches: PreparedPolygonBatch[] = [];
+  activeTable: GPUTable | null = null;
   model: GPUTableModel | null = null;
   pickingModel: GPUTableModel | null = null;
   private dataLoadVersion = 0;
@@ -161,15 +161,10 @@ export class ArrowPolygonRenderer {
         aspect: props.aspect
       }
     });
-    const model = this.model;
-    if (!model) {
-      return;
-    }
-    for (const [batchIndex, preparedBatch] of this.preparedBatches.entries()) {
-      this.shaderInputs.setProps({picking: {isActive: false, batchIndex}});
-      setPolygonModelPreparedBatch(model, preparedBatch);
-      model.draw(renderPass);
-    }
+    this.shaderInputs.setProps({picking: {isActive: false}});
+    this.model?.drawBatches(renderPass, {
+      onBatch: (_batch, batchIndex) => this.shaderInputs.setProps({picking: {batchIndex}})
+    });
   }
 
   pick(mousePosition: number[] | null | undefined): void {
@@ -182,17 +177,10 @@ export class ArrowPolygonRenderer {
       picker: this.picker,
       mousePosition,
       shaderInputs: this.shaderInputs,
-      draw: pickingPass => {
-        const pickingModel = this.pickingModel;
-        if (!pickingModel) {
-          return false;
-        }
-        for (const [batchIndex, preparedBatch] of this.preparedBatches.entries()) {
-          this.shaderInputs.setProps({picking: {batchIndex}});
-          setPolygonModelPreparedBatch(pickingModel, preparedBatch);
-          pickingModel.draw(pickingPass);
-        }
-      }
+      draw: pickingPass =>
+        this.pickingModel?.drawBatches(pickingPass, {
+          onBatch: (_batch, batchIndex) => this.shaderInputs.setProps({picking: {batchIndex}})
+        }) ?? false
     });
   }
 
@@ -321,7 +309,17 @@ export class ArrowPolygonRenderer {
 
   private appendPreparedBatch(preparedBatch: PreparedPolygonBatch): void {
     this.preparedBatches.push(preparedBatch);
-    this.createModels(preparedBatch);
+    if (!this.activeTable) {
+      this.activeTable = makeRetainedPolygonTable(this.preparedBatches);
+      this.createModels(this.activeTable);
+      return;
+    }
+
+    const batch = preparedBatch.prepared.table.batches[0];
+    if (!batch) {
+      throw new Error('ArrowPolygonRenderer prepared batch requires one GPU table batch');
+    }
+    this.activeTable.addBatch(batch);
   }
 
   private destroyPreparedBatches(): void {
@@ -332,18 +330,18 @@ export class ArrowPolygonRenderer {
     this.preparedBatches = [];
   }
 
-  private createModels(preparedBatch: PreparedPolygonBatch): void {
+  private createModels(table: GPUTable): void {
     if (this.model && this.pickingModel) {
       return;
     }
     this.model = createPolygonModel(this.device, {
       id: 'arrow-polygons',
-      prepared: preparedBatch.prepared,
+      table,
       shaderInputs: this.shaderInputs
     });
     this.pickingModel = createPolygonModel(this.device, {
       id: 'arrow-polygons-picking',
-      prepared: preparedBatch.prepared,
+      table,
       shaderInputs: this.shaderInputs,
       picking: true
     });
@@ -352,6 +350,7 @@ export class ArrowPolygonRenderer {
   private destroyModels(): void {
     this.model?.destroy();
     this.pickingModel?.destroy();
+    this.activeTable = null;
     this.model = null;
     this.pickingModel = null;
   }
@@ -378,9 +377,7 @@ export class ArrowPolygonRenderer {
   };
 
   private getPickingSourceInfos(): Array<GPURecordBatchSourceInfo | undefined> {
-    return this.preparedBatches.map(
-      preparedBatch => preparedBatch.prepared.table.batches[0]?.sourceInfo
-    );
+    return this.activeTable?.batches.map(batch => batch.sourceInfo) ?? [];
   }
 }
 
@@ -450,13 +447,17 @@ function destroyPreparedPolygonBatch(preparedBatch: PreparedPolygonBatch): void 
   preparedBatch.destroy();
 }
 
-function setPolygonModelPreparedBatch(
-  model: GPUTableModel,
-  preparedBatch: PreparedPolygonBatch
-): void {
-  model.setProps({table: preparedBatch.prepared.table});
-  model.setIndexBuffer(preparedBatch.prepared.indices);
-  model.setVertexCount(preparedBatch.prepared.tessellation.indices.length);
+function makeRetainedPolygonTable(preparedBatches: readonly PreparedPolygonBatch[]): GPUTable {
+  const firstBatch = preparedBatches[0];
+  if (!firstBatch) {
+    throw new Error('ArrowPolygonRenderer requires at least one prepared batch');
+  }
+  const batches = preparedBatches.flatMap(preparedBatch => preparedBatch.prepared.table.batches);
+  return new GPUTable({
+    batches,
+    schema: firstBatch.prepared.table.schema,
+    bufferLayout: firstBatch.prepared.table.bufferLayout
+  });
 }
 
 function getPolygonVector(props: ArrowPolygonRendererProps): arrow.Vector<ArrowPolygonInputType> {

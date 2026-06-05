@@ -53,13 +53,23 @@ When the source is an Arrow `Table`, prefer
 | `bindings` | `Record<string, Buffer \| DynamicBuffer>` | Storage bindings for the first directly bindable batch. |
 | `batches` | `GPURecordBatch[]` | Preserved batch-local GPU storage. |
 
+## Reserved Draw Columns
+
+`gpuVectors.indices` is the reserved indexed-draw column. It is not an
+attribute; preserved batches own their batch-local `vertex-list<uint32>` index
+vectors, and `GPUTableModel.drawBatches()` binds each batch index buffer before
+drawing. Indexed tables keep indices batch-local, so every preserved batch in an
+indexed table must contain `indices`.
+
 ## Methods
 
 ### `packBatches(options?): this`
 
 Replaces preserved GPU batches with fewer packed batches. With no options, all
 batches are packed into one. With `minBatchSize`, adjacent batches are greedily
-merged until each emitted batch reaches the requested row count.
+merged until each emitted batch reaches the requested row count. Indexed tables
+are rejected because packing batch-local indices would require rebasing them
+against the packed vertex rows.
 
 ### `addBatch(batch): this`
 
