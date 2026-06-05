@@ -116,7 +116,7 @@ export class WebGPUDevice extends Device {
 
     this.info = this._getInfo();
     this.features = this._getFeatures();
-    this.limits = this.handle.limits;
+    this.limits = getWebGPUDeviceLimits(this.handle.limits);
 
     // Listen for uncaptured WebGPU errors
     device.addEventListener('uncapturederror', (event: Event) => {
@@ -501,6 +501,7 @@ export class WebGPUDevice extends Device {
       gpuBackend,
       gpuArchitecture,
       fallback,
+      featureLevel: getWebGPUDeviceFeatureLevel(this.props.featureLevel),
       shadingLanguage: 'wgsl',
       shadingLanguageVersion: 100
     };
@@ -567,6 +568,33 @@ export class WebGPUDevice extends Device {
     }
     return capabilities;
   }
+}
+
+function getWebGPUDeviceLimits(limits: GPUSupportedLimits): DeviceLimits {
+  const stageSpecificLimits: Partial<Record<keyof DeviceLimits, number>> = {
+    maxStorageBuffersInVertexStage:
+      limits.maxStorageBuffersInVertexStage ?? limits.maxStorageBuffersPerShaderStage,
+    maxStorageBuffersInFragmentStage:
+      limits.maxStorageBuffersInFragmentStage ?? limits.maxStorageBuffersPerShaderStage,
+    maxStorageTexturesInVertexStage:
+      limits.maxStorageTexturesInVertexStage ?? limits.maxStorageTexturesPerShaderStage,
+    maxStorageTexturesInFragmentStage:
+      limits.maxStorageTexturesInFragmentStage ?? limits.maxStorageTexturesPerShaderStage
+  };
+
+  return new Proxy(limits, {
+    get(target, property) {
+      return typeof property === 'string' && property in stageSpecificLimits
+        ? stageSpecificLimits[property as keyof DeviceLimits]
+        : Reflect.get(target, property, target);
+    }
+  }) as DeviceLimits;
+}
+
+function getWebGPUDeviceFeatureLevel(
+  featureLevel: DeviceProps['featureLevel']
+): NonNullable<DeviceInfo['featureLevel']> {
+  return featureLevel || 'core';
 }
 
 function identifyGPUVendor(

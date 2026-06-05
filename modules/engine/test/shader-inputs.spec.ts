@@ -103,6 +103,24 @@ test('ShaderInputs#dependencies', t => {
   t.end();
 });
 
+test('ShaderInputs#addModules', t => {
+  const dependency: ShaderModule = {name: 'dependency'};
+  const module: ShaderModule = {name: 'module', dependencies: [dependency]};
+  const shaderInputs = new ShaderInputs({});
+
+  shaderInputs.addModules([module]);
+
+  t.ok(
+    shaderInputs.getModules().some(shaderModule => shaderModule.name === module.name),
+    'added module participates in shader inputs'
+  );
+  t.ok(
+    shaderInputs.getModules().some(shaderModule => shaderModule.name === dependency.name),
+    'added module dependencies participate in shader inputs'
+  );
+  t.end();
+});
+
 test('ShaderInputs#floatColors dependency props', t => {
   const shaderInputs = new ShaderInputs<{
     phongMaterial: PhongMaterialProps;

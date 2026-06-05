@@ -48,6 +48,7 @@ import {
   timeColumns
 } from './arrow-time-columns-shaders';
 import type {TimeColumnsRenderMode} from './control-panel';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 /** Public configuration for the Arrow time-columns schedule layer. */
 export type ArrowTimeColumnsRendererProps = {
@@ -99,6 +100,7 @@ const DEFAULT_TIME_COLUMNS_RENDERER_PROPS = {
     'currentTimeRateMillisecondsPerSecond' | 'initialScheduleMilliseconds'
   >
 >;
+const TIME_COLUMNS_VERTEX_STORAGE_BUFFER_COUNT = 5;
 
 /** Example layer that renders Arrow date/time/timestamp/duration columns as a schedule board. */
 export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: number}]> {
@@ -119,8 +121,16 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
     super();
     this.device = device;
     this.props = props;
+    const supportsStorageRendering = supportsVertexStorageBuffers(
+      this.device,
+      TIME_COLUMNS_VERTEX_STORAGE_BUFFER_COUNT
+    );
+    const requestedRenderMode =
+      props.renderMode ?? (supportsStorageRendering ? 'storage' : 'attributes');
     this.activeRenderMode =
-      props.renderMode ?? (this.device.type === 'webgpu' ? 'storage' : 'attributes');
+      requestedRenderMode === 'storage' && !supportsStorageRendering
+        ? 'attributes'
+        : requestedRenderMode;
     this.currentScheduleMilliseconds =
       props.initialScheduleMilliseconds ??
       DEFAULT_TIME_COLUMNS_RENDERER_PROPS.initialScheduleMilliseconds;
@@ -196,8 +206,8 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
     renderMode: TimeColumnsRenderMode
   ): ActiveTimeColumnsModel {
     if (renderMode === 'storage') {
-      if (this.device.type !== 'webgpu') {
-        throw new Error('Time column storage rendering requires WebGPU');
+      if (!supportsVertexStorageBuffers(this.device, TIME_COLUMNS_VERTEX_STORAGE_BUFFER_COUNT)) {
+        throw new Error('Time column storage rendering requires vertex storage buffers');
       }
       return new Model(this.device, {
         id: 'arrow-time-columns-events-storage',
@@ -280,7 +290,8 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
       return;
     }
     const nextRenderMode =
-      props.renderMode === 'storage' && this.device.type !== 'webgpu'
+      props.renderMode === 'storage' &&
+      !supportsVertexStorageBuffers(this.device, TIME_COLUMNS_VERTEX_STORAGE_BUFFER_COUNT)
         ? 'attributes'
         : props.renderMode;
     if (nextRenderMode === this.activeRenderMode) {

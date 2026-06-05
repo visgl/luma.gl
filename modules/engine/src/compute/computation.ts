@@ -34,13 +34,13 @@ const LOG_DRAW_TIMEOUT = 10000;
 export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
   source?: string;
 
-  /** shadertool shader modules (added to shader code) */
+  /** Shadertools shader modules added to shader code. */
   modules?: ShaderModule[];
-  /** Shadertool module defines (configures shader code)*/
-  defines?: Record<string, boolean>;
+  /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
+  defines?: Record<string, boolean | number>;
   // TODO - injections, hooks etc?
 
-  /** Shader inputs, used to generated uniform buffers and bindings */
+  /** Shader inputs, used to generate uniform buffers and bindings. */
   shaderInputs?: ShaderInputs;
 
   /** Bindings */
@@ -377,6 +377,7 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     shaderLanguage: device.info.shadingLanguage,
     shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     gpu: device.info.gpu,
+    limits: device.limits as unknown as Record<string, number | undefined>,
     // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
     features: device.features as unknown as Set<DeviceFeature>
   };

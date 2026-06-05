@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # Adapter
+
+<CoreDocsTabs group="device" active="adapter" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.1-blue.svg?style=flat-square" alt="From-v9.1" />

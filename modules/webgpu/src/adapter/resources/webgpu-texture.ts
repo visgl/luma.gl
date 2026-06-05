@@ -77,10 +77,12 @@ export class WebGPUTexture extends Texture {
 
     this.view = new WebGPUTextureView(this.device, {
       ...this.props,
+      ...(this.props.view || {}),
       texture: this,
-      mipLevelCount: this.mipLevels,
+      mipLevelCount: this.props.view?.mipLevelCount ?? this.mipLevels,
       // Note: arrayLayerCount controls the view of array textures, but does not apply to 3d texture depths
-      arrayLayerCount: this.dimension !== '3d' ? this.depth : 1
+      arrayLayerCount:
+        this.props.view?.arrayLayerCount ?? (this.dimension !== '3d' ? this.depth : 1)
     });
     this.attachResource(this.view);
 

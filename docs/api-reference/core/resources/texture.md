@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # Texture
+
+<CoreDocsTabs group="textures" active="texture" />
 
 A `Texture` are GPU objects that contain one or more images that all have the same image format, that can be accessed from shaders.
 

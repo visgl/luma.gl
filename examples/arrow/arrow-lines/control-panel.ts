@@ -8,6 +8,7 @@ import type {
   ArrowLineRendererModel,
   ArrowLineRendererTimeColumn
 } from './arrow-line-renderer';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 const MODEL_SELECTOR_ID = 'arrow-lines-model';
 const ROW_COUNT_SELECTOR_ID = 'arrow-lines-row-count';
@@ -42,6 +43,8 @@ const DECK_GPU_EXPANSION_ID = 'arrow-lines-deck-gpu-expansion';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-lines-streaming-batch-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-lines-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-lines-streaming-batch-status-label';
+const STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT = 6;
+const TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT = 7;
 
 export type ArrowLineControlPanelRowLabels = {
   '240-stream': string;
@@ -347,7 +350,8 @@ export class ArrowLineControlPanel {
     const nextTimeKind = this.timeColumnSelector?.value;
     if (
       isArrowLineControlPanelTimeKind(nextTimeKind) &&
-      (nextTimeKind !== 'timestamps' || this.device.type === 'webgpu')
+      (nextTimeKind !== 'timestamps' ||
+        supportsVertexStorageBuffers(this.device, TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT))
     ) {
       void this.handlers.onTimeChange(nextTimeKind);
     }
@@ -357,7 +361,10 @@ export class ArrowLineControlPanel {
     const nextModelKind = this.modelSelector?.value;
     if (
       isArrowLineRendererModel(nextModelKind) &&
-      (nextModelKind !== 'storage' || this.device.type === 'webgpu') &&
+      (nextModelKind !== 'storage' ||
+        supportsVertexStorageBuffers(this.device, STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT)) &&
+      (nextModelKind !== 'trips' ||
+        supportsVertexStorageBuffers(this.device, TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT)) &&
       (nextModelKind !== 'attribute' || this.state.timeKind !== 'timestamps')
     ) {
       this.handlers.onModelChange(nextModelKind);
@@ -389,6 +396,14 @@ export class ArrowLineControlPanel {
 
   private updateSelectorAvailability(): void {
     const isPolygonMode = this.state.mode === 'polygons';
+    const supportsStoragePath = supportsVertexStorageBuffers(
+      this.device,
+      STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT
+    );
+    const supportsTripsPath = supportsVertexStorageBuffers(
+      this.device,
+      TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT
+    );
     if (this.coordinateSelector) {
       for (const option of Array.from(this.coordinateSelector.options)) {
         option.disabled = isPolygonMode && option.value !== 'dense-union';
@@ -403,7 +418,7 @@ export class ArrowLineControlPanel {
       for (const option of Array.from(this.timeColumnSelector.options)) {
         option.disabled =
           (isPolygonMode && option.value !== 'none') ||
-          (option.value === 'timestamps' && this.device.type !== 'webgpu');
+          (option.value === 'timestamps' && !supportsTripsPath);
       }
     }
     if (!this.modelSelector) {
@@ -412,10 +427,10 @@ export class ArrowLineControlPanel {
     for (const option of Array.from(this.modelSelector.options)) {
       option.disabled =
         (option.value === 'storage' &&
-          (this.device.type !== 'webgpu' || this.state.timeKind === 'timestamps')) ||
+          (!supportsStoragePath || this.state.timeKind === 'timestamps')) ||
         (option.value === 'attribute' && this.state.timeKind === 'timestamps') ||
         (option.value === 'trips' &&
-          (this.device.type !== 'webgpu' || this.state.timeKind !== 'timestamps' || isPolygonMode));
+          (!supportsTripsPath || this.state.timeKind !== 'timestamps' || isPolygonMode));
       if (option.value === 'auto') {
         option.textContent = `auto (${getAutoPathModelLabel(this.device, this.state.timeKind)})`;
       }
@@ -633,7 +648,14 @@ function getStreamingBatchProgressPercent(
 }
 
 function getAutoPathModelLabel(device: Device, timeKind: ArrowLineControlPanelTimeKind): string {
-  if (device.type !== 'webgpu') {
+  if (
+    !supportsVertexStorageBuffers(
+      device,
+      timeKind === 'timestamps'
+        ? TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT
+        : STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT
+    )
+  ) {
     return 'attribute';
   }
   return timeKind === 'timestamps' ? 'trips' : 'storage';

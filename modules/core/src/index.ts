@@ -13,7 +13,9 @@ export type {
   DeviceProps,
   DeviceInfo,
   DeviceFeature,
-  DeviceTextureFormatCapabilities
+  DeviceTextureFormatCapabilities,
+  WebGPUFeatureLevel,
+  WebGPUDeviceFeatureLevel
 } from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 

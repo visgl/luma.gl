@@ -24,6 +24,7 @@ import {
   createMeshGeometryPickingModel,
   createMeshGeometryShaderInputs,
   getMeshGeometryShaderLayout,
+  supportsMeshGeometryStorageRendering,
   type MeshGeometryShaderInputs
 } from './mesh-geometry-model';
 
@@ -104,13 +105,13 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
       arrow.FixedSizeList<arrow.Float32>
     >;
     const faceColors = props.faceColors ?? defaultFaceColors;
-    const arrowMesh = makeArrowMeshTable(device.type, faceColors);
+    const supportsStorageRendering = supportsMeshGeometryStorageRendering(device);
+    const arrowMesh = makeArrowMeshTable(supportsStorageRendering, faceColors);
     this.meshTable = arrowMesh.data;
     this.faceNames = faceMetadata.getChild('name') as arrow.Vector<arrow.Utf8>;
-    this.faceColors =
-      device.type === 'webgpu'
-        ? makeGPUVectorFromArrow(device, faceColors, {name: 'faceColors', format: 'float32x4'})
-        : undefined;
+    this.faceColors = supportsStorageRendering
+      ? makeGPUVectorFromArrow(device, faceColors, {name: 'faceColors', format: 'float32x4'})
+      : undefined;
 
     this.updateInstanceMatrices(0);
     this.matrixArrowTable = makeInstanceArrowTable(this.matrixValues);
@@ -233,7 +234,7 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
 }
 
 function makeArrowMeshTable(
-  deviceType: AnimationProps['device']['type'],
+  useStorageRendering: boolean,
   faceColors: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>
 ): ArrowMeshTable {
   const cubeGeometry = new CubeGeometry({indices: true});
@@ -252,14 +253,13 @@ function makeArrowMeshTable(
   }
 
   const positions = makeArrowFixedSizeListVector(new arrow.Float32(), 3, cubePositions);
-  const table =
-    deviceType === 'webgpu'
-      ? makeWebGPUMeshTable(positions, cubeFaceIndices)
-      : makeWebGLMeshTable(
-          positions,
-          expandArrowVector(faceColors, cubeFaceIndices),
-          cubeFaceIndices
-        );
+  const table = useStorageRendering
+    ? makeWebGPUMeshTable(positions, cubeFaceIndices)
+    : makeWebGLMeshTable(
+        positions,
+        expandArrowVector(faceColors, cubeFaceIndices),
+        cubeFaceIndices
+      );
 
   return {
     shape: 'arrow-table',

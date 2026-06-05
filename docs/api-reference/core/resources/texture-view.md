@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # TextureView
+
+<CoreDocsTabs group="textures" active="texture-view" />
 
 A `TextureView` is a view onto some subset of the texture subresources defined by a particular `Texture`.
 

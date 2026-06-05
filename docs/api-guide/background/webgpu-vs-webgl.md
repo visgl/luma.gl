@@ -1,100 +1,157 @@
+import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
+
 # WebGPU vs WebGL
 
-This page is a collection of developer notes on the differences between WebGPU and WebGL. 
+<ApiOverviewDocsTabs active="webgpu-vs-webgl" />
 
-This is not intended to be a complete list but is included because they may be useful to someone interested in understanding the differences between WebGPU and WebGL technology. 
+<style>{`
+  .docs-markdown-table table {
+    display: table;
+    max-width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    width: 100%;
+  }
 
-These notes also indirectly explain why some of the breaking changes in the luma.gl v9 API were made.
+  .docs-markdown-table th,
+  .docs-markdown-table td {
+    overflow-wrap: break-word;
+  }
 
-**References**
+  .docs-markdown-table table:has(th:nth-child(4)) th:nth-child(-n + 3),
+  .docs-markdown-table table:has(th:nth-child(4)) td:nth-child(-n + 3) {
+    width: 18%;
+  }
 
-- [Efficiently rendering glTF models](https://toji.dev/webgpu-gltf-case-study/) - this superb case study by Brandon Jones contains a substantial amount of information about how WebGPU differs from WebGL.
+  .docs-markdown-table table:has(th:nth-child(4)) th:last-child,
+  .docs-markdown-table table:has(th:nth-child(4)) td:last-child {
+    width: 46%;
+  }
+`}</style>
 
-## Background
+Browsers expose two GPU APIs that matter to luma.gl applications: **WebGPU** and **WebGL 2**.
+WebGPU is the modern API and the direction browser GPU programming is moving. WebGL 2 is the
+older, widely deployed compatibility path. luma.gl supports both through the same `Device` API
+so applications can adopt WebGPU without giving up WebGL reach where it still matters.
 
-WebGPU is the next generation GPU API for the browser, standardized by W3C. 
-Given the broad industry support for the project and the fact that WebGPU was designed to embrace all the proprietary next-gen APIs from the major manufacturers, i.e. Vulkan, Metal, and DX12, it is reasonable to assume that the WebGPU API will be widely adopted and represents the future of GPU programming on the Web at least for the next decade and into the 2030s. 
+For most applications, register both backends and let luma.gl choose the best available device.
+luma.gl prefers WebGPU when the browser can create a WebGPU device, then falls back to WebGL.
 
-As of the writing of this article:
+```typescript
+import {luma} from '@luma.gl/core';
+import {webglAdapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-- The first version of WebGPU standard is approved and published.
-- WebGPU support has launched in the Chrome browser.
-- It has been announced that no further evolution of the WebGL standard is taking place.
+const device = await luma.createDevice({
+  type: 'best-available',
+  adapters: [webgpuAdapter, webglAdapter],
+  createCanvasContext: true
+});
+```
 
-# What is WebGPU?
+Use `device.type`, [`device.features`](/docs/api-reference/core/device-features), and
+[`device.limits`](/docs/api-reference/core/device-limits) when an application needs to choose a
+backend-specific path.
 
-WebGPU essentially exposes the latest next-gen GPU APIs (Vulkan, Metal, DX12) in the browser through a new common API. A notable characteristic of the three next-gen GPU APIs is that they are designed ground up so that unnecessary GPU processing overhead can be avoided and optimized away. 
+## Choosing a Backend
 
-One example of this (discussed in more detail below) is that by making GPU resources read-only, WebGPU minimizes repeated CPU-side validation overhead (no need to re-validate an object that can never change after it has been created).
+| Need | Recommendation |
+| --- | --- |
+| New application | Prefer WebGPU. |
+| Broadest reach | Use `type: 'best-available'`. |
+| Compute or storage buffers | Require WebGPU. |
+| Existing GLSL or WebGL code | Keep WebGL first, then add WebGPU deliberately. |
+| Portable rendering | Stay inside luma.gl `Device`, `Model`, pipeline, binding, feature, and limit APIs. |
 
-But there are also explicit features such as command queues, bind groups and render bundles that allow the application to pre-record or group operations so that the minimal amount of operations need to be repeated on each draw call / shader execution.
+## WebGPU
 
-## WebGL compatibility
+[WebGPU](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API) is the successor to WebGL.
+It is designed around the same generation of GPU APIs as Vulkan, Metal, and Direct3D 12, and it
+adds first-class support for general GPU computation as well as rendering.
 
-The WebGPU designers had many challenging goals, however backwards compatibility WebGL was  clearly not among them. While this was likely This lack of backwards is quite significant. And it is not just a simple matter of essentially the same APIs being arbitrarily renamed, but the structure of the API is different and the behavior of objects (immutability etc) does invalidate many reasonable assumptions made by WebGL applications. 
+For luma.gl users, WebGPU is the preferred backend when available:
 
-## Breaking changes
+| Advantage | Why it matters |
+| --- | --- |
+| Lower CPU and driver overhead | Better scaling for complex scenes and repeated work. |
+| Compute shaders and storage buffers | Modern GPU data work does not need WebGL workarounds. |
+| Modern resource model | Closely matches luma.gl resources, pipelines, bindings, and commands. |
+| Better multi-canvas support | One device can present to multiple canvases directly. |
 
-The luma.gl API with its focus on providing direct access to the GPU and the GPU API is perhaps impacted more by the incompatibilities between the WebGPU and the WebGL APIs than other WebGL frameworks that tend to provide higher-level, game-engine type abstractions in their APIs (such as a "renderer" class). 
+WebGPU also has practical constraints:
 
-To be sure, the effort required to support WebGPU is big in both cases, but sometimes the required implementation changes in other frameworks can perhaps be hidden inside their abstractions, and avoid breaking API changes, whereas in luma.gl, we have to expose the change and break some APIs.
+| Limitation | What to do in luma.gl |
+| --- | --- |
+| Browser, OS, and GPU support varies | Feature detect and keep a WebGL fallback when reach matters. |
+| Secure context required | Serve production apps over HTTPS. |
+| Shaders use WGSL | Keep WGSL, or matching WGSL and GLSL sources for portable apps. |
+| More explicit setup | Describe pipelines, bindings, and buffer layouts up front. |
+| Stricter formats and limits | Check `device.features` and `device.limits`. |
+| Portable baseline differs from adapter maximum | Keep the default `featureLevel: 'core'` for portability; request `'max'` only when the app needs optional WebGPU features or limits. |
 
-## Differences
+## WebGL 2
 
-### WebGPU Device vs WebGL Context
+[WebGL 2](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext) is the
+well-established browser GPU API based on OpenGL ES 3.0. It remains important because it is
+widely available and because many applications already have GLSL and WebGL rendering code.
 
-A WebGL context is associated with a specific canvas:
+For luma.gl users, WebGL 2 is the compatibility backend:
 
-- The default drawing buffer is associated with the canvas
-- Rendering to other canvases either requires separate WebGL contexts (with duplicated GPU resources) or going through hoops with framebuffer rendering and image copies.
-- A WebGPU device enables the application to render to multiple canvases using the same resources create separate swap chains for 
+| Advantage | Why it matters |
+| --- | --- |
+| Broad deployment | Safest path for older browsers, devices, and managed environments. |
+| Existing GLSL ecosystem | WebGL shaders can move into luma.gl incrementally. |
+| Familiar state model | Small apps can change draw state with less up-front setup. |
+| Mature debugging path | Existing WebGL tools and knowledge still help. |
 
-### GPU Resource Immutability
+WebGL 2 has the limits that motivate the transition to WebGPU:
 
-WebGPU API is more static, in the sense that objects tend to be immutable after creation.
+| Limitation | What to do in luma.gl |
+| --- | --- |
+| No compute shaders or storage buffers | Use WebGPU, or keep WebGL-specific transform or texture fallbacks. |
+| Stateful context model | Prefer luma.gl pipelines and bindings. |
+| One GPU-backed canvas per device | Use WebGPU for direct shared-resource multi-canvas workflows. |
+| Extension and implementation variance | Query luma.gl features and limits. |
+| Expensive readback and synchronization | Keep data on the GPU where possible. |
 
-By making GPU resources read-only, WebGPU minimizes repeated CPU-side validation overhead (no need to re-validate an object that can never change after it has been created).
+## WebGL 1
 
-However this means that when parameters or state does change, new resources need to be created which can create a fair amount of complication and work for the application.
+luma.gl v9 intentionally removed WebGL 1 support. Maintaining a third backend path would add
+implementation and testing cost without serving enough users to justify it: the remaining
+audience is mostly older devices and browsers that expose WebGL 1 but not WebGL 2, such as
+Internet Explorer. Applications that still need WebGL 1 should stay on an older luma.gl release
+or use another WebGL 1 capable stack.
 
-### Parameters and State Management
+## Differences That Matter in luma.gl
 
-In WebGL many parameters are set on the WebGL context using individual function calls:
+| Topic | WebGPU | WebGL 2 | Guidance |
+| --- | --- | --- | --- |
+| Default | Preferred | Reach fallback | Use `type: 'best-available'`. |
+| Canvas | Multiple direct contexts | One GPU-backed canvas | Use portable presentation APIs; require WebGPU for direct multi-canvas rendering. |
+| Shaders | WGSL | GLSL ES 3.00 | Keep shader sources explicit. |
+| Bindings | Bind groups | Uniform blocks and textures | Use luma.gl binding layouts. |
+| Compute | Compute and storage | Transform or texture fallback | Use WebGPU for modern compute. |
+| State | Explicit pipelines | Mutable context | Let `Model` and pipelines own setup. |
+| Formats | More explicit | More extension variance | Query features and limits. |
+| Commands | Recorded and submitted | Immediate underneath | Use luma.gl command APIs. |
 
-- This does cause problems when trying to make different modules work together.
-- But it does make it easier to change settings between draw calls.
+## Condensed Developer Notes
 
-## Programs vs Pipelines
+| Underlying API difference | Visible effect for luma.gl users |
+| --- | --- |
+| WebGPU descriptions are more static. | Reuse or create pipelines instead of mutating context state. |
+| WebGPU has uniform buffers. | Use luma.gl binding and shader layout APIs. |
+| WebGPU has no transform feedback. | Use compute on WebGPU; keep transform feedback only for WebGL paths. |
+| WebGPU owns vertex layouts in pipelines. | Describe formats and layouts up front. |
+| Optional capabilities differ. | Treat `device.features` and `device.limits` as the portability boundary. |
 
-| WebGPU limitation                           | Alternatives                                                                                                        |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| No GLSL support                             | 1) glslang project seems stale. 2) Use Naga (Rust) to build a WebAssembly transpiler. 3) write two sets of shaders. |
-| No constant attributes                      | 1) Create dummy buffers 2) dynamically generate shaders with uniforms.                                              |
-| Interleaving specified at Pipeline creation | New `PipelineProps.bufferLayout` concept                                                                               |
-| No transform feedback                       | Compute shaders (storage buffers)                                                                                   |
-| No uniforms, only Uniform buffers           | Add strong uniform buffer support to API                                                          |
+## Further Reading
 
-## No Uniforms
-
--  and a range of WebGL features are no longer available (uniforms and transform feedback just to mention a few). There are of course good reasons for this (and In many cases these incompatibilities reflect choices made by the underlying next-gen APIs) but WebGPU does create quite an upgrade shock for existing WebGL based frameworks. 
-
-## Attributes
-
-In WebGPU
-- Unlike WebGL, WebGPU attribute sizes must be even multiples of 2, which means that an attribute with 1 or 3 bytes per vertex are not possible.
-- Attribute formats (type, components, normalization, etc) are specified when creating a pipeline (program). This cannot be re specified when rebinding an attribute, like it can in WebGL.
-
-
-## No TransformFeedback
-
--  and a range of WebGL features are no longer available (uniforms and transform feedback just to mention a few). There are of course good reasons for this (and In many cases these incompatibilities reflect choices made by the underlying next-gen APIs) but WebGPU does create quite an upgrade shock for existing WebGL based frameworks. 
-
-## Explicit Optimizations
-
-WebGPU brings explicit features such as command queues, bind groups and render bundles that allow the application to pre-record or group operations so that the minimal amount of operations need to be repeated on each draw call / shader execution.
-
-While these are valuable, some of them require extra effort and planning when organizing your application.
-
-## Additional Information
-
-There are many other examples, this is only a partial list.
+- [GPU Initialization](/docs/api-guide/gpu/gpu-initialization)
+- [CanvasContext](/docs/api-reference/core/canvas-context)
+- [PresentationContext](/docs/api-reference/core/presentation-context)
+- [GPU Bindings](/docs/api-guide/gpu/gpu-bindings)
+- [GPU Commands](/docs/api-guide/gpu/gpu-commands)
+- [GPU Storage Buffers](/docs/api-guide/gpu/gpu-storage-buffers)
+- [GPU Computations](/docs/api-guide/engine/transforms)
+- [Efficiently rendering glTF models](https://toji.dev/webgpu-gltf-case-study/)

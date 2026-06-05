@@ -1,20 +1,69 @@
 // luma.gl
-import React from 'react';
-import type {Device, DeviceFeature, DeviceLimits, TextureFormat, VertexFormat} from '@luma.gl/core';
+import React, {useEffect, useState} from 'react';
+import type {
+  Device,
+  DeviceFeature,
+  DeviceInfo,
+  DeviceLimits,
+  TextureFormat,
+  VertexFormat
+} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
-import {useStore} from '../store/device-store';
+import {createDevice, type DeviceType, useStore} from '../store/device-store';
 
-function getLimit(device: Device, feature: keyof DeviceLimits): string {
-  return device ? device.limits[feature] ? String(device.limits[feature]) : '0 ❌' : 'N/A';
+export type DocumentationDeviceType = Extract<
+  DeviceType,
+  'webgpu-max' | 'webgpu-core' | 'webgl'
+>;
+
+const BYTE_LIMITS = new Set<keyof DeviceLimits>([
+  'maxUniformBufferBindingSize',
+  'maxStorageBufferBindingSize',
+  'maxBufferSize',
+  'minUniformBufferOffsetAlignment',
+  'minStorageBufferOffsetAlignment',
+  'maxColorAttachmentBytesPerSample',
+  'maxComputeWorkgroupStorageSize'
+]);
+
+function getLimit(device: Device | undefined, feature: keyof DeviceLimits): string {
+  if (!device) {
+    return 'N/A';
+  }
+
+  const limit = device.limits[feature];
+  if (!limit) {
+    return '0 ❌';
+  }
+  if (limit === Number.MAX_SAFE_INTEGER) {
+    return 'MAX_SAFE_INTEGER';
+  }
+  if (BYTE_LIMITS.has(feature)) {
+    return formatByteLimit(limit);
+  }
+
+  return String(limit);
 }
 
-function getFeature(device: Device, feature: string): string {
+function formatByteLimit(limit: number): string {
+  if (limit < 1024) {
+    return `${limit} B`;
+  }
+
+  const divisor = limit >= 1024 ** 2 ? 1024 ** 2 : 1024;
+  const unit = divisor === 1024 ** 2 ? 'MB' : 'KB';
+  const value = Math.round(limit / divisor);
+
+  return `${value} ${unit}`;
+}
+
+function getFeature(device: Device | undefined, feature: string): string {
   return device ? device.features.has(feature as DeviceFeature) ? '✅' : '❌' : 'N/A';
 }
 
-function getVertexFormat(device: Device, format: VertexFormat): string {
+function getVertexFormat(device: Device | undefined, format: VertexFormat): string {
   try {
     const isSupported = device && device.isVertexFormatSupported(format);
     return device ? isSupported ? '✅' : '❌' : 'N/A';
@@ -23,7 +72,7 @@ function getVertexFormat(device: Device, format: VertexFormat): string {
   }
 }
 
-function getFormat(device: Device, format: TextureFormat): string {
+function getFormat(device: Device | undefined, format: TextureFormat): string {
   try {
     const isSupported = device && device.isTextureFormatSupported(format);
     return device ? isSupported ? '✅' : '❌' : 'N/A';
@@ -32,7 +81,7 @@ function getFormat(device: Device, format: TextureFormat): string {
   }
 }
 
-function getFiltering(device: Device, format: TextureFormat): string {
+function getFiltering(device: Device | undefined, format: TextureFormat): string {
   try {
     const isSupported = device && device.isTextureFormatSupported(format) && device.isTextureFormatFilterable(format);
     return device ? isSupported ? '✅' : '❌' : 'N/A';
@@ -41,21 +90,25 @@ function getFiltering(device: Device, format: TextureFormat): string {
   }
 }
 
+type DeviceProfileProps = {
+  d?: DocumentationDeviceType;
+};
+
 /** DeviceInfo field */
-export const Info = ({f}) => {
-  const device = useStore(state => state.device);
-  const info = device ? device.info[f] : 'N/A';
+export const Info = ({f, d}: {f: keyof DeviceInfo} & DeviceProfileProps) => {
+  const device = useDevice(d);
+  const info = device ? (device.info[f] ?? 'N/A') : 'N/A';
   return <code style={{color: 'darkgreen'}} >{info}</code>;
 }
 
 /** Device.limits field */
-export const Limit = ({f}) => {
-  const device = useStore(state => state.device);
+export const Limit = ({f, d}: {f: keyof DeviceLimits} & DeviceProfileProps) => {
+  const device = useDevice(d);
   return <code style={{color: 'darkgreen'}} >{getLimit(device, f)}</code>;
 }
 
-export const Feature = ({f}) => {
-  const device = useStore(state => state.device);
+export const Feature = ({f, d}: {f: string} & DeviceProfileProps) => {
+  const device = useDevice(d);
   return <span>{getFeature(device, f)}</span>;
 }
 
@@ -115,4 +168,35 @@ export const WebGLExtensions = ({f}) => {
       )) }
     </ul>
   );
+}
+
+function useDevice(deviceType?: DocumentationDeviceType): Device | undefined {
+  const selectedDevice = useStore(state => state.device);
+  const [documentationDevice, setDocumentationDevice] = useState<Device>();
+
+  useEffect(() => {
+    let isCancelled = false;
+    if (!deviceType) {
+      setDocumentationDevice(undefined);
+      return;
+    }
+
+    void createDevice(deviceType)
+      .then(device => {
+        if (!isCancelled) {
+          setDocumentationDevice(device);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setDocumentationDevice(undefined);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [deviceType]);
+
+  return deviceType ? documentationDevice : selectedDevice;
 }

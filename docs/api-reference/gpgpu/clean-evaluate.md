@@ -1,4 +1,8 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
+
 # cleanEvaluate
+
+<GPGPUDocsTabs active="clean-evaluate" />
 
 `cleanEvaluate()` is a small utility for evaluating one or more result tables while cleaning up intermediate `GPUTableEvaluator` dependencies that are no longer needed.
 

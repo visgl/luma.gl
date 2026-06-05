@@ -25,11 +25,11 @@
     "type": "category",
     "label": "API Guide",
     "items": [
-      "api-guide/README",
       {
         "type": "category",
-        "label": "Background",
+        "label": "API overview",
         "items": [
+          "api-guide/README",
           "api-guide/background/api-design",
           "api-guide/background/learning-resources",
           "api-guide/background/webgpu-vs-webgl"
@@ -37,8 +37,22 @@
       },
       {
         "type": "category",
-        "label": "GPU Programming",
+        "label": "Engine-Level Programming",
         "items": [
+          "api-guide/engine/engine",
+          "api-guide/engine/interactivity",
+          "api-guide/engine/scenegraph",
+          "api-guide/engine/materials",
+          "api-guide/engine/transforms",
+          "api-guide/engine/redraw",
+          "api-guide/engine/shader-inputs"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "GPU-Level Programming",
+        "items": [
+          "api-guide/gpu/README",
           "api-guide/gpu/gpu-initialization",
           "api-guide/gpu/gpu-resources",
           "api-guide/gpu/gpu-memory",
@@ -57,23 +71,12 @@
       },
       {
         "type": "category",
-        "label": "Shader Programming",
+        "label": "Shader-Level Programming",
         "items": [
-          "api-guide/shaders/shader-types",
-          "api-guide/shaders/shader-modules"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "Engine Programming",
-        "items": [
-          "api-guide/engine/engine",
-          "api-guide/engine/redraw",
-          "api-guide/engine/shader-inputs",
-          "api-guide/engine/interactivity",
-          "api-guide/engine/scenegraph",
-          "api-guide/engine/materials",
-          "api-guide/engine/transforms"
+          "api-guide/shaders/README",
+          "api-guide/shaders/shader-modules",
+          "api-guide/shaders/shader-hooks",
+          "api-guide/shaders/shader-types"
         ]
       }
     ]

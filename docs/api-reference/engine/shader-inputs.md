@@ -71,6 +71,13 @@ declared schema.
 
 Returns the registered modules, including resolved dependencies.
 
+### `addModules(modules: ShaderModule[]): void`
+
+Registers modules after construction and resolves their dependencies before
+initializing uniform and binding state. Use this when the full module set is not
+known when the `ShaderInputs` instance is created; subsequent `setProps()`,
+`getUniformValues()`, and `getBindingValues()` calls include the added modules.
+
 ### `getUniformValues(): Partial<Record<string, Record<string, UniformValue>>>`
 
 Returns the current uniform values grouped by module.

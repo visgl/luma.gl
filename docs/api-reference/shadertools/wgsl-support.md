@@ -49,6 +49,35 @@ entry points needed by the pipeline.
 See [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler) for
 the API details.
 
+## Conditional WGSL
+
+WGSL itself has constants rather than a C-style preprocessor. luma.gl
+preprocesses assembled WGSL before assigning `@binding(auto)`, so inactive
+resource declarations do not reserve binding numbers.
+
+`Model`, `Computation`, and `ShaderAssembler` accept boolean or numeric
+`defines`. Supported conditions are `#ifdef NAME`, `#ifndef NAME`, `#if NAME`,
+`#if !NAME`, `#if defined(NAME)`, `#if !defined(NAME)`, and boolean or numeric
+literals. Compound expressions such as `A && B` are not supported.
+
+For WGSL assembled from a `Model` or `Computation`, luma.gl also sets
+`LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS` from
+`device.limits.maxStorageBuffersInVertexStage`. Use it when a vertex shader has
+storage-backed and attribute-backed variants:
+
+```wgsl
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
+@group(0) @binding(auto) var<storage, read> positions: array<vec4<f32>>;
+#else
+struct VertexInput {
+  @location(0) position: vec4<f32>,
+};
+#endif
+```
+
+The inactive branch is removed before WGSL reflection and auto-binding
+assignment.
+
 ## When Explicit Numbers Still Matter
 
 Most users should treat binding numbers as an implementation detail.

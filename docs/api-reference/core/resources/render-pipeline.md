@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # RenderPipeline
+
+<CoreDocsTabs group="pipelines" active="render-pipeline" />
 
 A `RenderPipeline` combines a vertex shader, a fragment shader, a
 [`ShaderLayout`](/docs/api-reference/core/shader-layout), and fixed render

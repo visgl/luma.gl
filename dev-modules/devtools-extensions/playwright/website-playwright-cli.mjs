@@ -192,11 +192,13 @@ function printHelp() {
 Usage:
   yarn website-debug --example showcase/persistence
   yarn website-debug --example persistence --backend webgl2
+  yarn website-debug --example api/animation --backend webgpu-core
+  yarn website-debug --example api/animation --backend webgpu-max
   yarn website-debug --attach=http://127.0.0.1:9222 --target-tab persistence
 
 Options:
   --example <value>         Example alias or route segment
-  --backend <webgpu|webgl2> Select a device tab explicitly
+  --backend <webgpu|webgpu-core|webgpu-max|webgl2> Select a device tab explicitly
   --attach <url>            Attach to an existing debug-enabled browser over CDP
   --target-tab <value>      Match a page by URL or title substring when attaching
   --channel <value>         Browser channel to launch

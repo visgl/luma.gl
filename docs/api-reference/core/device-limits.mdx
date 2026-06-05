@@ -1,6 +1,9 @@
-import {DeviceTabs, Feature as F, Limit as L, WebGLLimit as WL} from '@site/src/react-luma';
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {Limit as L} from '@site/src/react-luma';
 
 # DeviceLimits
+
+<CoreDocsTabs group="device" active="device-limits" />
 
 The `device.limits` field contains limits object that indicates what the current platform supports.
 
@@ -26,41 +29,51 @@ if (limits.maxTextureDimension2D > 2048) {
 
 ## DeviceLimits
 
-<DeviceTabs />
+The stage-specific storage limits matter when an application wants to read
+storage resources from a vertex or fragment shader. A WebGPU core device can
+report `0` for vertex-stage storage buffers, so storage-backed vertex rendering
+should check `maxStorageBuffersInVertexStage` before choosing that path. For
+assembled WGSL, see the
+[WGSL Support](/docs/api-reference/shadertools/wgsl-support) platform define for
+the same decision in shader source.
 
-| Limit                                       | Value                                               | WebGL parameter                       |
-| ------------------------------------------- | --------------------------------------------------- | ------------------------------------- |
-| `maxTextureDimension1D`                     | <L f="maxTextureDimension1D" />                     | WebGL2 does not support 1D textures   |
-| `maxTextureDimension2D`                     | <L f="maxTextureDimension2D" />                     | `GL.MAX_TEXTURE_SIZE`                 |
-| `maxTextureDimension3D`                     | <L f="maxTextureDimension3D" />                     | `GL.MAX_3D_TEXTURE_SIZE`              |
-| `maxTextureArrayLayers`                     | <L f="maxTextureArrayLayers" />                     | `GL.MAX_ARRAY_TEXTURE_LAYERS`         |
-| `maxBindGroups`                             | <L f="maxBindGroups" />                             | WebGL2 has no bind groups             |
-| `maxBindGroupsPlusVertexBuffers`            | <L f="maxBindGroupsPlusVertexBuffers" />            | WebGPU only                           |
-| `maxBindingsPerBindGroup`                   | <L f="maxBindingsPerBindGroup" />                   | WebGPU only                           |
-| `maxDynamicUniformBuffersPerPipelineLayout` | <L f="maxDynamicUniformBuffersPerPipelineLayout" /> | WebGPU only                           |
-| `maxDynamicStorageBuffersPerPipelineLayout` | <L f="maxDynamicStorageBuffersPerPipelineLayout" /> | WebGL2 has no storage buffers         |
-| `maxSampledTexturesPerShaderStage`          | <L f="maxSampledTexturesPerShaderStage" />          | `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`   |
-| `maxSamplersPerShaderStage`                 | <L f="maxSamplersPerShaderStage" />                 | `GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS` |
-| `maxStorageBuffersPerShaderStage`           | <L f="maxStorageBuffersPerShaderStage" />           | WebGL2 has no storage buffers         |
-| `maxStorageTexturesPerShaderStage`          | <L f="maxStorageTexturesPerShaderStage" />          | WebGL2 has no storage buffers         |
-| `maxUniformBuffersPerShaderStage`           | <L f="maxUniformBuffersPerShaderStage" />           | `GL.MAX_UNIFORM_BUFFER_BINDINGS`      |
-| `maxUniformBufferBindingSize`               | <L f="maxUniformBufferBindingSize" />               | `GL.MAX_UNIFORM_BLOCK_SIZE`           |
-| `maxStorageBufferBindingSize`               | <L f="maxStorageBufferBindingSize" />               | WebGL2 has no storage buffers         |
-| `maxBufferSize`                              | <L f="maxBufferSize" />                              | WebGPU reports the native buffer cap; WebGL uses the portable sentinel |
-| `minUniformBufferOffsetAlignment`           | <L f="minUniformBufferOffsetAlignment" />           | `GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT`  |
-| `minStorageBufferOffsetAlignment`           | <L f="minStorageBufferOffsetAlignment" />           | WebGPU only                           |
-| `maxVertexBuffers`                          | <L f="maxVertexBuffers" />                          | See [WebGPU issue][gpuweb4284]        |
-| `maxVertexAttributes`                       | <L f="maxVertexAttributes" />                       | `GL.MAX_VERTEX_ATTRIBS`               |
-| `maxVertexBufferArrayStride`                | <L f="maxVertexBufferArrayStride" />                | Can't be reliably determined on WebGL  |
-| `maxInterStageShaderVariables`             | <L f="maxInterStageShaderVariables" />             | `GL.MAX_VARYING_COMPONENTS`           |
-| `maxColorAttachments`                       | <L f="maxColorAttachments" />                       | `GL.MAX_COLOR_ATTACHMENTS`            |
-| `maxColorAttachmentBytesPerSample`          | <L f="maxColorAttachmentBytesPerSample" />          | WebGPU only                           |
-| `maxComputeWorkgroupStorageSize`            | <L f="maxComputeWorkgroupStorageSize" />            | WebGL2 has no compute shaders         |
-| `maxComputeInvocationsPerWorkgroup`         | <L f="maxComputeInvocationsPerWorkgroup" />         | WebGL2 has no compute shaders         |
-| `maxComputeWorkgroupSizeX`                  | <L f="maxComputeWorkgroupSizeX" />                  | WebGL2 has no compute shaders         |
-| `maxComputeWorkgroupSizeY`                  | <L f="maxComputeWorkgroupSizeY" />                  | WebGL2 has no compute shaders         |
-| `maxComputeWorkgroupSizeZ`                  | <L f="maxComputeWorkgroupSizeZ" />                  | WebGL2 has no compute shaders         |
-| `maxComputeWorkgroupsPerDimension`          | <L f="maxComputeWorkgroupsPerDimension" />          | WebGL2 has no compute shaders         |
+| Limit                                       | WebGPU<br />max                                      | WebGPU<br />core                                      | WebGL2                                      | WebGL parameter                       |
+| ------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- | ------------------------------------- |
+| `maxTextureDimension1D`                     | <L d="webgpu-max" f="maxTextureDimension1D" /> | <L d="webgpu-core" f="maxTextureDimension1D" /> | <L d="webgl" f="maxTextureDimension1D" /> | WebGL2 does not support 1D textures   |
+| `maxTextureDimension2D`                     | <L d="webgpu-max" f="maxTextureDimension2D" /> | <L d="webgpu-core" f="maxTextureDimension2D" /> | <L d="webgl" f="maxTextureDimension2D" /> | `GL.MAX_TEXTURE_SIZE`                 |
+| `maxTextureDimension3D`                     | <L d="webgpu-max" f="maxTextureDimension3D" /> | <L d="webgpu-core" f="maxTextureDimension3D" /> | <L d="webgl" f="maxTextureDimension3D" /> | `GL.MAX_3D_TEXTURE_SIZE`              |
+| `maxTextureArrayLayers`                     | <L d="webgpu-max" f="maxTextureArrayLayers" /> | <L d="webgpu-core" f="maxTextureArrayLayers" /> | <L d="webgl" f="maxTextureArrayLayers" /> | `GL.MAX_ARRAY_TEXTURE_LAYERS`         |
+| `maxBindGroups`                             | <L d="webgpu-max" f="maxBindGroups" /> | <L d="webgpu-core" f="maxBindGroups" /> | <L d="webgl" f="maxBindGroups" /> | WebGL2 has no bind groups             |
+| `maxBindGroupsPlusVertexBuffers`            | <L d="webgpu-max" f="maxBindGroupsPlusVertexBuffers" /> | <L d="webgpu-core" f="maxBindGroupsPlusVertexBuffers" /> | <L d="webgl" f="maxBindGroupsPlusVertexBuffers" /> | WebGPU only                           |
+| `maxBindingsPerBindGroup`                   | <L d="webgpu-max" f="maxBindingsPerBindGroup" /> | <L d="webgpu-core" f="maxBindingsPerBindGroup" /> | <L d="webgl" f="maxBindingsPerBindGroup" /> | WebGPU only                           |
+| `maxDynamicUniformBuffersPerPipelineLayout` | <L d="webgpu-max" f="maxDynamicUniformBuffersPerPipelineLayout" /> | <L d="webgpu-core" f="maxDynamicUniformBuffersPerPipelineLayout" /> | <L d="webgl" f="maxDynamicUniformBuffersPerPipelineLayout" /> | WebGPU only                           |
+| `maxDynamicStorageBuffersPerPipelineLayout` | <L d="webgpu-max" f="maxDynamicStorageBuffersPerPipelineLayout" /> | <L d="webgpu-core" f="maxDynamicStorageBuffersPerPipelineLayout" /> | <L d="webgl" f="maxDynamicStorageBuffersPerPipelineLayout" /> | WebGL2 has no storage buffers         |
+| `maxSampledTexturesPerShaderStage`          | <L d="webgpu-max" f="maxSampledTexturesPerShaderStage" /> | <L d="webgpu-core" f="maxSampledTexturesPerShaderStage" /> | <L d="webgl" f="maxSampledTexturesPerShaderStage" /> | `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`   |
+| `maxSamplersPerShaderStage`                 | <L d="webgpu-max" f="maxSamplersPerShaderStage" /> | <L d="webgpu-core" f="maxSamplersPerShaderStage" /> | <L d="webgl" f="maxSamplersPerShaderStage" /> | `GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS` |
+| `maxStorageBuffersPerShaderStage`           | <L d="webgpu-max" f="maxStorageBuffersPerShaderStage" /> | <L d="webgpu-core" f="maxStorageBuffersPerShaderStage" /> | <L d="webgl" f="maxStorageBuffersPerShaderStage" /> | WebGL2 has no storage buffers         |
+| `maxStorageBuffersInVertexStage`            | <L d="webgpu-max" f="maxStorageBuffersInVertexStage" /> | <L d="webgpu-core" f="maxStorageBuffersInVertexStage" /> | <L d="webgl" f="maxStorageBuffersInVertexStage" /> | WebGL2 has no storage buffers         |
+| `maxStorageBuffersInFragmentStage`          | <L d="webgpu-max" f="maxStorageBuffersInFragmentStage" /> | <L d="webgpu-core" f="maxStorageBuffersInFragmentStage" /> | <L d="webgl" f="maxStorageBuffersInFragmentStage" /> | WebGL2 has no storage buffers         |
+| `maxStorageTexturesPerShaderStage`          | <L d="webgpu-max" f="maxStorageTexturesPerShaderStage" /> | <L d="webgpu-core" f="maxStorageTexturesPerShaderStage" /> | <L d="webgl" f="maxStorageTexturesPerShaderStage" /> | WebGL2 has no storage buffers         |
+| `maxStorageTexturesInVertexStage`           | <L d="webgpu-max" f="maxStorageTexturesInVertexStage" /> | <L d="webgpu-core" f="maxStorageTexturesInVertexStage" /> | <L d="webgl" f="maxStorageTexturesInVertexStage" /> | WebGL2 has no storage textures        |
+| `maxStorageTexturesInFragmentStage`         | <L d="webgpu-max" f="maxStorageTexturesInFragmentStage" /> | <L d="webgpu-core" f="maxStorageTexturesInFragmentStage" /> | <L d="webgl" f="maxStorageTexturesInFragmentStage" /> | WebGL2 has no storage textures        |
+| `maxUniformBuffersPerShaderStage`           | <L d="webgpu-max" f="maxUniformBuffersPerShaderStage" /> | <L d="webgpu-core" f="maxUniformBuffersPerShaderStage" /> | <L d="webgl" f="maxUniformBuffersPerShaderStage" /> | `GL.MAX_UNIFORM_BUFFER_BINDINGS`      |
+| `maxUniformBufferBindingSize`               | <L d="webgpu-max" f="maxUniformBufferBindingSize" /> | <L d="webgpu-core" f="maxUniformBufferBindingSize" /> | <L d="webgl" f="maxUniformBufferBindingSize" /> | `GL.MAX_UNIFORM_BLOCK_SIZE`           |
+| `maxStorageBufferBindingSize`               | <L d="webgpu-max" f="maxStorageBufferBindingSize" /> | <L d="webgpu-core" f="maxStorageBufferBindingSize" /> | <L d="webgl" f="maxStorageBufferBindingSize" /> | WebGL2 has no storage buffers         |
+| `maxBufferSize`                              | <L d="webgpu-max" f="maxBufferSize" /> | <L d="webgpu-core" f="maxBufferSize" /> | <L d="webgl" f="maxBufferSize" /> | WebGPU reports the requested device limit; WebGL2 uses `Number.MAX_SAFE_INTEGER` as an unknown-limit sentinel |
+| `minUniformBufferOffsetAlignment`           | <L d="webgpu-max" f="minUniformBufferOffsetAlignment" /> | <L d="webgpu-core" f="minUniformBufferOffsetAlignment" /> | <L d="webgl" f="minUniformBufferOffsetAlignment" /> | `GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT`  |
+| `minStorageBufferOffsetAlignment`           | <L d="webgpu-max" f="minStorageBufferOffsetAlignment" /> | <L d="webgpu-core" f="minStorageBufferOffsetAlignment" /> | <L d="webgl" f="minStorageBufferOffsetAlignment" /> | WebGPU only                           |
+| `maxVertexBuffers`                          | <L d="webgpu-max" f="maxVertexBuffers" /> | <L d="webgpu-core" f="maxVertexBuffers" /> | <L d="webgl" f="maxVertexBuffers" /> | See [WebGPU issue][gpuweb4284]        |
+| `maxVertexAttributes`                       | <L d="webgpu-max" f="maxVertexAttributes" /> | <L d="webgpu-core" f="maxVertexAttributes" /> | <L d="webgl" f="maxVertexAttributes" /> | `GL.MAX_VERTEX_ATTRIBS`               |
+| `maxVertexBufferArrayStride`                | <L d="webgpu-max" f="maxVertexBufferArrayStride" /> | <L d="webgpu-core" f="maxVertexBufferArrayStride" /> | <L d="webgl" f="maxVertexBufferArrayStride" /> | Can't be reliably determined on WebGL  |
+| `maxInterStageShaderVariables`             | <L d="webgpu-max" f="maxInterStageShaderVariables" /> | <L d="webgpu-core" f="maxInterStageShaderVariables" /> | <L d="webgl" f="maxInterStageShaderVariables" /> | `GL.MAX_VARYING_COMPONENTS`           |
+| `maxColorAttachments`                       | <L d="webgpu-max" f="maxColorAttachments" /> | <L d="webgpu-core" f="maxColorAttachments" /> | <L d="webgl" f="maxColorAttachments" /> | `GL.MAX_COLOR_ATTACHMENTS`            |
+| `maxColorAttachmentBytesPerSample`          | <L d="webgpu-max" f="maxColorAttachmentBytesPerSample" /> | <L d="webgpu-core" f="maxColorAttachmentBytesPerSample" /> | <L d="webgl" f="maxColorAttachmentBytesPerSample" /> | WebGPU only                           |
+| `maxComputeWorkgroupStorageSize`            | <L d="webgpu-max" f="maxComputeWorkgroupStorageSize" /> | <L d="webgpu-core" f="maxComputeWorkgroupStorageSize" /> | <L d="webgl" f="maxComputeWorkgroupStorageSize" /> | WebGL2 has no compute shaders         |
+| `maxComputeInvocationsPerWorkgroup`         | <L d="webgpu-max" f="maxComputeInvocationsPerWorkgroup" /> | <L d="webgpu-core" f="maxComputeInvocationsPerWorkgroup" /> | <L d="webgl" f="maxComputeInvocationsPerWorkgroup" /> | WebGL2 has no compute shaders         |
+| `maxComputeWorkgroupSizeX`                  | <L d="webgpu-max" f="maxComputeWorkgroupSizeX" /> | <L d="webgpu-core" f="maxComputeWorkgroupSizeX" /> | <L d="webgl" f="maxComputeWorkgroupSizeX" /> | WebGL2 has no compute shaders         |
+| `maxComputeWorkgroupSizeY`                  | <L d="webgpu-max" f="maxComputeWorkgroupSizeY" /> | <L d="webgpu-core" f="maxComputeWorkgroupSizeY" /> | <L d="webgl" f="maxComputeWorkgroupSizeY" /> | WebGL2 has no compute shaders         |
+| `maxComputeWorkgroupSizeZ`                  | <L d="webgpu-max" f="maxComputeWorkgroupSizeZ" /> | <L d="webgpu-core" f="maxComputeWorkgroupSizeZ" /> | <L d="webgl" f="maxComputeWorkgroupSizeZ" /> | WebGL2 has no compute shaders         |
+| `maxComputeWorkgroupsPerDimension`          | <L d="webgpu-max" f="maxComputeWorkgroupsPerDimension" /> | <L d="webgpu-core" f="maxComputeWorkgroupsPerDimension" /> | <L d="webgl" f="maxComputeWorkgroupsPerDimension" /> | WebGL2 has no compute shaders         |
 
 ['ext_texture_filter_anisotropic']: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic
 

@@ -25,10 +25,12 @@ import {
   ArrowTemporalStarfieldControlPanel,
   makeArrowTemporalStarfieldControlPanelHtml
 } from './control-panel';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export const title = 'Time: Blinking Stars';
 export const description =
   'Scalar Arrow Timestamp and Duration columns normalized to relative Float32 GPU rows for blinking star instances.';
+const TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT = 6;
 
 export default class ArrowTemporalStarfieldAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
@@ -48,12 +50,16 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.activeRenderMode = this.device.type === 'webgpu' ? 'storage' : 'attributes';
+    const supportsStorage = supportsVertexStorageBuffers(
+      this.device,
+      TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT
+    );
+    this.activeRenderMode = supportsStorage ? 'storage' : 'attributes';
     this.controlPanel = new ArrowTemporalStarfieldControlPanel({
       initialState: {
         renderMode: this.activeRenderMode,
         timeColumn: this.activeTimeColumn,
-        supportsStorage: this.device.type === 'webgpu'
+        supportsStorage
       },
       handlers: {
         onRenderModeChange: this.handleRenderModeSelection,
@@ -92,7 +98,8 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
 
   handleRenderModeSelection = (requestedRenderMode: 'attributes' | 'storage'): void => {
     const nextRenderMode =
-      requestedRenderMode === 'storage' && this.device.type !== 'webgpu'
+      requestedRenderMode === 'storage' &&
+      !supportsVertexStorageBuffers(this.device, TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT)
         ? 'attributes'
         : requestedRenderMode;
     this.controlPanel.syncControls({renderMode: nextRenderMode});

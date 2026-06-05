@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # Shader
+
+<CoreDocsTabs group="pipelines" active="shader" />
 
 The `Shader` class holds a compiled shader.
 - It takes shader source code and compiles it during construction.

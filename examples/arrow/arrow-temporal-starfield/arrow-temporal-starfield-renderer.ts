@@ -41,6 +41,7 @@ import {
   temporalStarfield
 } from './arrow-temporal-starfield-shaders';
 import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '../arrow-renderer-utils';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 /** Public configuration for the Arrow temporal starfield layer. */
 export type ArrowTemporalStarfieldRendererProps = {
@@ -133,6 +134,7 @@ const DEFAULT_TEMPORAL_STARFIELD_PROPS = {
     'currentTimeRateMillisecondsPerSecond' | 'initialTimestampMilliseconds'
   >
 >;
+const TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT = 6;
 
 /** Example layer that renders timestamp/duration Arrow columns as blinking star instances. */
 export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {time: number}]> {
@@ -154,8 +156,16 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
     super();
     this.device = device;
     this.props = props;
+    const supportsStorageRendering = supportsVertexStorageBuffers(
+      this.device,
+      TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT
+    );
+    const requestedRenderMode =
+      props.renderMode ?? (supportsStorageRendering ? 'storage' : 'attributes');
     this.activeRenderMode =
-      props.renderMode ?? (this.device.type === 'webgpu' ? 'storage' : 'attributes');
+      requestedRenderMode === 'storage' && !supportsStorageRendering
+        ? 'attributes'
+        : requestedRenderMode;
     this.activeTimeColumn = props.timeColumn ?? 'timestamp';
     this.currentTimestampMilliseconds =
       props.initialTimestampMilliseconds ??
@@ -218,8 +228,10 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
     }
 
     if (renderMode === 'storage') {
-      if (this.device.type !== 'webgpu') {
-        throw new Error('Temporal starfield storage rendering requires WebGPU');
+      if (
+        !supportsVertexStorageBuffers(this.device, TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT)
+      ) {
+        throw new Error('Temporal starfield storage rendering requires vertex storage buffers');
       }
 
       return new Model(this.device, {
@@ -303,7 +315,8 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
       return;
     }
     const nextRenderMode =
-      props.renderMode === 'storage' && this.device.type !== 'webgpu'
+      props.renderMode === 'storage' &&
+      !supportsVertexStorageBuffers(this.device, TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT)
         ? 'attributes'
         : props.renderMode;
     if (nextRenderMode === this.activeRenderMode) {

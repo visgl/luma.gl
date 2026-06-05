@@ -83,7 +83,7 @@ struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) textureCoordinate : vec2<f32>,
   @location(1) textColor : vec4<f32>,
-  @interpolate(flat)
+  @interpolate(flat, either)
   @location(2) objectIndex : i32,
 };
 
@@ -227,7 +227,7 @@ struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) textureCoordinate : vec2<f32>,
   @location(1) textColor : vec4<f32>,
-  @interpolate(flat)
+  @interpolate(flat, either)
   @location(2) objectIndex : i32,
 };
 
@@ -468,7 +468,7 @@ struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) textureCoordinate : vec2<f32>,
   @location(1) textColor : vec4<f32>,
-  @interpolate(flat)
+  @interpolate(flat, either)
   @location(2) objectIndex : i32,
 };
 

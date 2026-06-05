@@ -15,19 +15,30 @@ struct AppUniforms {
 };
 
 @group(0) @binding(auto) var<uniform> app : AppUniforms;
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
 @group(0) @binding(auto) var<storage, read> faceColors : array<vec4<f32>>;
 @group(0) @binding(auto) var<storage, read> matrix : array<mat4x4<f32>>;
+#endif
 
 struct VertexInputs {
   @builtin(instance_index) instanceIndex : u32,
   @location(0) positions : vec3<f32>,
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
   @location(1) faceIndex : u32,
+#else
+  @location(1) colors : vec4<f32>,
+  @location(2) faceIndices : u32,
+  @location(3) matrixColumn0 : vec4<f32>,
+  @location(4) matrixColumn1 : vec4<f32>,
+  @location(5) matrixColumn2 : vec4<f32>,
+  @location(6) matrixColumn3 : vec4<f32>,
+#endif
 };
 
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) color : vec4<f32>,
-  @interpolate(flat)
+  @interpolate(flat, either)
   @location(1) objectIndex : i32,
 };
 
@@ -38,15 +49,29 @@ struct PickingFragmentOutputs {
 
 @vertex
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
   let modelMatrix = matrix[inputs.instanceIndex];
+#else
+  let modelMatrix = mat4x4<f32>(
+    inputs.matrixColumn0,
+    inputs.matrixColumn1,
+    inputs.matrixColumn2,
+    inputs.matrixColumn3
+  );
+#endif
   var outputs : FragmentInputs;
   outputs.Position =
     app.projectionMatrix *
     app.viewMatrix *
     modelMatrix *
     vec4<f32>(inputs.positions, 1.0);
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
   outputs.color = faceColors[inputs.faceIndex];
   outputs.objectIndex = i32(inputs.instanceIndex * ${MESH_FACE_COUNT}u + inputs.faceIndex);
+#else
+  outputs.color = inputs.colors;
+  outputs.objectIndex = i32(inputs.instanceIndex * ${MESH_FACE_COUNT}u + inputs.faceIndices);
+#endif
   return outputs;
 }
 

@@ -18,6 +18,7 @@ import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './wgsl-binding-debug';
+import {preprocess} from '../preprocessor/preprocessor';
 import {
   MODULE_WGSL_BINDING_DECLARATION_REGEXES,
   WGSL_BINDING_DECLARATION_REGEXES,
@@ -40,9 +41,7 @@ const FRAGMENT_SHADER_PROLOGUE = /* glsl */ `\
 precision highp float;
 `;
 
-/**
- * Options for `ShaderAssembler.assembleShaders()`
- */
+/** Props accepted by `ShaderAssembler` assembly methods. */
 export type AssembleShaderProps = AssembleShaderOptions & {
   platformInfo: PlatformInfo;
   /** WGSL: single shader source. */
@@ -53,6 +52,7 @@ export type AssembleShaderProps = AssembleShaderOptions & {
   fs?: string | null;
 };
 
+/** Shared shader assembly options. */
 export type AssembleShaderOptions = {
   /** information about the platform (which shader language & version, extensions etc.) */
   platformInfo: PlatformInfo;
@@ -60,8 +60,8 @@ export type AssembleShaderOptions = {
   id?: string;
   /** Modules to be injected */
   modules?: ShaderModule[];
-  /** Defines to be injected */
-  defines?: Record<string, boolean>;
+  /** Boolean or numeric preprocessor defines evaluated before shader assembly. */
+  defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
@@ -82,8 +82,8 @@ type AssembleStageOptions = {
   stage: 'vertex' | 'fragment';
   /** Modules to be injected */
   modules: any[];
-  /** Defines to be injected */
-  defines?: Record<string, boolean>;
+  /** Boolean or numeric preprocessor defines evaluated before shader assembly. */
+  defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
@@ -190,6 +190,7 @@ export function assembleShaderWGSL(
     stage,
     modules,
     // defines = {},
+    defines = {},
     hookFunctions = [],
     inject = {},
     log
@@ -200,7 +201,7 @@ export function assembleShaderWGSL(
   // const isVertex = type === 'vs';
   // const sourceLines = source.split('\n');
 
-  const coreSource = source;
+  const coreSource = preprocess(source, {defines});
 
   // Combine Module and Application Defines
   // const allDefines = {};
@@ -261,7 +262,8 @@ export function assembleShaderWGSL(
   const reservedBindingKeysByGroup = reserveRegisteredModuleBindings(
     modulesToInject,
     options._bindingRegistry,
-    usedBindingsByGroup
+    usedBindingsByGroup,
+    defines
   );
   const bindingAssignments: WGSLBindingAssignment[] = [];
 
@@ -269,21 +271,20 @@ export function assembleShaderWGSL(
     if (log) {
       checkShaderModuleDeprecations(module, coreSource, log);
     }
-    const relocation = relocateWGSLModuleBindings(
-      getShaderModuleSource(module, 'wgsl', log),
-      module,
-      {
-        usedBindingsByGroup,
-        bindingRegistry: options._bindingRegistry,
-        reservedBindingKeysByGroup
-      }
-    );
+    const preprocessedModuleSource = preprocess(getShaderModuleSource(module, 'wgsl', log), {
+      defines
+    });
+    const relocation = relocateWGSLModuleBindings(preprocessedModuleSource, module, {
+      usedBindingsByGroup,
+      bindingRegistry: options._bindingRegistry,
+      reservedBindingKeysByGroup
+    });
     bindingAssignments.push(...relocation.bindingAssignments);
-    const moduleSource = relocation.source;
+    const relocatedModuleSource = relocation.source;
     // Add the module source, and a #define that declares it presence
-    assembledSource += moduleSource;
+    assembledSource += relocatedModuleSource;
 
-    const injections = module.injections?.[stage] || {};
+    const injections = getWGSLModuleInjections(module);
     for (const key in injections) {
       const match = /^(v|f)s:#([\w-]+)$/.exec(key);
       if (match) {
@@ -301,16 +302,22 @@ export function assembleShaderWGSL(
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
 
-  assembledSource = injectShader(assembledSource, stage, declInjections);
+  assembledSource = injectShader(
+    assembledSource,
+    stage,
+    getWGSLDeclarationInjections(declInjections),
+    false,
+    'wgsl'
+  );
 
-  assembledSource += getShaderHooks(hookFunctionMap[stage], hookInjections);
+  assembledSource += getWGSLShaderHooks(hookFunctionMap, hookInjections);
   assembledSource += formatWGSLBindingAssignmentComments(bindingAssignments);
 
   // Add the version directive and actual source of this shader
   assembledSource += applicationRelocation.source;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, stage, mainInjections);
+  assembledSource = injectShader(assembledSource, stage, mainInjections, false, 'wgsl');
 
   assertNoUnresolvedAutoBindings(assembledSource);
 
@@ -332,7 +339,7 @@ function assembleShaderGLSL(
     language?: 'glsl' | 'wgsl';
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
-    defines?: Record<string, boolean>;
+    defines?: Record<string, boolean | number>;
     hookFunctions?: any[];
     inject?: Record<string, string | ShaderInjection>;
     prologue?: boolean;
@@ -496,6 +503,34 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
   };
 }
 
+function getWGSLModuleInjections(module: ShaderModule): Record<string, ShaderInjection> {
+  return {
+    ...(module.instance?.normalizedInjections.vertex || {}),
+    ...(module.instance?.normalizedInjections.fragment || {})
+  };
+}
+
+function getWGSLDeclarationInjections(
+  declarationInjections: Record<string, ShaderInjection[]>
+): Record<string, ShaderInjection[]> {
+  const unifiedDeclarations = [
+    ...(declarationInjections['vs:#decl'] || []),
+    ...(declarationInjections['fs:#decl'] || [])
+  ];
+
+  return unifiedDeclarations.length ? {'vs:#decl': unifiedDeclarations} : {};
+}
+
+function getWGSLShaderHooks(
+  hookFunctionMap: ReturnType<typeof normalizeShaderHooks>,
+  hookInjections: Record<string, ShaderInjection[]>
+): string {
+  return (
+    getShaderHooks(hookFunctionMap.vertex, hookInjections, 'wgsl') +
+    getShaderHooks(hookFunctionMap.fragment, hookInjections, 'wgsl')
+  );
+}
+
 /**
  * NOTE: Removed as id injection defeated caching of shaders
  * 
@@ -517,7 +552,7 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
 */
 
 /** Generates application defines from an object of key value pairs */
-function getApplicationDefines(defines: Record<string, boolean> = {}): string {
+function getApplicationDefines(defines: Record<string, boolean | number> = {}): string {
   let sourceText = '';
   for (const define in defines) {
     const value = defines[define];
@@ -784,7 +819,8 @@ function relocateWGSLApplicationBindingMatch(
 function reserveRegisteredModuleBindings(
   modules: ShaderModule[],
   bindingRegistry: Map<string, number> | undefined,
-  usedBindingsByGroup: Map<number, Set<number>>
+  usedBindingsByGroup: Map<number, Set<number>>,
+  defines: Record<string, boolean | number>
 ): Map<number, Map<number, string>> {
   const reservedBindingKeysByGroup = new Map<number, Map<number, string>>();
   if (!bindingRegistry) {
@@ -792,7 +828,7 @@ function reserveRegisteredModuleBindings(
   }
 
   for (const module of modules) {
-    for (const binding of getModuleWGSLBindingDeclarations(module)) {
+    for (const binding of getModuleWGSLBindingDeclarations(module, defines)) {
       const registryKey = getBindingRegistryKey(binding.group, module.name, binding.name);
       const location = bindingRegistry.get(registryKey);
       if (location !== undefined) {
@@ -843,9 +879,12 @@ function claimReservedBindingLocation(
   return true;
 }
 
-function getModuleWGSLBindingDeclarations(module: ShaderModule): {name: string; group: number}[] {
+function getModuleWGSLBindingDeclarations(
+  module: ShaderModule,
+  defines: Record<string, boolean | number>
+): {name: string; group: number}[] {
   const declarations: {name: string; group: number}[] = [];
-  const moduleSource = module.source || '';
+  const moduleSource = preprocess(module.source || '', {defines});
 
   for (const match of getWGSLBindingDeclarationMatches(
     moduleSource,

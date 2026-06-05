@@ -696,7 +696,10 @@ export const MultiCanvasExample: React.FC = () => {
   }
 
   return deviceType && presentationDevice ? (
-    <ReactExample component={MultiCanvasApp} componentProps={{deviceType, presentationDevice}} />
+    <ReactExample
+      component={MultiCanvasApp}
+      componentProps={{deviceType: getExampleDeviceType(presentationDevice), presentationDevice}}
+    />
   ) : (
     <ExamplePage>
       <div>Initializing device...</div>
@@ -750,7 +753,10 @@ export const TextureTesterExample: React.FC = () => {
       {presentationDeviceError ? (
         <div>{presentationDeviceError}</div>
       ) : deviceType && presentationDevice ? (
-        <TextureTesterApp deviceType={deviceType} presentationDevice={presentationDevice} />
+        <TextureTesterApp
+          deviceType={getExampleDeviceType(presentationDevice)}
+          presentationDevice={presentationDevice}
+        />
       ) : (
         <div>Initializing device...</div>
       )}
@@ -871,6 +877,10 @@ export const HelloTriangleExample: React.FC = props => (
     {...props}
   />
 );
+
+function getExampleDeviceType(device: {type: string}): 'webgl' | 'webgpu' {
+  return device.type === 'webgpu' ? 'webgpu' : 'webgl';
+}
 
 export const HelloTriangleGeometryExample: React.FC = props => (
   <LumaExample

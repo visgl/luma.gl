@@ -1,3 +1,5 @@
+import {Limit as L} from '@site/src/react-luma';
+
 # Using GPU Buffers
 
 See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for guidance on when buffer operations should use immediate resource helpers versus explicit command encoding.
@@ -7,20 +9,21 @@ See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for guidance on when b
 `device.limits` exposes the main caps that influence buffer sizing, GPU data
 representation, and binding pressure.
 
-| Limit | Current device value | Why it matters |
-| --- | --- | --- |
-| `maxBufferSize` | `device.limits.maxBufferSize` | Upper bound for one GPU buffer allocation. |
-| `maxUniformBufferBindingSize` | `device.limits.maxUniformBufferBindingSize` | Maximum bytes visible through one uniform-buffer binding. |
-| `maxStorageBufferBindingSize` | `device.limits.maxStorageBufferBindingSize` | Maximum bytes visible through one storage-buffer binding. |
-| `maxVertexBuffers` | `device.limits.maxVertexBuffers` | Total vertex-buffer bindings available to a render pipeline. |
-| `maxVertexAttributes` | `device.limits.maxVertexAttributes` | Total shader vertex attributes available. |
-| `maxUniformBuffersPerShaderStage` | `device.limits.maxUniformBuffersPerShaderStage` | Uniform-buffer binding pressure within one shader stage. |
-| `maxStorageBuffersPerShaderStage` | `device.limits.maxStorageBuffersPerShaderStage` | Storage-buffer binding pressure within one shader stage. |
-| `maxBindingsPerBindGroup` | `device.limits.maxBindingsPerBindGroup` | Total bindings available inside one WebGPU bind group. |
-| `maxBindGroupsPlusVertexBuffers` | `device.limits.maxBindGroupsPlusVertexBuffers` | Combined WebGPU pressure across bind groups and vertex buffers. |
+| Limit | WebGPU<br />max | WebGPU<br />core | WebGL2 | Why it matters |
+| --- | --- | --- | --- | --- |
+| `maxBufferSize` | <L d="webgpu-max" f="maxBufferSize" /> | <L d="webgpu-core" f="maxBufferSize" /> | <L d="webgl" f="maxBufferSize" /> | Upper bound for one GPU buffer allocation. |
+| `maxUniformBufferBindingSize` | <L d="webgpu-max" f="maxUniformBufferBindingSize" /> | <L d="webgpu-core" f="maxUniformBufferBindingSize" /> | <L d="webgl" f="maxUniformBufferBindingSize" /> | Maximum bytes visible through one uniform-buffer binding. |
+| `maxStorageBufferBindingSize` | <L d="webgpu-max" f="maxStorageBufferBindingSize" /> | <L d="webgpu-core" f="maxStorageBufferBindingSize" /> | <L d="webgl" f="maxStorageBufferBindingSize" /> | Maximum bytes visible through one storage-buffer binding. |
+| `maxVertexBuffers` | <L d="webgpu-max" f="maxVertexBuffers" /> | <L d="webgpu-core" f="maxVertexBuffers" /> | <L d="webgl" f="maxVertexBuffers" /> | Total vertex-buffer bindings available to a render pipeline. |
+| `maxVertexAttributes` | <L d="webgpu-max" f="maxVertexAttributes" /> | <L d="webgpu-core" f="maxVertexAttributes" /> | <L d="webgl" f="maxVertexAttributes" /> | Total shader vertex attributes available. |
+| `maxUniformBuffersPerShaderStage` | <L d="webgpu-max" f="maxUniformBuffersPerShaderStage" /> | <L d="webgpu-core" f="maxUniformBuffersPerShaderStage" /> | <L d="webgl" f="maxUniformBuffersPerShaderStage" /> | Uniform-buffer binding pressure within one shader stage. |
+| `maxStorageBuffersPerShaderStage` | <L d="webgpu-max" f="maxStorageBuffersPerShaderStage" /> | <L d="webgpu-core" f="maxStorageBuffersPerShaderStage" /> | <L d="webgl" f="maxStorageBuffersPerShaderStage" /> | Storage-buffer binding pressure within one shader stage. |
+| `maxStorageBuffersInVertexStage` | <L d="webgpu-max" f="maxStorageBuffersInVertexStage" /> | <L d="webgpu-core" f="maxStorageBuffersInVertexStage" /> | <L d="webgl" f="maxStorageBuffersInVertexStage" /> | Storage-buffer binding pressure available to vertex shaders. |
+| `maxBindingsPerBindGroup` | <L d="webgpu-max" f="maxBindingsPerBindGroup" /> | <L d="webgpu-core" f="maxBindingsPerBindGroup" /> | <L d="webgl" f="maxBindingsPerBindGroup" /> | Total bindings available inside one WebGPU bind group. |
+| `maxBindGroupsPlusVertexBuffers` | <L d="webgpu-max" f="maxBindGroupsPlusVertexBuffers" /> | <L d="webgpu-core" f="maxBindGroupsPlusVertexBuffers" /> | <L d="webgl" f="maxBindGroupsPlusVertexBuffers" /> | Combined WebGPU pressure across bind groups and vertex buffers. |
 
-See [Device Limits](/docs/api-reference/core/device-limits) for the live
-platform value table and the complete portable limit surface.
+See [Device Limits](/docs/api-reference/core/device-limits) for the complete
+portable limit surface.
 
 ## Buffer Operations
 

@@ -66,6 +66,7 @@ import {
   type ArrowTextRendererSetPropsResult
 } from './arrow-text-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export const title = 'Text: Strings/Dictionary strings';
 export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
@@ -77,6 +78,8 @@ type TextRendererUpdateOptions = {
   syncControls?: boolean;
   updateMetrics?: boolean;
 };
+const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
@@ -363,12 +366,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (modelKind === 'auto') {
       return modelKind;
     }
-    if (modelKind !== 'attribute' && this.device.type !== 'webgpu') {
+    if (
+      (modelKind === 'storage' || modelKind === 'storage-row-indexed') &&
+      !supportsVertexStorageBuffers(this.device, STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT)
+    ) {
       return 'auto';
     }
     if (
       modelKind === 'dictionary' &&
-      !isArrowTextDictionarySource(rendererTextInput.sourceVectors)
+      (!supportsVertexStorageBuffers(this.device, DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT) ||
+        !isArrowTextDictionarySource(rendererTextInput.sourceVectors))
     ) {
       return 'auto';
     }

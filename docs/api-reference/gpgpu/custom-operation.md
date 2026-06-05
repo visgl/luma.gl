@@ -1,4 +1,8 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
+
 # Custom Operations
+
+<GPGPUDocsTabs active="custom-operation" />
 
 Custom operations let applications add lazy `GPUTableEvaluator` operations that
 are dispatched through `backendRegistry`, just like the built-in operations.

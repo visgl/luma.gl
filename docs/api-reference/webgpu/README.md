@@ -9,7 +9,7 @@ be created using `luma.createDevice(props)`: See [`CreateDeviceProps`](/docs/api
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter}'@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 const device = await luma.createDevice({adapters: [webgpuAdapter], createCanvasContext: {width: 800, height: 600}});
 
@@ -17,13 +17,41 @@ const device = await luma.createDevice({adapters: [webgpuAdapter], createCanvasC
 const buffer = device.createBuffer(...);
 ```
 
+## Feature levels
+
+WebGPU devices default to the WebGPU core feature level:
+
+```typescript
+const device = await luma.createDevice({
+  type: 'webgpu',
+  adapters: [webgpuAdapter],
+  featureLevel: 'core'
+});
+```
+
+Applications that need the previous "request every supported feature and limit" behavior can opt in:
+
+```typescript
+const device = await luma.createDevice({
+  type: 'webgpu',
+  adapters: [webgpuAdapter],
+  featureLevel: 'max'
+});
+```
+
+Read `device.info.featureLevel` to see the effective level and use
+`device.limits` when selecting optional paths such as vertex-stage storage
+buffers. For assembled WGSL, shadertools also exposes
+`LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS`; see
+[WGSL Support](/docs/api-reference/shadertools/wgsl-support).
+
 ## Using for compute only
 
 If you are only interested in using WebGPU for compute and not for rendering (or if you want to manually create one or more `CanvasContext`s later), you can also create a WebGPU device without a `CanvasContext`:
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter}'@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 const device = await luma.createDevice({adapters: [webgpuAdapter]});
 

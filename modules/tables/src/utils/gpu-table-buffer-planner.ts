@@ -407,7 +407,7 @@ function allocateStorageAttributes({
     return {storageGroups: [], vertexColumns: columns};
   }
 
-  const maxStorageBuffers = Math.max(0, device.limits.maxStorageBuffersPerShaderStage || 0);
+  const maxStorageBuffers = getMaxVertexStageStorageBuffers(device);
   const storageGroups: GPUTableBufferGroup[] = [];
   const vertexColumns: GPUTablePlannedColumn[] = [];
   const storageColumns: GPUTablePlannedColumn[] = [];
@@ -539,10 +539,11 @@ function validatePlan(
   const storageBufferGroups = groups.filter(
     group => group.kind === 'separate-storage-column' || group.kind === 'stacked-storage-columns'
   );
-  if (storageBufferGroups.length > device.limits.maxStorageBuffersPerShaderStage) {
+  const maxStorageBuffers = getMaxVertexStageStorageBuffers(device);
+  if (storageBufferGroups.length > maxStorageBuffers) {
     throw new Error(
       `Attribute buffer allocation requires ${storageBufferGroups.length} storage buffers, ` +
-        `but this device supports ${device.limits.maxStorageBuffersPerShaderStage}`
+        `but this device supports ${maxStorageBuffers} in the vertex stage`
     );
   }
 
@@ -674,6 +675,14 @@ function shouldUseStorageBuffers(
   useStorageBuffers: boolean
 ): boolean {
   return useStorageBuffers && device.type === 'webgpu' && mode === 'table-with-row-geometries';
+}
+
+function getMaxVertexStageStorageBuffers(device: Device): number {
+  const limits = device.limits as unknown as Record<string, number | undefined>;
+  const maxStorageBuffersPerShaderStage = limits['maxStorageBuffersPerShaderStage'] ?? 0;
+  const maxStorageBuffersInVertexStage =
+    limits['maxStorageBuffersInVertexStage'] ?? maxStorageBuffersPerShaderStage;
+  return Math.max(0, Math.min(maxStorageBuffersPerShaderStage, maxStorageBuffersInVertexStage));
 }
 
 /**

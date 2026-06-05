@@ -12,6 +12,9 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/core**
+- WebGPU device creation now defaults to `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass `featureLevel: 'max'`.
+
 **@luma.gl/arrow**
 - Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
   - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`

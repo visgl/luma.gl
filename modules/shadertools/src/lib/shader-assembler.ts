@@ -32,7 +32,7 @@ export class ShaderAssembler {
 
   /**
    * A default shader assembler instance - the natural place to register default modules and hooks
-   * @returns
+   * @returns Shared default shader assembler.
    */
   static getDefaultShaderAssembler(): ShaderAssembler {
     ShaderAssembler.defaultShaderAssembler =
@@ -41,7 +41,8 @@ export class ShaderAssembler {
   }
 
   /**
-   * Add a default module that does not have to be provided with every call to assembleShaders()
+   * Add a default module that does not have to be provided with every assembly call.
+   * @param module Shader module to include in later assembly calls.
    */
   addDefaultModule(module: ShaderModule): void {
     if (
@@ -55,6 +56,7 @@ export class ShaderAssembler {
 
   /**
    * Remove a default module
+   * @param module Shader module to remove from later assembly calls.
    */
   removeDefaultModule(module: ShaderModule): void {
     const moduleName = typeof module === 'string' ? module : module.name;
@@ -63,8 +65,8 @@ export class ShaderAssembler {
 
   /**
    * Register a shader hook
-   * @param hook
-   * @param opts
+   * @param hook Stage-prefixed hook signature, such as `vs:OFFSET_POSITION(inout vec4 position)`.
+   * @param opts Optional hook metadata such as always-on header and footer source.
    */
   addShaderHook(hook: string, opts?: any): void {
     if (opts) {
@@ -75,9 +77,8 @@ export class ShaderAssembler {
 
   /**
    * Assemble a WGSL unified shader
-   * @param platformInfo
-   * @param props
-   * @returns
+   * @param props WGSL source, platform information, shader modules, defines, and injections.
+   * @returns Assembled WGSL source, resolved modules, uniforms, and binding debug metadata.
    */
   assembleWGSLShader(props: AssembleShaderProps): {
     source: string;
@@ -88,24 +89,29 @@ export class ShaderAssembler {
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const {source, getUniforms, bindingAssignments} = assembleWGSLShader({
+    const defines = getShaderPreprocessorDefines(props, modules);
+    const preprocessedApplicationSource =
+      props.platformInfo.shaderLanguage === 'wgsl' && props.source
+        ? preprocess(props.source, {defines})
+        : props.source;
+    const {
+      source: assembledSource,
+      getUniforms,
+      bindingAssignments
+    } = assembleWGSLShader({
       ...props,
       // @ts-expect-error
-      source: props.source,
+      source: preprocessedApplicationSource,
+      defines,
       _bindingRegistry: this._wgslBindingRegistry,
       modules,
       hookFunctions
     });
-    const defines = {
-      ...modules.reduce<Record<string, boolean>>((accumulator, module) => {
-        Object.assign(accumulator, module.defines);
-        return accumulator;
-      }, {}),
-      ...props.defines
-    };
     // WGSL does not have built-in preprocessing support (just compile time constants)
     const preprocessedSource =
-      props.platformInfo.shaderLanguage === 'wgsl' ? preprocess(source, {defines}) : source;
+      props.platformInfo.shaderLanguage === 'wgsl'
+        ? preprocess(assembledSource, {defines})
+        : assembledSource;
     return {
       source: preprocessedSource,
       getUniforms,
@@ -117,9 +123,8 @@ export class ShaderAssembler {
 
   /**
    * Assemble a pair of shaders into a single shader program
-   * @param platformInfo
-   * @param props
-   * @returns
+   * @param props GLSL vertex and fragment source, platform information, shader modules, defines, and injections.
+   * @returns Assembled GLSL source, resolved modules, and combined uniform getter.
    */
   assembleGLSLShaderPair(props: AssembleShaderProps): {
     vs: string;
@@ -171,4 +176,28 @@ export class ShaderAssembler {
     initializeShaderModules(modules);
     return modules;
   }
+}
+
+function getShaderPreprocessorDefines(
+  props: AssembleShaderProps,
+  modules: ShaderModule[]
+): Record<string, boolean | number> {
+  return {
+    ...getPlatformPreprocessorDefines(props.platformInfo),
+    ...modules.reduce<Record<string, boolean | number>>((accumulator, module) => {
+      Object.assign(accumulator, module.defines);
+      return accumulator;
+    }, {}),
+    ...props.defines
+  };
+}
+
+function getPlatformPreprocessorDefines(
+  platformInfo: AssembleShaderProps['platformInfo']
+): Record<string, boolean> {
+  const limits = platformInfo.limits || {};
+  return {
+    LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS:
+      platformInfo.type === 'webgpu' && (limits['maxStorageBuffersInVertexStage'] || 0) > 0
+  };
 }
