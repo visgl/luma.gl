@@ -1,6 +1,6 @@
 import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
 
-# API Design Philosophy
+# Design Philosophy
 
 <ApiOverviewDocsTabs active="api-design" />
 

@@ -1,4 +1,8 @@
+import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-tabs';
+
 # Shader Types Guide
+
+<ShaderLevelDocsTabs active="shader-types" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />

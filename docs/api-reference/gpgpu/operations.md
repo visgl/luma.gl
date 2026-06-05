@@ -1,4 +1,8 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
+
 # Operations
+
+<GPGPUDocsTabs active="operations" />
 
 This page is the top-level API reference for the lazy operations exported by `@luma.gl/gpgpu`.
 

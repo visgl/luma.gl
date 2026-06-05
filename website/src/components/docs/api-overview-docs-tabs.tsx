@@ -14,10 +14,10 @@ type ApiOverviewDocsTab = {
 export type ApiOverviewDocsTabId = 'overview' | 'api-design' | 'learning-resources' | 'webgpu-vs-webgl';
 
 const API_OVERVIEW_DOCS_TABS: ApiOverviewDocsTab[] = [
-  {id: 'overview', label: 'Overview', href: '/docs/api-guide'},
+  {id: 'overview', label: 'A Tale of Three APIs', href: '/docs/api-guide'},
   {
     id: 'api-design',
-    label: 'API Design Philosophy',
+    label: 'Design Philosophy',
     href: '/docs/api-guide/background/api-design'
   },
   {

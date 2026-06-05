@@ -1,4 +1,8 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
+
 # GPUTableEvaluator
+
+<GPGPUDocsTabs active="gpu-table" />
 
 `GPUTableEvaluator` is the core data container in `@luma.gl/gpgpu`. It
 describes a 2D table of numeric values that can be backed by CPU data, by

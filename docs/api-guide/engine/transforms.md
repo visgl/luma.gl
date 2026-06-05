@@ -1,4 +1,4 @@
-# GPU Computations and Transforms 
+# GPU Computations
 
 Some operations can be very efficiently executed on the GPU.
 

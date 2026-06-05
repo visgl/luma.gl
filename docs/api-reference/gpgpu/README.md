@@ -1,4 +1,8 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
+
 # Overview
+
+<GPGPUDocsTabs active="overview" />
 
 The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 
