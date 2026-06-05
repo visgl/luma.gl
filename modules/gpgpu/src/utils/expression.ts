@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /** JSON-friendly scalar expression tree for elementwise row transforms. */
-export type ExpressionLiteral = number | number[];
+export type ExpressionLiteral = number | readonly number[];
 
 export type Expression<OpT extends string = string> =
   | {kind: 'input'; name: string}

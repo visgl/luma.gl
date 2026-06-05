@@ -66,7 +66,7 @@ function evaluateExpression(
       if (Array.isArray(expression.value)) {
         return expression.value[laneIndex] ?? 0;
       }
-      return expression.value;
+      return expression.value as number;
 
     case 'call': {
       validateArity(expression.op, expression.args.length);

@@ -183,6 +183,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     const result = await rounded.evaluate(device, {name: 'positions32'});
 
     expect(result.name).toBe('positions32');
+    expect(result.format).toBe('float32x4');
     expect(result.stride).toBe(4);
     expect(Array.from(await readFloat32Vector(result))).toEqual(splitFloat64Rows(values, 2));
 

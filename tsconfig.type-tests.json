@@ -25,10 +25,23 @@
       ],
       "@luma.gl/engine/*": [
         "modules/engine/src/*"
+      ],
+      "@luma.gl/gpgpu": [
+        "modules/gpgpu/src/index.ts"
+      ],
+      "@luma.gl/gpgpu/*": [
+        "modules/gpgpu/src/*"
+      ],
+      "@luma.gl/tables": [
+        "modules/tables/src/index.ts"
+      ],
+      "@luma.gl/tables/*": [
+        "modules/tables/src/*"
       ]
     }
   },
   "include": [
+    "modules/gpgpu/test/gpu-vector/gpu-data-evaluator-types.spec.ts",
     "modules/shadertools/test/lib/uniform-types.spec.ts",
     "modules/engine/test/shader-inputs-types.spec.ts"
   ],

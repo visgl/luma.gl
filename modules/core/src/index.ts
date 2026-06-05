@@ -184,6 +184,7 @@ export {
   type DataTypeInfo,
   type PrimitiveDataTypeT,
   type SignedDataTypeT,
+  type TypedArraySignedDataTypeT,
   type TypedArrayConstructorT,
   type NormalizedTypedArrayConstructorT
 } from './shadertypes/data-types/data-types';

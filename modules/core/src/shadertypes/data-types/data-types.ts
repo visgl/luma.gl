@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {TypedArray} from '../../types';
+
 /**
  * Primitive data types that shaders can perform calculations in and declare variables with.
  * @note attribute inputs and texture samples can be populated from a different in-memory types, see below.
@@ -110,6 +112,23 @@ export type DataTypeIsIntegerT<T extends NormalizedDataType = NormalizedDataType
   | 'sint32'
   ? true
   : false;
+
+/** @type The signed data type represented by a typed array instance. */
+export type TypedArraySignedDataTypeT<ArrayT extends TypedArray> = ArrayT extends Float32Array
+  ? 'float32'
+  : ArrayT extends Uint32Array
+    ? 'uint32'
+    : ArrayT extends Int32Array
+      ? 'sint32'
+      : ArrayT extends Uint16Array
+        ? 'uint16'
+        : ArrayT extends Int16Array
+          ? 'sint16'
+          : ArrayT extends Uint8Array | Uint8ClampedArray
+            ? 'uint8'
+            : ArrayT extends Int8Array
+              ? 'sint8'
+              : SignedDataType;
 
 /** @type A typed array constructor type appropriate to hold the actual values of a data type (i.e. integers for normalized data types) */
 export type TypedArrayConstructorT<T extends NormalizedDataType> = T extends 'uint8'
