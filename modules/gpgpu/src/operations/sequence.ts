@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 
 type SequenceInputs = {
@@ -16,12 +16,12 @@ class SequenceOperation extends Operation<SequenceInputs> {
   name = 'sequence';
 
   /** Lazy output table for the generated sequence. */
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
   constructor(start: number, length: number, step: number) {
     super({start, step});
 
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       type: 'sint32',
       size: 1,
       length,
@@ -39,7 +39,7 @@ class SequenceOperation extends Operation<SequenceInputs> {
 /**
  * Generates an integer sequence with `count` values starting at `start` and incrementing by `step`.
  */
-export function sequence(count: number, start: number = 0, step: number = 1): GPUTableEvaluator {
+export function sequence(count: number, start: number = 0, step: number = 1): GPUDataEvaluator {
   ensureInteger('count', count);
   ensureInteger('start', start);
   ensureInteger('step', step);

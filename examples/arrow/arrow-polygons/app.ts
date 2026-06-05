@@ -14,6 +14,7 @@ import {
   makeArrowPolygonExampleData
 } from './arrow-polygon-data';
 import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from './arrow-polygon-renderer';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowPolygonControlPanel, makeArrowPolygonControlPanelHtml} from './control-panel';
 
 export const title = 'Polygons';
@@ -21,12 +22,15 @@ export const description =
   'Tessellates Arrow polygon, multipolygon, and geoarrow.geometry DenseUnion rows with math.gl earcut, including holes, row colors, and vertex colors.';
 
 export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowPolygonControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};
 
   readonly device: Device;
   readonly controlPanel: ArrowPolygonControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowPolygonControlPanelHtml()
+  });
   layer: ArrowPolygonRenderer;
   rowCountKind: ArrowPolygonRowCountKind = '10k-stream';
   sourceKind: ArrowPolygonSourceKind = 'polygon';
@@ -55,6 +59,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   }
 
   override async onInitialize(): Promise<void> {
+    this.panels.mount();
     this.controlPanel.initialize();
     this.streamPolygonInput(this.rowCountKind, this.sourceKind, this.colorKind);
   }
@@ -75,6 +80,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer.destroy();
   }
 
@@ -101,6 +107,12 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
     this.controlPanel.setPickedLabel('Hover polygon');
     this.controlPanel.setStreamingBatchStatus(0, sourceData.batchCount);
     this.updateMetrics();
+    const polygonTableStream = this.panels.beginLoadedTableStream({
+      id: 'polygons-source',
+      label: 'Loaded polygon source',
+      kind: 'source',
+      recordBatches: sourceData.recordBatches
+    });
 
     this.layer.setProps({
       data: createStreamingPolygonRecordBatchIterator(sourceData.recordBatches)[
@@ -110,6 +122,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
         if (this.isFinalized) {
           return;
         }
+        polygonTableStream.setLoadedBatchCount(loadedBatchCount);
         this.controlPanel.setStreamingBatchStatus(loadedBatchCount, sourceData.batchCount);
         this.controlPanel.setMetrics(metrics);
       }

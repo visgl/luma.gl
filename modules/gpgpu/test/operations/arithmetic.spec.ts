@@ -9,10 +9,11 @@ import {
   subtract,
   multiply,
   interleave,
+  swizzle,
   log,
   tan,
   cleanEvaluate,
-  GPUTableEvaluator
+  GPUDataEvaluator
 } from '@luma.gl/gpgpu';
 import {
   getTestDevice,
@@ -31,18 +32,18 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
     });
 
     const TEST_CASES: {
-      eval: GPUTableEvaluator;
+      eval: GPUDataEvaluator;
       expected: TestData;
       runCount?: number;
     }[] = [
       {
         // deck.gl position linear interpolation
         eval: (function () {
-          const start = GPUTableEvaluator.fromArray(
+          const start = GPUDataEvaluator.fromArray(
             new Float32Array([0, 0, 0, -1, 1, -1, 2, 4, 6, -100, -101, -102]),
             {size: 3}
           );
-          const end = GPUTableEvaluator.fromArray(
+          const end = GPUDataEvaluator.fromArray(
             new Float32Array([5, 4, 3, 1, -1, 1, -2, -4, -6, -100, -100, -100]),
             {size: 3}
           );
@@ -59,11 +60,11 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       {
         // deck.gl color linear interpolation
         eval: (function () {
-          const start = GPUTableEvaluator.fromArray(
+          const start = GPUDataEvaluator.fromArray(
             new Uint8Array([0, 0, 0, 255, 255, 255, 255, 255, 10, 20, 40, 80, 200, 160, 80, 40]),
             {size: 4, normalized: true}
           );
-          const end = GPUTableEvaluator.fromArray(
+          const end = GPUDataEvaluator.fromArray(
             new Uint8Array([
               255, 255, 255, 255, 0, 0, 255, 255, 100, 100, 100, 100, 0, 180, 200, 0
             ]),
@@ -84,27 +85,15 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       {
         // web mercator projection
         eval: (function () {
-          const pos = GPUTableEvaluator.fromArray(
+          const pos = GPUDataEvaluator.fromArray(
             new Float32Array([
               -122.4119, 37.7829, -0.11843, 51.5129, -74.01295, 40.7107, -58.4169, -34.6194,
               86.9207, 27.9882, 0, -84.999
             ]),
             {size: 2}
           );
-          const lon = new GPUTableEvaluator({
-            id: 'x',
-            source: pos,
-            type: 'float32',
-            size: 1,
-            offset: 0
-          });
-          const lat = new GPUTableEvaluator({
-            id: 'y',
-            source: pos,
-            type: 'float32',
-            size: 1,
-            offset: 4
-          });
+          const lon = swizzle(pos, [0]);
+          const lat = swizzle(pos, [1]);
 
           // radians(lon)
           const x = multiply(lon, Math.PI / 180);
@@ -143,8 +132,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         const stat = getRunStats(device);
         const beforeCount = stat?.count ?? 0;
         await cleanEvaluate(device, testCase);
-        await testCase.eval.readValue();
-        expect(verifyTableValue(testCase.eval, testCase.expected, 1e-6)).toBe(null);
+        expect(await verifyTableValue(testCase.eval, testCase.expected, 1e-6)).toBe(null);
         if (stat) {
           expect(stat.count - beforeCount).toBe(testCase.runCount ?? 1);
         }

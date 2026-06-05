@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {getValueAtRow} from './common';
 
 export const gather: OperationHandler<{
-  ids: GPUTableEvaluator;
-  sourceValues: GPUTableEvaluator;
+  ids: GPUDataEvaluator;
+  sourceValues: GPUDataEvaluator;
 }> = async ({inputs, output, target}) => {
   const {ids, sourceValues} = inputs;
   const idsValue = ids.value;

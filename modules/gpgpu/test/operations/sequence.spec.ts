@@ -4,7 +4,7 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, GPUTableEvaluator, sequence} from '@luma.gl/gpgpu';
+import {cleanEvaluate, GPUDataEvaluator, sequence} from '@luma.gl/gpgpu';
 import {getTestDevice, TestData, verifyTableValue} from './fixtures';
 
 for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
@@ -15,7 +15,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       device = await getTestDevice(deviceType);
     });
 
-    const TEST_CASES: {eval: GPUTableEvaluator; expected: TestData}[] = [
+    const TEST_CASES: {eval: GPUDataEvaluator; expected: TestData}[] = [
       {
         eval: sequence(5),
         expected: {value: [0, 1, 2, 3, 4], type: 'sint32', size: 1}
@@ -37,8 +37,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           return;
         }
         await cleanEvaluate(device, testCase);
-        await testCase.eval.readValue();
-        expect(verifyTableValue(testCase.eval, testCase.expected)).toBe(null);
+        expect(await verifyTableValue(testCase.eval, testCase.expected)).toBe(null);
         testCase.eval.destroy();
       });
     }

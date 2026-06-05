@@ -3,7 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {extrudeShapes, parseFont, TextGeometry} from '../../src/text-3d/index';
+import {
+  buildText3DGlyphAtlas,
+  extrudeShapes,
+  layoutText3DGlyphRows,
+  parseFont,
+  TextGeometry
+} from '../../src/text-3d/index';
+import {
+  makeArrowText3DGlyphData,
+  makeArrowText3DTextTable
+} from '../../../../examples/arrow/arrow-text-3d/arrow-text-3d-data';
 import {simpleFont} from './data/simple-font';
 import {Vector3} from '@math.gl/core';
 
@@ -89,6 +99,117 @@ test('extrusion preserves holes in polygonal glyphs', t => {
   t.ok(
     Math.abs(frontFaceArea - expectedArea) < expectedArea * 0.05,
     'triangulation honors inner hole'
+  );
+  t.end();
+});
+
+test('Text3D glyph atlas reuses renderable glyph geometry in stable first-use order', t => {
+  const font = parseFont(simpleFont);
+  const glyphAtlas = buildText3DGlyphAtlas(['ABBA'], {
+    font,
+    size: 10,
+    depth: 2,
+    curveSegments: 2
+  });
+
+  t.deepEqual(
+    glyphAtlas.glyphs.map(glyph => glyph.glyphCharacter),
+    ['A', '?'],
+    'missing source glyphs reuse the fallback glyph once'
+  );
+  t.equal(glyphAtlas.glyphs[0].firstVertex, 0, 'first glyph starts the shared geometry');
+  t.equal(
+    glyphAtlas.glyphs[1].firstVertex,
+    glyphAtlas.glyphs[0].vertexCount,
+    'second glyph starts after the first shared range'
+  );
+  t.equal(
+    glyphAtlas.geometry.vertexCount,
+    glyphAtlas.glyphs.reduce((vertexCount, glyph) => vertexCount + glyph.vertexCount, 0),
+    'shared geometry contains each renderable used glyph once'
+  );
+  t.end();
+});
+
+test('Text3D glyph layout advances spaces and rows without emitting whitespace geometry', t => {
+  const font = parseFont(simpleFont);
+  const glyphAtlas = buildText3DGlyphAtlas(['A A', 'A'], {
+    font,
+    size: 10,
+    depth: 2,
+    curveSegments: 2
+  });
+  const glyphLayout = layoutText3DGlyphRows(['A A', 'A'], glyphAtlas);
+
+  t.deepEqual(
+    glyphAtlas.glyphs.map(glyph => glyph.glyphCharacter),
+    ['A'],
+    'space advances text without entering the renderable glyph atlas'
+  );
+  t.equal(glyphLayout.instances.length, 3, 'only visible glyphs emit instances');
+  t.ok(
+    glyphLayout.instances[1].offset[0] > glyphLayout.instances[0].offset[0],
+    'space contributes horizontal advance between visible glyphs'
+  );
+  t.ok(
+    glyphLayout.instances[2].offset[1] < glyphLayout.instances[0].offset[1],
+    'next row advances downward by line height'
+  );
+  t.end();
+});
+
+test('Text3D glyph layout centers each row using the current font advances', t => {
+  const font = parseFont(simpleFont);
+  const glyphAtlas = buildText3DGlyphAtlas(['A', 'AA'], {
+    font,
+    size: 10,
+    depth: 2,
+    curveSegments: 2
+  });
+  const glyphLayout = layoutText3DGlyphRows(['A', 'AA'], glyphAtlas, {align: 'center'});
+  const [firstRowGlyph, secondRowFirstGlyph, secondRowSecondGlyph] = glyphLayout.instances;
+
+  t.equal(firstRowGlyph.offset[0], -font.measureLineWidth('A', 10) / 2, 'single glyph row centers');
+  t.equal(
+    secondRowFirstGlyph.offset[0],
+    -font.measureLineWidth('AA', 10) / 2,
+    'multi-glyph row starts at its centered advance'
+  );
+  t.equal(
+    secondRowSecondGlyph.offset[0],
+    secondRowFirstGlyph.offset[0] + font.getGlyphAdvance('A', 10),
+    'later glyphs retain source advance after centered start'
+  );
+  t.end();
+});
+
+test('Arrow 3D text groups repeated glyph ids and keeps only used atlas glyphs', t => {
+  const font = parseFont(simpleFont);
+  const textTable = makeArrowText3DTextTable(['A A']);
+  const glyphAtlas = buildText3DGlyphAtlas(['A A'], {
+    font,
+    size: 10,
+    depth: 2,
+    curveSegments: 2
+  });
+  const glyphData = makeArrowText3DGlyphData(textTable, glyphAtlas);
+  const glyphIds = glyphData.glyphInstanceTable.getChild('glyphIds');
+
+  t.deepEqual(
+    glyphIds?.toArray(),
+    new Uint32Array([0, 0]),
+    'repeated visible glyphs reuse one grouped glyph id'
+  );
+  t.deepEqual(
+    glyphAtlas.glyphs.map(glyph => glyph.glyphCharacter),
+    ['A'],
+    'shared glyph geometry excludes whitespace-only source characters'
+  );
+  t.equal(glyphData.drawRanges.length, 1, 'one used glyph produces one ranged draw');
+  t.equal(
+    glyphData.glyphInstanceTable.batches[0]?.numRows,
+    2,
+    'grouped Arrow record batch retains both visible glyph occurrences'
   );
   t.end();
 });

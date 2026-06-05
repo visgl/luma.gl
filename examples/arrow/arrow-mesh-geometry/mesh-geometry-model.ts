@@ -20,6 +20,7 @@ import {
   WGSL_SHADER,
   app
 } from './mesh-geometry-model-shaders';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export const MESH_GEOMETRY_MATRIX_ARROW_PATHS = {
   matrixColumn0: 'matrix',
@@ -27,6 +28,7 @@ export const MESH_GEOMETRY_MATRIX_ARROW_PATHS = {
   matrixColumn2: 'matrix',
   matrixColumn3: 'matrix'
 };
+const MESH_VERTEX_STORAGE_BUFFER_COUNT = 2;
 
 export type MeshGeometryShaderInputs = ShaderInputs<{
   app: typeof app.props;
@@ -52,13 +54,20 @@ export function createMeshGeometryShaderInputs(device: Device): MeshGeometryShad
 }
 
 export function getMeshGeometryShaderLayout(device: Device) {
-  return device.type === 'webgpu' ? WEBGPU_MESH_SHADER_LAYOUT : WEBGL_MESH_SHADER_LAYOUT;
+  return supportsMeshGeometryStorageRendering(device)
+    ? WEBGPU_MESH_SHADER_LAYOUT
+    : WEBGL_MESH_SHADER_LAYOUT;
+}
+
+export function supportsMeshGeometryStorageRendering(device: Device): boolean {
+  return supportsVertexStorageBuffers(device, MESH_VERTEX_STORAGE_BUFFER_COUNT);
 }
 
 export function createMeshGeometryModel(
   device: Device,
   {id, geometry, table, shaderInputs, faceColors, parameters}: MeshGeometryModelProps
 ): GPUTableModel {
+  const supportsStorageRendering = supportsMeshGeometryStorageRendering(device);
   return new GPUTableModel(device, {
     id,
     geometry,
@@ -68,6 +77,7 @@ export function createMeshGeometryModel(
     vs: VS_GLSL,
     fs: FS_GLSL,
     shaderLayout: getMeshGeometryShaderLayout(device),
+    defines: {LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS: supportsStorageRendering},
     shaderInputs,
     modules: [getArrowPickingModule(device)] as ShaderModule[],
     ...(faceColors ? {bindings: {faceColors: getGPUVectorBuffer(faceColors)}} : {}),
@@ -83,6 +93,7 @@ export function createMeshGeometryPickingModel(
     return null;
   }
 
+  const supportsStorageRendering = supportsMeshGeometryStorageRendering(device);
   return new GPUTableModel(device, {
     id,
     geometry,
@@ -94,6 +105,7 @@ export function createMeshGeometryPickingModel(
     fragmentEntryPoint: 'fragmentPicking',
     modules: [indexPicking] as ShaderModule[],
     shaderLayout: getMeshGeometryShaderLayout(device),
+    defines: {LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS: supportsStorageRendering},
     ...(faceColors ? {bindings: {faceColors: getGPUVectorBuffer(faceColors)}} : {}),
     shaderInputs,
     colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],

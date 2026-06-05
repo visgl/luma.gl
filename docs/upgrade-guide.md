@@ -12,6 +12,9 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/core**
+- WebGPU device creation now defaults to `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass `featureLevel: 'max'`.
+
 **@luma.gl/arrow**
 - Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
   - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
@@ -21,6 +24,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   - `makeGPUDataFromArrowData(...)`, `makeGPUVectorFromArrow(...)`, `makeGPURecordBatchFromArrowRecordBatch(...)`, and `makeGPUTableFromArrowTable(...)`
   - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`
 - Arrow append-in-place helpers and streaming wrapper classes have been removed. Convert each Arrow record batch with `makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, ...)` and retain it with `gpuTable.addBatch(...)`.
+
+**@luma.gl/gpgpu**
+- `GPUTableEvaluator` and `getGPUTableEvaluator()` have been removed. Use `GPUDataEvaluator` and `getGPUDataEvaluator()` for one packed fixed-width `GPUData` chunk.
+- Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
 
 ## Upgrading to v9.3
 

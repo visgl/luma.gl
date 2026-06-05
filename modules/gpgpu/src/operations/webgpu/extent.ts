@@ -5,8 +5,9 @@
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
+import {getWebGPUDispatchLayout, getWebGPUDispatchWorkgroupIndex} from './common/dispatch';
 import {getWGSLType} from './common/helper';
 import {
   getInputBinding,
@@ -18,7 +19,7 @@ import {
 
 type ExtentInputMode = 'raw' | 'partial';
 
-export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async ({
+export const extent: OperationHandler<{sourceValues: GPUDataEvaluator}> = async ({
   inputs,
   output,
   target
@@ -80,7 +81,7 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
         break;
       }
 
-      currentInput = new GPUTableEvaluator({
+      currentInput = new GPUDataEvaluator({
         buffer: nextOutputBuffer,
         type: output.type,
         size: 2,
@@ -108,18 +109,22 @@ function runExtentPass({
   outputStride,
   outputOffset
 }: {
-  input: GPUTableEvaluator;
+  input: GPUDataEvaluator;
   inputMode: ExtentInputMode;
   inputGroupCount: number;
   channelCount: number;
-  outputType: GPUTableEvaluator['type'];
+  outputType: GPUDataEvaluator['type'];
   outputBuffer: Buffer;
   outputLength: number;
   outputStride: number;
   outputOffset: number;
 }): void {
   const wgslType = getWGSLType(outputType);
-  const outputTable = new GPUTableEvaluator({
+  const dispatchLayout = getWebGPUDispatchLayout(
+    outputLength,
+    outputBuffer.device.limits.maxComputeWorkgroupsPerDimension
+  );
+  const outputTable = new GPUDataEvaluator({
     buffer: outputBuffer,
     type: outputType,
     size: 2,
@@ -141,7 +146,7 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
   @builtin(workgroup_id) workgroupId: vec3<u32>,
   @builtin(local_invocation_id) localId: vec3<u32>
 ) {
-  let outputRowIndex = workgroupId.x;
+  let outputRowIndex = ${getWebGPUDispatchWorkgroupIndex(dispatchLayout)};
   if (outputRowIndex >= ${outputLength}u) {
     return;
   }
@@ -198,12 +203,12 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
 
   const bindings: Record<string, Buffer> = {result: outputBuffer};
   if (!input.isConstant) {
-    bindings['sourceValues'] = getGPUVectorBuffer(input.gpuVector);
+    bindings['sourceValues'] = input.buffer;
   }
   computation.setBindings(bindings);
 
   const computePass = outputBuffer.device.beginComputePass({});
-  computation.dispatch(computePass, outputLength);
+  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
   computePass.end();
   outputBuffer.device.submit();
   computation.destroy();
@@ -211,7 +216,7 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
 
 function getExtentPassFunction(
   inputMode: ExtentInputMode,
-  type: GPUTableEvaluator['type'],
+  type: GPUDataEvaluator['type'],
   channelCount: number,
   inputGroupCount: number
 ): string {
@@ -250,7 +255,7 @@ function getExtentPassFunction(
 }`;
 }
 
-function getExtentInitialValues(type: GPUTableEvaluator['type']): [string, string] {
+function getExtentInitialValues(type: GPUDataEvaluator['type']): [string, string] {
   switch (type) {
     case 'uint32':
       return ['0xffffffffu', '0u'];

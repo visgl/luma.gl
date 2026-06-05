@@ -17,7 +17,11 @@ export class NullDeviceLimits extends DeviceLimits {
   maxSampledTexturesPerShaderStage = 8;
   maxSamplersPerShaderStage = 16;
   maxStorageBuffersPerShaderStage = 0;
+  maxStorageBuffersInVertexStage = 0;
+  maxStorageBuffersInFragmentStage = 0;
   maxStorageTexturesPerShaderStage = 0;
+  maxStorageTexturesInVertexStage = 0;
+  maxStorageTexturesInFragmentStage = 0;
   maxUniformBuffersPerShaderStage = 20;
   maxUniformBufferBindingSize = 16384;
   maxStorageBufferBindingSize = 0;

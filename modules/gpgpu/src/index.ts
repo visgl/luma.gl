@@ -3,12 +3,21 @@
 // Copyright (c) vis.gl contributors
 
 // Resources
-export {getGPUTableEvaluator, GPUTableEvaluator} from './operation/gpu-table-evaluator';
+export {getGPUDataEvaluator, GPUDataEvaluator} from './operation/gpu-data-evaluator';
 export type {
-  GPUTableEvaluatorEvaluateOptions,
-  GPUTableEvaluatorInput,
-  GPUTableEvaluatorProps
-} from './operation/gpu-table-evaluator';
+  GPUDataEvaluatorEvaluateOptions,
+  GPUDataEvaluatorFromGPUDataOptions,
+  GPUDataEvaluatorInput,
+  GPUDataEvaluatorProps
+} from './operation/gpu-data-evaluator';
+export {getGPUVectorEvaluator, GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
+export type {
+  GPUVectorEvaluatorEvaluateOptions,
+  GPUVectorEvaluatorFromGPUDataEvaluatorsOptions,
+  GPUVectorEvaluatorInput,
+  GPUVectorEvaluatorMapGPUDataTransform,
+  GPUVectorEvaluatorProps
+} from './operation/gpu-vector-evaluator';
 
 // Operations
 export {
@@ -26,14 +35,20 @@ export {
   tan
 } from './operations/arithmetic';
 export {extent} from './operations/extent';
+export {dot} from './operations/dot';
+export {equalAll} from './operations/equal-all';
 export {interleave} from './operations/interleave';
 export {fround} from './operations/fround';
 export {gather} from './operations/gather';
+export {length} from './operations/length';
+export {segmentedMap} from './operations/segmented-map';
+export {select} from './operations/select';
 export {sequence} from './operations/sequence';
+export {swizzle} from './operations/swizzle';
 
 // Backends
 export {backendRegistry} from './operation/backend-registry';
-export {webglBackend} from './operations/webgl/index';
-export {webgpuBackend} from './operations/webgpu/index';
-export {cpuBackend} from './operations/cpu/index';
+export type {BackendModule} from './operation/backend-registry';
+export {Operation} from './operation/operation';
+export type {OperationHandler, OperationHandlerResult} from './operation/operation';
 export {cleanEvaluate} from './utils/clean-evaluate';

@@ -49,6 +49,7 @@ import {
   getArrowRecordBatchAsyncIterator,
   type ArrowRecordBatchSource
 } from '../arrow-renderer-utils';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 /**
  * Public configuration props for an Arrow text layer.
@@ -214,6 +215,8 @@ const DEFAULT_COLUMNS: ResolvedArrowTextRendererColumns = {
 const DEFAULT_TEXT_COLOR: [number, number, number, number] = [128, 128, 128, 255];
 const DEFAULT_TEXT_ANGLE = 0;
 const DEFAULT_TEXT_SIZE = 32;
+const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 /**
  * Small example-layer wrapper that chooses between attribute, WebGPU storage, row-indexed
@@ -649,16 +652,30 @@ export class ArrowTextRenderer extends GPURenderable<
   ): ArrowTextRendererResolvedModel {
     const hasCharacterColors = isArrowTextCharacterColorType(data.sourceVectors.colors?.type);
     const hasDictionaryText = arrow.DataType.isDictionary(data.sourceVectors.texts.type);
+    const supportsStorageText = supportsVertexStorageBuffers(
+      this.device,
+      STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+    );
+    const supportsDictionaryText = supportsVertexStorageBuffers(
+      this.device,
+      DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+    );
     if (modelKind === 'auto') {
-      if (this.device.type === 'webgpu' && hasDictionaryText && !hasCharacterColors) {
+      if (supportsDictionaryText && hasDictionaryText && !hasCharacterColors) {
         return 'dictionary';
       }
-      if (this.device.type === 'webgpu' && !hasCharacterColors) {
+      if (supportsStorageText && !hasCharacterColors) {
         return 'storage';
       }
       return 'attribute';
     }
-    if (modelKind !== 'attribute' && (this.device.type !== 'webgpu' || hasCharacterColors)) {
+    if (modelKind !== 'attribute' && hasCharacterColors) {
+      return 'attribute';
+    }
+    if (modelKind === 'dictionary' && !supportsDictionaryText) {
+      return 'attribute';
+    }
+    if ((modelKind === 'storage' || modelKind === 'storage-row-indexed') && !supportsStorageText) {
       return 'attribute';
     }
     if (modelKind === 'dictionary' && !hasDictionaryText) {

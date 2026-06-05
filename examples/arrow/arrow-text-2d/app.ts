@@ -67,6 +67,8 @@ import {
   type ArrowTextRendererProps,
   type ArrowTextRendererSetPropsResult
 } from './arrow-text-renderer';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export const title = 'Text: Strings/Dictionary strings';
 export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
@@ -78,16 +80,21 @@ type TextRendererUpdateOptions = {
   syncControls?: boolean;
   updateMetrics?: boolean;
 };
+const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowText2DControlPanelHtml({
-    streamingBatchCount: STREAMING_TEXT_BATCH_COUNT,
-    deckCharacterAttributeBytesPerGlyph: DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
-  });
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {createFramebuffer: true, useDevicePixels: true};
 
   readonly device: Device;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowText2DControlPanelHtml({
+      streamingBatchCount: STREAMING_TEXT_BATCH_COUNT,
+      deckCharacterAttributeBytesPerGlyph: DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
+    })
+  });
   textInput!: ArrowTextRendererInput;
   textRenderer!: ArrowTextRenderer;
   controlPanel!: ArrowText2DControlPanel;
@@ -183,6 +190,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       this.handleObjectPicked
     );
 
+    this.panels.mount();
     this.initializeControlPanel();
     this.updateMetricLabels();
     this.startStreamingTextDatasetFromSource(
@@ -327,6 +335,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel?.destroy();
+    this.panels.finalize();
     this.picker?.destroy();
     this.pickingModel?.destroy();
     this.textRenderer?.destroy();
@@ -369,12 +378,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (modelKind === 'auto') {
       return modelKind;
     }
-    if (modelKind !== 'attribute' && this.device.type !== 'webgpu') {
+    if (
+      (modelKind === 'storage' || modelKind === 'storage-row-indexed') &&
+      !supportsVertexStorageBuffers(this.device, STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT)
+    ) {
       return 'auto';
     }
     if (
       modelKind === 'dictionary' &&
-      !isArrowTextDictionarySource(rendererTextInput.sourceVectors)
+      (!supportsVertexStorageBuffers(this.device, DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT) ||
+        !isArrowTextDictionarySource(rendererTextInput.sourceVectors))
     ) {
       return 'auto';
     }
@@ -467,12 +480,21 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     const recordBatchIterator = createStreamingRecordBatchIterator(streamingSource.recordBatches)[
       Symbol.asyncIterator
     ]();
+    const textTableStream = this.panels.beginLoadedTableStream({
+      id: 'text-2d-source',
+      label: 'Loaded text source',
+      kind: 'source',
+      recordBatches: streamingSource.recordBatches
+    });
     this.arrowVectorBuildTimeMs = streamingSource.arrowVectorBuildTimeMs;
     void this.textRenderer.setProps({
       data: recordBatchIterator,
       model: this.resolveAvailableModelKind(this.textModelKind),
       ...this.getRendererStyleSourceProps(),
-      onDataBatch: update => this.handleStreamingTextBatch(update, textDatasetKind, textColorKind)
+      onDataBatch: update => {
+        textTableStream.setLoadedBatchCount(update.loadedBatchCount);
+        this.handleStreamingTextBatch(update, textDatasetKind, textColorKind);
+      }
     });
   }
 

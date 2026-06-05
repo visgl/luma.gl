@@ -12,9 +12,10 @@ import {
   INSTANCES_PER_SIDE_OPTIONS
 } from './arrow-instanced-mesh-renderer';
 import {ArrowInstancingControlPanel, makeArrowInstancingControlPanelHtml} from './control-panel';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowInstancingControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {createFramebuffer: true, debug: true};
 
@@ -22,6 +23,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly timeline: Timeline;
   readonly timelineChannels: Record<string, number>;
   readonly controlPanel: ArrowInstancingControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowInstancingControlPanelHtml()
+  });
   readonly layer: ArrowInstancedMeshRenderer;
   instancesPerSide = DEFAULT_INSTANCES_PER_SIDE;
 
@@ -48,7 +52,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       initialState: {instancesPerSide: this.instancesPerSide},
       handlers: {onInstanceCountChange: this.handleInstanceCountChange}
     });
+    this.panels.mount();
     this.controlPanel.initialize();
+    this.syncTableEntry();
   }
 
   onRender(animationProps: AnimationProps): void {
@@ -86,6 +92,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize(): void {
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer.destroy();
   }
 
@@ -96,5 +103,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.instancesPerSide = instancesPerSide;
     this.controlPanel.syncControls({instancesPerSide});
     this.layer.setProps({instancesPerSide});
+    this.syncTableEntry();
   };
+
+  syncTableEntry(): void {
+    this.panels.setTableEntries([
+      {
+        id: 'instancing-source',
+        label: 'Instance attributes',
+        kind: 'source',
+        table: this.layer.getInstanceArrowTable()
+      }
+    ]);
+  }
 }

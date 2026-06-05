@@ -3,18 +3,11 @@
 // Copyright (c) vis.gl contributors
 import {SignedDataType, Device} from '@luma.gl/core';
 import {TypedArray, equals} from '@math.gl/core';
-import {
-  GPUTableEvaluator,
-  backendRegistry,
-  webglBackend,
-  webgpuBackend,
-  cpuBackend
-} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, backendRegistry} from '@luma.gl/gpgpu';
+import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
 import {Stat} from '@probe.gl/stats';
 import {getTestDevice as _getTestDevice} from '@luma.gl/test-utils';
 
-backendRegistry.add('webgl', webglBackend);
-backendRegistry.add('webgpu', webgpuBackend);
 backendRegistry.add('null', cpuBackend);
 
 export type TestData =
@@ -31,11 +24,11 @@ export type TestData =
     };
 
 /** Check table value against definition, returns error if any */
-export function verifyTableValue(
-  table: GPUTableEvaluator,
+export async function verifyTableValue(
+  table: GPUDataEvaluator,
   expected: TestData,
   epsilon?: number
-): string | null {
+): Promise<string | null> {
   const size = table.size;
 
   if ('type' in expected && expected.type !== table.type) {
@@ -48,7 +41,7 @@ export function verifyTableValue(
     return `isConstant does not match. Expected: ${'constant' in expected}, actual: ${table.isConstant}`;
   }
 
-  const actual = table.value;
+  const actual = table.isConstant ? table.value : await table.readValue();
   const target = 'constant' in expected ? (expected.constant as number[]) : expected.value;
   if (!actual) {
     return `Unexpected empty result`;
@@ -74,14 +67,14 @@ export function verifyTableValue(
     .join('\n')}`;
 }
 
-export function isSupportedByWebGPU(...inputs: (GPUTableEvaluator | undefined)[]): boolean {
-  const visitedEvaluators = new Set<GPUTableEvaluator>();
+export function isSupportedByWebGPU(...inputs: (GPUDataEvaluator | undefined)[]): boolean {
+  const visitedEvaluators = new Set<GPUDataEvaluator>();
   return inputs.every(input => isEvaluatorSupportedByWebGPU(input, visitedEvaluators));
 }
 
 function isEvaluatorSupportedByWebGPU(
-  evaluator: GPUTableEvaluator | undefined,
-  visitedEvaluators: Set<GPUTableEvaluator>
+  evaluator: GPUDataEvaluator | undefined,
+  visitedEvaluators: Set<GPUDataEvaluator>
 ): boolean {
   if (!evaluator || visitedEvaluators.has(evaluator)) {
     return true;
@@ -93,7 +86,7 @@ function isEvaluatorSupportedByWebGPU(
 
   const source = evaluator.source;
 
-  if (source instanceof GPUTableEvaluator) {
+  if (source instanceof GPUDataEvaluator) {
     return isEvaluatorSupportedByWebGPU(source, visitedEvaluators);
   }
 

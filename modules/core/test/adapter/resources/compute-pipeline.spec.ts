@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice, getWebGPUTestDevices} from '@luma.gl/test-utils';
 import {
   luma,
   ComputePipeline,
@@ -28,24 +28,32 @@ const source = /* WGSL*/ `\
 `;
 
 test('ComputePipeline#construct/delete', async t => {
-  const webgpuDevice = await getWebGPUTestDevice();
+  const webgpuDevices = await getWebGPUTestDevices();
 
-  if (webgpuDevice) {
+  for (const webgpuDevice of webgpuDevices) {
+    const label = webgpuDevice.info.featureLevel;
     const shader = webgpuDevice.createShader({source});
     const computePipeline = webgpuDevice.createComputePipeline({shader});
-    t.ok(computePipeline instanceof ComputePipeline, 'ComputePipeline construction successful');
+    t.ok(
+      computePipeline instanceof ComputePipeline,
+      `${label}: ComputePipeline construction successful`
+    );
     computePipeline.destroy();
-    t.ok(computePipeline instanceof ComputePipeline, 'ComputePipeline delete successful');
+    t.ok(computePipeline instanceof ComputePipeline, `${label}: ComputePipeline delete successful`);
     computePipeline.destroy();
-    t.ok(computePipeline instanceof ComputePipeline, 'ComputePipeline repeated delete successful');
+    t.ok(
+      computePipeline instanceof ComputePipeline,
+      `${label}: ComputePipeline repeated delete successful`
+    );
   }
   t.end();
 });
 
 test('ComputePipeline#compute', async t => {
-  const webgpuDevice = await getWebGPUTestDevice();
+  const webgpuDevices = await getWebGPUTestDevices();
 
-  if (webgpuDevice) {
+  for (const webgpuDevice of webgpuDevices) {
+    const label = webgpuDevice.info.featureLevel;
     const shader = webgpuDevice.createShader({source});
     const computePipeline = webgpuDevice.createComputePipeline({
       shader,
@@ -62,7 +70,7 @@ test('ComputePipeline#compute', async t => {
 
     workBuffer.write(new Int32Array([2]));
     const inputData = new Int32Array(await workBuffer.readAsync());
-    t.equal(inputData[0], 2, 'Input data is correct');
+    t.equal(inputData[0], 2, `${label}: Input data is correct`);
 
     computePipeline.setBindings({data: workBuffer});
 
@@ -74,7 +82,7 @@ test('ComputePipeline#compute', async t => {
     webgpuDevice.submit();
 
     const computedData = new Int32Array(await workBuffer.readAsync());
-    t.equal(computedData[0], 4, 'Computed data is correct');
+    t.equal(computedData[0], 4, `${label}: Computed data is correct`);
 
     computePipeline.destroy();
     shader.destroy();

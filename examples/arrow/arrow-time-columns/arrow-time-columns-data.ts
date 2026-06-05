@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 export const DAY_COUNT = 3;
@@ -85,6 +86,18 @@ export function makeTimeColumnsEventColorValues(): Uint8Array {
     eventColors.set(eventSpec.color, eventIndex * 4);
   }
   return eventColors;
+}
+
+export function makeTimeColumnsSourceTable(): arrow.Table {
+  const temporalSourceVectors = makeTimeColumnsTemporalSourceVectors();
+  return new arrow.Table({
+    ...temporalSourceVectors,
+    eventColors: makeArrowFixedSizeListVector(
+      new arrow.Uint8(),
+      4,
+      makeTimeColumnsEventColorValues()
+    )
+  });
 }
 
 function makeTemporalVector<T extends arrow.Date_ | arrow.Time | arrow.Timestamp | arrow.Duration>(

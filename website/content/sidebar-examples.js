@@ -18,23 +18,6 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Apache Arrow',
-      items: [
-        'arrow/arrow-points',
-        'arrow/arrow-lines',
-        'arrow/arrow-polygons',
-        'arrow/arrow-geoarrow',
-        'arrow/arrow-text-2d',
-        'arrow/arrow-temporal-starfield',
-        'arrow/arrow-time-columns',
-        'arrow/arrow-instancing',
-        'arrow/arrow-mesh-geometry',
-        'arrow/arrow-particles',
-        'arrow/arrow-dggs-polygons'
-      ]
-    },
-    {
-      type: 'category',
       label: 'API',
       items: [
         'api/animation',
@@ -64,6 +47,40 @@ const sidebars = {
         // 'tutorials/shader-hooks',
         'tutorials/transform-feedback'
         // 'tutorials/transform'
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Experimental',
+      items: [
+        'experimental/bloom',
+        'experimental/fp64',
+        'experimental/gpt-2'
+      ]
+    },
+    {
+      type: 'category',
+      label: 'GPU Data - luma v10',
+      items: ['v10/gpgpu']
+    },
+    {
+      type: 'category',
+      label: 'Apache Arrow - luma.gl v10',
+      items: [
+        'arrow/arrow-points',
+        'arrow/arrow-lines',
+        'arrow/arrow-polygons',
+        'arrow/arrow-geoarrow',
+        'arrow/arrow-float64-precision',
+        'arrow/arrow-text-2d',
+        'arrow/arrow-text-3d',
+        'arrow/arrow-temporal-starfield',
+        'arrow/arrow-time-columns',
+        'arrow/arrow-mesh-geometry',
+        'arrow/arrow-particles',
+        'arrow/arrow-instancing',
+        'arrow/arrow-dggs-polygons',
+        'arrow/arrow-columns'
       ]
     }
   ]

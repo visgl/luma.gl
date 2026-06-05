@@ -1,4 +1,8 @@
+import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
+
 # Learning Resources
+
+<ApiOverviewDocsTabs active="learning-resources" />
 
 ## WebGPU
 
@@ -21,4 +25,3 @@
 
 - [glTF 2.0 Specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
 - [Efficiently rendering glTF models](https://toji.dev/webgpu-gltf-case-study/) Again, this case study by Brandon Jones contains a substantial amount of information about how glTF is implemented.
-

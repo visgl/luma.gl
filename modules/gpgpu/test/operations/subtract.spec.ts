@@ -4,7 +4,7 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, GPUTableEvaluator, subtract} from '@luma.gl/gpgpu';
+import {cleanEvaluate, GPUDataEvaluator, subtract} from '@luma.gl/gpgpu';
 import {getTestDevice, TestData, verifyTableValue, isSupportedByWebGPU} from './fixtures';
 
 for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
@@ -16,23 +16,23 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
     });
 
     const TEST_CASES: {
-      eval: GPUTableEvaluator;
+      eval: GPUDataEvaluator;
       expected: TestData;
     }[] = [
       {
         eval: subtract(
-          GPUTableEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 2}),
-          GPUTableEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {size: 2})
+          GPUDataEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 2}),
+          GPUDataEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {size: 2})
         ),
         expected: {value: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6], type: 'float32', size: 2}
       },
       {
         eval: subtract(
-          GPUTableEvaluator.fromArray([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], {
+          GPUDataEvaluator.fromArray([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], {
             type: 'uint32',
             size: 2
           }),
-          GPUTableEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {
+          GPUDataEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {
             type: 'uint8',
             size: 2
           })
@@ -45,21 +45,21 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       },
       {
         eval: subtract(
-          GPUTableEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 6}),
-          GPUTableEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {size: 6})
+          GPUDataEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 6}),
+          GPUDataEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {size: 6})
         ),
         expected: {value: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6], type: 'float32', size: 6}
       },
       {
         eval: subtract(
-          GPUTableEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 3}),
-          GPUTableEvaluator.fromArray([1, -1, 1, -1], {size: 1})
+          GPUDataEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 3}),
+          GPUDataEvaluator.fromArray([1, -1, 1, -1], {size: 1})
         ),
         expected: {value: [-1, 0, 1, 4, 5, 6, 5, 6, 7, 10, 11, 12], type: 'float32', size: 3}
       },
       {
         eval: subtract(
-          GPUTableEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 3}),
+          GPUDataEvaluator.fromArray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], {size: 3}),
           1
         ),
         expected: {value: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], type: 'float32', size: 3}
@@ -70,9 +70,9 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       },
       {
         eval: subtract(
-          GPUTableEvaluator.fromArray([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], {size: 2}),
-          GPUTableEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {size: 2}),
-          GPUTableEvaluator.fromArray([1, -1, 1, -1, 1, -1], {type: 'sint8', size: 1})
+          GPUDataEvaluator.fromArray([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], {size: 2}),
+          GPUDataEvaluator.fromArray([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5], {size: 2}),
+          GPUDataEvaluator.fromArray([1, -1, 1, -1, 1, -1], {type: 'sint8', size: 1})
         ),
         expected: {
           value: [9, 10, 12, 13, 11, 12, 14, 15, 13, 14, 16, 17],
@@ -92,8 +92,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           return;
         }
         await cleanEvaluate(device, testCase);
-        await testCase.eval.readValue();
-        expect(verifyTableValue(testCase.eval, testCase.expected)).toBe(null);
+        expect(await verifyTableValue(testCase.eval, testCase.expected)).toBe(null);
         testCase.eval.destroy();
       });
     }

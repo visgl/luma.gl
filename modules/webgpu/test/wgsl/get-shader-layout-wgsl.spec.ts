@@ -87,6 +87,7 @@ const TEXTURE_SHADER = /* WGSL */ `\
 @group(0) @binding(2) var mySampler: sampler;
 @group(0) @binding(3) var myDepthTexture: texture_depth_2d;
 @group(0) @binding(4) var myMultisampledTexture: texture_multisampled_2d<f32>;
+@group(0) @binding(5) var myDepthTextureSampler: sampler;
 
 @fragment
 fn main(
@@ -135,6 +136,13 @@ TEST_CASES.push({
         name: 'mySampler',
         group: 0,
         location: 2
+      },
+      {
+        type: 'sampler',
+        name: 'myDepthTextureSampler',
+        group: 0,
+        location: 5,
+        samplerType: 'non-filtering'
       }
     ]
   }

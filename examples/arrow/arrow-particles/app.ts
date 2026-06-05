@@ -11,6 +11,7 @@ import {
   STREAMING_PARTICLE_BATCH_COUNT
 } from './arrow-particle-data';
 import {ArrowParticleRenderer} from './arrow-particle-renderer';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowParticlesControlPanel, makeArrowParticlesControlPanelHtml} from './control-panel';
 
 export const title = 'Particles: FixedSizeList<Float32, 2>';
@@ -18,11 +19,14 @@ export const description =
   'Arrow table columns uploaded to GPUVectors and updated through storage compute or transform feedback.';
 
 export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowParticlesControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   readonly device: Device;
   readonly layer: ArrowParticleRenderer;
   readonly controlPanel: ArrowParticlesControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowParticlesControlPanelHtml()
+  });
   isFinalized = false;
 
   constructor({device}: AnimationProps) {
@@ -33,6 +37,7 @@ export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTe
   }
 
   override async onInitialize(): Promise<void> {
+    this.panels.mount();
     this.controlPanel.initialize();
     this.startStreamingParticles();
   }
@@ -53,17 +58,25 @@ export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTe
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer.destroy();
   }
 
   private startStreamingParticles(): void {
     this.controlPanel.setStreamingBatchStatus(0, STREAMING_PARTICLE_BATCH_COUNT);
     const recordBatches = makeArrowParticleRecordBatches();
+    const particleTableStream = this.panels.beginLoadedTableStream({
+      id: 'particles-source',
+      label: 'Loaded particle source',
+      kind: 'source',
+      recordBatches
+    });
 
     this.layer.setProps({
       data: createStreamingParticleRecordBatchIterator(recordBatches),
       onDataBatch: ({loadedBatchCount}) => {
         if (!this.isFinalized) {
+          particleTableStream.setLoadedBatchCount(loadedBatchCount);
           this.controlPanel.setStreamingBatchStatus(
             loadedBatchCount,
             STREAMING_PARTICLE_BATCH_COUNT

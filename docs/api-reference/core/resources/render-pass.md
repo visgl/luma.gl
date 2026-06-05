@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # RenderPass
+
+<CoreDocsTabs group="commands" active="render-pass" />
 
 
 ## Usage

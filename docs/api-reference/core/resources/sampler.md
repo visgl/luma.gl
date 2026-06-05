@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # Sampler
+
+<CoreDocsTabs group="textures" active="sampler" />
 
 A `Sampler` is an immutable object that holds a set of sampling parameters for texture access.
 Sampling parameters are applied during shader execution and control how values ("texels")

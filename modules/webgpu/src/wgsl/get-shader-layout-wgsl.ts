@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AttributeShaderType, ShaderLayout, TextureBindingLayout, log} from '@luma.gl/core';
+import {
+  AttributeShaderType,
+  SamplerBindingLayout,
+  ShaderLayout,
+  TextureBindingLayout,
+  log
+} from '@luma.gl/core';
 import {TypeInfo, VariableInfo, WgslReflect, ResourceType} from 'wgsl_reflect';
 
 /**
@@ -67,7 +73,8 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
       type: 'sampler',
       name: sampler.name,
       group: sampler.group,
-      location: sampler.binding
+      location: sampler.binding,
+      ...getSamplerBindingFromReflect(sampler, shaderLayout.bindings)
     });
   }
 
@@ -90,6 +97,31 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
     }
   }
   return shaderLayout;
+}
+
+function getSamplerBindingFromReflect(
+  sampler: VariableInfo,
+  bindings: ShaderLayout['bindings']
+): Pick<SamplerBindingLayout, 'samplerType'> {
+  if (sampler.type.name === 'sampler_comparison') {
+    return {samplerType: 'comparison'};
+  }
+
+  const pairedTextureName = sampler.name.endsWith('Sampler')
+    ? sampler.name.slice(0, -'Sampler'.length)
+    : null;
+  const pairedTextureBinding = pairedTextureName
+    ? bindings.find(
+        binding =>
+          binding.type === 'texture' &&
+          binding.name === pairedTextureName &&
+          binding.group === sampler.group
+      )
+    : null;
+
+  return pairedTextureBinding?.type === 'texture' && pairedTextureBinding.sampleType === 'depth'
+    ? {samplerType: 'non-filtering'}
+    : {};
 }
 
 /** Get a valid shader attribute type string from a wgsl-reflect type */

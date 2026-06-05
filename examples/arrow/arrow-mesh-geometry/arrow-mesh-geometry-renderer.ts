@@ -26,6 +26,7 @@ import {
   createMeshGeometryPickingModel,
   createMeshGeometryShaderInputs,
   getMeshGeometryShaderLayout,
+  supportsMeshGeometryStorageRendering,
   type MeshGeometryShaderInputs
 } from './mesh-geometry-model';
 
@@ -85,6 +86,9 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
   readonly pickingModel: GPUTableModel | null;
   readonly matrixTable: GPUTable;
   readonly picker: PickingManager;
+  readonly faceMetadataTable: arrow.Table;
+  readonly meshTable: arrow.Table;
+  readonly matrixArrowTable: arrow.Table;
   readonly faceColors?: GPUVector<'float32x4'>;
   readonly faceNames: arrow.Vector<arrow.Utf8>;
   readonly matrixValues = new Float32Array(CUBE_COUNT * MATRIX_COMPONENT_COUNT);
@@ -99,27 +103,26 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
     this.shaderInputs = createMeshGeometryShaderInputs(device);
 
     const faceMetadata = makeFaceMetadataTable();
+    this.faceMetadataTable = faceMetadata;
     const defaultFaceColors = faceMetadata.getChild('COLOR_0') as arrow.Vector<
       arrow.FixedSizeList<arrow.Float32>
     >;
     const faceColors = props.faceColors ?? defaultFaceColors;
-    const arrowMesh = makeArrowMeshTable(device.type, faceColors);
+    const supportsStorageRendering = supportsMeshGeometryStorageRendering(device);
+    const arrowMesh = makeArrowMeshTable(supportsStorageRendering, faceColors);
+    this.meshTable = arrowMesh.data;
     this.faceNames = faceMetadata.getChild('name') as arrow.Vector<arrow.Utf8>;
-    this.faceColors =
-      device.type === 'webgpu'
-        ? makeGPUVectorFromArrow(device, faceColors, {name: 'faceColors', format: 'float32x4'})
-        : undefined;
+    this.faceColors = supportsStorageRendering
+      ? makeGPUVectorFromArrow(device, faceColors, {name: 'faceColors', format: 'float32x4'})
+      : undefined;
 
     this.updateInstanceMatrices(0);
+    this.matrixArrowTable = makeInstanceArrowTable(this.matrixValues);
     this.geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
-    this.matrixTable = makeGPUTableFromArrowTable(
-      device,
-      makeInstanceArrowTable(this.matrixValues),
-      {
-        shaderLayout: getMeshGeometryShaderLayout(device),
-        arrowPaths: MESH_GEOMETRY_MATRIX_ARROW_PATHS
-      }
-    );
+    this.matrixTable = makeGPUTableFromArrowTable(device, this.matrixArrowTable, {
+      shaderLayout: getMeshGeometryShaderLayout(device),
+      arrowPaths: MESH_GEOMETRY_MATRIX_ARROW_PATHS
+    });
     this.model = createMeshGeometryModel(device, {
       id: props.id ?? DEFAULT_MESH_RENDERER_ID,
       geometry: this.geometry,
@@ -232,7 +235,7 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
 }
 
 function makeArrowMeshTable(
-  deviceType: AnimationProps['device']['type'],
+  useStorageRendering: boolean,
   faceColors: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>
 ): ArrowMeshTable {
   const cubeGeometry = new CubeGeometry({indices: true});
@@ -251,14 +254,13 @@ function makeArrowMeshTable(
   }
 
   const positions = makeArrowFixedSizeListVector(new arrow.Float32(), 3, cubePositions);
-  const table =
-    deviceType === 'webgpu'
-      ? makeWebGPUMeshTable(positions, cubeFaceIndices)
-      : makeWebGLMeshTable(
-          positions,
-          expandArrowVector(faceColors, cubeFaceIndices),
-          cubeFaceIndices
-        );
+  const table = useStorageRendering
+    ? makeWebGPUMeshTable(positions, cubeFaceIndices)
+    : makeWebGLMeshTable(
+        positions,
+        expandArrowVector(faceColors, cubeFaceIndices),
+        cubeFaceIndices
+      );
 
   return {
     shape: 'arrow-table',

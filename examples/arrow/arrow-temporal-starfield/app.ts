@@ -17,34 +17,49 @@ import {
   type ArrowTemporalStarfieldRendererDataBatchUpdate
 } from './arrow-temporal-starfield-renderer';
 import {
+  ArrowExamplePanelManager,
+  makeArrowExamplePanelHostHtml,
+  type ArrowExampleLoadedTableStream
+} from '../arrow-example-panels';
+import {
   ArrowTemporalStarfieldControlPanel,
   makeArrowTemporalStarfieldControlPanelHtml
 } from './control-panel';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export const title = 'Time: Blinking Stars';
 export const description =
   'Scalar Arrow Timestamp and Duration columns normalized to relative Float32 GPU rows for blinking star instances.';
+const TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT = 6;
 
 export default class ArrowTemporalStarfieldAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowTemporalStarfieldControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   readonly device: Device;
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowTemporalStarfieldControlPanelHtml()
+  });
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
   layer: ArrowTemporalStarfieldRenderer | null = null;
   inputRequestVersion = 0;
   isFinalized = false;
+  activeStarfieldTableStream: ArrowExampleLoadedTableStream | null = null;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.activeRenderMode = this.device.type === 'webgpu' ? 'storage' : 'attributes';
+    const supportsStorage = supportsVertexStorageBuffers(
+      this.device,
+      TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT
+    );
+    this.activeRenderMode = supportsStorage ? 'storage' : 'attributes';
     this.controlPanel = new ArrowTemporalStarfieldControlPanel({
       initialState: {
         renderMode: this.activeRenderMode,
         timeColumn: this.activeTimeColumn,
-        supportsStorage: this.device.type === 'webgpu'
+        supportsStorage
       },
       handlers: {
         onRenderModeChange: this.handleRenderModeSelection,
@@ -58,6 +73,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
       renderMode: this.activeRenderMode,
       timeColumn: this.activeTimeColumn
     });
+    this.panels.mount();
     this.controlPanel.initialize();
     this.startStreamingStarfield();
   }
@@ -76,12 +92,14 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   override onFinalize(): void {
     this.isFinalized = true;
     this.controlPanel.destroy();
+    this.panels.finalize();
     this.layer?.destroy();
   }
 
   handleRenderModeSelection = (requestedRenderMode: 'attributes' | 'storage'): void => {
     const nextRenderMode =
-      requestedRenderMode === 'storage' && this.device.type !== 'webgpu'
+      requestedRenderMode === 'storage' &&
+      !supportsVertexStorageBuffers(this.device, TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT)
         ? 'attributes'
         : requestedRenderMode;
     this.controlPanel.syncControls({renderMode: nextRenderMode});
@@ -116,6 +134,12 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
       STREAMING_STARFIELD_ROWS_PER_BATCH,
       this.activeTimeColumn
     );
+    this.activeStarfieldTableStream = this.panels.beginLoadedTableStream({
+      id: 'temporal-starfield-source',
+      label: 'Loaded starfield source',
+      kind: 'source',
+      recordBatches
+    });
 
     layer.setProps({
       data: createStreamingTemporalStarfieldRecordBatchIterator(recordBatches),
@@ -132,6 +156,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
     if (update.isFirstBatch) {
       this.controlPanel.setLabels(this.layer.getLabels());
     }
+    this.activeStarfieldTableStream?.setLoadedBatchCount(update.loadedBatchCount);
     this.controlPanel.setStreamingBatchStatus(
       update.loadedBatchCount,
       STREAMING_STARFIELD_BATCH_COUNT

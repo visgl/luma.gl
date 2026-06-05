@@ -5,7 +5,7 @@
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {getGPUVectorBuffer, GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
 import {
   getAttributeType,
@@ -29,8 +29,8 @@ export function runRowTransform({
   module: ShaderModule;
   elementWise?: boolean;
   expression?: (laneIndex: number) => string;
-  inputs: {[name: string]: GPUTableEvaluator};
-  output: GPUTableEvaluator;
+  inputs: {[name: string]: GPUDataEvaluator};
+  output: GPUDataEvaluator;
   /** If specified, coerce all parameters to operation to this type.
    * Default to output's data type.
    */
@@ -57,8 +57,8 @@ export function runRowTransform({
     const input = inputs[name];
     modules.push(getInputModule(name, input.type, input.size, input.normalized, operationType));
     bufferLayout.push(getInputBufferLayout(name, input));
-    if (input instanceof GPUTableEvaluator) {
-      inputBuffers[name] = getGPUVectorBuffer(input.gpuVector);
+    if (input instanceof GPUDataEvaluator) {
+      inputBuffers[name] = input.buffer;
     } else {
       placeholderBuffer =
         placeholderBuffer || bufferPool.createOrReuse(device, outputBuffer.byteLength);
@@ -163,7 +163,7 @@ void get_${name}(out TYPE v[${inSize}]) {
   } as ShaderModule;
 }
 
-export function getInputBufferLayout(name: string, source: GPUTableEvaluator): BufferLayout {
+export function getInputBufferLayout(name: string, source: GPUDataEvaluator): BufferLayout {
   const bufferLayout: BufferLayout = {
     name,
     stepMode: source.isConstant ? 'vertex' : 'instance',

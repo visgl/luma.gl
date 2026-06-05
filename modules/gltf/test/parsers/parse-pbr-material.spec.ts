@@ -125,6 +125,39 @@ test('gltf#parsePBRMaterial enables core material maps and factors', t => {
   t.end();
 });
 
+test('gltf#parsePBRMaterial accepts normalized geometry attribute names', t => {
+  const warnings = captureWarnings(() => {
+    const parsedMaterial = parsePBRMaterial(
+      device,
+      {
+        pbrMetallicRoughness: {
+          baseColorTexture: makeCompressedTextureInfo('base-color')
+        },
+        normalTexture: makeCompressedTextureInfo('normal')
+      },
+      {normals: {}, texCoords: {}},
+      {}
+    );
+
+    t.equal(parsedMaterial.defines['HAS_NORMALS'], true, 'normalized normals enable HAS_NORMALS');
+    t.equal(parsedMaterial.defines['HAS_UV'], true, 'normalized texCoords enable HAS_UV');
+    t.equal(parsedMaterial.uniforms.baseColorMapEnabled, true, 'base color map stays enabled');
+
+    destroyParsedTextures(parsedMaterial);
+  });
+
+  t.notOk(
+    warnings.some(warning => warning.includes('missing TEXCOORD_0')),
+    'normalized texCoords avoid missing TEXCOORD_0 warning'
+  );
+  t.notOk(
+    warnings.some(warning => warning.includes('missing NORMAL')),
+    'normalized normals avoid missing NORMAL warning'
+  );
+
+  t.end();
+});
+
 test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   const parsedMaterial = parsePBRMaterial(
     device,

@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # ExternalTexture
+
+<CoreDocsTabs group="textures" active="external-texture" />
 
 :::info
 WebGPU only.

@@ -3,23 +3,23 @@
 // Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {GPUTableEvaluator} from '../../src/operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../src/operation/gpu-data-evaluator';
 import {ArithmeticOperation} from '../../src/operations/arithmetic-operation';
 
 test('GPGPU#ArithmeticOperation#mergeDependenciesAndExpressions', () => {
-  const a = new GPUTableEvaluator({
+  const a = new GPUDataEvaluator({
     id: 'a',
     type: 'float32',
     size: 1,
     value: new Float32Array([1, 2, 3])
   });
-  const b = new GPUTableEvaluator({
+  const b = new GPUDataEvaluator({
     id: 'b',
     type: 'float32',
     size: 1,
     value: new Float32Array([4, 5, 6])
   });
-  const c = new GPUTableEvaluator({
+  const c = new GPUDataEvaluator({
     id: 'c',
     type: 'float32',
     size: 1,
@@ -53,19 +53,19 @@ test('GPGPU#ArithmeticOperation#mergeDependenciesAndExpressions', () => {
 });
 
 test('GPGPU#ArithmeticOperation#toString', () => {
-  const a = new GPUTableEvaluator({
+  const a = new GPUDataEvaluator({
     id: 'a',
     type: 'float32',
     size: 1,
     value: new Float32Array([1])
   });
-  const b = new GPUTableEvaluator({
+  const b = new GPUDataEvaluator({
     id: 'b',
     type: 'float32',
     size: 1,
     value: new Float32Array([2])
   });
-  const two = new GPUTableEvaluator({
+  const two = new GPUDataEvaluator({
     id: '2',
     isConstant: true,
     type: 'float32',
@@ -81,7 +81,7 @@ test('GPGPU#ArithmeticOperation#toString', () => {
 });
 
 test('GPGPU#ArithmeticOperation#literalArgs', () => {
-  const a = new GPUTableEvaluator({
+  const a = new GPUDataEvaluator({
     id: 'a',
     type: 'float32',
     size: 1,
@@ -124,7 +124,7 @@ test('GPGPU#ArithmeticOperation#literalOnlyExpression', () => {
 });
 
 test('GPGPU#ArithmeticOperation#floatOnlyOpsPromoteOutputType', () => {
-  const integers = new GPUTableEvaluator({
+  const integers = new GPUDataEvaluator({
     id: 'integers',
     type: 'uint32',
     size: 1,

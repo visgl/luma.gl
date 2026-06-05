@@ -3,14 +3,26 @@ import {extent} from './extent';
 import {interleave} from './interleave';
 import {fround} from './fround';
 import {gather} from './gather';
+import {dot} from './dot';
+import {equalAll} from './equal-all';
+import {length} from './length';
+import {segmentedMap} from './segmented-map';
+import {select} from './select';
 import {sequence} from './sequence';
+import {swizzle} from './swizzle';
 
 /** WebGL backend for built-in GPGPU operations, implemented with transform feedback. */
-export const webglBackend = {
+export {
   arithmetic,
+  dot,
+  equalAll,
   extent,
   gather,
   interleave,
   fround,
-  sequence
+  length,
+  segmentedMap,
+  select,
+  sequence,
+  swizzle
 };

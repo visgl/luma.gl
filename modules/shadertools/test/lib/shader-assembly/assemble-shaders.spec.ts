@@ -10,7 +10,8 @@ import {
   picking,
   fp64,
   pbrMaterial,
-  PlatformInfo
+  PlatformInfo,
+  ShaderAssembler
 } from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
@@ -744,6 +745,83 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     'regex injection code included in shader hook'
   );
 
+  t.end();
+});
+
+test('ShaderAssembler#assembleWGSLShader supports hooks and named injections', t => {
+  const shaderAssembler = new ShaderAssembler();
+  shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
+  shaderAssembler.addShaderHook('fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)');
+
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: {
+      type: 'webgpu',
+      gpu: 'test-gpu',
+      shaderLanguage: 'wgsl',
+      shaderLanguageVersion: 300,
+      features: new Set()
+    },
+    source: /* wgsl */ `\
+@vertex
+fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> {
+  var shaderPosition = vec4<f32>(position, 0.0, 1.0);
+  OFFSET_POSITION(&shaderPosition);
+  return shaderPosition;
+}
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  var color = getColor();
+  FILTER_COLOR(&color);
+  return color;
+}
+`,
+    modules: [
+      {
+        name: 'wgsl-injections',
+        inject: {
+          'vs:OFFSET_POSITION': '(*position).x += 0.5;',
+          'fs:FILTER_COLOR': '(*color).r = 0.25;',
+          'fs:#decl': 'fn getColor() -> vec4<f32> { return vec4<f32>(1.0); }',
+          'vs:#main-start': 'let vertexStart = 1u;',
+          'fs:#main-end': 'let fragmentEnd = 2u;'
+        }
+      }
+    ]
+  });
+
+  t.ok(
+    assembledShader.source.includes('fn OFFSET_POSITION(position: ptr<function, vec4<f32>>) {'),
+    'WGSL vertex hook functions use WGSL syntax'
+  );
+  t.ok(
+    assembledShader.source.includes('fn FILTER_COLOR(color: ptr<function, vec4<f32>>) {'),
+    'WGSL fragment hook functions use WGSL syntax'
+  );
+  t.ok(
+    assembledShader.source.includes('(*position).x += 0.5;'),
+    'WGSL vertex hook injections are included'
+  );
+  t.ok(
+    assembledShader.source.includes('(*color).r = 0.25;'),
+    'WGSL fragment hook injections are included'
+  );
+  t.ok(
+    assembledShader.source.includes('fn getColor() -> vec4<f32>'),
+    'WGSL fragment declaration injections enter unified shader source'
+  );
+  t.ok(
+    assembledShader.source.includes('let vertexStart = 1u;'),
+    'WGSL vertex start injection lands'
+  );
+  t.ok(
+    assembledShader.source.includes('let fragmentEnd = 2u;'),
+    'WGSL fragment end injection lands'
+  );
+  t.notOk(
+    assembledShader.source.includes('void OFFSET_POSITION'),
+    'WGSL hook functions do not use GLSL declarations'
+  );
   t.end();
 });
 

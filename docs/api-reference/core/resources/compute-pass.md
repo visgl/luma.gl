@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # ComputePass
+
+<CoreDocsTabs group="commands" active="compute-pass" />
 
 :::info
 WebGPU only

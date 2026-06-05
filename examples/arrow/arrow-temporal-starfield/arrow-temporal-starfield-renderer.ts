@@ -19,6 +19,7 @@ import {
   GPUTableModel,
   getGPUVectorBuffer,
   getRequiredGPUVector,
+  type GPUTypeMap,
   type GPUVector
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
@@ -40,6 +41,7 @@ import {
   temporalStarfield
 } from './arrow-temporal-starfield-shaders';
 import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '../arrow-renderer-utils';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 /** Public configuration for the Arrow temporal starfield layer. */
 export type ArrowTemporalStarfieldRendererProps = {
@@ -100,14 +102,14 @@ type PreparedTemporalColumns = {
 };
 
 type TemporalStarfieldTableInput = {
-  table: GPUTable;
+  table: GPUTable<GPUTypeMap>;
   temporalColumns: PreparedTemporalColumns;
   timestampOriginMilliseconds: number;
   destroy: () => void;
 };
 
 type TemporalStarfieldGPURecordBatchInput = {
-  gpuRecordBatch: GPURecordBatch;
+  gpuRecordBatch: GPURecordBatch<GPUTypeMap>;
   temporalColumns: PreparedTemporalColumns;
   timestampOriginMilliseconds: number;
 };
@@ -132,6 +134,7 @@ const DEFAULT_TEMPORAL_STARFIELD_PROPS = {
     'currentTimeRateMillisecondsPerSecond' | 'initialTimestampMilliseconds'
   >
 >;
+const TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT = 6;
 
 /** Example layer that renders timestamp/duration Arrow columns as blinking star instances. */
 export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {time: number}]> {
@@ -153,8 +156,16 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
     super();
     this.device = device;
     this.props = props;
+    const supportsStorageRendering = supportsVertexStorageBuffers(
+      this.device,
+      TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT
+    );
+    const requestedRenderMode =
+      props.renderMode ?? (supportsStorageRendering ? 'storage' : 'attributes');
     this.activeRenderMode =
-      props.renderMode ?? (this.device.type === 'webgpu' ? 'storage' : 'attributes');
+      requestedRenderMode === 'storage' && !supportsStorageRendering
+        ? 'attributes'
+        : requestedRenderMode;
     this.activeTimeColumn = props.timeColumn ?? 'timestamp';
     this.currentTimestampMilliseconds =
       props.initialTimestampMilliseconds ??
@@ -217,8 +228,10 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
     }
 
     if (renderMode === 'storage') {
-      if (this.device.type !== 'webgpu') {
-        throw new Error('Temporal starfield storage rendering requires WebGPU');
+      if (
+        !supportsVertexStorageBuffers(this.device, TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT)
+      ) {
+        throw new Error('Temporal starfield storage rendering requires vertex storage buffers');
       }
 
       return new Model(this.device, {
@@ -302,7 +315,8 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
       return;
     }
     const nextRenderMode =
-      props.renderMode === 'storage' && this.device.type !== 'webgpu'
+      props.renderMode === 'storage' &&
+      !supportsVertexStorageBuffers(this.device, TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT)
         ? 'attributes'
         : props.renderMode;
     if (nextRenderMode === this.activeRenderMode) {
@@ -428,7 +442,7 @@ function createTemporalStarfieldTableInput(
     throw new Error('Temporal starfield requires at least one GPU record batch');
   }
 
-  const table = new GPUTable({
+  const table = new GPUTable<GPUTypeMap>({
     batches: batchInputs.map(batchInput => batchInput.gpuRecordBatch),
     schema: firstBatchInput.gpuRecordBatch.schema,
     bufferLayout: firstBatchInput.gpuRecordBatch.bufferLayout
@@ -464,10 +478,10 @@ async function makeTemporalStarfieldGPURecordBatchInput(
     }
   );
 
-  let positions: GPUVector | null = null;
+  let positions: GPUVector<'float32x2'> | null = null;
   let preparedEventStarts: PreparedEventStartsColumn | null = null;
-  let starSizes: GPUVector | null = null;
-  let eventColors: GPUVector | null = null;
+  let starSizes: GPUVector<'float32'> | null = null;
+  let eventColors: GPUVector<'unorm8x4'> | null = null;
   try {
     let modelPositions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
     if (timeColumn === 'xyzm') {
@@ -506,7 +520,7 @@ async function makeTemporalStarfieldGPURecordBatchInput(
       eventDurations: preparedDurationColumns.eventDurations,
       pulsePeriods: preparedDurationColumns.pulsePeriods
     };
-    const gpuRecordBatch = new GPURecordBatch({
+    const gpuRecordBatch = new GPURecordBatch<GPUTypeMap>({
       vectors: {
         positions,
         eventStarts: temporalColumns.eventStarts.vector,
@@ -652,7 +666,7 @@ function getPreparedScalarTemporalVector(
 }
 
 function getTemporalStarfieldStorageBindings(
-  temporalStarfieldTable: GPUTable | GPURecordBatch
+  temporalStarfieldTable: GPUTable<GPUTypeMap> | GPURecordBatch<GPUTypeMap>
 ): Record<string, Buffer | DynamicBuffer> {
   return {
     positions: getGPUVectorBuffer(

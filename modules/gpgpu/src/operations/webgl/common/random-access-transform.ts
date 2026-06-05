@@ -4,11 +4,11 @@
 
 import {Buffer, SignedDataType, Texture} from '@luma.gl/core';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {getGPUVectorBuffer, GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {getAttributeType, getSamplerType, getTextureFormat} from './helper';
 
 export function getSourceValuesTextureModule(
-  source: GPUTableEvaluator,
+  source: GPUDataEvaluator,
   outputType: SignedDataType,
   textureDataType: SignedDataType
 ): ShaderModule {
@@ -31,7 +31,7 @@ ${body}
 }
 
 export function createTableTexture(
-  source: GPUTableEvaluator,
+  source: GPUDataEvaluator,
   dataType: SignedDataType,
   device: Buffer['device']
 ): Texture {
@@ -47,7 +47,7 @@ export function createTableTexture(
 
   const commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToTexture({
-    sourceBuffer: getGPUVectorBuffer(source.gpuVector),
+    sourceBuffer: source.buffer,
     destinationTexture: texture,
     byteOffset: source.offset,
     bytesPerRow: source.stride,

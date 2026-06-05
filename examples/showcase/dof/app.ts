@@ -113,13 +113,21 @@ struct AppUniforms {
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
 @group(0) @binding(auto) var cubeTexture: texture_2d<f32>;
 @group(0) @binding(auto) var cubeTextureSampler: sampler;
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
 @group(0) @binding(auto) var<storage, read> instanceModelMatrix: array<mat4x4<f32>>;
+#endif
 
 struct VertexInputs {
   @builtin(instance_index) instanceIndex: u32,
   @location(0) positions: vec3<f32>,
   @location(1) normals: vec3<f32>,
   @location(2) texCoords: vec2<f32>,
+#if !LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
+  @location(3) instanceModelMatrixCol0: vec4<f32>,
+  @location(4) instanceModelMatrixCol1: vec4<f32>,
+  @location(5) instanceModelMatrixCol2: vec4<f32>,
+  @location(6) instanceModelMatrixCol3: vec4<f32>,
+#endif
 };
 
 struct VertexOutputs {
@@ -131,7 +139,16 @@ struct VertexOutputs {
 
 @vertex
 fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
+#if LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS
   let modelMatrix = instanceModelMatrix[inputs.instanceIndex];
+#else
+  let modelMatrix = mat4x4<f32>(
+    inputs.instanceModelMatrixCol0,
+    inputs.instanceModelMatrixCol1,
+    inputs.instanceModelMatrixCol2,
+    inputs.instanceModelMatrixCol3
+  );
+#endif
 
   let worldPosition = modelMatrix * vec4<f32>(inputs.positions, 1.0);
   let worldNormal = normalize((modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
@@ -293,6 +310,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({device, width, height}: AnimationProps) {
     super();
+    const useStorageModelMatrix =
+      device.type === 'webgpu' && getDeviceLimit(device, 'maxStorageBuffersInVertexStage') > 0;
+    const sceneShaderLayout = useStorageModelMatrix
+      ? SCENE_STORAGE_SHADER_LAYOUT
+      : SCENE_ATTRIBUTE_SHADER_LAYOUT;
     const offscreenColorFormat = getOffscreenColorFormat(device);
     // WebGPU uses a deeper depth format here because the blur radius is derived from depth
     // deltas, and low precision shows up as visible banding in far-field blur.
@@ -314,8 +336,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       device,
       makeDofInstanceTable(this.instanceModelMatrices),
       {
-        shaderLayout:
-          device.type === 'webgpu' ? SCENE_STORAGE_SHADER_LAYOUT : SCENE_ATTRIBUTE_SHADER_LAYOUT,
+        shaderLayout: sceneShaderLayout,
         arrowPaths: {
           instanceModelMatrixCol0: 'instanceModelMatrix',
           instanceModelMatrixCol1: 'instanceModelMatrix',
@@ -328,8 +349,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.sceneModel = new GPUTableModel(device, {
       id: 'dof-scene',
       shaderInputs: this.appShaderInputs,
-      shaderLayout:
-        device.type === 'webgpu' ? SCENE_STORAGE_SHADER_LAYOUT : SCENE_ATTRIBUTE_SHADER_LAYOUT,
+      shaderLayout: sceneShaderLayout,
       table: this.sceneTable,
       tableCount: 'instance',
       ...(device.info.shadingLanguage === 'wgsl'
@@ -556,6 +576,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 function getOffscreenColorFormat(device: AnimationProps['device']): TextureFormatColor {
   return device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm';
+}
+
+function getDeviceLimit(device: AnimationProps['device'], limitName: string): number {
+  return (device.limits as unknown as Record<string, number | undefined>)[limitName] || 0;
 }
 
 function makeDofInstanceTable(instanceModelMatrices: Float32Array): arrow.Table {

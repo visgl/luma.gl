@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, CanvasContextProps} from '@luma.gl/core';
+import type {Device, CanvasContextProps, DeviceProps} from '@luma.gl/core';
 import {luma, log} from '@luma.gl/core';
 import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
@@ -19,8 +19,10 @@ type TestDeviceCache = {
   webglDevicePromise: Promise<WebGLDevice> | null;
   /** A shared offscreen WebGL device for presentation-context tests */
   presentationWebglDevicePromise: Promise<WebGLDevice | null> | null;
-  /** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
-  webgpuDevicePromise: Promise<WebGPUDevice | null> | null;
+  /** WebGPU Devices intended for testing, keyed by featureLevel */
+  webgpuDevicePromises: Partial<
+    Record<NonNullable<DeviceProps['featureLevel']>, Promise<WebGPUDevice | null>>
+  >;
 };
 
 declare global {
@@ -35,23 +37,34 @@ type LostAwareDevice = {
   isLost: boolean;
 };
 
-/** Includes WebGPU device if available */
+type TestDeviceType = 'webgl' | 'webgpu' | 'webgpu-core' | 'webgpu-max' | 'null' | 'unknown';
+
+/**
+ * Returns available test devices for the requested backend types.
+ * @param types Backend types to create. `'webgpu'` preserves the legacy max-feature WebGPU test device.
+ */
 export async function getTestDevices(
-  types: Readonly<('webgl' | 'webgpu' | 'null' | 'unknown')[]> = ['webgl', 'webgpu']
+  types: Readonly<TestDeviceType[]> = ['webgl', 'webgpu']
 ): Promise<Device[]> {
   const promises = types.map(type => getTestDevice(type));
   const devices = await Promise.all(promises);
   return devices.filter(device => device !== null);
 }
 
-export async function getTestDevice(
-  type: 'webgl' | 'webgpu' | 'null' | 'unknown'
-): Promise<Device | null> {
+/**
+ * Returns a test device for one backend type, or `null` when that backend is unavailable.
+ * @param type Backend type to create.
+ */
+export async function getTestDevice(type: TestDeviceType): Promise<Device | null> {
   switch (type) {
     case 'webgl':
       return getOrCreateWebGLTestDevicePromise();
     case 'webgpu':
-      return getWebGPUTestDevice();
+      return getWebGPUTestDevice('max');
+    case 'webgpu-core':
+      return getWebGPUTestDevice('core');
+    case 'webgpu-max':
+      return getWebGPUTestDevice('max');
     case 'null':
       return getOrCreateNullTestDevicePromise();
     case 'unknown':
@@ -59,11 +72,33 @@ export async function getTestDevice(
   }
 }
 
-/** returns WebGPU device promise, if available */
-export async function getWebGPUTestDevice(): Promise<WebGPUDevice | null> {
-  return _refreshLostCachedTestDevice(getOrCreateWebGPUTestDevicePromise, () => {
-    testDeviceCache.webgpuDevicePromise = null;
-  });
+/**
+ * Returns a WebGPU test device for one feature level, or `null` when WebGPU is unavailable.
+ * @param featureLevel WebGPU feature level to request. Defaults to `'max'` for existing tests.
+ */
+export async function getWebGPUTestDevice(
+  featureLevel: NonNullable<DeviceProps['featureLevel']> = 'max'
+): Promise<WebGPUDevice | null> {
+  return _refreshLostCachedTestDevice(
+    () => getOrCreateWebGPUTestDevicePromise(featureLevel),
+    () => {
+      delete testDeviceCache.webgpuDevicePromises[featureLevel];
+    }
+  );
+}
+
+/**
+ * Returns available WebGPU test devices for the requested feature levels.
+ * @param featureLevels WebGPU feature levels to request. Defaults to both `'core'` and `'max'`.
+ */
+export async function getWebGPUTestDevices(
+  featureLevels: Readonly<NonNullable<DeviceProps['featureLevel']>[]> = ['core', 'max']
+): Promise<WebGPUDevice[]> {
+  const devices = await Promise.all(
+    featureLevels.map(featureLevel => getWebGPUTestDevice(featureLevel))
+  );
+
+  return devices.filter((device): device is WebGPUDevice => device !== null);
 }
 
 /** returns WebGL device promise, if available */
@@ -83,9 +118,11 @@ export async function getNullTestDevice(): Promise<NullDevice> {
   return getOrCreateNullTestDevicePromise();
 }
 
-function getOrCreateWebGPUTestDevicePromise(): Promise<WebGPUDevice | null> {
-  testDeviceCache.webgpuDevicePromise ||= makeWebGPUTestDevice();
-  return testDeviceCache.webgpuDevicePromise;
+function getOrCreateWebGPUTestDevicePromise(
+  featureLevel: NonNullable<DeviceProps['featureLevel']>
+): Promise<WebGPUDevice | null> {
+  testDeviceCache.webgpuDevicePromises[featureLevel] ||= makeWebGPUTestDevice(featureLevel);
+  return testDeviceCache.webgpuDevicePromises[featureLevel];
 }
 
 function getOrCreateWebGLTestDevicePromise(): Promise<WebGLDevice> {
@@ -103,19 +140,22 @@ function getOrCreateNullTestDevicePromise(): Promise<NullDevice> {
   return testDeviceCache.nullDevicePromise;
 }
 
-async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
+async function makeWebGPUTestDevice(
+  featureLevel: NonNullable<DeviceProps['featureLevel']>
+): Promise<WebGPUDevice | null> {
   const webgpuDeviceResolvers = withResolvers<WebGPUDevice | null>();
   try {
     const webgpuDevice = (await luma.createDevice({
-      id: 'webgpu-test-device',
+      id: `webgpu-${featureLevel}-test-device`,
       type: 'webgpu',
+      featureLevel,
       adapters: [webgpuAdapter],
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as WebGPUDevice;
     webgpuDevice.lost.finally(() => {
-      if (testDeviceCache.webgpuDevicePromise === webgpuDeviceResolvers.promise) {
-        testDeviceCache.webgpuDevicePromise = null;
+      if (testDeviceCache.webgpuDevicePromises[featureLevel] === webgpuDeviceResolvers.promise) {
+        delete testDeviceCache.webgpuDevicePromises[featureLevel];
       }
     });
     webgpuDeviceResolvers.resolve(webgpuDevice);
@@ -224,7 +264,7 @@ function getOrCreateTestDeviceCache(): TestDeviceCache {
     nullDevicePromise: null,
     webglDevicePromise: null,
     presentationWebglDevicePromise: null,
-    webgpuDevicePromise: null
+    webgpuDevicePromises: {}
   };
 
   return rootObject[TEST_DEVICE_CACHE_KEY];

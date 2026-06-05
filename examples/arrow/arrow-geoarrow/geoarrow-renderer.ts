@@ -37,6 +37,12 @@ export type GeoArrowRendererMetrics = {
   preparationTimeMs: number;
 };
 
+export type GeoArrowInspectionTables = {
+  pointTable: arrow.Table;
+  lineTable: arrow.Table;
+  polygonTable: arrow.Table;
+};
+
 type GeoArrowGeometryKind =
   | 'Point'
   | 'LineString'
@@ -68,6 +74,7 @@ export class GeoArrowRenderer {
     skippedRowCount: 0,
     preparationTimeMs: 0
   };
+  private inspectionTables: GeoArrowInspectionTables | null = null;
   private updateVersion = 0;
 
   constructor(device: Device, props: GeoArrowRendererProps = {}) {
@@ -130,6 +137,7 @@ export class GeoArrowRenderer {
     }
 
     this.replaceLineData(lineTable, nextProps);
+    this.inspectionTables = {pointTable, lineTable, polygonTable};
     this.metrics = {
       ...geometrySummary,
       preparationTimeMs: getTimestampMilliseconds() - startedAt
@@ -167,10 +175,18 @@ export class GeoArrowRenderer {
     this.polygonRenderer.destroy();
     this.lineRenderer?.destroy();
     this.lineRenderer = null;
+    this.inspectionTables = null;
   }
 
   getMetrics(): GeoArrowRendererMetrics {
     return this.metrics;
+  }
+
+  getInspectionTables(): GeoArrowInspectionTables {
+    if (!this.inspectionTables) {
+      throw new Error('GeoArrowRenderer has not prepared inspection tables');
+    }
+    return this.inspectionTables;
   }
 
   private async preparePointRenderer(

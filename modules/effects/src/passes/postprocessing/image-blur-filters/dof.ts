@@ -57,6 +57,7 @@ struct dofUniforms {
 
 @group(0) @binding(auto) var<uniform> dof: dofUniforms;
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
+@group(0) @binding(auto) var depthTextureSampler: sampler;
 
 fn dof_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -68,7 +69,7 @@ fn dof_sampleColor(
   let maxCoordinate = resolution - vec2<i32>(1, 1);
   let fragmentCoordinate = min(vec2<i32>(vec2<f32>(resolution) * texCoord), maxCoordinate);
 
-  let depthSample = textureLoad(depthTexture, fragmentCoordinate, 0);
+  let depthSample = textureSample(depthTexture, depthTextureSampler, texCoord);
   let linearDepth =
     (dof.depthRange.x * dof.depthRange.y) /
     (dof.depthRange.y -

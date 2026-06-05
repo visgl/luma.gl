@@ -11,12 +11,14 @@ import {
 } from './control-panel';
 import {
   makeArrowFloat64PrecisionSourceData,
+  makeArrowFloat64PrecisionSourceTable,
   type CoordinateMagnitudeKind
 } from './arrow-float64-precision-data';
 import {
   ArrowFloat64PrecisionRenderer,
   type ArrowFloat64PrecisionViewState
 } from './arrow-float64-precision-renderer';
+import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Float64 Origin Rebasing: Survey lines';
 export const description =
@@ -30,12 +32,15 @@ const DEFAULT_VIEW_STATE: ArrowFloat64PrecisionViewState = {
 const PANE_LABELS_ID = 'arrow-float64-precision-pane-labels';
 
 export default class ArrowFloat64PrecisionAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = makeArrowFloat64PrecisionControlPanelHtml();
+  static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};
 
   readonly device: Device;
   readonly controlPanel: ArrowFloat64PrecisionControlPanel;
+  readonly panels = new ArrowExamplePanelManager({
+    controlsHtml: makeArrowFloat64PrecisionControlPanelHtml()
+  });
   coordinateMagnitudeKind: CoordinateMagnitudeKind = DEFAULT_COORDINATE_MAGNITUDE_KIND;
   viewState: ArrowFloat64PrecisionViewState = {...DEFAULT_VIEW_STATE, pan: [0, 0]};
   renderer: ArrowFloat64PrecisionRenderer | null = null;
@@ -58,6 +63,7 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
 
   override async onInitialize(): Promise<void> {
     addPaneLabels();
+    this.panels.mount();
     this.controlPanel.initialize();
     await this.prepareRenderer(this.coordinateMagnitudeKind);
   }
@@ -82,6 +88,7 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
     this.rendererGeneration++;
     removePaneLabels();
     this.controlPanel.destroy();
+    this.panels.finalize();
     scheduleRendererDestroy(this.device, this.renderer);
     this.renderer = null;
   }
@@ -98,6 +105,15 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
     const rendererGeneration = ++this.rendererGeneration;
     this.controlPanel.setLoading(true);
     const sourceData = makeArrowFloat64PrecisionSourceData(coordinateMagnitudeKind);
+    this.panels.setTableEntries([
+      {
+        id: 'float64-source',
+        label: 'Survey path source',
+        kind: 'source',
+        table: makeArrowFloat64PrecisionSourceTable(sourceData),
+        status: `${sourceData.coordinateMagnitudeLabel} coordinate magnitude`
+      }
+    ]);
     const renderer = await ArrowFloat64PrecisionRenderer.create(this.device, sourceData);
     if (this.isFinalized || rendererGeneration !== this.rendererGeneration) {
       scheduleRendererDestroy(this.device, renderer);

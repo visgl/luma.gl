@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # ComputePipeline
+
+<CoreDocsTabs group="pipelines" active="compute-pipeline" />
 
 :::info
 `ComputePipeline` is only available on WebGPU.

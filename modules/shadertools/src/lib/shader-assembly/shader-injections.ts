@@ -83,7 +83,8 @@ export function injectShader(
   source: string,
   stage: 'vertex' | 'fragment',
   inject: Record<string, ShaderInjection[]>,
-  injectStandardStubs = false
+  injectStandardStubs = false,
+  language: 'glsl' | 'wgsl' = 'glsl'
 ): string {
   const isVertex = stage === 'vertex';
 
@@ -98,38 +99,50 @@ export function injectShader(
     switch (key) {
       // declarations are injected before the main function
       case 'vs:#decl':
-        if (isVertex) {
+        if (language === 'wgsl' || isVertex) {
           source = source.replace(DECLARATION_INJECT_MARKER, fragmentString);
         }
         break;
       // inject code at the beginning of the main function
       case 'vs:#main-start':
-        if (isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
+        if (language === 'wgsl' || isVertex) {
+          source =
+            language === 'wgsl'
+              ? injectWGSLStageMain(source, 'vertex', fragmentString, 'start')
+              : source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
         }
         break;
       // inject code at the end of main function
       case 'vs:#main-end':
-        if (isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
+        if (language === 'wgsl' || isVertex) {
+          source =
+            language === 'wgsl'
+              ? injectWGSLStageMain(source, 'vertex', fragmentString, 'end')
+              : source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
         }
         break;
       // declarations are injected before the main function
       case 'fs:#decl':
-        if (!isVertex) {
+        if (language === 'wgsl' || !isVertex) {
           source = source.replace(DECLARATION_INJECT_MARKER, fragmentString);
         }
         break;
       // inject code at the beginning of the main function
       case 'fs:#main-start':
-        if (!isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
+        if (language === 'wgsl' || !isVertex) {
+          source =
+            language === 'wgsl'
+              ? injectWGSLStageMain(source, 'fragment', fragmentString, 'start')
+              : source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
         }
         break;
       // inject code at the end of main function
       case 'fs:#main-end':
-        if (!isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
+        if (language === 'wgsl' || !isVertex) {
+          source =
+            language === 'wgsl'
+              ? injectWGSLStageMain(source, 'fragment', fragmentString, 'end')
+              : source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
         }
         break;
 
@@ -162,4 +175,61 @@ export function combineInjects(injects: any[]): Record<string, string> {
     }
   });
   return result;
+}
+
+function injectWGSLStageMain(
+  source: string,
+  stage: 'vertex' | 'fragment',
+  fragmentString: string,
+  position: 'start' | 'end'
+): string {
+  const bodyRange = getWGSLStageFunctionBodyRange(source, stage);
+  if (!bodyRange) {
+    return source;
+  }
+
+  if (position === 'start') {
+    const insertionIndex = bodyRange.openBraceIndex + 1;
+    return `${source.slice(0, insertionIndex)}\n${fragmentString}${source.slice(insertionIndex)}`;
+  }
+
+  return `${source.slice(0, bodyRange.closeBraceIndex)}${fragmentString}${source.slice(
+    bodyRange.closeBraceIndex
+  )}`;
+}
+
+function getWGSLStageFunctionBodyRange(
+  source: string,
+  stage: 'vertex' | 'fragment'
+): {openBraceIndex: number; closeBraceIndex: number} | null {
+  const stageAttribute = stage === 'vertex' ? '@vertex' : '@fragment';
+  const stageIndex = source.indexOf(stageAttribute);
+  if (stageIndex < 0) {
+    return null;
+  }
+
+  const functionIndex = source.indexOf('fn', stageIndex);
+  if (functionIndex < 0) {
+    return null;
+  }
+
+  const openBraceIndex = source.indexOf('{', functionIndex);
+  if (openBraceIndex < 0) {
+    return null;
+  }
+
+  let braceDepth = 0;
+  for (let index = openBraceIndex; index < source.length; index++) {
+    const character = source[index];
+    if (character === '{') {
+      braceDepth++;
+    } else if (character === '}') {
+      braceDepth--;
+      if (braceDepth === 0) {
+        return {openBraceIndex, closeBraceIndex: index};
+      }
+    }
+  }
+
+  return null;
 }

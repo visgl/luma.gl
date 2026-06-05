@@ -4,7 +4,7 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, extent, GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {cleanEvaluate, extent, GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {getTestDevice, TestData, verifyTableValue, isSupportedByWebGPU} from './fixtures';
 
 for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
@@ -16,19 +16,19 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
     });
 
     const TEST_CASES: {
-      eval: GPUTableEvaluator;
+      eval: GPUDataEvaluator;
       expected: TestData;
     }[] = [
       {
-        eval: extent(GPUTableEvaluator.fromArray([4, 9, -1, 8, 7, 3, 2, 12], {size: 2})),
+        eval: extent(GPUDataEvaluator.fromArray([4, 9, -1, 8, 7, 3, 2, 12], {size: 2})),
         expected: {value: [-1, 7, 3, 12], type: 'float32', size: 2}
       },
       {
-        eval: extent(GPUTableEvaluator.fromArray([8, 2, 13, 5], {type: 'uint32', size: 1})),
+        eval: extent(GPUDataEvaluator.fromArray([8, 2, 13, 5], {type: 'uint32', size: 1})),
         expected: {value: [2, 13], type: 'uint32', size: 2}
       },
       {
-        eval: extent(GPUTableEvaluator.fromConstant([6, -2])),
+        eval: extent(GPUDataEvaluator.fromConstant([6, -2])),
         expected: {value: [6, 6, -2, -2], type: 'float32', size: 2}
       }
     ];
@@ -43,8 +43,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           return;
         }
         await cleanEvaluate(device, testCase);
-        await testCase.eval.readValue();
-        expect(verifyTableValue(testCase.eval, testCase.expected)).toBe(null);
+        expect(await verifyTableValue(testCase.eval, testCase.expected)).toBe(null);
         testCase.eval.destroy();
       });
     }

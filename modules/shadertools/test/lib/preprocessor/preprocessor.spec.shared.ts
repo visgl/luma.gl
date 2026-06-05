@@ -68,6 +68,32 @@ var ibl = 0;
 var direct = 1;
 var ibl = 0;
 `
+  },
+  {
+    title: '#if define expression',
+    options: {defines: {USE_STORAGE: 1}},
+    source: `\
+#if USE_STORAGE
+var storagePath = 1;
+#else
+var attributePath = 1;
+#endif
+`,
+    result: `\
+var storagePath = 1;
+`
+  },
+  {
+    title: '#if negated define expression',
+    options: {defines: {USE_STORAGE: false}},
+    source: `\
+#if !USE_STORAGE
+var attributePath = 1;
+#endif
+`,
+    result: `\
+var attributePath = 1;
+`
   }
 ];
 
@@ -87,6 +113,11 @@ export function registerPreprocessorTests(test: TapeTestFunction): void {
       () => preprocess('#ifdef USE_SHADOWS\nvalue'),
       /Unterminated conditional block/,
       'unterminated conditionals throw'
+    );
+    t.throws(
+      () => preprocess('#if USE_A && USE_B\nvalue\n#endif'),
+      /Unsupported #if expression/,
+      'unsupported #if expressions throw'
     );
 
     t.end();
