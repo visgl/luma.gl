@@ -3,10 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {runRowComputation} from './common/row-transform';
 
-export const swizzle: OperationHandler<{x: GPUTableEvaluator; columns: number[]}> = async ({
+export const swizzle: OperationHandler<{x: GPUDataEvaluator; columns: number[]}> = async ({
   inputs,
   output,
   target

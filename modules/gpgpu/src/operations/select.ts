@@ -3,27 +3,27 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getCompatibleGPUTableEvaluatorFormat,
-  getGPUTableEvaluator,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getCompatibleGPUDataEvaluatorFormat,
+  getGPUDataEvaluator,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 import {deduceOutputProps} from '../utils/output-props';
 
 class SelectOperation extends Operation<{
-  condition: GPUTableEvaluator;
-  whenTrue: GPUTableEvaluator;
-  whenFalse: GPUTableEvaluator;
+  condition: GPUDataEvaluator;
+  whenTrue: GPUDataEvaluator;
+  whenFalse: GPUDataEvaluator;
 }> {
   name = 'select';
 
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
   constructor(
-    condition: GPUTableEvaluator,
-    whenTrue: GPUTableEvaluator,
-    whenFalse: GPUTableEvaluator
+    condition: GPUDataEvaluator,
+    whenTrue: GPUDataEvaluator,
+    whenFalse: GPUDataEvaluator
   ) {
     super({condition, whenTrue, whenFalse});
 
@@ -33,14 +33,14 @@ class SelectOperation extends Operation<{
     validateInputSize('select whenTrue', whenTrue.size, valueProps.size);
     validateInputSize('select whenFalse', whenFalse.size, valueProps.size);
 
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant: conditionAndLengthProps.isConstant,
       type: valueProps.type,
       size: valueProps.size,
       length: conditionAndLengthProps.length,
       format:
-        getCompatibleGPUTableEvaluatorFormat(whenTrue, valueProps.type, valueProps.size) ??
-        getCompatibleGPUTableEvaluatorFormat(whenFalse, valueProps.type, valueProps.size),
+        getCompatibleGPUDataEvaluatorFormat(whenTrue, valueProps.type, valueProps.size) ??
+        getCompatibleGPUDataEvaluatorFormat(whenFalse, valueProps.type, valueProps.size),
       source: this
     });
   }
@@ -58,14 +58,14 @@ class SelectOperation extends Operation<{
  * output row size. Scalar rows broadcast across lanes.
  */
 export function select(
-  condition: GPUTableEvaluatorInput,
-  whenTrue: GPUTableEvaluatorInput,
-  whenFalse: GPUTableEvaluatorInput
-): GPUTableEvaluator {
+  condition: GPUDataEvaluatorInput,
+  whenTrue: GPUDataEvaluatorInput,
+  whenFalse: GPUDataEvaluatorInput
+): GPUDataEvaluator {
   return new SelectOperation(
-    getGPUTableEvaluator(condition),
-    getGPUTableEvaluator(whenTrue),
-    getGPUTableEvaluator(whenFalse)
+    getGPUDataEvaluator(condition),
+    getGPUDataEvaluator(whenTrue),
+    getGPUDataEvaluator(whenFalse)
   ).output;
 }
 

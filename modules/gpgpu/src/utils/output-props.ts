@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import type {SignedDataType} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../operation/gpu-data-evaluator';
 
-export function deduceOutputProps(...inputs: GPUTableEvaluator[]): {
+export function deduceOutputProps(...inputs: GPUDataEvaluator[]): {
   isConstant: boolean;
   type: SignedDataType;
   size: number;

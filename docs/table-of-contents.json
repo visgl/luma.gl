@@ -166,7 +166,7 @@
         "label": "@luma.gl/gpgpu",
         "items": [
           "api-reference/gpgpu/README",
-          "api-reference/gpgpu/gpu-table",
+          "api-reference/gpgpu/gpu-data-evaluator",
           "api-reference/gpgpu/operations",
           "api-reference/gpgpu/custom-operation",
           "api-reference/gpgpu/clean-evaluate"

@@ -3,26 +3,26 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getGPUTableEvaluator,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getGPUDataEvaluator,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 import {deduceOutputProps} from '../utils/output-props';
 
 /** Deferred row interleave operation. */
-class InterleaveOperation extends Operation<{x: GPUTableEvaluator; y: GPUTableEvaluator}> {
+class InterleaveOperation extends Operation<{x: GPUDataEvaluator; y: GPUDataEvaluator}> {
   /** Operation name used for backend lookup. */
   name = 'interleave';
 
   /** Lazy output table for the interleaved result. */
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
-  constructor(x: GPUTableEvaluator, y: GPUTableEvaluator) {
+  constructor(x: GPUDataEvaluator, y: GPUDataEvaluator) {
     super({x, y});
 
     const {isConstant, type, length} = deduceOutputProps(x, y);
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant,
       type,
       size: x.size + y.size,
@@ -42,12 +42,12 @@ class InterleaveOperation extends Operation<{x: GPUTableEvaluator; y: GPUTableEv
  * Concatenates each input row in argument order.
  *
  * The returned table is lazy; no CPU or GPU work is performed until
- * {@link GPUTableEvaluator.evaluate} is called on the result.
+ * {@link GPUDataEvaluator.evaluate} is called on the result.
  */
-export function interleave(...args: GPUTableEvaluatorInput[]): GPUTableEvaluator {
-  let result = getGPUTableEvaluator(args[0]);
+export function interleave(...args: GPUDataEvaluatorInput[]): GPUDataEvaluator {
+  let result = getGPUDataEvaluator(args[0]);
   for (let i = 1; i < args.length; i++) {
-    result = new InterleaveOperation(result, getGPUTableEvaluator(args[i])).output;
+    result = new InterleaveOperation(result, getGPUDataEvaluator(args[i])).output;
   }
   return result;
 }

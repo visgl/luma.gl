@@ -13,7 +13,7 @@ import {
   extent,
   fround,
   gather,
-  GPUTableEvaluator,
+  GPUDataEvaluator,
   interleave,
   length,
   log,
@@ -42,15 +42,15 @@ import {
 
 export type SegmentedExpressionInput = {
   kind: 'segmented';
-  values: GPUTableEvaluator;
-  startIndices: GPUTableEvaluator;
+  values: GPUDataEvaluator;
+  startIndices: GPUDataEvaluator;
 };
 
-export type ExpressionInput = GPUTableEvaluator | SegmentedExpressionInput;
+export type ExpressionInput = GPUDataEvaluator | SegmentedExpressionInput;
 export type ExpressionInputs = Record<string, ExpressionInput>;
 
-type ExpressionValue = GPUTableEvaluator | SegmentedExpressionInput | number | number[];
-type OperationFunction = (...args: any[]) => GPUTableEvaluator;
+type ExpressionValue = GPUDataEvaluator | SegmentedExpressionInput | number | number[];
+type OperationFunction = (...args: any[]) => GPUDataEvaluator;
 
 const OPERATIONS: Record<string, OperationFunction> = {
   abs,
@@ -86,14 +86,14 @@ const BINARY_OPERATIONS: Record<string, OperationFunction> = {
   '**': pow
 };
 
-export function evaluateExpression(source: string, inputs: ExpressionInputs): GPUTableEvaluator {
+export function evaluateExpression(source: string, inputs: ExpressionInputs): GPUDataEvaluator {
   const expression = parseGPGPUExpression(source);
   const value = evaluateNode(expression, inputs);
-  if (value instanceof GPUTableEvaluator) {
+  if (value instanceof GPUDataEvaluator) {
     return value;
   }
   if (typeof value === 'number' || Array.isArray(value)) {
-    return GPUTableEvaluator.fromConstant(value);
+    return GPUDataEvaluator.fromConstant(value);
   }
   throw new Error('Expression resolves to segmented data; use .values or .startIndices');
 }
@@ -174,7 +174,7 @@ function evaluateUnaryExpression(node: UnaryExpression, inputs: ExpressionInputs
 function evaluateBinaryExpression(
   node: BinaryExpression,
   inputs: ExpressionInputs
-): GPUTableEvaluator {
+): GPUDataEvaluator {
   const operation = BINARY_OPERATIONS[node.operator];
   if (!operation) {
     throw new Error(`Unsupported binary operator ${node.operator}`);
@@ -185,7 +185,7 @@ function evaluateBinaryExpression(
   );
 }
 
-function evaluateCallExpression(node: CallExpression, inputs: ExpressionInputs): GPUTableEvaluator {
+function evaluateCallExpression(node: CallExpression, inputs: ExpressionInputs): GPUDataEvaluator {
   if (node.callee.type !== 'Identifier') {
     throw new Error('Only direct operation calls are supported');
   }
@@ -229,18 +229,18 @@ function evaluateMemberExpression(
   }
 }
 
-function getEvaluatorOrLiteral(value: ExpressionValue): GPUTableEvaluator | number | number[] {
+function getEvaluatorOrLiteral(value: ExpressionValue): GPUDataEvaluator | number | number[] {
   if (isSegmentedInput(value)) {
     throw new Error('Segmented inputs must use .values or .startIndices in this operation');
   }
   return value;
 }
 
-function getSegmentStartEvaluator(value: ExpressionValue | undefined): GPUTableEvaluator {
+function getSegmentStartEvaluator(value: ExpressionValue | undefined): GPUDataEvaluator {
   if (!value) {
     throw new Error('segmentedMap requires a segmented input');
   }
-  if (value instanceof GPUTableEvaluator) {
+  if (value instanceof GPUDataEvaluator) {
     return value;
   }
   if (isSegmentedInput(value)) {
@@ -257,7 +257,5 @@ function getNumberArgument(value: ExpressionValue | undefined, name: string): nu
 }
 
 function isSegmentedInput(value: ExpressionValue): value is SegmentedExpressionInput {
-  return (
-    typeof value === 'object' && !(value instanceof GPUTableEvaluator) && !Array.isArray(value)
-  );
+  return typeof value === 'object' && !(value instanceof GPUDataEvaluator) && !Array.isArray(value);
 }

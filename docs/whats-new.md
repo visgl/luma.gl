@@ -10,7 +10,7 @@ Target Release Date: Q3, 2026
 
 - **`@luma.gl/tables`** - Generic GPU table/runtime, planning, transform, and compute helpers.
 - **`@luma.gl/arrow`** - New module for working with binary columnar data on the GPU.
-- **`@luma.gl/gpgpu`** - New module for lazy `GPUTableEvaluator` operations with CPU/WebGL/WebGPU backends.
+- **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 
 
 **@luma.gl/core**
@@ -41,7 +41,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/gpgpu** NEW MODULE
 
-- **`GPUTableEvaluator`** lazy GPU operations with CPU/WebGL/WebGPU backends.
+- **`GPUDataEvaluator`** lazy GPUData operations and **`GPUVectorEvaluator`** chunk-preserving GPUVector transforms with CPU/WebGL/WebGPU backends.
 
 **@luma.gl/arrow** NEW MODULE
 

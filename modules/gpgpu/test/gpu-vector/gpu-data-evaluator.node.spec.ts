@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, NativeFloat16ArrayConstructor, type Device} from '@luma.gl/core';
-import {GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
 
-test('GPUTableEvaluator.fromGPUVector accepts packed Float16 vectors', () => {
+test('GPUDataEvaluator.fromGPUData accepts packed Float16 chunks', () => {
   const device = new NullDevice({});
   const vector2 = makeUint16Vector(device, 'colors16x2', [0x3c00, 0x3800], 2, {
     format: 'float16x2'
@@ -17,8 +17,8 @@ test('GPUTableEvaluator.fromGPUVector accepts packed Float16 vectors', () => {
     format: 'float16x4'
   });
 
-  const evaluator2 = GPUTableEvaluator.fromGPUVector(vector2);
-  const evaluator4 = GPUTableEvaluator.fromGPUVector(vector4);
+  const evaluator2 = GPUDataEvaluator.fromGPUData(vector2.data[0]);
+  const evaluator4 = GPUDataEvaluator.fromGPUData(vector4.data[0]);
 
   expect(evaluator2.type).toBe('float16');
   expect(evaluator2.size).toBe(2);
@@ -26,7 +26,6 @@ test('GPUTableEvaluator.fromGPUVector accepts packed Float16 vectors', () => {
   expect(evaluator4.type).toBe('float16');
   expect(evaluator4.size).toBe(4);
   expect(evaluator4.ValueType).toBe(NativeFloat16ArrayConstructor ?? Uint16Array);
-
   evaluator2.destroy();
   evaluator4.destroy();
   vector2.destroy();
@@ -34,17 +33,8 @@ test('GPUTableEvaluator.fromGPUVector accepts packed Float16 vectors', () => {
   device.destroy();
 });
 
-test('GPUTableEvaluator.fromGPUVector validates packed numeric vectors', () => {
+test('GPUDataEvaluator.fromGPUData validates packed numeric chunks', () => {
   const device = new NullDevice({});
-  const vector = makeFloat32Vector(device, 'values', [1, 2, 3, 4], 2);
-  const interleaved = new GPUVector({
-    type: 'interleaved',
-    name: 'interleaved-values',
-    buffer: vector.data[0].buffer,
-    length: 2,
-    byteStride: 8,
-    attributes: [{attribute: 'values', format: 'float32x2', byteOffset: 0}]
-  });
   const mismatchedRowByteLength = makeUint16Vector(device, 'bad-row-byte-length', [0, 0, 0, 0], 4, {
     format: 'float16x4',
     byteStride: 4,
@@ -56,20 +46,17 @@ test('GPUTableEvaluator.fromGPUVector validates packed numeric vectors', () => {
     rowByteLength: 8
   });
 
-  expect(() => GPUTableEvaluator.fromGPUVector(interleaved)).toThrow(/does not accept interleaved/);
-  expect(() => GPUTableEvaluator.fromGPUVector(mismatchedRowByteLength)).toThrow(
+  expect(() => GPUDataEvaluator.fromGPUData(mismatchedRowByteLength.data[0])).toThrow(
     /requires rowByteLength 8/
   );
-  expect(() => GPUTableEvaluator.fromGPUVector(unpacked)).toThrow(/requires packed vector/);
+  expect(() => GPUDataEvaluator.fromGPUData(unpacked.data[0])).toThrow(/requires packed GPUData/);
 
-  interleaved.destroy();
   mismatchedRowByteLength.destroy();
   unpacked.destroy();
-  vector.destroy();
   device.destroy();
 });
 
-test('GPUTableEvaluator.readValue only reads requested rows from GPU buffers', async () => {
+test('GPUDataEvaluator.readValue only reads requested rows from GPU buffers', async () => {
   const device = new NullDevice({});
   const packed = makeFloat32Vector(device, 'packed-values', [10, 11, 20, 21, 30, 31, 40, 41], 2);
   const strided = makeFloat32Vector(
@@ -83,8 +70,8 @@ test('GPUTableEvaluator.readValue only reads requested rows from GPU buffers', a
     }
   );
 
-  const packedEvaluator = GPUTableEvaluator.fromGPUVector(packed);
-  const stridedEvaluator = new GPUTableEvaluator({
+  const packedEvaluator = GPUDataEvaluator.fromGPUData(packed.data[0]);
+  const stridedEvaluator = new GPUDataEvaluator({
     id: 'strided-evaluator',
     type: 'float32',
     size: 2,
@@ -98,7 +85,7 @@ test('GPUTableEvaluator.readValue only reads requested rows from GPU buffers', a
   const stridedBuffer = strided.data[0].buffer;
   const packedReadAsyncSpy = vi.spyOn(packedBuffer, 'readAsync');
   const stridedReadAsyncSpy = vi.spyOn(stridedBuffer, 'readAsync');
-  const unevaluatedEvaluator = GPUTableEvaluator.fromArray([1, 2], {size: 1});
+  const unevaluatedEvaluator = GPUDataEvaluator.fromArray([1, 2], {size: 1});
 
   expect(packedEvaluator.buffer).toBe(packedBuffer);
   expect(stridedEvaluator.buffer).toBe(stridedBuffer);

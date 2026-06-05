@@ -3,14 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {runRowTransform} from './common/row-transform';
 import {getAttributeType, getZeroLiteral} from './common/helper';
 
 export const select: OperationHandler<{
-  condition: GPUTableEvaluator;
-  whenTrue: GPUTableEvaluator;
-  whenFalse: GPUTableEvaluator;
+  condition: GPUDataEvaluator;
+  whenTrue: GPUDataEvaluator;
+  whenFalse: GPUDataEvaluator;
 }> = async ({inputs, output, target}) => {
   const scalarType = getAttributeType(output.type, 1, output.normalized);
   const zeroLiteral = getZeroLiteral(scalarType);
@@ -43,7 +43,7 @@ export const select: OperationHandler<{
 
 function getLaneExpression(
   name: string,
-  input: GPUTableEvaluator,
+  input: GPUDataEvaluator,
   laneIndex: number,
   zeroLiteral: string
 ): string {

@@ -4,7 +4,7 @@
 
 import type {Device, Buffer} from '@luma.gl/core';
 import type {TypedArray} from '@math.gl/types';
-import {GPUTableEvaluator} from './gpu-table-evaluator';
+import {GPUDataEvaluator} from './gpu-data-evaluator';
 import {backendRegistry} from './backend-registry';
 
 /** Backend implementation for a single lazy GPGPU operation. */
@@ -13,8 +13,8 @@ export type OperationHandler<InputsT extends Record<string, any> = any> = (args:
   device: Device;
   /** Operation inputs. */
   inputs: InputsT;
-  /** Logical output table describing the target layout. */
-  output: GPUTableEvaluator;
+  /** Logical output evaluator describing the target layout. */
+  output: GPUDataEvaluator;
   /** GPU buffer that receives operation output. */
   target: Buffer;
 }) => Promise<OperationHandlerResult>;
@@ -28,24 +28,24 @@ export type OperationHandlerResult = {
  * Base class for deferred GPGPU operations.
  *
  * Operations form a lazy dependency graph. Calling {@link Operation.execute} first materializes
- * dependent tables, then dispatches either a CPU handler or a backend-specific GPU handler.
+ * dependent evaluators, then dispatches either a CPU handler or a backend-specific GPU handler.
  */
 export abstract class Operation<InputsT extends Record<string, any> = Record<string, any>> {
-  /** Input table map for this operation. */
+  /** Input evaluator map for this operation. */
   inputs: InputsT;
-  /** Input tables that need evaluation before this operation can run. */
-  dependencies: GPUTableEvaluator[];
+  /** Input evaluators that need evaluation before this operation can run. */
+  dependencies: GPUDataEvaluator[];
 
   constructor(inputs: InputsT) {
     this.inputs = inputs;
-    this.dependencies = Object.values(inputs).filter(i => i instanceof GPUTableEvaluator);
+    this.dependencies = Object.values(inputs).filter(i => i instanceof GPUDataEvaluator);
   }
 
   /** Unique identifier of this operation, e.g. 'add' */
   abstract get name(): string;
 
-  /** Logical output table produced by this operation. */
-  abstract get output(): GPUTableEvaluator;
+  /** Logical output evaluator produced by this operation. */
+  abstract get output(): GPUDataEvaluator;
 
   /** Human friendly string that describes this operation */
   abstract toString(): string;

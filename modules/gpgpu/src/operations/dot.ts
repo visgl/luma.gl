@@ -3,30 +3,30 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getGPUTableEvaluator,
-  getCompatibleGPUTableEvaluatorFormat,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getGPUDataEvaluator,
+  getCompatibleGPUDataEvaluatorFormat,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 import {deduceOutputProps} from '../utils/output-props';
 
-class DotOperation extends Operation<{x: GPUTableEvaluator; y: GPUTableEvaluator}> {
+class DotOperation extends Operation<{x: GPUDataEvaluator; y: GPUDataEvaluator}> {
   name = 'dot';
 
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
-  constructor(x: GPUTableEvaluator, y: GPUTableEvaluator) {
+  constructor(x: GPUDataEvaluator, y: GPUDataEvaluator) {
     super({x, y});
 
     validateMatchingRowSize('dot', x, y);
     const props = deduceOutputProps(x, y);
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant: props.isConstant,
       type: 'float32',
       size: 1,
       length: props.length,
-      format: getCompatibleGPUTableEvaluatorFormat(x, 'float32', 1, x.normalized),
+      format: getCompatibleGPUDataEvaluatorFormat(x, 'float32', 1, x.normalized),
       source: this
     });
   }
@@ -37,11 +37,11 @@ class DotOperation extends Operation<{x: GPUTableEvaluator; y: GPUTableEvaluator
   }
 }
 
-export function dot(x: GPUTableEvaluatorInput, y: GPUTableEvaluatorInput): GPUTableEvaluator {
-  return new DotOperation(getGPUTableEvaluator(x), getGPUTableEvaluator(y)).output;
+export function dot(x: GPUDataEvaluatorInput, y: GPUDataEvaluatorInput): GPUDataEvaluator {
+  return new DotOperation(getGPUDataEvaluator(x), getGPUDataEvaluator(y)).output;
 }
 
-function validateMatchingRowSize(name: string, x: GPUTableEvaluator, y: GPUTableEvaluator): void {
+function validateMatchingRowSize(name: string, x: GPUDataEvaluator, y: GPUDataEvaluator): void {
   if (x.size !== y.size) {
     throw new Error(`${name} inputs must have matching row sizes, got ${x.size} and ${y.size}`);
   }

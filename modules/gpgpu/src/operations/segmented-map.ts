@@ -3,14 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getGPUTableEvaluator,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getGPUDataEvaluator,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 
 type SegmentedMapInputs = {
-  segments: GPUTableEvaluator;
+  segments: GPUDataEvaluator;
   vertexCount: number;
 };
 
@@ -20,12 +20,12 @@ class SegmentedMapOperation extends Operation<SegmentedMapInputs> {
   name = 'segmentedMap';
 
   /** Lazy output table for the segmented mapping result. */
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
-  constructor(segments: GPUTableEvaluator, vertexCount: number) {
+  constructor(segments: GPUDataEvaluator, vertexCount: number) {
     super({segments, vertexCount});
 
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       type: 'uint32',
       size: 2,
       length: vertexCount,
@@ -48,9 +48,9 @@ class SegmentedMapOperation extends Operation<SegmentedMapInputs> {
  * the exclusive end of the final segment.
  */
 export function segmentedMap(
-  segments: GPUTableEvaluatorInput,
+  segments: GPUDataEvaluatorInput,
   vertexCount: number
-): GPUTableEvaluator {
+): GPUDataEvaluator {
   if (!Number.isInteger(vertexCount)) {
     throw new Error(`segmentedMap vertexCount must be an integer, got ${vertexCount}`);
   }
@@ -58,7 +58,7 @@ export function segmentedMap(
     throw new Error(`segmentedMap vertexCount must be non-negative, got ${vertexCount}`);
   }
 
-  const segmentsTable = getGPUTableEvaluator(segments);
+  const segmentsTable = getGPUDataEvaluator(segments);
   if (segmentsTable.length < 1) {
     throw new Error('segmentedMap segments must contain at least one segment start');
   }
@@ -73,7 +73,7 @@ export function segmentedMap(
   return new SegmentedMapOperation(segmentsTable, vertexCount).output;
 }
 
-function validateSegmentsIfAvailable(segments: GPUTableEvaluator, vertexCount: number): void {
+function validateSegmentsIfAvailable(segments: GPUDataEvaluator, vertexCount: number): void {
   const segmentStarts = segments.value;
   if (!segmentStarts) {
     return;
@@ -100,7 +100,7 @@ function validateSegmentsIfAvailable(segments: GPUTableEvaluator, vertexCount: n
   }
 }
 
-function getRowOffset(table: GPUTableEvaluator, rowIndex: number): number {
+function getRowOffset(table: GPUDataEvaluator, rowIndex: number): number {
   return (
     table.offset / table.ValueType.BYTES_PER_ELEMENT +
     rowIndex * (table.stride / table.ValueType.BYTES_PER_ELEMENT)

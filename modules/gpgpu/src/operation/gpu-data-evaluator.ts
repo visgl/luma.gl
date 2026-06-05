@@ -10,6 +10,7 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
+  GPUData,
   GPUVector,
   getDataTypeFromTypedArray,
   getGPUVectorFormatInfo,
@@ -21,15 +22,15 @@ import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 
-type GPUTableEvaluatorBufferOwnership = 'owned' | 'borrowed';
+type GPUDataEvaluatorBufferOwnership = 'owned' | 'borrowed';
 
-/** Evaluation options for {@link GPUTableEvaluator.evaluate}. */
-export type GPUTableEvaluatorEvaluateOptions = {
-  /** Output vector name. */
+/** Options for materializing one {@link GPUDataEvaluator}. */
+export type GPUDataEvaluatorEvaluateOptions = {
+  /** Name assigned to the materialized single-chunk `GPUVector`. */
   name?: string;
-  /** Memory format for the materialized GPUVector. Defaults to the evaluator's type and size. */
+  /** Memory format for the materialized `GPUVector`. Defaults to the evaluator layout. */
   format?: GPUVectorFormat;
-  /** Whether to materialize the GPUVector as an interleaved vector. */
+  /** Whether to expose the materialized buffer through an interleaved `GPUVector` view. */
   interleaved?:
     | boolean
     | {
@@ -38,9 +39,15 @@ export type GPUTableEvaluatorEvaluateOptions = {
       };
 };
 
-/** Properties used to construct a {@link GPUTableEvaluator}. */
-export type GPUTableEvaluatorProps = {
-  /** Optional debug name used by {@link GPUTableEvaluator.toString}. */
+/** Options for adapting one existing `GPUData` chunk into a {@link GPUDataEvaluator}. */
+export type GPUDataEvaluatorFromGPUDataOptions = {
+  /** Optional debug name used by {@link GPUDataEvaluator.toString}. */
+  id?: string;
+};
+
+/** Properties used to construct one {@link GPUDataEvaluator}. */
+export type GPUDataEvaluatorProps = {
+  /** Optional debug name used by {@link GPUDataEvaluator.toString}. */
   id?: string;
   /** Scalar element type for every stored value. */
   type: SignedDataType;
@@ -56,16 +63,16 @@ export type GPUTableEvaluatorProps = {
   stride?: number;
   /** Whether integer values should be normalized when read as float vertex attributes. */
   normalized?: boolean;
-  /** CPU buffer that initializes the table, required unless `source` or `buffer` is supplied. */
+  /** CPU buffer that initializes the evaluator, required unless another source is supplied. */
   value?: TypedArray;
-  /** External GPU buffer that backs this table and is not owned by the evaluator. */
+  /** External GPU buffer that backs this evaluator and is not owned by it. */
   buffer?: Buffer;
-  /** External GPUVector resource that backs this evaluator and is not owned by it. */
-  gpuVector?: GPUVector;
+  /** External GPUData chunk that backs this evaluator and is not owned by it. */
+  gpuData?: GPUData;
   /** Optional memory format preserved for GPUVector interop. */
   format?: GPUVectorFormat;
-  /** Lazy operation or table whose output initializes this table, required unless `value` is supplied. */
-  source?: Operation | GPUTableEvaluator | null;
+  /** Lazy operation or evaluator whose output initializes this evaluator. */
+  source?: Operation | GPUDataEvaluator | null;
   /** Whether every row should read the same value. */
   isConstant?: boolean;
   /** Number of logical rows, inferred for constants and CPU-backed tables when omitted. */
@@ -73,13 +80,15 @@ export type GPUTableEvaluatorProps = {
 };
 
 /**
- * Device-agnostic, immutable 2D numeric table used as input and output for lazy GPGPU operations.
+ * Device-agnostic, immutable 2D numeric evaluator used by lazy GPGPU operations.
  *
- * A table describes row layout and a data source, but does not allocate or run GPU work until
- * {@link GPUTableEvaluator.evaluate} is called. Operation functions such as `add()` return new tables whose
- * `source` points at the deferred operation.
+ * @remarks
+ * A `GPUDataEvaluator` describes exactly one logical `GPUData` chunk, a CPU value source, or a
+ * deferred operation output. It does not allocate or run GPU work until
+ * {@link GPUDataEvaluator.evaluate} is called. Use `GPUVectorEvaluator` when one transform should
+ * be applied independently across every `GPUData` chunk in a `GPUVector`.
  */
-export class GPUTableEvaluator {
+export class GPUDataEvaluator {
   /** Scalar element type for each stored value. */
   readonly type: SignedDataType;
   /** Number of scalar elements in each logical row. */
@@ -96,31 +105,35 @@ export class GPUTableEvaluator {
   readonly length: number;
   /** Total bytes needed for the table storage. */
   readonly byteLength: number;
-  /** TypedArray constructor for CPU representation, derived from {@link GPUTableEvaluator.type}. */
+  /** TypedArray constructor for CPU representation, derived from {@link GPUDataEvaluator.type}. */
   readonly ValueType: TypedArrayConstructor;
-  /** Operation whose output is used to fill the vector, required unless `value` is supplied */
-  readonly source: Operation | GPUTableEvaluator | null = null;
+  /** Operation or evaluator whose output initializes this evaluator. */
+  readonly source: Operation | GPUDataEvaluator | null = null;
   /** Optional memory format preserved for GPUVector interop. */
   readonly format?: GPUVectorFormat;
 
-  /** User-assigned id for easy debugging */
+  /** User-assigned id for easy debugging. */
   protected _id?: string;
-  /** destroy() has been called and no more resources should be created */
+  /** Whether {@link GPUDataEvaluator.destroy} has been called. */
   protected _destroyed: boolean = false;
 
-  /** CPU buffer, either provided by the user or read back from the GPU */
+  /** CPU buffer, either provided by the user or read back from the GPU. */
   protected _value?: TypedArray;
   /** Materialized GPU resource backing this evaluator. */
   private _gpuVector?: GPUVector;
   /** Whether this evaluator owns its backing GPU buffer or only borrows another resource's buffer. */
-  private _bufferOwnership: GPUTableEvaluatorBufferOwnership = 'owned';
+  private _bufferOwnership: GPUDataEvaluatorBufferOwnership = 'owned';
 
   /**
-   * Constructs a table from a CPU array.
+   * Constructs one evaluator from a CPU array.
    *
    * Plain JavaScript arrays are converted to typed arrays using `type` or `float32` by default.
    * `Float64Array` inputs are reinterpreted as `uint32` pairs so they can be consumed by GPU
    * operations such as {@link fround}.
+   *
+   * @param value - CPU values laid out as contiguous rows.
+   * @param props - Scalar type and row layout metadata for `value`.
+   * @returns One lazy evaluator backed by the provided CPU values.
    */
   static fromArray(
     value: TypedArray | number[],
@@ -130,8 +143,8 @@ export class GPUTableEvaluator {
       offset = 0,
       stride = 0,
       normalized = false
-    }: Partial<Pick<GPUTableEvaluatorProps, 'type' | 'size' | 'offset' | 'stride' | 'normalized'>>
-  ): GPUTableEvaluator {
+    }: Partial<Pick<GPUDataEvaluatorProps, 'type' | 'size' | 'offset' | 'stride' | 'normalized'>>
+  ): GPUDataEvaluator {
     let resolvedType = type;
     let typedValue: TypedArray;
     if (Array.isArray(value)) {
@@ -150,7 +163,7 @@ export class GPUTableEvaluator {
       typedValue = value;
     }
     const id = `<${resolvedType} * ${size}>`;
-    return new GPUTableEvaluator({
+    return new GPUDataEvaluator({
       id,
       type: resolvedType,
       size,
@@ -162,15 +175,16 @@ export class GPUTableEvaluator {
   }
 
   /**
-   * Constructs a constant table whose single row is broadcast across non-constant inputs.
+   * Constructs one constant evaluator whose single row is broadcast across non-constant inputs.
    *
    * @param value - Scalar or row value.
    * @param type - Scalar element type used for the CPU representation.
+   * @returns One lazy evaluator backed by the constant CPU row.
    */
   static fromConstant(
     value: number | number[],
     type: SignedDataType = 'float32'
-  ): GPUTableEvaluator {
+  ): GPUDataEvaluator {
     const ArrayType = getTypedArrayFromDataType(type);
     let id: string;
     if (!Array.isArray(value)) {
@@ -179,7 +193,7 @@ export class GPUTableEvaluator {
     } else {
       id = `[${value.join(',')}]`;
     }
-    return new GPUTableEvaluator({
+    return new GPUDataEvaluator({
       id,
       isConstant: true,
       type,
@@ -188,39 +202,46 @@ export class GPUTableEvaluator {
     });
   }
 
-  /** Creates a table evaluator view over an existing packed numeric GPUVector. */
-  static fromGPUVector(vector: GPUVector): GPUTableEvaluator {
-    validatePackedNumericGPUVector(vector);
-    const {type, size} = getGPUTablePropsFromGPUVector(vector);
-    const data = getSingleGPUVectorData(vector);
+  /**
+   * Creates one evaluator view over an existing packed numeric `GPUData` chunk.
+   *
+   * @param data - Packed fixed-width `GPUData` chunk to borrow.
+   * @param options - Optional debug metadata for the borrowed chunk.
+   * @returns One lazy evaluator that borrows `data.buffer`.
+   */
+  static fromGPUData(
+    data: GPUData,
+    options: GPUDataEvaluatorFromGPUDataOptions = {}
+  ): GPUDataEvaluator {
+    validatePackedNumericGPUData(data);
+    const {type, size} = getGPUDataEvaluatorPropsFromGPUData(data);
 
-    return new GPUTableEvaluator({
-      id: vector.name,
+    return new GPUDataEvaluator({
+      id: options.id,
       type,
       size,
       offset: data.byteOffset,
-      stride: vector.byteStride,
-      length: vector.length,
-      gpuVector: vector,
-      format: vector.format
+      stride: data.byteStride,
+      length: data.length,
+      gpuData: data,
+      format: data.format
     });
   }
 
-  /** TODO - Construct a new GPUTableEvaluator from a loaders.gl Table/BatchedTable. */
-  // static from(table: Table, columnName: string | number): GPUTableEvaluator
-
   /**
-   * Creates a table from explicit row layout and source information.
+   * Creates one evaluator from explicit row layout and source information.
    *
-   * Prefer {@link GPUTableEvaluator.fromArray} or {@link GPUTableEvaluator.fromConstant} for CPU-backed tables.
+   * Prefer {@link GPUDataEvaluator.fromArray} or {@link GPUDataEvaluator.fromConstant} for CPU-backed tables.
+   *
+   * @param props - Row layout and one value, buffer, GPUData, or deferred source.
    */
-  constructor(props: GPUTableEvaluatorProps) {
-    const {id, value, buffer, gpuVector, format, source = null, isConstant = false} = props;
-    if (!source && !value && !buffer && !gpuVector) {
-      throw new Error('OperationResource must have a value source');
+  constructor(props: GPUDataEvaluatorProps) {
+    const {id, value, buffer, gpuData, format, source = null, isConstant = false} = props;
+    if (!source && !value && !buffer && !gpuData) {
+      throw new Error('GPUDataEvaluator must have a value source');
     }
     let {type, size, offset, stride, normalized, length} = props;
-    if (source instanceof GPUTableEvaluator) {
+    if (source instanceof GPUDataEvaluator) {
       type = type ?? source.type;
       size = size ?? source.size;
       offset = offset ?? source.offset;
@@ -234,7 +255,7 @@ export class GPUTableEvaluator {
       length = isConstant ? 1 : length;
     }
     if (!type) {
-      throw new Error('GPUTableEvaluator: type not defined');
+      throw new Error('GPUDataEvaluator: type not defined');
     }
 
     this._id = id;
@@ -251,7 +272,7 @@ export class GPUTableEvaluator {
         length = 1;
       } else {
         if (!value) {
-          throw new Error('GPUTableEvaluator: length not defined');
+          throw new Error('GPUDataEvaluator: length not defined');
         }
         length = Math.ceil(value.byteLength / this.stride);
       }
@@ -261,9 +282,17 @@ export class GPUTableEvaluator {
     this.byteLength = this.stride * length;
     this._value = value;
     this._bufferOwnership =
-      source instanceof GPUTableEvaluator || buffer || gpuVector ? 'borrowed' : 'owned';
-    if (gpuVector) {
-      this._gpuVector = gpuVector;
+      source instanceof GPUDataEvaluator || buffer || gpuData ? 'borrowed' : 'owned';
+    if (gpuData) {
+      this._gpuVector = new GPUVector({
+        type: 'data',
+        name: this._id ?? 'data',
+        format: gpuData.format,
+        data: [gpuData],
+        stride: gpuData.stride,
+        byteStride: gpuData.byteStride,
+        rowByteLength: gpuData.rowByteLength
+      });
     } else if (buffer) {
       this._gpuVector = this.createGPUVectorView({
         buffer,
@@ -275,22 +304,20 @@ export class GPUTableEvaluator {
 
   /** CPU-side typed array, when available. */
   get value(): TypedArray | undefined {
-    return (
-      this._value || (this.source instanceof GPUTableEvaluator ? this.source.value : undefined)
-    );
+    return this._value || (this.source instanceof GPUDataEvaluator ? this.source.value : undefined);
   }
 
-  /** Whether a GPUVector has been materialized for this evaluator. */
+  /** Whether a single-chunk `GPUVector` has been materialized for this evaluator. */
   get evaluated(): boolean {
     return Boolean(this._gpuVector);
   }
 
-  /** Optional debug id or source GPUVector name. */
+  /** Optional debug id. */
   get id(): string | undefined {
     return this._id;
   }
 
-  /** Materialized GPUVector resource for the table. Only available after {@link GPUTableEvaluator.evaluate} resolves. */
+  /** Materialized single-chunk `GPUVector` for this evaluator. */
   get gpuVector(): GPUVector {
     if (!this._gpuVector) {
       throw new Error(`${this} not evaluated`);
@@ -298,30 +325,34 @@ export class GPUTableEvaluator {
     return this._gpuVector;
   }
 
-  /** Materialized GPU buffer backing the table. Only available after {@link GPUTableEvaluator.evaluate} resolves. */
+  /** Materialized GPU buffer backing this evaluator. */
   get buffer(): Buffer {
     return getBufferFromGPUVector(this.gpuVector);
   }
 
   /**
-   * Materializes the table on a device and returns the requested output format.
+   * Materializes this evaluator on a device and returns the requested output format.
    *
-   * If the table is operation-backed, dependencies are evaluated first and then the backend
+   * If the evaluator is operation-backed, dependencies are evaluated first and then the backend
    * operation writes into a cached GPU buffer.
+   *
+   * @param device - Device used to materialize the evaluator.
+   * @param options - Output view metadata for the materialized single-chunk `GPUVector`.
+   * @returns The cached or newly materialized single-chunk `GPUVector`.
    */
   async evaluate(
     device: Device,
-    options: GPUTableEvaluatorEvaluateOptions = {}
+    options: GPUDataEvaluatorEvaluateOptions = {}
   ): Promise<GPUVector> {
     if (this._destroyed) {
-      throw new Error(`GPUTableEvaluator ${this} already destroyed`);
+      throw new Error(`GPUDataEvaluator ${this} already destroyed`);
     }
     if (this._gpuVector) {
       return this._gpuVector;
     }
 
     let buffer: Buffer;
-    if (this.source instanceof GPUTableEvaluator) {
+    if (this.source instanceof GPUDataEvaluator) {
       const sourceGPUVector = await this.source.evaluate(device);
       this._gpuVector = this.createGPUVectorView({
         ...options,
@@ -346,9 +377,9 @@ export class GPUTableEvaluator {
     return this._gpuVector;
   }
 
-  /** Creates a GPUVector view over a materialized backing buffer. */
+  /** Creates a single-chunk `GPUVector` view over a materialized backing buffer. */
   private createGPUVectorView(
-    options: GPUTableEvaluatorEvaluateOptions & {buffer: Buffer}
+    options: GPUDataEvaluatorEvaluateOptions & {buffer: Buffer}
   ): GPUVector {
     const name = options.name ?? this._id ?? 'vector';
     const format =
@@ -387,10 +418,14 @@ export class GPUTableEvaluator {
   }
 
   /**
-   * Reads table data back to the CPU.
+   * Reads evaluator data back to the CPU.
    *
    * This is intended for debugging and validation. Tightly packed rows return a typed-array view;
    * strided rows are copied into a compact typed array.
+   *
+   * @param startRow - Inclusive first row to read.
+   * @param endRow - Exclusive last row to read.
+   * @returns CPU values for the requested row range.
    */
   async readValue(startRow: number = 0, endRow?: number): Promise<TypedArray> {
     const {ValueType} = this;
@@ -438,8 +473,8 @@ export class GPUTableEvaluator {
     return this._id ?? this.source?.toString() ?? this.constructor.name;
   }
 
-  /** Releases cached GPU storage and prevents future evaluation. */
-  destroy() {
+  /** Releases cached GPU storage owned by this evaluator and prevents future evaluation. */
+  destroy(): void {
     if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
         bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));
@@ -451,7 +486,7 @@ export class GPUTableEvaluator {
 }
 
 function getRowsFromValue(
-  table: GPUTableEvaluator,
+  table: GPUDataEvaluator,
   value: TypedArray,
   startRow: number,
   endRow: number
@@ -474,17 +509,36 @@ function getRowsFromValue(
   return result;
 }
 
-/** Input accepted by operations that normalize GPUVectors into evaluators. */
-export type GPUTableEvaluatorInput = GPUTableEvaluator | GPUVector;
+/** Input accepted by leaf operations that normalize one `GPUData` chunk into an evaluator. */
+export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData;
 
-/** Returns an evaluator, wrapping GPUVector inputs when needed. */
-export function getGPUTableEvaluator(input: GPUTableEvaluatorInput): GPUTableEvaluator {
-  return input instanceof GPUTableEvaluator ? input : GPUTableEvaluator.fromGPUVector(input);
+/**
+ * Returns one evaluator, adapting `GPUData` inputs when needed.
+ *
+ * @param input - Existing evaluator or one packed fixed-width `GPUData` chunk.
+ * @returns One `GPUDataEvaluator` for leaf GPGPU operations.
+ */
+export function getGPUDataEvaluator(input: GPUDataEvaluatorInput): GPUDataEvaluator {
+  if (input instanceof GPUDataEvaluator) {
+    return input;
+  }
+  if (input instanceof GPUData) {
+    return GPUDataEvaluator.fromGPUData(input);
+  }
+  throw new Error('getGPUDataEvaluator() requires GPUDataEvaluator or GPUData');
 }
 
-/** Returns source format only when it exactly matches the requested evaluator layout. */
-export function getCompatibleGPUTableEvaluatorFormat(
-  input: GPUTableEvaluator,
+/**
+ * Returns the source format when it exactly matches a requested evaluator layout.
+ *
+ * @param input - Evaluator whose preserved format should be checked.
+ * @param type - Required scalar element type.
+ * @param size - Required scalar component count.
+ * @param normalized - Required normalized integer interpretation.
+ * @returns The compatible source format, or `undefined` when the layout changes.
+ */
+export function getCompatibleGPUDataEvaluatorFormat(
+  input: GPUDataEvaluator,
   type: SignedDataType,
   size: number,
   normalized: boolean = false
@@ -493,36 +547,33 @@ export function getCompatibleGPUTableEvaluatorFormat(
   return input.format === expectedFormat ? input.format : undefined;
 }
 
-function validatePackedNumericGPUVector(vector: GPUVector): void {
-  if (vector.bufferLayout) {
-    throw new Error(
-      `GPUTableEvaluator.fromGPUVector() does not accept interleaved vector "${vector.name}"`
-    );
+function validatePackedNumericGPUData(data: GPUData): void {
+  if (!data.format) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires GPUData format metadata');
   }
-  getSingleGPUVectorData(vector);
-  if (!vector.format) {
-    throw new Error('GPUTableEvaluator.fromGPUVector() requires GPUVector format metadata');
+  if (isVertexListGPUVectorFormat(data.format)) {
+    throw new Error('GPUDataEvaluator.fromGPUData() does not support vertex-list input');
   }
-  if (isVertexListGPUVectorFormat(vector.format)) {
-    throw new Error('GPUTableEvaluator.fromGPUVector() does not support vertex-list input');
-  }
-  const formatInfo = getGPUVectorFormatInfo(vector.format);
+  const formatInfo = getGPUVectorFormatInfo(data.format);
   const expectedRowByteLength = formatInfo.byteLength;
-  if (vector.rowByteLength !== expectedRowByteLength) {
+  if (data.rowByteLength !== expectedRowByteLength) {
     throw new Error(
-      `GPUTableEvaluator.fromGPUVector() requires rowByteLength ${expectedRowByteLength} for vector "${vector.name}"`
+      `GPUDataEvaluator.fromGPUData() requires rowByteLength ${expectedRowByteLength} for GPUData`
     );
   }
-  if (vector.byteStride !== vector.rowByteLength) {
-    throw new Error(`GPUTableEvaluator.fromGPUVector() requires packed vector "${vector.name}"`);
+  if (data.byteStride !== data.rowByteLength) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires packed GPUData');
   }
 }
 
-function getGPUTablePropsFromGPUVector(vector: GPUVector): {type: SignedDataType; size: number} {
-  if (!vector.format) {
-    throw new Error('GPUTableEvaluator.fromGPUVector() requires GPUVector format metadata');
+function getGPUDataEvaluatorPropsFromGPUData(data: GPUData): {
+  type: SignedDataType;
+  size: number;
+} {
+  if (!data.format) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires GPUData format metadata');
   }
-  const formatInfo = getGPUVectorFormatInfo(vector.format);
+  const formatInfo = getGPUVectorFormatInfo(data.format);
   return {type: formatInfo.signedDataType, size: formatInfo.components};
 }
 
@@ -535,26 +586,26 @@ function getBufferFromGPUVector(vector: GPUVector): Buffer {
 function getSingleGPUVectorData(vector: GPUVector) {
   const [data, ...remainingData] = vector.data;
   if (!data || remainingData.length > 0) {
-    throw new Error(`GPUTableEvaluator requires exactly one GPUData chunk for "${vector.name}"`);
+    throw new Error(`GPUDataEvaluator requires exactly one GPUData chunk for "${vector.name}"`);
   }
   return data;
 }
 
-function getInterleavedAttributes(evaluator: GPUTableEvaluator): BufferAttributeLayout[] {
+function getInterleavedAttributes(evaluator: GPUDataEvaluator): BufferAttributeLayout[] {
   const attributes: BufferAttributeLayout[] = [];
   collectInterleavedAttributes(evaluator, attributes, {byteOffset: 0});
   return attributes;
 }
 
 function collectInterleavedAttributes(
-  evaluator: GPUTableEvaluator,
+  evaluator: GPUDataEvaluator,
   attributes: BufferAttributeLayout[],
   state: {byteOffset: number}
 ): void {
   const source = evaluator.source;
-  if (source && !(source instanceof GPUTableEvaluator) && source.name === 'interleave') {
+  if (source && !(source instanceof GPUDataEvaluator) && source.name === 'interleave') {
     for (const input of Object.values(source.inputs)) {
-      if (input instanceof GPUTableEvaluator) {
+      if (input instanceof GPUDataEvaluator) {
         collectInterleavedAttributes(input, attributes, state);
       }
     }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {GPUTableEvaluator} from '@luma.gl/gpgpu';
+import type {GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {Virtualizer, observeElementRect, type VirtualItem} from '@tanstack/virtual-core';
 
 const ROW_HEIGHT = 34;
@@ -30,7 +30,7 @@ export type TableValueArray =
 type BaseTableColumn = {
   id: string;
   logicalType: string;
-  evaluator?: GPUTableEvaluator;
+  evaluator?: GPUDataEvaluator;
   getRowText: (rowIndex: number) => string | Promise<string>;
 };
 
@@ -50,13 +50,13 @@ type EvaluatorRowChunkRange = Pick<EvaluatorRowChunk, 'startRow' | 'endRow'>;
 
 export type EvaluatorTableColumn = BaseTableColumn & {
   kind: 'evaluator';
-  evaluator: GPUTableEvaluator;
+  evaluator: GPUDataEvaluator;
 };
 
 export type SegmentedTableColumn = BaseTableColumn & {
   kind: 'segmented';
-  valuesEvaluator: GPUTableEvaluator;
-  startIndicesEvaluator: GPUTableEvaluator;
+  valuesEvaluator: GPUDataEvaluator;
+  startIndicesEvaluator: GPUDataEvaluator;
 };
 
 export type TableColumn = EvaluatorTableColumn | SegmentedTableColumn;
@@ -295,7 +295,7 @@ export class VirtualGPUTableRenderer {
 export function makeEvaluatorTableColumn(
   id: string,
   logicalType: string,
-  evaluator: GPUTableEvaluator
+  evaluator: GPUDataEvaluator
 ): EvaluatorTableColumn {
   const reader = new EvaluatorRowReader(evaluator);
   return {
@@ -310,8 +310,8 @@ export function makeEvaluatorTableColumn(
 export function makeSegmentedEvaluatorTableColumn(
   id: string,
   logicalType: string,
-  valuesEvaluator: GPUTableEvaluator,
-  startIndicesEvaluator: GPUTableEvaluator
+  valuesEvaluator: GPUDataEvaluator,
+  startIndicesEvaluator: GPUDataEvaluator
 ): SegmentedTableColumn {
   const reader = new SegmentedEvaluatorRowReader(valuesEvaluator, startIndicesEvaluator);
   return {
@@ -357,7 +357,7 @@ class EvaluatorRowReader {
   private cachedChunk: EvaluatorRowChunk | null = null;
   private pendingChunk: PendingEvaluatorRowChunk | null = null;
 
-  constructor(private readonly evaluator: GPUTableEvaluator) {}
+  constructor(private readonly evaluator: GPUDataEvaluator) {}
 
   async getRowText(rowIndex: number): Promise<string> {
     const effectiveRowIndex = this.evaluator.isConstant ? 0 : rowIndex;
@@ -404,8 +404,8 @@ class EvaluatorRowReader {
 
 class SegmentedEvaluatorRowReader {
   constructor(
-    private readonly valuesEvaluator: GPUTableEvaluator,
-    private readonly startIndicesEvaluator: GPUTableEvaluator
+    private readonly valuesEvaluator: GPUDataEvaluator,
+    private readonly startIndicesEvaluator: GPUDataEvaluator
   ) {}
 
   async getRowText(rowIndex: number): Promise<string> {

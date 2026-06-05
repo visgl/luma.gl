@@ -4,7 +4,7 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, segmentedMap, GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {cleanEvaluate, segmentedMap, GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {getTestDevice, TestData, verifyTableValue} from './fixtures';
 
 const LARGE_SEGMENTS = buildSegmentStarts(
@@ -22,11 +22,11 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
     });
 
     const TEST_CASES: {
-      eval: GPUTableEvaluator;
+      eval: GPUDataEvaluator;
       expected: TestData;
     }[] = [
       {
-        eval: segmentedMap(GPUTableEvaluator.fromArray([0, 3, 5], {type: 'uint32'}), 7),
+        eval: segmentedMap(GPUDataEvaluator.fromArray([0, 3, 5], {type: 'uint32'}), 7),
         expected: {
           value: [0, 0, 0, 1, 0, 2, 1, 0, 1, 1, 2, 0, 2, 1],
           type: 'uint32',
@@ -34,7 +34,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         }
       },
       {
-        eval: segmentedMap(GPUTableEvaluator.fromArray([0, 3, 3, 6], {type: 'uint32'}), 7),
+        eval: segmentedMap(GPUDataEvaluator.fromArray([0, 3, 3, 6], {type: 'uint32'}), 7),
         expected: {
           value: [0, 0, 0, 1, 0, 2, 2, 0, 2, 1, 2, 2, 3, 0],
           type: 'uint32',
@@ -42,7 +42,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         }
       },
       {
-        eval: segmentedMap(GPUTableEvaluator.fromArray([0], {type: 'uint32'}), 0),
+        eval: segmentedMap(GPUDataEvaluator.fromArray([0], {type: 'uint32'}), 0),
         expected: {
           value: [],
           type: 'uint32',
@@ -50,7 +50,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         }
       },
       {
-        eval: segmentedMap(GPUTableEvaluator.fromArray([0], {type: 'uint32'}), 4),
+        eval: segmentedMap(GPUDataEvaluator.fromArray([0], {type: 'uint32'}), 4),
         expected: {
           value: [0, 0, 0, 1, 0, 2, 0, 3],
           type: 'uint32',
@@ -59,7 +59,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       },
       {
         eval: segmentedMap(
-          GPUTableEvaluator.fromArray(LARGE_SEGMENTS, {type: 'uint32'}),
+          GPUDataEvaluator.fromArray(LARGE_SEGMENTS, {type: 'uint32'}),
           LARGE_VERTEX_COUNT
         ),
         expected: {

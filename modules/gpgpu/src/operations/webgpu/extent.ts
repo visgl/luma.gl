@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
 import {getWebGPUDispatchLayout, getWebGPUDispatchWorkgroupIndex} from './common/dispatch';
 import {getWGSLType} from './common/helper';
@@ -19,7 +19,7 @@ import {
 
 type ExtentInputMode = 'raw' | 'partial';
 
-export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async ({
+export const extent: OperationHandler<{sourceValues: GPUDataEvaluator}> = async ({
   inputs,
   output,
   target
@@ -81,7 +81,7 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
         break;
       }
 
-      currentInput = new GPUTableEvaluator({
+      currentInput = new GPUDataEvaluator({
         buffer: nextOutputBuffer,
         type: output.type,
         size: 2,
@@ -109,11 +109,11 @@ function runExtentPass({
   outputStride,
   outputOffset
 }: {
-  input: GPUTableEvaluator;
+  input: GPUDataEvaluator;
   inputMode: ExtentInputMode;
   inputGroupCount: number;
   channelCount: number;
-  outputType: GPUTableEvaluator['type'];
+  outputType: GPUDataEvaluator['type'];
   outputBuffer: Buffer;
   outputLength: number;
   outputStride: number;
@@ -124,7 +124,7 @@ function runExtentPass({
     outputLength,
     outputBuffer.device.limits.maxComputeWorkgroupsPerDimension
   );
-  const outputTable = new GPUTableEvaluator({
+  const outputTable = new GPUDataEvaluator({
     buffer: outputBuffer,
     type: outputType,
     size: 2,
@@ -216,7 +216,7 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
 
 function getExtentPassFunction(
   inputMode: ExtentInputMode,
-  type: GPUTableEvaluator['type'],
+  type: GPUDataEvaluator['type'],
   channelCount: number,
   inputGroupCount: number
 ): string {
@@ -255,7 +255,7 @@ function getExtentPassFunction(
 }`;
 }
 
-function getExtentInitialValues(type: GPUTableEvaluator['type']): [string, string] {
+function getExtentInitialValues(type: GPUDataEvaluator['type']): [string, string] {
   switch (type) {
     case 'uint32':
       return ['0xffffffffu', '0u'];

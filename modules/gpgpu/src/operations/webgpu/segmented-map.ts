@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './common/dispatch';
 import {
   getInputBinding,
@@ -16,7 +16,7 @@ import {
 } from './common/random-access-transform';
 
 export const segmentedMap: OperationHandler<{
-  segments: GPUTableEvaluator;
+  segments: GPUDataEvaluator;
   vertexCount: number;
 }> = async ({inputs, output, target}) => {
   const {segments} = inputs;

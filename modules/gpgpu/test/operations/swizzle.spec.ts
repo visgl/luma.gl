@@ -4,11 +4,11 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, GPUTableEvaluator, swizzle} from '@luma.gl/gpgpu';
+import {cleanEvaluate, GPUDataEvaluator, swizzle} from '@luma.gl/gpgpu';
 import {getTestDevice, TestData, verifyTableValue, isSupportedByWebGPU} from './fixtures';
 
 test('GPGPU#swizzle validates columns', () => {
-  const source = GPUTableEvaluator.fromArray([0, 1, 2, 3], {size: 2});
+  const source = GPUDataEvaluator.fromArray([0, 1, 2, 3], {size: 2});
 
   expect(() => swizzle(source, [])).toThrow(/must not be empty/);
   expect(() => swizzle(source, [0.5])).toThrow(/must be integers/);
@@ -17,7 +17,7 @@ test('GPGPU#swizzle validates columns', () => {
 });
 
 test('GPGPU#swizzle creates a source view for contiguous columns', () => {
-  const source = GPUTableEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23], {size: 4});
+  const source = GPUDataEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23], {size: 4});
   const result = swizzle(source, [1, 2]);
 
   expect(result.source).toBe(source);
@@ -29,7 +29,7 @@ test('GPGPU#swizzle creates a source view for contiguous columns', () => {
 });
 
 test('GPGPU#swizzle materializes CPU-backed values for reordered columns', () => {
-  const source = GPUTableEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23], {size: 4});
+  const source = GPUDataEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23], {size: 4});
   const result = swizzle(source, [2, 0, 2]);
 
   expect(result.source).toBe(null);
@@ -44,10 +44,10 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       device = await getTestDevice(deviceType);
     });
 
-    const TEST_CASES: {eval: GPUTableEvaluator; expected: TestData; normalized?: boolean}[] = [
+    const TEST_CASES: {eval: GPUDataEvaluator; expected: TestData; normalized?: boolean}[] = [
       {
         eval: swizzle(
-          GPUTableEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33], {
+          GPUDataEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33], {
             size: 4
           }),
           [1, 2]
@@ -56,7 +56,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       },
       {
         eval: swizzle(
-          GPUTableEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33], {
+          GPUDataEvaluator.fromArray([10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33], {
             size: 4
           }),
           [2, 0, 2]
@@ -64,12 +64,12 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         expected: {value: [12, 10, 12, 22, 20, 22, 32, 30, 32], type: 'float32', size: 3}
       },
       {
-        eval: swizzle(GPUTableEvaluator.fromConstant([4, 5, 6, 7], 'uint32'), [3, 1, 1]),
+        eval: swizzle(GPUDataEvaluator.fromConstant([4, 5, 6, 7], 'uint32'), [3, 1, 1]),
         expected: {constant: [7, 5, 5], type: 'uint32', size: 3}
       },
       {
         eval: swizzle(
-          GPUTableEvaluator.fromArray(new Uint8Array([0, 64, 128, 255, 255, 128, 64, 0]), {
+          GPUDataEvaluator.fromArray(new Uint8Array([0, 64, 128, 255, 255, 128, 64, 0]), {
             type: 'uint8',
             size: 4,
             normalized: true

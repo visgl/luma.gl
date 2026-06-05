@@ -3,24 +3,24 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getGPUTableEvaluator,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getGPUDataEvaluator,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 
 /** Deferred row gather operation. */
-class GatherOperation extends Operation<{ids: GPUTableEvaluator; sourceValues: GPUTableEvaluator}> {
+class GatherOperation extends Operation<{ids: GPUDataEvaluator; sourceValues: GPUDataEvaluator}> {
   /** Operation name used for backend lookup. */
   name = 'gather';
 
   /** Lazy output table for the gathered rows. */
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
-  constructor(ids: GPUTableEvaluator, sourceValues: GPUTableEvaluator) {
+  constructor(ids: GPUDataEvaluator, sourceValues: GPUDataEvaluator) {
     super({ids, sourceValues});
 
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant: ids.isConstant,
       type: sourceValues.type,
       size: sourceValues.size,
@@ -41,11 +41,11 @@ class GatherOperation extends Operation<{ids: GPUTableEvaluator; sourceValues: G
  *
  * Each row in `ids` must be a scalar index. Out-of-range indices return a zero row.
  * The returned table is lazy; no CPU or GPU work is performed until
- * {@link GPUTableEvaluator.evaluate} is called on the result.
+ * {@link GPUDataEvaluator.evaluate} is called on the result.
  */
 export function gather(
-  ids: GPUTableEvaluatorInput,
-  sourceValues: GPUTableEvaluatorInput
-): GPUTableEvaluator {
-  return new GatherOperation(getGPUTableEvaluator(ids), getGPUTableEvaluator(sourceValues)).output;
+  ids: GPUDataEvaluatorInput,
+  sourceValues: GPUDataEvaluatorInput
+): GPUDataEvaluator {
+  return new GatherOperation(getGPUDataEvaluator(ids), getGPUDataEvaluator(sourceValues)).output;
 }

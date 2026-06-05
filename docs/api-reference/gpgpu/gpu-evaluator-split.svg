@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" role="img" aria-labelledby="title description">
+  <title id="title">GPU evaluator split</title>
+  <desc id="description">
+    GPUDataEvaluator transforms one GPUData chunk, while GPUVectorEvaluator maps a transform over GPUVector chunks without packing them.
+  </desc>
+  <defs>
+    <style>
+      .background { fill: #ffffff; }
+      .title { fill: #111827; font: 700 54px Inter, Arial, sans-serif; }
+      .section { fill: #111827; font: 700 28px Inter, Arial, sans-serif; }
+      .label { fill: #111827; font: 700 23px "SFMono-Regular", Consolas, monospace; }
+      .caption { fill: #4b5563; font: 500 21px Inter, Arial, sans-serif; }
+      .small { fill: #4b5563; font: 600 18px Inter, Arial, sans-serif; }
+      .arrow { fill: none; stroke: #6b7280; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .arrow-head { fill: #6b7280; }
+      .removed { fill: #fee2e2; stroke: #ef4444; stroke-width: 4; }
+      .data { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 3; }
+      .data-evaluator { fill: #dbeafe; stroke: #2563eb; stroke-width: 4; }
+      .vector-evaluator { fill: #dcfce7; stroke: #16a34a; stroke-width: 4; }
+      .vector { fill: #f9fafb; stroke: #6b7280; stroke-width: 4; }
+      .chunk { fill: #e5e7eb; stroke: #9ca3af; stroke-width: 2; }
+      .transform { fill: #ecfeff; stroke: #0891b2; stroke-width: 3; }
+      .legend { fill: #f9fafb; stroke: #d1d5db; stroke-width: 3; }
+      .strike { stroke: #ef4444; stroke-width: 10; stroke-linecap: round; }
+      .green-arrow { fill: none; stroke: #16a34a; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect class="background" width="1400" height="820" />
+  <text class="title" x="70" y="82">GPU evaluator split</text>
+
+  <text class="section" x="70" y="155">Removed misleading API</text>
+  <rect class="removed" x="70" y="185" width="360" height="82" rx="22" />
+  <text class="label" x="112" y="237">GPUTableEvaluator</text>
+  <line class="strike" x1="96" y1="253" x2="402" y2="198" />
+  <text class="small" x="460" y="233">No GPUTable input path</text>
+
+  <text class="section" x="70" y="352">GPUData path</text>
+  <rect class="data" x="70" y="390" width="220" height="96" rx="24" />
+  <text class="label" x="116" y="447">GPUData</text>
+  <path class="arrow" d="M 312 438 H 410" />
+  <polygon class="arrow-head" points="410,438 382,420 382,456" />
+  <rect class="data-evaluator" x="430" y="378" width="360" height="120" rx="28" />
+  <text class="label" x="490" y="447">GPUDataEvaluator</text>
+  <path class="arrow" d="M 812 438 H 910" />
+  <polygon class="arrow-head" points="910,438 882,420 882,456" />
+  <rect class="data" x="930" y="390" width="220" height="96" rx="24" />
+  <text class="label" x="976" y="447">GPUData</text>
+  <rect class="transform" x="525" y="515" width="170" height="54" rx="18" />
+  <text class="small" x="560" y="549">transform</text>
+  <text class="caption" x="70" y="557">Runs directly on one incoming GPUData chunk.</text>
+
+  <text class="section" x="70" y="655">GPUVector path</text>
+  <rect class="vector" x="70" y="688" width="340" height="98" rx="24" />
+  <text class="label" x="100" y="724">GPUVector</text>
+  <rect class="chunk" x="100" y="738" width="82" height="28" rx="12" />
+  <rect class="chunk" x="194" y="738" width="82" height="28" rx="12" />
+  <rect class="chunk" x="288" y="738" width="82" height="28" rx="12" />
+  <path class="arrow" d="M 432 737 H 520" />
+  <polygon class="arrow-head" points="520,737 492,719 492,755" />
+  <rect class="vector-evaluator" x="540" y="675" width="390" height="124" rx="28" />
+  <text class="label" x="590" y="744">GPUVectorEvaluator</text>
+  <path class="green-arrow" d="M 952 707 H 1042" />
+  <path class="green-arrow" d="M 952 737 H 1042" />
+  <path class="green-arrow" d="M 952 767 H 1042" />
+  <polygon class="arrow-head" points="1042,707 1018,692 1018,722" />
+  <polygon class="arrow-head" points="1042,737 1018,722 1018,752" />
+  <polygon class="arrow-head" points="1042,767 1018,752 1018,782" />
+  <rect class="vector" x="1060" y="688" width="270" height="98" rx="24" />
+  <text class="label" x="1090" y="724">GPUVector</text>
+  <rect class="chunk" x="1090" y="738" width="62" height="28" rx="12" />
+  <rect class="chunk" x="1164" y="738" width="62" height="28" rx="12" />
+  <rect class="chunk" x="1238" y="738" width="62" height="28" rx="12" />
+
+  <rect class="legend" x="1010" y="165" width="320" height="162" rx="24" />
+  <text class="small" x="1044" y="205">Official APIs</text>
+  <text class="small" x="1044" y="245">GPUDataEvaluator = one GPUData</text>
+  <text class="small" x="1044" y="279">GPUVectorEvaluator = map chunks</text>
+  <text class="caption" x="70" y="812">GPUVectorEvaluator preserves chunk boundaries and does not pack streaming data implicitly.</text>
+</svg>
