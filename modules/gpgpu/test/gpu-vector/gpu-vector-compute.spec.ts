@@ -3,7 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {add, fround, GPUTableEvaluator, interleave} from '@luma.gl/gpgpu';
+import {
+  add,
+  fround,
+  GPUDataEvaluator,
+  GPUDataEvaluator,
+  GPUVectorEvaluator,
+  interleave
+} from '@luma.gl/gpgpu';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {getTestDevice} from '@luma.gl/test-utils';
 import {expect, test} from 'vitest';
@@ -35,6 +42,60 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     sum.destroy();
     x.destroy();
     y.destroy();
+  });
+
+  test(`GPUData compute#add:${deviceType}`, async t => {
+    const device = await getTestDevice(deviceType);
+    if (!device) {
+      t.annotate(`${deviceType} not available`);
+      return;
+    }
+
+    const x = makeFloat32Vector(device, 'x', [0, 1, 2, 3, 4, 5], 2);
+    const y = makeFloat32Vector(device, 'y', [10, 20, 30, 40, 50, 60], 2);
+    const sum = add(x.data[0], y.data[0]);
+    const result = await sum.evaluate(device, {name: 'sum'});
+
+    expect(result.name).toBe('sum');
+    expect(result.format).toBe(x.format);
+    expect(Array.from(await readFloat32Vector(result))).toEqual([10, 21, 32, 43, 54, 65]);
+
+    sum.destroy();
+    x.destroy();
+    y.destroy();
+  });
+
+  test(`GPUVectorEvaluator compute#mapGPUData:${deviceType}`, async t => {
+    const device = await getTestDevice(deviceType);
+    if (!device) {
+      t.annotate(`${deviceType} not available`);
+      return;
+    }
+
+    const x0 = makeFloat32Vector(device, 'x0', [0, 1, 2, 3], 2);
+    const x1 = makeFloat32Vector(device, 'x1', [4, 5, 6, 7], 2);
+    const vector = new GPUVector({
+      type: 'data',
+      name: 'x',
+      format: 'float32x2',
+      data: [x0.data[0], x1.data[0]]
+    });
+    const offset = GPUDataEvaluator.fromConstant([10, 20]);
+    const transformed = GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(data =>
+      add(data, offset)
+    );
+    const result = await transformed.evaluate(device, {name: 'sum'});
+
+    expect(result.name).toBe('sum');
+    expect(result.data).toHaveLength(2);
+    expect(Array.from(await readFloat32Data(result.data[0]))).toEqual([10, 21, 12, 23]);
+    expect(Array.from(await readFloat32Data(result.data[1]))).toEqual([14, 25, 16, 27]);
+
+    transformed.destroy();
+    offset.destroy();
+    vector.destroy();
+    x0.destroy();
+    x1.destroy();
   });
 
   test(`GPUVector compute#add synthesizes widened output type:${deviceType}`, async t => {
@@ -162,7 +223,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     }
 
     const vector = makeFloat32Vector(device, 'values', [1, 2, 3], 1);
-    const evaluator = GPUTableEvaluator.fromGPUVector(vector);
+    const evaluator = GPUDataEvaluator.fromGPUVector(vector);
     const result = await evaluator.evaluate(device, {name: 'values-view'});
 
     expect(result).toBe(vector);
@@ -233,6 +294,14 @@ function getUint32VectorFormat(stride: number): GPUVectorFormat {
 async function readFloat32Vector(vector: GPUVector): Promise<Float32Array> {
   const readByteLength = (vector.length - 1) * vector.byteStride + vector.rowByteLength;
   const bytes = await getBuffer(vector).readAsync(vector.byteOffset, readByteLength);
+  const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return new Float32Array(arrayBuffer);
+}
+
+async function readFloat32Data(data: GPUVector['data'][number]): Promise<Float32Array> {
+  const buffer = data.buffer instanceof Buffer ? data.buffer : data.buffer.buffer;
+  const readByteLength = (data.length - 1) * data.byteStride + data.rowByteLength;
+  const bytes = await buffer.readAsync(data.byteOffset, readByteLength);
   const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
   return new Float32Array(arrayBuffer);
 }

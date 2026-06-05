@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {runRowComputation} from './common/row-transform';
 
 const source = `\
@@ -19,7 +19,7 @@ fn equalAll(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<u32, 
 }
 `;
 
-export const equalAll: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
+export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
   inputs,
   output,
   target

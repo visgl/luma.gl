@@ -4,16 +4,16 @@ import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
 <GPGPUDocsTabs active="clean-evaluate" />
 
-`cleanEvaluate()` is a small utility for evaluating one or more result tables while cleaning up intermediate `GPUTableEvaluator` dependencies that are no longer needed.
+`cleanEvaluate()` is a small utility for evaluating one or more result evaluators while cleaning up intermediate `GPUDataEvaluator` dependencies that are no longer needed. `GPUDataEvaluator` remains the compatibility alias, and `GPUVectorEvaluator` roots are also supported.
 
 This is most useful when you build a lazy operation graph inline and only want to keep the final output evaluators alive.
 
 ## Usage
 
 ```ts
-import {GPUTableEvaluator, add, cleanEvaluate} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, add, cleanEvaluate} from '@luma.gl/gpgpu';
 
-const positions = GPUTableEvaluator.fromArray(
+const positions = GPUDataEvaluator.fromArray(
   new Float32Array([
     0, 0, 0,
     1, 0, 0
@@ -21,7 +21,7 @@ const positions = GPUTableEvaluator.fromArray(
   {size: 3}
 );
 
-const offset = GPUTableEvaluator.fromConstant([1, 2, 3]);
+const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
 const translated = add(positions, offset);
 
 await cleanEvaluate(device, {translated});
@@ -36,7 +36,7 @@ translated.destroy();
 
 ```ts
 function cleanEvaluate<
-  ResultT extends GPUTableEvaluator | GPUTableEvaluator[] | Record<string, unknown>
+  ResultT extends GPUDataEvaluator | GPUVectorEvaluator | Array<GPUDataEvaluator | GPUVectorEvaluator> | Record<string, unknown>
 >(device: Device, result: ResultT): Promise<ResultT>;
 ```
 
@@ -45,13 +45,13 @@ function cleanEvaluate<
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `device` | `Device` | The device used to evaluate the returned tables. |
-| `result` | `GPUTableEvaluator \| GPUTableEvaluator[] \| Record<string, unknown>` | The final evaluator or evaluators that should remain alive after evaluation. |
+| `result` | `GPUDataEvaluator \| GPUVectorEvaluator \| Array<GPUDataEvaluator \| GPUVectorEvaluator> \| Record<string, unknown>` | The final evaluator or evaluators that should remain alive after evaluation. |
 
 ## Behavior
 
 `cleanEvaluate()`:
 
-- finds all `GPUTableEvaluator` instances directly referenced by `result`
+- finds all `GPUDataEvaluator` instances directly referenced by `result`
 - evaluates those root evaluators
 - walks their dependency graph through `source`
 - destroys dependency evaluators whose GPU buffers are not also used by the root evaluators

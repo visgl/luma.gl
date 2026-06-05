@@ -3,27 +3,27 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getGPUTableEvaluator,
-  getCompatibleGPUTableEvaluatorFormat,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getGPUDataEvaluator,
+  getCompatibleGPUDataEvaluatorFormat,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 
-class LengthOperation extends Operation<{x: GPUTableEvaluator}> {
+class LengthOperation extends Operation<{x: GPUDataEvaluator}> {
   name = 'length';
 
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
-  constructor(x: GPUTableEvaluator) {
+  constructor(x: GPUDataEvaluator) {
     super({x});
 
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant: x.isConstant,
       type: 'float32',
       size: 1,
       length: x.length,
-      format: getCompatibleGPUTableEvaluatorFormat(x, 'float32', 1, x.normalized),
+      format: getCompatibleGPUDataEvaluatorFormat(x, 'float32', 1, x.normalized),
       source: this
     });
   }
@@ -33,6 +33,6 @@ class LengthOperation extends Operation<{x: GPUTableEvaluator}> {
   }
 }
 
-export function length(x: GPUTableEvaluatorInput): GPUTableEvaluator {
-  return new LengthOperation(getGPUTableEvaluator(x)).output;
+export function length(x: GPUDataEvaluatorInput): GPUDataEvaluator {
+  return new LengthOperation(getGPUDataEvaluator(x)).output;
 }

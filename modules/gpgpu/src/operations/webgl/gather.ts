@@ -6,7 +6,7 @@ import {BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {
   getAttributeType,
   getTextureDataType,
@@ -17,8 +17,8 @@ import {getOutputModule} from './common/row-transform';
 import {createTableTexture, getSourceValuesTextureModule} from './common/random-access-transform';
 
 export const gather: OperationHandler<{
-  ids: GPUTableEvaluator;
-  sourceValues: GPUTableEvaluator;
+  ids: GPUDataEvaluator;
+  sourceValues: GPUDataEvaluator;
 }> = async ({inputs, output, target}) => {
   const {ids, sourceValues} = inputs;
   const device = target.device;
@@ -74,7 +74,7 @@ void main() {
   }
 };
 
-function getIdsInputModule(source: GPUTableEvaluator, indexType: string): ShaderModule {
+function getIdsInputModule(source: GPUDataEvaluator, indexType: string): ShaderModule {
   const inputType = getAttributeType(source.type, 1);
   let element = 'aids_0';
   if (source.type !== getSignedDataTypeForScalar(indexType)) {
@@ -92,7 +92,7 @@ void get_ids(out INDEX_TYPE v[1]) {
   } as ShaderModule;
 }
 
-function getIdsBufferLayout(source: GPUTableEvaluator): BufferLayout {
+function getIdsBufferLayout(source: GPUDataEvaluator): BufferLayout {
   return {
     name: 'ids',
     stepMode: source.isConstant ? 'vertex' : 'instance',
@@ -107,7 +107,7 @@ function getIdsBufferLayout(source: GPUTableEvaluator): BufferLayout {
   };
 }
 
-function getGatherModule(outputType: GPUTableEvaluator['type']): ShaderModule {
+function getGatherModule(outputType: GPUDataEvaluator['type']): ShaderModule {
   const zero = getZeroLiteral(outputType);
   return {
     name: 'gather',
@@ -130,7 +130,7 @@ void gather(in INDEX_TYPE ids[1], out TYPE result[RESULT_LEN]) {
   } as ShaderModule;
 }
 
-function getSignedDataTypeForScalar(type: string): GPUTableEvaluator['type'] {
+function getSignedDataTypeForScalar(type: string): GPUDataEvaluator['type'] {
   switch (type) {
     case 'uint':
       return 'uint32';

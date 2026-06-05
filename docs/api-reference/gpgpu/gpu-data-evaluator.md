@@ -1,28 +1,33 @@
 import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
-# GPUTableEvaluator
+# GPUDataEvaluator
 
-<GPGPUDocsTabs active="gpu-table" />
+<GPGPUDocsTabs active="gpu-data-evaluator" />
 
-`GPUTableEvaluator` is the core data container in `@luma.gl/gpgpu`. It
-describes a 2D table of numeric values that can be backed by CPU data, by
-another `GPUTableEvaluator`, by a packed single-chunk `GPUVector`, or by the
-output of a lazy operation.
+`GPUDataEvaluator` is the single-chunk lazy data container in `@luma.gl/gpgpu`.
+It describes a 2D table of numeric values backed by CPU data, another
+`GPUDataEvaluator`, one packed `GPUData` chunk, a legacy packed single-chunk
+`GPUVector`, or the output of a lazy operation.
+
+`GPUDataEvaluator` remains a compatibility alias for `GPUDataEvaluator`.
+Use [`GPUVectorEvaluator`](/docs/api-reference/gpgpu/gpu-data-evaluator) when one
+transform should run independently over every `GPUData` chunk in a `GPUVector`
+without packing streaming batches together.
 
 Each row contains `size` elements of the same numeric type. Tables can represent tightly packed rows or strided data with a byte `offset` and `stride`.
 
 ## Usage
 
 ```ts
-import {GPUTableEvaluator, add} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, add} from '@luma.gl/gpgpu';
 
-const positions = GPUTableEvaluator.fromArray(new Float32Array([
+const positions = GPUDataEvaluator.fromArray(new Float32Array([
   0, 0, 0,
   1, 0, 0,
   0, 1, 0
 ]), {size: 3});
 
-const offset = GPUTableEvaluator.fromConstant([1, 2, 3]);
+const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
 const translated = add(positions, offset);
 
 await translated.evaluate(device);
@@ -31,7 +36,7 @@ const values = await translated.readValue();
 
 ## Types
 
-### `GPUTableEvaluatorProps`
+### `GPUDataEvaluatorProps`
 
 | Property | Type | Description |
 | --- | --- | --- |
@@ -42,30 +47,44 @@ const values = await translated.readValue();
 | `stride?` | `number` | Byte distance between adjacent rows. Defaults to `ValueType.BYTES_PER_ELEMENT * size`. |
 | `value?` | `TypedArray` | CPU-side data for the table. Required unless `source` is provided. |
 | `buffer?` | `Buffer` | Borrowed GPU buffer backing this evaluator. |
-| `gpuVector?` | `GPUVector` | Borrowed single-chunk numeric GPUVector resource backing this evaluator. |
+| `gpuData?` | `GPUData` | Borrowed packed numeric GPUData chunk backing this evaluator. |
+| `gpuVector?` | `GPUVector` | Borrowed legacy single-chunk numeric GPUVector resource backing this evaluator. |
 | `format?` | `GPUVectorFormat` | Optional memory format preserved for GPUVector interop. |
-| `source?` | `Operation \| GPUTableEvaluator \| null` | Lazy data source for this table. |
+| `source?` | `Operation \| GPUDataEvaluator \| null` | Lazy data source for this table. |
 | `isConstant?` | `boolean` | Whether every row shares the same value. Defaults to `false`. |
 | `length?` | `number` | Row count. Optional when `isConstant` is `true` or `value` is provided. |
 
 ## Static Methods
 
-### `GPUTableEvaluator.fromArray(value, props?): GPUTableEvaluator`
+### `GPUDataEvaluator.fromArray(value, props?): GPUDataEvaluator`
 
 Creates a table from a typed array or numeric array. When passed a plain JavaScript array, the method creates a typed array using `props.type` or `'float32'` by default.
 
 If `value` is a `Float64Array`, it is reinterpreted as `uint32` pairs so it can be used by GPU-oriented operations such as `fround()`.
 
-### `GPUTableEvaluator.fromConstant(value, type?): GPUTableEvaluator`
+### `GPUDataEvaluator.fromConstant(value, type?): GPUDataEvaluator`
 
 Creates a constant table with one shared row value. A scalar becomes a one-element row, and an array becomes a row with `value.length` elements.
 
-### `GPUTableEvaluator.fromGPUVector(vector): GPUTableEvaluator`
+### `GPUDataEvaluator.fromGPUVector(vector): GPUDataEvaluator`
 
 Creates an evaluator view over a packed numeric `GPUVector`. The input must have
 one `GPUData` chunk, a fixed non-`vertex-list` `GPUVector.format`, and tightly
 packed rows. The evaluator borrows `vector.data[0].buffer` and does not destroy
 it.
+
+### `GPUDataEvaluator.fromGPUData(data): GPUDataEvaluator`
+
+Creates an evaluator view over one packed numeric `GPUData` chunk. The input
+must have a fixed non-`vertex-list` `GPUData.format` and tightly packed rows.
+The evaluator borrows `data.buffer` and does not destroy it.
+
+### `GPUVectorEvaluator.fromGPUVector(vector): GPUVectorEvaluator`
+
+Creates a chunk-preserving vector evaluator over one packed numeric `GPUVector`.
+Use `.mapGPUData(transform)` to build one `GPUDataEvaluator` transform per
+preserved `GPUData` chunk, then call `.evaluate(device)` to materialize one
+output `GPUVector` with matching chunk boundaries.
 
 ## Properties
 
@@ -111,7 +130,7 @@ Materialized `Buffer` backing the table. Accessing this before `evaluate()` thro
 
 ## Methods
 
-### `constructor(props: GPUTableEvaluatorProps)`
+### `constructor(props: GPUDataEvaluatorProps)`
 
 Creates a table from explicit layout and source information.
 
@@ -135,9 +154,12 @@ Releases any cached GPU buffer and prevents future evaluation.
 
 ## Remarks
 
-- `GPUTableEvaluator` is immutable in shape. To produce a new table, create another `GPUTableEvaluator` or use an operation that returns one.
+- `GPUDataEvaluator` is immutable in shape. To produce a new table, create another `GPUDataEvaluator` or use an operation that returns one.
 - Evaluation is lazy. Creating operation chains does not allocate GPU resources until `evaluate()` is called on an output table.
 - Operation outputs are evaluators backed by immutable materialized buffers, not scratch buffers.
-- `GPUVector` inputs are borrowed through their `GPUData` buffers; operation
-  outputs own their materialized `GPUVector` backing resources.
+- `GPUData` and legacy single-chunk `GPUVector` inputs are borrowed through their
+  `GPUData` buffers; operation outputs own their materialized `GPUVector`
+  backing resources.
+- Streaming code should use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)`
+  when the same lazy transform must run across every preserved GPUData chunk.
 - Constant tables are useful for broadcasting values across every row of a non-constant input.

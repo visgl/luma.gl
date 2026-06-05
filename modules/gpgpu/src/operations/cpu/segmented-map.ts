@@ -3,10 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 
 export const segmentedMap: OperationHandler<{
-  segments: GPUTableEvaluator;
+  segments: GPUDataEvaluator;
   vertexCount: number;
 }> = async ({inputs, output, target}) => {
   const {segments, vertexCount} = inputs;
@@ -42,8 +42,8 @@ export const segmentedMap: OperationHandler<{
 };
 
 function validateSegments(
-  segmentStarts: GPUTableEvaluator['value'],
-  segments: GPUTableEvaluator,
+  segmentStarts: GPUDataEvaluator['value'],
+  segments: GPUDataEvaluator,
   vertexCount: number
 ) {
   if (segments.length < 1) {
@@ -71,7 +71,7 @@ function validateSegments(
   }
 }
 
-function getRowOffset(table: GPUTableEvaluator, rowIndex: number): number {
+function getRowOffset(table: GPUDataEvaluator, rowIndex: number): number {
   return (
     table.offset / table.ValueType.BYTES_PER_ELEMENT +
     rowIndex * (table.stride / table.ValueType.BYTES_PER_ELEMENT)

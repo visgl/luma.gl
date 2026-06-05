@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './common/dispatch';
 import {getLiteralValue, getWGSLType} from './common/helper';
 import {
@@ -18,12 +18,12 @@ import {
 } from './common/random-access-transform';
 
 export const gather: OperationHandler<{
-  ids: GPUTableEvaluator;
-  sourceValues: GPUTableEvaluator;
+  ids: GPUDataEvaluator;
+  sourceValues: GPUDataEvaluator;
 }> = async ({inputs, output, target}) => {
   const {ids, sourceValues} = inputs;
   const idsType = getWGSLType(ids.type);
-  const bindings: {name: string; input: GPUTableEvaluator; index: number}[] = [];
+  const bindings: {name: string; input: GPUDataEvaluator; index: number}[] = [];
   if (!ids.isConstant) {
     bindings.push({name: 'ids', input: ids, index: bindings.length});
   }
@@ -92,7 +92,7 @@ ${getGatherFunction(ids.type, output.type, output.size, sourceValues.length)}
   return {success: true};
 };
 
-function getIdsAccessor(input: GPUTableEvaluator, type: string): string {
+function getIdsAccessor(input: GPUDataEvaluator, type: string): string {
   if (input.isConstant) {
     const values = input.value;
     if (!values) {
@@ -112,8 +112,8 @@ function getIdsAccessor(input: GPUTableEvaluator, type: string): string {
 }
 
 function getGatherFunction(
-  idsType: GPUTableEvaluator['type'],
-  outputType: GPUTableEvaluator['type'],
+  idsType: GPUDataEvaluator['type'],
+  outputType: GPUDataEvaluator['type'],
   outputSize: number,
   sourceLength: number
 ): string {

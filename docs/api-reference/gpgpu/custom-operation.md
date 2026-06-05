@@ -4,7 +4,7 @@ import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
 <GPGPUDocsTabs active="custom-operation" />
 
-Custom operations let applications add lazy `GPUTableEvaluator` operations that
+Custom operations let applications add lazy `GPUDataEvaluator` operations that
 are dispatched through `backendRegistry`, just like the built-in operations.
 
 A custom operation has two parts:
@@ -25,25 +25,25 @@ registered with `backendRegistry.add()`.
 
 ```ts
 import {
-  getGPUTableEvaluator,
-  GPUTableEvaluator,
+  getGPUDataEvaluator,
+  GPUDataEvaluator,
   Operation,
-  type GPUTableEvaluatorInput
+  type GPUDataEvaluatorInput
 } from '@luma.gl/gpgpu';
 
 type ProjectNaturalEarthInputs = {
-  coordinates: GPUTableEvaluator;
+  coordinates: GPUDataEvaluator;
 };
 
 class ProjectNaturalEarthOperation extends Operation<ProjectNaturalEarthInputs> {
   name = 'projectNaturalEarth';
 
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
-  constructor(coordinates: GPUTableEvaluator) {
+  constructor(coordinates: GPUDataEvaluator) {
     super({coordinates});
 
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant: coordinates.isConstant,
       type: 'float32',
       size: 2,
@@ -57,8 +57,8 @@ class ProjectNaturalEarthOperation extends Operation<ProjectNaturalEarthInputs> 
   }
 }
 
-export function projectNaturalEarth(coordinates: GPUTableEvaluatorInput): GPUTableEvaluator {
-  const coordinatesTable = getGPUTableEvaluator(coordinates);
+export function projectNaturalEarth(coordinates: GPUDataEvaluatorInput): GPUDataEvaluator {
+  const coordinatesTable = getGPUDataEvaluator(coordinates);
   if (coordinatesTable.type !== 'float32' || coordinatesTable.size !== 2) {
     throw new Error('projectNaturalEarth() requires vec2<f32> longitude/latitude input');
   }
@@ -306,11 +306,11 @@ backendRegistry.add('webgpu', {
 
 ## Use the Operation
 
-Custom operations return `GPUTableEvaluator` instances, so they can be evaluated
+Custom operations return `GPUDataEvaluator` instances, so they can be evaluated
 or chained with other GPGPU operations.
 
 ```ts
-const coordinates = GPUTableEvaluator.fromArray(
+const coordinates = GPUDataEvaluator.fromArray(
   new Float32Array([
     -122.4194, 37.7749,
     -74.006, 40.7128
@@ -329,8 +329,8 @@ const result = await projected.readValue();
 - `Operation.name` and the backend module key must be identical.
 - Dependencies are evaluated before the handler is called.
 - WebGPU compute handlers bind input tables as storage buffers. Buffers
-  materialized by `GPUTableEvaluator.evaluate()` are storage-bindable; externally
-  supplied `GPUVector` buffers must also be created with storage usage.
+  materialized by `GPUDataEvaluator.evaluate()` are storage-bindable; externally
+  supplied `GPUData` or `GPUVector` buffers must also be created with storage usage.
 - Register a handler for every device type that may evaluate the operation.
 - Registering a custom backend module for `cpu`, `webgl`, or `webgpu` replaces
   the previously registered module for that device type.

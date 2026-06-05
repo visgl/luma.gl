@@ -4,21 +4,21 @@
 
 import {type TypedArray} from '@math.gl/types';
 import {
-  getGPUTableEvaluator,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getGPUDataEvaluator,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 
-class SwizzleOperation extends Operation<{x: GPUTableEvaluator; columns: number[]}> {
+class SwizzleOperation extends Operation<{x: GPUDataEvaluator; columns: number[]}> {
   name = 'swizzle';
 
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
-  constructor(x: GPUTableEvaluator, columns: number[]) {
+  constructor(x: GPUDataEvaluator, columns: number[]) {
     super({x, columns});
 
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant: x.isConstant,
       type: x.type,
       size: columns.length,
@@ -34,13 +34,13 @@ class SwizzleOperation extends Operation<{x: GPUTableEvaluator; columns: number[
   }
 }
 
-export function swizzle(table: GPUTableEvaluatorInput, columns: number[]): GPUTableEvaluator {
-  const source = getGPUTableEvaluator(table);
+export function swizzle(table: GPUDataEvaluatorInput, columns: number[]): GPUDataEvaluator {
+  const source = getGPUDataEvaluator(table);
   validateColumns(source, columns);
 
   if (isContinuousColumns(columns)) {
     const startColumn = columns[0];
-    return new GPUTableEvaluator({
+    return new GPUDataEvaluator({
       type: source.type,
       size: columns.length,
       offset: source.offset + startColumn * source.ValueType.BYTES_PER_ELEMENT,
@@ -52,7 +52,7 @@ export function swizzle(table: GPUTableEvaluatorInput, columns: number[]): GPUTa
   }
 
   if (source.value) {
-    return new GPUTableEvaluator({
+    return new GPUDataEvaluator({
       isConstant: source.isConstant,
       type: source.type,
       size: columns.length,
@@ -65,7 +65,7 @@ export function swizzle(table: GPUTableEvaluatorInput, columns: number[]): GPUTa
   return new SwizzleOperation(source, columns).output;
 }
 
-function validateColumns(source: GPUTableEvaluator, columns: number[]): void {
+function validateColumns(source: GPUDataEvaluator, columns: number[]): void {
   if (columns.length === 0) {
     throw new Error('swizzle columns must not be empty');
   }
@@ -89,7 +89,7 @@ function isContinuousColumns(columns: number[]): boolean {
   return true;
 }
 
-function getSwizzledValue(source: GPUTableEvaluator, columns: number[]): TypedArray {
+function getSwizzledValue(source: GPUDataEvaluator, columns: number[]): TypedArray {
   const rowCount = source.isConstant ? 1 : source.length;
   const result = new source.ValueType(rowCount * columns.length) as TypedArray;
   const value = source.value!;

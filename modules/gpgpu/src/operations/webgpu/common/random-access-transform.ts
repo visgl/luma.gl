@@ -3,19 +3,19 @@
 // Copyright (c) vis.gl contributors
 
 import {SignedDataType} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 
 export const RANDOM_ACCESS_WORKGROUP_SIZE = 64;
 
-export function getInputBinding(name: string, input: GPUTableEvaluator, index: number): string {
+export function getInputBinding(name: string, input: GPUDataEvaluator, index: number): string {
   const inputType = getWGSLType(input.type);
   return `@group(0) @binding(${index}) var<storage, read> ${name}: array<${inputType}>;`;
 }
 
 export function getTableAccessor(
   bindingName: string,
-  input: GPUTableEvaluator,
+  input: GPUDataEvaluator,
   asType: SignedDataType,
   accessorName: string = bindingName
 ): string {
@@ -50,16 +50,16 @@ ${Array.from({length: input.size}, (_, index) =>
 }`;
 }
 
-export function getSourceValuesAccessor(input: GPUTableEvaluator, asType: SignedDataType): string {
+export function getSourceValuesAccessor(input: GPUDataEvaluator, asType: SignedDataType): string {
   return getTableAccessor('sourceValues', input, asType, 'source_values');
 }
 
-export function getOutputBinding(output: GPUTableEvaluator, bindingIndex: number): string {
+export function getOutputBinding(output: GPUDataEvaluator, bindingIndex: number): string {
   const type = getWGSLType(output.type);
   return `@group(0) @binding(${bindingIndex}) var<storage, read_write> result: array<${type}>;`;
 }
 
-export function getOutputWriter(output: GPUTableEvaluator): string {
+export function getOutputWriter(output: GPUDataEvaluator): string {
   const stride = output.stride / output.ValueType.BYTES_PER_ELEMENT;
   const offset = output.offset / output.ValueType.BYTES_PER_ELEMENT;
   const type = getWGSLType(output.type);

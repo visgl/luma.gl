@@ -3,9 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import type {Buffer, Device} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
+import {DynamicBuffer} from '@luma.gl/engine';
+import {GPUDataEvaluator} from '../operation/gpu-data-evaluator';
+import {GPUVectorEvaluator} from '../operation/gpu-vector-evaluator';
 
-type EvaluatorResult = GPUTableEvaluator | GPUTableEvaluator[] | Record<string, unknown>;
+type Evaluator = GPUDataEvaluator | GPUVectorEvaluator;
+type EvaluatorResult = Evaluator | Evaluator[] | Record<string, unknown>;
 
 export async function cleanEvaluate<ResultT extends EvaluatorResult>(
   device: Device,
@@ -15,9 +18,9 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
 
   await Promise.all(rootEvaluators.map(evaluator => evaluator.evaluate(device)));
 
-  const preservedBuffers = new Set<Buffer>(rootEvaluators.map(evaluator => evaluator.buffer));
+  const preservedBuffers = new Set<Buffer>(rootEvaluators.flatMap(getEvaluatorBuffers));
 
-  const dependencyEvaluators = new Set<GPUTableEvaluator>();
+  const dependencyEvaluators = new Set<GPUDataEvaluator>();
   for (const evaluator of rootEvaluators) {
     collectDependencies(evaluator, dependencyEvaluators);
   }
@@ -31,9 +34,9 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
   return result;
 }
 
-function collectReferencedEvaluators(value: EvaluatorResult): GPUTableEvaluator[] {
-  const evaluators = new Set<GPUTableEvaluator>();
-  if (value instanceof GPUTableEvaluator) {
+function collectReferencedEvaluators(value: EvaluatorResult): Evaluator[] {
+  const evaluators = new Set<Evaluator>();
+  if (isEvaluator(value)) {
     return [value];
   }
   let valuesArray: unknown[];
@@ -43,7 +46,7 @@ function collectReferencedEvaluators(value: EvaluatorResult): GPUTableEvaluator[
     valuesArray = Object.values(value);
   }
   for (const item of valuesArray) {
-    if (item instanceof GPUTableEvaluator) {
+    if (isEvaluator(item)) {
       evaluators.add(item);
     }
   }
@@ -51,14 +54,21 @@ function collectReferencedEvaluators(value: EvaluatorResult): GPUTableEvaluator[
 }
 
 function collectDependencies(
-  evaluator: GPUTableEvaluator,
-  dependencyEvaluators: Set<GPUTableEvaluator>
+  evaluator: Evaluator,
+  dependencyEvaluators: Set<GPUDataEvaluator>
 ): void {
+  if (evaluator instanceof GPUVectorEvaluator) {
+    for (const gpuDataEvaluator of evaluator.gpuDataEvaluators) {
+      collectDependencies(gpuDataEvaluator, dependencyEvaluators);
+    }
+    return;
+  }
+
   const source = evaluator.source;
   if (!source) {
     return;
   }
-  if (source instanceof GPUTableEvaluator) {
+  if (source instanceof GPUDataEvaluator) {
     if (!dependencyEvaluators.has(source)) {
       dependencyEvaluators.add(source);
       collectDependencies(source, dependencyEvaluators);
@@ -71,4 +81,17 @@ function collectDependencies(
       collectDependencies(dependency, dependencyEvaluators);
     }
   }
+}
+
+function getEvaluatorBuffers(evaluator: Evaluator): Buffer[] {
+  if (evaluator instanceof GPUDataEvaluator) {
+    return [evaluator.buffer];
+  }
+  return evaluator.gpuVector.data.map(data =>
+    data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer
+  );
+}
+
+function isEvaluator(value: unknown): value is Evaluator {
+  return value instanceof GPUDataEvaluator || value instanceof GPUVectorEvaluator;
 }

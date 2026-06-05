@@ -4,7 +4,7 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, length, GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {cleanEvaluate, length, GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {getTestDevice, TestData, verifyTableValue, isSupportedByWebGPU} from './fixtures';
 
 for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
@@ -15,13 +15,13 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       device = await getTestDevice(deviceType);
     });
 
-    const TEST_CASES: {eval: GPUTableEvaluator; expected: TestData}[] = [
+    const TEST_CASES: {eval: GPUDataEvaluator; expected: TestData}[] = [
       {
-        eval: length(GPUTableEvaluator.fromArray([3, 4, 5, 12, 8, 15], {size: 2})),
+        eval: length(GPUDataEvaluator.fromArray([3, 4, 5, 12, 8, 15], {size: 2})),
         expected: {value: [5, 13, 17], type: 'float32', size: 1}
       },
       {
-        eval: length(GPUTableEvaluator.fromArray([2, 3, 6, 1, 2, 2, 9, 12, 20], {size: 3})),
+        eval: length(GPUDataEvaluator.fromArray([2, 3, 6, 1, 2, 2, 9, 12, 20], {size: 3})),
         expected: {value: [7, 3, 25], type: 'float32', size: 1}
       }
     ];

@@ -5,7 +5,7 @@
 import {Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
 import {arithmetic} from './arithmetic';
 import {getInputBufferLayout, getInputModule} from './common/row-transform';
@@ -13,7 +13,7 @@ import {getInputBufferLayout, getInputModule} from './common/row-transform';
 const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const TRANSFORM_RUNS = 'Transform Runs';
 
-export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async ({
+export const extent: OperationHandler<{sourceValues: GPUDataEvaluator}> = async ({
   inputs,
   output,
   target
@@ -141,7 +141,7 @@ void main() {
           ]
         },
         namedInputs: {
-          x: new GPUTableEvaluator({
+          x: new GPUDataEvaluator({
             buffer: intermediateBuffer,
             size: 2,
             type: 'float32',
