@@ -29,7 +29,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
   readonly device: Device;
   readonly controlPanel = new ArrowColumnRendererControlPanel();
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowColumnRendererControlPanelHtml()
+    descriptionHtml: makeArrowColumnRendererControlPanelHtml()
   });
   layer: ArrowColumnRenderer | null = null;
   isFinalized = false;

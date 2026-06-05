@@ -19,7 +19,7 @@ import {
   type ArrowPointSourceKind,
   type ArrowPointTimeKind
 } from './arrow-point-generator';
-import {ArrowPointRenderer, type ArrowPointRendererPickingInfo} from './arrow-point-renderer';
+import {ArrowPointRenderer} from './arrow-point-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowPointControlPanel} from './control-panel';
 
@@ -36,7 +36,8 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   readonly controlPanel: ArrowPointControlPanel;
   readonly layer: ArrowPointRenderer;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   rowCountKind: ArrowPointRowCountKind = '10k-stream';
   sourceKind: ArrowPointSourceKind = 'xym';
@@ -50,7 +51,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.layer = new ArrowPointRenderer(this.device, {onPick: this.handlePointPicked});
+    this.layer = new ArrowPointRenderer(this.device);
     this.controlPanel = new ArrowPointControlPanel({
       initialState: this.getControlPanelState(),
       handlers: {
@@ -80,7 +81,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
     const renderPass = device.beginRenderPass({clearColor: [0.012, 0.026, 0.055, 1]});
     this.layer.draw(renderPass, {aspect});
     renderPass.end();
-    this.layer.pick(_mousePosition);
+    this.layer.pick(_mousePosition, {force: this.animate && this.timeKind !== 'none'});
     this.controlPanel.setCurrentTimeLabel(
       this.timeKind === 'none' ? '-' : formatPointCurrentTimeLabel(this.currentTimeMilliseconds)
     );
@@ -136,7 +137,6 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
       timeKind: effectiveTimeKind,
       colorKind
     });
-    this.controlPanel.setPickedLabel('Hover point');
     this.controlPanel.setCurrentTimeLabel(
       effectiveTimeKind === 'none' ? '-' : formatPointCurrentTimeLabel(this.currentTimeMilliseconds)
     );
@@ -213,19 +213,5 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
 
   private readonly handleAnimateChange = (enabled: boolean): void => {
     this.animate = enabled;
-  };
-
-  private readonly handlePointPicked = ({
-    batchIndex,
-    rowIndex,
-    batchRowIndex
-  }: ArrowPointRendererPickingInfo): void => {
-    this.controlPanel.setPickedLabel(
-      batchIndex === null || rowIndex === null
-        ? 'Hover point'
-        : `rowIndex ${rowIndex.toLocaleString()} / batch ${(batchIndex + 1).toLocaleString()} / batch row ${
-            batchRowIndex === null ? '-' : batchRowIndex.toLocaleString()
-          }`
-    );
   };
 }

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {Device} from '@luma.gl/core';
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -19,7 +19,12 @@ import {
   type ArrowPolygonRowCountKind,
   type ArrowPolygonSourceKind
 } from './arrow-polygon-data';
-import type {ArrowPolygonRendererMetrics} from './arrow-polygon-renderer';
+import {
+  POLYGON_VERTEX_STORAGE_BUFFER_COUNT,
+  type ArrowPolygonRendererMetrics,
+  type ArrowPolygonRendererModel
+} from './arrow-polygon-renderer';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 const PICKED_ROW_ID = 'arrow-polygon-picked-row';
 const ROW_COUNT_ID = 'arrow-polygon-row-count';
@@ -44,19 +49,23 @@ export type ArrowPolygonControlPanelState = {
   rowCountKind: ArrowPolygonRowCountKind;
   sourceKind: ArrowPolygonSourceKind;
   colorKind: ArrowPolygonColorKind;
+  modelKind: ArrowPolygonRendererModel;
 };
 
 export type ArrowPolygonControlPanelProps = {
+  device: Device;
   initialState: ArrowPolygonControlPanelState;
   handlers: {
     onRowCountKindChange: (rowCountKind: ArrowPolygonRowCountKind) => void | Promise<void>;
     onSourceKindChange: (sourceKind: ArrowPolygonSourceKind) => void;
     onColorKindChange: (colorKind: ArrowPolygonColorKind) => void;
+    onModelKindChange: (modelKind: ArrowPolygonRendererModel) => void;
   };
   onRefresh: () => void;
 };
 
 export class ArrowPolygonControlPanel {
+  private readonly device: Device;
   private readonly handlers: ArrowPolygonControlPanelProps['handlers'];
   private readonly onRefresh: () => void;
   private readonly settingsPanel: ExampleSettingsPanelManager;
@@ -67,40 +76,38 @@ export class ArrowPolygonControlPanel {
   private batchCount = 0;
   private rootElement: HTMLElement | null = null;
 
-  constructor({initialState, handlers, onRefresh}: ArrowPolygonControlPanelProps) {
+  constructor({device, initialState, handlers, onRefresh}: ArrowPolygonControlPanelProps) {
+    this.device = device;
     this.state = initialState;
     this.handlers = handlers;
     this.onRefresh = onRefresh;
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'arrow-polygons-settings',
-      schema: makeArrowPolygonSettingsSchema(initialState),
+      schema: makeArrowPolygonSettingsSchema(device, initialState),
       settings: initialState,
       onSettingsChange: this.handleSettingsChange
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-polygons-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-polygons-status',
-          title: 'Status',
-          html: makeArrowPolygonControlPanelHtml(),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.render();
-            return () => {
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-polygons-description',
+      title: 'Description',
+      html: makeArrowPolygonControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.render();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -112,7 +119,10 @@ export class ArrowPolygonControlPanel {
 
   syncControls(state: Partial<ArrowPolygonControlPanelState>): void {
     this.state = {...this.state, ...state};
-    this.settingsPanel.setSchemaAndSettings(makeArrowPolygonSettingsSchema(this.state), this.state);
+    this.settingsPanel.setSchemaAndSettings(
+      makeArrowPolygonSettingsSchema(this.device, this.state),
+      this.state
+    );
     this.onRefresh();
   }
 
@@ -148,6 +158,10 @@ export class ArrowPolygonControlPanel {
     const colorKind = getChangedSetting(changedSettings, 'colorKind')?.nextValue;
     if (isColorKind(colorKind)) {
       this.handlers.onColorKindChange(colorKind);
+    }
+    const modelKind = getChangedSetting(changedSettings, 'modelKind')?.nextValue;
+    if (isArrowPolygonRendererModel(modelKind)) {
+      this.handlers.onModelKindChange(modelKind);
     }
   };
 
@@ -220,11 +234,31 @@ export class ArrowPolygonControlPanel {
 }
 
 export function makeArrowPolygonSettingsSchema(
+  device: Device,
   state: ArrowPolygonControlPanelState
 ): SettingsSchema {
+  const supportsStorage = supportsVertexStorageBuffers(device, POLYGON_VERTEX_STORAGE_BUFFER_COUNT);
   return {
     title: 'Settings',
     sections: [
+      {
+        id: 'renderer',
+        name: 'Renderer',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'modelKind',
+            label: 'Model',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Attributes', value: 'attributes'},
+              ...(supportsStorage ? [{label: 'Storage', value: 'storage'}] : []),
+              {label: `Auto (${supportsStorage ? 'Storage' : 'Attributes'})`, value: 'auto'}
+            ]
+          }
+        ]
+      },
       {
         id: 'data',
         name: 'Data',
@@ -390,4 +424,8 @@ function isRowCountKind(value: unknown): value is ArrowPolygonRowCountKind {
 
 function isColorKind(value: unknown): value is ArrowPolygonColorKind {
   return value === 'constant' || value === 'row-colors' || value === 'vertex-colors';
+}
+
+function isArrowPolygonRendererModel(value: unknown): value is ArrowPolygonRendererModel {
+  return value === 'attributes' || value === 'storage' || value === 'auto';
 }

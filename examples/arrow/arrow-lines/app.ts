@@ -57,7 +57,8 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
 
   readonly device: Device;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   activeMode: ArrowLineMode = 'lines';
   activeRowCountKind: ArrowLineRowCountKind = '240-stream';

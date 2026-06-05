@@ -6,11 +6,22 @@ import {RenderPass, log} from '@luma.gl/core';
 import {AnimationProps, ClipSpace} from '@luma.gl/engine';
 import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/gltf';
 import {type LightingProps} from '@luma.gl/shadertools';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 import GLTFCatalogApp, {
-  GLTF_CONTROL_PANEL_STYLE,
-  GLTF_CONTROL_ROW_STYLE,
   GLTF_MODEL_INFO_ID,
-  GLTF_SELECT_STYLE,
+  saveOptions,
   type GLTFCatalogModel,
   type GLTFModelReference
 } from './gltf-catalog-app';
@@ -20,6 +31,7 @@ const PBR_ENVIRONMENT_BASE_URL =
   'https://raw.githubusercontent.com/uber-common/deck.gl-data/master/luma.gl/examples/gltf';
 const SHOWCASE_EXTENSION_STORAGE_KEY = 'showcase-gltf-extension-filter';
 const ALL_EXTENSIONS_FILTER = 'all';
+const LOADING_MODEL_VALUE = 'loading-models';
 const CUBE_FACE_TO_DIRECTION = ['right', 'left', 'top', 'bottom', 'front', 'back'] as const;
 const SHOWCASE_FALLBACK_LIGHTING = {
   ambientLight: {
@@ -76,27 +88,10 @@ void main(void) {
 }
 `;
 
-const INFO_HTML = `\
-<p>
-  Browse production-quality glTF sample assets with interactive camera and animation controls.
-</p>
-<div id="model-options" style="${GLTF_CONTROL_PANEL_STYLE}">
-  <div style="${GLTF_CONTROL_ROW_STYLE}">
-    <label for="extension-select" style="margin: 0;">Extension</label>
-    <select id="extension-select" style="${GLTF_SELECT_STYLE}"></select>
-  </div>
-  <div style="${GLTF_CONTROL_ROW_STYLE}">
-    <label for="model-select" style="margin: 0;">Model</label>
-    <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0;">
-      <select id="model-select" style="flex: 1 1 auto; ${GLTF_SELECT_STYLE}"></select>
-      <div id="loading-state" class="gltf-loading-indicator" hidden>
-      <span class="gltf-loading-spinner" aria-hidden="true"></span>
-      </div>
-    </div>
-  </div>
-  <div><label><input type="checkbox" id="useModelLights" />Use Model Lights</label></div>
-  <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
-  <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
+const GLTF_DESCRIPTION_HTML = `\
+<p>Browse production-quality glTF sample assets with interactive camera and animation controls.</p>
+<div id="loading-state" class="gltf-loading-indicator" hidden>
+  <span class="gltf-loading-spinner" aria-hidden="true"></span>
 </div>
 <p style="margin-top: 8px;">Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
 <div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
@@ -106,13 +101,27 @@ const INFO_HTML = `\
 `;
 
 export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
-  static info = INFO_HTML;
+  static info = makeExamplePanelHostHtml();
   backgroundModel: ClipSpace;
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
+  extensionDemos: GLTFExtensionDemo[] = [];
+  modelOptions: ShowcaseModelMenuOption[] = [];
+  extensionName = ALL_EXTENSIONS_FILTER;
+  selectedModelValue = '';
   imageBasedLightingEnvironment?: PBREnvironment;
   imageBasedLightingEnvironmentPromise?: Promise<PBREnvironment | undefined>;
 
   constructor({device}: AnimationProps) {
     super({device});
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'gltf-settings',
+      schema: makeGltfSettingsSchema([], [], this.extensionName),
+      settings: this.getSettingsState(),
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
 
     this.backgroundModel = new ClipSpace(device, {
       id: 'gltf-showcase-background',
@@ -141,11 +150,26 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   override initializeModelMenus(models: GLTFCatalogModel[], currentModelName: string): () => void {
-    return initializeShowcaseModelMenus({
-      app: this,
-      currentModelName,
-      models
-    });
+    this.extensionDemos = getAvailableExtensionDemos(models);
+    const activeExtensionNames = new Set(
+      this.extensionDemos.map(extensionDemo => extensionDemo.extensionName)
+    );
+    const storedExtension = window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY];
+    this.extensionName = activeExtensionNames.has(storedExtension)
+      ? storedExtension
+      : ALL_EXTENSIONS_FILTER;
+    this.modelOptions = getModelOptionsForExtension(
+      this.extensionName,
+      getAllModelOptions(models),
+      this.extensionDemos
+    );
+    const selectedModelOption = getInitialModelOption(this.modelOptions, currentModelName);
+    this.selectedModelValue = encodeModelOption(selectedModelOption);
+    this.syncSettingsPanel();
+    if (this.extensionName !== ALL_EXTENSIONS_FILTER) {
+      this.loadModelOption(selectedModelOption);
+    }
+    return () => {};
   }
 
   drawBackground(renderPass: RenderPass): void {
@@ -183,6 +207,8 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   override onFinalize(): void {
+    this.settingsPanel.finalize();
+    this.panels.finalize();
     super.onFinalize();
     this.backgroundModel.destroy();
     destroyImageBasedLightingEnvironment(this.imageBasedLightingEnvironment);
@@ -220,6 +246,103 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
       return undefined;
     }
   }
+
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'gltf-controls',
+      title: 'Controls',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'gltf-description',
+          title: 'Description',
+          html: GLTF_DESCRIPTION_HTML
+        }),
+        this.settingsPanel.makePanel()
+      ]
+    });
+  }
+
+  private getSettingsState(): GltfSettingsState {
+    return {
+      extensionName: this.extensionName,
+      modelValue: this.selectedModelValue || LOADING_MODEL_VALUE,
+      useModelLights: this.options['useModelLights'],
+      cameraAnimation: this.options['cameraAnimation'],
+      gltfAnimation: this.options['gltfAnimation']
+    };
+  }
+
+  private syncSettingsPanel(): void {
+    this.settingsPanel.setSchemaAndSettings(
+      makeGltfSettingsSchema(this.extensionDemos, this.modelOptions, this.extensionName),
+      this.getSettingsState()
+    );
+    this.panels.setPanel(this.makePanel());
+  }
+
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const extensionName = getChangedSetting(changedSettings, 'extensionName')?.nextValue;
+    if (typeof extensionName === 'string') {
+      this.selectExtension(extensionName);
+      return;
+    }
+    const modelValue = getChangedSetting(changedSettings, 'modelValue')?.nextValue;
+    if (typeof modelValue === 'string') {
+      this.selectModel(modelValue);
+      return;
+    }
+    for (const optionName of ['useModelLights', 'cameraAnimation', 'gltfAnimation'] as const) {
+      const nextValue = getChangedSetting(changedSettings, optionName)?.nextValue;
+      if (typeof nextValue === 'boolean') {
+        this.options[optionName] = nextValue;
+        saveOptions(this.options);
+      }
+    }
+  };
+
+  private selectExtension(extensionName: string): void {
+    this.extensionName = isGltfExtensionName(extensionName, this.extensionDemos)
+      ? extensionName
+      : ALL_EXTENSIONS_FILTER;
+    window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY] = this.extensionName;
+    this.modelOptions = getModelOptionsForExtension(
+      this.extensionName,
+      getAllModelOptions(this.availableModels),
+      this.extensionDemos
+    );
+    const selectedModelOption = this.modelOptions[0];
+    if (!selectedModelOption) {
+      this.selectedModelValue = '';
+      this.syncSettingsPanel();
+      return;
+    }
+    this.selectedModelValue = encodeModelOption(selectedModelOption);
+    this.syncSettingsPanel();
+    this.loadModelOption(selectedModelOption);
+  }
+
+  private selectModel(modelValue: string): void {
+    if (modelValue === LOADING_MODEL_VALUE) {
+      return;
+    }
+    const selectedModelOption =
+      this.modelOptions.find(modelOption => encodeModelOption(modelOption) === modelValue) ||
+      this.modelOptions[0];
+    if (!selectedModelOption) {
+      return;
+    }
+    this.selectedModelValue = encodeModelOption(selectedModelOption);
+    this.syncSettingsPanel();
+    this.loadModelOption(selectedModelOption);
+  }
+
+  private loadModelOption(modelOption: ShowcaseModelMenuOption): void {
+    this.loadGLTF(modelOption);
+    window.localStorage[this.getModelStorageKey()] = modelOption.name;
+  }
 }
 
 function destroyImageBasedLightingEnvironment(
@@ -234,79 +357,9 @@ function destroyImageBasedLightingEnvironment(
   imageBasedLightingEnvironment.specularEnvSampler.destroy();
 }
 
-type ShowcaseModelMenuOption = GLTFModelReference & {
+export type ShowcaseModelMenuOption = GLTFModelReference & {
   label: string;
 };
-
-function initializeShowcaseModelMenus({
-  app,
-  currentModelName,
-  models
-}: {
-  app: AppAnimationLoopTemplate;
-  currentModelName: string;
-  models: GLTFCatalogModel[];
-}): () => void {
-  const extensionSelector = document.getElementById('extension-select') as HTMLSelectElement;
-  const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
-  if (!extensionSelector || !modelSelector) {
-    return () => {};
-  }
-
-  const extensionDemos = getAvailableExtensionDemos(models);
-  const activeExtensionNames = new Set(extensionDemos.map(demo => demo.extensionName));
-  const storedExtension = window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY];
-  const currentExtension = activeExtensionNames.has(storedExtension)
-    ? storedExtension
-    : ALL_EXTENSIONS_FILTER;
-  const allModels = models.map(model => ({
-    label: model.label || model.name,
-    name: model.name
-  }));
-
-  extensionSelector.replaceChildren();
-  extensionSelector.append(
-    createSelectOption(ALL_EXTENSIONS_FILTER, 'All Extensions'),
-    ...extensionDemos.map(demo => createSelectOption(demo.extensionName, demo.extensionName))
-  );
-  extensionSelector.value = currentExtension;
-
-  let modelOptions = getModelOptionsForExtension(currentExtension, allModels, extensionDemos);
-  let selectedModelOption = getInitialModelOption(modelOptions, currentModelName);
-  updateModelSelector(modelSelector, modelOptions, selectedModelOption);
-
-  if (currentExtension !== ALL_EXTENSIONS_FILTER) {
-    app.loadGLTF(selectedModelOption);
-    window.localStorage[app.getModelStorageKey()] = selectedModelOption.name;
-  }
-
-  const extensionChangeHandler = () => {
-    const extensionName = extensionSelector.value;
-    window.localStorage[SHOWCASE_EXTENSION_STORAGE_KEY] = extensionName;
-    modelOptions = getModelOptionsForExtension(extensionName, allModels, extensionDemos);
-    selectedModelOption = modelOptions[0];
-    updateModelSelector(modelSelector, modelOptions, selectedModelOption);
-    app.loadGLTF(selectedModelOption);
-    window.localStorage[app.getModelStorageKey()] = selectedModelOption.name;
-  };
-
-  const modelChangeHandler = () => {
-    const nextModelOption =
-      modelOptions.find(modelOption => encodeModelOption(modelOption) === modelSelector.value) ||
-      modelOptions[0];
-    selectedModelOption = nextModelOption;
-    app.loadGLTF(nextModelOption);
-    window.localStorage[app.getModelStorageKey()] = nextModelOption.name;
-  };
-
-  extensionSelector.addEventListener('change', extensionChangeHandler);
-  modelSelector.addEventListener('change', modelChangeHandler);
-
-  return () => {
-    extensionSelector.removeEventListener('change', extensionChangeHandler);
-    modelSelector.removeEventListener('change', modelChangeHandler);
-  };
-}
 
 function getAvailableExtensionDemos(models: GLTFCatalogModel[]): GLTFExtensionDemo[] {
   const modelsByName = new Map(models.map(model => [model.name, model]));
@@ -335,6 +388,13 @@ function getInitialModelOption(
   return modelOptions.find(modelOption => modelOption.name === currentModelName) || modelOptions[0];
 }
 
+function getAllModelOptions(models: GLTFCatalogModel[]): ShowcaseModelMenuOption[] {
+  return models.map(model => ({
+    label: model.label || model.name,
+    name: model.name
+  }));
+}
+
 function getModelOptionsForExtension(
   extensionName: string,
   allModels: ShowcaseModelMenuOption[],
@@ -350,26 +410,92 @@ function getModelOptionsForExtension(
   );
 }
 
-function updateModelSelector(
-  modelSelector: HTMLSelectElement,
-  modelOptions: ShowcaseModelMenuOption[],
-  selectedModelOption: ShowcaseModelMenuOption
-): void {
-  modelSelector.replaceChildren(
-    ...modelOptions.map(modelOption =>
-      createSelectOption(encodeModelOption(modelOption), modelOption.label)
-    )
-  );
-  modelSelector.value = encodeModelOption(selectedModelOption);
-}
-
-function createSelectOption(value: string, label: string): HTMLOptionElement {
-  const option = document.createElement('option');
-  option.value = value;
-  option.textContent = label;
-  return option;
-}
-
 function encodeModelOption(modelOption: GLTFModelReference): string {
   return `${modelOption.name}|${modelOption.variant || 'glTF'}|${modelOption.fileName || ''}`;
+}
+
+type GltfSettingsState = {
+  extensionName: string;
+  modelValue: string;
+  useModelLights: boolean;
+  cameraAnimation: boolean;
+  gltfAnimation: boolean;
+};
+
+export function makeGltfSettingsSchema(
+  extensionDemos: GLTFExtensionDemo[] = [],
+  modelOptions: ShowcaseModelMenuOption[] = [],
+  extensionName = ALL_EXTENSIONS_FILTER
+): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'models',
+        name: 'Models',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'extensionName',
+            label: 'Extension',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'All Extensions', value: ALL_EXTENSIONS_FILTER},
+              ...extensionDemos.map(extensionDemo => ({
+                label: extensionDemo.extensionName,
+                value: extensionDemo.extensionName
+              }))
+            ],
+            defaultValue: extensionName
+          },
+          {
+            name: 'modelValue',
+            label: 'Model',
+            type: 'select',
+            persist: 'none',
+            options:
+              modelOptions.length > 0
+                ? modelOptions.map(modelOption => ({
+                    label: modelOption.label,
+                    value: encodeModelOption(modelOption)
+                  }))
+                : [{label: 'Loading models...', value: LOADING_MODEL_VALUE}]
+          }
+        ]
+      },
+      {
+        id: 'animation',
+        name: 'Animation',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'useModelLights',
+            label: 'Use Model Lights',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'cameraAnimation',
+            label: 'Camera Animation',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'gltfAnimation',
+            label: 'glTF Animation',
+            type: 'boolean',
+            persist: 'none'
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function isGltfExtensionName(extensionName: string, extensionDemos: GLTFExtensionDemo[]): boolean {
+  return (
+    extensionName === ALL_EXTENSIONS_FILTER ||
+    extensionDemos.some(extensionDemo => extensionDemo.extensionName === extensionName)
+  );
 }

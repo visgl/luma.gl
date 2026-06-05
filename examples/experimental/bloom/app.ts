@@ -107,12 +107,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'bloom-controls',
       title: 'Controls',
       panels: [
-        this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
           id: 'bloom-description',
           title: '',
           html: '<p>Experimental bloom pipeline demo using extracted highlights, multi-stage blur targets, and final recomposition.</p>'
-        })
+        }),
+        this.settingsPanel.makePanel()
       ]
     });
   }
@@ -127,7 +127,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.bloomValues[propName] = nextValue;
       }
     }
-    this.settingsPanel.setSettings(settings);
     this.setShaderPasses([this.getBloomPassPipeline()]);
   };
 }

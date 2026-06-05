@@ -315,7 +315,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'animation-controls',
       title: 'Controls',
       panels: [
-        this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
           id: 'animation-actions',
           title: '',
@@ -338,7 +337,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
               pauseButton?.removeEventListener('click', handlePause);
             };
           }
-        })
+        }),
+        this.settingsPanel.makePanel()
       ]
     });
   }

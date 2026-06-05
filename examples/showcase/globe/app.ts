@@ -909,12 +909,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'globe-controls',
       title: 'Controls',
       panels: [
-        this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
           id: 'globe-description',
           title: '',
           html: GLOBE_DESCRIPTION_HTML
-        })
+        }),
+        this.settingsPanel.makePanel()
       ]
     });
   }
@@ -970,51 +970,95 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-function bindCheckboxControl(
-  id: string,
-  initialValue: boolean,
-  onChange: (value: boolean) => void,
-  cleanupCallbacks: CleanupCallback[]
-): void {
-  const input = document.getElementById(id) as HTMLInputElement | null;
-  if (!input) {
-    return;
-  }
-
-  input.checked = initialValue;
-  const changeHandler = () => onChange(input.checked);
-  input.addEventListener('change', changeHandler);
-  cleanupCallbacks.push(() => input.removeEventListener('change', changeHandler));
-}
-
-function bindRangeControl(
-  id: string,
-  outputId: string,
-  initialValue: number,
-  onChange: (value: number) => void,
-  formatValue: (value: number) => string,
-  cleanupCallbacks: CleanupCallback[]
-): void {
-  const input = document.getElementById(id) as HTMLInputElement | null;
-  const output = document.getElementById(outputId) as HTMLOutputElement | null;
-  if (!input || !output) {
-    return;
-  }
-
-  const applyValue = (value: number) => {
-    input.value = String(value);
-    output.value = formatValue(value);
-    output.textContent = formatValue(value);
-    onChange(value);
+function makeGlobeSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'layers',
+        name: 'Layers',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'starBackgroundEnabled',
+            label: 'Sky Background',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {name: 'waterEnabled', label: 'Water Overlay', type: 'boolean', persist: 'none'},
+          {name: 'landTextureEnabled', label: 'Land Texture', type: 'boolean', persist: 'none'}
+        ]
+      },
+      {
+        id: 'water',
+        name: 'Water',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'waveSpeed',
+            label: 'Wave Speed',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 4,
+            step: 0.01
+          },
+          {
+            name: 'normalStrength',
+            label: 'Normal Strength',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.4,
+            step: 0.01
+          },
+          {
+            name: 'fresnelPower',
+            label: 'Fresnel Power',
+            type: 'number',
+            persist: 'none',
+            min: 1,
+            max: 12,
+            step: 0.1
+          },
+          {
+            name: 'specularIntensity',
+            label: 'Specular Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 5,
+            step: 0.05
+          }
+        ]
+      },
+      {
+        id: 'light',
+        name: 'Light',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'lightAzimuth',
+            label: 'Light Azimuth',
+            type: 'number',
+            persist: 'none',
+            min: -180,
+            max: 180,
+            step: 1
+          },
+          {
+            name: 'lightElevation',
+            label: 'Light Elevation',
+            type: 'number',
+            persist: 'none',
+            min: 5,
+            max: 85,
+            step: 1
+          }
+        ]
+      }
+    ]
   };
-
-  applyValue(initialValue);
-
-  const inputHandler = () => {
-    applyValue(Number(input.value));
-  };
-  input.addEventListener('input', inputHandler);
-  cleanupCallbacks.push(() => input.removeEventListener('input', inputHandler));
 }
 
 function getDirectionalLightDirection(

@@ -8,6 +8,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82",
     "@luma.gl/core": "9.3.2",
     "@luma.gl/engine": "9.3.2",
     "@luma.gl/shadertools": "9.3.2",

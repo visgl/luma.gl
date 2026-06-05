@@ -24,7 +24,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly timelineChannels: Record<string, number>;
   readonly controlPanel: ArrowInstancingControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   readonly layer: ArrowInstancedMeshRenderer;
   instancesPerSide = DEFAULT_INSTANCES_PER_SIDE;
@@ -88,7 +89,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     renderPass.end();
 
-    this.layer.pick(animationProps._mousePosition);
+    this.layer.pick(animationProps._mousePosition, {force: true});
   }
 
   onFinalize(): void {

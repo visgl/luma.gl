@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -23,7 +22,6 @@ import {
 } from './arrow-point-generator';
 import type {ArrowPointRendererMetrics} from './arrow-point-renderer';
 
-const PICKED_ROW_ID = 'arrow-point-picked-row';
 const CURRENT_TIME_ID = 'arrow-point-current-time';
 const ROW_COUNT_ID = 'arrow-point-row-count';
 const DIMENSION_ID = 'arrow-point-dimension';
@@ -63,7 +61,6 @@ export type ArrowPointControlPanelProps = {
 };
 
 type ArrowPointPanelLabels = {
-  pickedLabel: string;
   currentTimeLabel: string;
   loadedBatchCount: number | null;
   batchCount: number;
@@ -76,7 +73,6 @@ export class ArrowPointControlPanel {
   private state: ArrowPointControlPanelState;
   private metrics: ArrowPointRendererMetrics | null = null;
   private labels: ArrowPointPanelLabels = {
-    pickedLabel: 'Hover point',
     currentTimeLabel: '-',
     loadedBatchCount: null,
     batchCount: 0
@@ -95,28 +91,25 @@ export class ArrowPointControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-points-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-points-status',
-          title: 'Status',
-          html: makeArrowPointControlPanelHtml(),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.render();
-            return () => {
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-points-description',
+      title: 'Description',
+      html: makeArrowPointControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.render();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -135,11 +128,6 @@ export class ArrowPointControlPanel {
   setMetrics(metrics: ArrowPointRendererMetrics): void {
     this.metrics = metrics;
     this.renderMetrics();
-  }
-
-  setPickedLabel(label: string): void {
-    this.labels.pickedLabel = label;
-    setLabel(this.rootElement, PICKED_ROW_ID, label);
   }
 
   setCurrentTimeLabel(label: string): void {
@@ -181,7 +169,6 @@ export class ArrowPointControlPanel {
   };
 
   private render(): void {
-    setLabel(this.rootElement, PICKED_ROW_ID, this.labels.pickedLabel);
     setLabel(this.rootElement, CURRENT_TIME_ID, this.labels.currentTimeLabel);
     if (this.labels.loadedBatchCount !== null) {
       renderStreamingBatchStatus(
@@ -319,7 +306,6 @@ export function makeArrowPointControlPanelHtml(): string {
   return `\
   <p>Renders Arrow point columns as instanced circle impostors with optional measure or timestamp animation.</p>
   ${makeStatusRow('Batches', makeProgressBar())}
-  ${makeStatusRow('Hover', `<strong id="${PICKED_ROW_ID}">Hover point</strong>`)}
   ${makeStatusRow('Clock', `<strong id="${CURRENT_TIME_ID}">-</strong>`)}
   <table style="width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12px;">
     <tbody>

@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -67,28 +66,25 @@ export class ArrowTimeColumnsControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-time-columns-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-time-columns-status',
-          title: 'Status',
-          html: makeArrowTimeColumnsControlPanelHtml(),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.renderLabels();
-            return () => {
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-time-columns-description',
+      title: 'Description',
+      html: makeArrowTimeColumnsControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.renderLabels();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -150,7 +146,7 @@ export function makeArrowTimeColumnsSettingsSchema(
         settings: [
           {
             name: 'renderMode',
-            label: 'Render',
+            label: 'Model',
             type: 'select',
             persist: 'none',
             options: [

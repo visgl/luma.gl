@@ -35,7 +35,8 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   readonly device: Device;
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';

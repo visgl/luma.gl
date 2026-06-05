@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -74,28 +73,25 @@ export class ArrowTemporalStarfieldControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-temporal-starfield-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-temporal-starfield-status',
-          title: 'Status',
-          html: makeArrowTemporalStarfieldControlPanelHtml(),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.render();
-            return () => {
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-temporal-starfield-description',
+      title: 'Description',
+      html: makeArrowTemporalStarfieldControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.render();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -183,7 +179,7 @@ export function makeArrowTemporalStarfieldSettingsSchema(
           },
           {
             name: 'renderMode',
-            label: 'Render',
+            label: 'Model',
             type: 'select',
             persist: 'none',
             options: [
@@ -200,9 +196,9 @@ export function makeArrowTemporalStarfieldSettingsSchema(
 export function makeArrowTemporalStarfieldControlPanelHtml(): string {
   return `\
   <p>Prepares Arrow <code>Timestamp</code> and <code>Duration</code> columns as relative <code>Float32</code> GPU rows, then uses them as per-star animation inputs.</p>
+  ${makeStatusRow('Batches', makeProgressBar())}
   ${makeStatusRow('Prepare', `<strong id="${PREPARATION_PATH_ID}"></strong>`)}
   ${makeStatusRow('Current', `<strong id="${CURRENT_TIMESTAMP_ID}"></strong>`)}
-  ${makeStatusRow('Batches', makeProgressBar())}
   <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 10px; margin-top: 12px; font-size: 12px;">
     <strong>Column</strong><strong>Prepared / origin</strong>
     <code id="${POSITIONS_COLUMN_ID}">positions: FixedSizeList&lt;Float32, 2&gt;</code><span><code>vec2 Float32</code></span>

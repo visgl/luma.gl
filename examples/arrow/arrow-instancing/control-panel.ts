@@ -2,8 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ColumnPanel, type Panel, type SettingsChangeDescriptor, type SettingsSchema} from '@deck.gl-community/panels';
-import {ExampleSettingsPanelManager, getChangedSetting, makeHtmlCustomPanel} from '../../example-panels';
+import {
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
 export type ArrowInstancingControlPanelState = {
   instancesPerSide: number;
@@ -45,19 +53,16 @@ export class ArrowInstancingControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-instancing-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-instancing-description',
-          title: '',
-          html: makeArrowInstancingControlPanelHtml()
-        })
-      ]
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-instancing-description',
+      title: 'Description',
+      html: makeArrowInstancingControlPanelHtml()
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}

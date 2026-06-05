@@ -13,7 +13,11 @@ import {
   type ArrowPolygonViewState,
   makeArrowPolygonExampleData
 } from './arrow-polygon-data';
-import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from './arrow-polygon-renderer';
+import {
+  ArrowPolygonRenderer,
+  type ArrowPolygonRendererModel,
+  type ArrowPolygonRendererPickingInfo
+} from './arrow-polygon-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowPolygonControlPanel} from './control-panel';
 
@@ -29,12 +33,14 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   readonly device: Device;
   readonly controlPanel: ArrowPolygonControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   layer: ArrowPolygonRenderer;
   rowCountKind: ArrowPolygonRowCountKind = '10k-stream';
   sourceKind: ArrowPolygonSourceKind = 'polygon';
   colorKind: ArrowPolygonColorKind = 'row-colors';
+  modelKind: ArrowPolygonRendererModel = 'auto';
   viewState: ArrowPolygonViewState | null = null;
   animationSeconds = 0;
   lastRenderSeconds: number | null = null;
@@ -43,17 +49,23 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.layer = new ArrowPolygonRenderer(this.device, {onPick: this.handlePolygonPicked});
+    this.layer = new ArrowPolygonRenderer(this.device, {
+      model: this.modelKind,
+      onPick: this.handlePolygonPicked
+    });
     this.controlPanel = new ArrowPolygonControlPanel({
+      device: this.device,
       initialState: {
         rowCountKind: this.rowCountKind,
         sourceKind: this.sourceKind,
-        colorKind: this.colorKind
+        colorKind: this.colorKind,
+        modelKind: this.modelKind
       },
       handlers: {
         onRowCountKindChange: this.handleRowCountKindChange,
         onSourceKindChange: this.handleSourceKindChange,
-        onColorKindChange: this.handleColorKindChange
+        onColorKindChange: this.handleColorKindChange,
+        onModelKindChange: this.handleModelKindChange
       },
       onRefresh: () => this.panels.refresh()
     });
@@ -75,7 +87,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
     const renderPass = device.beginRenderPass({clearColor: [0.02, 0.04, 0.08, 1]});
     this.layer.draw(renderPass, {aspect});
     renderPass.end();
-    this.layer.pick(_mousePosition);
+    this.layer.pick(_mousePosition, {force: true});
   }
 
   override onFinalize(): void {
@@ -101,6 +113,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
     this.layer.setProps({
       tessellated: sourceData.tessellated,
       colors: effectiveColorKind === 'constant' ? null : undefined,
+      model: this.modelKind,
       center: sourceData.viewState.startCenter,
       scale: sourceData.viewState.scale
     });
@@ -181,6 +194,15 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
       return;
     }
     this.streamPolygonInput(this.rowCountKind, this.sourceKind, colorKind);
+  };
+
+  private readonly handleModelKindChange = (modelKind: ArrowPolygonRendererModel): void => {
+    if (modelKind === this.modelKind) {
+      return;
+    }
+    this.modelKind = modelKind;
+    this.controlPanel.syncControls({modelKind});
+    this.layer.setProps({model: modelKind});
   };
 
   private readonly handlePolygonPicked = ({

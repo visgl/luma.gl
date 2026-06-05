@@ -7,7 +7,8 @@ import {
   AnimationLoopTemplate,
   type AnimationProps,
   type Model,
-  type PickingManager
+  type PickingManager,
+  type PickingShouldPickOptions
 } from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
 import {
@@ -87,11 +88,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   readonly device: Device;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () =>
-      this.controlPanel.makePanel({
+    descriptionPanel: () =>
+      this.controlPanel.makeDescriptionPanel({
         streamingBatchCount: STREAMING_TEXT_BATCH_COUNT,
         deckCharacterAttributeBytesPerGlyph: DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
-      })
+      }),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   textInput!: ArrowTextRendererInput;
   textRenderer!: ArrowTextRenderer;
@@ -297,7 +299,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.animate || Boolean(needsRedraw) || Boolean(textRendererNeedsRedraw)) {
       this.drawTextFrame(device, aspect);
     }
-    this.pickLabel(_mousePosition);
+    this.pickLabel(_mousePosition, {force: this.animate});
   }
 
   drawTextFrame(device: Device, aspect: number): void {
@@ -340,8 +342,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.textRenderer?.destroy();
   }
 
-  pickLabel(mousePosition: number[] | null | undefined): void {
-    if (!this.picker || !this.picker.shouldPick(mousePosition as [number, number] | null)) {
+  pickLabel(
+    mousePosition: number[] | null | undefined,
+    options: PickingShouldPickOptions = {}
+  ): void {
+    if (
+      !this.picker ||
+      !this.picker.shouldPick(mousePosition as [number, number] | null, options)
+    ) {
       return;
     }
 

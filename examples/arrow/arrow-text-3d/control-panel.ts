@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -37,19 +36,16 @@ export class ArrowText3DControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-text-3d-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-text-3d-description',
-          title: '',
-          html: makeArrowText3DControlPanelHtml()
-        })
-      ]
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-text-3d-description',
+      title: 'Description',
+      html: makeArrowText3DControlPanelHtml()
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -74,7 +70,6 @@ export class ArrowText3DControlPanel {
     }
     this.crawlColorKind = crawlColorKind;
     setText3DCrawlColorKind(crawlColorKind);
-    this.settingsPanel.setSettings(settings);
   };
 }
 

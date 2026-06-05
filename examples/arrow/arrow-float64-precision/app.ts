@@ -36,7 +36,8 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   readonly device: Device;
   readonly controlPanel: ArrowFloat64PrecisionControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   coordinateMagnitudeKind: CoordinateMagnitudeKind = DEFAULT_COORDINATE_MAGNITUDE_KIND;
   viewState: ArrowFloat64PrecisionViewState = {...DEFAULT_VIEW_STATE, pan: [0, 0]};
@@ -108,8 +109,7 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
         id: 'float64-source',
         label: 'Survey path source',
         kind: 'source',
-        table: makeArrowFloat64PrecisionSourceTable(sourceData),
-        status: `${sourceData.coordinateMagnitudeLabel} coordinate magnitude`
+        table: makeArrowFloat64PrecisionSourceTable(sourceData)
       }
     ]);
     const renderer = await ArrowFloat64PrecisionRenderer.create(this.device, sourceData);

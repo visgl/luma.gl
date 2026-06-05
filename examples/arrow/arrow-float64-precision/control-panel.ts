@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -74,30 +73,27 @@ export class ArrowFloat64PrecisionControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-float64-precision-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-float64-precision-status',
-          title: 'Status',
-          html: makeArrowFloat64PrecisionControlPanelHtml(),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.bindButtonHandlers(rootElement);
-            this.render();
-            return () => {
-              this.unbindButtonHandlers(rootElement);
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-float64-precision-description',
+      title: 'Description',
+      html: makeArrowFloat64PrecisionControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.bindButtonHandlers(rootElement);
+        this.render();
+        return () => {
+          this.unbindButtonHandlers(rootElement);
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -232,6 +228,7 @@ export function makeArrowFloat64PrecisionSettingsSchema(): SettingsSchema {
 
 export function makeArrowFloat64PrecisionControlPanelHtml(): string {
   return `\
+  <p>Compares Float64 and Float32 Arrow line paths at large coordinate magnitudes while panning and zooming.</p>
   <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
     <span style="font-weight: 700;">Pan</span>
     ${makeButton(PAN_LEFT_ID, 'Left')}

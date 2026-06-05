@@ -4,7 +4,6 @@
 
 import type {Device} from '@luma.gl/core';
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -154,31 +153,28 @@ export class ArrowLineControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-lines-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-lines-status',
-          title: 'Metrics',
-          html: makeArrowLineControlPanelHtml({
-            rowLabels: this.rowLabels,
-            deckPathAttributeBytesPerSegment: this.deckPathAttributeBytesPerSegment
-          }),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.render();
-            return () => {
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-lines-description',
+      title: 'Description',
+      html: makeArrowLineControlPanelHtml({
+        rowLabels: this.rowLabels,
+        deckPathAttributeBytesPerSegment: this.deckPathAttributeBytesPerSegment
+      }),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.render();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -437,14 +433,14 @@ export function makeArrowLineSettingsSchema(
             options: [
               ...(state.timeKind === 'timestamps'
                 ? []
-                : [{label: 'attribute', value: 'attribute'}]),
+                : [{label: 'Attributes', value: 'attribute'}]),
               ...(supportsStoragePath && state.timeKind !== 'timestamps'
-                ? [{label: 'storage', value: 'storage'}]
+                ? [{label: 'Storage', value: 'storage'}]
                 : []),
               ...(supportsTripsPath && state.timeKind === 'timestamps' && !isPolygonMode
-                ? [{label: 'trips', value: 'trips'}]
+                ? [{label: 'Trips', value: 'trips'}]
                 : []),
-              {label: `auto (${getAutoPathModelLabel(device, state.timeKind)})`, value: 'auto'}
+              {label: `Auto (${getAutoPathModelLabel(device, state.timeKind)})`, value: 'auto'}
             ]
           }
         ]
@@ -514,7 +510,10 @@ function renderStreamingBatchStatus(
     statusRow.setAttribute('aria-valuenow', '0');
     return;
   }
-  const safeLoadedBatchCount = Math.min(streamingBatchCount, Math.max(0, Math.trunc(loadedBatchCount)));
+  const safeLoadedBatchCount = Math.min(
+    streamingBatchCount,
+    Math.max(0, Math.trunc(loadedBatchCount))
+  );
   statusRow.style.display = 'block';
   statusRow.setAttribute('aria-valuenow', String(safeLoadedBatchCount));
   statusRow.setAttribute('aria-valuemax', String(streamingBatchCount));
@@ -549,9 +548,7 @@ function isArrowLineControlPanelCoordinateKind(
   return value === 'float32' || value === 'float64' || value === 'dense-union';
 }
 
-function isArrowLineControlPanelColorKind(
-  value: unknown
-): value is ArrowLineControlPanelColorKind {
+function isArrowLineControlPanelColorKind(value: unknown): value is ArrowLineControlPanelColorKind {
   return value === 'none' || value === 'row-colors' || value === 'vertex-colors';
 }
 
@@ -563,9 +560,7 @@ function isArrowLineControlPanelCapKind(value: unknown): value is ArrowLineContr
   return value === 'square' || value === 'round';
 }
 
-function isArrowLineControlPanelJointKind(
-  value: unknown
-): value is ArrowLineControlPanelJointKind {
+function isArrowLineControlPanelJointKind(value: unknown): value is ArrowLineControlPanelJointKind {
   return value === 'miter' || value === 'round';
 }
 
@@ -589,7 +584,7 @@ function getAutoPathModelLabel(device: Device, timeKind: ArrowLineControlPanelTi
         : STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT
     )
   ) {
-    return 'attribute';
+    return 'Attributes';
   }
-  return timeKind === 'timestamps' ? 'trips' : 'storage';
+  return timeKind === 'timestamps' ? 'Trips' : 'Storage';
 }

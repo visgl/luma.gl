@@ -4,7 +4,6 @@
 
 import type {Device} from '@luma.gl/core';
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -135,28 +134,25 @@ export class ArrowText2DControlPanel {
     });
   }
 
-  makePanel(htmlProps: ArrowText2DControlPanelHtmlProps): Panel {
-    return new ColumnPanel({
-      id: 'arrow-text-2d-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-text-2d-status',
-          title: 'Metrics',
-          html: makeArrowText2DControlPanelHtml(htmlProps),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.render();
-            return () => {
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(htmlProps: ArrowText2DControlPanelHtmlProps): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-text-2d-description',
+      title: 'Description',
+      html: makeArrowText2DControlPanelHtml(htmlProps),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.render();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -365,16 +361,16 @@ export function makeArrowText2DSettingsSchema(
             type: 'select',
             persist: 'none',
             options: [
-              {label: 'attribute', value: 'attribute'},
+              {label: 'Attributes', value: 'attribute'},
               ...(state.colorKind === 'character-colors' || !supportsStorageText
                 ? []
-                : [{label: 'storage', value: 'storage'}]),
+                : [{label: 'Storage', value: 'storage'}]),
               ...(state.colorKind === 'character-colors' ||
               state.sourceKind !== 'dictionary' ||
               !supportsDictionaryText
                 ? []
-                : [{label: 'dictionary', value: 'dictionary'}]),
-              {label: `auto (${getAutoTextModelLabel(device, state)})`, value: 'auto'}
+                : [{label: 'Dictionary', value: 'dictionary'}]),
+              {label: `Auto (${getAutoTextModelLabel(device, state)})`, value: 'auto'}
             ]
           }
         ]
@@ -440,7 +436,10 @@ function renderStreamingBatchStatus(
     statusRow.setAttribute('aria-valuenow', '0');
     return;
   }
-  const safeLoadedBatchCount = Math.min(streamingBatchCount, Math.max(0, Math.trunc(loadedBatchCount)));
+  const safeLoadedBatchCount = Math.min(
+    streamingBatchCount,
+    Math.max(0, Math.trunc(loadedBatchCount))
+  );
   statusRow.style.display = 'block';
   statusRow.setAttribute('aria-valuenow', String(safeLoadedBatchCount));
   statusRow.setAttribute('aria-valuemax', String(streamingBatchCount));
@@ -504,18 +503,18 @@ function getAutoTextModelLabel(
   state: Pick<ArrowText2DControlPanelState, 'sourceKind' | 'colorKind'>
 ): string {
   if (state.colorKind === 'character-colors') {
-    return 'attribute';
+    return 'Attributes';
   }
   if (
     state.sourceKind === 'dictionary' &&
     supportsVertexStorageBuffers(device, DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT)
   ) {
-    return 'dictionary';
+    return 'Dictionary';
   }
   if (supportsVertexStorageBuffers(device, STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT)) {
-    return 'storage';
+    return 'Storage';
   }
-  return 'attribute';
+  return 'Attributes';
 }
 
 function getStreamingBatchProgressPercent(

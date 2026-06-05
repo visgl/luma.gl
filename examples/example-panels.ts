@@ -4,8 +4,7 @@
 
 import {
   CustomPanel,
-  PanelBox,
-  PanelManager,
+  PanelThemeScope,
   SettingsManager,
   SettingsPanel,
   type Panel,
@@ -17,10 +16,23 @@ import {
   type SettingValue,
   type SettingsState
 } from '@deck.gl-community/panels';
+import {h, render} from 'preact';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
-const EXAMPLE_PANEL_BOX_ID = 'example-panel-box';
-const EXAMPLE_PANEL_BOX_WIDTH_PX = 388;
+const EXAMPLE_SETTINGS_PANEL_ATTRIBUTE = 'data-example-settings-panel';
+const MODEL_SETTING_NAMES = new Set(['modelKind', 'renderMode']);
+const EXAMPLE_PANEL_STYLE = `
+[data-example-panel-host] [aria-hidden='true'] {
+  display: none !important;
+}
+[${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] > label,
+[${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] button,
+[${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] input[type='number'],
+[${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] input[type='text'],
+[id^='settings-panel-input-'][role='listbox'] > button[role='option'] {
+  font-size: 15px !important;
+}
+`;
 
 export type ExampleCustomPanelRenderer = (rootElement: HTMLElement) => void | (() => void);
 
@@ -33,9 +45,17 @@ export type ExampleSettingsPanelProps = {
   localStorageConfig?: SettingsManagerLocalStorageConfig;
 };
 
-/** Returns the InfoBox host used by panel-managed example content. */
+/** Returns the InfoBox host used by panel-backed example content. */
 export function makeExamplePanelHostHtml(hostId = EXAMPLE_PANEL_HOST_ID): string {
   return `<div id="${hostId}" data-example-panel-host=""></div>`;
+}
+
+/** Renders panel content directly inside an existing InfoBox host. */
+export function renderExamplePanel(hostElement: HTMLElement, panel: Panel | null): void {
+  render(
+    panel ? h(PanelThemeScope, {panel}, h('style', {}, EXAMPLE_PANEL_STYLE), panel.content) : null,
+    hostElement
+  );
 }
 
 export function makeHtmlCustomPanel({
@@ -56,41 +76,34 @@ export function makeHtmlCustomPanel({
       rootElement.innerHTML = html;
       const cleanup = onRender?.(rootElement);
       return () => {
-        cleanup?.();
+        if (cleanup) {
+          cleanup();
+        }
         rootElement.replaceChildren();
       };
     }
   });
 }
 
-/** Owns one panel-managed InfoBox surface for an example. */
+/** Owns one panel-backed InfoBox surface for an example. */
 export class ExamplePanelManager {
   private readonly hostId: string;
-  private readonly panelBoxId: string;
-  private readonly widthPx: number;
   private panel: Panel;
   private hostElement: HTMLElement | null = null;
-  private panelManager: PanelManager | null = null;
 
   constructor({
     panel,
-    hostId = EXAMPLE_PANEL_HOST_ID,
-    panelBoxId = EXAMPLE_PANEL_BOX_ID,
-    widthPx = EXAMPLE_PANEL_BOX_WIDTH_PX
+    hostId = EXAMPLE_PANEL_HOST_ID
   }: {
     panel: Panel;
     hostId?: string;
-    panelBoxId?: string;
-    widthPx?: number;
   }) {
     this.panel = panel;
     this.hostId = hostId;
-    this.panelBoxId = panelBoxId;
-    this.widthPx = widthPx;
   }
 
   mount(): void {
-    if (this.panelManager || typeof document === 'undefined') {
+    if (this.hostElement || typeof document === 'undefined') {
       return;
     }
 
@@ -101,7 +114,6 @@ export class ExamplePanelManager {
 
     this.hostElement = hostElement;
     configurePanelHostElement(hostElement);
-    this.panelManager = new PanelManager({parentElement: hostElement});
     this.render();
   }
 
@@ -115,27 +127,17 @@ export class ExamplePanelManager {
   }
 
   finalize(): void {
-    this.panelManager?.finalize();
-    this.panelManager = null;
+    if (this.hostElement) {
+      renderExamplePanel(this.hostElement, null);
+    }
     this.hostElement = null;
   }
 
   private render(): void {
-    if (!this.panelManager || !this.hostElement) {
+    if (!this.hostElement) {
       return;
     }
-
-    this.panelManager.setProps({
-      components: [
-        new PanelBox({
-          id: this.panelBoxId,
-          _container: this.hostElement as HTMLDivElement,
-          widthPx: this.widthPx,
-          collapsible: false,
-          panel: this.panel
-        })
-      ]
-    });
+    renderExamplePanel(this.hostElement, this.panel);
   }
 }
 
@@ -193,12 +195,27 @@ export class ExampleSettingsPanelManager {
   }
 
   makePanel(): Panel {
-    return new SettingsPanel({
-      id: this.id,
+    const [settingsPanel] = SettingsPanel.createSectionPanels({
       label: this.label,
-      schema: this.schema,
+      schema: makeInlineSettingsSchema(this.schema),
       settings: this.settings,
       onSettingsChange: nextSettings => this.setSettingsFromPanel(nextSettings)
+    });
+    if (!settingsPanel) {
+      return makeExampleSettingsPanel(
+        new SettingsPanel({
+          id: this.id,
+          label: this.label,
+          schema: makeInlineSettingsSchema(this.schema),
+          settings: this.settings,
+          onSettingsChange: nextSettings => this.setSettingsFromPanel(nextSettings)
+        })
+      );
+    }
+    return makeExampleSettingsPanel({
+      ...settingsPanel,
+      id: this.id,
+      title: this.schema.title ?? this.label
     });
   }
 
@@ -217,6 +234,31 @@ export function getSettingDefinitions(schema: SettingsSchema): Map<string, Setti
   return settingDefinitions;
 }
 
+export function makeInlineSettingsSchema(schema: SettingsSchema): SettingsSchema {
+  const settings = schema.sections.flatMap(section => section.settings);
+  return {
+    title: schema.title,
+    sections: [
+      {
+        id: 'settings',
+        name: '',
+        initiallyCollapsed: false,
+        settings: [
+          ...settings.filter(setting => MODEL_SETTING_NAMES.has(setting.name)),
+          ...settings.filter(setting => !MODEL_SETTING_NAMES.has(setting.name))
+        ]
+      }
+    ]
+  };
+}
+
+function makeExampleSettingsPanel(panel: Panel): Panel {
+  return {
+    ...panel,
+    content: h('div', {[EXAMPLE_SETTINGS_PANEL_ATTRIBUTE]: ''}, panel.content)
+  };
+}
+
 export function getChangedSetting(
   changedSettings: readonly SettingsChangeDescriptor[] | undefined,
   settingName: string
@@ -226,6 +268,7 @@ export function getChangedSetting(
 
 export function configurePanelHostElement(hostElement: HTMLElement): void {
   hostElement.style.minWidth = '0';
+  hostElement.style.width = '100%';
   hostElement.style.setProperty('--menu-backdrop-filter', 'unset');
   hostElement.style.setProperty('--menu-background', 'transparent');
   hostElement.style.setProperty('--menu-border', 'none');

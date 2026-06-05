@@ -4,12 +4,20 @@
 
 import type {PreparedArrowPolygonGPUVectors} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
-import {indexColorPicking, indexPicking, ShaderInputs, supportsIndexPicking} from '@luma.gl/engine';
-import {GPUTableModel} from '@luma.gl/tables';
+import {
+  indexColorPicking,
+  indexPicking,
+  Model,
+  ShaderInputs,
+  supportsIndexPicking
+} from '@luma.gl/engine';
+import {getGPUVectorBuffer, GPUTableModel} from '@luma.gl/tables';
 import {
   FS_GLSL,
   PICKING_FS_GLSL,
   POLYGON_SHADER_LAYOUT,
+  POLYGON_STORAGE_SHADER_LAYOUT,
+  STORAGE_WGSL_SHADER,
   VS_GLSL,
   WGSL_SHADER,
   polygonViewport
@@ -25,7 +33,11 @@ export type PolygonModelProps = {
   prepared: PreparedArrowPolygonGPUVectors;
   shaderInputs: PolygonShaderInputs;
   picking?: boolean;
+  renderModel?: PolygonRenderModel;
 };
+
+export type PolygonRenderModel = 'attributes' | 'storage';
+export type PolygonModel = GPUTableModel | Model;
 
 export function createPolygonShaderInputs(device: Device): PolygonShaderInputs {
   const shaderInputs: PolygonShaderInputs = new ShaderInputs<{
@@ -41,8 +53,12 @@ export function createPolygonShaderInputs(device: Device): PolygonShaderInputs {
 
 export function createPolygonModel(
   device: Device,
-  {id, prepared, shaderInputs, picking = false}: PolygonModelProps
-): GPUTableModel {
+  {id, prepared, shaderInputs, picking = false, renderModel = 'attributes'}: PolygonModelProps
+): PolygonModel {
+  if (renderModel === 'storage') {
+    return createStoragePolygonModel(device, {id, prepared, shaderInputs, picking});
+  }
+
   const indexPickingSupported = supportsIndexPicking(device);
   return new GPUTableModel(device, {
     id,
@@ -58,6 +74,48 @@ export function createPolygonModel(
     table: prepared.table,
     tableCount: 'none',
     // Indexed WebGL draws use Model.vertexCount as the drawElements index count.
+    vertexCount: prepared.tessellation.indices.length,
+    indexBuffer: prepared.indices,
+    ...(picking && indexPickingSupported
+      ? {
+          colorAttachmentFormats: ['rgba8unorm', 'rg32sint'] as const,
+          depthStencilAttachmentFormat: 'depth24plus' as const
+        }
+      : {}),
+    parameters: getPickingParameters(picking)
+  });
+}
+
+export function getPolygonStorageBindings(
+  prepared: PreparedArrowPolygonGPUVectors
+): Record<string, ReturnType<typeof getGPUVectorBuffer>> {
+  return {
+    polygonPositions: getGPUVectorBuffer(prepared.positions),
+    polygonColors: getGPUVectorBuffer(prepared.colors),
+    polygonRowIndices: getGPUVectorBuffer(prepared.rowIndices)
+  };
+}
+
+function createStoragePolygonModel(
+  device: Device,
+  {id, prepared, shaderInputs, picking = false}: Omit<PolygonModelProps, 'renderModel'>
+): Model {
+  if (device.type !== 'webgpu') {
+    throw new Error('ArrowPolygonRenderer storage model requires WebGPU');
+  }
+
+  const indexPickingSupported = supportsIndexPicking(device);
+  return new Model(device, {
+    id,
+    source: STORAGE_WGSL_SHADER,
+    ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
+    modules: [
+      picking && indexPickingSupported ? indexPicking : getPolygonPickingModule(device)
+    ] as never,
+    shaderLayout: POLYGON_STORAGE_SHADER_LAYOUT,
+    shaderInputs,
+    bindings: getPolygonStorageBindings(prepared),
+    topology: 'triangle-list',
     vertexCount: prepared.tessellation.indices.length,
     indexBuffer: prepared.indices,
     ...(picking && indexPickingSupported

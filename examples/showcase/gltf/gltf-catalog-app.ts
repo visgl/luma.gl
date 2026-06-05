@@ -613,7 +613,7 @@ function loadOptions(defaultOptions: Record<string, boolean>): Record<string, bo
   }
 }
 
-function saveOptions(options: Record<string, boolean>) {
+export function saveOptions(options: Record<string, boolean>) {
   window.localStorage[GLTF_OPTIONS_STORAGE_KEY] = JSON.stringify(options);
 }
 

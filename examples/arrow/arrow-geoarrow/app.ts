@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {GeoArrowControlPanel, makeGeoArrowControlPanelHtml} from './control-panel';
+import {GeoArrowControlPanel} from './control-panel';
 import {makeGeoArrowExampleData, type GeoArrowExampleData} from './geoarrow-data';
 import {GeoArrowRenderer} from './geoarrow-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
@@ -21,7 +21,9 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
 
   readonly device: Device;
   readonly controlPanel = new GeoArrowControlPanel();
-  readonly panels = new ArrowExamplePanelManager({controlsHtml: makeGeoArrowControlPanelHtml()});
+  readonly panels = new ArrowExamplePanelManager({
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel()
+  });
   readonly renderer: GeoArrowRenderer;
   exampleData: GeoArrowExampleData | null = null;
   isFinalized = false;

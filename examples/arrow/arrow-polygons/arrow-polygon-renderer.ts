@@ -10,12 +10,14 @@ import {
   type PreparedArrowPolygonGPUVectors
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {PickingManager, type PickInfo} from '@luma.gl/engine';
-import type {GPUTableModel} from '@luma.gl/tables';
+import {PickingManager, type PickInfo, type PickingShouldPickOptions} from '@luma.gl/engine';
+import {GPUTableModel} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createPolygonModel,
   createPolygonShaderInputs,
+  getPolygonStorageBindings,
+  type PolygonModel,
   type PolygonShaderInputs
 } from './polygon-model';
 import {
@@ -29,11 +31,15 @@ import {
   type ArrowRecordBatchSource,
   type OptionalArrowColumnSelector
 } from '../arrow-renderer-utils';
+import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export type ArrowPolygonRendererPickingInfo = {
   batchIndex: number | null;
   rowIndex: number | null;
 };
+
+export type ArrowPolygonRendererModel = 'attributes' | 'storage' | 'auto';
+export type ArrowPolygonRendererResolvedModel = Exclude<ArrowPolygonRendererModel, 'auto'>;
 
 export type ArrowPolygonRendererProps = {
   /** Optional Arrow source table, record-batch iterable, or async record-batch iterator. */
@@ -50,6 +56,8 @@ export type ArrowPolygonRendererProps = {
   center?: [number, number];
   /** View scale applied after centering. */
   scale?: number;
+  /** Rendering path. `storage` requires WebGPU; WebGL falls back to attributes. */
+  model?: ArrowPolygonRendererModel;
   /** Called when the hovered polygon row changes. */
   onPick?: (info: ArrowPolygonRendererPickingInfo) => void;
   /** Called after one Arrow record batch has been prepared and appended. */
@@ -77,6 +85,7 @@ export type ArrowPolygonRendererDataBatchUpdate =
 const DEFAULT_POLYGON_RENDERER_COLOR: [number, number, number, number] = [0, 96, 255, 255];
 const DEFAULT_POLYGON_RENDERER_CENTER: [number, number] = [0, 0];
 const DEFAULT_POLYGON_RENDERER_SCALE = 1;
+export const POLYGON_VERTEX_STORAGE_BUFFER_COUNT = 3;
 
 export type ArrowPolygonColumns = {
   polygons: arrow.Vector<ArrowPolygonInputType>;
@@ -110,8 +119,9 @@ export class ArrowPolygonRenderer {
   readonly picker: PickingManager;
   props: ArrowPolygonRendererProps;
   preparedBatches: PreparedPolygonBatch[] = [];
-  model: GPUTableModel | null = null;
-  pickingModel: GPUTableModel | null = null;
+  resolvedModel: ArrowPolygonRendererResolvedModel;
+  model: PolygonModel | null = null;
+  pickingModel: PolygonModel | null = null;
   private dataLoadVersion = 0;
   private pickedBatchIndex: number | null = null;
   private pickedRowIndex: number | null = null;
@@ -119,6 +129,7 @@ export class ArrowPolygonRenderer {
   constructor(device: Device, props: ArrowPolygonRendererProps = {}) {
     this.device = device;
     this.props = props;
+    this.resolvedModel = resolveArrowPolygonRendererModel(device, props.model ?? 'auto');
     this.shaderInputs = createPolygonShaderInputs(device);
     this.picker = new PickingManager(device, {
       shaderInputs: this.shaderInputs,
@@ -132,15 +143,26 @@ export class ArrowPolygonRenderer {
   }
 
   setProps(props: Partial<ArrowPolygonRendererProps>): void {
+    const nextProps = {...this.props, ...props};
+    const nextResolvedModel = resolveArrowPolygonRendererModel(
+      this.device,
+      nextProps.model ?? 'auto'
+    );
     const shouldRecreate =
       props.data !== undefined ||
       props.polygons !== undefined ||
       props.colors !== undefined ||
       props.tessellated !== undefined ||
       props.color !== undefined;
-    this.props = {...this.props, ...props};
+    const shouldRecreateModels = nextResolvedModel !== this.resolvedModel;
+    this.props = nextProps;
+    this.resolvedModel = nextResolvedModel;
     if (shouldRecreate) {
       this.replaceData(this.props, props.data !== undefined);
+      return;
+    }
+    if (shouldRecreateModels) {
+      this.recreateModels();
     }
   }
 
@@ -168,12 +190,12 @@ export class ArrowPolygonRenderer {
     }
   }
 
-  pick(mousePosition: number[] | null | undefined): void {
+  pick(mousePosition: number[] | null | undefined, options: PickingShouldPickOptions = {}): void {
     if (!mousePosition) {
       this.clearPickingState();
       return;
     }
-    if (!this.picker.shouldPick(mousePosition as [number, number] | null)) {
+    if (!this.picker.shouldPick(mousePosition as [number, number] | null, options)) {
       return;
     }
 
@@ -334,14 +356,24 @@ export class ArrowPolygonRenderer {
     this.model = createPolygonModel(this.device, {
       id: 'arrow-polygons',
       prepared: preparedBatch.prepared,
-      shaderInputs: this.shaderInputs
+      shaderInputs: this.shaderInputs,
+      renderModel: this.resolvedModel
     });
     this.pickingModel = createPolygonModel(this.device, {
       id: 'arrow-polygons-picking',
       prepared: preparedBatch.prepared,
       shaderInputs: this.shaderInputs,
-      picking: true
+      picking: true,
+      renderModel: this.resolvedModel
     });
+  }
+
+  private recreateModels(): void {
+    const firstPreparedBatch = this.preparedBatches[0];
+    this.destroyModels();
+    if (firstPreparedBatch) {
+      this.createModels(firstPreparedBatch);
+    }
   }
 
   private destroyModels(): void {
@@ -434,12 +466,30 @@ function destroyPreparedPolygonBatch(preparedBatch: PreparedPolygonBatch): void 
 }
 
 function setPolygonModelPreparedBatch(
-  model: GPUTableModel,
+  model: PolygonModel,
   preparedBatch: PreparedPolygonBatch
 ): void {
-  model.setProps({table: preparedBatch.prepared.table});
+  if (model instanceof GPUTableModel) {
+    model.setProps({table: preparedBatch.prepared.table});
+  } else {
+    model.setBindings(getPolygonStorageBindings(preparedBatch.prepared));
+  }
   model.setIndexBuffer(preparedBatch.prepared.indices);
   model.setVertexCount(preparedBatch.prepared.tessellation.indices.length);
+}
+
+export function resolveArrowPolygonRendererModel(
+  device: Device,
+  model: ArrowPolygonRendererModel
+): ArrowPolygonRendererResolvedModel {
+  const supportsStorage = supportsVertexStorageBuffers(device, POLYGON_VERTEX_STORAGE_BUFFER_COUNT);
+  if (model === 'storage') {
+    return supportsStorage ? 'storage' : 'attributes';
+  }
+  if (model === 'attributes') {
+    return model;
+  }
+  return supportsStorage ? 'storage' : 'attributes';
 }
 
 function getPolygonPickingTooltip({batchIndex, objectIndex}: PickInfo): string | null {

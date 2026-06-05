@@ -8,10 +8,7 @@ import {parseFont} from '@luma.gl/text/text-3d';
 import {Matrix4} from '@math.gl/core';
 import {ArrowText3DRenderer} from './arrow-text-3d-renderer';
 import {CRAWL_TEXT_ROWS} from './arrow-text-3d-data';
-import {
-  ArrowText3DControlPanel,
-  getArrowText3DCrawlColor
-} from './control-panel';
+import {ArrowText3DControlPanel, getArrowText3DCrawlColor} from './control-panel';
 import {helvetiker} from '../../experimental/text-3d/helvetiker-font';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
@@ -25,7 +22,8 @@ export default class ArrowText3DAnimationLoopTemplate extends AnimationLoopTempl
   static info = makeArrowExamplePanelHostHtml();
 
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   readonly controlPanel = new ArrowText3DControlPanel({onRefresh: () => this.panels.refresh()});
   modelMatrix = new Matrix4();

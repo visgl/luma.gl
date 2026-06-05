@@ -12,6 +12,21 @@ import {
 import {Device} from '@luma.gl/core';
 import * as shaderModules from '@luma.gl/effects';
 import type {ShaderPass} from '@luma.gl/shadertools';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingDescriptor,
+  type SettingsChangeDescriptor,
+  type SettingsSchema,
+  type SettingsState
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
 const SOURCE_IMAGE = 'image2.png';
 const NO_EFFECT = 'No effect';
@@ -36,118 +51,19 @@ vec4 nullEffect_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-const PANEL_STYLE = [
-  'margin-top: 16px',
-  'padding: 16px',
-  'border: 1px solid rgba(148, 163, 184, 0.28)',
-  'border-radius: 18px',
-  'background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(2, 6, 23, 0.96) 100%)',
-  'box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38)'
-].join('; ');
-
-const LABEL_STYLE = [
-  'display: block',
-  'margin-bottom: 8px',
-  'font-size: 11px',
-  'font-weight: 700',
-  'letter-spacing: 0.08em',
-  'text-transform: uppercase',
-  'color: rgba(148, 163, 184, 0.92)'
-].join('; ');
-
-const SELECT_STYLE = [
-  'display: block',
-  'width: 100%',
-  'margin: 0',
-  'padding: 10px 42px 10px 14px',
-  'border: 1px solid rgba(148, 163, 184, 0.35)',
-  'border-radius: 12px',
-  'background: rgba(15, 23, 42, 0.92)',
-  'color: #f8fafc',
-  'font-size: 15px',
-  'font-weight: 500',
-  'line-height: 1.2',
-  'appearance: none',
-  '-webkit-appearance: none',
-  'box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)'
-].join('; ');
-
-const CARET_STYLE = [
-  'position: absolute',
-  'right: 14px',
-  'top: 50%',
-  'width: 9px',
-  'height: 9px',
-  'border-right: 2px solid rgba(226, 232, 240, 0.85)',
-  'border-bottom: 2px solid rgba(226, 232, 240, 0.85)',
-  'transform: translateY(-65%) rotate(45deg)',
-  'pointer-events: none'
-].join('; ');
-
-const CONTROL_SECTION_STYLE = [
-  'margin-top: 14px',
-  'padding-top: 14px',
-  'border-top: 1px solid rgba(148, 163, 184, 0.18)'
-].join('; ');
-
-const CONTROL_CARD_STYLE = ['display: grid', 'gap: 10px', 'margin-top: 10px'].join('; ');
-
-const CONTROL_ROW_STYLE = [
-  'display: grid',
-  'gap: 6px',
-  'padding: 10px 12px',
-  'border: 1px solid rgba(148, 163, 184, 0.18)',
-  'border-radius: 12px',
-  'background: rgba(15, 23, 42, 0.56)'
-].join('; ');
-
-const CONTROL_LABEL_ROW_STYLE = [
-  'display: flex',
-  'align-items: center',
-  'justify-content: space-between',
-  'gap: 12px',
-  'font-size: 12px',
-  'font-weight: 600',
-  'color: rgba(226, 232, 240, 0.94)'
-].join('; ');
-
-const CONTROL_HINT_STYLE = [
-  'font-size: 12px',
-  'line-height: 1.45',
-  'color: rgba(148, 163, 184, 0.88)'
-].join('; ');
-
-const RANGE_STYLE = ['width: 100%', 'margin: 0', 'accent-color: #38bdf8'].join('; ');
-
 const VECTOR_COMPONENT_LABELS = ['X', 'Y', 'Z', 'W'] as const;
 
 type EffectPropValue = number | number[];
-type EffectState = Record<string, EffectPropValue>;
+export type EffectState = Record<string, EffectPropValue>;
 type ShaderPropType = NonNullable<ShaderPass['propTypes']>[string];
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-<div style="color: rgba(226, 232, 240, 0.96);">
-  This example demonstrates luma.gl's reusable postprocessing shader passes on a fixed source image.
-  <br>
-  Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/" style="color: #7dd3fc;">glfx.js / WebGL Filter</a> application.
-</div>
-<div style="${PANEL_STYLE}">
-  <label for="postprocessing-selector" style="${LABEL_STYLE}">Effect</label>
-  <div style="position: relative;">
-    <select id="postprocessing-selector" style="${SELECT_STYLE}"></select>
-    <span aria-hidden="true" style="${CARET_STYLE}"></span>
-  </div>
-  <div style="${CONTROL_SECTION_STYLE}">
-    <label style="${LABEL_STYLE}; margin-bottom: 0;">Settings</label>
-    <div id="postprocessing-controls" style="${CONTROL_CARD_STYLE}"></div>
-  </div>
-</div>
-`;
+  static info = makeExamplePanelHostHtml();
 
   device: Device;
   imageTexture: DynamicTexture;
-  effectSelector: HTMLSelectElement | null = null;
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
   selectedEffectName = NO_EFFECT;
   effectValuesByName: Record<string, EffectState> = {};
   shaderPassMap: Record<string, ShaderPass>;
@@ -160,26 +76,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.imageTexture = this.createImageTexture(SOURCE_IMAGE);
     this.shaderPassMap = getShaderPasses();
     this.effectValuesByName = getInitialEffectValues(this.shaderPassMap);
-
-    const shaderPassNames = [NO_EFFECT, ...Object.keys(this.shaderPassMap)];
-    this.effectSelector = initializeSelector(
-      'postprocessing-selector',
-      shaderPassNames,
-      passName => this.applySelectedEffect(passName),
-      NO_EFFECT
-    );
-
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'postprocessing-settings',
+      schema: makePostprocessingSettingsSchema(
+        this.shaderPassMap,
+        this.selectedEffectName,
+        this.effectValuesByName
+      ),
+      settings: makePostprocessingSettingsState(this.selectedEffectName, this.effectValuesByName),
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
     this.applySelectedEffect(NO_EFFECT);
   }
 
   onFinalize(): void {
+    this.settingsPanel.finalize();
+    this.panels.finalize();
     this.imageTexture?.destroy();
     this.shaderPassRenderer?.destroy();
   }
 
   onRender(): void {
     this.shaderPassRenderer?.resize();
-    this.shaderPassRenderer.renderToScreen({sourceTexture: this.imageTexture});
+    this.shaderPassRenderer.renderToScreen({
+      sourceTexture: this.imageTexture,
+      uniforms: makePostprocessingUniforms(
+        this.selectedEffectName,
+        this.effectValuesByName,
+        this.shaderPassMap
+      )
+    });
   }
 
   createImageTexture(imageSource: string): DynamicTexture {
@@ -191,7 +119,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   applySelectedEffect(passName: string): void {
     this.selectedEffectName = passName;
     this.setShaderPasses(this.getShaderPassesForSelection(passName));
-    this.renderEffectControls();
+    this.syncSettingsPanel();
   }
 
   setShaderPasses(shaderPasses: ShaderPass[]): void {
@@ -209,150 +137,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return [nullEffect];
     }
 
-    return [{...shaderPass, uniforms: this.effectValuesByName[passName]}];
-  }
-
-  renderEffectControls(): void {
-    const controls = document.getElementById('postprocessing-controls');
-    if (!controls) {
-      return;
-    }
-
-    controls.replaceChildren();
-
-    const shaderPass =
-      this.selectedEffectName === NO_EFFECT
-        ? nullEffect
-        : this.shaderPassMap[this.selectedEffectName] || nullEffect;
-    const propEntries = getControllableProps(shaderPass);
-
-    if (propEntries.length === 0) {
-      const message = document.createElement('div');
-      message.style.cssText = CONTROL_ROW_STYLE;
-      message.textContent =
-        this.selectedEffectName === NO_EFFECT
-          ? 'Null effect passes the image through unchanged.'
-          : 'This effect does not expose configurable parameters.';
-      controls.appendChild(message);
-      return;
-    }
-
-    const effectState = this.effectValuesByName[this.selectedEffectName] || {};
-    for (const [propName, propType] of propEntries) {
-      const currentValue = cloneEffectValue(effectState[propName]);
-      if (typeof currentValue === 'number') {
-        controls.appendChild(
-          this.createNumberControl(this.selectedEffectName, propName, currentValue, propType)
-        );
-        continue;
-      }
-
-      if (Array.isArray(currentValue)) {
-        controls.appendChild(
-          this.createVectorControl(this.selectedEffectName, propName, currentValue, propType)
-        );
-      }
-    }
-  }
-
-  createNumberControl(
-    effectName: string,
-    propName: string,
-    currentValue: number,
-    propType: ShaderPropType
-  ): HTMLDivElement {
-    const bounds = getControlBounds(currentValue, propType);
-    const row = document.createElement('div');
-    row.style.cssText = CONTROL_ROW_STYLE;
-
-    const header = document.createElement('div');
-    header.style.cssText = CONTROL_LABEL_ROW_STYLE;
-
-    const label = document.createElement('span');
-    label.textContent = formatControlLabel(propName);
-    header.appendChild(label);
-
-    const valueLabel = document.createElement('span');
-    valueLabel.textContent = formatControlValue(currentValue);
-    header.appendChild(valueLabel);
-    row.appendChild(header);
-
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.min = String(bounds.min);
-    input.max = String(bounds.max);
-    input.step = String(bounds.step);
-    input.value = String(currentValue);
-    input.style.cssText = RANGE_STYLE;
-    input.addEventListener('input', event => {
-      const nextValue = Number((event.target as HTMLInputElement).value);
-      valueLabel.textContent = formatControlValue(nextValue);
-      this.updateEffectValue(effectName, propName, nextValue);
-    });
-    row.appendChild(input);
-
-    return row;
-  }
-
-  createVectorControl(
-    effectName: string,
-    propName: string,
-    currentValue: number[],
-    propType: ShaderPropType
-  ): HTMLDivElement {
-    const row = document.createElement('div');
-    row.style.cssText = CONTROL_ROW_STYLE;
-
-    const title = document.createElement('div');
-    title.style.cssText = CONTROL_LABEL_ROW_STYLE;
-    title.textContent = formatControlLabel(propName);
-    row.appendChild(title);
-
-    currentValue.forEach((componentValue, index) => {
-      const bounds = getControlBounds(componentValue, propType);
-      const componentRow = document.createElement('div');
-      componentRow.style.cssText = CONTROL_ROW_STYLE;
-
-      const header = document.createElement('div');
-      header.style.cssText = CONTROL_LABEL_ROW_STYLE;
-
-      const label = document.createElement('span');
-      label.textContent = VECTOR_COMPONENT_LABELS[index] || `Value ${index + 1}`;
-      header.appendChild(label);
-
-      const valueLabel = document.createElement('span');
-      valueLabel.textContent = formatControlValue(componentValue);
-      header.appendChild(valueLabel);
-      componentRow.appendChild(header);
-
-      const input = document.createElement('input');
-      input.type = 'range';
-      input.min = String(bounds.min);
-      input.max = String(bounds.max);
-      input.step = String(bounds.step);
-      input.value = String(componentValue);
-      input.style.cssText = RANGE_STYLE;
-      input.addEventListener('input', event => {
-        const nextValue = Number((event.target as HTMLInputElement).value);
-        valueLabel.textContent = formatControlValue(nextValue);
-        const nextVector = [...(this.effectValuesByName[effectName]?.[propName] as number[])] || [
-          ...currentValue
-        ];
-        nextVector[index] = nextValue;
-        this.updateEffectValue(effectName, propName, nextVector);
-      });
-      componentRow.appendChild(input);
-
-      row.appendChild(componentRow);
-    });
-
-    const hint = document.createElement('div');
-    hint.style.cssText = CONTROL_HINT_STYLE;
-    hint.textContent =
-      'Vector controls are normalized to the source image unless noted by the effect.';
-    row.appendChild(hint);
-
-    return row;
+    return [shaderPass];
   }
 
   updateEffectValue(effectName: string, propName: string, nextValue: EffectPropValue): void {
@@ -361,11 +146,54 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       ...currentState,
       [propName]: cloneEffectValue(nextValue)
     };
-
-    if (this.selectedEffectName === effectName) {
-      this.setShaderPasses(this.getShaderPassesForSelection(effectName));
-    }
   }
+
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'postprocessing-controls',
+      title: 'Controls',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'postprocessing-description',
+          title: '',
+          html: makePostprocessingStatusHtml(this.selectedEffectName, this.shaderPassMap)
+        }),
+        this.settingsPanel.makePanel()
+      ]
+    });
+  }
+
+  private syncSettingsPanel(): void {
+    this.settingsPanel.setSchemaAndSettings(
+      makePostprocessingSettingsSchema(
+        this.shaderPassMap,
+        this.selectedEffectName,
+        this.effectValuesByName
+      ),
+      makePostprocessingSettingsState(this.selectedEffectName, this.effectValuesByName)
+    );
+    this.panels.setPanel(this.makePanel());
+  }
+
+  private readonly handleSettingsChange = (
+    settings: SettingsState,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const effectName = getChangedSetting(changedSettings, 'effectName')?.nextValue;
+    if (typeof effectName === 'string' && effectName !== this.selectedEffectName) {
+      this.applySelectedEffect(effectName);
+      return;
+    }
+    if (this.selectedEffectName === NO_EFFECT) {
+      return;
+    }
+    const nextEffectState = unflattenEffectSettings(
+      this.selectedEffectName,
+      settings,
+      this.effectValuesByName[this.selectedEffectName] || {}
+    );
+    this.effectValuesByName[this.selectedEffectName] = nextEffectState;
+  };
 }
 
 function getShaderPasses(): Record<string, ShaderPass> {
@@ -410,6 +238,179 @@ function getControllableProps(shaderPass: ShaderPass): [string, ShaderPropType][
   );
 }
 
+export function makePostprocessingSettingsState(
+  selectedEffectName: string,
+  effectValuesByName: Record<string, EffectState>
+): SettingsState {
+  return {
+    effectName: selectedEffectName,
+    ...flattenEffectSettings(selectedEffectName, effectValuesByName[selectedEffectName] || {})
+  };
+}
+
+export function makePostprocessingUniforms(
+  selectedEffectName: string,
+  effectValuesByName: Record<string, EffectState>,
+  shaderPassMap: Record<string, ShaderPass>
+): Record<string, EffectState> | undefined {
+  if (selectedEffectName === NO_EFFECT) {
+    return undefined;
+  }
+
+  const shaderPass = shaderPassMap[selectedEffectName];
+  if (!shaderPass) {
+    return undefined;
+  }
+
+  return {
+    [shaderPass.name]: effectValuesByName[selectedEffectName] || {}
+  };
+}
+
+export function flattenEffectSettings(effectName: string, effectState: EffectState): SettingsState {
+  const settings: SettingsState = {};
+  for (const [propName, propValue] of Object.entries(effectState)) {
+    if (typeof propValue === 'number') {
+      settings[makeEffectSettingName(effectName, propName)] = propValue;
+      continue;
+    }
+    for (const [index, componentValue] of propValue.entries()) {
+      settings[makeEffectSettingName(effectName, propName, index)] = componentValue;
+    }
+  }
+  return settings;
+}
+
+export function unflattenEffectSettings(
+  effectName: string,
+  settings: SettingsState,
+  fallbackEffectState: EffectState
+): EffectState {
+  const effectState: EffectState = {};
+  for (const [propName, propValue] of Object.entries(fallbackEffectState)) {
+    if (typeof propValue === 'number') {
+      const nextValue = settings[makeEffectSettingName(effectName, propName)];
+      effectState[propName] = typeof nextValue === 'number' ? nextValue : propValue;
+      continue;
+    }
+    effectState[propName] = propValue.map((componentValue, index) => {
+      const nextValue = settings[makeEffectSettingName(effectName, propName, index)];
+      return typeof nextValue === 'number' ? nextValue : componentValue;
+    });
+  }
+  return effectState;
+}
+
+function makePostprocessingSettingsSchema(
+  shaderPassMap: Record<string, ShaderPass>,
+  selectedEffectName: string,
+  effectValuesByName: Record<string, EffectState>
+): SettingsSchema {
+  const shaderPass =
+    selectedEffectName === NO_EFFECT ? nullEffect : shaderPassMap[selectedEffectName] || nullEffect;
+  const effectState = effectValuesByName[selectedEffectName] || {};
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'effect',
+        name: 'Effect',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'effectName',
+            label: 'Effect',
+            type: 'select',
+            persist: 'none',
+            options: [NO_EFFECT, ...Object.keys(shaderPassMap)]
+          }
+        ]
+      },
+      ...(getControllableProps(shaderPass).length > 0
+        ? [
+            {
+              id: 'parameters',
+              name: 'Parameters',
+              initiallyCollapsed: false,
+              settings: getEffectSettingDescriptors(selectedEffectName, effectState, shaderPass)
+            }
+          ]
+        : [])
+    ]
+  };
+}
+
+function getEffectSettingDescriptors(
+  effectName: string,
+  effectState: EffectState,
+  shaderPass: ShaderPass
+): SettingDescriptor[] {
+  return getControllableProps(shaderPass).flatMap(([propName, propType]) => {
+    const propValue = effectState[propName];
+    if (typeof propValue === 'number') {
+      return [makeEffectNumberSetting(effectName, propName, propValue, propType)];
+    }
+    if (!Array.isArray(propValue)) {
+      return [];
+    }
+    return propValue.map((componentValue, index) =>
+      makeEffectNumberSetting(effectName, propName, componentValue, propType, index)
+    );
+  });
+}
+
+function makeEffectNumberSetting(
+  effectName: string,
+  propName: string,
+  value: number,
+  propType: ShaderPropType,
+  componentIndex?: number
+): SettingDescriptor {
+  const bounds = getControlBounds(value, propType);
+  const componentLabel =
+    componentIndex === undefined
+      ? ''
+      : ` ${VECTOR_COMPONENT_LABELS[componentIndex] || `Value ${componentIndex + 1}`}`;
+  return {
+    name: makeEffectSettingName(effectName, propName, componentIndex),
+    label: `${formatControlLabel(propName)}${componentLabel}`,
+    type: 'number',
+    persist: 'none',
+    min: bounds.min,
+    max: bounds.max,
+    step: bounds.step
+  };
+}
+
+function makeEffectSettingName(
+  effectName: string,
+  propName: string,
+  componentIndex?: number
+): string {
+  return componentIndex === undefined
+    ? `${effectName}__${propName}`
+    : `${effectName}__${propName}__${componentIndex}`;
+}
+
+function makePostprocessingStatusHtml(
+  selectedEffectName: string,
+  shaderPassMap: Record<string, ShaderPass>
+): string {
+  const shaderPass =
+    selectedEffectName === NO_EFFECT ? nullEffect : shaderPassMap[selectedEffectName] || nullEffect;
+  const statusMessage =
+    getControllableProps(shaderPass).length === 0
+      ? selectedEffectName === NO_EFFECT
+        ? 'Null effect passes the image through unchanged.'
+        : 'This effect does not expose configurable parameters.'
+      : 'Vector settings are exposed as scalar X/Y/Z/W settings.';
+  return `\
+  <p>This example demonstrates luma.gl's reusable postprocessing shader passes on a fixed source image.</p>
+  <p>Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/">glfx.js / WebGL Filter</a> application.</p>
+  <p>${statusMessage}</p>
+  `;
+}
+
 function isShaderPass(module: unknown): module is ShaderPass {
   return Boolean(module && typeof module === 'object' && 'passes' in module);
 }
@@ -450,35 +451,4 @@ function formatControlLabel(propName: string): string {
   return propName
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, firstCharacter => firstCharacter.toUpperCase());
-}
-
-function formatControlValue(value: number): string {
-  return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(3).replace(/\.?0+$/, '');
-}
-
-function initializeSelector(
-  id: string,
-  options: string[],
-  onChange: (key: string) => void,
-  initialValue?: string
-): HTMLSelectElement | null {
-  const selectList = document.getElementById(id) as HTMLSelectElement | null;
-  if (!selectList) {
-    return null;
-  }
-
-  selectList.replaceChildren();
-  for (const optionName of options) {
-    const option = document.createElement('option');
-    option.value = optionName;
-    option.text = optionName;
-    option.selected = optionName === initialValue;
-    selectList.appendChild(option);
-  }
-
-  selectList.addEventListener('change', event =>
-    onChange((event.target as HTMLSelectElement).value)
-  );
-
-  return selectList;
 }

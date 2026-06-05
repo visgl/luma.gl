@@ -535,12 +535,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'dof-controls',
       title: 'Controls',
       panels: [
-        this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
           id: 'dof-description',
           title: '',
           html: DOF_DESCRIPTION_HTML
-        })
+        }),
+        this.settingsPanel.makePanel()
       ]
     });
   }

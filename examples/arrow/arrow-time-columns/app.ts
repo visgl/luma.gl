@@ -6,10 +6,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowTimeColumnsRenderer} from './arrow-time-columns-renderer';
-import {
-  ArrowTimeColumnsControlPanel,
-  type TimeColumnsRenderMode
-} from './control-panel';
+import {ArrowTimeColumnsControlPanel, type TimeColumnsRenderMode} from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
@@ -24,7 +21,8 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
   readonly device: Device;
   readonly controlPanel: ArrowTimeColumnsControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsPanel: () => this.controlPanel.makePanel()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   activeRenderMode: TimeColumnsRenderMode;
   layer: ArrowTimeColumnsRenderer | null = null;

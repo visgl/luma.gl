@@ -12,6 +12,7 @@ import {
   ShaderInputs,
   makeRandomGenerator,
   PickingManager,
+  type PickingShouldPickOptions,
   supportsIndexPicking,
   picking,
   indexColorPicking,
@@ -376,8 +377,8 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
     this.cube.destroy();
   }
 
-  pick(mousePosition: number[] | null | undefined): void {
-    if (!this.picker.shouldPick(mousePosition as [number, number] | null)) {
+  pick(mousePosition: number[] | null | undefined, options: PickingShouldPickOptions = {}): void {
+    if (!this.picker.shouldPick(mousePosition as [number, number] | null, options)) {
       return;
     }
 

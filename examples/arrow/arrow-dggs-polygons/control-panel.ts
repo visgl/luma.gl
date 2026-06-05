@@ -3,8 +3,16 @@
 // Copyright (c) vis.gl contributors
 
 import type {DggsCellEncoding} from '@luma.gl/arrow';
-import {ColumnPanel, type Panel, type SettingsChangeDescriptor, type SettingsSchema} from '@deck.gl-community/panels';
-import {ExampleSettingsPanelManager, getChangedSetting, makeHtmlCustomPanel} from '../../example-panels';
+import {
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
 const ROW_COUNT_ID = 'arrow-dggs-polygons-row-count';
 const KEY_BYTES_ID = 'arrow-dggs-polygons-key-bytes';
@@ -64,28 +72,25 @@ export class ArrowDggsPolygonsControlPanel {
     });
   }
 
-  makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'arrow-dggs-polygons-controls',
-      title: 'Controls',
-      panels: [
-        this.settingsPanel.makePanel(),
-        makeHtmlCustomPanel({
-          id: 'arrow-dggs-polygons-metrics',
-          title: 'Metrics',
-          html: makeArrowDggsPolygonsControlPanelHtml(),
-          onRender: rootElement => {
-            this.rootElement = rootElement;
-            this.renderMetrics();
-            return () => {
-              if (this.rootElement === rootElement) {
-                this.rootElement = null;
-              }
-            };
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-dggs-polygons-description',
+      title: 'Description',
+      html: makeArrowDggsPolygonsControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.renderMetrics();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
           }
-        })
-      ]
+        };
+      }
     });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   initialize(): void {}
@@ -164,6 +169,7 @@ export function makeArrowDggsPolygonsSettingsSchema(): SettingsSchema {
 
 export function makeArrowDggsPolygonsControlPanelHtml(): string {
   return `\
+  <p>Renders DGGS cell ids from Arrow Uint64 or Utf8 columns as generated polygon paths.</p>
   ${makeMetricRow('Active Arrow column', ACTIVE_COLUMN_ID)}
   ${makeMetricRow('Rows', ROW_COUNT_ID)}
   ${makeMetricRow('Uint64 key bytes', KEY_BYTES_ID)}

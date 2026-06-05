@@ -29,6 +29,15 @@ export const POLYGON_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
+export const POLYGON_STORAGE_SHADER_LAYOUT = {
+  attributes: [],
+  bindings: [
+    {name: 'polygonPositions', type: 'read-only-storage', group: 1, location: 0},
+    {name: 'polygonColors', type: 'read-only-storage', group: 1, location: 1},
+    {name: 'polygonRowIndices', type: 'read-only-storage', group: 1, location: 2}
+  ]
+} satisfies ShaderLayout;
+
 export const WGSL_SHADER = /* wgsl */ `\
 struct PolygonViewportUniforms {
   center : vec2<f32>,
@@ -63,6 +72,64 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   outputs.Position = vec4<f32>(centered.x / max(polygonViewport.aspect, 0.2), centered.y, 0.0, 1.0);
   outputs.color = inputs.colors;
   outputs.objectIndex = i32(inputs.rowIndices);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
+  return picking_filterHighlightColor(inputs.color, inputs.objectIndex);
+}
+
+@fragment
+fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
+  var outputs : PickingFragmentOutputs;
+  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
+  return outputs;
+}
+`;
+
+export const STORAGE_WGSL_SHADER = /* wgsl */ `\
+struct PolygonViewportUniforms {
+  center : vec2<f32>,
+  scale : f32,
+  aspect : f32,
+};
+
+@group(0) @binding(auto) var<uniform> polygonViewport : PolygonViewportUniforms;
+@group(1) @binding(0) var<storage, read> polygonPositions : array<vec4<f32>>;
+@group(1) @binding(1) var<storage, read> polygonColors : array<u32>;
+@group(1) @binding(2) var<storage, read> polygonRowIndices : array<u32>;
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) color : vec4<f32>,
+  @interpolate(flat)
+  @location(1) objectIndex : i32,
+};
+
+struct PickingFragmentOutputs {
+  @location(0) fragColor : vec4<f32>,
+  @location(1) pickingColor : vec2<i32>,
+};
+
+fn unpackPolygonColor(packedColor : u32) -> vec4<f32> {
+  return vec4<f32>(
+    f32(packedColor & 255u),
+    f32((packedColor >> 8u) & 255u),
+    f32((packedColor >> 16u) & 255u),
+    f32((packedColor >> 24u) & 255u)
+  ) / 255.0;
+}
+
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
+  let position = polygonPositions[vertexIndex];
+  let centered = (position.xy - polygonViewport.center) * polygonViewport.scale;
+  var outputs : FragmentInputs;
+  outputs.Position = vec4<f32>(centered.x / max(polygonViewport.aspect, 0.2), centered.y, 0.0, 1.0);
+  outputs.color = unpackPolygonColor(polygonColors[vertexIndex]);
+  outputs.objectIndex = i32(polygonRowIndices[vertexIndex]);
   return outputs;
 }
 

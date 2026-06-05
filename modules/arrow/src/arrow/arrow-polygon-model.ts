@@ -90,6 +90,7 @@ function makePreparedArrowPolygonGPUVectors(
     name: 'positions',
     buffer: device.createBuffer({
       id: `${id}-positions`,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data: tessellation.positions
     }),
     dataType: makeFixedSizeListType(new Float32(), OUTPUT_POSITION_COMPONENTS),
@@ -104,6 +105,7 @@ function makePreparedArrowPolygonGPUVectors(
     name: 'colors',
     buffer: device.createBuffer({
       id: `${id}-colors`,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data: tessellation.colors
     }),
     dataType: makeFixedSizeListType(new Uint8(), 4),
@@ -118,6 +120,7 @@ function makePreparedArrowPolygonGPUVectors(
     name: 'rowIndices',
     buffer: device.createBuffer({
       id: `${id}-row-indices`,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data: tessellation.rowIndices
     }),
     dataType: new Uint32(),
