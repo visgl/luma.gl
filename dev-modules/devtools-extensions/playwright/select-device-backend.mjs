@@ -5,6 +5,7 @@ const DEVICE_TAB_LABELS = {
   webgl2: 'WebGL2',
   webgpu: 'WebGPU'
 };
+const SELECTED_DEVICE_TAB_ATTRIBUTE = 'data-luma-device-tab-selected';
 
 function normalizeBackend(backend) {
   if (!backend) {
@@ -44,9 +45,28 @@ export async function selectDeviceBackend(page, backend) {
     return false;
   }
 
-  await tab.first().click();
+  const deviceTab = tab.first();
+  if (await isDisabledDeviceTab(deviceTab)) {
+    return false;
+  }
+
+  if (await isSelectedDeviceTab(deviceTab)) {
+    return true;
+  }
+
+  await deviceTab.click();
   await page.waitForLoadState('networkidle').catch(() => {});
-  return true;
+  await page
+    .waitForFunction(
+      selectedBackend =>
+        document
+          .querySelector(`[data-luma-device-tab="${selectedBackend}"]`)
+          ?.getAttribute('data-luma-device-tab-selected') === 'true',
+      normalizedBackend,
+      {timeout: 5000}
+    )
+    .catch(() => {});
+  return await isSelectedDeviceTab(deviceTab);
 }
 
 export async function selectPreferredDeviceBackend(page, preferredBackend = 'webgpu') {
@@ -65,4 +85,12 @@ export async function selectPreferredDeviceBackend(page, preferredBackend = 'web
   }
 
   return null;
+}
+
+async function isDisabledDeviceTab(tab) {
+  return (await tab.getAttribute('aria-disabled')) === 'true';
+}
+
+async function isSelectedDeviceTab(tab) {
+  return (await tab.getAttribute(SELECTED_DEVICE_TAB_ATTRIBUTE)) === 'true';
 }

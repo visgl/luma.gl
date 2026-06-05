@@ -62,6 +62,9 @@ export const Tabs = props => {
           <HeaderItem
             key={tab.props.tag || tab.props.title}
             data-luma-device-tab={tab.props.tag || tab.props.title}
+            data-luma-device-tab-selected={
+              (tab.props.tag || tab.props.title) === selected ? 'true' : undefined
+            }
             aria-disabled={tab.props.disabled || undefined}
             disabled={tab.props.disabled}
             isSelected={(tab.props.tag || tab.props.title) === selected}
