@@ -594,7 +594,7 @@ function getWebGPUDeviceLimits(limits: GPUSupportedLimits): DeviceLimits {
 function getWebGPUDeviceFeatureLevel(
   featureLevel: DeviceProps['featureLevel']
 ): NonNullable<DeviceInfo['featureLevel']> {
-  return featureLevel || 'core';
+  return featureLevel === 'best-available' ? 'core' : featureLevel || 'core';
 }
 
 function identifyGPUVendor(

@@ -39,8 +39,34 @@ const device = await luma.createDevice({
 });
 ```
 
-Read `device.info.featureLevel` to see the effective level and use
-`device.limits` when selecting optional paths such as vertex-stage storage
+Applications can opt into WebGPU compatibility mode on browsers and backends that support it:
+
+```typescript
+const device = await luma.createDevice({
+  type: 'webgpu',
+  adapters: [webgpuAdapter],
+  featureLevel: 'compatibility'
+});
+```
+
+Applications that fit within compatibility restrictions but prefer core WebGPU when available can request the best available profile:
+
+```typescript
+const device = await luma.createDevice({
+  type: 'webgpu',
+  adapters: [webgpuAdapter],
+  featureLevel: 'best-available'
+});
+```
+
+This follows the compatibility upgrade flow described by
+[WebGPU Fundamentals](https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html):
+luma.gl requests a compatibility adapter, then requires `core-features-and-limits` when that
+adapter exposes it. For `'best-available'`, `device.info.featureLevel` reports whether the
+created device is `'core'` or `'compatibility'`.
+
+Read `device.info.featureLevel` to see the effective level. Use `device.limits`
+when selecting optional paths such as vertex-stage storage
 buffers. For assembled WGSL, shadertools also exposes
 `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS`; see
 [WGSL Support](/docs/api-reference/shadertools/wgsl-support).
