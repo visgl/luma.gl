@@ -8,23 +8,28 @@ import {
   type GPUDataEvaluatorInput
 } from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
+import type {GPUVectorFormat} from '@luma.gl/tables';
 
 /** Deferred row gather operation. */
-class GatherOperation extends Operation<{ids: GPUDataEvaluator; sourceValues: GPUDataEvaluator}> {
+class GatherOperation<SourceFormatT extends GPUVectorFormat> extends Operation<
+  {ids: GPUDataEvaluator; sourceValues: GPUDataEvaluator<SourceFormatT>},
+  GPUDataEvaluator<SourceFormatT>
+> {
   /** Operation name used for backend lookup. */
   name = 'gather';
 
   /** Lazy output table for the gathered rows. */
-  output: GPUDataEvaluator;
+  output: GPUDataEvaluator<SourceFormatT>;
 
-  constructor(ids: GPUDataEvaluator, sourceValues: GPUDataEvaluator) {
+  constructor(ids: GPUDataEvaluator, sourceValues: GPUDataEvaluator<SourceFormatT>) {
     super({ids, sourceValues});
 
-    this.output = new GPUDataEvaluator({
+    this.output = new GPUDataEvaluator<SourceFormatT>({
       isConstant: ids.isConstant,
       type: sourceValues.type,
       size: sourceValues.size,
       length: ids.length,
+      format: sourceValues.format,
       source: this
     });
   }
@@ -43,6 +48,10 @@ class GatherOperation extends Operation<{ids: GPUDataEvaluator; sourceValues: GP
  * The returned table is lazy; no CPU or GPU work is performed until
  * {@link GPUDataEvaluator.evaluate} is called on the result.
  */
+export function gather<SourceFormatT extends GPUVectorFormat>(
+  ids: GPUDataEvaluatorInput,
+  sourceValues: GPUDataEvaluatorInput<SourceFormatT>
+): GPUDataEvaluator<SourceFormatT>;
 export function gather(
   ids: GPUDataEvaluatorInput,
   sourceValues: GPUDataEvaluatorInput

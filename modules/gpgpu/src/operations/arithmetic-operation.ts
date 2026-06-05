@@ -9,6 +9,16 @@ import {
   type GPUDataEvaluatorInput
 } from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
+import type {SignedDataType} from '@luma.gl/core';
+import type {GPUVectorFormat} from '@luma.gl/tables';
+import type {
+  GPUVectorFormatComponentCount,
+  GPUVectorFormatFromTypeAndSize,
+  GPUVectorFormatIsNormalized,
+  GPUVectorFormatSignedDataType,
+  JoinSignedDataTypes,
+  MaxComponentCount
+} from '../operation/gpu-table-format-types';
 import {
   compileExpression,
   type ExpressionLiteral,
@@ -36,8 +46,8 @@ export type ArithmeticOperationInputs = {
   namedInputs: Record<string, GPUDataEvaluator>;
 };
 
-export type ArithmeticArgument = GPUDataEvaluatorInput | number | number[];
-type NormalizedArithmeticArgument = GPUDataEvaluator | number | number[];
+export type ArithmeticArgument = GPUDataEvaluatorInput | number | readonly number[];
+type NormalizedArithmeticArgument = GPUDataEvaluator | number | readonly number[];
 
 export const ARITHMETIC_OPERATIONS: ExpressionOperations<ArithmeticOp> = {
   add: {arity: 2, symbol: 'arithmetic_add'},
@@ -55,6 +65,77 @@ export const ARITHMETIC_OPERATIONS: ExpressionOperations<ArithmeticOp> = {
 };
 
 const FLOAT_OUTPUT_OPS = new Set<ArithmeticOp>(['pow', 'sqrt', 'sin', 'cos', 'tan', 'exp', 'log']);
+type FloatOutputArithmeticOp = 'pow' | 'sqrt' | 'sin' | 'cos' | 'tan' | 'exp' | 'log';
+
+type ArithmeticArgumentFormat<ArgumentT> =
+  ArgumentT extends GPUDataEvaluatorInput<infer FormatT> ? FormatT : never;
+
+type ArithmeticArgumentComponentCount<ArgumentT> = ArgumentT extends number
+  ? 1
+  : ArgumentT extends readonly number[]
+    ? number extends ArgumentT['length']
+      ? number
+      : ArgumentT['length']
+    : ArithmeticArgumentFormat<ArgumentT> extends GPUVectorFormat
+      ? GPUVectorFormatComponentCount<ArithmeticArgumentFormat<ArgumentT>>
+      : 1;
+
+type MaxArithmeticArgumentComponentCount<
+  ArgumentsT extends readonly unknown[],
+  CurrentSizeT extends number = 1
+> = ArgumentsT extends readonly [infer FirstT, ...infer RestT]
+  ? MaxArithmeticArgumentComponentCount<
+      RestT,
+      MaxComponentCount<CurrentSizeT, ArithmeticArgumentComponentCount<FirstT>>
+    >
+  : CurrentSizeT;
+
+type JoinArithmeticArgumentDataTypes<
+  ArgumentsT extends readonly unknown[],
+  CurrentTypeT extends SignedDataType | null = null
+> = ArgumentsT extends readonly [infer FirstT, ...infer RestT]
+  ? ArithmeticArgumentFormat<FirstT> extends infer FormatT extends GPUVectorFormat
+    ? [FormatT] extends [never]
+      ? JoinArithmeticArgumentDataTypes<RestT, CurrentTypeT>
+      : JoinArithmeticArgumentDataTypes<
+          RestT,
+          CurrentTypeT extends SignedDataType
+            ? JoinSignedDataTypes<CurrentTypeT, GPUVectorFormatSignedDataType<FormatT>>
+            : GPUVectorFormatSignedDataType<FormatT>
+        >
+    : JoinArithmeticArgumentDataTypes<RestT, CurrentTypeT>
+  : CurrentTypeT extends SignedDataType
+    ? CurrentTypeT
+    : 'float32';
+
+type HasNormalizedArithmeticArgument<ArgumentsT extends readonly unknown[]> =
+  ArgumentsT extends readonly [infer FirstT, ...infer RestT]
+    ? ArithmeticArgumentFormat<FirstT> extends infer FormatT extends GPUVectorFormat
+      ? [FormatT] extends [never]
+        ? HasNormalizedArithmeticArgument<RestT>
+        : GPUVectorFormatIsNormalized<FormatT> extends true
+          ? true
+          : HasNormalizedArithmeticArgument<RestT>
+      : HasNormalizedArithmeticArgument<RestT>
+    : false;
+
+type PromoteNormalizedArithmeticDataType<
+  TypeT extends SignedDataType,
+  HasNormalizedT extends boolean
+> = TypeT extends `float${string}` ? TypeT : HasNormalizedT extends true ? 'float32' : TypeT;
+
+export type ArithmeticOutputFormat<
+  OpT extends ArithmeticOp,
+  ArgumentsT extends readonly unknown[]
+> = GPUVectorFormatFromTypeAndSize<
+  OpT extends FloatOutputArithmeticOp
+    ? 'float32'
+    : PromoteNormalizedArithmeticDataType<
+        JoinArithmeticArgumentDataTypes<ArgumentsT>,
+        HasNormalizedArithmeticArgument<ArgumentsT>
+      >,
+  MaxArithmeticArgumentComponentCount<ArgumentsT>
+>;
 
 export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
   name = 'arithmetic';
@@ -178,7 +259,7 @@ function deduceArithmeticOutputProps(op: ArithmeticOp, args: NormalizedArithmeti
           length: 1
         };
 
-  const literalSize = literalArgs.reduce((size: number, arg: number | number[]) => {
+  const literalSize = literalArgs.reduce((size: number, arg: number | readonly number[]) => {
     if (Array.isArray(arg)) {
       return Math.max(size, arg.length);
     }

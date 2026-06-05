@@ -11,20 +11,21 @@ type SequenceInputs = {
 };
 
 /** Deferred integer sequence generation operation. */
-class SequenceOperation extends Operation<SequenceInputs> {
+class SequenceOperation extends Operation<SequenceInputs, GPUDataEvaluator<'sint32'>> {
   /** Operation name used for backend lookup. */
   name = 'sequence';
 
   /** Lazy output table for the generated sequence. */
-  output: GPUDataEvaluator;
+  output: GPUDataEvaluator<'sint32'>;
 
   constructor(start: number, length: number, step: number) {
     super({start, step});
 
-    this.output = new GPUDataEvaluator({
+    this.output = new GPUDataEvaluator<'sint32'>({
       type: 'sint32',
       size: 1,
       length,
+      format: 'sint32',
       source: this
     });
   }
@@ -39,7 +40,11 @@ class SequenceOperation extends Operation<SequenceInputs> {
 /**
  * Generates an integer sequence with `count` values starting at `start` and incrementing by `step`.
  */
-export function sequence(count: number, start: number = 0, step: number = 1): GPUDataEvaluator {
+export function sequence(
+  count: number,
+  start: number = 0,
+  step: number = 1
+): GPUDataEvaluator<'sint32'> {
   ensureInteger('count', count);
   ensureInteger('start', start);
   ensureInteger('step', step);

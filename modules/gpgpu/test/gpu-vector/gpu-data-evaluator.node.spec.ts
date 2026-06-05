@@ -16,9 +16,13 @@ test('GPUDataEvaluator.fromGPUData accepts packed Float16 chunks', () => {
   const vector4 = makeUint16Vector(device, 'colors16x4', [0x3c00, 0x3800, 0x3400, 0x3000], 4, {
     format: 'float16x4'
   });
+  const normalizedVector = makeUint16Vector(device, 'colors-unorm16x2', [0, 65535], 2, {
+    format: 'unorm16x2'
+  });
 
   const evaluator2 = GPUDataEvaluator.fromGPUData(vector2.data[0]);
   const evaluator4 = GPUDataEvaluator.fromGPUData(vector4.data[0]);
+  const normalizedEvaluator = GPUDataEvaluator.fromGPUData(normalizedVector.data[0]);
 
   expect(evaluator2.type).toBe('float16');
   expect(evaluator2.size).toBe(2);
@@ -26,10 +30,16 @@ test('GPUDataEvaluator.fromGPUData accepts packed Float16 chunks', () => {
   expect(evaluator4.type).toBe('float16');
   expect(evaluator4.size).toBe(4);
   expect(evaluator4.ValueType).toBe(NativeFloat16ArrayConstructor ?? Uint16Array);
+  expect(normalizedEvaluator.type).toBe('uint16');
+  expect(normalizedEvaluator.size).toBe(2);
+  expect(normalizedEvaluator.normalized).toBe(true);
+  expect(normalizedEvaluator.format).toBe('unorm16x2');
   evaluator2.destroy();
   evaluator4.destroy();
+  normalizedEvaluator.destroy();
   vector2.destroy();
   vector4.destroy();
+  normalizedVector.destroy();
   device.destroy();
 });
 

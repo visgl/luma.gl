@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {log} from '@luma.gl/core';
-import type {OperationHandler} from './operation';
+import type {OperationHandler, OperationOutput} from './operation';
 import * as cpuBackend from '../operations/cpu/index';
 
 /** Map from operation names to backend-specific operation handlers. */
@@ -47,7 +47,10 @@ class BackendRegistry {
    *
    * Pending async backend registrations are awaited before lookup.
    */
-  async get(deviceType: string, operationName: string): Promise<OperationHandler> {
+  async get<InputsT extends Record<string, any> = any, OutputT extends OperationOutput = any>(
+    deviceType: string,
+    operationName: string
+  ): Promise<OperationHandler<InputsT, OutputT>> {
     let module = this._modules[deviceType];
     if (!module) {
       if (deviceType === 'webgl') {
@@ -62,7 +65,7 @@ class BackendRegistry {
     if (!(operationName in resolvedModule)) {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }
-    return resolvedModule[operationName];
+    return resolvedModule[operationName] as unknown as OperationHandler<InputsT, OutputT>;
   }
 
   /** Removes all registered backend modules. Primarily intended for tests. */

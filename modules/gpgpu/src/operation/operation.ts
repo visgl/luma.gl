@@ -7,14 +7,25 @@ import type {TypedArray} from '@math.gl/types';
 import {GPUDataEvaluator} from './gpu-data-evaluator';
 import {backendRegistry} from './backend-registry';
 
+/** Minimal lazy operation output shape used by backend handlers. */
+export type OperationOutput = {
+  /** Number of logical output rows. */
+  length: number;
+  /** Number of bytes in the materialized output buffer. */
+  byteLength: number;
+};
+
 /** Backend implementation for a single lazy GPGPU operation. */
-export type OperationHandler<InputsT extends Record<string, any> = any> = (args: {
+export type OperationHandler<
+  InputsT extends Record<string, any> = any,
+  OutputT extends OperationOutput = GPUDataEvaluator
+> = (args: {
   /** Device selected for execution. */
   device: Device;
   /** Operation inputs. */
   inputs: InputsT;
   /** Logical output evaluator describing the target layout. */
-  output: GPUDataEvaluator;
+  output: OutputT;
   /** GPU buffer that receives operation output. */
   target: Buffer;
 }) => Promise<OperationHandlerResult>;
@@ -30,7 +41,10 @@ export type OperationHandlerResult = {
  * Operations form a lazy dependency graph. Calling {@link Operation.execute} first materializes
  * dependent evaluators, then dispatches either a CPU handler or a backend-specific GPU handler.
  */
-export abstract class Operation<InputsT extends Record<string, any> = Record<string, any>> {
+export abstract class Operation<
+  InputsT extends Record<string, any> = Record<string, any>,
+  OutputT extends OperationOutput = GPUDataEvaluator
+> {
   /** Input evaluator map for this operation. */
   inputs: InputsT;
   /** Input evaluators that need evaluation before this operation can run. */
@@ -45,7 +59,7 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
   abstract get name(): string;
 
   /** Logical output evaluator produced by this operation. */
-  abstract get output(): GPUDataEvaluator;
+  abstract get output(): OutputT;
 
   /** Human friendly string that describes this operation */
   abstract toString(): string;
@@ -57,7 +71,7 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
       await dep.evaluate(device);
     }
     const handlerRegistry = this.shouldExecuteOnCPU() ? 'cpu' : device.type;
-    const handler = await backendRegistry.get(handlerRegistry, this.name);
+    const handler = await backendRegistry.get<InputsT, OutputT>(handlerRegistry, this.name);
     return handler({
       device: target.device,
       inputs: this.inputs,
