@@ -12,6 +12,19 @@ import {
 import {Device} from '@luma.gl/core';
 import {bloom, bloomShaderPassPipeline} from '@luma.gl/effects';
 import type {ShaderPassPipeline} from '@luma.gl/shadertools';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
 const BLOOM_UNIFORMS = {
   threshold: 0.55,
@@ -19,65 +32,17 @@ const BLOOM_UNIFORMS = {
   radius: 8
 } as const;
 
-const PANEL_STYLE = [
-  'margin-top: 16px',
-  'padding: 16px',
-  'border: 1px solid rgba(148, 163, 184, 0.28)',
-  'border-radius: 18px',
-  'background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(2, 6, 23, 0.96) 100%)',
-  'box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38)'
-].join('; ');
-
-const LABEL_STYLE = [
-  'display: block',
-  'margin-bottom: 8px',
-  'font-size: 11px',
-  'font-weight: 700',
-  'letter-spacing: 0.08em',
-  'text-transform: uppercase',
-  'color: rgba(148, 163, 184, 0.92)'
-].join('; ');
-
-const CONTROL_CARD_STYLE = ['display: grid', 'gap: 10px', 'margin-top: 10px'].join('; ');
-
-const CONTROL_ROW_STYLE = [
-  'display: grid',
-  'gap: 6px',
-  'padding: 10px 12px',
-  'border: 1px solid rgba(148, 163, 184, 0.18)',
-  'border-radius: 12px',
-  'background: rgba(15, 23, 42, 0.56)'
-].join('; ');
-
-const CONTROL_LABEL_ROW_STYLE = [
-  'display: flex',
-  'align-items: center',
-  'justify-content: space-between',
-  'gap: 12px',
-  'font-size: 12px',
-  'font-weight: 600',
-  'color: rgba(226, 232, 240, 0.94)'
-].join('; ');
-
-const RANGE_STYLE = ['width: 100%', 'margin: 0', 'accent-color: #f59e0b'].join('; ');
-
 type BloomState = Record<'threshold' | 'intensity' | 'radius', number>;
 type ShaderPropType = NonNullable<typeof bloom.propTypes>[string];
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-<div style="color: rgba(226, 232, 240, 0.96);">
-  Experimental bloom pipeline demo using extracted highlights, multi-stage blur targets, and final recomposition.
-</div>
-<div style="${PANEL_STYLE}">
-  <label style="${LABEL_STYLE}; margin-bottom: 0;">Bloom Settings</label>
-  <div id="bloom-controls" style="${CONTROL_CARD_STYLE}"></div>
-</div>
-`;
+  static info = makeExamplePanelHostHtml();
 
   device: Device;
   imageTexture: DynamicTexture;
   bloomValues: BloomState = {...BLOOM_UNIFORMS};
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
   shaderPassRenderer!: ShaderPassRenderer;
 
   constructor({device}: AnimationProps) {
@@ -85,11 +50,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.device = device;
     this.imageTexture = this.createImageTexture('bloom-scene.png');
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'bloom-settings',
+      schema: makeBloomSettingsSchema(),
+      settings: this.bloomValues,
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
     this.setShaderPasses([this.getBloomPassPipeline()]);
-    this.renderControls();
   }
 
   onFinalize(): void {
+    this.settingsPanel.finalize();
+    this.panels.finalize();
     this.imageTexture?.destroy();
     this.shaderPassRenderer?.destroy();
   }
@@ -128,67 +102,62 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     };
   }
 
-  renderControls(): void {
-    const controls = document.getElementById('bloom-controls');
-    if (!controls) {
-      return;
-    }
-
-    controls.replaceChildren();
-
-    for (const [propName, propType] of Object.entries(bloom.propTypes || {})) {
-      if (propType.private || propType.value === undefined) {
-        continue;
-      }
-
-      controls.appendChild(
-        this.createNumberControl(
-          propName as keyof BloomState,
-          this.bloomValues[propName as keyof BloomState],
-          propType
-        )
-      );
-    }
-  }
-
-  createNumberControl(
-    propName: keyof BloomState,
-    currentValue: number,
-    propType: ShaderPropType
-  ): HTMLDivElement {
-    const bounds = getControlBounds(currentValue, propType);
-    const row = document.createElement('div');
-    row.style.cssText = CONTROL_ROW_STYLE;
-
-    const header = document.createElement('div');
-    header.style.cssText = CONTROL_LABEL_ROW_STYLE;
-
-    const label = document.createElement('span');
-    label.textContent = formatControlLabel(propName);
-    header.appendChild(label);
-
-    const valueLabel = document.createElement('span');
-    valueLabel.textContent = formatControlValue(currentValue);
-    header.appendChild(valueLabel);
-    row.appendChild(header);
-
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.min = String(bounds.min);
-    input.max = String(bounds.max);
-    input.step = String(bounds.step);
-    input.value = String(currentValue);
-    input.style.cssText = RANGE_STYLE;
-    input.addEventListener('input', event => {
-      const nextValue = Number((event.target as HTMLInputElement).value);
-      valueLabel.textContent = formatControlValue(nextValue);
-      this.bloomValues[propName] = nextValue;
-      this.setShaderPasses([this.getBloomPassPipeline()]);
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'bloom-controls',
+      title: 'Controls',
+      panels: [
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'bloom-description',
+          title: '',
+          html: '<p>Experimental bloom pipeline demo using extracted highlights, multi-stage blur targets, and final recomposition.</p>'
+        })
+      ]
     });
-    row.appendChild(input);
-
-    return row;
   }
+
+  private readonly handleSettingsChange = (
+    settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    for (const propName of Object.keys(this.bloomValues) as (keyof BloomState)[]) {
+      const nextValue = getChangedSetting(changedSettings, propName)?.nextValue;
+      if (typeof nextValue === 'number') {
+        this.bloomValues[propName] = nextValue;
+      }
+    }
+    this.settingsPanel.setSettings(settings);
+    this.setShaderPasses([this.getBloomPassPipeline()]);
+  };
+}
+
+export function makeBloomSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'bloom',
+        name: 'Bloom',
+        initiallyCollapsed: false,
+        settings: Object.entries(bloom.propTypes || {})
+          .filter(([, propType]) => !propType.private && typeof propType.value === 'number')
+          .map(([propName, propType]) => {
+            const value = propType.value as number;
+            const bounds = getControlBounds(value, propType);
+            return {
+              name: propName,
+              label: formatControlLabel(propName),
+              type: 'number' as const,
+              persist: 'none' as const,
+              min: bounds.min,
+              max: bounds.max,
+              step: bounds.step
+            };
+          })
+      }
+    ]
+  };
 }
 
 function getControlBounds(
@@ -217,8 +186,4 @@ function formatControlLabel(propName: string): string {
   return propName
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, firstCharacter => firstCharacter.toUpperCase());
-}
-
-function formatControlValue(value: number): string {
-  return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(3).replace(/\.?0+$/, '');
 }

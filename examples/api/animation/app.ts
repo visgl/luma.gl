@@ -10,6 +10,19 @@ import {
 } from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
@@ -114,12 +127,7 @@ void main(void) {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-Key frame animation based on multiple hierarchical timelines.
-<button id="play">Play</button>
-<button id="pause">Pause</button><BR>
-Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
-`;
+  static info = makeExamplePanelHostHtml();
 
   readonly translations = [
     [2, -2, 0],
@@ -151,7 +159,8 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
   ];
 
   timeline: Timeline;
-  timeSlider;
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
 
   cubes: {
     translation: number[];
@@ -168,21 +177,17 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
       dirlight
     });
 
-    const playButton = document.getElementById('play');
-    const pauseButton = document.getElementById('pause');
-    this.timeSlider = document.getElementById('time');
-
-    if (playButton && pauseButton) {
-      playButton.addEventListener('click', () => this.timeline.play());
-      pauseButton.addEventListener('click', () => this.timeline.pause());
-      this.timeSlider.addEventListener('input', event =>
-        this.timeline.setTime(parseFloat(event.target.value))
-      );
-    }
-
     this.timeline = new Timeline();
     animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'animation-settings',
+      schema: makeAnimationSettingsSchema(),
+      settings: {time: this.timeline.getTime()},
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
 
     const channels = [
       this.timeline.addChannel({delay: 2000, rate: 0.5, duration: 8000, repeat: 2}),
@@ -253,15 +258,16 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
   }
 
   onFinalize() {
+    this.settingsPanel.finalize();
+    this.panels.finalize();
     for (const cube of this.cubes) {
       cube.model.destroy();
     }
   }
 
   onRender({device, aspect}: AnimationProps) {
-    if (this.timeSlider) {
-      this.timeSlider.value = this.timeline.getTime();
-    }
+    this.settingsPanel.setSettings({time: this.timeline.getTime()});
+    this.panels.setPanel(this.makePanel());
 
     const modelMatrix = new Matrix4();
     const projectionMatrix = new Matrix4().perspective({
@@ -303,4 +309,71 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
     }
     renderPass.end();
   }
+
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'animation-controls',
+      title: 'Controls',
+      panels: [
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'animation-actions',
+          title: '',
+          html: `\
+          <p>Key frame animation based on multiple hierarchical timelines.</p>
+          <div style="display: flex; gap: 8px;">
+            <button id="play" type="button">Play</button>
+            <button id="pause" type="button">Pause</button>
+          </div>
+          `,
+          onRender: rootElement => {
+            const playButton = rootElement.querySelector<HTMLButtonElement>('#play');
+            const pauseButton = rootElement.querySelector<HTMLButtonElement>('#pause');
+            const handlePlay = () => this.timeline.play();
+            const handlePause = () => this.timeline.pause();
+            playButton?.addEventListener('click', handlePlay);
+            pauseButton?.addEventListener('click', handlePause);
+            return () => {
+              playButton?.removeEventListener('click', handlePlay);
+              pauseButton?.removeEventListener('click', handlePause);
+            };
+          }
+        })
+      ]
+    });
+  }
+
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const time = getChangedSetting(changedSettings, 'time')?.nextValue;
+    if (typeof time === 'number') {
+      this.timeline.setTime(time);
+    }
+  };
+}
+
+function makeAnimationSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'timeline',
+        name: 'Timeline',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'time',
+            label: 'Time',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 30000,
+            step: 1
+          }
+        ]
+      }
+    ]
+  };
 }

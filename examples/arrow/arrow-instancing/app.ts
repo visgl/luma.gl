@@ -11,7 +11,7 @@ import {
   DEFAULT_INSTANCES_PER_SIDE,
   INSTANCES_PER_SIDE_OPTIONS
 } from './arrow-instanced-mesh-renderer';
-import {ArrowInstancingControlPanel, makeArrowInstancingControlPanelHtml} from './control-panel';
+import {ArrowInstancingControlPanel} from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -24,7 +24,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly timelineChannels: Record<string, number>;
   readonly controlPanel: ArrowInstancingControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowInstancingControlPanelHtml()
+    controlsPanel: () => this.controlPanel.makePanel()
   });
   readonly layer: ArrowInstancedMeshRenderer;
   instancesPerSide = DEFAULT_INSTANCES_PER_SIDE;
@@ -50,7 +50,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.controlPanel = new ArrowInstancingControlPanel({
       instanceCountOptions: INSTANCES_PER_SIDE_OPTIONS,
       initialState: {instancesPerSide: this.instancesPerSide},
-      handlers: {onInstanceCountChange: this.handleInstanceCountChange}
+      handlers: {onInstanceCountChange: this.handleInstanceCountChange},
+      onRefresh: () => this.panels.refresh()
     });
     this.panels.mount();
     this.controlPanel.initialize();

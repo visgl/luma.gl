@@ -9,8 +9,7 @@ import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {formatDggsPolygonMetrics} from './arrow-dggs-polygon-metrics';
 import {ArrowDggsPolygonRenderer, type DggsSourceKind} from './arrow-dggs-polygon-renderer';
 import {
-  ArrowDggsPolygonsControlPanel,
-  makeArrowDggsPolygonsControlPanelHtml
+  ArrowDggsPolygonsControlPanel
 } from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
@@ -26,7 +25,7 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
   readonly device: Device;
   readonly controlPanel: ArrowDggsPolygonsControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowDggsPolygonsControlPanelHtml()
+    controlsPanel: () => this.controlPanel.makePanel()
   });
   activeEncoding: DggsCellEncoding = 'geohash';
   activeSourceKind: DggsSourceKind = 'uint64';
@@ -43,7 +42,8 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
       handlers: {
         onEncodingChange: this.handleEncodingSelection,
         onSourceChange: this.handleSourceSelection
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
   }
 

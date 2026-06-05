@@ -15,7 +15,7 @@ import {
 } from './arrow-polygon-data';
 import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from './arrow-polygon-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
-import {ArrowPolygonControlPanel, makeArrowPolygonControlPanelHtml} from './control-panel';
+import {ArrowPolygonControlPanel} from './control-panel';
 
 export const title = 'Polygons';
 export const description =
@@ -29,7 +29,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   readonly device: Device;
   readonly controlPanel: ArrowPolygonControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowPolygonControlPanelHtml()
+    controlsPanel: () => this.controlPanel.makePanel()
   });
   layer: ArrowPolygonRenderer;
   rowCountKind: ArrowPolygonRowCountKind = '10k-stream';
@@ -54,7 +54,8 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
         onRowCountKindChange: this.handleRowCountKindChange,
         onSourceKindChange: this.handleSourceKindChange,
         onColorKindChange: this.handleColorKindChange
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
   }
 

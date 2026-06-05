@@ -21,7 +21,7 @@ import {
 } from './arrow-point-generator';
 import {ArrowPointRenderer, type ArrowPointRendererPickingInfo} from './arrow-point-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
-import {ArrowPointControlPanel, makeArrowPointControlPanelHtml} from './control-panel';
+import {ArrowPointControlPanel} from './control-panel';
 
 export const title = 'Points: XY/XYM/XYZM';
 export const description =
@@ -36,7 +36,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   readonly controlPanel: ArrowPointControlPanel;
   readonly layer: ArrowPointRenderer;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowPointControlPanelHtml()
+    controlsPanel: () => this.controlPanel.makePanel()
   });
   rowCountKind: ArrowPointRowCountKind = '10k-stream';
   sourceKind: ArrowPointSourceKind = 'xym';
@@ -59,7 +59,8 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
         onTimeKindChange: this.handleTimeKindChange,
         onColorKindChange: this.handleColorKindChange,
         onAnimateChange: this.handleAnimateChange
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
   }
 

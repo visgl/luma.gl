@@ -14,6 +14,7 @@ import {
   type Panel
 } from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
+import {configurePanelHostElement, makeExamplePanelHostHtml} from '../example-panels';
 
 const ARROW_EXAMPLE_PANEL_HOST_ID = 'arrow-example-panel-host';
 const ARROW_EXAMPLE_PANEL_BOX_ID = 'arrow-example-panel-box';
@@ -43,12 +44,12 @@ type BeginLoadedTableStreamProps = Omit<ArrowExampleTableEntry, 'table'> & {
 
 /** Returns the InfoBox host used by panel-managed Arrow example content. */
 export function makeArrowExamplePanelHostHtml(): string {
-  return `<div id="${ARROW_EXAMPLE_PANEL_HOST_ID}" data-arrow-example-panel-host=""></div>`;
+  return makeExamplePanelHostHtml(ARROW_EXAMPLE_PANEL_HOST_ID);
 }
 
 /** Owns panel-managed controls plus CPU Arrow table inspection for one Arrow example. */
 export class ArrowExamplePanelManager {
-  private readonly controlsHtml: string;
+  private readonly makeControlsPanel: () => Panel;
   private readonly tableEntries = new Map<string, ArrowExampleTableEntry>();
   private readonly selectedBatchIndexByTableId = new Map<string, number>();
   private readonly activeStreamVersionByTableId = new Map<string, number>();
@@ -56,8 +57,27 @@ export class ArrowExamplePanelManager {
   private hostElement: HTMLElement | null = null;
   private panelManager: PanelManager | null = null;
 
-  constructor({controlsHtml}: {controlsHtml: string}) {
-    this.controlsHtml = controlsHtml;
+  constructor({
+    controlsHtml,
+    controlsPanel
+  }: {
+    controlsHtml?: string;
+    controlsPanel?: Panel | (() => Panel);
+  }) {
+    this.makeControlsPanel =
+      typeof controlsPanel === 'function'
+        ? controlsPanel
+        : controlsPanel
+          ? () => controlsPanel
+          : () =>
+              new CustomPanel({
+                id: ARROW_EXAMPLE_CONTROLS_PANEL_ID,
+                title: 'Controls',
+                onRenderHTML: rootElement => {
+                  rootElement.innerHTML = controlsHtml ?? '';
+                  return () => rootElement.replaceChildren();
+                }
+              });
   }
 
   mount(): void {
@@ -139,11 +159,6 @@ export class ArrowExamplePanelManager {
     this.render();
   }
 
-  private readonly renderControlsHtml = (rootElement: HTMLElement): (() => void) => {
-    rootElement.innerHTML = this.controlsHtml;
-    return () => rootElement.replaceChildren();
-  };
-
   private render(): void {
     if (!this.panelManager || !this.hostElement) {
       return;
@@ -160,14 +175,7 @@ export class ArrowExamplePanelManager {
             id: 'arrow-example-root-tabs',
             title: 'Arrow example',
             tabListLayout: 'wrap',
-            panels: [
-              new CustomPanel({
-                id: ARROW_EXAMPLE_CONTROLS_PANEL_ID,
-                title: 'Controls',
-                onRenderHTML: this.renderControlsHtml
-              }),
-              this.makeTablesPanel()
-            ]
+            panels: [this.makeControlsPanel(), this.makeTablesPanel()]
           })
         })
       ]
@@ -283,14 +291,6 @@ export class ArrowExamplePanelManager {
       this.clampSelectedBatchIndex(tableEntry);
     }
   }
-}
-
-function configurePanelHostElement(hostElement: HTMLElement): void {
-  hostElement.style.minWidth = '0';
-  hostElement.style.setProperty('--menu-backdrop-filter', 'unset');
-  hostElement.style.setProperty('--menu-background', 'transparent');
-  hostElement.style.setProperty('--menu-border', 'none');
-  hostElement.style.setProperty('--menu-shadow', 'none');
 }
 
 function renderTableSummary(

@@ -12,7 +12,6 @@ import {
 import * as arrow from 'apache-arrow';
 import {
   ArrowText2DControlPanel,
-  makeArrowText2DControlPanelHtml,
   type ArrowText2DControlPanelAngleKind,
   type ArrowText2DControlPanelClipRectsKind,
   type ArrowText2DControlPanelSizeKind
@@ -88,10 +87,11 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   readonly device: Device;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowText2DControlPanelHtml({
-      streamingBatchCount: STREAMING_TEXT_BATCH_COUNT,
-      deckCharacterAttributeBytesPerGlyph: DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
-    })
+    controlsPanel: () =>
+      this.controlPanel.makePanel({
+        streamingBatchCount: STREAMING_TEXT_BATCH_COUNT,
+        deckCharacterAttributeBytesPerGlyph: DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
+      })
   });
   textInput!: ArrowTextRendererInput;
   textRenderer!: ArrowTextRenderer;
@@ -161,7 +161,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         onClipRectsColumnChange: this.handleTextClipRectsSelection,
         onModelChange: this.handleModelSelection,
         onAnimateChange: this.handleAnimateToggle
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
     this.controlPanel.initialize();
   }
@@ -188,8 +189,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       this.handleObjectPicked
     );
 
-    this.panels.mount();
     this.initializeControlPanel();
+    this.panels.mount();
     this.updateMetricLabels();
     this.startStreamingTextDatasetFromSource(
       this.textDatasetKind as StreamingTextDatasetKind,

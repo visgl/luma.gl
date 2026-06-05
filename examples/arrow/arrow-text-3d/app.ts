@@ -10,8 +10,7 @@ import {ArrowText3DRenderer} from './arrow-text-3d-renderer';
 import {CRAWL_TEXT_ROWS} from './arrow-text-3d-data';
 import {
   ArrowText3DControlPanel,
-  getArrowText3DCrawlColor,
-  makeArrowText3DControlPanelHtml
+  getArrowText3DCrawlColor
 } from './control-panel';
 import {helvetiker} from '../../experimental/text-3d/helvetiker-font';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
@@ -25,8 +24,10 @@ const font = parseFont(helvetiker);
 export default class ArrowText3DAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
 
-  readonly controlPanel = new ArrowText3DControlPanel();
-  readonly panels = new ArrowExamplePanelManager({controlsHtml: makeArrowText3DControlPanelHtml()});
+  readonly panels = new ArrowExamplePanelManager({
+    controlsPanel: () => this.controlPanel.makePanel()
+  });
+  readonly controlPanel = new ArrowText3DControlPanel({onRefresh: () => this.panels.refresh()});
   modelMatrix = new Matrix4();
   normalMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: [0, 40, 980], center: [0, -520, -520]});

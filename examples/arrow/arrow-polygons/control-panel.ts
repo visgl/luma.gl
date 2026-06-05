@@ -3,6 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+import {
   POLYGON_DATASETS,
   type ArrowPolygonColorKind,
   type ArrowPolygonRowCountKind,
@@ -10,9 +21,6 @@ import {
 } from './arrow-polygon-data';
 import type {ArrowPolygonRendererMetrics} from './arrow-polygon-renderer';
 
-const ROW_COUNT_SELECTOR_ID = 'arrow-polygon-row-count-selector';
-const SOURCE_SELECTOR_ID = 'arrow-polygon-source';
-const COLOR_SELECTOR_ID = 'arrow-polygon-colors';
 const PICKED_ROW_ID = 'arrow-polygon-picked-row';
 const ROW_COUNT_ID = 'arrow-polygon-row-count';
 const POLYGON_COUNT_ID = 'arrow-polygon-polygon-count';
@@ -32,230 +40,304 @@ const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-polygon-streaming-batch-status-row'
 const STREAMING_BATCH_FILL_ID = 'arrow-polygon-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-polygon-streaming-batch-status-label';
 
+export type ArrowPolygonControlPanelState = {
+  rowCountKind: ArrowPolygonRowCountKind;
+  sourceKind: ArrowPolygonSourceKind;
+  colorKind: ArrowPolygonColorKind;
+};
+
 export type ArrowPolygonControlPanelProps = {
-  initialState: {
-    rowCountKind: ArrowPolygonRowCountKind;
-    sourceKind: ArrowPolygonSourceKind;
-    colorKind: ArrowPolygonColorKind;
-  };
+  initialState: ArrowPolygonControlPanelState;
   handlers: {
     onRowCountKindChange: (rowCountKind: ArrowPolygonRowCountKind) => void | Promise<void>;
     onSourceKindChange: (sourceKind: ArrowPolygonSourceKind) => void;
     onColorKindChange: (colorKind: ArrowPolygonColorKind) => void;
   };
+  onRefresh: () => void;
 };
 
 export class ArrowPolygonControlPanel {
-  private readonly props: ArrowPolygonControlPanelProps;
-  private rowCountSelector: HTMLSelectElement | null = null;
-  private sourceSelector: HTMLSelectElement | null = null;
-  private colorSelector: HTMLSelectElement | null = null;
-  private streamingBatchStatusRow: HTMLElement | null = null;
-  private streamingBatchFill: HTMLElement | null = null;
-  private streamingBatchStatusLabel: HTMLElement | null = null;
+  private readonly handlers: ArrowPolygonControlPanelProps['handlers'];
+  private readonly onRefresh: () => void;
+  private readonly settingsPanel: ExampleSettingsPanelManager;
+  private state: ArrowPolygonControlPanelState;
+  private metrics: ArrowPolygonRendererMetrics | null = null;
+  private pickedLabel = 'Hover polygon';
+  private loadedBatchCount: number | null = null;
+  private batchCount = 0;
+  private rootElement: HTMLElement | null = null;
 
-  constructor(props: ArrowPolygonControlPanelProps) {
-    this.props = props;
+  constructor({initialState, handlers, onRefresh}: ArrowPolygonControlPanelProps) {
+    this.state = initialState;
+    this.handlers = handlers;
+    this.onRefresh = onRefresh;
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'arrow-polygons-settings',
+      schema: makeArrowPolygonSettingsSchema(initialState),
+      settings: initialState,
+      onSettingsChange: this.handleSettingsChange
+    });
   }
 
-  initialize(): void {
-    this.rowCountSelector = document.getElementById(
-      ROW_COUNT_SELECTOR_ID
-    ) as HTMLSelectElement | null;
-    this.sourceSelector = document.getElementById(SOURCE_SELECTOR_ID) as HTMLSelectElement | null;
-    this.colorSelector = document.getElementById(COLOR_SELECTOR_ID) as HTMLSelectElement | null;
-    this.streamingBatchStatusRow = document.getElementById(STREAMING_BATCH_STATUS_ROW_ID);
-    this.streamingBatchFill = document.getElementById(STREAMING_BATCH_FILL_ID);
-    this.streamingBatchStatusLabel = document.getElementById(STREAMING_BATCH_STATUS_LABEL_ID);
-    this.rowCountSelector?.addEventListener('change', this.handleRowCountChange);
-    this.sourceSelector?.addEventListener('change', this.handleSourceChange);
-    this.colorSelector?.addEventListener('change', this.handleColorChange);
-    this.syncControls(this.props.initialState);
+  makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'arrow-polygons-controls',
+      title: 'Controls',
+      panels: [
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'arrow-polygons-status',
+          title: 'Status',
+          html: makeArrowPolygonControlPanelHtml(),
+          onRender: rootElement => {
+            this.rootElement = rootElement;
+            this.render();
+            return () => {
+              if (this.rootElement === rootElement) {
+                this.rootElement = null;
+              }
+            };
+          }
+        })
+      ]
+    });
   }
+
+  initialize(): void {}
 
   destroy(): void {
-    this.rowCountSelector?.removeEventListener('change', this.handleRowCountChange);
-    this.sourceSelector?.removeEventListener('change', this.handleSourceChange);
-    this.colorSelector?.removeEventListener('change', this.handleColorChange);
+    this.settingsPanel.finalize();
+    this.rootElement = null;
   }
 
-  syncControls(state: Partial<ArrowPolygonControlPanelProps['initialState']>): void {
-    if (state.rowCountKind && this.rowCountSelector) {
-      this.rowCountSelector.value = state.rowCountKind;
-    }
-    if (state.sourceKind && this.sourceSelector) {
-      this.sourceSelector.value = state.sourceKind;
-    }
-    if (state.colorKind && this.colorSelector) {
-      this.colorSelector.value = state.colorKind;
-    }
+  syncControls(state: Partial<ArrowPolygonControlPanelState>): void {
+    this.state = {...this.state, ...state};
+    this.settingsPanel.setSchemaAndSettings(makeArrowPolygonSettingsSchema(this.state), this.state);
+    this.onRefresh();
   }
 
   setMetrics(metrics: ArrowPolygonRendererMetrics): void {
-    const totalArrowByteLength = metrics.polygonArrowByteLength + metrics.stylingArrowByteLength;
-    const totalGpuByteLength =
-      metrics.generatedGeometryGpuByteLength + metrics.stylingGpuByteLength;
-    setLabel(ROW_COUNT_ID, formatInteger(metrics.rowCount));
-    setLabel(POLYGON_COUNT_ID, formatInteger(metrics.polygonCount));
-    setLabel(DIMENSION_ID, `${metrics.sourceDimension}D`);
-    setLabel(TOTAL_ARROW_BYTES_ID, formatByteLength(totalArrowByteLength));
-    setLabel(TOTAL_GPU_BYTES_ID, formatByteLength(totalGpuByteLength));
-    setLabel(
-      TOTAL_GPU_EXPANSION_ID,
-      formatExpansionRatio(totalGpuByteLength, totalArrowByteLength)
-    );
-    setLabel(TOTAL_BUILD_TIME_ID, formatTimeMs(metrics.tessellationTimeMs));
-    setLabel(POLYGON_ARROW_BYTES_ID, formatByteLength(metrics.polygonArrowByteLength));
-    setLabel(
-      GENERATED_GEOMETRY_GPU_BYTES_ID,
-      formatByteLength(metrics.generatedGeometryGpuByteLength)
-    );
-    setLabel(
-      POLYGON_GPU_EXPANSION_ID,
-      formatExpansionRatio(metrics.generatedGeometryGpuByteLength, metrics.polygonArrowByteLength)
-    );
-    setLabel(POLYGON_BUILD_TIME_ID, formatTimeMs(metrics.tessellationTimeMs));
-    setLabel(STYLING_ARROW_BYTES_ID, formatByteLength(metrics.stylingArrowByteLength));
-    setLabel(STYLING_GPU_BYTES_ID, formatByteLength(metrics.stylingGpuByteLength));
-    setLabel(
-      STYLING_GPU_EXPANSION_ID,
-      formatExpansionRatio(metrics.stylingGpuByteLength, metrics.stylingArrowByteLength)
-    );
+    this.metrics = metrics;
+    this.renderMetrics();
   }
 
   setPickedLabel(label: string): void {
-    setLabel(PICKED_ROW_ID, label);
+    this.pickedLabel = label;
+    setLabel(this.rootElement, PICKED_ROW_ID, label);
   }
 
   setStreamingBatchStatus(loadedBatchCount: number, batchCount: number): void {
-    if (
-      !this.streamingBatchStatusRow ||
-      !this.streamingBatchFill ||
-      !this.streamingBatchStatusLabel
-    ) {
-      return;
-    }
-    this.streamingBatchStatusRow.style.display = 'block';
-    this.streamingBatchStatusRow.setAttribute('aria-valuemax', `${batchCount}`);
-    this.streamingBatchStatusRow.setAttribute('aria-valuenow', `${loadedBatchCount}`);
-    const progressPercent = batchCount > 0 ? (loadedBatchCount / batchCount) * 100 : 0;
-    this.streamingBatchFill.style.width = `${progressPercent}%`;
-    this.streamingBatchStatusLabel.textContent = `Loaded ${loadedBatchCount} of ${batchCount} batches`;
+    this.loadedBatchCount = loadedBatchCount;
+    this.batchCount = batchCount;
+    renderStreamingBatchStatus(this.rootElement, loadedBatchCount, batchCount);
   }
 
-  private readonly handleRowCountChange = (): void => {
-    const rowCountKind = this.rowCountSelector?.value;
+  private readonly handleSettingsChange = (
+    settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    this.state = settings as ArrowPolygonControlPanelState;
+    const rowCountKind = getChangedSetting(changedSettings, 'rowCountKind')?.nextValue;
     if (isRowCountKind(rowCountKind)) {
-      void this.props.handlers.onRowCountKindChange(rowCountKind);
+      void this.handlers.onRowCountKindChange(rowCountKind);
     }
-  };
-
-  private readonly handleSourceChange = (): void => {
-    const sourceKind = this.sourceSelector?.value;
+    const sourceKind = getChangedSetting(changedSettings, 'sourceKind')?.nextValue;
     if (isSourceKind(sourceKind)) {
-      this.props.handlers.onSourceKindChange(sourceKind);
+      this.handlers.onSourceKindChange(sourceKind);
+    }
+    const colorKind = getChangedSetting(changedSettings, 'colorKind')?.nextValue;
+    if (isColorKind(colorKind)) {
+      this.handlers.onColorKindChange(colorKind);
     }
   };
 
-  private readonly handleColorChange = (): void => {
-    const colorKind = this.colorSelector?.value;
-    if (isColorKind(colorKind)) {
-      this.props.handlers.onColorKindChange(colorKind);
+  private render(): void {
+    setLabel(this.rootElement, PICKED_ROW_ID, this.pickedLabel);
+    if (this.loadedBatchCount !== null) {
+      renderStreamingBatchStatus(this.rootElement, this.loadedBatchCount, this.batchCount);
     }
+    this.renderMetrics();
+  }
+
+  private renderMetrics(): void {
+    if (!this.metrics) {
+      return;
+    }
+    const totalArrowByteLength =
+      this.metrics.polygonArrowByteLength + this.metrics.stylingArrowByteLength;
+    const totalGpuByteLength =
+      this.metrics.generatedGeometryGpuByteLength + this.metrics.stylingGpuByteLength;
+    setLabel(this.rootElement, ROW_COUNT_ID, formatInteger(this.metrics.rowCount));
+    setLabel(this.rootElement, POLYGON_COUNT_ID, formatInteger(this.metrics.polygonCount));
+    setLabel(this.rootElement, DIMENSION_ID, `${this.metrics.sourceDimension}D`);
+    setLabel(this.rootElement, TOTAL_ARROW_BYTES_ID, formatByteLength(totalArrowByteLength));
+    setLabel(this.rootElement, TOTAL_GPU_BYTES_ID, formatByteLength(totalGpuByteLength));
+    setLabel(
+      this.rootElement,
+      TOTAL_GPU_EXPANSION_ID,
+      formatExpansionRatio(totalGpuByteLength, totalArrowByteLength)
+    );
+    setLabel(this.rootElement, TOTAL_BUILD_TIME_ID, formatTimeMs(this.metrics.tessellationTimeMs));
+    setLabel(
+      this.rootElement,
+      POLYGON_ARROW_BYTES_ID,
+      formatByteLength(this.metrics.polygonArrowByteLength)
+    );
+    setLabel(
+      this.rootElement,
+      GENERATED_GEOMETRY_GPU_BYTES_ID,
+      formatByteLength(this.metrics.generatedGeometryGpuByteLength)
+    );
+    setLabel(
+      this.rootElement,
+      POLYGON_GPU_EXPANSION_ID,
+      formatExpansionRatio(
+        this.metrics.generatedGeometryGpuByteLength,
+        this.metrics.polygonArrowByteLength
+      )
+    );
+    setLabel(
+      this.rootElement,
+      POLYGON_BUILD_TIME_ID,
+      formatTimeMs(this.metrics.tessellationTimeMs)
+    );
+    setLabel(
+      this.rootElement,
+      STYLING_ARROW_BYTES_ID,
+      formatByteLength(this.metrics.stylingArrowByteLength)
+    );
+    setLabel(
+      this.rootElement,
+      STYLING_GPU_BYTES_ID,
+      formatByteLength(this.metrics.stylingGpuByteLength)
+    );
+    setLabel(
+      this.rootElement,
+      STYLING_GPU_EXPANSION_ID,
+      formatExpansionRatio(this.metrics.stylingGpuByteLength, this.metrics.stylingArrowByteLength)
+    );
+  }
+}
+
+export function makeArrowPolygonSettingsSchema(
+  state: ArrowPolygonControlPanelState
+): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'data',
+        name: 'Data',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'rowCountKind',
+            label: 'Rows',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: POLYGON_DATASETS['10k-stream'].label, value: '10k-stream'},
+              {label: POLYGON_DATASETS['100k-stream'].label, value: '100k-stream'}
+            ]
+          },
+          {
+            name: 'sourceKind',
+            label: 'Polygons',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {
+                label: 'Polygon - List<List<FixedSizeList<Float32, 2>>>',
+                value: 'polygon'
+              },
+              {
+                label: 'MultiPolygon - List<List<List<FixedSizeList<Float32, 2>>>>',
+                value: 'multipolygon'
+              },
+              {label: 'Tessellated - List<FixedSizeList<Float32, 2>>', value: 'tessellated'},
+              {label: 'DenseUnion - geoarrow.geometry Polygon/MultiPolygon', value: 'dense-union'}
+            ]
+          },
+          {
+            name: 'colorKind',
+            label: 'Colors',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Constant', value: 'constant'},
+              {label: 'Row - FixedSizeList<Uint8, 4>', value: 'row-colors'},
+              ...(state.sourceKind === 'dense-union'
+                ? []
+                : [{label: 'Vertex - nested FixedSizeList<Uint8, 4>', value: 'vertex-colors'}])
+            ]
+          }
+        ]
+      }
+    ]
   };
 }
 
 export function makeArrowPolygonControlPanelHtml(): string {
   return `\
-  <p>Earcuts Arrow polygon rows with holes, multipolygons, and geoarrow.geometry DenseUnion batches, or renders pre-tessellated triangle rows.</p>
-  <div style="max-height: calc(100vh - 72px); overflow-y: auto; overflow-x: hidden; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
-    <section style="overflow: visible; margin-bottom: 12px; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
-      <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Table</h3>
-      <div style="display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
-        <label for="${ROW_COUNT_SELECTOR_ID}">Rows</label>
-        <select id="${ROW_COUNT_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="10k-stream">${POLYGON_DATASETS['10k-stream'].label}</option>
-          <option value="100k-stream">${POLYGON_DATASETS['100k-stream'].label}</option>
-        </select>
-        <span>Batches</span>
-        <div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" style="box-sizing: border-box; display: none; position: relative; width: 100%; min-width: 0; height: 34px; overflow: hidden; border: 1px solid rgba(37, 99, 235, 0.32); border-radius: 6px; background: #dbeafe; color: #0f172a; font-size: 13px; line-height: 1.4;">
-          <span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #93c5fd 0%, #2563eb 100%); transition: width 220ms ease;"></span>
-          <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 8px; color: #0f172a; font-weight: 700; font-variant-numeric: tabular-nums;">Loaded 0 batches</span>
-        </div>
-        <span>Hover</span>
-        <strong id="${PICKED_ROW_ID}" style="box-sizing: border-box; display: flex; align-items: center; min-width: 0; min-height: 34px; padding: 0 10px; border: 1px solid rgba(148, 163, 184, 0.45); border-radius: 6px; background: rgba(248, 250, 252, 0.88); color: #0f172a; font-variant-numeric: tabular-nums;">Hover polygon</strong>
-        <label for="${SOURCE_SELECTOR_ID}">Polygons</label>
-        <select id="${SOURCE_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="polygon">Polygon - List&lt;List&lt;FixedSizeList&lt;Float32, 2&gt;&gt;&gt;</option>
-          <option value="multipolygon">MultiPolygon - List&lt;List&lt;List&lt;FixedSizeList&lt;Float32, 2&gt;&gt;&gt;&gt;</option>
-          <option value="tessellated">Tessellated - List&lt;FixedSizeList&lt;Float32, 2&gt;&gt;</option>
-          <option value="dense-union">DenseUnion - geoarrow.geometry Polygon/MultiPolygon</option>
-        </select>
-        <label for="${COLOR_SELECTOR_ID}">Colors</label>
-        <select id="${COLOR_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="constant">Constant</option>
-          <option value="row-colors">Row - FixedSizeList&lt;Uint8, 4&gt;</option>
-          <option value="vertex-colors">Vertex - nested FixedSizeList&lt;Uint8, 4&gt;</option>
-        </select>
-      </div>
-    </section>
-    <section style="overflow: visible; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
-      <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Metrics</h3>
-      <table style="display: table; width: 100%; min-width: 100%; table-layout: fixed; box-sizing: border-box; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); border-collapse: collapse; color: #334155; font-size: 13px; line-height: 1.4;">
-        <thead>
-          <tr style="color: #64748b; text-transform: uppercase; letter-spacing: 0.02em; font-size: 11px;">
-            <th style="width: 20%; padding: 8px 8px 6px 0; text-align: left; font-weight: 700; white-space: nowrap;">columns</th>
-            <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">Arrow</th>
-            <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">GPU</th>
-            <th style="width: 16%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">exp</th>
-            <th style="width: 20%; padding: 8px 0 6px 8px; text-align: right; font-weight: 700; white-space: nowrap;">time</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 700;">total</th>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
-            <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${TOTAL_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-          </tr>
-          <tr>
-            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">polygons</th>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${POLYGON_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${GENERATED_GEOMETRY_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${POLYGON_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
-            <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${POLYGON_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-          </tr>
-          <tr>
-            <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">styles</th>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLING_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLING_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-            <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLING_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
-            <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
-          </tr>
-        </tbody>
-      </table>
-      <div style="margin-top: 8px; color: #64748b; font-size: 12px; line-height: 1.4;">Rows <strong id="${ROW_COUNT_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">0</strong> · primitive polygons <strong id="${POLYGON_COUNT_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">0</strong> · source dimension <strong id="${DIMENSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">0D</strong></div>
-      <details style="margin-top: 14px; border-top: 1px solid rgba(208, 215, 222, 0.9); padding-top: 10px; color: #334155; font-size: 12px; line-height: 1.4;">
-        <summary style="cursor: pointer; color: #0f172a; font-weight: 700;">What this example isolates</summary>
-        <table style="width: 100%; margin-top: 10px; border-collapse: collapse; color: #334155; font-size: 12px; line-height: 1.4;">
-          <tbody>
-            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0; font-weight: 700;">Input</td><td style="padding: 7px 0;">Polygon rows with holes, multipolygon rows, geoarrow.geometry DenseUnion rows, or pre-tessellated triangle vertices.</td></tr>
-            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0; font-weight: 700;">Tessellation</td><td style="padding: 7px 0;">The polygons GPU row includes generated positions, rowIndexes, and triangle indices.</td></tr>
-            <tr><td style="padding: 7px 0; font-weight: 700;">Styling</td><td style="padding: 7px 0;">Constant, per-row, and per-vertex colors are expanded into table-backed polygon vertices.</td></tr>
-          </tbody>
-        </table>
-      </details>
-    </section>
-  </div>
+  <p>Earcuts Arrow polygon rows with holes, multipolygons, geoarrow.geometry DenseUnion batches, or pre-tessellated triangle rows.</p>
+  ${makeStatusRow('Batches', makeProgressBar())}
+  ${makeStatusRow('Hover', `<strong id="${PICKED_ROW_ID}">Hover polygon</strong>`)}
+  <table style="width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12px;">
+    <tbody>
+      ${makeMetricTableRow('total', TOTAL_ARROW_BYTES_ID, TOTAL_GPU_BYTES_ID, TOTAL_GPU_EXPANSION_ID, TOTAL_BUILD_TIME_ID)}
+      ${makeMetricTableRow('polygons', POLYGON_ARROW_BYTES_ID, GENERATED_GEOMETRY_GPU_BYTES_ID, POLYGON_GPU_EXPANSION_ID, POLYGON_BUILD_TIME_ID)}
+      ${makeMetricTableRow('styles', STYLING_ARROW_BYTES_ID, STYLING_GPU_BYTES_ID, STYLING_GPU_EXPANSION_ID, null)}
+    </tbody>
+  </table>
+  <p style="margin-bottom: 0; color: #64748b; font-size: 12px;">Rows <strong id="${ROW_COUNT_ID}">0</strong> · primitive polygons <strong id="${POLYGON_COUNT_ID}">0</strong> · source dimension <strong id="${DIMENSION_ID}">0D</strong></p>
   `;
 }
 
-function setLabel(id: string, value: string): void {
-  const element = document.getElementById(id);
+function makeProgressBar(): string {
+  return `<div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" style="display: none; position: relative; height: 24px; overflow: hidden; border: 1px solid #bfdbfe; border-radius: 6px; background: #dbeafe;"><span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: #2563eb;"></span><span id="${STREAMING_BATCH_STATUS_LABEL_ID}" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700;">Loaded 0 batches</span></div>`;
+}
+
+function makeStatusRow(label: string, valueHtml: string): string {
+  return `<div style="display: grid; grid-template-columns: 62px 1fr; gap: 8px; align-items: center; margin-top: 8px;"><span>${label}</span>${valueHtml}</div>`;
+}
+
+function makeMetricTableRow(
+  label: string,
+  arrowId: string,
+  gpuId: string,
+  expansionId: string,
+  timeId: string | null
+): string {
+  return `<tr><th style="text-align: left; padding: 4px 6px 4px 0;">${label}</th><td style="text-align: right;"><strong id="${arrowId}">Measuring...</strong></td><td style="text-align: right;"><strong id="${gpuId}">Measuring...</strong></td><td style="text-align: right;"><strong id="${expansionId}">-</strong></td><td style="text-align: right;">${timeId ? `<strong id="${timeId}">Measuring...</strong>` : '-'}</td></tr>`;
+}
+
+function renderStreamingBatchStatus(
+  rootElement: HTMLElement | null,
+  loadedBatchCount: number,
+  batchCount: number
+): void {
+  const statusRow = getElement(rootElement, STREAMING_BATCH_STATUS_ROW_ID);
+  const fill = getElement(rootElement, STREAMING_BATCH_FILL_ID);
+  const label = getElement(rootElement, STREAMING_BATCH_STATUS_LABEL_ID);
+  if (!statusRow || !fill || !label) {
+    return;
+  }
+  statusRow.style.display = 'block';
+  statusRow.setAttribute('aria-valuemax', `${batchCount}`);
+  statusRow.setAttribute('aria-valuenow', `${loadedBatchCount}`);
+  fill.style.width = `${batchCount > 0 ? (loadedBatchCount / batchCount) * 100 : 0}%`;
+  label.textContent = `Loaded ${loadedBatchCount} of ${batchCount} batches`;
+}
+
+function setLabel(rootElement: HTMLElement | null, id: string, value: string): void {
+  const element = getElement(rootElement, id);
   if (element) {
     element.textContent = value;
   }
+}
+
+function getElement(rootElement: HTMLElement | null, id: string): HTMLElement | null {
+  return rootElement?.querySelector<HTMLElement>(`#${id}`) ?? null;
 }
 
 function formatInteger(value: number): string {

@@ -21,10 +21,7 @@ import {
   makeArrowExamplePanelHostHtml,
   type ArrowExampleLoadedTableStream
 } from '../arrow-example-panels';
-import {
-  ArrowTemporalStarfieldControlPanel,
-  makeArrowTemporalStarfieldControlPanelHtml
-} from './control-panel';
+import {ArrowTemporalStarfieldControlPanel} from './control-panel';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export const title = 'Time: Blinking Stars';
@@ -38,7 +35,7 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   readonly device: Device;
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowTemporalStarfieldControlPanelHtml()
+    controlsPanel: () => this.controlPanel.makePanel()
   });
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
@@ -64,7 +61,8 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
       handlers: {
         onRenderModeChange: this.handleRenderModeSelection,
         onTimeColumnChange: this.handleTimeColumnSelection
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
   }
 

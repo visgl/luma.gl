@@ -2,7 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-const RENDER_MODE_SELECTOR_ID = 'arrow-time-columns-render-mode';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+
 const PREPARATION_PATH_ID = 'arrow-time-columns-preparation-path';
 const CURRENT_TIMESTAMP_ID = 'arrow-time-columns-current-timestamp';
 const DATE_ORIGIN_ID = 'arrow-time-columns-date-origin';
@@ -33,129 +44,155 @@ export type ArrowTimeColumnsControlPanelHandlers = {
 export type ArrowTimeColumnsControlPanelOptions = {
   initialState: ArrowTimeColumnsControlPanelState;
   handlers: ArrowTimeColumnsControlPanelHandlers;
+  onRefresh: () => void;
 };
 
 export class ArrowTimeColumnsControlPanel {
   private readonly handlers: ArrowTimeColumnsControlPanelHandlers;
+  private readonly onRefresh: () => void;
+  private readonly settingsPanel: ExampleSettingsPanelManager;
   private state: ArrowTimeColumnsControlPanelState;
-  private renderModeSelector: HTMLSelectElement | null = null;
-  private preparationPathLabel: HTMLElement | null = null;
-  private currentTimestampLabel: HTMLElement | null = null;
-  private dateOriginLabel: HTMLElement | null = null;
-  private timeOriginLabel: HTMLElement | null = null;
-  private timestampOriginLabel: HTMLElement | null = null;
-  private durationOriginLabel: HTMLElement | null = null;
+  private labels: Partial<ArrowTimeColumnsControlPanelLabels> = {};
+  private rootElement: HTMLElement | null = null;
 
-  constructor({initialState, handlers}: ArrowTimeColumnsControlPanelOptions) {
+  constructor({initialState, handlers, onRefresh}: ArrowTimeColumnsControlPanelOptions) {
     this.state = initialState;
     this.handlers = handlers;
+    this.onRefresh = onRefresh;
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'arrow-time-columns-settings',
+      schema: makeArrowTimeColumnsSettingsSchema(initialState),
+      settings: initialState,
+      onSettingsChange: this.handleSettingsChange
+    });
   }
 
-  initialize(): void {
-    if (!this.renderModeSelector) {
-      this.renderModeSelector = document.getElementById(
-        RENDER_MODE_SELECTOR_ID
-      ) as HTMLSelectElement | null;
-      this.renderModeSelector?.addEventListener('change', this.handleRenderModeSelection);
-    }
-
-    this.preparationPathLabel ??= document.getElementById(PREPARATION_PATH_ID);
-    this.currentTimestampLabel ??= document.getElementById(CURRENT_TIMESTAMP_ID);
-    this.dateOriginLabel ??= document.getElementById(DATE_ORIGIN_ID);
-    this.timeOriginLabel ??= document.getElementById(TIME_ORIGIN_ID);
-    this.timestampOriginLabel ??= document.getElementById(TIMESTAMP_ORIGIN_ID);
-    this.durationOriginLabel ??= document.getElementById(DURATION_ORIGIN_ID);
-    this.syncControls(this.state);
+  makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'arrow-time-columns-controls',
+      title: 'Controls',
+      panels: [
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'arrow-time-columns-status',
+          title: 'Status',
+          html: makeArrowTimeColumnsControlPanelHtml(),
+          onRender: rootElement => {
+            this.rootElement = rootElement;
+            this.renderLabels();
+            return () => {
+              if (this.rootElement === rootElement) {
+                this.rootElement = null;
+              }
+            };
+          }
+        })
+      ]
+    });
   }
+
+  initialize(): void {}
 
   destroy(): void {
-    this.renderModeSelector?.removeEventListener('change', this.handleRenderModeSelection);
-    this.renderModeSelector = null;
-    this.preparationPathLabel = null;
-    this.currentTimestampLabel = null;
-    this.dateOriginLabel = null;
-    this.timeOriginLabel = null;
-    this.timestampOriginLabel = null;
-    this.durationOriginLabel = null;
+    this.settingsPanel.finalize();
+    this.rootElement = null;
   }
 
   syncControls(state: Partial<ArrowTimeColumnsControlPanelState>): void {
     this.state = {...this.state, ...state};
-    if (!this.renderModeSelector) {
-      return;
-    }
-
-    this.renderModeSelector.value = this.state.renderMode;
-    this.renderModeSelector.disabled = !this.state.supportsStorage;
-    const storageOption = this.renderModeSelector.querySelector(
-      'option[value="storage"]'
-    ) as HTMLOptionElement | null;
-    if (storageOption) {
-      storageOption.disabled = !this.state.supportsStorage;
-    }
+    this.settingsPanel.setSchemaAndSettings(
+      makeArrowTimeColumnsSettingsSchema(this.state),
+      this.state
+    );
+    this.onRefresh();
   }
 
   setLabels(labels: Partial<ArrowTimeColumnsControlPanelLabels>): void {
-    setTextContent(this.preparationPathLabel, labels.preparationPath);
-    setTextContent(this.currentTimestampLabel, labels.currentTimestamp);
-    setTextContent(this.dateOriginLabel, labels.dateOrigin);
-    setTextContent(this.timeOriginLabel, labels.timeOrigin);
-    setTextContent(this.timestampOriginLabel, labels.timestampOrigin);
-    setTextContent(this.durationOriginLabel, labels.durationOrigin);
+    this.labels = {...this.labels, ...labels};
+    this.renderLabels();
   }
 
   setCurrentTimestampLabel(label: string): void {
-    setTextContent(this.currentTimestampLabel, label);
+    this.setLabels({currentTimestamp: label});
   }
 
-  private readonly handleRenderModeSelection = (): void => {
-    const requestedRenderMode = this.renderModeSelector?.value;
-    if (!isTimeColumnsRenderMode(requestedRenderMode)) {
-      return;
+  private readonly handleSettingsChange = (
+    settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    this.state = settings as ArrowTimeColumnsControlPanelState;
+    const renderMode = getChangedSetting(changedSettings, 'renderMode')?.nextValue;
+    if (isTimeColumnsRenderMode(renderMode)) {
+      this.handlers.onRenderModeChange(renderMode);
     }
-    const renderMode =
-      requestedRenderMode === 'storage' && !this.state.supportsStorage
-        ? 'attributes'
-        : requestedRenderMode;
-    this.syncControls({renderMode});
-    this.handlers.onRenderModeChange(renderMode);
+  };
+
+  private renderLabels(): void {
+    setTextContent(this.rootElement, PREPARATION_PATH_ID, this.labels.preparationPath);
+    setTextContent(this.rootElement, CURRENT_TIMESTAMP_ID, this.labels.currentTimestamp);
+    setTextContent(this.rootElement, DATE_ORIGIN_ID, this.labels.dateOrigin);
+    setTextContent(this.rootElement, TIME_ORIGIN_ID, this.labels.timeOrigin);
+    setTextContent(this.rootElement, TIMESTAMP_ORIGIN_ID, this.labels.timestampOrigin);
+    setTextContent(this.rootElement, DURATION_ORIGIN_ID, this.labels.durationOrigin);
+  }
+}
+
+export function makeArrowTimeColumnsSettingsSchema(
+  state: ArrowTimeColumnsControlPanelState
+): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'renderer',
+        name: 'Renderer',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'renderMode',
+            label: 'Render',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Attributes', value: 'attributes'},
+              ...(state.supportsStorage ? [{label: 'Storage', value: 'storage'}] : [])
+            ]
+          }
+        ]
+      }
+    ]
   };
 }
 
 export function makeArrowTimeColumnsControlPanelHtml(): string {
-  return `
-<p>Prepares Arrow <code>Date</code>, <code>Time</code>, <code>Timestamp</code>, and <code>Duration</code> columns as relative <code>Float32</code> GPU rows.</p>
-<div style="display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.7rem; align-items: center;">
-  <label for="${RENDER_MODE_SELECTOR_ID}">Render</label>
-  <select id="${RENDER_MODE_SELECTOR_ID}">
-    <option value="attributes">Attributes</option>
-    <option value="storage">Storage</option>
-  </select>
-  <span>Prepare</span>
-  <strong id="${PREPARATION_PATH_ID}"></strong>
-  <span>Current</span>
-  <strong id="${CURRENT_TIMESTAMP_ID}"></strong>
-</div>
-<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem 0.7rem; margin-top: 0.65rem; font-size: 0.78rem;">
-  <strong>Column</strong>
-  <strong>Prepared / origin</strong>
-  <code style="white-space: normal; overflow-wrap: anywhere;">eventDates: DateDay</code>
-  <span><code>Float32 day</code><br><span id="${DATE_ORIGIN_ID}"></span></span>
-  <code style="white-space: normal; overflow-wrap: anywhere;">eventTimes: TimeMillisecond</code>
-  <span><code>Float32 millisecond</code><br><span id="${TIME_ORIGIN_ID}"></span></span>
-  <code style="white-space: normal; overflow-wrap: anywhere;">eventStarts: TimestampMillisecond</code>
-  <span><code>Float32 millisecond</code><br><span id="${TIMESTAMP_ORIGIN_ID}"></span></span>
-  <code style="white-space: normal; overflow-wrap: anywhere;">eventDurations: DurationMillisecond</code>
-  <span><code>Float32 millisecond</code><br><span id="${DURATION_ORIGIN_ID}"></span></span>
-</div>
-`;
+  return `\
+  <p>Prepares Arrow <code>Date</code>, <code>Time</code>, <code>Timestamp</code>, and <code>Duration</code> columns as relative <code>Float32</code> GPU rows.</p>
+  ${makeStatusRow('Prepare', `<strong id="${PREPARATION_PATH_ID}"></strong>`)}
+  ${makeStatusRow('Current', `<strong id="${CURRENT_TIMESTAMP_ID}"></strong>`)}
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 10px; margin-top: 12px; font-size: 12px;">
+    <strong>Column</strong><strong>Prepared / origin</strong>
+    <code>eventDates: DateDay</code><span><code>Float32 day</code><br><span id="${DATE_ORIGIN_ID}"></span></span>
+    <code>eventTimes: TimeMillisecond</code><span><code>Float32 millisecond</code><br><span id="${TIME_ORIGIN_ID}"></span></span>
+    <code>eventStarts: TimestampMillisecond</code><span><code>Float32 millisecond</code><br><span id="${TIMESTAMP_ORIGIN_ID}"></span></span>
+    <code>eventDurations: DurationMillisecond</code><span><code>Float32 millisecond</code><br><span id="${DURATION_ORIGIN_ID}"></span></span>
+  </div>
+  `;
 }
 
-function isTimeColumnsRenderMode(value: string | undefined): value is TimeColumnsRenderMode {
+function makeStatusRow(label: string, valueHtml: string): string {
+  return `<div style="display: grid; grid-template-columns: 62px 1fr; gap: 8px; align-items: center; margin-top: 8px;"><span>${label}</span>${valueHtml}</div>`;
+}
+
+function isTimeColumnsRenderMode(value: unknown): value is TimeColumnsRenderMode {
   return value === 'attributes' || value === 'storage';
 }
 
-function setTextContent(element: HTMLElement | null, value: string | undefined): void {
+function setTextContent(
+  rootElement: HTMLElement | null,
+  id: string,
+  value: string | undefined
+): void {
+  const element = rootElement?.querySelector<HTMLElement>(`#${id}`);
   if (element && value !== undefined) {
     element.textContent = value;
   }

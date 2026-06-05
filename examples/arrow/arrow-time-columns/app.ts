@@ -8,7 +8,6 @@ import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowTimeColumnsRenderer} from './arrow-time-columns-renderer';
 import {
   ArrowTimeColumnsControlPanel,
-  makeArrowTimeColumnsControlPanelHtml,
   type TimeColumnsRenderMode
 } from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
@@ -25,7 +24,7 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
   readonly device: Device;
   readonly controlPanel: ArrowTimeColumnsControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowTimeColumnsControlPanelHtml()
+    controlsPanel: () => this.controlPanel.makePanel()
   });
   activeRenderMode: TimeColumnsRenderMode;
   layer: ArrowTimeColumnsRenderer | null = null;
@@ -43,7 +42,8 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
         renderMode: this.activeRenderMode,
         supportsStorage
       },
-      handlers: {onRenderModeChange: this.handleRenderModeSelection}
+      handlers: {onRenderModeChange: this.handleRenderModeSelection},
+      onRefresh: () => this.panels.refresh()
     });
   }
 
