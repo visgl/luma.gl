@@ -79,13 +79,13 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   vs?: string | null;
   fs?: string | null;
 
-  /** shadertool shader modules (added to shader code) */
+  /** Shadertools shader modules added to shader code. */
   modules?: ShaderModule[];
-  /** Shadertool module defines (configures shader code)*/
+  /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
   defines?: Record<string, boolean | number>;
   // TODO - injections, hooks etc?
 
-  /** Shader inputs, used to generated uniform buffers and bindings */
+  /** Shader inputs, used to generate uniform buffers and bindings. */
   shaderInputs?: ShaderInputs;
   /** Material-owned group-3 bindings */
   material?: Material;

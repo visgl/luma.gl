@@ -29,6 +29,14 @@ if (limits.maxTextureDimension2D > 2048) {
 
 ## DeviceLimits
 
+The stage-specific storage limits matter when an application wants to read
+storage resources from a vertex or fragment shader. A WebGPU core device can
+report `0` for vertex-stage storage buffers, so storage-backed vertex rendering
+should check `maxStorageBuffersInVertexStage` before choosing that path. For
+assembled WGSL, see the
+[WGSL Support](/docs/api-reference/shadertools/wgsl-support) platform define for
+the same decision in shader source.
+
 | Limit                                       | WebGPU<br />max                                      | WebGPU<br />core                                      | WebGL2                                      | WebGL parameter                       |
 | ------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- | ------------------------------------- |
 | `maxTextureDimension1D`                     | <L d="webgpu-max" f="maxTextureDimension1D" /> | <L d="webgpu-core" f="maxTextureDimension1D" /> | <L d="webgl" f="maxTextureDimension1D" /> | WebGL2 does not support 1D textures   |

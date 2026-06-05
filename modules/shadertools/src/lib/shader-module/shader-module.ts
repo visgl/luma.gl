@@ -78,6 +78,7 @@ export type ShaderModule<
     prevUniforms?: UniformsT
   ) => Partial<UniformsT & BindingsT>;
 
+  /** Boolean or numeric preprocessor defines contributed by this shader module. */
   defines?: Record<string, boolean | number>;
   /** Injections */
   inject?: Record<string, string | {injection: string; order: number}>;

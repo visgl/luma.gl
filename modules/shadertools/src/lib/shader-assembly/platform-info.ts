@@ -16,7 +16,7 @@ export type PlatformInfo = {
   shaderLanguageVersion: 100 | 300;
   /** string identifying current GPU */
   gpu: string;
-  /** Device limits for shader preprocessing decisions */
+  /** Device limits exposed to shader preprocessing decisions such as platform capability defines. */
   limits?: Record<string, number | undefined>;
   /** Feature strings for feature detection */
   features: Set<string>;

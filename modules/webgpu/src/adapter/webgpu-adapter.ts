@@ -54,6 +54,11 @@ const WEBGPU_SUPPORTED_LIMIT_NAMES: readonly WebGPUSupportedLimitName[] = [
   'maxImmediateSize'
 ];
 
+/**
+ * Returns every WebGPU limit that luma.gl can request from an adapter.
+ * @param supportedLimits Limits exposed by the selected WebGPU adapter.
+ * @returns Limits to forward through `GPUDeviceDescriptor.requiredLimits`.
+ */
 export function getRequiredWebGPULimits(
   supportedLimits: GPUSupportedLimits
 ): Record<string, number> {
@@ -69,10 +74,20 @@ export function getRequiredWebGPULimits(
   return requiredLimits;
 }
 
+/**
+ * Returns the requested WebGPU feature level, defaulting to the portable core profile.
+ * @param props Device creation props.
+ * @returns Effective WebGPU feature level to request.
+ */
 export function getWebGPUFeatureLevel(props: DeviceProps): RequestedWebGPUFeatureLevel {
   return props.featureLevel ?? 'core';
 }
 
+/**
+ * Returns WebGPU adapter options used while selecting an adapter.
+ * @param props Device creation props.
+ * @returns Options to pass to `navigator.gpu.requestAdapter()`.
+ */
 export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAdapterOptions {
   const options: GPURequestAdapterOptions = {featureLevel: 'core'};
 
@@ -83,6 +98,12 @@ export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAd
   return options;
 }
 
+/**
+ * Returns adapter features required for the requested WebGPU feature level.
+ * @param supportedFeatures Features exposed by the selected WebGPU adapter.
+ * @param featureLevel Effective WebGPU feature level to request.
+ * @returns Features to forward through `GPUDeviceDescriptor.requiredFeatures`.
+ */
 export function getRequiredWebGPUFeatures(
   supportedFeatures: GPUSupportedFeatures,
   featureLevel: RequestedWebGPUFeatureLevel

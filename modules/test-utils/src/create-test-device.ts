@@ -39,7 +39,10 @@ type LostAwareDevice = {
 
 type TestDeviceType = 'webgl' | 'webgpu' | 'webgpu-core' | 'webgpu-max' | 'null' | 'unknown';
 
-/** Includes WebGPU device if available */
+/**
+ * Returns available test devices for the requested backend types.
+ * @param types Backend types to create. `'webgpu'` preserves the legacy max-feature WebGPU test device.
+ */
 export async function getTestDevices(
   types: Readonly<TestDeviceType[]> = ['webgl', 'webgpu']
 ): Promise<Device[]> {
@@ -48,6 +51,10 @@ export async function getTestDevices(
   return devices.filter(device => device !== null);
 }
 
+/**
+ * Returns a test device for one backend type, or `null` when that backend is unavailable.
+ * @param type Backend type to create.
+ */
 export async function getTestDevice(type: TestDeviceType): Promise<Device | null> {
   switch (type) {
     case 'webgl':
@@ -65,7 +72,10 @@ export async function getTestDevice(type: TestDeviceType): Promise<Device | null
   }
 }
 
-/** returns WebGPU device promise, if available */
+/**
+ * Returns a WebGPU test device for one feature level, or `null` when WebGPU is unavailable.
+ * @param featureLevel WebGPU feature level to request. Defaults to `'max'` for existing tests.
+ */
 export async function getWebGPUTestDevice(
   featureLevel: NonNullable<DeviceProps['featureLevel']> = 'max'
 ): Promise<WebGPUDevice | null> {
@@ -77,7 +87,10 @@ export async function getWebGPUTestDevice(
   );
 }
 
-/** returns WebGPU test devices for the requested feature levels, skipping unavailable devices */
+/**
+ * Returns available WebGPU test devices for the requested feature levels.
+ * @param featureLevels WebGPU feature levels to request. Defaults to both `'core'` and `'max'`.
+ */
 export async function getWebGPUTestDevices(
   featureLevels: Readonly<NonNullable<DeviceProps['featureLevel']>[]> = ['core', 'max']
 ): Promise<WebGPUDevice[]> {

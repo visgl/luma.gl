@@ -41,9 +41,7 @@ const FRAGMENT_SHADER_PROLOGUE = /* glsl */ `\
 precision highp float;
 `;
 
-/**
- * Options for `ShaderAssembler.assembleShaders()`
- */
+/** Props accepted by `ShaderAssembler` assembly methods. */
 export type AssembleShaderProps = AssembleShaderOptions & {
   platformInfo: PlatformInfo;
   /** WGSL: single shader source. */
@@ -54,6 +52,7 @@ export type AssembleShaderProps = AssembleShaderOptions & {
   fs?: string | null;
 };
 
+/** Shared shader assembly options. */
 export type AssembleShaderOptions = {
   /** information about the platform (which shader language & version, extensions etc.) */
   platformInfo: PlatformInfo;
@@ -61,7 +60,7 @@ export type AssembleShaderOptions = {
   id?: string;
   /** Modules to be injected */
   modules?: ShaderModule[];
-  /** Defines to be injected */
+  /** Boolean or numeric preprocessor defines evaluated before shader assembly. */
   defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
@@ -83,7 +82,7 @@ type AssembleStageOptions = {
   stage: 'vertex' | 'fragment';
   /** Modules to be injected */
   modules: any[];
-  /** Defines to be injected */
+  /** Boolean or numeric preprocessor defines evaluated before shader assembly. */
   defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
@@ -553,7 +552,7 @@ function getWGSLShaderHooks(
 */
 
 /** Generates application defines from an object of key value pairs */
-function getApplicationDefines(defines: Record<string, boolean> = {}): string {
+function getApplicationDefines(defines: Record<string, boolean | number> = {}): string {
   let sourceText = '';
   for (const define in defines) {
     const value = defines[define];

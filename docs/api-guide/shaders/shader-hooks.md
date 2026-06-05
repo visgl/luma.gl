@@ -37,6 +37,22 @@ const offsetLeftModule = {
 };
 ```
 
+The example above uses GLSL syntax. Assembled WGSL supports the same hook flow
+with WGSL hook signatures and pointer arguments:
+
+```wgsl
+@vertex
+fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> {
+  var shaderPosition = vec4<f32>(position, 0.0, 1.0);
+  OFFSET_POSITION(&shaderPosition);
+  return shaderPosition;
+}
+```
+
+```typescript
+shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
+```
+
 The assembler gathers hook implementations from attached modules and patches
 them into the assembled shader at build time. If no module injects into a hook,
 the generated hook function is a no-op, so the base shader can call it

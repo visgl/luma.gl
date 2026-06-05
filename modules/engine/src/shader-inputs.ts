@@ -37,10 +37,7 @@ export class ShaderInputs<
     disableWarnings: false
   };
 
-  /**
-   * The map of modules
-   * @todo should should this include the resolved dependencies?
-   */
+  /** Registered shader modules, including resolved dependencies. */
   // @ts-ignore Fix typings
   modules: Readonly<{[P in keyof ShaderPropsT]: ShaderInputsModule}>;
 
@@ -52,8 +49,9 @@ export class ShaderInputs<
   // moduleUniformsChanged: Record<keyof ShaderPropsT, false | string>;
 
   /**
-   * Create a new UniformStore instance
-   * @param modules
+   * Creates shader input storage for one or more shader modules.
+   * @param modules Initial shader modules keyed by module name.
+   * @param options Shader input behavior options.
    */
   constructor(
     // @ts-ignore Fix typings
@@ -132,15 +130,16 @@ export class ShaderInputs<
     }
   }
 
-  /**
-   * Return the map of modules
-   * @todo should should this include the resolved dependencies?
-   */
+  /** Returns registered shader modules, including resolved dependencies. */
   getModules(): ShaderModule[] {
     return Object.values(this.modules) as ShaderModule[];
   }
 
-  /** Add shader modules that should participate in subsequent uniform and binding updates. */
+  /**
+   * Adds shader modules that should participate in subsequent uniform and binding updates.
+   * Module dependencies are resolved before new module state is initialized.
+   * @param modules Shader modules to register after construction.
+   */
   addModules(modules: ShaderInputsModule[]): void {
     const modulesToAdd = getShaderModuleDependencies(modules);
 

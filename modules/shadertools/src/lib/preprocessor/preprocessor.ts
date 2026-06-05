@@ -13,10 +13,20 @@ const IFDEF_WITH_COMMENT_REGEXP = new RegExp(
 );
 const ENDIF_WITH_COMMENT_REGEXP = /^\s*\#\s*endif\s*(?:\/\/.*)?$/;
 
+/** Options for the luma.gl shader source preprocessor. */
 export type PreprocessorOptions = {
+  /** Boolean or numeric values used by `#if`, `#ifdef`, and `#ifndef` conditionals. */
   defines?: Record<string, boolean | number>;
 };
 
+/**
+ * Removes inactive conditional branches from shader source.
+ * Supports `#ifdef`, `#ifndef`, and simple `#if` expressions using a define name,
+ * `!NAME`, `defined(NAME)`, `!defined(NAME)`, or a boolean or numeric literal.
+ * @param source Shader source containing luma.gl-supported conditional directives.
+ * @param options Defines used while evaluating conditional directives.
+ * @returns Shader source with inactive branches removed.
+ */
 export function preprocess(source: string, options?: PreprocessorOptions): string {
   const lines = source.split('\n');
   const output: string[] = [];
