@@ -189,11 +189,7 @@ void fround(in uint x[X_LEN], out float result[X_LEN]) {
 }
 `;
 
-export const fround: OperationHandler<{x: GPUDataEvaluator}> = async ({
-  inputs,
-  output,
-  target
-}) => {
+export const fround: OperationHandler<{x: GPUDataEvaluator}> = async ({inputs, output, target}) => {
   runRowTransform({
     module: {name: 'fround', vs},
     inputs,

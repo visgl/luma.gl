@@ -10,6 +10,7 @@ import {
   gather,
   getGPUDataEvaluator,
   GPUDataEvaluator,
+  GPUVectorEvaluator,
   interleave,
   sequence,
   sqrt
@@ -27,36 +28,39 @@ export function checkGPUDataEvaluatorTypes(
   float32x3Vector: GPUVector<'float32x3'>,
   uint32x4Vector: GPUVector<'uint32x4'>
 ): void {
-  const evaluatorFromVector = GPUDataEvaluator.fromGPUVector(float32x3Vector);
-  evaluatorFromVector satisfies GPUDataEvaluator<'float32x3'>;
+  const evaluatorFromData = GPUDataEvaluator.fromGPUData(float32x3Vector.data[0]);
+  evaluatorFromData satisfies GPUDataEvaluator<'float32x3'>;
 
-  const evaluatorFromInput = getGPUDataEvaluator(float32x3Vector);
+  const evaluatorFromInput = getGPUDataEvaluator(float32x3Vector.data[0]);
   evaluatorFromInput satisfies GPUDataEvaluator<'float32x3'>;
 
-  const evaluatedVector = evaluatorFromVector.evaluate(device);
+  const evaluatedVector = evaluatorFromData.evaluate(device);
   evaluatedVector satisfies Promise<GPUVector<'float32x3'>>;
 
-  const evaluatedOverrideVector = evaluatorFromVector.evaluate(device, {format: 'float32x2'});
+  const evaluatedOverrideVector = evaluatorFromData.evaluate(device, {format: 'float32x2'});
   evaluatedOverrideVector satisfies Promise<GPUVector<'float32x2'>>;
 
-  const evaluatedInterleavedVector = evaluatorFromVector.evaluate(device, {interleaved: true});
+  const evaluatedInterleavedVector = evaluatorFromData.evaluate(device, {interleaved: true});
   evaluatedInterleavedVector satisfies Promise<GPUVector<GPUVectorFormat>>;
+
+  const vectorEvaluator = GPUVectorEvaluator.fromGPUVector(float32x3Vector);
+  vectorEvaluator satisfies GPUVectorEvaluator;
 
   const sequenceEvaluator = sequence(4);
   sequenceEvaluator satisfies GPUDataEvaluator<'sint32'>;
 
-  const gatheredEvaluator = gather(sequenceEvaluator, float32x3Vector);
+  const gatheredEvaluator = gather(sequenceEvaluator, float32x3Vector.data[0]);
   gatheredEvaluator satisfies GPUDataEvaluator<'float32x3'>;
 
-  const extentEvaluator = extent(float32x3Vector);
+  const extentEvaluator = extent(float32x3Vector.data[0]);
   extentEvaluator satisfies GPUDataEvaluator<'float32x2'>;
 
-  const roundedEvaluator = fround(uint32x4Vector);
+  const roundedEvaluator = fround(uint32x4Vector.data[0]);
   roundedEvaluator satisfies GPUDataEvaluator<'float32x4'>;
 
-  const float32Evaluator = GPUDataEvaluator.fromGPUVector(float32Vector);
-  const float32x2Evaluator = GPUDataEvaluator.fromGPUVector(float32x2Vector);
-  const float32x3Evaluator = GPUDataEvaluator.fromGPUVector(float32x3Vector);
+  const float32Evaluator = GPUDataEvaluator.fromGPUData(float32Vector.data[0]);
+  const float32x2Evaluator = GPUDataEvaluator.fromGPUData(float32x2Vector.data[0]);
+  const float32x3Evaluator = GPUDataEvaluator.fromGPUData(float32x3Vector.data[0]);
 
   const widenedArithmeticEvaluator = add(float32Evaluator, float32x3Evaluator);
   widenedArithmeticEvaluator satisfies GPUDataEvaluator<'float32x3'>;

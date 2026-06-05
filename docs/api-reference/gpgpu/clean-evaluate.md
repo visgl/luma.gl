@@ -4,7 +4,7 @@ import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
 <GPGPUDocsTabs active="clean-evaluate" />
 
-`cleanEvaluate()` is a small utility for evaluating one or more result evaluators while cleaning up intermediate `GPUDataEvaluator` dependencies that are no longer needed. `GPUDataEvaluator` remains the compatibility alias, and `GPUVectorEvaluator` roots are also supported.
+`cleanEvaluate()` evaluates one or more result evaluators while cleaning up intermediate `GPUDataEvaluator` dependencies that are no longer needed. `GPUVectorEvaluator` roots are also supported.
 
 This is most useful when you build a lazy operation graph inline and only want to keep the final output evaluators alive.
 
@@ -51,7 +51,7 @@ function cleanEvaluate<
 
 `cleanEvaluate()`:
 
-- finds all `GPUDataEvaluator` instances directly referenced by `result`
+- finds all `GPUDataEvaluator` and `GPUVectorEvaluator` instances directly referenced by `result`
 - evaluates those root evaluators
 - walks their dependency graph through `source`
 - destroys dependency evaluators whose GPU buffers are not also used by the root evaluators

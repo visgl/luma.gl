@@ -1,40 +1,55 @@
 import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
-# GPUDataEvaluator
+# GPU Evaluators
 
 <GPGPUDocsTabs active="gpu-data-evaluator" />
 
-`GPUDataEvaluator` is the single-chunk lazy data container in `@luma.gl/gpgpu`.
-It describes a 2D table of numeric values backed by CPU data, another
-`GPUDataEvaluator`, one packed `GPUData` chunk, a legacy packed single-chunk
-`GPUVector`, or the output of a lazy operation.
+`@luma.gl/gpgpu` has two evaluator layers:
 
-`GPUDataEvaluator` remains a compatibility alias for `GPUDataEvaluator`.
-Use [`GPUVectorEvaluator`](/docs/api-reference/gpgpu/gpu-data-evaluator) when one
-transform should run independently over every `GPUData` chunk in a `GPUVector`
-without packing streaming batches together.
+- `GPUDataEvaluator` runs one lazy transform over one packed fixed-width `GPUData` chunk.
+- `GPUVectorEvaluator` applies one lazy `GPUDataEvaluator` transform independently to every ordered `GPUData` chunk in a `GPUVector`.
 
-Each row contains `size` elements of the same numeric type. Tables can represent tightly packed rows or strided data with a byte `offset` and `stride`.
+There is no `GPUTable` evaluator input path. Streaming code should pass an incoming
+`GPUData` chunk directly to `GPUDataEvaluator` operations, or wrap a `GPUVector`
+with `GPUVectorEvaluator` when the same transform should preserve every existing
+chunk boundary.
+
+![GPU evaluator split](./gpu-evaluator-split.svg)
 
 ## Usage
+
+### One incoming `GPUData`
 
 ```ts
 import {GPUDataEvaluator, add} from '@luma.gl/gpgpu';
 
-const positions = GPUDataEvaluator.fromArray(new Float32Array([
-  0, 0, 0,
-  1, 0, 0,
-  0, 1, 0
-]), {size: 3});
-
 const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
-const translated = add(positions, offset);
+const translatedChunk = add(incomingGPUData, offset);
 
-await translated.evaluate(device);
-const values = await translated.readValue();
+const translatedVector = await translatedChunk.evaluate(device);
 ```
 
-## Types
+### One `GPUVector`
+
+```ts
+import {GPUDataEvaluator, GPUVectorEvaluator, add} from '@luma.gl/gpgpu';
+
+const offset = GPUDataEvaluator.fromConstant([1, 2, 3]);
+const translatedVector = GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(data =>
+  add(data, offset)
+);
+
+const outputVector = await translatedVector.evaluate(device);
+```
+
+`GPUVectorEvaluator` preserves `vector.data[]` order and chunk boundaries. It does
+not combine streaming batches or pack buffers implicitly.
+
+## `GPUDataEvaluator`
+
+`GPUDataEvaluator` describes a 2D row layout backed by CPU values, one borrowed
+`GPUData` chunk, another `GPUDataEvaluator`, or a lazy `Operation` output. Each
+row contains `size` scalar elements of the same numeric type.
 
 ### `GPUDataEvaluatorProps`
 
@@ -45,121 +60,90 @@ const values = await translated.readValue();
 | `size` | `number` | Number of scalar elements in each row. |
 | `offset?` | `number` | Byte offset to the first element of the first row. Defaults to `0`. |
 | `stride?` | `number` | Byte distance between adjacent rows. Defaults to `ValueType.BYTES_PER_ELEMENT * size`. |
-| `value?` | `TypedArray` | CPU-side data for the table. Required unless `source` is provided. |
+| `normalized?` | `boolean` | Whether integer values are normalized when exposed as vertex formats. |
+| `value?` | `TypedArray` | CPU-side data for the evaluator. |
 | `buffer?` | `Buffer` | Borrowed GPU buffer backing this evaluator. |
 | `gpuData?` | `GPUData` | Borrowed packed numeric GPUData chunk backing this evaluator. |
-| `gpuVector?` | `GPUVector` | Borrowed legacy single-chunk numeric GPUVector resource backing this evaluator. |
 | `format?` | `GPUVectorFormat` | Optional memory format preserved for GPUVector interop. |
-| `source?` | `Operation \| GPUDataEvaluator \| null` | Lazy data source for this table. |
+| `source?` | `Operation \| GPUDataEvaluator \| null` | Lazy source for this evaluator. |
 | `isConstant?` | `boolean` | Whether every row shares the same value. Defaults to `false`. |
 | `length?` | `number` | Row count. Optional when `isConstant` is `true` or `value` is provided. |
 
-## Static Methods
+### Static Methods
 
-### `GPUDataEvaluator.fromArray(value, props?): GPUDataEvaluator`
+#### `GPUDataEvaluator.fromArray(value, props?): GPUDataEvaluator`
 
-Creates a table from a typed array or numeric array. When passed a plain JavaScript array, the method creates a typed array using `props.type` or `'float32'` by default.
+Creates one evaluator from a typed array or numeric array. Plain JavaScript
+arrays use `props.type` or `'float32'` by default. `Float64Array` inputs are
+reinterpreted as `uint32` pairs for GPU-oriented operations such as `fround()`.
 
-If `value` is a `Float64Array`, it is reinterpreted as `uint32` pairs so it can be used by GPU-oriented operations such as `fround()`.
+#### `GPUDataEvaluator.fromConstant(value, type?): GPUDataEvaluator`
 
-### `GPUDataEvaluator.fromConstant(value, type?): GPUDataEvaluator`
+Creates one constant evaluator with a shared row value. A scalar becomes a
+one-element row, and an array becomes a row with `value.length` elements.
 
-Creates a constant table with one shared row value. A scalar becomes a one-element row, and an array becomes a row with `value.length` elements.
+#### `GPUDataEvaluator.fromGPUData(data, options?): GPUDataEvaluator`
 
-### `GPUDataEvaluator.fromGPUVector(vector): GPUDataEvaluator`
+Creates one evaluator view over a packed fixed-width `GPUData` chunk. The input
+must have a non-`vertex-list` `GPUData.format`, matching `rowByteLength`, and
+packed rows. The evaluator borrows `data.buffer` and does not destroy it.
 
-Creates an evaluator view over a packed numeric `GPUVector`. The input must have
-one `GPUData` chunk, a fixed non-`vertex-list` `GPUVector.format`, and tightly
-packed rows. The evaluator borrows `vector.data[0].buffer` and does not destroy
-it.
+### Methods
 
-### `GPUDataEvaluator.fromGPUData(data): GPUDataEvaluator`
+#### `evaluate(device: Device, options?): Promise<GPUVector>`
 
-Creates an evaluator view over one packed numeric `GPUData` chunk. The input
-must have a fixed non-`vertex-list` `GPUData.format` and tightly packed rows.
-The evaluator borrows `data.buffer` and does not destroy it.
+Materializes one single-chunk `GPUVector` on the provided device. Lazy
+dependencies are evaluated before the operation handler writes the output.
 
-### `GPUVectorEvaluator.fromGPUVector(vector): GPUVectorEvaluator`
+#### `readValue(startRow?: number, endRow?: number): Promise<TypedArray>`
 
-Creates a chunk-preserving vector evaluator over one packed numeric `GPUVector`.
-Use `.mapGPUData(transform)` to build one `GPUDataEvaluator` transform per
-preserved `GPUData` chunk, then call `.evaluate(device)` to materialize one
-output `GPUVector` with matching chunk boundaries.
+Reads evaluator contents back to the CPU. This is intended for debugging or
+inspection and may be slower than staying on the GPU.
 
-## Properties
+#### `destroy(): void`
 
-### `type`
+Releases cached GPU storage owned by this evaluator and prevents future
+evaluation.
 
-Scalar element type for each stored value.
+## `GPUVectorEvaluator`
 
-### `size`
+`GPUVectorEvaluator` is the official `GPUVector` path. It wraps ordered
+`GPUDataEvaluator` chunks and materializes one output `GPUVector` with the same
+chunk boundaries.
 
-Number of scalar elements in each row.
+### Static Methods
 
-### `offset`, `stride`
+#### `GPUVectorEvaluator.fromGPUVector(vector): GPUVectorEvaluator`
 
-Byte layout information for reading rows from the underlying data.
+Creates one chunk-preserving evaluator over a fixed-width `GPUVector`. The
+vector must have at least one `GPUData` chunk and must not be interleaved.
 
-### `isConstant`
+#### `GPUVectorEvaluator.fromGPUDataEvaluators(evaluators, options?): GPUVectorEvaluator`
 
-Whether all rows share the same value.
+Creates one vector evaluator from already-built ordered chunk evaluators.
 
-### `length`
+### Methods
 
-Number of rows in the table.
+#### `mapGPUData(transform): GPUVectorEvaluator`
 
-### `byteLength`
+Applies one lazy `GPUDataEvaluator` transform independently to each preserved
+chunk. Use this for row-local streaming transforms that should not repack source
+batches.
 
-Total storage size in bytes.
+#### `evaluate(device: Device, options?): Promise<GPUVector>`
 
-### `ValueType`
+Materializes every chunk evaluator and returns one `GPUVector` with preserved
+chunk order and boundaries.
 
-Typed-array constructor associated with `type`.
+#### `destroy(): void`
 
-### `value`
-
-CPU-side typed array, when available. This may come from construction or from a later `readValue()` call.
-
-### `gpuVector`
-
-Materialized GPUVector resource for the table. Accessing this before `evaluate()` throws.
-
-### `buffer`
-
-Materialized `Buffer` backing the table. Accessing this before `evaluate()` throws.
-
-## Methods
-
-### `constructor(props: GPUDataEvaluatorProps)`
-
-Creates a table from explicit layout and source information.
-
-### `evaluate(device: Device, options?): Promise<GPUVector>`
-
-Materializes the table on the provided device and returns the immutable `GPUVector` backing this evaluator. If the table was created from an operation, all dependencies are evaluated first and the operation is executed lazily at this point.
-
-### `readValue(startRow?: number, endRow?: number): Promise<TypedArray>`
-
-Reads table contents back to the CPU. This is primarily for debugging or inspection and may be slower than staying on the GPU.
-
-When rows are tightly packed, the returned typed array references a contiguous slice. For strided tables, the method copies each row into a compact array before returning it.
-
-### `toString(): string`
-
-Returns the debug id, source description, or class name.
-
-### `destroy(): void`
-
-Releases any cached GPU buffer and prevents future evaluation.
+Releases cached GPU resources owned through child `GPUDataEvaluator` instances.
 
 ## Remarks
 
-- `GPUDataEvaluator` is immutable in shape. To produce a new table, create another `GPUDataEvaluator` or use an operation that returns one.
-- Evaluation is lazy. Creating operation chains does not allocate GPU resources until `evaluate()` is called on an output table.
-- Operation outputs are evaluators backed by immutable materialized buffers, not scratch buffers.
-- `GPUData` and legacy single-chunk `GPUVector` inputs are borrowed through their
-  `GPUData` buffers; operation outputs own their materialized `GPUVector`
-  backing resources.
-- Streaming code should use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)`
-  when the same lazy transform must run across every preserved GPUData chunk.
-- Constant tables are useful for broadcasting values across every row of a non-constant input.
+- Leaf operations accept `GPUDataEvaluator` or `GPUData`, not `GPUVector`.
+- Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` for vector-wide
+  transforms that should preserve streaming chunks.
+- `GPUDataEvaluator` operation outputs own their materialized single-chunk
+  `GPUVector` backing resource.
+- Borrowed `GPUData` chunks are not destroyed by `GPUDataEvaluator.destroy()`.

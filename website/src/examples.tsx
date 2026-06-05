@@ -496,10 +496,10 @@ export const GPGPUExample: React.FC = () => {
     <ExamplePage style={{background: '#f7f8fb', overflow: 'hidden'}}>
       <style>{GPGPU_EXAMPLE_STYLE}</style>
       <main id="app" className="gpgpu-showcase">
-        <h1>@luma.gl/gpgpu table evaluator showcase</h1>
+        <h1>@luma.gl/gpgpu evaluator showcase</h1>
         <p className="subtitle">
           Arrow-backed source columns are extracted as typed-array views and wrapped in
-          GPUTableEvaluator inputs.
+          GPUDataEvaluator inputs.
         </p>
 
         <div className="metadata-grid">

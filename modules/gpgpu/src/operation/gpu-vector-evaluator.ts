@@ -6,27 +6,42 @@ import type {Device} from '@luma.gl/core';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {GPUDataEvaluator, type GPUDataEvaluatorEvaluateOptions} from './gpu-data-evaluator';
 
-/** Evaluation options for {@link GPUVectorEvaluator.evaluate}. */
+/** Options for materializing one {@link GPUVectorEvaluator}. */
 export type GPUVectorEvaluatorEvaluateOptions = GPUDataEvaluatorEvaluateOptions;
 
-/** Properties used to construct a {@link GPUVectorEvaluator}. */
+/** Options for constructing one vector evaluator from ordered chunk evaluators. */
+export type GPUVectorEvaluatorFromGPUDataEvaluatorsOptions = {
+  /** Optional debug name used by {@link GPUVectorEvaluator.toString}. */
+  id?: string;
+  /** Optional memory format preserved for the materialized `GPUVector`. */
+  format?: GPUVectorFormat;
+};
+
+/** Callback used by {@link GPUVectorEvaluator.mapGPUData}. */
+export type GPUVectorEvaluatorMapGPUDataTransform = (
+  evaluator: GPUDataEvaluator,
+  chunkIndex: number
+) => GPUDataEvaluator;
+
+/** Properties used to construct one {@link GPUVectorEvaluator}. */
 export type GPUVectorEvaluatorProps = {
   /** Optional debug name used by {@link GPUVectorEvaluator.toString}. */
   id?: string;
   /** Ordered lazy GPUData transforms preserved as GPUVector chunks. */
-  gpuDataEvaluators: GPUDataEvaluator[];
+  gpuDataEvaluators: readonly GPUDataEvaluator[];
   /** Existing GPUVector resource wrapped by this evaluator, when already materialized. */
   gpuVector?: GPUVector;
   /** Optional memory format preserved for GPUVector interop. */
   format?: GPUVectorFormat;
 };
 
-/** Input accepted by helpers that normalize GPUVectors into vector evaluators. */
+/** Input accepted by helpers that normalize `GPUVector` resources into vector evaluators. */
 export type GPUVectorEvaluatorInput = GPUVectorEvaluator | GPUVector;
 
 /**
  * Lazy GPUVector transform that preserves ordered GPUData chunk boundaries.
  *
+ * @remarks
  * Use {@link GPUDataEvaluator} for one incoming GPUData chunk. Use this class
  * when one logical GPUVector should evaluate the same transform independently
  * over every GPUData chunk without packing them together.
@@ -45,7 +60,12 @@ export class GPUVectorEvaluator {
   private readonly _ownsGPUDataEvaluators: boolean;
   private _destroyed = false;
 
-  /** Creates a lazy vector evaluator over one existing packed numeric GPUVector. */
+  /**
+   * Creates one lazy vector evaluator over an existing fixed-width `GPUVector`.
+   *
+   * @param vector - Ordered `GPUData` chunks to preserve.
+   * @returns One evaluator that borrows the existing vector chunks.
+   */
   static fromGPUVector(vector: GPUVector): GPUVectorEvaluator {
     if (vector.bufferLayout) {
       throw new Error(
@@ -66,10 +86,16 @@ export class GPUVectorEvaluator {
     });
   }
 
-  /** Creates a lazy vector evaluator from already-built GPUData evaluators. */
+  /**
+   * Creates one lazy vector evaluator from already-built chunk evaluators.
+   *
+   * @param gpuDataEvaluators - Ordered chunk evaluators to preserve.
+   * @param options - Optional debug id and output format.
+   * @returns One evaluator that materializes the chunk evaluators as a `GPUVector`.
+   */
   static fromGPUDataEvaluators(
-    gpuDataEvaluators: GPUDataEvaluator[],
-    options: {id?: string; format?: GPUVectorFormat} = {}
+    gpuDataEvaluators: readonly GPUDataEvaluator[],
+    options: GPUVectorEvaluatorFromGPUDataEvaluatorsOptions = {}
   ): GPUVectorEvaluator {
     return new GPUVectorEvaluator({
       id: options.id,
@@ -78,7 +104,11 @@ export class GPUVectorEvaluator {
     });
   }
 
-  /** Creates a lazy vector evaluator from ordered GPUData evaluator chunks. */
+  /**
+   * Creates one lazy vector evaluator from ordered chunk evaluators.
+   *
+   * @param props - Ordered chunk evaluators and optional borrowed vector metadata.
+   */
   constructor({id, gpuDataEvaluators, gpuVector, format}: GPUVectorEvaluatorProps) {
     if (gpuDataEvaluators.length === 0) {
       throw new Error('GPUVectorEvaluator requires at least one GPUData evaluator');
@@ -93,12 +123,12 @@ export class GPUVectorEvaluator {
     this._ownsGPUDataEvaluators = !gpuVector;
   }
 
-  /** Whether a GPUVector has been materialized for this evaluator. */
+  /** Whether a `GPUVector` has been materialized for this evaluator. */
   get evaluated(): boolean {
     return Boolean(this._gpuVector);
   }
 
-  /** Materialized GPUVector resource. Only available after {@link GPUVectorEvaluator.evaluate} resolves. */
+  /** Materialized `GPUVector` resource. */
   get gpuVector(): GPUVector {
     if (!this._gpuVector) {
       throw new Error(`${this} not evaluated`);
@@ -106,17 +136,26 @@ export class GPUVectorEvaluator {
     return this._gpuVector;
   }
 
-  /** Applies one lazy GPUData transform independently to every preserved chunk. */
-  mapGPUData(
-    transform: (evaluator: GPUDataEvaluator, chunkIndex: number) => GPUDataEvaluator
-  ): GPUVectorEvaluator {
+  /**
+   * Applies one lazy transform independently to every preserved `GPUData` chunk.
+   *
+   * @param transform - Callback that returns the transformed evaluator for each chunk.
+   * @returns One vector evaluator with the same chunk order and boundaries.
+   */
+  mapGPUData(transform: GPUVectorEvaluatorMapGPUDataTransform): GPUVectorEvaluator {
     return GPUVectorEvaluator.fromGPUDataEvaluators(
       this.gpuDataEvaluators.map((evaluator, chunkIndex) => transform(evaluator, chunkIndex)),
       {id: this.id}
     );
   }
 
-  /** Materializes every GPUData transform and returns one chunk-preserving GPUVector. */
+  /**
+   * Materializes every chunk evaluator and returns one chunk-preserving `GPUVector`.
+   *
+   * @param device - Device used to materialize every chunk evaluator.
+   * @param options - Output view metadata for each materialized chunk.
+   * @returns One `GPUVector` with the original ordered chunk boundaries.
+   */
   async evaluate(
     device: Device,
     options: GPUVectorEvaluatorEvaluateOptions = {}
@@ -147,7 +186,7 @@ export class GPUVectorEvaluator {
     return this._gpuVector;
   }
 
-  /** Releases cached GPU resources owned through child GPUData evaluators. */
+  /** Releases cached GPU resources owned through child `GPUDataEvaluator` instances. */
   destroy(): void {
     if (this._ownsGPUDataEvaluators) {
       for (const evaluator of this.gpuDataEvaluators) {
@@ -164,12 +203,17 @@ export class GPUVectorEvaluator {
   }
 }
 
-/** Returns a vector evaluator, wrapping GPUVector inputs when needed. */
+/**
+ * Returns one vector evaluator, adapting `GPUVector` inputs when needed.
+ *
+ * @param input - Existing evaluator or fixed-width `GPUVector`.
+ * @returns One `GPUVectorEvaluator` that preserves ordered chunk boundaries.
+ */
 export function getGPUVectorEvaluator(input: GPUVectorEvaluatorInput): GPUVectorEvaluator {
   return input instanceof GPUVectorEvaluator ? input : GPUVectorEvaluator.fromGPUVector(input);
 }
 
-function validateMatchingGPUDataEvaluators(gpuDataEvaluators: GPUDataEvaluator[]): void {
+function validateMatchingGPUDataEvaluators(gpuDataEvaluators: readonly GPUDataEvaluator[]): void {
   const firstEvaluator = gpuDataEvaluators[0];
   for (const evaluator of gpuDataEvaluators.slice(1)) {
     if (

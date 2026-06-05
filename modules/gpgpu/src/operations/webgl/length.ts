@@ -16,11 +16,7 @@ void row_length(in TYPE x[X_LEN], out float result[1]) {
 }
 `;
 
-export const length: OperationHandler<{x: GPUDataEvaluator}> = async ({
-  inputs,
-  output,
-  target
-}) => {
+export const length: OperationHandler<{x: GPUDataEvaluator}> = async ({inputs, output, target}) => {
   runRowTransform({
     module: {name: 'row_length', vs},
     inputs,

@@ -30,13 +30,10 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       },
       {
         eval: divide(
-          GPUDataEvaluator.fromArray(
-            [8, 27, 64, 125, 216, 343, 512, 729, 1000, 1331, 1728, 2197],
-            {
-              type: 'uint32',
-              size: 2
-            }
-          ),
+          GPUDataEvaluator.fromArray([8, 27, 64, 125, 216, 343, 512, 729, 1000, 1331, 1728, 2197], {
+            type: 'uint32',
+            size: 2
+          }),
           GPUDataEvaluator.fromArray([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], {
             type: 'uint8',
             size: 2

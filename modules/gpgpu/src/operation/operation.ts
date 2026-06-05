@@ -13,7 +13,7 @@ export type OperationHandler<InputsT extends Record<string, any> = any> = (args:
   device: Device;
   /** Operation inputs. */
   inputs: InputsT;
-  /** Logical output table describing the target layout. */
+  /** Logical output evaluator describing the target layout. */
   output: GPUDataEvaluator;
   /** GPU buffer that receives operation output. */
   target: Buffer;
@@ -28,12 +28,12 @@ export type OperationHandlerResult = {
  * Base class for deferred GPGPU operations.
  *
  * Operations form a lazy dependency graph. Calling {@link Operation.execute} first materializes
- * dependent tables, then dispatches either a CPU handler or a backend-specific GPU handler.
+ * dependent evaluators, then dispatches either a CPU handler or a backend-specific GPU handler.
  */
 export abstract class Operation<InputsT extends Record<string, any> = Record<string, any>> {
-  /** Input table map for this operation. */
+  /** Input evaluator map for this operation. */
   inputs: InputsT;
-  /** Input tables that need evaluation before this operation can run. */
+  /** Input evaluators that need evaluation before this operation can run. */
   dependencies: GPUDataEvaluator[];
 
   constructor(inputs: InputsT) {
@@ -44,7 +44,7 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
   /** Unique identifier of this operation, e.g. 'add' */
   abstract get name(): string;
 
-  /** Logical output table produced by this operation. */
+  /** Logical output evaluator produced by this operation. */
   abstract get output(): GPUDataEvaluator;
 
   /** Human friendly string that describes this operation */

@@ -10,6 +10,18 @@ import {GPUVectorEvaluator} from '../operation/gpu-vector-evaluator';
 type Evaluator = GPUDataEvaluator | GPUVectorEvaluator;
 type EvaluatorResult = Evaluator | Evaluator[] | Record<string, unknown>;
 
+/**
+ * Materializes result evaluators and destroys unreferenced intermediate GPUData dependencies.
+ *
+ * @param device - Device used to materialize every root evaluator.
+ * @param result - Root evaluator shape that should remain alive after cleanup.
+ * @returns The original result value after its root evaluators have been materialized.
+ *
+ * @remarks
+ * `cleanEvaluate()` only inspects evaluators directly contained in `result`. `GPUVectorEvaluator`
+ * roots are preserved as vectors, while their intermediate `GPUDataEvaluator` dependencies are
+ * cleaned up when their buffers are not shared with a root output.
+ */
 export async function cleanEvaluate<ResultT extends EvaluatorResult>(
   device: Device,
   result: ResultT

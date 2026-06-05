@@ -154,11 +154,7 @@ fn fround(x: array<u32, {X_LEN}>) -> array<f32, {RESULT_LEN}> {
 }
 `;
 
-export const fround: OperationHandler<{x: GPUDataEvaluator}> = async ({
-  inputs,
-  output,
-  target
-}) => {
+export const fround: OperationHandler<{x: GPUDataEvaluator}> = async ({inputs, output, target}) => {
   runRowComputation({
     module: {name: 'fround', source},
     inputs,

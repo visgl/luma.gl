@@ -3,24 +3,19 @@
 // Copyright (c) vis.gl contributors
 
 // Resources
-export {
-  getGPUDataEvaluator,
-  getGPUDataEvaluator,
-  GPUDataEvaluator,
-  GPUDataEvaluator
-} from './operation/gpu-data-evaluator';
+export {getGPUDataEvaluator, GPUDataEvaluator} from './operation/gpu-data-evaluator';
 export type {
   GPUDataEvaluatorEvaluateOptions,
-  GPUDataEvaluatorInput,
-  GPUDataEvaluatorProps,
-  GPUDataEvaluatorEvaluateOptions,
+  GPUDataEvaluatorFromGPUDataOptions,
   GPUDataEvaluatorInput,
   GPUDataEvaluatorProps
 } from './operation/gpu-data-evaluator';
 export {getGPUVectorEvaluator, GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
 export type {
   GPUVectorEvaluatorEvaluateOptions,
+  GPUVectorEvaluatorFromGPUDataEvaluatorsOptions,
   GPUVectorEvaluatorInput,
+  GPUVectorEvaluatorMapGPUDataTransform,
   GPUVectorEvaluatorProps
 } from './operation/gpu-vector-evaluator';
 

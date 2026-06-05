@@ -16,11 +16,7 @@ fn row_length(x: array<{TYPE}, {X_LEN}>) -> array<f32, 1> {
 }
 `;
 
-export const length: OperationHandler<{x: GPUDataEvaluator}> = async ({
-  inputs,
-  output,
-  target
-}) => {
+export const length: OperationHandler<{x: GPUDataEvaluator}> = async ({inputs, output, target}) => {
   runRowComputation({
     module: {name: 'row_length', source},
     inputs,

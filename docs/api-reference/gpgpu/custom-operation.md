@@ -328,9 +328,11 @@ const result = await projected.readValue();
 
 - `Operation.name` and the backend module key must be identical.
 - Dependencies are evaluated before the handler is called.
-- WebGPU compute handlers bind input tables as storage buffers. Buffers
+- WebGPU compute handlers bind input evaluators as storage buffers. Buffers
   materialized by `GPUDataEvaluator.evaluate()` are storage-bindable; externally
-  supplied `GPUData` or `GPUVector` buffers must also be created with storage usage.
+  supplied `GPUData` buffers must also be created with storage usage.
+- Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` when the same
+  custom leaf operation should run independently across preserved vector chunks.
 - Register a handler for every device type that may evaluate the operation.
 - Registering a custom backend module for `cpu`, `webgl`, or `webgpu` replaces
   the previously registered module for that device type.

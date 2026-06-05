@@ -10,7 +10,7 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 
 - [`Operations`](/docs/api-reference/gpgpu/operations)
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation)
-- [`GPUDataEvaluator`](/docs/api-reference/gpgpu/gpu-data-evaluator)
+- [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator)
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
 ## Installing
@@ -101,7 +101,7 @@ registering CPU handlers for another device type.
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) shows how to define lazy operations and register backend handlers.
-- [`GPUDataEvaluator`](/docs/api-reference/gpgpu/gpu-data-evaluator) represents one packed GPUData chunk for lazy GPGPU operations. `GPUDataEvaluator` remains an alias, and `GPUVectorEvaluator` maps the same transform over preserved `GPUVector.data[]` chunks.
+- [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator) documents `GPUDataEvaluator` for one packed `GPUData` chunk and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate) evaluates final result tables and cleans up intermediate dependencies in one step.
 
 ## Related Engine APIs

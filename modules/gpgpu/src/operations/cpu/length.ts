@@ -6,11 +6,7 @@ import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {getValueAtRow} from './common';
 
-export const length: OperationHandler<{x: GPUDataEvaluator}> = async ({
-  inputs,
-  output,
-  target
-}) => {
+export const length: OperationHandler<{x: GPUDataEvaluator}> = async ({inputs, output, target}) => {
   const {x} = inputs;
   const result = new output.ValueType(output.length);
 

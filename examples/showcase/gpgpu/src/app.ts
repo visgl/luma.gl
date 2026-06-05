@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {luma, type Device} from '@luma.gl/core';
-import {cleanEvaluate, type GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {cleanEvaluate, type GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {makeShowcaseData} from './arrow-data';
@@ -166,7 +166,7 @@ async function runExpression({
 }
 
 async function makeOutputTableColumn(
-  output: GPUTableEvaluator,
+  output: GPUDataEvaluator,
   rowCount: number,
   sourceColumns: TableColumn[]
 ): Promise<TableColumn> {
@@ -208,7 +208,7 @@ async function getEvaluationDevice(): Promise<Device> {
   return evaluationDevicePromise;
 }
 
-function getMetricStartIndicesEvaluator(sourceColumns: TableColumn[]): GPUTableEvaluator {
+function getMetricStartIndicesEvaluator(sourceColumns: TableColumn[]): GPUDataEvaluator {
   const metricsColumn = sourceColumns.find(column => column.id === 'sampleMetrics');
   if (!metricsColumn || metricsColumn.kind !== 'segmented') {
     throw new Error('Cannot display longer output without sampleMetrics start indices');
@@ -217,8 +217,8 @@ function getMetricStartIndicesEvaluator(sourceColumns: TableColumn[]): GPUTableE
 }
 
 async function validateMetricSegmentedOutput(
-  output: GPUTableEvaluator,
-  metricStartIndices: GPUTableEvaluator,
+  output: GPUDataEvaluator,
+  metricStartIndices: GPUDataEvaluator,
   rowCount: number
 ): Promise<void> {
   if (metricStartIndices.length !== rowCount + 1) {
@@ -236,7 +236,7 @@ async function validateMetricSegmentedOutput(
   }
 }
 
-function formatEvaluatorType(evaluator: GPUTableEvaluator): string {
+function formatEvaluatorType(evaluator: GPUDataEvaluator): string {
   return `${evaluator.type}${evaluator.size === 1 ? '' : `x${evaluator.size}`}`;
 }
 
