@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type Binding, type BufferLayout} from '@luma.gl/core';
+import {type Binding, type Buffer, type BufferLayout} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';

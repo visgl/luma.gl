@@ -22,7 +22,7 @@ import {
   vectorFromArray
 } from 'apache-arrow';
 import {getArrowVectorBufferSource} from '../gpu/arrow-gpu-data';
-import {isNumericArrowType, type NumericArrowType} from '../core/arrow-types';
+import {isNumericArrowType, type NumericArrowType} from '../arrow-utils/arrow-types';
 
 export {getArrowDataBufferSource, getArrowVectorBufferSource} from '../gpu/arrow-gpu-data';
 

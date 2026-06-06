@@ -154,5 +154,6 @@ export class ArrowPathRenderer {
         return new AttributePathModel(device, makeAttributePathModelProps(device, modelProps));
       }
     }
+    throw new Error('ArrowPathRenderer received unsupported model');
   }
 }

@@ -12,13 +12,13 @@ import type {
 import {shaderTypeDecoder, vertexFormatDecoder} from '@luma.gl/core';
 import {getAttributeLayoutFromBufferSchema, type BufferSchema} from '@luma.gl/engine';
 import {Table, Vector} from 'apache-arrow';
-import {getArrowPaths, getArrowVectorByPath} from '../core/arrow-paths';
-import {getArrowColumnInfo, getInstanceColumnInfo} from '../core/arrow-column-info';
+import {getArrowPaths, getArrowVectorByPath} from '../arrow-utils/arrow-paths';
+import {getArrowColumnInfo, getInstanceColumnInfo} from '../arrow-utils/arrow-column-info';
 import {
   isInstanceArrowType,
   type ArrowColumnInfo,
   type AttributeArrowType
-} from '../core/arrow-types';
+} from '../arrow-utils/arrow-types';
 import {getArrowMatrixVectorInfo} from '../vectors/arrow-matrix-vector';
 
 /** Options that control Arrow column to GPU vertex format selection. */

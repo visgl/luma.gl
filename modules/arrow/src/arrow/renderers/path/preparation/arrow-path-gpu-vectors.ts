@@ -44,8 +44,8 @@ import {
   isInstanceArrowType,
   isVariableLengthAttributeArrowType,
   type NumericArrowType
-} from '../../../core/arrow-types';
-import type {ArrowVertexFormatOptions} from '../../arrow-shader-layout';
+} from '../../../arrow-utils/arrow-types';
+import type {ArrowVertexFormatOptions} from '../../../engine/arrow-shader-layout';
 import type {
   AttributePathModelProps,
   AttributePathModelState,
@@ -606,9 +606,9 @@ function buildPathSegmentLayout(
     if (!valueOffsets) {
       throw new Error('AttributePathModel source path chunks require Arrow list offsets');
     }
-    const pathValues = getArrowVariableLengthAttributeDataBufferSource(
+    const pathValues = getArrowVariableLengthAttributeDataBufferSource<Float32>(
       data as Data<ArrowPathCoordinateType>
-    ) as Float32Array;
+    );
     const firstElementOffset = valueOffsets[0] ?? 0;
 
     for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
@@ -983,7 +983,7 @@ function makeArrowPathViewOriginRows(
     chunks.push({
       rowStart,
       rowEnd,
-      values: getArrowDataBufferSource(data as Data<ArrowPathViewOriginType>) as Float32Array
+      values: getArrowDataBufferSource<Float32>(data as Data<ArrowPathViewOriginType>)
     });
     rowStart = rowEnd;
   }
@@ -1010,16 +1010,16 @@ function makeArrowPathColorRows(
         rowStart,
         rowEnd,
         valueOffsets,
-        values: getArrowVariableLengthAttributeDataBufferSource(
+        values: getArrowVariableLengthAttributeDataBufferSource<Uint8>(
           data as Data<ArrowPathVertexColorType>
-        ) as Uint8Array
+        )
       });
     } else {
       chunks.push({
         kind: 'row',
         rowStart,
         rowEnd,
-        values: getArrowDataBufferSource(data as Data<ArrowPathRowColorType>) as Uint8Array
+        values: getArrowDataBufferSource<Uint8>(data as Data<ArrowPathRowColorType>)
       });
     }
     rowStart = rowEnd;

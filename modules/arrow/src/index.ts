@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-export type {NumericArrowType, ArrowColumnInfo} from './arrow/core/arrow-types';
+export type {NumericArrowType, ArrowColumnInfo} from './arrow/arrow-utils/arrow-types';
 export {
   getArrowListNestingLevel,
   isNumericArrowType
   // isInstanceArrowType,
   // isVertexArrowType,
-} from './arrow/core/arrow-types';
+} from './arrow/arrow-utils/arrow-types';
 
 export {
   getArrowPaths,
   getArrowDataByPath,
   getArrowVectorByPath
-} from './arrow/core/arrow-paths';
+} from './arrow/arrow-utils/arrow-paths';
 
-export {analyzeArrowTable, getArrowColumnInfo} from './arrow/core/arrow-column-info';
+export {analyzeArrowTable, getArrowColumnInfo} from './arrow/arrow-utils/arrow-column-info';
 
 export {
   makeArrowVectorFromArray,

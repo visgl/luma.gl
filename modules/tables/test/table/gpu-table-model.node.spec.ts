@@ -248,6 +248,7 @@ test('GPUTableModel binds reserved table indices for indexed draws', t => {
 test('GPUTableModel draws reserved index vector slices by valueLength', t => {
   const device = new NullDevice({});
   const table = makeIndexedPositionsTableFromVector(
+    device,
     3,
     makeIndexSliceVector(device, 3, new Uint32Array([9, 9, 0, 1, 2, 9]), 2, 3)
   );
@@ -509,6 +510,7 @@ function makeIndexedPositionsTable(
 }
 
 function makeIndexedPositionsTableFromVector(
+  device: NullDevice,
   rowCount: number,
   indices: GPUVector
 ): GPUTable {

@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {DynamicBuffer, getIndexPickingModule, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
+import {
+  DynamicBuffer,
+  getIndexPickingModule,
+  indexPicking,
+  supportsIndexPicking
+} from '@luma.gl/engine';
 import {GPUTableModel, type GPUTableModelProps} from '../../engine/gpu-table-model';
 import {GPURecordBatch} from '../../table/gpu-record-batch';
 import type {GPUData} from '../../table/gpu-data';

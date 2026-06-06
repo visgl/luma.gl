@@ -14,7 +14,7 @@ import {
   makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
 } from '../../../gpu/arrow-gpu-table-adapters';
-import {isVariableLengthAttributeArrowType} from '../../../core/arrow-types';
+import {isVariableLengthAttributeArrowType} from '../../../arrow-utils/arrow-types';
 
 type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
 

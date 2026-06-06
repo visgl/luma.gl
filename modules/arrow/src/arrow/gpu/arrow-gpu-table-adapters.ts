@@ -41,8 +41,8 @@ import {
   Utf8,
   Vector
 } from 'apache-arrow';
-import {getArrowFieldByPath, getArrowVectorByPath} from '../core/arrow-paths';
-import {getArrowBufferLayout, type ArrowVertexFormatOptions} from '../models/arrow-shader-layout';
+import {getArrowFieldByPath, getArrowVectorByPath} from '../arrow-utils/arrow-paths';
+import {getArrowBufferLayout, type ArrowVertexFormatOptions} from '../engine/arrow-shader-layout';
 import {
   getArrowDataBufferSource,
   getArrowGPUDataReadbackMetadata,
@@ -60,7 +60,7 @@ import {
   isVariableLengthAttributeArrowType,
   type AttributeArrowType,
   type VariableLengthAttributeArrowType
-} from '../core/arrow-types';
+} from '../arrow-utils/arrow-types';
 import {getArrowMatrixVectorInfo} from '../vectors/arrow-matrix-vector';
 
 type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;

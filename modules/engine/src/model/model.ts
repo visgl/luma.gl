@@ -545,8 +545,8 @@ export class Model {
 
           const {indexBuffer} = this.vertexArray;
           const indexCount = indexBuffer
-            ? this.indexCount ??
-              indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
+            ? (this.indexCount ??
+              indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2))
             : undefined;
 
           drawSuccess = this.pipeline.draw({

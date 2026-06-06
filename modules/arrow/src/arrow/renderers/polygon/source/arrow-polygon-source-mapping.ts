@@ -8,7 +8,7 @@ import type {
   ArrowPolygonInputType,
   ArrowPolygonSourceVectors
 } from '@math.gl/geoarrow';
-import {getArrowPaths, getArrowVectorByPath} from '../../../core/arrow-paths';
+import {getArrowPaths, getArrowVectorByPath} from '../../../arrow-utils/arrow-paths';
 
 /** Raw Arrow table or record batch accepted by polygon source mapping helpers. */
 export type ArrowPolygonSourceData = Table | RecordBatch;

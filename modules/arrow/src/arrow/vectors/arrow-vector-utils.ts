@@ -18,7 +18,7 @@ import {
   isNumericArrowType,
   type AttributeArrowType,
   type NumericArrowType
-} from '../core/arrow-types';
+} from '../arrow-utils/arrow-types';
 
 type IntegerTypedArray =
   | Int8Array
@@ -304,7 +304,7 @@ function isSupportedExpansionNumericType(type: DataType): type is NumericArrowTy
   if (DataType.isInt(type)) {
     return type.bitWidth <= 32;
   }
-  return type.precision !== Precision.DOUBLE;
+  return DataType.isFloat(type) && type.precision !== Precision.DOUBLE;
 }
 
 function getRowIndices(rowMapping: ArrowVectorRowMapping): IntegerTypedArray {

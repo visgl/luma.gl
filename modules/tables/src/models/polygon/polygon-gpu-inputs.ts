@@ -64,10 +64,7 @@ export type PolygonBatchProps = PolygonGPUVectors & {
 };
 
 /** Validates row-preserving generated polygon vectors before a model binds them. */
-export function assertPolygonGPUVectorInputs(
-  modelName: string,
-  vectors: PolygonGPUVectors
-): void {
+export function assertPolygonGPUVectorInputs(modelName: string, vectors: PolygonGPUVectors): void {
   assertModelGPUVectorInputs(modelName, POLYGON_GPU_INPUT_SCHEMA, vectors);
   assertPolygonVectorRowAlignment(modelName, vectors);
   assertPolygonVertexValueAlignment(modelName, vectors);

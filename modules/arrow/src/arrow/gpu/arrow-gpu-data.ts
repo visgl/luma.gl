@@ -9,6 +9,7 @@ import {
   Data,
   DataType,
   FixedSizeList,
+  List,
   Precision,
   Utf8,
   Vector,
@@ -20,7 +21,7 @@ import {
   type AttributeArrowType,
   type NumericArrowType,
   type VariableLengthAttributeArrowType
-} from '../core/arrow-types';
+} from '../arrow-utils/arrow-types';
 
 /** Compact CPU metadata required to reconstruct variable-width Arrow chunks after GPU readback. */
 export type GPUDataReadbackMetadata =
@@ -115,6 +116,12 @@ export function getArrowUtf8DataBufferSource(data: Data<Utf8>): Uint8Array {
 }
 
 /** Return flattened numeric values referenced by one variable-length nested attribute chunk. */
+export function getArrowVariableLengthAttributeDataBufferSource<T extends NumericArrowType>(
+  data: Data<List<T | FixedSizeList<T>>>
+): T['TArray'];
+export function getArrowVariableLengthAttributeDataBufferSource(
+  data: Data<VariableLengthAttributeArrowType>
+): NumericArrowType['TArray'];
 export function getArrowVariableLengthAttributeDataBufferSource(
   data: Data<VariableLengthAttributeArrowType>
 ): NumericArrowType['TArray'] {

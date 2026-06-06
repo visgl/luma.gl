@@ -18,7 +18,7 @@ import type {
 } from './arrow-path-gpu-vectors';
 import {prepareGpuPathFloat64DeltaVector} from '../transforms/gpu-path-float64-deltas';
 import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
-import {isVariableLengthAttributeArrowType} from '../../../core/arrow-types';
+import {isVariableLengthAttributeArrowType} from '../../../arrow-utils/arrow-types';
 import type {StoragePathInputProps} from '@luma.gl/tables';
 import {prepareArrowTemporalGPUVector} from '../../../vectors/arrow-temporal-gpu-vector';
 export {
