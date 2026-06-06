@@ -1,0 +1,29 @@
+{
+  "name": "luma.gl-test-projection",
+  "version": "9.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@deck.gl/core": "9.3.0",
+    "@deck.gl/layers": "9.3.0",
+    "@luma.gl/arrow": "workspace:*",
+    "@luma.gl/core": "workspace:*",
+    "@luma.gl/engine": "workspace:*",
+    "@luma.gl/gpgpu": "workspace:*",
+    "@luma.gl/shadertools": "workspace:*",
+    "@luma.gl/tables": "workspace:*",
+    "@luma.gl/webgl": "workspace:*",
+    "@luma.gl/webgpu": "workspace:*",
+    "@math.gl/proj4": "^4.1.0",
+    "apache-arrow": "^17.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

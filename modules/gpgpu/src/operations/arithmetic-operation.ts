@@ -36,7 +36,7 @@ export type ArithmeticOperationInputs = {
   namedInputs: Record<string, GPUTableEvaluator>;
 };
 
-export type ArithmeticArgument = GPUTableEvaluatorInput | number | number[];
+export type ArithmeticArgument = GPUTableEvaluatorInput;
 type NormalizedArithmeticArgument = GPUTableEvaluator | number | number[];
 
 export const ARITHMETIC_OPERATIONS: ExpressionOperations<ArithmeticOp> = {

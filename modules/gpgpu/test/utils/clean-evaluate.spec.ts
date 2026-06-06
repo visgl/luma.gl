@@ -21,7 +21,12 @@ test(`GPGPU#cleanEvaluate`, async t => {
   const partial = add(x, y);
   const sum = add(partial, z);
 
-  await cleanEvaluate(device, {sum, x});
+  await cleanEvaluate(device, {
+    nested: {
+      sum,
+      retained: [{x}]
+    }
+  });
 
   expect(sum.gpuVector).toBeTruthy();
   expect(x.gpuVector).toBeTruthy();

@@ -33,6 +33,12 @@ export function checkGPUTableEvaluatorTypes(
   const evaluatorFromInput = getGPUTableEvaluator(float32x3Vector);
   evaluatorFromInput satisfies GPUTableEvaluator<'float32x3'>;
 
+  const scalarConstantFromInput = getGPUTableEvaluator(1);
+  scalarConstantFromInput satisfies GPUTableEvaluator;
+
+  const vectorConstantFromInput = getGPUTableEvaluator([1, 2]);
+  vectorConstantFromInput satisfies GPUTableEvaluator;
+
   const evaluatedVector = evaluatorFromVector.evaluate(device);
   evaluatedVector satisfies Promise<GPUVector<'float32x3'>>;
 

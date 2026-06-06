@@ -24,10 +24,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         expected: {value: [50, -32], type: 'float32', size: 1}
       },
       {
-        eval: dot(
-          GPUTableEvaluator.fromConstant([1, 0, -1]),
-          GPUTableEvaluator.fromArray([3, 4, 5, 6, 7, 8], {size: 3})
-        ),
+        eval: dot([1, 0, -1], GPUTableEvaluator.fromArray([3, 4, 5, 6, 7, 8], {size: 3})),
         expected: {value: [-2, -2], type: 'float32', size: 1}
       }
     ];

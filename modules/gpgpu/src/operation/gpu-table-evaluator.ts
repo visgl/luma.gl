@@ -5,6 +5,7 @@ import {
   Device,
   Buffer,
   SignedDataType,
+  assert,
   type BufferAttributeLayout,
   type VertexFormat
 } from '@luma.gl/core';
@@ -64,6 +65,8 @@ export type GPUTableEvaluatorProps = {
   gpuVector?: GPUVector;
   /** Optional memory format preserved for GPUVector interop. */
   format?: GPUVectorFormat;
+  /** Start indices for flattened variable-length GPUVector values. */
+  startIndices?: GPUTableEvaluator;
   /** Lazy operation or table whose output initializes this table, required unless `value` is supplied. */
   source?: Operation | GPUTableEvaluator | null;
   /** Whether every row should read the same value. */
@@ -102,6 +105,8 @@ export class GPUTableEvaluator {
   readonly source: Operation | GPUTableEvaluator | null = null;
   /** Optional memory format preserved for GPUVector interop. */
   readonly format?: GPUVectorFormat;
+  /** Start indices when this evaluator represents flattened variable-length values. */
+  readonly startIndices?: GPUTableEvaluator;
 
   /** User-assigned id for easy debugging */
   protected _id?: string;
@@ -190,6 +195,10 @@ export class GPUTableEvaluator {
 
   /** Creates a table evaluator view over an existing packed numeric GPUVector. */
   static fromGPUVector(vector: GPUVector): GPUTableEvaluator {
+    if (vector.format && isVertexListGPUVectorFormat(vector.format)) {
+      return makeGPUTableEvaluatorFromSegmentedGPUVector(vector);
+    }
+
     validatePackedNumericGPUVector(vector);
     const {type, size} = getGPUTablePropsFromGPUVector(vector);
     const data = getSingleGPUVectorData(vector);
@@ -215,7 +224,16 @@ export class GPUTableEvaluator {
    * Prefer {@link GPUTableEvaluator.fromArray} or {@link GPUTableEvaluator.fromConstant} for CPU-backed tables.
    */
   constructor(props: GPUTableEvaluatorProps) {
-    const {id, value, buffer, gpuVector, format, source = null, isConstant = false} = props;
+    const {
+      id,
+      value,
+      buffer,
+      gpuVector,
+      format,
+      startIndices,
+      source = null,
+      isConstant = false
+    } = props;
     if (!source && !value && !buffer && !gpuVector) {
       throw new Error('OperationResource must have a value source');
     }
@@ -246,6 +264,7 @@ export class GPUTableEvaluator {
     this.normalized = normalized;
     this.source = source;
     this.format = format;
+    this.startIndices = startIndices;
     if (length === undefined) {
       if (isConstant) {
         length = 1;
@@ -320,9 +339,10 @@ export class GPUTableEvaluator {
       return this._gpuVector;
     }
 
+    const source = this.source;
     let buffer: Buffer;
-    if (this.source instanceof GPUTableEvaluator) {
-      const sourceGPUVector = await this.source.evaluate(device);
+    if (source instanceof GPUTableEvaluator) {
+      const sourceGPUVector = await source.evaluate(device);
       this._gpuVector = this.createGPUVectorView({
         ...options,
         buffer: getBufferFromGPUVector(sourceGPUVector)
@@ -334,7 +354,8 @@ export class GPUTableEvaluator {
     if (this._value) {
       buffer.write(this._value);
     } else {
-      const result = await this.source!.execute(device, buffer);
+      assert(source);
+      const result = await source.execute(device, buffer);
       if (!result.success) {
         throw result.error || new Error(`${this.source} evaluation failed`);
       }
@@ -440,6 +461,7 @@ export class GPUTableEvaluator {
 
   /** Releases cached GPU storage and prevents future evaluation. */
   destroy() {
+    this.startIndices?.destroy();
     if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
         bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));
@@ -448,6 +470,49 @@ export class GPUTableEvaluator {
     }
     this._destroyed = true;
   }
+}
+
+function makeGPUTableEvaluatorFromSegmentedGPUVector(vector: GPUVector): GPUTableEvaluator {
+  const vectorFormat = vector.format;
+  assert(vectorFormat && isVertexListGPUVectorFormat(vectorFormat));
+
+  const formatInfo = getGPUVectorFormatInfo(vectorFormat);
+  const data = getSingleGPUVectorData(vector);
+  if (data.rowByteLength !== formatInfo.byteLength) {
+    throw new Error(
+      `GPUTableEvaluator.fromGPUVector() requires rowByteLength ${formatInfo.byteLength} for vector "${vector.name}"`
+    );
+  }
+  if (data.byteStride !== data.rowByteLength) {
+    throw new Error(`GPUTableEvaluator.fromGPUVector() requires packed vector "${vector.name}"`);
+  }
+
+  const startIndices = makeStartIndicesEvaluator(vector);
+  return new GPUTableEvaluator({
+    id: vector.name,
+    type: formatInfo.signedDataType,
+    size: formatInfo.components,
+    offset: data.byteOffset,
+    stride: data.byteStride,
+    length: data.valueLength,
+    buffer: getBufferFromGPUVector(vector),
+    format: formatInfo.elementFormat,
+    startIndices
+  });
+}
+
+function makeStartIndicesEvaluator(vector: GPUVector): GPUTableEvaluator {
+  const data = getSingleGPUVectorData(vector);
+  const metadata = data.readbackMetadata as {kind?: string; valueOffsets?: Int32Array} | undefined;
+  if (metadata?.kind !== 'variable-length-attribute' || !metadata.valueOffsets) {
+    throw new Error(`segment offsets missing for vertex-list vector "${vector.name}"`);
+  }
+  return new GPUTableEvaluator({
+    id: `${vector.name}.startIndices`,
+    type: 'sint32',
+    size: 1,
+    value: metadata.valueOffsets
+  });
 }
 
 function getRowsFromValue(
@@ -474,12 +539,18 @@ function getRowsFromValue(
   return result;
 }
 
-/** Input accepted by operations that normalize GPUVectors into evaluators. */
-export type GPUTableEvaluatorInput = GPUTableEvaluator | GPUVector;
+/** Input accepted by operations that normalize values into evaluators. */
+export type GPUTableEvaluatorInput = GPUTableEvaluator | GPUVector | number | number[];
 
 /** Returns an evaluator, wrapping GPUVector inputs when needed. */
 export function getGPUTableEvaluator(input: GPUTableEvaluatorInput): GPUTableEvaluator {
-  return input instanceof GPUTableEvaluator ? input : GPUTableEvaluator.fromGPUVector(input);
+  if (input instanceof GPUTableEvaluator) {
+    return input;
+  }
+  if (typeof input === 'number' || Array.isArray(input)) {
+    return GPUTableEvaluator.fromConstant(input);
+  }
+  return GPUTableEvaluator.fromGPUVector(input);
 }
 
 /** Returns source format only when it exactly matches the requested evaluator layout. */
@@ -519,9 +590,7 @@ function validatePackedNumericGPUVector(vector: GPUVector): void {
 }
 
 function getGPUTablePropsFromGPUVector(vector: GPUVector): {type: SignedDataType; size: number} {
-  if (!vector.format) {
-    throw new Error('GPUTableEvaluator.fromGPUVector() requires GPUVector format metadata');
-  }
+  assert(vector.format);
   const formatInfo = getGPUVectorFormatInfo(vector.format);
   return {type: formatInfo.signedDataType, size: formatInfo.components};
 }

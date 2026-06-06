@@ -62,8 +62,8 @@ export function segmentedMap(
   if (segmentsTable.length < 1) {
     throw new Error('segmentedMap segments must contain at least one segment start');
   }
-  if (segmentsTable.type !== 'uint32') {
-    throw new Error(`segmentedMap segments must have type uint32, got ${segmentsTable.type}`);
+  if (!segmentsTable.type.includes('int')) {
+    throw new Error(`segmentedMap segments must be integers, got ${segmentsTable.type}`);
   }
   if (segmentsTable.size !== 1) {
     throw new Error(`segmentedMap segments must have size 1, got ${segmentsTable.size}`);

@@ -5,7 +5,7 @@
 import type {Buffer, Device} from '@luma.gl/core';
 import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
 
-type EvaluatorResult = GPUTableEvaluator | GPUTableEvaluator[] | Record<string, unknown>;
+type EvaluatorResult = GPUTableEvaluator | unknown[] | Record<string, unknown>;
 
 export async function cleanEvaluate<ResultT extends EvaluatorResult>(
   device: Device,
@@ -24,7 +24,7 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
 
   for (const evaluator of dependencyEvaluators) {
     // Multiple evaluators could share the same underlying buffer
-    if (!preservedBuffers.has(evaluator.buffer)) {
+    if (evaluator.evaluated && !preservedBuffers.has(evaluator.buffer)) {
       evaluator.destroy();
     }
   }
@@ -33,21 +33,45 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
 
 function collectReferencedEvaluators(value: EvaluatorResult): GPUTableEvaluator[] {
   const evaluators = new Set<GPUTableEvaluator>();
-  if (value instanceof GPUTableEvaluator) {
-    return [value];
-  }
-  let valuesArray: unknown[];
-  if (Array.isArray(value)) {
-    valuesArray = value;
-  } else {
-    valuesArray = Object.values(value);
-  }
-  for (const item of valuesArray) {
-    if (item instanceof GPUTableEvaluator) {
-      evaluators.add(item);
-    }
-  }
+  const visitedObjects = new Set<object>();
+  collectReferencedEvaluatorsRecursive(value, evaluators, visitedObjects);
   return Array.from(evaluators);
+}
+
+function collectReferencedEvaluatorsRecursive(
+  value: unknown,
+  evaluators: Set<GPUTableEvaluator>,
+  visitedObjects: Set<object>
+): void {
+  if (value instanceof GPUTableEvaluator) {
+    evaluators.add(value);
+    return;
+  }
+
+  if (!value || typeof value !== 'object' || visitedObjects.has(value)) {
+    return;
+  }
+  visitedObjects.add(value);
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectReferencedEvaluatorsRecursive(item, evaluators, visitedObjects);
+    }
+    return;
+  }
+
+  if (!isPlainObject(value)) {
+    return;
+  }
+
+  for (const item of Object.values(value)) {
+    collectReferencedEvaluatorsRecursive(item, evaluators, visitedObjects);
+  }
+}
+
+function isPlainObject(value: object): value is Record<string, unknown> {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function collectDependencies(
