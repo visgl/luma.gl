@@ -3,20 +3,25 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  AttributePathModel,
-  StoragePathModel,
-  StorageTripsPathModel,
+  ArrowPathRenderer,
   convertArrowPathsToStorage,
   convertArrowPathsToAttribute,
   convertArrowTripsToStorage,
   getArrowVectorByteLength,
   makeArrowFixedSizeListVector,
   prepareArrowTemporalGPUVector,
-  type ArrowPathPreparedState,
-  type ArrowStoragePathInputProps
+  type ArrowPathPreparedState
 } from '@luma.gl/arrow';
 import {type CommandEncoder, type Device} from '@luma.gl/core';
-import {GPURenderable, GPUVector, type GPUVectorFormat, type VertexList} from '@luma.gl/tables';
+import {
+  AttributePathModel,
+  GPURenderable,
+  GPUVector,
+  StoragePathModel,
+  StorageTripsPathModel,
+  type GPUVectorFormat,
+  type VertexList
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createArrowLineShaderInputs,
@@ -147,8 +152,6 @@ export type ArrowLineStorageRendererData = {
   timestamps?: GPUVector;
   /** Optional view origins generated during coordinate normalization. */
   viewOrigins?: GPUVector;
-  /** Props ready for storage-backed path model construction. */
-  storagePathProps: ArrowStoragePathInputProps;
   /** Global source row index assigned to local path row zero. */
   rowIndexOffset?: number;
   /** Releases all resources owned by this prepared data object. */
@@ -503,11 +506,8 @@ export class ArrowLineRenderer extends GPURenderable<
     };
 
     if (modelKind === 'storage') {
-      if (!('storagePathProps' in props.data)) {
-        throw new Error('ArrowLineRenderer storage model requires storage-prepared data');
-      }
-      return new StoragePathModel(this.device, {
-        ...props.data.storagePathProps,
+      return ArrowPathRenderer.createModel(this.device, {
+        model: 'storage',
         ...commonProps,
         color: props.color ?? DEFAULT_PATH_COLOR,
         width: props.width ?? DEFAULT_PATH_WIDTH,
@@ -518,11 +518,11 @@ export class ArrowLineRenderer extends GPURenderable<
     }
 
     if (modelKind === 'trips') {
-      if (!('storagePathProps' in props.data) || !props.data.timestamps) {
+      if (!props.data.timestamps) {
         throw new Error('ArrowLineRenderer trips model requires a timestamps column');
       }
-      return new StorageTripsPathModel(this.device, {
-        ...props.data.storagePathProps,
+      return ArrowPathRenderer.createModel(this.device, {
+        model: 'trips',
         ...commonProps,
         timestamps: props.data.timestamps,
         currentTime: props.currentTime ?? 0,
@@ -538,7 +538,8 @@ export class ArrowLineRenderer extends GPURenderable<
     if (!('pathState' in props.data)) {
       throw new Error('ArrowLineRenderer attribute model requires attribute-prepared data');
     }
-    return new AttributePathModel(this.device, {
+    return ArrowPathRenderer.createModel(this.device, {
+      model: 'attribute',
       ...commonProps,
       pathState: props.data.pathState,
       source: WGSL_SHADER,
@@ -599,7 +600,6 @@ export async function convertArrowLineColumnsToGPUVectors(
       ...(prepared.widths ? {widths: prepared.widths} : {}),
       ...(prepared.timestamps ? {timestamps: prepared.timestamps} : {}),
       ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
-      storagePathProps: prepared.storagePathProps,
       rowIndexOffset: options.rowIndexOffset ?? 0,
       destroy: prepared.destroy
     };
@@ -631,7 +631,7 @@ export async function convertArrowLineColumnsToGPUVectors(
     ...(prepared.widths ? {widths: prepared.widths} : {}),
     ...(preparedTimestamps ? {timestamps: preparedTimestamps.temporal} : {}),
     ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
-    pathState: prepared.pathProps.pathState,
+    pathState: prepared.pathState,
     rowIndexOffset: options.rowIndexOffset ?? 0,
     destroy: () => {
       prepared.destroy();
@@ -824,15 +824,6 @@ function makeRetainedArrowLineInput(
     widths,
     ...(timestamps ? {timestamps} : {}),
     ...(viewOrigins ? {viewOrigins} : {}),
-    storagePathProps: {
-      ...firstStoragePathInput.storagePathProps,
-      paths,
-      ...(colors ? {colors} : {}),
-      widths,
-      ...(timestamps ? {timestamps} : {}),
-      ...(viewOrigins ? {viewOrigins} : {}),
-      rowIndexBase: rowIndexOffset
-    },
     rowIndexOffset,
     pathArrowByteLength,
     styleArrowByteLength,
@@ -993,6 +984,7 @@ function makeRetainedAttributePathState(
 
   return {
     segmentTable,
+    segmentLayout,
     expandedPathVertexData: firstRenderBatch.expandedPathVertexData,
     pathViewOriginData: firstRenderBatch.pathViewOriginData,
     renderBatches,

@@ -3,11 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from '@luma.gl/shadertools';
+import type {Device} from '@luma.gl/core';
 
 import type {PickingBindings, PickingProps, PickingUniforms} from './picking-uniforms';
 import {pickingUniforms} from './picking-uniforms';
 import {picking as colorPicking} from './color-picking';
+import {picking as indexColorPicking} from './index-color-picking';
 import {picking as indexPicking} from './index-picking';
+import {supportsIndexPicking} from './picking-manager';
 
 /**
  * Unified object-picking shader module.
@@ -20,3 +23,8 @@ export const picking = {
   vs: colorPicking.vs,
   fs: colorPicking.fs
 } as const satisfies ShaderModule<PickingProps, PickingUniforms, PickingBindings>;
+
+/** Returns the object-index picking shader module supported by this device. */
+export function getIndexPickingModule(device: Device): typeof indexPicking {
+  return (supportsIndexPicking(device) ? indexPicking : indexColorPicking) as typeof indexPicking;
+}

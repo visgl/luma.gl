@@ -4,25 +4,217 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  AttributePathModel,
-  StoragePathModel,
-  StorageTripsPathModel,
   buildArrowPathSegmentTable,
-  createArrowStoragePathState,
   makeArrowFixedSizeListVector,
+  makeAttributePathModelProps,
   makeGPUVectorFromArrow,
+  prepareArrowPathGPUVectors,
+  prepareArrowStoragePathGPUVectors,
   readArrowGPUVectorAsync,
+  resolveArrowPathSourceVectors,
   type ArrowPathSourceVectors,
   type PreparedArrowPathGPUVectors
 } from '@luma.gl/arrow';
 import type {Device, ShaderLayout} from '@luma.gl/core';
-import {GPUVector} from '@luma.gl/tables';
+import {
+  AttributePathModel,
+  StoragePathModel,
+  StorageTripsPathModel,
+  createStoragePathState,
+  type GPUVector,
+  type GPUVectorFormat
+} from '@luma.gl/tables';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 type Float64PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
 type ColorListArrowType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
+
+test('Arrow path-family models declare prepared GPU input schemas', t => {
+  t.deepEqual(
+    AttributePathModel.gpuInputSchema,
+    [
+      {
+        name: 'paths',
+        kind: 'positions',
+        required: true,
+        formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>'],
+        source: 'source-mappable'
+      },
+      {
+        name: 'colors',
+        kind: 'colors',
+        required: false,
+        formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
+        source: 'source-mappable'
+      },
+      {
+        name: 'widths',
+        kind: 'scalars',
+        required: false,
+        formats: ['float32'],
+        source: 'source-mappable'
+      },
+      {
+        name: 'viewOrigins',
+        kind: 'positions',
+        required: false,
+        formats: ['float32x4'],
+        source: 'generated'
+      }
+    ],
+    'attribute paths declare prepared renderer inputs'
+  );
+  t.deepEqual(
+    StoragePathModel.gpuInputSchema,
+    [
+      ...AttributePathModel.gpuInputSchema.slice(0, 3),
+      {
+        name: 'timestamps',
+        kind: 'time',
+        required: false,
+        formats: ['vertex-list<float32>'],
+        source: 'source-mappable'
+      },
+      AttributePathModel.gpuInputSchema[3]
+    ],
+    'storage paths add optional prepared timestamps'
+  );
+  t.deepEqual(
+    StorageTripsPathModel.gpuInputSchema,
+    [
+      ...AttributePathModel.gpuInputSchema.slice(0, 3),
+      {
+        name: 'timestamps',
+        kind: 'time',
+        required: true,
+        formats: ['vertex-list<float32>'],
+        source: 'source-mappable'
+      },
+      AttributePathModel.gpuInputSchema[3]
+    ],
+    'Trips storage paths require prepared timestamps'
+  );
+  t.equal(
+    AttributePathModel.gpuInputSchema,
+    AttributePathModel.gpuInputSchema,
+    'attribute model retains its schema reference'
+  );
+  t.equal(
+    StoragePathModel.gpuInputSchema,
+    StoragePathModel.gpuInputSchema,
+    'storage model retains its schema reference'
+  );
+  t.equal(
+    StorageTripsPathModel.gpuInputSchema,
+    StorageTripsPathModel.gpuInputSchema,
+    'Trips model retains its schema reference'
+  );
+  t.end();
+});
+
+test('resolveArrowPathSourceVectors maps same-name Table and RecordBatch columns', t => {
+  const sourceVectors = makeArrowPathSourceVectors();
+  const table = new arrow.Table(sourceVectors);
+  const resolvedFromTable = resolveArrowPathSourceVectors(AttributePathModel, {data: table});
+  const resolvedFromRecordBatch = resolveArrowPathSourceVectors(AttributePathModel, {
+    data: table.batches[0]!
+  });
+
+  assertPathVectorEqual(t, resolvedFromTable.paths, sourceVectors.paths, 'Table paths');
+  assertPathVectorEqual(t, resolvedFromRecordBatch.paths, sourceVectors.paths, 'RecordBatch paths');
+  t.deepEqual(
+    Array.from(getFixedSizeListValues(resolvedFromTable.colors!)),
+    Array.from(getFixedSizeListValues(sourceVectors.colors)),
+    'same-name colors resolve from Table'
+  );
+  t.deepEqual(
+    Array.from(resolvedFromTable.widths!.data[0]!.values as Float32Array),
+    Array.from(sourceVectors.widths.data[0]!.values as Float32Array),
+    'same-name widths resolve from Table'
+  );
+  t.end();
+});
+
+test('resolveArrowPathSourceVectors maps nested string selectors', t => {
+  const sourceVectors = makeArrowPathSourceVectors();
+  const table = makeNestedArrowPathTable('source', sourceVectors);
+  const resolved = resolveArrowPathSourceVectors(AttributePathModel, {
+    data: table,
+    selectors: {
+      paths: 'source.paths',
+      colors: 'source.colors',
+      widths: 'source.widths'
+    }
+  });
+
+  assertPathVectorEqual(t, resolved.paths, sourceVectors.paths, 'nested paths');
+  t.deepEqual(
+    Array.from(getFixedSizeListValues(resolved.colors!)),
+    Array.from(getFixedSizeListValues(sourceVectors.colors)),
+    'nested colors resolve from explicit path'
+  );
+  t.end();
+});
+
+test('resolveArrowPathSourceVectors supports direct vectors and optional disable', t => {
+  const sourceVectors = makeArrowPathSourceVectors();
+  const resolved = resolveArrowPathSourceVectors(StoragePathModel, {
+    selectors: {
+      paths: sourceVectors.paths,
+      colors: null,
+      widths: sourceVectors.widths
+    }
+  });
+
+  t.equal(resolved.paths, sourceVectors.paths, 'direct paths do not require a Table');
+  t.equal(resolved.colors, undefined, 'null disables optional colors');
+  t.equal(resolved.widths, sourceVectors.widths, 'direct widths do not require a Table');
+  t.equal(resolved.timestamps, undefined, 'omitted optional timestamps are skipped');
+  t.end();
+});
+
+test('resolveArrowPathSourceVectors skips missing optional columns and rejects missing required columns', t => {
+  const sourceVectors = makeArrowPathSourceVectors();
+  const pathsOnlyTable = new arrow.Table({paths: sourceVectors.paths});
+  const resolved = resolveArrowPathSourceVectors(AttributePathModel, {data: pathsOnlyTable});
+
+  t.equal(resolved.colors, undefined, 'missing optional colors are skipped');
+  t.equal(resolved.widths, undefined, 'missing optional widths are skipped');
+  t.throws(
+    () =>
+      resolveArrowPathSourceVectors(AttributePathModel, {
+        data: new arrow.Table({colors: sourceVectors.colors, widths: sourceVectors.widths})
+      }),
+    /source column "paths" for "paths" is missing/,
+    'missing required paths throw'
+  );
+  t.end();
+});
+
+test('resolveArrowPathSourceVectors requires Trips timestamps', t => {
+  const sourceVectors = makeArrowPathSourceVectors();
+  const timestamps = makeTemporalListVector(
+    new arrow.TimestampMillisecond(),
+    new BigInt64Array([1000n, 1010n, 1025n, 2000n, 2010n, 2020n, 2030n]),
+    new Int32Array([0, 3, 7])
+  );
+
+  t.throws(
+    () =>
+      resolveArrowPathSourceVectors(StorageTripsPathModel, {
+        data: new arrow.Table(sourceVectors)
+      }),
+    /source column "timestamps" for "timestamps" is missing/,
+    'Trips source mapping requires timestamps'
+  );
+  const resolved = resolveArrowPathSourceVectors(StorageTripsPathModel, {
+    data: new arrow.Table({...sourceVectors, timestamps})
+  });
+  t.equal(resolved.timestamps?.length, timestamps.length, 'Trips timestamps resolve by default');
+  t.end();
+});
 
 test('buildArrowPathSegmentTable expands path rows and repeats row styles', t => {
   const sourceVectors = makeArrowPathSourceVectors();
@@ -171,10 +363,13 @@ test('buildArrowPathSegmentTable preserves XYZ and XYZM coordinate lanes', t => 
 test('AttributePathModel derives from GPUTableModel and packs generated segment records', async t => {
   const device = new NullDevice({});
   const pathProps = await makeGpuArrowPathProps(device);
-  const model = new AttributePathModel(device, {
-    id: 'arrow-path-model-test',
-    ...pathProps.pathProps
-  });
+  const model = new AttributePathModel(
+    device,
+    makeAttributePathModelProps(device, {
+      id: 'arrow-path-model-test',
+      ...pathProps
+    })
+  );
   const expandedPathBytes = await model.expandedPathVertexData.readAsync();
   const firstSegmentPositions = new Float32Array(
     expandedPathBytes.buffer,
@@ -242,15 +437,48 @@ test('AttributePathModel requires prepared path state', t => {
 
   t.throws(
     () =>
-      new AttributePathModel(device, {
-        id: 'arrow-path-model-missing-sources-test',
-        paths
-      } as never),
+      new AttributePathModel(
+        device,
+        makeAttributePathModelProps(device, {
+          id: 'arrow-path-model-missing-sources-test',
+          paths
+        } as never)
+      ),
     /pathState/,
     'prepared path state is visible at the path model boundary'
   );
 
   paths.destroy();
+  t.end();
+});
+
+test('AttributePathModel validates prepared inputs by GPUVector.format', async t => {
+  const device = new NullDevice({});
+  const pathProps = await makeGpuArrowPathProps(device);
+  const sourceVectors = makeArrowPathSourceVectors();
+  const invalidColors = makeGpuArrowPathVector(
+    device,
+    'invalid-colors',
+    sourceVectors.colors,
+    'float32x4'
+  );
+
+  t.throws(
+    () =>
+      new AttributePathModel(
+        device,
+        makeAttributePathModelProps(device, {
+          id: 'arrow-path-model-invalid-color-format-test',
+          ...pathProps,
+          colors: invalidColors as unknown as NonNullable<PreparedArrowPathGPUVectors['colors']>
+        })
+      ),
+    /colors GPUVector\.format "float32x4" must be one of unorm8x4, vertex-list<unorm8x4>/,
+    'prepared color validation rejects a valid Arrow color vector with the wrong GPU format'
+  );
+
+  invalidColors.destroy();
+  pathProps.destroy();
   t.end();
 });
 
@@ -262,13 +490,16 @@ test('AttributePathModel rejects prepared state row mismatches', async t => {
 
   t.throws(
     () =>
-      new AttributePathModel(device, {
-        id: 'arrow-path-model-source-batch-alignment-test',
-        ...pathProps.pathProps,
-        colors: undefined,
-        widths: undefined,
-        paths: mismatchedPaths
-      }),
+      new AttributePathModel(
+        device,
+        makeAttributePathModelProps(device, {
+          id: 'arrow-path-model-source-batch-alignment-test',
+          ...pathProps,
+          colors: undefined,
+          widths: undefined,
+          paths: mismatchedPaths
+        })
+      ),
     /prepared path rows must match path GPU rows/,
     'prepared state rows stay aligned with path GPU rows'
   );
@@ -282,10 +513,13 @@ test('AttributePathModel splits generated path buffers by source-row boundaries'
   const device = new NullDevice({});
   Object.defineProperty(device.limits, 'maxBufferSize', {value: 300});
   const pathProps = await makeGpuArrowPathProps(device);
-  const model = new AttributePathModel(device, {
-    id: 'arrow-path-model-buffer-batching-test',
-    ...pathProps.pathProps
-  });
+  const model = new AttributePathModel(
+    device,
+    makeAttributePathModelProps(device, {
+      id: 'arrow-path-model-buffer-batching-test',
+      ...pathProps
+    })
+  );
 
   t.equal(model.renderBatches.length, 2, 'generated path output splits into two render batches');
   t.deepEqual(
@@ -300,10 +534,10 @@ test('AttributePathModel splits generated path buffers by source-row boundaries'
   t.end();
 });
 
-test('AttributePathModel.prepareGPUVectors keeps Float32 paths unchanged without closure', async t => {
+test('prepareArrowPathGPUVectors keeps Float32 paths unchanged without closure', async t => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowPathSourceVectors();
-  const prepared = await AttributePathModel.prepareGPUVectors(device, sourceVectors);
+  const prepared = await prepareArrowPathGPUVectors(device, sourceVectors);
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.equal(prepared.sourceOrigins, undefined, 'Float32 preparation does not create source origins');
@@ -333,10 +567,10 @@ test('AttributePathModel.prepareGPUVectors keeps Float32 paths unchanged without
   t.end();
 });
 
-test('AttributePathModel.prepareGPUVectors tags path-aligned vertex colors', async t => {
+test('prepareArrowPathGPUVectors tags path-aligned vertex colors', async t => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowPathSourceVectors();
-  const prepared = await AttributePathModel.prepareGPUVectors(device, {
+  const prepared = await prepareArrowPathGPUVectors(device, {
     ...sourceVectors,
     colors: makeColorListVector(
       new Int32Array([0, 3, 7]),
@@ -357,7 +591,7 @@ test('AttributePathModel.prepareGPUVectors tags path-aligned vertex colors', asy
   t.end();
 });
 
-test('AttributePathModel.prepareGPUVectors converts Float64 paths to per-row Float32 deltas', async t => {
+test('prepareArrowPathGPUVectors converts Float64 paths to per-row Float32 deltas', async t => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3, 5]),
@@ -366,7 +600,7 @@ test('AttributePathModel.prepareGPUVectors converts Float64 paths to per-row Flo
       20_000_000_000, 10, 19_999_999_999.75, 10.75
     ])
   );
-  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
+  const prepared = await prepareArrowPathGPUVectors(device, {paths});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.deepEqual(
@@ -385,7 +619,7 @@ test('AttributePathModel.prepareGPUVectors converts Float64 paths to per-row Flo
   t.end();
 });
 
-test('StoragePathModel.prepareGPUVectors converts Float64 paths to per-row Float32 deltas on WebGPU', async t => {
+test('prepareArrowStoragePathGPUVectors converts Float64 paths to per-row Float32 deltas on WebGPU', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -400,7 +634,7 @@ test('StoragePathModel.prepareGPUVectors converts Float64 paths to per-row Float
       20_000_000_000, 10, 19_999_999_999.75, 10.75
     ])
   );
-  const prepared = await StoragePathModel.prepareGPUVectors(device, {paths});
+  const prepared = await prepareArrowStoragePathGPUVectors(device, {paths});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.deepEqual(
@@ -419,14 +653,14 @@ test('StoragePathModel.prepareGPUVectors converts Float64 paths to per-row Float
   t.end();
 });
 
-test('AttributePathModel.prepareGPUVectors closes Float64 delta paths by appending the first delta', async t => {
+test('prepareArrowPathGPUVectors closes Float64 delta paths by appending the first delta', async t => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3]),
     new Float64Array([10_000_000, -10_000_000, 10_000_001, -10_000_000, 10_000_001, -9_999_999])
   );
   const closed = arrow.vectorFromArray([true], new arrow.Bool());
-  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths, closed});
+  const prepared = await prepareArrowPathGPUVectors(device, {paths, closed});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
   t.deepEqual(Array.from(getPathOffsets(preparedPaths)), [0, 4], 'closure appends one delta point');
@@ -445,26 +679,24 @@ test('AttributePathModel.prepareGPUVectors closes Float64 delta paths by appendi
   t.end();
 });
 
-test('AttributePathModel.prepareGPUVectors updates view origins without rewriting path deltas', async t => {
+test('prepareArrowPathGPUVectors updates view origins without rewriting path deltas', async t => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3]),
     new Float64Array([100, 200, 101, 200, 102, 201])
   );
-  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
+  const prepared = await prepareArrowPathGPUVectors(device, {paths});
   const pathBytesBefore = await prepared.paths.data[0].buffer.readAsync();
-  const deltaSegmentBytesBefore =
-    await prepared.pathProps.pathState.expandedPathVertexData.readAsync();
-  const viewOriginBytesBefore = await prepared.pathProps.pathState.pathViewOriginData.readAsync();
+  const deltaSegmentBytesBefore = await prepared.pathState.expandedPathVertexData.readAsync();
+  const viewOriginBytesBefore = await prepared.pathState.pathViewOriginData.readAsync();
 
   prepared.updateViewOrigins({
     modelViewMatrix: [2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 10, 20, 30, 1]
   });
 
   const pathBytesAfter = await prepared.paths.data[0].buffer.readAsync();
-  const deltaSegmentBytesAfter =
-    await prepared.pathProps.pathState.expandedPathVertexData.readAsync();
-  const viewOriginBytesAfter = await prepared.pathProps.pathState.pathViewOriginData.readAsync();
+  const deltaSegmentBytesAfter = await prepared.pathState.expandedPathVertexData.readAsync();
+  const viewOriginBytesAfter = await prepared.pathState.pathViewOriginData.readAsync();
   const updatedOrigins = new Float32Array(
     viewOriginBytesAfter.buffer,
     viewOriginBytesAfter.byteOffset,
@@ -524,7 +756,7 @@ test('AttributePathModel.prepareGPUVectors updates view origins without rewritin
   t.end();
 });
 
-test('AttributePathModel.prepareGPUVectors split Float64 transform matches CPU full transform', async t => {
+test('prepareArrowPathGPUVectors split Float64 transform matches CPU full transform', async t => {
   const device = new NullDevice({});
   const sourceOrigin = [1_000_000_000, -1_000_000_000, 100];
   const deltas = [
@@ -539,14 +771,14 @@ test('AttributePathModel.prepareGPUVectors split Float64 transform matches CPU f
     ),
     3
   );
-  const prepared = await AttributePathModel.prepareGPUVectors(device, {paths});
+  const prepared = await prepareArrowPathGPUVectors(device, {paths});
   const modelViewMatrix = makeOriginRelativeModelViewMatrix(sourceOrigin);
 
   prepared.updateViewOrigins({modelViewMatrix});
 
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
   const preparedDeltas = getPathValues(preparedPaths);
-  const viewOriginBytes = await prepared.pathProps.pathState.pathViewOriginData.readAsync();
+  const viewOriginBytes = await prepared.pathState.pathViewOriginData.readAsync();
   const viewOrigins = new Float32Array(
     viewOriginBytes.buffer,
     viewOriginBytes.byteOffset,
@@ -579,7 +811,7 @@ test('AttributePathModel.prepareGPUVectors split Float64 transform matches CPU f
   t.end();
 });
 
-test('AttributePathModel.prepareGPUVectors rejects unsupported path inputs', async t => {
+test('prepareArrowPathGPUVectors rejects unsupported path inputs', async t => {
   const device = new NullDevice({});
   const invalidDimensionPaths = makeFloat64PathVector(
     new Int32Array([0, 1]),
@@ -590,7 +822,7 @@ test('AttributePathModel.prepareGPUVectors rejects unsupported path inputs', asy
   const mismatchedClosed = arrow.vectorFromArray([true], new arrow.Bool());
 
   try {
-    await AttributePathModel.prepareGPUVectors(device, {paths: invalidDimensionPaths});
+    await prepareArrowPathGPUVectors(device, {paths: invalidDimensionPaths});
     t.fail('invalid path dimensions should be rejected');
   } catch (error) {
     t.ok(
@@ -600,7 +832,7 @@ test('AttributePathModel.prepareGPUVectors rejects unsupported path inputs', asy
   }
 
   try {
-    await AttributePathModel.prepareGPUVectors(device, {
+    await prepareArrowPathGPUVectors(device, {
       ...sourceVectors,
       closed: mismatchedClosed
     });
@@ -900,9 +1132,9 @@ test('StorageTripsPathModel binds prepared path-aligned timestamps', async t => 
       new Int32Array([0, 3, 7])
     )
   };
-  const prepared = await StoragePathModel.prepareGPUVectors(device, sourceVectors);
+  const prepared = await prepareArrowStoragePathGPUVectors(device, sourceVectors);
   const model = new StorageTripsPathModel(device, {
-    ...prepared.storagePathProps,
+    ...prepared,
     timestamps: prepared.timestamps!,
     currentTime: 25,
     trailLength: 10
@@ -980,13 +1212,13 @@ test('StoragePathModel rejects non-WebGPU devices', t => {
   t.end();
 });
 
-test('createArrowStoragePathState rejects non-WebGPU devices', t => {
+test('createStoragePathState rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
   const pathProps = makeStorageGpuArrowPathProps(device);
 
   t.throws(
     () =>
-      createArrowStoragePathState(device, {
+      createStoragePathState(device, {
         id: 'arrow-storage-path-state-test',
         ...pathProps
       }),
@@ -1000,34 +1232,46 @@ test('createArrowStoragePathState rejects non-WebGPU devices', t => {
 
 async function makeGpuArrowPathProps(device: Device): Promise<PreparedArrowPathGPUVectors> {
   const sourceVectors = makeArrowPathSourceVectors();
-  return AttributePathModel.prepareGPUVectors(device, sourceVectors);
+  return prepareArrowPathGPUVectors(device, sourceVectors);
 }
 
 function makeStorageGpuArrowPathProps(
   device: Device,
   sourceVectors: ArrowPathSourceVectors = makeArrowPathSourceVectors()
 ) {
+  const colors = sourceVectors.colors
+    ? makeGpuArrowPathVector(
+        device,
+        'colors',
+        sourceVectors.colors,
+        sourceVectors.colors.type instanceof arrow.List ? 'vertex-list<unorm8x4>' : 'unorm8x4'
+      )
+    : undefined;
+  const widths = sourceVectors.widths
+    ? makeGpuArrowPathVector(device, 'widths', sourceVectors.widths, 'float32')
+    : undefined;
   return {
-    paths: makeGpuArrowPathVector(device, 'paths', sourceVectors.paths),
-    colors: makeGpuArrowPathVector(device, 'colors', sourceVectors.colors),
-    widths: makeGpuArrowPathVector(device, 'widths', sourceVectors.widths)
+    paths: makeGpuArrowPathVector(device, 'paths', sourceVectors.paths, 'vertex-list<float32x2>'),
+    ...(colors ? {colors} : {}),
+    ...(widths ? {widths} : {})
   };
 }
 
-function makeGpuArrowPathVector<TypeT extends arrow.DataType>(
+function makeGpuArrowPathVector<FormatT extends GPUVectorFormat, TypeT extends arrow.DataType>(
   device: Device,
   name: string,
-  vector: arrow.Vector<TypeT>
-): GPUVector<TypeT> {
-  return makeGPUVectorFromArrow(device, vector, {name});
+  vector: arrow.Vector<TypeT>,
+  format: FormatT
+): GPUVector<FormatT> {
+  return makeGPUVectorFromArrow(device, vector, {name, format});
 }
 
 function destroyStorageGpuArrowPathProps(
   pathProps: ReturnType<typeof makeStorageGpuArrowPathProps>
 ): void {
   pathProps.paths.destroy();
-  pathProps.colors.destroy();
-  pathProps.widths.destroy();
+  pathProps.colors?.destroy();
+  pathProps.widths?.destroy();
 }
 
 function makeLegacyStoragePathShaderLayout(): ShaderLayout {
@@ -1095,6 +1339,23 @@ function makeArrowPathSourceVectors() {
     ),
     widths: arrow.vectorFromArray([2, 4], new arrow.Float32())
   };
+}
+
+function makeNestedArrowPathTable(
+  fieldName: string,
+  sourceVectors: ReturnType<typeof makeArrowPathSourceVectors>
+): arrow.Table {
+  const table = new arrow.Table(sourceVectors);
+  const innerStructData = table.batches[0]!.data;
+  const schema = new arrow.Schema([new arrow.Field(fieldName, innerStructData.type)]);
+  const structData = arrow.makeData({
+    type: new arrow.Struct(schema.fields),
+    length: table.numRows,
+    nullCount: 0,
+    nullBitmap: null,
+    children: [innerStructData]
+  });
+  return new arrow.Table([new arrow.RecordBatch(schema, structData)]);
 }
 
 function makePathVector(
@@ -1239,6 +1500,27 @@ function getPathValues(vector: arrow.Vector<PathArrowType>): Float32Array {
   const coordinateData = vector.data[0]!.children[0]!;
   const valueData = coordinateData.children[0] as arrow.Data<arrow.Float32>;
   return valueData.values as Float32Array;
+}
+
+function assertPathVectorEqual(
+  t: {
+    deepEqual: (actual: unknown, expected: unknown, message?: string) => void;
+  },
+  actual: arrow.Vector,
+  expected: arrow.Vector<PathArrowType>,
+  label: string
+): void {
+  const actualPaths = actual as arrow.Vector<PathArrowType>;
+  t.deepEqual(
+    Array.from(getPathOffsets(actualPaths)),
+    Array.from(getPathOffsets(expected)),
+    `${label} offsets match`
+  );
+  t.deepEqual(
+    Array.from(getPathValues(actualPaths)),
+    Array.from(getPathValues(expected)),
+    `${label} values match`
+  );
 }
 
 function getFixedSizeListValues(vector: arrow.Vector): Uint8Array {

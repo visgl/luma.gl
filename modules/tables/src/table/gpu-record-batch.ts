@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type BufferLayout} from '@luma.gl/core';
+import {type Binding, type BufferLayout} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';
@@ -39,7 +39,7 @@ export type GPURecordBatchFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = 
   /** Number of null rows in the generated GPU record batch. */
   nullCount?: number;
   /** Optional model-ready storage bindings keyed by shader binding name. */
-  bindings?: Record<string, Buffer | DynamicBuffer>;
+  bindings?: Record<string, Binding | DynamicBuffer>;
 };
 
 /** Generic record-batch construction props. */
@@ -63,7 +63,7 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   /** Model-ready attribute buffers keyed by buffer layout name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
   /** Model-ready storage bindings keyed by shader binding name. */
-  readonly bindings: Record<string, Buffer | DynamicBuffer> = {};
+  readonly bindings: Record<string, Binding | DynamicBuffer> = {};
   /** Optional source-row identity retained from the producing table/stream. */
   readonly sourceInfo?: GPURecordBatchSourceInfo;
 

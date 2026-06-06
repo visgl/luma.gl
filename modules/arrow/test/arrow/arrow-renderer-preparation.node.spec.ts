@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {makeArrowFixedSizeListVector, resolveArrowPickInfo} from '@luma.gl/arrow';
+import {
+  ArrowPolygonRenderer,
+  makeArrowFixedSizeListVector,
+  prepareArrowPolygonInput,
+  resolveArrowPickInfo
+} from '@luma.gl/arrow';
 import {Buffer} from '@luma.gl/core';
 import type {GPUData} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -17,10 +22,6 @@ import {
   ArrowPointRenderer,
   prepareArrowPointInput
 } from '../../../../examples/arrow/arrow-points/arrow-point-renderer';
-import {
-  ArrowPolygonRenderer,
-  prepareArrowPolygonInput
-} from '../../../../examples/arrow/arrow-polygons/arrow-polygon-renderer';
 import {
   addArrowTextGPUTableBatch,
   createArrowTextGPUTable
@@ -135,23 +136,30 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
     {polygons, colors: null, tessellated: true},
     {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-preparation-test'}
   );
-  const positionsBuffer = prepared.prepared.positions.data[0].buffer;
-  const indexVector = prepared.prepared.table.gpuVectors.indices;
+  const positionsBuffer = prepared.positions.data[0].buffer;
+  const colorsBuffer = prepared.colors.data[0].buffer;
+  const rowIndicesBuffer = prepared.rowIndices.data[0].buffer;
+  const indexVector = prepared.indices;
   const indexBuffer = indexVector.data[0].buffer;
 
-  t.equal(prepared.prepared.tessellation.rowCount, 1, 'keeps one polygon row');
-  t.equal(prepared.prepared.tessellation.vertexCount, 3, 'keeps tessellated triangle vertices');
-  t.equal(prepared.prepared.table.batches.length, 1, 'prepares one GPU table batch');
+  t.equal(prepared.tessellation.rowCount, 1, 'keeps one polygon row');
+  t.equal(prepared.tessellation.vertexCount, 3, 'keeps tessellated triangle vertices');
+  t.equal(prepared.positions.format, 'vertex-list<float32x4>', 'stores row-preserving positions');
+  t.equal(prepared.positions.length, 1, 'keeps source polygon rows on prepared positions');
+  t.equal(prepared.positions.valueLength, 3, 'stores flattened tessellated position values');
+  t.ok(positionsBuffer.usage & Buffer.STORAGE, 'creates polygon positions for storage draws');
+  t.ok(colorsBuffer.usage & Buffer.STORAGE, 'creates polygon colors for storage draws');
+  t.ok(rowIndicesBuffer.usage & Buffer.STORAGE, 'creates polygon row indices for storage draws');
   t.equal(indexVector.format, 'vertex-list<uint32>', 'stores polygon indices as a list vector');
   t.equal(indexVector.valueLength, 3, 'stores the flattened triangle index count');
   t.ok(indexBuffer.usage & Buffer.INDEX, 'creates the polygon index column with INDEX usage');
   t.deepEqual(
-    prepared.prepared.table.batches[0].sourceInfo,
+    prepared.sourceInfo,
     {sourceBatchIndex: 4, sourceRowIndexOffset: 9, sourceRowCount: 1},
     'records polygon source row metadata'
   );
   t.deepEqual(
-    Array.from(prepared.prepared.tessellation.rowIndices),
+    Array.from(prepared.tessellation.rowIndices),
     [9, 9, 9],
     'applies the row index offset to tessellated vertices'
   );
@@ -188,12 +196,10 @@ test('ArrowPolygonRenderer streaming uses one model over retained indexed batche
     }
   );
 
-  const firstPositionsBuffer = renderer.preparedBatches[0]?.prepared.positions.data[0].buffer;
-  const secondPositionsBuffer = renderer.preparedBatches[1]?.prepared.positions.data[0].buffer;
-  const firstIndexBuffer =
-    renderer.preparedBatches[0]?.prepared.table.gpuVectors.indices.data[0].buffer;
-  const secondIndexBuffer =
-    renderer.preparedBatches[1]?.prepared.table.gpuVectors.indices.data[0].buffer;
+  const firstPositionsBuffer = renderer.preparedBatches[0]?.positions.data[0].buffer;
+  const secondPositionsBuffer = renderer.preparedBatches[1]?.positions.data[0].buffer;
+  const firstIndexBuffer = renderer.preparedBatches[0]?.indices.data[0].buffer;
+  const secondIndexBuffer = renderer.preparedBatches[1]?.indices.data[0].buffer;
 
   t.equal(renderer.preparedBatches.length, 2, 'retains both streamed polygon batches');
   t.equal(renderer.model?.table?.batches.length, 2, 'uses one render model over both batches');
@@ -204,7 +210,7 @@ test('ArrowPolygonRenderer streaming uses one model over retained indexed batche
   );
   t.equal(renderer.getMetrics().rowCount, 2, 'tracks aggregate polygon rows');
   t.deepEqual(
-    renderer.preparedBatches.map(batch => batch.prepared.table.batches[0]?.sourceInfo),
+    renderer.preparedBatches.map(batch => batch.sourceInfo),
     [
       {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 1},
       {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
@@ -214,7 +220,7 @@ test('ArrowPolygonRenderer streaming uses one model over retained indexed batche
   t.deepEqual(
     resolveArrowPickInfo(
       {batchIndex: 1, objectIndex: 1},
-      renderer.preparedBatches.map(batch => batch.prepared.table.batches[0]?.sourceInfo)
+      renderer.preparedBatches.map(batch => batch.sourceInfo)
     ),
     {batchIndex: 1, rowIndex: 1, batchRowIndex: 0},
     'resolves polygon pick info to a source batch row'

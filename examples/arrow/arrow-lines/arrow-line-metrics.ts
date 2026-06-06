@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {StoragePathModel, StorageTripsPathModel} from '@luma.gl/arrow';
-import type {GPUVector} from '@luma.gl/tables';
+import {StoragePathModel, StorageTripsPathModel, type GPUVector} from '@luma.gl/tables';
 import type {ArrowLineControlPanelMetrics} from './control-panel';
 import type {
   ArrowLineRenderer,

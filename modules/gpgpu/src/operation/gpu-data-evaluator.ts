@@ -5,6 +5,8 @@ import {
   Device,
   Buffer,
   SignedDataType,
+  getDataTypeFromTypedArray,
+  getTypedArrayFromDataType,
   type BufferAttributeLayout,
   type VertexFormat
 } from '@luma.gl/core';
@@ -12,9 +14,7 @@ import {DynamicBuffer} from '@luma.gl/engine';
 import {
   GPUData,
   GPUVector,
-  getDataTypeFromTypedArray,
   getGPUVectorFormatInfo,
-  getTypedArrayFromDataType,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/tables';

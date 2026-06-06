@@ -245,6 +245,56 @@ test('GPUTableModel binds reserved table indices for indexed draws', t => {
   t.end();
 });
 
+test('GPUTableModel draws reserved index vector slices by valueLength', t => {
+  const device = new NullDevice({});
+  const table = makeIndexedPositionsTableFromVector(
+    3,
+    makeIndexSliceVector(device, 3, new Uint32Array([9, 9, 0, 1, 2, 9]), 2, 3)
+  );
+  const model = makeTableModel(device, table, {tableCount: 'none'});
+  const renderPass = device.getDefaultRenderPass();
+  const drawCalls: Array<{
+    vertexCount?: number;
+    indexCount?: number;
+    firstVertex?: number;
+    firstIndex?: number;
+  }> = [];
+  const draw = model.pipeline.draw.bind(model.pipeline);
+
+  model.pipeline.draw = options => {
+    drawCalls.push({
+      vertexCount: options.vertexCount,
+      indexCount: options.indexCount,
+      firstVertex: options.firstVertex,
+      firstIndex: options.firstIndex
+    });
+    return draw(options);
+  };
+
+  t.equal(model.vertexCount, 3, 'uses sliced index valueLength as vertex count');
+  t.equal(model.indexCount, 3, 'retains sliced index valueLength as indexed draw count');
+  t.equal(model.firstVertex, Uint32Array.BYTES_PER_ELEMENT * 2, 'retains WebGL byte offset');
+  t.equal(model.firstIndex, 2, 'retains WebGPU first index element');
+  t.ok(model.draw(renderPass), 'draws the sliced indexed table');
+  t.deepEqual(
+    drawCalls,
+    [
+      {
+        vertexCount: 3,
+        indexCount: 3,
+        firstVertex: Uint32Array.BYTES_PER_ELEMENT * 2,
+        firstIndex: 2
+      }
+    ],
+    'passes reserved index vector slice metadata to the render pipeline'
+  );
+
+  renderPass.destroy();
+  model.destroy();
+  table.destroy();
+  t.end();
+});
+
 test('GPUTableModel draws preserved indexed batches and restores aggregate state', t => {
   const device = new NullDevice({});
   const table = makeBatchedIndexedPositionsTable(device, [
@@ -458,6 +508,18 @@ function makeIndexedPositionsTable(
   });
 }
 
+function makeIndexedPositionsTableFromVector(
+  rowCount: number,
+  indices: GPUVector
+): GPUTable {
+  return new GPUTable({
+    vectors: {
+      positions: makePositionsVector(device, rowCount),
+      [GPU_TABLE_INDEX_COLUMN_NAME]: indices
+    }
+  });
+}
+
 function makeBatchedPositionsTable(device: NullDevice, rowCounts: number[]): GPUTable {
   let sourceRowIndexOffset = 0;
   const batches = rowCounts.map((rowCount, sourceBatchIndex) => {
@@ -538,6 +600,27 @@ function makeIndicesVector(
     format: 'vertex-list<uint32>',
     length: rowCount,
     valueLength: indices.length,
+    stride: 1,
+    byteStride: Uint32Array.BYTES_PER_ELEMENT,
+    ownsBuffer: true
+  });
+}
+
+function makeIndexSliceVector(
+  device: NullDevice,
+  rowCount: number,
+  indices: Uint32Array,
+  firstIndex: number,
+  indexCount: number
+): GPUVector {
+  return new GPUVector({
+    type: 'buffer',
+    name: GPU_TABLE_INDEX_COLUMN_NAME,
+    buffer: device.createBuffer({usage: Buffer.INDEX, data: indices}),
+    format: 'vertex-list<uint32>',
+    length: rowCount,
+    valueLength: indexCount,
+    byteOffset: firstIndex * Uint32Array.BYTES_PER_ELEMENT,
     stride: 1,
     byteStride: Uint32Array.BYTES_PER_ELEMENT,
     ownsBuffer: true

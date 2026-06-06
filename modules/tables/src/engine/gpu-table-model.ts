@@ -35,6 +35,9 @@ type GPUTableModelState = {
   explicitBindings: NonNullable<ModelProps['bindings']>;
   explicitBufferLayout: BufferLayout[];
   explicitIndexBuffer: Buffer | DynamicBuffer | null;
+  explicitIndexCount: number | undefined;
+  explicitFirstVertex: number;
+  explicitFirstIndex: number;
   explicitVertexCount: number;
   inferInstanceCount: boolean;
   inferVertexCount: boolean;
@@ -51,6 +54,8 @@ type GPUTableDrawSource = GPUTable | GPURecordBatch;
 type GPUTableIndexDrawState = {
   indexBuffer: Buffer | DynamicBuffer;
   indexCount: number;
+  firstVertex: number;
+  firstIndex: number;
 };
 
 /**
@@ -216,9 +221,20 @@ export class GPUTableModel extends Model {
     }
   }
 
-  private setTableIndexDrawState({indexBuffer, indexCount}: GPUTableIndexDrawState): void {
+  private setTableIndexDrawState({
+    indexBuffer,
+    indexCount,
+    firstVertex,
+    firstIndex
+  }: GPUTableIndexDrawState): void {
     if (this.indexBuffer !== getConcreteIndexBuffer(indexBuffer)) {
       this.setIndexBuffer(indexBuffer);
+    }
+    if (this.indexCount !== indexCount) {
+      this.setIndexCount(indexCount);
+    }
+    if (this.firstVertex !== firstVertex || this.firstIndex !== firstIndex) {
+      this.setDrawOffsets({firstVertex, firstIndex});
     }
     if (this.vertexCount !== indexCount) {
       this.setVertexCount(indexCount);
@@ -228,6 +244,18 @@ export class GPUTableModel extends Model {
   private restoreExplicitIndexDrawState(): void {
     if (this.indexBuffer !== getConcreteIndexBuffer(this.tableState.explicitIndexBuffer)) {
       this.setIndexBuffer(this.tableState.explicitIndexBuffer);
+    }
+    if (this.indexCount !== this.tableState.explicitIndexCount) {
+      this.setIndexCount(this.tableState.explicitIndexCount);
+    }
+    if (
+      this.firstVertex !== this.tableState.explicitFirstVertex ||
+      this.firstIndex !== this.tableState.explicitFirstIndex
+    ) {
+      this.setDrawOffsets({
+        firstVertex: this.tableState.explicitFirstVertex,
+        firstIndex: this.tableState.explicitFirstIndex
+      });
     }
     if (
       !this.tableState.inferVertexCount &&
@@ -246,6 +274,9 @@ function getGPUTableModelConstructorState(
   const explicitBindings = modelProps.bindings || {};
   const explicitBufferLayout = modelProps.bufferLayout || [];
   const explicitIndexBuffer = modelProps.indexBuffer ?? null;
+  const explicitIndexCount = modelProps.indexCount;
+  const explicitFirstVertex = modelProps.firstVertex ?? 0;
+  const explicitFirstIndex = modelProps.firstIndex ?? 0;
   const explicitVertexCount = modelProps.vertexCount ?? 0;
   const inferInstanceCount =
     Boolean(table) && tableCount === 'instance' && modelProps.instanceCount === undefined;
@@ -261,6 +292,9 @@ function getGPUTableModelConstructorState(
         explicitBindings,
         explicitBufferLayout,
         explicitIndexBuffer,
+        explicitIndexCount,
+        explicitFirstVertex,
+        explicitFirstIndex,
         explicitVertexCount,
         inferInstanceCount,
         inferVertexCount
@@ -289,6 +323,9 @@ function getGPUTableModelConstructorState(
       explicitBindings,
       explicitBufferLayout,
       explicitIndexBuffer,
+      explicitIndexCount,
+      explicitFirstVertex,
+      explicitFirstIndex,
       explicitVertexCount,
       inferInstanceCount,
       inferVertexCount
@@ -364,9 +401,15 @@ function getGPUTableIndexDrawState(source: GPUTableDrawSource): GPUTableIndexDra
   if (!concreteIndexBuffer || !(concreteIndexBuffer.usage & Buffer.INDEX)) {
     throw new Error('GPUTableModel indices column requires Buffer.INDEX usage');
   }
+  const indexByteStride = concreteIndexBuffer.indexType === 'uint32' ? 4 : 2;
+  if (indexData.byteOffset % indexByteStride !== 0) {
+    throw new Error('GPUTableModel indices column byteOffset must align with its index type');
+  }
   return {
     indexBuffer,
-    indexCount: indexVector.valueLength
+    indexCount: indexVector.valueLength,
+    firstVertex: indexData.byteOffset,
+    firstIndex: indexData.byteOffset / indexByteStride
   };
 }
 
