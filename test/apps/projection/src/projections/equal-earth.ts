@@ -32,14 +32,19 @@ import {
 } from './projection-utils';
 
 const RADIANS_PER_DEGREE = Math.PI / 180;
-const NATURAL_EARTH_HALF_WIDTH = Math.PI * 0.8707;
-const NATURAL_EARTH_MAX_LATITUDE = 90;
+const SQRT_3_OVER_2 = Math.sqrt(3) / 2;
+const EQUAL_EARTH_A1 = 1.340264;
+const EQUAL_EARTH_A2 = -0.081106;
+const EQUAL_EARTH_A3 = 0.000893;
+const EQUAL_EARTH_A4 = 0.003796;
+const EQUAL_EARTH_HALF_WIDTH = Math.PI / (SQRT_3_OVER_2 * EQUAL_EARTH_A1);
+const EQUAL_EARTH_MAX_LATITUDE = 90;
 const LATITUDE_TABLE_COORDINATE_SHIFT = 17;
 const LATITUDE_TABLE_COORDINATE_STEP = 2 ** LATITUDE_TABLE_COORDINATE_SHIFT;
 const LATITUDE_TABLE_COORDINATE_MASK = LATITUDE_TABLE_COORDINATE_STEP - 1;
 const LATITUDE_TABLE_COORDINATE_INVERSE_STEP = 1 / LATITUDE_TABLE_COORDINATE_STEP;
-const LATITUDE_MIN_QUANTIZED = projectDegrees180ToQuantized(-NATURAL_EARTH_MAX_LATITUDE);
-const LATITUDE_MAX_QUANTIZED = projectDegrees180ToQuantized(NATURAL_EARTH_MAX_LATITUDE);
+const LATITUDE_MIN_QUANTIZED = projectDegrees180ToQuantized(-EQUAL_EARTH_MAX_LATITUDE);
+const LATITUDE_MAX_QUANTIZED = projectDegrees180ToQuantized(EQUAL_EARTH_MAX_LATITUDE);
 const LATITUDE_TABLE_START_INDEX =
   Math.floor(LATITUDE_MIN_QUANTIZED / LATITUDE_TABLE_COORDINATE_STEP) - 1;
 const LATITUDE_TABLE_END_INDEX =
@@ -49,7 +54,6 @@ const LATITUDE_TABLE_TEXTURE_WIDTH = 256;
 const LATITUDE_TABLE_TEXTURE_HEIGHT = Math.ceil(
   LATITUDE_TABLE_LENGTH / LATITUDE_TABLE_TEXTURE_WIDTH
 );
-const LONGITUDE_SCALE_DENOMINATOR = 360 * 0.8707;
 const LONGITUDE_SCALE_TO_QUANTIZED_SCALE = 360;
 const QUANTIZED_CENTER = 0x80000000;
 
@@ -58,13 +62,13 @@ let longitudeScaleTableTextureValue: Uint32Array | null = null;
 let yTableValue: Uint32Array | null = null;
 let yTableTextureValue: Uint32Array | null = null;
 
-type NaturalEarthOperationInputs = ProjectionOperationInputs & {
+type EqualEarthOperationInputs = ProjectionOperationInputs & {
   longitudeScaleTable: GPUTableEvaluator;
   yTable: GPUTableEvaluator;
 };
 
-class NaturalEarthOperation extends Operation<NaturalEarthOperationInputs> {
-  name = 'naturalEarth';
+class EqualEarthOperation extends Operation<EqualEarthOperationInputs> {
+  name = 'equalEarth';
 
   output: GPUTableEvaluator;
 
@@ -75,23 +79,23 @@ class NaturalEarthOperation extends Operation<NaturalEarthOperationInputs> {
       yTable: getYTableEvaluator()
     });
 
-    this.output = makeQuantizedProjectionOutput('naturalEarth', positions, this);
+    this.output = makeQuantizedProjectionOutput('equalEarth', positions, this);
   }
 
   toString(): string {
-    return `naturalEarth(${this.inputs.positions})`;
+    return `equalEarth(${this.inputs.positions})`;
   }
 }
 
-export function naturalEarth(positions: ProjectionInput): GPUTableEvaluator {
-  return new NaturalEarthOperation(getProjectionPositions(positions, 'naturalEarth')).output;
+export function equalEarth(positions: ProjectionInput): GPUTableEvaluator {
+  return new EqualEarthOperation(getProjectionPositions(positions, 'equalEarth')).output;
 }
 
-export function rawNaturalEarth(coordinates: readonly [number, number]): [number, number];
-export function rawNaturalEarth(
+export function rawEqualEarth(coordinates: readonly [number, number]): [number, number];
+export function rawEqualEarth(
   coordinates: readonly [number, number, number]
 ): [number, number, number];
-export function rawNaturalEarth(
+export function rawEqualEarth(
   coordinates: readonly [number, number] | readonly [number, number, number]
 ): [number, number] | [number, number, number] {
   const [longitude, latitude] = coordinates;
@@ -102,7 +106,7 @@ export function rawNaturalEarth(
   );
 }
 
-export const executeCPUNaturalEarth: OperationHandler<NaturalEarthOperationInputs> = async ({
+export const executeCPUEqualEarth: OperationHandler<EqualEarthOperationInputs> = async ({
   inputs,
   output,
   target
@@ -122,7 +126,7 @@ export const executeCPUNaturalEarth: OperationHandler<NaturalEarthOperationInput
     }
 
     const [longitude, latitude] = position;
-    const {longitudeScale, y} = getNaturalEarthTableLookup(latitude);
+    const {longitudeScale, y} = getEqualEarthTableLookup(latitude);
     const projected = appendQuantizedAltitudeToProjectedPosition(
       [projectQuantizedLongitude(longitude, longitudeScale), y],
       position
@@ -136,7 +140,7 @@ export const executeCPUNaturalEarth: OperationHandler<NaturalEarthOperationInput
   return {success: true, value: outputValues};
 };
 
-export const executeWebGPUNaturalEarth: OperationHandler<NaturalEarthOperationInputs> = ({
+export const executeWebGPUEqualEarth: OperationHandler<EqualEarthOperationInputs> = ({
   inputs,
   output,
   target
@@ -161,7 +165,7 @@ export const executeWebGPUNaturalEarth: OperationHandler<NaturalEarthOperationIn
   });
 };
 
-export const executeWebGLNaturalEarth: OperationHandler<NaturalEarthOperationInputs> = ({
+export const executeWebGLEqualEarth: OperationHandler<EqualEarthOperationInputs> = ({
   inputs,
   output,
   target
@@ -252,7 +256,7 @@ function getYTableTextureValue(): Uint32Array {
   return yTableTextureValue;
 }
 
-function getNaturalEarthTableLookup(latitude: number): {longitudeScale: number; y: number} {
+function getEqualEarthTableLookup(latitude: number): {longitudeScale: number; y: number} {
   const clampedLatitude = clamp(latitude, LATITUDE_MIN_QUANTIZED, LATITUDE_MAX_QUANTIZED);
   const baseIndex = clamp(
     Math.floor(clampedLatitude / LATITUDE_TABLE_COORDINATE_STEP) - LATITUDE_TABLE_START_INDEX,
@@ -287,18 +291,16 @@ function getLatitudeTableQuantizedValue(index: number): number {
 }
 
 function getLongitudeScaleAnalytic(latitude: number): number {
-  const phi = clamp(
-    latitude,
-    -NATURAL_EARTH_MAX_LATITUDE,
-    NATURAL_EARTH_MAX_LATITUDE
-  ) * RADIANS_PER_DEGREE;
-  const phi2 = phi * phi;
-  const phi4 = phi2 * phi2;
-  const xCoefficient =
-    0.8707 -
-    0.131979 * phi2 +
-    phi4 * (-0.013791 + phi4 * (0.003971 * phi2 - 0.001529 * phi4));
-  return xCoefficient / LONGITUDE_SCALE_DENOMINATOR;
+  const theta = getEqualEarthTheta(latitude);
+  const theta2 = theta * theta;
+  const theta6 = theta2 * theta2 * theta2;
+  const denominator =
+    SQRT_3_OVER_2 *
+    (EQUAL_EARTH_A1 +
+      3 * EQUAL_EARTH_A2 * theta2 +
+      theta6 * (7 * EQUAL_EARTH_A3 + 9 * EQUAL_EARTH_A4 * theta2));
+  const longitudeCoefficient = Math.cos(theta) / denominator;
+  return (longitudeCoefficient * RADIANS_PER_DEGREE) / (2 * EQUAL_EARTH_HALF_WIDTH);
 }
 
 function projectQuantizedLongitude(longitude: number, longitudeScale: number): number {
@@ -316,22 +318,23 @@ function projectQuantizedLongitude(longitude: number, longitudeScale: number): n
 }
 
 function projectYAnalyticToQuantized(latitude: number): number {
-  return projectSignedRangeToQuantized(projectYAnalytic(latitude), NATURAL_EARTH_HALF_WIDTH);
+  return projectSignedRangeToQuantized(projectYAnalytic(latitude), EQUAL_EARTH_HALF_WIDTH);
 }
 
 function projectYAnalytic(latitude: number): number {
-  const phi = clamp(
+  const theta = getEqualEarthTheta(latitude);
+  const theta2 = theta * theta;
+  const theta6 = theta2 * theta2 * theta2;
+  return theta * (EQUAL_EARTH_A1 + EQUAL_EARTH_A2 * theta2 + theta6 * (EQUAL_EARTH_A3 + EQUAL_EARTH_A4 * theta2));
+}
+
+function getEqualEarthTheta(latitude: number): number {
+  const clampedLatitude = clamp(
     latitude,
-    -NATURAL_EARTH_MAX_LATITUDE,
-    NATURAL_EARTH_MAX_LATITUDE
-  ) * RADIANS_PER_DEGREE;
-  const phi2 = phi * phi;
-  const phi4 = phi2 * phi2;
-  return (
-    phi *
-    (1.007226 +
-      phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 0.005916 * phi4)))
+    -EQUAL_EARTH_MAX_LATITUDE,
+    EQUAL_EARTH_MAX_LATITUDE
   );
+  return Math.asin(SQRT_3_OVER_2 * Math.sin(clampedLatitude * RADIANS_PER_DEGREE));
 }
 
 function getWebGLProjectionSource(positions: GPUTableEvaluator, output: GPUTableEvaluator): string {
@@ -345,7 +348,7 @@ uniform highp usampler2D yTable;`,
       output.size === 3
         ? 'projectPosition(longitude, latitude, altitude)'
         : 'projectPosition(longitude, latitude)',
-    projectionFunctions: getGLSLNaturalEarthProjectionFunctions(output.size)
+    projectionFunctions: getGLSLEqualEarthProjectionFunctions(output.size)
   });
 }
 
@@ -373,11 +376,11 @@ function getWebGPUProjectionSource({
       output.size === 3
         ? 'projectPosition(longitude, latitude, altitude)'
         : 'projectPosition(longitude, latitude)',
-    projectionFunctions: getWGSLNaturalEarthProjectionFunctions(output.size)
+    projectionFunctions: getWGSLEqualEarthProjectionFunctions(output.size)
   });
 }
 
-function getGLSLNaturalEarthProjectionFunctions(outputSize: number): string {
+function getGLSLEqualEarthProjectionFunctions(outputSize: number): string {
   return /* glsl */ `
 uint readLongitudeScaleTable(int index) {
   return texelFetch(
@@ -395,7 +398,7 @@ uint readYTable(int index) {
   ).r;
 }
 
-uint projectLongitudeNaturalEarth(uint longitude, uint longitudeScale) {
+uint projectLongitudeEqualEarth(uint longitude, uint longitudeScale) {
   if (longitude >= 0x80000000u) {
     uint delta = multiplyUint32ByQuantizedScale(longitude - 0x80000000u, longitudeScale);
     return addUnsignedClamped(0x80000000u, delta);
@@ -424,7 +427,7 @@ ${outputSize === 3 ? 'uvec3' : 'uvec2'} projectPosition(uint longitude, uint lat
     readLongitudeScaleTable(baseIndex + 2),
     t
   );
-  uint x = projectLongitudeNaturalEarth(longitude, longitudeScale);
+  uint x = projectLongitudeEqualEarth(longitude, longitudeScale);
   uint y = interpolateCatmullRomUint32(
       readYTable(baseIndex - 1),
       readYTable(baseIndex),
@@ -437,9 +440,9 @@ ${outputSize === 3 ? '  return uvec3(x, y, altitude);' : '  return uvec2(x, y);'
 `;
 }
 
-function getWGSLNaturalEarthProjectionFunctions(outputSize: number): string {
+function getWGSLEqualEarthProjectionFunctions(outputSize: number): string {
   return /* wgsl */ `
-fn projectLongitudeNaturalEarth(longitude: u32, longitudeScale: u32) -> u32 {
+fn projectLongitudeEqualEarth(longitude: u32, longitudeScale: u32) -> u32 {
   if (longitude >= 0x80000000u) {
     let delta = multiplyUint32ByQuantizedScale(longitude - 0x80000000u, longitudeScale);
     return addUnsignedClamped(0x80000000u, delta);
@@ -463,13 +466,13 @@ fn projectPosition(longitude: u32, latitude: u32${outputSize === 3 ? ', altitude
   let t = f32(clampedLatitude & ${LATITUDE_TABLE_COORDINATE_MASK}u) * ${LATITUDE_TABLE_COORDINATE_INVERSE_STEP};
   let index = u32(baseIndex);
   let longitudeScale = interpolateCatmullRomUint32(
-    readLongitudeScaleTable(index - 1u),
-    readLongitudeScaleTable(index),
-    readLongitudeScaleTable(index + 1u),
-    readLongitudeScaleTable(index + 2u),
+    longitudeScaleTable[index - 1u],
+    longitudeScaleTable[index],
+    longitudeScaleTable[index + 1u],
+    longitudeScaleTable[index + 2u],
     t
   );
-  let x = projectLongitudeNaturalEarth(longitude, longitudeScale);
+  let x = projectLongitudeEqualEarth(longitude, longitudeScale);
   let y = interpolateCatmullRomUint32(
       yTable[index - 1u],
       yTable[index],

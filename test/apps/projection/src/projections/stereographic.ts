@@ -2,7 +2,6 @@ import {Texture, assert} from '@luma.gl/core';
 import {
   GPUTableEvaluator,
   Operation,
-  type GPUTableEvaluatorInput,
   type OperationHandler
 } from '@luma.gl/gpgpu';
 import {
@@ -18,16 +17,20 @@ import {
   PROJECTION_WORKGROUP_SIZE,
   UINT32_MAX,
   addSignedClamped,
+  appendQuantizedAltitudeToProjectedPosition,
+  appendRawAltitudeToProjectedPosition,
   executeWebGLProjection,
   executeWebGPUProjection,
   getQuantizedPosition,
   getProjectionPositions,
   clamp,
+  isInvalidQuantizedPosition,
   makeQuantizedProjectionOutput,
   projectDegrees180ToQuantized,
   quantizeUnitInterval,
   subtractUint32AsNumber,
   unprojectQuantizedDegrees,
+  type ProjectionInput,
   type ProjectionOperationInputs
 } from './projection-utils';
 
@@ -36,7 +39,7 @@ const INVALID_PROJECTED_POSITION: [number, number] = [UINT32_MAX, UINT32_MAX];
 const HIDDEN_HEMISPHERE_EPSILON = 1e-6;
 const UINT32_RANGE = 0x100000000;
 const QUANTIZED_OUTPUT_CENTER = 0x80000000;
-const STEREOGRAPHIC_LONGITUDE_TABLE_BITS = 10;
+const STEREOGRAPHIC_LONGITUDE_TABLE_BITS = 11;
 const STEREOGRAPHIC_LONGITUDE_TABLE_SIZE = 2 ** STEREOGRAPHIC_LONGITUDE_TABLE_BITS;
 const STEREOGRAPHIC_LONGITUDE_TABLE_MASK = STEREOGRAPHIC_LONGITUDE_TABLE_SIZE - 1;
 const STEREOGRAPHIC_LONGITUDE_OCTANT_BITS = STEREOGRAPHIC_LONGITUDE_TABLE_BITS - 3;
@@ -70,9 +73,27 @@ const STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_SCALE =
 const STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_SCALE =
   STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_CELLS /
   (STEREOGRAPHIC_LATITUDE_MAX_QUANTIZED - STEREOGRAPHIC_LATITUDE_POSITIVE_45_QUANTIZED);
+const STEREOGRAPHIC_LATITUDE_FIXED_POINT_BITS = 17;
+const STEREOGRAPHIC_LATITUDE_FIXED_POINT_SCALE = 2 ** STEREOGRAPHIC_LATITUDE_FIXED_POINT_BITS;
+const STEREOGRAPHIC_LATITUDE_FIXED_POINT_HALF_SCALE =
+  STEREOGRAPHIC_LATITUDE_FIXED_POINT_SCALE / 2;
+const STEREOGRAPHIC_LATITUDE_FIXED_POINT_INVERSE_SCALE =
+  1 / STEREOGRAPHIC_LATITUDE_FIXED_POINT_SCALE;
+const STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_FIXED_POINT_SCALE = Math.round(
+  STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_SCALE *
+    2 ** (32 + STEREOGRAPHIC_LATITUDE_FIXED_POINT_BITS)
+);
+const STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_FIXED_POINT_SCALE = Math.round(
+  STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_SCALE *
+    2 ** (32 + STEREOGRAPHIC_LATITUDE_FIXED_POINT_BITS)
+);
+const STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_FIXED_POINT_SCALE = Math.round(
+  STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_SCALE *
+    2 ** (32 + STEREOGRAPHIC_LATITUDE_FIXED_POINT_BITS)
+);
 const STEREOGRAPHIC_LATITUDE_TABLE_START_INDEX = -1;
 const STEREOGRAPHIC_POLAR_LATITUDE_ORIGIN_EPSILON = 1e-9;
-const STEREOGRAPHIC_TABLE_VERSION = 'lat-step-v3-octant';
+const STEREOGRAPHIC_TABLE_VERSION = 'lat-step-v3-octant-lon11';
 
 export type StereographicProjectionParameters = {
   longitudeOrigin?: number;
@@ -139,7 +160,7 @@ class StereographicOperation extends Operation<StereographicOperationInputs> {
 }
 
 export function stereographic(
-  positions: GPUTableEvaluatorInput,
+  positions: ProjectionInput,
   parameters: StereographicProjectionParameters = STEREOGRAPHIC_DEFAULT
 ): GPUTableEvaluator {
   return new StereographicOperation(
@@ -150,9 +171,23 @@ export function stereographic(
 
 export function rawStereographic(
   coordinates: readonly [number, number],
+  parameters?: StereographicProjectionParameters
+): [number, number];
+export function rawStereographic(
+  coordinates: readonly [number, number, number],
+  parameters?: StereographicProjectionParameters
+): [number, number, number];
+export function rawStereographic(
+  coordinates: readonly [number, number] | readonly [number, number, number],
   parameters: StereographicProjectionParameters = STEREOGRAPHIC_DEFAULT
-): [number, number] {
-  return projectStereographicToQuantized(coordinates, makeStereographicProjectionState(parameters));
+): [number, number] | [number, number, number] {
+  return appendRawAltitudeToProjectedPosition(
+    projectStereographicToQuantized(
+      [coordinates[0], coordinates[1]],
+      makeStereographicProjectionState(parameters)
+    ),
+    coordinates
+  );
 }
 
 export const executeCPUStereographic: OperationHandler<StereographicOperationInputs> = async ({
@@ -166,16 +201,26 @@ export const executeCPUStereographic: OperationHandler<StereographicOperationInp
   const outputValues = new Uint32Array(output.length * output.size);
 
   for (let rowIndex = 0; rowIndex < output.length; rowIndex++) {
-    const [longitude, latitude] = getQuantizedPosition(positionValues, positions, rowIndex);
+    const position = getQuantizedPosition(positionValues, positions, rowIndex);
     const outputOffset = rowIndex * output.size;
+    if (isInvalidQuantizedPosition(position)) {
+      for (let valueIndex = 0; valueIndex < output.size; valueIndex++) {
+        outputValues[outputOffset + valueIndex] = 0xffffffff;
+      }
+      continue;
+    }
+
+    const [longitude, latitude] = position;
     const projected = projectQuantizedStereographicToQuantized(
       longitude,
       latitude,
       parameters,
       projectedTableValues
     );
-    outputValues[outputOffset] = projected[0];
-    outputValues[outputOffset + 1] = projected[1];
+    const projectedPosition = appendQuantizedAltitudeToProjectedPosition(projected, position);
+    for (let valueIndex = 0; valueIndex < output.size; valueIndex++) {
+      outputValues[outputOffset + valueIndex] = projectedPosition[valueIndex];
+    }
   }
 
   target.write(outputValues);
@@ -225,7 +270,7 @@ export const executeWebGLStereographic: OperationHandler<StereographicOperationI
     positions,
     output,
     target,
-    source: getWebGLProjectionSource(positions, parameters),
+    source: getWebGLProjectionSource(positions, output, parameters),
     bindings: {projectedTable: projectedTableTexture},
     modules: [stereographicProjectionParameters],
     moduleProps: {stereographicProjection: makeStereographicProjectionUniforms(parameters)},
@@ -618,13 +663,52 @@ function evaluateUint32TableTaylor(
   const fmp = readProjectedTableValue(tableValue, coordinates, parameters, -1, 1, componentIndex);
   const fmm = readProjectedTableValue(tableValue, coordinates, parameters, -1, -1, componentIndex);
   const fx = (subtractUint32AsNumber(fp0, fm0)) / 2;
-  const fy = (subtractUint32AsNumber(f0p, f0m)) / 2;
   const fxx =
     subtractUint32AsNumber(fp0, f00) + subtractUint32AsNumber(fm0, f00);
-  const fyy =
-    subtractUint32AsNumber(f0p, f00) + subtractUint32AsNumber(f0m, f00);
-  const fxy =
-    (subtractUint32AsNumber(fpp, fpm) - subtractUint32AsNumber(fmp, fmm)) / 4;
+  let fy: number;
+  let fyy: number;
+  let fxy: number;
+  if (isLatitudeBandBoundary(coordinates.latitudeIndex)) {
+    if (coordinates.v >= 0) {
+      const f0pp = readProjectedTableValue(
+        tableValue,
+        coordinates,
+        parameters,
+        0,
+        2,
+        componentIndex
+      );
+      fy =
+        2 * subtractUint32AsNumber(f0p, f00) -
+        0.5 * subtractUint32AsNumber(f0pp, f00);
+      fyy =
+        subtractUint32AsNumber(f0pp, f00) -
+        2 * subtractUint32AsNumber(f0p, f00);
+      fxy =
+        (subtractUint32AsNumber(fpp, fmp) - subtractUint32AsNumber(fp0, fm0)) / 2;
+    } else {
+      const f0mm = readProjectedTableValue(
+        tableValue,
+        coordinates,
+        parameters,
+        0,
+        -2,
+        componentIndex
+      );
+      fy =
+        2 * subtractUint32AsNumber(f00, f0m) -
+        0.5 * subtractUint32AsNumber(f00, f0mm);
+      fyy =
+        subtractUint32AsNumber(f00, f0m) + subtractUint32AsNumber(f0mm, f0m);
+      fxy =
+        (subtractUint32AsNumber(fp0, fm0) - subtractUint32AsNumber(fpm, fmm)) / 2;
+    }
+  } else {
+    fy = subtractUint32AsNumber(f0p, f0m) / 2;
+    fyy = subtractUint32AsNumber(f0p, f00) + subtractUint32AsNumber(f0m, f00);
+    fxy =
+      (subtractUint32AsNumber(fpp, fpm) - subtractUint32AsNumber(fmp, fmm)) / 4;
+  }
   const {u, v} = coordinates;
   const correction =
     fx * u + fy * v + 0.5 * fxx * u * u + fxy * u * v + 0.5 * fyy * v * v;
@@ -688,16 +772,28 @@ function makeStereographicProjectionUniforms(
   };
 }
 
+function isLatitudeBandBoundary(latitudeIndex: number): boolean {
+  return (
+    latitudeIndex === STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_START ||
+    latitudeIndex === STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_START
+  );
+}
+
 function getWebGLProjectionSource(
   positions: GPUTableEvaluator,
+  output: GPUTableEvaluator,
   parameters: StereographicProjectionState
 ): string {
   return getGLSLProjectionShaderSource({
     positions,
+    output,
     extraPrecision: 'precision highp usampler2D;',
     uniforms: 'uniform highp usampler2D projectedTable;',
-    projectedExpression: 'projectStereographic(longitude, latitude)',
-    projectionFunctions: getGLSLStereographicProjectionFunctions(parameters)
+    projectedExpression:
+      output.size === 3
+        ? 'projectStereographic(longitude, latitude, altitude)'
+        : 'projectStereographic(longitude, latitude)',
+    projectionFunctions: getGLSLStereographicProjectionFunctions(parameters, output.size)
   });
 }
 
@@ -720,8 +816,11 @@ function getWebGPUProjectionSource({
     resultBindingIndex,
     workgroupSize: PROJECTION_WORKGROUP_SIZE,
     extraBindings: `@group(0) @binding(${projectedTableBindingIndex}) var<storage, read> projectedTable: array<u32>;`,
-    projectedExpression: 'projectStereographic(longitude, latitude)',
-    projectionFunctions: getWGSLStereographicProjectionFunctions(parameters)
+    projectedExpression:
+      output.size === 3
+        ? 'projectStereographic(longitude, latitude, altitude)'
+        : 'projectStereographic(longitude, latitude)',
+    projectionFunctions: getWGSLStereographicProjectionFunctions(parameters, output.size)
   });
 }
 
@@ -736,15 +835,31 @@ function getGLSLLatitudeTableFunctions(parameters: StereographicProjectionState)
       : 'mirrorLatitudeQuantized(clampedLatitude)';
 
   return /* glsl */ `
-StereographicLatitudeCoordinate makeLatitudeTableCoordinate(int bandStart, float localCoordinate) {
-  int latitudeIndex = int(clamp(
-    floor(localCoordinate + 0.5) + float(bandStart),
-    ${formatShaderFloat(tableIndexMin)},
-    ${formatShaderFloat(tableIndexMax)}
-  ));
+StereographicLatitudeCoordinate makeLatitudeTableCoordinate(
+  int bandStart,
+  uint quantizedLatitudeDelta,
+  uint fixedPointScale
+) {
+  uint fixedPointCoordinate = multiplyUint32ByQuantizedScale(
+    quantizedLatitudeDelta,
+    fixedPointScale
+  );
+  int localIndex = int(
+    (fixedPointCoordinate + ${STEREOGRAPHIC_LATITUDE_FIXED_POINT_HALF_SCALE}u) >>
+      ${STEREOGRAPHIC_LATITUDE_FIXED_POINT_BITS}u
+  );
+  int latitudeIndex = clamp(
+    localIndex + bandStart,
+    ${tableIndexMin},
+    ${tableIndexMax}
+  );
+  int clampedLocalIndex = latitudeIndex - bandStart;
+  int fixedPointResidual =
+    int(fixedPointCoordinate) -
+    clampedLocalIndex * ${STEREOGRAPHIC_LATITUDE_FIXED_POINT_SCALE};
   return StereographicLatitudeCoordinate(
     latitudeIndex,
-    localCoordinate - float(latitudeIndex - bandStart)
+    float(fixedPointResidual) * ${formatShaderFloat(STEREOGRAPHIC_LATITUDE_FIXED_POINT_INVERSE_SCALE)}
   );
 }
 
@@ -763,21 +878,21 @@ StereographicLatitudeCoordinate getLatitudeTableCoordinate(uint latitude) {
   if (northLatitude < ${STEREOGRAPHIC_LATITUDE_POSITIVE_15_QUANTIZED}u) {
     return makeLatitudeTableCoordinate(
       ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_START},
-      float(northLatitude - ${STEREOGRAPHIC_LATITUDE_CENTER_QUANTIZED}u) *
-        ${formatShaderFloat(STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_SCALE)}
+      northLatitude - ${STEREOGRAPHIC_LATITUDE_CENTER_QUANTIZED}u,
+      ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_FIXED_POINT_SCALE}u
     );
   }
   if (northLatitude < ${STEREOGRAPHIC_LATITUDE_POSITIVE_45_QUANTIZED}u) {
     return makeLatitudeTableCoordinate(
       ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_START},
-      float(northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_15_QUANTIZED}u) *
-        ${formatShaderFloat(STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_SCALE)}
+      northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_15_QUANTIZED}u,
+      ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_FIXED_POINT_SCALE}u
     );
   }
   return makeLatitudeTableCoordinate(
     ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_START},
-    float(northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_45_QUANTIZED}u) *
-      ${formatShaderFloat(STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_SCALE)}
+    northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_45_QUANTIZED}u,
+    ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_FIXED_POINT_SCALE}u
   );
 }
 `;
@@ -794,15 +909,31 @@ function getWGSLLatitudeTableFunctions(parameters: StereographicProjectionState)
       : 'mirrorLatitudeQuantized(clampedLatitude)';
 
   return /* wgsl */ `
-fn makeLatitudeTableCoordinate(bandStart: i32, localCoordinate: f32) -> StereographicLatitudeCoordinate {
-  let latitudeIndex = i32(clamp(
-    floor(localCoordinate + 0.5) + f32(bandStart),
-    ${formatShaderFloat(tableIndexMin)},
-    ${formatShaderFloat(tableIndexMax)}
-  ));
+fn makeLatitudeTableCoordinate(
+  bandStart: i32,
+  quantizedLatitudeDelta: u32,
+  fixedPointScale: u32
+) -> StereographicLatitudeCoordinate {
+  let fixedPointCoordinate = multiplyUint32ByQuantizedScale(
+    quantizedLatitudeDelta,
+    fixedPointScale
+  );
+  let localIndex = i32(
+    (fixedPointCoordinate + ${STEREOGRAPHIC_LATITUDE_FIXED_POINT_HALF_SCALE}u) >>
+      ${STEREOGRAPHIC_LATITUDE_FIXED_POINT_BITS}u
+  );
+  let latitudeIndex = clamp(
+    localIndex + bandStart,
+    ${tableIndexMin},
+    ${tableIndexMax}
+  );
+  let clampedLocalIndex = latitudeIndex - bandStart;
+  let fixedPointResidual =
+    i32(fixedPointCoordinate) -
+    clampedLocalIndex * ${STEREOGRAPHIC_LATITUDE_FIXED_POINT_SCALE};
   return StereographicLatitudeCoordinate(
     latitudeIndex,
-    localCoordinate - f32(latitudeIndex - bandStart)
+    f32(fixedPointResidual) * ${formatShaderFloat(STEREOGRAPHIC_LATITUDE_FIXED_POINT_INVERSE_SCALE)}
   );
 }
 
@@ -821,27 +952,30 @@ fn getLatitudeTableCoordinate(latitude: u32) -> StereographicLatitudeCoordinate 
   if (northLatitude < ${STEREOGRAPHIC_LATITUDE_POSITIVE_15_QUANTIZED}u) {
     return makeLatitudeTableCoordinate(
       ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_START},
-      f32(northLatitude - ${STEREOGRAPHIC_LATITUDE_CENTER_QUANTIZED}u) *
-        ${formatShaderFloat(STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_SCALE)}
+      northLatitude - ${STEREOGRAPHIC_LATITUDE_CENTER_QUANTIZED}u,
+      ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_0_FIXED_POINT_SCALE}u
     );
   }
   if (northLatitude < ${STEREOGRAPHIC_LATITUDE_POSITIVE_45_QUANTIZED}u) {
     return makeLatitudeTableCoordinate(
       ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_START},
-      f32(northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_15_QUANTIZED}u) *
-        ${formatShaderFloat(STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_SCALE)}
+      northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_15_QUANTIZED}u,
+      ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_FIXED_POINT_SCALE}u
     );
   }
   return makeLatitudeTableCoordinate(
     ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_START},
-    f32(northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_45_QUANTIZED}u) *
-      ${formatShaderFloat(STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_SCALE)}
+    northLatitude - ${STEREOGRAPHIC_LATITUDE_POSITIVE_45_QUANTIZED}u,
+    ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_FIXED_POINT_SCALE}u
   );
 }
 `;
 }
 
-function getGLSLStereographicProjectionFunctions(parameters: StereographicProjectionState): string {
+function getGLSLStereographicProjectionFunctions(
+  parameters: StereographicProjectionState,
+  outputSize: number
+): string {
   const mirrorXExpression =
     parameters.latitudeOriginSign > 0
       ? 'octant == 1 || octant == 2 || octant == 4 || octant == 7'
@@ -922,6 +1056,12 @@ uint getProjectedComponent(uvec2 value, int componentIndex) {
   return componentIndex == 0 ? value.x : value.y;
 }
 
+bool isLatitudeBandBoundary(int latitudeIndex) {
+  return
+    latitudeIndex == ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_START} ||
+    latitudeIndex == ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_START};
+}
+
 float getWrappedLongitudeDelta(uint value, uint center) {
   uint delta = value - center;
   if (delta > 0x80000000u) {
@@ -967,10 +1107,27 @@ uint evaluateProjectedComponent(StereographicTableCoordinate coordinates, int co
   uint fmp = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex - 1, coordinates.latitudeIndex + 1), componentIndex);
   uint fmm = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex - 1, coordinates.latitudeIndex - 1), componentIndex);
   float fx = 0.5 * subtractU32AsFloat(fp0, fm0);
-  float fy = 0.5 * subtractU32AsFloat(f0p, f0m);
   float fxx = subtractU32AsFloat(fp0, f00) + subtractU32AsFloat(fm0, f00);
-  float fyy = subtractU32AsFloat(f0p, f00) + subtractU32AsFloat(f0m, f00);
-  float fxy = 0.25 * (subtractU32AsFloat(fpp, fpm) - subtractU32AsFloat(fmp, fmm));
+  float fy;
+  float fyy;
+  float fxy;
+  if (isLatitudeBandBoundary(coordinates.latitudeIndex)) {
+    if (coordinates.v >= 0.0) {
+      uint f0pp = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex, coordinates.latitudeIndex + 2), componentIndex);
+      fy = 2.0 * subtractU32AsFloat(f0p, f00) - 0.5 * subtractU32AsFloat(f0pp, f00);
+      fyy = subtractU32AsFloat(f0pp, f00) - 2.0 * subtractU32AsFloat(f0p, f00);
+      fxy = 0.5 * (subtractU32AsFloat(fpp, fmp) - subtractU32AsFloat(fp0, fm0));
+    } else {
+      uint f0mm = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex, coordinates.latitudeIndex - 2), componentIndex);
+      fy = 2.0 * subtractU32AsFloat(f00, f0m) - 0.5 * subtractU32AsFloat(f00, f0mm);
+      fyy = subtractU32AsFloat(f00, f0m) + subtractU32AsFloat(f0mm, f0m);
+      fxy = 0.5 * (subtractU32AsFloat(fp0, fm0) - subtractU32AsFloat(fpm, fmm));
+    }
+  } else {
+    fy = 0.5 * subtractU32AsFloat(f0p, f0m);
+    fyy = subtractU32AsFloat(f0p, f00) + subtractU32AsFloat(f0m, f00);
+    fxy = 0.25 * (subtractU32AsFloat(fpp, fpm) - subtractU32AsFloat(fmp, fmm));
+  }
   float correction =
     fx * coordinates.u +
     fy * coordinates.v +
@@ -987,21 +1144,29 @@ uvec2 makeValidProjectedPosition(uint x, uint y) {
   return uvec2(x, y);
 }
 
-uvec2 projectStereographic(uint longitude, uint latitude) {
+${outputSize === 3 ? 'uvec3' : 'uvec2'} projectStereographic(uint longitude, uint latitude${outputSize === 3 ? ', uint altitude' : ''}) {
+  if (longitude == 0xffffffffu && latitude == 0xffffffffu${outputSize === 3 ? ' && altitude == 0xffffffffu' : ''}) {
+    return ${outputSize === 3 ? 'uvec3' : 'uvec2'}(0xffffffffu);
+  }
+
   if (getStereographicVisibilityDot(latitude) < -stereographicProjection.projectionParameters.z) {
-    return uvec2(0xffffffffu, 0xffffffffu);
+    return ${outputSize === 3 ? 'uvec3' : 'uvec2'}(0xffffffffu);
   }
 
   StereographicTableCoordinate coordinates = getStereographicTableCoordinate(longitude, latitude);
-  return makeValidProjectedPosition(
+  uvec2 projected = makeValidProjectedPosition(
     evaluateProjectedComponent(coordinates, 0),
     evaluateProjectedComponent(coordinates, 1)
   );
+${outputSize === 3 ? '  return uvec3(projected.x, projected.y, altitude);' : '  return projected;'}
 }
 `;
 }
 
-function getWGSLStereographicProjectionFunctions(parameters: StereographicProjectionState): string {
+function getWGSLStereographicProjectionFunctions(
+  parameters: StereographicProjectionState,
+  outputSize: number
+): string {
   const longitudeTableSize = getStereographicLongitudeTableSize();
   const mirrorXExpression =
     parameters.latitudeOriginSign > 0
@@ -1084,6 +1249,12 @@ fn getProjectedComponent(value: vec2<u32>, componentIndex: u32) -> u32 {
   return value.y;
 }
 
+fn isLatitudeBandBoundary(latitudeIndex: i32) -> bool {
+  return
+    latitudeIndex == ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_1_START} ||
+    latitudeIndex == ${STEREOGRAPHIC_POLAR_LATITUDE_BAND_2_START};
+}
+
 fn getWrappedLongitudeDelta(value: u32, center: u32) -> f32 {
   let delta = value - center;
   if (delta > 0x80000000u) {
@@ -1129,10 +1300,27 @@ fn evaluateProjectedComponent(coordinates: StereographicTableCoordinate, compone
   let fmp = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex - 1, coordinates.latitudeIndex + 1), componentIndex);
   let fmm = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex - 1, coordinates.latitudeIndex - 1), componentIndex);
   let fx = 0.5 * subtractU32AsF32(fp0, fm0);
-  let fy = 0.5 * subtractU32AsF32(f0p, f0m);
   let fxx = subtractU32AsF32(fp0, f00) + subtractU32AsF32(fm0, f00);
-  let fyy = subtractU32AsF32(f0p, f00) + subtractU32AsF32(f0m, f00);
-  let fxy = 0.25 * (subtractU32AsF32(fpp, fpm) - subtractU32AsF32(fmp, fmm));
+  var fy = 0.0;
+  var fyy = 0.0;
+  var fxy = 0.0;
+  if (isLatitudeBandBoundary(coordinates.latitudeIndex)) {
+    if (coordinates.v >= 0.0) {
+      let f0pp = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex, coordinates.latitudeIndex + 2), componentIndex);
+      fy = 2.0 * subtractU32AsF32(f0p, f00) - 0.5 * subtractU32AsF32(f0pp, f00);
+      fyy = subtractU32AsF32(f0pp, f00) - 2.0 * subtractU32AsF32(f0p, f00);
+      fxy = 0.5 * (subtractU32AsF32(fpp, fmp) - subtractU32AsF32(fp0, fm0));
+    } else {
+      let f0mm = getProjectedComponent(readProjectedTable(coordinates.longitudeIndex, coordinates.latitudeIndex - 2), componentIndex);
+      fy = 2.0 * subtractU32AsF32(f00, f0m) - 0.5 * subtractU32AsF32(f00, f0mm);
+      fyy = subtractU32AsF32(f00, f0m) + subtractU32AsF32(f0mm, f0m);
+      fxy = 0.5 * (subtractU32AsF32(fp0, fm0) - subtractU32AsF32(fpm, fmm));
+    }
+  } else {
+    fy = 0.5 * subtractU32AsF32(f0p, f0m);
+    fyy = subtractU32AsF32(f0p, f00) + subtractU32AsF32(f0m, f00);
+    fxy = 0.25 * (subtractU32AsF32(fpp, fpm) - subtractU32AsF32(fmp, fmm));
+  }
   let correction =
     fx * coordinates.u +
     fy * coordinates.v +
@@ -1149,16 +1337,21 @@ fn makeValidProjectedPosition(x: u32, y: u32) -> vec2<u32> {
   return vec2<u32>(x, y);
 }
 
-fn projectStereographic(longitude: u32, latitude: u32) -> vec2<u32> {
+fn projectStereographic(longitude: u32, latitude: u32${outputSize === 3 ? ', altitude: u32' : ''}) -> ${outputSize === 3 ? 'vec3<u32>' : 'vec2<u32>'} {
+  if (longitude == 0xffffffffu && latitude == 0xffffffffu${outputSize === 3 ? ' && altitude == 0xffffffffu' : ''}) {
+    return ${outputSize === 3 ? 'vec3<u32>' : 'vec2<u32>'}(0xffffffffu);
+  }
+
   if (getStereographicVisibilityDot(latitude) < -stereographicProjection.projectionParameters.z) {
-    return vec2<u32>(0xffffffffu, 0xffffffffu);
+    return ${outputSize === 3 ? 'vec3<u32>' : 'vec2<u32>'}(0xffffffffu);
   }
 
   let coordinates = getStereographicTableCoordinate(longitude, latitude);
-  return makeValidProjectedPosition(
+  let projected = makeValidProjectedPosition(
     evaluateProjectedComponent(coordinates, 0u),
     evaluateProjectedComponent(coordinates, 1u)
   );
+${outputSize === 3 ? '  return vec3<u32>(projected.x, projected.y, altitude);' : '  return projected;'}
 }
 `;
 }

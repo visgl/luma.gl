@@ -10,37 +10,63 @@ import {
 } from '@luma.gl/gpgpu';
 import {
   formatShaderFloat,
+  formatDoubleSingleConstructor,
   getGLSLDoublePrecisionMathModule,
   getGLSLGeospatialProjectionModule,
   getWGSLDoublePrecisionMathModule,
   getWGSLGeospatialProjectionModule
 } from './projection-shader-utils';
+import {
+  ALTITUDE_UNITS_PER_METER,
+  INVALID_QUANTIZED_COORDINATE,
+  QUANTIZED_SEA_LEVEL,
+  UINT32_MAX
+} from './projection-constants';
+
+export type DegreesToQuantizedInput =
+  | GPUTableEvaluatorInput
+  | {
+      coordinates: GPUTableEvaluatorInput;
+      altitude?: GPUTableEvaluatorInput;
+    };
 
 type DegreesToQuantizedOperationInputs = {
   values: GPUTableEvaluator;
+  altitude?: GPUTableEvaluator;
+  coordinateSize: number;
   hasLowPart: boolean;
 };
 
 const WORKGROUP_SIZE = 64;
-const UINT32_MAX = 0xffffffff;
+const QUANTIZED_SEA_LEVEL_UNIT = QUANTIZED_SEA_LEVEL / UINT32_MAX;
+const ALTITUDE_UNIT_SCALE = ALTITUDE_UNITS_PER_METER / UINT32_MAX;
 
 class DegreesToQuantizedOperation extends Operation<DegreesToQuantizedOperationInputs> {
   name = 'degreesToQuantized';
 
   output: GPUTableEvaluator;
 
-  constructor(values: GPUTableEvaluator, outputSize: number, hasLowPart: boolean) {
+  constructor(
+    values: GPUTableEvaluator,
+    outputSize: number,
+    coordinateSize: number,
+    hasLowPart: boolean,
+    altitude?: GPUTableEvaluator
+  ) {
     if (values.type !== 'float32') {
       throw new Error('degreesToQuantized input must be float32 values');
     }
-    super({values, hasLowPart});
+    if (altitude && (altitude.type !== 'float32' || altitude.size !== 1)) {
+      throw new Error('degreesToQuantized altitude must be scalar float32 values');
+    }
+    super({values, altitude, coordinateSize, hasLowPart});
 
     this.output = new GPUTableEvaluator({
       id: 'degreesToQuantized',
-      isConstant: values.isConstant,
+      isConstant: values.isConstant && (altitude?.isConstant ?? true),
       type: 'uint32',
       size: outputSize,
-      length: values.length,
+      length: getBroadcastLength(values, altitude),
       source: this
     });
   }
@@ -50,33 +76,155 @@ class DegreesToQuantizedOperation extends Operation<DegreesToQuantizedOperationI
   }
 }
 
-export function degreesToQuantized(x: GPUTableEvaluatorInput): GPUTableEvaluator {
-  const input = getGPUTableEvaluator(x);
+export function degreesToQuantized(x: DegreesToQuantizedInput): GPUTableEvaluator {
+  if (typeof x === 'object' && !(x instanceof GPUTableEvaluator) && 'coordinates' in x) {
+    const coordinates = normalizeCoordinateInput(getGPUTableEvaluator(x.coordinates));
+    if (x.altitude === undefined) {
+      return new DegreesToQuantizedOperation(
+        coordinates.values,
+        coordinates.logicalSize,
+        coordinates.logicalSize,
+        coordinates.hasLowPart
+      ).output;
+    }
 
+    const altitude = getGPUTableEvaluator(x.altitude);
+    if (coordinates.logicalSize !== 2) {
+      throw new Error('degreesToQuantized separate altitude input requires vec2 coordinates');
+    }
+    validateBroadcastLength(coordinates.values, altitude);
+    return new DegreesToQuantizedOperation(
+      coordinates.values,
+      3,
+      coordinates.logicalSize,
+      coordinates.hasLowPart,
+      altitude
+    ).output;
+  }
+
+  const coordinates = normalizeCoordinateInput(getGPUTableEvaluator(x));
+  return new DegreesToQuantizedOperation(
+    coordinates.values,
+    coordinates.logicalSize,
+    coordinates.logicalSize,
+    coordinates.hasLowPart
+  ).output;
+}
+
+function normalizeCoordinateInput(input: GPUTableEvaluator): {
+  values: GPUTableEvaluator;
+  logicalSize: number;
+  hasLowPart: boolean;
+} {
   if (input.type === 'uint32') {
     if (input.size % 2 !== 0) {
       throw new Error('degreesToQuantized fp64 input must have an even number of uint32 lanes');
     }
-    return new DegreesToQuantizedOperation(fround(input), input.size / 2, true).output;
+    const logicalSize = input.size / 2;
+    validateCoordinateSize(logicalSize);
+    return {values: fround(input), logicalSize, hasLowPart: true};
   }
 
   if (input.type === 'float32') {
-    return new DegreesToQuantizedOperation(input, input.size, false).output;
+    validateCoordinateSize(input.size);
+    return {values: input, logicalSize: input.size, hasLowPart: false};
   }
 
   throw new Error('degreesToQuantized input must be float32 degree values or float64 values');
 }
 
+function validateCoordinateSize(size: number): void {
+  if (size !== 2 && size !== 3) {
+    throw new Error('degreesToQuantized coordinates must be vec2 or vec3');
+  }
+}
+
+function getBroadcastLength(values: GPUTableEvaluator, altitude?: GPUTableEvaluator): number {
+  if (!altitude || altitude.isConstant || !values.isConstant) {
+    return values.length;
+  }
+  return altitude.length;
+}
+
+function validateBroadcastLength(values: GPUTableEvaluator, altitude: GPUTableEvaluator): void {
+  if (!values.isConstant && !altitude.isConstant && values.length !== altitude.length) {
+    throw new Error('degreesToQuantized coordinates and altitude must have matching lengths');
+  }
+}
+
+function isInvalidInputRow(
+  inputValues: ArrayLike<number>,
+  inputRowOffset: number,
+  coordinateSize: number,
+  hasLowPart: boolean,
+  altitude: GPUTableEvaluator | undefined,
+  altitudeValues: ArrayLike<number> | undefined,
+  altitudeOffset: number,
+  altitudeStride: number,
+  rowIndex: number
+): boolean {
+  for (let valueIndex = 0; valueIndex < coordinateSize; valueIndex++) {
+    if (
+      !Number.isFinite(
+        readCoordinateValue(inputValues, inputRowOffset, coordinateSize, hasLowPart, valueIndex)
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return Boolean(
+    altitude &&
+      altitudeValues &&
+      !Number.isFinite(
+        readAltitudeValue(altitudeValues, altitude, altitudeOffset, altitudeStride, rowIndex)
+      )
+  );
+}
+
+function readCoordinateValue(
+  inputValues: ArrayLike<number>,
+  inputRowOffset: number,
+  coordinateSize: number,
+  hasLowPart: boolean,
+  valueIndex: number
+): number {
+  const high = Number(inputValues[inputRowOffset + valueIndex]);
+  const low = hasLowPart ? Number(inputValues[inputRowOffset + valueIndex + coordinateSize]) : 0;
+  return high + low;
+}
+
+function readAltitudeValue(
+  altitudeValues: ArrayLike<number>,
+  altitude: GPUTableEvaluator,
+  altitudeOffset: number,
+  altitudeStride: number,
+  rowIndex: number
+): number {
+  const altitudeRowIndex = altitude.isConstant ? 0 : rowIndex;
+  return Number(altitudeValues[altitudeOffset + altitudeRowIndex * altitudeStride]);
+}
+
 export const executeCPUDegreesToQuantized: OperationHandler<
   DegreesToQuantizedOperationInputs
 > = async ({inputs, output, target}) => {
-  const {values, hasLowPart} = inputs;
+  const {values, altitude, coordinateSize, hasLowPart} = inputs;
   const sourceValues = values.value;
   const inputValues = sourceValues ?? (await values.readValue());
   const inputOffset = sourceValues ? values.offset / values.ValueType.BYTES_PER_ELEMENT : 0;
   const inputStride = sourceValues
     ? values.stride / values.ValueType.BYTES_PER_ELEMENT
     : values.size;
+  const sourceAltitudeValues = altitude?.value;
+  const altitudeValues = altitude
+    ? sourceAltitudeValues ?? (await altitude.readValue())
+    : undefined;
+  const altitudeOffset =
+    altitude && sourceAltitudeValues ? altitude.offset / altitude.ValueType.BYTES_PER_ELEMENT : 0;
+  const altitudeStride =
+    altitude && sourceAltitudeValues
+      ? altitude.stride / altitude.ValueType.BYTES_PER_ELEMENT
+      : (altitude?.size ?? 1);
   const outputValues = new Uint32Array(output.length * output.size);
 
   for (let rowIndex = 0; rowIndex < output.length; rowIndex++) {
@@ -84,10 +232,32 @@ export const executeCPUDegreesToQuantized: OperationHandler<
     const inputRowOffset = inputOffset + inputRowIndex * inputStride;
     const outputRowOffset = rowIndex * output.size;
 
+    if (
+      isInvalidInputRow(
+        inputValues,
+        inputRowOffset,
+        coordinateSize,
+        hasLowPart,
+        altitude,
+        altitudeValues,
+        altitudeOffset,
+        altitudeStride,
+        rowIndex
+      )
+    ) {
+      for (let valueIndex = 0; valueIndex < output.size; valueIndex++) {
+        outputValues[outputRowOffset + valueIndex] = INVALID_QUANTIZED_COORDINATE;
+      }
+      continue;
+    }
+
     for (let valueIndex = 0; valueIndex < output.size; valueIndex++) {
-      const high = Number(inputValues[inputRowOffset + valueIndex]);
-      const low = hasLowPart ? Number(inputValues[inputRowOffset + valueIndex + output.size]) : 0;
-      outputValues[outputRowOffset + valueIndex] = projectDegrees180ToQuantized(high + low);
+      const value =
+        altitude && valueIndex === 2
+          ? readAltitudeValue(altitudeValues!, altitude, altitudeOffset, altitudeStride, rowIndex)
+          : readCoordinateValue(inputValues, inputRowOffset, coordinateSize, hasLowPart, valueIndex);
+      outputValues[outputRowOffset + valueIndex] =
+        valueIndex === 2 ? projectAltitudeMetersToQuantized(value) : projectDegrees180ToQuantized(value);
     }
   }
 
@@ -98,22 +268,24 @@ export const executeCPUDegreesToQuantized: OperationHandler<
 export const executeWebGLDegreesToQuantized: OperationHandler<
   DegreesToQuantizedOperationInputs
 > = ({inputs, output, target}) => {
-  const {values, hasLowPart} = inputs;
+  const {values, altitude, coordinateSize, hasLowPart} = inputs;
+  const outputNames = getWebGLOutputNames(output.size);
   const transform = new BufferTransform(target.device, {
-    vs: getWebGLDegreesToQuantizedSource(values, output, hasLowPart),
-    bufferLayout: [getWebGLInputBufferLayout(values)],
+    vs: getWebGLDegreesToQuantizedSource(values, output, coordinateSize, hasLowPart, altitude),
+    bufferLayout: [
+      getWebGLInputBufferLayout(values, 'values'),
+      ...(altitude ? [getWebGLInputBufferLayout(altitude, 'altitude')] : [])
+    ],
     vertexCount: 1,
     instanceCount: output.length,
     feedbackBufferMode: 'interleaved',
-    outputs: getWebGLOutputNames(output.size)
+    outputs: outputNames
   });
 
   try {
     transform.run({
-      inputBuffers: {values: values.buffer},
-      outputBuffers: Object.fromEntries(
-        getWebGLOutputNames(output.size).map(name => [name, target])
-      )
+      inputBuffers: {values: values.buffer, ...(altitude ? {altitude: altitude.buffer} : {})},
+      outputBuffers: Object.fromEntries(outputNames.map(name => [name, target]))
     });
     return Promise.resolve({success: true});
   } finally {
@@ -124,15 +296,29 @@ export const executeWebGLDegreesToQuantized: OperationHandler<
 export const executeWebGPUDegreesToQuantized: OperationHandler<
   DegreesToQuantizedOperationInputs
 > = ({inputs, output, target}) => {
-  const {values, hasLowPart} = inputs;
-  const resultBindingIndex = values.isConstant ? 0 : 1;
+  const {values, altitude, coordinateSize, hasLowPart} = inputs;
+  const valueBindingIndex = values.isConstant ? -1 : 0;
+  const altitudeBindingIndex = altitude && !altitude.isConstant ? (values.isConstant ? 0 : 1) : -1;
+  const resultBindingIndex = (values.isConstant ? 0 : 1) + (altitude && !altitude.isConstant ? 1 : 0);
   const computation = new Computation(target.device, {
-    source: getWebGPUDegreesToQuantizedSource(values, output, resultBindingIndex, hasLowPart),
+    source: getWebGPUDegreesToQuantizedSource(
+      values,
+      output,
+      resultBindingIndex,
+      coordinateSize,
+      hasLowPart,
+      altitude,
+      valueBindingIndex,
+      altitudeBindingIndex
+    ),
     shaderLayout: {
       bindings: [
         ...(values.isConstant
           ? []
-          : [{name: 'values', type: 'storage' as const, group: 0, location: 0}]),
+          : [{name: 'values', type: 'storage' as const, group: 0, location: valueBindingIndex}]),
+        ...(altitude && !altitude.isConstant
+          ? [{name: 'altitude', type: 'storage' as const, group: 0, location: altitudeBindingIndex}]
+          : []),
         {name: 'result', type: 'storage' as const, group: 0, location: resultBindingIndex}
       ]
     }
@@ -140,6 +326,7 @@ export const executeWebGPUDegreesToQuantized: OperationHandler<
 
   computation.setBindings({
     ...(values.isConstant ? {} : {values: values.buffer}),
+    ...(altitude && !altitude.isConstant ? {altitude: altitude.buffer} : {}),
     result: target
   });
 
@@ -162,16 +349,26 @@ function projectDegrees180ToQuantized(degrees: number): number {
   return Math.round(((degrees + 180) / 360) * UINT32_MAX) >>> 0;
 }
 
-function getWebGLInputBufferLayout(values: GPUTableEvaluator): BufferLayout {
+function projectAltitudeMetersToQuantized(altitudeMeters: number): number {
+  if (altitudeMeters <= -QUANTIZED_SEA_LEVEL / ALTITUDE_UNITS_PER_METER) {
+    return 0;
+  }
+  if (altitudeMeters >= (UINT32_MAX - QUANTIZED_SEA_LEVEL) / ALTITUDE_UNITS_PER_METER) {
+    return UINT32_MAX;
+  }
+  return Math.round(QUANTIZED_SEA_LEVEL + altitudeMeters * ALTITUDE_UNITS_PER_METER) >>> 0;
+}
+
+function getWebGLInputBufferLayout(values: GPUTableEvaluator, name: string): BufferLayout {
   return {
-    name: 'values',
+    name,
     stepMode: values.isConstant ? 'vertex' : 'instance',
     byteStride: values.stride,
     attributes: Array.from({length: Math.ceil(values.size / 4)}, (_, attributeIndex) => {
       const laneIndex = attributeIndex * 4;
       const laneCount = Math.min(values.size - laneIndex, 4);
       return {
-        attribute: `values_${laneIndex}`,
+        attribute: `${name}_${laneIndex}`,
         format: getFloat32VertexFormat(laneCount),
         byteOffset: values.offset + laneIndex * values.ValueType.BYTES_PER_ELEMENT
       };
@@ -186,16 +383,33 @@ function getFloat32VertexFormat(size: number): VertexFormat {
 function getWebGLDegreesToQuantizedSource(
   values: GPUTableEvaluator,
   output: GPUTableEvaluator,
-  hasLowPart: boolean
+  coordinateSize: number,
+  hasLowPart: boolean,
+  altitude?: GPUTableEvaluator
 ): string {
-  const lowExpression = hasLowPart ? `values[index + ${output.size}]` : '0.0';
+  const lowExpression = hasLowPart ? `values[index + ${coordinateSize}]` : '0.0';
+  const altitudeDeclarations = altitude ? getWebGLInputDeclarations(altitude.size, 'altitude') : '';
+  const altitudeReader = altitude
+    ? `DoubleSingle readAltitudeInputValue(float altitude[${altitude.size}]) {
+  return DoubleSingle(altitude[0], 0.0);
+}`
+    : '';
+  const readValueBlock = altitude
+    ? `    DoubleSingle value;
+    if (i == 2) {
+      value = readAltitudeInputValue(altitude);
+    } else {
+      value = readInputValue(values, i);
+    }`
+    : '    DoubleSingle value = readInputValue(values, i);';
   return /* glsl */ `\
 #version 300 es
 
 precision highp float;
 precision highp int;
 
-${getWebGLInputDeclarations(values.size)}
+${getWebGLInputDeclarations(values.size, 'values')}
+${altitudeDeclarations}
 ${getWebGLOutputDeclarations(output.size)}
 ${getGLSLDoublePrecisionMathModule()}
 ${getGLSLGeospatialProjectionModule()}
@@ -204,17 +418,51 @@ DoubleSingle readInputValue(float values[${values.size}], int index) {
   return DoubleSingle(values[index], ${lowExpression});
 }
 
-void degreesToQuantized(float values[${values.size}], out uint result[${output.size}]) {
+${altitudeReader}
+
+bool isInvalidFloat(float value) {
+  return value != value || abs(value) > 3.402823e38;
+}
+
+bool isInvalidInputValue(DoubleSingle value) {
+  return isInvalidFloat(value.high) || isInvalidFloat(value.low);
+}
+
+uint projectAltitudeMetersToQuantized(DoubleSingle altitudeMeters) {
+  DoubleSingle unit = dsAdd(
+    ${formatDoubleSingleConstructor(QUANTIZED_SEA_LEVEL_UNIT)},
+    dsMul(altitudeMeters, ${formatDoubleSingleConstructor(ALTITUDE_UNIT_SCALE)})
+  );
+  return quantizeUnitToU32(unit);
+}
+
+void degreesToQuantized(float values[${values.size}], ${altitude ? `float altitude[${altitude.size}], ` : ''}out uint result[${output.size}]) {
+  bool isInvalidRow = false;
   for (int i = 0; i < ${output.size}; i++) {
-    result[i] = projectDegrees180ToQuantized(readInputValue(values, i));
+${readValueBlock}
+    if (isInvalidInputValue(value)) {
+      isInvalidRow = true;
+    }
+    if (i == 2) {
+      result[i] = projectAltitudeMetersToQuantized(value);
+    } else {
+      result[i] = projectDegrees180ToQuantized(value);
+    }
+  }
+  if (isInvalidRow) {
+    for (int i = 0; i < ${output.size}; i++) {
+      result[i] = ${INVALID_QUANTIZED_COORDINATE}u;
+    }
   }
 }
 
 void main() {
   float values[${values.size}];
   get_values(values);
+${altitude ? `  float altitude[${altitude.size}];
+  get_altitude(altitude);` : ''}
   uint result[${output.size}];
-  degreesToQuantized(values, result);
+  degreesToQuantized(values, ${altitude ? 'altitude, ' : ''}result);
   set_result(result);
 }
 `;
@@ -224,17 +472,27 @@ function getWebGPUDegreesToQuantizedSource(
   values: GPUTableEvaluator,
   output: GPUTableEvaluator,
   resultBindingIndex: number,
-  hasLowPart: boolean
+  coordinateSize: number,
+  hasLowPart: boolean,
+  altitude: GPUTableEvaluator | undefined,
+  valueBindingIndex: number,
+  altitudeBindingIndex: number
 ): string {
   const inputBinding = values.isConstant
     ? ''
-    : '@group(0) @binding(0) var<storage, read> values: array<f32>;\n';
+    : `@group(0) @binding(${valueBindingIndex}) var<storage, read> values: array<f32>;\n`;
+  const altitudeBinding =
+    altitude && !altitude.isConstant
+      ? `@group(0) @binding(${altitudeBindingIndex}) var<storage, read> altitude: array<f32>;\n`
+      : '';
   const constantValues = values.isConstant
     ? getConstantValues(values).map(formatShaderFloat).join(', ')
     : '';
-  const lowExpression = hasLowPart ? `values[index + ${output.size}u]` : '0.0';
+  const constantAltitude =
+    altitude?.isConstant && altitude.value ? formatShaderFloat(Number(altitude.value[0])) : '';
+  const lowExpression = hasLowPart ? `values[index + ${coordinateSize}u]` : '0.0';
   return /* wgsl */ `
-${inputBinding}@group(0) @binding(${resultBindingIndex}) var<storage, read_write> result: array<u32>;
+${inputBinding}${altitudeBinding}@group(0) @binding(${resultBindingIndex}) var<storage, read_write> result: array<u32>;
 
 ${getWGSLDoublePrecisionMathModule()}
 ${getWGSLGeospatialProjectionModule()}
@@ -245,6 +503,26 @@ ${getWebGPUInputReader(values, constantValues)}
 
 fn readInputValue(values: array<f32, ${values.size}>, index: u32) -> DoubleSingle {
   return DoubleSingle(values[index], ${lowExpression});
+}
+
+fn readAltitudeValue(rowIndex: u32) -> DoubleSingle {
+${getWebGPUAltitudeReader(altitude, constantAltitude)}
+}
+
+fn isInvalidF32(value: f32) -> bool {
+  return value != value || abs(value) > 3.402823e38;
+}
+
+fn isInvalidInputValue(value: DoubleSingle) -> bool {
+  return isInvalidF32(value.high) || isInvalidF32(value.low);
+}
+
+fn projectAltitudeMetersToQuantized(altitudeMeters: DoubleSingle) -> u32 {
+  let unit = dsAdd(
+    ${formatDoubleSingleConstructor(QUANTIZED_SEA_LEVEL_UNIT)},
+    dsMul(altitudeMeters, ${formatDoubleSingleConstructor(ALTITUDE_UNIT_SCALE)})
+  );
+  return quantizeUnitToU32(unit);
 }
 
 fn writeResult(rowIndex: u32, values: array<u32, ${output.size}>) {
@@ -262,26 +540,45 @@ ${Array.from({length: output.size}, (_, index) => `  result[rowOffset + ${index}
 
   let values = readValues(rowIndex);
   var projected: array<u32, ${output.size}>;
+  var isInvalidRow = false;
   for (var i = 0u; i < ${output.size}u; i = i + 1u) {
-    projected[i] = projectDegrees180ToQuantized(readInputValue(values, i));
+    var value: DoubleSingle;
+    if (${altitude ? 'i == 2u' : 'false'}) {
+      value = readAltitudeValue(rowIndex);
+    } else {
+      value = readInputValue(values, i);
+    }
+    if (isInvalidInputValue(value)) {
+      isInvalidRow = true;
+    }
+    if (i == 2u) {
+      projected[i] = projectAltitudeMetersToQuantized(value);
+    } else {
+      projected[i] = projectDegrees180ToQuantized(value);
+    }
+  }
+  if (isInvalidRow) {
+    for (var i = 0u; i < ${output.size}u; i = i + 1u) {
+      projected[i] = ${INVALID_QUANTIZED_COORDINATE}u;
+    }
   }
   writeResult(rowIndex, projected);
 }
 `;
 }
 
-function getWebGLInputDeclarations(size: number): string {
+function getWebGLInputDeclarations(size: number, name: string): string {
   let attributeBlock = '';
   let readBlock = '';
   for (let index = 0; index < size; index += 4) {
     const laneCount = Math.min(size - index, 4);
-    attributeBlock += `in ${getGLSLFloatType(laneCount)} values_${index};\n`;
+    attributeBlock += `in ${getGLSLFloatType(laneCount)} ${name}_${index};\n`;
     for (let lane = 0; lane < laneCount; lane++) {
-      readBlock += `  values[${index + lane}] = ${laneCount === 1 ? `values_${index}` : `values_${index}[${lane}]`};\n`;
+      readBlock += `  values[${index + lane}] = ${laneCount === 1 ? `${name}_${index}` : `${name}_${index}[${lane}]`};\n`;
     }
   }
   return `${attributeBlock}
-void get_values(out float values[${size}]) {
+void get_${name}(out float values[${size}]) {
 ${readBlock}}
 `;
 }
@@ -327,6 +624,24 @@ function getWebGPUInputReader(values: GPUTableEvaluator, constantValues: string)
   let rowOffset = ${offset}u + rowIndex * ${stride}u;
 ${Array.from({length: values.size}, (_, index) => `  result[${index}] = values[rowOffset + ${index}u];`).join('\n')}
   return result;`;
+}
+
+function getWebGPUAltitudeReader(
+  altitude: GPUTableEvaluator | undefined,
+  constantAltitude: string
+): string {
+  if (!altitude) {
+    return '  return DoubleSingle(0.0, 0.0);';
+  }
+  if (altitude.isConstant) {
+    return `  return DoubleSingle(${constantAltitude}, 0.0);`;
+  }
+
+  const offset = altitude.offset / altitude.ValueType.BYTES_PER_ELEMENT;
+  const stride = altitude.stride / altitude.ValueType.BYTES_PER_ELEMENT;
+  const rowIndex = altitude.isConstant ? '0u' : 'rowIndex';
+  return `  let rowOffset = ${offset}u + ${rowIndex} * ${stride}u;
+  return DoubleSingle(altitude[rowOffset], 0.0);`;
 }
 
 function getConstantValues(values: GPUTableEvaluator): number[] {

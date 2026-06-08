@@ -1,7 +1,6 @@
 import {
   GPUTableEvaluator,
   Operation,
-  type GPUTableEvaluatorInput,
   type OperationHandler
 } from '@luma.gl/gpgpu';
 import {
@@ -17,6 +16,9 @@ import {
   makeQuantizedProjectionOutput,
   projectDegrees180ToQuantized,
   projectLongitudeToQuantized,
+  appendRawAltitudeToProjectedPosition,
+  appendQuantizedAltitudeToProjectedPosition,
+  type ProjectionInput,
   type ProjectionOperationInputs
 } from './projection-utils';
 
@@ -36,14 +38,22 @@ class EquirectangularOperation extends Operation<ProjectionOperationInputs> {
   }
 }
 
-export function equirectangular(positions: GPUTableEvaluatorInput): GPUTableEvaluator {
+export function equirectangular(positions: ProjectionInput): GPUTableEvaluator {
   return new EquirectangularOperation(getProjectionPositions(positions, 'equirectangular')).output;
 }
 
+export function rawEquirectangular(coordinates: readonly [number, number]): [number, number];
 export function rawEquirectangular(
-  [longitude, latitude]: readonly [number, number]
-): [number, number] {
-  return [projectLongitudeToQuantized(longitude), projectLatitudeToQuantized(latitude)];
+  coordinates: readonly [number, number, number]
+): [number, number, number];
+export function rawEquirectangular(
+  coordinates: readonly [number, number] | readonly [number, number, number]
+): [number, number] | [number, number, number] {
+  const [longitude, latitude] = coordinates;
+  return appendRawAltitudeToProjectedPosition(
+    [projectLongitudeToQuantized(longitude), projectLatitudeToQuantized(latitude)],
+    coordinates
+  );
 }
 
 export const executeCPUEquirectangular: OperationHandler<ProjectionOperationInputs> =
@@ -53,10 +63,13 @@ export const executeCPUEquirectangular: OperationHandler<ProjectionOperationInpu
     const outputValues = new Uint32Array(output.length * output.size);
 
     for (let rowIndex = 0; rowIndex < output.length; rowIndex++) {
-      const [longitude, latitude] = getQuantizedPosition(positionValues, positions, rowIndex);
+      const position = getQuantizedPosition(positionValues, positions, rowIndex);
+      const [longitude, latitude] = position;
       const outputOffset = rowIndex * output.size;
-      outputValues[outputOffset] = longitude;
-      outputValues[outputOffset + 1] = latitude;
+      const projected = appendQuantizedAltitudeToProjectedPosition([longitude, latitude], position);
+      for (let valueIndex = 0; valueIndex < output.size; valueIndex++) {
+        outputValues[outputOffset + valueIndex] = projected[valueIndex];
+      }
     }
 
     target.write(outputValues);
@@ -88,7 +101,7 @@ export const executeWebGLEquirectangular: OperationHandler<ProjectionOperationIn
     positions,
     output,
     target,
-    source: getWebGLProjectionSource(positions)
+    source: getWebGLProjectionSource(positions, output)
   });
 };
 
@@ -96,9 +109,14 @@ function projectLatitudeToQuantized(latitude: number): number {
   return projectDegrees180ToQuantized(latitude);
 }
 
-function getWebGLProjectionSource(positions: GPUTableEvaluator): string {
+function getWebGLProjectionSource(positions: GPUTableEvaluator, output: GPUTableEvaluator): string {
   return getGLSLProjectionShaderSource({
     positions,
+    output,
+    projectedExpression:
+      output.size === 3
+        ? 'uvec3(projectLongitude(longitude), projectLatitude(latitude), altitude)'
+        : 'uvec2(projectLongitude(longitude), projectLatitude(latitude))',
     projectionFunctions: /* glsl */ `
 uint projectLatitude(uint latitude) {
   return latitude;
@@ -121,6 +139,10 @@ function getWebGPUProjectionSource({
     output,
     resultBindingIndex,
     workgroupSize: PROJECTION_WORKGROUP_SIZE,
+    projectedExpression:
+      output.size === 3
+        ? 'vec3<u32>(projectLongitude(longitude), projectLatitude(latitude), altitude)'
+        : 'vec2<u32>(projectLongitude(longitude), projectLatitude(latitude))',
     projectionFunctions: /* wgsl */ `
 fn projectLatitude(latitude: u32) -> u32 {
   return latitude;

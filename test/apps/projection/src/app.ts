@@ -1,14 +1,15 @@
-import {Deck, OrthographicView} from '@deck.gl/core';
-import {PathLayer as _PathLayer, ScatterplotLayer as _ScatterplotLayer} from '@deck.gl/layers';
+import {Deck, OrbitView} from '@deck.gl/core';
+import {PathLayer as _PathLayer, ScatterplotLayer, ColumnLayer as _ColumnLayer} from '@deck.gl/layers';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {type Device} from '@luma.gl/core';
+import { Model } from '@luma.gl/engine';
 import {
   GPUTableEvaluator,
   add,
   cleanEvaluate,
   equalAll,
   gather,
-  log,
+  sqrt,
   multiply,
   segmentedMap,
   select,
@@ -26,12 +27,17 @@ import * as webglBackend from '@luma.gl/gpgpu/webgl';
 import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
 import {
   ALBERS_USGS_5070,
+  LAMBERT_CONUS,
   albers,
+  equalEarth,
   equirectangular,
+  lambert,
   naturalEarth,
   projectionCPUBackend,
   projectionWebGLBackend,
   projectionWebGPUBackend,
+  INVALID_QUANTIZED_COORDINATE,
+  QUANTIZED_SEA_LEVEL,
   splitUint32,
   stereographic,
   webMercator
@@ -52,7 +58,7 @@ backendRegistry.add('webgpu', {
   ...projectionWebGPUBackend
 } satisfies BackendModule);
 
-type RawProjection = (coordinates: readonly [number, number]) => [number, number];
+type RawProjection = (coordinates: readonly [number, number]) => readonly number[];
 
 type ProjectionMode = {
   projectOp: (input: GPUTableEvaluatorInput) => GPUTableEvaluator;
@@ -63,6 +69,7 @@ const projectionModes = {
   equirectangular: {projectOp: equirectangular, projectRaw: equirectangular.raw},
   webMercator: {projectOp: webMercator, projectRaw: webMercator.raw},
   naturalEarth: {projectOp: naturalEarth, projectRaw: naturalEarth.raw},
+  equalEarth: {projectOp: equalEarth, projectRaw: equalEarth.raw},
   stereographic: {
     projectOp: (input: GPUTableEvaluatorInput) => stereographic(input, {longitudeOrigin: 0, latitudeOrigin: 90}), 
     projectRaw: (coordinates: readonly [number, number]) => stereographic.raw(coordinates, {longitudeOrigin: 0, latitudeOrigin: 90})
@@ -70,6 +77,12 @@ const projectionModes = {
   albers5070: {
     projectOp: (input: GPUTableEvaluatorInput) => albers(input, ALBERS_USGS_5070),
     projectRaw: (coordinates: readonly [number, number]) => albers.raw(coordinates, ALBERS_USGS_5070)
+  },
+  lambert: {
+    projectOp: (input: GPUTableEvaluatorInput) =>
+      lambert(input, LAMBERT_CONUS),
+    projectRaw: (coordinates: readonly [number, number]) =>
+      lambert.raw(coordinates, LAMBERT_CONUS)
   }
 } satisfies Record<string, ProjectionMode>;
 
@@ -84,10 +97,12 @@ async function main() {
   const places = generatePlaces();
 
   const deckgl = new Deck({
-    views: new OrthographicView({ flipY: false, controller: true }),
+    views: new OrbitView({ orbitAxis: 'Z', controller: true }),
     initialViewState: {
-      target: [2**31, 2**31],
-      zoom: -22
+      target: [256, 256, 0],
+      zoom: 0,
+      rotationX: 90,
+      rotationOrbit: 0
     },
     onDeviceInitialized: onLoad,
     layers: [],
@@ -147,13 +162,18 @@ async function main() {
 
     function update(mode: ProjectionModeName) {
       const {projectOp, projectRaw} = projectionModes[mode];
-      const projectedPlaceCoordinates = projectOp(placeCoordinates);
+      // const projectedPlaceCoordinates = projectOp(placeCoordinates);
+      const projectedPlaceCoordinates = projectOp({
+        coordinates: placeCoordinates,
+        altitude: multiply(placePopulation, GPUTableEvaluator.fromConstant(1, 'float32')),
+      });
       const getPosition = splitUint32(projectedPlaceCoordinates);
       const scatterplotData = cleanEvaluate(device, {
         length: placeCoordinates.length,
+        source: {projectedPlaceCoordinates},
         attributes: {
-          getPosition,
-          getRadius: multiply(log(placePopulation), .5)
+          getPosition: swizzle(getPosition, [0, 1, 5, 3, 4, 5]),
+          getElevation: add(swizzle(getPosition, [2]), swizzle(getPosition, [5])),
         }
       });
       const pathLayerData = cleanEvaluate(device, {
@@ -181,22 +201,20 @@ async function main() {
             getWidth: 1,
             widthUnits: 'pixels',
           }),
-          new ScatterplotLayer({
+          new ColumnLayer({
             data: scatterplotData,
             dataTransform: data => {
               // @ts-ignore hack: tell deck.gl attribute that this is a fp64 value
-              getPosition._value = new Float64Array();
+              data.attributes.getPosition._value = new Float64Array();
               // @ts-ignore hack: tell deck.gl attribute that this is a fp64 value
-              getPosition.size = 2;
+              data.attributes.getPosition.size = 3;
               return data;
             },
-            stroked: true,
+            wireframe: false,
             filled: true,
-            getLineWidth: 1,
-            radiusUnits: 'pixels',
-            lineWidthUnits: 'pixels',
-            getLineColor: [255, 0, 0],
-            getFillColor: [0, 0, 0, 0],
+            extruded: true,
+            radius: 1,
+            getFillColor: [255, 0, 0],
             onHover: info => {
               const {index} = info;
               if (index >= 0) {
@@ -204,11 +222,7 @@ async function main() {
               }
             },
             onClick: info => {
-              // @ts-ignore undo hack
-              getPosition._value = null;
-              // @ts-ignore undo hack
-              getPosition.size = 4;
-              void compareProjectionToRaw(info.index, getPosition, projectRaw, mode);
+              void compareProjectionToRaw(info.index, projectedPlaceCoordinates, projectRaw, mode);
             },
             pickable: true,
             autoHighlight: true
@@ -230,17 +244,19 @@ async function main() {
       await getPositionReadback.evaluate(device);
       const gpuResult = await getPositionReadback.readValue(index, index + 1);
 
-      const coordinates = Array.from(places.get(index)?.toJSON().coordinates as Iterable<number>) as [number, number];
-      if (!coordinates) {
+      const item = places.get(index)?.toJSON();
+      if (!item) {
         return;
       }
+      console.log(item)
+      const coordinates = [
+        ...Array.from(item.coordinates),
+        item.population,
+      ];
 
+      const gpuPosition = Array.from(gpuResult);
       const rawPosition = projectRaw(coordinates);
-      const gpuPosition = getProjectedPosition(gpuResult);
-      console.log('projection comparison:', [
-          gpuPosition[0] - rawPosition[0],
-          gpuPosition[1] - rawPosition[1]
-        ], {
+      console.log('projection comparison:', gpuPosition.map((value, valueIndex) => value - rawPosition[valueIndex]), {
         projection: mode,
         coordinates,
         gpu: gpuPosition,
@@ -273,8 +289,32 @@ function getProjectionModeURL(mode: ProjectionModeName): URL {
   return url;
 }
 
-function getProjectedPosition(value: ArrayLike<number>): [number, number] {
-  return [Number(value[0]) + Number(value[2]), Number(value[1]) + Number(value[3])];
+function reconstructQuantizedPosition(value: ArrayLike<number>): number[] {
+  const componentCount = value.length / 2;
+  if (isInvalidSplitPosition(value, componentCount)) {
+    return new Array(componentCount).fill(INVALID_QUANTIZED_COORDINATE);
+  }
+
+  return Array.from({length: componentCount}, (_, componentIndex) => {
+    const splitValue =
+      (Number(value[componentIndex]) + Number(value[componentIndex + componentCount])) *
+      Math.pow(2, 23);
+    return Math.round(
+      componentIndex === 2 ? splitValue + QUANTIZED_SEA_LEVEL : splitValue
+    );
+  });
+}
+
+function isInvalidSplitPosition(value: ArrayLike<number>, componentCount: number): boolean {
+  for (let componentIndex = 0; componentIndex < componentCount; componentIndex++) {
+    if (
+      Number(value[componentIndex]) !== 513 ||
+      Number(value[componentIndex + componentCount]) !== -1
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** This helper creates the segmentTypes buffer on the GPU.
@@ -332,11 +372,11 @@ class PathLayer extends _PathLayer {
     const shaders = super.getShaders();
     shaders.inject = {
       'vs:#main-start': `
-if (instanceStartPositions.x > 4294967296. && instanceStartPositions.y > 4294967296.) {
+if (instanceStartPositions.x > 512. && instanceStartPositions.y > 512.) {
   gl_Position = vec4(0.);
   return;
 }
-if (instanceEndPositions.x > 4294967296. && instanceEndPositions.y > 4294967296.) {
+if (instanceEndPositions.x > 512. && instanceEndPositions.y > 512.) {
   gl_Position = vec4(0.);
   return;
 }
@@ -346,18 +386,50 @@ if (instanceEndPositions.x > 4294967296. && instanceEndPositions.y > 4294967296.
   }
 }
 
-class ScatterplotLayer extends _ScatterplotLayer {
+class ColumnLayer extends _ColumnLayer {
   getShaders() {
     const shaders = super.getShaders();
     shaders.inject = {
       'vs:#main-start': `
-if (instancePositions.x > 4294967296. && instancePositions.y > 4294967296.) {
+if (instancePositions.x > 512. && instancePositions.y > 512.) {
   gl_Position = vec4(0.);
   return;
 }
       `
     };
     return shaders;
+  }
+
+  _getModels() {
+      const shaders = this.getShaders();
+      const bufferLayout = this.getAttributeManager()!.getBufferLayouts();
+      const { diskResolution, vertices, extruded, stroked } = this.props;
+      const geometry = this.getGeometry(diskResolution, vertices, extruded || stroked);
+      const fillModel = new Model(this.context.device, {
+          ...shaders,
+          id: `${this.props.id}-fill`,
+          geometry,
+          bufferLayout,
+          isInstanced: true
+      });
+      fillModel.setTopology('triangle-strip');
+      fillModel.setIndexBuffer(null);
+      const wireframeModel = new Model(this.context.device, {
+          ...shaders,
+          id: `${this.props.id}-wireframe`,
+          topology: 'line-list',
+          bufferLayout,
+          isInstanced: true
+      });
+      return {
+        fillVertexCount: geometry.attributes.positions.value.length / 3,
+          fillModel,
+          wireframeModel,
+          models: [wireframeModel, fillModel]
+      };
+  }
+
+  _updateGeometry() {
   }
 }
 

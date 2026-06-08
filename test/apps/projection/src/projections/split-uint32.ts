@@ -7,14 +7,18 @@ import {
   type GPUTableEvaluatorInput,
   type OperationHandler
 } from '@luma.gl/gpgpu';
-import {PROJECTION_WORKGROUP_SIZE} from './projection-utils';
+import {
+  INVALID_QUANTIZED_COORDINATE,
+  PROJECTION_WORKGROUP_SIZE,
+  QUANTIZED_SEA_LEVEL
+} from './projection-constants';
 
 const FLOAT32_SIGNIFICAND_BITS = 24;
 const FLOAT32_TRAILING_BITS = FLOAT32_SIGNIFICAND_BITS - 1;
 const MAX_EXACT_FLOAT32_UINT = 2 ** FLOAT32_SIGNIFICAND_BITS;
-const UINT32_MAX = 0xffffffff;
-const UINT32_MAX_FLOAT32_HIGH = 4294967808;
-const UINT32_MAX_FLOAT32_LOW = -513;
+const ZOOM_0_WORLD_SCALE = 2 ** -23;
+const UINT32_MAX_FLOAT32_HIGH = 513;
+const UINT32_MAX_FLOAT32_LOW = -1;
 
 type SplitUint32OperationInputs = {
   values: GPUTableEvaluator;
@@ -150,7 +154,9 @@ function writeSplitUint32Row(
   }
 
   for (let index = 0; index < inputSize; index++) {
-    const [high, low] = splitUint32ToFloat32Pair(Number(inputValues[inputRowOffset + index]));
+    const value = Number(inputValues[inputRowOffset + index]);
+    const [high, low] =
+      index === 2 ? splitZUint32ToFloat32Pair(value) : splitUint32ToFloat32Pair(value);
     outputValues[outputOffset + index] = high;
     outputValues[outputOffset + inputSize + index] = low;
   }
@@ -162,7 +168,7 @@ function isInvalidUint32Row(
   inputSize: number
 ): boolean {
   for (let index = 0; index < inputSize; index++) {
-    if (Number(inputValues[inputRowOffset + index]) !== UINT32_MAX) {
+    if (Number(inputValues[inputRowOffset + index]) !== INVALID_QUANTIZED_COORDINATE) {
       return false;
     }
   }
@@ -182,7 +188,24 @@ function writeInvalidSplitUint32Row(
 
 function splitUint32ToFloat32Pair(value: number): [number, number] {
   const high = Math.fround(value);
-  return [high, Math.fround(value - high)];
+  const low = Math.fround(value - high);
+  return [
+    Math.fround(high * ZOOM_0_WORLD_SCALE),
+    Math.fround(low * ZOOM_0_WORLD_SCALE)
+  ];
+}
+
+function splitZUint32ToFloat32Pair(value: number): [number, number] {
+  return splitSignedNumberToFloat32Pair(value - QUANTIZED_SEA_LEVEL);
+}
+
+function splitSignedNumberToFloat32Pair(value: number): [number, number] {
+  const high = Math.fround(value);
+  const low = Math.fround(value - high);
+  return [
+    Math.fround(high * ZOOM_0_WORLD_SCALE),
+    Math.fround(low * ZOOM_0_WORLD_SCALE)
+  ];
 }
 
 function getSplitUint32OutputFormat(outputSize: number): SplitUint32OutputFormat | undefined {
@@ -231,6 +254,8 @@ ${getWebGLOutputDeclarations(outputSize)}
 
 const uint FLOAT32_TRAILING_BITS = ${FLOAT32_TRAILING_BITS}u;
 const uint MAX_EXACT_FLOAT32_UINT = ${MAX_EXACT_FLOAT32_UINT}u;
+const uint QUANTIZED_SEA_LEVEL = ${QUANTIZED_SEA_LEVEL}u;
+const float ZOOM_0_WORLD_SCALE = ${ZOOM_0_WORLD_SCALE};
 
 // f32 has 24 significant bits including the hidden leading bit. Keep the closest f32
 // value in the high part and the signed residual in the low part.
@@ -249,7 +274,7 @@ uint findMostSignificantBit(uint value) {
 
 vec2 splitUint32Value(uint value) {
   if (value <= MAX_EXACT_FLOAT32_UINT) {
-    return vec2(float(value), 0.0);
+    return vec2(float(value) * ZOOM_0_WORLD_SCALE, 0.0);
   }
 
   uint exponent = findMostSignificantBit(value);
@@ -262,13 +287,23 @@ vec2 splitUint32Value(uint value) {
   bool roundUp = remainder > halfStep || (remainder == halfStep && (truncated & step) != 0u);
 
   if (roundUp && truncated > 0xffffffffu - step) {
-    return vec2(4294967296.0, -float(0xffffffffu - value + 1u));
+    return vec2(
+      4294967296.0 * ZOOM_0_WORLD_SCALE,
+      -float(0xffffffffu - value + 1u) * ZOOM_0_WORLD_SCALE
+    );
   }
 
   uint rounded = truncated + (roundUp ? step : 0u);
   float high = float(rounded);
   float low = value >= rounded ? float(value - rounded) : -float(rounded - value);
-  return vec2(high, low);
+  return vec2(high * ZOOM_0_WORLD_SCALE, low * ZOOM_0_WORLD_SCALE);
+}
+
+vec2 splitZUint32Value(uint value) {
+  if (value >= QUANTIZED_SEA_LEVEL) {
+    return splitUint32Value(value - QUANTIZED_SEA_LEVEL);
+  }
+  return -splitUint32Value(QUANTIZED_SEA_LEVEL - value);
 }
 
 void main() {
@@ -300,7 +335,7 @@ function getWebGLOutputDeclarations(outputSize: number): string {
 function getWebGLSplitStatements(inputSize: number): string {
   const splitStatements = Array.from({length: inputSize}, (_, index) => {
     const accessor = getWebGLInputAccessor(inputSize, index);
-    return `    vec2 splitValue_${index} = splitUint32Value(${accessor});
+    return `    vec2 splitValue_${index} = ${index === 2 ? 'splitZUint32Value' : 'splitUint32Value'}(${accessor});
     result[${index}] = splitValue_${index}.x;
     result[${inputSize + index}] = splitValue_${index}.y;`;
   }).join('\n');
@@ -389,6 +424,8 @@ function getWebGPUSplitUint32Source(
 
 const FLOAT32_TRAILING_BITS = ${FLOAT32_TRAILING_BITS}u;
 const MAX_EXACT_FLOAT32_UINT = ${MAX_EXACT_FLOAT32_UINT}u;
+const QUANTIZED_SEA_LEVEL = ${QUANTIZED_SEA_LEVEL}u;
+const ZOOM_0_WORLD_SCALE = ${ZOOM_0_WORLD_SCALE};
 
 // f32 has 24 significant bits including the hidden leading bit. Keep the closest f32
 // value in the high part and the signed residual in the low part.
@@ -407,7 +444,7 @@ fn findMostSignificantBit(value: u32) -> u32 {
 
 fn splitUint32Value(value: u32) -> vec2<f32> {
   if (value <= MAX_EXACT_FLOAT32_UINT) {
-    return vec2<f32>(f32(value), 0.0);
+    return vec2<f32>(f32(value) * ZOOM_0_WORLD_SCALE, 0.0);
   }
 
   let exponent = findMostSignificantBit(value);
@@ -420,7 +457,10 @@ fn splitUint32Value(value: u32) -> vec2<f32> {
   let roundUp = remainder > halfStep || (remainder == halfStep && (truncated & step) != 0u);
 
   if (roundUp && truncated > 0xffffffffu - step) {
-    return vec2<f32>(4294967296.0, -f32(0xffffffffu - value + 1u));
+    return vec2<f32>(
+      4294967296.0 * ZOOM_0_WORLD_SCALE,
+      -f32(0xffffffffu - value + 1u) * ZOOM_0_WORLD_SCALE
+    );
   }
 
   let rounded = truncated + select(0u, step, roundUp);
@@ -431,7 +471,14 @@ fn splitUint32Value(value: u32) -> vec2<f32> {
   } else {
     low = -f32(rounded - value);
   }
-  return vec2<f32>(high, low);
+  return vec2<f32>(high * ZOOM_0_WORLD_SCALE, low * ZOOM_0_WORLD_SCALE);
+}
+
+fn splitZUint32Value(value: u32) -> vec2<f32> {
+  if (value >= QUANTIZED_SEA_LEVEL) {
+    return splitUint32Value(value - QUANTIZED_SEA_LEVEL);
+  }
+  return -splitUint32Value(QUANTIZED_SEA_LEVEL - value);
 }
 
 fn readValue(rowIndex: u32, laneIndex: u32) -> u32 {
@@ -469,7 +516,8 @@ ${Array.from({length: output.size}, (_, index) => `  result[rowOffset + ${index}
     }
   } else {
     for (var laneIndex = 0u; laneIndex < ${values.size}u; laneIndex = laneIndex + 1u) {
-      let splitValue = splitUint32Value(readValue(rowIndex, laneIndex));
+      let value = readValue(rowIndex, laneIndex);
+      let splitValue = select(splitUint32Value(value), splitZUint32Value(value), laneIndex == 2u);
       splitValues[laneIndex] = splitValue.x;
       splitValues[laneIndex + ${values.size}u] = splitValue.y;
     }

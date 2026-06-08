@@ -30,10 +30,11 @@ import {
 } from './projection-utils';
 
 const RADIANS_PER_DEGREE = Math.PI / 180;
-const ALBERS_LATITUDE_MIN_QUANTIZED = projectDegrees180ToQuantized(-90);
-const ALBERS_LATITUDE_MAX_QUANTIZED = projectDegrees180ToQuantized(90);
+const STANDARD_PARALLEL_EPSILON = 1e-12;
+const LAMBERT_LATITUDE_MIN_QUANTIZED = projectDegrees180ToQuantized(-90);
+const LAMBERT_LATITUDE_MAX_QUANTIZED = projectDegrees180ToQuantized(90);
 
-export type AlbersProjectionParameters = {
+export type LambertConformalConicProjectionParameters = {
   standardParallels: readonly [number, number];
   longitudeOrigin: number;
   latitudeOrigin: number;
@@ -45,44 +46,50 @@ export type AlbersProjectionParameters = {
   outputHalfExtent: number;
 };
 
-type AlbersProjectionState = Required<
-  Omit<AlbersProjectionParameters, 'standardParallels' | 'outputCenter'>
+type LambertConformalConicProjectionState = Required<
+  Omit<LambertConformalConicProjectionParameters, 'standardParallels' | 'outputCenter'>
 > &
   ConicProjectionState & {
     standardParallels: readonly [number, number];
     outputCenter: readonly [number, number];
     eccentricity: number;
-    c: number;
+    f: number;
   };
 
-type AlbersOperationInputs = ProjectionOperationInputs & {
-  parameters: AlbersProjectionState;
+type LambertOperationInputs = ProjectionOperationInputs & {
+  parameters: LambertConformalConicProjectionState;
   rhoTable: GPUTableEvaluator;
   sineTable: GPUTableEvaluator;
 };
 
-type AlbersProjectionTableValues = ConicProjectionTableValues;
+type LambertConformalConicProjectionTableValues = ConicProjectionTableValues;
 
-const albersProjectionTableCache = new Map<string, AlbersProjectionTableValues>();
+const lambertProjectionTableCache = new Map<
+  string,
+  LambertConformalConicProjectionTableValues
+>();
 
-export const ALBERS_USGS_5070: AlbersProjectionParameters = {
-  standardParallels: [29.5, 45.5],
+export const LAMBERT_CONUS: LambertConformalConicProjectionParameters = {
+  standardParallels: [33, 45],
   longitudeOrigin: -96,
-  latitudeOrigin: 23,
+  latitudeOrigin: 39,
   falseEasting: 0,
   falseNorthing: 0,
   semiMajorAxis: 6378137,
   inverseFlattening: 298.257222101,
-  outputCenter: [0, 1500000],
+  outputCenter: [0, 0],
   outputHalfExtent: 20000000
 };
 
-class AlbersOperation extends Operation<AlbersOperationInputs> {
-  name = 'albers';
+class LambertOperation extends Operation<LambertOperationInputs> {
+  name = 'lambert';
 
   output: GPUTableEvaluator;
 
-  constructor(positions: GPUTableEvaluator, parameters: AlbersProjectionState) {
+  constructor(
+    positions: GPUTableEvaluator,
+    parameters: LambertConformalConicProjectionState
+  ) {
     super({
       positions,
       parameters,
@@ -90,47 +97,45 @@ class AlbersOperation extends Operation<AlbersOperationInputs> {
       sineTable: getSineTableEvaluator(parameters)
     });
 
-    this.output = makeQuantizedProjectionOutput('albers', positions, this);
+    this.output = makeQuantizedProjectionOutput('lambert', positions, this);
   }
 
   toString(): string {
-    return `albers(${this.inputs.positions})`;
+    return `lambert(${this.inputs.positions})`;
   }
 }
 
-export function albers(
+export function lambert(
   positions: ProjectionInput,
-  parameters: AlbersProjectionParameters
+  parameters: LambertConformalConicProjectionParameters
 ): GPUTableEvaluator {
-  return new AlbersOperation(
-    getProjectionPositions(positions, 'albers'),
-    makeAlbersProjectionState(parameters)
+  return new LambertOperation(
+    getProjectionPositions(positions, 'lambert'),
+    makeLambertProjectionState(parameters)
   ).output;
 }
 
-export function rawAlbers(
+export function rawLambert(
   coordinates: readonly [number, number],
-  parameters: AlbersProjectionParameters
+  parameters: LambertConformalConicProjectionParameters
 ): [number, number];
-export function rawAlbers(
+export function rawLambert(
   coordinates: readonly [number, number, number],
-  parameters: AlbersProjectionParameters
+  parameters: LambertConformalConicProjectionParameters
 ): [number, number, number];
-export function rawAlbers(
+export function rawLambert(
   coordinates: readonly [number, number] | readonly [number, number, number],
-  parameters: AlbersProjectionParameters
+  parameters: LambertConformalConicProjectionParameters
 ): [number, number] | [number, number, number] {
   return appendRawAltitudeToProjectedPosition(
-    projectAlbersToQuantized([coordinates[0], coordinates[1]], makeAlbersProjectionState(parameters)),
+    projectLambertToQuantized([coordinates[0], coordinates[1]], makeLambertProjectionState(parameters)),
     coordinates
   );
 }
 
-export const executeCPUAlbers: OperationHandler<AlbersOperationInputs> = async ({
-  inputs,
-  output,
-  target
-}) => {
+export const executeCPULambert: OperationHandler<
+  LambertOperationInputs
+> = async ({inputs, output, target}) => {
   const {positions, parameters, rhoTable, sineTable} = inputs;
   const positionValues = positions.value ?? (await positions.readValue());
   const outputValues = new Uint32Array(output.length * output.size);
@@ -165,28 +170,26 @@ export const executeCPUAlbers: OperationHandler<AlbersOperationInputs> = async (
   return {success: true, value: outputValues};
 };
 
-export const executeWebGPUAlbers: OperationHandler<AlbersOperationInputs> = ({
-  inputs,
-  output,
-  target
-}) => {
+export const executeWebGPULambert: OperationHandler<
+  LambertOperationInputs
+> = ({inputs, output, target}) => {
   return executeWebGPUConicProjection({inputs, output, target});
 };
 
-export const executeWebGLAlbers: OperationHandler<AlbersOperationInputs> = ({
-  inputs,
-  output,
-  target
-}) => {
+export const executeWebGLLambert: OperationHandler<
+  LambertOperationInputs
+> = ({inputs, output, target}) => {
   return executeWebGLConicProjection({
     inputs,
     output,
     target,
-    tableValues: getAlbersProjectionTableValues(inputs.parameters)
+    tableValues: getLambertProjectionTableValues(inputs.parameters)
   });
 };
 
-function makeAlbersProjectionState(parameters: AlbersProjectionParameters): AlbersProjectionState {
+function makeLambertProjectionState(
+  parameters: LambertConformalConicProjectionParameters
+): LambertConformalConicProjectionState {
   const semiMajorAxis = parameters.semiMajorAxis ?? 6378137;
   const inverseFlattening = parameters.inverseFlattening ?? 298.257222101;
   const falseEasting = parameters.falseEasting ?? 0;
@@ -202,12 +205,22 @@ function makeAlbersProjectionState(parameters: AlbersProjectionParameters): Albe
   const latitudeOrigin = parameters.latitudeOrigin * RADIANS_PER_DEGREE;
   const m1 = getM(standardParallel1, eccentricity);
   const m2 = getM(standardParallel2, eccentricity);
-  const q1 = getQ(standardParallel1, eccentricity);
-  const q2 = getQ(standardParallel2, eccentricity);
-  const q0 = getQ(latitudeOrigin, eccentricity);
-  const n = (m1 * m1 - m2 * m2) / (q2 - q1);
-  const c = m1 * m1 + n * q1;
-  const rho0 = (semiMajorAxis * Math.sqrt(c - n * q0)) / n;
+  const t1 = getT(standardParallel1, eccentricity);
+  const t2 = getT(standardParallel2, eccentricity);
+  const t0 = getT(latitudeOrigin, eccentricity);
+  const n =
+    Math.abs(standardParallel1 - standardParallel2) < STANDARD_PARALLEL_EPSILON
+      ? Math.sin(standardParallel1)
+      : Math.log(m1 / m2) / Math.log(t1 / t2);
+
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(
+      'lambert currently requires standard parallels that produce positive n'
+    );
+  }
+
+  const f = m1 / (n * t1 ** n);
+  const rho0 = semiMajorAxis * f * t0 ** n;
   const longitudeOriginQuantized = projectDegrees180ToQuantized(parameters.longitudeOrigin);
 
   return {
@@ -219,31 +232,31 @@ function makeAlbersProjectionState(parameters: AlbersProjectionParameters): Albe
     outputCenter,
     eccentricity,
     n,
-    c,
+    f,
     rho0,
     longitudeOriginQuantized
   };
 }
 
-function projectAlbersToQuantized(
+function projectLambertToQuantized(
   coordinates: readonly [number, number],
-  parameters: AlbersProjectionState
+  parameters: LambertConformalConicProjectionState
 ): [number, number] {
-  return projectConicMetersToQuantized(projectAlbersToMeters(coordinates, parameters), parameters);
+  return projectConicMetersToQuantized(
+    projectLambertToMeters(coordinates, parameters),
+    parameters
+  );
 }
 
-function projectAlbersToMeters(
+function projectLambertToMeters(
   [longitude, latitude]: readonly [number, number],
-  parameters: AlbersProjectionState
+  parameters: LambertConformalConicProjectionState
 ): [number, number] {
   const longitudeDeltaRadians =
     wrapLongitudeDeltaDegrees(longitude - parameters.longitudeOrigin) * RADIANS_PER_DEGREE;
   const latitudeRadians = latitude * RADIANS_PER_DEGREE;
   const theta = parameters.n * longitudeDeltaRadians;
-  const rho =
-    (parameters.semiMajorAxis *
-      Math.sqrt(Math.max(0, parameters.c - parameters.n * getQ(latitudeRadians, parameters.eccentricity)))) /
-    parameters.n;
+  const rho = getRhoFromLatitudeRadians(latitudeRadians, parameters);
   return [
     parameters.falseEasting + rho * Math.sin(theta),
     parameters.falseNorthing + parameters.rho0 - rho * Math.cos(theta)
@@ -268,40 +281,44 @@ function getM(latitudeRadians: number, eccentricity: number): number {
   );
 }
 
-function getQ(latitudeRadians: number, eccentricity: number): number {
+function getT(latitudeRadians: number, eccentricity: number): number {
   const sineLatitude = Math.sin(latitudeRadians);
   const eccentricitySineLatitude = eccentricity * sineLatitude;
   return (
-    (1 - eccentricity * eccentricity) *
-    (sineLatitude / (1 - eccentricitySineLatitude * eccentricitySineLatitude) -
-      Math.log((1 - eccentricitySineLatitude) / (1 + eccentricitySineLatitude)) /
-        (2 * eccentricity))
+    Math.tan(Math.PI / 4 - latitudeRadians / 2) /
+    ((1 - eccentricitySineLatitude) / (1 + eccentricitySineLatitude)) ** (eccentricity / 2)
   );
 }
 
-function getRhoTableEvaluator(parameters: AlbersProjectionState): GPUTableEvaluator {
-  return getConicRhoTableEvaluator(getAlbersProjectionTableValues(parameters));
+function getRhoTableEvaluator(
+  parameters: LambertConformalConicProjectionState
+): GPUTableEvaluator {
+  return getConicRhoTableEvaluator(getLambertProjectionTableValues(parameters));
 }
 
-function getSineTableEvaluator(parameters: AlbersProjectionState): GPUTableEvaluator {
-  return getConicSineTableEvaluator(getAlbersProjectionTableValues(parameters));
+function getSineTableEvaluator(
+  parameters: LambertConformalConicProjectionState
+): GPUTableEvaluator {
+  return getConicSineTableEvaluator(getLambertProjectionTableValues(parameters));
 }
 
-function getAlbersProjectionTableValues(
-  parameters: AlbersProjectionState
-): AlbersProjectionTableValues {
+function getLambertProjectionTableValues(
+  parameters: LambertConformalConicProjectionState
+): LambertConformalConicProjectionTableValues {
   return getConicProjectionTableValues(
-    albersProjectionTableCache,
-    getAlbersProjectionTableKey(parameters),
+    lambertProjectionTableCache,
+    getLambertProjectionTableKey(parameters),
     quantizedLatitude => getRhoOutputUnitsFromQuantizedLatitude(quantizedLatitude, parameters)
   );
 }
 
-function getAlbersProjectionTableKey(parameters: AlbersProjectionState): string {
+function getLambertProjectionTableKey(
+  parameters: LambertConformalConicProjectionState
+): string {
   return [
     parameters.eccentricity,
     parameters.n,
-    parameters.c,
+    parameters.f,
     parameters.rho0,
     parameters.semiMajorAxis,
     parameters.outputHalfExtent
@@ -310,12 +327,12 @@ function getAlbersProjectionTableKey(parameters: AlbersProjectionState): string 
 
 function getRhoOutputUnitsFromQuantizedLatitude(
   quantizedLatitude: number,
-  parameters: AlbersProjectionState
+  parameters: LambertConformalConicProjectionState
 ): number {
   const clampedLatitude = clamp(
     quantizedLatitude,
-    ALBERS_LATITUDE_MIN_QUANTIZED,
-    ALBERS_LATITUDE_MAX_QUANTIZED
+    LAMBERT_LATITUDE_MIN_QUANTIZED,
+    LAMBERT_LATITUDE_MAX_QUANTIZED
   );
   const latitudeRadians = unprojectQuantizedDegrees(clampedLatitude) * RADIANS_PER_DEGREE;
   return (
@@ -326,13 +343,11 @@ function getRhoOutputUnitsFromQuantizedLatitude(
 
 function getRhoFromLatitudeRadians(
   latitudeRadians: number,
-  parameters: AlbersProjectionState
+  parameters: LambertConformalConicProjectionState
 ): number {
   return (
-    (parameters.semiMajorAxis *
-      Math.sqrt(
-        Math.max(0, parameters.c - parameters.n * getQ(latitudeRadians, parameters.eccentricity))
-      )) /
-    parameters.n
+    parameters.semiMajorAxis *
+    parameters.f *
+    getT(latitudeRadians, parameters.eccentricity) ** parameters.n
   );
 }

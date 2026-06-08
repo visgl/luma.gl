@@ -18,15 +18,33 @@ import {
   type OperationHandlerResult
 } from '@luma.gl/gpgpu';
 import {getShaderModuleDependencies, type ShaderModule} from '@luma.gl/shadertools';
-import {degreesToQuantized} from './degrees-to-quantized';
+import {degreesToQuantized, type DegreesToQuantizedInput} from './degrees-to-quantized';
+import {
+  ALTITUDE_UNITS_PER_METER,
+  INVALID_QUANTIZED_COORDINATE,
+  PROJECTION_WORKGROUP_SIZE,
+  QUANTIZED_SEA_LEVEL,
+  UINT32_MAX
+} from './projection-constants';
 
-export const UINT32_MAX = 0xffffffff;
-export const PROJECTION_WORKGROUP_SIZE = 64;
+export {
+  ALTITUDE_UNITS_PER_METER,
+  EARTH_RADIUS_METERS,
+  INVALID_QUANTIZED_COORDINATE,
+  PROJECTION_WORKGROUP_SIZE,
+  QUANTIZED_SEA_LEVEL,
+  UINT32_MAX
+} from './projection-constants';
+
 const WEBGPU_SHADER_MODULE_BINDING_START = 100;
 
 export type ProjectionOperationInputs = {
   positions: GPUTableEvaluator;
 };
+
+export type ProjectionInput = DegreesToQuantizedInput;
+export type QuantizedPosition = [number, number] | [number, number, number];
+export type RawPosition = readonly [number, number] | readonly [number, number, number];
 
 type WebGPUBinding = {
   name: string;
@@ -48,33 +66,42 @@ type ProjectionShaderModuleProps = Record<string, Record<string, unknown>>;
 type ProjectionShaderModule = ShaderModule<any, any, any>;
 
 export function getProjectionPositions(
-  positions: GPUTableEvaluatorInput,
+  positions: ProjectionInput,
   operationName: string
 ): GPUTableEvaluator {
-  const positionsTable = getGPUTableEvaluator(positions);
-
-  if (positionsTable.type === 'float32' || positionsTable.type === 'uint32') {
-    const quantizedPositions = degreesToQuantized(positionsTable);
-    if (quantizedPositions.size !== 2) {
-      throw new Error(`${operationName} positions must contain lon/lat coordinate pairs`);
+  if (typeof positions === 'object' && !(positions instanceof GPUTableEvaluator) && 'coordinates' in positions) {
+    const quantizedPositions = degreesToQuantized(positions);
+    if (quantizedPositions.size !== 2 && quantizedPositions.size !== 3) {
+      throw new Error(`${operationName} positions must contain lon/lat or lon/lat/alt coordinate tuples`);
     }
     return quantizedPositions;
   }
 
-  throw new Error(`${operationName} positions must be vec2<f32> or vec2<f64>`);
+  const positionsTable = getGPUTableEvaluator(positions as GPUTableEvaluatorInput);
+
+  if (positionsTable.type === 'float32' || positionsTable.type === 'uint32') {
+    const quantizedPositions = degreesToQuantized(positionsTable);
+    if (quantizedPositions.size !== 2 && quantizedPositions.size !== 3) {
+      throw new Error(`${operationName} positions must contain lon/lat or lon/lat/alt coordinate tuples`);
+    }
+    return quantizedPositions;
+  }
+
+  throw new Error(`${operationName} positions must be vec2/vec3<f32> or vec2/vec3<f64>`);
 }
 
 export function makeQuantizedProjectionOutput(
   id: string,
   positions: GPUTableEvaluator,
-  source: Operation
+  source: Operation,
+  size: number = positions.size
 ): GPUTableEvaluator {
   return new GPUTableEvaluator({
     id,
     type: 'uint32',
-    size: 2,
+    size,
     length: positions.length,
-    format: 'uint32x2',
+    format: getQuantizedProjectionOutputFormat(size),
     source
   });
 }
@@ -83,13 +110,58 @@ export function getQuantizedPosition(
   values: ArrayLike<number>,
   positions: GPUTableEvaluator,
   rowIndex: number
-): [number, number] {
+): QuantizedPosition {
   const valueOffset = positions.offset / positions.ValueType.BYTES_PER_ELEMENT;
   const valueStride = positions.stride / positions.ValueType.BYTES_PER_ELEMENT;
   const sourceRowIndex = positions.isConstant ? 0 : rowIndex;
   const rowOffset = valueOffset + sourceRowIndex * valueStride;
 
-  return [Number(values[rowOffset]) >>> 0, Number(values[rowOffset + 1]) >>> 0];
+  return Array.from({length: positions.size}, (_, index) => Number(values[rowOffset + index]) >>> 0) as QuantizedPosition;
+}
+
+export function isInvalidQuantizedPosition(position: ArrayLike<number>): boolean {
+  for (let index = 0; index < position.length; index++) {
+    if (Number(position[index]) !== INVALID_QUANTIZED_COORDINATE) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function appendRawAltitudeToProjectedPosition(
+  projected: [number, number],
+  coordinates: RawPosition
+): QuantizedPosition {
+  const altitude = coordinates[2];
+  if (altitude === undefined) {
+    return projected;
+  }
+  if (isInvalidQuantizedPosition(projected)) {
+    return [
+      INVALID_QUANTIZED_COORDINATE,
+      INVALID_QUANTIZED_COORDINATE,
+      INVALID_QUANTIZED_COORDINATE
+    ];
+  }
+  return [projected[0], projected[1], projectAltitudeMetersToQuantized(altitude)];
+}
+
+export function appendQuantizedAltitudeToProjectedPosition(
+  projected: [number, number],
+  position: QuantizedPosition
+): QuantizedPosition {
+  const altitude = position[2];
+  if (altitude === undefined) {
+    return projected;
+  }
+  if (isInvalidQuantizedPosition(projected)) {
+    return [
+      INVALID_QUANTIZED_COORDINATE,
+      INVALID_QUANTIZED_COORDINATE,
+      INVALID_QUANTIZED_COORDINATE
+    ];
+  }
+  return [projected[0], projected[1], altitude];
 }
 
 export function quantizeUnitInterval(value: number): number {
@@ -118,6 +190,13 @@ export function projectLongitudeToQuantized(longitude: number): number {
   return projectDegrees180ToQuantized(longitude);
 }
 
+export function projectAltitudeMetersToQuantized(altitudeMeters: number): number {
+  if (!Number.isFinite(altitudeMeters)) {
+    return INVALID_QUANTIZED_COORDINATE;
+  }
+  return clampUint32(QUANTIZED_SEA_LEVEL + Math.round(altitudeMeters * ALTITUDE_UNITS_PER_METER));
+}
+
 export function splitFloat64ToFloat32Pair(value: number): [number, number] {
   const high = Math.fround(value);
   return [high, Math.fround(value - high)];
@@ -139,6 +218,12 @@ export function multiplyUint32ByQuantizedScale(value: number, scale: number): nu
 export function multiplyUint32ByQ31(value: number, scale: number): number {
   const product = BigInt(value >>> 0) * BigInt(scale >>> 0);
   return Number((product + 0x40000000n) >> 31n);
+}
+
+export function multiplyUint32ByQ24(value: number, scale: number): number {
+  const product = BigInt(value >>> 0) * BigInt(scale >>> 0);
+  const result = Number((product + 0x800000n) >> 24n);
+  return Math.min(result, UINT32_MAX);
 }
 
 export function addUnsignedClamped(value: number, delta: number): number {
@@ -197,6 +282,17 @@ export function interpolateCatmullRomUint32(
   const correction =
     m1 * t + (3 * d21 - 2 * m1 - m2) * t2 + (m1 + m2 - 2 * d21) * t3;
   return addSignedClamped(p1, Math.round(correction));
+}
+
+function getQuantizedProjectionOutputFormat(size: number): 'uint32x2' | 'uint32x3' | undefined {
+  switch (size) {
+    case 2:
+      return 'uint32x2';
+    case 3:
+      return 'uint32x3';
+    default:
+      return undefined;
+  }
 }
 
 export function getWebGLPositionsBufferLayout(positions: GPUTableEvaluator): BufferLayout {

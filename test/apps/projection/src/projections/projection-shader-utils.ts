@@ -33,18 +33,21 @@ export function formatDoubleSingleConstructor(
 
 export function getGLSLProjectionShaderSource({
   positions,
+  output,
   extraPrecision = '',
   uniforms = '',
   projectionFunctions,
   projectedExpression = 'uvec2(projectLongitude(longitude), projectLatitude(latitude))'
 }: {
   positions: GPUTableEvaluator;
+  output?: GPUTableEvaluator;
   extraPrecision?: string;
   uniforms?: string;
   projectionFunctions: string;
   projectedExpression?: string;
 }): string {
   const positionType = getGLSLPositionType(positions);
+  const projectedType = getGLSLUintVectorType(output?.size ?? 2);
   const extraPrecisionBlock = extraPrecision ? `${extraPrecision}\n` : '';
   const uniformsBlock = uniforms ? `\n${uniforms}\n` : '';
 
@@ -55,14 +58,14 @@ precision highp float;
 precision highp int;
 ${extraPrecisionBlock}
 in ${positionType} positions;
-flat out uvec2 projected;
+flat out ${projectedType} projected;
 ${uniformsBlock}
 ${getGLSLDoublePrecisionMathModule()}
 ${getGLSLGeospatialProjectionModule()}
 ${projectionFunctions}
 
 void main() {
-${getPositionQuantizedGLSL()}
+${getPositionQuantizedGLSL(positions)}
   projected = ${projectedExpression};
 }
 `;
@@ -107,10 +110,9 @@ fn readPosition(rowIndex: u32) -> array<${positionScalarType}, ${positions.size}
 ${getReadPositionWGSL(positions, positionConstantValues)}
 }
 
-fn writeResult(rowIndex: u32, value: vec2<u32>) {
+fn writeResult(rowIndex: u32, value: ${getWGSLUintVectorType(output.size)}) {
   let rowOffset = ${output.offset / output.ValueType.BYTES_PER_ELEMENT}u + rowIndex * ${output.stride / output.ValueType.BYTES_PER_ELEMENT}u;
-  result[rowOffset] = value.x;
-  result[rowOffset + 1u] = value.y;
+${Array.from({length: output.size}, (_, index) => `  result[rowOffset + ${index}u] = value.${getWGSLVectorComponent(index)};`).join('\n')}
 }
 
 @compute @workgroup_size(${workgroupSize}) fn main(
@@ -122,7 +124,7 @@ fn writeResult(rowIndex: u32, value: vec2<u32>) {
   }
 
   let position = readPosition(rowIndex);
-${getPositionQuantizedWGSL()}
+${getPositionQuantizedWGSL(positions)}
 
   writeResult(rowIndex, ${projectedExpression});
 }
@@ -357,6 +359,34 @@ fn multiplyUint32ByQ31(value: u32, scale: u32) -> u32 {
     return value;
   }
   return multiplyUint32ByQuantizedScale(value, scale << 1u);
+}
+
+fn multiplyUint32ByQ24(value: u32, scale: u32) -> u32 {
+  let valueLow = value & 0xffffu;
+  let valueHigh = value >> 16u;
+  let scaleLow = scale & 0xffffu;
+  let scaleHigh = scale >> 16u;
+  let productLow = valueLow * scaleLow;
+  let productMid1 = valueLow * scaleHigh;
+  let productMid2 = valueHigh * scaleLow;
+  let productHigh = valueHigh * scaleHigh;
+  let middleLow = (productLow >> 16u) + (productMid1 & 0xffffu) + (productMid2 & 0xffffu);
+  let high = productHigh + (productMid1 >> 16u) + (productMid2 >> 16u) + (middleLow >> 16u);
+  var low = ((middleLow & 0xffffu) << 16u) | (productLow & 0xffffu);
+  if (low <= 0xff7fffffu) {
+    low = low + 0x800000u;
+  } else {
+    low = low + 0x800000u;
+    let roundedHigh = high + 1u;
+    if (roundedHigh >= 0x01000000u) {
+      return 0xffffffffu;
+    }
+    return (roundedHigh << 8u) | (low >> 24u);
+  }
+  if (high >= 0x01000000u) {
+    return 0xffffffffu;
+  }
+  return (high << 8u) | (low >> 24u);
 }
 
 fn subtractU32AsF32(a: u32, b: u32) -> f32 {
@@ -660,6 +690,34 @@ uint multiplyUint32ByQ31(uint value, uint scale) {
   return multiplyUint32ByQuantizedScale(value, scale << 1u);
 }
 
+uint multiplyUint32ByQ24(uint value, uint scale) {
+  uint valueLow = value & 0xffffu;
+  uint valueHigh = value >> 16u;
+  uint scaleLow = scale & 0xffffu;
+  uint scaleHigh = scale >> 16u;
+  uint productLow = valueLow * scaleLow;
+  uint productMid1 = valueLow * scaleHigh;
+  uint productMid2 = valueHigh * scaleLow;
+  uint productHigh = valueHigh * scaleHigh;
+  uint middleLow = (productLow >> 16u) + (productMid1 & 0xffffu) + (productMid2 & 0xffffu);
+  uint high = productHigh + (productMid1 >> 16u) + (productMid2 >> 16u) + (middleLow >> 16u);
+  uint low = ((middleLow & 0xffffu) << 16u) | (productLow & 0xffffu);
+  if (low <= 0xff7fffffu) {
+    low = low + 0x800000u;
+  } else {
+    low = low + 0x800000u;
+    uint roundedHigh = high + 1u;
+    if (roundedHigh >= 0x01000000u) {
+      return 0xffffffffu;
+    }
+    return (roundedHigh << 8u) | (low >> 24u);
+  }
+  if (high >= 0x01000000u) {
+    return 0xffffffffu;
+  }
+  return (high << 8u) | (low >> 24u);
+}
+
 uint quantizeUnitToU32(DoubleSingle unitInput) {
   DoubleSingle unit = dsClamp(unitInput, dsZero(), dsOne());
   if (dsLessThanOrEqual(unit, dsZero())) {
@@ -804,14 +862,14 @@ uint projectLongitude(uint longitude) {
 `;
 }
 
-export function getPositionQuantizedWGSL(): string {
+export function getPositionQuantizedWGSL(positions: GPUTableEvaluator): string {
   return `  let longitude = position[0];
-  let latitude = position[1];`;
+  let latitude = position[1];${positions.size >= 3 ? '\n  let altitude = position[2];' : ''}`;
 }
 
-export function getPositionQuantizedGLSL(): string {
+export function getPositionQuantizedGLSL(positions: GPUTableEvaluator): string {
   return `  uint longitude = positions.x;
-  uint latitude = positions.y;`;
+  uint latitude = positions.y;${positions.size >= 3 ? '\n  uint altitude = positions.z;' : ''}`;
 }
 
 export function getReadPositionWGSL(
@@ -844,6 +902,18 @@ export function getConstantPositionValues(positions: GPUTableEvaluator): number[
 function getGLSLPositionType(positions: GPUTableEvaluator): string {
   const prefix = positions.type === 'uint32' ? 'uvec' : 'vec';
   return `${prefix}${positions.size}`;
+}
+
+function getGLSLUintVectorType(size: number): string {
+  return size === 1 ? 'uint' : `uvec${size}`;
+}
+
+function getWGSLUintVectorType(size: number): string {
+  return size === 1 ? 'u32' : `vec${size}<u32>`;
+}
+
+function getWGSLVectorComponent(index: number): string {
+  return ['x', 'y', 'z', 'w'][index] ?? `__invalid_component_${index}`;
 }
 
 function getWGSLPositionScalarType(positions: GPUTableEvaluator): 'f32' | 'u32' {
