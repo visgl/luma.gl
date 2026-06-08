@@ -12,6 +12,9 @@ import {PROJECTION_WORKGROUP_SIZE} from './projection-utils';
 const FLOAT32_SIGNIFICAND_BITS = 24;
 const FLOAT32_TRAILING_BITS = FLOAT32_SIGNIFICAND_BITS - 1;
 const MAX_EXACT_FLOAT32_UINT = 2 ** FLOAT32_SIGNIFICAND_BITS;
+const UINT32_MAX = 0xffffffff;
+const UINT32_MAX_FLOAT32_HIGH = 4294967808;
+const UINT32_MAX_FLOAT32_LOW = -513;
 
 type SplitUint32OperationInputs = {
   values: GPUTableEvaluator;
@@ -141,10 +144,39 @@ function writeSplitUint32Row(
   inputSize: number
 ): void {
   const outputOffset = rowIndex * inputSize * 2;
+  if (isInvalidUint32Row(inputValues, inputRowOffset, inputSize)) {
+    writeInvalidSplitUint32Row(outputValues, outputOffset, inputSize);
+    return;
+  }
+
   for (let index = 0; index < inputSize; index++) {
     const [high, low] = splitUint32ToFloat32Pair(Number(inputValues[inputRowOffset + index]));
     outputValues[outputOffset + index] = high;
     outputValues[outputOffset + inputSize + index] = low;
+  }
+}
+
+function isInvalidUint32Row(
+  inputValues: ArrayLike<number>,
+  inputRowOffset: number,
+  inputSize: number
+): boolean {
+  for (let index = 0; index < inputSize; index++) {
+    if (Number(inputValues[inputRowOffset + index]) !== UINT32_MAX) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function writeInvalidSplitUint32Row(
+  outputValues: Float32Array,
+  outputOffset: number,
+  inputSize: number
+): void {
+  for (let index = 0; index < inputSize; index++) {
+    outputValues[outputOffset + index] = UINT32_MAX_FLOAT32_HIGH;
+    outputValues[outputOffset + inputSize + index] = UINT32_MAX_FLOAT32_LOW;
   }
 }
 
@@ -266,12 +298,34 @@ function getWebGLOutputDeclarations(outputSize: number): string {
 }
 
 function getWebGLSplitStatements(inputSize: number): string {
-  return Array.from({length: inputSize}, (_, index) => {
+  const splitStatements = Array.from({length: inputSize}, (_, index) => {
     const accessor = getWebGLInputAccessor(inputSize, index);
-    return `  vec2 splitValue_${index} = splitUint32Value(${accessor});
-  result[${index}] = splitValue_${index}.x;
-  result[${inputSize + index}] = splitValue_${index}.y;`;
+    return `    vec2 splitValue_${index} = splitUint32Value(${accessor});
+    result[${index}] = splitValue_${index}.x;
+    result[${inputSize + index}] = splitValue_${index}.y;`;
   }).join('\n');
+
+  return `  bool isInvalidRow = ${getWebGLInvalidRowExpression(inputSize)};
+  if (isInvalidRow) {
+${getWebGLInvalidRowAssignments(inputSize)}
+  } else {
+${splitStatements}
+  }`;
+}
+
+function getWebGLInvalidRowExpression(inputSize: number): string {
+  return Array.from(
+    {length: inputSize},
+    (_, index) => `${getWebGLInputAccessor(inputSize, index)} == 0xffffffffu`
+  ).join(' && ');
+}
+
+function getWebGLInvalidRowAssignments(inputSize: number): string {
+  return Array.from(
+    {length: inputSize},
+    (_, index) => `    result[${index}] = ${UINT32_MAX_FLOAT32_HIGH}.0;
+    result[${inputSize + index}] = ${UINT32_MAX_FLOAT32_LOW}.0;`
+  ).join('\n');
 }
 
 function getWebGLOutputAssignments(outputSize: number): string {
@@ -385,6 +439,15 @@ fn readValue(rowIndex: u32, laneIndex: u32) -> u32 {
   return values[rowOffset + laneIndex];
 }
 
+fn isInvalidRow(rowIndex: u32) -> bool {
+  for (var laneIndex = 0u; laneIndex < ${values.size}u; laneIndex = laneIndex + 1u) {
+    if (readValue(rowIndex, laneIndex) != 0xffffffffu) {
+      return false;
+    }
+  }
+  return true;
+}
+
 fn writeResult(rowIndex: u32, value: array<f32, ${output.size}>) {
   let rowOffset = ${outputOffset}u + rowIndex * ${outputStride}u;
 ${Array.from({length: output.size}, (_, index) => `  result[rowOffset + ${index}u] = value[${index}];`).join('\n')}
@@ -399,10 +462,17 @@ ${Array.from({length: output.size}, (_, index) => `  result[rowOffset + ${index}
   }
 
   var splitValues: array<f32, ${output.size}>;
-  for (var laneIndex = 0u; laneIndex < ${values.size}u; laneIndex = laneIndex + 1u) {
-    let splitValue = splitUint32Value(readValue(rowIndex, laneIndex));
-    splitValues[laneIndex] = splitValue.x;
-    splitValues[laneIndex + ${values.size}u] = splitValue.y;
+  if (isInvalidRow(rowIndex)) {
+    for (var laneIndex = 0u; laneIndex < ${values.size}u; laneIndex = laneIndex + 1u) {
+      splitValues[laneIndex] = ${UINT32_MAX_FLOAT32_HIGH}.0;
+      splitValues[laneIndex + ${values.size}u] = ${UINT32_MAX_FLOAT32_LOW}.0;
+    }
+  } else {
+    for (var laneIndex = 0u; laneIndex < ${values.size}u; laneIndex = laneIndex + 1u) {
+      let splitValue = splitUint32Value(readValue(rowIndex, laneIndex));
+      splitValues[laneIndex] = splitValue.x;
+      splitValues[laneIndex + ${values.size}u] = splitValue.y;
+    }
   }
   writeResult(rowIndex, splitValues);
 }

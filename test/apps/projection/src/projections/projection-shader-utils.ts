@@ -297,6 +297,20 @@ fn quantizeUnitToU32(unitInput: DoubleSingle) -> u32 {
   return addSignedClamped(highOnlyValue, lowCorrection);
 }
 
+fn addUnsignedClamped(value: u32, delta: u32) -> u32 {
+  if (value > 0xffffffffu - delta) {
+    return 0xffffffffu;
+  }
+  return value + delta;
+}
+
+fn subtractUnsignedClamped(value: u32, delta: u32) -> u32 {
+  if (value < delta) {
+    return 0u;
+  }
+  return value - delta;
+}
+
 fn addSignedClamped(base: u32, delta: i32) -> u32 {
   if (delta >= 0) {
     let positiveDelta = u32(delta);
@@ -311,6 +325,38 @@ fn addSignedClamped(base: u32, delta: i32) -> u32 {
     return 0u;
   }
   return base - negativeDelta;
+}
+
+fn addSignedDelta(value: u32, delta: u32, negative: bool) -> u32 {
+  if (negative) {
+    return subtractUnsignedClamped(value, delta);
+  }
+  return addUnsignedClamped(value, delta);
+}
+
+fn multiplyUint32ByQuantizedScale(value: u32, scale: u32) -> u32 {
+  let valueLow = value & 0xffffu;
+  let valueHigh = value >> 16u;
+  let scaleLow = scale & 0xffffu;
+  let scaleHigh = scale >> 16u;
+  let productLow = valueLow * scaleLow;
+  let productMid1 = valueLow * scaleHigh;
+  let productMid2 = valueHigh * scaleLow;
+  let productHigh = valueHigh * scaleHigh;
+  let middleLow = (productLow >> 16u) + (productMid1 & 0xffffu) + (productMid2 & 0xffffu);
+  var high = productHigh + (productMid1 >> 16u) + (productMid2 >> 16u) + (middleLow >> 16u);
+  let low = ((middleLow & 0xffffu) << 16u) | (productLow & 0xffffu);
+  if (low >= 0x80000000u && high < 0xffffffffu) {
+    high = high + 1u;
+  }
+  return high;
+}
+
+fn multiplyUint32ByQ31(value: u32, scale: u32) -> u32 {
+  if (scale == 0x80000000u) {
+    return value;
+  }
+  return multiplyUint32ByQuantizedScale(value, scale << 1u);
 }
 
 fn subtractU32AsF32(a: u32, b: u32) -> f32 {
@@ -555,6 +601,20 @@ export function getGLSLGeospatialProjectionModule(): string {
   const degreesPerLowWord = formatDoubleSingleConstructor(360 / 0xffffffff);
 
   return /* glsl */ `
+uint addUnsignedClamped(uint value, uint delta) {
+  if (value > 0xffffffffu - delta) {
+    return 0xffffffffu;
+  }
+  return value + delta;
+}
+
+uint subtractUnsignedClamped(uint value, uint delta) {
+  if (value < delta) {
+    return 0u;
+  }
+  return value - delta;
+}
+
 uint addSignedClamped(uint base, int delta) {
   if (delta >= 0) {
     uint positiveDelta = uint(delta);
@@ -569,6 +629,35 @@ uint addSignedClamped(uint base, int delta) {
     return 0u;
   }
   return base - negativeDelta;
+}
+
+uint addSignedDelta(uint value, uint delta, bool negative) {
+  return negative ? subtractUnsignedClamped(value, delta) : addUnsignedClamped(value, delta);
+}
+
+uint multiplyUint32ByQuantizedScale(uint value, uint scale) {
+  uint valueLow = value & 0xffffu;
+  uint valueHigh = value >> 16u;
+  uint scaleLow = scale & 0xffffu;
+  uint scaleHigh = scale >> 16u;
+  uint productLow = valueLow * scaleLow;
+  uint productMid1 = valueLow * scaleHigh;
+  uint productMid2 = valueHigh * scaleLow;
+  uint productHigh = valueHigh * scaleHigh;
+  uint middleLow = (productLow >> 16u) + (productMid1 & 0xffffu) + (productMid2 & 0xffffu);
+  uint high = productHigh + (productMid1 >> 16u) + (productMid2 >> 16u) + (middleLow >> 16u);
+  uint low = ((middleLow & 0xffffu) << 16u) | (productLow & 0xffffu);
+  if (low >= 0x80000000u && high < 0xffffffffu) {
+    high = high + 1u;
+  }
+  return high;
+}
+
+uint multiplyUint32ByQ31(uint value, uint scale) {
+  if (scale == 0x80000000u) {
+    return value;
+  }
+  return multiplyUint32ByQuantizedScale(value, scale << 1u);
 }
 
 uint quantizeUnitToU32(DoubleSingle unitInput) {

@@ -1,5 +1,5 @@
 import {Deck, OrthographicView} from '@deck.gl/core';
-import {PathLayer, ScatterplotLayer} from '@deck.gl/layers';
+import {PathLayer as _PathLayer, ScatterplotLayer as _ScatterplotLayer} from '@deck.gl/layers';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {type Device} from '@luma.gl/core';
 import {
@@ -25,63 +25,31 @@ import * as cpuBackend from '@luma.gl/gpgpu/cpu';
 import * as webglBackend from '@luma.gl/gpgpu/webgl';
 import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
 import {
+  ALBERS_USGS_5070,
+  albers,
   equirectangular,
-  executeCPUEquirectangular,
-  executeWebGLEquirectangular,
-  executeWebGPUEquirectangular,
-  rawEquirectangular
-} from './projections/equirectangular';
-import {
-  executeCPUDegreesToQuantized,
-  executeWebGLDegreesToQuantized,
-  executeWebGPUDegreesToQuantized
-} from './projections/degrees-to-quantized';
-import {
-  executeCPUNaturalEarth,
-  executeWebGLNaturalEarth,
-  executeWebGPUNaturalEarth,
   naturalEarth,
-  rawNaturalEarth
-} from './projections/natural-earth';
-import {
-  executeCPUSplitUint32,
-  executeWebGLSplitUint32,
-  executeWebGPUSplitUint32,
-  splitUint32
-} from './projections/split-uint32';
-import {
-  executeCPUWebMercator,
-  executeWebGLWebMercator,
-  executeWebGPUWebMercator,
-  rawWebMercator,
+  projectionCPUBackend,
+  projectionWebGLBackend,
+  projectionWebGPUBackend,
+  splitUint32,
+  stereographic,
   webMercator
-} from './projections/web-mercator';
+} from './projections';
 
 backendRegistry.add('cpu', {
   ...cpuBackend,
-  degreesToQuantized: executeCPUDegreesToQuantized,
-  equirectangular: executeCPUEquirectangular,
-  naturalEarth: executeCPUNaturalEarth,
-  splitUint32: executeCPUSplitUint32,
-  webMercator: executeCPUWebMercator
+  ...projectionCPUBackend
 } satisfies BackendModule);
 
 backendRegistry.add('webgl', {
   ...webglBackend,
-  degreesToQuantized: executeWebGLDegreesToQuantized,
-  equirectangular: executeWebGLEquirectangular,
-  naturalEarth: executeWebGLNaturalEarth,
-  splitUint32: executeWebGLSplitUint32,
-  webMercator: executeWebGLWebMercator
+  ...projectionWebGLBackend
 } satisfies BackendModule);
 
 backendRegistry.add('webgpu', {
   ...webgpuBackend,
-  degreesToQuantized: executeWebGPUDegreesToQuantized,
-  equirectangular: executeWebGPUEquirectangular,
-  naturalEarth: executeWebGPUNaturalEarth,
-  splitUint32: executeWebGPUSplitUint32,
-  webMercator: executeWebGPUWebMercator
+  ...projectionWebGPUBackend
 } satisfies BackendModule);
 
 type RawProjection = (coordinates: readonly [number, number]) => [number, number];
@@ -92,10 +60,23 @@ type ProjectionMode = {
 };
 
 const projectionModes = {
-  equirectangular: {projectOp: equirectangular, projectRaw: rawEquirectangular},
-  webMercator: {projectOp: webMercator, projectRaw: rawWebMercator},
-  naturalEarth: {projectOp: naturalEarth, projectRaw: rawNaturalEarth}
+  equirectangular: {projectOp: equirectangular, projectRaw: equirectangular.raw},
+  webMercator: {projectOp: webMercator, projectRaw: webMercator.raw},
+  naturalEarth: {projectOp: naturalEarth, projectRaw: naturalEarth.raw},
+  stereographic: {
+    projectOp: (input: GPUTableEvaluatorInput) => stereographic(input, {longitudeOrigin: 0, latitudeOrigin: 90}), 
+    projectRaw: (coordinates: readonly [number, number]) => stereographic.raw(coordinates, {longitudeOrigin: 0, latitudeOrigin: 90})
+  },
+  albers5070: {
+    projectOp: (input: GPUTableEvaluatorInput) => albers(input, ALBERS_USGS_5070),
+    projectRaw: (coordinates: readonly [number, number]) => albers.raw(coordinates, ALBERS_USGS_5070)
+  }
 } satisfies Record<string, ProjectionMode>;
+
+type ProjectionModeName = keyof typeof projectionModes;
+
+const DEFAULT_PROJECTION_MODE: ProjectionModeName = 'equirectangular';
+
 main();
 
 async function main() {
@@ -141,18 +122,30 @@ async function main() {
     const graticulePathStartIndices = graticulePaths.startIndices!;
 
     const selector = document.getElementById('projection') as HTMLSelectElement;
+    const initialProjectionMode = getProjectionModeFromURL();
     for (const key in projectionModes) {
       const option = document.createElement('option');
       option.value = key;
       option.innerText = key;
-      option.selected = key === 'equirectangular';
+      option.selected = key === initialProjectionMode;
       selector.append(option);
     }
-    selector.onchange = () => update(selector.value as any);
+    selector.onchange = () => {
+      const mode = getProjectionMode(selector.value);
+      updateProjectionModeURL(mode);
+      update(mode);
+    };
 
-    update('equirectangular');
+    replaceProjectionModeURL(initialProjectionMode);
+    update(initialProjectionMode);
 
-    function update(mode: keyof typeof projectionModes) {
+    window.addEventListener('popstate', () => {
+      const mode = getProjectionModeFromURL();
+      selector.value = mode;
+      update(mode);
+    });
+
+    function update(mode: ProjectionModeName) {
       const {projectOp, projectRaw} = projectionModes[mode];
       const projectedPlaceCoordinates = projectOp(placeCoordinates);
       const getPosition = splitUint32(projectedPlaceCoordinates);
@@ -244,19 +237,40 @@ async function main() {
 
       const rawPosition = projectRaw(coordinates);
       const gpuPosition = getProjectedPosition(gpuResult);
-      console.log('projection comparison:', {
+      console.log('projection comparison:', [
+          gpuPosition[0] - rawPosition[0],
+          gpuPosition[1] - rawPosition[1]
+        ], {
         projection: mode,
         coordinates,
         gpu: gpuPosition,
         raw: rawPosition,
-        delta: [
-          gpuPosition[0] - rawPosition[0],
-          gpuPosition[1] - rawPosition[1]
-        ]
       });
     }
   }
 
+}
+
+function getProjectionModeFromURL(): ProjectionModeName {
+  return getProjectionMode(new URLSearchParams(window.location.search).get('projection'));
+}
+
+function getProjectionMode(value: string | null): ProjectionModeName {
+  return value && value in projectionModes ? (value as ProjectionModeName) : DEFAULT_PROJECTION_MODE;
+}
+
+function updateProjectionModeURL(mode: ProjectionModeName): void {
+  window.history.pushState(null, '', getProjectionModeURL(mode));
+}
+
+function replaceProjectionModeURL(mode: ProjectionModeName): void {
+  window.history.replaceState(null, '', getProjectionModeURL(mode));
+}
+
+function getProjectionModeURL(mode: ProjectionModeName): URL {
+  const url = new URL(window.location.href);
+  url.searchParams.set('projection', mode);
+  return url;
 }
 
 function getProjectedPosition(value: ArrayLike<number>): [number, number] {
@@ -310,6 +324,41 @@ function makePathLayerData(
       instanceTypes: add(startCapFlag, endCapFlag, invalidFlag)
     }
   };
+}
+
+/** Local shader injection to drop invalid coordinates */
+class PathLayer extends _PathLayer {
+  getShaders() {
+    const shaders = super.getShaders();
+    shaders.inject = {
+      'vs:#main-start': `
+if (instanceStartPositions.x > 4294967296. && instanceStartPositions.y > 4294967296.) {
+  gl_Position = vec4(0.);
+  return;
+}
+if (instanceEndPositions.x > 4294967296. && instanceEndPositions.y > 4294967296.) {
+  gl_Position = vec4(0.);
+  return;
+}
+      `
+    }
+    return shaders;
+  }
+}
+
+class ScatterplotLayer extends _ScatterplotLayer {
+  getShaders() {
+    const shaders = super.getShaders();
+    shaders.inject = {
+      'vs:#main-start': `
+if (instancePositions.x > 4294967296. && instancePositions.y > 4294967296.) {
+  gl_Position = vec4(0.);
+  return;
+}
+      `
+    };
+    return shaders;
+  }
 }
 
 function formatNumber(x: unknown): string {

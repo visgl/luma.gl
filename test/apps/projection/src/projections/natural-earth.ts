@@ -11,7 +11,7 @@ import {
 } from './projection-shader-utils';
 import {
   PROJECTION_WORKGROUP_SIZE,
-  UINT32_MAX,
+  addUnsignedClamped,
   clamp,
   executeWebGLProjection,
   executeWebGPUProjection,
@@ -19,9 +19,11 @@ import {
   getProjectionPositions,
   interpolateCatmullRomUint32,
   makeQuantizedProjectionOutput,
+  multiplyUint32ByQuantizedScale,
   projectDegrees180ToQuantized,
   projectSignedRangeToQuantized,
   quantizeUnitInterval,
+  subtractUnsignedClamped,
   unprojectQuantizedDegrees,
   type ProjectionOperationInputs
 } from './projection-utils';
@@ -278,29 +280,16 @@ function getLongitudeScaleAnalytic(latitude: number): number {
 
 function projectQuantizedLongitude(longitude: number, longitudeScale: number): number {
   if (longitude >= QUANTIZED_CENTER) {
-    return addUint32Clamped(
+    return addUnsignedClamped(
       QUANTIZED_CENTER,
       multiplyUint32ByQuantizedScale(longitude - QUANTIZED_CENTER, longitudeScale)
     );
   }
 
-  return subtractUint32Clamped(
+  return subtractUnsignedClamped(
     QUANTIZED_CENTER,
     multiplyUint32ByQuantizedScale(QUANTIZED_CENTER - longitude, longitudeScale)
   );
-}
-
-function multiplyUint32ByQuantizedScale(value: number, scale: number): number {
-  const product = BigInt(value >>> 0) * BigInt(scale >>> 0);
-  return Number((product + 0x80000000n) >> 32n);
-}
-
-function addUint32Clamped(value: number, delta: number): number {
-  return value > UINT32_MAX - delta ? UINT32_MAX : (value + delta) >>> 0;
-}
-
-function subtractUint32Clamped(value: number, delta: number): number {
-  return value < delta ? 0 : (value - delta) >>> 0;
 }
 
 function projectYAnalyticToQuantized(latitude: number): number {
@@ -376,38 +365,6 @@ uint readYTable(int index) {
   ).r;
 }
 
-uint addUnsignedClamped(uint value, uint delta) {
-  if (value > 0xffffffffu - delta) {
-    return 0xffffffffu;
-  }
-  return value + delta;
-}
-
-uint subtractUnsignedClamped(uint value, uint delta) {
-  if (value < delta) {
-    return 0u;
-  }
-  return value - delta;
-}
-
-uint multiplyUint32ByQuantizedScale(uint value, uint scale) {
-  uint valueLow = value & 0xffffu;
-  uint valueHigh = value >> 16u;
-  uint scaleLow = scale & 0xffffu;
-  uint scaleHigh = scale >> 16u;
-  uint productLow = valueLow * scaleLow;
-  uint productMid1 = valueLow * scaleHigh;
-  uint productMid2 = valueHigh * scaleLow;
-  uint productHigh = valueHigh * scaleHigh;
-  uint middleLow = (productLow >> 16u) + (productMid1 & 0xffffu) + (productMid2 & 0xffffu);
-  uint high = productHigh + (productMid1 >> 16u) + (productMid2 >> 16u) + (middleLow >> 16u);
-  uint low = ((middleLow & 0xffffu) << 16u) | (productLow & 0xffffu);
-  if (low >= 0x80000000u && high < 0xffffffffu) {
-    high = high + 1u;
-  }
-  return high;
-}
-
 uint projectLongitudeNaturalEarth(uint longitude, uint longitudeScale) {
   if (longitude >= 0x80000000u) {
     uint delta = multiplyUint32ByQuantizedScale(longitude - 0x80000000u, longitudeScale);
@@ -449,38 +406,6 @@ uvec2 projectPosition(uint longitude, uint latitude) {
 
 function getWGSLNaturalEarthProjectionFunctions(): string {
   return /* wgsl */ `
-fn addUnsignedClamped(value: u32, delta: u32) -> u32 {
-  if (value > 0xffffffffu - delta) {
-    return 0xffffffffu;
-  }
-  return value + delta;
-}
-
-fn subtractUnsignedClamped(value: u32, delta: u32) -> u32 {
-  if (value < delta) {
-    return 0u;
-  }
-  return value - delta;
-}
-
-fn multiplyUint32ByQuantizedScale(value: u32, scale: u32) -> u32 {
-  let valueLow = value & 0xffffu;
-  let valueHigh = value >> 16u;
-  let scaleLow = scale & 0xffffu;
-  let scaleHigh = scale >> 16u;
-  let productLow = valueLow * scaleLow;
-  let productMid1 = valueLow * scaleHigh;
-  let productMid2 = valueHigh * scaleLow;
-  let productHigh = valueHigh * scaleHigh;
-  let middleLow = (productLow >> 16u) + (productMid1 & 0xffffu) + (productMid2 & 0xffffu);
-  var high = productHigh + (productMid1 >> 16u) + (productMid2 >> 16u) + (middleLow >> 16u);
-  let low = ((middleLow & 0xffffu) << 16u) | (productLow & 0xffffu);
-  if (low >= 0x80000000u && high < 0xffffffffu) {
-    high = high + 1u;
-  }
-  return high;
-}
-
 fn projectLongitudeNaturalEarth(longitude: u32, longitudeScale: u32) -> u32 {
   if (longitude >= 0x80000000u) {
     let delta = multiplyUint32ByQuantizedScale(longitude - 0x80000000u, longitudeScale);
