@@ -374,7 +374,7 @@ function getRequiredArrowVector<T extends arrow.DataType>(
 function getPreparedScalarTemporalVector(
   preparedTemporalColumn: PreparedArrowTemporalGPUVector<'float32'>
 ): GPUVector<'float32'> {
-  if (!(preparedTemporalColumn.temporal.type instanceof arrow.Float32)) {
+  if (!(preparedTemporalColumn.temporal.dataType instanceof arrow.Float32)) {
     throw new Error('Time columns example requires scalar prepared Float32 temporal rows');
   }
   return preparedTemporalColumn.temporal;

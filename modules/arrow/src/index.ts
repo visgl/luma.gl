@@ -198,6 +198,7 @@ export {
   type ArrowTextShaderInputs
 } from './arrow/renderers/text/renderers/arrow-text-shaders';
 export {
+  getRequiredArrowGPUVectorDataType,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable,

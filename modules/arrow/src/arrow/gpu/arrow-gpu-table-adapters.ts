@@ -56,6 +56,8 @@ import {
   validateArrowGPUDataDirectUpload,
   type GPUDataReadbackMetadata
 } from './arrow-gpu-data';
+
+export {getRequiredArrowGPUVectorDataType} from './arrow-gpu-data';
 import {
   isInstanceArrowType,
   isVariableLengthAttributeArrowType,

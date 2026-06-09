@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  getRequiredArrowGPUVectorDataType,
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
@@ -369,7 +370,7 @@ async function makeArrowColumnTableInput(
       counts
     };
     const fields = Object.entries(vectors).map(
-      ([name, vector]) => new arrow.Field(name, vector.type, false)
+      ([name, vector]) => new arrow.Field(name, getRequiredArrowGPUVectorDataType(vector), false)
     );
     const batch = new GPURecordBatch<GPUTypeMap>({
       vectors,
@@ -406,7 +407,7 @@ async function makeArrowColumnTableInput(
 function getPreparedFloat32Vector(
   preparedTemporalVector: PreparedArrowTemporalGPUVector<'float32'>
 ): GPUVector<'float32'> {
-  if (!(preparedTemporalVector.temporal.type instanceof arrow.Float32)) {
+  if (!(preparedTemporalVector.temporal.dataType instanceof arrow.Float32)) {
     throw new Error('ArrowColumnRenderer requires scalar prepared Float32 temporal columns');
   }
   return preparedTemporalVector.temporal;
