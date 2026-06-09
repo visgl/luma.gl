@@ -39,6 +39,13 @@
 - Always import individual symbols from `'apache-arrow'` in `modules/*/src`.
 - It is preferred to use `import * as arrow from 'apache-arrow'` in tests, examples, and docs.
 
+## Geometry attribute naming
+- Built-in engine geometries and `@luma.gl/gltf` geometry use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
+- `Geometry.attributes` preserves source keys. Do not camelCase or alias those keys in the CPU geometry container.
+- `bufferLayout`, `GPUGeometry`, and `Model` bindings are shader-facing metadata. Convert source semantics only at adapter and model boundaries.
+- Explicit `bufferLayout` is caller-owned and must not be normalized by `Geometry`.
+- Preserve custom geometry names. When writing glTF custom semantics, follow the glTF `_NAME` convention.
+
 ## GPU table API boundaries
 - `@luma.gl/tables` owns generic GPU concepts only: `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`, `GPUSchema`, and `GPUVectorFormat`.
 - `@luma.gl/tables` and `@luma.gl/gpgpu` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.

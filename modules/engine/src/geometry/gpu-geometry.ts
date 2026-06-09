@@ -4,7 +4,7 @@
 
 import type {PrimitiveTopology, BufferLayout} from '@luma.gl/core';
 import {Device, Buffer} from '@luma.gl/core';
-import type {Geometry} from '../geometry/geometry';
+import {type Geometry, getGeometryShaderAttributeName} from '../geometry/geometry';
 import {makeInterleavedGeometry} from './geometry-utils';
 import {uid} from '../utils/uid';
 
@@ -147,8 +147,11 @@ export function getAttributeBuffersFromGeometry(
 ): {attributes: Record<string, Buffer>; bufferLayout: BufferLayout[]; vertexCount: number} {
   const attributes: Record<string, Buffer> = {};
   for (const [attributeName, attribute] of Object.entries(geometry.attributes)) {
+    const name =
+      geometry.bufferLayout.find(bufferLayout => bufferLayout.name === attributeName)?.name ||
+      getGeometryShaderAttributeName(attributeName);
     if (attribute) {
-      attributes[attributeName] = device.createBuffer({
+      attributes[name] = device.createBuffer({
         data: attribute.value,
         id: `${attributeName}-buffer`
       });

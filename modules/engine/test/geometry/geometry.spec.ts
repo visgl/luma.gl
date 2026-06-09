@@ -94,7 +94,7 @@ test('Geometry#constructor', t => {
   t.end();
 });
 
-test('Geometry#constructor normalizes explicit bufferLayout', t => {
+test('Geometry#constructor preserves source attribute and explicit layout names', t => {
   const geometry = new Geometry({
     topology: 'triangle-list',
     attributes: {
@@ -103,11 +103,8 @@ test('Geometry#constructor normalizes explicit bufferLayout', t => {
     bufferLayout: [{name: 'POSITION', format: 'float32x3'}]
   });
 
-  t.ok(geometry.attributes.positions, 'attribute name is normalized');
-  t.deepEqual(
-    geometry.bufferLayout,
-    [{name: 'positions', format: 'float32x3'}],
-    'shorthand bufferLayout name is normalized'
-  );
+  t.ok(geometry.attributes.POSITION, 'semantic attribute name is preserved');
+  t.notOk(geometry.attributes.positions, 'semantic attribute has no shader-name alias');
+  t.deepEqual(geometry.bufferLayout, [{name: 'POSITION', format: 'float32x3'}]);
   t.end();
 });

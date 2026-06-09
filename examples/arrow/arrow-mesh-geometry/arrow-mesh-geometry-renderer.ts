@@ -239,7 +239,7 @@ function makeArrowMeshTable(
   faceColors: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>
 ): ArrowMeshTable {
   const cubeGeometry = new CubeGeometry({indices: true});
-  const cubePositions = cubeGeometry.attributes.positions?.value;
+  const cubePositions = cubeGeometry.attributes.POSITION?.value;
   const cubeFaceIndices = cubeGeometry.attributes.faceIndex?.value;
   const cubeIndices = cubeGeometry.indices?.value;
 

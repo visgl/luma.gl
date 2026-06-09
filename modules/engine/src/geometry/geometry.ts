@@ -18,12 +18,13 @@ export type GeometryProps = {
   topology: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
   /** Draw vertex count. Auto-calculated from attributes or indices when omitted. */
   vertexCount?: number;
-  /** CPU attributes, keyed by shader attribute name or supported glTF-style semantic name. */
+  /** CPU attributes, keyed by caller-provided names such as glTF mesh attribute semantics. */
   attributes: Record<string, GeometryAttributeInput>;
   /**
    * Maps geometry buffers to shader attributes.
    *
-   * If omitted, the constructor creates one buffer layout entry for each normalized attribute.
+   * If omitted, the constructor creates one shader-facing buffer layout entry for each attribute.
+   * Explicit buffer layouts are preserved unchanged.
    */
   bufferLayout?: BufferLayout[];
   /** Optional index data. Indices are always stored separately from vertex attributes. */
@@ -50,9 +51,9 @@ export type GeometryAttribute = {
  * CPU-side geometry container.
  *
  * `Geometry` stores typed-array vertex data, optional index data, and an always-populated
- * `bufferLayout` that describes how its attributes map to shader inputs. Attribute names are
- * normalized once in the constructor so glTF-style names such as `POSITION` and `TEXCOORD_0`
- * become shader names such as `positions` and `texCoords`.
+ * `bufferLayout` that describes how its attributes map to shader inputs. CPU attribute names are
+ * preserved as supplied; synthesized buffer layouts map supported glTF-style names such as
+ * `POSITION` and `TEXCOORD_0` to default shader names such as `positions` and `texCoords`.
  */
 export class Geometry {
   /** Application-provided or generated identifier. */
@@ -67,7 +68,7 @@ export class Geometry {
   /** Optional index attribute. */
   readonly indices?: GeometryAttribute;
 
-  /** CPU attributes, keyed by normalized buffer or shader attribute name. */
+  /** CPU attributes, keyed by caller-provided source attribute name. */
   readonly attributes: Record<string, GeometryAttribute | undefined>;
 
   /** Buffer layout matching the geometry attributes. Always populated. */
@@ -76,7 +77,7 @@ export class Geometry {
   /** Application-owned metadata. */
   userData: Record<string, unknown> = {};
 
-  /** Creates a CPU geometry and normalizes attributes plus buffer layout metadata. */
+  /** Creates a CPU geometry and wraps raw typed arrays into attribute records. */
   constructor(props: GeometryProps) {
     const {attributes = {}, indices = null, vertexCount = null} = props;
 
@@ -112,8 +113,7 @@ export class Geometry {
         }
         this.indices = attribute;
       } else {
-        const normalizedAttributeName = getGeometryShaderAttributeName(attributeName);
-        this.attributes[normalizedAttributeName] = attribute;
+        this.attributes[attributeName] = attribute;
       }
     }
 
@@ -123,9 +123,8 @@ export class Geometry {
     }
 
     this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);
-    this.bufferLayout = props.bufferLayout
-      ? normalizeGeometryBufferLayout(props.bufferLayout)
-      : getBufferLayoutFromGeometryAttributes(this.attributes);
+    this.bufferLayout =
+      props.bufferLayout || getBufferLayoutFromGeometryAttributes(this.attributes);
   }
 
   /** Returns the resolved draw vertex count. */
@@ -174,8 +173,9 @@ export class Geometry {
 }
 
 /**
- * Converts supported geometry semantic names to shader attribute names.
+ * Converts supported geometry semantic names to default shader attribute names.
  *
+ * Use this only at render-layout boundaries. CPU `Geometry.attributes` preserves source names.
  * Names that do not have a built-in mapping are returned unchanged.
  */
 export function getGeometryShaderAttributeName(attributeName: string): string {
@@ -199,35 +199,18 @@ function getBufferLayoutFromGeometryAttributes(
   attributes: Record<string, GeometryAttribute | undefined>
 ): BufferLayout[] {
   const bufferLayout: BufferLayout[] = [];
-  for (const [name, attribute] of Object.entries(attributes)) {
+  for (const [attributeName, attribute] of Object.entries(attributes)) {
     if (!attribute) {
       continue; // eslint-disable-line no-continue
     }
     const {value, size, normalized} = attribute;
     if (size === undefined) {
-      throw new Error(`Attribute ${name} is missing a size`);
+      throw new Error(`Attribute ${attributeName} is missing a size`);
     }
     bufferLayout.push({
-      name,
+      name: getGeometryShaderAttributeName(attributeName),
       format: vertexFormatDecoder.getVertexFormatFromAttribute(value, size, normalized)
     });
   }
   return bufferLayout;
-}
-
-function normalizeGeometryBufferLayout(bufferLayout: BufferLayout[]): BufferLayout[] {
-  return bufferLayout.map(layout =>
-    layout.attributes
-      ? {
-          ...layout,
-          attributes: layout.attributes.map(attribute => ({
-            ...attribute,
-            attribute: getGeometryShaderAttributeName(attribute.attribute)
-          }))
-        }
-      : {
-          ...layout,
-          name: getGeometryShaderAttributeName(layout.name)
-        }
-  );
 }

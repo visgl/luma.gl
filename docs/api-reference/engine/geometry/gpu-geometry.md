@@ -53,7 +53,8 @@ Optional index buffer.
 
 ### `attributes`
 
-Named vertex buffers. Keys match `bufferLayout[].name`.
+Named vertex buffers. Keys match `bufferLayout[].name`; these are GPU buffer binding names, not
+necessarily the source keys stored in CPU `Geometry.attributes`.
 
 ### `userData`
 
