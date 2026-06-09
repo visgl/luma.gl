@@ -86,7 +86,7 @@ export function createArrowTextPickingModel(
     vs: VS_GLSL,
     fs: PICKING_FS_GLSL,
     fragmentEntryPoint: 'fragmentPicking',
-    modules: [indexPicking],
+    modules: [indexPicking] as never,
     shaderLayout: TEXT_SHADER_LAYOUT,
     bufferLayout: textModel.bufferLayout,
     attributes: {
