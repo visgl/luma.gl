@@ -130,6 +130,7 @@ export {
   type ArrowTextStorageInputProps,
   type ArrowTextStorageRenderProps,
   type ArrowTextStorageSourceVectors,
+  type ArrowTextStorageState,
   type ArrowTextGlyphTable,
   type ArrowTextModelProps,
   type ArrowTextRenderBatchState,

@@ -400,11 +400,7 @@ function assertPathVertexColorGPUVectorAlignment(paths: GPUVector, colors: GPUVe
   for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
     const pathOffsets = paths.data[batchIndex]?.valueOffsets;
     const colorOffsets = colors.data[batchIndex]?.valueOffsets;
-    if (
-      !pathOffsets ||
-      !colorOffsets ||
-      !arePathOffsetsEqual(pathOffsets, colorOffsets)
-    ) {
+    if (!pathOffsets || !colorOffsets || !arePathOffsetsEqual(pathOffsets, colorOffsets)) {
       throw new Error('PathAttributeModel vertex colors must align with path vertex offsets');
     }
   }

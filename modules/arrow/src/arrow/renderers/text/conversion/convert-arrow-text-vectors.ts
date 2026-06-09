@@ -284,6 +284,12 @@ export type ArrowTextStorageInputProps = ArrowTextStorageSharedInputProps & {
   sourceVectors: ArrowTextStorageSourceVectors;
 };
 
+/** Arrow-owned storage state that can append later Arrow source batches. */
+export type ArrowTextStorageState = TextStorageState & {
+  /** Arrow conversion metadata retained for explicit incremental append behavior. */
+  arrowAppendContext: ArrowTextStorageAppendContext;
+};
+
 /** Prepared GPU UTF-8 batch consumed by GPUVector-only storage text conversion. */
 export type GPUVectorTextStorageBatch = {
   /** Source text rows in this batch. */
@@ -1532,7 +1538,7 @@ export function createExpandedGlyphVertexData(
 export function createArrowTextStorageState(
   device: Device,
   props: ArrowTextStorageInputProps
-): TextStorageState {
+): ArrowTextStorageState {
   if (device.type !== 'webgpu') {
     throw new Error('createArrowTextStorageState requires a WebGPU device');
   }
@@ -1819,7 +1825,7 @@ export function createArrowTextStorageState(
   const firstBatch = getFirstTextStorageBatch({batches});
   const firstRenderBatch = getFirstTextStorageRenderBatch({renderBatches});
   let destroyed = false;
-  const storageState: TextStorageState = {
+  const storageState: ArrowTextStorageState = {
     glyphStream,
     fontAtlasManager: mappingState.fontAtlasManager,
     atlasTexture,
@@ -1853,6 +1859,12 @@ export function createArrowTextStorageState(
     storageRenderConfigBuffer: firstRenderBatch.storageRenderConfigBuffer,
     glyphFramesBuffer: glyphFrames.buffer,
     compactGlyphVertexData: firstRenderBatch.compactGlyphVertexData,
+    arrowAppendContext: {
+      defaultBuffers,
+      mappingState,
+      useGpuUtf8Decode,
+      utf8GlyphDefinitions
+    },
     destroy: () => {
       if (destroyed) {
         return;
@@ -1867,12 +1879,6 @@ export function createArrowTextStorageState(
       }
     }
   };
-  arrowTextStorageAppendContexts.set(storageState, {
-    defaultBuffers,
-    mappingState,
-    useGpuUtf8Decode,
-    utf8GlyphDefinitions
-  });
   return storageState;
 }
 
@@ -2572,11 +2578,6 @@ type ArrowTextStorageAppendContext = {
   utf8GlyphDefinitions?: ReturnType<typeof buildGpuUtf8GlyphDefinitions>;
 };
 
-const arrowTextStorageAppendContexts = new WeakMap<
-  TextStorageState,
-  ArrowTextStorageAppendContext
->();
-
 function createTextStorageDefaultBuffers(
   device: Device,
   props: AnyTextStorageInputProps
@@ -2758,11 +2759,11 @@ function createTextDictionaryStorageBuffer(
 export function appendArrowTextStorageStateBatches(
   device: Device,
   props: ArrowTextStorageInputProps,
-  storageState: TextStorageState
+  storageState: ArrowTextStorageState
 ): void {
-  const appendContext = arrowTextStorageAppendContexts.get(storageState);
+  const appendContext = storageState.arrowAppendContext;
   if (!appendContext) {
-    throw new Error('TextStorageState cannot append text batches it does not own');
+    throw new Error('ArrowTextStorageState requires append context');
   }
   const textInputs = resolveArrowTextStorageInputs(props);
   assertTextStorageAppendCompatible(storageState, textInputs.batches);
@@ -3084,7 +3085,7 @@ export function refreshArrowTextStorageRowBindings(
   );
   storageState.batches = nextBatches;
   storageState.rowStorageByteLength = rowStorageByteLength;
-  const appendContext = arrowTextStorageAppendContexts.get(storageState);
+  const appendContext = getArrowTextStorageAppendContext(storageState);
   if (appendContext) {
     appendContext.defaultBuffers = defaultBuffers;
   }
@@ -3108,6 +3109,18 @@ function assertTextStorageRowBindingRefreshCompatible(
       throw new Error('ArrowTextStorageModel row-binding updates must preserve text batch rows');
     }
   }
+}
+
+function getArrowTextStorageAppendContext(
+  storageState: TextStorageState
+): ArrowTextStorageAppendContext | undefined {
+  return isArrowTextStorageState(storageState) ? storageState.arrowAppendContext : undefined;
+}
+
+function isArrowTextStorageState(
+  storageState: TextStorageState
+): storageState is ArrowTextStorageState {
+  return 'arrowAppendContext' in storageState;
 }
 
 function syncArrowTextStorageStateFirstBatch(storageState: TextStorageState): void {
@@ -3206,9 +3219,7 @@ function assertTextDictionaryStorageRowBindingRefreshCompatible(
   }
 }
 
-function syncArrowTextDictionaryStorageStateFirstBatch(
-  storageState: TextDictionaryState
-): void {
+function syncArrowTextDictionaryStorageStateFirstBatch(storageState: TextDictionaryState): void {
   const firstBatch = getFirstTextDictionaryBatch(storageState);
   const firstRenderBatch = getFirstTextDictionaryRenderBatch(storageState);
   storageState.rowPositionsBuffer = firstBatch.rowPositionsBuffer;
@@ -3405,7 +3416,6 @@ function getAlignmentBaselineEnum(
       return DEFAULT_STORAGE_ALIGNMENT_BASELINE;
   }
 }
-
 
 function createPartitionedGpuExpandedTextStream(
   glyphStream: GpuExpandedTextStream,
