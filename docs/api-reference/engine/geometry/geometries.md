@@ -1,6 +1,6 @@
 # Built-in Geometries
 
-`@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard shader attributes such as `positions`, `normals`, and `texCoords`.
+`@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 
 ## Overview
 
