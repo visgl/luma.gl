@@ -47,21 +47,19 @@ export function AdapterBackendGraphic(): ReactNode {
               <span>{adapterPackage}</span>
               {variant === 'null' && <Tag>test-only</Tag>}
             </DiagramNode>
-            <Arrow className="docs-adapter-backend__arrow--adapter" />
             <DiagramNode className="docs-adapter-backend__node--device">
               <code>{device}</code>
               <span>{deviceDetail}</span>
             </DiagramNode>
-            <Arrow className="docs-adapter-backend__arrow--device" />
           </div>
         ))}
+        <DiagramMerge />
         <DiagramNode className="docs-adapter-backend__node--portable">
           <strong>
             <code>Device</code> portable API
           </strong>
           <span>same resource and command surface</span>
         </DiagramNode>
-        <Arrow className="docs-adapter-backend__arrow--app" />
         <DiagramNode className="docs-adapter-backend__node--app">
           <strong>app</strong>
           <code>device.createBuffer(...)</code>
@@ -86,8 +84,12 @@ function DiagramNode({
   return <div className={`docs-adapter-backend__node ${className}`}>{children}</div>;
 }
 
-function Arrow({className = ''}: {className?: string}): ReactNode {
-  return <div className={`docs-adapter-backend__arrow ${className}`} aria-hidden="true" />;
+function DiagramMerge(): ReactNode {
+  return (
+    <div className="docs-adapter-backend__merge" aria-hidden="true">
+      <span />
+    </div>
+  );
 }
 
 function Tag({children}: {children: ReactNode}): ReactNode {
