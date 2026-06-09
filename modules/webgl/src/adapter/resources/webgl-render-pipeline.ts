@@ -182,7 +182,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       topology = this.props.topology,
       vertexArray,
       vertexCount,
-      // indexCount,
+      indexCount,
       instanceCount,
       isInstanced = false,
       firstVertex = 0,
@@ -196,6 +196,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const glDrawMode = getGLDrawMode(topology);
     const isIndexed: boolean = Boolean(vertexArray.indexBuffer);
     const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
+    const indexedDrawCount = indexCount ?? vertexCount ?? 0;
     // Note that we sometimes get called with 0 instances
 
     // If we are using async linking, we need to wait until linking completes
@@ -240,7 +241,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       if (isIndexed && isInstanced) {
         this.device.gl.drawElementsInstanced(
           glDrawMode,
-          vertexCount || 0, // indexCount?
+          indexedDrawCount,
           glIndexType,
           firstVertex,
           instanceCount || 0
@@ -248,7 +249,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
         //   this.device.gldrawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
       } else if (isIndexed) {
-        this.device.gl.drawElements(glDrawMode, vertexCount || 0, glIndexType, firstVertex); // indexCount?
+        this.device.gl.drawElements(glDrawMode, indexedDrawCount, glIndexType, firstVertex);
       } else if (isInstanced) {
         this.device.gl.drawArraysInstanced(
           glDrawMode,

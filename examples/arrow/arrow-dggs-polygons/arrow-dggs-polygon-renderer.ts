@@ -12,11 +12,10 @@ import {
   prepareDggsCellPathGPUVector,
   type DggsCellEncoding,
   type PreparedDggsCellKeyGPUVector,
-  type PreparedDggsCellPathGPUVector,
-  type StoragePathModel
+  type PreparedDggsCellPathGPUVector
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {GPURenderable} from '@luma.gl/tables';
+import {GPURenderable, type StoragePathModel} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createDggsPolygonPathModel,

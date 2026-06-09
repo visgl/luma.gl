@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {StoragePathModel, StorageTripsPathModel} from '@luma.gl/arrow';
-import type {GPUVector} from '@luma.gl/tables';
+import {StoragePathModel, StorageTripsPathModel, type GPUVector} from '@luma.gl/tables';
 import type {ArrowLineControlPanelMetrics} from './control-panel';
 import type {
   ArrowLineRenderer,
@@ -36,7 +35,7 @@ export function getArrowLineMetrics(
     pathArrowBytes: formatByteLength(pathArrowBytes),
     pathGpuBytes: formatByteLength(pathGpuBytes),
     pathGpuExpansion: formatExpansionRatio(pathGpuBytes, pathArrowBytes),
-    pathPrepTime: `${getPathModelPrepTimeMs(pathModel).toFixed(1)}ms`,
+    pathPrepTime: `${getPathModelPrepTimeMs(pathInput, pathModel).toFixed(1)}ms`,
     styleArrowBytes: formatByteLength(styleArrowBytes),
     styleGpuBytes: formatByteLength(styleGpuBytes),
     styleGpuExpansion: formatExpansionRatio(styleGpuBytes, styleArrowBytes),
@@ -118,13 +117,19 @@ function getPathStyleGpuByteLength(
   return sourceStyleGpuBytes + expandedStyleGpuBytes;
 }
 
-function getPathModelPrepTimeMs(pathModel: ArrowLineRendererActiveModel | null): number {
+function getPathModelPrepTimeMs(
+  pathInput: ArrowLineRendererInput,
+  pathModel: ArrowLineRendererActiveModel | null
+): number {
   if (!pathModel) {
     return 0;
   }
-  return isStoragePathModel(pathModel)
-    ? pathModel.pathRangeBuildTimeMs
-    : pathModel.segmentAttributeBuildTimeMs;
+  if (isStoragePathModel(pathModel)) {
+    return pathModel.pathRangeBuildTimeMs;
+  }
+  return pathInput.model === 'attribute'
+    ? pathInput.pathState.segmentTable.segmentAttributeBuildTimeMs
+    : 0;
 }
 
 function isStoragePathModel(

@@ -108,6 +108,12 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 
   /** Optional index buffer. Dynamic buffers are rebound when resized. */
   indexBuffer?: ModelBuffer | null;
+  /** Optional indexed draw count. Defaults to the full bound index buffer length. */
+  indexCount?: number;
+  /** First vertex byte offset for WebGL indexed draws or first vertex for non-indexed draws. */
+  firstVertex?: number;
+  /** First index element for WebGPU indexed draws. */
+  firstIndex?: number;
   /** Buffer-valued attributes. Dynamic buffers are rebound when resized. */
   attributes?: Record<string, ModelBuffer>;
   /**   */
@@ -160,6 +166,9 @@ export class Model {
     modules: [],
     geometry: null,
     indexBuffer: null,
+    indexCount: undefined!,
+    firstVertex: 0,
+    firstIndex: 0,
     attributes: {},
     constantAttributes: {},
     bindings: {},
@@ -219,6 +228,12 @@ export class Model {
   instanceCount: number = 0;
   /** Vertex count */
   vertexCount: number;
+  /** Indexed draw count override. Undefined draws the full bound index buffer. */
+  indexCount: number | undefined;
+  /** First vertex byte offset for WebGL indexed draws or first vertex for non-indexed draws. */
+  firstVertex: number;
+  /** First index element for WebGPU indexed draws. */
+  firstIndex: number;
 
   /** Index buffer */
   indexBuffer: Buffer | null = null;
@@ -348,6 +363,9 @@ export class Model {
     }
 
     this.vertexCount = this.props.vertexCount;
+    this.indexCount = this.props.indexCount;
+    this.firstVertex = this.props.firstVertex;
+    this.firstIndex = this.props.firstIndex;
     this.instanceCount = this.props.instanceCount;
 
     this.topology = this.props.topology;
@@ -527,7 +545,8 @@ export class Model {
 
           const {indexBuffer} = this.vertexArray;
           const indexCount = indexBuffer
-            ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
+            ? (this.indexCount ??
+              indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2))
             : undefined;
 
           drawSuccess = this.pipeline.draw({
@@ -537,6 +556,8 @@ export class Model {
             vertexCount: this.vertexCount,
             instanceCount: this.instanceCount,
             indexCount,
+            firstVertex: this.firstVertex,
+            firstIndex: this.firstIndex,
             transformFeedback: this.transformFeedback || undefined,
             // Pipelines may be shared across models when caching is enabled, so bindings
             // and WebGL uniforms must be supplied on every draw instead of being stored
@@ -676,6 +697,19 @@ export class Model {
   setVertexCount(vertexCount: number): void {
     this.vertexCount = vertexCount;
     this.setNeedsRedraw('vertexCount');
+  }
+
+  /** Updates the indexed draw count override. */
+  setIndexCount(indexCount: number | undefined): void {
+    this.indexCount = indexCount;
+    this.setNeedsRedraw('indexCount');
+  }
+
+  /** Updates the first indexed/non-indexed draw offsets. */
+  setDrawOffsets({firstVertex, firstIndex}: {firstVertex: number; firstIndex: number}): void {
+    this.firstVertex = firstVertex;
+    this.firstIndex = firstIndex;
+    this.setNeedsRedraw('drawOffsets');
   }
 
   /** Set the shader inputs */

@@ -136,7 +136,7 @@ export {
   resolvePickingMode,
   resolvePickingBackend
 } from './modules/picking/picking-manager';
-export {picking} from './modules/picking/picking';
+export {getIndexPickingModule, picking} from './modules/picking/picking';
 export {picking as indexPicking} from './modules/picking/index-picking';
 export {picking as indexColorPicking} from './modules/picking/index-color-picking';
 export {picking as colorPicking} from './modules/picking/color-picking';

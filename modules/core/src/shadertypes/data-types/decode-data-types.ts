@@ -2,8 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TypedArray, TypedArrayConstructor} from '../../types';
-import {PrimitiveDataType, SignedDataType, NormalizedDataType, DataTypeInfo} from './data-types';
+import {
+  getFloat16ArrayConstructor,
+  isFloat16ArrayConstructor,
+  type TypedArray,
+  type TypedArrayConstructor
+} from '../../types';
+import type {
+  DataTypeInfo,
+  NormalizedDataType,
+  PrimitiveDataType,
+  SignedDataType
+} from './data-types';
 
 /**
  * Gets info about a data type constant (signed or normalized)
@@ -48,9 +58,14 @@ export function alignTo(size: number, count: number): number {
   }
 }
 
-/** Returns the VariableShaderType that corresponds to a typed array */
-export function getDataType(arrayOrType: TypedArray | TypedArrayConstructor): SignedDataType {
+/** Returns the luma.gl scalar data type represented by a typed array or constructor. */
+export function getDataTypeFromTypedArray(
+  arrayOrType: TypedArray | TypedArrayConstructor
+): SignedDataType {
   const Constructor = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
+  if (isFloat16ArrayConstructor(Constructor)) {
+    return 'float16';
+  }
   if (Constructor === Uint8ClampedArray) {
     return 'uint8';
   }
@@ -61,10 +76,36 @@ export function getDataType(arrayOrType: TypedArray | TypedArrayConstructor): Si
   return info[0];
 }
 
-/** Returns the TypedArray that corresponds to a shader data type */
-export function getTypedArrayConstructor(type: NormalizedDataType): TypedArrayConstructor {
-  const [, , , , Constructor] = NORMALIZED_TYPE_MAP[type];
+/** Returns the VariableShaderType that corresponds to a typed array. */
+export function getDataType(arrayOrType: TypedArray | TypedArrayConstructor): SignedDataType {
+  return getDataTypeFromTypedArray(arrayOrType);
+}
+
+/** Returns the typed array constructor used to represent one luma.gl scalar data type. */
+export function getTypedArrayFromDataType(type: NormalizedDataType): TypedArrayConstructor {
+  if (type === 'float16') {
+    return getFloat16ArrayConstructor();
+  }
+  const typeInfo = NORMALIZED_TYPE_MAP[type];
+  if (!typeInfo) {
+    throw new Error(type);
+  }
+  const [, , , , Constructor] = typeInfo;
   return Constructor;
+}
+
+/** Returns the TypedArray that corresponds to a shader data type. */
+export function getTypedArrayConstructor(type: NormalizedDataType): TypedArrayConstructor {
+  return getTypedArrayFromDataType(type);
+}
+
+/** Returns the byte length of one scalar element for a luma.gl data type. */
+export function getDataTypeByteLength(dataType: NormalizedDataType): number {
+  const typeInfo = NORMALIZED_TYPE_MAP[dataType];
+  if (!typeInfo) {
+    throw new Error(dataType);
+  }
+  return typeInfo[2];
 }
 
 const NORMALIZED_TYPE_MAP: Record<

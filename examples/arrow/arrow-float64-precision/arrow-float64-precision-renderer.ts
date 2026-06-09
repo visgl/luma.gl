@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  AttributePathModel,
+  ArrowPathRenderer,
   prepareArrowPathGPUVectors,
   type PreparedArrowPathGPUVectors
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {GPURenderable, type GPUVector} from '@luma.gl/tables';
+import {AttributePathModel, GPURenderable, type GPUVector} from '@luma.gl/tables';
 import type {ShaderInputs} from '@luma.gl/engine';
 import {
   createFloat64PrecisionShaderInputs,
@@ -176,8 +176,9 @@ async function createPreparedPathView(
     },
     {id: `arrow-float64-precision-${kind}`}
   );
-  const model = new AttributePathModel(device, {
-    ...prepared.pathProps,
+  const model = ArrowPathRenderer.createModel(device, {
+    model: 'attribute',
+    ...prepared,
     id: `arrow-float64-precision-${kind}`,
     source: WGSL_SHADER,
     vs: VS_GLSL,

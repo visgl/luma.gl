@@ -1,0 +1,102 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+import {DataType, Table, Vector} from 'apache-arrow';
+import {
+  AttributeArrowType,
+  NumericArrowType,
+  ArrowColumnInfo,
+  isNumericArrowType,
+  isInstanceArrowType,
+  // isVertexArrowType,
+  getSignedShaderType
+} from './arrow-types';
+import {getArrowPaths, getArrowVectorByPath} from './arrow-paths';
+
+/** Returns GPU-compatible column information for every compatible leaf column in an Arrow table. */
+export function analyzeArrowTable(arrowTable: Table): Record<string, ArrowColumnInfo> {
+  const columnInfos: Record<string, ArrowColumnInfo> = {};
+
+  for (const path of getArrowPaths(arrowTable)) {
+    const columnInfo = getArrowColumnInfo(arrowTable, path);
+    if (columnInfo) {
+      columnInfos[path] = columnInfo;
+    }
+  }
+
+  return columnInfos;
+}
+
+/** Returns GPU attribute information for an Arrow table column path, if compatible. */
+export function getArrowColumnInfo(arrowTable: Table, path: string): ArrowColumnInfo | null {
+  const vector = getArrowVectorByPath(arrowTable, path);
+  if (isInstanceArrowType(vector.type)) {
+    return getInstanceColumnInfo(vector);
+  }
+  // if (isVertexArrowType(vector.type)) {
+  //   return getVertexColumnInfo(vector);
+  // }
+  return null;
+}
+
+/** Returns GPU attribute information for a scalar or FixedSizeList Arrow vector. */
+export function getInstanceColumnInfo(vector: Vector<AttributeArrowType>): ArrowColumnInfo {
+  let components: 1 | 2 | 3 | 4 = 1;
+
+  let dataVector = vector as Vector<NumericArrowType>;
+  if (DataType.isFixedSizeList(vector.type)) {
+    dataVector = vector.getChildAt(0)!;
+    if (vector.type.listSize < 1 || vector.type.listSize > 4) {
+      throw new Error('Attribute column fixed list size must be between 1 and 4');
+    }
+    components = vector.type.listSize as 1 | 2 | 3 | 4;
+  }
+
+  if (!isNumericArrowType(dataVector.type)) {
+    throw new Error('Attribute column must be numeric or fixed list of numeric');
+  }
+
+  const signedDataType = getSignedShaderType(dataVector.type, components);
+
+  const columnInfo: ArrowColumnInfo = {
+    // data: dataVector.data,
+    signedDataType,
+    components,
+    stepMode: 'instance',
+    values: [],
+    offsets: []
+  };
+
+  for (const data of dataVector.data) {
+    columnInfo.values.push(data.values);
+  }
+  return columnInfo;
+}
+
+/** Extracts info from columns that can be used with GPU vertex attributes *
+export function getVertexColumnInfo(vector: Vector<MeshArrowType>): MeshData[] {
+  if (!DataType.isList(vector.type)) {
+    throw new Error('mesh data must be an Arrow list');
+  }
+
+  for (const data of vector.data) {
+    const offsets = data.valueOffsets;
+
+  if (DataType.isFixedSizeList(vector.type)) {
+    const dataVector = vector.getChild(0)!;
+    const getArrowColumnInfo
+    const dataVectorType = dataVector.type;
+    if (isNumericArrowType(dataVectorType)) {
+      return {
+        data: dataVector.data,
+        values: dataVector.data.values,
+        size: vector.type.listSize,
+        type: getAttributeShaderType(dataVectorType)
+      };
+    }
+    const size = dataVector;
+    return vector.getChild(0)!.data;
+  }
+  return vector.data;
+}
+*/

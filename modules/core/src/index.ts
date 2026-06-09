@@ -188,7 +188,12 @@ export {
   type NormalizedTypedArrayConstructorT
 } from './shadertypes/data-types/data-types';
 export {dataTypeDecoder} from './shadertypes/data-types/data-type-decoder';
-export {getTypedArrayConstructor} from './shadertypes/data-types/decode-data-types';
+export {
+  getDataTypeByteLength,
+  getDataTypeFromTypedArray,
+  getTypedArrayConstructor,
+  getTypedArrayFromDataType
+} from './shadertypes/data-types/decode-data-types';
 
 export {
   type AttributeShaderTypeT,

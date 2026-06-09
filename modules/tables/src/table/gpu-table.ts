@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type BufferLayout} from '@luma.gl/core';
+import {Buffer, type Binding, type BufferLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import type {GPUData} from './gpu-data';
@@ -20,7 +20,7 @@ export type GPUTableFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU vectors keyed by name, or a list of named GPU vectors. */
   vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
   /** Optional model-ready storage bindings keyed by shader binding name. */
-  bindings?: Record<string, Buffer | DynamicBuffer>;
+  bindings?: Record<string, Binding | DynamicBuffer>;
   /** Optional table-level schema metadata. */
   metadata?: Map<string, string>;
   /** Optional source-row identity forwarded to the generated one-batch GPU table. */
@@ -79,7 +79,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
   /** Model-ready attribute buffers keyed by buffer layout name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
   /** Model-ready storage bindings keyed by shader binding name. */
-  readonly bindings: Record<string, Buffer | DynamicBuffer> = {};
+  readonly bindings: Record<string, Binding | DynamicBuffer> = {};
   /** Preserved batch-local GPU storage. */
   readonly batches: GPURecordBatch[] = [];
 
