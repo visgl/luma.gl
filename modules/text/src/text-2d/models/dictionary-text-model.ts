@@ -4,9 +4,7 @@
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture, Model, type ModelProps} from '@luma.gl/engine';
-import type {GPUVector} from '@luma.gl/tables';
-import FontAtlasManager, {type FontAtlas, type FontSettings} from '../atlas/font-atlas-manager';
-import type {CharacterMapping} from '../atlas/text-utils';
+import FontAtlasManager from '../atlas/font-atlas-manager';
 import {
   getFirstDictionaryTextBatch,
   getFirstDictionaryTextRenderBatch,
@@ -17,7 +15,11 @@ import {
 } from '../model-utils/storage-text-state';
 import type {GpuDictionaryCompressedTextStream} from '../model-utils/gpu-text-types';
 import {drawPreparedStorageTextModelBatch} from '../model-utils/storage-model-draw';
-import type {DictionaryTextInputProps} from '../model-utils/text-model-props';
+import {
+  assertDictionaryTextGPUVectorInputs,
+  DICTIONARY_TEXT_GPU_INPUT_SCHEMA,
+  type DictionaryTextInputProps
+} from '../model-utils/text-model-props';
 import {
   DEFAULT_DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
   DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE
@@ -35,81 +37,31 @@ export interface DictionaryTextRenderProps extends ModelProps {}
 
 export type {DictionaryTextBatchState, DictionaryTextRenderBatchState, DictionaryTextState};
 
-/** Constructor props for the dictionary text renderer. */
-export interface DictionaryTextModelProps extends ModelProps {
-  /** GPU-resident label origins aligned one-for-one with `texts`; each row is `[x, y]`. */
-  positions: GPUVector;
-  /** GPU dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector;
-  /**
-   * Optional GPU packed RGBA8 text colors aligned with label rows.
-   *
-   * Arrow's TypeScript type does not encode fixed-list length; conversion validates
-   * `FixedSizeList<Uint8>` rows have `listSize === 4`.
-   */
-  colors?: GPUVector;
-  /** Optional GPU per-row angles in degrees. */
-  color?: [number, number, number, number];
-
-  /** Constant fallback angle in degrees used when `angles` is absent. */
-  angles?: GPUVector;
-  /** Constant fallback color used when `colors` is absent. */
-  angle?: number;
-
-  /** Optional GPU per-row deck-style text sizes. */
-  sizes?: GPUVector;
-  /** Constant fallback deck-style text size used when `sizes` is absent. */
-  size?: number;
-
-  /** Optional GPU per-row pixel offsets; each row is `[x, y]`. */
-  pixelOffsets?: GPUVector;
-  /** Optional GPU per-row text anchor enum: 0=start, 1=middle, 2=end. */
-  textAnchors?: GPUVector;
-  /** Optional GPU per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
-  alignmentBaselines?: GPUVector;
-  /**
-   * Optional GPU packed per-label clip rectangles `[x, y, width, height]`.
-   * Negative width or height disables clipping on that axis.
-   */
-  clipRects?: GPUVector;
-  /** Constant fallback pixel offset used when `pixelOffsets` is absent. */
-  pixelOffset?: [number, number];
-  /** Constant fallback text anchor used when `textAnchors` is absent. */
-  textAnchor?: 'start' | 'middle' | 'end';
-  /** Constant fallback alignment baseline used when `alignmentBaselines` is absent. */
-  alignmentBaseline?: 'center' | 'top' | 'bottom';
-  /** Character set for atlas generation. Pass `'auto'` when the adapter should derive it. */
-  characterSet?: FontSettings['characterSet'] | 'auto';
-  /** Font atlas generation settings. */
-  fontSettings?: FontSettings;
-  /** Multiplier applied to the atlas font size for one-line baseline layout. */
-  lineHeight?: number;
-  /** Optional deterministic mapping, mainly useful when atlas generation is managed externally. */
-  characterMapping?: CharacterMapping;
-  /** Optional prebuilt atlas for texture binding when `characterMapping` is injected. */
-  fontAtlas?: FontAtlas;
-  /** Prepared dictionary text state produced by a conversion helper. */
-  storageState: DictionaryTextState;
-  /** Whether this model owns and should destroy the prepared dictionary state. */
-  ownsStorageState?: boolean;
-}
+/** Flat prepared props accepted by the dictionary text renderer. */
+export type DictionaryTextModelProps = DictionaryTextInputProps &
+  DictionaryTextState & {
+    /** Whether this model owns and should destroy the prepared dictionary state. */
+    ownsStorageState?: boolean;
+  };
 
 /** Explicit prepared-state constructor props, used when sharing state with a companion model. */
-export interface PreparedDictionaryTextModelProps extends DictionaryTextRenderProps {
-  /** Prepared dictionary text state consumed by the renderer. */
-  storageState: DictionaryTextState;
-  /** Whether this model owns and should destroy the prepared dictionary state. */
-  ownsStorageState?: boolean;
-}
+export type PreparedDictionaryTextModelProps = DictionaryTextRenderProps &
+  Partial<DictionaryTextInputProps> &
+  DictionaryTextState & {
+    /** Whether this model owns and should destroy the prepared dictionary state. */
+    ownsStorageState?: boolean;
+  };
 
 /**
  * Dictionary text renderer that consumes typed GPUVector model props plus prepared render state.
  *
- * This WebGPU model does not accept Arrow source vectors. Arrow/data adapters should do CPU layout
- * work before constructing the model, then pass the prepared state through
- * {@link DictionaryTextModelProps}.
+ * Source adapters do layout work before constructing this model, then pass flat prepared GPU
+ * vectors and generated render resources through {@link DictionaryTextModelProps}.
  */
 export class DictionaryTextModel extends Model {
+  /** Prepared GPU vectors consumed by the dictionary text model. */
+  static readonly gpuInputSchema = DICTIONARY_TEXT_GPU_INPUT_SCHEMA;
+
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this model dictionary storage state. */
@@ -122,7 +74,7 @@ export class DictionaryTextModel extends Model {
   glyphCount!: number;
   /** Shared glyph records across unique dictionary values. */
   dictionaryGlyphCount!: number;
-  /** Normalized dictionary values retained across Arrow data chunks. */
+  /** Normalized dictionary values retained across source data chunks. */
   dictionaryValueCount!: number;
   /** CPU time spent building generated glyph attributes. */
   glyphAttributeBuildTimeMs!: number;
@@ -177,21 +129,25 @@ export class DictionaryTextModel extends Model {
   protected ownsStorageState: boolean;
   protected renderProps: DictionaryTextRenderProps;
 
-  constructor(device: Device, props: DictionaryTextModelProps) {
+  constructor(device: Device, props: DictionaryTextModelProps | PreparedDictionaryTextModelProps) {
     if (device.type !== 'webgpu') {
       throw new Error('DictionaryTextModel is WebGPU-only');
     }
+    if (isDictionaryTextInputProps(props)) {
+      assertDictionaryTextGPUVectorInputs(props);
+    }
+    const storageState = props;
     const renderProps = getDictionaryTextRenderProps(props);
-    super(device, createDictionaryTextModelProps(renderProps, props.storageState));
+    super(device, createDictionaryTextModelProps(renderProps, storageState));
     this.renderProps = renderProps;
-    this.storageState = props.storageState;
+    this.storageState = storageState;
     this.ownsStorageState = props.ownsStorageState === true;
-    this.applyStorageState(props.storageState);
+    this.applyStorageState(storageState);
   }
 
   /** Constructs a render-only model from an existing prepared dictionary state. */
   static fromState(device: Device, props: PreparedDictionaryTextModelProps): DictionaryTextModel {
-    return new DictionaryTextModel(device, props as DictionaryTextModelProps);
+    return new DictionaryTextModel(device, props);
   }
 
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
@@ -343,7 +299,9 @@ function createDictionaryTextBindings(
   };
 }
 
-function getDictionaryTextRenderProps(props: DictionaryTextModelProps): DictionaryTextRenderProps {
+function getDictionaryTextRenderProps(
+  props: DictionaryTextModelProps | PreparedDictionaryTextModelProps
+): DictionaryTextRenderProps {
   const {
     positions: _positions,
     texts: _texts,
@@ -365,9 +323,14 @@ function getDictionaryTextRenderProps(props: DictionaryTextModelProps): Dictiona
     lineHeight: _lineHeight,
     characterMapping: _characterMapping,
     fontAtlas: _fontAtlas,
-    storageState: _storageState,
     ownsStorageState: _ownsStorageState,
     ...renderProps
   } = props;
   return renderProps;
+}
+
+function isDictionaryTextInputProps(
+  props: DictionaryTextModelProps | PreparedDictionaryTextModelProps
+): props is DictionaryTextModelProps {
+  return 'positions' in props && 'texts' in props;
 }

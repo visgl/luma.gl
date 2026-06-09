@@ -18,7 +18,7 @@ export const CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE =
   EXPANDED_GLYPH_VERTEX_BYTE_STRIDE + Int16Array.BYTES_PER_ELEMENT * 4;
 export const INVALID_DICTIONARY_INDEX = 0xffffffff;
 
-export const DEFAULT_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
+export const DEFAULT_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
     {name: GLYPH_OFFSETS_COLUMN, location: 1, type: 'vec2<i32>', stepMode: 'instance'},
@@ -27,9 +27,9 @@ export const DEFAULT_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
-export const DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
+export const DEFAULT_CLIPPED_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
-    ...DEFAULT_ARROW_TEXT_SHADER_LAYOUT.attributes,
+    ...DEFAULT_TEXT_SHADER_LAYOUT.attributes,
     {name: GLYPH_CLIP_RECTS_COLUMN, location: 3, type: 'vec4<i32>', stepMode: 'instance'}
   ],
   bindings: []
@@ -56,7 +56,7 @@ export const DEFAULT_DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
-export const DEFAULT_ARROW_TEXT_VS = `#version 300 es
+export const DEFAULT_TEXT_VS = `#version 300 es
 precision highp float;
 
 in vec2 positions;
@@ -88,7 +88,7 @@ void main() {
 }
 `;
 
-export const DEFAULT_CLIPPED_ARROW_TEXT_VS = `#version 300 es
+export const DEFAULT_CLIPPED_TEXT_VS = `#version 300 es
 precision highp float;
 
 in vec2 positions;
@@ -142,7 +142,7 @@ void main() {
 }
 `;
 
-export const DEFAULT_ARROW_TEXT_FS = `#version 300 es
+export const DEFAULT_TEXT_FS = `#version 300 es
 precision highp float;
 
 uniform sampler2D fontAtlasTexture;

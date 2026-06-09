@@ -147,7 +147,7 @@ export type DictionaryTextBatchState = StorageTextBatchState & {
   rowDictionaryRecordsBuffer: Buffer;
   /** Per dictionary value half-open ranges into `dictionaryGlyphRecordsBuffer`. */
   dictionaryGlyphRangesBuffer: Buffer;
-  /** Shared per-glyph layout records for unique dictionary values in this Arrow batch. */
+  /** Shared per-glyph layout records for unique dictionary values in this source batch. */
   dictionaryGlyphRecordsBuffer: Buffer;
   /** Glyph atlas frames referenced by the shared dictionary glyph records. */
   glyphFramesBuffer: Buffer;

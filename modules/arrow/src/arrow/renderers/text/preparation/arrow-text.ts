@@ -2,44 +2,48 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {DataType, Utf8, Vector} from 'apache-arrow';
-import type {Character, CharacterMapping} from '../atlas/text-utils';
+import {
+  DataType,
+  Dictionary,
+  Int16,
+  Int32,
+  Int8,
+  Uint16,
+  Uint32,
+  Uint8,
+  Utf8,
+  Vector
+} from 'apache-arrow';
 import type {
+  Character,
+  CharacterMapping,
   GpuDictionaryCompressedTextStream,
   GpuDictionaryUtf8TextInput,
   GpuExpandedTextStream,
   GpuUtf8TextInput,
-  TextGlyphLayout,
-  Utf8Dictionary,
-  Utf8DictionaryIndexType,
-  Utf8TextType,
-  Utf8TextVector
-} from '../model-utils/gpu-text-types';
+  TextGlyphLayout
+} from '@luma.gl/text';
 
 export type {
   GpuDictionaryCompressedTextStream,
   GpuDictionaryUtf8TextInput,
   GpuExpandedTextStream,
   GpuUtf8TextInput,
-  TextGlyphLayout,
-  Utf8Dictionary,
-  Utf8DictionaryIndexType,
-  Utf8TextType,
-  Utf8TextVector
-} from '../model-utils/gpu-text-types';
+  TextGlyphLayout
+} from '@luma.gl/text';
 
 const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 
 /** Integer Arrow dictionary key types accepted by UTF-8 text helpers. */
-export type ArrowUtf8DictionaryIndexType = Utf8DictionaryIndexType;
+export type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
 /** Dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
-export type ArrowUtf8Dictionary = Utf8Dictionary;
+export type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
 /** Plain or dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
-export type ArrowUtf8TextType = Utf8TextType;
+export type ArrowUtf8TextType = Utf8 | ArrowUtf8Dictionary;
 /** Plain or dictionary-encoded UTF-8 Arrow text vector accepted by text helpers. */
-export type ArrowUtf8TextVector = Utf8TextVector;
+export type ArrowUtf8TextVector = Vector<ArrowUtf8TextType>;
 
 /** Mutable virtual UTF-8 byte range for one Arrow text row. */
 export type Utf8TextIndexTarget = {

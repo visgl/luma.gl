@@ -31,6 +31,12 @@ export type GPUDataFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> 
   ownsBuffer?: boolean;
   /** Optional metadata owned by the producer, such as Arrow readback descriptors. */
   readbackMetadata?: GPUDataReadbackMetadata;
+  /** Optional row offsets for variable-length values normalized to this data chunk. */
+  valueOffsets?: Int32Array;
+  /** Optional row validity bitmap normalized to this data chunk. */
+  nullBitmap?: Uint8Array;
+  /** Optional number of uploaded value bytes referenced by this data chunk. */
+  valueByteLength?: number;
   /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
   dataType?: unknown;
 };
@@ -64,6 +70,12 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
   readonly rowByteLength: number;
   /** Optional producer-owned metadata retained for adapter-level readback. */
   readonly readbackMetadata?: GPUDataReadbackMetadata;
+  /** Optional row offsets for variable-length values normalized to this data chunk. */
+  readonly valueOffsets?: Int32Array;
+  /** Optional row validity bitmap normalized to this data chunk. */
+  readonly nullBitmap?: Uint8Array;
+  /** Optional number of uploaded value bytes referenced by this data chunk. */
+  readonly valueByteLength?: number;
   private ownsDataBuffer: boolean;
 
   constructor({
@@ -77,6 +89,9 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
     rowByteLength,
     ownsBuffer = false,
     readbackMetadata,
+    valueOffsets,
+    nullBitmap,
+    valueByteLength,
     dataType
   }: GPUDataFromBufferProps<T>) {
     const formatInfo = format ? getGPUVectorFormatInfo(format) : undefined;
@@ -91,6 +106,9 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
     this.rowByteLength = rowByteLength ?? formatInfo?.byteLength ?? byteStride ?? this.stride;
     this.byteStride = byteStride ?? this.rowByteLength;
     this.readbackMetadata = readbackMetadata;
+    this.valueOffsets = valueOffsets;
+    this.nullBitmap = nullBitmap;
+    this.valueByteLength = valueByteLength;
     this.ownsDataBuffer = ownsBuffer;
   }
 

@@ -6,7 +6,7 @@ import type {GPUVector} from '../table/gpu-vector';
 import type {GPUVectorFormat} from '../table/gpu-vector-format';
 
 /** Semantic role consumed by one model GPU input. */
-export type ModelGPUInputKind = 'positions' | 'colors' | 'scalars' | 'time';
+export type ModelGPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
 
 /** Whether one model GPU input resolves from source data or model-generated data. */
 export type ModelGPUInputSource = 'source-mappable' | 'generated';

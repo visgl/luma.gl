@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
-import type {DictionaryTextModelProps} from '../models/dictionary-text-model';
+import type {DictionaryTextModelProps} from '@luma.gl/text';
 import {
   createArrowDictionaryStorageTextState,
   type ArrowDictionaryStorageTextInputProps,
@@ -54,7 +54,7 @@ export function convertArrowTextToDictionaryState(
 export function convertArrowTextToDictionaryModelProps(
   device: Device,
   props: ArrowDictionaryStorageTextInputProps
-): DictionaryTextModelProps {
+): DictionaryTextModelProps & ArrowDictionaryStorageTextState {
   const storageState = convertArrowTextToDictionaryState(device, props);
   const {
     sourceVectors: _sourceVectors,
@@ -64,9 +64,9 @@ export function convertArrowTextToDictionaryModelProps(
   } = props;
   return {
     ...modelProps,
-    storageState,
+    ...storageState,
     ownsStorageState: true
-  } as DictionaryTextModelProps;
+  } as DictionaryTextModelProps & ArrowDictionaryStorageTextState;
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};

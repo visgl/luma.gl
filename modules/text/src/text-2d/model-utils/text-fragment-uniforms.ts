@@ -4,16 +4,16 @@
 
 import type {TextSdfRenderSettings} from './storage-text-state';
 
-export function createArrowTextDefaultFragmentShaderUniforms(
+export function createTextDefaultFragmentShaderUniforms(
   uniforms: Record<string, unknown> | undefined,
   sdfRenderSettings: TextSdfRenderSettings
 ): Record<string, unknown> {
   const nextUniforms = {...(uniforms || {})};
-  updateArrowTextDefaultFragmentShaderUniforms(nextUniforms, sdfRenderSettings);
+  updateTextDefaultFragmentShaderUniforms(nextUniforms, sdfRenderSettings);
   return nextUniforms;
 }
 
-export function updateArrowTextDefaultFragmentShaderUniforms(
+export function updateTextDefaultFragmentShaderUniforms(
   uniforms: Record<string, unknown>,
   sdfRenderSettings: TextSdfRenderSettings
 ): void {

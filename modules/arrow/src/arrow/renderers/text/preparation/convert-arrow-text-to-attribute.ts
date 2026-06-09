@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
-import type {AttributeTextModelProps} from '../models/attribute-text-model';
+import type {AttributeTextModelProps} from '@luma.gl/text';
 import type {ArrowUtf8TextVector} from './arrow-text';
 import {
   createArrowAttributeTextState,
@@ -35,6 +35,10 @@ export type ArrowTextConversionColumns = {
   sizes?: string;
   /** Optional source column containing `FixedSizeList<Float32>[2]` pixel offsets. */
   pixelOffsets?: string;
+  /** Optional source column containing Uint8 text anchor enum values. */
+  textAnchors?: string;
+  /** Optional source column containing Uint8 alignment baseline enum values. */
+  alignmentBaselines?: string;
 };
 
 /**
@@ -59,6 +63,10 @@ export type ConvertedArrowTextData = {
   sizes?: GPUVector;
   /** Optional GPU-resident per-row pixel offsets. */
   pixelOffsets?: GPUVector;
+  /** Optional GPU-resident per-row text anchor enum values. */
+  textAnchors?: GPUVector;
+  /** Optional GPU-resident per-row alignment baseline enum values. */
+  alignmentBaselines?: GPUVector;
   /** CPU Arrow vectors retained for glyph expansion and batch alignment. */
   sourceVectors: ArrowTextSourceVectors;
   /** Releases every GPUVector created by this conversion result. */
@@ -85,7 +93,9 @@ const DEFAULT_COLUMNS: Required<ArrowTextConversionColumns> = {
   colors: 'colors',
   angles: 'angles',
   sizes: 'sizes',
-  pixelOffsets: 'pixelOffsets'
+  pixelOffsets: 'pixelOffsets',
+  textAnchors: 'textAnchors',
+  alignmentBaselines: 'alignmentBaselines'
 };
 
 /**
@@ -138,6 +148,18 @@ export function convertArrowTextToAttribute(
         preserveDataChunks: true
       })
     : undefined;
+  const textAnchors = sourceVectors.textAnchors
+    ? makeGPUVectorFromArrow(device, sourceVectors.textAnchors, {
+        name: columns.textAnchors,
+        preserveDataChunks: true
+      })
+    : undefined;
+  const alignmentBaselines = sourceVectors.alignmentBaselines
+    ? makeGPUVectorFromArrow(device, sourceVectors.alignmentBaselines, {
+        name: columns.alignmentBaselines,
+        preserveDataChunks: true
+      })
+    : undefined;
   let destroyed = false;
 
   return {
@@ -148,6 +170,8 @@ export function convertArrowTextToAttribute(
     ...(angles ? {angles} : {}),
     ...(sizes ? {sizes} : {}),
     ...(pixelOffsets ? {pixelOffsets} : {}),
+    ...(textAnchors ? {textAnchors} : {}),
+    ...(alignmentBaselines ? {alignmentBaselines} : {}),
     sourceVectors,
     destroy: () => {
       if (destroyed) {
@@ -161,6 +185,8 @@ export function convertArrowTextToAttribute(
       angles?.destroy();
       sizes?.destroy();
       pixelOffsets?.destroy();
+      textAnchors?.destroy();
+      alignmentBaselines?.destroy();
     }
   };
 }
@@ -188,12 +214,12 @@ export function convertArrowTextToAttributeState(
 export function convertArrowTextToAttributeModelProps(
   device: Device,
   props: ArrowTextModelProps
-): AttributeTextModelProps {
+): AttributeTextModelProps & ArrowAttributeTextState {
   const attributeState = convertArrowTextToAttributeState(device, props);
   const {sourceVectors: _sourceVectors, fontAtlasManager: _fontAtlasManager, ...modelProps} = props;
   return {
     ...modelProps,
-    attributeState,
+    ...attributeState,
     ownsAttributeState: true
-  } as AttributeTextModelProps;
+  } as AttributeTextModelProps & ArrowAttributeTextState;
 }

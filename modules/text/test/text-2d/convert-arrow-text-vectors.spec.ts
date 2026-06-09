@@ -4,10 +4,21 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
+  buildArrowTextGlyphTable,
+  createArrowStorageTextState,
+  createStorageTextStateFromGPUVectors,
+  convertArrowTextToAttributeModelProps,
+  convertArrowTextToDictionaryModelProps,
+  convertArrowTextToStorageModelProps,
+  convertArrowTextToStorageState,
   makeArrowFixedSizeListVector,
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable,
-  makeGPUVectorFromArrow
+  makeGPUVectorFromArrow,
+  packStorageTextClipRects,
+  type ArrowUtf8Dictionary,
+  type ArrowUtf8TextType,
+  type ArrowUtf8TextVector
 } from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/tables';
 import type {Device, ShaderLayout} from '@luma.gl/core';
@@ -18,17 +29,6 @@ import {
   DictionaryTextModel,
   RowIndexedStorageTextModel,
   StorageTextModel,
-  buildArrowTextGlyphTable,
-  createArrowStorageTextState,
-  createStorageTextStateFromGPUVectors,
-  convertArrowTextToAttributeModelProps,
-  convertArrowTextToDictionaryModelProps,
-  convertArrowTextToStorageModelProps,
-  convertArrowTextToStorageState,
-  packStorageTextClipRects,
-  type ArrowUtf8Dictionary,
-  type ArrowUtf8TextType,
-  type ArrowUtf8TextVector,
   type CharacterMapping
 } from '../../src/index';
 
@@ -205,15 +205,16 @@ test('AttributeTextModel derives from GPUTableModel and rebuilds glyph instance 
     false,
     'model-ready attribute props do not expose Arrow source vectors'
   );
+  t.equal(
+    Object.prototype.hasOwnProperty.call(modelProps, 'attributeState'),
+    false,
+    'model-ready attribute props are flat'
+  );
   const model = new AttributeTextModel(device, modelProps);
 
   t.equal(model.instanceCount, 3, 'instance count uses generated glyph rows');
   t.deepEqual(model.glyphLayout.startIndices, [0, 2, 3], 'model exposes glyph start indices');
-  t.equal(
-    modelProps.attributeState.glyphTable.table.numRows,
-    3,
-    'conversion state retains generated glyph table'
-  );
+  t.equal(modelProps.glyphTable.table.numRows, 3, 'conversion state retains generated glyph table');
 
   const updatedTextSource = makeArrowTexts(['A', 'A']);
   const updatedTexts = makeGpuTexts(device, updatedTextSource);
@@ -515,6 +516,11 @@ test('StorageTextModel packs SDF alpha settings into the style config uniform', 
     Object.prototype.hasOwnProperty.call(modelProps, 'sourceVectors'),
     false,
     'model-ready storage props do not expose Arrow source vectors'
+  );
+  t.equal(
+    Object.prototype.hasOwnProperty.call(modelProps, 'storageState'),
+    false,
+    'model-ready storage props are flat'
   );
   const model = new StorageTextModel(device, modelProps);
   const styleConfigBytes = await model.styleConfigBuffer.readAsync();

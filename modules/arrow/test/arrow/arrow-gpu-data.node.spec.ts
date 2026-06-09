@@ -54,11 +54,13 @@ test('makeGPUDataFromArrowData uploads FixedSizeList Arrow Data chunks', async t
 test('makeGPUDataFromArrowData uploads UTF-8 Arrow Data chunks with readback metadata', async t => {
   const device = new NullDevice({});
   const source = arrow.vectorFromArray(['a', 'luma'], new arrow.Utf8());
-  const gpuData = makeGPUDataFromArrowData(device, source.data[0], {format: 'uint8'});
+  const gpuData = makeGPUDataFromArrowData(device, source.data[0]);
   const result = await readArrowGPUDataAsync<arrow.Utf8>(gpuData);
 
   t.equal(gpuData.length, 2, 'keeps UTF-8 logical row count');
-  t.equal(gpuData.valueLength, 2, 'keeps UTF-8 logical row value length');
+  t.equal(gpuData.format, 'value-list<uint8>', 'declares UTF-8 byte-list storage format');
+  t.equal(gpuData.valueLength, 5, 'keeps flattened UTF-8 byte value length');
+  t.deepEqual(Array.from(gpuData.valueOffsets ?? []), [0, 1, 5], 'keeps generic row offsets');
   t.equal(gpuData.readbackMetadata?.kind, 'utf8', 'keeps UTF-8 readback metadata');
   t.deepEqual(
     Array.from(result.valueOffsets as Int32Array),

@@ -14,9 +14,9 @@ import {
   createArrowUtf8TextIndexAccessor,
   decodeArrowUtf8CodePoints,
   populateUtf8TextIndices,
-  type ArrowUtf8Dictionary,
-  type CharacterMapping
-} from '../../src/index';
+  type ArrowUtf8Dictionary
+} from '@luma.gl/arrow';
+import type {CharacterMapping} from '../../src/index';
 
 type TextDatum = {
   rowIndex: number;

@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
-import type {StorageTextModelProps} from '../models/storage-text-model';
+import type {StorageTextModelProps} from '@luma.gl/text';
 import {
   createArrowStorageTextState,
   createStorageTextStateFromGPUVectors,
@@ -67,7 +67,7 @@ export function convertArrowTextToStorageState(
 export function convertArrowTextToStorageModelProps(
   device: Device,
   props: ArrowStorageTextInputProps
-): StorageTextModelProps {
+): StorageTextModelProps & ArrowStorageTextState {
   const storageState = convertArrowTextToStorageState(device, props);
   const {
     sourceVectors: _sourceVectors,
@@ -77,9 +77,9 @@ export function convertArrowTextToStorageModelProps(
   } = props;
   return {
     ...modelProps,
-    storageState,
+    ...storageState,
     ownsStorageState: true
-  } as StorageTextModelProps;
+  } as StorageTextModelProps & ArrowStorageTextState;
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};
@@ -91,7 +91,7 @@ function canUseGPUVectorStorageTextState(
   return (
     device.type === 'webgpu' &&
     props.rowIndexColumn !== true &&
-    props.texts.type instanceof arrow.Utf8 &&
+    props.texts.format === 'value-list<uint8>' &&
     props.characterSet !== 'auto' &&
     (props.characterMapping !== undefined || props.characterSet !== undefined)
   );

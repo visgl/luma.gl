@@ -2,7 +2,7 @@
 
 Experimental 2D text utilities for luma.gl. The package contains:
 
-- Arrow-aware text conversion helpers that prepare GPUVector rows, glyph layout, and generated GPU state.
+- GPU-only text input schemas and preparation primitives.
 - `AttributeTextModel`, a one-line label renderer that renders prepared attribute vertex buffers.
 - `StorageTextModel`, a WebGPU-only renderer that renders prepared storage-backed glyph state.
 - `DictionaryTextModel`, a WebGPU-only renderer that renders prepared dictionary-compressed glyph state.
@@ -11,11 +11,13 @@ Experimental 2D text utilities for luma.gl. The package contains:
 
 ```ts
 import * as arrow from 'apache-arrow';
-import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import {
-  AttributeTextModel,
   convertArrowTextToAttribute,
-  convertArrowTextToAttributeState
+  convertArrowTextToAttributeModelProps,
+  makeArrowFixedSizeListVector
+} from '@luma.gl/arrow';
+import {
+  AttributeTextModel
 } from '@luma.gl/text';
 
 const sourceVectors = {
@@ -31,34 +33,28 @@ const convertedText = convertArrowTextToAttribute(device, {
   sourceVectors
 });
 
-const attributeState = convertArrowTextToAttributeState(device, {
+const model = new AttributeTextModel(device, convertArrowTextToAttributeModelProps(device, {
   ...convertedText,
   characterSet: 'auto',
   fontSettings: {sdf: true}
-});
-
-const model = new AttributeTextModel(device, {
-  id: 'text',
-  attributeState,
-  ownsAttributeState: true
-});
+}));
 ```
 
-Layer and data-preparation code owns Arrow source vectors and tables. It calls helpers such as `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()`, `createArrowAttributeTextState()`, `createArrowStorageTextState()`, and `createArrowDictionaryStorageTextState()` to produce prepared GPU resources. Renderer models consume only GPUVector-backed or prepared GPU state.
+`@luma.gl/arrow` owns Arrow source vectors, table mapping, upload, and glyph preparation. `@luma.gl/text` models consume flat prepared GPUVector props plus generated GPU resources.
 
 Text input vector support:
 
 | Input Vector | Attribute State | Storage State |
 | --- | --- | --- |
-| positions | `GPUVector<FixedSizeList<Float32>[2]>` | `GPUVector<FixedSizeList<Float32>[2]>` |
-| texts | `GPUVector<Utf8 \| Dictionary<Utf8, Int>>` | `GPUVector<Utf8 \| Dictionary<Utf8, Int>>` |
-| colors? | `GPUVector<FixedSizeList<Uint8>[4]>` | `GPUVector<FixedSizeList<Uint8>[4]>` |
-| angles? | `GPUVector<Float32>` | `GPUVector<Float32>` |
-| sizes? | `GPUVector<Float32>` | `GPUVector<Float32>` |
-| pixel offsets? | `GPUVector<FixedSizeList<Float32>[2]>` | `GPUVector<FixedSizeList<Float32>[2]>` |
+| positions | `GPUVector<'float32x2'>` | `GPUVector<'float32x2'>` |
+| texts | `GPUVector<ValueList<'uint8'> \| Int>` | `GPUVector<ValueList<'uint8'> \| Int>` |
+| colors? | `GPUVector<'unorm8x4' \| VertexList<'unorm8x4'>>` | `GPUVector<'unorm8x4'>` |
+| angles? | `GPUVector<'float32'>` | `GPUVector<'float32'>` |
+| sizes? | `GPUVector<'float32'>` | `GPUVector<'float32'>` |
+| pixel offsets? | `GPUVector<'float32x2'>` | `GPUVector<'float32x2'>` |
 | clip rects? | Expanded into generated per-glyph vertex data. | Packed into row storage. |
-| text anchors? | Custom label attribute/shader responsibility. | `GPUVector<Uint8>` |
-| alignment baselines? | Custom label attribute/shader responsibility. | `GPUVector<Uint8>` |
+| text anchors? | Custom label attribute/shader responsibility. | `GPUVector<'uint8'>` |
+| alignment baselines? | Custom label attribute/shader responsibility. | `GPUVector<'uint8'>` |
 
 Text column support:
 

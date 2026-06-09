@@ -2,27 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {
-  Dictionary,
-  Int16,
-  Int32,
-  Int8,
-  Uint16,
-  Uint32,
-  Uint8,
-  Utf8,
-  Vector
-} from 'apache-arrow';
-
-/** Integer dictionary key types accepted by UTF-8 text helpers. */
-export type Utf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
-/** Dictionary-encoded UTF-8 text leaf accepted by text models. */
-export type Utf8Dictionary = Dictionary<Utf8, Utf8DictionaryIndexType>;
-/** Plain or dictionary-encoded UTF-8 text leaf accepted by text models. */
-export type Utf8TextType = Utf8 | Utf8Dictionary;
-/** Plain or dictionary-encoded UTF-8 text vector accepted by adapter helpers. */
-export type Utf8TextVector = Vector<Utf8TextType>;
-
 /** One-line glyph offsets and atlas frames expanded from source text rows. */
 export type TextGlyphLayout = {
   /** Cumulative glyph offsets, length = source text rows + 1. */
@@ -119,7 +98,7 @@ export type GpuDictionaryCompressedTextStream = {
   glyphCount: number;
   /** Shared glyph records across unique dictionary values. */
   dictionaryGlyphCount: number;
-  /** Normalized dictionary values retained across Arrow data chunks. */
+  /** Normalized dictionary values retained across source data chunks. */
   dictionaryValueCount: number;
   /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;

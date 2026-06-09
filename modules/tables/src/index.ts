@@ -26,9 +26,11 @@ export {
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
   isGPUVectorFormatCompatibleWithShaderType,
+  isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat,
   type GPUVectorFormatInfo,
+  type ValueList,
   type VertexList
 } from './table/gpu-vector-format';
 export {

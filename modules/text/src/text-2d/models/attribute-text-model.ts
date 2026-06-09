@@ -4,17 +4,15 @@
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicTexture, type ModelProps} from '@luma.gl/engine';
-import {
-  GPUTableModel,
-  type GPUTableModelProps,
-  type GPUTable,
-  type GPUVector
-} from '@luma.gl/tables';
-import FontAtlasManager, {type FontAtlas, type FontSettings} from '../atlas/font-atlas-manager';
-import type {CharacterMapping} from '../atlas/text-utils';
+import {GPUTableModel, type GPUTableModelProps, type GPUTable} from '@luma.gl/tables';
+import FontAtlasManager from '../atlas/font-atlas-manager';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
-import type {AttributeTextInputProps} from '../model-utils/text-model-props';
+import {
+  assertAttributeTextGPUVectorInputs,
+  ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA,
+  type AttributeTextInputProps
+} from '../model-utils/text-model-props';
 
 export type {AttributeTextInputProps};
 
@@ -64,56 +62,31 @@ export type AttributeTextState = {
  */
 export interface AttributeTextRenderProps extends ModelProps {}
 
-/** Constructor props for the attribute text renderer. */
-export interface AttributeTextModelProps extends ModelProps {
-  /** GPU-resident label origins aligned one-for-one with `texts`; each row is `[x, y]`. */
-  positions: GPUVector;
-  /** GPU UTF-8 or dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
-  texts: GPUVector;
-  /** Optional GPU packed RGBA8 text colors aligned with label rows or label characters. */
-  colors?: GPUVector;
-  /** Optional GPU per-row angles in degrees. */
-  angles?: GPUVector;
-  /** Optional GPU per-row deck-style text sizes. */
-  sizes?: GPUVector;
-  /** Optional GPU per-row pixel offsets; each row is `[x, y]`. */
-  pixelOffsets?: GPUVector;
-  /**
-   * Optional GPU packed per-label clip rectangles `[x, y, width, height]`.
-   * Negative width or height disables clipping on that axis.
-   */
-  clipRects?: GPUVector;
-  /** Character set for atlas generation. Pass `'auto'` when the adapter should derive it. */
-  characterSet?: FontSettings['characterSet'] | 'auto';
-  /** Font atlas generation settings. */
-  fontSettings?: FontSettings;
-  /** Multiplier applied to the atlas font size for one-line baseline layout. */
-  lineHeight?: number;
-  /** Optional deterministic mapping, mainly useful when atlas generation is managed externally. */
-  characterMapping?: CharacterMapping;
-  /** Optional prebuilt atlas for texture binding when `characterMapping` is injected. */
-  fontAtlas?: FontAtlas;
-  /** Prepared attribute render state produced by a conversion helper. */
-  attributeState: AttributeTextState;
-  /** Whether this model owns and should destroy the prepared attribute state. */
-  ownsAttributeState?: boolean;
-}
+/** Flat prepared props accepted by the attribute text renderer. */
+export type AttributeTextModelProps = AttributeTextInputProps &
+  AttributeTextState & {
+    /** Whether this model owns and should destroy the prepared attribute state. */
+    ownsAttributeState?: boolean;
+  };
 
 /** Explicit prepared-state constructor props, used when sharing state with a companion model. */
-export interface PreparedAttributeTextModelProps extends AttributeTextRenderProps {
-  /** Prepared attribute render state produced by a conversion helper. */
-  attributeState: AttributeTextState;
-  /** Whether this model owns and should destroy the prepared attribute state. */
-  ownsAttributeState?: boolean;
-}
+export type PreparedAttributeTextModelProps = AttributeTextRenderProps &
+  Partial<AttributeTextInputProps> &
+  AttributeTextState & {
+    /** Whether this model owns and should destroy the prepared attribute state. */
+    ownsAttributeState?: boolean;
+  };
 
 /**
  * Attribute text renderer that consumes typed GPUVector model props plus prepared render state.
  *
- * This model does not accept Arrow source vectors. Arrow/data adapters should do CPU layout work
- * before constructing the model, then pass the prepared state through {@link AttributeTextModelProps}.
+ * Source adapters do layout work before constructing this model, then pass flat prepared GPU
+ * vectors and generated render resources through {@link AttributeTextModelProps}.
  */
 export class AttributeTextModel extends GPUTableModel {
+  /** Prepared GPU vectors consumed by the attribute-backed text model. */
+  static readonly gpuInputSchema = ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA;
+
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this model. */
@@ -134,24 +107,27 @@ export class AttributeTextModel extends GPUTableModel {
   private ownsAttributeState: boolean;
   private attributeState: AttributeTextState;
 
-  constructor(device: Device, props: AttributeTextModelProps) {
-    super(device, props.attributeState.modelProps);
-    this.attributeState = props.attributeState;
+  constructor(device: Device, props: AttributeTextModelProps | PreparedAttributeTextModelProps) {
+    if (isAttributeTextInputProps(props)) {
+      assertAttributeTextGPUVectorInputs(props);
+    }
+    super(device, props.modelProps);
+    this.attributeState = props;
     this.ownsAttributeState = props.ownsAttributeState === true;
-    this.fontAtlasManager = props.attributeState.fontAtlasManager;
-    this.atlasTexture = props.attributeState.atlasTexture;
-    this.glyphLayout = props.attributeState.glyphLayout;
-    this.characterSet = props.attributeState.characterSet;
-    this.glyphAttributeBuildTimeMs = props.attributeState.glyphAttributeBuildTimeMs;
-    this.glyphAttributeByteLength = props.attributeState.glyphAttributeByteLength;
-    this.expandedGlyphVertexData = props.attributeState.expandedGlyphVertexData;
-    this.renderBatches = props.attributeState.renderBatches;
-    this.defaultFragmentShaderUniforms = props.attributeState.defaultFragmentShaderUniforms;
+    this.fontAtlasManager = props.fontAtlasManager;
+    this.atlasTexture = props.atlasTexture;
+    this.glyphLayout = props.glyphLayout;
+    this.characterSet = props.characterSet;
+    this.glyphAttributeBuildTimeMs = props.glyphAttributeBuildTimeMs;
+    this.glyphAttributeByteLength = props.glyphAttributeByteLength;
+    this.expandedGlyphVertexData = props.expandedGlyphVertexData;
+    this.renderBatches = props.renderBatches;
+    this.defaultFragmentShaderUniforms = props.defaultFragmentShaderUniforms;
   }
 
   /** Constructs a render-only model from an existing prepared attribute state. */
   static fromState(device: Device, props: PreparedAttributeTextModelProps): AttributeTextModel {
-    return new AttributeTextModel(device, props as AttributeTextModelProps);
+    return new AttributeTextModel(device, props);
   }
 
   /** Draws each generated glyph render batch against the supplied render pass. */
@@ -219,6 +195,12 @@ export class AttributeTextModel extends GPUTableModel {
     this.setInstanceCount(attributeState.glyphLayout.glyphCount);
     this.setNeedsRedraw('Attribute text state updated');
   }
+}
+
+function isAttributeTextInputProps(
+  props: AttributeTextModelProps | PreparedAttributeTextModelProps
+): props is AttributeTextModelProps {
+  return 'positions' in props && 'texts' in props;
 }
 
 function destroyAttributeTextState(attributeState: AttributeTextState): void {
