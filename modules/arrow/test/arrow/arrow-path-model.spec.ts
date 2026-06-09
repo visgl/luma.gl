@@ -15,7 +15,7 @@ import {
   type ArrowPathSourceVectors,
   type PreparedArrowPathGPUVectors
 } from '@luma.gl/arrow';
-import type {Device, ShaderLayout} from '@luma.gl/core';
+import type {Device, RenderPass, ShaderLayout} from '@luma.gl/core';
 import {
   AttributePathModel,
   StoragePathModel,
@@ -902,6 +902,37 @@ test('StoragePathModel emits indexed compute-generated segment records', async t
     Array.from({length: 5}, (_, segmentIndex) => generatedPathWords[segmentIndex * 3 + 2]),
     [0, 0, 1, 1, 1],
     'compute output preserves source path row indices'
+  );
+
+  model.destroy();
+  destroyStorageGpuArrowPathProps(pathProps);
+  t.end();
+});
+
+test('StoragePathModel skips zero-segment render batches', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const pathProps = makeStorageGpuArrowPathProps(device, {
+    paths: makePathVector(new Int32Array([0, 1]), new Float32Array([0, 0]))
+  });
+  const model = new StoragePathModel(device, {
+    id: 'arrow-storage-path-zero-segments-test',
+    ...pathProps
+  });
+
+  t.deepEqual(
+    model.renderBatches.map(batch => batch.segmentCount),
+    [0],
+    'one-point paths retain a zero-segment render batch'
+  );
+  t.doesNotThrow(
+    () => model.draw({} as RenderPass),
+    'zero-segment render batches return without issuing a render pass draw'
   );
 
   model.destroy();

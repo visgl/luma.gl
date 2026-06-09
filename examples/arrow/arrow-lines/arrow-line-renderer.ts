@@ -19,8 +19,9 @@ import {
   GPUVector,
   StoragePathModel,
   StorageTripsPathModel,
+  type AttributePathModelProps,
   type GPUVectorFormat,
-  type VertexList
+  type StoragePathInputProps
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
@@ -121,15 +122,15 @@ export type ArrowLineAttributeRendererData = {
   /** Resolved model this data was prepared for. */
   model: 'attribute';
   /** GPU path coordinate rows. */
-  paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
+  paths: AttributePathModelProps['paths'];
   /** Optional GPU row or per-vertex colors. */
-  colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
+  colors?: AttributePathModelProps['colors'];
   /** Optional GPU per-row widths. */
-  widths?: GPUVector;
+  widths?: AttributePathModelProps['widths'];
   /** Optional GPU per-vertex relative timestamps. */
   timestamps?: GPUVector<'vertex-list<float32>'>;
   /** Optional view origins generated during coordinate normalization. */
-  viewOrigins?: GPUVector<'float32x4'>;
+  viewOrigins?: AttributePathModelProps['viewOrigins'];
   /** Prepared path state shared by attribute path rendering. */
   pathState: ArrowPathPreparedState;
   /** Global source row index assigned to local path row zero. */
@@ -143,15 +144,15 @@ export type ArrowLineStorageRendererData = {
   /** Resolved model this data was prepared for. */
   model: 'storage' | 'trips';
   /** GPU path coordinate rows. */
-  paths: GPUVector;
+  paths: StoragePathInputProps['paths'];
   /** Optional GPU row or per-vertex colors. */
-  colors?: GPUVector;
+  colors?: StoragePathInputProps['colors'];
   /** Optional GPU per-row widths. */
-  widths?: GPUVector;
+  widths?: StoragePathInputProps['widths'];
   /** Optional GPU per-vertex relative timestamps. */
-  timestamps?: GPUVector;
+  timestamps?: StoragePathInputProps['timestamps'];
   /** Optional view origins generated during coordinate normalization. */
-  viewOrigins?: GPUVector;
+  viewOrigins?: StoragePathInputProps['viewOrigins'];
   /** Global source row index assigned to local path row zero. */
   rowIndexOffset?: number;
   /** Releases all resources owned by this prepared data object. */
@@ -163,7 +164,7 @@ export type ArrowLineRendererData = ArrowLineAttributeRendererData | ArrowLineSt
 
 type ArrowLineRendererInputMetadata = {
   /** Required prepared widths vector for the example metrics and render paths. */
-  widths: GPUVector;
+  widths: GPUVector<'float32'>;
   /** Global source row index assigned to local path row zero. */
   rowIndexOffset: number;
   /** Bytes occupied by path coordinate and timestamp Arrow source vectors. */
@@ -493,31 +494,23 @@ export class ArrowLineRenderer extends GPURenderable<
     modelKind: ArrowLineRendererResolvedModel,
     props: PreparedArrowLineRendererProps
   ): ArrowLineRendererActiveModel {
-    const commonProps = {
-      id: props.id,
-      paths: props.data.paths,
-      ...(props.data.colors ? {colors: props.data.colors} : {}),
-      ...(props.data.widths ? {widths: props.data.widths} : {}),
-      ...(props.data.viewOrigins ? {viewOrigins: props.data.viewOrigins} : {}),
-      shaderInputs: this.shaderInputs,
-      topology: DEFAULT_PATH_TOPOLOGY,
-      vertexCount: DEFAULT_PATH_VERTEX_COUNT,
-      parameters: DEFAULT_RENDER_PARAMETERS
-    };
+    if (modelKind === 'storage' || modelKind === 'trips') {
+      if (props.data.model === 'attribute') {
+        throw new Error('ArrowLineRenderer storage models require storage-prepared data');
+      }
+      const commonProps = getArrowLineCommonModelProps(props, props.data, this.shaderInputs);
+      if (modelKind === 'storage') {
+        return ArrowPathRenderer.createModel(this.device, {
+          model: 'storage',
+          ...commonProps,
+          color: props.color ?? DEFAULT_PATH_COLOR,
+          width: props.width ?? DEFAULT_PATH_WIDTH,
+          rowIndexBase: props.data.rowIndexOffset ?? 0,
+          source: STORAGE_WGSL_SHADER,
+          shaderLayout: STORAGE_PATH_SHADER_LAYOUT
+        });
+      }
 
-    if (modelKind === 'storage') {
-      return ArrowPathRenderer.createModel(this.device, {
-        model: 'storage',
-        ...commonProps,
-        color: props.color ?? DEFAULT_PATH_COLOR,
-        width: props.width ?? DEFAULT_PATH_WIDTH,
-        rowIndexBase: props.data.rowIndexOffset ?? 0,
-        source: STORAGE_WGSL_SHADER,
-        shaderLayout: STORAGE_PATH_SHADER_LAYOUT
-      });
-    }
-
-    if (modelKind === 'trips') {
       if (!props.data.timestamps) {
         throw new Error('ArrowLineRenderer trips model requires a timestamps column');
       }
@@ -535,9 +528,10 @@ export class ArrowLineRenderer extends GPURenderable<
       });
     }
 
-    if (!('pathState' in props.data)) {
+    if (props.data.model !== 'attribute') {
       throw new Error('ArrowLineRenderer attribute model requires attribute-prepared data');
     }
+    const commonProps = getArrowLineCommonModelProps(props, props.data, this.shaderInputs);
     return ArrowPathRenderer.createModel(this.device, {
       model: 'attribute',
       ...commonProps,
@@ -548,6 +542,26 @@ export class ArrowLineRenderer extends GPURenderable<
       shaderLayout: PATH_SHADER_LAYOUT
     });
   }
+}
+
+function getArrowLineCommonModelProps<
+  DataT extends ArrowLineAttributeRendererData | ArrowLineStorageRendererData
+>(
+  props: PreparedArrowLineRendererProps,
+  data: DataT,
+  shaderInputs: ArrowLineRenderer['shaderInputs']
+) {
+  return {
+    id: props.id,
+    paths: data.paths,
+    ...(data.colors ? {colors: data.colors} : {}),
+    ...(data.widths ? {widths: data.widths} : {}),
+    ...(data.viewOrigins ? {viewOrigins: data.viewOrigins} : {}),
+    shaderInputs,
+    topology: DEFAULT_PATH_TOPOLOGY,
+    vertexCount: DEFAULT_PATH_VERTEX_COUNT,
+    parameters: DEFAULT_RENDER_PARAMETERS
+  };
 }
 
 /** Converts Arrow line columns into GPU vectors without adding example metrics. */

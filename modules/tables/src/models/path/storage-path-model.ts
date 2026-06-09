@@ -450,6 +450,9 @@ export class StoragePathModel extends Model {
   override draw(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     for (const renderBatch of this.storageState.renderBatches) {
+      if (renderBatch.segmentCount === 0) {
+        continue;
+      }
       const batch = this.storageState.batches[renderBatch.rowBindingBatchIndex];
       if (!batch) {
         throw new Error('StoragePathModel render batch is missing its row-binding batch');
