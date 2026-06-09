@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {VertexFormat} from '@luma.gl/core';
-import type {GPUVectorFormat, VertexList} from './gpu-vector-format';
+import type {GPUVectorFormat} from './gpu-vector-format';
 
 /** Reserved GPU table column used as an indexed draw buffer instead of a shader input. */
 export const GPU_TABLE_INDEX_COLUMN_NAME = 'indices';
@@ -19,7 +18,7 @@ export function isGPUTableIndexColumnName(
  * Named GPU table columns mapped to their canonical memory formats.
  *
  * The value type is a memory-layout string such as `float32x3`,
- * `unorm8x4`, or `vertex-list<float32x3>`. Shader value declarations live in
+ * `unorm8x4`, `vertex-list<float32x3>`, or `value-list<uint8>`. Shader value declarations live in
  * `ShaderLayout`; compatibility is checked at adapter boundaries.
  */
 export type GPUTypeMap = Record<string, GPUVectorFormat>;
@@ -33,7 +32,7 @@ export type GPUTypeMap = Record<string, GPUVectorFormat>;
  */
 export type GPUField<
   Name extends string = string,
-  Format extends VertexFormat | VertexList<VertexFormat> = GPUVectorFormat
+  Format extends GPUVectorFormat = GPUVectorFormat
 > = {
   /** Field/column name. */
   name: Name;

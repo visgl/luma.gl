@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {getArrowVectorByteLength} from '@luma.gl/arrow';
+import {
+  getArrowVectorByteLength,
+  type ArrowTextRenderer,
+  type ArrowTextRendererActiveModel,
+  type ArrowTextRendererInput
+} from '@luma.gl/arrow';
 import type {GPUVector} from '@luma.gl/tables';
-import {AttributeTextModel, DictionaryTextModel, StorageTextModel} from '@luma.gl/text';
+import {TextAttributeModel, TextDictionaryModel, TextStorageModel} from '@luma.gl/text';
 import type {ArrowText2DControlPanelMetrics} from './control-panel';
-import type {
-  ArrowTextRenderer,
-  ArrowTextRendererActiveModel,
-  ArrowTextRendererInput
-} from './arrow-text-renderer';
 
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 export const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
@@ -48,19 +48,19 @@ export function getArrowTextMetrics({
   sizeEnabled
 }: ArrowTextMetricProps): ArrowText2DControlPanelMetrics {
   const rowStorageByteLength =
-    textModel instanceof StorageTextModel || textModel instanceof DictionaryTextModel
+    textModel instanceof TextStorageModel || textModel instanceof TextDictionaryModel
       ? textModel.rowStorageByteLength
       : 0;
   const glyphDefinitionStorageByteLength =
-    textModel instanceof StorageTextModel || textModel instanceof DictionaryTextModel
+    textModel instanceof TextStorageModel || textModel instanceof TextDictionaryModel
       ? textModel.glyphDefinitionStorageByteLength
       : 0;
   const transientComputeInputByteLength =
-    textModel instanceof StorageTextModel || textModel instanceof DictionaryTextModel
+    textModel instanceof TextStorageModel || textModel instanceof TextDictionaryModel
       ? textModel.transientComputeInputByteLength
       : 0;
   const compressedDictionaryStorageByteLength =
-    textModel instanceof DictionaryTextModel ? textModel.compactStreamByteLength : 0;
+    textModel instanceof TextDictionaryModel ? textModel.compactStreamByteLength : 0;
   const styleArrowByteLength = getSelectedArrowStyleVectorByteLength(
     textInput,
     colorEnabled,
@@ -75,7 +75,7 @@ export function getArrowTextMetrics({
     sizeEnabled
   );
   const textGpuByteLength =
-    textModel instanceof AttributeTextModel
+    textModel instanceof TextAttributeModel
       ? Math.max(0, textModel.glyphAttributeByteLength - styleGpuByteLength)
       : textModel.glyphAttributeByteLength +
         rowStorageByteLength +
@@ -120,7 +120,7 @@ function getSelectedStyleColumnGpuByteLength(
   angleEnabled: boolean,
   sizeEnabled: boolean
 ): number {
-  if (textModel instanceof AttributeTextModel) {
+  if (textModel instanceof TextAttributeModel) {
     return getSelectedExpandedAttributeStyleVectorByteLength(
       textModel,
       textInput,
@@ -129,7 +129,7 @@ function getSelectedStyleColumnGpuByteLength(
       sizeEnabled
     );
   }
-  if (!(textModel instanceof StorageTextModel || textModel instanceof DictionaryTextModel)) {
+  if (!(textModel instanceof TextStorageModel || textModel instanceof TextDictionaryModel)) {
     return 0;
   }
 
@@ -181,7 +181,7 @@ function getSelectedArrowStyleVectorByteLength(
 }
 
 function getTextModelGlyphCount(textModel: ArrowTextRendererActiveModel): number {
-  return textModel instanceof StorageTextModel || textModel instanceof DictionaryTextModel
+  return textModel instanceof TextStorageModel || textModel instanceof TextDictionaryModel
     ? textModel.glyphCount
     : textModel.glyphLayout.glyphCount;
 }

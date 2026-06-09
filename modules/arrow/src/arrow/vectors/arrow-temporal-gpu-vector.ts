@@ -65,8 +65,8 @@ export type ArrowTemporalVectorInfo = {
   originPolicy?: ArrowTemporalOriginPolicy;
 };
 
-/** Options used when preparing one Arrow temporal column for GPU consumption. */
-export type PrepareArrowTemporalGPUVectorOptions = {
+/** Options used when converting one Arrow temporal column for GPU consumption. */
+export type ConvertArrowTemporalToGPUVectorOptions = {
   /** Stable prepared GPU vector name. Defaults to `temporal`. */
   name?: string;
   /** Stable resource id prefix. Defaults to the vector name. */
@@ -79,10 +79,10 @@ export type PrepareArrowTemporalGPUVectorOptions = {
   preferGPU?: boolean;
 };
 
-/** Options used when preparing several named Arrow temporal columns together. */
-export type PrepareArrowTemporalGPUVectorsOptions = {
-  /** Per-column preparation options keyed by source column name. */
-  columns?: Record<string, Omit<PrepareArrowTemporalGPUVectorOptions, 'name'>>;
+/** Options used when converting several named Arrow temporal columns together. */
+export type ConvertArrowTemporalToGPUVectorsOptions = {
+  /** Per-column conversion options keyed by source column name. */
+  columns?: Record<string, Omit<ConvertArrowTemporalToGPUVectorOptions, 'name'>>;
 };
 
 /** Prepared relative Float32 temporal GPU vector plus persisted metadata. */
@@ -139,10 +139,10 @@ const makeFloat32ListData = makeData as (props: {
   child: Data<Float32>;
 }) => Data<List<Float32>>;
 
-const TEMPORAL_PREPARE_SHADER_LAYOUT: ShaderLayout = {
+const TEMPORAL_CONVERSION_SHADER_LAYOUT: ShaderLayout = {
   bindings: [
     {name: 'sourceTemporalValues', type: 'read-only-storage', group: 0, location: 0},
-    {name: 'temporalPrepareConfig', type: 'read-only-storage', group: 0, location: 1},
+    {name: 'temporalConversionConfig', type: 'read-only-storage', group: 0, location: 1},
     {name: 'preparedTemporalValues', type: 'storage', group: 0, location: 2}
   ],
   attributes: []
@@ -175,31 +175,31 @@ export function getArrowTemporalVectorInfo(
   };
 }
 
-/** Prepare one scalar or variable-length Arrow temporal column as relative Float32 GPU values. */
-export function prepareArrowTemporalGPUVector(
+/** Convert one scalar or variable-length Arrow temporal column to relative Float32 GPU values. */
+export function convertArrowTemporalToGPUVector(
   device: Device,
   source: Vector<List<ArrowTemporalType>>,
-  options?: PrepareArrowTemporalGPUVectorOptions
+  options?: ConvertArrowTemporalToGPUVectorOptions
 ): Promise<PreparedArrowTemporalGPUVector<'vertex-list<float32>'>>;
-export function prepareArrowTemporalGPUVector(
+export function convertArrowTemporalToGPUVector(
   device: Device,
   source: Vector<ArrowTemporalType>,
-  options?: PrepareArrowTemporalGPUVectorOptions
+  options?: ConvertArrowTemporalToGPUVectorOptions
 ): Promise<PreparedArrowTemporalGPUVector<'float32'>>;
-export function prepareArrowTemporalGPUVector(
+export function convertArrowTemporalToGPUVector(
   device: Device,
   source: Vector<ArrowTemporalColumnType>,
-  options?: PrepareArrowTemporalGPUVectorOptions
+  options?: ConvertArrowTemporalToGPUVectorOptions
 ): Promise<PreparedArrowTemporalGPUVector>;
-export function prepareArrowTemporalGPUVector(
+export function convertArrowTemporalToGPUVector(
   device: Device,
   source: GPUVector,
-  options?: PrepareArrowTemporalGPUVectorOptions
+  options?: ConvertArrowTemporalToGPUVectorOptions
 ): Promise<PreparedArrowTemporalGPUVector>;
-export async function prepareArrowTemporalGPUVector(
+export async function convertArrowTemporalToGPUVector(
   device: Device,
   source: ArrowTemporalSource,
-  options: PrepareArrowTemporalGPUVectorOptions = {}
+  options: ConvertArrowTemporalToGPUVectorOptions = {}
 ): Promise<PreparedArrowTemporalGPUVector> {
   const sourceInfo = getRequiredArrowTemporalVectorInfo(source, options.field);
   const origin = resolveTemporalOrigin(source, sourceInfo, options);
@@ -220,7 +220,7 @@ export async function prepareArrowTemporalGPUVector(
         : makeArrowTemporalSourceGPUVector(device, source, {name: `${name}-source`, id});
     const ownsSourceVector = !(source instanceof GPUVector);
     try {
-      return await prepareArrowTemporalGPUVectorOnGPU(device, sourceVector, temporalInfo, field, {
+      return await convertArrowTemporalToGPUVectorOnGPU(device, sourceVector, temporalInfo, field, {
         name,
         id
       });
@@ -233,7 +233,7 @@ export async function prepareArrowTemporalGPUVector(
 
   if (source instanceof GPUVector) {
     throw new Error(
-      'prepareArrowTemporalGPUVector requires WebGPU for GPU-resident temporal input'
+      'convertArrowTemporalToGPUVector requires WebGPU for GPU-resident temporal input'
     );
   }
 
@@ -246,13 +246,13 @@ export async function prepareArrowTemporalGPUVector(
   return createPreparedArrowTemporalGPUVector(temporal, field, temporalInfo, true);
 }
 
-/** Prepare several named temporal columns with the same scalar/list normalization rules. */
-export async function prepareArrowTemporalGPUVectors<
+/** Convert several named temporal columns with the same scalar/list normalization rules. */
+export async function convertArrowTemporalToGPUVectors<
   SourceVectors extends Record<string, ArrowTemporalSource>
 >(
   device: Device,
   sourceVectors: SourceVectors,
-  options: PrepareArrowTemporalGPUVectorsOptions = {}
+  options: ConvertArrowTemporalToGPUVectorsOptions = {}
 ): Promise<PreparedArrowTemporalGPUVectorMap<SourceVectors>> {
   assertArrowTemporalVectorAlignment(sourceVectors);
   const entries = await Promise.all(
@@ -260,8 +260,8 @@ export async function prepareArrowTemporalGPUVectors<
       const columnOptions = {name, ...(options.columns?.[name] || {})};
       const prepared =
         source instanceof GPUVector
-          ? await prepareArrowTemporalGPUVector(device, source, columnOptions)
-          : await prepareArrowTemporalGPUVector(device, source, columnOptions);
+          ? await convertArrowTemporalToGPUVector(device, source, columnOptions)
+          : await convertArrowTemporalToGPUVector(device, source, columnOptions);
       return [name, prepared] as const;
     })
   );
@@ -279,12 +279,12 @@ function assertArrowTemporalVectorAlignment(
   for (const [name, vector] of entries.slice(1)) {
     if (vector.length !== referenceVector.length) {
       throw new Error(
-        `prepareArrowTemporalGPUVectors ${name} rows must match ${referenceName} rows (${vector.length} !== ${referenceVector.length})`
+        `convertArrowTemporalToGPUVectors ${name} rows must match ${referenceName} rows (${vector.length} !== ${referenceVector.length})`
       );
     }
     if (vector.data.length !== referenceVector.data.length) {
       throw new Error(
-        `prepareArrowTemporalGPUVectors ${name} batch count must match ${referenceName} batch count`
+        `convertArrowTemporalToGPUVectors ${name} batch count must match ${referenceName} batch count`
       );
     }
   }
@@ -318,12 +318,12 @@ function getPreparedArrowTemporalFormat(
   return temporalInfo.variableLength ? 'vertex-list<float32>' : 'float32';
 }
 
-async function prepareArrowTemporalGPUVectorOnGPU(
+async function convertArrowTemporalToGPUVectorOnGPU(
   device: Device,
   source: GPUVector,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
   field: Field,
-  options: Required<Pick<PrepareArrowTemporalGPUVectorOptions, 'name' | 'id'>>
+  options: Required<Pick<ConvertArrowTemporalToGPUVectorOptions, 'name' | 'id'>>
 ): Promise<PreparedArrowTemporalGPUVector> {
   const outputType = getPreparedArrowTemporalType(field);
   const outputFormat = getPreparedArrowTemporalFormat(temporalInfo);
@@ -338,7 +338,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
     const configBuffer = device.createBuffer({
       id: `${options.id}-temporal-config-${chunkIndex}`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: makeTemporalPrepareConfig(temporalInfo, scalarCount)
+      data: makeTemporalConversionConfig(temporalInfo, scalarCount)
     });
     const outputBuffer = new DynamicBuffer(device, {
       id: `${options.id}-temporal-values-${chunkIndex}`,
@@ -348,12 +348,12 @@ async function prepareArrowTemporalGPUVectorOnGPU(
         scalarCount * Float32Array.BYTES_PER_ELEMENT
       )
     });
-    dispatchArrowTemporalPreparation(device, temporalInfo, {
+    dispatchArrowTemporalConversion(device, temporalInfo, {
       id: options.id,
       chunkIndex,
       scalarCount,
       sourceTemporalValues: getGPUDataBinding(sourceData, getTemporalSourceByteLength(sourceData)),
-      temporalPrepareConfig: configBuffer,
+      temporalConversionConfig: configBuffer,
       preparedTemporalValues: outputBuffer
     });
     outputData.push(
@@ -403,7 +403,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
 function makeArrowTemporalSourceGPUVector(
   device: Device,
   source: Vector<ArrowTemporalColumnType>,
-  options: Required<Pick<PrepareArrowTemporalGPUVectorOptions, 'name' | 'id'>>
+  options: Required<Pick<ConvertArrowTemporalToGPUVectorOptions, 'name' | 'id'>>
 ): GPUVector {
   const sourceInfo = getRequiredArrowTemporalVectorInfo(source);
   const data = source.data.map((sourceData, chunkIndex) => {
@@ -538,7 +538,7 @@ function makeArrowTemporalMetadata(
 function resolveTemporalOrigin(
   source: ArrowTemporalSource,
   temporalInfo: ArrowTemporalVectorInfo,
-  options: PrepareArrowTemporalGPUVectorOptions
+  options: ConvertArrowTemporalToGPUVectorOptions
 ): number | bigint {
   if (options.origin !== undefined) {
     return parseTemporalOrigin(options.origin.toString(), getArrowTemporalLeafType(source.type)!);
@@ -577,7 +577,7 @@ function getRequiredArrowTemporalVectorInfo(
   const temporalInfo = getArrowTemporalVectorInfo(vector, field);
   if (!temporalInfo) {
     throw new Error(
-      'prepareArrowTemporalGPUVector requires Date, Time, Timestamp, Duration, or List thereof'
+      'convertArrowTemporalToGPUVector requires Date, Time, Timestamp, Duration, or List thereof'
     );
   }
   return temporalInfo;
@@ -655,10 +655,10 @@ function getRelativeTemporalValue(value: number | bigint, origin: number | bigin
 
 function validateArrowTemporalData(data: Data<ArrowTemporalColumnType>): void {
   if (data.nullCount > 0) {
-    throw new Error('prepareArrowTemporalGPUVector does not support nullable temporal rows');
+    throw new Error('convertArrowTemporalToGPUVector does not support nullable temporal rows');
   }
   if (DataType.isList(data.type) && (data.children[0]?.nullCount ?? 0) > 0) {
-    throw new Error('prepareArrowTemporalGPUVector does not support nullable temporal values');
+    throw new Error('convertArrowTemporalToGPUVector does not support nullable temporal values');
   }
 }
 
@@ -676,7 +676,7 @@ function getArrowTemporalDataBufferSource(
     }
     const valueOffsets = data.valueOffsets as Int32Array | undefined;
     if (!valueOffsets) {
-      throw new Error('prepareArrowTemporalGPUVector list input requires Arrow value offsets');
+      throw new Error('convertArrowTemporalToGPUVector list input requires Arrow value offsets');
     }
     // Arrow exposes valueOffsets as the logical row slice for data.offset; only child values
     // still need their physical child offset applied when copying flattened temporal leaves.
@@ -705,7 +705,7 @@ function getArrowTemporalScalarDataBufferSource(
 function getNormalizedArrowValueOffsets(data: Data<List<any>>): Int32Array {
   const valueOffsets = data.valueOffsets as Int32Array | undefined;
   if (!valueOffsets) {
-    throw new Error('prepareArrowTemporalGPUVector list input requires Arrow value offsets');
+    throw new Error('convertArrowTemporalToGPUVector list input requires Arrow value offsets');
   }
   // Arrow exposes valueOffsets as the logical row slice for data.offset.
   const firstValueOffset = valueOffsets[0] ?? 0;
@@ -733,7 +733,7 @@ function getTemporalSourceByteLength(data: GPUData): number {
     : data.length * data.byteStride;
 }
 
-function makeTemporalPrepareConfig(
+function makeTemporalConversionConfig(
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
   scalarCount: number
 ): Uint32Array {
@@ -749,7 +749,7 @@ function toTemporalOriginWords(origin: number | bigint, bitWidth: 32 | 64): [num
   return [Number(normalizedOrigin & 0xffffffffn), Number((normalizedOrigin >> 32n) & 0xffffffffn)];
 }
 
-function dispatchArrowTemporalPreparation(
+function dispatchArrowTemporalConversion(
   device: Device,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
   props: {
@@ -757,17 +757,17 @@ function dispatchArrowTemporalPreparation(
     chunkIndex: number;
     scalarCount: number;
     sourceTemporalValues: Binding;
-    temporalPrepareConfig: Binding;
+    temporalConversionConfig: Binding;
     preparedTemporalValues: Binding;
   }
 ): void {
   const computation = new Computation(device, {
-    id: `${props.id}-temporal-prepare-${props.chunkIndex}`,
-    source: getArrowTemporalPrepareSource(temporalInfo.bitWidth),
-    shaderLayout: TEMPORAL_PREPARE_SHADER_LAYOUT,
+    id: `${props.id}-temporal-conversion-${props.chunkIndex}`,
+    source: getArrowTemporalConversionSource(temporalInfo.bitWidth),
+    shaderLayout: TEMPORAL_CONVERSION_SHADER_LAYOUT,
     bindings: {
       sourceTemporalValues: props.sourceTemporalValues,
-      temporalPrepareConfig: props.temporalPrepareConfig,
+      temporalConversionConfig: props.temporalConversionConfig,
       preparedTemporalValues: props.preparedTemporalValues
     }
   });
@@ -780,14 +780,14 @@ function dispatchArrowTemporalPreparation(
   computation.destroy();
 }
 
-function getArrowTemporalPrepareSource(bitWidth: 32 | 64): string {
+function getArrowTemporalConversionSource(bitWidth: 32 | 64): string {
   const sourceType = bitWidth === 64 ? 'array<vec2<u32>>' : 'array<i32>';
   const readRelativeValue =
     bitWidth === 64
       ? `
 fn readRelativeTemporalValue(scalarIndex : u32) -> f32 {
   let valueBits = sourceTemporalValues[scalarIndex];
-  let originBits = vec2<u32>(temporalPrepareConfig[1], temporalPrepareConfig[2]);
+  let originBits = vec2<u32>(temporalConversionConfig[1], temporalConversionConfig[2]);
   let deltaLow = valueBits.x - originBits.x;
   let borrow = select(0u, 1u, valueBits.x < originBits.x);
   let deltaHigh = valueBits.y - originBits.y - borrow;
@@ -805,12 +805,12 @@ fn readRelativeTemporalValue(scalarIndex : u32) -> f32 {
 `
       : `
 fn readRelativeTemporalValue(scalarIndex : u32) -> f32 {
-  return f32(sourceTemporalValues[scalarIndex] - bitcast<i32>(temporalPrepareConfig[1]));
+  return f32(sourceTemporalValues[scalarIndex] - bitcast<i32>(temporalConversionConfig[1]));
 }
 `;
   return /* wgsl */ `
 @group(0) @binding(0) var<storage, read> sourceTemporalValues : ${sourceType};
-@group(0) @binding(1) var<storage, read> temporalPrepareConfig : array<u32>;
+@group(0) @binding(1) var<storage, read> temporalConversionConfig : array<u32>;
 @group(0) @binding(2) var<storage, read_write> preparedTemporalValues : array<f32>;
 
 ${readRelativeValue}
@@ -818,7 +818,7 @@ ${readRelativeValue}
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
   let scalarIndex = globalInvocationId.x;
-  if (scalarIndex >= temporalPrepareConfig[0]) {
+  if (scalarIndex >= temporalConversionConfig[0]) {
     return;
   }
   preparedTemporalValues[scalarIndex] = readRelativeTemporalValue(scalarIndex);

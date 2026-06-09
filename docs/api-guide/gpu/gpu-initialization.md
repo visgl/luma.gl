@@ -1,8 +1,10 @@
+import {AdapterBackendGraphic} from '@site/src/components/docs/adapter-backend-graphic';
+
 # GPU Initialization
 
 ## Adapter
 
-An `Adapter` is a factory for `Device` instances for a specific backend (e.g. WebGPU or WebGL).
+An `Adapter` is a factory for `Device` instances for a specific backend (for example, WebGPU or WebGL).
 
 ## Device
 
@@ -12,10 +14,12 @@ application with facilities for creating GPU resources (such as `Buffer` and `Te
 querying GPU capabilities, compiling and linking shaders into pipelines, setting parameters, 
 and of course performing draw and compute calls.
 
+<AdapterBackendGraphic />
+
 ## Backend Adapters
 
-The `@luma.gl/core` API is not usable on its own. One or more GPU backend modules 
-must be also be imported from a corresponding GPU API backend module (`@luma.gl/webgpu` and/or `@luma.gl/webgl`). 
+The `@luma.gl/core` API is not usable on its own. One or more adapters must also
+be imported from corresponding GPU API backend modules (`@luma.gl/webgpu` and/or `@luma.gl/webgl`)
 and provided when creating a `Device`.
 
 To create a WebGPU device:
@@ -29,12 +33,16 @@ yarn add @luma.gl/webgpu
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
-const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter], createCanvasContext: {canvas: ...}});
+const device = await luma.createDevice({
+  type: 'webgpu',
+  adapters: [webgpuAdapter],
+  createCanvasContext: {canvas: ...}
+});
 ```
 
 It is possible to supply more than one device adapter to create an application
 that can work in both WebGL and WebGPU environments. To create a `Device` using 
-the best available adapter (luma.gl favors WebGPU over WebGL devices, whenever WebGPU is available).
+the best available adapter, luma.gl favors WebGPU over WebGL devices whenever WebGPU is available.
 
 ```sh
 yarn add @luma.gl/core
@@ -44,9 +52,13 @@ yarn add @luma.gl/webgpu
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webglAdapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
-const bestAvailableDevice = luma.createDevice({type: 'best-available', adapters: [webglAdapter, webgpuAdapter], createCanvasContext: true});
-console.log(device.type); // 'webgpu' or 'webgl' depending on what the browser supports.
+const bestAvailableDevice = await luma.createDevice({
+  type: 'best-available',
+  adapters: [webgpuAdapter, webgl2Adapter],
+  createCanvasContext: true
+});
+console.log(bestAvailableDevice.type); // 'webgpu' or 'webgl' depending on what the browser supports.
 ```

@@ -5,6 +5,8 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   ArrowPolygonRenderer,
+  addArrowTextGPUTableBatch,
+  createArrowTextGPUTable,
   makeArrowFixedSizeListVector,
   prepareArrowPolygonInput,
   resolveArrowPickInfo
@@ -22,10 +24,6 @@ import {
   ArrowPointRenderer,
   prepareArrowPointInput
 } from '../../../../examples/arrow/arrow-points/arrow-point-renderer';
-import {
-  addArrowTextGPUTableBatch,
-  createArrowTextGPUTable
-} from '../../../../examples/arrow/arrow-text-2d/arrow-text-renderer';
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 
@@ -39,7 +37,7 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
   const prepared = await prepareArrowPointInput(
     device,
     {positions, colors: null, radii: null},
-    {rowIndexOffset: 5, sourceBatchIndex: 3, id: 'point-preparation-test'}
+    {rowIndexOffset: 5, sourceBatchIndex: 3, id: 'point-conversion-test'}
   );
   const rowIndices = await readGPUDataAsUint32Array(prepared.table.gpuVectors.rowIndices.data[0]);
   const positionsBuffer = prepared.table.gpuVectors.positions.data[0].buffer;
@@ -134,7 +132,7 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
   const prepared = await prepareArrowPolygonInput(
     device,
     {polygons, colors: null, tessellated: true},
-    {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-preparation-test'}
+    {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-conversion-test'}
   );
   const positionsBuffer = prepared.positions.data[0].buffer;
   const colorsBuffer = prepared.colors.data[0].buffer;
@@ -274,6 +272,32 @@ test('ArrowTextRenderer streaming GPU table retains pick source metadata', t => 
   t.end();
 });
 
+test('ArrowTextRenderer GPU table maps nested source selectors into text input names', t => {
+  const device = new NullDevice({});
+  const sourceVectors = makeTextSourceVectors();
+  const recordBatch = makeNestedTextRecordBatch('source', sourceVectors);
+  const gpuTable = createArrowTextGPUTable(device, recordBatch, {
+    positions: 'source.positions',
+    texts: 'source.texts',
+    pixelOffsets: 'source.pixelOffsets',
+    textAnchors: 'source.textAnchors',
+    alignmentBaselines: 'source.alignmentBaselines'
+  });
+
+  t.equal(gpuTable.gpuVectors.positions?.format, 'float32x2', 'maps nested positions');
+  t.equal(gpuTable.gpuVectors.texts?.format, 'value-list<uint8>', 'maps nested texts');
+  t.equal(gpuTable.gpuVectors.pixelOffsets?.format, 'float32x2', 'maps nested pixel offsets');
+  t.equal(gpuTable.gpuVectors.textAnchors?.format, 'uint8', 'maps nested text anchors');
+  t.equal(
+    gpuTable.gpuVectors.alignmentBaselines?.format,
+    'uint8',
+    'maps nested alignment baselines'
+  );
+
+  gpuTable.destroy();
+  t.end();
+});
+
 test('prepareArrowLineInputFromRecordBatches preserves chunks, row offsets, and ownership', async t => {
   const device = new NullDevice({});
   const recordBatches = [
@@ -290,7 +314,7 @@ test('prepareArrowLineInputFromRecordBatches preserves chunks, row offsets, and 
     model: 'attribute',
     mode: 'lines',
     rowIndexOffset: 20,
-    id: 'line-preparation-test'
+    id: 'line-conversion-test'
   });
   t.equal(prepared.model, 'attribute', 'prepares data for the selected renderer model');
   if (prepared.model !== 'attribute') {
@@ -521,6 +545,44 @@ function makeTextRecordBatch(positions: Float32Array, texts: string[]): arrow.Re
   }).batches[0];
   if (!recordBatch) {
     throw new Error('Expected Arrow table to contain a record batch');
+  }
+  return recordBatch;
+}
+
+function makeTextSourceVectors() {
+  return {
+    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1])),
+    texts: arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8()),
+    pixelOffsets: makeArrowFixedSizeListVector(
+      new arrow.Float32(),
+      2,
+      new Float32Array([1, 2, 3, 4])
+    ),
+    textAnchors: arrow.vectorFromArray([0, 1], new arrow.Uint8()),
+    alignmentBaselines: arrow.vectorFromArray([0, 2], new arrow.Uint8())
+  };
+}
+
+function makeNestedTextRecordBatch(
+  fieldName: string,
+  sourceVectors: ReturnType<typeof makeTextSourceVectors>
+): arrow.RecordBatch {
+  const table = new arrow.Table(sourceVectors);
+  const innerStructData = table.batches[0]?.data;
+  if (!innerStructData) {
+    throw new Error('Expected Arrow table to contain a source batch');
+  }
+  const schema = new arrow.Schema([new arrow.Field(fieldName, innerStructData.type)]);
+  const structData = arrow.makeData({
+    type: new arrow.Struct(schema.fields),
+    length: table.numRows,
+    nullCount: 0,
+    nullBitmap: null,
+    children: [innerStructData]
+  });
+  const recordBatch = new arrow.Table([new arrow.RecordBatch(schema, structData)]).batches[0];
+  if (!recordBatch) {
+    throw new Error('Expected nested Arrow table to contain a record batch');
   }
   return recordBatch;
 }

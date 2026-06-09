@@ -10,8 +10,8 @@ import {
   packDggsH3CellKey,
   packDggsQuadkeyKey,
   packDggsS2CellKey,
-  prepareDggsCellKeyGPUVector,
-  prepareDggsCellPathGPUVector,
+  convertDggsCellIdsToGPUKeys,
+  convertDggsCellKeysToGPUPaths,
   readArrowGPUVectorAsync,
   type DggsCellEncoding
 } from '@luma.gl/arrow';
@@ -91,7 +91,7 @@ const H3_UNSUPPORTED_PATH_TEST_KEYS = [
   0x83f004fffffffffn
 ] as const;
 
-test('arrow#prepareDggsCellKeyGPUVector parses Utf8 DGGS keys on the GPU', async t => {
+test('arrow#convertDggsCellIdsToGPUKeys parses Utf8 DGGS keys on the GPU', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -101,7 +101,7 @@ test('arrow#prepareDggsCellKeyGPUVector parses Utf8 DGGS keys on the GPU', async
 
   for (const [encoding, testCase] of Object.entries(STRING_KEY_TEST_CASES)) {
     const strings = arrow.vectorFromArray(testCase.strings, new arrow.Utf8());
-    const preparedKeys = prepareDggsCellKeyGPUVector(device, strings, {
+    const preparedKeys = convertDggsCellIdsToGPUKeys(device, strings, {
       id: `dggs-${encoding}-string-parser-test`,
       encoding: encoding as DggsCellEncoding
     });
@@ -120,7 +120,7 @@ test('arrow#prepareDggsCellKeyGPUVector parses Utf8 DGGS keys on the GPU', async
   t.end();
 });
 
-test('arrow#prepareDggsCellKeyGPUVector parses sliced Utf8 DGGS keys on the GPU', async t => {
+test('arrow#convertDggsCellIdsToGPUKeys parses sliced Utf8 DGGS keys on the GPU', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -131,7 +131,7 @@ test('arrow#prepareDggsCellKeyGPUVector parses sliced Utf8 DGGS keys on the GPU'
   const strings = arrow
     .vectorFromArray(['skip', 's', 'S0', '9q8yyk'], new arrow.Utf8())
     .slice(1) as arrow.Vector<arrow.Utf8>;
-  const preparedKeys = prepareDggsCellKeyGPUVector(device, strings, {
+  const preparedKeys = convertDggsCellIdsToGPUKeys(device, strings, {
     id: 'dggs-geohash-sliced-string-parser-test',
     encoding: 'geohash'
   });
@@ -149,7 +149,7 @@ test('arrow#prepareDggsCellKeyGPUVector parses sliced Utf8 DGGS keys on the GPU'
   t.end();
 });
 
-test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU', async t => {
+test('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GPU', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -211,7 +211,7 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
   ];
 
   for (const testCase of pathTestCases) {
-    const preparedPaths = prepareDggsCellPathGPUVector(device, makeUint64Vector(testCase.keys), {
+    const preparedPaths = convertDggsCellKeysToGPUPaths(device, makeUint64Vector(testCase.keys), {
       id: `dggs-${testCase.encoding}-path-extraction-test`,
       encoding: testCase.encoding
     });
@@ -248,7 +248,7 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
       preparedPaths.destroy();
     }
 
-    const preparedSplitPaths = prepareDggsCellPathGPUVector(
+    const preparedSplitPaths = convertDggsCellKeysToGPUPaths(
       device,
       makeUint64Vector(testCase.keys),
       {

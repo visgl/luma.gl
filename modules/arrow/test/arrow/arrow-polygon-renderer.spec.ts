@@ -16,7 +16,7 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
   const prepared = await prepareArrowPolygonInput(
     device,
     {polygons, colors: null, tessellated: true},
-    {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-preparation-test'}
+    {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-conversion-test'}
   );
   const positionsBuffer = prepared.positions.data[0].buffer;
   const colorsBuffer = prepared.colors.data[0].buffer;

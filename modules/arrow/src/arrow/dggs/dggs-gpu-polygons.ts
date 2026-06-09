@@ -188,13 +188,13 @@ function packDggsHexCellKey(
 }
 
 /** Expands prepared DGGS Uint64 keys into closed Float32 polygon paths on WebGPU. */
-export function prepareDggsCellPathGPUVector(
+export function convertDggsCellKeysToGPUPaths(
   device: Device,
   keys: Vector<Uint64> | GPUVector,
   options: DggsCellPathGPUVectorOptions
 ): PreparedDggsCellPathGPUVector {
   if (device.type !== 'webgpu') {
-    throw new Error('prepareDggsCellPathGPUVector requires a WebGPU device');
+    throw new Error('convertDggsCellKeysToGPUPaths requires a WebGPU device');
   }
 
   const resourceIdentifier = options.id || `dggs-${options.encoding}-cell-polygons`;
@@ -211,7 +211,7 @@ export function prepareDggsCellPathGPUVector(
         format: 'uint32x2'
       })
     : keys;
-  assertDggsCellKeyVector(keyVector, 'prepareDggsCellPathGPUVector');
+  assertDggsCellKeyVector(keyVector, 'convertDggsCellKeysToGPUPaths');
 
   const pathDataChunks: Array<GPUData> = [];
   let pathByteLength = 0;
@@ -301,16 +301,16 @@ export function prepareDggsCellPathGPUVector(
 }
 
 /** Parses UTF-8 DGGS cell keys into GPU-only Uint64 keys on WebGPU. */
-export function prepareDggsCellKeyGPUVector(
+export function convertDggsCellIdsToGPUKeys(
   device: Device,
   strings: Vector<Utf8>,
   options: DggsCellKeyGPUVectorOptions
 ): PreparedDggsCellKeyGPUVector {
   if (device.type !== 'webgpu') {
-    throw new Error('prepareDggsCellKeyGPUVector requires a WebGPU device');
+    throw new Error('convertDggsCellIdsToGPUKeys requires a WebGPU device');
   }
   if (!DataType.isUtf8(strings.type)) {
-    throw new Error('prepareDggsCellKeyGPUVector requires a Vector<Utf8>');
+    throw new Error('convertDggsCellIdsToGPUKeys requires a Vector<Utf8>');
   }
 
   const resourceIdentifier = options.id || `dggs-${options.encoding}-cell-keys`;

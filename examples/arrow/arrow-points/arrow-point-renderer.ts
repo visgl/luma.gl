@@ -14,10 +14,19 @@ import {
   makeArrowRecordBatchSourceInfo,
   makeArrowRowIndexGPUVector,
   makeGPUVectorFromArrow,
-  prepareArrowTemporalGPUVector,
+  convertArrowTemporalToGPUVector,
+  getOptionalArrowColumn,
+  getRequiredArrowColumn,
+  hasArrowTableOrVectorSource,
+  loadArrowRecordBatches,
   resolveArrowPickInfo,
   runArrowPickingPass,
-  type ArrowTemporalType
+  type ArrowColumnSelector,
+  type ArrowRecordBatchLoadContext,
+  type ArrowRecordBatchLoadUpdate,
+  type ArrowRecordBatchSource,
+  type ArrowTemporalType,
+  type OptionalArrowColumnSelector
 } from '@luma.gl/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo} from '@luma.gl/engine';
@@ -30,17 +39,6 @@ import {
   type PointModelVectors,
   type PointShaderInputs
 } from './point-model';
-import {
-  getOptionalArrowColumn,
-  getRequiredArrowColumn,
-  hasArrowTableOrVectorSource,
-  loadArrowRecordBatches,
-  type ArrowColumnSelector,
-  type ArrowRecordBatchLoadContext,
-  type ArrowRecordBatchLoadUpdate,
-  type ArrowRecordBatchSource,
-  type OptionalArrowColumnSelector
-} from '../arrow-renderer-utils';
 
 /** Arrow point coordinate input accepted by {@link ArrowPointRenderer}. */
 export type ArrowPointCoordinateType = arrow.FixedSizeList<arrow.Float32> | arrow.DenseUnion;
@@ -114,8 +112,8 @@ export type ArrowPointRendererMetrics = {
   pointGpuByteLength: number;
   /** Bytes occupied by prepared color and radius GPU vectors. */
   stylingGpuByteLength: number;
-  /** CPU time spent preparing the currently loaded point batches. */
-  preparationTimeMs: number;
+  /** CPU time spent converting the currently loaded point batches. */
+  conversionTimeMs: number;
 };
 
 /** Notification emitted after a point record batch is prepared and appended. */
@@ -157,7 +155,7 @@ export type ArrowPointGPUVectors = {
 export type ArrowPointRendererInput = ArrowPointGPUVectors & {
   pointArrowByteLength: number;
   stylingArrowByteLength: number;
-  preparationTimeMs: number;
+  conversionTimeMs: number;
 };
 
 type PreparedPointBatch = ArrowPointRendererInput;
@@ -273,8 +271,8 @@ export class ArrowPointRenderer {
         (total, batch) => total + batch.stylingGpuByteLength,
         0
       ),
-      preparationTimeMs: this.preparedBatches.reduce(
-        (total, batch) => total + batch.preparationTimeMs,
+      conversionTimeMs: this.preparedBatches.reduce(
+        (total, batch) => total + batch.conversionTimeMs,
         0
       )
     };
@@ -464,7 +462,7 @@ export async function prepareArrowPointInput(
     ...converted,
     pointArrowByteLength,
     stylingArrowByteLength,
-    preparationTimeMs: getTimestampMilliseconds() - startedAt
+    conversionTimeMs: getTimestampMilliseconds() - startedAt
   };
 }
 
@@ -673,7 +671,7 @@ async function makeEventTimesGPUVector(
     );
   }
   if (isScalarArrowTemporalVector(props.separateTimeColumn)) {
-    const preparedTimeColumn = await prepareArrowTemporalGPUVector(
+    const preparedTimeColumn = await convertArrowTemporalToGPUVector(
       device,
       props.separateTimeColumn,
       {
@@ -684,7 +682,7 @@ async function makeEventTimesGPUVector(
     );
     if (!(preparedTimeColumn.temporal.type instanceof arrow.Float32)) {
       preparedTimeColumn.destroy();
-      throw new Error('ArrowPointRenderer temporal time column did not prepare as Float32');
+      throw new Error('ArrowPointRenderer temporal time column did not convert to Float32');
     }
     return preparedTimeColumn.temporal;
   }

@@ -194,7 +194,7 @@
         "items": [
           "api-reference/arrow/README",
           "api-reference/arrow/arrow-representations",
-          "api-reference/arrow/arrow-preparation",
+          "api-reference/arrow/arrow-conversion",
           "api-reference/arrow/supported-arrow-types",
           "api-reference/arrow/deck-target-api",
           "api-reference/arrow/arrow-utils"

@@ -4,7 +4,7 @@
 
 import {RecordBatch, Table, Vector, type DataType} from 'apache-arrow';
 import type {ModelGPUInputDeclaration, ModelGPUInputSchema} from '@luma.gl/tables';
-import type {ArrowPathSourceVectors} from '../preparation/arrow-path-gpu-vectors';
+import type {ArrowPathSourceVectors} from '../conversion/arrow-path-gpu-vectors';
 import {getArrowPaths, getArrowVectorByPath} from '../../../arrow-utils/arrow-paths';
 
 type ArrowVectorDataType<VectorT extends Vector> =

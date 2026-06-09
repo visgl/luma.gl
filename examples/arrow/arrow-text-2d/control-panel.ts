@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {ArrowTextRendererProps} from './arrow-text-renderer';
+import type {ArrowTextRendererProps} from '@luma.gl/arrow';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 type TextModelKind = NonNullable<ArrowTextRendererProps['model']>;
@@ -36,8 +36,8 @@ const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-text-2d-streaming-batch-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-text-2d-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-text-2d-streaming-batch-status-label';
-const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
-const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
+const TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 export type ArrowText2DControlPanelRowCountKind =
   | '10k'
@@ -353,13 +353,13 @@ export class ArrowText2DControlPanel {
     if (!this.modelSelector) {
       return;
     }
-    const supportsStorageText = supportsVertexStorageBuffers(
+    const supportsTextStorage = supportsVertexStorageBuffers(
       this.device,
-      STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+      TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT
     );
-    const supportsDictionaryText = supportsVertexStorageBuffers(
+    const supportsTextDictionary = supportsVertexStorageBuffers(
       this.device,
-      DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+      TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT
     );
     for (const option of Array.from(this.modelSelector.options)) {
       const modelKind = option.value;
@@ -367,8 +367,8 @@ export class ArrowText2DControlPanel {
         (modelKind !== 'attribute' &&
           modelKind !== 'auto' &&
           (this.state.colorKind === 'character-colors' ||
-            (modelKind === 'storage' && !supportsStorageText) ||
-            (modelKind === 'dictionary' && !supportsDictionaryText))) ||
+            (modelKind === 'storage' && !supportsTextStorage) ||
+            (modelKind === 'dictionary' && !supportsTextDictionary))) ||
         (modelKind === 'dictionary' && this.state.sourceKind !== 'dictionary');
       if (modelKind === 'auto') {
         option.textContent = `auto (${getAutoTextModelLabel(this.device, this.state)})`;
@@ -588,11 +588,11 @@ function getAutoTextModelLabel(
   }
   if (
     state.sourceKind === 'dictionary' &&
-    supportsVertexStorageBuffers(device, DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT)
+    supportsVertexStorageBuffers(device, TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT)
   ) {
     return 'dictionary';
   }
-  if (supportsVertexStorageBuffers(device, STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT)) {
+  if (supportsVertexStorageBuffers(device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT)) {
     return 'storage';
   }
   return 'attribute';

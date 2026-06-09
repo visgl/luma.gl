@@ -12,14 +12,14 @@ import {getArrowVariableLengthAttributeDataBufferSource} from '../../../gpu/arro
 type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
 type ArrowPathFloat64CoordinateType = List<FixedSizeList<Float64>>;
 
-/** Stable resource naming options for WebGPU Float64 path delta preparation. */
-export type GpuPathFloat64DeltaPreparationOptions = {
+/** Stable resource naming options for WebGPU Float64 path delta conversion. */
+export type GpuPathFloat64DeltaConversionOptions = {
   /** Stable resource id prefix. */
   id?: string;
 };
 
 /** Prepared Float32 path deltas plus retained Float64 source origins. */
-export type GpuPathFloat64DeltaPreparation = {
+export type GpuPathFloat64DeltaConversion = {
   /** Prepared Float32 path deltas, one Arrow row per path. */
   paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
   /** First Float64 source point per path row, padded to four components. */
@@ -87,13 +87,13 @@ const GPU_PATH_FLOAT64_DELTA_SHADER_LAYOUT: ShaderLayout = {
 };
 
 /** Converts Float64 Arrow path rows into per-row Float32 deltas with WebGPU compute. */
-export async function prepareGpuPathFloat64DeltaVector(
+export async function convertArrowPathFloat64ToGPUVector(
   device: Device,
   paths: Vector<ArrowPathFloat64CoordinateType>,
-  options: GpuPathFloat64DeltaPreparationOptions = {}
-): Promise<GpuPathFloat64DeltaPreparation> {
+  options: GpuPathFloat64DeltaConversionOptions = {}
+): Promise<GpuPathFloat64DeltaConversion> {
   if (device.type !== 'webgpu') {
-    throw new Error('prepareGpuPathFloat64DeltaVector requires a WebGPU device');
+    throw new Error('convertArrowPathFloat64ToGPUVector requires a WebGPU device');
   }
 
   const componentCount = getArrowPathCoordinateComponentCount(paths.type);
@@ -115,22 +115,22 @@ export async function prepareGpuPathFloat64DeltaVector(
       componentCount
     );
     const sourcePathValuesBuffer = new DynamicBuffer(device, {
-      id: `${options.id || 'arrow-storage-path-model'}-source-path-values-${chunkIndex}`,
+      id: `${options.id || 'arrow-path-storage-model'}-source-path-values-${chunkIndex}`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       ...(pathValues.length > 0 ? {data: pathValues} : {byteLength: Float64Array.BYTES_PER_ELEMENT})
     });
     const sourcePathValueOffsetsBuffer = device.createBuffer({
-      id: `${options.id || 'arrow-storage-path-model'}-source-path-value-offsets-${chunkIndex}`,
+      id: `${options.id || 'arrow-path-storage-model'}-source-path-value-offsets-${chunkIndex}`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data: new Uint32Array(valueOffsets)
     });
     const pathDeltaConfigBuffer = device.createBuffer({
-      id: `${options.id || 'arrow-storage-path-model'}-path-delta-config-${chunkIndex}`,
+      id: `${options.id || 'arrow-path-storage-model'}-path-delta-config-${chunkIndex}`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data: new Uint32Array([data.length, componentCount])
     });
     const outputPathValuesBuffer = new DynamicBuffer(device, {
-      id: `${options.id || 'arrow-storage-path-model'}-path-delta-values-${chunkIndex}`,
+      id: `${options.id || 'arrow-path-storage-model'}-path-delta-values-${chunkIndex}`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       byteLength: Math.max(
         Float32Array.BYTES_PER_ELEMENT,
@@ -194,7 +194,7 @@ export async function prepareGpuPathFloat64DeltaVector(
 
 function dispatchGpuPathFloat64DeltaCompute(
   device: Device,
-  options: GpuPathFloat64DeltaPreparationOptions,
+  options: GpuPathFloat64DeltaConversionOptions,
   props: {
     chunkIndex: number;
     rowCount: number;
@@ -205,7 +205,7 @@ function dispatchGpuPathFloat64DeltaCompute(
   }
 ): void {
   const computation = new Computation(device, {
-    id: `${options.id || 'arrow-storage-path-model'}-path-delta-compute-${props.chunkIndex}`,
+    id: `${options.id || 'arrow-path-storage-model'}-path-delta-compute-${props.chunkIndex}`,
     source: GPU_PATH_FLOAT64_DELTA_COMPUTE_SOURCE,
     modules: [fp64arithmetic as ShaderModule],
     shaderLayout: GPU_PATH_FLOAT64_DELTA_SHADER_LAYOUT,
@@ -228,7 +228,7 @@ function dispatchGpuPathFloat64DeltaCompute(
 function getArrowPathCoordinateComponentCount(type: DataType): number {
   const pathElementType = type.children[0]?.type;
   if (!pathElementType || !DataType.isFixedSizeList(pathElementType)) {
-    throw new Error('Float64 path preparation requires FixedSizeList coordinate elements');
+    throw new Error('Float64 path conversion requires FixedSizeList coordinate elements');
   }
   return pathElementType.listSize;
 }
@@ -244,7 +244,7 @@ function getArrowPathCoordinateFormat(
     case 4:
       return 'vertex-list<float32x4>';
     default:
-      throw new Error('prepareGpuPathFloat64DeltaVector paths require 2, 3, or 4 components');
+      throw new Error('convertArrowPathFloat64ToGPUVector paths require 2, 3, or 4 components');
   }
 }
 
@@ -261,7 +261,7 @@ function getNormalizedArrowPathValueOffsets(
 ): Int32Array {
   const valueOffsets = data.valueOffsets as Int32Array | undefined;
   if (!valueOffsets) {
-    throw new Error('Float64 path preparation requires Arrow list offsets');
+    throw new Error('Float64 path conversion requires Arrow list offsets');
   }
   const firstElementOffset = valueOffsets[0] ?? 0;
   return Int32Array.from(valueOffsets, valueOffset => valueOffset - firstElementOffset);

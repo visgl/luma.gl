@@ -19,7 +19,7 @@ export type OptionalArrowPolygonColumnSelector<TypeT extends DataType = DataType
   | ArrowPolygonColumnSelector<TypeT>
   | null
   | undefined;
-/** Raw Arrow selectors keyed by polygon preparation input names. */
+/** Raw Arrow selectors keyed by polygon conversion input names. */
 export type ArrowPolygonSourceVectorSelectors = {
   /** Source polygon geometry column. Defaults to `polygons`. */
   polygons?: ArrowPolygonColumnSelector<ArrowPolygonInputType>;
@@ -30,11 +30,11 @@ export type ArrowPolygonSourceVectorSelectors = {
 export type ResolveArrowPolygonSourceVectorsProps = {
   /** Raw Arrow table or record batch containing same-name or selected source columns. */
   data?: ArrowPolygonSourceData | null;
-  /** Explicit raw Arrow column selectors keyed by polygon preparation inputs. */
+  /** Explicit raw Arrow column selectors keyed by polygon conversion inputs. */
   selectors?: ArrowPolygonSourceVectorSelectors;
 };
 
-/** Resolves raw Arrow polygon source vectors before GPU tessellation/preparation. */
+/** Resolves raw Arrow polygon source vectors before GPU tessellation/conversion. */
 export function resolveArrowPolygonSourceVectors(
   props: ResolveArrowPolygonSourceVectorsProps = {}
 ): ArrowPolygonSourceVectors {

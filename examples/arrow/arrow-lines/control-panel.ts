@@ -28,7 +28,7 @@ const SEGMENT_COUNT_ID = 'arrow-lines-segment-count';
 const PATH_ARROW_BYTES_ID = 'arrow-lines-path-arrow-bytes';
 const PATH_GPU_BYTES_ID = 'arrow-lines-path-gpu-bytes';
 const PATH_GPU_EXPANSION_ID = 'arrow-lines-path-gpu-expansion';
-const PATH_PREP_TIME_ID = 'arrow-lines-path-prep-time';
+const PATH_CONVERSION_TIME_ID = 'arrow-lines-path-conversion-time';
 const STYLE_ARROW_BYTES_ID = 'arrow-lines-style-arrow-bytes';
 const STYLE_GPU_BYTES_ID = 'arrow-lines-style-gpu-bytes';
 const STYLE_GPU_EXPANSION_ID = 'arrow-lines-style-gpu-expansion';
@@ -43,7 +43,7 @@ const DECK_GPU_EXPANSION_ID = 'arrow-lines-deck-gpu-expansion';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-lines-streaming-batch-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-lines-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-lines-streaming-batch-status-label';
-const STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT = 6;
+const PATH_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 6;
 const TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT = 7;
 
 export type ArrowLineControlPanelRowLabels = {
@@ -82,7 +82,7 @@ export type ArrowLineControlPanelMetrics = {
   pathArrowBytes: string;
   pathGpuBytes: string;
   pathGpuExpansion: string;
-  pathPrepTime: string;
+  pathConversionTime: string;
   styleArrowBytes: string;
   styleGpuBytes: string;
   styleGpuExpansion: string;
@@ -137,7 +137,7 @@ export class ArrowLineControlPanel {
   private pathArrowBytesLabel: HTMLElement | null = null;
   private pathGpuBytesLabel: HTMLElement | null = null;
   private pathGpuExpansionLabel: HTMLElement | null = null;
-  private pathPrepTimeLabel: HTMLElement | null = null;
+  private pathConversionTimeLabel: HTMLElement | null = null;
   private styleArrowBytesLabel: HTMLElement | null = null;
   private styleGpuBytesLabel: HTMLElement | null = null;
   private styleGpuExpansionLabel: HTMLElement | null = null;
@@ -189,7 +189,7 @@ export class ArrowLineControlPanel {
     this.pathArrowBytesLabel = document.getElementById(PATH_ARROW_BYTES_ID);
     this.pathGpuBytesLabel = document.getElementById(PATH_GPU_BYTES_ID);
     this.pathGpuExpansionLabel = document.getElementById(PATH_GPU_EXPANSION_ID);
-    this.pathPrepTimeLabel = document.getElementById(PATH_PREP_TIME_ID);
+    this.pathConversionTimeLabel = document.getElementById(PATH_CONVERSION_TIME_ID);
     this.styleArrowBytesLabel = document.getElementById(STYLE_ARROW_BYTES_ID);
     this.styleGpuBytesLabel = document.getElementById(STYLE_GPU_BYTES_ID);
     this.styleGpuExpansionLabel = document.getElementById(STYLE_GPU_EXPANSION_ID);
@@ -272,7 +272,7 @@ export class ArrowLineControlPanel {
     setMetricText(this.pathArrowBytesLabel, metrics.pathArrowBytes);
     setMetricText(this.pathGpuBytesLabel, metrics.pathGpuBytes);
     setMetricText(this.pathGpuExpansionLabel, metrics.pathGpuExpansion);
-    setMetricText(this.pathPrepTimeLabel, metrics.pathPrepTime);
+    setMetricText(this.pathConversionTimeLabel, metrics.pathConversionTime);
     setMetricText(this.styleArrowBytesLabel, metrics.styleArrowBytes);
     setMetricText(this.styleGpuBytesLabel, metrics.styleGpuBytes);
     setMetricText(this.styleGpuExpansionLabel, metrics.styleGpuExpansion);
@@ -362,7 +362,7 @@ export class ArrowLineControlPanel {
     if (
       isArrowLineRendererModel(nextModelKind) &&
       (nextModelKind !== 'storage' ||
-        supportsVertexStorageBuffers(this.device, STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT)) &&
+        supportsVertexStorageBuffers(this.device, PATH_STORAGE_VERTEX_STORAGE_BUFFER_COUNT)) &&
       (nextModelKind !== 'trips' ||
         supportsVertexStorageBuffers(this.device, TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT)) &&
       (nextModelKind !== 'attribute' || this.state.timeKind !== 'timestamps')
@@ -396,9 +396,9 @@ export class ArrowLineControlPanel {
 
   private updateSelectorAvailability(): void {
     const isPolygonMode = this.state.mode === 'polygons';
-    const supportsStoragePath = supportsVertexStorageBuffers(
+    const supportsPathStorage = supportsVertexStorageBuffers(
       this.device,
-      STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT
+      PATH_STORAGE_VERTEX_STORAGE_BUFFER_COUNT
     );
     const supportsTripsPath = supportsVertexStorageBuffers(
       this.device,
@@ -427,7 +427,7 @@ export class ArrowLineControlPanel {
     for (const option of Array.from(this.modelSelector.options)) {
       option.disabled =
         (option.value === 'storage' &&
-          (!supportsStoragePath || this.state.timeKind === 'timestamps')) ||
+          (!supportsPathStorage || this.state.timeKind === 'timestamps')) ||
         (option.value === 'attribute' && this.state.timeKind === 'timestamps') ||
         (option.value === 'trips' &&
           (!supportsTripsPath || this.state.timeKind !== 'timestamps' || isPolygonMode));
@@ -559,7 +559,7 @@ export function makeArrowLineControlPanelHtml({
             <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
             <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
-            <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${PATH_PREP_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+            <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${PATH_CONVERSION_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
           </tr>
           <tr>
             <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">styles</th>
@@ -589,7 +589,7 @@ export function makeArrowLineControlPanelHtml({
         <table style="width: 100%; margin-top: 10px; border-collapse: collapse; color: #334155; font-size: 12px; line-height: 1.4;">
           <tbody>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Input</td><td style="padding: 7px 0;">Nested Float32 XYZM Arrow lists, CPU-prepared Float64 lists, DenseUnion LineString/MultiLineString rows, or DenseUnion Polygon/MultiPolygon outline rings plus selectable row color columns, line-aligned color lists, and aligned List&lt;Timestamp&gt; rows</td></tr>
-            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Time</td><td style="padding: 7px 0;">AttributePathModel and StoragePathModel read numeric M from XYZM; StorageTripsPathModel normalizes List&lt;Timestamp&gt; to relative Float32 milliseconds and filters the trail in storage</td></tr>
+            <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Time</td><td style="padding: 7px 0;">PathAttributeModel and PathStorageModel read numeric M from XYZM; PathTripsStorageModel normalizes List&lt;Timestamp&gt; to relative Float32 milliseconds and filters the trail in storage</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Shared drawing</td><td style="padding: 7px 0;">All modes render the same miter/round joins and square/round caps; storage modes keep generated segment records indexed</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Attribute model</td><td style="padding: 7px 0;">CPU expansion builds segment records and repeats selected style rows into render attributes</td></tr>
             <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">deck.gl estimate</td><td style="padding: 7px 0;">Approximate PathLayer attribute storage at ${deckPathAttributeBytesPerSegment} bytes per generated segment</td></tr>
@@ -653,7 +653,7 @@ function getAutoPathModelLabel(device: Device, timeKind: ArrowLineControlPanelTi
       device,
       timeKind === 'timestamps'
         ? TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT
-        : STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT
+        : PATH_STORAGE_VERTEX_STORAGE_BUFFER_COUNT
     )
   ) {
     return 'attribute';

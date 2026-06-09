@@ -23,8 +23,8 @@ const FLOAT32_ARROW_BYTES_ID = 'arrow-float64-precision-float32-arrow-bytes';
 const STYLE_ARROW_BYTES_ID = 'arrow-float64-precision-style-arrow-bytes';
 const FLOAT64_GPU_BYTES_ID = 'arrow-float64-precision-float64-gpu-bytes';
 const FLOAT32_GPU_BYTES_ID = 'arrow-float64-precision-float32-gpu-bytes';
-const FLOAT64_PREP_TIME_ID = 'arrow-float64-precision-float64-prep-time';
-const FLOAT32_PREP_TIME_ID = 'arrow-float64-precision-float32-prep-time';
+const FLOAT64_CONVERSION_TIME_ID = 'arrow-float64-precision-float64-conversion-time';
+const FLOAT32_CONVERSION_TIME_ID = 'arrow-float64-precision-float32-conversion-time';
 const FLOAT32_ERROR_ID = 'arrow-float64-precision-float32-error';
 const PAN_LABEL_ID = 'arrow-float64-precision-pan-label';
 const LOADING_ID = 'arrow-float64-precision-loading';
@@ -120,7 +120,7 @@ export class ArrowFloat64PrecisionControlPanel {
 
   setLoading(isLoading: boolean): void {
     if (this.loadingLabel) {
-      this.loadingLabel.textContent = isLoading ? 'Preparing Arrow paths...' : '';
+      this.loadingLabel.textContent = isLoading ? 'Converting Arrow paths...' : '';
     }
   }
 
@@ -132,8 +132,8 @@ export class ArrowFloat64PrecisionControlPanel {
     setLabel(STYLE_ARROW_BYTES_ID, formatByteLength(metrics.styleArrowByteLength));
     setLabel(FLOAT64_GPU_BYTES_ID, formatByteLength(metrics.float64PreparedGpuByteLength));
     setLabel(FLOAT32_GPU_BYTES_ID, formatByteLength(metrics.float32PreparedGpuByteLength));
-    setLabel(FLOAT64_PREP_TIME_ID, `${metrics.float64PreparationTimeMs.toFixed(1)}ms`);
-    setLabel(FLOAT32_PREP_TIME_ID, `${metrics.float32PreparationTimeMs.toFixed(1)}ms`);
+    setLabel(FLOAT64_CONVERSION_TIME_ID, `${metrics.float64ConversionTimeMs.toFixed(1)}ms`);
+    setLabel(FLOAT32_CONVERSION_TIME_ID, `${metrics.float32ConversionTimeMs.toFixed(1)}ms`);
     setLabel(FLOAT32_ERROR_ID, `${formatMetric(metrics.maxFloat32LocalError)} world units`);
   }
 }
@@ -169,7 +169,7 @@ export function makeArrowFloat64PrecisionControlPanelHtml(): string {
     </div>
     <details style="margin-top: 6px; border-top: 1px solid rgba(203, 213, 225, 0.9); padding-top: 6px; color: #334155;">
       <summary style="cursor: pointer; font-weight: 700;">
-        Metrics: F32 error <strong id="${FLOAT32_ERROR_ID}" style="font-variant-numeric: tabular-nums;">-</strong>, rebase prep <strong id="${FLOAT64_PREP_TIME_ID}" style="font-variant-numeric: tabular-nums;">-</strong>
+        Metrics: F32 error <strong id="${FLOAT32_ERROR_ID}" style="font-variant-numeric: tabular-nums;">-</strong>, rebase conversion <strong id="${FLOAT64_CONVERSION_TIME_ID}" style="font-variant-numeric: tabular-nums;">-</strong>
       </summary>
       <div style="max-height: 90px; overflow-y: auto; display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin-top: 4px; padding-right: 4px;">
         ${makeMetricRow('Paths', PATH_COUNT_ID)}
@@ -179,7 +179,7 @@ export function makeArrowFloat64PrecisionControlPanelHtml(): string {
         ${makeMetricRow('Style', STYLE_ARROW_BYTES_ID)}
         ${makeMetricRow('F64 GPU', FLOAT64_GPU_BYTES_ID)}
         ${makeMetricRow('F32 GPU', FLOAT32_GPU_BYTES_ID)}
-        ${makeMetricRow('F32 prep', FLOAT32_PREP_TIME_ID)}
+        ${makeMetricRow('F32 conversion', FLOAT32_CONVERSION_TIME_ID)}
       </div>
       <div style="margin-top: 4px; color: #475569; font-size: 11px;">Left: Float32 cast. Right: Float64 origin rebasing, not <code>project64</code>.</div>
     </details>

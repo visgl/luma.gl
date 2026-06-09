@@ -4,8 +4,8 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  prepareArrowTemporalGPUVector,
-  prepareArrowTemporalGPUVectors,
+  convertArrowTemporalToGPUVector,
+  convertArrowTemporalToGPUVectors,
   readArrowGPUVectorAsync,
   TEMPORAL_ORIGIN_METADATA_KEY,
   TEMPORAL_ORIGIN_POLICY_METADATA_KEY,
@@ -14,13 +14,13 @@ import {
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-test('prepareArrowTemporalGPUVector emits relative scalar timestamps with persisted origin', async t => {
+test('convertArrowTemporalToGPUVector emits relative scalar timestamps with persisted origin', async t => {
   const device = new NullDevice({});
   const source = makeTemporalVector(
     new arrow.TimestampMillisecond(),
     new BigInt64Array([1000n, 1005n])
   );
-  const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
+  const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
   t.deepEqual(Array.from(result.toArray()), [0, 5], 'subtracts the first valid timestamp');
@@ -36,9 +36,9 @@ test('prepareArrowTemporalGPUVector emits relative scalar timestamps with persis
   t.end();
 });
 
-test('prepareArrowTemporalGPUVectors preserves aligned scalar temporal rows', async t => {
+test('convertArrowTemporalToGPUVectors preserves aligned scalar temporal rows', async t => {
   const device = new NullDevice({});
-  const prepared = await prepareArrowTemporalGPUVectors(device, {
+  const prepared = await convertArrowTemporalToGPUVectors(device, {
     eventDates: makeTemporalVector(new arrow.DateDay(), new Int32Array([20, 21, 21])),
     eventTimes: makeTemporalVector(
       new arrow.TimeMillisecond(),
@@ -85,14 +85,14 @@ test('prepareArrowTemporalGPUVectors preserves aligned scalar temporal rows', as
   t.end();
 });
 
-test('prepareArrowTemporalGPUVector preserves temporal list offsets for Trips-style streams', async t => {
+test('convertArrowTemporalToGPUVector preserves temporal list offsets for Trips-style streams', async t => {
   const device = new NullDevice({});
   const source = makeTemporalListVector(
     new arrow.TimestampMillisecond(),
     new BigInt64Array([1000n, 1010n, 1025n]),
     new Int32Array([0, 2, 3])
   );
-  const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
+  const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
   t.deepEqual(
@@ -110,14 +110,14 @@ test('prepareArrowTemporalGPUVector preserves temporal list offsets for Trips-st
   t.end();
 });
 
-test('prepareArrowTemporalGPUVector reads sliced temporal list rows', async t => {
+test('convertArrowTemporalToGPUVector reads sliced temporal list rows', async t => {
   const device = new NullDevice({});
   const source = makeTemporalListVector(
     new arrow.TimestampMillisecond(),
     new BigInt64Array([900n, 901n, 1000n, 1010n, 1025n]),
     new Int32Array([0, 2, 4, 5])
   ).slice(1) as arrow.Vector<arrow.List<arrow.TimestampMillisecond>>;
-  const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
+  const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
   t.deepEqual(
@@ -136,10 +136,10 @@ test('prepareArrowTemporalGPUVector reads sliced temporal list rows', async t =>
   t.end();
 });
 
-test('prepareArrowTemporalGPUVector keeps durations relative to zero', async t => {
+test('convertArrowTemporalToGPUVector keeps durations relative to zero', async t => {
   const device = new NullDevice({});
   const source = makeTemporalVector(new arrow.DurationMillisecond(), new BigInt64Array([5n, 10n]));
-  const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
+  const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
   t.deepEqual(Array.from(result.toArray()), [5, 10], 'leaves duration magnitudes unchanged');
@@ -154,10 +154,10 @@ test('prepareArrowTemporalGPUVector keeps durations relative to zero', async t =
   t.end();
 });
 
-test('prepareArrowTemporalGPUVector WebGPU matches CPU fallback', async t => {
+test('convertArrowTemporalToGPUVector WebGPU matches CPU fallback', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('Skipping temporal WebGPU preparation test without hardware WebGPU');
+    t.comment('Skipping temporal WebGPU conversion test without hardware WebGPU');
     t.end();
     return;
   }
@@ -165,8 +165,8 @@ test('prepareArrowTemporalGPUVector WebGPU matches CPU fallback', async t => {
     new arrow.TimestampMillisecond(),
     new BigInt64Array([1000n, 1005n])
   );
-  const gpuPrepared = await prepareArrowTemporalGPUVector(device, source);
-  const cpuPrepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
+  const gpuPrepared = await convertArrowTemporalToGPUVector(device, source);
+  const cpuPrepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const gpuResult = await readArrowGPUVectorAsync(gpuPrepared.temporal);
   const cpuResult = await readArrowGPUVectorAsync(cpuPrepared.temporal);
 
@@ -177,12 +177,12 @@ test('prepareArrowTemporalGPUVector WebGPU matches CPU fallback', async t => {
   t.end();
 });
 
-test('prepareArrowTemporalGPUVector rejects nullable temporal payloads', async t => {
+test('convertArrowTemporalToGPUVector rejects nullable temporal payloads', async t => {
   const device = new NullDevice({});
   const source = makeNullableTimestampVector();
 
   try {
-    await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
+    await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
     t.fail('rejects nullable temporal rows');
   } catch (error) {
     t.match(

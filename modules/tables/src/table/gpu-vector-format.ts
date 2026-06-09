@@ -21,12 +21,22 @@ import {shaderTypeDecoder, vertexFormatDecoder} from '@luma.gl/core';
 export type VertexList<Format extends VertexFormat = VertexFormat> = `vertex-list<${Format}>`;
 
 /**
+ * Variable-length rows of non-vertex element values.
+ *
+ * `value-list<uint8>` means each logical row owns a variable-length list of
+ * `uint8` element values. Offsets and other row metadata belong to the producer
+ * that created the vector.
+ */
+export type ValueList<Format extends VertexFormat = VertexFormat> = `value-list<${Format}>`;
+
+/**
  * Memory-layout string used by GPUVector.
  *
  * Fixed formats reuse core `VertexFormat` strings. Variable-length
- * vertex-aligned formats use `vertex-list<${VertexFormat}>`.
+ * vertex-aligned formats use `vertex-list<${VertexFormat}>`; other
+ * variable-length values use `value-list<${VertexFormat}>`.
  */
-export type GPUVectorFormat = VertexFormat | VertexList;
+export type GPUVectorFormat = VertexFormat | VertexList | ValueList;
 
 /** Decoded memory-layout information for a GPUVector format string. */
 export type GPUVectorFormatInfo = {
@@ -36,6 +46,8 @@ export type GPUVectorFormatInfo = {
   elementFormat: VertexFormat;
   /** Whether this vector stores row-offset vertex lists. */
   vertexList: boolean;
+  /** Whether this vector stores row-offset non-vertex value lists. */
+  valueList: boolean;
   /** Component memory data type. */
   type: NormalizedDataType;
   /** Component memory data type without normalization. */
@@ -57,16 +69,23 @@ export type GPUVectorFormatInfo = {
 };
 
 const VERTEX_LIST_FORMAT_REGEXP = /^vertex-list<([^<>]+)>$/;
+const VALUE_LIST_FORMAT_REGEXP = /^value-list<([^<>]+)>$/;
 
 /** Returns true when a GPUVector format describes row-offset vertex lists. */
 export function isVertexListGPUVectorFormat(format: string): format is VertexList {
   return VERTEX_LIST_FORMAT_REGEXP.test(format);
 }
 
-/** Returns the fixed element memory format for fixed and vertex-list vectors. */
+/** Returns true when a GPUVector format describes row-offset non-vertex value lists. */
+export function isValueListGPUVectorFormat(format: string): format is ValueList {
+  return VALUE_LIST_FORMAT_REGEXP.test(format);
+}
+
+/** Returns the fixed element memory format for fixed and variable-length vectors. */
 export function getGPUVectorElementFormat(format: GPUVectorFormat): VertexFormat {
   const vertexListMatch = VERTEX_LIST_FORMAT_REGEXP.exec(format);
-  const elementFormat = (vertexListMatch?.[1] ?? format) as VertexFormat;
+  const valueListMatch = VALUE_LIST_FORMAT_REGEXP.exec(format);
+  const elementFormat = (vertexListMatch?.[1] ?? valueListMatch?.[1] ?? format) as VertexFormat;
   try {
     vertexFormatDecoder.getVertexFormatInfo(elementFormat);
   } catch {
@@ -79,6 +98,7 @@ export function getGPUVectorElementFormat(format: GPUVectorFormat): VertexFormat
 export function getGPUVectorFormatInfo(format: GPUVectorFormat): GPUVectorFormatInfo {
   const elementFormat = getGPUVectorElementFormat(format);
   const vertexList = isVertexListGPUVectorFormat(format);
+  const valueList = isValueListGPUVectorFormat(format);
   const vertexFormatInfo = vertexFormatDecoder.getVertexFormatInfo(elementFormat);
   const type = vertexFormatInfo.type;
   const normalized = vertexFormatInfo.normalized;
@@ -88,6 +108,7 @@ export function getGPUVectorFormatInfo(format: GPUVectorFormat): GPUVectorFormat
     format,
     elementFormat,
     vertexList,
+    valueList,
     type,
     signedDataType: getSignedDataType(elementFormat, type),
     primitiveType,

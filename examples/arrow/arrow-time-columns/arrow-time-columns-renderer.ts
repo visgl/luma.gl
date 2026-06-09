@@ -4,7 +4,7 @@
 
 import {
   makeGPUVectorFromArrow,
-  prepareArrowTemporalGPUVectors,
+  convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
@@ -62,8 +62,8 @@ export type ArrowTimeColumnsRendererProps = {
 
 /** Labels displayed by the Arrow time-columns example control panel. */
 export type ArrowTimeColumnsRendererLabels = {
-  /** Active preparation path label. */
-  preparationPath: string;
+  /** Active conversion path label. */
+  conversionPath: string;
   /** Current synthetic timestamp label. */
   currentTimestamp: string;
   /** Date column origin label. */
@@ -256,7 +256,7 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
     const timeColumnsTableInput = this.getTimeColumnsTableInput();
     const {temporalColumns} = timeColumnsTableInput;
     return {
-      preparationPath: this.device.type === 'webgpu' ? 'WebGPU compute' : 'CPU fallback',
+      conversionPath: this.device.type === 'webgpu' ? 'WebGPU compute' : 'CPU fallback',
       currentTimestamp: this.getCurrentTimestampLabel(),
       dateOrigin: formatDateDayOrigin(temporalColumns.eventDates.temporalInfo.origin),
       timeOrigin: formatTimeOriginMilliseconds(temporalColumns.eventTimes.temporalInfo.origin),
@@ -319,7 +319,7 @@ async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTab
     eventStarts: getRequiredArrowVector<arrow.TimestampMillisecond>(sourceTable, 'eventStarts'),
     eventDurations: getRequiredArrowVector<arrow.DurationMillisecond>(sourceTable, 'eventDurations')
   };
-  const temporalColumns = await prepareArrowTemporalGPUVectors(device, temporalSourceVectors, {
+  const temporalColumns = await convertArrowTemporalToGPUVectors(device, temporalSourceVectors, {
     columns: {
       eventDates: {id: 'arrow-time-columns-event-dates'},
       eventTimes: {id: 'arrow-time-columns-event-times'},

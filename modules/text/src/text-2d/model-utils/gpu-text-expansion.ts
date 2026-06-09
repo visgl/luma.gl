@@ -5,14 +5,14 @@
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
-  GpuDictionaryUtf8TextInput,
+  GpuTextDictionaryUtf8Input,
   GpuExpandedTextStream,
   GpuUtf8TextInput
 } from './gpu-text-types';
 import {getGpuUtf8MapShaderBindings, getGpuUtf8MapShaderSource} from './gpu-utf8-map';
 
 /** Read-only storage buffer containing shared glyph anchor/advance pairs. */
-export type StorageGlyphMetricState = {
+export type TextStorageGlyphMetricState = {
   /** Read-only storage buffer consumed by text expansion compute. */
   buffer: Buffer;
   /** Logical bytes occupied by glyph metric data. */
@@ -20,7 +20,7 @@ export type StorageGlyphMetricState = {
 };
 
 /** Read-only storage buffer containing UTF-8 code point to glyph id lookup rows. */
-export type StorageGlyphLookupState = {
+export type TextStorageGlyphLookupState = {
   /** Read-only storage buffer consumed by UTF-8 text expansion compute. */
   buffer: Buffer;
   /** Logical bytes occupied by glyph lookup data. */
@@ -52,7 +52,7 @@ export type GpuUtf8ExpandedInputState = {
 };
 
 /** Read-only dictionary UTF-8 text inputs consumed by WebGPU text expansion. */
-export type GpuDictionaryUtf8ExpandedInputState = {
+export type GpuTextDictionaryUtf8ExpandedInputState = {
   /** Per-dictionary-value half-open UTF-8 byte range buffer. */
   dictionaryValueByteRangesBuffer: Buffer;
   /** Packed dictionary UTF-8 byte buffer. */
@@ -66,7 +66,7 @@ export type GpuDictionaryUtf8ExpandedInputState = {
 };
 
 /** Read-only dictionary UTF-8 text expansion config buffer. */
-export type GpuDictionaryUtf8ExpansionConfigState = {
+export type GpuTextDictionaryUtf8ExpansionConfigState = {
   /** Read-only text expansion config buffer. */
   expansionConfigBuffer: Buffer;
   /** Logical bytes occupied by dictionary UTF-8 text expansion config. */
@@ -334,7 +334,7 @@ const GPU_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   attributes: []
 };
 
-const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE = /* wgsl */ `
+const GPU_TEXT_DICTIONARY_UTF8_EXPANDED_COMPUTE_SOURCE = /* wgsl */ `
 @group(0) @binding(0) var<storage, read> textDictionaryValueByteRanges : array<vec2<u32>>;
 @group(0) @binding(1) var<storage, read> textDictionaryUtf8Bytes : array<u32>;
 @group(0) @binding(2) var<storage, read> textRowDictionaryIndices : array<u32>;
@@ -491,13 +491,13 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
 }
 `;
 
-const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE =
+const GPU_TEXT_DICTIONARY_UTF8_EXPANDED_COMPUTE_WITH_ROW_INDICES_SOURCE =
   addGeneratedGlyphRowIndices(
-    GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
+    GPU_TEXT_DICTIONARY_UTF8_EXPANDED_COMPUTE_SOURCE,
     'rowIndex + u32(max(textExpansionConfig[3], 0))'
   );
 
-const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
+const GPU_TEXT_DICTIONARY_UTF8_EXPANDED_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   bindings: [
     {name: 'textDictionaryValueByteRanges', type: 'read-only-storage', group: 0, location: 0},
     {name: 'textDictionaryUtf8Bytes', type: 'read-only-storage', group: 0, location: 1},
@@ -514,11 +514,11 @@ const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
 };
 
 /** Creates one read-only storage buffer for shared glyph metric rows. */
-export function createStorageGlyphMetrics(
+export function createTextStorageGlyphMetrics(
   device: Device,
   options: GpuTextExpansionResourceOptions,
   glyphMetricData: Int32Array
-): StorageGlyphMetricState {
+): TextStorageGlyphMetricState {
   return {
     buffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-glyph-metrics`,
@@ -530,11 +530,11 @@ export function createStorageGlyphMetrics(
 }
 
 /** Creates one read-only storage buffer for UTF-8 code point lookup rows. */
-export function createStorageGlyphLookup(
+export function createTextStorageGlyphLookup(
   device: Device,
   options: GpuTextExpansionResourceOptions,
   glyphLookupData: Uint32Array
-): StorageGlyphLookupState {
+): TextStorageGlyphLookupState {
   return {
     buffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-glyph-lookup`,
@@ -709,50 +709,50 @@ export function createGpuUtf8ExpandedInputFromBuffers(
 }
 
 /** Creates read-only storage inputs for dictionary UTF-8 text expansion. */
-export function createGpuDictionaryUtf8ExpandedInput(
+export function createGpuTextDictionaryUtf8ExpandedInput(
   device: Device,
   options: GpuTextExpansionResourceOptions,
-  dictionaryTextInput: GpuDictionaryUtf8TextInput
-): GpuDictionaryUtf8ExpandedInputState {
+  textDictionaryInput: GpuTextDictionaryUtf8Input
+): GpuTextDictionaryUtf8ExpandedInputState {
   return {
     dictionaryValueByteRangesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-dictionary-value-byte-ranges`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.dictionaryValueByteRanges.byteLength > 0
-          ? dictionaryTextInput.dictionaryValueByteRanges
+        textDictionaryInput.dictionaryValueByteRanges.byteLength > 0
+          ? textDictionaryInput.dictionaryValueByteRanges
           : new Uint32Array(2)
     }),
     dictionaryUtf8BytesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-dictionary-utf8-bytes`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.packedDictionaryUtf8Bytes.byteLength > 0
-          ? dictionaryTextInput.packedDictionaryUtf8Bytes
+        textDictionaryInput.packedDictionaryUtf8Bytes.byteLength > 0
+          ? textDictionaryInput.packedDictionaryUtf8Bytes
           : new Uint32Array(1)
     }),
     rowDictionaryIndicesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-row-dictionary-indices`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.rowDictionaryIndices.byteLength > 0
-          ? dictionaryTextInput.rowDictionaryIndices
+        textDictionaryInput.rowDictionaryIndices.byteLength > 0
+          ? textDictionaryInput.rowDictionaryIndices
           : new Uint32Array(1)
     }),
     rowOutputGlyphRangesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-row-output-glyph-ranges`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.rowOutputGlyphRanges.byteLength > 0
-          ? dictionaryTextInput.rowOutputGlyphRanges
+        textDictionaryInput.rowOutputGlyphRanges.byteLength > 0
+          ? textDictionaryInput.rowOutputGlyphRanges
           : new Uint32Array(2)
     }),
-    byteLength: dictionaryTextInput.inputByteLength
+    byteLength: textDictionaryInput.inputByteLength
   };
 }
 
 /** Creates read-only config for dictionary UTF-8 text expansion. */
-export function createGpuDictionaryUtf8ExpansionConfig(
+export function createGpuTextDictionaryUtf8ExpansionConfig(
   device: Device,
   options: GpuTextExpansionResourceOptions,
   {
@@ -772,7 +772,7 @@ export function createGpuDictionaryUtf8ExpansionConfig(
     outputGlyphIndexBase?: number;
     alignment?: GpuTextAlignmentExpansionOptions;
   }
-): GpuDictionaryUtf8ExpansionConfigState {
+): GpuTextDictionaryUtf8ExpansionConfigState {
   const expansionConfig = new Int32Array([
     baselineOffsetY,
     labelCount,
@@ -823,7 +823,7 @@ export function dispatchGpuExpandedTextCompute(
   options: GpuTextExpansionResourceOptions,
   state: {
     compactInput: GpuExpandedCompactInputState;
-    glyphMetrics: StorageGlyphMetricState;
+    glyphMetrics: TextStorageGlyphMetricState;
     generated: GpuExpandedGeneratedState;
     glyphCount: number;
     labelCount: number;
@@ -863,8 +863,8 @@ export function dispatchGpuUtf8ExpandedTextCompute(
   options: GpuTextExpansionResourceOptions,
   state: {
     utf8Input: GpuUtf8ExpandedInputState;
-    glyphLookup: StorageGlyphLookupState;
-    glyphMetrics: StorageGlyphMetricState;
+    glyphLookup: TextStorageGlyphLookupState;
+    glyphMetrics: TextStorageGlyphMetricState;
     generated: GpuExpandedGeneratedState;
     outputSlotCount: number;
     labelCount: number;
@@ -900,14 +900,14 @@ export function dispatchGpuUtf8ExpandedTextCompute(
 }
 
 /** Dispatches WebGPU compute that decodes dictionary UTF-8 rows into glyph vertices. */
-export function dispatchGpuDictionaryUtf8ExpandedTextCompute(
+export function dispatchGpuTextDictionaryUtf8ExpandedCompute(
   device: Device,
   options: GpuTextExpansionResourceOptions,
   state: {
-    dictionaryInput: GpuDictionaryUtf8ExpandedInputState;
-    expansionConfig: GpuDictionaryUtf8ExpansionConfigState;
-    glyphLookup: StorageGlyphLookupState;
-    glyphMetrics: StorageGlyphMetricState;
+    dictionaryInput: GpuTextDictionaryUtf8ExpandedInputState;
+    expansionConfig: GpuTextDictionaryUtf8ExpansionConfigState;
+    glyphLookup: TextStorageGlyphLookupState;
+    glyphMetrics: TextStorageGlyphMetricState;
     generated: GpuExpandedGeneratedState;
     glyphCount: number;
     labelCount: number;
@@ -919,9 +919,9 @@ export function dispatchGpuDictionaryUtf8ExpandedTextCompute(
   const computation = new Computation(device, {
     id: `${options.id || 'gpu-expanded-text-model'}-dictionary-utf8-compute`,
     source: state.generated.hasGlyphRowIndices
-      ? GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE
-      : GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
-    shaderLayout: GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT,
+      ? GPU_TEXT_DICTIONARY_UTF8_EXPANDED_COMPUTE_WITH_ROW_INDICES_SOURCE
+      : GPU_TEXT_DICTIONARY_UTF8_EXPANDED_COMPUTE_SOURCE,
+    shaderLayout: GPU_TEXT_DICTIONARY_UTF8_EXPANDED_COMPUTE_SHADER_LAYOUT,
     bindings: {
       textDictionaryValueByteRanges: state.dictionaryInput.dictionaryValueByteRangesBuffer,
       textDictionaryUtf8Bytes: state.dictionaryInput.dictionaryUtf8BytesBuffer,

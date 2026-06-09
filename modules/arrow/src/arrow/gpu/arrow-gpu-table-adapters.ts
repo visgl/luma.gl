@@ -18,6 +18,7 @@ import {
   type GPURecordBatchSourceInfo,
   type GPUVectorBufferProps,
   type GPUVectorFormat,
+  type ValueList,
   type VertexList
 } from '@luma.gl/tables';
 import {
@@ -92,7 +93,7 @@ type VertexFormatForArrowType<T extends DataType> =
     ? VertexFormatForArrowFixedSizeListType<ChildType>
     : VertexFormatForArrowScalarType<T>;
 export type GPUVectorFormatForArrowType<T extends DataType = DataType> = T extends Utf8
-  ? 'uint8'
+  ? ValueList<'uint8'>
   : T extends Dictionary
     ? GPUVectorFormat
     : T extends List<infer ChildType>
@@ -245,11 +246,15 @@ export function makeGPUDataFromArrowData<T extends DataType>(
       dataType: arrowType,
       format,
       length: data.length,
+      valueLength: readbackMetadata?.valueByteLength ?? 0,
       stride: 1,
       byteStride: 1,
       rowByteLength: 1,
       ownsBuffer: true,
-      readbackMetadata
+      readbackMetadata,
+      valueOffsets: readbackMetadata?.valueOffsets,
+      nullBitmap: readbackMetadata?.nullBitmap,
+      valueByteLength: readbackMetadata?.valueByteLength
     });
   }
 
@@ -275,7 +280,10 @@ export function makeGPUDataFromArrowData<T extends DataType>(
       byteStride,
       rowByteLength: byteStride,
       ownsBuffer: true,
-      readbackMetadata
+      readbackMetadata,
+      valueOffsets: readbackMetadata?.valueOffsets,
+      nullBitmap: readbackMetadata?.nullBitmap,
+      valueByteLength: readbackMetadata?.valueByteLength
     });
   }
 
@@ -326,7 +334,7 @@ export function makeGPUVectorFromArrow<T extends DataType>(
     isVariableLengthAttributeArrowType(arrowType);
   if (matrixInfo && !isCanonicalFloat32Matrix) {
     throw new Error(
-      'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
+      'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use convertArrowMatrixToGPUVector() first'
     );
   }
 
@@ -587,13 +595,13 @@ function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
   if (matrixInfo) {
     if (!isCanonicalFloat32ArrowMatrixInfo(matrixInfo)) {
       throw new Error(
-        'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
+        'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use convertArrowMatrixToGPUVector() first'
       );
     }
     return 'float32x4';
   }
   if (DataType.isUtf8(type)) {
-    return 'uint8';
+    return 'value-list<uint8>';
   }
   if (isArrowUtf8DictionaryType(type)) {
     return getGPUVectorFormatFromArrowDataType(type.indices);

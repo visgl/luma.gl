@@ -15,7 +15,7 @@ Apache Arrow utilities for luma.gl.
 
 - [Arrow Utilities](/docs/api-reference/arrow/arrow-utils)
 - [Arrow Representations](/docs/api-reference/arrow/arrow-representations)
-- [Arrow Table Preparation](/docs/api-reference/arrow/arrow-preparation)
+- [Arrow Table Conversion](/docs/api-reference/arrow/arrow-conversion)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [deck.gl v10 API Directions](/docs/api-reference/arrow/deck-target-api)
 
@@ -32,17 +32,18 @@ directly to the memory layouts used by GPU vertex attributes.
 
 Arrow also supports variable-length `List` columns. These are useful for data
 such as polygons and paths, but they do not map directly to a single vertex
-attribute without an additional conversion step. `ArrowPathModel` provides the
+attribute without an additional conversion step. `PathAttributeModel` provides the
 attribute-backed conversion for prepared Float32 XY, XYZ, and XYZM path coordinate
 rows, expanding each logical path into segment instances while keeping row-level
-style columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
+style columns at the path boundary. `PathStorageModel` provides the WebGPU
 storage-backed form: compute expands GPU-resident path values into compact indexed
 segment records from copied list-offset metadata, render shaders fetch coordinates
 from the original path-value storage buffer, and per-path style rows remain storage
 bindings instead of being repeated for every generated segment. Use
-`ArrowPathModel.prepareGPUVectors()` or `prepareArrowPathGPUVectors()` to turn raw
-Float32 or Float64 Arrow path vectors into prepared attribute-path inputs. Use
-`ArrowStoragePathModel.prepareGPUVectors()` or `prepareArrowStoragePathGPUVectors()`
+`ArrowPathRenderer.convertToGPUVectors()` or `convertArrowPathToGPUVectors()` to turn raw
+Float32 or Float64 Arrow path vectors into prepared path-attribute inputs. Use
+`ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` or
+`convertArrowPathStorageToGPUVectors()`
 when WebGPU storage rendering should convert Float64 path payloads into Float32
 deltas on the GPU before rendering.
 

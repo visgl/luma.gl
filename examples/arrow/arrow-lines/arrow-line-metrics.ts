@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {StoragePathModel, StorageTripsPathModel, type GPUVector} from '@luma.gl/tables';
+import {PathStorageModel, PathTripsStorageModel, type GPUVector} from '@luma.gl/tables';
 import type {ArrowLineControlPanelMetrics} from './control-panel';
 import type {
   ArrowLineRenderer,
@@ -35,7 +35,7 @@ export function getArrowLineMetrics(
     pathArrowBytes: formatByteLength(pathArrowBytes),
     pathGpuBytes: formatByteLength(pathGpuBytes),
     pathGpuExpansion: formatExpansionRatio(pathGpuBytes, pathArrowBytes),
-    pathPrepTime: `${getPathModelPrepTimeMs(pathInput, pathModel).toFixed(1)}ms`,
+    pathConversionTime: `${getPathModelConversionTimeMs(pathInput, pathModel).toFixed(1)}ms`,
     styleArrowBytes: formatByteLength(styleArrowBytes),
     styleGpuBytes: formatByteLength(styleGpuBytes),
     styleGpuExpansion: formatExpansionRatio(styleGpuBytes, styleArrowBytes),
@@ -57,13 +57,13 @@ function getPathCoordinateGpuByteLength(
   pathInput: ArrowLineRendererInput,
   pathModel: ArrowLineRendererActiveModel | null
 ): number {
-  const storagePathRangeGpuBytes =
-    pathModel && isStoragePathModel(pathModel) ? pathModel.pathRangeByteLength : 0;
+  const pathStorageRangeGpuBytes =
+    pathModel && isPathStorageModel(pathModel) ? pathModel.pathRangeByteLength : 0;
   return (
     getGpuVectorByteLength(pathInput.paths) +
     (pathInput.timestamps ? getGpuVectorByteLength(pathInput.timestamps) : 0) +
     (pathInput.viewOrigins ? getGpuVectorByteLength(pathInput.viewOrigins) : 0) +
-    storagePathRangeGpuBytes +
+    pathStorageRangeGpuBytes +
     getGeneratedPathGpuByteLength(pathModel)
   );
 }
@@ -72,7 +72,7 @@ function getGeneratedPathGpuByteLength(pathModel: ArrowLineRendererActiveModel |
   if (!pathModel) {
     return 0;
   }
-  if (isStoragePathModel(pathModel)) {
+  if (isPathStorageModel(pathModel)) {
     return pathModel.generatedRenderBufferByteLength;
   }
   return pathModel.renderBatches.reduce(
@@ -85,14 +85,14 @@ function getGeneratedPathGpuByteLength(pathModel: ArrowLineRendererActiveModel |
 }
 
 function getTransientPathGpuByteLength(pathModel: ArrowLineRendererActiveModel | null): number {
-  return pathModel && isStoragePathModel(pathModel) ? pathModel.transientComputeInputByteLength : 0;
+  return pathModel && isPathStorageModel(pathModel) ? pathModel.transientComputeInputByteLength : 0;
 }
 
 function getGeneratedPathSegmentCount(pathModel: ArrowLineRendererActiveModel | null): number {
   if (!pathModel) {
     return 0;
   }
-  return isStoragePathModel(pathModel)
+  return isPathStorageModel(pathModel)
     ? pathModel.segmentCount
     : pathModel.segmentLayout.segmentCount;
 }
@@ -107,7 +107,7 @@ function getPathStyleGpuByteLength(
   if (!pathModel) {
     return sourceStyleGpuBytes;
   }
-  if (isStoragePathModel(pathModel)) {
+  if (isPathStorageModel(pathModel)) {
     return sourceStyleGpuBytes + pathModel.rowStorageByteLength;
   }
   const expandedStyleGpuBytes = Object.values(pathModel.table?.gpuVectors || {}).reduce(
@@ -117,14 +117,14 @@ function getPathStyleGpuByteLength(
   return sourceStyleGpuBytes + expandedStyleGpuBytes;
 }
 
-function getPathModelPrepTimeMs(
+function getPathModelConversionTimeMs(
   pathInput: ArrowLineRendererInput,
   pathModel: ArrowLineRendererActiveModel | null
 ): number {
   if (!pathModel) {
     return 0;
   }
-  if (isStoragePathModel(pathModel)) {
+  if (isPathStorageModel(pathModel)) {
     return pathModel.pathRangeBuildTimeMs;
   }
   return pathInput.model === 'attribute'
@@ -132,10 +132,10 @@ function getPathModelPrepTimeMs(
     : 0;
 }
 
-function isStoragePathModel(
+function isPathStorageModel(
   pathModel: ArrowLineRendererActiveModel
-): pathModel is StoragePathModel | StorageTripsPathModel {
-  return pathModel instanceof StoragePathModel || pathModel instanceof StorageTripsPathModel;
+): pathModel is PathStorageModel | PathTripsStorageModel {
+  return pathModel instanceof PathStorageModel || pathModel instanceof PathTripsStorageModel;
 }
 
 function getGpuVectorByteLength(vector: GPUVector<any>): number {

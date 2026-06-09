@@ -54,9 +54,9 @@ export type ArrowMatrixVectorInfo = {
   columns: 2 | 3 | 4;
   /** Logical matrix row count. */
   rows: 2 | 3 | 4;
-  /** Stored logical value order before GPU preparation. */
+  /** Stored logical value order before GPU conversion. */
   order: ArrowMatrixOrder;
-  /** Stored physical row layout before GPU preparation. */
+  /** Stored physical row layout before GPU conversion. */
   layout: ArrowMatrixLayout;
   /** Stored Arrow child scalar precision. */
   valueType: 'float32' | 'float64';

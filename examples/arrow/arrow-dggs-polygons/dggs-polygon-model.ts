@@ -5,7 +5,7 @@
 import type {PreparedDggsCellPathGPUVector} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
-import {StoragePathModel} from '@luma.gl/tables';
+import {PathStorageModel} from '@luma.gl/tables';
 import {DGGS_PATH_SOURCE, dggsViewport} from './dggs-polygon-model-shaders';
 
 export type DggsPolygonShaderInputs = ShaderInputs<{
@@ -29,8 +29,8 @@ export function createDggsPolygonShaderInputs(): DggsPolygonShaderInputs {
 export function createDggsPolygonPathModel(
   device: Device,
   {id, paths, shaderInputs, color, width}: DggsPolygonPathModelProps
-): StoragePathModel {
-  return new StoragePathModel(device, {
+): PathStorageModel {
+  return new PathStorageModel(device, {
     id,
     paths,
     source: DGGS_PATH_SOURCE,

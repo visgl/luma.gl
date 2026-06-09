@@ -18,7 +18,7 @@ export const CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE =
   EXPANDED_GLYPH_VERTEX_BYTE_STRIDE + Int16Array.BYTES_PER_ELEMENT * 4;
 export const INVALID_DICTIONARY_INDEX = 0xffffffff;
 
-export const DEFAULT_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
+export const DEFAULT_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
     {name: GLYPH_OFFSETS_COLUMN, location: 1, type: 'vec2<i32>', stepMode: 'instance'},
@@ -27,15 +27,15 @@ export const DEFAULT_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
-export const DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
+export const DEFAULT_CLIPPED_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
-    ...DEFAULT_ARROW_TEXT_SHADER_LAYOUT.attributes,
+    ...DEFAULT_TEXT_SHADER_LAYOUT.attributes,
     {name: GLYPH_CLIP_RECTS_COLUMN, location: 3, type: 'vec4<i32>', stepMode: 'instance'}
   ],
   bindings: []
 };
 
-export const DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT: ShaderLayout = {
+export const DEFAULT_TEXT_STORAGE_INDEXED_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: GLYPH_OFFSETS_COLUMN, location: 0, type: 'vec2<i32>', stepMode: 'instance'},
     {name: GLYPH_INDICES_COLUMN, location: 1, type: 'vec2<u32>', stepMode: 'instance'}
@@ -43,20 +43,20 @@ export const DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
-export const DEFAULT_ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT: ShaderLayout = {
+export const DEFAULT_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
-    ...DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT.attributes,
+    ...DEFAULT_TEXT_STORAGE_INDEXED_SHADER_LAYOUT.attributes,
     {name: GLYPH_ROW_INDICES_COLUMN, location: 2, type: 'u32', stepMode: 'instance'}
   ],
   bindings: []
 };
 
-export const DEFAULT_DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT: ShaderLayout = {
+export const DEFAULT_TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT: ShaderLayout = {
   attributes: [],
   bindings: []
 };
 
-export const DEFAULT_ARROW_TEXT_VS = `#version 300 es
+export const DEFAULT_TEXT_VS = `#version 300 es
 precision highp float;
 
 in vec2 positions;
@@ -88,7 +88,7 @@ void main() {
 }
 `;
 
-export const DEFAULT_CLIPPED_ARROW_TEXT_VS = `#version 300 es
+export const DEFAULT_CLIPPED_TEXT_VS = `#version 300 es
 precision highp float;
 
 in vec2 positions;
@@ -142,7 +142,7 @@ void main() {
 }
 `;
 
-export const DEFAULT_ARROW_TEXT_FS = `#version 300 es
+export const DEFAULT_TEXT_FS = `#version 300 es
 precision highp float;
 
 uniform sampler2D fontAtlasTexture;
@@ -166,7 +166,7 @@ void main() {
 }
 `;
 
-export const DEFAULT_STORAGE_INDEXED_TEXT_SOURCE = /* wgsl */ `
+export const DEFAULT_TEXT_STORAGE_INDEXED_SOURCE = /* wgsl */ `
 @group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 @group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
@@ -372,13 +372,13 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 }
 `;
 
-export const DEFAULT_ROW_INDEXED_STORAGE_TEXT_SOURCE = DEFAULT_STORAGE_INDEXED_TEXT_SOURCE.replace(
+export const DEFAULT_TEXT_ROW_INDEXED_STORAGE_SOURCE = DEFAULT_TEXT_STORAGE_INDEXED_SOURCE.replace(
   '@location(1) glyphIndices : vec2<u32>,',
   `@location(1) glyphIndices : vec2<u32>,
   @location(2) glyphRowIndices : u32,`
 ).replace('let rowIndex = findRowIndex(glyphIndex);', 'let rowIndex = inputs.glyphRowIndices;');
 
-export const DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE = /* wgsl */ `
+export const DEFAULT_TEXT_DICTIONARY_STORAGE_SOURCE = /* wgsl */ `
 @group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 // Dictionary text keeps row styling in row buffers, shared glyph layout in

@@ -30,7 +30,7 @@ export type PolygonShaderInputs = ShaderInputs<{
 }>;
 
 /** Shader attribute layout consumed by attribute-backed filled polygon models. */
-export const ATTRIBUTE_POLYGON_SHADER_LAYOUT = {
+export const POLYGON_ATTRIBUTE_SHADER_LAYOUT = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec4<f32>'},
     {name: 'colors', location: 1, type: 'vec4<f32>'},
@@ -40,7 +40,7 @@ export const ATTRIBUTE_POLYGON_SHADER_LAYOUT = {
 } satisfies ShaderLayout;
 
 /** Shader layout consumed by storage-backed filled polygon models. */
-export const STORAGE_POLYGON_SHADER_LAYOUT = {
+export const POLYGON_STORAGE_SHADER_LAYOUT = {
   attributes: [],
   bindings: [
     {name: 'polygonPositions', type: 'read-only-storage', group: 0, location: 0},
@@ -50,7 +50,7 @@ export const STORAGE_POLYGON_SHADER_LAYOUT = {
 } satisfies ShaderLayout;
 
 /** WebGPU shader source for attribute-backed filled polygon models. */
-export const ATTRIBUTE_POLYGON_WGSL_SHADER = /* wgsl */ `\
+export const POLYGON_ATTRIBUTE_WGSL_SHADER = /* wgsl */ `\
 struct PolygonViewportUniforms {
   center : vec2<f32>,
   scale : f32,
@@ -106,7 +106,7 @@ fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
 `;
 
 /** WebGPU shader source for storage-backed filled polygon models. */
-export const STORAGE_POLYGON_WGSL_SHADER = /* wgsl */ `\
+export const POLYGON_STORAGE_WGSL_SHADER = /* wgsl */ `\
 @group(0) @binding(auto) var<storage, read> polygonPositions : array<vec4<f32>>;
 @group(0) @binding(auto) var<storage, read> polygonColors : array<u32>;
 @group(0) @binding(auto) var<storage, read> polygonRowIndices : array<u32>;
@@ -169,7 +169,7 @@ fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
 `;
 
 /** WebGL vertex shader source for attribute-backed filled polygon models. */
-export const ATTRIBUTE_POLYGON_VS_GLSL = /* glsl */ `\
+export const POLYGON_ATTRIBUTE_VS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 precision highp int;

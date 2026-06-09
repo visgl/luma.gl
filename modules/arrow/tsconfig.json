@@ -11,6 +11,7 @@
     {"path": "../core"},
     {"path": "../engine"},
     {"path": "../geoarrow"},
-    {"path": "../tables"}
+    {"path": "../tables"},
+    {"path": "../text"}
   ]
 }

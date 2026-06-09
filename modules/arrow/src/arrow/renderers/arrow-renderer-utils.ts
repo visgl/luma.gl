@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {RecordBatch, Table, Vector, type DataType} from 'apache-arrow';
+import type {Device} from '@luma.gl/core';
 
 /** Arrow table column selector accepted by Arrow renderers. */
 export type ArrowColumnSelector<TypeT extends DataType> = string | Vector<TypeT>;
@@ -17,7 +18,7 @@ export type OptionalArrowColumnSelector<TypeT extends DataType> =
  * Arrow record-batch source accepted by Arrow renderers.
  *
  * Renderers do not replay a previous source on prop-only changes. Pass a fresh source, or pass the
- * same replayable table/iterable again, whenever changed props require data preparation.
+ * same replayable table/iterable again, whenever changed props require data conversion.
  */
 export type ArrowRecordBatchSource =
   | Table
@@ -46,6 +47,19 @@ export type ArrowRecordBatchLoadContext = {
   /** True when this is the first yielded record batch in the stream. */
   isFirstBatch: boolean;
 };
+
+/** Returns one numeric device limit, or zero when the backend does not expose it. */
+export function getDeviceLimit(device: Device, limitName: string): number {
+  return (device.limits as unknown as Record<string, number | undefined>)[limitName] ?? 0;
+}
+
+/** Returns whether WebGPU vertex-stage storage buffers can bind the requested buffers. */
+export function supportsVertexStorageBuffers(device: Device, requiredBufferCount = 1): boolean {
+  return (
+    device.type === 'webgpu' &&
+    getDeviceLimit(device, 'maxStorageBuffersInVertexStage') >= requiredBufferCount
+  );
+}
 
 type LoadArrowRecordBatchesProps<PreparedBatch, Metrics> = {
   data: ArrowRecordBatchSource;

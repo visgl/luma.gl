@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 const RENDER_MODE_SELECTOR_ID = 'arrow-time-columns-render-mode';
-const PREPARATION_PATH_ID = 'arrow-time-columns-preparation-path';
+const CONVERSION_PATH_ID = 'arrow-time-columns-conversion-path';
 const CURRENT_TIMESTAMP_ID = 'arrow-time-columns-current-timestamp';
 const DATE_ORIGIN_ID = 'arrow-time-columns-date-origin';
 const TIME_ORIGIN_ID = 'arrow-time-columns-time-origin';
@@ -18,7 +18,7 @@ export type ArrowTimeColumnsControlPanelState = {
 };
 
 export type ArrowTimeColumnsControlPanelLabels = {
-  preparationPath: string;
+  conversionPath: string;
   currentTimestamp: string;
   dateOrigin: string;
   timeOrigin: string;
@@ -39,7 +39,7 @@ export class ArrowTimeColumnsControlPanel {
   private readonly handlers: ArrowTimeColumnsControlPanelHandlers;
   private state: ArrowTimeColumnsControlPanelState;
   private renderModeSelector: HTMLSelectElement | null = null;
-  private preparationPathLabel: HTMLElement | null = null;
+  private conversionPathLabel: HTMLElement | null = null;
   private currentTimestampLabel: HTMLElement | null = null;
   private dateOriginLabel: HTMLElement | null = null;
   private timeOriginLabel: HTMLElement | null = null;
@@ -59,7 +59,7 @@ export class ArrowTimeColumnsControlPanel {
       this.renderModeSelector?.addEventListener('change', this.handleRenderModeSelection);
     }
 
-    this.preparationPathLabel ??= document.getElementById(PREPARATION_PATH_ID);
+    this.conversionPathLabel ??= document.getElementById(CONVERSION_PATH_ID);
     this.currentTimestampLabel ??= document.getElementById(CURRENT_TIMESTAMP_ID);
     this.dateOriginLabel ??= document.getElementById(DATE_ORIGIN_ID);
     this.timeOriginLabel ??= document.getElementById(TIME_ORIGIN_ID);
@@ -71,7 +71,7 @@ export class ArrowTimeColumnsControlPanel {
   destroy(): void {
     this.renderModeSelector?.removeEventListener('change', this.handleRenderModeSelection);
     this.renderModeSelector = null;
-    this.preparationPathLabel = null;
+    this.conversionPathLabel = null;
     this.currentTimestampLabel = null;
     this.dateOriginLabel = null;
     this.timeOriginLabel = null;
@@ -96,7 +96,7 @@ export class ArrowTimeColumnsControlPanel {
   }
 
   setLabels(labels: Partial<ArrowTimeColumnsControlPanelLabels>): void {
-    setTextContent(this.preparationPathLabel, labels.preparationPath);
+    setTextContent(this.conversionPathLabel, labels.conversionPath);
     setTextContent(this.currentTimestampLabel, labels.currentTimestamp);
     setTextContent(this.dateOriginLabel, labels.dateOrigin);
     setTextContent(this.timeOriginLabel, labels.timeOrigin);
@@ -124,21 +124,21 @@ export class ArrowTimeColumnsControlPanel {
 
 export function makeArrowTimeColumnsControlPanelHtml(): string {
   return `
-<p>Prepares Arrow <code>Date</code>, <code>Time</code>, <code>Timestamp</code>, and <code>Duration</code> columns as relative <code>Float32</code> GPU rows.</p>
+<p>Converts Arrow <code>Date</code>, <code>Time</code>, <code>Timestamp</code>, and <code>Duration</code> columns as relative <code>Float32</code> GPU rows.</p>
 <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.7rem; align-items: center;">
   <label for="${RENDER_MODE_SELECTOR_ID}">Render</label>
   <select id="${RENDER_MODE_SELECTOR_ID}">
     <option value="attributes">Attributes</option>
     <option value="storage">Storage</option>
   </select>
-  <span>Prepare</span>
-  <strong id="${PREPARATION_PATH_ID}"></strong>
+  <span>Convert</span>
+  <strong id="${CONVERSION_PATH_ID}"></strong>
   <span>Current</span>
   <strong id="${CURRENT_TIMESTAMP_ID}"></strong>
 </div>
 <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem 0.7rem; margin-top: 0.65rem; font-size: 0.78rem;">
   <strong>Column</strong>
-  <strong>Prepared / origin</strong>
+  <strong>Converted / origin</strong>
   <code style="white-space: normal; overflow-wrap: anywhere;">eventDates: DateDay</code>
   <span><code>Float32 day</code><br><span id="${DATE_ORIGIN_ID}"></span></span>
   <code style="white-space: normal; overflow-wrap: anywhere;">eventTimes: TimeMillisecond</code>

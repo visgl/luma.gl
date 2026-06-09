@@ -4,7 +4,7 @@
 
 import {
   makeGPUVectorFromArrow,
-  prepareArrowTemporalGPUVectors,
+  convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
@@ -341,7 +341,7 @@ async function makeArrowColumnTableInput(
 
   try {
     geometry = await makeColumnRendererGeometry(device, sourceData.geometryTable);
-    temporalVectors = await prepareArrowTemporalGPUVectors(
+    temporalVectors = await convertArrowTemporalToGPUVectors(
       device,
       {
         timeStarts: getRequiredArrowVector<arrow.TimestampMillisecond>(

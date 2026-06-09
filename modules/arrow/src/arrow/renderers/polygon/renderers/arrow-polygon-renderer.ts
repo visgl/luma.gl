@@ -5,13 +5,13 @@
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo} from '@luma.gl/engine';
 import {
-  AttributePolygonModel,
+  PolygonAttributeModel,
   createPolygonShaderInputs,
-  StoragePolygonModel,
-  type AttributePolygonModelProps,
+  PolygonStorageModel,
+  type PolygonAttributeModelProps,
   type PolygonBatchProps,
   type PolygonShaderInputs,
-  type StoragePolygonModelProps
+  type PolygonStorageModelProps
 } from '@luma.gl/tables';
 import {RecordBatch, Table} from 'apache-arrow';
 import {
@@ -22,12 +22,12 @@ import {
 } from '../../../engine/arrow-picking';
 import {getArrowVectorByteLength} from '../../../vectors/arrow-vector-utils';
 import {
-  prepareArrowPolygonGPUVectorsAsync,
+  convertArrowPolygonToGPUVectorsAsync,
   type ArrowPolygonColorType,
   type ArrowPolygonInputType,
   type ArrowPolygonSourceVectors,
   type PreparedArrowPolygonGPUVectors
-} from '../preparation/arrow-polygon-gpu-vectors';
+} from '../conversion/arrow-polygon-gpu-vectors';
 import {
   resolveArrowPolygonSourceVectors,
   type ArrowPolygonColumnSelector,
@@ -51,7 +51,7 @@ export type ArrowPolygonRendererPickingInfo = {
 
 /** Arrow-aware props accepted by the filled polygon renderer. */
 export type ArrowPolygonRendererProps = {
-  /** GPU polygon model selected after Arrow preparation. Defaults to `attribute`. */
+  /** GPU polygon model selected after Arrow conversion. Defaults to `attribute`. */
   model?: ArrowPolygonRendererModel;
   /** Optional Arrow source table, record-batch iterable, or async record-batch iterator. */
   data?: ArrowRecordBatchSource | null;
@@ -78,12 +78,12 @@ export type ArrowPolygonRendererProps = {
 /** GPU polygon model selected by the Arrow-facing renderer. */
 export type ArrowPolygonRendererModel = 'attribute' | 'storage';
 
-/** Flat GPU props accepted by the Arrow polygon renderer after preparation. */
+/** Flat GPU props accepted by the Arrow polygon renderer after conversion. */
 export type ArrowPolygonRendererModelProps =
-  | ({model?: 'attribute'} & AttributePolygonModelProps)
-  | ({model: 'storage'} & StoragePolygonModelProps);
+  | ({model?: 'attribute'} & PolygonAttributeModelProps)
+  | ({model: 'storage'} & PolygonStorageModelProps);
 
-/** Aggregated source/GPU preparation metrics emitted by the filled polygon renderer. */
+/** Aggregated source/GPU conversion metrics emitted by the filled polygon renderer. */
 export type ArrowPolygonRendererMetrics = {
   rowCount: number;
   polygonCount: number;
@@ -97,13 +97,13 @@ export type ArrowPolygonRendererMetrics = {
   tessellationTimeMs: number;
 };
 
-/** One streamed polygon renderer preparation update. */
+/** One streamed polygon renderer conversion update. */
 export type ArrowPolygonRendererDataBatchUpdate = ArrowRecordBatchLoadUpdate<
   ArrowPolygonRendererMetrics,
   ArrowPolygonRendererInput
 >;
 
-/** Raw Arrow polygon columns resolved before GPU vector preparation. */
+/** Raw Arrow polygon columns resolved before GPU vector conversion. */
 export type ArrowPolygonColumns = ArrowPolygonSourceVectors;
 
 /** Options for converting Arrow polygon columns into prepared GPU vectors. */
@@ -132,15 +132,15 @@ const DEFAULT_POLYGON_RENDERER_COLOR: [number, number, number, number] = [0, 96,
 const DEFAULT_POLYGON_RENDERER_CENTER: [number, number] = [0, 0];
 const DEFAULT_POLYGON_RENDERER_SCALE = 1;
 
-/** Arrow-aware filled polygon renderer that prepares source vectors for a GPU-only model. */
+/** Arrow-aware filled polygon renderer that converts source vectors for a GPU-only model. */
 export class ArrowPolygonRenderer {
   readonly device: Device;
   readonly shaderInputs: PolygonShaderInputs;
   readonly picker: PickingManager;
   props: ArrowPolygonRendererProps;
   preparedBatches: PreparedPolygonBatch[] = [];
-  model: AttributePolygonModel | StoragePolygonModel | null = null;
-  pickingModel: AttributePolygonModel | StoragePolygonModel | null = null;
+  model: PolygonAttributeModel | PolygonStorageModel | null = null;
+  pickingModel: PolygonAttributeModel | PolygonStorageModel | null = null;
   private dataLoadVersion = 0;
 
   constructor(device: Device, props: ArrowPolygonRendererProps = {}) {
@@ -415,16 +415,16 @@ export class ArrowPolygonRenderer {
   }
 
   private createModel(
-    props: Omit<AttributePolygonModelProps, 'picking'> & {picking?: boolean}
-  ): AttributePolygonModel | StoragePolygonModel {
+    props: Omit<PolygonAttributeModelProps, 'picking'> & {picking?: boolean}
+  ): PolygonAttributeModel | PolygonStorageModel {
     if (this.props.model === 'storage') {
       return ArrowPolygonRenderer.createModel(this.device, {model: 'storage', ...props});
     }
     return ArrowPolygonRenderer.createModel(this.device, {model: 'attribute', ...props});
   }
 
-  /** Prepares raw Arrow polygon/style vectors for a GPU-only polygon model. */
-  static async prepareGPUVectors(
+  /** Converts raw Arrow polygon/style vectors for a GPU-only polygon model. */
+  static async convertToGPUVectors(
     device: Device,
     sourceVectors: ArrowPolygonSourceVectors,
     options: ConvertArrowPolygonColumnsToGPUVectorsOptions = {}
@@ -432,30 +432,30 @@ export class ArrowPolygonRenderer {
     return await convertArrowPolygonColumnsToGPUVectors(device, sourceVectors, options);
   }
 
-  /** Creates the selected GPU-only polygon model after Arrow preparation produced GPU vectors. */
+  /** Creates the selected GPU-only polygon model after Arrow conversion produced GPU vectors. */
   static createModel(
     device: Device,
-    props: {model?: 'attribute'} & AttributePolygonModelProps
-  ): AttributePolygonModel;
+    props: {model?: 'attribute'} & PolygonAttributeModelProps
+  ): PolygonAttributeModel;
   static createModel(
     device: Device,
-    props: {model: 'storage'} & StoragePolygonModelProps
-  ): StoragePolygonModel;
+    props: {model: 'storage'} & PolygonStorageModelProps
+  ): PolygonStorageModel;
   static createModel(
     device: Device,
     props: ArrowPolygonRendererModelProps
-  ): AttributePolygonModel | StoragePolygonModel {
+  ): PolygonAttributeModel | PolygonStorageModel {
     switch (props.model) {
       case 'storage': {
         const {model, ...modelProps} = props;
         void model;
-        return new StoragePolygonModel(device, modelProps);
+        return new PolygonStorageModel(device, modelProps);
       }
       case 'attribute':
       case undefined: {
         const {model, ...modelProps} = props;
         void model;
-        return new AttributePolygonModel(device, modelProps);
+        return new PolygonAttributeModel(device, modelProps);
       }
     }
   }
@@ -501,7 +501,7 @@ export async function convertArrowPolygonColumnsToGPUVectors(
   const rowIndexOffset = options.rowIndexOffset ?? 0;
   const sourceBatchIndex = options.sourceBatchIndex ?? 0;
   const id = options.id ?? 'arrow-polygons';
-  return await prepareArrowPolygonGPUVectorsAsync(device, columns, {
+  return await convertArrowPolygonToGPUVectorsAsync(device, columns, {
     id,
     tessellated: options.tessellated,
     color: options.color ?? DEFAULT_POLYGON_RENDERER_COLOR,

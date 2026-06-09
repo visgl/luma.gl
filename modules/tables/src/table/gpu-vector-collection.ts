@@ -6,7 +6,11 @@ import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';
-import {getGPUVectorElementFormat, isVertexListGPUVectorFormat} from './gpu-vector-format';
+import {
+  getGPUVectorElementFormat,
+  isValueListGPUVectorFormat,
+  isVertexListGPUVectorFormat
+} from './gpu-vector-format';
 import {isGPUTableIndexColumnName} from './gpu-schema';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
@@ -127,6 +131,11 @@ function synthesizeGPUVectorBufferLayout<T extends GPUTypeMap>(
   if (isVertexListGPUVectorFormat(vector.format)) {
     throw new Error(
       `${props.ownerName} cannot synthesize a generic buffer layout for vertex-list vector "${vector.name}"`
+    );
+  }
+  if (isValueListGPUVectorFormat(vector.format)) {
+    throw new Error(
+      `${props.ownerName} cannot synthesize a generic buffer layout for value-list vector "${vector.name}"`
     );
   }
   return [
