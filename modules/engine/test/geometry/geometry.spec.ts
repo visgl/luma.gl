@@ -106,5 +106,23 @@ test('Geometry#constructor preserves source attribute and explicit layout names'
   t.ok(geometry.attributes.POSITION, 'semantic attribute name is preserved');
   t.notOk(geometry.attributes.positions, 'semantic attribute has no shader-name alias');
   t.deepEqual(geometry.bufferLayout, [{name: 'POSITION', format: 'float32x3'}]);
+
+  const positions = {value: new Float32Array([1, 1, 1]), size: 3};
+  const geometryWithShaderNameOverride = new Geometry({
+    topology: 'triangle-list',
+    attributes: {
+      POSITION: {value: new Float32Array([0, 0, 0]), size: 3},
+      positions
+    }
+  });
+
+  t.notOk(
+    geometryWithShaderNameOverride.attributes.POSITION,
+    'shader-name override replaces semantic'
+  );
+  t.is(geometryWithShaderNameOverride.attributes.positions, positions, 'shader-name override wins');
+  t.deepEqual(geometryWithShaderNameOverride.bufferLayout, [
+    {name: 'positions', format: 'float32x3'}
+  ]);
   t.end();
 });

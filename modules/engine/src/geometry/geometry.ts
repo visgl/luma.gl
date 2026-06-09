@@ -113,6 +113,13 @@ export class Geometry {
         }
         this.indices = attribute;
       } else {
+        const shaderAttributeName = getGeometryShaderAttributeName(attributeName);
+        const storedAttributeName = Object.keys(this.attributes).find(
+          name => getGeometryShaderAttributeName(name) === shaderAttributeName
+        );
+        if (storedAttributeName) {
+          delete this.attributes[storedAttributeName];
+        }
         this.attributes[attributeName] = attribute;
       }
     }

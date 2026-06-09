@@ -79,7 +79,9 @@ Shader-facing names are separate. Synthesized buffer layouts map supported seman
 boundary: `POSITION` becomes `positions`, `NORMAL` becomes `normals`, `TEXCOORD_0` becomes `texCoords`,
 `TEXCOORD_1` becomes `texCoords1`, and `COLOR_0` becomes `colors`. Caller-provided non-glTF names such as
 `positions`, `clipSpacePositions`, and `faceIndex` are preserved as-is. When writing glTF custom semantics,
-use the spec's `_NAME` convention.
+use the spec's `_NAME` convention. If constructor input contains both a semantic key and its supported
+shader-facing name, the later key wins so built-in geometry attribute overrides keep their legacy behavior
+without storing duplicate CPU aliases.
 
 For non-interleaved geometry, each attribute key normally names one typed-array attribute. For interleaved
 geometry, the attribute key names the packed buffer, and `bufferLayout` maps that buffer back to shader

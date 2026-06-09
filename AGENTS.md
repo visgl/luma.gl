@@ -44,6 +44,7 @@
 - `Geometry.attributes` preserves source keys. Do not camelCase or alias those keys in the CPU geometry container.
 - `bufferLayout`, `GPUGeometry`, and `Model` bindings are shader-facing metadata. Convert source semantics only at adapter and model boundaries.
 - Explicit `bufferLayout` is caller-owned and must not be normalized by `Geometry`.
+- When source keys synthesize the same shader attribute, preserve legacy last-input-wins behavior without storing duplicate CPU aliases.
 - Preserve custom geometry names. When writing glTF custom semantics, follow the glTF `_NAME` convention.
 
 ## GPU table API boundaries
