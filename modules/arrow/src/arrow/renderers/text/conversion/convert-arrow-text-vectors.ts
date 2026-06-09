@@ -64,6 +64,9 @@ import {
   type CharacterMapping,
   type FontAtlas,
   type FontSettings,
+  type GpuExpandedTextStream,
+  type GpuTextDictionaryCompressedStream,
+  type GpuUtf8TextInput,
   type TextDictionaryBatchState,
   type TextDictionaryRenderBatchState,
   type TextDictionaryState,
@@ -94,9 +97,6 @@ import {
   populateUtf8TextIndices,
   type ArrowUtf8Dictionary,
   type ArrowUtf8TextVector,
-  type GpuTextDictionaryCompressedStream,
-  type GpuExpandedTextStream,
-  type GpuUtf8TextInput,
   type Utf8TextIndexTarget
 } from './arrow-text';
 

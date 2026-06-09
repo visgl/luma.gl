@@ -4,11 +4,10 @@
 
 import type {Device} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
-import type {TextDictionaryModelProps} from '@luma.gl/text';
+import type {TextDictionaryModelProps, TextDictionaryState} from '@luma.gl/text';
 import {
   createArrowTextDictionaryStorageState,
-  type ArrowTextDictionaryStorageInputProps,
-  type TextDictionaryState
+  type ArrowTextDictionaryStorageInputProps
 } from './convert-arrow-text-vectors';
 import {
   convertArrowTextToStorage,

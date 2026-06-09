@@ -157,7 +157,11 @@ export class TextDictionaryModel extends Model {
 
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    return drawPreparedTextStorageBatches({
+    return drawPreparedTextStorageBatches<
+      TextDictionaryBatchState,
+      TextDictionaryRenderBatchState,
+      TextDictionaryState
+    >({
       model: this,
       renderPass,
       storageState: this.storageState,

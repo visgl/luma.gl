@@ -13,6 +13,8 @@ import {
   makeData,
   makeVector
 } from 'apache-arrow';
+import type {GPUVector} from '@luma.gl/tables';
+import {getRequiredArrowGPUVectorDataType} from '../gpu/arrow-gpu-data';
 
 /** WGSL floating-point matrix shapes currently exposed through Arrow helpers. */
 export type ArrowMatrixShape =
@@ -230,23 +232,24 @@ export function makeArrowMatrix4x4Vector(
 
 /** Recover matrix metadata from an Arrow vector type produced by this helper. */
 export function getArrowMatrixVectorInfo(
-  vector: Pick<Vector, 'type'>
+  vector: Pick<Vector, 'type'> | Pick<GPUVector, 'dataType'>
 ): ArrowMatrixVectorInfo | null {
-  if (!DataType.isFixedSizeList(vector.type)) {
+  const type = 'type' in vector ? vector.type : getRequiredArrowGPUVectorDataType(vector);
+  if (!DataType.isFixedSizeList(type)) {
     return null;
   }
-  const metadata = vector.type.children[0]?.metadata;
+  const metadata = type.children[0]?.metadata;
   const shape = metadata?.get(MATRIX_SHAPE_METADATA_KEY) as ArrowMatrixShape | undefined;
   const order =
     (metadata?.get(MATRIX_ORDER_METADATA_KEY) as ArrowMatrixOrder | undefined) || 'column-major';
   const layout = metadata?.get(MATRIX_LAYOUT_METADATA_KEY) as ArrowMatrixLayout | undefined;
-  const childType = vector.type.children[0]?.type;
+  const childType = type.children[0]?.type;
   if (!shape || !layout || !(childType instanceof Float32 || childType instanceof Float64)) {
     return null;
   }
 
   const matrixInfo = getMatrixShapeInfo(shape, layout, order, childType);
-  return vector.type.listSize === matrixInfo.physicalComponentCount ? matrixInfo : null;
+  return type.listSize === matrixInfo.physicalComponentCount ? matrixInfo : null;
 }
 
 function getMatrixShapeInfo(

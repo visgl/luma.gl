@@ -5,12 +5,11 @@
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
-import type {TextStorageModelProps} from '@luma.gl/text';
+import type {TextStorageModelProps, TextStorageState} from '@luma.gl/text';
 import {
   createArrowTextStorageState,
   createTextStorageStateFromGPUVectors,
   type ArrowTextStorageInputProps,
-  type TextStorageState,
   type GPUVectorTextStorageInputProps
 } from './convert-arrow-text-vectors';
 import {
