@@ -24,14 +24,6 @@ import type {
   TextGlyphLayout
 } from '@luma.gl/text';
 
-export type {
-  GpuTextDictionaryCompressedStream,
-  GpuTextDictionaryUtf8Input,
-  GpuExpandedTextStream,
-  GpuUtf8TextInput,
-  TextGlyphLayout
-} from '@luma.gl/text';
-
 const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
@@ -102,9 +94,6 @@ type ArrowUtf8DictionaryChunk = {
   readonly dictionaryChunks: readonly ArrowUtf8Chunk[];
   readonly dictionaryCodePointsByIndex: Map<number, readonly number[]>;
 };
-
-/** One-line glyph offsets and atlas frames expanded from Arrow UTF-8 rows. */
-export type ArrowGlyphLayout = TextGlyphLayout;
 
 /** Returns whether a runtime Arrow vector stores UTF-8 labels. */
 export function isArrowUtf8Vector(value: unknown): value is Vector<Utf8> {
@@ -452,7 +441,7 @@ export function buildArrowGlyphLayout({
   baselineOffset: number;
   lineHeight: number;
   characterSet?: Set<string>;
-}): ArrowGlyphLayout {
+}): TextGlyphLayout {
   const decoder = createArrowTextRowDecoder(texts);
   const startIndices = new Array<number>(texts.length + 1);
   startIndices[0] = 0;

@@ -14,7 +14,14 @@ import {
   type TextStorageBuffer
 } from '../model-utils/text-storage-state';
 import type {GpuTextDictionaryCompressedStream} from '../model-utils/gpu-text-types';
-import {drawPreparedTextStorageModelBatch} from '../model-utils/text-storage-model-draw';
+import {
+  applyPreparedTextStorageState,
+  assertPreparedTextStorageDevice,
+  destroyOwnedPreparedTextStorageState,
+  drawPreparedTextStorageBatches,
+  getPreparedTextRenderProps,
+  replacePreparedTextStorageState
+} from '../model-utils/text-storage-model-utils';
 import {
   assertTextDictionaryGPUVectorInputs,
   TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
@@ -130,14 +137,12 @@ export class TextDictionaryModel extends Model {
   protected renderProps: TextDictionaryRenderProps;
 
   constructor(device: Device, props: TextDictionaryModelProps | PreparedTextDictionaryModelProps) {
-    if (device.type !== 'webgpu') {
-      throw new Error('TextDictionaryModel is WebGPU-only');
-    }
+    assertPreparedTextStorageDevice(device, 'TextDictionaryModel');
     if (isTextDictionaryInputProps(props)) {
       assertTextDictionaryGPUVectorInputs(props);
     }
     const storageState = props;
-    const renderProps = getTextDictionaryRenderProps(props);
+    const renderProps = getPreparedTextRenderProps<TextDictionaryRenderProps>(props);
     super(device, createTextDictionaryModelProps(renderProps, storageState));
     this.renderProps = renderProps;
     this.storageState = storageState;
@@ -152,47 +157,42 @@ export class TextDictionaryModel extends Model {
 
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    if (this.storageState.renderBatches.length === 1) {
-      return super.draw(renderPass);
-    }
-
-    let drawSuccess = true;
-    const usePreparedDraw =
-      this.device.type === 'webgpu' && this.storageState.renderBatches.length > 1;
-    for (const renderBatch of this.storageState.renderBatches) {
-      const batch = this.storageState.batches[renderBatch.rowBindingBatchIndex];
-      if (!batch) {
-        throw new Error('TextDictionaryModel render batch is missing its row-binding batch');
+    return drawPreparedTextStorageBatches<
+      TextDictionaryBatchState,
+      TextDictionaryRenderBatchState,
+      TextDictionaryState
+    >({
+      model: this,
+      renderPass,
+      storageState: this.storageState,
+      missingBatchError: 'TextDictionaryModel render batch is missing its row-binding batch',
+      drawModelBatch: () => super.draw(renderPass),
+      prepareBatch: (batch, renderBatch) => {
+        this.setBindings(
+          createTextDictionaryBindings(this.renderProps, this.storageState, batch, renderBatch)
+        );
+      },
+      restoreFirstBatch: () => {
+        const firstBatch = getFirstTextDictionaryBatch(this.storageState);
+        const firstRenderBatch = getFirstTextDictionaryRenderBatch(this.storageState);
+        this.setBindings(
+          createTextDictionaryBindings(
+            this.renderProps,
+            this.storageState,
+            firstBatch,
+            firstRenderBatch
+          )
+        );
       }
-      this.setBindings(
-        createTextDictionaryBindings(this.renderProps, this.storageState, batch, renderBatch)
-      );
-      this.setInstanceCount(renderBatch.glyphCount);
-      drawSuccess =
-        (usePreparedDraw
-          ? drawPreparedTextStorageModelBatch(this, renderPass)
-          : super.draw(renderPass)) && drawSuccess;
-    }
-    const firstBatch = getFirstTextDictionaryBatch(this.storageState);
-    const firstRenderBatch = getFirstTextDictionaryRenderBatch(this.storageState);
-    this.setBindings(
-      createTextDictionaryBindings(
-        this.renderProps,
-        this.storageState,
-        firstBatch,
-        firstRenderBatch
-      )
-    );
-    this.setInstanceCount(this.storageState.glyphCount);
-    return drawSuccess;
+    });
   }
 
   /** Releases owned dictionary text state plus inherited model resources. */
   override destroy(): void {
-    if (this.ownsStorageState) {
-      this.storageState.destroy();
-      this.ownsStorageState = false;
-    }
+    this.ownsStorageState = destroyOwnedPreparedTextStorageState(
+      this.storageState,
+      this.ownsStorageState
+    );
     super.destroy();
   }
 
@@ -202,9 +202,7 @@ export class TextDictionaryModel extends Model {
     ownsStorageState: boolean,
     redrawReason: string
   ): void {
-    if (this.ownsStorageState && this.storageState !== storageState) {
-      this.storageState.destroy();
-    }
+    replacePreparedTextStorageState(this.storageState, storageState, this.ownsStorageState);
     this.storageState = storageState;
     this.renderProps = renderProps;
     this.ownsStorageState = ownsStorageState;
@@ -219,37 +217,7 @@ export class TextDictionaryModel extends Model {
   }
 
   private applyStorageState(storageState: TextDictionaryState): void {
-    this.fontAtlasManager = storageState.fontAtlasManager;
-    this.atlasTexture = storageState.atlasTexture;
-    this.characterSet = storageState.characterSet;
-    this.glyphStream = storageState.glyphStream;
-    this.glyphCount = storageState.glyphCount;
-    this.dictionaryGlyphCount = storageState.dictionaryGlyphCount;
-    this.dictionaryValueCount = storageState.dictionaryValueCount;
-    this.glyphAttributeBuildTimeMs = storageState.glyphAttributeBuildTimeMs;
-    this.glyphAttributeByteLength = storageState.glyphAttributeByteLength;
-    this.compactStreamBuildTimeMs = storageState.compactStreamBuildTimeMs;
-    this.compactStreamByteLength = storageState.compactStreamByteLength;
-    this.generatedRenderBufferByteLength = storageState.generatedRenderBufferByteLength;
-    this.rowStorageByteLength = storageState.rowStorageByteLength;
-    this.glyphDefinitionStorageByteLength = storageState.glyphDefinitionStorageByteLength;
-    this.transientComputeInputByteLength = storageState.transientComputeInputByteLength;
-    this.batches = storageState.batches;
-    this.renderBatches = storageState.renderBatches;
-    this.rowPositionsBuffer = storageState.rowPositionsBuffer;
-    this.rowColorsBuffer = storageState.rowColorsBuffer;
-    this.rowAnglesBuffer = storageState.rowAnglesBuffer;
-    this.rowSizesBuffer = storageState.rowSizesBuffer;
-    this.rowPixelOffsetsBuffer = storageState.rowPixelOffsetsBuffer;
-    this.rowTextAnchorsBuffer = storageState.rowTextAnchorsBuffer;
-    this.rowAlignmentBaselinesBuffer = storageState.rowAlignmentBaselinesBuffer;
-    this.rowClipRectsBuffer = storageState.rowClipRectsBuffer;
-    this.rowDictionaryRecordsBuffer = storageState.rowDictionaryRecordsBuffer;
-    this.dictionaryGlyphRangesBuffer = storageState.dictionaryGlyphRangesBuffer;
-    this.dictionaryGlyphRecordsBuffer = storageState.dictionaryGlyphRecordsBuffer;
-    this.dictionaryRenderConfigBuffer = storageState.dictionaryRenderConfigBuffer;
-    this.styleConfigBuffer = storageState.styleConfigBuffer;
-    this.glyphFramesBuffer = storageState.glyphFramesBuffer;
+    applyPreparedTextStorageState(this, storageState);
   }
 }
 
@@ -297,36 +265,6 @@ function createTextDictionaryBindings(
     textDictionaryRenderConfig: renderBatch.dictionaryRenderConfigBuffer,
     ...(storageState.atlasTexture ? {fontAtlasTexture: storageState.atlasTexture} : {})
   };
-}
-
-function getTextDictionaryRenderProps(
-  props: TextDictionaryModelProps | PreparedTextDictionaryModelProps
-): TextDictionaryRenderProps {
-  const {
-    positions: _positions,
-    texts: _texts,
-    colors: _colors,
-    angles: _angles,
-    sizes: _sizes,
-    pixelOffsets: _pixelOffsets,
-    textAnchors: _textAnchors,
-    alignmentBaselines: _alignmentBaselines,
-    clipRects: _clipRects,
-    color: _color,
-    angle: _angle,
-    size: _size,
-    pixelOffset: _pixelOffset,
-    textAnchor: _textAnchor,
-    alignmentBaseline: _alignmentBaseline,
-    characterSet: _characterSet,
-    fontSettings: _fontSettings,
-    lineHeight: _lineHeight,
-    characterMapping: _characterMapping,
-    fontAtlas: _fontAtlas,
-    ownsStorageState: _ownsStorageState,
-    ...renderProps
-  } = props;
-  return renderProps;
 }
 
 function isTextDictionaryInputProps(

@@ -37,7 +37,7 @@ export type GPUDataFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> 
   nullBitmap?: Uint8Array;
   /** Optional number of uploaded value bytes referenced by this data chunk. */
   valueByteLength?: number;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   dataType?: unknown;
 };
 
@@ -50,9 +50,7 @@ export type GPUDataFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> 
 export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
   /** GPU buffer containing this chunk's bytes. */
   readonly buffer: Buffer | DynamicBuffer;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
-  readonly type: any;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   readonly dataType?: unknown;
   /** Canonical memory-layout descriptor for this data range, when this chunk has one value view. */
   readonly format?: T;
@@ -96,7 +94,6 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
   }: GPUDataFromBufferProps<T>) {
     const formatInfo = format ? getGPUVectorFormatInfo(format) : undefined;
     this.buffer = buffer;
-    this.type = dataType ?? format;
     this.dataType = dataType;
     this.format = format;
     this.length = length;

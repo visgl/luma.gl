@@ -680,7 +680,7 @@ async function makeEventTimesGPUVector(
         origin: props.timeOrigin
       }
     );
-    if (!(preparedTimeColumn.temporal.type instanceof arrow.Float32)) {
+    if (!(preparedTimeColumn.temporal.dataType instanceof arrow.Float32)) {
       preparedTimeColumn.destroy();
       throw new Error('ArrowPointRenderer temporal time column did not convert to Float32');
     }

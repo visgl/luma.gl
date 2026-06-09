@@ -660,7 +660,7 @@ function makeXYZMEventStartsGPUVector(
 function getPreparedScalarTemporalVector(
   preparedTemporalColumn: PreparedArrowTemporalGPUVector<'float32'>
 ): GPUVector<'float32'> {
-  if (!(preparedTemporalColumn.temporal.type instanceof arrow.Float32)) {
+  if (!(preparedTemporalColumn.temporal.dataType instanceof arrow.Float32)) {
     throw new Error('Temporal starfield requires scalar prepared Float32 temporal rows');
   }
   return preparedTemporalColumn.temporal;

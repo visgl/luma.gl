@@ -347,9 +347,9 @@ function getMatrixSourceScalarIndex(
 }
 
 function getRequiredArrowMatrixVectorInfo(
-  vector: Pick<Vector, 'type'> | Pick<GPUVector, 'type'>
+  vector: Pick<Vector, 'type'> | Pick<GPUVector, 'dataType'>
 ): ArrowMatrixVectorInfo {
-  const matrixInfo = getArrowMatrixVectorInfo(vector as Pick<Vector, 'type'>);
+  const matrixInfo = getArrowMatrixVectorInfo(vector);
   if (!matrixInfo) {
     throw new Error(
       'convertArrowMatrixToGPUVector requires FixedSizeList<Float32|Float64> matrix metadata'

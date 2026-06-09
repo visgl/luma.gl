@@ -757,7 +757,8 @@ function getDggsCellPolygonPointCount(encoding: DggsCellEncoding): number {
 }
 
 function assertDggsCellKeyVector(keys: GPUVector, callerName: string): void {
-  if (!DataType.isInt(keys.type) || keys.type.bitWidth !== 64 || keys.type.isSigned !== false) {
+  const keyType = keys.dataType;
+  if (!DataType.isInt(keyType) || keyType.bitWidth !== 64 || keyType.isSigned !== false) {
     throw new Error(`${callerName} requires Uint64 keys`);
   }
 }

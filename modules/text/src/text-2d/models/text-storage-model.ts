@@ -15,7 +15,14 @@ import {
   type TextStorageState
 } from '../model-utils/text-storage-state';
 import type {GpuExpandedTextStream} from '../model-utils/gpu-text-types';
-import {drawPreparedTextStorageModelBatch} from '../model-utils/text-storage-model-draw';
+import {
+  applyPreparedTextStorageState,
+  assertPreparedTextStorageDevice,
+  destroyOwnedPreparedTextStorageState,
+  drawPreparedTextStorageBatches,
+  getPreparedTextRenderProps,
+  replacePreparedTextStorageState
+} from '../model-utils/text-storage-model-utils';
 import {
   assertTextStorageGPUVectorInputs,
   TEXT_STORAGE_GPU_INPUT_SCHEMA,
@@ -135,14 +142,12 @@ export class TextStorageModel extends Model {
   protected renderProps: TextStorageRenderProps;
 
   constructor(device: Device, props: TextStorageModelProps | PreparedTextStorageModelProps) {
-    if (device.type !== 'webgpu') {
-      throw new Error('TextStorageModel is WebGPU-only');
-    }
+    assertPreparedTextStorageDevice(device, 'TextStorageModel');
     if (isTextStorageInputProps(props)) {
       assertTextStorageGPUVectorInputs(props);
     }
     const storageState = props;
-    const renderProps = getTextStorageRenderProps(props);
+    const renderProps = getPreparedTextRenderProps<TextStorageRenderProps>(props);
     super(device, createTextStorageModelProps(renderProps, storageState));
     this.renderProps = renderProps;
     this.storageState = storageState;
@@ -157,48 +162,48 @@ export class TextStorageModel extends Model {
 
   /** Draws each generated storage text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    if (this.storageState.renderBatches.length === 1) {
-      return super.draw(renderPass);
-    }
-
-    let drawSuccess = true;
-    const usePreparedDraw =
-      this.device.type === 'webgpu' && this.storageState.renderBatches.length > 1;
-    for (const renderBatch of this.storageState.renderBatches) {
-      const batch = this.storageState.batches[renderBatch.rowBindingBatchIndex];
-      if (!batch) {
-        throw new Error('TextStorageModel render batch is missing its row-binding batch');
+    return drawPreparedTextStorageBatches<
+      TextStorageBatchState,
+      TextStorageRenderBatchState,
+      TextStorageState
+    >({
+      model: this,
+      renderPass,
+      storageState: this.storageState,
+      missingBatchError: 'TextStorageModel render batch is missing its row-binding batch',
+      drawModelBatch: () => super.draw(renderPass),
+      prepareBatch: (batch, renderBatch) => {
+        this.setAttributes({
+          [COMPACT_GLYPH_VERTEX_DATA]: renderBatch.compactGlyphVertexData
+        });
+        this.setBindings(
+          createTextStorageBindings(this.renderProps, this.storageState, batch, renderBatch)
+        );
+      },
+      restoreFirstBatch: () => {
+        const firstBatch = getFirstTextStorageBatch(this.storageState);
+        const firstRenderBatch = getFirstTextStorageRenderBatch(this.storageState);
+        this.setAttributes({
+          [COMPACT_GLYPH_VERTEX_DATA]: firstRenderBatch.compactGlyphVertexData
+        });
+        this.setBindings(
+          createTextStorageBindings(
+            this.renderProps,
+            this.storageState,
+            firstBatch,
+            firstRenderBatch
+          )
+        );
       }
-      this.setAttributes({
-        [COMPACT_GLYPH_VERTEX_DATA]: renderBatch.compactGlyphVertexData
-      });
-      this.setBindings(
-        createTextStorageBindings(this.renderProps, this.storageState, batch, renderBatch)
-      );
-      this.setInstanceCount(renderBatch.glyphCount);
-      drawSuccess =
-        (usePreparedDraw
-          ? drawPreparedTextStorageModelBatch(this, renderPass)
-          : super.draw(renderPass)) && drawSuccess;
-    }
-    const firstBatch = getFirstTextStorageBatch(this.storageState);
-    const firstRenderBatch = getFirstTextStorageRenderBatch(this.storageState);
-    this.setAttributes({
-      [COMPACT_GLYPH_VERTEX_DATA]: firstRenderBatch.compactGlyphVertexData
     });
-    this.setBindings(
-      createTextStorageBindings(this.renderProps, this.storageState, firstBatch, firstRenderBatch)
-    );
-    this.setInstanceCount(this.storageState.glyphCount);
-    return drawSuccess;
   }
 
   /** Releases owned storage text state plus inherited model resources. */
   override destroy(): void {
-    if (this.ownsStorageState) {
-      this.storageState.destroy();
-      this.ownsStorageState = false;
-    }
+    this.ownsStorageState = destroyOwnedPreparedTextStorageState(
+      this.storageState,
+      this.ownsStorageState
+    );
     super.destroy();
   }
 
@@ -208,9 +213,7 @@ export class TextStorageModel extends Model {
     ownsStorageState: boolean,
     redrawReason: string
   ): void {
-    if (this.ownsStorageState && this.storageState !== storageState) {
-      this.storageState.destroy();
-    }
+    replacePreparedTextStorageState(this.storageState, storageState, this.ownsStorageState);
     this.storageState = storageState;
     this.renderProps = renderProps;
     this.ownsStorageState = ownsStorageState;
@@ -228,35 +231,7 @@ export class TextStorageModel extends Model {
   }
 
   private applyStorageState(storageState: TextStorageState): void {
-    this.fontAtlasManager = storageState.fontAtlasManager;
-    this.atlasTexture = storageState.atlasTexture;
-    this.characterSet = storageState.characterSet;
-    this.glyphStream = storageState.glyphStream;
-    this.glyphCount = storageState.glyphCount;
-    this.glyphAttributeBuildTimeMs = storageState.glyphAttributeBuildTimeMs;
-    this.glyphAttributeByteLength = storageState.glyphAttributeByteLength;
-    this.compactStreamBuildTimeMs = storageState.compactStreamBuildTimeMs;
-    this.compactStreamByteLength = storageState.compactStreamByteLength;
-    this.generatedRenderBufferByteLength = storageState.generatedRenderBufferByteLength;
-    this.renderControlByteLength = storageState.renderControlByteLength;
-    this.rowStorageByteLength = storageState.rowStorageByteLength;
-    this.glyphDefinitionStorageByteLength = storageState.glyphDefinitionStorageByteLength;
-    this.transientComputeInputByteLength = storageState.transientComputeInputByteLength;
-    this.batches = storageState.batches;
-    this.renderBatches = storageState.renderBatches;
-    this.rowPositionsBuffer = storageState.rowPositionsBuffer;
-    this.rowColorsBuffer = storageState.rowColorsBuffer;
-    this.rowAnglesBuffer = storageState.rowAnglesBuffer;
-    this.rowSizesBuffer = storageState.rowSizesBuffer;
-    this.rowPixelOffsetsBuffer = storageState.rowPixelOffsetsBuffer;
-    this.rowTextAnchorsBuffer = storageState.rowTextAnchorsBuffer;
-    this.rowAlignmentBaselinesBuffer = storageState.rowAlignmentBaselinesBuffer;
-    this.rowClipRectsBuffer = storageState.rowClipRectsBuffer;
-    this.rowGlyphStartsBuffer = storageState.rowGlyphStartsBuffer;
-    this.styleConfigBuffer = storageState.styleConfigBuffer;
-    this.storageRenderConfigBuffer = storageState.storageRenderConfigBuffer;
-    this.glyphFramesBuffer = storageState.glyphFramesBuffer;
-    this.compactGlyphVertexData = storageState.compactGlyphVertexData;
+    applyPreparedTextStorageState(this, storageState);
   }
 }
 
@@ -367,36 +342,6 @@ function createTextStorageBindings(
     textStorageRenderConfig: renderBatch.storageRenderConfigBuffer,
     ...(storageState.atlasTexture ? {fontAtlasTexture: storageState.atlasTexture} : {})
   };
-}
-
-function getTextStorageRenderProps(
-  props: TextStorageModelProps | PreparedTextStorageModelProps
-): TextStorageRenderProps {
-  const {
-    positions: _positions,
-    texts: _texts,
-    colors: _colors,
-    angles: _angles,
-    sizes: _sizes,
-    pixelOffsets: _pixelOffsets,
-    textAnchors: _textAnchors,
-    alignmentBaselines: _alignmentBaselines,
-    clipRects: _clipRects,
-    color: _color,
-    angle: _angle,
-    size: _size,
-    pixelOffset: _pixelOffset,
-    textAnchor: _textAnchor,
-    alignmentBaseline: _alignmentBaseline,
-    characterSet: _characterSet,
-    fontSettings: _fontSettings,
-    lineHeight: _lineHeight,
-    characterMapping: _characterMapping,
-    fontAtlas: _fontAtlas,
-    ownsStorageState: _ownsStorageState,
-    ...renderProps
-  } = props;
-  return renderProps;
 }
 
 function isTextStorageInputProps(

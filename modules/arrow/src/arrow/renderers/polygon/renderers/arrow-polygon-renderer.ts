@@ -103,9 +103,6 @@ export type ArrowPolygonRendererDataBatchUpdate = ArrowRecordBatchLoadUpdate<
   ArrowPolygonRendererInput
 >;
 
-/** Raw Arrow polygon columns resolved before GPU vector conversion. */
-export type ArrowPolygonColumns = ArrowPolygonSourceVectors;
-
 /** Options for converting Arrow polygon columns into prepared GPU vectors. */
 export type ConvertArrowPolygonColumnsToGPUVectorsOptions = Pick<
   ArrowPolygonRendererProps,
@@ -115,9 +112,6 @@ export type ConvertArrowPolygonColumnsToGPUVectorsOptions = Pick<
   sourceBatchIndex?: number;
   id?: string;
 };
-
-/** Prepared polygon GPU vectors returned by Arrow conversion. */
-export type ArrowPolygonGPUVectors = PreparedArrowPolygonGPUVectors;
 
 /** Prepared polygon GPU vectors plus renderer-facing metrics. */
 export type ArrowPolygonRendererInput = PreparedArrowPolygonGPUVectors & {
@@ -428,7 +422,7 @@ export class ArrowPolygonRenderer {
     device: Device,
     sourceVectors: ArrowPolygonSourceVectors,
     options: ConvertArrowPolygonColumnsToGPUVectorsOptions = {}
-  ): Promise<ArrowPolygonGPUVectors> {
+  ): Promise<PreparedArrowPolygonGPUVectors> {
     return await convertArrowPolygonColumnsToGPUVectors(device, sourceVectors, options);
   }
 
@@ -495,9 +489,9 @@ export async function prepareArrowPolygonInput(
 /** Converts Arrow polygon columns into GPU vectors without creating render models or metrics. */
 export async function convertArrowPolygonColumnsToGPUVectors(
   device: Device,
-  columns: ArrowPolygonColumns,
+  columns: ArrowPolygonSourceVectors,
   options: ConvertArrowPolygonColumnsToGPUVectorsOptions = {}
-): Promise<ArrowPolygonGPUVectors> {
+): Promise<PreparedArrowPolygonGPUVectors> {
   const rowIndexOffset = options.rowIndexOffset ?? 0;
   const sourceBatchIndex = options.sourceBatchIndex ?? 0;
   const id = options.id ?? 'arrow-polygons';

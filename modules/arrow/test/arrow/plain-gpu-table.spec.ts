@@ -49,7 +49,7 @@ test('GPUTable creates GPU vectors from shader-compatible Arrow table columns', 
   t.ok(gpuTable.gpuVectors.positions instanceof GPUVector, 'creates a positions GPU vector');
   t.ok(gpuTable.gpuVectors.colors instanceof GPUVector, 'creates a colors GPU vector');
   t.equal(
-    gpuTable.gpuVectors.positions.type,
+    gpuTable.gpuVectors.positions.dataType,
     table.getChild('positions')?.type,
     'vector exposes type'
   );
@@ -190,7 +190,7 @@ test('GPUTable preserves record batch boundaries with real batch-owned GPU buffe
   t.ok(gpuTable.batches[0] instanceof GPURecordBatch, 'creates GPURecordBatch views');
   t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'keeps vector data chunk boundaries');
   t.ok(
-    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.type as arrow.DataType),
+    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.dataType as arrow.DataType),
     'aggregate vectors preserve adapter data type metadata'
   );
   t.equal(gpuTable.batches[1].numRows, 2, 'tracks rows per record batch');
@@ -250,7 +250,7 @@ test('GPUTable packBatches collapses owned batches in place', t => {
   t.equal(gpuTable.batches[0].numRows, 4, 'preserves the packed row count');
   t.equal(gpuTable.gpuVectors.positions.data.length, 1, 'exposes one packed aggregate chunk');
   t.ok(
-    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.type as arrow.DataType),
+    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.dataType as arrow.DataType),
     'packed vectors preserve adapter data type metadata'
   );
   t.equal(
@@ -364,7 +364,7 @@ test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers',
   );
   t.equal(gpuTable.gpuVectors.texts.data.length, 2, 'keeps UTF-8 aggregate chunk boundaries');
   t.ok(
-    arrow.DataType.isUtf8(gpuTable.gpuVectors.texts.type as arrow.DataType),
+    arrow.DataType.isUtf8(gpuTable.gpuVectors.texts.dataType as arrow.DataType),
     'aggregate UTF-8 vectors preserve adapter data type metadata'
   );
 
@@ -458,7 +458,7 @@ test('GPUTable detachVector removes one live column and transfers its ownership'
   );
   t.equal(detachedColors.data.length, 2, 'returns all detached batch data chunks');
   t.ok(
-    arrow.DataType.isFixedSizeList(detachedColors.type as arrow.DataType),
+    arrow.DataType.isFixedSizeList(detachedColors.dataType as arrow.DataType),
     'detached vectors preserve adapter data type metadata'
   );
   t.ok(detachedColors.ownsBuffer, 'detached vector retains the removed GPU ownership');
