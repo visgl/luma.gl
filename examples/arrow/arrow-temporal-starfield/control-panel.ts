@@ -7,7 +7,7 @@ const TIME_COLUMN_SELECTOR_ID = 'arrow-temporal-starfield-time-column';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-temporal-starfield-streaming-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-temporal-starfield-streaming-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-temporal-starfield-streaming-status-label';
-const PREPARATION_PATH_ID = 'arrow-temporal-starfield-preparation-path';
+const CONVERSION_PATH_ID = 'arrow-temporal-starfield-conversion-path';
 const CURRENT_TIMESTAMP_ID = 'arrow-temporal-starfield-current-timestamp';
 const POSITIONS_COLUMN_ID = 'arrow-temporal-starfield-positions-column';
 const EVENT_STARTS_COLUMN_ID = 'arrow-temporal-starfield-event-starts-column';
@@ -22,7 +22,7 @@ export type ArrowTemporalStarfieldControlPanelState = {
 };
 
 export type ArrowTemporalStarfieldControlPanelLabels = {
-  preparationPath: string;
+  conversionPath: string;
   currentTimestamp: string;
   positionsColumn: string;
   eventStartsColumn: string;
@@ -49,7 +49,7 @@ export class ArrowTemporalStarfieldControlPanel {
   private streamingBatchStatusRow: HTMLElement | null = null;
   private streamingBatchFill: HTMLElement | null = null;
   private streamingBatchStatusLabel: HTMLElement | null = null;
-  private preparationPathLabel: HTMLElement | null = null;
+  private conversionPathLabel: HTMLElement | null = null;
   private currentTimestampLabel: HTMLElement | null = null;
   private positionsColumnLabel: HTMLElement | null = null;
   private eventStartsColumnLabel: HTMLElement | null = null;
@@ -80,7 +80,7 @@ export class ArrowTemporalStarfieldControlPanel {
     this.streamingBatchStatusRow ??= document.getElementById(STREAMING_BATCH_STATUS_ROW_ID);
     this.streamingBatchFill ??= document.getElementById(STREAMING_BATCH_FILL_ID);
     this.streamingBatchStatusLabel ??= document.getElementById(STREAMING_BATCH_STATUS_LABEL_ID);
-    this.preparationPathLabel ??= document.getElementById(PREPARATION_PATH_ID);
+    this.conversionPathLabel ??= document.getElementById(CONVERSION_PATH_ID);
     this.currentTimestampLabel ??= document.getElementById(CURRENT_TIMESTAMP_ID);
     this.positionsColumnLabel ??= document.getElementById(POSITIONS_COLUMN_ID);
     this.eventStartsColumnLabel ??= document.getElementById(EVENT_STARTS_COLUMN_ID);
@@ -98,7 +98,7 @@ export class ArrowTemporalStarfieldControlPanel {
     this.streamingBatchStatusRow = null;
     this.streamingBatchFill = null;
     this.streamingBatchStatusLabel = null;
-    this.preparationPathLabel = null;
+    this.conversionPathLabel = null;
     this.currentTimestampLabel = null;
     this.positionsColumnLabel = null;
     this.eventStartsColumnLabel = null;
@@ -126,7 +126,7 @@ export class ArrowTemporalStarfieldControlPanel {
   }
 
   setLabels(labels: Partial<ArrowTemporalStarfieldControlPanelLabels>): void {
-    setTextContent(this.preparationPathLabel, labels.preparationPath);
+    setTextContent(this.conversionPathLabel, labels.conversionPath);
     setTextContent(this.currentTimestampLabel, labels.currentTimestamp);
     setTextContent(this.positionsColumnLabel, labels.positionsColumn);
     setTextContent(this.eventStartsColumnLabel, labels.eventStartsColumn);
@@ -193,7 +193,7 @@ export class ArrowTemporalStarfieldControlPanel {
 
 export function makeArrowTemporalStarfieldControlPanelHtml(): string {
   return `
-<p>Prepares Arrow <code>Timestamp</code> and <code>Duration</code> columns as relative <code>Float32</code> GPU rows, then uses them as per-star animation inputs.</p>
+<p>Converts Arrow <code>Timestamp</code> and <code>Duration</code> columns as relative <code>Float32</code> GPU rows, then uses them as per-star animation inputs.</p>
 <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.7rem; align-items: center;">
   <label for="${TIME_COLUMN_SELECTOR_ID}">Time</label>
   <select id="${TIME_COLUMN_SELECTOR_ID}">
@@ -205,8 +205,8 @@ export function makeArrowTemporalStarfieldControlPanelHtml(): string {
     <option value="attributes">Attributes</option>
     <option value="storage">Storage</option>
   </select>
-  <span>Prepare</span>
-  <strong id="${PREPARATION_PATH_ID}"></strong>
+  <span>Convert</span>
+  <strong id="${CONVERSION_PATH_ID}"></strong>
   <span>Current</span>
   <strong id="${CURRENT_TIMESTAMP_ID}"></strong>
 </div>
@@ -216,7 +216,7 @@ export function makeArrowTemporalStarfieldControlPanelHtml(): string {
 </div>
 <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem 0.7rem; margin-top: 0.65rem; font-size: 0.78rem;">
   <strong>Column</strong>
-  <strong>Prepared / origin</strong>
+  <strong>Converted / origin</strong>
   <code id="${POSITIONS_COLUMN_ID}" style="white-space: normal; overflow-wrap: anywhere;">positions: FixedSizeList&lt;Float32, 2&gt;</code>
   <span><code>vec2 Float32</code></span>
   <code id="${EVENT_STARTS_COLUMN_ID}" style="white-space: normal; overflow-wrap: anywhere;">eventStarts: TimestampMillisecond</code>

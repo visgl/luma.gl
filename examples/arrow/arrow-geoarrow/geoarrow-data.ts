@@ -506,7 +506,7 @@ function getGeometryMetrics(rows: GeometryRow[]): GeoArrowRendererMetrics {
     lineRowCount,
     polygonRowCount,
     skippedRowCount,
-    preparationTimeMs: 0
+    conversionTimeMs: 0
   };
 }
 

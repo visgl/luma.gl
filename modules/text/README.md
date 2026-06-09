@@ -3,9 +3,9 @@
 Experimental 2D text utilities for luma.gl. The package contains:
 
 - GPU-only text input schemas and preparation primitives.
-- `AttributeTextModel`, a one-line label renderer that renders prepared attribute vertex buffers.
-- `StorageTextModel`, a WebGPU-only renderer that renders prepared storage-backed glyph state.
-- `DictionaryTextModel`, a WebGPU-only renderer that renders prepared dictionary-compressed glyph state.
+- `TextAttributeModel`, a one-line label renderer that renders prepared attribute vertex buffers.
+- `TextStorageModel`, a WebGPU-only renderer that renders prepared storage-backed glyph state.
+- `TextDictionaryModel`, a WebGPU-only renderer that renders prepared dictionary-compressed glyph state.
 
 ## Usage
 
@@ -17,7 +17,7 @@ import {
   makeArrowFixedSizeListVector
 } from '@luma.gl/arrow';
 import {
-  AttributeTextModel
+  TextAttributeModel
 } from '@luma.gl/text';
 
 const sourceVectors = {
@@ -33,7 +33,7 @@ const convertedText = convertArrowTextToAttribute(device, {
   sourceVectors
 });
 
-const model = new AttributeTextModel(device, convertArrowTextToAttributeModelProps(device, {
+const model = new TextAttributeModel(device, convertArrowTextToAttributeModelProps(device, {
   ...convertedText,
   characterSet: 'auto',
   fontSettings: {sdf: true}

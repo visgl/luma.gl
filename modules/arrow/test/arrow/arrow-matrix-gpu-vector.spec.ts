@@ -10,16 +10,16 @@ import {
   MATRIX_ORDER_METADATA_KEY,
   MATRIX_SHAPE_METADATA_KEY,
   makeArrowMatrixVector,
-  prepareArrowMatrixGPUVector,
+  convertArrowMatrixToGPUVector,
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-test('prepareArrowMatrixGPUVector keeps canonical Float32 matrices GPU-ready', async t => {
+test('convertArrowMatrixToGPUVector keeps canonical Float32 matrices GPU-ready', async t => {
   const device = new NullDevice({});
   const source = makeArrowMatrixVector('mat4x3', new Float32Array(12));
-  const prepared = await prepareArrowMatrixGPUVector(device, source);
+  const prepared = await convertArrowMatrixToGPUVector(device, source);
   const result = await readArrowGPUVectorAsync(prepared.matrix);
 
   t.deepEqual(
@@ -48,7 +48,7 @@ test('prepareArrowMatrixGPUVector keeps canonical Float32 matrices GPU-ready', a
   t.end();
 });
 
-test('prepareArrowMatrixGPUVector normalizes packed row-major Float64 matrices', async t => {
+test('convertArrowMatrixToGPUVector normalizes packed row-major Float64 matrices', async t => {
   const device = new NullDevice({});
   const source = makeRawMatrixVector(
     new arrow.Float64(),
@@ -60,7 +60,7 @@ test('prepareArrowMatrixGPUVector normalizes packed row-major Float64 matrices',
       layout: 'packed'
     }
   );
-  const prepared = await prepareArrowMatrixGPUVector(device, source);
+  const prepared = await convertArrowMatrixToGPUVector(device, source);
   const result = await readArrowGPUVectorAsync(prepared.matrix);
 
   t.deepEqual(

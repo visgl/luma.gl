@@ -14,7 +14,7 @@ type ArrowDocsTab = {
 export type ArrowDocsTabId =
   | 'overview'
   | 'arrow-representations'
-  | 'preparation'
+  | 'conversion'
   | 'supported-types'
   | 'utilities'
   | 'deck-api';
@@ -22,7 +22,7 @@ export type ArrowDocsTabId =
 const ARROW_DOCS_TABS: ArrowDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/arrow'},
   {id: 'arrow-representations', label: 'Arrow Representations', href: '/docs/api-reference/arrow/arrow-representations'},
-  {id: 'preparation', label: 'Preparation', href: '/docs/api-reference/arrow/arrow-preparation'},
+  {id: 'conversion', label: 'Conversion', href: '/docs/api-reference/arrow/arrow-conversion'},
   {id: 'supported-types', label: 'Supported Types', href: '/docs/api-reference/arrow/supported-arrow-types'},
   {id: 'utilities', label: 'Utilities', href: '/docs/api-reference/arrow/arrow-utils'},
   {id: 'deck-api', label: 'deck.gl API', href: '/docs/api-reference/arrow/deck-target-api'}

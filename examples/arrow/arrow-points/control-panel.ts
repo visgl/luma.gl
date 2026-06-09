@@ -135,14 +135,14 @@ export class ArrowPointControlPanel {
       TOTAL_GPU_EXPANSION_ID,
       formatExpansionRatio(totalGpuByteLength, totalArrowByteLength)
     );
-    setLabel(TOTAL_BUILD_TIME_ID, formatTimeMs(metrics.preparationTimeMs));
+    setLabel(TOTAL_BUILD_TIME_ID, formatTimeMs(metrics.conversionTimeMs));
     setLabel(POINT_ARROW_BYTES_ID, formatByteLength(metrics.pointArrowByteLength));
     setLabel(POINT_GPU_BYTES_ID, formatByteLength(metrics.pointGpuByteLength));
     setLabel(
       POINT_GPU_EXPANSION_ID,
       formatExpansionRatio(metrics.pointGpuByteLength, metrics.pointArrowByteLength)
     );
-    setLabel(POINT_BUILD_TIME_ID, formatTimeMs(metrics.preparationTimeMs));
+    setLabel(POINT_BUILD_TIME_ID, formatTimeMs(metrics.conversionTimeMs));
     setLabel(STYLING_ARROW_BYTES_ID, formatByteLength(metrics.stylingArrowByteLength));
     setLabel(STYLING_GPU_BYTES_ID, formatByteLength(metrics.stylingGpuByteLength));
     setLabel(

@@ -712,42 +712,42 @@ export function createGpuUtf8ExpandedInputFromBuffers(
 export function createGpuDictionaryUtf8ExpandedInput(
   device: Device,
   options: GpuTextExpansionResourceOptions,
-  dictionaryTextInput: GpuDictionaryUtf8TextInput
+  textDictionaryInput: GpuDictionaryUtf8TextInput
 ): GpuDictionaryUtf8ExpandedInputState {
   return {
     dictionaryValueByteRangesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-dictionary-value-byte-ranges`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.dictionaryValueByteRanges.byteLength > 0
-          ? dictionaryTextInput.dictionaryValueByteRanges
+        textDictionaryInput.dictionaryValueByteRanges.byteLength > 0
+          ? textDictionaryInput.dictionaryValueByteRanges
           : new Uint32Array(2)
     }),
     dictionaryUtf8BytesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-dictionary-utf8-bytes`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.packedDictionaryUtf8Bytes.byteLength > 0
-          ? dictionaryTextInput.packedDictionaryUtf8Bytes
+        textDictionaryInput.packedDictionaryUtf8Bytes.byteLength > 0
+          ? textDictionaryInput.packedDictionaryUtf8Bytes
           : new Uint32Array(1)
     }),
     rowDictionaryIndicesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-row-dictionary-indices`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.rowDictionaryIndices.byteLength > 0
-          ? dictionaryTextInput.rowDictionaryIndices
+        textDictionaryInput.rowDictionaryIndices.byteLength > 0
+          ? textDictionaryInput.rowDictionaryIndices
           : new Uint32Array(1)
     }),
     rowOutputGlyphRangesBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-row-output-glyph-ranges`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data:
-        dictionaryTextInput.rowOutputGlyphRanges.byteLength > 0
-          ? dictionaryTextInput.rowOutputGlyphRanges
+        textDictionaryInput.rowOutputGlyphRanges.byteLength > 0
+          ? textDictionaryInput.rowOutputGlyphRanges
           : new Uint32Array(2)
     }),
-    byteLength: dictionaryTextInput.inputByteLength
+    byteLength: textDictionaryInput.inputByteLength
   };
 }
 

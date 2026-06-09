@@ -25,7 +25,7 @@ const TEXT_DICTIONARY_INDEX_FORMATS = [
 const TEXT_FORMATS = ['value-list<uint8>', ...TEXT_DICTIONARY_INDEX_FORMATS] as const;
 
 /** Prepared GPU inputs consumed by attribute-backed 2D text models. */
-export const ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA = [
+export const TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA = [
   {
     name: 'positions',
     kind: 'positions',
@@ -78,7 +78,7 @@ export const ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA = [
 ] as const satisfies ModelGPUInputSchema;
 
 /** Prepared GPU inputs consumed by storage-backed 2D text models. */
-export const STORAGE_TEXT_GPU_INPUT_SCHEMA = [
+export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
   {
     name: 'positions',
     kind: 'positions',
@@ -145,7 +145,7 @@ export const STORAGE_TEXT_GPU_INPUT_SCHEMA = [
 ] as const satisfies ModelGPUInputSchema;
 
 /** Prepared GPU inputs consumed by dictionary storage-backed 2D text models. */
-export const DICTIONARY_TEXT_GPU_INPUT_SCHEMA = [
+export const TEXT_DICTIONARY_GPU_INPUT_SCHEMA = [
   {
     name: 'positions',
     kind: 'positions',
@@ -160,7 +160,7 @@ export const DICTIONARY_TEXT_GPU_INPUT_SCHEMA = [
     formats: TEXT_DICTIONARY_INDEX_FORMATS,
     source: 'source-mappable'
   },
-  ...STORAGE_TEXT_GPU_INPUT_SCHEMA.slice(2)
+  ...TEXT_STORAGE_GPU_INPUT_SCHEMA.slice(2)
 ] as const satisfies ModelGPUInputSchema;
 
 /** GPUVector inputs shared by all 2D text model preparation paths. */
@@ -195,13 +195,13 @@ export interface TextInputProps extends ModelProps {
 }
 
 /** GPUVector inputs for attribute-backed 2D text preparation. */
-export interface AttributeTextInputProps extends TextInputProps {
+export interface TextAttributeInputProps extends TextInputProps {
   /** Optional GPU packed RGBA8 text colors aligned with label rows or label characters. */
   colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
 }
 
 /** GPUVector inputs for storage-backed 2D text preparation. */
-export interface StorageTextInputProps extends Omit<TextInputProps, 'texts'> {
+export interface TextStorageInputProps extends Omit<TextInputProps, 'texts'> {
   /** GPU-resident UTF-8 value bytes or dictionary row keys aligned row-for-row with `positions`. */
   texts: TextInputProps['texts'];
   /** Optional GPU packed RGBA8 text colors aligned with label rows. */
@@ -225,24 +225,24 @@ export interface StorageTextInputProps extends Omit<TextInputProps, 'texts'> {
 }
 
 /** GPUVector inputs for compressed dictionary storage-backed 2D text preparation. */
-export interface DictionaryTextInputProps extends Omit<StorageTextInputProps, 'texts'> {
+export interface TextDictionaryInputProps extends Omit<TextStorageInputProps, 'texts'> {
   /** GPU-resident dictionary row keys aligned row-for-row with `positions`. */
   texts: GPUVector<'sint8' | 'sint16' | 'sint32' | 'uint8' | 'uint16' | 'uint32'>;
 }
 
 /** Validates prepared attribute text GPU vectors before building render state. */
-export function assertAttributeTextGPUVectorInputs(props: AttributeTextInputProps): void {
-  assertTextGPUVectorInputs('AttributeTextModel', ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA, props);
+export function assertTextAttributeGPUVectorInputs(props: TextAttributeInputProps): void {
+  assertTextGPUVectorInputs('TextAttributeModel', TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA, props);
 }
 
 /** Validates prepared storage text GPU vectors before building render state. */
-export function assertStorageTextGPUVectorInputs(props: StorageTextInputProps): void {
-  assertTextGPUVectorInputs('StorageTextModel', STORAGE_TEXT_GPU_INPUT_SCHEMA, props);
+export function assertTextStorageGPUVectorInputs(props: TextStorageInputProps): void {
+  assertTextGPUVectorInputs('TextStorageModel', TEXT_STORAGE_GPU_INPUT_SCHEMA, props);
 }
 
 /** Validates prepared dictionary text GPU vectors before building render state. */
-export function assertDictionaryTextGPUVectorInputs(props: DictionaryTextInputProps): void {
-  assertTextGPUVectorInputs('DictionaryTextModel', DICTIONARY_TEXT_GPU_INPUT_SCHEMA, props);
+export function assertTextDictionaryGPUVectorInputs(props: TextDictionaryInputProps): void {
+  assertTextGPUVectorInputs('TextDictionaryModel', TEXT_DICTIONARY_GPU_INPUT_SCHEMA, props);
 }
 
 function assertTextGPUVectorInputs(

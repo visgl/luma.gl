@@ -26,9 +26,9 @@ export {
   getArrowVectorBufferSource
 } from './arrow/vectors/arrow-fixed-size-list';
 export {
-  prepareArrowMatrixGPUVector,
+  convertArrowMatrixToGPUVector,
   type PreparedArrowMatrixGPUVector,
-  type PrepareArrowMatrixGPUVectorOptions
+  type ConvertArrowMatrixToGPUVectorOptions
 } from './arrow/vectors/arrow-matrix-gpu-vector';
 export {
   getArrowMatrixVectorInfo,
@@ -59,8 +59,8 @@ export {
 } from './arrow/vectors/arrow-matrix-vector';
 export {
   getArrowTemporalVectorInfo,
-  prepareArrowTemporalGPUVector,
-  prepareArrowTemporalGPUVectors,
+  convertArrowTemporalToGPUVector,
+  convertArrowTemporalToGPUVectors,
   TEMPORAL_KIND_METADATA_KEY,
   TEMPORAL_ORIGIN_METADATA_KEY,
   TEMPORAL_ORIGIN_POLICY_METADATA_KEY,
@@ -74,8 +74,8 @@ export {
   type ArrowTemporalUnit,
   type ArrowTemporalVectorInfo,
   type PreparedArrowTemporalGPUVector,
-  type PrepareArrowTemporalGPUVectorOptions,
-  type PrepareArrowTemporalGPUVectorsOptions
+  type ConvertArrowTemporalToGPUVectorOptions,
+  type ConvertArrowTemporalToGPUVectorsOptions
 } from './arrow/vectors/arrow-temporal-gpu-vector';
 export {
   expandArrowVector,
@@ -122,36 +122,36 @@ export {
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
   type Utf8TextIndexTarget
-} from './arrow/renderers/text/preparation/arrow-text';
+} from './arrow/renderers/text/conversion/arrow-text';
 export {
   buildArrowTextGlyphTable,
-  createArrowAttributeTextState,
-  createArrowDictionaryStorageTextState,
-  createArrowStorageTextState,
-  createStorageTextStateFromGPUVectors,
-  packStorageTextClipRects,
-  type ArrowAttributeTextInputProps,
-  type ArrowAttributeTextRenderProps,
-  type ArrowAttributeTextState,
-  type ArrowDictionaryStorageTextBatchState,
-  type ArrowDictionaryStorageTextInputProps,
-  type ArrowDictionaryStorageTextRenderBatchState,
-  type ArrowDictionaryStorageTextRenderProps,
-  type ArrowDictionaryStorageTextSourceVectors,
-  type ArrowDictionaryStorageTextState,
-  type ArrowStorageTextBatchState,
-  type ArrowStorageTextInputProps,
-  type ArrowStorageTextRenderBatchState,
-  type ArrowStorageTextRenderProps,
-  type ArrowStorageTextSourceVectors,
-  type ArrowStorageTextState,
+  createArrowTextAttributeState,
+  createArrowTextDictionaryStorageState,
+  createArrowTextStorageState,
+  createTextStorageStateFromGPUVectors,
+  packTextStorageClipRects,
+  type ArrowTextAttributeInputProps,
+  type ArrowTextAttributeRenderProps,
+  type ArrowTextAttributeState,
+  type ArrowTextDictionaryStorageBatchState,
+  type ArrowTextDictionaryStorageInputProps,
+  type ArrowTextDictionaryStorageRenderBatchState,
+  type ArrowTextDictionaryStorageRenderProps,
+  type ArrowTextDictionaryStorageSourceVectors,
+  type ArrowTextDictionaryStorageState,
+  type ArrowTextStorageBatchState,
+  type ArrowTextStorageInputProps,
+  type ArrowTextStorageRenderBatchState,
+  type ArrowTextStorageRenderProps,
+  type ArrowTextStorageSourceVectors,
+  type ArrowTextStorageState,
   type ArrowTextGlyphTable,
   type ArrowTextModelProps,
   type ArrowTextRenderBatchState,
   type ArrowTextSourceVectors,
-  type GPUVectorStorageTextBatch,
-  type GPUVectorStorageTextInputProps
-} from './arrow/renderers/text/preparation/convert-arrow-text-vectors';
+  type GPUVectorTextStorageBatch,
+  type GPUVectorTextStorageInputProps
+} from './arrow/renderers/text/conversion/convert-arrow-text-vectors';
 export {
   convertArrowTextToAttribute,
   convertArrowTextToAttributeModelProps,
@@ -159,17 +159,17 @@ export {
   type ArrowTextConversionColumns,
   type ConvertedArrowTextData,
   type ConvertArrowTextProps
-} from './arrow/renderers/text/preparation/convert-arrow-text-to-attribute';
+} from './arrow/renderers/text/conversion/convert-arrow-text-to-attribute';
 export {
   convertArrowTextToStorage,
   convertArrowTextToStorageModelProps,
   convertArrowTextToStorageState
-} from './arrow/renderers/text/preparation/convert-arrow-text-to-storage';
+} from './arrow/renderers/text/conversion/convert-arrow-text-to-storage';
 export {
   convertArrowTextToDictionary,
   convertArrowTextToDictionaryModelProps,
   convertArrowTextToDictionaryState
-} from './arrow/renderers/text/preparation/convert-arrow-text-to-dictionary';
+} from './arrow/renderers/text/conversion/convert-arrow-text-to-dictionary';
 export {
   ArrowTextRenderer,
   addArrowTextGPUTableBatch,
@@ -212,16 +212,16 @@ export {
   type ArrowTextShaderInputs
 } from './arrow/renderers/text/renderers/arrow-text-shaders';
 export {
-  AttributeTextModel,
-  DictionaryTextModel,
-  RowIndexedStorageTextModel,
-  StorageTextModel,
-  ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA,
-  DICTIONARY_TEXT_GPU_INPUT_SCHEMA,
-  STORAGE_TEXT_GPU_INPUT_SCHEMA,
-  type AttributeTextModelProps,
-  type DictionaryTextModelProps,
-  type StorageTextModelProps
+  TextAttributeModel,
+  TextDictionaryModel,
+  TextRowIndexedStorageModel,
+  TextStorageModel,
+  TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA,
+  TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
+  TEXT_STORAGE_GPU_INPUT_SCHEMA,
+  type TextAttributeModelProps,
+  type TextDictionaryModelProps,
+  type TextStorageModelProps
 } from '@luma.gl/text';
 
 export {
@@ -264,10 +264,10 @@ export type {
   ArrowMeshTopology
 } from './arrow/engine/arrow-mesh-types';
 export {
-  AttributePathModel,
-  ARROW_PATH_GPU_INPUT_SCHEMA,
-  type AttributePathModelProps,
-  type AttributePathModelState,
+  PathAttributeModel,
+  PATH_ATTRIBUTE_GPU_INPUT_SCHEMA,
+  type PathAttributeModelProps,
+  type PathAttributeModelState,
   type PathRenderBatchState,
   type PathSegmentLayout
 } from '@luma.gl/tables';
@@ -278,9 +278,9 @@ export {
   convertArrowPathsToStorage,
   convertArrowTripsToStorage,
   createArrowPathPreparedState,
-  makeAttributePathModelProps,
-  prepareArrowPathGPUVectors,
-  prepareArrowStoragePathGPUVectors,
+  makePathAttributeModelProps,
+  convertArrowPathToGPUVectors,
+  convertArrowPathStorageToGPUVectors,
   type ArrowPathPreparedGPUVectorProps,
   type ArrowPathPreparedState,
   type ArrowPathRendererModel,
@@ -290,9 +290,9 @@ export {
   type ArrowPathViewOriginUpdateProps,
   type PreparedArrowPathGPUVectors,
   type PreparedArrowPathRendererGPUVectors,
-  type PreparedStoragePathGPUVectors,
-  type PrepareArrowPathGPUVectorsOptions,
-  type PrepareArrowPathRendererGPUVectorsOptions
+  type PreparedPathStorageGPUVectors,
+  type ConvertArrowPathToGPUVectorsOptions,
+  type ConvertArrowPathRendererGPUVectorsOptions
 } from './arrow/renderers/path/renderers/arrow-path-renderer';
 export {
   convertGeoArrowTableToDenseUnion,
@@ -331,8 +331,8 @@ export {
   type ResolveArrowPolygonSourceVectorsProps
 } from './arrow/renderers/polygon/source/arrow-polygon-source-mapping';
 export {
-  prepareArrowPolygonGPUVectorsAsync,
-  prepareArrowPolygonGPUVectors,
+  convertArrowPolygonToGPUVectorsAsync,
+  convertArrowPolygonToGPUVectors,
   tesselateAsync,
   tessellateArrowPolygons,
   type ArrowMultiPolygonType,
@@ -350,8 +350,8 @@ export {
   type ArrowTessellatedPolygonType,
   type ArrowTessellatedPolygonVertexColorType,
   type PreparedArrowPolygonGPUVectors,
-  type PrepareArrowPolygonGPUVectorsOptions
-} from './arrow/renderers/polygon/preparation/arrow-polygon-gpu-vectors';
+  type ConvertArrowPolygonToGPUVectorsOptions
+} from './arrow/renderers/polygon/conversion/arrow-polygon-gpu-vectors';
 export {
   getArrowRecordBatchAsyncIterator,
   getOptionalArrowColumn,
@@ -365,32 +365,32 @@ export {
   type OptionalArrowColumnSelector
 } from './arrow/renderers/arrow-renderer-utils';
 export {
-  AttributePolygonModel,
+  PolygonAttributeModel,
   createPolygonShaderInputs,
   POLYGON_GPU_INPUT_SCHEMA,
-  StoragePolygonModel,
-  type AttributePolygonModelProps,
+  PolygonStorageModel,
+  type PolygonAttributeModelProps,
   type PolygonBatchProps,
   type PolygonGPUTypeMap,
   type PolygonGPUVectors,
   type PolygonShaderInputs,
-  type StoragePolygonModelProps,
+  type PolygonStorageModelProps,
   type PolygonViewportUniforms
 } from '@luma.gl/tables';
 export {
-  StoragePathModel,
-  ARROW_STORAGE_PATH_GPU_INPUT_SCHEMA,
-  createStoragePathState,
-  type StoragePathBatchState,
-  type StoragePathInputProps,
-  type StoragePathModelProps,
-  type StoragePathRenderBatchState,
-  type StoragePathState
+  PathStorageModel,
+  PATH_STORAGE_GPU_INPUT_SCHEMA,
+  createPathStorageState,
+  type PathStorageBatchState,
+  type PathStorageInputProps,
+  type PathStorageModelProps,
+  type PathStorageRenderBatchState,
+  type PathStorageState
 } from '@luma.gl/tables';
 export {
-  StorageTripsPathModel,
-  ARROW_STORAGE_TRIPS_PATH_GPU_INPUT_SCHEMA,
-  type StorageTripsPathModelProps
+  PathTripsStorageModel,
+  PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA,
+  type PathTripsStorageModelProps
 } from '@luma.gl/tables';
 export {
   getDggsUint64Words,
@@ -399,8 +399,8 @@ export {
   packDggsH3CellKey,
   packDggsQuadkeyKey,
   packDggsS2CellKey,
-  prepareDggsCellKeyGPUVector,
-  prepareDggsCellPathGPUVector,
+  convertDggsCellIdsToGPUKeys,
+  convertDggsCellKeysToGPUPaths,
   type DggsCellEncoding,
   type DggsCellKeyGPUVectorOptions,
   type DggsCellPathCoordinateFormat,

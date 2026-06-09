@@ -17,7 +17,7 @@ export const LABEL_FIELD_WIDTH = LABEL_COLUMN_COUNT * LABEL_COLUMN_SPACING;
 const LABEL_CLIP_WIDTH = 720;
 export const STREAMING_TEXT_BATCH_COUNT = 10;
 const STREAMING_TEXT_BATCH_DELAY_MS = 1000;
-const DICTIONARY_TEXT_ROWS_PER_CHUNK = 100_000;
+const TEXT_DICTIONARY_ROWS_PER_CHUNK = 100_000;
 const DICTIONARY_LABEL_COUNT_PER_CHUNK = 1_000;
 const ARROW_UTF8_DICTIONARY_TYPE = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32(), 0);
 
@@ -35,8 +35,8 @@ export type TextRowCountKind = '10k' | '100k' | '1m';
 export type TextSourceKind = 'utf8' | 'dictionary';
 export type TextColorKind = 'constant' | 'string-colors' | 'character-colors';
 export type Utf8TextDatasetKind = TextRowCountKind;
-export type DictionaryTextDatasetKind = '10k-dict' | '100k-dict' | '1m-dict';
-export type EagerTextDatasetKind = Utf8TextDatasetKind | DictionaryTextDatasetKind;
+export type TextDictionaryDatasetKind = '10k-dict' | '100k-dict' | '1m-dict';
+export type EagerTextDatasetKind = Utf8TextDatasetKind | TextDictionaryDatasetKind;
 export type StreamingTextDatasetKind = `${EagerTextDatasetKind}-stream`;
 export type StreamingTextTableSizeKind = `${Utf8TextDatasetKind}-stream`;
 export type TextTableSizeKind = TextRowCountKind | StreamingTextTableSizeKind;
@@ -341,7 +341,7 @@ function makeArrowTextVector(
   getGlobalLabelIndex: (localLabelIndex: number) => number
 ): ArrowUtf8TextVector {
   if (dataset.textType === 'dictionary') {
-    return makeArrowDictionaryTextVector(labelCount, getGlobalLabelIndex);
+    return makeArrowTextDictionaryVector(labelCount, getGlobalLabelIndex);
   }
 
   const labels = new Array<string>(labelCount);
@@ -351,7 +351,7 @@ function makeArrowTextVector(
   return arrow.vectorFromArray(labels, new arrow.Utf8()) as arrow.Vector<arrow.Utf8>;
 }
 
-function makeArrowDictionaryTextVector(
+function makeArrowTextDictionaryVector(
   labelCount: number,
   getGlobalLabelIndex: (localLabelIndex: number) => number
 ): arrow.Vector<ArrowUtf8Dictionary> {
@@ -507,7 +507,7 @@ function getTextLabelLength(dataset: TextDataset, labelIndex: number): number {
 }
 
 function getDictionaryChunkIndex(labelIndex: number): number {
-  return Math.floor(labelIndex / DICTIONARY_TEXT_ROWS_PER_CHUNK);
+  return Math.floor(labelIndex / TEXT_DICTIONARY_ROWS_PER_CHUNK);
 }
 
 function getDictionaryLabelIndex(labelIndex: number): number {
@@ -515,7 +515,7 @@ function getDictionaryLabelIndex(labelIndex: number): number {
 }
 
 function getArrowTextInputRowChunkSize(dataset: TextDataset): number {
-  return dataset.textType === 'dictionary' ? DICTIONARY_TEXT_ROWS_PER_CHUNK : dataset.labelCount;
+  return dataset.textType === 'dictionary' ? TEXT_DICTIONARY_ROWS_PER_CHUNK : dataset.labelCount;
 }
 
 function splitArrowVectorByRows<T extends arrow.DataType>(
@@ -558,9 +558,9 @@ export function isStreamingTextDatasetKind(
   return value.endsWith('-stream');
 }
 
-export function isDictionaryTextDatasetKind(
+export function isTextDictionaryDatasetKind(
   value: TextDatasetKind
-): value is DictionaryTextDatasetKind {
+): value is TextDictionaryDatasetKind {
   return value.endsWith('-dict');
 }
 
@@ -592,14 +592,14 @@ export function getTextInputKind(
 
 export function getTextDatasetRowCountKind(value: TextDatasetKind): TextRowCountKind {
   const eagerDatasetKind = getEagerTextDatasetKind(value);
-  if (isDictionaryTextDatasetKind(eagerDatasetKind)) {
+  if (isTextDictionaryDatasetKind(eagerDatasetKind)) {
     return eagerDatasetKind.slice(0, -'-dict'.length) as TextRowCountKind;
   }
   return eagerDatasetKind;
 }
 
 export function getTextDatasetSourceKind(value: TextDatasetKind): TextSourceKind {
-  if (isDictionaryTextDatasetKind(getEagerTextDatasetKind(value))) {
+  if (isTextDictionaryDatasetKind(getEagerTextDatasetKind(value))) {
     return 'dictionary';
   }
   return 'utf8';

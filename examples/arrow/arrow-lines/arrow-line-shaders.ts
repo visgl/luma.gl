@@ -23,7 +23,7 @@ export const PATH_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
-export const STORAGE_PATH_SHADER_LAYOUT = {
+export const PATH_STORAGE_SHADER_LAYOUT = {
   attributes: [
     {name: 'segmentStartPointIndices', location: 0, type: 'u32', stepMode: 'instance'},
     {name: 'segmentFlags', location: 1, type: 'u32', stepMode: 'instance'},
@@ -250,7 +250,7 @@ fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
 }
 `;
 
-function makeStoragePathWGSLShader({usesTimestampColumn}: {usesTimestampColumn: boolean}): string {
+function makePathStorageWGSLShader({usesTimestampColumn}: {usesTimestampColumn: boolean}): string {
   return /* wgsl */ `\
 struct PathViewportUniforms {
   viewportScale : vec2<f32>,
@@ -630,8 +630,8 @@ ${
 `;
 }
 
-export const STORAGE_WGSL_SHADER = makeStoragePathWGSLShader({usesTimestampColumn: false});
-export const TRIPS_STORAGE_WGSL_SHADER = makeStoragePathWGSLShader({usesTimestampColumn: true});
+export const STORAGE_WGSL_SHADER = makePathStorageWGSLShader({usesTimestampColumn: false});
+export const TRIPS_STORAGE_WGSL_SHADER = makePathStorageWGSLShader({usesTimestampColumn: true});
 
 export const VS_GLSL = /* glsl */ `\
 #version 300 es

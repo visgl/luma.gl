@@ -4,11 +4,11 @@
 
 import type {Device} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
-import type {DictionaryTextModelProps} from '@luma.gl/text';
+import type {TextDictionaryModelProps} from '@luma.gl/text';
 import {
-  createArrowDictionaryStorageTextState,
-  type ArrowDictionaryStorageTextInputProps,
-  type ArrowDictionaryStorageTextState
+  createArrowTextDictionaryStorageState,
+  type ArrowTextDictionaryStorageInputProps,
+  type ArrowTextDictionaryStorageState
 } from './convert-arrow-text-vectors';
 import {
   convertArrowTextToStorage,
@@ -36,25 +36,25 @@ export function convertArrowTextToDictionary(
  * Builds prepared WebGPU dictionary text state from Arrow-backed GPU inputs.
  *
  * The returned state stores shared glyph records per dictionary value plus per-row dictionary
- * references. Pass it to {@link DictionaryTextModel}.
+ * references. Pass it to {@link TextDictionaryModel}.
  */
 export function convertArrowTextToDictionaryState(
   device: Device,
-  props: ArrowDictionaryStorageTextInputProps
-): ArrowDictionaryStorageTextState {
-  return createArrowDictionaryStorageTextState(device, props);
+  props: ArrowTextDictionaryStorageInputProps
+): ArrowTextDictionaryStorageState {
+  return createArrowTextDictionaryStorageState(device, props);
 }
 
 /**
  * Builds model-ready dictionary text props from Arrow-backed GPU inputs.
  *
  * CPU Arrow source vectors are consumed only by this conversion step and are not exposed on the
- * returned {@link DictionaryTextModelProps}.
+ * returned {@link TextDictionaryModelProps}.
  */
 export function convertArrowTextToDictionaryModelProps(
   device: Device,
-  props: ArrowDictionaryStorageTextInputProps
-): DictionaryTextModelProps & ArrowDictionaryStorageTextState {
+  props: ArrowTextDictionaryStorageInputProps
+): TextDictionaryModelProps & ArrowTextDictionaryStorageState {
   const storageState = convertArrowTextToDictionaryState(device, props);
   const {
     sourceVectors: _sourceVectors,
@@ -66,7 +66,7 @@ export function convertArrowTextToDictionaryModelProps(
     ...modelProps,
     ...storageState,
     ownsStorageState: true
-  } as DictionaryTextModelProps & ArrowDictionaryStorageTextState;
+  } as TextDictionaryModelProps & ArrowTextDictionaryStorageState;
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};

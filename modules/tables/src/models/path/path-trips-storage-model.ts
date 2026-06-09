@@ -7,15 +7,15 @@ import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUVector} from '../../table/gpu-vector';
 import type {VertexList} from '../../table/gpu-vector-format';
 import {
-  StoragePathModel,
-  type StoragePathInputProps,
-  type StoragePathModelProps
-} from './storage-path-model';
+  PathStorageModel,
+  type PathStorageInputProps,
+  type PathStorageModelProps
+} from './path-storage-model';
 import {assertModelGPUVectorInputs} from '../../engine/gpu-table-model-input-schema';
 import type {ModelGPUInputSchema} from '../../engine/gpu-table-model-input-schema';
 
 /** Props for storage-backed Trips-style path rendering. */
-export type StorageTripsPathModelProps = StoragePathModelProps & {
+export type PathTripsStorageModelProps = PathStorageModelProps & {
   /** Prepared per-path Float32 temporal stream aligned with path vertices. */
   timestamps: GPUVector<VertexList<'float32'>>;
   /** Current animation time in the same unit as prepared timestamps. */
@@ -27,7 +27,7 @@ export type StorageTripsPathModelProps = StoragePathModelProps & {
 };
 
 /** Prepared GPU inputs consumed by the storage-backed trips path model. */
-export const ARROW_STORAGE_TRIPS_PATH_GPU_INPUT_SCHEMA = [
+export const PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA = [
   {
     name: 'paths',
     kind: 'positions',
@@ -65,7 +65,7 @@ export const ARROW_STORAGE_TRIPS_PATH_GPU_INPUT_SCHEMA = [
   }
 ] as const satisfies ModelGPUInputSchema;
 
-const DEFAULT_STORAGE_TRIPS_PATH_SOURCE = /* wgsl */ `
+const DEFAULT_PATH_TRIPS_STORAGE_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathValues : array<f32>;
   @group(0) @binding(auto) var<storage, read> pathRanges : array<vec4<u32>>;
   @group(0) @binding(auto) var<storage, read> pathViewOrigins : array<vec4<f32>>;
@@ -202,18 +202,18 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 `;
 
 /** WebGPU storage-backed path model with TripsLayer-style temporal filtering. */
-export class StorageTripsPathModel extends StoragePathModel {
+export class PathTripsStorageModel extends PathStorageModel {
   /** Prepared GPU vectors consumed by the storage-backed trips path model. */
   static override readonly gpuInputSchema: ModelGPUInputSchema =
-    ARROW_STORAGE_TRIPS_PATH_GPU_INPUT_SCHEMA;
+    PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA;
 
-  private tripProps: StorageTripsPathModelProps;
+  private tripProps: PathTripsStorageModelProps;
   private tripConfigBuffer: DynamicBuffer;
 
   /** Creates a WebGPU storage-backed Trips-style path model. */
-  constructor(device: Device, props: StorageTripsPathModelProps) {
-    if (hasStorageTripsPathInputProps(props)) {
-      assertModelGPUVectorInputs('StorageTripsPathModel', StorageTripsPathModel.gpuInputSchema, {
+  constructor(device: Device, props: PathTripsStorageModelProps) {
+    if (hasPathTripsStorageInputProps(props)) {
+      assertModelGPUVectorInputs('PathTripsStorageModel', PathTripsStorageModel.gpuInputSchema, {
         paths: props.paths,
         colors: props.colors,
         widths: props.widths,
@@ -224,7 +224,7 @@ export class StorageTripsPathModel extends StoragePathModel {
     const tripConfigBuffer = createTripPathConfigBuffer(device, props);
     super(device, {
       ...props,
-      source: props.source ?? DEFAULT_STORAGE_TRIPS_PATH_SOURCE,
+      source: props.source ?? DEFAULT_PATH_TRIPS_STORAGE_SOURCE,
       bindings: {
         ...(props.bindings || {}),
         tripPathConfig: tripConfigBuffer
@@ -235,8 +235,8 @@ export class StorageTripsPathModel extends StoragePathModel {
   }
 
   /** Updates current-time and trail props while retaining storage path resources. */
-  override setProps(props: Partial<StorageTripsPathModelProps>): void {
-    const nextProps = {...this.tripProps, ...props} as StorageTripsPathModelProps;
+  override setProps(props: Partial<PathTripsStorageModelProps>): void {
+    const nextProps = {...this.tripProps, ...props} as PathTripsStorageModelProps;
     if (
       props.currentTime !== undefined ||
       props.trailLength !== undefined ||
@@ -251,7 +251,7 @@ export class StorageTripsPathModel extends StoragePathModel {
         ...(props.bindings || this.tripProps.bindings || {}),
         tripPathConfig: this.tripConfigBuffer
       }
-    } as Partial<StoragePathModelProps>);
+    } as Partial<PathStorageModelProps>);
   }
 
   /** Releases Trips config storage plus inherited storage path resources. */
@@ -261,25 +261,25 @@ export class StorageTripsPathModel extends StoragePathModel {
   }
 }
 
-function hasStorageTripsPathInputProps(
-  props: StorageTripsPathModelProps
-): props is StoragePathInputProps & StorageTripsPathModelProps {
+function hasPathTripsStorageInputProps(
+  props: PathTripsStorageModelProps
+): props is PathStorageInputProps & PathTripsStorageModelProps {
   return 'paths' in props;
 }
 
 function createTripPathConfigBuffer(
   device: Device,
-  props: Pick<StorageTripsPathModelProps, 'id' | 'currentTime' | 'trailLength' | 'fadeTrail'>
+  props: Pick<PathTripsStorageModelProps, 'id' | 'currentTime' | 'trailLength' | 'fadeTrail'>
 ): DynamicBuffer {
   return new DynamicBuffer(device, {
-    id: `${props.id || 'storage-trips-path-model'}-trip-config`,
+    id: `${props.id || 'path-trips-storage-model'}-trip-config`,
     usage: Buffer.UNIFORM | Buffer.COPY_DST | Buffer.COPY_SRC,
     data: makeTripPathConfigData(props)
   });
 }
 
 function makeTripPathConfigData(
-  props: Pick<StorageTripsPathModelProps, 'currentTime' | 'trailLength' | 'fadeTrail'>
+  props: Pick<PathTripsStorageModelProps, 'currentTime' | 'trailLength' | 'fadeTrail'>
 ): Uint32Array {
   const arrayBuffer = new ArrayBuffer(16);
   const floatValues = new Float32Array(arrayBuffer);

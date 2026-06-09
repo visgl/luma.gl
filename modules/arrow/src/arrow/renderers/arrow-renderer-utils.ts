@@ -18,7 +18,7 @@ export type OptionalArrowColumnSelector<TypeT extends DataType> =
  * Arrow record-batch source accepted by Arrow renderers.
  *
  * Renderers do not replay a previous source on prop-only changes. Pass a fresh source, or pass the
- * same replayable table/iterable again, whenever changed props require data preparation.
+ * same replayable table/iterable again, whenever changed props require data conversion.
  */
 export type ArrowRecordBatchSource =
   | Table

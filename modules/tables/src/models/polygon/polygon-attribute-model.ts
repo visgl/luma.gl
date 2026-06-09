@@ -16,9 +16,9 @@ import {
   type PolygonGPUVectors
 } from './polygon-gpu-inputs';
 import {
-  ATTRIBUTE_POLYGON_SHADER_LAYOUT,
-  ATTRIBUTE_POLYGON_VS_GLSL,
-  ATTRIBUTE_POLYGON_WGSL_SHADER,
+  POLYGON_ATTRIBUTE_SHADER_LAYOUT,
+  POLYGON_ATTRIBUTE_VS_GLSL,
+  POLYGON_ATTRIBUTE_WGSL_SHADER,
   getPolygonPickingParameters,
   POLYGON_FS_GLSL,
   POLYGON_PICKING_FS_GLSL,
@@ -26,7 +26,7 @@ import {
 } from './polygon-shaders';
 
 /** Flat props accepted by the GPU-only attribute-backed filled polygon model. */
-export type AttributePolygonModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> &
+export type PolygonAttributeModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> &
   PolygonBatchProps & {
     /** Shader inputs shared by render and picking polygon models. */
     shaderInputs: PolygonShaderInputs;
@@ -34,36 +34,36 @@ export type AttributePolygonModelProps = Omit<GPUTableModelProps, 'table' | 'tab
     picking?: boolean;
   };
 
-type PreparedAttributePolygonModel = {
+type PreparedPolygonAttributeModel = {
   table: GPUTable;
   modelProps: GPUTableModelProps;
 };
 
 /** GPU-only filled polygon model consuming tessellated vectors as vertex attributes. */
-export class AttributePolygonModel extends GPUTableModel {
+export class PolygonAttributeModel extends GPUTableModel {
   /** Prepared GPU vectors consumed by the attribute-backed filled polygon model. */
   static readonly gpuInputSchema = POLYGON_GPU_INPUT_SCHEMA;
 
   readonly polygonTable: GPUTable;
 
   /** Creates an attribute-backed filled polygon model from prepared GPU vectors. */
-  constructor(device: Device, props: AttributePolygonModelProps) {
-    const prepared = prepareAttributePolygonModel(device, props);
+  constructor(device: Device, props: PolygonAttributeModelProps) {
+    const prepared = preparePolygonAttributeModel(device, props);
     super(device, prepared.modelProps);
     this.polygonTable = prepared.table;
   }
 
   /** Appends one retained prepared polygon batch without repacking its GPU buffers. */
   addBatch(props: PolygonBatchProps): void {
-    this.polygonTable.addBatch(createAttributePolygonRecordBatch(props));
+    this.polygonTable.addBatch(createPolygonAttributeRecordBatch(props));
     this.setNeedsRedraw('Polygon batch added');
   }
 }
 
-function prepareAttributePolygonModel(
+function preparePolygonAttributeModel(
   device: Device,
-  props: AttributePolygonModelProps
-): PreparedAttributePolygonModel {
+  props: PolygonAttributeModelProps
+): PreparedPolygonAttributeModel {
   const {
     positions,
     colors,
@@ -76,7 +76,7 @@ function prepareAttributePolygonModel(
     shaderInputs,
     ...modelProps
   } = props;
-  const table = createAttributePolygonTable({
+  const table = createPolygonAttributeTable({
     positions,
     colors,
     rowIndices,
@@ -90,14 +90,14 @@ function prepareAttributePolygonModel(
     table,
     modelProps: {
       ...modelProps,
-      source: ATTRIBUTE_POLYGON_WGSL_SHADER,
-      vs: ATTRIBUTE_POLYGON_VS_GLSL,
+      source: POLYGON_ATTRIBUTE_WGSL_SHADER,
+      vs: POLYGON_ATTRIBUTE_VS_GLSL,
       fs: picking && indexPickingSupported ? POLYGON_PICKING_FS_GLSL : POLYGON_FS_GLSL,
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
       modules: [
         picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)
       ] as never,
-      shaderLayout: ATTRIBUTE_POLYGON_SHADER_LAYOUT,
+      shaderLayout: POLYGON_ATTRIBUTE_SHADER_LAYOUT,
       shaderInputs,
       table,
       tableCount: 'none',
@@ -113,8 +113,8 @@ function prepareAttributePolygonModel(
   };
 }
 
-function createAttributePolygonTable(props: PolygonBatchProps): GPUTable {
-  const batch = createAttributePolygonRecordBatch(props);
+function createPolygonAttributeTable(props: PolygonBatchProps): GPUTable {
+  const batch = createPolygonAttributeRecordBatch(props);
   return new GPUTable({
     batches: [batch],
     schema: batch.schema,
@@ -122,18 +122,18 @@ function createAttributePolygonTable(props: PolygonBatchProps): GPUTable {
   });
 }
 
-function createAttributePolygonRecordBatch(props: PolygonBatchProps): GPURecordBatch {
+function createPolygonAttributeRecordBatch(props: PolygonBatchProps): GPURecordBatch {
   const {sourceInfo, nullCount = 0, ...vectors} = props;
-  assertPolygonGPUVectorInputs('AttributePolygonModel', vectors);
+  assertPolygonGPUVectorInputs('PolygonAttributeModel', vectors);
   return new GPURecordBatch<GPUTypeMap>({
     vectors: vectors as Record<string, GPUVector>,
-    bufferLayout: getAttributePolygonBufferLayout(vectors),
+    bufferLayout: getPolygonAttributeBufferLayout(vectors),
     sourceInfo,
     nullCount
   });
 }
 
-function getAttributePolygonBufferLayout(vectors: PolygonGPUVectors): BufferLayout[] {
+function getPolygonAttributeBufferLayout(vectors: PolygonGPUVectors): BufferLayout[] {
   return [
     {name: 'positions', byteStride: vectors.positions.byteStride, format: 'float32x4'},
     {name: 'colors', byteStride: vectors.colors.byteStride, format: 'unorm8x4'},

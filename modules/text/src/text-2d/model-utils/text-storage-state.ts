@@ -7,7 +7,7 @@ import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
 import FontAtlasManager from '../atlas/font-atlas-manager';
 import type {GpuDictionaryCompressedTextStream, GpuExpandedTextStream} from './gpu-text-types';
 
-export type StorageTextBuffer = Buffer | DynamicBuffer;
+export type TextStorageBuffer = Buffer | DynamicBuffer;
 
 export type TextSdfRenderSettings = {
   sdf: boolean;
@@ -15,12 +15,12 @@ export type TextSdfRenderSettings = {
   smoothing: number;
 };
 
-type StorageTextOwnedResource = {
+type TextStorageOwnedResource = {
   destroy: () => void;
 };
 
 /** Per-source-batch row bindings retained by prepared storage text state. */
-export type StorageTextBatchState = {
+export type TextStorageBatchState = {
   /** Global source text row index assigned to local row zero. */
   batchRowIndexBase: number;
   /** Global row-storage index assigned to local row zero. */
@@ -30,19 +30,19 @@ export type StorageTextBatchState = {
   /** Glyph instances generated from this storage batch. */
   glyphCount: number;
   /** Read-only storage buffer for label origins. */
-  rowPositionsBuffer: StorageTextBuffer;
+  rowPositionsBuffer: TextStorageBuffer;
   /** Read-only storage buffer for packed RGBA8 row colors. */
-  rowColorsBuffer: StorageTextBuffer;
+  rowColorsBuffer: TextStorageBuffer;
   /** Read-only storage buffer for per-row angles. */
-  rowAnglesBuffer: StorageTextBuffer;
+  rowAnglesBuffer: TextStorageBuffer;
   /** Read-only storage buffer for per-row text sizes. */
-  rowSizesBuffer: StorageTextBuffer;
+  rowSizesBuffer: TextStorageBuffer;
   /** Read-only storage buffer for per-row pixel offsets. */
-  rowPixelOffsetsBuffer: StorageTextBuffer;
+  rowPixelOffsetsBuffer: TextStorageBuffer;
   /** Read-only storage buffer for packed per-row text anchor enums. */
-  rowTextAnchorsBuffer: StorageTextBuffer;
+  rowTextAnchorsBuffer: TextStorageBuffer;
   /** Read-only storage buffer for packed per-row alignment baseline enums. */
-  rowAlignmentBaselinesBuffer: StorageTextBuffer;
+  rowAlignmentBaselinesBuffer: TextStorageBuffer;
   /** Read-only storage buffer for packed per-row clip rectangles. */
   rowClipRectsBuffer: Buffer;
   /** Optional read-only storage buffer for cumulative row glyph starts. */
@@ -52,7 +52,7 @@ export type StorageTextBatchState = {
 };
 
 /** Generated storage text render-batch state. */
-export type StorageTextRenderBatchState = {
+export type TextStorageRenderBatchState = {
   /** Source storage batch whose row bindings feed this generated render batch. */
   rowBindingBatchIndex: number;
   /** First source text row included in this generated render batch. */
@@ -70,7 +70,7 @@ export type StorageTextRenderBatchState = {
 };
 
 /** Reusable WebGPU storage text expansion and row-binding state. */
-export type StorageTextState = {
+export type TextStorageState = {
   /** Optional atlas manager retained when this state built the atlas. */
   fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this storage state. */
@@ -106,27 +106,27 @@ export type StorageTextState = {
   /** Read-only storage buffer for glyph atlas frames. */
   glyphFramesBuffer: Buffer;
   /** Per-source-batch row bindings. */
-  batches: StorageTextBatchState[];
+  batches: TextStorageBatchState[];
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches: StorageTextRenderBatchState[];
+  renderBatches: TextStorageRenderBatchState[];
   /** Row/default binding resources owned by this storage state. */
-  ownedRowBindingResources: StorageTextOwnedResource[];
+  ownedRowBindingResources: TextStorageOwnedResource[];
   /** Glyph definition and render-control resources owned by this storage state. */
-  ownedGlyphResources: StorageTextOwnedResource[];
+  ownedGlyphResources: TextStorageOwnedResource[];
   /** First batch label origin buffer. */
-  rowPositionsBuffer: StorageTextBuffer;
+  rowPositionsBuffer: TextStorageBuffer;
   /** First batch packed RGBA8 row color buffer. */
-  rowColorsBuffer: StorageTextBuffer;
+  rowColorsBuffer: TextStorageBuffer;
   /** First batch row angle buffer. */
-  rowAnglesBuffer: StorageTextBuffer;
+  rowAnglesBuffer: TextStorageBuffer;
   /** First batch row text size buffer. */
-  rowSizesBuffer: StorageTextBuffer;
+  rowSizesBuffer: TextStorageBuffer;
   /** First batch row pixel offset buffer. */
-  rowPixelOffsetsBuffer: StorageTextBuffer;
+  rowPixelOffsetsBuffer: TextStorageBuffer;
   /** First batch packed row text anchor buffer. */
-  rowTextAnchorsBuffer: StorageTextBuffer;
+  rowTextAnchorsBuffer: TextStorageBuffer;
   /** First batch packed row alignment baseline buffer. */
-  rowAlignmentBaselinesBuffer: StorageTextBuffer;
+  rowAlignmentBaselinesBuffer: TextStorageBuffer;
   /** First batch packed row clip rectangle buffer. */
   rowClipRectsBuffer: Buffer;
   /** First batch cumulative row glyph start buffer. */
@@ -142,7 +142,7 @@ export type StorageTextState = {
 };
 
 /** Per-source-batch dictionary glyph storage retained by compressed dictionary text state. */
-export type DictionaryTextBatchState = StorageTextBatchState & {
+export type TextDictionaryBatchState = TextStorageBatchState & {
   /** Per row `(dictionary index, row glyph start)` records plus one terminal sentinel. */
   rowDictionaryRecordsBuffer: Buffer;
   /** Per dictionary value half-open ranges into `dictionaryGlyphRecordsBuffer`. */
@@ -158,7 +158,7 @@ export type DictionaryTextBatchState = StorageTextBatchState & {
 };
 
 /** Generated compressed dictionary text render-batch state. */
-export type DictionaryTextRenderBatchState = {
+export type TextDictionaryRenderBatchState = {
   /** Source storage batch whose row bindings feed this generated render batch. */
   rowBindingBatchIndex: number;
   /** First source text row included in this generated render batch. */
@@ -174,8 +174,8 @@ export type DictionaryTextRenderBatchState = {
 };
 
 /** Reusable WebGPU compressed dictionary text storage and row-binding state. */
-export type DictionaryTextState = Omit<
-  StorageTextState,
+export type TextDictionaryState = Omit<
+  TextStorageState,
   | 'glyphStream'
   | 'batches'
   | 'renderBatches'
@@ -192,11 +192,11 @@ export type DictionaryTextState = Omit<
   /** Normalized dictionary values retained across data chunks. */
   dictionaryValueCount: number;
   /** Per-source-batch row and dictionary glyph bindings. */
-  batches: DictionaryTextBatchState[];
+  batches: TextDictionaryBatchState[];
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches: DictionaryTextRenderBatchState[];
+  renderBatches: TextDictionaryRenderBatchState[];
   /** Dictionary glyph and render-control resources owned by this dictionary storage state. */
-  ownedDictionaryResources: StorageTextOwnedResource[];
+  ownedDictionaryResources: TextStorageOwnedResource[];
   /** First batch per-row dictionary reference buffer. */
   rowDictionaryRecordsBuffer: Buffer;
   /** First batch per-dictionary-value glyph range buffer. */
@@ -207,49 +207,49 @@ export type DictionaryTextState = Omit<
   dictionaryRenderConfigBuffer: DynamicBuffer;
 };
 
-export function getFirstStorageTextBatch(
-  storageState: Pick<StorageTextState, 'batches'>
-): StorageTextBatchState {
+export function getFirstTextStorageBatch(
+  storageState: Pick<TextStorageState, 'batches'>
+): TextStorageBatchState {
   const firstBatch = storageState.batches[0];
   if (!firstBatch) {
-    throw new Error('StorageTextState requires at least one row-binding batch');
+    throw new Error('TextStorageState requires at least one row-binding batch');
   }
   return firstBatch;
 }
 
-export function getFirstStorageTextRenderBatch(
-  storageState: Pick<StorageTextState, 'renderBatches'>
-): StorageTextRenderBatchState {
+export function getFirstTextStorageRenderBatch(
+  storageState: Pick<TextStorageState, 'renderBatches'>
+): TextStorageRenderBatchState {
   const firstRenderBatch = storageState.renderBatches[0];
   if (!firstRenderBatch) {
-    throw new Error('StorageTextState requires at least one render batch');
+    throw new Error('TextStorageState requires at least one render batch');
   }
   return firstRenderBatch;
 }
 
-export function getStorageRowGlyphStartsBuffer(batch: StorageTextBatchState): Buffer {
+export function getTextStorageRowGlyphStartsBuffer(batch: TextStorageBatchState): Buffer {
   if (!batch.rowGlyphStartsBuffer) {
-    throw new Error('StorageTextState batch is missing row glyph starts');
+    throw new Error('TextStorageState batch is missing row glyph starts');
   }
   return batch.rowGlyphStartsBuffer;
 }
 
-export function getFirstDictionaryTextBatch(
-  storageState: Pick<DictionaryTextState, 'batches'>
-): DictionaryTextBatchState {
+export function getFirstTextDictionaryBatch(
+  storageState: Pick<TextDictionaryState, 'batches'>
+): TextDictionaryBatchState {
   const firstBatch = storageState.batches[0];
   if (!firstBatch) {
-    throw new Error('DictionaryTextState requires at least one row-binding batch');
+    throw new Error('TextDictionaryState requires at least one row-binding batch');
   }
   return firstBatch;
 }
 
-export function getFirstDictionaryTextRenderBatch(
-  storageState: Pick<DictionaryTextState, 'renderBatches'>
-): DictionaryTextRenderBatchState {
+export function getFirstTextDictionaryRenderBatch(
+  storageState: Pick<TextDictionaryState, 'renderBatches'>
+): TextDictionaryRenderBatchState {
   const firstRenderBatch = storageState.renderBatches[0];
   if (!firstRenderBatch) {
-    throw new Error('DictionaryTextState requires at least one render batch');
+    throw new Error('TextDictionaryState requires at least one render batch');
   }
   return firstRenderBatch;
 }

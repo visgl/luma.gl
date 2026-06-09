@@ -23,7 +23,7 @@ deck.gl v10 API is designed with the following aspirational goals:
 - Make it easy for developers to reason about binary columnar data.
 - Take full advantage of performance and memory compactness advantages.
 - Avoid conversion to JS objects whenever possible
-- Move GPU data preparation to the GPU when possible.
+- Move GPU data conversion to the GPU when possible.
 - Support high precision inputs (Float64)
 - Support HDR colors (Float16, Float32)
 - Support temporal data (XYZM coordinate, time and duration arrow columns)
@@ -229,7 +229,7 @@ Time inputs can be:
 - A scalar `Date`, `Time`, `Timestamp`, or `Duration` column for one temporal value per row.
 - A `List<Date | Time | Timestamp | Duration>` column for one temporal value per path, track, or string-expanded vertex.
 
-Temporal preparation should normalize Arrow temporal values into relative GPU values while preserving enough metadata to recover the source meaning. Absolute `Date`, `Time`, and `Timestamp` values need an origin and unit; `Duration` values can use origin `0`.
+Temporal conversion should normalize Arrow temporal values into relative GPU values while preserving enough metadata to recover the source meaning. Absolute `Date`, `Time`, and `Timestamp` values need an origin and unit; `Duration` values can use origin `0`.
 
 For streamed `RecordBatch` inputs, the temporal origin should be stable across all batches in the layer. A layer can use a caller-supplied origin, loader-supplied metadata, or the first valid temporal value from the stream, but later batches should not silently shift the animation clock for already uploaded data.
 
@@ -237,7 +237,7 @@ Picking callbacks should report source row or source vertex information independ
 
 ## 64-Bit Precision
 
-Arrow inputs should be able to preserve 64-bit source data even when a layer prepares a lower-level GPU representation for rendering.
+Arrow inputs should be able to preserve 64-bit source data even when a layer converts a lower-level GPU representation for rendering.
 
 Important 64-bit cases include:
 
@@ -245,7 +245,7 @@ Important 64-bit cases include:
 - `Int64` / `Uint64` identifiers, DGGS cell ids, timestamps, and application keys.
 - 64-bit temporal columns such as timestamp microseconds or nanoseconds.
 
-Layer adapters should choose an explicit GPU preparation strategy instead of silently pretending every 64-bit value is an ordinary `Float32`. Useful strategies include direct `Float32` repacking when precision loss is acceptable, origin-relative `Float32` for local coordinates, high/low word-pair storage for high-precision positions, and bit-preserving integer storage for identifiers or DGGS cells.
+Layer adapters should choose an explicit GPU conversion strategy instead of silently pretending every 64-bit value is an ordinary `Float32`. Useful strategies include direct `Float32` repacking when precision loss is acceptable, origin-relative `Float32` for local coordinates, high/low word-pair storage for high-precision positions, and bit-preserving integer storage for identifiers or DGGS cells.
 
 The original Arrow or application source should remain the source of truth for CPU-rich picking and callbacks. GPU-only inputs can expose the prepared GPU representation plus provenance metadata, but should not imply that the layer can reconstruct exact CPU-side 64-bit values unless the caller supplied the source table, source vectors, or a row resolver.
 

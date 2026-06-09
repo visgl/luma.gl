@@ -35,7 +35,7 @@ export {
   type ArrowTessellatedPolygonVertexColorType
 } from '@math.gl/geoarrow';
 
-export type PrepareArrowPolygonGPUVectorsOptions = ArrowPolygonTessellationOptions & {
+export type ConvertArrowPolygonToGPUVectorsOptions = ArrowPolygonTessellationOptions & {
   /** Stable resource id prefix. Defaults to `arrow-polygon-model`. */
   id?: string;
   /** Zero-based source batch index. Defaults to `0`. */
@@ -65,11 +65,11 @@ export type PreparedArrowPolygonGPUVectors = {
 
 const OUTPUT_POSITION_COMPONENTS = 4;
 
-/** Prepares tessellated Arrow polygon output as flat row-preserving GPU vectors. */
-export function prepareArrowPolygonGPUVectors(
+/** Converts tessellated Arrow polygon output to flat row-preserving GPU vectors. */
+export function convertArrowPolygonToGPUVectors(
   device: Device,
   sourceVectors: ArrowPolygonSourceVectors,
-  options: PrepareArrowPolygonGPUVectorsOptions = {}
+  options: ConvertArrowPolygonToGPUVectorsOptions = {}
 ): PreparedArrowPolygonGPUVectors {
   const id = options.id ?? 'arrow-polygon-model';
   const tessellation = tessellateArrowPolygons(sourceVectors, options);
@@ -77,10 +77,10 @@ export function prepareArrowPolygonGPUVectors(
 }
 
 /** Async variant that awaits GeoArrow polygon tessellation before creating GPU resources. */
-export async function prepareArrowPolygonGPUVectorsAsync(
+export async function convertArrowPolygonToGPUVectorsAsync(
   device: Device,
   sourceVectors: ArrowPolygonSourceVectors,
-  options: PrepareArrowPolygonGPUVectorsOptions = {}
+  options: ConvertArrowPolygonToGPUVectorsOptions = {}
 ): Promise<PreparedArrowPolygonGPUVectors> {
   const id = options.id ?? 'arrow-polygon-model';
   const tessellation = await tesselateAsync(sourceVectors, options);
@@ -91,7 +91,7 @@ function makePreparedArrowPolygonGPUVectors(
   device: Device,
   tessellation: ArrowPolygonTessellationResult,
   id: string,
-  options: PrepareArrowPolygonGPUVectorsOptions
+  options: ConvertArrowPolygonToGPUVectorsOptions
 ): PreparedArrowPolygonGPUVectors {
   const normalizedTessellation = normalizePolygonTessellationIndices(tessellation);
   const vertexValueOffsets = makePolygonVertexValueOffsets(normalizedTessellation, options);
@@ -209,7 +209,7 @@ function makeListType<T extends DataType>(childType: T): List<T> {
 
 function makePolygonVertexValueOffsets(
   tessellation: ArrowPolygonTessellationResult,
-  options: PrepareArrowPolygonGPUVectorsOptions
+  options: ConvertArrowPolygonToGPUVectorsOptions
 ): Int32Array {
   const valueOffsets = new Int32Array(tessellation.rowCount + 1);
   const rowIndexOffset = options.rowIndexOffset ?? 0;

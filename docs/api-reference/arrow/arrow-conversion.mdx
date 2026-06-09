@@ -1,8 +1,8 @@
 import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 
-# Arrow Table Preparation
+# Arrow Table Conversion
 
-<ArrowDocsTabs active="preparation" />
+<ArrowDocsTabs active="conversion" />
 
 ## Arrow Vector Factories
 
@@ -27,25 +27,26 @@ an appended copy of their first vertex, while already-closed, open, empty, and
 single-point paths remain unchanged. 
 
 The Float32 rows can be absolute path
-coordinates or origin-relative deltas produced from Float64 path preparation.
+coordinates or origin-relative deltas produced from Float64 path conversion.
 WebGPU uses compute classification and scatter passes; other devices use
 equivalent CPU fallback semantics.
 
 ###
 
-`ArrowPathModel.prepareGPUVectors()` and `prepareArrowPathGPUVectors()` are the
-attribute-path preparation boundary. Float32 XY, XYZ, and XYZM path rows upload
+`ArrowPathRenderer.convertToGPUVectors()` and `convertArrowPathToGPUVectors()` are the
+attribute-path conversion boundary. Float32 XY, XYZ, and XYZM path rows upload
 unchanged unless closure is requested. Float64 path rows convert on the CPU into
 stable per-row Float32 deltas from the first point; CPU Float64 origins are kept
 separately, and `updateViewOrigins()` refreshes the per-row view-origin buffers
-when the view or model matrix changes. `ArrowStoragePathModel.prepareGPUVectors()`
-and `prepareArrowStoragePathGPUVectors()` provide the storage-only WebGPU boundary:
+when the view or model matrix changes.
+`ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` and
+`convertArrowPathStorageToGPUVectors()` provide the storage-only WebGPU boundary:
 Float64 rows upload temporarily, convert once into Float32 deltas with
 `sub_fp64u32_to_f32`, then release the transient Float64 GPU payload before
 returning storage path props.
 
-`ArrowPathModel` consumes prepared path props and expands one logical path row
-into packed per-segment render records. `ArrowStoragePathModel` is the WebGPU
+`PathAttributeModel` consumes prepared path props and expands one logical path row
+into packed per-segment render records. `PathStorageModel` is the WebGPU
 storage-backed counterpart. It expands nested path rows into compact indexed
 segment records through compute using the GPU-resident prepared path values plus
 copied list-offset metadata. Render shaders fetch coordinates from path-value
@@ -57,8 +58,8 @@ persistent `vec4<u32>` path range per source row. Shaders that request legacy
 end, previous, or next segment index attributes automatically keep the older
 six-word record layout.
 
-Reusable storage state can be built separately with `createArrowStoragePathState`.
-`ArrowStorageTripsPathModel` layers Trips-style temporal filtering over that
+Reusable storage state can be built separately with `createArrowPathStorageState`.
+`PathTripsStorageModel` layers Trips-style temporal filtering over that
 storage path surface by reading prepared `List<Float32>` timestamps aligned with
 path vertices.
 
@@ -68,20 +69,20 @@ Matrix Arrow columns can carry explicit vis.gl matrix shape, order, and physical
 layout metadata through `makeArrowMatrixVector()` and the shape-specific matrix
 builders. 
 
-`prepareArrowMatrixGPUVector()` accepts metadata-tagged
+`convertArrowMatrixToGPUVector()` accepts metadata-tagged
 `FixedSizeList<Float32>` or `FixedSizeList<Float64>` rows, then returns one
 canonical Float32 column-major `wgsl-storage` GPU vector. Canonical Float32 GPU
 vectors pass through, raw Arrow Float64 rows truncate to Float32 during CPU
-preparation, and non-canonical GPU-resident rows normalize with WebGPU compute.
+conversion, and non-canonical GPU-resident rows normalize with WebGPU compute.
 The same prepared column can lower into matrix attribute columns or bind as
 `array<matCxR<f32>>`.
 
 ## Time Columns
 
-Temporal Arrow columns can be prepared with `prepareArrowTemporalGPUVector()` or
-`prepareArrowTemporalGPUVectors()`. Supported v1 leaves are `Date`, `Time`,
+Temporal Arrow columns can be converted with `convertArrowTemporalToGPUVector()` or
+`convertArrowTemporalToGPUVectors()`. Supported v1 leaves are `Date`, `Time`,
 `Timestamp`, and `Duration`, including `List<...>` leaves for Trips-style
-streams. Preparation emits relative Float32 values in the original Arrow unit,
+streams. Conversion emits relative Float32 values in the original Arrow unit,
 persists the selected origin metadata on the prepared field, chooses the first
 valid absolute value when no origin is stored, and uses origin `0` for
 durations. Raw Arrow inputs use CPU fallback where WebGPU is unavailable;
@@ -89,9 +90,9 @@ GPU-resident temporal inputs use WebGPU compute.
 
 ## Global Grid Columns
 
-DGGS helpers keep compact global grid keys on the GPU. `prepareDggsCellKeyGPUVector()`
+DGGS helpers keep compact global grid keys on the GPU. `convertDggsCellIdsToGPUKeys()`
 parses UTF-8 geohash, quadkey, S2, A5, or H3 cell IDs into Uint64 GPU keys on
-WebGPU, while `prepareDggsCellPathGPUVector()` expands prepared Uint64 keys into
+WebGPU, while `convertDggsCellKeysToGPUPaths()` expands prepared Uint64 keys into
 closed Float32 cell boundary paths for path-style rendering. Its optional
 `coordinateFormat: 'fp64-split'` mode emits
 `[longitudeHigh, latitudeHigh, longitudeLow, latitudeLow]` Float32 components,

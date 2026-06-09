@@ -37,7 +37,7 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
   const prepared = await prepareArrowPointInput(
     device,
     {positions, colors: null, radii: null},
-    {rowIndexOffset: 5, sourceBatchIndex: 3, id: 'point-preparation-test'}
+    {rowIndexOffset: 5, sourceBatchIndex: 3, id: 'point-conversion-test'}
   );
   const rowIndices = await readGPUDataAsUint32Array(prepared.table.gpuVectors.rowIndices.data[0]);
   const positionsBuffer = prepared.table.gpuVectors.positions.data[0].buffer;
@@ -132,7 +132,7 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
   const prepared = await prepareArrowPolygonInput(
     device,
     {polygons, colors: null, tessellated: true},
-    {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-preparation-test'}
+    {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-conversion-test'}
   );
   const positionsBuffer = prepared.positions.data[0].buffer;
   const colorsBuffer = prepared.colors.data[0].buffer;
@@ -314,7 +314,7 @@ test('prepareArrowLineInputFromRecordBatches preserves chunks, row offsets, and 
     model: 'attribute',
     mode: 'lines',
     rowIndexOffset: 20,
-    id: 'line-preparation-test'
+    id: 'line-conversion-test'
   });
   t.equal(prepared.model, 'attribute', 'prepares data for the selected renderer model');
   if (prepared.model !== 'attribute') {

@@ -14,17 +14,17 @@ import {
 } from '../../../gpu/arrow-gpu-table-adapters';
 import {GPURenderable, GPUVector, GPUTable, getRequiredGPUVector} from '@luma.gl/tables';
 import {
-  AttributeTextModel,
-  DictionaryTextModel,
-  RowIndexedStorageTextModel,
-  StorageTextModel,
+  TextAttributeModel,
+  TextDictionaryModel,
+  TextRowIndexedStorageModel,
+  TextStorageModel,
   type FontSettings
 } from '@luma.gl/text';
 import {
   type ArrowUtf8TextVector,
-  type ArrowAttributeTextInputProps,
-  type ArrowDictionaryStorageTextInputProps,
-  type ArrowStorageTextInputProps,
+  type ArrowTextAttributeInputProps,
+  type ArrowTextDictionaryStorageInputProps,
+  type ArrowTextStorageInputProps,
   convertArrowTextToAttribute,
   convertArrowTextToAttributeModelProps,
   convertArrowTextToDictionary,
@@ -32,17 +32,17 @@ import {
   convertArrowTextToStorage,
   convertArrowTextToStorageModelProps,
   type ConvertedArrowTextData
-} from '../preparation/index';
+} from '../conversion/index';
 import * as arrow from 'apache-arrow';
 import {
   createArrowTextShaderInputs,
-  DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
-  DICTIONARY_STORAGE_WGSL_SHADER,
+  TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
+  TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
   FS_GLSL,
-  ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT,
-  ROW_INDEXED_STORAGE_WGSL_SHADER,
-  STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
-  STORAGE_INDEXED_WGSL_SHADER,
+  TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT,
+  TEXT_ROW_INDEXED_STORAGE_WGSL_SHADER,
+  TEXT_STORAGE_INDEXED_SHADER_LAYOUT,
+  TEXT_STORAGE_INDEXED_WGSL_SHADER,
   STREAMING_TEXT_INPUT_SHADER_LAYOUT,
   TEXT_SHADER_LAYOUT,
   VS_GLSL,
@@ -76,7 +76,7 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
   data?: ArrowRecordBatchSource;
   /** Text model path. `auto` prefers WebGPU storage paths when the source shape supports them. */
   model?: 'attribute' | 'storage' | 'storage-row-indexed' | 'dictionary' | 'auto';
-  /** Fixed character set used by text atlas/layout preparation. */
+  /** Fixed character set used by text atlas/layout conversion. */
   characterSet?: string;
   /** Font atlas settings forwarded to the luma.gl text models. */
   fontSettings?: FontSettings;
@@ -96,14 +96,14 @@ export type {CharacterColorDataType, RowColorColumnDataType};
 
 /** Concrete luma.gl text model instances owned by {@link ArrowTextRenderer}. */
 export type ArrowTextRendererActiveModel =
-  | AttributeTextModel
-  | StorageTextModel
-  | DictionaryTextModel;
+  | TextAttributeModel
+  | TextStorageModel
+  | TextDictionaryModel;
 
 /** Prepared GPUVector text data returned by Arrow conversion helpers. */
 export type ArrowTextRendererData = ConvertedArrowTextData;
 
-/** CPU Arrow source plus byte-size metadata used by preparation helpers. */
+/** CPU Arrow source plus byte-size metadata used by conversion helpers. */
 export type ArrowTextRendererSource = ArrowTextMappedSourceVectors & {
   /** Byte length of the primary Arrow text vector. */
   arrowVectorByteLength: number;
@@ -214,8 +214,8 @@ const DEFAULT_COLUMNS: ResolvedArrowTextRendererColumns = {
 const DEFAULT_TEXT_COLOR: [number, number, number, number] = [128, 128, 128, 255];
 const DEFAULT_TEXT_ANGLE = 0;
 const DEFAULT_TEXT_SIZE = 32;
-const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
-const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
+const TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 /**
  * Arrow-aware renderer that chooses between attribute, WebGPU storage, row-indexed
@@ -240,7 +240,7 @@ export class ArrowTextRenderer extends GPURenderable<
   private dataLoadVersion = 0;
   private isDestroyed = false;
 
-  /** Creates a layer from Arrow source props after GPUVector preparation. */
+  /** Creates a layer from Arrow source props after GPUVector conversion. */
   private constructor(
     device: Device,
     props: ArrowTextRendererProps,
@@ -586,20 +586,20 @@ export class ArrowTextRenderer extends GPURenderable<
     };
 
     if (modelKind === 'dictionary') {
-      return new DictionaryTextModel(
+      return new TextDictionaryModel(
         this.device,
         convertArrowTextToDictionaryModelProps(this.device, {
           ...this.getStorageInputProps(data),
           ...commonProps,
-          source: DICTIONARY_STORAGE_WGSL_SHADER,
-          shaderLayout: DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT
+          source: TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
+          shaderLayout: TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT
         })
       );
     }
 
     if (modelKind === 'storage' || modelKind === 'storage-row-indexed') {
       const StorageModel =
-        modelKind === 'storage-row-indexed' ? RowIndexedStorageTextModel : StorageTextModel;
+        modelKind === 'storage-row-indexed' ? TextRowIndexedStorageModel : TextStorageModel;
       return new StorageModel(
         this.device,
         convertArrowTextToStorageModelProps(this.device, {
@@ -608,17 +608,17 @@ export class ArrowTextRenderer extends GPURenderable<
           rowIndexColumn: modelKind === 'storage-row-indexed',
           source:
             modelKind === 'storage-row-indexed'
-              ? ROW_INDEXED_STORAGE_WGSL_SHADER
-              : STORAGE_INDEXED_WGSL_SHADER,
+              ? TEXT_ROW_INDEXED_STORAGE_WGSL_SHADER
+              : TEXT_STORAGE_INDEXED_WGSL_SHADER,
           shaderLayout:
             modelKind === 'storage-row-indexed'
-              ? ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT
-              : STORAGE_INDEXED_TEXT_SHADER_LAYOUT
+              ? TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
+              : TEXT_STORAGE_INDEXED_SHADER_LAYOUT
         })
       );
     }
 
-    return new AttributeTextModel(
+    return new TextAttributeModel(
       this.device,
       convertArrowTextToAttributeModelProps(this.device, {
         ...this.getInputProps(data),
@@ -636,20 +636,20 @@ export class ArrowTextRenderer extends GPURenderable<
     data: ArrowTextRendererData
   ): ArrowTextRendererResolvedModel {
     const hasCharacterColors = isArrowTextCharacterColorType(data.sourceVectors.colors?.type);
-    const hasDictionaryText = arrow.DataType.isDictionary(data.sourceVectors.texts.type);
-    const supportsStorageText = supportsVertexStorageBuffers(
+    const hasTextDictionary = arrow.DataType.isDictionary(data.sourceVectors.texts.type);
+    const supportsTextStorage = supportsVertexStorageBuffers(
       this.device,
-      STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+      TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT
     );
-    const supportsDictionaryText = supportsVertexStorageBuffers(
+    const supportsTextDictionary = supportsVertexStorageBuffers(
       this.device,
-      DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+      TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT
     );
     if (modelKind === 'auto') {
-      if (supportsDictionaryText && hasDictionaryText && !hasCharacterColors) {
+      if (supportsTextDictionary && hasTextDictionary && !hasCharacterColors) {
         return 'dictionary';
       }
-      if (supportsStorageText && !hasCharacterColors) {
+      if (supportsTextStorage && !hasCharacterColors) {
         return 'storage';
       }
       return 'attribute';
@@ -657,13 +657,13 @@ export class ArrowTextRenderer extends GPURenderable<
     if (modelKind !== 'attribute' && hasCharacterColors) {
       return 'attribute';
     }
-    if (modelKind === 'dictionary' && !supportsDictionaryText) {
+    if (modelKind === 'dictionary' && !supportsTextDictionary) {
       return 'attribute';
     }
-    if ((modelKind === 'storage' || modelKind === 'storage-row-indexed') && !supportsStorageText) {
+    if ((modelKind === 'storage' || modelKind === 'storage-row-indexed') && !supportsTextStorage) {
       return 'attribute';
     }
-    if (modelKind === 'dictionary' && !hasDictionaryText) {
+    if (modelKind === 'dictionary' && !hasTextDictionary) {
       return 'attribute';
     }
     return modelKind;
@@ -681,7 +681,7 @@ export class ArrowTextRenderer extends GPURenderable<
   private getInputProps(
     data: ArrowTextRendererData
   ): Pick<
-    ArrowAttributeTextInputProps,
+    ArrowTextAttributeInputProps,
     | 'positions'
     | 'texts'
     | 'sourceVectors'
@@ -706,7 +706,7 @@ export class ArrowTextRenderer extends GPURenderable<
   private getStorageInputProps(
     data: ArrowTextRendererData
   ): Pick<
-    ArrowStorageTextInputProps & ArrowDictionaryStorageTextInputProps,
+    ArrowTextStorageInputProps & ArrowTextDictionaryStorageInputProps,
     | 'positions'
     | 'texts'
     | 'sourceVectors'

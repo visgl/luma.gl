@@ -17,7 +17,7 @@ import type {Model} from '@luma.gl/engine';
  * storage-text implementation and should be removed if `Model.draw()` gains a public batch draw path
  * that supports this rebinding pattern.
  */
-export function drawPreparedStorageTextModelBatch(model: Model, renderPass: RenderPass): boolean {
+export function drawPreparedTextStorageModelBatch(model: Model, renderPass: RenderPass): boolean {
   const drawableModel = model as unknown as {
     _areBindingsLoading(): string | false;
     _syncAttachmentFormats(renderPass: RenderPass): void;

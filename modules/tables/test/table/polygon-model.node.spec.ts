@@ -5,11 +5,11 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
-  AttributePolygonModel,
+  PolygonAttributeModel,
   createPolygonShaderInputs,
   GPUVector,
   POLYGON_GPU_INPUT_SCHEMA,
-  StoragePolygonModel,
+  PolygonStorageModel,
   type PolygonGPUVectors,
   type VertexList
 } from '@luma.gl/tables';
@@ -46,16 +46,16 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
       source: 'generated'
     }
   ]);
-  t.equal(AttributePolygonModel.gpuInputSchema, POLYGON_GPU_INPUT_SCHEMA);
-  t.equal(StoragePolygonModel.gpuInputSchema, POLYGON_GPU_INPUT_SCHEMA);
+  t.equal(PolygonAttributeModel.gpuInputSchema, POLYGON_GPU_INPUT_SCHEMA);
+  t.equal(PolygonStorageModel.gpuInputSchema, POLYGON_GPU_INPUT_SCHEMA);
   t.end();
 });
 
-test('AttributePolygonModel consumes flattened vertex-list values through explicit table layout', t => {
+test('PolygonAttributeModel consumes flattened vertex-list values through explicit table layout', t => {
   const device = new NullDevice({});
   const vectors = makePolygonGPUVectors(device);
-  const model = new AttributePolygonModel(device, {
-    id: 'attribute-polygon-model-test',
+  const model = new PolygonAttributeModel(device, {
+    id: 'polygon-attribute-model-test',
     ...vectors,
     shaderInputs: createPolygonShaderInputs(device)
   });
@@ -74,7 +74,7 @@ test('AttributePolygonModel consumes flattened vertex-list values through explic
   t.end();
 });
 
-test('AttributePolygonModel validates prepared GPUVector formats', t => {
+test('PolygonAttributeModel validates prepared GPUVector formats', t => {
   const device = new NullDevice({});
   const vectors = makePolygonGPUVectors(device);
   const invalidPositions = makePolygonGPUVector(
@@ -88,8 +88,8 @@ test('AttributePolygonModel validates prepared GPUVector formats', t => {
 
   t.throws(
     () =>
-      new AttributePolygonModel(device, {
-        id: 'attribute-polygon-model-invalid-format',
+      new PolygonAttributeModel(device, {
+        id: 'polygon-attribute-model-invalid-format',
         ...vectors,
         positions: invalidPositions as unknown as PolygonGPUVectors['positions'],
         shaderInputs: createPolygonShaderInputs(device)
@@ -102,12 +102,12 @@ test('AttributePolygonModel validates prepared GPUVector formats', t => {
   t.end();
 });
 
-test('AttributePolygonModel appends retained indexed polygon batches', t => {
+test('PolygonAttributeModel appends retained indexed polygon batches', t => {
   const device = new NullDevice({});
   const firstVectors = makePolygonGPUVectors(device);
   const secondVectors = makePolygonGPUVectors(device, 1);
-  const model = new AttributePolygonModel(device, {
-    id: 'attribute-polygon-model-streaming',
+  const model = new PolygonAttributeModel(device, {
+    id: 'polygon-attribute-model-streaming',
     ...firstVectors,
     sourceInfo: {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 1},
     shaderInputs: createPolygonShaderInputs(device)
@@ -136,14 +136,14 @@ test('AttributePolygonModel appends retained indexed polygon batches', t => {
   t.end();
 });
 
-test('StoragePolygonModel rejects non-WebGPU devices', t => {
+test('PolygonStorageModel rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
   const vectors = makePolygonGPUVectors(device, 0, Buffer.VERTEX | Buffer.STORAGE);
 
   t.throws(
     () =>
-      new StoragePolygonModel(device, {
-        id: 'storage-polygon-model-test',
+      new PolygonStorageModel(device, {
+        id: 'polygon-storage-model-test',
         ...vectors,
         shaderInputs: createPolygonShaderInputs(device)
       }),
@@ -155,16 +155,16 @@ test('StoragePolygonModel rejects non-WebGPU devices', t => {
   t.end();
 });
 
-test('StoragePolygonModel binds flattened polygon vectors as storage', async t => {
+test('PolygonStorageModel binds flattened polygon vectors as storage', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('Skipping StoragePolygonModel storage test without WebGPU');
+    t.comment('Skipping PolygonStorageModel storage test without WebGPU');
     t.end();
     return;
   }
   const vectors = makePolygonGPUVectors(device, 0, Buffer.VERTEX | Buffer.STORAGE);
-  const model = new StoragePolygonModel(device, {
-    id: 'storage-polygon-model-test',
+  const model = new PolygonStorageModel(device, {
+    id: 'polygon-storage-model-test',
     ...vectors,
     shaderInputs: createPolygonShaderInputs(device)
   });

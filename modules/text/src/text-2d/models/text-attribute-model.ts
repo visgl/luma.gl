@@ -9,15 +9,15 @@ import FontAtlasManager from '../atlas/font-atlas-manager';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
 import {
-  assertAttributeTextGPUVectorInputs,
-  ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA,
-  type AttributeTextInputProps
+  assertTextAttributeGPUVectorInputs,
+  TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA,
+  type TextAttributeInputProps
 } from '../model-utils/text-model-props';
 
-export type {AttributeTextInputProps};
+export type {TextAttributeInputProps};
 
 /** Generated glyph batch consumed by one attribute-model draw call. */
-export type AttributeTextRenderBatchState = {
+export type TextAttributeRenderBatchState = {
   /** First source text row included in this generated render batch. */
   rowStart: number;
   /** Source text row after the last row included in this generated render batch. */
@@ -28,8 +28,8 @@ export type AttributeTextRenderBatchState = {
   expandedGlyphVertexData: Buffer;
 };
 
-/** Prepared GPU table and generated glyph resources consumed by {@link AttributeTextModel}. */
-export type AttributeTextState = {
+/** Prepared GPU table and generated glyph resources consumed by {@link TextAttributeModel}. */
+export type TextAttributeState = {
   /** Model props with a GPU table containing label/style attributes. */
   modelProps: GPUTableModelProps;
   /** One-line glyph offsets and atlas frames expanded from source text rows. */
@@ -47,7 +47,7 @@ export type AttributeTextState = {
   /** First generated expanded glyph vertex attribute buffer. */
   expandedGlyphVertexData: Buffer;
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches: AttributeTextRenderBatchState[];
+  renderBatches: TextAttributeRenderBatchState[];
   /** SDF render settings retained for built-in fragment shader uniforms. */
   sdfRenderSettings?: unknown;
   /** Default fragment shader uniforms, when the built-in shader is used. */
@@ -58,21 +58,21 @@ export type AttributeTextState = {
  * Render and shader options for an attribute text model that reuses prepared state.
  *
  * These are standard luma.gl model options; draw counts and generated glyph buffers come from the
- * prepared {@link AttributeTextState}.
+ * prepared {@link TextAttributeState}.
  */
-export interface AttributeTextRenderProps extends ModelProps {}
+export interface TextAttributeRenderProps extends ModelProps {}
 
 /** Flat prepared props accepted by the attribute text renderer. */
-export type AttributeTextModelProps = AttributeTextInputProps &
-  AttributeTextState & {
+export type TextAttributeModelProps = TextAttributeInputProps &
+  TextAttributeState & {
     /** Whether this model owns and should destroy the prepared attribute state. */
     ownsAttributeState?: boolean;
   };
 
 /** Explicit prepared-state constructor props, used when sharing state with a companion model. */
-export type PreparedAttributeTextModelProps = AttributeTextRenderProps &
-  Partial<AttributeTextInputProps> &
-  AttributeTextState & {
+export type PreparedTextAttributeModelProps = TextAttributeRenderProps &
+  Partial<TextAttributeInputProps> &
+  TextAttributeState & {
     /** Whether this model owns and should destroy the prepared attribute state. */
     ownsAttributeState?: boolean;
   };
@@ -81,11 +81,11 @@ export type PreparedAttributeTextModelProps = AttributeTextRenderProps &
  * Attribute text renderer that consumes typed GPUVector model props plus prepared render state.
  *
  * Source adapters do layout work before constructing this model, then pass flat prepared GPU
- * vectors and generated render resources through {@link AttributeTextModelProps}.
+ * vectors and generated render resources through {@link TextAttributeModelProps}.
  */
-export class AttributeTextModel extends GPUTableModel {
+export class TextAttributeModel extends GPUTableModel {
   /** Prepared GPU vectors consumed by the attribute-backed text model. */
-  static readonly gpuInputSchema = ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA;
+  static readonly gpuInputSchema = TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA;
 
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
@@ -102,14 +102,14 @@ export class AttributeTextModel extends GPUTableModel {
   /** First generated expanded glyph vertex attribute buffer. */
   expandedGlyphVertexData: Buffer;
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches: AttributeTextRenderBatchState[];
+  renderBatches: TextAttributeRenderBatchState[];
   protected defaultFragmentShaderUniforms?: Record<string, unknown>;
   private ownsAttributeState: boolean;
-  private attributeState: AttributeTextState;
+  private attributeState: TextAttributeState;
 
-  constructor(device: Device, props: AttributeTextModelProps | PreparedAttributeTextModelProps) {
-    if (isAttributeTextInputProps(props)) {
-      assertAttributeTextGPUVectorInputs(props);
+  constructor(device: Device, props: TextAttributeModelProps | PreparedTextAttributeModelProps) {
+    if (isTextAttributeInputProps(props)) {
+      assertTextAttributeGPUVectorInputs(props);
     }
     super(device, props.modelProps);
     this.attributeState = props;
@@ -126,15 +126,15 @@ export class AttributeTextModel extends GPUTableModel {
   }
 
   /** Constructs a render-only model from an existing prepared attribute state. */
-  static fromState(device: Device, props: PreparedAttributeTextModelProps): AttributeTextModel {
-    return new AttributeTextModel(device, props);
+  static fromState(device: Device, props: PreparedTextAttributeModelProps): TextAttributeModel {
+    return new TextAttributeModel(device, props);
   }
 
   /** Draws each generated glyph render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
     const gpuTable = this.table;
     if (!gpuTable || gpuTable.batches.length !== this.renderBatches.length) {
-      throw new Error('AttributeTextModel draw batches must align with generated glyph batches');
+      throw new Error('TextAttributeModel draw batches must align with generated glyph batches');
     }
 
     let drawSuccess = true;
@@ -142,7 +142,7 @@ export class AttributeTextModel extends GPUTableModel {
       for (const [batchIndex, renderBatch] of this.renderBatches.entries()) {
         const gpuBatch = gpuTable.batches[batchIndex];
         if (!gpuBatch) {
-          throw new Error('AttributeTextModel is missing a GPU render batch');
+          throw new Error('TextAttributeModel is missing a GPU render batch');
         }
         this.setAttributes({
           ...gpuBatch.attributes,
@@ -165,15 +165,15 @@ export class AttributeTextModel extends GPUTableModel {
   /** Releases owned atlas and generated glyph render buffers. */
   override destroy(): void {
     if (this.ownsAttributeState) {
-      destroyAttributeTextState(this.attributeState);
+      destroyTextAttributeState(this.attributeState);
       this.ownsAttributeState = false;
     }
     super.destroy();
   }
 
-  protected setAttributeState(attributeState: AttributeTextState, ownsAttributeState = true): void {
+  protected setAttributeState(attributeState: TextAttributeState, ownsAttributeState = true): void {
     if (this.ownsAttributeState) {
-      destroyAttributeTextState(this.attributeState);
+      destroyTextAttributeState(this.attributeState);
     }
     this.attributeState = attributeState;
     this.ownsAttributeState = ownsAttributeState;
@@ -197,13 +197,13 @@ export class AttributeTextModel extends GPUTableModel {
   }
 }
 
-function isAttributeTextInputProps(
-  props: AttributeTextModelProps | PreparedAttributeTextModelProps
-): props is AttributeTextModelProps {
+function isTextAttributeInputProps(
+  props: TextAttributeModelProps | PreparedTextAttributeModelProps
+): props is TextAttributeModelProps {
   return 'positions' in props && 'texts' in props;
 }
 
-function destroyAttributeTextState(attributeState: AttributeTextState): void {
+function destroyTextAttributeState(attributeState: TextAttributeState): void {
   attributeState.atlasTexture?.destroy();
   for (const renderBatch of attributeState.renderBatches) {
     renderBatch.expandedGlyphVertexData.destroy();

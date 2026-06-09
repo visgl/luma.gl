@@ -9,26 +9,26 @@ import {
   convertArrowTripsToStorage,
   getArrowVectorByteLength,
   makeArrowFixedSizeListVector,
-  prepareArrowTemporalGPUVector,
+  convertArrowTemporalToGPUVector,
   type ArrowPathPreparedState
 } from '@luma.gl/arrow';
 import {type CommandEncoder, type Device} from '@luma.gl/core';
 import {
-  AttributePathModel,
+  PathAttributeModel,
   GPURenderable,
   GPUVector,
-  StoragePathModel,
-  StorageTripsPathModel,
-  type AttributePathModelProps,
+  PathStorageModel,
+  PathTripsStorageModel,
+  type PathAttributeModelProps,
   type GPUVectorFormat,
-  type StoragePathInputProps
+  type PathStorageInputProps
 } from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createArrowLineShaderInputs,
   FS_GLSL,
   PATH_SHADER_LAYOUT,
-  STORAGE_PATH_SHADER_LAYOUT,
+  PATH_STORAGE_SHADER_LAYOUT,
   STORAGE_WGSL_SHADER,
   TRIPS_STORAGE_WGSL_SHADER,
   VS_GLSL,
@@ -61,7 +61,7 @@ export type ArrowLineFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arro
  */
 export type ArrowLineDenseUnionCoordinateType = arrow.DenseUnion;
 /**
- * CPU source path coordinate type accepted by preparation helpers.
+ * CPU source path coordinate type accepted by conversion helpers.
  *
  * DenseUnion inputs are accepted at the example renderer boundary and normalized into
  * `List<FixedSizeList<Float32, 4>>` before the core path models prepare GPU vectors.
@@ -82,11 +82,11 @@ export type ArrowLineVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint
 export type ArrowLineColorType = ArrowLineRowColorType | ArrowLineVertexColorType;
 /** Concrete luma.gl path models owned by {@link ArrowLineRenderer}. */
 export type ArrowLineRendererActiveModel =
-  | AttributePathModel
-  | StoragePathModel
-  | StorageTripsPathModel;
+  | PathAttributeModel
+  | PathStorageModel
+  | PathTripsStorageModel;
 
-/** CPU Arrow vectors accepted by Arrow path preparation helpers. */
+/** CPU Arrow vectors accepted by Arrow path conversion helpers. */
 export type ArrowLineRendererSourceVectors = {
   /** Variable-length path coordinate rows, or DenseUnion rows normalized by this example layer. */
   paths: arrow.Vector<ArrowLineSourceCoordinateType>;
@@ -122,15 +122,15 @@ export type ArrowLineAttributeRendererData = {
   /** Resolved model this data was prepared for. */
   model: 'attribute';
   /** GPU path coordinate rows. */
-  paths: AttributePathModelProps['paths'];
+  paths: PathAttributeModelProps['paths'];
   /** Optional GPU row or per-vertex colors. */
-  colors?: AttributePathModelProps['colors'];
+  colors?: PathAttributeModelProps['colors'];
   /** Optional GPU per-row widths. */
-  widths?: AttributePathModelProps['widths'];
+  widths?: PathAttributeModelProps['widths'];
   /** Optional GPU per-vertex relative timestamps. */
   timestamps?: GPUVector<'vertex-list<float32>'>;
   /** Optional view origins generated during coordinate normalization. */
-  viewOrigins?: AttributePathModelProps['viewOrigins'];
+  viewOrigins?: PathAttributeModelProps['viewOrigins'];
   /** Prepared path state shared by attribute path rendering. */
   pathState: ArrowPathPreparedState;
   /** Global source row index assigned to local path row zero. */
@@ -144,15 +144,15 @@ export type ArrowLineStorageRendererData = {
   /** Resolved model this data was prepared for. */
   model: 'storage' | 'trips';
   /** GPU path coordinate rows. */
-  paths: StoragePathInputProps['paths'];
+  paths: PathStorageInputProps['paths'];
   /** Optional GPU row or per-vertex colors. */
-  colors?: StoragePathInputProps['colors'];
+  colors?: PathStorageInputProps['colors'];
   /** Optional GPU per-row widths. */
-  widths?: StoragePathInputProps['widths'];
+  widths?: PathStorageInputProps['widths'];
   /** Optional GPU per-vertex relative timestamps. */
-  timestamps?: StoragePathInputProps['timestamps'];
+  timestamps?: PathStorageInputProps['timestamps'];
   /** Optional view origins generated during coordinate normalization. */
-  viewOrigins?: StoragePathInputProps['viewOrigins'];
+  viewOrigins?: PathStorageInputProps['viewOrigins'];
   /** Global source row index assigned to local path row zero. */
   rowIndexOffset?: number;
   /** Releases all resources owned by this prepared data object. */
@@ -194,7 +194,7 @@ export type ArrowLineRendererSourceData = {
   arrowVectorBuildTimeMs?: number;
 };
 
-/** Props for preparing GPUVector path data from explicit Arrow source vectors. */
+/** Props for converting GPUVector path data from explicit Arrow source vectors. */
 export type ArrowLineRendererPrepareDataProps = {
   /** Source Arrow vectors to prepare. */
   sourceVectors: ArrowLineRendererSourceVectors;
@@ -210,8 +210,8 @@ export type ArrowLineRendererPrepareDataProps = {
   rowIndexOffset?: number;
 };
 
-/** Options for preparing one Arrow line source or record-batch group. */
-export type ArrowLineRendererPreparationOptions = {
+/** Options for converting one Arrow line source or record-batch group. */
+export type ArrowLineRendererConversionOptions = {
   /** Path rendering path. Defaults to `auto`. */
   model?: ArrowLineRendererModel;
   /** Source time column mode. Defaults to `xyzm`. */
@@ -279,7 +279,7 @@ const DEFAULT_PATH_COLOR: [number, number, number, number] = [199, 219, 245, 235
 const DEFAULT_PATH_WIDTH = 0.0035;
 const DEFAULT_PATH_TOPOLOGY = 'triangle-list' as const;
 const DEFAULT_PATH_VERTEX_COUNT = 12;
-const STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT = 6;
+const PATH_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 6;
 const TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT = 7;
 const DEFAULT_RENDER_PARAMETERS = {
   depthWriteEnabled: false,
@@ -317,7 +317,7 @@ export class ArrowLineRenderer extends GPURenderable<
   }
 
   /**
-   * Prepares Arrow source vectors for path rendering.
+   * Converts Arrow source vectors for path rendering.
    *
    * DenseUnion path coordinates are normalized to one prepared path row per top-level DenseUnion
    * row. Row-aligned style and timestamp columns remain unchanged.
@@ -348,7 +348,7 @@ export class ArrowLineRenderer extends GPURenderable<
       nextModel !== this.resolvedModel;
     this.props = nextProps;
 
-    if (props.currentTime !== undefined && this.model instanceof StorageTripsPathModel) {
+    if (props.currentTime !== undefined && this.model instanceof PathTripsStorageModel) {
       this.model.setProps({currentTime: props.currentTime});
     }
 
@@ -507,7 +507,7 @@ export class ArrowLineRenderer extends GPURenderable<
           width: props.width ?? DEFAULT_PATH_WIDTH,
           rowIndexBase: props.data.rowIndexOffset ?? 0,
           source: STORAGE_WGSL_SHADER,
-          shaderLayout: STORAGE_PATH_SHADER_LAYOUT
+          shaderLayout: PATH_STORAGE_SHADER_LAYOUT
         });
       }
 
@@ -524,7 +524,7 @@ export class ArrowLineRenderer extends GPURenderable<
         width: props.width ?? DEFAULT_PATH_WIDTH,
         rowIndexBase: props.data.rowIndexOffset ?? 0,
         source: TRIPS_STORAGE_WGSL_SHADER,
-        shaderLayout: STORAGE_PATH_SHADER_LAYOUT
+        shaderLayout: PATH_STORAGE_SHADER_LAYOUT
       });
     }
 
@@ -568,7 +568,7 @@ function getArrowLineCommonModelProps<
 export async function convertArrowLineColumnsToGPUVectors(
   device: Device,
   columns: ArrowLineRendererSourceVectors,
-  options: ArrowLineRendererPreparationOptions = {}
+  options: ArrowLineRendererConversionOptions = {}
 ): Promise<ArrowLineRendererData> {
   const sourceVectors = normalizeArrowLineSourceVectors(columns, options.mode ?? 'lines');
   const id = options.id ?? 'arrow-line-renderer';
@@ -620,7 +620,7 @@ export async function convertArrowLineColumnsToGPUVectors(
   }
 
   const preparedTimestamps = sourceVectors.timestamps
-    ? await prepareArrowTemporalGPUVector(device, sourceVectors.timestamps, {
+    ? await convertArrowTemporalToGPUVector(device, sourceVectors.timestamps, {
         name: 'timestamps',
         id: `${id}-timestamps`
       })
@@ -658,23 +658,23 @@ export async function convertArrowLineColumnsToGPUVectors(
 export async function prepareArrowLineInput(
   device: Device,
   sourceData: ArrowLineRendererSourceData,
-  options: ArrowLineRendererMode | ArrowLineRendererPreparationOptions = 'lines'
+  options: ArrowLineRendererMode | ArrowLineRendererConversionOptions = 'lines'
 ): Promise<ArrowLineRendererInput> {
-  const prepareOptions = normalizeArrowLineRendererPreparationOptions(options);
+  const conversionOptions = normalizeArrowLineRendererConversionOptions(options);
   const {sourceVectors} = sourceData;
   const prepared = await convertArrowLineColumnsToGPUVectors(device, sourceVectors, {
-    id: prepareOptions.id ?? 'arrow-lines',
-    model: prepareOptions.model,
-    timeColumn: prepareOptions.timeColumn,
-    mode: prepareOptions.mode,
-    rowIndexOffset: prepareOptions.rowIndexOffset
+    id: conversionOptions.id ?? 'arrow-lines',
+    model: conversionOptions.model,
+    timeColumn: conversionOptions.timeColumn,
+    mode: conversionOptions.mode,
+    rowIndexOffset: conversionOptions.rowIndexOffset
   });
   if (!prepared.widths) {
     throw new Error('Arrow path example expected prepared width GPU vectors');
   }
   if (
     sourceVectors.timestamps &&
-    prepareOptions.timeColumn === 'timestamps' &&
+    conversionOptions.timeColumn === 'timestamps' &&
     !prepared.timestamps
   ) {
     throw new Error('Arrow path example expected prepared timestamp GPU vectors');
@@ -698,9 +698,9 @@ export async function prepareArrowLineInput(
 export async function prepareArrowLineInputFromRecordBatches(
   device: Device,
   recordBatches: arrow.RecordBatch[],
-  options: ArrowLineRendererMode | ArrowLineRendererPreparationOptions = 'lines'
+  options: ArrowLineRendererMode | ArrowLineRendererConversionOptions = 'lines'
 ): Promise<ArrowLineRendererInput> {
-  const prepareOptions = normalizeArrowLineRendererPreparationOptions(options);
+  const conversionOptions = normalizeArrowLineRendererConversionOptions(options);
   const sourceTable = new arrow.Table(recordBatches);
   const paths = getRequiredArrowVector<ArrowLineSourceCoordinateType>(sourceTable, 'paths');
   const colors = getOptionalArrowVector<ArrowLineColorType>(sourceTable, 'colors');
@@ -724,7 +724,7 @@ export async function prepareArrowLineInputFromRecordBatches(
       styleArrowByteLength:
         (colors ? getArrowVectorByteLength(colors) : 0) + getArrowVectorByteLength(widths)
     },
-    prepareOptions
+    conversionOptions
   );
 }
 
@@ -755,32 +755,32 @@ function makeRetainedArrowLineInput(
   const rowIndexOffset = firstPathInput.rowIndexOffset;
 
   if (firstPathInput.model === 'attribute') {
-    const attributePathInputs = pathInputs.filter(
+    const pathAttributeInputs = pathInputs.filter(
       (pathInput): pathInput is Extract<ArrowLineRendererInput, {model: 'attribute'}> =>
         pathInput.model === 'attribute'
     );
     const paths = makeAggregateGPUVector(
       'paths',
-      attributePathInputs.map(pathInput => pathInput.paths)
+      pathAttributeInputs.map(pathInput => pathInput.paths)
     );
     const colors = makeAggregateOptionalGPUVector(
       'colors',
-      attributePathInputs,
+      pathAttributeInputs,
       pathInput => pathInput.colors
     );
     const widths = makeAggregateRequiredGPUVector(
       'widths',
-      attributePathInputs,
+      pathAttributeInputs,
       pathInput => pathInput.widths
     );
     const timestamps = makeAggregateOptionalGPUVector(
       'timestamps',
-      attributePathInputs,
+      pathAttributeInputs,
       pathInput => pathInput.timestamps
     );
     const viewOrigins = makeAggregateOptionalGPUVector(
       'viewOrigins',
-      attributePathInputs,
+      pathAttributeInputs,
       pathInput => pathInput.viewOrigins
     );
     return {
@@ -790,7 +790,7 @@ function makeRetainedArrowLineInput(
       widths,
       ...(timestamps ? {timestamps} : {}),
       ...(viewOrigins ? {viewOrigins} : {}),
-      pathState: makeRetainedAttributePathState(attributePathInputs),
+      pathState: makeRetainedPathAttributeState(pathAttributeInputs),
       rowIndexOffset,
       pathArrowByteLength,
       styleArrowByteLength,
@@ -798,41 +798,41 @@ function makeRetainedArrowLineInput(
     };
   }
 
-  const storagePathInputs = pathInputs.filter(
+  const pathStorageInputs = pathInputs.filter(
     (pathInput): pathInput is Extract<ArrowLineRendererInput, {model: 'storage' | 'trips'}> =>
       pathInput.model === 'storage' || pathInput.model === 'trips'
   );
   const paths = makeAggregateGPUVector(
     'paths',
-    storagePathInputs.map(pathInput => pathInput.paths)
+    pathStorageInputs.map(pathInput => pathInput.paths)
   );
   const colors = makeAggregateOptionalGPUVector(
     'colors',
-    storagePathInputs,
+    pathStorageInputs,
     pathInput => pathInput.colors
   );
   const widths = makeAggregateRequiredGPUVector(
     'widths',
-    storagePathInputs,
+    pathStorageInputs,
     pathInput => pathInput.widths
   );
   const timestamps = makeAggregateOptionalGPUVector(
     'timestamps',
-    storagePathInputs,
+    pathStorageInputs,
     pathInput => pathInput.timestamps
   );
   const viewOrigins = makeAggregateOptionalGPUVector(
     'viewOrigins',
-    storagePathInputs,
+    pathStorageInputs,
     pathInput => pathInput.viewOrigins
   );
-  const firstStoragePathInput = storagePathInputs[0];
-  if (!firstStoragePathInput) {
+  const firstPathStorageInput = pathStorageInputs[0];
+  if (!firstPathStorageInput) {
     throw new Error('ArrowLineRenderer retained stream requires storage path batches');
   }
 
   return {
-    model: firstStoragePathInput.model,
+    model: firstPathStorageInput.model,
     paths,
     ...(colors ? {colors} : {}),
     widths,
@@ -903,7 +903,7 @@ function shouldLoadLineSource(props: ArrowLineRendererProps, hasNewDataSource: b
   return hasNewDataSource || !props.data;
 }
 
-function makeRetainedAttributePathState(
+function makeRetainedPathAttributeState(
   pathInputs: readonly Extract<ArrowLineRendererInput, {model: 'attribute'}>[]
 ): ArrowPathPreparedState {
   const segmentTables = pathInputs.map(pathInput => pathInput.pathState.segmentTable);
@@ -1032,10 +1032,10 @@ function destroyArrowLineInputs(pathInputs: readonly ArrowLineRendererInput[] | 
   }
 }
 
-function normalizeArrowLineRendererPreparationOptions(
-  options: ArrowLineRendererMode | ArrowLineRendererPreparationOptions
-): Required<Pick<ArrowLineRendererPreparationOptions, 'mode' | 'rowIndexOffset'>> &
-  Pick<ArrowLineRendererPreparationOptions, 'id' | 'model' | 'timeColumn'> {
+function normalizeArrowLineRendererConversionOptions(
+  options: ArrowLineRendererMode | ArrowLineRendererConversionOptions
+): Required<Pick<ArrowLineRendererConversionOptions, 'mode' | 'rowIndexOffset'>> &
+  Pick<ArrowLineRendererConversionOptions, 'id' | 'model' | 'timeColumn'> {
   return typeof options === 'string'
     ? {mode: options, rowIndexOffset: 0}
     : {
@@ -1074,7 +1074,7 @@ function resolveArrowLineRendererModel(
 function getPathStorageBufferCount(timeColumn: ArrowLineRendererTimeColumn): number {
   return timeColumn === 'timestamps'
     ? TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT
-    : STORAGE_PATH_VERTEX_STORAGE_BUFFER_COUNT;
+    : PATH_STORAGE_VERTEX_STORAGE_BUFFER_COUNT;
 }
 
 function normalizeArrowLineSourceVectors(

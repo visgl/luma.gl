@@ -5,11 +5,11 @@
 import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
-import type {AttributeTextModelProps} from '@luma.gl/text';
+import type {TextAttributeModelProps} from '@luma.gl/text';
 import type {ArrowUtf8TextVector} from './arrow-text';
 import {
-  createArrowAttributeTextState,
-  type ArrowAttributeTextState,
+  createArrowTextAttributeState,
+  type ArrowTextAttributeState,
   type ArrowTextModelProps,
   type ArrowTextSourceVectors
 } from './convert-arrow-text-vectors';
@@ -44,7 +44,7 @@ export type ArrowTextConversionColumns = {
 /**
  * GPUVector bundle produced from Arrow text source vectors.
  *
- * Layer/data-preparation code owns this object and should call `destroy()` when the prepared
+ * Layer/data-conversion code owns this object and should call `destroy()` when the prepared
  * vectors are no longer used by a model or prepared state. The original CPU Arrow vectors are
  * retained in `sourceVectors` so glyph-layout helpers can still expand UTF-8 rows explicitly.
  */
@@ -99,11 +99,11 @@ const DEFAULT_COLUMNS: Required<ArrowTextConversionColumns> = {
 };
 
 /**
- * Uploads Arrow text source vectors to GPUVectors for attribute text preparation.
+ * Uploads Arrow text source vectors to GPUVectors for attribute text conversion.
  *
- * This does not construct a renderer. It is intended for layer/data-preparation code that will
+ * This does not construct a renderer. It is intended for layer/data-conversion code that will
  * then call {@link convertArrowTextToAttributeState} and pass the prepared state to
- * {@link AttributeTextModel}.
+ * {@link TextAttributeModel}.
  */
 export function convertArrowTextToAttribute(
   device: Device,
@@ -195,31 +195,31 @@ export function convertArrowTextToAttribute(
  * Builds prepared attribute text state from Arrow-backed GPU inputs.
  *
  * The returned state contains generated glyph vertex buffers and the GPU table consumed by
- * {@link AttributeTextModel}. The caller decides whether the model owns that state by setting
+ * {@link TextAttributeModel}. The caller decides whether the model owns that state by setting
  * `ownsAttributeState` on the model props.
  */
 export function convertArrowTextToAttributeState(
   device: Device,
   props: ArrowTextModelProps
-): ArrowAttributeTextState {
-  return createArrowAttributeTextState(device, props);
+): ArrowTextAttributeState {
+  return createArrowTextAttributeState(device, props);
 }
 
 /**
  * Builds model-ready attribute text props from Arrow-backed GPU inputs.
  *
  * CPU Arrow source vectors are consumed only by this conversion step and are not exposed on the
- * returned {@link AttributeTextModelProps}.
+ * returned {@link TextAttributeModelProps}.
  */
 export function convertArrowTextToAttributeModelProps(
   device: Device,
   props: ArrowTextModelProps
-): AttributeTextModelProps & ArrowAttributeTextState {
+): TextAttributeModelProps & ArrowTextAttributeState {
   const attributeState = convertArrowTextToAttributeState(device, props);
   const {sourceVectors: _sourceVectors, fontAtlasManager: _fontAtlasManager, ...modelProps} = props;
   return {
     ...modelProps,
     ...attributeState,
     ownsAttributeState: true
-  } as AttributeTextModelProps & ArrowAttributeTextState;
+  } as TextAttributeModelProps & ArrowTextAttributeState;
 }

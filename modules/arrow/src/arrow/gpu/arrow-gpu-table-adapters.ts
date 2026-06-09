@@ -334,7 +334,7 @@ export function makeGPUVectorFromArrow<T extends DataType>(
     isVariableLengthAttributeArrowType(arrowType);
   if (matrixInfo && !isCanonicalFloat32Matrix) {
     throw new Error(
-      'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
+      'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use convertArrowMatrixToGPUVector() first'
     );
   }
 
@@ -595,7 +595,7 @@ function getGPUVectorFormatForArrowType(type: DataType): GPUVectorFormat {
   if (matrixInfo) {
     if (!isCanonicalFloat32ArrowMatrixInfo(matrixInfo)) {
       throw new Error(
-        'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
+        'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use convertArrowMatrixToGPUVector() first'
       );
     }
     return 'float32x4';

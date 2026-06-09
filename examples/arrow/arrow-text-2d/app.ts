@@ -80,8 +80,8 @@ type TextRendererUpdateOptions = {
   syncControls?: boolean;
   updateMetrics?: boolean;
 };
-const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
-const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
+const TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
@@ -380,13 +380,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     }
     if (
       (modelKind === 'storage' || modelKind === 'storage-row-indexed') &&
-      !supportsVertexStorageBuffers(this.device, STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT)
+      !supportsVertexStorageBuffers(this.device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT)
     ) {
       return 'auto';
     }
     if (
       modelKind === 'dictionary' &&
-      (!supportsVertexStorageBuffers(this.device, DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT) ||
+      (!supportsVertexStorageBuffers(this.device, TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT) ||
         !isArrowTextDictionarySource(rendererTextInput.sourceVectors))
     ) {
       return 'auto';

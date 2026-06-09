@@ -20,7 +20,7 @@ import {
   createGpuPathRangeState,
   dispatchGpuPathExpansionCompute
 } from './gpu/gpu-path-expansion';
-import {resolveStoragePathInputs, type StoragePathBatchInputs} from './gpu/storage-path-gpu-inputs';
+import {resolvePathStorageInputs, type PathStorageBatchInputs} from './gpu/path-storage-gpu-inputs';
 import type {ModelGPUInputSchema} from '../../engine/gpu-table-model-input-schema';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';
@@ -43,11 +43,11 @@ const LEGACY_ROW_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 5;
 const COMPACT_SEGMENT_FLAGS_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT;
 const COMPACT_ROW_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 2;
 
-const DEFAULT_STORAGE_PATH_COLOR: [number, number, number, number] = [255, 255, 255, 255];
-const DEFAULT_STORAGE_PATH_WIDTH = 1;
+const DEFAULT_PATH_STORAGE_COLOR: [number, number, number, number] = [255, 255, 255, 255];
+const DEFAULT_PATH_STORAGE_WIDTH = 1;
 
 /** Prepared GPU inputs consumed by the storage-backed path model. */
-export const ARROW_STORAGE_PATH_GPU_INPUT_SCHEMA = [
+export const PATH_STORAGE_GPU_INPUT_SCHEMA = [
   {
     name: 'paths',
     kind: 'positions',
@@ -85,13 +85,13 @@ export const ARROW_STORAGE_PATH_GPU_INPUT_SCHEMA = [
   }
 ] as const satisfies ModelGPUInputSchema;
 
-type StoragePathOwnedResource =
+type PathStorageOwnedResource =
   | Pick<GPUVector, 'destroy'>
   | Pick<DynamicBuffer, 'destroy'>
   | Pick<Buffer, 'destroy'>;
-type StoragePathRecordMode = 'compact' | 'legacy';
+type PathStorageRecordMode = 'compact' | 'legacy';
 
-const DEFAULT_STORAGE_PATH_SHADER_LAYOUT: ShaderLayout = {
+const DEFAULT_PATH_STORAGE_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: SEGMENT_START_POINT_INDICES_COLUMN, location: 0, type: 'u32', stepMode: 'instance'},
     {name: SEGMENT_FLAGS_COLUMN, location: 1, type: 'u32', stepMode: 'instance'},
@@ -100,7 +100,7 @@ const DEFAULT_STORAGE_PATH_SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
-const DEFAULT_STORAGE_PATH_SOURCE = /* wgsl */ `
+const DEFAULT_PATH_STORAGE_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathValues : array<f32>;
   @group(0) @binding(auto) var<storage, read> pathRanges : array<vec4<u32>>;
   @group(0) @binding(auto) var<storage, read> pathViewOrigins : array<vec4<f32>>;
@@ -210,7 +210,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 `;
 
 /** GPU vectors used by the storage-backed path model. */
-export type StoragePathInputProps = Omit<ModelProps, 'instanceCount'> & {
+export type PathStorageInputProps = Omit<ModelProps, 'instanceCount'> & {
   /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one GPU row per path. */
   paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
   /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
@@ -229,13 +229,13 @@ export type StoragePathInputProps = Omit<ModelProps, 'instanceCount'> & {
   width?: number;
 };
 
-type StoragePathRenderProps = Omit<
-  StoragePathInputProps,
+type PathStorageRenderProps = Omit<
+  PathStorageInputProps,
   'paths' | 'colors' | 'widths' | 'viewOrigins' | 'color' | 'width'
 >;
 
-/** Per-source-batch storage bindings retained by {@link StoragePathState}. */
-export type StoragePathBatchState = {
+/** Per-source-batch storage bindings retained by {@link PathStorageState}. */
+export type PathStorageBatchState = {
   /** Global source path row index assigned to local row zero. */
   batchRowIndexBase: number;
   /** Source path rows included in this storage batch. */
@@ -261,7 +261,7 @@ export type StoragePathBatchState = {
 };
 
 /** Generated storage path render-batch state. */
-export type StoragePathRenderBatchState = {
+export type PathStorageRenderBatchState = {
   /** Source storage batch whose row bindings feed this generated render batch. */
   rowBindingBatchIndex: number;
   /** First source path row included in this generated render batch. */
@@ -275,7 +275,7 @@ export type StoragePathRenderBatchState = {
 };
 
 /** Reusable WebGPU storage path expansion and row-binding state. */
-export type StoragePathState = {
+export type PathStorageState = {
   /** Generated segment records across all preserved render batches. */
   segmentCount: number;
   /** CPU time spent constructing persistent path range metadata. */
@@ -293,11 +293,11 @@ export type StoragePathState = {
   /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength: number;
   /** Per-source-batch storage bindings and persistent range state. */
-  batches: StoragePathBatchState[];
+  batches: PathStorageBatchState[];
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches: StoragePathRenderBatchState[];
+  renderBatches: PathStorageRenderBatchState[];
   /** Row/default binding resources owned by this storage state. */
-  ownedRowBindingResources: StoragePathOwnedResource[];
+  ownedRowBindingResources: PathStorageOwnedResource[];
   /** First batch packed per-row RGBA8 color binding. */
   rowColorsBinding: Binding;
   /** First batch packed per-vertex RGBA8 color binding. */
@@ -313,26 +313,26 @@ export type StoragePathState = {
 };
 
 /** Props for constructing or rebinding a WebGPU storage-backed path model. */
-export type StoragePathModelProps =
-  | (StoragePathInputProps & {storageState?: never})
-  | (StoragePathRenderProps & {storageState: StoragePathState});
+export type PathStorageModelProps =
+  | (PathStorageInputProps & {storageState?: never})
+  | (PathStorageRenderProps & {storageState: PathStorageState});
 
-type StoragePathDefaultBindings = {
+type PathStorageDefaultBindings = {
   colorsBinding: Binding;
   vertexColorsBinding: Binding;
   widthsBinding: Binding;
   viewOriginsBinding: Binding;
   byteLength: number;
-  ownedResources: StoragePathOwnedResource[];
+  ownedResources: PathStorageOwnedResource[];
 };
 
-type StoragePathBatchRowState = {
+type PathStorageBatchRowState = {
   pathViewOriginsBinding: Binding;
   rowColorsBinding: Binding;
   vertexColorsBinding: Binding;
   rowWidthsBinding: Binding;
   styleConfigBuffer: DynamicBuffer;
-  ownedResources: StoragePathOwnedResource[];
+  ownedResources: PathStorageOwnedResource[];
   ownedByteLength: number;
 };
 
@@ -340,9 +340,9 @@ type StoragePathBatchRowState = {
  * WebGPU-only path model that expands variable-length GPU path rows through compute,
  * while keeping per-row style values as storage-buffer reads during rendering.
  */
-export class StoragePathModel extends Model {
+export class PathStorageModel extends Model {
   /** Prepared GPU vectors consumed by the storage-backed path model. */
-  static readonly gpuInputSchema: ModelGPUInputSchema = ARROW_STORAGE_PATH_GPU_INPUT_SCHEMA;
+  static readonly gpuInputSchema: ModelGPUInputSchema = PATH_STORAGE_GPU_INPUT_SCHEMA;
 
   /** Generated segment records across all preserved render batches. */
   segmentCount!: number;
@@ -361,9 +361,9 @@ export class StoragePathModel extends Model {
   /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength!: number;
   /** Per-source-batch storage bindings and persistent range state. */
-  batches!: StoragePathBatchState[];
+  batches!: PathStorageBatchState[];
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches!: StoragePathRenderBatchState[];
+  renderBatches!: PathStorageRenderBatchState[];
   /** First batch packed per-row RGBA8 color binding. */
   rowColorsBinding!: Binding;
   /** First batch packed per-vertex RGBA8 color binding. */
@@ -375,20 +375,20 @@ export class StoragePathModel extends Model {
   /** First generated compact or legacy path segment vertex buffer. */
   compactPathVertexData!: Buffer;
   /** Reusable storage path expansion and row-binding state currently bound by the model. */
-  storageState: StoragePathState;
-  private pathProps: StoragePathModelProps;
+  storageState: PathStorageState;
+  private pathProps: PathStorageModelProps;
   private ownsStorageState: boolean;
 
   /** Creates a WebGPU storage-backed path model. */
-  constructor(device: Device, props: StoragePathModelProps) {
+  constructor(device: Device, props: PathStorageModelProps) {
     if (device.type !== 'webgpu') {
-      throw new Error('StoragePathModel is WebGPU-only');
+      throw new Error('PathStorageModel is WebGPU-only');
     }
-    const ownsStorageState = !hasStoragePathState(props);
+    const ownsStorageState = !hasPathStorageState(props);
     const storageState = ownsStorageState
-      ? createStoragePathState(device, props)
+      ? createPathStorageState(device, props)
       : props.storageState;
-    super(device, createStoragePathModelProps(props, storageState));
+    super(device, createPathStorageModelProps(props, storageState));
     this.pathProps = props;
     this.storageState = storageState;
     this.ownsStorageState = ownsStorageState;
@@ -396,10 +396,10 @@ export class StoragePathModel extends Model {
   }
 
   /** Updates storage path props, rebuilding state only when path/layout inputs change. */
-  setProps(props: Partial<StoragePathModelProps>): void {
-    const nextProps = {...this.pathProps, ...props} as StoragePathModelProps;
-    const nextUsesExternalState = hasStoragePathState(nextProps);
-    const pathProps = props as Partial<StoragePathInputProps>;
+  setProps(props: Partial<PathStorageModelProps>): void {
+    const nextProps = {...this.pathProps, ...props} as PathStorageModelProps;
+    const nextUsesExternalState = hasPathStorageState(nextProps);
+    const pathProps = props as Partial<PathStorageInputProps>;
     const shouldReplaceExternalState = 'storageState' in props && props.storageState !== undefined;
     const shouldReplaceState =
       shouldReplaceExternalState ||
@@ -418,10 +418,10 @@ export class StoragePathModel extends Model {
     this.pathProps = nextProps;
     if (!shouldReplaceState) {
       if (shouldRefreshRowBindings) {
-        refreshStoragePathRowBindings(this.device, nextProps, this.storageState);
+        refreshPathStorageRowBindings(this.device, nextProps, this.storageState);
         this.applyStorageState(this.storageState);
-        const firstBatch = getFirstStoragePathBatch(this.storageState);
-        this.setBindings(createStoragePathBindings(nextProps, firstBatch));
+        const firstBatch = getFirstPathStorageBatch(this.storageState);
+        this.setBindings(createPathStorageBindings(nextProps, firstBatch));
         this.setNeedsRedraw('Storage path row bindings updated');
       }
       return;
@@ -429,19 +429,19 @@ export class StoragePathModel extends Model {
 
     const nextStorageState = nextUsesExternalState
       ? nextProps.storageState
-      : createStoragePathState(this.device, nextProps);
+      : createPathStorageState(this.device, nextProps);
     if (this.ownsStorageState) {
       this.storageState.destroy();
     }
     this.storageState = nextStorageState;
     this.ownsStorageState = !nextUsesExternalState;
     this.applyStorageState(nextStorageState);
-    const firstBatch = getFirstStoragePathBatch(nextStorageState);
-    const firstRenderBatch = getFirstStoragePathRenderBatch(nextStorageState);
+    const firstBatch = getFirstPathStorageBatch(nextStorageState);
+    const firstRenderBatch = getFirstPathStorageRenderBatch(nextStorageState);
     this.setAttributes({
       [COMPACT_PATH_VERTEX_DATA]: firstRenderBatch.compactPathVertexData
     });
-    this.setBindings(createStoragePathBindings(nextProps, firstBatch));
+    this.setBindings(createPathStorageBindings(nextProps, firstBatch));
     this.setInstanceCount(firstRenderBatch.segmentCount);
     this.setNeedsRedraw('Storage path state updated');
   }
@@ -455,21 +455,21 @@ export class StoragePathModel extends Model {
       }
       const batch = this.storageState.batches[renderBatch.rowBindingBatchIndex];
       if (!batch) {
-        throw new Error('StoragePathModel render batch is missing its row-binding batch');
+        throw new Error('PathStorageModel render batch is missing its row-binding batch');
       }
       this.setAttributes({
         [COMPACT_PATH_VERTEX_DATA]: renderBatch.compactPathVertexData
       });
-      this.setBindings(createStoragePathBindings(this.pathProps, batch));
+      this.setBindings(createPathStorageBindings(this.pathProps, batch));
       this.setInstanceCount(renderBatch.segmentCount);
       drawSuccess = super.draw(renderPass) && drawSuccess;
     }
-    const firstBatch = getFirstStoragePathBatch(this.storageState);
-    const firstRenderBatch = getFirstStoragePathRenderBatch(this.storageState);
+    const firstBatch = getFirstPathStorageBatch(this.storageState);
+    const firstRenderBatch = getFirstPathStorageRenderBatch(this.storageState);
     this.setAttributes({
       [COMPACT_PATH_VERTEX_DATA]: firstRenderBatch.compactPathVertexData
     });
-    this.setBindings(createStoragePathBindings(this.pathProps, firstBatch));
+    this.setBindings(createPathStorageBindings(this.pathProps, firstBatch));
     this.setInstanceCount(this.storageState.segmentCount);
     return drawSuccess;
   }
@@ -482,7 +482,7 @@ export class StoragePathModel extends Model {
     super.destroy();
   }
 
-  private applyStorageState(storageState: StoragePathState): void {
+  private applyStorageState(storageState: PathStorageState): void {
     this.segmentCount = storageState.segmentCount;
     this.pathRangeBuildTimeMs = storageState.pathRangeBuildTimeMs;
     this.pathRangeByteLength = storageState.pathRangeByteLength;
@@ -501,7 +501,7 @@ export class StoragePathModel extends Model {
   }
 }
 
-function getStoragePathRecordMode(shaderLayout: ShaderLayout): StoragePathRecordMode {
+function getPathStorageRecordMode(shaderLayout: ShaderLayout): PathStorageRecordMode {
   const shaderAttributeNames = new Set(shaderLayout.attributes.map(attribute => attribute.name));
   return shaderRequestsLegacySegmentAttributes(shaderAttributeNames) ? 'legacy' : 'compact';
 }
@@ -514,29 +514,29 @@ function shaderRequestsLegacySegmentAttributes(shaderAttributeNames: Set<string>
   );
 }
 
-function getStoragePathRecordByteStride(recordMode: StoragePathRecordMode): number {
+function getPathStorageRecordByteStride(recordMode: PathStorageRecordMode): number {
   return recordMode === 'legacy' ? LEGACY_PATH_VERTEX_BYTE_STRIDE : COMPACT_PATH_VERTEX_BYTE_STRIDE;
 }
 
 /** Builds reusable WebGPU storage path expansion and row-binding state. */
-export function createStoragePathState(
+export function createPathStorageState(
   device: Device,
-  props: StoragePathInputProps
-): StoragePathState {
+  props: PathStorageInputProps
+): PathStorageState {
   if (device.type !== 'webgpu') {
-    throw new Error('createStoragePathState requires a WebGPU device');
+    throw new Error('createPathStorageState requires a WebGPU device');
   }
   const pathRangeBuildStartTime = getNow();
-  const shaderLayout = props.shaderLayout ?? DEFAULT_STORAGE_PATH_SHADER_LAYOUT;
-  const pathRecordMode = getStoragePathRecordMode(shaderLayout);
-  const pathRecordByteStride = getStoragePathRecordByteStride(pathRecordMode);
+  const shaderLayout = props.shaderLayout ?? DEFAULT_PATH_STORAGE_SHADER_LAYOUT;
+  const pathRecordMode = getPathStorageRecordMode(shaderLayout);
+  const pathRecordByteStride = getPathStorageRecordByteStride(pathRecordMode);
   const pathRecordWordCount = pathRecordByteStride / Uint32Array.BYTES_PER_ELEMENT;
-  const pathInputs = resolveStoragePathInputs(props, StoragePathModel.gpuInputSchema);
-  const defaultBindings = createStoragePathDefaultBindings(device, props);
-  const ownedRowBindingResources: StoragePathOwnedResource[] = [...defaultBindings.ownedResources];
-  const ownedPathRangeResources: StoragePathOwnedResource[] = [];
-  const batches: StoragePathBatchState[] = [];
-  const renderBatches: StoragePathRenderBatchState[] = [];
+  const pathInputs = resolvePathStorageInputs(props, PathStorageModel.gpuInputSchema);
+  const defaultBindings = createPathStorageDefaultBindings(device, props);
+  const ownedRowBindingResources: PathStorageOwnedResource[] = [...defaultBindings.ownedResources];
+  const ownedPathRangeResources: PathStorageOwnedResource[] = [];
+  const batches: PathStorageBatchState[] = [];
+  const renderBatches: PathStorageRenderBatchState[] = [];
   let segmentCount = 0;
   let pathRangeByteLength = 0;
   let generatedRenderBufferByteLength = 0;
@@ -556,13 +556,13 @@ export function createStoragePathState(
     );
     ownedPathRangeResources.push(pathRangeState);
     pathRangeByteLength += pathRangeState.byteLength;
-    const rowState = createStoragePathBatchRowState(device, props, batchInput, defaultBindings);
+    const rowState = createPathStorageBatchRowState(device, props, batchInput, defaultBindings);
     const generatedBufferBatches = planGeneratedBufferBatches({
       device,
       recordOffsets: batchInput.recordOffsets,
       recordByteStride: pathRecordByteStride,
       maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
-      resourceLabel: 'StoragePathModel indexed generated path vertex data'
+      resourceLabel: 'PathStorageModel indexed generated path vertex data'
     });
 
     for (const generatedBufferBatch of generatedBufferBatches) {
@@ -622,8 +622,8 @@ export function createStoragePathState(
     segmentCount += batchInput.segmentCount;
   }
 
-  const firstBatch = getFirstStoragePathBatch({batches});
-  const firstRenderBatch = getFirstStoragePathRenderBatch({renderBatches});
+  const firstBatch = getFirstPathStorageBatch({batches});
+  const firstRenderBatch = getFirstPathStorageRenderBatch({renderBatches});
   let destroyed = false;
   return {
     segmentCount,
@@ -647,8 +647,8 @@ export function createStoragePathState(
         return;
       }
       destroyed = true;
-      destroyStoragePathResources(ownedRowBindingResources);
-      destroyStoragePathResources(ownedPathRangeResources);
+      destroyPathStorageResources(ownedRowBindingResources);
+      destroyPathStorageResources(ownedPathRangeResources);
       for (const renderBatch of renderBatches) {
         renderBatch.compactPathVertexData.destroy();
       }
@@ -656,18 +656,18 @@ export function createStoragePathState(
   };
 }
 
-function createStoragePathModelProps(
-  props: StoragePathModelProps,
-  storageState: StoragePathState
+function createPathStorageModelProps(
+  props: PathStorageModelProps,
+  storageState: PathStorageState
 ): ModelProps {
-  const shaderLayout = props.shaderLayout ?? DEFAULT_STORAGE_PATH_SHADER_LAYOUT;
-  const firstBatch = getFirstStoragePathBatch(storageState);
-  const firstRenderBatch = getFirstStoragePathRenderBatch(storageState);
+  const shaderLayout = props.shaderLayout ?? DEFAULT_PATH_STORAGE_SHADER_LAYOUT;
+  const firstBatch = getFirstPathStorageBatch(storageState);
+  const firstRenderBatch = getFirstPathStorageRenderBatch(storageState);
   return {
     ...props,
-    source: props.source ?? DEFAULT_STORAGE_PATH_SOURCE,
+    source: props.source ?? DEFAULT_PATH_STORAGE_SOURCE,
     shaderLayout,
-    bindings: createStoragePathBindings(props, firstBatch),
+    bindings: createPathStorageBindings(props, firstBatch),
     attributes: {
       ...(props.attributes || {}),
       [COMPACT_PATH_VERTEX_DATA]: firstRenderBatch.compactPathVertexData
@@ -682,9 +682,9 @@ function createStoragePathModelProps(
   };
 }
 
-function createStoragePathBindings(
-  props: StoragePathModelProps,
-  batch: StoragePathBatchState
+function createPathStorageBindings(
+  props: PathStorageModelProps,
+  batch: PathStorageBatchState
 ): NonNullable<ModelProps['bindings']> {
   return {
     ...(props.bindings || {}),
@@ -715,7 +715,7 @@ function createCompactPathBufferLayout(
   }
   if (!useLegacyRecordLayout && shaderRequestsLegacySegmentAttributes(shaderAttributeNames)) {
     throw new Error(
-      'StoragePathModel storageState uses compact path records, but the shader layout requests legacy segment neighbor attributes'
+      'PathStorageModel storageState uses compact path records, but the shader layout requests legacy segment neighbor attributes'
     );
   }
   if (useLegacyRecordLayout && shaderAttributeNames.has(SEGMENT_END_POINT_INDICES_COLUMN)) {
@@ -765,34 +765,34 @@ function createCompactPathBufferLayout(
   };
 }
 
-function createStoragePathDefaultBindings(
+function createPathStorageDefaultBindings(
   device: Device,
-  props: StoragePathInputProps
-): StoragePathDefaultBindings {
-  const id = props.id || 'storage-path-model';
-  const colorsVector = createStoragePathOwnedGpuVector(
+  props: PathStorageInputProps
+): PathStorageDefaultBindings {
+  const id = props.id || 'path-storage-model';
+  const colorsVector = createPathStorageOwnedGpuVector(
     device,
     `${id}-default-row-colors`,
     'unorm8x4',
-    new Uint8Array(props.color ?? DEFAULT_STORAGE_PATH_COLOR)
+    new Uint8Array(props.color ?? DEFAULT_PATH_STORAGE_COLOR)
   );
-  const widthsVector = createStoragePathOwnedGpuVector(
+  const widthsVector = createPathStorageOwnedGpuVector(
     device,
     `${id}-default-row-widths`,
     'float32',
-    new Float32Array([props.width ?? DEFAULT_STORAGE_PATH_WIDTH])
+    new Float32Array([props.width ?? DEFAULT_PATH_STORAGE_WIDTH])
   );
-  const viewOriginsVector = createStoragePathOwnedGpuVector(
+  const viewOriginsVector = createPathStorageOwnedGpuVector(
     device,
     `${id}-default-view-origins`,
     'float32x4',
     new Float32Array(4)
   );
   return {
-    colorsBinding: getStoragePathGpuVectorBinding(colorsVector),
-    vertexColorsBinding: getStoragePathGpuVectorBinding(colorsVector),
-    widthsBinding: getStoragePathGpuVectorBinding(widthsVector),
-    viewOriginsBinding: getStoragePathGpuVectorBinding(viewOriginsVector),
+    colorsBinding: getPathStorageGpuVectorBinding(colorsVector),
+    vertexColorsBinding: getPathStorageGpuVectorBinding(colorsVector),
+    widthsBinding: getPathStorageGpuVectorBinding(widthsVector),
+    viewOriginsBinding: getPathStorageGpuVectorBinding(viewOriginsVector),
     byteLength:
       Uint8Array.BYTES_PER_ELEMENT * 4 +
       Float32Array.BYTES_PER_ELEMENT +
@@ -801,19 +801,19 @@ function createStoragePathDefaultBindings(
   };
 }
 
-function createStoragePathBatchRowState(
+function createPathStorageBatchRowState(
   device: Device,
-  props: StoragePathInputProps,
-  batchInput: StoragePathBatchInputs,
-  defaultBindings: StoragePathDefaultBindings
-): StoragePathBatchRowState {
-  const styleConfigData = createStoragePathStyleConfigData(
+  props: PathStorageInputProps,
+  batchInput: PathStorageBatchInputs,
+  defaultBindings: PathStorageDefaultBindings
+): PathStorageBatchRowState {
+  const styleConfigData = createPathStorageStyleConfigData(
     props,
     batchInput.batchRowIndexBase,
     batchInput.componentCount
   );
   const styleConfigBuffer = new DynamicBuffer(device, {
-    id: `${props.id || 'storage-path-model'}-style-config-${batchInput.batchRowIndexBase}`,
+    id: `${props.id || 'path-storage-model'}-style-config-${batchInput.batchRowIndexBase}`,
     usage: Buffer.UNIFORM | Buffer.COPY_DST | Buffer.COPY_SRC,
     data: styleConfigData
   });
@@ -834,7 +834,7 @@ function createStoragePathBatchRowState(
   };
 }
 
-function createStoragePathOwnedGpuVector<FormatT extends GPUVectorFormat>(
+function createPathStorageOwnedGpuVector<FormatT extends GPUVectorFormat>(
   device: Device,
   name: string,
   format: FormatT,
@@ -854,7 +854,7 @@ function createStoragePathOwnedGpuVector<FormatT extends GPUVectorFormat>(
   });
 }
 
-function getStoragePathGpuVectorBinding(vector: GPUVector): Binding {
+function getPathStorageGpuVectorBinding(vector: GPUVector): Binding {
   const [data, ...remainingData] = vector.data;
   if (!data || remainingData.length > 0) {
     throw new Error(`Storage path vector "${vector.name}" requires exactly one GPUData chunk`);
@@ -864,29 +864,29 @@ function getStoragePathGpuVectorBinding(vector: GPUVector): Binding {
 }
 
 function isArrowPathRowColorGPUVector(
-  colors: NonNullable<StoragePathInputProps['colors']>
+  colors: NonNullable<PathStorageInputProps['colors']>
 ): boolean {
   return colors.format === 'unorm8x4';
 }
 
-function isPathVertexColorGPUVector(colors: NonNullable<StoragePathInputProps['colors']>): boolean {
+function isPathVertexColorGPUVector(colors: NonNullable<PathStorageInputProps['colors']>): boolean {
   return colors.format === 'vertex-list<unorm8x4>';
 }
 
-function createStoragePathStyleConfigData(
-  props: StoragePathInputProps,
+function createPathStorageStyleConfigData(
+  props: PathStorageInputProps,
   batchRowIndexBase: number,
   pathComponentCount: number
 ): Uint32Array {
   const arrayBuffer = new ArrayBuffer(48);
   const floatValues = new Float32Array(arrayBuffer);
   const uintValues = new Uint32Array(arrayBuffer);
-  const color = props.color ?? DEFAULT_STORAGE_PATH_COLOR;
+  const color = props.color ?? DEFAULT_PATH_STORAGE_COLOR;
   floatValues[0] = color[0] / 255;
   floatValues[1] = color[1] / 255;
   floatValues[2] = color[2] / 255;
   floatValues[3] = color[3] / 255;
-  floatValues[4] = props.width ?? DEFAULT_STORAGE_PATH_WIDTH;
+  floatValues[4] = props.width ?? DEFAULT_PATH_STORAGE_WIDTH;
   uintValues[5] = props.colors && isArrowPathRowColorGPUVector(props.colors) ? 1 : 0;
   uintValues[6] = props.widths ? 1 : 0;
   uintValues[7] = batchRowIndexBase;
@@ -896,21 +896,21 @@ function createStoragePathStyleConfigData(
   return uintValues;
 }
 
-function refreshStoragePathRowBindings(
+function refreshPathStorageRowBindings(
   device: Device,
-  props: StoragePathInputProps,
-  storageState: StoragePathState
+  props: PathStorageInputProps,
+  storageState: PathStorageState
 ): void {
-  const pathInputs = resolveStoragePathInputs(props, StoragePathModel.gpuInputSchema);
-  assertStoragePathRowBindingRefreshCompatible(storageState, pathInputs.batches);
-  const nextOwnedRowBindingResources: StoragePathOwnedResource[] = [];
-  const defaultBindings = createStoragePathDefaultBindings(device, props);
+  const pathInputs = resolvePathStorageInputs(props, PathStorageModel.gpuInputSchema);
+  assertPathStorageRowBindingRefreshCompatible(storageState, pathInputs.batches);
+  const nextOwnedRowBindingResources: PathStorageOwnedResource[] = [];
+  const defaultBindings = createPathStorageDefaultBindings(device, props);
   nextOwnedRowBindingResources.push(...defaultBindings.ownedResources);
   let rowStorageByteLength = defaultBindings.byteLength;
 
   const nextBatches = pathInputs.batches.map((batchInput, batchIndex) => {
     const previousBatch = storageState.batches[batchIndex];
-    const rowState = createStoragePathBatchRowState(device, props, batchInput, defaultBindings);
+    const rowState = createPathStorageBatchRowState(device, props, batchInput, defaultBindings);
     nextOwnedRowBindingResources.push(...rowState.ownedResources);
     rowStorageByteLength += rowState.ownedByteLength;
     return {
@@ -927,21 +927,21 @@ function refreshStoragePathRowBindings(
     };
   });
 
-  replaceOwnedStoragePathResources(
+  replaceOwnedPathStorageResources(
     storageState.ownedRowBindingResources,
     nextOwnedRowBindingResources
   );
   storageState.batches = nextBatches;
   storageState.rowStorageByteLength = rowStorageByteLength;
-  syncStoragePathStateFirstBatch(storageState);
+  syncPathStorageStateFirstBatch(storageState);
 }
 
-function assertStoragePathRowBindingRefreshCompatible(
-  storageState: StoragePathState,
-  batches: StoragePathBatchInputs[]
+function assertPathStorageRowBindingRefreshCompatible(
+  storageState: PathStorageState,
+  batches: PathStorageBatchInputs[]
 ): void {
   if (batches.length !== storageState.batches.length) {
-    throw new Error('StoragePathModel row-binding updates must preserve path batch count');
+    throw new Error('PathStorageModel row-binding updates must preserve path batch count');
   }
   for (const [batchIndex, batchInput] of batches.entries()) {
     const existingBatch = storageState.batches[batchIndex];
@@ -951,14 +951,14 @@ function assertStoragePathRowBindingRefreshCompatible(
       existingBatch.rowCount !== batchInput.rowCount ||
       existingBatch.segmentCount !== batchInput.segmentCount
     ) {
-      throw new Error('StoragePathModel row-binding updates must preserve path batch rows');
+      throw new Error('PathStorageModel row-binding updates must preserve path batch rows');
     }
   }
 }
 
-function syncStoragePathStateFirstBatch(storageState: StoragePathState): void {
-  const firstBatch = getFirstStoragePathBatch(storageState);
-  const firstRenderBatch = getFirstStoragePathRenderBatch(storageState);
+function syncPathStorageStateFirstBatch(storageState: PathStorageState): void {
+  const firstBatch = getFirstPathStorageBatch(storageState);
+  const firstRenderBatch = getFirstPathStorageRenderBatch(storageState);
   storageState.rowColorsBinding = firstBatch.rowColorsBinding;
   storageState.vertexColorsBinding = firstBatch.vertexColorsBinding;
   storageState.rowWidthsBinding = firstBatch.rowWidthsBinding;
@@ -966,43 +966,43 @@ function syncStoragePathStateFirstBatch(storageState: StoragePathState): void {
   storageState.compactPathVertexData = firstRenderBatch.compactPathVertexData;
 }
 
-function destroyStoragePathResources(resources: StoragePathOwnedResource[]): void {
+function destroyPathStorageResources(resources: PathStorageOwnedResource[]): void {
   for (const resource of resources) {
     resource.destroy();
   }
 }
 
-function replaceOwnedStoragePathResources(
-  currentResources: StoragePathOwnedResource[],
-  nextResources: StoragePathOwnedResource[]
+function replaceOwnedPathStorageResources(
+  currentResources: PathStorageOwnedResource[],
+  nextResources: PathStorageOwnedResource[]
 ): void {
-  destroyStoragePathResources(currentResources);
+  destroyPathStorageResources(currentResources);
   currentResources.splice(0, currentResources.length, ...nextResources);
 }
 
-function getFirstStoragePathBatch(
-  storageState: Pick<StoragePathState, 'batches'>
-): StoragePathBatchState {
+function getFirstPathStorageBatch(
+  storageState: Pick<PathStorageState, 'batches'>
+): PathStorageBatchState {
   const firstBatch = storageState.batches[0];
   if (!firstBatch) {
-    throw new Error('StoragePathState requires at least one row-binding batch');
+    throw new Error('PathStorageState requires at least one row-binding batch');
   }
   return firstBatch;
 }
 
-function getFirstStoragePathRenderBatch(
-  storageState: Pick<StoragePathState, 'renderBatches'>
-): StoragePathRenderBatchState {
+function getFirstPathStorageRenderBatch(
+  storageState: Pick<PathStorageState, 'renderBatches'>
+): PathStorageRenderBatchState {
   const firstRenderBatch = storageState.renderBatches[0];
   if (!firstRenderBatch) {
-    throw new Error('StoragePathState requires at least one render batch');
+    throw new Error('PathStorageState requires at least one render batch');
   }
   return firstRenderBatch;
 }
 
-function hasStoragePathState(
-  props: StoragePathModelProps
-): props is StoragePathRenderProps & {storageState: StoragePathState} {
+function hasPathStorageState(
+  props: PathStorageModelProps
+): props is PathStorageRenderProps & {storageState: PathStorageState} {
   return 'storageState' in props && props.storageState !== undefined;
 }
 

@@ -6,57 +6,57 @@ import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture, Model, type ModelProps} from '@luma.gl/engine';
 import FontAtlasManager from '../atlas/font-atlas-manager';
 import {
-  getFirstStorageTextBatch,
-  getFirstStorageTextRenderBatch,
-  getStorageRowGlyphStartsBuffer,
-  type StorageTextBatchState,
-  type StorageTextBuffer,
-  type StorageTextRenderBatchState,
-  type StorageTextState
-} from '../model-utils/storage-text-state';
+  getFirstTextStorageBatch,
+  getFirstTextStorageRenderBatch,
+  getTextStorageRowGlyphStartsBuffer,
+  type TextStorageBatchState,
+  type TextStorageBuffer,
+  type TextStorageRenderBatchState,
+  type TextStorageState
+} from '../model-utils/text-storage-state';
 import type {GpuExpandedTextStream} from '../model-utils/gpu-text-types';
-import {drawPreparedStorageTextModelBatch} from '../model-utils/storage-model-draw';
+import {drawPreparedTextStorageModelBatch} from '../model-utils/text-storage-model-draw';
 import {
-  assertStorageTextGPUVectorInputs,
-  STORAGE_TEXT_GPU_INPUT_SCHEMA,
-  type StorageTextInputProps
+  assertTextStorageGPUVectorInputs,
+  TEXT_STORAGE_GPU_INPUT_SCHEMA,
+  type TextStorageInputProps
 } from '../model-utils/text-model-props';
 import {
   COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
   COMPACT_GLYPH_VERTEX_DATA,
-  DEFAULT_ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT,
-  DEFAULT_ROW_INDEXED_STORAGE_TEXT_SOURCE,
-  DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
-  DEFAULT_STORAGE_INDEXED_TEXT_SOURCE,
+  DEFAULT_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT,
+  DEFAULT_TEXT_ROW_INDEXED_STORAGE_SOURCE,
+  DEFAULT_TEXT_STORAGE_INDEXED_SHADER_LAYOUT,
+  DEFAULT_TEXT_STORAGE_INDEXED_SOURCE,
   GLYPH_INDICES_COLUMN,
   GLYPH_OFFSETS_COLUMN,
   GLYPH_ROW_INDICES_COLUMN,
   ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE
 } from '../model-utils/text-shaders';
 
-export type {StorageTextInputProps};
+export type {TextStorageInputProps};
 
 /**
  * Render and shader options for a storage text model that reuses prepared state.
  *
  * These are standard luma.gl model options; draw counts, storage bindings, and generated glyph
- * buffers come from the prepared {@link StorageTextState}.
+ * buffers come from the prepared {@link TextStorageState}.
  */
-export interface StorageTextRenderProps extends ModelProps {}
+export interface TextStorageRenderProps extends ModelProps {}
 
-export type {StorageTextBatchState, StorageTextRenderBatchState, StorageTextState};
+export type {TextStorageBatchState, TextStorageRenderBatchState, TextStorageState};
 
 /** Flat prepared props accepted by the storage text renderer. */
-export type StorageTextModelProps = StorageTextInputProps &
-  StorageTextState & {
+export type TextStorageModelProps = TextStorageInputProps &
+  TextStorageState & {
     /** Whether this model owns and should destroy the prepared storage state. */
     ownsStorageState?: boolean;
   };
 
 /** Explicit prepared-state constructor props, used when sharing state with a companion model. */
-export type PreparedStorageTextModelProps = StorageTextRenderProps &
-  Partial<StorageTextInputProps> &
-  StorageTextState & {
+export type PreparedTextStorageModelProps = TextStorageRenderProps &
+  Partial<TextStorageInputProps> &
+  TextStorageState & {
     /** Whether this model owns and should destroy the prepared storage state. */
     ownsStorageState?: boolean;
   };
@@ -65,11 +65,11 @@ export type PreparedStorageTextModelProps = StorageTextRenderProps &
  * Storage text renderer that consumes typed GPUVector model props plus prepared render state.
  *
  * Source adapters do layout work before constructing this model, then pass flat prepared GPU
- * vectors and generated render resources through {@link StorageTextModelProps}.
+ * vectors and generated render resources through {@link TextStorageModelProps}.
  */
-export class StorageTextModel extends Model {
+export class TextStorageModel extends Model {
   /** Prepared GPU vectors consumed by the storage-backed text model. */
-  static readonly gpuInputSchema = STORAGE_TEXT_GPU_INPUT_SCHEMA;
+  static readonly gpuInputSchema = TEXT_STORAGE_GPU_INPUT_SCHEMA;
 
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
@@ -100,19 +100,19 @@ export class StorageTextModel extends Model {
   /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength!: number;
   /** First batch label origin buffer. */
-  rowPositionsBuffer!: StorageTextBuffer;
+  rowPositionsBuffer!: TextStorageBuffer;
   /** First batch packed RGBA8 row color buffer. */
-  rowColorsBuffer!: StorageTextBuffer;
+  rowColorsBuffer!: TextStorageBuffer;
   /** First batch row angle buffer. */
-  rowAnglesBuffer!: StorageTextBuffer;
+  rowAnglesBuffer!: TextStorageBuffer;
   /** First batch row text size buffer. */
-  rowSizesBuffer!: StorageTextBuffer;
+  rowSizesBuffer!: TextStorageBuffer;
   /** First batch row pixel offset buffer. */
-  rowPixelOffsetsBuffer!: StorageTextBuffer;
+  rowPixelOffsetsBuffer!: TextStorageBuffer;
   /** First batch packed row text anchor buffer. */
-  rowTextAnchorsBuffer!: StorageTextBuffer;
+  rowTextAnchorsBuffer!: TextStorageBuffer;
   /** First batch packed row alignment baseline buffer. */
-  rowAlignmentBaselinesBuffer!: StorageTextBuffer;
+  rowAlignmentBaselinesBuffer!: TextStorageBuffer;
   /** First batch packed row clip rectangle buffer. */
   rowClipRectsBuffer!: Buffer;
   /** First batch cumulative row glyph start buffer. */
@@ -126,24 +126,24 @@ export class StorageTextModel extends Model {
   /** First generated compact glyph vertex buffer. */
   compactGlyphVertexData!: Buffer;
   /** Per-source-batch row bindings. */
-  batches!: StorageTextBatchState[];
+  batches!: TextStorageBatchState[];
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches!: StorageTextRenderBatchState[];
+  renderBatches!: TextStorageRenderBatchState[];
   /** Reusable storage text expansion and row-binding state currently bound by the model. */
-  storageState: StorageTextState;
+  storageState: TextStorageState;
   protected ownsStorageState: boolean;
-  protected renderProps: StorageTextRenderProps;
+  protected renderProps: TextStorageRenderProps;
 
-  constructor(device: Device, props: StorageTextModelProps | PreparedStorageTextModelProps) {
+  constructor(device: Device, props: TextStorageModelProps | PreparedTextStorageModelProps) {
     if (device.type !== 'webgpu') {
-      throw new Error('StorageTextModel is WebGPU-only');
+      throw new Error('TextStorageModel is WebGPU-only');
     }
-    if (isStorageTextInputProps(props)) {
-      assertStorageTextGPUVectorInputs(props);
+    if (isTextStorageInputProps(props)) {
+      assertTextStorageGPUVectorInputs(props);
     }
     const storageState = props;
-    const renderProps = getStorageTextRenderProps(props);
-    super(device, createStorageTextModelProps(renderProps, storageState));
+    const renderProps = getTextStorageRenderProps(props);
+    super(device, createTextStorageModelProps(renderProps, storageState));
     this.renderProps = renderProps;
     this.storageState = storageState;
     this.ownsStorageState = props.ownsStorageState === true;
@@ -151,8 +151,8 @@ export class StorageTextModel extends Model {
   }
 
   /** Constructs a render-only model from an existing prepared storage state. */
-  static fromState(device: Device, props: PreparedStorageTextModelProps): StorageTextModel {
-    return new StorageTextModel(device, props);
+  static fromState(device: Device, props: PreparedTextStorageModelProps): TextStorageModel {
+    return new TextStorageModel(device, props);
   }
 
   /** Draws each generated storage text render batch against the supplied render pass. */
@@ -167,27 +167,27 @@ export class StorageTextModel extends Model {
     for (const renderBatch of this.storageState.renderBatches) {
       const batch = this.storageState.batches[renderBatch.rowBindingBatchIndex];
       if (!batch) {
-        throw new Error('StorageTextModel render batch is missing its row-binding batch');
+        throw new Error('TextStorageModel render batch is missing its row-binding batch');
       }
       this.setAttributes({
         [COMPACT_GLYPH_VERTEX_DATA]: renderBatch.compactGlyphVertexData
       });
       this.setBindings(
-        createStorageTextBindings(this.renderProps, this.storageState, batch, renderBatch)
+        createTextStorageBindings(this.renderProps, this.storageState, batch, renderBatch)
       );
       this.setInstanceCount(renderBatch.glyphCount);
       drawSuccess =
         (usePreparedDraw
-          ? drawPreparedStorageTextModelBatch(this, renderPass)
+          ? drawPreparedTextStorageModelBatch(this, renderPass)
           : super.draw(renderPass)) && drawSuccess;
     }
-    const firstBatch = getFirstStorageTextBatch(this.storageState);
-    const firstRenderBatch = getFirstStorageTextRenderBatch(this.storageState);
+    const firstBatch = getFirstTextStorageBatch(this.storageState);
+    const firstRenderBatch = getFirstTextStorageRenderBatch(this.storageState);
     this.setAttributes({
       [COMPACT_GLYPH_VERTEX_DATA]: firstRenderBatch.compactGlyphVertexData
     });
     this.setBindings(
-      createStorageTextBindings(this.renderProps, this.storageState, firstBatch, firstRenderBatch)
+      createTextStorageBindings(this.renderProps, this.storageState, firstBatch, firstRenderBatch)
     );
     this.setInstanceCount(this.storageState.glyphCount);
     return drawSuccess;
@@ -202,9 +202,9 @@ export class StorageTextModel extends Model {
     super.destroy();
   }
 
-  protected setStorageTextState(
-    storageState: StorageTextState,
-    renderProps: StorageTextRenderProps,
+  protected setTextStorageState(
+    storageState: TextStorageState,
+    renderProps: TextStorageRenderProps,
     ownsStorageState: boolean,
     redrawReason: string
   ): void {
@@ -215,19 +215,19 @@ export class StorageTextModel extends Model {
     this.renderProps = renderProps;
     this.ownsStorageState = ownsStorageState;
     this.applyStorageState(storageState);
-    const firstBatch = getFirstStorageTextBatch(storageState);
-    const firstRenderBatch = getFirstStorageTextRenderBatch(storageState);
+    const firstBatch = getFirstTextStorageBatch(storageState);
+    const firstRenderBatch = getFirstTextStorageRenderBatch(storageState);
     this.setAttributes({
       [COMPACT_GLYPH_VERTEX_DATA]: firstRenderBatch.compactGlyphVertexData
     });
     this.setBindings(
-      createStorageTextBindings(renderProps, storageState, firstBatch, firstRenderBatch)
+      createTextStorageBindings(renderProps, storageState, firstBatch, firstRenderBatch)
     );
     this.setInstanceCount(firstRenderBatch.glyphCount);
     this.setNeedsRedraw(redrawReason);
   }
 
-  private applyStorageState(storageState: StorageTextState): void {
+  private applyStorageState(storageState: TextStorageState): void {
     this.fontAtlasManager = storageState.fontAtlasManager;
     this.atlasTexture = storageState.atlasTexture;
     this.characterSet = storageState.characterSet;
@@ -260,20 +260,20 @@ export class StorageTextModel extends Model {
   }
 }
 
-function createStorageTextModelProps(
-  props: StorageTextRenderProps,
-  storageState: StorageTextState
+function createTextStorageModelProps(
+  props: TextStorageRenderProps,
+  storageState: TextStorageState
 ): ModelProps {
-  const firstRenderBatch = getFirstStorageTextRenderBatch(storageState);
+  const firstRenderBatch = getFirstTextStorageRenderBatch(storageState);
   const hasGlyphRowIndices = storageState.hasGlyphRowIndices === true;
   return {
     ...props,
-    source: props.source ?? getDefaultStorageTextSource(storageState),
-    shaderLayout: props.shaderLayout ?? getDefaultStorageTextShaderLayout(storageState),
-    bindings: createStorageTextBindings(
+    source: props.source ?? getDefaultTextStorageSource(storageState),
+    shaderLayout: props.shaderLayout ?? getDefaultTextStorageShaderLayout(storageState),
+    bindings: createTextStorageBindings(
       props,
       storageState,
-      getFirstStorageTextBatch(storageState),
+      getFirstTextStorageBatch(storageState),
       firstRenderBatch
     ),
     attributes: {
@@ -318,10 +318,10 @@ function createStorageTextModelProps(
  * The extra row-index column increases generated glyph vertex storage, but lets shaders fetch row
  * style data directly instead of binary-searching cumulative row glyph starts.
  */
-export class RowIndexedStorageTextModel extends StorageTextModel {
-  constructor(device: Device, props: StorageTextModelProps | PreparedStorageTextModelProps) {
+export class TextRowIndexedStorageModel extends TextStorageModel {
+  constructor(device: Device, props: TextStorageModelProps | PreparedTextStorageModelProps) {
     if (props.hasGlyphRowIndices !== true) {
-      throw new Error('RowIndexedStorageTextModel requires hasGlyphRowIndices');
+      throw new Error('TextRowIndexedStorageModel requires hasGlyphRowIndices');
     }
     super(device, props);
   }
@@ -329,29 +329,29 @@ export class RowIndexedStorageTextModel extends StorageTextModel {
   /** Constructs a row-indexed render-only model from an existing prepared storage state. */
   static override fromState(
     device: Device,
-    props: PreparedStorageTextModelProps
-  ): RowIndexedStorageTextModel {
-    return new RowIndexedStorageTextModel(device, props);
+    props: PreparedTextStorageModelProps
+  ): TextRowIndexedStorageModel {
+    return new TextRowIndexedStorageModel(device, props);
   }
 }
 
-function getDefaultStorageTextSource(storageState: StorageTextState): string {
+function getDefaultTextStorageSource(storageState: TextStorageState): string {
   return storageState.hasGlyphRowIndices === true
-    ? DEFAULT_ROW_INDEXED_STORAGE_TEXT_SOURCE
-    : DEFAULT_STORAGE_INDEXED_TEXT_SOURCE;
+    ? DEFAULT_TEXT_ROW_INDEXED_STORAGE_SOURCE
+    : DEFAULT_TEXT_STORAGE_INDEXED_SOURCE;
 }
 
-function getDefaultStorageTextShaderLayout(storageState: StorageTextState) {
+function getDefaultTextStorageShaderLayout(storageState: TextStorageState) {
   return storageState.hasGlyphRowIndices === true
-    ? DEFAULT_ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT
-    : DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT;
+    ? DEFAULT_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
+    : DEFAULT_TEXT_STORAGE_INDEXED_SHADER_LAYOUT;
 }
 
-function createStorageTextBindings(
-  props: StorageTextRenderProps,
-  storageState: StorageTextState,
-  batch: StorageTextBatchState,
-  renderBatch: StorageTextRenderBatchState
+function createTextStorageBindings(
+  props: TextStorageRenderProps,
+  storageState: TextStorageState,
+  batch: TextStorageBatchState,
+  renderBatch: TextStorageRenderBatchState
 ): NonNullable<ModelProps['bindings']> {
   return {
     ...(props.bindings || {}),
@@ -361,7 +361,7 @@ function createStorageTextBindings(
     textRowSizes: batch.rowSizesBuffer,
     textRowPixelOffsets: batch.rowPixelOffsetsBuffer,
     textRowClipRects: batch.rowClipRectsBuffer,
-    textRowGlyphStarts: getStorageRowGlyphStartsBuffer(batch),
+    textRowGlyphStarts: getTextStorageRowGlyphStartsBuffer(batch),
     textGlyphFrames: storageState.glyphFramesBuffer,
     textStorageStyleConfig: batch.styleConfigBuffer,
     textStorageRenderConfig: renderBatch.storageRenderConfigBuffer,
@@ -369,9 +369,9 @@ function createStorageTextBindings(
   };
 }
 
-function getStorageTextRenderProps(
-  props: StorageTextModelProps | PreparedStorageTextModelProps
-): StorageTextRenderProps {
+function getTextStorageRenderProps(
+  props: TextStorageModelProps | PreparedTextStorageModelProps
+): TextStorageRenderProps {
   const {
     positions: _positions,
     texts: _texts,
@@ -399,8 +399,8 @@ function getStorageTextRenderProps(
   return renderProps;
 }
 
-function isStorageTextInputProps(
-  props: StorageTextModelProps | PreparedStorageTextModelProps
-): props is StorageTextModelProps {
+function isTextStorageInputProps(
+  props: TextStorageModelProps | PreparedTextStorageModelProps
+): props is TextStorageModelProps {
   return 'positions' in props && 'texts' in props;
 }

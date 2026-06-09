@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextSdfRenderSettings} from './storage-text-state';
+import type {TextSdfRenderSettings} from './text-storage-state';
 
 export function createTextDefaultFragmentShaderUniforms(
   uniforms: Record<string, unknown> | undefined,

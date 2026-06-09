@@ -5,13 +5,13 @@
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
-import type {StorageTextModelProps} from '@luma.gl/text';
+import type {TextStorageModelProps} from '@luma.gl/text';
 import {
-  createArrowStorageTextState,
-  createStorageTextStateFromGPUVectors,
-  type ArrowStorageTextInputProps,
-  type ArrowStorageTextState,
-  type GPUVectorStorageTextInputProps
+  createArrowTextStorageState,
+  createTextStorageStateFromGPUVectors,
+  type ArrowTextStorageInputProps,
+  type ArrowTextStorageState,
+  type GPUVectorTextStorageInputProps
 } from './convert-arrow-text-vectors';
 import {
   convertArrowTextToAttribute,
@@ -20,7 +20,7 @@ import {
 } from './convert-arrow-text-to-attribute';
 
 /**
- * Uploads Arrow text source vectors to GPUVectors for storage text preparation.
+ * Uploads Arrow text source vectors to GPUVectors for storage text conversion.
  *
  * Storage text supports row colors only; per-character color lists are rejected because storage
  * models bind row style buffers and do not expand per-character color attributes.
@@ -39,35 +39,35 @@ export function convertArrowTextToStorage(
  * Builds prepared WebGPU storage text state from Arrow-backed GPU inputs.
  *
  * The returned state owns row binding buffers, generated glyph buffers, atlas resources, and
- * render-batch control buffers. Pass it to {@link StorageTextModel} or
- * {@link RowIndexedStorageTextModel}.
+ * render-batch control buffers. Pass it to {@link TextStorageModel} or
+ * {@link TextRowIndexedStorageModel}.
  */
 export function convertArrowTextToStorageState(
   device: Device,
-  props: ArrowStorageTextInputProps
-): ArrowStorageTextState {
-  if (canUseGPUVectorStorageTextState(device, props)) {
+  props: ArrowTextStorageInputProps
+): ArrowTextStorageState {
+  if (canUseGPUVectorTextStorageState(device, props)) {
     try {
-      return createStorageTextStateFromGPUVectors(device, props);
+      return createTextStorageStateFromGPUVectors(device, props);
     } catch (error) {
-      if (!isGPUVectorStorageTextFallbackError(error)) {
+      if (!isGPUVectorTextStorageFallbackError(error)) {
         throw error;
       }
     }
   }
-  return createArrowStorageTextState(device, props);
+  return createArrowTextStorageState(device, props);
 }
 
 /**
  * Builds model-ready storage text props from Arrow-backed GPU inputs.
  *
  * CPU Arrow source vectors are consumed only by this conversion step and are not exposed on the
- * returned {@link StorageTextModelProps}.
+ * returned {@link TextStorageModelProps}.
  */
 export function convertArrowTextToStorageModelProps(
   device: Device,
-  props: ArrowStorageTextInputProps
-): StorageTextModelProps & ArrowStorageTextState {
+  props: ArrowTextStorageInputProps
+): TextStorageModelProps & ArrowTextStorageState {
   const storageState = convertArrowTextToStorageState(device, props);
   const {
     sourceVectors: _sourceVectors,
@@ -79,15 +79,15 @@ export function convertArrowTextToStorageModelProps(
     ...modelProps,
     ...storageState,
     ownsStorageState: true
-  } as StorageTextModelProps & ArrowStorageTextState;
+  } as TextStorageModelProps & ArrowTextStorageState;
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};
 
-function canUseGPUVectorStorageTextState(
+function canUseGPUVectorTextStorageState(
   device: Device,
-  props: ArrowStorageTextInputProps
-): props is ArrowStorageTextInputProps & GPUVectorStorageTextInputProps & {texts: GPUVector} {
+  props: ArrowTextStorageInputProps
+): props is ArrowTextStorageInputProps & GPUVectorTextStorageInputProps & {texts: GPUVector} {
   return (
     device.type === 'webgpu' &&
     props.rowIndexColumn !== true &&
@@ -97,7 +97,7 @@ function canUseGPUVectorStorageTextState(
   );
 }
 
-function isGPUVectorStorageTextFallbackError(error: unknown): boolean {
+function isGPUVectorTextStorageFallbackError(error: unknown): boolean {
   return (
     error instanceof Error &&
     /row offset metadata|zero-offset byte buffers|textBatches|clipRects batches/.test(error.message)

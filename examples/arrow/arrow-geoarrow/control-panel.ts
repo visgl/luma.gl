@@ -9,7 +9,7 @@ const POINT_ROWS_ID = 'arrow-geoarrow-point-rows';
 const LINE_ROWS_ID = 'arrow-geoarrow-line-rows';
 const POLYGON_ROWS_ID = 'arrow-geoarrow-polygon-rows';
 const SKIPPED_ROWS_ID = 'arrow-geoarrow-skipped-rows';
-const PREPARATION_TIME_ID = 'arrow-geoarrow-preparation-time';
+const CONVERSION_TIME_ID = 'arrow-geoarrow-conversion-time';
 const ARROW_BYTES_ID = 'arrow-geoarrow-arrow-bytes';
 
 export class GeoArrowControlPanel {
@@ -18,7 +18,7 @@ export class GeoArrowControlPanel {
   private lineRowsLabel: HTMLElement | null = null;
   private polygonRowsLabel: HTMLElement | null = null;
   private skippedRowsLabel: HTMLElement | null = null;
-  private preparationTimeLabel: HTMLElement | null = null;
+  private conversionTimeLabel: HTMLElement | null = null;
   private arrowBytesLabel: HTMLElement | null = null;
 
   initialize(): void {
@@ -27,7 +27,7 @@ export class GeoArrowControlPanel {
     this.lineRowsLabel = document.getElementById(LINE_ROWS_ID);
     this.polygonRowsLabel = document.getElementById(POLYGON_ROWS_ID);
     this.skippedRowsLabel = document.getElementById(SKIPPED_ROWS_ID);
-    this.preparationTimeLabel = document.getElementById(PREPARATION_TIME_ID);
+    this.conversionTimeLabel = document.getElementById(CONVERSION_TIME_ID);
     this.arrowBytesLabel = document.getElementById(ARROW_BYTES_ID);
   }
 
@@ -37,7 +37,7 @@ export class GeoArrowControlPanel {
     setText(this.lineRowsLabel, metrics.lineRowCount.toLocaleString());
     setText(this.polygonRowsLabel, metrics.polygonRowCount.toLocaleString());
     setText(this.skippedRowsLabel, metrics.skippedRowCount.toLocaleString());
-    setText(this.preparationTimeLabel, `${metrics.preparationTimeMs.toFixed(1)} ms`);
+    setText(this.conversionTimeLabel, `${metrics.conversionTimeMs.toFixed(1)} ms`);
     setText(this.arrowBytesLabel, formatBytes(arrowByteLength));
   }
 }
@@ -54,7 +54,7 @@ export function makeGeoArrowControlPanelHtml(): string {
       ${makeMetricRow('Polygons', POLYGON_ROWS_ID)}
       ${makeMetricRow('Skipped', SKIPPED_ROWS_ID)}
       ${makeMetricRow('Arrow bytes', ARROW_BYTES_ID)}
-      ${makeMetricRow('Preparation', PREPARATION_TIME_ID)}
+      ${makeMetricRow('Conversion', CONVERSION_TIME_ID)}
     </section>
     <section style="overflow: visible; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Routing</h3>

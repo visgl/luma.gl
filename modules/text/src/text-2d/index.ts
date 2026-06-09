@@ -63,50 +63,50 @@ export {
   DEFAULT_TEXT_VS,
   DEFAULT_CLIPPED_TEXT_SHADER_LAYOUT,
   DEFAULT_CLIPPED_TEXT_VS,
-  DEFAULT_DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
-  DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE,
-  DEFAULT_ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT,
-  DEFAULT_ROW_INDEXED_STORAGE_TEXT_SOURCE,
+  DEFAULT_TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
+  DEFAULT_TEXT_DICTIONARY_STORAGE_SOURCE,
+  DEFAULT_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT,
+  DEFAULT_TEXT_ROW_INDEXED_STORAGE_SOURCE,
   ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
-  DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
-  DEFAULT_STORAGE_INDEXED_TEXT_SOURCE
+  DEFAULT_TEXT_STORAGE_INDEXED_SHADER_LAYOUT,
+  DEFAULT_TEXT_STORAGE_INDEXED_SOURCE
 } from './model-utils/text-shaders';
 export {createTextDefaultFragmentShaderUniforms} from './model-utils/text-fragment-uniforms';
 export {
-  AttributeTextModel,
-  type AttributeTextModelProps,
-  type AttributeTextRenderBatchState,
-  type AttributeTextState,
-  type PreparedAttributeTextModelProps
-} from './models/attribute-text-model';
+  TextAttributeModel,
+  type TextAttributeModelProps,
+  type TextAttributeRenderBatchState,
+  type TextAttributeState,
+  type PreparedTextAttributeModelProps
+} from './models/text-attribute-model';
 export {
-  StorageTextModel,
-  RowIndexedStorageTextModel,
-  type StorageTextBatchState,
-  type StorageTextModelProps,
-  type PreparedStorageTextModelProps,
-  type StorageTextRenderBatchState,
-  type StorageTextRenderProps,
-  type StorageTextState
-} from './models/storage-text-model';
+  TextStorageModel,
+  TextRowIndexedStorageModel,
+  type TextStorageBatchState,
+  type TextStorageModelProps,
+  type PreparedTextStorageModelProps,
+  type TextStorageRenderBatchState,
+  type TextStorageRenderProps,
+  type TextStorageState
+} from './models/text-storage-model';
 export {
-  DictionaryTextModel,
-  type DictionaryTextBatchState,
-  type DictionaryTextModelProps,
-  type PreparedDictionaryTextModelProps,
-  type DictionaryTextRenderBatchState,
-  type DictionaryTextRenderProps,
-  type DictionaryTextState
-} from './models/dictionary-text-model';
+  TextDictionaryModel,
+  type TextDictionaryBatchState,
+  type TextDictionaryModelProps,
+  type PreparedTextDictionaryModelProps,
+  type TextDictionaryRenderBatchState,
+  type TextDictionaryRenderProps,
+  type TextDictionaryState
+} from './models/text-dictionary-model';
 export {
-  assertAttributeTextGPUVectorInputs,
-  assertDictionaryTextGPUVectorInputs,
-  assertStorageTextGPUVectorInputs,
-  ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA,
-  DICTIONARY_TEXT_GPU_INPUT_SCHEMA,
-  STORAGE_TEXT_GPU_INPUT_SCHEMA,
-  type AttributeTextInputProps,
-  type DictionaryTextInputProps,
-  type StorageTextInputProps,
+  assertTextAttributeGPUVectorInputs,
+  assertTextDictionaryGPUVectorInputs,
+  assertTextStorageGPUVectorInputs,
+  TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA,
+  TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
+  TEXT_STORAGE_GPU_INPUT_SCHEMA,
+  type TextAttributeInputProps,
+  type TextDictionaryInputProps,
+  type TextStorageInputProps,
   type TextInputProps
 } from './model-utils/text-model-props';

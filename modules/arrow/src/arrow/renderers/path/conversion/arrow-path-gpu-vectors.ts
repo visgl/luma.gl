@@ -47,8 +47,8 @@ import {
 } from '../../../arrow-utils/arrow-types';
 import type {ArrowVertexFormatOptions} from '../../../engine/arrow-shader-layout';
 import type {
-  AttributePathModelProps,
-  AttributePathModelState,
+  PathAttributeModelProps,
+  PathAttributeModelState,
   PathRenderBatchState,
   PathSegmentLayout
 } from '@luma.gl/tables';
@@ -139,8 +139,8 @@ export type ArrowPathSourceVectors = {
   timestamps?: Vector<ArrowTemporalColumnType>;
 };
 
-/** Options used when preparing Arrow path source vectors for GPU rendering. */
-export type PrepareArrowPathGPUVectorsOptions = {
+/** Options used when converting Arrow path source vectors for GPU rendering. */
+export type ConvertArrowPathToGPUVectorsOptions = {
   /** Stable resource id prefix. Defaults to `arrow-path-model`. */
   id?: string;
   /** Endpoint epsilon used when appending explicit closing vertices. Defaults to `0`. */
@@ -150,13 +150,13 @@ export type PrepareArrowPathGPUVectorsOptions = {
 };
 
 /** Flat prepared GPU props accepted before the Arrow renderer creates the attribute model table. */
-export type ArrowPathPreparedGPUVectorProps = Omit<AttributePathModelProps, 'table'> &
+export type ArrowPathPreparedGPUVectorProps = Omit<PathAttributeModelProps, 'table'> &
   ArrowVertexFormatOptions & {
-    /** Prepared path expansion state produced by `prepareArrowPathGPUVectors()`. */
+    /** Prepared path expansion state produced by `convertArrowPathToGPUVectors()`. */
     pathState: ArrowPathPreparedState;
   };
 
-/** Prepared flat props for {@link AttributePathModel} plus retained update/destruction helpers. */
+/** Prepared flat props for {@link PathAttributeModel} plus retained update/destruction helpers. */
 export type PreparedArrowPathGPUVectors = ArrowPathPreparedGPUVectorProps & {
   /** Optional retained Float64 source origins used to refresh view-space origins. */
   sourceOrigins?: Float64Array;
@@ -175,7 +175,7 @@ export type ArrowPathSegmentTable = {
 };
 
 /** Generated attribute-path buffers retained independently from model construction. */
-export type ArrowPathPreparedState = AttributePathModelState & {
+export type ArrowPathPreparedState = PathAttributeModelState & {
   /** Expanded Arrow segment table used to build generated buffers. */
   segmentTable: ArrowPathSegmentTable;
   /** Releases owned generated path buffers. */
@@ -194,7 +194,7 @@ export function buildArrowPathSegmentTable(props: {
   rowIndexBase?: number;
 }): ArrowPathSegmentTable {
   if (props.rowTable.schema.fields.length > 0 && props.rowTable.numRows !== props.paths.length) {
-    throw new Error('AttributePathModel requires rowTable rows to match path rows');
+    throw new Error('PathAttributeModel requires rowTable rows to match path rows');
   }
   assertArrowPathColumnAvailable(props.rowTable, SEGMENT_START_POSITIONS_COLUMN);
   assertArrowPathColumnAvailable(props.rowTable, SEGMENT_END_POSITIONS_COLUMN);
@@ -263,7 +263,7 @@ export function buildArrowPathSegmentTable(props: {
   };
 }
 
-/** Builds generated path segment buffers without constructing an {@link AttributePathModel}. */
+/** Builds generated path segment buffers without constructing an {@link PathAttributeModel}. */
 export function createArrowPathPreparedState(
   device: Device,
   props: {
@@ -289,7 +289,7 @@ export function createArrowPathPreparedState(
     device,
     recordOffsets: segmentTable.segmentLayout.startIndices,
     recordByteStride: EXPANDED_PATH_VERTEX_BYTE_STRIDE,
-    resourceLabel: 'AttributePathModel expanded path vertex data'
+    resourceLabel: 'PathAttributeModel expanded path vertex data'
   });
   const expandedPathVertexStates = generatedBufferBatches.map(generatedBufferBatch =>
     createExpandedPathVertexData(
@@ -307,7 +307,7 @@ export function createArrowPathPreparedState(
   const firstExpandedPathVertexState = expandedPathVertexStates[0];
   const firstPathViewOriginState = pathViewOriginStates[0];
   if (!firstExpandedPathVertexState || !firstPathViewOriginState) {
-    throw new Error('AttributePathModel requires at least one generated path render batch');
+    throw new Error('PathAttributeModel requires at least one generated path render batch');
   }
   const renderBatches = generatedBufferBatches.map((generatedBufferBatch, batchIndex) => ({
     rowStart: generatedBufferBatch.rowStart,
@@ -336,13 +336,13 @@ export function createArrowPathPreparedState(
 }
 
 /** Converts Arrow-prepared path GPU vectors and render state into GPU-only model props. */
-export function makeAttributePathModelProps(
+export function makePathAttributeModelProps(
   device: Device,
   props: ArrowPathPreparedGPUVectorProps
-): AttributePathModelProps {
+): PathAttributeModelProps {
   if (!props.pathState) {
     throw new Error(
-      'makeAttributePathModelProps requires pathState prepared by prepareArrowPathGPUVectors()'
+      'makePathAttributeModelProps requires pathState prepared by convertArrowPathToGPUVectors()'
     );
   }
   const {allowWebGLOnlyFormats, ...modelProps} = props;
@@ -362,17 +362,17 @@ export function makeAttributePathModelProps(
   };
 }
 
-/** Prepares raw Arrow path/style columns for attribute-backed path rendering. */
-export async function prepareArrowPathGPUVectors(
+/** Converts raw Arrow path/style columns for attribute-backed path rendering. */
+export async function convertArrowPathToGPUVectors(
   device: Device,
   sourceVectors: ArrowPathSourceVectors,
-  options: PrepareArrowPathGPUVectorsOptions = {}
+  options: ConvertArrowPathToGPUVectorsOptions = {}
 ): Promise<PreparedArrowPathGPUVectors> {
   assertArrowPathSourceVectorTypes(sourceVectors);
   assertArrowPathSourceVectorRows(sourceVectors);
 
   const id = options.id || 'arrow-path-model';
-  const preparedCoordinateData = prepareArrowPathCoordinateData(sourceVectors.paths);
+  const preparedCoordinateData = convertArrowPathCoordinateData(sourceVectors.paths);
   const sourceOriginValues = preparedCoordinateData.sourceOrigins;
   const pathChunkRowCounts = preparedCoordinateData.paths.data.map(data => data.length);
   const pathFormat = getArrowPathCoordinateFormat(preparedCoordinateData.paths.type);
@@ -483,14 +483,14 @@ function assertArrowPathSourceVectorTypes(sourceVectors: ArrowPathSourceVectors)
   assertArrowPathSourceCoordinateType(sourceVectors.paths.type, 'paths');
   if (sourceVectors.colors && !isArrowPathColorType(sourceVectors.colors.type)) {
     throw new Error(
-      'prepareArrowPathGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
+      'convertArrowPathToGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
   if (sourceVectors.widths && !(sourceVectors.widths.type instanceof Float32)) {
-    throw new Error('prepareArrowPathGPUVectors widths must be Vector<Float32>');
+    throw new Error('convertArrowPathToGPUVectors widths must be Vector<Float32>');
   }
   if (sourceVectors.closed && !(sourceVectors.closed.type instanceof Bool)) {
-    throw new Error('prepareArrowPathGPUVectors closed flags must be Vector<Bool>');
+    throw new Error('convertArrowPathToGPUVectors closed flags must be Vector<Bool>');
   }
 }
 
@@ -504,7 +504,7 @@ function assertArrowPathSourceVectorRows(sourceVectors: ArrowPathSourceVectors):
   for (const [name, vector] of rowInputs) {
     if (vector && vector.length !== sourceVectors.paths.length) {
       throw new Error(
-        `prepareArrowPathGPUVectors ${name} rows must match paths rows (${vector.length} !== ${sourceVectors.paths.length})`
+        `convertArrowPathToGPUVectors ${name} rows must match paths rows (${vector.length} !== ${sourceVectors.paths.length})`
       );
     }
   }
@@ -525,7 +525,7 @@ function assertArrowPathCoordinateType(type: DataType, name: string): void {
     !(type.children[0].type.children[0]?.type instanceof Float32)
   ) {
     throw new Error(
-      `AttributePathModel ${name} must be GPUVector<List<FixedSizeList<Float32>[2..4]>>`
+      `PathAttributeModel ${name} must be GPUVector<List<FixedSizeList<Float32>[2..4]>>`
     );
   }
 }
@@ -540,7 +540,7 @@ function assertArrowPathSourceCoordinateType(type: DataType, name: string): void
     (!(coordinateValueType instanceof Float32) && !(coordinateValueType instanceof Float64))
   ) {
     throw new Error(
-      `prepareArrowPathGPUVectors ${name} must be Vector<List<FixedSizeList<Float32|Float64>[2..4]>>`
+      `convertArrowPathToGPUVectors ${name} must be Vector<List<FixedSizeList<Float32|Float64>[2..4]>>`
     );
   }
 }
@@ -575,7 +575,7 @@ function buildPathSegmentLayout(
   for (const data of paths.data) {
     const valueOffsets = data.valueOffsets as Int32Array | undefined;
     if (!valueOffsets) {
-      throw new Error('AttributePathModel source path chunks require Arrow list offsets');
+      throw new Error('PathAttributeModel source path chunks require Arrow list offsets');
     }
     for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
       const pathStart = valueOffsets[rowIndex] ?? 0;
@@ -604,7 +604,7 @@ function buildPathSegmentLayout(
   for (const data of paths.data) {
     const valueOffsets = data.valueOffsets as Int32Array | undefined;
     if (!valueOffsets) {
-      throw new Error('AttributePathModel source path chunks require Arrow list offsets');
+      throw new Error('PathAttributeModel source path chunks require Arrow list offsets');
     }
     const pathValues = getArrowVariableLengthAttributeDataBufferSource<Float32>(
       data as Data<ArrowPathCoordinateType>
@@ -730,7 +730,7 @@ function getArrowPathCoordinateFormat(
     case 4:
       return 'vertex-list<float32x4>';
     default:
-      throw new Error('AttributePathModel paths require 2, 3, or 4 coordinate components');
+      throw new Error('PathAttributeModel paths require 2, 3, or 4 coordinate components');
   }
 }
 
@@ -744,12 +744,12 @@ function assertArrowPathColorVector(
 ): void {
   if (!isArrowPathColorType(colors.type)) {
     throw new Error(
-      'AttributePathModel colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
+      'PathAttributeModel colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
   if (colors.length !== paths.length) {
     throw new Error(
-      `AttributePathModel color rows must match path rows (${colors.length} !== ${paths.length})`
+      `PathAttributeModel color rows must match path rows (${colors.length} !== ${paths.length})`
     );
   }
   if (isArrowPathVertexColorType(colors.type)) {
@@ -762,13 +762,13 @@ function assertArrowPathVertexColorVectorAlignment(
   colors: Vector<ArrowPathVertexColorType>
 ): void {
   if (paths.data.length !== colors.data.length) {
-    throw new Error('AttributePathModel vertex color batch count must match path batch count');
+    throw new Error('PathAttributeModel vertex color batch count must match path batch count');
   }
   for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
     const pathOffsets = paths.data[batchIndex]?.valueOffsets as Int32Array | undefined;
     const colorOffsets = colors.data[batchIndex]?.valueOffsets as Int32Array | undefined;
     if (!pathOffsets || !colorOffsets || !areArrowPathOffsetsEqual(pathOffsets, colorOffsets)) {
-      throw new Error('AttributePathModel vertex colors must align with path vertex offsets');
+      throw new Error('PathAttributeModel vertex colors must align with path vertex offsets');
     }
   }
 }
@@ -786,11 +786,11 @@ function assertArrowPathViewOriginVector(
     viewOrigins.type.listSize !== 4 ||
     !(viewOrigins.type.children[0]?.type instanceof Float32)
   ) {
-    throw new Error('AttributePathModel view origins must be Vector<FixedSizeList<Float32>[4]>');
+    throw new Error('PathAttributeModel view origins must be Vector<FixedSizeList<Float32>[4]>');
   }
   if (viewOrigins.length !== rowCount) {
     throw new Error(
-      `AttributePathModel view origin rows must match path rows (${viewOrigins.length} !== ${rowCount})`
+      `PathAttributeModel view origin rows must match path rows (${viewOrigins.length} !== ${rowCount})`
     );
   }
 }
@@ -798,12 +798,12 @@ function assertArrowPathViewOriginVector(
 function getArrowPathCoordinateComponentCount(type: DataType): number {
   const pathElementType = type.children[0]?.type;
   if (!pathElementType || !DataType.isFixedSizeList(pathElementType)) {
-    throw new Error('AttributePathModel paths require FixedSizeList coordinate elements');
+    throw new Error('PathAttributeModel paths require FixedSizeList coordinate elements');
   }
   return pathElementType.listSize;
 }
 
-function prepareArrowPathCoordinateData(paths: Vector<ArrowPathSourceCoordinateType>): {
+function convertArrowPathCoordinateData(paths: Vector<ArrowPathSourceCoordinateType>): {
   paths: Vector<ArrowPathCoordinateType>;
   sourceOrigins?: Float64Array;
 } {
@@ -812,7 +812,7 @@ function prepareArrowPathCoordinateData(paths: Vector<ArrowPathSourceCoordinateT
     return {paths: paths as Vector<ArrowPathCoordinateType>};
   }
   if (!(coordinateValueType instanceof Float64)) {
-    throw new Error('prepareArrowPathGPUVectors paths must contain Float32 or Float64 coordinates');
+    throw new Error('convertArrowPathToGPUVectors paths must contain Float32 or Float64 coordinates');
   }
 
   const componentCount = getArrowPathCoordinateComponentCount(paths.type);
@@ -824,7 +824,7 @@ function prepareArrowPathCoordinateData(paths: Vector<ArrowPathSourceCoordinateT
   for (const data of paths.data) {
     const valueOffsets = data.valueOffsets as Int32Array | undefined;
     if (!valueOffsets) {
-      throw new Error('prepareArrowPathGPUVectors Float64 paths require Arrow list offsets');
+      throw new Error('convertArrowPathToGPUVectors Float64 paths require Arrow list offsets');
     }
     const pathValues = getArrowVariableLengthAttributeDataBufferSource(
       data as Data<ArrowPathFloat64CoordinateType>
@@ -1003,7 +1003,7 @@ function makeArrowPathColorRows(
     if (isArrowPathVertexColorType(data.type)) {
       const valueOffsets = data.valueOffsets as Int32Array | undefined;
       if (!valueOffsets) {
-        throw new Error('AttributePathModel vertex colors require Arrow list offsets');
+        throw new Error('PathAttributeModel vertex colors require Arrow list offsets');
       }
       chunks.push({
         kind: 'vertex',
@@ -1065,7 +1065,7 @@ function getArrowPathViewOriginChunk(
   if (chunk && rowIndex >= chunk.rowStart && rowIndex < chunk.rowEnd) {
     return chunk;
   }
-  throw new Error(`AttributePathModel view origin row ${rowIndex} is missing`);
+  throw new Error(`PathAttributeModel view origin row ${rowIndex} is missing`);
 }
 
 function copyArrowPathColorRow(
@@ -1095,7 +1095,7 @@ function copyArrowPathColorRow(
     (colorChunk.valueOffsets[localRowIndex] ?? firstElementOffset) - firstElementOffset;
   const colorEnd = (colorChunk.valueOffsets[localRowIndex + 1] ?? colorStart) - firstElementOffset;
   if (colorEnd - colorStart < segmentCount + 1) {
-    throw new Error('AttributePathModel vertex colors must provide one color per path vertex');
+    throw new Error('PathAttributeModel vertex colors must provide one color per path vertex');
   }
 
   for (let segmentOffset = 0; segmentOffset < segmentCount; segmentOffset++) {
@@ -1123,7 +1123,7 @@ function getArrowPathColorChunk(
   if (chunk && rowIndex >= chunk.rowStart && rowIndex < chunk.rowEnd) {
     return chunk;
   }
-  throw new Error(`AttributePathModel color row ${rowIndex} is missing`);
+  throw new Error(`PathAttributeModel color row ${rowIndex} is missing`);
 }
 
 function packArrowPathColor(values: Uint8Array, offset: number): number {
@@ -1295,7 +1295,7 @@ function makeArrowPathRowIndices(startIndices: number[], rowIndexBase: number = 
 
 function assertArrowPathColumnAvailable(table: Table, columnName: string): void {
   if (table.getChild(columnName)) {
-    throw new Error(`AttributePathModel rowTable column "${columnName}" is reserved`);
+    throw new Error(`PathAttributeModel rowTable column "${columnName}" is reserved`);
   }
 }
 

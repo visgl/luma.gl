@@ -7,7 +7,7 @@ import {
   isArrowFixedSizeListVector,
   makeArrowFixedSizeListVector,
   makeGPUVectorFromArrow,
-  prepareArrowTemporalGPUVectors,
+  convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
@@ -73,8 +73,8 @@ export type ArrowTemporalStarfieldRendererDataBatchUpdate = {
 
 /** Labels displayed by the temporal starfield example control panel. */
 export type ArrowTemporalStarfieldRendererLabels = {
-  /** Active preparation path label. */
-  preparationPath: string;
+  /** Active conversion path label. */
+  conversionPath: string;
   /** Current synthetic timestamp label. */
   currentTimestamp: string;
   /** Active positions column label. */
@@ -267,7 +267,7 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
     const temporalStarfieldTableInput = this.getTemporalStarfieldTableInput();
     const {temporalColumns} = temporalStarfieldTableInput;
     return {
-      preparationPath: this.device.type === 'webgpu' ? 'WebGPU compute' : 'CPU fallback',
+      conversionPath: this.device.type === 'webgpu' ? 'WebGPU compute' : 'CPU fallback',
       currentTimestamp: this.getCurrentTimestampLabel(),
       positionsColumn:
         this.activeTimeColumn === 'xyzm'
@@ -464,7 +464,7 @@ async function makeTemporalStarfieldGPURecordBatchInput(
 ): Promise<TemporalStarfieldGPURecordBatchInput> {
   const sourceTable = new arrow.Table([recordBatch]);
   const sourceVectors = getTemporalStarfieldRecordBatchVectors(sourceTable, timeColumn);
-  const preparedDurationColumns = await prepareArrowTemporalGPUVectors(
+  const preparedDurationColumns = await convertArrowTemporalToGPUVectors(
     device,
     {
       eventDurations: sourceVectors.eventDurations,
@@ -494,7 +494,7 @@ async function makeTemporalStarfieldGPURecordBatchInput(
       );
     } else {
       modelPositions = sourceVectors.positions;
-      preparedEventStarts = await prepareTimestampEventStartsGPUVector(
+      preparedEventStarts = await convertTimestampEventStartsToGPUVector(
         device,
         getRequiredTimestampVector(sourceVectors.eventStarts),
         batchIndex
@@ -584,12 +584,12 @@ function getRequiredTimestampVector(
   return vector;
 }
 
-async function prepareTimestampEventStartsGPUVector(
+async function convertTimestampEventStartsToGPUVector(
   device: Device,
   eventStarts: arrow.Vector<arrow.TimestampMillisecond>,
   batchIndex: number
 ): Promise<PreparedEventStartsColumn> {
-  const preparedColumns = await prepareArrowTemporalGPUVectors(
+  const preparedColumns = await convertArrowTemporalToGPUVectors(
     device,
     {eventStarts},
     {
@@ -603,7 +603,7 @@ async function prepareTimestampEventStartsGPUVector(
   );
   const preparedEventStarts = preparedColumns.eventStarts;
   if (!preparedEventStarts) {
-    throw new Error('Temporal starfield failed to prepare eventStarts');
+      throw new Error('Temporal starfield failed to convert eventStarts');
   }
   return {
     vector: getPreparedScalarTemporalVector(preparedEventStarts),

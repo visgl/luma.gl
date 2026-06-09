@@ -24,13 +24,13 @@ import {
 } from './polygon-gpu-inputs';
 import {
   getPolygonPickingParameters,
-  STORAGE_POLYGON_SHADER_LAYOUT,
-  STORAGE_POLYGON_WGSL_SHADER,
+  POLYGON_STORAGE_SHADER_LAYOUT,
+  POLYGON_STORAGE_WGSL_SHADER,
   type PolygonShaderInputs
 } from './polygon-shaders';
 
 /** Flat props accepted by the GPU-only storage-backed filled polygon model. */
-export type StoragePolygonModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> &
+export type PolygonStorageModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> &
   PolygonBatchProps & {
     /** Shader inputs shared by render and picking polygon models. */
     shaderInputs: PolygonShaderInputs;
@@ -38,39 +38,39 @@ export type StoragePolygonModelProps = Omit<GPUTableModelProps, 'table' | 'table
     picking?: boolean;
   };
 
-type PreparedStoragePolygonModel = {
+type PreparedPolygonStorageModel = {
   table: GPUTable;
   modelProps: GPUTableModelProps;
 };
 
 /** GPU-only filled polygon model consuming tessellated vectors through storage bindings. */
-export class StoragePolygonModel extends GPUTableModel {
+export class PolygonStorageModel extends GPUTableModel {
   /** Prepared GPU vectors consumed by the storage-backed filled polygon model. */
   static readonly gpuInputSchema = POLYGON_GPU_INPUT_SCHEMA;
 
   readonly polygonTable: GPUTable;
 
   /** Creates a storage-backed filled polygon model from prepared GPU vectors. */
-  constructor(device: Device, props: StoragePolygonModelProps) {
+  constructor(device: Device, props: PolygonStorageModelProps) {
     if (device.type !== 'webgpu') {
-      throw new Error('StoragePolygonModel is WebGPU-only');
+      throw new Error('PolygonStorageModel is WebGPU-only');
     }
-    const prepared = prepareStoragePolygonModel(device, props);
+    const prepared = preparePolygonStorageModel(device, props);
     super(device, prepared.modelProps);
     this.polygonTable = prepared.table;
   }
 
   /** Appends one retained prepared polygon batch without repacking its GPU buffers. */
   addBatch(props: PolygonBatchProps): void {
-    this.polygonTable.addBatch(createStoragePolygonRecordBatch(props));
+    this.polygonTable.addBatch(createPolygonStorageRecordBatch(props));
     this.setNeedsRedraw('Polygon batch added');
   }
 }
 
-function prepareStoragePolygonModel(
+function preparePolygonStorageModel(
   device: Device,
-  props: StoragePolygonModelProps
-): PreparedStoragePolygonModel {
+  props: PolygonStorageModelProps
+): PreparedPolygonStorageModel {
   const {
     positions,
     colors,
@@ -83,7 +83,7 @@ function prepareStoragePolygonModel(
     shaderInputs,
     ...modelProps
   } = props;
-  const table = createStoragePolygonTable({
+  const table = createPolygonStorageTable({
     positions,
     colors,
     rowIndices,
@@ -97,12 +97,12 @@ function prepareStoragePolygonModel(
     table,
     modelProps: {
       ...modelProps,
-      source: STORAGE_POLYGON_WGSL_SHADER,
+      source: POLYGON_STORAGE_WGSL_SHADER,
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
       modules: [
         picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)
       ] as never,
-      shaderLayout: STORAGE_POLYGON_SHADER_LAYOUT,
+      shaderLayout: POLYGON_STORAGE_SHADER_LAYOUT,
       shaderInputs,
       table,
       tableCount: 'none',
@@ -118,8 +118,8 @@ function prepareStoragePolygonModel(
   };
 }
 
-function createStoragePolygonTable(props: PolygonBatchProps): GPUTable {
-  const batch = createStoragePolygonRecordBatch(props);
+function createPolygonStorageTable(props: PolygonBatchProps): GPUTable {
+  const batch = createPolygonStorageRecordBatch(props);
   return new GPUTable({
     batches: [batch],
     schema: batch.schema,
@@ -127,31 +127,31 @@ function createStoragePolygonTable(props: PolygonBatchProps): GPUTable {
   });
 }
 
-function createStoragePolygonRecordBatch(props: PolygonBatchProps): GPURecordBatch {
+function createPolygonStorageRecordBatch(props: PolygonBatchProps): GPURecordBatch {
   const {sourceInfo, nullCount = 0, ...vectors} = props;
-  assertPolygonGPUVectorInputs('StoragePolygonModel', vectors);
+  assertPolygonGPUVectorInputs('PolygonStorageModel', vectors);
   return new GPURecordBatch<GPUTypeMap>({
     vectors: vectors as Record<string, GPUVector>,
     bufferLayout: [],
-    bindings: getStoragePolygonBindings(vectors),
+    bindings: getPolygonStorageBindings(vectors),
     sourceInfo,
     nullCount
   });
 }
 
-function getStoragePolygonBindings(vectors: PolygonGPUVectors): Record<string, Binding> {
+function getPolygonStorageBindings(vectors: PolygonGPUVectors): Record<string, Binding> {
   return {
-    polygonPositions: getStoragePolygonBinding(vectors.positions),
-    polygonColors: getStoragePolygonBinding(vectors.colors),
-    polygonRowIndices: getStoragePolygonBinding(vectors.rowIndices)
+    polygonPositions: getPolygonStorageBinding(vectors.positions),
+    polygonColors: getPolygonStorageBinding(vectors.colors),
+    polygonRowIndices: getPolygonStorageBinding(vectors.rowIndices)
   };
 }
 
-function getStoragePolygonBinding(vector: GPUVector): Binding {
+function getPolygonStorageBinding(vector: GPUVector): Binding {
   const data = getGPUVectorData(vector);
-  const buffer = getStoragePolygonBuffer(data);
+  const buffer = getPolygonStorageBuffer(data);
   if (!(buffer.usage & Buffer.STORAGE)) {
-    throw new Error(`StoragePolygonModel ${vector.name} requires Buffer.STORAGE usage`);
+    throw new Error(`PolygonStorageModel ${vector.name} requires Buffer.STORAGE usage`);
   }
   return {
     buffer,
@@ -160,6 +160,6 @@ function getStoragePolygonBinding(vector: GPUVector): Binding {
   };
 }
 
-function getStoragePolygonBuffer(data: GPUData): Buffer {
+function getPolygonStorageBuffer(data: GPUData): Buffer {
   return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
 }

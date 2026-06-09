@@ -6,48 +6,48 @@ import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture, Model, type ModelProps} from '@luma.gl/engine';
 import FontAtlasManager from '../atlas/font-atlas-manager';
 import {
-  getFirstDictionaryTextBatch,
-  getFirstDictionaryTextRenderBatch,
-  type DictionaryTextBatchState,
-  type DictionaryTextRenderBatchState,
-  type DictionaryTextState,
-  type StorageTextBuffer
-} from '../model-utils/storage-text-state';
+  getFirstTextDictionaryBatch,
+  getFirstTextDictionaryRenderBatch,
+  type TextDictionaryBatchState,
+  type TextDictionaryRenderBatchState,
+  type TextDictionaryState,
+  type TextStorageBuffer
+} from '../model-utils/text-storage-state';
 import type {GpuDictionaryCompressedTextStream} from '../model-utils/gpu-text-types';
-import {drawPreparedStorageTextModelBatch} from '../model-utils/storage-model-draw';
+import {drawPreparedTextStorageModelBatch} from '../model-utils/text-storage-model-draw';
 import {
-  assertDictionaryTextGPUVectorInputs,
-  DICTIONARY_TEXT_GPU_INPUT_SCHEMA,
-  type DictionaryTextInputProps
+  assertTextDictionaryGPUVectorInputs,
+  TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
+  type TextDictionaryInputProps
 } from '../model-utils/text-model-props';
 import {
-  DEFAULT_DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
-  DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE
+  DEFAULT_TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
+  DEFAULT_TEXT_DICTIONARY_STORAGE_SOURCE
 } from '../model-utils/text-shaders';
 
-export type {DictionaryTextInputProps};
+export type {TextDictionaryInputProps};
 
 /**
  * Render and shader options for a dictionary text model that reuses prepared state.
  *
  * These are standard luma.gl model options; draw counts, dictionary bindings, and generated glyph
- * buffers come from the prepared {@link DictionaryTextState}.
+ * buffers come from the prepared {@link TextDictionaryState}.
  */
-export interface DictionaryTextRenderProps extends ModelProps {}
+export interface TextDictionaryRenderProps extends ModelProps {}
 
-export type {DictionaryTextBatchState, DictionaryTextRenderBatchState, DictionaryTextState};
+export type {TextDictionaryBatchState, TextDictionaryRenderBatchState, TextDictionaryState};
 
 /** Flat prepared props accepted by the dictionary text renderer. */
-export type DictionaryTextModelProps = DictionaryTextInputProps &
-  DictionaryTextState & {
+export type TextDictionaryModelProps = TextDictionaryInputProps &
+  TextDictionaryState & {
     /** Whether this model owns and should destroy the prepared dictionary state. */
     ownsStorageState?: boolean;
   };
 
 /** Explicit prepared-state constructor props, used when sharing state with a companion model. */
-export type PreparedDictionaryTextModelProps = DictionaryTextRenderProps &
-  Partial<DictionaryTextInputProps> &
-  DictionaryTextState & {
+export type PreparedTextDictionaryModelProps = TextDictionaryRenderProps &
+  Partial<TextDictionaryInputProps> &
+  TextDictionaryState & {
     /** Whether this model owns and should destroy the prepared dictionary state. */
     ownsStorageState?: boolean;
   };
@@ -56,11 +56,11 @@ export type PreparedDictionaryTextModelProps = DictionaryTextRenderProps &
  * Dictionary text renderer that consumes typed GPUVector model props plus prepared render state.
  *
  * Source adapters do layout work before constructing this model, then pass flat prepared GPU
- * vectors and generated render resources through {@link DictionaryTextModelProps}.
+ * vectors and generated render resources through {@link TextDictionaryModelProps}.
  */
-export class DictionaryTextModel extends Model {
+export class TextDictionaryModel extends Model {
   /** Prepared GPU vectors consumed by the dictionary text model. */
-  static readonly gpuInputSchema = DICTIONARY_TEXT_GPU_INPUT_SCHEMA;
+  static readonly gpuInputSchema = TEXT_DICTIONARY_GPU_INPUT_SCHEMA;
 
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
@@ -93,19 +93,19 @@ export class DictionaryTextModel extends Model {
   /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength!: number;
   /** First batch label origin buffer. */
-  rowPositionsBuffer!: StorageTextBuffer;
+  rowPositionsBuffer!: TextStorageBuffer;
   /** First batch packed RGBA8 row color buffer. */
-  rowColorsBuffer!: StorageTextBuffer;
+  rowColorsBuffer!: TextStorageBuffer;
   /** First batch row angle buffer. */
-  rowAnglesBuffer!: StorageTextBuffer;
+  rowAnglesBuffer!: TextStorageBuffer;
   /** First batch row text size buffer. */
-  rowSizesBuffer!: StorageTextBuffer;
+  rowSizesBuffer!: TextStorageBuffer;
   /** First batch row pixel offset buffer. */
-  rowPixelOffsetsBuffer!: StorageTextBuffer;
+  rowPixelOffsetsBuffer!: TextStorageBuffer;
   /** First batch packed row text anchor buffer. */
-  rowTextAnchorsBuffer!: StorageTextBuffer;
+  rowTextAnchorsBuffer!: TextStorageBuffer;
   /** First batch packed row alignment baseline buffer. */
-  rowAlignmentBaselinesBuffer!: StorageTextBuffer;
+  rowAlignmentBaselinesBuffer!: TextStorageBuffer;
   /** First batch packed row clip rectangle buffer. */
   rowClipRectsBuffer!: Buffer;
   /** First batch per-row dictionary reference buffer. */
@@ -121,24 +121,24 @@ export class DictionaryTextModel extends Model {
   /** First render batch dictionary lookup config uniform buffer. */
   dictionaryRenderConfigBuffer!: DynamicBuffer;
   /** Per-source-batch row and dictionary glyph bindings. */
-  batches!: DictionaryTextBatchState[];
+  batches!: TextDictionaryBatchState[];
   /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches!: DictionaryTextRenderBatchState[];
+  renderBatches!: TextDictionaryRenderBatchState[];
   /** Reusable compressed dictionary text storage state currently bound by the model. */
-  storageState: DictionaryTextState;
+  storageState: TextDictionaryState;
   protected ownsStorageState: boolean;
-  protected renderProps: DictionaryTextRenderProps;
+  protected renderProps: TextDictionaryRenderProps;
 
-  constructor(device: Device, props: DictionaryTextModelProps | PreparedDictionaryTextModelProps) {
+  constructor(device: Device, props: TextDictionaryModelProps | PreparedTextDictionaryModelProps) {
     if (device.type !== 'webgpu') {
-      throw new Error('DictionaryTextModel is WebGPU-only');
+      throw new Error('TextDictionaryModel is WebGPU-only');
     }
-    if (isDictionaryTextInputProps(props)) {
-      assertDictionaryTextGPUVectorInputs(props);
+    if (isTextDictionaryInputProps(props)) {
+      assertTextDictionaryGPUVectorInputs(props);
     }
     const storageState = props;
-    const renderProps = getDictionaryTextRenderProps(props);
-    super(device, createDictionaryTextModelProps(renderProps, storageState));
+    const renderProps = getTextDictionaryRenderProps(props);
+    super(device, createTextDictionaryModelProps(renderProps, storageState));
     this.renderProps = renderProps;
     this.storageState = storageState;
     this.ownsStorageState = props.ownsStorageState === true;
@@ -146,8 +146,8 @@ export class DictionaryTextModel extends Model {
   }
 
   /** Constructs a render-only model from an existing prepared dictionary state. */
-  static fromState(device: Device, props: PreparedDictionaryTextModelProps): DictionaryTextModel {
-    return new DictionaryTextModel(device, props);
+  static fromState(device: Device, props: PreparedTextDictionaryModelProps): TextDictionaryModel {
+    return new TextDictionaryModel(device, props);
   }
 
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
@@ -162,21 +162,21 @@ export class DictionaryTextModel extends Model {
     for (const renderBatch of this.storageState.renderBatches) {
       const batch = this.storageState.batches[renderBatch.rowBindingBatchIndex];
       if (!batch) {
-        throw new Error('DictionaryTextModel render batch is missing its row-binding batch');
+        throw new Error('TextDictionaryModel render batch is missing its row-binding batch');
       }
       this.setBindings(
-        createDictionaryTextBindings(this.renderProps, this.storageState, batch, renderBatch)
+        createTextDictionaryBindings(this.renderProps, this.storageState, batch, renderBatch)
       );
       this.setInstanceCount(renderBatch.glyphCount);
       drawSuccess =
         (usePreparedDraw
-          ? drawPreparedStorageTextModelBatch(this, renderPass)
+          ? drawPreparedTextStorageModelBatch(this, renderPass)
           : super.draw(renderPass)) && drawSuccess;
     }
-    const firstBatch = getFirstDictionaryTextBatch(this.storageState);
-    const firstRenderBatch = getFirstDictionaryTextRenderBatch(this.storageState);
+    const firstBatch = getFirstTextDictionaryBatch(this.storageState);
+    const firstRenderBatch = getFirstTextDictionaryRenderBatch(this.storageState);
     this.setBindings(
-      createDictionaryTextBindings(
+      createTextDictionaryBindings(
         this.renderProps,
         this.storageState,
         firstBatch,
@@ -196,9 +196,9 @@ export class DictionaryTextModel extends Model {
     super.destroy();
   }
 
-  protected setDictionaryTextState(
-    storageState: DictionaryTextState,
-    renderProps: DictionaryTextRenderProps,
+  protected setTextDictionaryState(
+    storageState: TextDictionaryState,
+    renderProps: TextDictionaryRenderProps,
     ownsStorageState: boolean,
     redrawReason: string
   ): void {
@@ -209,16 +209,16 @@ export class DictionaryTextModel extends Model {
     this.renderProps = renderProps;
     this.ownsStorageState = ownsStorageState;
     this.applyStorageState(storageState);
-    const firstBatch = getFirstDictionaryTextBatch(storageState);
-    const firstRenderBatch = getFirstDictionaryTextRenderBatch(storageState);
+    const firstBatch = getFirstTextDictionaryBatch(storageState);
+    const firstRenderBatch = getFirstTextDictionaryRenderBatch(storageState);
     this.setBindings(
-      createDictionaryTextBindings(renderProps, storageState, firstBatch, firstRenderBatch)
+      createTextDictionaryBindings(renderProps, storageState, firstBatch, firstRenderBatch)
     );
     this.setInstanceCount(firstRenderBatch.glyphCount);
     this.setNeedsRedraw(redrawReason);
   }
 
-  private applyStorageState(storageState: DictionaryTextState): void {
+  private applyStorageState(storageState: TextDictionaryState): void {
     this.fontAtlasManager = storageState.fontAtlasManager;
     this.atlasTexture = storageState.atlasTexture;
     this.characterSet = storageState.characterSet;
@@ -253,19 +253,19 @@ export class DictionaryTextModel extends Model {
   }
 }
 
-function createDictionaryTextModelProps(
-  props: DictionaryTextRenderProps,
-  storageState: DictionaryTextState
+function createTextDictionaryModelProps(
+  props: TextDictionaryRenderProps,
+  storageState: TextDictionaryState
 ): ModelProps {
-  const firstRenderBatch = getFirstDictionaryTextRenderBatch(storageState);
+  const firstRenderBatch = getFirstTextDictionaryRenderBatch(storageState);
   return {
     ...props,
-    source: props.source ?? DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE,
-    shaderLayout: props.shaderLayout ?? DEFAULT_DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
-    bindings: createDictionaryTextBindings(
+    source: props.source ?? DEFAULT_TEXT_DICTIONARY_STORAGE_SOURCE,
+    shaderLayout: props.shaderLayout ?? DEFAULT_TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
+    bindings: createTextDictionaryBindings(
       props,
       storageState,
-      getFirstDictionaryTextBatch(storageState),
+      getFirstTextDictionaryBatch(storageState),
       firstRenderBatch
     ),
     attributes: props.attributes ?? {},
@@ -275,11 +275,11 @@ function createDictionaryTextModelProps(
   };
 }
 
-function createDictionaryTextBindings(
-  props: DictionaryTextRenderProps,
-  storageState: DictionaryTextState,
-  batch: DictionaryTextBatchState,
-  renderBatch: DictionaryTextRenderBatchState
+function createTextDictionaryBindings(
+  props: TextDictionaryRenderProps,
+  storageState: TextDictionaryState,
+  batch: TextDictionaryBatchState,
+  renderBatch: TextDictionaryRenderBatchState
 ): NonNullable<ModelProps['bindings']> {
   return {
     ...(props.bindings || {}),
@@ -299,9 +299,9 @@ function createDictionaryTextBindings(
   };
 }
 
-function getDictionaryTextRenderProps(
-  props: DictionaryTextModelProps | PreparedDictionaryTextModelProps
-): DictionaryTextRenderProps {
+function getTextDictionaryRenderProps(
+  props: TextDictionaryModelProps | PreparedTextDictionaryModelProps
+): TextDictionaryRenderProps {
   const {
     positions: _positions,
     texts: _texts,
@@ -329,8 +329,8 @@ function getDictionaryTextRenderProps(
   return renderProps;
 }
 
-function isDictionaryTextInputProps(
-  props: DictionaryTextModelProps | PreparedDictionaryTextModelProps
-): props is DictionaryTextModelProps {
+function isTextDictionaryInputProps(
+  props: TextDictionaryModelProps | PreparedTextDictionaryModelProps
+): props is TextDictionaryModelProps {
   return 'positions' in props && 'texts' in props;
 }

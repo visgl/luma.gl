@@ -9,14 +9,14 @@ import {
   supportsArrowIndexPicking
 } from '../../../engine/arrow-picking';
 import {indexPicking, Model, type PickingManager, type ShaderInputs} from '@luma.gl/engine';
-import {AttributeTextModel, DictionaryTextModel, StorageTextModel} from '@luma.gl/text';
+import {TextAttributeModel, TextDictionaryModel, TextStorageModel} from '@luma.gl/text';
 import type {ArrowTextRendererActiveModel} from './arrow-text-renderer';
 import {
-  DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
-  DICTIONARY_STORAGE_WGSL_SHADER,
+  TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
+  TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
   PICKING_FS_GLSL,
-  STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
-  STORAGE_INDEXED_WGSL_SHADER,
+  TEXT_STORAGE_INDEXED_SHADER_LAYOUT,
+  TEXT_STORAGE_INDEXED_WGSL_SHADER,
   TEXT_SHADER_LAYOUT,
   VS_GLSL,
   WGSL_SHADER
@@ -46,16 +46,16 @@ export function createArrowTextPickingModel(
   textModel: ArrowTextRendererActiveModel,
   shaderInputs: ShaderInputs<any>
 ): Model {
-  if (textModel instanceof DictionaryTextModel) {
-    return DictionaryTextModel.fromState(device, {
+  if (textModel instanceof TextDictionaryModel) {
+    return TextDictionaryModel.fromState(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
       ...textModel.storageState,
-      source: DICTIONARY_STORAGE_WGSL_SHADER,
+      source: TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,
       fragmentEntryPoint: 'fragmentPicking',
       modules: [indexPicking] as never,
-      shaderLayout: DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
+      shaderLayout: TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
       shaderInputs,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
@@ -63,16 +63,16 @@ export function createArrowTextPickingModel(
     });
   }
 
-  if (textModel instanceof StorageTextModel) {
-    return StorageTextModel.fromState(device, {
+  if (textModel instanceof TextStorageModel) {
+    return TextStorageModel.fromState(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
       ...textModel.storageState,
-      source: STORAGE_INDEXED_WGSL_SHADER,
+      source: TEXT_STORAGE_INDEXED_WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,
       fragmentEntryPoint: 'fragmentPicking',
       modules: [indexPicking] as never,
-      shaderLayout: STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
+      shaderLayout: TEXT_STORAGE_INDEXED_SHADER_LAYOUT,
       shaderInputs,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
@@ -110,7 +110,7 @@ export function drawArrowTextPickingPass(
   textModel: ArrowTextRendererActiveModel,
   options: {onBatch?: (batchIndex: number) => void} = {}
 ): void {
-  if (textModel instanceof AttributeTextModel) {
+  if (textModel instanceof TextAttributeModel) {
     drawArrowTextPickingBatches(pickingPass, pickingModel, textModel, options);
     return;
   }
@@ -121,7 +121,7 @@ export function drawArrowTextPickingPass(
 function drawArrowTextPickingBatches(
   pickingPass: RenderPass,
   pickingModel: Model,
-  textModel: AttributeTextModel,
+  textModel: TextAttributeModel,
   {onBatch}: {onBatch?: (batchIndex: number) => void}
 ): void {
   const gpuBatches = textModel.table?.batches || [];

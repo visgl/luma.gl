@@ -9,22 +9,22 @@
 | Responsibility | Public APIs |
 | --- | --- |
 | Arrow facade in `@luma.gl/arrow` | `ArrowTextRenderer`, `resolveArrowTextSourceVectors()`, `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()` |
-| Pure rendering in `@luma.gl/text` | `AttributeTextModel`, `StorageTextModel`, `RowIndexedStorageTextModel`, `DictionaryTextModel` |
-| GPU input contracts in `@luma.gl/text` | `ATTRIBUTE_TEXT_GPU_INPUT_SCHEMA`, `STORAGE_TEXT_GPU_INPUT_SCHEMA`, `DICTIONARY_TEXT_GPU_INPUT_SCHEMA` |
+| Pure rendering in `@luma.gl/text` | `TextAttributeModel`, `TextStorageModel`, `TextRowIndexedStorageModel`, `TextDictionaryModel` |
+| GPU input contracts in `@luma.gl/text` | `TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA`, `TEXT_STORAGE_GPU_INPUT_SCHEMA`, `TEXT_DICTIONARY_GPU_INPUT_SCHEMA` |
 
 New code should perform Arrow conversion through `@luma.gl/arrow` and construct one of the pure models with flat prepared props.
 
 ## Attribute Path
 
-Use `convertArrowTextToAttribute()` to upload Arrow source vectors, then `convertArrowTextToAttributeModelProps()` to build flat model props for `AttributeTextModel`.
+Use `convertArrowTextToAttribute()` to upload Arrow source vectors, then `convertArrowTextToAttributeModelProps()` to build flat model props for `TextAttributeModel`.
 
 The attribute path supports row colors and per-character color lists. It expands text rows into generated glyph vertex attributes and renders through a GPU table.
 
 ## Storage Path
 
-Use `convertArrowTextToStorage()` and `convertArrowTextToStorageModelProps()` when rendering with WebGPU storage buffers. Pass the resulting flat props to `StorageTextModel` or `RowIndexedStorageTextModel`.
+Use `convertArrowTextToStorage()` and `convertArrowTextToStorageModelProps()` when rendering with WebGPU storage buffers. Pass the resulting flat props to `TextStorageModel` or `TextRowIndexedStorageModel`.
 
-`RowIndexedStorageTextModel` stores one extra source-row index per generated glyph. This avoids shader-side row lookup by binary search at the cost of a larger generated glyph vertex record.
+`TextRowIndexedStorageModel` stores one extra source-row index per generated glyph. This avoids shader-side row lookup by binary search at the cost of a larger generated glyph vertex record.
 
 ## Dictionary Path
 

@@ -114,41 +114,41 @@ export {
   type ModelGPUInputVectors
 } from './engine/gpu-table-model-input-schema';
 export {
-  AttributePathModel,
-  ARROW_PATH_GPU_INPUT_SCHEMA,
-  type AttributePathModelProps,
-  type AttributePathModelState,
+  PathAttributeModel,
+  PATH_ATTRIBUTE_GPU_INPUT_SCHEMA,
+  type PathAttributeModelProps,
+  type PathAttributeModelState,
   type PathRenderBatchState,
   type PathSegmentLayout
-} from './models/path/attribute-path-model';
+} from './models/path/path-attribute-model';
 export {
-  StoragePathModel,
-  ARROW_STORAGE_PATH_GPU_INPUT_SCHEMA,
-  createStoragePathState,
-  type StoragePathBatchState,
-  type StoragePathInputProps,
-  type StoragePathModelProps,
-  type StoragePathRenderBatchState,
-  type StoragePathState
-} from './models/path/storage-path-model';
+  PathStorageModel,
+  PATH_STORAGE_GPU_INPUT_SCHEMA,
+  createPathStorageState,
+  type PathStorageBatchState,
+  type PathStorageInputProps,
+  type PathStorageModelProps,
+  type PathStorageRenderBatchState,
+  type PathStorageState
+} from './models/path/path-storage-model';
 export {
-  StorageTripsPathModel,
-  ARROW_STORAGE_TRIPS_PATH_GPU_INPUT_SCHEMA,
-  type StorageTripsPathModelProps
-} from './models/path/storage-trips-path-model';
+  PathTripsStorageModel,
+  PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA,
+  type PathTripsStorageModelProps
+} from './models/path/path-trips-storage-model';
 export {
-  resolveStoragePathInputs,
-  type StoragePathBatchInputs,
-  type StoragePathInputs
-} from './models/path/gpu/storage-path-gpu-inputs';
+  resolvePathStorageInputs,
+  type PathStorageBatchInputs,
+  type PathStorageInputs
+} from './models/path/gpu/path-storage-gpu-inputs';
 export {
-  AttributePolygonModel,
-  type AttributePolygonModelProps
-} from './models/polygon/attribute-polygon-model';
+  PolygonAttributeModel,
+  type PolygonAttributeModelProps
+} from './models/polygon/polygon-attribute-model';
 export {
-  StoragePolygonModel,
-  type StoragePolygonModelProps
-} from './models/polygon/storage-polygon-model';
+  PolygonStorageModel,
+  type PolygonStorageModelProps
+} from './models/polygon/polygon-storage-model';
 export {
   POLYGON_GPU_INPUT_SCHEMA,
   type PolygonBatchProps,
@@ -157,14 +157,14 @@ export {
 } from './models/polygon/polygon-gpu-inputs';
 export {
   createPolygonShaderInputs,
-  ATTRIBUTE_POLYGON_SHADER_LAYOUT,
-  ATTRIBUTE_POLYGON_VS_GLSL,
-  ATTRIBUTE_POLYGON_WGSL_SHADER,
+  POLYGON_ATTRIBUTE_SHADER_LAYOUT,
+  POLYGON_ATTRIBUTE_VS_GLSL,
+  POLYGON_ATTRIBUTE_WGSL_SHADER,
   POLYGON_FS_GLSL,
   POLYGON_PICKING_FS_GLSL,
   polygonViewport,
-  STORAGE_POLYGON_SHADER_LAYOUT,
-  STORAGE_POLYGON_WGSL_SHADER,
+  POLYGON_STORAGE_SHADER_LAYOUT,
+  POLYGON_STORAGE_WGSL_SHADER,
   type PolygonShaderInputs,
   type PolygonViewportUniforms
 } from './models/polygon/polygon-shaders';

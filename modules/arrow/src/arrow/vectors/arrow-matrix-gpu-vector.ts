@@ -18,8 +18,8 @@ import {
 type ArrowMatrixVector = Vector<FixedSizeList<ArrowMatrixValueType>>;
 type ArrowMatrixGPUVector = GPUVector;
 
-/** Options used when preparing one Arrow matrix column for GPU consumption. */
-export type PrepareArrowMatrixGPUVectorOptions = {
+/** Options used when converting one Arrow matrix column for GPU consumption. */
+export type ConvertArrowMatrixToGPUVectorOptions = {
   /** Stable GPU vector name. Defaults to `matrix`. */
   name?: string;
   /** Stable resource id prefix. Defaults to the vector name. */
@@ -32,7 +32,7 @@ export type PreparedArrowMatrixGPUVector = {
   matrix: GPUVector;
   /** Alias for callers that prefer the generic vector name. */
   vector: GPUVector;
-  /** Source matrix metadata recovered before preparation. */
+  /** Source matrix metadata recovered before conversion. */
   sourceInfo: ArrowMatrixVectorInfo;
   /** Canonical output matrix metadata. */
   matrixInfo: ArrowMatrixVectorInfo;
@@ -40,20 +40,20 @@ export type PreparedArrowMatrixGPUVector = {
   destroy: () => void;
 };
 
-const MATRIX_PREPARE_SHADER_LAYOUT: ShaderLayout = {
+const MATRIX_CONVERSION_SHADER_LAYOUT: ShaderLayout = {
   bindings: [
     {name: 'sourceMatrixValues', type: 'read-only-storage', group: 0, location: 0},
-    {name: 'matrixPrepareConfig', type: 'read-only-storage', group: 0, location: 1},
+    {name: 'matrixConversionConfig', type: 'read-only-storage', group: 0, location: 1},
     {name: 'preparedMatrixValues', type: 'storage', group: 0, location: 2}
   ],
   attributes: []
 };
 
-/** Prepare one metadata-tagged Arrow matrix column as canonical Float32 GPU storage. */
-export async function prepareArrowMatrixGPUVector(
+/** Convert one metadata-tagged Arrow matrix column to canonical Float32 GPU storage. */
+export async function convertArrowMatrixToGPUVector(
   device: Device,
   source: ArrowMatrixVector | ArrowMatrixGPUVector,
-  options: PrepareArrowMatrixGPUVectorOptions = {}
+  options: ConvertArrowMatrixToGPUVectorOptions = {}
 ): Promise<PreparedArrowMatrixGPUVector> {
   const sourceInfo = getRequiredArrowMatrixVectorInfo(source);
   const name = options.name || 'matrix';
@@ -65,9 +65,9 @@ export async function prepareArrowMatrixGPUVector(
       return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, false);
     }
     if (device.type !== 'webgpu') {
-      throw new Error('prepareArrowMatrixGPUVector requires WebGPU for non-canonical GPU matrices');
+      throw new Error('convertArrowMatrixToGPUVector requires WebGPU for non-canonical GPU matrices');
     }
-    return prepareArrowMatrixGPUVectorOnGPU(device, source, sourceInfo, {name, id});
+    return convertArrowMatrixToGPUVectorOnGPU(device, source, sourceInfo, {name, id});
   }
 
   const canonicalVector = isCanonicalFloat32Matrix(sourceInfo)
@@ -99,11 +99,11 @@ function createPreparedArrowMatrixGPUVector(
   };
 }
 
-async function prepareArrowMatrixGPUVectorOnGPU(
+async function convertArrowMatrixToGPUVectorOnGPU(
   device: Device,
   source: ArrowMatrixGPUVector,
   sourceInfo: ArrowMatrixVectorInfo,
-  options: Required<Pick<PrepareArrowMatrixGPUVectorOptions, 'name' | 'id'>>
+  options: Required<Pick<ConvertArrowMatrixToGPUVectorOptions, 'name' | 'id'>>
 ): Promise<PreparedArrowMatrixGPUVector> {
   const outputType = makeArrowMatrixVector(
     sourceInfo.shape,
@@ -136,12 +136,12 @@ async function prepareArrowMatrixGPUVectorOnGPU(
         sourceData.length * outputInfo.byteStride
       )
     });
-    dispatchArrowMatrixPreparation(device, sourceInfo, {
+    dispatchArrowMatrixConversion(device, sourceInfo, {
       id: options.id,
       chunkIndex,
       scalarCount: sourceData.length * outputInfo.physicalComponentCount,
       sourceMatrixValues: getGPUDataBinding(sourceData),
-      matrixPrepareConfig: configBuffer,
+      matrixConversionConfig: configBuffer,
       preparedMatrixValues: outputBuffer
     });
     outputData.push(
@@ -178,7 +178,7 @@ async function prepareArrowMatrixGPUVectorOnGPU(
   return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, true);
 }
 
-function dispatchArrowMatrixPreparation(
+function dispatchArrowMatrixConversion(
   device: Device,
   sourceInfo: ArrowMatrixVectorInfo,
   props: {
@@ -186,18 +186,18 @@ function dispatchArrowMatrixPreparation(
     chunkIndex: number;
     scalarCount: number;
     sourceMatrixValues: Binding;
-    matrixPrepareConfig: Binding;
+    matrixConversionConfig: Binding;
     preparedMatrixValues: Binding;
   }
 ): void {
   const computation = new Computation(device, {
-    id: `${props.id}-matrix-prepare-${props.chunkIndex}`,
-    source: getArrowMatrixPrepareSource(sourceInfo),
+    id: `${props.id}-matrix-conversion-${props.chunkIndex}`,
+    source: getArrowMatrixConversionSource(sourceInfo),
     ...(sourceInfo.valueType === 'float64' ? {modules: [fp64arithmetic as ShaderModule]} : {}),
-    shaderLayout: MATRIX_PREPARE_SHADER_LAYOUT,
+    shaderLayout: MATRIX_CONVERSION_SHADER_LAYOUT,
     bindings: {
       sourceMatrixValues: props.sourceMatrixValues,
-      matrixPrepareConfig: props.matrixPrepareConfig,
+      matrixConversionConfig: props.matrixConversionConfig,
       preparedMatrixValues: props.preparedMatrixValues
     }
   });
@@ -210,7 +210,7 @@ function dispatchArrowMatrixPreparation(
   computation.destroy();
 }
 
-function getArrowMatrixPrepareSource(sourceInfo: ArrowMatrixVectorInfo): string {
+function getArrowMatrixConversionSource(sourceInfo: ArrowMatrixVectorInfo): string {
   const sourceType = sourceInfo.valueType === 'float64' ? 'array<vec2<u32>>' : 'array<f32>';
   const readSourceScalar =
     sourceInfo.valueType === 'float64'
@@ -226,16 +226,16 @@ fn readSourceScalar(scalarIndex : u32) -> f32 {
 `;
   return /* wgsl */ `
 @group(0) @binding(0) var<storage, read> sourceMatrixValues : ${sourceType};
-@group(0) @binding(1) var<storage, read> matrixPrepareConfig : array<u32>;
+@group(0) @binding(1) var<storage, read> matrixConversionConfig : array<u32>;
 @group(0) @binding(2) var<storage, read_write> preparedMatrixValues : array<f32>;
 
 ${readSourceScalar}
 
 fn getSourceScalarIndex(matrixIndex : u32, columnIndex : u32, rowIndex : u32) -> u32 {
-  let columns = matrixPrepareConfig[1];
-  let sourcePhysicalComponentCount = matrixPrepareConfig[3];
-  let sourceColumnStride = matrixPrepareConfig[4];
-  let sourceOrder = matrixPrepareConfig[7];
+  let columns = matrixConversionConfig[1];
+  let sourcePhysicalComponentCount = matrixConversionConfig[3];
+  let sourceColumnStride = matrixConversionConfig[4];
+  let sourceOrder = matrixConversionConfig[7];
   let matrixOffset = matrixIndex * sourcePhysicalComponentCount;
   if (sourceOrder == 0u) {
     return matrixOffset + columnIndex * sourceColumnStride + rowIndex;
@@ -246,11 +246,11 @@ fn getSourceScalarIndex(matrixIndex : u32, columnIndex : u32, rowIndex : u32) ->
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
   let scalarIndex = globalInvocationId.x;
-  let rowCount = matrixPrepareConfig[0];
-  let columns = matrixPrepareConfig[1];
-  let rows = matrixPrepareConfig[2];
-  let targetPhysicalComponentCount = matrixPrepareConfig[5];
-  let targetColumnStride = matrixPrepareConfig[6];
+  let rowCount = matrixConversionConfig[0];
+  let columns = matrixConversionConfig[1];
+  let rows = matrixConversionConfig[2];
+  let targetPhysicalComponentCount = matrixConversionConfig[5];
+  let targetColumnStride = matrixConversionConfig[6];
   if (scalarIndex >= rowCount * targetPhysicalComponentCount) {
     return;
   }
@@ -296,7 +296,7 @@ function makeCanonicalArrowMatrixVector(
 function makeArrowMatrixGPUVector(
   device: Device,
   vector: Vector<FixedSizeList<Float32>>,
-  options: Required<Pick<PrepareArrowMatrixGPUVectorOptions, 'name' | 'id'>>
+  options: Required<Pick<ConvertArrowMatrixToGPUVectorOptions, 'name' | 'id'>>
 ): GPUVector {
   const matrixInfo = getRequiredArrowMatrixVectorInfo(vector);
   const buffer = new DynamicBuffer(device, {
@@ -350,7 +350,7 @@ function getRequiredArrowMatrixVectorInfo(
   const matrixInfo = getArrowMatrixVectorInfo(vector as Pick<Vector, 'type'>);
   if (!matrixInfo) {
     throw new Error(
-      'prepareArrowMatrixGPUVector requires FixedSizeList<Float32|Float64> matrix metadata'
+      'convertArrowMatrixToGPUVector requires FixedSizeList<Float32|Float64> matrix metadata'
     );
   }
   return matrixInfo;

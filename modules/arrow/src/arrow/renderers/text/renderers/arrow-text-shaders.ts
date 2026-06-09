@@ -40,7 +40,7 @@ export const TEXT_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
-export const STORAGE_INDEXED_TEXT_SHADER_LAYOUT = {
+export const TEXT_STORAGE_INDEXED_SHADER_LAYOUT = {
   attributes: [
     {name: 'glyphOffsets', location: 0, type: 'vec2<i32>', stepMode: 'instance'},
     {name: 'glyphIndices', location: 1, type: 'vec2<u32>', stepMode: 'instance'}
@@ -48,15 +48,15 @@ export const STORAGE_INDEXED_TEXT_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
-export const ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT = {
+export const TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT = {
   attributes: [
-    ...STORAGE_INDEXED_TEXT_SHADER_LAYOUT.attributes,
+    ...TEXT_STORAGE_INDEXED_SHADER_LAYOUT.attributes,
     {name: 'glyphRowIndices', location: 2, type: 'u32', stepMode: 'instance'}
   ],
   bindings: []
 } satisfies ShaderLayout;
 
-export const DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT = {
+export const TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT = {
   attributes: [],
   bindings: []
 } satisfies ShaderLayout;
@@ -173,7 +173,7 @@ fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
 }
 `;
 
-export const STORAGE_INDEXED_WGSL_SHADER = /* wgsl */ `\
+export const TEXT_STORAGE_INDEXED_WGSL_SHADER = /* wgsl */ `\
 struct TextViewportUniforms {
   cameraOffset : vec2<f32>,
   viewportScale : vec2<f32>,
@@ -402,13 +402,13 @@ fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
 }
 `;
 
-export const ROW_INDEXED_STORAGE_WGSL_SHADER = STORAGE_INDEXED_WGSL_SHADER.replace(
+export const TEXT_ROW_INDEXED_STORAGE_WGSL_SHADER = TEXT_STORAGE_INDEXED_WGSL_SHADER.replace(
   '@location(1) glyphIndices : vec2<u32>,',
   `@location(1) glyphIndices : vec2<u32>,
   @location(2) glyphRowIndices : u32,`
 ).replace('let rowIndex = findRowIndex(glyphIndex);', 'let rowIndex = inputs.glyphRowIndices;');
 
-export const DICTIONARY_STORAGE_WGSL_SHADER = /* wgsl */ `\
+export const TEXT_DICTIONARY_STORAGE_WGSL_SHADER = /* wgsl */ `\
 struct TextViewportUniforms {
   cameraOffset : vec2<f32>,
   viewportScale : vec2<f32>,

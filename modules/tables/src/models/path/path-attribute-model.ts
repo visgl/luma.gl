@@ -43,7 +43,7 @@ const SEGMENT_END_COLORS_BYTE_OFFSET =
   SEGMENT_START_COLORS_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 
 /** Prepared GPU inputs consumed by the attribute-backed path model. */
-export const ARROW_PATH_GPU_INPUT_SCHEMA = [
+export const PATH_ATTRIBUTE_GPU_INPUT_SCHEMA = [
   {
     name: 'paths',
     kind: 'positions',
@@ -135,7 +135,7 @@ export type PathSegmentLayout = {
   segmentEndColors: Uint32Array;
 };
 
-/** Generated render-batch state consumed by {@link AttributePathModel}. */
+/** Generated render-batch state consumed by {@link PathAttributeModel}. */
 export type PathRenderBatchState = {
   /** First source path row included in this generated render batch. */
   rowStart: number;
@@ -149,8 +149,8 @@ export type PathRenderBatchState = {
   pathViewOriginData: Buffer;
 };
 
-/** GPU-only path render state prepared before constructing {@link AttributePathModel}. */
-export type AttributePathModelState = {
+/** GPU-only path render state prepared before constructing {@link PathAttributeModel}. */
+export type PathAttributeModelState = {
   /** Generated path segment layout diagnostics. */
   segmentLayout: PathSegmentLayout;
   /** Generated render batches preserved for device buffer-size limits. */
@@ -164,7 +164,7 @@ export type AttributePathModelState = {
 };
 
 /** Props for the GPU-only attribute-backed path renderer. */
-export type AttributePathModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> & {
+export type PathAttributeModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> & {
   /** GPU table supplying already prepared segment-compatible row attributes. */
   table: GPUTable;
   /** Whether the model should destroy its prepared GPU table. Defaults to `false`. */
@@ -178,10 +178,10 @@ export type AttributePathModelProps = Omit<GPUTableModelProps, 'table' | 'tableC
   /** Optional per-path view-space origins, one GPU row per path. */
   viewOrigins?: GPUVector<'float32x4'>;
   /** Prepared GPU-only path expansion state. */
-  pathState: AttributePathModelState;
+  pathState: PathAttributeModelState;
 };
 
-type PreparedAttributePathModel = {
+type PreparedPathAttributeModel = {
   modelProps: GPUTableModelProps;
   segmentLayout: PathSegmentLayout;
   expandedPathVertexData: Buffer;
@@ -190,9 +190,9 @@ type PreparedAttributePathModel = {
 };
 
 /** GPU-only path renderer that consumes already prepared path GPU vectors and render state. */
-export class AttributePathModel extends GPUTableModel {
+export class PathAttributeModel extends GPUTableModel {
   /** Prepared GPU vectors consumed by the attribute-backed path model. */
-  static readonly gpuInputSchema = ARROW_PATH_GPU_INPUT_SCHEMA;
+  static readonly gpuInputSchema = PATH_ATTRIBUTE_GPU_INPUT_SCHEMA;
 
   /** Generated path segment layout diagnostics. */
   segmentLayout: PathSegmentLayout;
@@ -202,14 +202,14 @@ export class AttributePathModel extends GPUTableModel {
   pathViewOriginData: Buffer;
   /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: PathRenderBatchState[];
-  private pathProps: AttributePathModelProps;
+  private pathProps: PathAttributeModelProps;
   private pathShaderLayout: ShaderLayout;
   private pathTable: GPUTable;
   private ownsPathTable: boolean;
 
   /** Creates an attribute-backed path model from prepared GPU props. */
-  constructor(device: Device, props: AttributePathModelProps) {
-    const prepared = prepareAttributePathModel(props);
+  constructor(device: Device, props: PathAttributeModelProps) {
+    const prepared = preparePathAttributeModel(props);
     super(device, prepared.modelProps);
     this.pathTable = props.table;
     this.ownsPathTable = props.ownsTable ?? false;
@@ -222,7 +222,7 @@ export class AttributePathModel extends GPUTableModel {
   }
 
   /** Replace generated segment records with new prepared GPU path state. */
-  override setProps(props: Partial<AttributePathModelProps>): void {
+  override setProps(props: Partial<PathAttributeModelProps>): void {
     const nextProps = {...this.pathProps, ...props};
     const shouldRebuild =
       props.pathState !== undefined || props.table !== undefined || props.ownsTable !== undefined;
@@ -233,7 +233,7 @@ export class AttributePathModel extends GPUTableModel {
       return;
     }
 
-    const prepared = prepareAttributePathModel(nextProps);
+    const prepared = preparePathAttributeModel(nextProps);
     this.segmentLayout = prepared.segmentLayout;
     this.expandedPathVertexData = prepared.expandedPathVertexData;
     this.pathViewOriginData = prepared.pathViewOriginData;
@@ -249,7 +249,7 @@ export class AttributePathModel extends GPUTableModel {
       previousPathTable.destroy();
     }
     this.setAttributes(
-      getAttributePathModelAttributes(prepared.modelProps.shaderLayout!, prepared)
+      getPathAttributeModelAttributes(prepared.modelProps.shaderLayout!, prepared)
     );
     this.setInstanceCount(prepared.segmentLayout.segmentCount);
     this.setNeedsRedraw('Path segment state updated');
@@ -260,7 +260,7 @@ export class AttributePathModel extends GPUTableModel {
     const tableBatches = this.table?.batches || [];
     if (tableBatches.length > 0 && tableBatches.length !== this.renderBatches.length) {
       throw new Error(
-        'AttributePathModel draw batches must align with generated path render batches'
+        'PathAttributeModel draw batches must align with generated path render batches'
       );
     }
 
@@ -270,7 +270,7 @@ export class AttributePathModel extends GPUTableModel {
         const tableBatch = tableBatches[batchIndex];
         this.setAttributes({
           ...(tableBatch?.attributes || {}),
-          ...getAttributePathModelBatchAttributes(this.pathShaderLayout, renderBatch)
+          ...getPathAttributeModelBatchAttributes(this.pathShaderLayout, renderBatch)
         });
         this.setInstanceCount(renderBatch.segmentCount);
         drawSuccess = super.draw(renderPass) && drawSuccess;
@@ -278,7 +278,7 @@ export class AttributePathModel extends GPUTableModel {
     } finally {
       this.setAttributes({
         ...(this.table?.attributes || {}),
-        ...getAttributePathModelAttributes(this.pathShaderLayout, {
+        ...getPathAttributeModelAttributes(this.pathShaderLayout, {
           expandedPathVertexData: this.expandedPathVertexData,
           pathViewOriginData: this.pathViewOriginData
         })
@@ -299,14 +299,14 @@ export class AttributePathModel extends GPUTableModel {
   }
 }
 
-function prepareAttributePathModel(props: AttributePathModelProps): PreparedAttributePathModel {
+function preparePathAttributeModel(props: PathAttributeModelProps): PreparedPathAttributeModel {
   assertArrowPathVectorTypes(props);
   assertArrowPathVectorRowAlignment(props);
   assertArrowPathPreparedStateAlignment(props);
   const shaderLayout = props.shaderLayout ?? DEFAULT_PATH_SHADER_LAYOUT;
   const firstRenderBatch = props.pathState.renderBatches[0];
   if (!firstRenderBatch) {
-    throw new Error('AttributePathModel requires at least one prepared path render batch');
+    throw new Error('PathAttributeModel requires at least one prepared path render batch');
   }
 
   return {
@@ -317,7 +317,7 @@ function prepareAttributePathModel(props: AttributePathModelProps): PreparedAttr
       shaderLayout,
       attributes: {
         ...(props.attributes || {}),
-        ...getAttributePathModelBatchAttributes(shaderLayout, firstRenderBatch)
+        ...getPathAttributeModelBatchAttributes(shaderLayout, firstRenderBatch)
       },
       bufferLayout: [...(props.bufferLayout || []), ...createArrowPathBufferLayouts(shaderLayout)],
       topology: props.topology ?? 'line-list',
@@ -333,8 +333,8 @@ function prepareAttributePathModel(props: AttributePathModelProps): PreparedAttr
   };
 }
 
-function assertArrowPathVectorTypes(props: AttributePathModelProps): void {
-  assertModelGPUVectorInputs('AttributePathModel', AttributePathModel.gpuInputSchema, {
+function assertArrowPathVectorTypes(props: PathAttributeModelProps): void {
+  assertModelGPUVectorInputs('PathAttributeModel', PathAttributeModel.gpuInputSchema, {
     paths: props.paths,
     colors: props.colors,
     widths: props.widths,
@@ -342,24 +342,24 @@ function assertArrowPathVectorTypes(props: AttributePathModelProps): void {
   });
 }
 
-function assertArrowPathVectorRowAlignment(props: AttributePathModelProps): void {
+function assertArrowPathVectorRowAlignment(props: PathAttributeModelProps): void {
   const rowInputs = getArrowPathRowInputs(props);
   const [referenceName, referenceVector] = rowInputs[0];
   for (const [name, vector] of rowInputs.slice(1)) {
     if (vector.length !== referenceVector.length) {
       throw new Error(
-        `AttributePathModel ${name} rows must match ${referenceName} rows (${vector.length} !== ${referenceVector.length})`
+        `PathAttributeModel ${name} rows must match ${referenceName} rows (${vector.length} !== ${referenceVector.length})`
       );
     }
     if (vector.data.length !== referenceVector.data.length) {
       throw new Error(
-        `AttributePathModel ${name} batch count must match ${referenceName} batch count`
+        `PathAttributeModel ${name} batch count must match ${referenceName} batch count`
       );
     }
     for (let batchIndex = 0; batchIndex < vector.data.length; batchIndex++) {
       if (vector.data[batchIndex].length !== referenceVector.data[batchIndex].length) {
         throw new Error(
-          `AttributePathModel ${name} batch ${batchIndex} rows must match ${referenceName}`
+          `PathAttributeModel ${name} batch ${batchIndex} rows must match ${referenceName}`
         );
       }
     }
@@ -369,7 +369,7 @@ function assertArrowPathVectorRowAlignment(props: AttributePathModelProps): void
   }
 }
 
-function getArrowPathRowInputs(props: AttributePathModelProps): Array<[string, GPUVector]> {
+function getArrowPathRowInputs(props: PathAttributeModelProps): Array<[string, GPUVector]> {
   return [
     ['paths', props.paths],
     ['colors', props.colors],
@@ -379,19 +379,19 @@ function getArrowPathRowInputs(props: AttributePathModelProps): Array<[string, G
 }
 
 function isPathVertexColorGPUVector(
-  colors: NonNullable<AttributePathModelProps['colors']>
+  colors: NonNullable<PathAttributeModelProps['colors']>
 ): boolean {
   return colors.format !== undefined && isVertexListGPUVectorFormat(colors.format);
 }
 
-function assertArrowPathPreparedStateAlignment(props: AttributePathModelProps): void {
+function assertArrowPathPreparedStateAlignment(props: PathAttributeModelProps): void {
   if (!props.pathState) {
-    throw new Error('AttributePathModel requires prepared pathState');
+    throw new Error('PathAttributeModel requires prepared pathState');
   }
   const preparedRowCount = props.pathState.segmentLayout.startIndices.length - 1;
   if (preparedRowCount !== props.paths.length) {
     throw new Error(
-      `AttributePathModel prepared path rows must match path GPU rows (${preparedRowCount} !== ${props.paths.length})`
+      `PathAttributeModel prepared path rows must match path GPU rows (${preparedRowCount} !== ${props.paths.length})`
     );
   }
 }
@@ -405,7 +405,7 @@ function assertArrowPathVertexColorGpuVectorAlignment(paths: GPUVector, colors: 
       colorMetadata?.kind !== 'variable-length-attribute' ||
       !areArrowPathOffsetsEqual(pathMetadata.valueOffsets, colorMetadata.valueOffsets)
     ) {
-      throw new Error('AttributePathModel vertex colors must align with path vertex offsets');
+      throw new Error('PathAttributeModel vertex colors must align with path vertex offsets');
     }
   }
 }
@@ -501,9 +501,9 @@ function createArrowPathBufferLayouts(shaderLayout: ShaderLayout): BufferLayout[
   return bufferLayouts;
 }
 
-function getAttributePathModelAttributes(
+function getPathAttributeModelAttributes(
   shaderLayout: ShaderLayout,
-  state: Pick<AttributePathModelState, 'expandedPathVertexData' | 'pathViewOriginData'>
+  state: Pick<PathAttributeModelState, 'expandedPathVertexData' | 'pathViewOriginData'>
 ): Record<string, Buffer> {
   const shaderAttributeNames = new Set(shaderLayout.attributes.map(attribute => attribute.name));
   return {
@@ -514,9 +514,9 @@ function getAttributePathModelAttributes(
   };
 }
 
-function getAttributePathModelBatchAttributes(
+function getPathAttributeModelBatchAttributes(
   shaderLayout: ShaderLayout,
   renderBatch: PathRenderBatchState
 ): Record<string, Buffer> {
-  return getAttributePathModelAttributes(shaderLayout, renderBatch);
+  return getPathAttributeModelAttributes(shaderLayout, renderBatch);
 }

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {RecordBatch, Table, Vector} from 'apache-arrow';
-import type {ArrowUtf8TextVector} from '../preparation';
+import type {ArrowUtf8TextVector} from '../conversion';
 import {getArrowPaths, getArrowVectorByPath} from '../../../arrow-utils/arrow-paths';
 
 /** Raw Arrow table or record batch accepted by text source mapping helpers. */
@@ -23,7 +23,7 @@ export type OptionalArrowTextColumnSelector<TypeT extends import('apache-arrow')
   | ArrowTextColumnSelector<TypeT>
   | null
   | undefined;
-/** Raw Arrow selectors keyed by text preparation input names. */
+/** Raw Arrow selectors keyed by text conversion input names. */
 export type ArrowTextSourceVectorSelectors = {
   /** Label origins. Defaults to `positions`. */
   positions?: ArrowTextColumnSelector<
@@ -50,7 +50,7 @@ export type ArrowTextSourceVectorSelectors = {
   /** Row alignment baseline enum values. Defaults to `alignmentBaselines`; `null` disables them. */
   alignmentBaselines?: OptionalArrowTextColumnSelector<import('apache-arrow').Uint8>;
 };
-/** Resolved raw Arrow vectors consumed by text preparation helpers. */
+/** Resolved raw Arrow vectors consumed by text conversion helpers. */
 export type ArrowTextMappedSourceVectors = {
   positions: Vector<import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>>;
   texts: ArrowUtf8TextVector;
@@ -66,11 +66,11 @@ export type ArrowTextMappedSourceVectors = {
 export type ResolveArrowTextSourceVectorsProps = {
   /** Raw Arrow table or record batch containing same-name or selected source columns. */
   data?: ArrowTextSourceData | null;
-  /** Explicit raw Arrow column selectors keyed by text preparation inputs. */
+  /** Explicit raw Arrow column selectors keyed by text conversion inputs. */
   selectors?: ArrowTextSourceVectorSelectors;
 };
 
-/** Resolves raw Arrow text source vectors before GPU upload and glyph preparation. */
+/** Resolves raw Arrow text source vectors before GPU upload and glyph conversion. */
 export function resolveArrowTextSourceVectors(
   props: ResolveArrowTextSourceVectorsProps = {}
 ): ArrowTextMappedSourceVectors {

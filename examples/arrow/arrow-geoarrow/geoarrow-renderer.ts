@@ -34,7 +34,7 @@ export type GeoArrowRendererMetrics = {
   lineRowCount: number;
   polygonRowCount: number;
   skippedRowCount: number;
-  preparationTimeMs: number;
+  conversionTimeMs: number;
 };
 
 export type GeoArrowInspectionTables = {
@@ -72,7 +72,7 @@ export class GeoArrowRenderer {
     lineRowCount: 0,
     polygonRowCount: 0,
     skippedRowCount: 0,
-    preparationTimeMs: 0
+    conversionTimeMs: 0
   };
   private inspectionTables: GeoArrowInspectionTables | null = null;
   private updateVersion = 0;
@@ -140,7 +140,7 @@ export class GeoArrowRenderer {
     this.inspectionTables = {pointTable, lineTable, polygonTable};
     this.metrics = {
       ...geometrySummary,
-      preparationTimeMs: getTimestampMilliseconds() - startedAt
+      conversionTimeMs: getTimestampMilliseconds() - startedAt
     };
   }
 
@@ -295,7 +295,7 @@ function summarizeGeometries(geometries: arrow.Vector<arrow.DenseUnion>): GeoArr
     lineRowCount: 0,
     polygonRowCount: 0,
     skippedRowCount: 0,
-    preparationTimeMs: 0
+    conversionTimeMs: 0
   };
   visitDenseUnionRows(geometries, ({geometryKind, childData, childRowIndex}) => {
     if (!childData.getValid(childRowIndex)) {
