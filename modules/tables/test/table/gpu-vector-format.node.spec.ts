@@ -85,7 +85,7 @@ test('GPUVector accepts format as canonical metadata and synthesizes table layou
   const table = new GPUTable({vectors: {colors}});
 
   t.equal(colors.format, 'unorm8x4', 'stores the canonical GPUVector format');
-  t.equal(colors.type, 'unorm8x4', 'retains the deprecated type alias as format metadata');
+  t.notOk('type' in colors, 'drops the deprecated type alias');
   t.equal(table.bufferLayout[0].format, 'unorm8x4', 'table layout uses GPUVector.format');
 
   table.destroy();

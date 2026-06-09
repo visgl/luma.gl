@@ -10,7 +10,7 @@ import {
   createArrowTextStorageState,
   createTextStorageStateFromGPUVectors,
   type ArrowTextStorageInputProps,
-  type ArrowTextStorageState,
+  type TextStorageState,
   type GPUVectorTextStorageInputProps
 } from './convert-arrow-text-vectors';
 import {
@@ -45,7 +45,7 @@ export function convertArrowTextToStorage(
 export function convertArrowTextToStorageState(
   device: Device,
   props: ArrowTextStorageInputProps
-): ArrowTextStorageState {
+): TextStorageState {
   if (canUseGPUVectorTextStorageState(device, props)) {
     try {
       return createTextStorageStateFromGPUVectors(device, props);
@@ -67,7 +67,7 @@ export function convertArrowTextToStorageState(
 export function convertArrowTextToStorageModelProps(
   device: Device,
   props: ArrowTextStorageInputProps
-): TextStorageModelProps & ArrowTextStorageState {
+): TextStorageModelProps & TextStorageState {
   const storageState = convertArrowTextToStorageState(device, props);
   const {
     sourceVectors: _sourceVectors,
@@ -79,7 +79,7 @@ export function convertArrowTextToStorageModelProps(
     ...modelProps,
     ...storageState,
     ownsStorageState: true
-  } as TextStorageModelProps & ArrowTextStorageState;
+  } as TextStorageModelProps & TextStorageState;
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};

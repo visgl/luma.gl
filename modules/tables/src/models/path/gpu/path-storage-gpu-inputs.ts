@@ -77,9 +77,7 @@ export function resolvePathStorageInputs(
       segmentCount,
       pathValuesBinding: getStorageGPUDataBinding(
         pathData,
-        pathData.readbackMetadata?.kind === 'variable-length-attribute'
-          ? pathData.readbackMetadata.valueByteLength
-          : undefined
+        getStorageGPUDataValueByteLength(pathData, props.paths.byteStride)
       ),
       viewOriginsBinding: viewOriginData
         ? getStorageGPUDataBinding(
@@ -99,9 +97,7 @@ export function resolvePathStorageInputs(
       timestampsBinding: timestampData
         ? getStorageGPUDataBinding(
             timestampData,
-            timestampData.readbackMetadata?.kind === 'variable-length-attribute'
-              ? timestampData.readbackMetadata.valueByteLength
-              : undefined
+            getStorageGPUDataValueByteLength(timestampData, props.timestamps!.byteStride)
           )
         : undefined
     });
@@ -163,12 +159,11 @@ function assertPathStorageVectorRowAlignment(props: PathStorageInputProps): void
 function assertPathStorageTimestampAlignment(paths: GPUVector, timestamps: GPUVector): void {
   for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
     const pathOffsets = getPathStorageOffsets(paths.data[batchIndex] as GPUData);
-    const timestampData = timestamps.data[batchIndex];
-    const timestampMetadata = timestampData.readbackMetadata;
-    if (timestampMetadata?.kind !== 'variable-length-attribute') {
+    const timestampOffsets = timestamps.data[batchIndex].valueOffsets;
+    if (!timestampOffsets) {
       throw new Error('PathStorageModel timestamps require copied variable-length offsets');
     }
-    if (!areOffsetsEqual(pathOffsets, timestampMetadata.valueOffsets)) {
+    if (!areOffsetsEqual(pathOffsets, timestampOffsets)) {
       throw new Error('PathStorageModel timestamps must align with path vertex offsets');
     }
   }
@@ -177,12 +172,11 @@ function assertPathStorageTimestampAlignment(paths: GPUVector, timestamps: GPUVe
 function assertPathStorageVertexColorAlignment(paths: GPUVector, colors: GPUVector): void {
   for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
     const pathOffsets = getPathStorageOffsets(paths.data[batchIndex] as GPUData);
-    const colorData = colors.data[batchIndex];
-    const colorMetadata = colorData.readbackMetadata;
-    if (colorMetadata?.kind !== 'variable-length-attribute') {
+    const colorOffsets = colors.data[batchIndex].valueOffsets;
+    if (!colorOffsets) {
       throw new Error('PathStorageModel vertex colors require copied variable-length offsets');
     }
-    if (!areOffsetsEqual(pathOffsets, colorMetadata.valueOffsets)) {
+    if (!areOffsetsEqual(pathOffsets, colorOffsets)) {
       throw new Error('PathStorageModel vertex colors must align with path vertex offsets');
     }
   }
@@ -193,11 +187,10 @@ function areOffsetsEqual(left: Int32Array, right: Int32Array): boolean {
 }
 
 function getPathStorageOffsets(data: GPUData): Int32Array {
-  const metadata = data.readbackMetadata;
-  if (metadata?.kind !== 'variable-length-attribute') {
+  if (!data.valueOffsets) {
     throw new Error('PathStorageModel paths require copied variable-length offset metadata');
   }
-  return metadata.valueOffsets;
+  return data.valueOffsets;
 }
 
 function makePathStorageRecordOffsets(valueOffsets: Int32Array, rowCount: number): number[] {
@@ -236,7 +229,5 @@ function getGPUDataBuffer(data: GPUData): Buffer {
 }
 
 function getStorageGPUDataValueByteLength(data: GPUData, rowByteStride: number): number {
-  return data.readbackMetadata?.kind === 'variable-length-attribute'
-    ? data.readbackMetadata.valueByteLength
-    : data.length * rowByteStride;
+  return data.valueByteLength ?? data.valueLength * rowByteStride;
 }

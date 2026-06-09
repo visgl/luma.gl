@@ -42,7 +42,7 @@ export type GPUVectorFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat
   rowByteLength?: number;
   /** Whether this vector should destroy the wrapped buffer. */
   ownsBuffer?: boolean;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   dataType?: unknown;
 };
 
@@ -68,7 +68,7 @@ export type GPUVectorFromInterleavedProps<T extends GPUVectorFormat = GPUVectorF
   attributes: BufferAttributeLayout[];
   /** Whether this vector should destroy the wrapped buffer. */
   ownsBuffer?: boolean;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   dataType?: unknown;
 };
 
@@ -94,7 +94,7 @@ export type GPUVectorFromDataProps<T extends GPUVectorFormat = GPUVectorFormat> 
   bufferLayout?: BufferLayout;
   /** Whether this vector should destroy the supplied GPU data chunks. */
   ownsData?: boolean;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   dataType?: unknown;
 };
 
@@ -122,7 +122,7 @@ export type GPUVectorFromAppendableProps<T extends GPUVectorFormat = GPUVectorFo
   capacityGrowthFactor?: number;
   /** Buffer props forwarded when adapter code creates appended GPUData buffers. */
   bufferProps?: GPUVectorDynamicBufferProps;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   dataType?: unknown;
 };
 
@@ -142,9 +142,7 @@ export type GPUVectorCreateProps<T extends GPUVectorFormat = GPUVectorFormat> =
 export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   /** Stable vector name. */
   readonly name: string;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
-  readonly type?: any;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   readonly dataType?: unknown;
   /** Canonical memory-layout descriptor for the uploaded bytes. */
   readonly format?: T;
@@ -187,7 +185,6 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         } = props;
         const {stride, byteStride, rowByteLength} = getResolvedGPUVectorLayout(props);
         this.name = name;
-        this.type = props.dataType ?? format;
         this.dataType = props.dataType;
         this.format = format;
         this.length = length;
@@ -226,7 +223,6 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
           ownsBuffer = false
         } = props;
         this.name = name;
-        this.type = props.dataType ?? format;
         this.dataType = props.dataType;
         this.format = format;
         this.length = length;
@@ -270,7 +266,6 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         } = props;
         validateGPUVectorDataFormats(data, format);
         this.name = name;
-        this.type = props.dataType ?? format;
         this.dataType = props.dataType;
         this.format = format;
         this.length = data.reduce((totalLength, chunk) => totalLength + chunk.length, 0);
@@ -289,7 +284,6 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         const {name, device, format, valueLength = 0, bufferProps} = props;
         const {stride, byteStride, rowByteLength} = getResolvedGPUVectorLayout(props);
         this.name = name;
-        this.type = props.dataType ?? format;
         this.dataType = props.dataType;
         this.format = format;
         this.length = 0;

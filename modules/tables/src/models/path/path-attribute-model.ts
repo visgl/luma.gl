@@ -302,7 +302,7 @@ export class PathAttributeModel extends GPUTableModel {
 function preparePathAttributeModel(props: PathAttributeModelProps): PreparedPathAttributeModel {
   assertArrowPathVectorTypes(props);
   assertArrowPathVectorRowAlignment(props);
-  assertArrowPathPreparedStateAlignment(props);
+  assertPathPreparedStateAlignment(props);
   const shaderLayout = props.shaderLayout ?? DEFAULT_PATH_SHADER_LAYOUT;
   const firstRenderBatch = props.pathState.renderBatches[0];
   if (!firstRenderBatch) {
@@ -365,7 +365,7 @@ function assertArrowPathVectorRowAlignment(props: PathAttributeModelProps): void
     }
   }
   if (props.colors && isPathVertexColorGPUVector(props.colors)) {
-    assertArrowPathVertexColorGpuVectorAlignment(props.paths, props.colors);
+    assertPathVertexColorGPUVectorAlignment(props.paths, props.colors);
   }
 }
 
@@ -384,7 +384,7 @@ function isPathVertexColorGPUVector(
   return colors.format !== undefined && isVertexListGPUVectorFormat(colors.format);
 }
 
-function assertArrowPathPreparedStateAlignment(props: PathAttributeModelProps): void {
+function assertPathPreparedStateAlignment(props: PathAttributeModelProps): void {
   if (!props.pathState) {
     throw new Error('PathAttributeModel requires prepared pathState');
   }
@@ -396,21 +396,21 @@ function assertArrowPathPreparedStateAlignment(props: PathAttributeModelProps): 
   }
 }
 
-function assertArrowPathVertexColorGpuVectorAlignment(paths: GPUVector, colors: GPUVector): void {
+function assertPathVertexColorGPUVectorAlignment(paths: GPUVector, colors: GPUVector): void {
   for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
-    const pathMetadata = paths.data[batchIndex]?.readbackMetadata;
-    const colorMetadata = colors.data[batchIndex]?.readbackMetadata;
+    const pathOffsets = paths.data[batchIndex]?.valueOffsets;
+    const colorOffsets = colors.data[batchIndex]?.valueOffsets;
     if (
-      pathMetadata?.kind !== 'variable-length-attribute' ||
-      colorMetadata?.kind !== 'variable-length-attribute' ||
-      !areArrowPathOffsetsEqual(pathMetadata.valueOffsets, colorMetadata.valueOffsets)
+      !pathOffsets ||
+      !colorOffsets ||
+      !arePathOffsetsEqual(pathOffsets, colorOffsets)
     ) {
       throw new Error('PathAttributeModel vertex colors must align with path vertex offsets');
     }
   }
 }
 
-function areArrowPathOffsetsEqual(left: Int32Array, right: Int32Array): boolean {
+function arePathOffsetsEqual(left: Int32Array, right: Int32Array): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 

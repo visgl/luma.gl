@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {BigTypedArray, Buffer} from '@luma.gl/core';
-import type {GPUData} from '@luma.gl/tables';
+import type {GPUData, GPUVector} from '@luma.gl/tables';
 import {
   BufferType,
   Data,
@@ -64,6 +64,26 @@ type NumericTypedArrayConstructor = {
   readonly BYTES_PER_ELEMENT: number;
   new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): BigTypedArray;
 };
+
+/** Returns the Arrow data type retained by one GPU data chunk. */
+export function getRequiredArrowGPUDataType<T extends DataType = DataType>(
+  data: Pick<GPUData, 'dataType'>
+): T {
+  if (!data.dataType) {
+    throw new Error('Arrow GPUData requires adapter dataType metadata');
+  }
+  return data.dataType as T;
+}
+
+/** Returns the Arrow data type retained by one GPU vector. */
+export function getRequiredArrowGPUVectorDataType<T extends DataType = DataType>(
+  vector: Pick<GPUVector, 'dataType'>
+): T {
+  if (!vector.dataType) {
+    throw new Error('Arrow GPUVector requires adapter dataType metadata');
+  }
+  return vector.dataType as T;
+}
 
 const makeNumericData = makeData as <T extends NumericArrowType>(props: {
   type: T;
@@ -296,7 +316,8 @@ export async function readArrowGPUVectorAsync<T extends AttributeArrowType>(
 
 /** Read one generic GPU data range back into one Arrow `Data` chunk. */
 export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): Promise<Data<T>> {
-  if (DataType.isUtf8(data.type)) {
+  const dataType = getRequiredArrowGPUDataType<T>(data);
+  if (DataType.isUtf8(dataType)) {
     const metadata = data.readbackMetadata as GPUDataReadbackMetadata | undefined;
     if (metadata?.kind !== 'utf8') {
       throw new Error('readArrowGPUDataAsync() requires UTF-8 readback metadata');
@@ -315,7 +336,7 @@ export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): 
     }) as Data<T>;
   }
 
-  if (isVariableLengthAttributeArrowType(data.type)) {
+  if (isVariableLengthAttributeArrowType(dataType)) {
     const metadata = data.readbackMetadata as GPUDataReadbackMetadata | undefined;
     if (metadata?.kind !== 'variable-length-attribute') {
       throw new Error(
@@ -327,7 +348,7 @@ export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): 
         ? new Uint8Array(0)
         : await data.buffer.readAsync(data.byteOffset, metadata.valueByteLength);
     return makeArrowVariableLengthAttributeDataFromPackedBytes(
-      data.type,
+      dataType,
       data.length,
       metadata,
       bytes
@@ -335,7 +356,7 @@ export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): 
   }
 
   const vector = await readArrowGPUVectorAsync({
-    type: data.type as unknown as AttributeArrowType,
+    type: dataType as unknown as AttributeArrowType,
     buffer: data.buffer,
     length: data.length,
     byteOffset: data.byteOffset,

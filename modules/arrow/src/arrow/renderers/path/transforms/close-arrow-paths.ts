@@ -8,6 +8,7 @@ import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {Bool, BufferType, Data, DataType, FixedSizeList, Float32, List, Vector} from 'apache-arrow';
 import {
   getArrowVariableLengthAttributeDataBufferSource,
+  getRequiredArrowGPUVectorDataType,
   type GPUDataReadbackMetadata
 } from '../../../gpu/arrow-gpu-data';
 import {
@@ -224,6 +225,7 @@ export async function closeArrowPaths<Format extends GPUVectorFormat = GPUVector
   props: CloseArrowPathsProps<Format>
 ): Promise<GPUVector<Format>> {
   const epsilon = assertCloseArrowPathsProps(props);
+  const pathType = getCloseArrowPathType(props.paths);
   const chunkStates = getCloseArrowPathChunkStates(props.paths, props.closed);
 
   if (device.type !== 'webgpu') {
@@ -239,7 +241,7 @@ export async function closeArrowPaths<Format extends GPUVectorFormat = GPUVector
   return new GPUVector<Format>({
     type: 'data',
     name: props.paths.name,
-    dataType: props.paths.type,
+    dataType: pathType,
     format: props.paths.format,
     data: outputData,
     stride: props.paths.stride,
@@ -250,7 +252,7 @@ export async function closeArrowPaths<Format extends GPUVectorFormat = GPUVector
 }
 
 function assertCloseArrowPathsProps(props: CloseArrowPathsProps): number {
-  assertCloseArrowPathCoordinateType(props.paths.type);
+  assertCloseArrowPathCoordinateType(getCloseArrowPathType(props.paths));
   if (!(props.closed.type instanceof Bool)) {
     throw new Error('closeArrowPaths closed flags must be Vector<Bool>');
   }
@@ -289,15 +291,14 @@ function getCloseArrowPathChunkStates<Format extends GPUVectorFormat>(
   let rowIndexBase = 0;
 
   for (const pathData of paths.data) {
-    const metadata = pathData.readbackMetadata;
-    if (metadata?.kind !== 'variable-length-attribute') {
+    if (!pathData.valueOffsets || pathData.valueByteLength === undefined) {
       throw new Error('closeArrowPaths paths require copied variable-length Arrow offset metadata');
     }
-    validateValueOffsets(metadata.valueOffsets, pathData.length);
+    validateValueOffsets(pathData.valueOffsets, pathData.length);
     chunkStates.push({
       pathData,
-      valueOffsets: metadata.valueOffsets,
-      valueByteLength: metadata.valueByteLength,
+      valueOffsets: pathData.valueOffsets,
+      valueByteLength: pathData.valueByteLength,
       closedFlags: allClosedFlags.subarray(rowIndexBase, rowIndexBase + pathData.length),
       rowIndexBase
     });
@@ -339,7 +340,8 @@ async function closeArrowPathChunkOnGPU<Format extends GPUVectorFormat>(
   chunkIndex: number,
   epsilon: number
 ): Promise<GPUData<Format>> {
-  const componentCount = getPathComponentCount(props.paths.type);
+  const pathType = getCloseArrowPathType(props.paths);
+  const componentCount = getPathComponentCount(pathType);
   const classificationState = createClosedPathClassificationState(
     device,
     props,
@@ -391,14 +393,16 @@ async function closeArrowPathChunkOnGPU<Format extends GPUVectorFormat>(
     Float32Array.BYTES_PER_ELEMENT;
   return new GPUData<Format>({
     buffer: scatterState.outputPathValuesBuffer,
-    dataType: props.paths.type,
+    dataType: pathType,
     format: chunkState.pathData.format,
     length: chunkState.pathData.length,
     stride: chunkState.pathData.stride,
     byteStride: chunkState.pathData.byteStride,
     rowByteLength: chunkState.pathData.rowByteLength,
     ownsBuffer: true,
-    readbackMetadata: makeClosedPathReadbackMetadata(outputOffsets, outputValueByteLength)
+    readbackMetadata: makeClosedPathReadbackMetadata(outputOffsets, outputValueByteLength),
+    valueOffsets: outputOffsets,
+    valueByteLength: outputValueByteLength
   });
 }
 
@@ -616,7 +620,7 @@ async function closeArrowPathsOnCPU<Format extends GPUVectorFormat>(
   const sourcePaths = (await readArrowGPUVectorAsync(
     props.paths
   )) as Vector<ArrowPathCoordinateType>;
-  const componentCount = getPathComponentCount(props.paths.type);
+  const componentCount = getPathComponentCount(getCloseArrowPathType(props.paths));
   const outputData = sourcePaths.data.map((data, chunkIndex) =>
     closeArrowPathDataOnCPU(
       data as Data<ArrowPathCoordinateType>,
@@ -763,4 +767,8 @@ function getPathComponentCount(type: ArrowPathCoordinateType): number {
     throw new Error('closeArrowPaths paths require FixedSizeList coordinate elements');
   }
   return coordinateType.listSize;
+}
+
+function getCloseArrowPathType(paths: GPUVector): ArrowPathCoordinateType {
+  return getRequiredArrowGPUVectorDataType<ArrowPathCoordinateType>(paths);
 }

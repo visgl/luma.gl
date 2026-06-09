@@ -412,7 +412,7 @@ test('GPUVector creates a GPU buffer from an Arrow vector', t => {
   const gpuVector = makeGPUVectorFromArrow(device, vector);
 
   t.notOk('vector' in gpuVector, 'does not retain the source Arrow vector');
-  t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
+  t.equal(gpuVector.dataType, vector.type, 'exposes the Arrow vector type');
   t.equal(gpuVector.format, 'float32x2', 'maps FixedSizeList<Float32, 2> to float32x2');
   t.equal(gpuVector.length, 2, 'exposes the Arrow vector length');
   t.equal(gpuVector.stride, 2, 'exposes the FixedSizeList stride');
@@ -607,7 +607,7 @@ test('GPUVector infers Arrow-vector object construction from vector props', t =>
   const gpuVector = makeGPUVectorFromArrow(device, vector, {name: 'positions'});
 
   t.equal(gpuVector.name, 'positions', 'exposes vector name');
-  t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
+  t.equal(gpuVector.dataType, vector.type, 'exposes the Arrow vector type');
   t.equal(gpuVector.length, 2, 'exposes vector length');
   t.equal(gpuVector.stride, 2, 'exposes scalar stride');
   t.equal(gpuVector.byteOffset, 0, 'defaults byteOffset');
@@ -638,7 +638,7 @@ test('GPUVector wraps existing typed buffers', t => {
   };
 
   t.equal(gpuVector.name, 'weights', 'exposes vector name');
-  t.equal(gpuVector.type.typeId, new arrow.Float32().typeId, 'exposes supplied Arrow type');
+  t.equal(gpuVector.dataType.typeId, new arrow.Float32().typeId, 'exposes supplied Arrow type');
   t.equal(gpuVector.length, 4, 'exposes supplied length');
   t.equal(gpuVector.stride, 1, 'deduces scalar stride');
   t.equal(gpuVector.byteStride, 4, 'deduces byte stride');
@@ -695,11 +695,11 @@ test('GPUVector wraps interleaved buffers', t => {
   });
 
   t.equal(gpuVector.name, 'instances', 'exposes vector name');
-  t.ok(arrow.DataType.isBinary(gpuVector.type), 'uses Arrow Binary for interleaved storage');
+  t.ok(arrow.DataType.isBinary(gpuVector.dataType), 'uses Arrow Binary for interleaved storage');
   t.equal(gpuVector.length, 2, 'exposes row count');
   t.equal(gpuVector.stride, 16, 'uses byte stride as opaque row stride');
   t.equal(gpuVector.data.length, 1, 'exposes one opaque GPUData chunk');
-  t.ok(arrow.DataType.isBinary(gpuVector.data[0].type), 'GPUData uses Arrow Binary');
+  t.ok(arrow.DataType.isBinary(gpuVector.data[0].dataType), 'GPUData uses Arrow Binary');
   t.equal(gpuVector.data[0].buffer, buffer, 'GPUData keeps the interleaved buffer');
   t.deepEqual(
     gpuVector.bufferLayout,

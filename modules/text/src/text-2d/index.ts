@@ -73,6 +73,15 @@ export {
 } from './model-utils/text-shaders';
 export {createTextDefaultFragmentShaderUniforms} from './model-utils/text-fragment-uniforms';
 export {
+  getFirstTextDictionaryBatch,
+  getFirstTextDictionaryRenderBatch,
+  getFirstTextStorageBatch,
+  getFirstTextStorageRenderBatch,
+  getTextStorageRowGlyphStartsBuffer,
+  type TextSdfRenderSettings,
+  type TextStorageBuffer
+} from './model-utils/text-storage-state';
+export {
   TextAttributeModel,
   type TextAttributeModelProps,
   type TextAttributeRenderBatchState,

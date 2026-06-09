@@ -84,14 +84,6 @@ export {
   type ArrowVectorRowMapping
 } from './arrow/vectors/arrow-vector-utils';
 export {
-  assertModelGPUVectorInputs,
-  type ModelGPUInputDeclaration,
-  type ModelGPUInputKind,
-  type ModelGPUInputSchema,
-  type ModelGPUInputSource,
-  type ModelGPUInputVectors
-} from '@luma.gl/tables';
-export {
   resolveArrowPathSourceVectors,
   type ArrowPathMappedSourceVectors,
   type ArrowPathSourceData,
@@ -113,7 +105,6 @@ export {
   isArrowUtf8TextVector,
   isArrowUtf8Vector,
   populateUtf8TextIndices,
-  type ArrowGlyphLayout,
   type ArrowUtf8Dictionary,
   type ArrowUtf8DictionaryIndexType,
   type ArrowUtf8Chunk,
@@ -133,18 +124,12 @@ export {
   type ArrowTextAttributeInputProps,
   type ArrowTextAttributeRenderProps,
   type ArrowTextAttributeState,
-  type ArrowTextDictionaryStorageBatchState,
   type ArrowTextDictionaryStorageInputProps,
-  type ArrowTextDictionaryStorageRenderBatchState,
   type ArrowTextDictionaryStorageRenderProps,
   type ArrowTextDictionaryStorageSourceVectors,
-  type ArrowTextDictionaryStorageState,
-  type ArrowTextStorageBatchState,
   type ArrowTextStorageInputProps,
-  type ArrowTextStorageRenderBatchState,
   type ArrowTextStorageRenderProps,
   type ArrowTextStorageSourceVectors,
-  type ArrowTextStorageState,
   type ArrowTextGlyphTable,
   type ArrowTextModelProps,
   type ArrowTextRenderBatchState,
@@ -212,19 +197,6 @@ export {
   type ArrowTextShaderInputs
 } from './arrow/renderers/text/renderers/arrow-text-shaders';
 export {
-  TextAttributeModel,
-  TextDictionaryModel,
-  TextRowIndexedStorageModel,
-  TextStorageModel,
-  TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA,
-  TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
-  TEXT_STORAGE_GPU_INPUT_SCHEMA,
-  type TextAttributeModelProps,
-  type TextDictionaryModelProps,
-  type TextStorageModelProps
-} from '@luma.gl/text';
-
-export {
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable,
@@ -264,14 +236,6 @@ export type {
   ArrowMeshTopology
 } from './arrow/engine/arrow-mesh-types';
 export {
-  PathAttributeModel,
-  PATH_ATTRIBUTE_GPU_INPUT_SCHEMA,
-  type PathAttributeModelProps,
-  type PathAttributeModelState,
-  type PathRenderBatchState,
-  type PathSegmentLayout
-} from '@luma.gl/tables';
-export {
   ArrowPathRenderer,
   buildArrowPathSegmentTable,
   convertArrowPathsToAttribute,
@@ -295,24 +259,9 @@ export {
   type ConvertArrowPathRendererGPUVectorsOptions
 } from './arrow/renderers/path/renderers/arrow-path-renderer';
 export {
-  convertGeoArrowTableToDenseUnion,
-  convertGeoArrowVectorToDenseUnion,
-  type GeoArrowDenseUnionTableOptions,
-  type GeoArrowDenseUnionVectorOptions,
-  type GeoArrowSerializedEncoding,
-  convertGeoArrowTableToInterleaved,
-  convertGeoArrowTableToInterleavedAsync,
-  convertGeoArrowVectorToInterleaved,
-  type GeoArrowInterleaveOptions,
-  type GeoArrowNativeEncoding
-} from '@math.gl/geoarrow';
-
-export {
   ArrowPolygonRenderer,
   convertArrowPolygonColumnsToGPUVectors,
   prepareArrowPolygonInput,
-  type ArrowPolygonColumns,
-  type ArrowPolygonGPUVectors,
   type ArrowPolygonRendererDataBatchUpdate,
   type ArrowPolygonRendererInput,
   type ArrowPolygonRendererMetrics,
@@ -365,34 +314,6 @@ export {
   type OptionalArrowColumnSelector
 } from './arrow/renderers/arrow-renderer-utils';
 export {
-  PolygonAttributeModel,
-  createPolygonShaderInputs,
-  POLYGON_GPU_INPUT_SCHEMA,
-  PolygonStorageModel,
-  type PolygonAttributeModelProps,
-  type PolygonBatchProps,
-  type PolygonGPUTypeMap,
-  type PolygonGPUVectors,
-  type PolygonShaderInputs,
-  type PolygonStorageModelProps,
-  type PolygonViewportUniforms
-} from '@luma.gl/tables';
-export {
-  PathStorageModel,
-  PATH_STORAGE_GPU_INPUT_SCHEMA,
-  createPathStorageState,
-  type PathStorageBatchState,
-  type PathStorageInputProps,
-  type PathStorageModelProps,
-  type PathStorageRenderBatchState,
-  type PathStorageState
-} from '@luma.gl/tables';
-export {
-  PathTripsStorageModel,
-  PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA,
-  type PathTripsStorageModelProps
-} from '@luma.gl/tables';
-export {
   getDggsUint64Words,
   packDggsA5CellKey,
   packDggsGeohashKey,
@@ -414,41 +335,5 @@ export {
   type ArrowVertexFormatOptions,
   type ArrowBufferLayoutOptions
 } from './arrow/engine/arrow-shader-layout';
-
-// GEOARROW
-
-export {
-  findGeometryColumnIndex,
-  isColumnReference,
-  getGeometryVector,
-  validateVectorAccessors,
-  validateColorVector,
-  isPointVector,
-  isLineStringVector,
-  isPolygonVector,
-  isMultiPointVector,
-  isMultiLineStringVector,
-  isMultiPolygonVector,
-  validatePointType,
-  validateLineStringType,
-  validatePolygonType,
-  validateMultiPointType,
-  validateMultiLineStringType,
-  validateMultiPolygonType,
-  getPointChild,
-  getLineStringChild,
-  getPolygonChild,
-  getMultiPointChild,
-  getMultiLineStringChild,
-  getMultiPolygonChild
-} from './geoarrow/geoarrow';
-
-export {
-  getMultiLineStringResolvedOffsets,
-  getPolygonResolvedOffsets,
-  getMultiPolygonResolvedOffsets
-} from './geoarrow/geoarrow-transform';
-
-export {expandArrayToCoords, invertOffsets} from './attribute-utils/attribute-utils';
 
 //   assignAccessor,
