@@ -7,8 +7,8 @@ import * as arrow from 'apache-arrow';
 import {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
-  buildGpuDictionaryCompressedTextStream,
-  buildGpuDictionaryUtf8TextInput,
+  buildGpuTextDictionaryCompressedStream,
+  buildGpuTextDictionaryUtf8Input,
   buildGpuExpandedTextStream,
   buildGpuUtf8TextInput,
   createArrowUtf8TextIndexAccessor,
@@ -127,7 +127,7 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
     ['skip', 'AB', 'A'],
     new Int32Array([0, 1, 2])
   ).slice(1) as arrow.Vector<ArrowUtf8Dictionary>;
-  const slicedTextInput = buildGpuDictionaryUtf8TextInput(sliced);
+  const slicedTextInput = buildGpuTextDictionaryUtf8Input(sliced);
   t.deepEqual(slicedTextInput.startIndices, [0, 2, 3], 'sliced dictionary rows stay normalized');
   t.deepEqual(
     Array.from(slicedTextInput.rowDictionaryIndices),
@@ -135,7 +135,7 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
     'sliced dictionary rows read dictionary keys from the logical row offset'
   );
   t.equal(slicedTextInput.byteLength, 3, 'sliced dictionary output reserves glyphs per row');
-  const slicedStream = buildGpuDictionaryCompressedTextStream({
+  const slicedStream = buildGpuTextDictionaryCompressedStream({
     texts: sliced,
     mapping,
     baselineOffset: 1,
@@ -159,7 +159,7 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
     1,
     2
   );
-  const offsetTextInput = buildGpuDictionaryUtf8TextInput(offsetTextDictionaries);
+  const offsetTextInput = buildGpuTextDictionaryUtf8Input(offsetTextDictionaries);
   t.deepEqual(
     offsetTextInput.startIndices,
     [0, 2, 3],
@@ -225,9 +225,9 @@ test('buildGpuExpandedTextStream packs glyph ids and shared definitions determin
   t.end();
 });
 
-test('buildGpuDictionaryUtf8TextInput uploads dictionary bytes once per chunk', t => {
+test('buildGpuTextDictionaryUtf8Input uploads dictionary bytes once per chunk', t => {
   const texts = makeExplicitArrowTextDictionaries(['AB', 'A'], new Int32Array([0, 1, 0]));
-  const textInput = buildGpuDictionaryUtf8TextInput(texts);
+  const textInput = buildGpuTextDictionaryUtf8Input(texts);
   const packedBytes = new Uint8Array(textInput.packedDictionaryUtf8Bytes.buffer).subarray(
     0,
     textInput.dictionaryByteLength
@@ -255,13 +255,13 @@ test('buildGpuDictionaryUtf8TextInput uploads dictionary bytes once per chunk', 
   t.end();
 });
 
-test('buildGpuDictionaryCompressedTextStream shares dictionary glyph records per chunk', t => {
+test('buildGpuTextDictionaryCompressedStream shares dictionary glyph records per chunk', t => {
   const mapping: CharacterMapping = {
     A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
     B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7}
   };
   const texts = makeExplicitArrowTextDictionaries(['AB', 'A'], new Int32Array([0, 1, 0, 1]));
-  const stream = buildGpuDictionaryCompressedTextStream({
+  const stream = buildGpuTextDictionaryCompressedStream({
     texts,
     mapping,
     baselineOffset: 1,

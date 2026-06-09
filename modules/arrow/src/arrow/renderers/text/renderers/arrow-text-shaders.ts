@@ -6,12 +6,6 @@ import type {ShaderLayout} from '@luma.gl/core';
 import {picking, ShaderInputs} from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
-export const GLYPH_WORLD_SCALE = 0.36;
-export const VIEW_HEIGHT = 820;
-export const CAMERA_PAN_SPEED_X = 72;
-export const CAMERA_PAN_SPEED_Y = 56;
-export const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
-
 export const STREAMING_TEXT_INPUT_SHADER_LAYOUT = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},

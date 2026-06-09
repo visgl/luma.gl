@@ -245,7 +245,9 @@ function assertPathStorageSourceVertexColorAlignment(
   colors: Vector<ArrowPathVertexColorType>
 ): void {
   if (paths.data.length !== colors.data.length) {
-    throw new Error('convertArrowPathStorageToGPUVectors vertex color batch count must match paths');
+    throw new Error(
+      'convertArrowPathStorageToGPUVectors vertex color batch count must match paths'
+    );
   }
   for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
     const pathOffsets = paths.data[batchIndex]?.valueOffsets as Int32Array | undefined;

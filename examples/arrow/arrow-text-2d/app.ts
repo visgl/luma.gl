@@ -3,7 +3,21 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {clearArrowPickingState, resolveArrowPickInfo, runArrowPickingPass} from '@luma.gl/arrow';
+import {
+  ArrowTextRenderer,
+  clearArrowPickingState,
+  createArrowTextPickingManager,
+  createArrowTextPickingModel,
+  drawArrowTextPickingPass,
+  resolveArrowPickInfo,
+  runArrowPickingPass,
+  supportsTextIndexPicking,
+  type ArrowTextRendererActiveModel,
+  type ArrowTextRendererDataBatchUpdate,
+  type ArrowTextRendererInput,
+  type ArrowTextRendererProps,
+  type ArrowTextRendererSetPropsResult
+} from '@luma.gl/arrow';
 import {
   AnimationLoopTemplate,
   type AnimationProps,
@@ -43,35 +57,20 @@ import {
   type TextTableSizeKind
 } from './arrow-text-data';
 import {
-  createArrowTextPickingManager,
-  createArrowTextPickingModel,
-  drawArrowTextPickingPass,
-  supportsTextIndexPicking
-} from './arrow-text-picking';
-import {
   DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH,
   getArrowTextRendererMetrics
 } from './arrow-text-metrics';
-import {
-  CAMERA_PAN_SPEED_X,
-  CAMERA_PAN_SPEED_Y,
-  GLYPH_WORLD_SCALE,
-  VIEW_HEIGHT,
-  CHARACTER_SET
-} from './arrow-text-shaders';
-import {
-  ArrowTextRenderer,
-  type ArrowTextRendererActiveModel,
-  type ArrowTextRendererDataBatchUpdate,
-  type ArrowTextRendererInput,
-  type ArrowTextRendererProps,
-  type ArrowTextRendererSetPropsResult
-} from './arrow-text-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 export const title = 'Text: Strings/Dictionary strings';
 export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
+
+const GLYPH_WORLD_SCALE = 0.36;
+const VIEW_HEIGHT = 820;
+const CAMERA_PAN_SPEED_X = 72;
+const CAMERA_PAN_SPEED_Y = 56;
+const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
 
 type ActiveTextModel = ArrowTextRendererActiveModel;
 type TextModelKind = NonNullable<ArrowTextRendererProps['model']>;

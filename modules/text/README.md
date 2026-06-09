@@ -74,7 +74,7 @@ Text draw buffers:
 | row pixel offsets | vertex | row | Optional per-label pixel offsets, or a one-row storage fallback buffer. |
 | row clip rects | - | row | Optional packed `Int16[4]` clip rectangles remain row storage in the storage model; the attribute model expands them into `expandedGlyphVertexData`. |
 | expandedGlyphVertexData | vertex | - | Expanded per-glyph vertex payload for the attribute model: model-generated offsets, inline glyph frames, and global source-row ids. |
-| compactGlyphVertexData | - | vertex | Compact storage-path glyph payload: packed offsets, glyph ids, and optional global source-row ids. |
+| compactGlyphVertexData | - | vertex | Compact text-storage glyph payload: packed offsets, glyph ids, and optional global source-row ids. |
 | glyph frames | vertex | data | Per-glyph atlas frame attributes in the attribute model; shared atlas-frame storage indexed by glyph id in the storage model. |
 | atlas texture | data | data | Font atlas sampled by the fragment shader. |
 | sampler | data | data | Sampler paired with the atlas texture. |

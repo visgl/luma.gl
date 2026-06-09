@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {ArrowPolygonRendererMetrics} from '@luma.gl/arrow';
 import {
   POLYGON_DATASETS,
   type ArrowPolygonColorKind,
   type ArrowPolygonRowCountKind,
   type ArrowPolygonSourceKind
 } from './arrow-polygon-data';
-import type {ArrowPolygonRendererMetrics} from './arrow-polygon-renderer';
 
 const ROW_COUNT_SELECTOR_ID = 'arrow-polygon-row-count-selector';
 const SOURCE_SELECTOR_ID = 'arrow-polygon-source';

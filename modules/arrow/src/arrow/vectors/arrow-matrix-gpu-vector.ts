@@ -65,7 +65,9 @@ export async function convertArrowMatrixToGPUVector(
       return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, false);
     }
     if (device.type !== 'webgpu') {
-      throw new Error('convertArrowMatrixToGPUVector requires WebGPU for non-canonical GPU matrices');
+      throw new Error(
+        'convertArrowMatrixToGPUVector requires WebGPU for non-canonical GPU matrices'
+      );
     }
     return convertArrowMatrixToGPUVectorOnGPU(device, source, sourceInfo, {name, id});
   }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
@@ -13,7 +14,6 @@ import {
   type ArrowPolygonViewState,
   makeArrowPolygonExampleData
 } from './arrow-polygon-data';
-import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from './arrow-polygon-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowPolygonControlPanel, makeArrowPolygonControlPanelHtml} from './control-panel';
 

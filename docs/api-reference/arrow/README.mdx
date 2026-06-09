@@ -41,7 +41,7 @@ segment records from copied list-offset metadata, render shaders fetch coordinat
 from the original path-value storage buffer, and per-path style rows remain storage
 bindings instead of being repeated for every generated segment. Use
 `ArrowPathRenderer.convertToGPUVectors()` or `convertArrowPathToGPUVectors()` to turn raw
-Float32 or Float64 Arrow path vectors into prepared attribute-path inputs. Use
+Float32 or Float64 Arrow path vectors into prepared path-attribute inputs. Use
 `ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` or
 `convertArrowPathStorageToGPUVectors()`
 when WebGPU storage rendering should convert Float64 path payloads into Float32

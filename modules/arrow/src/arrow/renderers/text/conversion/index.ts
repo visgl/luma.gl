@@ -5,8 +5,8 @@
 export {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
-  buildGpuDictionaryCompressedTextStream,
-  buildGpuDictionaryUtf8TextInput,
+  buildGpuTextDictionaryCompressedStream,
+  buildGpuTextDictionaryUtf8Input,
   buildGpuExpandedTextStream,
   buildGpuUtf8TextInput,
   createArrowUtf8TextIndexAccessor,

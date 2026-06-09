@@ -34,7 +34,7 @@ equivalent CPU fallback semantics.
 ###
 
 `ArrowPathRenderer.convertToGPUVectors()` and `convertArrowPathToGPUVectors()` are the
-attribute-path conversion boundary. Float32 XY, XYZ, and XYZM path rows upload
+path-attribute conversion boundary. Float32 XY, XYZ, and XYZM path rows upload
 unchanged unless closure is requested. Float64 path rows convert on the CPU into
 stable per-row Float32 deltas from the first point; CPU Float64 origins are kept
 separately, and `updateViewOrigins()` refreshes the per-row view-origin buffers

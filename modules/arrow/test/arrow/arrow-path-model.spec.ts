@@ -855,9 +855,9 @@ test('PathStorageModel emits indexed compute-generated segment records', async t
     return;
   }
 
-  const pathProps = makeStorageGpuArrowPathProps(device);
+  const pathProps = makePathStorageGpuArrowProps(device);
   const model = new PathStorageModel(device, {
-    id: 'arrow-storage-path-generated-segments-test',
+    id: 'arrow-path-storage-generated-segments-test',
     ...pathProps
   });
   const compactPathBytes = await model.compactPathVertexData.readAsync();
@@ -905,7 +905,7 @@ test('PathStorageModel emits indexed compute-generated segment records', async t
   );
 
   model.destroy();
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
@@ -917,11 +917,11 @@ test('PathStorageModel skips zero-segment render batches', async t => {
     return;
   }
 
-  const pathProps = makeStorageGpuArrowPathProps(device, {
+  const pathProps = makePathStorageGpuArrowProps(device, {
     paths: makePathVector(new Int32Array([0, 1]), new Float32Array([0, 0]))
   });
   const model = new PathStorageModel(device, {
-    id: 'arrow-storage-path-zero-segments-test',
+    id: 'arrow-path-storage-zero-segments-test',
     ...pathProps
   });
 
@@ -936,7 +936,7 @@ test('PathStorageModel skips zero-segment render batches', async t => {
   );
 
   model.destroy();
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
@@ -949,7 +949,7 @@ test('PathStorageModel binds path-aligned vertex colors', async t => {
   }
 
   const sourceVectors = makeArrowPathSourceVectors();
-  const pathProps = makeStorageGpuArrowPathProps(device, {
+  const pathProps = makePathStorageGpuArrowProps(device, {
     ...sourceVectors,
     colors: makeColorListVector(
       new Int32Array([0, 3, 7]),
@@ -960,7 +960,7 @@ test('PathStorageModel binds path-aligned vertex colors', async t => {
     )
   });
   const model = new PathStorageModel(device, {
-    id: 'arrow-storage-path-vertex-color-test',
+    id: 'arrow-path-storage-vertex-color-test',
     ...pathProps
   });
   const bindings = (model as any)._getBindings();
@@ -976,7 +976,7 @@ test('PathStorageModel binds path-aligned vertex colors', async t => {
   t.equal(styleConfigWords[10], 1, 'vertex color storage is enabled for color lists');
 
   model.destroy();
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
@@ -989,9 +989,9 @@ test('PathStorageModel preserves legacy segment records when requested by shader
   }
 
   const legacyShaderLayout = makeLegacyPathStorageShaderLayout();
-  const pathProps = makeStorageGpuArrowPathProps(device);
+  const pathProps = makePathStorageGpuArrowProps(device);
   const model = new PathStorageModel(device, {
-    id: 'arrow-storage-path-legacy-generated-segments-test',
+    id: 'arrow-path-storage-legacy-generated-segments-test',
     ...pathProps,
     shaderLayout: legacyShaderLayout
   });
@@ -1031,7 +1031,7 @@ test('PathStorageModel preserves legacy segment records when requested by shader
   );
 
   model.destroy();
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
@@ -1044,16 +1044,16 @@ test('PathStorageModel compact records derive the same neighbors as legacy recor
   }
 
   const legacyShaderLayout = makeLegacyPathStorageShaderLayout();
-  const compactPathProps = makeStorageGpuArrowPathProps(device);
-  const legacyPathProps = makeStorageGpuArrowPathProps(device);
+  const compactPathProps = makePathStorageGpuArrowProps(device);
+  const legacyPathProps = makePathStorageGpuArrowProps(device);
   const sourceVectors = makeArrowPathSourceVectors();
   const pathOffsets = getPathOffsets(sourceVectors.paths);
   const compactModel = new PathStorageModel(device, {
-    id: 'arrow-storage-path-compact-neighbor-parity-test',
+    id: 'arrow-path-storage-compact-neighbor-parity-test',
     ...compactPathProps
   });
   const legacyModel = new PathStorageModel(device, {
-    id: 'arrow-storage-path-legacy-neighbor-parity-test',
+    id: 'arrow-path-storage-legacy-neighbor-parity-test',
     ...legacyPathProps,
     shaderLayout: legacyShaderLayout
   });
@@ -1082,8 +1082,8 @@ test('PathStorageModel compact records derive the same neighbors as legacy recor
 
   compactModel.destroy();
   legacyModel.destroy();
-  destroyStorageGpuArrowPathProps(compactPathProps);
-  destroyStorageGpuArrowPathProps(legacyPathProps);
+  destroyPathStorageGpuArrowProps(compactPathProps);
+  destroyPathStorageGpuArrowProps(legacyPathProps);
   t.end();
 });
 
@@ -1095,9 +1095,9 @@ test('PathStorageModel uses a shared zero origin when view origins are absent', 
     return;
   }
 
-  const pathProps = makeStorageGpuArrowPathProps(device);
+  const pathProps = makePathStorageGpuArrowProps(device);
   const model = new PathStorageModel(device, {
-    id: 'arrow-storage-path-default-origin-test',
+    id: 'arrow-path-storage-default-origin-test',
     ...pathProps
   });
 
@@ -1105,7 +1105,7 @@ test('PathStorageModel uses a shared zero origin when view origins are absent', 
   t.equal(model.pathRangeByteLength, 32, 'path ranges account for per-row storage separately');
 
   model.destroy();
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
@@ -1117,9 +1117,9 @@ test('PathStorageModel refreshes row styles without rebuilding segment buffers',
     return;
   }
 
-  const pathProps = makeStorageGpuArrowPathProps(device);
+  const pathProps = makePathStorageGpuArrowProps(device);
   const model = new PathStorageModel(device, {
-    id: 'arrow-storage-path-row-style-refresh-test',
+    id: 'arrow-path-storage-row-style-refresh-test',
     ...pathProps
   });
   const storageState = model.storageState;
@@ -1143,7 +1143,7 @@ test('PathStorageModel refreshes row styles without rebuilding segment buffers',
   );
 
   model.destroy();
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
@@ -1195,9 +1195,9 @@ test('PathStorageModel splits compute-generated segment buffers by storage limit
   });
 
   try {
-    const pathProps = makeStorageGpuArrowPathProps(device);
+    const pathProps = makePathStorageGpuArrowProps(device);
     const model = new PathStorageModel(device, {
-      id: 'arrow-storage-path-buffer-batching-test',
+      id: 'arrow-path-storage-buffer-batching-test',
       ...pathProps
     });
 
@@ -1215,7 +1215,7 @@ test('PathStorageModel splits compute-generated segment buffers by storage limit
     );
 
     model.destroy();
-    destroyStorageGpuArrowPathProps(pathProps);
+    destroyPathStorageGpuArrowProps(pathProps);
   } finally {
     Object.defineProperty(device.limits, 'maxStorageBufferBindingSize', {
       value: originalMaxStorageBufferBindingSize,
@@ -1227,7 +1227,7 @@ test('PathStorageModel splits compute-generated segment buffers by storage limit
 
 test('PathStorageModel rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
-  const pathProps = makeStorageGpuArrowPathProps(device);
+  const pathProps = makePathStorageGpuArrowProps(device);
 
   t.throws(
     () =>
@@ -1239,25 +1239,25 @@ test('PathStorageModel rejects non-WebGPU devices', t => {
     'storage path model reports its backend contract'
   );
 
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
 test('createPathStorageState rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
-  const pathProps = makeStorageGpuArrowPathProps(device);
+  const pathProps = makePathStorageGpuArrowProps(device);
 
   t.throws(
     () =>
       createPathStorageState(device, {
-        id: 'arrow-storage-path-state-test',
+        id: 'arrow-path-storage-state-test',
         ...pathProps
       }),
     /WebGPU device/,
     'storage-state builder reports its backend contract'
   );
 
-  destroyStorageGpuArrowPathProps(pathProps);
+  destroyPathStorageGpuArrowProps(pathProps);
   t.end();
 });
 
@@ -1266,7 +1266,7 @@ async function makeGpuArrowPathProps(device: Device): Promise<PreparedArrowPathG
   return convertArrowPathToGPUVectors(device, sourceVectors);
 }
 
-function makeStorageGpuArrowPathProps(
+function makePathStorageGpuArrowProps(
   device: Device,
   sourceVectors: ArrowPathSourceVectors = makeArrowPathSourceVectors()
 ) {
@@ -1297,8 +1297,8 @@ function makeGpuArrowPathVector<FormatT extends GPUVectorFormat, TypeT extends a
   return makeGPUVectorFromArrow(device, vector, {name, format});
 }
 
-function destroyStorageGpuArrowPathProps(
-  pathProps: ReturnType<typeof makeStorageGpuArrowPathProps>
+function destroyPathStorageGpuArrowProps(
+  pathProps: ReturnType<typeof makePathStorageGpuArrowProps>
 ): void {
   pathProps.paths.destroy();
   pathProps.colors?.destroy();

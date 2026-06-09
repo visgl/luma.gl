@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {getArrowVectorByteLength} from '@luma.gl/arrow';
+import {
+  getArrowVectorByteLength,
+  type ArrowTextRenderer,
+  type ArrowTextRendererActiveModel,
+  type ArrowTextRendererInput
+} from '@luma.gl/arrow';
 import type {GPUVector} from '@luma.gl/tables';
 import {TextAttributeModel, TextDictionaryModel, TextStorageModel} from '@luma.gl/text';
 import type {ArrowText2DControlPanelMetrics} from './control-panel';
-import type {
-  ArrowTextRenderer,
-  ArrowTextRendererActiveModel,
-  ArrowTextRendererInput
-} from './arrow-text-renderer';
 
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 export const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;

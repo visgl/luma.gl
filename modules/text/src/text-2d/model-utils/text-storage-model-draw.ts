@@ -6,7 +6,7 @@ import type {RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 
 /**
- * Draws the model's current storage-text batch state by calling the pipeline directly.
+ * Draws the model's current text-storage batch state by calling the pipeline directly.
  *
  * Storage and dictionary text models can split one prepared text state into multiple render
  * batches. Those models mutate one `Model` instance's attributes, bindings, and instance count for
@@ -14,7 +14,7 @@ import type {Model} from '@luma.gl/engine';
  * were just installed are used immediately with the current render pass attachment formats.
  *
  * This intentionally reaches into private `Model` methods, so it should stay scoped to the
- * storage-text implementation and should be removed if `Model.draw()` gains a public batch draw path
+ * text-storage implementation and should be removed if `Model.draw()` gains a public batch draw path
  * that supports this rebinding pattern.
  */
 export function drawPreparedTextStorageModelBatch(model: Model, renderPass: RenderPass): boolean {

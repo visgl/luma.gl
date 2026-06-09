@@ -17,16 +17,16 @@ import {
 import type {
   Character,
   CharacterMapping,
-  GpuDictionaryCompressedTextStream,
-  GpuDictionaryUtf8TextInput,
+  GpuTextDictionaryCompressedStream,
+  GpuTextDictionaryUtf8Input,
   GpuExpandedTextStream,
   GpuUtf8TextInput,
   TextGlyphLayout
 } from '@luma.gl/text';
 
 export type {
-  GpuDictionaryCompressedTextStream,
-  GpuDictionaryUtf8TextInput,
+  GpuTextDictionaryCompressedStream,
+  GpuTextDictionaryUtf8Input,
   GpuExpandedTextStream,
   GpuUtf8TextInput,
   TextGlyphLayout
@@ -221,9 +221,9 @@ export function buildGpuUtf8TextInput(texts: Vector<Utf8>): GpuUtf8TextInput {
  * Normalize dictionary-encoded Arrow UTF-8 text for WebGPU expansion.
  * Dictionary value bytes are stored once per input chunk; rows reference values by normalized key.
  */
-export function buildGpuDictionaryUtf8TextInput(
+export function buildGpuTextDictionaryUtf8Input(
   texts: Vector<ArrowUtf8Dictionary>
-): GpuDictionaryUtf8TextInput {
+): GpuTextDictionaryUtf8Input {
   const textInputBuildStartTime = getNow();
   const chunks = buildArrowUtf8DictionaryChunks(texts);
   const dictionaryValueByteRangeValues: number[] = [];
@@ -599,7 +599,7 @@ export function buildGpuExpandedTextStream({
 }
 
 /** Build shared glyph runs for dictionary values plus compact per-row glyph occurrences. */
-export function buildGpuDictionaryCompressedTextStream({
+export function buildGpuTextDictionaryCompressedStream({
   texts,
   mapping,
   baselineOffset,
@@ -611,7 +611,7 @@ export function buildGpuDictionaryCompressedTextStream({
   baselineOffset: number;
   lineHeight: number;
   characterSet?: Set<string>;
-}): GpuDictionaryCompressedTextStream {
+}): GpuTextDictionaryCompressedStream {
   const glyphStreamBuildStartTime = getNow();
   const chunks = buildArrowUtf8DictionaryChunks(texts);
   const dictionaryValueCount = chunks.reduce((count, chunk) => count + chunk.dictionaryLength, 0);

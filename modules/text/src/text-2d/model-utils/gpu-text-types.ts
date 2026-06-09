@@ -59,7 +59,7 @@ export type GpuUtf8TextInput = {
 };
 
 /** Packed dictionary UTF-8 byte ranges used by WebGPU text expansion. */
-export type GpuDictionaryUtf8TextInput = {
+export type GpuTextDictionaryUtf8Input = {
   /** Cumulative output glyph offsets, length = source text rows + 1. */
   startIndices: number[];
   /** Normalized dictionary value index for each source text row. */
@@ -81,7 +81,7 @@ export type GpuDictionaryUtf8TextInput = {
 };
 
 /** Compressed dictionary glyph runs plus per-row dictionary references. */
-export type GpuDictionaryCompressedTextStream = {
+export type GpuTextDictionaryCompressedStream = {
   /** Cumulative visible glyph offsets, length = source text rows + 1. */
   startIndices: number[];
   /** Per-row half-open visible glyph ranges. */

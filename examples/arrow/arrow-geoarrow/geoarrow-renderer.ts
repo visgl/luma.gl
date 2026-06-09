@@ -4,9 +4,8 @@
 
 import * as arrow from 'apache-arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {ArrowPolygonRenderer, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import {ArrowPointRenderer} from '../arrow-points/arrow-point-renderer';
-import {ArrowPolygonRenderer} from '../arrow-polygons/arrow-polygon-renderer';
 import {
   ArrowLineRenderer,
   type ArrowLineColorType,

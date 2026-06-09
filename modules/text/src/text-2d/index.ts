@@ -21,33 +21,33 @@ export {
   type CharacterMapping
 } from './atlas/text-utils';
 export {
-  type GpuDictionaryCompressedTextStream,
-  type GpuDictionaryUtf8TextInput,
+  type GpuTextDictionaryCompressedStream,
+  type GpuTextDictionaryUtf8Input,
   type GpuExpandedTextStream,
   type GpuUtf8TextInput,
   type TextGlyphLayout
 } from './model-utils/gpu-text-types';
 export {
-  createGpuDictionaryUtf8ExpandedInput,
-  createGpuDictionaryUtf8ExpansionConfig,
+  createGpuTextDictionaryUtf8ExpandedInput,
+  createGpuTextDictionaryUtf8ExpansionConfig,
   createGpuExpandedCompactInput,
   createGpuExpandedGeneratedState,
   createGpuUtf8ExpandedInput,
   createGpuUtf8ExpandedInputFromBuffers,
-  createStorageGlyphLookup,
-  createStorageGlyphMetrics,
-  dispatchGpuDictionaryUtf8ExpandedTextCompute,
+  createTextStorageGlyphLookup,
+  createTextStorageGlyphMetrics,
+  dispatchGpuTextDictionaryUtf8ExpandedCompute,
   dispatchGpuExpandedTextCompute,
   dispatchGpuUtf8ExpandedTextCompute,
-  type GpuDictionaryUtf8ExpandedInputState,
-  type GpuDictionaryUtf8ExpansionConfigState,
+  type GpuTextDictionaryUtf8ExpandedInputState,
+  type GpuTextDictionaryUtf8ExpansionConfigState,
   type GpuExpandedCompactInputState,
   type GpuExpandedGeneratedState,
   type GpuTextAlignmentExpansionOptions,
   type GpuTextExpansionResourceOptions,
   type GpuUtf8ExpandedInputState,
-  type StorageGlyphLookupState,
-  type StorageGlyphMetricState
+  type TextStorageGlyphLookupState,
+  type TextStorageGlyphMetricState
 } from './model-utils/gpu-text-expansion';
 export {
   DEFAULT_GPU_UTF8_MAP_BINDING_NAMES,

@@ -5,7 +5,7 @@
 import {type Buffer} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
 import FontAtlasManager from '../atlas/font-atlas-manager';
-import type {GpuDictionaryCompressedTextStream, GpuExpandedTextStream} from './gpu-text-types';
+import type {GpuExpandedTextStream, GpuTextDictionaryCompressedStream} from './gpu-text-types';
 
 export type TextStorageBuffer = Buffer | DynamicBuffer;
 
@@ -186,7 +186,7 @@ export type TextDictionaryState = Omit<
   | 'renderControlByteLength'
 > & {
   /** Optional compressed dictionary glyph stream retained for diagnostics. */
-  glyphStream?: GpuDictionaryCompressedTextStream;
+  glyphStream?: GpuTextDictionaryCompressedStream;
   /** Shared glyph records across unique dictionary values. */
   dictionaryGlyphCount: number;
   /** Normalized dictionary values retained across data chunks. */

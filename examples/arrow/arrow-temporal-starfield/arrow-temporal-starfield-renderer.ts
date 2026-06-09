@@ -8,6 +8,8 @@ import {
   makeArrowFixedSizeListVector,
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
+  loadArrowRecordBatches,
+  type ArrowRecordBatchSource,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
@@ -40,7 +42,6 @@ import {
   STAR_VERTEX_GLSL_SHADER,
   temporalStarfield
 } from './arrow-temporal-starfield-shaders';
-import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '../arrow-renderer-utils';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 /** Public configuration for the Arrow temporal starfield layer. */
@@ -603,7 +604,7 @@ async function convertTimestampEventStartsToGPUVector(
   );
   const preparedEventStarts = preparedColumns.eventStarts;
   if (!preparedEventStarts) {
-      throw new Error('Temporal starfield failed to convert eventStarts');
+    throw new Error('Temporal starfield failed to convert eventStarts');
   }
   return {
     vector: getPreparedScalarTemporalVector(preparedEventStarts),

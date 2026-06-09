@@ -10,6 +10,9 @@ import {
   getArrowVectorByteLength,
   makeArrowFixedSizeListVector,
   convertArrowTemporalToGPUVector,
+  loadArrowRecordBatches,
+  type ArrowRecordBatchLoadUpdate,
+  type ArrowRecordBatchSource,
   type ArrowPathPreparedState
 } from '@luma.gl/arrow';
 import {type CommandEncoder, type Device} from '@luma.gl/core';
@@ -34,11 +37,6 @@ import {
   VS_GLSL,
   WGSL_SHADER
 } from './arrow-line-shaders';
-import {
-  loadArrowRecordBatches,
-  type ArrowRecordBatchLoadUpdate,
-  type ArrowRecordBatchSource
-} from '../arrow-renderer-utils';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 /** Path rendering path selected by the Arrow path example layer. */

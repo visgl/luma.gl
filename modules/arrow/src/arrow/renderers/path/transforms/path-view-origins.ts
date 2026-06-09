@@ -63,7 +63,9 @@ export function updateViewOriginValues(
   modelViewMatrix: readonly number[]
 ): void {
   if (modelViewMatrix.length < 16) {
-    throw new Error('convertArrowPathToGPUVectors updateViewOrigins requires a 4x4 modelViewMatrix');
+    throw new Error(
+      'convertArrowPathToGPUVectors updateViewOrigins requires a 4x4 modelViewMatrix'
+    );
   }
   for (let rowIndex = 0; rowIndex < sourceOrigins.length / 4; rowIndex++) {
     const originOffset = rowIndex * 4;

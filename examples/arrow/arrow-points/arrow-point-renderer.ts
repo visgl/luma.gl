@@ -15,9 +15,18 @@ import {
   makeArrowRowIndexGPUVector,
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVector,
+  getOptionalArrowColumn,
+  getRequiredArrowColumn,
+  hasArrowTableOrVectorSource,
+  loadArrowRecordBatches,
   resolveArrowPickInfo,
   runArrowPickingPass,
-  type ArrowTemporalType
+  type ArrowColumnSelector,
+  type ArrowRecordBatchLoadContext,
+  type ArrowRecordBatchLoadUpdate,
+  type ArrowRecordBatchSource,
+  type ArrowTemporalType,
+  type OptionalArrowColumnSelector
 } from '@luma.gl/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo} from '@luma.gl/engine';
@@ -30,17 +39,6 @@ import {
   type PointModelVectors,
   type PointShaderInputs
 } from './point-model';
-import {
-  getOptionalArrowColumn,
-  getRequiredArrowColumn,
-  hasArrowTableOrVectorSource,
-  loadArrowRecordBatches,
-  type ArrowColumnSelector,
-  type ArrowRecordBatchLoadContext,
-  type ArrowRecordBatchLoadUpdate,
-  type ArrowRecordBatchSource,
-  type OptionalArrowColumnSelector
-} from '../arrow-renderer-utils';
 
 /** Arrow point coordinate input accepted by {@link ArrowPointRenderer}. */
 export type ArrowPointCoordinateType = arrow.FixedSizeList<arrow.Float32> | arrow.DenseUnion;

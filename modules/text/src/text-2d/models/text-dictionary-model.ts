@@ -13,7 +13,7 @@ import {
   type TextDictionaryState,
   type TextStorageBuffer
 } from '../model-utils/text-storage-state';
-import type {GpuDictionaryCompressedTextStream} from '../model-utils/gpu-text-types';
+import type {GpuTextDictionaryCompressedStream} from '../model-utils/gpu-text-types';
 import {drawPreparedTextStorageModelBatch} from '../model-utils/text-storage-model-draw';
 import {
   assertTextDictionaryGPUVectorInputs,
@@ -69,7 +69,7 @@ export class TextDictionaryModel extends Model {
   /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
   /** Optional compressed dictionary glyph stream retained for diagnostics. */
-  glyphStream?: GpuDictionaryCompressedTextStream;
+  glyphStream?: GpuTextDictionaryCompressedStream;
   /** Visible glyph instances across all source text rows. */
   glyphCount!: number;
   /** Shared glyph records across unique dictionary values. */

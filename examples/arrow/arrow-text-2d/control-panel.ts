@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {ArrowTextRendererProps} from './arrow-text-renderer';
+import type {ArrowTextRendererProps} from '@luma.gl/arrow';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 type TextModelKind = NonNullable<ArrowTextRendererProps['model']>;

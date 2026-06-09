@@ -174,7 +174,7 @@ export type ArrowPathSegmentTable = {
   attributeByteLength: number;
 };
 
-/** Generated attribute-path buffers retained independently from model construction. */
+/** Generated path-attribute buffers retained independently from model construction. */
 export type ArrowPathPreparedState = PathAttributeModelState & {
   /** Expanded Arrow segment table used to build generated buffers. */
   segmentTable: ArrowPathSegmentTable;
@@ -812,7 +812,9 @@ function convertArrowPathCoordinateData(paths: Vector<ArrowPathSourceCoordinateT
     return {paths: paths as Vector<ArrowPathCoordinateType>};
   }
   if (!(coordinateValueType instanceof Float64)) {
-    throw new Error('convertArrowPathToGPUVectors paths must contain Float32 or Float64 coordinates');
+    throw new Error(
+      'convertArrowPathToGPUVectors paths must contain Float32 or Float64 coordinates'
+    );
   }
 
   const componentCount = getArrowPathCoordinateComponentCount(paths.type);

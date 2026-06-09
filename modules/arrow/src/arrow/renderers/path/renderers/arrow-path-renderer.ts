@@ -111,7 +111,7 @@ export class ArrowPathRenderer {
     }
   }
 
-  /** Converts prepared attribute-path vectors into props accepted by {@link PathAttributeModel}. */
+  /** Converts prepared path-attribute vectors into props accepted by {@link PathAttributeModel}. */
   static makeModelProps(
     device: Device,
     props: ArrowPathPreparedGPUVectorProps

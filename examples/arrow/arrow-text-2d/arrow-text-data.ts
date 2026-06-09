@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {getArrowVectorByteLength, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {
+  getArrowVectorByteLength,
+  makeArrowFixedSizeListVector,
+  type ArrowTextRendererSource,
+  type CharacterColorDataType,
+  type RowColorColumnDataType
+} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
-import type {
-  ArrowTextRendererSource,
-  CharacterColorDataType,
-  RowColorColumnDataType
-} from './arrow-text-renderer';
 
 export const LABEL_COLUMN_COUNT = 400;
 export const LABEL_COLUMN_SPACING = 540;

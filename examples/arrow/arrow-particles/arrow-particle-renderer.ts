@@ -5,9 +5,11 @@
 import {
   getArrowFixedSizeListValues,
   isArrowFixedSizeListVector,
+  loadArrowRecordBatches,
   makeArrowFixedSizeListVector,
   makeGPUVectorFromArrow,
-  makeGPURecordBatchFromArrowRecordBatch
+  makeGPURecordBatchFromArrowRecordBatch,
+  type ArrowRecordBatchSource
 } from '@luma.gl/arrow';
 import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
@@ -34,7 +36,6 @@ import {
   WORKGROUP_SIZE,
   makeComputeShader
 } from './arrow-particle-shaders';
-import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '../arrow-renderer-utils';
 
 const DEFAULT_RESET_INTERVAL_MILLISECONDS = 12_000;
 

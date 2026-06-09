@@ -505,9 +505,9 @@ test('TextStorageModel packs SDF alpha settings into the style config uniform', 
     return;
   }
 
-  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
   const modelProps = convertArrowTextToStorageModelProps(device, {
-    id: 'arrow-storage-text-sdf-style-config-test',
+    id: 'arrow-text-storage-sdf-style-config-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10, sdf: true, cutoff: 0.25, smoothing: 0.07}
@@ -540,7 +540,7 @@ test('TextStorageModel packs SDF alpha settings into the style config uniform', 
   );
 
   model.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -552,9 +552,9 @@ test('TextStorageModel interleaves compact glyph vertex records', async t => {
     return;
   }
 
-  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
   const model = createTextStorageModel(device, {
-    id: 'arrow-storage-text-generated-glyph-vertices-test',
+    id: 'arrow-text-storage-generated-glyph-vertices-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -596,7 +596,7 @@ test('TextStorageModel interleaves compact glyph vertex records', async t => {
   t.deepEqual(Array.from(renderConfig), [0, 0, 2, 0], 'render config scopes row lookup');
 
   model.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -608,7 +608,7 @@ test('createTextStorageStateFromGPUVectors prepares storage text without sourceV
     return;
   }
 
-  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
   const storageState = createTextStorageStateFromGPUVectors(device, {
     id: 'gpu-vector-text-storage-state-test',
     positions: textProps.positions,
@@ -636,7 +636,7 @@ test('createTextStorageStateFromGPUVectors prepares storage text without sourceV
   );
 
   storageState.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -648,9 +648,9 @@ test('convertArrowTextToStorageState uses GPUVector path for fixed UTF-8 text', 
     return;
   }
 
-  const textProps = makeStorageGpuTextProps(device, ['AB', '🙂']);
+  const textProps = makeTextStorageGpuProps(device, ['AB', '🙂']);
   const storageState = convertArrowTextToStorageState(device, {
-    id: 'arrow-storage-text-gpu-vector-adapter-test',
+    id: 'arrow-text-storage-gpu-vector-adapter-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -664,7 +664,7 @@ test('convertArrowTextToStorageState uses GPUVector path for fixed UTF-8 text', 
   t.equal(storageState.glyphCount, 6, 'multi-byte labels match the GPU UTF-8 byte-slot path');
 
   storageState.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -676,9 +676,9 @@ test('convertArrowTextToStorageState keeps CPU fallbacks for auto and dictionary
     return;
   }
 
-  const autoTextProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const autoTextProps = makeTextStorageGpuProps(device, ['AB', 'A']);
   const autoStorageState = convertArrowTextToStorageState(device, {
-    id: 'arrow-storage-text-auto-fallback-test',
+    id: 'arrow-text-storage-auto-fallback-test',
     ...autoTextProps,
     characterMapping: CHARACTER_MAPPING,
     characterSet: 'auto',
@@ -686,9 +686,9 @@ test('convertArrowTextToStorageState keeps CPU fallbacks for auto and dictionary
   });
   t.ok(autoStorageState.glyphStream, 'auto characterSet keeps CPU glyph expansion');
 
-  const textDictionaryProps = makeStorageGpuTextDictionaryProps(device, ['AB', 'A', 'AB']);
+  const textDictionaryProps = makeTextDictionaryStorageGpuProps(device, ['AB', 'A', 'AB']);
   const dictionaryStorageState = convertArrowTextToStorageState(device, {
-    id: 'arrow-storage-text-dictionary-fallback-test',
+    id: 'arrow-text-storage-dictionary-fallback-test',
     ...textDictionaryProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -697,8 +697,8 @@ test('convertArrowTextToStorageState keeps CPU fallbacks for auto and dictionary
 
   autoStorageState.destroy();
   dictionaryStorageState.destroy();
-  destroyStorageGpuTextProps(autoTextProps);
-  destroyStorageGpuTextProps(textDictionaryProps);
+  destroyTextStorageGpuProps(autoTextProps);
+  destroyTextStorageGpuProps(textDictionaryProps);
   t.end();
 });
 
@@ -710,9 +710,9 @@ test('TextRowIndexedStorageModel stores row indices in compact glyph records', a
     return;
   }
 
-  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
   const modelProps = convertArrowTextToStorageModelProps(device, {
-    id: 'arrow-row-indexed-storage-text-generated-glyph-vertices-test',
+    id: 'arrow-text-row-indexed-storage-generated-glyph-vertices-test',
     ...textProps,
     rowIndexColumn: true,
     characterMapping: CHARACTER_MAPPING,
@@ -762,7 +762,7 @@ test('TextRowIndexedStorageModel stores row indices in compact glyph records', a
   );
 
   model.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -774,9 +774,9 @@ test('TextStorageModel accepts dictionary UTF-8 text through CPU glyph expansion
     return;
   }
 
-  const textProps = makeStorageGpuTextDictionaryProps(device, ['AB', 'A', 'AB']);
+  const textProps = makeTextDictionaryStorageGpuProps(device, ['AB', 'A', 'AB']);
   const model = createTextStorageModel(device, {
-    id: 'arrow-storage-text-dictionary-expanded-glyph-vertices-test',
+    id: 'arrow-text-storage-dictionary-expanded-glyph-vertices-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -812,7 +812,7 @@ test('TextStorageModel accepts dictionary UTF-8 text through CPU glyph expansion
   );
 
   model.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -824,9 +824,9 @@ test('TextDictionaryModel shares dictionary glyph records per batch', async t =>
     return;
   }
 
-  const textProps = makeStorageGpuTextDictionaryProps(device, ['AB', 'A', 'AB']);
+  const textProps = makeTextDictionaryStorageGpuProps(device, ['AB', 'A', 'AB']);
   const modelProps = convertArrowTextToDictionaryModelProps(device, {
-    id: 'arrow-dictionary-storage-text-compressed-test',
+    id: 'arrow-text-dictionary-storage-compressed-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -870,7 +870,7 @@ test('TextDictionaryModel shares dictionary glyph records per batch', async t =>
   );
 
   model.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -882,9 +882,9 @@ test('TextDictionaryModel draws every dictionary source batch', async t => {
     return;
   }
 
-  const textProps = makeChunkedStorageGpuTextDictionaryProps(device, [['AB'], ['A'], ['AB', 'A']]);
+  const textProps = makeChunkedTextDictionaryStorageGpuProps(device, [['AB'], ['A'], ['AB', 'A']]);
   const model = createTextDictionaryModel(device, {
-    id: 'arrow-dictionary-text-chunked-draw-test',
+    id: 'arrow-text-dictionary-chunked-draw-test',
     ...textProps,
     source: DICTIONARY_DRAW_TEST_WGSL_SHADER,
     shaderLayout: DICTIONARY_DRAW_TEST_SHADER_LAYOUT,
@@ -979,7 +979,7 @@ test('TextDictionaryModel draws every dictionary source batch', async t => {
     privateModel._syncAttachmentFormats = syncAttachmentFormats;
     privateModel._updatePipeline = updatePipeline;
     model.destroy();
-    destroyStorageGpuTextProps(textProps);
+    destroyTextStorageGpuProps(textProps);
   }
   t.end();
 });
@@ -999,7 +999,7 @@ test('TextStorageModel rebuilds from streamed GPUTable-backed text batches', asy
   const firstSourceVectors = makeArrowTextStorageSourceVectorsFromBatches([firstBatch]);
 
   const model = createTextStorageModel(device, {
-    id: 'arrow-storage-text-streaming-gpu-table-test',
+    id: 'arrow-text-storage-streaming-gpu-table-test',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
@@ -1013,7 +1013,7 @@ test('TextStorageModel rebuilds from streamed GPUTable-backed text batches', asy
     })
   );
   const rebuiltModel = createTextStorageModel(device, {
-    id: 'arrow-storage-text-streaming-gpu-table-test-rebuilt',
+    id: 'arrow-text-storage-streaming-gpu-table-test-rebuilt',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowTextStorageSourceVectorsFromBatches([firstBatch, secondBatch]),
@@ -1050,7 +1050,7 @@ test('TextStorageModel rebuilds dictionary GPUTable-backed text batches', async 
   const firstSourceVectors = makeArrowTextStorageSourceVectorsFromBatches([firstBatch]);
 
   const model = createTextStorageModel(device, {
-    id: 'arrow-storage-text-dictionary-streaming-gpu-table-test',
+    id: 'arrow-text-storage-dictionary-streaming-gpu-table-test',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: firstSourceVectors,
@@ -1064,7 +1064,7 @@ test('TextStorageModel rebuilds dictionary GPUTable-backed text batches', async 
     })
   );
   const rebuiltModel = createTextStorageModel(device, {
-    id: 'arrow-storage-text-dictionary-streaming-gpu-table-test-rebuilt',
+    id: 'arrow-text-storage-dictionary-streaming-gpu-table-test-rebuilt',
     positions: gpuTable.gpuVectors.positions,
     texts: gpuTable.gpuVectors.texts,
     sourceVectors: makeArrowTextStorageSourceVectorsFromBatches([firstBatch, secondBatch]),
@@ -1099,9 +1099,9 @@ test('TextStorageModel splits compact glyph buffers by device limits', async t =
   });
 
   try {
-    const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+    const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
     const model = createTextStorageModel(device, {
-      id: 'arrow-storage-text-buffer-batching-test',
+      id: 'arrow-text-storage-buffer-batching-test',
       ...textProps,
       characterMapping: CHARACTER_MAPPING,
       fontSettings: {fontSize: 10}
@@ -1125,7 +1125,7 @@ test('TextStorageModel splits compact glyph buffers by device limits', async t =
     );
 
     model.destroy();
-    destroyStorageGpuTextProps(textProps);
+    destroyTextStorageGpuProps(textProps);
   } finally {
     Object.defineProperty(device.limits, 'maxStorageBufferBindingSize', {
       value: originalMaxStorageBufferBindingSize,
@@ -1148,7 +1148,7 @@ test('TextStorageModel rejects non-WebGPU devices', t => {
 
 test('createArrowTextStorageState rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
-  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
 
   t.throws(
     () =>
@@ -1161,7 +1161,7 @@ test('createArrowTextStorageState rejects non-WebGPU devices', t => {
     /WebGPU device/,
     'storage-state builder reports its backend contract'
   );
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   t.end();
 });
 
@@ -1173,9 +1173,9 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
     return;
   }
 
-  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
   const model = createTextStorageModel(device, {
-    id: 'arrow-storage-text-row-binding-refresh-test',
+    id: 'arrow-text-storage-row-binding-refresh-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -1185,7 +1185,7 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
   const styleConfigBuffer = model.styleConfigBuffer;
 
   const colorModel = createTextStorageModel(device, {
-    id: 'arrow-storage-text-row-binding-rebuild-color-test',
+    id: 'arrow-text-storage-row-binding-rebuild-color-test',
     ...textProps,
     color: [255, 0, 0, 255],
     characterMapping: CHARACTER_MAPPING,
@@ -1203,7 +1203,7 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
   const updatedTextSource = makeArrowTexts(['A', 'A']);
   const updatedTexts = makeGpuTexts(device, updatedTextSource);
   const textModel = createTextStorageModel(device, {
-    id: 'arrow-storage-text-row-binding-rebuild-text-test',
+    id: 'arrow-text-storage-row-binding-rebuild-text-test',
     ...textProps,
     texts: updatedTexts,
     sourceVectors: {...textProps.sourceVectors, texts: updatedTextSource},
@@ -1222,7 +1222,7 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
   model.destroy();
   colorModel.destroy();
   textModel.destroy();
-  destroyStorageGpuTextProps(textProps);
+  destroyTextStorageGpuProps(textProps);
   updatedTexts.destroy();
   t.end();
 });
@@ -1314,7 +1314,7 @@ function destroyGpuTextProps(props: ReturnType<typeof makeGpuTextProps>): void {
   props.texts.destroy();
 }
 
-function makeStorageGpuTextProps(device: NullDevice, labels: string[]) {
+function makeTextStorageGpuProps(device: NullDevice, labels: string[]) {
   const positions = makeArrowPositions(labels.length);
   const texts = makeArrowTexts(labels);
   return {
@@ -1324,7 +1324,7 @@ function makeStorageGpuTextProps(device: NullDevice, labels: string[]) {
   };
 }
 
-function makeStorageGpuTextDictionaryProps(device: NullDevice, labels: readonly (string | null)[]) {
+function makeTextDictionaryStorageGpuProps(device: NullDevice, labels: readonly (string | null)[]) {
   const positions = makeArrowPositions(labels.length);
   const texts = makeArrowTextDictionaries(labels);
   return {
@@ -1334,7 +1334,7 @@ function makeStorageGpuTextDictionaryProps(device: NullDevice, labels: readonly 
   };
 }
 
-function makeChunkedStorageGpuTextDictionaryProps(
+function makeChunkedTextDictionaryStorageGpuProps(
   device: NullDevice,
   labelChunks: readonly (readonly (string | null)[])[]
 ) {
@@ -1359,7 +1359,7 @@ function makeChunkedStorageGpuTextDictionaryProps(
   };
 }
 
-function destroyStorageGpuTextProps(props: {positions: GPUVector; texts: GPUVector}): void {
+function destroyTextStorageGpuProps(props: {positions: GPUVector; texts: GPUVector}): void {
   props.positions.destroy();
   props.texts.destroy();
 }
