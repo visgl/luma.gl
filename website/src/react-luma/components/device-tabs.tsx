@@ -8,26 +8,34 @@ export type DeviceTabSelection =
   | 'webgl2'
   | 'webgpu'
   | 'webgpu-core'
-  | 'webgpu-max';
+  | 'webgpu-max'
+  | 'webgpu-compatibility';
 
 interface DeviceTabsProps {
   devices?: DeviceTabSelection[];
   style?: CSSProperties;
 }
 
-const DEFAULT_DEVICE_TYPES: DeviceType[] = ['webgpu-core', 'webgpu-max', 'webgl'];
+const DEFAULT_DEVICE_TYPES: DeviceType[] = [
+  'webgpu-core',
+  'webgpu-max',
+  'webgpu-compatibility',
+  'webgl'
+];
 
-const WEBGPU_DEVICE_TYPES: DeviceType[] = ['webgpu-core', 'webgpu-max'];
+const WEBGPU_DEVICE_TYPES: DeviceType[] = ['webgpu-core', 'webgpu-max', 'webgpu-compatibility'];
 
 const DEVICE_TAB_LABELS: Record<DeviceType, string> = {
   'webgpu-core': 'WebGPU',
   'webgpu-max': 'WebGPU',
+  'webgpu-compatibility': 'WebGPU',
   webgl: 'WebGL2'
 };
 
 const DEVICE_TAB_BADGES: Partial<Record<DeviceType, string>> = {
   'webgpu-core': 'CORE',
-  'webgpu-max': 'MAX'
+  'webgpu-max': 'MAX',
+  'webgpu-compatibility': 'COMPAT'
 };
 
 export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {

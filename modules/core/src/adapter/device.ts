@@ -76,11 +76,13 @@ export type DeviceInfo = {
  * WebGPU feature/limit profile requested during device creation.
  * - `'core'` requests the portable WebGPU core profile.
  * - `'max'` requests every adapter feature and supported limit that luma.gl can forward.
+ * - `'compatibility'` requests WebGPU compatibility mode.
+ * - `'best-available'` requests compatibility mode, then upgrades to core when available.
  */
-export type WebGPUFeatureLevel = 'core' | 'max';
+export type WebGPUFeatureLevel = 'core' | 'max' | 'compatibility' | 'best-available';
 
 /** Effective WebGPU feature level reported by a created WebGPU device. */
-export type WebGPUDeviceFeatureLevel = WebGPUFeatureLevel;
+export type WebGPUDeviceFeatureLevel = Exclude<WebGPUFeatureLevel, 'best-available'>;
 
 /** Limits for a device (max supported sizes of resources, max number of bindings etc) */
 export abstract class DeviceLimits {
@@ -267,6 +269,7 @@ export type DeviceFeature =
 // export type ChromeExperimentalFeatures = ;
 
 export type WebGPUDeviceFeature =
+  | 'core-features-and-limits'
   | 'depth-clip-control'
   | 'depth32float-stencil8'
   | 'texture-compression-bc'
@@ -349,7 +352,7 @@ export type DeviceProps = {
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
-  /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit. */
+  /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to opt into compatibility mode, or `'best-available'` to upgrade a compatibility adapter to core when possible. */
   featureLevel?: WebGPUFeatureLevel;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */

@@ -49,7 +49,9 @@ export async function probeWebGPU(page) {
     const result = {
       navigatorGpu: Boolean(globalThis.navigator?.gpu),
       adapter: false,
+      compatibilityAdapter: false,
       features: [],
+      compatibilityFeatures: [],
       isFallbackAdapter: undefined,
       error: null
     };
@@ -63,6 +65,14 @@ export async function probeWebGPU(page) {
       result.adapter = Boolean(adapter);
       result.features = adapter ? Array.from(adapter.features.values()) : [];
       result.isFallbackAdapter = adapter?.isFallbackAdapter;
+
+      const compatibilityAdapter = await globalThis.navigator.gpu.requestAdapter({
+        featureLevel: 'compatibility'
+      });
+      result.compatibilityAdapter = Boolean(compatibilityAdapter);
+      result.compatibilityFeatures = compatibilityAdapter
+        ? Array.from(compatibilityAdapter.features.values())
+        : [];
     } catch (error) {
       result.error = error instanceof Error ? error.message : String(error);
     }

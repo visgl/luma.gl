@@ -1,6 +1,7 @@
 const DEVICE_TAB_LABELS = {
   'webgpu-core': 'WebGPU',
   'webgpu-max': 'WebGPU',
+  'webgpu-compatibility': 'WebGPU',
   webgl: 'WebGL2',
   webgl2: 'WebGL2',
   webgpu: 'WebGPU'
@@ -24,6 +25,8 @@ function normalizeBackend(backend) {
     case 'webgpu-max':
     case 'max':
       return 'webgpu-max';
+    case 'webgpu-compatibility':
+      return 'webgpu-compatibility';
     default:
       return normalizedBackend;
   }
@@ -73,8 +76,8 @@ export async function selectPreferredDeviceBackend(page, preferredBackend = 'web
   const normalizedPreferredBackend = normalizeBackend(preferredBackend) || 'webgpu';
   const orderedBackends =
     normalizedPreferredBackend === 'webgl'
-      ? ['webgl', 'webgpu-core']
-      : [normalizedPreferredBackend, 'webgpu-core', 'webgl'].filter(
+      ? ['webgl', 'webgpu-core', 'webgpu-compatibility']
+      : [normalizedPreferredBackend, 'webgpu-core', 'webgpu-compatibility', 'webgl'].filter(
           (backend, index, array) => array.indexOf(backend) === index
         );
 

@@ -87,7 +87,7 @@ WebGPU also has practical constraints:
 | Shaders use WGSL | Keep WGSL, or matching WGSL and GLSL sources for portable apps. |
 | More explicit setup | Describe pipelines, bindings, and buffer layouts up front. |
 | Stricter formats and limits | Check `device.features` and `device.limits`. |
-| Portable baseline differs from adapter maximum | Keep the default `featureLevel: 'core'` for portability; request `'max'` only when the app needs optional WebGPU features or limits. |
+| Portable baseline differs from adapter maximum | Keep the default `featureLevel: 'core'` for portability; request `'max'` only when the app needs optional WebGPU features or limits. Apps that fit compatibility restrictions can request `'compatibility'`, or `'best-available'` to upgrade that request to core when possible. |
 
 ## WebGL 2
 

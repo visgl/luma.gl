@@ -7,6 +7,7 @@
 
 import {
   Adapter,
+  type DeviceInfo,
   type DeviceProps,
   log
 } from '@luma.gl/core';
@@ -14,6 +15,9 @@ import type {WebGPUDevice} from './webgpu-device';
 
 type WebGPUSupportedLimitName = Exclude<keyof GPUSupportedLimits, '__brand'>;
 type RequestedWebGPUFeatureLevel = NonNullable<DeviceProps['featureLevel']>;
+type EffectiveWebGPUFeatureLevel = NonNullable<DeviceInfo['featureLevel']>;
+
+const CORE_FEATURES_AND_LIMITS = 'core-features-and-limits' as GPUFeatureName;
 
 const WEBGPU_SUPPORTED_LIMIT_NAMES: readonly WebGPUSupportedLimitName[] = [
   'maxTextureDimension1D',
@@ -89,7 +93,13 @@ export function getWebGPUFeatureLevel(props: DeviceProps): RequestedWebGPUFeatur
  * @returns Options to pass to `navigator.gpu.requestAdapter()`.
  */
 export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAdapterOptions {
-  const options: GPURequestAdapterOptions = {featureLevel: 'core'};
+  const featureLevel = getWebGPUFeatureLevel(props);
+  const options: GPURequestAdapterOptions = {
+    featureLevel:
+      featureLevel === 'compatibility' || featureLevel === 'best-available'
+        ? 'compatibility'
+        : 'core'
+  };
 
   if (props.powerPreference && props.powerPreference !== 'default') {
     options.powerPreference = props.powerPreference;
@@ -112,7 +122,34 @@ export function getRequiredWebGPUFeatures(
     return Array.from(supportedFeatures) as GPUFeatureName[];
   }
 
+  if (featureLevel === 'best-available' && supportedFeatures.has(CORE_FEATURES_AND_LIMITS)) {
+    // Compatibility adapters expose this opt-in when they can be upgraded to
+    // core. See WebGPU Fundamentals:
+    // https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html
+    return [CORE_FEATURES_AND_LIMITS];
+  }
+
   return [];
+}
+
+/**
+ * Returns the feature level exposed by the created WebGPU device.
+ * @param requestedFeatureLevel Feature level requested by luma.gl.
+ * @param deviceFeatures Features exposed by the created WebGPU device.
+ * @returns Effective feature level reported through `device.info`.
+ */
+export function getEffectiveWebGPUFeatureLevel(
+  requestedFeatureLevel: RequestedWebGPUFeatureLevel,
+  deviceFeatures: GPUSupportedFeatures
+): EffectiveWebGPUFeatureLevel {
+  if (
+    (requestedFeatureLevel === 'compatibility' || requestedFeatureLevel === 'best-available') &&
+    deviceFeatures.has(CORE_FEATURES_AND_LIMITS)
+  ) {
+    return 'core';
+  }
+
+  return requestedFeatureLevel === 'best-available' ? 'compatibility' : requestedFeatureLevel;
 }
 
 export class WebGPUAdapter extends Adapter {
@@ -181,7 +218,8 @@ export class WebGPUAdapter extends Adapter {
     // log.probe(1, 'GPUDevice available')();
 
     const {WebGPUDevice} = await import('./webgpu-device');
-    const deviceProps = {...props, featureLevel: requestedFeatureLevel};
+    const featureLevel = getEffectiveWebGPUFeatureLevel(requestedFeatureLevel, gpuDevice.features);
+    const deviceProps = {...props, featureLevel};
 
     log.groupCollapsed(1, 'WebGPUDevice created')();
     try {

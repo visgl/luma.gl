@@ -15,7 +15,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/core**
 
-- **WebGPU feature levels** - `DeviceProps.featureLevel` now selects `'core'`, the portable WebGPU default, or `'max'`, which requests every adapter feature and supported limit to preserve the previous behavior. The effective level is reported as `device.info.featureLevel`.
+- **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.
 - **Stage-specific storage limits** - `device.limits` now reports storage buffer and storage texture availability separately for vertex and fragment stages, so applications can choose storage-backed rendering only where the requested device supports it.
 
 **@luma.gl/engine**

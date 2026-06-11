@@ -6,7 +6,7 @@ Supported capabilities:
 - launch a Chromium-family browser with repo-configured options
 - resolve website examples from aliases or route segments
 - open any website example with `yarn website-debug --example ...`
-- select `WebGPU`, `WebGPU` with the `MAX` badge, or `WebGL2`
+- select `WebGPU`, `WebGPU` with the `MAX` badge, `WebGPU` with the `COMPAT` badge, or `WebGL2`
 - collect console logs, page errors, and failed requests
 - capture screenshots and probe WebGPU availability
 
@@ -16,6 +16,7 @@ CLI examples:
 yarn website-debug --example showcase/persistence
 yarn website-debug --example api/animation --backend webgpu-core
 yarn website-debug --example api/animation --backend webgpu-max
+yarn website-debug --example api/animation --backend webgpu-compatibility
 yarn website-debug --example persistence --backend webgl2
 yarn website-debug --attach=http://127.0.0.1:9222 --target-tab persistence
 ```
@@ -33,6 +34,6 @@ Artifacts:
 - `.playwright-artifacts/last-url.txt`
 
 Backend behavior:
-- explicit `--backend webgpu-core`, `--backend webgpu-max`, or `--backend webgl2` clicks the corresponding `DeviceTabs` entry
+- explicit `--backend webgpu-core`, `--backend webgpu-max`, `--backend webgpu-compatibility`, or `--backend webgl2` clicks the corresponding `DeviceTabs` entry
 - `--backend webgpu` remains an alias for `webgpu-core`
-- with no explicit backend, the runner prefers core WebGPU and falls back to `WebGL2`
+- with no explicit backend, the runner prefers core WebGPU, then compatibility WebGPU, then falls back to `WebGL2`
