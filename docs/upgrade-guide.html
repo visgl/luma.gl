@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
-<title data-rh="true">Upgrade Guide | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/upgrade-guide"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Upgrade Guide | luma.gl"><meta data-rh="true" name="description" content="The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications."><meta data-rh="true" property="og:description" content="The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/upgrade-guide"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/upgrade-guide" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/upgrade-guide" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Upgrade Guide","item":"https://luma.gl/docs/upgrade-guide"}]}</script><link rel="stylesheet" href="/assets/css/styles.61d0a047.css">
-<script src="/assets/js/runtime~main.fd5559f3.js" defer="defer"></script>
-<script src="/assets/js/main.03004e3d.js" defer="defer"></script>
+<title data-rh="true">Upgrade Guide | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/upgrade-guide"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Upgrade Guide | luma.gl"><meta data-rh="true" name="description" content="The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications."><meta data-rh="true" property="og:description" content="The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/upgrade-guide"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/upgrade-guide" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/upgrade-guide" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Upgrade Guide","item":"https://luma.gl/docs/upgrade-guide"}]}</script><link rel="stylesheet" href="/assets/css/styles.be9a1bce.css">
+<script src="/assets/js/runtime~main.54017943.js" defer="defer"></script>
+<script src="/assets/js/main.5ee7808a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -19,6 +19,10 @@ intermediary releases.</p>
 <p>luma.gl largely follows <a href="https://semver.org" target="_blank" rel="noopener noreferrer" class="">SEMVER</a> conventions. Breaking changes are typically only done in major versions, minor version bumps bring new functionality but few breaking changes, and patch releases typically contain only low-risk fixes.</p>
 <p><em>For detailed commit level logs that include alpha and beta releases, see the <a href="https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="">CHANGELOG</a> in the github repository.</em></p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="upgrading-to-v100">Upgrading to v10.0<a href="#upgrading-to-v100" class="hash-link" aria-label="Direct link to Upgrading to v10.0" title="Direct link to Upgrading to v10.0" translate="no">​</a></h2>
+<p><strong>@luma.gl/core</strong></p>
+<ul>
+<li class="">WebGPU device creation now defaults to <code>DeviceProps.featureLevel: &#x27;core&#x27;</code>. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass <code>featureLevel: &#x27;max&#x27;</code>.</li>
+</ul>
 <p><strong>@luma.gl/arrow</strong></p>
 <ul>
 <li class="">Generic GPU table/runtime APIs moved to <code>@luma.gl/tables</code>:<!-- -->
@@ -36,6 +40,11 @@ intermediary releases.</p>
 </li>
 <li class="">Arrow append-in-place helpers and streaming wrapper classes have been removed. Convert each Arrow record batch with <code>makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, ...)</code> and retain it with <code>gpuTable.addBatch(...)</code>.</li>
 </ul>
+<p><strong>@luma.gl/gpgpu</strong></p>
+<ul>
+<li class=""><code>GPUTableEvaluator</code> and <code>getGPUTableEvaluator()</code> have been removed. Use <code>GPUDataEvaluator</code> and <code>getGPUDataEvaluator()</code> for one packed fixed-width <code>GPUData</code> chunk.</li>
+<li class="">Leaf GPGPU operations no longer adapt <code>GPUVector</code> inputs. Use <code>GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)</code> to apply one leaf transform independently across preserved <code>GPUVector.data[]</code> chunks.</li>
+</ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="upgrading-to-v93">Upgrading to v9.3<a href="#upgrading-to-v93" class="hash-link" aria-label="Direct link to Upgrading to v9.3" title="Direct link to Upgrading to v9.3" translate="no">​</a></h2>
 <p><strong>Potentially breaking behavior</strong></p>
 <ul>
@@ -45,7 +54,6 @@ intermediary releases.</p>
 <li class="">glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.</li>
 <li class="">The legacy feature flag <code>timer-query-webgl</code> has been removed. Replace checks for <code>timer-query-webgl</code> with <code>timestamp-query</code> for GPU timestamp/query support on both WebGPU and WebGL.</li>
 <li class=""><code>PipelineFactory</code> and <code>ShaderFactory</code> now import from <code>@luma.gl/core</code> instead of <code>@luma.gl/engine</code>.</li>
-<li class=""><code>@luma.gl/constants</code> has been removed. If raw numeric WebGL enums are still needed, import them from <code>@luma.gl/webgl/constants</code>.</li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="upgrading-to-v92">Upgrading to v9.2<a href="#upgrading-to-v92" class="hash-link" aria-label="Direct link to Upgrading to v9.2" title="Direct link to Upgrading to v9.2" translate="no">​</a></h2>
 <p>v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the <code>Texture</code> -&gt; <code>AsyncTexture</code> split, impact on most applications should be minimal.</p>

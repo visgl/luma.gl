@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
-<title data-rh="true">Geometry | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/api-reference/engine/geometry"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Geometry | luma.gl"><meta data-rh="true" name="description" content="Geometry is the CPU-side geometry container used by engine classes."><meta data-rh="true" property="og:description" content="Geometry is the CPU-side geometry container used by engine classes."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/api-reference/engine/geometry"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/api-reference/engine/geometry" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/api-reference/engine/geometry" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Geometry","item":"https://luma.gl/docs/api-reference/engine/geometry/"}]}</script><link rel="stylesheet" href="/assets/css/styles.61d0a047.css">
-<script src="/assets/js/runtime~main.fd5559f3.js" defer="defer"></script>
-<script src="/assets/js/main.03004e3d.js" defer="defer"></script>
+<title data-rh="true">Geometry | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/api-reference/engine/geometry"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Geometry | luma.gl"><meta data-rh="true" name="description" content="Geometry is the CPU-side geometry container used by engine classes."><meta data-rh="true" property="og:description" content="Geometry is the CPU-side geometry container used by engine classes."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/api-reference/engine/geometry"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/api-reference/engine/geometry" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/api-reference/engine/geometry" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Geometry","item":"https://luma.gl/docs/api-reference/engine/geometry/"}]}</script><link rel="stylesheet" href="/assets/css/styles.be9a1bce.css">
+<script src="/assets/js/runtime~main.54017943.js" defer="defer"></script>
+<script src="/assets/js/main.5ee7808a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -36,21 +36,29 @@ representing the result as a normal <code>Geometry</code>.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="indices"><code>indices</code><a href="#indices" class="hash-link" aria-label="Direct link to indices" title="Direct link to indices" translate="no">​</a></h3>
 <p>Optional index attribute.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="attributes"><code>attributes</code><a href="#attributes" class="hash-link" aria-label="Direct link to attributes" title="Direct link to attributes" translate="no">​</a></h3>
-<p>Named geometry attributes. The constructed <code>Geometry</code> stores normalized names: <code>POSITION</code> becomes <code>positions</code>,
-<code>NORMAL</code> becomes <code>normals</code>, <code>TEXCOORD_0</code> becomes <code>texCoords</code>, <code>TEXCOORD_1</code> becomes <code>texCoords1</code>, and
-<code>COLOR_0</code> becomes <code>colors</code>.</p>
+<p>Named CPU geometry attributes. <code>Geometry</code> preserves the keys supplied to the constructor. Built-in
+geometries and <code>@luma.gl/gltf</code> use glTF mesh attribute semantics such as <code>POSITION</code>, <code>NORMAL</code>, and
+<code>TEXCOORD_0</code>; glTF calls these mesh attribute semantics, while each semantic points to accessor data in
+<code>mesh.primitive.attributes</code>. See the official <a href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html" target="_blank" rel="noopener noreferrer" class="">glTF 2.0 specification</a>.</p>
+<p>Shader-facing names are separate. Synthesized buffer layouts map supported semantic names at the render
+boundary: <code>POSITION</code> becomes <code>positions</code>, <code>NORMAL</code> becomes <code>normals</code>, <code>TEXCOORD_0</code> becomes <code>texCoords</code>,
+<code>TEXCOORD_1</code> becomes <code>texCoords1</code>, and <code>COLOR_0</code> becomes <code>colors</code>. Caller-provided non-glTF names such as
+<code>positions</code>, <code>clipSpacePositions</code>, and <code>faceIndex</code> are preserved as-is. When writing glTF custom semantics,
+use the spec&#x27;s <code>_NAME</code> convention. If constructor input contains both a semantic key and its supported
+shader-facing name, the later key wins so built-in geometry attribute overrides keep their legacy behavior
+without storing duplicate CPU aliases.</p>
 <p>For non-interleaved geometry, each attribute key normally names one typed-array attribute. For interleaved
 geometry, the attribute key names the packed buffer, and <code>bufferLayout</code> maps that buffer back to shader
 attributes.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bufferlayout"><code>bufferLayout</code><a href="#bufferlayout" class="hash-link" aria-label="Direct link to bufferlayout" title="Direct link to bufferlayout" translate="no">​</a></h3>
 <p>The buffer layout for the geometry attributes. It is always populated on constructed <code>Geometry</code> instances.
-If omitted, the constructor creates one layout entry for each normalized attribute. Explicit <code>bufferLayout</code>
-entries are normalized with the same semantic-name rules used for <code>attributes</code>.</p>
+If omitted, the constructor creates one shader-facing layout entry for each attribute. Explicit
+<code>bufferLayout</code> entries are preserved unchanged.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="userdata"><code>userData</code><a href="#userdata" class="hash-link" aria-label="Direct link to userdata" title="Direct link to userdata" translate="no">​</a></h3>
 <p>Application-owned metadata.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="methods">Methods<a href="#methods" class="hash-link" aria-label="Direct link to Methods" title="Direct link to Methods" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="constructorprops-geometryprops"><code>constructor(props: GeometryProps)</code><a href="#constructorprops-geometryprops" class="hash-link" aria-label="Direct link to constructorprops-geometryprops" title="Direct link to constructorprops-geometryprops" translate="no">​</a></h3>
-<p>Creates a geometry object and normalizes raw typed arrays into <code>GeometryAttribute</code> records.</p>
+<p>Creates a geometry object and wraps raw typed arrays into <code>GeometryAttribute</code> records.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="getvertexcount-number"><code>getVertexCount(): number</code><a href="#getvertexcount-number" class="hash-link" aria-label="Direct link to getvertexcount-number" title="Direct link to getvertexcount-number" translate="no">​</a></h3>
 <p>Returns the resolved vertex count.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="getattributes-geometryattributes"><code>getAttributes(): GeometryAttributes</code><a href="#getattributes-geometryattributes" class="hash-link" aria-label="Direct link to getattributes-geometryattributes" title="Direct link to getattributes-geometryattributes" translate="no">​</a></h3>
