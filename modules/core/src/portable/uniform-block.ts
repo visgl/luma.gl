@@ -53,8 +53,8 @@ export class UniformBlock<
   /** Set a map of uniforms */
   setUniforms(uniforms: Partial<TUniforms>): void {
     for (const [key, value] of Object.entries(uniforms)) {
-      this._setUniform(key, value);
-      if (!this.needsRedraw) {
+      const changed = this._setUniform(key, value);
+      if (changed && !this.needsRedraw) {
         this.setNeedsRedraw(`${this.name}.${key}=${value}`);
       }
     }
@@ -72,13 +72,14 @@ export class UniformBlock<
     return (this.uniforms || {}) as Record<string, UniformValue>;
   }
 
-  /** Set a single uniform */
-  private _setUniform(key: keyof TUniforms, value: UniformValue) {
+  /** Set a single uniform. Returns `true` if the value changed. */
+  private _setUniform(key: keyof TUniforms, value: UniformValue): boolean {
     if (arrayEqual(this.uniforms[key], value)) {
-      return;
+      return false;
     }
     this.uniforms[key] = arrayCopy(value);
     this.modifiedUniforms[key] = true;
     this.modified = true;
+    return true;
   }
 }
