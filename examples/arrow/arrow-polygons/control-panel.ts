@@ -20,10 +20,9 @@ import {
   type ArrowPolygonSourceKind
 } from './arrow-polygon-data';
 import {
-  POLYGON_VERTEX_STORAGE_BUFFER_COUNT,
   type ArrowPolygonRendererMetrics,
   type ArrowPolygonRendererModel
-} from './arrow-polygon-renderer';
+} from '@luma.gl/arrow';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 const PICKED_ROW_ID = 'arrow-polygon-picked-row';
@@ -44,6 +43,7 @@ const STYLING_GPU_EXPANSION_ID = 'arrow-polygon-styling-gpu-expansion';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-polygon-streaming-batch-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-polygon-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-polygon-streaming-batch-status-label';
+const POLYGON_VERTEX_STORAGE_BUFFER_COUNT = 3;
 
 export type ArrowPolygonControlPanelState = {
   rowCountKind: ArrowPolygonRowCountKind;
@@ -252,9 +252,8 @@ export function makeArrowPolygonSettingsSchema(
             type: 'select',
             persist: 'none',
             options: [
-              {label: 'Attributes', value: 'attributes'},
-              ...(supportsStorage ? [{label: 'Storage', value: 'storage'}] : []),
-              {label: `Auto (${supportsStorage ? 'Storage' : 'Attributes'})`, value: 'auto'}
+              {label: 'Attribute', value: 'attribute'},
+              ...(supportsStorage ? [{label: 'Storage', value: 'storage'}] : [])
             ]
           }
         ]
@@ -427,5 +426,5 @@ function isColorKind(value: unknown): value is ArrowPolygonColorKind {
 }
 
 function isArrowPolygonRendererModel(value: unknown): value is ArrowPolygonRendererModel {
-  return value === 'attributes' || value === 'storage' || value === 'auto';
+  return value === 'attribute' || value === 'storage';
 }

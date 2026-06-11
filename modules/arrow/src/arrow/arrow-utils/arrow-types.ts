@@ -1,0 +1,104 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import type {SignedDataType, BigTypedArray} from '@luma.gl/core';
+import {Data, DataType, FixedSizeList, Float, Int, List, Precision} from 'apache-arrow';
+
+/** Numeric Apache Arrow scalar types that can be represented as GPU vertex attributes. */
+export type NumericArrowType = Int | Float;
+
+/** Attribute-compatible Arrow column type with one to four numeric values per row. */
+export type AttributeArrowType = NumericArrowType | FixedSizeList<NumericArrowType>;
+
+/** Variable-length Arrow column with one to four numeric values per nested element. */
+export type VariableLengthAttributeArrowType = List<
+  NumericArrowType | FixedSizeList<NumericArrowType>
+>;
+
+/** Mesh-compatible Arrow column type with a list of attribute-compatible values per row. */
+export type MeshArrowType = VariableLengthAttributeArrowType;
+
+/** Arrow column shape and numeric type information needed to derive a GPU vertex format. */
+export type ArrowColumnInfo = {
+  /** Whether values advance per instance or per vertex. */
+  stepMode: 'instance' | 'vertex';
+  /** luma.gl signed data type for the scalar values in the column. */
+  signedDataType: SignedDataType;
+  /** Number of scalar values per logical attribute. */
+  components: 1 | 2 | 3 | 4;
+  /** Underlying Arrow value buffers for this column. */
+  values: BigTypedArray[];
+  /** Nested list offsets for variable-length mesh columns. */
+  offsets: Uint32Array[][];
+};
+
+/** Returns the number of top-level nested Arrow List wrappers around a data node. */
+export function getArrowListNestingLevel(data: Data): number {
+  let nestingLevel = 0;
+  if (DataType.isList(data.type)) {
+    nestingLevel += 1;
+    data = data.children[0];
+  }
+  return nestingLevel;
+}
+
+/** Returns true when an Arrow type is an integer or floating point scalar type. */
+export function isNumericArrowType(type: DataType): type is Int | Float {
+  return DataType.isFloat(type) || DataType.isInt(type);
+}
+
+/** Returns true when an Arrow type can provide one scalar/vector attribute per row. */
+export function isInstanceArrowType(type: DataType): type is AttributeArrowType {
+  return (
+    isNumericArrowType(type) ||
+    (DataType.isFixedSizeList(type) &&
+      type.listSize >= 1 &&
+      type.listSize <= 4 &&
+      isNumericArrowType(type.children[0].type))
+  );
+}
+
+/** Returns true when an Arrow type can provide multiple scalar/vector attributes per row. */
+export function isVertexArrowType(type: DataType): type is MeshArrowType {
+  return isVariableLengthAttributeArrowType(type);
+}
+
+/** Returns true when an Arrow type can encode variable-length nested numeric attributes. */
+export function isVariableLengthAttributeArrowType(
+  type: DataType
+): type is VariableLengthAttributeArrowType {
+  return DataType.isList(type) && isInstanceArrowType(type.children[0].type);
+}
+
+/** Returns the luma.gl signed data type corresponding to a numeric Arrow type. */
+export function getSignedShaderType(
+  arrowType: NumericArrowType,
+  size: 1 | 2 | 3 | 4
+): SignedDataType {
+  if (DataType.isInt(arrowType)) {
+    switch (arrowType.bitWidth) {
+      case 8:
+        return arrowType.isSigned ? 'sint8' : 'uint8';
+      case 16:
+        return arrowType.isSigned ? 'sint16' : 'uint16';
+      case 32:
+        return arrowType.isSigned ? 'sint32' : 'uint32';
+      case 64:
+        throw new Error('64-bit integers are not supported in shaders');
+    }
+  }
+
+  if (DataType.isFloat(arrowType)) {
+    switch (arrowType.precision) {
+      case Precision.HALF:
+        return 'float16';
+      case Precision.SINGLE:
+        return 'float32';
+      case Precision.DOUBLE:
+        throw new Error('Double precision floats are not supported in shaders');
+    }
+  }
+
+  throw new Error(`Unsupported arrow type ${arrowType}`);
+}

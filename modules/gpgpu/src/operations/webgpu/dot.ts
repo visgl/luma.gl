@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {runRowComputation} from './common/row-transform';
 
 const source = `\
@@ -16,7 +16,7 @@ fn row_dot(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<f32, 1
 }
 `;
 
-export const dot: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
+export const dot: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
   inputs,
   output,
   target

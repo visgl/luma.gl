@@ -3,18 +3,33 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  clearArrowPickingState,
+  createArrowPickingManager,
   getArrowFixedSizeListValues,
   getArrowTemporalVectorInfo,
   getArrowVectorBufferSource,
   getArrowVectorByteLength,
   isArrowFixedSizeListVector,
   makeArrowFixedSizeListVector,
+  makeArrowRecordBatchSourceInfo,
+  makeArrowRowIndexGPUVector,
   makeGPUVectorFromArrow,
-  prepareArrowTemporalGPUVector,
-  type ArrowTemporalType
+  convertArrowTemporalToGPUVector,
+  getOptionalArrowColumn,
+  getRequiredArrowColumn,
+  hasArrowTableOrVectorSource,
+  loadArrowRecordBatches,
+  resolveArrowPickInfo,
+  runArrowPickingPass,
+  type ArrowColumnSelector,
+  type ArrowRecordBatchLoadContext,
+  type ArrowRecordBatchLoadUpdate,
+  type ArrowRecordBatchSource,
+  type ArrowTemporalType,
+  type OptionalArrowColumnSelector
 } from '@luma.gl/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
-import {PickingManager, type PickInfo, type PickingShouldPickOptions} from '@luma.gl/engine';
+import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
 import {GPUTable, type GPURecordBatch, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
@@ -24,17 +39,6 @@ import {
   type PointModelVectors,
   type PointShaderInputs
 } from './point-model';
-import {
-  getOptionalArrowColumn,
-  getRequiredArrowColumn,
-  hasArrowTableOrVectorSource,
-  loadArrowRecordBatches,
-  type ArrowColumnSelector,
-  type ArrowRecordBatchLoadContext,
-  type ArrowRecordBatchLoadUpdate,
-  type ArrowRecordBatchSource,
-  type OptionalArrowColumnSelector
-} from '../arrow-renderer-utils';
 
 /** Arrow point coordinate input accepted by {@link ArrowPointRenderer}. */
 export type ArrowPointCoordinateType = arrow.FixedSizeList<arrow.Float32> | arrow.DenseUnion;
@@ -108,8 +112,8 @@ export type ArrowPointRendererMetrics = {
   pointGpuByteLength: number;
   /** Bytes occupied by prepared color and radius GPU vectors. */
   stylingGpuByteLength: number;
-  /** CPU time spent preparing the currently loaded point batches. */
-  preparationTimeMs: number;
+  /** CPU time spent converting the currently loaded point batches. */
+  conversionTimeMs: number;
 };
 
 /** Notification emitted after a point record batch is prepared and appended. */
@@ -134,6 +138,7 @@ export type ConvertArrowPointColumnsToGPUVectorsOptions = Pick<
   'timeColumn' | 'timeOrigin' | 'color' | 'radius'
 > & {
   rowIndexOffset?: number;
+  sourceBatchIndex?: number;
   id?: string;
 };
 
@@ -150,7 +155,7 @@ export type ArrowPointGPUVectors = {
 export type ArrowPointRendererInput = ArrowPointGPUVectors & {
   pointArrowByteLength: number;
   stylingArrowByteLength: number;
-  preparationTimeMs: number;
+  conversionTimeMs: number;
 };
 
 type PreparedPointBatch = ArrowPointRendererInput;
@@ -176,17 +181,14 @@ export class ArrowPointRenderer {
   pickingModel: GPUTableModel | null = null;
   private activeTable: PointModelTable | null = null;
   private dataLoadVersion = 0;
-  private pickedBatchIndex: number | null = null;
-  private pickedRowIndex: number | null = null;
 
   /** Creates a point renderer for the supplied luma.gl device. */
   constructor(device: Device, props: ArrowPointRendererProps = {}) {
     this.device = device;
     this.props = props;
     this.shaderInputs = createPointShaderInputs(device);
-    this.picker = new PickingManager(device, {
+    this.picker = createArrowPickingManager(device, {
       shaderInputs: this.shaderInputs,
-      mode: 'auto',
       onObjectPicked: this.handleObjectPicked,
       getTooltip: this.getPointPickingTooltip
     });
@@ -225,22 +227,21 @@ export class ArrowPointRenderer {
   /** Runs a picking pass for the supplied mouse position and updates hover callbacks/tooltips. */
   pick(mousePosition: number[] | null | undefined, options: PickingShouldPickOptions = {}): void {
     if (!mousePosition) {
-      this.clearPickingState();
-      return;
-    }
-    if (!this.picker.shouldPick(mousePosition as [number, number] | null, options)) {
+      clearArrowPickingState(this.picker, this.handleObjectPicked);
       return;
     }
 
-    const pickingPass = this.picker.beginRenderPass();
-    this.pickingModel?.drawBatches(pickingPass, {
-      onBatch: (_batch: GPURecordBatch, batchIndex: number) =>
-        this.shaderInputs.setProps({picking: {batchIndex}})
+    runArrowPickingPass({
+      picker: this.picker,
+      mousePosition,
+      pickingOptions: options,
+      shaderInputs: this.shaderInputs,
+      draw: pickingPass =>
+        this.pickingModel?.drawBatches(pickingPass, {
+          onBatch: (_batch: GPURecordBatch, batchIndex: number) =>
+            this.shaderInputs.setProps({picking: {batchIndex}})
+        }) ?? false
     });
-    pickingPass.end();
-
-    this.shaderInputs.setProps({picking: {isActive: false}});
-    void this.picker.updatePickInfo(mousePosition as [number, number]);
   }
 
   /** Releases all GPU resources owned by the renderer. */
@@ -271,8 +272,8 @@ export class ArrowPointRenderer {
         (total, batch) => total + batch.stylingGpuByteLength,
         0
       ),
-      preparationTimeMs: this.preparedBatches.reduce(
-        (total, batch) => total + batch.preparationTimeMs,
+      conversionTimeMs: this.preparedBatches.reduce(
+        (total, batch) => total + batch.conversionTimeMs,
         0
       )
     };
@@ -294,7 +295,7 @@ export class ArrowPointRenderer {
   private replaceData(props: ArrowPointRendererProps, hasNewDataSource = true): void {
     this.dataLoadVersion++;
     const dataLoadVersion = this.dataLoadVersion;
-    this.clearPickingState();
+    clearArrowPickingState(this.picker, this.handleObjectPicked);
     this.destroyPreparedBatches();
 
     if (!hasPointSource(props) || !shouldLoadPointSource(props, hasNewDataSource)) {
@@ -321,7 +322,7 @@ export class ArrowPointRenderer {
       return;
     }
 
-    const preparedBatch = await this.createPreparedBatch(props, 0, 'arrow-points');
+    const preparedBatch = await this.createPreparedBatch(props, 0, 0, 'arrow-points');
     if (!this.isDataLoadActive(dataLoadVersion)) {
       destroyPreparedPointBatch(preparedBatch);
       return;
@@ -344,6 +345,7 @@ export class ArrowPointRenderer {
     return await this.createPreparedBatch(
       {...props, data},
       context.rowIndexOffset,
+      context.batchIndex,
       `arrow-points-${context.batchIndex}`
     );
   }
@@ -351,10 +353,12 @@ export class ArrowPointRenderer {
   private async createPreparedBatch(
     props: ArrowPointRendererProps,
     rowIndexOffset: number,
+    sourceBatchIndex: number,
     id: string
   ): Promise<PreparedPointBatch> {
     const preparedInput = await prepareArrowPointInput(this.device, props, {
       rowIndexOffset,
+      sourceBatchIndex,
       id
     });
     return preparedInput;
@@ -404,45 +408,24 @@ export class ArrowPointRenderer {
     return dataLoadVersion === this.dataLoadVersion;
   }
 
-  private clearPickingState(): void {
-    this.picker.clearPickState();
-    this.picker.pickInfo = {batchIndex: null, objectIndex: null};
-    if (this.pickedBatchIndex !== null || this.pickedRowIndex !== null) {
-      this.handleObjectPicked({batchIndex: null, objectIndex: null});
-    }
-  }
-
   private readonly handleObjectPicked = ({batchIndex, objectIndex}: PickInfo): void => {
-    this.pickedBatchIndex = batchIndex;
-    this.pickedRowIndex = objectIndex;
+    const pickInfo = resolveArrowPickInfo({batchIndex, objectIndex}, this.activeTable);
     this.props.onPick?.({
-      batchIndex,
-      rowIndex: objectIndex,
-      batchRowIndex: this.getBatchRowIndex(batchIndex, objectIndex)
+      batchIndex: pickInfo.batchIndex,
+      rowIndex: pickInfo.rowIndex,
+      batchRowIndex: pickInfo.batchRowIndex
     });
   };
-
-  private getBatchRowIndex(batchIndex: number | null, rowIndex: number | null): number | null {
-    if (batchIndex === null || rowIndex === null) {
-      return null;
-    }
-    const preparedBatch = this.preparedBatches[batchIndex];
-    if (!preparedBatch) {
-      return null;
-    }
-    const batchRowIndex = rowIndex - preparedBatch.rowIndexOffset;
-    return batchRowIndex >= 0 && batchRowIndex < preparedBatch.rowCount ? batchRowIndex : null;
-  }
 
   private readonly getPointPickingTooltip = ({
     batchIndex,
     objectIndex
   }: PickInfo): string | null => {
-    if (batchIndex === null || objectIndex === null) {
+    const pickInfo = resolveArrowPickInfo({batchIndex, objectIndex}, this.activeTable);
+    if (pickInfo.batchIndex === null || pickInfo.rowIndex === null) {
       return null;
     }
-    const batchRowIndex = this.getBatchRowIndex(batchIndex, objectIndex);
-    return formatPointPickingLabel(batchIndex, objectIndex, batchRowIndex);
+    return formatPointPickingLabel(pickInfo.batchIndex, pickInfo.rowIndex, pickInfo.batchRowIndex);
   };
 }
 
@@ -450,7 +433,7 @@ export class ArrowPointRenderer {
 export async function prepareArrowPointInput(
   device: Device,
   props: ArrowPointRendererProps,
-  options: {rowIndexOffset?: number; id?: string} = {}
+  options: {rowIndexOffset?: number; sourceBatchIndex?: number; id?: string} = {}
 ): Promise<ArrowPointRendererInput> {
   const positions = getPositionVector(props);
   const colors = getColorVector(props);
@@ -467,6 +450,7 @@ export async function prepareArrowPointInput(
     {positions, separateTimeColumn, colors, radii},
     {
       rowIndexOffset: options.rowIndexOffset,
+      sourceBatchIndex: options.sourceBatchIndex,
       id: options.id,
       timeColumn: props.timeColumn,
       timeOrigin: props.timeOrigin,
@@ -479,7 +463,7 @@ export async function prepareArrowPointInput(
     ...converted,
     pointArrowByteLength,
     stylingArrowByteLength,
-    preparationTimeMs: getTimestampMilliseconds() - startedAt
+    conversionTimeMs: getTimestampMilliseconds() - startedAt
   };
 }
 
@@ -490,6 +474,7 @@ export async function convertArrowPointColumnsToGPUVectors(
   options: ConvertArrowPointColumnsToGPUVectorsOptions = {}
 ): Promise<ArrowPointGPUVectors> {
   const rowIndexOffset = options.rowIndexOffset ?? 0;
+  const sourceBatchIndex = options.sourceBatchIndex ?? 0;
   const id = options.id ?? 'arrow-points';
   const {positions, separateTimeColumn = null, colors = null, radii = null} = columns;
   const normalizedPositions = normalizePointPositions(positions);
@@ -518,10 +503,10 @@ export async function convertArrowPointColumnsToGPUVectors(
     colors ?? makeConstantColorVector(rowCount, options.color ?? DEFAULT_POINT_RENDERER_COLOR),
     {name: 'colors', id: `${id}-colors`, format: 'unorm8x4'}
   );
-  const rowIndices = makeGPUVectorFromArrow(device, makeRowIndexVector(rowCount, rowIndexOffset), {
-    name: 'rowIndices',
-    id: `${id}-row-indices`,
-    format: 'uint32'
+  const rowIndices = makeArrowRowIndexGPUVector(device, {
+    rowCount,
+    rowIndexOffset,
+    id: `${id}-row-indices`
   });
   const vectors: PointModelVectors = {
     positions: pointPositions,
@@ -530,7 +515,14 @@ export async function convertArrowPointColumnsToGPUVectors(
     colors: pointColors,
     rowIndices
   };
-  const table = new GPUTable({vectors}) as PointModelTable;
+  const table = new GPUTable({
+    vectors,
+    sourceInfo: makeArrowRecordBatchSourceInfo({
+      sourceBatchIndex,
+      sourceRowIndexOffset: rowIndexOffset,
+      sourceRowCount: rowCount
+    })
+  }) as PointModelTable;
   const pointGpuByteLength =
     getGPUVectorByteLength(pointPositions) +
     getGPUVectorByteLength(eventTimes) +
@@ -680,7 +672,7 @@ async function makeEventTimesGPUVector(
     );
   }
   if (isScalarArrowTemporalVector(props.separateTimeColumn)) {
-    const preparedTimeColumn = await prepareArrowTemporalGPUVector(
+    const preparedTimeColumn = await convertArrowTemporalToGPUVector(
       device,
       props.separateTimeColumn,
       {
@@ -689,9 +681,9 @@ async function makeEventTimesGPUVector(
         origin: props.timeOrigin
       }
     );
-    if (!(preparedTimeColumn.temporal.type instanceof arrow.Float32)) {
+    if (!(preparedTimeColumn.temporal.dataType instanceof arrow.Float32)) {
       preparedTimeColumn.destroy();
-      throw new Error('ArrowPointRenderer temporal time column did not prepare as Float32');
+      throw new Error('ArrowPointRenderer temporal time column did not convert to Float32');
     }
     return preparedTimeColumn.temporal;
   }
@@ -855,17 +847,6 @@ function makeConstantColorVector(
   return makeArrowFixedSizeListVector(new arrow.Uint8(), 4, values);
 }
 
-function makeRowIndexVector(rowCount: number, rowIndexOffset: number): arrow.Vector<arrow.Uint32> {
-  const values = new Uint32Array(rowCount);
-  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-    values[rowIndex] = rowIndexOffset + rowIndex;
-  }
-  const data = new arrow.Data(new arrow.Uint32(), 0, values.length, 0, {
-    [arrow.BufferType.DATA]: values
-  }) as unknown as arrow.Data<arrow.Uint32>;
-  return new arrow.Vector([data]);
-}
-
 function getGPUVectorByteLength(vector: GPUVector): number {
   return vector.length * vector.byteStride;
 }
@@ -875,6 +856,8 @@ function hasPointSource(props: ArrowPointRendererProps): boolean {
 }
 
 function shouldLoadPointSource(props: ArrowPointRendererProps, hasNewDataSource: boolean): boolean {
+  // Table-backed column/style changes do not replay the previous table implicitly. Pass `data`
+  // again in the same prop update to rebuild from a table or iterable source.
   return (
     hasNewDataSource ||
     !props.data ||

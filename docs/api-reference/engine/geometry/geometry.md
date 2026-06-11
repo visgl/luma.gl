@@ -70,9 +70,18 @@ Optional index attribute.
 
 ### `attributes`
 
-Named geometry attributes. The constructed `Geometry` stores normalized names: `POSITION` becomes `positions`,
-`NORMAL` becomes `normals`, `TEXCOORD_0` becomes `texCoords`, `TEXCOORD_1` becomes `texCoords1`, and
-`COLOR_0` becomes `colors`.
+Named CPU geometry attributes. `Geometry` preserves the keys supplied to the constructor. Built-in
+geometries and `@luma.gl/gltf` use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and
+`TEXCOORD_0`; glTF calls these mesh attribute semantics, while each semantic points to accessor data in
+`mesh.primitive.attributes`. See the official [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html).
+
+Shader-facing names are separate. Synthesized buffer layouts map supported semantic names at the render
+boundary: `POSITION` becomes `positions`, `NORMAL` becomes `normals`, `TEXCOORD_0` becomes `texCoords`,
+`TEXCOORD_1` becomes `texCoords1`, and `COLOR_0` becomes `colors`. Caller-provided non-glTF names such as
+`positions`, `clipSpacePositions`, and `faceIndex` are preserved as-is. When writing glTF custom semantics,
+use the spec's `_NAME` convention. If constructor input contains both a semantic key and its supported
+shader-facing name, the later key wins so built-in geometry attribute overrides keep their legacy behavior
+without storing duplicate CPU aliases.
 
 For non-interleaved geometry, each attribute key normally names one typed-array attribute. For interleaved
 geometry, the attribute key names the packed buffer, and `bufferLayout` maps that buffer back to shader
@@ -81,8 +90,8 @@ attributes.
 ### `bufferLayout`
 
 The buffer layout for the geometry attributes. It is always populated on constructed `Geometry` instances.
-If omitted, the constructor creates one layout entry for each normalized attribute. Explicit `bufferLayout`
-entries are normalized with the same semantic-name rules used for `attributes`.
+If omitted, the constructor creates one shader-facing layout entry for each attribute. Explicit
+`bufferLayout` entries are preserved unchanged.
 
 ### `userData`
 
@@ -92,7 +101,7 @@ Application-owned metadata.
 
 ### `constructor(props: GeometryProps)`
 
-Creates a geometry object and normalizes raw typed arrays into `GeometryAttribute` records.
+Creates a geometry object and wraps raw typed arrays into `GeometryAttribute` records.
 
 ### `getVertexCount(): number`
 

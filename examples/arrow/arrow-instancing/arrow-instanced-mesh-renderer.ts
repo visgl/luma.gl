@@ -2,21 +2,25 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {makeArrowFixedSizeListVector, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {
+  createArrowPickingManager,
+  getArrowPickingModule,
+  makeArrowFixedSizeListVector,
+  makeGPUTableFromArrowTable,
+  runArrowPickingPass,
+  supportsArrowIndexPicking
+} from '@luma.gl/arrow';
 import {Device, type CommandEncoder, type RenderPass, type ShaderLayout} from '@luma.gl/core';
-import type {ModelProps} from '@luma.gl/engine';
+import type {ModelProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {
   CubeGeometry,
   Geometry,
   Model,
   ShaderInputs,
   makeRandomGenerator,
-  PickingManager,
-  type PickingShouldPickOptions,
-  supportsIndexPicking,
   picking,
-  indexColorPicking,
-  indexPicking
+  indexPicking,
+  type PickingManager
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {GPURenderable, GPUTable, GPUTableModel} from '@luma.gl/tables';
@@ -219,7 +223,7 @@ class InstancedCube extends GPUTableModel {
       vs: VS_GLSL,
       fs: FS_GLSL,
       // @ts-expect-error Remove once npm package updated with new types
-      modules: [dirlight, supportsIndexPicking(device) ? indexPicking : indexColorPicking],
+      modules: [dirlight, getArrowPickingModule(device)],
       geometry: new CubeGeometry({indices: true}),
       parameters: {
         depthWriteEnabled: true,
@@ -248,8 +252,8 @@ class InstancedCube extends GPUTableModel {
       topology: 'triangle-list',
       indices: cubeGeometry.indices!,
       attributes: {
-        positions: cubeGeometry.attributes.positions!,
-        normals: cubeGeometry.attributes.normals!
+        POSITION: cubeGeometry.attributes.POSITION!,
+        NORMAL: cubeGeometry.attributes.NORMAL!
       }
     });
 
@@ -339,10 +343,7 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
     this.instanceArrowTable = makeInstanceArrowTable(this.instancesPerSide);
     this.cube = this.createCube();
     this.pickingCube = this.createPickingCube();
-    this.picker = new PickingManager(device, {
-      shaderInputs: this.shaderInputs,
-      mode: 'auto'
-    });
+    this.picker = createArrowPickingManager(device, {shaderInputs: this.shaderInputs});
   }
 
   setProps(props: ArrowInstancedMeshRendererProps): void {
@@ -378,17 +379,16 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
   }
 
   pick(mousePosition: number[] | null | undefined, options: PickingShouldPickOptions = {}): void {
-    if (!this.picker.shouldPick(mousePosition as [number, number] | null, options)) {
-      return;
-    }
-
-    const pickingCube = this.pickingCube || this.cube;
-    const pickingPass = this.picker.beginRenderPass();
-    pickingCube.draw(pickingPass);
-    pickingPass.end();
-
-    this.shaderInputs.setProps({picking: {isActive: false}});
-    this.picker.updatePickInfo(mousePosition as [number, number]);
+    runArrowPickingPass({
+      picker: this.picker,
+      mousePosition,
+      pickingOptions: options,
+      shaderInputs: this.shaderInputs,
+      draw: pickingPass => {
+        const pickingCube = this.pickingCube || this.cube;
+        pickingCube.draw(pickingPass);
+      }
+    });
   }
 
   getInstanceArrowTable(): InstanceArrowTable {
@@ -403,7 +403,7 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
   }
 
   createPickingCube(): Model | null {
-    if (!supportsIndexPicking(this.device)) {
+    if (!supportsArrowIndexPicking(this.device)) {
       return null;
     }
 

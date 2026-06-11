@@ -13,14 +13,14 @@ type GPGPUDocsTab = {
 /** GPGPU documentation tab identifiers. */
 export type GPGPUDocsTabId =
   | 'overview'
-  | 'gpu-table'
+  | 'gpu-data-evaluator'
   | 'operations'
   | 'custom-operation'
   | 'clean-evaluate';
 
 const GPGPU_DOCS_TABS: GPGPUDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/gpgpu'},
-  {id: 'gpu-table', label: 'GPUTableEvaluator', href: '/docs/api-reference/gpgpu/gpu-table'},
+  {id: 'gpu-data-evaluator', label: 'GPU Evaluators', href: '/docs/api-reference/gpgpu/gpu-data-evaluator'},
   {id: 'operations', label: 'Operations', href: '/docs/api-reference/gpgpu/operations'},
   {
     id: 'custom-operation',

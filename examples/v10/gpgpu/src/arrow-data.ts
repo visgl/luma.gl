@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {getArrowFixedSizeListValues, getArrowVectorBufferSource} from '@luma.gl/arrow';
-import {GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator} from '@luma.gl/gpgpu';
 import * as arrow from 'apache-arrow';
 import type {ExpressionInputs} from './expression';
 import {formatFixedRow, formatSegmentedRow, type TableColumn} from './table-renderer';
@@ -90,25 +90,22 @@ function makeTableColumnsFromArrowTable(table: ShowcaseArrowTable): TableColumn[
   );
   validateFixedSizeListColumn(coordinatesVector, 'coordinates', arrow.Precision.DOUBLE, 3);
   const coordinateValues = getArrowFixedSizeListValues(coordinatesVector) as Float64Array;
-  const coordinatesEvaluator = GPUTableEvaluator.fromArray(coordinateValues, {
+  const coordinatesEvaluator = GPUDataEvaluator.fromArray(coordinateValues, {
     size: COORDINATE_COMPONENT_COUNT
   });
 
   const rankingVector = getRequiredColumn<arrow.Uint8>(table, 'ranking');
   validateUint8Column(rankingVector, 'ranking');
   const rankingValues = getArrowVectorBufferSource(rankingVector) as Uint8Array;
-  const rankingEvaluator = GPUTableEvaluator.fromArray(rankingValues, {type: 'uint8', size: 1});
+  const rankingEvaluator = GPUDataEvaluator.fromArray(rankingValues, {type: 'uint8', size: 1});
 
   const sampleMetricsVector = getRequiredColumn<arrow.List<arrow.Float32>>(table, 'sampleMetrics');
   const sampleMetrics = getSampleMetricBuffers(sampleMetricsVector);
-  const sampleMetricValuesEvaluator = GPUTableEvaluator.fromArray(sampleMetrics.values, {size: 1});
-  const sampleMetricStartIndicesEvaluator = GPUTableEvaluator.fromArray(
-    sampleMetrics.startIndices,
-    {
-      type: 'uint32',
-      size: 1
-    }
-  );
+  const sampleMetricValuesEvaluator = GPUDataEvaluator.fromArray(sampleMetrics.values, {size: 1});
+  const sampleMetricStartIndicesEvaluator = GPUDataEvaluator.fromArray(sampleMetrics.startIndices, {
+    type: 'uint32',
+    size: 1
+  });
 
   return [
     {

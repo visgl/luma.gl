@@ -3,22 +3,22 @@
 // Copyright (c) vis.gl contributors
 
 import type {Buffer, TypedArray} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import type {OperationHandlerResult} from '../../operation/operation';
 
 type CPUTransformProps =
   | {
       elementWise: true;
       func: (...args: number[]) => number;
-      inputs: {[name: string]: GPUTableEvaluator};
-      output: GPUTableEvaluator;
+      inputs: {[name: string]: GPUDataEvaluator};
+      output: GPUDataEvaluator;
       outputBuffer: Buffer;
     }
   | {
       elementWise?: false;
       func: (...args: TypedArray[]) => void;
-      inputs: {[name: string]: GPUTableEvaluator};
-      output: GPUTableEvaluator;
+      inputs: {[name: string]: GPUDataEvaluator};
+      output: GPUDataEvaluator;
       outputBuffer: Buffer;
     };
 
@@ -62,7 +62,7 @@ export function runCPUTransform({
   };
 }
 
-export function getValueAtRow(source: GPUTableEvaluator, index: number): TypedArray {
+export function getValueAtRow(source: GPUDataEvaluator, index: number): TypedArray {
   const value = source.value!;
   const valueSize = source.size;
   const valueOffset = source.offset / source.ValueType.BYTES_PER_ELEMENT;
@@ -82,7 +82,7 @@ export function getValueAtRow(source: GPUTableEvaluator, index: number): TypedAr
   return normalizedRow;
 }
 
-function normalizeValue(value: number, type: GPUTableEvaluator['type']): number {
+function normalizeValue(value: number, type: GPUDataEvaluator['type']): number {
   switch (type) {
     case 'uint8':
       return value / 255;

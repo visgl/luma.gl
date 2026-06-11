@@ -10,7 +10,7 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 
 - [`Operations`](/docs/api-reference/gpgpu/operations)
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation)
-- [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table)
+- [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator)
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
 
 ## Installing
@@ -26,14 +26,14 @@ Interleaving two buffers together
 ```ts
 import {luma} from '@luma.gl/core';
 import {webglAdapter} from '@luma.gl/webgl';
-import {GPUTableEvaluator, add, interleave} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, add, interleave} from '@luma.gl/gpgpu';
 
-const inputA = GPUTableEvaluator.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
-const inputB = GPUTableEvaluator.fromArray(new Float32Array([10, 20]), {size: 1});
+const inputA = GPUDataEvaluator.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
+const inputB = GPUDataEvaluator.fromArray(new Float32Array([10, 20]), {size: 1});
 const output = interleave(inputA, inputB);
 
 // Operations can be chained
-const outputAlt = interleave(inputA, add(inputB, GPUTableEvaluator.fromConstant(1)));
+const outputAlt = interleave(inputA, add(inputB, GPUDataEvaluator.fromConstant(1)));
 
 // No computation is performed until the output is evaluated.
 // The WebGL backend is loaded automatically on first use.
@@ -101,7 +101,7 @@ registering CPU handlers for another device type.
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) shows how to define lazy operations and register backend handlers.
-- [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations. It can borrow packed single-chunk `GPUVector` inputs from `@luma.gl/tables`.
+- [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator) documents `GPUDataEvaluator` for one packed `GPUData` chunk and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate) evaluates final result tables and cleans up intermediate dependencies in one step.
 
 ## Related Engine APIs

@@ -15,7 +15,7 @@ import {createDevice, type DeviceType, useStore} from '../store/device-store';
 
 export type DocumentationDeviceType = Extract<
   DeviceType,
-  'webgpu-max' | 'webgpu-core' | 'webgl'
+  'webgpu-max' | 'webgpu-core' | 'webgpu-compatibility' | 'webgl'
 >;
 
 const BYTE_LIMITS = new Set<keyof DeviceLimits>([

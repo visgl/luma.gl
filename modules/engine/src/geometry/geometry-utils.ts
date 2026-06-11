@@ -201,10 +201,7 @@ function getInterleavedSourceAttributes(
   attributeNames?: string[]
 ): Array<[string, GeometryAttribute | undefined]> {
   if (attributeNames) {
-    return attributeNames.map(attributeName => {
-      const normalizedAttributeName = getGeometryShaderAttributeName(attributeName);
-      return [normalizedAttributeName, geometry.attributes[normalizedAttributeName]];
-    });
+    return attributeNames.map(attributeName => [attributeName, geometry.attributes[attributeName]]);
   }
   return Object.entries(geometry.attributes);
 }

@@ -4,12 +4,28 @@
 
 import type {Device} from '@luma.gl/core';
 import {
+  ArrowTextRenderer,
+  clearArrowPickingState,
+  createArrowTextPickingManager,
+  createArrowTextPickingModel,
+  drawArrowTextPickingPass,
+  resolveArrowPickInfo,
+  runArrowPickingPass,
+  supportsTextIndexPicking,
+  type ArrowTextRendererActiveModel,
+  type ArrowTextRendererDataBatchUpdate,
+  type ArrowTextRendererInput,
+  type ArrowTextRendererProps,
+  type ArrowTextRendererSetPropsResult
+} from '@luma.gl/arrow';
+import {
   AnimationLoopTemplate,
   type AnimationProps,
   type Model,
   type PickingManager,
   type PickingShouldPickOptions
 } from '@luma.gl/engine';
+import type {GPUTable} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   ArrowText2DControlPanel,
@@ -41,30 +57,9 @@ import {
   type TextTableSizeKind
 } from './arrow-text-data';
 import {
-  createArrowTextPickingManager,
-  createArrowTextPickingModel,
-  drawArrowTextPickingPass,
-  supportsTextIndexPicking
-} from './arrow-text-picking';
-import {
   DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH,
   getArrowTextRendererMetrics
 } from './arrow-text-metrics';
-import {
-  CAMERA_PAN_SPEED_X,
-  CAMERA_PAN_SPEED_Y,
-  GLYPH_WORLD_SCALE,
-  VIEW_HEIGHT,
-  CHARACTER_SET
-} from './arrow-text-shaders';
-import {
-  ArrowTextRenderer,
-  type ArrowTextRendererActiveModel,
-  type ArrowTextRendererDataBatchUpdate,
-  type ArrowTextRendererInput,
-  type ArrowTextRendererProps,
-  type ArrowTextRendererSetPropsResult
-} from './arrow-text-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
@@ -78,8 +73,13 @@ type TextRendererUpdateOptions = {
   syncControls?: boolean;
   updateMetrics?: boolean;
 };
-const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
-const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
+const GLYPH_WORLD_SCALE = 0.36;
+const VIEW_HEIGHT = 820;
+const CAMERA_PAN_SPEED_X = 72;
+const CAMERA_PAN_SPEED_Y = 56;
+const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
+const TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
@@ -346,22 +346,30 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     mousePosition: number[] | null | undefined,
     options: PickingShouldPickOptions = {}
   ): void {
-    if (
-      !this.picker ||
-      !this.picker.shouldPick(mousePosition as [number, number] | null, options)
-    ) {
+    if (!this.picker) {
+      return;
+    }
+    if (!mousePosition) {
+      clearArrowPickingState(this.picker, this.handleObjectPicked);
       return;
     }
 
     this.textRenderer.shaderInputs.setProps({picking: {batchIndex: 0}});
     this.pickingModel?.predraw(this.device.commandEncoder);
-    const pickingPass = this.picker.beginRenderPass();
-    if (this.pickingModel) {
-      drawArrowTextPickingPass(pickingPass, this.pickingModel, this.textModel);
-    }
-    pickingPass.end();
-    this.textRenderer.shaderInputs.setProps({picking: {isActive: false}});
-    void this.picker.updatePickInfo(mousePosition as [number, number]);
+    runArrowPickingPass({
+      picker: this.picker,
+      mousePosition,
+      pickingOptions: options,
+      shaderInputs: this.textRenderer.shaderInputs,
+      draw: pickingPass => {
+        if (!this.pickingModel) {
+          return false;
+        }
+        drawArrowTextPickingPass(pickingPass, this.pickingModel, this.textModel, {
+          onBatch: batchIndex => this.textRenderer.shaderInputs.setProps({picking: {batchIndex}})
+        });
+      }
+    });
   }
 
   createPickingModel(): Model | null {
@@ -377,13 +385,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     }
     if (
       (modelKind === 'storage' || modelKind === 'storage-row-indexed') &&
-      !supportsVertexStorageBuffers(this.device, STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT)
+      !supportsVertexStorageBuffers(this.device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT)
     ) {
       return 'auto';
     }
     if (
       modelKind === 'dictionary' &&
-      (!supportsVertexStorageBuffers(this.device, DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT) ||
+      (!supportsVertexStorageBuffers(this.device, TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT) ||
         !isArrowTextDictionarySource(rendererTextInput.sourceVectors))
     ) {
       return 'auto';
@@ -601,13 +609,34 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     batchIndex: number | null;
     objectIndex: number | null;
   }): void => {
+    const pickInfo = resolveArrowPickInfo(
+      {batchIndex, objectIndex},
+      getTextModelTable(this.textModel)
+    );
     this.textRenderer.setNeedsRedraw('picked Arrow row changed');
     this.controlPanel?.setPickedLabel(
-      batchIndex === null || objectIndex === null
+      pickInfo.rowIndex === null
         ? 'Hover text'
-        : 'row ' + objectIndex.toLocaleString()
+        : formatTextPickingLabel(pickInfo.batchIndex, pickInfo.rowIndex, pickInfo.batchRowIndex)
     );
   };
+}
+
+function getTextModelTable(textModel: ActiveTextModel): Pick<GPUTable, 'batches'> | null {
+  const table = (textModel as {table?: Pick<GPUTable, 'batches'>}).table;
+  return table ?? null;
+}
+
+function formatTextPickingLabel(
+  batchIndex: number | null,
+  rowIndex: number,
+  batchRowIndex: number | null
+): string {
+  if (batchIndex === null) {
+    return 'row ' + rowIndex.toLocaleString();
+  }
+  const batchRowLabel = batchRowIndex === null ? '-' : batchRowIndex.toLocaleString();
+  return `row ${rowIndex.toLocaleString()} / batch ${(batchIndex + 1).toLocaleString()} / batch row ${batchRowLabel}`;
 }
 
 function deriveArrowTextRendererData(

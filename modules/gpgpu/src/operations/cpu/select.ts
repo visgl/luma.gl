@@ -3,13 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {getValueAtRow} from './common';
 
 export const select: OperationHandler<{
-  condition: GPUTableEvaluator;
-  whenTrue: GPUTableEvaluator;
-  whenFalse: GPUTableEvaluator;
+  condition: GPUDataEvaluator;
+  whenTrue: GPUDataEvaluator;
+  whenFalse: GPUDataEvaluator;
 }> = async ({inputs, output, target}) => {
   const {condition, whenTrue, whenFalse} = inputs;
   const result = new output.ValueType(output.length * output.size);

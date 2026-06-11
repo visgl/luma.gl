@@ -13,7 +13,7 @@ import {
   getChangedSetting,
   makeHtmlCustomPanel
 } from '../../example-panels';
-import type {ArrowTextRendererProps} from './arrow-text-renderer';
+import type {ArrowTextRendererProps} from '@luma.gl/arrow';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 type TextModelKind = NonNullable<ArrowTextRendererProps['model']>;
@@ -38,8 +38,8 @@ const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-text-2d-streaming-batch-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-text-2d-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-text-2d-streaming-batch-status-label';
-const STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 8;
-const DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT = 10;
+const TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 8;
+const TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
 export type ArrowText2DControlPanelRowCountKind =
   | '10k'
@@ -266,11 +266,11 @@ export function makeArrowText2DSettingsSchema(
 ): SettingsSchema {
   const supportsStorageText = supportsVertexStorageBuffers(
     device,
-    STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+    TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT
   );
   const supportsDictionaryText = supportsVertexStorageBuffers(
     device,
-    DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT
+    TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT
   );
   return {
     title: 'Settings',
@@ -361,7 +361,7 @@ export function makeArrowText2DSettingsSchema(
             type: 'select',
             persist: 'none',
             options: [
-              {label: 'Attributes', value: 'attribute'},
+              {label: 'Attribute', value: 'attribute'},
               ...(state.colorKind === 'character-colors' || !supportsStorageText
                 ? []
                 : [{label: 'Storage', value: 'storage'}]),
@@ -507,11 +507,11 @@ function getAutoTextModelLabel(
   }
   if (
     state.sourceKind === 'dictionary' &&
-    supportsVertexStorageBuffers(device, DICTIONARY_TEXT_VERTEX_STORAGE_BUFFER_COUNT)
+    supportsVertexStorageBuffers(device, TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT)
   ) {
     return 'Dictionary';
   }
-  if (supportsVertexStorageBuffers(device, STORAGE_TEXT_VERTEX_STORAGE_BUFFER_COUNT)) {
+  if (supportsVertexStorageBuffers(device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT)) {
     return 'Storage';
   }
   return 'Attributes';

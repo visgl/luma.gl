@@ -1,0 +1,137 @@
+import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
+
+# Arrow Table Conversion
+
+<ArrowDocsTabs active="conversion" />
+
+## Arrow Vector Factories
+
+## List Columns
+
+Arrow vector factories also support variable-length Arrow list columns whose
+nested elements contain one to four numeric components. This covers scalar lists
+plus tuple-style data such as XY, XYZ, and XYZM coordinates, while copying only
+compact list-offset metadata needed for readback instead of retaining the
+uploaded Arrow value arrays.
+
+### Path Columns
+
+Path Vectors are list of coordinates that are interpreted as a open paths or closed paths.
+Closed paths are often used to represent polygon outlines.
+
+### `closeArrowPaths()`
+
+`closeArrowPaths()` normalizes Float32 path rows before rendering or expansion:
+closed paths whose first and last vertices differ by more than an epsilon receive
+an appended copy of their first vertex, while already-closed, open, empty, and
+single-point paths remain unchanged. 
+
+The Float32 rows can be absolute path
+coordinates or origin-relative deltas produced from Float64 path conversion.
+WebGPU uses compute classification and scatter passes; other devices use
+equivalent CPU fallback semantics.
+
+###
+
+`ArrowPathRenderer.convertToGPUVectors()` and `convertArrowPathToGPUVectors()` are the
+path-attribute conversion boundary. Float32 XY, XYZ, and XYZM path rows upload
+unchanged unless closure is requested. Float64 path rows convert on the CPU into
+stable per-row Float32 deltas from the first point; CPU Float64 origins are kept
+separately, and `updateViewOrigins()` refreshes the per-row view-origin buffers
+when the view or model matrix changes.
+`ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` and
+`convertArrowPathStorageToGPUVectors()` provide the storage-only WebGPU boundary:
+Float64 rows upload temporarily, convert once into Float32 deltas with
+`sub_fp64u32_to_f32`, then release the transient Float64 GPU payload before
+returning storage path props.
+
+`PathAttributeModel` consumes prepared path props and expands one logical path row
+into packed per-segment render records. `PathStorageModel` is the WebGPU
+storage-backed counterpart. It expands nested path rows into compact indexed
+segment records through compute using the GPU-resident prepared path values plus
+copied list-offset metadata. Render shaders fetch coordinates from path-value
+storage and add per-row view origins, while per-path color and width rows remain
+storage-buffer bindings instead of being duplicated per generated segment.
+Default storage records use three `u32` words per segment
+(`segmentStartPointIndex`, `segmentFlags`, and `globalRowIndex`) plus one
+persistent `vec4<u32>` path range per source row. Shaders that request legacy
+end, previous, or next segment index attributes automatically keep the older
+six-word record layout.
+
+Reusable storage state can be built separately with `createArrowPathStorageState`.
+`PathTripsStorageModel` layers Trips-style temporal filtering over that
+storage path surface by reading prepared `List<Float32>` timestamps aligned with
+path vertices.
+
+## Matrix Columns
+
+Matrix Arrow columns can carry explicit vis.gl matrix shape, order, and physical
+layout metadata through `makeArrowMatrixVector()` and the shape-specific matrix
+builders. 
+
+`convertArrowMatrixToGPUVector()` accepts metadata-tagged
+`FixedSizeList<Float32>` or `FixedSizeList<Float64>` rows, then returns one
+canonical Float32 column-major `wgsl-storage` GPU vector. Canonical Float32 GPU
+vectors pass through, raw Arrow Float64 rows truncate to Float32 during CPU
+conversion, and non-canonical GPU-resident rows normalize with WebGPU compute.
+The same prepared column can lower into matrix attribute columns or bind as
+`array<matCxR<f32>>`.
+
+## Time Columns
+
+Temporal Arrow columns can be converted with `convertArrowTemporalToGPUVector()` or
+`convertArrowTemporalToGPUVectors()`. Supported v1 leaves are `Date`, `Time`,
+`Timestamp`, and `Duration`, including `List<...>` leaves for Trips-style
+streams. Conversion emits relative Float32 values in the original Arrow unit,
+persists the selected origin metadata on the prepared field, chooses the first
+valid absolute value when no origin is stored, and uses origin `0` for
+durations. Raw Arrow inputs use CPU fallback where WebGPU is unavailable;
+GPU-resident temporal inputs use WebGPU compute.
+
+## Global Grid Columns
+
+DGGS helpers keep compact global grid keys on the GPU. `convertDggsCellIdsToGPUKeys()`
+parses UTF-8 geohash, quadkey, S2, A5, or H3 cell IDs into Uint64 GPU keys on
+WebGPU, while `convertDggsCellKeysToGPUPaths()` expands prepared Uint64 keys into
+closed Float32 cell boundary paths for path-style rendering. Its optional
+`coordinateFormat: 'fp64-split'` mode emits
+`[longitudeHigh, latitudeHigh, longitudeLow, latitudeLow]` Float32 components,
+but DGGS boundary math still runs in Float32 today, so the low components are
+zero until true higher-precision decode math is added. The `dggs` shader module
+provides the matching WGSL Uint64 word and DGGS boundary helpers.
+
+## Columnar Geometries
+
+`ArrowTableGeometry` and `makeGPUGeometryFromArrow()` can convert
+loaders.gl-compatible Mesh Arrow tables through the local structural
+`ArrowMeshTable` type. Mesh Arrow attributes are uploaded as table-backed GPU
+geometry, defaulting to one interleaved vertex buffer plus a separate optional
+index buffer.
+
+For lower-level table pipelines, import `GPUTableBufferPlanner` from
+`@luma.gl/tables` to produce deterministic GPU allocation plans from column
+descriptors while respecting device vertex and storage buffer limits.
+
+
+## BufferLayouts
+
+The module can derive GPU `BufferLayout` entries from Arrow schemas and create
+`@luma.gl/tables` objects from compatible Arrow columns through
+`makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and
+`makeGPUTableFromArrowTable()`. The generic GPU table object model is documented in
+[`@luma.gl/tables`](/docs/api-reference/tables), with an object model overview
+in [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure).
+
+Arrow upload helpers now produce format-first GPU objects:
+
+- fixed Arrow columns become `GPUVector.format` values such as `float32x3` or
+  `unorm8x4`;
+- list-of-vertex Arrow columns become `vertex-list<...>` formats;
+- `GPUSchema` records the selected GPU fields;
+- Arrow `DataType` values remain adapter metadata for migration and readback.
+
+Streaming helpers preserve batch and buffer boundaries by creating one immutable
+`GPURecordBatch` per incoming Arrow record batch. Each Arrow data chunk is
+uploaded into a new `GPUData` with its own buffer, and `GPUTable` aggregate
+vectors expose the logical column through `GPUVector.data[]`.
+instead of merging previous batches into one larger buffer.

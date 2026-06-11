@@ -4,7 +4,7 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, fround, GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {cleanEvaluate, fround, GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {getTestDevice, verifyTableValue} from './fixtures';
 
 function splitFloatsCPU(input: number[], size: number): number[] {
@@ -97,7 +97,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
 
     for (const testCase of TEST_CASES) {
       const output = fround(
-        GPUTableEvaluator.fromArray(new Float64Array(testCase.values), {size: testCase.size})
+        GPUDataEvaluator.fromArray(new Float64Array(testCase.values), {size: testCase.size})
       );
       test(output.toString(), async t => {
         if (!device) {

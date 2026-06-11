@@ -61,6 +61,20 @@ void main() {
 }
 `;
 
+const VS_INDEXED_DRAW = /* glsl */ `\
+#version 300 es
+
+const vec2 POSITIONS[3] = vec2[3](
+  vec2(0.0, 0.5),
+  vec2(-0.5, -0.5),
+  vec2(0.5, -0.5)
+);
+
+void main() {
+  gl_Position = vec4(POSITIONS[gl_VertexID], 0.0, 1.0);
+}
+`;
+
 const FS_MIXED_SAMPLERS = /* glsl */ `\
 #version 300 es
 precision highp float;
@@ -192,6 +206,75 @@ test('WEBGLRenderPipeline initializes mixed sampler uniforms before validation',
     'render pipeline with sampler2D and samplerCube links successfully'
   );
 
+  renderPipeline.destroy();
+  vs.destroy();
+  fs.destroy();
+  device.destroy();
+  t.end();
+});
+
+test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const vs = device.createShader({stage: 'vertex', source: VS_INDEXED_DRAW});
+  const fs = device.createShader({stage: 'fragment', source: FS_THREE_UBOS});
+  const renderPipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+
+  const linkStatus = await waitForLinkStatus(renderPipeline);
+  t.equal(linkStatus, 'success', 'indexed render pipeline linked successfully');
+  if (linkStatus !== 'success') {
+    renderPipeline.destroy();
+    vs.destroy();
+    fs.destroy();
+    device.destroy();
+    t.end();
+    return;
+  }
+
+  const indexBuffer = device.createBuffer({
+    usage: Buffer.INDEX,
+    data: new Uint16Array([0, 1, 2])
+  });
+  const vertexArray = device.createVertexArray({
+    shaderLayout: renderPipeline.shaderLayout,
+    bufferLayout: renderPipeline.bufferLayout
+  });
+  vertexArray.setIndexBuffer(indexBuffer);
+  const renderPass = new WEBGLRenderPass(device, {});
+  const indexedDrawCounts: number[] = [];
+  const indexedInstancedDrawCounts: number[] = [];
+  const drawElements = gl.drawElements.bind(gl);
+  const drawElementsInstanced = gl.drawElementsInstanced.bind(gl);
+  gl.drawElements = ((mode, count, type, offset) => {
+    indexedDrawCounts.push(count);
+    drawElements(mode, count, type, offset);
+  }) as typeof gl.drawElements;
+  gl.drawElementsInstanced = ((mode, count, type, offset, instanceCount) => {
+    indexedInstancedDrawCounts.push(count);
+    drawElementsInstanced(mode, count, type, offset, instanceCount);
+  }) as typeof gl.drawElementsInstanced;
+
+  try {
+    renderPipeline.draw({renderPass, vertexArray, vertexCount: 3, indexCount: 2});
+    renderPipeline.draw({
+      renderPass,
+      vertexArray,
+      vertexCount: 3,
+      indexCount: 2,
+      isInstanced: true,
+      instanceCount: 1
+    });
+  } finally {
+    gl.drawElements = drawElements;
+    gl.drawElementsInstanced = drawElementsInstanced;
+  }
+
+  t.deepEqual(indexedDrawCounts, [2], 'non-instanced indexed draw uses indexCount');
+  t.deepEqual(indexedInstancedDrawCounts, [2], 'instanced indexed draw uses indexCount');
+
+  renderPass.end();
+  vertexArray.destroy();
+  indexBuffer.destroy();
   renderPipeline.destroy();
   vs.destroy();
   fs.destroy();

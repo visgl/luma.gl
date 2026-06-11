@@ -43,7 +43,7 @@ Implementation notes:
 
 - Direct position rows can be consumed as row-aligned attributes or storage rows.
 - Float64 positions preserve source precision in Arrow, then adapters repack to
-  Float32, origin-relative Float32, or word-pair storage at preparation boundaries.
+  Float32, origin-relative Float32, or word-pair storage at conversion boundaries.
 
 ### Colors
 
@@ -114,9 +114,9 @@ Implementation notes:
 
 - Matrix columns require vis.gl matrix metadata. The recommended construction path
   is `makeArrowMatrixVector()` or a shape-specific `makeArrowMatrix*Vector()`.
-- `prepareArrowMatrixGPUVector()` emits canonical Float32 column-major
+- `convertArrowMatrixToGPUVector()` emits canonical Float32 column-major
   `wgsl-storage` rows. Float64 source matrices preserve source precision in Arrow
-  but truncate to Float32 during preparation.
+  but truncate to Float32 during conversion.
 - WebGPU storage paths can bind one matrix column as `array<matCxR<f32>>`.
   Attribute paths lower the same matrix column into multiple vector attributes.
 
@@ -145,7 +145,7 @@ Implementation notes:
 - Absolute temporal columns use the first valid value as the origin unless an
   origin is supplied. Duration columns use origin `0`.
 - Temporal columns are not generic vertex attributes; they need temporal
-  preparation or model-specific storage/compute consumption.
+  conversion or model-specific storage/compute consumption.
 
 ### Interleaved Data
 
@@ -198,7 +198,7 @@ Semantic notes:
 Implementation notes:
 
 - Path coordinates are encoded as flattened coordinate values plus list offsets.
-- Float64 path rows preserve precise coordinates in Arrow, then adapters prepare
+- Float64 path rows preserve precise coordinates in Arrow, then adapters convert
   per-row Float32 deltas plus retained origins before rendering.
 - RGB source colors are planned but not currently supported.
 

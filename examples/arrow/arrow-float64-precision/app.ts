@@ -17,9 +17,9 @@ import {
 } from './arrow-float64-precision-renderer';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
-export const title = 'Float64 Precision: Survey lines';
+export const title = 'Float64 Origin Rebasing: Survey lines';
 export const description =
-  'Large-coordinate Arrow path rows compared as explicit Float32 casts and Float64-prepared per-row deltas plus view origins.';
+  'Large-coordinate Arrow path rows compared as explicit Float32 casts and Float64 origin rebasing with per-row deltas plus view origins.';
 
 const DEFAULT_COORDINATE_MAGNITUDE_KIND: CoordinateMagnitudeKind = '1e9';
 const DEFAULT_VIEW_STATE: ArrowFloat64PrecisionViewState = {
@@ -203,7 +203,7 @@ function addPaneLabels(): void {
   ].join('; ');
   paneLabels.innerHTML = `\
     <div style="text-align: center;">Float32 cast<br><span style="font-weight: 500; color: #9ed6e8;">expect snapped or collapsed detail</span></div>
-    <div style="text-align: center;">Float64 prepared<br><span style="font-weight: 500; color: #9ed6e8;">local detail preserved</span></div>
+    <div style="text-align: center;">Float64 origin rebasing<br><span style="font-weight: 500; color: #9ed6e8;">local detail preserved</span></div>
   `;
   document.body.appendChild(paneLabels);
 }

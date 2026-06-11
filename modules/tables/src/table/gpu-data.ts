@@ -31,7 +31,13 @@ export type GPUDataFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> 
   ownsBuffer?: boolean;
   /** Optional metadata owned by the producer, such as Arrow readback descriptors. */
   readbackMetadata?: GPUDataReadbackMetadata;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional row offsets for variable-length values normalized to this data chunk. */
+  valueOffsets?: Int32Array;
+  /** Optional row validity bitmap normalized to this data chunk. */
+  nullBitmap?: Uint8Array;
+  /** Optional number of uploaded value bytes referenced by this data chunk. */
+  valueByteLength?: number;
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   dataType?: unknown;
 };
 
@@ -44,9 +50,7 @@ export type GPUDataFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> 
 export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
   /** GPU buffer containing this chunk's bytes. */
   readonly buffer: Buffer | DynamicBuffer;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
-  readonly type: any;
-  /** @deprecated Adapter-owned legacy metadata; core tables do not inspect this value. */
+  /** Optional adapter-owned metadata; core tables do not inspect this value. */
   readonly dataType?: unknown;
   /** Canonical memory-layout descriptor for this data range, when this chunk has one value view. */
   readonly format?: T;
@@ -64,6 +68,12 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
   readonly rowByteLength: number;
   /** Optional producer-owned metadata retained for adapter-level readback. */
   readonly readbackMetadata?: GPUDataReadbackMetadata;
+  /** Optional row offsets for variable-length values normalized to this data chunk. */
+  readonly valueOffsets?: Int32Array;
+  /** Optional row validity bitmap normalized to this data chunk. */
+  readonly nullBitmap?: Uint8Array;
+  /** Optional number of uploaded value bytes referenced by this data chunk. */
+  readonly valueByteLength?: number;
   private ownsDataBuffer: boolean;
 
   constructor({
@@ -77,11 +87,13 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
     rowByteLength,
     ownsBuffer = false,
     readbackMetadata,
+    valueOffsets,
+    nullBitmap,
+    valueByteLength,
     dataType
   }: GPUDataFromBufferProps<T>) {
     const formatInfo = format ? getGPUVectorFormatInfo(format) : undefined;
     this.buffer = buffer;
-    this.type = dataType ?? format;
     this.dataType = dataType;
     this.format = format;
     this.length = length;
@@ -91,6 +103,9 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
     this.rowByteLength = rowByteLength ?? formatInfo?.byteLength ?? byteStride ?? this.stride;
     this.byteStride = byteStride ?? this.rowByteLength;
     this.readbackMetadata = readbackMetadata;
+    this.valueOffsets = valueOffsets;
+    this.nullBitmap = nullBitmap;
+    this.valueByteLength = valueByteLength;
     this.ownsDataBuffer = ownsBuffer;
   }
 

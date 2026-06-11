@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type BufferLayout} from '@luma.gl/core';
+import {type Binding, type Buffer, type BufferLayout} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';
@@ -10,6 +10,16 @@ import {createGPUVectorCollection} from './gpu-vector-collection';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
+};
+
+/** Generic source-row identity for a GPU record batch. */
+export type GPURecordBatchSourceInfo = {
+  /** Zero-based source batch index in the producing stream/table. */
+  sourceBatchIndex: number;
+  /** Zero-based source row index assigned to the first logical source row in this batch. */
+  sourceRowIndexOffset: number;
+  /** Number of logical source rows represented by this batch. */
+  sourceRowCount: number;
 };
 
 /** Props for constructing a GPU record batch from existing vectors and metadata. */
@@ -24,10 +34,12 @@ export type GPURecordBatchFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = 
   numRows?: number;
   /** Optional batch-level schema metadata. */
   metadata?: Map<string, string>;
+  /** Optional source-row identity retained for picking and row-level diagnostics. */
+  sourceInfo?: GPURecordBatchSourceInfo;
   /** Number of null rows in the generated GPU record batch. */
   nullCount?: number;
   /** Optional model-ready storage bindings keyed by shader binding name. */
-  bindings?: Record<string, Buffer | DynamicBuffer>;
+  bindings?: Record<string, Binding | DynamicBuffer>;
 };
 
 /** Generic record-batch construction props. */
@@ -51,7 +63,9 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   /** Model-ready attribute buffers keyed by buffer layout name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
   /** Model-ready storage bindings keyed by shader binding name. */
-  readonly bindings: Record<string, Buffer | DynamicBuffer> = {};
+  readonly bindings: Record<string, Binding | DynamicBuffer> = {};
+  /** Optional source-row identity retained from the producing table/stream. */
+  readonly sourceInfo?: GPURecordBatchSourceInfo;
 
   /** Creates one GPU record batch from named GPU vectors and optional schema metadata. */
   constructor({
@@ -60,6 +74,7 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
     fields,
     numRows,
     metadata,
+    sourceInfo,
     nullCount = 0,
     bindings = {}
   }: GPURecordBatchFromVectorsProps<T>) {
@@ -82,6 +97,7 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
       metadata: metadata ?? new Map()
     };
     this.numCols = vectorCollection.fields.length;
+    this.sourceInfo = sourceInfo ? {...sourceInfo} : undefined;
   }
 
   /** Adds logical row/null counts after an adapter appends into batch-local vectors. */

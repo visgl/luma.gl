@@ -4,13 +4,13 @@
 
 import {BufferTransform} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {createTableTexture, getSourceValuesTextureModule} from './common/random-access-transform';
 import {getTextureDataType} from './common/helper';
 import {getOutputModule} from './common/row-transform';
 
 export const segmentedMap: OperationHandler<{
-  segments: GPUTableEvaluator;
+  segments: GPUDataEvaluator;
   vertexCount: number;
 }> = async ({inputs, output, target}) => {
   const {segments} = inputs;

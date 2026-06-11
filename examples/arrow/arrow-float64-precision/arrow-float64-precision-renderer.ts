@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  AttributePathModel,
-  prepareArrowPathGPUVectors,
+  ArrowPathRenderer,
+  convertArrowPathToGPUVectors,
   type PreparedArrowPathGPUVectors
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {GPURenderable, type GPUVector} from '@luma.gl/tables';
+import {PathAttributeModel, GPURenderable, type GPUVector} from '@luma.gl/tables';
 import type {ShaderInputs} from '@luma.gl/engine';
 import {
   createFloat64PrecisionShaderInputs,
@@ -35,16 +35,16 @@ export type ArrowFloat64PrecisionMetrics = {
   styleArrowByteLength: number;
   float32PreparedGpuByteLength: number;
   float64PreparedGpuByteLength: number;
-  float32PreparationTimeMs: number;
-  float64PreparationTimeMs: number;
+  float32ConversionTimeMs: number;
+  float64ConversionTimeMs: number;
   maxFloat32LocalError: number;
 };
 
 type PreparedPathView = {
   prepared: PreparedArrowPathGPUVectors;
-  model: AttributePathModel;
+  model: PathAttributeModel;
   shaderInputs: ShaderInputs<{precisionViewport: PrecisionViewportUniforms}>;
-  preparationTimeMs: number;
+  conversionTimeMs: number;
 };
 
 const LEFT_PANE_OFFSET: [number, number] = [-0.52, 0];
@@ -146,8 +146,8 @@ export class ArrowFloat64PrecisionRenderer extends GPURenderable<[RenderPass]> {
         this.float64View.prepared,
         this.float64View.model
       ),
-      float32PreparationTimeMs: this.float32View.preparationTimeMs,
-      float64PreparationTimeMs: this.float64View.preparationTimeMs,
+      float32ConversionTimeMs: this.float32View.conversionTimeMs,
+      float64ConversionTimeMs: this.float64View.conversionTimeMs,
       maxFloat32LocalError: this.sourceData.maxFloat32LocalError
     };
   }
@@ -166,8 +166,8 @@ async function createPreparedPathView(
   kind: 'float32' | 'float64'
 ): Promise<PreparedPathView> {
   const shaderInputs = createFloat64PrecisionShaderInputs();
-  const preparationStartTime = getNow();
-  const prepared = await prepareArrowPathGPUVectors(
+  const conversionStartTime = getNow();
+  const prepared = await convertArrowPathToGPUVectors(
     device,
     {
       paths: kind === 'float64' ? sourceData.pathsFloat64 : sourceData.pathsFloat32Local,
@@ -176,8 +176,9 @@ async function createPreparedPathView(
     },
     {id: `arrow-float64-precision-${kind}`}
   );
-  const model = new AttributePathModel(device, {
-    ...prepared.pathProps,
+  const model = ArrowPathRenderer.createModel(device, {
+    model: 'attribute',
+    ...prepared,
     id: `arrow-float64-precision-${kind}`,
     source: WGSL_SHADER,
     vs: VS_GLSL,
@@ -193,7 +194,7 @@ async function createPreparedPathView(
     prepared,
     model,
     shaderInputs,
-    preparationTimeMs: getNow() - preparationStartTime
+    conversionTimeMs: getNow() - conversionStartTime
   };
 }
 
@@ -238,7 +239,7 @@ function makeModelViewMatrix(
 
 function getPreparedPathGpuByteLength(
   prepared: PreparedArrowPathGPUVectors,
-  model: AttributePathModel
+  model: PathAttributeModel
 ): number {
   return (
     getGpuVectorByteLength(prepared.paths) +

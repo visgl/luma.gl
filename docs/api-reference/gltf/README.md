@@ -159,6 +159,12 @@ Normally this is called automatically by parseGLTF/createScenegraphsFromGLTF
 but it can be invoked directly when applications need to construct a
 material programmatically.
 
+Parsed glTF primitive geometry preserves glTF mesh attribute semantics in
+`Geometry.attributes`, for example `POSITION`, `NORMAL`, and `TEXCOORD_0`. In the glTF 2.0
+specification, `mesh.primitive.attributes` maps those semantic keys to accessor indices; luma.gl
+stores the decoded typed-array data under the same semantic keys and maps them to shader-facing names
+only at render-layout boundaries. See the official [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html).
+
 ## Relationship to other modules
 
 - Relies on `@loaders.gl/gltf` for reading .gltf/.glb scene files.

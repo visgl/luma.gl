@@ -11,13 +11,14 @@ import {getErrorMessage, logError} from '../utils/error-utils';
 
 const DEVICE_TYPE_STORAGE_KEY = 'luma-device-type';
 const DEFAULT_DEVICE_TYPE: DeviceType = 'webgpu-core';
-const FALLBACK_DEVICE_TYPE_ORDER: DeviceType[] = ['webgpu-core', 'webgl'];
+const FALLBACK_DEVICE_TYPE_ORDER: DeviceType[] = ['webgpu-core', 'webgpu-compatibility', 'webgl'];
 
-export type DeviceType = 'webgl' | 'webgpu-core' | 'webgpu-max';
+export type DeviceType = 'webgl' | 'webgpu-core' | 'webgpu-max' | 'webgpu-compatibility';
 
 const WEBGPU_FEATURE_LEVELS = {
   'webgpu-core': 'core',
-  'webgpu-max': 'max'
+  'webgpu-max': 'max',
+  'webgpu-compatibility': 'compatibility'
 } as const satisfies Partial<Record<DeviceType, NonNullable<DeviceProps['featureLevel']>>>;
 
 export type Store = {
@@ -56,6 +57,7 @@ export async function createDevice(type: DeviceType): Promise<Device> {
       }
     });
 
+    validateCreatedDeviceType(type, device);
     return device;
   })().catch(error => {
     delete cachedDevice[type];
@@ -89,6 +91,7 @@ export async function createPresentationDevice(type: DeviceType): Promise<Device
       }
     });
 
+    validateCreatedDeviceType(type, device);
     return device;
   })().catch(error => {
     delete cachedPresentationDevice[type];
@@ -232,6 +235,18 @@ function isWebGPUDeviceType(type: DeviceType): boolean {
   return type.startsWith('webgpu-');
 }
 
+function validateCreatedDeviceType(type: DeviceType, device: Device): void {
+  const featureLevel = WEBGPU_FEATURE_LEVELS[type];
+  if (featureLevel && device.info.featureLevel !== featureLevel) {
+    throw new Error(`Requested ${featureLevel} WebGPU device, received ${device.info.featureLevel}`);
+  }
+}
+
 function isDeviceType(type: string | null): type is DeviceType {
-  return type === 'webgl' || type === 'webgpu-core' || type === 'webgpu-max';
+  return (
+    type === 'webgl' ||
+    type === 'webgpu-core' ||
+    type === 'webgpu-max' ||
+    type === 'webgpu-compatibility'
+  );
 }

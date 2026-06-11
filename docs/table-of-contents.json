@@ -166,7 +166,7 @@
         "label": "@luma.gl/gpgpu",
         "items": [
           "api-reference/gpgpu/README",
-          "api-reference/gpgpu/gpu-table",
+          "api-reference/gpgpu/gpu-data-evaluator",
           "api-reference/gpgpu/operations",
           "api-reference/gpgpu/custom-operation",
           "api-reference/gpgpu/clean-evaluate"
@@ -194,7 +194,7 @@
         "items": [
           "api-reference/arrow/README",
           "api-reference/arrow/arrow-representations",
-          "api-reference/arrow/arrow-preparation",
+          "api-reference/arrow/arrow-conversion",
           "api-reference/arrow/supported-arrow-types",
           "api-reference/arrow/deck-target-api",
           "api-reference/arrow/arrow-utils"

@@ -17,7 +17,7 @@ import {
   ArrowPolygonRenderer,
   type ArrowPolygonRendererModel,
   type ArrowPolygonRendererPickingInfo
-} from './arrow-polygon-renderer';
+} from '@luma.gl/arrow';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowPolygonControlPanel} from './control-panel';
 
@@ -40,7 +40,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   rowCountKind: ArrowPolygonRowCountKind = '10k-stream';
   sourceKind: ArrowPolygonSourceKind = 'polygon';
   colorKind: ArrowPolygonColorKind = 'row-colors';
-  modelKind: ArrowPolygonRendererModel = 'auto';
+  modelKind: ArrowPolygonRendererModel = 'attribute';
   viewState: ArrowPolygonViewState | null = null;
   animationSeconds = 0;
   lastRenderSeconds: number | null = null;

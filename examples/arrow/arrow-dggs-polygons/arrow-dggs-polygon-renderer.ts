@@ -8,15 +8,14 @@ import {
   packDggsH3CellKey,
   packDggsQuadkeyKey,
   packDggsS2CellKey,
-  prepareDggsCellKeyGPUVector,
-  prepareDggsCellPathGPUVector,
+  convertDggsCellIdsToGPUKeys,
+  convertDggsCellKeysToGPUPaths,
   type DggsCellEncoding,
   type PreparedDggsCellKeyGPUVector,
-  type PreparedDggsCellPathGPUVector,
-  type StoragePathModel
+  type PreparedDggsCellPathGPUVector
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {GPURenderable} from '@luma.gl/tables';
+import {GPURenderable, type PathStorageModel} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createDggsPolygonPathModel,
@@ -53,7 +52,7 @@ export type ArrowDggsPolygonRendererMetrics = {
   keyBytes: number;
   /** Bytes used by prepared boundary path data. */
   pathBytes: number;
-  /** Transient bytes used while preparing keys and paths. */
+  /** Transient bytes used while converting keys and paths. */
   transientBytes: number;
 };
 
@@ -163,7 +162,7 @@ export class ArrowDggsPolygonRenderer extends GPURenderable<[RenderPass, {aspect
   activeEncoding: DggsCellEncoding;
   activeSourceKind: DggsSourceKind;
   activeInput!: DggsPreparedInput;
-  pathModel!: StoragePathModel;
+  pathModel!: PathStorageModel;
   props: ArrowDggsPolygonRendererProps;
 
   constructor(device: Device, props: ArrowDggsPolygonRendererProps = {}) {
@@ -250,7 +249,7 @@ export class ArrowDggsPolygonRenderer extends GPURenderable<[RenderPass, {aspect
     let preparedKeys: PreparedDggsCellKeyGPUVector | undefined;
     let keys: PreparedDggsCellKeyGPUVector['keys'] | arrow.Vector<arrow.Uint64>;
     if (sourceKind === 'utf8') {
-      preparedKeys = prepareDggsCellKeyGPUVector(
+      preparedKeys = convertDggsCellIdsToGPUKeys(
         this.device,
         getTableVector<arrow.Utf8>(this.stringTable, encoding),
         {
@@ -262,7 +261,7 @@ export class ArrowDggsPolygonRenderer extends GPURenderable<[RenderPass, {aspect
     } else {
       keys = getTableVector<arrow.Uint64>(this.uint64Table, encoding);
     }
-    const preparedPaths = prepareDggsCellPathGPUVector(this.device, keys, {
+    const preparedPaths = convertDggsCellKeysToGPUPaths(this.device, keys, {
       id: `dggs-${sourceKind}-${encoding}-paths`,
       encoding
     });
@@ -278,7 +277,7 @@ export class ArrowDggsPolygonRenderer extends GPURenderable<[RenderPass, {aspect
     return preparedInput;
   }
 
-  createPathModel(input: DggsPreparedInput, encoding: DggsCellEncoding): StoragePathModel {
+  createPathModel(input: DggsPreparedInput, encoding: DggsCellEncoding): PathStorageModel {
     return createDggsPolygonPathModel(this.device, {
       id: `arrow-dggs-polygons-${encoding}`,
       paths: input.paths.paths,

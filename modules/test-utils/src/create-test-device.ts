@@ -37,7 +37,14 @@ type LostAwareDevice = {
   isLost: boolean;
 };
 
-type TestDeviceType = 'webgl' | 'webgpu' | 'webgpu-core' | 'webgpu-max' | 'null' | 'unknown';
+type TestDeviceType =
+  | 'webgl'
+  | 'webgpu'
+  | 'webgpu-core'
+  | 'webgpu-max'
+  | 'webgpu-compatibility'
+  | 'null'
+  | 'unknown';
 
 /**
  * Returns available test devices for the requested backend types.
@@ -65,6 +72,8 @@ export async function getTestDevice(type: TestDeviceType): Promise<Device | null
       return getWebGPUTestDevice('core');
     case 'webgpu-max':
       return getWebGPUTestDevice('max');
+    case 'webgpu-compatibility':
+      return getWebGPUTestDevice('compatibility');
     case 'null':
       return getOrCreateNullTestDevicePromise();
     case 'unknown':

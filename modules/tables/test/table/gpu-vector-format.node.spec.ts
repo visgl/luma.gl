@@ -14,22 +14,31 @@ import {
   getGPUVectorData,
   getRequiredGPUVector,
   isGPUVectorFormatCompatibleWithShaderType,
+  isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
 } from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('GPUVector format helpers parse fixed and vertex-list formats', t => {
+test('GPUVector format helpers parse fixed and variable-length formats', t => {
   const fixedInfo = getGPUVectorFormatInfo('float32x3');
   const vertexListInfo = getGPUVectorFormatInfo('vertex-list<unorm8x4>');
+  const valueListInfo = getGPUVectorFormatInfo('value-list<uint8>');
 
   t.equal(fixedInfo.elementFormat, 'float32x3', 'fixed vector element format is unchanged');
   t.equal(fixedInfo.vertexList, false, 'fixed vector is not a vertex list');
+  t.equal(fixedInfo.valueList, false, 'fixed vector is not a value list');
   t.equal(fixedInfo.byteLength, 12, 'fixed vector byte length is decoded');
   t.equal(vertexListInfo.elementFormat, 'unorm8x4', 'vertex-list exposes its element format');
   t.equal(vertexListInfo.vertexList, true, 'vertex-list marker is decoded');
+  t.equal(vertexListInfo.valueList, false, 'vertex-list is not a value-list');
   t.equal(vertexListInfo.primitiveType, 'f32', 'normalized list elements expose f32 values');
+  t.equal(valueListInfo.elementFormat, 'uint8', 'value-list exposes its element format');
+  t.equal(valueListInfo.vertexList, false, 'value-list is not a vertex-list');
+  t.equal(valueListInfo.valueList, true, 'value-list marker is decoded');
   t.equal(getGPUVectorElementFormat('vertex-list<unorm8x4>'), 'unorm8x4');
+  t.equal(getGPUVectorElementFormat('value-list<uint8>'), 'uint8');
   t.ok(isVertexListGPUVectorFormat('vertex-list<unorm8x4>'), 'recognizes vertex-list syntax');
+  t.ok(isValueListGPUVectorFormat('value-list<uint8>'), 'recognizes value-list syntax');
   t.notOk(isVertexListGPUVectorFormat('list<unorm8x4>'), 'generic list syntax is not accepted');
   t.throws(
     () => getGPUVectorFormatInfo('list<unorm8x4>' as never),
@@ -76,7 +85,7 @@ test('GPUVector accepts format as canonical metadata and synthesizes table layou
   const table = new GPUTable({vectors: {colors}});
 
   t.equal(colors.format, 'unorm8x4', 'stores the canonical GPUVector format');
-  t.equal(colors.type, 'unorm8x4', 'retains the deprecated type alias as format metadata');
+  t.notOk('type' in colors, 'drops the deprecated type alias');
   t.equal(table.bufferLayout[0].format, 'unorm8x4', 'table layout uses GPUVector.format');
 
   table.destroy();

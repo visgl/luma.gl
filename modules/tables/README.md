@@ -7,4 +7,10 @@ GPU-resident table primitives for luma.gl.
 `GPUVectorFormat`, and `VertexList`. Adapter modules such as `@luma.gl/arrow`
 create these objects from source data.
 
+Table-backed indexed rendering reserves the `indices` GPU vector name for a
+non-attribute `vertex-list<uint32>` draw column. Each preserved batch supplies
+one `Buffer.INDEX` `GPUData` chunk; `GPUTableModel.drawBatches()` binds that
+batch-local index buffer and uses the vector `valueLength` as the indexed draw
+count.
+
 See [luma.gl](https://luma.gl/docs/api-reference/tables) for documentation.

@@ -3,11 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  getCompatibleGPUTableEvaluatorFormat,
-  getGPUTableEvaluator,
-  GPUTableEvaluator,
-  type GPUTableEvaluatorInput
-} from '../operation/gpu-table-evaluator';
+  getCompatibleGPUDataEvaluatorFormat,
+  getGPUDataEvaluator,
+  GPUDataEvaluator,
+  type GPUDataEvaluatorInput
+} from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
 import {
   compileExpression,
@@ -33,11 +33,11 @@ export type ArithmeticOp =
 
 export type ArithmeticOperationInputs = {
   expression: Expression<ArithmeticOp>;
-  namedInputs: Record<string, GPUTableEvaluator>;
+  namedInputs: Record<string, GPUDataEvaluator>;
 };
 
-export type ArithmeticArgument = GPUTableEvaluatorInput | number | number[];
-type NormalizedArithmeticArgument = GPUTableEvaluator | number | number[];
+export type ArithmeticArgument = GPUDataEvaluatorInput | number | number[];
+type NormalizedArithmeticArgument = GPUDataEvaluator | number | number[];
 
 export const ARITHMETIC_OPERATIONS: ExpressionOperations<ArithmeticOp> = {
   add: {arity: 2, symbol: 'arithmetic_add'},
@@ -59,11 +59,11 @@ const FLOAT_OUTPUT_OPS = new Set<ArithmeticOp>(['pow', 'sqrt', 'sin', 'cos', 'ta
 export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
   name = 'arithmetic';
 
-  output: GPUTableEvaluator;
+  output: GPUDataEvaluator;
 
   constructor(op: ArithmeticOp, args: ArithmeticArgument[]) {
     const evaluatorArgs = args.map(arg =>
-      isLiteralArgument(arg) ? arg : getGPUTableEvaluator(arg)
+      isLiteralArgument(arg) ? arg : getGPUDataEvaluator(arg)
     );
     const {expression, namedInputs, dependencies} = getMergedExpressionAndInputs(op, evaluatorArgs);
     super({
@@ -74,15 +74,15 @@ export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
 
     const {isConstant, type, size, length} = deduceArithmeticOutputProps(op, evaluatorArgs);
     const firstInput = evaluatorArgs.find(
-      (arg): arg is GPUTableEvaluator => arg instanceof GPUTableEvaluator
+      (arg): arg is GPUDataEvaluator => arg instanceof GPUDataEvaluator
     );
-    this.output = new GPUTableEvaluator({
+    this.output = new GPUDataEvaluator({
       isConstant,
       type,
       size,
       length,
       format: firstInput
-        ? getCompatibleGPUTableEvaluatorFormat(firstInput, type, size, firstInput.normalized)
+        ? getCompatibleGPUDataEvaluatorFormat(firstInput, type, size, firstInput.normalized)
         : undefined,
       source: this
     });
@@ -114,12 +114,12 @@ function getMergedExpressionAndInputs(
   args: NormalizedArithmeticArgument[]
 ): {
   expression: Expression<ArithmeticOp>;
-  namedInputs: Record<string, GPUTableEvaluator>;
-  dependencies: GPUTableEvaluator[];
+  namedInputs: Record<string, GPUDataEvaluator>;
+  dependencies: GPUDataEvaluator[];
 } {
   const argExpressions: Expression<ArithmeticOp>[] = [];
-  const namedInputs: Record<string, GPUTableEvaluator> = {};
-  const dependencies = new Set<GPUTableEvaluator>();
+  const namedInputs: Record<string, GPUDataEvaluator> = {};
+  const dependencies = new Set<GPUDataEvaluator>();
   let nextInputIndex = 0;
 
   for (const arg of args) {
@@ -164,7 +164,7 @@ function getMergedExpressionAndInputs(
 
 function deduceArithmeticOutputProps(op: ArithmeticOp, args: NormalizedArithmeticArgument[]) {
   const evaluatorArgs = args.filter(
-    (arg): arg is GPUTableEvaluator => arg instanceof GPUTableEvaluator
+    (arg): arg is GPUDataEvaluator => arg instanceof GPUDataEvaluator
   );
   const literalArgs = args.filter(isLiteralArgument);
 
@@ -199,7 +199,7 @@ function isLiteralArgument(
 }
 
 function getRemappedInputNames(
-  namedInputs: Record<string, GPUTableEvaluator>,
+  namedInputs: Record<string, GPUDataEvaluator>,
   startIndex: number
 ): Record<string, string> {
   const inputNameMap: Record<string, string> = {};
