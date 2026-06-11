@@ -14,6 +14,7 @@ import * as arrow from 'apache-arrow';
 import {Fragment, h} from 'preact';
 import {
   configurePanelHostElement,
+  makeExampleContentPanel,
   makeHtmlCustomPanel,
   makeExamplePanelHostHtml,
   renderExamplePanel
@@ -200,11 +201,8 @@ export class ArrowExamplePanelManager {
             panels: tablePanels
           });
 
-    return {
-      ...tablePanel,
-      id: ARROW_EXAMPLE_TABLES_PANEL_ID,
-      title: 'Tables'
-    };
+    tablePanel.setProps({id: ARROW_EXAMPLE_TABLES_PANEL_ID, title: 'Tables'});
+    return tablePanel;
   }
 
   private makeTablePanel(tableEntry: ArrowExampleTableEntry): Panel {
@@ -228,11 +226,11 @@ export class ArrowExamplePanelManager {
       schema: tableEntry.table.schema
     });
 
-    return {
+    return makeExampleContentPanel({
       id: `${tableEntry.id}-panel`,
       title: tableEntry.label,
       content: h(Fragment, {}, batchesPanel.content, contentsPanel.content, schemaPanel.content)
-    };
+    });
   }
 
   private pruneTableState(): void {

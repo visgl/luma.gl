@@ -1,9 +1,11 @@
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
 import {
+  ExamplePanelManager,
   ExampleSettingsPanelManager,
   getSettingDefinitions,
+  makeExamplePanelHostHtml,
   makeHtmlCustomPanel,
   makeInlineSettingsSchema
 } from '../../examples/example-panels';
@@ -34,6 +36,33 @@ const TEST_SETTINGS_SCHEMA: SettingsSchema = {
           type: 'select',
           persist: 'none',
           options: ['alpha', 'beta']
+        }
+      ]
+    }
+  ]
+};
+
+const MULTI_SELECT_SETTINGS_SCHEMA: SettingsSchema = {
+  title: 'Settings',
+  sections: [
+    {
+      id: 'test',
+      name: 'Test',
+      initiallyCollapsed: false,
+      settings: [
+        {
+          name: 'mode',
+          label: 'Mode',
+          type: 'select',
+          persist: 'none',
+          options: ['alpha', 'beta']
+        },
+        {
+          name: 'shape',
+          label: 'Shape',
+          type: 'select',
+          persist: 'none',
+          options: ['small', 'this-is-a-long-option-value']
         }
       ]
     }
@@ -159,6 +188,78 @@ describe('ExampleSettingsPanelManager', () => {
       'mode'
     ]);
   });
+
+  test('closes other dropdowns and lets open menus exceed the trigger width', async () => {
+    document.body.innerHTML = makeExamplePanelHostHtml();
+    const settingsPanel = new ExampleSettingsPanelManager({
+      id: 'test-settings',
+      schema: MULTI_SELECT_SETTINGS_SCHEMA,
+      settings: {mode: 'alpha', shape: 'small'}
+    });
+    const panelManager = new ExamplePanelManager({panel: settingsPanel.makePanel()});
+    panelManager.mount();
+
+    try {
+      const modeButton = getRequiredButton(document, '#settings-panel-input-mode');
+      const shapeButton = getRequiredButton(document, '#settings-panel-input-shape');
+      const modeLabel = getRequiredElement<HTMLLabelElement>(
+        document,
+        '[data-setting-row-for="mode"] > label'
+      );
+      const modeRoot = modeButton.parentElement;
+      if (!modeRoot) {
+        throw new Error('Expected mode select root');
+      }
+      vi.spyOn(modeRoot, 'getBoundingClientRect').mockReturnValue({
+        bottom: 40,
+        height: 32,
+        left: 32,
+        right: 152,
+        top: 8,
+        width: 120,
+        x: 32,
+        y: 8,
+        toJSON: () => ({})
+      } as DOMRect);
+
+      modeLabel.click();
+      await Promise.resolve();
+      expect(document.body.querySelector('[role="listbox"]')).toBeNull();
+
+      modeButton.click();
+      await Promise.resolve();
+
+      const modeListbox = getRequiredElement<HTMLDivElement>(
+        document.body,
+        '#settings-panel-input-mode-listbox'
+      );
+      expect(modeListbox.style.width).toBe('max-content');
+      expect(modeListbox.style.minWidth).toBe('120px');
+      expect(
+        getRequiredElement<HTMLSpanElement>(modeListbox, 'button[role="option"] > span').style
+          .textOverflow
+      ).toBe('');
+
+      shapeButton.dispatchEvent(new Event('pointerdown', {bubbles: true}));
+      await Promise.resolve();
+      expect(document.body.querySelector('#settings-panel-input-mode-listbox')).toBeNull();
+
+      modeButton.click();
+      await Promise.resolve();
+      shapeButton.click();
+      await Promise.resolve();
+      expect(document.body.querySelectorAll('[role="listbox"]')).toHaveLength(1);
+      expect(document.body.querySelector('#settings-panel-input-shape-listbox')).toBeTruthy();
+
+      document.body.dispatchEvent(new Event('pointerdown', {bubbles: true}));
+      await Promise.resolve();
+      expect(document.body.querySelector('[role="listbox"]')).toBeNull();
+    } finally {
+      panelManager.finalize();
+      settingsPanel.finalize();
+      document.body.replaceChildren();
+    }
+  });
 });
 
 describe('ArrowExamplePanelManager', () => {
@@ -275,4 +376,16 @@ function makeMemoryStorage(initialValues: Record<string, string> = {}): Storage 
     removeItem: key => values.delete(key),
     setItem: (key, value) => values.set(key, value)
   };
+}
+
+function getRequiredButton(root: ParentNode, selector: string): HTMLButtonElement {
+  return getRequiredElement<HTMLButtonElement>(root, selector);
+}
+
+function getRequiredElement<T extends Element>(root: ParentNode, selector: string): T {
+  const element = root.querySelector<T>(selector);
+  if (!element) {
+    throw new Error(`Expected element matching selector: ${selector}`);
+  }
+  return element;
 }

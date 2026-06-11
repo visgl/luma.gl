@@ -16,7 +16,7 @@ import {
   type SettingValue,
   type SettingsState
 } from '@deck.gl-community/panels';
-import {h, render} from 'preact';
+import {Fragment, h, render} from 'preact';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
 const EXAMPLE_SETTINGS_PANEL_ATTRIBUTE = 'data-example-settings-panel';
@@ -81,6 +81,26 @@ export function makeHtmlCustomPanel({
         }
         rootElement.replaceChildren();
       };
+    }
+  });
+}
+
+/** Creates one simple panel from already-built Preact content. */
+export function makeExampleContentPanel({
+  id,
+  title,
+  content
+}: {
+  id: string;
+  title: string;
+  content: Panel['content'];
+}): Panel {
+  return new CustomPanel({
+    id,
+    title,
+    onRenderHTML: rootElement => {
+      render(h(Fragment, {}, content), rootElement);
+      return () => render(null, rootElement);
     }
   });
 }
@@ -212,11 +232,8 @@ export class ExampleSettingsPanelManager {
         })
       );
     }
-    return makeExampleSettingsPanel({
-      ...settingsPanel,
-      id: this.id,
-      title: this.schema.title ?? this.label
-    });
+    settingsPanel.setProps({id: this.id, title: this.schema.title ?? this.label});
+    return makeExampleSettingsPanel(settingsPanel);
   }
 
   finalize(): void {
@@ -253,10 +270,10 @@ export function makeInlineSettingsSchema(schema: SettingsSchema): SettingsSchema
 }
 
 function makeExampleSettingsPanel(panel: Panel): Panel {
-  return {
-    ...panel,
+  panel.setProps({
     content: h('div', {[EXAMPLE_SETTINGS_PANEL_ATTRIBUTE]: ''}, panel.content)
-  };
+  });
+  return panel;
 }
 
 export function getChangedSetting(

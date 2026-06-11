@@ -95,7 +95,7 @@
     "test-fast"
   ],
   "dependencies": {
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82",
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
     "@math.gl/types": "^4.1.0",
     "@types/offscreencanvas": "^2019.7.3",
     "preact": "^10.17.0"
