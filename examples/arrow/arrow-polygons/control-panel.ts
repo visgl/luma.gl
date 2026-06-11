@@ -19,10 +19,7 @@ import {
   type ArrowPolygonRowCountKind,
   type ArrowPolygonSourceKind
 } from './arrow-polygon-data';
-import {
-  type ArrowPolygonRendererMetrics,
-  type ArrowPolygonRendererModel
-} from '@luma.gl/arrow';
+import {type ArrowPolygonRendererMetrics, type ArrowPolygonRendererModel} from '@luma.gl/arrow';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 const PICKED_ROW_ID = 'arrow-polygon-picked-row';

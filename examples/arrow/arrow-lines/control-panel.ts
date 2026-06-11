@@ -81,7 +81,7 @@ export type ArrowLineControlPanelMetrics = {
   pathArrowBytes: string;
   pathGpuBytes: string;
   pathGpuExpansion: string;
-  pathPrepTime: string;
+  pathConversionTime: string;
   styleArrowBytes: string;
   styleGpuBytes: string;
   styleGpuExpansion: string;
@@ -273,7 +273,7 @@ export class ArrowLineControlPanel {
       [PATH_ARROW_BYTES_ID]: this.metrics.pathArrowBytes,
       [PATH_GPU_BYTES_ID]: this.metrics.pathGpuBytes,
       [PATH_GPU_EXPANSION_ID]: this.metrics.pathGpuExpansion,
-      [PATH_PREP_TIME_ID]: this.metrics.pathPrepTime,
+      [PATH_PREP_TIME_ID]: this.metrics.pathConversionTime,
       [STYLE_ARROW_BYTES_ID]: this.metrics.styleArrowBytes,
       [STYLE_GPU_BYTES_ID]: this.metrics.styleGpuBytes,
       [STYLE_GPU_EXPANSION_ID]: this.metrics.styleGpuExpansion,

@@ -165,8 +165,8 @@ export class ArrowFloat64PrecisionControlPanel {
       [STYLE_ARROW_BYTES_ID]: formatByteLength(this.metrics.styleArrowByteLength),
       [FLOAT64_GPU_BYTES_ID]: formatByteLength(this.metrics.float64PreparedGpuByteLength),
       [FLOAT32_GPU_BYTES_ID]: formatByteLength(this.metrics.float32PreparedGpuByteLength),
-      [FLOAT64_PREP_TIME_ID]: `${this.metrics.float64PreparationTimeMs.toFixed(1)}ms`,
-      [FLOAT32_PREP_TIME_ID]: `${this.metrics.float32PreparationTimeMs.toFixed(1)}ms`,
+      [FLOAT64_PREP_TIME_ID]: `${this.metrics.float64ConversionTimeMs.toFixed(1)}ms`,
+      [FLOAT32_PREP_TIME_ID]: `${this.metrics.float32ConversionTimeMs.toFixed(1)}ms`,
       [FLOAT32_ERROR_ID]: `${formatMetric(this.metrics.maxFloat32LocalError)} world units`
     };
     for (const [id, value] of Object.entries(metricsById)) {

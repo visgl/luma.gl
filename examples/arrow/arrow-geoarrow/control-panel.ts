@@ -56,7 +56,7 @@ export class GeoArrowControlPanel {
     setText(
       this.rootElement,
       PREPARATION_TIME_ID,
-      `${this.metrics.preparationTimeMs.toFixed(1)} ms`
+      `${this.metrics.conversionTimeMs.toFixed(1)} ms`
     );
     setText(this.rootElement, ARROW_BYTES_ID, formatBytes(this.arrowByteLength));
   }

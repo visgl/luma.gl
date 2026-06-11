@@ -196,7 +196,7 @@ export class ArrowPointControlPanel {
       TOTAL_GPU_EXPANSION_ID,
       formatExpansionRatio(totalGpuByteLength, totalArrowByteLength)
     );
-    setLabel(this.rootElement, TOTAL_BUILD_TIME_ID, formatTimeMs(this.metrics.preparationTimeMs));
+    setLabel(this.rootElement, TOTAL_BUILD_TIME_ID, formatTimeMs(this.metrics.conversionTimeMs));
     setLabel(
       this.rootElement,
       POINT_ARROW_BYTES_ID,
@@ -212,7 +212,7 @@ export class ArrowPointControlPanel {
       POINT_GPU_EXPANSION_ID,
       formatExpansionRatio(this.metrics.pointGpuByteLength, this.metrics.pointArrowByteLength)
     );
-    setLabel(this.rootElement, POINT_BUILD_TIME_ID, formatTimeMs(this.metrics.preparationTimeMs));
+    setLabel(this.rootElement, POINT_BUILD_TIME_ID, formatTimeMs(this.metrics.conversionTimeMs));
     setLabel(
       this.rootElement,
       STYLING_ARROW_BYTES_ID,
