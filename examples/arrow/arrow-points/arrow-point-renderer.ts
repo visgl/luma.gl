@@ -29,7 +29,7 @@ import {
   type OptionalArrowColumnSelector
 } from '@luma.gl/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
-import type {PickingManager, PickInfo} from '@luma.gl/engine';
+import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
 import {GPUTable, type GPURecordBatch, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
@@ -225,7 +225,7 @@ export class ArrowPointRenderer {
   }
 
   /** Runs a picking pass for the supplied mouse position and updates hover callbacks/tooltips. */
-  pick(mousePosition: number[] | null | undefined): void {
+  pick(mousePosition: number[] | null | undefined, options: PickingShouldPickOptions = {}): void {
     if (!mousePosition) {
       clearArrowPickingState(this.picker, this.handleObjectPicked);
       return;
@@ -234,6 +234,7 @@ export class ArrowPointRenderer {
     runArrowPickingPass({
       picker: this.picker,
       mousePosition,
+      pickingOptions: options,
       shaderInputs: this.shaderInputs,
       draw: pickingPass =>
         this.pickingModel?.drawBatches(pickingPass, {

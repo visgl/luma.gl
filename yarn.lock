@@ -2482,9 +2482,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deck.gl-community/panels@https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82":
-  version: 9.3.5
-  resolution: "@deck.gl-community/panels@https://github.com/visgl/deck.gl-community.git#workspace=%40deck.gl-community%2Fpanels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+"@deck.gl-community/panels@https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e":
+  version: 9.3.7
+  resolution: "@deck.gl-community/panels@https://github.com/visgl/deck.gl-community.git#workspace=%40deck.gl-community%2Fpanels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
   dependencies:
     "@probe.gl/stats": "npm:^4.1.1"
     monaco-editor: "npm:^0.53.0"
@@ -2494,7 +2494,7 @@ __metadata:
   peerDependenciesMeta:
     apache-arrow:
       optional: true
-  checksum: 10c0/a5c8492d2ee37aff6182aefc284eab7657a8f930789e6f73c28131c040fc03306fe207c3c5606a7a66b873094173f6f0f9fdcc7b4981676012367983e89ae515
+  checksum: 10c0/c921c6764c1cd276c8624bec5844c7b81b698b61ad84037c869afbf94d920c53df41f9588e9bd144c37ac9af0f49854b27beacd38b26888dd939830459c7643d
   languageName: node
   linkType: hard
 
@@ -15366,6 +15366,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-animation@workspace:examples/api/animation"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
@@ -15380,7 +15381,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-columns@workspace:examples/arrow/arrow-columns"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15398,7 +15399,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-dggs-polygons@workspace:examples/arrow/arrow-dggs-polygons"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15415,7 +15416,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-float64-precision@workspace:examples/arrow/arrow-float64-precision"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15433,7 +15434,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-geoarrow@workspace:examples/arrow/arrow-geoarrow"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15451,7 +15452,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-instancing@workspace:examples/arrow/arrow-instancing"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15469,7 +15470,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-lines@workspace:examples/arrow/arrow-lines"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15487,7 +15488,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-mesh-geometry@workspace:examples/arrow/arrow-mesh-geometry"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15506,7 +15507,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-particles@workspace:examples/arrow/arrow-particles"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15523,7 +15524,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-points@workspace:examples/arrow/arrow-points"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15541,7 +15542,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-polygons@workspace:examples/arrow/arrow-polygons"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15559,7 +15560,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-temporal-starfield@workspace:examples/arrow/arrow-temporal-starfield"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15577,7 +15578,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-text-2d@workspace:examples/arrow/arrow-text-2d"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15596,7 +15597,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-text-3d@workspace:examples/arrow/arrow-text-3d"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15616,7 +15617,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-time-columns@workspace:examples/arrow/arrow-time-columns"
   dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=cc7fe4b1408ca43e5dcfdccde578d2a9131ecc82"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15650,6 +15651,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-bloom@workspace:examples/experimental/bloom"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:9.3.2"
     "@luma.gl/effects": "npm:9.3.2"
     "@luma.gl/engine": "npm:9.3.2"
@@ -15699,6 +15701,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-gltf-showcase@workspace:examples/showcase/gltf"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~4.4.2"
     "@loaders.gl/gltf": "npm:~4.4.2"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15808,6 +15811,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-instancing@workspace:examples/showcase/instancing"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
@@ -15872,6 +15876,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-postprocessing@workspace:examples/showcase/postprocessing"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~4.4.2"
     "@loaders.gl/gltf": "npm:~4.4.2"
     "@luma.gl/core": "npm:~9.3.0"
@@ -15918,6 +15923,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-dof@workspace:examples/showcase/dof"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
@@ -15935,6 +15941,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-globe@workspace:examples/showcase/globe"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:9.3.2"
     "@luma.gl/engine": "npm:9.3.2"
     "@luma.gl/shadertools": "npm:9.3.2"
@@ -15969,6 +15976,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-text-3d@workspace:examples/experimental/text-3d"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
@@ -16133,6 +16141,7 @@ __metadata:
   dependencies:
     "@babel/core": "npm:^7.28.3"
     "@babel/preset-env": "npm:^7.28.3"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~4.4.2"
     "@loaders.gl/gltf": "npm:~4.4.2"
     "@loaders.gl/polyfills": "npm:~4.4.2"
@@ -16155,6 +16164,7 @@ __metadata:
     a5-js: "npm:^0.8.0"
     h3-js: "npm:^4.4.0"
     pre-commit: "npm:^1.2.2"
+    preact: "npm:^10.17.0"
     vite: "npm:^8.0.0"
     vitest: "npm:^4.0.18"
   languageName: unknown

@@ -3,9 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 import type {DggsCellEncoding} from '@luma.gl/arrow';
+import {
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
-const ENCODING_SELECTOR_ID = 'arrow-dggs-polygons-encoding';
-const SOURCE_SELECTOR_ID = 'arrow-dggs-polygons-source';
 const ROW_COUNT_ID = 'arrow-dggs-polygons-row-count';
 const KEY_BYTES_ID = 'arrow-dggs-polygons-key-bytes';
 const PATH_BYTES_ID = 'arrow-dggs-polygons-path-bytes';
@@ -35,113 +43,138 @@ export type ArrowDggsPolygonsControlPanelHandlers = {
 export type ArrowDggsPolygonsControlPanelOptions = {
   initialState: ArrowDggsPolygonsControlPanelState;
   handlers: ArrowDggsPolygonsControlPanelHandlers;
+  onRefresh: () => void;
 };
 
 export class ArrowDggsPolygonsControlPanel {
   private readonly handlers: ArrowDggsPolygonsControlPanelHandlers;
+  private readonly onRefresh: () => void;
+  private readonly settingsPanel: ExampleSettingsPanelManager;
   private state: ArrowDggsPolygonsControlPanelState;
-  private encodingSelector: HTMLSelectElement | null = null;
-  private sourceSelector: HTMLSelectElement | null = null;
-  private rowCountLabel: HTMLElement | null = null;
-  private keyBytesLabel: HTMLElement | null = null;
-  private pathBytesLabel: HTMLElement | null = null;
-  private transientBytesLabel: HTMLElement | null = null;
-  private activeColumnLabel: HTMLElement | null = null;
+  private metrics: ArrowDggsPolygonsControlPanelMetrics = {
+    activeColumn: '-',
+    rowCount: '-',
+    keyBytes: '-',
+    pathBytes: '-',
+    transientBytes: '-'
+  };
+  private rootElement: HTMLElement | null = null;
 
-  constructor({initialState, handlers}: ArrowDggsPolygonsControlPanelOptions) {
+  constructor({initialState, handlers, onRefresh}: ArrowDggsPolygonsControlPanelOptions) {
     this.state = initialState;
     this.handlers = handlers;
+    this.onRefresh = onRefresh;
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'arrow-dggs-polygons-settings',
+      schema: makeArrowDggsPolygonsSettingsSchema(),
+      settings: initialState,
+      onSettingsChange: this.handleSettingsChange
+    });
   }
 
-  initialize(): void {
-    if (!this.encodingSelector) {
-      this.encodingSelector = document.getElementById(
-        ENCODING_SELECTOR_ID
-      ) as HTMLSelectElement | null;
-      this.encodingSelector?.addEventListener('change', this.handleEncodingSelection);
-    }
-    if (!this.sourceSelector) {
-      this.sourceSelector = document.getElementById(SOURCE_SELECTOR_ID) as HTMLSelectElement | null;
-      this.sourceSelector?.addEventListener('change', this.handleSourceSelection);
-    }
-
-    this.rowCountLabel ??= document.getElementById(ROW_COUNT_ID);
-    this.keyBytesLabel ??= document.getElementById(KEY_BYTES_ID);
-    this.pathBytesLabel ??= document.getElementById(PATH_BYTES_ID);
-    this.transientBytesLabel ??= document.getElementById(TRANSIENT_BYTES_ID);
-    this.activeColumnLabel ??= document.getElementById(ACTIVE_COLUMN_ID);
-    this.syncControls(this.state);
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-dggs-polygons-description',
+      title: 'Description',
+      html: makeArrowDggsPolygonsControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.renderMetrics();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
+          }
+        };
+      }
+    });
   }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
+  }
+
+  initialize(): void {}
 
   destroy(): void {
-    this.encodingSelector?.removeEventListener('change', this.handleEncodingSelection);
-    this.sourceSelector?.removeEventListener('change', this.handleSourceSelection);
-    this.encodingSelector = null;
-    this.sourceSelector = null;
-    this.rowCountLabel = null;
-    this.keyBytesLabel = null;
-    this.pathBytesLabel = null;
-    this.transientBytesLabel = null;
-    this.activeColumnLabel = null;
+    this.settingsPanel.finalize();
+    this.rootElement = null;
   }
 
   syncControls(state: Partial<ArrowDggsPolygonsControlPanelState>): void {
     this.state = {...this.state, ...state};
-    if (this.encodingSelector) {
-      this.encodingSelector.value = this.state.encoding;
-    }
-    if (this.sourceSelector) {
-      this.sourceSelector.value = this.state.sourceKind;
-    }
+    this.settingsPanel.setSettings(this.state);
+    this.onRefresh();
   }
 
   setMetricValues(metrics: ArrowDggsPolygonsControlPanelMetrics): void {
-    setMetricText(this.activeColumnLabel, metrics.activeColumn);
-    setMetricText(this.rowCountLabel, metrics.rowCount);
-    setMetricText(this.keyBytesLabel, metrics.keyBytes);
-    setMetricText(this.pathBytesLabel, metrics.pathBytes);
-    setMetricText(this.transientBytesLabel, metrics.transientBytes);
+    this.metrics = metrics;
+    this.renderMetrics();
   }
 
-  private readonly handleEncodingSelection = (): void => {
-    const encoding = parseDggsCellEncoding(this.encodingSelector?.value);
-    if (encoding) {
+  private readonly handleSettingsChange = (
+    settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    this.state = settings as ArrowDggsPolygonsControlPanelState;
+    const encoding = getChangedSetting(changedSettings, 'encoding')?.nextValue;
+    if (isDggsCellEncoding(encoding)) {
       this.handlers.onEncodingChange(encoding);
+    }
+    const sourceKind = getChangedSetting(changedSettings, 'sourceKind')?.nextValue;
+    if (isDggsSourceKind(sourceKind)) {
+      this.handlers.onSourceChange(sourceKind);
     }
   };
 
-  private readonly handleSourceSelection = (): void => {
-    const sourceKind = parseDggsSourceKind(this.sourceSelector?.value);
-    if (sourceKind) {
-      this.handlers.onSourceChange(sourceKind);
-    }
+  private renderMetrics(): void {
+    setMetricText(this.rootElement, ACTIVE_COLUMN_ID, this.metrics.activeColumn);
+    setMetricText(this.rootElement, ROW_COUNT_ID, this.metrics.rowCount);
+    setMetricText(this.rootElement, KEY_BYTES_ID, this.metrics.keyBytes);
+    setMetricText(this.rootElement, PATH_BYTES_ID, this.metrics.pathBytes);
+    setMetricText(this.rootElement, TRANSIENT_BYTES_ID, this.metrics.transientBytes);
+  }
+}
+
+export function makeArrowDggsPolygonsSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'source',
+        name: 'Source',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'encoding',
+            label: 'Column',
+            type: 'select',
+            persist: 'none',
+            options: ['geohash', 'quadkey', 's2', 'a5', 'h3']
+          },
+          {
+            name: 'sourceKind',
+            label: 'Source',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Vector<Uint64>', value: 'uint64'},
+              {label: 'Vector<Utf8> parsed on GPU', value: 'utf8'}
+            ]
+          }
+        ]
+      }
+    ]
   };
 }
 
 export function makeArrowDggsPolygonsControlPanelHtml(): string {
   return `\
-  <div style="min-width: 280px; max-width: 420px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 10px; background: rgba(255, 255, 255, 0.96); color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
-    <div style="display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; align-items: center;">
-      <label for="${ENCODING_SELECTOR_ID}" style="font-weight: 700;">Column</label>
-      <select id="${ENCODING_SELECTOR_ID}" style="min-height: 32px; border: 1px solid #94a3b8; border-radius: 6px; background: white;">
-        <option value="geohash">geohash</option>
-        <option value="quadkey">quadkey</option>
-        <option value="s2">s2</option>
-        <option value="a5">a5</option>
-        <option value="h3">h3</option>
-      </select>
-      <label for="${SOURCE_SELECTOR_ID}" style="font-weight: 700;">Source</label>
-      <select id="${SOURCE_SELECTOR_ID}" style="min-height: 32px; border: 1px solid #94a3b8; border-radius: 6px; background: white;">
-        <option value="uint64">Vector&lt;Uint64&gt;</option>
-        <option value="utf8">Vector&lt;Utf8&gt; parsed on GPU</option>
-      </select>
-    </div>
-    ${makeMetricRow('Active Arrow column', ACTIVE_COLUMN_ID)}
-    ${makeMetricRow('Rows', ROW_COUNT_ID)}
-    ${makeMetricRow('Uint64 key bytes', KEY_BYTES_ID)}
-    ${makeMetricRow('Generated path bytes', PATH_BYTES_ID)}
-    ${makeMetricRow('Transient compute bytes', TRANSIENT_BYTES_ID)}
-  </div>
+  <p>Renders DGGS cell ids from Arrow Uint64 or Utf8 columns as generated polygon paths.</p>
+  ${makeMetricRow('Active Arrow column', ACTIVE_COLUMN_ID)}
+  ${makeMetricRow('Rows', ROW_COUNT_ID)}
+  ${makeMetricRow('Uint64 key bytes', KEY_BYTES_ID)}
+  ${makeMetricRow('Generated path bytes', PATH_BYTES_ID)}
+  ${makeMetricRow('Transient compute bytes', TRANSIENT_BYTES_ID)}
   `;
 }
 
@@ -149,24 +182,18 @@ function makeMetricRow(label: string, id: string): string {
   return `<div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;"><span>${label}</span><strong id="${id}" style="font-variant-numeric: tabular-nums;">-</strong></div>`;
 }
 
-function parseDggsCellEncoding(value: string | undefined): DggsCellEncoding | null {
-  if (
-    value === 'geohash' ||
-    value === 'quadkey' ||
-    value === 's2' ||
-    value === 'a5' ||
-    value === 'h3'
-  ) {
-    return value;
-  }
-  return null;
+function isDggsCellEncoding(value: unknown): value is DggsCellEncoding {
+  return (
+    value === 'geohash' || value === 'quadkey' || value === 's2' || value === 'a5' || value === 'h3'
+  );
 }
 
-function parseDggsSourceKind(value: string | undefined): DggsSourceKind | null {
-  return value === 'utf8' || value === 'uint64' ? value : null;
+function isDggsSourceKind(value: unknown): value is DggsSourceKind {
+  return value === 'utf8' || value === 'uint64';
 }
 
-function setMetricText(element: HTMLElement | null, value: string): void {
+function setMetricText(rootElement: HTMLElement | null, id: string, value: string): void {
+  const element = rootElement?.querySelector<HTMLElement>(`#${id}`);
   if (element) {
     element.textContent = value;
   }

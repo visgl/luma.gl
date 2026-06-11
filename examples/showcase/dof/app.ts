@@ -29,25 +29,24 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 import {GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
-const INFO_HTML = `\
+const DOF_DESCRIPTION_HTML = `\
 <div>
   <p><b>Depth of Field</b></p>
   <p>Several instanced cubes rendered with a depth-driven postprocessing blur.</p>
-</div>
-<div style="display: grid; gap: 10px; min-width: 280px;">
-  <label style="display: grid; gap: 4px;">
-    <span style="font-size: 12px; font-weight: 600;">Focus Distance</span>
-    <input type="range" id="dof-focus-distance" min="0.1" max="10.0" step="0.1">
-  </label>
-  <label style="display: grid; gap: 4px;">
-    <span style="font-size: 12px; font-weight: 600;">Lens Aperture</span>
-    <input type="range" id="dof-f-stop" min="0.1" max="10.0" step="0.1">
-  </label>
-  <label style="display: grid; gap: 4px;">
-    <span style="font-size: 12px; font-weight: 600;">Focal Length</span>
-    <input type="range" id="dof-focal-length" min="0.1" max="10.0" step="0.1">
-  </label>
 </div>
 `;
 
@@ -287,11 +286,13 @@ function createDepthTexture(
 }
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = makeExamplePanelHostHtml();
 
   focalLength = 2;
   focusDistance = 3;
   fStop = 2.8;
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
 
   appShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
 
@@ -304,9 +305,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cubeTransforms: CubeTransform[] = [];
 
   sceneFramebuffer: Framebuffer;
-
-  controlsInitialized = false;
-  controlCleanup: Array<() => void> = [];
 
   constructor({device, width, height}: AnimationProps) {
     super();
@@ -391,17 +389,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.shaderPassRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [dofShaderPassPipeline]
     });
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'dof-settings',
+      schema: makeDofSettingsSchema(),
+      settings: this.getSettingsState(),
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
 
     this.initializeCubeTransforms();
     this.writeInstanceMatrices();
   }
 
   onFinalize(): void {
-    for (const cleanup of this.controlCleanup) {
-      cleanup();
-    }
-    this.controlCleanup = [];
-
+    this.settingsPanel.finalize();
+    this.panels.finalize();
     this.sceneModel.destroy();
     this.sceneTable.destroy();
     this.cubeTexture.destroy();
@@ -410,8 +413,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, width, height, aspect}: AnimationProps): void {
-    this.initializeControls();
-
     // Keep offscreen targets matched to the presentation size so blur radius stays stable in
     // texel space as the canvas resizes.
     this.sceneFramebuffer.resize({width, height});
@@ -529,49 +530,94 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     );
   }
 
-  initializeControls(): void {
-    if (this.controlsInitialized || typeof document === 'undefined') {
-      return;
-    }
-
-    const sliderConfigs = [
-      {
-        id: 'dof-focal-length',
-        value: this.focalLength,
-        onInput: (value: number) => {
-          this.focalLength = value;
-        }
-      },
-      {
-        id: 'dof-focus-distance',
-        value: this.focusDistance,
-        onInput: (value: number) => {
-          this.focusDistance = value;
-        }
-      },
-      {
-        id: 'dof-f-stop',
-        value: this.fStop,
-        onInput: (value: number) => {
-          this.fStop = value;
-        }
-      }
-    ];
-
-    for (const sliderConfig of sliderConfigs) {
-      const element = document.getElementById(sliderConfig.id) as HTMLInputElement | null;
-      if (!element) {
-        return;
-      }
-
-      element.value = String(sliderConfig.value);
-      const onInput = () => sliderConfig.onInput(Number(element.value));
-      element.addEventListener('input', onInput);
-      this.controlCleanup.push(() => element.removeEventListener('input', onInput));
-    }
-
-    this.controlsInitialized = true;
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'dof-controls',
+      title: 'Controls',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'dof-description',
+          title: '',
+          html: DOF_DESCRIPTION_HTML
+        }),
+        this.settingsPanel.makePanel()
+      ]
+    });
   }
+
+  private getSettingsState(): DofSettingsState {
+    return {
+      focusDistance: this.focusDistance,
+      fStop: this.fStop,
+      focalLength: this.focalLength
+    };
+  }
+
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const focusDistance = getChangedSetting(changedSettings, 'focusDistance')?.nextValue;
+    if (typeof focusDistance === 'number') {
+      this.focusDistance = focusDistance;
+    }
+    const fStop = getChangedSetting(changedSettings, 'fStop')?.nextValue;
+    if (typeof fStop === 'number') {
+      this.fStop = fStop;
+    }
+    const focalLength = getChangedSetting(changedSettings, 'focalLength')?.nextValue;
+    if (typeof focalLength === 'number') {
+      this.focalLength = focalLength;
+    }
+  };
+}
+
+type DofSettingsState = {
+  focusDistance: number;
+  fStop: number;
+  focalLength: number;
+};
+
+function makeDofSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'lens',
+        name: 'Lens',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'focusDistance',
+            label: 'Focus Distance',
+            type: 'number',
+            persist: 'none',
+            min: 0.1,
+            max: 10,
+            step: 0.1
+          },
+          {
+            name: 'fStop',
+            label: 'Lens Aperture',
+            type: 'number',
+            persist: 'none',
+            min: 0.1,
+            max: 10,
+            step: 0.1
+          },
+          {
+            name: 'focalLength',
+            label: 'Focal Length',
+            type: 'number',
+            persist: 'none',
+            min: 0.1,
+            max: 10,
+            step: 0.1
+          }
+        ]
+      }
+    ]
+  };
 }
 
 function getOffscreenColorFormat(device: AnimationProps['device']): TextureFormatColor {

@@ -22,13 +22,13 @@ import {
   AnimationLoopTemplate,
   type AnimationProps,
   type Model,
-  type PickingManager
+  type PickingManager,
+  type PickingShouldPickOptions
 } from '@luma.gl/engine';
 import type {GPUTable} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   ArrowText2DControlPanel,
-  makeArrowText2DControlPanelHtml,
   type ArrowText2DControlPanelAngleKind,
   type ArrowText2DControlPanelClipRectsKind,
   type ArrowText2DControlPanelSizeKind
@@ -66,12 +66,6 @@ import {supportsVertexStorageBuffers} from '../utils/device-limits';
 export const title = 'Text: Strings/Dictionary strings';
 export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
 
-const GLYPH_WORLD_SCALE = 0.36;
-const VIEW_HEIGHT = 820;
-const CAMERA_PAN_SPEED_X = 72;
-const CAMERA_PAN_SPEED_Y = 56;
-const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
-
 type ActiveTextModel = ArrowTextRendererActiveModel;
 type TextModelKind = NonNullable<ArrowTextRendererProps['model']>;
 type TextRendererUpdateOptions = {
@@ -79,6 +73,11 @@ type TextRendererUpdateOptions = {
   syncControls?: boolean;
   updateMetrics?: boolean;
 };
+const GLYPH_WORLD_SCALE = 0.36;
+const VIEW_HEIGHT = 820;
+const CAMERA_PAN_SPEED_X = 72;
+const CAMERA_PAN_SPEED_Y = 56;
+const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
 const TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 8;
 const TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT = 10;
 
@@ -89,10 +88,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   readonly device: Device;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowText2DControlPanelHtml({
-      streamingBatchCount: STREAMING_TEXT_BATCH_COUNT,
-      deckCharacterAttributeBytesPerGlyph: DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
-    })
+    descriptionPanel: () =>
+      this.controlPanel.makeDescriptionPanel({
+        streamingBatchCount: STREAMING_TEXT_BATCH_COUNT,
+        deckCharacterAttributeBytesPerGlyph: DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
+      }),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   textInput!: ArrowTextRendererInput;
   textRenderer!: ArrowTextRenderer;
@@ -162,7 +163,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         onClipRectsColumnChange: this.handleTextClipRectsSelection,
         onModelChange: this.handleModelSelection,
         onAnimateChange: this.handleAnimateToggle
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
     this.controlPanel.initialize();
   }
@@ -189,8 +191,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       this.handleObjectPicked
     );
 
-    this.panels.mount();
     this.initializeControlPanel();
+    this.panels.mount();
     this.updateMetricLabels();
     this.startStreamingTextDatasetFromSource(
       this.textDatasetKind as StreamingTextDatasetKind,
@@ -297,7 +299,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.animate || Boolean(needsRedraw) || Boolean(textRendererNeedsRedraw)) {
       this.drawTextFrame(device, aspect);
     }
-    this.pickLabel(_mousePosition);
+    this.pickLabel(_mousePosition, {force: this.animate});
   }
 
   drawTextFrame(device: Device, aspect: number): void {
@@ -340,7 +342,10 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.textRenderer?.destroy();
   }
 
-  pickLabel(mousePosition: number[] | null | undefined): void {
+  pickLabel(
+    mousePosition: number[] | null | undefined,
+    options: PickingShouldPickOptions = {}
+  ): void {
     if (!this.picker) {
       return;
     }
@@ -354,6 +359,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     runArrowPickingPass({
       picker: this.picker,
       mousePosition,
+      pickingOptions: options,
       shaderInputs: this.textRenderer.shaderInputs,
       draw: pickingPass => {
         if (!this.pickingModel) {
@@ -545,9 +551,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       previousPickingModel?.destroy();
     }
     if (updateResult.modelChanged || resetPickedLabel) {
-      if (this.picker) {
-        clearArrowPickingState(this.picker, this.handleObjectPicked);
-      }
+      this.picker?.clearPickState();
     }
     if (resetPickedLabel) {
       this.controlPanel?.setPickedLabel('Hover text');

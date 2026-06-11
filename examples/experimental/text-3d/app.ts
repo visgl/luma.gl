@@ -8,14 +8,30 @@ import {AnimationLoopTemplate, Model, ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {parseFont, TextGeometry} from '@luma.gl/text/text-3d';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+import {
+  DEFAULT_TEXT_3D_CRAWL_COLOR,
+  getText3DCrawlColor,
+  getText3DCrawlColorKind,
+  setText3DCrawlColorKind,
+  type Text3DCrawlColorKind
+} from '../../text-3d-crawl-color';
 import {helvetiker} from './helvetiker-font';
 
 export const title = '3D Space Crawl';
 export const description = 'Perspective space crawl built with extruded text geometry.';
-
-const TEXT_3D_COLOR_STORAGE_KEY = 'text-3d-crawl-color';
-const DEFAULT_CRAWL_COLOR: [number, number, number, number] = [1, 0.62, 0.32, 1];
-const YELLOW_CRAWL_COLOR: [number, number, number, number] = [1, 0.9, 0.32, 1];
 
 const WGSL_SHADER = /* wgsl */ `
 struct AppUniforms {
@@ -191,17 +207,15 @@ const crawlText = [
 ].join('\n');
 
 export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-<p>Extrudes text geometry using a typeface JSON font with beveling.</p>
-<p>The text scrolls into deep space with deck.gl-flavored crawl copy.</p>
-<p>Enable canvas antialiasing or increase bevel and curve segments if the edges shimmer.</p>
-`;
+  static info = makeExamplePanelHostHtml();
 
   modelMatrix = new Matrix4();
   normalMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: [0, 40, 980], center: [0, -520, -520]});
   projectionMatrix = new Matrix4();
   shaderInputs = new ShaderInputs<{app: typeof app.props}>({app});
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
   model: Model;
   /** Horizontal translation that centers the generated text geometry. */
   geometryOffset: [number, number, number];
@@ -224,7 +238,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         projectionMatrix: new Matrix4(),
         normalMatrix: new Matrix4(),
         time: 0,
-        crawlColor: DEFAULT_CRAWL_COLOR,
+        crawlColor: DEFAULT_TEXT_3D_CRAWL_COLOR,
         fade: [0, 0, 0, 0]
       }
     });
@@ -291,6 +305,14 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         cullMode: 'back'
       }
     });
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'text-3d-settings',
+      schema: makeText3DSettingsSchema(),
+      settings: {crawlColorKind: getText3DCrawlColorKind()},
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
   }
 
   onRender({device, tick, aspect}: AnimationProps) {
@@ -318,7 +340,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         projectionMatrix: this.projectionMatrix,
         normalMatrix: this.normalMatrix,
         time: tick * 0.016,
-        crawlColor: getCrawlColor(),
+        crawlColor: getText3DCrawlColor(),
         fade: [-260, -80, 960, 1360]
       }
     });
@@ -329,17 +351,66 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize() {
+    this.settingsPanel.finalize();
+    this.panels.finalize();
     this.model.destroy();
   }
-}
 
-function getCrawlColor(): [number, number, number, number] {
-  if (typeof window === 'undefined') {
-    return DEFAULT_CRAWL_COLOR;
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'text-3d-controls',
+      title: 'Controls',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'text-3d-description',
+          title: '',
+          html: `\
+          <p>Extrudes text geometry using a typeface JSON font with beveling.</p>
+          <p>The text scrolls into deep space with deck.gl-flavored crawl copy.</p>
+          <p>Enable canvas antialiasing or increase bevel and curve segments if the edges shimmer.</p>
+          `
+        }),
+        this.settingsPanel.makePanel()
+      ]
+    });
   }
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const crawlColor =
-    searchParams.get('crawlColor') ?? window.localStorage.getItem(TEXT_3D_COLOR_STORAGE_KEY);
-  return crawlColor === 'yellow' ? YELLOW_CRAWL_COLOR : DEFAULT_CRAWL_COLOR;
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const crawlColorKind = getChangedSetting(changedSettings, 'crawlColorKind')?.nextValue;
+    if (isText3DCrawlColorKind(crawlColorKind)) {
+      setText3DCrawlColorKind(crawlColorKind);
+    }
+  };
+}
+
+function makeText3DSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'style',
+        name: 'Style',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'crawlColorKind',
+            label: 'Crawl color',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Copper', value: 'copper'},
+              {label: 'Yellow', value: 'yellow'}
+            ]
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function isText3DCrawlColorKind(value: unknown): value is Text3DCrawlColorKind {
+  return value === 'copper' || value === 'yellow';
 }

@@ -5,10 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {
-  ArrowFloat64PrecisionControlPanel,
-  makeArrowFloat64PrecisionControlPanelHtml
-} from './control-panel';
+import {ArrowFloat64PrecisionControlPanel} from './control-panel';
 import {
   makeArrowFloat64PrecisionSourceData,
   makeArrowFloat64PrecisionSourceTable,
@@ -39,7 +36,8 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   readonly device: Device;
   readonly controlPanel: ArrowFloat64PrecisionControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowFloat64PrecisionControlPanelHtml()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   coordinateMagnitudeKind: CoordinateMagnitudeKind = DEFAULT_COORDINATE_MAGNITUDE_KIND;
   viewState: ArrowFloat64PrecisionViewState = {...DEFAULT_VIEW_STATE, pan: [0, 0]};
@@ -57,7 +55,8 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
         onZoomChange: this.handleZoomChange,
         onPanChange: this.handlePanChange,
         onResetView: this.handleResetView
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
   }
 
@@ -110,8 +109,7 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
         id: 'float64-source',
         label: 'Survey path source',
         kind: 'source',
-        table: makeArrowFloat64PrecisionSourceTable(sourceData),
-        status: `${sourceData.coordinateMagnitudeLabel} coordinate magnitude`
+        table: makeArrowFloat64PrecisionSourceTable(sourceData)
       }
     ]);
     const renderer = await ArrowFloat64PrecisionRenderer.create(this.device, sourceData);

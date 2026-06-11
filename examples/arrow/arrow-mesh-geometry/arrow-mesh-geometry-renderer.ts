@@ -15,7 +15,7 @@ import {
   type ArrowMeshTable
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device} from '@luma.gl/core';
-import type {AnimationProps} from '@luma.gl/engine';
+import type {AnimationProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {CubeGeometry, type PickingManager} from '@luma.gl/engine';
 import {GPURenderable, type GPUTable, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
 import {Matrix4, radians} from '@math.gl/core';
@@ -186,7 +186,7 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
     });
     this.model.draw(renderPass);
     renderPass.end();
-    this.pickFace(_mousePosition);
+    this.pickFace(_mousePosition, {force: true});
   }
 
   destroy(): void {
@@ -221,10 +221,14 @@ export class ArrowMeshRenderer extends GPURenderable<[AnimationProps]> {
     this.matrixTable?.gpuVectors.matrix?.data[0]?.buffer.write(this.matrixValues);
   }
 
-  pickFace(mousePosition: number[] | null | undefined): void {
+  pickFace(
+    mousePosition: number[] | null | undefined,
+    options: PickingShouldPickOptions = {}
+  ): void {
     runArrowPickingPass({
       picker: this.picker,
       mousePosition,
+      pickingOptions: options,
       shaderInputs: this.shaderInputs,
       draw: pickingPass => {
         this.shaderInputs.setProps({picking: {batchIndex: 0}});

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import type {PickingManager, PickInfo} from '@luma.gl/engine';
+import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
 import {
   PolygonAttributeModel,
   createPolygonShaderInputs,
@@ -188,7 +188,7 @@ export class ArrowPolygonRenderer {
     });
   }
 
-  pick(mousePosition: number[] | null | undefined): void {
+  pick(mousePosition: number[] | null | undefined, options: PickingShouldPickOptions = {}): void {
     if (!mousePosition) {
       clearArrowPickingState(this.picker, this.handleObjectPicked);
       return;
@@ -197,6 +197,7 @@ export class ArrowPolygonRenderer {
     runArrowPickingPass({
       picker: this.picker,
       mousePosition,
+      pickingOptions: options,
       shaderInputs: this.shaderInputs,
       draw: pickingPass =>
         this.pickingModel?.drawBatches(pickingPass, {

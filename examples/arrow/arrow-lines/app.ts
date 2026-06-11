@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import type * as arrow from 'apache-arrow';
-import {ArrowLineControlPanel, makeArrowLineControlPanelHtml} from './control-panel';
+import {ArrowLineControlPanel} from './control-panel';
 import {
   createStreamingPathRecordBatchIterator,
   getTemporalCurrentTimeMilliseconds,
@@ -57,13 +57,8 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
 
   readonly device: Device;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowLineControlPanelHtml({
-      rowLabels: {
-        '240-stream': PATH_DATASETS['240'].label,
-        '2400-stream': PATH_DATASETS['2400'].label
-      },
-      deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT
-    })
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   activeMode: ArrowLineMode = 'lines';
   activeRowCountKind: ArrowLineRowCountKind = '240-stream';
@@ -104,8 +99,8 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
     }
     this.activeArrowVectorBuildTimeMs = arrowVectorBuildTimeMs;
     this.pathRenderer = this.createPathRenderer(this.activePathModelKind);
-    this.panels.mount();
     this.initializeControlPanel();
+    this.panels.mount();
     this.updateMetricLabels();
     this.streamPathRecordBatches(
       recordBatches,
@@ -206,6 +201,11 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
   initializeControlPanel(): void {
     this.controlPanel = new ArrowLineControlPanel({
       device: this.device,
+      rowLabels: {
+        '240-stream': PATH_DATASETS['240'].label,
+        '2400-stream': PATH_DATASETS['2400'].label
+      },
+      deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT,
       initialState: this.getControlPanelState(),
       handlers: {
         onRowCountChange: this.handleRowCountSelection,
@@ -219,7 +219,8 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
         onCapChange: this.handleCapSelection,
         onJointChange: this.handleJointSelection,
         onMiterLimitChange: this.handleMiterLimitInput
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
     this.controlPanel.initialize();
   }
@@ -232,6 +233,8 @@ export default class ArrowLineAnimationLoopTemplate extends AnimationLoopTemplat
       colorKind: this.activeColorKind,
       timeKind: this.activeTimeKind,
       modelKind: this.activePathModelKind,
+      measureSweepEnabled: this.measureSweepEnabled,
+      widthsEnabled: this.widthsEnabled,
       capKind: this.capKind,
       jointKind: this.jointKind,
       miterLimit: this.miterLimit

@@ -6,20 +6,24 @@ import {
   ArrowBatchesPanel,
   ArrowSchemaPanel,
   ArrowTablePanel,
-  ColumnPanel,
   CustomPanel,
-  PanelBox,
-  PanelManager,
   TabbedPanel,
   type Panel
 } from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
+import {Fragment, h} from 'preact';
+import {
+  configurePanelHostElement,
+  makeExampleContentPanel,
+  makeHtmlCustomPanel,
+  makeExamplePanelHostHtml,
+  renderExamplePanel
+} from '../example-panels';
 
 const ARROW_EXAMPLE_PANEL_HOST_ID = 'arrow-example-panel-host';
-const ARROW_EXAMPLE_PANEL_BOX_ID = 'arrow-example-panel-box';
-const ARROW_EXAMPLE_CONTROLS_PANEL_ID = 'arrow-example-controls';
+const ARROW_EXAMPLE_DESCRIPTION_PANEL_ID = 'arrow-example-description';
+const ARROW_EXAMPLE_SETTINGS_PANEL_ID = 'arrow-example-settings';
 const ARROW_EXAMPLE_TABLES_PANEL_ID = 'arrow-example-tables';
-const ARROW_EXAMPLE_PANEL_BOX_WIDTH_PX = 388;
 const ARROW_EXAMPLE_TABLE_PREVIEW_ROW_LIMIT = 50;
 const ARROW_EXAMPLE_TABLE_PREVIEW_NESTED_ITEM_LIMIT = 6;
 
@@ -30,7 +34,6 @@ export type ArrowExampleTableEntry = {
   label: string;
   kind: ArrowExampleTableKind;
   table: arrow.Table;
-  status?: string;
 };
 
 export type ArrowExampleLoadedTableStream = {
@@ -41,27 +44,49 @@ type BeginLoadedTableStreamProps = Omit<ArrowExampleTableEntry, 'table'> & {
   recordBatches: readonly arrow.RecordBatch[];
 };
 
-/** Returns the InfoBox host used by panel-managed Arrow example content. */
+type ArrowExamplePanelFactory = Panel | (() => Panel);
+
+/** Returns the InfoBox host used by panel-backed Arrow example content. */
 export function makeArrowExamplePanelHostHtml(): string {
-  return `<div id="${ARROW_EXAMPLE_PANEL_HOST_ID}" data-arrow-example-panel-host=""></div>`;
+  return makeExamplePanelHostHtml(ARROW_EXAMPLE_PANEL_HOST_ID);
 }
 
-/** Owns panel-managed controls plus CPU Arrow table inspection for one Arrow example. */
+/** Owns panel-backed description, settings, and CPU Arrow table inspection for one Arrow example. */
 export class ArrowExamplePanelManager {
-  private readonly controlsHtml: string;
+  private readonly makeDescriptionPanel: () => Panel;
+  private readonly makeSettingsPanel: () => Panel;
   private readonly tableEntries = new Map<string, ArrowExampleTableEntry>();
-  private readonly selectedBatchIndexByTableId = new Map<string, number>();
   private readonly activeStreamVersionByTableId = new Map<string, number>();
   private nextStreamVersion = 0;
   private hostElement: HTMLElement | null = null;
-  private panelManager: PanelManager | null = null;
 
-  constructor({controlsHtml}: {controlsHtml: string}) {
-    this.controlsHtml = controlsHtml;
+  constructor({
+    descriptionHtml,
+    descriptionPanel,
+    settingsPanel
+  }: {
+    descriptionHtml?: string;
+    descriptionPanel?: ArrowExamplePanelFactory;
+    settingsPanel?: ArrowExamplePanelFactory;
+  }) {
+    const defaultDescriptionPanel = makeHtmlCustomPanel({
+      id: ARROW_EXAMPLE_DESCRIPTION_PANEL_ID,
+      title: 'Description',
+      html: descriptionHtml ?? ''
+    });
+    const defaultSettingsPanel = makeEmptyArrowExampleSettingsPanel();
+    this.makeDescriptionPanel = makeArrowExamplePanelFactory(
+      descriptionPanel,
+      () => defaultDescriptionPanel
+    );
+    this.makeSettingsPanel = makeArrowExamplePanelFactory(
+      settingsPanel,
+      () => defaultSettingsPanel
+    );
   }
 
   mount(): void {
-    if (this.panelManager || typeof document === 'undefined') {
+    if (this.hostElement || typeof document === 'undefined') {
       return;
     }
 
@@ -72,13 +97,13 @@ export class ArrowExamplePanelManager {
 
     this.hostElement = hostElement;
     configurePanelHostElement(hostElement);
-    this.panelManager = new PanelManager({parentElement: hostElement});
     this.render();
   }
 
   finalize(): void {
-    this.panelManager?.finalize();
-    this.panelManager = null;
+    if (this.hostElement) {
+      renderExamplePanel(this.hostElement, null);
+    }
     this.hostElement = null;
   }
 
@@ -93,7 +118,6 @@ export class ArrowExamplePanelManager {
 
   upsertTableEntry(tableEntry: ArrowExampleTableEntry): void {
     this.tableEntries.set(tableEntry.id, tableEntry);
-    this.clampSelectedBatchIndex(tableEntry);
     this.render();
   }
 
@@ -101,7 +125,6 @@ export class ArrowExamplePanelManager {
     if (!this.tableEntries.delete(tableId)) {
       return;
     }
-    this.selectedBatchIndexByTableId.delete(tableId);
     this.activeStreamVersionByTableId.delete(tableId);
     this.render();
   }
@@ -126,8 +149,7 @@ export class ArrowExamplePanelManager {
       );
       this.upsertTableEntry({
         ...tableEntry,
-        table: new arrow.Table(schema, recordBatches.slice(0, effectiveLoadedBatchCount)),
-        status: `${effectiveLoadedBatchCount.toLocaleString()} / ${totalBatchCount.toLocaleString()} batches loaded`
+        table: new arrow.Table(schema, recordBatches.slice(0, effectiveLoadedBatchCount))
       });
     };
 
@@ -139,39 +161,20 @@ export class ArrowExamplePanelManager {
     this.render();
   }
 
-  private readonly renderControlsHtml = (rootElement: HTMLElement): (() => void) => {
-    rootElement.innerHTML = this.controlsHtml;
-    return () => rootElement.replaceChildren();
-  };
-
   private render(): void {
-    if (!this.panelManager || !this.hostElement) {
+    if (!this.hostElement) {
       return;
     }
 
-    this.panelManager.setProps({
-      components: [
-        new PanelBox({
-          id: ARROW_EXAMPLE_PANEL_BOX_ID,
-          _container: this.hostElement as HTMLDivElement,
-          widthPx: ARROW_EXAMPLE_PANEL_BOX_WIDTH_PX,
-          collapsible: false,
-          panel: new TabbedPanel({
-            id: 'arrow-example-root-tabs',
-            title: 'Arrow example',
-            tabListLayout: 'wrap',
-            panels: [
-              new CustomPanel({
-                id: ARROW_EXAMPLE_CONTROLS_PANEL_ID,
-                title: 'Controls',
-                onRenderHTML: this.renderControlsHtml
-              }),
-              this.makeTablesPanel()
-            ]
-          })
-        })
-      ]
-    });
+    renderExamplePanel(
+      this.hostElement,
+      new TabbedPanel({
+        id: 'arrow-example-root-tabs',
+        title: 'Arrow example',
+        tabListLayout: 'wrap',
+        panels: [this.makeDescriptionPanel(), this.makeSettingsPanel(), this.makeTablesPanel()]
+      })
+    );
   }
 
   private makeTablesPanel(): Panel {
@@ -198,177 +201,61 @@ export class ArrowExamplePanelManager {
             panels: tablePanels
           });
 
-    return new ColumnPanel({
-      id: ARROW_EXAMPLE_TABLES_PANEL_ID,
-      title: 'Tables',
-      panels: [tablePanel]
-    });
+    tablePanel.setProps({id: ARROW_EXAMPLE_TABLES_PANEL_ID, title: 'Tables'});
+    return tablePanel;
   }
 
   private makeTablePanel(tableEntry: ArrowExampleTableEntry): Panel {
-    const selectedBatchIndex = this.selectedBatchIndexByTableId.get(tableEntry.id);
-    return new ColumnPanel({
+    const batchesPanel = new ArrowBatchesPanel({
+      id: `${tableEntry.id}-batches`,
+      title: 'Batches',
+      table: tableEntry.table
+    });
+    const contentsPanel = new ArrowTablePanel({
+      id: `${tableEntry.id}-contents`,
+      title: 'Contents',
+      table: tableEntry.table,
+      batchIndex: 'all',
+      showRowIndex: true,
+      maxRows: ARROW_EXAMPLE_TABLE_PREVIEW_ROW_LIMIT,
+      maxNestedItems: ARROW_EXAMPLE_TABLE_PREVIEW_NESTED_ITEM_LIMIT
+    });
+    const schemaPanel = new ArrowSchemaPanel({
+      id: `${tableEntry.id}-schema`,
+      title: 'Schema',
+      schema: tableEntry.table.schema
+    });
+
+    return makeExampleContentPanel({
       id: `${tableEntry.id}-panel`,
       title: tableEntry.label,
-      panels: [
-        new CustomPanel({
-          id: `${tableEntry.id}-summary`,
-          title: '',
-          onRenderHTML: rootElement =>
-            renderTableSummary(rootElement, tableEntry, selectedBatchIndex, {
-              onResetBatchSelection: () => this.resetBatchSelection(tableEntry.id),
-              onRefresh: () => this.refresh()
-            })
-        }),
-        new ArrowBatchesPanel({
-          id: `${tableEntry.id}-batches`,
-          title: 'Batches',
-          table: tableEntry.table,
-          selectedBatchIndex,
-          onBatchSelect: batchIndex => this.selectBatch(tableEntry.id, batchIndex)
-        }),
-        new ArrowTablePanel({
-          id: `${tableEntry.id}-contents`,
-          title: 'Contents',
-          table: tableEntry.table,
-          batchIndex: selectedBatchIndex ?? 'all',
-          showRowIndex: true,
-          maxRows: ARROW_EXAMPLE_TABLE_PREVIEW_ROW_LIMIT,
-          maxNestedItems: ARROW_EXAMPLE_TABLE_PREVIEW_NESTED_ITEM_LIMIT
-        }),
-        new ArrowSchemaPanel({
-          id: `${tableEntry.id}-schema`,
-          title: 'Schema',
-          schema: tableEntry.table.schema
-        })
-      ]
+      content: h(Fragment, {}, batchesPanel.content, contentsPanel.content, schemaPanel.content)
     });
   }
 
-  private selectBatch(tableId: string, batchIndex: number): void {
-    const tableEntry = this.tableEntries.get(tableId);
-    if (!tableEntry || batchIndex < 0 || batchIndex >= tableEntry.table.batches.length) {
-      return;
-    }
-    this.selectedBatchIndexByTableId.set(tableId, batchIndex);
-    this.render();
-  }
-
-  private resetBatchSelection(tableId: string): void {
-    if (!this.selectedBatchIndexByTableId.delete(tableId)) {
-      return;
-    }
-    this.render();
-  }
-
-  private clampSelectedBatchIndex(tableEntry: ArrowExampleTableEntry): void {
-    const selectedBatchIndex = this.selectedBatchIndexByTableId.get(tableEntry.id);
-    if (selectedBatchIndex !== undefined && selectedBatchIndex >= tableEntry.table.batches.length) {
-      this.selectedBatchIndexByTableId.delete(tableEntry.id);
-    }
-  }
-
   private pruneTableState(): void {
-    for (const tableId of this.selectedBatchIndexByTableId.keys()) {
-      if (!this.tableEntries.has(tableId)) {
-        this.selectedBatchIndexByTableId.delete(tableId);
-      }
-    }
     for (const tableId of this.activeStreamVersionByTableId.keys()) {
       if (!this.tableEntries.has(tableId)) {
         this.activeStreamVersionByTableId.delete(tableId);
       }
     }
-    for (const tableEntry of this.tableEntries.values()) {
-      this.clampSelectedBatchIndex(tableEntry);
-    }
   }
 }
 
-function configurePanelHostElement(hostElement: HTMLElement): void {
-  hostElement.style.minWidth = '0';
-  hostElement.style.setProperty('--menu-backdrop-filter', 'unset');
-  hostElement.style.setProperty('--menu-background', 'transparent');
-  hostElement.style.setProperty('--menu-border', 'none');
-  hostElement.style.setProperty('--menu-shadow', 'none');
-}
-
-function renderTableSummary(
-  rootElement: HTMLElement,
-  tableEntry: ArrowExampleTableEntry,
-  selectedBatchIndex: number | undefined,
-  handlers: {
-    onRefresh: () => void;
-    onResetBatchSelection: () => void;
+function makeArrowExamplePanelFactory(
+  panel: ArrowExamplePanelFactory | undefined,
+  fallback: () => Panel
+): () => Panel {
+  if (typeof panel === 'function') {
+    return panel;
   }
-): () => void {
-  const kindLabel = tableEntry.kind === 'derived' ? 'Derived CPU Arrow' : 'Source CPU Arrow';
-  const status = tableEntry.status ? `<span>${escapeHtml(tableEntry.status)}</span>` : '';
-  const batchSelection =
-    selectedBatchIndex === undefined
-      ? 'Showing all loaded rows'
-      : `Showing batch ${selectedBatchIndex.toLocaleString()}`;
-  rootElement.innerHTML = `\
-<div style="display: grid; gap: 8px; color: #334155; font: 500 12px/1.45 system-ui, sans-serif;">
-  <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-    <span style="padding: 2px 6px; border-radius: 999px; background: #e2e8f0; color: #0f172a; font-weight: 700;">${escapeHtml(kindLabel)}</span>
-    <span>${escapeHtml(batchSelection)}</span>
-    ${status}
-  </div>
-  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-    <button type="button" data-arrow-example-table-refresh="" style="${getActionButtonStyle()}">Refresh preview</button>
-    ${
-      selectedBatchIndex === undefined
-        ? ''
-        : `<button type="button" data-arrow-example-table-all-rows="" style="${getActionButtonStyle()}">All loaded rows</button>`
-    }
-  </div>
-</div>`;
-
-  const refreshButton = rootElement.querySelector<HTMLButtonElement>(
-    '[data-arrow-example-table-refresh]'
-  );
-  const allRowsButton = rootElement.querySelector<HTMLButtonElement>(
-    '[data-arrow-example-table-all-rows]'
-  );
-  refreshButton?.addEventListener('click', handlers.onRefresh);
-  allRowsButton?.addEventListener('click', handlers.onResetBatchSelection);
-
-  return () => {
-    refreshButton?.removeEventListener('click', handlers.onRefresh);
-    allRowsButton?.removeEventListener('click', handlers.onResetBatchSelection);
-    rootElement.replaceChildren();
-  };
+  return panel ? () => panel : fallback;
 }
 
-function getActionButtonStyle(): string {
-  return [
-    'min-height: 28px',
-    'padding: 0 8px',
-    'border: 1px solid #cbd5e1',
-    'border-radius: 6px',
-    'background: #fff',
-    'color: #0f172a',
-    'cursor: pointer',
-    'font: 600 12px/1 system-ui, sans-serif'
-  ].join('; ');
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, character => {
-    switch (character) {
-      case '&':
-        return '&amp;';
-      case '<':
-        return '&lt;';
-      case '>':
-        return '&gt;';
-      case '"':
-        return '&quot;';
-      case "'":
-        return '&#39;';
-      default:
-        return character;
-    }
+function makeEmptyArrowExampleSettingsPanel(): Panel {
+  return makeHtmlCustomPanel({
+    id: ARROW_EXAMPLE_SETTINGS_PANEL_ID,
+    title: 'Settings',
+    html: '<p style="margin: 0; color: #475569; font: 500 12px/1.45 system-ui, sans-serif;">No settings for this example.</p>'
   });
 }

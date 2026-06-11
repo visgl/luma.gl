@@ -24,6 +24,10 @@ export type PickingTooltip = string | null;
 
 export type PickingMode = 'auto' | 'index' | 'color';
 export type ResolvedPickingMode = Exclude<PickingMode, 'auto'>;
+export type PickingShouldPickOptions = {
+  /** Re-render picking even when the cursor has not moved. */
+  force?: boolean;
+};
 /** @deprecated Use `PickingMode`. */
 export type PickingBackend = PickingMode;
 /** @deprecated Use `ResolvedPickingMode`. */
@@ -156,7 +160,8 @@ export class PickingManager {
 
   /** Return whether callers need to render a fresh picking pass for this cursor position. */
   shouldPick(
-    mousePosition: [number, number] | null | undefined
+    mousePosition: [number, number] | null | undefined,
+    options: PickingShouldPickOptions = {}
   ): mousePosition is [number, number] {
     if (!mousePosition) {
       if (this.lastMousePosition) {
@@ -167,6 +172,7 @@ export class PickingManager {
 
     const [mouseX, mouseY] = mousePosition;
     if (
+      !options.force &&
       this.lastMousePosition &&
       this.lastMousePosition[0] === mouseX &&
       this.lastMousePosition[1] === mouseY

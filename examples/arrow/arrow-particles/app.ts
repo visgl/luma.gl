@@ -25,7 +25,7 @@ export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTe
   readonly layer: ArrowParticleRenderer;
   readonly controlPanel: ArrowParticlesControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowParticlesControlPanelHtml()
+    descriptionHtml: makeArrowParticlesControlPanelHtml()
   });
   isFinalized = false;
 

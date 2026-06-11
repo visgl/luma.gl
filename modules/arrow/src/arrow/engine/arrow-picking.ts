@@ -10,6 +10,7 @@ import {
   supportsIndexPicking,
   type PickInfo,
   type PickingManagerProps,
+  type PickingShouldPickOptions,
   type ShaderInputs
 } from '@luma.gl/engine';
 import type {GPURecordBatchSourceInfo, GPUTable, GPUVector} from '@luma.gl/tables';
@@ -94,15 +95,17 @@ export function clearArrowPickingState(
 export function runArrowPickingPass({
   picker,
   mousePosition,
+  pickingOptions,
   shaderInputs,
   draw
 }: {
   picker: PickingManager;
   mousePosition: number[] | null | undefined;
+  pickingOptions?: PickingShouldPickOptions;
   shaderInputs?: ShaderInputs<any>;
   draw: (pickingPass: RenderPass) => boolean | void;
 }): boolean {
-  if (!picker.shouldPick(mousePosition as [number, number] | null)) {
+  if (!picker.shouldPick(mousePosition as [number, number] | null, pickingOptions)) {
     return false;
   }
 

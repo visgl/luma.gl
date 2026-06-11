@@ -11,7 +11,7 @@ import {
   supportsArrowIndexPicking
 } from '@luma.gl/arrow';
 import {Device, type CommandEncoder, type RenderPass, type ShaderLayout} from '@luma.gl/core';
-import type {ModelProps} from '@luma.gl/engine';
+import type {ModelProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {
   CubeGeometry,
   Geometry,
@@ -378,10 +378,11 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
     this.cube.destroy();
   }
 
-  pick(mousePosition: number[] | null | undefined): void {
+  pick(mousePosition: number[] | null | undefined, options: PickingShouldPickOptions = {}): void {
     runArrowPickingPass({
       picker: this.picker,
       mousePosition,
+      pickingOptions: options,
       shaderInputs: this.shaderInputs,
       draw: pickingPass => {
         const pickingCube = this.pickingCube || this.cube;

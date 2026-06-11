@@ -18,7 +18,7 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
 
   readonly layer: ArrowMeshRenderer;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowMeshGeometryControlPanelHtml(ARROW_MESH_GEOMETRY_CUBE_COUNT)
+    descriptionHtml: makeArrowMeshGeometryControlPanelHtml(ARROW_MESH_GEOMETRY_CUBE_COUNT)
   });
 
   constructor({device}: AnimationProps) {
@@ -42,8 +42,7 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
         id: 'mesh-instance-matrices',
         label: 'Current instance matrices',
         kind: 'derived',
-        table: this.layer.matrixArrowTable,
-        status: 'Refresh preview while animation runs'
+        table: this.layer.matrixArrowTable
       }
     ]);
   }

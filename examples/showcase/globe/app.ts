@@ -24,6 +24,19 @@ import {
   waterMaterial
 } from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 import earthTextureUrl from './earth.jpg';
 import earthWaterMaskUrl from './earth-specular.gif';
 // NASA Tycho Star Map converted to local cube-map faces for offline example loading.
@@ -34,133 +47,10 @@ import tychoPosxUrl from './tycho-posx.jpg';
 import tychoPosyUrl from './tycho-posy.jpg';
 import tychoPoszUrl from './tycho-posz.jpg';
 
-const INFO_HTML = `\
-<style>
-  #globe-controls {
-    color: #172536;
-    font: 13px/1.45 "SF Pro Text", "Segoe UI", sans-serif;
-  }
-
-  #globe-controls p {
-    margin: 0 0 12px;
-    color: rgba(23, 37, 54, 0.78);
-  }
-
-  #globe-controls .grid {
-    display: grid;
-    gap: 12px;
-  }
-
-  #globe-controls .rows {
-    display: grid;
-    gap: 10px;
-  }
-
-  #globe-controls .toggle-row {
-    display: grid;
-    gap: 10px;
-  }
-
-  #globe-controls .toggle {
-    display: grid;
-    grid-template-columns: 160px minmax(140px, 1fr) 56px;
-    align-items: center;
-    column-gap: 12px;
-  }
-
-  #globe-controls .control-row {
-    display: grid;
-    grid-template-columns: 160px minmax(140px, 1fr) 56px;
-    align-items: center;
-    column-gap: 12px;
-  }
-
-  #globe-controls .control-label {
-    min-width: 0;
-  }
-
-  #globe-controls .control-input {
-    display: flex;
-    align-items: center;
-  }
-
-  #globe-controls .toggle span,
-  #globe-controls .control-label {
-    font-weight: 500;
-  }
-
-  #globe-controls .toggle span {
-    grid-column: 1;
-    min-width: 0;
-  }
-
-  #globe-controls input[type='range'] {
-    width: 100%;
-    accent-color: #73d0ff;
-  }
-
-  #globe-controls select {
-    width: 100%;
-    border: 1px solid rgba(23, 37, 54, 0.18);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.92);
-    color: #172536;
-    padding: 6px 10px;
-    font: inherit;
-  }
-
-  #globe-controls input[type='checkbox'] {
-    accent-color: #73d0ff;
-    grid-column: 3;
-    justify-self: end;
-  }
-
-  #globe-controls output {
-    min-width: 44px;
-    color: rgba(23, 37, 54, 0.64);
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-
-  #globe-controls .caption {
-    margin-top: 12px;
-    color: rgba(23, 37, 54, 0.6);
-    font-size: 12px;
-  }
-
-  #globe-controls .attribution {
-    margin-top: 8px;
-    color: rgba(23, 37, 54, 0.56);
-    font-size: 11px;
-    line-height: 1.35;
-  }
-
-  #globe-controls .attribution a {
-    color: inherit;
-  }
-</style>
-<div id="globe-controls">
-  <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and a starfield backdrop.</p>
-  <div class="grid">
-    <div class="toggle-row">
-      <label class="toggle"><span>Sky Background</span><input id="star-background-enabled" type="checkbox" checked /></label>
-      <label class="toggle"><span>Water Overlay</span><input id="water-enabled" type="checkbox" checked /></label>
-      <label class="toggle"><span>Land Texture</span><input id="land-texture-enabled" type="checkbox" checked /></label>
-    </div>
-    <div class="rows">
-      <label class="control-row"><span class="control-label">Wave Speed</span><span class="control-input"><input id="wave-speed" type="range" min="0" max="4" step="0.01" value="1.25" /></span><output id="wave-speed-value">1.25x</output></label>
-      <label class="control-row"><span class="control-label">Normal Strength</span><span class="control-input"><input id="normal-strength" type="range" min="0" max="1.4" step="0.01" value="0.52" /></span><output id="normal-strength-value">0.52</output></label>
-      <label class="control-row"><span class="control-label">Fresnel Power</span><span class="control-input"><input id="fresnel-power" type="range" min="1" max="12" step="0.1" value="6.2" /></span><output id="fresnel-power-value">6.2</output></label>
-      <label class="control-row"><span class="control-label">Specular Intensity</span><span class="control-input"><input id="specular-intensity" type="range" min="0" max="5" step="0.05" value="2.45" /></span><output id="specular-intensity-value">2.45</output></label>
-      <label class="control-row"><span class="control-label">Light Azimuth</span><span class="control-input"><input id="light-azimuth" type="range" min="-180" max="180" step="1" value="-38" /></span><output id="light-azimuth-value">-38°</output></label>
-      <label class="control-row"><span class="control-label">Light Elevation</span><span class="control-input"><input id="light-elevation" type="range" min="5" max="85" step="1" value="34" /></span><output id="light-elevation-value">34°</output></label>
-    </div>
-  </div>
-  <div class="caption">Drag to orbit. Use the mouse wheel or trackpad to zoom.</div>
-  <div class="attribution">
-    Sky: NASA <a href="https://science.nasa.gov/3d-resources/tycho-star-map/">Tycho Star Map</a>.
-  </div>
-</div>
+const GLOBE_DESCRIPTION_HTML = `\
+<p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and a starfield backdrop.</p>
+<p>Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
+<p style="font-size: 11px;">Sky: NASA <a href="https://science.nasa.gov/3d-resources/tycho-star-map/">Tycho Star Map</a>.</p>
 `;
 
 const SKYBOX_SHADER_WGSL = /* wgsl */ `\
@@ -680,7 +570,7 @@ const EARTH_CELESTIAL_OFFSET = radians(-90);
 const EARTH_ROTATION_RATE = 0.00008;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = makeExamplePanelHostHtml();
 
   backgroundModel: Model;
   landModel: Model;
@@ -695,6 +585,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   waterMaskTexture: DynamicTexture;
   device: Device;
   controls: GlobeControls = {...DEFAULT_CONTROLS};
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
   cleanupCallbacks: CleanupCallback[] = [];
   cameraAngle = 0.6;
   cameraTilt = 0.28;
@@ -703,6 +595,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'globe-settings',
+      schema: makeGlobeSettingsSchema(),
+      settings: this.controls,
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     canvas.style.cursor = 'grab';
@@ -902,10 +801,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override async onInitialize(): Promise<void> {
-    this.initializeControls();
+    this.panels.mount();
   }
 
   override onFinalize(): void {
+    this.settingsPanel.finalize();
+    this.panels.finalize();
     this.backgroundModel.destroy();
     this.landModel.destroy();
     this.oceanModel.destroy();
@@ -1003,92 +904,32 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return [0.01, 0.03, 0.06, 1];
   }
 
-  private initializeControls(): void {
-    bindCheckboxControl(
-      'star-background-enabled',
-      this.controls.starBackgroundEnabled,
-      value => {
-        this.controls.starBackgroundEnabled = value;
-      },
-      this.cleanupCallbacks
-    );
-    bindCheckboxControl(
-      'water-enabled',
-      this.controls.waterEnabled,
-      value => {
-        this.controls.waterEnabled = value;
-      },
-      this.cleanupCallbacks
-    );
-    bindCheckboxControl(
-      'land-texture-enabled',
-      this.controls.landTextureEnabled,
-      value => {
-        this.controls.landTextureEnabled = value;
-      },
-      this.cleanupCallbacks
-    );
-    bindRangeControl(
-      'wave-speed',
-      'wave-speed-value',
-      this.controls.waveSpeed,
-      value => {
-        this.controls.waveSpeed = value;
-      },
-      value => `${value.toFixed(2)}x`,
-      this.cleanupCallbacks
-    );
-    bindRangeControl(
-      'normal-strength',
-      'normal-strength-value',
-      this.controls.normalStrength,
-      value => {
-        this.controls.normalStrength = value;
-      },
-      value => value.toFixed(2),
-      this.cleanupCallbacks
-    );
-    bindRangeControl(
-      'fresnel-power',
-      'fresnel-power-value',
-      this.controls.fresnelPower,
-      value => {
-        this.controls.fresnelPower = value;
-      },
-      value => value.toFixed(1),
-      this.cleanupCallbacks
-    );
-    bindRangeControl(
-      'specular-intensity',
-      'specular-intensity-value',
-      this.controls.specularIntensity,
-      value => {
-        this.controls.specularIntensity = value;
-      },
-      value => value.toFixed(2),
-      this.cleanupCallbacks
-    );
-    bindRangeControl(
-      'light-azimuth',
-      'light-azimuth-value',
-      this.controls.lightAzimuth,
-      value => {
-        this.controls.lightAzimuth = value;
-      },
-      value => `${value.toFixed(0)}°`,
-      this.cleanupCallbacks
-    );
-    bindRangeControl(
-      'light-elevation',
-      'light-elevation-value',
-      this.controls.lightElevation,
-      value => {
-        this.controls.lightElevation = value;
-      },
-      value => `${value.toFixed(0)}°`,
-      this.cleanupCallbacks
-    );
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'globe-controls',
+      title: 'Controls',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'globe-description',
+          title: '',
+          html: GLOBE_DESCRIPTION_HTML
+        }),
+        this.settingsPanel.makePanel()
+      ]
+    });
   }
+
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    for (const settingName of Object.keys(this.controls) as (keyof GlobeControls)[]) {
+      const nextValue = getChangedSetting(changedSettings, settingName)?.nextValue;
+      if (typeof nextValue === 'boolean' || typeof nextValue === 'number') {
+        this.controls[settingName] = nextValue as GlobeControls[typeof settingName];
+      }
+    }
+  };
 
   private getCameraPosition(): [number, number, number] {
     const horizontalScale = Math.cos(this.cameraTilt);
@@ -1129,51 +970,95 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-function bindCheckboxControl(
-  id: string,
-  initialValue: boolean,
-  onChange: (value: boolean) => void,
-  cleanupCallbacks: CleanupCallback[]
-): void {
-  const input = document.getElementById(id) as HTMLInputElement | null;
-  if (!input) {
-    return;
-  }
-
-  input.checked = initialValue;
-  const changeHandler = () => onChange(input.checked);
-  input.addEventListener('change', changeHandler);
-  cleanupCallbacks.push(() => input.removeEventListener('change', changeHandler));
-}
-
-function bindRangeControl(
-  id: string,
-  outputId: string,
-  initialValue: number,
-  onChange: (value: number) => void,
-  formatValue: (value: number) => string,
-  cleanupCallbacks: CleanupCallback[]
-): void {
-  const input = document.getElementById(id) as HTMLInputElement | null;
-  const output = document.getElementById(outputId) as HTMLOutputElement | null;
-  if (!input || !output) {
-    return;
-  }
-
-  const applyValue = (value: number) => {
-    input.value = String(value);
-    output.value = formatValue(value);
-    output.textContent = formatValue(value);
-    onChange(value);
+function makeGlobeSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'layers',
+        name: 'Layers',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'starBackgroundEnabled',
+            label: 'Sky Background',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {name: 'waterEnabled', label: 'Water Overlay', type: 'boolean', persist: 'none'},
+          {name: 'landTextureEnabled', label: 'Land Texture', type: 'boolean', persist: 'none'}
+        ]
+      },
+      {
+        id: 'water',
+        name: 'Water',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'waveSpeed',
+            label: 'Wave Speed',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 4,
+            step: 0.01
+          },
+          {
+            name: 'normalStrength',
+            label: 'Normal Strength',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.4,
+            step: 0.01
+          },
+          {
+            name: 'fresnelPower',
+            label: 'Fresnel Power',
+            type: 'number',
+            persist: 'none',
+            min: 1,
+            max: 12,
+            step: 0.1
+          },
+          {
+            name: 'specularIntensity',
+            label: 'Specular Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 5,
+            step: 0.05
+          }
+        ]
+      },
+      {
+        id: 'light',
+        name: 'Light',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'lightAzimuth',
+            label: 'Light Azimuth',
+            type: 'number',
+            persist: 'none',
+            min: -180,
+            max: 180,
+            step: 1
+          },
+          {
+            name: 'lightElevation',
+            label: 'Light Elevation',
+            type: 'number',
+            persist: 'none',
+            min: 5,
+            max: 85,
+            step: 1
+          }
+        ]
+      }
+    ]
   };
-
-  applyValue(initialValue);
-
-  const inputHandler = () => {
-    applyValue(Number(input.value));
-  };
-  input.addEventListener('input', inputHandler);
-  cleanupCallbacks.push(() => input.removeEventListener('input', inputHandler));
 }
 
 function getDirectionalLightDirection(

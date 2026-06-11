@@ -8,10 +8,7 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {formatDggsPolygonMetrics} from './arrow-dggs-polygon-metrics';
 import {ArrowDggsPolygonRenderer, type DggsSourceKind} from './arrow-dggs-polygon-renderer';
-import {
-  ArrowDggsPolygonsControlPanel,
-  makeArrowDggsPolygonsControlPanelHtml
-} from './control-panel';
+import {ArrowDggsPolygonsControlPanel} from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Global Grids: Uint64, Utf8';
@@ -26,7 +23,8 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
   readonly device: Device;
   readonly controlPanel: ArrowDggsPolygonsControlPanel;
   readonly panels = new ArrowExamplePanelManager({
-    controlsHtml: makeArrowDggsPolygonsControlPanelHtml()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   activeEncoding: DggsCellEncoding = 'geohash';
   activeSourceKind: DggsSourceKind = 'uint64';
@@ -43,7 +41,8 @@ export default class ArrowDggsPolygonsAnimationLoopTemplate extends AnimationLoo
       handlers: {
         onEncodingChange: this.handleEncodingSelection,
         onSourceChange: this.handleSourceSelection
-      }
+      },
+      onRefresh: () => this.panels.refresh()
     });
   }
 

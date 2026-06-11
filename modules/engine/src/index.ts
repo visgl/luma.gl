@@ -126,6 +126,7 @@ export type {
   PickingTooltip,
   PickingMode,
   ResolvedPickingMode,
+  PickingShouldPickOptions,
   PickingBackend,
   PickingManagerProps,
   ResolvedPickingBackend

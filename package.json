@@ -95,8 +95,10 @@
     "test-fast"
   ],
   "dependencies": {
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
     "@math.gl/types": "^4.1.0",
-    "@types/offscreencanvas": "^2019.7.3"
+    "@types/offscreencanvas": "^2019.7.3",
+    "preact": "^10.17.0"
   },
   "packageManager": "yarn@4.13.0+sha512.5c20ba010c99815433e5c8453112165e673f1c7948d8d2b267f4b5e52097538658388ebc9f9580656d9b75c5cc996f990f611f99304a2197d4c56d21eea370e7"
 }

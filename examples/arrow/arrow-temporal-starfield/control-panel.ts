@@ -2,12 +2,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-const RENDER_MODE_SELECTOR_ID = 'arrow-temporal-starfield-render-mode';
-const TIME_COLUMN_SELECTOR_ID = 'arrow-temporal-starfield-time-column';
+import {
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-temporal-starfield-streaming-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-temporal-starfield-streaming-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-temporal-starfield-streaming-status-label';
-const CONVERSION_PATH_ID = 'arrow-temporal-starfield-conversion-path';
+const PREPARATION_PATH_ID = 'arrow-temporal-starfield-preparation-path';
 const CURRENT_TIMESTAMP_ID = 'arrow-temporal-starfield-current-timestamp';
 const POSITIONS_COLUMN_ID = 'arrow-temporal-starfield-positions-column';
 const EVENT_STARTS_COLUMN_ID = 'arrow-temporal-starfield-event-starts-column';
@@ -22,7 +31,7 @@ export type ArrowTemporalStarfieldControlPanelState = {
 };
 
 export type ArrowTemporalStarfieldControlPanelLabels = {
-  conversionPath: string;
+  preparationPath: string;
   currentTimestamp: string;
   positionsColumn: string;
   eventStartsColumn: string;
@@ -39,220 +48,227 @@ export type ArrowTemporalStarfieldControlPanelHandlers = {
 export type ArrowTemporalStarfieldControlPanelOptions = {
   initialState: ArrowTemporalStarfieldControlPanelState;
   handlers: ArrowTemporalStarfieldControlPanelHandlers;
+  onRefresh: () => void;
 };
 
 export class ArrowTemporalStarfieldControlPanel {
   private readonly handlers: ArrowTemporalStarfieldControlPanelHandlers;
+  private readonly onRefresh: () => void;
+  private readonly settingsPanel: ExampleSettingsPanelManager;
   private state: ArrowTemporalStarfieldControlPanelState;
-  private renderModeSelector: HTMLSelectElement | null = null;
-  private timeColumnSelector: HTMLSelectElement | null = null;
-  private streamingBatchStatusRow: HTMLElement | null = null;
-  private streamingBatchFill: HTMLElement | null = null;
-  private streamingBatchStatusLabel: HTMLElement | null = null;
-  private conversionPathLabel: HTMLElement | null = null;
-  private currentTimestampLabel: HTMLElement | null = null;
-  private positionsColumnLabel: HTMLElement | null = null;
-  private eventStartsColumnLabel: HTMLElement | null = null;
-  private timestampOriginLabel: HTMLElement | null = null;
-  private durationOriginLabel: HTMLElement | null = null;
-  private pulsePeriodOriginLabel: HTMLElement | null = null;
+  private labels: Partial<ArrowTemporalStarfieldControlPanelLabels> = {};
+  private loadedBatchCount: number | null = null;
+  private streamingBatchCount = 0;
+  private rootElement: HTMLElement | null = null;
 
-  constructor({initialState, handlers}: ArrowTemporalStarfieldControlPanelOptions) {
+  constructor({initialState, handlers, onRefresh}: ArrowTemporalStarfieldControlPanelOptions) {
     this.state = initialState;
     this.handlers = handlers;
+    this.onRefresh = onRefresh;
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'arrow-temporal-starfield-settings',
+      schema: makeArrowTemporalStarfieldSettingsSchema(initialState),
+      settings: initialState,
+      onSettingsChange: this.handleSettingsChange
+    });
   }
 
-  initialize(): void {
-    if (!this.renderModeSelector) {
-      this.renderModeSelector = document.getElementById(
-        RENDER_MODE_SELECTOR_ID
-      ) as HTMLSelectElement | null;
-      this.renderModeSelector?.addEventListener('change', this.handleRenderModeSelection);
-    }
-
-    if (!this.timeColumnSelector) {
-      this.timeColumnSelector = document.getElementById(
-        TIME_COLUMN_SELECTOR_ID
-      ) as HTMLSelectElement | null;
-      this.timeColumnSelector?.addEventListener('change', this.handleTimeColumnSelection);
-    }
-
-    this.streamingBatchStatusRow ??= document.getElementById(STREAMING_BATCH_STATUS_ROW_ID);
-    this.streamingBatchFill ??= document.getElementById(STREAMING_BATCH_FILL_ID);
-    this.streamingBatchStatusLabel ??= document.getElementById(STREAMING_BATCH_STATUS_LABEL_ID);
-    this.conversionPathLabel ??= document.getElementById(CONVERSION_PATH_ID);
-    this.currentTimestampLabel ??= document.getElementById(CURRENT_TIMESTAMP_ID);
-    this.positionsColumnLabel ??= document.getElementById(POSITIONS_COLUMN_ID);
-    this.eventStartsColumnLabel ??= document.getElementById(EVENT_STARTS_COLUMN_ID);
-    this.timestampOriginLabel ??= document.getElementById(TIMESTAMP_ORIGIN_ID);
-    this.durationOriginLabel ??= document.getElementById(DURATION_ORIGIN_ID);
-    this.pulsePeriodOriginLabel ??= document.getElementById(PULSE_PERIOD_ORIGIN_ID);
-    this.syncControls(this.state);
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-temporal-starfield-description',
+      title: 'Description',
+      html: makeArrowTemporalStarfieldControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.render();
+        return () => {
+          if (this.rootElement === rootElement) {
+            this.rootElement = null;
+          }
+        };
+      }
+    });
   }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
+  }
+
+  initialize(): void {}
 
   destroy(): void {
-    this.renderModeSelector?.removeEventListener('change', this.handleRenderModeSelection);
-    this.timeColumnSelector?.removeEventListener('change', this.handleTimeColumnSelection);
-    this.renderModeSelector = null;
-    this.timeColumnSelector = null;
-    this.streamingBatchStatusRow = null;
-    this.streamingBatchFill = null;
-    this.streamingBatchStatusLabel = null;
-    this.conversionPathLabel = null;
-    this.currentTimestampLabel = null;
-    this.positionsColumnLabel = null;
-    this.eventStartsColumnLabel = null;
-    this.timestampOriginLabel = null;
-    this.durationOriginLabel = null;
-    this.pulsePeriodOriginLabel = null;
+    this.settingsPanel.finalize();
+    this.rootElement = null;
   }
 
   syncControls(state: Partial<ArrowTemporalStarfieldControlPanelState>): void {
     this.state = {...this.state, ...state};
-    if (this.timeColumnSelector) {
-      this.timeColumnSelector.value = this.state.timeColumn;
-    }
-
-    if (this.renderModeSelector) {
-      this.renderModeSelector.value = this.state.renderMode;
-      this.renderModeSelector.disabled = !this.state.supportsStorage;
-      const storageOption = this.renderModeSelector.querySelector(
-        'option[value="storage"]'
-      ) as HTMLOptionElement | null;
-      if (storageOption) {
-        storageOption.disabled = !this.state.supportsStorage;
-      }
-    }
+    this.settingsPanel.setSchemaAndSettings(
+      makeArrowTemporalStarfieldSettingsSchema(this.state),
+      this.state
+    );
+    this.onRefresh();
   }
 
   setLabels(labels: Partial<ArrowTemporalStarfieldControlPanelLabels>): void {
-    setTextContent(this.conversionPathLabel, labels.conversionPath);
-    setTextContent(this.currentTimestampLabel, labels.currentTimestamp);
-    setTextContent(this.positionsColumnLabel, labels.positionsColumn);
-    setTextContent(this.eventStartsColumnLabel, labels.eventStartsColumn);
-    setTextContent(this.timestampOriginLabel, labels.timestampOrigin);
-    setTextContent(this.durationOriginLabel, labels.durationOrigin);
-    setTextContent(this.pulsePeriodOriginLabel, labels.pulsePeriodOrigin);
+    this.labels = {...this.labels, ...labels};
+    this.renderLabels();
   }
 
   setCurrentTimestampLabel(label: string): void {
-    setTextContent(this.currentTimestampLabel, label);
+    this.setLabels({currentTimestamp: label});
   }
 
   setStreamingBatchStatus(loadedBatchCount: number | null, streamingBatchCount: number): void {
-    if (
-      !this.streamingBatchStatusRow ||
-      !this.streamingBatchFill ||
-      !this.streamingBatchStatusLabel
-    ) {
-      return;
-    }
-
-    if (loadedBatchCount === null) {
-      this.streamingBatchStatusRow.style.display = 'none';
-      this.streamingBatchFill.style.width = '0%';
-      this.streamingBatchStatusLabel.textContent = `Loaded 0 of ${streamingBatchCount} batches`;
-      this.streamingBatchStatusRow.setAttribute('aria-valuenow', '0');
-      return;
-    }
-
-    const safeLoadedBatchCount = Math.min(Math.max(loadedBatchCount, 0), streamingBatchCount);
-    const progressPercent = getStreamingBatchProgressPercent(
-      safeLoadedBatchCount,
-      streamingBatchCount
-    );
-    this.streamingBatchStatusRow.style.display = 'block';
-    this.streamingBatchStatusRow.setAttribute('aria-valuenow', String(safeLoadedBatchCount));
-    this.streamingBatchStatusRow.setAttribute('aria-valuemax', String(streamingBatchCount));
-    this.streamingBatchFill.style.width = `${progressPercent}%`;
-    this.streamingBatchStatusLabel.textContent = `Loaded ${safeLoadedBatchCount} of ${streamingBatchCount} batches`;
+    this.loadedBatchCount = loadedBatchCount;
+    this.streamingBatchCount = streamingBatchCount;
+    renderStreamingBatchStatus(this.rootElement, loadedBatchCount, streamingBatchCount);
   }
 
-  private readonly handleTimeColumnSelection = (): void => {
-    const requestedTimeColumn = this.timeColumnSelector?.value;
-    if (!isTemporalStarfieldTimeColumn(requestedTimeColumn)) {
-      return;
+  private readonly handleSettingsChange = (
+    settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    this.state = settings as ArrowTemporalStarfieldControlPanelState;
+    const timeColumn = getChangedSetting(changedSettings, 'timeColumn')?.nextValue;
+    if (isTemporalStarfieldTimeColumn(timeColumn)) {
+      this.handlers.onTimeColumnChange(timeColumn);
     }
-    this.syncControls({timeColumn: requestedTimeColumn});
-    this.handlers.onTimeColumnChange(requestedTimeColumn);
+    const renderMode = getChangedSetting(changedSettings, 'renderMode')?.nextValue;
+    if (isTemporalStarfieldRenderMode(renderMode)) {
+      this.handlers.onRenderModeChange(renderMode);
+    }
   };
 
-  private readonly handleRenderModeSelection = (): void => {
-    const requestedRenderMode = this.renderModeSelector?.value;
-    if (!isTemporalStarfieldRenderMode(requestedRenderMode)) {
-      return;
-    }
-    const renderMode =
-      requestedRenderMode === 'storage' && !this.state.supportsStorage
-        ? 'attributes'
-        : requestedRenderMode;
-    this.syncControls({renderMode});
-    this.handlers.onRenderModeChange(renderMode);
+  private render(): void {
+    renderStreamingBatchStatus(this.rootElement, this.loadedBatchCount, this.streamingBatchCount);
+    this.renderLabels();
+  }
+
+  private renderLabels(): void {
+    setTextContent(this.rootElement, PREPARATION_PATH_ID, this.labels.preparationPath);
+    setTextContent(this.rootElement, CURRENT_TIMESTAMP_ID, this.labels.currentTimestamp);
+    setTextContent(this.rootElement, POSITIONS_COLUMN_ID, this.labels.positionsColumn);
+    setTextContent(this.rootElement, EVENT_STARTS_COLUMN_ID, this.labels.eventStartsColumn);
+    setTextContent(this.rootElement, TIMESTAMP_ORIGIN_ID, this.labels.timestampOrigin);
+    setTextContent(this.rootElement, DURATION_ORIGIN_ID, this.labels.durationOrigin);
+    setTextContent(this.rootElement, PULSE_PERIOD_ORIGIN_ID, this.labels.pulsePeriodOrigin);
+  }
+}
+
+export function makeArrowTemporalStarfieldSettingsSchema(
+  state: ArrowTemporalStarfieldControlPanelState
+): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'data',
+        name: 'Data',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'timeColumn',
+            label: 'Time',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'timestamp - TimestampMillisecond', value: 'timestamp'},
+              {label: 'M coordinate - FixedSizeList<Float32, 4>', value: 'xyzm'}
+            ]
+          },
+          {
+            name: 'renderMode',
+            label: 'Model',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Attributes', value: 'attributes'},
+              ...(state.supportsStorage ? [{label: 'Storage', value: 'storage'}] : [])
+            ]
+          }
+        ]
+      }
+    ]
   };
 }
 
 export function makeArrowTemporalStarfieldControlPanelHtml(): string {
-  return `
-<p>Converts Arrow <code>Timestamp</code> and <code>Duration</code> columns as relative <code>Float32</code> GPU rows, then uses them as per-star animation inputs.</p>
-<div style="display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.7rem; align-items: center;">
-  <label for="${TIME_COLUMN_SELECTOR_ID}">Time</label>
-  <select id="${TIME_COLUMN_SELECTOR_ID}">
-    <option value="timestamp">timestamp - TimestampMillisecond</option>
-    <option value="xyzm">M coordinate - FixedSizeList&lt;Float32, 4&gt;</option>
-  </select>
-  <label for="${RENDER_MODE_SELECTOR_ID}">Render</label>
-  <select id="${RENDER_MODE_SELECTOR_ID}">
-    <option value="attributes">Attributes</option>
-    <option value="storage">Storage</option>
-  </select>
-  <span>Convert</span>
-  <strong id="${CONVERSION_PATH_ID}"></strong>
-  <span>Current</span>
-  <strong id="${CURRENT_TIMESTAMP_ID}"></strong>
-</div>
-<div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" style="display: none; position: relative; width: 100%; height: 1.6rem; margin-top: 0.65rem; overflow: hidden; border: 1px solid rgba(125, 211, 252, 0.42); border-radius: 0.45rem; background: rgba(15, 23, 42, 0.22); color: #e0f2fe;">
-  <span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, rgba(14, 165, 233, 0.72) 0%, rgba(125, 211, 252, 0.92) 100%); transition: width 220ms ease;"></span>
-  <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 0.5rem; color: #f8fafc; font-weight: 700; font-variant-numeric: tabular-nums;">Loaded 0 batches</span>
-</div>
-<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem 0.7rem; margin-top: 0.65rem; font-size: 0.78rem;">
-  <strong>Column</strong>
-  <strong>Converted / origin</strong>
-  <code id="${POSITIONS_COLUMN_ID}" style="white-space: normal; overflow-wrap: anywhere;">positions: FixedSizeList&lt;Float32, 2&gt;</code>
-  <span><code>vec2 Float32</code></span>
-  <code id="${EVENT_STARTS_COLUMN_ID}" style="white-space: normal; overflow-wrap: anywhere;">eventStarts: TimestampMillisecond</code>
-  <span><code>Float32 millisecond</code><br><span id="${TIMESTAMP_ORIGIN_ID}"></span></span>
-  <code style="white-space: normal; overflow-wrap: anywhere;">eventDurations: DurationMillisecond</code>
-  <span><code>Float32 millisecond</code><br><span id="${DURATION_ORIGIN_ID}"></span></span>
-  <code style="white-space: normal; overflow-wrap: anywhere;">pulsePeriods: DurationMillisecond</code>
-  <span><code>Float32 millisecond</code><br><span id="${PULSE_PERIOD_ORIGIN_ID}"></span></span>
-  <code style="white-space: normal; overflow-wrap: anywhere;">eventColors: FixedSizeList&lt;Uint8, 4&gt;</code>
-  <span><code>vec4 Uint8</code></span>
-</div>
-`;
+  return `\
+  <p>Prepares Arrow <code>Timestamp</code> and <code>Duration</code> columns as relative <code>Float32</code> GPU rows, then uses them as per-star animation inputs.</p>
+  ${makeStatusRow('Batches', makeProgressBar())}
+  ${makeStatusRow('Prepare', `<strong id="${PREPARATION_PATH_ID}"></strong>`)}
+  ${makeStatusRow('Current', `<strong id="${CURRENT_TIMESTAMP_ID}"></strong>`)}
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 10px; margin-top: 12px; font-size: 12px;">
+    <strong>Column</strong><strong>Prepared / origin</strong>
+    <code id="${POSITIONS_COLUMN_ID}">positions: FixedSizeList&lt;Float32, 2&gt;</code><span><code>vec2 Float32</code></span>
+    <code id="${EVENT_STARTS_COLUMN_ID}">eventStarts: TimestampMillisecond</code><span><code>Float32 millisecond</code><br><span id="${TIMESTAMP_ORIGIN_ID}"></span></span>
+    <code>eventDurations: DurationMillisecond</code><span><code>Float32 millisecond</code><br><span id="${DURATION_ORIGIN_ID}"></span></span>
+    <code>pulsePeriods: DurationMillisecond</code><span><code>Float32 millisecond</code><br><span id="${PULSE_PERIOD_ORIGIN_ID}"></span></span>
+  </div>
+  `;
+}
+
+function makeProgressBar(): string {
+  return `<div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" style="display: none; position: relative; height: 24px; overflow: hidden; border: 1px solid #bfdbfe; border-radius: 6px; background: #dbeafe;"><span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: #2563eb;"></span><span id="${STREAMING_BATCH_STATUS_LABEL_ID}" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700;">Loaded 0 batches</span></div>`;
+}
+
+function makeStatusRow(label: string, valueHtml: string): string {
+  return `<div style="display: grid; grid-template-columns: 62px 1fr; gap: 8px; align-items: center; margin-top: 8px;"><span>${label}</span>${valueHtml}</div>`;
+}
+
+function renderStreamingBatchStatus(
+  rootElement: HTMLElement | null,
+  loadedBatchCount: number | null,
+  streamingBatchCount: number
+): void {
+  const statusRow = getElement(rootElement, STREAMING_BATCH_STATUS_ROW_ID);
+  const fill = getElement(rootElement, STREAMING_BATCH_FILL_ID);
+  const label = getElement(rootElement, STREAMING_BATCH_STATUS_LABEL_ID);
+  if (!statusRow || !fill || !label) {
+    return;
+  }
+  if (loadedBatchCount === null) {
+    statusRow.style.display = 'none';
+    fill.style.width = '0%';
+    label.textContent = `Loaded 0 of ${streamingBatchCount} batches`;
+    statusRow.setAttribute('aria-valuenow', '0');
+    return;
+  }
+  const safeLoadedBatchCount = Math.min(Math.max(loadedBatchCount, 0), streamingBatchCount);
+  statusRow.style.display = 'block';
+  statusRow.setAttribute('aria-valuenow', String(safeLoadedBatchCount));
+  statusRow.setAttribute('aria-valuemax', String(streamingBatchCount));
+  fill.style.width = `${getStreamingBatchProgressPercent(safeLoadedBatchCount, streamingBatchCount)}%`;
+  label.textContent = `Loaded ${safeLoadedBatchCount} of ${streamingBatchCount} batches`;
 }
 
 function getStreamingBatchProgressPercent(
   loadedBatchCount: number,
   streamingBatchCount: number
 ): number {
-  if (streamingBatchCount <= 0) {
-    return 0;
-  }
-  return (loadedBatchCount / streamingBatchCount) * 100;
+  return streamingBatchCount <= 0 ? 0 : (loadedBatchCount / streamingBatchCount) * 100;
 }
 
-function isTemporalStarfieldRenderMode(
-  value: string | undefined
-): value is 'attributes' | 'storage' {
+function isTemporalStarfieldRenderMode(value: unknown): value is 'attributes' | 'storage' {
   return value === 'attributes' || value === 'storage';
 }
 
-function isTemporalStarfieldTimeColumn(value: string | undefined): value is 'timestamp' | 'xyzm' {
+function isTemporalStarfieldTimeColumn(value: unknown): value is 'timestamp' | 'xyzm' {
   return value === 'timestamp' || value === 'xyzm';
 }
 
-function setTextContent(element: HTMLElement | null, value: string | undefined): void {
+function setTextContent(
+  rootElement: HTMLElement | null,
+  id: string,
+  value: string | undefined
+): void {
+  const element = getElement(rootElement, id);
   if (element && value !== undefined) {
     element.textContent = value;
   }
+}
+
+function getElement(rootElement: HTMLElement | null, id: string): HTMLElement | null {
+  return rootElement?.querySelector<HTMLElement>(`#${id}`) ?? null;
 }
