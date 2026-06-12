@@ -10,6 +10,7 @@ import {
   type TextureViewProps,
   type Sampler,
   type SamplerProps,
+  type CopyElementImageOptions,
   type CopyExternalImageOptions,
   type TextureReadOptions,
   type TextureWriteOptions,
@@ -202,6 +203,55 @@ export class WEBGLTexture extends Texture {
         default:
         // Can never happen in WebGL
       }
+    });
+
+    this.gl.bindTexture(this.glTarget, null);
+
+    return {width: options.width, height: options.height};
+  }
+
+  copyElementImage(options_: CopyElementImageOptions): {width: number; height: number} {
+    const options = this._normalizeCopyElementImageOptions(options_);
+    const {glFormat} = this;
+    const {element, depth, mipLevel, sourceX, sourceY, x, y, z, width, height} = options;
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
+    const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
+    const gl = this.gl as WebGL2RenderingContext & {
+      texElementImage2D?: (
+        target: number,
+        internalFormat: number,
+        source: Element,
+        config?: {
+          sx?: number;
+          sy?: number;
+          swidth?: number;
+          sheight?: number;
+          width?: number;
+          height?: number;
+        }
+      ) => void;
+    };
+
+    if (depth !== 1 || (this.dimension !== '2d' && this.dimension !== 'cube')) {
+      throw new Error(`${this} copyElementImage only supports 2d and cube textures on WebGL`);
+    }
+    if (mipLevel !== 0 || x !== 0 || y !== 0) {
+      throw new Error(`${this} copyElementImage only supports full base-level uploads on WebGL`);
+    }
+    if (typeof gl.texElementImage2D !== 'function') {
+      throw new Error(`${this} copyElementImage is not supported by this WebGL implementation`);
+    }
+
+    this.gl.bindTexture(this.glTarget, this.handle);
+    withGLParameters(this.gl, glParameters, () => {
+      gl.texElementImage2D?.(glTarget, glFormat, element, {
+        sx: sourceX,
+        sy: sourceY,
+        swidth: width,
+        sheight: height,
+        width,
+        height
+      });
     });
 
     this.gl.bindTexture(this.glTarget, null);

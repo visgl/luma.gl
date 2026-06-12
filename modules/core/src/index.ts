@@ -105,6 +105,7 @@ export type {CompilerMessage} from './adapter/types/compiler-message';
 export type {ExternalImage} from './shadertypes/image-types/image-types';
 
 export {
+  type CopyElementImageOptions,
   type CopyExternalImageOptions,
   type CopyImageDataOptions,
   type TextureReadOptions,

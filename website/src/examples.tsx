@@ -14,6 +14,7 @@ import ArrowFloat64PrecisionApp from '../../examples/arrow/arrow-float64-precisi
 import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
 import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
+import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/experimental/video-texture/app';
@@ -676,6 +677,17 @@ function getCameraErrorMessage(error: unknown): string {
     ? 'Allow camera access in browser or system settings'
     : getErrorMessage(error);
 }
+
+export const HTMLUIPrismExample: React.FC = props => (
+  <LumaExample
+    id="html-ui-prism"
+    title="HTML UI Prism"
+    directory="experimental"
+    template={HTMLUIPrismApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
 
 export const ArrowMeshGeometryExample: React.FC = props => (
   <LumaExample

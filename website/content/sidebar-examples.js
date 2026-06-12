@@ -55,6 +55,7 @@ const sidebars = {
       label: 'Experimental',
       items: [
         'experimental/bloom',
+        'experimental/html-ui-prism',
         'experimental/fp64',
         'experimental/gpt-2',
         'experimental/video-texture'

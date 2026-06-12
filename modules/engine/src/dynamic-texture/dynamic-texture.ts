@@ -502,11 +502,11 @@ export class DynamicTexture implements TextureBindingSource {
     }
   }
 
-  private _touch(): void {
+  protected _touch(): void {
     this.updateTimestamp = this.device.incrementTimestamp();
   }
 
-  private _touchGeneration(): void {
+  protected _touchGeneration(): void {
     this.generation++;
     this._touch();
   }
