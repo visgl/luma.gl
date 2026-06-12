@@ -578,7 +578,7 @@ function makeSupportNotice(deviceType: string): HTMLElement {
   supportNoticeElement.className = 'html-ui-prism-support';
   supportNoticeElement.innerHTML = `\
 <strong>HTML-in-Canvas is not available.</strong>
-<span>This ${escapeHtml(deviceType)} browser path does not expose the experimental DOM-to-texture upload APIs required by this demo. In Canary, enable <code>chrome://flags/#enable-experimental-web-platform-features</code> or serve this origin with an <code>HTMLInCanvas</code> origin-trial token.</span>
+<span>This ${escapeHtml(deviceType)} browser path does not expose the experimental DOM-to-texture upload APIs required by this demo. In Canary, enable <a href="chrome://flags/#canvas-draw-element">chrome://flags/#canvas-draw-element</a> or serve this origin with an <code>HTMLInCanvas</code> origin-trial token.</span>
 `;
   return supportNoticeElement;
 }
@@ -804,5 +804,9 @@ const HTML_UI_PRISM_CSS = `\
   color: #475569;
   font-size: 14px;
   line-height: 1.45;
+}
+
+.html-ui-prism-support a {
+  color: #2563eb;
 }
 `;
