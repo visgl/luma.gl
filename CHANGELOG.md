@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.4
+
+- feat(core): Support legacy sizing in CanvasContext (#2588)
+
 ### v9.3.3
 
 - fix(webgl): Do not assume luma WEBGLFramebuffer (#2597)
