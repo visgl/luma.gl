@@ -438,11 +438,18 @@ export abstract class CanvasSurface {
     if (this.props.pixelSizeSource === 'css-dpr') {
       // In css-dpr mode the ResizeObserver watches content-box, which won't fire on a pure DPR
       // change (CSS size unchanged). Recalculate the drawing buffer from the new DPR here.
-      const dpr = this.getDevicePixelRatio();
-      this.devicePixelWidth = Math.floor(this.cssWidth * dpr);
-      this.devicePixelHeight = Math.floor(this.cssHeight * dpr);
-      this._updateDrawingBufferSize();
       const oldPixelSize = this.getDevicePixelSize();
+      const dpr = this.getDevicePixelRatio();
+      const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
+      this.devicePixelWidth = Math.max(
+        1,
+        Math.min(Math.floor(this.cssWidth * dpr), maxDevicePixelWidth)
+      );
+      this.devicePixelHeight = Math.max(
+        1,
+        Math.min(Math.floor(this.cssHeight * dpr), maxDevicePixelHeight)
+      );
+      this._updateDrawingBufferSize();
       this.device.props.onResize(this as CanvasContext | PresentationContext, {oldPixelSize});
     }
 
