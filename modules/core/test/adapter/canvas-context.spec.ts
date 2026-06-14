@@ -342,6 +342,54 @@ test('CanvasContext#_handleResize keeps numeric useDevicePixels override across 
   t.end();
 });
 
+test('CanvasContext#_observeDevicePixelRatio recalculates drawing buffer in css-dpr mode', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext({pixelSizeSource: 'css-dpr'}, false);
+  let resizeCalls = 0;
+  // @ts-expect-error read only
+  canvasContext.device = {
+    limits: {maxTextureDimension2D: 4096},
+    props: {
+      onResize: () => {
+        resizeCalls++;
+      },
+      onDevicePixelRatioChange: () => {},
+      onVisibilityChange: () => {},
+      onPositionChange: () => {}
+    }
+  };
+
+  // Simulate an initial resize at DPR 2
+  canvasContext.getDevicePixelRatio = () => 2;
+  (canvasContext as any)._handleResize([
+    {
+      target: canvasContext.canvas,
+      contentBoxSize: [{inlineSize: 400, blockSize: 300}]
+    }
+  ]);
+  t.deepEqual(canvasContext.getDevicePixelSize(), [800, 600], 'initial size at DPR 2');
+
+  // Simulate a DPR change to 1.5 (browser zoom)
+  resizeCalls = 0;
+  canvasContext.getDevicePixelRatio = () => 1.5;
+  // Mark the observer as started so _observeDevicePixelRatio doesn't bail
+  (canvasContext as any)._canvasObserver = {started: true};
+  (canvasContext as any)._observeDevicePixelRatio();
+
+  t.deepEqual(
+    canvasContext.getDevicePixelSize(),
+    [600, 450],
+    'DPR change recalculates device pixel size using Math.floor(css * newDpr)'
+  );
+  t.equal(resizeCalls, 1, 'onResize is called when DPR changes in css-dpr mode');
+
+  t.end();
+});
+
 test('CanvasContext#_startObservers defers DOM observation until explicitly started', t => {
   if (!isBrowser()) {
     t.end();

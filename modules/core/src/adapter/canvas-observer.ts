@@ -5,6 +5,7 @@
 type CanvasObserverProps = {
   canvas?: HTMLCanvasElement;
   trackPosition: boolean;
+  resizeObserverBox?: ResizeObserverBoxOptions;
   onResize: (entries: ResizeObserverEntry[]) => void;
   onIntersection: (entries: IntersectionObserverEntry[]) => void;
   onDevicePixelRatioChange: () => void;
@@ -48,8 +49,9 @@ export class CanvasObserver {
     this._resizeObserver ||= new ResizeObserver(entries => this.props.onResize(entries));
 
     this._intersectionObserver.observe(this.props.canvas);
+    const box = this.props.resizeObserverBox || 'device-pixel-content-box';
     try {
-      this._resizeObserver.observe(this.props.canvas, {box: 'device-pixel-content-box'});
+      this._resizeObserver.observe(this.props.canvas, {box});
     } catch {
       this._resizeObserver.observe(this.props.canvas, {box: 'content-box'});
     }
