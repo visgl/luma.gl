@@ -69,33 +69,24 @@ test('DynamicTexture tracks update timestamps and resource generations', async t
     format: 'rgba8unorm'
   });
   const initialTimestamp = texture.updateTimestamp;
-  const initialCacheToken = texture.cacheToken;
 
   await texture.ready;
 
   t.equal(texture.generation, 1, 'initial texture creation increments generation');
   t.ok(texture.updateTimestamp > initialTimestamp, 'initial texture creation updates timestamp');
-  t.notEqual(
-    texture.cacheToken,
-    initialCacheToken,
-    'initial texture creation replaces cache token'
-  );
 
   const readyGeneration = texture.generation;
-  const readyCacheToken = texture.cacheToken;
   const readyTimestamp = texture.updateTimestamp;
 
   texture.setTexture2DData({data: new Uint8Array([5, 6, 7, 8]), width: 1, height: 1});
 
   t.equal(texture.generation, readyGeneration, 'texture data upload preserves generation');
-  t.equal(texture.cacheToken, readyCacheToken, 'texture data upload preserves cache token');
   t.ok(texture.updateTimestamp > readyTimestamp, 'texture data upload updates timestamp');
 
   const uploadTimestamp = texture.updateTimestamp;
   texture.resize({width: 2, height: 2});
 
   t.equal(texture.generation, readyGeneration + 1, 'resize increments generation');
-  t.notEqual(texture.cacheToken, readyCacheToken, 'resize replaces cache token');
   t.ok(texture.updateTimestamp > uploadTimestamp, 'resize updates timestamp');
 
   texture.destroy();

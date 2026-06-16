@@ -9,6 +9,7 @@ import {
 } from '../../shadertypes/shader-types/shader-types';
 import {type Buffer} from '../resources/buffer';
 import {type Sampler} from '../resources/sampler';
+import {type ExternalTexture} from '../resources/external-texture';
 import {type Texture} from '../resources/texture';
 import {type TextureView} from '../resources/texture-view';
 
@@ -71,6 +72,7 @@ export type BindingDeclaration =
   | UniformBufferBindingLayout
   | StorageBufferBindingLayout
   | TextureBindingLayout
+  | ExternalTextureBindingLayout
   | SamplerBindingLayout
   | StorageTextureBindingLayout;
 
@@ -128,6 +130,19 @@ export type TextureBindingLayout = {
   multisampled?: boolean;
 };
 
+/** Shader binding declaration for a WebGPU `texture_external` slot. */
+export type ExternalTextureBindingLayout = {
+  type: 'external-texture';
+  /** Name of the binding. Used by luma to map bindings by name */
+  name: string;
+  /** Bind group index. Always 0 in WebGL */
+  group: number;
+  /** Binding index within the bind group */
+  location: number;
+  /** Which shader stages can access this binding */
+  visibility?: number;
+};
+
 export type SamplerBindingLayout = {
   type: 'sampler';
   /** Name of the binding. Used by luma to map bindings by name */
@@ -162,6 +177,7 @@ export type StorageTextureBindingLayout = {
 export type Binding =
   | TextureView
   | Texture
+  | ExternalTexture
   | Sampler
   | Buffer
   | {buffer: Buffer; offset?: number; size?: number};

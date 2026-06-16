@@ -2,8 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding, BindingsByGroup, CommandEncoder, Device} from '@luma.gl/core';
-import {Buffer, Texture, TextureView, UniformStore} from '@luma.gl/core';
+import type {
+  Binding,
+  BindingsByGroup,
+  CommandEncoder,
+  ComputeShaderLayout,
+  Device,
+  ShaderLayout
+} from '@luma.gl/core';
+import {Buffer, ExternalTexture, Texture, TextureView, UniformStore} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {
   DynamicBuffer,
@@ -12,7 +19,11 @@ import {
   isBufferRangeBinding,
   resolveBufferRangeBinding
 } from '../dynamic-buffer/dynamic-buffer';
-import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
+import {
+  getTextureBindingLayout,
+  isTextureBindingSource,
+  type TextureBindingSource
+} from '../dynamic-texture/texture-binding-source';
 import {ShaderInputs} from '../shader-inputs';
 import {shaderModuleHasUniforms} from '../utils/shader-module-utils';
 import {uid} from '../utils/uid';
@@ -23,8 +34,11 @@ import {
 } from './material-factory';
 
 type MaterialModuleProps = Partial<Record<string, Record<string, unknown>>>;
-type MaterialBinding = Binding | DynamicTexture | DynamicBuffer | DynamicBufferRange;
+/** Resource accepted by one material binding slot. */
+type MaterialBinding = Binding | TextureBindingSource | DynamicBuffer | DynamicBufferRange;
 type MaterialBindings = Record<string, MaterialBinding>;
+/** Shader layout subset needed while resolving texture binding sources. */
+type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 type MaterialPropsUpdate<TModuleProps extends MaterialModuleProps> = Partial<{
   [P in keyof TModuleProps]?: Partial<TModuleProps[P]>;
 }>;
@@ -188,18 +202,26 @@ export class Material<
     return resourceBindings;
   }
 
-  /** Returns the resolved bindings, including internal uniform buffers and ready textures. */
-  getBindings(): Partial<{[K in keyof TBindings]: Binding}> & Record<string, Binding> {
-    this._syncDynamicResourceCacheToken();
+  /**
+   * Returns resolved bindings, including internal uniform buffers and ready texture sources.
+   * @param shaderLayout Reflected bindings used to select copied or external texture resolution.
+   */
+  getBindings(
+    shaderLayout: AnyShaderLayout = {bindings: []}
+  ): Partial<{[K in keyof TBindings]: Binding}> & Record<string, Binding> {
+    this._syncDynamicResourceGenerations();
 
     const validBindings = {} as Partial<{[K in keyof TBindings]: Binding}> &
       Record<string, Binding>;
     const validBindingsMap = validBindings as Record<string, Binding>;
-
     for (const [name, binding] of Object.entries(this.bindings)) {
-      if (binding instanceof DynamicTexture) {
-        if (binding.isReady) {
-          validBindingsMap[name] = binding.texture;
+      if (isTextureBindingSource(binding)) {
+        const bindingLayout = getTextureBindingLayout(shaderLayout, name, {
+          fallbackGroup: MATERIAL_BIND_GROUP
+        });
+        const resolvedBinding = bindingLayout ? binding.resolveTextureBinding(bindingLayout) : null;
+        if (resolvedBinding) {
+          validBindingsMap[name] = resolvedBinding;
         }
       } else if (binding instanceof DynamicBuffer) {
         validBindingsMap[name] = binding.buffer;
@@ -210,17 +232,21 @@ export class Material<
       }
     }
 
+    this._syncDynamicResourceGenerations();
     return validBindings;
   }
 
-  /** Packages resolved material bindings into logical bind group `3`. */
-  getBindingsByGroup(): BindingsByGroup {
-    return this.factory.getBindingsByGroup(this.getBindings());
+  /**
+   * Packages resolved material bindings into logical bind group `3`.
+   * @param shaderLayout Reflected bindings used to select copied or external texture resolution.
+   */
+  getBindingsByGroup(shaderLayout: AnyShaderLayout = {bindings: []}): BindingsByGroup {
+    return this.factory.getBindingsByGroup(this.getBindings(shaderLayout));
   }
 
   /** Returns the stable bind-group cache token for the requested bind group. */
   getBindGroupCacheKey(group: number): object | null {
-    this._syncDynamicResourceCacheToken();
+    this._syncDynamicResourceGenerations();
     return group === MATERIAL_BIND_GROUP ? this._bindGroupCacheToken : null;
   }
 
@@ -230,11 +256,15 @@ export class Material<
     for (const binding of Object.values(this.bindings)) {
       if (binding instanceof TextureView) {
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
-      } else if (binding instanceof Buffer || binding instanceof Texture) {
+      } else if (
+        binding instanceof Buffer ||
+        binding instanceof Texture ||
+        binding instanceof ExternalTexture
+      ) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
       } else if (binding instanceof DynamicBuffer) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
-      } else if (binding instanceof DynamicTexture) {
+      } else if (isTextureBindingSource(binding)) {
         timestamp = binding.isReady ? Math.max(timestamp, binding.updateTimestamp) : Infinity;
       } else if (isBufferRangeBinding(binding)) {
         timestamp = Math.max(
@@ -278,7 +308,8 @@ export class Material<
     return didChange;
   }
 
-  private _syncDynamicResourceCacheToken(): void {
+  /** Invalidates the material bind-group key when deferred binding generations change. */
+  private _syncDynamicResourceGenerations(): void {
     const nextGenerations: Record<string, number> = {};
     let didChange = false;
 
@@ -305,8 +336,13 @@ export class Material<
   }
 }
 
+/**
+ * Returns the generation tracked for one deferred material binding.
+ * @param binding Material binding candidate.
+ * @returns Deferred binding generation, or `null` for stable concrete bindings.
+ */
 function getDynamicResourceGeneration(binding: MaterialBinding): number | null {
-  if (binding instanceof DynamicTexture) {
+  if (isTextureBindingSource(binding)) {
     return binding.generation;
   }
 

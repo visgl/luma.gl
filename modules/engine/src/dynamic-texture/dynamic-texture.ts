@@ -40,6 +40,7 @@ import {
   getTextureArraySubresources,
   getTextureCubeArraySubresources
 } from './texture-data';
+import type {TextureBindingLayout, TextureBindingSource} from './texture-binding-source';
 
 /**
  * Properties for a dynamic texture
@@ -75,7 +76,7 @@ export type DynamicTextureProps = Omit<TextureProps, 'data' | 'mipLevels' | 'wid
  * The `DynamicTexture` class allows luma.gl to provide some support for working with textures
  * without accumulating excessive complexity in the core Texture class which is designed as an immutable nature of GPU resource.
  */
-export class DynamicTexture {
+export class DynamicTexture implements TextureBindingSource {
   readonly device: Device;
   readonly id: string;
 
@@ -95,8 +96,6 @@ export class DynamicTexture {
   generation = 0;
   /** Last update timestamp for texture content, readiness, or identity changes. */
   updateTimestamp: number;
-  /** Token replaced whenever cache users need a new resource identity. */
-  cacheToken: object = {};
 
   private resolveReady: (t: Texture) => void = () => {};
   private rejectReady: (error: Error) => void = () => {};
@@ -121,6 +120,15 @@ export class DynamicTexture {
     const width = this._texture?.width ?? this.props.width ?? '?';
     const height = this._texture?.height ?? this.props.height ?? '?';
     return `DynamicTexture:"${this.id}":${width}x${height}px:(${this.isReady ? 'ready' : 'loading...'})`;
+  }
+
+  /**
+   * Resolves this ready dynamic texture as an ordinary copied texture binding.
+   * @param _bindingLayout Reflected texture-like shader slot; DynamicTexture always resolves a copied texture.
+   * @returns The copied texture, or `null` while the source is not ready.
+   */
+  resolveTextureBinding(_bindingLayout: TextureBindingLayout): Texture | null {
+    return this.isReady ? this.texture : null;
   }
 
   constructor(device: Device, props: DynamicTextureProps) {
@@ -500,7 +508,6 @@ export class DynamicTexture {
 
   private _touchGeneration(): void {
     this.generation++;
-    this.cacheToken = {};
     this._touch();
   }
 

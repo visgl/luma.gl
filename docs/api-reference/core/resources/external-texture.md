@@ -8,12 +8,9 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 WebGPU only.
 :::
 
-While it is possible to use a normal `Texture` for a video element, the `ExternalTexture`
-class provides a way to create a cheap-to-construct, disposable view of the video.
+`ExternalTexture` is the low-level concrete WebGPU `GPUExternalTexture` binding for browser-owned texture data. It is a one-shot resource, not a long-lived video object.
 
-The performance and memory savings can be significant.
-
-Since a new external texture is created every frame, new bindings must be prepared:
+Since WebGPU external textures are acquired per frame, bindings that use them must be prepared again for each draw:
 
 ```typescript
 function onFrame() {
@@ -21,12 +18,11 @@ function onFrame() {
 
   const externalTexture = device.createExternalTexture({source: video});
 
-  model.setBindings([
-    externalTexture,
-    sampler
-  ])
+  model.setBindings({videoTexture: externalTexture});
 
   model.draw(renderPass);
 }
 requestAnimationFrame(onFrame);
 ```
+
+`ExternalTextureProps` accepts `source?: HTMLVideoElement | VideoFrame`, `colorSpace?: 'srgb'`, an optional default `sampler`, and normal `ResourceProps`. Handle-backed opaque WebGPU external textures also require `width` and `height` when luma cannot infer them from a source.

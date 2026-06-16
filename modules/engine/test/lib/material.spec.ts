@@ -6,8 +6,8 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {waterMaterial} from '../../../shadertools/src/modules/lighting/water-material/water-material';
-import {Buffer, Texture} from '../../../core/src';
-import {DynamicBuffer, DynamicTexture, MaterialFactory} from '../../src';
+import {Buffer, Texture, type ShaderLayout} from '../../../core/src';
+import {DynamicBuffer, DynamicTexture, MaterialFactory, type TextureBindingSource} from '../../src';
 
 const defaultUniformMaterial: ShaderModule<{value: number}> = {
   name: 'defaultUniformMaterial',
@@ -185,3 +185,60 @@ test('Material invalidates bind-group cache keys when DynamicTexture generation 
   dynamicTexture.destroy();
   t.end();
 });
+
+test('Material invalidates bind-group cache keys for volatile external texture resolutions', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const materialFactory = new MaterialFactory<{}, {materialTexture: TextureBindingSource}>(
+    webglDevice,
+    {
+      modules: [dynamicTextureMaterial as ShaderModule]
+    }
+  );
+  const texture = webglDevice.createTexture({width: 1, height: 1});
+  const textureBindingSource = makeVolatileTextureBindingSource(texture);
+  const material = materialFactory.createMaterial({
+    bindings: {
+      materialTexture: textureBindingSource
+    }
+  });
+  const shaderLayout: ShaderLayout = {
+    attributes: [],
+    bindings: [{name: 'materialTexture', type: 'external-texture', group: 3, location: 0}]
+  };
+
+  material.getBindings(shaderLayout);
+  const initialCacheKey = material.getBindGroupCacheKey(3);
+  material.getBindings(shaderLayout);
+  const nextCacheKey = material.getBindGroupCacheKey(3);
+
+  t.notEqual(initialCacheKey, nextCacheKey, 'new external resolution invalidates bind-group key');
+  t.equal(textureBindingSource.resolutionCount, 2, 'material resolves once per bindings request');
+
+  material.destroy();
+  texture.destroy();
+  t.end();
+});
+
+function makeVolatileTextureBindingSource(texture: Texture): TextureBindingSource & {
+  readonly resolutionCount: number;
+} {
+  let generation = 0;
+  let resolutionCount = 0;
+
+  return {
+    id: 'volatile-texture-source',
+    isReady: true,
+    get generation() {
+      return generation;
+    },
+    updateTimestamp: texture.updateTimestamp,
+    get resolutionCount() {
+      return resolutionCount;
+    },
+    resolveTextureBinding() {
+      resolutionCount++;
+      generation++;
+      return texture;
+    }
+  };
+}

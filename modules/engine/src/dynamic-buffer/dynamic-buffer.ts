@@ -25,12 +25,12 @@ export type DynamicBufferProps = Omit<BufferProps, 'handle' | 'onMapped'> & {
 };
 
 /** Buffer-like source accepted by dynamic buffer range helpers. */
-export type DynamicBufferBindingSource = Buffer | DynamicBuffer;
+export type BufferBindingSource = Buffer | DynamicBuffer;
 
 /** Binding range that may point at either a {@link Buffer} or a {@link DynamicBuffer}. */
 export type DynamicBufferRange = {
   /** Buffer source for the binding range. */
-  buffer: DynamicBufferBindingSource;
+  buffer: BufferBindingSource;
   /** Byte offset into the current backing buffer. */
   offset?: number;
   /** Byte length of the binding range. */
@@ -40,7 +40,7 @@ export type DynamicBufferRange = {
 /** Generic buffer range binding accepted by engine binding resolution helpers. */
 export type BufferRangeBinding = {
   /** Buffer source for the binding range. */
-  buffer: DynamicBufferBindingSource;
+  buffer: BufferBindingSource;
   /** Byte offset into the current backing buffer. */
   offset?: number;
   /** Byte length of the binding range. */
@@ -77,8 +77,6 @@ export class DynamicBuffer {
   generation = 0;
   /** Last update timestamp for writes, reads that populate debug data, or resize operations. */
   updateTimestamp: number;
-  /** Token replaced whenever cache users need a new resource identity. */
-  cacheToken: object = {};
   /** Optional CPU-side mirror of recent writes and readbacks for debugging. */
   debugData: ArrayBuffer = new ArrayBuffer(0);
 
@@ -299,7 +297,6 @@ export class DynamicBuffer {
     }
     this._ownsBuffer = true;
     this.generation++;
-    this.cacheToken = {};
     this._touch();
     return true;
   }
@@ -429,7 +426,7 @@ export function getDynamicBufferFromBinding(binding: unknown): DynamicBuffer | n
 }
 
 /** Resolves a static or dynamic buffer source to the current core {@link Buffer}. */
-export function resolveBufferBindingSource(buffer: DynamicBufferBindingSource): Buffer {
+export function resolveBufferBindingSource(buffer: BufferBindingSource): Buffer {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 

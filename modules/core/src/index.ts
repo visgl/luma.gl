@@ -141,6 +141,7 @@ export type {
   UniformBufferBindingLayout,
   StorageBufferBindingLayout,
   TextureBindingLayout,
+  ExternalTextureBindingLayout,
   SamplerBindingLayout,
   StorageTextureBindingLayout
 } from './adapter/types/shader-layout';

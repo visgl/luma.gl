@@ -4,6 +4,7 @@
 
 import type {Binding, BindingsByGroup, Device} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
+import type {TextureBindingSource} from '../dynamic-texture/texture-binding-source';
 import {ShaderInputs} from '../shader-inputs';
 import type {Material, MaterialProps} from './material';
 import {Material as MaterialClass} from './material';
@@ -12,7 +13,7 @@ type MaterialModuleProps = Partial<Record<string, Record<string, unknown>>>;
 type MaterialBindings = Record<
   string,
   | Binding
-  | import('../dynamic-texture/dynamic-texture').DynamicTexture
+  | TextureBindingSource
   | import('../dynamic-buffer/dynamic-buffer').DynamicBuffer
   | import('../dynamic-buffer/dynamic-buffer').DynamicBufferRange
 >;

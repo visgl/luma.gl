@@ -118,7 +118,12 @@ export type {
 
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
-export type {DynamicBufferProps, DynamicBufferRange} from './dynamic-buffer/dynamic-buffer';
+export type {TextureBindingSource} from './dynamic-texture/texture-binding-source';
+export type {
+  BufferBindingSource,
+  DynamicBufferProps,
+  DynamicBufferRange
+} from './dynamic-buffer/dynamic-buffer';
 export {DynamicBuffer} from './dynamic-buffer/dynamic-buffer';
 
 export type {

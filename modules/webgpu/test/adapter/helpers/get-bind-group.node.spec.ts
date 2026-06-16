@@ -6,8 +6,12 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {Bindings, ShaderLayout} from '@luma.gl/core';
 import {
   formatBindGroupCreationErrorSummary,
+  getBindGroup,
   getBindGroupLabel
 } from '../../../src/adapter/helpers/get-bind-group';
+import {WebGPUExternalTexture} from '../../../src/adapter/resources/webgpu-external-texture';
+import {WebGPUPipelineLayout} from '../../../src/adapter/resources/webgpu-pipeline-layout';
+import {WebGPUTexture} from '../../../src/adapter/resources/webgpu-texture';
 
 test('formatBindGroupCreationErrorSummary formats compact missing-binding summaries', t => {
   const shaderLayout: ShaderLayout = {
@@ -93,3 +97,100 @@ test('getBindGroupLabel uses pipeline id, group, and expected binding names', t 
 
   t.end();
 });
+
+test('WebGPU external texture bindings use external handles and paired samplers', t => {
+  const shaderLayout: ShaderLayout = {
+    attributes: [],
+    bindings: [
+      {name: 'videoTexture', type: 'external-texture', group: 0, location: 0},
+      {name: 'videoTextureSampler', type: 'sampler', group: 0, location: 1}
+    ]
+  };
+  const externalTexture = Object.assign(Object.create(WebGPUExternalTexture.prototype), {
+    handle: 'external-handle',
+    sampler: {handle: 'sampler-handle'}
+  }) as WebGPUExternalTexture;
+  const descriptor = getBindGroup(
+    makeMockWebGPUDevice(),
+    {} as GPUBindGroupLayout,
+    shaderLayout,
+    {videoTexture: externalTexture},
+    0
+  ) as unknown as GPUBindGroupDescriptor;
+
+  t.deepEqual(
+    descriptor.entries,
+    [
+      {binding: 0, resource: 'external-handle'},
+      {binding: 1, resource: 'sampler-handle'}
+    ],
+    'native external texture binds its handle and default sampler'
+  );
+
+  t.end();
+});
+
+test('WebGPU external texture bindings accept copied texture fallback views', t => {
+  const shaderLayout: ShaderLayout = {
+    attributes: [],
+    bindings: [
+      {name: 'videoTexture', type: 'external-texture', group: 0, location: 0},
+      {name: 'videoTextureSampler', type: 'sampler', group: 0, location: 1}
+    ]
+  };
+  const copiedTexture = Object.assign(Object.create(WebGPUTexture.prototype), {
+    view: {handle: 'texture-view-handle'},
+    sampler: {handle: 'sampler-handle'}
+  }) as WebGPUTexture;
+  const descriptor = getBindGroup(
+    makeMockWebGPUDevice(),
+    {} as GPUBindGroupLayout,
+    shaderLayout,
+    {videoTexture: copiedTexture},
+    0
+  ) as unknown as GPUBindGroupDescriptor;
+
+  t.deepEqual(
+    descriptor.entries,
+    [
+      {binding: 0, resource: 'texture-view-handle'},
+      {binding: 1, resource: 'sampler-handle'}
+    ],
+    'copied fallback texture binds its view through the external slot'
+  );
+
+  t.end();
+});
+
+test('WebGPU external texture shader layouts emit externalTexture bind group entries', t => {
+  const shaderLayout: ShaderLayout = {
+    attributes: [],
+    bindings: [{name: 'videoTexture', type: 'external-texture', group: 0, location: 4}]
+  };
+  const originalGPUShaderStage = globalThis.GPUShaderStage;
+  globalThis.GPUShaderStage = {VERTEX: 1, FRAGMENT: 2, COMPUTE: 4} as GPUShaderStage;
+  const pipelineLayout = Object.assign(Object.create(WebGPUPipelineLayout.prototype), {
+    props: {shaderLayout}
+  }) as WebGPUPipelineLayout;
+
+  const entries = (pipelineLayout as any).mapShaderLayoutToBindGroupEntriesByGroup();
+
+  globalThis.GPUShaderStage = originalGPUShaderStage;
+  t.deepEqual(
+    entries,
+    [[{binding: 4, visibility: 7, externalTexture: {}}]],
+    'pipeline layout uses WebGPU externalTexture descriptor'
+  );
+
+  t.end();
+});
+
+function makeMockWebGPUDevice(): any {
+  return {
+    handle: {
+      createBindGroup: (descriptor: GPUBindGroupDescriptor) => descriptor
+    },
+    pushErrorScope: () => {},
+    popErrorScope: () => {}
+  };
+}

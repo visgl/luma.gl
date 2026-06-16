@@ -13,7 +13,6 @@ import type {
   ShaderProps,
   SamplerProps,
   TextureProps,
-  ExternalTexture,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
@@ -108,8 +107,8 @@ export class NullDevice extends Device {
     return new NullTexture(this, props);
   }
 
-  createExternalTexture(props: ExternalTextureProps): ExternalTexture {
-    throw new Error('createExternalTexture() not implemented'); // return new Program(props);
+  createExternalTexture(_props: ExternalTextureProps): never {
+    throw new Error('ExternalTexture is not available on NullDevice');
   }
 
   createSampler(props: SamplerProps): NullSampler {

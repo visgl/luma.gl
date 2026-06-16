@@ -4,6 +4,7 @@
 
 import {
   AttributeShaderType,
+  ExternalTextureBindingLayout,
   SamplerBindingLayout,
   ShaderLayout,
   TextureBindingLayout,
@@ -57,13 +58,21 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   }
 
   for (const texture of parsedWGSL.textures) {
-    const bindingDeclaration: TextureBindingLayout = {
-      type: 'texture',
-      name: texture.name,
-      group: texture.group,
-      location: texture.binding,
-      ...getTextureBindingFromReflect(texture)
-    };
+    const bindingDeclaration: TextureBindingLayout | ExternalTextureBindingLayout =
+      texture.type.name === 'texture_external'
+        ? {
+            type: 'external-texture',
+            name: texture.name,
+            group: texture.group,
+            location: texture.binding
+          }
+        : {
+            type: 'texture',
+            name: texture.name,
+            group: texture.group,
+            location: texture.binding,
+            ...getTextureBindingFromReflect(texture)
+          };
 
     shaderLayout.bindings.push(bindingDeclaration);
   }
@@ -113,7 +122,7 @@ function getSamplerBindingFromReflect(
   const pairedTextureBinding = pairedTextureName
     ? bindings.find(
         binding =>
-          binding.type === 'texture' &&
+          (binding.type === 'texture' || binding.type === 'external-texture') &&
           binding.name === pairedTextureName &&
           binding.group === sampler.group
       )

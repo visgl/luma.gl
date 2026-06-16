@@ -5,18 +5,22 @@
 import type {Binding, CompositeShaderType, UniformValue} from '@luma.gl/core';
 import type {ShaderModuleUniformValue} from '@luma.gl/shadertools';
 import {isNumericArray} from '@math.gl/types';
+import type {TextureBindingSource} from '../dynamic-texture/texture-binding-source';
+
+/** Shader input value routed through the binding map. */
+type ShaderInputBinding = Binding | TextureBindingSource;
 
 export function isUniformValue(value: unknown): value is UniformValue {
   return isNumericArray(value) || typeof value === 'number' || typeof value === 'boolean';
 }
 
 type UniformsAndBindings = {
-  bindings: Record<string, Binding>;
+  bindings: Record<string, ShaderInputBinding>;
   uniforms: Record<string, ShaderModuleUniformValue>;
 };
 
 export function splitUniformsAndBindings(
-  uniforms: Record<string, Binding | ShaderModuleUniformValue>,
+  uniforms: Record<string, ShaderInputBinding | ShaderModuleUniformValue>,
   uniformTypes: Readonly<Record<string, CompositeShaderType>> = {}
 ): UniformsAndBindings {
   const result: UniformsAndBindings = {bindings: {}, uniforms: {}};
@@ -25,7 +29,7 @@ export function splitUniformsAndBindings(
     if (Object.prototype.hasOwnProperty.call(uniformTypes, name) || isUniformValue(uniform)) {
       result.uniforms[name] = uniform as ShaderModuleUniformValue;
     } else {
-      result.bindings[name] = uniform as Binding;
+      result.bindings[name] = uniform as ShaderInputBinding;
     }
   });
 

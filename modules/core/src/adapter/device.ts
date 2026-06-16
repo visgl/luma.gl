@@ -775,7 +775,7 @@ or create a device with the 'debug: true' prop.`;
   /** Create a texture */
   abstract createTexture(props: TextureProps): Texture;
 
-  /** Create a temporary texture view of a video source */
+  /** Create a temporary external texture binding when available on this backend. */
   abstract createExternalTexture(props: ExternalTextureProps): ExternalTexture;
 
   /** Create a sampler */
