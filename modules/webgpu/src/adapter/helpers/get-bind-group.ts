@@ -152,12 +152,11 @@ function getBindGroupEntries(
     // Mirror the WebGL path: when both `foo` and `fooUniforms` exist in the bindings map,
     // prefer the exact shader binding name and ignore the alias entry.
     if (!isShadowedAlias && bindingLayout) {
-      const entry = bindingLayout
-        ? getBindGroupEntry(value, bindingLayout.location, undefined, bindingName)
-        : null;
-      if (entry) {
-        entries.push(entry);
+      const entry = getBindGroupEntry(value, bindingLayout, undefined, bindingName);
+      if (!entry) {
+        continue;
       }
+      entries.push(entry);
 
       // TODO - hack to automatically bind default samplers for copied and native textures.
       if (value instanceof Texture || value instanceof ExternalTexture) {
@@ -166,7 +165,7 @@ function getBindGroupEntries(
         });
         const samplerEntry = samplerBindingLayout
           ? samplerBindingLayout.group === group
-            ? getBindGroupEntry(value, samplerBindingLayout.location, {sampler: true}, bindingName)
+            ? getBindGroupEntry(value, samplerBindingLayout, {sampler: true}, bindingName)
             : null
           : null;
         if (samplerEntry) {
@@ -181,10 +180,22 @@ function getBindGroupEntries(
 
 function getBindGroupEntry(
   binding: Binding,
-  index: number,
+  bindingLayout: BindingDeclaration,
   options?: {sampler?: boolean},
   bindingName: string = 'unknown'
 ): GPUBindGroupEntry | null {
+  const index = bindingLayout.location;
+  if (bindingLayout.type === 'external-texture' && !(binding instanceof ExternalTexture)) {
+    log.warn(`invalid external texture binding ${bindingName}`, binding)();
+    return null;
+  }
+  if (binding instanceof ExternalTexture && !options?.sampler) {
+    if (bindingLayout.type !== 'external-texture') {
+      log.warn(`invalid non-external texture binding ${bindingName}`, binding)();
+      return null;
+    }
+  }
+
   if (binding instanceof Buffer) {
     return {
       binding: index,
@@ -241,7 +252,7 @@ function getBindGroupEntry(
       resource: (binding as WebGPUExternalTexture).handle
     };
   }
-  log.warn(`invalid binding ${bindingName}`, binding);
+  log.warn(`invalid binding ${bindingName}`, binding)();
   return null;
 }
 

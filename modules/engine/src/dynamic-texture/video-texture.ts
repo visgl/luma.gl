@@ -19,7 +19,15 @@ export type VideoTextureProps = Omit<
   source: VideoTextureSource;
   /** Color space requested for copied or imported video data. */
   colorSpace?: 'srgb';
-  /** Generate mipmaps after copied-frame uploads. Ignored by native external bindings. */
+  /**
+   * Generate mipmaps after copied-frame uploads.
+   *
+   * @remarks
+   * This is supported for WebGL copied bindings. WebGPU copied video bindings resolve during
+   * draw preparation, after the caller may already have opened a render pass, so WebGPU rejects
+   * this option until video uploads can be prepared before the render pass.
+   * Native external bindings ignore this option.
+   */
   mipmaps?: boolean;
   /** Mip levels for copied standard texture bindings. */
   mipLevels?: number | 'auto';
@@ -45,8 +53,7 @@ type VideoElementWithFrameCallback = HTMLVideoElement & {
  * Live video binding source.
  *
  * GLSL `sampler2D` and WGSL `texture_2d` bindings resolve to copied luma textures.
- * WGSL `texture_external` bindings resolve to native WebGPU external textures
- * when possible and otherwise use a copied one-mip compatible texture.
+ * WGSL `texture_external` bindings resolve to native WebGPU external textures.
  */
 export class VideoTexture implements TextureBindingSource {
   /** Device used to create copied and native external texture bindings. */
@@ -73,8 +80,6 @@ export class VideoTexture implements TextureBindingSource {
   private _resolveReady: (texture: VideoTexture) => void = () => {};
   private _texture: Texture | null = null;
   private _textureFrameToken: unknown = undefined;
-  private _externalFallbackTexture: Texture | null = null;
-  private _externalFallbackTextureFrameToken: unknown = undefined;
   private _externalTexture: ExternalTexture | null = null;
   private _nativeExternalTextureSupported: boolean | null = null;
   private _videoFrameCallbackHandle: number | null = null;
@@ -151,7 +156,6 @@ export class VideoTexture implements TextureBindingSource {
     this._sourceVersion++;
     this._sourceFrameToken = null;
     this._textureFrameToken = undefined;
-    this._externalFallbackTextureFrameToken = undefined;
     this._nativeExternalTextureSupported = null;
     this._attachVideoSource();
     this._observeSource();
@@ -174,10 +178,12 @@ export class VideoTexture implements TextureBindingSource {
       if (externalTexture) {
         return externalTexture;
       }
-      return this._resolveCopiedTexture(true);
+      throw new Error(
+        `${this} cannot resolve WebGPU texture_external binding; use texture_2d for copied video path`
+      );
     }
 
-    return this._resolveCopiedTexture(false);
+    return this._resolveCopiedTexture();
   }
 
   /**
@@ -187,7 +193,6 @@ export class VideoTexture implements TextureBindingSource {
   setSampler(sampler: Sampler | SamplerProps): void {
     this._sampler = sampler;
     this._texture?.setSampler(sampler);
-    this._externalFallbackTexture?.setSampler(sampler);
     this._externalTexture?.setSampler?.(sampler);
     this._touchGeneration();
   }
@@ -200,11 +205,8 @@ export class VideoTexture implements TextureBindingSource {
     this._detachVideoSource();
     this._destroyExternalTexture();
     this._texture?.destroy();
-    this._externalFallbackTexture?.destroy();
     this._texture = null;
-    this._externalFallbackTexture = null;
     this._textureFrameToken = undefined;
-    this._externalFallbackTextureFrameToken = undefined;
     this._isReady = false;
     this.destroyed = true;
     this._touchGeneration();
@@ -212,39 +214,36 @@ export class VideoTexture implements TextureBindingSource {
 
   /**
    * Resolves and uploads the copied texture variant for the current source frame.
-   * @param externalCompatible Whether the copy must satisfy `texture_external` fallback limits.
    * @returns Copied texture containing the current observed frame.
    */
-  private _resolveCopiedTexture(externalCompatible: boolean): Texture {
-    const texture = this._getOrCreateCopiedTexture(externalCompatible);
-    const copiedFrameToken = externalCompatible
-      ? this._externalFallbackTextureFrameToken
-      : this._textureFrameToken;
-    if (!Object.is(copiedFrameToken, this._sourceFrameToken)) {
+  private _resolveCopiedTexture(): Texture {
+    if (this.device.type === 'webgpu' && this.props.mipmaps) {
+      throw new Error(
+        `${this} cannot generate WebGPU video mipmaps during draw binding resolution; use mipmaps: false or upload into a Texture before opening the render pass`
+      );
+    }
+
+    const texture = this._getOrCreateCopiedTexture();
+    if (!Object.is(this._textureFrameToken, this._sourceFrameToken)) {
       texture.copyExternalImage({
         image: this._source,
         colorSpace: this.props.colorSpace
       });
-      if (!externalCompatible && this.props.mipmaps) {
+      if (this.props.mipmaps) {
         this._generateMipmaps(texture);
       }
-      if (externalCompatible) {
-        this._externalFallbackTextureFrameToken = this._sourceFrameToken;
-      } else {
-        this._textureFrameToken = this._sourceFrameToken;
-      }
+      this._textureFrameToken = this._sourceFrameToken;
     }
     return texture;
   }
 
   /**
    * Returns an existing size-compatible copied texture or creates one lazily.
-   * @param externalCompatible Whether the copy must use external-texture fallback constraints.
    * @returns Copied texture allocated for the current source dimensions.
    */
-  private _getOrCreateCopiedTexture(externalCompatible: boolean): Texture {
+  private _getOrCreateCopiedTexture(): Texture {
     const size = this._getResolvedSize();
-    const currentTexture = externalCompatible ? this._externalFallbackTexture : this._texture;
+    const currentTexture = this._texture;
     if (
       currentTexture &&
       currentTexture.width === size.width &&
@@ -254,29 +253,20 @@ export class VideoTexture implements TextureBindingSource {
     }
 
     currentTexture?.destroy();
-    const mipLevels = externalCompatible ? 1 : this._getCopiedTextureMipLevels(size);
-    let usage = this.props.usage | Texture.SAMPLE | Texture.COPY_DST;
-    if (!externalCompatible && this.device.type === 'webgpu' && this.props.mipmaps) {
-      usage |= Texture.RENDER | Texture.COPY_SRC;
-    }
+    const mipLevels = this._getCopiedTextureMipLevels(size);
 
     const texture = this.device.createTexture({
-      id: `${this.id}-${externalCompatible ? 'external-fallback' : 'texture'}`,
+      id: `${this.id}-texture`,
       width: size.width,
       height: size.height,
-      format: externalCompatible ? 'rgba8unorm' : this.props.format,
-      usage,
+      format: this.props.format,
+      usage: this.props.usage | Texture.SAMPLE | Texture.COPY_DST,
       mipLevels,
       sampler: this._sampler,
       view: this.props.view
     });
-    if (externalCompatible) {
-      this._externalFallbackTexture = texture;
-      this._externalFallbackTextureFrameToken = undefined;
-    } else {
-      this._texture = texture;
-      this._textureFrameToken = undefined;
-    }
+    this._texture = texture;
+    this._textureFrameToken = undefined;
     this._touchGeneration();
     return texture;
   }
@@ -303,7 +293,7 @@ export class VideoTexture implements TextureBindingSource {
       return this._externalTexture;
     } catch (error) {
       this._nativeExternalTextureSupported = false;
-      log.probe(1, `${this} falling back to copied external texture binding`, error)();
+      log.probe(1, `${this} native WebGPU external texture import unavailable`, error)();
       return null;
     }
   }
@@ -327,14 +317,12 @@ export class VideoTexture implements TextureBindingSource {
   }
 
   /**
-   * Generates copied standard texture mipmaps on backends that expose generation helpers.
+   * Generates copied standard texture mipmaps for WebGL.
    * @param texture Copied standard texture that received a new source frame.
    */
   private _generateMipmaps(texture: Texture): void {
     if (this.device.type === 'webgl') {
       texture.generateMipmapsWebGL();
-    } else if (this.device.type === 'webgpu') {
-      this.device.generateMipmapsWebGPU(texture);
     }
   }
 
