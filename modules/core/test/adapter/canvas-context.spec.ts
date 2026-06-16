@@ -281,7 +281,7 @@ test('CanvasContext#_handleResize supports css-dpr compatibility sizing', t => {
     (canvasContext as any)._handleResize([
       {
         target: canvasContext.canvas,
-        contentBoxSize: [{inlineSize: 100.2, blockSize: 50.2}],
+        contentBoxSize: [{inlineSize: 100.4, blockSize: 50.4}],
         devicePixelContentBoxSize: [{inlineSize: 151, blockSize: 76}]
       }
     ]);
@@ -289,7 +289,7 @@ test('CanvasContext#_handleResize supports css-dpr compatibility sizing', t => {
     t.deepEqual(
       canvasContext.getDevicePixelSize(),
       [150, 75],
-      'css-dpr mode rounds css size times DPR and ignores exact observer size'
+      'css-dpr mode floors css size times DPR and ignores exact observer size'
     );
     t.deepEqual(
       canvasContext.getDrawingBufferSize(),

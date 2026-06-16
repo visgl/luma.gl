@@ -53,6 +53,11 @@ export type MutableCanvasContextProps = {
   useDevicePixels?: boolean | number;
 };
 
+type DevicePixelSize = {
+  devicePixelWidth: number;
+  devicePixelHeight: number;
+};
+
 /**
  * Shared tracked-canvas lifecycle used by both renderable and presentation contexts.
  * - Creates a new canvas or looks up a canvas from the DOM
@@ -358,11 +363,7 @@ export abstract class CanvasSurface {
 
     const oldPixelSize = this.getDevicePixelSize();
 
-    const {devicePixelWidth, devicePixelHeight} = this._getDevicePixelSizeFromResizeEntry(entry);
-
-    const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
-    this.devicePixelWidth = Math.max(1, Math.min(devicePixelWidth, maxDevicePixelWidth));
-    this.devicePixelHeight = Math.max(1, Math.min(devicePixelHeight, maxDevicePixelHeight));
+    this._setDevicePixelSize(this._getDevicePixelSizeFromResizeEntry(entry));
 
     this._updateDrawingBufferSize();
 
@@ -390,18 +391,14 @@ export abstract class CanvasSurface {
     this.updatePosition();
   }
 
-  protected _getDevicePixelSizeFromResizeEntry(entry: ResizeObserverEntry): {
-    devicePixelWidth: number;
-    devicePixelHeight: number;
-  } {
+  protected _getDevicePixelSizeFromResizeEntry(entry: ResizeObserverEntry): DevicePixelSize {
     const contentBoxSize = assertDefined(entry.contentBoxSize?.[0]);
 
     if (this.props.pixelSizeSource === 'css-dpr') {
-      const devicePixelRatio = this.getDevicePixelRatio();
-      return {
-        devicePixelWidth: Math.floor(contentBoxSize.inlineSize * devicePixelRatio),
-        devicePixelHeight: Math.floor(contentBoxSize.blockSize * devicePixelRatio)
-      };
+      return this._getDevicePixelSizeFromCSSSize(
+        contentBoxSize.inlineSize,
+        contentBoxSize.blockSize
+      );
     }
 
     return {
@@ -412,6 +409,20 @@ export abstract class CanvasSurface {
         entry.devicePixelContentBoxSize?.[0]?.blockSize ||
         contentBoxSize.blockSize * devicePixelRatio
     };
+  }
+
+  protected _getDevicePixelSizeFromCSSSize(cssWidth: number, cssHeight: number): DevicePixelSize {
+    const devicePixelRatio = this.getDevicePixelRatio();
+    return {
+      devicePixelWidth: Math.floor(cssWidth * devicePixelRatio),
+      devicePixelHeight: Math.floor(cssHeight * devicePixelRatio)
+    };
+  }
+
+  protected _setDevicePixelSize({devicePixelWidth, devicePixelHeight}: DevicePixelSize): void {
+    const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
+    this.devicePixelWidth = Math.max(1, Math.min(devicePixelWidth, maxDevicePixelWidth));
+    this.devicePixelHeight = Math.max(1, Math.min(devicePixelHeight, maxDevicePixelHeight));
   }
 
   _resizeDrawingBufferIfNeeded() {
@@ -439,16 +450,7 @@ export abstract class CanvasSurface {
       // In css-dpr mode the ResizeObserver watches content-box, which won't fire on a pure DPR
       // change (CSS size unchanged). Recalculate the drawing buffer from the new DPR here.
       const oldPixelSize = this.getDevicePixelSize();
-      const dpr = this.getDevicePixelRatio();
-      const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
-      this.devicePixelWidth = Math.max(
-        1,
-        Math.min(Math.floor(this.cssWidth * dpr), maxDevicePixelWidth)
-      );
-      this.devicePixelHeight = Math.max(
-        1,
-        Math.min(Math.floor(this.cssHeight * dpr), maxDevicePixelHeight)
-      );
+      this._setDevicePixelSize(this._getDevicePixelSizeFromCSSSize(this.cssWidth, this.cssHeight));
       this._updateDrawingBufferSize();
       this.device.props.onResize(this as CanvasContext | PresentationContext, {oldPixelSize});
     }
