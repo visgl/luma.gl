@@ -55,7 +55,8 @@ const sidebars = {
       items: [
         'experimental/bloom',
         'experimental/fp64',
-        'experimental/gpt-2'
+        'experimental/gpt-2',
+        'experimental/video-texture'
       ]
     },
     {

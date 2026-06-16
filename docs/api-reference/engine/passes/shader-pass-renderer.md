@@ -81,7 +81,7 @@ Bindings follow a similar pattern:
 - `options.bindings` passed to the draw call
 
 This makes it practical to keep one renderer alive while swapping in frame-specific resources such
-as a freshly rendered depth texture.
+as a freshly rendered depth texture or a `VideoTexture`.
 
 When you call `shaderInputs.setProps({[passName]: {...}})`, any texture bindings in that object are
 stored as defaults for that specific shader pass. `ShaderPassRenderer` resolves those defaults per

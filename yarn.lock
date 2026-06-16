@@ -15682,6 +15682,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-video-texture@workspace:examples/experimental/video-texture":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-video-texture@workspace:examples/experimental/video-texture"
+  dependencies:
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context"

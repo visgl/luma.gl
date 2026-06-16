@@ -119,6 +119,8 @@ export type {
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
 export type {TextureBindingSource} from './dynamic-texture/texture-binding-source';
+export type {VideoTextureProps, VideoTextureSource} from './dynamic-texture/video-texture';
+export {VideoTexture} from './dynamic-texture/video-texture';
 export type {
   BufferBindingSource,
   DynamicBufferProps,

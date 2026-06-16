@@ -84,7 +84,7 @@ Returns the current uniform values grouped by module.
 
 ### `getBindingValues(): Record<string, Binding | TextureBindingSource>`
 
-Merges all module bindings into a single binding map suitable for a `Model` or `Computation`, including engine texture binding sources such as `DynamicTexture`.
+Merges all module bindings into a single binding map suitable for a `Model` or `Computation`, including engine texture binding sources such as `DynamicTexture` and `VideoTexture`.
 
 ### `getDebugTable(): Record<string, Record<string, unknown>>`
 

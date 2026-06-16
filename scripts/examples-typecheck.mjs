@@ -18,6 +18,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-particles',
   'arrow/arrow-points',
   'arrow/arrow-polygons',
+  'experimental/video-texture',
   'integrations/hello-react',
   'showcase/dof',
   'showcase/persistence',

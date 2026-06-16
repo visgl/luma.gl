@@ -36,7 +36,7 @@ renderPass.end();
 | `modules?` | `ShaderModule[]` | Shader modules to assemble into the shader source. |
 | `defines?` | `Record<string, boolean>` | Shader module defines. |
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
-| `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| TextureBindingSource>` | Textures, samplers, uniform buffers, dynamic buffers, and texture binding sources such as `DynamicTexture`. |
+| `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| TextureBindingSource>` | Textures, samplers, uniform buffers, dynamic buffers, and texture binding sources such as `DynamicTexture` and `VideoTexture`. |
 | `parameters?` | `RenderPipelineParameters` | Pipeline parameters baked into the model's pipeline. |
 | `geometry?` | `Geometry \| GPUGeometry \| null` | Geometry source for attributes and indices. |
 | `isInstanced?` | `boolean` | Optional override for instancing. |
@@ -83,7 +83,7 @@ Attribute and index data currently bound to the model.
 
 ### `bindings`
 
-Current binding map, including `DynamicBuffer` instances that may replace their backing buffer and `TextureBindingSource` instances such as `DynamicTexture` that resolve to concrete texture bindings during draw preparation.
+Current binding map, including `DynamicBuffer` instances that may replace their backing buffer and `TextureBindingSource` instances such as `DynamicTexture` and `VideoTexture` that resolve to concrete texture bindings during draw preparation.
 
 ### `vertexArray`
 
@@ -187,4 +187,4 @@ Sets constant-valued attributes.
 
 - `Model` integrates with [`ShaderInputs`](/docs/api-reference/engine/shader-inputs), [`PipelineFactory`](/docs/api-reference/core/pipeline-factory), and [`ShaderFactory`](/docs/api-reference/core/shader-factory) by default.
 - `DynamicBuffer` attributes, index buffers, and bindings are resolved before drawing so resized buffers are rebound automatically.
-- Texture binding sources such as `DynamicTexture` are supported directly. `Model.draw()` defers rendering until texture binding sources are ready.
+- `DynamicTexture` and `VideoTexture` bindings are supported directly. `Model.draw()` defers rendering until texture binding sources are ready.
