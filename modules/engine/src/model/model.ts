@@ -17,10 +17,13 @@ import {
   type AttributeInfo,
   type Binding,
   type BindingsByGroup,
+  type ComputeShaderLayout,
   type PrimitiveTopology,
+  type ShaderLayout,
   Device,
   DeviceFeature,
   Buffer,
+  ExternalTexture,
   Texture,
   TextureView,
   RenderPipeline,
@@ -57,7 +60,11 @@ import {
   isBufferRangeBinding,
   resolveBufferRangeBinding
 } from '../dynamic-buffer/dynamic-buffer';
-import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
+import {
+  getTextureBindingLayout,
+  isTextureBindingSource,
+  type TextureBindingSource
+} from '../dynamic-texture/texture-binding-source';
 import {Material} from '../material/material';
 
 const LOG_DRAW_PRIORITY = 2;
@@ -71,8 +78,11 @@ const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
   'depth32float',
   'depth32float-stencil8'
 ];
-type ModelBinding = Binding | DynamicTexture | DynamicBuffer | DynamicBufferRange;
+/** Resource accepted by one model binding slot. */
+type ModelBinding = Binding | TextureBindingSource | DynamicBuffer | DynamicBufferRange;
 type ModelBuffer = Buffer | DynamicBuffer;
+/** Shader layout subset needed while resolving texture binding sources. */
+type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
@@ -150,7 +160,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
  * - Reuses and lazily recompiles {@link RenderPipeline | pipelines} as needed.
  * - Integrates with `@luma.gl/shadertools` to assemble GLSL or WGSL from shader modules.
  * - Manages geometry attributes and buffer bindings.
- * - Accepts textures, samplers and uniform buffers as bindings, including `DynamicTexture`.
+ * - Accepts textures, samplers and uniform buffers as bindings, including texture binding sources.
  * - Provides detailed debug logging and optional shader source inspection.
  */
 export class Model {
@@ -540,8 +550,9 @@ export class Model {
           this._drawBlockedReason = drawValidationError;
           drawSuccess = false;
         } else {
-          const syncBindings = this._getBindings();
-          const syncBindGroups = this._getBindGroups();
+          const shaderLayout = this._getCurrentShaderLayout();
+          const syncBindings = this._getBindings(shaderLayout);
+          const syncBindGroups = this._getBindGroups(shaderLayout, syncBindings);
 
           const {indexBuffer} = this.vertexArray;
           const indexCount = indexBuffer
@@ -881,24 +892,29 @@ export class Model {
   /** Check that bindings are loaded. Returns id of first binding that is still loading. */
   _areBindingsLoading(): string | false {
     for (const binding of Object.values(this.bindings)) {
-      if (binding instanceof DynamicTexture && !binding.isReady) {
+      if (isTextureBindingSource(binding) && !binding.isReady) {
         return binding.id;
       }
     }
     for (const binding of Object.values(this.material?.bindings || {})) {
-      if (binding instanceof DynamicTexture && !binding.isReady) {
+      if (isTextureBindingSource(binding) && !binding.isReady) {
         return binding.id;
       }
     }
     return false;
   }
 
-  /** Extracts texture view from loaded async textures. Returns null if any textures have not yet been loaded. */
-  _getBindings(): Record<string, Binding> {
+  /**
+   * Resolves ready model bindings for the current shader layout.
+   * @param shaderLayout Reflected bindings used to select copied or external texture resolution.
+   */
+  _getBindings(
+    shaderLayout: AnyShaderLayout = this._getCurrentShaderLayout()
+  ): Record<string, Binding> {
     const validBindings: Record<string, Binding> = {};
 
     for (const [name, binding] of Object.entries(this.bindings)) {
-      const resolvedBinding = resolveModelBinding(binding);
+      const resolvedBinding = resolveModelBinding(name, binding, shaderLayout);
       if (resolvedBinding) {
         validBindings[name] = resolvedBinding;
       }
@@ -907,17 +923,26 @@ export class Model {
     return validBindings;
   }
 
-  _getBindGroups(): BindingsByGroup {
-    const shaderLayout = this.pipeline?.shaderLayout || this.props.shaderLayout || {bindings: []};
+  /**
+   * Groups resolved model and material bindings for the current shader layout.
+   * @param shaderLayout Reflected bindings used to group logical binding names.
+   * @param bindings Model bindings already resolved for this draw preparation.
+   */
+  _getBindGroups(
+    shaderLayout: AnyShaderLayout = this._getCurrentShaderLayout(),
+    bindings: Record<string, Binding> = this._getBindings(shaderLayout)
+  ): BindingsByGroup {
     const bindGroups = shaderLayout.bindings.length
-      ? normalizeBindingsByGroup(shaderLayout, this._getBindings())
-      : {0: this._getBindings()};
+      ? normalizeBindingsByGroup(shaderLayout, bindings)
+      : {0: bindings};
 
     if (!this.material) {
       return bindGroups;
     }
 
-    for (const [groupKey, groupBindings] of Object.entries(this.material.getBindingsByGroup())) {
+    for (const [groupKey, groupBindings] of Object.entries(
+      this.material.getBindingsByGroup(shaderLayout)
+    )) {
       const group = Number(groupKey);
       bindGroups[group] = {
         ...(bindGroups[group] || {}),
@@ -945,11 +970,15 @@ export class Model {
     for (const binding of Object.values(this.bindings)) {
       if (binding instanceof TextureView) {
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
-      } else if (binding instanceof Buffer || binding instanceof Texture) {
+      } else if (
+        binding instanceof Buffer ||
+        binding instanceof Texture ||
+        binding instanceof ExternalTexture
+      ) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
       } else if (binding instanceof DynamicBuffer) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
-      } else if (binding instanceof DynamicTexture) {
+      } else if (isTextureBindingSource(binding)) {
         timestamp = binding.isReady
           ? Math.max(timestamp, binding.updateTimestamp)
           : // The texture will become available in the future
@@ -1164,6 +1193,11 @@ export class Model {
     return filteredBindings;
   }
 
+  /** Returns the current reflected shader layout or the pre-reflection empty layout. */
+  private _getCurrentShaderLayout(): AnyShaderLayout {
+    return this.pipeline?.shaderLayout || this.props.shaderLayout || {bindings: []};
+  }
+
   private _syncDynamicBuffers(): void {
     if (
       this._dynamicIndexBufferSource &&
@@ -1219,9 +1253,23 @@ export class Model {
 
 // HELPERS
 
-function resolveModelBinding(binding: ModelBinding): Binding | null {
-  if (binding instanceof DynamicTexture) {
-    return binding.isReady ? binding.texture : null;
+/**
+ * Resolves one model binding against the current shader layout.
+ * @param bindingName Logical model binding name.
+ * @param binding Model binding or deferred engine binding source.
+ * @param shaderLayout Reflected bindings used to select copied or external texture resolution.
+ * @returns Concrete core binding, or `null` while a deferred source is unavailable.
+ */
+function resolveModelBinding(
+  bindingName: string,
+  binding: ModelBinding,
+  shaderLayout: AnyShaderLayout
+): Binding | null {
+  if (isTextureBindingSource(binding)) {
+    const bindingLayout = getTextureBindingLayout(shaderLayout, bindingName, {
+      fallbackGroup: 0
+    });
+    return bindingLayout ? binding.resolveTextureBinding(bindingLayout) : null;
   }
 
   if (binding instanceof DynamicBuffer) {

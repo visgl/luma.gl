@@ -9,12 +9,21 @@ import type {
   ComputeShaderLayout,
   ShaderLayout
 } from '@luma.gl/core';
-import {Buffer, Sampler, Texture, TextureView, getShaderLayoutBinding, log} from '@luma.gl/core';
+import {
+  Buffer,
+  ExternalTexture,
+  Sampler,
+  Texture,
+  TextureView,
+  getShaderLayoutBinding,
+  log
+} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
 import type {WebGPUSampler} from '../resources/webgpu-sampler';
 import type {WebGPUTexture} from '../resources/webgpu-texture';
 import type {WebGPUTextureView} from '../resources/webgpu-texture-view';
+import type {WebGPUExternalTexture} from '../resources/webgpu-external-texture';
 
 type AnyShaderLayout = ShaderLayout | ComputeShaderLayout;
 type BindGroupBindingSummary = {
@@ -150,8 +159,8 @@ function getBindGroupEntries(
         entries.push(entry);
       }
 
-      // TODO - hack to automatically bind samplers to supplied texture default samplers
-      if (value instanceof Texture) {
+      // TODO - hack to automatically bind default samplers for copied and native textures.
+      if (value instanceof Texture || value instanceof ExternalTexture) {
         const samplerBindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
           ignoreWarnings: true
         });
@@ -207,6 +216,7 @@ function getBindGroupEntry(
     };
   }
   if (binding instanceof Texture) {
+    // Copied texture path: bind the paired sampler or ordinary texture view.
     if (options?.sampler) {
       return {
         binding: index,
@@ -216,6 +226,19 @@ function getBindGroupEntry(
     return {
       binding: index,
       resource: (binding as WebGPUTexture).view.handle
+    };
+  }
+  if (binding instanceof ExternalTexture) {
+    // Native `texture_external` path: bind the paired sampler or acquired external handle.
+    if (options?.sampler) {
+      return {
+        binding: index,
+        resource: (binding as WebGPUExternalTexture).sampler.handle
+      };
+    }
+    return {
+      binding: index,
+      resource: (binding as WebGPUExternalTexture).handle
     };
   }
   log.warn(`invalid binding ${bindingName}`, binding);

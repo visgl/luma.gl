@@ -177,7 +177,7 @@ Runs the pass chain and then draws the result into the device's current framebuf
 renderToScreen(options: {
   sourceTexture: DynamicTexture | Texture;
   uniforms?: Record<string, Record<string, unknown>>;
-  bindings?: Record<string, Binding | DynamicTexture>;
+  bindings?: Record<string, Binding | TextureBindingSource>;
 }): boolean
 ```
 
@@ -191,7 +191,7 @@ Runs the pass chain and returns the output texture.
 renderToTexture(options: {
   sourceTexture: DynamicTexture | Texture;
   uniforms?: Record<string, Record<string, unknown>>;
-  bindings?: Record<string, Binding | DynamicTexture>;
+  bindings?: Record<string, Binding | TextureBindingSource>;
 }): Texture | null
 ```
 
@@ -199,7 +199,7 @@ renderToTexture(options: {
 
 - `sourceTexture` may be a `DynamicTexture` or a ready `Texture`.
 - `uniforms` may supply per-draw shader module uniforms keyed by shader pass name.
-- `bindings` may supply per-draw texture bindings keyed by shader binding name.
+- `bindings` may supply per-draw texture bindings or texture binding sources keyed by shader binding name.
 - Two internal framebuffers are used for ping-pong rendering through the shared `previous` sequence.
 - Named render targets are declared only on `ShaderPassPipeline`, not on `ShaderPass`.
 - Target names `original` and `previous` are reserved and may not be used as pipeline target names.

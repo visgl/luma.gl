@@ -82,9 +82,9 @@ known when the `ShaderInputs` instance is created; subsequent `setProps()`,
 
 Returns the current uniform values grouped by module.
 
-### `getBindingValues(): Record<string, Binding>`
+### `getBindingValues(): Record<string, Binding | TextureBindingSource>`
 
-Merges all module bindings into a single binding map suitable for a `Model` or `Computation`.
+Merges all module bindings into a single binding map suitable for a `Model` or `Computation`, including engine texture binding sources such as `DynamicTexture`.
 
 ### `getDebugTable(): Record<string, Record<string, unknown>>`
 

@@ -106,6 +106,11 @@ export class WebGPUPipelineLayout extends PipelineLayout {
           break;
         }
 
+        case 'external-texture': {
+          bindingTypeInfo.externalTexture = {};
+          break;
+        }
+
         default: {
           log.warn('unhandled binding type when creating pipeline descriptor')();
         }

@@ -36,7 +36,7 @@ renderPass.end();
 | `modules?` | `ShaderModule[]` | Shader modules to assemble into the shader source. |
 | `defines?` | `Record<string, boolean>` | Shader module defines. |
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
-| `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| DynamicTexture>` | Textures, samplers, uniform buffers, dynamic buffers, and dynamic textures. |
+| `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| TextureBindingSource>` | Textures, samplers, uniform buffers, dynamic buffers, and texture binding sources such as `DynamicTexture`. |
 | `parameters?` | `RenderPipelineParameters` | Pipeline parameters baked into the model's pipeline. |
 | `geometry?` | `Geometry \| GPUGeometry \| null` | Geometry source for attributes and indices. |
 | `isInstanced?` | `boolean` | Optional override for instancing. |
@@ -83,7 +83,7 @@ Attribute and index data currently bound to the model.
 
 ### `bindings`
 
-Current binding map, including `DynamicBuffer` instances that may replace their backing buffer and `DynamicTexture` instances that have not yet resolved to concrete textures.
+Current binding map, including `DynamicBuffer` instances that may replace their backing buffer and `TextureBindingSource` instances such as `DynamicTexture` that resolve to concrete texture bindings during draw preparation.
 
 ### `vertexArray`
 
@@ -129,7 +129,7 @@ Updates shader inputs and rebuilds the pipeline if necessary, encoding any manag
 
 ### `draw(renderPass: RenderPass): boolean`
 
-Draws once into the supplied render pass. Returns `false` when required resources, such as unresolved `DynamicTexture` bindings, are not ready yet.
+Draws once into the supplied render pass. Returns `false` when required resources, such as unresolved texture binding sources, are not ready yet.
 
 ### `setGeometry(geometry: Geometry | GPUGeometry | null): void`
 
@@ -163,9 +163,9 @@ Replaces the current `ShaderInputs` instance.
 
 Flushes current `ShaderInputs` values into the model's internal uniform store and bindings. On WebGPU, pass the same `CommandEncoder` that will later open the render pass when uploads must be ordered with subsequent draws.
 
-### `setBindings(bindings: Record<string, Binding | DynamicBuffer | DynamicBufferRange | DynamicTexture>): void`
+### `setBindings(bindings: Record<string, Binding | DynamicBuffer | DynamicBufferRange | TextureBindingSource>): void`
 
-Sets textures, samplers, uniform buffers, dynamic buffers, and dynamic textures.
+Sets textures, samplers, uniform buffers, dynamic buffers, and texture binding sources.
 
 ### `setTransformFeedback(transformFeedback: TransformFeedback | null): void`
 
@@ -187,4 +187,4 @@ Sets constant-valued attributes.
 
 - `Model` integrates with [`ShaderInputs`](/docs/api-reference/engine/shader-inputs), [`PipelineFactory`](/docs/api-reference/core/pipeline-factory), and [`ShaderFactory`](/docs/api-reference/core/shader-factory) by default.
 - `DynamicBuffer` attributes, index buffers, and bindings are resolved before drawing so resized buffers are rebound automatically.
-- `DynamicTexture` bindings are supported directly. `Model.draw()` defers rendering until those textures are ready.
+- Texture binding sources such as `DynamicTexture` are supported directly. `Model.draw()` defers rendering until texture binding sources are ready.

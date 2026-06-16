@@ -13,6 +13,7 @@ import type {
 import {initializeShaderModule} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
+import type {TextureBindingSource} from '../dynamic-texture/texture-binding-source';
 import {ClipSpace} from '../models/clip-space';
 import {SwapFramebuffers} from '../compute/swap';
 import {BackgroundTextureModel} from '../models/billboard-texture-model';
@@ -51,6 +52,8 @@ export type ShaderPassRendererProps = {
 
 /** Source texture accepted by {@link ShaderPassRenderer}. */
 type ShaderPassSourceTexture = DynamicTexture | Texture;
+/** Binding accepted by shader pass inputs, including deferred texture binding sources. */
+type ShaderPassBinding = Binding | TextureBindingSource;
 
 /**
  * Runs one or more shader passes against a source texture.
@@ -289,15 +292,15 @@ class PassRenderer {
     originalTexture: Texture;
     previousTexture: Texture;
     outputTexture: Texture;
-    externalBindings: Record<string, Binding | DynamicTexture>;
-  }): Record<string, Binding | DynamicTexture> {
+    externalBindings: Record<string, ShaderPassBinding>;
+  }): Record<string, ShaderPassBinding> {
     const {execution, originalTexture, previousTexture, outputTexture, externalBindings} = options;
     const inputMap = execution.inputs || {sourceTexture: 'previous'};
     const shaderInputBindings = this.shaderInputs.getModuleBindingValues(execution.shaderPass.name);
     // Shader-pass bindings stored in `shaderInputs` act as renderer-owned defaults. Per-draw
     // external bindings can override those defaults for frame-specific resources, while routed
     // logical inputs such as `sourceTexture` remain authoritative below.
-    const resolvedBindings: Record<string, Binding | DynamicTexture> = {
+    const resolvedBindings: Record<string, ShaderPassBinding> = {
       ...shaderInputBindings,
       ...externalBindings
     };
@@ -429,7 +432,7 @@ class SubPassRenderer {
 
   prepare(options: {
     commandEncoder: CommandEncoder;
-    bindings: Record<string, Binding | DynamicTexture>;
+    bindings: Record<string, ShaderPassBinding>;
     textureScale: [number, number];
     uniforms?: Record<string, unknown>;
   }): void {

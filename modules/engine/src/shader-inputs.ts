@@ -11,6 +11,10 @@ import {
   ShaderModuleUniformValue
 } from '@luma.gl/shadertools';
 import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
+import type {TextureBindingSource} from './dynamic-texture/texture-binding-source';
+
+/** Shader binding accepted by ShaderInputs, including deferred texture binding sources. */
+export type ShaderInputBinding = Binding | TextureBindingSource;
 
 export type ShaderInputsOptions = {
   disableWarnings?: boolean;
@@ -43,8 +47,8 @@ export class ShaderInputs<
 
   /** Stores the uniform values for each module */
   moduleUniforms: Record<keyof ShaderPropsT, Record<string, ShaderModuleUniformValue>>;
-  /** Stores the uniform bindings for each module  */
-  moduleBindings: Record<keyof ShaderPropsT, Record<string, Binding>>;
+  /** Stores resource bindings for each module. */
+  moduleBindings: Record<keyof ShaderPropsT, Record<string, ShaderInputBinding>>;
   /** Tracks if uniforms have changed */
   // moduleUniformsChanged: Record<keyof ShaderPropsT, false | string>;
 
@@ -78,7 +82,7 @@ export class ShaderInputs<
       keyof ShaderPropsT,
       Record<string, ShaderModuleUniformValue>
     >;
-    this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Binding>>;
+    this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, ShaderInputBinding>>;
 
     // Initialize the modules
     for (const [name, module] of Object.entries(modules)) {
@@ -160,9 +164,9 @@ export class ShaderInputs<
     return this.moduleUniforms;
   }
 
-  /** Merges all bindings for the shader (from the various modules) */
-  getBindingValues(): Record<string, Binding> {
-    const bindings = {} as Record<string, Binding>;
+  /** Merges concrete and deferred bindings for the shader from the registered modules. */
+  getBindingValues(): Record<string, ShaderInputBinding> {
+    const bindings = {} as Record<string, ShaderInputBinding>;
     for (const moduleBindings of Object.values(this.moduleBindings)) {
       Object.assign(bindings, moduleBindings);
     }
@@ -175,7 +179,9 @@ export class ShaderInputs<
    * This is used by systems such as {@link ShaderPassRenderer} that execute one shader module at a
    * time and need the defaults for just that module.
    */
-  getModuleBindingValues(moduleName: keyof ShaderPropsT | string): Record<string, Binding> {
+  getModuleBindingValues(
+    moduleName: keyof ShaderPropsT | string
+  ): Record<string, ShaderInputBinding> {
     const moduleBindings = this.moduleBindings[moduleName as keyof ShaderPropsT];
     return moduleBindings ? {...moduleBindings} : {};
   }

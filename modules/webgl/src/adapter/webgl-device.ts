@@ -20,7 +20,6 @@ import type {
   // Sampler,
   SamplerProps,
   TextureProps,
-  ExternalTexture,
   ExternalTextureProps,
   FramebufferProps,
   // RenderPipeline,
@@ -315,8 +314,8 @@ export class WebGLDevice extends Device {
     return new WEBGLTexture(this, props);
   }
 
-  createExternalTexture(props: ExternalTextureProps): ExternalTexture {
-    throw new Error('createExternalTexture() not implemented'); // return new Program(props);
+  createExternalTexture(_props: ExternalTextureProps): never {
+    throw new Error('ExternalTexture is not available on WebGL');
   }
 
   createSampler(props: SamplerProps): WEBGLSampler {

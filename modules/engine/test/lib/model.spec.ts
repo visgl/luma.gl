@@ -3,8 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Buffer, CommandEncoder, Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
-import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {
+  Buffer,
+  CommandEncoder,
+  Device,
+  luma,
+  PipelineFactory,
+  ShaderFactory,
+  type ShaderLayout,
+  type Texture
+} from '@luma.gl/core';
+import {DynamicBuffer, Model, type TextureBindingSource} from '@luma.gl/engine';
 import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
 import {skin} from '@luma.gl/shadertools';
 import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
@@ -79,6 +88,26 @@ const mockModule = {
   dependencies: []
 };
 
+function makeCountingTextureBindingSource(texture: Texture): TextureBindingSource & {
+  readonly resolutionCount: number;
+} {
+  let resolutionCount = 0;
+
+  return {
+    id: 'counting-texture-source',
+    isReady: true,
+    generation: 0,
+    updateTimestamp: texture.updateTimestamp,
+    get resolutionCount() {
+      return resolutionCount;
+    },
+    resolveTextureBinding() {
+      resolutionCount++;
+      return texture;
+    }
+  };
+}
+
 test('Model#construct/destruct', async t => {
   const webglDevice = await getWebGLTestDevice();
 
@@ -130,6 +159,33 @@ test('Model#multiple delete', async t => {
   model2.destroy();
   t.ok(model2.pipeline.destroyed === false, 'program remains cached after last release by default');
 
+  t.end();
+});
+
+test('Model reuses one texture source resolution while preparing bind groups', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const texture = webglDevice.createTexture({width: 1, height: 1});
+  const textureBindingSource = makeCountingTextureBindingSource(texture);
+  const model = new Model(webglDevice, {
+    id: 'texture-binding-source-resolution-test',
+    topology: 'point-list',
+    vertexCount: 0,
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
+  });
+  const shaderLayout: ShaderLayout = {
+    attributes: [],
+    bindings: [{name: 'videoTexture', type: 'texture', group: 0, location: 0}]
+  };
+
+  model.setBindings({videoTexture: textureBindingSource});
+  const bindings = (model as any)._getBindings(shaderLayout);
+  (model as any)._getBindGroups(shaderLayout, bindings);
+
+  t.equal(textureBindingSource.resolutionCount, 1, 'bind group preparation reuses resolution');
+
+  model.destroy();
+  texture.destroy();
   t.end();
 });
 

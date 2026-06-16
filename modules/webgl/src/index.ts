@@ -48,7 +48,6 @@ export {WebGLCanvasContext} from './adapter/webgl-canvas-context';
 // WebGL Resource classes
 export {WEBGLBuffer} from './adapter/resources/webgl-buffer';
 export {WEBGLTexture} from './adapter/resources/webgl-texture';
-// export {WEBGLExternalTexture} from './adapter/resources/webgl-external-texture';
 export {WEBGLShader} from './adapter/resources/webgl-shader';
 export {WEBGLSampler} from './adapter/resources/webgl-sampler';
 export {WEBGLFramebuffer} from './adapter/resources/webgl-framebuffer';
