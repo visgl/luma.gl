@@ -39,7 +39,7 @@ import type {
   RenderBundleEncoderProps,
   ShaderLayout
 } from '@luma.gl/core';
-import {Buffer, Device, DeviceFeatures} from '@luma.gl/core';
+import {Buffer, Device, DeviceFeatures, isHTMLInCanvasSupported} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
@@ -561,6 +561,17 @@ export class WebGPUDevice extends Device {
 
     for (const feature of WEBGPU_ALWAYS_FEATURES) {
       features.add(feature);
+    }
+
+    if (
+      isHTMLInCanvasSupported() &&
+      typeof (
+        this.handle.queue as GPUQueue & {
+          copyElementImageToTexture?: unknown;
+        }
+      ).copyElementImageToTexture === 'function'
+    ) {
+      features.add('html-in-canvas');
     }
 
     return new DeviceFeatures(Array.from(features), this.props._disabledFeatures);

@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
-import {DeviceFeature} from '@luma.gl/core';
+import {DeviceFeature, isHTMLInCanvasSupported} from '@luma.gl/core';
 
 const DEVICE_LIMITS = {
   maxTextureDimension1D: true,
@@ -77,6 +77,35 @@ test('Device#features (unknown features)', async t => {
   t.notOk(webglDevice.features.has('unknown'), 'features.has should return false');
   // @ts-expect-error
   t.notOk(webglDevice.features.has(''), 'features.has should return false');
+  t.end();
+});
+
+test('isHTMLInCanvasSupported checks canvas proposal APIs', t => {
+  const originalHTMLCanvasElement = globalThis.HTMLCanvasElement;
+  const setHTMLCanvasElement = (HTMLCanvasElement_: typeof HTMLCanvasElement | undefined) => {
+    if (HTMLCanvasElement_) {
+      Object.defineProperty(globalThis, 'HTMLCanvasElement', {
+        configurable: true,
+        value: HTMLCanvasElement_
+      });
+    } else {
+      Reflect.deleteProperty(globalThis, 'HTMLCanvasElement');
+    }
+  };
+
+  class SupportedHTMLCanvasElement {}
+  Object.defineProperties(SupportedHTMLCanvasElement.prototype, {
+    layoutSubtree: {configurable: true, value: false},
+    requestPaint: {configurable: true, value: () => {}}
+  });
+
+  setHTMLCanvasElement(SupportedHTMLCanvasElement as unknown as typeof HTMLCanvasElement);
+  t.ok(isHTMLInCanvasSupported(), 'layoutSubtree and requestPaint enable HTML-in-Canvas');
+
+  setHTMLCanvasElement(class {} as unknown as typeof HTMLCanvasElement);
+  t.notOk(isHTMLInCanvasSupported(), 'missing proposal APIs disable HTML-in-Canvas');
+
+  setHTMLCanvasElement(originalHTMLCanvasElement);
   t.end();
 });
 

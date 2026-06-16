@@ -5,7 +5,7 @@
 // Feature detection for WebGL
 // Provides a function that enables simple checking of which WebGL features are
 
-import {DeviceFeature, DeviceFeatures} from '@luma.gl/core';
+import {DeviceFeature, DeviceFeatures, isHTMLInCanvasSupported} from '@luma.gl/core';
 import {GLExtensions} from '@luma.gl/webgl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {
@@ -18,7 +18,9 @@ import {
  * Defines luma.gl "feature" names and semantics
  * when value is 'string' it is the name of the extension that enables this feature
  */
-const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
+type WebGLFeatureDefinition = boolean | string | ((gl: WebGL2RenderingContext) => boolean);
+
+const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
   // optional WebGPU features
   'depth-clip-control': 'EXT_depth_clamp', // TODO these seem subtly different
   'timestamp-query': 'EXT_disjoint_timer_query_webgl2',
@@ -28,6 +30,13 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
 
   // optional WebGL features
   'compilation-status-async-webgl': 'KHR_parallel_shader_compile',
+  'html-in-canvas': gl =>
+    isHTMLInCanvasSupported() &&
+    typeof (
+      gl as WebGL2RenderingContext & {
+        texElementImage2D?: unknown;
+      }
+    ).texElementImage2D === 'function',
   'polygon-mode-webgl': 'WEBGL_polygon_mode',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
   'shader-clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
@@ -116,7 +125,9 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
     const isSupported =
       typeof featureInfo === 'string'
         ? Boolean(getWebGLExtension(this.gl, featureInfo, this.extensions))
-        : Boolean(featureInfo);
+        : typeof featureInfo === 'function'
+          ? featureInfo(this.gl)
+          : Boolean(featureInfo);
 
     return isSupported;
   }

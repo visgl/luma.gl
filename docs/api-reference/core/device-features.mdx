@@ -22,6 +22,8 @@ Each device has a `device.features` field that holds a `DeviceFeatures` object w
 
 | Feature Name                               | WebGPU<br />max                                      | WebGPU<br />core                                      | WebGPU<br />compat                                      | WebGL2                                      | Description                                  | WebGL counterpart                                                              |
 | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Browser APIs**                          |
+| `html-in-canvas`                          | <F d="webgpu-max" f="html-in-canvas"/> | <F d="webgpu-core" f="html-in-canvas"/> | <F d="webgpu-compatibility" f="html-in-canvas"/> | <F d="webgl" f="html-in-canvas"/> | DOM subtree rasterization into textures     | `texElementImage2D`                                                            |
 | **WebGPU Extensions**                      |
 | `core-features-and-limits`                 | <F d="webgpu-max" f="core-features-and-limits"/> | <F d="webgpu-core" f="core-features-and-limits"/> | <F d="webgpu-compatibility" f="core-features-and-limits"/> | <F d="webgl" f="core-features-and-limits"/> | Core WebGPU feature and limit profile        | N/A                                                                            |
 | `depth-clip-control`                       | <F d="webgpu-max" f="depth-clip-control"/> | <F d="webgpu-core" f="depth-clip-control"/> | <F d="webgpu-compatibility" f="depth-clip-control"/> | <F d="webgl" f="depth-clip-control"/> | Disable depth clipping via `unclippedDepth`  | `WEBGL_depth_texture`                                                          |
@@ -76,6 +78,10 @@ An example of feature detection
 ```ts
 // Checks if `QuerySet` objects can do GPU timing
 if (device.features.has('timestamp-query')) {
+   ...
+}
+// Checks whether the active browser and backend can rasterize DOM children into textures
+if (device.features.has('html-in-canvas')) {
    ...
 }
 // Alternatively - do the same query using raw WebGL extensions

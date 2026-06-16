@@ -259,15 +259,30 @@ export class DeviceFeatures {
   }
 }
 
+type HTMLInCanvasCanvasElement = HTMLCanvasElement & {
+  layoutSubtree?: boolean;
+  requestPaint?: () => void;
+};
+
+/** Whether the browser exposes the canvas-side HTML-in-Canvas proposal APIs. */
+export function isHTMLInCanvasSupported(): boolean {
+  if (typeof HTMLCanvasElement === 'undefined') {
+    return false;
+  }
+
+  const canvasPrototype = HTMLCanvasElement.prototype as HTMLInCanvasCanvasElement;
+  return 'layoutSubtree' in canvasPrototype && typeof canvasPrototype.requestPaint === 'function';
+}
+
 /** Device feature names */
 export type DeviceFeature =
   | WebGPUDeviceFeature
   | WebGLDeviceFeature
-  | WebGLCompressedTextureFeatures;
-// | ChromeExperimentalFeatures
+  | WebGLCompressedTextureFeatures
+  | BrowserDeviceFeature;
 
-/** Chrome-specific extensions. Expected to eventually become standard features. */
-// export type ChromeExperimentalFeatures = ;
+/** Browser APIs surfaced through luma.gl devices. */
+export type BrowserDeviceFeature = 'html-in-canvas'; // HTMLCanvasElement layoutSubtree/requestPaint plus backend DOM-to-texture copy
 
 export type WebGPUDeviceFeature =
   | 'core-features-and-limits'
