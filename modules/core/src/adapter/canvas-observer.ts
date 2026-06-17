@@ -8,7 +8,7 @@ type CanvasObserverProps = {
   canvas?: HTMLCanvasElement;
   /** Whether to poll for canvas position changes. */
   trackPosition: boolean;
-  /** ResizeObserver box type passed to `observe()`. Defaults to `'device-pixel-content-box'`. */
+  /** ResizeObserver box type passed to `observe()`. */
   resizeObserverBox: ResizeObserverBoxOptions;
   /** Called with ResizeObserver entries for the observed canvas. */
   onResize: (entries: ResizeObserverEntry[]) => void;

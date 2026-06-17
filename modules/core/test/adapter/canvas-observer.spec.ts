@@ -86,6 +86,7 @@ test('CanvasObserver#start is idempotent and stop is idempotent', t => {
     const observer = new CanvasObserver({
       canvas: document.createElement('canvas'),
       trackPosition: false,
+      resizeObserverBox: 'device-pixel-content-box',
       onResize: () => {},
       onIntersection: () => {},
       onDevicePixelRatioChange: () => {},
@@ -147,6 +148,7 @@ test('CanvasObserver#trackPosition polling stops after stop', t => {
     const observer = new CanvasObserver({
       canvas: document.createElement('canvas'),
       trackPosition: true,
+      resizeObserverBox: 'device-pixel-content-box',
       onResize: () => {},
       onIntersection: () => {},
       onDevicePixelRatioChange: () => {},
@@ -173,7 +175,7 @@ test('CanvasObserver#trackPosition polling stops after stop', t => {
   t.end();
 });
 
-test('CanvasObserver#resizeObserverBox defaults to device-pixel-content-box', t => {
+test('CanvasObserver#resizeObserverBox uses device-pixel-content-box when specified', t => {
   if (!isBrowser()) {
     t.end();
     return;
@@ -202,6 +204,7 @@ test('CanvasObserver#resizeObserverBox defaults to device-pixel-content-box', t 
     const observer = new CanvasObserver({
       canvas: document.createElement('canvas'),
       trackPosition: false,
+      resizeObserverBox: 'device-pixel-content-box',
       onResize: () => {},
       onIntersection: () => {},
       onDevicePixelRatioChange: () => {},
@@ -209,7 +212,7 @@ test('CanvasObserver#resizeObserverBox defaults to device-pixel-content-box', t 
     });
 
     observer.start();
-    t.equal(observedBox, 'device-pixel-content-box', 'defaults to device-pixel-content-box');
+    t.equal(observedBox, 'device-pixel-content-box', 'uses device-pixel-content-box');
     observer.stop();
   } finally {
     restoreGlobals(globalScope, originals);
@@ -300,6 +303,7 @@ test('CanvasObserver#start is a no-op without an HTML canvas', t => {
   try {
     const observer = new CanvasObserver({
       trackPosition: true,
+      resizeObserverBox: 'device-pixel-content-box',
       onResize: () => {},
       onIntersection: () => {},
       onDevicePixelRatioChange: () => {},
