@@ -281,7 +281,7 @@ test('CanvasContext#_handleResize supports css-dpr compatibility sizing', t => {
     (canvasContext as any)._handleResize([
       {
         target: canvasContext.canvas,
-        contentBoxSize: [{inlineSize: 100.2, blockSize: 50.2}],
+        contentBoxSize: [{inlineSize: 100.4, blockSize: 50.4}],
         devicePixelContentBoxSize: [{inlineSize: 151, blockSize: 76}]
       }
     ]);
@@ -289,7 +289,7 @@ test('CanvasContext#_handleResize supports css-dpr compatibility sizing', t => {
     t.deepEqual(
       canvasContext.getDevicePixelSize(),
       [150, 75],
-      'css-dpr mode rounds css size times DPR and ignores exact observer size'
+      'css-dpr mode floors css size times DPR and ignores exact observer size'
     );
     t.deepEqual(
       canvasContext.getDrawingBufferSize(),
@@ -338,6 +338,113 @@ test('CanvasContext#_handleResize keeps numeric useDevicePixels override across 
   } finally {
     canvasContext.getDevicePixelRatio = originalGetDevicePixelRatio;
   }
+
+  t.end();
+});
+
+test('CanvasContext#_observeDevicePixelRatio recalculates drawing buffer in css-dpr mode', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext({pixelSizeSource: 'css-dpr'}, false);
+  let resizeCalls = 0;
+  // @ts-expect-error read only
+  canvasContext.device = {
+    limits: {maxTextureDimension2D: 4096},
+    props: {
+      onResize: () => {
+        resizeCalls++;
+      },
+      onDevicePixelRatioChange: () => {},
+      onVisibilityChange: () => {},
+      onPositionChange: () => {}
+    }
+  };
+
+  // Simulate an initial resize at DPR 2
+  canvasContext.getDevicePixelRatio = () => 2;
+  (canvasContext as any)._handleResize([
+    {
+      target: canvasContext.canvas,
+      contentBoxSize: [{inlineSize: 400, blockSize: 300}]
+    }
+  ]);
+  t.deepEqual(canvasContext.getDevicePixelSize(), [800, 600], 'initial size at DPR 2');
+
+  // Simulate a DPR change to 1.5 (browser zoom)
+  resizeCalls = 0;
+  let lastOldPixelSize: [number, number] | undefined;
+  // @ts-expect-error read only
+  canvasContext.device = {
+    ...canvasContext.device,
+    props: {
+      ...canvasContext.device.props,
+      onResize: (_ctx: any, {oldPixelSize}: {oldPixelSize: [number, number]}) => {
+        resizeCalls++;
+        lastOldPixelSize = oldPixelSize;
+      }
+    }
+  };
+  canvasContext.getDevicePixelRatio = () => 1.5;
+  // Mark the observer as started so _observeDevicePixelRatio doesn't bail
+  (canvasContext as any)._canvasObserver = {started: true};
+  (canvasContext as any)._observeDevicePixelRatio();
+
+  t.deepEqual(
+    canvasContext.getDevicePixelSize(),
+    [600, 450],
+    'DPR change recalculates device pixel size using Math.floor(css * newDpr)'
+  );
+  t.equal(resizeCalls, 1, 'onResize is called when DPR changes in css-dpr mode');
+  t.deepEqual(lastOldPixelSize, [800, 600], 'onResize receives the previous pixel size');
+
+  t.end();
+});
+
+test('CanvasContext#_observeDevicePixelRatio clamps to max texture size in css-dpr mode', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext({pixelSizeSource: 'css-dpr'}, false);
+  // @ts-expect-error read only
+  canvasContext.device = {
+    limits: {maxTextureDimension2D: 2048},
+    props: {
+      onResize: () => {},
+      onDevicePixelRatioChange: () => {},
+      onVisibilityChange: () => {},
+      onPositionChange: () => {}
+    }
+  };
+
+  // Set up a large canvas (1500x1200 CSS) at DPR 2 = 3000x2400 which exceeds 2048
+  canvasContext.getDevicePixelRatio = () => 2;
+  (canvasContext as any)._handleResize([
+    {
+      target: canvasContext.canvas,
+      contentBoxSize: [{inlineSize: 1500, blockSize: 1200}]
+    }
+  ]);
+  t.deepEqual(
+    canvasContext.getDevicePixelSize(),
+    [2048, 2048],
+    'initial size clamped by _handleResize'
+  );
+
+  // Now simulate a DPR change to 3 (4500x3600 unclamped)
+  canvasContext.getDevicePixelRatio = () => 3;
+  (canvasContext as any)._canvasObserver = {started: true};
+  (canvasContext as any)._observeDevicePixelRatio();
+
+  t.deepEqual(
+    canvasContext.getDevicePixelSize(),
+    [2048, 2048],
+    'DPR change clamps pixel size to maxTextureDimension2D'
+  );
 
   t.end();
 });
