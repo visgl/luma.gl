@@ -14,6 +14,7 @@ import {
   type Texture
 } from '@luma.gl/core';
 import {DynamicBuffer, Model, type TextureBindingSource} from '@luma.gl/engine';
+import {ShaderInputs} from '../../src/shader-inputs';
 import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
 import {skin} from '@luma.gl/shadertools';
 import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
@@ -85,6 +86,14 @@ const mockModule = {
   vs: '',
   fs: '',
   getUniforms: (opts, context) => ({}),
+  dependencies: []
+};
+
+const appFrameModule = {
+  name: 'appFrame',
+  uniformTypes: {
+    scale: 'f32'
+  },
   dependencies: []
 };
 
@@ -570,6 +579,32 @@ test('Model merges WGSL inferred bindings with explicit shader layout', async t 
   t.ok(
     model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame'),
     'pipeline layout includes bindings inferred from WGSL'
+  );
+
+  model.destroy();
+  t.end();
+});
+
+test('Model assembles shader input modules alongside explicit modules', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU unavailable, skipping shader input module merge test');
+    t.end();
+    return;
+  }
+
+  const model = new Model(webgpuDevice, {
+    id: 'shader-input-and-explicit-module-merge-test',
+    source: DUMMY_WGSL_WITH_BINDING,
+    modules: [mockModule],
+    shaderInputs: new ShaderInputs({appFrame: appFrameModule}),
+    vertexCount: 3
+  });
+
+  t.notOk(model.source.includes('@binding(auto)'), 'application auto binding is resolved');
+  t.ok(
+    model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame'),
+    'shader input binding is included in the pipeline layout'
   );
 
   model.destroy();

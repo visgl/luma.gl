@@ -64,6 +64,23 @@ export function shaderModuleHasUniforms(module: ShaderModule): boolean {
   return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
 }
 
+export function mergeShaderModules(
+  explicitModules: ShaderModule[] | undefined,
+  shaderInputModules: ShaderModule[] | undefined
+): ShaderModule[] {
+  const modules: ShaderModule[] = [];
+  const moduleNames = new Set<string>();
+
+  for (const module of [...(explicitModules || []), ...(shaderInputModules || [])]) {
+    if (!moduleNames.has(module.name)) {
+      moduleNames.add(module.name);
+      modules.push(module);
+    }
+  }
+
+  return modules;
+}
+
 /** Returns binding-name aliases that should share the module-declared bind group. */
 function getRelatedBindingNames(bindingName: string): string[] {
   const bindingNames = new Set<string>([bindingName, `${bindingName}Uniforms`]);

@@ -227,6 +227,11 @@ test('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GP
         makeExpectedOffsets(testCase.keys.length, testCase.pointCount),
         `${testCase.encoding} path offsets use the fixed point count`
       );
+      t.deepEqual(
+        Array.from(preparedPaths.paths.data[0]!.valueOffsets || []),
+        makeExpectedOffsets(testCase.keys.length, testCase.pointCount),
+        `${testCase.encoding} GPUData keeps renderer-facing path offsets`
+      );
       t.equal(
         getPathCoordinateComponentCount(pathVector),
         2,
