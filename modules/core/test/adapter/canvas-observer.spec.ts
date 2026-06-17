@@ -86,6 +86,7 @@ test('CanvasObserver#start is idempotent and stop is idempotent', t => {
     const observer = new CanvasObserver({
       canvas: document.createElement('canvas'),
       trackPosition: false,
+      resizeObserverBox: 'device-pixel-content-box',
       onResize: () => {},
       onIntersection: () => {},
       onDevicePixelRatioChange: () => {},
@@ -147,6 +148,7 @@ test('CanvasObserver#trackPosition polling stops after stop', t => {
     const observer = new CanvasObserver({
       canvas: document.createElement('canvas'),
       trackPosition: true,
+      resizeObserverBox: 'device-pixel-content-box',
       onResize: () => {},
       onIntersection: () => {},
       onDevicePixelRatioChange: () => {},
@@ -166,6 +168,98 @@ test('CanvasObserver#trackPosition polling stops after stop', t => {
 
     intervalCallback?.();
     t.equal(positionChangeCalls, 1, 'position polling callback does not fire after stop');
+  } finally {
+    restoreGlobals(globalScope, originals);
+  }
+
+  t.end();
+});
+
+test('CanvasObserver#resizeObserverBox uses device-pixel-content-box when specified', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis;
+  const originals = getOriginalGlobals(globalScope);
+  let observedBox: string | undefined;
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe(_target: Element, options?: ResizeObserverOptions) {
+      observedBox = options?.box;
+    }
+    disconnect() {}
+  } as typeof ResizeObserver;
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {}
+    disconnect() {}
+  } as typeof IntersectionObserver;
+  globalScope.setTimeout = (callback: TimerHandler, delay?: number) =>
+    originals.setTimeout.call(globalScope, callback, delay);
+
+  try {
+    const observer = new CanvasObserver({
+      canvas: document.createElement('canvas'),
+      trackPosition: false,
+      resizeObserverBox: 'device-pixel-content-box',
+      onResize: () => {},
+      onIntersection: () => {},
+      onDevicePixelRatioChange: () => {},
+      onPositionChange: () => {}
+    });
+
+    observer.start();
+    t.equal(observedBox, 'device-pixel-content-box', 'uses device-pixel-content-box');
+    observer.stop();
+  } finally {
+    restoreGlobals(globalScope, originals);
+  }
+
+  t.end();
+});
+
+test('CanvasObserver#resizeObserverBox uses content-box when specified', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis;
+  const originals = getOriginalGlobals(globalScope);
+  let observedBox: string | undefined;
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe(_target: Element, options?: ResizeObserverOptions) {
+      observedBox = options?.box;
+    }
+    disconnect() {}
+  } as typeof ResizeObserver;
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {}
+    disconnect() {}
+  } as typeof IntersectionObserver;
+  globalScope.setTimeout = (callback: TimerHandler, delay?: number) =>
+    originals.setTimeout.call(globalScope, callback, delay);
+
+  try {
+    const observer = new CanvasObserver({
+      canvas: document.createElement('canvas'),
+      trackPosition: false,
+      resizeObserverBox: 'content-box',
+      onResize: () => {},
+      onIntersection: () => {},
+      onDevicePixelRatioChange: () => {},
+      onPositionChange: () => {}
+    });
+
+    observer.start();
+    t.equal(observedBox, 'content-box', 'uses content-box when resizeObserverBox is set');
+    observer.stop();
   } finally {
     restoreGlobals(globalScope, originals);
   }
@@ -209,6 +303,7 @@ test('CanvasObserver#start is a no-op without an HTML canvas', t => {
   try {
     const observer = new CanvasObserver({
       trackPosition: true,
+      resizeObserverBox: 'device-pixel-content-box',
       onResize: () => {},
       onIntersection: () => {},
       onDevicePixelRatioChange: () => {},
