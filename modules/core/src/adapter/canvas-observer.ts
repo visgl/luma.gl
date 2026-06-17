@@ -9,7 +9,7 @@ type CanvasObserverProps = {
   /** Whether to poll for canvas position changes. */
   trackPosition: boolean;
   /** ResizeObserver box type passed to `observe()`. Defaults to `'device-pixel-content-box'`. */
-  resizeObserverBox?: ResizeObserverBoxOptions;
+  resizeObserverBox: ResizeObserverBoxOptions;
   /** Called with ResizeObserver entries for the observed canvas. */
   onResize: (entries: ResizeObserverEntry[]) => void;
   /** Called with IntersectionObserver entries for the observed canvas. */
@@ -66,7 +66,7 @@ export class CanvasObserver {
     this._resizeObserver ||= new ResizeObserver(entries => this.props.onResize(entries));
 
     this._intersectionObserver.observe(this.props.canvas);
-    const box = this.props.resizeObserverBox || 'device-pixel-content-box';
+    const box = this.props.resizeObserverBox;
     try {
       this._resizeObserver.observe(this.props.canvas, {box});
     } catch {

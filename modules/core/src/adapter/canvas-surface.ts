@@ -181,7 +181,7 @@ export abstract class CanvasSurface {
     this._canvasObserver = new CanvasObserver({
       canvas: this.htmlCanvas,
       trackPosition: this.props.trackPosition,
-      resizeObserverBox: this.props.pixelSizeSource === 'css-dpr' ? 'content-box' : undefined,
+      resizeObserverBox: this.props.pixelSizeSource === 'css-dpr' ? 'content-box' : 'device-pixel-content-box',
       onResize: entries => this._handleResize(entries),
       onIntersection: entries => this._handleIntersection(entries),
       onDevicePixelRatioChange: () => this._observeDevicePixelRatio(),
