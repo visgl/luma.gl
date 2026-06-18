@@ -61,6 +61,10 @@ export type CopyElementImageOptions = {
   sourceX?: number;
   /** Start copying from source offset y (default 0) */
   sourceY?: number;
+  /** Copy area width in source CSS pixels. Defaults to destination width. */
+  sourceWidth?: number;
+  /** Copy area height in source CSS pixels. Defaults to destination height. */
+  sourceHeight?: number;
   /** Copy depth, number of layers/depth slices(default 1) */
   depth?: number;
   /** Start copying into offset x (default 0) */
@@ -748,6 +752,8 @@ export abstract class Texture extends Resource<TextureProps> {
     height: undefined!,
     sourceX: 0,
     sourceY: 0,
+    sourceWidth: undefined!,
+    sourceHeight: undefined!,
     depth: 1,
     mipLevel: 0,
     x: 0,

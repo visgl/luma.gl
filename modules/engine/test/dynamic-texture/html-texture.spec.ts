@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {Texture, type Device} from '@luma.gl/core';
 import {getNullTestDevice} from '@luma.gl/test-utils';
 import {HTMLTexture} from '../../src/index';
 
@@ -44,9 +45,13 @@ test('HTMLTexture configures paint cycle and tracks DOM uploads', async t => {
   const device = await getNullTestDevice();
   const fakeCanvas = new FakeCanvas();
   const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+  const element = {
+    parentElement: canvas,
+    getBoundingClientRect: () => ({width: 2, height: 2})
+  } as unknown as Element;
   const texture = new HTMLTexture(device, {
     canvas,
-    element: {} as Element,
+    element,
     width: 2,
     height: 2
   });
@@ -55,6 +60,11 @@ test('HTMLTexture configures paint cycle and tracks DOM uploads', async t => {
   await texture.ready;
   t.true(fakeCanvas.hasAttribute('layoutsubtree'), 'constructor enables layoutsubtree');
   t.equal(fakeCanvas.requestPaintCount, 1, 'constructor requests the first paint');
+  t.equal(
+    texture.props.usage,
+    Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
+    'default texture usage supports WebGPU element-image copies'
+  );
 
   texture.requestUpdate();
   t.equal(fakeCanvas.requestPaintCount, 2, 'requestUpdate delegates to canvas.requestPaint');
@@ -66,6 +76,58 @@ test('HTMLTexture configures paint cycle and tracks DOM uploads', async t => {
   texture.destroy();
   fakeCanvas.dispatch('paint');
   t.equal(texture.updateTimestamp, uploadTimestamp, 'destroy removes paint listener');
+
+  t.end();
+});
+
+test('HTMLTexture rejects elements that are not direct canvas children', async t => {
+  const device = await getNullTestDevice();
+  const fakeCanvas = new FakeCanvas();
+  const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+  const element = {parentElement: {}} as unknown as Element;
+
+  t.throws(
+    () =>
+      new HTMLTexture(device, {
+        canvas,
+        element,
+        width: 2,
+        height: 2
+      }),
+    /direct child/,
+    'nested source elements are rejected before browser upload'
+  );
+
+  t.end();
+});
+
+test('HTMLTexture.isSupported gates experimental backend upload paths', t => {
+  const fakeCanvas = new FakeCanvas();
+  const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+
+  const webglDevice = {
+    type: 'webgl',
+    gl: {
+      texElementImage2D() {}
+    }
+  };
+  const webgpuDevice = {
+    type: 'webgpu',
+    handle: {
+      queue: {
+        copyElementImageToTexture() {}
+      }
+    }
+  };
+
+  t.true(
+    HTMLTexture.isSupported(webglDevice as unknown as Device, canvas),
+    'WebGL texElementImage2D path is supported'
+  );
+  t.true(
+    HTMLTexture.isSupported(webgpuDevice as unknown as Device, canvas),
+    'WebGPU copyElementImageToTexture path is supported'
+  );
 
   t.end();
 });

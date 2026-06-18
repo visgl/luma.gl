@@ -187,8 +187,8 @@ export class WebGPUTexture extends Texture {
         source: options.element,
         sx: options.sourceX,
         sy: options.sourceY,
-        swidth: options.width,
-        sheight: options.height
+        swidth: options.sourceWidth ?? options.width,
+        sheight: options.sourceHeight ?? options.height
       },
       {
         destination: {

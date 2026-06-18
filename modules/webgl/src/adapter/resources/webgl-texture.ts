@@ -213,7 +213,20 @@ export class WEBGLTexture extends Texture {
   copyElementImage(options_: CopyElementImageOptions): {width: number; height: number} {
     const options = this._normalizeCopyElementImageOptions(options_);
     const {glFormat} = this;
-    const {element, depth, mipLevel, sourceX, sourceY, x, y, z, width, height} = options;
+    const {
+      element,
+      depth,
+      mipLevel,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      x,
+      y,
+      z,
+      width,
+      height
+    } = options;
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
     const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
     const gl = this.gl as WebGL2RenderingContext & {
@@ -247,8 +260,8 @@ export class WEBGLTexture extends Texture {
       gl.texElementImage2D?.(glTarget, glFormat, element, {
         sx: sourceX,
         sy: sourceY,
-        swidth: width,
-        sheight: height,
+        swidth: sourceWidth ?? width,
+        sheight: sourceHeight ?? height,
         width,
         height
       });

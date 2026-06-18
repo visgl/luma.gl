@@ -27,6 +27,10 @@ export type HTMLTextureProps = Omit<
   width: number;
   /** Texture height in pixels. */
   height: number;
+  /** Source DOM box width in CSS pixels. Defaults to the element border box width. */
+  sourceWidth?: number;
+  /** Source DOM box height in CSS pixels. Defaults to the element border box height. */
+  sourceHeight?: number;
   /** Request a repaint when the subtree mutates. */
   autoUpdate?: boolean;
   /** Request a repaint when the subtree size changes. */
@@ -44,6 +48,8 @@ export class HTMLTexture extends DynamicTexture {
   readonly element: ElementTextureSource;
   readonly autoUpdate: boolean;
   readonly observeResize: boolean;
+  readonly sourceHeight: number | undefined;
+  readonly sourceWidth: number | undefined;
 
   private pendingPaint = false;
   private mutationObserver: MutationObserver | null = null;
@@ -57,16 +63,20 @@ export class HTMLTexture extends DynamicTexture {
       element,
       height,
       observeResize = false,
+      sourceHeight,
+      sourceWidth,
       width,
       ...textureProps
     } = props;
+    assertElementIsCanvasChild(canvas, element);
+
     const resolvedTextureProps = {
       ...textureProps,
       data: null,
       dimension: '2d',
       height,
       mipmaps: false,
-      usage: textureProps.usage ?? Texture.SAMPLE | Texture.COPY_DST,
+      usage: textureProps.usage ?? Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
       width
     } satisfies DynamicTextureProps;
 
@@ -76,6 +86,8 @@ export class HTMLTexture extends DynamicTexture {
     this.element = element;
     this.autoUpdate = autoUpdate;
     this.observeResize = observeResize;
+    this.sourceHeight = sourceHeight;
+    this.sourceWidth = sourceWidth;
 
     HTMLTexture.configureCanvas(canvas);
     this.canvas.addEventListener('paint', this.handlePaint);
@@ -177,11 +189,38 @@ export class HTMLTexture extends DynamicTexture {
       return;
     }
 
+    const sourceSize = getElementBorderBoxSize(this.element);
     this.texture.copyElementImage({
       element: this.element,
       height: this.texture.height,
+      sourceHeight: this.sourceHeight ?? sourceSize.height,
+      sourceWidth: this.sourceWidth ?? sourceSize.width,
       width: this.texture.width
     });
     this._touch();
   }
+}
+
+function assertElementIsCanvasChild(
+  canvas: HTMLCanvasElement,
+  element: ElementTextureSource
+): void {
+  if (element.parentElement !== canvas) {
+    throw new Error('HTMLTexture element must be a direct child of the HTML-in-Canvas canvas');
+  }
+}
+
+function getElementBorderBoxSize(element: ElementTextureSource): {width: number; height: number} {
+  if (element instanceof HTMLElement) {
+    return {
+      width: element.offsetWidth,
+      height: element.offsetHeight
+    };
+  }
+
+  const bounds = element.getBoundingClientRect();
+  return {
+    width: bounds.width,
+    height: bounds.height
+  };
 }

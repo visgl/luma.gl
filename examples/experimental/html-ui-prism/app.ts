@@ -28,7 +28,17 @@ const FACE_WORLD_SIZE = 2.9;
 const PRISM_RADIUS = FACE_WORLD_SIZE * 0.5;
 const PRISM_TILT = -0.18;
 const QUARTER_TURN = Math.PI / 2;
+const AUTO_ROTATION_RESUME_DELAY_MS = 3500;
 const FACE_IDS = ['info', 'settings', 'stats', 'debug'] as const;
+const FACE_POINTER_EVENT_TYPES = [
+  'pointerdown',
+  'pointermove',
+  'pointerup',
+  'pointercancel',
+  'click',
+  'dblclick',
+  'wheel'
+] as const;
 
 type PrismFaceId = (typeof FACE_IDS)[number];
 
@@ -37,23 +47,25 @@ type AppUniforms = {
 };
 
 type PrismSettingsState = {
-  activeFace: PrismFaceId;
-  paused: boolean;
+  rotate: boolean;
   rotationSpeed: number;
 };
 
 type PrismFace = {
   id: PrismFaceId;
-  index: number;
-  label: string;
   model: Model;
   panelHostElement: HTMLElement;
   panel: Panel;
-  sourceElement: HTMLElement;
   texture: HTMLTexture;
   uniformStore: UniformStore<{app: AppUniforms}>;
   wrapperElement: HTMLElement;
 };
+
+type HTMLInCanvasElement = HTMLCanvasElement & {
+  getElementTransform?: (element: Element, drawTransform: DOMMatrix) => DOMMatrix | null;
+};
+
+const activePrismByCanvas = new WeakMap<HTMLCanvasElement, AppAnimationLoopTemplate>();
 
 const app = {
   uniformTypes: {
@@ -158,20 +170,21 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
     up: [0, 1, 0]
   });
   private readonly settingsPanel: ExampleSettingsPanelManager;
-  private readonly canvas: HTMLCanvasElement;
+  private readonly canvas: HTMLInCanvasElement;
   private readonly supported: boolean;
   private activeFaceId: PrismFaceId = 'info';
   private dragPointerId: number | null = null;
   private dragStartRotationY = 0;
   private dragStartX = 0;
   private lastRenderTime = 0;
-  private panelSceneElement: HTMLElement | null = null;
+  private autoRotationPauseRemainingMs = 0;
+  private finalized = false;
+  private active = true;
   private prismFaces: PrismFace[] = [];
   private rotationY = 0;
   private settingsState: PrismSettingsState = {
-    activeFace: 'info',
-    paused: false,
-    rotationSpeed: 0.55
+    rotate: true,
+    rotationSpeed: 0.28
   };
   private styleElement: HTMLStyleElement | null = null;
   private supportNoticeElement: HTMLElement | null = null;
@@ -180,6 +193,9 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
   constructor({device}: AnimationProps) {
     super();
     this.canvas = device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+    activePrismByCanvas.get(this.canvas)?.deactivateForReplacement();
+    activePrismByCanvas.set(this.canvas, this);
+
     this.supported = HTMLTexture.isSupported(device, this.canvas);
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'html-ui-prism-settings',
@@ -196,23 +212,37 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
       return;
     }
 
-    this.panelSceneElement = this.createPanelScene();
-    this.canvas.appendChild(this.panelSceneElement);
-    this.prismFaces = FACE_IDS.map((faceId, index) => this.createPrismFace(device, faceId, index));
+    this.prismFaces = FACE_IDS.map(faceId => this.createPrismFace(device, faceId));
     this.syncActiveFace();
   }
 
   override onFinalize(): void {
+    this.finalizeResources();
+    if (activePrismByCanvas.get(this.canvas) === this) {
+      activePrismByCanvas.delete(this.canvas);
+    }
+  }
+
+  private deactivateForReplacement(): void {
+    this.active = false;
+    this.finalizeResources();
+  }
+
+  private finalizeResources(): void {
+    if (this.finalized) {
+      return;
+    }
+    this.finalized = true;
     this.settingsPanel.finalize();
     this.prismFaces.forEach(face => {
       renderExamplePanel(face.panelHostElement, null);
+      this.updateFaceEventListeners(face.wrapperElement, 'remove');
+      face.wrapperElement.remove();
       face.model.destroy();
       face.texture.destroy();
       face.uniformStore.destroy();
     });
     this.prismFaces = [];
-    this.panelSceneElement?.remove();
-    this.panelSceneElement = null;
     this.styleElement?.remove();
     this.styleElement = null;
     this.supportNoticeElement?.remove();
@@ -224,6 +254,10 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
+    if (!this.active) {
+      return;
+    }
+
     if (!this.supported) {
       const renderPass = device.beginRenderPass({clearColor: [0.05, 0.06, 0.08, 1]});
       renderPass.end();
@@ -232,7 +266,6 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
 
     this.updateRotation(time);
     this.syncActiveFace();
-    this.syncPanelSceneTransform();
 
     this.projectionMatrix.perspective({fovy: Math.PI / 3, aspect, near: 0.1, far: 100});
 
@@ -250,6 +283,7 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
       const modelViewProjectionMatrix = new Matrix4(this.projectionMatrix)
         .multiplyRight(this.viewMatrix)
         .multiplyRight(modelMatrix);
+      this.syncPrismFaceTransform(face, modelViewProjectionMatrix);
 
       face.uniformStore.setUniforms({
         app: {modelViewProjectionMatrix}
@@ -264,6 +298,7 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
     HTMLTexture.configureCanvas(this.canvas);
     this.canvas.style.background = '#0d1117';
     this.canvas.style.cursor = 'grab';
+    this.canvas.style.overflow = 'visible';
     this.canvas.style.position = 'relative';
     this.styleElement = document.createElement('style');
     this.styleElement.textContent = HTML_UI_PRISM_CSS;
@@ -274,26 +309,16 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
     this.canvas.addEventListener('pointercancel', this.handlePointerUp);
   }
 
-  private createPanelScene(): HTMLElement {
-    const panelSceneElement = document.createElement('div');
-    panelSceneElement.className = 'html-ui-prism-scene';
-    return panelSceneElement;
-  }
-
-  private createPrismFace(
-    device: AnimationProps['device'],
-    faceId: PrismFaceId,
-    index: number
-  ): PrismFace {
-    const {panelHostElement, sourceElement, wrapperElement} = makePrismFaceElements(faceId);
+  private createPrismFace(device: AnimationProps['device'], faceId: PrismFaceId): PrismFace {
+    const {panelHostElement, wrapperElement} = makePrismFaceElements(faceId);
     const panel = this.makePanel(faceId);
-    this.panelSceneElement?.appendChild(wrapperElement);
+    this.canvas.appendChild(wrapperElement);
     renderExamplePanel(panelHostElement, panel);
 
     const texture = new HTMLTexture(device, {
       autoUpdate: true,
       canvas: this.canvas,
-      element: sourceElement,
+      element: wrapperElement,
       height: FACE_TEXTURE_SIZE,
       observeResize: true,
       sampler: device.createSampler({
@@ -319,7 +344,8 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
       }
     });
 
-    wrapperElement.style.transform = `rotateY(${this.faceRotationById.get(faceId) ?? 0}rad) translateZ(${PRISM_RADIUS * 180}px)`;
+    this.updateFaceEventListeners(wrapperElement, 'add');
+
     wrapperElement
       .querySelector<HTMLButtonElement>('[data-prism-face-focus]')
       ?.addEventListener('click', () => {
@@ -328,12 +354,9 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
 
     return {
       id: faceId,
-      index,
-      label: getFaceLabel(faceId),
       model,
       panel,
       panelHostElement,
-      sourceElement,
       texture,
       uniformStore,
       wrapperElement
@@ -393,8 +416,6 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
       FACE_IDS[normalizeFaceIndex(Math.round(-this.rotationY / QUARTER_TURN))];
     if (nextActiveFaceId !== this.activeFaceId) {
       this.activeFaceId = nextActiveFaceId;
-      this.settingsState = {...this.settingsState, activeFace: nextActiveFaceId};
-      this.settingsPanel.setSettings(this.settingsState);
     }
 
     for (const face of this.prismFaces) {
@@ -402,12 +423,33 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
     }
   }
 
-  private syncPanelSceneTransform(): void {
-    if (!this.panelSceneElement) {
-      return;
+  private syncPrismFaceTransform(face: PrismFace, modelViewProjectionMatrix: Matrix4): void {
+    const drawTransform = makeCssDrawTransform({
+      canvas: this.canvas,
+      element: face.wrapperElement,
+      modelViewProjectionMatrix
+    });
+
+    let elementTransform: DOMMatrix | null | undefined = null;
+    try {
+      elementTransform = this.canvas.getElementTransform?.(face.wrapperElement, drawTransform);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'InvalidStateError') {
+        return;
+      }
+      throw error;
     }
-    this.panelSceneElement.style.setProperty('--html-ui-prism-rotation-y', `${this.rotationY}rad`);
-    this.panelSceneElement.style.setProperty('--html-ui-prism-tilt', `${PRISM_TILT}rad`);
+    if (elementTransform?.is2D) {
+      elementTransform = DOMMatrix.fromFloat64Array(elementTransform.toFloat64Array());
+    }
+
+    if (elementTransform) {
+      face.wrapperElement.style.transform = elementTransform.toString();
+      face.wrapperElement.style.zIndex = face.id === this.activeFaceId ? '10' : '1';
+    } else {
+      const faceRotationY = this.faceRotationById.get(face.id) ?? 0;
+      face.wrapperElement.style.transform = `translate(-50%, -50%) rotateX(${PRISM_TILT}rad) rotateY(${this.rotationY}rad) rotateY(${faceRotationY}rad) translateZ(${PRISM_RADIUS * 180}px)`;
+    }
   }
 
   private updateRotation(time: number): void {
@@ -429,7 +471,15 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
       return;
     }
 
-    if (!this.settingsState.paused && this.dragPointerId === null) {
+    if (this.autoRotationPauseRemainingMs > 0) {
+      this.autoRotationPauseRemainingMs = Math.max(
+        0,
+        this.autoRotationPauseRemainingMs - deltaSeconds * 1000
+      );
+      return;
+    }
+
+    if (this.settingsState.rotate && this.dragPointerId === null) {
       this.rotationY += this.settingsState.rotationSpeed * deltaSeconds;
     }
   }
@@ -439,17 +489,12 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (
-      event.target instanceof Element &&
-      event.target.closest('[data-html-ui-prism-face][data-active="true"]')
-    ) {
-      return;
-    }
-
     this.dragPointerId = event.pointerId;
     this.dragStartX = event.clientX;
     this.dragStartRotationY = this.rotationY;
     this.targetRotationY = null;
+    this.autoRotationPauseRemainingMs = Number.POSITIVE_INFINITY;
+    this.setRotate(false);
     this.canvas.setPointerCapture?.(event.pointerId);
     this.canvas.style.cursor = 'grabbing';
   };
@@ -466,41 +511,72 @@ Experimental HTML-in-Canvas demo. In supporting browsers, each prism face is a l
       return;
     }
     this.dragPointerId = null;
+    this.pauseAutoRotationBriefly();
     this.canvas.releasePointerCapture?.(event.pointerId);
     this.canvas.style.cursor = 'grab';
+  };
+
+  private pauseAutoRotationBriefly(): void {
+    this.autoRotationPauseRemainingMs = AUTO_ROTATION_RESUME_DELAY_MS;
+  }
+
+  private readonly handleFacePointerEvent = (event: Event): void => {
+    this.pauseAutoRotationBriefly();
+    event.stopPropagation();
+  };
+
+  private readonly handleFaceDragStart = (event: DragEvent): void => {
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   private readonly handleSettingsChange = (
     settings: Record<string, unknown>,
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
-    const activeFace = getChangedSetting(changedSettings, 'activeFace')?.nextValue;
-    const paused = getChangedSetting(changedSettings, 'paused')?.nextValue;
-    const rotationSpeed = getChangedSetting(changedSettings, 'rotationSpeed')?.nextValue;
+    const rotate = getChangedSetting(changedSettings, 'rotate')?.nextValue ?? settings.rotate;
+    const rotationSpeed =
+      getChangedSetting(changedSettings, 'rotationSpeed')?.nextValue ?? settings.rotationSpeed;
+    const nextSettings = {...this.settingsState};
 
-    if (typeof activeFace === 'string' && isPrismFaceId(activeFace)) {
-      this.snapToFace(activeFace);
-    }
-    if (typeof paused === 'boolean') {
-      this.settingsState = {...this.settingsState, paused};
+    if (typeof rotate === 'boolean') {
+      nextSettings.rotate = rotate;
+      if (rotate) {
+        this.autoRotationPauseRemainingMs = 0;
+      }
     }
     if (typeof rotationSpeed === 'number') {
-      this.settingsState = {...this.settingsState, rotationSpeed};
+      nextSettings.rotationSpeed = rotationSpeed;
+      if (nextSettings.rotate) {
+        this.autoRotationPauseRemainingMs = 0;
+      }
     }
 
-    this.settingsState = {
-      ...this.settingsState,
-      ...settings,
-      activeFace: isPrismFaceId(settings.activeFace)
-        ? settings.activeFace
-        : this.settingsState.activeFace
-    } as PrismSettingsState;
+    this.settingsState = nextSettings;
   };
+
+  private setRotate(rotate: boolean): void {
+    if (this.settingsState.rotate === rotate) {
+      return;
+    }
+    this.settingsState = {...this.settingsState, rotate};
+    if (rotate) {
+      this.autoRotationPauseRemainingMs = 0;
+    }
+    this.settingsPanel.setSettings(this.settingsState);
+  }
+
+  private updateFaceEventListeners(element: HTMLElement, action: 'add' | 'remove'): void {
+    const methodName = action === 'add' ? 'addEventListener' : 'removeEventListener';
+    for (const eventType of FACE_POINTER_EVENT_TYPES) {
+      element[methodName](eventType, this.handleFacePointerEvent);
+    }
+    element[methodName]('dragstart', this.handleFaceDragStart);
+  }
 }
 
 function makePrismFaceElements(faceId: PrismFaceId): {
   panelHostElement: HTMLElement;
-  sourceElement: HTMLElement;
   wrapperElement: HTMLElement;
 } {
   const wrapperElement = document.createElement('article');
@@ -525,7 +601,7 @@ function makePrismFaceElements(faceId: PrismFaceId): {
   }
   configurePanelHostElement(panelHostElement);
 
-  return {panelHostElement, sourceElement, wrapperElement};
+  return {panelHostElement, wrapperElement};
 }
 
 function makePrismSettingsSchema(): SettingsSchema {
@@ -542,22 +618,56 @@ function makePrismSettingsSchema(): SettingsSchema {
             label: 'Rotation Speed',
             type: 'number',
             persist: 'none',
-            min: -2,
+            min: 0,
             max: 2,
             step: 0.01
           },
-          {name: 'paused', label: 'Pause', type: 'boolean', persist: 'none'},
-          {
-            name: 'activeFace',
-            label: 'Focus Face',
-            type: 'select',
-            persist: 'none',
-            options: FACE_IDS.map(faceId => ({label: getFaceLabel(faceId), value: faceId}))
-          }
+          {name: 'rotate', label: 'Rotate', type: 'boolean', persist: 'none'}
         ]
       }
     ]
   };
+}
+
+function makeCssDrawTransform(props: {
+  canvas: HTMLCanvasElement;
+  element: HTMLElement;
+  modelViewProjectionMatrix: Matrix4;
+}): DOMMatrix {
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const elementWidth = props.element.offsetWidth || 1;
+  const elementHeight = props.element.offsetHeight || 1;
+  const viewportWidth = props.canvas.width;
+  const viewportHeight = props.canvas.height;
+
+  const viewportMatrix = new Matrix4([
+    viewportWidth / 2,
+    0,
+    0,
+    0,
+    0,
+    -viewportHeight / 2,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    viewportWidth / 2,
+    viewportHeight / 2,
+    0,
+    1
+  ]);
+  const elementToFaceMatrix = new Matrix4()
+    .translate([-FACE_WORLD_SIZE / 2, FACE_WORLD_SIZE / 2, 0])
+    .scale([FACE_WORLD_SIZE / elementWidth, -FACE_WORLD_SIZE / elementHeight, 1]);
+  const cssPixelScaleMatrix = new Matrix4().scale([1 / devicePixelRatio, 1 / devicePixelRatio, 1]);
+  const drawTransform = new Matrix4(viewportMatrix)
+    .multiplyRight(props.modelViewProjectionMatrix)
+    .multiplyRight(elementToFaceMatrix)
+    .multiplyRight(cssPixelScaleMatrix);
+
+  return new DOMMatrix(Array.from(drawTransform));
 }
 
 function makeStatsHtml(): string {
@@ -596,10 +706,6 @@ function getFaceLabel(faceId: PrismFaceId): string {
   return faceId[0].toUpperCase() + faceId.slice(1);
 }
 
-function isPrismFaceId(value: unknown): value is PrismFaceId {
-  return typeof value === 'string' && FACE_IDS.includes(value as PrismFaceId);
-}
-
 function normalizeFaceIndex(index: number): number {
   return ((index % FACE_IDS.length) + FACE_IDS.length) % FACE_IDS.length;
 }
@@ -632,41 +738,20 @@ function escapeHtml(value: string): string {
 }
 
 const HTML_UI_PRISM_CSS = `\
-.html-ui-prism-scene {
-  --html-ui-prism-face-size: 324px;
-  --html-ui-prism-rotation-y: 0rad;
-  --html-ui-prism-tilt: 0rad;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  overflow: visible;
-  pointer-events: none;
-  position: absolute;
-  perspective: 980px;
-  transform: rotateX(var(--html-ui-prism-tilt)) rotateY(var(--html-ui-prism-rotation-y));
-  transform-style: preserve-3d;
-}
-
-.html-ui-prism-scene::before {
-  background: radial-gradient(circle at 50% 50%, rgba(90, 133, 255, 0.18), rgba(13, 17, 23, 0) 56%);
-  content: '';
-  inset: 8%;
-  pointer-events: none;
-  position: absolute;
-}
-
 .html-ui-prism-face {
+  --html-ui-prism-face-size: 324px;
   display: grid;
   height: var(--html-ui-prism-face-size);
+  left: 0;
   place-items: center;
-  pointer-events: none;
-  position: absolute;
-  transform-style: preserve-3d;
-  width: var(--html-ui-prism-face-size);
-}
-
-.html-ui-prism-face[data-active='true'] {
   pointer-events: auto;
+  position: absolute;
+  top: 0;
+  transform-origin: 0 0;
+  transform-style: preserve-3d;
+  user-select: none;
+  -webkit-user-select: none;
+  width: var(--html-ui-prism-face-size);
 }
 
 .html-ui-prism-surface {
@@ -684,6 +769,8 @@ const HTML_UI_PRISM_CSS = `\
   height: 100%;
   overflow: hidden;
   padding: 16px;
+  user-select: none;
+  -webkit-user-select: none;
   width: 100%;
 }
 
