@@ -76,6 +76,7 @@ export class GPUTableModel extends Model {
     super(device, modelProps);
     this.table = table;
     this.tableState = state;
+    this.captureExplicitDrawState();
     if (table) {
       this.setTableDrawState(table);
     }
@@ -200,6 +201,18 @@ export class GPUTableModel extends Model {
       return;
     }
     this.setTableDrawState(this.table);
+  }
+
+  private captureExplicitDrawState(): void {
+    if (!this.tableState.explicitIndexBuffer && this.indexBuffer) {
+      this.tableState.explicitIndexBuffer = this.indexBuffer;
+    }
+    if (this.tableState.explicitIndexCount === undefined && this.indexCount !== undefined) {
+      this.tableState.explicitIndexCount = this.indexCount;
+    }
+    if (this.tableState.explicitVertexCount === 0 && this.vertexCount > 0) {
+      this.tableState.explicitVertexCount = this.vertexCount;
+    }
   }
 
   private setTableDrawState(source: GPUTableDrawSource): void {

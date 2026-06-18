@@ -4,6 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type ShaderLayout} from '@luma.gl/core';
+import {Geometry} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   GPURecordBatch,
@@ -26,6 +27,14 @@ const INTERLEAVED_TABLE_MODEL_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
+const TABLE_MODEL_GEOMETRY_SHADER_LAYOUT = {
+  attributes: [
+    {name: 'geometryPositions', location: 0, type: 'vec2<f32>'},
+    {name: 'positions', location: 1, type: 'vec2<f32>', stepMode: 'instance'}
+  ],
+  bindings: []
+} satisfies ShaderLayout;
+
 const TABLE_MODEL_VERTEX_SHADER = /* glsl */ `\
 #version 300 es
 in vec2 positions;
@@ -40,6 +49,15 @@ in vec4 matrixColumn0;
 in vec4 matrixColumn1;
 void main() {
   gl_Position = matrixColumn0 + matrixColumn1 * 0.0;
+}
+`;
+
+const TABLE_MODEL_GEOMETRY_VERTEX_SHADER = /* glsl */ `\
+#version 300 es
+in vec2 geometryPositions;
+in vec2 positions;
+void main() {
+  gl_Position = vec4(geometryPositions + positions * 0.0, 0.0, 1.0);
 }
 `;
 
@@ -242,6 +260,47 @@ test('GPUTableModel binds reserved table indices for indexed draws', t => {
   renderPass.destroy();
   model.destroy();
   table.destroy();
+  t.end();
+});
+
+test('GPUTableModel preserves geometry draw state with instance tables', t => {
+  const device = new NullDevice({});
+  const table = makePositionsTable(device, 2);
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-model-geometry-instance-test',
+    vs: TABLE_MODEL_GEOMETRY_VERTEX_SHADER,
+    fs: TABLE_MODEL_FRAGMENT_SHADER,
+    shaderLayout: TABLE_MODEL_GEOMETRY_SHADER_LAYOUT,
+    table,
+    tableCount: 'instance',
+    geometry: new Geometry({
+      topology: 'triangle-list',
+      indices: new Uint16Array([0, 1, 2]),
+      attributes: {
+        geometryPositions: {size: 2, value: new Float32Array([0, 0, 1, 0, 0, 1])}
+      }
+    })
+  });
+  const geometryIndexBuffer = model.indexBuffer;
+  const nextTable = makePositionsTable(device, 3);
+
+  t.equal(model.vertexCount, 3, 'preserves geometry vertex count after initial table sync');
+  t.equal(model.indexBuffer, geometryIndexBuffer, 'preserves geometry index buffer');
+  t.equal(model.instanceCount, 2, 'still infers instance count from table rows');
+
+  model.setProps({table: nextTable});
+
+  t.equal(model.vertexCount, 3, 'preserves geometry vertex count after table replacement');
+  t.equal(
+    model.indexBuffer,
+    geometryIndexBuffer,
+    'preserves geometry index buffer after table replacement'
+  );
+  t.equal(model.instanceCount, 3, 'updates instance count for replacement table rows');
+
+  model.destroy();
+  table.destroy();
+  nextTable.destroy();
   t.end();
 });
 
