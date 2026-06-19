@@ -25,12 +25,14 @@ export class WEBGLFramebuffer extends Framebuffer {
     super(device, props);
 
     // WebGL default framebuffer handle is null
-    const isDefaultFramebuffer = props.handle === null;
+    const suppliedHandle = props.handle as WebGLFramebuffer | null | undefined;
+    const isDefaultFramebuffer = suppliedHandle === null;
 
     this.device = device;
     this.gl = device.gl;
-    this.handle =
-      this.props.handle || isDefaultFramebuffer ? this.props.handle : this.gl.createFramebuffer();
+    this.handle = (
+      suppliedHandle || isDefaultFramebuffer ? suppliedHandle : this.gl.createFramebuffer()
+    )!;
 
     if (!isDefaultFramebuffer) {
       // default framebuffer handle is null, so we can't set debug metadata...

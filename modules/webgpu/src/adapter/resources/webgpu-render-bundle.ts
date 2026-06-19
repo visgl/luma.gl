@@ -71,7 +71,8 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
 
     const descriptor = this.getRenderBundleEncoderDescriptor();
     this.device.pushErrorScope('validation');
-    this.handle = this.props.handle || this.device.handle.createRenderBundleEncoder(descriptor);
+    const suppliedHandle = this.props.handle as GPURenderBundleEncoder | undefined;
+    this.handle = suppliedHandle || this.device.handle.createRenderBundleEncoder(descriptor);
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
       this.device.debug();
@@ -216,7 +217,7 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
   }
 
   private getRenderBundleEncoderDescriptor(): GPURenderBundleEncoderDescriptor {
-    const renderBundleEncoderProps = this.props as Required<RenderBundleEncoderProps>;
+    const renderBundleEncoderProps = this.props as unknown as Required<RenderBundleEncoderProps>;
     const descriptor: GPURenderBundleEncoderDescriptor = {
       label: this.props.id,
       colorFormats: renderBundleEncoderProps.colorAttachmentFormats.map(format =>

@@ -85,7 +85,8 @@ export class WebGPURenderPass extends RenderPass {
 
       this.device.pushErrorScope('validation');
       const beginRenderPassStartTime = profiler ? getTimestamp() : 0;
-      this.handle = this.props.handle || commandEncoder.beginRenderPass(renderPassDescriptor);
+      const suppliedHandle = this.props.handle as GPURenderPassEncoder | undefined;
+      this.handle = suppliedHandle || commandEncoder.beginRenderPass(renderPassDescriptor);
       if (profiler) {
         profiler.renderPassBeginCount = (profiler.renderPassBeginCount || 0) + 1;
         profiler.renderPassBeginTimeMs =

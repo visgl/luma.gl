@@ -10,7 +10,7 @@ export type BufferMapCallback<T> = (arrayBuffer: ArrayBuffer, lifetime: 'mapped'
 
 export type BufferProps = ResourceProps & {
   /** Supply a handle to connect to an existing device-specific buffer */
-  handle?: WebGLBuffer;
+  handle?: unknown;
   /** Specifies how this buffer can be used */
   usage?: number;
   /** Length in bytes of memory to be allocated. If not specified, `byteLength` of  `props.data` will be used. */
@@ -154,6 +154,7 @@ export abstract class Buffer extends Resource<BufferProps> {
 
   static override defaultProps: Required<BufferProps> = {
     ...Resource.defaultProps,
+    handle: undefined!,
     usage: 0, // Buffer.COPY_DST | Buffer.COPY_SRC
     byteLength: 0,
     byteOffset: 0,

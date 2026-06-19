@@ -5,7 +5,6 @@ import {
   type CopyExternalImageOptions,
   type TextureReadOptions,
   type TextureWriteOptions,
-  type SamplerProps,
   Buffer,
   Texture,
   log,
@@ -14,8 +13,8 @@ import {
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
-import {WebGPUSampler} from './webgpu-sampler';
-import {WebGPUTextureView} from './webgpu-texture-view';
+import {WebGPUSampler, type WebGPUSamplerProps} from './webgpu-sampler';
+import {WebGPUTextureView, type WebGPUTextureViewProps} from './webgpu-texture-view';
 import {WebGPUBuffer} from './webgpu-buffer';
 
 /** WebGPU implementation of the luma.gl core Texture resource */
@@ -36,15 +35,16 @@ export class WebGPUTexture extends Texture {
     } else if (props.sampler === undefined) {
       this.sampler = this.device.getDefaultSampler();
     } else {
-      this.sampler = new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
+      this.sampler = new WebGPUSampler(this.device, (props.sampler as WebGPUSamplerProps) || {});
       this.attachResource(this.sampler);
     }
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
 
+    const suppliedHandle = this.props.handle as GPUTexture | undefined;
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       this.device.handle.createTexture({
         label: this.id,
         size: {
@@ -75,9 +75,11 @@ export class WebGPUTexture extends Texture {
       this.height = this.handle.height;
     }
 
+    const {handle: _textureHandle, ...textureProps} = this.props;
+    const {handle: _viewHandle, ...textureViewProps} = this.props.view || {};
     this.view = new WebGPUTextureView(this.device, {
-      ...this.props,
-      ...(this.props.view || {}),
+      ...textureProps,
+      ...textureViewProps,
       texture: this,
       mipLevelCount: this.props.view?.mipLevelCount ?? this.mipLevels,
       // Note: arrayLayerCount controls the view of array textures, but does not apply to 3d texture depths
@@ -117,7 +119,10 @@ export class WebGPUTexture extends Texture {
   }
 
   createView(props: TextureViewProps): WebGPUTextureView {
-    return new WebGPUTextureView(this.device, {...props, texture: this});
+    return new WebGPUTextureView(this.device, {
+      ...(props as WebGPUTextureViewProps),
+      texture: this
+    });
   }
 
   copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {

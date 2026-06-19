@@ -26,8 +26,9 @@ export class WebGPUQuerySet extends QuerySet {
   constructor(device: WebGPUDevice, props: QuerySetProps) {
     super(device, props);
     this.device = device;
+    const suppliedHandle = this.props.handle as GPUQuerySet | undefined;
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       this.device.handle.createQuerySet({
         type: this.props.type,
         count: this.props.count

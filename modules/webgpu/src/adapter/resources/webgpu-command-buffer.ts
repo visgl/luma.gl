@@ -18,8 +18,9 @@ export class WebGPUCommandBuffer extends CommandBuffer {
     super(commandEncoder.device, props);
     this.device = commandEncoder.device;
     this.transientUploadBuffers = commandEncoder.takeTransientUploadBuffers();
+    const suppliedHandle = this.props.handle as GPUCommandBuffer | undefined;
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       commandEncoder.handle.finish({
         label: props?.id || 'unnamed-command-buffer'
       });

@@ -30,9 +30,10 @@ export class WebGPUComputePipeline extends ComputePipeline {
     this.device = device;
 
     const webgpuShader = this.props.shader as WebGPUShader;
+    const suppliedHandle = this.props.handle as GPUComputePipeline | undefined;
 
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       this.device.handle.createComputePipeline({
         label: this.props.id,
         compute: {

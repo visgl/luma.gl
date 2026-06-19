@@ -31,7 +31,9 @@ export class WEBGLBuffer extends Buffer {
     this.device = device;
     this.gl = this.device.gl;
 
-    const handle = typeof props === 'object' ? props.handle : undefined;
+    const handle = (typeof props === 'object' ? props.handle : undefined) as
+      | WebGLBuffer
+      | undefined;
     this.handle = handle || this.gl.createBuffer();
     device._setWebGLDebugMetadata(this.handle, this, {
       spector: {...this.props, data: typeof this.props.data}

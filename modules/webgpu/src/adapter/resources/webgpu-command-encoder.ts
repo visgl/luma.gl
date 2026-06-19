@@ -26,8 +26,9 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   constructor(device: WebGPUDevice, props: CommandEncoderProps = {}) {
     super(device, props);
     this.device = device;
+    const suppliedHandle = props.handle as GPUCommandEncoder | undefined;
     this.handle =
-      props.handle ||
+      suppliedHandle ||
       this.device.handle.createCommandEncoder({
         label: this.props.id
         // TODO was this removed in standard?

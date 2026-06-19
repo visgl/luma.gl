@@ -354,7 +354,11 @@ export class WebGLDevice extends Device {
   override _createSharedRenderPipelineWebGL(props: RenderPipelineProps): SharedRenderPipeline {
     return new WEBGLSharedRenderPipeline(
       this,
-      props as RenderPipelineProps & {vs: WEBGLShader; fs: WEBGLShader}
+      props as RenderPipelineProps & {
+        handle?: WebGLProgram;
+        vs: WEBGLShader;
+        fs: WEBGLShader;
+      }
     );
   }
 

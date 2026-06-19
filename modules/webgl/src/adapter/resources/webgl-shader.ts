@@ -19,12 +19,13 @@ export class WEBGLShader extends Shader {
   constructor(device: WebGLDevice, props: ShaderProps) {
     super(device, props);
     this.device = device;
+    const suppliedHandle = this.props.handle as WebGLShader | undefined;
     switch (this.props.stage) {
       case 'vertex':
-        this.handle = this.props.handle || this.device.gl.createShader(GL.VERTEX_SHADER);
+        this.handle = suppliedHandle || this.device.gl.createShader(GL.VERTEX_SHADER)!;
         break;
       case 'fragment':
-        this.handle = this.props.handle || this.device.gl.createShader(GL.FRAGMENT_SHADER);
+        this.handle = suppliedHandle || this.device.gl.createShader(GL.FRAGMENT_SHADER)!;
         break;
       default:
         throw new Error(this.props.stage);

@@ -43,7 +43,7 @@ import {Buffer, Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
-import {WebGPUSampler} from './resources/webgpu-sampler';
+import {WebGPUSampler, type WebGPUSamplerProps} from './resources/webgpu-sampler';
 import {WebGPUShader} from './resources/webgpu-shader';
 import {WebGPURenderPipeline} from './resources/webgpu-render-pipeline';
 import {WebGPURenderBundleEncoder} from './resources/webgpu-render-bundle';
@@ -188,7 +188,7 @@ export class WebGPUDevice extends Device {
   }
 
   createSampler(props: SamplerProps): WebGPUSampler {
-    return new WebGPUSampler(this, props);
+    return new WebGPUSampler(this, props as WebGPUSamplerProps);
   }
 
   getDefaultSampler(): WebGPUSampler {
