@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.5
+
+- fix(core): use content-box observer and Math.floor in css-dpr mode (#2676)
+
 ### v9.3.4
 
 - feat(core): Support legacy sizing in CanvasContext (#2588)
