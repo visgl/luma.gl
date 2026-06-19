@@ -4,9 +4,10 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 <CoreDocsTabs group="commands" active="compute-pass" />
 
-:::info
-WebGPU only
-:::
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
 
 A pass on which to run computations with compute pipelines.
 

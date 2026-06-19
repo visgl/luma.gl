@@ -45,8 +45,9 @@ export class WebGPUComputePass extends ComputePass {
       }
     }
 
+    const suppliedHandle = this.props.handle as GPUComputePassEncoder | undefined;
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       commandEncoder.beginComputePass({
         label: this.props.id,
         timestampWrites

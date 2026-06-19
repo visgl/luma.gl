@@ -26,8 +26,9 @@ export class WebGPUQuerySet extends QuerySet {
   constructor(device: WebGPUDevice, props: QuerySetProps) {
     super(device, props);
     this.device = device;
+    const suppliedHandle = this.props.handle as GPUQuerySet | undefined;
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       this.device.handle.createQuerySet({
         type: this.props.type,
         count: this.props.count
@@ -119,9 +120,7 @@ export class WebGPUQuerySet extends QuerySet {
           destinationBuffer: this._readBuffer!,
           size: this._resolveBuffer!.byteLength
         });
-        const commandBuffer = commandEncoder.finish({
-          id: `${this.id}-read-results-command-buffer`
-        });
+        const commandBuffer = commandEncoder.finish();
         const previousSubmitReason = getCpuHotspotSubmitReason(this.device) || undefined;
         setCpuHotspotSubmitReason(this.device, 'query-readback');
         try {

@@ -151,7 +151,7 @@ or use another WebGL 1 capable stack.
 - [CanvasContext](/docs/api-reference/core/canvas-context)
 - [PresentationContext](/docs/api-reference/core/presentation-context)
 - [GPU Bindings](/docs/api-guide/gpu/gpu-bindings)
-- [GPU Commands](/docs/api-guide/gpu/gpu-commands)
+- [Issuing GPU Commands](/docs/api-guide/gpu/gpu-commands)
 - [GPU Storage Buffers](/docs/api-guide/gpu/gpu-storage-buffers)
 - [GPU Computations](/docs/api-guide/engine/transforms)
 - [Efficiently rendering glTF models](https://toji.dev/webgpu-gltf-case-study/)

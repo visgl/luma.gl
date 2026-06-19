@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {CommandBufferProps, CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
+import {CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
 import type {
   RenderPassProps,
   ComputePass,
@@ -32,7 +32,8 @@ export class WEBGLCommandEncoder extends CommandEncoder {
     super(device, props);
     this.device = device;
     this.commandBuffer = new WEBGLCommandBuffer(device, {
-      id: `${this.props.id}-command-buffer`
+      id: this.id,
+      userData: this.userData
     });
   }
 
@@ -40,11 +41,7 @@ export class WEBGLCommandEncoder extends CommandEncoder {
     this.destroyResource();
   }
 
-  override finish(props?: CommandBufferProps): WEBGLCommandBuffer {
-    if (props?.id && this.commandBuffer.id !== props.id) {
-      this.commandBuffer.id = props.id;
-      this.commandBuffer.props.id = props.id;
-    }
+  override finish(): WEBGLCommandBuffer {
     this.destroy();
     return this.commandBuffer;
   }

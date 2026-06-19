@@ -68,7 +68,7 @@ struct VertexInputs {
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) color : vec4<f32>,
-  @interpolate(flat)
+  @interpolate(flat, either)
   @location(1) objectIndex : i32,
 };
 
@@ -122,7 +122,7 @@ struct PolygonViewportUniforms {
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) color : vec4<f32>,
-  @interpolate(flat)
+  @interpolate(flat, either)
   @location(1) objectIndex : i32,
 };
 

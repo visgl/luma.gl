@@ -24,6 +24,7 @@ import type {Texture, TextureProps} from './resources/texture';
 import type {ExternalTexture, ExternalTextureProps} from './resources/external-texture';
 import type {Framebuffer, FramebufferProps} from './resources/framebuffer';
 import type {RenderPass, RenderPassProps} from './resources/render-pass';
+import type {RenderBundleEncoder, RenderBundleEncoderProps} from './resources/render-bundle';
 import type {ComputePass, ComputePassProps} from './resources/compute-pass';
 import type {CommandEncoder, CommandEncoderProps} from './resources/command-encoder';
 import type {CommandBuffer} from './resources/command-buffer';
@@ -792,6 +793,14 @@ or create a device with the 'debug: true' prop.`;
 
   /** Create a compute pipeline (aka program). WebGPU only. */
   abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
+
+  /**
+   * Creates an encoder for reusable WebGPU draw commands.
+   * @param props - Resource metadata and render-attachment compatibility requirements.
+   * @returns A render bundle encoder that records without beginning a render pass.
+   * @throws On backends other than WebGPU.
+   */
+  abstract createRenderBundleEncoder(props?: RenderBundleEncoderProps): RenderBundleEncoder;
 
   /** Create a vertex array */
   abstract createVertexArray(props: VertexArrayProps): VertexArray;

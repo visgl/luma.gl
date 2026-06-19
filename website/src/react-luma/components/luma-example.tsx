@@ -24,6 +24,7 @@ import {
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 let isInfoBoxCollapsedByDefault = true;
 const statsWidgetCollapsedStateByTitle: Record<string, boolean> = {};
+let currentLumaExampleTask: Promise<void> = Promise.resolve();
 
 // WORKAROUND FOR luma.gl VRDisplay
 // if (!globalThis.navigator) {// eslint-disable-line
@@ -225,6 +226,7 @@ function getDefaultCanvasColorTextureByteLength(device: Device): number {
 }
 
 type LumaExampleProps = React.PropsWithChildren<{
+  className?: string;
   id?: string;
   title?: string;
   template: Function;
@@ -534,7 +536,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
   /** Each example maintains an animation loop */
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
-  const currentTask = useRef<Promise<void> | null>(null);
   const statsContainerRef = useRef<HTMLDivElement | null>(null);
   const statsPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -543,6 +544,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const device = useStore(store => store.device);
   const [effectiveDeviceType, setEffectiveDeviceType] = useState<DeviceType | undefined>();
   const [effectiveDevice, setEffectiveDevice] = useState<Device | undefined>();
+  const requestedDeviceTypesKey = getRequestedDeviceTypes(props.devices)?.join('|') || '';
 
   useEffect(() => {
     let isCancelled = false;
@@ -587,7 +589,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     return () => {
       isCancelled = true;
     };
-  }, [deviceType, device, props.devices]);
+  }, [deviceType, device, requestedDeviceTypesKey]);
 
   useEffect(() => {
     if (!canvasContainerRef.current || !effectiveDeviceType || !effectiveDevice) {
@@ -694,7 +696,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
     };
 
-    currentTask.current = Promise.resolve(currentTask.current)
+    currentLumaExampleTask = currentLumaExampleTask
       .then(() => {
         if (isCancelled) {
           return;
@@ -711,7 +713,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     return () => {
       isCancelled = true;
 
-      currentTask.current = Promise.resolve(currentTask.current)
+      currentLumaExampleTask = currentLumaExampleTask
         .then(() => {
           if (statsIntervalId !== null) {
             window.clearInterval(statsIntervalId);
@@ -734,6 +736,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           statsPanelRef.current?.replaceChildren();
           statsWidgets = [];
           if (animationLoop) {
+            if (!effectiveDevice.isLost) {
+              effectiveDevice.submit();
+            }
             animationLoop.destroy();
             animationLoop = null;
           }
@@ -753,7 +758,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     props.template,
     props.directory,
     props.id,
-    websiteBaseUrl
+    websiteBaseUrl,
+    requestedDeviceTypesKey
   ]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
@@ -761,6 +767,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
   return (
     <ExamplePage
+      className={props.className}
       style={{
         overflow: 'hidden',
         ...props.style

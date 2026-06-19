@@ -53,6 +53,7 @@ const config = {
         'hello-triangle': '/examples/tutorials/hello-triangle',
         globe: '/examples/showcase/globe',
         instancing: '/examples/showcase/instancing',
+        'render-bundles': '/examples/api/render-bundles',
         'instanced-cubes': '/examples/tutorials/instanced-cubes',
         lighting: '/examples/tutorials/lighting',
         'multi-canvas': '/examples/api/multi-canvas',

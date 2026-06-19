@@ -24,7 +24,8 @@ const sidebars = {
         'api/multi-canvas',
         'api/cubemap',
         'api/texture-3d',
-        'api/texture-tester'
+        'api/texture-tester',
+        'api/render-bundles'
       ]
     },
     {

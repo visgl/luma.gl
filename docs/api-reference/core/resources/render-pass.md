@@ -26,7 +26,7 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling
   ...
 ```
 
-## Clearing the screen
+### Clearing the screen
 
 `Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Clearing can also be disabled by setting `loadOp='load'`.
 
@@ -49,7 +49,7 @@ Depth and stencil buffers are also cleared to default values:
   device.submit();
 ```
 
-## Viewport size
+### Viewport size
 
 `RenderPassProps.parameters.viewport` controls how the rendered graphics is mapped to window pixels / texels (more precisely, the affine transformation of x and y from normalized device coordinates to window coordinates).
 
@@ -94,6 +94,16 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 ### `end(): void`
 
 Must be called after all draw calls have been completed to guarantee rendering. Frees up any GPU resources associated with this render pass.
+
+### `executeBundles(bundles: Iterable<RenderBundle>): void`
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From-v9.4" />
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
+Replays previously recorded `RenderBundle` objects from a [`RenderBundleEncoder`](/docs/api-reference/core/resources/render-bundle-encoder) in this render pass.
 
 ### `pushDebugGroup(groupLabel: string): void`
 

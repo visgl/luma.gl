@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {
-  CommandBufferProps,
+  ResourceProps,
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
@@ -18,7 +18,7 @@ export class NullCommandBuffer extends CommandBuffer {
   readonly device: NullDevice;
   readonly handle: null = null;
 
-  constructor(device: NullDevice, props: CommandBufferProps) {
+  constructor(device: NullDevice, props: ResourceProps) {
     super(device, props);
     this.device = device;
   }

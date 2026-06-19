@@ -10,7 +10,7 @@ import {Buffer} from './buffer';
 import {Texture} from './texture';
 import type {RenderPass, RenderPassProps} from './render-pass';
 import type {ComputePass, ComputePassProps} from './compute-pass';
-import type {CommandBuffer, CommandBufferProps} from './command-buffer';
+import type {CommandBuffer} from './command-buffer';
 
 // WEBGPU COMMAND ENCODER OPERATIONS
 
@@ -158,8 +158,11 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     this._gpuTimeMs = undefined;
   }
 
-  /** Completes recording of the commands sequence */
-  abstract finish(props?: CommandBufferProps): CommandBuffer;
+  /**
+   * Completes recording and invalidates this encoder.
+   * @returns A single-use `CommandBuffer` that inherits this encoder's `id` and `userData`.
+   */
+  abstract finish(): CommandBuffer;
 
   /** Create a RenderPass using the default CommandEncoder */
   abstract beginRenderPass(props?: RenderPassProps): RenderPass;

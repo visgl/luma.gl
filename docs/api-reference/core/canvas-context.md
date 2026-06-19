@@ -42,7 +42,7 @@ const canvasContext1 = device.createCanvasContext(...);
 const canvasContext2 = device.createCanvasContext(...);
 ```
 
-However this is only supported on WebGPU. A WebGL `Device` always has exactly one `CanvasContext` that must be created when the device is created, and a WebGL device can only render into that single canvas. (This is a fundamental limitation of the WebGL API, outside of luma.gl's control). 
+WebGPU supports multiple `CanvasContext`s. A WebGL `Device` always has exactly one `CanvasContext` that must be created when the device is created, and a WebGL device can only render into that single canvas. This is a fundamental limitation of the WebGL API.
 
 Because of this, the `Device` class provides a `DeviceProps.createCanvasContext` property that creates a default `CanvasContext`:
 
@@ -80,7 +80,14 @@ const renderPass = device.beginRenderPass({
 });
 ```
 
-Rendering into  additional canvas contexts (WebGPU only):
+### Additional canvas contexts
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
+Render into an additional canvas context:
 
 ```typescript
 const newCanvasContext = device.createCanvasContext({canvas: ...});

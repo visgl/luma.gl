@@ -6,13 +6,13 @@ import test, {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   Buffer,
   CommandBuffer,
-  CommandBufferProps,
   CommandEncoder,
   ComputePass,
   Device,
   QuerySet,
   QuerySetProps,
   RenderPass,
+  type ResourceProps,
   Texture,
   TextureFormat
 } from '@luma.gl/core';
@@ -45,7 +45,7 @@ class TestCommandBuffer extends CommandBuffer {
   readonly device: Device;
   readonly handle = null;
 
-  constructor(device: Device, props: CommandBufferProps = {}) {
+  constructor(device: Device, props: ResourceProps = {}) {
     super(device, props);
     this.device = device;
   }
@@ -89,8 +89,8 @@ class TestCommandEncoder extends CommandEncoder {
     this._timeProfilingSlotCount = 4;
   }
 
-  finish(_props?: CommandBufferProps): CommandBuffer {
-    return new TestCommandBuffer(this.device, {});
+  finish(): CommandBuffer {
+    return new TestCommandBuffer(this.device, {id: this.id, userData: this.userData});
   }
 
   beginRenderPass(): RenderPass {
@@ -160,6 +160,16 @@ test('Transient command resources release core stats', async t => {
     );
 
     const commandBuffer = commandEncoder.finish();
+    t.equal(
+      commandBuffer.id,
+      commandEncoder.id,
+      `${device.type} command buffer inherits the encoder id`
+    );
+    t.equal(
+      commandBuffer.userData,
+      commandEncoder.userData,
+      `${device.type} command buffer inherits the encoder userData`
+    );
     const afterFinishStats = getResourceStats(device);
     t.equal(
       afterFinishStats.commandEncodersActive,

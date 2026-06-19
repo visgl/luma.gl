@@ -62,7 +62,7 @@ struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) color : vec4<f32>,
   @location(1) localPosition : vec2<f32>,
-  @interpolate(flat)
+  @interpolate(flat, either)
   @location(2) objectIndex : i32,
 };
 

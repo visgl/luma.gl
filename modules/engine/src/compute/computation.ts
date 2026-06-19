@@ -22,6 +22,7 @@ import {type ShaderModule, type PlatformInfo, ShaderAssembler} from '@luma.gl/sh
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
 import {
+  mergeShaderModules,
   mergeShaderModuleBindingsIntoLayout,
   shaderModuleHasUniforms
 } from '../utils/shader-module-utils';
@@ -141,9 +142,7 @@ export class Computation {
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
 
-    // Extract modules from shader inputs if not supplied
-    const modules =
-      (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
+    const modules = mergeShaderModules(this.props.modules, this.shaderInputs?.getModules());
 
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;

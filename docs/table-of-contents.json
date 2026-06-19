@@ -118,6 +118,7 @@
           "api-reference/core/resources/fence",
           "api-reference/core/resources/framebuffer",
           "api-reference/core/resources/render-pass",
+          "api-reference/core/resources/render-bundle-encoder",
           "api-reference/core/resources/render-pipeline",
           "api-reference/core/resources/sampler",
           "api-reference/core/resources/shader",

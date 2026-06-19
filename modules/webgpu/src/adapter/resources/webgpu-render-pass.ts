@@ -3,7 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray, NumberArray4} from '@math.gl/types';
-import type {RenderPassProps, RenderPassParameters, Bindings, BindingsByGroup} from '@luma.gl/core';
+import type {
+  RenderBundle,
+  RenderPassProps,
+  RenderPassParameters,
+  Bindings,
+  BindingsByGroup
+} from '@luma.gl/core';
 import {Buffer, RenderPass, RenderPipeline, _getDefaultBindGroupFactory, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
@@ -11,6 +17,7 @@ import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 import {WebGPUQuerySet} from './webgpu-query-set';
 import {WebGPUFramebuffer} from './webgpu-framebuffer';
+import {WebGPURenderBundle} from './webgpu-render-bundle';
 import {getCpuHotspotProfiler, getTimestamp} from '../helpers/cpu-hotspot-profiler';
 
 export class WebGPURenderPass extends RenderPass {
@@ -78,7 +85,8 @@ export class WebGPURenderPass extends RenderPass {
 
       this.device.pushErrorScope('validation');
       const beginRenderPassStartTime = profiler ? getTimestamp() : 0;
-      this.handle = this.props.handle || commandEncoder.beginRenderPass(renderPassDescriptor);
+      const suppliedHandle = this.props.handle as GPURenderPassEncoder | undefined;
+      this.handle = suppliedHandle || commandEncoder.beginRenderPass(renderPassDescriptor);
       if (profiler) {
         profiler.renderPassBeginCount = (profiler.renderPassBeginCount || 0) + 1;
         profiler.renderPassBeginTimeMs =
@@ -223,7 +231,24 @@ export class WebGPURenderPass extends RenderPass {
     this.handle.endOcclusionQuery();
   }
 
-  // executeBundles(bundles: Iterable<GPURenderBundle>): void;
+  /** Replays compatible native WebGPU render bundles in this pass. */
+  executeBundles(bundles: Iterable<RenderBundle>): void {
+    this.device.pushErrorScope('validation');
+    this.handle.executeBundles(
+      Array.from(bundles, renderBundle => (renderBundle as WebGPURenderBundle).handle)
+    );
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(
+        new Error(`${this} executeBundles failed:\n"${error.message}"`),
+        this
+      )();
+      this.device.debug();
+    });
+
+    // Native executeBundles clears the pass draw state after replaying the bundle.
+    this.pipeline = null;
+    this.bindings = {};
+  }
 
   // INTERNAL
 

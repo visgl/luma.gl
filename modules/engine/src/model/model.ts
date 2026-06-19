@@ -49,6 +49,7 @@ import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
 import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
 import {
   mergeInferredShaderLayout,
+  mergeShaderModules,
   mergeShaderModuleBindingsIntoLayout,
   shaderModuleHasUniforms
 } from '../utils/shader-module-utils';
@@ -326,10 +327,7 @@ export class Model {
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
 
-    // Extract modules from shader inputs if not supplied
-    const modules =
-      // @ts-ignore shaderInputs is assigned in setShaderInputs above.
-      (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
+    const modules = mergeShaderModules(this.props.modules, shaderInputs.getModules());
 
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
@@ -1232,13 +1230,21 @@ export class Model {
           };
         }
       ).framebuffer || renderPass.props.framebuffer;
+    const renderBundleProps = renderPass.props as RenderPass['props'] & {
+      colorAttachmentFormats?: (TextureFormatColor | null)[];
+      depthStencilAttachmentFormat?: TextureFormatDepthStencil | false;
+    };
 
-    const nextColorAttachmentFormats = framebuffer?.colorAttachments?.map(colorAttachment =>
-      asColorAttachmentFormat(colorAttachment?.texture?.format)
-    );
-    const nextDepthStencilAttachmentFormat = asDepthStencilAttachmentFormat(
-      framebuffer?.depthStencilAttachment?.texture?.format
-    );
+    const nextColorAttachmentFormats =
+      renderBundleProps.colorAttachmentFormats ??
+      framebuffer?.colorAttachments?.map(colorAttachment =>
+        asColorAttachmentFormat(colorAttachment?.texture?.format)
+      );
+    const nextDepthStencilAttachmentFormat =
+      renderBundleProps.depthStencilAttachmentFormat === false
+        ? undefined
+        : (renderBundleProps.depthStencilAttachmentFormat ??
+          asDepthStencilAttachmentFormat(framebuffer?.depthStencilAttachment?.texture?.format));
 
     if (
       !deepEqual(this._colorAttachmentFormats, nextColorAttachmentFormats, 1) ||

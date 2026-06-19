@@ -21,7 +21,9 @@ export type CoreDocsTabId =
   | 'shader-types'
   | 'vertex-formats'
   | 'texture-formats'
+  | 'command-encoding'
   | 'render-pass'
+  | 'render-bundle-encoder'
   | 'compute-pass'
   | 'command-encoder'
   | 'shader'
@@ -70,19 +72,29 @@ const CORE_DOCS_TABS: Record<CoreDocsTabGroupId, CoreDocsTab[]> = {
   ],
   commands: [
     {
-      id: 'render-pass',
-      label: 'RenderPass',
-      href: '/docs/api-reference/core/resources/render-pass'
-    },
-    {
-      id: 'compute-pass',
-      label: 'ComputePass',
-      href: '/docs/api-reference/core/resources/compute-pass'
+      id: 'command-encoding',
+      label: 'Issuing Commands',
+      href: '/docs/api-guide/gpu/gpu-commands'
     },
     {
       id: 'command-encoder',
       label: 'CommandEncoder',
       href: '/docs/api-reference/core/resources/command-encoder'
+    },
+    {
+      id: 'render-pass',
+      label: 'RenderPass',
+      href: '/docs/api-reference/core/resources/render-pass'
+    },
+    {
+      id: 'render-bundle-encoder',
+      label: 'RenderBundleEncoder',
+      href: '/docs/api-reference/core/resources/render-bundle-encoder'
+    },
+    {
+      id: 'compute-pass',
+      label: 'ComputePass',
+      href: '/docs/api-reference/core/resources/compute-pass'
     }
   ],
   pipelines: [

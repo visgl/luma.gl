@@ -16,6 +16,7 @@ import type {
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
+  RenderBundleEncoderProps,
   ComputePipeline,
   ComputePipelineProps,
   Buffer,
@@ -147,13 +148,18 @@ export class NullDevice extends Device {
     throw new Error('ComputePipeline is not supported on NullDevice');
   }
 
+  /** @throws Always throws because `NullDevice` does not support render bundles. */
+  createRenderBundleEncoder(_props?: RenderBundleEncoderProps): never {
+    throw new Error('Render bundles are only supported in WebGPU');
+  }
+
   override createCommandEncoder(props: CommandEncoderProps = {}): NullCommandEncoder {
     return new NullCommandEncoder(this, props);
   }
 
   submit(commandBuffer?: NullCommandBuffer): void {
     if (!commandBuffer) {
-      commandBuffer = this.commandEncoder.finish({id: `${this.id}-default-command-buffer`});
+      commandBuffer = this.commandEncoder.finish();
       this.commandEncoder.destroy();
       this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-command-encoder`});
     }

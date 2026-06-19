@@ -30,8 +30,9 @@ export class WebGPUBuffer extends Buffer {
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
+    const suppliedHandle = this.props.handle as GPUBuffer | undefined;
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       this.device.handle.createBuffer({
         label: this.props.id,
         // usage defaults to vertex

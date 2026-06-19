@@ -2,7 +2,7 @@ import {Limit as L} from '@site/src/react-luma';
 
 # Using GPU Buffers
 
-See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for guidance on when buffer operations should use immediate resource helpers versus explicit command encoding.
+See also [Issuing GPU Commands](/docs/api-guide/gpu/gpu-commands) for guidance on when buffer operations should use immediate resource helpers versus explicit command encoding.
 
 ## Buffer-Relevant Limits
 

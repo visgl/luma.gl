@@ -4,7 +4,7 @@
 
 import {ExternalTexture, ExternalTextureProps, Sampler, SamplerProps} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
-import {WebGPUSampler} from './webgpu-sampler';
+import {WebGPUSampler, type WebGPUSamplerProps} from './webgpu-sampler';
 
 /** WebGPU concrete wrapper for one acquired `GPUExternalTexture` binding snapshot. */
 export class WebGPUExternalTexture extends ExternalTexture {
@@ -29,8 +29,9 @@ export class WebGPUExternalTexture extends ExternalTexture {
     if (this.props.handle && !this.props.source && (this.width <= 0 || this.height <= 0)) {
       throw new Error(`${this} handle-backed external textures require width and height`);
     }
+    const suppliedHandle = this.props.handle as GPUExternalTexture | undefined;
     this.handle =
-      this.props.handle ||
+      suppliedHandle ||
       this.device.handle.importExternalTexture({
         source: this.props.source,
         colorSpace: this.props.colorSpace
@@ -60,7 +61,7 @@ export class WebGPUExternalTexture extends ExternalTexture {
     this.sampler =
       sampler instanceof WebGPUSampler
         ? sampler
-        : new WebGPUSampler(this.device, sampler as SamplerProps);
+        : new WebGPUSampler(this.device, sampler as WebGPUSamplerProps);
     return this;
   }
 }

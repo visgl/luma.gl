@@ -42,6 +42,7 @@ import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import ArrowText3DApp from '../../examples/arrow/arrow-text-3d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
+import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import Text3DApp from '../../examples/experimental/text-3d/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
@@ -718,6 +719,31 @@ export const TextureTesterExample: React.FC = () => {
     </ExamplePage>
   );
 };
+
+export const RenderBundlesExample: React.FC<{embedded?: boolean}> = ({embedded = false}) => (
+  <LumaExample
+    className={embedded ? 'render-bundles-embedded-example' : undefined}
+    id="render-bundles"
+    title="Render Bundles"
+    directory="api"
+    template={RenderBundlesApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    showStats
+    style={
+      embedded
+        ? {
+            boxSizing: 'border-box',
+            height: '560px',
+            minHeight: '560px',
+            margin: '1rem 0 2rem',
+            border: '1px solid var(--ifm-color-emphasis-300)',
+            borderRadius: '8px'
+          }
+        : undefined
+    }
+  />
+);
 
 // Integration Examples
 

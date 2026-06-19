@@ -59,6 +59,9 @@ export {_getDefaultBindGroupFactory} from './factories/bind-group-factory';
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';
 
+export type {RenderBundleEncoderProps} from './adapter/resources/render-bundle';
+export {RenderBundle, RenderBundleEncoder} from './adapter/resources/render-bundle';
+
 export type {ComputePipelineProps} from './adapter/resources/compute-pipeline';
 export {ComputePipeline} from './adapter/resources/compute-pipeline';
 
@@ -68,7 +71,6 @@ export {ComputePass} from './adapter/resources/compute-pass';
 export type {CommandEncoderProps} from './adapter/resources/command-encoder';
 export {CommandEncoder} from './adapter/resources/command-encoder';
 
-export type {CommandBufferProps} from './adapter/resources/command-buffer';
 export {CommandBuffer} from './adapter/resources/command-buffer';
 
 export type {VertexArrayProps} from './adapter/resources/vertex-array';
