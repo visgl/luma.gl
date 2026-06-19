@@ -56,7 +56,7 @@ For scenes with both stable and frequently changing draws, split the work into m
 | --- | --- | --- | --- |
 | `colorAttachmentFormats?` | `(TextureFormatColor \| null)[]` | `[device.preferredColorFormat]` | Color attachment formats expected by the bundle. |
 | `depthStencilAttachmentFormat?` | `TextureFormatDepthStencil \| false` | `device.preferredDepthFormat` | Depth/stencil attachment format expected by the bundle. Set `false` for a color-only bundle. |
-| `sampleCount?` | `number` | `1` | Sample count expected by the bundle. |
+| `sampleCount?` | `number` | `1` | Sample count expected by the bundle. Currently only `1` is supported; multisampled render bundles require multisample pipeline support. |
 | `depthReadOnly?` | `boolean` | `false` | Marks the expected depth attachment as read-only. |
 | `stencilReadOnly?` | `boolean` | `false` | Marks the expected stencil attachment as read-only. |
 

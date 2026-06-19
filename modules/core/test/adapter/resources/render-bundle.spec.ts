@@ -81,6 +81,11 @@ test('Render bundles record reusable WebGPU commands', async t => {
     /RenderBundleEncoder does not support render pass props/,
     'render bundle encoder rejects render-pass setup props'
   );
+  t.throws(
+    () => webgpuDevice.createRenderBundleEncoder({sampleCount: 4}),
+    /RenderBundleEncoder currently only supports sampleCount 1/,
+    'render bundle encoder rejects unsupported multisampling'
+  );
 
   t.end();
 });

@@ -26,6 +26,7 @@ export type RenderBundleEncoderProps = ResourceProps & {
   depthStencilAttachmentFormat?: TextureFormatDepthStencil | false;
   /**
    * Sample count required by render passes that execute the finished bundle.
+   * Multisampled render bundles are not currently supported, so this must be `1`.
    * @defaultValue `1`
    */
   sampleCount?: number;
@@ -139,6 +140,10 @@ export abstract class RenderBundleEncoder extends RenderPass {
 }
 
 function validateRenderBundleEncoderProps(props: RenderBundleEncoderProps): void {
+  if (props.sampleCount !== undefined && props.sampleCount !== 1) {
+    throw new Error('RenderBundleEncoder currently only supports sampleCount 1');
+  }
+
   const renderPassProps = props as RenderBundleEncoderProps & Partial<RenderPassProps>;
   const invalidPropNames = [
     renderPassProps.framebuffer !== undefined && renderPassProps.framebuffer !== null

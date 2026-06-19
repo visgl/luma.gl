@@ -125,7 +125,7 @@ renderPass.end();
 device.submit();
 ```
 
-Rebuild a render bundle when its draw sequence, bound resources, pipeline compatibility, attachment formats, or sample count change.
+Rebuild a render bundle when its draw sequence, bound resources, pipeline compatibility, or attachment formats change. Multisampled render bundles are not currently supported.
 
 ## Commands Outside Passes
 
