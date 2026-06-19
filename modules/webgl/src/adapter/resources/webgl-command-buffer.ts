@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  type CommandBufferProps,
+  type ResourceProps,
   type CopyBufferToBufferOptions,
   type CopyBufferToTextureOptions,
   type CopyTextureToBufferOptions,
@@ -66,7 +66,7 @@ export class WEBGLCommandBuffer extends CommandBuffer {
   readonly handle = null;
   commands: Command[] = [];
 
-  constructor(device: WebGLDevice, props: CommandBufferProps = {}) {
+  constructor(device: WebGLDevice, props: ResourceProps = {}) {
     super(device, props);
     this.device = device;
   }

@@ -4,9 +4,10 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 <CoreDocsTabs group="pipelines" active="compute-pipeline" />
 
-:::info
-`ComputePipeline` is only available on WebGPU.
-:::
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
 
 A `ComputePipeline` holds a compiled compute shader plus the
 [`ComputeShaderLayout`](/docs/api-reference/core/shader-layout) that describes

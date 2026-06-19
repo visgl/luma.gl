@@ -24,6 +24,8 @@ const BASE_RESOURCE_COUNT_ORDER = [
   'PipelineLayouts',
   'VertexArrays',
   'RenderPasss',
+  'RenderBundleEncoders',
+  'RenderBundles',
   'ComputePasss',
   'CommandEncoders',
   'CommandBuffers'
@@ -43,6 +45,8 @@ const WEBGL_RESOURCE_COUNT_ORDER = [
   'PipelineLayouts',
   'VertexArrays',
   'RenderPasss',
+  'RenderBundleEncoders',
+  'RenderBundles',
   'ComputePasss',
   'CommandEncoders',
   'CommandBuffers'
@@ -77,7 +81,7 @@ export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
   id?: string;
   /** Handle for the underlying resources (WebGL object or WebGPU handle) */
-  handle?: any;
+  handle?: unknown;
   /** User provided data stored on this resource  */
   userData?: {[key: string]: any};
 };

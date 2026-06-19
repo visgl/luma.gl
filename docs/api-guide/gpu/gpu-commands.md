@@ -1,37 +1,45 @@
-# GPU Commands
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {CommandEncodingGraphic} from '@site/src/components/docs/command-encoding-graphic';
 
-Most luma.gl applications spend most of their time doing one of two things:
+# Issuing GPU Commands
 
-- calling immediate convenience methods such as `Buffer.write()` or `Texture.writeData()`
-- recording explicit GPU work through `CommandEncoder`, `RenderPass`, and `ComputePass`
+<CoreDocsTabs group="commands" active="command-encoding" />
 
-Both styles are valid. The right choice depends on whether you need simple data transfer, explicit ordering, or predictable batching.
+GPU work happens when your application records commands and submits them to a `Device`. A command can draw, dispatch compute work, copy data, write a timestamp, or replay previously recorded draws.
 
-## Two command styles in luma.gl
+luma.gl gives you a small set of command objects. Start with the one that matches the work you want to describe:
 
-### Immediate convenience methods
+| Start with | Use it for |
+| --- | --- |
+| [`CommandEncoder`](/docs/api-reference/core/resources/command-encoder) | Records an ordered stream of buffer and texture writes and reads, render and compute operations. |
+| [`ComputePass`](/docs/api-reference/core/resources/compute-pass) | Records dispatches of WebGPU compute pipelines. |
+| [`RenderPass`](/docs/api-reference/core/resources/render-pass) | Records draw calls into a framebuffer or the current canvas frame. |
+| [`RenderBundleEncoder`](/docs/api-reference/core/resources/render-bundle-encoder) | Records reusable WebGPU draw commands once for replay from a later `RenderPass`. |
 
-These methods perform a complete operation from the call site:
+## Typical Usage
 
-- `Buffer.write()`
-- `Buffer.mapAndWriteAsync()`
-- `Texture.copyExternalImage()`
-- `Texture.writeData()`
-- `Texture.readBuffer()`
-- `Texture.readDataAsync()` (deprecated convenience wrapper)
-- `Texture.writeBuffer()`
+The usual command path is:
 
-These APIs are convenient because they do not require you to create a `CommandEncoder`, finish it, or submit it yourself.
+1. Get a `CommandEncoder`.
+2. Begin one or more passes or record copy/query commands on that encoder.
+3. End each pass.
+4. Finish the encoder into a `CommandBuffer`.
+5. Submit the finished work to the `Device`.
 
-They are best when:
+For the common single-pass rendering case, `device.beginRenderPass()` and `device.submit()` use the device's default command encoder for you:
 
-- your source data is on the CPU
-- you are doing a one-off upload or readback
-- you do not need to tightly coordinate the copy with render or compute work in the same command stream
+```ts
+const renderPass = device.beginRenderPass({
+  clearColor: [0, 0, 0, 1],
+  clearDepth: 1
+});
 
-### Recorded command streams
+model.draw(renderPass);
+renderPass.end();
+device.submit();
+```
 
-Recorded command streams are built explicitly:
+Use an explicit `CommandEncoder` when you need one visible submission boundary around several operations:
 
 ```ts
 const commandEncoder = device.createCommandEncoder();
@@ -40,7 +48,6 @@ const renderPass = commandEncoder.beginRenderPass({
   framebuffer,
   clearColor: [0, 0, 0, 1]
 });
-
 model.draw(renderPass);
 renderPass.end();
 
@@ -48,13 +55,81 @@ const commandBuffer = commandEncoder.finish();
 device.submit(commandBuffer);
 ```
 
-This style is best when:
+### Outputs and Reuse
 
-- the source and destination are already on the GPU
-- multiple copies, passes, and query operations must happen in one ordered stream
-- you want to control exactly when work is submitted
+`CommandBuffer` and `RenderBundle` are the two finished command artifacts. Passes contribute commands to their parent `CommandEncoder`; they do not produce standalone objects.
 
-The main recorded-copy methods are:
+| Output | Produced by | How obtained | Reusable |
+| --- | --- | --- | --- |
+| `CommandBuffer` | `CommandEncoder` | `RenderPass.end()`, `ComputePass.end()`, `CommandEncoder.finish()` | ❌ |
+| `RenderBundle` | `RenderBundleEncoder` | Call `RenderBundleEncoder.finish()` | ✅ |
+
+## Passes
+
+A pass groups commands that share one kind of GPU work.
+
+### RenderPass
+
+Use a `RenderPass` when you are drawing. It chooses the render target, applies clear/load behavior, and receives draw calls from a `Model` or `RenderPipeline`.
+
+```ts
+const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+model.draw(renderPass);
+renderPass.end();
+device.submit();
+```
+
+### ComputePass
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
+Use a `ComputePass` when you are dispatching a compute pipeline.
+
+```ts
+const computePass = webgpuDevice.beginComputePass();
+computePass.setPipeline(computePipeline);
+computePass.dispatch(workgroupCount);
+computePass.end();
+webgpuDevice.submit();
+```
+
+## How the Pieces Fit Together
+
+Render and compute passes contribute commands to a `CommandEncoder`. Render bundles take a separate reusable path and are replayed from a later render pass.
+
+<CommandEncodingGraphic />
+
+## Reusable Draw Commands
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
+Use a `RenderBundleEncoder` when the same WebGPU draw commands run repeatedly and only already-bound buffer or texture contents change. It records draw commands without starting a render pass. `finish()` returns an immutable `RenderBundle`, and a normal `RenderPass` replays that bundle.
+
+```ts
+const renderBundleEncoder = device.createRenderBundleEncoder({
+  colorAttachmentFormats: [device.preferredColorFormat]
+});
+
+model.draw(renderBundleEncoder);
+const renderBundle = renderBundleEncoder.finish();
+
+const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+renderPass.executeBundles([renderBundle]);
+renderPass.end();
+device.submit();
+```
+
+Rebuild a render bundle when its draw sequence, bound resources, pipeline compatibility, attachment formats, or sample count change.
+
+## Commands Outside Passes
+
+Not every command belongs inside a pass. `CommandEncoder` also records operations such as:
 
 - `copyBufferToBuffer()`
 - `copyBufferToTexture()`
@@ -63,145 +138,43 @@ The main recorded-copy methods are:
 - `resolveQuerySet()`
 - `writeTimestamp()`
 
-## WebGL vs WebGPU
+Use these when the operation must be ordered with render or compute work in the same command stream. For simple CPU-driven uploads and readbacks, resource helpers such as `Buffer.write()` and `Texture.writeData()` are often simpler; see the buffer and texture guides for those choices.
 
-The `CommandEncoder` API is portable, but the backend behavior is not identical.
+## Optional Details: Backends and Data Transfers
 
-### WebGPU
+:::note
+The command model above is enough for most rendering and compute work. The details below are useful when you need to choose between resource helpers and explicit copy commands, or when backend execution differences matter.
+:::
 
-On WebGPU, command encoding is truly deferred:
+### WebGPU and WebGL execution
 
-- commands record onto a specific `CommandEncoder`
-- `finish()` seals that encoder into one `CommandBuffer`
-- `submit()` sends that finished work to the queue
+On WebGPU, command encoding is truly deferred. Commands are recorded onto a specific `CommandEncoder`, `finish()` seals that encoder into a `CommandBuffer`, and `submit()` sends the finished work to the queue.
 
-This gives WebGPU applications a real command-stream abstraction. Ordering, batching, and pass ownership all follow the encoder you recorded into.
+On WebGL, luma.gl preserves the same API shape where practical, but rendering remains effectively immediate. Copy commands can be recorded and replayed at submission, while render-pass state changes and clears occur as the pass is used. WebGL does not support compute passes or render bundles.
 
-### WebGL
+### Resource helpers and explicit commands
 
-On WebGL, luma.gl provides a best-effort compatibility layer.
+Resource helpers perform a complete operation without requiring you to finish and submit a command encoder. They are usually the simplest choice when data starts on the CPU or in a browser image object:
 
-- copy commands are recorded and replayed when you submit the command buffer
-- render passes are still effectively immediate-mode
-- state changes and clears happen as the pass is used, not as a native deferred GPU command stream
+- `Buffer.write()` for CPU-to-buffer uploads
+- `Texture.writeData()` for typed-array texture uploads
+- `Texture.copyExternalImage()` for image, canvas, or video sources
+- `Texture.readBuffer()` for a standalone texture readback
 
-So the portable rule is:
+Use `CommandEncoder` copy methods when the source and destination already live on the GPU, several operations must execute in a specific order, or you want one explicit submission boundary:
 
-- use `CommandEncoder` when you want a cross-backend way to express copy work and pass structure
-- do not assume WebGL has the same deferred execution model as WebGPU
+- `copyBufferToBuffer()`
+- `copyBufferToTexture()`
+- `copyTextureToBuffer()`
+- `copyTextureToTexture()`
 
-For rendering, WebGL is still conceptually immediate even though luma.gl exposes the same surface API.
+### Choosing a texture upload path
 
-## Immediate APIs on WebGPU
+On WebGPU, buffer-to-texture copies follow stricter layout rules than queue-style CPU uploads. In particular, buffer-copy row pitches generally need to be aligned to 256 bytes.
 
-Some luma.gl methods intentionally map to WebGPU's queue-style immediate operations rather than command-buffer recording.
+Use `Texture.writeData()` for tightly packed CPU texels. Use `Texture.writeBuffer()` or `CommandEncoder.copyBufferToTexture()` when the source is already in a reusable GPU buffer and the extra layout control is intentional.
 
-### Queue-style upload paths
-
-- `Buffer.write()` is the luma.gl equivalent of queue-driven buffer upload
-- `Texture.writeData()` closely matches `GPUQueue.writeTexture()`
-- `Texture.copyExternalImage()` closely matches `GPUQueue.copyExternalImageToTexture()`
-
-Use these when your source data starts on the CPU or in browser image objects.
-
-### Command-encoder copy paths
-
-- `Texture.writeBuffer()`
-- `Texture.readBuffer()`
-- `CommandEncoder.copyBufferToTexture()`
-- `CommandEncoder.copyTextureToBuffer()`
-
-These use GPU buffer-copy semantics instead of queue-style CPU upload semantics.
-
-This matters on WebGPU because buffer-copy layout rules are stricter:
-
-- row pitch must follow buffer-copy alignment rules
-- in practice `bytesPerRow` usually needs to be a multiple of `256`
-
-If your data is tightly packed on the CPU, `Texture.writeData()` is usually the better upload path.
-
-## Choosing an approach
-
-### Recommended defaults
-
-Use `Buffer.write()` when:
-
-- you are updating a buffer from CPU memory
-- you do not need to batch that upload with other GPU commands
-
-Use `Texture.writeData()` when:
-
-- you are uploading texels from a typed array
-- the source is tightly packed CPU memory
-- you want to avoid WebGPU buffer-copy row-alignment requirements
-
-Use `Texture.copyExternalImage()` when:
-
-- the source is an `ImageBitmap`, `ImageData`, canvas, image, or video
-
-Use `CommandEncoder` copy methods when:
-
-- the source already lives in a GPU `Buffer` or `Texture`
-- multiple copies and passes must execute in a specific order
-- you want one explicit submission boundary for a group of operations
-
-Use `Texture.readBuffer()` when:
-
-- you want a simple standalone readback helper with an explicit destination buffer
-- you do not need that readback to be manually integrated into a larger command stream
-- the source texture was created with `Texture.COPY_SRC`
-
-Use engine `DynamicTexture.readAsync()` when:
-
-- you want a convenience readback helper that allocates a temporary buffer and returns CPU bytes directly
-
-## Performance guidance
-
-### Prefer immediate resource methods for CPU-to-GPU uploads
-
-If your source data originates on the CPU, the immediate methods are usually the simplest and best first choice:
-
-- `Buffer.write()`
-- `Texture.writeData()`
-- `Texture.copyExternalImage()`
-
-These avoid extra staging logic in application code and map well to the native fast paths of each backend.
-
-### Prefer command encoding for GPU-to-GPU work
-
-If both ends of the operation already live on the GPU, command encoding is typically the better fit:
-
-- buffer-to-buffer copies
-- texture-to-buffer staging
-- buffer-to-texture staging from reusable upload buffers
-- texture-to-texture copies
-- render + compute + copy pipelines in one ordered sequence
-
-This is especially true on WebGPU, where the encoder is the real unit of command recording.
-
-### Avoid unnecessary buffer staging for texture uploads
-
-On WebGPU, buffer-copy texture uploads are not the same as `writeTexture()` style uploads.
-
-Use `Texture.writeData()` instead of `writeBuffer()` or `copyBufferToTexture()` when:
-
-- the source data is a CPU typed array
-- rows are tightly packed
-- you do not already have the data in a reusable GPU buffer
-
-Use `writeBuffer()` or `copyBufferToTexture()` when:
-
-- the source is already in a GPU buffer
-- you want to reuse a staging/upload buffer across many updates
-- the extra layout control is intentional
-
-### WebGL recommendations
-
-On WebGL, prefer the simpler API unless you specifically need the portable command surface:
-
-- use resource methods for straightforward uploads and readbacks
-- use `CommandEncoder` for copy operations and portable code structure
-- do not treat WebGL command encoding as a promise of native deferred execution
+As a rule of thumb, prefer resource helpers for one-off CPU uploads and readbacks. Prefer explicit command encoding for ordered GPU-to-GPU work or mixed copy, render, and compute operations in one submission.
 
 ## Related pages
 
@@ -209,3 +182,4 @@ On WebGL, prefer the simpler API unless you specifically need the portable comma
 - [Using GPU Textures](/docs/api-guide/gpu/gpu-textures)
 - [How GPU Rendering Works](/docs/api-guide/gpu/gpu-rendering)
 - [CommandEncoder](/docs/api-reference/core/resources/command-encoder)
+- [RenderBundleEncoder](/docs/api-reference/core/resources/render-bundle-encoder)

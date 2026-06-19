@@ -9,6 +9,7 @@ import type {RenderPassParameters} from '../types/parameters';
 import {Resource, ResourceProps} from './resource';
 import {Framebuffer} from './framebuffer';
 import {QuerySet} from './query-set';
+import type {RenderBundle} from './render-bundle';
 
 /**
  * Properties for a RenderPass instance is a required parameter to all draw calls.
@@ -68,9 +69,13 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     return 'RenderPass';
   }
 
-  constructor(device: Device, props: RenderPassProps) {
+  constructor(
+    device: Device,
+    props: RenderPassProps,
+    defaultProps: Required<RenderPassProps> = RenderPass.defaultProps
+  ) {
     props = RenderPass.normalizeProps(device, props);
-    super(device, props, RenderPass.defaultProps);
+    super(device, props, defaultProps);
   }
 
   /** Call when rendering is done in this pass. */
@@ -79,7 +84,12 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference) */
   abstract setParameters(parameters: RenderPassParameters): void;
 
-  // executeBundles(bundles: Iterable<GPURenderBundle>): void;
+  /**
+   * Replays reusable draw commands recorded by one or more render bundle encoders.
+   * @param bundles - Bundles whose attachment formats and sample count are compatible with this pass.
+   * @throws On backends other than WebGPU.
+   */
+  abstract executeBundles(bundles: Iterable<RenderBundle>): void;
 
   /** Being an occlusion query. Value will be stored in the occlusionQuerySet at the index. Occlusion queries cannot be nested. */
   abstract beginOcclusionQuery(queryIndex: number): void;

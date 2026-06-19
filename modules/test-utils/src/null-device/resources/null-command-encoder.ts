@@ -4,7 +4,6 @@
 
 import {CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
 import type {
-  CommandBufferProps,
   RenderPassProps,
   ComputePass,
   ComputePassProps,
@@ -32,8 +31,11 @@ export class NullCommandEncoder extends CommandEncoder {
     this.destroyResource();
   }
 
-  finish(props: CommandBufferProps = {}): NullCommandBuffer {
-    const commandBuffer = new NullCommandBuffer(this.device, props);
+  finish(): NullCommandBuffer {
+    const commandBuffer = new NullCommandBuffer(this.device, {
+      id: this.id,
+      userData: this.userData
+    });
     this.destroy();
     return commandBuffer;
   }

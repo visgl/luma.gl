@@ -342,6 +342,50 @@ test('Model#draw skips implicit predraw on WebGPU', async t => {
   t.end();
 });
 
+test('Model#draw records WebGPU render bundles', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const framebuffer = webgpuDevice.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm'],
+    depthStencilAttachment: 'depth24plus'
+  });
+  const model = new Model(webgpuDevice, {
+    id: 'webgpu-render-bundle-model-test',
+    source: DUMMY_WGSL,
+    vertexCount: 1
+  });
+  const renderBundleEncoder = webgpuDevice.createRenderBundleEncoder({
+    colorAttachmentFormats: ['rgba8unorm'],
+    depthStencilAttachmentFormat: 'depth24plus'
+  });
+
+  t.ok(model.draw(renderBundleEncoder), 'WebGPU model draw records into render bundle encoder');
+
+  const renderBundle = renderBundleEncoder.finish();
+  const renderPass = webgpuDevice.beginRenderPass({
+    clearColor: [0, 0, 0, 0],
+    clearDepth: 1,
+    framebuffer
+  });
+  renderPass.executeBundles([renderBundle]);
+  renderPass.end();
+  webgpuDevice.submit();
+
+  renderBundle.destroy();
+  framebuffer.destroy();
+  model.destroy();
+
+  t.end();
+});
+
 test('Model#draw skips WebGPU render pipelines that failed init', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 

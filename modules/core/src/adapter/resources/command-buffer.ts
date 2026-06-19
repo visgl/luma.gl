@@ -5,38 +5,25 @@
 import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 
-// interface Queue {
-//   submit(commandBuffers);
-
-//   // onSubmittedWorkDone(): Promise<undefined>;
-
-//   writeBuffer(options: WriteBufferOptions): void;
-//   writeTexture(options: TextureWriteOptions): void;
-
-//   // copyExternalImageToTexture(
-//   //   GPUImageCopyExternalImage source,
-//   //   GPUImageCopyTextureTagged destination,
-//   //   GPUExtent3D copySize
-//   // ): void;
-// }
-
-export type CommandBufferProps = ResourceProps & {};
-
 /**
- * Represents the finished contents of exactly one CommandEncoder. Backends may store native
- * command buffers or replayable command lists internally, but submission must preserve the same
- * recorded command ordering.
+ * Represents the finished contents of a CommandEncoder.
+ *
+ * @remarks
+ * Backends may store native command buffers or replayable command lists internally, but
+ * submission preserves recorded command ordering. A command buffer inherits its encoder's `id`
+ * and `userData`. Command buffers are immutable, are submitted once, and may be retained only for
+ * debugging or application bookkeeping.
  */
-export abstract class CommandBuffer extends Resource<CommandBufferProps> {
+export abstract class CommandBuffer extends Resource<ResourceProps> {
   override get [Symbol.toStringTag](): string {
     return 'CommandBuffer';
   }
 
-  constructor(device: Device, props: CommandBufferProps) {
+  constructor(device: Device, props: ResourceProps) {
     super(device, props, CommandBuffer.defaultProps);
   }
 
-  static override defaultProps: Required<CommandBufferProps> = {
+  static override defaultProps: Required<ResourceProps> = {
     ...Resource.defaultProps
   };
 }

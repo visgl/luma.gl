@@ -4,9 +4,10 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 <CoreDocsTabs group="textures" active="external-texture" />
 
-:::info
-WebGPU only.
-:::
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
 
 `ExternalTexture` is the low-level concrete WebGPU `GPUExternalTexture` binding for browser-owned texture data. It is a one-shot resource, not a long-lived video object.
 

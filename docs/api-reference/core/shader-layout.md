@@ -8,6 +8,25 @@ A `ShaderLayout` describes the static interface of a shader pipeline:
 luma.gl uses `ShaderLayout` to match named JavaScript resources to the numeric
 binding locations used by GPU shaders.
 
+## Usage
+
+```ts
+const shaderLayout = {
+  attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+  bindings: [
+    {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+    {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+    {name: 'materialUniforms', type: 'uniform', group: 3, location: 0}
+  ]
+};
+
+const pipeline = device.createRenderPipeline({
+  vs,
+  fs,
+  shaderLayout
+});
+```
+
 ## Types
 
 ### `ShaderLayout`
@@ -132,25 +151,6 @@ Sampler:
   location: 2,
   samplerType: 'filtering'
 }
-```
-
-## Usage
-
-```ts
-const shaderLayout = {
-  attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
-  bindings: [
-    {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
-    {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
-    {name: 'materialUniforms', type: 'uniform', group: 3, location: 0}
-  ]
-};
-
-const pipeline = device.createRenderPipeline({
-  vs,
-  fs,
-  shaderLayout
-});
 ```
 
 ## WebGPU vs WebGL

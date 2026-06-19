@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {
-  CommandBufferProps,
   RenderPassProps,
   ComputePassProps,
   CopyBufferToTextureOptions,
@@ -45,10 +44,11 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     this.destroyResource();
   }
 
-  finish(props?: CommandBufferProps): WebGPUCommandBuffer {
+  finish(): WebGPUCommandBuffer {
     this.device.pushErrorScope('validation');
     const commandBuffer = new WebGPUCommandBuffer(this, {
-      id: props?.id || 'unnamed-command-buffer'
+      id: this.id,
+      userData: this.userData
     });
     this.device.popErrorScope((error: GPUError) => {
       const message = `${this} command encoding: ${error.message}. Maybe add depthWriteEnabled to your Model?`;

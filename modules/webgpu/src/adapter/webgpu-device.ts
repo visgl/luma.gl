@@ -36,6 +36,7 @@ import type {
   CommandEncoder,
   PipelineLayoutProps,
   RenderPipeline,
+  RenderBundleEncoderProps,
   ShaderLayout
 } from '@luma.gl/core';
 import {Buffer, Device, DeviceFeatures} from '@luma.gl/core';
@@ -45,6 +46,7 @@ import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
 import {WebGPUSampler} from './resources/webgpu-sampler';
 import {WebGPUShader} from './resources/webgpu-shader';
 import {WebGPURenderPipeline} from './resources/webgpu-render-pipeline';
+import {WebGPURenderBundleEncoder} from './resources/webgpu-render-bundle';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
@@ -206,6 +208,11 @@ export class WebGPUDevice extends Device {
 
   createComputePipeline(props: ComputePipelineProps): WebGPUComputePipeline {
     return new WebGPUComputePipeline(this, props);
+  }
+
+  /** Creates an encoder for reusable WebGPU draw commands. */
+  createRenderBundleEncoder(props: RenderBundleEncoderProps = {}): WebGPURenderBundleEncoder {
+    return new WebGPURenderBundleEncoder(this, props);
   }
 
   createVertexArray(props: VertexArrayProps): WebGPUVertexArray {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CommandBufferProps} from '@luma.gl/core';
+import type {ResourceProps} from '@luma.gl/core';
 import {CommandBuffer} from '@luma.gl/core';
 
 import {WebGPUDevice} from '../webgpu-device';
@@ -14,7 +14,7 @@ export class WebGPUCommandBuffer extends CommandBuffer {
   readonly handle: GPUCommandBuffer;
   transientUploadBuffers: WebGPUBuffer[];
 
-  constructor(commandEncoder: WebGPUCommandEncoder, props: CommandBufferProps) {
+  constructor(commandEncoder: WebGPUCommandEncoder, props: ResourceProps) {
     super(commandEncoder.device, props);
     this.device = commandEncoder.device;
     this.transientUploadBuffers = commandEncoder.takeTransientUploadBuffers();

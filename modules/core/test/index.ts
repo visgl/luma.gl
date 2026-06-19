@@ -42,6 +42,7 @@ import './adapter/resources/buffer.spec';
 import './adapter/resources/command-encoder.spec';
 import './adapter/resources/shader.spec';
 import './adapter/resources/render-pipeline.spec';
+import './adapter/resources/render-bundle.spec';
 import './adapter/resources/compute-pipeline.spec';
 import './adapter/resources/sampler.spec';
 import './adapter/resources/texture.spec';

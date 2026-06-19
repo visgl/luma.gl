@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumericArray, NumberArray4} from '@math.gl/types';
+import type {RenderBundle} from '@luma.gl/core';
 import {RenderPass, RenderPassProps, RenderPassParameters} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/webgl/constants';
@@ -88,7 +89,10 @@ export class WEBGLRenderPass extends RenderPass {
   // beginOcclusionQuery(queryIndex: number): void;
   // endOcclusionQuery(): void;
 
-  // executeBundles(bundles: Iterable<GPURenderBundle>): void;
+  /** @throws Always throws because WebGL does not support render bundles. */
+  executeBundles(_bundles: Iterable<RenderBundle>): void {
+    throw new Error('Render bundles are only supported in WebGPU');
+  }
 
   /**
    * Maps RenderPass parameters to GL parameters

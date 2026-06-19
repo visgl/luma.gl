@@ -119,9 +119,7 @@ export class WebGPUQuerySet extends QuerySet {
           destinationBuffer: this._readBuffer!,
           size: this._resolveBuffer!.byteLength
         });
-        const commandBuffer = commandEncoder.finish({
-          id: `${this.id}-read-results-command-buffer`
-        });
+        const commandBuffer = commandEncoder.finish();
         const previousSubmitReason = getCpuHotspotSubmitReason(this.device) || undefined;
         setCpuHotspotSubmitReason(this.device, 'query-readback');
         try {

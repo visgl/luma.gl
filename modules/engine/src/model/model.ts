@@ -1230,13 +1230,21 @@ export class Model {
           };
         }
       ).framebuffer || renderPass.props.framebuffer;
+    const renderBundleProps = renderPass.props as RenderPass['props'] & {
+      colorAttachmentFormats?: (TextureFormatColor | null)[];
+      depthStencilAttachmentFormat?: TextureFormatDepthStencil | false;
+    };
 
-    const nextColorAttachmentFormats = framebuffer?.colorAttachments?.map(colorAttachment =>
-      asColorAttachmentFormat(colorAttachment?.texture?.format)
-    );
-    const nextDepthStencilAttachmentFormat = asDepthStencilAttachmentFormat(
-      framebuffer?.depthStencilAttachment?.texture?.format
-    );
+    const nextColorAttachmentFormats =
+      renderBundleProps.colorAttachmentFormats ??
+      framebuffer?.colorAttachments?.map(colorAttachment =>
+        asColorAttachmentFormat(colorAttachment?.texture?.format)
+      );
+    const nextDepthStencilAttachmentFormat =
+      renderBundleProps.depthStencilAttachmentFormat === false
+        ? undefined
+        : (renderBundleProps.depthStencilAttachmentFormat ??
+          asDepthStencilAttachmentFormat(framebuffer?.depthStencilAttachment?.texture?.format));
 
     if (
       !deepEqual(this._colorAttachmentFormats, nextColorAttachmentFormats, 1) ||

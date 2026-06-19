@@ -27,6 +27,7 @@ import type {
   SharedRenderPipeline,
   ComputePipeline,
   ComputePipelineProps,
+  RenderBundleEncoderProps,
   CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
@@ -359,6 +360,11 @@ export class WebGLDevice extends Device {
 
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
     throw new Error('ComputePipeline not supported in WebGL');
+  }
+
+  /** @throws Always throws because WebGL does not support render bundles. */
+  createRenderBundleEncoder(_props?: RenderBundleEncoderProps): never {
+    throw new Error('Render bundles are only supported in WebGPU');
   }
 
   override createCommandEncoder(props: CommandEncoderProps = {}): WEBGLCommandEncoder {

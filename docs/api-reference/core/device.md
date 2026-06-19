@@ -277,7 +277,7 @@ Use the static `Device.create()` method to create classes.
 Releases resources associated with this `Device`.
 
 :::info
-WebGPU only. Calling `device.destroy()` on a WebGL `Device` will not immediately release GPU resources.
+Calling `device.destroy()` releases GPU resources immediately on WebGPU. On WebGL it will not immediately release GPU resources.
 The WebGL API does not provide a context destroy function,
 instead relying on garbage collection to eventually release the resources.
 :::
@@ -290,19 +290,20 @@ or that the `lost` promise is resolved before any API errors are triggered by ac
 
 ### createCanvasContext()
 
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
 ```typescript
 createCanvasContext(props?: CanvasContextProps): CanvasContext
 ```
 
-Creates a new [`CanvasContext`](./canvas-context).
-
-:::info
-WebGPU only. WebGL devices can only render into the canvas they were created with.
-:::
+Creates a new [`CanvasContext`](./canvas-context). WebGL devices can only render into the canvas they were created with.
 
 ### createPresentationContext()
 
-<p class="badges">
+<p className="badges">
   <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
   <img src="https://img.shields.io/badge/Experimental-orange.svg?style=flat-square" alt="Experimental" />
 </p>
@@ -401,11 +402,30 @@ Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program). See [`R
 
 ### createComputePipeline
 
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
 ```typescript
 createComputePipeline(props: ComputePipelineProps): ComputePipeline
 ```
 
 Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program). See [`ComputePipelineProps`](./resources/compute-pipeline.md#computepipelineprops) for available options.
+
+### createRenderBundleEncoder
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From-v9.4" />
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
+```typescript
+createRenderBundleEncoder(props?: RenderBundleEncoderProps): RenderBundleEncoder
+```
+
+Creates a reusable render command encoder. Call `finish()` on the encoder, then replay the returned bundle from a `RenderPass` with `executeBundles()`.
 
 ### createFence
 
@@ -427,6 +447,11 @@ Creates a [`RenderPass`](./resources/render-pass). See [`RenderPassProps`](./res
 - See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for the difference between pass recording on WebGPU and best-effort immediate behavior on WebGL.
 
 ### beginComputePass
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
 
 ```typescript
 beginComputePass(props?: ComputePassProps): ComputePass
