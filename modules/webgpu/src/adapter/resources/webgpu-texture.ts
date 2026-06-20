@@ -2,6 +2,7 @@
 import {
   type TextureProps,
   type TextureViewProps,
+  type CopyElementImageOptions,
   type CopyExternalImageOptions,
   type TextureReadOptions,
   type TextureWriteOptions,
@@ -154,6 +155,59 @@ export class WebGPUTexture extends Texture {
     });
 
     // TODO - should these be clipped to the texture size minus x,y,z?
+    return {width: options.width, height: options.height};
+  }
+
+  copyElementImage(options_: CopyElementImageOptions): {width: number; height: number} {
+    const options = this._normalizeCopyElementImageOptions(options_);
+    const queue = this.device.handle.queue as GPUQueue & {
+      copyElementImageToTexture?: (
+        source: {
+          source: Element;
+          sx?: number;
+          sy?: number;
+          swidth?: number;
+          sheight?: number;
+        },
+        destination: {
+          destination: GPUImageCopyTextureTagged;
+          width?: number;
+          height?: number;
+        }
+      ) => void;
+    };
+
+    if (typeof queue.copyElementImageToTexture !== 'function') {
+      throw new Error(`${this} copyElementImage is not supported by this WebGPU implementation`);
+    }
+
+    this.device.pushErrorScope('validation');
+    queue.copyElementImageToTexture(
+      {
+        source: options.element,
+        sx: options.sourceX,
+        sy: options.sourceY,
+        swidth: options.sourceWidth ?? options.width,
+        sheight: options.sourceHeight ?? options.height
+      },
+      {
+        destination: {
+          texture: this.handle,
+          origin: [options.x, options.y, options.z],
+          mipLevel: options.mipLevel,
+          aspect: options.aspect,
+          colorSpace: options.colorSpace,
+          premultipliedAlpha: options.premultipliedAlpha
+        },
+        width: options.width,
+        height: options.height
+      }
+    );
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`copyElementImage: ${error.message}`), this)();
+      this.device.debug();
+    });
+
     return {width: options.width, height: options.height};
   }
 

@@ -1,7 +1,12 @@
 /* eslint-disable no-continue, max-depth */
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {
+  getNullTestDevice,
+  getWebGLTestDevice,
+  getTestDevices,
+  getWebGPUTestDevice
+} from '@luma.gl/test-utils';
 
 import {
   TypedArray,
@@ -64,6 +69,21 @@ test('Texture#clone overrides size', async t => {
     tex.destroy();
     cloned.destroy();
   }
+  t.end();
+});
+
+test('Texture#copyElementImage returns copied size on supported implementations', async t => {
+  const device = await getNullTestDevice();
+  const texture = device.createTexture({width: 2, height: 2});
+  const copiedSize = texture.copyElementImage({
+    element: {} as Element,
+    width: 2,
+    height: 2
+  });
+
+  t.deepEqual(copiedSize, {width: 2, height: 2}, 'copyElementImage returns copied size');
+
+  texture.destroy();
   t.end();
 });
 

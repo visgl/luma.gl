@@ -10,6 +10,16 @@ export type PlaneGeometryProps = {
   id?: string;
   radius?: number;
   attributes?: any;
+  type?: 'x,y' | 'x,z' | 'y,z';
+  offset?: number;
+  flipCull?: boolean;
+  unpack?: boolean;
+  xlen?: number;
+  ylen?: number;
+  zlen?: number;
+  nx?: number;
+  ny?: number;
+  nz?: number;
 };
 
 // Primitives inspired by TDL http://code.google.com/p/webglsamples/,

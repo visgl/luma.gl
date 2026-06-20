@@ -5,6 +5,7 @@
 import {
   type TextureProps,
   type TextureViewProps,
+  type CopyElementImageOptions,
   type CopyExternalImageOptions,
   type CopyImageDataOptions,
   type TextureReadOptions,
@@ -64,6 +65,10 @@ export class NullTexture extends Texture {
 
   copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
     return {width: this.width, height: this.height};
+  }
+
+  copyElementImage(options: CopyElementImageOptions): {width: number; height: number} {
+    return {width: options.width, height: options.height};
   }
 
   override setSampler(sampler?: Sampler | SamplerProps): void {

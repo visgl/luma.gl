@@ -1,0 +1,21 @@
+<!doctype html>
+<head>
+  <style>
+    body {
+      background: #0d1117;
+      margin: 0;
+    }
+  </style>
+</head>
+<script type="module">
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgl2Adapter} from '@luma.gl/webgl';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+    adapters: [webgpuAdapter, webgl2Adapter]
+  });
+  animationLoop.start();
+</script>
+<body></body>

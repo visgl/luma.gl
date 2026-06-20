@@ -3,3 +3,4 @@
 // Copyright (c) vis.gl contributors
 
 import './textures/packed-pixels.spec';
+import './textures/html-texture.spec';

@@ -1,0 +1,16 @@
+---
+title: HTML UI Prism
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {HTMLUIPrismExample} from '@site/src/examples';
+
+<ExampleHeader id="html-ui-prism" directory="experimental" devices={['webgl2', 'webgpu']}>
+  <div>
+    Live DOM panels are copied into GPU textures and mapped onto a rotating square prism. This
+    requires a browser exposing the experimental HTML-in-Canvas paint and DOM-to-texture upload
+    APIs; unsupported browsers show a fallback notice.
+  </div>
+</ExampleHeader>
+
+<HTMLUIPrismExample />

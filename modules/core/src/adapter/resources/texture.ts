@@ -49,6 +49,42 @@ export type CopyExternalImageOptions = {
   flipY?: boolean;
 };
 
+/** Options for Texture.copyElementImage */
+export type CopyElementImageOptions = {
+  /** DOM element rendered by the browser into the texture. */
+  element: Element;
+  /** Copy area width in pixels. */
+  width: number;
+  /** Copy area height in pixels. */
+  height: number;
+  /** Start copying from source offset x (default 0) */
+  sourceX?: number;
+  /** Start copying from source offset y (default 0) */
+  sourceY?: number;
+  /** Copy area width in source CSS pixels. Defaults to destination width. */
+  sourceWidth?: number;
+  /** Copy area height in source CSS pixels. Defaults to destination height. */
+  sourceHeight?: number;
+  /** Copy depth, number of layers/depth slices(default 1) */
+  depth?: number;
+  /** Start copying into offset x (default 0) */
+  x?: number;
+  /** Start copying into offset y (default 0) */
+  y?: number;
+  /** Start copying into layer / depth slice z (default 0) */
+  z?: number;
+  /** Which mip-level to copy into (default 0) */
+  mipLevel?: number;
+  /** When copying into depth stencil textures (default 'all') */
+  aspect?: 'all' | 'stencil-only' | 'depth-only';
+  /** Specific color space of image data */
+  colorSpace?: 'srgb';
+  /** load as premultiplied alpha */
+  premultipliedAlpha?: boolean;
+  /** Whether to flip the image vertically */
+  flipY?: boolean;
+};
+
 /** Options for copyImageData */
 export type CopyImageDataOptions = {
   /** Data to copy (array of bytes) */
@@ -282,6 +318,9 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Copy an image (e.g an ImageBitmap) into the texture */
   abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
 
+  /** Copy live DOM element pixels into the texture when supported by the current browser backend. */
+  abstract copyElementImage(options: CopyElementImageOptions): {width: number; height: number};
+
   /**
    * Copy raw image data (bytes) into the texture.
    *
@@ -466,6 +505,23 @@ export abstract class Texture extends Resource<TextureProps> {
       ...optionsWithoutUndefined
     };
     // WebGL will error if we try to copy outside the bounds of the texture
+    options.width = Math.min(options.width, mipLevelSize.width - options.x);
+    options.height = Math.min(options.height, mipLevelSize.height - options.y);
+    options.depth = Math.min(options.depth, mipLevelSize.depthOrArrayLayers - options.z);
+    return options;
+  }
+
+  _normalizeCopyElementImageOptions(
+    options_: CopyElementImageOptions
+  ): Required<CopyElementImageOptions> {
+    const optionsWithoutUndefined = Texture._omitUndefined(options_);
+    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
+    const mipLevelSize = this._getMipLevelSize(mipLevel);
+    const options = {
+      ...Texture.defaultCopyElementImageOptions,
+      ...mipLevelSize,
+      ...optionsWithoutUndefined
+    };
     options.width = Math.min(options.width, mipLevelSize.width - options.x);
     options.height = Math.min(options.height, mipLevelSize.height - options.y);
     options.depth = Math.min(options.depth, mipLevelSize.depthOrArrayLayers - options.z);
@@ -678,6 +734,26 @@ export abstract class Texture extends Resource<TextureProps> {
     sourceY: 0,
     width: undefined!,
     height: undefined!,
+    depth: 1,
+    mipLevel: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+    aspect: 'all',
+    colorSpace: 'srgb',
+    premultipliedAlpha: false,
+    flipY: false
+  };
+
+  /** Default options */
+  protected static defaultCopyElementImageOptions: Required<CopyElementImageOptions> = {
+    element: undefined!,
+    width: undefined!,
+    height: undefined!,
+    sourceX: 0,
+    sourceY: 0,
+    sourceWidth: undefined!,
+    sourceHeight: undefined!,
     depth: 1,
     mipLevel: 0,
     x: 0,

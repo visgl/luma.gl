@@ -12,6 +12,14 @@ Target Release Date: Q3, 2026
 - **`@luma.gl/arrow`** - New module for working with binary columnar data on the GPU.
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 
+**@luma.gl/core**
+
+- **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` reports whether the active browser and backend expose the experimental DOM-to-texture rasterization path.
+
+**@luma.gl/experimental**
+
+- **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
+
 **@luma.gl/engine**
 
 - **`Animator`** - New animation helper for timeline-driven animation updates.

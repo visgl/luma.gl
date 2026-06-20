@@ -13,11 +13,12 @@ export type {
   DeviceProps,
   DeviceInfo,
   DeviceFeature,
+  BrowserDeviceFeature,
   DeviceTextureFormatCapabilities,
   WebGPUFeatureLevel,
   WebGPUDeviceFeatureLevel
 } from './adapter/device';
-export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
+export {Device, DeviceFeatures, DeviceLimits, isHTMLInCanvasSupported} from './adapter/device';
 
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
@@ -105,6 +106,7 @@ export type {CompilerMessage} from './adapter/types/compiler-message';
 export type {ExternalImage} from './shadertypes/image-types/image-types';
 
 export {
+  type CopyElementImageOptions,
   type CopyExternalImageOptions,
   type CopyImageDataOptions,
   type TextureReadOptions,
