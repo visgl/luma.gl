@@ -169,6 +169,15 @@
       },
       {
         "type": "category",
+        "label": "@luma.gl/experimental",
+        "items": [
+          "api-reference/experimental/README",
+          "api-reference/experimental/a-buffer-renderer",
+          "api-reference/experimental/wboit-renderer"
+        ]
+      },
+      {
+        "type": "category",
         "label": "@luma.gl/gpgpu",
         "items": [
           "api-reference/gpgpu/README",

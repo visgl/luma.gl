@@ -15,8 +15,17 @@ const MAX_COUNT_ID = 'arrow-columns-max-count';
 const GPU_BYTES_ID = 'arrow-columns-gpu-bytes';
 const ARROW_BUILD_TIME_ID = 'arrow-columns-arrow-build-time';
 const GEOMETRY_DECODE_TIME_ID = 'arrow-columns-geometry-decode-time';
+const TRANSPARENCY_MODE_ID = 'arrow-columns-transparency-mode';
+
+export type ArrowColumnTransparencyMode = 'a-buffer' | 'weighted-blended' | 'alpha-blending';
+
+export type ArrowColumnRendererControlPanelOptions = {
+  onTransparencyModeChange?: (mode: ArrowColumnTransparencyMode) => void;
+};
 
 export class ArrowColumnRendererControlPanel {
+  private readonly options: ArrowColumnRendererControlPanelOptions;
+  private transparencyModeSelector: HTMLSelectElement | null = null;
   private statusLabel: HTMLElement | null = null;
   private sourceRowsLabel: HTMLElement | null = null;
   private aggregateRowsLabel: HTMLElement | null = null;
@@ -29,7 +38,17 @@ export class ArrowColumnRendererControlPanel {
   private arrowBuildTimeLabel: HTMLElement | null = null;
   private geometryDecodeTimeLabel: HTMLElement | null = null;
 
+  constructor(options: ArrowColumnRendererControlPanelOptions = {}) {
+    this.options = options;
+  }
+
   initialize(): void {
+    if (!this.transparencyModeSelector) {
+      this.transparencyModeSelector = document.getElementById(
+        TRANSPARENCY_MODE_ID
+      ) as HTMLSelectElement | null;
+      this.transparencyModeSelector?.addEventListener('change', this.handleTransparencyModeChange);
+    }
     this.statusLabel ??= document.getElementById(STATUS_ID);
     this.sourceRowsLabel ??= document.getElementById(SOURCE_ROWS_ID);
     this.aggregateRowsLabel ??= document.getElementById(AGGREGATE_ROWS_ID);
@@ -44,6 +63,8 @@ export class ArrowColumnRendererControlPanel {
   }
 
   destroy(): void {
+    this.transparencyModeSelector?.removeEventListener('change', this.handleTransparencyModeChange);
+    this.transparencyModeSelector = null;
     this.statusLabel = null;
     this.sourceRowsLabel = null;
     this.aggregateRowsLabel = null;
@@ -61,6 +82,12 @@ export class ArrowColumnRendererControlPanel {
     setText(this.statusLabel, status);
   }
 
+  setTransparencyMode(mode: ArrowColumnTransparencyMode): void {
+    if (this.transparencyModeSelector) {
+      this.transparencyModeSelector.value = mode;
+    }
+  }
+
   setActiveTimeBucket(activeTimeBucket: string): void {
     setText(this.activeBucketLabel, activeTimeBucket);
   }
@@ -76,12 +103,31 @@ export class ArrowColumnRendererControlPanel {
     setText(this.arrowBuildTimeLabel, metrics.arrowBuildTime);
     setText(this.geometryDecodeTimeLabel, metrics.geometryDecodeTime);
   }
+
+  private handleTransparencyModeChange = (event: Event): void => {
+    const mode = (event.target as HTMLSelectElement).value;
+    this.options.onTransparencyModeChange?.(
+      mode === 'weighted-blended'
+        ? 'weighted-blended'
+        : mode === 'alpha-blending'
+          ? 'alpha-blending'
+          : 'a-buffer'
+    );
+  };
 }
 
 export function makeArrowColumnRendererControlPanelHtml(): string {
   return `\
-  <div style="min-width: 300px; max-width: 430px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 8px; background: rgba(255, 255, 255, 0.96); color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
+  <div style="box-sizing: border-box; width: 100%; padding: 14px 16px; border: 1px solid #d0d7de; border-radius: 8px; background: #fff; color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
     <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Arrow H3 Columns</h3>
+    <label for="${TRANSPARENCY_MODE_ID}" style="display: grid; gap: 5px; margin-bottom: 10px; font-weight: 600;">
+      <span>Transparency</span>
+      <select id="${TRANSPARENCY_MODE_ID}" style="width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; font: inherit;">
+        <option value="a-buffer">A-buffer OIT</option>
+        <option value="weighted-blended">Weighted blended OIT</option>
+        <option value="alpha-blending">Standard alpha blending</option>
+      </select>
+    </label>
     ${makeMetricRow('Status', STATUS_ID)}
     ${makeMetricRow('Source CSV rows', SOURCE_ROWS_ID)}
     ${makeMetricRow('Arrow aggregate rows', AGGREGATE_ROWS_ID)}

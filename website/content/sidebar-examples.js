@@ -54,6 +54,7 @@ const sidebars = {
       type: 'category',
       label: 'Experimental',
       items: [
+        'experimental/a-buffer',
         'experimental/bloom',
         'experimental/html-ui-prism',
         'experimental/fp64',

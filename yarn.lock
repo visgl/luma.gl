@@ -4442,16 +4442,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/experimental@workspace:*, @luma.gl/experimental@workspace:modules/experimental":
+"@luma.gl/experimental@npm:~9.3.0, @luma.gl/experimental@workspace:*, @luma.gl/experimental@workspace:modules/experimental":
   version: 0.0.0-use.local
   resolution: "@luma.gl/experimental@workspace:modules/experimental"
   dependencies:
-    "@luma.gl/core": "npm:9.3.2"
-    "@luma.gl/engine": "npm:9.3.2"
-    "@luma.gl/shadertools": "npm:9.3.2"
-    "@math.gl/polygon": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
-    apache-arrow: "npm:^17.0.0"
+  peerDependencies:
+    "@luma.gl/core": ~9.3.0
+    "@luma.gl/engine": ~9.3.0
+    "@luma.gl/shadertools": ~9.3.0
   languageName: unknown
   linkType: soft
 
@@ -15387,6 +15386,7 @@ __metadata:
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/experimental": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/tables": "npm:~9.3.0"
     "@luma.gl/webgpu": "npm:~9.3.0"
@@ -15662,6 +15662,22 @@ __metadata:
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-experimental-a-buffer@workspace:examples/experimental/a-buffer":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-a-buffer@workspace:examples/experimental/a-buffer"
+  dependencies:
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/experimental": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown

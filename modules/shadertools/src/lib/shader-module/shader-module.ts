@@ -25,6 +25,8 @@ export type UniformInfo = {
 export type ShaderModuleBindingLayout = {
   name: string;
   group: number;
+  /** Which shader stages can access this binding. Uses GPUShaderStage bit flags. */
+  visibility?: number;
 };
 
 // Helper types

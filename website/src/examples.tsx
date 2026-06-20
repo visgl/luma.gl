@@ -33,6 +33,7 @@ import initializeExternalWebGLContext, {
 import HelloReactApp from '../../examples/integrations/hello-react/app';
 import {getErrorMessage, logError} from './react-luma/utils/error-utils';
 import DOFApp from '../../examples/showcase/dof/app';
+import ABufferApp from '../../examples/experimental/a-buffer/app';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
@@ -597,6 +598,18 @@ export const DOFExample: React.FC = props => (
     directory="showcase"
     template={DOFApp}
     config={exampleConfig}
+    {...props}
+  />
+);
+
+export const OITExample: React.FC = props => (
+  <LumaExample
+    id="a-buffer"
+    title="Order-independent Transparency"
+    directory="experimental"
+    template={ABufferApp}
+    config={exampleConfig}
+    devices={['webgpu', 'webgl2']}
     {...props}
   />
 );

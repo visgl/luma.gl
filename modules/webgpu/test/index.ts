@@ -4,6 +4,7 @@
 
 import './webgpu/adapter/webgpu-adapter.spec';
 import './adapter/helpers/get-vertex-buffer-layout.spec';
+import './adapter/resources/webgpu-render-pass.spec';
 import './adapter/resources/webgpu-vertex-array.spec';
 
 // WGSL parsing

@@ -283,25 +283,27 @@ export class WebGPURenderPass extends RenderPass {
       // DEPTH
       if (this.props.depthReadOnly) {
         depthStencilAttachment.depthReadOnly = true;
-      }
-      if (this.props.clearDepth !== false) {
+      } else if (this.props.clearDepth !== false) {
         depthStencilAttachment.depthClearValue = this.props.clearDepth;
       }
       // STENCIL
-      // if (this.props.clearStencil !== false) {
+      if (this.props.stencilReadOnly) {
+        depthStencilAttachment.stencilReadOnly = true;
+      }
+      // if (!this.props.stencilReadOnly && this.props.clearStencil !== false) {
       //   depthStencilAttachment.stencilClearValue = this.props.clearStencil;
       // }
 
       // WebGPU only wants us to set these parameters if the texture format actually has a depth aspect
       const hasDepthAspect = true;
-      if (hasDepthAspect) {
+      if (hasDepthAspect && !this.props.depthReadOnly) {
         depthStencilAttachment.depthLoadOp = this.props.clearDepth !== false ? 'clear' : 'load';
         depthStencilAttachment.depthStoreOp = 'store'; // TODO - support 'discard'?
       }
 
       // WebGPU only wants us to set these parameters if the texture format actually has a stencil aspect
       const hasStencilAspect = false;
-      if (hasStencilAspect) {
+      if (hasStencilAspect && !this.props.stencilReadOnly) {
         depthStencilAttachment.stencilLoadOp = this.props.clearStencil !== false ? 'clear' : 'load';
         depthStencilAttachment.stencilStoreOp = 'store'; // TODO - support 'discard'?
       }

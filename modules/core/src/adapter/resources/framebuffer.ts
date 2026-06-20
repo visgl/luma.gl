@@ -138,7 +138,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   protected createDepthStencilTexture(format: TextureFormat): Texture {
     return this.device.createTexture({
       id: `${this.id}-depth-stencil-attachment`,
-      usage: Texture.RENDER_ATTACHMENT,
+      usage: Texture.RENDER_ATTACHMENT | Texture.SAMPLE,
       format,
       width: this.width,
       height: this.height

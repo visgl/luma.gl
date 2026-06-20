@@ -149,7 +149,7 @@ fn getTimeActivation(eventStart : f32, eventDuration : f32) -> f32 {
     elapsed += columnRenderer.cycleDuration;
   }
   if (elapsed < 0.0 || elapsed > eventDuration) {
-    return 0.015;
+    return 0.0;
   }
 
   let fadeIn = smoothstep(0.0, eventDuration * 0.28, elapsed);
@@ -169,7 +169,8 @@ fn getColumnColor(count : f32, activation : f32, isTop : bool) -> vec4<f32> {
   let hotColor = vec3<f32>(1.0, 0.18, 0.22);
   let colorRamp = mix(mix(coolColor, warmColor, smoothstep(0.0, 0.72, normalizedCount)), hotColor, smoothstep(0.58, 1.0, normalizedCount));
   let litColor = colorRamp * select(0.62, 1.0, isTop) * (0.54 + activation * 0.58);
-  return vec4<f32>(min(litColor, vec3<f32>(1.0)), 0.26 + activation * 0.7);
+  let alpha = select(0.0, 0.18 + activation * 0.48, activation > 0.0);
+  return vec4<f32>(min(litColor, vec3<f32>(1.0)), alpha);
 }
 
 @vertex
@@ -211,6 +212,17 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
+  if (inputs.color.a <= 0.0) {
+    discard;
+  }
+#if A_BUFFER_ENABLED
+  return aBuffer_captureStraightColor(inputs.color, inputs.Position);
+#else
+#if WBOIT_ENABLED
+  return wboit_captureStraightColor(inputs.color, inputs.Position);
+#else
   return inputs.color;
+#endif
+#endif
 }
 `;

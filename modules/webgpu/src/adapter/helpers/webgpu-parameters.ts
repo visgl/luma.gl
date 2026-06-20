@@ -298,6 +298,9 @@ function setParameters(
   parameters: Parameters
 ): void {
   for (const [key, value] of Object.entries(parameters)) {
+    if (value === undefined) {
+      continue;
+    }
     const setterFunction = PARAMETER_TABLE[key as keyof Parameters];
     if (setterFunction) {
       setterFunction(key, value, pipelineDescriptor);

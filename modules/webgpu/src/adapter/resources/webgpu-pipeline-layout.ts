@@ -11,6 +11,12 @@ import {
 } from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 
+const SHADER_STAGE_VERTEX = 0x1;
+const SHADER_STAGE_FRAGMENT = 0x2;
+const SHADER_STAGE_COMPUTE = 0x4;
+const VISIBILITY_ALL = SHADER_STAGE_VERTEX | SHADER_STAGE_FRAGMENT | SHADER_STAGE_COMPUTE;
+const VISIBILITY_WRITABLE_STORAGE = SHADER_STAGE_FRAGMENT | SHADER_STAGE_COMPUTE;
+
 export class WebGPUPipelineLayout extends PipelineLayout {
   readonly device: WebGPUDevice;
   readonly handle: GPUPipelineLayout;
@@ -116,18 +122,28 @@ export class WebGPUPipelineLayout extends PipelineLayout {
         }
       }
 
-      const VISIBILITY_ALL =
-        GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE;
-
       bindGroupEntriesByGroup[binding.group].push({
         binding: binding.location,
-        visibility: binding.visibility || VISIBILITY_ALL,
+        visibility: getWebGPUBindingVisibility(binding),
         ...bindingTypeInfo
       });
     }
 
     return bindGroupEntriesByGroup;
   }
+}
+
+/** Writable storage buffers are not supported in the WebGPU vertex stage. */
+export function getWebGPUBindingVisibility(
+  binding: PipelineLayoutProps['shaderLayout']['bindings'][number]
+): number {
+  if (binding.visibility !== undefined) {
+    return binding.visibility;
+  }
+
+  return binding.type === 'storage' && !isStorageTextureBindingLayout(binding)
+    ? VISIBILITY_WRITABLE_STORAGE
+    : VISIBILITY_ALL;
 }
 
 const isStorageTextureBindingLayout = (
