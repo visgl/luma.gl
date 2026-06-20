@@ -91,6 +91,12 @@ export function verifyCompositeShaderInputTypes(): void {
   });
 
   shaderInputs.setProps({
+    bindings: {
+      cameraTexture: {} as Texture
+    }
+  });
+
+  shaderInputs.setProps({
     composite: {
       lights: [{position: [1, 2, 3], intensity: 1}]
     }

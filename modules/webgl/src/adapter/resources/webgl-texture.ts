@@ -97,44 +97,54 @@ export class WEBGLTexture extends Texture {
     this.glType = formatInfo.type;
     this.compressed = formatInfo.compressed;
 
+    if (this.isHandleBorrowed && this.props.handle === undefined) {
+      throw new Error('Borrowed WebGL textures require a texture handle');
+    }
+
     this.handle = this.props.handle || this.gl.createTexture();
     this.device._setWebGLDebugMetadata(this.handle, this, {spector: this.props});
 
-    /**
-     * Use WebGL immutable texture storage to allocate and clear texture memory.
-     * - texStorage2D should be considered a preferred alternative to texImage2D. It may have lower memory costs than texImage2D in some implementations.
-     * - Once texStorage*D has been called, the texture is immutable and can only be updated with texSubImage*(), not texImage()
-     * @see https://registry.khronos.org/webgl/specs/latest/2.0/ WebGL 2 spec section 3.7.6
-     */
-    this.gl.bindTexture(this.glTarget, this.handle);
-    const {dimension, width, height, depth, mipLevels, glTarget, glInternalFormat} = this;
-    if (!this.compressed) {
-      switch (dimension) {
-        case '2d':
-        case 'cube':
-          this.gl.texStorage2D(glTarget, mipLevels, glInternalFormat, width, height);
-          break;
-        case '2d-array':
-        case '3d':
-          this.gl.texStorage3D(glTarget, mipLevels, glInternalFormat, width, height, depth);
-          break;
-        default:
-          throw new Error(dimension);
+    if (!this.isHandleBorrowed) {
+      // Opaque borrowed WebGLTexture handles are binding-only. Allocating storage, uploading
+      // pixels, or changing sampler state would mutate a resource owned outside luma.gl.
+      /**
+       * Use WebGL immutable texture storage to allocate and clear texture memory.
+       * - texStorage2D should be considered a preferred alternative to texImage2D. It may have lower memory costs than texImage2D in some implementations.
+       * - Once texStorage*D has been called, the texture is immutable and can only be updated with texSubImage*(), not texImage()
+       * @see https://registry.khronos.org/webgl/specs/latest/2.0/ WebGL 2 spec section 3.7.6
+       */
+      this.gl.bindTexture(this.glTarget, this.handle);
+      const {dimension, width, height, depth, mipLevels, glTarget, glInternalFormat} = this;
+      if (!this.compressed) {
+        switch (dimension) {
+          case '2d':
+          case 'cube':
+            this.gl.texStorage2D(glTarget, mipLevels, glInternalFormat, width, height);
+            break;
+          case '2d-array':
+          case '3d':
+            this.gl.texStorage3D(glTarget, mipLevels, glInternalFormat, width, height, depth);
+            break;
+          default:
+            throw new Error(dimension);
+        }
       }
+      this.gl.bindTexture(this.glTarget, null);
+
+      // Set data
+      this._initializeData(props.data);
     }
-    this.gl.bindTexture(this.glTarget, null);
 
-    // Set data
-    this._initializeData(props.data);
-
-    if (!this.props.handle) {
+    if (this.ownsHandle) {
       this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
     } else {
       this.trackReferencedMemory(this.getAllocatedByteLength(), 'Texture');
     }
 
-    // Set texture sampler parameters
-    this.setSampler(this.props.sampler);
+    if (!this.isHandleBorrowed) {
+      // Set texture sampler parameters
+      this.setSampler(this.props.sampler);
+    }
     // @ts-ignore TODO - fix types
     this.view = new WEBGLTextureView(this.device, {...this.props, texture: this});
 
@@ -149,7 +159,7 @@ export class WEBGLTexture extends Texture {
       this._framebufferAttachmentKey = null;
 
       this.removeStats();
-      if (!this.props.handle) {
+      if (this.ownsHandle) {
         this.gl.deleteTexture(this.handle);
         this.trackDeallocatedMemory('Texture');
       } else {
@@ -164,7 +174,21 @@ export class WEBGLTexture extends Texture {
     return new WEBGLTextureView(this.device, {...props, texture: this});
   }
 
+  override clone(size?: {width: number; height: number}): Texture {
+    // Texture.clone({width, height}) is luma.gl's resize path. A borrowed handle keeps the
+    // externally provided dimensions, so a resized wrapper would lie about the sampled texture.
+    if (
+      this.isHandleBorrowed &&
+      size &&
+      (size.width !== this.width || size.height !== this.height)
+    ) {
+      throw new Error(`Cannot resize borrowed read-only ${this}`);
+    }
+    return super.clone(size);
+  }
+
   override setSampler(sampler: Sampler | SamplerProps = {}): void {
+    this._assertWritable('set sampler parameters on');
     super.setSampler(sampler);
     // Apply sampler parameters to texture
     const parameters = convertSamplerParametersToWebGL(this.sampler.props);
@@ -172,6 +196,7 @@ export class WEBGLTexture extends Texture {
   }
 
   copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
+    this._assertWritable('copy external image data into');
     const options = this._normalizeCopyExternalImageOptions(options_);
 
     if (options.sourceX || options.sourceY) {
@@ -211,6 +236,7 @@ export class WEBGLTexture extends Texture {
   }
 
   copyElementImage(options_: CopyElementImageOptions): {width: number; height: number} {
+    this._assertWritable('copy element image data into');
     const options = this._normalizeCopyElementImageOptions(options_);
     const {glFormat} = this;
     const {
@@ -324,6 +350,7 @@ export class WEBGLTexture extends Texture {
   }
 
   writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
+    this._assertWritable('write buffer data into');
     const options = this._normalizeTextureWriteOptions(options_);
     const {width, height, depthOrArrayLayers, mipLevel, byteOffset, x, y, z} = options;
     const {glFormat, glType, compressed} = this;
@@ -388,6 +415,7 @@ export class WEBGLTexture extends Texture {
     data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
     options_: TextureWriteOptions = {}
   ): void {
+    this._assertWritable('write data into');
     const options = this._normalizeTextureWriteOptions(options_);
 
     const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
@@ -654,6 +682,7 @@ export class WEBGLTexture extends Texture {
    * @note - this is used by the DynamicTexture class to generate mipmaps on WebGL
    */
   override generateMipmapsWebGL(options?: {force?: boolean}): void {
+    this._assertWritable('generate mipmaps for');
     const isFilterableAndRenderable =
       this.device.isTextureFormatRenderable(this.props.format) &&
       this.device.isTextureFormatFilterable(this.props.format);
@@ -751,6 +780,13 @@ export class WEBGLTexture extends Texture {
 
     gl.bindTexture(this.glTarget, null);
     return _textureUnit;
+  }
+
+  private _assertWritable(operation: string): void {
+    if (this.isHandleBorrowed) {
+      // Borrowed WebGL texture handles are binding-only; every luma.gl texture mutation API is not.
+      throw new Error(`Cannot ${operation} borrowed read-only ${this}`);
+    }
   }
 }
 

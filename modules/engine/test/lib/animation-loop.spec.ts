@@ -105,6 +105,43 @@ test('engine#AnimationLoop redraw', async t => {
   }).start();
 });
 
+test('engine#AnimationLoop passes frame payload from custom animation frame provider', async t => {
+  const device = await getWebGLTestDevice();
+  const animationFrame = {};
+  let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
+    null;
+  let cancelAnimationFrameCallCount = 0;
+  const animationFrameProvider = {
+    requestAnimationFrame(callback: (time: DOMHighResTimeStamp, animationFrame?: unknown) => void) {
+      scheduledCallback = callback;
+      return 1;
+    },
+    cancelAnimationFrame() {
+      cancelAnimationFrameCallCount++;
+    }
+  };
+  const animationLoop = new AnimationLoop({
+    device,
+    animationFrameProvider,
+    onRender: ({animationLoop, animationFrame: receivedAnimationFrame}) => {
+      t.equal(
+        receivedAnimationFrame,
+        animationFrame,
+        'onRender receives frame payload from frame provider'
+      );
+      animationLoop.stop();
+    }
+  });
+
+  await animationLoop.start();
+  scheduledCallback?.(123, animationFrame);
+
+  t.equal(cancelAnimationFrameCallCount, 1, 'stopping cancels scheduled custom frame');
+  animationLoop.destroy();
+  device.destroy();
+  t.end();
+});
+
 test('engine#AnimationLoop should not call initialize more than once', async t => {
   const device = await getWebGLTestDevice();
 

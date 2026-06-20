@@ -14,6 +14,20 @@ import {Stats, Stat} from '@probe.gl/stats';
 let statIdCounter = 0;
 const ANIMATION_LOOP_STATS = 'Animation Loop';
 
+/** Experimental v10 callback shape for browser or custom animation frames. */
+export type AnimationFrameCallback = (time: DOMHighResTimeStamp, animationFrame?: unknown) => void;
+
+/** Experimental v10 work-in-progress animation frame source. */
+export interface AnimationFrameProvider {
+  requestAnimationFrame(callback: AnimationFrameCallback): number;
+  cancelAnimationFrame(animationFrameId: number): void;
+}
+
+const defaultAnimationFrameProvider: AnimationFrameProvider = {
+  requestAnimationFrame: callback => requestAnimationFramePolyfill(callback),
+  cancelAnimationFrame: animationFrameId => cancelAnimationFramePolyfill(animationFrameId)
+};
+
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
   device: Device | Promise<Device>;
@@ -28,11 +42,15 @@ export type AnimationLoopProps = {
 
   // view parameters - TODO move to CanvasContext?
   autoResizeViewport?: boolean;
+  /** Experimental v10 work-in-progress frame source. */
+  animationFrameProvider?: AnimationFrameProvider;
 };
 
 export type MutableAnimationLoopProps = {
   // view parameters
   autoResizeViewport?: boolean;
+  /** Experimental v10 work-in-progress frame source. */
+  animationFrameProvider?: AnimationFrameProvider;
 };
 
 /** Convenient animation loop */
@@ -52,7 +70,8 @@ export class AnimationLoop {
     stats: undefined!,
 
     // view parameters
-    autoResizeViewport: false
+    autoResizeViewport: false,
+    animationFrameProvider: defaultAnimationFrameProvider
   } as const satisfies Readonly<Required<AnimationLoopProps>>;
 
   device: Device | null = null;
@@ -99,7 +118,10 @@ export class AnimationLoop {
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
 
-    this.setProps({autoResizeViewport: props.autoResizeViewport});
+    this.setProps({
+      autoResizeViewport: props.autoResizeViewport,
+      animationFrameProvider: props.animationFrameProvider
+    });
 
     // Bind methods
     this.start = this.start.bind(this);
@@ -141,6 +163,19 @@ export class AnimationLoop {
   setProps(props: MutableAnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
       this.props.autoResizeViewport = props.autoResizeViewport || false;
+    }
+    if ('animationFrameProvider' in props) {
+      const animationFrameProvider = props.animationFrameProvider || defaultAnimationFrameProvider;
+      if (animationFrameProvider !== this.props.animationFrameProvider) {
+        const animationFrameWasScheduled = this._animationFrameId !== null;
+        if (animationFrameWasScheduled) {
+          this._cancelAnimationFrame();
+        }
+        this.props.animationFrameProvider = animationFrameProvider;
+        if (animationFrameWasScheduled) {
+          this._requestAnimationFrame();
+        }
+      }
     }
     return this;
   }
@@ -208,7 +243,7 @@ export class AnimationLoop {
   }
 
   /** Explicitly draw a frame */
-  redraw(time?: number): this {
+  redraw(time?: number, animationFrame: unknown | null = null): this {
     if (this.device?.isLost || this._error) {
       return this;
     }
@@ -216,6 +251,9 @@ export class AnimationLoop {
     this._beginFrameTimers(time);
 
     this._setupFrame();
+    if (this.animationProps) {
+      this.animationProps.animationFrame = animationFrame;
+    }
     this._updateAnimationProps();
 
     this._renderFrame(this._getAnimationProps());
@@ -301,13 +339,9 @@ export class AnimationLoop {
       return;
     }
 
-    // VR display has a separate animation frame to sync with headset
-    // TODO WebVR API discontinued, replaced by WebXR: https://immersive-web.github.io/webxr/
-    // See https://developer.mozilla.org/en-US/docs/Web/API/VRDisplay/requestAnimationFrame
-    // if (this.display && this.display.requestAnimationFrame) {
-    //   this._animationFrameId = this.display.requestAnimationFrame(this._animationFrame.bind(this));
-    // }
-    this._animationFrameId = requestAnimationFramePolyfill(this._animationFrame.bind(this));
+    this._animationFrameId = this.props.animationFrameProvider.requestAnimationFrame(
+      this._animationFrame.bind(this)
+    );
   }
 
   _cancelAnimationFrame(): void {
@@ -315,21 +349,15 @@ export class AnimationLoop {
       return;
     }
 
-    // VR display has a separate animation frame to sync with headset
-    // TODO WebVR API discontinued, replaced by WebXR: https://immersive-web.github.io/webxr/
-    // See https://developer.mozilla.org/en-US/docs/Web/API/VRDisplay/requestAnimationFrame
-    // if (this.display && this.display.cancelAnimationFramePolyfill) {
-    //   this.display.cancelAnimationFrame(this._animationFrameId);
-    // }
-    cancelAnimationFramePolyfill(this._animationFrameId);
+    this.props.animationFrameProvider.cancelAnimationFrame(this._animationFrameId);
     this._animationFrameId = null;
   }
 
-  _animationFrame(time: number): void {
+  _animationFrame(time: number, animationFrame?: unknown): void {
     if (!this._running) {
       return;
     }
-    this.redraw(time);
+    this.redraw(time, animationFrame ?? null);
     this._requestAnimationFrame();
   }
 
@@ -396,6 +424,7 @@ export class AnimationLoop {
       tock: 0,
 
       // Experimental
+      animationFrame: null,
       _mousePosition: null // Event props
     };
   }

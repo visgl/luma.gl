@@ -82,6 +82,11 @@ export type ResourceProps = {
   id?: string;
   /** Handle for the underlying resources (WebGL object or WebGPU handle) */
   handle?: unknown;
+  /**
+   * @internal Opaque externally owned handle. luma.gl may reference this handle but must not
+   * initialize, mutate, or destroy it.
+   */
+  _isHandleBorrowed?: boolean;
   /** User provided data stored on this resource  */
   userData?: {[key: string]: any};
 };
@@ -94,6 +99,7 @@ export abstract class Resource<Props extends ResourceProps> {
   static defaultProps: Required<ResourceProps> = {
     id: 'undefined',
     handle: undefined,
+    _isHandleBorrowed: false,
     userData: undefined!
   };
 
@@ -129,6 +135,18 @@ export abstract class Resource<Props extends ResourceProps> {
   private allocatedBytesName: string | null = null;
   /** Attached resources will be destroyed when this resource is destroyed. Tracks auto-created "sub" resources. */
   private _attachedResources = new Set<Resource<ResourceProps>>();
+
+  /** Whether luma.gl created and owns the underlying resource handle. */
+  get ownsHandle(): boolean {
+    return (
+      (this.props.handle === undefined || this.props.handle === null) && !this.isHandleBorrowed
+    );
+  }
+
+  /** Whether luma.gl may only reference the opaque externally owned resource handle. */
+  get isHandleBorrowed(): boolean {
+    return Boolean(this.props._isHandleBorrowed);
+  }
 
   /**
    * Create a new Resource. Called from Subclass
