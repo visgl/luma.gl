@@ -5,7 +5,8 @@
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {luma, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, HTMLTexture, Model, PlaneGeometry} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, PlaneGeometry} from '@luma.gl/engine';
+import {HTMLTexture} from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 import {
   type Panel,

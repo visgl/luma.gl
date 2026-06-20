@@ -16,6 +16,10 @@ Target Release Date: Q3, 2026
 
 - **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` reports whether the active browser and backend expose the experimental DOM-to-texture rasterization path.
 
+**@luma.gl/experimental**
+
+- **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
+
 **@luma.gl/engine**
 
 - **`Animator`** - New animation helper for timeline-driven animation updates.

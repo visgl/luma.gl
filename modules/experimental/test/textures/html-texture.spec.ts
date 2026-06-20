@@ -4,8 +4,21 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Texture, type Device} from '@luma.gl/core';
+import {HTMLTexture} from '@luma.gl/experimental';
 import {getNullTestDevice} from '@luma.gl/test-utils';
-import {HTMLTexture} from '../../src/index';
+
+const TEXTURE_BINDING = {
+  type: 'texture',
+  name: 'htmlTexture',
+  group: 0,
+  location: 0
+} as const;
+const EXTERNAL_TEXTURE_BINDING = {
+  type: 'external-texture',
+  name: 'htmlTexture',
+  group: 0,
+  location: 0
+} as const;
 
 class FakeCanvas {
   private readonly attributes = new Map<string, string>();
@@ -57,13 +70,23 @@ test('HTMLTexture configures paint cycle and tracks DOM uploads', async t => {
   });
   const initialTimestamp = texture.updateTimestamp;
 
-  await texture.ready;
+  t.true(texture.isReady, 'copied HTML texture is ready after allocation');
   t.true(fakeCanvas.hasAttribute('layoutsubtree'), 'constructor enables layoutsubtree');
   t.equal(fakeCanvas.requestPaintCount, 1, 'constructor requests the first paint');
   t.equal(
-    texture.props.usage,
-    Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
+    texture.texture.props.usage,
+    Texture.SAMPLE | Texture.COPY_DST,
     'default texture usage supports WebGPU element-image copies'
+  );
+  t.equal(
+    texture.resolveTextureBinding(TEXTURE_BINDING),
+    texture.texture,
+    'ordinary texture slots resolve copied HTML texture'
+  );
+  t.throws(
+    () => texture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
+    /use texture_2d for copied HTML path/,
+    'HTML textures do not resolve through external texture slots'
   );
 
   texture.requestUpdate();
@@ -72,10 +95,12 @@ test('HTMLTexture configures paint cycle and tracks DOM uploads', async t => {
   fakeCanvas.dispatch('paint');
   t.ok(texture.updateTimestamp > initialTimestamp, 'paint uploads element and updates timestamp');
 
-  const uploadTimestamp = texture.updateTimestamp;
   texture.destroy();
+  t.false(texture.isReady, 'destroy makes HTML texture unavailable');
+  t.equal(texture.resolveTextureBinding(TEXTURE_BINDING), null, 'destroy clears texture binding');
+  const destroyTimestamp = texture.updateTimestamp;
   fakeCanvas.dispatch('paint');
-  t.equal(texture.updateTimestamp, uploadTimestamp, 'destroy removes paint listener');
+  t.equal(texture.updateTimestamp, destroyTimestamp, 'destroy removes paint listener');
 
   t.end();
 });
@@ -101,32 +126,28 @@ test('HTMLTexture rejects elements that are not direct canvas children', async t
   t.end();
 });
 
-test('HTMLTexture.isSupported gates experimental backend upload paths', t => {
+test('HTMLTexture.isSupported gates luma.gl HTML-in-Canvas feature', t => {
   const fakeCanvas = new FakeCanvas();
   const canvas = fakeCanvas as unknown as HTMLCanvasElement;
 
-  const webglDevice = {
-    type: 'webgl',
-    gl: {
-      texElementImage2D() {}
+  const supportedDevice = {
+    features: {
+      has: (feature: string) => feature === 'html-in-canvas'
     }
   };
-  const webgpuDevice = {
-    type: 'webgpu',
-    handle: {
-      queue: {
-        copyElementImageToTexture() {}
-      }
+  const unsupportedDevice = {
+    features: {
+      has: () => false
     }
   };
 
   t.true(
-    HTMLTexture.isSupported(webglDevice as unknown as Device, canvas),
-    'WebGL texElementImage2D path is supported'
+    HTMLTexture.isSupported(supportedDevice as unknown as Device, canvas),
+    'luma.gl HTML-in-Canvas feature is supported'
   );
-  t.true(
-    HTMLTexture.isSupported(webgpuDevice as unknown as Device, canvas),
-    'WebGPU copyElementImageToTexture path is supported'
+  t.false(
+    HTMLTexture.isSupported(unsupportedDevice as unknown as Device, canvas),
+    'missing luma.gl HTML-in-Canvas feature is unsupported'
   );
 
   t.end();

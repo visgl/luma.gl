@@ -11,6 +11,7 @@
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
     "@luma.gl/core": "9.3.2",
     "@luma.gl/engine": "9.3.2",
+    "@luma.gl/experimental": "workspace:*",
     "@luma.gl/shadertools": "9.3.2",
     "@luma.gl/webgl": "9.3.2",
     "@luma.gl/webgpu": "9.3.2",
