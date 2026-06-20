@@ -19,6 +19,16 @@ import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './wgsl-binding-debug';
 import {preprocess} from '../preprocessor/preprocessor';
+import type {AttributeShaderType} from '@luma.gl/core';
+import type {ResolvedShaderPluginVarying} from '../shader-plugin';
+import {
+  assembleShaderPluginVertexInputsWGSL,
+  getShaderPluginVertexInputDeclarationsGLSL
+} from './shader-plugin-vertex-inputs';
+import {
+  assembleShaderPluginVaryingsGLSL,
+  assembleShaderPluginVaryingsWGSL
+} from './shader-plugin-varyings';
 import {
   MODULE_WGSL_BINDING_DECLARATION_REGEXES,
   WGSL_BINDING_DECLARATION_REGEXES,
@@ -68,6 +78,16 @@ export type AssembleShaderOptions = {
   hookFunctions?: (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
+  /** Ordered code injections contributed by ShaderPlugin descriptors. */
+  pluginInjections?: Record<string, ShaderInjection[]>;
+  /** Vertex inputs contributed by ShaderPlugin descriptors. */
+  pluginVertexInputs?: Record<string, AttributeShaderType>;
+  /** Cross-stage varyings contributed by ShaderPlugin descriptors. */
+  pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
+  /** WGSL vertex entry point selected by the render pipeline. */
+  vertexEntryPoint?: string;
+  /** WGSL fragment entry point selected by the render pipeline. */
+  fragmentEntryPoint?: string;
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
@@ -90,6 +110,16 @@ type AssembleStageOptions = {
   hookFunctions?: (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
+  /** Ordered code injections contributed by ShaderPlugin descriptors. */
+  pluginInjections?: Record<string, ShaderInjection[]>;
+  /** Vertex inputs contributed by ShaderPlugin descriptors. */
+  pluginVertexInputs?: Record<string, AttributeShaderType>;
+  /** Cross-stage varyings contributed by ShaderPlugin descriptors. */
+  pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
+  /** WGSL vertex entry point selected by the render pipeline. */
+  vertexEntryPoint?: string;
+  /** WGSL fragment entry point selected by the render pipeline. */
+  fragmentEntryPoint?: string;
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
@@ -193,6 +223,11 @@ export function assembleShaderWGSL(
     defines = {},
     hookFunctions = [],
     inject = {},
+    pluginInjections = {},
+    pluginVertexInputs = {},
+    pluginVaryings = {},
+    vertexEntryPoint = 'vertexMain',
+    fragmentEntryPoint = 'fragmentMain',
     log
   } = options;
 
@@ -201,7 +236,19 @@ export function assembleShaderWGSL(
   // const isVertex = type === 'vs';
   // const sourceLines = source.split('\n');
 
-  const coreSource = preprocess(source, {defines});
+  const preprocessedSource = preprocess(source, {defines});
+  const pluginVertexInputAssembly = assembleShaderPluginVertexInputsWGSL(
+    preprocessedSource,
+    vertexEntryPoint,
+    pluginVertexInputs
+  );
+  const pluginVaryingAssembly = assembleShaderPluginVaryingsWGSL(
+    pluginVertexInputAssembly.source,
+    vertexEntryPoint,
+    fragmentEntryPoint,
+    pluginVaryings
+  );
+  const coreSource = pluginVaryingAssembly.source;
 
   // Combine Module and Application Defines
   // const allDefines = {};
@@ -231,6 +278,8 @@ export function assembleShaderWGSL(
   const declInjections: Record<string, ShaderInjection[]> = {};
   const mainInjections: Record<string, ShaderInjection[]> = {};
 
+  appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
+
   for (const key in inject) {
     const injection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
@@ -252,6 +301,13 @@ export function assembleShaderWGSL(
       mainInjections[key] = [injection as any];
     }
   }
+  appendGeneratedVertexInputInjections(
+    pluginVertexInputAssembly.declarations,
+    pluginVertexInputAssembly.initialization,
+    declInjections,
+    mainInjections
+  );
+  appendGeneratedVaryingInjections(pluginVaryingAssembly, declInjections, mainInjections);
 
   // TODO - hack until shadertool modules support WebGPU
   const modulesToInject = modules;
@@ -307,7 +363,8 @@ export function assembleShaderWGSL(
     stage,
     getWGSLDeclarationInjections(declInjections),
     false,
-    'wgsl'
+    'wgsl',
+    {vertex: vertexEntryPoint, fragment: fragmentEntryPoint}
   );
 
   assembledSource += getWGSLShaderHooks(hookFunctionMap, hookInjections);
@@ -317,7 +374,10 @@ export function assembleShaderWGSL(
   assembledSource += applicationRelocation.source;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, stage, mainInjections, false, 'wgsl');
+  assembledSource = injectShader(assembledSource, stage, mainInjections, false, 'wgsl', {
+    vertex: vertexEntryPoint,
+    fragment: fragmentEntryPoint
+  });
 
   assertNoUnresolvedAutoBindings(assembledSource);
 
@@ -342,6 +402,9 @@ function assembleShaderGLSL(
     defines?: Record<string, boolean | number>;
     hookFunctions?: any[];
     inject?: Record<string, string | ShaderInjection>;
+    pluginInjections?: Record<string, ShaderInjection[]>;
+    pluginVertexInputs?: Record<string, AttributeShaderType>;
+    pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
     prologue?: boolean;
     log?: any;
   }
@@ -354,6 +417,9 @@ function assembleShaderGLSL(
     defines = {},
     hookFunctions = [],
     inject = {},
+    pluginInjections = {},
+    pluginVertexInputs = {},
+    pluginVaryings = {},
     prologue = true,
     log
   } = options;
@@ -411,6 +477,8 @@ ${getApplicationDefines(allDefines)}
   const declInjections: Record<string, ShaderInjection[]> = {};
   const mainInjections: Record<string, ShaderInjection[]> = {};
 
+  appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
+
   for (const key in inject) {
     const injection: ShaderInjection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
@@ -431,6 +499,32 @@ ${getApplicationDefines(allDefines)}
       // Regex injection
       mainInjections[key] = [injection];
     }
+  }
+  if (stage === 'vertex') {
+    const declarations = getShaderPluginVertexInputDeclarationsGLSL(coreSource, pluginVertexInputs);
+    if (declarations) {
+      declInjections['vs:#decl'] = declInjections['vs:#decl'] || [];
+      declInjections['vs:#decl'].push({
+        injection: declarations,
+        order: Number.MIN_SAFE_INTEGER
+      });
+    }
+  }
+  const pluginVaryingAssembly = assembleShaderPluginVaryingsGLSL(coreSource, stage, pluginVaryings);
+  if (pluginVaryingAssembly.declarations) {
+    const declarationTarget = stage === 'vertex' ? 'vs:#decl' : 'fs:#decl';
+    declInjections[declarationTarget] = declInjections[declarationTarget] || [];
+    declInjections[declarationTarget].push({
+      injection: pluginVaryingAssembly.declarations,
+      order: Number.MIN_SAFE_INTEGER
+    });
+  }
+  if (pluginVaryingAssembly.initialization) {
+    mainInjections['vs:#main-start'] = mainInjections['vs:#main-start'] || [];
+    mainInjections['vs:#main-start'].push({
+      injection: pluginVaryingAssembly.initialization,
+      order: Number.MIN_SAFE_INTEGER
+    });
   }
 
   for (const module of modules) {
@@ -501,6 +595,85 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
     }
     return uniforms;
   };
+}
+
+function appendInjections(
+  injections: Record<string, ShaderInjection[]>,
+  hookInjections: Record<string, ShaderInjection[]>,
+  declInjections: Record<string, ShaderInjection[]>,
+  mainInjections: Record<string, ShaderInjection[]>
+): void {
+  for (const key in injections) {
+    const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
+    if (match) {
+      const hash = match[2];
+      const name = match[3];
+      const injectionType = hash
+        ? name === 'decl'
+          ? declInjections
+          : mainInjections
+        : hookInjections;
+      injectionType[key] = injectionType[key] || [];
+      injectionType[key].push(...injections[key]);
+    } else {
+      mainInjections[key] = mainInjections[key] || [];
+      mainInjections[key].push(...injections[key]);
+    }
+  }
+}
+
+function appendGeneratedVertexInputInjections(
+  declarations: string,
+  initialization: string,
+  declarationInjections: Record<string, ShaderInjection[]>,
+  mainInjections: Record<string, ShaderInjection[]>
+): void {
+  if (declarations) {
+    declarationInjections['vs:#decl'] = declarationInjections['vs:#decl'] || [];
+    declarationInjections['vs:#decl'].push({
+      injection: declarations,
+      order: Number.MIN_SAFE_INTEGER
+    });
+  }
+  if (initialization) {
+    mainInjections['vs:#main-start'] = mainInjections['vs:#main-start'] || [];
+    mainInjections['vs:#main-start'].push({
+      injection: initialization,
+      order: Number.MIN_SAFE_INTEGER
+    });
+  }
+}
+
+function appendGeneratedVaryingInjections(
+  assembly: {
+    declarations: string;
+    vertexInitialization: string;
+    fragmentInitialization: string;
+  },
+  declarationInjections: Record<string, ShaderInjection[]>,
+  mainInjections: Record<string, ShaderInjection[]>
+): void {
+  if (assembly.declarations) {
+    declarationInjections['vs:#decl'] = declarationInjections['vs:#decl'] || [];
+    declarationInjections['vs:#decl'].push({
+      injection: assembly.declarations,
+      order: Number.MIN_SAFE_INTEGER
+    });
+  }
+  if (assembly.vertexInitialization) {
+    mainInjections['vs:#main-start'] = mainInjections['vs:#main-start'] || [];
+    mainInjections['vs:#main-start'].push({
+      injection: assembly.vertexInitialization,
+      order: Number.MIN_SAFE_INTEGER
+    });
+  }
+  if (assembly.fragmentInitialization) {
+    mainInjections['fs:#main-start'] = mainInjections['fs:#main-start'] || [];
+    mainInjections['fs:#main-start'].push({
+      injection: assembly.fragmentInitialization,
+      order: Number.MIN_SAFE_INTEGER
+    });
+  }
 }
 
 function getWGSLModuleInjections(module: ShaderModule): Record<string, ShaderInjection> {

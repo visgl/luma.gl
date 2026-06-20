@@ -35,6 +35,7 @@ renderPass.end();
 | `fs?` | `string \| null` | GLSL fragment shader source. |
 | `modules?` | `ShaderModule[]` | Shader modules to assemble into the shader source. |
 | `defines?` | `Record<string, boolean>` | Shader module defines. |
+| `plugins?` | `ShaderPlugin[]` | Reusable shader assembly plugins resolved for the active GLSL or WGSL backend. Plugin `vertexInputs` add shader-facing attributes; callers still own buffer layout and attribute data. |
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
 | `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| TextureBindingSource>` | Textures, samplers, uniform buffers, dynamic buffers, and texture binding sources such as `DynamicTexture` and `VideoTexture`. |
 | `parameters?` | `RenderPipelineParameters` | Pipeline parameters baked into the model's pipeline. |

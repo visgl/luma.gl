@@ -42,7 +42,8 @@ export function mergeShaderModuleBindingsIntoLayout<TShaderLayout extends AnySha
 
 export function mergeInferredShaderLayout(
   shaderLayout: ShaderLayout | null | undefined,
-  inferredShaderLayout: ShaderLayout | null | undefined
+  inferredShaderLayout: ShaderLayout | null | undefined,
+  inferredAttributeNames: readonly string[] = []
 ): ShaderLayout | null | undefined {
   if (!shaderLayout) {
     return inferredShaderLayout;
@@ -54,7 +55,12 @@ export function mergeInferredShaderLayout(
   return {
     ...shaderLayout,
     attributes: shaderLayout.attributes.length
-      ? shaderLayout.attributes
+      ? mergeAttributeLayouts(
+          shaderLayout.attributes,
+          inferredShaderLayout.attributes.filter(attribute =>
+            inferredAttributeNames.includes(attribute.name)
+          )
+        )
       : inferredShaderLayout.attributes,
     bindings: mergeBindingLayouts(shaderLayout.bindings, inferredShaderLayout.bindings)
   };
@@ -120,4 +126,43 @@ function mergeBindingLayouts<TBindingLayout extends ShaderLayout['bindings'][num
   }
 
   return mergedBindings;
+}
+
+function mergeAttributeLayouts(
+  explicitAttributes: ShaderLayout['attributes'],
+  inferredAttributes: ShaderLayout['attributes']
+): ShaderLayout['attributes'] {
+  const mergedAttributes = explicitAttributes.map(attribute => ({...attribute}));
+  const explicitAttributesByName = new Map(
+    explicitAttributes.map(attribute => [attribute.name, attribute])
+  );
+  const explicitAttributesByLocation = new Map(
+    explicitAttributes.map(attribute => [attribute.location, attribute])
+  );
+
+  for (const inferredAttribute of inferredAttributes) {
+    const explicitByName = explicitAttributesByName.get(inferredAttribute.name);
+    if (explicitByName) {
+      if (
+        explicitByName.type !== inferredAttribute.type ||
+        explicitByName.location !== inferredAttribute.location
+      ) {
+        throw new Error(
+          `Shader attribute "${inferredAttribute.name}" conflicts with its inferred type or location`
+        );
+      }
+      continue;
+    }
+
+    const explicitByLocation = explicitAttributesByLocation.get(inferredAttribute.location);
+    if (explicitByLocation) {
+      throw new Error(
+        `Shader attributes "${explicitByLocation.name}" and "${inferredAttribute.name}" both use location ${inferredAttribute.location}`
+      );
+    }
+
+    mergedAttributes.push({...inferredAttribute});
+  }
+
+  return mergedAttributes;
 }

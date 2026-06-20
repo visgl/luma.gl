@@ -40,6 +40,7 @@ const config = {
       examples: {
         animation: '/examples/api/animation',
         'arrow-points': '/examples/arrow/arrow-points',
+        'arrow-filtering': '/examples/arrow/arrow-filtering',
         cubemap: '/examples/api/cubemap',
         fp64: '/examples/experimental/fp64',
         'external-context': '/examples/integrations/external-context',

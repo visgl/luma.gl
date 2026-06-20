@@ -30,7 +30,7 @@ fixed-size trailing array of light structs.
 ## Related Pages
 
 - [Core Shader Types](/docs/api-reference/core/shader-types)
-- [Shader Modules](/docs/api-guide/shaders/shader-modules)
+- [Shader Assembly](/docs/api-guide/shaders/shader-assembly)
 - [ShaderInputs Reference](/docs/api-reference/engine/shader-inputs)
 - [UniformStore](/docs/api-reference/core/uniform-store)
 - [ShaderBlockLayout](/docs/api-reference/core/shader-block-layout)

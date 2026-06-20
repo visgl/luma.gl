@@ -69,6 +69,7 @@ const sidebars = {
       type: 'category',
       label: 'Apache Arrow - luma.gl v10',
       items: [
+        'arrow/arrow-filtering',
         'arrow/arrow-points',
         'arrow/arrow-lines',
         'arrow/arrow-polygons',

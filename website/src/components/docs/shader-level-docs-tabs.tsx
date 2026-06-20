@@ -11,13 +11,31 @@ type ShaderLevelDocsTab = {
 };
 
 /** Shader-Level Programming documentation tab identifiers. */
-export type ShaderLevelDocsTabId = 'overview' | 'shader-modules' | 'shader-hooks' | 'shader-types';
+export type ShaderLevelDocsTabId =
+  | 'overview'
+  | 'shader-assembly'
+  | 'writing-portable-shaders'
+  | 'writing-customizable-shaders'
+  | 'shader-passes';
 
 const SHADER_LEVEL_DOCS_TABS: ShaderLevelDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-guide/shaders'},
-  {id: 'shader-modules', label: 'Shader Modules', href: '/docs/api-guide/shaders/shader-modules'},
-  {id: 'shader-hooks', label: 'Shader Hooks', href: '/docs/api-guide/shaders/shader-hooks'},
-  {id: 'shader-types', label: 'Shader Types', href: '/docs/api-guide/shaders/shader-types'}
+  {
+    id: 'shader-assembly',
+    label: 'Shader Assembly',
+    href: '/docs/api-guide/shaders/shader-assembly'
+  },
+  {
+    id: 'writing-customizable-shaders',
+    label: 'Customizable Shaders',
+    href: '/docs/api-guide/shaders/writing-customizable-shaders'
+  },
+  {
+    id: 'writing-portable-shaders',
+    label: 'Portable Shaders',
+    href: '/docs/api-guide/shaders/writing-portable-shaders'
+  },
+  {id: 'shader-passes', label: 'Shader Passes', href: '/docs/api-guide/shaders/shader-passes'}
 ];
 
 /**

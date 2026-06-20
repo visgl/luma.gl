@@ -2,9 +2,11 @@
 
 Screen space effects packaged as reusable shader modules in `@luma.gl/effects` based on the [glfx library](http://evanw.github.io/glfx.js/).
 
-:::caution
-> luma.gl shader modules can be used directly with [deck.gl](https://deck.gl)'s post processing system.
-> the `Pass` classes that were removed from luma.gl v7. Until they are restored, these shader passes would require manual code to use. 
+:::info
+luma.gl shader passes can be used directly with [deck.gl](https://deck.gl)'s
+postprocessing system. In luma.gl, run them through
+[`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer).
+The older `Pass` classes from luma.gl v7 are not the current execution API.
 :::
 
 ## Attribution
@@ -18,6 +20,10 @@ Import the shader module(s) you would like to use from `@luma.gl/effects`, e.g:
 ```typescript
 import {brightnessContrast} from '@luma.gl/effects';
 ```
+
+Pass imported effects to
+[`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer)
+when running them inside luma.gl.
 
 Some effects also consume extra bindings in addition to the default `sourceTexture`. For example,
 `persistenceEffect` expects a `persistenceTexture` binding containing the previously accumulated frame.

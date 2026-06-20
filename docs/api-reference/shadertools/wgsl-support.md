@@ -1,6 +1,8 @@
 # WGSL Support
 
 `@luma.gl/shadertools` supports WGSL shader assembly in addition to GLSL.
+For cross-backend authoring guidance, see
+[Writing Portable Shaders](/docs/api-guide/shaders/writing-portable-shaders).
 
 ## Recommended Binding Style
 

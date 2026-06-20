@@ -15,6 +15,16 @@ export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-deb
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {
+  ResolvedShaderPlugins,
+  ResolvedShaderPluginVarying,
+  ShaderPlugin,
+  ShaderPluginInjection,
+  ShaderPluginInjectionTarget,
+  ShaderPluginVarying,
+  ShaderPluginVaryingInterpolation,
+  ShaderPluginVariant
+} from './lib/shader-plugin';
+export type {
   ShaderPass,
   ShaderPassInputSource,
   ShaderPassRenderTarget,
@@ -30,6 +40,7 @@ export {initializeShaderModule, initializeShaderModules} from './lib/shader-modu
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
 export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
 export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
+export {mergeShaderPluginModules, resolveShaderPlugins} from './lib/shader-plugin';
 export type {
   GLSLUniformBlockInfo,
   ShaderModuleUniformLayoutStage,
@@ -118,6 +129,10 @@ export {
 // export {projection} from './modules/engine/project/project';
 export type {PickingProps, PickingUniforms} from './modules/engine/picking/picking';
 export {picking} from './modules/engine/picking/picking';
+export type {FilterShaderPluginProps} from './modules/engine/filter/filter';
+export {filterShaderPlugin} from './modules/engine/filter/filter';
+export type {ClipShaderPluginProps} from './modules/engine/clip/clip';
+export {clipShaderPlugin} from './modules/engine/clip/clip';
 export {skin} from './modules/engine/skin/skin';
 
 // lighting

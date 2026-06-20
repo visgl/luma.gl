@@ -67,6 +67,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/shadertools**
 
 - **[`dggs`](/docs/api-reference/shadertools/shader-modules/dggs)** - New WGSL helper module decodes compact Uint64 DGGS cell keys for WebGPU storage and boundary extraction workflows.
+- **[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin)** - Reusable shader assembly plugins group shader modules, defines, named injections, portable caller-owned vertex inputs, and generated cross-stage varyings. The new [`filterShaderPlugin`](/examples/arrow/arrow-filtering) and `clipShaderPlugin` demonstrate scalar filtering and instance/geometry clipping on WebGL 2 and WebGPU.
 
 
 ## Version 9.4

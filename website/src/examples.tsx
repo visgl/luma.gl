@@ -12,6 +12,7 @@ import ArrowGeoArrowApp from '../../examples/arrow/arrow-geoarrow/app';
 import ArrowLinesApp from '../../examples/arrow/arrow-lines/app';
 import ArrowFloat64PrecisionApp from '../../examples/arrow/arrow-float64-precision/app';
 import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
+import ArrowFilteringApp from '../../examples/arrow/arrow-filtering/app';
 import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
@@ -59,6 +60,7 @@ import HelloInstancingApp from '../../examples/tutorials/hello-instancing/app';
 import HelloGLTFApp from '../../examples/tutorials/hello-gltf/app';
 import LightingApp from '../../examples/tutorials/lighting/app';
 import ShaderHooksApp from '../../examples/tutorials/shader-hooks/app';
+import ShaderPluginsApp from '../../examples/tutorials/shader-plugins/app';
 import ShaderModulesApp from '../../examples/tutorials/shader-modules/app';
 import TransformFeedbackApp from '../../examples/tutorials/transform-feedback/app';
 import TransformApp from '../../examples/tutorials/transform/app';
@@ -389,6 +391,18 @@ export const ArrowPointRendererExample: React.FC = props => (
     title="Points"
     directory="arrow"
     template={ArrowPointRendererApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowFilteringExample: React.FC = props => (
+  <LumaExample
+    id="arrow-filtering"
+    title="ShaderPlugin Filtering"
+    directory="arrow"
+    template={ArrowFilteringApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -1026,6 +1040,17 @@ export const ShaderHooksExample: React.FC = props => (
     id="shader-hooks"
     directory="tutorials"
     template={ShaderHooksApp}
+    config={exampleConfig}
+    showStats={false}
+    {...props}
+  />
+);
+
+export const ShaderPluginsExample: React.FC = props => (
+  <LumaExample
+    id="shader-plugins"
+    directory="tutorials"
+    template={ShaderPluginsApp}
     config={exampleConfig}
     showStats={false}
     {...props}

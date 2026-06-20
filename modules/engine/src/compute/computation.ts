@@ -18,7 +18,14 @@ import {
   log,
   dataTypeDecoder
 } from '@luma.gl/core';
-import {type ShaderModule, type PlatformInfo, ShaderAssembler} from '@luma.gl/shadertools';
+import {
+  type ShaderModule,
+  type ShaderPlugin,
+  type PlatformInfo,
+  mergeShaderPluginModules,
+  resolveShaderPlugins,
+  ShaderAssembler
+} from '@luma.gl/shadertools';
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
 import {
@@ -39,7 +46,8 @@ export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
   modules?: ShaderModule[];
   /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
   defines?: Record<string, boolean | number>;
-  // TODO - injections, hooks etc?
+  /** Reusable shader assembly plugins resolved for WGSL compute assembly. */
+  plugins?: ShaderPlugin[];
 
   /** Shader inputs, used to generate uniform buffers and bindings. */
   shaderInputs?: ShaderInputs;
@@ -76,6 +84,7 @@ export class Computation {
     source: '',
     modules: [],
     defines: {},
+    plugins: [],
 
     bindings: undefined!,
     shaderInputs: undefined!,
@@ -131,18 +140,31 @@ export class Computation {
 
     Object.assign(this.userData, props.userData);
 
+    const platformInfo = getPlatformInfo(device);
+    const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
+    if (
+      Object.keys(resolvedPlugins.vertexInputs).length > 0 ||
+      Object.keys(resolvedPlugins.varyings).length > 0
+    ) {
+      throw new Error('Computation does not support ShaderPlugin vertex inputs or varyings');
+    }
+
     // Setup shader module inputs
-    const moduleMap = Object.fromEntries(
-      this.props.modules?.map(module => [module.name, module]) || []
+    const shaderInputModules = mergeShaderPluginModules(
+      this.props.modules,
+      resolvedPlugins.modules
     );
+    const moduleMap = Object.fromEntries(shaderInputModules.map(module => [module.name, module]));
     // @ts-ignore TODO - fix up typing?
     this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
+    if (props.shaderInputs && resolvedPlugins.modules.length > 0) {
+      this.shaderInputs.addModules(resolvedPlugins.modules);
+    }
     this.setShaderInputs(this.shaderInputs);
 
     // Setup shader assembler
-    const platformInfo = getPlatformInfo(device);
-
     const modules = mergeShaderModules(this.props.modules, this.shaderInputs?.getModules());
+    const defines = {...resolvedPlugins.defines, ...this.props.defines};
 
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
@@ -154,7 +176,9 @@ export class Computation {
     const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
-      modules
+      modules,
+      defines,
+      pluginInjections: resolvedPlugins.injections
     });
 
     this.source = source;

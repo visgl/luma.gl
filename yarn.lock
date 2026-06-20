@@ -15412,6 +15412,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-arrow-filtering@workspace:examples/arrow/arrow-filtering":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-filtering@workspace:examples/arrow/arrow-filtering"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-arrow-float64-precision@workspace:examples/arrow/arrow-float64-precision":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-float64-precision@workspace:examples/arrow/arrow-float64-precision"
@@ -15943,6 +15961,21 @@ __metadata:
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/types": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-shader-plugins@workspace:examples/tutorials/shader-plugins":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-shader-plugins@workspace:examples/tutorials/shader-plugins"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
