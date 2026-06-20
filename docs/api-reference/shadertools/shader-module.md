@@ -1,43 +1,90 @@
 # ShaderModule
 
-In luma.gl, reusable shader modules are defined by objects that conform to the `ShaderModule` type.
-For more information see [Shader Module System Guide](/docs/api-guide/shaders/shader-modules).
+`ShaderModule` is the reusable shader feature descriptor used by
+`@luma.gl/shadertools`. A module may contribute WGSL and/or GLSL source,
+shader-facing uniform descriptors, resource bindings, dependencies, defines,
+and ordered injections.
 
-`ShaderModule`s are used by the luma.gl [shader assembler](./shader-assembler). The shader assembler imports chunks of reusable shader code from the module into your shader program source code.
+`ShaderModule`s are used by [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler)
+and engine classes such as [`Model`](/docs/api-reference/engine/model) and
+[`Computation`](/docs/api-reference/engine/compute/computation). The assembler
+resolves dependencies, prepends module source, applies injections, and returns
+assembled source plus a combined uniform getter.
+
+For the composition model, see
+[Shader Assembly](/docs/api-guide/shaders/shader-assembly).
 
 ## Usage
 
-To define a new shader module, you create a descriptor object that brings together all the necessary pieces:
+Attach modules through an engine class:
 
 ```typescript
-type ModuleProps = {
-  radius: number;
-}
+import {Model} from '@luma.gl/engine';
 
-export const MY_SHADER_MODULE: ShaderModule<ModuleProps> = {
+const model = new Model(device, {
+  source: wgslSource,
+  vs: glslVertexSource,
+  fs: glslFragmentSource,
+  modules: [color]
+});
+```
+
+Or pass modules directly to `ShaderAssembler`.
+
+To define a new shader module, create a descriptor that brings together the
+source, uniforms, injections, and dependencies that belong to one reusable
+shader feature:
+
+```typescript
+import type {ShaderModule} from '@luma.gl/shadertools';
+
+type MyShaderModuleProps = {
+  intensity: number;
+};
+
+export const myShaderModule = {
   name: 'my-shader-module',
+  source: '...',
   vs: '...',
   fs: '...',
+  uniformTypes: {
+    intensity: 'f32'
+  },
   inject: {},
   dependencies: [],
-  deprecations: [],
-};
+  getUniforms: props => ({intensity: props.intensity})
+} as const satisfies ShaderModule<MyShaderModuleProps>;
 ```
+
+Use `source` for WGSL, `vs` and `fs` for GLSL stage source, or all three when
+the module supports both backends. `uniformTypes` declares shader-facing
+layouts; `getUniforms` maps application props to the uniforms and bindings
+consumed by the shader; `dependencies` brings in other modules first; and
+`inject` targets hooks or named injection points when the module needs to
+modify base shader flow.
 
 ## Fields
 
+#### `props`, `uniforms`, `bindings`
+
+- `props?`, `uniforms?`, `bindings?` - Type-inference fields. They are not
+  currently used as runtime values.
 
 #### `name`
 
 - `name` (string) - The name of the shader module.
 
+#### `source`
+
+- `source?` (string) - WGSL code contributed by the module.
+
 #### `vs`
 
-- `vs?` - (string | null)
+- `vs?` (string) - GLSL vertex shader code contributed by the module.
 
 #### `fs`
 
-- `fs` - (string | null)
+- `fs?` (string) - GLSL fragment shader code contributed by the module.
 
 #### `uniformTypes` (_Object_) - Uniform shader types
 
@@ -58,19 +105,36 @@ See [Core Shader Types](/docs/api-reference/core/shader-types) for the
 descriptor syntax, TypeScript inference, array handling, and how nested values
 flow through `ShaderInputs` and uniform-buffer packing.
 
-#### `uniformPropTypes` (_Object_) - Uniform JS prop types
+#### `propTypes` (_Object_) - Uniform JS prop types
 
 #### `defaultUniforms` (_Object_) - Default uniform values
 
-#### `getUniforms` (_function_) - Function that maps props to uniforms & bindings. When not provided it is assumed that the names of the uniforms and bindings match those of the provided props
+#### `getUniforms` (_function_) - Function that maps props to uniforms and bindings
+
+When `getUniforms` is not provided, shadertools validates props using
+`propTypes` and returns the matching values.
+
+#### `bindingLayout` (_Array_) - Logical bind-group assignment for bindings
+
+Each entry has `name` and `group`. For current bind-group guidance, see
+[Bind Groups and Bindings](/docs/api-guide/gpu/gpu-bindings).
+
+#### `firstBindingSlot` (_Number_) - Preferred WGSL auto-binding start slot
+
+This affects module-owned WGSL `@binding(auto)` relocation.
 
 #### `defines` (_Object_) - Constant defines to be injected into shader
 
-#### `inject` (_Object_) - injections the module will make into shader hooks, see below
+#### `inject` (_Object_) - Injections the module will make into shader hooks or anchors
 
-#### `dependencies` (_Array_) - a list of other shader modules that this module is dependent on
+See [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler#hooks-and-injections)
+for hook and standard injection target syntax.
 
-#### `deprecations` (_Array_) - a list of deprecated APIs.
+#### `dependencies` (_Array_) - Shader modules that this module depends on
+
+Dependencies are resolved before the module source is assembled.
+
+#### `deprecations` (_Array_) - Deprecated APIs detected during assembly
 
 If `deprecations` is supplied, `assembleShaders` will scan shader source code for the deprecated constructs and issue a console warning if found. Each API is described in the following format:
 
@@ -79,10 +143,15 @@ If `deprecations` is supplied, `assembleShaders` will scan shader source code fo
 - `new`: name of the new uniform/function
 - `deprecated`: whether the old API is still supported.
 
+#### `instance` (_Object_) - Runtime initialization state
+
+Generated by `initializeShaderModule()` or shader assembly. Application module
+descriptors should normally leave this unset.
 
 ### Statically defining Uniforms
 
-If the uniforms of this module can be directly pulled from user props, they may declaratively defined by a `defaultUniforms` object:
+If the uniforms of this module can be directly pulled from user props, they may
+be declaratively defined by a `defaultUniforms` object:
 
 ```typescript
 {
@@ -114,13 +183,18 @@ user's module props to uniforms. This can be achieved using `getUniforms()`:
 
 ## Defining Injections
 
-A map of hook function signatures to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. See [assembleShaders]( /docs/api-reference/shadertools/shader-assembler) documentation for more information on shader hooks.
+A map from hook or standard anchor target to either the injection code string,
+or an object containing the injection code and an `order` option indicating
+ordering within the hook function. See
+[`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler) for more
+information on shader hooks and standard anchors.
 
 For example:
 
 ```typescript
-{
-  picking: {
+const picking = {
+  name: 'picking',
+  inject: {
     'vs:VERTEX_HOOK_FUNCTION': 'picking_setPickingColor(color.rgb);',
     'fs:FRAGMENT_HOOK_FUNCTION': {
       injection: 'color = picking_filterColor(color);',
@@ -128,46 +202,62 @@ For example:
     },
     'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
   }
-}
+};
 ```
 
 ## Functions
 
+#### `initializeShaderModule()`
+
+```ts
+initializeShaderModule(module: ShaderModule): void
+```
+
+Initializes one module's dependencies, normalized injections, parsed
+deprecations, prop validators, and default uniforms. Assembly calls this as
+needed.
+
+#### `initializeShaderModules()`
+
+```ts
+initializeShaderModules(modules: ShaderModule[]): void
+```
+
+Initializes each module in an array.
+
 #### `getShaderModuleUniforms()`
 
 ```ts
-getShaderModuleUniforms(module: ShaderModule)
+getShaderModuleUniforms(
+  module: ShaderModule,
+  props?: Record<string, unknown>,
+  oldUniforms?: Record<string, ShaderModuleUniformValue>
+): Record<string, Binding | ShaderModuleUniformValue>
 ```
-- 
-- JavaScript function that maps JavaScript parameter keys to uniforms used by this module
 
-Each shader module provides a method to get a map of uniforms for the shader. This function will be called with two arguments:
-
-- `opts` - the module props to update. This argument may not be provided when `getUniforms` is called to generate a set of default uniform values.
-- `context` - the uniforms generated by this module's dependencies.
-
-The function should return a JavaScript object with keys representing uniform names and values representing uniform values.
-
-The function should expect the shape of the dependency uniforms to vary based on
-what's passed in `opts`. This behavior is intended because we only want to
-recalculate a uniform if the uniforms that it depends on are changed. An
-example is the `project` and `project64` modules in deck.gl. When
-`opts.viewport` is provided, `project64` will receive the updated projection
-matrix generated by the `project` module. If `opts.viewport` is empty, then the
-`project` module generates nothing and so should `project64`.
+Returns the uniforms and bindings produced for one module update. When the
+module has `getUniforms` and `props` are supplied, shadertools calls
+`getUniforms(props, oldUniforms || defaultUniforms)`. Otherwise it validates
+and returns matching props through `propTypes`.
 
 #### `getShaderModuleDependencies()`
 
 ```ts
-getShaderModuleDependencies(module: ShaderModule): ShaderModule[]
+getShaderModuleDependencies(modules: ShaderModule[]): ShaderModule[]
 ```
 
-## TODO
+Returns modules and transitive dependencies sorted so dependencies are assembled
+before modules that use them.
 
-:::caution
-This page is not complete:
-- Describe props to uniforms mapping system
-- Better documentation of getShaderModuleUniforms
-- Describe all functions working on shader modules
-- Better reference information for injections
-:::
+#### `checkShaderModuleDeprecations()`
+
+```ts
+checkShaderModuleDeprecations(
+  shaderModule: ShaderModule,
+  shaderSource: string,
+  log: any
+): void
+```
+
+Checks shader source against the module's deprecation definitions and logs
+matching warnings or removals.

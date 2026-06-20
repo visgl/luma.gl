@@ -1,0 +1,26 @@
+{
+  "name": "luma.gl-examples-arrow-filtering",
+  "version": "9.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
+    "@luma.gl/arrow": "~9.3.0",
+    "@luma.gl/core": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/shadertools": "~9.3.0",
+    "@luma.gl/tables": "~9.3.0",
+    "@luma.gl/webgl": "~9.3.0",
+    "@luma.gl/webgpu": "~9.3.0",
+    "apache-arrow": "^17.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

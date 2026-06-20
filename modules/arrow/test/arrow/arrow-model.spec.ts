@@ -29,6 +29,11 @@ const STORAGE_SHADER_LAYOUT: ShaderLayout = {
   bindings: [{name: 'colors', type: 'read-only-storage', group: 0, location: 0}]
 };
 
+const FILTER_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [{name: 'filterValues', location: 0, type: 'f32', stepMode: 'instance'}],
+  bindings: []
+};
+
 const DUMMY_VS = `#version 300 es
 in vec2 positions;
 void main() {
@@ -93,6 +98,26 @@ test('makeGPUTableFromArrowTable converts Arrow tables for GPUTableModel renderi
   t.notOk(positionsBuffer.destroyed, 'GPUTableModel leaves converted tables caller-owned');
   table.destroy();
   t.ok(positionsBuffer.destroyed, 'caller destroys converted table buffers');
+  t.end();
+});
+
+test('makeGPUTableFromArrowTable converts scalar filter values to float32 attributes', t => {
+  const device = new NullDevice({});
+  const arrowTable = new arrow.Table({
+    filterValues: arrow.makeVector(new Float32Array([0, 0.5, 1]))
+  });
+  const table = makeGPUTableFromArrowTable(device, arrowTable, {
+    shaderLayout: FILTER_SHADER_LAYOUT
+  });
+
+  t.equal(table.gpuVectors.filterValues.format, 'float32', 'filter vector uses float32 storage');
+  t.deepEqual(
+    table.bufferLayout,
+    [{name: 'filterValues', format: 'float32', stepMode: 'instance'}],
+    'table exposes a matching scalar instance buffer layout'
+  );
+
+  table.destroy();
   t.end();
 });
 

@@ -46,6 +46,7 @@
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
+      "tutorials/shader-plugins",
       "tutorials/transform-feedback",
       "tutorials/transform"
     ]
@@ -68,6 +69,7 @@
     "type": "category",
     "label": "Apache Arrow - luma.gl v10",
     "items": [
+      "arrow/arrow-filtering",
       "arrow/arrow-points",
       "arrow/arrow-lines",
       "arrow/arrow-polygons",

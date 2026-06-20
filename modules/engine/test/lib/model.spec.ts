@@ -15,7 +15,12 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer, Model, type TextureBindingSource} from '@luma.gl/engine';
 import {ShaderInputs} from '../../src/shader-inputs';
-import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {
+  getNullTestDevice,
+  getWebGLTestDevice,
+  getWebGPUTestDevice,
+  getTestDevices
+} from '@luma.gl/test-utils';
 import {skin} from '@luma.gl/shadertools';
 import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
 
@@ -893,6 +898,57 @@ test('Model#pipeline caching with defines and modules', async t => {
     defineModuleModel1.pipeline === defineModuleModel2.pipeline,
     'Got cached pipeline with modules and defines'
   );
+
+  t.end();
+});
+
+test('Model#plugins assemble backend contributions', async t => {
+  const nullDevice = await getNullTestDevice();
+  const pluginModule = {name: 'model-plugin-module', vs: '', fs: ''};
+
+  const glslModel = new Model(nullDevice, {
+    id: 'glsl-model-plugin-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    plugins: [
+      {
+        name: 'glsl-model-plugin',
+        modules: [pluginModule],
+        glsl: {
+          injections: [{target: 'fs:#decl', injection: 'float pluginMarker = 1.0;'}]
+        }
+      }
+    ]
+  });
+
+  t.ok(glslModel.fs.includes('float pluginMarker = 1.0;'), 'GLSL plugin injection is assembled');
+  t.ok(
+    glslModel.shaderInputs.getModules().some(module => module.name === pluginModule.name),
+    'plugin modules participate in shader inputs'
+  );
+  glslModel.destroy();
+
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (webgpuDevice) {
+    const wgslModel = new Model(webgpuDevice, {
+      id: 'wgsl-model-plugin-test',
+      source: DUMMY_WGSL,
+      plugins: [
+        {
+          name: 'wgsl-model-plugin',
+          wgsl: {
+            injections: [{target: 'fs:#decl', injection: 'const PLUGIN_MARKER: f32 = 1.0;'}]
+          }
+        }
+      ]
+    });
+
+    t.ok(
+      wgslModel.source.includes('const PLUGIN_MARKER: f32 = 1.0;'),
+      'WGSL plugin injection is assembled'
+    );
+    wgslModel.destroy();
+  }
 
   t.end();
 });

@@ -15,6 +15,7 @@
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
+      "tutorials/shader-plugins",
       "tutorials/transform",
       "tutorials/transform-feedback",
       "tutorials/external-webgl-context",
@@ -74,9 +75,10 @@
         "label": "Shader-Level Programming",
         "items": [
           "api-guide/shaders/README",
-          "api-guide/shaders/shader-modules",
-          "api-guide/shaders/shader-hooks",
-          "api-guide/shaders/shader-types"
+          "api-guide/shaders/shader-assembly",
+          "api-guide/shaders/writing-customizable-shaders",
+          "api-guide/shaders/writing-portable-shaders",
+          "api-guide/shaders/shader-passes"
         ]
       }
     ]
@@ -215,9 +217,17 @@
         "type": "category",
         "label": "@luma.gl/shadertools",
         "items": [
+          "api-reference/shadertools/README",
+          "api-reference/shadertools/shader-module",
+          "api-reference/shadertools/shader-pass",
+          "api-reference/shadertools/shader-plugin",
+          "api-reference/shadertools/shader-assembler",
+          "api-reference/shadertools/shader-info",
+          "api-reference/shadertools/shader-conventions",
+          "api-reference/shadertools/wgsl-support",
           {
             "type": "category",
-            "label": "Shader Modules",
+            "label": "Shader Module Catalog",
             "items": [
               "api-reference/shadertools/shader-modules/float-colors",
               "api-reference/shadertools/shader-modules/dggs",
@@ -239,15 +249,9 @@
           },
           {
             "type": "category",
-            "label": "Shader Passes",
+            "label": "Shader Pass Catalog",
             "items": ["api-reference/shadertools/shader-passes/image-processing"]
-          },
-          "api-reference/shadertools/README",
-          "api-reference/shadertools/shader-module",
-          "api-reference/shadertools/shader-assembler",
-          "api-reference/shadertools/shader-info",
-          "api-reference/shadertools/shader-conventions",
-          "api-reference/shadertools/wgsl-support"
+          }
         ]
       },
       {

@@ -1,29 +1,29 @@
 # Overview
 
-`@luma.gl/shadertools` provides:
-- a shader module system that enables applications to compose portable shaders from libraries of shader modules
-- together with a core library of shader modules that applications can add to their own shaders to add features such as lighting, picking, image processing and more.
+`@luma.gl/shadertools` provides textual shader assembly utilities and the
+shader descriptors used by luma.gl engine classes. It does not compile shaders
+or call WebGL or WebGPU APIs.
 
-For the uniform descriptor syntax used by shader modules, see
-[Core Shader Types](/docs/api-reference/core/shader-types).
+Use the [Shader-Level Programming guide](/docs/api-guide/shaders) for authoring
+choices. Use this section for exact shadertools descriptors, assembler methods,
+WGSL assembly behavior, and built-in module catalogs.
 
-:::info
-The `@luma.gl/shadertools` module only performs textual processing on shader source code. It does not use or depend on the WebGL or WebGPU APIs or any other luma.gl module.
-:::
+## Reference Pages
 
-## Features
-
-Shader Modules
-- A Shader Module system allowing
-- A Shader Pass system allowing simple description and chaining of post processing effects.
-- A props to uniforms mapping system
-- A selection of shader modules and shader passes
-
-Additional reference pages:
-
+- [`ShaderModule`](/docs/api-reference/shadertools/shader-module) describes reusable
+  shader source, uniform descriptors, bindings, dependencies, and injections.
+- [`ShaderPass`](/docs/api-reference/shadertools/shader-pass) describes shader
+  modules that can run through the engine pass renderer.
+- [`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin)
 - [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler)
+- [`ShaderInfo`](/docs/api-reference/shadertools/shader-info)
 - [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support)
 - [`Shader Module Conventions`](/docs/api-reference/shadertools/shader-conventions)
+
+For the uniform descriptor syntax used by shader modules, see
+[Core Shader Types](/docs/api-reference/core/shader-types). For the engine-side
+module prop and binding bridge, see
+[`ShaderInputs`](/docs/api-reference/engine/shader-inputs).
 
 ## Built-in Shader Modules
 
@@ -43,11 +43,3 @@ The API reference contains pages for the built-in shader modules exported by `@l
 - [`gouraudMaterial`](/docs/api-reference/shadertools/shader-modules/gouraud-material)
 - [`phongMaterial`](/docs/api-reference/shadertools/shader-modules/phong-material)
 - [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material)
-
-### Shader Injections
-
-A number of shader injection points are defined by the system, letting applications inject custom code into shaders.
-
-### Shader Hooks
-
-To allow shader modules to have more control in the modification of the application's shaders, a set of shader modules can define shader hooks.

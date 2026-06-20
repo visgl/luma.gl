@@ -20,6 +20,7 @@ import {
   type ComputeShaderLayout,
   type PrimitiveTopology,
   type ShaderLayout,
+  type AttributeShaderType,
   Device,
   DeviceFeature,
   Buffer,
@@ -37,8 +38,17 @@ import {
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 
-import type {ShaderBindingDebugRow, ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import type {
+  ShaderBindingDebugRow,
+  ShaderModule,
+  ShaderPlugin,
+  PlatformInfo
+} from '@luma.gl/shadertools';
+import {
+  mergeShaderPluginModules,
+  resolveShaderPlugins,
+  ShaderAssembler
+} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
@@ -94,7 +104,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   modules?: ShaderModule[];
   /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
   defines?: Record<string, boolean | number>;
-  // TODO - injections, hooks etc?
+  /** Reusable shader assembly plugins resolved for the active GLSL or WGSL backend. */
+  plugins?: ShaderPlugin[];
 
   /** Shader inputs, used to generate uniform buffers and bindings. */
   shaderInputs?: ShaderInputs;
@@ -175,6 +186,7 @@ export class Model {
     userData: {},
     defines: {},
     modules: [],
+    plugins: [],
     geometry: null,
     indexBuffer: null,
     indexCount: undefined!,
@@ -313,21 +325,28 @@ export class Model {
 
     this.material = props.material || null;
 
+    const platformInfo = getPlatformInfo(device);
+    const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
+
     // Setup shader module inputs
-    const moduleMap = Object.fromEntries(
-      this.props.modules?.map(module => [module.name, module]) || []
+    const shaderInputModules = mergeShaderPluginModules(
+      this.props.modules,
+      resolvedPlugins.modules
     );
+    const moduleMap = Object.fromEntries(shaderInputModules.map(module => [module.name, module]));
 
     const shaderInputs =
       props.shaderInputs ||
       new ShaderInputs(moduleMap, {disableWarnings: this.props.disableWarnings});
+    if (props.shaderInputs && resolvedPlugins.modules.length > 0) {
+      shaderInputs.addModules(resolvedPlugins.modules);
+    }
     // @ts-ignore
     this.setShaderInputs(shaderInputs);
 
     // Setup shader assembler
-    const platformInfo = getPlatformInfo(device);
-
     const modules = mergeShaderModules(this.props.modules, shaderInputs.getModules());
+    const defines = {...resolvedPlugins.defines, ...this.props.defines};
 
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
@@ -342,17 +361,29 @@ export class Model {
       const {source, getUniforms, bindingTable} = this.props.shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
-        modules
+        modules,
+        defines,
+        pluginInjections: resolvedPlugins.injections,
+        pluginVertexInputs: resolvedPlugins.vertexInputs,
+        pluginVaryings: resolvedPlugins.varyings
       });
       this.source = source;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
       this._bindingTable = bindingTable;
       // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
-      const inferredShaderLayout = (
+      const reflectedShaderLayout = (
         device as Device & {getShaderLayout?: (source: string) => any}
       ).getShaderLayout?.(this.source);
-      const shaderLayout = mergeInferredShaderLayout(this.props.shaderLayout, inferredShaderLayout);
+      const inferredShaderLayout = normalizeShaderPluginAttributeNames(
+        reflectedShaderLayout,
+        resolvedPlugins.vertexInputs
+      );
+      const shaderLayout = mergeInferredShaderLayout(
+        this.props.shaderLayout,
+        inferredShaderLayout,
+        Object.keys(resolvedPlugins.vertexInputs)
+      );
       this.props.shaderLayout =
         mergeShaderModuleBindingsIntoLayout(shaderLayout || null, modules) || null;
     } else {
@@ -360,7 +391,11 @@ export class Model {
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
         platformInfo,
         ...this.props,
-        modules
+        modules,
+        defines,
+        pluginInjections: resolvedPlugins.injections,
+        pluginVertexInputs: resolvedPlugins.vertexInputs,
+        pluginVaryings: resolvedPlugins.varyings
       });
 
       this.vs = vs;
@@ -1258,6 +1293,25 @@ export class Model {
 }
 
 // HELPERS
+
+function normalizeShaderPluginAttributeNames(
+  shaderLayout: ShaderLayout | null | undefined,
+  vertexInputs: Record<string, AttributeShaderType>
+): ShaderLayout | null | undefined {
+  if (!shaderLayout || Object.keys(vertexInputs).length === 0) {
+    return shaderLayout;
+  }
+
+  return {
+    ...shaderLayout,
+    attributes: shaderLayout.attributes.map(attribute => {
+      const publicName = attribute.name.startsWith('_luma_')
+        ? attribute.name.slice('_luma_'.length)
+        : null;
+      return publicName && vertexInputs[publicName] ? {...attribute, name: publicName} : attribute;
+    })
+  };
+}
 
 /**
  * Resolves one model binding against the current shader layout.

@@ -73,6 +73,60 @@ test('Computation#compute', async t => {
   t.end();
 });
 
+test('Computation#plugins assemble WGSL contributions', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (webgpuDevice) {
+    const computation = new Computation(webgpuDevice, {
+      source,
+      plugins: [
+        {
+          name: 'compute-plugin',
+          wgsl: {
+            modules: [
+              {
+                name: 'compute-plugin-module',
+                source: 'const COMPUTE_PLUGIN_MARKER: i32 = 1;'
+              }
+            ]
+          }
+        }
+      ]
+    });
+
+    t.ok(
+      computation.source.includes('const COMPUTE_PLUGIN_MARKER: i32 = 1;'),
+      'WGSL computation plugin injection is assembled'
+    );
+    computation.destroy();
+
+    t.throws(
+      () =>
+        new Computation(webgpuDevice, {
+          source,
+          plugins: [{name: 'vertex-input-plugin', vertexInputs: {filterValues: 'f32'}}]
+        }),
+      /does not support ShaderPlugin vertex inputs/,
+      'compute pipelines reject plugin vertex inputs'
+    );
+
+    t.throws(
+      () =>
+        new Computation(webgpuDevice, {
+          source,
+          plugins: [
+            {
+              name: 'varying-plugin',
+              varyings: {pluginValue: {type: 'f32'}}
+            }
+          ]
+        }),
+      /does not support ShaderPlugin vertex inputs or varyings/,
+      'compute pipelines reject plugin varyings'
+    );
+  }
+  t.end();
+});
+
 function isSoftwareBackedDevice(device: Device): boolean {
   return (
     device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)

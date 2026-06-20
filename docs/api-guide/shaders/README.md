@@ -4,38 +4,28 @@ import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-t
 
 <ShaderLevelDocsTabs active="overview" />
 
-Shader-Level Programming is where luma.gl applications define the shader source
-that ultimately runs on the GPU. luma.gl does not replace shader authoring with
-a scene language or code generator: applications still provide explicit WGSL
-and/or GLSL source, then use luma.gl APIs to assemble, bind, and run that source
-portably.
+luma.gl applications must provide the shader source code that will ultimately
+run on the GPU. Such code must be provided as WGSL and/or GLSL depending on
+which backend(s) are targeted. luma.gl helps assemble that source, bind its
+inputs, and run it through the engine APIs.
 
-Portable applications usually keep matching shader sources for both backends:
+| Question | Guide page | Main reference pages |
+| --- | --- | --- |
+| How does luma.gl combine application source with reusable shader code? | [Shader Assembly](/docs/api-guide/shaders/shader-assembly) | [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler), [`ShaderModule`](/docs/api-reference/shadertools/shader-module), [`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin) |
+| How do I let optional features customize a base shader without copying it? | [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders) | [`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin), [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler) |
+| How do I keep one rendering feature available on WebGPU and WebGL 2? | [Writing Portable Shaders](/docs/api-guide/shaders/writing-portable-shaders) | [`Model`](/docs/api-reference/engine/model), [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support) |
+| How do I run image effects or other fullscreen texture stages? | [Shader Passes](/docs/api-guide/shaders/shader-passes) | [`ShaderPass`](/docs/api-reference/shadertools/shader-pass), [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) |
 
-- WebGPU uses WGSL, commonly as one unified source string containing the entry
-  points needed by the pipeline.
-- WebGL 2 uses GLSL ES 3.00, commonly as separate vertex and fragment shader
-  source strings.
-- `Model` and `ShaderAssembler` accept those sources directly and combine them
-  with shader modules, hooks, injections, defines, and binding metadata.
+Related reference topics:
 
-`@luma.gl/shadertools` helps applications organize shader code without hiding
-the shader program. Its shader assembler can prepend reusable module source,
-resolve module dependencies, apply injections, and, for assembled WGSL, rewrite
-`@binding(auto)` declarations to concrete binding numbers before WebGPU compiles
-the final shader.
-
-Use this guide when deciding how to structure application shader source:
-
-- [Shader Modules](/docs/api-guide/shaders/shader-modules) package reusable WGSL
-  and GLSL snippets plus their uniforms, bindings, and dependencies.
-- [Shader Hooks](/docs/api-guide/shaders/shader-hooks) let base shaders expose
-  named extension points that attached modules can customize.
-- [Shader Types](/docs/api-guide/shaders/shader-types) points to the canonical
-  descriptors used for shader-facing uniform layouts.
+- [Core Shader Types](/docs/api-reference/core/shader-types) defines the
+  descriptors used by `ShaderModule.uniformTypes`.
+- [Shader Inputs](/docs/api-guide/engine/shader-inputs) explains the engine-side
+  bridge from module props to uniform buffers and bindings.
+- [Bind Groups and Bindings](/docs/api-guide/gpu/gpu-bindings) explains named
+  shader resources and logical bind groups.
 
 For runnable examples, see the [Shader Modules](/docs/tutorials/shader-modules),
-[Shader Hooks](/docs/tutorials/shader-hooks), and [Lighting](/docs/tutorials/lighting)
-tutorials. For API details, see [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler),
-[`ShaderModule`](/docs/api-reference/shadertools/shader-module), and
-[`WGSL Support`](/docs/api-reference/shadertools/wgsl-support).
+[Shader Hooks](/docs/tutorials/shader-hooks),
+[Shader Plugins](/docs/tutorials/shader-plugins), and
+[Lighting](/docs/tutorials/lighting) tutorials.

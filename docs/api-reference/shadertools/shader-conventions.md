@@ -1,4 +1,4 @@
-# Shader Modules
+# Shader Module Conventions
 
 :::caution
 This describes informal conventions that luma.gl applies to its shaders. 
@@ -29,13 +29,7 @@ camera or view-projection block could reasonably live in group `1` or group
 For the current public guidance, see the
 [Bind Groups and Bindings Guide](/docs/api-guide/gpu/gpu-bindings).
 
-## Shader Passes
-
-It is possible to package up many typical screen-space post-processing steps as a shader module.
-
-Sometimes a pass needs to be run several times with some internal uniform changed. This can be described
-by adding the `passes` field to a shader module.
-
-### Defining your own Shader Modules
-
-It is important that the order and types of declarations of uniforms match those in the shader.
+For shader module descriptor fields, see
+[`ShaderModule`](/docs/api-reference/shadertools/shader-module). For passes that
+run shader modules through an engine renderer, see
+[`ShaderPass`](/docs/api-reference/shadertools/shader-pass).

@@ -84,7 +84,8 @@ export function injectShader(
   stage: 'vertex' | 'fragment',
   inject: Record<string, ShaderInjection[]>,
   injectStandardStubs = false,
-  language: 'glsl' | 'wgsl' = 'glsl'
+  language: 'glsl' | 'wgsl' = 'glsl',
+  entryPoints: {vertex?: string; fragment?: string} = {}
 ): string {
   const isVertex = stage === 'vertex';
 
@@ -108,7 +109,7 @@ export function injectShader(
         if (language === 'wgsl' || isVertex) {
           source =
             language === 'wgsl'
-              ? injectWGSLStageMain(source, 'vertex', fragmentString, 'start')
+              ? injectWGSLStageMain(source, 'vertex', fragmentString, 'start', entryPoints.vertex)
               : source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
         }
         break;
@@ -117,7 +118,7 @@ export function injectShader(
         if (language === 'wgsl' || isVertex) {
           source =
             language === 'wgsl'
-              ? injectWGSLStageMain(source, 'vertex', fragmentString, 'end')
+              ? injectWGSLStageMain(source, 'vertex', fragmentString, 'end', entryPoints.vertex)
               : source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
         }
         break;
@@ -132,7 +133,13 @@ export function injectShader(
         if (language === 'wgsl' || !isVertex) {
           source =
             language === 'wgsl'
-              ? injectWGSLStageMain(source, 'fragment', fragmentString, 'start')
+              ? injectWGSLStageMain(
+                  source,
+                  'fragment',
+                  fragmentString,
+                  'start',
+                  entryPoints.fragment
+                )
               : source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
         }
         break;
@@ -141,7 +148,7 @@ export function injectShader(
         if (language === 'wgsl' || !isVertex) {
           source =
             language === 'wgsl'
-              ? injectWGSLStageMain(source, 'fragment', fragmentString, 'end')
+              ? injectWGSLStageMain(source, 'fragment', fragmentString, 'end', entryPoints.fragment)
               : source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
         }
         break;
@@ -181,9 +188,10 @@ function injectWGSLStageMain(
   source: string,
   stage: 'vertex' | 'fragment',
   fragmentString: string,
-  position: 'start' | 'end'
+  position: 'start' | 'end',
+  entryPoint?: string
 ): string {
-  const bodyRange = getWGSLStageFunctionBodyRange(source, stage);
+  const bodyRange = getWGSLStageFunctionBodyRange(source, stage, entryPoint);
   if (!bodyRange) {
     return source;
   }
@@ -200,7 +208,8 @@ function injectWGSLStageMain(
 
 function getWGSLStageFunctionBodyRange(
   source: string,
-  stage: 'vertex' | 'fragment'
+  stage: 'vertex' | 'fragment',
+  entryPoint?: string
 ): {openBraceIndex: number; closeBraceIndex: number} | null {
   const stageAttribute = stage === 'vertex' ? '@vertex' : '@fragment';
   const stageIndex = source.indexOf(stageAttribute);
@@ -208,7 +217,9 @@ function getWGSLStageFunctionBodyRange(
     return null;
   }
 
-  const functionIndex = source.indexOf('fn', stageIndex);
+  const functionIndex = entryPoint
+    ? source.search(new RegExp(`\\bfn\\s+${escapeRegExp(entryPoint)}\\s*\\(`))
+    : source.indexOf('fn', stageIndex);
   if (functionIndex < 0) {
     return null;
   }
@@ -232,4 +243,8 @@ function getWGSLStageFunctionBodyRange(
   }
 
   return null;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

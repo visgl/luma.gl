@@ -5,7 +5,10 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderLayout} from '../../../core/src';
 import {lighting, pbrMaterial} from '../../../shadertools/src';
-import {mergeShaderModuleBindingsIntoLayout} from '../../src/utils/shader-module-utils';
+import {
+  mergeInferredShaderLayout,
+  mergeShaderModuleBindingsIntoLayout
+} from '../../src/utils/shader-module-utils';
 
 test('mergeShaderModuleBindingsIntoLayout does not create placeholder layouts', t => {
   const shaderLayout = mergeShaderModuleBindingsIntoLayout<ShaderLayout | null>(null, [lighting]);
@@ -35,5 +38,56 @@ test('mergeShaderModuleBindingsIntoLayout remaps companion sampler bindings', t 
     'companion sampler binding group is remapped'
   );
 
+  t.end();
+});
+
+test('mergeInferredShaderLayout merges compatible attributes and rejects conflicts', t => {
+  const explicitLayout: ShaderLayout = {
+    attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
+    bindings: []
+  };
+  const inferredLayout: ShaderLayout = {
+    attributes: [
+      {name: 'positions', location: 0, type: 'vec2<f32>'},
+      {name: 'filterValues', location: 1, type: 'f32'}
+    ],
+    bindings: []
+  };
+  const mergedLayout = mergeInferredShaderLayout(explicitLayout, inferredLayout, ['filterValues']);
+
+  t.deepEqual(
+    mergedLayout?.attributes,
+    [
+      {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
+      {name: 'filterValues', location: 1, type: 'f32'}
+    ],
+    'explicit metadata wins and inferred plugin attributes are appended'
+  );
+  t.throws(
+    () =>
+      mergeInferredShaderLayout(
+        explicitLayout,
+        {
+          attributes: [{name: 'filterValues', location: 0, type: 'f32'}],
+          bindings: []
+        },
+        ['filterValues']
+      ),
+    /both use location 0/,
+    'different names cannot share a location'
+  );
+  t.throws(
+    () =>
+      mergeInferredShaderLayout(
+        explicitLayout,
+        {
+          attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+          bindings: []
+        },
+        ['positions']
+      ),
+    /conflicts with its inferred type or location/,
+    'same-name declarations must have compatible types and locations'
+  );
   t.end();
 });
