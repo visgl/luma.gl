@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Model, aBufferPlugin} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {aBufferPlugin} from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const SHADER_STAGE_FRAGMENT = 0x2;

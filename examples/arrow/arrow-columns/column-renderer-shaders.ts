@@ -218,7 +218,11 @@ fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
 #if A_BUFFER_ENABLED
   return aBuffer_captureStraightColor(inputs.color, inputs.Position);
 #else
+#if WBOIT_ENABLED
+  return wboit_captureStraightColor(inputs.color, inputs.Position);
+#else
   return inputs.color;
+#endif
 #endif
 }
 `;

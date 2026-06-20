@@ -15,14 +15,15 @@ import {
   type RenderPass,
   type RenderPipelineParameters
 } from '@luma.gl/core';
+import {Model, ShaderInputs, type DynamicBuffer} from '@luma.gl/engine';
 import {
-  Model,
-  ShaderInputs,
   aBuffer,
   aBufferPlugin,
   type ABufferShaderModuleProps,
-  type DynamicBuffer
-} from '@luma.gl/engine';
+  type WBOITShaderModuleProps,
+  wboit,
+  wboitPlugin
+} from '@luma.gl/experimental';
 import {
   GPURenderable,
   GPURecordBatch,
@@ -151,9 +152,14 @@ export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDra
     columnRenderer: typeof columnRenderer.props;
     aBuffer: ABufferShaderModuleProps;
   }>({columnRenderer, aBuffer});
+  readonly wboitShaderInputs = new ShaderInputs<{
+    columnRenderer: typeof columnRenderer.props;
+    wboit: WBOITShaderModuleProps;
+  }>({columnRenderer, wboit});
   props: ColumnRendererProps;
   model: Model;
   aBufferModel: Model;
+  wboitModel: Model;
 
   constructor(device: Device, props: ColumnRendererProps) {
     super();
@@ -162,8 +168,9 @@ export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDra
     }
     this.device = device;
     this.props = props;
-    this.model = this.createModel(props, false);
-    this.aBufferModel = this.createModel(props, true);
+    this.model = this.createModel(props, 'alpha');
+    this.aBufferModel = this.createModel(props, 'a-buffer');
+    this.wboitModel = this.createModel(props, 'wboit');
   }
 
   setProps(props: Partial<ColumnRendererProps>): void {
@@ -172,9 +179,11 @@ export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDra
       const bindings = getColumnRendererBindings(this.props.table, this.props.geometry);
       this.model.setBindings(bindings);
       this.aBufferModel.setBindings(bindings);
+      this.wboitModel.setBindings(bindings);
       if (props.table) {
         this.model.setInstanceCount(props.table.numRows);
         this.aBufferModel.setInstanceCount(props.table.numRows);
+        this.wboitModel.setInstanceCount(props.table.numRows);
       }
     }
   }
@@ -206,21 +215,47 @@ export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDra
     this.aBufferModel.draw(renderPass);
   }
 
+  prepareWBOITDraw(
+    commandEncoder: CommandEncoder,
+    props: ColumnRendererDrawProps,
+    shaderModuleProps: WBOITShaderModuleProps,
+    captureParameters: Readonly<RenderPipelineParameters>
+  ): void {
+    this.wboitShaderInputs.setProps({
+      columnRenderer: this.getShaderModuleProps(props),
+      wboit: shaderModuleProps
+    });
+    this.wboitModel.setParameters({...RENDER_PARAMETERS, ...captureParameters});
+    this.wboitModel.predraw(commandEncoder);
+  }
+
+  drawWBOIT(renderPass: RenderPass): void {
+    this.wboitModel.draw(renderPass);
+  }
+
   destroy(): void {
     this.model.destroy();
     this.aBufferModel.destroy();
+    this.wboitModel.destroy();
     this.shaderInputs.destroy();
     this.aBufferShaderInputs.destroy();
+    this.wboitShaderInputs.destroy();
   }
 
-  private createModel(props: ColumnRendererProps, aBufferEnabled: boolean): Model {
+  private createModel(props: ColumnRendererProps, mode: 'alpha' | 'a-buffer' | 'wboit'): Model {
+    const aBufferEnabled = mode === 'a-buffer';
+    const wboitEnabled = mode === 'wboit';
     return new Model(this.device, {
-      id: `arrow-columns-columns-${aBufferEnabled ? 'a-buffer' : 'alpha'}`,
+      id: `arrow-columns-columns-${mode}`,
       source: COLUMN_RENDERER_WGSL_SHADER,
       shaderLayout: COLUMN_RENDERER_SHADER_LAYOUT,
-      shaderInputs: aBufferEnabled ? this.aBufferShaderInputs : this.shaderInputs,
-      defines: {A_BUFFER_ENABLED: aBufferEnabled},
-      plugins: aBufferEnabled ? [aBufferPlugin] : [],
+      shaderInputs: aBufferEnabled
+        ? this.aBufferShaderInputs
+        : wboitEnabled
+          ? this.wboitShaderInputs
+          : this.shaderInputs,
+      defines: {A_BUFFER_ENABLED: aBufferEnabled, WBOIT_ENABLED: wboitEnabled},
+      plugins: aBufferEnabled ? [aBufferPlugin] : wboitEnabled ? [wboitPlugin] : [],
       bindings: getColumnRendererBindings(props.table, props.geometry),
       topology: 'triangle-list',
       vertexCount: COLUMN_VERTEX_COUNT,
@@ -336,6 +371,32 @@ export class ArrowColumnRenderer extends GPURenderable<
 
   drawABuffer(renderPass: RenderPass): void {
     this.columnRenderer?.drawABuffer(renderPass);
+  }
+
+  prepareWBOITDraw(
+    commandEncoder: CommandEncoder,
+    props: {time: number; aspect: number},
+    shaderModuleProps: WBOITShaderModuleProps,
+    captureParameters: Readonly<RenderPipelineParameters>
+  ): void {
+    if (!this.columnRenderer || !this.tableInput) {
+      return;
+    }
+
+    this.updateCurrentTimestamp(props.time);
+    this.columnRenderer.prepareWBOITDraw(
+      commandEncoder,
+      {
+        aspect: props.aspect,
+        currentTimestampMilliseconds: this.currentTimestampMilliseconds
+      },
+      shaderModuleProps,
+      captureParameters
+    );
+  }
+
+  drawWBOIT(renderPass: RenderPass): void {
+    this.columnRenderer?.drawWBOIT(renderPass);
   }
 
   destroy(): void {

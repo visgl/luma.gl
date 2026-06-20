@@ -13,10 +13,7 @@ import {
   Texture,
   type TextureView
 } from '@luma.gl/core';
-
-import {ClipSpace} from '../../models/clip-space';
-import {ShaderInputs} from '../../shader-inputs';
-import {uid} from '../../utils/uid';
+import {ClipSpace, ShaderInputs} from '@luma.gl/engine';
 import {aBuffer, type ABufferShaderModuleProps} from './a-buffer';
 
 const A_BUFFER_HEAD_POINTER_HEADER_BYTE_LENGTH = 8;
@@ -24,6 +21,12 @@ const A_BUFFER_HEAD_POINTER_BYTE_LENGTH = 4;
 const A_BUFFER_FRAGMENT_BYTE_LENGTH = 12;
 const DEFAULT_AVERAGE_FRAGMENTS_PER_PIXEL = 4;
 const DEFAULT_MAX_FRAGMENTS_PER_PIXEL = 12;
+let nextABufferResourceId = 0;
+
+function makeABufferResourceId(prefix: string): string {
+  nextABufferResourceId += 1;
+  return `${prefix}-${nextABufferResourceId}`;
+}
 
 function getABufferCompositeShader(maxFragmentsPerPixel: number): string {
   return /* wgsl */ `\
@@ -194,7 +197,7 @@ export class ABufferRenderer {
     this.props = resolveABufferRendererProps(props);
     this.shaderInputs = new ShaderInputs<{aBuffer: ABufferShaderModuleProps}>({aBuffer});
     this.compositeModel = new ClipSpace(device, {
-      id: uid('a-buffer-composite'),
+      id: makeABufferResourceId('a-buffer-composite'),
       source: getABufferCompositeShader(this.props.maxFragmentsPerPixel),
       shaderInputs: this.shaderInputs,
       parameters: {
@@ -325,17 +328,17 @@ export class ABufferRenderer {
     const headPointerInitData = new Uint32Array(nextSlicePlan.headPointerByteLength / 4);
 
     this.headPointerInitBuffer = this.device.createBuffer({
-      id: uid('a-buffer-head-pointer-init'),
+      id: makeABufferResourceId('a-buffer-head-pointer-init'),
       usage: Buffer.COPY_SRC,
       data: headPointerInitData
     });
     this.headPointers = this.device.createBuffer({
-      id: uid('a-buffer-head-pointers'),
+      id: makeABufferResourceId('a-buffer-head-pointers'),
       usage: Buffer.STORAGE | Buffer.COPY_DST,
       byteLength: nextSlicePlan.headPointerByteLength
     });
     this.fragments = this.device.createBuffer({
-      id: uid('a-buffer-fragments'),
+      id: makeABufferResourceId('a-buffer-fragments'),
       usage: Buffer.STORAGE,
       byteLength: nextSlicePlan.fragmentByteLength
     });

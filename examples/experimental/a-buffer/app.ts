@@ -2,26 +2,27 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Texture, type Device, type Framebuffer, type RenderPipelineParameters} from '@luma.gl/core';
+import {type Device, type RenderPipelineParameters} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, SphereGeometry, Model, ShaderInputs} from '@luma.gl/engine';
 import {
   ABufferRenderer,
-  AnimationLoopTemplate,
-  ClipSpace,
-  SphereGeometry,
-  Model,
-  ShaderInputs,
+  WBOITRenderer,
   aBuffer,
   aBufferPlugin,
-  type ABufferShaderModuleProps
-} from '@luma.gl/engine';
+  getABufferSupport,
+  getWBOITSupport,
+  type ABufferShaderModuleProps,
+  type WBOITShaderModuleProps,
+  wboit,
+  wboitPlugin
+} from '@luma.gl/experimental';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
 const OPAQUE_INSTANCE_COUNT = 2;
 const TRANSLUCENT_INSTANCE_COUNT = 7;
 const ORBIT_DURATION_SECONDS = 90;
-const OFFSCREEN_COLOR_FORMAT = 'rgba16float';
 const MODE_SELECT_ID = 'a-buffer-mode';
 const OPACITY_INPUT_ID = 'a-buffer-opacity';
 const OPACITY_OUTPUT_ID = 'a-buffer-opacity-value';
@@ -78,12 +79,6 @@ struct FragmentInputs {
   @location(1) @interpolate(flat) gridIndex: u32,
 };
 
-fn getWeightedBlendedOitWeight(depth: f32, alpha: f32) -> f32 {
-  let alphaWeight = pow(min(1.0, alpha * 10.0) + 0.01, 3.0);
-  let depthWeight = pow(1.0 - depth * 0.9, 3.0);
-  return clamp(alphaWeight * 1e8 * depthWeight, 1e-2, 3e3);
-}
-
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   let gridIndex = scene.gridStart + inputs.instanceIndex * scene.gridStride;
@@ -120,15 +115,10 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 #if A_BUFFER_ENABLED
   return aBuffer_captureStraightColor(color, inputs.Position);
 #else
-#if WBOIT_ACCUMULATION
-  let weight = getWeightedBlendedOitWeight(inputs.Position.z, color.a);
-  return vec4<f32>(color.rgb * color.a * weight, color.a * weight);
-#else
-#if WBOIT_REVEALAGE
-  return vec4<f32>(color.a);
+#if WBOIT_ENABLED
+  return wboit_captureStraightColor(color, inputs.Position);
 #else
   return color;
-#endif
 #endif
 #endif
 }
@@ -183,12 +173,6 @@ flat in uint vGridIndex;
 
 out vec4 fragColor;
 
-float getWeightedBlendedOitWeight(float depth, float alpha) {
-  float alphaWeight = pow(min(1.0, alpha * 10.0) + 0.01, 3.0);
-  float depthWeight = pow(1.0 - depth * 0.9, 3.0);
-  return clamp(alphaWeight * 1e8 * depthWeight, 1e-2, 3e3);
-}
-
 void main(void) {
   vec3 colors[6] = vec3[6](
     vec3(0.96, 0.18, 0.24),
@@ -203,69 +187,11 @@ void main(void) {
   float lighting = 0.36 + 0.64 * (0.5 + 0.5 * dot(normalize(vNormal), lightDirection));
   vec4 color = vec4(baseColor * lighting, scene.opacity);
 
-#if WBOIT_ACCUMULATION
-  float weight = getWeightedBlendedOitWeight(gl_FragCoord.z, color.a);
-  fragColor = vec4(color.rgb * color.a * weight, color.a * weight);
-#else
-#if WBOIT_REVEALAGE
-  fragColor = vec4(color.a);
+#if WBOIT_ENABLED
+  fragColor = wboit_captureStraightColor(color, gl_FragCoord);
 #else
   fragColor = color;
 #endif
-#endif
-}
-`;
-
-const COMPOSITE_WGSL = /* wgsl */ `\
-@group(0) @binding(auto) var accumulationTexture: texture_2d<f32>;
-@group(0) @binding(auto) var accumulationTextureSampler: sampler;
-@group(0) @binding(auto) var revealageTexture: texture_2d<f32>;
-@group(0) @binding(auto) var revealageTextureSampler: sampler;
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-#if FLIP_WBOIT_TEXTURE_Y
-  let textureCoordinates = vec2<f32>(inputs.uv.x, 1.0 - inputs.uv.y);
-#else
-  let textureCoordinates = inputs.uv;
-#endif
-  let accumulation = textureSample(
-    accumulationTexture,
-    accumulationTextureSampler,
-    textureCoordinates
-  );
-  let revealage = textureSample(
-    revealageTexture,
-    revealageTextureSampler,
-    textureCoordinates
-  ).r;
-  let alpha = 1.0 - revealage;
-  let weightedColor = accumulation.rgb / max(accumulation.a, 1e-5);
-  return vec4<f32>(weightedColor * alpha, alpha);
-}
-`;
-
-const COMPOSITE_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform sampler2D accumulationTexture;
-uniform sampler2D revealageTexture;
-
-in vec2 uv;
-out vec4 fragColor;
-
-void main(void) {
-#if FLIP_WBOIT_TEXTURE_Y
-  vec2 textureCoordinates = vec2(uv.x, 1.0 - uv.y);
-#else
-  vec2 textureCoordinates = uv;
-#endif
-  vec4 accumulation = texture(accumulationTexture, textureCoordinates);
-  float revealage = texture(revealageTexture, textureCoordinates).r;
-  float alpha = 1.0 - revealage;
-  vec3 weightedColor = accumulation.rgb / max(accumulation.a, 1e-5);
-  fragColor = vec4(weightedColor * alpha, alpha);
 }
 `;
 
@@ -287,53 +213,6 @@ const TRANSLUCENT_PARAMETERS = {
   blendAlphaSrcFactor: 'one',
   blendAlphaDstFactor: 'one-minus-src-alpha'
 } as const satisfies RenderPipelineParameters;
-
-const WBOIT_ACCUMULATION_PARAMETERS = {
-  depthWriteEnabled: false,
-  depthCompare: 'less-equal',
-  cullMode: 'back',
-  blend: true,
-  blendColorOperation: 'add',
-  blendColorSrcFactor: 'one',
-  blendColorDstFactor: 'one',
-  blendAlphaOperation: 'add',
-  blendAlphaSrcFactor: 'one',
-  blendAlphaDstFactor: 'one'
-} as const satisfies RenderPipelineParameters;
-
-const WBOIT_REVEALAGE_PARAMETERS = {
-  depthWriteEnabled: false,
-  depthCompare: 'less-equal',
-  cullMode: 'back',
-  blend: true,
-  blendColorOperation: 'add',
-  blendColorSrcFactor: 'zero',
-  blendColorDstFactor: 'one-minus-src',
-  blendAlphaOperation: 'add',
-  blendAlphaSrcFactor: 'zero',
-  blendAlphaDstFactor: 'one-minus-src-alpha'
-} as const satisfies RenderPipelineParameters;
-
-const COMPOSITE_PARAMETERS = {
-  depthWriteEnabled: false,
-  blend: true,
-  blendColorOperation: 'add',
-  blendColorSrcFactor: 'one',
-  blendColorDstFactor: 'one-minus-src-alpha',
-  blendAlphaOperation: 'add',
-  blendAlphaSrcFactor: 'one',
-  blendAlphaDstFactor: 'one-minus-src-alpha'
-} as const satisfies RenderPipelineParameters;
-
-type WboitRenderTargets = {
-  accumulationTexture: Texture;
-  accumulationFramebuffer: Framebuffer;
-  revealageTexture: Texture;
-  revealageFramebuffer: Framebuffer;
-  depthTexture: Texture;
-  width: number;
-  height: number;
-};
 
 export default class OrderIndependentTransparencyExample extends AnimationLoopTemplate {
   static info = `\
@@ -381,22 +260,22 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   readonly supportsABuffer: boolean;
   readonly supportsWeightedBlendedOit: boolean;
   readonly aBufferRenderer: ABufferRenderer | null;
+  readonly wboitRenderer: WBOITRenderer | null;
   readonly opaqueShaderInputs = new ShaderInputs<{scene: SceneUniforms}>({scene});
   readonly alphaShaderInputs = new ShaderInputs<{scene: SceneUniforms}>({scene});
-  readonly accumulationShaderInputs = new ShaderInputs<{scene: SceneUniforms}>({scene});
-  readonly revealageShaderInputs = new ShaderInputs<{scene: SceneUniforms}>({scene});
+  readonly wboitShaderInputs = new ShaderInputs<{
+    scene: SceneUniforms;
+    wboit: WBOITShaderModuleProps;
+  }>({scene, wboit});
   readonly aBufferShaderInputs = new ShaderInputs<{
     scene: SceneUniforms;
     aBuffer: ABufferShaderModuleProps;
   }>({scene, aBuffer});
   readonly opaqueModel: Model;
   readonly alphaModel: Model;
-  readonly accumulationModel: Model;
-  readonly revealageModel: Model;
+  readonly wboitModel: Model | null;
   readonly aBufferModel: Model | null;
-  readonly compositeModel: ClipSpace | null;
 
-  renderTargets: WboitRenderTargets | null;
   transparencyMode: TransparencyMode = 'a-buffer';
   opacity = 0.34;
   sphereSize = 6.5;
@@ -405,15 +284,12 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   lastRenderTimeSeconds: number | null = null;
   controlCleanup: Array<() => void> = [];
 
-  constructor({device, width, height}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
 
     this.device = device;
-    this.supportsABuffer = device.type === 'webgpu';
-    this.supportsWeightedBlendedOit = supportsWeightedBlendedOit(device);
-    this.renderTargets = this.supportsWeightedBlendedOit
-      ? createWboitRenderTargets(device, width, height)
-      : null;
+    this.supportsABuffer = getABufferSupport(device).supported;
+    this.supportsWeightedBlendedOit = getWBOITSupport(device).supported;
     this.transparencyMode = this.getDefaultTransparencyMode();
     this.aBufferRenderer = this.supportsABuffer
       ? new ABufferRenderer(device, {
@@ -422,6 +298,7 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
           maxBufferByteLength: 64 * 1024 * 1024
         })
       : null;
+    this.wboitRenderer = this.supportsWeightedBlendedOit ? new WBOITRenderer(device) : null;
     this.opaqueModel = this.createModel({
       id: 'a-buffer-opaque',
       instanceCount: OPAQUE_INSTANCE_COUNT,
@@ -434,20 +311,15 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
       shaderInputs: this.alphaShaderInputs,
       parameters: TRANSLUCENT_PARAMETERS
     });
-    this.accumulationModel = this.createModel({
-      id: 'wboit-accumulation',
-      instanceCount: TRANSLUCENT_INSTANCE_COUNT,
-      shaderInputs: this.accumulationShaderInputs,
-      parameters: WBOIT_ACCUMULATION_PARAMETERS,
-      accumulation: true
-    });
-    this.revealageModel = this.createModel({
-      id: 'wboit-revealage',
-      instanceCount: TRANSLUCENT_INSTANCE_COUNT,
-      shaderInputs: this.revealageShaderInputs,
-      parameters: WBOIT_REVEALAGE_PARAMETERS,
-      revealage: true
-    });
+    this.wboitModel = this.supportsWeightedBlendedOit
+      ? this.createModel({
+          id: 'wboit-capture',
+          instanceCount: TRANSLUCENT_INSTANCE_COUNT,
+          shaderInputs: this.wboitShaderInputs,
+          parameters: TRANSLUCENT_PARAMETERS,
+          wboitEnabled: true
+        })
+      : null;
     this.aBufferModel = this.supportsABuffer
       ? this.createModel({
           id: 'a-buffer-capture',
@@ -457,26 +329,13 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
           aBufferEnabled: true
         })
       : null;
-    this.compositeModel =
-      this.renderTargets &&
-      new ClipSpace(device, {
-        id: 'wboit-composite',
-        source: COMPOSITE_WGSL,
-        fs: COMPOSITE_GLSL,
-        bindings: {
-          accumulationTexture: this.renderTargets.accumulationTexture,
-          revealageTexture: this.renderTargets.revealageTexture
-        },
-        defines: {FLIP_WBOIT_TEXTURE_Y: device.type === 'webgpu' ? 1 : 0},
-        parameters: COMPOSITE_PARAMETERS
-      });
   }
 
   override async onInitialize(): Promise<void> {
     this.initializeControls();
   }
 
-  override onRender({aspect, height, time, width}: AnimationProps): void {
+  override onRender({aspect, time}: AnimationProps): void {
     const viewProjectionMatrix = this.getViewProjectionMatrix(aspect, time);
     const opaqueProps = this.getSceneProps(viewProjectionMatrix, false);
     const translucentProps = this.getSceneProps(viewProjectionMatrix, true);
@@ -506,8 +365,26 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
       return;
     }
 
-    if (this.transparencyMode === 'weighted-blended' && this.supportsWeightedBlendedOit) {
-      this.renderWeightedBlendedOit({height, opaqueProps, translucentProps, width});
+    if (this.transparencyMode === 'weighted-blended' && this.wboitRenderer && this.wboitModel) {
+      this.wboitRenderer.render({
+        clearColor: [0.004, 0.008, 0.018, 1],
+        clearDepth: 1,
+        prepareBase: commandEncoder => {
+          this.opaqueShaderInputs.setProps({scene: opaqueProps});
+          this.opaqueModel.predraw(commandEncoder);
+        },
+        drawBase: renderPass => {
+          this.opaqueModel.draw(renderPass);
+        },
+        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+          this.wboitShaderInputs.setProps({scene: translucentProps, wboit: shaderModuleProps});
+          this.wboitModel?.setParameters({...TRANSLUCENT_PARAMETERS, ...captureParameters});
+          this.wboitModel?.predraw(commandEncoder);
+        },
+        drawTranslucent: renderPass => {
+          this.wboitModel?.draw(renderPass);
+        }
+      });
       return;
     }
 
@@ -531,19 +408,14 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     this.controlCleanup = [];
     this.opaqueModel.destroy();
     this.alphaModel.destroy();
-    this.accumulationModel.destroy();
-    this.revealageModel.destroy();
+    this.wboitModel?.destroy();
     this.aBufferModel?.destroy();
-    this.compositeModel?.destroy();
     this.opaqueShaderInputs.destroy();
     this.alphaShaderInputs.destroy();
-    this.accumulationShaderInputs.destroy();
-    this.revealageShaderInputs.destroy();
+    this.wboitShaderInputs.destroy();
     this.aBufferShaderInputs.destroy();
     this.aBufferRenderer?.destroy();
-    if (this.renderTargets) {
-      destroyWboitRenderTargets(this.renderTargets);
-    }
+    this.wboitRenderer?.destroy();
   }
 
   private createModel(options: {
@@ -552,10 +424,10 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     shaderInputs: ShaderInputs<any>;
     parameters: Readonly<RenderPipelineParameters>;
     aBufferEnabled?: boolean;
-    accumulation?: boolean;
-    revealage?: boolean;
+    wboitEnabled?: boolean;
   }): Model {
     const aBufferEnabled = options.aBufferEnabled ?? false;
+    const wboitEnabled = options.wboitEnabled ?? false;
     return new Model(this.device, {
       id: options.id,
       source: SCENE_WGSL,
@@ -564,97 +436,12 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
       shaderInputs: options.shaderInputs,
       defines: {
         A_BUFFER_ENABLED: aBufferEnabled ? 1 : 0,
-        WBOIT_ACCUMULATION: options.accumulation ? 1 : 0,
-        WBOIT_REVEALAGE: options.revealage ? 1 : 0
+        WBOIT_ENABLED: wboitEnabled ? 1 : 0
       },
-      plugins: aBufferEnabled ? [aBufferPlugin] : [],
+      plugins: aBufferEnabled ? [aBufferPlugin] : wboitEnabled ? [wboitPlugin] : [],
       geometry: new SphereGeometry({nlat: 32, nlong: 48}),
       instanceCount: options.instanceCount,
       parameters: options.parameters
-    });
-  }
-
-  private renderWeightedBlendedOit({
-    height,
-    opaqueProps,
-    translucentProps,
-    width
-  }: {
-    height: number;
-    opaqueProps: SceneUniforms;
-    translucentProps: SceneUniforms;
-    width: number;
-  }): void {
-    if (!this.renderTargets || !this.compositeModel) {
-      throw new Error('Weighted blended OIT is not supported by this device.');
-    }
-
-    this.resizeWboitRenderTargets(width, height);
-    this.opaqueShaderInputs.setProps({scene: opaqueProps});
-    this.accumulationShaderInputs.setProps({scene: translucentProps});
-    this.revealageShaderInputs.setProps({scene: translucentProps});
-    this.opaqueModel.predraw(this.device.commandEncoder);
-    this.accumulationModel.predraw(this.device.commandEncoder);
-    this.revealageModel.predraw(this.device.commandEncoder);
-    this.compositeModel.predraw(this.device.commandEncoder);
-
-    const basePass = this.device.beginRenderPass({
-      clearColor: [0.004, 0.008, 0.018, 1],
-      clearDepth: 1
-    });
-    this.opaqueModel.draw(basePass);
-    basePass.end();
-
-    const depthPass = this.device.beginRenderPass({
-      framebuffer: this.renderTargets.accumulationFramebuffer,
-      parameters: {colorMask: 0},
-      clearColor: [0, 0, 0, 0],
-      clearDepth: 1
-    });
-    this.opaqueModel.draw(depthPass);
-    depthPass.end();
-
-    const accumulationPass = this.device.beginRenderPass({
-      framebuffer: this.renderTargets.accumulationFramebuffer,
-      clearColor: [0, 0, 0, 0],
-      clearDepth: false,
-      depthReadOnly: true
-    });
-    this.accumulationModel.draw(accumulationPass);
-    accumulationPass.end();
-
-    const revealagePass = this.device.beginRenderPass({
-      framebuffer: this.renderTargets.revealageFramebuffer,
-      clearColor: [1, 1, 1, 1],
-      clearDepth: false,
-      depthReadOnly: true
-    });
-    this.revealageModel.draw(revealagePass);
-    revealagePass.end();
-
-    const compositePass = this.device.beginRenderPass({
-      clearColor: false,
-      clearDepth: false,
-      depthReadOnly: true
-    });
-    this.compositeModel.draw(compositePass);
-    compositePass.end();
-  }
-
-  private resizeWboitRenderTargets(width: number, height: number): void {
-    if (!this.renderTargets || !this.compositeModel) {
-      throw new Error('Weighted blended OIT is not supported by this device.');
-    }
-
-    if (this.renderTargets.width === width && this.renderTargets.height === height) {
-      return;
-    }
-
-    destroyWboitRenderTargets(this.renderTargets);
-    this.renderTargets = createWboitRenderTargets(this.device, width, height);
-    this.compositeModel.setBindings({
-      accumulationTexture: this.renderTargets.accumulationTexture,
-      revealageTexture: this.renderTargets.revealageTexture
     });
   }
 
@@ -810,11 +597,6 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   }
 }
 
-function supportsWeightedBlendedOit(device: Device): boolean {
-  const capabilities = device.getTextureFormatCapabilities(OFFSCREEN_COLOR_FORMAT);
-  return capabilities.render && capabilities.blend;
-}
-
 function getInfoTab(element: HTMLElement): InfoTab | null {
   const infoTab = element.dataset.aBufferInfoTab ?? element.dataset.aBufferInfoPanel;
   return infoTab === 'controls' || infoTab === 'details' ? infoTab : null;
@@ -830,64 +612,4 @@ function setTransparencyOptionSupported(
     option.disabled = !supported;
     option.hidden = !supported;
   }
-}
-
-function createWboitRenderTargets(
-  device: Device,
-  width: number,
-  height: number
-): WboitRenderTargets {
-  const accumulationTexture = createRenderTexture(device, 'wboit-accumulation', width, height);
-  const revealageTexture = createRenderTexture(device, 'wboit-revealage', width, height);
-  const depthTexture = device.createTexture({
-    id: 'wboit-depth',
-    width,
-    height,
-    format: 'depth24plus',
-    usage: Texture.RENDER
-  });
-
-  return {
-    accumulationTexture,
-    accumulationFramebuffer: device.createFramebuffer({
-      id: 'wboit-accumulation-framebuffer',
-      width,
-      height,
-      colorAttachments: [accumulationTexture],
-      depthStencilAttachment: depthTexture
-    }),
-    revealageTexture,
-    revealageFramebuffer: device.createFramebuffer({
-      id: 'wboit-revealage-framebuffer',
-      width,
-      height,
-      colorAttachments: [revealageTexture],
-      depthStencilAttachment: depthTexture
-    }),
-    depthTexture,
-    width,
-    height
-  };
-}
-
-function createRenderTexture(device: Device, id: string, width: number, height: number): Texture {
-  return device.createTexture({
-    id,
-    width,
-    height,
-    format: OFFSCREEN_COLOR_FORMAT,
-    usage: Texture.SAMPLE | Texture.RENDER,
-    sampler: {
-      magFilter: 'nearest',
-      minFilter: 'nearest'
-    }
-  });
-}
-
-function destroyWboitRenderTargets(renderTargets: WboitRenderTargets): void {
-  renderTargets.accumulationFramebuffer.destroy();
-  renderTargets.revealageFramebuffer.destroy();
-  renderTargets.accumulationTexture.destroy();
-  renderTargets.revealageTexture.destroy();
-  renderTargets.depthTexture.destroy();
 }

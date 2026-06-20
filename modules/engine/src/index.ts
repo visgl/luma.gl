@@ -148,24 +148,6 @@ export {getIndexPickingModule, picking} from './modules/picking/picking';
 export {picking as indexPicking} from './modules/picking/index-picking';
 export {picking as indexColorPicking} from './modules/picking/index-color-picking';
 export {picking as colorPicking} from './modules/picking/color-picking';
-export type {
-  ABufferShaderModuleBindings,
-  ABufferShaderModuleProps,
-  ABufferShaderModuleUniforms
-} from './modules/a-buffer/a-buffer';
-export {aBuffer, aBufferPlugin} from './modules/a-buffer/a-buffer';
-export type {
-  ABufferCaptureContext,
-  ABufferRenderOptions,
-  ABufferRendererProps,
-  ABufferSlicePlan,
-  ABufferSupport
-} from './modules/a-buffer/a-buffer-renderer';
-export {
-  ABufferRenderer,
-  getABufferSlicePlan,
-  getABufferSupport
-} from './modules/a-buffer/a-buffer-renderer';
 
 export {
   requestAnimationFramePolyfill,

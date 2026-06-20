@@ -1,6 +1,6 @@
 # ABufferRenderer
 
-`ABufferRenderer` provides WebGPU-only order-independent transparency for models that append final fragment colors into the engine `aBuffer` shader module.
+`ABufferRenderer` provides experimental WebGPU-only order-independent transparency for models that append final fragment colors into the `aBuffer` shader module.
 
 The renderer owns the per-frame linked-list buffers and runs three stages:
 
@@ -12,12 +12,14 @@ The renderer owns the per-frame linked-list buffers and runs three stages:
 
 ```ts
 import {
-  ABufferRenderer,
   Model,
-  ShaderInputs,
+  ShaderInputs
+} from '@luma.gl/engine';
+import {
+  ABufferRenderer,
   aBuffer,
   aBufferPlugin
-} from '@luma.gl/engine';
+} from '@luma.gl/experimental';
 
 const shaderInputs = new ShaderInputs({aBuffer});
 const renderer = new ABufferRenderer(device, {

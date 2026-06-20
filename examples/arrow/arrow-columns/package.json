@@ -13,6 +13,7 @@
     "@luma.gl/arrow": "~9.3.0",
     "@luma.gl/core": "~9.3.0",
     "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/experimental": "~9.3.0",
     "@luma.gl/shadertools": "~9.3.0",
     "@luma.gl/tables": "~9.3.0",
     "@luma.gl/webgpu": "~9.3.0",

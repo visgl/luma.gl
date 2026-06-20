@@ -4,15 +4,14 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device, type Framebuffer, type Texture} from '@luma.gl/core';
+import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
   ABufferRenderer,
-  Model,
-  ShaderInputs,
   aBuffer,
   aBufferPlugin,
   getABufferSlicePlan,
   getABufferSupport
-} from '@luma.gl/engine';
+} from '@luma.gl/experimental';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 test('aBuffer plugin exposes the WGSL module only', t => {

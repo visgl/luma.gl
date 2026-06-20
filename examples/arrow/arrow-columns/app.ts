@@ -4,7 +4,8 @@
 
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {ABufferRenderer, AnimationLoopTemplate} from '@luma.gl/engine';
+import {AnimationLoopTemplate} from '@luma.gl/engine';
+import {ABufferRenderer, WBOITRenderer} from '@luma.gl/experimental';
 import {
   ArrowColumnRenderer,
   formatActiveTimeBucket,
@@ -29,6 +30,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
 
   readonly device: Device;
   readonly aBufferRenderer: ABufferRenderer;
+  readonly wboitRenderer: WBOITRenderer;
   transparencyMode: ArrowColumnTransparencyMode = 'a-buffer';
   readonly controlPanel = new ArrowColumnRendererControlPanel({
     onTransparencyModeChange: mode => {
@@ -50,6 +52,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
       maxFragmentsPerPixel: 24,
       maxBufferByteLength: 64 * 1024 * 1024
     });
+    this.wboitRenderer = new WBOITRenderer(this.device);
   }
 
   override async onInitialize(): Promise<void> {
@@ -111,6 +114,23 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
           this.layer?.drawABuffer(renderPass);
         }
       });
+    } else if (this.transparencyMode === 'weighted-blended') {
+      this.wboitRenderer.render({
+        clearColor: [0.012, 0.024, 0.045, 1],
+        clearDepth: 1,
+        drawBase: () => {},
+        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+          this.layer?.prepareWBOITDraw(
+            commandEncoder,
+            {time, aspect},
+            shaderModuleProps,
+            captureParameters
+          );
+        },
+        drawTranslucent: renderPass => {
+          this.layer?.drawWBOIT(renderPass);
+        }
+      });
     } else {
       const renderPass = device.beginRenderPass({
         clearColor: [0.012, 0.024, 0.045, 1],
@@ -132,6 +152,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     this.controlPanel.destroy();
     this.panels.finalize();
     this.aBufferRenderer.destroy();
+    this.wboitRenderer.destroy();
     this.layer?.destroy();
   }
 
@@ -139,7 +160,9 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     this.controlPanel.setStatus(
       this.transparencyMode === 'a-buffer'
         ? 'Rendering with A-buffer OIT'
-        : 'Rendering with standard alpha blending'
+        : this.transparencyMode === 'weighted-blended'
+          ? 'Rendering with weighted blended OIT'
+          : 'Rendering with standard alpha blending'
     );
   }
 }

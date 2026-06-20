@@ -17,7 +17,7 @@ const ARROW_BUILD_TIME_ID = 'arrow-columns-arrow-build-time';
 const GEOMETRY_DECODE_TIME_ID = 'arrow-columns-geometry-decode-time';
 const TRANSPARENCY_MODE_ID = 'arrow-columns-transparency-mode';
 
-export type ArrowColumnTransparencyMode = 'a-buffer' | 'alpha-blending';
+export type ArrowColumnTransparencyMode = 'a-buffer' | 'weighted-blended' | 'alpha-blending';
 
 export type ArrowColumnRendererControlPanelOptions = {
   onTransparencyModeChange?: (mode: ArrowColumnTransparencyMode) => void;
@@ -107,7 +107,11 @@ export class ArrowColumnRendererControlPanel {
   private handleTransparencyModeChange = (event: Event): void => {
     const mode = (event.target as HTMLSelectElement).value;
     this.options.onTransparencyModeChange?.(
-      mode === 'alpha-blending' ? 'alpha-blending' : 'a-buffer'
+      mode === 'weighted-blended'
+        ? 'weighted-blended'
+        : mode === 'alpha-blending'
+          ? 'alpha-blending'
+          : 'a-buffer'
     );
   };
 }
@@ -120,6 +124,7 @@ export function makeArrowColumnRendererControlPanelHtml(): string {
       <span>Transparency</span>
       <select id="${TRANSPARENCY_MODE_ID}" style="width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; font: inherit;">
         <option value="a-buffer">A-buffer OIT</option>
+        <option value="weighted-blended">Weighted blended OIT</option>
         <option value="alpha-blending">Standard alpha blending</option>
       </select>
     </label>

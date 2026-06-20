@@ -4,7 +4,8 @@ Experimental features for luma.gl.
 
 :::warning
 These are experimental features that may change or be removed at any time. Use at your own risk.
-Experimental features are not documented. Refer to comments in code.
 :::
 
-See [luma.gl](http://luma.gl) for documentation.
+The package currently includes experimental order-independent transparency renderers and packed
+pixel-format helpers. See the [luma.gl API reference](https://luma.gl/docs/api-reference/experimental)
+for documentation.
