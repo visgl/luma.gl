@@ -1,0 +1,86 @@
+# Working With Video Textures
+
+Video can enter a shader through more than one texture path. The right path depends on whether the application needs portable texture semantics or WebGPU's optimized direct-video sampling path.
+
+## Choose The Binding Path
+
+| Need | luma.gl API | Shader binding | Notes |
+| --- | --- | --- | --- |
+| One uploaded image or one copied video frame | [`Texture`](/docs/api-reference/core/resources/texture) | GLSL `sampler2D`, WGSL `texture_2d<f32>` | Concrete GPU allocation with ordinary texture sampling. |
+| Async or replaceable copied texture data | [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) | GLSL `sampler2D`, WGSL `texture_2d<f32>` | Engine wrapper around a concrete luma `Texture`. |
+| Playing `HTMLVideoElement` or caller-owned `VideoFrame` | [`VideoTexture`](/docs/api-reference/engine/video-texture) | Depends on shader declaration | Engine binding source that resolves the concrete per-draw binding. |
+| Native WebGPU direct-video sampling | [`ExternalTexture`](/docs/api-reference/core/resources/external-texture) | WGSL `texture_external` | Concrete, short-lived WebGPU binding acquired from a video source. |
+
+Use an ordinary `Texture` when the shader needs the normal texture feature set: `textureSample`, repeat address modes, mipmaps, render-target usage, storage usage, or one shader shape shared with non-video textures. A video frame can be copied into such a texture with `Texture.copyExternalImage()`.
+
+Use `VideoTexture` when the application owns a live `HTMLVideoElement` or `VideoFrame` and wants the engine to update the binding as frames arrive:
+
+```typescript
+import {Model, VideoTexture} from '@luma.gl/engine';
+
+const videoTexture = new VideoTexture(device, {source: video});
+
+const model = new Model(device, {
+  source,
+  bindings: {videoTexture}
+});
+```
+
+The shader declaration chooses how `VideoTexture` resolves:
+
+```glsl
+uniform sampler2D videoTexture;
+vec4 color = texture(videoTexture, uv);
+```
+
+```wgsl
+@group(0) @binding(auto) var videoTexture: texture_2d<f32>;
+@group(0) @binding(auto) var videoTextureSampler: sampler;
+let color = textureSample(videoTexture, videoTextureSampler, uv);
+```
+
+Both declarations above use the copied luma `Texture` path. WebGL always uses this path. WebGPU uses it when the shader asks for `texture_2d<f32>`.
+
+## ExternalTexture Is An Optimization
+
+WebGPU also supports native external textures:
+
+```wgsl
+@group(0) @binding(auto) var videoTexture: texture_external;
+@group(0) @binding(auto) var videoTextureSampler: sampler;
+let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
+```
+
+When a `VideoTexture` resolves against `texture_external`, luma.gl tries to acquire a native WebGPU [`GPUExternalTexture`](https://gpuweb.github.io/gpuweb/#gpu-external-texture). A copied `Texture` cannot satisfy that WebGPU bind-group slot, so use a `texture_2d<f32>` shader binding when native external import is unavailable or copied texture behavior is required.
+
+This native path is an optimization, not a more general texture type. The [WebGPU Fundamentals external-video guide](https://webgpufundamentals.org/webgpu/lessons/webgpu-textures-external-video.html) explains why: browsers often receive decoded video in YUV-like planes rather than already-expanded RGBA pixels. `texture_external` lets WebGPU sample that browser-owned representation directly and perform the needed conversion during sampling instead of first copying every frame into an RGBA texture. The browser implementation decides whether a copy is avoided, but the API exists so it can avoid that conversion/copy when possible.
+
+That optimization comes with constraints:
+
+- `ExternalTexture` is a concrete acquired binding, not a long-lived engine video object.
+- A WebGPU external texture is only valid for the current JavaScript task, so luma.gl reacquires it during draw binding resolution.
+- The shader must use WGSL `texture_external`; GLSL and normal WGSL `texture_2d<f32>` use copied textures instead.
+- Sampling uses `textureSampleBaseClampToEdge`, so the native path is base-level and clamp-style. It does not provide mipmaps or ordinary repeat sampling.
+- Native external acquisition can force bind-group invalidation because the concrete external binding may change between draws.
+
+The WebGPU Fundamentals article also notes two useful implementation details: an external texture may conceptually hide multiple underlying video planes, and WebGPU can inject the format conversion needed to return shader-visible RGBA. That is why an external texture needs special WGSL syntax instead of pretending to be a normal `texture_2d<f32>`.
+
+Use the copied path when flexibility matters. Use `texture_external` when the shader can accept its restrictions and video sampling cost matters.
+
+## Camera Video
+
+Camera streams use the same `HTMLVideoElement` path:
+
+```typescript
+const stream = await navigator.mediaDevices.getUserMedia({video: true});
+video.srcObject = stream;
+await video.play();
+
+const videoTexture = new VideoTexture(device, {source: video});
+```
+
+Camera acquisition should be triggered by a user gesture. Wait until the video exposes a current frame before expecting `VideoTexture` to draw; `requestVideoFrameCallback()` is the preferred browser signal when available. Stop the `MediaStream` tracks when the application no longer needs the camera. If the camera should look mirror-like, flip the U texture coordinate in the shader or model UVs.
+
+## Practical Rule
+
+Start with `VideoTexture` and a normal texture binding when writing portable rendering code. Change the WebGPU shader binding to `texture_external` only for draws that can accept external-texture sampling semantics and benefit from the direct-video optimization.

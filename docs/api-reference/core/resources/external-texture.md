@@ -9,7 +9,7 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
   <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
 </p>
 
-`ExternalTexture` is the low-level concrete WebGPU `GPUExternalTexture` binding for browser-owned texture data. It is a one-shot resource, not a long-lived video object.
+`ExternalTexture` is the low-level concrete WebGPU `GPUExternalTexture` binding for browser-owned texture data. It is a one-shot resource, not the engine-level live video helper. Use [`VideoTexture`](/docs/api-reference/engine/video-texture) when a model or material should follow a playing video across frames.
 
 Since WebGPU external textures are acquired per frame, bindings that use them must be prepared again for each draw:
 

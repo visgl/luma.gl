@@ -63,7 +63,7 @@ export function isTextureBindingLayout(
  * @remarks
  * Models and materials can be asked for bindings before a shader layout has been reflected.
  * In that legacy empty-layout path, `fallbackGroup` synthesizes an ordinary `texture` slot so
- * copied texture binding sources keep their pre-reflection behavior.
+ * copied `DynamicTexture` and `VideoTexture` bindings keep their pre-reflection behavior.
  * Native WebGPU `texture_external` resolution still requires the real reflected declaration.
  *
  * @param shaderLayout Reflected shader bindings, or an empty binding list before reflection.

@@ -130,7 +130,7 @@ test('WebGPU external texture bindings use external handles and paired samplers'
   t.end();
 });
 
-test('WebGPU external texture bindings accept copied texture fallback views', t => {
+test('WebGPU external texture bindings reject copied texture fallback views', t => {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: [
@@ -142,22 +142,15 @@ test('WebGPU external texture bindings accept copied texture fallback views', t 
     view: {handle: 'texture-view-handle'},
     sampler: {handle: 'sampler-handle'}
   }) as WebGPUTexture;
-  const descriptor = getBindGroup(
+  const bindGroup = getBindGroup(
     makeMockWebGPUDevice(),
     {} as GPUBindGroupLayout,
     shaderLayout,
     {videoTexture: copiedTexture},
     0
-  ) as unknown as GPUBindGroupDescriptor;
-
-  t.deepEqual(
-    descriptor.entries,
-    [
-      {binding: 0, resource: 'texture-view-handle'},
-      {binding: 1, resource: 'sampler-handle'}
-    ],
-    'copied fallback texture binds its view through the external slot'
   );
+
+  t.equal(bindGroup, null, 'copied texture cannot satisfy an external texture slot');
 
   t.end();
 });

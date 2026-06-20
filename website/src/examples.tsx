@@ -16,6 +16,7 @@ import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
+import VideoTextureApp from '../../examples/experimental/video-texture/app';
 import {
   initializeGPGPUShowcase,
   type GPGPUShowcaseHandle
@@ -595,6 +596,86 @@ export const BloomExample: React.FC = props => (
     {...props}
   />
 );
+
+export const VideoTextureExample: React.FC = props => {
+  const [cameraStatus, setCameraStatus] = useState<'idle' | 'pending' | 'live' | 'error'>('idle');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isCameraBlocked, setIsCameraBlocked] = useState(false);
+  const handleUseCamera = async () => {
+    const app = VideoTextureApp.current;
+    if (!app) {
+      setCameraStatus('error');
+      setCameraError('Example is still starting');
+      return;
+    }
+
+    setCameraStatus('pending');
+    setCameraError(null);
+    setIsCameraBlocked(false);
+    try {
+      await app.useCamera();
+      setCameraStatus('live');
+    } catch (error) {
+      setCameraStatus('error');
+      setCameraError(getCameraErrorMessage(error));
+      setIsCameraBlocked(isCameraPermissionBlocked(error));
+    }
+  };
+
+  return (
+    <LumaExample
+      id="video-texture"
+      title="Video Texture Beacon"
+      directory="experimental"
+      template={VideoTextureApp}
+      config={exampleConfig}
+      headerControls={
+        <div style={{display: 'flex', alignItems: 'center', gap: 10, marginTop: 12}}>
+          <button
+            type="button"
+            onClick={() => void handleUseCamera()}
+            disabled={cameraStatus === 'pending' || cameraStatus === 'live' || isCameraBlocked}
+            style={{
+              border: '1px solid #0f766e',
+              borderRadius: 999,
+              background: cameraStatus === 'live' ? '#ccfbf1' : '#fff',
+              color: '#0f172a',
+              cursor:
+                cameraStatus === 'pending' || cameraStatus === 'live' || isCameraBlocked
+                  ? 'default'
+                  : 'pointer',
+              font: '600 14px system-ui, sans-serif',
+              padding: '8px 12px'
+            }}
+          >
+            {cameraStatus === 'pending'
+              ? 'Starting camera'
+              : cameraStatus === 'live'
+                ? 'Camera live'
+                : isCameraBlocked
+                  ? 'Camera blocked'
+                : cameraStatus === 'error'
+                  ? 'Retry camera'
+                  : 'Use camera'}
+          </button>
+          {cameraStatus === 'pending' ? <span>Waiting for first frame</span> : null}
+          {cameraError ? <span>{cameraError}</span> : null}
+        </div>
+      }
+      {...props}
+    />
+  );
+};
+
+function isCameraPermissionBlocked(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'NotAllowedError';
+}
+
+function getCameraErrorMessage(error: unknown): string {
+  return isCameraPermissionBlocked(error)
+    ? 'Allow camera access in browser or system settings'
+    : getErrorMessage(error);
+}
 
 export const ArrowMeshGeometryExample: React.FC = props => (
   <LumaExample
