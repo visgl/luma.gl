@@ -20,6 +20,10 @@ import {
   initializeGPGPUShowcase,
   type GPGPUShowcaseHandle
 } from '../../examples/v10/gpgpu/src/app';
+import {
+  initializeBitonicArgsortExample,
+  type BitonicArgsortExampleHandle
+} from '../../examples/v10/gpgpu-bitonic-sort/src/app';
 import ArrowParticlesApp from '../../examples/arrow/arrow-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
@@ -513,6 +517,36 @@ export const GPGPUExample: React.FC = () => {
           </div>
         </section>
       </main>
+    </ExamplePage>
+  );
+};
+
+/** Docusaurus wrapper for the Arrow-backed BitonicArgsort GPGPU example. */
+export const GPGPUBitonicSortExample: React.FC = () => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let handle: BitonicArgsortExampleHandle | null = null;
+    try {
+      handle = initializeBitonicArgsortExample();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      logError('Failed to initialize bitonic argsort example', error);
+    }
+
+    return () => {
+      handle?.destroy();
+    };
+  }, []);
+
+  return (
+    <ExamplePage style={{background: '#f7f8fb', overflow: 'hidden'}}>
+      <main id="bitonic-argsort-app" />
+      {errorMessage ? (
+        <p role="alert" style={{padding: 22}}>
+          {errorMessage}
+        </p>
+      ) : null}
     </ExamplePage>
   );
 };

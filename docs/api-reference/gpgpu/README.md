@@ -9,6 +9,7 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 ## API Reference
 
 - [`Operations`](/docs/api-reference/gpgpu/operations)
+- [`Bitonic Argsort`](/docs/api-reference/gpgpu/bitonic-argsort)
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation)
 - [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator)
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
@@ -94,12 +95,21 @@ backendRegistry.add('webgl', {
 See [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) for a full
 operation and backend handler example.
 
+The WebGPU endpoint also exports direct helpers that do not participate in lazy
+backend dispatch. Use [`BitonicArgsort`](/docs/api-reference/gpgpu/bitonic-argsort)
+when a packed `GPUVector<'uint32'>` needs stable sorted row indices kept in GPU
+storage. When those keys start as Apache Arrow data, upload the Arrow vector
+with `makeGPUVectorFromArrow(...)` from `@luma.gl/arrow` before passing the
+resulting `GPUVector` to the sorter. See the runnable
+[Bitonic argsort example](/examples/v10/gpgpu-bitonic-sort).
+
 The CPU backend can be imported from `@luma.gl/gpgpu/cpu` when explicitly
 registering CPU handlers for another device type.
 
 ## Concepts
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
+- [`Bitonic Argsort`](/docs/api-reference/gpgpu/bitonic-argsort) documents the direct WebGPU argsort helper for packed `GPUVector<'uint32'>` keys.
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) shows how to define lazy operations and register backend handlers.
 - [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator) documents `GPUDataEvaluator` for one packed `GPUData` chunk and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate) evaluates final result tables and cleans up intermediate dependencies in one step.

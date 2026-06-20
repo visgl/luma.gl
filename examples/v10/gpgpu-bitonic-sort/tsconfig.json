@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "baseUrl": "../../..",
+    "typeRoots": ["../../../node_modules/@webgpu/types", "../../../node_modules/@types"],
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "paths": {
+      "@luma.gl/arrow": ["modules/arrow/src/index.ts"],
+      "@luma.gl/arrow/*": ["modules/arrow/src/*"],
+      "@luma.gl/core": ["modules/core/src/index.ts"],
+      "@luma.gl/core/*": ["modules/core/src/*"],
+      "@luma.gl/engine": ["modules/engine/src/index.ts"],
+      "@luma.gl/engine/*": ["modules/engine/src/*"],
+      "@luma.gl/gpgpu": ["modules/gpgpu/src/index.ts"],
+      "@luma.gl/gpgpu/*": ["modules/gpgpu/src/*"],
+      "@luma.gl/shadertools": ["modules/shadertools/src/index.ts"],
+      "@luma.gl/shadertools/*": ["modules/shadertools/src/*"],
+      "@luma.gl/tables": ["modules/tables/src/index.ts"],
+      "@luma.gl/tables/*": ["modules/tables/src/*"],
+      "@luma.gl/webgpu": ["modules/webgpu/src/index.ts"],
+      "@luma.gl/webgpu/*": ["modules/webgpu/src/*"]
+    }
+  },
+  "include": ["."]
+}

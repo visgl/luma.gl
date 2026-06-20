@@ -169,6 +169,7 @@
           "api-reference/gpgpu/README",
           "api-reference/gpgpu/gpu-data-evaluator",
           "api-reference/gpgpu/operations",
+          "api-reference/gpgpu/bitonic-argsort",
           "api-reference/gpgpu/custom-operation",
           "api-reference/gpgpu/clean-evaluate"
         ]

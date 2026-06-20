@@ -15,6 +15,7 @@ export type GPGPUDocsTabId =
   | 'overview'
   | 'gpu-data-evaluator'
   | 'operations'
+  | 'bitonic-argsort'
   | 'custom-operation'
   | 'clean-evaluate';
 
@@ -22,6 +23,7 @@ const GPGPU_DOCS_TABS: GPGPUDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/gpgpu'},
   {id: 'gpu-data-evaluator', label: 'GPU Evaluators', href: '/docs/api-reference/gpgpu/gpu-data-evaluator'},
   {id: 'operations', label: 'Operations', href: '/docs/api-reference/gpgpu/operations'},
+  {id: 'bitonic-argsort', label: 'Bitonic Argsort', href: '/docs/api-reference/gpgpu/bitonic-argsort'},
   {
     id: 'custom-operation',
     label: 'Custom Operations',

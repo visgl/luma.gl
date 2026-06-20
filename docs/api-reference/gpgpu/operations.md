@@ -8,6 +8,9 @@ This page is the top-level API reference for the lazy operations exported by `@l
 
 Each operation returns a new [`GPUDataEvaluator`](/docs/api-reference/gpgpu/gpu-data-evaluator). No GPU work is performed until that output table is evaluated.
 
+For final-result WebGPU argsort that returns sorted row indices directly as a
+`GPUVector<'uint32'>`, see [`BitonicArgsort`](/docs/api-reference/gpgpu/bitonic-argsort).
+
 ## Common Behavior
 
 - Each operation returns a new `GPUDataEvaluator`.
