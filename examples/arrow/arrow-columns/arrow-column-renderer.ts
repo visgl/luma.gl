@@ -8,8 +8,21 @@ import {
   convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
-import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
-import {Model, ShaderInputs, type DynamicBuffer} from '@luma.gl/engine';
+import {
+  type Buffer,
+  type CommandEncoder,
+  type Device,
+  type RenderPass,
+  type RenderPipelineParameters
+} from '@luma.gl/core';
+import {
+  Model,
+  ShaderInputs,
+  aBuffer,
+  aBufferPlugin,
+  type ABufferShaderModuleProps,
+  type DynamicBuffer
+} from '@luma.gl/engine';
 import {
   GPURenderable,
   GPURecordBatch,
@@ -134,8 +147,13 @@ export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDra
   readonly shaderInputs = new ShaderInputs<{columnRenderer: typeof columnRenderer.props}>({
     columnRenderer
   });
+  readonly aBufferShaderInputs = new ShaderInputs<{
+    columnRenderer: typeof columnRenderer.props;
+    aBuffer: ABufferShaderModuleProps;
+  }>({columnRenderer, aBuffer});
   props: ColumnRendererProps;
   model: Model;
+  aBufferModel: Model;
 
   constructor(device: Device, props: ColumnRendererProps) {
     super();
@@ -144,15 +162,19 @@ export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDra
     }
     this.device = device;
     this.props = props;
-    this.model = this.createModel(props);
+    this.model = this.createModel(props, false);
+    this.aBufferModel = this.createModel(props, true);
   }
 
   setProps(props: Partial<ColumnRendererProps>): void {
     this.props = {...this.props, ...props};
     if (props.table || props.geometry) {
-      this.model.setBindings(getColumnRendererBindings(this.props.table, this.props.geometry));
+      const bindings = getColumnRendererBindings(this.props.table, this.props.geometry);
+      this.model.setBindings(bindings);
+      this.aBufferModel.setBindings(bindings);
       if (props.table) {
         this.model.setInstanceCount(props.table.numRows);
+        this.aBufferModel.setInstanceCount(props.table.numRows);
       }
     }
   }
@@ -162,37 +184,62 @@ export class ColumnRenderer extends GPURenderable<[RenderPass, ColumnRendererDra
   }
 
   override draw(renderPass: RenderPass, props: ColumnRendererDrawProps): void {
-    this.shaderInputs.setProps({
-      columnRenderer: {
-        center: this.props.center,
-        currentTimestamp: props.currentTimestampMilliseconds,
-        cycleDuration: this.props.cycleDurationMilliseconds,
-        maxCount: this.props.maxCount,
-        heightScale: this.props.heightScale,
-        scale: this.props.scale,
-        tilt: this.props.tilt,
-        aspect: props.aspect
-      }
-    });
+    this.shaderInputs.setProps({columnRenderer: this.getShaderModuleProps(props)});
     this.model.draw(renderPass);
+  }
+
+  prepareABufferDraw(
+    commandEncoder: CommandEncoder,
+    props: ColumnRendererDrawProps,
+    shaderModuleProps: ABufferShaderModuleProps,
+    captureParameters: Readonly<RenderPipelineParameters>
+  ): void {
+    this.aBufferShaderInputs.setProps({
+      columnRenderer: this.getShaderModuleProps(props),
+      aBuffer: shaderModuleProps
+    });
+    this.aBufferModel.setParameters({...RENDER_PARAMETERS, ...captureParameters});
+    this.aBufferModel.predraw(commandEncoder);
+  }
+
+  drawABuffer(renderPass: RenderPass): void {
+    this.aBufferModel.draw(renderPass);
   }
 
   destroy(): void {
     this.model.destroy();
+    this.aBufferModel.destroy();
+    this.shaderInputs.destroy();
+    this.aBufferShaderInputs.destroy();
   }
 
-  private createModel(props: ColumnRendererProps): Model {
+  private createModel(props: ColumnRendererProps, aBufferEnabled: boolean): Model {
     return new Model(this.device, {
-      id: 'arrow-columns-columns',
+      id: `arrow-columns-columns-${aBufferEnabled ? 'a-buffer' : 'alpha'}`,
       source: COLUMN_RENDERER_WGSL_SHADER,
       shaderLayout: COLUMN_RENDERER_SHADER_LAYOUT,
-      shaderInputs: this.shaderInputs,
+      shaderInputs: aBufferEnabled ? this.aBufferShaderInputs : this.shaderInputs,
+      defines: {A_BUFFER_ENABLED: aBufferEnabled},
+      plugins: aBufferEnabled ? [aBufferPlugin] : [],
       bindings: getColumnRendererBindings(props.table, props.geometry),
       topology: 'triangle-list',
       vertexCount: COLUMN_VERTEX_COUNT,
       instanceCount: props.table.numRows,
       parameters: RENDER_PARAMETERS
     });
+  }
+
+  private getShaderModuleProps(props: ColumnRendererDrawProps): typeof columnRenderer.props {
+    return {
+      center: this.props.center,
+      currentTimestamp: props.currentTimestampMilliseconds,
+      cycleDuration: this.props.cycleDurationMilliseconds,
+      maxCount: this.props.maxCount,
+      heightScale: this.props.heightScale,
+      scale: this.props.scale,
+      tilt: this.props.tilt,
+      aspect: props.aspect
+    };
   }
 }
 
@@ -257,23 +304,38 @@ export class ArrowColumnRenderer extends GPURenderable<
       return;
     }
 
-    const seconds = props.time / 1000;
-    if (this.lastRenderSeconds === null) {
-      this.lastRenderSeconds = seconds;
-    }
-    const elapsedSeconds = Math.max(seconds - this.lastRenderSeconds, 0);
-    this.lastRenderSeconds = seconds;
-    this.currentTimestampMilliseconds =
-      (this.currentTimestampMilliseconds +
-        elapsedSeconds *
-          (this.props.currentTimeRateMillisecondsPerSecond ??
-            DEFAULT_COLUMN_RENDERER_PROPS.currentTimeRateMillisecondsPerSecond)) %
-      this.tableInput.sourceData.cycleDurationMilliseconds;
+    this.updateCurrentTimestamp(props.time);
 
     this.columnRenderer.draw(renderPass, {
       aspect: props.aspect,
       currentTimestampMilliseconds: this.currentTimestampMilliseconds
     });
+  }
+
+  prepareABufferDraw(
+    commandEncoder: CommandEncoder,
+    props: {time: number; aspect: number},
+    shaderModuleProps: ABufferShaderModuleProps,
+    captureParameters: Readonly<RenderPipelineParameters>
+  ): void {
+    if (!this.columnRenderer || !this.tableInput) {
+      return;
+    }
+
+    this.updateCurrentTimestamp(props.time);
+    this.columnRenderer.prepareABufferDraw(
+      commandEncoder,
+      {
+        aspect: props.aspect,
+        currentTimestampMilliseconds: this.currentTimestampMilliseconds
+      },
+      shaderModuleProps,
+      captureParameters
+    );
+  }
+
+  drawABuffer(renderPass: RenderPass): void {
+    this.columnRenderer?.drawABuffer(renderPass);
   }
 
   destroy(): void {
@@ -315,6 +377,21 @@ export class ArrowColumnRenderer extends GPURenderable<
       throw new Error('ArrowColumnRenderer has not been initialized');
     }
     return this.tableInput;
+  }
+
+  private updateCurrentTimestamp(time: number): void {
+    const seconds = time / 1000;
+    if (this.lastRenderSeconds === null) {
+      this.lastRenderSeconds = seconds;
+    }
+    const elapsedSeconds = Math.max(seconds - this.lastRenderSeconds, 0);
+    this.lastRenderSeconds = seconds;
+    this.currentTimestampMilliseconds =
+      (this.currentTimestampMilliseconds +
+        elapsedSeconds *
+          (this.props.currentTimeRateMillisecondsPerSecond ??
+            DEFAULT_COLUMN_RENDERER_PROPS.currentTimeRateMillisecondsPerSecond)) %
+      this.getTableInput().sourceData.cycleDurationMilliseconds;
   }
 }
 

@@ -18,6 +18,7 @@ creating pipelines from shaders, binding buffers and textures, handling redraw s
 - [`Scenegraph`](/docs/api-guide/engine/scenegraph), [`GroupNode`](/docs/api-reference/engine/scenegraph/group-node), and [`ModelNode`](/docs/api-reference/engine/scenegraph/model-node) cover scenegraph organization.
 - [`PickingManager`](/docs/api-reference/engine/picking-manager) handles object picking and highlight state for models that use the engine picking shader modules.
 - [`Computation`](/docs/api-reference/engine/compute/computation), [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), and [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) cover engine-level compute workflows.
+- [`ABufferRenderer`](/docs/api-reference/engine/a-buffer-renderer) provides WebGPU-only order-independent transparency for compatible WGSL models.
 - [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) applies shader passes to textures for postprocessing pipelines.
 
 ## Remarks

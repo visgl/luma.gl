@@ -4,6 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderLayout} from '../../../core/src';
+import type {ShaderModule} from '../../../shadertools/src';
 import {lighting, pbrMaterial} from '../../../shadertools/src';
 import {
   mergeInferredShaderLayout,
@@ -88,6 +89,26 @@ test('mergeInferredShaderLayout merges compatible attributes and rejects conflic
       ),
     /conflicts with its inferred type or location/,
     'same-name declarations must have compatible types and locations'
+  );
+  t.end();
+});
+
+test('mergeShaderModuleBindingsIntoLayout merges binding visibility', t => {
+  const shaderLayout: ShaderLayout = {
+    bindings: [{type: 'storage', name: 'fragments', location: 1, group: 0}],
+    attributes: []
+  };
+  const fragmentStorageModule = {
+    name: 'fragmentStorage',
+    bindingLayout: [{name: 'fragments', group: 0, visibility: 0x2}]
+  } satisfies ShaderModule;
+
+  const mergedLayout = mergeShaderModuleBindingsIntoLayout(shaderLayout, [fragmentStorageModule]);
+
+  t.equal(
+    mergedLayout?.bindings.find(binding => binding.name === 'fragments')?.visibility,
+    0x2,
+    'module binding visibility is merged into inferred bindings'
   );
   t.end();
 });

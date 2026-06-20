@@ -1,0 +1,127 @@
+# ABufferRenderer
+
+`ABufferRenderer` provides WebGPU-only order-independent transparency for models that append final fragment colors into the engine `aBuffer` shader module.
+
+The renderer owns the per-frame linked-list buffers and runs three stages:
+
+- a base scene pass,
+- one or more translucent capture slices,
+- a fullscreen composite over the existing color target.
+
+## Usage
+
+```ts
+import {
+  ABufferRenderer,
+  Model,
+  ShaderInputs,
+  aBuffer,
+  aBufferPlugin
+} from '@luma.gl/engine';
+
+const shaderInputs = new ShaderInputs({aBuffer});
+const renderer = new ABufferRenderer(device, {
+  averageFragmentsPerPixel: 4,
+  maxFragmentsPerPixel: 12,
+  maxBufferByteLength: 64 * 1024 * 1024
+});
+
+const model = new Model(device, {
+  source,
+  plugins: [aBufferPlugin],
+  shaderInputs
+});
+
+renderer.render({
+  clearColor: [0, 0, 0, 1],
+  clearDepth: 1,
+  drawBase: renderPass => {
+    drawOpaqueScene(renderPass);
+  },
+  prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+    shaderInputs.setProps({aBuffer: shaderModuleProps});
+    model.setParameters({...model.parameters, ...captureParameters});
+    model.predraw(commandEncoder);
+  },
+  drawTranslucent: renderPass => {
+    model.draw(renderPass);
+  }
+});
+```
+
+The WGSL fragment shader must pass its final color and `@builtin(position)` into one of the capture helpers:
+
+```wgsl
+fragColor = aBuffer_captureStraightColor(fragColor, inputs.Position);
+```
+
+Use `aBuffer_capturePremultipliedColor` when the shader already outputs premultiplied alpha.
+
+The capture helper samples opaque depth before allocating a fragment record. Translucent
+fragments behind opaque geometry therefore do not consume A-buffer capacity and cannot bleed
+through opaque surfaces.
+
+## Shader Module
+
+`aBufferPlugin` installs the WebGPU-only `aBuffer` shader module. The module exposes two WGSL
+helpers:
+
+- `aBuffer_captureStraightColor(color, position)` premultiplies straight-alpha color before
+  capture.
+- `aBuffer_capturePremultipliedColor(color, position)` stores an already-premultiplied color.
+
+Both helpers return the supplied color. A model can therefore wrap its existing final fragment
+color without maintaining a separate capture shader.
+
+The renderer supplies module bindings through `ABufferCaptureContext.shaderModuleProps`. Apply
+those props to the same `ShaderInputs` instance used by the translucent model before calling
+`Model.predraw()`.
+
+## Types
+
+```ts
+export type ABufferRendererProps = {
+  averageFragmentsPerPixel?: number;
+  maxFragmentsPerPixel?: number;
+  maxBufferByteLength?: number;
+};
+
+export type ABufferRenderOptions = {
+  framebuffer?: Framebuffer | null;
+  clearColor?: NumberArray4 | false;
+  clearDepth?: number | false;
+  prepareBase?: (commandEncoder: CommandEncoder) => void;
+  drawBase: (renderPass: RenderPass) => void;
+  prepareTranslucent: (context: ABufferCaptureContext) => void;
+  drawTranslucent: (renderPass: RenderPass) => void;
+};
+```
+
+`getABufferSupport(device)` reports whether the device provides the required WebGPU fragment-stage
+storage buffers. `getABufferSlicePlan(...)` exposes the renderer's bounded-memory allocation
+calculation for diagnostics and tests.
+
+## Rendering Model
+
+Each captured fragment occupies 12 bytes: packed premultiplied RGBA8 color, depth, and a linked-list
+pointer. Head pointers use a zero sentinel and fragment pointers are one-based.
+
+For each horizontal slice, the renderer:
+
+1. Clears linked-list heads and allocation counters.
+2. Captures visible translucent fragments after sampling opaque depth.
+3. Reads at most `maxFragmentsPerPixel` records per pixel.
+4. Sorts the records back-to-front and composites premultiplied color over the base target.
+
+If storage capacity is exhausted, additional fragments are dropped. If a pixel contains more than
+`maxFragmentsPerPixel`, only that many linked-list records are composited.
+
+## Remarks
+
+- `ABufferRenderer` requires WebGPU and a single-sample color/depth framebuffer. Custom depth attachments must include `Texture.SAMPLE` usage.
+- The base pass depth texture is sampled during translucent capture so fragments behind opaque geometry are rejected before linked-list storage writes.
+- The renderer does not submit the device command encoder; the surrounding render loop keeps that responsibility.
+- `prepareTranslucent` runs once per horizontal capture slice. Update A-buffer shader props and call `Model.predraw()` there before the render pass opens.
+- Merge `captureParameters` after the model's regular parameters. It disables color writes and removes depth/stencil pipeline state because capture runs without a depth attachment. Opaque-depth comparison happens in the A-buffer shader module.
+- `maxBufferByteLength` caps each storage buffer. Targets that exceed the budget are rendered in horizontal slices.
+- Exactness is bounded by the configured fragment capacity and `maxFragmentsPerPixel`.

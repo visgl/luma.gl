@@ -185,7 +185,7 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.depthStencilAttachment?.destroy();
       this.depthStencilAttachment = this.device.createTexture({
         id: `${this.id}#depth-stencil-texture`,
-        usage: Texture.RENDER_ATTACHMENT,
+        usage: Texture.RENDER_ATTACHMENT | Texture.SAMPLE,
         format: depthStencilFormat,
         width: this.drawingBufferWidth,
         height: this.drawingBufferHeight

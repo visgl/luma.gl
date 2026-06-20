@@ -43,6 +43,7 @@ import './compute/swap.spec';
 import './compute/buffer-transform.spec';
 import './compute/texture-transform.spec';
 import './compute/computation.spec';
+import './passes/a-buffer-renderer.spec';
 import './passes/shader-pass-renderer.spec';
 import './models/background-texture-model.spec';
 import './models/light-models.spec';

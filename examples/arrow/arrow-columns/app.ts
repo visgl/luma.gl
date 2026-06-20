@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate} from '@luma.gl/engine';
+import {ABufferRenderer, AnimationLoopTemplate} from '@luma.gl/engine';
 import {
   ArrowColumnRenderer,
   formatActiveTimeBucket,
@@ -13,13 +13,14 @@ import {
 import {formatArrowColumnRendererMetrics} from './arrow-column-metrics';
 import {
   ArrowColumnRendererControlPanel,
-  makeArrowColumnRendererControlPanelHtml
+  makeArrowColumnRendererControlPanelHtml,
+  type ArrowColumnTransparencyMode
 } from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'DGGS + time';
 export const description =
-  'Fetches the deck.gl HexagonLayer accident dataset, converts it to Arrow H3/time/count columns, and renders animated GPU-decoded H3 columns.';
+  'Fetches the deck.gl HexagonLayer accident dataset, converts it to Arrow H3/time/count columns, and renders animated GPU-decoded H3 columns with A-buffer order-independent transparency.';
 
 export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
@@ -27,7 +28,14 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
   static props = {useDevicePixels: true, createFramebuffer: true};
 
   readonly device: Device;
-  readonly controlPanel = new ArrowColumnRendererControlPanel();
+  readonly aBufferRenderer: ABufferRenderer;
+  transparencyMode: ArrowColumnTransparencyMode = 'a-buffer';
+  readonly controlPanel = new ArrowColumnRendererControlPanel({
+    onTransparencyModeChange: mode => {
+      this.transparencyMode = mode;
+      this.updateRendererStatus();
+    }
+  });
   readonly panels = new ArrowExamplePanelManager({
     descriptionHtml: makeArrowColumnRendererControlPanelHtml()
   });
@@ -37,11 +45,17 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
+    this.aBufferRenderer = new ABufferRenderer(this.device, {
+      averageFragmentsPerPixel: 16,
+      maxFragmentsPerPixel: 24,
+      maxBufferByteLength: 64 * 1024 * 1024
+    });
   }
 
   override async onInitialize(): Promise<void> {
     this.panels.mount();
     this.controlPanel.initialize();
+    this.controlPanel.setTransparencyMode(this.transparencyMode);
     this.controlPanel.setStatus('Loading deck.gl CSV');
     this.controlPanel.setMetrics(
       formatArrowColumnRendererMetrics(getDefaultColumnRendererMetricDefaults())
@@ -60,7 +74,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
       layer.destroy();
       return;
     }
-    this.controlPanel.setStatus('Rendering WebGPU columns');
+    this.updateRendererStatus();
     this.controlPanel.setMetrics(formatArrowColumnRendererMetrics(layer.getMetrics()));
     const sourceData = layer.getSourceData();
     this.panels.setTableEntries([
@@ -80,12 +94,31 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.012, 0.024, 0.045, 1],
-      clearDepth: 1
-    });
-    this.layer?.draw(renderPass, {time, aspect});
-    renderPass.end();
+    if (this.transparencyMode === 'a-buffer') {
+      this.aBufferRenderer.render({
+        clearColor: [0.012, 0.024, 0.045, 1],
+        clearDepth: 1,
+        drawBase: () => {},
+        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+          this.layer?.prepareABufferDraw(
+            commandEncoder,
+            {time, aspect},
+            shaderModuleProps,
+            captureParameters
+          );
+        },
+        drawTranslucent: renderPass => {
+          this.layer?.drawABuffer(renderPass);
+        }
+      });
+    } else {
+      const renderPass = device.beginRenderPass({
+        clearColor: [0.012, 0.024, 0.045, 1],
+        clearDepth: 1
+      });
+      this.layer?.draw(renderPass, {time, aspect});
+      renderPass.end();
+    }
 
     if (this.layer) {
       this.controlPanel.setActiveTimeBucket(
@@ -98,7 +131,16 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     this.isFinalized = true;
     this.controlPanel.destroy();
     this.panels.finalize();
+    this.aBufferRenderer.destroy();
     this.layer?.destroy();
+  }
+
+  private updateRendererStatus(): void {
+    this.controlPanel.setStatus(
+      this.transparencyMode === 'a-buffer'
+        ? 'Rendering with A-buffer OIT'
+        : 'Rendering with standard alpha blending'
+    );
   }
 }
 

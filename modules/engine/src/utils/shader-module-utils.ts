@@ -33,6 +33,9 @@ export function mergeShaderModuleBindingsIntoLayout<TShaderLayout extends AnySha
         if (binding?.group === 0) {
           binding.group = bindingLayout.group;
         }
+        if (binding && bindingLayout.visibility !== undefined) {
+          binding.visibility = bindingLayout.visibility;
+        }
       }
     }
   }

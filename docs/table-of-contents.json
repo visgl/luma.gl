@@ -160,6 +160,7 @@
           "api-reference/engine/scenegraph/model-node",
           "api-reference/engine/scenegraph/scenegraph-node",
           "api-reference/engine/picking-manager",
+          "api-reference/engine/a-buffer-renderer",
           "api-reference/engine/passes/shader-pass-renderer",
           "api-reference/engine/compute/swap",
           "api-reference/engine/compute/computation",
