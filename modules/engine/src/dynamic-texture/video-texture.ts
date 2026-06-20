@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, ExternalTexture, Sampler, SamplerProps, TextureProps} from '@luma.gl/core';
+import type {Device, ExternalTexture, ResourceProps, Sampler, SamplerProps} from '@luma.gl/core';
 import {Texture, log} from '@luma.gl/core';
 import {uid} from '../utils/uid';
 import type {TextureBindingLayout, TextureBindingSource} from './texture-binding-source';
@@ -11,42 +11,13 @@ import type {TextureBindingLayout, TextureBindingSource} from './texture-binding
 export type VideoTextureSource = HTMLVideoElement | VideoFrame;
 
 /** Properties for a live video binding source. */
-export type VideoTextureProps = Omit<
-  TextureProps,
-  'data' | 'dimension' | 'width' | 'height' | 'depth' | 'samples' | 'mipLevels'
-> & {
+export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
   /** Caller-owned live video source followed by this binding source. */
   source: VideoTextureSource;
   /** Color space requested for copied or imported video data. */
   colorSpace?: 'srgb';
-  /**
-   * Generate mipmaps after copied-frame uploads.
-   *
-   * @remarks
-   * This is supported for WebGL copied bindings. WebGPU copied video bindings resolve during
-   * draw preparation, after the caller may already have opened a render pass, so WebGPU rejects
-   * this option until video uploads can be prepared before the render pass.
-   * Native external bindings ignore this option.
-   */
-  mipmaps?: boolean;
-  /** Mip levels for copied standard texture bindings. */
-  mipLevels?: number | 'auto';
-  /** Optional source width override. */
-  width?: number;
-  /** Optional source height override. */
-  height?: number;
-};
-
-/** Fully resolved properties stored by {@link VideoTexture}. */
-type ResolvedVideoTextureProps = Required<VideoTextureProps>;
-/** HTML video element shape used for optional frame callback feature detection. */
-type VideoElementWithFrameCallback = HTMLVideoElement & {
-  /** Schedules observation of the next presented HTML video frame when supported. */
-  requestVideoFrameCallback?: (
-    callback: (now: DOMHighResTimeStamp, metadata: VideoFrameCallbackMetadata) => void
-  ) => number;
-  /** Cancels one previously scheduled HTML video frame callback when supported. */
-  cancelVideoFrameCallback?: (handle: number) => void;
+  /** Default sampler used by copied and native external bindings. */
+  sampler?: Sampler | SamplerProps;
 };
 
 /**
@@ -60,10 +31,6 @@ export class VideoTexture implements TextureBindingSource {
   readonly device: Device;
   /** Stable resource identifier used in loading and debug messages. */
   readonly id: string;
-  /** Resolved creation properties for this video binding source. */
-  readonly props: Readonly<ResolvedVideoTextureProps>;
-  /** Resolves after the source exposes dimensions and a current frame. */
-  readonly ready: Promise<VideoTexture>;
 
   /** Whether this video binding source has been destroyed. */
   destroyed = false;
@@ -71,20 +38,15 @@ export class VideoTexture implements TextureBindingSource {
   generation = 0;
 
   private _source: VideoTextureSource;
+  private _colorSpace: 'srgb';
   private _sampler: Sampler | SamplerProps;
   private _isReady = false;
   private _updateTimestamp: number;
   private _sourceVersion = 0;
   private _sourceFrameToken: unknown = null;
-  private _readyResolved = false;
-  private _resolveReady: (texture: VideoTexture) => void = () => {};
   private _texture: Texture | null = null;
   private _textureFrameToken: unknown = undefined;
   private _externalTexture: ExternalTexture | null = null;
-  private _nativeExternalTextureSupported: boolean | null = null;
-  private _videoFrameCallbackHandle: number | null = null;
-  private _videoFrameCallbackCounter = 0;
-  private _videoEventListeners: Array<{eventName: string; listener: EventListener}> = [];
 
   /** Current caller-owned live video source. */
   get source(): VideoTextureSource {
@@ -101,14 +63,6 @@ export class VideoTexture implements TextureBindingSource {
   get updateTimestamp(): number {
     this._observeSource();
     return this._updateTimestamp;
-  }
-
-  /** Standard copied texture, created lazily after the first standard texture resolution. */
-  get texture(): Texture {
-    if (!this._texture) {
-      throw new Error(`${this} standard texture has not been resolved yet`);
-    }
-    return this._texture;
   }
 
   /** Resource label used by debug output. */
@@ -130,17 +84,10 @@ export class VideoTexture implements TextureBindingSource {
   constructor(device: Device, props: VideoTextureProps) {
     this.device = device;
     this.id = props.id || uid('video-texture');
-    this.props = {
-      ...VideoTexture.defaultProps,
-      ...props,
-      id: this.id
-    };
     this._source = props.source;
-    this._sampler = this.props.sampler;
+    this._colorSpace = props.colorSpace ?? 'srgb';
+    this._sampler = props.sampler ?? {};
     this._updateTimestamp = this.device.incrementTimestamp();
-    this.ready = new Promise<VideoTexture>(resolve => {
-      this._resolveReady = resolve;
-    });
 
     this.setSource(props.source);
   }
@@ -150,14 +97,11 @@ export class VideoTexture implements TextureBindingSource {
    * @param source Next caller-owned video source to follow.
    */
   setSource(source: VideoTextureSource): void {
-    this._detachVideoSource();
     this._destroyExternalTexture();
     this._source = source;
     this._sourceVersion++;
     this._sourceFrameToken = null;
     this._textureFrameToken = undefined;
-    this._nativeExternalTextureSupported = null;
-    this._attachVideoSource();
     this._observeSource();
     this._touchGeneration();
   }
@@ -174,13 +118,7 @@ export class VideoTexture implements TextureBindingSource {
     }
 
     if (bindingLayout.type === 'external-texture' && this.device.type === 'webgpu') {
-      const externalTexture = this._createNativeExternalTexture();
-      if (externalTexture) {
-        return externalTexture;
-      }
-      throw new Error(
-        `${this} cannot resolve WebGPU texture_external binding; use texture_2d for copied video path`
-      );
+      return this._createNativeExternalTexture();
     }
 
     return this._resolveCopiedTexture();
@@ -202,7 +140,6 @@ export class VideoTexture implements TextureBindingSource {
     if (this.destroyed) {
       return;
     }
-    this._detachVideoSource();
     this._destroyExternalTexture();
     this._texture?.destroy();
     this._texture = null;
@@ -217,21 +154,12 @@ export class VideoTexture implements TextureBindingSource {
    * @returns Copied texture containing the current observed frame.
    */
   private _resolveCopiedTexture(): Texture {
-    if (this.device.type === 'webgpu' && this.props.mipmaps) {
-      throw new Error(
-        `${this} cannot generate WebGPU video mipmaps during draw binding resolution; use mipmaps: false or upload into a Texture before opening the render pass`
-      );
-    }
-
     const texture = this._getOrCreateCopiedTexture();
     if (!Object.is(this._textureFrameToken, this._sourceFrameToken)) {
       texture.copyExternalImage({
         image: this._source,
-        colorSpace: this.props.colorSpace
+        colorSpace: this._colorSpace
       });
-      if (this.props.mipmaps) {
-        this._generateMipmaps(texture);
-      }
       this._textureFrameToken = this._sourceFrameToken;
     }
     return texture;
@@ -253,17 +181,15 @@ export class VideoTexture implements TextureBindingSource {
     }
 
     currentTexture?.destroy();
-    const mipLevels = this._getCopiedTextureMipLevels(size);
 
     const texture = this.device.createTexture({
       id: `${this.id}-texture`,
       width: size.width,
       height: size.height,
-      format: this.props.format,
-      usage: this.props.usage | Texture.SAMPLE | Texture.COPY_DST,
-      mipLevels,
-      sampler: this._sampler,
-      view: this.props.view
+      format: 'rgba8unorm',
+      usage: Texture.SAMPLE | Texture.COPY_DST,
+      mipLevels: 1,
+      sampler: this._sampler
     });
     this._texture = texture;
     this._textureFrameToken = undefined;
@@ -272,29 +198,25 @@ export class VideoTexture implements TextureBindingSource {
   }
 
   /**
-   * Acquires one native WebGPU external texture binding when supported.
-   * @returns Fresh acquired external texture, or `null` after native import fails.
+   * Acquires one native WebGPU external texture binding.
+   * @returns Fresh acquired external texture.
    */
-  private _createNativeExternalTexture(): ExternalTexture | null {
-    if (this._nativeExternalTextureSupported === false) {
-      return null;
-    }
-
+  private _createNativeExternalTexture(): ExternalTexture {
     try {
       this._destroyExternalTexture();
       this._externalTexture = this.device.createExternalTexture({
         id: `${this.id}-external`,
         source: this._source,
-        colorSpace: this.props.colorSpace,
+        colorSpace: this._colorSpace,
         sampler: this._sampler
       });
-      this._nativeExternalTextureSupported = true;
-      this._incrementGeneration();
+      this.generation++;
       return this._externalTexture;
     } catch (error) {
-      this._nativeExternalTextureSupported = false;
       log.probe(1, `${this} native WebGPU external texture import unavailable`, error)();
-      return null;
+      throw new Error(
+        `${this} cannot resolve WebGPU texture_external binding; use texture_2d for copied video path`
+      );
     }
   }
 
@@ -305,39 +227,15 @@ export class VideoTexture implements TextureBindingSource {
   }
 
   /**
-   * Resolves the copied standard texture mip level count.
-   * @param size Current copied texture dimensions.
-   * @returns Requested mip level count clamped to the current dimensions.
-   */
-  private _getCopiedTextureMipLevels(size: {width: number; height: number}): number {
-    const maxMipLevels = this.device.getMipLevelCount(size.width, size.height);
-    return this.props.mipLevels === 'auto'
-      ? maxMipLevels
-      : Math.max(1, Math.min(maxMipLevels, this.props.mipLevels));
-  }
-
-  /**
-   * Generates copied standard texture mipmaps for WebGL.
-   * @param texture Copied standard texture that received a new source frame.
-   */
-  private _generateMipmaps(texture: Texture): void {
-    if (this.device.type === 'webgl') {
-      texture.generateMipmapsWebGL();
-    }
-  }
-
-  /**
-   * Resolves current copied texture dimensions after source size overrides.
+   * Resolves current copied texture dimensions.
    * @returns Positive dimensions for the current source frame.
    */
   private _getResolvedSize(): {width: number; height: number} {
-    const sourceSize = getVideoTextureSourceSize(this._source);
-    const width = this.props.width || sourceSize.width;
-    const height = this.props.height || sourceSize.height;
-    if (width <= 0 || height <= 0) {
+    const size = getVideoTextureSourceSize(this._source);
+    if (size.width <= 0 || size.height <= 0) {
       throw new Error(`${this} source has no current frame size`);
     }
-    return {width, height};
+    return size;
   }
 
   /** Observes current source readiness and frame identity before binding resolution. */
@@ -349,10 +247,6 @@ export class VideoTexture implements TextureBindingSource {
     const isReady = isVideoTextureSourceReady(this._source);
     if (isReady !== this._isReady) {
       this._isReady = isReady;
-      if (isReady && !this._readyResolved) {
-        this._readyResolved = true;
-        this._resolveReady(this);
-      }
       this._touch();
     }
 
@@ -367,58 +261,6 @@ export class VideoTexture implements TextureBindingSource {
     }
   }
 
-  /** Registers readiness and frame observers for an HTML video source. */
-  private _attachVideoSource(): void {
-    if (!isHTMLVideoElementSource(this._source)) {
-      return;
-    }
-
-    const video = this._source;
-    const listener = () => this._observeSource();
-    for (const eventName of ['loadedmetadata', 'loadeddata', 'resize', 'timeupdate', 'seeked']) {
-      video.addEventListener(eventName, listener);
-      this._videoEventListeners.push({eventName, listener});
-    }
-    this._scheduleVideoFrameCallback();
-  }
-
-  /** Removes readiness and frame observers from the current HTML video source. */
-  private _detachVideoSource(): void {
-    if (!isHTMLVideoElementSource(this._source)) {
-      return;
-    }
-
-    const video = this._source as VideoElementWithFrameCallback;
-    for (const {eventName, listener} of this._videoEventListeners) {
-      video.removeEventListener(eventName, listener);
-    }
-    this._videoEventListeners = [];
-    if (this._videoFrameCallbackHandle !== null) {
-      video.cancelVideoFrameCallback?.(this._videoFrameCallbackHandle);
-      this._videoFrameCallbackHandle = null;
-    }
-  }
-
-  /** Schedules the next HTML video frame callback when that browser API is available. */
-  private _scheduleVideoFrameCallback(): void {
-    if (!isHTMLVideoElementSource(this._source)) {
-      return;
-    }
-
-    const video = this._source as VideoElementWithFrameCallback;
-    if (!video.requestVideoFrameCallback) {
-      return;
-    }
-
-    this._videoFrameCallbackHandle = video.requestVideoFrameCallback((_now, metadata) => {
-      this._videoFrameCallbackHandle = null;
-      this._videoFrameCallbackCounter++;
-      this._sourceFrameToken = `${this._sourceVersion}:callback:${metadata.presentedFrames ?? this._videoFrameCallbackCounter}:${metadata.mediaTime}`;
-      this._touch();
-      this._scheduleVideoFrameCallback();
-    });
-  }
-
   /** Advances the device timestamp after source content or readiness changes. */
   private _touch(): void {
     this._updateTimestamp = this.device.incrementTimestamp();
@@ -426,31 +268,9 @@ export class VideoTexture implements TextureBindingSource {
 
   /** Advances binding generation and timestamp after binding identity can change. */
   private _touchGeneration(): void {
-    this._incrementGeneration();
+    this.generation++;
     this._touch();
   }
-
-  /** Advances the monotonic binding generation. */
-  private _incrementGeneration(): void {
-    this.generation++;
-  }
-
-  /** Default resolved properties used by {@link VideoTexture}. */
-  static defaultProps: ResolvedVideoTextureProps = {
-    id: 'undefined',
-    handle: undefined,
-    userData: undefined!,
-    format: 'rgba8unorm',
-    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
-    sampler: {},
-    view: undefined!,
-    source: undefined!,
-    colorSpace: 'srgb',
-    mipmaps: false,
-    mipLevels: 1,
-    width: 0,
-    height: 0
-  };
 }
 
 /** Returns whether a video source exposes HTML video element playback state. */
@@ -464,21 +284,13 @@ function isHTMLVideoElementSource(source: VideoTextureSource): source is HTMLVid
   );
 }
 
-/** Returns whether a video source exposes VideoFrame dimensions and timestamp. */
-function isVideoFrameSource(source: VideoTextureSource): source is VideoFrame {
-  return (
-    (typeof VideoFrame !== 'undefined' && source instanceof VideoFrame) ||
-    ('displayWidth' in source && 'displayHeight' in source && !('videoWidth' in source))
-  );
-}
-
 /** Returns whether a video source exposes dimensions and a current sampleable frame. */
 function isVideoTextureSourceReady(source: VideoTextureSource): boolean {
   const size = getVideoTextureSourceSize(source);
   if (size.width <= 0 || size.height <= 0) {
     return false;
   }
-  return isHTMLVideoElementSource(source) ? source.readyState >= 2 : isVideoFrameSource(source);
+  return isHTMLVideoElementSource(source) ? source.readyState >= 2 : true;
 }
 
 /** Returns current sampleable source dimensions. */

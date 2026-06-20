@@ -51,6 +51,5 @@ let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 ## Remarks
 
 - Shader binding type selects the representation. There is no single native external-texture shader declaration shared by GLSL and WGSL.
-- `texture_external` is for base-level clamp-style external sampling. Use a normal texture binding when the shader needs mipmaps, repeat addressing, or ordinary `textureSample` semantics.
-- WebGL copied `VideoTexture` bindings can generate mipmaps after frame uploads. WebGPU `VideoTexture` rejects `mipmaps: true` because WebGPU mipmap generation must be recorded before the render pass; upload into an ordinary `Texture` before `beginRenderPass()` when that path is required.
+- `texture_external` is for base-level clamp-style external sampling. Upload into an ordinary `Texture` when the shader needs mipmaps, repeat addressing, or ordinary `textureSample` semantics.
 - Future copied DOM sources such as HTML-in-Canvas textures and future WebXR camera helpers can use the same `TextureBindingSource` framework without making `VideoTexture` their public API.

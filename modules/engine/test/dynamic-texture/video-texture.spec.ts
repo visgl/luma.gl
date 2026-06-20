@@ -66,11 +66,12 @@ test('VideoTexture waits for HTMLVideoElement current frame data', async t => {
   video.videoWidth = 4;
   video.videoHeight = 2;
   video.readyState = 2;
-  video.dispatchEvent(new Event('loadeddata'));
-  await videoTexture.ready;
 
   t.true(videoTexture.isReady, 'video becomes ready with dimensions and current frame');
   t.ok(videoTexture.resolveTextureBinding(TEXTURE_BINDING), 'ready video resolves binding');
+  const firstTimestamp = videoTexture.updateTimestamp;
+  video.currentTime = 1;
+  t.ok(videoTexture.updateTimestamp > firstTimestamp, 'new video time updates timestamp');
 
   videoTexture.destroy();
   t.end();
@@ -85,22 +86,6 @@ test('VideoTexture does not bind copied textures through WebGPU external slots',
     () => videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
     /use texture_2d for copied video path/,
     'native external import failure requires a copied texture shader slot'
-  );
-
-  videoTexture.destroy();
-  t.end();
-});
-
-test('VideoTexture rejects WebGPU copied mipmaps during draw binding resolution', t => {
-  const videoTexture = new VideoTexture(makeFakeWebGPUDevice(), {
-    source: makeFakeVideoFrame(1).frame,
-    mipmaps: true
-  });
-
-  t.throws(
-    () => videoTexture.resolveTextureBinding(TEXTURE_BINDING),
-    /cannot generate WebGPU video mipmaps during draw binding resolution/,
-    'WebGPU copied mipmaps need preparation before the render pass'
   );
 
   videoTexture.destroy();
@@ -122,18 +107,18 @@ function makeFakeVideoFrame(timestamp: number): {frame: VideoFrame; closeCount: 
   return result;
 }
 
-function makeFakeVideoElement(): EventTarget & {
+function makeFakeVideoElement(): {
   videoWidth: number;
   videoHeight: number;
   readyState: number;
   currentTime: number;
 } {
-  return Object.assign(new EventTarget(), {
+  return {
     videoWidth: 0,
     videoHeight: 0,
     readyState: 0,
     currentTime: 0
-  });
+  };
 }
 
 function makeFakeWebGPUDevice(): Device {

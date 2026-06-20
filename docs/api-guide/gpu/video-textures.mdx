@@ -62,7 +62,6 @@ That optimization comes with constraints:
 - The shader must use WGSL `texture_external`; GLSL and normal WGSL `texture_2d<f32>` use copied textures instead.
 - Sampling uses `textureSampleBaseClampToEdge`, so the native path is base-level and clamp-style. It does not provide mipmaps or ordinary repeat sampling.
 - Native external acquisition can force bind-group invalidation because the concrete external binding may change between draws.
-- `VideoTexture` copies frames during draw binding resolution. WebGL can generate copied video mipmaps there, but WebGPU `VideoTexture` rejects `mipmaps: true` because WebGPU mipmap generation must be recorded before the render pass. Upload into an ordinary `Texture` before `beginRenderPass()` when WebGPU video mipmaps are required.
 
 The WebGPU Fundamentals article also notes two useful implementation details: an external texture may conceptually hide multiple underlying video planes, and WebGPU can inject the format conversion needed to return shader-visible RGBA. That is why an external texture needs special WGSL syntax instead of pretending to be a normal `texture_2d<f32>`.
 
