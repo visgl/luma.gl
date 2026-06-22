@@ -30,7 +30,14 @@ import {
 } from '@luma.gl/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
-import {GPUTable, type GPURecordBatch, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
+import {
+  GPUConstantVector,
+  GPUTable,
+  getGPUVectorByteLength,
+  type GPURecordBatch,
+  type GPUTableModel,
+  type GPUVector
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createPointModel,
@@ -493,16 +500,36 @@ export async function convertArrowPointColumnsToGPUVectors(
     timeOrigin: options.timeOrigin,
     id: `${id}-event-times`
   });
-  const pointRadii = makeGPUVectorFromArrow(
-    device,
-    radii ?? makeConstantRadiusVector(rowCount, options.radius ?? DEFAULT_POINT_RENDERER_RADIUS),
-    {name: 'radii', id: `${id}-radii`, format: 'float32'}
-  );
-  const pointColors = makeGPUVectorFromArrow(
-    device,
-    colors ?? makeConstantColorVector(rowCount, options.color ?? DEFAULT_POINT_RENDERER_COLOR),
-    {name: 'colors', id: `${id}-colors`, format: 'unorm8x4'}
-  );
+  const radius = options.radius ?? DEFAULT_POINT_RENDERER_RADIUS;
+  const pointRadii =
+    !radii && device.type === 'webgpu'
+      ? GPUConstantVector.fromValue(device, {
+          name: 'radii',
+          id: `${id}-radii`,
+          format: 'float32',
+          length: rowCount,
+          value: new Float32Array([radius])
+        })
+      : makeGPUVectorFromArrow(device, radii ?? makeConstantRadiusVector(rowCount, radius), {
+          name: 'radii',
+          id: `${id}-radii`,
+          format: 'float32'
+        });
+  const color = options.color ?? DEFAULT_POINT_RENDERER_COLOR;
+  const pointColors =
+    !colors && device.type === 'webgpu'
+      ? GPUConstantVector.fromValue(device, {
+          name: 'colors',
+          id: `${id}-colors`,
+          format: 'unorm8x4',
+          length: rowCount,
+          value: new Uint8Array(color)
+        })
+      : makeGPUVectorFromArrow(device, colors ?? makeConstantColorVector(rowCount, color), {
+          name: 'colors',
+          id: `${id}-colors`,
+          format: 'unorm8x4'
+        });
   const rowIndices = makeArrowRowIndexGPUVector(device, {
     rowCount,
     rowIndexOffset,
@@ -846,10 +873,6 @@ function makeConstantColorVector(
     values.set(color, rowIndex * 4);
   }
   return makeArrowFixedSizeListVector(new arrow.Uint8(), 4, values);
-}
-
-function getGPUVectorByteLength(vector: GPUVector): number {
-  return vector.length * vector.byteStride;
 }
 
 function hasPointSource(props: ArrowPointRendererProps): boolean {

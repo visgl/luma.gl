@@ -4,11 +4,14 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
+  GPUConstantVector,
   GPUData,
   GPURecordBatch,
   GPUVector,
   GPUTable,
+  getGPUDataByteLength,
   getGPUVectorBuffer,
+  getGPUVectorByteLength,
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
   getGPUVectorData,
@@ -87,6 +90,132 @@ test('GPUVector accepts format as canonical metadata and synthesizes table layou
   t.equal(colors.format, 'unorm8x4', 'stores the canonical GPUVector format');
   t.notOk('type' in colors, 'drops the deprecated type alias');
   t.equal(table.bufferLayout[0].format, 'unorm8x4', 'table layout uses GPUVector.format');
+
+  table.destroy();
+  t.end();
+});
+
+test('GPUConstantVector broadcasts one physical value across logical table rows', t => {
+  const device = new NullDevice({});
+  const positions = new GPUVector({
+    type: 'buffer',
+    name: 'positions',
+    buffer: device.createBuffer({data: new Float32Array(6)}),
+    format: 'float32x2',
+    length: 3,
+    ownsBuffer: true
+  });
+  const colors = GPUConstantVector.fromValue(device, {
+    name: 'colors',
+    format: 'unorm8x4',
+    length: 3,
+    value: new Uint8Array([10, 20, 30, 255])
+  });
+  const colorData = getGPUVectorData(colors);
+  const colorBuffer = colorData.buffer;
+  const table = new GPUTable({vectors: {positions, colors}});
+
+  t.ok(colors.isConstant, 'marks the specialized vector as constant');
+  t.equal(colors.length, 3, 'retains the logical row count');
+  t.equal(colorData.length, 3, 'retains logical rows on the backing GPUData view');
+  t.equal(colors.byteStride, 0, 'uses zero byte stride for broadcast vertex input');
+  t.equal(colors.rowByteLength, 4, 'retains the physical payload size');
+  t.equal(colorBuffer.byteLength, 4, 'allocates one physical value');
+  t.equal(getGPUDataByteLength(colorData), 4, 'reports one materialized data payload');
+  t.equal(getGPUVectorByteLength(colors), 4, 'reports one materialized vector payload');
+  t.equal(table.numRows, 3, 'constant vector aligns with ordinary table rows');
+  t.equal(table.bufferLayout.find(layout => layout.name === 'colors')?.byteStride, 0);
+
+  table.destroy();
+  t.ok(colorBuffer.destroyed, 'fromValue creates an owned buffer');
+  t.end();
+});
+
+test('GPUConstantVector wraps borrowed buffers and validates its invariant', t => {
+  const device = new NullDevice({});
+  const borrowedBuffer = device.createBuffer({byteLength: 8});
+  const shortBuffer = device.createBuffer({byteLength: 4});
+  const borrowed = new GPUConstantVector({
+    name: 'offsets',
+    buffer: borrowedBuffer,
+    format: 'float32x2',
+    length: 5
+  });
+
+  borrowed.destroy();
+  t.notOk(borrowedBuffer.destroyed, 'borrowed constant buffer remains caller-owned');
+  t.throws(
+    () =>
+      new GPUConstantVector({
+        name: 'invalidLength',
+        buffer: borrowedBuffer,
+        format: 'float32',
+        length: -1
+      }),
+    /length must be a non-negative integer/
+  );
+  t.throws(
+    () =>
+      new GPUConstantVector({
+        name: 'shortBuffer',
+        buffer: shortBuffer,
+        format: 'float32x2',
+        length: 1
+      }),
+    /must contain one float32x2 value/
+  );
+  t.throws(
+    () =>
+      GPUConstantVector.fromValue(device, {
+        name: 'wrongValueSize',
+        format: 'float32x2',
+        length: 1,
+        value: new Float32Array([1])
+      }),
+    /value byteLength 4 must match float32x2 byteLength 8/
+  );
+  t.throws(
+    () =>
+      new GPUConstantVector({
+        name: 'variableLength',
+        buffer: borrowedBuffer,
+        format: 'vertex-list<float32>' as never,
+        length: 1
+      }),
+    /requires a fixed-width vertex format/
+  );
+
+  borrowedBuffer.destroy();
+  shortBuffer.destroy();
+  t.end();
+});
+
+test('GPUTable rejects packing constant vectors across batches', t => {
+  const device = new NullDevice({});
+  const makeBatch = (value: number): GPURecordBatch =>
+    new GPURecordBatch({
+      vectors: {
+        values: GPUConstantVector.fromValue(device, {
+          name: 'values',
+          format: 'float32',
+          length: 1,
+          value: new Float32Array([value])
+        })
+      }
+    });
+  const firstBatch = makeBatch(1);
+  const secondBatch = makeBatch(2);
+  const table = new GPUTable({
+    batches: [firstBatch, secondBatch],
+    schema: firstBatch.schema,
+    bufferLayout: firstBatch.bufferLayout
+  });
+
+  t.throws(
+    () => table.packBatches(),
+    /does not support constant GPU vectors/,
+    'does not merge potentially different per-batch constants'
+  );
 
   table.destroy();
   t.end();

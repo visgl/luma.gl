@@ -11,8 +11,7 @@ import type {
 import {
   getLogicalBufferSlots,
   getMinimumAttributeLocation,
-  resolveLogicalAttributeMappings,
-  vertexFormatDecoder
+  resolveLogicalAttributeMappings
 } from '@luma.gl/core';
 
 /** Describes one physical WebGPU vertex-buffer slot derived from a logical buffer layout. */
@@ -151,12 +150,10 @@ function groupMappingsByBuffer(
 }
 
 /**
- * Returns the effective byte stride for a logical attribute mapping.
+ * Returns the resolved byte stride for a logical attribute mapping.
  * @param mapping One backend-agnostic logical attribute mapping.
- * @returns The mapping stride, or the packed vertex-format size when unmapped.
+ * @returns The resolved mapping stride, including an explicit zero.
  */
 function getResolvedByteStride(mapping: LogicalAttributeMapping): number {
-  return (
-    mapping.byteStride || vertexFormatDecoder.getVertexFormatInfo(mapping.vertexFormat).byteLength
-  );
+  return mapping.byteStride;
 }

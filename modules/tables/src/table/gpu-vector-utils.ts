@@ -9,6 +9,22 @@ import type {GPURecordBatch} from './gpu-record-batch';
 import type {GPUTable} from './gpu-table';
 import type {GPUVector} from './gpu-vector';
 
+/** Returns the materialized payload byte length of one GPU data chunk. */
+export function getGPUDataByteLength(data: GPUData): number {
+  if (data.byteStride === 0) {
+    return data.rowByteLength;
+  }
+  if (data.length === 0) {
+    return 0;
+  }
+  return data.length * data.byteStride;
+}
+
+/** Returns the materialized payload byte length across all chunks in a GPU vector. */
+export function getGPUVectorByteLength(vector: GPUVector): number {
+  return vector.data.reduce((byteLength, data) => byteLength + getGPUDataByteLength(data), 0);
+}
+
 /** Returns the single GPUData chunk for APIs that require contiguous GPU vector storage. */
 export function getGPUVectorData(vector: GPUVector): GPUData {
   const [data, ...remainingData] = vector.data;

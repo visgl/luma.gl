@@ -18,6 +18,13 @@ export {
   type GPUVectorFromInterleavedProps
 } from './table/gpu-vector';
 export {
+  GPUConstantVector,
+  type GPUConstantVectorFromValueProps,
+  type GPUConstantVectorProps
+} from './table/gpu-constant-vector';
+export {
+  getGPUDataByteLength,
+  getGPUVectorByteLength,
   getGPUVectorBuffer,
   getGPUVectorData,
   getRequiredGPUVector

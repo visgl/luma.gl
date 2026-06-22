@@ -10,6 +10,7 @@ import {GPUVector} from './gpu-vector';
 import {GPURecordBatch, type GPURecordBatchSourceInfo} from './gpu-record-batch';
 import {createGPUVectorCollection} from './gpu-vector-collection';
 import {GPU_TABLE_INDEX_COLUMN_NAME} from './gpu-schema';
+import {getGPUVectorByteLength} from './gpu-vector-utils';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
@@ -133,6 +134,13 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
     }
     if (this.batches.some(batch => batch.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME])) {
       throw new Error('GPUTable.packBatches() does not support indexed tables');
+    }
+    if (
+      this.batches.some(batch =>
+        Object.values(batch.gpuVectors).some(vector => vector.byteStride === 0)
+      )
+    ) {
+      throw new Error('GPUTable.packBatches() does not support constant GPU vectors');
     }
 
     const batchGroups = createGPUPackGroups(this.batches, options.minBatchSize);
@@ -559,7 +567,7 @@ function getGPURecordBatchDevice<T extends GPUTypeMap>(batch: GPURecordBatch<T>)
 }
 
 function getGPUVectorPackedByteLength(vector: GPUVector): number {
-  return vector.data.reduce((byteLength, data) => byteLength + data.length * data.byteStride, 0);
+  return getGPUVectorByteLength(vector);
 }
 
 function getGPUDataCopyByteLength(data: GPUData): number {

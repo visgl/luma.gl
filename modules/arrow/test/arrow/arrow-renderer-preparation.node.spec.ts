@@ -11,8 +11,8 @@ import {
   prepareArrowPolygonInput,
   resolveArrowPickInfo
 } from '@luma.gl/arrow';
-import {Buffer} from '@luma.gl/core';
-import type {GPUData} from '@luma.gl/tables';
+import {Buffer, type Device} from '@luma.gl/core';
+import {GPUConstantVector, type GPUData} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {
@@ -50,6 +50,10 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
     'records point source row metadata'
   );
   t.deepEqual(Array.from(rowIndices), [5, 6], 'applies the row index offset');
+  t.notOk(
+    prepared.table.gpuVectors.colors instanceof GPUConstantVector,
+    'null device retains the materialized constant fallback'
+  );
   t.equal(
     prepared.stylingGpuByteLength,
     8,
@@ -70,6 +74,34 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
 
   prepared.destroy();
   t.ok(positionsBuffer.destroyed, 'destroy releases owned point buffers');
+  t.end();
+});
+
+test('prepareArrowPointInput uses zero-stride style constants on WebGPU', async t => {
+  const device = makeTestDevice('webgpu');
+  const positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 1, 1])
+  );
+  const prepared = await prepareArrowPointInput(
+    device,
+    {positions, colors: null, radii: null},
+    {id: 'point-constant-vector-test'}
+  );
+  const {colors, radii} = prepared.table.gpuVectors;
+
+  t.ok(colors instanceof GPUConstantVector, 'uses a constant color vector');
+  t.ok(radii instanceof GPUConstantVector, 'uses a constant radius vector');
+  t.equal(colors.byteStride, 0, 'color vector broadcasts with zero stride');
+  t.equal(radii.byteStride, 0, 'radius vector broadcasts with zero stride');
+  t.equal(colors.length, 2, 'constant color retains logical point rows');
+  t.equal(radii.length, 2, 'constant radius retains logical point rows');
+  t.equal(colors.data[0]?.buffer.byteLength, 4, 'stores one RGBA8 value');
+  t.equal(radii.data[0]?.buffer.byteLength, 4, 'stores one Float32 value');
+  t.equal(prepared.stylingGpuByteLength, 8, 'reports only materialized constant payloads');
+
+  prepared.destroy();
   t.end();
 });
 
@@ -615,6 +647,13 @@ function makeRecordBatchIterator(
       return recordBatch ? {done: false, value: recordBatch} : {done: true, value: undefined};
     }
   };
+}
+
+function makeTestDevice(type: Device['type']): Device {
+  const device = new NullDevice({});
+  const testDevice = Object.create(device);
+  Object.defineProperty(testDevice, 'type', {value: type});
+  return testDevice;
 }
 
 function waitForPointBatches(
