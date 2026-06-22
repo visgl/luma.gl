@@ -9,6 +9,7 @@ export type ArrowPointRowCountKind = '10k-stream' | '100k-stream';
 export type ArrowPointSourceKind = 'xy' | 'xym' | 'xyzm' | 'dense-union';
 export type ArrowPointTimeKind = 'none' | 'm' | 'timestamp';
 export type ArrowPointColorKind = 'constant' | 'row-colors';
+export type ArrowPointRadiusKind = 'constant' | 'row-radii';
 
 export type ArrowPointDataset = {
   rowCount: number;

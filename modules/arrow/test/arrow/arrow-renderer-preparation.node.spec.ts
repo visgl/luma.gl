@@ -50,6 +50,23 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
     'records point source row metadata'
   );
   t.deepEqual(Array.from(rowIndices), [5, 6], 'applies the row index offset');
+  t.equal(
+    prepared.stylingGpuByteLength,
+    8,
+    'constant styles account for one radius and color payload'
+  );
+
+  const rowStyles = await prepareArrowPointInput(device, {
+    positions,
+    colors: makeArrowFixedSizeListVector(
+      new arrow.Uint8(),
+      4,
+      new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255])
+    ),
+    radii: arrow.vectorFromArray([0.5, 1], new arrow.Float32())
+  });
+  t.equal(rowStyles.stylingGpuByteLength, 16, 'row styles account for every row payload');
+  rowStyles.destroy();
 
   prepared.destroy();
   t.ok(positionsBuffer.destroyed, 'destroy releases owned point buffers');

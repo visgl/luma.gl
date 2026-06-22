@@ -160,8 +160,8 @@ export type ArrowPointRendererInput = ArrowPointGPUVectors & {
 
 type PreparedPointBatch = ArrowPointRendererInput;
 
-const DEFAULT_POINT_RENDERER_COLOR: [number, number, number, number] = [73, 166, 255, 220];
-const DEFAULT_POINT_RENDERER_RADIUS = 0.0075;
+export const DEFAULT_POINT_RENDERER_COLOR: [number, number, number, number] = [73, 166, 255, 220];
+export const DEFAULT_POINT_RENDERER_RADIUS = 0.0075;
 const DEFAULT_POINT_RENDERER_CENTER: [number, number] = [0, 0];
 const DEFAULT_POINT_RENDERER_SCALE = 1;
 const DEFAULT_POINT_RENDERER_CURRENT_TIME = 0;
@@ -528,7 +528,8 @@ export async function convertArrowPointColumnsToGPUVectors(
     getGPUVectorByteLength(eventTimes) +
     getGPUVectorByteLength(rowIndices);
   const stylingGpuByteLength =
-    getGPUVectorByteLength(pointRadii) + getGPUVectorByteLength(pointColors);
+    (radii ? getGPUVectorByteLength(pointRadii) : pointRadii.rowByteLength) +
+    (colors ? getGPUVectorByteLength(pointColors) : pointColors.rowByteLength);
 
   return {
     table,
