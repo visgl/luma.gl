@@ -1,0 +1,201 @@
+import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+
+# Constant Columns
+
+<TablesDocsTabs active="constants" />
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+A constant column has one physical value and a logical value for every row in a
+table or record batch. It lets an application use one shader interface for both
+per-row data and constant styling without materializing the same value once per
+row.
+
+Constant columns are a logical table concept. Vertex attributes, WebGL current
+attributes, uniforms, and storage buffers use different physical mechanisms to
+publish that concept to a shader.
+
+## Logical And Physical Size
+
+For a constant color applied to 100,000 rows:
+
+| Property | Value |
+| --- | --- |
+| Logical length | `100000` rows |
+| Format | `unorm8x4` |
+| Physical payload | One 4-byte color |
+| Vertex byte stride | `0` on WebGPU |
+
+Logical length is used for table row alignment and draw counts. Physical byte
+length is used for allocation and memory metrics. Each streamed batch may have
+its own constant value, so one payload is stored per batch rather than once for
+the aggregate table.
+
+## WebGPU Vertex Attributes
+
+`GPUConstantVector` represents a fixed-width constant column as one vertex
+payload with zero byte stride:
+
+```ts
+import {GPUConstantVector} from '@luma.gl/tables';
+
+const colors = GPUConstantVector.fromValue(device, {
+  id: 'point-colors',
+  name: 'colors',
+  format: 'unorm8x4',
+  length: table.numRows,
+  value: new Uint8Array([73, 166, 255, 220])
+});
+```
+
+`GPUConstantVector.fromValue()` creates and owns a vertex buffer containing
+exactly one encoded value. The constructor form wraps an existing `Buffer` or
+`DynamicBuffer` containing one complete value at byte offset zero:
+
+```ts
+const radii = new GPUConstantVector({
+  name: 'radii',
+  buffer,
+  format: 'float32',
+  length: table.numRows,
+  ownsBuffer: false
+});
+```
+
+The shader declaration is identical for constant and per-row columns:
+
+```wgsl
+struct VertexInputs {
+  @location(0) position: vec2<f32>,
+  @location(1) color: vec4<f32>,
+  @location(2) radius: f32,
+};
+```
+
+Only the bound buffer layout changes. With `arrayStride: 0`, every vertex or
+instance reads the same payload row.
+
+### Interleaved Constants
+
+Multiple constant attributes can share one physical buffer:
+
+```text
+constant payload: [color][radius][angle]
+
+buffer layout:
+  byteStride: 0
+  color:  byteOffset 0
+  radius: byteOffset 4
+  angle:  byteOffset 8
+```
+
+Zero stride applies to the entire vertex-buffer binding, not to one attribute
+inside it. Every attribute in a zero-stride interleaved buffer must therefore be
+constant.
+
+To override only some attributes from an existing interleaved row buffer, move
+the overridden attributes into a separate zero-stride buffer layout. Keep the
+remaining per-row attributes in their original nonzero-stride layout. Both
+layouts continue to target the shader's existing attribute locations.
+
+Interleaved constant groups also need an explicit physical payload byte length.
+It is the end of the last attribute payload, including required alignment and
+padding; it is not the zero byte stride.
+
+## WebGL Vertex Attributes
+
+WebGL exposes constant attributes as current generic vertex attribute values:
+
+```ts
+gl.disableVertexAttribArray(location);
+gl.vertexAttrib4fv(location, value);
+```
+
+The disabled array causes every vertex to receive the current value. WebGL2
+also provides integer forms such as `vertexAttribI4i()` and
+`vertexAttribI4ui()`. Matrix inputs occupy multiple attribute locations and
+require one constant value per location.
+
+WebGL's `vertexAttribPointer(..., stride = 0)` does not broadcast one row. In
+WebGL, zero means tightly packed array data. Applications must use the current
+attribute API or materialize repeated values.
+
+The WebGL API does not expose a buffer for a current attribute. Browser and
+driver implementations may use native vertex-input state or emulate the value
+with a small cached buffer. Some ANGLE backends use an internal streamed vertex
+buffer with zero stride, but that allocation is not part of the application's
+WebGL buffer model.
+
+The current attribute API requires a CPU-accessible typed value. An opaque GPU
+buffer cannot be converted into a WebGL current attribute without readback.
+Portable applications should therefore retain the typed constant value as the
+source of truth, even when WebGPU uploads that value into a zero-stride buffer.
+
+The Arrow points integration currently uses materialized vectors as its WebGL
+fallback. Native WebGL current-attribute publication requires a constant-aware
+model or vertex-array binding API in addition to `GPUConstantVector`.
+
+## WebGPU Storage Buffers
+
+Storage buffers do not have bind-time vertex stride state. A one-element
+storage buffer must be paired with shader indexing that selects element zero.
+
+One approach is a uniform row multiplier for each independently constant
+column:
+
+```wgsl
+struct TableColumnModes {
+  colorRowMultiplier: u32,
+  radiusRowMultiplier: u32,
+};
+
+@group(0) @binding(0) var<uniform> columnModes: TableColumnModes;
+@group(0) @binding(1) var<storage, read> colors: array<u32>;
+@group(0) @binding(2) var<storage, read> radii: array<f32>;
+
+fn readColor(logicalRowIndex: u32) -> u32 {
+  return colors[logicalRowIndex * columnModes.colorRowMultiplier];
+}
+
+fn readRadius(logicalRowIndex: u32) -> f32 {
+  return radii[logicalRowIndex * columnModes.radiusRowMultiplier];
+}
+```
+
+Set a multiplier to `0` for a one-element constant buffer and `1` for a normal
+per-row column. In a simple instanced table, `logicalRowIndex` can be
+`instance_index`. Row-geometry renderers should pass their source-row mapping
+instead.
+
+For many booleans, applications can encode the multipliers in a bit mask. If
+all constants are small and consumed together, another option is one uniform
+constant struct rather than several one-element storage buffers.
+
+Storage-buffer constant handling is shader-aware and is not currently
+implemented by `GPUConstantVector`. Do not interpret `byteStride: 0` as storage
+buffer indexing behavior.
+
+## Backend Summary
+
+| Consumption path | Constant representation | Current tables support |
+| --- | --- | --- |
+| WebGPU vertex attribute | One payload row with `arrayStride: 0` | `GPUConstantVector` for fixed-width attributes |
+| WebGPU interleaved vertex attributes | One packed payload row with zero group stride | Planned; requires constant-only grouping and explicit payload size |
+| WebGL vertex attribute | Disabled array plus `vertexAttrib*()` current value | Materialized fallback; native publication requires CPU value bindings |
+| WebGPU storage buffer | One-element buffer plus shader index selection, or a uniform struct | Application/shader managed |
+| WebGL storage buffer | Not available | Not applicable |
+
+## Batching And Packing
+
+Constants are batch-local. Two adjacent batches can use different constant
+values while exposing one aggregate logical column. Consequently,
+`GPUTable.packBatches()` rejects groups containing zero-stride vectors; merging
+them would require either proving their payloads equal or materializing the
+values.
+
+Use `getGPUDataByteLength()` and `getGPUVectorByteLength()` for physical memory
+accounting. They count a zero-stride chunk as one payload row while preserving
+the vector's logical `length` for table validation.

@@ -15,6 +15,7 @@ GPU-resident table primitives for luma.gl.
 
 - [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure)
 - [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
+- [Constant Columns](/docs/api-reference/tables/constant-columns)
 - [GPUTable](/docs/api-reference/tables/gpu-table)
 - [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch)
 - [GPUVector](/docs/api-reference/tables/gpu-vector)
@@ -25,9 +26,9 @@ GPU-resident table primitives for luma.gl.
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 
 The `@luma.gl/tables` module owns reusable table-side GPU objects such as
-`GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`, plus structural typing
-types such as `GPUSchema`, `GPUField`, `GPUTypeMap`, `GPUVectorFormat`, and
-`VertexList`. Table-oriented execution helpers include `TableTransform`,
+`GPUData`, `GPUVector`, `GPUConstantVector`, `GPURecordBatch`, and `GPUTable`,
+plus structural typing types such as `GPUSchema`, `GPUField`, `GPUTypeMap`,
+`GPUVectorFormat`, and `VertexList`. Table-oriented execution helpers include `TableTransform`,
 `GPUTableComputation`, `GPUTableBufferPlanner`, and generated-buffer batching
 utilities. `GPUTableModel` renders preserved table batches through one model
 pipeline, while `GPUTableGeometry` exposes a packed static table as ordinary GPU

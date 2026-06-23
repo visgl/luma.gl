@@ -35,6 +35,9 @@ When the input starts as Apache Arrow, prefer
 [`makeGPUVectorFromArrow()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`.
 
+Use [`GPUConstantVector`](/docs/api-reference/tables/constant-columns) when one
+fixed-width value should be broadcast across the vector's logical rows.
+
 ## Constructor Modes
 
 `GPUVector` uses a discriminated constructor prop union.

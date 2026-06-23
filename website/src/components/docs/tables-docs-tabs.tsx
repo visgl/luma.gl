@@ -15,6 +15,7 @@ export type TablesDocsTabId =
   | 'overview'
   | 'structure'
   | 'lifecycle'
+  | 'constants'
   | 'table'
   | 'record-batch'
   | 'vector'
@@ -27,6 +28,7 @@ const TABLES_DOCS_TABS: TablesDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/tables'},
   {id: 'structure', label: 'Structure', href: '/docs/api-reference/tables/gpu-table-structure'},
   {id: 'lifecycle', label: 'Lifecycle', href: '/docs/api-reference/tables/gpu-table-lifecycle'},
+  {id: 'constants', label: 'Constants', href: '/docs/api-reference/tables/constant-columns'},
   {id: 'table', label: 'GPUTable', href: '/docs/api-reference/tables/gpu-table'},
   {id: 'record-batch', label: 'GPURecordBatch', href: '/docs/api-reference/tables/gpu-record-batch'},
   {id: 'vector', label: 'GPUVector', href: '/docs/api-reference/tables/gpu-vector'},

@@ -194,6 +194,7 @@
           "api-reference/tables/README",
           "api-reference/tables/gpu-table-structure",
           "api-reference/tables/gpu-table-lifecycle",
+          "api-reference/tables/constant-columns",
           "api-reference/tables/gpu-table",
           "api-reference/tables/gpu-record-batch",
           "api-reference/tables/gpu-vector",
