@@ -12,6 +12,11 @@ import {
   getChangedSetting,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import type {TemporalStarfieldStyleKind} from './arrow-temporal-starfield-data';
+import {
+  DEFAULT_TEMPORAL_STARFIELD_EVENT_COLOR,
+  DEFAULT_TEMPORAL_STARFIELD_STAR_SIZE
+} from './arrow-temporal-starfield-renderer';
 
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-temporal-starfield-streaming-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-temporal-starfield-streaming-fill';
@@ -20,6 +25,8 @@ const PREPARATION_PATH_ID = 'arrow-temporal-starfield-preparation-path';
 const CURRENT_TIMESTAMP_ID = 'arrow-temporal-starfield-current-timestamp';
 const POSITIONS_COLUMN_ID = 'arrow-temporal-starfield-positions-column';
 const EVENT_STARTS_COLUMN_ID = 'arrow-temporal-starfield-event-starts-column';
+const STAR_SIZES_COLUMN_ID = 'arrow-temporal-starfield-star-sizes-column';
+const EVENT_COLORS_COLUMN_ID = 'arrow-temporal-starfield-event-colors-column';
 const TIMESTAMP_ORIGIN_ID = 'arrow-temporal-starfield-timestamp-origin';
 const DURATION_ORIGIN_ID = 'arrow-temporal-starfield-duration-origin';
 const PULSE_PERIOD_ORIGIN_ID = 'arrow-temporal-starfield-pulse-period-origin';
@@ -27,6 +34,8 @@ const PULSE_PERIOD_ORIGIN_ID = 'arrow-temporal-starfield-pulse-period-origin';
 export type ArrowTemporalStarfieldControlPanelState = {
   renderMode: 'attributes' | 'storage';
   timeColumn: 'timestamp' | 'xyzm';
+  starSizeKind: TemporalStarfieldStyleKind;
+  eventColorKind: TemporalStarfieldStyleKind;
   supportsStorage: boolean;
 };
 
@@ -35,6 +44,8 @@ export type ArrowTemporalStarfieldControlPanelLabels = {
   currentTimestamp: string;
   positionsColumn: string;
   eventStartsColumn: string;
+  starSizesColumn: string;
+  eventColorsColumn: string;
   timestampOrigin: string;
   durationOrigin: string;
   pulsePeriodOrigin: string;
@@ -43,6 +54,8 @@ export type ArrowTemporalStarfieldControlPanelLabels = {
 export type ArrowTemporalStarfieldControlPanelHandlers = {
   onRenderModeChange: (renderMode: 'attributes' | 'storage') => void;
   onTimeColumnChange: (timeColumn: 'timestamp' | 'xyzm') => void;
+  onStarSizeKindChange: (starSizeKind: TemporalStarfieldStyleKind) => void;
+  onEventColorKindChange: (eventColorKind: TemporalStarfieldStyleKind) => void;
 };
 
 export type ArrowTemporalStarfieldControlPanelOptions = {
@@ -138,6 +151,14 @@ export class ArrowTemporalStarfieldControlPanel {
     if (isTemporalStarfieldRenderMode(renderMode)) {
       this.handlers.onRenderModeChange(renderMode);
     }
+    const starSizeKind = getChangedSetting(changedSettings, 'starSizeKind')?.nextValue;
+    if (isTemporalStarfieldStyleKind(starSizeKind)) {
+      this.handlers.onStarSizeKindChange(starSizeKind);
+    }
+    const eventColorKind = getChangedSetting(changedSettings, 'eventColorKind')?.nextValue;
+    if (isTemporalStarfieldStyleKind(eventColorKind)) {
+      this.handlers.onEventColorKindChange(eventColorKind);
+    }
   };
 
   private render(): void {
@@ -150,6 +171,8 @@ export class ArrowTemporalStarfieldControlPanel {
     setTextContent(this.rootElement, CURRENT_TIMESTAMP_ID, this.labels.currentTimestamp);
     setTextContent(this.rootElement, POSITIONS_COLUMN_ID, this.labels.positionsColumn);
     setTextContent(this.rootElement, EVENT_STARTS_COLUMN_ID, this.labels.eventStartsColumn);
+    setTextContent(this.rootElement, STAR_SIZES_COLUMN_ID, this.labels.starSizesColumn);
+    setTextContent(this.rootElement, EVENT_COLORS_COLUMN_ID, this.labels.eventColorsColumn);
     setTextContent(this.rootElement, TIMESTAMP_ORIGIN_ID, this.labels.timestampOrigin);
     setTextContent(this.rootElement, DURATION_ORIGIN_ID, this.labels.durationOrigin);
     setTextContent(this.rootElement, PULSE_PERIOD_ORIGIN_ID, this.labels.pulsePeriodOrigin);
@@ -186,6 +209,32 @@ export function makeArrowTemporalStarfieldSettingsSchema(
               {label: 'Attributes', value: 'attributes'},
               ...(state.supportsStorage ? [{label: 'Storage', value: 'storage'}] : [])
             ]
+          },
+          {
+            name: 'starSizeKind',
+            label: 'Sizes',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {
+                label: `Constant Float32 ${DEFAULT_TEMPORAL_STARFIELD_STAR_SIZE}`,
+                value: 'constant'
+              },
+              {label: 'Row - Float32', value: 'column'}
+            ]
+          },
+          {
+            name: 'eventColorKind',
+            label: 'Colors',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {
+                label: `Constant RGBA8 [${DEFAULT_TEMPORAL_STARFIELD_EVENT_COLOR.join(', ')}]`,
+                value: 'constant'
+              },
+              {label: 'Row - FixedSizeList<Uint8, 4>', value: 'column'}
+            ]
           }
         ]
       }
@@ -205,6 +254,8 @@ export function makeArrowTemporalStarfieldControlPanelHtml(): string {
     <code id="${EVENT_STARTS_COLUMN_ID}">eventStarts: TimestampMillisecond</code><span><code>Float32 millisecond</code><br><span id="${TIMESTAMP_ORIGIN_ID}"></span></span>
     <code>eventDurations: DurationMillisecond</code><span><code>Float32 millisecond</code><br><span id="${DURATION_ORIGIN_ID}"></span></span>
     <code>pulsePeriods: DurationMillisecond</code><span><code>Float32 millisecond</code><br><span id="${PULSE_PERIOD_ORIGIN_ID}"></span></span>
+    <code id="${STAR_SIZES_COLUMN_ID}">starSizes: Float32</code><span><code>Float32</code></span>
+    <code id="${EVENT_COLORS_COLUMN_ID}">eventColors: FixedSizeList&lt;Uint8, 4&gt;</code><span><code>unorm8x4</code></span>
   </div>
   `;
 }
@@ -256,6 +307,10 @@ function isTemporalStarfieldRenderMode(value: unknown): value is 'attributes' | 
 
 function isTemporalStarfieldTimeColumn(value: unknown): value is 'timestamp' | 'xyzm' {
   return value === 'timestamp' || value === 'xyzm';
+}
+
+function isTemporalStarfieldStyleKind(value: unknown): value is TemporalStarfieldStyleKind {
+  return value === 'constant' || value === 'column';
 }
 
 function setTextContent(

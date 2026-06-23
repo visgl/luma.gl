@@ -8,12 +8,16 @@ import {TAU} from './arrow-temporal-starfield-data';
 
 type TemporalStarfieldUniforms = {
   currentTimestamp: number;
+  starSizeRowMultiplier: number;
+  eventColorRowMultiplier: number;
 };
 
 export const temporalStarfield: ShaderModule<TemporalStarfieldUniforms> = {
   name: 'temporalStarfield',
   uniformTypes: {
-    currentTimestamp: 'f32'
+    currentTimestamp: 'f32',
+    starSizeRowMultiplier: 'u32',
+    eventColorRowMultiplier: 'u32'
   }
 };
 
@@ -55,6 +59,8 @@ export const RENDER_PARAMETERS = {
 export const STAR_ATTRIBUTE_WGSL_SHADER = /* wgsl */ `\
 struct TemporalStarfieldUniforms {
   currentTimestamp : f32,
+  starSizeRowMultiplier : u32,
+  eventColorRowMultiplier : u32,
 };
 
 @group(0) @binding(auto) var<uniform> temporalStarfield : TemporalStarfieldUniforms;
@@ -163,6 +169,8 @@ fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
 export const STAR_STORAGE_WGSL_SHADER = /* wgsl */ `\
 struct TemporalStarfieldUniforms {
   currentTimestamp : f32,
+  starSizeRowMultiplier : u32,
+  eventColorRowMultiplier : u32,
 };
 
 @group(0) @binding(auto) var<uniform> temporalStarfield : TemporalStarfieldUniforms;
@@ -239,14 +247,16 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   let eventStart = eventStarts[starIndex];
   let eventDuration = eventDurations[starIndex];
   let pulsePeriod = pulsePeriods[starIndex];
-  let eventColor = unpack4x8unorm(eventColors[starIndex]);
+  let eventColorIndex = starIndex * temporalStarfield.eventColorRowMultiplier;
+  let starSizeIndex = starIndex * temporalStarfield.starSizeRowMultiplier;
+  let eventColor = unpack4x8unorm(eventColors[eventColorIndex]);
   let visibility = getStarVisibility(
     temporalStarfield.currentTimestamp,
     eventStart,
     eventDuration
   );
   let pulse = getStarPulse(temporalStarfield.currentTimestamp, eventStart, pulsePeriod);
-  let starSize = starSizes[starIndex] * max(visibility, 0.0) * mix(0.72, 2.4, pulse);
+  let starSize = starSizes[starSizeIndex] * max(visibility, 0.0) * mix(0.72, 2.4, pulse);
   let starPosition = getStarPosition(positions[starIndex], temporalStarfield.currentTimestamp);
 
   outputs.Position = vec4<f32>(starPosition + corner * starSize, 0.0, 1.0);
@@ -283,6 +293,8 @@ in vec4 eventColors;
 
 uniform temporalStarfieldUniforms {
   float currentTimestamp;
+  uint starSizeRowMultiplier;
+  uint eventColorRowMultiplier;
 } temporalStarfield;
 
 out vec4 vColor;

@@ -24,6 +24,9 @@ import {
   ArrowPointRenderer,
   prepareArrowPointInput
 } from '../../../../examples/arrow/arrow-points/arrow-point-renderer';
+import {makeTemporalStarfieldRecordBatches} from '../../../../examples/arrow/arrow-temporal-starfield/arrow-temporal-starfield-data';
+import {makeTemporalStarfieldGPURecordBatchInput} from '../../../../examples/arrow/arrow-temporal-starfield/arrow-temporal-starfield-renderer';
+import {STAR_STORAGE_WGSL_SHADER} from '../../../../examples/arrow/arrow-temporal-starfield/arrow-temporal-starfield-shaders';
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 
@@ -102,6 +105,56 @@ test('prepareArrowPointInput uses zero-stride style constants on WebGPU', async 
   t.equal(prepared.stylingGpuByteLength, 8, 'reports only materialized constant payloads');
 
   prepared.destroy();
+  t.end();
+});
+
+test('temporal starfield constants support attribute and storage models', async t => {
+  const device = makeTestDevice('webgpu');
+  const recordBatch = makeTemporalStarfieldRecordBatches(
+    3,
+    3,
+    'timestamp',
+    'constant',
+    'constant'
+  )[0];
+  if (!recordBatch) {
+    throw new Error('Expected a temporal starfield record batch');
+  }
+  t.notOk(recordBatch.getChild('starSizes'), 'constant size is omitted from the Arrow batch');
+  t.notOk(recordBatch.getChild('eventColors'), 'constant color is omitted from the Arrow batch');
+  const prepared = await makeTemporalStarfieldGPURecordBatchInput(
+    device,
+    recordBatch,
+    0,
+    'timestamp',
+    {
+      starSizeColumn: null,
+      eventColorColumn: null,
+      starSize: 0.01,
+      eventColor: [104, 168, 255, 255]
+    },
+    {preferTemporalGPU: false}
+  );
+  const {starSizes, eventColors} = prepared.gpuRecordBatch.gpuVectors;
+
+  t.ok(starSizes instanceof GPUConstantVector, 'uses a constant star-size vector');
+  t.ok(eventColors instanceof GPUConstantVector, 'uses a constant event-color vector');
+  t.equal(starSizes.length, 3, 'star size retains the logical row count');
+  t.equal(eventColors.length, 3, 'event color retains the logical row count');
+  t.equal(starSizes.data[0]?.buffer.byteLength, 4, 'stores one star-size payload');
+  t.equal(eventColors.data[0]?.buffer.byteLength, 4, 'stores one event-color payload');
+  t.ok(starSizes.data[0]?.buffer.usage & Buffer.STORAGE, 'star size can bind as storage');
+  t.ok(eventColors.data[0]?.buffer.usage & Buffer.STORAGE, 'event color can bind as storage');
+  t.ok(
+    STAR_STORAGE_WGSL_SHADER.includes('starIndex * temporalStarfield.starSizeRowMultiplier'),
+    'storage shader redirects constant sizes to row zero'
+  );
+  t.ok(
+    STAR_STORAGE_WGSL_SHADER.includes('starIndex * temporalStarfield.eventColorRowMultiplier'),
+    'storage shader redirects constant colors to row zero'
+  );
+
+  prepared.gpuRecordBatch.destroy();
   t.end();
 });
 

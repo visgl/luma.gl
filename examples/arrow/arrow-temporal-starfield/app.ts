@@ -10,7 +10,8 @@ import {
   makeTemporalStarfieldRecordBatches,
   STAR_COUNT,
   STREAMING_STARFIELD_BATCH_COUNT,
-  STREAMING_STARFIELD_ROWS_PER_BATCH
+  STREAMING_STARFIELD_ROWS_PER_BATCH,
+  type TemporalStarfieldStyleKind
 } from './arrow-temporal-starfield-data';
 import {
   ArrowTemporalStarfieldRenderer,
@@ -40,6 +41,8 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   });
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
+  activeStarSizeKind: TemporalStarfieldStyleKind = 'constant';
+  activeEventColorKind: TemporalStarfieldStyleKind = 'constant';
   layer: ArrowTemporalStarfieldRenderer | null = null;
   inputRequestVersion = 0;
   isFinalized = false;
@@ -57,11 +60,15 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
       initialState: {
         renderMode: this.activeRenderMode,
         timeColumn: this.activeTimeColumn,
+        starSizeKind: this.activeStarSizeKind,
+        eventColorKind: this.activeEventColorKind,
         supportsStorage
       },
       handlers: {
         onRenderModeChange: this.handleRenderModeSelection,
-        onTimeColumnChange: this.handleTimeColumnSelection
+        onTimeColumnChange: this.handleTimeColumnSelection,
+        onStarSizeKindChange: this.handleStarSizeKindSelection,
+        onEventColorKindChange: this.handleEventColorKindSelection
       },
       onRefresh: () => this.panels.refresh()
     });
@@ -70,7 +77,9 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   override async onInitialize(): Promise<void> {
     this.layer = new ArrowTemporalStarfieldRenderer(this.device, {
       renderMode: this.activeRenderMode,
-      timeColumn: this.activeTimeColumn
+      timeColumn: this.activeTimeColumn,
+      starSizeColumn: this.activeStarSizeKind === 'constant' ? null : 'starSizes',
+      eventColorColumn: this.activeEventColorKind === 'constant' ? null : 'eventColors'
     });
     this.panels.mount();
     this.controlPanel.initialize();
@@ -120,6 +129,24 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
     this.startStreamingStarfield();
   };
 
+  handleStarSizeKindSelection = (starSizeKind: TemporalStarfieldStyleKind): void => {
+    if (starSizeKind === this.activeStarSizeKind) {
+      return;
+    }
+    this.activeStarSizeKind = starSizeKind;
+    this.controlPanel.syncControls({starSizeKind});
+    this.startStreamingStarfield();
+  };
+
+  handleEventColorKindSelection = (eventColorKind: TemporalStarfieldStyleKind): void => {
+    if (eventColorKind === this.activeEventColorKind) {
+      return;
+    }
+    this.activeEventColorKind = eventColorKind;
+    this.controlPanel.syncControls({eventColorKind});
+    this.startStreamingStarfield();
+  };
+
   private startStreamingStarfield(): void {
     const layer = this.layer;
     if (!layer) {
@@ -131,7 +158,9 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
     const recordBatches = makeTemporalStarfieldRecordBatches(
       STAR_COUNT,
       STREAMING_STARFIELD_ROWS_PER_BATCH,
-      this.activeTimeColumn
+      this.activeTimeColumn,
+      this.activeStarSizeKind,
+      this.activeEventColorKind
     );
     this.activeStarfieldTableStream = this.panels.beginLoadedTableStream({
       id: 'temporal-starfield-source',
@@ -141,6 +170,8 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
     });
 
     layer.setProps({
+      starSizeColumn: this.activeStarSizeKind === 'constant' ? null : 'starSizes',
+      eventColorColumn: this.activeEventColorKind === 'constant' ? null : 'eventColors',
       data: createStreamingTemporalStarfieldRecordBatchIterator(recordBatches),
       onDataBatch: this.handleStreamingStarfieldBatch
     });

@@ -14,6 +14,8 @@ export const CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND = 3_200;
 export const SOURCE_TIMESTAMP_ORIGIN_MILLISECONDS = Date.UTC(2026, 4, 22, 21);
 export const TAU = Math.PI * 2;
 
+export type TemporalStarfieldStyleKind = 'constant' | 'column';
+
 export type TemporalStarfieldSourceVectors = {
   eventStarts: arrow.Vector<arrow.TimestampMillisecond>;
   eventDurations: arrow.Vector<arrow.DurationMillisecond>;
@@ -92,7 +94,9 @@ export function makeTemporalStarfieldRows(
 
 export function makeTemporalStarfieldTable(
   starRows: TemporalStarfieldRows = makeTemporalStarfieldRows(),
-  timeColumn: 'timestamp' | 'xyzm' = 'timestamp'
+  timeColumn: 'timestamp' | 'xyzm' = 'timestamp',
+  starSizeKind: TemporalStarfieldStyleKind = 'column',
+  eventColorKind: TemporalStarfieldStyleKind = 'column'
 ): arrow.Table {
   const columns: Record<string, arrow.Vector> = {
     positions:
@@ -104,9 +108,7 @@ export function makeTemporalStarfieldTable(
           )
         : makeArrowFixedSizeListVector(new arrow.Float32(), 2, starRows.positions),
     eventDurations: makeTemporalVector(new arrow.DurationMillisecond(), starRows.eventDurations),
-    pulsePeriods: makeTemporalVector(new arrow.DurationMillisecond(), starRows.pulsePeriods),
-    starSizes: makeFloat32Vector(starRows.starSizes),
-    eventColors: makeArrowFixedSizeListVector(new arrow.Uint8(), 4, starRows.eventColors)
+    pulsePeriods: makeTemporalVector(new arrow.DurationMillisecond(), starRows.pulsePeriods)
   };
   if (timeColumn === 'timestamp') {
     columns.eventStarts = makeTemporalVector(
@@ -114,20 +116,30 @@ export function makeTemporalStarfieldTable(
       starRows.eventStarts
     );
   }
+  if (starSizeKind === 'column') {
+    columns.starSizes = makeFloat32Vector(starRows.starSizes);
+  }
+  if (eventColorKind === 'column') {
+    columns.eventColors = makeArrowFixedSizeListVector(new arrow.Uint8(), 4, starRows.eventColors);
+  }
   return new arrow.Table(columns);
 }
 
 export function makeTemporalStarfieldRecordBatches(
   starCount = STAR_COUNT,
   rowsPerBatch = starCount,
-  timeColumn: 'timestamp' | 'xyzm' = 'timestamp'
+  timeColumn: 'timestamp' | 'xyzm' = 'timestamp',
+  starSizeKind: TemporalStarfieldStyleKind = 'column',
+  eventColorKind: TemporalStarfieldStyleKind = 'column'
 ): arrow.RecordBatch[] {
   const recordBatches: arrow.RecordBatch[] = [];
   for (let starStart = 0; starStart < starCount; starStart += rowsPerBatch) {
     const batchStarCount = Math.min(rowsPerBatch, starCount - starStart);
     const recordBatch = makeTemporalStarfieldTable(
       makeTemporalStarfieldRows(starStart, batchStarCount),
-      timeColumn
+      timeColumn,
+      starSizeKind,
+      eventColorKind
     ).batches[0];
     if (recordBatch) {
       recordBatches.push(recordBatch);

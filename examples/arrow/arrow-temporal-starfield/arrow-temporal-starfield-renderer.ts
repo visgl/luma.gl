@@ -12,10 +12,11 @@ import {
   type ArrowRecordBatchSource,
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
-import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
+import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {type DynamicBuffer, Model, ShaderInputs} from '@luma.gl/engine';
 import {
   GPURenderable,
+  GPUConstantVector,
   GPURecordBatch,
   GPUTable,
   GPUTableModel,
@@ -50,6 +51,14 @@ export type ArrowTemporalStarfieldRendererProps = {
   renderMode?: 'attributes' | 'storage';
   /** Source time representation used for event starts. */
   timeColumn?: 'timestamp' | 'xyzm';
+  /** Arrow size column. Set to `null` to broadcast `starSize`. */
+  starSizeColumn?: string | null;
+  /** Arrow color column. Set to `null` to broadcast `eventColor`. */
+  eventColorColumn?: string | null;
+  /** Constant star size used when `starSizeColumn` is null. */
+  starSize?: number;
+  /** Constant RGBA8 color used when `eventColorColumn` is null. */
+  eventColor?: [number, number, number, number];
   /** Optional Arrow source table, record-batch iterable, or async record-batch iterator. */
   data?: ArrowRecordBatchSource;
   /** Synthetic clock rate used to advance the star pulse timeline. */
@@ -82,6 +91,10 @@ export type ArrowTemporalStarfieldRendererLabels = {
   positionsColumn: string;
   /** Active event-start column label. */
   eventStartsColumn: string;
+  /** Active star-size column or constant label. */
+  starSizesColumn: string;
+  /** Active event-color column or constant label. */
+  eventColorsColumn: string;
   /** Timestamp origin label. */
   timestampOrigin: string;
   /** Duration origin label. */
@@ -109,10 +122,22 @@ type TemporalStarfieldTableInput = {
   destroy: () => void;
 };
 
-type TemporalStarfieldGPURecordBatchInput = {
+export type TemporalStarfieldGPURecordBatchInput = {
   gpuRecordBatch: GPURecordBatch<GPUTypeMap>;
   temporalColumns: PreparedTemporalColumns;
   timestampOriginMilliseconds: number;
+};
+
+export type TemporalStarfieldStyleOptions = {
+  starSizeColumn: string | null;
+  eventColorColumn: string | null;
+  starSize: number;
+  eventColor: [number, number, number, number];
+};
+
+export type TemporalStarfieldPreparationOptions = {
+  /** Prefer WebGPU compute for temporal conversion when available. */
+  preferTemporalGPU?: boolean;
 };
 
 type TemporalStarfieldRecordBatchVectors = {
@@ -120,8 +145,8 @@ type TemporalStarfieldRecordBatchVectors = {
   eventStarts: arrow.Vector<arrow.TimestampMillisecond> | null;
   eventDurations: arrow.Vector<arrow.DurationMillisecond>;
   pulsePeriods: arrow.Vector<arrow.DurationMillisecond>;
-  starSizes: arrow.Vector<arrow.Float32>;
-  eventColors: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>;
+  starSizes: arrow.Vector<arrow.Float32> | null;
+  eventColors: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>> | null;
 };
 
 type ActiveTemporalStarfieldModel = GPUTableModel | Model;
@@ -135,6 +160,10 @@ const DEFAULT_TEMPORAL_STARFIELD_PROPS = {
     'currentTimeRateMillisecondsPerSecond' | 'initialTimestampMilliseconds'
   >
 >;
+export const DEFAULT_TEMPORAL_STARFIELD_STAR_SIZE = 0.01;
+export const DEFAULT_TEMPORAL_STARFIELD_EVENT_COLOR: [number, number, number, number] = [
+  104, 168, 255, 255
+];
 const TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT = 6;
 
 /** Example layer that renders timestamp/duration Arrow columns as blinking star instances. */
@@ -176,7 +205,13 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
   async initialize(): Promise<void> {
     this.replaceData(
       this.props.data ??
-        makeTemporalStarfieldRecordBatches(undefined, undefined, this.activeTimeColumn),
+        makeTemporalStarfieldRecordBatches(
+          undefined,
+          undefined,
+          this.activeTimeColumn,
+          this.props.starSizeColumn === null ? 'constant' : 'column',
+          this.props.eventColorColumn === null ? 'constant' : 'column'
+        ),
       true
     );
   }
@@ -205,7 +240,9 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
 
     this.shaderInputs.setProps({
       temporalStarfield: {
-        currentTimestamp: this.currentTimestampMilliseconds
+        currentTimestamp: this.currentTimestampMilliseconds,
+        starSizeRowMultiplier: 1,
+        eventColorRowMultiplier: 1
       }
     });
 
@@ -278,6 +315,16 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
         this.activeTimeColumn === 'xyzm'
           ? 'eventStarts: M coordinate from positions'
           : 'eventStarts: TimestampMillisecond',
+      starSizesColumn:
+        this.props.starSizeColumn === null
+          ? `starSizes: Constant Float32 ${this.props.starSize ?? DEFAULT_TEMPORAL_STARFIELD_STAR_SIZE}`
+          : `${this.props.starSizeColumn ?? 'starSizes'}: Float32`,
+      eventColorsColumn:
+        this.props.eventColorColumn === null
+          ? `eventColors: Constant RGBA8 [${(
+              this.props.eventColor ?? DEFAULT_TEMPORAL_STARFIELD_EVENT_COLOR
+            ).join(', ')}]`
+          : `${this.props.eventColorColumn ?? 'eventColors'}: FixedSizeList<Uint8, 4>`,
       timestampOrigin: formatTimestampOriginMilliseconds(
         temporalColumns.eventStarts.originMilliseconds
       ),
@@ -362,7 +409,17 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
           this.device,
           recordBatch,
           context.batchIndex,
-          this.activeTimeColumn
+          this.activeTimeColumn,
+          {
+            starSizeColumn:
+              this.props.starSizeColumn === undefined ? 'starSizes' : this.props.starSizeColumn,
+            eventColorColumn:
+              this.props.eventColorColumn === undefined
+                ? 'eventColors'
+                : this.props.eventColorColumn,
+            starSize: this.props.starSize ?? DEFAULT_TEMPORAL_STARFIELD_STAR_SIZE,
+            eventColor: this.props.eventColor ?? DEFAULT_TEMPORAL_STARFIELD_EVENT_COLOR
+          }
         ),
       appendBatch: batchInput => this.addGPURecordBatchInput(batchInput),
       destroyBatch: batchInput => batchInput.gpuRecordBatch.destroy(),
@@ -407,6 +464,9 @@ export class ArrowTemporalStarfieldRenderer extends GPURenderable<[RenderPass, {
       if (batch.numRows === 0) {
         continue;
       }
+      this.shaderInputs.setProps({
+        temporalStarfield: getTemporalStarfieldStorageRowMultipliers(batch)
+      });
       this.starModel.setBindings(getTemporalStarfieldStorageBindings(batch));
       this.starModel.setInstanceCount(batch.numRows);
       this.starModel.draw(renderPass);
@@ -457,14 +517,25 @@ function createTemporalStarfieldTableInput(
   };
 }
 
-async function makeTemporalStarfieldGPURecordBatchInput(
+export async function makeTemporalStarfieldGPURecordBatchInput(
   device: Device,
   recordBatch: arrow.RecordBatch,
   batchIndex: number,
-  timeColumn: 'timestamp' | 'xyzm'
+  timeColumn: 'timestamp' | 'xyzm',
+  styleOptions: TemporalStarfieldStyleOptions = {
+    starSizeColumn: 'starSizes',
+    eventColorColumn: 'eventColors',
+    starSize: DEFAULT_TEMPORAL_STARFIELD_STAR_SIZE,
+    eventColor: DEFAULT_TEMPORAL_STARFIELD_EVENT_COLOR
+  },
+  preparationOptions: TemporalStarfieldPreparationOptions = {}
 ): Promise<TemporalStarfieldGPURecordBatchInput> {
   const sourceTable = new arrow.Table([recordBatch]);
-  const sourceVectors = getTemporalStarfieldRecordBatchVectors(sourceTable, timeColumn);
+  const sourceVectors = getTemporalStarfieldRecordBatchVectors(
+    sourceTable,
+    timeColumn,
+    styleOptions
+  );
   const preparedDurationColumns = await convertArrowTemporalToGPUVectors(
     device,
     {
@@ -473,8 +544,14 @@ async function makeTemporalStarfieldGPURecordBatchInput(
     },
     {
       columns: {
-        eventDurations: {id: `arrow-temporal-starfield-event-durations-${batchIndex}`},
-        pulsePeriods: {id: `arrow-temporal-starfield-pulse-periods-${batchIndex}`}
+        eventDurations: {
+          id: `arrow-temporal-starfield-event-durations-${batchIndex}`,
+          preferGPU: preparationOptions.preferTemporalGPU
+        },
+        pulsePeriods: {
+          id: `arrow-temporal-starfield-pulse-periods-${batchIndex}`,
+          preferGPU: preparationOptions.preferTemporalGPU
+        }
       }
     }
   );
@@ -498,7 +575,8 @@ async function makeTemporalStarfieldGPURecordBatchInput(
       preparedEventStarts = await convertTimestampEventStartsToGPUVector(
         device,
         getRequiredTimestampVector(sourceVectors.eventStarts),
-        batchIndex
+        batchIndex,
+        preparationOptions.preferTemporalGPU
       );
     }
     positions = makeGPUVectorFromArrow(device, modelPositions, {
@@ -506,16 +584,20 @@ async function makeTemporalStarfieldGPURecordBatchInput(
       id: `arrow-temporal-starfield-positions-${batchIndex}`,
       format: 'float32x2'
     });
-    starSizes = makeGPUVectorFromArrow(device, sourceVectors.starSizes, {
-      name: 'starSizes',
-      id: `arrow-temporal-starfield-star-sizes-${batchIndex}`,
-      format: 'float32'
-    });
-    eventColors = makeGPUVectorFromArrow(device, sourceVectors.eventColors, {
-      name: 'eventColors',
-      id: `arrow-temporal-starfield-event-colors-${batchIndex}`,
-      format: 'unorm8x4'
-    });
+    starSizes = makeTemporalStarfieldStarSizesGPUVector(
+      device,
+      sourceVectors.starSizes,
+      recordBatch.numRows,
+      styleOptions.starSize,
+      batchIndex
+    );
+    eventColors = makeTemporalStarfieldEventColorsGPUVector(
+      device,
+      sourceVectors.eventColors,
+      recordBatch.numRows,
+      styleOptions.eventColor,
+      batchIndex
+    );
     const temporalColumns: PreparedTemporalColumns = {
       eventStarts: preparedEventStarts,
       eventDurations: preparedDurationColumns.eventDurations,
@@ -550,7 +632,8 @@ async function makeTemporalStarfieldGPURecordBatchInput(
 
 function getTemporalStarfieldRecordBatchVectors(
   table: arrow.Table,
-  timeColumn: 'timestamp' | 'xyzm'
+  timeColumn: 'timestamp' | 'xyzm',
+  styleOptions: {starSizeColumn: string | null; eventColorColumn: string | null}
 ): TemporalStarfieldRecordBatchVectors {
   return {
     positions: getRequiredArrowVector(table, 'positions'),
@@ -560,9 +643,83 @@ function getTemporalStarfieldRecordBatchVectors(
         : (table.getChild('eventStarts') as arrow.Vector<arrow.TimestampMillisecond> | null),
     eventDurations: getRequiredArrowVector(table, 'eventDurations'),
     pulsePeriods: getRequiredArrowVector(table, 'pulsePeriods'),
-    starSizes: getRequiredArrowVector(table, 'starSizes'),
-    eventColors: getRequiredArrowVector(table, 'eventColors')
+    starSizes: styleOptions.starSizeColumn
+      ? getRequiredArrowVector(table, styleOptions.starSizeColumn)
+      : null,
+    eventColors: styleOptions.eventColorColumn
+      ? getRequiredArrowVector(table, styleOptions.eventColorColumn)
+      : null
   };
+}
+
+function makeTemporalStarfieldStarSizesGPUVector(
+  device: Device,
+  starSizes: arrow.Vector<arrow.Float32> | null,
+  rowCount: number,
+  starSize: number,
+  batchIndex: number
+): GPUVector<'float32'> {
+  const id = `arrow-temporal-starfield-star-sizes-${batchIndex}`;
+  if (!starSizes && device.type === 'webgpu') {
+    return GPUConstantVector.fromValue(device, {
+      name: 'starSizes',
+      id,
+      format: 'float32',
+      length: rowCount,
+      value: new Float32Array([starSize]),
+      usage: Buffer.STORAGE
+    });
+  }
+  return makeGPUVectorFromArrow(
+    device,
+    starSizes ?? makeConstantStarSizesVector(rowCount, starSize),
+    {name: 'starSizes', id, format: 'float32'}
+  );
+}
+
+function makeTemporalStarfieldEventColorsGPUVector(
+  device: Device,
+  eventColors: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>> | null,
+  rowCount: number,
+  eventColor: [number, number, number, number],
+  batchIndex: number
+): GPUVector<'unorm8x4'> {
+  const id = `arrow-temporal-starfield-event-colors-${batchIndex}`;
+  if (!eventColors && device.type === 'webgpu') {
+    return GPUConstantVector.fromValue(device, {
+      name: 'eventColors',
+      id,
+      format: 'unorm8x4',
+      length: rowCount,
+      value: new Uint8Array(eventColor),
+      usage: Buffer.STORAGE
+    });
+  }
+  return makeGPUVectorFromArrow(
+    device,
+    eventColors ?? makeConstantEventColorsVector(rowCount, eventColor),
+    {name: 'eventColors', id, format: 'unorm8x4'}
+  );
+}
+
+function makeConstantStarSizesVector(
+  rowCount: number,
+  starSize: number
+): arrow.Vector<arrow.Float32> {
+  const values = new Float32Array(rowCount);
+  values.fill(starSize);
+  return makeFloat32Vector(values);
+}
+
+function makeConstantEventColorsVector(
+  rowCount: number,
+  eventColor: [number, number, number, number]
+): arrow.Vector<arrow.FixedSizeList<arrow.Uint8>> {
+  const values = new Uint8Array(rowCount * 4);
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    values.set(eventColor, rowIndex * 4);
+  }
+  return makeArrowFixedSizeListVector(new arrow.Uint8(), 4, values);
 }
 
 function getRequiredArrowVector<T extends arrow.DataType>(
@@ -588,7 +745,8 @@ function getRequiredTimestampVector(
 async function convertTimestampEventStartsToGPUVector(
   device: Device,
   eventStarts: arrow.Vector<arrow.TimestampMillisecond>,
-  batchIndex: number
+  batchIndex: number,
+  preferGPU?: boolean
 ): Promise<PreparedEventStartsColumn> {
   const preparedColumns = await convertArrowTemporalToGPUVectors(
     device,
@@ -597,7 +755,8 @@ async function convertTimestampEventStartsToGPUVector(
       columns: {
         eventStarts: {
           id: `arrow-temporal-starfield-event-starts-${batchIndex}`,
-          origin: SOURCE_TIMESTAMP_ORIGIN_MILLISECONDS
+          origin: SOURCE_TIMESTAMP_ORIGIN_MILLISECONDS,
+          preferGPU
         }
       }
     }
@@ -688,6 +847,25 @@ function getTemporalStarfieldStorageBindings(
     eventColors: getGPUVectorBuffer(
       getRequiredGPUVector(temporalStarfieldTable, 'eventColors', 'Temporal starfield table')
     )
+  };
+}
+
+function getTemporalStarfieldStorageRowMultipliers(
+  temporalStarfieldTable: GPUTable<GPUTypeMap> | GPURecordBatch<GPUTypeMap>
+): {starSizeRowMultiplier: number; eventColorRowMultiplier: number} {
+  const starSizes = getRequiredGPUVector(
+    temporalStarfieldTable,
+    'starSizes',
+    'Temporal starfield table'
+  );
+  const eventColors = getRequiredGPUVector(
+    temporalStarfieldTable,
+    'eventColors',
+    'Temporal starfield table'
+  );
+  return {
+    starSizeRowMultiplier: starSizes instanceof GPUConstantVector ? 0 : 1,
+    eventColorRowMultiplier: eventColors instanceof GPUConstantVector ? 0 : 1
   };
 }
 
