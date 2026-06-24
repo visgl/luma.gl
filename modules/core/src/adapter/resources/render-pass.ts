@@ -5,11 +5,49 @@
 import type {NumberArray4, TypedArray} from '@math.gl/types';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
-// import {Binding} from '../types/shader-layout';
+import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
+import type {Bindings, BindingsByGroup} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
 import {Framebuffer} from './framebuffer';
 import {QuerySet} from './query-set';
 import type {RenderBundle} from './render-bundle';
+import type {RenderPipeline} from './render-pipeline';
+import type {TransformFeedback} from './transform-feedback';
+import type {VertexArray} from './vertex-array';
+
+/** Draw arguments consumed by the active state on a {@link RenderPass}. */
+export type RenderPassDrawOptions = {
+  /** Use instanced rendering? WebGL compatibility only; WebGPU infers this from instanceCount. */
+  isInstanced?: boolean;
+  /** Number of vertices to draw. */
+  vertexCount?: number;
+  /** Number of indices to draw. */
+  indexCount?: number;
+  /** Number of instances to draw. */
+  instanceCount?: number;
+  /** First vertex to draw from. */
+  firstVertex?: number;
+  /** First index to draw from. */
+  firstIndex?: number;
+  /** First instance to draw from. */
+  firstInstance?: number;
+  /** Base vertex added to indexed draws. */
+  baseVertex?: number;
+  /** @deprecated WebGL-only compatibility override. Prefer fixed pipeline parameters. */
+  parameters?: RenderPipelineParameters;
+  /** @deprecated WebGL-only compatibility override. Prefer fixed pipeline topology. */
+  topology?: PrimitiveTopology;
+  /** @deprecated WebGL-only compatibility state. */
+  transformFeedback?: TransformFeedback;
+  /** @deprecated WebGL-only compatibility uniforms. Prefer buffer bindings. */
+  uniforms?: Record<string, unknown>;
+};
+
+/** Internal options used by engine draw paths to preserve bind-group cache reuse. */
+export type RenderPassBindingOptions = {
+  /** @internal Stable keys for backend bind-group reuse. */
+  _bindGroupCacheKeys?: Partial<Record<number, object>>;
+};
 
 /**
  * Properties for a RenderPass instance is a required parameter to all draw calls.
@@ -84,6 +122,24 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference) */
   abstract setParameters(parameters: RenderPassParameters): void;
 
+  /** Selects the pipeline used by subsequent binding and draw commands. */
+  abstract setPipeline(pipeline: RenderPipeline): void;
+
+  /**
+   * Replaces the complete binding set used by subsequent draw commands.
+   * A pipeline must be selected first so bindings can be resolved against its shader layout.
+   */
+  abstract setBindings(
+    bindings: Bindings | BindingsByGroup,
+    options?: RenderPassBindingOptions
+  ): void;
+
+  /** Selects the vertex array used by subsequent draw commands. */
+  abstract setVertexArray(vertexArray: VertexArray): void;
+
+  /** Issues a draw using the currently selected pipeline, bindings, and vertex array. */
+  abstract draw(options: RenderPassDrawOptions): boolean;
+
   /**
    * Replays reusable draw commands recorded by one or more render bundle encoders.
    * @param bundles - Bundles whose attachment formats and sample count are compatible with this pass.
@@ -126,16 +182,3 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     endTimestampIndex: undefined!
   };
 }
-
-// TODO - Can we align WebGL implementation with WebGPU API?
-// In WebGPU the following methods are on the renderpass instead of the renderpipeline
-// luma.gl keeps them on the pipeline for now, but that has some issues.
-
-// abstract setPipeline(pipeline: RenderPipeline): void {}
-// abstract setIndexBuffer()
-// abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
-// abstract setBindings(bindings: Record<string, Binding>): void;
-// abstract setParameters(parameters: RenderPassParameters);
-// abstract draw(options: {
-// abstract drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-// abstract drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;

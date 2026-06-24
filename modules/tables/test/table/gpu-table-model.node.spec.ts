@@ -191,12 +191,12 @@ test('GPUTableModel draws preserved batches and restores table-level bindings', 
   const renderPass = device.getDefaultRenderPass();
   const batchBuffers = table.batches.map(batch => batch.gpuData['positions'].buffer);
   const drawCalls: Array<{instanceCount?: number; buffer?: unknown}> = [];
-  const draw = model.pipeline.draw.bind(model.pipeline);
+  const draw = renderPass.draw.bind(renderPass);
 
-  model.pipeline.draw = options => {
+  renderPass.draw = options => {
     drawCalls.push({
       instanceCount: options.instanceCount,
-      buffer: options.vertexArray.attributes[0]
+      buffer: renderPass.vertexArray?.attributes[0]
     });
     return draw(options);
   };
@@ -232,11 +232,11 @@ test('GPUTableModel binds reserved table indices for indexed draws', t => {
   const renderPass = device.getDefaultRenderPass();
   const indexBuffer = table.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME].data[0].buffer;
   const drawCalls: Array<{indexBuffer?: unknown; vertexCount?: number; indexCount?: number}> = [];
-  const draw = model.pipeline.draw.bind(model.pipeline);
+  const draw = renderPass.draw.bind(renderPass);
 
-  model.pipeline.draw = options => {
+  renderPass.draw = options => {
     drawCalls.push({
-      indexBuffer: options.vertexArray.indexBuffer,
+      indexBuffer: renderPass.vertexArray?.indexBuffer,
       vertexCount: options.vertexCount,
       indexCount: options.indexCount
     });
@@ -254,7 +254,7 @@ test('GPUTableModel binds reserved table indices for indexed draws', t => {
   t.deepEqual(
     drawCalls,
     [{indexBuffer, vertexCount: indexValues.length, indexCount: indexValues.length}],
-    'passes indexed draw state to the render pipeline'
+    'passes indexed draw state to the render pass'
   );
 
   renderPass.destroy();
@@ -319,9 +319,9 @@ test('GPUTableModel draws reserved index vector slices by valueLength', t => {
     firstVertex?: number;
     firstIndex?: number;
   }> = [];
-  const draw = model.pipeline.draw.bind(model.pipeline);
+  const draw = renderPass.draw.bind(renderPass);
 
-  model.pipeline.draw = options => {
+  renderPass.draw = options => {
     drawCalls.push({
       vertexCount: options.vertexCount,
       indexCount: options.indexCount,
@@ -346,7 +346,7 @@ test('GPUTableModel draws reserved index vector slices by valueLength', t => {
         firstIndex: 2
       }
     ],
-    'passes reserved index vector slice metadata to the render pipeline'
+    'passes reserved index vector slice metadata to the render pass'
   );
 
   renderPass.destroy();
@@ -367,11 +367,11 @@ test('GPUTableModel draws preserved indexed batches and restores aggregate state
     batch => batch.gpuData[GPU_TABLE_INDEX_COLUMN_NAME].buffer
   );
   const drawCalls: Array<{indexBuffer?: unknown; vertexCount?: number; indexCount?: number}> = [];
-  const draw = model.pipeline.draw.bind(model.pipeline);
+  const draw = renderPass.draw.bind(renderPass);
 
-  model.pipeline.draw = options => {
+  renderPass.draw = options => {
     drawCalls.push({
-      indexBuffer: options.vertexArray.indexBuffer,
+      indexBuffer: renderPass.vertexArray?.indexBuffer,
       vertexCount: options.vertexCount,
       indexCount: options.indexCount
     });

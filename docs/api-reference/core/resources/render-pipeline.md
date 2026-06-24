@@ -6,20 +6,19 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 A `RenderPipeline` combines a vertex shader, a fragment shader, a
 [`ShaderLayout`](/docs/api-reference/core/shader-layout), and fixed render
-state into a reusable draw pipeline.
+state into a reusable, immutable pipeline descriptor. Select it on a
+[`RenderPass`](/docs/api-reference/core/resources/render-pass) before drawing.
 
-## Bindings and bind groups
+## Deprecated pipeline-owned bindings
 
-`RenderPipeline` accepts bindings in two forms:
+`RenderPipelineProps.bindings`, `RenderPipelineProps.bindGroups`,
+`pipeline.setBindings()`, and `pipeline.draw()` remain available for
+compatibility, but are deprecated and will be removed in the next major
+release. New code sets bindings and issues draws on `RenderPass`.
 
-- `bindings`: a flat `Record<string, Binding>`
-- `bindGroups`: grouped bindings keyed by bind-group index
-
-Flat `bindings` remain supported for compatibility. When they are used, luma.gl
-partitions them into logical groups using `shaderLayout.bindings[].group`.
-
-Grouped `bindGroups` are useful when you want your application code to mirror
-the structure of your WGSL bind groups directly.
+`bindings` is a flat `Record<string, Binding>`; `bindGroups` is grouped by
+bind-group index. Flat bindings are partitioned using
+`shaderLayout.bindings[].group`.
 
 ## Usage
 
@@ -39,33 +38,26 @@ const pipeline = device.createRenderPipeline({
 });
 ```
 
-Draw with grouped bindings:
+Draw through the render pass:
 
 ```ts
-pipeline.draw({
-  renderPass,
-  vertexArray,
-  vertexCount,
-  bindGroups: {
+renderPass.setPipeline(pipeline);
+renderPass.setBindings({
     0: {frameUniforms},
     2: {lightingUniforms},
     3: {materialUniforms}
-  }
 });
+renderPass.setVertexArray(vertexArray);
+renderPass.draw({vertexCount});
 ```
 
-Draw with flat bindings:
+Flat bindings are also accepted:
 
 ```ts
-pipeline.draw({
-  renderPass,
-  vertexArray,
-  vertexCount,
-  bindings: {
-    frameUniforms,
-    lightingUniforms,
-    materialUniforms
-  }
+renderPass.setBindings({
+  frameUniforms,
+  lightingUniforms,
+  materialUniforms
 });
 ```
 
@@ -81,23 +73,24 @@ Important properties:
 - `bufferLayout?: BufferLayout[]`
 - `topology?: PrimitiveTopology`
 - `parameters?: RenderPipelineParameters`
-- `bindings?: Bindings`
-- `bindGroups?: BindingsByGroup`
+- `bindings?: Bindings` (deprecated)
+- `bindGroups?: BindingsByGroup` (deprecated)
 - `varyings?: string[]`
 - `bufferMode?: number`
 
 ### `bindings`
 
-Optional default flat bindings stored on the pipeline for compatibility paths.
+Deprecated default flat bindings stored on the pipeline for compatibility paths.
 
 ### `bindGroups`
 
-Optional default grouped bindings stored on the pipeline. Keys are bind-group
-indices such as `0`, `2`, and `3`.
+Deprecated default grouped bindings stored on the pipeline.
 
-## `draw()`
+## `draw()` (deprecated)
 
-The draw call accepts dynamic resources and draw parameters, including:
+This compatibility adapter forwards to the supplied render pass. Prefer
+`renderPass.setPipeline()`, `setBindings()`, `setVertexArray()`, and
+`draw()`. It accepts:
 
 - `renderPass`
 - `vertexArray`
@@ -111,16 +104,8 @@ The draw call accepts dynamic resources and draw parameters, including:
 
 ## WebGPU vs WebGL
 
-### WebGPU
-
-WebGPU uses native bind groups and luma.gl binds each populated group before the
-draw.
-
-### WebGL
-
-WebGL does not support bind groups natively. luma.gl still accepts grouped
-bindings logically and flattens them to WebGL uniform-buffer and texture-unit
-bindings at draw time.
+WebGPU maps pass bindings to native bind groups. WebGL emulates the same
+pass-owned state using uniform-buffer and texture-unit bindings at draw time.
 
 ## Related Pages
 

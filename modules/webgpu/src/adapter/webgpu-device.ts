@@ -443,13 +443,13 @@ export class WebGPUDevice extends Device {
     }
   }
 
-  popErrorScope(handler: (error: GPUError) => void): void {
+  popErrorScope(handler: (error: GPUError) => void): Promise<void> {
     if (!this.props.debug) {
-      return;
+      return Promise.resolve();
     }
     const profiler = getWebGPUCpuHotspotProfiler(this);
     const startTime = profiler ? getTimestamp() : 0;
-    this.handle
+    const errorScopePromise = this.handle
       .popErrorScope()
       .then((error: GPUError | null) => {
         if (error) {
@@ -469,6 +469,7 @@ export class WebGPUDevice extends Device {
       profiler.errorScopePopCount = (profiler.errorScopePopCount || 0) + 1;
       profiler.errorScopeTimeMs = (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
     }
+    return errorScopePromise;
   }
 
   // PRIVATE METHODS

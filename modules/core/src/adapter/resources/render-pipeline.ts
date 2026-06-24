@@ -62,10 +62,9 @@ export type RenderPipelineProps = ResourceProps & {
   /** Internal hook for backend-specific shared pipeline implementations. */
   _sharedRenderPipeline?: SharedRenderPipeline;
 
-  // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
-  /** Buffers, Textures, Samplers for the shader bindings */
+  /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
   bindings?: Bindings;
-  /** Bindings grouped by bind-group index */
+  /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
   bindGroups?: BindingsByGroup;
 };
 
@@ -116,7 +115,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     this.sharedRenderPipeline = this.props._sharedRenderPipeline || null;
   }
 
-  /** Draw call. Returns false if the draw call was aborted (due to resources still initializing) */
+  /**
+   * @deprecated Use RenderPass.setPipeline(), setBindings(), setVertexArray(), and draw().
+   * Will be removed in the next major release.
+   */
   abstract draw(options: {
     /** Render pass to draw into (targeting screen or framebuffer) */
     renderPass?: RenderPass;
@@ -143,9 +145,9 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     baseVertex?: number;
     /** Transform feedback. WebGL only. */
     transformFeedback?: TransformFeedback;
-    /** Bindings applied for this draw (textures, samplers, uniform buffers) */
+    /** @deprecated Set bindings on RenderPass instead. */
     bindings?: Bindings;
-    /** Bindings grouped by bind-group index */
+    /** @deprecated Set bindings on RenderPass instead. */
     bindGroups?: BindingsByGroup;
     /** Optional stable cache keys for backend bind-group reuse */
     _bindGroupCacheKeys?: Partial<Record<number, object>>;

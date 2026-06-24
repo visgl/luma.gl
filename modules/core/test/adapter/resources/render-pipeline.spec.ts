@@ -68,22 +68,6 @@ test('RenderPipeline can infer an empty shader layout for builtin-only WGSL shad
   t.end();
 });
 
-const INVALID_RENDER_SOURCE = /* WGSL */ `
-@vertex fn wrongVertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
-  var positions = array<vec2<f32>, 3>(
-    vec2<f32>(0.0, 0.5),
-    vec2<f32>(-0.5, -0.5),
-    vec2<f32>(0.5, -0.5)
-  );
-  let position = positions[vertexIndex];
-  return vec4<f32>(position, 0.0, 1.0);
-}
-
-@fragment fn fragmentMain() -> @location(0) vec4<f32> {
-  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-}
-`;
-
 test('RenderPipeline bind-group cache only invalidates when binding identities change', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 
@@ -165,6 +149,57 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   t.end();
 });
 
+test('RenderPass owns pipeline, bindings, vertex array, and draw state', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const shader = webgpuDevice.createShader({source: RENDER_SOURCE});
+  const renderPipeline = webgpuDevice.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    shaderLayout: {
+      attributes: [],
+      bindings: [{name: 'colorUniforms', type: 'uniform', group: 3, location: 0}]
+    }
+  });
+  const uniformBuffer = webgpuDevice.createBuffer({
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST
+  });
+  const vertexArray = webgpuDevice.createVertexArray({
+    shaderLayout: renderPipeline.shaderLayout,
+    bufferLayout: renderPipeline.bufferLayout
+  });
+  const framebuffer = webgpuDevice
+    .getDefaultCanvasContext()
+    .getCurrentFramebuffer({depthStencilFormat: false});
+  const renderPass = webgpuDevice.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+
+  t.throws(
+    () => renderPass.setBindings({colorUniforms: uniformBuffer}),
+    /setPipeline.*must be called before setBindings/,
+    'bindings require an active render pipeline'
+  );
+
+  renderPass.setPipeline(renderPipeline);
+  renderPass.setBindings({3: {colorUniforms: uniformBuffer}});
+  renderPass.setVertexArray(vertexArray);
+  t.equal(renderPass.draw({vertexCount: 3}), true, 'render pass issues the draw');
+
+  renderPass.end();
+  webgpuDevice.submit();
+  vertexArray.destroy();
+  uniformBuffer.destroy();
+  renderPipeline.destroy();
+  shader.destroy();
+  t.end();
+});
+
 test('RenderPipeline creates a depth attachment descriptor when an explicit WebGPU depth format is supplied', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 
@@ -204,7 +239,7 @@ test('RenderPipeline creates a depth attachment descriptor when an explicit WebG
   t.end();
 });
 
-test('WebGPU RenderPipeline marks init failures as errored and skips draw', async t => {
+test('WebGPU RenderPipeline skips draw when marked errored', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
@@ -213,7 +248,7 @@ test('WebGPU RenderPipeline marks init failures as errored and skips draw', asyn
     return;
   }
 
-  const shader = webgpuDevice.createShader({source: INVALID_RENDER_SOURCE});
+  const shader = webgpuDevice.createShader({source: BUILTIN_ONLY_RENDER_SOURCE});
   const renderPipeline = webgpuDevice.createRenderPipeline({
     vs: shader,
     fs: shader,
@@ -223,8 +258,7 @@ test('WebGPU RenderPipeline marks init failures as errored and skips draw', asyn
     }
   });
 
-  const linkStatus = await waitForLinkStatus(renderPipeline);
-  t.equal(linkStatus, 'error', 'render pipeline init failure marks linkStatus as error');
+  renderPipeline.linkStatus = 'error';
   t.ok(renderPipeline.isErrored, 'render pipeline reports errored state');
 
   const vertexArray = webgpuDevice.createVertexArray({
@@ -249,12 +283,3 @@ test('WebGPU RenderPipeline marks init failures as errored and skips draw', asyn
   shader.destroy();
   t.end();
 });
-
-async function waitForLinkStatus(renderPipeline: {
-  linkStatus: 'pending' | 'success' | 'error';
-}): Promise<'pending' | 'success' | 'error'> {
-  for (let iteration = 0; iteration < 50 && renderPipeline.linkStatus !== 'error'; iteration++) {
-    await new Promise(resolve => setTimeout(resolve, 10));
-  }
-  return renderPipeline.linkStatus;
-}

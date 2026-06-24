@@ -277,10 +277,10 @@ test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', 
     instanceCount?: number;
     buffer?: unknown;
   }[] = [];
-  const draw = model.pipeline.draw.bind(model.pipeline);
+  const draw = renderPass.draw.bind(renderPass);
 
-  model.pipeline.draw = options => {
-    const positionsBinding = options.vertexArray.attributes[0];
+  renderPass.draw = options => {
+    const positionsBinding = renderPass.vertexArray?.attributes[0];
     drawCalls.push({
       instanceCount: options.instanceCount,
       buffer: positionsBinding

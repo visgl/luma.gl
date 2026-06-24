@@ -38,7 +38,7 @@ renderPass.end();
 device.submit();
 ```
 
-The bundle attachment formats and sample count must match the render pass that executes it. `RenderBundleEncoder` behaves like a partial render pass for draw recording, so render-pass setup and dynamic pass controls such as clears, framebuffer selection, viewport, scissor rectangle, blend constant, stencil reference, and occlusion queries are not available while recording a bundle.
+The bundle attachment formats and sample count must match the render pass that executes it. `RenderBundleEncoder` uses the same `setPipeline()`, `setBindings()`, `setVertexArray()`, and `draw()` commands as a render pass. It behaves like a partial render pass for draw recording, so render-pass setup and dynamic pass controls such as clears, framebuffer selection, viewport, scissor rectangle, blend constant, stencil reference, and occlusion queries are not available while recording a bundle.
 
 ### Updating resources and splitting bundles
 
