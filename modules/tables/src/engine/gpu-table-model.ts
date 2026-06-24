@@ -173,6 +173,11 @@ export class GPUTableModel extends Model {
       getBufferLayoutNames(nextTable.bufferLayout),
       'buffer layout'
     );
+    assertNoDuplicateNames(
+      Object.keys(this.tableState.explicitBindings),
+      Object.keys(getGPUTableDrawBindings(nextTable, this.tableState.tableBindingNames)),
+      'binding'
+    );
     this.setBufferLayout([...this.tableState.explicitBufferLayout, ...nextTable.bufferLayout]);
     this.setAttributes({
       ...this.tableState.explicitAttributes,
@@ -324,6 +329,11 @@ function getGPUTableModelConstructorState(
     getBufferLayoutNames(explicitBufferLayout),
     getBufferLayoutNames(table.bufferLayout),
     'buffer layout'
+  );
+  assertNoDuplicateNames(
+    Object.keys(explicitBindings),
+    Object.keys(getGPUTableDrawBindings(table, tableBindingNames)),
+    'binding'
   );
   assertNoExplicitIndexBuffer(table, explicitIndexBuffer);
   validateGPUTableIndexBatches(table);

@@ -609,5 +609,6 @@ function getColumnBufferLayout(
   bufferLayout: BufferLayout[],
   columnName: string
 ): BufferLayout | undefined {
-  return bufferLayout.find(layout => layout.name === columnName);
+  const layout = bufferLayout.find(candidateLayout => candidateLayout.name === columnName);
+  return layout?.attributes ? layout : undefined;
 }
