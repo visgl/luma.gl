@@ -11,8 +11,8 @@ import {
   type PathStorageInputProps,
   type PathStorageModelProps
 } from './path-storage-model';
-import {assertModelGPUVectorInputs} from '../../engine/gpu-table-model-input-schema';
-import type {ModelGPUInputSchema} from '../../engine/gpu-table-model-input-schema';
+import {validateGPUInputVectors} from '../../engine/gpu-input-schema';
+import type {GPUInputSchema} from '../../engine/gpu-input-schema';
 
 /** Props for storage-backed Trips-style path rendering. */
 export type PathTripsStorageModelProps = PathStorageModelProps & {
@@ -59,7 +59,7 @@ export const PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA = [
     formats: ['float32x4'],
     internal: true
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 const DEFAULT_PATH_TRIPS_STORAGE_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathValues : array<f32>;
@@ -200,8 +200,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 /** WebGPU storage-backed path model with TripsLayer-style temporal filtering. */
 export class PathTripsStorageModel extends PathStorageModel {
   /** Prepared GPU vectors consumed by the storage-backed trips path model. */
-  static override readonly gpuInputSchema: ModelGPUInputSchema =
-    PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA;
+  static override readonly gpuInputSchema: GPUInputSchema = PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA;
 
   private tripProps: PathTripsStorageModelProps;
   private tripConfigBuffer: DynamicBuffer;
@@ -209,7 +208,7 @@ export class PathTripsStorageModel extends PathStorageModel {
   /** Creates a WebGPU storage-backed Trips-style path model. */
   constructor(device: Device, props: PathTripsStorageModelProps) {
     if (hasPathTripsStorageInputProps(props)) {
-      assertModelGPUVectorInputs('PathTripsStorageModel', PathTripsStorageModel.gpuInputSchema, {
+      validateGPUInputVectors('PathTripsStorageModel', PathTripsStorageModel.gpuInputSchema, {
         paths: props.paths,
         colors: props.colors,
         widths: props.widths,

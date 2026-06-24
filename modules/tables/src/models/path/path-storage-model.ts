@@ -21,7 +21,7 @@ import {
   dispatchGpuPathExpansionCompute
 } from './gpu/gpu-path-expansion';
 import {resolvePathStorageInputs, type PathStorageBatchInputs} from './gpu/path-storage-gpu-inputs';
-import type {ModelGPUInputSchema} from '../../engine/gpu-table-model-input-schema';
+import type {GPUInputSchema} from '../../engine/gpu-input-schema';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';
 const SEGMENT_END_POINT_INDICES_COLUMN = 'segmentEndPointIndices';
@@ -79,7 +79,7 @@ export const PATH_STORAGE_GPU_INPUT_SCHEMA = [
     formats: ['float32x4'],
     internal: true
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 type PathStorageOwnedResource =
   | Pick<GPUVector, 'destroy'>
@@ -338,7 +338,7 @@ type PathStorageBatchRowState = {
  */
 export class PathStorageModel extends Model {
   /** Prepared GPU vectors consumed by the storage-backed path model. */
-  static readonly gpuInputSchema: ModelGPUInputSchema = PATH_STORAGE_GPU_INPUT_SCHEMA;
+  static readonly gpuInputSchema: GPUInputSchema = PATH_STORAGE_GPU_INPUT_SCHEMA;
 
   /** Generated segment records across all preserved render batches. */
   segmentCount!: number;

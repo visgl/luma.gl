@@ -57,6 +57,8 @@ types in [`@luma.gl/tables`](/docs/api-reference/tables):
 - `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
 - `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record
   batch boundaries.
+- `ArrowInputSchema` combines source resolution and conversion with final
+  `GPUInputSchema` validation for model-specific prepared inputs.
 
 The resulting table schema is `GPUSchema`, and each vector has a
 `GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or

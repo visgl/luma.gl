@@ -4,10 +4,10 @@
 
 import type {ModelProps} from '@luma.gl/engine';
 import {
-  assertModelGPUVectorInputs,
+  validateGPUInputVectors,
+  type GPUInputSchema,
+  type GPUInputVectors,
   type GPUVector,
-  type ModelGPUInputSchema,
-  type ModelGPUInputVectors,
   type ValueList,
   type VertexList
 } from '@luma.gl/tables';
@@ -68,7 +68,7 @@ export const TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA = [
     required: false,
     formats: ['sint16x4']
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 /** Prepared GPU inputs consumed by storage-backed 2D text models. */
 export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
@@ -126,7 +126,7 @@ export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
     required: false,
     formats: ['sint16x4']
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 /** Prepared GPU inputs consumed by dictionary storage-backed 2D text models. */
 export const TEXT_DICTIONARY_GPU_INPUT_SCHEMA = [
@@ -143,7 +143,7 @@ export const TEXT_DICTIONARY_GPU_INPUT_SCHEMA = [
     formats: TEXT_DICTIONARY_INDEX_FORMATS
   },
   ...TEXT_STORAGE_GPU_INPUT_SCHEMA.slice(2)
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 /** GPUVector inputs shared by all 2D text model preparation paths. */
 export interface TextInputProps extends ModelProps {
@@ -229,13 +229,13 @@ export function assertTextDictionaryGPUVectorInputs(props: TextDictionaryInputPr
 
 function assertTextGPUVectorInputs(
   modelName: string,
-  schema: ModelGPUInputSchema,
+  schema: GPUInputSchema,
   props: TextInputProps
 ): void {
   const vectors = Object.fromEntries(
     schema.map(input => [input.name, props[input.name as keyof TextInputProps]])
-  ) as ModelGPUInputVectors;
-  assertModelGPUVectorInputs(modelName, schema, vectors);
+  ) as GPUInputVectors;
+  validateGPUInputVectors(modelName, schema, vectors);
   const rowCount = props.positions.length;
   for (const input of schema) {
     const vector = vectors[input.name];

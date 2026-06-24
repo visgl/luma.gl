@@ -15,10 +15,7 @@ import type {GPUVector} from '../../table/gpu-vector';
 import {getGPUDataBuffersForLayout} from '../../table/gpu-vector-utils';
 import {isVertexListGPUVectorFormat, type VertexList} from '../../table/gpu-vector-format';
 import type {GeneratedBufferBatch} from '../../utils/generated-buffer-batches';
-import {
-  assertModelGPUVectorInputs,
-  type ModelGPUInputSchema
-} from '../../engine/gpu-table-model-input-schema';
+import {type GPUInputSchema, validateGPUInputVectors} from '../../engine/gpu-input-schema';
 
 const SEGMENT_START_POSITIONS_COLUMN = 'segmentStartPositions';
 const SEGMENT_END_POSITIONS_COLUMN = 'segmentEndPositions';
@@ -70,7 +67,7 @@ export const PATH_ATTRIBUTE_GPU_INPUT_SCHEMA = [
     formats: ['float32x4'],
     internal: true
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 const DEFAULT_PATH_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
@@ -342,7 +339,7 @@ function preparePathAttributeModel(props: PathAttributeModelProps): PreparedPath
 }
 
 function assertArrowPathVectorTypes(props: PathAttributeModelProps): void {
-  assertModelGPUVectorInputs('PathAttributeModel', PathAttributeModel.gpuInputSchema, {
+  validateGPUInputVectors('PathAttributeModel', PathAttributeModel.gpuInputSchema, {
     paths: props.paths,
     colors: props.colors,
     widths: props.widths,

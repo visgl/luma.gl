@@ -109,12 +109,12 @@ export {
   getTypedArrayFromDataType
 } from '@luma.gl/core';
 export {
-  assertModelGPUVectorInputs,
-  type ModelGPUInputDeclaration,
-  type ModelGPUInputKind,
-  type ModelGPUInputSchema,
-  type ModelGPUInputVectors
-} from './engine/gpu-table-model-input-schema';
+  validateGPUInputVectors,
+  type GPUInputDeclaration,
+  type GPUInputKind,
+  type GPUInputSchema,
+  type GPUInputVectors
+} from './engine/gpu-input-schema';
 export {
   PathAttributeModel,
   PATH_ATTRIBUTE_GPU_INPUT_SCHEMA,

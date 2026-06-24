@@ -10,10 +10,7 @@ import {
 } from '../../../table/gpu-vector-format';
 import type {GPUData} from '../../../table/gpu-data';
 import type {GPUVector} from '../../../table/gpu-vector';
-import {
-  assertModelGPUVectorInputs,
-  type ModelGPUInputSchema
-} from '../../../engine/gpu-table-model-input-schema';
+import {type GPUInputSchema, validateGPUInputVectors} from '../../../engine/gpu-input-schema';
 import type {PathStorageInputProps} from '../path-storage-model';
 
 /** Per-source-batch storage bindings and path range metadata. */
@@ -51,7 +48,7 @@ export type PathStorageInputs = {
 /** Resolves aligned path/style GPUVector batches for storage-backed path expansion. */
 export function resolvePathStorageInputs(
   props: PathStorageInputProps,
-  gpuInputSchema: ModelGPUInputSchema
+  gpuInputSchema: GPUInputSchema
 ): PathStorageInputs {
   assertPathStorageVectorTypes(props, gpuInputSchema);
   assertPathStorageVectorRowAlignment(props);
@@ -109,9 +106,9 @@ export function resolvePathStorageInputs(
 
 function assertPathStorageVectorTypes(
   props: PathStorageInputProps,
-  gpuInputSchema: ModelGPUInputSchema
+  gpuInputSchema: GPUInputSchema
 ): void {
-  assertModelGPUVectorInputs('PathStorageModel', gpuInputSchema, {
+  validateGPUInputVectors('PathStorageModel', gpuInputSchema, {
     paths: props.paths,
     colors: props.colors,
     widths: props.widths,

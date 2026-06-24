@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {RecordBatch, Table, Vector, type DataType} from 'apache-arrow';
-import type {ModelGPUInputDeclaration, ModelGPUInputSchema} from '@luma.gl/tables';
+import type {GPUInputDeclaration, GPUInputSchema} from '@luma.gl/tables';
 import type {ArrowPathSourceVectors} from '../conversion/arrow-path-gpu-vectors';
 import {getArrowPaths, getArrowVectorByPath} from '../../../arrow-utils/arrow-paths';
 
@@ -40,7 +40,7 @@ export type ArrowPathSourceVectorSelectors = {
 /** Schema-bearing Arrow path-family model constructor accepted by source mapping helpers. */
 export type ArrowPathSourceMappingModel = {
   /** Runtime prepared GPU input contract. */
-  readonly gpuInputSchema: ModelGPUInputSchema;
+  readonly gpuInputSchema: GPUInputSchema;
   /** Constructor name used in mapping errors when available. */
   readonly name?: string;
 };
@@ -98,13 +98,13 @@ function getArrowPathSourceTable(data: ArrowPathSourceData | null | undefined): 
   return data instanceof Table ? data : new Table([data]);
 }
 
-function getArrowPathSourceMappableInputs(schema: ModelGPUInputSchema): ModelGPUInputDeclaration[] {
+function getArrowPathSourceMappableInputs(schema: GPUInputSchema): GPUInputDeclaration[] {
   return schema.filter(input => !input.internal);
 }
 
 function assertArrowPathSourceSelectors(
   modelName: string,
-  sourceMappableInputs: ModelGPUInputDeclaration[],
+  sourceMappableInputs: GPUInputDeclaration[],
   selectors: ArrowPathSourceVectorSelectors
 ): void {
   const sourceMappableInputNames = new Set(sourceMappableInputs.map(input => input.name));
@@ -119,7 +119,7 @@ function assertArrowPathSourceSelectors(
 
 function resolveArrowPathSourceVector(
   modelName: string,
-  input: ModelGPUInputDeclaration,
+  input: GPUInputDeclaration,
   selector: OptionalArrowColumnSelector,
   table: Table | undefined,
   availablePaths: Set<string>

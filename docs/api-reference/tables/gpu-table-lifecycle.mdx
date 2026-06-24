@@ -99,7 +99,9 @@ example, `unorm8x4` can feed `vec4<f32>`, while `uint32x4` cannot feed
 
 See [GPUSchema](/docs/api-reference/tables/gpu-schema) and
 [GPUVectorFormat](/docs/api-reference/tables/gpu-vector-format) for the type
-reference.
+reference. A model's accepted prepared vector inputs are declared separately
+with
+[`GPUInputSchema`](/docs/api-reference/tables/gpu-input-schema).
 
 ## Object Responsibilities
 
@@ -113,6 +115,7 @@ method signatures live on the individual reference pages:
 | `GPURecordBatch` | One immutable preserved batch with batch-local data chunks and layout metadata. | [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch) |
 | `GPUTable` | Table-level owner that preserves batches, exposes aggregate vectors, and controls packing/detach/destruction. | [GPUTable](/docs/api-reference/tables/gpu-table) |
 | `GPUSchema` | Selected-column metadata with `GPUVectorFormat` fields. | [GPUSchema](/docs/api-reference/tables/gpu-schema) |
+| `GPUInputSchema` | Runtime declaration of required and optional `GPUVector` model inputs. | [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema) |
 
 The important invariant is that buffers are reached through `GPUData`, not
 directly through `GPUVector`. Code that needs one directly bindable buffer should
@@ -290,5 +293,6 @@ for modes, options, and output shapes.
 - [GPUVector](/docs/api-reference/tables/gpu-vector)
 - [GPUData](/docs/api-reference/tables/gpu-data)
 - [GPUSchema](/docs/api-reference/tables/gpu-schema)
+- [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema)
 - [GPUVectorFormat](/docs/api-reference/tables/gpu-vector-format)
 - [GPUTableBufferPlanner](/docs/api-reference/tables/gpu-table-buffer-planner)

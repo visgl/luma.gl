@@ -20,6 +20,7 @@ export type TablesDocsTabId =
   | 'vector'
   | 'data'
   | 'schema'
+  | 'input-schema'
   | 'vector-format'
   | 'buffer-planner';
 
@@ -32,6 +33,11 @@ const TABLES_DOCS_TABS: TablesDocsTab[] = [
   {id: 'vector', label: 'GPUVector', href: '/docs/api-reference/tables/gpu-vector'},
   {id: 'data', label: 'GPUData', href: '/docs/api-reference/tables/gpu-data'},
   {id: 'schema', label: 'GPUSchema', href: '/docs/api-reference/tables/gpu-schema'},
+  {
+    id: 'input-schema',
+    label: 'GPUInputSchema',
+    href: '/docs/api-reference/tables/gpu-input-schema'
+  },
   {id: 'vector-format', label: 'GPUVectorFormat', href: '/docs/api-reference/tables/gpu-vector-format'},
   {id: 'buffer-planner', label: 'Buffer Planner', href: '/docs/api-reference/tables/gpu-table-buffer-planner'}
 ];
