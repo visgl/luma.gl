@@ -29,6 +29,7 @@ import {
   GPURecordBatch,
   GPUTable,
   getGPUVectorBuffer,
+  getGPUVectorData,
   getRequiredGPUVector,
   type GPUTypeMap,
   type GPUVector
@@ -511,10 +512,11 @@ async function makeArrowColumnTableInput(
       ([name, vector]) => new arrow.Field(name, getRequiredArrowGPUVectorDataType(vector), false)
     );
     const batch = new GPURecordBatch<GPUTypeMap>({
-      vectors,
+      gpuData: Object.fromEntries(
+        Object.entries(vectors).map(([name, vector]) => [name, getGPUVectorData(vector)])
+      ),
       fields,
-      bufferLayout: [],
-      bindings: getColumnVectorBindings(vectors)
+      bufferLayout: []
     });
     const table = new GPUTable<GPUTypeMap>({
       batches: [batch],

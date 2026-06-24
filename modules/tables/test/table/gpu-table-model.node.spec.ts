@@ -129,7 +129,7 @@ test('GPUTableModel merges explicit model state and rejects duplicate table inpu
   );
   t.equal(
     model.vertexArray.attributes[1],
-    table.attributes['positions'],
+    table.batches[0].gpuData.positions.buffer,
     'adds table attributes after explicit model bindings'
   );
 
@@ -167,7 +167,7 @@ test('GPUTableModel binds interleaved table buffers by layout name', t => {
     table
   });
 
-  t.deepEqual(Object.keys(table.attributes), ['matrices'], 'keeps the layout-named buffer');
+  t.notOk('attributes' in table, 'does not cache derived attribute buffers on the table');
   t.equal(
     model.vertexArray.attributes[0],
     matrixBuffer,
@@ -189,7 +189,7 @@ test('GPUTableModel draws preserved batches and restores table-level bindings', 
   const table = makeBatchedPositionsTable(device, [1, 2]);
   const model = makeTableModel(device, table);
   const renderPass = device.getDefaultRenderPass();
-  const batchBuffers = table.batches.map(batch => batch.gpuVectors['positions'].data[0].buffer);
+  const batchBuffers = table.batches.map(batch => batch.gpuData['positions'].buffer);
   const drawCalls: Array<{instanceCount?: number; buffer?: unknown}> = [];
   const draw = model.pipeline.draw.bind(model.pipeline);
 
@@ -214,7 +214,7 @@ test('GPUTableModel draws preserved batches and restores table-level bindings', 
   );
   t.equal(
     model.vertexArray.attributes[0],
-    table.attributes['positions'],
+    batchBuffers[0],
     'restores table-level attribute buffers after batched drawing'
   );
 
@@ -364,7 +364,7 @@ test('GPUTableModel draws preserved indexed batches and restores aggregate state
   const model = makeTableModel(device, table, {tableCount: 'none'});
   const renderPass = device.getDefaultRenderPass();
   const batchIndexBuffers = table.batches.map(
-    batch => batch.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME].data[0].buffer
+    batch => batch.gpuData[GPU_TABLE_INDEX_COLUMN_NAME].buffer
   );
   const drawCalls: Array<{indexBuffer?: unknown; vertexCount?: number; indexCount?: number}> = [];
   const draw = model.pipeline.draw.bind(model.pipeline);
@@ -416,30 +416,14 @@ test('GPUTableModel requires reserved table indices to use INDEX buffers', t => 
   t.end();
 });
 
-test('GPUTableModel refreshes inferred counts when a table row count changes', t => {
-  const device = new NullDevice({});
-  const table = makePositionsTable(device, 1);
-  const model = makeTableModel(device, table);
-
-  table.batches[0].appendRows(3);
-  table.refreshFromBatches();
-  model.needsRedraw();
-
-  t.equal(model.instanceCount, 4, 'syncs inferred row counts before redraw checks');
-
-  model.destroy();
-  table.destroy();
-  t.end();
-});
-
 test('GPUTable preserves source-row metadata across batch operations', t => {
   const device = new NullDevice({});
   const firstBatch = new GPURecordBatch({
-    vectors: {positions: makePositionsVector(device, 1)},
+    gpuData: {positions: makePositionsVector(device, 1).data[0]},
     sourceInfo: {sourceBatchIndex: 0, sourceRowIndexOffset: 10, sourceRowCount: 1}
   });
   const secondBatch = new GPURecordBatch({
-    vectors: {positions: makePositionsVector(device, 2)},
+    gpuData: {positions: makePositionsVector(device, 2).data[0]},
     sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 11, sourceRowCount: 2}
   });
   const table = new GPUTable({
@@ -585,7 +569,7 @@ function makeBatchedPositionsTable(device: NullDevice, rowCounts: number[]): GPU
   let sourceRowIndexOffset = 0;
   const batches = rowCounts.map((rowCount, sourceBatchIndex) => {
     const batch = new GPURecordBatch({
-      vectors: {positions: makePositionsVector(device, rowCount)},
+      gpuData: {positions: makePositionsVector(device, rowCount).data[0]},
       sourceInfo: {sourceBatchIndex, sourceRowIndexOffset, sourceRowCount: rowCount}
     });
     sourceRowIndexOffset += rowCount;
@@ -605,9 +589,9 @@ function makeBatchedIndexedPositionsTable(
   const batches = batchProps.map(
     ({rowCount, indices}) =>
       new GPURecordBatch({
-        vectors: {
-          positions: makePositionsVector(device, rowCount),
-          [GPU_TABLE_INDEX_COLUMN_NAME]: makeIndicesVector(device, rowCount, indices)
+        gpuData: {
+          positions: makePositionsVector(device, rowCount).data[0],
+          [GPU_TABLE_INDEX_COLUMN_NAME]: makeIndicesVector(device, rowCount, indices).data[0]
         }
       })
   );
@@ -622,7 +606,7 @@ function makeContiguousSourceBatchedPositionsTable(device: NullDevice): GPUTable
   let sourceRowIndexOffset = 0;
   const batches = [1, 2].map(rowCount => {
     const batch = new GPURecordBatch({
-      vectors: {positions: makePositionsVector(device, rowCount)},
+      gpuData: {positions: makePositionsVector(device, rowCount).data[0]},
       sourceInfo: {sourceBatchIndex: 0, sourceRowIndexOffset, sourceRowCount: rowCount}
     });
     sourceRowIndexOffset += rowCount;

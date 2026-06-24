@@ -61,7 +61,7 @@ test('PolygonAttributeModel consumes flattened vertex-list values through explic
   });
 
   t.equal(model.table?.numRows, 1, 'keeps one logical source polygon row');
-  t.equal(model.table?.batches[0]?.gpuVectors.positions.format, 'vertex-list<float32x4>');
+  t.equal(model.table?.batches[0]?.gpuData.positions.format, 'vertex-list<float32x4>');
   t.equal(model.vertexCount, 3, 'uses flattened reserved index valueLength for indexed draw count');
   t.deepEqual(
     model.table?.bufferLayout.map(layout => layout.name),
@@ -173,9 +173,10 @@ test('PolygonStorageModel binds flattened polygon vectors as storage', async t =
   t.deepEqual(model.table?.bufferLayout, [], 'does not synthesize vertex attributes');
   t.equal(model.vertexCount, 3, 'uses flattened reserved index valueLength for indexed draws');
   t.equal(model.indexCount, 3, 'plumbs flattened reserved index valueLength to Model.draw');
-  t.ok(model.table?.bindings.polygonPositions, 'binds prepared positions as storage');
-  t.ok(model.table?.bindings.polygonColors, 'binds prepared colors as storage');
-  t.ok(model.table?.bindings.polygonRowIndices, 'binds prepared row indices as storage');
+  t.notOk('bindings' in model.table!, 'does not cache model bindings on the table');
+  t.ok(model.bindings.polygonPositions, 'binds prepared positions as storage');
+  t.ok(model.bindings.polygonColors, 'binds prepared colors as storage');
+  t.ok(model.bindings.polygonRowIndices, 'binds prepared row indices as storage');
 
   model.destroy();
   destroyPolygonGPUVectors(vectors);

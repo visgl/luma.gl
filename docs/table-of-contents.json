@@ -69,7 +69,8 @@
           "api-guide/gpu/gpu-bindings",
           "api-guide/gpu/gpu-attributes",
           "api-guide/gpu/gpu-uniforms",
-          "api-guide/gpu/gpu-storage-buffers"
+          "api-guide/gpu/gpu-storage-buffers",
+          "api-guide/gpu/tabular-data-in-wgsl"
         ]
       },
       {

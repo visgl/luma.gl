@@ -250,21 +250,27 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
       }
 
       case 'data': {
+        const format = props.format ?? getFirstGPUVectorDataFormat(props.data);
+        const formatInfo = format ? getGPUVectorFormatInfo(format) : undefined;
         const {
           name,
-          format = getFirstGPUVectorDataFormat(props.data),
           data,
-          stride = data[0]?.stride ?? getGPUVectorFormatInfo(format).components,
+          stride = data[0]?.stride ?? formatInfo?.components ?? 1,
           valueLength = data.reduce(
             (totalValueLength, chunk) => totalValueLength + chunk.valueLength,
             0
           ),
-          byteStride = data[0]?.byteStride ?? getGPUVectorFormatInfo(format).byteLength,
-          rowByteLength = data[0]?.rowByteLength ?? getGPUVectorFormatInfo(format).byteLength,
+          byteStride = data[0]?.byteStride ?? formatInfo?.byteLength,
+          rowByteLength = data[0]?.rowByteLength ?? formatInfo?.byteLength,
           bufferLayout,
           ownsData = false
         } = props;
-        validateGPUVectorDataFormats(data, format);
+        if (byteStride === undefined || rowByteLength === undefined) {
+          throw new Error('GPUVector requires format or explicit byte layout metadata');
+        }
+        if (format) {
+          validateGPUVectorDataFormats(data, format);
+        }
         this.name = name;
         this.dataType = props.dataType;
         this.format = format;
@@ -418,12 +424,8 @@ function getResolvedGPUVectorLayout<T extends GPUVectorFormat>(props: {
   };
 }
 
-function getFirstGPUVectorDataFormat<T extends GPUVectorFormat>(data: GPUData<T>[]): T {
-  const format = data[0]?.format;
-  if (!format) {
-    throw new Error('GPUVector requires format or at least one GPUData chunk');
-  }
-  return format;
+function getFirstGPUVectorDataFormat<T extends GPUVectorFormat>(data: GPUData<T>[]): T | undefined {
+  return data[0]?.format;
 }
 
 function validateGPUVectorDataFormats<T extends GPUVectorFormat>(

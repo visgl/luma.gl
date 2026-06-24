@@ -37,8 +37,8 @@ test('GPUTableGeometry validates indexed and multi-batch geometry contracts', t 
     data: new Uint16Array([0, 1, 2])
   });
   const batches = [
-    new GPURecordBatch({vectors: {positions: makePositionsVector(device, 1)}}),
-    new GPURecordBatch({vectors: {positions: makePositionsVector(device, 2)}})
+    new GPURecordBatch({gpuData: {positions: makePositionsVector(device, 1).data[0]}}),
+    new GPURecordBatch({gpuData: {positions: makePositionsVector(device, 2).data[0]}})
   ];
   const batchedTable = new GPUTable({
     batches,
@@ -63,7 +63,7 @@ test('GPUTableGeometry validates indexed and multi-batch geometry contracts', t 
   t.end();
 });
 
-test('GPUTableGeometry rejects appendable DynamicBuffer attributes', t => {
+test('GPUTable rejects appendable vectors without batch-local GPUData', t => {
   const device = new NullDevice({});
   const positions = new GPUVector({
     type: 'appendable',
@@ -73,15 +73,13 @@ test('GPUTableGeometry rejects appendable DynamicBuffer attributes', t => {
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2
   });
-  const table = new GPUTable({vectors: {positions}});
-
   t.throws(
-    () => new GPUTableGeometry({table, topology: 'triangle-list'}),
-    /static single-buffer attributes/,
-    'geometry conversion documents the static-buffer-only contract'
+    () => new GPUTable({vectors: {positions}}),
+    /requires exactly one GPUData chunk/,
+    'immutable record batches require materialized GPUData'
   );
 
-  table.destroy();
+  positions.destroy();
   t.end();
 });
 

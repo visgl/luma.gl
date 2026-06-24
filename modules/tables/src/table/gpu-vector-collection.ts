@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
-import type {DynamicBuffer} from '@luma.gl/engine';
+import type {BufferLayout, VertexFormat} from '@luma.gl/core';
 import type {GPUField, GPUTypeMap} from './gpu-schema';
 import {GPUVector} from './gpu-vector';
 import {
@@ -17,10 +16,10 @@ type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
 };
 
-/** Options for normalizing named GPU vectors into table/batch columns. */
+/** Options for normalizing named GPU vectors into table columns. */
 export type GPUVectorCollectionProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** Name of the owning structure, used in errors. */
-  ownerName: 'GPUTable' | 'GPURecordBatch';
+  ownerName: 'GPUTable';
   /** GPU vectors keyed by name, or a list of already-named GPU vectors. */
   vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
   /** Optional precomputed buffer layouts. */
@@ -31,12 +30,10 @@ export type GPUVectorCollectionProps<T extends GPUTypeMap = GPUTypeMap> = {
   numRows?: number;
 };
 
-/** Normalized GPU vector collection metadata shared by GPUTable and GPURecordBatch. */
+/** Normalized GPU vector collection metadata used by GPUTable vector construction. */
 export type GPUVectorCollection<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU vectors keyed by shader/table column name. */
   gpuVectors: GPUVectorMap<T> | Record<string, GPUVector>;
-  /** Model-ready attribute buffers keyed by buffer layout name. */
-  attributes: Record<string, Buffer | DynamicBuffer>;
   /** Buffer layouts for fixed vectors. */
   bufferLayout: BufferLayout[];
   /** Schema fields for selected vectors. */
@@ -53,11 +50,9 @@ export function createGPUVectorCollection<T extends GPUTypeMap = GPUTypeMap>(
   const numRows = getGPUVectorCollectionRowCount(gpuVectors, props.numRows);
   const bufferLayout = getGPUVectorCollectionBufferLayout(props, gpuVectors);
   const fields = getGPUVectorCollectionFields(props, gpuVectors);
-  const attributes = getGPUVectorCollectionAttributes(bufferLayout, gpuVectors);
 
   return {
     gpuVectors: gpuVectors as GPUVectorMap<T>,
-    attributes,
     bufferLayout,
     fields,
     numRows
@@ -180,33 +175,4 @@ function getGPUVectorCollectionFields<T extends GPUTypeMap>(
       metadata: new Map()
     };
   });
-}
-
-function getGPUVectorCollectionAttributes(
-  bufferLayout: BufferLayout[],
-  gpuVectors: Record<string, GPUVector>
-): Record<string, Buffer | DynamicBuffer> {
-  const attributes: Record<string, Buffer | DynamicBuffer> = {};
-  for (const layout of bufferLayout) {
-    const vector = gpuVectors[layout.name];
-    if (!vector) {
-      throw new Error(`Buffer layout references missing GPU vector "${layout.name}"`);
-    }
-    if (vector.data.length === 0) {
-      continue;
-    }
-    attributes[layout.name] = getSingleGPUVectorDataBuffer(vector, layout.name);
-  }
-  return attributes;
-}
-
-function getSingleGPUVectorDataBuffer(
-  vector: GPUVector,
-  attributeName: string
-): Buffer | DynamicBuffer {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(`Attribute "${attributeName}" requires exactly one GPUData chunk`);
-  }
-  return data.buffer;
 }

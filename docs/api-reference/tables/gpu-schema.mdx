@@ -87,9 +87,8 @@ with
 Table-backed indexed rendering reserves the GPU table column name `indices`.
 It is a draw column, not a shader attribute:
 
-- `gpuVectors.indices` stays in the table or batch schema and vector map;
-- `indices` is excluded from synthesized `bufferLayout` entries and
-  `attributes`;
+- table-level `gpuVectors.indices` and batch-local `gpuData.indices` stay in the schema;
+- `indices` is excluded from synthesized `bufferLayout` entries;
 - `GPUTableModel` binds it through `Model.setIndexBuffer()` instead of matching
   it against `ShaderLayout.attributes`.
 
@@ -113,8 +112,8 @@ management. The objects that need lifecycle management are GPU resource owners:
 - [`GPUData`](/docs/api-reference/tables/gpu-data) owns or borrows one buffer.
 - [`GPUVector`](/docs/api-reference/tables/gpu-vector) owns or borrows ordered
   `GPUData` chunks.
-- [`GPURecordBatch`](/docs/api-reference/tables/gpu-record-batch) owns
-  batch-local vectors.
+- [`GPURecordBatch`](/docs/api-reference/tables/gpu-record-batch) owns one
+  batch-local `GPUData` chunk per selected column.
 - [`GPUTable`](/docs/api-reference/tables/gpu-table) owns preserved batches.
 
 Keeping schema as plain data lets Arrow, gpgpu, generated-geometry, and

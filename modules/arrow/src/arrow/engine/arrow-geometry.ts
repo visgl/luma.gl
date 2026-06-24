@@ -10,7 +10,13 @@ import {
   type VertexFormat,
   vertexFormatDecoder
 } from '@luma.gl/core';
-import {GPURecordBatch, GPUTable, GPUTableGeometry, GPUVector} from '@luma.gl/tables';
+import {
+  GPURecordBatch,
+  GPUTable,
+  GPUTableGeometry,
+  GPUVector,
+  getGPUVectorData
+} from '@luma.gl/tables';
 import {Binary, DataType, Float, Int, Precision, Table, Vector} from 'apache-arrow';
 import type {ArrowMeshTable, ArrowMeshTopology} from './arrow-mesh-types';
 
@@ -466,7 +472,10 @@ function createSeparateGPUTable(
 }
 
 function createGeometryGPUTable(vectors: GPUVector[], bufferLayout: BufferLayout[]): GPUTable {
-  const batch = new GPURecordBatch({vectors, bufferLayout});
+  const gpuData = Object.fromEntries(
+    vectors.map(vector => [vector.name, getGPUVectorData(vector)])
+  );
+  const batch = new GPURecordBatch({gpuData, bufferLayout});
   return new GPUTable({
     batches: [batch],
     schema: batch.schema,

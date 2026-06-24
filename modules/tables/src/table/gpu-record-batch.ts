@@ -2,14 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type Binding, type Buffer, type BufferLayout} from '@luma.gl/core';
-import type {DynamicBuffer} from '@luma.gl/engine';
+import type {BufferLayout, VertexFormat} from '@luma.gl/core';
+import type {GPUData} from './gpu-data';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
-import {GPUVector} from './gpu-vector';
-import {createGPUVectorCollection} from './gpu-vector-collection';
+import {isGPUTableIndexColumnName} from './gpu-schema';
+import {
+  getGPUVectorElementFormat,
+  isValueListGPUVectorFormat,
+  isVertexListGPUVectorFormat
+} from './gpu-vector-format';
 
-type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
-  [Name in keyof T & string]: GPUVector<T[Name]>;
+/** Batch-local GPU data keyed by selected table column name. */
+export type GPUDataMap<T extends GPUTypeMap = GPUTypeMap> = {
+  [Name in keyof T & string]: GPUData<T[Name]>;
 };
 
 /** Generic source-row identity for a GPU record batch. */
@@ -22,15 +27,15 @@ export type GPURecordBatchSourceInfo = {
   sourceRowCount: number;
 };
 
-/** Props for constructing a GPU record batch from existing vectors and metadata. */
-export type GPURecordBatchFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
-  /** GPU vectors keyed by name, or a list of named GPU vectors. */
-  vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
+/** Props for constructing one immutable GPU record batch from GPU data chunks. */
+export type GPURecordBatchFromDataProps<T extends GPUTypeMap = GPUTypeMap> = {
+  /** One batch-local GPU data chunk keyed by selected column name. */
+  gpuData: GPUDataMap<T> | Record<string, GPUData>;
   /** Optional precomputed batch buffer layouts. */
   bufferLayout?: BufferLayout[];
-  /** Optional selected schema fields. Defaults to fields synthesized from vector names and formats. */
+  /** Optional selected schema fields. Defaults to fields synthesized from data names and formats. */
   fields?: GPUField[];
-  /** Explicit row count for intentionally vector-less batches. */
+  /** Explicit row count for intentionally data-less batches. */
   numRows?: number;
   /** Optional batch-level schema metadata. */
   metadata?: Map<string, string>;
@@ -38,15 +43,12 @@ export type GPURecordBatchFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = 
   sourceInfo?: GPURecordBatchSourceInfo;
   /** Number of null rows in the generated GPU record batch. */
   nullCount?: number;
-  /** Optional model-ready storage bindings keyed by shader binding name. */
-  bindings?: Record<string, Binding | DynamicBuffer>;
 };
 
 /** Generic record-batch construction props. */
-export type GPURecordBatchProps<T extends GPUTypeMap = GPUTypeMap> =
-  GPURecordBatchFromVectorsProps<T>;
+export type GPURecordBatchProps<T extends GPUTypeMap = GPUTypeMap> = GPURecordBatchFromDataProps<T>;
 
-/** GPU memory and schema metadata for one selected record batch. */
+/** Immutable GPU memory and schema metadata for one selected record batch. */
 export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   /** GPU-facing schema for the selected columns. */
   schema: GPUSchema<T>;
@@ -58,74 +60,140 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   nullCount: number;
   /** Buffer layout derived by the producing adapter. */
   readonly bufferLayout: BufferLayout[] = [];
-  /** GPU vectors keyed by shader/table column name. */
-  readonly gpuVectors: Record<string, GPUVector> = {};
-  /** Model-ready attribute buffers keyed by buffer layout name. */
-  readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
-  /** Model-ready storage bindings keyed by shader binding name. */
-  readonly bindings: Record<string, Binding | DynamicBuffer> = {};
+  /** One batch-local GPU data chunk keyed by shader/table column name. */
+  readonly gpuData: Record<string, GPUData> = {};
   /** Optional source-row identity retained from the producing table/stream. */
   readonly sourceInfo?: GPURecordBatchSourceInfo;
 
-  /** Creates one GPU record batch from named GPU vectors and optional schema metadata. */
+  /** Creates one immutable GPU record batch from named GPU data chunks. */
   constructor({
-    vectors,
+    gpuData,
     bufferLayout,
     fields,
     numRows,
     metadata,
     sourceInfo,
-    nullCount = 0,
-    bindings = {}
-  }: GPURecordBatchFromVectorsProps<T>) {
-    const vectorCollection = createGPUVectorCollection<T>({
-      ownerName: 'GPURecordBatch',
-      vectors,
-      bufferLayout,
-      fields,
-      numRows
-    });
-
-    this.numRows = vectorCollection.numRows;
+    nullCount = 0
+  }: GPURecordBatchFromDataProps<T>) {
+    this.numRows = getGPUDataCollectionRowCount(gpuData, numRows);
     this.nullCount = nullCount;
-    Object.assign(this.gpuVectors, vectorCollection.gpuVectors);
-    Object.assign(this.attributes, vectorCollection.attributes);
-    Object.assign(this.bindings, bindings);
-    this.bufferLayout.push(...vectorCollection.bufferLayout);
+    Object.assign(this.gpuData, gpuData);
+    this.bufferLayout.push(...getGPUDataCollectionBufferLayout(gpuData, bufferLayout));
+    const resolvedFields = getGPUDataCollectionFields(gpuData, fields, this.bufferLayout);
     this.schema = {
-      fields: vectorCollection.fields,
+      fields: resolvedFields,
       metadata: metadata ?? new Map()
     };
-    this.numCols = vectorCollection.fields.length;
+    this.numCols = resolvedFields.length;
     this.sourceInfo = sourceInfo ? {...sourceInfo} : undefined;
   }
 
-  /** Adds logical row/null counts after an adapter appends into batch-local vectors. */
-  appendRows(numRows: number, nullCount = 0): this {
-    this.numRows += numRows;
-    this.nullCount += nullCount;
-    return this;
-  }
-
-  /** Clears logical row/null counts while retaining vectors and allocations. */
-  resetRows(): this {
-    this.numRows = 0;
-    this.nullCount = 0;
-    return this;
-  }
-
-  /** Clears appendable vector payloads plus batch row/null counts while retaining allocations. */
-  resetLastBatch(): this {
-    for (const gpuVector of Object.values(this.gpuVectors)) {
-      gpuVector.resetLastBatch();
-    }
-    return this.resetRows();
-  }
-
-  /** Destroys every owned GPU vector retained by this batch. */
+  /** Destroys every owned GPU data chunk retained by this batch. */
   destroy(): void {
-    for (const gpuVector of Object.values(this.gpuVectors)) {
-      gpuVector.destroy();
+    for (const data of Object.values(this.gpuData)) {
+      data.destroy();
     }
   }
+}
+
+function getGPUDataCollectionRowCount(
+  gpuData: Record<string, GPUData>,
+  explicitNumRows?: number
+): number {
+  const firstData = Object.values(gpuData)[0];
+  if (!firstData) {
+    return explicitNumRows ?? 0;
+  }
+
+  const numRows = explicitNumRows ?? firstData.length;
+  const mismatchedData = Object.values(gpuData).find(data => data.length !== numRows);
+  if (mismatchedData) {
+    throw new Error('GPURecordBatch requires matching GPUData row counts');
+  }
+  return numRows;
+}
+
+function getGPUDataCollectionBufferLayout(
+  gpuData: Record<string, GPUData>,
+  explicitBufferLayout?: BufferLayout[]
+): BufferLayout[] {
+  if (explicitBufferLayout) {
+    for (const layout of explicitBufferLayout) {
+      if (isGPUTableIndexColumnName(layout.name)) {
+        throw new Error(
+          `GPURecordBatch buffer layout cannot include reserved index column "${layout.name}"`
+        );
+      }
+      if (!gpuData[layout.name]) {
+        throw new Error(`GPURecordBatch buffer layout references missing GPUData "${layout.name}"`);
+      }
+    }
+    return explicitBufferLayout;
+  }
+
+  return Object.entries(gpuData).flatMap(([name, data]) =>
+    isGPUTableIndexColumnName(name) ? [] : synthesizeGPUDataBufferLayout(name, data)
+  );
+}
+
+function synthesizeGPUDataBufferLayout(name: string, data: GPUData): BufferLayout[] {
+  if (!data.format) {
+    throw new Error(
+      `GPURecordBatch cannot synthesize a buffer layout for GPUData "${name}" without a format`
+    );
+  }
+  if (isVertexListGPUVectorFormat(data.format)) {
+    throw new Error(
+      `GPURecordBatch cannot synthesize a generic buffer layout for vertex-list GPUData "${name}"`
+    );
+  }
+  if (isValueListGPUVectorFormat(data.format)) {
+    throw new Error(
+      `GPURecordBatch cannot synthesize a generic buffer layout for value-list GPUData "${name}"`
+    );
+  }
+  return [
+    {
+      name,
+      byteStride: data.byteStride,
+      format: getGPUVectorElementFormat(data.format) as VertexFormat
+    }
+  ];
+}
+
+function getGPUDataCollectionFields(
+  gpuData: Record<string, GPUData>,
+  explicitFields: GPUField[] | undefined,
+  bufferLayout: BufferLayout[]
+): GPUField[] {
+  if (explicitFields) {
+    for (const field of explicitFields) {
+      if (!gpuData[field.name]) {
+        throw new Error(`GPURecordBatch schema references missing GPUData "${field.name}"`);
+      }
+    }
+    return explicitFields;
+  }
+
+  const layoutNames = new Set(bufferLayout.map(layout => layout.name));
+  return Object.entries(gpuData).map(([name, data]) => {
+    if (!data.format) {
+      if (layoutNames.has(name)) {
+        return {
+          name,
+          nullable: false,
+          metadata: new Map()
+        };
+      }
+      throw new Error(
+        `GPURecordBatch cannot synthesize a schema field for GPUData "${name}" without a format`
+      );
+    }
+    return {
+      name,
+      format: data.format,
+      nullable: false,
+      metadata: new Map()
+    };
+  });
 }

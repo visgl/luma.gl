@@ -13,6 +13,7 @@ import {DynamicBuffer, Model, type ModelProps} from '@luma.gl/engine';
 import type {GPURecordBatch} from '../table/gpu-record-batch';
 import {GPU_TABLE_INDEX_COLUMN_NAME} from '../table/gpu-schema';
 import {GPUTable} from '../table/gpu-table';
+import {getGPUDataBuffersForLayout} from '../table/gpu-vector-utils';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */
 export type GPUTableModelCount = 'instance' | 'vertex' | 'none';
@@ -33,6 +34,7 @@ export type GPUTableModelDrawBatchesOptions = {
 type GPUTableModelState = {
   explicitAttributes: NonNullable<ModelProps['attributes']>;
   explicitBindings: NonNullable<ModelProps['bindings']>;
+  tableBindingNames: string[];
   explicitBufferLayout: BufferLayout[];
   explicitIndexBuffer: Buffer | DynamicBuffer | null;
   explicitIndexCount: number | undefined;
@@ -131,11 +133,11 @@ export class GPUTableModel extends Model {
         );
         this.setAttributes({
           ...this.tableState.explicitAttributes,
-          ...batch.attributes
+          ...getGPUTableDrawAttributes(batch)
         });
         this.setBindings({
           ...this.tableState.explicitBindings,
-          ...batch.bindings
+          ...getGPUTableDrawBindings(batch, this.tableState.tableBindingNames)
         });
         this.setTableDrawState(batch);
         options.onBatch?.(batch, batchIndex);
@@ -145,11 +147,11 @@ export class GPUTableModel extends Model {
       this.drawingTableBatches = false;
       this.setAttributes({
         ...this.tableState.explicitAttributes,
-        ...table.attributes
+        ...getGPUTableDrawAttributes(table)
       });
       this.setBindings({
         ...this.tableState.explicitBindings,
-        ...table.bindings
+        ...getGPUTableDrawBindings(table, this.tableState.tableBindingNames)
       });
       this.setTableDrawState(table);
     }
@@ -163,7 +165,7 @@ export class GPUTableModel extends Model {
     validateGPUTableIndexBatches(nextTable);
     assertNoDuplicateNames(
       Object.keys(this.tableState.explicitAttributes),
-      Object.keys(nextTable.attributes),
+      getBufferLayoutNames(nextTable.bufferLayout),
       'attribute'
     );
     assertNoDuplicateNames(
@@ -171,20 +173,14 @@ export class GPUTableModel extends Model {
       getBufferLayoutNames(nextTable.bufferLayout),
       'buffer layout'
     );
-    assertNoDuplicateNames(
-      Object.keys(this.tableState.explicitBindings),
-      Object.keys(nextTable.bindings),
-      'binding'
-    );
-
     this.setBufferLayout([...this.tableState.explicitBufferLayout, ...nextTable.bufferLayout]);
     this.setAttributes({
       ...this.tableState.explicitAttributes,
-      ...nextTable.attributes
+      ...getGPUTableDrawAttributes(nextTable)
     });
     this.setBindings({
       ...this.tableState.explicitBindings,
-      ...nextTable.bindings
+      ...getGPUTableDrawBindings(nextTable, this.tableState.tableBindingNames)
     });
     this.setTableDrawState(nextTable);
     this.table = nextTable;
@@ -285,6 +281,9 @@ function getGPUTableModelConstructorState(
   const {table, tableCount = 'instance', ...modelProps} = props;
   const explicitAttributes = modelProps.attributes || {};
   const explicitBindings = modelProps.bindings || {};
+  const tableBindingNames = (modelProps.shaderLayout?.bindings || [])
+    .filter(binding => binding.type === 'storage' || binding.type === 'read-only-storage')
+    .map(binding => binding.name);
   const explicitBufferLayout = modelProps.bufferLayout || [];
   const explicitIndexBuffer = modelProps.indexBuffer ?? null;
   const explicitIndexCount = modelProps.indexCount;
@@ -303,6 +302,7 @@ function getGPUTableModelConstructorState(
       state: {
         explicitAttributes,
         explicitBindings,
+        tableBindingNames,
         explicitBufferLayout,
         explicitIndexBuffer,
         explicitIndexCount,
@@ -317,7 +317,7 @@ function getGPUTableModelConstructorState(
 
   assertNoDuplicateNames(
     Object.keys(explicitAttributes),
-    Object.keys(table.attributes),
+    getBufferLayoutNames(table.bufferLayout),
     'attribute'
   );
   assertNoDuplicateNames(
@@ -325,7 +325,6 @@ function getGPUTableModelConstructorState(
     getBufferLayoutNames(table.bufferLayout),
     'buffer layout'
   );
-  assertNoDuplicateNames(Object.keys(explicitBindings), Object.keys(table.bindings), 'binding');
   assertNoExplicitIndexBuffer(table, explicitIndexBuffer);
   validateGPUTableIndexBatches(table);
 
@@ -334,6 +333,7 @@ function getGPUTableModelConstructorState(
     state: {
       explicitAttributes,
       explicitBindings,
+      tableBindingNames,
       explicitBufferLayout,
       explicitIndexBuffer,
       explicitIndexCount,
@@ -346,12 +346,43 @@ function getGPUTableModelConstructorState(
     modelProps: {
       ...modelProps,
       bufferLayout: [...explicitBufferLayout, ...table.bufferLayout],
-      attributes: {...explicitAttributes, ...table.attributes},
-      bindings: {...explicitBindings, ...table.bindings},
+      attributes: {...explicitAttributes, ...getGPUTableDrawAttributes(table)},
+      bindings: {
+        ...explicitBindings,
+        ...getGPUTableDrawBindings(table, tableBindingNames)
+      },
       ...(inferInstanceCount ? {instanceCount: table.numRows} : {}),
       ...(inferVertexCount ? {vertexCount: table.numRows} : {})
     }
   };
+}
+
+function getGPUTableDrawBindings(
+  source: GPUTableDrawSource,
+  bindingNames: string[]
+): Record<string, Buffer | DynamicBuffer> {
+  const batch = source instanceof GPUTable ? source.batches[0] : source;
+  if (!batch) {
+    return {};
+  }
+  const bindings: Record<string, Buffer | DynamicBuffer> = {};
+  for (const bindingName of bindingNames) {
+    const data = batch.gpuData[bindingName];
+    if (data) {
+      bindings[bindingName] = data.buffer;
+    }
+  }
+  return bindings;
+}
+
+function getGPUTableDrawAttributes(
+  source: GPUTableDrawSource
+): Record<string, Buffer | DynamicBuffer> {
+  const attributeSource = source instanceof GPUTable ? source.batches[0] : source;
+  if (!attributeSource) {
+    return {};
+  }
+  return getGPUDataBuffersForLayout(attributeSource.bufferLayout, attributeSource.gpuData);
 }
 
 function getBufferLayoutNames(bufferLayout: BufferLayout[]): string[] {
@@ -385,7 +416,7 @@ function assertNoExplicitIndexBuffer(
 function validateGPUTableIndexBatches(table: GPUTable): void {
   const tableHasIndices = Boolean(table.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME]);
   for (const batch of table.batches) {
-    const batchHasIndices = Boolean(batch.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME]);
+    const batchHasIndices = Boolean(batch.gpuData[GPU_TABLE_INDEX_COLUMN_NAME]);
     if (batchHasIndices !== tableHasIndices) {
       throw new Error('GPUTableModel indexed tables require every batch to include indices');
     }
@@ -394,19 +425,24 @@ function validateGPUTableIndexBatches(table: GPUTable): void {
 }
 
 function getGPUTableIndexDrawState(source: GPUTableDrawSource): GPUTableIndexDrawState | null {
-  const indexVector = source.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME];
-  if (!indexVector) {
+  const indexData =
+    source instanceof GPUTable
+      ? source.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME]?.data[0]
+      : source.gpuData[GPU_TABLE_INDEX_COLUMN_NAME];
+  if (!indexData) {
     return null;
   }
   if (source instanceof GPUTable && source.batches.length > 1) {
     return null;
   }
-  if (indexVector.format !== 'vertex-list<uint32>') {
+  if (indexData.format !== 'vertex-list<uint32>') {
     throw new Error('GPUTableModel indices column requires vertex-list<uint32> format');
   }
 
-  const [indexData, ...remainingIndexData] = indexVector.data;
-  if (!indexData || remainingIndexData.length > 0) {
+  if (
+    source instanceof GPUTable &&
+    source.gpuVectors[GPU_TABLE_INDEX_COLUMN_NAME].data.length !== 1
+  ) {
     throw new Error('GPUTableModel indices column requires exactly one GPUData chunk');
   }
   const indexBuffer = indexData.buffer;
@@ -420,7 +456,7 @@ function getGPUTableIndexDrawState(source: GPUTableDrawSource): GPUTableIndexDra
   }
   return {
     indexBuffer,
-    indexCount: indexVector.valueLength,
+    indexCount: indexData.valueLength,
     firstVertex: indexData.byteOffset,
     firstIndex: indexData.byteOffset / indexByteStride
   };

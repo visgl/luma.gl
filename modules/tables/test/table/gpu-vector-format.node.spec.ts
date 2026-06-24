@@ -235,15 +235,19 @@ test('GPUVector table helpers expose single-chunk vectors and required columns',
     data: [firstData, secondData],
     ownsData: false
   });
-  const batch = new GPURecordBatch({vectors: {positions}});
+  const batch = new GPURecordBatch({gpuData: {positions: positions.data[0]}});
   const table = new GPUTable({
     batches: [batch],
     schema: batch.schema,
     bufferLayout: batch.bufferLayout
   });
 
-  t.equal(getRequiredGPUVector(table, 'positions'), positions, 'finds a table vector by name');
-  t.equal(getRequiredGPUVector(batch, 'positions'), positions, 'finds a batch vector by name');
+  t.equal(
+    getRequiredGPUVector(table, 'positions'),
+    table.gpuVectors.positions,
+    'finds the table aggregate vector by name'
+  );
+  t.equal(batch.gpuData.positions, firstData, 'record batch retains one GPUData per column');
   t.equal(getGPUVectorData(positions), firstData, 'returns the single retained GPUData chunk');
   t.equal(getGPUVectorBuffer(positions), firstData.buffer, 'returns the single retained buffer');
   t.throws(
@@ -264,7 +268,95 @@ test('GPUVector table helpers expose single-chunk vectors and required columns',
   t.end();
 });
 
-test('GPUTable forwards vector-construction bindings to its generated record batch', t => {
+test('GPURecordBatch owns one row-aligned GPUData chunk per column', t => {
+  const device = new NullDevice({});
+  const positionsBuffer = device.createBuffer({byteLength: 16});
+  const colorsBuffer = device.createBuffer({byteLength: 8});
+  const positions = new GPUData({
+    buffer: positionsBuffer,
+    format: 'float32x2',
+    length: 2,
+    byteStride: 8,
+    ownsBuffer: true
+  });
+  const colors = new GPUData({
+    buffer: colorsBuffer,
+    format: 'unorm8x4',
+    length: 2,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const mismatchedColorsBuffer = device.createBuffer({byteLength: 4});
+  const mismatchedColors = new GPUData({
+    buffer: mismatchedColorsBuffer,
+    format: 'unorm8x4',
+    length: 1,
+    byteStride: 4,
+    ownsBuffer: true
+  });
+  const batch = new GPURecordBatch({gpuData: {positions, colors}});
+
+  t.equal(batch.numRows, 2, 'derives rows from GPUData length');
+  t.deepEqual(
+    batch.schema.fields.map(field => field.name),
+    ['positions', 'colors'],
+    'synthesizes fields from keyed GPUData'
+  );
+  t.equal(batch.gpuData.positions, positions, 'retains the keyed data chunk');
+  t.throws(
+    () =>
+      new GPURecordBatch({
+        gpuData: {
+          positions,
+          colors: mismatchedColors
+        }
+      }),
+    /matching GPUData row counts/,
+    'rejects mismatched column lengths'
+  );
+
+  batch.destroy();
+  mismatchedColors.destroy();
+  t.ok(positionsBuffer.destroyed, 'destroys owned position data');
+  t.ok(colorsBuffer.destroyed, 'destroys owned color data');
+  t.end();
+});
+
+test('GPURecordBatch accepts explicit layouts for format-less interleaved GPUData', t => {
+  const device = new NullDevice({});
+  const data = new GPUData({
+    buffer: device.createBuffer({byteLength: 32}),
+    length: 2,
+    stride: 16,
+    byteStride: 16,
+    rowByteLength: 16,
+    ownsBuffer: true
+  });
+  const batch = new GPURecordBatch({
+    gpuData: {interleaved: data},
+    bufferLayout: [
+      {
+        name: 'interleaved',
+        byteStride: 16,
+        attributes: [
+          {attribute: 'positions', format: 'float32x2', byteOffset: 0},
+          {attribute: 'colors', format: 'unorm8x4', byteOffset: 8}
+        ]
+      }
+    ]
+  });
+  const emptyBatch = new GPURecordBatch({gpuData: {}, numRows: 0});
+
+  t.equal(batch.numRows, 2, 'derives interleaved row count from GPUData');
+  t.equal(batch.schema.fields[0].format, undefined, 'keeps format-less interleaved field');
+  t.equal(emptyBatch.numRows, 0, 'accepts explicit empty batches');
+
+  batch.destroy();
+  emptyBatch.destroy();
+  t.end();
+});
+
+test('GPUTable keeps storage in GPU vectors instead of cached bindings', t => {
   const device = new NullDevice({});
   const positions = new GPUVector({
     type: 'buffer',
@@ -285,17 +377,11 @@ test('GPUTable forwards vector-construction bindings to its generated record bat
     byteStride: 4,
     ownsBuffer: true
   });
-  const table = new GPUTable({
-    vectors: {positions, weights},
-    bindings: {weights: weightsBuffer}
-  });
+  const table = new GPUTable({vectors: {positions, weights}});
 
-  t.equal(table.bindings.weights, weightsBuffer, 'exposes the forwarded binding on the table');
-  t.equal(
-    table.batches[0].bindings.weights,
-    weightsBuffer,
-    'forwards bindings to the generated record batch'
-  );
+  t.notOk('bindings' in table, 'does not cache bindings on the table');
+  t.notOk('bindings' in table.batches[0], 'does not cache bindings on the batch');
+  t.equal(table.gpuVectors.weights.data[0].buffer, weightsBuffer, 'keeps storage on GPUData');
 
   table.destroy();
   t.end();

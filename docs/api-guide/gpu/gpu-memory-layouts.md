@@ -2,6 +2,9 @@
 
 GPU buffers are byte ranges. A layout describes how shader-visible rows and columns are mapped onto those bytes.
 
+For the WGSL-facing difference between vertex-fetch layouts and storage-buffer
+layouts, see [Tabular Data in WGSL](./tabular-data-in-wgsl).
+
 When one logical GPU record needs several named field views, use the
 record-oriented [`BufferSchema`](./buffer-schemas) helpers in `@luma.gl/engine`
 instead of hand-writing every shared-buffer attribute offset.
