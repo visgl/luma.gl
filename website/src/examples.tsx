@@ -1,9 +1,9 @@
 //
 
-import React, {useEffect, useRef, useState} from 'react';
-import CodeBlock from '@theme/CodeBlock';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {ExampleHeader, ExamplePage, InfoBox, LumaExample, ReactExample, useStore} from './react-luma';
 
+import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
@@ -86,31 +86,59 @@ type DeckArrowLayerPanelProps = {
   metrics: readonly {label: string; value: string}[];
 };
 
+function escapeDeckArrowPanelHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function makeDeckArrowLayerInfoPanel({
+  id,
+  title,
+  description,
+  metrics
+}: DeckArrowLayerPanelProps) {
+  const metricHtml = metrics
+    .map(
+      metric => `
+        <div style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
+          <div style="color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;">
+            ${escapeDeckArrowPanelHtml(metric.label)}
+          </div>
+          <div style="margin-top: 3px; color: #0f172a; font-size: 13px; font-weight: 700;">
+            ${escapeDeckArrowPanelHtml(metric.value)}
+          </div>
+        </div>`
+    )
+    .join('');
+
+  return makeHtmlCustomPanel({
+    id: `${id}-info`,
+    title,
+    html: `
+      <p style="margin: 0 0 12px; color: #475569; font-size: 13px; line-height: 1.5;">
+        ${escapeDeckArrowPanelHtml(description)}
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        ${metricHtml}
+      </div>`
+  });
+}
+
 function DeckArrowLayerPanel({
   id,
   title,
   description,
   metrics
 }: DeckArrowLayerPanelProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
-  const [source, setSource] = useState<string | null>(null);
+  const panel = useMemo(
+    () => makeDeckArrowLayerInfoPanel({id, title, description, metrics}),
+    [description, id, metrics, title]
+  );
 
-  useEffect(() => {
-    if (activeTab !== 'source' || source !== null) {
-      return;
-    }
-    let isCancelled = false;
-    void fetch(`/example-assets/deck/${id}/app.ts`)
-      .then(response => response.text())
-      .then(nextSource => {
-        if (!isCancelled) {
-          setSource(nextSource);
-        }
-      });
-    return () => {
-      isCancelled = true;
-    };
-  }, [activeTab, id, source]);
   return (
     <div
       style={{
@@ -128,68 +156,8 @@ function DeckArrowLayerPanel({
         title={title}
         sourcePath={`examples/deck/${id}/app.ts`}
         style={{pointerEvents: 'auto'}}
-      >
-        <div style={{display: 'flex', gap: 4, marginBottom: 12}}>
-          {(['info', 'source'] as const).map(tab => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              style={{
-                border: '1px solid #cbd5e1',
-                borderRadius: 6,
-                padding: '4px 9px',
-                background: activeTab === tab ? '#e2e8f0' : '#fff',
-                color: '#0f172a',
-                cursor: 'pointer',
-                fontSize: 12,
-                fontWeight: activeTab === tab ? 700 : 500
-              }}
-            >
-              {tab === 'info' ? 'Info' : 'Source'}
-            </button>
-          ))}
-        </div>
-        {activeTab === 'info' ? (
-          <>
-            <p style={{margin: '0 0 12px', color: '#475569', fontSize: 13, lineHeight: 1.5}}>
-              {description}
-            </p>
-            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8}}>
-              {metrics.map(metric => (
-                <div
-                  key={metric.label}
-                  style={{
-                    padding: '8px 10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 8,
-                    background: '#f8fafc'
-                  }}
-                >
-                  <div
-                    style={{
-                      color: '#64748b',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase'
-                    }}
-                  >
-                    {metric.label}
-                  </div>
-                  <div style={{marginTop: 3, color: '#0f172a', fontSize: 13, fontWeight: 700}}>
-                    {metric.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div style={{maxHeight: 480, overflow: 'auto'}}>
-            <CodeBlock language="typescript">{source ?? '// Loading source…'}</CodeBlock>
-          </div>
-        )}
-      </InfoBox>
+        panel={panel}
+      />
     </div>
   );
 }

@@ -35,11 +35,7 @@ const ASSET_EXTENSIONS = new Set([
 ]);
 
 const SKIPPED_DIRECTORY_NAMES = new Set(['dist', 'node_modules']);
-const EXAMPLE_SOURCE_PATHS = [
-  'deck/arrow-path-layer/app.ts',
-  'deck/arrow-polygon-layer/app.ts',
-  'deck/arrow-text-layer/app.ts'
-];
+const EXAMPLE_SOURCE_FILE_NAMES = new Set(['app.ts', 'app.tsx']);
 
 function syncExampleAssets() {
   rmSync(path.resolve(websiteDirectory, '.generated', 'example-assets'), {
@@ -65,7 +61,7 @@ function syncExampleAssets() {
       }
 
       const extension = path.extname(entryName).toLowerCase();
-      if (!ASSET_EXTENSIONS.has(extension)) {
+      if (!ASSET_EXTENSIONS.has(extension) && !EXAMPLE_SOURCE_FILE_NAMES.has(entryName)) {
         continue;
       }
 
@@ -78,13 +74,6 @@ function syncExampleAssets() {
   };
 
   walkDirectory(examplesDirectory);
-  for (const relativePath of EXAMPLE_SOURCE_PATHS) {
-    const sourcePath = path.join(examplesDirectory, relativePath);
-    const destinationPath = path.join(outputDirectory, relativePath);
-    mkdirSync(path.dirname(destinationPath), {recursive: true});
-    cpSync(sourcePath, destinationPath);
-    copiedAssetCount++;
-  }
   console.log(`Synced ${copiedAssetCount} example assets to ${outputDirectory}`);
 }
 

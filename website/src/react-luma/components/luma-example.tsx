@@ -1,9 +1,15 @@
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import CodeBlock from '@theme/CodeBlock';
+import type {Panel} from '@deck.gl-community/panels';
 import {Device, luma} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import type {Stat, Stats} from '@probe.gl/stats';
+import {
+  configurePanelHostElement,
+  renderExamplePanel
+} from '../../../../examples/example-panels';
 import {DeviceTabs, type DeviceTabSelection} from './device-tabs';
 import {
   clearActiveCpuHotspotProfilerDevice,
@@ -288,10 +294,32 @@ const EXAMPLE_INFO_STYLE: CSSProperties = {
   borderRadius: 12,
   color: '#111',
   width: 420,
-  maxWidth: 'min(420px, 100%)',
+  minWidth: 0,
+  maxWidth: 'calc(100vw - 40px)',
   overflow: 'hidden',
   padding: '10px 16px',
   zIndex: 10
+};
+
+const INFO_BOX_DEFAULT_WIDTH = 420;
+const INFO_BOX_MIN_WIDTH = 280;
+const INFO_BOX_MIN_HEIGHT = 160;
+const INFO_BOX_VIEWPORT_RIGHT_MARGIN = 20;
+const INFO_BOX_VIEWPORT_BOTTOM_MARGIN = 12;
+const INFO_BOX_KEYBOARD_RESIZE_STEP = 10;
+const INFO_BOX_LARGE_KEYBOARD_RESIZE_STEP = 30;
+
+type InfoBoxSize = {
+  width: number;
+  height: number;
+};
+
+type InfoBoxResizeState = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  startWidth: number;
+  startHeight: number;
 };
 
 type ExampleInfoProps = {
@@ -305,9 +333,42 @@ type ExampleInfoProps = {
 type InfoBoxProps = React.PropsWithChildren<
   ExampleInfoProps & {
     html?: string;
+    panel?: Panel;
     style?: CSSProperties;
   }
 >;
+
+function getInfoBoxSizeBounds(infoBoxElement: HTMLElement): {
+  minWidth: number;
+  minHeight: number;
+  maxWidth: number;
+  maxHeight: number;
+} {
+  const rect = infoBoxElement.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const maxWidth = Math.max(1, viewportWidth - rect.left - INFO_BOX_VIEWPORT_RIGHT_MARGIN);
+  const maxHeight = Math.max(1, viewportHeight - rect.top - INFO_BOX_VIEWPORT_BOTTOM_MARGIN);
+
+  return {
+    minWidth: Math.min(INFO_BOX_MIN_WIDTH, maxWidth),
+    minHeight: Math.min(INFO_BOX_MIN_HEIGHT, maxHeight),
+    maxWidth,
+    maxHeight
+  };
+}
+
+function clampInfoBoxSize(
+  infoBoxElement: HTMLElement,
+  width: number,
+  height: number
+): InfoBoxSize {
+  const {minWidth, minHeight, maxWidth, maxHeight} = getInfoBoxSizeBounds(infoBoxElement);
+  return {
+    width: Math.min(maxWidth, Math.max(minWidth, width)),
+    height: Math.min(maxHeight, Math.max(minHeight, height))
+  };
+}
 
 type ExamplePageProps = React.PropsWithChildren<{
   className?: string;
@@ -330,24 +391,151 @@ type ReactExampleProps<P> = {
 };
 
 export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
+  const {siteConfig} = useDocusaurusContext();
+  const websiteBaseUrl = siteConfig.baseUrl.endsWith('/') ? siteConfig.baseUrl : `${siteConfig.baseUrl}/`;
   const sourceUrl = getExampleSourceUrl(props);
+  const sourcePaths = React.useMemo(
+    () => getExampleSourcePaths(props),
+    [props.directory, props.id, props.sourceDirectory, props.sourcePath]
+  );
+  const sourcePathsKey = sourcePaths.join('|');
   const title = getExampleTitle(props.id, props.title);
   const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
-  const maxInfoHeight = 760;
-  const maxInfoContentHeight = 680;
+  const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
+  const [infoBoxSize, setInfoBoxSize] = useState<InfoBoxSize | null>(null);
+  const [sourceResult, setSourceResult] = useState<{
+    key: string;
+    path?: string;
+    source?: string;
+    error?: string;
+  } | null>(null);
+  const infoBoxRef = useRef<HTMLDivElement | null>(null);
+  const panelHostRef = useRef<HTMLDivElement | null>(null);
+  const resizeStateRef = useRef<InfoBoxResizeState | null>(null);
   const toggleCollapsed = () => setIsCollapsed(value => !value);
+  const currentSourceResult = sourceResult?.key === sourcePathsKey ? sourceResult : null;
 
   useEffect(() => {
     isInfoBoxCollapsedByDefault = isCollapsed;
   }, [isCollapsed]);
 
+  useEffect(() => {
+    if (activeTab !== 'source' || sourcePaths.length === 0 || currentSourceResult) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    void fetchExampleSource(websiteBaseUrl, sourcePaths, abortController.signal)
+      .then(({path, source}) => {
+        setSourceResult({key: sourcePathsKey, path, source});
+      })
+      .catch(error => {
+        if (!abortController.signal.aborted) {
+          setSourceResult({
+            key: sourcePathsKey,
+            error: error instanceof Error ? error.message : 'Unable to load source code.'
+          });
+        }
+      });
+
+    return () => abortController.abort();
+  }, [activeTab, currentSourceResult, sourcePaths, sourcePathsKey, websiteBaseUrl]);
+
+  useEffect(() => {
+    const panelHostElement = panelHostRef.current;
+    if (!panelHostElement || !props.panel) {
+      return;
+    }
+
+    configurePanelHostElement(panelHostElement);
+    renderExamplePanel(panelHostElement, props.panel);
+    return () => renderExamplePanel(panelHostElement, null);
+  }, [props.panel]);
+
+  const handleResizePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const infoBoxElement = infoBoxRef.current;
+    if (!infoBoxElement) {
+      return;
+    }
+
+    const rect = infoBoxElement.getBoundingClientRect();
+    resizeStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+
+  const handleResizePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const infoBoxElement = infoBoxRef.current;
+    const resizeState = resizeStateRef.current;
+    if (!infoBoxElement || !resizeState || resizeState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    setInfoBoxSize(
+      clampInfoBoxSize(
+        infoBoxElement,
+        resizeState.startWidth + event.clientX - resizeState.startX,
+        resizeState.startHeight + event.clientY - resizeState.startY
+      )
+    );
+  };
+
+  const finishResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (resizeStateRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+
+    resizeStateRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const infoBoxElement = infoBoxRef.current;
+    if (!infoBoxElement) {
+      return;
+    }
+
+    const resizeStep = event.shiftKey
+      ? INFO_BOX_LARGE_KEYBOARD_RESIZE_STEP
+      : INFO_BOX_KEYBOARD_RESIZE_STEP;
+    const widthDelta =
+      event.key === 'ArrowLeft' ? -resizeStep : event.key === 'ArrowRight' ? resizeStep : 0;
+    const heightDelta =
+      event.key === 'ArrowUp' ? -resizeStep : event.key === 'ArrowDown' ? resizeStep : 0;
+    if (widthDelta === 0 && heightDelta === 0) {
+      return;
+    }
+
+    const rect = infoBoxElement.getBoundingClientRect();
+    setInfoBoxSize(currentSize =>
+      clampInfoBoxSize(
+        infoBoxElement,
+        (currentSize?.width ?? rect.width) + widthDelta,
+        (currentSize?.height ?? rect.height) + heightDelta
+      )
+    );
+    event.preventDefault();
+  };
+
   return (
     <div
+      ref={infoBoxRef}
       style={{
         ...EXAMPLE_INFO_STYLE,
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: isCollapsed ? undefined : maxInfoHeight,
+        position: 'relative',
+        width: infoBoxSize?.width ?? INFO_BOX_DEFAULT_WIDTH,
+        height: isCollapsed ? undefined : infoBoxSize?.height,
+        maxHeight: isCollapsed ? undefined : 'calc(100vh - var(--ifm-navbar-height) - 24px)',
         ...props.style
       }}
     >
@@ -409,13 +597,120 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
         aria-hidden={isCollapsed}
         style={{
           marginTop: isCollapsed ? 0 : 12,
-          maxHeight: maxInfoContentHeight,
+          minWidth: 0,
+          minHeight: 0,
+          flex: '1 1 auto',
+          display: isCollapsed ? 'none' : 'flex',
+          flexDirection: 'column',
           overflowY: 'auto'
         }}
       >
-        {props.html ? <div dangerouslySetInnerHTML={{__html: props.html}} /> : null}
-        {props.children}
+        {sourcePaths.length > 0 ? (
+          <div
+            role="tablist"
+            aria-label="Example information"
+            style={{display: 'flex', gap: 4, marginBottom: 12}}
+          >
+            {(['info', 'source'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 6,
+                  padding: '4px 9px',
+                  background: activeTab === tab ? '#e2e8f0' : '#fff',
+                  color: '#0f172a',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: activeTab === tab ? 700 : 500
+                }}
+              >
+                {tab === 'info' ? 'Info' : 'Source'}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <div
+          hidden={activeTab !== 'info'}
+          aria-hidden={activeTab !== 'info'}
+          style={{minWidth: 0, minHeight: 0, flex: '1 1 auto', overflow: 'auto'}}
+        >
+          {props.html ? <div dangerouslySetInnerHTML={{__html: props.html}} /> : null}
+          {props.children}
+          {props.panel ? <div ref={panelHostRef} /> : null}
+        </div>
+        {sourcePaths.length > 0 ? (
+          <div
+            hidden={activeTab !== 'source'}
+            aria-hidden={activeTab !== 'source'}
+            style={{
+              minWidth: 0,
+              minHeight: 0,
+              flex: '1 1 auto',
+              maxWidth: '100%',
+              overflow: 'auto',
+              background: '#f6f8fa'
+            }}
+          >
+            {currentSourceResult?.error ? (
+              <p style={{margin: 0, color: '#b00020'}}>{currentSourceResult.error}</p>
+            ) : (
+              <CodeBlock
+                language={currentSourceResult?.path?.endsWith('.tsx') ? 'tsx' : 'typescript'}
+              >
+                {currentSourceResult?.source ?? '// Loading source…'}
+              </CodeBlock>
+            )}
+          </div>
+        ) : null}
       </div>
+      {!isCollapsed ? (
+        <button
+          type="button"
+          aria-label="Resize info box"
+          title="Resize info box"
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={finishResize}
+          onPointerCancel={finishResize}
+          onKeyDown={handleResizeKeyDown}
+          style={{
+            position: 'absolute',
+            right: 6,
+            bottom: 6,
+            zIndex: 100,
+            display: 'grid',
+            placeItems: 'center',
+            width: 28,
+            height: 28,
+            padding: 0,
+            border: '1px solid #94a3b8',
+            borderRadius: 6,
+            background: '#e2e8f0',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.18)',
+            color: '#334155',
+            cursor: 'nwse-resize',
+            fontSize: 19,
+            lineHeight: 1,
+            touchAction: 'none',
+            userSelect: 'none'
+          }}
+        >
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+            <path
+              d="M4 14L14 4M9 14L14 9M13 14L14 13"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="1.75"
+            />
+          </svg>
+        </button>
+      ) : null}
     </div>
   );
 };
@@ -840,6 +1135,43 @@ function getExampleSourceUrl(props: {
     return `${GITHUB_TREE}/examples/${sourceDirectory}/${props.id}`;
   }
   return null;
+}
+
+function getExampleSourcePaths(props: {
+  directory?: string;
+  id?: string;
+  sourceDirectory?: string;
+  sourcePath?: string;
+}): string[] {
+  if (props.sourcePath) {
+    const sourcePath = props.sourcePath.replace(/^\/?examples\//, '').replace(/^\//, '');
+    if (/\.(?:[cm]?[jt]sx?)$/.test(sourcePath)) {
+      return [sourcePath];
+    }
+    return [`${sourcePath}/app.ts`, `${sourcePath}/app.tsx`];
+  }
+
+  if (props.id && (props.sourceDirectory || props.directory)) {
+    const sourceDirectory = props.sourceDirectory || props.directory;
+    return [`${sourceDirectory}/${props.id}/app.ts`, `${sourceDirectory}/${props.id}/app.tsx`];
+  }
+
+  return [];
+}
+
+async function fetchExampleSource(
+  websiteBaseUrl: string,
+  sourcePaths: readonly string[],
+  signal: AbortSignal
+): Promise<{path: string; source: string}> {
+  for (const sourcePath of sourcePaths) {
+    const response = await fetch(`${websiteBaseUrl}example-assets/${sourcePath}`, {signal});
+    if (response.ok) {
+      return {path: sourcePath, source: await response.text()};
+    }
+  }
+
+  throw new Error('Unable to load source code.');
 }
 
 function getRequestedDeviceTypes(
