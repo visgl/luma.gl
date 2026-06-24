@@ -52,36 +52,32 @@ export const PATH_STORAGE_GPU_INPUT_SCHEMA = [
     name: 'paths',
     kind: 'positions',
     required: true,
-    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>'],
-    source: 'source-mappable'
+    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
   },
   {
     name: 'colors',
     kind: 'colors',
     required: false,
-    formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
-    source: 'source-mappable'
+    formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
     name: 'widths',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'timestamps',
     kind: 'time',
     required: false,
-    formats: ['vertex-list<float32>'],
-    source: 'source-mappable'
+    formats: ['vertex-list<float32>']
   },
   {
     name: 'viewOrigins',
     kind: 'positions',
     required: false,
     formats: ['float32x4'],
-    source: 'generated'
+    internal: true
   }
 ] as const satisfies ModelGPUInputSchema;
 

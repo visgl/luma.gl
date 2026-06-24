@@ -113,7 +113,6 @@ export {
   type ModelGPUInputDeclaration,
   type ModelGPUInputKind,
   type ModelGPUInputSchema,
-  type ModelGPUInputSource,
   type ModelGPUInputVectors
 } from './engine/gpu-table-model-input-schema';
 export {

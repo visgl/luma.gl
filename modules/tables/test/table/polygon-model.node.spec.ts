@@ -22,28 +22,28 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
       kind: 'positions',
       required: true,
       formats: ['vertex-list<float32x4>'],
-      source: 'generated'
+      internal: true
     },
     {
       name: 'colors',
       kind: 'colors',
       required: true,
       formats: ['vertex-list<unorm8x4>'],
-      source: 'generated'
+      internal: true
     },
     {
       name: 'rowIndices',
       kind: 'scalars',
       required: true,
       formats: ['vertex-list<uint32>'],
-      source: 'generated'
+      internal: true
     },
     {
       name: 'indices',
       kind: 'scalars',
       required: true,
       formats: ['vertex-list<uint32>'],
-      source: 'generated'
+      internal: true
     }
   ]);
   t.equal(PolygonAttributeModel.gpuInputSchema, POLYGON_GPU_INPUT_SCHEMA);

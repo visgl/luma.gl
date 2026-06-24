@@ -99,7 +99,7 @@ function getArrowPathSourceTable(data: ArrowPathSourceData | null | undefined): 
 }
 
 function getArrowPathSourceMappableInputs(schema: ModelGPUInputSchema): ModelGPUInputDeclaration[] {
-  return schema.filter(input => input.source === 'source-mappable');
+  return schema.filter(input => !input.internal);
 }
 
 function assertArrowPathSourceSelectors(

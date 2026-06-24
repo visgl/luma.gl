@@ -17,28 +17,28 @@ export const POLYGON_GPU_INPUT_SCHEMA = [
     kind: 'positions',
     required: true,
     formats: ['vertex-list<float32x4>'],
-    source: 'generated'
+    internal: true
   },
   {
     name: 'colors',
     kind: 'colors',
     required: true,
     formats: ['vertex-list<unorm8x4>'],
-    source: 'generated'
+    internal: true
   },
   {
     name: 'rowIndices',
     kind: 'scalars',
     required: true,
     formats: ['vertex-list<uint32>'],
-    source: 'generated'
+    internal: true
   },
   {
     name: 'indices',
     kind: 'scalars',
     required: true,
     formats: ['vertex-list<uint32>'],
-    source: 'generated'
+    internal: true
   }
 ] as const satisfies ModelGPUInputSchema;
 

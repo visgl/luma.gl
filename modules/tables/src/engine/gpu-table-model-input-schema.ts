@@ -8,9 +8,6 @@ import type {GPUVectorFormat} from '../table/gpu-vector-format';
 /** Semantic role consumed by one model GPU input. */
 export type ModelGPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
 
-/** Whether one model GPU input resolves from source data or model-generated data. */
-export type ModelGPUInputSource = 'source-mappable' | 'generated';
-
 /** Runtime declaration for one prepared GPUVector consumed by a model. */
 export type ModelGPUInputDeclaration<
   Name extends string = string,
@@ -24,8 +21,11 @@ export type ModelGPUInputDeclaration<
   required: boolean;
   /** Accepted canonical GPUVector memory formats. */
   formats: readonly Format[];
-  /** Whether source mapping may resolve this input. */
-  source: ModelGPUInputSource;
+  /**
+   * Whether this input is generated during conversion or model preparation.
+   * Omit for inputs that source mapping may resolve directly.
+   */
+  internal?: boolean;
 };
 
 /** Runtime prepared GPU input contract declared by one model. */
