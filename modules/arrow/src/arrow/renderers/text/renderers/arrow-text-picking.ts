@@ -9,6 +9,7 @@ import {
   supportsArrowIndexPicking
 } from '../../../engine/arrow-picking';
 import {indexPicking, Model, type PickingManager, type ShaderInputs} from '@luma.gl/engine';
+import {getGPUDataBuffersForLayout, type GPUTable} from '@luma.gl/tables';
 import {TextAttributeModel, TextDictionaryModel, TextStorageModel} from '@luma.gl/text';
 import type {ArrowTextRendererActiveModel} from './arrow-text-renderer';
 import {
@@ -90,7 +91,7 @@ export function createArrowTextPickingModel(
     shaderLayout: TEXT_SHADER_LAYOUT,
     bufferLayout: textModel.bufferLayout,
     attributes: {
-      ...textModel.table!.attributes,
+      ...getArrowTextPickingTableAttributes(textModel.table),
       expandedGlyphVertexData: textModel.expandedGlyphVertexData
     },
     instanceCount: textModel.instanceCount,
@@ -130,7 +131,7 @@ function drawArrowTextPickingBatches(
       throw new Error('Arrow text picking requires aligned GPU and glyph render batches');
     }
     pickingModel.setAttributes({
-      ...gpuBatch.attributes,
+      ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
       expandedGlyphVertexData: renderBatch.expandedGlyphVertexData
     });
     pickingModel.setInstanceCount(renderBatch.glyphCount);
@@ -138,8 +139,15 @@ function drawArrowTextPickingBatches(
     pickingModel.draw(pickingPass);
   }
   pickingModel.setAttributes({
-    ...(textModel.table?.attributes || {}),
+    ...getArrowTextPickingTableAttributes(textModel.table),
     expandedGlyphVertexData: textModel.expandedGlyphVertexData
   });
   pickingModel.setInstanceCount(textModel.glyphLayout.glyphCount);
+}
+
+function getArrowTextPickingTableAttributes(
+  table: GPUTable | undefined
+): ReturnType<typeof getGPUDataBuffersForLayout> {
+  const firstBatch = table?.batches[0];
+  return firstBatch ? getGPUDataBuffersForLayout(firstBatch.bufferLayout, firstBatch.gpuData) : {};
 }
