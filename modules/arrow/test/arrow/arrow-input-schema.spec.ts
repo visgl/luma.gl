@@ -63,23 +63,31 @@ test('ArrowInputSchema resolves, converts, generates internal vectors, and valid
 test('ArrowInputSchema rejects converted vectors outside the GPU input contract', async t => {
   const device = new NullDevice({});
   const sourcePositions = arrow.vectorFromArray([1, 2], new arrow.Float32());
+  let preparedPositions: GPUVector<'float32'> | null = null;
   const schema: ArrowInputSchema<SourceVectors, {positions: GPUVector<'float32'>}> = {
     name: 'InvalidArrowInput',
     gpuInputSchema: [{name: 'positions', kind: 'positions', required: true, formats: ['uint32']}],
     resolveSourceVectors: () => ({positions: sourcePositions}),
-    convertToGPUVectors: (inputDevice, sourceVectors) => ({
-      positions: makeGPUVectorFromArrow(inputDevice, sourceVectors.positions, {
+    convertToGPUVectors: (inputDevice, sourceVectors) => {
+      const positions = makeGPUVectorFromArrow(inputDevice, sourceVectors.positions, {
         name: 'positions',
         format: 'float32'
-      })
-    }),
+      });
+      preparedPositions = positions;
+      return {positions};
+    },
     getGPUInputVectors: preparedInput => preparedInput
   };
 
-  await t.rejects(
-    () => prepareArrowInput(device, schema, {}),
-    /positions GPUVector\.format "float32" must be one of uint32/,
-    'validates converter output against gpuInputSchema'
-  );
+  try {
+    await prepareArrowInput(device, schema, {});
+    t.fail('invalid converted vector format should be rejected');
+  } catch (error) {
+    t.ok(
+      /positions GPUVector\.format "float32" must be one of uint32/.test((error as Error).message),
+      'validates converter output against gpuInputSchema'
+    );
+  }
+  preparedPositions?.destroy();
   t.end();
 });
