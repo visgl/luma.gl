@@ -77,7 +77,12 @@
     "cheerio": "1.0.0-rc.9",
     "typescript": "5.9.3",
     "tsconfig-paths": "^3.9.0",
-    "ts-patch": "^3.3.0"
+    "ts-patch": "^3.3.0",
+    "@luma.gl/core": "workspace:*",
+    "@luma.gl/engine": "workspace:*",
+    "@luma.gl/shadertools": "workspace:*",
+    "@luma.gl/webgl": "workspace:*",
+    "wgsl_reflect": "1.2.3"
   },
   "packageExtensions": {
     "@loaders.gl/gltf@*": {

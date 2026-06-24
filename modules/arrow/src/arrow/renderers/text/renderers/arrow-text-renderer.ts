@@ -12,6 +12,7 @@ import {
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable
 } from '../../../gpu/arrow-gpu-table-adapters';
+import {type ModelProps} from '@luma.gl/engine';
 import {GPURenderable, GPUVector, GPUTable, getRequiredGPUVector} from '@luma.gl/tables';
 import {
   TextAttributeModel,
@@ -90,6 +91,11 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
   onDataBatch?: (update: ArrowTextRendererDataBatchUpdate) => void;
   /** Called when renderer-owned Arrow batch loading fails. */
   onDataError?: (error: unknown) => void;
+  /**
+   * Optional shader overrides for hosts that provide their own projection modules.
+   * GPUVector preparation and renderer-owned model lifecycle remain unchanged.
+   */
+  modelProps?: Pick<ModelProps, 'source' | 'vs' | 'fs' | 'modules' | 'shaderInputs'>;
 };
 
 export type {CharacterColorDataType, RowColorColumnDataType};
@@ -227,7 +233,7 @@ export class ArrowTextRenderer extends GPURenderable<
   /** Device used for all GPU resources owned by this layer. */
   readonly device: Device;
   /** Shared shader inputs used by rendering, picking, and viewport uniforms. */
-  readonly shaderInputs = createArrowTextShaderInputs();
+  readonly shaderInputs;
   /** Last applied layer props. */
   props: ArrowTextRendererProps;
   /** Prepared GPUVector text input currently consumed by the active model. */
@@ -249,6 +255,12 @@ export class ArrowTextRenderer extends GPURenderable<
     super();
     this.device = device;
     this.props = props;
+    const hostPickingModule = props.modelProps?.modules?.find(module => module.name === 'picking');
+    this.shaderInputs =
+      props.modelProps?.shaderInputs ?? createArrowTextShaderInputs(hostPickingModule as never);
+    if (props.modelProps?.modules) {
+      this.shaderInputs.addModules(props.modelProps.modules);
+    }
     this.textInput = textInput;
     this.resolvedModel = this.resolveModel(this.props.model ?? 'auto', this.textInput);
     this.model = this.createModel(this.resolvedModel, this.props, this.textInput);
@@ -577,8 +589,12 @@ export class ArrowTextRenderer extends GPURenderable<
       id: props.id,
       characterSet: props.characterSet,
       fontSettings: props.fontSettings,
+      ...props.modelProps,
       shaderInputs: this.shaderInputs,
-      modules: getArrowTextRenderModules(this.device) as never,
+      modules: mergeHostShaderModules(
+        getArrowTextRenderModules(this.device),
+        props.modelProps?.modules ?? []
+      ) as never,
       parameters: DEFAULT_RENDER_PARAMETERS,
       color,
       angle,
@@ -623,9 +639,9 @@ export class ArrowTextRenderer extends GPURenderable<
       convertArrowTextToAttributeModelProps(this.device, {
         ...this.getInputProps(data),
         ...commonProps,
-        source: WGSL_SHADER,
-        vs: VS_GLSL,
-        fs: FS_GLSL,
+        source: props.modelProps?.source ?? WGSL_SHADER,
+        vs: props.modelProps?.vs ?? VS_GLSL,
+        fs: props.modelProps?.fs ?? FS_GLSL,
         shaderLayout: TEXT_SHADER_LAYOUT
       })
     );
@@ -1087,6 +1103,20 @@ function isArrowTextCharacterColorType(
 
 function getArrowTextRenderModules(device: Device): unknown[] {
   return getArrowPickingModules(device);
+}
+
+function mergeHostShaderModules(
+  defaultModules: unknown[],
+  hostModules: NonNullable<NonNullable<ArrowTextRendererProps['modelProps']>['modules']>
+): unknown[] {
+  const hostModuleNames = new Set(hostModules.map(module => module.name));
+  return [
+    ...defaultModules.filter(module => {
+      const moduleName = (module as {name?: string}).name;
+      return !moduleName || !hostModuleNames.has(moduleName);
+    }),
+    ...hostModules
+  ];
 }
 
 async function getArrowRecordBatches(data: ArrowRecordBatchSource): Promise<arrow.RecordBatch[]> {

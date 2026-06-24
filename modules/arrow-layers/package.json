@@ -1,0 +1,33 @@
+{
+  "name": "@deck.gl-community/arrow-layers",
+  "version": "9.3.0",
+  "private": true,
+  "description": "deck.gl layers backed by Apache Arrow and luma.gl GPU vectors",
+  "license": "MIT",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "@deck.gl/core": "9.3.4",
+    "@luma.gl/arrow": "~9.3.0",
+    "@luma.gl/core": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/shadertools": "~9.3.0",
+    "@luma.gl/tables": "~9.3.0",
+    "apache-arrow": "^17.0.0"
+  }
+}

@@ -54,6 +54,8 @@ const SHARED_COMPILER_OPTIONS = {
   paths: {
     '@luma.gl/arrow': ['modules/arrow/src/index.ts'],
     '@luma.gl/arrow/*': ['modules/arrow/src/*'],
+    '@deck.gl-community/arrow-layers': ['modules/arrow-layers/src/index.ts'],
+    '@deck.gl-community/arrow-layers/*': ['modules/arrow-layers/src/*'],
     '@math.gl/geoarrow': ['modules/geoarrow/src/index.ts'],
     '@math.gl/geoarrow/*': ['modules/geoarrow/src/*'],
     '@luma.gl/tables': ['modules/tables/src/index.ts'],

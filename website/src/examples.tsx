@@ -1,7 +1,8 @@
 //
 
 import React, {useEffect, useRef, useState} from 'react';
-import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from './react-luma';
+import CodeBlock from '@theme/CodeBlock';
+import {ExampleHeader, ExamplePage, InfoBox, LumaExample, ReactExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
@@ -66,8 +67,234 @@ import ShaderPluginsApp from '../../examples/tutorials/shader-plugins/app';
 import ShaderModulesApp from '../../examples/tutorials/shader-modules/app';
 import TransformFeedbackApp from '../../examples/tutorials/transform-feedback/app';
 import TransformApp from '../../examples/tutorials/transform/app';
+import {createArrowPathLayerDeck} from '../../examples/deck/arrow-path-layer/app';
+import {createArrowPolygonLayerDeck} from '../../examples/deck/arrow-polygon-layer/app';
+import {createArrowTextLayerDeck} from '../../examples/deck/arrow-text-layer/app';
 
 const exampleConfig = {};
+
+type DeckExampleHandle = {
+  finalize: () => void;
+};
+type CreateDeckExample = (parent: HTMLDivElement) =>
+  | DeckExampleHandle
+  | Promise<DeckExampleHandle>;
+type DeckArrowLayerPanelProps = {
+  id: string;
+  title: string;
+  description: string;
+  metrics: readonly {label: string; value: string}[];
+};
+
+function DeckArrowLayerPanel({
+  id,
+  title,
+  description,
+  metrics
+}: DeckArrowLayerPanelProps) {
+  const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
+  const [source, setSource] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== 'source' || source !== null) {
+      return;
+    }
+    let isCancelled = false;
+    void fetch(`/example-assets/deck/${id}/app.ts`)
+      .then(response => response.text())
+      .then(nextSource => {
+        if (!isCancelled) {
+          setSource(nextSource);
+        }
+      });
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeTab, id, source]);
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        left: 0,
+        zIndex: 20,
+        padding: '12px 20px',
+        pointerEvents: 'none'
+      }}
+    >
+      <InfoBox
+        id={id}
+        title={title}
+        sourcePath={`examples/deck/${id}/app.ts`}
+        style={{pointerEvents: 'auto'}}
+      >
+        <div style={{display: 'flex', gap: 4, marginBottom: 12}}>
+          {(['info', 'source'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              style={{
+                border: '1px solid #cbd5e1',
+                borderRadius: 6,
+                padding: '4px 9px',
+                background: activeTab === tab ? '#e2e8f0' : '#fff',
+                color: '#0f172a',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: activeTab === tab ? 700 : 500
+              }}
+            >
+              {tab === 'info' ? 'Info' : 'Source'}
+            </button>
+          ))}
+        </div>
+        {activeTab === 'info' ? (
+          <>
+            <p style={{margin: '0 0 12px', color: '#475569', fontSize: 13, lineHeight: 1.5}}>
+              {description}
+            </p>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8}}>
+              {metrics.map(metric => (
+                <div
+                  key={metric.label}
+                  style={{
+                    padding: '8px 10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    background: '#f8fafc'
+                  }}
+                >
+                  <div
+                    style={{
+                      color: '#64748b',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    {metric.label}
+                  </div>
+                  <div style={{marginTop: 3, color: '#0f172a', fontSize: 13, fontWeight: 700}}>
+                    {metric.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div style={{maxHeight: 480, overflow: 'auto'}}>
+            <CodeBlock language="typescript">{source ?? '// Loading source…'}</CodeBlock>
+          </div>
+        )}
+      </InfoBox>
+    </div>
+  );
+}
+
+function DeckArrowLayerCanvas({
+  createDeck,
+  panel
+}: {
+  createDeck: CreateDeckExample;
+  panel: DeckArrowLayerPanelProps;
+}): React.ReactNode {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    let isFinalized = false;
+    let deck: DeckExampleHandle | null = null;
+    void Promise.resolve(createDeck(container)).then(createdDeck => {
+      if (isFinalized) {
+        createdDeck.finalize();
+        return;
+      }
+      deck = createdDeck;
+    });
+
+    return () => {
+      isFinalized = true;
+      deck?.finalize();
+    };
+  }, [createDeck]);
+
+  return (
+    <>
+      <div ref={containerRef} style={{position: 'absolute', inset: 0, overflow: 'hidden'}} />
+      <DeckArrowLayerPanel {...panel} />
+    </>
+  );
+}
+
+export const DeckArrowPathLayerExample: React.FC = () => (
+  <ReactExample
+    component={DeckArrowLayerCanvas}
+    componentProps={{
+      createDeck: createArrowPathLayerDeck,
+      panel: {
+        id: 'arrow-path-layer',
+        title: 'Arrow Path Layer',
+        description:
+          'Variable-length Arrow path columns become GPUVector-backed segment buffers without Deck attribute generation.',
+        metrics: [
+          {label: 'Rows', value: '240 paths'},
+          {label: 'Model', value: 'Attribute'},
+          {label: 'Attributes', value: 'GPUVector'}
+        ]
+      }
+    }}
+    showStats={false}
+  />
+);
+
+export const DeckArrowPolygonLayerExample: React.FC = () => (
+  <ReactExample
+    component={DeckArrowLayerCanvas}
+    componentProps={{
+      createDeck: createArrowPolygonLayerDeck,
+      panel: {
+        id: 'arrow-polygon-layer',
+        title: 'Arrow Polygon Layer',
+        description:
+          'Streamed Arrow polygon rows retain GPUVector-backed geometry and styling through tessellation and draw.',
+        metrics: [
+          {label: 'Rows', value: '10k stream'},
+          {label: 'Geometry', value: 'Tessellated'},
+          {label: 'Attributes', value: 'GPUVector'}
+        ]
+      }
+    }}
+    showStats={false}
+  />
+);
+
+export const DeckArrowTextLayerExample: React.FC = () => (
+  <ReactExample
+    component={DeckArrowLayerCanvas}
+    componentProps={{
+      createDeck: createArrowTextLayerDeck,
+      panel: {
+        id: 'arrow-text-layer',
+        title: 'Arrow Text Layer',
+        description:
+          'Arrow string and style columns stay columnar while the text renderer prepares GPUVector glyph inputs.',
+        metrics: [
+          {label: 'Rows', value: '800 labels'},
+          {label: 'Model', value: 'Attribute'},
+          {label: 'Attributes', value: 'GPUVector'}
+        ]
+      }
+    }}
+    showStats={false}
+  />
+);
 
 const GPGPU_EXAMPLE_STYLE = `
   .gpgpu-showcase {

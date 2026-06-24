@@ -1,0 +1,21 @@
+{
+  "name": "luma.gl-examples-deck-arrow-polygon-layer",
+  "version": "9.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@deck.gl-community/arrow-layers": "workspace:*",
+    "@deck.gl/core": "9.3.4",
+    "@luma.gl/arrow": "~9.3.0",
+    "apache-arrow": "^17.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

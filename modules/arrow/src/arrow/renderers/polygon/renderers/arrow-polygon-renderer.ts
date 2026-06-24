@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
+import type {ModelProps, PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
 import {
   PolygonAttributeModel,
   createPolygonShaderInputs,
@@ -73,6 +73,8 @@ export type ArrowPolygonRendererProps = {
   onDataBatch?: (update: ArrowPolygonRendererDataBatchUpdate) => void;
   /** Called when renderer-owned Arrow batch loading fails. */
   onDataError?: (error: unknown) => void;
+  /** Optional shader overrides for hosts that provide their own projection modules. */
+  modelProps?: Pick<ModelProps, 'source' | 'vs' | 'fs' | 'modules'>;
 };
 
 /** GPU polygon model selected by the Arrow-facing renderer. */
@@ -140,7 +142,11 @@ export class ArrowPolygonRenderer {
   constructor(device: Device, props: ArrowPolygonRendererProps = {}) {
     this.device = device;
     this.props = props;
-    this.shaderInputs = createPolygonShaderInputs(device);
+    const hostPickingModule = props.modelProps?.modules?.find(module => module.name === 'picking');
+    this.shaderInputs = createPolygonShaderInputs(device, hostPickingModule as never);
+    if (props.modelProps?.modules) {
+      this.shaderInputs.addModules(props.modelProps.modules);
+    }
     this.picker = createArrowPickingManager(device, {
       shaderInputs: this.shaderInputs,
       onObjectPicked: this.handleObjectPicked,
@@ -175,16 +181,21 @@ export class ArrowPolygonRenderer {
   }
 
   draw(renderPass: RenderPass, props: {aspect: number}): void {
-    this.shaderInputs.setProps({
-      polygonViewport: {
-        center: this.props.center ?? DEFAULT_POLYGON_RENDERER_CENTER,
-        scale: this.props.scale ?? DEFAULT_POLYGON_RENDERER_SCALE,
-        aspect: props.aspect
-      }
-    });
-    this.shaderInputs.setProps({picking: {isActive: false}});
+    if (!this.props.modelProps?.vs) {
+      this.shaderInputs.setProps({
+        polygonViewport: {
+          center: this.props.center ?? DEFAULT_POLYGON_RENDERER_CENTER,
+          scale: this.props.scale ?? DEFAULT_POLYGON_RENDERER_SCALE,
+          aspect: props.aspect
+        }
+      });
+    }
     this.model?.drawBatches(renderPass, {
-      onBatch: (_batch, batchIndex) => this.shaderInputs.setProps({picking: {batchIndex}})
+      onBatch: (_batch, batchIndex) => {
+        if (!this.props.modelProps?.vs) {
+          this.shaderInputs.setProps({picking: {batchIndex}});
+        }
+      }
     });
   }
 
@@ -353,6 +364,7 @@ export class ArrowPolygonRenderer {
     this.model = this.createModel({
       id: 'arrow-polygons',
       ...modelBatchProps,
+      ...this.props.modelProps,
       shaderInputs: this.shaderInputs
     });
     this.pickingModel = this.createModel({

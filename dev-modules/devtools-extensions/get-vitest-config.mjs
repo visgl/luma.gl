@@ -39,6 +39,11 @@ export async function getVitestConfig(options = {}) {
     });
 
   return defineConfig({
+    // Keep deck.gl inside Vite's module graph so its luma.gl imports use the
+    // repository source aliases instead of loading a second built runtime.
+    ssr: {
+      noExternal: ['@deck.gl/core']
+    },
     resolve: {
       alias: [
         ...tsconfigAliases,
