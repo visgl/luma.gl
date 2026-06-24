@@ -14,13 +14,13 @@ import {
   ArrowPathRenderer,
   getArrowRecordBatchAsyncIterator,
   resolveArrowPathSourceVectors,
-  type ArrowPathRendererModel,
   type ArrowPathSourceVectorSelectors,
   type ArrowRecordBatchSource,
   type PreparedArrowPathRendererGPUVectors
 } from '@luma.gl/arrow';
+import type {ShaderLayout} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import {PathAttributeModel, PathStorageModel, PathTripsStorageModel} from '@luma.gl/tables';
+import {PathAttributeModel} from '@luma.gl/tables';
 import {Table, type RecordBatch} from 'apache-arrow';
 import {getDeckProjectProps} from './arrow-layer-types';
 
@@ -31,6 +31,7 @@ precision highp int;
 in vec4 segmentStartPositions;
 in vec4 segmentEndPositions;
 in vec4 pathViewOrigins;
+in uint rowIndices;
 
 vec3 encodeDeckPickingColor(int objectIndex) {
   int colorIndex = objectIndex + 1;
@@ -46,7 +47,7 @@ void main() {
   vec3 pathPosition = (pathViewOrigins + pathDelta).xyz;
   gl_Position = project_position_to_clipspace(pathPosition, vec3(0.0), vec3(0.0));
   geometry.position = gl_Position;
-  geometry.pickingColor = encodeDeckPickingColor(0);
+  geometry.pickingColor = encodeDeckPickingColor(int(rowIndices));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
   vec4 pathColor = vec4(0.78, 0.86, 0.96, 1.0);
   DECKGL_FILTER_COLOR(pathColor, geometry);
@@ -64,13 +65,23 @@ void main() {
 }
 `;
 
+const DECK_PATH_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [
+    {name: 'segmentStartPositions', location: 0, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'segmentEndPositions', location: 1, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'pathViewOrigins', location: 2, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'rowIndices', location: 3, type: 'u32', stepMode: 'instance'}
+  ],
+  bindings: []
+};
+
 /** Deck-facing props for an Arrow-backed path layer. */
 export type ArrowPathLayerProps = Omit<LayerProps, 'data'> &
   ArrowPathSourceVectorSelectors & {
     /** Arrow table or preserved record-batch source. */
     data?: ArrowRecordBatchSource | null;
-    /** GPU path model. Auto resolves from the active backend and timestamp input. */
-    model?: ArrowPathRendererModel | 'auto';
+    /** Deck projection currently requires the attribute-backed path model. */
+    model?: 'attribute' | 'auto';
     /** Called after a streamed record batch has been incorporated. */
     onDataBatch?: (update: {loadedBatchCount: number; isFirstBatch: boolean}) => void;
     /** Called when layer-owned Arrow loading or preparation fails. */
@@ -155,8 +166,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
         return;
       }
       const table = recordBatches ? new Table(recordBatches) : undefined;
-      const modelKind = this.resolveModel(props);
-      const sourceVectors = resolveArrowPathSourceVectors(this.getSourceModel(modelKind), {
+      const modelKind = this.resolveModel();
+      const sourceVectors = resolveArrowPathSourceVectors(PathAttributeModel, {
         data: table,
         selectors: {
           paths: props.paths,
@@ -184,7 +195,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
           modules: [project32, picking],
           vs: DECK_PATH_VS,
           fs: DECK_PATH_FS
-        })
+        }),
+        shaderLayout: DECK_PATH_SHADER_LAYOUT
       } as never);
       const previousModel = this.getLayerState().model;
       const previousPrepared = this.getLayerState().prepared;
@@ -217,25 +229,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     return batches;
   }
 
-  private resolveModel(props: ArrowPathLayerProps): ArrowPathRendererModel {
-    if (props.model && props.model !== 'auto') {
-      return props.model;
-    }
-    if (this.context.device.type !== 'webgpu') {
-      return 'attribute';
-    }
-    return props.timestamps ? 'trips' : 'storage';
-  }
-
-  private getSourceModel(model: ArrowPathRendererModel) {
-    switch (model) {
-      case 'storage':
-        return PathStorageModel;
-      case 'trips':
-        return PathTripsStorageModel;
-      case 'attribute':
-        return PathAttributeModel;
-    }
+  private resolveModel(): 'attribute' {
+    return 'attribute';
   }
 
   private isActiveLoad(loadVersion: number): boolean {
