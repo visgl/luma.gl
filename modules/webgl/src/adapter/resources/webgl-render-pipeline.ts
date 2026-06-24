@@ -17,7 +17,6 @@ import {RenderPipeline, flattenBindingsByGroup, log, normalizeBindingsByGroup} f
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 
-import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
 
@@ -29,7 +28,6 @@ import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WEBGLTransformFeedback} from './webgl-transform-feedback';
-import {getGLDrawMode} from '../helpers/webgl-topology-utils';
 import {WEBGLSharedRenderPipeline} from './webgl-shared-render-pipeline';
 
 /** Creates a new render pipeline */
@@ -93,10 +91,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this.destroyResource();
   }
 
-  /**
-   * Compatibility shim for code paths that still set bindings on the pipeline.
-   * Shared-model draws pass bindings per draw and do not rely on this state.
-   */
+  /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
   setBindings(bindings: Bindings | BindingsByGroup, options?: {disableWarnings?: boolean}): void {
     const flatBindings = flattenBindingsByGroup(
       normalizeBindingsByGroup(this.shaderLayout, bindings)
@@ -171,104 +166,28 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     _bindGroupCacheKeys?: Partial<Record<number, object>>;
     uniforms?: Record<string, UniformValue>;
   }): boolean {
-    this._syncLinkStatus();
+    const webglRenderPass = options.renderPass as WEBGLRenderPass;
     const drawBindings = options.bindGroups
       ? flattenBindingsByGroup(options.bindGroups)
       : options.bindings || this.bindings;
 
-    const {
-      renderPass,
-      parameters = this.props.parameters,
-      topology = this.props.topology,
-      vertexArray,
-      vertexCount,
-      indexCount,
-      instanceCount,
-      isInstanced = false,
-      firstVertex = 0,
-      // firstIndex,
-      // firstInstance,
-      // baseVertex,
-      transformFeedback,
-      uniforms = this.uniforms
-    } = options;
-
-    const glDrawMode = getGLDrawMode(topology);
-    const isIndexed: boolean = Boolean(vertexArray.indexBuffer);
-    const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
-    const indexedDrawCount = indexCount ?? vertexCount ?? 0;
-    // Note that we sometimes get called with 0 instances
-
-    // If we are using async linking, we need to wait until linking completes
-    if (this.linkStatus !== 'success') {
-      log.info(2, `RenderPipeline:${this.id}.draw() aborted - waiting for shader linking`)();
-      return false;
-    }
-
-    // Avoid WebGL draw call when not rendering any data or values are incomplete
-    // Note: async textures set as uniforms might still be loading.
-    // Now that all uniforms have been updated, check if any texture
-    // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable(drawBindings)) {
-      log.info(2, `RenderPipeline:${this.id}.draw() aborted - textures not yet loaded`)();
-      //  Note: false means that the app needs to redraw the pipeline again.
-      return false;
-    }
-
-    // (isInstanced && instanceCount === 0)
-    // if (vertexCount === 0) {
-    //   log.info(2, `RenderPipeline:${this.id}.draw() aborted - no vertices to draw`)();
-    //   Note: false means that the app needs to redraw the pipeline again.
-    //   return true;
-    // }
-
-    this.device.gl.useProgram(this.handle);
-
-    // Note: Rebinds constant attributes before each draw call
-    vertexArray.bindBeforeRender(renderPass);
-
-    if (transformFeedback) {
-      transformFeedback.begin(this.props.topology);
-    }
-
-    // We have to apply bindings before every draw call since other draw calls will overwrite
-    this._applyBindings(drawBindings, {disableWarnings: this.props.disableWarnings});
-    this._applyUniforms(uniforms);
-
-    const webglRenderPass = renderPass as WEBGLRenderPass;
-
-    withDeviceAndGLParameters(this.device, parameters, webglRenderPass.glParameters, () => {
-      if (isIndexed && isInstanced) {
-        this.device.gl.drawElementsInstanced(
-          glDrawMode,
-          indexedDrawCount,
-          glIndexType,
-          firstVertex,
-          instanceCount || 0
-        );
-        // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
-        //   this.device.gldrawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
-      } else if (isIndexed) {
-        this.device.gl.drawElements(glDrawMode, indexedDrawCount, glIndexType, firstVertex);
-      } else if (isInstanced) {
-        this.device.gl.drawArraysInstanced(
-          glDrawMode,
-          firstVertex,
-          vertexCount || 0,
-          instanceCount || 0
-        );
-      } else {
-        this.device.gl.drawArrays(glDrawMode, firstVertex, vertexCount || 0);
-      }
-
-      if (transformFeedback) {
-        transformFeedback.end();
-      }
+    webglRenderPass.setPipeline(this);
+    webglRenderPass.setBindings(drawBindings);
+    webglRenderPass.setVertexArray(options.vertexArray);
+    return webglRenderPass.draw({
+      parameters: options.parameters,
+      topology: options.topology,
+      isInstanced: options.isInstanced,
+      vertexCount: options.vertexCount,
+      indexCount: options.indexCount,
+      instanceCount: options.instanceCount,
+      firstVertex: options.firstVertex,
+      firstIndex: options.firstIndex,
+      firstInstance: options.firstInstance,
+      baseVertex: options.baseVertex,
+      transformFeedback: options.transformFeedback,
+      uniforms: options.uniforms
     });
-
-    vertexArray.unbindAfterRender(renderPass);
-
-    return true;
   }
 
   /**
@@ -390,7 +309,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
-  private _syncLinkStatus(): void {
+  _syncLinkStatus(): void {
     this.linkStatus = (this.sharedRenderPipeline as WEBGLSharedRenderPipeline).linkStatus;
   }
 }

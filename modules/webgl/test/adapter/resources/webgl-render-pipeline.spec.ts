@@ -181,6 +181,22 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
   }
 
   renderPass.end();
+
+  const canonicalRenderPass = new WEBGLRenderPass(device, {});
+  t.throws(
+    () => canonicalRenderPass.setBindings({BlockA: bufferA}),
+    /setPipeline.*must be called before setBindings/,
+    'pass bindings require an active pipeline'
+  );
+  canonicalRenderPass.setPipeline(renderPipeline);
+  canonicalRenderPass.setBindings({BlockA: bufferA, BlockB: bufferB, BlockC: bufferC});
+  canonicalRenderPass.setVertexArray(vertexArray);
+  t.ok(
+    canonicalRenderPass.draw({vertexCount: 3}),
+    'render pass owns WebGL pipeline, bindings, vertex array, and draw state'
+  );
+  canonicalRenderPass.end();
+
   vertexArray.destroy();
   bufferA.destroy();
   bufferB.destroy();

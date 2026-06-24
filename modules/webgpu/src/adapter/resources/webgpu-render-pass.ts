@@ -7,8 +7,11 @@ import type {
   RenderBundle,
   RenderPassProps,
   RenderPassParameters,
+  RenderPassBindingOptions,
+  RenderPassDrawOptions,
   Bindings,
-  BindingsByGroup
+  BindingsByGroup,
+  VertexArray
 } from '@luma.gl/core';
 import {Buffer, RenderPass, RenderPipeline, _getDefaultBindGroupFactory, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
@@ -30,6 +33,10 @@ export class WebGPURenderPass extends RenderPass {
 
   /** Latest bindings applied to this pass */
   bindings: Bindings | BindingsByGroup = {};
+  private bindingsPipeline: WebGPURenderPipeline | null = null;
+
+  /** Vertex array used by subsequent draw commands. */
+  vertexArray: VertexArray | null = null;
 
   constructor(
     device: WebGPUDevice,
@@ -132,17 +139,27 @@ export class WebGPURenderPass extends RenderPass {
   }
 
   /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */
-  setBindings(bindings: Bindings | BindingsByGroup): void {
+  setBindings(bindings: Bindings | BindingsByGroup, options?: RenderPassBindingOptions): void {
+    if (!this.pipeline) {
+      throw new Error('RenderPass.setPipeline() must be called before setBindings()');
+    }
     this.bindings = bindings;
-    const bindGroups =
-      (this.pipeline &&
-        _getDefaultBindGroupFactory(this.device).getBindGroups(this.pipeline, bindings)) ||
-      {};
+    this.bindingsPipeline = this.pipeline;
+    const bindGroups = _getDefaultBindGroupFactory(this.device).getBindGroups(
+      this.pipeline,
+      bindings,
+      options?._bindGroupCacheKeys
+    );
     for (const [group, bindGroup] of Object.entries(bindGroups)) {
       if (bindGroup) {
         this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
       }
     }
+  }
+
+  /** Selects the vertex array used by subsequent draw commands. */
+  setVertexArray(vertexArray: VertexArray): void {
+    this.vertexArray = vertexArray;
   }
 
   setIndexBuffer(
@@ -158,15 +175,15 @@ export class WebGPURenderPass extends RenderPass {
     this.handle.setVertexBuffer(slot, (buffer as WebGPUBuffer).handle, offset);
   }
 
-  draw(options: {
-    vertexCount?: number;
-    indexCount?: number;
-    instanceCount?: number;
-    firstVertex?: number;
-    firstIndex?: number;
-    firstInstance?: number;
-    baseVertex?: number;
-  }): void {
+  draw(options: RenderPassDrawOptions): boolean {
+    if (!this.pipeline) {
+      throw new Error('RenderPass.setPipeline() must be called before draw()');
+    }
+    if (this.pipeline.shaderLayout.bindings.length > 0 && this.bindingsPipeline !== this.pipeline) {
+      throw new Error('RenderPass.setBindings() must be called after setPipeline() before draw()');
+    }
+
+    this.vertexArray?.bindBeforeRender(this);
     if (options.indexCount) {
       this.handle.drawIndexed(
         options.indexCount,
@@ -183,6 +200,8 @@ export class WebGPURenderPass extends RenderPass {
         options.firstInstance
       );
     }
+    this.vertexArray?.unbindAfterRender(this);
+    return true;
   }
 
   drawIndirect(): void {

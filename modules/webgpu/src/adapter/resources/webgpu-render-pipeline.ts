@@ -1,13 +1,7 @@
 // luma.gl MIT license
 
 import type {Bindings, BindingsByGroup, RenderPass, VertexArray} from '@luma.gl/core';
-import {
-  RenderPipeline,
-  RenderPipelineProps,
-  _getDefaultBindGroupFactory,
-  log,
-  normalizeBindingsByGroup
-} from '@luma.gl/core';
+import {RenderPipeline, RenderPipelineProps, log, normalizeBindingsByGroup} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
@@ -76,10 +70,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this.handle = null;
   }
 
-  /**
-   * Compatibility shim for code paths that still set bindings on the pipeline.
-   * The shared-model path passes bindings per draw and does not rely on this state.
-   */
+  /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
   setBindings(bindings: Bindings | BindingsByGroup): void {
     const nextBindingsByGroup = normalizeBindingsByGroup(this.shaderLayout, bindings);
     for (const [groupKey, groupBindings] of Object.entries(nextBindingsByGroup)) {
@@ -100,7 +91,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
   }
 
-  /** @todo - should this be moved to renderpass? */
+  /** @deprecated Use RenderPass command methods instead. */
   draw(options: {
     renderPass: RenderPass;
     vertexArray: VertexArray;
@@ -122,56 +113,26 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
 
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
-    const instanceCount =
-      options.instanceCount && options.instanceCount > 0 ? options.instanceCount : 1;
-
-    // Set pipeline
-    this.device.pushErrorScope('validation');
-    webgpuRenderPass.handle.setPipeline(this.handle);
-    this.device.popErrorScope((error: GPUError) => {
-      this.device.reportError(new Error(`${this} setPipeline failed:\n"${error.message}"`), this)();
-      this.device.debug();
-    });
-
-    // Set bindings (uniform buffers, textures etc)
     const hasExplicitBindings = Boolean(options.bindGroups || options.bindings);
-    const bindGroups = _getDefaultBindGroupFactory(this.device).getBindGroups(
-      this,
-      hasExplicitBindings ? options.bindGroups || options.bindings : this._bindingsByGroup,
-      hasExplicitBindings ? options._bindGroupCacheKeys : this._bindGroupCacheKeysByGroup
-    );
-    for (const [group, bindGroup] of Object.entries(bindGroups)) {
-      if (bindGroup) {
-        webgpuRenderPass.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
+    webgpuRenderPass.setPipeline(this);
+    webgpuRenderPass.setBindings(
+      hasExplicitBindings ? options.bindGroups || options.bindings || {} : this._bindingsByGroup,
+      {
+        _bindGroupCacheKeys: hasExplicitBindings
+          ? options._bindGroupCacheKeys
+          : this._bindGroupCacheKeysByGroup
       }
-    }
-
-    // Set attributes
-    // Note: Rebinds constant attributes before each draw call
-    options.vertexArray.bindBeforeRender(options.renderPass);
-
-    // Draw
-    if (options.indexCount) {
-      webgpuRenderPass.handle.drawIndexed(
-        options.indexCount,
-        instanceCount,
-        options.firstIndex || 0,
-        options.baseVertex || 0,
-        options.firstInstance || 0
-      );
-    } else {
-      webgpuRenderPass.handle.draw(
-        options.vertexCount || 0,
-        instanceCount,
-        options.firstVertex || 0,
-        options.firstInstance || 0
-      );
-    }
-
-    // Note: Rebinds constant attributes before each draw call
-    options.vertexArray.unbindAfterRender(options.renderPass);
-
-    return true;
+    );
+    webgpuRenderPass.setVertexArray(options.vertexArray);
+    return webgpuRenderPass.draw({
+      vertexCount: options.vertexCount,
+      indexCount: options.indexCount,
+      instanceCount: options.instanceCount && options.instanceCount > 0 ? options.instanceCount : 1,
+      firstVertex: options.firstVertex,
+      firstIndex: options.firstIndex,
+      firstInstance: options.firstInstance,
+      baseVertex: options.baseVertex
+    });
   }
 
   _getBindingsByGroupWebGPU(): BindingsByGroup {

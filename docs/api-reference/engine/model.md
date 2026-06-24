@@ -1,7 +1,9 @@
 # Model
 
 `Model` is the main engine-level rendering class in luma.gl.
-It assembles shaders, manages geometry and bindings, reuses cached pipelines, and issues draw calls through a [`RenderPass`](/docs/api-reference/core/resources/render-pass).
+It assembles shaders, manages geometry and bindings, reuses immutable cached
+pipelines, and applies its dynamic draw state to a
+[`RenderPass`](/docs/api-reference/core/resources/render-pass).
 
 ## Usage
 
@@ -130,7 +132,10 @@ Updates shader inputs and rebuilds the pipeline if necessary, encoding any manag
 
 ### `draw(renderPass: RenderPass): boolean`
 
-Draws once into the supplied render pass. Returns `false` when required resources, such as unresolved texture binding sources, are not ready yet.
+Draws once into the supplied render pass. The model selects its pipeline,
+bindings, and vertex array on that pass before issuing the draw. Returns
+`false` when required resources, such as unresolved texture binding sources,
+are not ready yet.
 
 ### `setGeometry(geometry: Geometry | GPUGeometry | null): void`
 

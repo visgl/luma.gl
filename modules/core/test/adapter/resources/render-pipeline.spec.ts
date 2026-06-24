@@ -165,6 +165,57 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   t.end();
 });
 
+test('RenderPass owns pipeline, bindings, vertex array, and draw state', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const shader = webgpuDevice.createShader({source: RENDER_SOURCE});
+  const renderPipeline = webgpuDevice.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    shaderLayout: {
+      attributes: [],
+      bindings: [{name: 'colorUniforms', type: 'uniform', group: 3, location: 0}]
+    }
+  });
+  const uniformBuffer = webgpuDevice.createBuffer({
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST
+  });
+  const vertexArray = webgpuDevice.createVertexArray({
+    shaderLayout: renderPipeline.shaderLayout,
+    bufferLayout: renderPipeline.bufferLayout
+  });
+  const framebuffer = webgpuDevice
+    .getDefaultCanvasContext()
+    .getCurrentFramebuffer({depthStencilFormat: false});
+  const renderPass = webgpuDevice.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+
+  t.throws(
+    () => renderPass.setBindings({colorUniforms: uniformBuffer}),
+    /setPipeline.*must be called before setBindings/,
+    'bindings require an active render pipeline'
+  );
+
+  renderPass.setPipeline(renderPipeline);
+  renderPass.setBindings({3: {colorUniforms: uniformBuffer}});
+  renderPass.setVertexArray(vertexArray);
+  t.equal(renderPass.draw({vertexCount: 3}), true, 'render pass issues the draw');
+
+  renderPass.end();
+  webgpuDevice.submit();
+  vertexArray.destroy();
+  uniformBuffer.destroy();
+  renderPipeline.destroy();
+  shader.destroy();
+  t.end();
+});
+
 test('RenderPipeline creates a depth attachment descriptor when an explicit WebGPU depth format is supplied', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 

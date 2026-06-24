@@ -3,14 +3,35 @@
 // Copyright (c) vis.gl contributors
 
 import {NumericArray, NumberArray4} from '@math.gl/types';
-import type {RenderBundle} from '@luma.gl/core';
-import {RenderPass, RenderPassProps, RenderPassParameters} from '@luma.gl/core';
+import type {
+  Bindings,
+  BindingsByGroup,
+  RenderBundle,
+  RenderPassBindingOptions,
+  RenderPassDrawOptions,
+  RenderPipeline,
+  UniformValue,
+  VertexArray
+} from '@luma.gl/core';
+import {
+  flattenBindingsByGroup,
+  normalizeBindingsByGroup,
+  RenderPass,
+  RenderPassProps,
+  RenderPassParameters,
+  log
+} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/webgl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WEBGLQuerySet} from './webgl-query-set';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
+import {WEBGLBuffer} from './webgl-buffer';
+import {WEBGLRenderPipeline} from './webgl-render-pipeline';
+import {WEBGLTransformFeedback} from './webgl-transform-feedback';
+import {getGLDrawMode} from '../helpers/webgl-topology-utils';
+import {withDeviceAndGLParameters} from '../converters/device-parameters';
 
 const COLOR_CHANNELS: NumberArray4 = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
@@ -20,6 +41,16 @@ export class WEBGLRenderPass extends RenderPass {
 
   /** Parameters that should be applied before each draw call */
   glParameters: GLParameters = {};
+
+  /** Pipeline used by subsequent draw commands. */
+  pipeline: WEBGLRenderPipeline | null = null;
+
+  /** Complete binding set used by subsequent draw commands. */
+  bindings: Bindings = {};
+  private bindingsPipeline: WEBGLRenderPipeline | null = null;
+
+  /** Vertex array used by subsequent draw commands. */
+  vertexArray: VertexArray | null = null;
 
   constructor(device: WebGLDevice, props: RenderPassProps) {
     super(device, props);
@@ -146,6 +177,106 @@ export class WEBGLRenderPass extends RenderPass {
     this.glParameters = glParameters;
 
     setGLParameters(this.device.gl, glParameters);
+  }
+
+  setPipeline(pipeline: RenderPipeline): void {
+    this.pipeline = pipeline as WEBGLRenderPipeline;
+  }
+
+  setBindings(bindings: Bindings | BindingsByGroup, _options?: RenderPassBindingOptions): void {
+    if (!this.pipeline) {
+      throw new Error('RenderPass.setPipeline() must be called before setBindings()');
+    }
+    this.bindings = flattenBindingsByGroup(
+      normalizeBindingsByGroup(this.pipeline.shaderLayout, bindings)
+    );
+    this.bindingsPipeline = this.pipeline;
+  }
+
+  setVertexArray(vertexArray: VertexArray): void {
+    this.vertexArray = vertexArray;
+  }
+
+  draw(options: RenderPassDrawOptions): boolean {
+    const pipeline = this.pipeline;
+    const vertexArray = this.vertexArray;
+    if (!pipeline) {
+      throw new Error('RenderPass.setPipeline() must be called before draw()');
+    }
+    if (!vertexArray) {
+      throw new Error('RenderPass.setVertexArray() must be called before draw()');
+    }
+    if (pipeline.shaderLayout.bindings.length > 0 && this.bindingsPipeline !== pipeline) {
+      throw new Error('RenderPass.setBindings() must be called after setPipeline() before draw()');
+    }
+
+    pipeline._syncLinkStatus();
+    const {
+      parameters = pipeline.props.parameters,
+      topology = pipeline.props.topology,
+      vertexCount,
+      indexCount,
+      instanceCount,
+      isInstanced = false,
+      firstVertex = 0,
+      transformFeedback,
+      uniforms = pipeline.uniforms
+    } = options;
+
+    const glDrawMode = getGLDrawMode(topology);
+    const isIndexed = Boolean(vertexArray.indexBuffer);
+    const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
+    const indexedDrawCount = indexCount ?? vertexCount ?? 0;
+
+    if (pipeline.linkStatus !== 'success') {
+      log.info(2, `RenderPipeline:${pipeline.id}.draw() aborted - waiting for shader linking`)();
+      return false;
+    }
+    if (!pipeline._areTexturesRenderable(this.bindings)) {
+      log.info(2, `RenderPipeline:${pipeline.id}.draw() aborted - textures not yet loaded`)();
+      return false;
+    }
+
+    this.device.gl.useProgram(pipeline.handle);
+    vertexArray.bindBeforeRender(this);
+
+    const webglTransformFeedback = transformFeedback as WEBGLTransformFeedback | undefined;
+    if (webglTransformFeedback) {
+      webglTransformFeedback.begin(pipeline.props.topology);
+    }
+
+    pipeline._applyBindings(this.bindings, {disableWarnings: pipeline.props.disableWarnings});
+    pipeline._applyUniforms(uniforms as Record<string, UniformValue>);
+
+    withDeviceAndGLParameters(this.device, parameters, this.glParameters, () => {
+      if (isIndexed && isInstanced) {
+        this.device.gl.drawElementsInstanced(
+          glDrawMode,
+          indexedDrawCount,
+          glIndexType,
+          firstVertex,
+          instanceCount || 0
+        );
+      } else if (isIndexed) {
+        this.device.gl.drawElements(glDrawMode, indexedDrawCount, glIndexType, firstVertex);
+      } else if (isInstanced) {
+        this.device.gl.drawArraysInstanced(
+          glDrawMode,
+          firstVertex,
+          vertexCount || 0,
+          instanceCount || 0
+        );
+      } else {
+        this.device.gl.drawArrays(glDrawMode, firstVertex, vertexCount || 0);
+      }
+
+      if (webglTransformFeedback) {
+        webglTransformFeedback.end();
+      }
+    });
+
+    vertexArray.unbindAfterRender(this);
+    return true;
   }
 
   beginOcclusionQuery(queryIndex: number): void {

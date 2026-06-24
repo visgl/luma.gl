@@ -108,9 +108,10 @@ depends on explicit shader-layout metadata.
 
 ## Where bindings are accepted
 
+- [`RenderPass`](/docs/api-reference/core/resources/render-pass)
+  - `setBindings(bindingsOrBindGroups)`
 - [`RenderPipeline`](/docs/api-reference/core/resources/render-pipeline)
-  - `bindings`
-  - `bindGroups`
+  - `bindings`, `bindGroups`, and `setBindings()` are deprecated compatibility APIs
 - [`ComputePipeline`](/docs/api-reference/core/resources/compute-pipeline)
   - `setBindings(bindingsOrBindGroups)`
 

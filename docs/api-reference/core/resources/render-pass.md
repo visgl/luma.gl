@@ -14,7 +14,7 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling
 ```typescript
   // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
   const renderPass = device.beginRenderPass();
-  model.draw();
+  model.draw(renderPass);
   renderPass.end();
   device.submit();
 ```
@@ -32,7 +32,7 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling
 
 ```typescript
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
-  model.draw();
+  model.draw(renderPass);
   renderPass.end();
   device.submit();
 ```
@@ -94,6 +94,33 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 ### `end(): void`
 
 Must be called after all draw calls have been completed to guarantee rendering. Frees up any GPU resources associated with this render pass.
+
+### `setPipeline(pipeline: RenderPipeline): void`
+
+Selects the immutable render pipeline used by subsequent commands.
+
+### `setBindings(bindings: Bindings | BindingsByGroup): void`
+
+Replaces the complete binding set used by subsequent draws. Call
+`setPipeline()` first so luma.gl can resolve binding names against the active
+shader layout.
+
+### `setVertexArray(vertexArray: VertexArray): void`
+
+Selects the vertex and index data used by subsequent draws.
+
+### `draw(options: RenderPassDrawOptions): boolean`
+
+Draws with the active pipeline, bindings, and vertex array. `options` contains
+draw counts and offsets such as `vertexCount`, `indexCount`,
+`instanceCount`, `firstVertex`, and `firstIndex`.
+
+```ts
+renderPass.setPipeline(pipeline);
+renderPass.setBindings({frameUniforms, materialUniforms});
+renderPass.setVertexArray(vertexArray);
+renderPass.draw({vertexCount: 3});
+```
 
 ### `executeBundles(bundles: Iterable<RenderBundle>): void`
 

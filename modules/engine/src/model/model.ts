@@ -593,9 +593,12 @@ export class Model {
               indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2))
             : undefined;
 
-          drawSuccess = this.pipeline.draw({
-            renderPass,
-            vertexArray: this.vertexArray,
+          renderPass.setPipeline(this.pipeline);
+          renderPass.setBindings(syncBindGroups, {
+            _bindGroupCacheKeys: this._getBindGroupCacheKeys()
+          });
+          renderPass.setVertexArray(this.vertexArray);
+          drawSuccess = renderPass.draw({
             isInstanced: this.isInstanced,
             vertexCount: this.vertexCount,
             instanceCount: this.instanceCount,
@@ -603,16 +606,9 @@ export class Model {
             firstVertex: this.firstVertex,
             firstIndex: this.firstIndex,
             transformFeedback: this.transformFeedback || undefined,
-            // Pipelines may be shared across models when caching is enabled, so bindings
-            // and WebGL uniforms must be supplied on every draw instead of being stored
-            // on the pipeline instance.
-            bindings: syncBindings,
-            bindGroups: syncBindGroups,
-            _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
             uniforms: this.props.uniforms,
-            // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
-            // so we must provide our unique parameters to each draw
-            // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
+            // WebGL shares underlying cached programs even for models that have different
+            // parameters and topology, so those compatibility overrides remain per draw.
             parameters: this.parameters,
             topology: this.topology
           });
@@ -1104,7 +1100,7 @@ export class Model {
         depthStencilAttachmentFormat: this._depthStencilAttachmentFormat,
         topology: this.topology,
         parameters: this.parameters,
-        bindGroups: this._getBindGroups(),
+        bindGroups: undefined,
         vs,
         fs
       });

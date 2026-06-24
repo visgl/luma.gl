@@ -14,6 +14,12 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 **@luma.gl/core**
 - WebGPU device creation now defaults to `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass `featureLevel: 'max'`.
+- Render draw state is now owned by `RenderPass`. `RenderPipelineProps.bindings`,
+  `RenderPipelineProps.bindGroups`, `RenderPipeline.setBindings()`, and
+  `RenderPipeline.draw()` are deprecated compatibility APIs and will be
+  removed in the next major release. New low-level code should call
+  `renderPass.setPipeline()`, `setBindings()`, `setVertexArray()`, and
+  `draw()`.
 
 **@luma.gl/arrow**
 - Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
