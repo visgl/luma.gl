@@ -30,7 +30,8 @@
 - Start that Markdown description with `Goals` and `Changes` sections, then include verification, risks, follow-up notes, or other merge-relevant sections when useful.
 - In the verification section, explicitly call out the AGENTS.md checks that were run or could not be run: `nvm use`, `yarn install`, `yarn build`, `yarn test`, `yarn lint fix`, `yarn website:build`, and `(cd website && yarn build)`.
 - Run `yarn build` after the final code and formatting changes, and treat it as a required pre-merge gate. It compiles every module with `tspc` and catches cross-package TypeScript API breakage that `yarn test-node` does not cover.
-- Do not rely on `yarn test-node` as a substitute for `yarn build`; run both when table or shared package APIs change.
+- Run `yarn test` after the final code and formatting changes, and treat it as a required pre-merge gate. It runs both node and headless coverage; targeted `yarn test-node` runs are focused checks and are not sufficient on their own.
+- Do not rely on `yarn test-node` as a substitute for `yarn build` or `yarn test`; run all three when table or shared package APIs change.
  
 ## Code style
 - TypeScript strict mode
