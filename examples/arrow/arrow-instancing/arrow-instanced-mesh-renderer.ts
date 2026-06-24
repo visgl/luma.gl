@@ -23,7 +23,7 @@ import {
   type PickingManager
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
-import {GPURenderable, GPUTable, GPUTableModel} from '@luma.gl/tables';
+import {GPURenderable, GPUTable, GPUTableModel, getGPUDataBuffersForLayout} from '@luma.gl/tables';
 import {Matrix4} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 
@@ -269,7 +269,7 @@ class InstancedCube extends GPUTableModel {
       bufferLayout: instanceBufferLayout,
       instanceCount: this.instanceCount,
       geometry: pickingGeometry,
-      attributes: this.table!.attributes,
+      attributes: getInstanceTableAttributes(this.table!),
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
       parameters: {
@@ -354,7 +354,7 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
     this.instanceArrowTable = makeInstanceArrowTable(props.instancesPerSide);
     this.cube.setInstanceTable(this.instanceArrowTable);
     if (this.pickingCube) {
-      this.pickingCube.setAttributes(this.cube.table!.attributes);
+      this.pickingCube.setAttributes(getInstanceTableAttributes(this.cube.table!));
       this.pickingCube.setInstanceCount(this.cube.instanceCount);
     }
   }
@@ -412,4 +412,12 @@ export class ArrowInstancedMeshRenderer extends GPURenderable<
       shaderInputs: this.shaderInputs
     });
   }
+}
+
+function getInstanceTableAttributes(table: GPUTable) {
+  const batch = table.batches[0];
+  if (!batch) {
+    throw new Error('Arrow instancing requires one GPU table batch');
+  }
+  return getGPUDataBuffersForLayout(batch.bufferLayout, batch.gpuData);
 }
