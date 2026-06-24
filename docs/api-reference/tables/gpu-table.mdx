@@ -13,7 +13,7 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 columns. It preserves real
 [`GPURecordBatch`](/docs/api-reference/tables/gpu-record-batch) objects, exposes
 aggregate [`GPUVector`](/docs/api-reference/tables/gpu-vector) views, and
-controls packing, detaching, selection, reset, and destruction.
+controls packing, detaching, selection, and destruction.
 
 ## Usage
 
@@ -49,15 +49,13 @@ When the source is an Arrow `Table`, prefer
 | `nullCount` | `number` | Aggregate null row count. |
 | `bufferLayout` | `BufferLayout[]` | Buffer layout shared by compatible preserved batches. |
 | `gpuVectors` | `Record<string, GPUVector>` | Aggregate vectors keyed by table/shader column name. |
-| `attributes` | `Record<string, Buffer \| DynamicBuffer>` | Attribute buffers for the first directly drawable batch. |
-| `bindings` | `Record<string, Buffer \| DynamicBuffer>` | Storage bindings for the first directly bindable batch. |
 | `batches` | `GPURecordBatch[]` | Preserved batch-local GPU storage. |
 
 ## Reserved Draw Columns
 
 `gpuVectors.indices` is the reserved indexed-draw column. It is not an
 attribute; preserved batches own their batch-local `vertex-list<uint32>` index
-vectors, and `GPUTableModel.drawBatches()` binds each batch index buffer before
+data chunks, and `GPUTableModel.drawBatches()` binds each batch index buffer before
 drawing. Indexed tables keep indices batch-local, so every preserved batch in an
 indexed table must contain `indices`.
 
@@ -83,13 +81,9 @@ Recomputes aggregate row counts and aggregate vector chunk lists from preserved
 batches. Existing aggregate vectors are extended with new `GPUData` chunks when
 possible.
 
-### `resetLastBatch(): this`
-
-Clears only the trailing appendable GPU batch while retaining its allocations.
-
 ### `select(...columnNames): this`
 
-Destructively keeps only the requested columns. Dropped batch-local vectors are
+Destructively keeps only the requested columns. Dropped batch-local data chunks are
 destroyed.
 
 ### `detachVector(columnName): GPUVector`
@@ -104,7 +98,7 @@ defaults to `batches.length`.
 
 ### `destroy(): void`
 
-Destroys retained GPU batches and follows their vector-level ownership graphs.
+Destroys retained GPU batches and their owned data chunks.
 
 ## Ownership
 

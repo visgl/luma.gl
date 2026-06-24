@@ -12,6 +12,7 @@ import {
 import {GPUTableModel, type GPUTableModelProps} from '../../engine/gpu-table-model';
 import type {GPUTable} from '../../table/gpu-table';
 import type {GPUVector} from '../../table/gpu-vector';
+import {getGPUDataBuffersForLayout} from '../../table/gpu-vector-utils';
 import {isVertexListGPUVectorFormat, type VertexList} from '../../table/gpu-vector-format';
 import type {GeneratedBufferBatch} from '../../utils/generated-buffer-batches';
 import {
@@ -269,7 +270,9 @@ export class PathAttributeModel extends GPUTableModel {
       for (const [batchIndex, renderBatch] of this.renderBatches.entries()) {
         const tableBatch = tableBatches[batchIndex];
         this.setAttributes({
-          ...(tableBatch?.attributes || {}),
+          ...(tableBatch
+            ? getGPUDataBuffersForLayout(tableBatch.bufferLayout, tableBatch.gpuData)
+            : {}),
           ...getPathAttributeModelBatchAttributes(this.pathShaderLayout, renderBatch)
         });
         this.setInstanceCount(renderBatch.segmentCount);
@@ -277,7 +280,7 @@ export class PathAttributeModel extends GPUTableModel {
       }
     } finally {
       this.setAttributes({
-        ...(this.table?.attributes || {}),
+        ...getPathTableAttributes(this.table),
         ...getPathAttributeModelAttributes(this.pathShaderLayout, {
           expandedPathVertexData: this.expandedPathVertexData,
           pathViewOriginData: this.pathViewOriginData
@@ -297,6 +300,14 @@ export class PathAttributeModel extends GPUTableModel {
       this.ownsPathTable = false;
     }
   }
+}
+
+function getPathTableAttributes(table?: GPUTable): ReturnType<typeof getGPUDataBuffersForLayout> {
+  const firstBatch = table?.batches[0];
+  if (!firstBatch) {
+    return {};
+  }
+  return getGPUDataBuffersForLayout(firstBatch.bufferLayout, firstBatch.gpuData);
 }
 
 function preparePathAttributeModel(props: PathAttributeModelProps): PreparedPathAttributeModel {

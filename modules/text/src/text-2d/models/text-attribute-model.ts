@@ -4,7 +4,12 @@
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicTexture, type ModelProps} from '@luma.gl/engine';
-import {GPUTableModel, type GPUTableModelProps, type GPUTable} from '@luma.gl/tables';
+import {
+  GPUTableModel,
+  getGPUDataBuffersForLayout,
+  type GPUTableModelProps,
+  type GPUTable
+} from '@luma.gl/tables';
 import FontAtlasManager from '../atlas/font-atlas-manager';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
@@ -145,15 +150,18 @@ export class TextAttributeModel extends GPUTableModel {
           throw new Error('TextAttributeModel is missing a GPU render batch');
         }
         this.setAttributes({
-          ...gpuBatch.attributes,
+          ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
           [EXPANDED_GLYPH_VERTEX_DATA]: renderBatch.expandedGlyphVertexData
         });
         this.setInstanceCount(renderBatch.glyphCount);
         drawSuccess = super.draw(renderPass) && drawSuccess;
       }
     } finally {
+      const firstGpuBatch = gpuTable.batches[0];
       this.setAttributes({
-        ...(gpuTable.attributes || {}),
+        ...(firstGpuBatch
+          ? getGPUDataBuffersForLayout(firstGpuBatch.bufferLayout, firstGpuBatch.gpuData)
+          : {}),
         [EXPANDED_GLYPH_VERTEX_DATA]: this.expandedGlyphVertexData
       });
       this.setInstanceCount(this.glyphLayout.glyphCount);

@@ -8,7 +8,7 @@ import {GPUTableModel, type GPUTableModelProps} from '../../engine/gpu-table-mod
 import {GPURecordBatch} from '../../table/gpu-record-batch';
 import type {GPUTypeMap} from '../../table/gpu-schema';
 import {GPUTable} from '../../table/gpu-table';
-import type {GPUVector} from '../../table/gpu-vector';
+import {getGPUVectorData} from '../../table/gpu-vector-utils';
 import {
   assertPolygonGPUVectorInputs,
   POLYGON_GPU_INPUT_SCHEMA,
@@ -126,7 +126,9 @@ function createPolygonAttributeRecordBatch(props: PolygonBatchProps): GPURecordB
   const {sourceInfo, nullCount = 0, ...vectors} = props;
   assertPolygonGPUVectorInputs('PolygonAttributeModel', vectors);
   return new GPURecordBatch<GPUTypeMap>({
-    vectors: vectors as Record<string, GPUVector>,
+    gpuData: Object.fromEntries(
+      Object.entries(vectors).map(([name, vector]) => [name, getGPUVectorData(vector)])
+    ),
     bufferLayout: getPolygonAttributeBufferLayout(vectors),
     sourceInfo,
     nullCount

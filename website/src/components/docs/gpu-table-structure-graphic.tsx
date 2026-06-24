@@ -6,8 +6,8 @@ const gpuTableDetails = ['schema', 'bufferLayout', 'gpuVectors', 'batches[]'];
 const gpuDataDetails = ['type', 'length', 'byteOffset', 'byteStride', 'ownsBuffer'];
 const memorySteps = [
   ['GPUTable', 'owns batches'],
-  ['GPURecordBatch', 'owns batch-local vectors'],
-  ['GPUVector', 'owns or borrows data chunks'],
+  ['GPURecordBatch', 'owns batch-local data chunks'],
+  ['GPUVector', 'table-level aggregate view'],
   ['GPUData', 'owns or borrows DynamicBuffer']
 ];
 

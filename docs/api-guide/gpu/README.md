@@ -7,5 +7,6 @@
 - [GPU command encoding](/docs/api-guide/gpu/gpu-commands) - Decide when to use immediate resource helpers versus explicit `CommandEncoder` recording.
 - [GPU resource management](/docs/api-guide/gpu/gpu-resources) - Create `Shader`, `RenderPipeline`, `RenderPass` etc. objects.
 - [GPU binding management](/docs/api-guide/gpu/gpu-bindings) - Make attribute buffers, uniforms, textures, samplers available to GPU shaders.
+- [Tabular data in WGSL](/docs/api-guide/gpu/tabular-data-in-wgsl) - Map logical table columns to vertex attributes or WebGPU storage arrays and structs.
 - [Shader execution / rendering](/docs/api-guide/gpu/gpu-rendering) - Drawing into textures, running compute shaders.
 - [GPU parameter management](/docs/api-guide/gpu/gpu-parameters) - Configuring blending, clipping, depth tests etc.

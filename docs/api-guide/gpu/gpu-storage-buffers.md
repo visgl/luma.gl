@@ -5,6 +5,10 @@ be read or written as ordinary WGSL arrays and structs. They are not available i
 WebGL, so applications that need cross-backend rendering should still understand
 the attribute path described in [Attributes](./gpu-attributes).
 
+For a side-by-side treatment of tabular columns through attributes and storage,
+including packed integers and storage alignment, see
+[Tabular Data in WGSL](./tabular-data-in-wgsl).
+
 ## Storage Buffer Basics
 
 Declare storage bindings in the shader layout:
@@ -136,6 +140,7 @@ batch-by-batch before dispatch.
 ## Related References
 
 - [Attributes](./gpu-attributes)
+- [Tabular Data in WGSL](./tabular-data-in-wgsl)
 - [Buffer Schemas and Columnar Records](./buffer-schemas)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)

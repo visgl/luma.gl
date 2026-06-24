@@ -20,6 +20,8 @@ export {
 export {
   getGPUVectorBuffer,
   getGPUVectorData,
+  getGPUDataBuffersForLayout,
+  getGPUVectorBuffersForLayout,
   getRequiredGPUVector
 } from './table/gpu-vector-utils';
 export {
@@ -47,7 +49,8 @@ export {
 } from './table/gpu-vector-collection';
 export {
   GPURecordBatch,
-  type GPURecordBatchFromVectorsProps,
+  type GPUDataMap,
+  type GPURecordBatchFromDataProps,
   type GPURecordBatchProps,
   type GPURecordBatchSourceInfo
 } from './table/gpu-record-batch';

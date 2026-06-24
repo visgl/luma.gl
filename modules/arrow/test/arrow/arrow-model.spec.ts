@@ -76,7 +76,7 @@ test('makeGPUTableFromArrowTable converts Arrow tables for GPUTableModel renderi
     shaderLayout: SHADER_LAYOUT,
     table
   });
-  const positionsBuffer = table.batches[0].gpuVectors.positions.data[0].buffer;
+  const positionsBuffer = table.batches[0].gpuData.positions.buffer;
 
   t.ok(table instanceof GPUTable, 'creates a GPUTable');
   t.deepEqual(
@@ -89,7 +89,7 @@ test('makeGPUTableFromArrowTable converts Arrow tables for GPUTableModel renderi
   );
   t.equal(
     model.vertexArray.attributes[0],
-    getConcreteTestBuffer(table.attributes.positions),
+    getConcreteTestBuffer(table.batches[0].gpuData.positions.buffer),
     'sets Model vertex array attributes from GPU table buffers'
   );
   t.equal(model.instanceCount, arrowTable.numRows, 'infers instanceCount from table row count');
@@ -121,7 +121,7 @@ test('makeGPUTableFromArrowTable converts scalar filter values to float32 attrib
   t.end();
 });
 
-test('makeGPUTableFromArrowTable exposes Arrow table rows as storage bindings', t => {
+test('makeGPUTableFromArrowTable derives model storage bindings from batch GPUData', t => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable();
   const table = makeGPUTableFromArrowTable(device, arrowTable, {
@@ -134,14 +134,14 @@ test('makeGPUTableFromArrowTable exposes Arrow table rows as storage bindings', 
     shaderLayout: STORAGE_SHADER_LAYOUT,
     table
   });
-  const colorsBuffer = table.batches[0].gpuVectors.colors.data[0].buffer;
+  const colorsBuffer = table.batches[0].gpuData.colors.buffer;
 
   t.deepEqual(
     table.schema.fields.map(field => field.name),
     ['positions', 'colors'],
     'keeps attribute and storage columns in the selected GPU schema'
   );
-  t.equal(table.bindings.colors, colorsBuffer, 'table exposes storage rows as a named binding');
+  t.notOk('bindings' in table, 'table does not cache storage bindings');
   t.equal(model.bindings.colors, colorsBuffer, 'model receives storage bindings from the table');
 
   model.destroy();
@@ -213,7 +213,7 @@ test('GPUTableModel updates converted GPU table props', t => {
   );
   t.equal(
     model.vertexArray.attributes[0],
-    getConcreteTestBuffer(nextTable.attributes.positions),
+    getConcreteTestBuffer(nextTable.batches[0].gpuData.positions.buffer),
     'sets vertex array attributes from the updated GPU table buffers'
   );
 
@@ -271,7 +271,7 @@ test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', 
   const previousPipeline = model.pipeline;
   const previousBufferLayout = model.bufferLayout;
   const positionsBuffers = table.batches.map(batch =>
-    getConcreteTestBuffer(batch.gpuVectors.positions.data[0].buffer)
+    getConcreteTestBuffer(batch.gpuData.positions.buffer)
   );
   const drawCalls: {
     instanceCount?: number;
@@ -304,7 +304,7 @@ test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', 
   t.equal(model.instanceCount, arrowTable.numRows, 'restores the table-level inferred row count');
   t.equal(
     model.vertexArray.attributes[0],
-    getConcreteTestBuffer(table.attributes.positions),
+    getConcreteTestBuffer(table.batches[0].gpuData.positions.buffer),
     'restores table-level model attributes after batched drawing'
   );
 

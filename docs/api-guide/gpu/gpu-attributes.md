@@ -4,6 +4,9 @@
 Note that while **attributes** is a structured and performant mechanism to provide columnar data to shaders that works on both WebGPU and WebGL, they are rather rigid and have a number of limitations. In WebGPU a more significantly more flexible approach is to use [storage buffers](./gpu-storage-buffers).
 :::
 
+For a WGSL-focused comparison of attribute columns, interleaved rows, storage
+arrays, and storage structs, see [Tabular Data in WGSL](./tabular-data-in-wgsl).
+
 The traditional 3D GPU execution model is that shaders work on vertexes, each vertex having a number of unique values such as position, normal, texture coordinates etc. 
 
 In this model, the purpose of GPU vertex **attributes** is to 

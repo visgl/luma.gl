@@ -8,6 +8,7 @@ import type {GPUData} from '../table/gpu-data';
 import {GPUVector} from '../table/gpu-vector';
 import {GPURecordBatch} from '../table/gpu-record-batch';
 import {GPUTable} from '../table/gpu-table';
+import {getGPUDataBuffersForLayout} from '../table/gpu-vector-utils';
 
 type TableTransformBufferMap = NonNullable<Parameters<BufferTransform['run']>[0]>['outputBuffers'];
 type TableTransformRunOptions = Parameters<BufferTransform['run']>[0];
@@ -142,7 +143,7 @@ export class TableTransform extends BufferTransform {
         );
         this.model.setAttributes({
           ...this.explicitAttributes,
-          ...batch.attributes
+          ...getTableTransformAttributes(batch)
         });
         if (this.inferVertexCount) {
           this.model.setVertexCount(batch.numRows);
@@ -165,7 +166,7 @@ export class TableTransform extends BufferTransform {
     } finally {
       this.model.setAttributes({
         ...this.explicitAttributes,
-        ...this.table.attributes
+        ...getTableTransformAttributes(this.table)
       });
       if (this.inferVertexCount) {
         this.model.setVertexCount(this.table.numRows);
@@ -256,7 +257,7 @@ function getTableTransformState(device: Device, props: TableTransformProps): Tab
   try {
     assertNoDuplicateNames(
       Object.keys(explicitAttributes),
-      Object.keys(table.attributes),
+      getBufferLayoutNames(table.bufferLayout),
       'attribute'
     );
     assertNoDuplicateNames(
@@ -285,11 +286,21 @@ function getTableTransformState(device: Device, props: TableTransformProps): Tab
     transformProps: {
       ...transformProps,
       ...(transformOutputs ? {outputs: transformOutputs} : {}),
-      attributes: {...explicitAttributes, ...table.attributes},
+      attributes: {...explicitAttributes, ...getTableTransformAttributes(table)},
       bufferLayout: [...explicitBufferLayout, ...table.bufferLayout],
       ...(inferVertexCount ? {vertexCount: table.numRows} : {})
     }
   };
+}
+
+function getTableTransformAttributes(
+  source: GPUTable | GPURecordBatch
+): Record<string, Buffer | DynamicBuffer> {
+  const attributeSource = source instanceof GPUTable ? source.batches[0] : source;
+  if (!attributeSource) {
+    return {};
+  }
+  return getGPUDataBuffersForLayout(attributeSource.bufferLayout, attributeSource.gpuData);
 }
 
 function getInitialTable(props: {table?: GPUTable; inputVectors?: TableTransformInputVectors}): {

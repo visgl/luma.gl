@@ -433,14 +433,13 @@ example](/examples/arrow/arrow-dggs-polygons).
 `GPURecordBatch` and `GPUTable` also select Arrow columns referenced by shader
 bindings of type `'storage'` or `'read-only-storage'`. Selected storage columns:
 
-- appear in `gpuVectors` by binding name;
-- appear in `bindings` by binding name;
+- appear in batch-local `gpuData` and table-level `gpuVectors` by binding name;
 - contribute fields to the GPU-facing Arrow schema;
 - are rebound batch-by-batch by `GPUTableModel.drawBatches(renderPass)`.
 
 This keeps table-backed WebGPU render paths compact. A column such as
-`instanceModelMatrix` can be uploaded once through the table machinery and bound
-directly to a WGSL storage array without four separate matrix-column bindings.
+`instanceModelMatrix` can be uploaded once through the table machinery and
+bound directly to a WGSL storage array without four separate matrix-column bindings.
 
 Storage-selected columns and attribute-selected columns must use distinct shader
 input names. A single name cannot be both an attribute and a storage binding in

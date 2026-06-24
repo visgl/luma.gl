@@ -18,7 +18,7 @@ import {
   type Text3DBounds,
   type Text3DGlyphAtlasOptions
 } from '@luma.gl/text/text-3d';
-import type {GPUTable} from '@luma.gl/tables';
+import {getGPUDataBuffersForLayout, type GPUTable} from '@luma.gl/tables';
 import type {Matrix4, NumberArray4, NumberArray16} from '@math.gl/core';
 import {
   makeArrowText3DGlyphData,
@@ -245,7 +245,7 @@ export class ArrowText3DRenderer {
       shaderLayout: ARROW_TEXT_3D_SHADER_LAYOUT,
       geometry: glyphAtlas.geometry,
       bufferLayout: this.glyphInstanceTable.bufferLayout,
-      attributes: firstGlyphBatch.attributes,
+      attributes: getGPUDataBuffersForLayout(firstGlyphBatch.bufferLayout, firstGlyphBatch.gpuData),
       instanceCount: firstGlyphBatch.numRows,
       parameters: {
         depthWriteEnabled: true,
@@ -323,7 +323,9 @@ function drawArrowText3DGlyphRanges(
     if (!glyphInstanceBatch) {
       throw new Error('Arrow 3D text draw range is missing its grouped glyph instance batch');
     }
-    model.setAttributes(glyphInstanceBatch.attributes);
+    model.setAttributes(
+      getGPUDataBuffersForLayout(glyphInstanceBatch.bufferLayout, glyphInstanceBatch.gpuData)
+    );
     model.setInstanceCount(glyphDrawRange.instanceCount);
     const drawValidationError = drawableModel.vertexArray.getDrawValidationError();
     if (drawValidationError) {

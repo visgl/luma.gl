@@ -19,7 +19,7 @@ import {
   GPURecordBatch,
   GPUTable,
   getGPUVectorBuffer,
-  getRequiredGPUVector,
+  type GPUData,
   type GPUVector,
   TableTransform
 } from '@luma.gl/tables';
@@ -217,18 +217,18 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       if (batch.numRows === 0) {
         continue;
       }
-      const positions = getRequiredGPUVector(
+      const positions = getRequiredBatchGPUData(
         batch,
         'particlePositions',
         'ArrowParticleRenderer GPU batch'
       );
       const renderValues = this.getParticleRenderBatchValues(batch);
       if (this.device.type === 'webgpu') {
-        this.model.setBindings({particlePositions: getGPUVectorBuffer(positions)});
+        this.model.setBindings({particlePositions: positions.buffer});
         this.model.setAttributes({particleColors: getGPUVectorBuffer(renderValues.colors)});
       } else {
         this.model.setAttributes({
-          particlePositions: getGPUVectorBuffer(positions),
+          particlePositions: positions.buffer,
           particleColors: getGPUVectorBuffer(renderValues.colors)
         });
       }
@@ -355,7 +355,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
     if (!firstBatch) {
       return;
     }
-    const firstPositions = getRequiredGPUVector(
+    const firstPositions = getRequiredBatchGPUData(
       firstBatch,
       'particlePositions',
       'ArrowParticleRenderer GPU batch'
@@ -375,7 +375,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
         source: WEBGPU_RENDER_SHADER,
         shaderLayout: RENDER_SHADER_LAYOUT,
         bindings: {
-          particlePositions: getGPUVectorBuffer(firstPositions)
+          particlePositions: firstPositions.buffer
         },
         attributes: {
           particleColors: getGPUVectorBuffer(firstRenderValues.colors)
@@ -402,7 +402,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       fs: WEBGL_RENDER_FRAGMENT_SHADER,
       shaderLayout: WEBGL_RENDER_SHADER_LAYOUT,
       attributes: {
-        particlePositions: getGPUVectorBuffer(firstPositions),
+        particlePositions: firstPositions.buffer,
         particleColors: getGPUVectorBuffer(firstRenderValues.colors)
       },
       bufferLayout: [
@@ -422,12 +422,16 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       if (!initialValues) {
         continue;
       }
-      getGPUVectorBuffer(
-        getRequiredGPUVector(batch, 'particlePositions', 'ArrowParticleRenderer GPU batch')
-      ).write(initialValues.positions);
-      getGPUVectorBuffer(
-        getRequiredGPUVector(batch, 'particleVelocities', 'ArrowParticleRenderer GPU batch')
-      ).write(initialValues.velocities);
+      getRequiredBatchGPUData(
+        batch,
+        'particlePositions',
+        'ArrowParticleRenderer GPU batch'
+      ).buffer.write(initialValues.positions);
+      getRequiredBatchGPUData(
+        batch,
+        'particleVelocities',
+        'ArrowParticleRenderer GPU batch'
+      ).buffer.write(initialValues.velocities);
     }
   }
 
@@ -437,12 +441,12 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       return outputBuffers;
     }
 
-    const positions = getRequiredGPUVector(
+    const positions = getRequiredBatchGPUData(
       batch,
       'particlePositions',
       'ArrowParticleRenderer GPU batch'
     );
-    const velocities = getRequiredGPUVector(
+    const velocities = getRequiredBatchGPUData(
       batch,
       'particleVelocities',
       'ArrowParticleRenderer GPU batch'
@@ -455,15 +459,11 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
     return outputBuffers;
   }
 
-  private createTransformOutputBuffer(
-    batch: GPURecordBatch,
-    vector: GPUVector,
-    label: string
-  ): Buffer {
+  private createTransformOutputBuffer(batch: GPURecordBatch, data: GPUData, label: string): Buffer {
     return this.device.createBuffer({
       id: `arrow-particles-${label}-output-${this.particleTable?.batches.indexOf(batch) ?? 0}`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST,
-      byteLength: Math.max(1, vector.length * vector.byteStride)
+      byteLength: Math.max(1, data.length * data.byteStride)
     });
   }
 
@@ -479,7 +479,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       copyCount += copyOutputToBatchVector({
         commandEncoder,
         sourceBuffer: outputBuffers.nextParticlePositions,
-        targetVector: getRequiredGPUVector(
+        targetData: getRequiredBatchGPUData(
           batch,
           'particlePositions',
           'ArrowParticleRenderer GPU batch'
@@ -488,7 +488,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       copyCount += copyOutputToBatchVector({
         commandEncoder,
         sourceBuffer: outputBuffers.nextParticleVelocities,
-        targetVector: getRequiredGPUVector(
+        targetData: getRequiredBatchGPUData(
           batch,
           'particleVelocities',
           'ArrowParticleRenderer GPU batch'
@@ -634,22 +634,34 @@ function destroyPreparedParticleBatch(preparedBatch: PreparedParticleBatch): voi
 function copyOutputToBatchVector({
   commandEncoder,
   sourceBuffer,
-  targetVector
+  targetData
 }: {
   commandEncoder: ReturnType<Device['createCommandEncoder']>;
   sourceBuffer: Buffer;
-  targetVector: GPUVector;
+  targetData: GPUData;
 }): number {
-  const size = targetVector.length * targetVector.byteStride;
+  const size = targetData.length * targetData.byteStride;
   if (size === 0) {
     return 0;
   }
   commandEncoder.copyBufferToBuffer({
     sourceBuffer,
-    destinationBuffer: getConcreteBuffer(getGPUVectorBuffer(targetVector)),
+    destinationBuffer: getConcreteBuffer(targetData.buffer),
     size
   });
   return 1;
+}
+
+function getRequiredBatchGPUData(
+  batch: GPURecordBatch,
+  columnName: string,
+  ownerName: string
+): GPUData {
+  const data = batch.gpuData[columnName];
+  if (!data) {
+    throw new Error(`${ownerName} is missing GPUData "${columnName}"`);
+  }
+  return data;
 }
 
 function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {

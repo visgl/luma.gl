@@ -16,6 +16,7 @@ import {
   GPUTable,
   GPUVector,
   type GPURecordBatchSourceInfo,
+  type GPUField,
   type GPUVectorBufferProps,
   type GPUVectorFormat,
   type ValueList,
@@ -34,7 +35,6 @@ import {
   List,
   Precision,
   RecordBatch,
-  Schema,
   Table,
   Uint16,
   Uint32,
@@ -416,25 +416,25 @@ export function makeGPURecordBatchFromArrowRecordBatch(
     arrowPaths: options.arrowPaths,
     allowWebGLOnlyFormats: options.allowWebGLOnlyFormats
   });
-  const fields: Field[] = [];
-  const vectors: Record<string, GPUVector> = {};
-  const bindings: Record<string, Buffer | DynamicBuffer> = {};
+  const fields: GPUField[] = [];
+  const gpuData: Record<string, GPUData> = {};
   const selectedNames = new Set<string>();
 
   for (const layout of bufferLayout) {
     const arrowPath = options.arrowPaths?.[layout.name] || layout.name;
     const vector = getArrowVectorByPath(table, arrowPath);
     const sourceField = getArrowFieldByPath(table, arrowPath);
-    const gpuVector = makeGPUVectorFromArrow(device, vector as Vector, {
+    gpuData[layout.name] = makeGPUDataFromArrowRecordBatchVector(device, vector as Vector, {
       ...options.bufferProps,
-      name: layout.name,
       format: layout.format
     });
-    fields.push(
-      new Field(layout.name, vector.type, sourceField.nullable, new Map(sourceField.metadata))
-    );
+    fields.push({
+      name: layout.name,
+      format: gpuData[layout.name].format,
+      nullable: sourceField.nullable,
+      metadata: new Map(sourceField.metadata)
+    });
     selectedNames.add(layout.name);
-    vectors[layout.name] = gpuVector;
   }
 
   for (const storageBinding of getArrowStorageBindings(options.shaderLayout)) {
@@ -449,32 +449,59 @@ export function makeGPURecordBatchFromArrowRecordBatch(
     if (!vector || !sourceField) {
       continue;
     }
-    const gpuVector = makeGPUVectorFromArrow(device, vector as Vector, {
-      ...options.bufferProps,
-      name: storageBinding.name
-    });
-    fields.push(
-      new Field(
-        storageBinding.name,
-        vector.type,
-        sourceField.nullable,
-        new Map(sourceField.metadata)
-      )
+    gpuData[storageBinding.name] = makeGPUDataFromArrowRecordBatchVector(
+      device,
+      vector as Vector,
+      options.bufferProps
     );
+    fields.push({
+      name: storageBinding.name,
+      format: gpuData[storageBinding.name].format,
+      nullable: sourceField.nullable,
+      metadata: new Map(sourceField.metadata)
+    });
     selectedNames.add(storageBinding.name);
-    vectors[storageBinding.name] = gpuVector;
-    bindings[storageBinding.name] = getSingleGPUVectorDataBuffer(gpuVector, storageBinding.name);
   }
 
   return new GPURecordBatch({
-    vectors,
+    gpuData,
     bufferLayout,
     fields,
     numRows: recordBatch.numRows,
     metadata: new Map(recordBatch.schema.metadata),
     sourceInfo: options.sourceInfo,
-    nullCount: recordBatch.nullCount,
-    bindings
+    nullCount: recordBatch.nullCount
+  });
+}
+
+function makeGPUDataFromArrowRecordBatchVector(
+  device: Device,
+  vector: Vector,
+  props: ArrowGPUDataProps = {}
+): GPUData {
+  const arrowType = vector.type;
+  const matrixInfo = getArrowMatrixVectorInfo(vector);
+  const isCanonicalFloat32Matrix = matrixInfo && isCanonicalFloat32ArrowMatrixInfo(matrixInfo);
+  const requiresChunkedUpload =
+    DataType.isUtf8(arrowType) ||
+    isArrowUtf8DictionaryType(arrowType) ||
+    isVariableLengthAttributeArrowType(arrowType);
+  if (matrixInfo && !isCanonicalFloat32Matrix) {
+    throw new Error(
+      'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use convertArrowMatrixToGPUVector() first'
+    );
+  }
+  if (!isInstanceArrowType(arrowType) && !isCanonicalFloat32Matrix && !requiresChunkedUpload) {
+    throw new Error(`GPUVector does not support Arrow type ${arrowType}`);
+  }
+
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error('Arrow RecordBatch columns require exactly one Arrow Data chunk');
+  }
+  return makeGPUDataFromArrowData(device, data, {
+    ...props,
+    format: props.format ?? (matrixInfo ? 'float32x4' : getGPUVectorFormatForArrowType(arrowType))
   });
 }
 
@@ -505,22 +532,19 @@ export function makeGPUTableFromArrowTable(
       arrowPaths: options.arrowPaths,
       allowWebGLOnlyFormats: options.allowWebGLOnlyFormats
     });
-  const schema =
-    firstBatch?.schema ??
-    new Schema(
-      bufferLayout.map(layout => {
-        const arrowPath = options.arrowPaths?.[layout.name] || layout.name;
-        const vector = getArrowVectorByPath(table, arrowPath);
-        const sourceField = getArrowFieldByPath(table, arrowPath);
-        return new Field(
-          layout.name,
-          vector.type,
-          sourceField.nullable,
-          new Map(sourceField.metadata)
-        );
-      }),
-      new Map(table.schema.metadata)
-    );
+  const schema = firstBatch?.schema ?? {
+    fields: bufferLayout.map(layout => {
+      const arrowPath = options.arrowPaths?.[layout.name] || layout.name;
+      const sourceField = getArrowFieldByPath(table, arrowPath);
+      return {
+        name: layout.name,
+        format: layout.format as GPUVectorFormat,
+        nullable: sourceField.nullable,
+        metadata: new Map(sourceField.metadata)
+      };
+    }),
+    metadata: new Map(table.schema.metadata)
+  };
 
   return new GPUTable({
     batches,
@@ -545,19 +569,6 @@ export async function readArrowGPUVectorAsync<T extends DataType>(
   }
   const data = await Promise.all(vector.data.map(chunk => readArrowGPUDataAsync<T>(chunk)));
   return new Vector(data) as Vector<T>;
-}
-
-function getSingleGPUVectorDataBuffer(
-  vector: GPUVector,
-  bindingName: string
-): Buffer | DynamicBuffer {
-  const [data, ...remainingData] = vector.data;
-  if (!data || remainingData.length > 0) {
-    throw new Error(
-      `GPURecordBatch storage binding "${bindingName}" requires exactly one GPUData chunk`
-    );
-  }
-  return data.buffer;
 }
 
 function getArrowStorageBindings(shaderLayout: ShaderLayout): Array<{name: string}> {

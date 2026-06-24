@@ -104,6 +104,10 @@ function preparePolygonStorageModel(
       ] as never,
       shaderLayout: POLYGON_STORAGE_SHADER_LAYOUT,
       shaderInputs,
+      bindings: {
+        ...(modelProps.bindings || {}),
+        ...getPolygonStorageBindings({positions, colors, rowIndices, indices})
+      },
       table,
       tableCount: 'none',
       topology: 'triangle-list',
@@ -131,9 +135,10 @@ function createPolygonStorageRecordBatch(props: PolygonBatchProps): GPURecordBat
   const {sourceInfo, nullCount = 0, ...vectors} = props;
   assertPolygonGPUVectorInputs('PolygonStorageModel', vectors);
   return new GPURecordBatch<GPUTypeMap>({
-    vectors: vectors as Record<string, GPUVector>,
+    gpuData: Object.fromEntries(
+      Object.entries(vectors).map(([name, vector]) => [name, getGPUVectorData(vector)])
+    ),
     bufferLayout: [],
-    bindings: getPolygonStorageBindings(vectors),
     sourceInfo,
     nullCount
   });

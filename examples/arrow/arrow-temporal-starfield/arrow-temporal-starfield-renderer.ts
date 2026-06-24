@@ -20,6 +20,7 @@ import {
   GPUTable,
   GPUTableModel,
   getGPUVectorBuffer,
+  getGPUVectorData,
   getRequiredGPUVector,
   type GPUTypeMap,
   type GPUVector
@@ -522,14 +523,16 @@ async function makeTemporalStarfieldGPURecordBatchInput(
       pulsePeriods: preparedDurationColumns.pulsePeriods
     };
     const gpuRecordBatch = new GPURecordBatch<GPUTypeMap>({
-      vectors: {
-        positions,
-        eventStarts: temporalColumns.eventStarts.vector,
-        eventDurations: getPreparedScalarTemporalVector(temporalColumns.eventDurations),
-        pulsePeriods: getPreparedScalarTemporalVector(temporalColumns.pulsePeriods),
-        starSizes,
-        eventColors
-      }
+      gpuData: Object.fromEntries(
+        Object.entries({
+          positions,
+          eventStarts: temporalColumns.eventStarts.vector,
+          eventDurations: getPreparedScalarTemporalVector(temporalColumns.eventDurations),
+          pulsePeriods: getPreparedScalarTemporalVector(temporalColumns.pulsePeriods),
+          starSizes,
+          eventColors
+        }).map(([name, vector]) => [name, getGPUVectorData(vector)])
+      )
     });
 
     return {

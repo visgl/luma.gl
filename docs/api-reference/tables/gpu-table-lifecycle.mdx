@@ -25,15 +25,15 @@ sources after extracting the buffer data and metadata they need.
 
 The object model is batch-preserving by default:
 
-- `GPUTable.batches[]` contains real GPU record batches with batch-local
-  buffers.
+- `GPUTable.batches[]` contains real GPU record batches with one batch-local
+  `GPUData` chunk per selected column.
 - Table-level `gpuVectors` aggregate those batch-local chunks through
   `GPUVector.data[]`.
 - `GPUData` is the chunk primitive. It owns or borrows one `Buffer` or
   `DynamicBuffer`.
 - `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one
-  compatible layout/pipeline and rebinding each batch's attribute buffers,
-  bindings, and reserved `indices` index buffer when present.
+  compatible layout/pipeline and deriving each batch's attribute buffers and
+  reserved `indices` index buffer from its `gpuData`.
 
 This means a multi-batch Arrow table stays multi-batch after GPU upload. If the
 application prefers fewer draw units, it packs explicitly:
@@ -48,9 +48,9 @@ gpuTable.packBatches();
 gpuTable.packBatches({minBatchSize: 50_000});
 ```
 
-Packing mutates the table in place. It rebuilds `batches[]`, table-level
-`gpuVectors`, and `attributes`, then destroys only superseded GPU buffers that
-were owned by the removed batches. Borrowed external buffers are not destroyed.
+Packing mutates the table in place. It rebuilds `batches[]` and table-level
+`gpuVectors`, then destroys only superseded GPU buffers that were owned by the
+removed batches. Borrowed external buffers are not destroyed.
 Indexed tables are rejected because packed index buffers would need their
 batch-local vertex indices rebased.
 
@@ -110,7 +110,7 @@ method signatures live on the individual reference pages:
 | --- | --- | --- |
 | `GPUData` | One GPU buffer plus row/stride metadata and buffer ownership. | [GPUData](/docs/api-reference/tables/gpu-data) |
 | `GPUVector` | One logical column over ordered `GPUData[]` chunks. | [GPUVector](/docs/api-reference/tables/gpu-vector) |
-| `GPURecordBatch` | One preserved batch with batch-local vectors, attributes, and bindings. | [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch) |
+| `GPURecordBatch` | One immutable preserved batch with batch-local data chunks and layout metadata. | [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch) |
 | `GPUTable` | Table-level owner that preserves batches, exposes aggregate vectors, and controls packing/detach/destruction. | [GPUTable](/docs/api-reference/tables/gpu-table) |
 | `GPUSchema` | Selected-column metadata with `GPUVectorFormat` fields. | [GPUSchema](/docs/api-reference/tables/gpu-schema) |
 
