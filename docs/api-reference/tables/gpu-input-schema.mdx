@@ -1,0 +1,155 @@
+import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+
+# GPUInputSchema
+
+<TablesDocsTabs active="input-schema" />
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+`GPUInputSchema` is the runtime contract a model or renderer uses to declare the
+prepared [`GPUVector`](/docs/api-reference/tables/gpu-vector) inputs it accepts.
+Models expose the contract as a static `gpuInputSchema` property so renderers,
+adapters, validation helpers, and application code can inspect the same
+declaration.
+
+It is distinct from [`GPUSchema`](/docs/api-reference/tables/gpu-schema):
+
+| Type | Describes | Used by |
+| --- | --- | --- |
+| `GPUSchema` | Concrete columns that already exist in a `GPUTable` or `GPURecordBatch`. | Table storage, batching, packing, and layout synthesis. |
+| `GPUInputSchema` | Required and optional `GPUVector` inputs that a model or renderer can consume. | Model props, runtime validation, and source-to-GPU adapters. |
+
+## Types
+
+```ts
+import type {GPUVector, GPUVectorFormat} from '@luma.gl/tables';
+
+export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
+
+export type GPUInputDeclaration<
+  Name extends string = string,
+  Format extends GPUVectorFormat = GPUVectorFormat
+> = {
+  name: Name;
+  kind: GPUInputKind;
+  required: boolean;
+  formats: readonly Format[];
+  internal?: boolean;
+};
+
+export type GPUInputSchema = readonly GPUInputDeclaration[];
+
+export type GPUInputVectors = Record<string, GPUVector | undefined>;
+```
+
+Each declaration has one prepared model prop name:
+
+- `name` is the model prop and vector name, such as `paths`, `colors`, or
+  `timestamps`.
+- `kind` is a semantic role for adapters and diagnostics. It is not a shader
+  type.
+- `required` controls whether validation rejects a missing vector.
+- `formats` lists accepted canonical `GPUVector.format` memory layouts.
+- `internal: true` marks an input generated during conversion or model
+  preparation. When omitted, source mapping may resolve the input directly.
+
+`formats` may contain alternatives when one model accepts more than one memory
+layout. For example, a path model can accept 2D, 3D, or 4D vertex-list
+coordinates without weakening the runtime contract to an arbitrary
+`GPUVectorFormat`.
+
+## Declaring Model Inputs
+
+Use `as const satisfies GPUInputSchema` so literal names and formats remain
+available to TypeScript while the declaration is checked against the public
+schema type:
+
+```ts
+import type {GPUInputSchema} from '@luma.gl/tables';
+
+export const PATH_GPU_INPUT_SCHEMA = [
+  {
+    name: 'paths',
+    kind: 'positions',
+    required: true,
+    formats: [
+      'vertex-list<float32x2>',
+      'vertex-list<float32x3>',
+      'vertex-list<float32x4>'
+    ]
+  },
+  {
+    name: 'colors',
+    kind: 'colors',
+    required: false,
+    formats: ['unorm8x4', 'vertex-list<unorm8x4>']
+  },
+  {
+    name: 'viewOrigins',
+    kind: 'positions',
+    required: false,
+    formats: ['float32x4'],
+    internal: true
+  }
+] as const satisfies GPUInputSchema;
+
+export class PathModel {
+  static readonly gpuInputSchema = PATH_GPU_INPUT_SCHEMA;
+}
+```
+
+The common case is compact: externally supplied inputs omit `internal`.
+Only generated inputs need `internal: true`.
+
+## Runtime Validation
+
+`validateGPUInputVectors()` checks a prepared vector map against a schema:
+
+```ts
+import {validateGPUInputVectors} from '@luma.gl/tables';
+
+validateGPUInputVectors('PathModel', PathModel.gpuInputSchema, {
+  paths,
+  colors,
+  viewOrigins
+});
+```
+
+The helper rejects:
+
+- a missing declaration with `required: true`;
+- a supplied vector whose `GPUVector.format` is absent or not listed in
+  `formats`.
+
+Model-specific validation should remain next to the model. For example, a model
+can additionally require matching row counts, matching variable-length
+`valueLength`, or one directly bindable `GPUData` chunk.
+
+## Source Mapping
+
+Source adapters may use `gpuInputSchema` to discover which model inputs can be
+resolved from source columns. A declaration with `internal: true` is excluded
+from source selectors because the conversion or model path owns generating it.
+
+For example, Arrow path source mapping can resolve `paths`, `colors`, `widths`,
+and `timestamps` by default from same-name Arrow columns or explicit selectors.
+It rejects a selector for generated `viewOrigins`.
+
+`internal` is not ownership metadata and does not prevent an advanced caller
+from constructing the final model props directly. It only states that generic
+source mapping must not treat that declaration as a direct source-column input.
+
+## Existing Model Schemas
+
+The built-in table and text models expose schemas for their prepared inputs:
+
+- `PathAttributeModel`, `PathStorageModel`, and `PathTripsStorageModel`;
+- `PolygonAttributeModel` and `PolygonStorageModel`;
+- `TextAttributeModel`, `TextStorageModel`, `TextRowIndexedStorageModel`, and
+  `TextDictionaryModel`.
+
+These schemas describe the GPU-facing boundary. Arrow-specific source types and
+conversion rules remain in `@luma.gl/arrow`.

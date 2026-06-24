@@ -112,6 +112,38 @@ For lower-level table pipelines, import `GPUTableBufferPlanner` from
 `@luma.gl/tables` to produce deterministic GPU allocation plans from column
 descriptors while respecting device vertex and storage buffer limits.
 
+## GPU Input Programming Guidelines
+
+Keep the final GPU contract separate from Arrow conversion policy:
+
+```text
+GPUInputSchema
+  -> validates final GPUVector props
+
+ArrowInputSchema
+  -> resolves Arrow columns
+  -> converts Arrow vectors
+  -> generates internal vectors
+  -> validates the result against GPUInputSchema
+```
+
+`GPUInputSchema` belongs to `@luma.gl/tables`. It declares required and optional
+prepared vector names, accepted `GPUVector.format` values, semantic kinds, and
+which inputs are internal. It deliberately does not mention Arrow `DataType`
+objects, source column paths, temporal origins, tessellation, text dictionaries,
+or fallback-vector generation.
+
+`ArrowInputSchema` belongs to `@luma.gl/arrow`. It combines an Arrow-free
+`gpuInputSchema` with adapter-owned `resolveSourceVectors`,
+`convertToGPUVectors`, and `getGPUInputVectors` functions. The
+`prepareArrowInput()` helper runs that pipeline and calls
+`validateGPUInputVectors()` before returning the prepared result.
+
+Use a simple Arrow input schema for direct one-column uploads. Keep model-family
+adapters for cross-column conversions such as path normalization, polygon
+tessellation, temporal conversion, and text glyph preparation. Do not make
+`@luma.gl/tables` depend on Apache Arrow to describe those policies.
+
 
 ## BufferLayouts
 

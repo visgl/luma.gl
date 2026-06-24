@@ -198,6 +198,13 @@ export {
   type ArrowTextShaderInputs
 } from './arrow/renderers/text/renderers/arrow-text-shaders';
 export {
+  prepareArrowInput,
+  type ArrowInputResolveProps,
+  type ArrowInputSchema,
+  type ArrowInputSourceData,
+  type PrepareArrowInputProps
+} from './arrow/gpu/arrow-input-schema';
+export {
   getRequiredArrowGPUVectorDataType,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,

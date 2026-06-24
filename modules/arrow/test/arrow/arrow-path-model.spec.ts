@@ -39,29 +39,26 @@ test('Arrow path-family models declare prepared GPU input schemas', t => {
         name: 'paths',
         kind: 'positions',
         required: true,
-        formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>'],
-        source: 'source-mappable'
+        formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
       },
       {
         name: 'colors',
         kind: 'colors',
         required: false,
-        formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
-        source: 'source-mappable'
+        formats: ['unorm8x4', 'vertex-list<unorm8x4>']
       },
       {
         name: 'widths',
         kind: 'scalars',
         required: false,
-        formats: ['float32'],
-        source: 'source-mappable'
+        formats: ['float32']
       },
       {
         name: 'viewOrigins',
         kind: 'positions',
         required: false,
         formats: ['float32x4'],
-        source: 'generated'
+        internal: true
       }
     ],
     'attribute paths declare prepared renderer inputs'
@@ -74,8 +71,7 @@ test('Arrow path-family models declare prepared GPU input schemas', t => {
         name: 'timestamps',
         kind: 'time',
         required: false,
-        formats: ['vertex-list<float32>'],
-        source: 'source-mappable'
+        formats: ['vertex-list<float32>']
       },
       PathAttributeModel.gpuInputSchema[3]
     ],
@@ -89,8 +85,7 @@ test('Arrow path-family models declare prepared GPU input schemas', t => {
         name: 'timestamps',
         kind: 'time',
         required: true,
-        formats: ['vertex-list<float32>'],
-        source: 'source-mappable'
+        formats: ['vertex-list<float32>']
       },
       PathAttributeModel.gpuInputSchema[3]
     ],
@@ -172,6 +167,23 @@ test('resolveArrowPathSourceVectors supports direct vectors and optional disable
   t.equal(resolved.colors, undefined, 'null disables optional colors');
   t.equal(resolved.widths, sourceVectors.widths, 'direct widths do not require a Table');
   t.equal(resolved.timestamps, undefined, 'omitted optional timestamps are skipped');
+  t.end();
+});
+
+test('resolveArrowPathSourceVectors rejects internal input selectors', t => {
+  const sourceVectors = makeArrowPathSourceVectors();
+
+  t.throws(
+    () =>
+      resolveArrowPathSourceVectors(PathAttributeModel, {
+        selectors: {
+          paths: sourceVectors.paths,
+          viewOrigins: sourceVectors.paths
+        } as never
+      }),
+    /source selector "viewOrigins" is not declared as source-mappable/,
+    'internal inputs are unavailable to source mapping'
+  );
   t.end();
 });
 

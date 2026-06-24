@@ -11,8 +11,8 @@ import {
   type PathStorageInputProps,
   type PathStorageModelProps
 } from './path-storage-model';
-import {assertModelGPUVectorInputs} from '../../engine/gpu-table-model-input-schema';
-import type {ModelGPUInputSchema} from '../../engine/gpu-table-model-input-schema';
+import {validateGPUInputVectors} from '../../engine/gpu-input-schema';
+import type {GPUInputSchema} from '../../engine/gpu-input-schema';
 
 /** Props for storage-backed Trips-style path rendering. */
 export type PathTripsStorageModelProps = PathStorageModelProps & {
@@ -32,38 +32,34 @@ export const PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA = [
     name: 'paths',
     kind: 'positions',
     required: true,
-    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>'],
-    source: 'source-mappable'
+    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
   },
   {
     name: 'colors',
     kind: 'colors',
     required: false,
-    formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
-    source: 'source-mappable'
+    formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
     name: 'widths',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'timestamps',
     kind: 'time',
     required: true,
-    formats: ['vertex-list<float32>'],
-    source: 'source-mappable'
+    formats: ['vertex-list<float32>']
   },
   {
     name: 'viewOrigins',
     kind: 'positions',
     required: false,
     formats: ['float32x4'],
-    source: 'generated'
+    internal: true
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 const DEFAULT_PATH_TRIPS_STORAGE_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathValues : array<f32>;
@@ -204,8 +200,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 /** WebGPU storage-backed path model with TripsLayer-style temporal filtering. */
 export class PathTripsStorageModel extends PathStorageModel {
   /** Prepared GPU vectors consumed by the storage-backed trips path model. */
-  static override readonly gpuInputSchema: ModelGPUInputSchema =
-    PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA;
+  static override readonly gpuInputSchema: GPUInputSchema = PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA;
 
   private tripProps: PathTripsStorageModelProps;
   private tripConfigBuffer: DynamicBuffer;
@@ -213,7 +208,7 @@ export class PathTripsStorageModel extends PathStorageModel {
   /** Creates a WebGPU storage-backed Trips-style path model. */
   constructor(device: Device, props: PathTripsStorageModelProps) {
     if (hasPathTripsStorageInputProps(props)) {
-      assertModelGPUVectorInputs('PathTripsStorageModel', PathTripsStorageModel.gpuInputSchema, {
+      validateGPUInputVectors('PathTripsStorageModel', PathTripsStorageModel.gpuInputSchema, {
         paths: props.paths,
         colors: props.colors,
         widths: props.widths,

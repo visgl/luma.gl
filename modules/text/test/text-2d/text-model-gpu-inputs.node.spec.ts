@@ -23,50 +23,43 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       name: 'positions',
       kind: 'positions',
       required: true,
-      formats: ['float32x2'],
-      source: 'source-mappable'
+      formats: ['float32x2']
     },
     {
       name: 'texts',
       kind: 'text',
       required: true,
-      formats: ['value-list<uint8>', 'sint8', 'sint16', 'sint32', 'uint8', 'uint16', 'uint32'],
-      source: 'source-mappable'
+      formats: ['value-list<uint8>', 'sint8', 'sint16', 'sint32', 'uint8', 'uint16', 'uint32']
     },
     {
       name: 'colors',
       kind: 'colors',
       required: false,
-      formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
-      source: 'source-mappable'
+      formats: ['unorm8x4', 'vertex-list<unorm8x4>']
     },
     {
       name: 'angles',
       kind: 'scalars',
       required: false,
-      formats: ['float32'],
-      source: 'source-mappable'
+      formats: ['float32']
     },
     {
       name: 'sizes',
       kind: 'scalars',
       required: false,
-      formats: ['float32'],
-      source: 'source-mappable'
+      formats: ['float32']
     },
     {
       name: 'pixelOffsets',
       kind: 'positions',
       required: false,
-      formats: ['float32x2'],
-      source: 'source-mappable'
+      formats: ['float32x2']
     },
     {
       name: 'clipRects',
       kind: 'positions',
       required: false,
-      formats: ['sint16x4'],
-      source: 'source-mappable'
+      formats: ['sint16x4']
     }
   ]);
   t.deepEqual(TEXT_STORAGE_GPU_INPUT_SCHEMA, [
@@ -74,64 +67,55 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       name: 'positions',
       kind: 'positions',
       required: true,
-      formats: ['float32x2'],
-      source: 'source-mappable'
+      formats: ['float32x2']
     },
     {
       name: 'texts',
       kind: 'text',
       required: true,
-      formats: ['value-list<uint8>', 'sint8', 'sint16', 'sint32', 'uint8', 'uint16', 'uint32'],
-      source: 'source-mappable'
+      formats: ['value-list<uint8>', 'sint8', 'sint16', 'sint32', 'uint8', 'uint16', 'uint32']
     },
     {
       name: 'colors',
       kind: 'colors',
       required: false,
-      formats: ['unorm8x4'],
-      source: 'source-mappable'
+      formats: ['unorm8x4']
     },
     {
       name: 'angles',
       kind: 'scalars',
       required: false,
-      formats: ['float32'],
-      source: 'source-mappable'
+      formats: ['float32']
     },
     {
       name: 'sizes',
       kind: 'scalars',
       required: false,
-      formats: ['float32'],
-      source: 'source-mappable'
+      formats: ['float32']
     },
     {
       name: 'pixelOffsets',
       kind: 'positions',
       required: false,
-      formats: ['float32x2'],
-      source: 'source-mappable'
+      formats: ['float32x2']
     },
     {
       name: 'textAnchors',
       kind: 'scalars',
       required: false,
-      formats: ['uint8'],
-      source: 'source-mappable'
+      formats: ['uint8']
     },
     {
       name: 'alignmentBaselines',
       kind: 'scalars',
       required: false,
-      formats: ['uint8'],
-      source: 'source-mappable'
+      formats: ['uint8']
     },
     {
       name: 'clipRects',
       kind: 'positions',
       required: false,
-      formats: ['sint16x4'],
-      source: 'source-mappable'
+      formats: ['sint16x4']
     }
   ]);
   t.deepEqual(TEXT_DICTIONARY_GPU_INPUT_SCHEMA, [
@@ -139,15 +123,13 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       name: 'positions',
       kind: 'positions',
       required: true,
-      formats: ['float32x2'],
-      source: 'source-mappable'
+      formats: ['float32x2']
     },
     {
       name: 'texts',
       kind: 'text',
       required: true,
-      formats: ['sint8', 'sint16', 'sint32', 'uint8', 'uint16', 'uint32'],
-      source: 'source-mappable'
+      formats: ['sint8', 'sint16', 'sint32', 'uint8', 'uint16', 'uint32']
     },
     ...TEXT_STORAGE_GPU_INPUT_SCHEMA.slice(2)
   ]);

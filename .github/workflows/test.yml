@@ -53,9 +53,21 @@ jobs:
       - name: Install Playwright Chromium
         run: yarn playwright:install
 
+      - name: Reclaim install cache and report disk usage
+        run: |
+          rm -rf "${HOME}/.yarn/berry/cache"
+          df -h .
+          du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
+
       - name: Run headless tests and generate coverage
         run: |
           yarn test-coverage
+
+      - name: Report disk usage after coverage
+        if: always()
+        run: |
+          df -h .
+          du -sh . coverage "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
       - name: Run node tests
         run: |

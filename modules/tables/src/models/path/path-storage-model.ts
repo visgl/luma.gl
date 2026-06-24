@@ -21,7 +21,7 @@ import {
   dispatchGpuPathExpansionCompute
 } from './gpu/gpu-path-expansion';
 import {resolvePathStorageInputs, type PathStorageBatchInputs} from './gpu/path-storage-gpu-inputs';
-import type {ModelGPUInputSchema} from '../../engine/gpu-table-model-input-schema';
+import type {GPUInputSchema} from '../../engine/gpu-input-schema';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';
 const SEGMENT_END_POINT_INDICES_COLUMN = 'segmentEndPointIndices';
@@ -52,38 +52,34 @@ export const PATH_STORAGE_GPU_INPUT_SCHEMA = [
     name: 'paths',
     kind: 'positions',
     required: true,
-    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>'],
-    source: 'source-mappable'
+    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
   },
   {
     name: 'colors',
     kind: 'colors',
     required: false,
-    formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
-    source: 'source-mappable'
+    formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
     name: 'widths',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'timestamps',
     kind: 'time',
     required: false,
-    formats: ['vertex-list<float32>'],
-    source: 'source-mappable'
+    formats: ['vertex-list<float32>']
   },
   {
     name: 'viewOrigins',
     kind: 'positions',
     required: false,
     formats: ['float32x4'],
-    source: 'generated'
+    internal: true
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 type PathStorageOwnedResource =
   | Pick<GPUVector, 'destroy'>
@@ -342,7 +338,7 @@ type PathStorageBatchRowState = {
  */
 export class PathStorageModel extends Model {
   /** Prepared GPU vectors consumed by the storage-backed path model. */
-  static readonly gpuInputSchema: ModelGPUInputSchema = PATH_STORAGE_GPU_INPUT_SCHEMA;
+  static readonly gpuInputSchema: GPUInputSchema = PATH_STORAGE_GPU_INPUT_SCHEMA;
 
   /** Generated segment records across all preserved render batches. */
   segmentCount!: number;

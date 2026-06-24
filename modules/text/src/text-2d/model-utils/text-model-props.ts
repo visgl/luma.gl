@@ -4,10 +4,10 @@
 
 import type {ModelProps} from '@luma.gl/engine';
 import {
-  assertModelGPUVectorInputs,
+  validateGPUInputVectors,
+  type GPUInputSchema,
+  type GPUInputVectors,
   type GPUVector,
-  type ModelGPUInputSchema,
-  type ModelGPUInputVectors,
   type ValueList,
   type VertexList
 } from '@luma.gl/tables';
@@ -30,52 +30,45 @@ export const TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA = [
     name: 'positions',
     kind: 'positions',
     required: true,
-    formats: ['float32x2'],
-    source: 'source-mappable'
+    formats: ['float32x2']
   },
   {
     name: 'texts',
     kind: 'text',
     required: true,
-    formats: TEXT_FORMATS,
-    source: 'source-mappable'
+    formats: TEXT_FORMATS
   },
   {
     name: 'colors',
     kind: 'colors',
     required: false,
-    formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
-    source: 'source-mappable'
+    formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
     name: 'angles',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'sizes',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'pixelOffsets',
     kind: 'positions',
     required: false,
-    formats: ['float32x2'],
-    source: 'source-mappable'
+    formats: ['float32x2']
   },
   {
     name: 'clipRects',
     kind: 'positions',
     required: false,
-    formats: ['sint16x4'],
-    source: 'source-mappable'
+    formats: ['sint16x4']
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 /** Prepared GPU inputs consumed by storage-backed 2D text models. */
 export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
@@ -83,66 +76,57 @@ export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
     name: 'positions',
     kind: 'positions',
     required: true,
-    formats: ['float32x2'],
-    source: 'source-mappable'
+    formats: ['float32x2']
   },
   {
     name: 'texts',
     kind: 'text',
     required: true,
-    formats: TEXT_FORMATS,
-    source: 'source-mappable'
+    formats: TEXT_FORMATS
   },
   {
     name: 'colors',
     kind: 'colors',
     required: false,
-    formats: ['unorm8x4'],
-    source: 'source-mappable'
+    formats: ['unorm8x4']
   },
   {
     name: 'angles',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'sizes',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'pixelOffsets',
     kind: 'positions',
     required: false,
-    formats: ['float32x2'],
-    source: 'source-mappable'
+    formats: ['float32x2']
   },
   {
     name: 'textAnchors',
     kind: 'scalars',
     required: false,
-    formats: ['uint8'],
-    source: 'source-mappable'
+    formats: ['uint8']
   },
   {
     name: 'alignmentBaselines',
     kind: 'scalars',
     required: false,
-    formats: ['uint8'],
-    source: 'source-mappable'
+    formats: ['uint8']
   },
   {
     name: 'clipRects',
     kind: 'positions',
     required: false,
-    formats: ['sint16x4'],
-    source: 'source-mappable'
+    formats: ['sint16x4']
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 /** Prepared GPU inputs consumed by dictionary storage-backed 2D text models. */
 export const TEXT_DICTIONARY_GPU_INPUT_SCHEMA = [
@@ -150,18 +134,16 @@ export const TEXT_DICTIONARY_GPU_INPUT_SCHEMA = [
     name: 'positions',
     kind: 'positions',
     required: true,
-    formats: ['float32x2'],
-    source: 'source-mappable'
+    formats: ['float32x2']
   },
   {
     name: 'texts',
     kind: 'text',
     required: true,
-    formats: TEXT_DICTIONARY_INDEX_FORMATS,
-    source: 'source-mappable'
+    formats: TEXT_DICTIONARY_INDEX_FORMATS
   },
   ...TEXT_STORAGE_GPU_INPUT_SCHEMA.slice(2)
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 /** GPUVector inputs shared by all 2D text model preparation paths. */
 export interface TextInputProps extends ModelProps {
@@ -247,13 +229,13 @@ export function assertTextDictionaryGPUVectorInputs(props: TextDictionaryInputPr
 
 function assertTextGPUVectorInputs(
   modelName: string,
-  schema: ModelGPUInputSchema,
+  schema: GPUInputSchema,
   props: TextInputProps
 ): void {
   const vectors = Object.fromEntries(
     schema.map(input => [input.name, props[input.name as keyof TextInputProps]])
-  ) as ModelGPUInputVectors;
-  assertModelGPUVectorInputs(modelName, schema, vectors);
+  ) as GPUInputVectors;
+  validateGPUInputVectors(modelName, schema, vectors);
   const rowCount = props.positions.length;
   for (const input of schema) {
     const vector = vectors[input.name];

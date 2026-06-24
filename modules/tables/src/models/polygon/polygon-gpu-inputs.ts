@@ -5,10 +5,7 @@
 import type {GPURecordBatchSourceInfo} from '../../table/gpu-record-batch';
 import type {GPUVector} from '../../table/gpu-vector';
 import type {VertexList} from '../../table/gpu-vector-format';
-import {
-  assertModelGPUVectorInputs,
-  type ModelGPUInputSchema
-} from '../../engine/gpu-table-model-input-schema';
+import {type GPUInputSchema, validateGPUInputVectors} from '../../engine/gpu-input-schema';
 
 /** Prepared generated GPU inputs consumed by filled polygon models. */
 export const POLYGON_GPU_INPUT_SCHEMA = [
@@ -17,30 +14,30 @@ export const POLYGON_GPU_INPUT_SCHEMA = [
     kind: 'positions',
     required: true,
     formats: ['vertex-list<float32x4>'],
-    source: 'generated'
+    internal: true
   },
   {
     name: 'colors',
     kind: 'colors',
     required: true,
     formats: ['vertex-list<unorm8x4>'],
-    source: 'generated'
+    internal: true
   },
   {
     name: 'rowIndices',
     kind: 'scalars',
     required: true,
     formats: ['vertex-list<uint32>'],
-    source: 'generated'
+    internal: true
   },
   {
     name: 'indices',
     kind: 'scalars',
     required: true,
     formats: ['vertex-list<uint32>'],
-    source: 'generated'
+    internal: true
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 /** Prepared GPU vector formats consumed by filled polygon models. */
 export type PolygonGPUTypeMap = {
@@ -65,7 +62,7 @@ export type PolygonBatchProps = PolygonGPUVectors & {
 
 /** Validates row-preserving generated polygon vectors before a model binds them. */
 export function assertPolygonGPUVectorInputs(modelName: string, vectors: PolygonGPUVectors): void {
-  assertModelGPUVectorInputs(modelName, POLYGON_GPU_INPUT_SCHEMA, vectors);
+  validateGPUInputVectors(modelName, POLYGON_GPU_INPUT_SCHEMA, vectors);
   assertPolygonVectorRowAlignment(modelName, vectors);
   assertPolygonVertexValueAlignment(modelName, vectors);
 }

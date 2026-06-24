@@ -15,10 +15,7 @@ import type {GPUVector} from '../../table/gpu-vector';
 import {getGPUDataBuffersForLayout} from '../../table/gpu-vector-utils';
 import {isVertexListGPUVectorFormat, type VertexList} from '../../table/gpu-vector-format';
 import type {GeneratedBufferBatch} from '../../utils/generated-buffer-batches';
-import {
-  assertModelGPUVectorInputs,
-  type ModelGPUInputSchema
-} from '../../engine/gpu-table-model-input-schema';
+import {type GPUInputSchema, validateGPUInputVectors} from '../../engine/gpu-input-schema';
 
 const SEGMENT_START_POSITIONS_COLUMN = 'segmentStartPositions';
 const SEGMENT_END_POSITIONS_COLUMN = 'segmentEndPositions';
@@ -49,31 +46,28 @@ export const PATH_ATTRIBUTE_GPU_INPUT_SCHEMA = [
     name: 'paths',
     kind: 'positions',
     required: true,
-    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>'],
-    source: 'source-mappable'
+    formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
   },
   {
     name: 'colors',
     kind: 'colors',
     required: false,
-    formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
-    source: 'source-mappable'
+    formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
     name: 'widths',
     kind: 'scalars',
     required: false,
-    formats: ['float32'],
-    source: 'source-mappable'
+    formats: ['float32']
   },
   {
     name: 'viewOrigins',
     kind: 'positions',
     required: false,
     formats: ['float32x4'],
-    source: 'generated'
+    internal: true
   }
-] as const satisfies ModelGPUInputSchema;
+] as const satisfies GPUInputSchema;
 
 const DEFAULT_PATH_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
@@ -345,7 +339,7 @@ function preparePathAttributeModel(props: PathAttributeModelProps): PreparedPath
 }
 
 function assertArrowPathVectorTypes(props: PathAttributeModelProps): void {
-  assertModelGPUVectorInputs('PathAttributeModel', PathAttributeModel.gpuInputSchema, {
+  validateGPUInputVectors('PathAttributeModel', PathAttributeModel.gpuInputSchema, {
     paths: props.paths,
     colors: props.colors,
     widths: props.widths,
