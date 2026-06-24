@@ -10,6 +10,7 @@ import {GPUVector} from './gpu-vector';
 import {GPURecordBatch, type GPURecordBatchSourceInfo} from './gpu-record-batch';
 import {createGPUVectorCollection} from './gpu-vector-collection';
 import {GPU_TABLE_INDEX_COLUMN_NAME} from './gpu-schema';
+import {isValueListGPUVectorFormat, isVertexListGPUVectorFormat} from './gpu-vector-format';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
@@ -391,6 +392,17 @@ function createPackedGPURecordBatch(
     const firstData = sourceData[0];
     if (!firstData) {
       throw new Error(`GPUTable batch is missing GPUData "${columnName}"`);
+    }
+    if (
+      sourceData.some(
+        data =>
+          data.format &&
+          (isValueListGPUVectorFormat(data.format) || isVertexListGPUVectorFormat(data.format))
+      )
+    ) {
+      throw new Error(
+        `GPUTable.packBatches() does not support variable-length GPUData "${columnName}"`
+      );
     }
 
     const byteLength = sourceData.reduce(

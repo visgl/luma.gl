@@ -359,13 +359,18 @@ test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers',
 
   t.equal(
     gpuTable.batches[0].gpuData.texts.buffer,
-    gpuTable.batches[0].gpuData.texts.buffer,
+    gpuTable.gpuVectors.texts.data[0].buffer,
     'batch-local UTF-8 storage binding resolves through GPUData'
   );
   t.equal(gpuTable.gpuVectors.texts.data.length, 2, 'keeps UTF-8 aggregate chunk boundaries');
   t.ok(
     arrow.DataType.isUtf8(gpuTable.gpuVectors.texts.dataType as arrow.DataType),
     'aggregate UTF-8 vectors preserve adapter data type metadata'
+  );
+  t.throws(
+    () => gpuTable.packBatches(),
+    /does not support variable-length GPUData "texts"/,
+    'generic packing rejects variable-length storage payloads instead of truncating them'
   );
 
   gpuTable.destroy();
