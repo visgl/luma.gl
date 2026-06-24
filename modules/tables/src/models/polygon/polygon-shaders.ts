@@ -223,13 +223,16 @@ void main(void) {
 `;
 
 /** Creates shared shader inputs for filled polygon render and picking models. */
-export function createPolygonShaderInputs(device: Device): PolygonShaderInputs {
+export function createPolygonShaderInputs(
+  device: Device,
+  pickingModule = getIndexPickingModule(device)
+): PolygonShaderInputs {
   const shaderInputs: PolygonShaderInputs = new ShaderInputs<{
     polygonViewport: typeof polygonViewport.props;
     picking: typeof indexPicking.props;
   }>({
     polygonViewport,
-    picking: getIndexPickingModule(device)
+    picking: pickingModule
   });
   shaderInputs.setProps({picking: {indexMode: 'attribute', batchIndex: 0}});
   return shaderInputs;

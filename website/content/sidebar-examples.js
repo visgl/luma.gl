@@ -87,6 +87,15 @@ const sidebars = {
         'arrow/arrow-dggs-polygons',
         'arrow/arrow-columns'
       ]
+    },
+    {
+      type: 'category',
+      label: 'Arrow Layers - deck.gl v10',
+      items: [
+        'deck/arrow-path-layer',
+        'deck/arrow-polygon-layer',
+        'deck/arrow-text-layer'
+      ]
     }
   ]
 };

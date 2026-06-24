@@ -90,13 +90,16 @@ function preparePolygonAttributeModel(
     table,
     modelProps: {
       ...modelProps,
-      source: POLYGON_ATTRIBUTE_WGSL_SHADER,
-      vs: POLYGON_ATTRIBUTE_VS_GLSL,
-      fs: picking && indexPickingSupported ? POLYGON_PICKING_FS_GLSL : POLYGON_FS_GLSL,
+      source: modelProps.source ?? POLYGON_ATTRIBUTE_WGSL_SHADER,
+      vs: modelProps.vs ?? POLYGON_ATTRIBUTE_VS_GLSL,
+      fs:
+        modelProps.fs ??
+        (picking && indexPickingSupported ? POLYGON_PICKING_FS_GLSL : POLYGON_FS_GLSL),
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
-      modules: [
-        picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)
-      ] as never,
+      modules: mergeHostShaderModules(
+        [picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)],
+        modelProps.modules ?? []
+      ) as never,
       shaderLayout: POLYGON_ATTRIBUTE_SHADER_LAYOUT,
       shaderInputs,
       table,
@@ -111,6 +114,20 @@ function preparePolygonAttributeModel(
       parameters: parameters ?? getPolygonPickingParameters(picking)
     }
   };
+}
+
+function mergeHostShaderModules(
+  defaultModules: unknown[],
+  hostModules: NonNullable<PolygonAttributeModelProps['modules']>
+): unknown[] {
+  const hostModuleNames = new Set(hostModules.map(module => module.name));
+  return [
+    ...defaultModules.filter(module => {
+      const moduleName = (module as {name?: string}).name;
+      return !moduleName || !hostModuleNames.has(moduleName);
+    }),
+    ...hostModules
+  ];
 }
 
 function createPolygonAttributeTable(props: PolygonBatchProps): GPUTable {

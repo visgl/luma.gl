@@ -815,11 +815,13 @@ export type ArrowTextShaderInputs = ShaderInputs<{
   picking: typeof picking.props;
 }>;
 
-export function createArrowTextShaderInputs(): ArrowTextShaderInputs {
+export function createArrowTextShaderInputs(
+  pickingModule: typeof picking = picking
+): ArrowTextShaderInputs {
   return new ShaderInputs<{textViewport: typeof textViewport.props; picking: typeof picking.props}>(
     {
       textViewport,
-      picking
+      picking: pickingModule
     }
   );
 }

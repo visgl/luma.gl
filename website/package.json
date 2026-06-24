@@ -37,5 +37,8 @@
     "@docusaurus/tsconfig": "^3.9.2",
     "docusaurus-mdx-checker": "^3.0.0"
   },
-  "browserslist": {}
+  "browserslist": [
+    ">0.2% and supports async-functions",
+    "not dead"
+  ]
 }
