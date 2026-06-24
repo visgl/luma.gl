@@ -38,6 +38,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     };
     this.handle = this.props.handle as GPURenderPipeline;
     let descriptor: GPURenderPipelineDescriptor | null = null;
+    let validationPromise: Promise<void> | null = null;
     if (!this.handle) {
       descriptor = this._getRenderPipelineDescriptor();
       log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
@@ -46,7 +47,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
       this.device.pushErrorScope('validation');
       this.handle = this.device.handle.createRenderPipeline(descriptor);
-      this.device.popErrorScope((error: GPUError) => {
+      validationPromise = this.device.popErrorScope((error: GPUError) => {
         this.linkStatus = 'error';
         this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
         this.device.debug();
@@ -54,7 +55,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
     this.descriptor = descriptor;
     this.handle.label = this.props.id;
-    this.linkStatus = 'success';
+    this.linkStatus = validationPromise ? 'pending' : 'success';
+    validationPromise?.then(() => {
+      if (this.linkStatus !== 'error') {
+        this.linkStatus = 'success';
+      }
+    });
 
     // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
