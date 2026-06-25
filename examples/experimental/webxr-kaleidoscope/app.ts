@@ -15,7 +15,7 @@ import {
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
-export const title = 'Passthrough Kaleidoscope';
+export const title = 'WebXR Kaleidoscope';
 export const description =
   'Folds WebXR camera frames or a procedural fallback through animated XR shards.';
 
@@ -152,7 +152,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({animationLoop, device}: AnimationProps) {
     super();
     if (device.type !== 'webgl') {
-      throw new Error('Passthrough Kaleidoscope requires WebGL2');
+      throw new Error('WebXR Kaleidoscope requires WebGL2');
     }
 
     AppAnimationLoopTemplate.current = this;
