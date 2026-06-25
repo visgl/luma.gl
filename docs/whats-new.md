@@ -81,7 +81,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/effects**
 
 - **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, outlines, temporal AA, motion blur, screen-space reflections, and volumetric fog.
-- **[Visualization City](/examples/showcase/advanced-effects)** - New MRT showcase combines the complete effect stack with presets, quality levels, debug views, and before/after comparison.
+- **[Visualization City](/examples/experimental/advanced-effects)** - New MRT showcase combines the complete effect stack with presets, quality levels, debug views, and before/after comparison.
 
 
 ## Version 9.4
