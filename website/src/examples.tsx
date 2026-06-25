@@ -47,7 +47,7 @@ import initializeExternalWebGLContext, {
 import HelloReactApp from '../../examples/integrations/hello-react/app';
 import {getErrorMessage, logError} from './react-luma/utils/error-utils';
 import DOFApp from '../../examples/showcase/dof/app';
-import AdvancedEffectsApp from '../../examples/showcase/advanced-effects/app';
+import AdvancedEffectsApp from '../../examples/experimental/advanced-effects/app';
 import ABufferApp from '../../examples/experimental/a-buffer/app';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
@@ -853,7 +853,7 @@ export const AdvancedEffectsExample: React.FC = props => (
   <LumaExample
     id="advanced-effects"
     title="Advanced Effects: Visualization City"
-    directory="showcase"
+    directory="experimental"
     template={AdvancedEffectsApp}
     config={exampleConfig}
     devices={['webgpu']}

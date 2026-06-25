@@ -204,9 +204,9 @@ const ssaoEvaluate = {
   propTypes: {
     nearPlane: {value: 0.1},
     farPlane: {value: 200},
-    radius: {value: 8, min: 1, softMax: 32},
-    bias: {value: 0.02, min: 0, softMax: 0.2},
-    intensity: {value: 1.6, min: 0, softMax: 4},
+    radius: {value: 7, min: 1, softMax: 32},
+    bias: {value: 0.03, min: 0, softMax: 0.2},
+    intensity: {value: 1.35, min: 0, softMax: 4},
     useNormalTexture: {value: 0, min: 0, max: 1, private: true}
   },
   passes: [{sampler: true}]
@@ -227,7 +227,9 @@ fn ssaoComposite_sampleColor(
   let color = textureSample(sourceTexture, sourceTextureSampler, texCoord);
   let ambient = textureSample(ambientOcclusionTexture, ambientOcclusionTextureSampler, texCoord).r;
   if (ssaoComposite.debugMode > 0.5) { return vec4f(vec3f(ambient), 1.0); }
-  return vec4f(color.rgb * mix(0.35, 1.0, ambient), color.a);
+  let rawOcclusion = clamp(1.0 - ambient, 0.0, 1.0);
+  let contactOcclusion = smoothstep(0.03, 0.5, rawOcclusion);
+  return vec4f(color.rgb * (1.0 - contactOcclusion * 0.48), color.a);
 }`,
   bindingLayout: [{name: 'ambientOcclusionTexture', group: 0}],
   uniformTypes: {debugMode: 'f32'},
@@ -539,20 +541,44 @@ export function createMotionBlurShaderPassPipeline(): ShaderPassPipeline {
   };
 }
 
-type SSRUniforms = {intensity: number; maxDistance: number; thickness: number};
+type SSRUniforms = {
+  projectionMatrix: number[];
+  inverseProjectionMatrix: number[];
+  intensity: number;
+  maxDistance: number;
+  thickness: number;
+  sampleCount: number;
+};
+const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const ssrTrace = {
   name: 'ssrTrace',
   source: /* wgsl */ `\
 struct ssrTraceUniforms {
+  projectionMatrix: mat4x4f,
+  inverseProjectionMatrix: mat4x4f,
   intensity: f32,
   maxDistance: f32,
   thickness: f32,
+  sampleCount: f32,
 };
 @group(0) @binding(auto) var<uniform> ssrTrace: ssrTraceUniforms;
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 @group(0) @binding(auto) var normalTexture: texture_2d<f32>;
 @group(0) @binding(auto) var normalTextureSampler: sampler;
+
+fn ssrReconstructViewPosition(uv: vec2f, depth: f32) -> vec3f {
+  let clip = vec4f(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
+  let view = ssrTrace.inverseProjectionMatrix * clip;
+  return view.xyz / max(view.w, 0.00001);
+}
+
+fn ssrProjectViewPosition(position: vec3f) -> vec2f {
+  let clip = ssrTrace.projectionMatrix * vec4f(position, 1.0);
+  let ndc = clip.xy / max(clip.w, 0.00001);
+  return vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+}
+
 fn ssrTrace_sampleColor(
   sourceTexture: texture_2d<f32>, sourceTextureSampler: sampler, texSize: vec2f, texCoord: vec2f
 ) -> vec4f {
@@ -561,23 +587,54 @@ fn ssrTrace_sampleColor(
   let normal = normalize(normalRoughness.xyz * 2.0 - 1.0);
   let roughness = normalRoughness.a;
   let centerDepth = textureSampleLevel(depthTexture, depthTextureSampler, sceneCoord, 0);
-  let viewRay = normalize(vec3f(texCoord * 2.0 - 1.0, 1.0));
-  let reflectedRay = reflect(viewRay, normal);
-  let direction = normalize(vec2f(reflectedRay.x, -reflectedRay.y));
+  if (centerDepth >= 0.99999 || roughness >= 0.92) { return vec4f(0.0); }
+
+  let viewPosition = ssrReconstructViewPosition(sceneCoord, centerDepth);
+  let incident = normalize(viewPosition);
+  let reflectedRay = normalize(reflect(incident, normal));
+  if (reflectedRay.z >= -0.001) { return vec4f(0.0); }
+
   var reflection = vec3f(0.0);
   var confidence = 0.0;
-  for (var index: i32 = 1; index <= 32; index++) {
-    let travel = f32(index) / 32.0 * ssrTrace.maxDistance;
-    let sampleUv = texCoord + direction * travel;
+  var previousTravel = 0.12;
+  for (var index: i32 = 1; index <= 64; index++) {
+    if (f32(index) > ssrTrace.sampleCount) { break; }
+    let fraction = f32(index) / max(ssrTrace.sampleCount, 1.0);
+    let travel = 0.12 + pow(fraction, 1.35) * ssrTrace.maxDistance;
+    let rayPosition = viewPosition + reflectedRay * travel;
+    let sampleUv = ssrProjectViewPosition(rayPosition);
     if (any(sampleUv <= vec2f(0.0)) || any(sampleUv >= vec2f(1.0))) { break; }
     let sampleDepth = textureSampleLevel(depthTexture, depthTextureSampler, sampleUv, 0);
-    let expectedDepth = centerDepth + travel * reflectedRay.z * 0.08;
-    if (abs(sampleDepth - expectedDepth) < ssrTrace.thickness) {
-      reflection = textureSampleLevel(sourceTexture, sourceTextureSampler, sampleUv, 0.0).rgb;
-      let edge = min(min(sampleUv.x, sampleUv.y), min(1.0 - sampleUv.x, 1.0 - sampleUv.y));
-      confidence = smoothstep(0.0, 0.12, edge) * (1.0 - roughness) * ssrTrace.intensity;
+    if (sampleDepth >= 0.99999) { previousTravel = travel; continue; }
+    let scenePosition = ssrReconstructViewPosition(sampleUv, sampleDepth);
+    let depthDelta = (-rayPosition.z) - (-scenePosition.z);
+    let hitThickness = ssrTrace.thickness + travel * 0.012;
+    if (depthDelta >= 0.0 && depthDelta < hitThickness) {
+      var nearTravel = previousTravel;
+      var farTravel = travel;
+      var hitUv = sampleUv;
+      for (var refinement: i32 = 0; refinement < 5; refinement++) {
+        let refinedTravel = (nearTravel + farTravel) * 0.5;
+        let refinedPosition = viewPosition + reflectedRay * refinedTravel;
+        let refinedUv = ssrProjectViewPosition(refinedPosition);
+        let refinedDepth = textureSampleLevel(depthTexture, depthTextureSampler, refinedUv, 0);
+        let refinedScene = ssrReconstructViewPosition(refinedUv, refinedDepth);
+        if ((-refinedPosition.z) - (-refinedScene.z) >= 0.0) {
+          farTravel = refinedTravel;
+          hitUv = refinedUv;
+        } else {
+          nearTravel = refinedTravel;
+        }
+      }
+      reflection = textureSampleLevel(sourceTexture, sourceTextureSampler, hitUv, roughness * 3.0).rgb;
+      let edge = min(min(hitUv.x, hitUv.y), min(1.0 - hitUv.x, 1.0 - hitUv.y));
+      let fresnel = mix(0.35, 1.0, pow(1.0 - max(dot(-incident, normal), 0.0), 5.0));
+      let roughnessFade = pow(1.0 - roughness, 2.0);
+      let distanceFade = 1.0 - clamp(farTravel / ssrTrace.maxDistance, 0.0, 1.0);
+      confidence = smoothstep(0.0, 0.1, edge) * roughnessFade * fresnel * distanceFade * ssrTrace.intensity;
       break;
     }
+    previousTravel = travel;
   }
   return vec4f(reflection, clamp(confidence, 0.0, 1.0));
 }`,
@@ -586,11 +643,21 @@ fn ssrTrace_sampleColor(
     {name: 'normalTexture', group: 0}
   ],
   uniforms: {} as SSRUniforms,
-  uniformTypes: {intensity: 'f32', maxDistance: 'f32', thickness: 'f32'},
+  uniformTypes: {
+    projectionMatrix: 'mat4x4<f32>',
+    inverseProjectionMatrix: 'mat4x4<f32>',
+    intensity: 'f32',
+    maxDistance: 'f32',
+    thickness: 'f32',
+    sampleCount: 'f32'
+  },
   propTypes: {
-    intensity: {value: 0.8, min: 0, softMax: 2},
-    maxDistance: {value: 0.35, min: 0.02, max: 1},
-    thickness: {value: 0.018, min: 0.001, softMax: 0.1}
+    projectionMatrix: {value: IDENTITY_MATRIX, private: true},
+    inverseProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
+    intensity: {value: 1.25, min: 0, softMax: 3},
+    maxDistance: {value: 90, min: 1, softMax: 180},
+    thickness: {value: 0.65, min: 0.02, softMax: 3},
+    sampleCount: {value: 40, min: 8, max: 64}
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;

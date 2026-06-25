@@ -329,6 +329,7 @@ class VisualizationCityModel {
   }
 }
 
+/** WebGPU-only experimental showcase for composable screen-space effects. */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
@@ -376,6 +377,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       near: NEAR_PLANE,
       far: FAR_PLANE
     });
+    const inverseProjectionMatrix = new Matrix4(projectionMatrix).invert();
     const viewMatrix = new Matrix4().lookAt({eye, center: [0, 5, 0], up: [0, 1, 0]});
     const viewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
     if (this.frameIndex === 0) {
@@ -426,9 +428,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         },
         motionBlur: {strength: 1.55, sampleCount: this.settings.quality === 'Cinematic' ? 16 : 9},
         ssrTrace: {
-          intensity: 0.95,
-          maxDistance: this.settings.quality === 'Low' ? 0.2 : 0.38,
-          thickness: 0.022
+          projectionMatrix,
+          inverseProjectionMatrix,
+          intensity: this.settings.preset === 'Reflective Night' ? 1.8 : 1.35,
+          maxDistance: this.settings.quality === 'Low' ? 55 : 95,
+          thickness: this.settings.quality === 'Cinematic' ? 0.48 : 0.72,
+          sampleCount:
+            this.settings.quality === 'Low' ? 20 : this.settings.quality === 'Cinematic' ? 56 : 36
         },
         ssrComposite: {debugMode: this.settings.debugView === 'Reflections' ? 1 : 0},
         volumetricFog: {
@@ -480,7 +486,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       pipelines.push(createMotionBlurShaderPassPipeline());
     }
     pipelines.push(displayPipeline);
-    return new ShaderPassRenderer(this.device, {shaderPasses: pipelines, flipY: false});
+    return new ShaderPassRenderer(this.device, {shaderPasses: pipelines, flipY: true});
   }
 
   private rebuildRenderer(): void {

@@ -1,5 +1,7 @@
 import {defineConfig} from 'vite';
 
+// Keep the experimental example runnable as a small standalone WebGPU application.
+
 const alias = {
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
   '@luma.gl/effects': `${__dirname}/../../../modules/effects/src`,

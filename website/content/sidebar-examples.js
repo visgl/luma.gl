@@ -14,8 +14,7 @@ const sidebars = {
         'showcase/globe',
         {type: 'doc', id: 'showcase/postprocessing', label: 'Effects: Postprocessing'},
         {type: 'doc', id: 'showcase/dof', label: 'Effects: Depth of Field'},
-        {type: 'doc', id: 'showcase/persistence', label: 'Effects: Persistence'},
-        {type: 'doc', id: 'showcase/advanced-effects', label: 'Effects: Visualization City'}
+        {type: 'doc', id: 'showcase/persistence', label: 'Effects: Persistence'}
       ]
     },
     {
@@ -57,6 +56,7 @@ const sidebars = {
       label: 'Experimental',
       items: [
         'experimental/a-buffer',
+        {type: 'doc', id: 'experimental/advanced-effects', label: 'Effects: Visualization City'},
         'experimental/bloom',
         'experimental/fp64',
         'experimental/gpt-2',

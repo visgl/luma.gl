@@ -25,11 +25,6 @@
         "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
-      },
-      {
-        "type": "doc",
-        "id": "showcase/advanced-effects",
-        "label": "Effects: Visualization City"
       }
     ]
   },
@@ -73,6 +68,11 @@
     "label": "Experimental",
     "items": [
       "experimental/a-buffer",
+      {
+        "type": "doc",
+        "id": "experimental/advanced-effects",
+        "label": "Effects: Visualization City"
+      },
       "experimental/bloom",
       "experimental/fp64",
       "experimental/gpt-2",
