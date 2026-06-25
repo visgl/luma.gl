@@ -15,7 +15,8 @@ import {
   type ArrowPolygonRendererDataBatchUpdate,
   type ArrowPolygonRendererProps
 } from '@luma.gl/arrow';
-import {getDeckProjectProps, getViewportAspect} from './arrow-layer-types';
+import type {Model} from '@luma.gl/engine';
+import {DECK_ARROW_ALPHA_BLEND_PARAMETERS, getViewportAspect} from './arrow-layer-types';
 
 const DECK_POLYGON_VS = `#version 300 es
 precision highp float;
@@ -78,6 +79,7 @@ type ArrowPolygonLayerState = {
 /** deck.gl layer that keeps polygon columns in Arrow-owned GPU vectors. */
 export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
   static override layerName = 'ArrowPolygonLayer';
+  static override defaultProps = {parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS};
 
   override getAttributeManager() {
     return null;
@@ -110,21 +112,13 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     );
   }
 
-  override getModels() {
-    // The renderer owns batch-local GPUVector bindings and draw parameters.
-    return [];
+  override getModels(): Model[] {
+    const model = this.getRendererOrNull()?.model;
+    return model ? [model] : [];
   }
 
-  override draw({
-    renderPass,
-    context,
-    shaderModuleProps
-  }: Parameters<Layer<ArrowPolygonLayerProps>['draw']>[0]): void {
+  override draw({renderPass, context}: Parameters<Layer<ArrowPolygonLayerProps>['draw']>[0]): void {
     const renderer = this.getRenderer();
-    renderer.shaderInputs.setProps({
-      project: getDeckProjectProps(this, context),
-      picking: shaderModuleProps.picking
-    } as never);
     renderer.predraw(context.device.commandEncoder);
     renderer.draw(renderPass, {aspect: getViewportAspect(context.viewport)});
   }
@@ -173,6 +167,6 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
   }
 
   private getRendererOrNull(): ArrowPolygonRenderer | null {
-    return (this.state as ArrowPolygonLayerState).renderer;
+    return (this.state as ArrowPolygonLayerState | undefined)?.renderer ?? null;
   }
 }

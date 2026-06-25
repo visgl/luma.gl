@@ -45,6 +45,11 @@ export async function getVitestConfig(options = {}) {
     ssr: {
       noExternal: ['@deck.gl/core']
     },
+    // Browser projects also run Vite's dependency optimizer before the SSR transform path.
+    // Keep deck.gl in the source graph there so both imports share one luma.gl runtime.
+    optimizeDeps: {
+      exclude: ['@deck.gl/core']
+    },
     resolve: {
       alias: [
         ...tsconfigAliases,
