@@ -30,13 +30,20 @@ import {
 } from '@luma.gl/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
-import {GPUTable, type GPURecordBatch, type GPUTableModel, type GPUVector} from '@luma.gl/tables';
+import {
+  GPUConstant,
+  GPUTable,
+  type GPURecordBatch,
+  type GPUTableModel,
+  type GPUVector
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
   createPointModel,
   createPointShaderInputs,
+  type PointModelColumns,
+  type PointModelMode,
   type PointModelTable,
-  type PointModelVectors,
   type PointShaderInputs
 } from './point-model';
 
@@ -82,6 +89,8 @@ export type ArrowPointRendererProps = {
   color?: [number, number, number, number];
   /** Constant fallback point radius in source coordinate units. */
   radius?: number;
+  /** GPU table consumption path. Storage is used only on WebGPU. */
+  modelMode?: PointModelMode;
   /** View center in source coordinate units. */
   center?: [number, number];
   /** View scale applied after centering. */
@@ -208,9 +217,13 @@ export class ArrowPointRenderer {
       props.radii !== undefined ||
       props.color !== undefined ||
       props.radius !== undefined;
+    const shouldRebuildModels =
+      props.modelMode !== undefined && props.modelMode !== this.props.modelMode;
     this.props = {...this.props, ...props};
     if (shouldRecreate) {
       this.replaceData(this.props, props.data !== undefined);
+    } else if (shouldRebuildModels) {
+      this.rebuildModels();
     }
   }
 
@@ -268,10 +281,9 @@ export class ArrowPointRenderer {
         (total, batch) => total + batch.pointGpuByteLength,
         0
       ),
-      stylingGpuByteLength: this.preparedBatches.reduce(
-        (total, batch) => total + batch.stylingGpuByteLength,
-        0
-      ),
+      stylingGpuByteLength:
+        this.preparedBatches.reduce((total, batch) => total + batch.stylingGpuByteLength, 0) +
+        (this.model?.tableBindingByteLength ?? 0),
       conversionTimeMs: this.preparedBatches.reduce(
         (total, batch) => total + batch.conversionTimeMs,
         0
@@ -386,13 +398,15 @@ export class ArrowPointRenderer {
     this.model = createPointModel(this.device, {
       id: 'arrow-points',
       table: this.activeTable,
-      shaderInputs: this.shaderInputs
+      shaderInputs: this.shaderInputs,
+      mode: getEffectivePointModelMode(this.device, this.props.modelMode)
     });
     this.pickingModel = createPointModel(this.device, {
       id: 'arrow-points-picking',
       table: this.activeTable,
       shaderInputs: this.shaderInputs,
-      picking: true
+      picking: true,
+      mode: getEffectivePointModelMode(this.device, this.props.modelMode)
     });
   }
 
@@ -493,22 +507,32 @@ export async function convertArrowPointColumnsToGPUVectors(
     timeOrigin: options.timeOrigin,
     id: `${id}-event-times`
   });
-  const pointRadii = makeGPUVectorFromArrow(
-    device,
-    radii ?? makeConstantRadiusVector(rowCount, options.radius ?? DEFAULT_POINT_RENDERER_RADIUS),
-    {name: 'radii', id: `${id}-radii`, format: 'float32'}
-  );
-  const pointColors = makeGPUVectorFromArrow(
-    device,
-    colors ?? makeConstantColorVector(rowCount, options.color ?? DEFAULT_POINT_RENDERER_COLOR),
-    {name: 'colors', id: `${id}-colors`, format: 'unorm8x4'}
-  );
+  const pointRadii = radii
+    ? makeGPUVectorFromArrow(device, radii, {
+        name: 'radii',
+        id: `${id}-radii`,
+        format: 'float32'
+      })
+    : new GPUConstant({
+        format: 'float32',
+        value: new Float32Array([options.radius ?? DEFAULT_POINT_RENDERER_RADIUS])
+      });
+  const pointColors = colors
+    ? makeGPUVectorFromArrow(device, colors, {
+        name: 'colors',
+        id: `${id}-colors`,
+        format: 'unorm8x4'
+      })
+    : new GPUConstant({
+        format: 'unorm8x4',
+        value: new Uint8Array(options.color ?? DEFAULT_POINT_RENDERER_COLOR)
+      });
   const rowIndices = makeArrowRowIndexGPUVector(device, {
     rowCount,
     rowIndexOffset,
     id: `${id}-row-indices`
   });
-  const vectors: PointModelVectors = {
+  const pointColumns: PointModelColumns = {
     positions: pointPositions,
     eventTimes,
     radii: pointRadii,
@@ -516,7 +540,7 @@ export async function convertArrowPointColumnsToGPUVectors(
     rowIndices
   };
   const table = new GPUTable({
-    vectors,
+    columns: pointColumns,
     sourceInfo: makeArrowRecordBatchSourceInfo({
       sourceBatchIndex,
       sourceRowIndexOffset: rowIndexOffset,
@@ -528,7 +552,8 @@ export async function convertArrowPointColumnsToGPUVectors(
     getGPUVectorByteLength(eventTimes) +
     getGPUVectorByteLength(rowIndices);
   const stylingGpuByteLength =
-    getGPUVectorByteLength(pointRadii) + getGPUVectorByteLength(pointColors);
+    (pointRadii instanceof GPUConstant ? 0 : getGPUVectorByteLength(pointRadii)) +
+    (pointColors instanceof GPUConstant ? 0 : getGPUVectorByteLength(pointColors));
 
   return {
     table,
@@ -552,7 +577,8 @@ function makeRetainedPointTable(preparedBatches: readonly PreparedPointBatch[]):
   }
   const batches = preparedBatches.flatMap(preparedBatch => preparedBatch.table.batches);
   return new GPUTable({
-    batches
+    batches,
+    constants: firstBatch.table.gpuConstants
   }) as PointModelTable;
 }
 
@@ -828,25 +854,15 @@ function makeFloat32Vector(values: Float32Array): arrow.Vector<arrow.Float32> {
   return new arrow.Vector([data]);
 }
 
-function makeConstantRadiusVector(rowCount: number, radius: number): arrow.Vector<arrow.Float32> {
-  const values = new Float32Array(rowCount);
-  values.fill(radius);
-  return makeFloat32Vector(values);
-}
-
-function makeConstantColorVector(
-  rowCount: number,
-  color: [number, number, number, number]
-): arrow.Vector<arrow.FixedSizeList<arrow.Uint8>> {
-  const values = new Uint8Array(rowCount * 4);
-  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-    values.set(color, rowIndex * 4);
-  }
-  return makeArrowFixedSizeListVector(new arrow.Uint8(), 4, values);
-}
-
 function getGPUVectorByteLength(vector: GPUVector): number {
   return vector.length * vector.byteStride;
+}
+
+function getEffectivePointModelMode(
+  device: Device,
+  modelMode: PointModelMode | undefined
+): PointModelMode {
+  return modelMode === 'storage' && device.type === 'webgpu' ? 'storage' : 'attributes';
 }
 
 function hasPointSource(props: ArrowPointRendererProps): boolean {

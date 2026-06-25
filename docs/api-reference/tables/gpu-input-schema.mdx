@@ -10,7 +10,8 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 </p>
 
 `GPUInputSchema` is the runtime contract a model or renderer uses to declare the
-prepared [`GPUVector`](/docs/api-reference/tables/gpu-vector) inputs it accepts.
+prepared varying [`GPUVector`](/docs/api-reference/tables/gpu-vector) and constant
+[`GPUConstant`](/docs/api-reference/tables/gpu-constant) inputs it accepts.
 Models expose the contract as a static `gpuInputSchema` property so renderers,
 adapters, validation helpers, and application code can inspect the same
 declaration.
@@ -20,12 +21,12 @@ It is distinct from [`GPUSchema`](/docs/api-reference/tables/gpu-schema):
 | Type | Describes | Used by |
 | --- | --- | --- |
 | `GPUSchema` | Concrete columns that already exist in a `GPUTable` or `GPURecordBatch`. | Table storage, batching, packing, and layout synthesis. |
-| `GPUInputSchema` | Required and optional `GPUVector` inputs that a model or renderer can consume. | Model props, runtime validation, and source-to-GPU adapters. |
+| `GPUInputSchema` | Required and optional logical columns that a model or renderer can consume. | Model props, runtime validation, and source-to-GPU adapters. |
 
 ## Types
 
 ```ts
-import type {GPUVector, GPUVectorFormat} from '@luma.gl/tables';
+import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/tables';
 
 export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
 
@@ -35,7 +36,7 @@ export type GPUInputDeclaration<
 > = {
   columnName: ColumnName;
   attributeName?: string;
-  bindingName?: string;
+  storageBindingName?: string;
   kind: GPUInputKind;
   required: boolean;
   formats: readonly Format[];
@@ -45,6 +46,7 @@ export type GPUInputDeclaration<
 export type GPUInputSchema = readonly GPUInputDeclaration[];
 
 export type GPUInputVectors = Record<string, GPUVector | undefined>;
+export type GPUInputColumns = Record<string, GPUVector | GPUConstant | undefined>;
 ```
 
 Each declaration selects one prepared table column:
@@ -52,11 +54,12 @@ Each declaration selects one prepared table column:
 - `columnName` is the model prop and vector name, such as `paths`, `colors`, or
   `timestamps`.
 - `attributeName` optionally names the shader attribute supplied by that column.
-- `bindingName` optionally names the shader storage binding supplied by that
+- `storageBindingName` optionally names the shader storage binding supplied by that
   column.
 - `kind` is a semantic role for adapters and diagnostics. It is not a shader
   type.
-- `required` controls whether validation rejects a missing vector.
+- `required` controls whether validation rejects a missing input. Required inputs
+  must be varying vectors; optional fixed-width inputs may be constants.
 - `formats` lists accepted canonical `GPUVector.format` memory layouts.
 - `internal: true` marks an input generated during conversion or model
   preparation. When omitted, source mapping may resolve the input directly.
@@ -128,6 +131,10 @@ The helper rejects:
 - a missing declaration with `required: true`;
 - a supplied vector whose `GPUVector.format` is absent or not listed in
   `formats`.
+- a `GPUConstant` supplied for a declaration with `required: true`.
+
+Optional absence does not satisfy a statically declared storage binding. Such a
+shader still needs a constant, varying vector, or model-specific dummy binding.
 
 Model-specific validation should remain next to the model. For example, a model
 can additionally require matching row counts, matching variable-length
@@ -135,7 +142,7 @@ can additionally require matching row counts, matching variable-length
 
 For inputs that already live in a `GPUTable` and map directly to shader
 attributes or storage bindings, use
-[`getShaderBindingsFromGPUTable()`](/docs/api-reference/tables/gpu-table-shader-bindings)
+[`GPUTableShaderBindings`](/docs/api-reference/tables/gpu-table-shader-bindings)
 to resolve batch-preserving draw resources.
 
 For example, one table column can map to a differently named storage binding:
@@ -143,7 +150,7 @@ For example, one table column can map to a differently named storage binding:
 ```ts
 {
   columnName: 'positions',
-  bindingName: 'polygonPositions',
+  storageBindingName: 'polygonPositions',
   kind: 'positions',
   required: true,
   formats: ['vertex-list<float32x4>']

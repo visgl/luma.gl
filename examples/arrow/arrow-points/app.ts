@@ -15,11 +15,13 @@ import {
   getPointTimeColumn,
   makeArrowPointExampleData,
   type ArrowPointColorKind,
+  type ArrowPointRadiusKind,
   type ArrowPointRowCountKind,
   type ArrowPointSourceKind,
   type ArrowPointTimeKind
 } from './arrow-point-generator';
 import {ArrowPointRenderer} from './arrow-point-renderer';
+import type {PointModelMode} from './point-model';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 import {ArrowPointControlPanel} from './control-panel';
 
@@ -43,6 +45,8 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   sourceKind: ArrowPointSourceKind = 'xym';
   timeKind: ArrowPointTimeKind = 'm';
   colorKind: ArrowPointColorKind = 'row-colors';
+  radiusKind: ArrowPointRadiusKind = 'row-radii';
+  modelMode: PointModelMode = 'attributes';
   animate = true;
   currentTimeMilliseconds = 0;
   lastRenderSeconds: number | null = null;
@@ -51,7 +55,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.layer = new ArrowPointRenderer(this.device);
+    this.layer = new ArrowPointRenderer(this.device, {modelMode: this.modelMode});
     this.controlPanel = new ArrowPointControlPanel({
       initialState: this.getControlPanelState(),
       handlers: {
@@ -59,16 +63,25 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
         onSourceKindChange: this.handleSourceKindChange,
         onTimeKindChange: this.handleTimeKindChange,
         onColorKindChange: this.handleColorKindChange,
+        onRadiusKindChange: this.handleRadiusKindChange,
+        onModelModeChange: this.handleModelModeChange,
         onAnimateChange: this.handleAnimateChange
       },
-      onRefresh: () => this.panels.refresh()
+      onRefresh: () => this.panels.refresh(),
+      supportsStorage: this.device.type === 'webgpu'
     });
   }
 
   override async onInitialize(): Promise<void> {
     this.panels.mount();
     this.controlPanel.initialize();
-    this.streamPointInput(this.rowCountKind, this.sourceKind, this.timeKind, this.colorKind);
+    this.streamPointInput(
+      this.rowCountKind,
+      this.sourceKind,
+      this.timeKind,
+      this.colorKind,
+      this.radiusKind
+    );
   }
 
   override onRender({aspect, device, time, _mousePosition}: AnimationProps): void {
@@ -100,6 +113,8 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
       sourceKind: this.sourceKind,
       timeKind: this.timeKind,
       colorKind: this.colorKind,
+      radiusKind: this.radiusKind,
+      modelMode: this.modelMode,
       animate: this.animate
     };
   }
@@ -108,13 +123,15 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
     rowCountKind: ArrowPointRowCountKind,
     sourceKind: ArrowPointSourceKind,
     timeKind: ArrowPointTimeKind,
-    colorKind: ArrowPointColorKind
+    colorKind: ArrowPointColorKind,
+    radiusKind: ArrowPointRadiusKind
   ): void {
     const effectiveTimeKind = getEffectivePointTimeKind(sourceKind, timeKind);
     this.rowCountKind = rowCountKind;
     this.sourceKind = sourceKind;
     this.timeKind = effectiveTimeKind;
     this.colorKind = colorKind;
+    this.radiusKind = radiusKind;
     this.currentTimeMilliseconds = 0;
     this.lastRenderSeconds = null;
 
@@ -122,12 +139,14 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
       rowCountKind,
       sourceKind,
       effectiveTimeKind,
-      colorKind
+      colorKind,
+      radiusKind
     );
     this.layer.setProps({
       timeColumn: getPointTimeColumn(effectiveTimeKind),
       timeOrigin: sourceData.timeOriginMilliseconds,
       colors: colorKind === 'constant' ? null : undefined,
+      radii: radiusKind === 'constant' ? null : undefined,
       center: [0, 0],
       scale: 1
     });
@@ -135,7 +154,8 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
       rowCountKind,
       sourceKind,
       timeKind: effectiveTimeKind,
-      colorKind
+      colorKind,
+      radiusKind
     });
     this.controlPanel.setCurrentTimeLabel(
       effectiveTimeKind === 'none' ? '-' : formatPointCurrentTimeLabel(this.currentTimeMilliseconds)
@@ -187,28 +207,76 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
     if (rowCountKind === this.rowCountKind) {
       return;
     }
-    this.streamPointInput(rowCountKind, this.sourceKind, this.timeKind, this.colorKind);
+    this.streamPointInput(
+      rowCountKind,
+      this.sourceKind,
+      this.timeKind,
+      this.colorKind,
+      this.radiusKind
+    );
   };
 
   private readonly handleSourceKindChange = (sourceKind: ArrowPointSourceKind): void => {
     if (sourceKind === this.sourceKind) {
       return;
     }
-    this.streamPointInput(this.rowCountKind, sourceKind, this.timeKind, this.colorKind);
+    this.streamPointInput(
+      this.rowCountKind,
+      sourceKind,
+      this.timeKind,
+      this.colorKind,
+      this.radiusKind
+    );
   };
 
   private readonly handleTimeKindChange = (timeKind: ArrowPointTimeKind): void => {
     if (timeKind === this.timeKind) {
       return;
     }
-    this.streamPointInput(this.rowCountKind, this.sourceKind, timeKind, this.colorKind);
+    this.streamPointInput(
+      this.rowCountKind,
+      this.sourceKind,
+      timeKind,
+      this.colorKind,
+      this.radiusKind
+    );
   };
 
   private readonly handleColorKindChange = (colorKind: ArrowPointColorKind): void => {
     if (colorKind === this.colorKind) {
       return;
     }
-    this.streamPointInput(this.rowCountKind, this.sourceKind, this.timeKind, colorKind);
+    this.streamPointInput(
+      this.rowCountKind,
+      this.sourceKind,
+      this.timeKind,
+      colorKind,
+      this.radiusKind
+    );
+  };
+
+  private readonly handleRadiusKindChange = (radiusKind: ArrowPointRadiusKind): void => {
+    if (radiusKind === this.radiusKind) {
+      return;
+    }
+    this.streamPointInput(
+      this.rowCountKind,
+      this.sourceKind,
+      this.timeKind,
+      this.colorKind,
+      radiusKind
+    );
+  };
+
+  private readonly handleModelModeChange = (modelMode: PointModelMode): void => {
+    const effectiveMode = this.device.type === 'webgpu' ? modelMode : 'attributes';
+    if (effectiveMode === this.modelMode) {
+      return;
+    }
+    this.modelMode = effectiveMode;
+    this.layer.setProps({modelMode: effectiveMode});
+    this.controlPanel.syncControls({modelMode: effectiveMode});
+    this.updateMetrics();
   };
 
   private readonly handleAnimateChange = (enabled: boolean): void => {

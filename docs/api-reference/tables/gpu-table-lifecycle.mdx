@@ -17,7 +17,7 @@ and preparation helpers, see
 
 ## Overview
 
-`GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`, and `GPUSchema`
+`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, `GPUTable`, and `GPUSchema`
 are GPU-side representations for typed table columns and batches. Arrow vectors,
 record batches, and tables are common construction inputs through
 `@luma.gl/arrow`; the generic GPU objects do not retain references to those
@@ -29,6 +29,8 @@ The object model is batch-preserving by default:
   `GPUData` chunk per selected column.
 - Table-level `gpuVectors` aggregate those batch-local chunks through
   `GPUVector.data[]`.
+- Table-level `gpuConstants` retain one immutable CPU payload and never appear in
+  batch `gpuData` or the physical `bufferLayout`.
 - `GPUData` is the chunk primitive. It owns or borrows one `Buffer` or
   `DynamicBuffer`.
 - `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one
@@ -112,12 +114,13 @@ method signatures live on the individual reference pages:
 | --- | --- | --- |
 | `GPUData` | One GPU buffer plus row/stride metadata and buffer ownership. | [GPUData](/docs/api-reference/tables/gpu-data) |
 | `GPUVector` | One logical column over ordered `GPUData[]` chunks. | [GPUVector](/docs/api-reference/tables/gpu-vector) |
+| `GPUConstant` | One table-wide fixed-width logical column value. | [GPUConstant](/docs/api-reference/tables/gpu-constant) |
 | `GPURecordBatch` | One immutable preserved batch with batch-local data chunks and layout metadata. | [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch) |
 | `GPUTable` | Table-level owner that preserves batches, exposes aggregate vectors, and controls packing/detach/destruction. | [GPUTable](/docs/api-reference/tables/gpu-table) |
 | `GPUSchema` | Selected-column metadata with `GPUVectorFormat` fields. | [GPUSchema](/docs/api-reference/tables/gpu-schema) |
 | `GPUInputSchema` | Runtime declaration of required and optional `GPUVector` model inputs. | [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema) |
 
-The important invariant is that buffers are reached through `GPUData`, not
+The important invariant is that varying buffers are reached through `GPUData`, not
 directly through `GPUVector`. Code that needs one directly bindable buffer should
 require `vector.data.length === 1` and bind `vector.data[0].buffer`. Batch-aware
 render and compute paths should iterate `GPUTable.batches[]` or the corresponding

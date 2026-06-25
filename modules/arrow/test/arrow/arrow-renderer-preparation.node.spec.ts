@@ -44,6 +44,11 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
 
   t.equal(prepared.rowCount, 2, 'keeps one point row per source row');
   t.equal(prepared.table.batches.length, 1, 'prepares one GPU table batch');
+  t.equal(prepared.table.gpuConstants.colors?.byteLength, 4, 'keeps one constant color payload');
+  t.equal(prepared.table.gpuConstants.radii?.byteLength, 4, 'keeps one constant radius payload');
+  t.notOk(prepared.table.gpuVectors.colors, 'does not materialize repeated constant colors');
+  t.notOk(prepared.table.gpuVectors.radii, 'does not materialize repeated constant radii');
+  t.equal(prepared.stylingGpuByteLength, 0, 'defers constant GPU allocation to shader bindings');
   t.deepEqual(
     prepared.table.batches[0].sourceInfo,
     {sourceBatchIndex: 3, sourceRowIndexOffset: 5, sourceRowCount: 2},

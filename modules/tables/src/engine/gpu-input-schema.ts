@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {GPUVector} from '../table/gpu-vector';
+import type {GPUConstant} from '../table/gpu-constant';
 import type {GPUVectorFormat} from '../table/gpu-vector-format';
 
 /** Semantic role consumed by one GPU input. */
@@ -18,7 +19,7 @@ export type GPUInputDeclaration<
   /** Optional shader attribute supplied by this column. */
   attributeName?: string;
   /** Optional shader storage binding supplied by this column. */
-  bindingName?: string;
+  storageBindingName?: string;
   /** Semantic role consumed by the model or renderer. */
   kind: GPUInputKind;
   /** Whether callers must provide this prepared GPU input. */
@@ -35,28 +36,38 @@ export type GPUInputDeclaration<
 /** Runtime prepared GPU input contract declared by one model or renderer. */
 export type GPUInputSchema = readonly GPUInputDeclaration[];
 
-/** Prepared GPU vectors keyed by declared GPU input column name. */
+/** Prepared varying GPU vectors keyed by declared GPU input column name. */
 export type GPUInputVectors = Record<string, GPUVector | undefined>;
+
+/** Prepared logical GPU columns keyed by declared GPU input column name. */
+export type GPUInputColumns = Record<string, GPUVector | GPUConstant | undefined>;
 
 /** Validates prepared GPU vectors against one runtime GPU input schema. */
 export function validateGPUInputVectors(
   ownerName: string,
   schema: GPUInputSchema,
-  vectors: GPUInputVectors
+  vectors: GPUInputColumns
 ): void {
   for (const input of schema) {
-    const vector = vectors[input.columnName];
-    if (!vector) {
+    const column = vectors[input.columnName];
+    if (!column) {
       if (input.required) {
         throw new Error(`${ownerName} requires GPU input "${input.columnName}"`);
       }
       continue;
     }
 
-    const format = vector.format;
-    if (!format || !(input.formats as readonly GPUVectorFormat[]).includes(format)) {
+    if ('isConstant' in column && input.required) {
       throw new Error(
-        `${ownerName} ${input.columnName} GPUVector.format "${format ?? 'undefined'}" must be one of ${input.formats.join(', ')}`
+        `${ownerName} requires varying GPU input "${input.columnName}"; required inputs cannot be constant`
+      );
+    }
+
+    const format = column.format;
+    if (!format || !(input.formats as readonly GPUVectorFormat[]).includes(format)) {
+      const columnType = 'isConstant' in column ? 'GPUConstant' : 'GPUVector';
+      throw new Error(
+        `${ownerName} ${input.columnName} ${columnType}.format "${format ?? 'undefined'}" must be one of ${input.formats.join(', ')}`
       );
     }
   }

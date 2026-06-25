@@ -14,7 +14,7 @@ This page describes the `@luma.gl/tables` object model used by Arrow adapters,
 table-backed rendering, and table-oriented compute helpers. The diagram is
 adapted from the loaders.gl ArrowJS table-structure docs, but the focus here is
 the GPU resource model: `GPUTable`, `GPURecordBatch`, `GPUVector`, and
-`GPUData`.
+`GPUData`, plus table-wide `GPUConstant` columns.
 
 <GPUTableStructureGraphic />
 
@@ -22,16 +22,18 @@ the GPU resource model: `GPUTable`, `GPURecordBatch`, `GPUVector`, and
 
 | GPU object | Role | Important state |
 | --- | --- | --- |
-| [`GPUTable`](/docs/api-reference/tables/gpu-table) | Table-level owner and mutation surface. | `schema`, `bufferLayout`, `gpuVectors`, `batches[]` |
+| [`GPUTable`](/docs/api-reference/tables/gpu-table) | Logical table owner and mutation surface. | `schema`, `gpuColumns`, `gpuVectors`, `gpuConstants`, `batches[]` |
+| [`GPUConstant`](/docs/api-reference/tables/gpu-constant) | One fixed-width value shared by every table row. | `format`, `value`, `byteLength` |
 | [`GPURecordBatch`](/docs/api-reference/tables/gpu-record-batch) | One preserved GPU batch with one data chunk per column. | `schema`, `numRows`, `bufferLayout`, `gpuData` |
 | [`GPUVector`](/docs/api-reference/tables/gpu-vector) | One logical typed column over one or more GPU data chunks. | `name`, `format`, `length`, `valueLength`, `stride`, `byteStride`, `data[]` |
 | [`GPUData`](/docs/api-reference/tables/gpu-data) | One GPU buffer plus typed row metadata. | `buffer`, `format`, `length`, `valueLength`, `byteOffset`, `byteStride`, `rowByteLength`, `ownsBuffer` |
 | [`GPUSchema`](/docs/api-reference/tables/gpu-schema) | Plain selected-column schema metadata. | `fields`, `metadata` |
 
-The table is intentionally batch-preserving. When an Arrow table has multiple
+The table is intentionally batch-preserving. Constants live only at table level;
+they never become fake batch `GPUData`. When an Arrow table has multiple
 record batches, `makeGPUTableFromArrowTable()` creates one `GPURecordBatch` per source
 batch. Table-level `gpuVectors` aggregate the batch-local `gpuData` chunks so code can
-reason about one logical column, while batch-aware render and compute paths can
+reason about one logical varying column, while batch-aware render and compute paths can
 still bind one physical batch at a time.
 
 ## Arrow JS Mapping

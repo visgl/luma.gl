@@ -9,13 +9,25 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
   <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
 </p>
 
-GPU-resident table primitives for luma.gl.
+Typed, batch-preserving GPU table primitives for rendering, transforms, and compute.
+
+## Start Here
+
+- Read the [GPU Tables guide](/docs/api-guide/gpu/gpu-tables) for end-to-end
+  attribute and storage workflows.
+- Read [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure) for
+  the logical-column and physical-batch object model.
+- Use [`GPUTable`](/docs/api-reference/tables/gpu-table) for data ownership and
+  [`GPUTableShaderBindings`](/docs/api-reference/tables/gpu-table-shader-bindings)
+  for backend-specific shader resources.
+- Use `@luma.gl/arrow` adapters when source data is Apache Arrow.
 
 ## API Reference
 
 - [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure)
 - [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
 - [GPUTable](/docs/api-reference/tables/gpu-table)
+- [GPUConstant](/docs/api-reference/tables/gpu-constant)
 - [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch)
 - [GPUVector](/docs/api-reference/tables/gpu-vector)
 - [GPUData](/docs/api-reference/tables/gpu-data)
@@ -27,11 +39,11 @@ GPU-resident table primitives for luma.gl.
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 
 The `@luma.gl/tables` module owns reusable table-side GPU objects such as
-`GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`, plus structural typing
+`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, and `GPUTable`, plus structural typing
 types such as `GPUSchema`, `GPUField`, `GPUTypeMap`, `GPUVectorFormat`, and
 `VertexList`. Models can publish `GPUInputSchema` declarations for the
-prepared `GPUVector` inputs they accept. `getShaderBindingsFromGPUTable()`
-resolves those declarations into batch-preserving attribute and storage
+prepared table inputs they accept. `GPUTableShaderBindings`
+resolves those declarations into owned, batch-preserving attribute and storage
 resources for a shader layout. Table-oriented execution helpers include
 `TableTransform`,
 `GPUTableComputation`, `GPUTableBufferPlanner`, and generated-buffer batching

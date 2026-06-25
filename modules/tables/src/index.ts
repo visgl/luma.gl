@@ -3,6 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 export {
+  GPUConstant,
+  type GPUConstantProps
+} from './table/gpu-constant';
+export {
   GPUData,
   type GPUDataFromBufferProps,
   type GPUDataReadbackMetadata
@@ -51,6 +55,9 @@ export {
 } from './table/gpu-record-batch';
 export {
   GPUTable,
+  type GPUColumn,
+  type GPUColumnMap,
+  type GPUTableFromColumnsProps,
   type GPUTableDetachBatchesOptions,
   type GPUTableFromBatchesProps,
   type GPUTableFromSchemaProps,
@@ -106,15 +113,17 @@ export {
 } from '@luma.gl/core';
 export {
   validateGPUInputVectors,
+  type GPUInputColumns,
   type GPUInputDeclaration,
   type GPUInputKind,
   type GPUInputSchema,
   type GPUInputVectors
 } from './engine/gpu-input-schema';
 export {
-  getShaderBindingsFromGPUTable,
+  GPUTableShaderBindings,
+  getGPUTableRowMultiplierFieldName,
   type GPUTableShaderBindingBatch,
-  type GPUTableShaderBindings
+  type GPUTableShaderBindingsProps
 } from './engine/gpu-table-shader-bindings';
 export {
   PathAttributeModel,

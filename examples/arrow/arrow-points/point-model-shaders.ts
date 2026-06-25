@@ -37,6 +37,16 @@ export const POINT_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
+export const POINT_STORAGE_SHADER_LAYOUT = {
+  attributes: [{name: 'rowIndices', location: 0, type: 'u32', stepMode: 'instance'}],
+  bindings: [
+    {name: 'pointPositions', type: 'read-only-storage', group: 1, location: 0},
+    {name: 'pointEventTimes', type: 'read-only-storage', group: 1, location: 1},
+    {name: 'pointRadii', type: 'read-only-storage', group: 1, location: 2},
+    {name: 'pointColors', type: 'read-only-storage', group: 1, location: 3}
+  ]
+} satisfies ShaderLayout;
+
 export const WGSL_SHADER = /* wgsl */ `\
 struct PointViewportUniforms {
   center : vec2<f32>,
@@ -108,6 +118,115 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   outputs.color.a = outputs.color.a * temporalAlpha;
   outputs.localPosition = corner;
   outputs.objectIndex = i32(inputs.rowIndices);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
+  if (length(inputs.localPosition) > 1.0 || inputs.color.a <= 0.005) {
+    discard;
+  }
+  let edgeAlpha = 1.0 - smoothstep(0.82, 1.0, length(inputs.localPosition));
+  return picking_filterHighlightColor(vec4<f32>(inputs.color.rgb, inputs.color.a * edgeAlpha), inputs.objectIndex);
+}
+
+@fragment
+fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
+  if (length(inputs.localPosition) > 1.0 || inputs.color.a <= 0.005) {
+    discard;
+  }
+  var outputs : PickingFragmentOutputs;
+  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
+  return outputs;
+}
+`;
+
+export const WGSL_STORAGE_SHADER = /* wgsl */ `\
+struct PointViewportUniforms {
+  center : vec2<f32>,
+  scale : f32,
+  aspect : f32,
+  currentTime : f32,
+  trailLength : f32,
+  timeEnabled : f32,
+};
+
+@group(0) @binding(auto) var<uniform> pointViewport : PointViewportUniforms;
+@group(1) @binding(auto) var<storage, read> pointPositions : array<vec2<f32>>;
+@group(1) @binding(auto) var<storage, read> pointEventTimes : array<f32>;
+@group(1) @binding(auto) var<storage, read> pointRadii : array<f32>;
+@group(1) @binding(auto) var<storage, read> pointColors : array<u32>;
+struct VertexInputs {
+  @builtin(vertex_index) vertexIndex : u32,
+  @builtin(instance_index) instanceIndex : u32,
+  @location(0) rowIndices : u32,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) color : vec4<f32>,
+  @location(1) localPosition : vec2<f32>,
+  @interpolate(flat, either)
+  @location(2) objectIndex : i32,
+};
+
+struct PickingFragmentOutputs {
+  @location(0) fragColor : vec4<f32>,
+  @location(1) pickingColor : vec2<i32>,
+};
+
+fn getQuadCorner(vertexIndex : u32) -> vec2<f32> {
+  if (vertexIndex == 0u) { return vec2<f32>(-1.0, -1.0); }
+  if (vertexIndex == 1u) { return vec2<f32>(1.0, -1.0); }
+  if (vertexIndex == 2u) { return vec2<f32>(1.0, 1.0); }
+  if (vertexIndex == 3u) { return vec2<f32>(-1.0, -1.0); }
+  if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
+  return vec2<f32>(-1.0, 1.0);
+}
+
+fn unpackPointColor(colorWord : u32) -> vec4<f32> {
+  return vec4<f32>(
+    f32(colorWord & 0xffu),
+    f32((colorWord >> 8u) & 0xffu),
+    f32((colorWord >> 16u) & 0xffu),
+    f32((colorWord >> 24u) & 0xffu)
+  ) / 255.0;
+}
+
+fn getTemporalAlpha(eventTime : f32) -> f32 {
+  if (pointViewport.timeEnabled < 0.5) {
+    return 1.0;
+  }
+  let age = pointViewport.currentTime - eventTime;
+  if (age < 0.0 || age > pointViewport.trailLength) {
+    return 0.0;
+  }
+  let fadeIn = smoothstep(0.0, 1200.0, age);
+  let fadeOut = 1.0 - smoothstep(pointViewport.trailLength * 0.62, pointViewport.trailLength, age);
+  return max(fadeIn * fadeOut, 0.08);
+}
+
+@vertex
+fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
+  let rowIndex = inputs.instanceIndex;
+  let position = pointPositions[gpuTable_getRowIndex(rowIndex, gpuTableColumns.pointPositionsRowMultiplier)];
+  let eventTime = pointEventTimes[gpuTable_getRowIndex(rowIndex, gpuTableColumns.pointEventTimesRowMultiplier)];
+  let radiusValue = pointRadii[gpuTable_getRowIndex(rowIndex, gpuTableColumns.pointRadiiRowMultiplier)];
+  let color = unpackPointColor(pointColors[gpuTable_getRowIndex(rowIndex, gpuTableColumns.pointColorsRowMultiplier)]);
+  let objectIndex = inputs.rowIndices;
+  let corner = getQuadCorner(inputs.vertexIndex % 6u);
+  let centered = (position - pointViewport.center) * pointViewport.scale;
+  let radius = radiusValue * pointViewport.scale;
+  let clipCenter = vec2<f32>(centered.x / max(pointViewport.aspect, 0.2), centered.y);
+  let clipOffset = vec2<f32>(corner.x / max(pointViewport.aspect, 0.2), corner.y) * radius;
+
+  var outputs : FragmentInputs;
+  outputs.Position = vec4<f32>(clipCenter + clipOffset, 0.0, 1.0);
+  outputs.color = color;
+  outputs.color.a = outputs.color.a * getTemporalAlpha(eventTime);
+  outputs.localPosition = corner;
+  outputs.objectIndex = i32(objectIndex);
   return outputs;
 }
 

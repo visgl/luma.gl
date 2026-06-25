@@ -3,10 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  CustomPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
 } from '@deck.gl-community/panels';
+import {Fragment, h, render} from 'preact';
 import {
   ExampleSettingsPanelManager,
   getChangedSetting,
@@ -16,11 +18,13 @@ import {
   POINT_DATASETS,
   POINT_TRAIL_LENGTH_MILLISECONDS,
   type ArrowPointColorKind,
+  type ArrowPointRadiusKind,
   type ArrowPointRowCountKind,
   type ArrowPointSourceKind,
   type ArrowPointTimeKind
 } from './arrow-point-generator';
 import type {ArrowPointRendererMetrics} from './arrow-point-renderer';
+import type {PointModelMode} from './point-model';
 
 const CURRENT_TIME_ID = 'arrow-point-current-time';
 const ROW_COUNT_ID = 'arrow-point-row-count';
@@ -45,6 +49,8 @@ export type ArrowPointControlPanelState = {
   sourceKind: ArrowPointSourceKind;
   timeKind: ArrowPointTimeKind;
   colorKind: ArrowPointColorKind;
+  radiusKind: ArrowPointRadiusKind;
+  modelMode: PointModelMode;
   animate: boolean;
 };
 
@@ -55,9 +61,12 @@ export type ArrowPointControlPanelProps = {
     onSourceKindChange: (sourceKind: ArrowPointSourceKind) => void;
     onTimeKindChange: (timeKind: ArrowPointTimeKind) => void;
     onColorKindChange: (colorKind: ArrowPointColorKind) => void;
+    onRadiusKindChange: (radiusKind: ArrowPointRadiusKind) => void;
+    onModelModeChange: (modelMode: PointModelMode) => void;
     onAnimateChange: (enabled: boolean) => void;
   };
   onRefresh: () => void;
+  supportsStorage: boolean;
 };
 
 type ArrowPointPanelLabels = {
@@ -69,6 +78,7 @@ type ArrowPointPanelLabels = {
 export class ArrowPointControlPanel {
   private readonly handlers: ArrowPointControlPanelProps['handlers'];
   private readonly onRefresh: () => void;
+  private readonly supportsStorage: boolean;
   private readonly settingsPanel: ExampleSettingsPanelManager;
   private state: ArrowPointControlPanelState;
   private metrics: ArrowPointRendererMetrics | null = null;
@@ -78,14 +88,16 @@ export class ArrowPointControlPanel {
     batchCount: 0
   };
   private rootElement: HTMLElement | null = null;
+  private settingsRootElement: HTMLElement | null = null;
 
-  constructor({initialState, handlers, onRefresh}: ArrowPointControlPanelProps) {
+  constructor({initialState, handlers, onRefresh, supportsStorage}: ArrowPointControlPanelProps) {
     this.state = initialState;
     this.handlers = handlers;
     this.onRefresh = onRefresh;
+    this.supportsStorage = supportsStorage;
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'arrow-points-settings',
-      schema: makeArrowPointSettingsSchema(initialState),
+      schema: makeArrowPointSettingsSchema(initialState, supportsStorage),
       settings: initialState,
       onSettingsChange: this.handleSettingsChange
     });
@@ -109,7 +121,33 @@ export class ArrowPointControlPanel {
   }
 
   makeSettingsPanel(): Panel {
-    return this.settingsPanel.makePanel();
+    const settingsPanel = this.settingsPanel.makePanel();
+    return new CustomPanel({
+      id: 'arrow-points-settings-and-metrics',
+      title: 'Settings',
+      onRenderHTML: rootElement => {
+        render(
+          h(
+            Fragment,
+            {},
+            settingsPanel.content,
+            h('div', {
+              style: {marginTop: '16px'},
+              dangerouslySetInnerHTML: {__html: makeArrowPointMetricsHtml()}
+            })
+          ),
+          rootElement
+        );
+        this.settingsRootElement = rootElement;
+        this.renderMetrics();
+        return () => {
+          if (this.settingsRootElement === rootElement) {
+            this.settingsRootElement = null;
+          }
+          render(null, rootElement);
+        };
+      }
+    });
   }
 
   initialize(): void {}
@@ -117,11 +155,15 @@ export class ArrowPointControlPanel {
   destroy(): void {
     this.settingsPanel.finalize();
     this.rootElement = null;
+    this.settingsRootElement = null;
   }
 
   syncControls(state: Partial<ArrowPointControlPanelState>): void {
     this.state = {...this.state, ...state};
-    this.settingsPanel.setSchemaAndSettings(makeArrowPointSettingsSchema(this.state), this.state);
+    this.settingsPanel.setSchemaAndSettings(
+      makeArrowPointSettingsSchema(this.state, this.supportsStorage),
+      this.state
+    );
     this.onRefresh();
   }
 
@@ -162,6 +204,14 @@ export class ArrowPointControlPanel {
     if (isColorKind(colorKind)) {
       this.handlers.onColorKindChange(colorKind);
     }
+    const radiusKind = getChangedSetting(changedSettings, 'radiusKind')?.nextValue;
+    if (isRadiusKind(radiusKind)) {
+      this.handlers.onRadiusKindChange(radiusKind);
+    }
+    const modelMode = getChangedSetting(changedSettings, 'modelMode')?.nextValue;
+    if (modelMode === 'attributes' || modelMode === 'storage') {
+      this.handlers.onModelModeChange(modelMode);
+    }
     const animate = getChangedSetting(changedSettings, 'animate')?.nextValue;
     if (typeof animate === 'boolean') {
       this.handlers.onAnimateChange(animate);
@@ -187,51 +237,43 @@ export class ArrowPointControlPanel {
     const totalArrowByteLength =
       this.metrics.pointArrowByteLength + this.metrics.stylingArrowByteLength;
     const totalGpuByteLength = this.metrics.pointGpuByteLength + this.metrics.stylingGpuByteLength;
-    setLabel(this.rootElement, ROW_COUNT_ID, formatInteger(this.metrics.rowCount));
-    setLabel(this.rootElement, DIMENSION_ID, `${this.metrics.sourceDimension}D`);
-    setLabel(this.rootElement, TOTAL_ARROW_BYTES_ID, formatByteLength(totalArrowByteLength));
-    setLabel(this.rootElement, TOTAL_GPU_BYTES_ID, formatByteLength(totalGpuByteLength));
-    setLabel(
-      this.rootElement,
+    this.setMetricLabel(ROW_COUNT_ID, formatInteger(this.metrics.rowCount));
+    this.setMetricLabel(DIMENSION_ID, `${this.metrics.sourceDimension}D`);
+    this.setMetricLabel(TOTAL_ARROW_BYTES_ID, formatByteLength(totalArrowByteLength));
+    this.setMetricLabel(TOTAL_GPU_BYTES_ID, formatByteLength(totalGpuByteLength));
+    this.setMetricLabel(
       TOTAL_GPU_EXPANSION_ID,
       formatExpansionRatio(totalGpuByteLength, totalArrowByteLength)
     );
-    setLabel(this.rootElement, TOTAL_BUILD_TIME_ID, formatTimeMs(this.metrics.conversionTimeMs));
-    setLabel(
-      this.rootElement,
-      POINT_ARROW_BYTES_ID,
-      formatByteLength(this.metrics.pointArrowByteLength)
-    );
-    setLabel(
-      this.rootElement,
-      POINT_GPU_BYTES_ID,
-      formatByteLength(this.metrics.pointGpuByteLength)
-    );
-    setLabel(
-      this.rootElement,
+    this.setMetricLabel(TOTAL_BUILD_TIME_ID, formatTimeMs(this.metrics.conversionTimeMs));
+    this.setMetricLabel(POINT_ARROW_BYTES_ID, formatByteLength(this.metrics.pointArrowByteLength));
+    this.setMetricLabel(POINT_GPU_BYTES_ID, formatByteLength(this.metrics.pointGpuByteLength));
+    this.setMetricLabel(
       POINT_GPU_EXPANSION_ID,
       formatExpansionRatio(this.metrics.pointGpuByteLength, this.metrics.pointArrowByteLength)
     );
-    setLabel(this.rootElement, POINT_BUILD_TIME_ID, formatTimeMs(this.metrics.conversionTimeMs));
-    setLabel(
-      this.rootElement,
+    this.setMetricLabel(POINT_BUILD_TIME_ID, formatTimeMs(this.metrics.conversionTimeMs));
+    this.setMetricLabel(
       STYLING_ARROW_BYTES_ID,
       formatByteLength(this.metrics.stylingArrowByteLength)
     );
-    setLabel(
-      this.rootElement,
-      STYLING_GPU_BYTES_ID,
-      formatByteLength(this.metrics.stylingGpuByteLength)
-    );
-    setLabel(
-      this.rootElement,
+    this.setMetricLabel(STYLING_GPU_BYTES_ID, formatByteLength(this.metrics.stylingGpuByteLength));
+    this.setMetricLabel(
       STYLING_GPU_EXPANSION_ID,
       formatExpansionRatio(this.metrics.stylingGpuByteLength, this.metrics.stylingArrowByteLength)
     );
   }
+
+  private setMetricLabel(id: string, value: string): void {
+    setLabel(this.rootElement, id, value);
+    setLabel(this.settingsRootElement, id, value);
+  }
 }
 
-export function makeArrowPointSettingsSchema(state: ArrowPointControlPanelState): SettingsSchema {
+export function makeArrowPointSettingsSchema(
+  state: ArrowPointControlPanelState,
+  supportsStorage = true
+): SettingsSchema {
   return {
     title: 'Settings',
     sections: [
@@ -240,6 +282,16 @@ export function makeArrowPointSettingsSchema(state: ArrowPointControlPanelState)
         name: 'Data',
         initiallyCollapsed: false,
         settings: [
+          {
+            name: 'modelMode',
+            label: 'GPU inputs',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Attributes', value: 'attributes'},
+              ...(supportsStorage ? [{label: 'Storage buffers', value: 'storage'}] : [])
+            ]
+          },
           {
             name: 'rowCountKind',
             label: 'Rows',
@@ -282,6 +334,16 @@ export function makeArrowPointSettingsSchema(state: ArrowPointControlPanelState)
               {label: 'Constant', value: 'constant'},
               {label: 'Row - FixedSizeList<Uint8, 4>', value: 'row-colors'}
             ]
+          },
+          {
+            name: 'radiusKind',
+            label: 'Radii',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Constant', value: 'constant'},
+              {label: 'Row - Float32', value: 'row-radii'}
+            ]
           }
         ]
       },
@@ -307,7 +369,16 @@ export function makeArrowPointControlPanelHtml(): string {
   <p>Renders Arrow point columns as instanced circle impostors with optional measure or timestamp animation.</p>
   ${makeStatusRow('Batches', makeProgressBar())}
   ${makeStatusRow('Clock', `<strong id="${CURRENT_TIME_ID}">-</strong>`)}
+  ${makeArrowPointMetricsHtml()}
+  `;
+}
+
+function makeArrowPointMetricsHtml(): string {
+  return `\
   <table style="width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12px;">
+    <thead>
+      <tr><th style="text-align: left; padding: 4px 6px 4px 0;">Data</th><th style="text-align: right;">Arrow</th><th style="text-align: right;">GPU</th><th style="text-align: right;">Expansion</th><th style="text-align: right;">Build</th></tr>
+    </thead>
     <tbody>
       ${makeMetricTableRow('total', TOTAL_ARROW_BYTES_ID, TOTAL_GPU_BYTES_ID, TOTAL_GPU_EXPANSION_ID, TOTAL_BUILD_TIME_ID)}
       ${makeMetricTableRow('points', POINT_ARROW_BYTES_ID, POINT_GPU_BYTES_ID, POINT_GPU_EXPANSION_ID, POINT_BUILD_TIME_ID)}
@@ -416,4 +487,8 @@ function isTimeKind(value: unknown): value is ArrowPointTimeKind {
 
 function isColorKind(value: unknown): value is ArrowPointColorKind {
   return value === 'constant' || value === 'row-colors';
+}
+
+function isRadiusKind(value: unknown): value is ArrowPointRadiusKind {
+  return value === 'constant' || value === 'row-radii';
 }

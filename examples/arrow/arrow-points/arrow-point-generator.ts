@@ -9,6 +9,7 @@ export type ArrowPointRowCountKind = '10k-stream' | '100k-stream';
 export type ArrowPointSourceKind = 'xy' | 'xym' | 'xyzm' | 'dense-union';
 export type ArrowPointTimeKind = 'none' | 'm' | 'timestamp';
 export type ArrowPointColorKind = 'constant' | 'row-colors';
+export type ArrowPointRadiusKind = 'constant' | 'row-radii';
 
 export type ArrowPointDataset = {
   rowCount: number;
@@ -53,7 +54,8 @@ export function makeArrowPointExampleData(
   rowCountKind: ArrowPointRowCountKind,
   sourceKind: ArrowPointSourceKind,
   timeKind: ArrowPointTimeKind,
-  colorKind: ArrowPointColorKind
+  colorKind: ArrowPointColorKind,
+  radiusKind: ArrowPointRadiusKind = 'row-radii'
 ): ArrowPointExampleData {
   const dataset = POINT_DATASETS[rowCountKind];
   const positionDataChunks: arrow.Data[] = [];
@@ -63,7 +65,9 @@ export function makeArrowPointExampleData(
 
   forEachPointBatch(dataset, (rowIndices, batchIndex) => {
     positionDataChunks.push(makePositionDataChunk(sourceKind, rowIndices, dataset.rowCount));
-    sizeDataChunks.push(makePointSizeDataChunk(rowIndices));
+    if (radiusKind === 'row-radii') {
+      sizeDataChunks.push(makePointSizeDataChunk(rowIndices));
+    }
     if (colorKind === 'row-colors') {
       colorDataChunks.push(makeRowColorDataChunk(rowIndices, batchIndex));
     }
@@ -73,7 +77,10 @@ export function makeArrowPointExampleData(
   });
 
   const positions = new arrow.Vector(positionDataChunks) as arrow.Vector<any>;
-  const pointSizes = new arrow.Vector(sizeDataChunks) as arrow.Vector<arrow.Float32>;
+  const pointSizes =
+    sizeDataChunks.length > 0
+      ? (new arrow.Vector(sizeDataChunks) as arrow.Vector<arrow.Float32>)
+      : null;
   const colors =
     colorDataChunks.length > 0
       ? (new arrow.Vector(colorDataChunks) as arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>)
@@ -84,7 +91,7 @@ export function makeArrowPointExampleData(
       : null;
   const table = new arrow.Table({
     positions,
-    pointSizes,
+    ...(pointSizes ? {pointSizes} : {}),
     ...(colors ? {colors} : {}),
     ...(eventTimes ? {eventTimes} : {})
   });

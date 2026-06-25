@@ -12,7 +12,7 @@ export const POLYGON_GPU_INPUT_SCHEMA = [
   {
     columnName: 'positions',
     attributeName: 'positions',
-    bindingName: 'polygonPositions',
+    storageBindingName: 'polygonPositions',
     kind: 'positions',
     required: true,
     formats: ['vertex-list<float32x4>'],
@@ -21,7 +21,7 @@ export const POLYGON_GPU_INPUT_SCHEMA = [
   {
     columnName: 'colors',
     attributeName: 'colors',
-    bindingName: 'polygonColors',
+    storageBindingName: 'polygonColors',
     kind: 'colors',
     required: true,
     formats: ['vertex-list<unorm8x4>'],
@@ -30,7 +30,7 @@ export const POLYGON_GPU_INPUT_SCHEMA = [
   {
     columnName: 'rowIndices',
     attributeName: 'rowIndices',
-    bindingName: 'polygonRowIndices',
+    storageBindingName: 'polygonRowIndices',
     kind: 'scalars',
     required: true,
     formats: ['vertex-list<uint32>'],

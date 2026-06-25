@@ -149,7 +149,7 @@ export function resolveLogicalAttributeMappings(
         stepMode: layout.stepMode,
         vertexFormat: layout.format,
         byteOffset: 0,
-        byteStride: layout.byteStride || 0
+        byteStride
       });
     }
   }
@@ -171,8 +171,10 @@ export function resolveLogicalAttributeMappings(
         bufferName: bufferMapping?.bufferName || attribute.name,
         location: attribute.location,
         vertexFormat,
-        byteOffset: bufferMapping?.byteOffset || 0,
-        byteStride: bufferMapping?.byteStride || 0,
+        byteOffset: bufferMapping?.byteOffset ?? 0,
+        byteStride:
+          bufferMapping?.byteStride ??
+          vertexFormatDecoder.getVertexFormatInfo(vertexFormat).byteLength,
         stepMode:
           bufferMapping?.stepMode ||
           attribute.stepMode ||
