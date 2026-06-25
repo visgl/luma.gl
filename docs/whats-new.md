@@ -24,6 +24,7 @@ Target Release Date: Q3, 2026
 
 - **`Animator`** - New animation helper for timeline-driven animation updates.
 - **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
+- **Temporal shader-pass targets** - `ShaderPassRenderer` supports persistent ping-pong history targets, explicit reset, and safe same-target temporal reads and writes.
 - **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`.
 - **[`BufferSchema`](/docs/api-reference/engine/buffer-schema)** - Record-oriented GPU row descriptions lower shared layouts into vertex `BufferLayout`s.
 - **Semantic attribute normalization** - `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0` are normalized to shader attribute names.
@@ -76,6 +77,11 @@ Target Release Date: Q3, 2026
 
 - **[`dggs`](/docs/api-reference/shadertools/shader-modules/dggs)** - New WGSL helper module decodes compact Uint64 DGGS cell keys for WebGPU storage and boundary extraction workflows.
 - **[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin)** - Reusable shader assembly plugins group shader modules, defines, named injections, portable caller-owned vertex inputs, and generated cross-stage varyings. The new [`filterShaderPlugin`](/examples/arrow/arrow-filtering) and `clipShaderPlugin` demonstrate scalar filtering and instance/geometry clipping on WebGL 2 and WebGPU.
+
+**@luma.gl/effects**
+
+- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, outlines, temporal AA, motion blur, screen-space reflections, and volumetric fog.
+- **[Visualization City](/examples/showcase/advanced-effects)** - New MRT showcase combines the complete effect stack with presets, quality levels, debug views, and before/after comparison.
 
 
 ## Version 9.4

@@ -115,3 +115,20 @@ export {fxaa} from './passes/postprocessing/fxaa/fxaa';
 // experimental modules
 export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-filters/warp';
 export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
+
+// Advanced scene-aware postprocessing pipelines
+export type {
+  DepthAwareBlurProps,
+  ScreenSpaceEffectOptions,
+  ScreenSpaceNormalSource
+} from './passes/postprocessing/advanced/advanced-effects';
+export {
+  createMotionBlurShaderPassPipeline,
+  createOutlineShaderPassPipeline,
+  createSSAOShaderPassPipeline,
+  createSSRShaderPassPipeline,
+  createTAAShaderPassPipeline,
+  createVolumetricFogShaderPassPipeline,
+  depthAwareBlur,
+  depthAwareBlurShaderPassPipeline
+} from './passes/postprocessing/advanced/advanced-effects';
