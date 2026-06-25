@@ -29,5 +29,7 @@ export type AnimationProps = {
   timeline: Timeline | null;
 
   // Experimental
+  /** Experimental v10 work-in-progress frame payload from a custom animation frame provider. */
+  animationFrame: unknown | null;
   _mousePosition?: [number, number] | null; // [offsetX, offsetY],
 };

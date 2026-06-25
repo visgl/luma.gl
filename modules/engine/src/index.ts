@@ -13,7 +13,11 @@ export type {AnimationProps} from './animation-loop/animation-props';
 
 export {AnimationLoopTemplate} from './animation-loop/animation-loop-template';
 
-export type {AnimationLoopProps} from './animation-loop/animation-loop';
+export type {
+  AnimationFrameCallback,
+  AnimationFrameProvider,
+  AnimationLoopProps
+} from './animation-loop/animation-loop';
 export {AnimationLoop} from './animation-loop/animation-loop';
 
 export type {MakeAnimationLoopProps} from './animation-loop/make-animation-loop';
@@ -78,6 +82,7 @@ export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geome
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
 export {ShaderInputs} from './shader-inputs';
+export type {ShaderInputBinding, ShaderInputsProps} from './shader-inputs';
 export {
   getAttributeLayoutFromBufferSchema,
   type AttributeLayoutFromBufferSchemaOptions,
@@ -118,7 +123,10 @@ export type {
 
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
-export type {TextureBindingSource} from './dynamic-texture/texture-binding-source';
+export type {
+  TextureBindingLayout,
+  TextureBindingSource
+} from './dynamic-texture/texture-binding-source';
 export type {VideoTextureProps, VideoTextureSource} from './dynamic-texture/video-texture';
 export {VideoTexture} from './dynamic-texture/video-texture';
 export type {

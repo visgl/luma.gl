@@ -34,3 +34,4 @@ import './adapter/resources/webgl-vertex-array.spec';
 import './adapter/resources/webgl-transform-feedback.spec';
 import './adapter/resources/webgl-render-pass.spec';
 import './adapter/resources/webgl-render-pipeline.spec';
+import './adapter/resources/webgl-texture.spec';

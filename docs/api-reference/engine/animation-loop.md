@@ -55,6 +55,7 @@ export type AnimationLoopProps = {
   onError?: (reason: Error) => void;
   stats?: Stats;
   autoResizeViewport?: boolean;
+  animationFrameProvider?: AnimationFrameProvider;
 };
 ```
 
@@ -77,6 +78,7 @@ Important fields include:
 | `tick`, `tock` | `number` | Frame counters. |
 | `needsRedraw` | `false \| string` | Last redraw reason, if any. |
 | `timeline` | `Timeline \| null` | Attached timeline, if any. |
+| `animationFrame` | `unknown \| null` | Experimental frame payload from a custom animation frame provider. |
 | `_mousePosition` | `[number, number] \| null` | Experimental mouse position. |
 
 ## Properties
@@ -119,7 +121,7 @@ Deprecated alias for `destroy()`.
 
 Calls `onError` and stores the error internally to prevent repeated rendering.
 
-### `setProps(props: {autoResizeViewport?: boolean}): this`
+### `setProps(props: {autoResizeViewport?: boolean; animationFrameProvider?: AnimationFrameProvider}): this`
 
 Updates mutable loop settings.
 
@@ -139,7 +141,7 @@ Initializes the device if needed, calls `onInitialize`, and starts requesting an
 
 Stops the loop and calls `onFinalize` if initialization completed successfully.
 
-### `redraw(time?: number): this`
+### `redraw(time?: number, animationFrame?: unknown | null): this`
 
 Runs a single frame immediately without waiting for `requestAnimationFrame`.
 
@@ -163,3 +165,31 @@ Triggers a redraw and returns the current HTML canvas as a data URL.
 
 - `AnimationLoop` expects the application to create and destroy its own GPU resources in `onInitialize` and `onFinalize`.
 - If you prefer a class-based lifecycle, use [`AnimationLoopTemplate`](/docs/api-reference/engine/animation-loop-template) together with `makeAnimationLoop()`.
+
+## Experimental Frame Provider
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+`AnimationLoop` accepts an experimental `animationFrameProvider` for schedulers that carry a per-frame payload. During those frames, `AnimationProps.animationFrame` contains the provider payload; it is `null` for ordinary browser frames.
+
+```typescript
+const animationFrameProvider = {
+  requestAnimationFrame(callback) {
+    return customScheduler.requestAnimationFrame((time, frame) => callback(time, frame));
+  },
+  cancelAnimationFrame(animationFrameId) {
+    customScheduler.cancelAnimationFrame(animationFrameId);
+  }
+};
+
+const animationLoop = new AnimationLoop({
+  device,
+  animationFrameProvider,
+  onRender({animationFrame}) {
+    // Inspect provider-specific frame state here.
+  }
+});
+```

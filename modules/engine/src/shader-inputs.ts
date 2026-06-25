@@ -20,6 +20,13 @@ export type ShaderInputsOptions = {
   disableWarnings?: boolean;
 };
 
+export type ShaderInputsProps<
+  ShaderPropsT extends Partial<Record<string, Record<string, unknown>>>
+> = Partial<{[P in keyof ShaderPropsT]?: Partial<ShaderPropsT[P]>}> & {
+  /** Shader resource bindings that are not owned by a shader module. */
+  bindings?: Record<string, ShaderInputBinding>;
+};
+
 type ShaderInputsModule = Pick<
   ShaderModule<any, any, any>,
   'bindingLayout' | 'defaultUniforms' | 'dependencies' | 'getUniforms' | 'name' | 'uniformTypes'
@@ -49,6 +56,8 @@ export class ShaderInputs<
   moduleUniforms: Record<keyof ShaderPropsT, Record<string, ShaderModuleUniformValue>>;
   /** Stores resource bindings for each module. */
   moduleBindings: Record<keyof ShaderPropsT, Record<string, ShaderInputBinding>>;
+  /** Stores shader resource bindings that are not owned by a shader module. */
+  directBindings: Record<string, ShaderInputBinding> = {};
   /** Tracks if uniforms have changed */
   // moduleUniformsChanged: Record<keyof ShaderPropsT, false | string>;
 
@@ -101,8 +110,16 @@ export class ShaderInputs<
   /**
    * Set module props
    */
-  setProps(props: Partial<{[P in keyof ShaderPropsT]?: Partial<ShaderPropsT[P]>}>): void {
+  setProps(props: ShaderInputsProps<ShaderPropsT>): void {
+    if (props.bindings) {
+      Object.assign(this.directBindings, props.bindings);
+    }
+
     for (const name of Object.keys(props)) {
+      if (name === 'bindings') {
+        continue;
+      }
+
       const moduleName = name as keyof ShaderPropsT;
       const moduleProps = props[moduleName] || {};
       const module = this.modules[moduleName];
@@ -170,6 +187,7 @@ export class ShaderInputs<
     for (const moduleBindings of Object.values(this.moduleBindings)) {
       Object.assign(bindings, moduleBindings);
     }
+    Object.assign(bindings, this.directBindings);
     return bindings;
   }
 

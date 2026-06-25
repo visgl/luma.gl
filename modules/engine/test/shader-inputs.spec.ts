@@ -187,6 +187,28 @@ test('ShaderInputs#bindings', t => {
   });
 });
 
+test('ShaderInputs#direct bindings', t => {
+  const shaderInputs = new ShaderInputs({});
+  const cameraTexture = 'CAMERA_TEXTURE' as unknown as Texture;
+  const nextCameraTexture = 'NEXT_CAMERA_TEXTURE' as unknown as Texture;
+
+  shaderInputs.setProps({bindings: {cameraTexture}});
+  t.deepEqual(
+    shaderInputs.getBindingValues(),
+    {cameraTexture: 'CAMERA_TEXTURE'},
+    'direct binding is available to the model'
+  );
+
+  shaderInputs.setProps({bindings: {cameraTexture: nextCameraTexture}});
+  t.deepEqual(
+    shaderInputs.getBindingValues(),
+    {cameraTexture: 'NEXT_CAMERA_TEXTURE'},
+    'direct binding can be updated'
+  );
+
+  t.end();
+});
+
 test('ShaderInputs#getModuleBindingValues', t => {
   type FirstModuleProps = {firstTexture: Texture};
   type SecondModuleProps = {secondTexture: Texture};
