@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # GroupNode
+
+<EngineDocsTabs group="scenegraph" active="group-node" />
 
 `GroupNode` extends [`ScenegraphNode`](/docs/api-reference/engine/scenegraph/scenegraph-node) with child-node management and traversal helpers.
 

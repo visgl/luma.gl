@@ -1,6 +1,9 @@
 import {Limit as L} from '@site/src/react-luma';
+import {GpuMemoryDocsTabs} from '@site/src/components/docs/gpu-memory-docs-tabs';
 
 # Using GPU Buffers
+
+<GpuMemoryDocsTabs active="gpu-buffers" />
 
 See also [Issuing GPU Commands](/docs/api-guide/gpu/gpu-commands) for guidance on when buffer operations should use immediate resource helpers versus explicit command encoding.
 

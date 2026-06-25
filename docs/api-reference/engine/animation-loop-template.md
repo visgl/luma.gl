@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # AnimationLoopTemplate
+
+<EngineDocsTabs group="animation" active="animation-loop-template" />
 
 `AnimationLoopTemplate` is a small abstract base class for applications that prefer a class-based render lifecycle on top of [`AnimationLoop`](/docs/api-reference/engine/animation-loop).
 

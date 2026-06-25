@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # GPUGeometry
+
+<EngineDocsTabs group="geometry" active="gpu-geometry" />
 
 `GPUGeometry` is the GPU-backed counterpart to [`Geometry`](/docs/api-reference/engine/geometry).
 It stores already-created luma.gl `Buffer` objects plus the corresponding `bufferLayout` metadata.

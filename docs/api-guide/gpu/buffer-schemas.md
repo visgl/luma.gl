@@ -1,4 +1,8 @@
+import {GpuMemoryDocsTabs} from '@site/src/components/docs/gpu-memory-docs-tabs';
+
 # Buffer Schemas and Columnar Records
+
+<GpuMemoryDocsTabs active="buffer-schemas" />
 
 Columnar GPU workflows often start with separate typed columns, but shaders do
 not always consume those columns one-for-one. Common cases include:

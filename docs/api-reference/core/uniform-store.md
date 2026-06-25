@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # UniformStore
+
+<CoreDocsTabs group="layouts" active="uniform-store" />
 
 A uniform store holds uniform values for a set of different uniform buffers, 
 It can optionally creates managed uniform buffers for those

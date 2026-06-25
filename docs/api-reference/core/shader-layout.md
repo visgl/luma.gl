@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # ShaderLayout
+
+<CoreDocsTabs group="layouts" active="shader-layout" />
 
 A `ShaderLayout` describes the static interface of a shader pipeline:
 

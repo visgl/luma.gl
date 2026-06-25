@@ -1,4 +1,8 @@
+import {LegacyDocsTabs} from '@site/src/components/docs/legacy-docs-tabs';
+
 # Porting Guide
+
+<LegacyDocsTabs active="porting-guide" />
 
 Given that the changes in the v9 API are quite extensive, this separate porting guide is provided to hopefully help plan the upgrade process.
 

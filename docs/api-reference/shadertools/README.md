@@ -1,4 +1,8 @@
+import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+
 # Overview
+
+<ShadertoolsDocsTabs active="overview" />
 
 `@luma.gl/shadertools` provides textual shader assembly utilities and the
 shader descriptors used by luma.gl engine classes. It does not compile shaders

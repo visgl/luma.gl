@@ -1,4 +1,8 @@
+import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+
 # ShaderPass
+
+<ShadertoolsDocsTabs active="shader-pass" />
 
 `ShaderPass` is a [`ShaderModule`](/docs/api-reference/shadertools/shader-module)
 that can be executed as a standalone fullscreen texture-processing stage.

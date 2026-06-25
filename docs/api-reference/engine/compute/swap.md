@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # Swap
+
+<EngineDocsTabs group="compute" active="swap" />
 
 `Swap` is a small double-buffering helper for pairs of GPU resources.
 It is used by higher-level engine utilities such as [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) and is also exported directly for application code.

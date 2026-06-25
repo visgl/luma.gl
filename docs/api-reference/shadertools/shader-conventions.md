@@ -1,4 +1,8 @@
+import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+
 # Shader Module Conventions
+
+<ShadertoolsDocsTabs active="shader-conventions" />
 
 :::caution
 This describes informal conventions that luma.gl applies to its shaders. 

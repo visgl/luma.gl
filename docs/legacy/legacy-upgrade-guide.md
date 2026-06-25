@@ -1,4 +1,8 @@
+import {LegacyDocsTabs} from '@site/src/components/docs/legacy-docs-tabs';
+
 # Legacy Upgrade Guide
+
+<LegacyDocsTabs active="legacy-upgrade-guide" />
 
 :::info
 This page contains upgrade guides for older luma.gl releases (up through v8.5). For upgrading to luma.gl v9, refer to the main [Upgrade Guide](/docs/upgrade-guide).

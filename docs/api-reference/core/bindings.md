@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # Bindings
+
+<CoreDocsTabs group="layouts" active="bindings" />
 
 Bindings are the GPU resources that shader code accesses through declared
 binding points:

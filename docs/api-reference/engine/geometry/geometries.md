@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # Built-in Geometries
+
+<EngineDocsTabs group="geometry" active="built-in-geometries" />
 
 `@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 

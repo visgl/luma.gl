@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # ShaderBlockLayout
+
+<CoreDocsTabs group="layouts" active="shader-block-layout" />
 
 `ShaderBlockLayout` is the portable description of how luma.gl packs uniform-style
 and storage-style shader blocks on the CPU before uploading them to GPU buffers.

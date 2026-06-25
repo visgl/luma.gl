@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # BufferLayout
+
+<CoreDocsTabs group="layouts" active="buffer-layout" />
 
 The bufferLayout type provides information about how the application is planning to 
 map the attributes in its pipelines to the memory in GPU buffers. 

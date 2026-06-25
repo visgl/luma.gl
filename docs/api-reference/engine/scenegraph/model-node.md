@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # ModelNode
+
+<EngineDocsTabs group="scenegraph" active="model-node" />
 
 `ModelNode` extends [`ScenegraphNode`](/docs/api-reference/engine/scenegraph/scenegraph-node) with a [`Model`](/docs/api-reference/engine/model) and optional bounds / managed resources.
 

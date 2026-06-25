@@ -1,4 +1,8 @@
+import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+
 # ShaderModule
+
+<ShadertoolsDocsTabs active="shader-module" />
 
 `ShaderModule` is the reusable shader feature descriptor used by
 `@luma.gl/shadertools`. A module may contribute WGSL and/or GLSL source,

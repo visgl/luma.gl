@@ -1,4 +1,8 @@
+import {GpuMemoryDocsTabs} from '@site/src/components/docs/gpu-memory-docs-tabs';
+
 # GPU Memory Layouts
+
+<GpuMemoryDocsTabs active="gpu-memory-layouts" />
 
 GPU buffers are byte ranges. A layout describes how shader-visible rows and columns are mapped onto those bytes.
 
