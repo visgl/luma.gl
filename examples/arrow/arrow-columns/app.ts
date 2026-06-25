@@ -12,11 +12,7 @@ import {
   getDefaultColumnRendererMetricDefaults
 } from './arrow-column-renderer';
 import {formatArrowColumnRendererMetrics} from './arrow-column-metrics';
-import {
-  ArrowColumnRendererControlPanel,
-  makeArrowColumnRendererControlPanelHtml,
-  type ArrowColumnTransparencyMode
-} from './control-panel';
+import {ArrowColumnRendererControlPanel, type ArrowColumnTransparencyMode} from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'DGGS + time';
@@ -39,7 +35,8 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     }
   });
   readonly panels = new ArrowExamplePanelManager({
-    descriptionHtml: makeArrowColumnRendererControlPanelHtml()
+    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
+    settingsPanel: () => this.controlPanel.makeSettingsPanel()
   });
   layer: ArrowColumnRenderer | null = null;
   isFinalized = false;
@@ -57,8 +54,6 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
 
   override async onInitialize(): Promise<void> {
     this.panels.mount();
-    this.controlPanel.initialize();
-    this.controlPanel.setTransparencyMode(this.transparencyMode);
     this.controlPanel.setStatus('Loading deck.gl CSV');
     this.controlPanel.setMetrics(
       formatArrowColumnRendererMetrics(getDefaultColumnRendererMetricDefaults())

@@ -17,6 +17,7 @@ import {
   makeExampleContentPanel,
   makeHtmlCustomPanel,
   makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
   renderExamplePanel
 } from '../example-panels';
 
@@ -168,7 +169,7 @@ export class ArrowExamplePanelManager {
 
     renderExamplePanel(
       this.hostElement,
-      new TabbedPanel({
+      makeExampleTabbedPanel({
         id: 'arrow-example-root-tabs',
         title: 'Arrow example',
         tabListLayout: 'wrap',
