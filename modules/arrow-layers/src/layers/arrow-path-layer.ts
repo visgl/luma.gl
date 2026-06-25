@@ -22,7 +22,6 @@ import type {ShaderLayout} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {PathAttributeModel} from '@luma.gl/tables';
 import {Table, type RecordBatch} from 'apache-arrow';
-import {getDeckProjectProps} from './arrow-layer-types';
 
 const DECK_PATH_VS = `#version 300 es
 precision highp float;
@@ -121,25 +120,15 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
   }
 
   override getModels(): Model[] {
-    // Arrow renderers own their models and bind GPUVector inputs immediately
-    // before drawing. Exposing them here makes Deck inject its shader modules
-    // and rewrite model parameters as if they were Deck-managed models.
-    return [];
+    const model = (this.state as ArrowPathLayerState | undefined)?.model;
+    return model ? [model] : [];
   }
 
-  override draw({
-    renderPass,
-    context,
-    shaderModuleProps
-  }: Parameters<Layer<ArrowPathLayerProps>['draw']>[0]): void {
+  override draw({renderPass, context}: Parameters<Layer<ArrowPathLayerProps>['draw']>[0]): void {
     const model = this.getLayerState().model;
     if (!model) {
       return;
     }
-    model.shaderInputs.setProps({
-      project: getDeckProjectProps(this, context),
-      picking: shaderModuleProps.picking
-    });
     model.predraw(context.device.commandEncoder);
     model.draw(renderPass);
   }

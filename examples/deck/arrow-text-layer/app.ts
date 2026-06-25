@@ -5,19 +5,15 @@
 import {Deck, OrthographicView} from '@deck.gl/core';
 import {ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
-import {makeArrowTextSource, type TextDataset} from '../../arrow/arrow-text-2d/arrow-text-data';
-
-const DECK_TEXT_DATASET: TextDataset = {
-  labelCount: 800,
-  label: '800 Utf8 texts, 24K glyphs',
-  textType: 'utf8'
-};
+import {initializeArrowTextLayerSource} from './arrow-text-layer-source';
 
 /** Creates the standalone or website-hosted Deck text-layer example. */
 export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
-  const sourceData = makeArrowTextSource(DECK_TEXT_DATASET, 'constant');
-
-  return new Deck({
+  let initialSource!: Parameters<Parameters<typeof initializeArrowTextLayerSource>[0]>[0];
+  initializeArrowTextLayerSource(sourceData => {
+    initialSource = sourceData;
+  });
+  const deck = new Deck({
     parent,
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 0},
@@ -27,9 +23,9 @@ export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
       new ArrowTextLayer({
         id: 'arrow-text',
         pickable: true,
-        positions: sourceData.positions,
-        texts: sourceData.texts,
-        clipRects: sourceData.clipRects,
+        positions: initialSource.positions,
+        texts: initialSource.texts,
+        clipRects: initialSource.clipRects,
         colors: null,
         angles: null,
         sizes: null,
@@ -39,4 +35,5 @@ export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
       })
     ]
   });
+  return deck;
 }

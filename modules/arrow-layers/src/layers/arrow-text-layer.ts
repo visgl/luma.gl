@@ -15,7 +15,8 @@ import {
   type ArrowTextRendererDataBatchUpdate,
   type ArrowTextRendererProps
 } from '@luma.gl/arrow';
-import {getDeckProjectProps} from './arrow-layer-types';
+import type {Model} from '@luma.gl/engine';
+import {DECK_ARROW_ALPHA_BLEND_PARAMETERS} from './arrow-layer-types';
 
 const DECK_TEXT_VS = `#version 300 es
 precision highp float;
@@ -142,6 +143,7 @@ type ArrowTextLayerState = {
 /** deck.gl layer that keeps text columns in Arrow-owned GPU vectors. */
 export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
   static override layerName = 'ArrowTextLayer';
+  static override defaultProps = {parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS};
 
   override getAttributeManager() {
     return null;
@@ -184,23 +186,17 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     }
   }
 
-  override getModels() {
-    // The renderer owns text model bindings and shader inputs.
-    return [];
+  override getModels(): Model[] {
+    const model = this.getRendererOrNull()?.model;
+    return model ? [model] : [];
   }
 
-  override draw({
-    renderPass,
-    context,
-    shaderModuleProps
-  }: Parameters<Layer<ArrowTextLayerProps>['draw']>[0]): void {
+  override draw({renderPass, context}: Parameters<Layer<ArrowTextLayerProps>['draw']>[0]): void {
     const renderer = this.getRendererOrNull();
     if (!renderer) {
       return;
     }
     renderer.shaderInputs.setProps({
-      project: getDeckProjectProps(this, context),
-      picking: shaderModuleProps.picking,
       textViewport: {
         cameraOffset: [0, 0],
         viewportScale: [
@@ -264,7 +260,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
   }
 
   private getRendererOrNull(): ArrowTextRenderer | null {
-    return this.getLayerState().renderer;
+    return (this.state as ArrowTextLayerState | undefined)?.renderer ?? null;
   }
 
   private getLayerState(): ArrowTextLayerState {
