@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # BackgroundTextureModel
+
+<EngineDocsTabs group="fullscreen" active="background-texture-model" />
 
 `BackgroundTextureModel` is a specialized [`ClipSpace`](/docs/api-reference/engine/clip-space) that renders one texture across the screen while preserving aspect ratio.
 

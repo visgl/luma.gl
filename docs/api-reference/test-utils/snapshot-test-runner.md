@@ -1,4 +1,8 @@
+import {TestUtilsDocsTabs} from '@site/src/components/docs/test-utils-docs-tabs';
+
 # SnapshotTestRunner
+
+<TestUtilsDocsTabs active="snapshot-test-runner" />
 
 Client-side utility for browser-based WebGL render tests.
 

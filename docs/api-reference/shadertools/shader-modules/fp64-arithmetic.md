@@ -1,4 +1,8 @@
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+
 # fp64arithmetic
+
+<ShaderModuleDocsTabs group="precision" active="fp64-arithmetic" />
 
 The `fp64arithmetic` shader module provides the low-level double-single
 arithmetic used by [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64).

@@ -1,4 +1,8 @@
+import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+
 # WBOITRenderer
+
+<ExperimentalDocsTabs active="wboit-renderer" />
 
 `WBOITRenderer` implements weighted blended order-independent transparency on WebGPU and WebGL2.
 It owns floating-point accumulation and revealage targets, records the required passes, and

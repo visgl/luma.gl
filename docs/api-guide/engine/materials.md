@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # Materials
+
+<EngineDocsTabs group="model" active="materials" />
 
 In luma.gl, a `Material` describes reusable surface state for one shading model
 or material schema. A `MaterialFactory` defines that schema and creates

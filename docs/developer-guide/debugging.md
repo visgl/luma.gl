@@ -1,4 +1,8 @@
+import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
+
 # Debugging
+
+<DeveloperDocsTabs active="debugging" />
 
 ## Why GPU Debugging can be hard
 

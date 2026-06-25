@@ -1,4 +1,8 @@
+import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
+
 # Editing
+
+<DeveloperDocsTabs active="editing" />
 
 ## Shader Syntax Highlighting
 
@@ -9,4 +13,3 @@ If you are using vscode, the
 [vscode-glsl-literal](https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal) and 
 [vscode-wgsl-literal](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) 
 vscode extensions can be used to regain syntax highlighting.
-

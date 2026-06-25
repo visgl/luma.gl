@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # DynamicTexture
+
+<EngineDocsTabs group="dynamic-resources" active="dynamic-texture" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />

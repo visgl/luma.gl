@@ -1,4 +1,8 @@
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+
 # pbrMaterial
+
+<ShaderModuleDocsTabs group="lighting" active="pbr-material" />
 
 Implements Physically Based Shading of a microfacet surface defined by a glTF material.
 

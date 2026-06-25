@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # VideoTexture
+
+<EngineDocsTabs group="dynamic-resources" active="video-texture" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />

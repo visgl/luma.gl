@@ -1,4 +1,8 @@
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+
 # dirlight
+
+<ShaderModuleDocsTabs group="lighting" active="dirlight" />
 
 The `dirlight` shader module is a lightweight alternative to the full
 [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting) module.

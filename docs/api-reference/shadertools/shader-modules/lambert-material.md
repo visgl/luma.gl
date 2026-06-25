@@ -1,4 +1,8 @@
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+
 # lambertMaterial
+
+<ShaderModuleDocsTabs group="lighting" active="lambert-material" />
 
 This `lambertMaterial` shader module provides a diffuse-only matte material
 model. It applies Lambert shading per fragment using the shared

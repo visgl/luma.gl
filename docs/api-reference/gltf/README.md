@@ -1,4 +1,8 @@
+import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
+
 # Overview
+
+<GltfDocsTabs active="overview" />
 
 The `@luma.gl/gltf` modules utilities for turning glTF data into a
 [luma.gl scenegraph](/docs/api-reference/engine/scenegraph/scenegraph-node) .

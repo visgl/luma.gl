@@ -27,10 +27,28 @@ export type EngineDocsTabId =
   | 'animation-loop'
   | 'animation-loop-template'
   | 'key-frames'
-  | 'timeline';
+  | 'timeline'
+  | 'dynamic-buffer'
+  | 'dynamic-texture'
+  | 'video-texture'
+  | 'load-image-bitmap'
+  | 'clip-space'
+  | 'background-texture-model'
+  | 'shader-pass-renderer'
+  | 'model'
+  | 'shader-inputs-guide'
+  | 'shader-inputs'
+  | 'materials';
 
 /** Engine documentation tab group identifiers. */
-export type EngineDocsTabGroupId = 'geometry' | 'scenegraph' | 'compute' | 'animation';
+export type EngineDocsTabGroupId =
+  | 'geometry'
+  | 'scenegraph'
+  | 'compute'
+  | 'animation'
+  | 'dynamic-resources'
+  | 'fullscreen'
+  | 'model';
 
 const ENGINE_DOCS_TABS: Record<EngineDocsTabGroupId, EngineDocsTab[]> = {
   geometry: [
@@ -100,6 +118,39 @@ const ENGINE_DOCS_TABS: Record<EngineDocsTabGroupId, EngineDocsTab[]> = {
       href: '/docs/api-reference/engine/animation/key-frames'
     },
     {id: 'timeline', label: 'Timeline', href: '/docs/api-reference/engine/animation/timeline'}
+  ],
+  'dynamic-resources': [
+    {id: 'dynamic-buffer', label: 'DynamicBuffer', href: '/docs/api-reference/engine/dynamic-buffer'},
+    {
+      id: 'dynamic-texture',
+      label: 'DynamicTexture',
+      href: '/docs/api-reference/engine/dynamic-texture'
+    },
+    {id: 'video-texture', label: 'VideoTexture', href: '/docs/api-reference/engine/video-texture'},
+    {
+      id: 'load-image-bitmap',
+      label: 'loadImageBitmap',
+      href: '/docs/api-reference/engine/load-image-bitmap'
+    }
+  ],
+  fullscreen: [
+    {id: 'clip-space', label: 'ClipSpace', href: '/docs/api-reference/engine/clip-space'},
+    {
+      id: 'background-texture-model',
+      label: 'BackgroundTextureModel',
+      href: '/docs/api-reference/engine/background-texture-model'
+    },
+    {
+      id: 'shader-pass-renderer',
+      label: 'ShaderPassRenderer',
+      href: '/docs/api-reference/engine/passes/shader-pass-renderer'
+    }
+  ],
+  model: [
+    {id: 'model', label: 'Model', href: '/docs/api-reference/engine/model'},
+    {id: 'shader-inputs-guide', label: 'Shader Inputs', href: '/docs/api-guide/engine/shader-inputs'},
+    {id: 'shader-inputs', label: 'ShaderInputs', href: '/docs/api-reference/engine/shader-inputs'},
+    {id: 'materials', label: 'Materials', href: '/docs/api-guide/engine/materials'}
   ]
 };
 

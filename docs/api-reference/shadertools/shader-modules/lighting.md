@@ -1,4 +1,8 @@
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+
 # lighting
+
+<ShaderModuleDocsTabs group="lighting" active="lighting" />
 
 The `lighting` shader module collects scene lighting into a single uniform block
 that can be shared across draw calls. It is the common light source module used

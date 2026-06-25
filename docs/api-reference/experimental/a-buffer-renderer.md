@@ -1,4 +1,8 @@
+import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+
 # ABufferRenderer
+
+<ExperimentalDocsTabs active="a-buffer-renderer" />
 
 `ABufferRenderer` provides experimental WebGPU-only order-independent transparency for models that append final fragment colors into the `aBuffer` shader module.
 

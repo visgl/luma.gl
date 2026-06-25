@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # Using GPU Parameters
+
+<GpuGuideDocsTabs group="execution" active="parameters" />
 
 luma.gl provides a unified API for controlling GPU parameters providing control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
 

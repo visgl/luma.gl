@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # ClipSpace
+
+<EngineDocsTabs group="fullscreen" active="clip-space" />
 
 `ClipSpace` is a convenience subclass of [`Model`](/docs/api-reference/engine/model) that draws a fullscreen quad in clip space.
 

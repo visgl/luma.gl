@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # loadImageBitmap
+
+<EngineDocsTabs group="dynamic-resources" active="load-image-bitmap" />
 
 A simple small utility to load images from URLs. The loaded `ImageBitmaps` can be used to create textures.
 
