@@ -118,10 +118,11 @@ export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
 
 // Advanced scene-aware postprocessing pipelines
 export type {
-  DepthAwareBlurProps,
   ScreenSpaceEffectOptions,
   ScreenSpaceNormalSource
-} from './passes/postprocessing/advanced/advanced-effects';
+} from './passes/postprocessing/advanced/screen-space-effect-types';
+export type {DepthAwareBlurProps} from './passes/postprocessing/advanced/depth-aware-blur';
+export {depthAwareBlur} from './passes/postprocessing/advanced/depth-aware-blur';
 export {
   createMotionBlurShaderPassPipeline,
   createOutlineShaderPassPipeline,
@@ -129,6 +130,5 @@ export {
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline,
   createVolumetricFogShaderPassPipeline,
-  depthAwareBlur,
   depthAwareBlurShaderPassPipeline
-} from './passes/postprocessing/advanced/advanced-effects';
+} from './passes/postprocessing/advanced/pipelines';
