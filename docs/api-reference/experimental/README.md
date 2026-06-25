@@ -9,6 +9,15 @@ Install the package alongside matching luma.gl core, engine, and shadertools ver
 yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
 ```
 
+## WebXR
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+- [WebXR](/docs/api-reference/experimental/webxr): WebGL-only session, frame, and raw camera helpers.
+
 ## Order-independent Transparency
 
 - [`ABufferRenderer`](/docs/api-reference/experimental/a-buffer-renderer) captures, sorts, and

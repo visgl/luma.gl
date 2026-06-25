@@ -43,6 +43,7 @@ const config = {
         'arrow-filtering': '/examples/arrow/arrow-filtering',
         cubemap: '/examples/api/cubemap',
         fp64: '/examples/experimental/fp64',
+        'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',
         'arrow-text-2d': '/examples/arrow/arrow-text-2d',
         'arrow-text-3d': '/examples/arrow/arrow-text-3d',

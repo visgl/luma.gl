@@ -233,6 +233,22 @@
       },
       {
         "type": "category",
+        "label": "@luma.gl/experimental",
+        "items": [
+          "api-reference/experimental/README",
+          {
+            "type": "category",
+            "label": "WebXR",
+            "items": [
+              "api-reference/experimental/webxr/README",
+              "api-reference/experimental/webxr/webxr-camera-texture",
+              "api-reference/experimental/webxr/webxr-manager"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "category",
         "label": "@luma.gl/shadertools",
         "items": [
           "api-reference/shadertools/README",

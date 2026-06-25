@@ -20,6 +20,7 @@ import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/experimental/video-texture/app';
+import WebXRKaleidoscopeApp from '../../examples/experimental/webxr-kaleidoscope/app';
 import {
   initializeGPGPUShowcase,
   type GPGPUShowcaseHandle
@@ -917,6 +918,103 @@ export const VideoTextureExample: React.FC = props => {
           </button>
           {cameraStatus === 'pending' ? <span>Waiting for first frame</span> : null}
           {cameraError ? <span>{cameraError}</span> : null}
+        </div>
+      }
+      {...props}
+    />
+  );
+};
+
+export const WebXRKaleidoscopeExample: React.FC = props => {
+  type XRStatus = 'idle' | 'pending' | 'live' | 'error';
+  type XRMode = 'immersive-ar' | 'immersive-vr';
+
+  const [xrStatus, setXRStatus] = useState<XRStatus>('idle');
+  const [xrMode, setXRMode] = useState<XRMode | null>(null);
+  const [xrError, setXRError] = useState<string | null>(null);
+  const handleXRSession = async (sessionMode: XRMode) => {
+    const app = WebXRKaleidoscopeApp.current;
+    if (!app) {
+      setXRStatus('error');
+      setXRError('Example is still starting');
+      return;
+    }
+
+    setXRStatus('pending');
+    setXRMode(sessionMode);
+    setXRError(null);
+    try {
+      if (xrStatus === 'live' && xrMode === sessionMode) {
+        await app.exitXR();
+        setXRStatus('idle');
+        setXRMode(null);
+      } else {
+        if (xrStatus === 'live') {
+          await app.exitXR();
+        }
+        await app.enterXR(sessionMode);
+        setXRStatus('live');
+        setXRMode(sessionMode);
+      }
+    } catch (error) {
+      setXRStatus('error');
+      setXRMode(null);
+      setXRError(getErrorMessage(error));
+    }
+  };
+  const getXRButtonText = (sessionMode: XRMode) => {
+    const label = sessionMode === 'immersive-vr' ? 'VR' : 'AR';
+    if (xrStatus === 'pending' && xrMode === sessionMode) {
+      return `Starting ${label}`;
+    }
+    if (xrStatus === 'live' && xrMode === sessionMode) {
+      return `Exit ${label}`;
+    }
+    if (xrStatus === 'error' && xrMode === sessionMode) {
+      return `Retry ${label}`;
+    }
+    return `Enter ${label}`;
+  };
+  const getXRButtonStyle = (sessionMode: XRMode): React.CSSProperties => ({
+    border: '1px solid #0f766e',
+    borderRadius: 999,
+    background: xrStatus === 'live' && xrMode === sessionMode ? '#ccfbf1' : '#fff',
+    color: '#0f172a',
+    cursor: xrStatus === 'pending' ? 'default' : 'pointer',
+    font: '600 14px system-ui, sans-serif',
+    padding: '8px 12px'
+  });
+
+  return (
+    <LumaExample
+      id="webxr-kaleidoscope"
+      title="Passthrough Kaleidoscope"
+      directory="experimental"
+      devices={['webgl2']}
+      template={WebXRKaleidoscopeApp}
+      config={exampleConfig}
+      headerControls={
+        <div style={{display: 'flex', alignItems: 'center', gap: 10, marginTop: 12}}>
+          <button
+            type="button"
+            onClick={() => void handleXRSession('immersive-vr')}
+            disabled={xrStatus === 'pending'}
+            style={getXRButtonStyle('immersive-vr')}
+          >
+            {getXRButtonText('immersive-vr')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleXRSession('immersive-ar')}
+            disabled={xrStatus === 'pending'}
+            style={getXRButtonStyle('immersive-ar')}
+          >
+            {getXRButtonText('immersive-ar')}
+          </button>
+          {xrStatus === 'pending' ? (
+            <span>Requesting {xrMode === 'immersive-ar' ? 'AR' : 'VR'} session</span>
+          ) : null}
+          {xrError ? <span>{xrError}</span> : null}
         </div>
       }
       {...props}

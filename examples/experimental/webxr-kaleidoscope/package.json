@@ -1,0 +1,21 @@
+{
+  "name": "luma.gl-examples-experimental-webxr-kaleidoscope",
+  "version": "9.3.0",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/core": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/experimental": "~9.3.0",
+    "@luma.gl/webgl": "~9.3.0",
+    "@math.gl/core": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

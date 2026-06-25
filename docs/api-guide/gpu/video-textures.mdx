@@ -1,5 +1,10 @@
 # Working With Video Textures
 
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
 Video can enter a shader through more than one texture path. The right path depends on whether the application needs portable texture semantics or WebGPU's optimized direct-video sampling path.
 
 ## Choose The Binding Path
@@ -9,6 +14,7 @@ Video can enter a shader through more than one texture path. The right path depe
 | One uploaded image or one copied video frame | [`Texture`](/docs/api-reference/core/resources/texture) | GLSL `sampler2D`, WGSL `texture_2d<f32>` | Concrete GPU allocation with ordinary texture sampling. |
 | Async or replaceable copied texture data | [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) | GLSL `sampler2D`, WGSL `texture_2d<f32>` | Engine wrapper around a concrete luma `Texture`. |
 | Playing `HTMLVideoElement` or caller-owned `VideoFrame` | [`VideoTexture`](/docs/api-reference/engine/video-texture) | Depends on shader declaration | Engine binding source that resolves the concrete per-draw binding. |
+| WebXR Raw Camera Access view | [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture) | GLSL `sampler2D` | Experimental WebGL-only binding source around the browser-owned raw camera texture. |
 | Native WebGPU direct-video sampling | [`ExternalTexture`](/docs/api-reference/core/resources/external-texture) | WGSL `texture_external` | Concrete, short-lived WebGPU binding acquired from a video source. |
 
 Use an ordinary `Texture` when the shader needs the normal texture feature set: `textureSample`, repeat address modes, mipmaps, render-target usage, storage usage, or one shader shape shared with non-video textures. A video frame can be copied into such a texture with `Texture.copyExternalImage()`.
@@ -80,6 +86,28 @@ const videoTexture = new VideoTexture(device, {source: video});
 ```
 
 Camera acquisition should be triggered by a user gesture. Wait until the video exposes a current frame before expecting `VideoTexture` to draw; `requestVideoFrameCallback()` is the preferred browser signal when available. Stop the `MediaStream` tracks when the application no longer needs the camera. If the camera should look mirror-like, flip the U texture coordinate in the shader or model UVs.
+
+## WebXR Raw Camera Access
+
+Experimental v10 `WebXRCameraTexture` is the WebXR-specific raw camera path. It is not a `VideoTexture`: the WebXR Raw Camera Access API exposes a browser-owned WebGL texture for one `XRView`, so luma.gl wraps that texture as a borrowed read-only normal texture binding.
+
+```typescript
+import {WebXRCameraTexture} from '@luma.gl/experimental';
+
+const cameraTexture = new WebXRCameraTexture(device, xrWebGLBinding);
+
+session.requestAnimationFrame((time, xrFrame) => {
+  const pose = xrFrame.getViewerPose(referenceSpace);
+  const xrView = pose?.views[0] ?? null;
+
+  cameraTexture.setView(xrView);
+  model.shaderInputs.setProps({
+    bindings: {uTexture: cameraTexture}
+  });
+});
+```
+
+Use a GLSL `sampler2D` binding. WebXR camera textures do not route through core `ExternalTexture` in v10 work in progress, and WebGPU WebXR camera textures remain unsupported until the platform exposes a real WebGPU camera texture API.
 
 ## Practical Rule
 

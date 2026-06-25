@@ -31,3 +31,5 @@ export type {WBOITPass, WBOITShaderModuleProps, WBOITShaderModuleUniforms} from 
 export {wboit, wboitPlugin} from './oit/wboit';
 export type {WBOITCaptureContext, WBOITRenderOptions, WBOITSupport} from './oit/wboit-renderer';
 export {getWBOITSupport, WBOITRenderer} from './oit/wboit-renderer';
+
+export * from './webxr/index';

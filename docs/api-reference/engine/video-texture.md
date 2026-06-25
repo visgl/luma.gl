@@ -1,5 +1,10 @@
 # VideoTexture
 
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
 `VideoTexture` is the engine-level live video binding source. It accepts an `HTMLVideoElement` or `VideoFrame` and resolves the concrete core binding that matches the shader slot used by the current draw.
 
 For the copied-vs-external texture tradeoff, see [Working With Video Textures](/docs/api-guide/gpu/video-textures).
@@ -52,4 +57,4 @@ let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 
 - Shader binding type selects the representation. There is no single native external-texture shader declaration shared by GLSL and WGSL.
 - `texture_external` is for base-level clamp-style external sampling. Upload into an ordinary `Texture` when the shader needs mipmaps, repeat addressing, or ordinary `textureSample` semantics.
-- Future copied DOM sources such as HTML-in-Canvas textures and future WebXR camera helpers can use the same `TextureBindingSource` framework without making `VideoTexture` their public API.
+- Future copied DOM sources such as HTML-in-Canvas textures and experimental [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture) use the same `TextureBindingSource` framework without making `VideoTexture` their public API.
