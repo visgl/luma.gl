@@ -1,0 +1,93 @@
+import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
+
+# GPUTable Shader Bindings
+
+<TablesDocsTabs active="shader-bindings" />
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-in-Progress" />
+</p>
+
+`getShaderBindingsFromGPUTable()` resolves a prepared
+[GPUTable](/docs/api-reference/tables/gpu-table) against a
+[GPUInputSchema](/docs/api-reference/tables/gpu-input-schema) and a
+[ShaderLayout](/docs/api-reference/core/shader-layout). It returns the
+attribute layouts and GPU buffer resources needed to submit one draw per
+preserved table batch.
+
+```ts
+import {getShaderBindingsFromGPUTable} from '@luma.gl/tables';
+
+const shaderBindings = getShaderBindingsFromGPUTable(
+  table,
+  ModelClass.gpuInputSchema,
+  shaderLayout
+);
+```
+
+## Signature
+
+```ts
+function getShaderBindingsFromGPUTable(
+  table: GPUTable,
+  gpuInputSchema: GPUInputSchema,
+  shaderLayout: ShaderLayout
+): GPUTableShaderBindings;
+
+type GPUTableShaderBindings = {
+  bufferLayout: BufferLayout[];
+  batches: GPUTableShaderBindingBatch[];
+};
+
+type GPUTableShaderBindingBatch = {
+  attributes: Record<string, Buffer | DynamicBuffer>;
+  attributeBuffers: Array<Buffer | DynamicBuffer>;
+  bindings: Record<string, Binding>;
+};
+```
+
+## Returned Draw State
+
+`bufferLayout` contains only table layouts that satisfy declared GPU inputs
+and feed shader attributes. `attributeBuffers` uses the same order as that
+layout array. `attributes` exposes the same buffers by layout name for
+`Model.setAttributes()`.
+
+`bindings` contains storage and read-only-storage `Binding` ranges keyed by
+shader binding name. Each range retains the source `GPUData.byteOffset` and
+byte size. The helper does not create a WebGPU bind group. Bind-group
+creation belongs to `Model` or `RenderPipeline`, which owns the concrete
+pipeline layout, backend, and bind-group cache.
+
+The result preserves `GPUTable.batches`. A multi-batch table therefore returns
+multiple draw states rather than silently binding only its first batch or
+implicitly packing data.
+
+```ts
+const shaderBindings = getShaderBindingsFromGPUTable(table, gpuInputSchema, shaderLayout);
+
+for (const batch of shaderBindings.batches) {
+  model.setBufferLayout(shaderBindings.bufferLayout);
+  model.setAttributes(batch.attributes);
+  model.setBindings(batch.bindings);
+  model.draw(renderPass);
+}
+```
+
+## Resolution Rules
+
+- The helper first validates required inputs and `GPUVector.format` values with
+  `GPUInputSchema`.
+- `columnName` selects the table vector and batch-local `GPUData`.
+- `attributeName` selects a shader attribute represented by
+  `GPUTable.bufferLayout`.
+- `bindingName` selects a `storage` / `read-only-storage` shader binding.
+- Attribute inputs are returned as layouts plus ordered and named buffers.
+- Storage inputs are returned as named `Binding` ranges.
+- Optional inputs absent from the table are omitted.
+- A declaration without `attributeName` or `bindingName` remains validation-only.
+  One column may feed both an attribute and a storage binding.
+
+Source-column mapping and generation of internal model inputs remain adapter or
+model-preparation responsibilities.

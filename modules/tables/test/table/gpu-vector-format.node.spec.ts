@@ -237,9 +237,7 @@ test('GPUVector table helpers expose single-chunk vectors and required columns',
   });
   const batch = new GPURecordBatch({gpuData: {positions: positions.data[0]}});
   const table = new GPUTable({
-    batches: [batch],
-    schema: batch.schema,
-    bufferLayout: batch.bufferLayout
+    batches: [batch]
   });
 
   t.equal(

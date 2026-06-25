@@ -43,25 +43,25 @@ const SEGMENT_END_COLORS_BYTE_OFFSET =
 /** Prepared GPU inputs consumed by the attribute-backed path model. */
 export const PATH_ATTRIBUTE_GPU_INPUT_SCHEMA = [
   {
-    name: 'paths',
+    columnName: 'paths',
     kind: 'positions',
     required: true,
     formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
   },
   {
-    name: 'colors',
+    columnName: 'colors',
     kind: 'colors',
     required: false,
     formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
-    name: 'widths',
+    columnName: 'widths',
     kind: 'scalars',
     required: false,
     formats: ['float32']
   },
   {
-    name: 'viewOrigins',
+    columnName: 'viewOrigins',
     kind: 'positions',
     required: false,
     formats: ['float32x4'],

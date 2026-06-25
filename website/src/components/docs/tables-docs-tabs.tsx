@@ -21,6 +21,7 @@ export type TablesDocsTabId =
   | 'data'
   | 'schema'
   | 'input-schema'
+  | 'shader-bindings'
   | 'vector-format'
   | 'buffer-planner';
 
@@ -37,6 +38,11 @@ const TABLES_DOCS_TABS: TablesDocsTab[] = [
     id: 'input-schema',
     label: 'GPUInputSchema',
     href: '/docs/api-reference/tables/gpu-input-schema'
+  },
+  {
+    id: 'shader-bindings',
+    label: 'Shader Bindings',
+    href: '/docs/api-reference/tables/gpu-table-shader-bindings'
   },
   {id: 'vector-format', label: 'GPUVectorFormat', href: '/docs/api-reference/tables/gpu-vector-format'},
   {id: 'buffer-planner', label: 'Buffer Planner', href: '/docs/api-reference/tables/gpu-table-buffer-planner'}

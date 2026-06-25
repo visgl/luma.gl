@@ -10,28 +10,34 @@ import {type GPUInputSchema, validateGPUInputVectors} from '../../engine/gpu-inp
 /** Prepared generated GPU inputs consumed by filled polygon models. */
 export const POLYGON_GPU_INPUT_SCHEMA = [
   {
-    name: 'positions',
+    columnName: 'positions',
+    attributeName: 'positions',
+    bindingName: 'polygonPositions',
     kind: 'positions',
     required: true,
     formats: ['vertex-list<float32x4>'],
     internal: true
   },
   {
-    name: 'colors',
+    columnName: 'colors',
+    attributeName: 'colors',
+    bindingName: 'polygonColors',
     kind: 'colors',
     required: true,
     formats: ['vertex-list<unorm8x4>'],
     internal: true
   },
   {
-    name: 'rowIndices',
+    columnName: 'rowIndices',
+    attributeName: 'rowIndices',
+    bindingName: 'polygonRowIndices',
     kind: 'scalars',
     required: true,
     formats: ['vertex-list<uint32>'],
     internal: true
   },
   {
-    name: 'indices',
+    columnName: 'indices',
     kind: 'scalars',
     required: true,
     formats: ['vertex-list<uint32>'],

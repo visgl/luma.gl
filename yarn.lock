@@ -16355,25 +16355,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-showcase-gpgpu@workspace:examples/showcase/gpgpu":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-showcase-gpgpu@workspace:examples/showcase/gpgpu"
-  dependencies:
-    "@luma.gl/arrow": "npm:~9.3.0"
-    "@luma.gl/core": "npm:~9.3.0"
-    "@luma.gl/engine": "npm:~9.3.0"
-    "@luma.gl/gpgpu": "npm:~9.3.0"
-    "@luma.gl/shadertools": "npm:~9.3.0"
-    "@luma.gl/webgl": "npm:~9.3.0"
-    "@luma.gl/webgpu": "npm:~9.3.0"
-    "@tanstack/virtual-core": "npm:^3.16.0"
-    acorn: "npm:^8.16.0"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^5.9.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
 "luma.gl-examples-text-3d@workspace:examples/experimental/text-3d":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-text-3d@workspace:examples/experimental/text-3d"

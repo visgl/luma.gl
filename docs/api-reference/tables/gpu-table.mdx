@@ -36,8 +36,15 @@ When the source is an Arrow `Table`, prefer
 
 | Mode | Key props | Use when |
 | --- | --- | --- |
-| `{vectors}` | `vectors`, `metadata`, `nullCount` | Build one GPU table and one GPU record batch from existing vectors. |
-| `{batches}` | `batches`, `schema`, `bufferLayout`, `numRows`, `nullCount` | Preserve already-created GPU record batches. `schema` is a `GPUSchema`. |
+| `{schema}` | `schema`, optional `bufferLayout` | Create a typed empty table with no batches. |
+| `{batches}` | `batches` | Preserve non-empty GPU record batches and infer schema/layout from the first batch. |
+| `{vectors}` | `vectors`, `metadata`, `nullCount` | Infer schema/layout and zip compatible `GPUVector.data[]` chunks into preserved table batches. |
+
+The vectors mode preserves existing chunk boundaries. Every vector must have
+the same number of `GPUData` chunks, and chunks at the same index must have the
+same logical row count. The constructor rejects incompatible vectors instead of
+repacking or rechunking GPU memory. Vectors with zero chunks create an inferred
+schema table with zero batches; fixed layouts are retained when representable.
 
 ## Properties
 
@@ -73,7 +80,7 @@ against the packed vertex rows.
 
 Adds one already-created `GPURecordBatch` and rebuilds aggregate row counts and
 vectors. The batch must match the table's buffer layout and selected schema
-fields.
+fields. A schema-only empty table adopts its first batch's buffer layout.
 
 ### `refreshFromBatches(): this`
 

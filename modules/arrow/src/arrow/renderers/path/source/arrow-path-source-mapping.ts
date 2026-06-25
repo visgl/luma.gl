@@ -69,18 +69,20 @@ export function resolveArrowPathSourceVectors(
 
   const sourceVectors: Partial<ArrowPathMappedSourceVectors> = {};
   for (const input of sourceMappableInputs) {
-    if (!isArrowPathSourceInputName(input.name)) {
-      throw new Error(`${modelName} source mapping does not support GPU input "${input.name}"`);
+    if (!isArrowPathSourceInputName(input.columnName)) {
+      throw new Error(
+        `${modelName} source mapping does not support GPU input "${input.columnName}"`
+      );
     }
     const vector = resolveArrowPathSourceVector(
       modelName,
       input,
-      selectors[input.name],
+      selectors[input.columnName],
       table,
       availablePaths
     );
     if (vector) {
-      setArrowPathSourceVector(sourceVectors, input.name, vector);
+      setArrowPathSourceVector(sourceVectors, input.columnName, vector);
     }
   }
 
@@ -107,7 +109,7 @@ function assertArrowPathSourceSelectors(
   sourceMappableInputs: GPUInputDeclaration[],
   selectors: ArrowPathSourceVectorSelectors
 ): void {
-  const sourceMappableInputNames = new Set(sourceMappableInputs.map(input => input.name));
+  const sourceMappableInputNames = new Set(sourceMappableInputs.map(input => input.columnName));
   for (const [inputName, selector] of Object.entries(selectors)) {
     if (selector !== undefined && !sourceMappableInputNames.has(inputName)) {
       throw new Error(
@@ -126,7 +128,7 @@ function resolveArrowPathSourceVector(
 ): Vector | undefined {
   if (selector === null) {
     if (input.required) {
-      throw new Error(`${modelName} source selector "${input.name}" cannot be null`);
+      throw new Error(`${modelName} source selector "${input.columnName}" cannot be null`);
     }
     return undefined;
   }
@@ -134,20 +136,22 @@ function resolveArrowPathSourceVector(
     return selector;
   }
 
-  const columnPath = selector ?? input.name;
+  const columnPath = selector ?? input.columnName;
   if (!table) {
     if (selector === undefined && !input.required) {
       return undefined;
     }
     throw new Error(
-      `${modelName} source selector "${input.name}" requires data to resolve column "${columnPath}"`
+      `${modelName} source selector "${input.columnName}" requires data to resolve column "${columnPath}"`
     );
   }
   if (!availablePaths.has(columnPath)) {
     if (selector === undefined && !input.required) {
       return undefined;
     }
-    throw new Error(`${modelName} source column "${columnPath}" for "${input.name}" is missing`);
+    throw new Error(
+      `${modelName} source column "${columnPath}" for "${input.columnName}" is missing`
+    );
   }
 
   return getArrowVectorByPath(table, columnPath);

@@ -546,13 +546,12 @@ export function makeGPUTableFromArrowTable(
     metadata: new Map(table.schema.metadata)
   };
 
-  return new GPUTable({
-    batches,
-    schema,
-    bufferLayout,
-    numRows: table.numRows,
-    nullCount: table.nullCount
-  });
+  return batches.length > 0
+    ? new GPUTable({batches})
+    : new GPUTable({
+        schema,
+        bufferLayout
+      });
 }
 
 /** Reads one generic GPU data range back into Arrow `Data`. */

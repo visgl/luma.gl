@@ -552,9 +552,7 @@ function makeRetainedPointTable(preparedBatches: readonly PreparedPointBatch[]):
   }
   const batches = preparedBatches.flatMap(preparedBatch => preparedBatch.table.batches);
   return new GPUTable({
-    batches,
-    schema: firstBatch.table.schema,
-    bufferLayout: firstBatch.table.bufferLayout
+    batches
   }) as PointModelTable;
 }
 

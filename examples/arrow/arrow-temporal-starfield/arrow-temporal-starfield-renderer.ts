@@ -445,9 +445,7 @@ function createTemporalStarfieldTableInput(
   }
 
   const table = new GPUTable<GPUTypeMap>({
-    batches: batchInputs.map(batchInput => batchInput.gpuRecordBatch),
-    schema: firstBatchInput.gpuRecordBatch.schema,
-    bufferLayout: firstBatchInput.gpuRecordBatch.bufferLayout
+    batches: batchInputs.map(batchInput => batchInput.gpuRecordBatch)
   });
 
   return {

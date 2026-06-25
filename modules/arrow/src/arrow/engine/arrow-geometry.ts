@@ -476,13 +476,7 @@ function createGeometryGPUTable(vectors: GPUVector[], bufferLayout: BufferLayout
     vectors.map(vector => [vector.name, getGPUVectorData(vector)])
   );
   const batch = new GPURecordBatch({gpuData, bufferLayout});
-  return new GPUTable({
-    batches: [batch],
-    schema: batch.schema,
-    bufferLayout: batch.bufferLayout,
-    numRows: batch.numRows,
-    nullCount: batch.nullCount
-  });
+  return new GPUTable({batches: [batch]});
 }
 
 function parseBooleanMetadata(value: string | undefined): boolean | undefined {
