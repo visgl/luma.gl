@@ -899,7 +899,7 @@ export const VideoTextureExample: React.FC = props => {
   return (
     <LumaExample
       id="video-texture"
-      title="Video Texture Beacon"
+      title="Video Texture"
       directory="experimental"
       template={VideoTextureApp}
       config={exampleConfig}
@@ -1004,7 +1004,7 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
   return (
     <LumaExample
       id="webxr-kaleidoscope"
-      title="Passthrough Kaleidoscope"
+      title="WebXR Kaleidoscope"
       directory="experimental"
       devices={['webgl2']}
       template={WebXRKaleidoscopeApp}
@@ -1051,7 +1051,7 @@ function getCameraErrorMessage(error: unknown): string {
 export const HTMLUIPrismExample: React.FC = props => (
   <LumaExample
     id="html-ui-prism"
-    title="HTML UI Prism"
+    title="HTML-in-Canvas Prism"
     directory="experimental"
     template={HTMLUIPrismApp}
     config={exampleConfig}

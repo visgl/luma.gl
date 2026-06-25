@@ -56,10 +56,10 @@ const sidebars = {
       items: [
         'experimental/a-buffer',
         'experimental/bloom',
-        'experimental/html-ui-prism',
         'experimental/fp64',
         'experimental/gpt-2',
         'experimental/video-texture',
+        'experimental/html-ui-prism',
         'experimental/webxr-kaleidoscope'
       ]
     },

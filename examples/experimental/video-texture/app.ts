@@ -8,7 +8,7 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CylinderGeometry, Model, VideoTexture} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
-export const title = 'Video Texture Beacon';
+export const title = 'Video Texture';
 export const description = 'Wraps a live video texture around a rotating cylinder.';
 
 type AppUniforms = {

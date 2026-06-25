@@ -21,7 +21,7 @@ import {
   renderExamplePanel
 } from '../../example-panels';
 
-export const title = 'HTML UI Prism';
+export const title = 'HTML-in-Canvas Prism';
 export const description = 'Renders live panel-backed DOM surfaces on a rotating GPU prism.';
 
 const FACE_TEXTURE_SIZE = 640;
