@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # Shader Inputs
+
+<EngineDocsTabs group="model" active="shader-inputs-guide" />
 
 `ShaderInputs` is the engine-side bridge between shader-module props and the
 uniform buffers or bindings consumed by a [`Model`](/docs/api-reference/engine/model)

@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # Tabular Data in WGSL
+
+<GpuGuideDocsTabs group="shader-data" active="tabular-data" />
 
 Many GPU workloads start with tabular data: each logical row describes one
 vertex, instance, particle, glyph, path, or record, and each column supplies one

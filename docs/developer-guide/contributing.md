@@ -1,4 +1,8 @@
+import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
+
 # Contributing
+
+<DeveloperDocsTabs active="contributing" />
 
 luma.gl welcomes contributions from the community. Smaller fixes 
 

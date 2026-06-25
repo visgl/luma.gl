@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # ShaderInputs
+
+<EngineDocsTabs group="model" active="shader-inputs" />
 
 `ShaderInputs` stores per-module uniform values and binding values for shader modules.
 It is the glue between engine classes like [`Model`](/docs/api-reference/engine/model) and [`Computation`](/docs/api-reference/engine/compute/computation) and the uniform layouts defined by `@luma.gl/shadertools` modules.

@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # Bind Groups and Bindings
+
+<GpuGuideDocsTabs group="shader-data" active="bindings" />
 
 luma.gl uses the term **binding** for GPU resources that shaders read through
 named binding declarations: uniform buffers, storage buffers, textures, and

@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # ShaderPassRenderer
+
+<EngineDocsTabs group="fullscreen" active="shader-pass-renderer" />
 
 `ShaderPassRenderer` applies one or more `ShaderPass` or `ShaderPassPipeline` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 

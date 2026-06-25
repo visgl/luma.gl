@@ -1,6 +1,9 @@
 import {AdapterBackendGraphic} from '@site/src/components/docs/adapter-backend-graphic';
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 # GPU Initialization
+
+<GpuGuideDocsTabs group="execution" active="initialization" />
 
 ## Adapter
 

@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # Overview
+
+<GpuGuideDocsTabs group="execution" active="overview" />
 
 - [GPU initialization](/docs/api-guide/gpu/gpu-initialization) - Open a GPU device and query its capabilities.
 - [GPU memory management](/docs/api-guide/gpu/gpu-memory) - Create, upload memory to and read from [Buffers](/docs/api-guide/gpu/gpu-buffers), [Textures](/docs/api-guide/gpu/gpu-textures) etc.

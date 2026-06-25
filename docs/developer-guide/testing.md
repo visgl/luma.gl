@@ -1,4 +1,8 @@
+import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
+
 # Testing
+
+<DeveloperDocsTabs active="testing" />
 
 The primary test runner is Vitest.
 

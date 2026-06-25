@@ -1,4 +1,8 @@
+import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+
 # @luma.gl/experimental
+
+<ExperimentalDocsTabs active="overview" />
 
 `@luma.gl/experimental` publishes incubating luma.gl APIs that are usable by applications but may
 change or be removed without the compatibility guarantees applied to stable modules.

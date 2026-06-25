@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # GPU Resources
+
+<GpuGuideDocsTabs group="execution" active="resources" />
 
 A key role of the `Device` class is to let the application create GPU resources. 
 The main GPU resources that luma.gl applications will typically be creating directly are 

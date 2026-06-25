@@ -1,4 +1,8 @@
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+
 # phongMaterial
+
+<ShaderModuleDocsTabs group="lighting" active="phong-material" />
 
 This `phongMaterial` shader module provides functions to apply Phong shading
 with a simple specular model per fragment. It is a good default when you want

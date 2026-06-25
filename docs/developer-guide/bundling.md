@@ -1,4 +1,8 @@
+import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
+
 # Bundling
+
+<DeveloperDocsTabs active="bundling" />
 
 ## Optimizing for Bundle Size
 

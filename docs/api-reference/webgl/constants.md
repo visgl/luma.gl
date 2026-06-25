@@ -1,4 +1,8 @@
+import {WebGLDocsTabs} from '@site/src/components/docs/webgl-docs-tabs';
+
 # `@luma.gl/webgl/constants`
+
+<WebGLDocsTabs active="constants" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />

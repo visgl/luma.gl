@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # Uniforms
+
+<GpuGuideDocsTabs group="shader-data" active="uniforms" />
 
 Uniforms are shader variables whose values can be set from JavaScript.
 

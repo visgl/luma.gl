@@ -1,4 +1,8 @@
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+
 # gouraudMaterial
+
+<ShaderModuleDocsTabs group="lighting" active="gouraud-material" />
 
 The `gouraudMaterial` shader module provides functions to apply Gouraud shading
 with a simple specular model per vertex. It is typically faster than

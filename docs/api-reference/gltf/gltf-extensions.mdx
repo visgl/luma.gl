@@ -2,6 +2,8 @@
 sidebar_label: Extension Support
 ---
 
+import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
+
 export const GLTF_EXTENSION_SPEC_BASE_URL =
   'https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0';
 
@@ -86,6 +88,8 @@ export const SupportRow = ({name, support, fromVersion, children}) => (
 );
 
 # glTF Extension Support
+
+<GltfDocsTabs active="extensions" />
 
 <p className="badges">
   <FromVersionBadge version="9.3" />

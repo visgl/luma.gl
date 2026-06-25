@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # Model
+
+<EngineDocsTabs group="model" active="model" />
 
 `Model` is the main engine-level rendering class in luma.gl.
 It assembles shaders, manages geometry and bindings, reuses immutable cached

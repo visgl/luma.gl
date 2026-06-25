@@ -1,4 +1,8 @@
+import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
+
 # Profiling
+
+<DeveloperDocsTabs active="profiling" />
 
 GPU programming is all about performance, so having tools to systematically
 measure the performance impact of code changes is critical. luma.gl offers

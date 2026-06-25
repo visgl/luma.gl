@@ -1,4 +1,8 @@
+import {WebGLDocsTabs} from '@site/src/components/docs/webgl-docs-tabs';
+
 # @luma.gl/webgl
+
+<WebGLDocsTabs active="overview" />
 
 ## WebGL Device Adapter
 

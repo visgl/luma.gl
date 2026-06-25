@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # How GPU Rendering Works
+
+<GpuGuideDocsTabs group="execution" active="rendering" />
 
 See also [Issuing GPU Commands](/docs/api-guide/gpu/gpu-commands) for how render passes relate to `CommandEncoder`, `CommandBuffer`, and `device.submit()` on WebGL and WebGPU.
 

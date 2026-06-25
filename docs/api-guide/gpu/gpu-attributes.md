@@ -1,4 +1,8 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+
 # Attributes
+
+<GpuGuideDocsTabs group="shader-data" active="attributes" />
 
 :::info
 Note that while **attributes** is a structured and performant mechanism to provide columnar data to shaders that works on both WebGPU and WebGL, they are rather rigid and have a number of limitations. In WebGPU a more significantly more flexible approach is to use [storage buffers](./gpu-storage-buffers).
