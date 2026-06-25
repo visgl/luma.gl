@@ -24,9 +24,9 @@ test('ArrowInputSchema resolves, converts, generates internal vectors, and valid
   const schema: ArrowInputSchema<SourceVectors, PreparedInput, {positions?: string}> = {
     name: 'TestArrowInput',
     gpuInputSchema: [
-      {name: 'positions', kind: 'positions', required: true, formats: ['float32']},
+      {columnName: 'positions', kind: 'positions', required: true, formats: ['float32']},
       {
-        name: 'rowIndices',
+        columnName: 'rowIndices',
         kind: 'scalars',
         required: true,
         formats: ['uint32'],
@@ -36,11 +36,11 @@ test('ArrowInputSchema resolves, converts, generates internal vectors, and valid
     resolveSourceVectors: () => ({positions: sourcePositions}),
     convertToGPUVectors: (inputDevice, sourceVectors) => ({
       positions: makeGPUVectorFromArrow(inputDevice, sourceVectors.positions, {
-        name: 'positions',
+        columnName: 'positions',
         format: 'float32'
       }),
       rowIndices: makeGPUVectorFromArrow(inputDevice, sourceRowIndices, {
-        name: 'rowIndices',
+        columnName: 'rowIndices',
         format: 'uint32'
       })
     }),
@@ -66,11 +66,13 @@ test('ArrowInputSchema rejects converted vectors outside the GPU input contract'
   let preparedPositions: GPUVector<'float32'> | null = null;
   const schema: ArrowInputSchema<SourceVectors, {positions: GPUVector<'float32'>}> = {
     name: 'InvalidArrowInput',
-    gpuInputSchema: [{name: 'positions', kind: 'positions', required: true, formats: ['uint32']}],
+    gpuInputSchema: [
+      {columnName: 'positions', kind: 'positions', required: true, formats: ['uint32']}
+    ],
     resolveSourceVectors: () => ({positions: sourcePositions}),
     convertToGPUVectors: (inputDevice, sourceVectors) => {
       const positions = makeGPUVectorFromArrow(inputDevice, sourceVectors.positions, {
-        name: 'positions',
+        columnName: 'positions',
         format: 'float32'
       });
       preparedPositions = positions;

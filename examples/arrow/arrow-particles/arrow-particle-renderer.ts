@@ -281,9 +281,7 @@ export class ArrowParticleRenderer extends GPURenderable<[RenderPass]> {
       this.particleTable.addBatch(gpuRecordBatch);
     } else {
       this.particleTable = new GPUTable({
-        batches: [gpuRecordBatch],
-        schema: gpuRecordBatch.schema,
-        bufferLayout: gpuRecordBatch.bufferLayout
+        batches: [gpuRecordBatch]
       });
     }
     this.initialBatchValues.set(gpuRecordBatch, initialValues);

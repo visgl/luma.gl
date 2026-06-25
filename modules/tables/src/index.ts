@@ -43,11 +43,6 @@ export {
   type GPUTypeMap
 } from './table/gpu-schema';
 export {
-  createGPUVectorCollection,
-  type GPUVectorCollection,
-  type GPUVectorCollectionProps
-} from './table/gpu-vector-collection';
-export {
   GPURecordBatch,
   type GPUDataMap,
   type GPURecordBatchFromDataProps,
@@ -58,6 +53,7 @@ export {
   GPUTable,
   type GPUTableDetachBatchesOptions,
   type GPUTableFromBatchesProps,
+  type GPUTableFromSchemaProps,
   type GPUTableFromVectorsProps,
   type GPUTablePackBatchesOptions,
   type GPUTableProps
@@ -115,6 +111,11 @@ export {
   type GPUInputSchema,
   type GPUInputVectors
 } from './engine/gpu-input-schema';
+export {
+  getShaderBindingsFromGPUTable,
+  type GPUTableShaderBindingBatch,
+  type GPUTableShaderBindings
+} from './engine/gpu-table-shader-bindings';
 export {
   PathAttributeModel,
   PATH_ATTRIBUTE_GPU_INPUT_SCHEMA,

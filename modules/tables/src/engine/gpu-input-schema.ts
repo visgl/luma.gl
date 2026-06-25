@@ -10,11 +10,15 @@ export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
 
 /** Runtime declaration for one prepared GPUVector consumed by a model or renderer. */
 export type GPUInputDeclaration<
-  Name extends string = string,
+  ColumnName extends string = string,
   Format extends GPUVectorFormat = GPUVectorFormat
 > = {
-  /** Prepared input name. */
-  name: Name;
+  /** Prepared GPUTable column and GPUVector map key. */
+  columnName: ColumnName;
+  /** Optional shader attribute supplied by this column. */
+  attributeName?: string;
+  /** Optional shader storage binding supplied by this column. */
+  bindingName?: string;
   /** Semantic role consumed by the model or renderer. */
   kind: GPUInputKind;
   /** Whether callers must provide this prepared GPU input. */
@@ -31,7 +35,7 @@ export type GPUInputDeclaration<
 /** Runtime prepared GPU input contract declared by one model or renderer. */
 export type GPUInputSchema = readonly GPUInputDeclaration[];
 
-/** Prepared GPU vectors keyed by declared GPU input name. */
+/** Prepared GPU vectors keyed by declared GPU input column name. */
 export type GPUInputVectors = Record<string, GPUVector | undefined>;
 
 /** Validates prepared GPU vectors against one runtime GPU input schema. */
@@ -41,10 +45,10 @@ export function validateGPUInputVectors(
   vectors: GPUInputVectors
 ): void {
   for (const input of schema) {
-    const vector = vectors[input.name];
+    const vector = vectors[input.columnName];
     if (!vector) {
       if (input.required) {
-        throw new Error(`${ownerName} requires GPU input "${input.name}"`);
+        throw new Error(`${ownerName} requires GPU input "${input.columnName}"`);
       }
       continue;
     }
@@ -52,7 +56,7 @@ export function validateGPUInputVectors(
     const format = vector.format;
     if (!format || !(input.formats as readonly GPUVectorFormat[]).includes(format)) {
       throw new Error(
-        `${ownerName} ${input.name} GPUVector.format "${format ?? 'undefined'}" must be one of ${input.formats.join(', ')}`
+        `${ownerName} ${input.columnName} GPUVector.format "${format ?? 'undefined'}" must be one of ${input.formats.join(', ')}`
       );
     }
   }

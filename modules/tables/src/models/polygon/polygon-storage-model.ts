@@ -124,11 +124,7 @@ function preparePolygonStorageModel(
 
 function createPolygonStorageTable(props: PolygonBatchProps): GPUTable {
   const batch = createPolygonStorageRecordBatch(props);
-  return new GPUTable({
-    batches: [batch],
-    schema: batch.schema,
-    bufferLayout: batch.bufferLayout
-  });
+  return new GPUTable({batches: [batch]});
 }
 
 function createPolygonStorageRecordBatch(props: PolygonBatchProps): GPURecordBatch {

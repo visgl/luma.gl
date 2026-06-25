@@ -30,10 +30,12 @@ import type {GPUVector, GPUVectorFormat} from '@luma.gl/tables';
 export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
 
 export type GPUInputDeclaration<
-  Name extends string = string,
+  ColumnName extends string = string,
   Format extends GPUVectorFormat = GPUVectorFormat
 > = {
-  name: Name;
+  columnName: ColumnName;
+  attributeName?: string;
+  bindingName?: string;
   kind: GPUInputKind;
   required: boolean;
   formats: readonly Format[];
@@ -45,10 +47,13 @@ export type GPUInputSchema = readonly GPUInputDeclaration[];
 export type GPUInputVectors = Record<string, GPUVector | undefined>;
 ```
 
-Each declaration has one prepared model prop name:
+Each declaration selects one prepared table column:
 
-- `name` is the model prop and vector name, such as `paths`, `colors`, or
+- `columnName` is the model prop and vector name, such as `paths`, `colors`, or
   `timestamps`.
+- `attributeName` optionally names the shader attribute supplied by that column.
+- `bindingName` optionally names the shader storage binding supplied by that
+  column.
 - `kind` is a semantic role for adapters and diagnostics. It is not a shader
   type.
 - `required` controls whether validation rejects a missing vector.
@@ -63,7 +68,7 @@ coordinates without weakening the runtime contract to an arbitrary
 
 ## Declaring Model Inputs
 
-Use `as const satisfies GPUInputSchema` so literal names and formats remain
+Use `as const satisfies GPUInputSchema` so literal column names and formats remain
 available to TypeScript while the declaration is checked against the public
 schema type:
 
@@ -72,7 +77,7 @@ import type {GPUInputSchema} from '@luma.gl/tables';
 
 export const PATH_GPU_INPUT_SCHEMA = [
   {
-    name: 'paths',
+    columnName: 'paths',
     kind: 'positions',
     required: true,
     formats: [
@@ -82,13 +87,13 @@ export const PATH_GPU_INPUT_SCHEMA = [
     ]
   },
   {
-    name: 'colors',
+    columnName: 'colors',
     kind: 'colors',
     required: false,
     formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
-    name: 'viewOrigins',
+    columnName: 'viewOrigins',
     kind: 'positions',
     required: false,
     formats: ['float32x4'],
@@ -127,6 +132,23 @@ The helper rejects:
 Model-specific validation should remain next to the model. For example, a model
 can additionally require matching row counts, matching variable-length
 `valueLength`, or one directly bindable `GPUData` chunk.
+
+For inputs that already live in a `GPUTable` and map directly to shader
+attributes or storage bindings, use
+[`getShaderBindingsFromGPUTable()`](/docs/api-reference/tables/gpu-table-shader-bindings)
+to resolve batch-preserving draw resources.
+
+For example, one table column can map to a differently named storage binding:
+
+```ts
+{
+  columnName: 'positions',
+  bindingName: 'polygonPositions',
+  kind: 'positions',
+  required: true,
+  formats: ['vertex-list<float32x4>']
+}
+```
 
 ## Source Mapping
 

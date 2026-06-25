@@ -201,6 +201,7 @@
           "api-reference/tables/gpu-data",
           "api-reference/tables/gpu-schema",
           "api-reference/tables/gpu-input-schema",
+          "api-reference/tables/gpu-table-shader-bindings",
           "api-reference/tables/gpu-vector-format",
           "api-reference/tables/gpu-table-buffer-planner"
         ]

@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type BufferLayout} from '@luma.gl/core';
+import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {GPUData} from './gpu-data';
 import {GPUVector} from './gpu-vector';
 import {GPURecordBatch, type GPURecordBatchSourceInfo} from './gpu-record-batch';
-import {createGPUVectorCollection} from './gpu-vector-collection';
-import {GPU_TABLE_INDEX_COLUMN_NAME} from './gpu-schema';
-import {isValueListGPUVectorFormat, isVertexListGPUVectorFormat} from './gpu-vector-format';
+import {GPU_TABLE_INDEX_COLUMN_NAME, isGPUTableIndexColumnName} from './gpu-schema';
+import {
+  getGPUVectorElementFormat,
+  isValueListGPUVectorFormat,
+  isVertexListGPUVectorFormat
+} from './gpu-vector-format';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
@@ -22,30 +25,31 @@ export type GPUTableFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
   vectors: GPUVectorMap<T> | Record<string, GPUVector> | GPUVector[];
   /** Optional table-level schema metadata. */
   metadata?: Map<string, string>;
-  /** Optional source-row identity forwarded to the generated one-batch GPU table. */
+  /** Optional source-row identity forwarded when vectors contain one GPUData chunk. */
   sourceInfo?: GPURecordBatchSourceInfo;
-  /** Number of null rows in the generated GPU table. */
+  /** Number of null rows forwarded when vectors contain one GPUData chunk. */
   nullCount?: number;
 };
 
 /** Options for constructing a GPU table from already-built record batches. */
 export type GPUTableFromBatchesProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU batches preserved by the table. */
-  batches: GPURecordBatch[];
-  /** Selected schema fields and metadata for the table. */
+  batches: GPURecordBatch<T>[];
+};
+
+/** Options for constructing one typed table with no GPU record batches. */
+export type GPUTableFromSchemaProps<T extends GPUTypeMap = GPUTypeMap> = {
+  /** Selected schema retained by the empty table. */
   schema: GPUSchema<T>;
-  /** Optional layout retained when `batches` is empty. */
+  /** Optional layout retained until the first batch is added. */
   bufferLayout?: BufferLayout[];
-  /** Explicit row count retained when `batches` is empty. */
-  numRows?: number;
-  /** Explicit null count retained when `batches` is empty. */
-  nullCount?: number;
 };
 
 /** Generic GPU table construction props. */
 export type GPUTableProps<T extends GPUTypeMap = GPUTypeMap> =
   | GPUTableFromVectorsProps<T>
-  | GPUTableFromBatchesProps<T>;
+  | GPUTableFromBatchesProps<T>
+  | GPUTableFromSchemaProps<T>;
 
 /** Options for replacing preserved GPU batches with larger packed batches. */
 export type GPUTablePackBatchesOptions = {
@@ -79,45 +83,53 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
   /** Buffer layout shared by preserved record batches. */
   readonly bufferLayout: BufferLayout[] = [];
 
-  /** Creates one logical GPU table from vectors or already-preserved GPU record batches. */
+  /** Creates one logical GPU table from a schema, batches, or batch-aligned vectors. */
   constructor(props: GPUTableProps<T>) {
     if ('batches' in props) {
-      this.schema = props.schema;
-      this.numCols = props.schema.fields.length;
-      this.batches.push(...props.batches);
-      this.bufferLayout.push(...(props.bufferLayout ?? props.batches[0]?.bufferLayout ?? []));
-      this.numRows =
-        props.numRows ?? props.batches.reduce((numRows, batch) => numRows + batch.numRows, 0);
-      this.nullCount =
-        props.nullCount ??
-        props.batches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0);
+      const firstBatch = props.batches[0];
+      if (!firstBatch) {
+        throw new Error('GPUTable batches constructor requires at least one GPURecordBatch');
+      }
+      assertCompatibleGPURecordBatches(props.batches);
+      this.schema = firstBatch.schema as GPUSchema<T>;
+      this.numCols = firstBatch.schema.fields.length;
+      this.batches.push(...(props.batches as GPURecordBatch[]));
+      this.bufferLayout.push(...firstBatch.bufferLayout);
+      this.numRows = props.batches.reduce((numRows, batch) => numRows + batch.numRows, 0);
+      this.nullCount = props.batches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0);
       this.rebuildAggregateVectors();
       return;
     }
 
+    if ('schema' in props) {
+      this.schema = props.schema;
+      this.numCols = props.schema.fields.length;
+      this.numRows = 0;
+      this.nullCount = 0;
+      this.bufferLayout.push(...(props.bufferLayout ?? []));
+      return;
+    }
+
     const {vectors, metadata, sourceInfo, nullCount = 0} = props;
-    const vectorCollection = createGPUVectorCollection<T>({
-      ownerName: 'GPUTable',
-      vectors
-    });
-    const batch: GPURecordBatch = new GPURecordBatch<GPUTypeMap>({
-      gpuData: getSingleGPUVectorDataMap(vectorCollection.gpuVectors as GPUVectorMap<T>),
-      bufferLayout: vectorCollection.bufferLayout,
-      fields: vectorCollection.fields,
+    const gpuVectors = normalizeGPUVectors(vectors);
+    const hasGPUData = Object.values(gpuVectors).some(vector => vector.data.length > 0);
+    const bufferLayout = getGPUVectorBufferLayout(gpuVectors, !hasGPUData);
+    const fields = getGPUVectorFields(gpuVectors);
+    const batches = createGPURecordBatchesFromVectors(
+      gpuVectors,
+      bufferLayout,
+      fields,
       metadata,
       sourceInfo,
       nullCount
-    });
+    );
 
-    this.numRows = vectorCollection.numRows;
-    this.nullCount = nullCount;
-    this.schema = {
-      fields: vectorCollection.fields,
-      metadata: metadata ?? new Map()
-    };
-    this.numCols = vectorCollection.fields.length;
-    this.bufferLayout.push(...vectorCollection.bufferLayout);
-    this.batches.push(batch);
+    this.schema = {fields, metadata: metadata ?? new Map()};
+    this.numCols = fields.length;
+    this.numRows = batches.reduce((numRows, batch) => numRows + batch.numRows, 0);
+    this.nullCount = batches.reduce((totalNullCount, batch) => totalNullCount + batch.nullCount, 0);
+    this.bufferLayout.push(...bufferLayout);
+    this.batches.push(...batches);
     this.rebuildAggregateVectors();
   }
 
@@ -159,6 +171,16 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
 
   /** Adds one already-created GPU record batch to this table. */
   addBatch(batch: GPURecordBatch): this {
+    if (this.batches.length === 0) {
+      assertMatchingGPURecordBatchSchema(this.schema, batch.schema, 'GPUTable.addBatch()');
+      if (this.bufferLayout.length === 0) {
+        this.bufferLayout.push(...batch.bufferLayout);
+      } else if (!deepEqualBufferLayouts(this.bufferLayout, batch.bufferLayout)) {
+        throw new Error('GPUTable.addBatch() requires matching buffer layouts');
+      }
+      this.batches.push(batch);
+      return this.refreshFromBatches();
+    }
     assertCompatibleGPURecordBatch(this, batch);
     this.batches.push(batch);
     return this.refreshFromBatches();
@@ -509,18 +531,45 @@ function assertCompatibleGPURecordBatch<T extends GPUTypeMap>(
   if (!deepEqualBufferLayouts(table.bufferLayout, batch.bufferLayout)) {
     throw new Error('GPUTable.addBatch() requires matching buffer layouts');
   }
-  if (table.schema.fields.length !== batch.schema.fields.length) {
-    throw new Error('GPUTable.addBatch() requires matching selected schema fields');
+  assertMatchingGPURecordBatchSchema(table.schema, batch.schema, 'GPUTable.addBatch()');
+}
+
+function assertCompatibleGPURecordBatches<T extends GPUTypeMap>(
+  batches: GPURecordBatch<T>[]
+): void {
+  const firstBatch = batches[0];
+  if (!firstBatch) {
+    return;
   }
-  for (let fieldIndex = 0; fieldIndex < table.schema.fields.length; fieldIndex++) {
-    const tableField = table.schema.fields[fieldIndex];
-    const batchField = batch.schema.fields[fieldIndex];
+  for (const batch of batches.slice(1)) {
+    if (!deepEqualBufferLayouts(firstBatch.bufferLayout, batch.bufferLayout)) {
+      throw new Error('GPUTable batches constructor requires matching buffer layouts');
+    }
+    assertMatchingGPURecordBatchSchema(
+      firstBatch.schema,
+      batch.schema,
+      'GPUTable batches constructor'
+    );
+  }
+}
+
+function assertMatchingGPURecordBatchSchema<T extends GPUTypeMap>(
+  expectedSchema: GPUSchema<T>,
+  candidateSchema: GPUSchema<T>,
+  ownerName: string
+): void {
+  if (expectedSchema.fields.length !== candidateSchema.fields.length) {
+    throw new Error(ownerName + ' requires matching selected schema fields');
+  }
+  for (let fieldIndex = 0; fieldIndex < expectedSchema.fields.length; fieldIndex++) {
+    const tableField = expectedSchema.fields[fieldIndex];
+    const batchField = candidateSchema.fields[fieldIndex];
     if (
       !batchField ||
       tableField.name !== batchField.name ||
       tableField.format !== batchField.format
     ) {
-      throw new Error('GPUTable.addBatch() requires matching selected schema fields');
+      throw new Error(ownerName + ' requires matching selected schema fields');
     }
   }
 }
@@ -603,18 +652,156 @@ function rebuildGPURecordBatchColumns<T extends GPUTypeMap>(
   batch.numCols = selectedFields.length;
 }
 
-function getSingleGPUVectorDataMap(gpuVectors: Record<string, GPUVector>): Record<string, GPUData> {
-  const gpuData: Record<string, GPUData> = {};
-  for (const [columnName, vector] of Object.entries(gpuVectors)) {
-    const [data, ...remainingData] = vector.data;
-    if (!data || remainingData.length > 0) {
+function normalizeGPUVectors(
+  vectors: Record<string, GPUVector> | GPUVector[]
+): Record<string, GPUVector> {
+  return Array.isArray(vectors)
+    ? Object.fromEntries(vectors.map(vector => [vector.name, vector]))
+    : vectors;
+}
+
+function getGPUVectorBufferLayout(
+  gpuVectors: Record<string, GPUVector>,
+  allowVariableLengthWithoutLayout = false
+): BufferLayout[] {
+  return Object.values(gpuVectors).flatMap(vector =>
+    isGPUTableIndexColumnName(vector.name)
+      ? []
+      : synthesizeGPUVectorBufferLayout(vector, allowVariableLengthWithoutLayout)
+  );
+}
+
+function synthesizeGPUVectorBufferLayout(
+  vector: GPUVector,
+  allowVariableLengthWithoutLayout: boolean
+): BufferLayout[] {
+  if (vector.bufferLayout) {
+    return [vector.bufferLayout];
+  }
+  if (!vector.format) {
+    throw new Error(
+      'GPUTable cannot synthesize a buffer layout for vector "' + vector.name + '" without a format'
+    );
+  }
+  if (isVertexListGPUVectorFormat(vector.format)) {
+    if (allowVariableLengthWithoutLayout) {
+      return [];
+    }
+    throw new Error(
+      'GPUTable cannot synthesize a generic buffer layout for vertex-list vector "' +
+        vector.name +
+        '"'
+    );
+  }
+  if (isValueListGPUVectorFormat(vector.format)) {
+    if (allowVariableLengthWithoutLayout) {
+      return [];
+    }
+    throw new Error(
+      'GPUTable cannot synthesize a generic buffer layout for value-list vector "' +
+        vector.name +
+        '"'
+    );
+  }
+  return [
+    {
+      name: vector.name,
+      byteStride: vector.byteStride,
+      format: getGPUVectorElementFormat(vector.format) as VertexFormat
+    }
+  ];
+}
+
+function getGPUVectorFields(gpuVectors: Record<string, GPUVector>): GPUField[] {
+  return Object.values(gpuVectors).map(vector => {
+    if (!vector.format) {
+      if (vector.bufferLayout) {
+        return {name: vector.name, nullable: false, metadata: new Map()};
+      }
       throw new Error(
-        `GPUTable vectors constructor requires exactly one GPUData chunk for "${columnName}"`
+        'GPUTable cannot synthesize a schema field for vector "' +
+          vector.name +
+          '" without a format'
       );
     }
-    gpuData[columnName] = data;
+    return {
+      name: vector.name,
+      format: vector.format,
+      nullable: false,
+      metadata: new Map()
+    };
+  });
+}
+
+function createGPURecordBatchesFromVectors(
+  gpuVectors: Record<string, GPUVector>,
+  bufferLayout: BufferLayout[],
+  fields: GPUField[],
+  metadata: Map<string, string> | undefined,
+  sourceInfo: GPURecordBatchSourceInfo | undefined,
+  nullCount: number
+): GPURecordBatch[] {
+  const vectors = Object.values(gpuVectors);
+  const batchCount = vectors[0]?.data.length ?? 0;
+  for (const vector of vectors) {
+    validateGPUVectorChunks(vector);
+    if (vector.data.length !== batchCount) {
+      throw new Error('GPUTable vectors constructor requires matching GPUData chunk counts');
+    }
   }
-  return gpuData;
+  if (batchCount !== 1 && (sourceInfo || nullCount > 0)) {
+    throw new Error(
+      'GPUTable vectors constructor supports sourceInfo and nullCount only with one GPUData chunk'
+    );
+  }
+
+  const batches: GPURecordBatch[] = [];
+  for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+    const gpuData: Record<string, GPUData> = {};
+    let numRows: number | undefined;
+    for (const [columnName, vector] of Object.entries(gpuVectors)) {
+      const data = vector.data[batchIndex];
+      if (!data) {
+        throw new Error(
+          'GPUTable vectors constructor is missing GPUData chunk for "' + columnName + '"'
+        );
+      }
+      if (numRows === undefined) {
+        numRows = data.length;
+      } else if (data.length !== numRows) {
+        throw new Error(
+          'GPUTable vectors constructor requires matching row counts in batch ' + batchIndex
+        );
+      }
+      gpuData[columnName] = data;
+    }
+    batches.push(
+      new GPURecordBatch({
+        gpuData,
+        bufferLayout,
+        fields,
+        metadata,
+        ...(sourceInfo ? {sourceInfo} : {}),
+        nullCount
+      })
+    );
+  }
+  return batches;
+}
+
+function validateGPUVectorChunks(vector: GPUVector): void {
+  for (const data of vector.data) {
+    if (
+      data.format !== vector.format ||
+      data.stride !== vector.stride ||
+      data.byteStride !== vector.byteStride ||
+      data.rowByteLength !== vector.rowByteLength
+    ) {
+      throw new Error(
+        'GPUTable vectors constructor requires compatible GPUData chunks for "' + vector.name + '"'
+      );
+    }
+  }
 }
 
 function getColumnBufferLayout(

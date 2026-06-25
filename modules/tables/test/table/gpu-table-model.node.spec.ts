@@ -427,9 +427,7 @@ test('GPUTable preserves source-row metadata across batch operations', t => {
     sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 11, sourceRowCount: 2}
   });
   const table = new GPUTable({
-    batches: [firstBatch],
-    schema: firstBatch.schema,
-    bufferLayout: firstBatch.bufferLayout
+    batches: [firstBatch]
   });
 
   table.addBatch(secondBatch);
@@ -576,9 +574,7 @@ function makeBatchedPositionsTable(device: NullDevice, rowCounts: number[]): GPU
     return batch;
   });
   return new GPUTable({
-    batches,
-    schema: batches[0].schema,
-    bufferLayout: batches[0].bufferLayout
+    batches
   });
 }
 
@@ -596,9 +592,7 @@ function makeBatchedIndexedPositionsTable(
       })
   );
   return new GPUTable({
-    batches,
-    schema: batches[0].schema,
-    bufferLayout: batches[0].bufferLayout
+    batches
   });
 }
 
@@ -613,9 +607,7 @@ function makeContiguousSourceBatchedPositionsTable(device: NullDevice): GPUTable
     return batch;
   });
   return new GPUTable({
-    batches,
-    schema: batches[0].schema,
-    bufferLayout: batches[0].bufferLayout
+    batches
   });
 }
 

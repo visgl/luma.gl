@@ -27,43 +27,43 @@ const TEXT_FORMATS = ['value-list<uint8>', ...TEXT_DICTIONARY_INDEX_FORMATS] as 
 /** Prepared GPU inputs consumed by attribute-backed 2D text models. */
 export const TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA = [
   {
-    name: 'positions',
+    columnName: 'positions',
     kind: 'positions',
     required: true,
     formats: ['float32x2']
   },
   {
-    name: 'texts',
+    columnName: 'texts',
     kind: 'text',
     required: true,
     formats: TEXT_FORMATS
   },
   {
-    name: 'colors',
+    columnName: 'colors',
     kind: 'colors',
     required: false,
     formats: ['unorm8x4', 'vertex-list<unorm8x4>']
   },
   {
-    name: 'angles',
+    columnName: 'angles',
     kind: 'scalars',
     required: false,
     formats: ['float32']
   },
   {
-    name: 'sizes',
+    columnName: 'sizes',
     kind: 'scalars',
     required: false,
     formats: ['float32']
   },
   {
-    name: 'pixelOffsets',
+    columnName: 'pixelOffsets',
     kind: 'positions',
     required: false,
     formats: ['float32x2']
   },
   {
-    name: 'clipRects',
+    columnName: 'clipRects',
     kind: 'positions',
     required: false,
     formats: ['sint16x4']
@@ -73,55 +73,55 @@ export const TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA = [
 /** Prepared GPU inputs consumed by storage-backed 2D text models. */
 export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
   {
-    name: 'positions',
+    columnName: 'positions',
     kind: 'positions',
     required: true,
     formats: ['float32x2']
   },
   {
-    name: 'texts',
+    columnName: 'texts',
     kind: 'text',
     required: true,
     formats: TEXT_FORMATS
   },
   {
-    name: 'colors',
+    columnName: 'colors',
     kind: 'colors',
     required: false,
     formats: ['unorm8x4']
   },
   {
-    name: 'angles',
+    columnName: 'angles',
     kind: 'scalars',
     required: false,
     formats: ['float32']
   },
   {
-    name: 'sizes',
+    columnName: 'sizes',
     kind: 'scalars',
     required: false,
     formats: ['float32']
   },
   {
-    name: 'pixelOffsets',
+    columnName: 'pixelOffsets',
     kind: 'positions',
     required: false,
     formats: ['float32x2']
   },
   {
-    name: 'textAnchors',
+    columnName: 'textAnchors',
     kind: 'scalars',
     required: false,
     formats: ['uint8']
   },
   {
-    name: 'alignmentBaselines',
+    columnName: 'alignmentBaselines',
     kind: 'scalars',
     required: false,
     formats: ['uint8']
   },
   {
-    name: 'clipRects',
+    columnName: 'clipRects',
     kind: 'positions',
     required: false,
     formats: ['sint16x4']
@@ -131,13 +131,13 @@ export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
 /** Prepared GPU inputs consumed by dictionary storage-backed 2D text models. */
 export const TEXT_DICTIONARY_GPU_INPUT_SCHEMA = [
   {
-    name: 'positions',
+    columnName: 'positions',
     kind: 'positions',
     required: true,
     formats: ['float32x2']
   },
   {
-    name: 'texts',
+    columnName: 'texts',
     kind: 'text',
     required: true,
     formats: TEXT_DICTIONARY_INDEX_FORMATS
@@ -233,18 +233,18 @@ function assertTextGPUVectorInputs(
   props: TextInputProps
 ): void {
   const vectors = Object.fromEntries(
-    schema.map(input => [input.name, props[input.name as keyof TextInputProps]])
+    schema.map(input => [input.columnName, props[input.columnName as keyof TextInputProps]])
   ) as GPUInputVectors;
   validateGPUInputVectors(modelName, schema, vectors);
   const rowCount = props.positions.length;
   for (const input of schema) {
-    const vector = vectors[input.name];
+    const vector = vectors[input.columnName];
     if (!vector) {
       continue;
     }
     if (vector.length !== rowCount) {
       throw new Error(
-        `${modelName} ${input.name} rows must match positions rows (${vector.length} !== ${rowCount})`
+        `${modelName} ${input.columnName} rows must match positions rows (${vector.length} !== ${rowCount})`
       );
     }
   }

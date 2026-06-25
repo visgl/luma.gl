@@ -519,9 +519,7 @@ async function makeArrowColumnTableInput(
       bufferLayout: []
     });
     const table = new GPUTable<GPUTypeMap>({
-      batches: [batch],
-      schema: batch.schema,
-      bufferLayout: []
+      batches: [batch]
     });
 
     return {

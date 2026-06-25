@@ -10,3 +10,4 @@ import './table/table-transform.spec';
 import './table/gpu-renderable.node.spec';
 import './table/gpu-table-model.node.spec';
 import './table/gpu-table-geometry.node.spec';
+import './table/gpu-table-shader-bindings.node.spec';

@@ -132,11 +132,7 @@ function mergeHostShaderModules(
 
 function createPolygonAttributeTable(props: PolygonBatchProps): GPUTable {
   const batch = createPolygonAttributeRecordBatch(props);
-  return new GPUTable({
-    batches: [batch],
-    schema: batch.schema,
-    bufferLayout: batch.bufferLayout
-  });
+  return new GPUTable({batches: [batch]});
 }
 
 function createPolygonAttributeRecordBatch(props: PolygonBatchProps): GPURecordBatch {
