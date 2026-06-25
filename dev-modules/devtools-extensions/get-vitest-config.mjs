@@ -25,6 +25,7 @@ export async function getVitestConfig(options = {}) {
   const browserName = vitestConfig.browserName || 'chromium';
   const testTimeout = vitestConfig.testTimeout || 60_000;
   const fileParallelism = vitestConfig.fileParallelism;
+  const coverageConfig = vitestConfig.coverage || {};
   const softwareGpu = Boolean(vitestConfig.softwareGpu);
   const tsconfigAliases = getTsconfigAliases(tsconfigProjects);
 
@@ -104,8 +105,11 @@ export async function getVitestConfig(options = {}) {
         }
       ],
       coverage: {
-        provider: 'v8',
-        reporter: ['text', 'lcov']
+        provider: coverageConfig.provider || 'v8',
+        reporter: coverageConfig.reporter || ['text', 'lcov'],
+        include: coverageConfig.include,
+        exclude: coverageConfig.exclude,
+        excludeAfterRemap: coverageConfig.excludeAfterRemap
       }
     }
   });
