@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import type {Device} from '@luma.gl/core';
+import {Buffer, type Device} from '@luma.gl/core';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 function getResourceCount(device: Device, resourceType: string): number {
@@ -33,7 +33,6 @@ test('Render bundles record reusable WebGPU commands', async t => {
     colorAttachmentFormats: ['rgba8unorm'],
     depthStencilAttachmentFormat: 'depth24plus'
   });
-
   t.equal(
     getResourceCount(webgpuDevice, 'RenderBundleEncoders'),
     renderBundleEncodersActive + 1,
@@ -108,6 +107,18 @@ test('Render bundles are WebGPU only', async t => {
       /Render bundles are only supported in WebGPU/,
       `${device.type} cannot execute render bundles`
     );
+    const indirectBuffer = device.createBuffer({byteLength: 20, usage: Buffer.INDIRECT});
+    t.throws(
+      () => renderPass.drawIndirect(indirectBuffer),
+      /Indirect drawing is only supported in WebGPU/,
+      `${device.type} cannot draw indirectly`
+    );
+    t.throws(
+      () => renderPass.drawIndexedIndirect(indirectBuffer),
+      /Indirect drawing is only supported in WebGPU/,
+      `${device.type} cannot draw indexed indirectly`
+    );
+    indirectBuffer.destroy();
     renderPass.end();
   }
 

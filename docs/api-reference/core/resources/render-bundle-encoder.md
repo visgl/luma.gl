@@ -40,6 +40,11 @@ device.submit();
 
 The bundle attachment formats and sample count must match the render pass that executes it. `RenderBundleEncoder` uses the same `setPipeline()`, `setBindings()`, `setVertexArray()`, and `draw()` commands as a render pass. It behaves like a partial render pass for draw recording, so render-pass setup and dynamic pass controls such as clears, framebuffer selection, viewport, scissor rectangle, blend constant, stencil reference, and occlusion queries are not available while recording a bundle.
 
+`drawIndirect(buffer, byteOffset)` and `drawIndexedIndirect(buffer, byteOffset)` can be recorded in a
+bundle. The command and binding sequence stays immutable while compute or uploads change the
+contents of the indirect buffer before each replay. This is the recommended pattern for stable
+draw groups whose GPU-generated instance counts change every frame.
+
 ### Updating resources and splitting bundles
 
 A render bundle records draw commands and resource bindings, not the current contents of bound buffers and textures. Update dynamic resource contents separately before executing the bundle; these content updates do not require rebuilding it. Changing which resource is bound, its binding offset, the pipeline, or the draw sequence does require new commands and therefore a rebuilt bundle.

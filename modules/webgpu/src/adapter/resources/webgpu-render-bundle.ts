@@ -191,10 +191,16 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
     return true;
   }
 
-  /** Reserved for indirect draw support. */
-  drawIndirect(): void {
-    // drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-    // drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  drawIndirect(indirectBuffer: Buffer, indirectByteOffset: number = 0): void {
+    this.vertexArray?.bindBeforeRender(this);
+    this.handle.drawIndirect((indirectBuffer as WebGPUBuffer).handle, indirectByteOffset);
+    this.vertexArray?.unbindAfterRender(this);
+  }
+
+  drawIndexedIndirect(indirectBuffer: Buffer, indirectByteOffset: number = 0): void {
+    this.vertexArray?.bindBeforeRender(this);
+    this.handle.drawIndexedIndirect((indirectBuffer as WebGPUBuffer).handle, indirectByteOffset);
+    this.vertexArray?.unbindAfterRender(this);
   }
 
   /**

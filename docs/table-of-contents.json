@@ -174,6 +174,17 @@
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          {
+            "type": "category",
+            "label": "GPU Primitives",
+            "items": [
+              "api-reference/experimental/gpu-primitives/README",
+              "api-reference/experimental/gpu-primitives/gpu-command-graph",
+              "api-reference/experimental/gpu-primitives/gpu-scan",
+              "api-reference/experimental/gpu-primitives/gpu-compaction",
+              "api-reference/experimental/gpu-primitives/draw-command-buffer"
+            ]
+          },
           "api-reference/experimental/a-buffer-renderer",
           "api-reference/experimental/wboit-renderer"
         ]
@@ -236,6 +247,17 @@
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          {
+            "type": "category",
+            "label": "GPU Primitives",
+            "items": [
+              "api-reference/experimental/gpu-primitives/README",
+              "api-reference/experimental/gpu-primitives/gpu-command-graph",
+              "api-reference/experimental/gpu-primitives/gpu-scan",
+              "api-reference/experimental/gpu-primitives/gpu-compaction",
+              "api-reference/experimental/gpu-primitives/draw-command-buffer"
+            ]
+          },
           {
             "type": "category",
             "label": "WebXR",

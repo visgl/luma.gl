@@ -33,3 +33,5 @@ export type {WBOITCaptureContext, WBOITRenderOptions, WBOITSupport} from './oit/
 export {getWBOITSupport, WBOITRenderer} from './oit/wboit-renderer';
 
 export * from './webxr/index';
+
+export * from './gpu-primitives/index';

@@ -5,6 +5,7 @@
 import type {
   Bindings,
   BindingsByGroup,
+  Buffer,
   RenderBundle,
   RenderPassBindingOptions,
   RenderPassDrawOptions,
@@ -61,6 +62,14 @@ export class NullRenderPass extends RenderPass {
     this.vertexArray?.bindBeforeRender(this);
     this.vertexArray?.unbindAfterRender(this);
     return true;
+  }
+
+  drawIndirect(_indirectBuffer: Buffer, _indirectByteOffset: number = 0): void {
+    throw new Error('Indirect drawing is only supported in WebGPU');
+  }
+
+  drawIndexedIndirect(_indirectBuffer: Buffer, _indirectByteOffset: number = 0): void {
+    throw new Error('Indirect drawing is only supported in WebGPU');
   }
 
   /** @throws Always throws because `NullRenderPass` does not support render bundles. */

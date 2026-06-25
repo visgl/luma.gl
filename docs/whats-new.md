@@ -19,6 +19,8 @@ Target Release Date: Q3, 2026
 **@luma.gl/experimental**
 
 - **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
+- **GPU command graphs** - Experimental WebGPU command graphs compile explicit buffer hazards, fixed capacities, node resources, and transient-buffer reuse while leaving encoding and submission under application control.
+- **GPU scan, compaction, and indirect drawing** - Typed graph views compose hierarchical `uint32` scan, stable ID compaction, and GPU-written `DrawCommandBuffer` instance counts. The [GPU Trace Viewer](/examples/experimental/gpu-trace-viewer) demonstrates the path over up to four million spans.
 
 **@luma.gl/engine**
 

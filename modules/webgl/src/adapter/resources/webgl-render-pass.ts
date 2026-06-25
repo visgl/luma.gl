@@ -6,6 +6,7 @@ import {NumericArray, NumberArray4} from '@math.gl/types';
 import type {
   Bindings,
   BindingsByGroup,
+  Buffer,
   RenderBundle,
   RenderPassBindingOptions,
   RenderPassDrawOptions,
@@ -277,6 +278,16 @@ export class WEBGLRenderPass extends RenderPass {
 
     vertexArray.unbindAfterRender(this);
     return true;
+  }
+
+  /** @throws Always throws because WebGL does not expose indirect drawing. */
+  drawIndirect(_indirectBuffer: Buffer, _indirectByteOffset: number = 0): void {
+    throw new Error('Indirect drawing is only supported in WebGPU');
+  }
+
+  /** @throws Always throws because WebGL does not expose indirect drawing. */
+  drawIndexedIndirect(_indirectBuffer: Buffer, _indirectByteOffset: number = 0): void {
+    throw new Error('Indirect drawing is only supported in WebGPU');
   }
 
   beginOcclusionQuery(queryIndex: number): void {

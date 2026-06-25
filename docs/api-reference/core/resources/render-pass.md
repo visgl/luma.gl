@@ -122,6 +122,21 @@ renderPass.setVertexArray(vertexArray);
 renderPass.draw({vertexCount: 3});
 ```
 
+### `drawIndirect(indirectBuffer: Buffer, indirectByteOffset?: number): void`
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
+  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
+</p>
+
+Draws using four packed `uint32` arguments beginning at `indirectByteOffset`: `vertexCount`,
+`instanceCount`, `firstVertex`, and `firstInstance`. The buffer requires `Buffer.INDIRECT` usage.
+
+### `drawIndexedIndirect(indirectBuffer: Buffer, indirectByteOffset?: number): void`
+
+Draws indexed geometry using five packed 32-bit arguments: `indexCount`, `instanceCount`,
+`firstIndex`, signed `baseVertex`, and `firstInstance`. The record occupies 20 bytes.
+
 ### `executeBundles(bundles: Iterable<RenderBundle>): void`
 
 <p className="badges">
