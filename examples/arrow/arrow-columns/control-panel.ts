@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {Panel, SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
+import {
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 import type {ArrowColumnRendererFormattedMetrics} from './arrow-column-metrics';
 
 const STATUS_ID = 'arrow-columns-status';
@@ -15,7 +21,6 @@ const MAX_COUNT_ID = 'arrow-columns-max-count';
 const GPU_BYTES_ID = 'arrow-columns-gpu-bytes';
 const ARROW_BUILD_TIME_ID = 'arrow-columns-arrow-build-time';
 const GEOMETRY_DECODE_TIME_ID = 'arrow-columns-geometry-decode-time';
-const TRANSPARENCY_MODE_ID = 'arrow-columns-transparency-mode';
 
 export type ArrowColumnTransparencyMode = 'a-buffer' | 'weighted-blended' | 'alpha-blending';
 
@@ -25,7 +30,8 @@ export type ArrowColumnRendererControlPanelOptions = {
 
 export class ArrowColumnRendererControlPanel {
   private readonly options: ArrowColumnRendererControlPanelOptions;
-  private transparencyModeSelector: HTMLSelectElement | null = null;
+  private readonly settingsPanel: ExampleSettingsPanelManager;
+  private rootElement: HTMLElement | null = null;
   private statusLabel: HTMLElement | null = null;
   private sourceRowsLabel: HTMLElement | null = null;
   private aggregateRowsLabel: HTMLElement | null = null;
@@ -40,31 +46,51 @@ export class ArrowColumnRendererControlPanel {
 
   constructor(options: ArrowColumnRendererControlPanelOptions = {}) {
     this.options = options;
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'arrow-columns-settings',
+      schema: makeArrowColumnRendererSettingsSchema(),
+      settings: {transparencyMode: 'a-buffer'},
+      onSettingsChange: this.handleSettingsChange
+    });
   }
 
-  initialize(): void {
-    if (!this.transparencyModeSelector) {
-      this.transparencyModeSelector = document.getElementById(
-        TRANSPARENCY_MODE_ID
-      ) as HTMLSelectElement | null;
-      this.transparencyModeSelector?.addEventListener('change', this.handleTransparencyModeChange);
-    }
-    this.statusLabel ??= document.getElementById(STATUS_ID);
-    this.sourceRowsLabel ??= document.getElementById(SOURCE_ROWS_ID);
-    this.aggregateRowsLabel ??= document.getElementById(AGGREGATE_ROWS_ID);
-    this.decodedCellsLabel ??= document.getElementById(DECODED_CELLS_ID);
-    this.h3ResolutionLabel ??= document.getElementById(H3_RESOLUTION_ID);
-    this.timeBucketsLabel ??= document.getElementById(TIME_BUCKETS_ID);
-    this.activeBucketLabel ??= document.getElementById(ACTIVE_BUCKET_ID);
-    this.maxCountLabel ??= document.getElementById(MAX_COUNT_ID);
-    this.gpuBytesLabel ??= document.getElementById(GPU_BYTES_ID);
-    this.arrowBuildTimeLabel ??= document.getElementById(ARROW_BUILD_TIME_ID);
-    this.geometryDecodeTimeLabel ??= document.getElementById(GEOMETRY_DECODE_TIME_ID);
+  makeDescriptionPanel(): Panel {
+    return makeHtmlCustomPanel({
+      id: 'arrow-columns-description',
+      title: 'Description',
+      html: makeArrowColumnRendererControlPanelHtml(),
+      onRender: rootElement => {
+        this.rootElement = rootElement;
+        this.statusLabel = getElement(rootElement, STATUS_ID);
+        this.sourceRowsLabel = getElement(rootElement, SOURCE_ROWS_ID);
+        this.aggregateRowsLabel = getElement(rootElement, AGGREGATE_ROWS_ID);
+        this.decodedCellsLabel = getElement(rootElement, DECODED_CELLS_ID);
+        this.h3ResolutionLabel = getElement(rootElement, H3_RESOLUTION_ID);
+        this.timeBucketsLabel = getElement(rootElement, TIME_BUCKETS_ID);
+        this.activeBucketLabel = getElement(rootElement, ACTIVE_BUCKET_ID);
+        this.maxCountLabel = getElement(rootElement, MAX_COUNT_ID);
+        this.gpuBytesLabel = getElement(rootElement, GPU_BYTES_ID);
+        this.arrowBuildTimeLabel = getElement(rootElement, ARROW_BUILD_TIME_ID);
+        this.geometryDecodeTimeLabel = getElement(rootElement, GEOMETRY_DECODE_TIME_ID);
+        return () => {
+          this.rootElement = null;
+          this.clearLabels();
+        };
+      }
+    });
+  }
+
+  makeSettingsPanel(): Panel {
+    return this.settingsPanel.makePanel();
   }
 
   destroy(): void {
-    this.transparencyModeSelector?.removeEventListener('change', this.handleTransparencyModeChange);
-    this.transparencyModeSelector = null;
+    this.settingsPanel.finalize();
+    this.rootElement = null;
+    this.clearLabels();
+  }
+
+  private clearLabels(): void {
     this.statusLabel = null;
     this.sourceRowsLabel = null;
     this.aggregateRowsLabel = null;
@@ -80,12 +106,6 @@ export class ArrowColumnRendererControlPanel {
 
   setStatus(status: string): void {
     setText(this.statusLabel, status);
-  }
-
-  setTransparencyMode(mode: ArrowColumnTransparencyMode): void {
-    if (this.transparencyModeSelector) {
-      this.transparencyModeSelector.value = mode;
-    }
   }
 
   setActiveTimeBucket(activeTimeBucket: string): void {
@@ -104,15 +124,40 @@ export class ArrowColumnRendererControlPanel {
     setText(this.geometryDecodeTimeLabel, metrics.geometryDecodeTime);
   }
 
-  private handleTransparencyModeChange = (event: Event): void => {
-    const mode = (event.target as HTMLSelectElement).value;
-    this.options.onTransparencyModeChange?.(
-      mode === 'weighted-blended'
-        ? 'weighted-blended'
-        : mode === 'alpha-blending'
-          ? 'alpha-blending'
-          : 'a-buffer'
-    );
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.nextValue;
+    if (isTransparencyMode(transparencyMode)) {
+      this.options.onTransparencyModeChange?.(transparencyMode);
+    }
+  };
+}
+
+export function makeArrowColumnRendererSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'renderer',
+        name: 'Renderer',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'transparencyMode',
+            label: 'Transparency',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'A-buffer OIT', value: 'a-buffer'},
+              {label: 'Weighted blended OIT', value: 'weighted-blended'},
+              {label: 'Standard alpha blending', value: 'alpha-blending'}
+            ]
+          }
+        ]
+      }
+    ]
   };
 }
 
@@ -120,14 +165,6 @@ export function makeArrowColumnRendererControlPanelHtml(): string {
   return `\
   <div style="box-sizing: border-box; width: 100%; padding: 14px 16px; border: 1px solid #d0d7de; border-radius: 8px; background: #fff; color: #0f172a; font: 14px/1.4 system-ui, sans-serif;">
     <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Arrow H3 Columns</h3>
-    <label for="${TRANSPARENCY_MODE_ID}" style="display: grid; gap: 5px; margin-bottom: 10px; font-weight: 600;">
-      <span>Transparency</span>
-      <select id="${TRANSPARENCY_MODE_ID}" style="width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; font: inherit;">
-        <option value="a-buffer">A-buffer OIT</option>
-        <option value="weighted-blended">Weighted blended OIT</option>
-        <option value="alpha-blending">Standard alpha blending</option>
-      </select>
-    </label>
     ${makeMetricRow('Status', STATUS_ID)}
     ${makeMetricRow('Source CSV rows', SOURCE_ROWS_ID)}
     ${makeMetricRow('Arrow aggregate rows', AGGREGATE_ROWS_ID)}
@@ -151,4 +188,12 @@ function setText(element: HTMLElement | null, value: string): void {
   if (element) {
     element.textContent = value;
   }
+}
+
+function getElement(rootElement: HTMLElement, id: string): HTMLElement | null {
+  return rootElement.querySelector<HTMLElement>(`#${id}`);
+}
+
+function isTransparencyMode(value: unknown): value is ArrowColumnTransparencyMode {
+  return value === 'a-buffer' || value === 'weighted-blended' || value === 'alpha-blending';
 }

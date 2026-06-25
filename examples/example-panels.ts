@@ -7,6 +7,7 @@ import {
   PanelThemeScope,
   SettingsManager,
   SettingsPanel,
+  TabbedPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsManagerLocalStorageConfig,
@@ -14,12 +15,16 @@ import {
   type SettingsSchema,
   type SettingDescriptor,
   type SettingValue,
-  type SettingsState
+  type SettingsState,
+  type TabbedPanelProps
 } from '@deck.gl-community/panels';
 import {Fragment, h, render} from 'preact';
+import {useEffect, useState} from 'preact/hooks';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
 const EXAMPLE_SETTINGS_PANEL_ATTRIBUTE = 'data-example-settings-panel';
+const EXAMPLE_SOURCE_PANEL_ID = 'example-source';
+const EXAMPLES_PATH_PREFIX = '/examples/';
 const MODEL_SETTING_NAMES = new Set(['modelKind', 'renderMode']);
 const EXAMPLE_PANEL_STYLE = `
 [data-example-panel-host] [aria-hidden='true'] {
@@ -43,6 +48,11 @@ export type ExampleSettingsPanelProps = {
   settings: SettingsState;
   onSettingsChange?: SettingsManagerOnChange;
   localStorageConfig?: SettingsManagerLocalStorageConfig;
+};
+
+type ExampleSourceResult = {
+  source?: string;
+  error?: string;
 };
 
 /** Returns the InfoBox host used by panel-backed example content. */
@@ -103,6 +113,112 @@ export function makeExampleContentPanel({
       return () => render(null, rootElement);
     }
   });
+}
+
+/** Creates a community tabbed panel with the website source viewer appended when available. */
+export function makeExampleTabbedPanel(props: TabbedPanelProps): Panel {
+  const hasSourcePanel = props.panels.some(panel => panel.id === EXAMPLE_SOURCE_PANEL_ID);
+  const panels =
+    isWebsiteExample() && !hasSourcePanel
+      ? [...props.panels, makeExampleSourcePanel()]
+      : props.panels;
+  return new TabbedPanel({...props, panels});
+}
+
+function makeExampleSourcePanel(): Panel {
+  return makeExampleContentPanel({
+    id: EXAMPLE_SOURCE_PANEL_ID,
+    title: 'Source',
+    content: h(ExampleSourcePanelContent, {})
+  });
+}
+
+function ExampleSourcePanelContent() {
+  const [sourceResult, setSourceResult] = useState<ExampleSourceResult>({});
+
+  useEffect(() => {
+    const sourcePaths = getCurrentExampleSourcePaths();
+    if (sourcePaths.length === 0) {
+      setSourceResult({error: 'Unable to determine source code path.'});
+      return;
+    }
+
+    const abortController = new AbortController();
+    void fetchCurrentExampleSource(sourcePaths, abortController.signal)
+      .then(source => setSourceResult({source}))
+      .catch(error => {
+        if (!abortController.signal.aborted) {
+          setSourceResult({
+            error: error instanceof Error ? error.message : 'Unable to load source code.'
+          });
+        }
+      });
+
+    return () => abortController.abort();
+  }, []);
+
+  if (sourceResult.error) {
+    return h('p', {style: {margin: 0, color: '#b00020'}}, sourceResult.error);
+  }
+
+  return h(
+    'pre',
+    {
+      style: {
+        margin: 0,
+        padding: '12px',
+        maxWidth: '100%',
+        overflow: 'auto',
+        background: '#f6f8fa',
+        color: '#24292f',
+        font: '12px/1.45 ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word'
+      }
+    },
+    h('code', {}, sourceResult.source ?? '// Loading source…')
+  );
+}
+
+function isWebsiteExample(): boolean {
+  return typeof window !== 'undefined' && Boolean((window as Window & {website?: boolean}).website);
+}
+
+function getCurrentExampleSourcePaths(): string[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  const examplesPathIndex = window.location.pathname.indexOf(EXAMPLES_PATH_PREFIX);
+  if (examplesPathIndex < 0) {
+    return [];
+  }
+
+  const sourceDirectory = window.location.pathname
+    .slice(examplesPathIndex + EXAMPLES_PATH_PREFIX.length)
+    .replace(/\/+$/, '');
+  if (!sourceDirectory) {
+    return [];
+  }
+
+  return [`${sourceDirectory}/app.ts`, `${sourceDirectory}/app.tsx`];
+}
+
+async function fetchCurrentExampleSource(
+  sourcePaths: readonly string[],
+  signal: AbortSignal
+): Promise<string> {
+  const examplesPathIndex = window.location.pathname.indexOf(EXAMPLES_PATH_PREFIX);
+  const websiteBasePath = window.location.pathname.slice(0, examplesPathIndex + 1);
+
+  for (const sourcePath of sourcePaths) {
+    const response = await fetch(`${websiteBasePath}example-assets/${sourcePath}`, {signal});
+    if (response.ok) {
+      return response.text();
+    }
+  }
+
+  throw new Error('Unable to load source code.');
 }
 
 /** Owns one panel-backed InfoBox surface for an example. */

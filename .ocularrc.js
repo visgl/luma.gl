@@ -77,6 +77,24 @@ const config = {
       softwareGpu: Boolean(process.env.CI),
       // CI runners intermittently close Chromium under high parallel WebGL/WebGPU load.
       fileParallelism: !process.env.CI,
+      // Istanbul instruments only the product source allowlist before browser execution.
+      // This keeps generated bundles, source maps, examples, and large fixtures out of the
+      // transient coverage chunks that can exhaust smaller GitHub-hosted runner disks.
+      coverage: {
+        provider: 'istanbul',
+        include: ['modules/**/src/**/*.{js,ts,tsx}'],
+        exclude: [
+          '**/*.d.ts',
+          '**/*.map',
+          '**/*.{bundle,min}.{js,ts}',
+          '**/{build,coverage,dist,node_modules,vendor,vendored}/**',
+          'examples/**',
+          'website/**',
+          'test/**',
+          'modules/**/test/**'
+        ],
+        excludeAfterRemap: true
+      },
       // Repo-owned exclusions that should not live in reusable devtools code.
       excludePatterns: [
         '**/*.disabled.*',

@@ -22,6 +22,7 @@ export {
 // Examples
 export {ExamplePage} from './components/luma-example';
 export {ExampleHeader} from './components/luma-example';
-export {InfoBox} from './components/luma-example';
+export {ExampleStats} from './components/example-stats';
+export {InfoBox} from './components/info-box';
 export {LumaExample} from './components/luma-example';
 export {ReactExample} from './components/luma-example';

@@ -1056,13 +1056,15 @@ html[data-theme='dark'] .docusaurus-highlight-code-line {
   width: 100%;
 }
 
-body:has(.luma-example-page) .theme-doc-sidebar-container {
-  display: none;
-}
+@media screen and (max-width: 996px) {
+  body:has(.luma-example-page) .theme-doc-sidebar-container {
+    display: none;
+  }
 
-body:has(.luma-example-page) .theme-doc-sidebar-container + main {
-  width: 100%;
-  max-width: none;
+  body:has(.luma-example-page) .theme-doc-sidebar-container + main {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 body:has(.luma-example-page) .theme-layout-footer,

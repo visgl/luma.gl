@@ -19,23 +19,21 @@ import {
 } from '@luma.gl/experimental';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
+import {type SettingsChangeDescriptor, type SettingsSchema} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel,
+  makeExampleTabbedPanel
+} from '../../example-panels';
 
 const OPAQUE_INSTANCE_COUNT = 2;
 const TRANSLUCENT_INSTANCE_COUNT = 7;
 const ORBIT_DURATION_SECONDS = 90;
-const MODE_SELECT_ID = 'a-buffer-mode';
-const OPACITY_INPUT_ID = 'a-buffer-opacity';
-const OPACITY_OUTPUT_ID = 'a-buffer-opacity-value';
-const SPHERE_SIZE_INPUT_ID = 'a-buffer-sphere-size';
-const SPHERE_SIZE_OUTPUT_ID = 'a-buffer-sphere-size-value';
-const ROTATION_INPUT_ID = 'a-buffer-rotation';
-const CONTROLS_TAB_ID = 'a-buffer-controls-tab';
-const DETAILS_TAB_ID = 'a-buffer-details-tab';
-const CONTROLS_PANEL_ID = 'a-buffer-controls-panel';
-const DETAILS_PANEL_ID = 'a-buffer-details-panel';
 
 type TransparencyMode = 'a-buffer' | 'weighted-blended' | 'alpha-blending';
-type InfoTab = 'controls' | 'details';
 
 type SceneUniforms = {
   viewProjectionMatrix: Matrix4;
@@ -215,44 +213,7 @@ const TRANSLUCENT_PARAMETERS = {
 } as const satisfies RenderPipelineParameters;
 
 export default class OrderIndependentTransparencyExample extends AnimationLoopTemplate {
-  static info = `\
-<div style="display: grid; gap: 12px; min-width: 260px; color: #0f172a; font: 13px/1.4 system-ui, sans-serif;">
-  <div role="tablist" aria-label="Order-independent transparency example information" style="display: flex; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
-    <button id="${CONTROLS_TAB_ID}" type="button" role="tab" aria-controls="${CONTROLS_PANEL_ID}" aria-selected="true" data-a-buffer-info-tab="controls" style="padding: 5px 9px; border: 1px solid #7dd3fc; border-radius: 999px; background: #e0f2fe; color: #0369a1; cursor: pointer; font: 600 12px/1 system-ui, sans-serif;">Controls</button>
-    <button id="${DETAILS_TAB_ID}" type="button" role="tab" aria-controls="${DETAILS_PANEL_ID}" aria-selected="false" tabindex="-1" data-a-buffer-info-tab="details" style="padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #334155; cursor: pointer; font: 600 12px/1 system-ui, sans-serif;">Details</button>
-  </div>
-  <section id="${CONTROLS_PANEL_ID}" role="tabpanel" aria-labelledby="${CONTROLS_TAB_ID}" data-a-buffer-info-panel="controls" style="display: grid; gap: 12px;">
-    <p style="margin: 0;">Compare exact per-pixel linked-list OIT, approximate weighted blended OIT, and unsorted alpha blending on the same interleaved scene.</p>
-    <label style="display: grid; gap: 5px; font-weight: 600;">
-      <span>Transparency</span>
-      <select id="${MODE_SELECT_ID}" style="padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; font: inherit;">
-        <option value="a-buffer">A-buffer OIT</option>
-        <option value="weighted-blended">Weighted blended OIT</option>
-        <option value="alpha-blending">Standard alpha blending</option>
-      </select>
-    </label>
-    <label style="display: grid; gap: 5px; font-weight: 600;">
-      <span style="display: flex; justify-content: space-between; gap: 12px;">Opacity <output id="${OPACITY_OUTPUT_ID}">0.34</output></span>
-      <input id="${OPACITY_INPUT_ID}" type="range" min="0.1" max="0.7" step="0.01" value="0.34" style="width: 100%; margin: 0;">
-    </label>
-    <label style="display: grid; gap: 5px; font-weight: 600;">
-      <span style="display: flex; justify-content: space-between; gap: 12px;">Sphere size <output id="${SPHERE_SIZE_OUTPUT_ID}">6.5</output></span>
-      <input id="${SPHERE_SIZE_INPUT_ID}" type="range" min="3" max="10" step="0.1" value="6.5" style="width: 100%; margin: 0;">
-    </label>
-    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
-      <input id="${ROTATION_INPUT_ID}" type="checkbox" checked>
-      Rotate camera
-    </label>
-  </section>
-  <section id="${DETAILS_PANEL_ID}" role="tabpanel" aria-labelledby="${DETAILS_TAB_ID}" aria-hidden="true" data-a-buffer-info-panel="details" hidden style="display: none; gap: 10px; color: #334155;">
-    <p style="margin: 0;">The dropdown renders the same unsorted translucent spheres with three different blending strategies.</p>
-    <div style="display: grid; gap: 8px;">
-      <div><strong style="color: #0f172a;">A-buffer OIT</strong><br>Captures every translucent fragment into GPU storage, sorts fragments per pixel, then composites them back-to-front. It is the most accurate option here and is available on WebGPU.</div>
-      <div><strong style="color: #0f172a;">Weighted blended OIT</strong><br>Accumulates weighted color and revealage into floating-point offscreen targets, then composites once. It avoids sorting and works on WebGPU or WebGL2 when float render-target blending is available, but it is approximate.</div>
-      <div><strong style="color: #0f172a;">Standard alpha blending</strong><br>Blends translucent draws directly into the framebuffer in submission order. It is the cheapest fallback, but unsorted overlaps produce visibly incorrect results.</div>
-    </div>
-  </section>
-</div>`;
+  static info = makeExamplePanelHostHtml();
 
   static props = {useDevicePixels: true, createFramebuffer: true};
 
@@ -275,6 +236,8 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   readonly alphaModel: Model;
   readonly wboitModel: Model | null;
   readonly aBufferModel: Model | null;
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
 
   transparencyMode: TransparencyMode = 'a-buffer';
   opacity = 0.34;
@@ -282,7 +245,6 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   rotationEnabled = true;
   orbitRadians = Math.PI / 6;
   lastRenderTimeSeconds: number | null = null;
-  controlCleanup: Array<() => void> = [];
 
   constructor({device}: AnimationProps) {
     super();
@@ -291,6 +253,31 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     this.supportsABuffer = getABufferSupport(device).supported;
     this.supportsWeightedBlendedOit = getWBOITSupport(device).supported;
     this.transparencyMode = this.getDefaultTransparencyMode();
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'a-buffer-settings',
+      schema: makeABufferSettingsSchema(this.supportsABuffer, this.supportsWeightedBlendedOit),
+      settings: {
+        transparencyMode: this.transparencyMode,
+        opacity: this.opacity,
+        sphereSize: this.sphereSize,
+        rotationEnabled: this.rotationEnabled
+      },
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({
+      panel: makeExampleTabbedPanel({
+        id: 'a-buffer-tabs',
+        title: 'Order-independent transparency',
+        panels: [
+          makeHtmlCustomPanel({
+            id: 'a-buffer-description',
+            title: 'Description',
+            html: A_BUFFER_DESCRIPTION_HTML
+          }),
+          this.settingsPanel.makePanel()
+        ]
+      })
+    });
     this.aBufferRenderer = this.supportsABuffer
       ? new ABufferRenderer(device, {
           averageFragmentsPerPixel: 4,
@@ -332,7 +319,7 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   }
 
   override async onInitialize(): Promise<void> {
-    this.initializeControls();
+    this.panels.mount();
   }
 
   override onRender({aspect, time}: AnimationProps): void {
@@ -402,10 +389,8 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   }
 
   override onFinalize(): void {
-    for (const cleanup of this.controlCleanup) {
-      cleanup();
-    }
-    this.controlCleanup = [];
+    this.panels.finalize();
+    this.settingsPanel.finalize();
     this.opaqueModel.destroy();
     this.alphaModel.destroy();
     this.wboitModel?.destroy();
@@ -495,121 +480,89 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     return projectionMatrix.multiplyRight(viewMatrix);
   }
 
-  private initializeControls(): void {
-    this.initializeInfoTabs();
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.value;
+    const opacity = getChangedSetting(changedSettings, 'opacity')?.value;
+    const sphereSize = getChangedSetting(changedSettings, 'sphereSize')?.value;
+    const rotationEnabled = getChangedSetting(changedSettings, 'rotationEnabled')?.value;
 
-    const modeSelect = document.getElementById(MODE_SELECT_ID) as HTMLSelectElement | null;
-    const opacityInput = document.getElementById(OPACITY_INPUT_ID) as HTMLInputElement | null;
-    const opacityOutput = document.getElementById(OPACITY_OUTPUT_ID);
-    const sphereSizeInput = document.getElementById(
-      SPHERE_SIZE_INPUT_ID
-    ) as HTMLInputElement | null;
-    const sphereSizeOutput = document.getElementById(SPHERE_SIZE_OUTPUT_ID);
-    const rotationInput = document.getElementById(ROTATION_INPUT_ID) as HTMLInputElement | null;
-
-    if (modeSelect) {
-      setTransparencyOptionSupported(modeSelect, 'a-buffer', this.supportsABuffer);
-      setTransparencyOptionSupported(
-        modeSelect,
-        'weighted-blended',
-        this.supportsWeightedBlendedOit
-      );
-      modeSelect.value = this.transparencyMode;
-
-      const handleModeChange = () => {
-        if (modeSelect.value === 'weighted-blended') {
-          this.transparencyMode = 'weighted-blended';
-          return;
-        }
-        this.transparencyMode =
-          modeSelect.value === 'alpha-blending' ? 'alpha-blending' : 'a-buffer';
-      };
-      modeSelect.addEventListener('change', handleModeChange);
-      this.controlCleanup.push(() => modeSelect.removeEventListener('change', handleModeChange));
+    if (isTransparencyMode(transparencyMode)) {
+      this.transparencyMode = transparencyMode;
     }
-    if (opacityInput) {
-      const handleOpacityInput = () => {
-        this.opacity = Number(opacityInput.value);
-        if (opacityOutput) {
-          opacityOutput.textContent = this.opacity.toFixed(2);
-        }
-      };
-      opacityInput.addEventListener('input', handleOpacityInput);
-      this.controlCleanup.push(() => opacityInput.removeEventListener('input', handleOpacityInput));
+    if (typeof opacity === 'number') {
+      this.opacity = opacity;
     }
-    if (sphereSizeInput) {
-      const handleSphereSizeInput = () => {
-        this.sphereSize = Number(sphereSizeInput.value);
-        if (sphereSizeOutput) {
-          sphereSizeOutput.textContent = this.sphereSize.toFixed(1);
-        }
-      };
-      sphereSizeInput.addEventListener('input', handleSphereSizeInput);
-      this.controlCleanup.push(() =>
-        sphereSizeInput.removeEventListener('input', handleSphereSizeInput)
-      );
+    if (typeof sphereSize === 'number') {
+      this.sphereSize = sphereSize;
     }
-    if (rotationInput) {
-      const handleRotationChange = () => {
-        this.rotationEnabled = rotationInput.checked;
-      };
-      rotationInput.addEventListener('change', handleRotationChange);
-      this.controlCleanup.push(() =>
-        rotationInput.removeEventListener('change', handleRotationChange)
-      );
+    if (typeof rotationEnabled === 'boolean') {
+      this.rotationEnabled = rotationEnabled;
     }
-  }
-
-  private initializeInfoTabs(): void {
-    const tabs = Array.from(
-      document.querySelectorAll<HTMLButtonElement>('[data-a-buffer-info-tab]')
-    );
-    const panels = Array.from(document.querySelectorAll<HTMLElement>('[data-a-buffer-info-panel]'));
-
-    const setActiveInfoTab = (activeTab: InfoTab) => {
-      for (const tab of tabs) {
-        const isActive = getInfoTab(tab) === activeTab;
-        tab.setAttribute('aria-selected', String(isActive));
-        tab.tabIndex = isActive ? 0 : -1;
-        tab.style.background = isActive ? '#e0f2fe' : '#fff';
-        tab.style.borderColor = isActive ? '#7dd3fc' : '#cbd5e1';
-        tab.style.color = isActive ? '#0369a1' : '#334155';
-      }
-      for (const panel of panels) {
-        const isActive = getInfoTab(panel) === activeTab;
-        panel.hidden = !isActive;
-        panel.setAttribute('aria-hidden', String(!isActive));
-        panel.style.display = isActive ? 'grid' : 'none';
-      }
-    };
-
-    for (const tab of tabs) {
-      const infoTab = getInfoTab(tab);
-      if (!infoTab) {
-        continue;
-      }
-      const handleTabClick = () => setActiveInfoTab(infoTab);
-      tab.addEventListener('click', handleTabClick);
-      this.controlCleanup.push(() => tab.removeEventListener('click', handleTabClick));
-    }
-
-    setActiveInfoTab('controls');
-  }
+  };
 }
 
-function getInfoTab(element: HTMLElement): InfoTab | null {
-  const infoTab = element.dataset.aBufferInfoTab ?? element.dataset.aBufferInfoPanel;
-  return infoTab === 'controls' || infoTab === 'details' ? infoTab : null;
+function makeABufferSettingsSchema(
+  supportsABuffer: boolean,
+  supportsWeightedBlendedOit: boolean
+): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'rendering',
+        name: 'Rendering',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'transparencyMode',
+            label: 'Transparency',
+            type: 'select',
+            persist: 'none',
+            options: [
+              ...(supportsABuffer ? [{label: 'A-buffer OIT', value: 'a-buffer'}] : []),
+              ...(supportsWeightedBlendedOit
+                ? [{label: 'Weighted blended OIT', value: 'weighted-blended'}]
+                : []),
+              {label: 'Standard alpha blending', value: 'alpha-blending'}
+            ]
+          },
+          {
+            name: 'opacity',
+            label: 'Opacity',
+            type: 'range',
+            min: 0.1,
+            max: 0.7,
+            step: 0.01,
+            persist: 'none'
+          },
+          {
+            name: 'sphereSize',
+            label: 'Sphere size',
+            type: 'range',
+            min: 3,
+            max: 10,
+            step: 0.1,
+            persist: 'none'
+          },
+          {name: 'rotationEnabled', label: 'Rotate camera', type: 'boolean', persist: 'none'}
+        ]
+      }
+    ]
+  };
 }
 
-function setTransparencyOptionSupported(
-  modeSelect: HTMLSelectElement,
-  mode: TransparencyMode,
-  supported: boolean
-): void {
-  const option = modeSelect.querySelector<HTMLOptionElement>(`option[value="${mode}"]`);
-  if (option) {
-    option.disabled = !supported;
-    option.hidden = !supported;
-  }
+function isTransparencyMode(value: unknown): value is TransparencyMode {
+  return value === 'a-buffer' || value === 'weighted-blended' || value === 'alpha-blending';
 }
+
+const A_BUFFER_DESCRIPTION_HTML = `\
+<p>Compare exact per-pixel linked-list OIT, approximate weighted blended OIT, and unsorted alpha blending on the same interleaved scene.</p>
+<p>The dropdown renders the same unsorted translucent spheres with three different blending strategies.</p>
+<div style="display: grid; gap: 8px;">
+  <div><strong>A-buffer OIT</strong><br>Captures every translucent fragment into GPU storage, sorts fragments per pixel, then composites them back-to-front. It is the most accurate option here and is available on WebGPU.</div>
+  <div><strong>Weighted blended OIT</strong><br>Accumulates weighted color and revealage into floating-point offscreen targets, then composites once. It avoids sorting and works on WebGPU or WebGL2 when float render-target blending is available, but it is approximate.</div>
+  <div><strong>Standard alpha blending</strong><br>Blends translucent draws directly into the framebuffer in submission order. It is the cheapest fallback, but unsorted overlaps produce visibly incorrect results.</div>
+</div>`;

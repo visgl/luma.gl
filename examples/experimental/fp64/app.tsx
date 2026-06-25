@@ -10,6 +10,12 @@ import {Model, ShaderInputs} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
+import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting
+} from '../../example-panels';
 
 type AppProps = {
   device?: Device | null;
@@ -88,6 +94,7 @@ const ZOOM_PRESETS: Record<ZoomPresetId, ZoomPreset> = {
   }
 };
 const DEFAULT_PRESET_ID: ZoomPresetId = 'seahorse';
+const FP64_SETTINGS_HOST_ID = 'fp64-settings-host';
 
 export default class App extends React.PureComponent<AppProps, AppState> {
   readonly canvasRefs = [
@@ -100,6 +107,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   private ownsDevice = false;
   private initializationGeneration = 0;
   private isComponentMounted = false;
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
 
   constructor(props: AppProps) {
     super(props);
@@ -110,10 +119,21 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       isReady: false,
       selectedPresetId: DEFAULT_PRESET_ID
     };
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'fp64-settings',
+      schema: makeFP64SettingsSchema(),
+      settings: {selectedPresetId: DEFAULT_PRESET_ID},
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({
+      hostId: FP64_SETTINGS_HOST_ID,
+      panel: this.settingsPanel.makePanel()
+    });
   }
 
   override async componentDidMount(): Promise<void> {
     this.isComponentMounted = true;
+    this.panels.mount();
     await this.initialize();
   }
 
@@ -137,6 +157,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   override componentWillUnmount(): void {
     this.isComponentMounted = false;
     this.initializationGeneration++;
+    this.panels.finalize();
+    this.settingsPanel.finalize();
     this.destroyResources();
   }
 
@@ -214,6 +236,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         {initializationError ? (
           <p style={{color: '#b00020', margin: 0}}>{initializationError}</p>
         ) : null}
+        <div id={FP64_SETTINGS_HOST_ID} />
         <div
           style={{
             display: 'grid',
@@ -223,40 +246,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
             alignItems: 'start'
           }}
         >
-          {visualizationSpecs.map((visualization, index) => (
+          {visualizationSpecs.map(visualization => (
             <ExamplePaneCopy
-              control={
-                index === 0 ? (
-                  <label
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
-                      marginTop: 12,
-                      maxWidth: 220
-                    }}
-                  >
-                    <span style={{fontSize: 13, fontWeight: 600}}>Zoom target</span>
-                    <select
-                      onChange={this.handlePresetChange}
-                      value={selectedPresetId}
-                      style={{
-                        border: '1px solid #c7cad1',
-                        borderRadius: 8,
-                        padding: '8px 10px',
-                        font: 'inherit',
-                        background: '#fff'
-                      }}
-                    >
-                      {Object.entries(ZOOM_PRESETS).map(([presetId, preset]) => (
-                        <option key={presetId} value={presetId}>
-                          {preset.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : undefined
-              }
               description={visualization.description}
               key={`${visualization.kind}-copy`}
               title={visualization.title}
@@ -306,8 +297,14 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     });
   }
 
-  private handlePresetChange = (event: React.ChangeEvent<HTMLSelectElement>): void => {
-    this.setState({selectedPresetId: event.target.value as ZoomPresetId});
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const selectedPresetId = getChangedSetting(changedSettings, 'selectedPresetId')?.nextValue;
+    if (isZoomPresetId(selectedPresetId)) {
+      this.setState({selectedPresetId});
+    }
   };
 
   private handleFrame = (pixelScale: number): void => {
@@ -316,6 +313,35 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       this.setState({currentZoomLabel});
     }
   };
+}
+
+function makeFP64SettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'view',
+        name: 'View',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'selectedPresetId',
+            label: 'Zoom target',
+            type: 'select',
+            persist: 'none',
+            options: Object.entries(ZOOM_PRESETS).map(([value, preset]) => ({
+              label: preset.label,
+              value
+            }))
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function isZoomPresetId(value: unknown): value is ZoomPresetId {
+  return value === 'seahorse' || value === 'elephant';
 }
 
 export function renderToDOM(
@@ -553,12 +579,8 @@ function getOverlayLines(zoomPreset: ZoomPreset, currentZoomLabel: string): stri
   ];
 }
 
-function ExamplePaneCopy(props: {
-  control?: React.ReactNode;
-  description: string;
-  title: string;
-}): React.ReactNode {
-  const {control, description, title} = props;
+function ExamplePaneCopy(props: {description: string; title: string}): React.ReactNode {
+  const {description, title} = props;
 
   return (
     <div
@@ -577,7 +599,6 @@ function ExamplePaneCopy(props: {
       >
         <h3 style={{marginTop: 0, marginBottom: 6}}>{title}</h3>
         <p style={{margin: 0, lineHeight: 1.45}}>{description}</p>
-        {control}
       </div>
     </div>
   );
