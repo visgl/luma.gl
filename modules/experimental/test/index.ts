@@ -6,3 +6,5 @@ import './textures/packed-pixels.spec';
 import './textures/html-texture.spec';
 import './oit/a-buffer-renderer.spec';
 import './oit/wboit-renderer.spec';
+
+import './webxr';

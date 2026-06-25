@@ -20,6 +20,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-points',
   'arrow/arrow-polygons',
   'experimental/video-texture',
+  'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
   'showcase/dof',
   'showcase/persistence',
@@ -58,6 +59,8 @@ const SHARED_COMPILER_OPTIONS = {
     '@deck.gl-community/arrow-layers/*': ['modules/arrow-layers/src/*'],
     '@math.gl/geoarrow': ['modules/geoarrow/src/index.ts'],
     '@math.gl/geoarrow/*': ['modules/geoarrow/src/*'],
+    '@luma.gl/experimental': ['modules/experimental/src/index.ts'],
+    '@luma.gl/experimental/*': ['modules/experimental/src/*'],
     '@luma.gl/tables': ['modules/tables/src/index.ts'],
     '@luma.gl/tables/*': ['modules/tables/src/*']
   }
