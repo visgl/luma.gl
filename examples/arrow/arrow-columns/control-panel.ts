@@ -128,7 +128,7 @@ export class ArrowColumnRendererControlPanel {
     _settings: Record<string, unknown>,
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
-    const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.value;
+    const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.nextValue;
     if (isTransparencyMode(transparencyMode)) {
       this.options.onTransparencyModeChange?.(transparencyMode);
     }

@@ -301,7 +301,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     _settings: Record<string, unknown>,
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
-    const selectedPresetId = getChangedSetting(changedSettings, 'selectedPresetId')?.value;
+    const selectedPresetId = getChangedSetting(changedSettings, 'selectedPresetId')?.nextValue;
     if (isZoomPresetId(selectedPresetId)) {
       this.setState({selectedPresetId});
     }
