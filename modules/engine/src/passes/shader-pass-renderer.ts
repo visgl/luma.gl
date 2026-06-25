@@ -38,6 +38,10 @@ type ManagedRenderTarget = {
   spec: ShaderPassRenderTarget;
   texture: Texture;
   framebuffer: Framebuffer;
+  historyTexture?: Texture;
+  historyFramebuffer?: Framebuffer;
+  historyInitialized: boolean;
+  writtenThisFrame: boolean;
 };
 
 const RESERVED_RENDER_TARGET_NAMES = new Set(['original', 'previous']);
@@ -51,9 +55,18 @@ export type ShaderPassRendererProps = {
 };
 
 /** Source texture accepted by {@link ShaderPassRenderer}. */
-type ShaderPassSourceTexture = DynamicTexture | Texture;
+export type ShaderPassSourceTexture = DynamicTexture | Texture;
 /** Binding accepted by shader pass inputs, including deferred texture binding sources. */
-type ShaderPassBinding = Binding | TextureBindingSource;
+export type ShaderPassBinding = Binding | TextureBindingSource;
+
+/** Per-frame inputs accepted by {@link ShaderPassRenderer}. */
+export type ShaderPassRendererRenderOptions = {
+  sourceTexture: ShaderPassSourceTexture;
+  uniforms?: Record<string, Record<string, unknown>>;
+  bindings?: Record<string, ShaderPassBinding>;
+  /** Invalidates all persistent render targets before rendering this frame. */
+  resetHistory?: boolean;
+};
 
 /**
  * Runs one or more shader passes against a source texture.
@@ -120,11 +133,14 @@ export class ShaderPassRenderer {
     }
   }
 
-  renderToScreen(options: {
-    sourceTexture: ShaderPassSourceTexture;
-    uniforms?: any;
-    bindings?: any;
-  }): boolean {
+  /** Invalidates persistent pipeline targets without destroying their allocations. */
+  resetHistory(): void {
+    for (const passRenderer of this.passRenderers) {
+      passRenderer.resetHistory();
+    }
+  }
+
+  renderToScreen(options: ShaderPassRendererRenderOptions): boolean {
     const outputTexture = this.renderToTexture(options);
     if (!outputTexture) {
       return false;
@@ -150,11 +166,7 @@ export class ShaderPassRenderer {
   /** Runs the shaderPasses in sequence on the sourceTexture and returns a texture with the results.
    * @returns null if the the sourceTexture has not yet been loaded
    */
-  renderToTexture(options: {
-    sourceTexture: ShaderPassSourceTexture;
-    uniforms?: any;
-    bindings?: any;
-  }): Texture | null {
+  renderToTexture(options: ShaderPassRendererRenderOptions): Texture | null {
     const {sourceTexture} = options;
     if (sourceTexture instanceof DynamicTexture && !sourceTexture.isReady) {
       return null;
@@ -164,6 +176,10 @@ export class ShaderPassRenderer {
 
     if (this.passRenderers.length === 0) {
       return originalTexture;
+    }
+
+    if (options.resetHistory) {
+      this.resetHistory();
     }
 
     // Seed the first shared framebuffer with the original source. This normalizes the starting
@@ -185,53 +201,64 @@ export class ShaderPassRenderer {
 
     let previousFramebuffer: Framebuffer | null = sourceFramebuffer;
     let previousTexture: Texture = getFramebufferTexture(sourceFramebuffer);
-    for (const passRenderer of this.passRenderers) {
-      for (const execution of passRenderer.subPassExecutions) {
-        const outputName = execution.output || 'previous';
-        const outputFramebuffer: Framebuffer =
-          outputName === 'previous'
-            ? getNextPreviousFramebuffer(this.swapFramebuffers, previousFramebuffer)
-            : passRenderer.getRenderTarget(outputName).framebuffer;
-        const outputTexture = getFramebufferTexture(outputFramebuffer);
-        // Pipeline routing resolves logical input names like `original`, `previous`, or a named
-        // render target into concrete textures for this draw.
-        const resolvedBindings = passRenderer.resolveBindings({
-          execution,
-          originalTexture,
-          previousTexture,
-          outputTexture,
-          externalBindings: options.bindings || {}
-        });
-        // Runtime uniforms are layered last so callers can update a renderer-owned pass without
-        // reconstructing it every frame.
-        const resolvedUniforms = resolveExecutionUniforms(
-          this.shaderInputs,
-          execution,
-          options.uniforms || {}
-        );
+    let frameSucceeded = false;
+    try {
+      for (const passRenderer of this.passRenderers) {
+        passRenderer.initializeHistoryTargets(originalTexture, this.textureModel);
+        for (const execution of passRenderer.subPassExecutions) {
+          const outputName = execution.output || 'previous';
+          const outputFramebuffer: Framebuffer =
+            outputName === 'previous'
+              ? getNextPreviousFramebuffer(this.swapFramebuffers, previousFramebuffer)
+              : passRenderer.getOutputFramebuffer(outputName);
+          const outputTexture = getFramebufferTexture(outputFramebuffer);
+          // Pipeline routing resolves logical input names like `original`, `previous`, or a named
+          // render target into concrete textures for this draw.
+          const resolvedBindings = passRenderer.resolveBindings({
+            execution,
+            originalTexture,
+            previousTexture,
+            outputTexture,
+            externalBindings: options.bindings || {}
+          });
+          // Runtime uniforms are layered last so callers can update a renderer-owned pass without
+          // reconstructing it every frame.
+          const resolvedUniforms = resolveExecutionUniforms(
+            this.shaderInputs,
+            execution,
+            options.uniforms || {}
+          );
 
-        execution.subPassRenderer.prepare({
-          commandEncoder: this.device.commandEncoder,
-          bindings: resolvedBindings,
-          textureScale: calculateTextureScale(
-            (resolvedBindings['sourceTexture'] as Texture) || previousTexture,
-            outputTexture
-          ),
-          uniforms: resolvedUniforms
-        });
-        const renderPass = this.device.beginRenderPass({
-          id: 'shader-pass-renderer-run-pass',
-          framebuffer: outputFramebuffer,
-          clearColor: [0, 0, 0, 1],
-          clearDepth: 1
-        });
-        execution.subPassRenderer.draw(renderPass);
-        renderPass.end();
+          execution.subPassRenderer.prepare({
+            commandEncoder: this.device.commandEncoder,
+            bindings: resolvedBindings,
+            textureScale: calculateTextureScale(
+              (resolvedBindings['sourceTexture'] as Texture) || previousTexture,
+              outputTexture
+            ),
+            uniforms: resolvedUniforms
+          });
+          const renderPass = this.device.beginRenderPass({
+            id: 'shader-pass-renderer-run-pass',
+            framebuffer: outputFramebuffer,
+            clearColor: [0, 0, 0, 1],
+            clearDepth: 1
+          });
+          execution.subPassRenderer.draw(renderPass);
+          renderPass.end();
 
-        if (outputName === 'previous') {
-          previousTexture = outputTexture;
-          previousFramebuffer = outputFramebuffer;
+          if (outputName === 'previous') {
+            previousTexture = outputTexture;
+            previousFramebuffer = outputFramebuffer;
+          } else {
+            passRenderer.markTargetWritten(outputName);
+          }
         }
+      }
+      frameSucceeded = true;
+    } finally {
+      for (const passRenderer of this.passRenderers) {
+        passRenderer.finishFrame(frameSucceeded);
       }
     }
 
@@ -279,6 +306,69 @@ class PassRenderer {
     resizeManagedRenderTargets(this.device, this.renderTargets, size);
   }
 
+  resetHistory(): void {
+    for (const renderTarget of Object.values(this.renderTargets)) {
+      renderTarget.historyInitialized = false;
+      renderTarget.writtenThisFrame = false;
+    }
+  }
+
+  initializeHistoryTargets(originalTexture: Texture, textureModel: BackgroundTextureModel): void {
+    for (const renderTarget of Object.values(this.renderTargets)) {
+      if (renderTarget.spec.lifetime !== 'history' || renderTarget.historyInitialized) {
+        continue;
+      }
+      const historyFramebuffer = getHistoryFramebuffer(renderTarget);
+      const initialize = renderTarget.spec.initialize || {
+        clearColor: [0, 0, 0, 0] as [number, number, number, number]
+      };
+      if (initialize === 'original') {
+        textureModel.setProps({backgroundTexture: originalTexture});
+        textureModel.predraw(this.device.commandEncoder);
+        const renderPass = this.device.beginRenderPass({
+          id: `${renderTarget.name}-initialize-history`,
+          framebuffer: historyFramebuffer,
+          clearColor: [0, 0, 0, 0],
+          clearDepth: false
+        });
+        textureModel.draw(renderPass);
+        renderPass.end();
+      } else {
+        const renderPass = this.device.beginRenderPass({
+          id: `${renderTarget.name}-clear-history`,
+          framebuffer: historyFramebuffer,
+          clearColor: initialize.clearColor,
+          clearDepth: false
+        });
+        renderPass.end();
+      }
+      renderTarget.historyInitialized = true;
+    }
+  }
+
+  getOutputFramebuffer(name: string): Framebuffer {
+    return this.getRenderTarget(name).framebuffer;
+  }
+
+  markTargetWritten(name: string): void {
+    this.getRenderTarget(name).writtenThisFrame = true;
+  }
+
+  finishFrame(succeeded: boolean): void {
+    for (const renderTarget of Object.values(this.renderTargets)) {
+      if (succeeded && renderTarget.spec.lifetime === 'history' && renderTarget.writtenThisFrame) {
+        const historyTexture = getHistoryTexture(renderTarget);
+        const historyFramebuffer = getHistoryFramebuffer(renderTarget);
+        renderTarget.historyTexture = renderTarget.texture;
+        renderTarget.historyFramebuffer = renderTarget.framebuffer;
+        renderTarget.texture = historyTexture;
+        renderTarget.framebuffer = historyFramebuffer;
+        renderTarget.historyInitialized = true;
+      }
+      renderTarget.writtenThisFrame = false;
+    }
+  }
+
   getRenderTarget(name: string): ManagedRenderTarget {
     const renderTarget = this.renderTargets[name];
     if (!renderTarget) {
@@ -297,12 +387,17 @@ class PassRenderer {
     const {execution, originalTexture, previousTexture, outputTexture, externalBindings} = options;
     const inputMap = execution.inputs || {sourceTexture: 'previous'};
     const shaderInputBindings = this.shaderInputs.getModuleBindingValues(execution.shaderPass.name);
+    const externalBindingsForPass = Object.fromEntries(
+      Object.entries(externalBindings).filter(([name]) =>
+        execution.shaderPass.bindingLayout?.some(binding => binding.name === name)
+      )
+    );
     // Shader-pass bindings stored in `shaderInputs` act as renderer-owned defaults. Per-draw
     // external bindings can override those defaults for frame-specific resources, while routed
     // logical inputs such as `sourceTexture` remain authoritative below.
     const resolvedBindings: Record<string, ShaderPassBinding> = {
       ...shaderInputBindings,
-      ...externalBindings
+      ...externalBindingsForPass
     };
     const outputName = execution.output || 'previous';
 
@@ -311,7 +406,12 @@ class PassRenderer {
         continue;
       }
       const texture = this.resolveInputTexture(inputSource, originalTexture, previousTexture);
-      if (outputName !== 'previous' && inputSource === outputName) {
+      const target = inputSource in this.renderTargets ? this.renderTargets[inputSource] : null;
+      if (
+        outputName !== 'previous' &&
+        inputSource === outputName &&
+        target?.spec.lifetime !== 'history'
+      ) {
         throw new Error(
           `${execution.ownerName}: subpass cannot read and write render target "${outputName}" in the same draw`
         );
@@ -388,8 +488,13 @@ class PassRenderer {
         return originalTexture;
       case 'previous':
         return previousTexture;
-      default:
-        return this.getRenderTarget(inputSource).texture;
+      default: {
+        const renderTarget = this.getRenderTarget(inputSource);
+        if (renderTarget.spec.lifetime === 'history' && !renderTarget.writtenThisFrame) {
+          return getHistoryTexture(renderTarget);
+        }
+        return renderTarget.texture;
+      }
     }
   }
 
@@ -567,6 +672,8 @@ function destroyManagedRenderTargets(renderTargets: Record<string, ManagedRender
   for (const renderTarget of Object.values(renderTargets)) {
     renderTarget.framebuffer.destroy();
     renderTarget.texture.destroy();
+    renderTarget.historyFramebuffer?.destroy();
+    renderTarget.historyTexture?.destroy();
   }
 }
 
@@ -586,6 +693,8 @@ function resizeManagedRenderTargets(
 
     renderTarget.framebuffer.destroy();
     renderTarget.texture.destroy();
+    renderTarget.historyFramebuffer?.destroy();
+    renderTarget.historyTexture?.destroy();
     const replacement = createManagedRenderTarget(
       device,
       renderTarget.name,
@@ -594,6 +703,10 @@ function resizeManagedRenderTargets(
     );
     renderTarget.texture = replacement.texture;
     renderTarget.framebuffer = replacement.framebuffer;
+    renderTarget.historyTexture = replacement.historyTexture;
+    renderTarget.historyFramebuffer = replacement.historyFramebuffer;
+    renderTarget.historyInitialized = false;
+    renderTarget.writtenThisFrame = false;
   }
 }
 
@@ -604,6 +717,33 @@ function createManagedRenderTarget(
   size: [number, number]
 ): ManagedRenderTarget {
   const targetSize = getRenderTargetSize(size, spec.scale);
+  const {texture, framebuffer} = createTargetResources(device, name, spec, targetSize);
+  let historyTexture: Texture | undefined;
+  let historyFramebuffer: Framebuffer | undefined;
+  if (spec.lifetime === 'history') {
+    const historyResources = createTargetResources(device, `${name}-history`, spec, targetSize);
+    historyTexture = historyResources.texture;
+    historyFramebuffer = historyResources.framebuffer;
+  }
+
+  return {
+    name,
+    spec,
+    texture,
+    framebuffer,
+    historyTexture,
+    historyFramebuffer,
+    historyInitialized: false,
+    writtenThisFrame: false
+  };
+}
+
+function createTargetResources(
+  device: Device,
+  name: string,
+  spec: ShaderPassRenderTarget,
+  targetSize: [number, number]
+): {texture: Texture; framebuffer: Framebuffer} {
   const texture = device.createTexture({
     id: `${name}-texture`,
     width: targetSize[0],
@@ -618,7 +758,21 @@ function createManagedRenderTarget(
     colorAttachments: [texture]
   });
 
-  return {name, spec, texture, framebuffer};
+  return {texture, framebuffer};
+}
+
+function getHistoryTexture(renderTarget: ManagedRenderTarget): Texture {
+  if (!renderTarget.historyTexture) {
+    throw new Error(`${renderTarget.name}: transient render target has no history texture`);
+  }
+  return renderTarget.historyTexture;
+}
+
+function getHistoryFramebuffer(renderTarget: ManagedRenderTarget): Framebuffer {
+  if (!renderTarget.historyFramebuffer) {
+    throw new Error(`${renderTarget.name}: transient render target has no history framebuffer`);
+  }
+  return renderTarget.historyFramebuffer;
 }
 
 function getRenderTargetSize(

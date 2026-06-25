@@ -11,6 +11,10 @@ export type ShaderPassRenderTarget = {
   scale?: [number, number];
   /** Render target format. Defaults to the device preferred color format. */
   format?: TextureFormat;
+  /** Resource lifetime. History targets retain their last successfully rendered value. */
+  lifetime?: 'transient' | 'history';
+  /** Initial value used after construction, resize, or an explicit history reset. */
+  initialize?: 'original' | {clearColor: [number, number, number, number]};
 };
 
 export type ShaderPassInputSource<TargetNameT extends string = string> =
