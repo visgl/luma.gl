@@ -65,7 +65,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'GPU Data - luma v10',
-      items: ['v10/gpgpu']
+      items: ['v10/gpgpu', 'v10/gpgpu-bitonic-sort']
     },
     {
       type: 'category',

@@ -6,8 +6,13 @@ import {log} from '@luma.gl/core';
 import type {OperationHandler} from './operation';
 import * as cpuBackend from '../operations/cpu/index';
 
-/** Map from operation names to backend-specific operation handlers. */
-export type BackendModule = Record<string, OperationHandler>;
+/**
+ * Backend endpoint exports keyed by operation name, plus optional endpoint-specific helpers.
+ *
+ * Lazy operation lookup resolves only the requested operation name. Direct endpoint helpers such
+ * as `BitonicArgsort` can share the endpoint without being registered as lazy operations.
+ */
+export type BackendModule = Record<string, unknown>;
 
 /**
  * Registry for operation backends keyed by luma.gl device type.
@@ -59,10 +64,11 @@ class BackendRegistry {
       }
     }
     const resolvedModule = await module;
-    if (!(operationName in resolvedModule)) {
+    const operationHandler = resolvedModule[operationName];
+    if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }
-    return resolvedModule[operationName];
+    return operationHandler as OperationHandler;
   }
 
   /** Removes all registered backend modules. Primarily intended for tests. */
