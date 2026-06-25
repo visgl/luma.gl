@@ -1,7 +1,15 @@
 //
 
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {ExampleHeader, ExamplePage, InfoBox, LumaExample, ReactExample, useStore} from './react-luma';
+import {
+  DeviceTabs,
+  ExampleHeader,
+  ExamplePage,
+  InfoBox,
+  LumaExample,
+  ReactExample,
+  useStore
+} from './react-luma';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import AnimationApp from '../../examples/api/animation/app';
@@ -651,11 +659,18 @@ export const ArrowDggsPolygonsExample: React.FC = props => (
 
 export const GPGPUExample: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const deviceType = useStore(store => store.deviceType);
+  const device = useStore(store => store.device);
 
   useEffect(() => {
+    if (!deviceType?.startsWith('webgpu-') || !device) {
+      return;
+    }
+
     let handle: GPGPUShowcaseHandle | null = null;
     try {
-      handle = initializeGPGPUShowcase();
+      setErrorMessage(null);
+      handle = initializeGPGPUShowcase({device});
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
       logError('Failed to initialize GPGPU example', error);
@@ -664,12 +679,13 @@ export const GPGPUExample: React.FC = () => {
     return () => {
       handle?.destroy();
     };
-  }, []);
+  }, [deviceType, device]);
 
   return (
     <ExamplePage style={{background: '#f7f8fb', overflow: 'hidden'}}>
       <style>{GPGPU_EXAMPLE_STYLE}</style>
       <main id="app" className="gpgpu-showcase">
+        <DeviceTabs devices={['webgpu']} style={{marginBottom: 16}} />
         <h1>@luma.gl/gpgpu evaluator showcase</h1>
         <p className="subtitle">
           Arrow-backed source columns are extracted as typed-array views and wrapped in
