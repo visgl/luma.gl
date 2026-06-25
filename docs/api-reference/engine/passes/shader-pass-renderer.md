@@ -140,8 +140,13 @@ const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
 export type ShaderPassRendererProps = {
   shaderPasses: (ShaderPass | ShaderPassPipeline)[];
   shaderInputs?: ShaderInputs;
+  flipY?: boolean;
 };
 ```
+
+`flipY` controls the fullscreen copies used to seed and present the pass chain. It defaults to
+`true` on WebGPU to preserve image-texture behavior. Set it to `false` when the source is a
+framebuffer attachment whose texture coordinates already use the render-target orientation.
 
 ## Properties
 

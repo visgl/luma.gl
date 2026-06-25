@@ -52,6 +52,8 @@ export type ShaderPassRendererProps = {
   shaderPasses: ShaderPassLike[];
   /** Optional typed ShaderInputs object for setting uniforms */
   shaderInputs?: ShaderInputs;
+  /** Flip source and presentation sampling vertically. Defaults to true on WebGPU. */
+  flipY?: boolean;
 };
 
 /** Source texture accepted by {@link ShaderPassRenderer}. */
@@ -108,7 +110,7 @@ export class ShaderPassRenderer {
 
     this.textureModel = new BackgroundTextureModel(device, {
       backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture,
-      flipY: device.type === 'webgpu'
+      flipY: props.flipY ?? device.type === 'webgpu'
     });
 
     this.passRenderers = props.shaderPasses.map(

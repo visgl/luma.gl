@@ -492,6 +492,22 @@ test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
   t.end();
 });
 
+test('ShaderPassRenderer supports framebuffer-oriented source textures', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [],
+      shaderInputs: new ShaderInputs({}),
+      flipY: false
+    });
+
+    t.equal(renderer.textureModel.flipY, false, `${device.type} disables fullscreen Y flipping`);
+
+    renderer.destroy();
+  }
+  t.end();
+});
+
 test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {
