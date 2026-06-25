@@ -6,9 +6,10 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
-  getShaderBindingsFromGPUTable,
+  GPUConstant,
   GPURecordBatch,
   GPUTable,
+  GPUTableShaderBindings,
   GPUVector,
   type GPUInputSchema
 } from '@luma.gl/tables';
@@ -17,14 +18,14 @@ const GPU_INPUT_SCHEMA = [
   {
     columnName: 'positions',
     attributeName: 'positions',
-    bindingName: 'positions',
+    storageBindingName: 'positions',
     kind: 'positions',
     required: true,
     formats: ['float32x2']
   },
   {
     columnName: 'weights',
-    bindingName: 'polygonWeights',
+    storageBindingName: 'polygonWeights',
     kind: 'scalars',
     required: true,
     formats: ['float32']
@@ -43,7 +44,7 @@ const SHADER_LAYOUT = {
   ]
 } satisfies ShaderLayout;
 
-test('getShaderBindingsFromGPUTable resolves draw-ready buffers per preserved batch', t => {
+test('GPUTableShaderBindings resolves draw-ready buffers per preserved batch', t => {
   const device = new NullDevice({});
   const firstBatch = makeBatch(device, 2);
   const secondBatch = makeBatch(device, 3);
@@ -51,7 +52,11 @@ test('getShaderBindingsFromGPUTable resolves draw-ready buffers per preserved ba
     batches: [firstBatch, secondBatch]
   });
 
-  const shaderBindings = getShaderBindingsFromGPUTable(table, GPU_INPUT_SCHEMA, SHADER_LAYOUT);
+  const shaderBindings = new GPUTableShaderBindings(device, {
+    table,
+    gpuInputSchema: GPU_INPUT_SCHEMA,
+    shaderLayout: SHADER_LAYOUT
+  });
 
   t.deepEqual(
     shaderBindings.bufferLayout.map(layout => layout.name),
@@ -79,11 +84,12 @@ test('getShaderBindingsFromGPUTable resolves draw-ready buffers per preserved ba
     'returns Model-ready storage binding ranges'
   );
 
+  shaderBindings.destroy();
   table.destroy();
   t.end();
 });
 
-test('getShaderBindingsFromGPUTable validates schema formats', t => {
+test('GPUTableShaderBindings validates schema formats', t => {
   const device = new NullDevice({});
   const table = new GPUTable({
     vectors: {
@@ -101,7 +107,12 @@ test('getShaderBindingsFromGPUTable validates schema formats', t => {
     }
   ] as const satisfies GPUInputSchema;
   t.throws(
-    () => getShaderBindingsFromGPUTable(table, incompatibleSchema, SHADER_LAYOUT),
+    () =>
+      new GPUTableShaderBindings(device, {
+        table,
+        gpuInputSchema: incompatibleSchema,
+        shaderLayout: SHADER_LAYOUT
+      }),
     /must be one of float32x3/,
     'rejects a table vector with an incompatible input format'
   );
@@ -109,7 +120,7 @@ test('getShaderBindingsFromGPUTable validates schema formats', t => {
   t.end();
 });
 
-test('getShaderBindingsFromGPUTable can bind one input as an attribute and storage', t => {
+test('GPUTableShaderBindings can bind one input as an attribute and storage', t => {
   const device = new NullDevice({});
   const table = new GPUTable({
     vectors: {
@@ -128,11 +139,11 @@ test('getShaderBindingsFromGPUTable can bind one input as an attribute and stora
     ]
   } satisfies ShaderLayout;
 
-  const shaderBindings = getShaderBindingsFromGPUTable(
+  const shaderBindings = new GPUTableShaderBindings(device, {
     table,
-    GPU_INPUT_SCHEMA.slice(0, 1),
-    sharedShaderLayout
-  );
+    gpuInputSchema: GPU_INPUT_SCHEMA.slice(0, 1),
+    shaderLayout: sharedShaderLayout
+  });
   t.equal(
     shaderBindings.batches[0].attributes.positions,
     table.batches[0].gpuData.positions.buffer,
@@ -150,7 +161,124 @@ test('getShaderBindingsFromGPUTable can bind one input as an attribute and stora
     'returns the storage resource'
   );
 
+  shaderBindings.destroy();
   table.destroy();
+  t.end();
+});
+
+test('GPUTableShaderBindings prepares zero-stride attribute and one-row storage constants', t => {
+  const device = new NullDevice({});
+  const colors = new GPUConstant({
+    format: 'unorm8x4',
+    value: new Uint8Array([10, 20, 30, 40])
+  });
+  const weights = new GPUConstant({format: 'float32', value: new Float32Array([2])});
+  const table = new GPUTable({columns: {colors, weights}, numRows: 5});
+  const schema = [
+    {
+      columnName: 'colors',
+      attributeName: 'colors',
+      kind: 'colors',
+      required: false,
+      formats: ['unorm8x4']
+    },
+    {
+      columnName: 'weights',
+      storageBindingName: 'weights',
+      kind: 'scalars',
+      required: false,
+      formats: ['float32']
+    }
+  ] as const satisfies GPUInputSchema;
+  const shaderLayout = {
+    attributes: [{name: 'colors', location: 0, type: 'vec4<f32>', stepMode: 'instance'}],
+    bindings: [{name: 'weights', type: 'read-only-storage', group: 0, location: 0}]
+  } satisfies ShaderLayout;
+  const shaderBindings = new GPUTableShaderBindings(device, {
+    table,
+    gpuInputSchema: schema,
+    shaderLayout
+  });
+
+  t.equal(shaderBindings.bufferLayout[0].byteStride, 0, 'preserves explicit zero stride');
+  t.equal(shaderBindings.batches.length, 1, 'retains the data-less logical batch');
+  t.ok(shaderBindings.batches[0].bindings.weights, 'binds a one-row storage buffer');
+  t.ok(shaderBindings.batches[0].bindings.gpuTableColumns, 'binds row multipliers');
+  t.match(
+    shaderBindings.shaderModule?.source ?? '',
+    /weightsRowMultiplier/,
+    'generates the named storage multiplier'
+  );
+  t.ok(shaderBindings.ownedByteLength >= 12, 'accounts for owned constant resources');
+
+  shaderBindings.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('GPUTableShaderBindings rejects constants for required inputs', t => {
+  const device = new NullDevice({});
+  const positions = new GPUConstant({format: 'float32x2', value: new Float32Array([0, 0])});
+  const table = new GPUTable({columns: {positions}, numRows: 2});
+  t.throws(
+    () =>
+      new GPUTableShaderBindings(device, {
+        table,
+        gpuInputSchema: GPU_INPUT_SCHEMA.slice(0, 1),
+        shaderLayout: SHADER_LAYOUT
+      }),
+    /required inputs cannot be constant/,
+    'required schema declarations stay varying'
+  );
+  table.destroy();
+  t.end();
+});
+
+test('GPUTableShaderBindings reuses compatible owned buffers and destroys them', t => {
+  const device = new NullDevice({});
+  const schema = [
+    {
+      columnName: 'colors',
+      attributeName: 'colors',
+      kind: 'colors',
+      required: false,
+      formats: ['unorm8x4']
+    }
+  ] as const satisfies GPUInputSchema;
+  const shaderLayout = {
+    attributes: [{name: 'colors', location: 0, type: 'vec4<f32>', stepMode: 'instance'}],
+    bindings: []
+  } satisfies ShaderLayout;
+  const firstTable = new GPUTable({
+    columns: {
+      colors: new GPUConstant({format: 'unorm8x4', value: new Uint8Array([1, 2, 3, 4])})
+    },
+    numRows: 2
+  });
+  const secondTable = new GPUTable({
+    columns: {
+      colors: new GPUConstant({format: 'unorm8x4', value: new Uint8Array([5, 6, 7, 8])})
+    },
+    numRows: 3
+  });
+  const shaderBindings = new GPUTableShaderBindings(device, {
+    table: firstTable,
+    gpuInputSchema: schema,
+    shaderLayout
+  });
+  const firstBuffer = shaderBindings.batches[0].attributeBuffers[0];
+
+  shaderBindings.updateBindings(secondTable);
+  t.equal(shaderBindings.batches[0].attributeBuffers[0], firstBuffer, 'reuses equal-size buffers');
+  shaderBindings.destroy();
+  t.ok(firstBuffer.destroyed, 'destroy releases the reused owned buffer');
+  t.throws(
+    () => shaderBindings.updateBindings(firstTable),
+    /has been destroyed/,
+    'destroyed bindings cannot be updated'
+  );
+  firstTable.destroy();
+  secondTable.destroy();
   t.end();
 });
 

@@ -10,6 +10,8 @@ import {
   type RenderPass
 } from '@luma.gl/core';
 import {DynamicBuffer, Model, type ModelProps} from '@luma.gl/engine';
+import type {GPUInputSchema} from './gpu-input-schema';
+import {GPUTableShaderBindings} from './gpu-table-shader-bindings';
 import type {GPURecordBatch} from '../table/gpu-record-batch';
 import {GPU_TABLE_INDEX_COLUMN_NAME} from '../table/gpu-schema';
 import {GPUTable} from '../table/gpu-table';
@@ -24,6 +26,8 @@ export type GPUTableModelProps = ModelProps & {
   table?: GPUTable;
   /** Controls whether table rows infer `instanceCount`, `vertexCount`, or neither. */
   tableCount?: GPUTableModelCount;
+  /** Optional logical-column contract used to resolve constants and renamed shader inputs. */
+  gpuInputSchema?: GPUInputSchema;
 };
 
 export type GPUTableModelDrawBatchesOptions = {
@@ -43,12 +47,15 @@ type GPUTableModelState = {
   explicitVertexCount: number;
   inferInstanceCount: boolean;
   inferVertexCount: boolean;
+  gpuInputSchema?: GPUInputSchema;
+  shaderLayout?: ModelProps['shaderLayout'];
 };
 
 type GPUTableModelConstructorState = {
   table?: GPUTable;
   modelProps: ModelProps;
   state: GPUTableModelState;
+  shaderBindings?: GPUTableShaderBindings;
 };
 
 type GPUTableDrawSource = GPUTable | GPURecordBatch;
@@ -70,18 +77,34 @@ export class GPUTableModel extends Model {
   /** Currently bound table, when table-backed rendering is active. */
   table?: GPUTable;
   private readonly tableState: GPUTableModelState;
+  private tableShaderBindings?: GPUTableShaderBindings;
   private drawingTableBatches = false;
+
+  /** Bytes owned by table-to-shader binding preparation, excluding caller-owned table buffers. */
+  get tableBindingByteLength(): number {
+    return this.tableShaderBindings?.ownedByteLength ?? 0;
+  }
 
   /** Creates a model whose table-backed attributes and bindings can be rebound by batch. */
   constructor(device: Device, props: GPUTableModelProps) {
-    const {table, modelProps, state} = getGPUTableModelConstructorState(props);
+    const {table, modelProps, state, shaderBindings} = getGPUTableModelConstructorState(
+      device,
+      props
+    );
     super(device, modelProps);
     this.table = table;
     this.tableState = state;
+    this.tableShaderBindings = shaderBindings;
     this.captureExplicitDrawState();
     if (table) {
       this.setTableDrawState(table);
     }
+  }
+
+  override destroy(): void {
+    this.tableShaderBindings?.destroy();
+    this.tableShaderBindings = undefined;
+    super.destroy();
   }
 
   /** Replaces the bound GPU table when one is supplied. */
@@ -114,8 +137,9 @@ export class GPUTableModel extends Model {
       throw new Error('GPUTableModel.drawBatches() requires a GPUTable');
     }
 
+    const tableBufferLayout = this.tableShaderBindings?.bufferLayout ?? table.bufferLayout;
     assertMatchingBufferLayouts(
-      table.bufferLayout,
+      tableBufferLayout,
       this.tableState.explicitBufferLayout,
       this.bufferLayout,
       'GPUTableModel.drawBatches() model buffer layout does not match its GPU table'
@@ -125,20 +149,22 @@ export class GPUTableModel extends Model {
     this.drawingTableBatches = true;
     try {
       for (const [batchIndex, batch] of table.batches.entries()) {
-        assertMatchingBufferLayouts(
-          table.bufferLayout,
-          [],
-          batch.bufferLayout,
-          'GPUTableModel.drawBatches() requires every batch to use the table buffer layout'
-        );
+        const preparedBatch = this.tableShaderBindings?.batches[batchIndex];
+        if (this.tableShaderBindings && !preparedBatch) {
+          throw new Error('GPUTableModel.drawBatches() is missing prepared batch bindings');
+        }
         this.setAttributes({
           ...this.tableState.explicitAttributes,
-          ...getGPUTableDrawAttributes(batch)
+          ...(preparedBatch?.attributes ?? getGPUTableDrawAttributes(batch))
         });
         this.setBindings({
           ...this.tableState.explicitBindings,
-          ...getGPUTableDrawBindings(batch, this.tableState.tableBindingNames)
+          ...(preparedBatch?.bindings ??
+            getGPUTableDrawBindings(batch, this.tableState.tableBindingNames))
         });
+        if (this.tableShaderBindings) {
+          this.setConstantAttributes(this.tableShaderBindings.constantAttributes);
+        }
         this.setTableDrawState(batch);
         options.onBatch?.(batch, batchIndex);
         drawSuccess = super.draw(renderPass) && drawSuccess;
@@ -147,11 +173,12 @@ export class GPUTableModel extends Model {
       this.drawingTableBatches = false;
       this.setAttributes({
         ...this.tableState.explicitAttributes,
-        ...getGPUTableDrawAttributes(table)
+        ...(this.tableShaderBindings?.batches[0]?.attributes ?? getGPUTableDrawAttributes(table))
       });
       this.setBindings({
         ...this.tableState.explicitBindings,
-        ...getGPUTableDrawBindings(table, this.tableState.tableBindingNames)
+        ...(this.tableShaderBindings?.batches[0]?.bindings ??
+          getGPUTableDrawBindings(table, this.tableState.tableBindingNames))
       });
       this.setTableDrawState(table);
     }
@@ -161,32 +188,62 @@ export class GPUTableModel extends Model {
 
   /** Rebinds the model to a replacement table while preserving explicit model state. */
   protected setTable(nextTable: GPUTable): void {
+    if (this.tableState.gpuInputSchema) {
+      if (!this.tableState.shaderLayout) {
+        throw new Error('GPUTableModel gpuInputSchema requires shaderLayout');
+      }
+      if (this.tableShaderBindings) {
+        this.tableShaderBindings.updateBindings(nextTable);
+      } else {
+        this.tableShaderBindings = new GPUTableShaderBindings(this.device, {
+          table: nextTable,
+          gpuInputSchema: this.tableState.gpuInputSchema,
+          shaderLayout: this.tableState.shaderLayout
+        });
+        if (this.tableShaderBindings.shaderModule) {
+          this.tableShaderBindings.destroy();
+          this.tableShaderBindings = undefined;
+          throw new Error(
+            'GPUTableModel storage gpuInputSchema requires a table during model construction'
+          );
+        }
+      }
+    }
+    const tableBufferLayout = this.tableShaderBindings?.bufferLayout ?? nextTable.bufferLayout;
+    const tableAttributes =
+      this.tableShaderBindings?.batches[0]?.attributes ?? getGPUTableDrawAttributes(nextTable);
+    const tableBindings =
+      this.tableShaderBindings?.batches[0]?.bindings ??
+      getGPUTableDrawBindings(nextTable, this.tableState.tableBindingNames);
     assertNoExplicitIndexBuffer(nextTable, this.tableState.explicitIndexBuffer);
     validateGPUTableIndexBatches(nextTable);
     assertNoDuplicateNames(
       Object.keys(this.tableState.explicitAttributes),
-      getBufferLayoutNames(nextTable.bufferLayout),
+      getBufferLayoutNames(tableBufferLayout),
       'attribute'
     );
     assertNoDuplicateNames(
       getBufferLayoutNames(this.tableState.explicitBufferLayout),
-      getBufferLayoutNames(nextTable.bufferLayout),
+      getBufferLayoutNames(tableBufferLayout),
       'buffer layout'
     );
     assertNoDuplicateNames(
       Object.keys(this.tableState.explicitBindings),
-      Object.keys(getGPUTableDrawBindings(nextTable, this.tableState.tableBindingNames)),
+      Object.keys(tableBindings),
       'binding'
     );
-    this.setBufferLayout([...this.tableState.explicitBufferLayout, ...nextTable.bufferLayout]);
+    this.setBufferLayout([...this.tableState.explicitBufferLayout, ...tableBufferLayout]);
     this.setAttributes({
       ...this.tableState.explicitAttributes,
-      ...getGPUTableDrawAttributes(nextTable)
+      ...tableAttributes
     });
     this.setBindings({
       ...this.tableState.explicitBindings,
-      ...getGPUTableDrawBindings(nextTable, this.tableState.tableBindingNames)
+      ...tableBindings
     });
+    if (this.tableShaderBindings) {
+      this.setConstantAttributes(this.tableShaderBindings.constantAttributes);
+    }
     this.setTableDrawState(nextTable);
     this.table = nextTable;
   }
@@ -281,9 +338,10 @@ export class GPUTableModel extends Model {
 }
 
 function getGPUTableModelConstructorState(
+  device: Device,
   props: GPUTableModelProps
 ): GPUTableModelConstructorState {
-  const {table, tableCount = 'instance', ...modelProps} = props;
+  const {table, tableCount = 'instance', gpuInputSchema, ...modelProps} = props;
   const explicitAttributes = modelProps.attributes || {};
   const explicitBindings = modelProps.bindings || {};
   const tableBindingNames = (modelProps.shaderLayout?.bindings || [])
@@ -315,31 +373,51 @@ function getGPUTableModelConstructorState(
         explicitFirstIndex,
         explicitVertexCount,
         inferInstanceCount,
-        inferVertexCount
+        inferVertexCount,
+        gpuInputSchema,
+        shaderLayout: modelProps.shaderLayout
       }
     };
   }
 
+  assertNoExplicitIndexBuffer(table, explicitIndexBuffer);
+  validateGPUTableIndexBatches(table);
+
+  let shaderBindings: GPUTableShaderBindings | undefined;
+  if (gpuInputSchema) {
+    if (!modelProps.shaderLayout) {
+      throw new Error('GPUTableModel gpuInputSchema requires shaderLayout');
+    }
+    shaderBindings = new GPUTableShaderBindings(device, {
+      table,
+      gpuInputSchema,
+      shaderLayout: modelProps.shaderLayout
+    });
+  } else if (Object.keys(table.gpuConstants).length > 0) {
+    throw new Error('GPUTableModel constant columns require gpuInputSchema');
+  }
+
+  const tableBufferLayout = shaderBindings?.bufferLayout ?? table.bufferLayout;
+  const tableAttributes =
+    shaderBindings?.batches[0]?.attributes ?? getGPUTableDrawAttributes(table);
+  const tableBindings =
+    shaderBindings?.batches[0]?.bindings ?? getGPUTableDrawBindings(table, tableBindingNames);
+
   assertNoDuplicateNames(
     Object.keys(explicitAttributes),
-    getBufferLayoutNames(table.bufferLayout),
+    getBufferLayoutNames(tableBufferLayout),
     'attribute'
   );
   assertNoDuplicateNames(
     getBufferLayoutNames(explicitBufferLayout),
-    getBufferLayoutNames(table.bufferLayout),
+    getBufferLayoutNames(tableBufferLayout),
     'buffer layout'
   );
-  assertNoDuplicateNames(
-    Object.keys(explicitBindings),
-    Object.keys(getGPUTableDrawBindings(table, tableBindingNames)),
-    'binding'
-  );
-  assertNoExplicitIndexBuffer(table, explicitIndexBuffer);
-  validateGPUTableIndexBatches(table);
+  assertNoDuplicateNames(Object.keys(explicitBindings), Object.keys(tableBindings), 'binding');
 
   return {
     table,
+    shaderBindings,
     state: {
       explicitAttributes,
       explicitBindings,
@@ -351,15 +429,21 @@ function getGPUTableModelConstructorState(
       explicitFirstIndex,
       explicitVertexCount,
       inferInstanceCount,
-      inferVertexCount
+      inferVertexCount,
+      gpuInputSchema,
+      shaderLayout: modelProps.shaderLayout
     },
     modelProps: {
       ...modelProps,
-      bufferLayout: [...explicitBufferLayout, ...table.bufferLayout],
-      attributes: {...explicitAttributes, ...getGPUTableDrawAttributes(table)},
+      modules: shaderBindings?.shaderModule
+        ? [...(modelProps.modules ?? []), shaderBindings.shaderModule]
+        : modelProps.modules,
+      bufferLayout: [...explicitBufferLayout, ...tableBufferLayout],
+      attributes: {...explicitAttributes, ...tableAttributes},
+      constantAttributes: shaderBindings?.constantAttributes,
       bindings: {
         ...explicitBindings,
-        ...getGPUTableDrawBindings(table, tableBindingNames)
+        ...tableBindings
       },
       ...(inferInstanceCount ? {instanceCount: table.numRows} : {}),
       ...(inferVertexCount ? {vertexCount: table.numRows} : {})

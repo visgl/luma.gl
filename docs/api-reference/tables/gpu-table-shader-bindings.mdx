@@ -1,45 +1,74 @@
 import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 
-# GPUTable Shader Bindings
+# GPUTableShaderBindings
 
 <TablesDocsTabs active="shader-bindings" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-in-Progress" />
-</p>
+`GPUTableShaderBindings` owns backend-specific resources prepared by resolving one
+`GPUTable` against a fixed `GPUInputSchema` and `ShaderLayout`. It preserves table
+batches and returns ordinary resources suitable for `Model.setAttributes()` and
+`Model.setBindings()`.
 
-`getShaderBindingsFromGPUTable()` resolves a prepared
-[GPUTable](/docs/api-reference/tables/gpu-table) against a
-[GPUInputSchema](/docs/api-reference/tables/gpu-input-schema) and a
-[ShaderLayout](/docs/api-reference/core/shader-layout). It returns the
-attribute layouts and GPU buffer resources needed to submit one draw per
-preserved table batch.
+Use `GPUTableModel` for automatic integration. Use this class directly when an
+application owns its model or render-pipeline lifecycle.
+
+## Usage
 
 ```ts
-import {getShaderBindingsFromGPUTable} from '@luma.gl/tables';
-
-const shaderBindings = getShaderBindingsFromGPUTable(
+const prepared = new GPUTableShaderBindings(device, {
   table,
-  ModelClass.gpuInputSchema,
+  gpuInputSchema: PointModel.gpuInputSchema,
   shaderLayout
-);
+});
+
+const model = new Model(device, {
+  source,
+  modules: prepared.shaderModule ? [prepared.shaderModule] : [],
+  shaderLayout,
+  bufferLayout: prepared.bufferLayout,
+  attributes: prepared.batches[0]?.attributes,
+  bindings: prepared.batches[0]?.bindings
+});
+
+for (const batch of prepared.batches) {
+  model.setAttributes(batch.attributes);
+  model.setBindings(batch.bindings);
+  model.setConstantAttributes(prepared.constantAttributes);
+  model.draw(renderPass);
+}
+
+model.destroy();
+prepared.destroy();
 ```
 
-## Signature
+## Constructor
 
 ```ts
-function getShaderBindingsFromGPUTable(
-  table: GPUTable,
-  gpuInputSchema: GPUInputSchema,
-  shaderLayout: ShaderLayout
-): GPUTableShaderBindings;
+new GPUTableShaderBindings(device, {
+  table,
+  gpuInputSchema,
+  shaderLayout
+});
+```
 
-type GPUTableShaderBindings = {
-  bufferLayout: BufferLayout[];
-  batches: GPUTableShaderBindingBatch[];
-};
+The schema and shader layout define the pipeline contract and remain fixed for the
+object lifetime. Use `updateBindings()` to replace only the table.
 
+## Properties
+
+| Property | Type | Meaning |
+| --- | --- | --- |
+| `device` | `Device` | Device used for backend preparation. |
+| `table` | `GPUTable` | Currently prepared table. |
+| `gpuInputSchema` | `GPUInputSchema` | Fixed logical input contract. |
+| `shaderLayout` | `ShaderLayout` | Fixed shader attribute and binding contract. |
+| `bufferLayout` | `BufferLayout[]` | Final backend-ready attribute layouts. |
+| `batches` | `GPUTableShaderBindingBatch[]` | Draw-ready resources per preserved batch. |
+| `constantAttributes` | `Record<string, TypedArray>` | WebGL context constant values. |
+| `shaderModule` | `ShaderModule \| undefined` | Generated WebGPU storage row-index module. |
+| `ownedByteLength` | `number` | Current byte length of resources owned by this object. |
+
+```ts
 type GPUTableShaderBindingBatch = {
   attributes: Record<string, Buffer | DynamicBuffer>;
   attributeBuffers: Array<Buffer | DynamicBuffer>;
@@ -47,47 +76,106 @@ type GPUTableShaderBindingBatch = {
 };
 ```
 
-## Returned Draw State
+`attributeBuffers` follows `bufferLayout` order. `attributes` exposes the same
+resources by logical layout name.
 
-`bufferLayout` contains only table layouts that satisfy declared GPU inputs
-and feed shader attributes. `attributeBuffers` uses the same order as that
-layout array. `attributes` exposes the same buffers by layout name for
-`Model.setAttributes()`.
+## updateBindings(table)
 
-`bindings` contains storage and read-only-storage `Binding` ranges keyed by
-shader binding name. Each range retains the source `GPUData.byteOffset` and
-byte size. The helper does not create a WebGPU bind group. Bind-group
-creation belongs to `Model` or `RenderPipeline`, which owns the concrete
-pipeline layout, backend, and bind-group cache.
+Validates and prepares a replacement table using the existing schema and shader
+layout. Compatible owned buffers are reused and rewritten. Obsolete owned resources
+are destroyed after the next state has been prepared.
 
-The result preserves `GPUTable.batches`. A multi-batch table therefore returns
-multiple draw states rather than silently binding only its first batch or
-implicitly packing data.
+The replacement table may change row count, batch count, or whether an optional
+input is varying or constant. A resulting attribute-layout change requires the model
+to apply the new `bufferLayout`; `GPUTableModel` does this automatically.
 
-```ts
-const shaderBindings = getShaderBindingsFromGPUTable(table, gpuInputSchema, shaderLayout);
+## destroy()
 
-for (const batch of shaderBindings.batches) {
-  model.setBufferLayout(shaderBindings.bufferLayout);
-  model.setAttributes(batch.attributes);
-  model.setBindings(batch.bindings);
-  model.draw(renderPass);
+Destroys zero-stride vertex buffers, one-row storage buffers, and the generated row
+multiplier uniform. It does not destroy the caller-owned table or its `GPUData`.
+Repeated calls are safe. Updating a destroyed object throws.
+
+## Attribute Resolution
+
+For varying inputs, `columnName` selects the table layout and `attributeName` selects
+the shader attribute. Interleaved layouts retain only attributes selected as varying.
+
+For WebGPU constants, compatible values with the same step mode are packed into a
+single buffer layout with `byteStride: 0`. Every draw therefore reads the same payload
+for every vertex or instance.
+
+For WebGL constants, no vertex buffer is allocated. Raw memory values are converted
+to the float or integer values visible to the shader, including normalized integer,
+half-float, packed `unorm10-10-10-2`, and BGRA formats.
+
+## Storage Resolution
+
+Varying columns produce batch-local `Binding` ranges that preserve `GPUData.byteOffset`
+and uploaded byte size. Constants produce aligned one-row storage buffers.
+
+When storage declarations are present, `shaderModule` contributes:
+
+```wgsl
+@group(0) @binding(auto)
+var<uniform> gpuTableColumns : GPUTableColumnUniforms;
+
+fn gpuTable_getRowIndex(rowIndex : u32, rowMultiplier : u32) -> u32 {
+  return rowIndex * rowMultiplier;
 }
 ```
 
-## Resolution Rules
+Each storage binding receives a generated field named
+`<storageBindingName>RowMultiplier`:
 
-- The helper first validates required inputs and `GPUVector.format` values with
-  `GPUInputSchema`.
-- `columnName` selects the table vector and batch-local `GPUData`.
-- `attributeName` selects a shader attribute represented by
-  `GPUTable.bufferLayout`.
-- `bindingName` selects a `storage` / `read-only-storage` shader binding.
-- Attribute inputs are returned as layouts plus ordered and named buffers.
-- Storage inputs are returned as named `Binding` ranges.
-- Optional inputs absent from the table are omitted.
-- A declaration without `attributeName` or `bindingName` remains validation-only.
-  One column may feed both an attribute and a storage binding.
+```wgsl
+let color = pointColors[
+  gpuTable_getRowIndex(
+    instanceIndex,
+    gpuTableColumns.pointColorsRowMultiplier
+  )
+];
+```
 
-Source-column mapping and generation of internal model inputs remain adapter or
-model-preparation responsibilities.
+The multiplier is `1` for varying columns and `0` for constants. The uniform binding
+is added to every prepared batch as `gpuTableColumns`.
+
+## GPUTableModel Integration
+
+```ts
+const model = new GPUTableModel(device, {
+  source,
+  shaderLayout,
+  gpuInputSchema: PointModel.gpuInputSchema,
+  table,
+  tableCount: 'instance'
+});
+
+model.drawBatches(renderPass);
+model.setProps({table: replacementTable});
+model.destroy();
+```
+
+The model owns its `GPUTableShaderBindings` but does not own the table.
+
+## Remarks
+
+- **Pipeline compatibility:** `GPUInputSchema` and `ShaderLayout` cannot change through
+  `updateBindings()`. Construct a new object for a new pipeline contract.
+- **Schema validation:** required inputs must exist as varying vectors. Optional
+  fixed-width inputs may be vectors or constants if their format is listed.
+- **Dynamic buffers:** prepared attributes retain `DynamicBuffer` wrappers; storage
+  ranges resolve their current concrete buffers when prepared.
+- **Batch preservation:** the class never packs table batches. `batches[n]` corresponds
+  to `table.batches[n]`.
+- **Interleaving:** a constant override is removed from its varying interleaved layout.
+  Empty layouts are omitted from the pipeline.
+- **Allocation reuse:** update reuses an owned buffer only when purpose, usage, and
+  byte length remain compatible.
+- **Alignment:** `ownedByteLength` reports actual allocated bytes, which may exceed
+  `GPUConstant.byteLength`.
+- **Failure behavior:** validation runs before table state is replaced. A failed update
+  leaves the previously published binding state active.
+- **Optional absence:** this class omits absent optional table resources. A shader that
+  statically requires such a binding still needs a model-specific dummy or fallback.
+- **Ownership:** caller-owned `GPUData`, `GPUVector`, `GPUTable`, and explicit model
+  bindings are never destroyed by this object.

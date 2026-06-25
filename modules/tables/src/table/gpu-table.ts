@@ -5,18 +5,44 @@
 import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
+import {GPUConstant} from './gpu-constant';
 import {GPUData} from './gpu-data';
 import {GPUVector} from './gpu-vector';
 import {GPURecordBatch, type GPURecordBatchSourceInfo} from './gpu-record-batch';
 import {GPU_TABLE_INDEX_COLUMN_NAME, isGPUTableIndexColumnName} from './gpu-schema';
 import {
   getGPUVectorElementFormat,
+  type GPUVectorFormat,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
 } from './gpu-vector-format';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;
+};
+
+/** One logical GPU table column with a format-preserving constant option for fixed-width rows. */
+export type GPUColumn<T extends GPUVectorFormat = GPUVectorFormat> =
+  | GPUVector<T>
+  | (T extends VertexFormat ? GPUConstant<T> : never);
+
+/** Typed logical GPU table columns keyed by schema field name. */
+export type GPUColumnMap<T extends GPUTypeMap = GPUTypeMap> = {
+  [Name in keyof T & string]: GPUColumn<T[Name]>;
+};
+
+/** Options for constructing a GPU table from logical varying and constant columns. */
+export type GPUTableFromColumnsProps<T extends GPUTypeMap = GPUTypeMap> = {
+  /** Logical columns keyed by table field name. */
+  columns: GPUColumnMap<T> | Record<string, GPUVector | GPUConstant>;
+  /** Required logical row count when every column is constant. */
+  numRows?: number;
+  /** Optional table-level schema metadata. */
+  metadata?: Map<string, string>;
+  /** Optional source-row identity forwarded when vectors contain one GPUData chunk. */
+  sourceInfo?: GPURecordBatchSourceInfo;
+  /** Number of null rows forwarded when vectors contain one GPUData chunk. */
+  nullCount?: number;
 };
 
 /** Options for constructing a GPU table from existing GPU vectors. */
@@ -35,6 +61,8 @@ export type GPUTableFromVectorsProps<T extends GPUTypeMap = GPUTypeMap> = {
 export type GPUTableFromBatchesProps<T extends GPUTypeMap = GPUTypeMap> = {
   /** GPU batches preserved by the table. */
   batches: GPURecordBatch<T>[];
+  /** Immutable logical constant columns shared by every batch. */
+  constants?: Record<string, GPUConstant>;
 };
 
 /** Options for constructing one typed table with no GPU record batches. */
@@ -47,6 +75,7 @@ export type GPUTableFromSchemaProps<T extends GPUTypeMap = GPUTypeMap> = {
 
 /** Generic GPU table construction props. */
 export type GPUTableProps<T extends GPUTypeMap = GPUTypeMap> =
+  | GPUTableFromColumnsProps<T>
   | GPUTableFromVectorsProps<T>
   | GPUTableFromBatchesProps<T>
   | GPUTableFromSchemaProps<T>;
@@ -77,6 +106,10 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
   nullCount: number;
   /** GPU vectors keyed by table/shader column name. */
   readonly gpuVectors: Record<string, GPUVector> = {};
+  /** Immutable logical constants keyed by table/shader column name. */
+  readonly gpuConstants: Record<string, GPUConstant> = {};
+  /** Canonical logical columns keyed by table/shader column name. */
+  readonly gpuColumns: Record<string, GPUVector | GPUConstant> = {};
   /** Preserved batch-local GPU storage. */
   readonly batches: GPURecordBatch[] = [];
 
@@ -91,8 +124,28 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
         throw new Error('GPUTable batches constructor requires at least one GPURecordBatch');
       }
       assertCompatibleGPURecordBatches(props.batches);
-      this.schema = firstBatch.schema as GPUSchema<T>;
-      this.numCols = firstBatch.schema.fields.length;
+      Object.assign(this.gpuConstants, props.constants ?? {});
+      for (const constantName of Object.keys(this.gpuConstants)) {
+        if (firstBatch.gpuData[constantName]) {
+          throw new Error(
+            `GPUTable constant column "${constantName}" conflicts with batch GPUData`
+          );
+        }
+        if (isGPUTableIndexColumnName(constantName)) {
+          throw new Error('GPUTable reserved index column "indices" cannot be constant');
+        }
+      }
+      const constantFields = getGPUConstantFields(this.gpuConstants);
+      this.schema =
+        constantFields.length === 0
+          ? (firstBatch.schema as GPUSchema<T>)
+          : {
+              fields: [...firstBatch.schema.fields, ...constantFields] as GPUField<
+                keyof T & string
+              >[],
+              metadata: new Map(firstBatch.schema.metadata)
+            };
+      this.numCols = this.schema.fields.length;
       this.batches.push(...(props.batches as GPURecordBatch[]));
       this.bufferLayout.push(...firstBatch.bufferLayout);
       this.numRows = props.batches.reduce((numRows, batch) => numRows + batch.numRows, 0);
@@ -110,15 +163,30 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
       return;
     }
 
-    const {vectors, metadata, sourceInfo, nullCount = 0} = props;
-    const gpuVectors = normalizeGPUVectors(vectors);
+    const {metadata, sourceInfo, nullCount = 0} = props;
+    const columns = 'columns' in props ? props.columns : props.vectors;
+    const normalizedColumns = normalizeGPUColumns(columns);
+    const gpuVectors = Object.fromEntries(
+      Object.entries(normalizedColumns).filter(
+        (entry): entry is [string, GPUVector] => entry[1] instanceof GPUVector
+      )
+    );
+    Object.assign(
+      this.gpuConstants,
+      Object.fromEntries(
+        Object.entries(normalizedColumns).filter(
+          (entry): entry is [string, GPUConstant] => entry[1] instanceof GPUConstant
+        )
+      )
+    );
     const hasGPUData = Object.values(gpuVectors).some(vector => vector.data.length > 0);
     const bufferLayout = getGPUVectorBufferLayout(gpuVectors, !hasGPUData);
-    const fields = getGPUVectorFields(gpuVectors);
+    const vectorFields = getGPUVectorFields(gpuVectors);
+    const fields = getGPUColumnFields(normalizedColumns, vectorFields);
     const batches = createGPURecordBatchesFromVectors(
       gpuVectors,
       bufferLayout,
-      fields,
+      vectorFields,
       metadata,
       sourceInfo,
       nullCount
@@ -126,10 +194,17 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
 
     this.schema = {fields, metadata: metadata ?? new Map()};
     this.numCols = fields.length;
-    this.numRows = batches.reduce((numRows, batch) => numRows + batch.numRows, 0);
+    const inferredNumRows = batches.reduce((numRows, batch) => numRows + batch.numRows, 0);
+    const explicitNumRows = 'columns' in props ? props.numRows : undefined;
+    this.numRows = getGPUTableRowCount(inferredNumRows, gpuVectors, explicitNumRows);
     this.nullCount = batches.reduce((totalNullCount, batch) => totalNullCount + batch.nullCount, 0);
     this.bufferLayout.push(...bufferLayout);
     this.batches.push(...batches);
+    if (this.batches.length === 0 && Object.keys(this.gpuConstants).length > 0) {
+      this.batches.push(
+        new GPURecordBatch({gpuData: {}, fields: [], numRows: this.numRows, metadata})
+      );
+    }
     this.rebuildAggregateVectors();
   }
 
@@ -152,7 +227,7 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
         continue;
       }
       nextBatches.push(
-        createPackedGPURecordBatch(batchGroup, this.bufferLayout, this.schema as GPUSchema)
+        createPackedGPURecordBatch(batchGroup, this.bufferLayout, getGPUTableVaryingSchema(this))
       );
       supersededBatches.push(...batchGroup);
     }
@@ -172,7 +247,11 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
   /** Adds one already-created GPU record batch to this table. */
   addBatch(batch: GPURecordBatch): this {
     if (this.batches.length === 0) {
-      assertMatchingGPURecordBatchSchema(this.schema, batch.schema, 'GPUTable.addBatch()');
+      assertMatchingGPURecordBatchSchema(
+        getGPUTableVaryingSchema(this),
+        batch.schema,
+        'GPUTable.addBatch()'
+      );
       if (this.bufferLayout.length === 0) {
         this.bufferLayout.push(...batch.bufferLayout);
       } else if (!deepEqualBufferLayouts(this.bufferLayout, batch.bufferLayout)) {
@@ -281,17 +360,17 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
       delete this.gpuVectors[name];
     }
     const firstBatch = this.batches[0];
-    if (!firstBatch) {
-      return;
+    if (firstBatch) {
+      for (const columnName of Object.keys(firstBatch.gpuData)) {
+        const batchData = getBatchColumnData(this.batches, columnName);
+        this.gpuVectors[columnName] = createAggregateGPUVector(
+          columnName,
+          batchData,
+          getColumnBufferLayout(this.bufferLayout, columnName)
+        );
+      }
     }
-    for (const columnName of Object.keys(firstBatch.gpuData)) {
-      const batchData = getBatchColumnData(this.batches, columnName);
-      this.gpuVectors[columnName] = createAggregateGPUVector(
-        columnName,
-        batchData,
-        getColumnBufferLayout(this.bufferLayout, columnName)
-      );
-    }
+    synchronizeGPUColumns(this);
   }
 
   private trySynchronizeAggregateVectors(): boolean {
@@ -402,7 +481,7 @@ function createGPUPackGroups(batches: GPURecordBatch[], minBatchSize?: number): 
 function createPackedGPURecordBatch(
   batchGroup: GPURecordBatch[],
   bufferLayout: BufferLayout[],
-  schema: GPUSchema
+  schema: GPUSchema<any>
 ): GPURecordBatch {
   const firstBatch = batchGroup[0];
   const device = getGPURecordBatchDevice(firstBatch);
@@ -531,7 +610,11 @@ function assertCompatibleGPURecordBatch<T extends GPUTypeMap>(
   if (!deepEqualBufferLayouts(table.bufferLayout, batch.bufferLayout)) {
     throw new Error('GPUTable.addBatch() requires matching buffer layouts');
   }
-  assertMatchingGPURecordBatchSchema(table.schema, batch.schema, 'GPUTable.addBatch()');
+  assertMatchingGPURecordBatchSchema(
+    getGPUTableVaryingSchema(table),
+    batch.schema,
+    'GPUTable.addBatch()'
+  );
 }
 
 function assertCompatibleGPURecordBatches<T extends GPUTypeMap>(
@@ -625,6 +708,12 @@ function rebuildGPUTableColumns<T extends GPUTypeMap>(
       delete table.gpuVectors[name];
     }
   }
+  for (const name of Object.keys(table.gpuConstants)) {
+    if (!selectedColumnSet.has(name)) {
+      delete table.gpuConstants[name];
+    }
+  }
+  synchronizeGPUColumns(table);
 }
 
 function rebuildGPURecordBatchColumns<T extends GPUTypeMap>(
@@ -652,12 +741,86 @@ function rebuildGPURecordBatchColumns<T extends GPUTypeMap>(
   batch.numCols = selectedFields.length;
 }
 
-function normalizeGPUVectors(
-  vectors: Record<string, GPUVector> | GPUVector[]
-): Record<string, GPUVector> {
-  return Array.isArray(vectors)
-    ? Object.fromEntries(vectors.map(vector => [vector.name, vector]))
-    : vectors;
+function normalizeGPUColumns(
+  columns: Record<string, GPUVector | GPUConstant> | GPUVector[]
+): Record<string, GPUVector | GPUConstant> {
+  const normalizedColumns = Array.isArray(columns)
+    ? Object.fromEntries(columns.map(vector => [vector.name, vector]))
+    : columns;
+  for (const [columnName, column] of Object.entries(normalizedColumns)) {
+    if (column instanceof GPUVector && column.name !== columnName) {
+      throw new Error(
+        `GPUTable column name "${columnName}" does not match GPUVector.name "${column.name}"`
+      );
+    }
+    if (isGPUTableIndexColumnName(columnName) && column instanceof GPUConstant) {
+      throw new Error('GPUTable reserved index column "indices" cannot be constant');
+    }
+  }
+  return normalizedColumns;
+}
+
+function getGPUColumnFields(
+  columns: Record<string, GPUVector | GPUConstant>,
+  vectorFields: GPUField[]
+): GPUField[] {
+  const vectorFieldMap = new Map(vectorFields.map(field => [field.name, field]));
+  return Object.entries(columns).map(([columnName, column]) => {
+    if (column instanceof GPUConstant) {
+      return {
+        name: columnName,
+        format: column.format,
+        nullable: false,
+        metadata: new Map()
+      };
+    }
+    const field = vectorFieldMap.get(columnName);
+    if (!field) {
+      throw new Error(`GPUTable cannot synthesize field "${columnName}"`);
+    }
+    return field;
+  });
+}
+
+function getGPUConstantFields(constants: Record<string, GPUConstant>): GPUField[] {
+  return getGPUColumnFields(constants, []);
+}
+
+function getGPUTableRowCount(
+  inferredNumRows: number,
+  gpuVectors: Record<string, GPUVector>,
+  explicitNumRows?: number
+): number {
+  if (
+    explicitNumRows !== undefined &&
+    (!Number.isInteger(explicitNumRows) || explicitNumRows < 0)
+  ) {
+    throw new Error('GPUTable columns constructor requires numRows to be a non-negative integer');
+  }
+  if (Object.keys(gpuVectors).length === 0) {
+    if (explicitNumRows === undefined) {
+      throw new Error('GPUTable columns constructor requires numRows for an all-constant table');
+    }
+    return explicitNumRows;
+  }
+  if (explicitNumRows !== undefined && explicitNumRows !== inferredNumRows) {
+    throw new Error('GPUTable columns constructor numRows must match varying columns');
+  }
+  return inferredNumRows;
+}
+
+function synchronizeGPUColumns<T extends GPUTypeMap>(table: GPUTable<T>): void {
+  for (const name of Object.keys(table.gpuColumns)) {
+    delete table.gpuColumns[name];
+  }
+  Object.assign(table.gpuColumns, table.gpuVectors, table.gpuConstants);
+}
+
+function getGPUTableVaryingSchema<T extends GPUTypeMap>(table: GPUTable<T>): GPUSchema<T> {
+  return {
+    fields: table.schema.fields.filter(field => !table.gpuConstants[field.name]),
+    metadata: new Map(table.schema.metadata)
+  };
 }
 
 function getGPUVectorBufferLayout(

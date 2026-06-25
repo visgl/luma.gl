@@ -20,7 +20,7 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
     {
       columnName: 'positions',
       attributeName: 'positions',
-      bindingName: 'polygonPositions',
+      storageBindingName: 'polygonPositions',
       kind: 'positions',
       required: true,
       formats: ['vertex-list<float32x4>'],
@@ -29,7 +29,7 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
     {
       columnName: 'colors',
       attributeName: 'colors',
-      bindingName: 'polygonColors',
+      storageBindingName: 'polygonColors',
       kind: 'colors',
       required: true,
       formats: ['vertex-list<unorm8x4>'],
@@ -38,7 +38,7 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
     {
       columnName: 'rowIndices',
       attributeName: 'rowIndices',
-      bindingName: 'polygonRowIndices',
+      storageBindingName: 'polygonRowIndices',
       kind: 'scalars',
       required: true,
       formats: ['vertex-list<uint32>'],

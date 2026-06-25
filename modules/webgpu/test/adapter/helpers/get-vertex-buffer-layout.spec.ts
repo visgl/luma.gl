@@ -201,6 +201,27 @@ test('WebGPU#getVertexBufferLayout', t => {
   t.end();
 });
 
+test('WebGPU#getVertexBufferLayout preserves explicit zero stride', t => {
+  const constantLayout = getVertexBufferLayout(
+    {
+      attributes: [{name: 'colors', location: 0, type: 'vec4<f32>', stepMode: 'instance'}],
+      bindings: []
+    },
+    [{name: 'colors', format: 'unorm8x4', byteStride: 0}]
+  );
+  const packedLayout = getVertexBufferLayout(
+    {
+      attributes: [{name: 'colors', location: 0, type: 'vec4<f32>', stepMode: 'instance'}],
+      bindings: []
+    },
+    [{name: 'colors', format: 'unorm8x4'}]
+  );
+
+  t.equal(constantLayout[0].arrayStride, 0, 'explicit zero remains zero');
+  t.equal(packedLayout[0].arrayStride, 4, 'omitted stride resolves to packed format size');
+  t.end();
+});
+
 test('WebGPU#resolveVertexBufferLayouts splits oversized interleaved offsets into repeated bindings', t => {
   const {vertexBufferLayouts, resolvedSlots} = resolveVertexBufferLayouts(
     fp64ShaderLayout,

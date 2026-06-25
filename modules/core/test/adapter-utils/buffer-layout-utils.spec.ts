@@ -58,7 +58,7 @@ test('resolveLogicalAttributeMappings resolves interleaved, shorthand, and defau
       location: 2,
       vertexFormat: 'float32x3',
       byteOffset: 0,
-      byteStride: 0,
+      byteStride: 12,
       stepMode: 'vertex'
     },
     {
@@ -67,10 +67,29 @@ test('resolveLogicalAttributeMappings resolves interleaved, shorthand, and defau
       location: 3,
       vertexFormat: 'float32x4',
       byteOffset: 0,
-      byteStride: 0,
+      byteStride: 16,
       stepMode: 'vertex'
     }
   ]);
+  t.end();
+});
+
+test('resolveLogicalAttributeMappings distinguishes zero from omitted stride', t => {
+  const mappings = resolveLogicalAttributeMappings(shaderLayout, [
+    {name: 'vertexPositions', format: 'float32x3', byteStride: 0},
+    {name: 'colors', format: 'float32x4'}
+  ]);
+
+  t.equal(
+    mappings.find(mapping => mapping.attributeName === 'vertexPositions')?.byteStride,
+    0,
+    'preserves an explicit zero stride'
+  );
+  t.equal(
+    mappings.find(mapping => mapping.attributeName === 'colors')?.byteStride,
+    16,
+    'resolves an omitted stride to the packed format size'
+  );
   t.end();
 });
 
