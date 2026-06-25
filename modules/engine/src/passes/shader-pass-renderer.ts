@@ -113,8 +113,9 @@ export class ShaderPassRenderer {
       flipY: props.flipY ?? device.type === 'webgpu'
     });
 
+    const flipY = props.flipY ?? device.type === 'webgpu';
     this.passRenderers = props.shaderPasses.map(
-      shaderPass => new PassRenderer(device, shaderPass, this.shaderInputs)
+      shaderPass => new PassRenderer(device, shaderPass, this.shaderInputs, flipY)
     );
   }
 
@@ -276,7 +277,12 @@ class PassRenderer {
   renderTargets: Record<string, ManagedRenderTarget>;
   subPassExecutions: EffectiveSubPass[];
 
-  constructor(device: Device, passDefinition: ShaderPassLike, shaderInputs: ShaderInputs) {
+  constructor(
+    device: Device,
+    passDefinition: ShaderPassLike,
+    shaderInputs: ShaderInputs,
+    flipY: boolean
+  ) {
     this.device = device;
     this.shaderInputs = shaderInputs;
     this.passDefinition = passDefinition;
@@ -285,7 +291,7 @@ class PassRenderer {
       validateRenderTargetNames(passDefinition.name, passDefinition.renderTargets || {});
       this.renderTargets = createManagedRenderTargets(device, passDefinition.renderTargets || {});
       this.subPassExecutions = passDefinition.steps.flatMap(step =>
-        this.createStepExecutions(passDefinition, step)
+        this.createStepExecutions(passDefinition, step, flipY)
       );
       return;
     }
@@ -293,7 +299,8 @@ class PassRenderer {
     validateShaderPassDoesNotOwnRenderTargets(passDefinition, passDefinition.name);
     this.renderTargets = {};
     this.subPassExecutions = this.createPassExecutions(passDefinition, {
-      ownerName: passDefinition.name
+      ownerName: passDefinition.name,
+      flipY
     });
   }
 
@@ -435,7 +442,8 @@ class PassRenderer {
 
   private createStepExecutions(
     pipeline: ShaderPassPipeline,
-    step: ShaderPassPipeline['steps'][number]
+    step: ShaderPassPipeline['steps'][number],
+    flipY: boolean
   ): EffectiveSubPass[] {
     validateShaderPassDoesNotOwnRenderTargets(
       step.shaderPass,
@@ -446,7 +454,8 @@ class PassRenderer {
       ownerName: `${pipeline.name}/${step.shaderPass.name}`,
       firstInputs: step.inputs,
       lastOutput: step.output,
-      uniformOverrides: step.uniforms
+      uniformOverrides: step.uniforms,
+      flipY
     });
   }
 
@@ -457,6 +466,7 @@ class PassRenderer {
       firstInputs?: Partial<Record<string, ShaderPassInputSource<string>>>;
       lastOutput?: 'previous' | string;
       uniformOverrides?: Record<string, unknown>;
+      flipY: boolean;
     }
   ): EffectiveSubPass[] {
     const subPasses = shaderPass.passes || [];
@@ -472,7 +482,7 @@ class PassRenderer {
       return {
         ownerName: options.ownerName,
         shaderPass,
-        subPassRenderer: new SubPassRenderer(this.device, shaderPass, subPass),
+        subPassRenderer: new SubPassRenderer(this.device, shaderPass, subPass, options.flipY),
         inputs,
         output,
         uniforms: mergeUniforms(options.uniformOverrides, subPass.uniforms)
@@ -510,10 +520,12 @@ class SubPassRenderer {
   model: ClipSpace;
   shaderPass: ShaderPass;
   subPass: ShaderSubPass;
+  flipY: boolean;
 
-  constructor(device: Device, shaderPass: ShaderPass, subPass: ShaderSubPass) {
+  constructor(device: Device, shaderPass: ShaderPass, subPass: ShaderSubPass, flipY: boolean) {
     this.shaderPass = shaderPass;
     this.subPass = subPass;
+    this.flipY = flipY;
     const action =
       subPass.action || (subPass.filter && 'filter') || (subPass.sampler && 'sample') || 'filter';
     const fs = getFragmentShaderForRenderPass({
@@ -546,7 +558,7 @@ class SubPassRenderer {
     const {commandEncoder, bindings, textureScale, uniforms} = options;
 
     this.model.shaderInputs.setProps({
-      textureTransform: {scale: textureScale}
+      textureTransform: {scale: textureScale, flipY: this.flipY ? 1 : 0}
     });
     this.model.shaderInputs.setProps({
       [this.shaderPass.name]: this.shaderPass.uniforms || {}

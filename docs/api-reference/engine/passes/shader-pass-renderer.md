@@ -144,9 +144,10 @@ export type ShaderPassRendererProps = {
 };
 ```
 
-`flipY` controls the fullscreen copies used to seed and present the pass chain. It defaults to
-`true` on WebGPU to preserve image-texture behavior. Set it to `false` when the source is a
-framebuffer attachment whose texture coordinates already use the render-target orientation.
+`flipY` controls texture sampling in the fullscreen copies and every shader subpass. It defaults
+to `true` on WebGPU so framebuffer attachments retain a consistent top-left screen orientation
+through intermediate render targets. Set it explicitly when integrating textures with a different
+origin convention.
 
 ## Properties
 
