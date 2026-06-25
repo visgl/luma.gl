@@ -79,7 +79,7 @@ export class HTMLTexture implements TextureBindingSource {
       sampler = {},
       sourceHeight,
       sourceWidth,
-      usage = Texture.SAMPLE | Texture.COPY_DST,
+      usage = Texture.SAMPLE | Texture.COPY_DST | Texture.RENDER,
       width
     } = props;
     assertElementIsCanvasChild(canvas, element);

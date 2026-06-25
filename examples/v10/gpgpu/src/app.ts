@@ -16,22 +16,31 @@ import {
   type TableColumn
 } from './table-renderer';
 
-const DEFAULT_ROW_COUNT = 10_000_000;
+// The evaluator buffer pool reserves 2x the requested byte length. Five million rows keep the
+// largest default allocation below WebGPU's portable 256 MiB maxBufferSize limit.
+const DEFAULT_ROW_COUNT = 5_000_000;
 const MAXIMUM_ROW_COUNT = 10_000_000;
 const EXPRESSION_QUERY_PARAMETER = 'expression';
-
-let evaluationDevicePromise: Promise<Device> | null = null;
 
 export type GPGPUShowcaseHandle = {
   destroy: () => void;
 };
 
-export function initializeGPGPUShowcase(): GPGPUShowcaseHandle {
+export type GPGPUShowcaseProps = {
+  /** Reuse a caller-owned device, such as the device selected by the website DeviceTabs. */
+  device?: Device;
+};
+
+export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUShowcaseHandle {
   const root = document.getElementById('app');
   if (!root) {
     throw new Error('GPGPU showcase requires #app');
   }
 
+  const evaluationDevicePromise = props.device
+    ? Promise.resolve(props.device)
+    : createEvaluationDevice();
+  const ownsEvaluationDevice = !props.device;
   const elements = getRenderedTableElements();
   const expressionElements = getExpressionElements();
   const requestedExpression = getRequestedExpression();
@@ -61,8 +70,9 @@ export function initializeGPGPUShowcase(): GPGPUShowcaseHandle {
     }
     renderer?.destroy();
     renderer = null;
-    void evaluationDevicePromise?.then(device => device.destroy());
-    evaluationDevicePromise = null;
+    if (ownsEvaluationDevice) {
+      void evaluationDevicePromise.then(device => device.destroy());
+    }
   };
 
   if (requestedExpression !== null) {
@@ -100,6 +110,7 @@ export function initializeGPGPUShowcase(): GPGPUShowcaseHandle {
         renderer,
         sourceColumns: data.columns,
         expressionInputs: data.expressionInputs,
+        evaluationDevicePromise,
         persistExpression: true
       });
     };
@@ -112,6 +123,7 @@ export function initializeGPGPUShowcase(): GPGPUShowcaseHandle {
         renderer: tableRenderer,
         sourceColumns: data.columns,
         expressionInputs: data.expressionInputs,
+        evaluationDevicePromise,
         persistExpression: false
       });
     }
@@ -159,6 +171,7 @@ async function runExpression({
   renderer,
   sourceColumns,
   expressionInputs,
+  evaluationDevicePromise,
   persistExpression
 }: {
   expression: string;
@@ -166,6 +179,7 @@ async function runExpression({
   renderer: VirtualGPUTableRenderer;
   sourceColumns: Parameters<VirtualGPUTableRenderer['setColumns']>[0];
   expressionInputs: Parameters<typeof evaluateExpression>[1];
+  evaluationDevicePromise: Promise<Device>;
   persistExpression: boolean;
 }): Promise<void> {
   let evaluationStartedAt: number | null = null;
@@ -182,7 +196,7 @@ async function runExpression({
     messageElement.textContent = 'Evaluating expression...';
     const output = evaluateExpression(trimmedExpression, expressionInputs);
 
-    const device = await getEvaluationDevice();
+    const device = await evaluationDevicePromise;
     await cleanEvaluate(device, {
       ...expressionInputs,
       output
@@ -227,23 +241,20 @@ async function makeOutputTableColumn(
   );
 }
 
-async function getEvaluationDevice(): Promise<Device> {
-  if (!evaluationDevicePromise) {
-    evaluationDevicePromise = luma.createDevice({
-      adapters: [webgpuAdapter, webgl2Adapter],
-      createCanvasContext:
-        typeof OffscreenCanvas === 'undefined'
-          ? true
-          : {
-              canvas: new OffscreenCanvas(1, 1),
-              width: 1,
-              height: 1,
-              autoResize: false,
-              useDevicePixels: false
-            }
-    });
-  }
-  return evaluationDevicePromise;
+async function createEvaluationDevice(): Promise<Device> {
+  return await luma.createDevice({
+    adapters: [webgpuAdapter, webgl2Adapter],
+    createCanvasContext:
+      typeof OffscreenCanvas === 'undefined'
+        ? true
+        : {
+            canvas: new OffscreenCanvas(1, 1),
+            width: 1,
+            height: 1,
+            autoResize: false,
+            useDevicePixels: false
+          }
+  });
 }
 
 function getMetricStartIndicesEvaluator(sourceColumns: TableColumn[]): GPUDataEvaluator {

@@ -75,7 +75,7 @@ test('HTMLTexture configures paint cycle and tracks DOM uploads', async t => {
   t.equal(fakeCanvas.requestPaintCount, 1, 'constructor requests the first paint');
   t.equal(
     texture.texture.props.usage,
-    Texture.SAMPLE | Texture.COPY_DST,
+    Texture.SAMPLE | Texture.COPY_DST | Texture.RENDER,
     'default texture usage supports WebGPU element-image copies'
   );
   t.equal(
