@@ -1,4 +1,8 @@
+import {GpuMemoryDocsTabs} from '@site/src/components/docs/gpu-memory-docs-tabs';
+
 # Storage Buffers
+
+<GpuMemoryDocsTabs active="gpu-storage-buffers" />
 
 Storage buffers are the flexible WebGPU path for shader-visible data that should
 be read or written as ordinary WGSL arrays and structs. They are not available in

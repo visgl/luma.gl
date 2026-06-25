@@ -1,4 +1,8 @@
+import {GpuMemoryDocsTabs} from '@site/src/components/docs/gpu-memory-docs-tabs';
+
 # GPU Memory
+
+<GpuMemoryDocsTabs active="gpu-memory" />
 
 Memory on GPU is managed through [Buffer](/docs/api-guide/gpu/gpu-buffers) and [Texture](/docs/api-guide/gpu/gpu-textures) resources.
 

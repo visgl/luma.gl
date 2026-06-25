@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # PresentationContext
+
+<CoreDocsTabs group="presentation" active="presentation-context" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />

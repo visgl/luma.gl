@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # ScenegraphNode
+
+<EngineDocsTabs group="scenegraph" active="scenegraph-node" />
 
 `ScenegraphNode` is the base class for engine scenegraph objects.
 It stores an id, transform state, a model matrix, and utility methods for updating that transform.

@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # AnimationLoop
+
+<EngineDocsTabs group="animation" active="animation-loop" />
 
 `AnimationLoop` manages a render loop around a luma.gl [`Device`](/docs/api-reference/core/device).
 It resolves the device, tracks frame timing, builds [`AnimationProps`](#animationprops), and invokes application callbacks for initialization, per-frame rendering, and teardown.

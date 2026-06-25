@@ -1,4 +1,8 @@
+import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+
 # ShaderPlugin
+
+<ShadertoolsDocsTabs active="shader-plugin" />
 
 `ShaderPlugin` groups reusable shader assembly contributions that can be
 attached to [`Model`](/docs/api-reference/engine/model) and

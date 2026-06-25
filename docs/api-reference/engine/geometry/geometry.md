@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # Geometry
+
+<EngineDocsTabs group="geometry" active="geometry" />
 
 `Geometry` is the CPU-side geometry container used by engine classes.
 It stores typed-array attributes, optional indices, and a `bufferLayout`.

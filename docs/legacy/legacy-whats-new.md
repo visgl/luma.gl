@@ -1,4 +1,8 @@
+import {LegacyDocsTabs} from '@site/src/components/docs/legacy-docs-tabs';
+
 # Legacy What's New
+
+<LegacyDocsTabs active="legacy-whats-new" />
 
 :::info
 This page contains release notes for older luma.gl releases (up through v8.5). For luma.gl v9, refer to the main [Whats' New](/docs/whats-new) page.

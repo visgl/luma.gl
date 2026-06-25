@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # Scenegraphs
+
+<EngineDocsTabs group="scenegraph" active="scenegraphs" />
 
 The luma.gl engine provides a set of Scenegraph classes to organize `Model`s into a hierarchy.
 

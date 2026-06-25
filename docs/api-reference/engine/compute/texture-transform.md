@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # TextureTransform
+
+<EngineDocsTabs group="compute" active="texture-transform" />
 
 `TextureTransform` is the engine helper for texture-to-texture transform passes.
 It builds an internal [`Model`](/docs/api-reference/engine/model), manages a framebuffer for the target texture, and renders into that texture.

@@ -34,7 +34,15 @@ export type CoreDocsTabId =
   | 'texture'
   | 'texture-view'
   | 'sampler'
-  | 'external-texture';
+  | 'external-texture'
+  | 'shader-layout'
+  | 'bindings'
+  | 'shader-block-layout'
+  | 'buffer-layout'
+  | 'uniform-store'
+  | 'canvas-context'
+  | 'presentation-context'
+  | 'framebuffer';
 
 /** Core documentation tab group identifiers. */
 export type CoreDocsTabGroupId =
@@ -42,7 +50,9 @@ export type CoreDocsTabGroupId =
   | 'shader-types'
   | 'commands'
   | 'pipelines'
-  | 'textures';
+  | 'textures'
+  | 'layouts'
+  | 'presentation';
 
 const CORE_DOCS_TABS: Record<CoreDocsTabGroupId, CoreDocsTab[]> = {
   device: [
@@ -132,6 +142,30 @@ const CORE_DOCS_TABS: Record<CoreDocsTabGroupId, CoreDocsTab[]> = {
       id: 'external-texture',
       label: 'ExternalTexture',
       href: '/docs/api-reference/core/resources/external-texture'
+    }
+  ],
+  layouts: [
+    {id: 'shader-layout', label: 'ShaderLayout', href: '/docs/api-reference/core/shader-layout'},
+    {id: 'bindings', label: 'Bindings', href: '/docs/api-reference/core/bindings'},
+    {
+      id: 'shader-block-layout',
+      label: 'ShaderBlockLayout',
+      href: '/docs/api-reference/core/shader-block-layout'
+    },
+    {id: 'buffer-layout', label: 'BufferLayout', href: '/docs/api-reference/core/buffer-layout'},
+    {id: 'uniform-store', label: 'UniformStore', href: '/docs/api-reference/core/uniform-store'}
+  ],
+  presentation: [
+    {id: 'canvas-context', label: 'CanvasContext', href: '/docs/api-reference/core/canvas-context'},
+    {
+      id: 'presentation-context',
+      label: 'PresentationContext',
+      href: '/docs/api-reference/core/presentation-context'
+    },
+    {
+      id: 'framebuffer',
+      label: 'Framebuffer',
+      href: '/docs/api-reference/core/resources/framebuffer'
     }
   ]
 };

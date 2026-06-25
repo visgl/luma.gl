@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # BufferTransform
+
+<EngineDocsTabs group="compute" active="buffer-transform" />
 
 `BufferTransform` is the engine wrapper for WebGL transform-feedback workflows.
 It internally builds a [`Model`](/docs/api-reference/engine/model) plus a `TransformFeedback` object and uses them to run buffer-to-buffer transforms.

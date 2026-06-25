@@ -1,4 +1,8 @@
+import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+
 # GPU Computations
+
+<EngineDocsTabs group="compute" active="gpu-computations" />
 
 Some operations can be very efficiently executed on the GPU.
 

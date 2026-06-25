@@ -1,4 +1,8 @@
+import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+
 # ShaderAssembler
+
+<ShadertoolsDocsTabs active="shader-assembler" />
 
 `ShaderAssembler` combines application shader source with shadertools modules,
 hook functions, and injections before luma.gl creates shader resources. Use

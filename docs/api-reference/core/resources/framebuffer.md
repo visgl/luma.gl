@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # Framebuffer
+
+<CoreDocsTabs group="presentation" active="framebuffer" />
 
 A `Framebuffer` holds textures that will be used as render targets for `RenderPipeline`s 
 together with additional information on how the `RenderPipeline` should use the various attached textures:
