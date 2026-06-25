@@ -5,14 +5,9 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {
-  createStreamingParticleRecordBatchIterator,
-  makeArrowParticleRecordBatches,
-  STREAMING_PARTICLE_BATCH_COUNT
-} from './arrow-particle-data';
 import {ArrowParticleRenderer} from './arrow-particle-renderer';
-import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
-import {ArrowParticlesControlPanel, makeArrowParticlesControlPanelHtml} from './control-panel';
+import {ArrowParticleSource} from './arrow-particle-source';
+import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Particles: FixedSizeList<Float32, 2>';
 export const description =
@@ -20,69 +15,28 @@ export const description =
 
 export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
-
-  readonly device: Device;
   readonly layer: ArrowParticleRenderer;
-  readonly controlPanel: ArrowParticlesControlPanel;
-  readonly panels = new ArrowExamplePanelManager({
-    descriptionHtml: makeArrowParticlesControlPanelHtml()
-  });
-  isFinalized = false;
+  readonly source: ArrowParticleSource;
 
   constructor({device}: AnimationProps) {
     super();
-    this.device = device as Device;
-    this.layer = new ArrowParticleRenderer(this.device);
-    this.controlPanel = new ArrowParticlesControlPanel();
+    this.layer = new ArrowParticleRenderer(device as Device);
+    this.source = new ArrowParticleSource(props => this.layer.setProps(props));
   }
 
   override async onInitialize(): Promise<void> {
-    this.panels.mount();
-    this.controlPanel.initialize();
-    this.startStreamingParticles();
+    this.source.initialize();
   }
 
   override onRender({device, time}: AnimationProps): void {
-    const didReset = this.layer.update(time);
-    if (didReset && !this.isFinalized) {
-      this.startStreamingParticles();
-    }
-
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.01, 0.02, 0.05, 1]
-    });
+    if (this.layer.update(time)) this.source.restart();
+    const renderPass = device.beginRenderPass({clearColor: [0.01, 0.02, 0.05, 1]});
     this.layer.draw(renderPass);
     renderPass.end();
   }
 
   override onFinalize(): void {
-    this.isFinalized = true;
-    this.controlPanel.destroy();
-    this.panels.finalize();
+    this.source.finalize();
     this.layer.destroy();
-  }
-
-  private startStreamingParticles(): void {
-    this.controlPanel.setStreamingBatchStatus(0, STREAMING_PARTICLE_BATCH_COUNT);
-    const recordBatches = makeArrowParticleRecordBatches();
-    const particleTableStream = this.panels.beginLoadedTableStream({
-      id: 'particles-source',
-      label: 'Loaded particle source',
-      kind: 'source',
-      recordBatches
-    });
-
-    this.layer.setProps({
-      data: createStreamingParticleRecordBatchIterator(recordBatches),
-      onDataBatch: ({loadedBatchCount}) => {
-        if (!this.isFinalized) {
-          particleTableStream.setLoadedBatchCount(loadedBatchCount);
-          this.controlPanel.setStreamingBatchStatus(
-            loadedBatchCount,
-            STREAMING_PARTICLE_BATCH_COUNT
-          );
-        }
-      }
-    });
   }
 }

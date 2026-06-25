@@ -6,14 +6,9 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ABufferRenderer, WBOITRenderer} from '@luma.gl/experimental';
-import {
-  ArrowColumnRenderer,
-  formatActiveTimeBucket,
-  getDefaultColumnRendererMetricDefaults
-} from './arrow-column-renderer';
-import {formatArrowColumnRendererMetrics} from './arrow-column-metrics';
-import {ArrowColumnRendererControlPanel, type ArrowColumnTransparencyMode} from './control-panel';
-import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
+import {ArrowColumnRenderer, formatActiveTimeBucket} from './arrow-column-renderer';
+import {ArrowColumnSource} from './arrow-column-source';
+import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'DGGS + time';
 export const description =
@@ -21,25 +16,12 @@ export const description =
 
 export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
-
   static props = {useDevicePixels: true, createFramebuffer: true};
-
   readonly device: Device;
   readonly aBufferRenderer: ABufferRenderer;
   readonly wboitRenderer: WBOITRenderer;
-  transparencyMode: ArrowColumnTransparencyMode = 'a-buffer';
-  readonly controlPanel = new ArrowColumnRendererControlPanel({
-    onTransparencyModeChange: mode => {
-      this.transparencyMode = mode;
-      this.updateRendererStatus();
-    }
-  });
-  readonly panels = new ArrowExamplePanelManager({
-    descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
-    settingsPanel: () => this.controlPanel.makeSettingsPanel()
-  });
+  readonly source: ArrowColumnSource;
   layer: ArrowColumnRenderer | null = null;
-  isFinalized = false;
 
   constructor({device}: AnimationProps) {
     super();
@@ -50,81 +32,44 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
       maxBufferByteLength: 64 * 1024 * 1024
     });
     this.wboitRenderer = new WBOITRenderer(this.device);
+    this.source = new ArrowColumnSource(
+      sourceData => void this.initializeLayer(sourceData),
+      () => this.source.setRenderingStatus()
+    );
   }
 
   override async onInitialize(): Promise<void> {
-    this.panels.mount();
-    this.controlPanel.setStatus('Loading deck.gl CSV');
-    this.controlPanel.setMetrics(
-      formatArrowColumnRendererMetrics(getDefaultColumnRendererMetricDefaults())
-    );
-
-    const layer = new ArrowColumnRenderer(this.device);
-    this.layer = layer;
-    try {
-      await layer.initialize();
-    } catch (error) {
-      this.controlPanel.setStatus(getErrorMessage(error));
-      throw error;
-    }
-
-    if (this.isFinalized) {
-      layer.destroy();
-      return;
-    }
-    this.updateRendererStatus();
-    this.controlPanel.setMetrics(formatArrowColumnRendererMetrics(layer.getMetrics()));
-    const sourceData = layer.getSourceData();
-    this.panels.setTableEntries([
-      {
-        id: 'columns-aggregate',
-        label: 'Aggregated columns',
-        kind: 'source',
-        table: sourceData.table
-      },
-      {
-        id: 'columns-geometry',
-        label: 'Decoded H3 geometry keys',
-        kind: 'derived',
-        table: sourceData.geometryTable
-      }
-    ]);
+    await this.source.initialize();
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
-    if (this.transparencyMode === 'a-buffer') {
+    if (this.source.transparencyMode === 'a-buffer') {
       this.aBufferRenderer.render({
         clearColor: [0.012, 0.024, 0.045, 1],
         clearDepth: 1,
         drawBase: () => {},
-        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) =>
           this.layer?.prepareABufferDraw(
             commandEncoder,
             {time, aspect},
             shaderModuleProps,
             captureParameters
-          );
-        },
-        drawTranslucent: renderPass => {
-          this.layer?.drawABuffer(renderPass);
-        }
+          ),
+        drawTranslucent: renderPass => this.layer?.drawABuffer(renderPass)
       });
-    } else if (this.transparencyMode === 'weighted-blended') {
+    } else if (this.source.transparencyMode === 'weighted-blended') {
       this.wboitRenderer.render({
         clearColor: [0.012, 0.024, 0.045, 1],
         clearDepth: 1,
         drawBase: () => {},
-        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) =>
           this.layer?.prepareWBOITDraw(
             commandEncoder,
             {time, aspect},
             shaderModuleProps,
             captureParameters
-          );
-        },
-        drawTranslucent: renderPass => {
-          this.layer?.drawWBOIT(renderPass);
-        }
+          ),
+        drawTranslucent: renderPass => this.layer?.drawWBOIT(renderPass)
       });
     } else {
       const renderPass = device.beginRenderPass({
@@ -134,34 +79,25 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
       this.layer?.draw(renderPass, {time, aspect});
       renderPass.end();
     }
-
-    if (this.layer) {
-      this.controlPanel.setActiveTimeBucket(
-        formatActiveTimeBucket(this.layer.getActiveTimeBucket())
-      );
-    }
+    if (this.layer)
+      this.source.setActiveTimeBucket(formatActiveTimeBucket(this.layer.getActiveTimeBucket()));
   }
 
   override onFinalize(): void {
-    this.isFinalized = true;
-    this.controlPanel.destroy();
-    this.panels.finalize();
+    this.source.finalize();
     this.aBufferRenderer.destroy();
     this.wboitRenderer.destroy();
     this.layer?.destroy();
   }
 
-  private updateRendererStatus(): void {
-    this.controlPanel.setStatus(
-      this.transparencyMode === 'a-buffer'
-        ? 'Rendering with A-buffer OIT'
-        : this.transparencyMode === 'weighted-blended'
-          ? 'Rendering with weighted blended OIT'
-          : 'Rendering with standard alpha blending'
-    );
+  private async initializeLayer(
+    sourceData: import('./arrow-column-data').ArrowColumnSourceData
+  ): Promise<void> {
+    const layer = new ArrowColumnRenderer(this.device, {sourceData});
+    await layer.initialize();
+    this.layer?.destroy();
+    this.layer = layer;
+    this.source.setRenderingStatus();
+    this.source.setRendererMetrics(layer.getMetrics());
   }
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

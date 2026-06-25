@@ -136,8 +136,8 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
       DEFAULT_TIME_COLUMNS_RENDERER_PROPS.initialScheduleMilliseconds;
   }
 
-  async initialize(): Promise<void> {
-    this.timeColumnsTableInput = await makeTimeColumnsTableInput(this.device);
+  async initialize(sourceTable = makeTimeColumnsSourceTable()): Promise<void> {
+    this.timeColumnsTableInput = await makeTimeColumnsTableInput(this.device, sourceTable);
     this.boardModel = this.createBoardModel();
     this.eventModel = this.createEventModel(this.timeColumnsTableInput, this.activeRenderMode);
     this.cursorModel = this.createCursorModel();
@@ -311,8 +311,10 @@ export class ArrowTimeColumnsRenderer extends GPURenderable<[RenderPass, {time: 
   }
 }
 
-async function makeTimeColumnsTableInput(device: Device): Promise<TimeColumnsTableInput> {
-  const sourceTable = makeTimeColumnsSourceTable();
+async function makeTimeColumnsTableInput(
+  device: Device,
+  sourceTable: arrow.Table
+): Promise<TimeColumnsTableInput> {
   const temporalSourceVectors = {
     eventDates: getRequiredArrowVector<arrow.DateDay>(sourceTable, 'eventDates'),
     eventTimes: getRequiredArrowVector<arrow.TimeMillisecond>(sourceTable, 'eventTimes'),

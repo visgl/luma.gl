@@ -4,10 +4,9 @@
 
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
-import {makeArrowFilteringTable} from './arrow-filtering-data';
 import {ArrowFilteringRenderer} from './arrow-filtering-renderer';
-import {ArrowFilteringControlPanel, type ArrowFilteringControlState} from './control-panel';
+import {ArrowFilteringSource} from './arrow-filtering-source';
+import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'ShaderPlugin Filtering';
 export const description =
@@ -15,46 +14,32 @@ export const description =
 
 export default class ArrowFilteringAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
-
-  readonly renderer: ArrowFilteringRenderer;
-  readonly controlPanel: ArrowFilteringControlPanel;
-  readonly panels: ArrowExamplePanelManager;
+  renderer: ArrowFilteringRenderer | null = null;
+  readonly source: ArrowFilteringSource;
 
   constructor({device}: AnimationProps) {
     super();
-    const arrowTable = makeArrowFilteringTable();
-    this.renderer = new ArrowFilteringRenderer(device, arrowTable);
-    const initialState: ArrowFilteringControlState = {enabled: true, min: 0.2, max: 0.8};
-    this.renderer.setFilterProps(initialState);
-    this.controlPanel = new ArrowFilteringControlPanel(
-      initialState,
-      state => {
-        this.renderer.setFilterProps(state);
+    this.source = new ArrowFilteringSource(
+      table => {
+        this.renderer?.destroy();
+        this.renderer = new ArrowFilteringRenderer(device, table);
       },
-      () => this.panels.refresh()
+      state => this.renderer?.setFilterProps(state)
     );
-    this.panels = new ArrowExamplePanelManager({
-      descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
-      settingsPanel: () => this.controlPanel.makeSettingsPanel()
-    });
-    this.panels.setTableEntries([
-      {id: 'arrow-filtering-source', label: 'Filterable points', kind: 'source', table: arrowTable}
-    ]);
   }
 
   override async onInitialize(): Promise<void> {
-    this.panels.mount();
+    this.source.initialize();
   }
 
   override onRender({device, aspect}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: [0.015, 0.02, 0.035, 1]});
-    this.renderer.draw(renderPass, aspect);
+    this.renderer?.draw(renderPass, aspect);
     renderPass.end();
   }
 
   override onFinalize(): void {
-    this.controlPanel.destroy();
-    this.panels.finalize();
-    this.renderer.destroy();
+    this.source.finalize();
+    this.renderer?.destroy();
   }
 }
