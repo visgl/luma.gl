@@ -37,3 +37,25 @@ The renderer owns only intermediate and temporal history textures.
 The cinematic stack applies SSAO, reflections, volumetric fog, outlines, temporal antialiasing,
 and motion blur. Depth-aware bilateral blur is reused inside SSAO and can also be enabled directly
 from the controls. History is reset whenever quality, presets, or enabled effects change.
+
+These pipelines use the same ordered `previous` chain as the existing image effects. For example,
+bloom and depth of field can be inserted between the scene-aware stages without bypassing earlier
+results. Adding any advanced pipeline makes the combined renderer WebGPU-only, even when the other
+effects in the list also support WebGL.
+
+## Related effects
+
+The advanced effects extend the existing catalog rather than duplicating it:
+
+- Depth-aware blur is a bilateral building block that preserves depth edges. The existing depth of
+  field effect instead computes lens defocus, while Gaussian and triangle blur are depth-independent.
+- TAA uses motion and history to stabilize edges over time; FXAA is a single-frame alternative.
+- Motion blur follows the scene velocity attachment; zoom blur is a stylized radial effect.
+- Persistence intentionally creates fading trails from application-provided history. TAA and fog
+  history are stabilization mechanisms owned by their respective pipelines.
+- SSAO, screen-space reflections, outlines, and volumetric fog have no older equivalents in the
+  effects module.
+
+The depth, normal, and velocity attachments continue to describe the original scene geometry.
+Place coordinate-warping effects after the scene-aware stack unless the application transforms all
+of those attachments in the same way.

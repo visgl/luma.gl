@@ -109,7 +109,7 @@ const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   steps: [
     {
       shaderPass: brightExtractPass,
-      inputs: {sourceTexture: 'original'},
+      inputs: {sourceTexture: 'previous'},
       output: 'extract',
       uniforms: {threshold: 0.8}
     },
@@ -131,6 +131,9 @@ const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   ]
 };
 ```
+
+Using `previous` for the primary color input makes the pipeline compose in its declared position
+in `shaderPasses`. `original` remains available for an intentional bypass of preceding effects.
 
 ## Types
 

@@ -37,6 +37,16 @@ Pipelines may add named render targets. The renderer validates routing, manages
 their size, and prevents a subpass from reading and writing the same named
 target in one draw.
 
+Built-in effects consume `previous`, so the `shaderPasses` array has strict
+ordered-composition semantics even when it mixes plain `ShaderPass` objects and
+multi-step `ShaderPassPipeline` objects. Route an input from `original` only
+when an effect intentionally needs to bypass all preceding color processing.
+
+Scene-aware effects may also sample application-owned depth, normal, or velocity
+attachments. Color adjustments can be placed anywhere in the chain, but an
+effect that warps screen coordinates should run after scene-aware effects unless
+the application applies the same transform to those auxiliary attachments.
+
 ## When To Use Shader Passes
 
 - Postprocessing color, blur, bloom, depth-of-field, and temporal effects.
