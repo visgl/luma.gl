@@ -1,9 +1,12 @@
 const {getDocusaurusConfig} = require('@vis.gl/docusaurus-website');
 
+const websiteBaseUrl = process.env.WEBSITE_BASE_URL || '/';
+
 const config = getDocusaurusConfig({
   projectName: 'luma.gl',
   tagline: 'WebGPU and WebGL2 API for visualization and compute',
-  siteUrl: process.env.STAGING ? 'https://visgl.github.io/luma.gl' : 'https://luma.gl',
+  siteUrl: 'https://luma.gl',
+  baseUrl: websiteBaseUrl,
   repoUrl: 'https://github.com/visgl/luma.gl',
 
   docsTableOfContents: require('../docs/table-of-contents.json'),
@@ -80,6 +83,7 @@ const {
 
 module.exports = {
   ...baseConfig,
+  baseUrl: websiteBaseUrl,
   staticDirectories: [...staticDirectories, '.generated/example-assets'],
   plugins: basePlugins.map((plugin) => {
     if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
