@@ -59,6 +59,7 @@ const sidebars = {
         'experimental/fp64',
         'experimental/gpt-2',
         'experimental/video-texture',
+        'experimental/gpu-frustum-culling',
         'experimental/gpu-trace-viewer',
         'experimental/html-ui-prism',
         'experimental/webxr-kaleidoscope'

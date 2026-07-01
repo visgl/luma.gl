@@ -16024,6 +16024,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-gpu-frustum-culling@workspace:examples/experimental/gpu-frustum-culling":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-gpu-frustum-culling@workspace:examples/experimental/gpu-frustum-culling"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/experimental": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-gpu-trace-viewer@workspace:examples/experimental/gpu-trace-viewer":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-gpu-trace-viewer@workspace:examples/experimental/gpu-trace-viewer"
