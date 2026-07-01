@@ -1,0 +1,379 @@
+import {UniformStore, VariableShaderType} from '@luma.gl/core';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  Model,
+  CubeGeometry,
+  Timeline,
+  KeyFrames,
+  makeRandomGenerator
+} from '@luma.gl/engine';
+import {dirlight} from '@luma.gl/shadertools';
+import {Matrix4, radians} from '@math.gl/core';
+import {
+  ColumnPanel,
+  type Panel,
+  type SettingsChangeDescriptor,
+  type SettingsSchema
+} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getChangedSetting,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+
+// Ensure repeatable rendertests
+const random = makeRandomGenerator();
+
+// SHADERS
+
+type AppUniforms = {
+  uColor: number[];
+  uModel: number[];
+  uView: number[];
+  uProjection: number[];
+};
+
+const app: {uniformTypes: Record<string, VariableShaderType>} = {
+  uniformTypes: {
+    uColor: 'vec3<f32>',
+    uModel: 'mat4x4<f32>',
+    uView: 'mat4x4<f32>',
+    uProjection: 'mat4x4<f32>'
+  }
+};
+
+const source = /* wgsl */ `\
+struct Uniforms {
+  uColor : vec3<f32>,
+  uModel : mat4x4<f32>,
+  uView : mat4x4<f32>,
+  uProjection : mat4x4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+
+struct VertexInputs {
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+  @location(1) normals : vec3<f32>
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) color : vec3<f32>,
+  @location(1) dirlightNormal: DirlightNormal,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  // gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
+  outputs.Position = app.uProjection * app.uView * app.uModel * inputs.positions;
+  outputs.color = app.uColor;
+
+  let normal: vec3<f32> = (app.uModel * vec4<f32>(inputs.normals, 0.0)).xyz;
+  outputs.dirlightNormal = dirlight_setNormal(normal);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  var fragColor = vec4(inputs.color, 1.);
+  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.dirlightNormal));
+  return fragColor;
+}
+`;
+
+const vs = /* glsl */ `\
+#version 300 es
+
+in vec3 positions;
+in vec3 normals;
+
+uniform appUniforms {
+  vec3 uColor;
+  mat4 uModel;
+  mat4 uView;
+  mat4 uProjection;
+} app;
+
+out vec3 color;
+
+void main(void) {
+  vec3 normal = vec3(app.uModel * vec4(normals, 0.0));
+
+  // Set up data for modules
+  color = app.uColor;
+  dirlight_setNormal(normal);
+  gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
+}
+`;
+
+const fs = /* glsl */ `\
+#version 300 es
+
+precision highp float;
+
+in vec3 color;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = vec4(color, 1.);
+  fragColor = dirlight_filterColor(fragColor);
+}
+`;
+
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = makeExamplePanelHostHtml();
+
+  readonly translations = [
+    [2, -2, 0],
+    [2, 2, 0],
+    [-2, 2, 0],
+    [-2, -2, 0]
+  ];
+
+  readonly rotations = [
+    [random(), random(), random()],
+    [random(), random(), random()],
+    [random(), random(), random()],
+    [random(), random(), random()]
+  ];
+
+  readonly colors = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+    [1, 1, 0]
+  ];
+
+  readonly keyFrameData: [number, number][] = [
+    [0, 0],
+    [1000, 2 * Math.PI],
+    [2000, Math.PI],
+    [3000, 2 * Math.PI],
+    [4000, 0]
+  ];
+
+  timeline: Timeline;
+  readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly panels: ExamplePanelManager;
+
+  cubes: {
+    translation: number[];
+    rotation: number[];
+    keyFrames: KeyFrames<number>;
+    model: Model;
+    uniformStore: UniformStore<{app: AppUniforms}>;
+  }[];
+  globalUniformStore: UniformStore<{dirlight: typeof dirlight.uniforms}>;
+
+  constructor({device, aspect, animationLoop}: AnimationProps) {
+    super();
+    this.globalUniformStore = new UniformStore(device, {
+      dirlight
+    });
+
+    this.timeline = new Timeline();
+    animationLoop.attachTimeline(this.timeline);
+    this.timeline.play();
+    this.settingsPanel = new ExampleSettingsPanelManager({
+      id: 'animation-settings',
+      schema: makeAnimationSettingsSchema(),
+      settings: {time: this.timeline.getTime()},
+      onSettingsChange: this.handleSettingsChange
+    });
+    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels.mount();
+
+    const channels = [
+      this.timeline.addChannel({delay: 2000, rate: 0.5, duration: 8000, repeat: 2}),
+      this.timeline.addChannel({delay: 10000, rate: 0.2, duration: 20000, repeat: 1}),
+      this.timeline.addChannel({
+        delay: 7000,
+        rate: 1,
+        duration: 4000,
+        repeat: 8
+      }),
+      this.timeline.addChannel({
+        delay: 0,
+        rate: 0.8,
+        duration: 5000,
+        repeat: Number.POSITIVE_INFINITY
+      })
+    ];
+
+    this.cubes = new Array(4);
+
+    const keyFrames = [
+      new KeyFrames(this.keyFrameData),
+      new KeyFrames(this.keyFrameData),
+      new KeyFrames(this.keyFrameData),
+      new KeyFrames(this.keyFrameData)
+    ];
+
+    for (let i = 0; i < 4; ++i) {
+      this.timeline.attachAnimation(keyFrames[i], channels[i]);
+
+      const cubeUniformStore = new UniformStore(device, {app});
+
+      cubeUniformStore.setUniforms({
+        app: {
+          uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 20.0}),
+          uView: new Matrix4().lookAt({
+            center: [0, 0, 0],
+            eye: [0, 0, -8]
+          }),
+          uColor: this.colors[i]
+        }
+      });
+
+      this.cubes[i] = {
+        uniformStore: cubeUniformStore,
+        translation: this.translations[i],
+        rotation: this.rotations[i],
+        keyFrames: keyFrames[i],
+        model: new Model(device, {
+          id: `cube-${i}`,
+          source,
+          vs,
+          fs,
+          instanceCount: 1,
+          modules: [dirlight],
+          geometry: new CubeGeometry(),
+          parameters: {
+            depthWriteEnabled: true,
+            depthCompare: 'less-equal'
+          },
+          bindings: {
+            app: cubeUniformStore.getManagedUniformBuffer('app'),
+            dirlight: this.globalUniformStore.getManagedUniformBuffer('dirlight')
+          }
+        })
+      };
+    }
+  }
+
+  onFinalize() {
+    this.settingsPanel.finalize();
+    this.panels.finalize();
+    for (const cube of this.cubes) {
+      cube.model.destroy();
+    }
+  }
+
+  onRender({device, aspect}: AnimationProps) {
+    this.settingsPanel.setSettings({time: this.timeline.getTime()});
+    this.panels.setPanel(this.makePanel());
+
+    const modelMatrix = new Matrix4();
+    const projectionMatrix = new Matrix4().perspective({
+      fovy: radians(60),
+      aspect,
+      near: 1,
+      far: 20.0
+    });
+
+    for (const cube of this.cubes) {
+      const startRotation = cube.keyFrames.getStartData();
+      const endRotation = cube.keyFrames.getEndData();
+      const rotation = startRotation + cube.keyFrames.factor * (endRotation - startRotation);
+      const rotationX = cube.rotation[0] + rotation;
+      const rotationY = cube.rotation[1] + rotation;
+      const rotationZ = cube.rotation[2];
+      modelMatrix
+        .identity()
+        .translate(cube.translation)
+        .rotateXYZ([rotationX, rotationY, rotationZ]);
+
+      cube.uniformStore.setUniforms({
+        app: {
+          uModel: modelMatrix,
+          uProjection: projectionMatrix
+        }
+      });
+
+      cube.uniformStore.updateUniformBuffers();
+    }
+
+    // Draw the cubes
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1],
+      clearDepth: true
+    });
+    for (const cube of this.cubes) {
+      cube.model.draw(renderPass);
+    }
+    renderPass.end();
+  }
+
+  private makePanel(): Panel {
+    return new ColumnPanel({
+      id: 'animation-controls',
+      title: 'Controls',
+      panels: [
+        makeHtmlCustomPanel({
+          id: 'animation-actions',
+          title: '',
+          html: `\
+          <p>Key frame animation based on multiple hierarchical timelines.</p>
+          <div style="display: flex; gap: 8px;">
+            <button id="play" type="button">Play</button>
+            <button id="pause" type="button">Pause</button>
+          </div>
+          `,
+          onRender: rootElement => {
+            const playButton = rootElement.querySelector<HTMLButtonElement>('#play');
+            const pauseButton = rootElement.querySelector<HTMLButtonElement>('#pause');
+            const handlePlay = () => this.timeline.play();
+            const handlePause = () => this.timeline.pause();
+            playButton?.addEventListener('click', handlePlay);
+            pauseButton?.addEventListener('click', handlePause);
+            return () => {
+              playButton?.removeEventListener('click', handlePlay);
+              pauseButton?.removeEventListener('click', handlePause);
+            };
+          }
+        }),
+        this.settingsPanel.makePanel()
+      ]
+    });
+  }
+
+  private readonly handleSettingsChange = (
+    _settings: Record<string, unknown>,
+    changedSettings?: SettingsChangeDescriptor[]
+  ): void => {
+    const time = getChangedSetting(changedSettings, 'time')?.nextValue;
+    if (typeof time === 'number') {
+      this.timeline.setTime(time);
+    }
+  };
+}
+
+function makeAnimationSettingsSchema(): SettingsSchema {
+  return {
+    title: 'Settings',
+    sections: [
+      {
+        id: 'timeline',
+        name: 'Timeline',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'time',
+            label: 'Time',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 30000,
+            step: 1
+          }
+        ]
+      }
+    ]
+  };
+}

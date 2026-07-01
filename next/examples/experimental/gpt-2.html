@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-examples docs-version-current docs-doc-page" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">luma.gl</title><meta data-rh="true" property="og:title" content="luma.gl"><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/next/examples/experimental/gpt-2"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-examples-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-examples-current"><link data-rh="true" rel="icon" href="/next/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/next/examples/experimental/gpt-2"><link data-rh="true" rel="alternate" href="https://luma.gl/next/examples/experimental/gpt-2" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/next/examples/experimental/gpt-2" hreflang="x-default"><link rel="stylesheet" href="/next/assets/css/styles.598401b3.css">
+<script src="/next/assets/js/runtime~main.620e89b9.js" defer="defer"></script>
+<script src="/next/assets/js/main.a5129b57.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"light"),document.documentElement.setAttribute("data-theme-choice",t||"light")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_oPtH" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/next/"><div class="navbar__logo"><img src="/next/visgl-logo-dark.png" alt="vis.gl Logo" class="themedComponent_siVc themedComponent--light_hHel"><img src="/next/visgl-logo-light.png" alt="vis.gl Logo" class="themedComponent_siVc themedComponent--dark_yETr"></div><b class="navbar__title text--truncate">luma.gl</b></a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/next/examples">Examples</a><a class="navbar__item navbar__link" href="/next/docs">Docs</a><a class="navbar__item navbar__link" href="/next/docs/tutorials">Tutorials</a><a href="https://medium.com/vis-gl" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/visgl/luma.gl" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_ki11 colorModeToggle_Hewu"><button class="clean-btn toggleButton_MMFG toggleButtonDisabled_Uw7m" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_k9hJ lightToggleIcon_lgto"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_k9hJ darkToggleIcon_U96C"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_k9hJ systemToggleIcon_E5c0"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_bzqh"><div class="dsla-search-wrapper"><div class="dsla-search-field" data-tags="default,docs-default-current,docs-examples-current"></div></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_MB5r"><div class="docsWrapper__sE8"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_iEvu" type="button"></button><div class="docRoot_DfVB"><aside class="theme-doc-sidebar-container docSidebarContainer_c7NB"><div class="sidebarViewport_KYo0"><div class="sidebar_CUen"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_jmj1"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/next/examples"><span title="Overview" class="linkLabel_CDUV"><span class="linkTitle_f4wm">Overview</span></span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/next/examples/showcase/instancing"><span title="Showcase" class="categoryLinkLabel_ufhF">Showcase</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/next/examples/api/animation"><span title="API" class="categoryLinkLabel_ufhF">API</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/next/examples/integrations/external-context"><span title="Integrations" class="categoryLinkLabel_ufhF">Integrations</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/next/examples/tutorials/hello-triangle"><span title="Tutorials" class="categoryLinkLabel_ufhF">Tutorials</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/next/examples/experimental/a-buffer"><span title="Experimental" class="categoryLinkLabel_ufhF">Experimental</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/next/examples/experimental/a-buffer"><span title="Order-independent Transparency" class="linkLabel_CDUV"><span class="linkTitle_f4wm">Order-independent Transparency</span></span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/next/examples/experimental/bloom"><span title="Bloom" class="linkLabel_CDUV"><span class="linkTitle_f4wm">Bloom</span></span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/next/examples/experimental/fp64"><span title="FP64" class="linkLabel_CDUV"><span class="linkTitle_f4wm">FP64</span></span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/next/examples/experimental/gpt-2"><span title="GPT-2 Transformer" class="linkLabel_CDUV"><span class="linkTitle_f4wm">GPT-2 Transformer</span></span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/next/examples/experimental/video-texture"><span title="Video Texture" class="linkLabel_CDUV"><span class="linkTitle_f4wm">Video Texture</span></span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/next/examples/experimental/html-ui-prism"><span title="HTML-in-Canvas Prism" class="linkLabel_CDUV"><span class="linkTitle_f4wm">HTML-in-Canvas Prism</span></span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/next/examples/experimental/webxr-kaleidoscope"><span title="WebXR Kaleidoscope" class="linkLabel_CDUV"><span class="linkTitle_f4wm">WebXR Kaleidoscope</span></span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/next/examples/v10/gpgpu"><span title="GPU Data - luma v10" class="categoryLinkLabel_ufhF">GPU Data - luma v10</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/next/examples/arrow/arrow-filtering"><span title="Apache Arrow - luma.gl v10" class="categoryLinkLabel_ufhF">Apache Arrow - luma.gl v10</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/next/examples/deck/arrow-path-layer"><span title="Arrow Layers - deck.gl v10" class="categoryLinkLabel_ufhF">Arrow Layers - deck.gl v10</span></a></div></li></ul></nav></div></div></aside><main class="docMainContainer_a9sJ"><div class="container padding-top--md padding-bottom--lg"><div class="doc-item-component__DemoContainer-sc-187t2dd-0 jetmQO"><div class="luma-example-page" style="position:relative;width:100%;height:calc(100vh - var(--ifm-navbar-height));min-height:calc(100vh - var(--ifm-navbar-height));overflow:hidden"><div style="height:100%;min-height:0;position:relative;z-index:1">
+    <section class="gpgpu-shell">
+      <style>
+        .gpgpu-shell {
+          box-sizing: border-box;
+          max-width: 1180px;
+          height: 100dvh;
+          overflow: hidden;
+          color: #dbe7f3;
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+          letter-spacing: 0;
+        }
+        .gpgpu-workspace {
+          display: grid;
+          height: 100%;
+          gap: 14px;
+          grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+          align-items: stretch;
+        }
+        .gpgpu-main-column {
+          display: grid;
+          gap: 14px;
+          grid-template-rows: auto minmax(0, 1fr);
+          min-height: 0;
+          min-width: 0;
+        }
+        .gpgpu-output-column {
+          display: grid;
+          min-height: 0;
+          min-width: 0;
+        }
+        .gpgpu-panel {
+          border: 1px solid #294055;
+          background: #09131f;
+          color: #dbe7f3;
+          padding: 18px;
+        }
+        .gpgpu-hero {
+          display: grid;
+          gap: 12px;
+          background: #08111c;
+          border-left: 4px solid #38bdf8;
+          padding: 14px 16px;
+        }
+        .gpgpu-title-row,
+        .gpgpu-prompt-row,
+        .gpgpu-settings-row,
+        .gpgpu-status-grid {
+          display: grid;
+          gap: 10px;
+        }
+        .gpgpu-title-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .gpgpu-kicker {
+          margin: 0 0 4px 0;
+          color: #7dd3fc;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+        .gpgpu-title {
+          margin: 0;
+          color: #f8fafc;
+          font-size: 22px;
+          line-height: 1.1;
+        }
+        .gpgpu-copy {
+          margin: 6px 0 0 0;
+          max-width: 760px;
+          color: #bfd0e0;
+          font-size: 13px;
+          line-height: 1.4;
+        }
+        .gpgpu-actions,
+        .gpgpu-shortcuts,
+        .gpgpu-toggle-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .gpgpu-actions {
+          justify-content: flex-end;
+          align-items: end;
+        }
+        .gpgpu-prompt-row {
+          align-items: end;
+          grid-template-columns: minmax(320px, 1fr) auto;
+        }
+        .gpgpu-settings-row {
+          align-items: end;
+          grid-template-columns: auto auto minmax(180px, 1fr);
+        }
+        .gpgpu-field,
+        .gpgpu-field-row,
+        .gpgpu-stack {
+          display: grid;
+          gap: 6px;
+        }
+        .gpgpu-setting {
+          border: 1px solid #294055;
+          border-radius: 8px;
+          background: #0b1622;
+          padding: 8px 10px;
+        }
+        .gpgpu-field-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: end;
+        }
+        .gpgpu-label {
+          color: #e2edf7;
+          font-size: 13px;
+          font-weight: 700;
+        }
+        .gpgpu-input,
+        .gpgpu-select {
+          width: 100%;
+          min-height: 36px;
+          box-sizing: border-box;
+          border: 1px solid #486174;
+          background: #f8fafc;
+          color: #09131f;
+          font: inherit;
+          padding: 7px 10px;
+        }
+        .gpgpu-number {
+          width: 96px;
+        }
+        .gpgpu-button {
+          min-height: 36px;
+          border: 1px solid #567086;
+          background: #142536;
+          color: #edf6ff;
+          cursor: pointer;
+          font: inherit;
+          font-weight: 650;
+          padding: 7px 11px;
+        }
+        .gpgpu-setting .gpgpu-button {
+          border-radius: 999px;
+          font-size: 12px;
+          min-height: 28px;
+          padding: 4px 9px;
+        }
+        .gpgpu-setting .gpgpu-button[aria-pressed="true"] {
+          background: #1f8f72;
+          border-color: #67e8c4;
+          color: #f0fdfa;
+          box-shadow: inset 0 0 0 1px rgba(240, 253, 250, 0.18);
+        }
+        .gpgpu-setting .gpgpu-shortcuts {
+          gap: 6px;
+        }
+        .gpgpu-setting .gpgpu-label {
+          font-size: 12px;
+        }
+        .gpgpu-actions .gpgpu-button {
+          border-radius: 999px;
+          padding-inline: 16px;
+        }
+        .gpgpu-button:hover {
+          background: #1a3248;
+        }
+        .gpgpu-button-primary {
+          border-color: #38bdf8;
+          background: #0f7498;
+          color: #f8fafc;
+        }
+        .gpgpu-button-danger {
+          border-color: #c08457;
+          background: #5c3524;
+        }
+        .gpgpu-button:disabled {
+          cursor: not-allowed;
+          opacity: 0.45;
+        }
+        .gpgpu-range {
+          width: 100%;
+          accent-color: #38bdf8;
+        }
+        .gpgpu-status-card,
+        .gpgpu-download-card,
+        .gpgpu-note {
+          border: 1px solid #294055;
+          background: #0d1a28;
+          padding: 14px;
+        }
+        .gpgpu-output-card {
+          display: grid;
+          grid-template-rows: minmax(0, 1fr);
+          min-height: 0;
+          height: 100%;
+        }
+        .gpgpu-download-card {
+          align-content: start;
+        }
+        .gpgpu-tab-shell {
+          background: #0d1a28;
+          border: 1px solid #294055;
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr);
+          min-height: 0;
+          padding: 14px;
+        }
+        .gpgpu-tab-shell[data-loading="true"] {
+          grid-template-rows: minmax(0, 1fr);
+          padding: 0;
+        }
+        .gpgpu-tab-shell[data-loading="true"] .gpgpu-tabs,
+        .gpgpu-tab-shell[data-loading="true"] .gpgpu-tab-panels {
+          display: none;
+        }
+        .gpgpu-loading-stage {
+          display: none;
+          min-height: 0;
+        }
+        .gpgpu-tab-shell[data-loading="true"] .gpgpu-loading-stage {
+          display: grid;
+        }
+        .gpgpu-loading-stage .gpgpu-download-card {
+          align-content: center;
+          border: 0;
+          display: grid;
+          gap: 18px;
+          height: 100%;
+          min-height: 0;
+          padding: 28px;
+        }
+        .gpgpu-loading-message {
+          color: #edf6ff;
+          font-size: 15px;
+          font-weight: 650;
+          line-height: 1.4;
+        }
+        .gpgpu-tabs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        .gpgpu-tab-button {
+          background: #142536;
+          border: 1px solid #567086;
+          color: #dbe7f3;
+          cursor: pointer;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          min-height: 34px;
+          padding: 7px 11px;
+        }
+        .gpgpu-tab-button[aria-selected="true"] {
+          background: #0f7498;
+          border-color: #38bdf8;
+          color: #f8fafc;
+        }
+        .gpgpu-tab-panels {
+          min-height: 0;
+        }
+        .gpgpu-tab-panel {
+          display: none;
+          height: 100%;
+          min-height: 0;
+          overflow: auto;
+        }
+        .gpgpu-tab-panel[data-active="true"] {
+          display: grid;
+          gap: 12px;
+          grid-template-rows: auto minmax(0, 1fr);
+        }
+        .gpgpu-stage-head {
+          align-items: center;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+        .gpgpu-stage-title {
+          color: #f8fafc;
+          font-size: 15px;
+          font-weight: 750;
+        }
+        .gpgpu-stage-surface {
+          background: #03070d;
+          border: 1px solid #294055;
+          display: grid;
+          min-height: 0;
+          overflow: hidden;
+          position: relative;
+        }
+        .gpgpu-visualization-host {
+          display: none;
+          min-height: 0;
+          width: 100%;
+        }
+        .gpgpu-visualization-host canvas {
+          display: block !important;
+          height: 100% !important;
+          min-height: 0;
+          width: 100% !important;
+        }
+        .gpgpu-device {
+          color: #7dd3fc;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 12px;
+          margin-bottom: 10px;
+        }
+        .gpgpu-output {
+          color: #edf6ff;
+          font-size: 14px;
+          line-height: 1.55;
+          margin: 0;
+          overflow: auto;
+          padding-right: 6px;
+          white-space: pre-wrap;
+        }
+        .gpgpu-output-layout {
+          display: grid;
+          gap: 10px;
+        }
+        .gpgpu-output-section {
+          background: #0b1622;
+          border: 1px solid #294055;
+          border-radius: 8px;
+          padding: 10px 12px;
+        }
+        .gpgpu-output-section-title {
+          color: #f8fafc;
+          font-size: 13px;
+          font-weight: 750;
+          margin: 0 0 6px 0;
+        }
+        .gpgpu-output-pre {
+          background: transparent !important;
+          border: 0 !important;
+          color: inherit !important;
+          font: inherit;
+          line-height: inherit;
+          margin: 0;
+          padding: 0 !important;
+          white-space: pre-wrap;
+        }
+        .gpgpu-model-output {
+          color: #9fd7b0;
+          font-size: 16px;
+          font-weight: 700;
+          line-height: 1.6;
+        }
+        .gpgpu-logits-pre {
+          border: 1px solid #294055 !important;
+          border-radius: 8px;
+          padding: 8px !important;
+        }
+        .gpgpu-download-row {
+          display: grid;
+          gap: 6px;
+        }
+        .gpgpu-download-head {
+          align-items: center;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+        }
+        .gpgpu-spinner {
+          animation: gpgpu-loading-spin 0.8s linear infinite;
+          border: 2px solid #486174;
+          border-radius: 999px;
+          border-top-color: #f8fafc;
+          display: inline-block;
+          height: 12px;
+          width: 12px;
+        }
+        .gpgpu-download-status {
+          color: #c5d6e6;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 11px;
+        }
+        .gpgpu-progress {
+          background: #162738;
+          height: 8px;
+          overflow: hidden;
+        }
+        .gpgpu-progress > div {
+          height: 100%;
+          width: 0%;
+        }
+        .gpgpu-model-bar {
+          background: #38bdf8;
+        }
+        .gpgpu-tokenizer-bar {
+          background: #34d399;
+        }
+        .gpgpu-note {
+          color: #b8cadb;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 11px;
+          line-height: 1.45;
+          margin: 0;
+        }
+        .gpgpu-details-body {
+          border: 1px solid #294055;
+          background: #07111c;
+          color: #bfd0e0;
+          font-size: 12px;
+          line-height: 1.5;
+          overflow: auto;
+          padding: 12px 14px;
+        }
+        .gpgpu-debug {
+          border: 1px solid #294055;
+          background: #07111c;
+          color: #dbe7f3;
+          font-size: 11px;
+          line-height: 1.4;
+          height: 100%;
+          margin: 0;
+          min-height: 0;
+          overflow: auto;
+          padding: 10px;
+          white-space: pre-wrap;
+        }
+        .gpgpu-toggle {
+          align-items: center;
+          color: #e2edf7;
+          display: inline-flex;
+          gap: 6px;
+          font-size: 13px;
+        }
+        @keyframes gpgpu-loading-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @media (max-width: 900px) {
+          .gpgpu-workspace {
+            grid-template-columns: 1fr;
+            overflow: auto;
+          }
+          .gpgpu-title-row,
+          .gpgpu-prompt-row,
+          .gpgpu-settings-row,
+          .gpgpu-field-row {
+            grid-template-columns: 1fr;
+          }
+          .gpgpu-actions {
+            justify-content: flex-start;
+          }
+          .gpgpu-number {
+            width: 100%;
+          }
+        }
+      </style>
+      <div class="gpgpu-workspace">
+        <div class="gpgpu-main-column">
+          <div class="gpgpu-panel gpgpu-hero">
+            <div class="gpgpu-title-row">
+              <div>
+                <p class="gpgpu-kicker">WebGPU Compute Demo</p>
+                <h2 class="gpgpu-title">GPT-2 124M next-token lab</h2>
+                <p class="gpgpu-copy">
+                  Load the llm.c checkpoint, inspect tensor activity, and sample continuations with
+                  luma.gl compute shaders driving the dense projections and language-model head.
+                </p>
+              </div>
+            </div>
+            <div class="gpgpu-prompt-row">
+              <label class="gpgpu-field">
+                <span class="gpgpu-label">Prompt</span>
+                <input id="gpgpu-prompt" class="gpgpu-input" value="The future of WebGPU is">
+              </label>
+              <div class="gpgpu-actions">
+                <button id="gpgpu-generate" class="gpgpu-button gpgpu-button-primary" disabled="disabled">Generate</button>
+                <button id="gpgpu-stop" class="gpgpu-button gpgpu-button-danger" disabled="disabled">Stop</button>
+              </div>
+            </div>
+            <div class="gpgpu-settings-row">
+              <div class="gpgpu-stack gpgpu-setting">
+                <span class="gpgpu-label">Max new tokens</span>
+                <div class="gpgpu-shortcuts" aria-label="Max new token shortcuts">
+                  <button type="button" class="gpgpu-button" data-gpgpu-token-count="1" aria-label="Generate up to 1 new token">1</button>
+                  <button type="button" class="gpgpu-button" data-gpgpu-token-count="16" aria-label="Generate up to 16 new tokens">16</button>
+                  <button type="button" class="gpgpu-button" data-gpgpu-token-count="64" aria-label="Generate up to 64 new tokens">64</button>
+                  <button type="button" class="gpgpu-button" data-gpgpu-token-count="256" aria-label="Generate up to 256 new tokens">256</button>
+                </div>
+              </div>
+              <div class="gpgpu-stack gpgpu-setting">
+                <span class="gpgpu-label">Context window</span>
+                <div class="gpgpu-shortcuts" aria-label="Context window shortcuts">
+                  <button type="button" class="gpgpu-button" data-gpgpu-context-token-count="16" aria-label="Use a 16 token context window">16</button>
+                  <button type="button" class="gpgpu-button" data-gpgpu-context-token-count="32" aria-label="Use a 32 token context window">32</button>
+                  <button type="button" class="gpgpu-button" data-gpgpu-context-token-count="64" aria-label="Use a 64 token context window">64</button>
+                  <button type="button" class="gpgpu-button" data-gpgpu-context-token-count="128" aria-label="Use a 128 token context window">128</button>
+                  <button type="button" class="gpgpu-button" data-gpgpu-context-token-count="256" aria-label="Use a 256 token context window">256</button>
+                </div>
+              </div>
+              <div class="gpgpu-stack gpgpu-setting">
+                <label class="gpgpu-field">
+                  <span class="gpgpu-label">Temperature <output id="gpgpu-temperature-value">0.10</output></span>
+                  <input id="gpgpu-temperature" class="gpgpu-range" type="range" min="0" max="2" step="0.05" value="0.1">
+                </label>
+              </div>
+            </div>
+          </div>
+          <div id="gpgpu-tab-shell" class="gpgpu-tab-shell" data-loading="true">
+            <div id="gpgpu-loading-stage" class="gpgpu-loading-stage">
+              <div id="gpgpu-loading" class="gpgpu-download-card">
+                <div class="gpgpu-loading-message">
+                  Loading GPT-2 124M model and tokenizer from Hugging Face...
+                </div>
+                <div class="gpgpu-download-row">
+                  <div class="gpgpu-download-head">
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                      <span id="gpgpu-model-spinner" class="gpgpu-spinner" aria-hidden="true"></span>
+                      <span>Model</span>
+                    </span>
+                    <span id="gpgpu-model-download-status" class="gpgpu-download-status">Waiting</span>
+                  </div>
+                  <div class="gpgpu-progress">
+                    <div id="gpgpu-model-download-bar" class="gpgpu-model-bar"></div>
+                  </div>
+                </div>
+                <div class="gpgpu-download-row">
+                  <div class="gpgpu-download-head">
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                      <span id="gpgpu-tokenizer-spinner" class="gpgpu-spinner" aria-hidden="true"></span>
+                      <span>Tokenizer</span>
+                    </span>
+                    <span id="gpgpu-tokenizer-download-status" class="gpgpu-download-status">Waiting</span>
+                  </div>
+                  <div class="gpgpu-progress">
+                    <div id="gpgpu-tokenizer-download-bar" class="gpgpu-tokenizer-bar"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="gpgpu-tabs" role="tablist" aria-label="GPT-2 workspace views">
+              <button type="button" class="gpgpu-tab-button" data-gpgpu-tab-target="tensor-atlas" role="tab" aria-selected="true">Tensor Atlas</button>
+              <button type="button" class="gpgpu-tab-button" data-gpgpu-tab-target="about-demo" role="tab" aria-selected="false">About Demo</button>
+              <button type="button" class="gpgpu-tab-button" data-gpgpu-tab-target="about-atlas" role="tab" aria-selected="false">About Atlas</button>
+              <button type="button" class="gpgpu-tab-button" data-gpgpu-tab-target="debug-trace" role="tab" aria-selected="false">Debug Trace</button>
+            </div>
+            <div class="gpgpu-tab-panels">
+              <section class="gpgpu-tab-panel" data-gpgpu-tab-panel="tensor-atlas" data-active="true" role="tabpanel">
+                <div class="gpgpu-stage-head">
+                  <div class="gpgpu-stage-title">Tensor atlas</div>
+                  <div id="gpgpu-device" class="gpgpu-device">Device: initializing...</div>
+                </div>
+                <div class="gpgpu-stage-surface">
+                  <div id="gpgpu-visualization-host" class="gpgpu-visualization-host"></div>
+                </div>
+                <div id="gpgpu-canvas-hover-readout" class="gpgpu-note">
+                  Canvas hover: move over the atlas after a run to inspect the tensor span under the mouse. Scroll to zoom, drag to pan, double-click resets.
+                </div>
+              </section>
+              <section class="gpgpu-tab-panel" data-gpgpu-tab-panel="about-demo" data-active="false" role="tabpanel">
+                <div class="gpgpu-details-body">
+          <p style="margin: 0 0 6px 0;">
+            The prompt is tokenized with byte-level GPT-2 BPE, converted to token plus absolute position embeddings, and run through the selected sliding context window.
+            Each transformer block applies layer norm, causal self-attention, a residual add, another layer norm, an MLP with GELU, and a final residual add.
+          </p>
+          <p style="margin: 0 0 6px 0;">
+            WebGPU compute shaders run the tensor-heavy work: layer norms, QKV projections, attention, projection matrices, GELU, residual adds, and the final language-model head.
+            The CPU still handles UI, tokenization, sampling, and reading back final logits.
+          </p>
+          <p style="margin: 0;">
+            The final logits are unnormalized token scores. Temperature 0 picks the highest logit; temperatures above 0 convert logits to probabilities and sample from the distribution.
+            The logits table shows raw logit, temperature-scaled delta from the best token, probability, and decoded token text.
+            During generation, click any generated-token chip to inspect the logits that produced that token; the demo keeps the logits history for the current run.
+          </p>
+                </div>
+              </section>
+              <section class="gpgpu-tab-panel" data-gpgpu-tab-panel="about-atlas" data-active="false" role="tabpanel">
+                <div class="gpgpu-details-body">
+          <p style="margin: 0 0 6px 0;">
+            The canvas is a dense tensor atlas. It uses 640 by 360 tiny cells, so the latest forward pass can show token embeddings, position embeddings, sampled matrix weights, activations, and logits across all layers.
+            Read it left to right, top to bottom; new tensor spans are appended in the same order the model runs.
+          </p>
+          <p style="margin: 0 0 6px 0;">
+            Each tiny cell is one sampled tensor value: yellow is positive, cyan is negative, dark gray is zero, and red is NaN or infinity.
+            Small tensors are shown value-for-value; large matrices are sampled from the whole matrix so every layer and major multiply gets canvas space.
+          </p>
+          <p style="margin: 0 0 6px 0;">
+            The first spans are the selected context token embeddings, position embeddings, and their sum. Then each GPT-2 block adds sampled parameter tensors for layer norm, QKV, attention projection, MLP, and output projection, followed by the activations produced by those WebGPU kernels.
+            The final spans show the last layer norm and the language-model-head logits over the vocabulary.
+          </p>
+          <p style="margin: 0 0 6px 0;">
+            Repeated horizontal textures usually mean a matrix is being sampled across rows and columns. Large yellow or cyan bands show strongly signed values; mixed blue/yellow noise means weights or activations are balanced around zero.
+            Red is the important failure signal: it means a tensor readback saw NaN or infinity.
+          </p>
+          <p style="margin: 0;">
+            Move the mouse over the canvas to see the tensor span, atlas cell, approximate sampled source index, sign, and intensity under the pointer.
+            Context-token spans and the final logits span also show the actual token id and decoded token text under the mouse.
+            Scroll on the canvas to zoom around the cursor, drag to pan the zoomed atlas, and double-click the canvas to reset to the full atlas.
+            The canvas visualization and Debug Trace have separate controls. Enable Debug Trace to see the exact tensor names, stats, and pixel ranges that correspond to the atlas spans; keep it off for faster generation.
+          </p>
+                </div>
+              </section>
+              <section class="gpgpu-tab-panel" data-gpgpu-tab-panel="debug-trace" data-active="false" role="tabpanel">
+                <div class="gpgpu-toggle-row">
+                  <label class="gpgpu-toggle">
+                    <input id="gpgpu-canvas-enabled" type="checkbox" checked="checked">
+                    <span>Canvas tensor visualization</span>
+                  </label>
+                  <label class="gpgpu-toggle">
+                    <input id="gpgpu-debug-enabled" type="checkbox">
+                    <span>Debug Trace</span>
+                  </label>
+                </div>
+                <pre id="gpgpu-debug" class="gpgpu-debug">Waiting for model load...</pre>
+              </section>
+            </div>
+          </div>
+        </div>
+        <aside class="gpgpu-output-column">
+          <div class="gpgpu-status-card gpgpu-output-card">
+            <div id="gpgpu-output" class="gpgpu-output">
+              <div class="gpgpu-output-layout">
+                <section class="gpgpu-output-section">
+                  <div class="gpgpu-output-section-title">Output</div>
+                  <pre class="gpgpu-output-pre">Loading GPT-2 files...</pre>
+                </section>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div><div style="min-height:0;position:absolute;inset:0"><div style="display:block;width:100%;height:100%;pointer-events:none"></div></div></div>
+<p>This demo downloads GPT-2 124M model and tokenizer artifacts from Andrej Karpathy&#x27;s
+<a href="https://huggingface.co/datasets/karpathy/llmc-starter-pack">llmc-starter-pack</a>, which
+packages files for the MIT-licensed <a href="https://github.com/karpathy/llm.c">llm.c</a> workflow.
+GPT-2 was originally released by OpenAI in the
+<a href="https://github.com/openai/gpt-2">gpt-2</a> repository.</p></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Other vis.gl Libraries</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https:/deck.gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">deck.gl<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://loaders.gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">loaders.gl<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://visgl.github.io/react-map-gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">react-map-gl<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://visgl.github.io/deck.gl-community/" target="_blank" rel="noopener noreferrer" class="footer__link-item">deck.gl-community<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">More</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://medium.com/vis-gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">vis.gl blog on Medium<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/visgl/luma.gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 OpenJS Foundation</div></div></div></footer></div>
+</body>
+</html>
