@@ -64,7 +64,6 @@ const {
 module.exports = {
   ...baseConfig,
   baseUrl: websiteBaseUrl,
-  staticDirectories: [...staticDirectories, '.generated/example-assets'],
   plugins: basePlugins.map((plugin) => {
     if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
       return [
