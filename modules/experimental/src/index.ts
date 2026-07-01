@@ -32,6 +32,23 @@ export {wboit, wboitPlugin} from './oit/wboit';
 export type {WBOITCaptureContext, WBOITRenderOptions, WBOITSupport} from './oit/wboit-renderer';
 export {getWBOITSupport, WBOITRenderer} from './oit/wboit-renderer';
 
+export type {ShadowQuality} from './shadows/shadow-quality';
+export type {
+  DirectionalShadowLight,
+  PointShadowFace,
+  PointShadowLight,
+  ShadowCamera,
+  ShadowMapRendererProps,
+  ShadowRenderOptions,
+  ShadowRenderView,
+  ShadowShaderProps,
+  SpotShadowLight
+} from './shadows/shadow-map-renderer';
+export {ShadowMapRenderer} from './shadows/shadow-map-renderer';
+export {shadow} from './shadows/shadow';
+export type {ContactShadowProps} from './shadows/contact-shadow';
+export {createContactShadowShaderPassPipeline} from './shadows/contact-shadow';
+
 export * from './webxr/index';
 
 export * from './gpu-primitives/index';

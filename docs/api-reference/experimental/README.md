@@ -45,6 +45,13 @@ compaction, stable key/value sorting, and GPU-written indirect draw commands.
 Both renderers leave scene models, shader inputs, command submission, and fallback selection under
 application control.
 
+## Hybrid Shadows
+
+[`ShadowMapRenderer`](/docs/api-reference/experimental/shadow-map-renderer) provides WebGPU-only
+cascaded directional, spot-array, and point cube-array maps with PCSS filtering. Applications draw
+casters through a per-view callback and explicitly multiply the `shadow` module's factors into
+their direct-light terms. A companion shader-pass pipeline adds primary-sun contact refinement.
+
 ## Packed Pixel Formats
 
 `RGBADecoder` and `TEXTURE_FORMAT_PIXEL_DECODERS` provide the existing experimental helpers for

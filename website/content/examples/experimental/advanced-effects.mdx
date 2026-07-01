@@ -12,9 +12,9 @@ import {AdvancedEffectsExample} from '@site/src/examples';
   devices={['webgpu']}
 >
   <div>
-    A procedural city rendered into color, normal/roughness, velocity, and depth attachments, then
+    A procedural city lit by cascaded sun, moving spot, local point, and contact shadows, then
     composed through SSAO, screen-space reflections, volumetric fog, outlines, temporal AA, and
-    motion blur. Use the split control to compare the raw scene with the final effect stack.
+    motion blur. Use the split and debug controls to inspect every shadow source.
   </div>
 </ExampleHeader>
 
@@ -24,19 +24,33 @@ import {AdvancedEffectsExample} from '@site/src/examples';
 
 The example deliberately keeps scene rendering outside `ShaderPassRenderer`. Its MRT pass writes:
 
-- `rgba8unorm` scene color;
+- `rgba8unorm` light-space-shadowed scene color;
 - `rgba8unorm` view-space normals in RGB and roughness in alpha;
 - `rg16float` unjittered motion vectors as `currentUv - previousUv`;
+- `rgba8unorm` unshadowed scene color for the split comparison;
+- `rgba16float` shadowed directional direct light for contact-only composition;
+- `rgba16float` directional, spot, point, and cascade debug data;
 - sampled `depth24plus` depth.
 
 Those textures are passed as bindings to a normal ordered list of `ShaderPassPipeline` objects.
 The renderer owns only intermediate and temporal history textures.
+The standalone example requests the adapter's supported `max` feature level so this six-target
+layout is created only with limits the selected WebGPU adapter actually exposes.
 
-## Effect order
+## Shadow callback and effect order
 
-The cinematic stack applies SSAO, reflections, volumetric fog, outlines, temporal antialiasing,
-and motion blur. Depth-aware bilateral blur is reused inside SSAO and can also be enabled directly
-from the controls. History is reset whenever quality, presets, or enabled effects change.
+`ShadowMapRenderer` owns `depth32float` directional and spot arrays plus a point cube array. The
+example reuses the city's instance buffers in depth-only caster models and supplies one independent
+uniform buffer per cascade or cube face. This preserves every view matrix until command submission.
+
+Scene shading applies each light-space factor only to that light's direct contribution. Contact
+shadows then ray march the camera depth toward the sun and bilateral-filter the result using depth
+and normals. Their composite consumes the dedicated directional-direct attachment, so ambient and
+emissive terms remain untouched.
+
+The complete order is light-space scene shading, contact shadows, SSAO, reflections, volumetric
+fog, outlines, temporal antialiasing, and motion blur. History resets whenever quality, shadow/light
+configuration, framebuffer dimensions, presets, or enabled effects change.
 
 These pipelines use the same ordered `previous` chain as the existing image effects. For example,
 bloom and depth of field can be inserted between the scene-aware stages without bypassing earlier
