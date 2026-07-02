@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderPass} from '@luma.gl/shadertools';
-import type {SceneVelocityBindings} from './screen-space-effect-types';
+import type {Texture} from '@luma.gl/core';
+import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 
 type MotionBlurUniforms = {strength: number; sampleCount: number};
+type MotionBlurBindings = {depthTexture?: Texture; velocityTexture?: Texture};
 
 export const motionBlurPass = {
   name: 'motionBlur',
@@ -42,7 +43,7 @@ fn motionBlur_sampleColor(
     {name: 'velocityTexture', group: 0},
     {name: 'depthTexture', group: 0}
   ],
-  props: {} as Partial<MotionBlurUniforms> & SceneVelocityBindings,
+  props: {} as Partial<MotionBlurUniforms> & MotionBlurBindings,
   uniforms: {} as MotionBlurUniforms,
   uniformTypes: {strength: 'f32', sampleCount: 'f32'},
   propTypes: {
@@ -51,3 +52,10 @@ fn motionBlur_sampleColor(
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
+
+export function createMotionBlurShaderPassPipeline(): ShaderPassPipeline {
+  return {
+    name: 'motionBlurShaderPassPipeline',
+    steps: [{shaderPass: motionBlurPass, output: 'previous'}]
+  };
+}

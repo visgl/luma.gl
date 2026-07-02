@@ -2,9 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderPass} from '@luma.gl/shadertools';
-import type {SceneNormalBindings} from './screen-space-effect-types';
+import type {Texture} from '@luma.gl/core';
+import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import {depthAwareBlur} from './depth-aware-blur';
 import {depthHelpers} from './screen-space-shader-helpers';
+import type {ScreenSpaceNormalSource} from './types';
+
+export type SSAOShaderPassPipelineOptions = {
+  normalSource?: ScreenSpaceNormalSource;
+  resolutionScale?: number;
+};
 
 type SSAOUniforms = {
   nearPlane: number;
@@ -14,6 +21,8 @@ type SSAOUniforms = {
   intensity: number;
   useNormalTexture: number;
 };
+
+type SSAOBindings = {depthTexture?: Texture; normalTexture?: Texture};
 
 const ssaoEvaluateSource = /* wgsl */ `\
 ${depthHelpers}
@@ -66,9 +75,9 @@ export const ssaoEvaluate = {
     {name: 'depthTexture', group: 0},
     {name: 'normalTexture', group: 0}
   ],
-  props: {} as Partial<SSAOUniforms> & SceneNormalBindings,
+  props: {} as Partial<SSAOUniforms> & SSAOBindings,
   uniforms: {} as SSAOUniforms,
-  bindings: {} as SceneNormalBindings,
+  bindings: {} as SSAOBindings,
   uniformTypes: {
     nearPlane: 'f32',
     farPlane: 'f32',
@@ -87,6 +96,50 @@ export const ssaoEvaluate = {
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
+
+export function createSSAOShaderPassPipeline(
+  options: SSAOShaderPassPipelineOptions = {}
+): ShaderPassPipeline<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
+  const scale = options.resolutionScale || 0.5;
+  const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
+  const evaluateInputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
+  if (!useNormalTexture) {
+    evaluateInputs['normalTexture'] = 'previous';
+  }
+  return {
+    name: 'ssaoShaderPassPipeline',
+    renderTargets: {
+      ssaoRaw: {scale: [scale, scale], format: 'rgba8unorm'},
+      ssaoScratch: {scale: [scale, scale], format: 'rgba8unorm'},
+      ssaoBlurred: {scale: [scale, scale], format: 'rgba8unorm'}
+    },
+    steps: [
+      {
+        shaderPass: ssaoEvaluate,
+        inputs: evaluateInputs,
+        output: 'ssaoRaw',
+        uniforms: {useNormalTexture}
+      },
+      {
+        shaderPass: depthAwareBlur,
+        inputs: {sourceTexture: 'ssaoRaw'},
+        output: 'ssaoScratch',
+        uniforms: {direction: [1, 0]}
+      },
+      {
+        shaderPass: depthAwareBlur,
+        inputs: {sourceTexture: 'ssaoScratch'},
+        output: 'ssaoBlurred',
+        uniforms: {direction: [0, 1]}
+      },
+      {
+        shaderPass: ssaoComposite,
+        inputs: {sourceTexture: 'previous', ambientOcclusionTexture: 'ssaoBlurred'},
+        output: 'previous'
+      }
+    ]
+  };
+}
 
 export const ssaoComposite = {
   name: 'ssaoComposite',

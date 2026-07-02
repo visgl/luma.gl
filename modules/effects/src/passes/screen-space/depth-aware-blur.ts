@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderPass} from '@luma.gl/shadertools';
-import type {SceneDepthBindings} from './screen-space-effect-types';
+import type {Texture} from '@luma.gl/core';
+import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 
 export type DepthAwareBlurProps = {
   direction?: [number, number];
@@ -13,6 +13,7 @@ export type DepthAwareBlurProps = {
 };
 
 type DepthAwareBlurUniforms = Required<DepthAwareBlurProps>;
+type DepthAwareBlurBindings = {depthTexture?: Texture};
 
 const depthAwareBlurSource = /* wgsl */ `\
 struct depthAwareBlurUniforms {
@@ -59,9 +60,9 @@ export const depthAwareBlur = {
   name: 'depthAwareBlur',
   source: depthAwareBlurSource,
   bindingLayout: [{name: 'depthTexture', group: 0}],
-  props: {} as DepthAwareBlurProps & SceneDepthBindings,
+  props: {} as DepthAwareBlurProps & DepthAwareBlurBindings,
   uniforms: {} as DepthAwareBlurUniforms,
-  bindings: {} as SceneDepthBindings,
+  bindings: {} as DepthAwareBlurBindings,
   uniformTypes: {
     direction: 'vec2<f32>',
     radius: 'f32',
@@ -76,7 +77,26 @@ export const depthAwareBlur = {
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
-  DepthAwareBlurProps & SceneDepthBindings,
+  DepthAwareBlurProps & DepthAwareBlurBindings,
   DepthAwareBlurUniforms,
-  SceneDepthBindings
+  DepthAwareBlurBindings
 >;
+
+export const depthAwareBlurShaderPassPipeline = {
+  name: 'depthAwareBlurShaderPassPipeline',
+  renderTargets: {depthAwareBlurScratch: {}},
+  steps: [
+    {
+      shaderPass: depthAwareBlur,
+      inputs: {sourceTexture: 'previous'},
+      output: 'depthAwareBlurScratch',
+      uniforms: {direction: [1, 0]}
+    },
+    {
+      shaderPass: depthAwareBlur,
+      inputs: {sourceTexture: 'depthAwareBlurScratch'},
+      output: 'previous',
+      uniforms: {direction: [0, 1]}
+    }
+  ]
+} satisfies ShaderPassPipeline<'depthAwareBlurScratch'>;

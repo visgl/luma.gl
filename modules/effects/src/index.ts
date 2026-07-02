@@ -117,18 +117,17 @@ export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-f
 export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
 
 // Advanced scene-aware postprocessing pipelines
-export type {
-  ScreenSpaceEffectOptions,
-  ScreenSpaceNormalSource
-} from './passes/postprocessing/advanced/screen-space-effect-types';
-export type {DepthAwareBlurProps} from './passes/postprocessing/advanced/depth-aware-blur';
-export {depthAwareBlur} from './passes/postprocessing/advanced/depth-aware-blur';
+export type {ScreenSpaceNormalSource} from './passes/screen-space/types';
+export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
-  createMotionBlurShaderPassPipeline,
-  createOutlineShaderPassPipeline,
-  createSSAOShaderPassPipeline,
-  createSSRShaderPassPipeline,
-  createTAAShaderPassPipeline,
-  createVolumetricFogShaderPassPipeline,
+  depthAwareBlur,
   depthAwareBlurShaderPassPipeline
-} from './passes/postprocessing/advanced/pipelines';
+} from './passes/screen-space/depth-aware-blur';
+export {createMotionBlurShaderPassPipeline} from './passes/screen-space/motion-blur';
+export type {OutlineShaderPassPipelineOptions} from './passes/screen-space/outlines';
+export {createOutlineShaderPassPipeline} from './passes/screen-space/outlines';
+export {createSSRShaderPassPipeline} from './passes/screen-space/screen-space-reflections';
+export type {SSAOShaderPassPipelineOptions} from './passes/screen-space/ssao';
+export {createSSAOShaderPassPipeline} from './passes/screen-space/ssao';
+export {createTAAShaderPassPipeline} from './passes/screen-space/temporal-antialiasing';
+export {createVolumetricFogShaderPassPipeline} from './passes/screen-space/volumetric-fog';

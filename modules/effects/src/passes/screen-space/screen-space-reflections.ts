@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 
 type SSRUniforms = {
   projectionMatrix: number[];
@@ -126,6 +126,24 @@ fn ssrTrace_sampleColor(
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
+
+export function createSSRShaderPassPipeline(
+  options: {resolutionScale?: number} = {}
+): ShaderPassPipeline<'ssrReflection'> {
+  const scale = options.resolutionScale || 0.5;
+  return {
+    name: 'ssrShaderPassPipeline',
+    renderTargets: {ssrReflection: {scale: [scale, scale], format: 'rgba16float'}},
+    steps: [
+      {shaderPass: ssrTrace, inputs: {sourceTexture: 'previous'}, output: 'ssrReflection'},
+      {
+        shaderPass: ssrComposite,
+        inputs: {sourceTexture: 'previous', reflectionTexture: 'ssrReflection'},
+        output: 'previous'
+      }
+    ]
+  };
+}
 
 export const ssrComposite = {
   name: 'ssrComposite',
