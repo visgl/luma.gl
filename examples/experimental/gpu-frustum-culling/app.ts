@@ -6,9 +6,12 @@ import {Buffer, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Computation, CubeGeometry, Model} from '@luma.gl/engine';
 import {
+  decodeGPUIndexPickInfo,
   DrawCommandBuffer,
   GPUCommandGraph,
   GPUCompaction,
+  GPUIndexPickingTarget,
+  INDEX_PICKING_READBACK_BYTE_LENGTH,
   type CompiledGPUCommandGraph
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
@@ -19,7 +22,11 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {makeCullingInstances} from './culling-data';
-import {CULLING_RENDER_SHADER, getFrustumCullingShader} from './culling-shaders';
+import {
+  CULLING_PICKING_SHADER,
+  CULLING_RENDER_SHADER,
+  getFrustumCullingShader
+} from './culling-shaders';
 
 export const title = 'GPU Frustum Culling';
 export const description =
@@ -36,6 +43,10 @@ const FIELD_FOV = Math.PI / 3;
 
 type CullingGraphResources = {
   compiled: CompiledGPUCommandGraph<CullingGraphParameters>;
+  pickingCompiled: CompiledGPUCommandGraph<PickingGraphParameters>;
+  pickingReadbackId: string;
+  pickingWidth: number;
+  pickingHeight: number;
   drawCommands: DrawCommandBuffer;
   instances: Buffer;
   visibleIds: Buffer;
@@ -50,12 +61,18 @@ type CullingGraphParameters = {
   overviewViewport?: Viewport;
 };
 
+type PickingGraphParameters = {
+  perspectiveViewport: Viewport;
+  pixel: readonly [number, number];
+};
+
 export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
   static props = {createFramebuffer: true, debug: true};
 
   readonly device: Device;
   readonly model: Model;
+  readonly pickingModel: Model;
   readonly uniformBuffer: Buffer;
   readonly overviewUniformBuffer: Buffer;
   readonly panels: ExamplePanelManager;
@@ -72,6 +89,8 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   private lastPointer: [number, number] = [0, 0];
   private sampledVisibleCount = 0;
   private countReadPending = false;
+  private pickedObjectIndex: number | null = null;
+  private pickReadPendingCount = 0;
   private frameIndex = 0;
   private encodeTimeMilliseconds = 0;
   private compileTimeMilliseconds = 0;
@@ -123,6 +142,29 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
         depthWriteEnabled: true
       }
     });
+    this.pickingModel = new Model(device, {
+      id: 'gpu-frustum-culling-picking-model',
+      source: CULLING_PICKING_SHADER,
+      geometry: new CubeGeometry({id: 'gpu-frustum-culling-picking-cube', indices: true}),
+      colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
+      depthStencilAttachmentFormat: 'depth24plus',
+      shaderLayout: {
+        attributes: [
+          {name: 'positions', location: 0, type: 'vec3<f32>'},
+          {name: 'normals', location: 1, type: 'vec3<f32>'}
+        ],
+        bindings: [
+          {name: 'instances', type: 'read-only-storage', group: 0, location: 0},
+          {name: 'visibleIds', type: 'read-only-storage', group: 0, location: 1},
+          {name: 'uniforms', type: 'uniform', group: 0, location: 2}
+        ]
+      },
+      parameters: {
+        cullMode: 'back',
+        depthCompare: 'less-equal',
+        depthWriteEnabled: true
+      }
+    });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.rebuild(DEFAULT_CAPACITY);
     this.panels.mount();
@@ -140,10 +182,25 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     }
   }
 
-  override onRender({animationLoop, device, time, width, height}: AnimationProps): void {
-    const resources = this.resources;
+  override onRender({
+    animationLoop,
+    device,
+    time,
+    width,
+    height,
+    _mousePosition
+  }: AnimationProps): void {
+    let resources = this.resources;
     if (!resources) {
       return;
+    }
+    const deviceSize = device.getDefaultCanvasContext().getDevicePixelSize();
+    if (resources.pickingWidth !== deviceSize[0] || resources.pickingHeight !== deviceSize[1]) {
+      this.rebuild(this.capacity);
+      resources = this.resources;
+      if (!resources) {
+        return;
+      }
     }
     if (this.autoOrbit) {
       this.yaw = 0.72 + time * 0.00008;
@@ -152,6 +209,20 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     this.writeUniforms(viewports);
     const encodeStart = performance.now();
     resources.compiled.encode(device.commandEncoder, {parameters: viewports});
+    if (_mousePosition && this.frameIndex % 4 === 0 && this.pickReadPendingCount < 2) {
+      const pixel = this.getPickingPixel(_mousePosition as [number, number], resources);
+      const readbackBuffer = device.createBuffer({
+        id: `gpu-frustum-culling-pick-${this.frameIndex}`,
+        byteLength: INDEX_PICKING_READBACK_BYTE_LENGTH,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      resources.pickingCompiled.encode(device.commandEncoder, {
+        parameters: {perspectiveViewport: viewports.perspectiveViewport, pixel},
+        buffers: {[resources.pickingReadbackId]: readbackBuffer}
+      });
+      this.pickReadPendingCount++;
+      queueMicrotask(() => void this.readPickingResult(readbackBuffer));
+    }
     this.encodeTimeMilliseconds = performance.now() - encodeStart;
     this.framesPerSecond = animationLoop.frameRate.getSampleHz();
     this.cpuFrameTimeMilliseconds = animationLoop.cpuTime.getSampleAverageTime();
@@ -175,6 +246,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     }
     this.panels.finalize();
     this.destroyResources();
+    this.pickingModel.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
     this.overviewUniformBuffer.destroy();
@@ -221,8 +293,22 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       perspectiveRenderBundle,
       overviewRenderBundle
     );
+    const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
+    const pickingWidth = Math.max(1, deviceSize[0]);
+    const pickingHeight = Math.max(1, deviceSize[1]);
+    const picking = this.createPickingGraph(
+      pickingWidth,
+      pickingHeight,
+      instances,
+      visibleIds,
+      drawCommands
+    );
     this.resources = {
       compiled,
+      pickingCompiled: picking.compiled,
+      pickingReadbackId: picking.readbackId,
+      pickingWidth,
+      pickingHeight,
       drawCommands,
       instances,
       visibleIds,
@@ -230,6 +316,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       overviewRenderBundle
     };
     this.sampledVisibleCount = 0;
+    this.pickedObjectIndex = null;
     this.compileTimeMilliseconds = performance.now() - compileStart;
     this.updateInspector();
   }
@@ -369,6 +456,87 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     return graph.compile();
   }
 
+  private createPickingGraph(
+    width: number,
+    height: number,
+    instancesBuffer: Buffer,
+    visibleIdsBuffer: Buffer,
+    drawCommands: DrawCommandBuffer
+  ): {
+    compiled: CompiledGPUCommandGraph<PickingGraphParameters>;
+    readbackId: string;
+  } {
+    const graph = new GPUCommandGraph<PickingGraphParameters>(this.device, {
+      id: 'gpu-frustum-culling-picking-graph'
+    });
+    const instances = graph.importBuffer(
+      {
+        id: 'picking-instances',
+        byteLength: instancesBuffer.byteLength,
+        usage: instancesBuffer.usage
+      },
+      instancesBuffer
+    );
+    const visibleIds = graph.importBuffer(
+      {
+        id: 'picking-visible-ids',
+        byteLength: visibleIdsBuffer.byteLength,
+        usage: visibleIdsBuffer.usage
+      },
+      visibleIdsBuffer
+    );
+    const uniforms = graph.importBuffer(
+      {
+        id: 'picking-uniforms',
+        byteLength: this.uniformBuffer.byteLength,
+        usage: this.uniformBuffer.usage
+      },
+      this.uniformBuffer
+    );
+    const drawCommandBuffer = graph.importBuffer(
+      {
+        id: 'picking-draw-command',
+        byteLength: drawCommands.buffer.byteLength,
+        usage: drawCommands.buffer.usage
+      },
+      drawCommands.buffer
+    );
+    const target = new GPUIndexPickingTarget(graph, {
+      id: 'visible-instance-picking',
+      width,
+      height
+    });
+    graph.addRenderPass({
+      id: 'render-visible-instance-picking',
+      attachments: target.attachments,
+      resources: [
+        {buffer: instances, usage: 'storage-read'},
+        {buffer: visibleIds, usage: 'storage-read'},
+        {buffer: uniforms, usage: 'uniform'},
+        {buffer: drawCommandBuffer, usage: 'indirect'}
+      ],
+      compile: () => ({
+        getRenderPassProps: () => target.renderPassProps,
+        encode: ({parameters, renderPass, getBuffer}) => {
+          renderPass.setParameters({viewport: parameters.perspectiveViewport});
+          renderPass.setPipeline(this.pickingModel.pipeline);
+          renderPass.setVertexArray(this.pickingModel.vertexArray);
+          renderPass.setBindings({
+            instances: getBuffer(instances),
+            visibleIds: getBuffer(visibleIds),
+            uniforms: getBuffer(uniforms)
+          });
+          drawCommands.draw(renderPass, 0);
+        }
+      })
+    });
+    target.addReadbackPass({
+      after: 'render-visible-instance-picking',
+      getPixel: parameters => parameters.pixel
+    });
+    return {compiled: graph.compile(), readbackId: target.readback.id};
+  }
+
   private createRenderBundle(
     id: string,
     instances: Buffer,
@@ -469,7 +637,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
         FIELD_NEAR_PLANE,
         FIELD_FAR_PLANE,
         cullingEnabled ? 1 : 0,
-        0,
+        this.pickedObjectIndex === null ? 0 : this.pickedObjectIndex + 1,
         0,
         0
       ],
@@ -494,11 +662,36 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     }
   }
 
+  private getPickingPixel(
+    mousePosition: [number, number],
+    resources: CullingGraphResources
+  ): readonly [number, number] {
+    const devicePixels = this.device
+      .getDefaultCanvasContext()
+      .cssToDevicePixels(mousePosition, false);
+    return [
+      Math.max(0, Math.min(resources.pickingWidth - 1, devicePixels.x)),
+      Math.max(0, Math.min(resources.pickingHeight - 1, devicePixels.y))
+    ];
+  }
+
+  private async readPickingResult(readbackBuffer: Buffer): Promise<void> {
+    try {
+      const bytes = await readbackBuffer.readAsync(0, 8);
+      this.pickedObjectIndex = decodeGPUIndexPickInfo(bytes).objectIndex;
+      this.updateInspector();
+    } finally {
+      readbackBuffer.destroy();
+      this.pickReadPendingCount--;
+    }
+  }
+
   private destroyResources(): void {
     if (!this.resources) {
       return;
     }
     this.resources.compiled.destroy();
+    this.resources.pickingCompiled.destroy();
     this.resources.perspectiveRenderBundle.destroy();
     this.resources.overviewRenderBundle.destroy();
     this.resources.drawCommands.destroy();
@@ -515,7 +708,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
         makeHtmlCustomPanel({
           id: 'gpu-frustum-culling-overview',
           title: '',
-          html: `<p style="margin:0;line-height:1.45">A command graph tests bounding spheres, stably compacts visible IDs, writes one indexed indirect command, and replays a fixed render bundle.</p>`
+          html: `<p style="margin:0;line-height:1.45">A command graph tests bounding spheres, stably compacts visible IDs, writes one indexed indirect command, and replays a fixed render bundle. A second graph renders those stable source IDs into transient integer picking attachments.</p>`
         }),
         makeHtmlCustomPanel({
           id: 'gpu-frustum-culling-controls',
@@ -550,7 +743,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       <label><input type="checkbox" data-comparison checked> Perspective + overview</label>
       <label><input type="checkbox" data-auto-orbit checked> Auto-orbit camera</label>
       <button type="button" data-reset>Reset camera</button>
-      <small>Drag the perspective view to orbit. Use the wheel to zoom. The overview replays the same GPU-culled indirect draw; disable it for a single-render baseline.</small>
+      <small>Move the pointer over the perspective view to pick and highlight a GPU-compacted source ID. Drag to orbit and use the wheel to zoom. The overview replays the same indirect draw.</small>
     </div>`;
   }
 
@@ -608,11 +801,13 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
         <span>CPU frame</span><strong>${this.cpuFrameTimeMilliseconds.toFixed(2)} ms</strong>
         <span>GPU frame</span><strong>${formatGpuTime(this.device, this.gpuFrameTimeMilliseconds)}</strong>
         <span>Sampled visible</span><strong>${formatCount(this.sampledVisibleCount)} (${visiblePercentage.toFixed(1)}%)</strong>
+        <span>Picked source ID</span><strong>${this.pickedObjectIndex ?? 'none'}</strong>
         <span>CPU graph encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>
         <span>Logical scratch</span><strong>${formatBytes(stats.logicalTransientBytes)}</strong>
         <span>Physical scratch</span><strong>${formatBytes(stats.physicalTransientBytes)}</strong>
         <span>Transient reuse</span><strong>${stats.reusePercentage.toFixed(0)}%</strong>
         <span>Physical allocations</span><strong>${stats.physicalTransientBufferCount}/${stats.logicalTransientBufferCount}</strong>
+        <span>Picking textures</span><strong>${this.resources?.pickingCompiled.stats.physicalTransientTextureCount}/${this.resources?.pickingCompiled.stats.logicalTransientTextureCount}</strong>
       </div>`;
     }
     if (this.nodesElement) {

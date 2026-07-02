@@ -6,7 +6,9 @@ export {
   CompiledGPUCommandGraph,
   GPUCommandGraph,
   GraphBufferHandle,
-  GraphBufferView
+  GraphBufferView,
+  GraphTextureHandle,
+  GraphTextureView
 } from './gpu-command-graph';
 export type {
   GPUCommandGraphCompileContext,
@@ -23,7 +25,16 @@ export type {
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,
-  GraphImportedBuffer
+  GraphImportedBuffer,
+  GraphImportedTexture,
+  GraphRenderPassAttachments,
+  GraphResourceUse,
+  GraphTextureAspect,
+  GraphTextureDescriptor,
+  GraphTextureDimension,
+  GraphTextureUsage,
+  GraphTextureUse,
+  GraphTextureViewProps
 } from './gpu-command-graph';
 
 export {GPUScan} from './gpu-scan';
@@ -42,6 +53,16 @@ export type {GPUHistogramDomain, GPUHistogramProps} from './gpu-histogram';
 
 export {GPUGridBinning} from './gpu-grid-binning';
 export type {GPUGridBinningBounds, GPUGridBinningProps} from './gpu-grid-binning';
+
+export {
+  decodeGPUIndexPickInfo,
+  GPUIndexPickingTarget,
+  INDEX_PICKING_READBACK_BYTE_LENGTH
+} from './gpu-index-picking-target';
+export type {
+  GPUIndexPickingReadbackProps,
+  GPUIndexPickingTargetProps
+} from './gpu-index-picking-target';
 
 export {DrawCommandBuffer} from './draw-command-buffer';
 export type {

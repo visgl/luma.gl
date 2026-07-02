@@ -844,6 +844,14 @@ produces normal graph output that can feed another reduction. `GPUGridBinning` a
 atomic accumulation strategy to packed positions and row-major cells. All three keep input,
 output, submission, and readback ownership with the caller.
 
+## Implemented textures and picking
+
+`GPUCommandGraph` schedules logical texture views across sampled, storage, render-attachment, and
+copy roles. Compatible non-overlapping transient textures reuse physical allocations, while mip,
+layer, and aspect ranges keep hazards precise. `GPUIndexPickingTarget` uses those resources for
+integer object and batch IDs, leaving rendering, submission, staging-buffer selection, and explicit
+readback with the application.
+
 ## Future primitives
 
 The proposed architecture extends beyond the implemented proof.
@@ -854,25 +862,12 @@ The trace predicate is application-owned. Reusable visibility workflows can stan
 inputs such as bounding spheres, axis-aligned boxes, time ranges, LOD thresholds, and selection
 masks. Their output should remain compacted stable IDs plus counts, not a renderer-specific object.
 
-### Picking
-
-A picking graph can share visible IDs and stable object identity with rendering. Integer render
-targets avoid color encoding on WebGPU. Region reduction can keep more work on the GPU, while the
-application explicitly chooses when to read the final pick result.
-
 ### Spatial indexes
 
 WebGPU does not currently expose a native acceleration-structure object comparable to ray-tracing
 APIs. luma.gl should name concrete library-built structures such as `GPUGridIndex` or `GPUBVH`.
 They are storage-buffer data structures with construction and traversal algorithms, not magical
 backend resources.
-
-### Textures and attachments
-
-A complete graph will add logical texture views, sampled/storage access, render attachments,
-copy roles, mip and layer ranges, and compatibility-aware transient reuse. Texture aliasing has
-more format and usage constraints than buffers and should be added from measured render workflows
-rather than guessed into the first compiler.
 
 ### GPUScene
 
@@ -919,6 +914,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
 - [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning)
+- [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)
 - [GPU commands](/docs/api-guide/gpu/gpu-commands)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)

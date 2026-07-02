@@ -4,9 +4,9 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="command-graph" />
 
-`GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer resources and ordered compute,
-render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns transient buffers
-and node resources but borrows every import.
+`GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
+ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns
+transient resources and node state but borrows every import.
 
 ```ts
 const graph = new GPUCommandGraph<{time: number}>(device, {id: 'simulation'});
@@ -59,31 +59,58 @@ Imports the backing allocation and preserves the supplied `GPUData` range.
 Imports a packed vector containing exactly one `GPUData` chunk. Multi-chunk and interleaved vectors
 are rejected in the current experiment.
 
+## Texture APIs
+
+### `importTexture(descriptor, defaultTexture?)`
+
+Declares a caller-owned `Texture` or ready `DynamicTexture`. Texture descriptors are exact rather
+than capacity-based: format, dimension, extent, mip count, and sample count must match at every
+encoding, while concrete usage must contain every declared flag. Recompile canvas-sized graphs
+after a device-pixel resize.
+
+### `createTransientTexture(descriptor)`
+
+Declares graph-owned texture storage. Non-overlapping logical textures reuse one physical texture
+when their descriptors match apart from ID and usage. The allocation is created with the union of
+their usage flags.
+
+### `createTextureView(texture, props?)`
+
+Creates a `GraphTextureView` with normalized aspect, mip, and array-layer ranges. Texture hazards
+are inferred only between overlapping ranges. Handle-level uses conservatively cover the complete
+texture.
+
 ## Node APIs
 
 - `addComputePass(node)` compiles an executable callback that receives a graph-owned `ComputePass`.
-- `addRenderPass(node)` may resolve `RenderPassProps` for each encoding and receives a graph-owned
-  `RenderPass`.
+- `addRenderPass(node)` may declare graph texture `attachments`, resolve other `RenderPassProps`
+  for each encoding, and receives a graph-owned `RenderPass`.
 - `addCopyPass(node)` records directly on the caller's `CommandEncoder`.
 
-Nodes declare resource uses with `storage-read`, `storage-write`, `storage-read-write`, `uniform`,
-`copy-source`, `copy-destination`, `indirect`, `vertex`, or `index`. `dependsOn` adds explicit
-ordering where buffers do not express the dependency.
+Buffer nodes declare storage, uniform, copy, indirect, vertex, and index uses. Texture nodes declare
+`sampled`, storage, render-attachment, and copy uses. Render attachments are automatically treated
+as read-write resources. `dependsOn` adds explicit ordering where resources do not express the
+dependency.
+
+Executable contexts expose `getBuffer()`, `getTexture()`, and `getTextureView()`. Concrete texture
+views and framebuffers are cached for repeated encodings and rebuilt when an imported texture is
+replaced.
 
 ## `CompiledGPUCommandGraph`
 
 ### `encode(commandEncoder, options)`
 
 Records every compiled node. `options.parameters` is forwarded to callbacks. `options.buffers` may
-override imported resources by ID if capacity and usage remain compatible.
+override imported buffers by ID if capacity and usage remain compatible. `options.textures`
+overrides exact-size imported textures.
 
 `encode()` never submits, maps, reads, or grows resources.
 
 ### `stats`
 
-Reports node order, logical and physical transient counts and bytes, bytes reused, and reuse
-percentage.
+Reports node order and separate buffer and texture transient counts, bytes, and reuse percentages.
 
 ### `destroy()`
 
-Destroys compiled node resources and physical transients. Imported buffers remain caller-owned.
+Destroys compiled node resources, cached views/framebuffers, and physical transients. Imported
+buffers and textures remain caller-owned.

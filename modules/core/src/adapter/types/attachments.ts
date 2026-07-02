@@ -40,7 +40,7 @@ type StorageTextureBindingLayout = {
   /** The index of the binding point in the compiled and linked shader */
   location?: number;
   visibility: number;
-  access?: 'write-only';
+  access?: 'write-only' | 'read-only' | 'read-write';
   format: TextureFormat;
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
 };
