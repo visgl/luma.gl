@@ -35,7 +35,12 @@ const ASSET_EXTENSIONS = new Set([
 ]);
 
 const SKIPPED_DIRECTORY_NAMES = new Set(['dist', 'node_modules']);
-const EXAMPLE_SOURCE_FILE_NAMES = new Set(['app.ts', 'app.tsx']);
+const EXAMPLE_SOURCE_FILE_NAMES = new Set([
+  'app.ts',
+  'app.tsx',
+  'index.html',
+  'package.json'
+]);
 
 function syncExampleAssets() {
   rmSync(path.resolve(websiteDirectory, '.generated', 'example-assets'), {

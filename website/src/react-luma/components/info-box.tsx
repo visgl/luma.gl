@@ -36,7 +36,9 @@ export type ExampleInfoProps = {
   directory?: string;
   id?: string;
   sourceDirectory?: string;
+  sourceFiles?: string[];
   sourcePath?: string;
+  stackBlitz?: boolean;
   title?: string;
 };
 
@@ -63,6 +65,11 @@ type InfoBoxResizeState = {
   startY: number;
   startWidth: number;
   startHeight: number;
+};
+
+type ExampleSourceFile = {
+  path: string;
+  source: string;
 };
 
 /** Panel-framework mount for the website InfoBox chrome and panel content. */
@@ -121,17 +128,17 @@ function InfoBoxView(props: InfoBoxViewProps) {
   const sourceUrl = getExampleSourceUrl(props);
   const sourcePaths = React.useMemo(
     () => getExampleSourcePaths(props),
-    [props.directory, props.id, props.sourceDirectory, props.sourcePath]
+    [props.directory, props.id, props.sourceDirectory, props.sourceFiles, props.sourcePath]
   );
   const sourcePathsKey = sourcePaths.join('|');
   const title = getExampleTitle(props.id, props.title);
   const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
   const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
+  const [activeSourcePath, setActiveSourcePath] = useState('');
   const [infoBoxSize, setInfoBoxSize] = useState<InfoBoxSize | null>(null);
   const [sourceResult, setSourceResult] = useState<{
     key: string;
-    path?: string;
-    source?: string;
+    files?: ExampleSourceFile[];
     error?: string;
   } | null>(null);
   const infoBoxRef = useRef<HTMLDivElement | null>(null);
@@ -152,9 +159,10 @@ function InfoBoxView(props: InfoBoxViewProps) {
     }
 
     const abortController = new AbortController();
-    void fetchExampleSource(props.websiteBaseUrl, sourcePaths, abortController.signal)
-      .then(({path, source}) => {
-        setSourceResult({key: sourcePathsKey, path, source});
+    void fetchExampleSources(props.websiteBaseUrl, sourcePaths, abortController.signal)
+      .then(files => {
+        setSourceResult({key: sourcePathsKey, files});
+        setActiveSourcePath(files[0]?.path || '');
       })
       .catch(error => {
         if (!abortController.signal.aborted) {
@@ -269,11 +277,14 @@ function InfoBoxView(props: InfoBoxViewProps) {
     event.preventDefault();
   };
 
+  const activeSourceFile =
+    currentSourceResult?.files?.find(file => file.path === activeSourcePath) ||
+    currentSourceResult?.files?.[0];
   const sourceContent = currentSourceResult?.error ? (
     <p style={{margin: 0, color: '#b00020'}}>{currentSourceResult.error}</p>
   ) : (
-    <CodeBlock language={currentSourceResult?.path?.endsWith('.tsx') ? 'tsx' : 'typescript'}>
-      {currentSourceResult?.source ?? '// Loading source…'}
+    <CodeBlock language={getSourceLanguage(activeSourceFile?.path)}>
+      {activeSourceFile?.source ?? '// Loading source…'}
     </CodeBlock>
   );
 
@@ -398,6 +409,63 @@ function InfoBoxView(props: InfoBoxViewProps) {
               background: '#f6f8fa'
             }}
           >
+            {currentSourceResult?.files && currentSourceResult.files.length > 0 ? (
+              <div
+                role="tablist"
+                aria-label="Example source files"
+                style={{
+                  alignItems: 'center',
+                  background: '#eef2f6',
+                  display: 'flex',
+                  gap: 4,
+                  overflowX: 'auto',
+                  padding: '8px'
+                }}
+              >
+                {currentSourceResult.files.map(file => (
+                  <button
+                    key={file.path}
+                    type="button"
+                    role="tab"
+                    aria-selected={file.path === activeSourceFile?.path}
+                    onClick={() => setActiveSourcePath(file.path)}
+                    style={{
+                      background: file.path === activeSourceFile?.path ? '#fff' : 'transparent',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 5,
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: file.path === activeSourceFile?.path ? 700 : 500,
+                      padding: '4px 8px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {file.path.split('/').at(-1)}
+                  </button>
+                ))}
+                {props.stackBlitz ? (
+                  <button
+                    type="button"
+                    onClick={() => void openExampleInStackBlitz(title, currentSourceResult.files || [])}
+                    style={{
+                      background: '#146ef5',
+                      border: 0,
+                      borderRadius: 5,
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      marginLeft: 'auto',
+                      padding: '5px 9px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Edit in StackBlitz
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             {sourceContent}
           </div>
         ) : null}
@@ -489,35 +557,94 @@ function getExampleSourceUrl(props: ExampleInfoProps): string | null {
 }
 
 function getExampleSourcePaths(props: ExampleInfoProps): string[] {
+  if (props.sourceFiles && props.sourceFiles.length > 0) {
+    const sourceRoot = getExampleSourceRoot(props);
+    return sourceRoot ? props.sourceFiles.map(file => `${sourceRoot}/${file}`) : props.sourceFiles;
+  }
+
   if (props.sourcePath) {
     const sourcePath = props.sourcePath.replace(/^\/?examples\//, '').replace(/^\//, '');
     if (/\.(?:[cm]?[jt]sx?)$/.test(sourcePath)) {
       return [sourcePath];
     }
-    return [`${sourcePath}/app.ts`, `${sourcePath}/app.tsx`];
+    return [
+      `${sourcePath}/app.ts`,
+      `${sourcePath}/app.tsx`,
+      `${sourcePath}/index.html`,
+      `${sourcePath}/package.json`
+    ];
   }
 
   if (props.id && (props.sourceDirectory || props.directory)) {
     const sourceDirectory = props.sourceDirectory || props.directory;
-    return [`${sourceDirectory}/${props.id}/app.ts`, `${sourceDirectory}/${props.id}/app.tsx`];
+    return [
+      `${sourceDirectory}/${props.id}/app.ts`,
+      `${sourceDirectory}/${props.id}/app.tsx`,
+      `${sourceDirectory}/${props.id}/index.html`,
+      `${sourceDirectory}/${props.id}/package.json`
+    ];
   }
 
   return [];
 }
 
-async function fetchExampleSource(
+function getExampleSourceRoot(props: ExampleInfoProps): string | null {
+  if (props.sourcePath) {
+    return props.sourcePath.replace(/^\/?examples\//, '').replace(/^\//, '');
+  }
+  if (props.id && (props.sourceDirectory || props.directory)) {
+    return `${props.sourceDirectory || props.directory}/${props.id}`;
+  }
+  return null;
+}
+
+async function fetchExampleSources(
   websiteBaseUrl: string,
   sourcePaths: readonly string[],
   signal: AbortSignal
-): Promise<{path: string; source: string}> {
+): Promise<ExampleSourceFile[]> {
+  const sourceFiles: ExampleSourceFile[] = [];
   for (const sourcePath of sourcePaths) {
     const response = await fetch(`${websiteBaseUrl}example-assets/${sourcePath}`, {signal});
     if (response.ok) {
-      return {path: sourcePath, source: await response.text()};
+      sourceFiles.push({path: sourcePath, source: await response.text()});
     }
   }
 
-  throw new Error('Unable to load source code.');
+  if (sourceFiles.length === 0) {
+    throw new Error('Unable to load source code.');
+  }
+  return sourceFiles;
+}
+
+function getSourceLanguage(path?: string): string {
+  if (path?.endsWith('.tsx')) return 'tsx';
+  if (path?.endsWith('.html')) return 'html';
+  if (path?.endsWith('.json')) return 'json';
+  return 'typescript';
+}
+
+async function openExampleInStackBlitz(
+  title: string,
+  sourceFiles: ExampleSourceFile[]
+): Promise<void> {
+  const {default: sdk} = await import('@stackblitz/sdk');
+  const files = Object.fromEntries(
+    sourceFiles.map(file => [file.path.split('/').at(-1) || file.path, file.source])
+  );
+  await sdk.openProject(
+    {
+      title: `luma.gl: ${title}`,
+      description: 'Runnable luma.gl example from the official documentation.',
+      template: 'node',
+      files
+    },
+    {
+      newWindow: true,
+      openFile: files['app.tsx'] ? 'app.tsx' : 'app.ts',
+      startScript: 'start'
+    }
+  );
 }
 
 function getExampleTitle(id?: string, title?: string): string {

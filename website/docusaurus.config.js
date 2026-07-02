@@ -85,20 +85,41 @@ module.exports = {
   ...baseConfig,
   baseUrl: websiteBaseUrl,
   staticDirectories: [...staticDirectories, '.generated/example-assets'],
-  plugins: basePlugins.map((plugin) => {
-    if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
-      return [
-        plugin[0],
-        {
-          ...plugin[1],
-          indexDocs: true,
-          indexBlog: false,
-          indexPages: true
+  plugins: [
+    ...basePlugins.map((plugin) => {
+      if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
+        return [
+          plugin[0],
+          {
+            ...plugin[1],
+            indexDocs: true,
+            indexBlog: false,
+            indexPages: true
+          }
+        ];
+      }
+      return plugin;
+    }),
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        id: 'core-api-reference',
+        name: '@luma.gl/core generated API',
+        entryPoints: ['../modules/core/src/index.ts'],
+        tsconfig: '../modules/core/tsconfig.json',
+        out: '../docs/api-reference/generated/core',
+        docsPath: '../docs',
+        readme: 'none',
+        excludeInternal: true,
+        excludePrivate: true,
+        excludeProtected: true,
+        gitRevision: 'master',
+        sidebar: {
+          autoConfiguration: false
         }
-      ];
-    }
-    return plugin;
-  }),
+      }
+    ]
+  ],
   future: {
     v4: true
   },

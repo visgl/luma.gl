@@ -1,99 +1,51 @@
 import {DeviceTabs} from '@site/src/react-luma';
 import {HelloTriangleExample} from '@site/src/examples';
+import {ExampleSource} from '@site/src/components/docs/example-source';
 import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 
 # Hello Triangle
 
 <TutorialDocsTabs group="fundamentals" active="hello-triangle" />
 
-This tutorial demonstrates how to draw a triangle using luma.gl's cross-platform rendering APIs.
+**Goal:** create one `Model` and issue a portable draw call. Complete
+[Getting Started](/docs/getting-started) before this lesson.
 
 <DeviceTabs />
 <HelloTriangleExample showHeader={false} showStats={false} />
 
-It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
+The example should display a red triangle. Switch backends above the canvas to verify
+that the same application code runs with WebGPU and WebGL2.
 
-We create a `Model` to render the triangle. This will be a recurring theme in all our tutorials. A `Model` can be thought of as gathering all the WebGL/WebGPU pieces necessary for a single draw call: render pipelines (shader programs), attribute buffers, uniforms, texture bindings etc.
+## The mental model
 
-The program uses a tiny vertex shader that relies on the built-in `vertex_index` to look up clip-space positions for the three vertices. A matching fragment shader fills the triangle with a solid color. Both WGSL and GLSL versions are provided so the example runs on WebGPU and WebGL without changes.
+A `Model` gathers the state required for one draw: shaders, topology, vertex and
+instance counts, buffer layouts, attributes, bindings, and render parameters. It is a
+durable object; the animation loop draws it into a short-lived `RenderPass` each frame.
 
-The complete source for this example is shown below. It creates a `Model` with both WGSL and GLSL shaders and renders it inside an `AnimationLoopTemplate`. The animation loop simply opens a render pass, draws the model and ends the pass each frame.
+This first model does not need a vertex buffer. Both shaders use the built-in vertex
+index to select three clip-space positions. The WebGPU backend consumes WGSL and the
+WebGL2 backend consumes GLSL, while the model and render loop are shared.
 
-```typescript
-import {AnimationLoopTemplate, AnimationProps, makeAnimationLoop, Model} from '@luma.gl/engine';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+## Follow the frame
 
-const WGSL_SHADER = /* WGSL */ `
-@vertex
-fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
-  var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
-  return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
-}
+1. `makeAnimationLoop` creates the best available device from the supplied adapters.
+2. The animation loop constructs the application with that device.
+3. `onRender` begins a render pass and clears its color attachment.
+4. `model.draw(renderPass)` records the draw.
+5. Ending the pass allows the device to submit and present the frame.
 
-@fragment
-fn fragmentMain() -> @location(0) vec4<f32> {
-  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-}
-`;
+<ExampleSource example="tutorials/hello-triangle" />
 
-const VS_GLSL = /* glsl */ `
-#version 300 es
-const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
-void main() {
-  gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
-}
-`;
+## Common problems
 
-const FS_GLSL = /* glsl */ `
-#version 300 es
-precision highp float;
-layout(location = 0) out vec4 outColor;
-void main() {
-  outColor = vec4(1.0, 0.0, 0.0, 1.0);
-}
-`;
+- A shader compilation error normally identifies WGSL or GLSL source and line number in
+  the browser console.
+- A blank canvas with no error often means the model was not drawn inside an active pass.
+- If only one backend fails, use the backend selector to isolate the shader or feature
+  that is not portable.
 
-class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  model: Model;
+## Summary
 
-  constructor({device}: AnimationProps) {
-    super();
-    this.model = new Model(device, {
-      source: WGSL_SHADER,
-      vs: VS_GLSL,
-      fs: FS_GLSL,
-      topology: 'triangle-list',
-      vertexCount: 3,
-      shaderLayout: {
-        attributes: [],
-        bindings: []
-      },
-      parameters: {
-        depthFormat: 'depth24plus'
-      }
-    });
-  }
-
-  override onFinalize() {
-    this.model.destroy();
-  }
-
-  override onRender({device}: AnimationProps) {
-    const renderPass = device.beginRenderPass({clearColor: [1, 1, 1, 1]});
-    this.model.draw(renderPass);
-    renderPass.end();
-  }
-}
-
-const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
-  adapters: [webgpuAdapter, webgl2Adapter]
-});
-animationLoop.start();
-```
-
-The vertex shader uses built-in indices, so no vertex buffers are needed for this
-minimal example. The render loop clears the canvas and draws the model every
-frame.
-
-When the application runs you should see a red triangle rendered on a white background.
+You created a model, provided backend-appropriate shaders, and drew it through the same
+render-pass API. Next, [Hello Cube](/docs/tutorials/hello-cube) adds geometry, textures,
+depth testing, and uniforms.

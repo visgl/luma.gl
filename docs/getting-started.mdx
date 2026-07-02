@@ -1,0 +1,154 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Getting Started
+
+luma.gl is a TypeScript toolkit for applications that need direct, portable access to
+WebGPU and WebGL2. This guide creates a small rendering project that tries WebGPU first
+and falls back to WebGL2.
+
+## Prerequisites
+
+- A current Node.js LTS release
+- A browser with WebGPU or WebGL2 support
+- Basic TypeScript knowledge
+
+:::tip
+
+If your goal is a geospatial visualization rather than a GPU framework or custom
+renderer, start with [deck.gl](https://deck.gl) instead. deck.gl is built on luma.gl and
+provides higher-level layers, cameras, and interaction.
+
+:::
+
+## Create a project
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm create vite@latest luma-demo -- --template vanilla-ts
+cd luma-demo
+npm install @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn create vite luma-demo --template vanilla-ts
+cd luma-demo
+yarn add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm create vite luma-demo --template vanilla-ts
+cd luma-demo
+pnpm add @luma.gl/engine @luma.gl/webgpu @luma.gl/webgl
+```
+
+  </TabItem>
+</Tabs>
+
+Replace `src/main.ts` with:
+
+```typescript
+import {AnimationLoopTemplate, type AnimationProps, makeAnimationLoop} from '@luma.gl/engine';
+import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/webgl';
+
+class App extends AnimationLoopTemplate {
+  override onRender({device}: AnimationProps): void {
+    const renderPass = device.beginRenderPass({
+      clearColor: [0.05, 0.08, 0.14, 1]
+    });
+    renderPass.end();
+  }
+}
+
+makeAnimationLoop(App, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+}).start();
+```
+
+Start the development server:
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm run dev
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn dev
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm dev
+```
+
+  </TabItem>
+</Tabs>
+
+You should see a dark canvas. luma.gl creates the best available device, begins a render
+pass each frame, and presents the result to the page.
+
+## Choose a learning path
+
+<div className="docs-api-card-grid">
+  <a className="docs-api-card" href="/docs/tutorials/hello-triangle">
+    <span className="docs-api-card__kind">Recommended</span>
+    <strong>Rendering with the Engine API</strong>
+    <span>Draw a triangle, add geometry and textures, then move on to instancing and reusable shaders.</span>
+    <span className="docs-api-card__meta">Start with Model and AnimationLoop</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-guide/gpu">
+    <span className="docs-api-card__kind">Lower level</span>
+    <strong>GPU resources and compute</strong>
+    <span>Work directly with devices, buffers, textures, bindings, command encoders, and compute passes.</span>
+    <span className="docs-api-card__meta">Start with the portable GPU API</span>
+  </a>
+</div>
+
+## How backend selection works
+
+The application supplies both adapters in preference order. A WebGPU-capable browser
+uses `webgpuAdapter`; other supported browsers fall back to `webgl2Adapter`. Application
+code continues to use the same luma.gl `Device`, resource, and render-pass APIs.
+
+Use only `webgpuAdapter` when your application depends on compute shaders, storage
+textures, or another WebGPU-only feature. The documentation marks backend-specific
+features explicitly.
+
+## Troubleshooting
+
+### The canvas is blank
+
+Check the browser console first. Confirm that `src/main.ts` is imported by `index.html`
+and that the canvas is not hidden by application CSS.
+
+### WebGPU is unavailable
+
+The example should fall back to WebGL2. To debug WebGPU specifically, consult the
+[WebGPU and WebGL comparison](/docs/api-guide/background/webgpu-vs-webgl) and inspect
+the selected device in your browser developer tools.
+
+### TypeScript cannot resolve a package
+
+Install all three packages shown above. `@luma.gl/engine` provides `AnimationLoop` and
+`Model`; `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete device adapters.
+
+## Next step
+
+Continue with [Hello Triangle](/docs/tutorials/hello-triangle), where the empty render
+pass becomes a complete portable draw call.

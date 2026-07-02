@@ -25,6 +25,7 @@
     "@docusaurus/core": "^3.9.2",
     "@probe.gl/stats": "^4.1.1",
     "@probe.gl/stats-widget": "^4.1.1",
+    "@stackblitz/sdk": "^1.11.0",
     "@vis.gl/docusaurus-website": "1.0.0-alpha.21",
     "clsx": "^1.1.1",
     "maplibre-gl": "^5.13.0",
@@ -35,7 +36,11 @@
   "devDependencies": {
     "@cmfcmf/docusaurus-search-local": "^2.0.0",
     "@docusaurus/tsconfig": "^3.9.2",
-    "docusaurus-mdx-checker": "^3.0.0"
+    "docusaurus-mdx-checker": "^3.0.0",
+    "docusaurus-plugin-typedoc": "^1.4.2",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.10.0",
+    "typescript": "5.9.3"
   },
   "browserslist": [
     ">0.2% and supports async-functions",
