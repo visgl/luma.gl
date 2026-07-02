@@ -8,6 +8,41 @@ import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
 
+test('GPUDataEvaluator buffer pool allocates exact sizes and validates device limits', async () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device.limits, 'maxBufferSize', {value: 16});
+
+  const evaluator = GPUDataEvaluator.fromArray(new Uint8Array(8), {type: 'uint8', size: 1});
+  await evaluator.evaluate(device);
+  const buffer = evaluator.buffer;
+
+  expect(buffer.byteLength).toBe(evaluator.byteLength);
+  expect(buffer.byteLength).toBe(8);
+
+  evaluator.destroy();
+
+  const smallerEvaluator = GPUDataEvaluator.fromArray(new Uint8Array(4), {
+    type: 'uint8',
+    size: 1
+  });
+  await smallerEvaluator.evaluate(device);
+
+  expect(smallerEvaluator.buffer).toBe(buffer);
+  expect(smallerEvaluator.buffer.byteLength).toBe(8);
+
+  const oversizedEvaluator = GPUDataEvaluator.fromArray(new Uint8Array(17), {
+    type: 'uint8',
+    size: 1
+  });
+  await expect(oversizedEvaluator.evaluate(device)).rejects.toThrow(
+    'Buffer pool cannot allocate 17 bytes: device.limits.maxBufferSize is 16'
+  );
+
+  smallerEvaluator.destroy();
+  oversizedEvaluator.destroy();
+  device.destroy();
+});
+
 test('GPUDataEvaluator.fromGPUData accepts packed Float16 chunks', () => {
   const device = new NullDevice({});
   const vector2 = makeUint16Vector(device, 'colors16x2', [0x3c00, 0x3800], 2, {

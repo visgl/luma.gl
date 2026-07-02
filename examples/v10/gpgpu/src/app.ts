@@ -16,8 +16,8 @@ import {
   type TableColumn
 } from './table-renderer';
 
-// The evaluator buffer pool reserves 2x the requested byte length. Five million rows keep the
-// largest default allocation below WebGPU's portable 256 MiB maxBufferSize limit.
+// Keep the default workload conservative for browsers while preserving the ten-million-row
+// stress case through the rows query parameter.
 const DEFAULT_ROW_COUNT = 5_000_000;
 const MAXIMUM_ROW_COUNT = 10_000_000;
 const EXPRESSION_QUERY_PARAMETER = 'expression';
