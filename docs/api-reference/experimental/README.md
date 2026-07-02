@@ -31,7 +31,7 @@ yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertool
 
 The [GPU Primitives and Command Graphs guide](/docs/api-reference/experimental/gpu-primitives)
 introduces explicit command scheduling, typed table-backed graph views, hierarchical scan, stable
-compaction, and GPU-written indirect draw commands.
+compaction, stable key/value sorting, and GPU-written indirect draw commands.
 
 ## Order-independent Transparency
 

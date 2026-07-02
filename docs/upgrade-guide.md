@@ -34,6 +34,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 **@luma.gl/gpgpu**
 - `GPUTableEvaluator` and `getGPUTableEvaluator()` have been removed. Use `GPUDataEvaluator` and `getGPUDataEvaluator()` for one packed fixed-width `GPUData` chunk.
 - Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
+- The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/experimental` with explicit key/value output views and command submission.
 
 ## Upgrading to v9.3
 

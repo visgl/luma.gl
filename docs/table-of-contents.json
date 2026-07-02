@@ -182,6 +182,7 @@
               "api-reference/experimental/gpu-primitives/gpu-command-graph",
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
+              "api-reference/experimental/gpu-primitives/gpu-sort",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },
@@ -196,7 +197,6 @@
           "api-reference/gpgpu/README",
           "api-reference/gpgpu/gpu-data-evaluator",
           "api-reference/gpgpu/operations",
-          "api-reference/gpgpu/bitonic-argsort",
           "api-reference/gpgpu/custom-operation",
           "api-reference/gpgpu/clean-evaluate"
         ]
@@ -255,6 +255,7 @@
               "api-reference/experimental/gpu-primitives/gpu-command-graph",
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
+              "api-reference/experimental/gpu-primitives/gpu-sort",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },

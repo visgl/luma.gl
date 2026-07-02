@@ -1,5 +1,4 @@
 import {arithmetic} from './arithmetic';
-import {BitonicArgsort} from './bitonic-argsort';
 import {dot} from './dot';
 import {equalAll} from './equal-all';
 import {extent} from './extent';
@@ -12,10 +11,9 @@ import {select} from './select';
 import {sequence} from './sequence';
 import {swizzle} from './swizzle';
 
-/** WebGPU backend handlers and direct WebGPU-only GPGPU helpers. */
+/** WebGPU backend handlers. */
 export {
   arithmetic,
-  BitonicArgsort,
   dot,
   equalAll,
   extent,

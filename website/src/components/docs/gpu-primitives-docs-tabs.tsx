@@ -6,6 +6,7 @@ export type GPUPrimitivesDocsTabId =
   | 'command-graph'
   | 'scan'
   | 'compaction'
+  | 'sort'
   | 'draw-command-buffer';
 
 const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
@@ -28,6 +29,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'compaction',
     label: 'Compaction',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-compaction'
+  },
+  {
+    id: 'sort',
+    label: 'Sort',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-sort'
   },
   {
     id: 'draw-command-buffer',

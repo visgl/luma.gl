@@ -27,6 +27,10 @@ import BloomApp from '../../examples/experimental/bloom/app';
 import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
 import GPUFrustumCullingApp from '../../examples/experimental/gpu-frustum-culling/app';
 import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
+import {
+  initializeGPUSortExample,
+  type GPUSortExampleHandle
+} from '../../examples/experimental/gpu-sort/src/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/experimental/video-texture/app';
@@ -35,10 +39,6 @@ import {
   initializeGPGPUShowcase,
   type GPGPUShowcaseHandle
 } from '../../examples/v10/gpgpu/src/app';
-import {
-  initializeBitonicArgsortExample,
-  type BitonicArgsortExampleHandle
-} from '../../examples/v10/gpgpu-bitonic-sort/src/app';
 import ArrowParticlesApp from '../../examples/arrow/arrow-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
@@ -753,17 +753,17 @@ export const GPGPUExample: React.FC = () => {
   );
 };
 
-/** Docusaurus wrapper for the Arrow-backed BitonicArgsort GPGPU example. */
-export const GPGPUBitonicSortExample: React.FC = () => {
+/** Docusaurus wrapper for the graph-native paired GPU sort example. */
+export const GPUSortExample: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let handle: BitonicArgsortExampleHandle | null = null;
+    let handle: GPUSortExampleHandle | null = null;
     try {
-      handle = initializeBitonicArgsortExample();
+      handle = initializeGPUSortExample();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
-      logError('Failed to initialize bitonic argsort example', error);
+      logError('Failed to initialize GPU sort example', error);
     }
 
     return () => {
@@ -773,7 +773,7 @@ export const GPGPUBitonicSortExample: React.FC = () => {
 
   return (
     <ExamplePage style={{background: '#f7f8fb', overflow: 'hidden'}}>
-      <main id="bitonic-argsort-app" />
+      <main id="gpu-sort-app" />
       {errorMessage ? (
         <p role="alert" style={{padding: 22}}>
           {errorMessage}
