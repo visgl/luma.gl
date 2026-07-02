@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@deck.gl-community/arrow-layers": "workspace:*",
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
     "@deck.gl/core": "9.3.4",
     "@luma.gl/arrow": "~9.3.0",
     "@luma.gl/core": "~9.3.0",

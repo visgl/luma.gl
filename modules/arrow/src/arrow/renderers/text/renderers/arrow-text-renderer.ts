@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type CommandEncoder, type Device} from '@luma.gl/core';
+import {type CommandEncoder, type Device, type ShaderLayout} from '@luma.gl/core';
 import {
   getArrowPickingModules,
   makeArrowRecordBatchSourceInfo
@@ -89,6 +89,8 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
   angle?: number;
   /** Constant fallback row text size used when no row size vector is present. */
   size?: number;
+  /** Attribute-model shader layout override used after Arrow source preparation. */
+  attributeShaderLayout?: ShaderLayout;
   /** Called after one Arrow record batch has been prepared and appended. */
   onDataBatch?: (update: ArrowTextRendererDataBatchUpdate) => void;
   /** Called when renderer-owned Arrow batch loading fails. */
@@ -655,7 +657,7 @@ export class ArrowTextRenderer extends GPURenderable<
         source: props.modelProps?.source ?? WGSL_SHADER,
         vs: props.modelProps?.vs ?? VS_GLSL,
         fs: props.modelProps?.fs ?? FS_GLSL,
-        shaderLayout: TEXT_SHADER_LAYOUT
+        shaderLayout: props.attributeShaderLayout ?? TEXT_SHADER_LAYOUT
       })
     );
   }

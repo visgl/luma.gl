@@ -21,6 +21,11 @@ import {
 } from './arrow-polygon-data';
 import {type ArrowPolygonRendererMetrics, type ArrowPolygonRendererModel} from '@luma.gl/arrow';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
+import {
+  ARROW_EXAMPLE_INPUT_MODE_OPTIONS,
+  isArrowExampleInputMode,
+  type ArrowExampleInputMode
+} from '../arrow-example-input';
 
 const PICKED_ROW_ID = 'arrow-polygon-picked-row';
 const ROW_COUNT_ID = 'arrow-polygon-row-count';
@@ -43,6 +48,7 @@ const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-polygon-streaming-batch-status-la
 const POLYGON_VERTEX_STORAGE_BUFFER_COUNT = 3;
 
 export type ArrowPolygonControlPanelState = {
+  inputMode: ArrowExampleInputMode;
   rowCountKind: ArrowPolygonRowCountKind;
   sourceKind: ArrowPolygonSourceKind;
   colorKind: ArrowPolygonColorKind;
@@ -53,11 +59,13 @@ export type ArrowPolygonControlPanelProps = {
   device: Device;
   initialState: ArrowPolygonControlPanelState;
   handlers: {
+    onInputModeChange: (inputMode: ArrowExampleInputMode) => void;
     onRowCountKindChange: (rowCountKind: ArrowPolygonRowCountKind) => void | Promise<void>;
     onSourceKindChange: (sourceKind: ArrowPolygonSourceKind) => void;
     onColorKindChange: (colorKind: ArrowPolygonColorKind) => void;
     onModelKindChange: (modelKind: ArrowPolygonRendererModel) => void;
   };
+  supportedModelKinds?: readonly ArrowPolygonRendererModel[];
   onRefresh: () => void;
 };
 
@@ -65,6 +73,7 @@ export class ArrowPolygonControlPanel {
   private readonly device: Device;
   private readonly handlers: ArrowPolygonControlPanelProps['handlers'];
   private readonly onRefresh: () => void;
+  private readonly supportedModelKinds: readonly ArrowPolygonRendererModel[];
   private readonly settingsPanel: ExampleSettingsPanelManager;
   private state: ArrowPolygonControlPanelState;
   private metrics: ArrowPolygonRendererMetrics | null = null;
@@ -73,14 +82,21 @@ export class ArrowPolygonControlPanel {
   private batchCount = 0;
   private rootElement: HTMLElement | null = null;
 
-  constructor({device, initialState, handlers, onRefresh}: ArrowPolygonControlPanelProps) {
+  constructor({
+    device,
+    initialState,
+    handlers,
+    supportedModelKinds = ['attribute', 'storage'],
+    onRefresh
+  }: ArrowPolygonControlPanelProps) {
     this.device = device;
     this.state = initialState;
     this.handlers = handlers;
+    this.supportedModelKinds = supportedModelKinds;
     this.onRefresh = onRefresh;
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'arrow-polygons-settings',
-      schema: makeArrowPolygonSettingsSchema(device, initialState),
+      schema: makeArrowPolygonSettingsSchema(device, initialState, supportedModelKinds),
       settings: initialState,
       onSettingsChange: this.handleSettingsChange
     });
@@ -117,7 +133,7 @@ export class ArrowPolygonControlPanel {
   syncControls(state: Partial<ArrowPolygonControlPanelState>): void {
     this.state = {...this.state, ...state};
     this.settingsPanel.setSchemaAndSettings(
-      makeArrowPolygonSettingsSchema(this.device, this.state),
+      makeArrowPolygonSettingsSchema(this.device, this.state, this.supportedModelKinds),
       this.state
     );
     this.onRefresh();
@@ -144,6 +160,10 @@ export class ArrowPolygonControlPanel {
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
     this.state = settings as ArrowPolygonControlPanelState;
+    const inputMode = getChangedSetting(changedSettings, 'inputMode')?.nextValue;
+    if (isArrowExampleInputMode(inputMode)) {
+      this.handlers.onInputModeChange(inputMode);
+    }
     const rowCountKind = getChangedSetting(changedSettings, 'rowCountKind')?.nextValue;
     if (isRowCountKind(rowCountKind)) {
       void this.handlers.onRowCountKindChange(rowCountKind);
@@ -232,7 +252,8 @@ export class ArrowPolygonControlPanel {
 
 export function makeArrowPolygonSettingsSchema(
   device: Device,
-  state: ArrowPolygonControlPanelState
+  state: ArrowPolygonControlPanelState,
+  supportedModelKinds: readonly ArrowPolygonRendererModel[] = ['attribute', 'storage']
 ): SettingsSchema {
   const supportsStorage = supportsVertexStorageBuffers(device, POLYGON_VERTEX_STORAGE_BUFFER_COUNT);
   return {
@@ -249,8 +270,12 @@ export function makeArrowPolygonSettingsSchema(
             type: 'select',
             persist: 'none',
             options: [
-              {label: 'Attribute', value: 'attribute'},
-              ...(supportsStorage ? [{label: 'Storage', value: 'storage'}] : [])
+              ...(supportedModelKinds.includes('attribute')
+                ? [{label: 'Attribute', value: 'attribute'}]
+                : []),
+              ...(supportsStorage && supportedModelKinds.includes('storage')
+                ? [{label: 'Storage', value: 'storage'}]
+                : [])
             ]
           }
         ]
@@ -260,6 +285,13 @@ export function makeArrowPolygonSettingsSchema(
         name: 'Data',
         initiallyCollapsed: false,
         settings: [
+          {
+            name: 'inputMode',
+            label: 'Input',
+            type: 'select',
+            persist: 'none',
+            options: [...ARROW_EXAMPLE_INPUT_MODE_OPTIONS]
+          },
           {
             name: 'rowCountKind',
             label: 'Rows',

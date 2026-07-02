@@ -16041,8 +16041,10 @@ __metadata:
   resolution: "luma.gl-examples-deck-arrow-path-layer@workspace:examples/deck/arrow-path-layer"
   dependencies:
     "@deck.gl-community/arrow-layers": "workspace:*"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -16054,8 +16056,10 @@ __metadata:
   resolution: "luma.gl-examples-deck-arrow-polygon-layer@workspace:examples/deck/arrow-polygon-layer"
   dependencies:
     "@deck.gl-community/arrow-layers": "workspace:*"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -16067,6 +16071,7 @@ __metadata:
   resolution: "luma.gl-examples-deck-arrow-text-layer@workspace:examples/deck/arrow-text-layer"
   dependencies:
     "@deck.gl-community/arrow-layers": "workspace:*"
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/arrow": "npm:~9.3.0"
     "@luma.gl/core": "npm:~9.3.0"

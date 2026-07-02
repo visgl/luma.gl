@@ -8,6 +8,7 @@ import {
   project32,
   type LayerContext,
   type LayerProps,
+  type PickingInfo,
   type UpdateParameters
 } from '@deck.gl/core';
 import {
@@ -17,6 +18,8 @@ import {
 } from '@luma.gl/arrow';
 import type {Model} from '@luma.gl/engine';
 import {DECK_ARROW_ALPHA_BLEND_PARAMETERS, getViewportAspect} from './arrow-layer-types';
+import type {ArrowLayerPickingInfo} from './arrow-layer-types';
+import type {GPURecordBatchSourceInfo} from '@luma.gl/tables';
 
 const DECK_POLYGON_VS = `#version 300 es
 precision highp float;
@@ -74,6 +77,7 @@ export type ArrowPolygonLayerProps = Omit<LayerProps, 'data'> &
 
 type ArrowPolygonLayerState = {
   renderer: ArrowPolygonRenderer | null;
+  sourceInfos: GPURecordBatchSourceInfo[];
 };
 
 /** deck.gl layer that keeps polygon columns in Arrow-owned GPU vectors. */
@@ -86,8 +90,15 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
   }
 
   override initializeState({device}: LayerContext): void {
+    const rendererProps = this.getRendererProps(this.props);
     this.setState({
-      renderer: new ArrowPolygonRenderer(device, this.getRendererProps(this.props))
+      renderer: new ArrowPolygonRenderer(device, {
+        ...rendererProps,
+        data: null,
+        polygons: undefined,
+        colors: undefined
+      }),
+      sourceInfos: []
     } satisfies ArrowPolygonLayerState);
   }
 
@@ -100,6 +111,10 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
       props.colors !== oldProps.colors ||
       props.tessellated !== oldProps.tessellated ||
       props.color !== oldProps.color;
+
+    if (sourceChanged) {
+      this.getLayerState().sourceInfos = [];
+    }
 
     renderer.setProps(
       sourceChanged
@@ -123,9 +138,13 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     renderer.draw(renderPass, {aspect: getViewportAspect(context.viewport)});
   }
 
+  override getPickingInfo({info}: {info: PickingInfo}): ArrowLayerPickingInfo {
+    return addArrowPickingInfo(info, this.getLayerState().sourceInfos);
+  }
+
   override finalizeState(context: LayerContext): void {
     this.getRendererOrNull()?.destroy();
-    this.setState({renderer: null} satisfies ArrowPolygonLayerState);
+    this.setState({renderer: null, sourceInfos: []} satisfies ArrowPolygonLayerState);
     super.finalizeState(context);
   }
 
@@ -154,6 +173,8 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     update: ArrowPolygonRendererDataBatchUpdate,
     onDataBatch: ArrowPolygonRendererProps['onDataBatch']
   ): void {
+    const sourceInfo = update.preparedBatch.sourceInfo;
+    this.getLayerState().sourceInfos[sourceInfo.sourceBatchIndex] = sourceInfo;
     this.setNeedsRedraw();
     onDataBatch?.(update);
   }
@@ -169,4 +190,29 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
   private getRendererOrNull(): ArrowPolygonRenderer | null {
     return (this.state as ArrowPolygonLayerState | undefined)?.renderer ?? null;
   }
+
+  private getLayerState(): ArrowPolygonLayerState {
+    return this.state as ArrowPolygonLayerState;
+  }
+}
+
+function addArrowPickingInfo(
+  info: PickingInfo,
+  sourceInfos: readonly GPURecordBatchSourceInfo[]
+): ArrowLayerPickingInfo {
+  const pickingInfo = info as ArrowLayerPickingInfo;
+  const rowIndex = pickingInfo.index;
+  const sourceInfo = sourceInfos.find(
+    candidate =>
+      rowIndex >= candidate.sourceRowIndexOffset &&
+      rowIndex < candidate.sourceRowIndexOffset + candidate.sourceRowCount
+  );
+  if (sourceInfo) {
+    pickingInfo.arrow = {
+      rowIndex,
+      batchIndex: sourceInfo.sourceBatchIndex,
+      batchRowIndex: rowIndex - sourceInfo.sourceRowIndexOffset
+    };
+  }
+  return pickingInfo;
 }
