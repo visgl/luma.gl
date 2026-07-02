@@ -4,10 +4,19 @@ import Link from '@docusaurus/Link';
 type ExperimentalDocsTab = {id: ExperimentalDocsTabId; label: string; href: string};
 
 /** Experimental documentation tab identifiers. */
-export type ExperimentalDocsTabId = 'overview' | 'a-buffer-renderer' | 'wboit-renderer';
+export type ExperimentalDocsTabId =
+  | 'overview'
+  | 'shadow-map-renderer'
+  | 'a-buffer-renderer'
+  | 'wboit-renderer';
 
 const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/experimental'},
+  {
+    id: 'shadow-map-renderer',
+    label: 'ShadowMapRenderer',
+    href: '/docs/api-reference/experimental/shadow-map-renderer'
+  },
   {
     id: 'a-buffer-renderer',
     label: 'ABufferRenderer',

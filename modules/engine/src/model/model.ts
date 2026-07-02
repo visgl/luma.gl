@@ -414,6 +414,9 @@ export class Model {
     this.topology = this.props.topology;
     this.bufferLayout = this.props.bufferLayout;
     this.parameters = this.props.parameters;
+    // Seed attachment formats before creating the initial WebGPU pipeline. This is required for
+    // depth-only models whose intentional empty color target list must not fall back to the canvas
+    // format before the first render pass can synchronize attachment state.
     this._colorAttachmentFormats = this.props.colorAttachmentFormats;
     this._depthStencilAttachmentFormat = this.props.depthStencilAttachmentFormat;
 

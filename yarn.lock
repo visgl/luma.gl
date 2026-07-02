@@ -4701,6 +4701,7 @@ __metadata:
   resolution: "@luma.gl/experimental@workspace:modules/experimental"
   dependencies:
     "@luma.gl/tables": "npm:~9.3.0"
+    "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
     "@luma.gl/core": ~9.3.0
@@ -15997,6 +15998,7 @@ __metadata:
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/effects": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/experimental": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"

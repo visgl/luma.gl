@@ -56,9 +56,8 @@ export {bloomShaderPassPipeline} from './passes/postprocessing/image-blur-filter
 export type {
   DofProps,
   DofUniforms
-} from './passes/postprocessing/image-blur-filters/dof';
-export {dof} from './passes/postprocessing/image-blur-filters/dof';
-export {dofShaderPassPipeline} from './passes/postprocessing/image-blur-filters/dof-shader-pass-pipeline';
+} from './passes/screen-space/dof';
+export {dof, dofShaderPassPipeline} from './passes/screen-space/dof';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms
@@ -116,8 +115,7 @@ export {fxaa} from './passes/postprocessing/fxaa/fxaa';
 export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-filters/warp';
 export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
 
-// Advanced scene-aware postprocessing pipelines
-export type {ScreenSpaceNormalSource} from './passes/screen-space/types';
+// Screen-space effects
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
   depthAwareBlur,

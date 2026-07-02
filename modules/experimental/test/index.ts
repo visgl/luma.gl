@@ -6,6 +6,8 @@ import './textures/packed-pixels.spec';
 import './textures/html-texture.spec';
 import './oit/a-buffer-renderer.spec';
 import './oit/wboit-renderer.spec';
+import './shadows/shadow-map-renderer.spec';
+import './shadows/shadow-wgsl.spec';
 
 import './webxr';
 import './gpu-primitives/gpu-command-graph.spec';
