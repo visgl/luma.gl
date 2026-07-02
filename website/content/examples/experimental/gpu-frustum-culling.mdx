@@ -1,0 +1,26 @@
+---
+title: GPU Frustum Culling
+sidebar_label: GPU frustum culling
+---
+
+import {GPUFrustumCullingExample} from '@site/src/examples';
+
+<GPUFrustumCullingExample />
+
+This example applies the experimental command-graph primitives to a conventional 3D workload. A
+compute node tests instance bounding spheres against the camera frustum, `GPUCompaction` preserves
+the visible source IDs in stable order, and its result count lands directly in an indexed
+`DrawCommandBuffer`. A pre-recorded render bundle can therefore stay fixed while the GPU changes
+which instances it draws each frame. The default comparison view replays that same compacted ID
+list and indirect command through an interactive perspective camera and a fixed overhead camera,
+making the culling result visible without running visibility twice. Disable the overview to measure
+a single-render baseline.
+
+The inspector reports sampled visibility, frame rate, CPU frame and graph-encoding time, optional
+GPU frame time, graph node order, and logical-versus-physical transient memory. GPU timing is shown
+only when the browser exposes WebGPU timestamp queries.
+
+The design follows the GPU-driven pattern demonstrated by the
+[WebGPU Bundle Culling sample](https://webgpu.github.io/webgpu-samples/?sample=bundleCulling) and
+[Toji's source implementation](https://github.com/toji/webgpu-bundle-culling), expressed through
+reusable luma.gl primitives rather than application-specific buffer scheduling.

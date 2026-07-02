@@ -25,6 +25,7 @@ import ArrowFilteringApp from '../../examples/arrow/arrow-filtering/app';
 import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
+import GPUFrustumCullingApp from '../../examples/experimental/gpu-frustum-culling/app';
 import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
@@ -1080,6 +1081,18 @@ export const GPUTraceViewerExample: React.FC = props => (
     directory="experimental"
     devices={['webgpu']}
     template={GPUTraceViewerApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUFrustumCullingExample: React.FC = props => (
+  <LumaExample
+    id="gpu-frustum-culling"
+    title="GPU Frustum Culling"
+    directory="experimental"
+    devices={['webgpu']}
+    template={GPUFrustumCullingApp}
     config={exampleConfig}
     {...props}
   />

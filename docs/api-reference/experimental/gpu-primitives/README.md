@@ -1,5 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
-import {GPUTraceViewerExample} from '@site/src/examples';
+import {GPUFrustumCullingExample, GPUTraceViewerExample} from '@site/src/examples';
 
 # GPU Primitives and Command Graphs
 
@@ -47,6 +47,15 @@ to four million spans. The implementation is intentionally experimental: it is c
 measure and use, but small enough that its API can still respond to experience.
 
 <GPUTraceViewerExample embedded />
+
+The GPU frustum-culling example applies the same primitives to a conventional 3D scene. It tests
+bounding spheres in compute, stably compacts visible instance IDs, writes the count into an indexed
+indirect record, and replays fixed perspective and overhead render bundles from the same GPU-owned
+result. Its split view makes the culling decision observable, while its inspector compares runtime
+timing with compiled graph allocation statistics. Together, the examples demonstrate that the API
+is not specific to trace data or two-dimensional rendering.
+
+<GPUFrustumCullingExample embedded />
 
 ## Why primitives instead of effects?
 
@@ -813,8 +822,10 @@ experimental-to-tables dependency without forcing engine to depend upward. Algor
 gpgpu because they are optional computation capabilities rather than core resource types.
 
 Graduation should happen only after at least two independent consumers use the graph. The trace
-viewer proves filtering and rendering. A second candidate should exercise a different pattern,
-such as text expansion, path tessellation, histogramming, or scientific reduction.
+viewer proves two-dimensional filtering and rendering. The frustum-culling field adds a second
+consumer with bounding-sphere visibility, indexed indirect drawing, and a moving three-dimensional
+camera. Additional consumers should still exercise different patterns such as text expansion, path
+tessellation, histogramming, or scientific reduction.
 
 ## Future primitives
 
