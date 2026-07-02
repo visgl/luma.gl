@@ -61,10 +61,6 @@ const sidebars = {
         'experimental/fp64',
         'experimental/gpt-2',
         'experimental/video-texture',
-        'experimental/gpu-frustum-culling',
-        'experimental/gpu-trace-viewer',
-        'experimental/gpu-sort',
-        'experimental/gpu-data-analysis',
         'experimental/html-ui-prism',
         'experimental/webxr-kaleidoscope'
       ]
@@ -73,6 +69,16 @@ const sidebars = {
       type: 'category',
       label: 'GPU Data - luma v10',
       items: ['v10/gpgpu']
+    },
+    {
+      type: 'category',
+      label: 'GPU Command Graph',
+      items: [
+        'experimental/gpu-frustum-culling',
+        'experimental/gpu-trace-viewer',
+        'experimental/gpu-sort',
+        'experimental/gpu-data-analysis'
+      ]
     },
     {
       type: 'category',

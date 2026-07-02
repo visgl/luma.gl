@@ -1,4 +1,5 @@
 const {getDocusaurusConfig} = require('@vis.gl/docusaurus-website');
+const {OptionDefaults: typedocOptionDefaults} = require('typedoc');
 
 const websiteBaseUrl = process.env.WEBSITE_BASE_URL || '/';
 
@@ -113,6 +114,7 @@ module.exports = {
         excludeInternal: true,
         excludePrivate: true,
         excludeProtected: true,
+        blockTags: [...typedocOptionDefaults.blockTags, '@note', '@todo'],
         gitRevision: 'master',
         sidebar: {
           autoConfiguration: false
