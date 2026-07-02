@@ -41,9 +41,10 @@ indirect draw arguments
 pre-recorded render commands
 ```
 
-The first implementation consists of `GPUCommandGraph`, typed graph buffer views, `GPUScan`,
-`GPUCompaction`, and `DrawCommandBuffer`. The accompanying trace viewer runs this pipeline over up
-to four million spans. The implementation is intentionally experimental: it is concrete enough to
+The implementation consists of `GPUCommandGraph`, typed graph buffer views, `GPUScan`,
+`GPUCompaction`, `GPUSort`, and `DrawCommandBuffer`. The accompanying trace viewer runs filtering
+and compaction over up to four million spans, while the GPU sort example demonstrates stable
+paired sorting. The implementation is intentionally experimental: it is concrete enough to
 measure and use, but small enough that its API can still respond to experience.
 
 <GPUTraceViewerExample embedded />
@@ -151,10 +152,10 @@ pipelines would confuse multi-pass algorithms with `GPUComputePipeline`.
 ### Algorithms
 
 Algorithms provide data semantics across one or more kernels. `GPUScan` promises an exclusive
-prefix sum. `GPUCompaction` promises stable selection. Future `GPUReduction`, `GPUSort`, and
-`GPUHistogram` objects should promise results and constraints rather than a fixed implementation.
-For example, a sorter might choose bitonic sort for a small vector and radix sort for a larger one
-without changing the public contract.
+prefix sum. `GPUCompaction` promises stable selection. `GPUSort` promises stable paired `uint32`
+ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones. Future
+`GPUReduction` and `GPUHistogram` objects should likewise promise results and constraints rather
+than a fixed implementation.
 
 The first algorithms are deliberately typed and curated. Arbitrary WGSL callbacks for compare,
 combine, and predicate functions are attractive, but they significantly expand validation,
@@ -838,13 +839,6 @@ extent. It needs policies for empty inputs, floating-point order, NaN handling, 
 layout, and deterministic versus fastest execution. Existing gpgpu extent code provides a useful
 starting point.
 
-### Sort
-
-`GPUSort` should expose key/value ordering, stability, direction, and supported key formats while
-leaving the implementation selectable. The current `BitonicArgsort` proves stable `uint32` row
-indices but submits internally and is optimized for clarity rather than every scale. A graph-native
-sort could reuse scratch, compose with visibility, and select radix or bitonic stages.
-
 ### Histogram and binning
 
 Histograms are foundational for scientific visualization, color-domain selection, density maps,
@@ -919,6 +913,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph)
 - [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan)
 - [`GPUCompaction`](/docs/api-reference/experimental/gpu-primitives/gpu-compaction)
+- [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)
 - [GPU commands](/docs/api-guide/gpu/gpu-commands)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)

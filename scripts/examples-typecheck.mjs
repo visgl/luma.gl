@@ -21,6 +21,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-polygons',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
+  'experimental/gpu-sort',
   'experimental/video-texture',
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',

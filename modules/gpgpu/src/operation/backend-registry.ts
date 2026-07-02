@@ -8,9 +8,6 @@ import * as cpuBackend from '../operations/cpu/index';
 
 /**
  * Backend endpoint exports keyed by operation name, plus optional endpoint-specific helpers.
- *
- * Lazy operation lookup resolves only the requested operation name. Direct endpoint helpers such
- * as `BitonicArgsort` can share the endpoint without being registered as lazy operations.
  */
 export type BackendModule = Record<string, unknown>;
 

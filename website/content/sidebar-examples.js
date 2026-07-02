@@ -63,6 +63,7 @@ const sidebars = {
         'experimental/video-texture',
         'experimental/gpu-frustum-culling',
         'experimental/gpu-trace-viewer',
+        'experimental/gpu-sort',
         'experimental/html-ui-prism',
         'experimental/webxr-kaleidoscope'
       ]
@@ -70,7 +71,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'GPU Data - luma v10',
-      items: ['v10/gpgpu', 'v10/gpgpu-bitonic-sort']
+      items: ['v10/gpgpu']
     },
     {
       type: 'category',
