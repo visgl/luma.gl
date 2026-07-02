@@ -18,16 +18,19 @@ import {
 } from './arrow-polygon-data';
 import {ArrowPolygonControlPanel} from './control-panel';
 import {ArrowExamplePanelManager} from '../arrow-example-panels';
+import type {ArrowExampleInputMode} from '../arrow-example-input';
+import * as arrow from 'apache-arrow';
 
 export type ArrowPolygonSourceUpdate = Pick<
   ArrowPolygonRendererProps,
-  'data' | 'onDataBatch' | 'tessellated' | 'colors' | 'model' | 'center' | 'scale'
+  'data' | 'onDataBatch' | 'tessellated' | 'polygons' | 'colors' | 'model' | 'center' | 'scale'
 > & {viewState: ArrowPolygonViewState};
 
 /** Owns polygon source generation, controls, and Arrow table inspection. */
 export class ArrowPolygonSource {
   readonly panels: ArrowExamplePanelManager;
   readonly controlPanel: ArrowPolygonControlPanel;
+  inputMode: ArrowExampleInputMode = 'stream';
   rowCountKind: ArrowPolygonRowCountKind = '10k-stream';
   sourceKind: ArrowPolygonSourceKind = 'polygon';
   colorKind: ArrowPolygonColorKind = 'row-colors';
@@ -39,7 +42,8 @@ export class ArrowPolygonSource {
     private readonly onSourceChange: (update: ArrowPolygonSourceUpdate) => void,
     private readonly onRendererPropsChange: (
       props: Pick<ArrowPolygonRendererProps, 'model'>
-    ) => void
+    ) => void,
+    options: {supportedModelKinds?: readonly ArrowPolygonRendererModel[]} = {}
   ) {
     this.panels = new ArrowExamplePanelManager({
       descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
@@ -49,14 +53,17 @@ export class ArrowPolygonSource {
       device,
       initialState: this.getControlState(),
       handlers: {
+        onInputModeChange: inputMode =>
+          this.setPolygonInput(inputMode, this.rowCountKind, this.sourceKind, this.colorKind),
         onRowCountKindChange: rowCountKind =>
-          this.streamPolygonInput(rowCountKind, this.sourceKind, this.colorKind),
+          this.setPolygonInput(this.inputMode, rowCountKind, this.sourceKind, this.colorKind),
         onSourceKindChange: sourceKind =>
-          this.streamPolygonInput(this.rowCountKind, sourceKind, this.colorKind),
+          this.setPolygonInput(this.inputMode, this.rowCountKind, sourceKind, this.colorKind),
         onColorKindChange: colorKind =>
-          this.streamPolygonInput(this.rowCountKind, this.sourceKind, colorKind),
+          this.setPolygonInput(this.inputMode, this.rowCountKind, this.sourceKind, colorKind),
         onModelKindChange: this.handleModelKindChange
       },
+      supportedModelKinds: options.supportedModelKinds,
       onRefresh: () => this.panels.refresh()
     });
   }
@@ -64,7 +71,7 @@ export class ArrowPolygonSource {
   initialize(): void {
     this.panels.mount();
     this.controlPanel.initialize();
-    this.streamPolygonInput(this.rowCountKind, this.sourceKind, this.colorKind);
+    this.setPolygonInput(this.inputMode, this.rowCountKind, this.sourceKind, this.colorKind);
   }
 
   finalize(): void {
@@ -83,6 +90,7 @@ export class ArrowPolygonSource {
 
   private getControlState() {
     return {
+      inputMode: this.inputMode,
       rowCountKind: this.rowCountKind,
       sourceKind: this.sourceKind,
       colorKind: this.colorKind,
@@ -90,18 +98,25 @@ export class ArrowPolygonSource {
     };
   }
 
-  private streamPolygonInput(
+  private setPolygonInput(
+    inputMode: ArrowExampleInputMode,
     rowCountKind: ArrowPolygonRowCountKind,
     sourceKind: ArrowPolygonSourceKind,
     colorKind: ArrowPolygonColorKind
   ): void {
     const effectiveColorKind =
       sourceKind === 'dense-union' && colorKind === 'vertex-colors' ? 'row-colors' : colorKind;
+    this.inputMode = inputMode;
     this.rowCountKind = rowCountKind;
     this.sourceKind = sourceKind;
     this.colorKind = effectiveColorKind;
     const sourceData = makeArrowPolygonExampleData(rowCountKind, sourceKind, effectiveColorKind);
-    this.controlPanel.syncControls({rowCountKind, sourceKind, colorKind: effectiveColorKind});
+    this.controlPanel.syncControls({
+      inputMode,
+      rowCountKind,
+      sourceKind,
+      colorKind: effectiveColorKind
+    });
     this.controlPanel.setPickedLabel('Hover polygon');
     this.controlPanel.setStreamingBatchStatus(0, sourceData.batchCount);
     const tableStream = this.panels.beginLoadedTableStream({
@@ -110,22 +125,43 @@ export class ArrowPolygonSource {
       kind: 'source',
       recordBatches: sourceData.recordBatches
     });
-    this.onSourceChange({
+    const sourceTable = new arrow.Table(sourceData.recordBatches);
+    const polygonVector = sourceTable.getChild('polygons');
+    if (!polygonVector) {
+      throw new Error('Arrow polygon example requires a polygons column');
+    }
+    const colorVector = sourceTable.getChild('colors');
+    const commonUpdate = {
       viewState: sourceData.viewState,
       tessellated: sourceData.tessellated,
-      colors: effectiveColorKind === 'constant' ? null : undefined,
       model: this.modelKind,
       center: sourceData.viewState.startCenter,
       scale: sourceData.viewState.scale,
-      data: createStreamingPolygonRecordBatchIterator(sourceData.recordBatches)[
-        Symbol.asyncIterator
-      ](),
       onDataBatch: ({loadedBatchCount, metrics}: ArrowPolygonRendererDataBatchUpdate) => {
         if (this.isFinalized) return;
         tableStream.setLoadedBatchCount(loadedBatchCount);
         this.controlPanel.setStreamingBatchStatus(loadedBatchCount, sourceData.batchCount);
         this.controlPanel.setMetrics(metrics);
       }
+    };
+    if (inputMode === 'vectors') {
+      this.onSourceChange({
+        ...commonUpdate,
+        polygons: polygonVector,
+        colors: effectiveColorKind === 'constant' ? null : (colorVector ?? undefined)
+      });
+      return;
+    }
+    this.onSourceChange({
+      ...commonUpdate,
+      data:
+        inputMode === 'stream'
+          ? createStreamingPolygonRecordBatchIterator(sourceData.recordBatches)[
+              Symbol.asyncIterator
+            ]()
+          : sourceTable,
+      polygons: 'polygons',
+      colors: effectiveColorKind === 'constant' ? null : 'colors'
     });
   }
 

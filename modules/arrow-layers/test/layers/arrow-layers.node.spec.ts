@@ -32,7 +32,18 @@ test('Arrow deck layers expose their active draw models to Deck', t => {
   t.deepEqual(polygonLayer.getModels(), [], 'polygon layer has no model before initialization');
   t.deepEqual(textLayer.getModels(), [], 'text layer has no model before initialization');
 
-  pathLayer.state = {model: pathModel, prepared: null, loadVersion: 0};
+  pathLayer.state = {
+    batches: [
+      {
+        model: pathModel,
+        prepared: null,
+        batchIndex: 0,
+        rowIndexOffset: 0,
+        rowCount: 1
+      }
+    ],
+    loadVersion: 0
+  } as never;
   polygonLayer.state = {
     renderer: {model: polygonModel, pickingModel: polygonPickingModel}
   } as never;
@@ -48,11 +59,12 @@ test('Arrow deck layers expose their active draw models to Deck', t => {
   t.end();
 });
 
-test('Arrow polygon and text layers preserve alpha blending defaults', t => {
+test('Arrow deck layers preserve alpha blending defaults', t => {
+  const pathLayer = new ArrowPathLayer({id: 'path'});
   const polygonLayer = new ArrowPolygonLayer({id: 'polygon'});
   const textLayer = new ArrowTextLayer({id: 'text'});
 
-  for (const layer of [polygonLayer, textLayer]) {
+  for (const layer of [pathLayer, polygonLayer, textLayer]) {
     t.equal(layer.props.parameters.blend, true, `${layer.id} enables alpha blending`);
     t.equal(layer.props.parameters.depthWriteEnabled, false, `${layer.id} disables depth writes`);
     t.equal(

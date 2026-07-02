@@ -6,6 +6,7 @@ import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
 import type {TextAttributeModelProps} from '@luma.gl/text';
+import {DataType} from 'apache-arrow';
 import type {ArrowUtf8TextVector} from './arrow-text';
 import {
   createArrowTextAttributeState,
@@ -127,6 +128,7 @@ export function convertArrowTextToAttribute(
   const colors = sourceVectors.colors
     ? makeGPUVectorFromArrow(device, sourceVectors.colors, {
         name: columns.colors,
+        format: DataType.isList(sourceVectors.colors.type) ? 'vertex-list<unorm8x4>' : 'unorm8x4',
         preserveDataChunks: true
       })
     : undefined;

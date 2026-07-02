@@ -12,6 +12,7 @@ import {
 } from './react-luma';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
+import {makeArrowExamplePanelHostHtml} from '../../examples/arrow/arrow-example-panels';
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
@@ -95,61 +96,20 @@ type CreateDeckExample = (parent: HTMLDivElement) =>
 type DeckArrowLayerPanelProps = {
   id: string;
   title: string;
-  description: string;
-  metrics: readonly {label: string; value: string}[];
 };
 
-function escapeDeckArrowPanelHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function makeDeckArrowLayerInfoPanel({
-  id,
-  title,
-  description,
-  metrics
-}: DeckArrowLayerPanelProps) {
-  const metricHtml = metrics
-    .map(
-      metric => `
-        <div style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
-          <div style="color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;">
-            ${escapeDeckArrowPanelHtml(metric.label)}
-          </div>
-          <div style="margin-top: 3px; color: #0f172a; font-size: 13px; font-weight: 700;">
-            ${escapeDeckArrowPanelHtml(metric.value)}
-          </div>
-        </div>`
-    )
-    .join('');
-
+function makeDeckArrowLayerInfoPanel({id, title}: DeckArrowLayerPanelProps) {
   return makeHtmlCustomPanel({
     id: `${id}-info`,
     title,
-    html: `
-      <p style="margin: 0 0 12px; color: #475569; font-size: 13px; line-height: 1.5;">
-        ${escapeDeckArrowPanelHtml(description)}
-      </p>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-        ${metricHtml}
-      </div>`
+    html: makeArrowExamplePanelHostHtml()
   });
 }
 
-function DeckArrowLayerPanel({
-  id,
-  title,
-  description,
-  metrics
-}: DeckArrowLayerPanelProps) {
+function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
   const panel = useMemo(
-    () => makeDeckArrowLayerInfoPanel({id, title, description, metrics}),
-    [description, id, metrics, title]
+    () => makeDeckArrowLayerInfoPanel({id, title}),
+    [id, title]
   );
 
   return (
@@ -221,14 +181,7 @@ export const DeckArrowPathLayerExample: React.FC = () => (
       createDeck: createArrowPathLayerDeck,
       panel: {
         id: 'arrow-path-layer',
-        title: 'Arrow Path Layer',
-        description:
-          'Variable-length Arrow path columns become GPUVector-backed segment buffers without Deck attribute generation.',
-        metrics: [
-          {label: 'Rows', value: '240 paths'},
-          {label: 'Model', value: 'Attribute'},
-          {label: 'Attributes', value: 'GPUVector'}
-        ]
+        title: 'Arrow Path Layer'
       }
     }}
     showStats={false}
@@ -242,14 +195,7 @@ export const DeckArrowPolygonLayerExample: React.FC = () => (
       createDeck: createArrowPolygonLayerDeck,
       panel: {
         id: 'arrow-polygon-layer',
-        title: 'Arrow Polygon Layer',
-        description:
-          'Streamed Arrow polygon rows retain GPUVector-backed geometry and styling through tessellation and draw.',
-        metrics: [
-          {label: 'Rows', value: '10k stream'},
-          {label: 'Geometry', value: 'Tessellated'},
-          {label: 'Attributes', value: 'GPUVector'}
-        ]
+        title: 'Arrow Polygon Layer'
       }
     }}
     showStats={false}
@@ -263,14 +209,7 @@ export const DeckArrowTextLayerExample: React.FC = () => (
       createDeck: createArrowTextLayerDeck,
       panel: {
         id: 'arrow-text-layer',
-        title: 'Arrow Text Layer',
-        description:
-          'Arrow string and style columns stay columnar while the text renderer prepares GPUVector glyph inputs.',
-        metrics: [
-          {label: 'Rows', value: '800 labels'},
-          {label: 'Model', value: 'Attribute'},
-          {label: 'Attributes', value: 'GPUVector'}
-        ]
+        title: 'Arrow Text Layer'
       }
     }}
     showStats={false}

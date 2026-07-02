@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {PickingInfo} from '@deck.gl/core';
+import type {ArrowLayerPickingInfo} from '@deck.gl-community/arrow-layers';
 
 /** Returns a compact tooltip for picked Arrow layer rows. */
 export function getArrowLayerTooltip(info: PickingInfo): string | null {
@@ -10,5 +11,9 @@ export function getArrowLayerTooltip(info: PickingInfo): string | null {
     return null;
   }
   const rowIndex = Math.max(info.index, 0);
-  return `${info.layer.id}\nrow ${rowIndex.toLocaleString()}`;
+  const arrowInfo = (info as ArrowLayerPickingInfo).arrow;
+  const batchLabel = arrowInfo
+    ? `\nbatch ${(arrowInfo.batchIndex + 1).toLocaleString()} / batch row ${arrowInfo.batchRowIndex.toLocaleString()}`
+    : '';
+  return `${info.layer.id}\nrow ${rowIndex.toLocaleString()}${batchLabel}`;
 }
