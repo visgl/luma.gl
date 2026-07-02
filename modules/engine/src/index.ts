@@ -100,7 +100,12 @@ export {
 } from './application-utils/load-file';
 
 // EXPERIMENTAL
-export type {ShaderPassRendererProps} from './passes/shader-pass-renderer';
+export type {
+  ShaderPassBinding,
+  ShaderPassRendererProps,
+  ShaderPassRendererRenderOptions,
+  ShaderPassSourceTexture
+} from './passes/shader-pass-renderer';
 export {ShaderPassRenderer} from './passes/shader-pass-renderer';
 
 export {Swap} from './compute/swap';

@@ -1,0 +1,14 @@
+<!doctype html>
+<head>
+  <style>
+    body { margin: 0; background: #030712; color-scheme: dark; }
+  </style>
+</head>
+<script type="module">
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter]}).start();
+</script>
+<body></body>

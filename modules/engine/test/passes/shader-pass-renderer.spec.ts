@@ -230,6 +230,25 @@ const selfAliasingPipeline: ShaderPassPipeline<'scratch'> = {
   ]
 };
 
+const historyPipeline: ShaderPassPipeline<'historyColor'> = {
+  name: 'historyPipeline',
+  renderTargets: {
+    historyColor: {lifetime: 'history', initialize: 'original'}
+  },
+  steps: [
+    {
+      shaderPass: invertPass,
+      inputs: {sourceTexture: 'historyColor'},
+      output: 'historyColor'
+    },
+    {
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'historyColor'},
+      output: 'previous'
+    }
+  ]
+};
+
 const reservedTargetPipeline: ShaderPassPipeline<'original'> = {
   name: 'reservedTarget',
   renderTargets: {original: {}},
@@ -473,6 +492,27 @@ test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
   t.end();
 });
 
+test('ShaderPassRenderer supports explicit texture orientation', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [copyPass],
+      shaderInputs: new ShaderInputs({}),
+      flipY: false
+    });
+
+    t.equal(renderer.textureModel.flipY, false, `${device.type} disables fullscreen Y flipping`);
+    t.equal(
+      renderer.passRenderers[0].subPassExecutions[0].subPassRenderer.flipY,
+      false,
+      `${device.type} disables shader-subpass Y flipping`
+    );
+
+    renderer.destroy();
+  }
+  t.end();
+});
+
 test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {
@@ -510,6 +550,61 @@ test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
     >;
     t.equal(pipelineTargets.extract.texture.width, 4, 'resizes full-size pipeline target width');
     t.equal(pipelineTargets.blurred.texture.height, 2, 'resizes scaled pipeline target height');
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});
+
+test('ShaderPassRenderer supports persistent history targets', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'history-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [historyPipeline],
+      shaderInputs: new ShaderInputs({invert: invertPass, copy: copyPass})
+    });
+
+    const firstOutput = renderer.renderToTexture({sourceTexture});
+    t.deepEqual(
+      Array.from(await readPixels(firstOutput!)),
+      [0, 255, 255, 255],
+      'first frame reads initialized history'
+    );
+
+    const secondOutput = renderer.renderToTexture({sourceTexture});
+    t.deepEqual(
+      Array.from(await readPixels(secondOutput!)),
+      [255, 0, 0, 255],
+      'second frame reads previous successful output'
+    );
+
+    const resetOutput = renderer.renderToTexture({sourceTexture, resetHistory: true});
+    t.deepEqual(
+      Array.from(await readPixels(resetOutput!)),
+      [0, 255, 255, 255],
+      'explicit reset reinitializes history'
+    );
+
+    renderer.resize([2, 2]);
+    const resizedOutput = renderer.renderToTexture({sourceTexture});
+    t.deepEqual(
+      Array.from(await readPixels(resizedOutput!)).slice(0, 4),
+      [0, 255, 255, 255],
+      'resize resets history'
+    );
 
     renderer.destroy();
     sourceTexture.destroy();

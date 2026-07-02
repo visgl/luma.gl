@@ -311,7 +311,8 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
 
 /**
  * BloomShaderPassPipeline
- * Extracts bright pixels at multiple scales, blurs them, and composites the glow over the original.
+ * Extracts bright pixels at multiple scales, blurs them, and composites the glow over the
+ * preceding effect output.
  */
 export const bloomShaderPassPipeline = {
   name: 'bloomShaderPassPipeline',
@@ -329,7 +330,7 @@ export const bloomShaderPassPipeline = {
   steps: [
     {
       shaderPass: bloomExtractPass,
-      inputs: {sourceTexture: 'original'},
+      inputs: {sourceTexture: 'previous'},
       output: 'extractHalf',
       uniforms: {threshold: 0.8}
     },
@@ -347,7 +348,7 @@ export const bloomShaderPassPipeline = {
     },
     {
       shaderPass: bloomExtractPass,
-      inputs: {sourceTexture: 'original'},
+      inputs: {sourceTexture: 'previous'},
       output: 'extractQuarter',
       uniforms: {threshold: 0.8}
     },
@@ -365,7 +366,7 @@ export const bloomShaderPassPipeline = {
     },
     {
       shaderPass: bloomExtractPass,
-      inputs: {sourceTexture: 'original'},
+      inputs: {sourceTexture: 'previous'},
       output: 'extractEighth',
       uniforms: {threshold: 0.8}
     },

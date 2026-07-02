@@ -88,8 +88,14 @@ export type ShaderPassInputSource<TargetNameT extends string = string> =
 export type ShaderPassRenderTarget = {
   scale?: [number, number];
   format?: TextureFormat;
+  lifetime?: 'transient' | 'history';
+  initialize?: 'original' | {clearColor: [number, number, number, number]};
 };
 ```
+
+`history` targets retain the last successfully rendered value through an internal ping-pong pair.
+When one step reads and writes the same history target, it reads the previous frame and writes the
+current frame. `initialize` controls the first value after construction, resize, or reset.
 
 ### `ShaderPassPipeline`
 

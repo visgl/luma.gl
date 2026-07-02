@@ -10,6 +10,12 @@ import {
   brightnessContrast,
   bulgePinch,
   colorHalftone,
+  createMotionBlurShaderPassPipeline,
+  createOutlineShaderPassPipeline,
+  createSSAOShaderPassPipeline,
+  createSSRShaderPassPipeline,
+  createTAAShaderPassPipeline,
+  createVolumetricFogShaderPassPipeline,
   dof,
   denoise,
   dotScreen,
@@ -66,6 +72,15 @@ const PLATFORM_INFO = {
   features: new Set<string>()
 };
 
+const ADVANCED_SHADER_PASSES = [
+  createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
+  createOutlineShaderPassPipeline({normalSource: 'normal-texture'}),
+  createTAAShaderPassPipeline(),
+  createMotionBlurShaderPassPipeline(),
+  createSSRShaderPassPipeline(),
+  createVolumetricFogShaderPassPipeline()
+].flatMap(pipeline => pipeline.steps.map(step => step.shaderPass));
+
 const SHADER_PASSES = [
   fxaa,
   brightnessContrast,
@@ -88,8 +103,9 @@ const SHADER_PASSES = [
   ink,
   magnify,
   bulgePinch,
-  swirl
-] as const;
+  swirl,
+  ...ADVANCED_SHADER_PASSES
+];
 
 const WGSL_COMPILATION_TIMEOUT_MS = 2000;
 

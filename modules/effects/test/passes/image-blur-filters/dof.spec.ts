@@ -21,6 +21,11 @@ test('dofShaderPassPipeline#shape', t => {
   t.equal(dofShaderPassPipeline.steps.length, 2, 'pipeline has two passes');
   t.equal(dofShaderPassPipeline.steps[0].shaderPass, dof, 'first step uses dof');
   t.equal(dofShaderPassPipeline.steps[1].shaderPass, dof, 'second step uses dof');
+  t.equal(
+    dofShaderPassPipeline.steps[0].inputs.sourceTexture,
+    'previous',
+    'pipeline consumes the preceding effect output'
+  );
   t.deepEqual(
     dofShaderPassPipeline.steps[0].uniforms,
     {texelOffset: [1, 0]},

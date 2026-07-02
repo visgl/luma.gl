@@ -11,7 +11,7 @@ type DofTargetName = 'blurScratch';
  * Reusable DOF pipeline.
  *
  * The pipeline runs {@link dof} twice:
- * - horizontal blur from `original` into `blurScratch`
+ * - horizontal blur from `previous` into `blurScratch`
  * - vertical blur from `blurScratch` back into `previous`
  *
  * The caller still supplies the external `depthTexture` binding and the public DOF uniforms.
@@ -25,7 +25,7 @@ export const dofShaderPassPipeline = {
     {
       shaderPass: dof,
       inputs: {
-        sourceTexture: 'original'
+        sourceTexture: 'previous'
       },
       output: 'blurScratch',
       uniforms: {

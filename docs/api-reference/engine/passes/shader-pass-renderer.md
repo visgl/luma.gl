@@ -109,7 +109,7 @@ const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   steps: [
     {
       shaderPass: brightExtractPass,
-      inputs: {sourceTexture: 'original'},
+      inputs: {sourceTexture: 'previous'},
       output: 'extract',
       uniforms: {threshold: 0.8}
     },
@@ -132,6 +132,9 @@ const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
 };
 ```
 
+Using `previous` for the primary color input makes the pipeline compose in its declared position
+in `shaderPasses`. `original` remains available for an intentional bypass of preceding effects.
+
 ## Types
 
 ### `ShaderPassRendererProps`
@@ -140,8 +143,14 @@ const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
 export type ShaderPassRendererProps = {
   shaderPasses: (ShaderPass | ShaderPassPipeline)[];
   shaderInputs?: ShaderInputs;
+  flipY?: boolean;
 };
 ```
+
+`flipY` controls texture sampling in the fullscreen copies and every shader subpass. It defaults
+to `true` on WebGPU so framebuffer attachments retain a consistent top-left screen orientation
+through intermediate render targets. Set it explicitly when integrating textures with a different
+origin convention.
 
 ## Properties
 
@@ -177,6 +186,13 @@ Resizes the internal swap framebuffers and all pipeline render targets to match 
 
 Named targets respect their declared `scale`. For example, a target with `scale: [0.5, 0.5]` is resized to half width and half height.
 
+Resizing invalidates history targets whose allocation size changes.
+
+### `resetHistory(): void`
+
+Invalidates every history target. The next render initializes each target from its declared
+`initialize` value without reallocating it.
+
 ### `renderToScreen(options): boolean`
 
 Runs the pass chain and then draws the result into the device's current framebuffer.
@@ -186,6 +202,7 @@ renderToScreen(options: {
   sourceTexture: DynamicTexture | Texture;
   uniforms?: Record<string, Record<string, unknown>>;
   bindings?: Record<string, Binding | TextureBindingSource>;
+  resetHistory?: boolean;
 }): boolean
 ```
 
@@ -200,6 +217,7 @@ renderToTexture(options: {
   sourceTexture: DynamicTexture | Texture;
   uniforms?: Record<string, Record<string, unknown>>;
   bindings?: Record<string, Binding | TextureBindingSource>;
+  resetHistory?: boolean;
 }): Texture | null
 ```
 
@@ -214,3 +232,6 @@ renderToTexture(options: {
 - A plain `ShaderPass` used outside a pipeline may only reference `original` and `previous`.
 - The renderer throws if a pass or pipeline step references an unknown input source or output target.
 - The renderer throws if a subpass tries to read from and write to the same named render target in one draw.
+- A `history` target is the exception: same-target reads resolve to the previous physical texture,
+  and the write becomes visible to later steps only after that draw succeeds.
+- History textures swap only after the complete pass chain succeeds.
