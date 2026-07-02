@@ -5,7 +5,6 @@
 import {Device, Buffer} from '@luma.gl/core';
 
 class BufferPool {
-  overAlloc: number = 2;
   poolSize: number = 100;
 
   private bufferPools: Map<Device, Buffer[]>;
@@ -15,12 +14,18 @@ class BufferPool {
   }
 
   createOrReuse(device: Device, byteLength: number): Buffer {
+    if (byteLength > device.limits.maxBufferSize) {
+      throw new Error(
+        `Buffer pool cannot allocate ${byteLength} bytes: device.limits.maxBufferSize is ${device.limits.maxBufferSize}`
+      );
+    }
+
     const pool = this.bufferPools.get(device);
     const i = pool ? pool.findIndex(b => b.byteLength >= byteLength) : -1;
     if (i < 0) {
       return device.createBuffer({
         usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-        byteLength: byteLength * this.overAlloc
+        byteLength
       });
     }
     const [result] = pool!.splice(i, 1);
