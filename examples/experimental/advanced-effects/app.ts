@@ -36,6 +36,7 @@ import {
   makeExamplePanelHostHtml,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {ComparisonSplitter} from './comparison-splitter';
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 180;
@@ -256,9 +257,7 @@ fn advancedEffectsDisplay_sampleColor(
   }
   let original = textureSample(originalTexture, originalTextureSampler, sceneCoord);
   let processed = textureSample(sourceTexture, sourceTextureSampler, texCoord);
-  let divider = smoothstep(0.003, 0.0, abs(texCoord.x - advancedEffectsDisplay.split));
-  let comparison = select(processed, original, texCoord.x < advancedEffectsDisplay.split);
-  return mix(comparison, vec4f(0.3, 0.92, 1.0, 1.0), divider);
+  return select(processed, original, texCoord.x < advancedEffectsDisplay.split);
 }`,
   bindingLayout: [
     {name: 'originalTexture', group: 0},
@@ -337,6 +336,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly city: VisualizationCityModel;
   readonly panels: ExamplePanelManager;
   readonly settingsPanel: ExampleSettingsPanelManager;
+  readonly comparisonSplitter: ComparisonSplitter | null;
   sceneFramebuffer: Framebuffer;
   renderer: ShaderPassRenderer;
   settings: AdvancedEffectsSettings = {...DEFAULT_SETTINGS};
@@ -358,11 +358,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.panels.mount();
+    const canvas = device.getDefaultCanvasContext().canvas;
+    this.comparisonSplitter =
+      canvas instanceof HTMLCanvasElement
+        ? new ComparisonSplitter({
+            canvas,
+            value: this.settings.split,
+            onChange: split => {
+              this.settings = {...this.settings, split};
+            },
+            onCommit: split => this.settingsPanel.setSettingValue('split', split)
+          })
+        : null;
   }
 
   onRender({device, width, height, aspect, tick}: AnimationProps): void {
     this.sceneFramebuffer.resize({width, height});
     this.renderer.resize([width, height]);
+    this.comparisonSplitter?.setVisible(this.settings.debugView === 'Final');
+    this.comparisonSplitter?.updateLayout();
 
     const time = this.settings.animate ? tick / 1000 : this.previousTime;
     const cameraAngle = this.settings.animate ? time * 0.055 : 0.55;
@@ -452,6 +466,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize(): void {
+    this.comparisonSplitter?.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.city.destroy();
@@ -503,7 +518,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'advanced-effects-description',
           title: '',
-          html: '<p><b>Composable screen-space rendering</b></p><p>The left side is the raw MRT scene; the right side combines SSAO, SSR, fog, outlines, TAA, and motion blur.</p>'
+          html: '<p><b>Composable screen-space rendering</b></p><p>Drag the divider to compare the raw MRT scene on the left with SSAO, SSR, fog, outlines, TAA, and motion blur on the right.</p>'
         }),
         this.settingsPanel.makePanel()
       ]
@@ -524,6 +539,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       };
       this.settingsPanel.setSchemaAndSettings(makeSettingsSchema(), this.settings);
     }
+    this.comparisonSplitter?.setValue(this.settings.split);
+    this.comparisonSplitter?.setVisible(this.settings.debugView === 'Final');
     this.rebuildRenderer();
   };
 }
