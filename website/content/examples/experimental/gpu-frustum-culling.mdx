@@ -7,6 +7,11 @@ import {GPUFrustumCullingExample} from '@site/src/examples';
 
 <GPUFrustumCullingExample />
 
+Move the pointer over the perspective view to pick an instance. The selected cube is highlighted and
+the inspector reports its original source ID, even though the visible IDs have been compacted into a
+different draw order. Drag to orbit, scroll to zoom, change the instance capacity, and toggle the
+overhead comparison view to see the same indirect draw from two cameras.
+
 This example applies the experimental command-graph primitives to a conventional 3D workload. A
 compute node tests instance bounding spheres against the camera frustum, `GPUCompaction` preserves
 the visible source IDs in stable order, and its result count lands directly in an indexed
@@ -16,9 +21,14 @@ list and indirect command through an interactive perspective camera and a fixed 
 making the culling result visible without running visibility twice. Disable the overview to measure
 a single-render baseline.
 
+Picking runs through a second graph that owns transient color, signed-integer ID, and depth textures.
+It renders the compacted source IDs, copies one cursor pixel into a caller-owned staging buffer, and
+decodes the result only after submission. Resizing recompiles the fixed-size picking graph, while
+overlapping requests use separate staging buffers rather than hidden readback state.
+
 The inspector reports sampled visibility, frame rate, CPU frame and graph-encoding time, optional
-GPU frame time, graph node order, and logical-versus-physical transient memory. GPU timing is shown
-only when the browser exposes WebGPU timestamp queries.
+GPU frame time, picked source ID, graph node order, buffer reuse, and physical-versus-logical picking
+texture counts. GPU timing is shown only when the browser exposes WebGPU timestamp queries.
 
 The design follows the GPU-driven pattern demonstrated by the
 [WebGPU Bundle Culling sample](https://webgpu.github.io/webgpu-samples/?sample=bundleCulling) and
