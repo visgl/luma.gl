@@ -50,7 +50,7 @@ type LineRendererUpdateOptions = {
   updateMetrics?: boolean;
 };
 
-export class ArrowLineSourceController extends AnimationLoopTemplate {
+export class ArrowLineDataSourceController extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};

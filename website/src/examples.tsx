@@ -5,12 +5,14 @@ import {
   DeviceTabs,
   ExampleHeader,
   ExamplePage,
+  getCanvasContainer,
   InfoBox,
   LumaExample,
   ReactExample,
   type ExampleDisplayProps,
   useStore
 } from './react-luma';
+import type {Device} from '@luma.gl/core';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import {makeArrowExamplePanelHostHtml} from '../../examples/arrow/arrow-example-panels';
@@ -105,7 +107,10 @@ type WebsiteExampleProps = ExampleDisplayProps & {
 type DeckExampleHandle = {
   finalize: () => void;
 };
-type CreateDeckExample = (parent: HTMLDivElement) =>
+type CreateDeckExample = (
+  parent: HTMLDivElement,
+  options: {device: Device}
+) =>
   | DeckExampleHandle
   | Promise<DeckExampleHandle>;
 type DeckArrowLayerPanelProps = {
@@ -139,13 +144,19 @@ function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
         pointerEvents: 'none'
       }}
     >
-      <InfoBox
-        id={id}
-        title={title}
-        sourcePath={`examples/deck/${id}/app.ts`}
-        style={{pointerEvents: 'auto'}}
-        panel={panel}
-      />
+      <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12}}>
+        <InfoBox
+          id={id}
+          title={title}
+          sourcePath={`examples/deck/${id}/app.ts`}
+          style={{pointerEvents: 'auto'}}
+          panel={panel}
+        />
+        <DeviceTabs
+          devices={['webgpu', 'webgl2']}
+          style={{flexShrink: 0, pointerEvents: 'auto'}}
+        />
+      </div>
     </div>
   );
 }
@@ -158,16 +169,30 @@ function DeckArrowLayerCanvas({
   panel: DeckArrowLayerPanelProps;
 }): React.ReactNode {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const device = useStore(state => state.device);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
+    if (!container || !device) {
       return;
     }
 
+    const deviceCanvas = device.getDefaultCanvasContext().canvas;
+    if (!(deviceCanvas instanceof HTMLCanvasElement)) {
+      throw new Error('Website Deck examples require the shared device canvas to be an HTMLCanvasElement');
+    }
+    Object.assign(deviceCanvas.style, {
+      display: 'block',
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      height: '100%'
+    });
+    container.replaceChildren(deviceCanvas);
+
     let isFinalized = false;
     let deck: DeckExampleHandle | null = null;
-    void Promise.resolve(createDeck(container)).then(createdDeck => {
+    void Promise.resolve(createDeck(container, {device})).then(createdDeck => {
       if (isFinalized) {
         createdDeck.finalize();
         return;
@@ -178,8 +203,10 @@ function DeckArrowLayerCanvas({
     return () => {
       isFinalized = true;
       deck?.finalize();
+      container.replaceChildren();
+      getCanvasContainer().appendChild(deviceCanvas);
     };
-  }, [createDeck]);
+  }, [createDeck, device]);
 
   return (
     <>

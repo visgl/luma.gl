@@ -19,7 +19,13 @@ import {
   type ArrowRecordBatchSource,
   type PreparedArrowPathRendererGPUVectors
 } from '@luma.gl/arrow';
-import type {ShaderLayout} from '@luma.gl/core';
+import {
+  Buffer,
+  type BufferLayout,
+  type Device,
+  type ShaderLayout,
+  type TypedArray
+} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {PathAttributeModel} from '@luma.gl/tables';
 import type {RecordBatch} from 'apache-arrow';
@@ -29,6 +35,9 @@ type ArrowPathColor = [number, number, number, number];
 
 const DEFAULT_PATH_COLOR: ArrowPathColor = [199, 219, 245, 255];
 const DEFAULT_PATH_WIDTH = 0.0035;
+
+const CONSTANT_PATH_COLOR_BUFFER = 'constantPathColor';
+const CONSTANT_PATH_WIDTH_BUFFER = 'constantPathWidth';
 
 const DECK_PATH_FS = `#version 300 es
 precision highp float;
@@ -42,9 +51,86 @@ void main() {
 }
 `;
 
+const DECK_PATH_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [
+    {name: 'segmentStartPositions', location: 0, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'segmentEndPositions', location: 1, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'rowIndices', location: 2, type: 'u32', stepMode: 'instance'},
+    {name: 'segmentStartColors', location: 3, type: 'u32', stepMode: 'instance'},
+    {name: 'segmentEndColors', location: 4, type: 'u32', stepMode: 'instance'},
+    {name: 'widths', location: 5, type: 'f32', stepMode: 'instance'},
+    {name: 'pathViewOrigins', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
+  ],
+  bindings: []
+};
+
+const DECK_PATH_VS = `#version 300 es
+precision highp float;
+precision highp int;
+
+in vec4 segmentStartPositions;
+in vec4 segmentEndPositions;
+in uint rowIndices;
+in uint segmentStartColors;
+in uint segmentEndColors;
+in float widths;
+in vec4 pathViewOrigins;
+
+out vec4 vColor;
+
+vec3 encodeDeckPickingColor(int objectIndex) {
+  int colorIndex = objectIndex + 1;
+  return vec3(
+    float(colorIndex % 256),
+    float((colorIndex / 256) % 256),
+    float((colorIndex / 65536) % 256)
+  );
+}
+
+vec4 unpackPathColor(uint colorWord) {
+  return vec4(
+    float(colorWord & 255u),
+    float((colorWord >> 8u) & 255u),
+    float((colorWord >> 16u) & 255u),
+    float((colorWord >> 24u) & 255u)
+  ) / 255.0;
+}
+
+vec2 getTriangleCorner(int vertexIndex) {
+  if (vertexIndex == 0) return vec2(0.0, -1.0);
+  if (vertexIndex == 1) return vec2(1.0, -1.0);
+  if (vertexIndex == 2) return vec2(1.0, 1.0);
+  if (vertexIndex == 3) return vec2(0.0, -1.0);
+  if (vertexIndex == 4) return vec2(1.0, 1.0);
+  return vec2(0.0, 1.0);
+}
+
+void main() {
+  vec2 corner = getTriangleCorner(gl_VertexID % 6);
+  vec4 startPosition = pathViewOrigins + segmentStartPositions;
+  vec4 endPosition = pathViewOrigins + segmentEndPositions;
+  vec2 direction = normalize(endPosition.xy - startPosition.xy);
+  if (any(isnan(direction))) direction = vec2(1.0, 0.0);
+  vec2 normal = vec2(-direction.y, direction.x);
+  vec4 pathPosition = mix(startPosition, endPosition, corner.x);
+  pathPosition.xy += normal * corner.y * widths;
+  gl_Position = project_position_to_clipspace(pathPosition.xyz, vec3(0.0), vec3(0.0));
+  geometry.position = gl_Position;
+  geometry.pickingColor = encodeDeckPickingColor(int(rowIndices));
+  DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
+  vColor = mix(
+    unpackPathColor(segmentStartColors),
+    unpackPathColor(segmentEndColors),
+    corner.x
+  );
+  DECKGL_FILTER_COLOR(vColor, geometry);
+}
+`;
+
 type ArrowPathLayerBatch = {
   model: Model;
   prepared: PreparedArrowPathRendererGPUVectors;
+  constantBuffers: Buffer[];
   batchIndex: number;
   rowIndexOffset: number;
   rowCount: number;
@@ -213,28 +299,39 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       return;
     }
 
-    const hasColors = Boolean(sourceVectors.colors);
-    const hasWidths = Boolean(sourceVectors.widths);
-    const model = ArrowPathRenderer.createModel(this.context.device, {
-      ...prepared,
-      model: 'attribute',
+    const constantStyle = createDeckPathConstantStyle(this.context.device, {
       id: `${props.id}-batch-${batchIndex}`,
-      ...this.getShaders({
-        modules: [project32, picking],
-        vs: getDeckPathVertexShader({
-          hasColors,
-          hasWidths,
-          color: props.color ?? DEFAULT_PATH_COLOR,
-          width: props.width ?? DEFAULT_PATH_WIDTH
+      hasColors: Boolean(sourceVectors.colors),
+      hasWidths: Boolean(sourceVectors.widths),
+      color: props.color ?? DEFAULT_PATH_COLOR,
+      width: props.width ?? DEFAULT_PATH_WIDTH
+    });
+    let model: Model;
+    try {
+      model = ArrowPathRenderer.createModel(this.context.device, {
+        ...prepared,
+        model: 'attribute',
+        id: `${props.id}-batch-${batchIndex}`,
+        ...this.getShaders({
+          modules: [project32, picking],
+          vs: DECK_PATH_VS,
+          fs: DECK_PATH_FS
         }),
-        fs: DECK_PATH_FS
-      }),
-      shaderLayout: getDeckPathShaderLayout(hasColors, hasWidths),
-      topology: 'triangle-list',
-      vertexCount: 6
-    } as never);
+        shaderLayout: DECK_PATH_SHADER_LAYOUT,
+        bufferLayout: constantStyle.bufferLayout,
+        attributes: constantStyle.attributes,
+        constantAttributes: constantStyle.constantAttributes,
+        topology: 'triangle-list',
+        vertexCount: 6
+      } as never);
+    } catch (error) {
+      destroyBuffers(constantStyle.buffers);
+      prepared.destroy();
+      throw error;
+    }
     if (!this.isActiveLoad(loadVersion)) {
       model.destroy();
+      destroyBuffers(constantStyle.buffers);
       prepared.destroy();
       return;
     }
@@ -243,6 +340,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const batch: ArrowPathLayerBatch = {
       model,
       prepared,
+      constantBuffers: constantStyle.buffers,
       batchIndex,
       rowIndexOffset,
       rowCount
@@ -268,106 +366,92 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
   }
 }
 
-function getDeckPathShaderLayout(hasColors: boolean, hasWidths: boolean): ShaderLayout {
-  return {
-    attributes: [
-      {name: 'segmentStartPositions', location: 0, type: 'vec4<f32>', stepMode: 'instance'},
-      {name: 'segmentEndPositions', location: 1, type: 'vec4<f32>', stepMode: 'instance'},
-      {name: 'rowIndices', location: 2, type: 'u32', stepMode: 'instance'},
-      ...(hasColors
-        ? ([
-            {name: 'segmentStartColors', location: 3, type: 'u32', stepMode: 'instance'},
-            {name: 'segmentEndColors', location: 4, type: 'u32', stepMode: 'instance'}
-          ] as const)
-        : []),
-      ...(hasWidths
-        ? ([{name: 'widths', location: 5, type: 'f32', stepMode: 'instance'}] as const)
-        : []),
-      {name: 'pathViewOrigins', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
-    ],
-    bindings: []
-  };
+function createDeckPathConstantStyle(
+  device: Device,
+  {
+    id,
+    hasColors,
+    hasWidths,
+    color,
+    width
+  }: {
+    id: string;
+    hasColors: boolean;
+    hasWidths: boolean;
+    color: ArrowPathColor;
+    width: number;
+  }
+): {
+  bufferLayout: BufferLayout[];
+  attributes: Record<string, Buffer>;
+  constantAttributes: Record<string, TypedArray>;
+  buffers: Buffer[];
+} {
+  const bufferLayout: BufferLayout[] = [];
+  const attributes: Record<string, Buffer> = {};
+  const constantAttributes: Record<string, TypedArray> = {};
+  const buffers: Buffer[] = [];
+
+  if (!hasColors) {
+    // WebGL sets integer constant attributes through vertexAttribI4uiv, so retain four lanes.
+    // WebGPU consumes the first lane through the zero-stride uint32 layout.
+    const value = new Uint32Array([packPathColor(color), 0, 0, 0]);
+    bufferLayout.push({
+      name: CONSTANT_PATH_COLOR_BUFFER,
+      byteStride: 0,
+      stepMode: 'instance',
+      attributes: [
+        {attribute: 'segmentStartColors', format: 'uint32', byteOffset: 0},
+        {attribute: 'segmentEndColors', format: 'uint32', byteOffset: 0}
+      ]
+    });
+    if (device.type === 'webgl') {
+      constantAttributes['segmentStartColors'] = value;
+      constantAttributes['segmentEndColors'] = value;
+    } else {
+      const buffer = device.createBuffer({id: `${id}-constant-color`, data: value});
+      attributes[CONSTANT_PATH_COLOR_BUFFER] = buffer;
+      buffers.push(buffer);
+    }
+  }
+
+  if (!hasWidths) {
+    const value = new Float32Array([width]);
+    bufferLayout.push({
+      name: CONSTANT_PATH_WIDTH_BUFFER,
+      byteStride: 0,
+      stepMode: 'instance',
+      attributes: [{attribute: 'widths', format: 'float32', byteOffset: 0}]
+    });
+    if (device.type === 'webgl') {
+      constantAttributes['widths'] = value;
+    } else {
+      const buffer = device.createBuffer({id: `${id}-constant-width`, data: value});
+      attributes[CONSTANT_PATH_WIDTH_BUFFER] = buffer;
+      buffers.push(buffer);
+    }
+  }
+
+  return {bufferLayout, attributes, constantAttributes, buffers};
 }
 
-function getDeckPathVertexShader({
-  hasColors,
-  hasWidths,
-  color,
-  width
-}: {
-  hasColors: boolean;
-  hasWidths: boolean;
-  color: ArrowPathColor;
-  width: number;
-}): string {
-  const normalizedColor = color.map(component => component / 255).join(', ');
-  return `#version 300 es
-precision highp float;
-precision highp int;
-
-in vec4 segmentStartPositions;
-in vec4 segmentEndPositions;
-in uint rowIndices;
-${hasColors ? 'in uint segmentStartColors;\nin uint segmentEndColors;' : ''}
-${hasWidths ? 'in float widths;' : ''}
-in vec4 pathViewOrigins;
-
-out vec4 vColor;
-
-vec3 encodeDeckPickingColor(int objectIndex) {
-  int colorIndex = objectIndex + 1;
-  return vec3(
-    float(colorIndex % 256),
-    float((colorIndex / 256) % 256),
-    float((colorIndex / 65536) % 256)
+function packPathColor(color: ArrowPathColor): number {
+  const [red, green, blue, alpha] = color.map(component =>
+    Math.max(0, Math.min(255, Math.round(component)))
   );
+  return (red | (green << 8) | (blue << 16) | (alpha << 24)) >>> 0;
 }
 
-vec4 unpackPathColor(uint colorWord) {
-  return vec4(
-    float(colorWord & 255u),
-    float((colorWord >> 8u) & 255u),
-    float((colorWord >> 16u) & 255u),
-    float((colorWord >> 24u) & 255u)
-  ) / 255.0;
-}
-
-vec2 getTriangleCorner(int vertexIndex) {
-  if (vertexIndex == 0) return vec2(0.0, -1.0);
-  if (vertexIndex == 1) return vec2(1.0, -1.0);
-  if (vertexIndex == 2) return vec2(1.0, 1.0);
-  if (vertexIndex == 3) return vec2(0.0, -1.0);
-  if (vertexIndex == 4) return vec2(1.0, 1.0);
-  return vec2(0.0, 1.0);
-}
-
-void main() {
-  vec2 corner = getTriangleCorner(gl_VertexID % 6);
-  vec4 startPosition = pathViewOrigins + segmentStartPositions;
-  vec4 endPosition = pathViewOrigins + segmentEndPositions;
-  vec2 direction = normalize(endPosition.xy - startPosition.xy);
-  if (any(isnan(direction))) direction = vec2(1.0, 0.0);
-  vec2 normal = vec2(-direction.y, direction.x);
-  float pathWidth = ${hasWidths ? 'widths' : width.toFixed(8)};
-  vec4 pathPosition = mix(startPosition, endPosition, corner.x);
-  pathPosition.xy += normal * corner.y * pathWidth;
-  gl_Position = project_position_to_clipspace(pathPosition.xyz, vec3(0.0), vec3(0.0));
-  geometry.position = gl_Position;
-  geometry.pickingColor = encodeDeckPickingColor(int(rowIndices));
-  DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
-  vColor = ${
-    hasColors
-      ? 'mix(unpackPathColor(segmentStartColors), unpackPathColor(segmentEndColors), corner.x)'
-      : `vec4(${normalizedColor})`
-  };
-  DECKGL_FILTER_COLOR(vColor, geometry);
-}
-`;
+function destroyBuffers(buffers: Buffer[]): void {
+  for (const buffer of buffers) {
+    buffer.destroy();
+  }
 }
 
 function destroyPathBatches(batches: ArrowPathLayerBatch[]): void {
   for (const batch of batches) {
     batch.model.destroy();
+    destroyBuffers(batch.constantBuffers);
     batch.prepared.destroy();
   }
 }

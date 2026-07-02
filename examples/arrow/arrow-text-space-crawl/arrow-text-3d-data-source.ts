@@ -47,7 +47,7 @@ const GENERATED_FONT_SETTINGS = {
 type TextCrawlRenderer = ArrowText3DRenderer | ArrowAtlasText3DRenderer;
 
 /** Animates comparable Arrow text renderers through the existing 3D crawl camera. */
-export class ArrowText3DSourceController extends AnimationLoopTemplate {
+export class ArrowText3DDataSourceController extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
 
   readonly panels = new ArrowExamplePanelManager({

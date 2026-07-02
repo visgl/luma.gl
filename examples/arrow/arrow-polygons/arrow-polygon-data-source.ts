@@ -21,13 +21,13 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 import type {ArrowExampleInputMode} from '../arrow-example-input';
 import * as arrow from 'apache-arrow';
 
-export type ArrowPolygonSourceUpdate = Pick<
+export type ArrowPolygonDataSourceUpdate = Pick<
   ArrowPolygonRendererProps,
   'data' | 'onDataBatch' | 'tessellated' | 'polygons' | 'colors' | 'model' | 'center' | 'scale'
 > & {viewState: ArrowPolygonViewState};
 
-/** Owns polygon source generation, controls, and Arrow table inspection. */
-export class ArrowPolygonSource {
+/** Owns polygon data generation, controls, and Arrow table inspection. */
+export class ArrowPolygonDataSource {
   readonly panels: ArrowExamplePanelManager;
   readonly controlPanel: ArrowPolygonControlPanel;
   inputMode: ArrowExampleInputMode = 'stream';
@@ -39,7 +39,7 @@ export class ArrowPolygonSource {
 
   constructor(
     device: Device,
-    private readonly onSourceChange: (update: ArrowPolygonSourceUpdate) => void,
+    private readonly onDataSourceChange: (update: ArrowPolygonDataSourceUpdate) => void,
     private readonly onRendererPropsChange: (
       props: Pick<ArrowPolygonRendererProps, 'model'>
     ) => void,
@@ -145,14 +145,14 @@ export class ArrowPolygonSource {
       }
     };
     if (inputMode === 'vectors') {
-      this.onSourceChange({
+      this.onDataSourceChange({
         ...commonUpdate,
         polygons: polygonVector,
         colors: effectiveColorKind === 'constant' ? null : (colorVector ?? undefined)
       });
       return;
     }
-    this.onSourceChange({
+    this.onDataSourceChange({
       ...commonUpdate,
       data:
         inputMode === 'stream'

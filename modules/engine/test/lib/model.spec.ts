@@ -147,6 +147,37 @@ test('Model#construct/destruct', async t => {
   t.end();
 });
 
+test('Model#draw skips zero-instance submissions', async t => {
+  const device = await getNullTestDevice();
+  const model = new Model(device, {
+    id: 'zero-draw-test',
+    topology: 'point-list',
+    vertexCount: 3,
+    instanceCount: 0,
+    isInstanced: true,
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
+  });
+  const renderPass = device.getDefaultRenderPass();
+  const draw = renderPass.draw.bind(renderPass);
+  let drawCallCount = 0;
+  renderPass.draw = options => {
+    drawCallCount++;
+    return draw(options);
+  };
+
+  t.ok(model.draw(renderPass), 'zero-instance draw is a successful no-op');
+  t.equal(drawCallCount, 0, 'zero-instance draw is not submitted');
+
+  model.setInstanceCount(1);
+  t.ok(model.draw(renderPass), 'non-empty draw succeeds');
+  t.equal(drawCallCount, 1, 'non-empty draw is submitted');
+
+  renderPass.end();
+  model.destroy();
+  t.end();
+});
+
 test('Model#multiple delete', async t => {
   const webglDevice = await getWebGLTestDevice();
 

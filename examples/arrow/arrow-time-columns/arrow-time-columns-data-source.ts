@@ -16,14 +16,14 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 const TIME_COLUMNS_VERTEX_STORAGE_BUFFER_COUNT = 5;
 
 /** Owns the temporal source table and rendering-mode controls. */
-export class ArrowTimeColumnsSource {
+export class ArrowTimeColumnsDataSource {
   readonly controlPanel: ArrowTimeColumnsControlPanel;
   readonly panels: ArrowExamplePanelManager;
   activeRenderMode: TimeColumnsRenderMode;
 
   constructor(
     private readonly device: Device,
-    private readonly onSourceChange: (table: arrow.Table) => Promise<void>,
+    private readonly onDataSourceChange: (table: arrow.Table) => Promise<void>,
     private readonly onRendererPropsChange: (props: ArrowTimeColumnsRendererProps) => void
   ) {
     const supportsStorage = supportsVertexStorageBuffers(
@@ -49,7 +49,7 @@ export class ArrowTimeColumnsSource {
     this.panels.setTableEntries([
       {id: 'time-columns-source', label: 'Temporal schedule source', kind: 'source', table}
     ]);
-    await this.onSourceChange(table);
+    await this.onDataSourceChange(table);
   }
 
   updateLabels(renderer: ArrowTimeColumnsRenderer): void {

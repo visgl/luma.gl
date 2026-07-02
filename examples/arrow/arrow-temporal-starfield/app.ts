@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowTemporalStarfieldRenderer} from './arrow-temporal-starfield-renderer';
-import {ArrowTemporalStarfieldSource} from './arrow-temporal-starfield-source';
+import {ArrowTemporalStarfieldDataSource} from './arrow-temporal-starfield-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Time: Blinking Stars';
@@ -16,12 +16,12 @@ export const description =
 export default class ArrowTemporalStarfieldAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
   readonly layer: ArrowTemporalStarfieldRenderer;
-  readonly source: ArrowTemporalStarfieldSource;
+  readonly dataSource: ArrowTemporalStarfieldDataSource;
 
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowTemporalStarfieldRenderer(device as Device);
-    this.source = new ArrowTemporalStarfieldSource(
+    this.dataSource = new ArrowTemporalStarfieldDataSource(
       device as Device,
       props => this.layer.setProps(props),
       props => this.layer.setProps(props)
@@ -29,18 +29,18 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   }
 
   override async onInitialize(): Promise<void> {
-    this.source.initialize();
+    this.dataSource.initialize();
   }
 
   override onRender({device, time}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: [0.005, 0.008, 0.024, 1]});
     this.layer.draw(renderPass, {time});
     renderPass.end();
-    this.source.updateLabels(this.layer);
+    this.dataSource.updateLabels(this.layer);
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.layer.destroy();
   }
 }

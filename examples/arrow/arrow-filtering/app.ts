@@ -5,7 +5,7 @@
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowFilteringRenderer} from './arrow-filtering-renderer';
-import {ArrowFilteringSource} from './arrow-filtering-source';
+import {ArrowFilteringDataSource} from './arrow-filtering-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'ShaderPlugin Filtering';
@@ -15,11 +15,11 @@ export const description =
 export default class ArrowFilteringAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
   renderer: ArrowFilteringRenderer | null = null;
-  readonly source: ArrowFilteringSource;
+  readonly dataSource: ArrowFilteringDataSource;
 
   constructor({device}: AnimationProps) {
     super();
-    this.source = new ArrowFilteringSource(
+    this.dataSource = new ArrowFilteringDataSource(
       table => {
         this.renderer?.destroy();
         this.renderer = new ArrowFilteringRenderer(device, table);
@@ -29,7 +29,7 @@ export default class ArrowFilteringAnimationLoopTemplate extends AnimationLoopTe
   }
 
   override async onInitialize(): Promise<void> {
-    this.source.initialize();
+    this.dataSource.initialize();
   }
 
   override onRender({device, aspect}: AnimationProps): void {
@@ -39,7 +39,7 @@ export default class ArrowFilteringAnimationLoopTemplate extends AnimationLoopTe
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.renderer?.destroy();
   }
 }

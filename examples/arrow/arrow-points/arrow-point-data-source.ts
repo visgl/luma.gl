@@ -24,13 +24,13 @@ import {
 import {ArrowPointControlPanel} from './control-panel';
 import {ArrowExamplePanelManager} from '../arrow-example-panels';
 
-export type ArrowPointSourceUpdate = Pick<
+export type ArrowPointDataSourceUpdate = Pick<
   ArrowPointRendererProps,
   'data' | 'onDataBatch' | 'timeColumn' | 'timeOrigin' | 'colors' | 'radii' | 'center' | 'scale'
 >;
 
 /** Owns point source generation, controls, and Arrow table inspection. */
-export class ArrowPointSource {
+export class ArrowPointDataSource {
   readonly panels: ArrowExamplePanelManager;
   readonly controlPanel: ArrowPointControlPanel;
   rowCountKind: ArrowPointRowCountKind = '10k-stream';
@@ -44,7 +44,7 @@ export class ArrowPointSource {
 
   constructor(
     private readonly device: Device,
-    private readonly onSourceChange: (update: ArrowPointSourceUpdate) => void,
+    private readonly onDataSourceChange: (update: ArrowPointDataSourceUpdate) => void,
     private readonly onRendererPropsChange: (
       props: Pick<ArrowPointRendererProps, 'modelMode'>
     ) => void
@@ -180,7 +180,7 @@ export class ArrowPointSource {
       kind: 'source',
       recordBatches: sourceData.recordBatches
     });
-    this.onSourceChange({
+    this.onDataSourceChange({
       data: createStreamingPointRecordBatchIterator(sourceData.recordBatches)[
         Symbol.asyncIterator
       ](),

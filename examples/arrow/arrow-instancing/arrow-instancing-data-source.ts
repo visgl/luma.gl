@@ -14,7 +14,7 @@ import {
 import {ArrowInstancingControlPanel} from './control-panel';
 import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
-export class ArrowInstancingSourceController extends AnimationLoopTemplate {
+export class ArrowInstancingDataSourceController extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
 
   static props = {createFramebuffer: true, debug: true};

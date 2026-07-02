@@ -36,6 +36,21 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     data: makeArrowLineRecordBatches(pathSource),
     model: 'attribute'
   });
+  let constantPathDataError: unknown;
+  const constantPathLayer = new ArrowPathLayer({
+    id: 'arrow-paths-constant-picking-test',
+    pickable: true,
+    data: new Table({paths: pathSource.sourceVectors.paths}),
+    paths: 'paths',
+    colors: null,
+    widths: null,
+    color: [255, 180, 90, 255],
+    width: 0.004,
+    model: 'attribute',
+    onDataError: error => {
+      constantPathDataError = error;
+    }
+  });
   const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
   const polygonLayer = new ArrowPolygonLayer({
     id: 'arrow-polygons-picking-test',
@@ -89,8 +104,36 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     layer: Layer;
     initialViewState: {target: [number, number]; zoom: number};
     getError?: () => unknown;
+    inspectModel?: (model: Model) => void;
   }> = [
     {layer: pathLayer, initialViewState: {target: [0, 0], zoom: 8}},
+    {
+      layer: constantPathLayer,
+      initialViewState: {target: [0, 0], zoom: 8},
+      getError: () => constantPathDataError,
+      inspectModel: model => {
+        const constantLayouts = model.bufferLayout.filter(layout =>
+          layout.name.startsWith('constantPath')
+        );
+        t.deepEqual(
+          constantLayouts.map(layout => layout.byteStride),
+          [0, 0],
+          `${model.device.type} path constants use zero-stride attribute layouts`
+        );
+        if (model.device.type === 'webgl') {
+          for (const attributeName of ['segmentStartColors', 'segmentEndColors', 'widths']) {
+            const attribute = model.pipeline.shaderLayout.attributes.find(
+              candidate => candidate.name === attributeName
+            );
+            t.ok(attribute, `WebGL path shader exposes ${attributeName}`);
+            t.ok(
+              attribute && ArrayBuffer.isView(model.vertexArray.attributes[attribute.location]),
+              `WebGL ${attributeName} is a native constant attribute`
+            );
+          }
+        }
+      }
+    },
     {
       layer: polygonLayer,
       initialViewState: {target: polygonSource.viewState.startCenter, zoom: 9}
@@ -103,8 +146,8 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     {layer: constantTextLayer, initialViewState: {target: [0, 0], zoom: 0}}
   ];
 
-  for (const {layer, initialViewState, getError} of cases) {
-    const pickingInfo = await pickFirstLayerObject(layer, initialViewState, getError);
+  for (const {layer, initialViewState, getError, inspectModel} of cases) {
+    const pickingInfo = await pickFirstLayerObject(layer, initialViewState, getError, inspectModel);
     t.ok(pickingInfo?.picked, `${layer.id} returns a picked object`);
     t.equal(pickingInfo?.layer?.id, layer.id, `${layer.id} decodes the picked layer`);
     t.ok(
@@ -187,7 +230,8 @@ test('ArrowPathLayer draws streamed batches incrementally and preserves picking 
 async function pickFirstLayerObject(
   layer: Layer,
   initialViewState: {target: [number, number]; zoom: number},
-  getError: () => unknown = () => undefined
+  getError: () => unknown = () => undefined,
+  inspectModel: (model: Model) => void = () => {}
 ): Promise<PickingInfo | null> {
   const parent = document.createElement('div');
   parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
@@ -204,6 +248,7 @@ async function pickFirstLayerObject(
 
   try {
     const model = await waitForLayerModel(layer, getError);
+    inspectModel(model);
     await waitForPipeline(model);
     deck.redraw(true);
     await waitForPipeline(model);

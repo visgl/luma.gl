@@ -2,7 +2,7 @@
 export {default as ArrowBigRight} from './icons/arrow-big-right';
 
 // State
-export {useStore} from './store/device-store';
+export {getCanvasContainer, useStore} from './store/device-store';
 
 // Components
 export {Tabs, Tab} from './components/tabs';

@@ -19,7 +19,7 @@ const DEFAULT_VIEW_STATE: ArrowFloat64PrecisionViewState = {zoom: 1, pan: [0, 0]
 const PANE_LABELS_ID = 'arrow-float64-precision-pane-labels';
 
 /** Owns float64 source replacement, view controls, and panels. */
-export class ArrowFloat64PrecisionSource {
+export class ArrowFloat64PrecisionDataSource {
   readonly controlPanel: ArrowFloat64PrecisionControlPanel;
   readonly panels: ArrowExamplePanelManager;
   coordinateMagnitudeKind: CoordinateMagnitudeKind = '1e9';
@@ -28,7 +28,7 @@ export class ArrowFloat64PrecisionSource {
   private isFinalized = false;
 
   constructor(
-    private readonly onSourceChange: (
+    private readonly onDataSourceChange: (
       sourceData: ArrowFloat64PrecisionSourceData
     ) => Promise<ArrowFloat64PrecisionRenderer | null>
   ) {
@@ -101,7 +101,7 @@ export class ArrowFloat64PrecisionSource {
         table: makeArrowFloat64PrecisionSourceTable(sourceData)
       }
     ]);
-    const renderer = await this.onSourceChange(sourceData);
+    const renderer = await this.onDataSourceChange(sourceData);
     if (this.isFinalized || generation !== this.requestGeneration || !renderer) return;
     this.coordinateMagnitudeKind = coordinateMagnitudeKind;
     this.viewState = {...DEFAULT_VIEW_STATE, pan: [0, 0]};

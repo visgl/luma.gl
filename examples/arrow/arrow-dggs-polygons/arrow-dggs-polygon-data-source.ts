@@ -15,7 +15,7 @@ export const title = 'Global Grids: Uint64, Utf8';
 export const description =
   'Parses geohash, quadkey, S2, A5, and H3 cell ids into Uint64 keys on the GPU, generates boundary paths, and renders them through the storage-backed Arrow path model.';
 
-export class ArrowDggsPolygonSourceController extends AnimationLoopTemplate {
+export class ArrowDggsPolygonDataSourceController extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
 
   static props = {useDevicePixels: true};

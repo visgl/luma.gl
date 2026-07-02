@@ -24,7 +24,7 @@ import {DeckArrowSourcePanel} from '../arrow-example-source-panel';
 type TextColumnKind = 'constant' | 'column';
 type TextClipKind = 'none' | 'column';
 
-type ArrowTextLayerSourceState = Record<string, unknown> & {
+type ArrowTextDataSourceState = Record<string, unknown> & {
   inputMode: ArrowExampleInputMode;
   rowCountKind: TextRowCountKind;
   sourceKind: TextSourceKind;
@@ -35,7 +35,7 @@ type ArrowTextLayerSourceState = Record<string, unknown> & {
   modelKind: 'attribute';
 };
 
-export type ArrowTextLayerSourceUpdate = Pick<
+export type ArrowTextDataSourceUpdate = Pick<
   ArrowTextLayerProps,
   | 'data'
   | 'positions'
@@ -53,9 +53,9 @@ export type ArrowTextLayerSourceUpdate = Pick<
   | 'onDataBatch'
 >;
 
-/** Owns source selection and the shared Arrow panels for the deck text example. */
-export class ArrowTextLayerSource {
-  private state: ArrowTextLayerSourceState = {
+/** Owns data selection and the shared Arrow panels for the deck text example. */
+export class ArrowTextDataSource {
+  private state: ArrowTextDataSourceState = {
     inputMode: 'stream',
     rowCountKind: '10k',
     sourceKind: 'utf8',
@@ -69,21 +69,21 @@ export class ArrowTextLayerSource {
     id: 'deck-arrow-text',
     description:
       'Arrow UTF-8 or dictionary strings and style columns can stream by RecordBatch, resolve by table column name, or be supplied as direct vectors.',
-    schema: makeArrowTextLayerSourceSchema(),
+    schema: makeArrowTextDataSourceSchema(),
     initialState: this.state,
     onSettingsChange: state => {
       this.state = state;
-      void this.emitSource();
+      void this.emitDataSource();
     }
   });
   private sourceVersion = 0;
   private isFinalized = false;
 
-  constructor(private readonly onSourceChange: (update: ArrowTextLayerSourceUpdate) => void) {}
+  constructor(private readonly onDataSourceChange: (update: ArrowTextDataSourceUpdate) => void) {}
 
   initialize(): void {
     this.panel.initialize();
-    void this.emitSource();
+    void this.emitDataSource();
   }
 
   finalize(): void {
@@ -92,7 +92,7 @@ export class ArrowTextLayerSource {
     this.panel.finalize();
   }
 
-  private async emitSource(): Promise<void> {
+  private async emitDataSource(): Promise<void> {
     const sourceVersion = ++this.sourceVersion;
     const datasetKey = `${this.state.rowCountKind}${
       this.state.sourceKind === 'dictionary' ? '-dict' : ''
@@ -120,7 +120,7 @@ export class ArrowTextLayerSource {
       throw new Error('Arrow text example requires positions and texts columns');
     }
     const tableStream = this.panel.beginTableStream(recordBatches);
-    const commonProps: ArrowTextLayerSourceUpdate = {
+    const commonProps: ArrowTextDataSourceUpdate = {
       model: 'attribute',
       color: [199, 219, 245, 255],
       angle: 0,
@@ -140,7 +140,7 @@ export class ArrowTextLayerSource {
 
     if (this.state.inputMode === 'vectors') {
       tableStream.setLoadedBatchCount(recordBatches.length);
-      this.onSourceChange({
+      this.onDataSourceChange({
         ...commonProps,
         positions: positions as ArrowTextLayerProps['positions'],
         texts: texts as ArrowTextLayerProps['texts'],
@@ -164,7 +164,7 @@ export class ArrowTextLayerSource {
       return;
     }
 
-    this.onSourceChange({
+    this.onDataSourceChange({
       ...commonProps,
       data:
         this.state.inputMode === 'stream'
@@ -180,7 +180,7 @@ export class ArrowTextLayerSource {
   }
 }
 
-function makeArrowTextLayerSourceSchema(): SettingsSchema {
+function makeArrowTextDataSourceSchema(): SettingsSchema {
   return {
     title: 'Settings',
     sections: [

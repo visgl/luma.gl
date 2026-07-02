@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {GeoArrowRenderer} from './geoarrow-renderer';
-import {GeoArrowSource} from './geoarrow-source';
+import {GeoArrowDataSource} from './geoarrow-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'GeoArrow';
@@ -17,12 +17,12 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
   static info = makeArrowExamplePanelHostHtml();
   static props = {useDevicePixels: true};
   readonly renderer: GeoArrowRenderer;
-  readonly source: GeoArrowSource;
+  readonly dataSource: GeoArrowDataSource;
 
   constructor({device}: AnimationProps) {
     super();
     this.renderer = new GeoArrowRenderer(device as Device);
-    this.source = new GeoArrowSource(async data => {
+    this.dataSource = new GeoArrowDataSource(async data => {
       await this.renderer.setProps({
         data: data.table,
         geometries: 'geometries',
@@ -32,12 +32,12 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
         center: [0, 0],
         scale: 1
       });
-      this.source.setRendererResult(this.renderer, data);
+      this.dataSource.setRendererResult(this.renderer, data);
     });
   }
 
   override async onInitialize(): Promise<void> {
-    await this.source.initialize();
+    await this.dataSource.initialize();
   }
 
   override onRender({aspect, device}: AnimationProps): void {
@@ -47,7 +47,7 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.renderer.destroy();
   }
 }

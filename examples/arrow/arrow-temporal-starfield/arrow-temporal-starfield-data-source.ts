@@ -22,7 +22,7 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 const TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT = 6;
 
 /** Owns starfield source streams and controls. */
-export class ArrowTemporalStarfieldSource {
+export class ArrowTemporalStarfieldDataSource {
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
   readonly panels: ArrowExamplePanelManager;
   activeRenderMode: 'attributes' | 'storage';
@@ -31,7 +31,7 @@ export class ArrowTemporalStarfieldSource {
 
   constructor(
     private readonly device: Device,
-    private readonly onSourceChange: (props: ArrowTemporalStarfieldRendererProps) => void,
+    private readonly onDataSourceChange: (props: ArrowTemporalStarfieldRendererProps) => void,
     private readonly onRendererPropsChange: (props: ArrowTemporalStarfieldRendererProps) => void
   ) {
     const supportsStorage = supportsVertexStorageBuffers(
@@ -88,7 +88,7 @@ export class ArrowTemporalStarfieldSource {
       kind: 'source',
       recordBatches
     });
-    this.onSourceChange({
+    this.onDataSourceChange({
       data: createStreamingTemporalStarfieldRecordBatchIterator(recordBatches),
       onDataBatch: (update: ArrowTemporalStarfieldRendererDataBatchUpdate) => {
         if (this.isFinalized) return;

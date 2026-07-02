@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowFloat64PrecisionRenderer} from './arrow-float64-precision-renderer';
-import {ArrowFloat64PrecisionSource} from './arrow-float64-precision-source';
+import {ArrowFloat64PrecisionDataSource} from './arrow-float64-precision-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Float64 Origin Rebasing: Survey lines';
@@ -17,13 +17,13 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   static info = makeArrowExamplePanelHostHtml();
   static props = {useDevicePixels: true};
   readonly device: Device;
-  readonly source: ArrowFloat64PrecisionSource;
+  readonly dataSource: ArrowFloat64PrecisionDataSource;
   renderer: ArrowFloat64PrecisionRenderer | null = null;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.source = new ArrowFloat64PrecisionSource(async sourceData => {
+    this.dataSource = new ArrowFloat64PrecisionDataSource(async sourceData => {
       const renderer = await ArrowFloat64PrecisionRenderer.create(this.device, sourceData);
       const previousRenderer = this.renderer;
       this.renderer = renderer;
@@ -33,14 +33,14 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   }
 
   override async onInitialize(): Promise<void> {
-    await this.source.initialize();
+    await this.dataSource.initialize();
   }
 
   override onRender({aspect, device}: AnimationProps): void {
     this.renderer?.updateViewState({
       aspect,
-      zoom: this.source.viewState.zoom,
-      pan: this.source.viewState.pan
+      zoom: this.dataSource.viewState.zoom,
+      pan: this.dataSource.viewState.pan
     });
     this.renderer?.predraw(device.commandEncoder);
     const renderPass = device.beginRenderPass({clearColor: [0.012, 0.026, 0.055, 1]});
@@ -49,7 +49,7 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     scheduleRendererDestroy(this.device, this.renderer);
     this.renderer = null;
   }

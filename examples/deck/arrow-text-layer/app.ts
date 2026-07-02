@@ -5,8 +5,9 @@
 import {Deck, OrthographicView} from '@deck.gl/core';
 import {ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
+import {getDeckExampleDeviceProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
-import {ArrowTextLayerSource, type ArrowTextLayerSourceUpdate} from './arrow-text-layer-source';
+import {ArrowTextDataSource, type ArrowTextDataSourceUpdate} from './arrow-text-data-source';
 
 let fontAtlas: FontAtlas | undefined;
 
@@ -23,17 +24,23 @@ function getFontAtlas(): FontAtlas {
 }
 
 /** Creates the standalone or website-hosted Deck text-layer example. */
-export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
-  let source: ArrowTextLayerSource | null = null;
+export function createArrowTextLayerDeck(
+  parent?: HTMLDivElement,
+  options: DeckExampleDeviceOptions = {}
+) {
   const deck = new Deck({
     parent,
+    device: options.device,
+    deviceProps: options.device
+      ? undefined
+      : getDeckExampleDeviceProps(options.deviceType ?? 'webgpu'),
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 0},
     controller: true,
     getTooltip: getArrowLayerTooltip,
     layers: []
   });
-  source = new ArrowTextLayerSource((props: ArrowTextLayerSourceUpdate) => {
+  const dataSource = new ArrowTextDataSource((props: ArrowTextDataSourceUpdate) => {
     deck.setProps({
       layers: [
         new ArrowTextLayer({
@@ -45,10 +52,11 @@ export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
       ]
     });
   });
-  source.initialize();
+  dataSource.initialize();
+
   return {
     finalize: () => {
-      source?.finalize();
+      dataSource.finalize();
       deck.finalize();
     }
   };

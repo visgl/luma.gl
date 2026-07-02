@@ -12,14 +12,14 @@ import {ArrowColumnRendererControlPanel, type ArrowColumnTransparencyMode} from 
 import {ArrowExamplePanelManager} from '../arrow-example-panels';
 
 /** Owns asynchronous column source loading and the example controls. */
-export class ArrowColumnSource {
+export class ArrowColumnDataSource {
   readonly controlPanel: ArrowColumnRendererControlPanel;
   readonly panels: ArrowExamplePanelManager;
   transparencyMode: ArrowColumnTransparencyMode = 'a-buffer';
   private isFinalized = false;
 
   constructor(
-    private readonly onSourceChange: (sourceData: ArrowColumnSourceData) => void,
+    private readonly onDataSourceChange: (sourceData: ArrowColumnSourceData) => void,
     private readonly onTransparencyModeChange: (mode: ArrowColumnTransparencyMode) => void
   ) {
     this.controlPanel = new ArrowColumnRendererControlPanel({
@@ -57,7 +57,7 @@ export class ArrowColumnSource {
           table: sourceData.geometryTable
         }
       ]);
-      this.onSourceChange(sourceData);
+      this.onDataSourceChange(sourceData);
     } catch (error) {
       this.controlPanel.setStatus(error instanceof Error ? error.message : String(error));
       throw error;

@@ -25,7 +25,7 @@ import {DeckArrowSourcePanel} from '../arrow-example-source-panel';
 
 type PathWidthKind = 'constant' | 'row-widths';
 
-type ArrowPathLayerSourceState = Record<string, unknown> & {
+type ArrowPathDataSourceState = Record<string, unknown> & {
   inputMode: ArrowExampleInputMode;
   rowCountKind: ArrowLineRowCountKind;
   coordinateKind: Exclude<ArrowLineCoordinateKind, 'dense-union'>;
@@ -35,7 +35,7 @@ type ArrowPathLayerSourceState = Record<string, unknown> & {
   modelKind: 'attribute';
 };
 
-export type ArrowPathLayerSourceUpdate = Pick<
+export type ArrowPathDataSourceUpdate = Pick<
   ArrowPathLayerProps,
   | 'data'
   | 'paths'
@@ -48,9 +48,9 @@ export type ArrowPathLayerSourceUpdate = Pick<
   | 'onDataBatch'
 >;
 
-/** Owns source selection and the shared Arrow panels for the deck path example. */
-export class ArrowPathLayerSource {
-  private state: ArrowPathLayerSourceState = {
+/** Owns data selection and the shared Arrow panels for the deck path example. */
+export class ArrowPathDataSource {
+  private state: ArrowPathDataSourceState = {
     inputMode: 'stream',
     rowCountKind: '240-stream',
     coordinateKind: 'float32',
@@ -63,20 +63,20 @@ export class ArrowPathLayerSource {
     id: 'deck-arrow-paths',
     description:
       'Variable-length Arrow paths preserve RecordBatch boundaries and can be supplied as a stream, named table columns, or direct vectors.',
-    schema: makeArrowPathLayerSourceSchema(),
+    schema: makeArrowPathDataSourceSchema(),
     initialState: this.state,
     onSettingsChange: state => {
       this.state = state;
-      this.emitSource();
+      this.emitDataSource();
     }
   });
   private isFinalized = false;
 
-  constructor(private readonly onSourceChange: (update: ArrowPathLayerSourceUpdate) => void) {}
+  constructor(private readonly onDataSourceChange: (update: ArrowPathDataSourceUpdate) => void) {}
 
   initialize(): void {
     this.panel.initialize();
-    this.emitSource();
+    this.emitDataSource();
   }
 
   finalize(): void {
@@ -84,7 +84,7 @@ export class ArrowPathLayerSource {
     this.panel.finalize();
   }
 
-  private emitSource(): void {
+  private emitDataSource(): void {
     const datasetKind = this.state.rowCountKind === '240-stream' ? '240' : '2400';
     const sourceData = makeArrowLineSourceData(
       PATH_DATASETS[datasetKind],
@@ -100,7 +100,7 @@ export class ArrowPathLayerSource {
     );
     const sourceTable = new arrow.Table(recordBatches);
     const tableStream = this.panel.beginTableStream(recordBatches);
-    const commonProps: ArrowPathLayerSourceUpdate = {
+    const commonProps: ArrowPathDataSourceUpdate = {
       model: 'attribute',
       color: [199, 219, 245, 235],
       width: 0.0035,
@@ -115,7 +115,7 @@ export class ArrowPathLayerSource {
     };
 
     if (this.state.inputMode === 'vectors') {
-      this.onSourceChange({
+      this.onDataSourceChange({
         ...commonProps,
         paths: sourceData.sourceVectors.paths as ArrowPathLayerProps['paths'],
         colors:
@@ -127,7 +127,7 @@ export class ArrowPathLayerSource {
       return;
     }
 
-    this.onSourceChange({
+    this.onDataSourceChange({
       ...commonProps,
       data:
         this.state.inputMode === 'stream'
@@ -141,7 +141,7 @@ export class ArrowPathLayerSource {
   }
 }
 
-function makeArrowPathLayerSourceSchema(): SettingsSchema {
+function makeArrowPathDataSourceSchema(): SettingsSchema {
   return {
     title: 'Settings',
     sections: [
