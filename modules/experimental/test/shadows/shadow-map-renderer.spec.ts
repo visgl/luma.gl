@@ -117,7 +117,7 @@ test('ShadowMapRenderer reuses, reconstructs and destroys resources', async t =>
     return;
   }
   const renderer = new ShadowMapRenderer(device, {
-    quality: 'Low',
+    quality: 'low',
     directionalMapSize: 16,
     spotMapSize: 16,
     pointMapSize: 16
@@ -164,7 +164,7 @@ test('ShadowMapRenderer reuses, reconstructs and destroys resources', async t =>
     'invokes views in deterministic cascade, spot and cube-face order'
   );
 
-  renderer.setProps({quality: 'Cinematic'});
+  renderer.setProps({quality: 'cinematic'});
   const rebuiltProps = renderer.render(options);
   t.notEqual(
     rebuiltProps.directionalShadowTexture,

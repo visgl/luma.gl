@@ -14,7 +14,7 @@ cascaded directional maps, spot arrays, point-light cube arrays, and the sampler
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {ShadowMapRenderer, shadow} from '@luma.gl/experimental';
 
-const renderer = new ShadowMapRenderer(device, {quality: 'Balanced'});
+const renderer = new ShadowMapRenderer(device, {quality: 'balanced'});
 const shaderInputs = new ShaderInputs({shadow});
 
 const shadowProps = renderer.render({
@@ -64,9 +64,9 @@ comparison filtering.
 
 | Quality | Cascades | Directional | Spot | Point face | Blocker/filter | Contact scale/steps |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Low | 3 | 1024 | 512 | 256 | 8 / 12 | 0.5 / 12 |
-| Balanced | 4 | 1536 | 1024 | 512 | 16 / 24 | 0.75 / 24 |
-| Cinematic | 4 | 2048 | 2048 | 1024 | 24 / 48 | 1.0 / 40 |
+| `low` | 3 | 1024 | 512 | 256 | 8 / 12 | 0.5 / 12 |
+| `balanced` | 4 | 1536 | 1024 | 512 | 16 / 24 | 0.75 / 24 |
+| `cinematic` | 4 | 2048 | 2048 | 1024 | 24 / 48 | 1.0 / 40 |
 
 Capacities default to one directional, one spot, and one point light. Configurable hard limits are
 one directional, four spot, and four point lights. `setProps()` rebuilds resources only when the

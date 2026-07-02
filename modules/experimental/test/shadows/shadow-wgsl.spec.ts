@@ -124,7 +124,7 @@ test('ShadowMapRenderer executes caster and receiver draws for every light view'
     return;
   }
   const renderer = new ShadowMapRenderer(device, {
-    quality: 'Low',
+    quality: 'low',
     directionalMapSize: 16,
     spotMapSize: 16,
     pointMapSize: 16

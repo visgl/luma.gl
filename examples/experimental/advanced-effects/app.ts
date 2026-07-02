@@ -25,7 +25,6 @@ import {
   createContactShadowShaderPassPipeline,
   shadow,
   ShadowMapRenderer,
-  type ShadowQuality,
   type ShadowShaderProps
 } from '@luma.gl/experimental';
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
@@ -79,7 +78,7 @@ type DebugView =
 
 type AdvancedEffectsSettings = {
   preset: PresetName;
-  quality: ShadowQuality;
+  shadowQuality: 'low' | 'balanced' | 'cinematic';
   animate: boolean;
   split: number;
   debugView: DebugView;
@@ -177,15 +176,15 @@ const PRESETS: Record<PresetName, Partial<AdvancedEffectsSettings>> = {
   }
 };
 
-const QUALITY_SCALE: Record<ShadowQuality, number> = {
-  Low: 0.35,
-  Balanced: 0.5,
-  Cinematic: 1
+const SHADOW_QUALITY_SCALE: Record<'low' | 'balanced' | 'cinematic', number> = {
+  low: 0.35,
+  balanced: 0.5,
+  cinematic: 1
 };
 
 const DEFAULT_SETTINGS: AdvancedEffectsSettings = {
   preset: 'Shadow Study',
-  quality: 'Balanced',
+  shadowQuality: 'balanced',
   animate: true,
   split: 0.52,
   debugView: 'Final',
@@ -518,7 +517,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
     this.device = device;
     this.city = new VisualizationCityModel(device);
-    this.shadowRenderer = new ShadowMapRenderer(device, {quality: this.settings.quality});
+    this.shadowRenderer = new ShadowMapRenderer(device, {quality: this.settings.shadowQuality});
     this.shadowCasters = new CityShadowCasterModels(
       device,
       this.city.buffers,
@@ -666,8 +665,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           inverseProjectionMatrix,
           lightDirectionView,
           frameIndex: this.frameIndex,
-          maxDistance: this.settings.quality === 'Cinematic' ? 5 : 3.5,
-          thickness: this.settings.quality === 'Low' ? 0.18 : 0.12
+          maxDistance: this.settings.shadowQuality === 'cinematic' ? 5 : 3.5,
+          thickness: this.settings.shadowQuality === 'low' ? 0.18 : 0.12
         },
         contactShadowComposite: {
           strength: 0.9,
@@ -680,26 +679,33 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         },
         ssaoEvaluate: {nearPlane: NEAR_PLANE, farPlane: FAR_PLANE},
         ssaoComposite: {debugMode: this.settings.debugView === 'AO' ? 1 : 0},
-        screenSpaceOutline: {thickness: this.settings.quality === 'Cinematic' ? 1.8 : 1.25},
+        screenSpaceOutline: {thickness: this.settings.shadowQuality === 'cinematic' ? 1.8 : 1.25},
         taaResolve: {
-          historyWeight: this.settings.quality === 'Low' ? 0.52 : 0.68,
+          historyWeight: this.settings.shadowQuality === 'low' ? 0.52 : 0.68,
           currentJitter: jitter,
           previousJitter
         },
-        motionBlur: {strength: 1.55, sampleCount: this.settings.quality === 'Cinematic' ? 16 : 9},
+        motionBlur: {
+          strength: 1.55,
+          sampleCount: this.settings.shadowQuality === 'cinematic' ? 16 : 9
+        },
         ssrTrace: {
           projectionMatrix,
           inverseProjectionMatrix,
           intensity: this.settings.preset === 'Reflective Night' ? 1.8 : 1.35,
-          maxDistance: this.settings.quality === 'Low' ? 55 : 95,
-          thickness: this.settings.quality === 'Cinematic' ? 0.48 : 0.72,
+          maxDistance: this.settings.shadowQuality === 'low' ? 55 : 95,
+          thickness: this.settings.shadowQuality === 'cinematic' ? 0.48 : 0.72,
           sampleCount:
-            this.settings.quality === 'Low' ? 20 : this.settings.quality === 'Cinematic' ? 56 : 36
+            this.settings.shadowQuality === 'low'
+              ? 20
+              : this.settings.shadowQuality === 'cinematic'
+                ? 56
+                : 36
         },
         ssrComposite: {debugMode: this.settings.debugView === 'Reflections' ? 1 : 0},
         volumetricFog: {
           density: this.settings.preset === 'Foggy Depth' ? 0.2 : 0.08,
-          historyWeight: this.settings.quality === 'Low' ? 0.08 : 0.18,
+          historyWeight: this.settings.shadowQuality === 'low' ? 0.08 : 0.18,
           time
         },
         advancedEffectsDisplay: {split: this.settings.split, debugMode}
@@ -723,11 +729,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   private createRenderer(): ShaderPassRenderer {
-    const scale = QUALITY_SCALE[this.settings.quality];
+    const scale = SHADOW_QUALITY_SCALE[this.settings.shadowQuality];
     const pipelines: ShaderPassPipeline[] = [];
     const shadowDebugView = isShadowDebugView(this.settings.debugView);
     if (this.settings.contactShadowsEnabled) {
-      pipelines.push(createContactShadowShaderPassPipeline({quality: this.settings.quality}));
+      pipelines.push(createContactShadowShaderPassPipeline({quality: this.settings.shadowQuality}));
     }
     if (!shadowDebugView && this.settings.ssaoEnabled) {
       pipelines.push(
@@ -793,7 +799,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
     this.comparisonSplitter?.setValue(this.settings.split);
     this.comparisonSplitter?.setVisible(this.settings.debugView === 'Final');
-    this.shadowRenderer.setProps({quality: this.settings.quality});
+    this.shadowRenderer.setProps({quality: this.settings.shadowQuality});
     this.rebuildRenderer();
   };
 }
@@ -1038,11 +1044,11 @@ function makeSettingsSchema(): SettingsSchema {
             options: Object.keys(PRESETS)
           },
           {
-            name: 'quality',
-            label: 'Quality',
+            name: 'shadowQuality',
+            label: 'Shadow Quality',
             type: 'select',
             persist: 'none',
-            options: Object.keys(QUALITY_SCALE)
+            options: Object.keys(SHADOW_QUALITY_SCALE)
           },
           {
             name: 'debugView',

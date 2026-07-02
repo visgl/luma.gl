@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-/** Preset controlling shadow-map resolution and sampling cost. */
-export type ShadowQuality = 'Low' | 'Balanced' | 'Cinematic';
-
 export type ShadowQualitySettings = {
   cascadeCount: number;
   directionalMapSize: number;
@@ -18,9 +15,9 @@ export type ShadowQualitySettings = {
 
 /** Fixed quality settings shared by shadow maps, PCSS and contact refinement. */
 export const SHADOW_QUALITY_SETTINGS: Readonly<
-  Record<ShadowQuality, Readonly<ShadowQualitySettings>>
+  Record<'low' | 'balanced' | 'cinematic', Readonly<ShadowQualitySettings>>
 > = Object.freeze({
-  Low: Object.freeze({
+  low: Object.freeze({
     cascadeCount: 3,
     directionalMapSize: 1024,
     spotMapSize: 512,
@@ -30,7 +27,7 @@ export const SHADOW_QUALITY_SETTINGS: Readonly<
     contactScale: 0.5,
     contactStepCount: 12
   }),
-  Balanced: Object.freeze({
+  balanced: Object.freeze({
     cascadeCount: 4,
     directionalMapSize: 1536,
     spotMapSize: 1024,
@@ -40,7 +37,7 @@ export const SHADOW_QUALITY_SETTINGS: Readonly<
     contactScale: 0.75,
     contactStepCount: 24
   }),
-  Cinematic: Object.freeze({
+  cinematic: Object.freeze({
     cascadeCount: 4,
     directionalMapSize: 2048,
     spotMapSize: 2048,

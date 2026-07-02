@@ -13,7 +13,7 @@ import type {
 import {Device, Texture as TextureResource} from '@luma.gl/core';
 import {Matrix4, radians} from '@math.gl/core';
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
-import {SHADOW_QUALITY_SETTINGS, type ShadowQuality} from './shadow-quality';
+import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 
 const MAX_DIRECTIONAL_LIGHTS = 1;
 const MAX_SPOT_LIGHTS = 4;
@@ -75,7 +75,7 @@ export type PointShadowLight = ShadowBiasProps & {
 
 /** Resource capacities and quality defaults owned by {@link ShadowMapRenderer}. */
 export type ShadowMapRendererProps = {
-  quality?: ShadowQuality;
+  quality?: 'low' | 'balanced' | 'cinematic';
   directionalLightCapacity?: number;
   spotLightCapacity?: number;
   pointLightCapacity?: number;
@@ -108,7 +108,7 @@ export type ShadowRenderOptions = {
 
 /** Fully resolved props returned by the renderer and consumed by the `shadow` shader module. */
 export type ShadowShaderProps = {
-  quality: ShadowQuality;
+  quality: 'low' | 'balanced' | 'cinematic';
   cascadeCount: number;
   cascadeSplits: readonly number[];
   blockerSampleCount: number;
@@ -509,7 +509,7 @@ function resolveShadowMapRendererProps(
   device: Device,
   props: ShadowMapRendererProps
 ): ResolvedShadowMapRendererProps {
-  const quality = props.quality || 'Balanced';
+  const quality = props.quality || 'balanced';
   const qualitySettings = SHADOW_QUALITY_SETTINGS[quality];
   if (!qualitySettings) {
     throw new Error(`Unknown shadow quality: ${String(quality)}.`);

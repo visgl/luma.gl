@@ -32,7 +32,6 @@ export {wboit, wboitPlugin} from './oit/wboit';
 export type {WBOITCaptureContext, WBOITRenderOptions, WBOITSupport} from './oit/wboit-renderer';
 export {getWBOITSupport, WBOITRenderer} from './oit/wboit-renderer';
 
-export type {ShadowQuality} from './shadows/shadow-quality';
 export type {
   DirectionalShadowLight,
   PointShadowFace,

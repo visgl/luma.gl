@@ -5,7 +5,7 @@
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
 import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
-import {SHADOW_QUALITY_SETTINGS, type ShadowQuality} from './shadow-quality';
+import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1];
 
@@ -265,9 +265,9 @@ fn contactShadowComposite_sampleColor(
 
 /** Builds the quality-scaled trace, bilateral cleanup, and direct-light composite pipeline. */
 export function createContactShadowShaderPassPipeline(
-  options: {quality?: ShadowQuality} = {}
+  options: {quality?: 'low' | 'balanced' | 'cinematic'} = {}
 ): ShaderPassPipeline<'contactShadowRaw' | 'contactShadowScratch' | 'contactShadowFiltered'> {
-  const quality = options.quality || 'Balanced';
+  const quality = options.quality || 'balanced';
   const settings = SHADOW_QUALITY_SETTINGS[quality];
   if (!settings) {
     throw new Error(`Unknown shadow quality: ${String(quality)}.`);
