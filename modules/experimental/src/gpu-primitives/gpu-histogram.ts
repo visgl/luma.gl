@@ -150,6 +150,52 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
   let maximum: ${shaderType} = ${getLiteral(literalDomain[1], props.input.format)};`;
   const finiteCondition =
     props.input.format === 'float32' ? 'value == value && abs(value) <= 3.402823466e+38' : 'true';
+  const integerMultiplierBitCount = 32 - Math.clz32(props.output.length);
+  const integerBinningFunction =
+    props.input.format === 'float32'
+      ? ''
+      : `fn multiplyDivideFloor(numerator: u32, multiplier: u32, denominator: u32) -> u32 {
+  var quotient = 0u;
+  var remainder = 0u;
+  var bitIndex = ${integerMultiplierBitCount}u;
+  loop {
+    bitIndex = bitIndex - 1u;
+    // Double and add modulo denominator without overflowing u32.
+    let doubledThreshold = denominator - remainder;
+    if (remainder >= doubledThreshold) {
+      remainder = remainder - doubledThreshold;
+      quotient = quotient * 2u + 1u;
+    } else {
+      remainder = remainder * 2u;
+      quotient = quotient * 2u;
+    }
+    if (((multiplier >> bitIndex) & 1u) != 0u) {
+      let additionThreshold = denominator - numerator;
+      if (remainder >= additionThreshold) {
+        remainder = remainder - additionThreshold;
+        quotient = quotient + 1u;
+      } else {
+        remainder = remainder + numerator;
+      }
+    }
+    if (bitIndex == 0u) { break; }
+  }
+  return quotient;
+}`;
+  const binCalculation =
+    props.input.format === 'float32'
+      ? `let ratio = (value - minimum) / (maximum - minimum);
+          binIndex = min(u32(ratio * f32(BIN_COUNT)), BIN_COUNT - 1u);`
+      : props.input.format === 'uint32'
+        ? 'binIndex = multiplyDivideFloor(value - minimum, BIN_COUNT, maximum - minimum);'
+        : `let orderedValue = bitcast<u32>(value) ^ 0x80000000u;
+          let orderedMinimum = bitcast<u32>(minimum) ^ 0x80000000u;
+          let orderedMaximum = bitcast<u32>(maximum) ^ 0x80000000u;
+          binIndex = multiplyDivideFloor(
+            orderedValue - orderedMinimum,
+            BIN_COUNT,
+            orderedMaximum - orderedMinimum
+          );`;
   const accumulation = local
     ? `if (accepted) { atomicAdd(&localCounts[binIndex], 1u); }
   workgroupBarrier();
@@ -167,6 +213,7 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 ${domainBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
+${integerBinningFunction}
 
 @compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>,
@@ -188,8 +235,7 @@ ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}
         if (value == maximum) {
           binIndex = BIN_COUNT - 1u;
         } else {
-          let ratio = (f32(value) - f32(minimum)) / (f32(maximum) - f32(minimum));
-          binIndex = min(u32(ratio * f32(BIN_COUNT)), BIN_COUNT - 1u);
+          ${binCalculation}
         }
       }
     }

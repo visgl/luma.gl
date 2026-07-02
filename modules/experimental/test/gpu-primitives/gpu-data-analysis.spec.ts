@@ -72,6 +72,47 @@ test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
     'literal uint32 domain includes exact maximum in final bin'
   );
   t.deepEqual(
+    await runHistogram(
+      device,
+      Uint32Array.from([0, 0x7fffffff, 0x80000000, 0xffffffff]),
+      'uint32',
+      2,
+      [0, 0xffffffff]
+    ),
+    [2, 2],
+    'full-range uint32 bin boundaries stay in integer space'
+  );
+  t.deepEqual(
+    await runHistogram(
+      device,
+      Int32Array.from([-0x80000000, -1, 0, 0x7fffffff]),
+      'sint32',
+      2,
+      [-0x80000000, 0x7fffffff]
+    ),
+    [2, 2],
+    'full-range sint32 bin boundaries stay in integer space'
+  );
+  let randomState = 0x1234abcd;
+  const fullRangeValues = Uint32Array.from({length: 1025}, (_, index) => {
+    randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+    return index === 1024 ? 0xffffffff : randomState;
+  });
+  const fullRangeBinCount = 257;
+  const expectedFullRangeCounts = Array.from({length: fullRangeBinCount}, () => 0);
+  for (const value of fullRangeValues) {
+    const binIndex =
+      value === 0xffffffff
+        ? fullRangeBinCount - 1
+        : Number((BigInt(value) * BigInt(fullRangeBinCount)) / 0xffffffffn);
+    expectedFullRangeCounts[binIndex]++;
+  }
+  t.deepEqual(
+    await runHistogram(device, fullRangeValues, 'uint32', fullRangeBinCount, [0, 0xffffffff]),
+    expectedFullRangeCounts,
+    'wide integer multiply/divide matches an exact BigInt reference above 256 bins'
+  );
+  t.deepEqual(
     await runHistogram(device, Int32Array.from([-2, -1, 0, 1, 2]), 'sint32', 2, [-2, 2], true),
     [2, 3],
     'GPU sint32 domain is accepted'
