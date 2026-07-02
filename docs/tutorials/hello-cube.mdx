@@ -1,201 +1,52 @@
 import {DeviceTabs} from '@site/src/react-luma';
 import {HelloCubeExample} from '@site/src/examples';
+import {ExampleSource} from '@site/src/components/docs/example-source';
 import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 
 # Hello Cube
 
 <TutorialDocsTabs group="fundamentals" active="hello-cube" />
 
-This tutorial demonstrates how to render a spinning textured cube using luma.gl's cross-platform rendering APIs.
+**Goal:** expand the triangle model with geometry, a sampled texture, depth testing,
+and uniforms that change every frame.
 
 <DeviceTabs />
 <HelloCubeExample showHeader={false} showStats={false} />
 
-It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
+## From a draw to a scene object
 
-The cube shaders sample from a 2D texture and apply a model-view-projection
-matrix. A `UniformStore` tracks that matrix so it can be updated every frame as
-the cube rotates. The texture is loaded asynchronously and bound through the
-model's `bindings` property along with the uniform buffer.
+`CubeGeometry` supplies positions, texture coordinates, and indices. `Model` converts
+that geometry into GPU buffers and associates the attributes with the locations declared
+by the WGSL and GLSL vertex shaders.
 
-The complete source for this example is shown below. It builds a `Model` with WGSL
-and GLSL shaders, manages uniforms with a `UniformStore`, and draws a `CubeGeometry`
-inside an `AnimationLoopTemplate`.
+A `DynamicTexture` begins loading the image immediately. The model binds it by name, so
+the WebGPU shader's `@binding(auto)` declarations and the WebGL2 sampler uniform can use
+the same JavaScript binding object.
 
-In WGSL, the example uses `@binding(auto)`, so the JavaScript side only needs
-to provide bindings by name.
+## Updating uniforms
 
-```typescript
-import type {NumberArray, VariableShaderType} from '@luma.gl/core';
-import {Texture, UniformStore} from '@luma.gl/core';
-import {
-  AnimationLoopTemplate,
-  makeAnimationLoop,
-  type AnimationProps,
-  Model,
-  CubeGeometry,
-  loadImageBitmap,
-  DynamicTexture
-} from '@luma.gl/engine';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+The model-view-projection matrix changes every frame as the cube rotates. `UniformStore`
+maintains the typed CPU values and the corresponding managed GPU uniform buffer. The
+frame performs three steps:
 
-import {Matrix4} from '@math.gl/core';
+1. Recalculate the matrix for the current aspect ratio and animation tick.
+2. Call `setUniforms` with the new value.
+3. Draw the model in a pass with color and depth attachments.
 
-const WGSL_SHADER = /* WGSL */ `
-struct Uniforms {
-  modelViewProjectionMatrix : mat4x4<f32>,
-};
+Depth writes and `less-equal` comparison ensure the cube's hidden faces do not overwrite
+nearer surfaces.
 
-@group(0) @binding(auto) var<uniform> app : Uniforms;
-@group(0) @binding(auto) var uTexture : texture_2d<f32>;
-@group(0) @binding(auto) var uTextureSampler : sampler;
+<ExampleSource example="tutorials/hello-cube" />
 
-struct VertexInputs {
-  @location(0) positions : vec4<f32>,
-  @location(1) texCoords : vec2<f32>
-};
+## Common problems
 
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) fragUV : vec2<f32>,
-  @location(1) fragPosition: vec4<f32>,
-}
+- A black cube usually indicates that the image failed to load; check the asset URL.
+- Distorted faces usually indicate an attribute layout that does not match the shader.
+- Missing faces or incorrect overlap often means depth testing or the depth attachment is
+  absent.
 
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  outputs.Position = app.modelViewProjectionMatrix * inputs.positions;
-  outputs.fragUV = inputs.texCoords;
-  outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
-  return outputs;
-}
+## Summary
 
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  return textureSample(uTexture, uTextureSampler, inputs.fragUV);
-}
-`;
-
-// GLSL
-const VS_GLSL = /* glsl */ `
-#version 300 es
-#define SHADER_NAME cube-vs
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-} app;
-
-layout(location=0) in vec3 positions;
-layout(location=1) in vec2 texCoords;
-
-out vec2 fragUV;
-out vec4 fragPosition;
-
-void main() {
-  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
-  fragUV = texCoords;
-  fragPosition = 0.5 * (vec4(positions, 1.) + vec4(1., 1., 1., 1.));
-}
-`;
-
-const FS_GLSL = /* glsl */ `
-#version 300 es
-#define SHADER_NAME cube-fs
-precision highp float;
-
-uniform sampler2D uTexture;
-
-in vec2 fragUV;
-in vec4 fragPosition;
-
-layout (location=0) out vec4 fragColor;
-
-void main() {
-  fragColor = texture(uTexture, vec2(fragUV.x, 1.0 - fragUV.y));
-}
-`;
-
-type AppUniforms = {
-  mvpMatrix: NumberArray;
-};
-
-const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
-  uniformTypes: {
-    mvpMatrix: 'mat4x4<f32>'
-  }
-};
-
-const eyePosition = [0, 0, -4];
-
-class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  mvpMatrix = new Matrix4();
-  viewMatrix = new Matrix4().lookAt({eye: eyePosition});
-  model: Model;
-  uniformStore = new UniformStore<{app: AppUniforms}>({app});
-
-  constructor({device}: AnimationProps) {
-    super();
-
-    const texture = new DynamicTexture(device, {
-      usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
-      data: loadImageBitmap('vis-logo.png'),
-      flipY: true,
-      mipmaps: true,
-      sampler: device.createSampler({
-        minFilter: 'linear',
-        magFilter: 'linear',
-        mipmapFilter: 'linear'
-      })
-    });
-
-    this.model = new Model(device, {
-      id: 'rotating-cube',
-      source: WGSL_SHADER,
-      vs: VS_GLSL,
-      fs: FS_GLSL,
-      geometry: new CubeGeometry({indices: false}),
-      bindings: {
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-        uTexture: texture
-      },
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal'
-      }
-    });
-  }
-
-  onFinalize() {
-    this.model.destroy();
-    this.uniformStore.destroy();
-  }
-
-  onRender({device, aspect, tick}: AnimationProps) {
-    this.mvpMatrix
-      .perspective({fovy: Math.PI / 3, aspect})
-      .multiplyRight(this.viewMatrix)
-      .rotateX(tick * 0.01)
-      .rotateY(tick * 0.013);
-
-    this.uniformStore.setUniforms({
-      app: {mvpMatrix: this.mvpMatrix}
-    });
-
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
-    this.model.draw(renderPass);
-    renderPass.end();
-  }
-}
-
-const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
-  adapters: [webgpuAdapter, webgl2Adapter]
-});
-animationLoop.start();
-```
-
-During rendering the animation loop recalculates the matrix, updates the uniform
-buffer and draws the cube inside a render pass. The fragment shader samples the
-bound texture to shade each face.
-
-Running the application will display a rotating cube textured with the vis.gl logo.
+You combined geometry, asynchronous texture data, bindings, uniforms, and depth state in
+one reusable model. Next, [Hello Instancing](/docs/tutorials/hello-instancing) draws many
+objects with one model and one draw call.

@@ -1357,6 +1357,7 @@ export const HelloTriangleExample: React.FC = props => (
     template={HelloTriangleApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1372,6 +1373,7 @@ export const HelloTriangleGeometryExample: React.FC = props => (
     template={HelloTriangleGeometryApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1383,6 +1385,7 @@ export const HelloCubeExample: React.FC = props => (
     template={HelloCubeApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1394,6 +1397,7 @@ export const InstancedCubesExample: React.FC = props => (
     template={InstancedCubesApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1405,6 +1409,7 @@ export const TwoCubesExample: React.FC = props => (
     template={TwoCubesApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1416,6 +1421,7 @@ export const LightingExample: React.FC = props => (
     template={LightingApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1427,6 +1433,7 @@ export const HelloGLTFExample: React.FC = props => (
     template={HelloGLTFApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1438,6 +1445,7 @@ export const HelloInstancingExample: React.FC = props => (
     template={HelloInstancingApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1449,6 +1457,7 @@ export const ShaderHooksExample: React.FC = props => (
     template={ShaderHooksApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1460,6 +1469,7 @@ export const ShaderPluginsExample: React.FC = props => (
     template={ShaderPluginsApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1471,6 +1481,7 @@ export const ShaderModulesExample: React.FC = props => (
     template={ShaderModulesApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     {...props}
   />
 );
@@ -1482,6 +1493,7 @@ export const TransformFeedbackExample: React.FC = props => (
     template={TransformFeedbackApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     devices={['webgl2']}
     {...props}
   />
@@ -1494,6 +1506,7 @@ export const TransformExample: React.FC = props => (
     template={TransformApp}
     config={exampleConfig}
     showStats={false}
+    stackBlitz
     devices={['webgl2']}
     {...props}
   />

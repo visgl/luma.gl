@@ -1,151 +1,64 @@
 import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 
-# Setup
+# Fundamentals
 
 <TutorialDocsTabs group="fundamentals" active="setup" />
 
-These tutorials use the current luma.gl v9.3 API. The runnable sources in
-[`examples/tutorials`](https://github.com/visgl/luma.gl/tree/master/examples/tutorials)
-remain the canonical reference for the code shown on these pages.
+This course builds a portable renderer one concept at a time. Every lesson includes a
+live example that can switch between WebGPU and WebGL2 when both backends support the
+feature. The files shown on each page are loaded from the runnable examples in this
+repository, so the documentation and tested code stay in sync.
 
-This tutorial will walk you through setting up a basic development project for luma.gl applications using [Vite](https://vitejs.dev/) tooling. Later tutorials will build on this one, so we recommend going through it first.
+Before starting, complete [Getting Started](/docs/getting-started). Familiarity with
+TypeScript and basic GPU concepts is helpful; the tutorials explain the luma.gl object
+model as it is introduced.
 
-**Note:** It is assumed for these tutorials that you have some basic knowledge of GPU APIs and JavaScript programming.
+## Rendering foundations
 
-## A Minimal Application
+<div className="docs-api-card-grid">
+  <a className="docs-api-card" href="/docs/tutorials/hello-triangle">
+    <span className="docs-api-card__kind">1 · Beginner</span>
+    <strong>Hello Triangle</strong>
+    <span>Create a Model, supply portable shaders, and issue a draw inside a render pass.</span>
+    <span className="docs-api-card__meta">Model · shaders · render passes</span>
+  </a>
+  <a className="docs-api-card" href="/docs/tutorials/hello-cube">
+    <span className="docs-api-card__kind">2 · Beginner</span>
+    <strong>Hello Cube</strong>
+    <span>Add geometry, textures, depth testing, and uniforms that update every frame.</span>
+    <span className="docs-api-card__meta">Geometry · textures · uniforms</span>
+  </a>
+  <a className="docs-api-card" href="/docs/tutorials/hello-instancing">
+    <span className="docs-api-card__kind">3 · Intermediate</span>
+    <strong>Hello Instancing</strong>
+    <span>Draw many copies of one geometry using per-instance attributes.</span>
+    <span className="docs-api-card__meta">Buffers · layouts · instancing</span>
+  </a>
+  <a className="docs-api-card" href="/docs/tutorials/lighting">
+    <span className="docs-api-card__kind">4 · Intermediate</span>
+    <strong>Lighting</strong>
+    <span>Compose reusable shader functionality and supply material inputs.</span>
+    <span className="docs-api-card__meta">Shader modules · materials</span>
+  </a>
+</div>
 
-Create a new folder on your file system to store your new project.
-Then let's create a file `app.ts` in the project root folder and add the following to it:
+## Reusable shaders
 
-```typescript
-import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate} from '@luma.gl/engine';
+- [Shader Modules](/docs/tutorials/shader-modules) package reusable shader code and typed inputs.
+- [Shader Hooks](/docs/tutorials/shader-hooks) expose deliberate extension points.
+- [Shader Plugins](/docs/tutorials/shader-plugins) combine modules, injections, and application configuration.
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  override onRender({device}: AnimationProps) {
-    const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
-    });
-    renderPass.end();
-  }
-}
-```
+## GPU-driven updates
 
-This will be the basic structure of most luma.gl applications. `AnimationLoopTemplate`
-provides the lifecycle hooks, while the page entry point chooses the rendering
-backend and starts the loop.
+- [Transform](/docs/tutorials/transform) runs data transformations on portable GPU resources.
+- [Transform Feedback](/docs/tutorials/transform-feedback) demonstrates the WebGL2-specific feedback path.
+- [External WebGL Context](/docs/tutorials/external-webgl-context) integrates luma.gl with an existing renderer.
 
-Now create an `index.html` file to bootstrap the application:
+## What the examples guarantee
 
-```html
-<!doctype html>
-<script type="module">
-  import {makeAnimationLoop} from '@luma.gl/engine';
-  import {webgpuAdapter} from '@luma.gl/webgpu';
-  import {webgl2Adapter} from '@luma.gl/webgl';
-  import AppAnimationLoopTemplate from './app.ts';
+- Tutorial application sources are typechecked by the repository test setup.
+- The backend selector reflects the backends supported by each example.
+- Full source links point to the same files rendered in the documentation.
 
-  makeAnimationLoop(AppAnimationLoopTemplate, {
-    adapters: [webgpuAdapter, webgl2Adapter]
-  }).start();
-</script>
-<body style="margin: 0;"></body>
-```
-
-When the page loads, luma.gl will try `webgpuAdapter` first and fall back to
-`webgl2Adapter` when WebGPU is unavailable.
-
-## Build Tooling
-
-We will need the following files in the project folder:
-
-```
-- package.json
-- vite.config.ts
-- app.ts
-- index.html
-```
-
-From the command line, first run
-
-```bash
-mkdir luma-demo
-cd luma-demo
-npm init -y
-```
-
-to set up our project directory and initialize npm.
-
-Next run
-
-```bash
-npm i @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu
-npm i -D vite typescript
-```
-
-to install our dependencies.
-
-Open the file `package.json` (created when we initialized npm), and add the following to the `scripts` block:
-
-```json
-{
-  "scripts": {
-    "start": "vite",
-    "build": "tsc && vite build",
-    "serve": "vite preview"
-  },
-  "dependencies": {
-    "@luma.gl/engine": "9.3.0-alpha.6",
-    "@luma.gl/webgl": "9.3.0-alpha.6",
-    "@luma.gl/webgpu": "9.3.0-alpha.6"
-  },
-  "devDependencies": {
-    "typescript": "^5.5.0",
-    "vite": "^8.0.0"
-  }
-}
-```
-
-The full contents of the `package.json` should be the following (dependency version numbers might differ):
-
-```json
-{
-  "name": "luma-demo",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "start": "vite",
-    "build": "tsc && vite build",
-    "serve": "vite preview"
-  },
-  "dependencies": {
-    "@luma.gl/engine": "9.3.0-alpha.6",
-    "@luma.gl/webgl": "9.3.0-alpha.6",
-    "@luma.gl/webgpu": "9.3.0-alpha.6"
-  },
-  "devDependencies": {
-    "typescript": "^5.5.0",
-    "vite": "^8.0.0"
-  }
-}
-```
-
-Create a file [`vite.config.ts`](https://vitejs.dev/config/) in the project root and add the following to it:
-
-```typescript
-import {defineConfig} from 'vite';
-
-export default defineConfig({
-  server: {open: true}
-});
-```
-
-and run
-
-```bash
-npm start
-```
-
-from the command line. If all went well, a tab should open in your default browser,
-and you should see a black canvas fill the page.
+After the course, use [What's Next?](/docs/tutorials/whats-next) to choose a deeper API
+guide or a larger example.

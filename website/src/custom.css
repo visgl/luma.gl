@@ -256,6 +256,56 @@ html[data-theme='dark'] .markdown .docs-markdown-table__table th code {
   line-height: 1.4;
 }
 
+.markdown .docs-example-source {
+  border: 1px solid var(--docs-table-border);
+  border-radius: 10px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.markdown .docs-example-source__header {
+  align-items: center;
+  background: var(--docs-table-shell-background);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+}
+
+.markdown .docs-example-source__tabs {
+  background: var(--docs-table-shell-background);
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding: 0 0.75rem;
+}
+
+.markdown .docs-example-source__tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: var(--ifm-font-color-base);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.65rem 0.75rem;
+  white-space: nowrap;
+}
+
+.markdown .docs-example-source__tabs button.is-active {
+  border-bottom-color: var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+  font-weight: 700;
+}
+
+.markdown .docs-example-source > div[class*='codeBlockContainer'] {
+  border-radius: 0;
+  margin: 0;
+}
+
+.markdown .docs-example-source__error {
+  color: var(--ifm-color-danger-dark);
+  margin: 1rem;
+}
+
 html[data-theme='dark'] .markdown .docs-api-card__kind,
 html[data-theme='dark'] .markdown .docs-api-card__meta {
   color: rgba(226, 232, 240, 0.72);

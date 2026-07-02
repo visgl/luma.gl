@@ -1,183 +1,47 @@
 import {DeviceTabs} from '@site/src/react-luma';
 import {HelloInstancingExample} from '@site/src/examples';
+import {ExampleSource} from '@site/src/components/docs/example-source';
 import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 
 # Hello Instancing
 
 <TutorialDocsTabs group="fundamentals" active="hello-instancing" />
 
-This tutorial illustrates _instanced_ drawing with luma.gl using both WGSL and GLSL shaders and also shows how a custom luma.gl _shader module_ can be used to pass colors.
+**Goal:** draw multiple copies of one geometry with one model and one draw call.
 
 <DeviceTabs />
 <HelloInstancingExample showHeader={false} showStats={false} />
 
-It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
+## Shared and per-instance data
 
-_Instancing_ lets the GPU draw many copies of the same geometry with a single draw call. When rendering many similar geometries this can be significant speedups.
+Instancing separates attributes by update frequency:
 
-In this sample, each triangle shares the same vertex data while per-instance
-attributes provide unique colors and offsets. A small `color` shader module passes
-those colors from the vertex shader to the fragment shader.
+- Vertex positions use the default `vertex` step mode and repeat for every instance.
+- Colors and offsets use `stepMode: 'instance'`, so the GPU advances those values once
+  per triangle rather than once per vertex.
 
-The code below creates a `Model` with per-instance attributes to draw four colored
-triangles inside an `AnimationLoopTemplate`.
+The model sets `vertexCount: 3` and `instanceCount: 4`. The resulting draw processes the
+same three positions four times, pairing each copy with a different color and offset.
 
-A luma.gl shader module essentially contains some shader code fragments that will be inserted into our vertex and fragment shaders. Shader modules usually define shader functions that implement generic functionality that can be reused in different shader programs.
+## Buffer layout is the contract
 
-In this case, we're defining a minimal shader module to pass a color from the vertex shader to the fragment shader. This module also demonstrates a common convention in luma.gl to prefix function and variable names in a shader module with the name of the module to avoid name collisions.
+`bufferLayout` maps JavaScript buffer names to shader attributes and describes the stored
+format. A layout mismatch can read the correct bytes with the wrong stride or component
+count, so keep memory formats such as `float32x2` separate from shader-facing types.
 
-Now let's update our vertex and fragment shaders to use the shader module functions:
+The example includes both WGSL and GLSL. The portable application constructs identical
+buffers and bindings for either backend.
 
-```typescript
-import {Buffer} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, makeAnimationLoop} from '@luma.gl/engine';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+<ExampleSource example="tutorials/hello-instancing" />
 
-const colorShaderModule = {
-  name: 'color',
-  source: /* wgsl */ `
-  // TODO: wgsl not yet implemented
-  // struct ColorVaryings {
-  //   color: vec3<f32>,
-  // };
+## When to use instancing
 
-  // @vertex
-  // fn color_setColor(color: vec3f, input: ColorVaryings) -> ColorVaryings {
-  //   var output = input;
-  //   output.color = color;
-  //   return output;
-  // }
+Instancing is a strong fit when many objects share geometry and shader logic but differ
+in transforms, colors, picking identifiers, or other small records. It reduces draw-call
+overhead and avoids duplicating shared vertex data.
 
-  // @fragment
-  // fn color_getColor(input: ColorVaryings) -> vec4<f32> {
-  //   return vec4<f32>(input.color, 1.0);
-  // }
-  `,
-  vs: /* glsl */ `
-out vec3 color_vColor;
+## Summary
 
-void color_setColor(vec3 color) {
-  color_vColor = color;
-}
-  `,
-  fs: /* glsl */ `
-in vec3 color_vColor;
-
-vec3 color_getColor() {
-  return color_vColor;
-}
-  `
-};
-
-const source = /* wgsl */ `
-struct VertexInputs {
-  @location(0) position: vec2<f32>,
-  @location(1) instanceColor: vec3<f32>,
-  @location(2) instanceOffset: vec2<f32>,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position: vec4<f32>,
-  @location(0) color: vec3<f32>,
-}
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs: FragmentInputs;
-  outputs.color = inputs.instanceColor;
-  outputs.Position = vec4<f32>(inputs.position + inputs.instanceOffset, 0.0, 1.0);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  return vec4<f32>(inputs.color, 1.0);
-}
-`;
-
-const vs = /* glsl */ `
-#version 300 es
-in vec2 position;
-in vec3 instanceColor;
-in vec2 instanceOffset;
-
-void main() {
-  color_setColor(instanceColor);
-  gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
-}
-`;
-
-const fs = /* glsl */ `
-#version 300 es
-out vec4 fragColor;
-void main() {
-  fragColor = vec4(color_getColor(), 1.0);
-}
-`;
-
-class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  model: Model;
-  positionBuffer: Buffer;
-  colorBuffer: Buffer;
-  offsetBuffer: Buffer;
-
-  constructor({device}: AnimationProps) {
-    super();
-
-    this.positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
-    this.colorBuffer = device.createBuffer(
-      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0])
-    );
-    this.offsetBuffer = device.createBuffer(
-      new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5])
-    );
-
-    this.model = new Model(device, {
-      source,
-      vs,
-      fs,
-      modules: [colorShaderModule],
-      bufferLayout: [
-        {name: 'position', format: 'float32x2'},
-        {name: 'instanceColor', format: 'float32x3', stepMode: 'instance'},
-        {name: 'instanceOffset', format: 'float32x2', stepMode: 'instance'}
-      ],
-      attributes: {
-        position: this.positionBuffer,
-        instanceColor: this.colorBuffer,
-        instanceOffset: this.offsetBuffer
-      },
-      vertexCount: 3,
-      instanceCount: 4,
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal'
-      }
-    });
-  }
-
-  onFinalize() {
-    this.model.destroy();
-    this.positionBuffer.destroy();
-    this.colorBuffer.destroy();
-    this.offsetBuffer.destroy();
-  }
-
-  onRender({device}: AnimationProps) {
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
-    this.model.draw(renderPass);
-    renderPass.end();
-  }
-}
-
-const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
-  adapters: [webgpuAdapter, webgl2Adapter]
-});
-animationLoop.start();
-```
-
-Note that geometry vertex positions are stored once in one separate GPU buffer, while two additional buffers supply
-per-instance colors and offsets. The buffer layout marks those attributes with `stepMode: 'instance'` so they advance once per triangle. A single draw call then renders four instances in different screen quadrants.
-
-Running the application will draw four colored triangles using instancing.
+You used per-vertex and per-instance buffers in one model. Continue with
+[Shader Modules](/docs/tutorials/shader-modules) to package shader behavior for reuse,
+or [Lighting](/docs/tutorials/lighting) to apply that composition to materials.

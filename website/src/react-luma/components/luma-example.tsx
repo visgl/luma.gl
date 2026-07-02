@@ -50,7 +50,9 @@ type LumaExampleProps = React.PropsWithChildren<{
   config: unknown;
   directory?: string;
   sourceDirectory?: string;
+  sourceFiles?: string[];
   sourcePath?: string;
+  stackBlitz?: boolean;
   style?: CSSProperties;
   container?: string;
   panel?: boolean;
@@ -137,7 +139,9 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
         title={props.title}
         directory={props.directory}
         sourceDirectory={props.sourceDirectory}
+        sourceFiles={props.sourceFiles}
         sourcePath={props.sourcePath}
+        stackBlitz={props.stackBlitz}
         style={{pointerEvents: 'auto'}}
       >
         {props.children}
@@ -321,7 +325,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           title={props.title}
           directory={props.directory}
           sourceDirectory={props.sourceDirectory}
+          sourceFiles={props.sourceFiles}
           sourcePath={props.sourcePath}
+          stackBlitz={props.stackBlitz}
           devices={props.devices}
         >
           {info && props.templateInfoPlacement !== 'page' ? (

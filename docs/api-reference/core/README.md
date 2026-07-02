@@ -4,6 +4,10 @@ The `@luma.gl/core` module provides an abstract API that enables application cod
 to portably work with both WebGPU and WebGL. The main export is the `Device` class
 which provides methods for creating GPU resources such as `Buffer`, `Texture`, `Shader` etc.
 
+The pages in this section provide curated explanations and portability guidance. For
+the exact public TypeScript declarations, overloads, inheritance, and source locations,
+use the [generated `@luma.gl/core` API index](/docs/api-reference/generated/core).
+
 ## Installing adapters
 
 The `@luma.gl/core` module is not usable on its own. A device adapter module must

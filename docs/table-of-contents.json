@@ -1,12 +1,9 @@
 [
   "README",
   "getting-started",
-  "whats-new",
-  "upgrade-guide",
-  "faq",
   {
     "type": "category",
-    "label": "Tutorials",
+    "label": "Fundamentals",
     "items": [
       "tutorials/README",
       "tutorials/hello-triangle",
@@ -22,6 +19,9 @@
       "tutorials/whats-next"
     ]
   },
+  "faq",
+  "whats-new",
+  "upgrade-guide",
   {
     "type": "category",
     "label": "API Guide",
