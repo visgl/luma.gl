@@ -10,6 +10,7 @@
   "references": [
     {"path": "../core"},
     {"path": "../engine"},
-    {"path": "../shadertools"}
+    {"path": "../shadertools"},
+    {"path": "../tables"}
   ]
 }

@@ -22,6 +22,17 @@ yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertool
 
 - [WebXR](/docs/api-reference/experimental/webxr): WebGL-only session, frame, and raw camera helpers.
 
+## GPU Primitives and Command Graphs
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+The [GPU Primitives and Command Graphs guide](/docs/api-reference/experimental/gpu-primitives)
+introduces explicit command scheduling, typed table-backed graph views, hierarchical scan, stable
+compaction, and GPU-written indirect draw commands.
+
 ## Order-independent Transparency
 
 - [`ABufferRenderer`](/docs/api-reference/experimental/a-buffer-renderer) captures, sorts, and

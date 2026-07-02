@@ -6,7 +6,7 @@ Experimental features for luma.gl.
 These are experimental features that may change or be removed at any time. Use at your own risk.
 :::
 
-The package currently includes experimental order-independent transparency renderers, packed
-pixel-format helpers, and v10 work-in-progress WebGL-only WebXR session, frame, and raw camera
-helpers. See the [luma.gl API reference](https://luma.gl/docs/api-reference/experimental) for
-documentation.
+The package currently includes experimental GPU command graphs and data-parallel primitives,
+order-independent transparency renderers, packed pixel-format helpers, and v10 work-in-progress
+WebGL-only WebXR session, frame, and raw camera helpers. See the
+[luma.gl API reference](https://luma.gl/docs/api-reference/experimental) for documentation.

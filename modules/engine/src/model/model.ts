@@ -414,6 +414,8 @@ export class Model {
     this.topology = this.props.topology;
     this.bufferLayout = this.props.bufferLayout;
     this.parameters = this.props.parameters;
+    this._colorAttachmentFormats = this.props.colorAttachmentFormats;
+    this._depthStencilAttachmentFormat = this.props.depthStencilAttachmentFormat;
 
     // Geometry, if provided, sets topology and vertex cound
     if (props.geometry) {

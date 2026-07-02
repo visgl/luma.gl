@@ -9,6 +9,7 @@ import type {PrimitiveTopology, RenderPipelineParameters} from '../types/paramet
 import type {Bindings, BindingsByGroup} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
 import {Framebuffer} from './framebuffer';
+import {Buffer} from './buffer';
 import {QuerySet} from './query-set';
 import type {RenderBundle} from './render-bundle';
 import type {RenderPipeline} from './render-pipeline';
@@ -139,6 +140,12 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
 
   /** Issues a draw using the currently selected pipeline, bindings, and vertex array. */
   abstract draw(options: RenderPassDrawOptions): boolean;
+
+  /** Issues a non-indexed draw using four uint32 arguments stored in an indirect buffer. */
+  abstract drawIndirect(indirectBuffer: Buffer, indirectByteOffset?: number): void;
+
+  /** Issues an indexed draw using five 32-bit arguments stored in an indirect buffer. */
+  abstract drawIndexedIndirect(indirectBuffer: Buffer, indirectByteOffset?: number): void;
 
   /**
    * Replays reusable draw commands recorded by one or more render bundle encoders.

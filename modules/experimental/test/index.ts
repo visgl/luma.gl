@@ -8,3 +8,4 @@ import './oit/a-buffer-renderer.spec';
 import './oit/wboit-renderer.spec';
 
 import './webxr';
+import './gpu-primitives/gpu-command-graph.spec';

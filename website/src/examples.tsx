@@ -25,6 +25,7 @@ import ArrowFilteringApp from '../../examples/arrow/arrow-filtering/app';
 import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
+import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/experimental/video-texture/app';
@@ -1054,6 +1055,18 @@ export const HTMLUIPrismExample: React.FC = props => (
     title="HTML-in-Canvas Prism"
     directory="experimental"
     template={HTMLUIPrismApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUTraceViewerExample: React.FC = props => (
+  <LumaExample
+    id="gpu-trace-viewer"
+    title="GPU Command Graph Trace Viewer"
+    directory="experimental"
+    devices={['webgpu']}
+    template={GPUTraceViewerApp}
     config={exampleConfig}
     {...props}
   />
