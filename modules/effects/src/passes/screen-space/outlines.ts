@@ -4,10 +4,9 @@
 
 import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {depthHelpers} from './screen-space-shader-helpers';
-import type {ScreenSpaceNormalSource} from './types';
 
 export type OutlineShaderPassPipelineOptions = {
-  normalSource?: ScreenSpaceNormalSource;
+  normalSource?: 'reconstruct-from-depth' | 'normal-texture';
 };
 
 type OutlineUniforms = {
