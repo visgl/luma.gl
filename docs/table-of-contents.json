@@ -184,6 +184,9 @@
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
               "api-reference/experimental/gpu-primitives/gpu-sort",
+              "api-reference/experimental/gpu-primitives/gpu-reduction",
+              "api-reference/experimental/gpu-primitives/gpu-histogram",
+              "api-reference/experimental/gpu-primitives/gpu-grid-binning",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },
@@ -258,6 +261,9 @@
               "api-reference/experimental/gpu-primitives/gpu-scan",
               "api-reference/experimental/gpu-primitives/gpu-compaction",
               "api-reference/experimental/gpu-primitives/gpu-sort",
+              "api-reference/experimental/gpu-primitives/gpu-reduction",
+              "api-reference/experimental/gpu-primitives/gpu-histogram",
+              "api-reference/experimental/gpu-primitives/gpu-grid-binning",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },

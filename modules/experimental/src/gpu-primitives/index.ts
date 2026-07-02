@@ -34,6 +34,15 @@ export type {GPUCompactionProps} from './gpu-compaction';
 export {GPUSort} from './gpu-sort';
 export type {GPUSortAlgorithm, GPUSortDirection, GPUSortProps} from './gpu-sort';
 
+export {GPUReduction} from './gpu-reduction';
+export type {GPUReductionOperation, GPUReductionProps} from './gpu-reduction';
+
+export {GPUHistogram} from './gpu-histogram';
+export type {GPUHistogramDomain, GPUHistogramProps} from './gpu-histogram';
+
+export {GPUGridBinning} from './gpu-grid-binning';
+export type {GPUGridBinningBounds, GPUGridBinningProps} from './gpu-grid-binning';
+
 export {DrawCommandBuffer} from './draw-command-buffer';
 export type {
   DrawCommand,

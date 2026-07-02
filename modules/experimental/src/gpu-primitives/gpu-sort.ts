@@ -2,14 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Binding} from '@luma.gl/core';
+import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphBufferView} from './gpu-command-graph';
-import {GPUScan, getViewBinding, getViewElementOffset, validatePackedUint32View} from './gpu-scan';
+import {GPUScan} from './gpu-scan';
+import {
+  createTransientView,
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedUint32View
+} from './graph-buffer-view-utils';
 
 const BITONIC_WORKGROUP_SIZE = 256;
 const RADIX_WORKGROUP_SIZE = 256;
-const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const INVALID_INDEX = 0xffffffff;
 const MAXIMUM_LOGICAL_LENGTH = 0x80000000;
 const AUTO_BITONIC_MAXIMUM_LENGTH = 65_536;
@@ -167,8 +172,18 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
 
 function addBitonicSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUSort): void {
   const paddedLength = getNextPowerOfTwo(sort.keys.length);
-  const indicesA = createTransientUint32View(graph, `${sort.id}-bitonic-indices-a`, paddedLength);
-  const indicesB = createTransientUint32View(graph, `${sort.id}-bitonic-indices-b`, paddedLength);
+  const indicesA = createTransientView(
+    graph,
+    `${sort.id}-bitonic-indices-a`,
+    'uint32',
+    paddedLength
+  );
+  const indicesB = createTransientView(
+    graph,
+    `${sort.id}-bitonic-indices-b`,
+    'uint32',
+    paddedLength
+  );
   addBitonicInitializePass(graph, sort, indicesA, paddedLength);
 
   let currentIndices = indicesA;
@@ -327,28 +342,32 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
 }
 
 function addRadixSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUSort): void {
-  const scratchKeys = createTransientUint32View(
+  const scratchKeys = createTransientView(
     graph,
     `${sort.id}-radix-scratch-keys`,
+    'uint32',
     sort.keys.length
   );
-  const scratchValues = createTransientUint32View(
+  const scratchValues = createTransientView(
     graph,
     `${sort.id}-radix-scratch-values`,
+    'uint32',
     sort.keys.length
   );
   let currentKeys = sort.keys;
   let currentValues = sort.values;
 
   for (let bit = 0; bit < 32; bit++) {
-    const flags = createTransientUint32View(
+    const flags = createTransientView(
       graph,
       `${sort.id}-radix-bit-${bit}-flags`,
+      'uint32',
       sort.keys.length
     );
-    const offsets = createTransientUint32View(
+    const offsets = createTransientView(
       graph,
       `${sort.id}-radix-bit-${bit}-offsets`,
+      'uint32',
       sort.keys.length
     );
     const nextKeys = bit % 2 === 0 ? scratchKeys : sort.outputKeys;
@@ -466,19 +485,6 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(outputValues)}u;
     bindings: {keys, values, flags, offsets, outputKeys, outputValues},
     dispatchCount: Math.ceil(sort.keys.length / RADIX_WORKGROUP_SIZE)
   });
-}
-
-function createTransientUint32View<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  id: string,
-  length: number
-): GraphBufferView<'uint32'> {
-  const buffer = graph.createTransientBuffer({
-    id,
-    byteLength: Math.max(length, 1) * UINT32_BYTE_LENGTH,
-    usage: Buffer.STORAGE
-  });
-  return graph.createBufferView(buffer, {format: 'uint32', length});
 }
 
 function getNextPowerOfTwo(length: number): number {

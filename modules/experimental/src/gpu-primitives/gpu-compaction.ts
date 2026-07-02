@@ -2,13 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferView} from './gpu-command-graph';
-import {GPUScan, getViewBinding, getViewElementOffset, validatePackedUint32View} from './gpu-scan';
+import {GPUScan} from './gpu-scan';
+import {
+  createTransientView,
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedUint32View
+} from './graph-buffer-view-utils';
 
 const COMPACTION_WORKGROUP_SIZE = 256;
-const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
 export type GPUCompactionProps = {
   id?: string;
@@ -60,15 +64,7 @@ export class GPUCompaction {
       return;
     }
 
-    const offsetsBuffer = graph.createTransientBuffer({
-      id: `${this.id}-offsets`,
-      byteLength: this.input.length * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE
-    });
-    const offsets = graph.createBufferView(offsetsBuffer, {
-      format: 'uint32',
-      length: this.input.length
-    });
+    const offsets = createTransientView(graph, `${this.id}-offsets`, 'uint32', this.input.length);
     new GPUScan({
       id: `${this.id}-scan`,
       input: this.flags,

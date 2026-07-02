@@ -7,6 +7,9 @@ export type GPUPrimitivesDocsTabId =
   | 'scan'
   | 'compaction'
   | 'sort'
+  | 'reduction'
+  | 'histogram'
+  | 'grid-binning'
   | 'draw-command-buffer';
 
 const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
@@ -34,6 +37,21 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'sort',
     label: 'Sort',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-sort'
+  },
+  {
+    id: 'reduction',
+    label: 'Reduction',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-reduction'
+  },
+  {
+    id: 'histogram',
+    label: 'Histogram',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-histogram'
+  },
+  {
+    id: 'grid-binning',
+    label: 'Grid Binning',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning'
   },
   {
     id: 'draw-command-buffer',

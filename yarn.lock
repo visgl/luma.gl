@@ -16042,6 +16042,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-gpu-data-analysis@workspace:examples/experimental/gpu-data-analysis":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-gpu-data-analysis@workspace:examples/experimental/gpu-data-analysis"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/experimental": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/text": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-gpu-frustum-culling@workspace:examples/experimental/gpu-frustum-culling":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-gpu-frustum-culling@workspace:examples/experimental/gpu-frustum-culling"

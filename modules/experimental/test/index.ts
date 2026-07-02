@@ -12,3 +12,4 @@ import './shadows/shadow-wgsl.spec';
 import './webxr';
 import './gpu-primitives/gpu-command-graph.spec';
 import './gpu-primitives/gpu-sort.spec';
+import './gpu-primitives/gpu-data-analysis.spec';
