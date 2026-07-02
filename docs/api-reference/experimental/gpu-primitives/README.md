@@ -836,7 +836,22 @@ camera. The data-analysis example adds a third consumer based on Arrow columns, 
 reduction, histogram composition, and spatial counts. Additional consumers should still exercise
 different patterns such as text expansion or path tessellation.
 
-## Implemented data analysis
+## Roadmap status
+
+The command-graph foundation and the first texture/picking milestone are implemented. The broader
+GPU application platform is not complete yet.
+
+Completed milestones include:
+
+- Fixed-capacity buffer and logical-texture scheduling across compute, render, and copy nodes.
+- Buffer and texture hazard inference, imported-resource overrides, graph-owned attachments,
+  transient allocation reuse, ownership validation, and allocation statistics.
+- Exclusive scan, stable compaction, paired sort, scalar reduction, histogram counting, spatial
+  grid binning, and GPU-written indirect draw commands.
+- Single-pixel integer object and batch picking through `GPUIndexPickingTarget`.
+- Independent trace-viewer, frustum-culling/picking, and GPU data-analysis consumers.
+
+### Implemented data analysis
 
 `GPUReduction` collapses packed scalar rows with explicit empty, overflow, floating-point order,
 and non-finite policies. `GPUHistogram` accepts literal, GPU-resident, or inferred domains and
@@ -844,7 +859,7 @@ produces normal graph output that can feed another reduction. `GPUGridBinning` a
 atomic accumulation strategy to packed positions and row-major cells. All three keep input,
 output, submission, and readback ownership with the caller.
 
-## Implemented textures and picking
+### Implemented textures and picking
 
 `GPUCommandGraph` schedules logical texture views across sampled, storage, render-attachment, and
 copy roles. Compatible non-overlapping transient textures reuse physical allocations, while mip,
@@ -852,15 +867,17 @@ layer, and aspect ranges keep hazards precise. `GPUIndexPickingTarget` uses thos
 integer object and batch IDs, leaving rendering, submission, staging-buffer selection, and explicit
 readback with the application.
 
-## Future primitives
+## Remaining roadmap
 
-The proposed architecture extends beyond the implemented proof.
+The proposed architecture extends beyond the implemented foundation in the following areas.
 
-### Visibility
+### Reusable visibility workflows
 
-The trace predicate is application-owned. Reusable visibility workflows can standardize common
-inputs such as bounding spheres, axis-aligned boxes, time ranges, LOD thresholds, and selection
-masks. Their output should remain compacted stable IDs plus counts, not a renderer-specific object.
+Visibility is proven by the trace viewer and frustum-culling example, but each predicate remains
+application-owned. Reusable workflows can standardize common inputs such as bounding spheres,
+axis-aligned boxes, time ranges, LOD thresholds, and selection masks. Their output should remain
+compacted stable IDs plus counts, not a renderer-specific object. General application-defined
+predicates should wait for a deliberate shader-callback or shader-extension protocol.
 
 ### Spatial indexes
 
@@ -875,6 +892,28 @@ A future `GPUScene` should be a flat draw database: stable object IDs, bounds, t
 membership, geometry references, and command slots. It should not duplicate a game-engine scene
 graph. CPU scene graphs can update a GPU draw database, while table-oriented applications can
 construct the same database directly.
+
+### Picking and texture expansion
+
+The current picking target intentionally handles one device pixel and one integer object/batch
+contract. Region picking, color-encoded fallback, automatic staging-buffer rings, and higher-level
+callback, highlight, and tooltip policies remain future workflow layers. Texture scheduling still
+needs contracts for multisampled resolve targets, swapchain imports, and external textures before
+those resources can participate in the same logical hazard and lifetime model.
+
+### Richer algorithm variants
+
+The first algorithms favor narrow, measurable contracts. Future variants include inclusive,
+segmented, floating-point, and custom associative scans; weighted and floating-point grid
+aggregates; irregular-edge, categorical, sparse, and multidimensional histograms; and batch-aware
+algorithms that preserve multi-chunk table structure without implicit concatenation.
+
+### API graduation
+
+The graph and algorithms remain in `@luma.gl/experimental`. After their resource, shader-extension,
+and package-dependency contracts stabilize, graph infrastructure and typed views should graduate to
+`@luma.gl/engine`, while optional algorithms should move to `@luma.gl/gpgpu`. Graduation includes an
+API and dependency audit rather than only moving files between packages.
 
 ## What is intentionally not automatic
 
