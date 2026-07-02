@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 
 const BLUR_SAMPLE_LIMIT = 20;
 
@@ -225,3 +225,23 @@ export const dof = {
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
+
+/** Separable depth-of-field pipeline with horizontal and vertical blur passes. */
+export const dofShaderPassPipeline = {
+  name: 'dofShaderPassPipeline',
+  renderTargets: {blurScratch: {}},
+  steps: [
+    {
+      shaderPass: dof,
+      inputs: {sourceTexture: 'previous'},
+      output: 'blurScratch',
+      uniforms: {texelOffset: [1, 0]}
+    },
+    {
+      shaderPass: dof,
+      inputs: {sourceTexture: 'blurScratch'},
+      output: 'previous',
+      uniforms: {texelOffset: [0, 1]}
+    }
+  ]
+} as const satisfies ShaderPassPipeline<'blurScratch'>;

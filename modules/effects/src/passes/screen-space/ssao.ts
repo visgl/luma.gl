@@ -6,10 +6,9 @@ import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {depthAwareBlur} from './depth-aware-blur';
 import {depthHelpers} from './screen-space-shader-helpers';
-import type {ScreenSpaceNormalSource} from './types';
 
 export type SSAOShaderPassPipelineOptions = {
-  normalSource?: ScreenSpaceNormalSource;
+  normalSource?: 'reconstruct-from-depth' | 'normal-texture';
   resolutionScale?: number;
 };
 
