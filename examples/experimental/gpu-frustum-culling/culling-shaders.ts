@@ -41,7 +41,8 @@ struct VertexOutput {
   var output: VertexOutput;
   output.position = uniforms.viewProjectionMatrix * vec4<f32>(worldPosition, 1.0);
   output.normal = inputs.normals;
-  output.color = instance.color;
+  let highlighted = uniforms.options.y > 0.5 && sourceIndex == u32(uniforms.options.y - 1.0);
+  output.color = select(instance.color, vec4<f32>(1.0, 0.85, 0.15, 1.0), highlighted);
   return output;
 }
 
@@ -49,6 +50,59 @@ struct VertexOutput {
   let lightDirection = normalize(vec3<f32>(0.42, 0.82, 0.36));
   let diffuse = max(dot(normalize(input.normal), lightDirection), 0.18);
   return vec4<f32>(input.color.rgb * diffuse, input.color.a);
+}`;
+
+export const CULLING_PICKING_SHADER = /* wgsl */ `
+struct CullingInstance {
+  positionRadius: vec4<f32>,
+  color: vec4<f32>,
+};
+
+struct CullingUniforms {
+  viewProjectionMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  frustum: vec4<f32>,
+  options: vec4<f32>,
+};
+
+@group(0) @binding(0) var<storage, read> instances: array<CullingInstance>;
+@group(0) @binding(1) var<storage, read> visibleIds: array<u32>;
+@group(0) @binding(2) var<uniform> uniforms: CullingUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec4<f32>,
+  @location(1) normals: vec3<f32>,
+};
+
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) @interpolate(flat) sourceIndex: u32,
+};
+
+struct FragmentOutput {
+  @location(0) color: vec4<f32>,
+  @location(1) indices: vec2<i32>,
+};
+
+@vertex fn vertexMain(
+  inputs: VertexInputs,
+  @builtin(instance_index) instanceIndex: u32
+) -> VertexOutput {
+  let sourceIndex = visibleIds[instanceIndex];
+  let instance = instances[sourceIndex];
+  let worldPosition = inputs.positions.xyz * instance.positionRadius.w * 1.35 +
+    instance.positionRadius.xyz;
+  var output: VertexOutput;
+  output.position = uniforms.viewProjectionMatrix * vec4<f32>(worldPosition, 1.0);
+  output.sourceIndex = sourceIndex;
+  return output;
+}
+
+@fragment fn fragmentMain(input: VertexOutput) -> FragmentOutput {
+  var output: FragmentOutput;
+  output.color = vec4<f32>(0.0);
+  output.indices = vec2<i32>(i32(input.sourceIndex), 0);
+  return output;
 }`;
 
 export function getFrustumCullingShader(instanceCount: number): string {

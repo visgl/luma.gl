@@ -64,6 +64,7 @@ const sidebars = {
         'experimental/gpu-frustum-culling',
         'experimental/gpu-trace-viewer',
         'experimental/gpu-sort',
+        'experimental/gpu-data-analysis',
         'experimental/html-ui-prism',
         'experimental/webxr-kaleidoscope'
       ]

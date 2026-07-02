@@ -1,5 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
-import {GPUFrustumCullingExample, GPUTraceViewerExample} from '@site/src/examples';
+import {GPUDataAnalysisExample, GPUFrustumCullingExample, GPUTraceViewerExample} from '@site/src/examples';
 
 # GPU Primitives and Command Graphs
 
@@ -42,9 +42,10 @@ pre-recorded render commands
 ```
 
 The implementation consists of `GPUCommandGraph`, typed graph buffer views, `GPUScan`,
-`GPUCompaction`, `GPUSort`, and `DrawCommandBuffer`. The accompanying trace viewer runs filtering
-and compaction over up to four million spans, while the GPU sort example demonstrates stable
-paired sorting. The implementation is intentionally experimental: it is concrete enough to
+`GPUCompaction`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
+`DrawCommandBuffer`. The accompanying trace viewer runs filtering and compaction over up to four
+million spans, while the sort and data-analysis examples demonstrate composable buffer-native
+algorithms. The implementation is intentionally experimental: it is concrete enough to
 measure and use, but small enough that its API can still respond to experience.
 
 <GPUTraceViewerExample embedded />
@@ -57,6 +58,12 @@ timing with compiled graph allocation statistics. Together, the examples demonst
 is not specific to trace data or two-dimensional rendering.
 
 <GPUFrustumCullingExample embedded />
+
+The data-analysis example composes extent reduction, histogram counting, histogram-count
+reduction, and grid binning in one reusable graph. It uploads Arrow columns and keeps compilation,
+submission, validation readback, and transient-allocation diagnostics explicit.
+
+<GPUDataAnalysisExample embedded />
 
 ## Why primitives instead of effects?
 
@@ -153,9 +160,9 @@ pipelines would confuse multi-pass algorithms with `GPUComputePipeline`.
 
 Algorithms provide data semantics across one or more kernels. `GPUScan` promises an exclusive
 prefix sum. `GPUCompaction` promises stable selection. `GPUSort` promises stable paired `uint32`
-ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones. Future
-`GPUReduction` and `GPUHistogram` objects should likewise promise results and constraints rather
-than a fixed implementation.
+ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones.
+`GPUReduction`, `GPUHistogram`, and `GPUGridBinning` promise aggregate and binning results while
+selecting hierarchical and atomic implementations internally.
 
 The first algorithms are deliberately typed and curated. Arbitrary WGSL callbacks for compare,
 combine, and predicate functions are attractive, but they significantly expand validation,
@@ -825,26 +832,29 @@ gpgpu because they are optional computation capabilities rather than core resour
 Graduation should happen only after at least two independent consumers use the graph. The trace
 viewer proves two-dimensional filtering and rendering. The frustum-culling field adds a second
 consumer with bounding-sphere visibility, indexed indirect drawing, and a moving three-dimensional
-camera. Additional consumers should still exercise different patterns such as text expansion, path
-tessellation, histogramming, or scientific reduction.
+camera. The data-analysis example adds a third consumer based on Arrow columns, scientific
+reduction, histogram composition, and spatial counts. Additional consumers should still exercise
+different patterns such as text expansion or path tessellation.
+
+## Implemented data analysis
+
+`GPUReduction` collapses packed scalar rows with explicit empty, overflow, floating-point order,
+and non-finite policies. `GPUHistogram` accepts literal, GPU-resident, or inferred domains and
+produces normal graph output that can feed another reduction. `GPUGridBinning` applies the same
+atomic accumulation strategy to packed positions and row-major cells. All three keep input,
+output, submission, and readback ownership with the caller.
+
+## Implemented textures and picking
+
+`GPUCommandGraph` schedules logical texture views across sampled, storage, render-attachment, and
+copy roles. Compatible non-overlapping transient textures reuse physical allocations, while mip,
+layer, and aspect ranges keep hazards precise. `GPUIndexPickingTarget` uses those resources for
+integer object and batch IDs, leaving rendering, submission, staging-buffer selection, and explicit
+readback with the application.
 
 ## Future primitives
 
 The proposed architecture extends beyond the implemented proof.
-
-### Reduction
-
-`GPUReduction` should collapse rows using precise operations such as sum, minimum, maximum, and
-extent. It needs policies for empty inputs, floating-point order, NaN handling, overflow, channel
-layout, and deterministic versus fastest execution. Existing gpgpu extent code provides a useful
-starting point.
-
-### Histogram and binning
-
-Histograms are foundational for scientific visualization, color-domain selection, density maps,
-and trace summaries. A useful API must distinguish fixed bins, computed domains, weighted values,
-and contention strategies. Histogram output should be a normal graph view that can feed reduction
-or rendering.
 
 ### Visibility
 
@@ -852,25 +862,12 @@ The trace predicate is application-owned. Reusable visibility workflows can stan
 inputs such as bounding spheres, axis-aligned boxes, time ranges, LOD thresholds, and selection
 masks. Their output should remain compacted stable IDs plus counts, not a renderer-specific object.
 
-### Picking
-
-A picking graph can share visible IDs and stable object identity with rendering. Integer render
-targets avoid color encoding on WebGPU. Region reduction can keep more work on the GPU, while the
-application explicitly chooses when to read the final pick result.
-
 ### Spatial indexes
 
 WebGPU does not currently expose a native acceleration-structure object comparable to ray-tracing
 APIs. luma.gl should name concrete library-built structures such as `GPUGridIndex` or `GPUBVH`.
 They are storage-buffer data structures with construction and traversal algorithms, not magical
 backend resources.
-
-### Textures and attachments
-
-A complete graph will add logical texture views, sampled/storage access, render attachments,
-copy roles, mip and layer ranges, and compatibility-aware transient reuse. Texture aliasing has
-more format and usage constraints than buffers and should be added from measured render workflows
-rather than guessed into the first compiler.
 
 ### GPUScene
 
@@ -914,6 +911,10 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan)
 - [`GPUCompaction`](/docs/api-reference/experimental/gpu-primitives/gpu-compaction)
 - [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
+- [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
+- [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
+- [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning)
+- [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)
 - [GPU commands](/docs/api-guide/gpu/gpu-commands)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)

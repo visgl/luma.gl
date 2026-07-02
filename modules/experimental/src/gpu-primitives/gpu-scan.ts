@@ -2,13 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Binding} from '@luma.gl/core';
+import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferView} from './gpu-command-graph';
+import {
+  createTransientView,
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedUint32View
+} from './graph-buffer-view-utils';
 
 const SCAN_WORKGROUP_SIZE = 256;
-const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
-const STORAGE_BINDING_ALIGNMENT = 256;
 
 export type GPUScanProps = {
   id?: string;
@@ -56,15 +60,12 @@ export class GPUScan {
       const blockCount = Math.ceil(levelLength / SCAN_WORKGROUP_SIZE);
       let blockSums: GraphBufferView<'uint32'> | undefined;
       if (blockCount > 1) {
-        const blockSumsBuffer = graph.createTransientBuffer({
-          id: `${this.id}-level-${levelIndex}-block-sums`,
-          byteLength: blockCount * UINT32_BYTE_LENGTH,
-          usage: Buffer.STORAGE
-        });
-        blockSums = graph.createBufferView(blockSumsBuffer, {
-          format: 'uint32',
-          length: blockCount
-        });
+        blockSums = createTransientView(
+          graph,
+          `${this.id}-level-${levelIndex}-block-sums`,
+          'uint32',
+          blockCount
+        );
       }
 
       addBlockScanPass(graph, {
@@ -80,15 +81,12 @@ export class GPUScan {
       if (!blockSums) {
         break;
       }
-      const blockOffsetsBuffer = graph.createTransientBuffer({
-        id: `${this.id}-level-${levelIndex}-block-offsets`,
-        byteLength: blockCount * UINT32_BYTE_LENGTH,
-        usage: Buffer.STORAGE
-      });
-      const blockOffsets = graph.createBufferView(blockOffsetsBuffer, {
-        format: 'uint32',
-        length: blockCount
-      });
+      const blockOffsets = createTransientView(
+        graph,
+        `${this.id}-level-${levelIndex}-block-offsets`,
+        'uint32',
+        blockCount
+      );
       levels[levels.length - 1].blockOffsets = blockOffsets;
       levelInput = blockSums;
       levelOutput = blockOffsets;
@@ -258,36 +256,4 @@ const BLOCK_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.blockOffsets)}u;
       };
     }
   });
-}
-
-/** @internal */
-export function validatePackedUint32View(view: GraphBufferView, name: string): void {
-  if (
-    view.format !== 'uint32' ||
-    view.byteStride !== UINT32_BYTE_LENGTH ||
-    view.rowByteLength !== UINT32_BYTE_LENGTH ||
-    view.byteOffset % UINT32_BYTE_LENGTH !== 0
-  ) {
-    throw new Error(`${name} must be packed, uint32-aligned GPU data`);
-  }
-}
-
-/** @internal */
-export function getViewBinding(
-  view: GraphBufferView,
-  getBuffer: (view: GraphBufferView) => Buffer
-): Binding {
-  const alignedByteOffset =
-    Math.floor(view.byteOffset / STORAGE_BINDING_ALIGNMENT) * STORAGE_BINDING_ALIGNMENT;
-  const prefixByteLength = view.byteOffset - alignedByteOffset;
-  return {
-    buffer: getBuffer(view),
-    offset: alignedByteOffset,
-    size: prefixByteLength + Math.max(view.length * view.byteStride, view.rowByteLength)
-  };
-}
-
-/** @internal */
-export function getViewElementOffset(view: GraphBufferView): number {
-  return (view.byteOffset % STORAGE_BINDING_ALIGNMENT) / UINT32_BYTE_LENGTH;
 }

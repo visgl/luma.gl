@@ -166,7 +166,7 @@ export type StorageTextureBindingLayout = {
   location: number;
   /** Which shader stages can access this binding */
   visibility?: number;
-  access?: 'write-only';
+  access?: 'write-only' | 'read-only' | 'read-write';
   format: TextureFormat;
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
 };

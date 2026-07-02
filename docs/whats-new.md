@@ -22,6 +22,7 @@ Target Release Date: Q3, 2026
 - **GPU command graphs** - Experimental WebGPU command graphs compile explicit buffer hazards, fixed capacities, node resources, and transient-buffer reuse while leaving encoding and submission under application control.
 - **GPU scan, compaction, and indirect drawing** - Typed graph views compose hierarchical `uint32` scan, stable ID compaction, and GPU-written `DrawCommandBuffer` instance counts. The [GPU Trace Viewer](/examples/experimental/gpu-trace-viewer) demonstrates the path over up to four million spans, while [GPU Frustum Culling](/examples/experimental/gpu-frustum-culling) applies it to indexed indirect rendering of a 3D instance field.
 - **Graph-native GPU sort** - `GPUSort` stably orders paired packed `uint32` keys and values in either direction, automatically selecting bitonic or binary LSD radix passes. The [GPU Sort example](/examples/experimental/gpu-sort) exposes graph compilation and transient reuse.
+- **Graph-native GPU data analysis** - `GPUReduction`, `GPUHistogram`, and `GPUGridBinning` add deterministic scalar aggregates, reusable histogram counts, and row-major spatial counts. The [GPU Data Analysis example](/examples/experimental/gpu-data-analysis) composes the operations without hidden submission or readback.
 - **Hybrid shadows** - `ShadowMapRenderer`, the group-2 `shadow` WGSL module, and the contact-shadow shader-pass pipeline add WebGPU cascaded directional, spot, and point-light shadows with PCSS filtering. Visualization City demonstrates the complete ordered stack.
 
 **@luma.gl/engine**

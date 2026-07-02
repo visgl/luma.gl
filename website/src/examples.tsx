@@ -31,6 +31,10 @@ import {
   initializeGPUSortExample,
   type GPUSortExampleHandle
 } from '../../examples/experimental/gpu-sort/src/app';
+import {
+  initializeGPUDataAnalysisExample,
+  type GPUDataAnalysisExampleHandle
+} from '../../examples/experimental/gpu-data-analysis/src/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/experimental/video-texture/app';
@@ -774,6 +778,33 @@ export const GPUSortExample: React.FC = () => {
   return (
     <ExamplePage style={{background: '#f7f8fb', overflow: 'hidden'}}>
       <main id="gpu-sort-app" />
+      {errorMessage ? (
+        <p role="alert" style={{padding: 22}}>
+          {errorMessage}
+        </p>
+      ) : null}
+    </ExamplePage>
+  );
+};
+
+/** Docusaurus wrapper for the graph-native data-analysis example. */
+export const GPUDataAnalysisExample: React.FC = () => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let handle: GPUDataAnalysisExampleHandle | null = null;
+    try {
+      handle = initializeGPUDataAnalysisExample();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      logError('Failed to initialize GPU data-analysis example', error);
+    }
+    return () => handle?.destroy();
+  }, []);
+
+  return (
+    <ExamplePage style={{background: '#f6f8fb', overflow: 'hidden'}}>
+      <main id="gpu-data-analysis-app" />
       {errorMessage ? (
         <p role="alert" style={{padding: 22}}>
           {errorMessage}
