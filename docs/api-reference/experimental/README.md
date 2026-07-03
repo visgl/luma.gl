@@ -1,7 +1,7 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
 import {OITExample} from '@site/src/examples';
 
-# @luma.gl/experimental
+# Overview
 
 <ExperimentalDocsTabs active="overview" />
 
