@@ -11,6 +11,7 @@ import type {Model} from '@luma.gl/engine';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Table, vectorFromArray, type RecordBatch} from 'apache-arrow';
+import {afterAll} from 'vitest';
 import {
   makeArrowLineRecordBatches,
   makeArrowLineSourceData
@@ -23,6 +24,18 @@ const TEST_VIEWPORT_HEIGHT = 480;
 const TEST_MODEL_TIMEOUT_MILLISECONDS = 10_000;
 const TEXT_FONT_ATLAS = buildBitmapFontAtlas({
   characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
+});
+const deferredDeckCleanups: Array<{deck: Deck; parent: HTMLDivElement}> = [];
+let sharedStorageDeck: {deck: Deck; parent: HTMLDivElement} | null = null;
+
+afterAll(() => {
+  for (const {deck, parent} of deferredDeckCleanups) {
+    deck.finalize();
+    parent.remove();
+  }
+  sharedStorageDeck?.deck.finalize();
+  sharedStorageDeck?.parent.remove();
+  sharedStorageDeck = null;
 });
 
 test('Arrow deck layers return source row indices from Deck picking', async t => {
@@ -301,8 +314,9 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
       );
     }
   } finally {
-    deck.finalize();
-    parent.remove();
+    deck.setProps({layers: []});
+    deck.animationLoop?.stop();
+    deferredDeckCleanups.push({deck, parent});
   }
 
   t.end();
@@ -349,19 +363,7 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
       dataError = error;
     }
   });
-  const parent = document.createElement('div');
-  parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
-  parent.style.height = `${TEST_VIEWPORT_HEIGHT}px`;
-  document.body.append(parent);
-  const deck = new Deck({
-    parent,
-    width: TEST_VIEWPORT_WIDTH,
-    height: TEST_VIEWPORT_HEIGHT,
-    device,
-    views: new OrthographicView({id: 'main'}),
-    initialViewState: {target: [0, 0], zoom: 8},
-    layers: []
-  });
+  const {deck} = getSharedStorageDeck(device);
 
   try {
     await waitForDeckInitialization(deck);
@@ -388,12 +390,11 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
       'global row index resolves to source batch and batch-local row'
     );
   } finally {
-    deck.finalize();
+    deck.setProps({layers: []});
     for (const buffer of callerColorBuffers) {
       t.notOk(buffer.destroyed, 'ArrowPathLayer leaves caller-owned GPU color buffers alive');
     }
     callerColorVector.destroy();
-    parent.remove();
   }
   t.end();
 });
@@ -509,7 +510,7 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     }
   ];
 
-  const {deck, parent} = createTestDeck(device);
+  const {deck} = getSharedStorageDeck(device);
   try {
     await waitForDeckInitialization(deck);
     for (const {layer, initialViewState, getError} of cases) {
@@ -524,8 +525,7 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
       }
     }
   } finally {
-    deck.finalize();
-    parent.remove();
+    deck.setProps({layers: []});
     for (const vector of [polygonColorVector, textColorVector]) {
       for (const data of vector.data) {
         t.notOk(
@@ -588,6 +588,11 @@ function createTestDeck(device?: Device): {deck: Deck; parent: HTMLDivElement} {
     layers: []
   });
   return {deck, parent};
+}
+
+function getSharedStorageDeck(device: Device): {deck: Deck; parent: HTMLDivElement} {
+  sharedStorageDeck ??= createTestDeck(device);
+  return sharedStorageDeck;
 }
 
 async function waitForLayerModel(
