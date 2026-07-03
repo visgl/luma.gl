@@ -63,7 +63,7 @@ test('FontAtlasManager prefers OffscreenCanvas and records rebuild metrics', t =
   const manager = new FontAtlasManager();
   manager.setProps(createFontSettings('font-atlas-offscreen'));
 
-  t.ok(manager.atlas?.data instanceof OffscreenCanvas, 'OffscreenCanvas backs the atlas');
+  t.ok(manager.atlas?.pages[0] instanceof OffscreenCanvas, 'OffscreenCanvas backs the atlas');
   t.equal(manager.metrics?.cacheStatus, 'rebuild', 'first atlas build is a rebuild');
   t.equal(manager.metrics?.usedOffscreenCanvas, true, 'metrics report the selected backend');
   t.equal(manager.metrics?.glyphCount, 2, 'metrics report processed glyph count');
@@ -86,7 +86,7 @@ test('FontAtlasManager falls back to DOM canvas and reports cache hits', t => {
     const cachedManager = new FontAtlasManager();
     cachedManager.setProps(props);
 
-    t.ok(cachedManager.atlas?.data instanceof HTMLCanvasElement, 'DOM canvas backs the atlas');
+    t.ok(cachedManager.atlas?.pages[0] instanceof HTMLCanvasElement, 'DOM canvas backs the atlas');
     t.equal(
       cachedManager.metrics?.cacheStatus,
       'hit',

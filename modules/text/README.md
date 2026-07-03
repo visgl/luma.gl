@@ -2,6 +2,9 @@
 
 Experimental 2D text utilities for luma.gl. The package contains:
 
+- `FontAtlas`, the normalized glyph metrics, image pages, and sampling settings used by
+  atlas-backed text.
+- `buildBitmapFontAtlas()` and `buildSdfFontAtlas()`, explicit browser-font atlas builders.
 - GPU-only text input schemas and preparation primitives.
 - `TextAttributeModel`, a one-line label renderer that renders prepared attribute vertex buffers.
 - `TextStorageModel`, a WebGPU-only renderer that renders prepared storage-backed glyph state.
