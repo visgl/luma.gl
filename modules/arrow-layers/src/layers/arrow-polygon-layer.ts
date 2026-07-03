@@ -4,6 +4,7 @@
 
 import {
   Layer,
+  log,
   picking,
   project32,
   type LayerContext,
@@ -13,6 +14,7 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowPolygonRenderer,
+  readArrowGPUVectorAsync,
   type ArrowPolygonRendererDataBatchUpdate,
   type ArrowPolygonRendererProps
 } from '@luma.gl/arrow';
@@ -26,7 +28,35 @@ import {
   watchDeckArrowModelPipeline
 } from './arrow-layer-types';
 import type {ArrowLayerPickingInfo} from './arrow-layer-types';
-import {POLYGON_STORAGE_SHADER_LAYOUT, type GPURecordBatchSourceInfo} from '@luma.gl/tables';
+import {
+  GPUVector,
+  POLYGON_STORAGE_SHADER_LAYOUT,
+  type GPURecordBatchSourceInfo,
+  type VertexList
+} from '@luma.gl/tables';
+import type {Vector} from 'apache-arrow';
+import {
+  assertArrowLayerGPUVector,
+  getArrowLayerInputNullValue,
+  getArrowLayerInputSource,
+  inspectArrowLayerColumn,
+  isArrowLayerColor,
+  isArrowLayerGPUVector,
+  type ArrowLayerInput
+} from './arrow-layer-input';
+
+type ArrowPolygonColor = [number, number, number, number];
+type ArrowPolygonColorSource =
+  | Exclude<ArrowPolygonRendererProps['colors'], null | undefined>
+  | GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
+type ArrowPolygonResolvedColorSource = {
+  value: Exclude<ArrowPolygonColorSource, GPUVector> | null;
+};
+
+/** Constant, Arrow column, or GPU column accepted by ArrowPolygonLayer.color. */
+export type ArrowPolygonColorInput = ArrowLayerInput<ArrowPolygonColor, ArrowPolygonColorSource>;
+
+const DEFAULT_POLYGON_COLOR: ArrowPolygonColor = [0, 96, 255, 255];
 
 const DECK_POLYGON_VS = `#version 300 es
 precision highp float;
@@ -131,7 +161,10 @@ fn unpackStoragePolygonColor(colorWord: u32) -> vec4<f32> {
 fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> PolygonStorageVertexOutputs {
   var outputs: PolygonStorageVertexOutputs;
   outputs.position = deck_projectPosition(polygonPositions[vertexIndex].xyz);
-  outputs.color = unpackStoragePolygonColor(polygonColors[vertexIndex]);
+  outputs.color = unpackStoragePolygonColor(polygonColors[gpuTable_getRowIndex(
+    vertexIndex,
+    gpuTableColumns.polygonColorsRowMultiplier
+  )]);
   outputs.pickingColor = deck_encodePickingColor(polygonRowIndices[vertexIndex]);
   return outputs;
 }
@@ -144,15 +177,18 @@ fn fragmentMain(inputs: PolygonStorageVertexOutputs) -> @location(0) vec4<f32> {
 
 /** Deck-facing props for an Arrow-backed filled polygon layer. */
 export type ArrowPolygonLayerProps = Omit<LayerProps, 'data'> &
-  ArrowPolygonRendererProps & {
+  Omit<ArrowPolygonRendererProps, 'colors' | 'color'> & {
     /** Deck-managed opacity multiplier. */
     opacity?: number;
+    /** Constant color, color source, or color source with an explicit null replacement. */
+    color?: ArrowPolygonColorInput;
   };
 
 type ArrowPolygonLayerState = {
   renderer: ArrowPolygonRenderer | null;
   sourceInitialized: boolean;
   sourceInfos: GPURecordBatchSourceInfo[];
+  colorResolveVersion: number;
 };
 
 /** deck.gl layer that keeps polygon columns in Arrow-owned GPU vectors. */
@@ -186,7 +222,8 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     this.setState({
       renderer,
       sourceInitialized: false,
-      sourceInfos: []
+      sourceInfos: [],
+      colorResolveVersion: 0
     } satisfies ArrowPolygonLayerState);
     this.watchRendererPipeline(renderer);
   }
@@ -199,7 +236,6 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
       !state.sourceInitialized ||
       changeFlags.dataChanged ||
       props.polygons !== oldProps.polygons ||
-      props.colors !== oldProps.colors ||
       props.tessellated !== oldProps.tessellated ||
       props.color !== oldProps.color;
     const modelChanged = props.model !== oldProps.model;
@@ -209,17 +245,19 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
       state.sourceInfos = [];
     }
 
-    renderer.setProps(
-      sourceChanged
-        ? this.getRendererProps(props)
-        : modelChanged
+    if (sourceChanged) {
+      this.setRendererSourceProps(renderer, props);
+    } else {
+      renderer.setProps(
+        modelChanged
           ? {...this.getRendererModelProps(props), center: props.center, scale: props.scale}
           : {
               model: props.model,
               center: props.center,
               scale: props.scale
             }
-    );
+      );
+    }
     this.watchRendererPipeline(renderer);
   }
 
@@ -246,19 +284,30 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     this.setState({
       renderer: null,
       sourceInitialized: true,
-      sourceInfos: []
+      sourceInfos: [],
+      colorResolveVersion: this.getLayerState().colorResolveVersion + 1
     } satisfies ArrowPolygonLayerState);
     super.finalizeState(context);
   }
 
-  private getRendererProps(props: ArrowPolygonLayerProps): ArrowPolygonRendererProps {
+  private getRendererProps(
+    props: ArrowPolygonLayerProps,
+    resolvedColorSource?: ArrowPolygonResolvedColorSource
+  ): ArrowPolygonRendererProps {
+    const colorSource = getArrowLayerInputSource(props.color, isArrowLayerColor);
     return {
       ...this.getRendererModelProps(props),
       data: props.data,
       polygons: props.polygons,
-      colors: props.colors,
+      colors:
+        resolvedColorSource?.value ??
+        (resolvedColorSource
+          ? null
+          : isArrowLayerGPUVector(colorSource)
+            ? null
+            : (colorSource ?? null)),
       tessellated: props.tessellated,
-      color: props.color,
+      color: getArrowLayerInputNullValue(props.color, DEFAULT_POLYGON_COLOR, isArrowLayerColor),
       center: props.center,
       scale: props.scale,
       onPick: props.onPick,
@@ -271,6 +320,101 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
         }
       }
     };
+  }
+
+  private setRendererSourceProps(
+    renderer: ArrowPolygonRenderer,
+    props: ArrowPolygonLayerProps
+  ): void {
+    const colorSource = getArrowLayerInputSource(props.color, isArrowLayerColor);
+    const state = this.getLayerState();
+    const colorResolveVersion = state.colorResolveVersion + 1;
+    state.colorResolveVersion = colorResolveVersion;
+    if (!isArrowLayerGPUVector(colorSource)) {
+      if (typeof colorSource === 'string') {
+        if (!props.data) {
+          this.warnMissingColorColumn(props, colorSource);
+          renderer.setProps(this.getRendererProps(props, {value: null}));
+          return;
+        }
+        renderer.setProps({data: null});
+        void inspectArrowLayerColumn(props.data, colorSource)
+          .then(resolution => {
+            if (
+              this.getRendererOrNull() !== renderer ||
+              this.getLayerState().colorResolveVersion !== colorResolveVersion
+            ) {
+              void resolution.cancel();
+              return;
+            }
+            if (!resolution.hasColumn) {
+              this.warnMissingColorColumn(props, colorSource);
+            }
+            renderer.setProps(
+              this.getRendererProps(
+                {...props, data: resolution.data},
+                {value: resolution.hasColumn ? colorSource : null}
+              )
+            );
+            this.watchRendererPipeline(renderer);
+            this.setNeedsRedraw();
+          })
+          .catch(error => {
+            if (this.getLayerState().colorResolveVersion === colorResolveVersion) {
+              if (props.onDataError) props.onDataError(error);
+              else this.raiseError(toError(error), `resolving Arrow polygon color in ${this}`);
+            }
+          });
+        return;
+      }
+      renderer.setProps(this.getRendererProps(props));
+      return;
+    }
+    if (props.data) {
+      const error = new Error(
+        'ArrowPolygonLayer direct GPUVector color requires direct polygon vectors rather than streamed data'
+      );
+      if (props.onDataError) props.onDataError(error);
+      else this.raiseError(error, `resolving Arrow polygon color in ${this}`);
+      return;
+    }
+    const polygonRowCount =
+      props.polygons && typeof props.polygons !== 'string' ? props.polygons.length : undefined;
+    assertArrowLayerGPUVector(
+      'ArrowPolygonLayer color',
+      colorSource,
+      ['unorm8x4', 'vertex-list<unorm8x4>'],
+      polygonRowCount
+    );
+    renderer.setProps({data: null});
+    void readArrowGPUVectorAsync(colorSource)
+      .then(colorVector => {
+        if (
+          this.getRendererOrNull() === renderer &&
+          this.getLayerState().colorResolveVersion === colorResolveVersion
+        ) {
+          renderer.setProps(this.getRendererProps(props, {value: colorVector as Vector as never}));
+          this.watchRendererPipeline(renderer);
+          this.setNeedsRedraw();
+        }
+      })
+      .catch(error => {
+        if (this.getLayerState().colorResolveVersion === colorResolveVersion) {
+          if (props.onDataError) props.onDataError(error);
+          else this.raiseError(toError(error), `resolving Arrow polygon color in ${this}`);
+        }
+      });
+  }
+
+  private warnMissingColorColumn(props: ArrowPolygonLayerProps, columnPath: string): void {
+    const nullValue = getArrowLayerInputNullValue(
+      props.color,
+      DEFAULT_POLYGON_COLOR,
+      isArrowLayerColor
+    );
+    log.warn(
+      `${this.id}: ArrowPolygonLayer color column "${columnPath}" is missing; using color default ${JSON.stringify(nullValue)}`
+    )();
   }
 
   private getRendererModelProps(

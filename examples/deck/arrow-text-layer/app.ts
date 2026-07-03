@@ -87,11 +87,12 @@ function setTextLayer(deck: Deck<OrthographicView>, dataSource: ArrowTextDataSou
         positions: 'positions',
         texts: 'texts',
         clipRects: dataSource.clipRects === null ? null : 'clipRects',
-        colors: dataSource.colors === null ? null : 'colors',
+        color: dataSource.colorColumn
+          ? {source: 'colors', nullValue: [199, 219, 245, 255]}
+          : [199, 219, 245, 255],
         angles: dataSource.angles === null ? null : 'angles',
         sizes: dataSource.sizes === null ? null : 'sizes',
         pixelOffsets: null,
-        color: [199, 219, 245, 255],
         angle: 0,
         size: 32,
         characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',

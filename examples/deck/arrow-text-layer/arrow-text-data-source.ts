@@ -37,7 +37,7 @@ export type ArrowTextDataSourceUpdate = {
   asyncIterator: AsyncIterable<arrow.RecordBatch>;
   model: ArrowTextLayerProps['model'];
   clipRects: ArrowTextLayerProps['clipRects'];
-  colors: ArrowTextLayerProps['colors'];
+  colorColumn: boolean;
   angles: ArrowTextLayerProps['angles'];
   sizes: ArrowTextLayerProps['sizes'];
   animate: boolean;
@@ -128,7 +128,7 @@ export class ArrowTextDataSource {
     this.onDataUpdated({
       asyncIterator: createStreamingRecordBatchIterator(recordBatches),
       model: this.state.modelKind,
-      colors: this.state.colorKind === 'constant' ? null : undefined,
+      colorColumn: this.state.colorKind !== 'constant',
       sizes: this.state.sizeKind === 'constant' ? null : undefined,
       angles: this.state.angleKind === 'constant' ? null : undefined,
       clipRects: this.state.clipKind === 'none' ? null : undefined,

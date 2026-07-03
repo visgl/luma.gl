@@ -38,8 +38,8 @@ type ArrowPathDataSourceState = Record<string, unknown> & {
 export type ArrowPathDataSourceUpdate = {
   asyncIterator: AsyncIterable<arrow.RecordBatch>;
   model: ArrowPathLayerProps['model'];
-  colors: ArrowPathLayerProps['colors'];
-  widths: ArrowPathLayerProps['widths'];
+  colorColumn: boolean;
+  widthColumn: boolean;
   currentTime: number;
   trailLength: number;
   temporalEnabled: boolean;
@@ -118,8 +118,8 @@ export class ArrowPathDataSource {
       trailLength: TEMPORAL_TRAIL_LENGTH_MILLISECONDS / TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT,
       temporalEnabled: this.state.timeKind === 'xyzm',
       animate: this.state.animate,
-      colors: this.state.colorKind === 'none' ? null : undefined,
-      widths: this.state.widthKind === 'constant' ? null : undefined,
+      colorColumn: this.state.colorKind !== 'none',
+      widthColumn: this.state.widthKind !== 'constant',
       layerProps: {
         onDataBatch: update => {
           if (!this.isFinalized) {

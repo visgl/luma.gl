@@ -92,9 +92,11 @@ function makeArrowPolygonLayer(
     model: dataSourceUpdate.model ?? 'attribute',
     data: dataSourceUpdate.data,
     polygons: 'polygons',
-    colors: dataSourceUpdate.colors === null ? null : 'colors',
+    color:
+      dataSourceUpdate.colors === null
+        ? [0, 96, 255, 255]
+        : {source: 'colors', nullValue: [0, 96, 255, 255]},
     tessellated: dataSourceUpdate.tessellated,
-    color: [0, 96, 255, 255],
     center: dataSourceUpdate.center,
     scale: dataSourceUpdate.scale,
     onHover: (info: ArrowLayerPickingInfo) => {

@@ -149,7 +149,10 @@ fn projectPolygonPosition(position : vec4<f32>) -> vec4<f32> {
 fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
   var outputs : FragmentInputs;
   outputs.Position = projectPolygonPosition(polygonPositions[vertexIndex]);
-  outputs.color = unpackPolygonColor(polygonColors[vertexIndex]);
+  outputs.color = unpackPolygonColor(polygonColors[gpuTable_getRowIndex(
+    vertexIndex,
+    gpuTableColumns.polygonColorsRowMultiplier
+  )]);
   outputs.objectIndex = i32(polygonRowIndices[vertexIndex]);
   return outputs;
 }

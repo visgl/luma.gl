@@ -803,7 +803,7 @@ function createColorReader(
   if (colorInfo === 'row') {
     return {
       kind: 'row',
-      getColor: rowIndex => getRowColor(colors, rowIndex)
+      getColor: rowIndex => getRowColor(colors, rowIndex, constantColor)
     };
   }
 
@@ -813,7 +813,11 @@ function createColorReader(
     getColor: (rowIndex, coordinateIndex) => {
       let rowColors = rowCache.get(rowIndex);
       if (!rowColors) {
-        rowColors = flattenVertexColors(colors.get(rowIndex));
+        const row = colors.get(rowIndex);
+        if (!row) {
+          return constantColor;
+        }
+        rowColors = flattenVertexColors(row, constantColor);
         rowCache.set(rowIndex, rowColors);
       }
       const colorOffset = coordinateIndex * 4;
@@ -830,15 +834,23 @@ function createColorReader(
   };
 }
 
-function flattenVertexColors(value: unknown): Uint8Array {
+function flattenVertexColors(
+  value: unknown,
+  fallback: [number, number, number, number]
+): Uint8Array {
   const colors: number[] = [];
-  appendFlattenedColors(value, colors);
+  appendFlattenedColors(value, colors, fallback);
   return Uint8Array.from(colors);
 }
 
-function appendFlattenedColors(value: unknown, colors: number[]): void {
+function appendFlattenedColors(
+  value: unknown,
+  colors: number[],
+  fallback: [number, number, number, number]
+): void {
   if (!isVectorLike(value)) {
-    throw new Error('ArrowPolygonRenderer vertex colors must be nested Arrow vectors');
+    colors.push(...fallback);
+    return;
   }
   if (isUint8Type(value.type) && value.length === 4) {
     colors.push(
@@ -850,15 +862,19 @@ function appendFlattenedColors(value: unknown, colors: number[]): void {
     return;
   }
   for (let index = 0; index < value.length; index++) {
-    appendFlattenedColors(value.get(index), colors);
+    appendFlattenedColors(value.get(index), colors, fallback);
   }
 }
 
 function getRowColor(
   colors: Vector<ArrowPolygonColorType>,
-  rowIndex: number
+  rowIndex: number,
+  fallback: [number, number, number, number]
 ): [number, number, number, number] {
   const value = colors.get(rowIndex);
+  if (!value) {
+    return fallback;
+  }
   if (!isVectorLike(value) || value.length !== 4) {
     throw new Error('ArrowPolygonRenderer row colors must be FixedSizeList<Uint8, 4>');
   }

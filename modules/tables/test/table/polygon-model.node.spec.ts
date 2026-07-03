@@ -31,8 +31,8 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
       attributeName: 'colors',
       storageBindingName: 'polygonColors',
       kind: 'colors',
-      required: true,
-      formats: ['vertex-list<unorm8x4>'],
+      required: false,
+      formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
       internal: true
     },
     {
@@ -256,7 +256,7 @@ function makePolygonGPUVector<FormatT extends VertexList>(
 
 function destroyPolygonGPUVectors(vectors: PolygonGPUVectors): void {
   vectors.positions.destroy();
-  vectors.colors.destroy();
+  if ('destroy' in vectors.colors) vectors.colors.destroy();
   vectors.rowIndices.destroy();
   vectors.indices.destroy();
 }

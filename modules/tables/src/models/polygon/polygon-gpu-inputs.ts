@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {GPURecordBatchSourceInfo} from '../../table/gpu-record-batch';
+import type {GPUConstant} from '../../table/gpu-constant';
 import type {GPUVector} from '../../table/gpu-vector';
 import type {VertexList} from '../../table/gpu-vector-format';
 import {type GPUInputSchema, validateGPUInputVectors} from '../../engine/gpu-input-schema';
@@ -23,8 +24,8 @@ export const POLYGON_GPU_INPUT_SCHEMA = [
     attributeName: 'colors',
     storageBindingName: 'polygonColors',
     kind: 'colors',
-    required: true,
-    formats: ['vertex-list<unorm8x4>'],
+    required: false,
+    formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
     internal: true
   },
   {
@@ -55,7 +56,10 @@ export type PolygonGPUTypeMap = {
 
 /** Prepared GPU vectors consumed by one filled polygon model batch. */
 export type PolygonGPUVectors = {
-  [ColumnName in keyof PolygonGPUTypeMap]: GPUVector<PolygonGPUTypeMap[ColumnName]>;
+  positions: GPUVector<PolygonGPUTypeMap['positions']>;
+  colors: GPUVector<PolygonGPUTypeMap['colors']> | GPUConstant<'unorm8x4'>;
+  rowIndices: GPUVector<PolygonGPUTypeMap['rowIndices']>;
+  indices: GPUVector<PolygonGPUTypeMap['indices']>;
 };
 
 /** One prepared filled polygon batch appended to a model. */
@@ -74,11 +78,11 @@ export function assertPolygonGPUVectorInputs(modelName: string, vectors: Polygon
 }
 
 function assertPolygonVectorRowAlignment(modelName: string, vectors: PolygonGPUVectors): void {
-  const [referenceName, referenceVector] = Object.entries(vectors)[0] as [
-    keyof PolygonGPUVectors,
-    GPUVector
-  ];
-  for (const [name, vector] of Object.entries(vectors).slice(1)) {
+  const varyingVectors = Object.entries(vectors).filter(([, column]) => 'data' in column) as Array<
+    [string, GPUVector]
+  >;
+  const [referenceName, referenceVector] = varyingVectors[0];
+  for (const [name, vector] of varyingVectors.slice(1)) {
     if (vector.length !== referenceVector.length) {
       throw new Error(
         `${modelName} ${name} rows must match ${referenceName} rows (${vector.length} !== ${referenceVector.length})`
@@ -90,7 +94,7 @@ function assertPolygonVectorRowAlignment(modelName: string, vectors: PolygonGPUV
 function assertPolygonVertexValueAlignment(modelName: string, vectors: PolygonGPUVectors): void {
   const vertexCount = vectors.positions.valueLength;
   if (
-    vectors.colors.valueLength !== vertexCount ||
+    ('valueLength' in vectors.colors && vectors.colors.valueLength !== vertexCount) ||
     vectors.rowIndices.valueLength !== vertexCount
   ) {
     throw new Error(`${modelName} positions, colors, and rowIndices require matching valueLength`);

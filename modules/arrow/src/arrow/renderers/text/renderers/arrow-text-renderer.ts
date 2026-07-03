@@ -317,6 +317,15 @@ export class ArrowTextRenderer extends GPURenderable<
     return renderer;
   }
 
+  /** Creates a renderer from already prepared GPUVector input. */
+  static createFromPreparedInput(
+    device: Device,
+    props: ArrowTextRendererProps,
+    textInput: ArrowTextRendererInput
+  ): ArrowTextRenderer {
+    return new ArrowTextRenderer(device, props, textInput);
+  }
+
   /** Uploads explicit Arrow source vectors and selects the best prepared data representation. */
   static prepareData(
     device: Device,

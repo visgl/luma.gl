@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUVector, type GPURecordBatchSourceInfo, type VertexList} from '@luma.gl/tables';
+import {
+  GPUConstant,
+  GPUVector,
+  type GPURecordBatchSourceInfo,
+  type VertexList
+} from '@luma.gl/tables';
 import {
   tesselateAsync,
   tessellateArrowPolygons,
@@ -46,7 +51,7 @@ export type PreparedArrowPolygonGPUVectors = {
   /** Output positions vector, padded to vec4 Float32 values per tessellated vertex. */
   positions: GPUVector<VertexList<'float32x4'>>;
   /** Output per-vertex RGBA8 colors aligned with positions. */
-  colors: GPUVector<VertexList<'unorm8x4'>>;
+  colors: GPUVector<VertexList<'unorm8x4'>> | GPUConstant<'unorm8x4'>;
   /** Output source row indices aligned with positions. */
   rowIndices: GPUVector<VertexList<'uint32'>>;
   /** Output triangle indices grouped by source polygon row. */
@@ -73,7 +78,13 @@ export function convertArrowPolygonToGPUVectors(
 ): PreparedArrowPolygonGPUVectors {
   const id = options.id ?? 'arrow-polygon-model';
   const tessellation = tessellateArrowPolygons(sourceVectors, options);
-  return makePreparedArrowPolygonGPUVectors(device, tessellation, id, options);
+  return makePreparedArrowPolygonGPUVectors(
+    device,
+    tessellation,
+    id,
+    options,
+    Boolean(sourceVectors.colors)
+  );
 }
 
 /** Async variant that awaits GeoArrow polygon tessellation before creating GPU resources. */
@@ -84,14 +95,21 @@ export async function convertArrowPolygonToGPUVectorsAsync(
 ): Promise<PreparedArrowPolygonGPUVectors> {
   const id = options.id ?? 'arrow-polygon-model';
   const tessellation = await tesselateAsync(sourceVectors, options);
-  return makePreparedArrowPolygonGPUVectors(device, tessellation, id, options);
+  return makePreparedArrowPolygonGPUVectors(
+    device,
+    tessellation,
+    id,
+    options,
+    Boolean(sourceVectors.colors)
+  );
 }
 
 function makePreparedArrowPolygonGPUVectors(
   device: Device,
   tessellation: ArrowPolygonTessellationResult,
   id: string,
-  options: ConvertArrowPolygonToGPUVectorsOptions
+  options: ConvertArrowPolygonToGPUVectorsOptions,
+  hasColorVector: boolean
 ): PreparedArrowPolygonGPUVectors {
   const normalizedTessellation = normalizePolygonTessellationIndices(tessellation);
   const vertexValueOffsets = makePolygonVertexValueOffsets(normalizedTessellation, options);
@@ -115,22 +133,27 @@ function makePreparedArrowPolygonGPUVectors(
     byteStride: Float32Array.BYTES_PER_ELEMENT * OUTPUT_POSITION_COMPONENTS,
     ownsBuffer: true
   });
-  const colors: GPUVector<VertexList<'unorm8x4'>> = new GPUVector({
-    type: 'buffer',
-    name: 'colors',
-    buffer: device.createBuffer({
-      id: `${id}-colors`,
-      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: normalizedTessellation.colors
-    }),
-    dataType: makeListType(makeFixedSizeListType(new Uint8(), 4)),
-    format: 'vertex-list<unorm8x4>',
-    length: normalizedTessellation.rowCount,
-    valueLength: normalizedTessellation.vertexCount,
-    stride: 4,
-    byteStride: Uint8Array.BYTES_PER_ELEMENT * 4,
-    ownsBuffer: true
-  });
+  const colors = hasColorVector
+    ? new GPUVector({
+        type: 'buffer',
+        name: 'colors',
+        buffer: device.createBuffer({
+          id: `${id}-colors`,
+          usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+          data: normalizedTessellation.colors
+        }),
+        dataType: makeListType(makeFixedSizeListType(new Uint8(), 4)),
+        format: 'vertex-list<unorm8x4>' as const,
+        length: normalizedTessellation.rowCount,
+        valueLength: normalizedTessellation.vertexCount,
+        stride: 4,
+        byteStride: Uint8Array.BYTES_PER_ELEMENT * 4,
+        ownsBuffer: true
+      })
+    : new GPUConstant({
+        format: 'unorm8x4',
+        value: Uint8Array.from(options.color ?? [0, 96, 255, 255])
+      });
   const rowIndices: GPUVector<VertexList<'uint32'>> = new GPUVector({
     type: 'buffer',
     name: 'rowIndices',
@@ -180,7 +203,7 @@ function makePreparedArrowPolygonGPUVectors(
     tessellation: normalizedTessellation,
     destroy: () => {
       positions.destroy();
-      colors.destroy();
+      if (colors instanceof GPUVector) colors.destroy();
       rowIndices.destroy();
       indices.destroy();
     }

@@ -65,10 +65,10 @@ function setPathLayer(
         model: dataSource.model ?? 'auto',
         data: dataSource.asyncIterator,
         paths: 'paths',
-        colors: dataSource.colors || 'colors',
-        widths: dataSource.widths || 'widths',
-        color: [199, 219, 245, 235],
-        width: 0.0035,
+        color: dataSource.colorColumn
+          ? {source: 'colors', nullValue: [199, 219, 245, 235]}
+          : [199, 219, 245, 235],
+        width: dataSource.widthColumn ? {source: 'widths', nullValue: 0.0035} : 0.0035,
         currentTime,
         trailLength: dataSource.trailLength,
         temporalEnabled: dataSource.temporalEnabled,
