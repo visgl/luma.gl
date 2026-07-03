@@ -12,6 +12,13 @@ export {
   type GPUDataReadbackMetadata
 } from './table/gpu-data';
 export {
+  GPUDataView,
+  makeGPUDataViewFromAttribute,
+  type GPUDataViewBuffer,
+  type GPUDataViewFromAttributeProps,
+  type GPUDataViewProps
+} from './table/gpu-data-view';
+export {
   GPUVector,
   type GPUVectorBufferProps,
   type GPUVectorCreateProps,

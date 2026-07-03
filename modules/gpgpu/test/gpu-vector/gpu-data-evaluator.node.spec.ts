@@ -68,7 +68,7 @@ test('GPUDataEvaluator.fromGPUData accepts packed Float16 chunks', () => {
   device.destroy();
 });
 
-test('GPUDataEvaluator.fromGPUData validates packed numeric chunks', () => {
+test('GPUDataEvaluator.fromGPUData validates fixed-width chunks and preserves strides', () => {
   const device = new NullDevice({});
   const mismatchedRowByteLength = makeUint16Vector(device, 'bad-row-byte-length', [0, 0, 0, 0], 4, {
     format: 'float16x4',
@@ -84,8 +84,11 @@ test('GPUDataEvaluator.fromGPUData validates packed numeric chunks', () => {
   expect(() => GPUDataEvaluator.fromGPUData(mismatchedRowByteLength.data[0])).toThrow(
     /requires rowByteLength 8/
   );
-  expect(() => GPUDataEvaluator.fromGPUData(unpacked.data[0])).toThrow(/requires packed GPUData/);
+  const stridedEvaluator = GPUDataEvaluator.fromGPUData(unpacked.data[0]);
+  expect(stridedEvaluator.stride).toBe(12);
+  expect(stridedEvaluator.byteLength).toBe(8);
 
+  stridedEvaluator.destroy();
   mismatchedRowByteLength.destroy();
   unpacked.destroy();
   device.destroy();

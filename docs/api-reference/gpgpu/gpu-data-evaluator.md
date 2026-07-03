@@ -6,11 +6,11 @@ import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
 `@luma.gl/gpgpu` has two evaluator layers:
 
-- `GPUDataEvaluator` runs one lazy transform over one packed fixed-width `GPUData` chunk.
+- `GPUDataEvaluator` runs one lazy transform over one fixed-width `GPUData` chunk or `GPUDataView`.
 - `GPUVectorEvaluator` applies one lazy `GPUDataEvaluator` transform independently to every ordered `GPUData` chunk in a `GPUVector`.
 
 There is no `GPUTable` evaluator input path. Streaming code should pass an incoming
-`GPUData` chunk directly to `GPUDataEvaluator` operations, or wrap a `GPUVector`
+`GPUData` chunk or borrowed `GPUDataView` directly to `GPUDataEvaluator` operations, or wrap a `GPUVector`
 with `GPUVectorEvaluator` when the same transform should preserve every existing
 chunk boundary.
 
@@ -45,10 +45,31 @@ const outputVector = await translatedVector.evaluate(device);
 `GPUVectorEvaluator` preserves `vector.data[]` order and chunk boundaries. It does
 not combine streaming batches or pack buffers implicitly.
 
+### Interleaved attribute input
+
+```ts
+import {add} from '@luma.gl/gpgpu';
+import {makeGPUDataViewFromAttribute} from '@luma.gl/tables';
+
+const positions = makeGPUDataViewFromAttribute({
+  buffer: interleavedBuffer,
+  bufferLayout,
+  attributeName: 'positions',
+  length: instanceCount
+});
+
+const translatedPositions = add(positions, [10, 0, 0]);
+const packedOutput = await translatedPositions.evaluate(device);
+```
+
+Input views retain their offset and stride, so multiple attributes may borrow
+the same interleaved buffer. Operation results remain newly materialized packed
+outputs; evaluating into an interleaved destination is not implicit.
+
 ## `GPUDataEvaluator`
 
 `GPUDataEvaluator` describes a 2D row layout backed by CPU values, one borrowed
-`GPUData` chunk, another `GPUDataEvaluator`, or a lazy `Operation` output. Each
+`GPUData` chunk, borrowed `GPUDataView`, another `GPUDataEvaluator`, or a lazy `Operation` output. Each
 row contains `size` scalar elements of the same numeric type.
 
 ### `GPUDataEvaluatorProps`
@@ -62,8 +83,8 @@ row contains `size` scalar elements of the same numeric type.
 | `stride?` | `number` | Byte distance between adjacent rows. Defaults to `ValueType.BYTES_PER_ELEMENT * size`. |
 | `normalized?` | `boolean` | Whether integer values are normalized when exposed as vertex formats. |
 | `value?` | `TypedArray` | CPU-side data for the evaluator. |
-| `buffer?` | `Buffer` | Borrowed GPU buffer backing this evaluator. |
-| `gpuData?` | `GPUData` | Borrowed packed numeric GPUData chunk backing this evaluator. |
+| `buffer?` | `Buffer \| DynamicBuffer` | Borrowed GPU buffer backing this evaluator. |
+| `gpuData?` | `GPUData` | Borrowed fixed-width GPUData chunk backing this evaluator. |
 | `format?` | `GPUVectorFormat` | Optional memory format preserved for GPUVector interop. |
 | `source?` | `Operation \| GPUDataEvaluator \| null` | Lazy source for this evaluator. |
 | `isConstant?` | `boolean` | Whether every row shares the same value. Defaults to `false`. |
@@ -84,9 +105,20 @@ one-element row, and an array becomes a row with `value.length` elements.
 
 #### `GPUDataEvaluator.fromGPUData(data, options?): GPUDataEvaluator`
 
-Creates one evaluator view over a packed fixed-width `GPUData` chunk. The input
-must have a non-`vertex-list` `GPUData.format`, matching `rowByteLength`, and
-packed rows. The evaluator borrows `data.buffer` and does not destroy it.
+Creates one evaluator view over a fixed-width `GPUData` chunk. The input
+must have a fixed-width `GPUData.format` and matching `rowByteLength`. Strided
+rows are preserved. The evaluator borrows `data.buffer` and does not destroy it.
+
+#### `GPUDataEvaluator.fromGPUDataView(view, options?): GPUDataEvaluator`
+
+Creates an evaluator over a borrowed fixed-width `GPUDataView`, preserving its
+format, length, byte offset, and byte stride. Existing operations accept views
+directly through `GPUDataEvaluatorInput`.
+
+CPU, WebGL, and WebGPU support strided 32-bit component formats. Other formats
+remain subject to backend capabilities; unsupported WebGPU storage types fail
+explicitly rather than being repacked. Offsets and strides must be aligned to
+the stored scalar component width.
 
 ### Methods
 
@@ -141,9 +173,10 @@ Releases cached GPU resources owned through child `GPUDataEvaluator` instances.
 
 ## Remarks
 
-- Leaf operations accept `GPUDataEvaluator` or `GPUData`, not `GPUVector`.
+- Leaf operations accept `GPUDataEvaluator`, `GPUData`, or `GPUDataView`, not `GPUVector`.
 - Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` for vector-wide
   transforms that should preserve streaming chunks.
 - `GPUDataEvaluator` operation outputs own their materialized single-chunk
   `GPUVector` backing resource.
 - Borrowed `GPUData` chunks are not destroyed by `GPUDataEvaluator.destroy()`.
+- Borrowed `GPUDataView` buffers are not destroyed by `GPUDataEvaluator.destroy()`.
