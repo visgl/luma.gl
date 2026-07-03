@@ -11,6 +11,7 @@ import.meta.glob(
     '../../modules/webgpu/test/**/*.spec.ts',
     '!../../modules/**/test/**/*.node.spec.ts',
     '!../../modules/**/test/**/wip/**/*.spec.ts',
+    '!../../modules/core/test/adapter/resources/**/*.spec.ts',
     '!../../modules/core/test/shadertypes/shader-types.spec.ts',
     '!../../modules/webgl/test/adapter/helpers/get-shader-layout.spec.ts'
   ],

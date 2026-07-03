@@ -7,6 +7,7 @@ import.meta.glob(
     '../../modules/engine/test/**/*.spec.ts',
     '!../../modules/engine/test/**/*.node.spec.ts',
     '!../../modules/engine/test/**/wip/**/*.spec.ts',
+    '!../../modules/engine/test/compute/**/*.spec.ts',
     '!../../modules/engine/test/lib/model.spec.ts',
     '!../../modules/engine/test/passes/shader-pass-renderer.spec.ts',
     '!../../modules/engine/test/geometry/gpu-geometry.spec.ts',
