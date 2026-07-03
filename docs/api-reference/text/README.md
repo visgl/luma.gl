@@ -33,7 +33,8 @@ Use `convertArrowTextToAttribute()` to upload Arrow source vectors, then `conver
 The attribute path supports row colors and per-character color lists. It expands text rows into generated glyph vertex attributes and renders through a GPU table.
 
 Atlas-backed text requires a normalized `fontAtlas`. Build browser-font atlases explicitly with
-`buildBitmapFontAtlas()` or `buildSdfFontAtlas()` before constructing a text renderer or model.
+`buildBitmapFontAtlas()` or `buildSdfFontAtlas()`, or load BMFont JSON MSDF atlases with
+`buildMsdfFontAtlas()` or `loadMsdfFontAtlas()` before constructing a text renderer or model.
 
 ## Storage Path
 

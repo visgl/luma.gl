@@ -20,7 +20,7 @@ import {
 } from '../../text-3d-crawl-color';
 
 export type ArrowText3DCrawlColorKind = Text3DCrawlColorKind;
-export type ArrowText3DRenderingKind = 'extruded' | 'bitmap' | 'sdf';
+export type ArrowText3DRenderingKind = 'extruded' | 'bitmap' | 'sdf' | 'msdf';
 export type ArrowText3DBrowserFontKind = 'monospace' | 'sans-serif' | 'serif';
 
 const TEXT_3D_RENDERING_QUERY_PARAMETER = 'textRendering';
@@ -151,6 +151,7 @@ export function makeArrowText3DSettingsSchema(
             type: 'select',
             persist: 'none',
             options: [
+              {label: 'MSDF atlas', value: 'msdf'},
               {label: 'SDF atlas', value: 'sdf'},
               {label: 'Bitmap atlas', value: 'bitmap'},
               {label: 'Extruded typeface', value: 'extruded'}
@@ -197,7 +198,7 @@ export function makeArrowText3DControlPanelHtml(renderingKind: ArrowText3DRender
     ? ' The selected browser font regenerates this atlas.'
     : '';
   return `\
-  <p>Stores crawl rows in Apache Arrow Utf8 and switches the same crawl between extruded typeface geometry, generated bitmap atlas text, and generated SDF atlas text.</p>
+  <p>Stores crawl rows in Apache Arrow Utf8 and switches the same crawl between extruded typeface geometry, generated bitmap atlas text, generated SDF atlas text, and prebuilt MSDF atlas text.</p>
   <p>${renderingDescription}${browserFontDescription}</p>
   `;
 }
@@ -210,7 +211,7 @@ export function getArrowText3DRenderingKind(
   const renderingKind = currentWindow
     ? new URLSearchParams(currentWindow.location.search).get(TEXT_3D_RENDERING_QUERY_PARAMETER)
     : null;
-  return isArrowText3DRenderingKind(renderingKind) ? renderingKind : 'sdf';
+  return isArrowText3DRenderingKind(renderingKind) ? renderingKind : 'msdf';
 }
 
 export function setArrowText3DRenderingKind(
@@ -222,7 +223,7 @@ export function setArrowText3DRenderingKind(
   }
 
   const searchParams = new URLSearchParams(currentWindow.location.search);
-  if (renderingKind === 'sdf') {
+  if (renderingKind === 'msdf') {
     searchParams.delete(TEXT_3D_RENDERING_QUERY_PARAMETER);
   } else {
     searchParams.set(TEXT_3D_RENDERING_QUERY_PARAMETER, renderingKind);
@@ -273,11 +274,15 @@ export function getArrowText3DBrowserFontFamily(
 }
 
 function getAtlasRenderingLabel(renderingKind: Exclude<ArrowText3DRenderingKind, 'extruded'>) {
-  return renderingKind === 'sdf' ? 'Generated SDF atlas text' : 'Generated bitmap atlas text';
+  return renderingKind === 'msdf'
+    ? 'Prebuilt MSDF atlas text'
+    : renderingKind === 'sdf'
+      ? 'Generated SDF atlas text'
+      : 'Generated bitmap atlas text';
 }
 
 function isArrowText3DRenderingKind(value: unknown): value is ArrowText3DRenderingKind {
-  return value === 'extruded' || value === 'bitmap' || value === 'sdf';
+  return value === 'extruded' || value === 'bitmap' || value === 'sdf' || value === 'msdf';
 }
 
 function isArrowText3DBrowserFontKind(value: unknown): value is ArrowText3DBrowserFontKind {

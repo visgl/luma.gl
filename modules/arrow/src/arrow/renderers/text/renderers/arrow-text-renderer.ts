@@ -775,7 +775,8 @@ function setArrowTextFontAtlasShaderProps(
       textViewport: {
         textFontRenderMode: fontShaderProps.renderMode,
         textSdfThreshold: fontShaderProps.sdfThreshold,
-        textSdfSmoothing: fontShaderProps.sdfSmoothing
+        textSdfSmoothing: fontShaderProps.sdfSmoothing,
+        textMsdfDistanceRange: fontShaderProps.msdfDistanceRange
       }
     } as never);
   }

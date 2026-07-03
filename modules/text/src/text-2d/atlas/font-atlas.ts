@@ -6,7 +6,7 @@ import type {ExternalImage} from '@luma.gl/core';
 import type {CharacterMapping, TextKerning} from './text-utils';
 
 /** Sampling algorithm used to recover glyph coverage from an atlas page. */
-export type FontAtlasRenderMode = 'bitmap' | 'sdf';
+export type FontAtlasRenderMode = 'bitmap' | 'sdf' | 'msdf';
 
 /** Fragment-stage parameters associated with one font atlas. */
 export type FontAtlasRenderSettings = {
@@ -16,6 +16,8 @@ export type FontAtlasRenderSettings = {
   threshold: number;
   /** Width of the distance-field transition. Ignored for bitmap atlases. */
   smoothing: number;
+  /** Signed-distance range encoded around each MSDF glyph, in atlas pixels. */
+  distanceRange?: number;
 };
 
 /**

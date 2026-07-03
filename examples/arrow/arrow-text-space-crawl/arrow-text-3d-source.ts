@@ -4,8 +4,13 @@
 
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {buildBitmapFontAtlas, buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
+import {_resolveLoadFileUrl, AnimationLoopTemplate} from '@luma.gl/engine';
+import {
+  buildBitmapFontAtlas,
+  buildSdfFontAtlas,
+  loadMsdfFontAtlas,
+  type FontAtlas
+} from '@luma.gl/text';
 import {parseFont, type Text3DBounds} from '@luma.gl/text/text-3d';
 import {Matrix4} from '@math.gl/core';
 import {ArrowAtlasText3DRenderer} from './arrow-atlas-text-3d-renderer';
@@ -27,7 +32,7 @@ import {ArrowExamplePanelManager, makeArrowExamplePanelHostHtml} from '../arrow-
 
 export const title = 'Arrow Space Crawl';
 export const description =
-  'Perspective space crawl comparing extruded, bitmap, and SDF text rendering.';
+  'Perspective space crawl comparing extruded, bitmap, SDF, and MSDF text rendering.';
 
 const font = parseFont(helvetiker);
 const CRAWL_CHARACTER_SET = [...new Set(CRAWL_TEXT_ROWS.join(''))].join('');
@@ -75,6 +80,7 @@ export class ArrowText3DSourceController extends AnimationLoopTemplate {
   baseDepthOffset = -320;
   baseScale: [number, number, number] = [1.08, 1.08, 1];
   private rendererLoadVersion = 0;
+  private msdfFontAtlasPromise: Promise<FontAtlas> | null = null;
   private isFinalized = false;
 
   constructor({device}: AnimationProps) {
@@ -205,6 +211,10 @@ export class ArrowText3DSourceController extends AnimationLoopTemplate {
   private async getFontAtlas(
     renderingKind: Exclude<ArrowText3DRenderingKind, 'extruded'>
   ): Promise<FontAtlas> {
+    if (renderingKind === 'msdf') {
+      this.msdfFontAtlasPromise ||= loadMsdfFontAtlas(getMsdfFontUrl());
+      return await this.msdfFontAtlasPromise;
+    }
     const fontAtlasSettings = {
       ...GENERATED_FONT_SETTINGS,
       fontFamily: getArrowText3DBrowserFontFamily(this.browserFontKind)
@@ -247,4 +257,8 @@ export class ArrowText3DSourceController extends AnimationLoopTemplate {
         : [])
     ]);
   }
+}
+
+function getMsdfFontUrl(): string {
+  return _resolveLoadFileUrl('fonts/oswald-msdf.json');
 }

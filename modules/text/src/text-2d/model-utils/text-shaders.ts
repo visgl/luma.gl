@@ -12,12 +12,14 @@ import {
 const DEFAULT_TEXT_FRAGMENT_SHADER_SETTINGS = {
   renderMode: {expression: 'textFontRenderMode', kind: 'float'},
   sdfThreshold: 'textSdfThreshold',
-  sdfSmoothing: 'textSdfSmoothing'
+  sdfSmoothing: 'textSdfSmoothing',
+  msdfDistanceRange: 'textMsdfDistanceRange'
 } as const satisfies TextGlyphAlphaShaderSettings;
 const TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS = {
   renderMode: {expression: 'textStorageStyleConfig.fontRenderMode', kind: 'uint'},
   sdfThreshold: 'textStorageStyleConfig.sdfThreshold',
-  sdfSmoothing: 'textStorageStyleConfig.sdfSmoothing'
+  sdfSmoothing: 'textStorageStyleConfig.sdfSmoothing',
+  msdfDistanceRange: 'textStorageStyleConfig.msdfDistanceRange'
 } as const satisfies TextGlyphAlphaShaderSettings;
 
 export const GLYPH_OFFSETS_COLUMN = 'glyphOffsets';
@@ -173,6 +175,7 @@ uniform highp sampler2DArray fontAtlasTexture;
 uniform float textFontRenderMode;
 uniform float textSdfThreshold;
 uniform float textSdfSmoothing;
+uniform float textMsdfDistanceRange;
 in vec2 vTextureCoordinate;
 flat in uint vAtlasPage;
 out vec4 fragColor;
@@ -216,7 +219,7 @@ struct TextStorageStyleConfig {
   sdfThreshold : f32,
   sdfSmoothing : f32,
   fontRenderMode : u32,
-  _padding1 : u32,
+  msdfDistanceRange : f32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -435,7 +438,7 @@ struct TextStorageStyleConfig {
   sdfThreshold : f32,
   sdfSmoothing : f32,
   fontRenderMode : u32,
-  _padding1 : u32,
+  msdfDistanceRange : f32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;

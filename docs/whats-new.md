@@ -78,6 +78,7 @@ Target Release Date: Q3, 2026
 - **Pure GPUVector text models** - New `TextAttributeModel`, `TextStorageModel`, and `TextDictionaryModel` render prepared GPUVector-backed or storage-backed text state while Arrow conversion remains layer-owned.
 - **Arrow text conversion helpers** - `@luma.gl/arrow` exports helpers such as `ArrowTextRenderer`, `resolveArrowTextSourceVectors()`, `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()`, `createArrowTextStorageState()`, and `createArrowTextDictionaryStorageState()` to prepare glyph state from Arrow source vectors.
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
+- **MSDF text fonts** - `@luma.gl/text` can build or load prebuilt BMFont JSON MSDF atlases, including kerning and multi-page atlas metadata, through the same `FontAtlas` format used by generated bitmap and SDF atlases.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
 
