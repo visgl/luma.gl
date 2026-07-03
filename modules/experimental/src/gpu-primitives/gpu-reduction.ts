@@ -4,7 +4,12 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
+import {
+  GPUCommandGraph,
+  GraphVectorView,
+  type GraphBufferUse,
+  type GraphDataView
+} from './gpu-command-graph';
 import {
   createTransientView,
   getViewBinding,
@@ -19,23 +24,28 @@ const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
 /** Operation performed by {@link GPUReduction}. */
 export type GPUReductionOperation = 'sum' | 'min' | 'max' | 'extent';
 
+/** One scalar chunk or an ordered scalar vector reduced by {@link GPUReduction}. */
+export type GPUReductionInput<T extends GPUScalarFormat = GPUScalarFormat> =
+  | GraphDataView<T>
+  | GraphVectorView<T>;
+
 /** Properties for a graph-native scalar reduction. */
 export type GPUReductionProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
-  input: GraphDataView<T>;
+  input: GPUReductionInput<T>;
   output: GraphDataView<T>;
   operation: GPUReductionOperation;
 };
 
 /**
- * Hierarchical reduction over packed 32-bit scalar graph views.
+ * Hierarchical reduction over packed 32-bit scalar graph data views and vectors.
  *
  * @remarks Inputs and outputs are caller-owned. Hierarchical scratch is graph-owned, and adding
  * the reduction to a graph never submits work or reads data back.
  */
 export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly id: string;
-  readonly input: GraphDataView<T>;
+  readonly input: GPUReductionInput<T>;
   readonly output: GraphDataView<T>;
   readonly operation: GPUReductionOperation;
 
@@ -44,7 +54,13 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
     this.input = props.input;
     this.output = props.output;
     this.operation = props.operation;
-    validatePackedView(this.input, SCALAR_FORMATS, `${this.id} input`);
+    for (const [chunkIndex, input] of getReductionInputs(this.input).entries()) {
+      const name = this.input instanceof GraphVectorView ? ` input chunk ${chunkIndex}` : ' input';
+      validatePackedView(input, SCALAR_FORMATS, `${this.id}${name}`);
+      if (input.format !== this.input.format) {
+        throw new Error(`${this.id}${name} format must match the input format`);
+      }
+    }
     validatePackedView(this.output, SCALAR_FORMATS, `${this.id} output`);
     if (this.input.format !== this.output.format) {
       throw new Error(`${this.id} input and output formats must match`);
@@ -56,17 +72,19 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
     if (this.output.length !== outputLength) {
       throw new Error(`${this.id} ${this.operation} output must contain ${outputLength} row(s)`);
     }
-    if (this.input.buffer === this.output.buffer) {
-      throw new Error(`${this.id} input and output must use separate buffers`);
+    if (getReductionInputs(this.input).some(input => input.buffer === this.output.buffer)) {
+      throw new Error(`${this.id} inputs and output must use separate buffers`);
     }
   }
 
   /** Adds hierarchical reduction passes and hidden scratch to a command graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    if (this.input.buffer.graph !== graph || this.output.buffer.graph !== graph) {
+    const inputs = getReductionInputs(this.input);
+    if (inputs.some(input => input.buffer.graph !== graph) || this.output.buffer.graph !== graph) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
-    if (this.input.length === 0) {
+    const nonEmptyInputs = inputs.filter(input => input.length > 0);
+    if (nonEmptyInputs.length === 0) {
       addClearReductionPass(graph, this.id, this.output);
       return;
     }
@@ -74,57 +92,165 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
     const valuesPerRow = this.operation === 'extent' ? 2 : 1;
     const needsValidity =
       this.input.format === 'float32' && ['min', 'max', 'extent'].includes(this.operation);
-    let inputValues: GraphDataView<T> = this.input;
-    let inputValidity: GraphDataView<'uint32'> | undefined;
-    let inputLength = this.input.length;
-    let levelIndex = 0;
+    let reductionResult: ReductionResult<T>;
 
-    while (true) {
-      const outputLength = Math.ceil(inputLength / REDUCTION_WORKGROUP_SIZE);
-      const outputValues = createTransientView(
-        graph,
-        `${this.id}-level-${levelIndex}-values`,
-        this.input.format,
-        outputLength * valuesPerRow
-      ) as GraphDataView<T>;
-      const outputValidity = needsValidity
-        ? createTransientView(
-            graph,
-            `${this.id}-level-${levelIndex}-validity`,
-            'uint32',
-            outputLength
-          )
-        : undefined;
-      addReductionLevelPass(graph, {
-        id: `${this.id}-level-${levelIndex}`,
+    if (nonEmptyInputs.length === 1) {
+      reductionResult = addReductionLevels(graph, {
+        id: this.id,
         format: this.input.format,
         operation: this.operation,
-        inputValues,
-        inputValidity,
-        outputValues,
-        outputValidity,
-        inputLength,
+        inputValues: nonEmptyInputs[0],
+        inputLength: nonEmptyInputs[0].length,
         valuesPerRow,
-        firstLevel: levelIndex === 0
+        firstLevel: true,
+        needsValidity
       });
-      inputValues = outputValues;
-      inputValidity = outputValidity;
-      inputLength = outputLength;
-      levelIndex++;
-      if (inputLength === 1) {
-        break;
-      }
+    } else {
+      const partialValues = createTransientView(
+        graph,
+        `${this.id}-chunk-values`,
+        this.input.format,
+        nonEmptyInputs.length * valuesPerRow
+      ) as GraphDataView<T>;
+      const partialValidity = needsValidity
+        ? createTransientView(graph, `${this.id}-chunk-validity`, 'uint32', nonEmptyInputs.length)
+        : undefined;
+
+      nonEmptyInputs.forEach((input, partialIndex) => {
+        addReductionLevels(graph, {
+          id: `${this.id}-chunk-${partialIndex}`,
+          format: this.input.format,
+          operation: this.operation,
+          inputValues: input,
+          inputLength: input.length,
+          valuesPerRow,
+          firstLevel: true,
+          needsValidity,
+          finalValues: createPackedSubview(
+            graph,
+            partialValues,
+            partialIndex * valuesPerRow,
+            valuesPerRow
+          ),
+          finalValidity: partialValidity
+            ? createPackedSubview(graph, partialValidity, partialIndex, 1)
+            : undefined
+        });
+      });
+
+      reductionResult = addReductionLevels(graph, {
+        id: `${this.id}-merge`,
+        format: this.input.format,
+        operation: this.operation,
+        inputValues: partialValues,
+        inputValidity: partialValidity,
+        inputLength: nonEmptyInputs.length,
+        valuesPerRow,
+        firstLevel: false,
+        needsValidity
+      });
     }
 
     addFinalizeReductionPass(graph, {
       id: `${this.id}-finalize`,
       format: this.input.format,
-      inputValues,
-      inputValidity,
+      inputValues: reductionResult.values,
+      inputValidity: reductionResult.validity,
       output: this.output,
       valuesPerRow
     });
   }
+}
+
+type ReductionResult<T extends GPUScalarFormat> = {
+  values: GraphDataView<T>;
+  validity?: GraphDataView<'uint32'>;
+};
+
+function addReductionLevels<Parameters, T extends GPUScalarFormat>(
+  graph: GPUCommandGraph<Parameters>,
+  props: {
+    id: string;
+    format: T;
+    operation: GPUReductionOperation;
+    inputValues: GraphDataView<T>;
+    inputValidity?: GraphDataView<'uint32'>;
+    inputLength: number;
+    valuesPerRow: number;
+    firstLevel: boolean;
+    needsValidity: boolean;
+    finalValues?: GraphDataView<T>;
+    finalValidity?: GraphDataView<'uint32'>;
+  }
+): ReductionResult<T> {
+  let inputValues = props.inputValues;
+  let inputValidity = props.inputValidity;
+  let inputLength = props.inputLength;
+  let levelIndex = 0;
+
+  while (true) {
+    const outputLength = Math.ceil(inputLength / REDUCTION_WORKGROUP_SIZE);
+    const isFinalLevel = outputLength === 1;
+    const outputValues =
+      isFinalLevel && props.finalValues
+        ? props.finalValues
+        : (createTransientView(
+            graph,
+            `${props.id}-level-${levelIndex}-values`,
+            props.format,
+            outputLength * props.valuesPerRow
+          ) as GraphDataView<T>);
+    const outputValidity = props.needsValidity
+      ? isFinalLevel && props.finalValidity
+        ? props.finalValidity
+        : createTransientView(
+            graph,
+            `${props.id}-level-${levelIndex}-validity`,
+            'uint32',
+            outputLength
+          )
+      : undefined;
+    addReductionLevelPass(graph, {
+      id: `${props.id}-level-${levelIndex}`,
+      format: props.format,
+      operation: props.operation,
+      inputValues,
+      inputValidity,
+      outputValues,
+      outputValidity,
+      inputLength,
+      valuesPerRow: props.valuesPerRow,
+      firstLevel: props.firstLevel && levelIndex === 0
+    });
+    inputValues = outputValues;
+    inputValidity = outputValidity;
+    inputLength = outputLength;
+    levelIndex++;
+    if (inputLength === 1) {
+      break;
+    }
+  }
+
+  return {values: inputValues, validity: inputValidity};
+}
+
+function createPackedSubview<T extends GPUScalarFormat, Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  view: GraphDataView<T>,
+  elementOffset: number,
+  length: number
+): GraphDataView<T> {
+  return graph.createDataView(view.buffer, {
+    format: view.format,
+    length,
+    byteOffset: view.byteOffset + elementOffset * view.rowByteLength
+  });
+}
+
+function getReductionInputs<T extends GPUScalarFormat>(
+  input: GPUReductionInput<T>
+): readonly GraphDataView<T>[] {
+  return input instanceof GraphVectorView ? input.data : [input];
 }
 
 function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
