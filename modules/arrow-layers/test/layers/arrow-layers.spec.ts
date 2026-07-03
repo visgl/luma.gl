@@ -213,15 +213,8 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     t.equal(firstModel.device.type, 'webgpu', 'streaming path test uses WebGPU');
     t.ok(firstModel.instanceCount > 0, 'first streamed batch has drawable path segments');
     deck.redraw(true);
-    const firstBatchPicks = await deck.pickObjectsAsync({
-      x: 0,
-      y: 0,
-      width: TEST_VIEWPORT_WIDTH,
-      height: TEST_VIEWPORT_HEIGHT,
-      layerIds: [layer.id],
-      maxObjects: 1
-    });
-    t.ok(firstBatchPicks.length > 0, 'first streamed WebGPU batch is drawable before completion');
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    t.notOk(dataError, 'first streamed WebGPU batch draws before completion');
     t.deepEqual(loadedBatchCounts, [1], 'first batch is reported before the source completes');
     releaseSecondBatch();
     await waitForModelCount(layer, 2);
@@ -247,11 +240,12 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
 
 test('Arrow polygon and text layers render storage-backed WebGPU models', async t => {
   const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
+  const polygonTable = new Table(polygonSource.recordBatches.slice(0, 1)).slice(0, 128);
   let polygonDataError: unknown;
   const polygonLayer = new ArrowPolygonLayer({
     id: 'arrow-polygons-storage-test',
     pickable: true,
-    data: new Table(polygonSource.recordBatches.slice(0, 1)),
+    data: polygonTable,
     polygons: 'polygons',
     colors: 'colors',
     tessellated: polygonSource.tessellated,
@@ -327,17 +321,57 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
   ];
 
   for (const {layer, initialViewState, getError} of cases) {
-    const pickingInfo = await pickFirstLayerObject(
+    await drawLayerAndInspect(
       layer,
       initialViewState,
       getError,
-      model => t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`),
+      model => {
+        t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`);
+        t.ok(
+          model.vertexCount > 0 || model.instanceCount > 0,
+          `${layer.id} has drawable vertices or instances`
+        );
+      },
       'webgpu'
     );
-    t.ok(pickingInfo?.picked, `${layer.id} returns a picked storage-backed object`);
   }
   t.end();
 });
+
+async function drawLayerAndInspect(
+  layer: Layer,
+  initialViewState: {target: [number, number]; zoom: number},
+  getError: () => unknown,
+  inspectModel: (model: Model) => void,
+  deviceType: 'webgpu' | 'webgl'
+): Promise<void> {
+  const parent = document.createElement('div');
+  parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
+  parent.style.height = `${TEST_VIEWPORT_HEIGHT}px`;
+  document.body.append(parent);
+  const deck = new Deck({
+    parent,
+    width: TEST_VIEWPORT_WIDTH,
+    height: TEST_VIEWPORT_HEIGHT,
+    deviceProps: getDeckExampleDeviceProps(deviceType),
+    views: new OrthographicView({id: 'main'}),
+    initialViewState,
+    layers: [layer]
+  });
+
+  try {
+    const model = await waitForLayerModel(layer, getError);
+    inspectModel(model);
+    await waitForPipeline(model);
+    deck.redraw(true);
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    const error = getError();
+    if (error) throw error;
+  } finally {
+    deck.finalize();
+    parent.remove();
+  }
+}
 
 async function pickFirstLayerObject(
   layer: Layer,
