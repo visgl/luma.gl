@@ -11,11 +11,9 @@ const testDir = join(packageRoot, 'test');
 class BrowserSuiteSequencer extends BaseSequencer {
   async sort(files) {
     const sortedFiles = await super.sort(files);
-    return sortedFiles.sort((firstFile, secondFile) => {
-      const firstIsCatchAll = firstFile.moduleId.endsWith('/test/browser-suites/monorepo.spec.ts');
-      const secondIsCatchAll = secondFile.moduleId.endsWith('/test/browser-suites/monorepo.spec.ts');
-      return Number(firstIsCatchAll) - Number(secondIsCatchAll);
-    });
+    const catchAllFiles = sortedFiles.filter(file => file.moduleId.includes('monorepo.spec.ts'));
+    const focusedFiles = sortedFiles.filter(file => !file.moduleId.includes('monorepo.spec.ts'));
+    return [...focusedFiles, ...catchAllFiles];
   }
 }
 
