@@ -34,7 +34,8 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
         this.viewState = update.viewState;
         this.animationSeconds = 0;
         this.lastRenderSeconds = null;
-        this.layer.setProps(update);
+        const {viewState: _viewState, layerProps, ...rendererProps} = update;
+        this.layer.setProps({...rendererProps, ...layerProps});
       },
       onRendererPropsUpdated: props => this.layer.setProps(props)
     });

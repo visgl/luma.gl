@@ -95,7 +95,7 @@ function setTextLayer(deck: Deck<OrthographicView>, dataSource: ArrowTextDataSou
         angle: 0,
         size: 32,
         characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
-        onDataBatch: dataSource.onDataBatch
+        ...dataSource.layerProps
       })
     ]
   });

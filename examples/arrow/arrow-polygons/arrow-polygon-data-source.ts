@@ -23,8 +23,11 @@ import * as arrow from 'apache-arrow';
 
 export type ArrowPolygonDataSourceUpdate = Pick<
   ArrowPolygonRendererProps,
-  'data' | 'onDataBatch' | 'tessellated' | 'polygons' | 'colors' | 'model' | 'center' | 'scale'
-> & {viewState: ArrowPolygonViewState};
+  'data' | 'tessellated' | 'polygons' | 'colors' | 'model' | 'center' | 'scale'
+> & {
+  viewState: ArrowPolygonViewState;
+  layerProps: Pick<ArrowPolygonRendererProps, 'onDataBatch'>;
+};
 
 export type ArrowPolygonDataSourceProps = {
   onDataUpdated: (update: ArrowPolygonDataSourceUpdate) => void;
@@ -160,11 +163,13 @@ export class ArrowPolygonDataSource {
       model: this.modelKind,
       center: sourceData.viewState.startCenter,
       scale: sourceData.viewState.scale,
-      onDataBatch: ({loadedBatchCount, metrics}: ArrowPolygonRendererDataBatchUpdate) => {
-        if (this.isFinalized) return;
-        tableStream.setLoadedBatchCount(loadedBatchCount);
-        this.controlPanel.setStreamingBatchStatus(loadedBatchCount, sourceData.batchCount);
-        this.controlPanel.setMetrics(metrics);
+      layerProps: {
+        onDataBatch: ({loadedBatchCount, metrics}: ArrowPolygonRendererDataBatchUpdate) => {
+          if (this.isFinalized) return;
+          tableStream.setLoadedBatchCount(loadedBatchCount);
+          this.controlPanel.setStreamingBatchStatus(loadedBatchCount, sourceData.batchCount);
+          this.controlPanel.setMetrics(metrics);
+        }
       }
     };
     if (inputMode === 'vectors') {

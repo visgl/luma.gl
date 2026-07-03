@@ -97,9 +97,9 @@ function makeArrowPolygonLayer(
     color: [0, 96, 255, 255],
     center: dataSourceUpdate.center,
     scale: dataSourceUpdate.scale,
-    onDataBatch: dataSourceUpdate.onDataBatch,
     onHover: (info: ArrowLayerPickingInfo) => {
       dataSource.setPickedRow(info.arrow?.batchIndex ?? null, info.index ?? null);
-    }
+    },
+    ...dataSourceUpdate.layerProps
   });
 }

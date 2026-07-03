@@ -44,7 +44,7 @@ export type ArrowPathDataSourceUpdate = {
   trailLength: number;
   temporalEnabled: boolean;
   animate: boolean;
-  onDataBatch: NonNullable<ArrowPathLayerProps['onDataBatch']>;
+  layerProps: Pick<ArrowPathLayerProps, 'onDataBatch'>;
 };
 
 export type ArrowPathDataSourceProps = {
@@ -120,9 +120,11 @@ export class ArrowPathDataSource {
       animate: this.state.animate,
       colors: this.state.colorKind === 'none' ? null : undefined,
       widths: this.state.widthKind === 'constant' ? null : undefined,
-      onDataBatch: update => {
-        if (!this.isFinalized) {
-          tableStream.setLoadedBatchCount(update.loadedBatchCount);
+      layerProps: {
+        onDataBatch: update => {
+          if (!this.isFinalized) {
+            tableStream.setLoadedBatchCount(update.loadedBatchCount);
+          }
         }
       }
     });

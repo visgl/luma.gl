@@ -65,14 +65,14 @@ function setPathLayer(
         model: dataSource.model ?? 'auto',
         data: dataSource.asyncIterator,
         paths: 'paths',
-        colors: dataSource.colors === null ? null : 'colors',
-        widths: dataSource.widths === null ? null : 'widths',
+        colors: dataSource.colors || 'colors',
+        widths: dataSource.widths || 'widths',
         color: [199, 219, 245, 235],
         width: 0.0035,
         currentTime,
         trailLength: dataSource.trailLength,
         temporalEnabled: dataSource.temporalEnabled,
-        onDataBatch: dataSource.onDataBatch
+        ...dataSource.layerProps
       })
     ]
   });

@@ -42,7 +42,7 @@ export type ArrowTextDataSourceUpdate = {
   sizes: ArrowTextLayerProps['sizes'];
   animate: boolean;
   labelFieldHeight: number;
-  onDataBatch: NonNullable<ArrowTextLayerProps['onDataBatch']>;
+  layerProps: Pick<ArrowTextLayerProps, 'onDataBatch'>;
 };
 
 export type ArrowTextDataSourceProps = {
@@ -134,9 +134,11 @@ export class ArrowTextDataSource {
       clipRects: this.state.clipKind === 'none' ? null : undefined,
       animate: this.state.animate,
       labelFieldHeight: (dataset.labelCount / LABEL_COLUMN_COUNT) * LABEL_ROW_SPACING,
-      onDataBatch: update => {
-        if (!this.isFinalized) {
-          tableStream.setLoadedBatchCount(update.loadedBatchCount);
+      layerProps: {
+        onDataBatch: update => {
+          if (!this.isFinalized) {
+            tableStream.setLoadedBatchCount(update.loadedBatchCount);
+          }
         }
       }
     });
