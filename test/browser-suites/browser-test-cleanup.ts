@@ -8,4 +8,7 @@ import {afterAll} from 'vitest';
 // Aggregate suites intentionally share one WebGPU device because Dawn adapters are single-use.
 // WebGL devices and their auto-created canvases can be detached safely between substantial suites,
 // allowing their browser-owned contexts to be collected without invalidating the WebGPU instance.
-afterAll(destroyWebGLTestDevices);
+afterAll(async () => {
+  await destroyWebGLTestDevices();
+  (globalThis as typeof globalThis & {gc?: () => void}).gc?.();
+});

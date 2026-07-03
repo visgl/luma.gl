@@ -85,6 +85,8 @@ const config = {
       // Browser packages share native GPU process limits, so create their cached devices
       // sequentially in local and CI runs.
       fileParallelism: false,
+      // Let aggregate test realms collect detached canvases before the next realm starts.
+      launchOptions: {args: ['--js-flags=--expose-gc']},
       // Istanbul instruments only the product source allowlist before browser execution.
       // This keeps generated bundles, source maps, examples, and large fixtures out of the
       // transient coverage chunks that can exhaust smaller GitHub-hosted runner disks.
