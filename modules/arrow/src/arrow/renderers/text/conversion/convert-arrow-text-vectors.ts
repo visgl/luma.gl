@@ -1355,6 +1355,7 @@ export function createArrowTextRenderTable(
   const generatedGlyphColumnNames = new Set([
     GLYPH_OFFSETS_COLUMN,
     GLYPH_FRAMES_COLUMN,
+    GLYPH_PAGES_COLUMN,
     GLYPH_CLIP_RECTS_COLUMN,
     ROW_INDICES_COLUMN
   ]);
