@@ -2,21 +2,23 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {registerTestDeviceCleanup} from './test-device-cleanup';
-
-registerTestDeviceCleanup();
-
 import.meta.glob(
   [
     '../../modules/*/test/**/*.spec.ts',
     '../devtools/**/*.spec.ts',
     '../examples/**/*.spec.ts',
+    '!../../modules/arrow/test/**/*.spec.ts',
     '!../../modules/arrow-layers/test/**/*.spec.ts',
+    '!../../modules/constants/test/**/*.spec.ts',
+    '!../../modules/core/test/**/*.spec.ts',
+    '!../../modules/geoarrow/test/**/*.spec.ts',
+    '!../../modules/tables/test/**/*.spec.ts',
+    '!../../modules/test-utils/test/**/*.spec.ts',
+    '!../../modules/text/test/**/*.spec.ts',
+    '!../../modules/webgl/test/**/*.spec.ts',
+    '!../../modules/webgpu/test/**/*.spec.ts',
     '!../../modules/**/test/**/*.node.spec.ts',
     '!../../modules/**/test/**/wip/**/*.spec.ts',
-    '!../../modules/arrow/test/arrow/arrow-column-info.spec.ts',
-    '!../../modules/arrow/test/arrow/get-arrow-data.spec.ts',
-    '!../../modules/core/test/shadertypes/shader-types.spec.ts',
     '!../../modules/engine/test/geometry/gpu-geometry.spec.ts',
     '!../../modules/engine/test/shader-inputs-types.spec.ts',
     '!../../modules/shadertools/test/lib/uniform-types.spec.ts',
