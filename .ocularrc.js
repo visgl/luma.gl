@@ -73,8 +73,8 @@ const config = {
     },
     // Local Vitest configuration layered on top of the reusable config factory.
     vitest: {
-      // Run one browser entry per package, with only the four GPU-heavy packages divided into
-      // subsystem suites. This limits device churn without exhausting one long-lived device.
+      // Import the browser-safe monorepo tests through one entry so they share one cached device
+      // lifecycle. Multiple aggregate entries exhaust Chromium's native GPU context limits.
       browserIncludePatterns: ['test/browser-suites/*.spec.ts'],
       // Force Chromium browser projects onto SwiftShader in CI for deterministic rendering.
       // Local runs should use the machine GPU unless explicitly overridden.
