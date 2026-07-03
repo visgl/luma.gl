@@ -4,7 +4,12 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
+import {
+  GPUCommandGraph,
+  GraphVectorView,
+  type GraphBufferUse,
+  type GraphDataView
+} from './gpu-command-graph';
 import {
   getViewBinding,
   getViewElementOffset,
@@ -20,10 +25,13 @@ export type GPUGridBinningBounds =
   | readonly [number, number, number, number]
   | GraphDataView<'float32x4'>;
 
+/** Packed float32x2 graph data accepted by {@link GPUGridBinning}. */
+export type GPUGridBinningPositions = GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
+
 /** Properties for graph-native two-dimensional grid counting. */
 export type GPUGridBinningProps = {
   id?: string;
-  positions: GraphDataView<'float32x2'>;
+  positions: GPUGridBinningPositions;
   output: GraphDataView<'uint32'>;
   gridSize: readonly [number, number];
   bounds: GPUGridBinningBounds;
@@ -32,7 +40,7 @@ export type GPUGridBinningProps = {
 /** Graph-native row-major count accumulation for packed float32x2 positions. */
 export class GPUGridBinning {
   readonly id: string;
-  readonly positions: GraphDataView<'float32x2'>;
+  readonly positions: GPUGridBinningPositions;
   readonly output: GraphDataView<'uint32'>;
   readonly gridSize: readonly [number, number];
   readonly bounds: GPUGridBinningBounds;
@@ -43,7 +51,9 @@ export class GPUGridBinning {
     this.output = props.output;
     this.gridSize = props.gridSize;
     this.bounds = props.bounds;
-    validatePackedView(this.positions, ['float32x2'], `${this.id} positions`);
+    for (const chunk of getPositionChunks(this.positions)) {
+      validatePackedView(chunk, ['float32x2'], `${this.id} positions`);
+    }
     validatePackedUint32View(this.output, `${this.id} output`);
     const [width, height] = this.gridSize;
     if (
@@ -57,7 +67,7 @@ export class GPUGridBinning {
     if (this.output.length !== width * height) {
       throw new Error(`${this.id} output.length must equal gridSize width * height`);
     }
-    if (this.positions.buffer === this.output.buffer) {
+    if (getPositionChunks(this.positions).some(chunk => chunk.buffer === this.output.buffer)) {
       throw new Error(`${this.id} positions and output must use separate buffers`);
     }
     if (Array.isArray(this.bounds)) {
@@ -83,15 +93,29 @@ export class GPUGridBinning {
 
   /** Adds output clearing and grid accumulation nodes to a graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    if (this.positions.buffer.graph !== graph || this.output.buffer.graph !== graph) {
+    if (
+      getPositionChunks(this.positions).some(chunk => chunk.buffer.graph !== graph) ||
+      this.output.buffer.graph !== graph
+    ) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     if (isGPUGridBoundsView(this.bounds) && this.bounds.buffer.graph !== graph) {
       throw new Error(`${this.id} bounds must belong to the target graph`);
     }
     addClearGridPass(graph, this.id, this.output);
-    if (this.positions.length > 0) {
-      addGridPass(graph, this);
+    const chunks = getPositionChunks(this.positions);
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      const positions = chunks[chunkIndex];
+      if (positions.length > 0) {
+        addGridPass(graph, {
+          id:
+            this.positions instanceof GraphVectorView ? `${this.id}-chunk-${chunkIndex}` : this.id,
+          positions,
+          output: this.output,
+          gridSize: this.gridSize,
+          bounds: this.bounds
+        });
+      }
     }
   }
 }
@@ -122,7 +146,13 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 
 function addGridPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  binning: GPUGridBinning
+  binning: {
+    id: string;
+    positions: GraphDataView<'float32x2'>;
+    output: GraphDataView<'uint32'>;
+    gridSize: readonly [number, number];
+    bounds: GPUGridBinningBounds;
+  }
 ): void {
   const [width, height] = binning.gridSize;
   const local = binning.output.length <= MAXIMUM_LOCAL_CELL_COUNT;
@@ -259,4 +289,10 @@ function getFloatLiteral(value: number): string {
 
 function isGPUGridBoundsView(bounds: GPUGridBinningBounds): bounds is GraphDataView<'float32x4'> {
   return !Array.isArray(bounds);
+}
+
+function getPositionChunks(
+  positions: GPUGridBinningPositions
+): readonly GraphDataView<'float32x2'>[] {
+  return positions instanceof GraphVectorView ? positions.data : [positions];
 }

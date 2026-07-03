@@ -73,12 +73,12 @@ its documented atomic graph resources; callers must select, adapt, or explicitly
 
 | Primitive | Primary graph input | Multi-chunk `GraphVectorView` |
 | --- | --- | :---: |
-| `GPUScan` | `GraphDataView<'uint32'>` | ❌ |
-| `GPUCompaction` | Input and flag `GraphDataView`s | ❌ |
+| `GPUScan` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
+| `GPUCompaction` | Scalar `GraphDataView`s or matching `GraphVectorView`s | ✅ |
 | `GPUSort` | Key and value `GraphDataView`s | ❌ |
 | `GPUReduction` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUHistogram` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
-| `GPUGridBinning` | Position `GraphDataView` | ❌ |
+| `GPUGridBinning` | Position `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUIndexPickingTarget` | Texture and readback resources | ❌ |
 | `DrawCommandBuffer` | Indirect command buffer | ❌ |
 

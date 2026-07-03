@@ -20,7 +20,7 @@ new GPUGridBinning({
 ```ts
 type GPUGridBinningProps = {
   id?: string;
-  positions: GraphDataView<'float32x2'>;
+  positions: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
   output: GraphDataView<'uint32'>;
   gridSize: readonly [number, number];
   bounds: readonly [number, number, number, number] | GraphDataView<'float32x4'>;
@@ -30,5 +30,9 @@ type GPUGridBinningProps = {
 `output.length` must equal `width * height`. Non-finite and out-of-bounds positions are ignored;
 exact maximum coordinates enter the final column or row. Each encoding clears the output. Up to
 256 cells use workgroup-local atomics, and larger grids use direct global atomics.
+
+For a `GraphVectorView`, each encoding clears the grid once and then accumulates every non-empty
+position chunk in source order. Chunk boundaries and backing buffers are preserved; the primitive
+does not concatenate or pack positions.
 
 This first API accumulates counts only. Weighted and floating-point cell aggregates are deferred.

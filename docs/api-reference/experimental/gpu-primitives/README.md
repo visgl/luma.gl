@@ -382,6 +382,10 @@ new GPUScan({
 Scratch block sums and offsets are graph transients. They participate in lifetime analysis and are
 released with the compiled graph. `GPUScan` does not allocate during encoding.
 
+For matching `GraphVectorView` input and output, scan treats all chunks as one logical sequence
+while keeping every caller-visible buffer and chunk boundary intact. It scans chunks locally,
+scans their totals, and explicitly propagates the resulting carries across chunk boundaries.
+
 The first implementation intentionally supports only exclusive `uint32` addition. Inclusive scan,
 signed or floating-point sums, segmented scans, minimum/maximum operators, and user-defined
 associative operators are plausible extensions. They need explicit numerical and determinism
@@ -416,6 +420,10 @@ the full records. Compacting IDs also avoids copying wide records when visibilit
 The count is an ordinary one-element graph view. It can target a standalone buffer, a field in a
 larger parameter structure, or the `instanceCount` word inside an indirect command. Zero-length
 inputs add a tiny count-clearing pass and never dispatch a zero-sized scan.
+
+For matching vector input, flags, and output, compaction uses vector-wide scan offsets and fills the
+existing output chunks as one logical sequence. It does not concatenate, repack, or replace caller
+buffers, and the count remains a single total for the complete vector.
 
 ## Indirect drawing and stable draw groups
 
@@ -857,8 +865,10 @@ Completed milestones include:
 `GPUReduction` collapses packed scalar rows with explicit empty, overflow, floating-point order,
 and non-finite policies. `GPUHistogram` accepts literal, GPU-resident, or inferred domains and
 produces normal graph output that can feed another reduction. `GPUGridBinning` applies the same
-atomic accumulation strategy to packed positions and row-major cells. All three keep input,
-output, submission, and readback ownership with the caller.
+atomic accumulation strategy to packed positions and row-major cells. Reduction, histogram, and
+grid binning accept fixed-width vectors directly; grid binning clears once before ordered
+per-chunk accumulation. All three keep input, output, submission, and readback ownership with the
+caller.
 
 ### Implemented textures and picking
 
