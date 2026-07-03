@@ -11,8 +11,10 @@ packed `uint32` graph views without submitting commands or reading results back 
 import {GPUCommandGraph, GPUSort} from '@luma.gl/experimental';
 
 const graph = new GPUCommandGraph(device, {id: 'sort-records'});
-const keys = graph.importGPUVector('keys', keyVector);
-const values = graph.importGPUVector('values', rowIdVector);
+const keyChunks = graph.importGPUVector('keys', keyVector);
+const valueChunks = graph.importGPUVector('values', rowIdVector);
+const keys = keyChunks.data[0]!;
+const values = valueChunks.data[0]!;
 const outputKeyHandle = graph.importBuffer(
   {id: 'output-keys', byteLength, usage: outputKeyBuffer.usage},
   outputKeyBuffer

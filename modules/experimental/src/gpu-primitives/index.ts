@@ -8,7 +8,8 @@ export {
   GraphBufferHandle,
   GraphDataView,
   GraphTextureHandle,
-  GraphTextureView
+  GraphTextureView,
+  GraphVectorView
 } from './gpu-command-graph';
 export type {
   GPUCommandGraphCompileContext,

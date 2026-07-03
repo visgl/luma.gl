@@ -18,7 +18,9 @@ import {
   GPUData,
   type GPUVector,
   type GPUVectorFormat,
-  getGPUVectorFormatInfo
+  getGPUVectorFormatInfo,
+  isValueListGPUVectorFormat,
+  isVertexListGPUVectorFormat
 } from '@luma.gl/tables';
 
 /** GPU buffer use declared by one graph node. */
@@ -137,6 +139,42 @@ export class GraphDataView<T extends GPUVectorFormat = GPUVectorFormat> {
     this.byteOffset = props.byteOffset;
     this.byteStride = props.byteStride;
     this.rowByteLength = props.rowByteLength;
+  }
+}
+
+/** Ordered graph data views that preserve one fixed-width GPUVector's chunk boundaries. */
+export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat> {
+  readonly id: string;
+  readonly name: string;
+  readonly format: T;
+  readonly length: number;
+  readonly valueLength: number;
+  readonly stride: number;
+  readonly byteStride: number;
+  readonly rowByteLength: number;
+  readonly data: readonly GraphDataView<T>[];
+
+  /** @internal */
+  constructor(props: {
+    id: string;
+    name: string;
+    format: T;
+    length: number;
+    valueLength: number;
+    stride: number;
+    byteStride: number;
+    rowByteLength: number;
+    data: readonly GraphDataView<T>[];
+  }) {
+    this.id = props.id;
+    this.name = props.name;
+    this.format = props.format;
+    this.length = props.length;
+    this.valueLength = props.valueLength;
+    this.stride = props.stride;
+    this.byteStride = props.byteStride;
+    this.rowByteLength = props.rowByteLength;
+    this.data = props.data;
   }
 }
 
@@ -375,6 +413,7 @@ export class GPUCommandGraph<Parameters = void> {
 
   private readonly buffers = new Map<string, GraphBufferHandle>();
   private readonly textures = new Map<string, GraphTextureHandle>();
+  private readonly tableBufferHandles = new Map<Buffer, GraphBufferHandle>();
   private readonly nodes: GPUCommandGraphNode<Parameters>[] = [];
   private readonly nodeIds = new Set<string>();
   private compiled = false;
@@ -440,33 +479,39 @@ export class GPUCommandGraph<Parameters = void> {
 
   /** Imports one borrowed GPUData range and returns its typed graph view. */
   importGPUData<T extends GPUVectorFormat>(id: string, data: GPUData<T>): GraphDataView<T> {
-    if (!data.format) {
-      throw new Error(`GPUCommandGraph import "${id}" requires GPUData.format`);
-    }
-    const coreBuffer = getCoreBuffer(data.buffer);
-    const handle = this.importBuffer(
-      {id, byteLength: coreBuffer.byteLength, usage: coreBuffer.usage},
-      data.buffer
-    );
-    return this.createDataView(handle, {
-      format: data.format,
-      length: data.length,
-      byteOffset: data.byteOffset,
-      byteStride: data.byteStride,
-      rowByteLength: data.rowByteLength
-    });
+    return this.importGPUDataView(id, data);
   }
 
-  /** Imports one packed, single-chunk GPUVector. */
-  importGPUVector<T extends GPUVectorFormat>(id: string, vector: GPUVector<T>): GraphDataView<T> {
-    const [data, ...remainingData] = vector.data;
-    if (!data || remainingData.length > 0) {
-      throw new Error(`GPUCommandGraph import "${id}" requires exactly one GPUVector chunk`);
-    }
+  /** Imports all chunks of one fixed-width GPUVector without packing them. */
+  importGPUVector<T extends GPUVectorFormat>(id: string, vector: GPUVector<T>): GraphVectorView<T> {
     if (vector.bufferLayout) {
       throw new Error(`GPUCommandGraph import "${id}" does not accept interleaved GPUVector data`);
     }
-    return this.importGPUData(id, data);
+    const format = vector.format ?? vector.data[0]?.format;
+    if (!format) {
+      throw new Error(`GPUCommandGraph import "${id}" requires GPUVector.format`);
+    }
+    if (isVertexListGPUVectorFormat(format) || isValueListGPUVectorFormat(format)) {
+      throw new Error(`GPUCommandGraph import "${id}" requires a fixed-width GPUVector format`);
+    }
+    const data = vector.data.map((chunk, chunkIndex) => {
+      if (chunk.format !== format) {
+        throw new Error(`GPUCommandGraph import "${id}" requires matching GPUVector chunk formats`);
+      }
+      const chunkId = vector.data.length === 1 ? id : `${id}-chunk-${chunkIndex}`;
+      return this.importGPUDataView(chunkId, chunk);
+    });
+    return new GraphVectorView({
+      id,
+      name: vector.name,
+      format,
+      length: vector.length,
+      valueLength: vector.valueLength,
+      stride: vector.stride,
+      byteStride: vector.byteStride,
+      rowByteLength: vector.rowByteLength,
+      data
+    });
   }
 
   /** Declares a caller-owned fixed-size texture that can be supplied now or while encoding. */
@@ -683,6 +728,31 @@ export class GPUCommandGraph<Parameters = void> {
     }
     this.textures.set(texture.id, texture);
     return texture;
+  }
+
+  private importGPUDataView<T extends GPUVectorFormat>(
+    id: string,
+    data: GPUData<T>
+  ): GraphDataView<T> {
+    if (!data.format) {
+      throw new Error(`GPUCommandGraph import "${id}" requires GPUData.format`);
+    }
+    const coreBuffer = getCoreBuffer(data.buffer);
+    let handle = this.tableBufferHandles.get(coreBuffer);
+    if (!handle) {
+      handle = this.importBuffer(
+        {id, byteLength: coreBuffer.byteLength, usage: coreBuffer.usage},
+        data.buffer
+      );
+      this.tableBufferHandles.set(coreBuffer, handle);
+    }
+    return this.createDataView(handle, {
+      format: data.format,
+      length: data.length,
+      byteOffset: data.byteOffset,
+      byteStride: data.byteStride,
+      rowByteLength: data.rowByteLength
+    });
   }
 
   private assertBuffer(buffer: GraphBufferHandle): void {

@@ -166,8 +166,18 @@ class GPUSortExample {
         usage: Buffer.STORAGE | Buffer.COPY_SRC
       });
       const graph = new GPUCommandGraph(this.device, {id: 'gpu-sort-example'});
-      const keyView = graph.importGPUVector('keys', inputKeys);
-      const valueView = graph.importGPUVector('values', inputValues);
+      const keysImport = graph.importGPUVector('keys', inputKeys);
+      const valuesImport = graph.importGPUVector('values', inputValues);
+      const keyView = keysImport.data[0];
+      const valueView = valuesImport.data[0];
+      if (
+        !keyView ||
+        keysImport.data.length !== 1 ||
+        !valueView ||
+        valuesImport.data.length !== 1
+      ) {
+        throw new Error('GPU sort requires single-chunk input vectors');
+      }
       const outputKeyHandle = graph.importBuffer(
         {id: 'output-keys', byteLength, usage: outputKeys.usage},
         outputKeys
