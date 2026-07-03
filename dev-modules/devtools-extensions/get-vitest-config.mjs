@@ -27,6 +27,7 @@ export async function getVitestConfig(options = {}) {
     'test/**/*.spec.{ts,js}'
   ];
   const browserName = vitestConfig.browserName || 'chromium';
+  const browserSequencer = vitestConfig.browserSequencer;
   const browserSetupFiles = vitestConfig.browserSetupFiles || [];
   const testTimeout = vitestConfig.testTimeout || 60_000;
   const fileParallelism = vitestConfig.fileParallelism;
@@ -84,6 +85,7 @@ export async function getVitestConfig(options = {}) {
             color: 'green',
             environment: 'node',
             fileParallelism,
+            sequence: browserSequencer ? {sequencer: browserSequencer} : undefined,
             testTimeout,
             setupFiles: [BROWSER_PROCESS_SHIM_PATH, ...browserSetupFiles],
             include: browserIncludePatterns,
@@ -102,6 +104,7 @@ export async function getVitestConfig(options = {}) {
             color: 'cyan',
             environment: 'node',
             fileParallelism,
+            sequence: browserSequencer ? {sequencer: browserSequencer} : undefined,
             testTimeout,
             setupFiles: [BROWSER_PROCESS_SHIM_PATH, ...browserSetupFiles],
             include: browserIncludePatterns,

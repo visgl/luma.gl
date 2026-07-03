@@ -2,10 +2,22 @@
 
 import {dirname, join} from 'path';
 import {fileURLToPath} from 'url';
+import {BaseSequencer} from 'vitest/node';
 
 const packageRoot = dirname(fileURLToPath(import.meta.url));
 const devModules = join(packageRoot, 'dev-modules');
 const testDir = join(packageRoot, 'test');
+
+class BrowserSuiteSequencer extends BaseSequencer {
+  async sort(files) {
+    const sortedFiles = await super.sort(files);
+    return sortedFiles.sort((firstFile, secondFile) => {
+      const firstIsCatchAll = firstFile.moduleId.endsWith('/test/browser-suites/monorepo.spec.ts');
+      const secondIsCatchAll = secondFile.moduleId.endsWith('/test/browser-suites/monorepo.spec.ts');
+      return Number(firstIsCatchAll) - Number(secondIsCatchAll);
+    });
+  }
+}
 
 /** @type {OcularConfig} */
 const config = {
@@ -76,6 +88,7 @@ const config = {
       // Group browser tests into a few substantial realms. This isolates Deck shader hooks and
       // bounds per-context GPU resources without recreating a device for every source test file.
       browserIncludePatterns: ['test/browser-suites/*.spec.ts'],
+      browserSequencer: BrowserSuiteSequencer,
       // Release WebGL contexts between aggregate realms while retaining the shared WebGPU device.
       // Chromium/Dawn adapters cannot reliably create a replacement WebGPU device in one process.
       browserSetupFiles: ['test/browser-suites/browser-test-cleanup.ts'],
