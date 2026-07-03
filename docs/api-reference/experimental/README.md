@@ -1,4 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+import {OITExample} from '@site/src/examples';
 
 # @luma.gl/experimental
 
@@ -44,6 +45,10 @@ compaction, stable key/value sorting, and GPU-written indirect draw commands.
 
 Both renderers leave scene models, shader inputs, command submission, and fallback selection under
 application control.
+
+Compare A-buffer, weighted-blended, and ordinary alpha blending on the same overlapping scene:
+
+<OITExample embedded showStats={false} />
 
 ## Hybrid Shadows
 

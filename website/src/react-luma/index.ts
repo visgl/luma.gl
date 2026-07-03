@@ -22,6 +22,11 @@ export {
 // Examples
 export {ExamplePage} from './components/luma-example';
 export {ExampleHeader} from './components/luma-example';
+export type {
+  ExampleDisplayProps,
+  ExamplePageProps,
+  LumaExampleProps
+} from './components/luma-example';
 export {ExampleStats} from './components/example-stats';
 export {InfoBox} from './components/info-box';
 export {LumaExample} from './components/luma-example';

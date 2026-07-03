@@ -1,5 +1,6 @@
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@site/src/react-luma';
+import {TextureTesterExample} from '@site/src/examples';
 
 # Texture Formats
 
@@ -215,6 +216,10 @@ For more information on compressed textures, see e.g. [Compressed Textures in 20
 | `texture-compression-pvrtc-webgl` | PowerVR chipsets.                         | iPhone, iPad, certain Android    |                                          |
 | `texture-compression-atc-webgl`   | Adreno GPUs                               | Qualcomm Snapdragon devices.     |                                          |
 | `texture-compression-etc1-webgl`  | Ericsson Compression                      | Older ETC compression.           |                                          |
+
+The live capability sampler loads representative Basis/KTX2, BC/DXT, ASTC, and ETC assets. Unsupported cards are expected and reflect the formats exposed by the selected backend and GPU.
+
+<TextureTesterExample embedded />
 
 ## Supercompressed Textures
 

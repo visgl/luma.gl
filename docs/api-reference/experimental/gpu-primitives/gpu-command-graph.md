@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUDataAnalysisExample} from '@site/src/examples';
 
 # GPUCommandGraph
 
@@ -7,6 +8,10 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 `GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
 ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns
 transient resources and node state but borrows every import.
+
+This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
+
+<GPUDataAnalysisExample embedded />
 
 ```ts
 const graph = new GPUCommandGraph<{time: number}>(device, {id: 'simulation'});

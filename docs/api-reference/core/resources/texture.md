@@ -1,4 +1,5 @@
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {Texture3DExample} from '@site/src/examples';
 
 # Texture
 
@@ -123,6 +124,10 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 | `3d`         | ✅      | ✅      | Holds a "stack" of textures which enables 3D interpolation.          |
 | `cube`       | ✅      | ✅      | Holds 6 textures representing sides of a cube.                       |
 | `cube-array` | ✅      | ❌      | Holds an array where every 6 textures represent the sides of a cube. |
+
+The example below uploads procedural volume data to a `3d` texture and samples through its depth:
+
+<Texture3DExample embedded showStats={false} />
 
 
 ## ExternalImage

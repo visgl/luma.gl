@@ -1106,6 +1106,58 @@ html[data-theme='dark'] .docusaurus-highlight-code-line {
   width: 100%;
 }
 
+.markdown .docs-embedded-example {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 10px;
+  box-sizing: border-box;
+  margin: 1rem 0 2rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.markdown .docs-embedded-example--content {
+  overflow: visible;
+}
+
+.markdown .texture-tester-embedded-header {
+  align-items: flex-start;
+  background: var(--ifm-background-surface-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.markdown .texture-tester-compact {
+  padding: 1rem;
+}
+
+.markdown .texture-tester-compact .texture-format-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(206px, 1fr));
+}
+
+.markdown .texture-tester-compact .texture-format-grid > section {
+  min-width: 0;
+}
+
+.markdown .texture-tester-compact .texture-format-grid h2 {
+  font-size: 1rem;
+  line-height: 1.35;
+  margin-top: 0;
+}
+
+@media screen and (max-width: 640px) {
+  .markdown .docs-embedded-example {
+    border-radius: 8px;
+    margin-left: calc(-1 * var(--ifm-spacing-horizontal));
+    width: calc(100% + 2 * var(--ifm-spacing-horizontal));
+  }
+}
+
 @media screen and (max-width: 996px) {
   body:has(.luma-example-page) .theme-doc-sidebar-container {
     display: none;

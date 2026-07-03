@@ -42,8 +42,15 @@ const STYLES = {
   }
 };
 
-type LumaExampleProps = React.PropsWithChildren<{
+export type ExampleDisplayProps = {
   className?: string;
+  embedded?: boolean;
+  embeddedHeight?: CSSProperties['height'];
+  style?: CSSProperties;
+};
+
+export type LumaExampleProps = React.PropsWithChildren<
+  ExampleDisplayProps & {
   id?: string;
   title?: string;
   template: Function;
@@ -53,7 +60,6 @@ type LumaExampleProps = React.PropsWithChildren<{
   sourceFiles?: string[];
   sourcePath?: string;
   stackBlitz?: boolean;
-  style?: CSSProperties;
   container?: string;
   panel?: boolean;
   showHeader?: boolean;
@@ -61,7 +67,8 @@ type LumaExampleProps = React.PropsWithChildren<{
   devices?: DeviceTabSelection[];
   templateInfoPlacement?: 'header' | 'page';
   headerControls?: React.ReactNode;
-}>;
+  }
+>;
 
 const defaultProps = {
   name: 'luma-example'
@@ -100,10 +107,7 @@ const EXAMPLE_HEADER_STYLE: CSSProperties = {
   pointerEvents: 'none'
 };
 
-type ExamplePageProps = React.PropsWithChildren<{
-  className?: string;
-  style?: CSSProperties;
-}>;
+export type ExamplePageProps = React.PropsWithChildren<ExampleDisplayProps>;
 
 type ExampleHeaderProps = React.PropsWithChildren<
   ExampleInfoProps & {
@@ -115,16 +119,24 @@ type ExampleHeaderProps = React.PropsWithChildren<
 type ReactExampleProps<P> = {
   component: React.ComponentType<P>;
   componentProps: P;
-  className?: string;
-  style?: CSSProperties;
   showStats?: boolean;
-};
+} & ExampleDisplayProps;
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
+  const embeddedHeight = props.embeddedHeight ?? 560;
+  const embeddedStyle: CSSProperties | undefined = props.embedded
+    ? {
+        height: embeddedHeight,
+        minHeight: embeddedHeight === 'auto' ? 0 : embeddedHeight
+      }
+    : undefined;
+
   return (
     <div
-      className={props.className || 'luma-example-page'}
-      style={{...EXAMPLE_CONTAINER_STYLE, ...props.style}}
+      className={
+        props.className || (props.embedded ? 'docs-embedded-example' : 'luma-example-page')
+      }
+      style={{...EXAMPLE_CONTAINER_STYLE, ...embeddedStyle, ...props.style}}
     >
       {props.children}
     </div>
@@ -146,7 +158,10 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
       >
         {props.children}
       </InfoBox>
-      <DeviceTabs devices={props.devices} style={{flexShrink: 0, pointerEvents: 'auto'}} />
+      <DeviceTabs
+        devices={props.devices}
+        style={{flexShrink: 1, maxWidth: '100%', overflowX: 'auto', pointerEvents: 'auto'}}
+      />
     </div>
   );
 };
@@ -155,7 +170,12 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
   const Component = props.component;
 
   return (
-    <ExamplePage className={props.className} style={props.style}>
+    <ExamplePage
+      className={props.className}
+      embedded={props.embedded}
+      embeddedHeight={props.embeddedHeight}
+      style={props.style}
+    >
       {props.showStats !== false ? <ExampleStats /> : null}
       <Component {...props.componentProps} />
     </ExamplePage>
@@ -314,6 +334,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   return (
     <ExamplePage
       className={props.className}
+      embedded={props.embedded}
+      embeddedHeight={props.embeddedHeight}
       style={{
         overflow: 'hidden',
         ...props.style
