@@ -164,41 +164,36 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     const {initializationError, isReady} = this.state;
 
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20,
-          padding: '72px 20px 20px'
-        }}
-      >
+      <div className="multi-canvas-example">
         {initializationError ? (
           <p style={{color: '#b00020', margin: 0}}>{initializationError}</p>
         ) : null}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gridTemplateRows: 'auto auto',
-            gap: 20,
-            alignItems: 'start'
-          }}
-        >
-          <ExamplePaneCopy
+        <div className="multi-canvas-example-grid">
+          <ExamplePane
+            canvasRef={this.canvasRefs[0]}
             description={CONCENTRIC_WAVES_DESCRIPTION}
+            isReady={isReady}
             title={CONCENTRIC_WAVES_TITLE}
           />
-          <ExamplePaneCopy description={ANIMATED_NOISE_DESCRIPTION} title={ANIMATED_NOISE_TITLE} />
-          <ExamplePaneCanvas canvasRef={this.canvasRefs[0]} isReady={isReady} />
-          <ExamplePaneCanvas canvasRef={this.canvasRefs[1]} isReady={isReady} />
+          <ExamplePane
+            canvasRef={this.canvasRefs[1]}
+            description={ANIMATED_NOISE_DESCRIPTION}
+            isReady={isReady}
+            title={ANIMATED_NOISE_TITLE}
+          />
         </div>
       </div>
     );
   }
 }
 
-function ExamplePaneCopy(props: {description: string; title: string}): React.ReactNode {
-  const {description, title} = props;
+function ExamplePane(props: {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  description: string;
+  isReady: boolean;
+  title: string;
+}): React.ReactNode {
+  const {canvasRef, description, isReady, title} = props;
 
   return (
     <div
@@ -218,23 +213,6 @@ function ExamplePaneCopy(props: {description: string; title: string}): React.Rea
         <h3 style={{marginTop: 0, marginBottom: 6}}>{title}</h3>
         <p style={{margin: 0, lineHeight: 1.45}}>{description}</p>
       </div>
-    </div>
-  );
-}
-
-function ExamplePaneCanvas(props: {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  isReady: boolean;
-}): React.ReactNode {
-  const {canvasRef, isReady} = props;
-
-  return (
-    <div
-      style={{
-        minWidth: 0,
-        width: '100%'
-      }}
-    >
       <canvas
         ref={canvasRef}
         width={CANVAS_WIDTH}

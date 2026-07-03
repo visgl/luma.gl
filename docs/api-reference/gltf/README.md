@@ -1,4 +1,5 @@
 import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
+import {GLTFExample} from '@site/src/examples';
 
 # Overview
 
@@ -6,6 +7,8 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 
 The `@luma.gl/gltf` modules utilities for turning glTF data into a
 [luma.gl scenegraph](/docs/api-reference/engine/scenegraph/scenegraph-node) .
+
+<GLTFExample embedded showStats={false} />
 
 ## Installing
 

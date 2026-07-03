@@ -1150,11 +1150,33 @@ html[data-theme='dark'] .docusaurus-highlight-code-line {
   margin-top: 0;
 }
 
+.multi-canvas-example {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 72px 20px 20px;
+}
+
+.multi-canvas-example-grid {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.markdown .docs-embedded-example .multi-canvas-example {
+  padding: 20px;
+}
+
 @media screen and (max-width: 640px) {
   .markdown .docs-embedded-example {
     border-radius: 8px;
     margin-left: calc(-1 * var(--ifm-spacing-horizontal));
     width: calc(100% + 2 * var(--ifm-spacing-horizontal));
+  }
+
+  .markdown .docs-embedded-example .multi-canvas-example-grid {
+    grid-template-columns: 1fr;
   }
 }
 

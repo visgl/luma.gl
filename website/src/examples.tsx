@@ -495,7 +495,7 @@ const GPGPU_EXAMPLE_STYLE = `
 
 // Showcase Examples
 
-export const GLTFExample: React.FC = props => (
+export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="gltf"
     title="glTF"
@@ -598,7 +598,7 @@ export const ArrowFloat64PrecisionExample: React.FC = props => (
   />
 );
 
-export const ArrowGeoArrowExample: React.FC = props => (
+export const ArrowGeoArrowExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="arrow-geoarrow"
     title="GeoArrow"
@@ -925,7 +925,7 @@ export const OITExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
-export const BloomExample: React.FC = props => (
+export const BloomExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="bloom"
     title="Bloom"
@@ -1172,7 +1172,7 @@ export const ArrowParticlesExample: React.FC = props => (
 
 // API Examples
 
-export const AnimationExample: React.FC = props => (
+export const AnimationExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="animation"
     directory="api"
@@ -1194,22 +1194,34 @@ export const CubemapExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
-export const MultiCanvasExample: React.FC = () => {
+export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
   const deviceType = useStore(store => store.deviceType);
   const presentationDevice = useStore(store => store.presentationDevice);
   const presentationDeviceError = useStore(store => store.presentationDeviceError);
+  const exampleDisplayProps: ExampleDisplayProps = {
+    className: props.className,
+    embedded: props.embedded,
+    embeddedHeight: props.embeddedHeight,
+    style: props.style
+  };
 
   if (presentationDeviceError) {
-    return <div>{presentationDeviceError}</div>;
+    return (
+      <ExamplePage {...exampleDisplayProps}>
+        <div>{presentationDeviceError}</div>
+      </ExamplePage>
+    );
   }
 
   return deviceType && presentationDevice ? (
     <ReactExample
       component={MultiCanvasApp}
       componentProps={{deviceType: getExampleDeviceType(presentationDevice), presentationDevice}}
+      showStats={props.showStats}
+      {...exampleDisplayProps}
     />
   ) : (
-    <ExamplePage>
+    <ExamplePage {...exampleDisplayProps}>
       <div>Initializing device...</div>
     </ExamplePage>
   );

@@ -1,4 +1,5 @@
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+import {BloomExample} from '@site/src/examples';
 
 # ShaderPassRenderer
 
@@ -11,6 +12,8 @@ Internally it uses [`ClipSpace`](/docs/api-reference/engine/clip-space), [`Backg
 For the descriptor types, see
 [`ShaderPass`](/docs/api-reference/shadertools/shader-pass). For the authoring
 model, see [Shader Passes](/docs/api-guide/shaders/shader-passes).
+
+<BloomExample embedded showStats={false} />
 
 ## Usage
 
