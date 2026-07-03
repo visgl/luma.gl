@@ -21,6 +21,7 @@ import {
   POLYGON_ATTRIBUTE_VS_GLSL,
   POLYGON_ATTRIBUTE_WGSL_SHADER,
   getPolygonPickingParameters,
+  mergePolygonShaderModules,
   POLYGON_FS_GLSL,
   POLYGON_PICKING_FS_GLSL,
   type PolygonShaderInputs
@@ -98,7 +99,7 @@ function preparePolygonAttributeModel(
         modelProps.fs ??
         (picking && indexPickingSupported ? POLYGON_PICKING_FS_GLSL : POLYGON_FS_GLSL),
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
-      modules: mergeHostShaderModules(
+      modules: mergePolygonShaderModules(
         [picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)],
         modelProps.modules ?? []
       ) as never,
@@ -117,20 +118,6 @@ function preparePolygonAttributeModel(
       parameters: parameters ?? getPolygonPickingParameters(picking)
     }
   };
-}
-
-function mergeHostShaderModules(
-  defaultModules: unknown[],
-  hostModules: NonNullable<PolygonAttributeModelProps['modules']>
-): unknown[] {
-  const hostModuleNames = new Set(hostModules.map(module => module.name));
-  return [
-    ...defaultModules.filter(module => {
-      const moduleName = (module as {name?: string}).name;
-      return !moduleName || !hostModuleNames.has(moduleName);
-    }),
-    ...hostModules
-  ];
 }
 
 function createPolygonAttributeTable(props: PolygonBatchProps): GPUTable {

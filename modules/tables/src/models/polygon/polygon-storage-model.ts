@@ -17,6 +17,7 @@ import {
 } from './polygon-gpu-inputs';
 import {
   getPolygonPickingParameters,
+  mergePolygonShaderModules,
   POLYGON_STORAGE_SHADER_LAYOUT,
   POLYGON_STORAGE_WGSL_SHADER,
   type PolygonShaderInputs
@@ -93,11 +94,10 @@ function preparePolygonStorageModel(
       ...modelProps,
       source: modelProps.source ?? POLYGON_STORAGE_WGSL_SHADER,
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
-      modules:
-        modelProps.modules ??
-        ([
-          picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)
-        ] as never),
+      modules: mergePolygonShaderModules(
+        [picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)],
+        modelProps.modules ?? []
+      ) as never,
       shaderLayout: modelProps.shaderLayout ?? POLYGON_STORAGE_SHADER_LAYOUT,
       shaderInputs,
       table,

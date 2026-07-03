@@ -23,6 +23,21 @@ export const polygonViewport: ShaderModule<PolygonViewportUniforms> = {
   }
 };
 
+/** Merges required polygon shader modules with caller additions, replacing defaults by name. */
+export function mergePolygonShaderModules(
+  defaultModules: unknown[],
+  hostModules: {name: string}[]
+): unknown[] {
+  const hostModuleNames = new Set(hostModules.map(module => module.name));
+  return [
+    ...defaultModules.filter(module => {
+      const moduleName = (module as {name?: string}).name;
+      return !moduleName || !hostModuleNames.has(moduleName);
+    }),
+    ...hostModules
+  ];
+}
+
 /** Shader inputs accepted by filled polygon models. */
 export type PolygonShaderInputs = ShaderInputs<{
   polygonViewport: typeof polygonViewport.props;
