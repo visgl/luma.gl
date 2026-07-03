@@ -6,6 +6,6 @@ import {destroyWebGLTestDevices} from '@luma.gl/test-utils';
 import {afterAll} from 'vitest';
 
 // Aggregate suites intentionally share one WebGPU device because Dawn adapters are single-use.
-// WebGL contexts can be recreated safely and are explicitly lost before the next substantial
-// suite so their browser-owned GPU allocations are released immediately instead of waiting for GC.
+// WebGL devices and their auto-created canvases can be detached safely between substantial suites,
+// allowing their browser-owned contexts to be collected without invalidating the WebGPU instance.
 afterAll(destroyWebGLTestDevices);

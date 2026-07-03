@@ -147,7 +147,8 @@ export async function destroyWebGLTestDevices(): Promise<void> {
   const devices = await Promise.all(devicePromises);
   for (const device of new Set(devices)) {
     device?.destroy();
-    device?.handle.getExtension('WEBGL_lose_context')?.loseContext();
+    device?.canvasContext.destroy();
+    device?.canvasContext.htmlCanvas?.remove();
   }
 }
 
