@@ -9,7 +9,6 @@ const alias = {
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/tables': `${__dirname}/../../../modules/tables/src`,
   '@luma.gl/test-utils': `${__dirname}/../../../modules/test-utils/src`,
-  '@luma.gl/text/text-3d': `${__dirname}/../../../modules/text/src/text-3d/index.ts`,
   '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
   '@luma.gl/webgl/constants': `${__dirname}/../../../modules/webgl/src/constants`,
   '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,

@@ -437,17 +437,23 @@ export function buildArrowGlyphLayout({
   texts,
   fontAtlas,
   lineHeight,
-  characterSet
+  characterSet,
+  textAnchor,
+  alignmentBaseline
 }: {
   texts: ArrowUtf8TextVector;
   fontAtlas: FontAtlas;
   lineHeight?: number;
   characterSet?: Set<string>;
+  textAnchor?: 'start' | 'middle' | 'end';
+  alignmentBaseline?: 'center' | 'top' | 'bottom';
 }): TextGlyphLayout {
   return buildTextGlyphLayout(createArrowTextRowDecoder(texts), {
     fontAtlas,
     lineHeight,
-    characterSet
+    characterSet,
+    textAnchor,
+    alignmentBaseline
   });
 }
 

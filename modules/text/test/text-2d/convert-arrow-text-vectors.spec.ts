@@ -110,6 +110,23 @@ test('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', t
   t.end();
 });
 
+test('buildArrowTextGlyphTable applies constant text alignment', t => {
+  const result = buildArrowTextGlyphTable({
+    labelTable: new arrow.Table({positions: makeArrowPositions(1)}),
+    texts: arrow.vectorFromArray(['AB'], new arrow.Utf8()),
+    fontAtlas: FONT_ATLAS,
+    textAnchor: 'middle',
+    alignmentBaseline: 'top'
+  });
+
+  t.deepEqual(
+    Array.from(result.glyphLayout.glyphOffsets),
+    [-4, 11, 1, 11],
+    'attribute glyph offsets include centered and top-aligned row shifts'
+  );
+  t.end();
+});
+
 test('buildArrowTextGlyphTable expands character color lists per glyph', t => {
   const labelTable = new arrow.Table({
     positions: makeArrowPositions(2),

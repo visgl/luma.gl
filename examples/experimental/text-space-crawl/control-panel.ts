@@ -13,32 +13,30 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {
-  getText3DCrawlColor,
-  getText3DCrawlColorKind,
-  setText3DCrawlColorKind,
-  type Text3DCrawlColorKind
-} from '../../text-3d-crawl-color';
+  getTextSpaceCrawlColorKind,
+  setTextSpaceCrawlColorKind,
+  type TextSpaceCrawlColorKind
+} from '../../text-space-crawl-color';
 
-export type ArrowText3DCrawlColorKind = Text3DCrawlColorKind;
-export type ArrowText3DRenderingKind = 'extruded' | 'bitmap' | 'sdf' | 'msdf';
-export type ArrowText3DBrowserFontKind = 'monospace' | 'sans-serif' | 'serif';
+export type TextSpaceCrawlRenderingKind = 'extruded' | 'bitmap' | 'sdf' | 'msdf';
+export type TextSpaceCrawlBrowserFontKind = 'monospace' | 'sans-serif' | 'serif';
 
-const TEXT_3D_RENDERING_QUERY_PARAMETER = 'textRendering';
-const TEXT_3D_BROWSER_FONT_QUERY_PARAMETER = 'textFont';
-type ArrowText3DWindow = Pick<Window, 'history' | 'location'>;
+const TEXT_RENDERING_QUERY_PARAMETER = 'textRendering';
+const TEXT_BROWSER_FONT_QUERY_PARAMETER = 'textFont';
+type TextSpaceCrawlWindow = Pick<Window, 'history' | 'location'>;
 
-export class ArrowText3DControlPanel {
+export class TextSpaceCrawlControlPanel {
   private readonly onRefresh: () => void;
   private readonly onRenderingKindChange: (
-    renderingKind: ArrowText3DRenderingKind
+    renderingKind: TextSpaceCrawlRenderingKind
   ) => void | Promise<void>;
   private readonly onBrowserFontKindChange: (
-    browserFontKind: ArrowText3DBrowserFontKind
+    browserFontKind: TextSpaceCrawlBrowserFontKind
   ) => void | Promise<void>;
   private readonly settingsPanel: ExampleSettingsPanelManager;
-  private crawlColorKind = getText3DCrawlColorKind();
-  private renderingKind: ArrowText3DRenderingKind;
-  private browserFontKind: ArrowText3DBrowserFontKind;
+  private crawlColorKind = getTextSpaceCrawlColorKind();
+  private renderingKind: TextSpaceCrawlRenderingKind;
+  private browserFontKind: TextSpaceCrawlBrowserFontKind;
 
   constructor({
     onRefresh,
@@ -48,10 +46,12 @@ export class ArrowText3DControlPanel {
     initialBrowserFontKind
   }: {
     onRefresh: () => void;
-    onRenderingKindChange: (renderingKind: ArrowText3DRenderingKind) => void | Promise<void>;
-    onBrowserFontKindChange: (browserFontKind: ArrowText3DBrowserFontKind) => void | Promise<void>;
-    initialRenderingKind: ArrowText3DRenderingKind;
-    initialBrowserFontKind: ArrowText3DBrowserFontKind;
+    onRenderingKindChange: (renderingKind: TextSpaceCrawlRenderingKind) => void | Promise<void>;
+    onBrowserFontKindChange: (
+      browserFontKind: TextSpaceCrawlBrowserFontKind
+    ) => void | Promise<void>;
+    initialRenderingKind: TextSpaceCrawlRenderingKind;
+    initialBrowserFontKind: TextSpaceCrawlBrowserFontKind;
   }) {
     this.onRefresh = onRefresh;
     this.onRenderingKindChange = onRenderingKindChange;
@@ -59,8 +59,8 @@ export class ArrowText3DControlPanel {
     this.renderingKind = initialRenderingKind;
     this.browserFontKind = initialBrowserFontKind;
     this.settingsPanel = new ExampleSettingsPanelManager({
-      id: 'arrow-text-3d-settings',
-      schema: makeArrowText3DSettingsSchema(this.renderingKind),
+      id: 'text-space-crawl-settings',
+      schema: makeTextSpaceCrawlSettingsSchema(this.renderingKind),
       settings: {
         crawlColorKind: this.crawlColorKind,
         renderingKind: this.renderingKind,
@@ -72,9 +72,9 @@ export class ArrowText3DControlPanel {
 
   makeDescriptionPanel(): Panel {
     return makeHtmlCustomPanel({
-      id: 'arrow-text-3d-description',
+      id: 'text-space-crawl-description',
       title: 'Description',
-      html: makeArrowText3DControlPanelHtml(this.renderingKind)
+      html: makeTextSpaceCrawlControlPanelHtml(this.renderingKind)
     });
   }
 
@@ -89,9 +89,9 @@ export class ArrowText3DControlPanel {
   }
 
   syncControls(props: {
-    crawlColorKind?: ArrowText3DCrawlColorKind;
-    renderingKind?: ArrowText3DRenderingKind;
-    browserFontKind?: ArrowText3DBrowserFontKind;
+    crawlColorKind?: TextSpaceCrawlColorKind;
+    renderingKind?: TextSpaceCrawlRenderingKind;
+    browserFontKind?: TextSpaceCrawlBrowserFontKind;
   }): void {
     const {
       crawlColorKind = this.crawlColorKind,
@@ -101,7 +101,7 @@ export class ArrowText3DControlPanel {
     this.crawlColorKind = crawlColorKind;
     this.renderingKind = renderingKind;
     this.browserFontKind = browserFontKind;
-    this.settingsPanel.setSchemaAndSettings(makeArrowText3DSettingsSchema(renderingKind), {
+    this.settingsPanel.setSchemaAndSettings(makeTextSpaceCrawlSettingsSchema(renderingKind), {
       crawlColorKind,
       renderingKind,
       browserFontKind
@@ -114,28 +114,28 @@ export class ArrowText3DControlPanel {
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
     const renderingKind = getChangedSetting(changedSettings, 'renderingKind')?.nextValue;
-    if (isArrowText3DRenderingKind(renderingKind)) {
+    if (isTextSpaceCrawlRenderingKind(renderingKind)) {
       this.renderingKind = renderingKind;
-      setArrowText3DRenderingKind(renderingKind);
+      setTextSpaceCrawlRenderingKind(renderingKind);
       void this.onRenderingKindChange(renderingKind);
     }
     const browserFontKind = getChangedSetting(changedSettings, 'browserFontKind')?.nextValue;
-    if (isArrowText3DBrowserFontKind(browserFontKind)) {
+    if (isTextSpaceCrawlBrowserFontKind(browserFontKind)) {
       this.browserFontKind = browserFontKind;
-      setArrowText3DBrowserFontKind(browserFontKind);
+      setTextSpaceCrawlBrowserFontKind(browserFontKind);
       void this.onBrowserFontKindChange(browserFontKind);
     }
     const crawlColorKind = getChangedSetting(changedSettings, 'crawlColorKind')?.nextValue;
-    if (!isText3DCrawlColorKind(crawlColorKind)) {
+    if (!isTextSpaceCrawlColorKind(crawlColorKind)) {
       return;
     }
     this.crawlColorKind = crawlColorKind;
-    setText3DCrawlColorKind(crawlColorKind);
+    setTextSpaceCrawlColorKind(crawlColorKind);
   };
 }
 
-export function makeArrowText3DSettingsSchema(
-  renderingKind: ArrowText3DRenderingKind
+export function makeTextSpaceCrawlSettingsSchema(
+  renderingKind: TextSpaceCrawlRenderingKind
 ): SettingsSchema {
   return {
     title: 'Settings',
@@ -188,34 +188,33 @@ export function makeArrowText3DSettingsSchema(
   };
 }
 
-export function makeArrowText3DControlPanelHtml(renderingKind: ArrowText3DRenderingKind): string {
+export function makeTextSpaceCrawlControlPanelHtml(
+  renderingKind: TextSpaceCrawlRenderingKind
+): string {
   const renderingDescription =
     renderingKind === 'extruded'
-      ? 'Extruded typeface geometry reuses one shared mesh range per visible glyph.'
-      : `${getAtlasRenderingLabel(renderingKind)} uses the shared Arrow text ` +
-        '`fontAtlas` prop and renders one perspective atlas quad per visible glyph.';
+      ? 'Extruded typeface text uses conventional beveled geometry.'
+      : `${getAtlasRenderingLabel(renderingKind)} renders one perspective atlas quad per visible glyph.`;
   const browserFontDescription = usesBrowserFont(renderingKind)
     ? ' The selected browser font regenerates this atlas.'
     : '';
   return `\
-  <p>Stores crawl rows in Apache Arrow Utf8 and switches the same crawl between extruded typeface geometry, generated bitmap atlas text, generated SDF atlas text, and prebuilt MSDF atlas text.</p>
+  <p>Compares extruded typeface geometry, generated bitmap atlas text, generated SDF atlas text, and prebuilt MSDF atlas text.</p>
   <p>${renderingDescription}${browserFontDescription}</p>
   `;
 }
 
-export const getArrowText3DCrawlColor = getText3DCrawlColor;
-
-export function getArrowText3DRenderingKind(
+export function getTextSpaceCrawlRenderingKind(
   currentWindow = getCurrentWindow()
-): ArrowText3DRenderingKind {
+): TextSpaceCrawlRenderingKind {
   const renderingKind = currentWindow
-    ? new URLSearchParams(currentWindow.location.search).get(TEXT_3D_RENDERING_QUERY_PARAMETER)
+    ? new URLSearchParams(currentWindow.location.search).get(TEXT_RENDERING_QUERY_PARAMETER)
     : null;
-  return isArrowText3DRenderingKind(renderingKind) ? renderingKind : 'msdf';
+  return isTextSpaceCrawlRenderingKind(renderingKind) ? renderingKind : 'msdf';
 }
 
-export function setArrowText3DRenderingKind(
-  renderingKind: ArrowText3DRenderingKind,
+export function setTextSpaceCrawlRenderingKind(
+  renderingKind: TextSpaceCrawlRenderingKind,
   currentWindow = getCurrentWindow()
 ): void {
   if (!currentWindow) {
@@ -224,9 +223,9 @@ export function setArrowText3DRenderingKind(
 
   const searchParams = new URLSearchParams(currentWindow.location.search);
   if (renderingKind === 'msdf') {
-    searchParams.delete(TEXT_3D_RENDERING_QUERY_PARAMETER);
+    searchParams.delete(TEXT_RENDERING_QUERY_PARAMETER);
   } else {
-    searchParams.set(TEXT_3D_RENDERING_QUERY_PARAMETER, renderingKind);
+    searchParams.set(TEXT_RENDERING_QUERY_PARAMETER, renderingKind);
   }
 
   const search = searchParams.toString();
@@ -234,17 +233,17 @@ export function setArrowText3DRenderingKind(
   currentWindow.history.replaceState({}, '', nextUrl);
 }
 
-export function getArrowText3DBrowserFontKind(
+export function getTextSpaceCrawlBrowserFontKind(
   currentWindow = getCurrentWindow()
-): ArrowText3DBrowserFontKind {
+): TextSpaceCrawlBrowserFontKind {
   const browserFontKind = currentWindow
-    ? new URLSearchParams(currentWindow.location.search).get(TEXT_3D_BROWSER_FONT_QUERY_PARAMETER)
+    ? new URLSearchParams(currentWindow.location.search).get(TEXT_BROWSER_FONT_QUERY_PARAMETER)
     : null;
-  return isArrowText3DBrowserFontKind(browserFontKind) ? browserFontKind : 'monospace';
+  return isTextSpaceCrawlBrowserFontKind(browserFontKind) ? browserFontKind : 'monospace';
 }
 
-export function setArrowText3DBrowserFontKind(
-  browserFontKind: ArrowText3DBrowserFontKind,
+export function setTextSpaceCrawlBrowserFontKind(
+  browserFontKind: TextSpaceCrawlBrowserFontKind,
   currentWindow = getCurrentWindow()
 ): void {
   if (!currentWindow) {
@@ -253,9 +252,9 @@ export function setArrowText3DBrowserFontKind(
 
   const searchParams = new URLSearchParams(currentWindow.location.search);
   if (browserFontKind === 'monospace') {
-    searchParams.delete(TEXT_3D_BROWSER_FONT_QUERY_PARAMETER);
+    searchParams.delete(TEXT_BROWSER_FONT_QUERY_PARAMETER);
   } else {
-    searchParams.set(TEXT_3D_BROWSER_FONT_QUERY_PARAMETER, browserFontKind);
+    searchParams.set(TEXT_BROWSER_FONT_QUERY_PARAMETER, browserFontKind);
   }
 
   const search = searchParams.toString();
@@ -263,8 +262,8 @@ export function setArrowText3DBrowserFontKind(
   currentWindow.history.replaceState({}, '', nextUrl);
 }
 
-export function getArrowText3DBrowserFontFamily(
-  browserFontKind: ArrowText3DBrowserFontKind
+export function getTextSpaceCrawlBrowserFontFamily(
+  browserFontKind: TextSpaceCrawlBrowserFontKind
 ): string {
   return browserFontKind === 'sans-serif'
     ? 'Avenir Next, Helvetica Neue, Arial, sans-serif'
@@ -273,7 +272,7 @@ export function getArrowText3DBrowserFontFamily(
       : 'Monaco, Menlo, monospace';
 }
 
-function getAtlasRenderingLabel(renderingKind: Exclude<ArrowText3DRenderingKind, 'extruded'>) {
+function getAtlasRenderingLabel(renderingKind: Exclude<TextSpaceCrawlRenderingKind, 'extruded'>) {
   return renderingKind === 'msdf'
     ? 'Prebuilt MSDF atlas text'
     : renderingKind === 'sdf'
@@ -281,22 +280,22 @@ function getAtlasRenderingLabel(renderingKind: Exclude<ArrowText3DRenderingKind,
       : 'Generated bitmap atlas text';
 }
 
-function isArrowText3DRenderingKind(value: unknown): value is ArrowText3DRenderingKind {
+function isTextSpaceCrawlRenderingKind(value: unknown): value is TextSpaceCrawlRenderingKind {
   return value === 'extruded' || value === 'bitmap' || value === 'sdf' || value === 'msdf';
 }
 
-function isArrowText3DBrowserFontKind(value: unknown): value is ArrowText3DBrowserFontKind {
+function isTextSpaceCrawlBrowserFontKind(value: unknown): value is TextSpaceCrawlBrowserFontKind {
   return value === 'monospace' || value === 'sans-serif' || value === 'serif';
 }
 
-function usesBrowserFont(renderingKind: ArrowText3DRenderingKind): boolean {
+function usesBrowserFont(renderingKind: TextSpaceCrawlRenderingKind): boolean {
   return renderingKind === 'bitmap' || renderingKind === 'sdf';
 }
 
-function isText3DCrawlColorKind(value: unknown): value is ArrowText3DCrawlColorKind {
+function isTextSpaceCrawlColorKind(value: unknown): value is TextSpaceCrawlColorKind {
   return value === 'copper' || value === 'yellow';
 }
 
-function getCurrentWindow(): ArrowText3DWindow | null {
+function getCurrentWindow(): TextSpaceCrawlWindow | null {
   return typeof window === 'undefined' ? null : window;
 }

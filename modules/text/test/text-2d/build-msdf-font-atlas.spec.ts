@@ -106,9 +106,9 @@ test('loadMsdfFontAtlas loads descriptor pages into the common FontAtlas format'
 });
 
 test('MSDF font pages resolve relative to root-relative descriptor URLs', t => {
-  const descriptorUrl = '/example-assets/arrow/arrow-text-space-crawl/fonts/oswald-msdf.json';
+  const descriptorUrl = '/example-assets/experimental/text-space-crawl/fonts/oswald-msdf.json';
   const expectedPageUrl = new URL(
-    '/example-assets/arrow/arrow-text-space-crawl/fonts/oswald-msdf.png',
+    '/example-assets/experimental/text-space-crawl/fonts/oswald-msdf.png',
     globalThis.location?.href ?? 'http://localhost/'
   ).toString();
 

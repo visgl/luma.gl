@@ -69,10 +69,9 @@ import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
-import ArrowTextSpaceCrawlApp from '../../examples/arrow/arrow-text-space-crawl/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
-import Text3DApp from '../../examples/experimental/text-3d/app';
+import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
 import GlobeApp from '../../examples/showcase/globe/app';
@@ -581,17 +580,6 @@ export const ArrowText2DExample: React.FC = props => (
   />
 );
 
-export const ArrowTextSpaceCrawlExample: React.FC = props => (
-  <LumaExample
-    id="arrow-text-space-crawl"
-    title="Arrow Space Crawl"
-    directory="arrow"
-    template={ArrowTextSpaceCrawlApp}
-    config={exampleConfig}
-    {...props}
-  />
-);
-
 export const ArrowTimeColumnsExample: React.FC = props => (
   <LumaExample
     id="arrow-time-columns"
@@ -890,12 +878,12 @@ export const GPT2Example: React.FC = props => (
   />
 );
 
-export const Text3DExample: React.FC = props => (
+export const TextSpaceCrawlExample: React.FC = props => (
   <LumaExample
-    id="text-3d"
-    title="3D Space Crawl"
+    id="text-space-crawl"
+    title="Text Space Crawl"
     directory="experimental"
-    template={Text3DApp}
+    template={TextSpaceCrawlApp}
     config={exampleConfig}
     {...props}
   />
