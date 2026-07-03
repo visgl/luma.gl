@@ -22,7 +22,8 @@ import {DECK_ARROW_ALPHA_BLEND_PARAMETERS} from './arrow-layer-types';
 const TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS = {
   renderMode: {expression: 'textViewport.textFontRenderMode', kind: 'float'},
   sdfThreshold: 'textViewport.textSdfThreshold',
-  sdfSmoothing: 'textViewport.textSdfSmoothing'
+  sdfSmoothing: 'textViewport.textSdfSmoothing',
+  msdfDistanceRange: 'textViewport.textMsdfDistanceRange'
 } as const satisfies TextGlyphAlphaShaderSettings;
 
 const DECK_TEXT_VS = `#version 300 es
@@ -47,6 +48,7 @@ layout(std140) uniform textViewportUniforms {
   float textFontRenderMode;
   float textSdfThreshold;
   float textSdfSmoothing;
+  float textMsdfDistanceRange;
 } textViewport;
 
 uniform highp sampler2DArray fontAtlasTexture;
@@ -131,6 +133,7 @@ layout(std140) uniform textViewportUniforms {
   float textFontRenderMode;
   float textSdfThreshold;
   float textSdfSmoothing;
+  float textMsdfDistanceRange;
 } textViewport;
 
 uniform highp sampler2DArray fontAtlasTexture;

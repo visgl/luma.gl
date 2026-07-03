@@ -14,12 +14,14 @@ import {
 const TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS = {
   renderMode: {expression: 'textViewport.textFontRenderMode', kind: 'float'},
   sdfThreshold: 'textViewport.textSdfThreshold',
-  sdfSmoothing: 'textViewport.textSdfSmoothing'
+  sdfSmoothing: 'textViewport.textSdfSmoothing',
+  msdfDistanceRange: 'textViewport.textMsdfDistanceRange'
 } as const satisfies TextGlyphAlphaShaderSettings;
 const TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS = {
   renderMode: {expression: 'textStorageStyleConfig.fontRenderMode', kind: 'uint'},
   sdfThreshold: 'textStorageStyleConfig.sdfThreshold',
-  sdfSmoothing: 'textStorageStyleConfig.sdfSmoothing'
+  sdfSmoothing: 'textStorageStyleConfig.sdfSmoothing',
+  msdfDistanceRange: 'textStorageStyleConfig.msdfDistanceRange'
 } as const satisfies TextGlyphAlphaShaderSettings;
 
 const configuredAttributeVertexHooks = new WeakMap<ShaderAssembler, Set<string>>();
@@ -115,6 +117,7 @@ struct TextViewportUniforms {
   textFontRenderMode : f32,
   textSdfThreshold : f32,
   textSdfSmoothing : f32,
+  textMsdfDistanceRange : f32,
 };
 
 @group(0) @binding(auto) var<uniform> textViewport : TextViewportUniforms;
@@ -274,7 +277,7 @@ struct TextStorageStyleConfig {
   sdfThreshold : f32,
   sdfSmoothing : f32,
   fontRenderMode : u32,
-  _padding1 : u32,
+  msdfDistanceRange : f32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -529,7 +532,7 @@ struct TextStorageStyleConfig {
   sdfThreshold : f32,
   sdfSmoothing : f32,
   fontRenderMode : u32,
-  _padding1 : u32,
+  msdfDistanceRange : f32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -793,6 +796,7 @@ layout(std140) uniform textViewportUniforms {
   float textFontRenderMode;
   float textSdfThreshold;
   float textSdfSmoothing;
+  float textMsdfDistanceRange;
 } textViewport;
 
 uniform highp sampler2DArray fontAtlasTexture;
@@ -876,6 +880,7 @@ layout(std140) uniform textViewportUniforms {
   float textFontRenderMode;
   float textSdfThreshold;
   float textSdfSmoothing;
+  float textMsdfDistanceRange;
 } textViewport;
 
 uniform highp sampler2DArray fontAtlasTexture;
@@ -914,6 +919,7 @@ layout(std140) uniform textViewportUniforms {
   float textFontRenderMode;
   float textSdfThreshold;
   float textSdfSmoothing;
+  float textMsdfDistanceRange;
 } textViewport;
 
 uniform highp sampler2DArray fontAtlasTexture;
@@ -950,6 +956,7 @@ export type TextViewportUniforms = {
   textFontRenderMode: number;
   textSdfThreshold: number;
   textSdfSmoothing: number;
+  textMsdfDistanceRange: number;
 };
 
 export const textViewport: ShaderModule<TextViewportUniforms> = {
@@ -963,7 +970,8 @@ export const textViewport: ShaderModule<TextViewportUniforms> = {
     colorsEnabled: 'f32',
     textFontRenderMode: 'f32',
     textSdfThreshold: 'f32',
-    textSdfSmoothing: 'f32'
+    textSdfSmoothing: 'f32',
+    textMsdfDistanceRange: 'f32'
   }
 };
 

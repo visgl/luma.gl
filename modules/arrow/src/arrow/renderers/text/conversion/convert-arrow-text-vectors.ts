@@ -3205,8 +3205,9 @@ function createTextStorageStyleConfigData(
   floatValues[16] =
     fontRenderSettings.mode === 'bitmap' ? BITMAP_TEXT_SDF_THRESHOLD : fontRenderSettings.threshold;
   floatValues[17] = fontRenderSettings.smoothing;
-  uintValues[18] = fontRenderSettings.mode === 'bitmap' ? 0 : 1;
-  uintValues[19] = 0;
+  uintValues[18] =
+    fontRenderSettings.mode === 'bitmap' ? 0 : fontRenderSettings.mode === 'sdf' ? 1 : 2;
+  floatValues[19] = fontRenderSettings.distanceRange ?? 0;
   return uintValues;
 }
 

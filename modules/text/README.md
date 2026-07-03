@@ -21,6 +21,7 @@ import {
 } from '@luma.gl/arrow';
 import {
   buildSdfFontAtlas,
+  loadMsdfFontAtlas,
   TextAttributeModel
 } from '@luma.gl/text';
 
@@ -41,12 +42,19 @@ const model = new TextAttributeModel(device, convertArrowTextToAttributeModelPro
   ...convertedText,
   fontAtlas: buildSdfFontAtlas({characterSet: 'helo,lum.ag'})
 }));
+
+const msdfFontAtlas = await loadMsdfFontAtlas('/fonts/inter-msdf.json');
+const msdfModel = new TextAttributeModel(device, convertArrowTextToAttributeModelProps(device, {
+  ...convertedText,
+  fontAtlas: msdfFontAtlas
+}));
 ```
 
 `@luma.gl/arrow` owns Arrow source vectors, table mapping, upload, and glyph preparation. `@luma.gl/text` models consume flat prepared GPUVector props plus generated GPU resources.
 
 Atlas-backed text consumes the common `FontAtlas` format. Build generated browser-font atlases
-with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`.
+with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`. Build or load BMFont JSON MSDF atlases
+with `buildMsdfFontAtlas()` or `loadMsdfFontAtlas()`.
 
 Text input vector support:
 

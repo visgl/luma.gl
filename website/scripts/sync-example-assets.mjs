@@ -24,6 +24,7 @@ const ASSET_EXTENSIONS = new Set([
   '.hdr',
   '.jpeg',
   '.jpg',
+  '.json',
   '.ktx',
   '.ktx2',
   '.mtl',
@@ -70,7 +71,7 @@ function syncExampleAssets() {
         continue;
       }
 
-      const relativePath = path.relative(examplesDirectory, entryPath);
+      const relativePath = getWebsiteAssetPath(path.relative(examplesDirectory, entryPath));
       const destinationPath = path.join(outputDirectory, relativePath);
       mkdirSync(path.dirname(destinationPath), {recursive: true});
       cpSync(entryPath, destinationPath);
@@ -80,6 +81,13 @@ function syncExampleAssets() {
 
   walkDirectory(examplesDirectory);
   console.log(`Synced ${copiedAssetCount} example assets to ${outputDirectory}`);
+}
+
+function getWebsiteAssetPath(relativePath) {
+  const pathSegments = relativePath.split(path.sep);
+  return pathSegments[2] === 'public'
+    ? path.join(...pathSegments.slice(0, 2), ...pathSegments.slice(3))
+    : relativePath;
 }
 
 syncExampleAssets();

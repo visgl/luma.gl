@@ -9,6 +9,13 @@ export {
 } from './build-bitmap-font-atlas';
 export {buildSdfFontAtlas, type SdfFontAtlasSettings} from './build-sdf-font-atlas';
 export {
+  buildMsdfFontAtlas,
+  loadMsdfFontAtlas,
+  type BmFontMsdfCharacter,
+  type BmFontMsdfData,
+  type BmFontMsdfKerning
+} from './build-msdf-font-atlas';
+export {
   autoWrapping,
   buildMapping,
   getCharacterAtlasPage,
