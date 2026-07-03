@@ -9,6 +9,7 @@ export default {
   devtools: {
     vitest: {
       excludePatterns: [],
+      browserIncludePatterns: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
       tsconfigProjects: ['./tsconfig.json'],
       browserName: 'chromium',
       testTimeout: 60000,

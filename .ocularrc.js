@@ -73,11 +73,15 @@ const config = {
     },
     // Local Vitest configuration layered on top of the reusable config factory.
     vitest: {
+      // Run one browser entry per package. This keeps test cases organized by subsystem while
+      // allowing each package to reuse a small number of cached WebGL/WebGPU devices.
+      browserIncludePatterns: ['test/browser-suites/*.spec.ts'],
       // Force Chromium browser projects onto SwiftShader in CI for deterministic rendering.
       // Local runs should use the machine GPU unless explicitly overridden.
       softwareGpu: Boolean(process.env.CI),
-      // CI runners intermittently close Chromium under high parallel WebGL/WebGPU load.
-      fileParallelism: !process.env.CI,
+      // Browser packages share native GPU process limits, so create their cached devices
+      // sequentially in local and CI runs.
+      fileParallelism: false,
       // Istanbul instruments only the product source allowlist before browser execution.
       // This keeps generated bundles, source maps, examples, and large fixtures out of the
       // transient coverage chunks that can exhaust smaller GitHub-hosted runner disks.

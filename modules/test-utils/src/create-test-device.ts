@@ -131,6 +131,39 @@ export async function getNullTestDevice(): Promise<NullDevice> {
   return getOrCreateNullTestDevicePromise();
 }
 
+/**
+ * Destroys and clears every cached test device created in the current test realm.
+ * Package-level browser suites call this once after their tests complete so native GPU
+ * instances do not accumulate across the full monorepo test run.
+ */
+export async function destroyTestDevices(): Promise<void> {
+  const devicePromises: Promise<Device | null>[] = [];
+  if (testDeviceCache.nullDevicePromise) {
+    devicePromises.push(testDeviceCache.nullDevicePromise);
+  }
+  if (testDeviceCache.webglDevicePromise) {
+    devicePromises.push(testDeviceCache.webglDevicePromise);
+  }
+  if (testDeviceCache.presentationWebglDevicePromise) {
+    devicePromises.push(testDeviceCache.presentationWebglDevicePromise);
+  }
+  for (const webgpuDevicePromise of Object.values(testDeviceCache.webgpuDevicePromises)) {
+    if (webgpuDevicePromise) {
+      devicePromises.push(webgpuDevicePromise);
+    }
+  }
+
+  testDeviceCache.nullDevicePromise = null;
+  testDeviceCache.webglDevicePromise = null;
+  testDeviceCache.presentationWebglDevicePromise = null;
+  testDeviceCache.webgpuDevicePromises = {};
+
+  const devices = await Promise.all(devicePromises);
+  for (const device of new Set(devices)) {
+    device?.destroy();
+  }
+}
+
 function getOrCreateWebGPUTestDevicePromise(
   featureLevel: NonNullable<DeviceProps['featureLevel']>
 ): Promise<WebGPUDevice | null> {
