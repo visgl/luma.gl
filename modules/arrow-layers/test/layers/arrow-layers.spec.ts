@@ -329,6 +329,11 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     t.end();
     return;
   }
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping streamed WebGPU Deck rendering on a software-backed adapter');
+    t.end();
+    return;
+  }
   const source = makeArrowLineSourceData(
     {pathCount: 12, pointCount: 8, label: 'streaming test paths'},
     'lines',
@@ -403,6 +408,11 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
   const device = await getWebGPUTestDevice('core');
   if (!device) {
     t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping storage-backed WebGPU Deck rendering on a software-backed adapter');
     t.end();
     return;
   }
@@ -593,6 +603,12 @@ function createTestDeck(device?: Device): {deck: Deck; parent: HTMLDivElement} {
 function getSharedStorageDeck(device: Device): {deck: Deck; parent: HTMLDivElement} {
   sharedStorageDeck ??= createTestDeck(device);
   return sharedStorageDeck;
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
 }
 
 async function waitForLayerModel(
