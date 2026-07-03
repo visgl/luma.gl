@@ -130,8 +130,18 @@ class GPUDataAnalysisExample {
       const gridBuffer = makeOutputBuffer(this.device, 'grid', gridWidth * gridWidth);
       const outputs = [extentBuffer, histogramBuffer, totalBuffer, gridBuffer];
       const graph = new GPUCommandGraph(this.device, {id: 'gpu-data-analysis-example'});
-      const valuesView = graph.importGPUVector('values', gpuValues);
-      const positionsView = graph.importGPUVector('positions', gpuPositions);
+      const valuesImport = graph.importGPUVector('values', gpuValues);
+      const positionsImport = graph.importGPUVector('positions', gpuPositions);
+      const valuesView = valuesImport.data[0];
+      const positionsView = positionsImport.data[0];
+      if (
+        !valuesView ||
+        valuesImport.data.length !== 1 ||
+        !positionsView ||
+        positionsImport.data.length !== 1
+      ) {
+        throw new Error('GPU data analysis requires single-chunk input vectors');
+      }
       const extent = importOutput(graph, extentBuffer, 'extent', 'float32', 2);
       const histogram = importOutput(graph, histogramBuffer, 'histogram', 'uint32', binCount);
       const total = importOutput(graph, totalBuffer, 'total', 'uint32', 1);

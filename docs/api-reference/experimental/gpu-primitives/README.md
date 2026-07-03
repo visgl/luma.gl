@@ -292,10 +292,10 @@ const sourceIds = graph.createDataView(sourceBuffer, {
 });
 ```
 
-`importGPUData()` preserves a `GPUData` range. `importGPUVector()` accepts a packed vector with one
-chunk in this experiment. Multi-chunk vectors require a batching policy: preserve chunks as
-separate graph invocations, expose a graph array, or explicitly pack them. The proof does not
-choose silently. It rejects multi-chunk and interleaved vectors with a clear error.
+`importGPUData()` preserves one `GPUData` range. `importGPUVector()` preserves every fixed-width
+chunk as an ordered `GraphVectorView`. The graph does not choose an execution policy for that
+collection: algorithms consume individual `GraphDataView` chunks unless they explicitly document
+vector-aware semantics. Interleaved and variable-length vectors require dedicated adapters.
 
 Formats and shader value types remain distinct. `GPUVectorFormat` describes stored bytes such as
 `uint32`, `float32x3`, or `unorm8x4`. WGSL declarations describe values such as `u32` and
@@ -650,13 +650,14 @@ WGSL. This is how compaction can legally write the `instanceCount` at byte offse
 copy pass. The graph view continues to describe the precise four-byte field; binding adaptation
 belongs to the kernel that knows its storage layout.
 
-`GPUVector` adds chunking. The initial adapter accepts exactly one packed chunk because chunk
-semantics affect scheduling. Concatenating chunks would allocate and copy implicitly. Treating
-chunks as one contiguous binding would be incorrect. Flattening them into multiple dispatches can
-change algorithm results: a global scan needs carry values between chunks, while independent
-per-batch scans do not. Rejection makes the unresolved policy visible.
+`GPUVector` adds chunking. Importing a fixed-width vector returns a `GraphVectorView` containing one
+`GraphDataView` per source chunk. The graph preserves chunk order and shared physical allocations;
+it does not concatenate, copy, or dispatch work automatically. Algorithms still declare atomic
+`GraphDataView` resources, so accepting a `GraphVectorView` is an explicit algorithm-level choice.
+Interleaved and variable-length vectors remain rejected until dedicated adapters define attribute
+and topology semantics.
 
-A future batch-aware graph API can offer explicit choices. A map-style algorithm may instantiate a
+A batch-aware graph API can offer explicit choices. A map-style algorithm may instantiate a
 graph fragment for every chunk. A streaming scan may produce a per-chunk total, scan those totals,
 then add carries. An application that truly needs contiguous storage can call a named packing
 operation and account for its allocation. All three are useful, and none should be selected merely

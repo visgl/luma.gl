@@ -56,8 +56,9 @@ Imports the backing allocation and preserves the supplied `GPUData` range.
 
 ### `importGPUVector(id, vector)`
 
-Imports a packed vector containing exactly one `GPUData` chunk. Multi-chunk and interleaved vectors
-are rejected in the current experiment.
+Imports every fixed-width `GPUData` chunk without packing and returns a `GraphVectorView`. Chunk
+order, vector metadata, per-chunk offsets, and shared backing buffers are preserved. Interleaved and
+variable-length vectors require explicit adapters and are rejected.
 
 ## Texture APIs
 

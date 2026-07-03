@@ -6,6 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {DrawCommandBuffer, GPUCommandGraph, GPUCompaction, GPUScan} from '@luma.gl/experimental';
+import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 test('GPUCommandGraph compiles dependencies and reuses transient buffers', async t => {
@@ -76,6 +77,140 @@ test('GPUCommandGraph rejects explicit dependency cycles', async t => {
     compile: () => ({encode: () => {}})
   });
   t.throws(() => graph.compile(), /dependency cycle/, 'cycle is rejected');
+  t.end();
+});
+
+test('GPUCommandGraph preserves fixed-width GPUVector chunks and borrowed ownership', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const sharedBuffer = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
+  const trailingBuffer = device.createBuffer({byteLength: 8, usage: Buffer.STORAGE});
+  const firstChunk = new GPUData({
+    buffer: sharedBuffer,
+    format: 'uint32',
+    length: 2,
+    byteOffset: 0,
+    ownsBuffer: true
+  });
+  const secondChunk = new GPUData({
+    buffer: sharedBuffer,
+    format: 'uint32',
+    length: 2,
+    byteOffset: 8
+  });
+  const thirdChunk = new GPUData({
+    buffer: trailingBuffer,
+    format: 'uint32',
+    length: 2,
+    ownsBuffer: true
+  });
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'values',
+    format: 'uint32',
+    data: [firstChunk, secondChunk, thirdChunk],
+    ownsData: true
+  });
+  const graph = new GPUCommandGraph(device, {id: 'gpu-vector-import-test'});
+  const firstView = graph.importGPUData('first-data', firstChunk);
+  const vectorView = graph.importGPUVector('values', vector);
+
+  t.equal(firstView.format, 'uint32', 'GPUData format is preserved');
+  t.equal(firstView.length, 2, 'GPUData length is preserved');
+  t.equal(firstView.byteOffset, 0, 'GPUData byte offset is preserved');
+  t.equal(firstView.byteStride, 4, 'GPUData byte stride is preserved');
+  t.equal(vectorView.name, 'values', 'GPUVector name is preserved');
+  t.equal(vectorView.length, 6, 'GPUVector row count is preserved');
+  t.equal(vectorView.data.length, 3, 'GPUVector chunk count is preserved');
+  t.equal(vectorView.data[0].buffer, firstView.buffer, 'reuses an already imported table buffer');
+  t.equal(vectorView.data[0].buffer, vectorView.data[1].buffer, 'shared chunks share one handle');
+  t.notEqual(
+    vectorView.data[1].buffer,
+    vectorView.data[2].buffer,
+    'distinct buffers stay distinct'
+  );
+  t.equal(vectorView.data[1].byteOffset, 8, 'per-chunk byte offsets are preserved');
+
+  graph.addCopyPass({
+    id: 'read-first-chunk',
+    dependsOn: ['gate'],
+    resources: [{buffer: vectorView.data[0], usage: 'storage-read'}],
+    compile: () => ({encode: () => {}})
+  });
+  graph.addCopyPass({
+    id: 'write-second-chunk',
+    resources: [{buffer: vectorView.data[1], usage: 'storage-write'}],
+    compile: () => ({encode: () => {}})
+  });
+  graph.addCopyPass({id: 'gate', compile: () => ({encode: () => {}})});
+  const compiled = graph.compile();
+  t.deepEqual(
+    compiled.stats.nodeOrder,
+    ['gate', 'read-first-chunk', 'write-second-chunk'],
+    'hazards are inferred through the shared physical buffer handle'
+  );
+
+  compiled.destroy();
+  t.notOk(sharedBuffer.destroyed, 'compiled graph does not destroy borrowed shared storage');
+  t.notOk(trailingBuffer.destroyed, 'compiled graph does not destroy borrowed trailing storage');
+  vector.destroy();
+  t.ok(sharedBuffer.destroyed, 'GPUVector retains shared-buffer ownership');
+  t.ok(trailingBuffer.destroyed, 'GPUVector retains trailing-buffer ownership');
+  t.end();
+});
+
+test('GPUCommandGraph rejects interleaved and variable-length GPUVector imports', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const interleaved = new GPUVector({
+    type: 'interleaved',
+    name: 'interleaved',
+    buffer: device.createBuffer({byteLength: 16, usage: Buffer.STORAGE}),
+    length: 2,
+    byteStride: 8,
+    attributes: [{attribute: 'value', format: 'uint32', byteOffset: 0}],
+    ownsBuffer: true
+  });
+  const listData = new GPUData({
+    buffer: device.createBuffer({byteLength: 8, usage: Buffer.STORAGE}),
+    format: 'value-list<uint32>',
+    length: 1,
+    valueLength: 2,
+    valueOffsets: new Int32Array([0, 2]),
+    ownsBuffer: true
+  });
+  const variableLength = new GPUVector({
+    type: 'data',
+    name: 'variable-length',
+    format: 'value-list<uint32>',
+    data: [listData],
+    ownsData: true
+  });
+  const graph = new GPUCommandGraph(device);
+
+  t.throws(
+    () => graph.importGPUVector('interleaved', interleaved),
+    /does not accept interleaved/,
+    'interleaved vectors require an explicit attribute adapter'
+  );
+  t.throws(
+    () => graph.importGPUVector('variable-length', variableLength),
+    /fixed-width GPUVector format/,
+    'variable-length vectors require an explicit topology adapter'
+  );
+
+  interleaved.destroy();
+  variableLength.destroy();
   t.end();
 });
 
