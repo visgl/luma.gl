@@ -9,7 +9,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Table, vectorFromArray, type RecordBatch} from 'apache-arrow';
 import {
   makeArrowLineRecordBatches,
@@ -186,6 +186,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     pixelOffsets: null,
     color: 'missingColors',
     model: 'attribute',
+    fontAtlas: TEXT_FONT_ATLAS,
     characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
     onDataError: error => {
       missingTextColorDataError = error;
@@ -281,7 +282,8 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     }
   ];
 
-  const {deck, parent} = createTestDeck();
+  const device = await getWebGLTestDevice();
+  const {deck, parent} = createTestDeck(device);
   try {
     await waitForDeckInitialization(deck);
     for (const {layer, initialViewState, getError, inspectModel} of cases) {
