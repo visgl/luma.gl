@@ -18,19 +18,37 @@ const SCAN_WORKGROUP_SIZE = 256;
 /** Packed uint32 graph data accepted by {@link GPUScan}. */
 export type GPUScanInput = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
-/** Properties for a graph-native exclusive prefix sum. */
+/** Properties for one graph-native exclusive prefix sum. */
 export type GPUScanProps = {
+  /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
+  /** One packed unsigned data view or an ordered vector of packed chunks. */
   input: GPUScanInput;
+  /** Caller-owned destination with matching view kind and sufficient capacity or topology. */
   output: GPUScanInput;
 };
 
-/** Hierarchical exclusive prefix sum over packed uint32 graph data. */
+/**
+ * Hierarchical exclusive prefix sum over packed `uint32` graph data.
+ *
+ * Each 256-thread block writes local exclusive offsets and, when necessary, one block sum. Higher
+ * levels scan those block sums before reverse-order offset passes add the parent offsets back into
+ * every lower level. Vector inputs are one logical sequence whose carries cross chunk boundaries
+ * without changing caller-visible topology. Arithmetic wraps modulo 2^32.
+ */
 export class GPUScan {
+  /** Prefix for generated graph node and transient resource IDs. */
   readonly id: string;
+  /** Packed unsigned source data or ordered source vector. */
   readonly input: GPUScanInput;
+  /** Caller-owned exclusive-prefix destination with matching view kind. */
   readonly output: GPUScanInput;
 
+  /**
+   * Creates and validates an exclusive scan description.
+   *
+   * @throws If either view is not packed `uint32` data or the output is shorter than the input.
+   */
   constructor(props: GPUScanProps) {
     this.id = props.id ?? 'gpu-scan';
     this.input = props.input;
@@ -49,78 +67,90 @@ export class GPUScan {
     }
   }
 
-  /** Adds local scans, vector carry propagation, and scratch buffers to a graph. */
+  /**
+   * Adds local scan hierarchies, vector carry propagation, and graph-owned scratch.
+   *
+   * Empty inputs add no nodes. This method declares work only; it does not compile, encode, submit,
+   * or read data back.
+   */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     validateScanOwnership(graph, this.input, this.id);
     validateScanOwnership(graph, this.output, this.id);
-    if (this.input instanceof GraphVectorView && this.output instanceof GraphVectorView) {
-      addVectorScan(graph, this.id, this.input, this.output);
-    } else {
-      addScanLevels(
-        graph,
-        this.id,
-        this.input as GraphDataView<'uint32'>,
-        this.output as GraphDataView<'uint32'>
-      );
-    }
+    addChunkedScan(graph, this.id, this.input, this.output);
   }
 }
 
-function addVectorScan<Parameters>(
+/** Normalizes atomic and vector inputs and adds the required local scans and vector carries. */
+function addChunkedScan<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
-  input: GraphVectorView<'uint32'>,
-  output: GraphVectorView<'uint32'>
+  input: GPUScanInput,
+  output: GPUScanInput
 ): void {
-  if (input.length === 0) {
+  const inputChunks = getScanChunks(input);
+  const outputChunks = getScanChunks(output);
+  const nonEmptyChunks = inputChunks
+    .map((inputChunk, chunkIndex) => ({
+      chunkIndex,
+      input: inputChunk,
+      output: outputChunks[chunkIndex]
+    }))
+    .filter(chunk => chunk.input.length > 0);
+  if (nonEmptyChunks.length === 0) {
     return;
   }
-  if (input.data.length === 1) {
-    addScanLevels(graph, `${id}-chunk-0`, input.data[0], output.data[0]);
+  const isVector = input instanceof GraphVectorView;
+  if (nonEmptyChunks.length === 1) {
+    const chunk = nonEmptyChunks[0];
+    addScanLevels(
+      graph,
+      isVector ? `${id}-chunk-${chunk.chunkIndex}` : id,
+      chunk.input,
+      chunk.output
+    );
     return;
   }
 
-  const chunkTotals = createTransientView(graph, `${id}-chunk-totals`, 'uint32', input.data.length);
+  const chunkTotals = createTransientView(
+    graph,
+    `${id}-chunk-totals`,
+    'uint32',
+    nonEmptyChunks.length
+  );
   const chunkOffsets = createTransientView(
     graph,
     `${id}-chunk-offsets`,
     'uint32',
-    input.data.length
+    nonEmptyChunks.length
   );
-  addClearPass(graph, `${id}-clear-chunk-totals`, chunkTotals);
-  for (let chunkIndex = 0; chunkIndex < input.data.length; chunkIndex++) {
-    const inputChunk = input.data[chunkIndex];
-    if (inputChunk.length === 0) {
-      continue;
-    }
-    const outputChunk = output.data[chunkIndex];
-    addScanLevels(graph, `${id}-chunk-${chunkIndex}`, inputChunk, outputChunk);
-    addChunkTotalPass(graph, {
-      id: `${id}-chunk-${chunkIndex}-total`,
-      input: inputChunk,
-      output: outputChunk,
-      chunkTotals,
-      chunkIndex
-    });
-  }
+  nonEmptyChunks.forEach((chunk, partialIndex) => {
+    addScanLevels(
+      graph,
+      `${id}-chunk-${chunk.chunkIndex}`,
+      chunk.input,
+      chunk.output,
+      createPackedSubview(graph, chunkTotals, partialIndex)
+    );
+  });
   addScanLevels(graph, `${id}-chunk-carries`, chunkTotals, chunkOffsets);
-  for (let chunkIndex = 0; chunkIndex < output.data.length; chunkIndex++) {
-    if (output.data[chunkIndex].length > 0) {
-      addChunkCarryPass(graph, {
-        id: `${id}-chunk-${chunkIndex}-add-carry`,
-        output: output.data[chunkIndex],
-        chunkOffsets,
-        chunkIndex
-      });
-    }
-  }
+  nonEmptyChunks.forEach((chunk, partialIndex) => {
+    addOffsetPass(graph, {
+      id: `${id}-chunk-${chunk.chunkIndex}-add-carry`,
+      output: chunk.output,
+      offsets: chunkOffsets,
+      length: chunk.output.length,
+      offsetIndex: partialIndex
+    });
+  });
 }
 
+/** Adds every hierarchical level required to scan one non-empty packed data view. */
 function addScanLevels<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   input: GraphDataView<'uint32'>,
-  output: GraphDataView<'uint32'>
+  output: GraphDataView<'uint32'>,
+  finalSum?: GraphDataView<'uint32'>
 ): void {
   if (input.length === 0) {
     return;
@@ -153,6 +183,7 @@ function addScanLevels<Parameters>(
       input: levelInput,
       output: levelOutput,
       blockSums,
+      finalSum: blockSums ? undefined : finalSum,
       length: levelLength,
       blockCount
     });
@@ -176,156 +207,29 @@ function addScanLevels<Parameters>(
 
   for (let index = levels.length - 2; index >= 0; index--) {
     const level = levels[index];
-    addBlockOffsetPass(graph, {
+    addOffsetPass(graph, {
       id: `${id}-level-${index}-add-offsets`,
       output: level.output,
-      blockOffsets: level.blockOffsets!,
+      offsets: level.blockOffsets!,
       length: level.length
     });
   }
 }
 
-function addClearPass<Parameters>(
+/** Returns one packed row within a transient view without allocating another buffer. */
+function createPackedSubview<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  id: string,
-  output: GraphDataView<'uint32'>
-): void {
-  const source = /* wgsl */ `
-const ELEMENT_COUNT: u32 = ${output.length}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
-@group(0) @binding(0) var<storage, read_write> outputValues: array<u32>;
-@compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
-) {
-  if (globalId.x < ELEMENT_COUNT) { outputValues[OUTPUT_OFFSET + globalId.x] = 0u; }
-}`;
-  addSimpleScanPass(graph, {
-    id,
-    source,
-    resources: [{buffer: output, usage: 'storage-write'}],
-    bindings: {outputValues: output},
-    dispatchCount: Math.ceil(output.length / SCAN_WORKGROUP_SIZE)
+  view: GraphDataView<'uint32'>,
+  index: number
+): GraphDataView<'uint32'> {
+  return graph.createDataView(view.buffer, {
+    format: 'uint32',
+    length: 1,
+    byteOffset: view.byteOffset + index * view.rowByteLength
   });
 }
 
-function addChunkTotalPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    input: GraphDataView<'uint32'>;
-    output: GraphDataView<'uint32'>;
-    chunkTotals: GraphDataView<'uint32'>;
-    chunkIndex: number;
-  }
-): void {
-  const lastIndex = props.input.length - 1;
-  const source = /* wgsl */ `
-const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
-const TOTALS_OFFSET: u32 = ${getViewElementOffset(props.chunkTotals)}u;
-@group(0) @binding(0) var<storage, read> inputValues: array<u32>;
-@group(0) @binding(1) var<storage, read> outputValues: array<u32>;
-@group(0) @binding(2) var<storage, read_write> chunkTotals: array<u32>;
-@compute @workgroup_size(1) fn main() {
-  chunkTotals[TOTALS_OFFSET + ${props.chunkIndex}u] =
-    outputValues[OUTPUT_OFFSET + ${lastIndex}u] + inputValues[INPUT_OFFSET + ${lastIndex}u];
-}`;
-  addSimpleScanPass(graph, {
-    id: props.id,
-    source,
-    resources: [
-      {buffer: props.input, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-read'},
-      {buffer: props.chunkTotals, usage: 'storage-write'}
-    ],
-    bindings: {
-      inputValues: props.input,
-      outputValues: props.output,
-      chunkTotals: props.chunkTotals
-    },
-    dispatchCount: 1
-  });
-}
-
-function addChunkCarryPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    output: GraphDataView<'uint32'>;
-    chunkOffsets: GraphDataView<'uint32'>;
-    chunkIndex: number;
-  }
-): void {
-  const source = /* wgsl */ `
-const ELEMENT_COUNT: u32 = ${props.output.length}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
-const OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.chunkOffsets)}u;
-@group(0) @binding(0) var<storage, read_write> outputValues: array<u32>;
-@group(0) @binding(1) var<storage, read> chunkOffsets: array<u32>;
-@compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
-) {
-  if (globalId.x < ELEMENT_COUNT) {
-    outputValues[OUTPUT_OFFSET + globalId.x] = outputValues[OUTPUT_OFFSET + globalId.x] +
-      chunkOffsets[OFFSETS_OFFSET + ${props.chunkIndex}u];
-  }
-}`;
-  addSimpleScanPass(graph, {
-    id: props.id,
-    source,
-    resources: [
-      {buffer: props.output, usage: 'storage-read-write'},
-      {buffer: props.chunkOffsets, usage: 'storage-read'}
-    ],
-    bindings: {outputValues: props.output, chunkOffsets: props.chunkOffsets},
-    dispatchCount: Math.ceil(props.output.length / SCAN_WORKGROUP_SIZE)
-  });
-}
-
-function addSimpleScanPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    source: string;
-    resources: Array<{
-      buffer: GraphDataView;
-      usage: 'storage-read' | 'storage-write' | 'storage-read-write';
-    }>;
-    bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
-  }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
-          }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
-}
-
+/** Validates every atomic chunk accepted by a scan input. */
 function validateScanInput(input: GPUScanInput, name: string): void {
   const chunks = input instanceof GraphVectorView ? input.data : [input];
   for (const chunk of chunks) {
@@ -333,6 +237,12 @@ function validateScanInput(input: GPUScanInput, name: string): void {
   }
 }
 
+/** Normalizes one data view or vector into its ordered atomic chunks. */
+function getScanChunks(input: GPUScanInput): readonly GraphDataView<'uint32'>[] {
+  return input instanceof GraphVectorView ? input.data : [input];
+}
+
+/** Verifies that every scan chunk belongs to the graph receiving the operation. */
 function validateScanOwnership<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   input: GPUScanInput,
@@ -344,6 +254,7 @@ function validateScanOwnership<Parameters>(
   }
 }
 
+/** Adds one block-local exclusive scan level and optionally writes one sum per block. */
 function addBlockScanPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -351,21 +262,28 @@ function addBlockScanPass<Parameters>(
     input: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
     blockSums?: GraphDataView<'uint32'>;
+    finalSum?: GraphDataView<'uint32'>;
     length: number;
     blockCount: number;
   }
 ): void {
-  const blockSumBinding = props.blockSums
-    ? '@group(0) @binding(2) var<storage, read_write> blockSums: array<u32>;'
+  const sumOutput = props.blockSums ?? props.finalSum;
+  const sumBinding = sumOutput
+    ? '@group(0) @binding(2) var<storage, read_write> sumValues: array<u32>;'
     : '';
+  const sumWrite = props.blockSums
+    ? 'sumValues[SUM_OFFSET + workgroupId.x] = scratch[255u];'
+    : props.finalSum
+      ? 'sumValues[SUM_OFFSET] = scratch[255u];'
+      : '';
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
-${props.blockSums ? `const BLOCK_SUMS_OFFSET: u32 = ${getViewElementOffset(props.blockSums)}u;` : ''}
+${sumOutput ? `const SUM_OFFSET: u32 = ${getViewElementOffset(sumOutput)}u;` : ''}
 @group(0) @binding(0) var<storage, read> inputValues: array<u32>;
 @group(0) @binding(1) var<storage, read_write> outputValues: array<u32>;
-${blockSumBinding}
+${sumBinding}
 var<workgroup> scratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;
 
 @compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
@@ -395,7 +313,7 @@ var<workgroup> scratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;
   }
 
   if (lane == ${SCAN_WORKGROUP_SIZE - 1}u) {
-    ${props.blockSums ? 'blockSums[BLOCK_SUMS_OFFSET + workgroupId.x] = scratch[255u];' : ''}
+    ${sumWrite}
   }
   if (index < ELEMENT_COUNT) {
     outputValues[OUTPUT_OFFSET + index] = scratch[lane] - inputValue;
@@ -407,7 +325,7 @@ var<workgroup> scratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;
     resources: [
       {buffer: props.input, usage: 'storage-read'},
       {buffer: props.output, usage: 'storage-write'},
-      ...(props.blockSums ? [{buffer: props.blockSums, usage: 'storage-write'} as const] : [])
+      ...(sumOutput ? [{buffer: sumOutput, usage: 'storage-write'} as const] : [])
     ],
     compile: ({device}) => {
       const computation = new Computation(device, {
@@ -417,8 +335,8 @@ var<workgroup> scratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;
           bindings: [
             {name: 'inputValues', type: 'storage', group: 0, location: 0},
             {name: 'outputValues', type: 'storage', group: 0, location: 1},
-            ...(props.blockSums
-              ? [{name: 'blockSums', type: 'storage' as const, group: 0, location: 2}]
+            ...(sumOutput
+              ? [{name: 'sumValues', type: 'storage' as const, group: 0, location: 2}]
               : [])
           ]
         }
@@ -429,8 +347,8 @@ var<workgroup> scratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;
             inputValues: getViewBinding(props.input, getBuffer),
             outputValues: getViewBinding(props.output, getBuffer)
           };
-          if (props.blockSums) {
-            bindings['blockSums'] = getViewBinding(props.blockSums, getBuffer);
+          if (sumOutput) {
+            bindings['sumValues'] = getViewBinding(sumOutput, getBuffer);
           }
           computation.setBindings(bindings);
           computation.dispatch(computePass, props.blockCount);
@@ -441,35 +359,39 @@ var<workgroup> scratch: array<u32, ${SCAN_WORKGROUP_SIZE}>;
   });
 }
 
-function addBlockOffsetPass<Parameters>(
+/** Adds a scanned block offset or one vector carry into an output view. */
+function addOffsetPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
     output: GraphDataView<'uint32'>;
-    blockOffsets: GraphDataView<'uint32'>;
+    offsets: GraphDataView<'uint32'>;
     length: number;
+    offsetIndex?: number;
   }
 ): void {
+  const offsetIndex =
+    props.offsetIndex === undefined ? `index / ${SCAN_WORKGROUP_SIZE}u` : `${props.offsetIndex}u`;
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
-const BLOCK_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.blockOffsets)}u;
+const OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.offsets)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<u32>;
-@group(0) @binding(1) var<storage, read> blockOffsets: array<u32>;
+@group(0) @binding(1) var<storage, read> offsets: array<u32>;
 
 @compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>
 ) {
   let index = globalId.x;
   if (index < ELEMENT_COUNT) {
-    outputValues[OUTPUT_OFFSET + index] = outputValues[OUTPUT_OFFSET + index] + blockOffsets[BLOCK_OFFSETS_OFFSET + index / ${SCAN_WORKGROUP_SIZE}u];
+    outputValues[OUTPUT_OFFSET + index] = outputValues[OUTPUT_OFFSET + index] + offsets[OFFSETS_OFFSET + ${offsetIndex}];
   }
 }`;
   graph.addComputePass({
     id: props.id,
     resources: [
       {buffer: props.output, usage: 'storage-read-write'},
-      {buffer: props.blockOffsets, usage: 'storage-read'}
+      {buffer: props.offsets, usage: 'storage-read'}
     ],
     compile: ({device}) => {
       const computation = new Computation(device, {
@@ -478,7 +400,7 @@ const BLOCK_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.blockOffsets)}u;
         shaderLayout: {
           bindings: [
             {name: 'outputValues', type: 'storage', group: 0, location: 0},
-            {name: 'blockOffsets', type: 'storage', group: 0, location: 1}
+            {name: 'offsets', type: 'storage', group: 0, location: 1}
           ]
         }
       });
@@ -486,7 +408,7 @@ const BLOCK_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.blockOffsets)}u;
         encode: ({computePass, getBuffer}) => {
           computation.setBindings({
             outputValues: getViewBinding(props.output, getBuffer),
-            blockOffsets: getViewBinding(props.blockOffsets, getBuffer)
+            offsets: getViewBinding(props.offsets, getBuffer)
           });
           computation.dispatch(computePass, Math.ceil(props.length / SCAN_WORKGROUP_SIZE));
         },

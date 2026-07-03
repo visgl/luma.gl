@@ -9,10 +9,17 @@ import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-comman
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const STORAGE_BINDING_ALIGNMENT = 256;
 
-/** @internal */
+/** Packed 32-bit scalar formats supported by graph-native analysis primitives. @internal */
 export type GPUScalarFormat = 'uint32' | 'sint32' | 'float32';
 
-/** @internal */
+/**
+ * Validates that a view has one of the requested formats and a packed, uint32-aligned layout.
+ *
+ * Packed primitive shaders index storage buffers in 32-bit components, so they cannot consume
+ * interleaved rows or arbitrary byte offsets.
+ *
+ * @internal
+ */
 export function validatePackedView<T extends GPUVectorFormat>(
   view: GraphDataView,
   formats: readonly T[],
@@ -29,12 +36,19 @@ export function validatePackedView<T extends GPUVectorFormat>(
   }
 }
 
-/** @internal */
+/** Validates a packed `uint32` view used for flags, counts, or indices. @internal */
 export function validatePackedUint32View(view: GraphDataView, name: string): void {
   validatePackedView(view, ['uint32'], name);
 }
 
-/** @internal */
+/**
+ * Returns the aligned storage-buffer binding that contains a logical data view.
+ *
+ * WebGPU storage bindings begin at 256-byte-aligned offsets. Generated shaders add the component
+ * offset from {@link getViewElementOffset} to reach the view's actual first row.
+ *
+ * @internal
+ */
 export function getViewBinding(
   view: GraphDataView,
   getBuffer: (view: GraphDataView) => Buffer
@@ -53,12 +67,12 @@ export function getViewBinding(
   };
 }
 
-/** Offset in 32-bit components from the aligned storage binding. @internal */
+/** Returns the view offset in 32-bit components from its aligned storage binding. @internal */
 export function getViewElementOffset(view: GraphDataView): number {
   return (view.byteOffset % STORAGE_BINDING_ALIGNMENT) / UINT32_BYTE_LENGTH;
 }
 
-/** @internal */
+/** Creates a packed graph-owned transient buffer and a typed view spanning it. @internal */
 export function createTransientView<T extends GPUVectorFormat, Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
@@ -80,6 +94,14 @@ export function createTransientVectorView<T extends GPUVectorFormat, Parameters>
   id: string,
   template: GraphVectorView<T>
 ): GraphVectorView<T> {
+  let emptyChunk: GraphDataView<T> | undefined;
+  const data = template.data.map((chunk, chunkIndex) => {
+    if (chunk.length === 0) {
+      emptyChunk ??= createTransientView(graph, `${id}-empty`, template.format, 0);
+      return emptyChunk;
+    }
+    return createTransientView(graph, `${id}-chunk-${chunkIndex}`, template.format, chunk.length);
+  });
   return new GraphVectorView({
     id,
     name: id,
@@ -89,9 +111,7 @@ export function createTransientVectorView<T extends GPUVectorFormat, Parameters>
     stride: template.stride,
     byteStride: template.byteStride,
     rowByteLength: template.rowByteLength,
-    data: template.data.map((chunk, chunkIndex) =>
-      createTransientView(graph, `${id}-chunk-${chunkIndex}`, template.format, chunk.length)
-    )
+    data
   });
 }
 

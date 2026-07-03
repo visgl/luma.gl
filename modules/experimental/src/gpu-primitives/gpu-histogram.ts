@@ -24,7 +24,10 @@ const HISTOGRAM_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_BIN_COUNT = 256;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
 
-/** Domain accepted by {@link GPUHistogram}. */
+/**
+ * Domain accepted by {@link GPUHistogram}: a literal pair, a two-row GPU view, or an automatically
+ * inferred extent.
+ */
 export type GPUHistogramDomain<T extends GPUScalarFormat = GPUScalarFormat> =
   | readonly [number, number]
   | GraphDataView<T>
@@ -37,19 +40,39 @@ export type GPUHistogramInput<T extends GPUScalarFormat = GPUScalarFormat> =
 
 /** Properties for graph-native scalar histogram counting. */
 export type GPUHistogramProps<T extends GPUScalarFormat = GPUScalarFormat> = {
+  /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
+  /** Packed scalar chunk or ordered vector of packed scalar chunks. */
   input: GPUHistogramInput<T>;
+  /** Caller-owned `uint32` counts; its length defines the bin count. */
   output: GraphDataView<'uint32'>;
+  /** Inclusive input domain or `'auto'` for a graph-native extent reduction. */
   domain: GPUHistogramDomain<T>;
 };
 
-/** Graph-native histogram counting for packed 32-bit scalar values. */
+/**
+ * Graph-native histogram counting for packed 32-bit scalar values.
+ *
+ * Output is cleared on every encoding. Up to 256 bins use workgroup-local atomics before merging;
+ * larger outputs accumulate directly with global atomics. Values outside the inclusive domain and
+ * non-finite floating-point values are ignored.
+ */
 export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
+  /** Prefix for generated graph node and transient resource IDs. */
   readonly id: string;
+  /** Packed scalar chunk or ordered vector of packed scalar chunks. */
   readonly input: GPUHistogramInput<T>;
+  /** Caller-owned bin counts. */
   readonly output: GraphDataView<'uint32'>;
+  /** Literal, GPU-resident, or automatically inferred domain. */
   readonly domain: GPUHistogramDomain<T>;
 
+  /**
+   * Creates and validates a scalar histogram description.
+   *
+   * @throws If views are not packed supported formats, output is empty, formats mismatch, buffers
+   * alias unsafely, or a literal/GPU domain is invalid.
+   */
   constructor(props: GPUHistogramProps<T>) {
     this.id = props.id ?? 'gpu-histogram';
     this.input = props.input;
@@ -82,7 +105,13 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
     }
   }
 
-  /** Adds domain inference, output clearing, and accumulation nodes to a graph. */
+  /**
+   * Adds optional domain inference, one output-clear pass, and one accumulation pass per non-empty
+   * input chunk to a graph.
+   *
+   * Automatic domains compose a {@link GPUReduction} extent. Empty inputs still clear output but
+   * add no accumulation pass.
+   */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const inputs = getHistogramInputs(this.input);
     if (inputs.some(input => input.buffer.graph !== graph) || this.output.buffer.graph !== graph) {
@@ -126,12 +155,14 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
   }
 }
 
+/** Normalizes a scalar data view or vector view into its ordered chunk list. */
 function getHistogramInputs<T extends GPUScalarFormat>(
   input: GPUHistogramInput<T>
 ): readonly GraphDataView<T>[] {
   return input instanceof GraphVectorView ? input.data : [input];
 }
 
+/** Clears every output bin before accumulation for the current graph encoding. */
 function addClearHistogramPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
@@ -156,6 +187,7 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
   });
 }
 
+/** Adds the local- or global-atomic histogram accumulation pass. */
 function addHistogramPass<Parameters, T extends GPUScalarFormat>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -292,6 +324,7 @@ ${integerBinningFunction}
   });
 }
 
+/** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
 function addComputationPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -333,6 +366,7 @@ function addComputationPass<Parameters>(
   });
 }
 
+/** Validates a finite ordered literal domain and the selected scalar format's numeric range. */
 function validateLiteralDomain(
   domain: readonly number[],
   format: GPUScalarFormat,
@@ -350,16 +384,19 @@ function validateLiteralDomain(
   }
 }
 
+/** Narrows a histogram domain to its GPU-resident two-row view form. */
 function isGPUHistogramDomainView<T extends GPUScalarFormat>(
   domain: GPUHistogramDomain<T>
 ): domain is GraphDataView<T> {
   return domain !== 'auto' && !Array.isArray(domain);
 }
 
+/** Returns the WGSL scalar type corresponding to a supported GPU storage format. */
 function getShaderType(format: GPUScalarFormat): 'u32' | 'i32' | 'f32' {
   return format === 'uint32' ? 'u32' : format === 'sint32' ? 'i32' : 'f32';
 }
 
+/** Formats a JavaScript number as a type-correct WGSL scalar literal. */
 function getLiteral(value: number, format: GPUScalarFormat): string {
   if (format === 'uint32') return `${value}u`;
   if (format === 'sint32') return `${value}`;
