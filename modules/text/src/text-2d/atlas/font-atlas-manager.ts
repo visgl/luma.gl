@@ -7,7 +7,10 @@
 import TinySDF from '@mapbox/tiny-sdf';
 import {log} from '@luma.gl/core';
 import {buildMapping, type CharacterMapping} from './text-utils';
+import type {FontAtlas} from './font-atlas';
 import LRUCache from './lru-cache';
+
+export type {FontAtlas} from './font-atlas';
 
 function getDefaultCharacterSet(): string[] {
   const characterSet: string[] = [];
@@ -59,17 +62,6 @@ const MAX_CANVAS_WIDTH = 1024;
 const DEFAULT_ASCENT = 0.9;
 const DEFAULT_DESCENT = 0.3;
 const CACHE_LIMIT = 3;
-
-export type FontAtlas = {
-  baselineOffset: number;
-  xOffset: number;
-  yOffsetMin: number;
-  yOffsetMax: number;
-  mapping: CharacterMapping;
-  data: HTMLCanvasElement | OffscreenCanvas;
-  width: number;
-  height: number;
-};
 
 export type FontAtlasBuildMetrics = Readonly<{
   cacheStatus: 'hit' | 'rebuild' | 'incremental';
@@ -222,7 +214,9 @@ export default class FontAtlasManager {
         glyphCount: 0,
         atlasWidth: cachedFontAtlas.width,
         atlasHeight: cachedFontAtlas.height,
-        usedOffscreenCanvas: isOffscreenCanvas(cachedFontAtlas.data)
+        usedOffscreenCanvas: isOffscreenCanvas(
+          cachedFontAtlas.pages[0] as HTMLCanvasElement | OffscreenCanvas
+        )
       };
       return;
     }
@@ -241,7 +235,7 @@ export default class FontAtlasManager {
   ): {atlas: FontAtlas; metrics: FontAtlasBuildMetrics} {
     const totalBuildStartTime = getNow();
     const {fontFamily, fontWeight, fontSize, buffer, sdf} = this.props;
-    let canvas = cachedFontAtlas?.data;
+    let canvas = cachedFontAtlas?.pages[0] as HTMLCanvasElement | OffscreenCanvas | undefined;
     let canvasPreparationTimeMs = 0;
     if (!canvas) {
       const canvasPreparationStartTime = getNow();
@@ -325,11 +319,15 @@ export default class FontAtlasManager {
     const fontMetrics = renderer ? renderer.measure() : defaultMeasure();
     const atlas = {
       baselineOffset: (fontMetrics.ascent - fontMetrics.descent) / 2,
+      lineHeight: fontSize,
       xOffset,
       yOffsetMin,
       yOffsetMax,
       mapping,
-      data: canvas,
+      renderSettings: sdf
+        ? {mode: 'sdf' as const, threshold: 1 - this.props.cutoff, smoothing: this.props.smoothing}
+        : {mode: 'bitmap' as const, threshold: 0, smoothing: 0},
+      pages: [canvas],
       width: canvas.width,
       height: canvas.height
     };
@@ -345,7 +343,7 @@ export default class FontAtlasManager {
         glyphCount: characterSet.size,
         atlasWidth: atlas.width,
         atlasHeight: atlas.height,
-        usedOffscreenCanvas: isOffscreenCanvas(atlas.data)
+        usedOffscreenCanvas: isOffscreenCanvas(atlas.pages[0])
       }
     };
   }

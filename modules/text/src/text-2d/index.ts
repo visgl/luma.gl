@@ -6,11 +6,16 @@ export {
   default as FontAtlasManager,
   DEFAULT_FONT_SETTINGS,
   setFontAtlasCacheLimit,
-  type FontAtlas,
   type FontAtlasBuildMetrics,
   type FontRenderer,
   type FontSettings
 } from './atlas/font-atlas-manager';
+export {type FontAtlas} from './atlas/font-atlas';
+export {
+  buildBitmapFontAtlas,
+  type BitmapFontAtlasSettings
+} from './build-bitmap-font-atlas';
+export {buildSdfFontAtlas, type SdfFontAtlasSettings} from './build-sdf-font-atlas';
 export {
   autoWrapping,
   buildMapping,

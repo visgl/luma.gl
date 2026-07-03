@@ -121,6 +121,15 @@ const BITMAP_TEXT_SDF_THRESHOLD = -1;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 const STORAGE_RENDER_CONFIG_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT * 4;
 const TEXT_DICTIONARY_RENDER_CONFIG_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT * 4;
+
+/** Returns the image accepted by the current single-page text renderers. */
+function getSinglePageFontAtlasData(fontAtlas: FontAtlas): FontAtlas['pages'][number] {
+  if (fontAtlas.pages.length !== 1) {
+    throw new Error('This text renderer requires a FontAtlas with exactly one image page');
+  }
+  return fontAtlas.pages[0];
+}
+
 /** Resolved atlas mapping and layout metrics shared by attribute and storage conversion. */
 export type ResolvedCharacterMapping = {
   /** Character-to-atlas-frame mapping used while generating glyph records. */
@@ -1337,7 +1346,7 @@ function makeArrowTextModelProps(
   const atlasTexture = mappingState.fontAtlas
     ? new DynamicTexture(device, {
         id: `${props.id || 'arrow-text-model'}-atlas`,
-        data: mappingState.fontAtlas.data
+        data: getSinglePageFontAtlasData(mappingState.fontAtlas)
       })
     : undefined;
 
@@ -1547,7 +1556,7 @@ export function createArrowTextStorageState(
   const atlasTexture = mappingState.fontAtlas
     ? new DynamicTexture(device, {
         id: `${props.id || 'arrow-text-storage-model'}-atlas`,
-        data: mappingState.fontAtlas.data
+        data: getSinglePageFontAtlasData(mappingState.fontAtlas)
       })
     : undefined;
   const useGpuUtf8Decode = Boolean(
@@ -1896,7 +1905,7 @@ export function createTextStorageStateFromGPUVectors(
   const atlasTexture = mappingState.fontAtlas
     ? new DynamicTexture(device, {
         id: `${props.id || 'text-storage-model'}-atlas`,
-        data: mappingState.fontAtlas.data
+        data: getSinglePageFontAtlasData(mappingState.fontAtlas)
       })
     : undefined;
   const glyphDefinitions = buildGpuUtf8GlyphDefinitions({
@@ -2115,7 +2124,7 @@ export function createArrowTextDictionaryStorageState(
   const atlasTexture = mappingState.fontAtlas
     ? new DynamicTexture(device, {
         id: `${props.id || 'arrow-text-dictionary-storage-model'}-atlas`,
-        data: mappingState.fontAtlas.data
+        data: getSinglePageFontAtlasData(mappingState.fontAtlas)
       })
     : undefined;
 
