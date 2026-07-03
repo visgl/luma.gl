@@ -73,9 +73,8 @@ const config = {
     },
     // Local Vitest configuration layered on top of the reusable config factory.
     vitest: {
-      // Import the browser-safe monorepo tests through one entry so they share one cached device
-      // lifecycle. Recreating devices across package entries exhausts native GPU resources and
-      // cannot reuse a consumed WebGPU adapter.
+      // Keep Deck's global shader hooks out of the low-level renderer test realm while retaining
+      // one cached device lifecycle. The monorepo entry performs the final device cleanup.
       browserIncludePatterns: ['test/browser-suites/*.spec.ts'],
       // Force Chromium browser projects onto SwiftShader in CI for deterministic rendering.
       // Local runs should use the machine GPU unless explicitly overridden.

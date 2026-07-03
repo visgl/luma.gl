@@ -11,6 +11,7 @@ import.meta.glob(
     '../../modules/*/test/**/*.spec.ts',
     '../devtools/**/*.spec.ts',
     '../examples/**/*.spec.ts',
+    '!../../modules/arrow-layers/test/**/*.spec.ts',
     '!../../modules/**/test/**/*.node.spec.ts',
     '!../../modules/**/test/**/wip/**/*.spec.ts',
     '!../../modules/arrow/test/arrow/arrow-column-info.spec.ts',
