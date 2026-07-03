@@ -1,4 +1,6 @@
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {DeviceTabs} from '@site/src/react-luma';
+import {MultiCanvasExample} from '@site/src/examples';
 
 # CanvasContext
 
@@ -83,6 +85,15 @@ const renderPass = device.beginRenderPass({
   framebuffer: device.getDefaultCanvasContext().getFramebuffer()
 });
 ```
+
+### Multiple presentation contexts
+
+A single device can present into multiple canvases. On WebGPU each canvas is backed by its own
+presentation context. On WebGL the shared device renders through an `OffscreenCanvas` before
+presenting into the visible canvases.
+
+<DeviceTabs />
+<MultiCanvasExample embedded embeddedHeight="auto" showStats={false} />
 
 ### Additional canvas contexts
 
