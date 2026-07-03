@@ -1,6 +1,6 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
 
-# @luma.gl/experimental
+# Overview
 
 <ExperimentalDocsTabs active="overview" />
 
