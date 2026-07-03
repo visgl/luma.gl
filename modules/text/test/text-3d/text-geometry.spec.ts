@@ -13,7 +13,7 @@ import {
 import {
   makeArrowText3DGlyphData,
   makeArrowText3DTextTable
-} from '../../../../examples/arrow/arrow-text-3d/arrow-text-3d-data';
+} from '../../../../examples/arrow/arrow-text-space-crawl/arrow-text-3d-data';
 import {simpleFont} from './data/simple-font';
 import {Vector3} from '@math.gl/core';
 
