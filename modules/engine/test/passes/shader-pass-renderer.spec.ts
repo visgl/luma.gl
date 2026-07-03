@@ -492,6 +492,38 @@ test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
   t.end();
 });
 
+test('ShaderPassRenderer accepts its previous output as the next source', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'repeated-pass-source-texture',
+      usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [invertPass],
+      shaderInputs: new ShaderInputs({}),
+      flipY: false
+    });
+    const firstOutput = renderer.renderToTexture({sourceTexture});
+    const secondOutput = renderer.renderToTexture({sourceTexture: firstOutput!});
+    device.submit();
+
+    t.deepEqual(
+      Array.from(await readPixels(secondOutput!)),
+      device.preferredColorFormat.startsWith('bgra') ? [0, 0, 255, 255] : [255, 0, 0, 255],
+      `${device.type} safely reuses ping-pong output as the next input`
+    );
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});
+
 test('ShaderPassRenderer supports explicit texture orientation', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {

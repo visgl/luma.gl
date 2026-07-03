@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray4} from '@math.gl/types';
 import {
   Buffer,
   type CommandEncoder,
   Device,
-  type Framebuffer,
   type RenderPass,
   type RenderPipelineParameters,
   Texture,
   type TextureView
 } from '@luma.gl/core';
-import {ClipSpace, ShaderInputs} from '@luma.gl/engine';
-import {aBuffer, type ABufferShaderModuleProps} from './a-buffer';
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {type ABufferShaderModuleProps} from './a-buffer';
+import {createABufferResolveShaderPassPipeline} from './a-buffer-resolve-shader-pass-pipeline';
 
 const A_BUFFER_HEAD_POINTER_HEADER_BYTE_LENGTH = 8;
 const A_BUFFER_HEAD_POINTER_BYTE_LENGTH = 4;
@@ -26,61 +25,6 @@ let nextABufferResourceId = 0;
 function makeABufferResourceId(prefix: string): string {
   nextABufferResourceId += 1;
   return `${prefix}-${nextABufferResourceId}`;
-}
-
-function getABufferCompositeShader(maxFragmentsPerPixel: number): string {
-  return /* wgsl */ `\
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let pixelIndex = aBuffer_getPixelIndex(inputs.Position);
-  if (pixelIndex >= arrayLength(&headPointers.heads)) {
-    discard;
-  }
-
-  var fragmentPointer = atomicLoad(&headPointers.heads[pixelIndex]);
-  var capturedFragments: array<ABufferFragment, ${maxFragmentsPerPixel}>;
-  var fragmentCount = 0u;
-
-  while (
-    fragmentPointer != A_BUFFER_EMPTY_FRAGMENT_POINTER &&
-    fragmentCount < ${maxFragmentsPerPixel}u
-  ) {
-    let fragmentIndex = fragmentPointer - 1u;
-    if (fragmentIndex >= arrayLength(&fragments.fragments)) {
-      break;
-    }
-    capturedFragments[fragmentCount] = fragments.fragments[fragmentIndex];
-    fragmentPointer = capturedFragments[fragmentCount].next;
-    fragmentCount += 1u;
-  }
-
-  if (fragmentCount == 0u) {
-    discard;
-  }
-
-  var sortIndex = 1u;
-  while (sortIndex < fragmentCount) {
-    let fragmentToInsert = capturedFragments[sortIndex];
-    var insertIndex = sortIndex;
-    while (insertIndex > 0u && capturedFragments[insertIndex - 1u].depth < fragmentToInsert.depth) {
-      capturedFragments[insertIndex] = capturedFragments[insertIndex - 1u];
-      insertIndex -= 1u;
-    }
-    capturedFragments[insertIndex] = fragmentToInsert;
-    sortIndex += 1u;
-  }
-
-  var compositeColor = vec4<f32>(0.0);
-  var compositeIndex = 0u;
-  while (compositeIndex < fragmentCount) {
-    let fragmentColor = unpack4x8unorm(capturedFragments[compositeIndex].color);
-    compositeColor = fragmentColor + compositeColor * (1.0 - fragmentColor.a);
-    compositeIndex += 1u;
-  }
-
-  return compositeColor;
-}
-`;
 }
 
 export type ABufferRendererProps = {
@@ -108,7 +52,7 @@ export type ABufferSlicePlan = {
   height: number;
   /** Maximum number of framebuffer rows captured in one pass. */
   sliceHeight: number;
-  /** Number of capture and composite passes required to render the target. */
+  /** Number of capture and resolve passes required to render the target. */
   sliceCount: number;
   /** Number of pixels represented by the largest slice. */
   maxSlicePixelCount: number;
@@ -131,16 +75,10 @@ export type ABufferCaptureContext = {
 };
 
 export type ABufferRenderOptions = {
-  /** Target color/depth framebuffer. Defaults to the current canvas framebuffer. */
-  framebuffer?: Framebuffer | null;
-  /** Base pass clear color. */
-  clearColor?: NumberArray4 | false;
-  /** Base pass clear depth. */
-  clearDepth?: number | false;
-  /** Prepare uploads and base-pass pipeline state before the base render pass opens. */
-  prepareBase?: (commandEncoder: CommandEncoder) => void;
-  /** Draw the base scene that the A-buffer composite overlays. */
-  drawBase: (renderPass: RenderPass) => void;
+  /** Opaque color to resolve captured translucent fragments over. */
+  sourceTexture: Texture;
+  /** Sampleable opaque depth generated alongside `sourceTexture`. */
+  opaqueDepthTexture: TextureView;
   /** Bind A-buffer resources and prepare capture pipelines before each slice pass opens. */
   prepareTranslucent: (context: ABufferCaptureContext) => void;
   /** Draw translucent models that append fragments into the A-buffer. */
@@ -150,11 +88,11 @@ export type ABufferRenderOptions = {
 type ResolvedABufferRendererProps = Required<ABufferRendererProps>;
 
 /**
- * Renders exact order-independent transparency with a per-pixel linked-list A-buffer.
+ * Captures exact order-independent transparency and resolves each slice through a ShaderPassPipeline.
  *
- * The renderer first draws the opaque base scene, captures translucent fragments into storage
- * buffers, sorts each pixel's fragments by depth, and composites premultiplied colors over the
- * base color target. Large targets are split into horizontal slices to keep storage bounded.
+ * The renderer captures translucent fragments into storage buffers, sorts each pixel's fragments
+ * by depth, and resolves premultiplied colors over the supplied opaque source. Large targets are
+ * split into horizontal slices to keep storage bounded.
  *
  * @note The renderer is WebGPU-only and does not submit the device command encoder.
  */
@@ -179,8 +117,7 @@ export class ABufferRenderer {
   readonly device: Device;
   readonly props: ResolvedABufferRendererProps;
 
-  private readonly shaderInputs: ShaderInputs<{aBuffer: ABufferShaderModuleProps}>;
-  private readonly compositeModel: ClipSpace;
+  private readonly resolveRenderer: ShaderPassRenderer;
   private slicePlan: ABufferSlicePlan | null = null;
   private headPointerInitBuffer: Buffer | null = null;
   private headPointers: Buffer | null = null;
@@ -195,63 +132,39 @@ export class ABufferRenderer {
 
     this.device = device;
     this.props = resolveABufferRendererProps(props);
-    this.shaderInputs = new ShaderInputs<{aBuffer: ABufferShaderModuleProps}>({aBuffer});
-    this.compositeModel = new ClipSpace(device, {
-      id: makeABufferResourceId('a-buffer-composite'),
-      source: getABufferCompositeShader(this.props.maxFragmentsPerPixel),
-      shaderInputs: this.shaderInputs,
-      parameters: {
-        blend: true,
-        blendColorOperation: 'add',
-        blendColorSrcFactor: 'one',
-        blendColorDstFactor: 'one-minus-src-alpha',
-        blendAlphaOperation: 'add',
-        blendAlphaSrcFactor: 'one',
-        blendAlphaDstFactor: 'one-minus-src-alpha'
-      }
+    this.resolveRenderer = new ShaderPassRenderer(device, {
+      shaderPasses: [
+        createABufferResolveShaderPassPipeline({
+          maxFragmentsPerPixel: this.props.maxFragmentsPerPixel
+        })
+      ]
     });
   }
 
-  /** Destroys owned models, shader inputs, and storage buffers. */
+  /** Destroys the resolve pipeline and owned storage buffers. */
   destroy(): void {
     this.destroyBuffers();
-    this.compositeModel.destroy();
-    this.shaderInputs.destroy();
+    this.resolveRenderer.destroy();
   }
 
   /**
-   * Records the base, translucent capture, and composite passes.
+   * Captures translucent slices and resolves each over the previous color result.
    *
    * `prepareTranslucent` and `drawTranslucent` may run multiple times when the target is sliced.
    */
-  render(options: ABufferRenderOptions): void {
-    const framebuffer =
-      options.framebuffer ?? this.device.getDefaultCanvasContext().getCurrentFramebuffer();
-    validateABufferFramebuffer(framebuffer);
-    this.resize({width: framebuffer.width, height: framebuffer.height});
-
+  render(options: ABufferRenderOptions): Texture {
+    validateABufferRenderOptions(options);
+    const {sourceTexture, opaqueDepthTexture} = options;
+    this.resize({width: sourceTexture.width, height: sourceTexture.height});
     const commandEncoder = this.device.commandEncoder;
-    options.prepareBase?.(commandEncoder);
-    const basePass = this.device.beginRenderPass({
-      id: 'a-buffer-base',
-      framebuffer,
-      clearColor: options.clearColor,
-      clearDepth: options.clearDepth
-    });
-    try {
-      options.drawBase(basePass);
-    } finally {
-      basePass.end();
-    }
-
     const slicePlan = this.slicePlan!;
     const captureFramebuffer = this.device.createFramebuffer({
       id: 'a-buffer-capture-framebuffer',
-      width: framebuffer.width,
-      height: framebuffer.height,
-      colorAttachments: framebuffer.colorAttachments
+      width: sourceTexture.width,
+      height: sourceTexture.height,
+      colorAttachments: [sourceTexture]
     });
-    const opaqueDepthTexture = framebuffer.depthStencilAttachment!;
+    let resolvedTexture = sourceTexture;
     try {
       for (let sliceIndex = 0; sliceIndex < slicePlan.sliceCount; sliceIndex++) {
         const sliceStartY = sliceIndex * slicePlan.sliceHeight;
@@ -281,23 +194,25 @@ export class ABufferRenderer {
           capturePass.end();
         }
 
-        this.shaderInputs.setProps({aBuffer: shaderModuleProps});
-        this.compositeModel.predraw(commandEncoder);
-        const compositePass = this.device.beginRenderPass({
-          id: `a-buffer-composite-${sliceIndex}`,
-          framebuffer: captureFramebuffer,
-          parameters: {scissorRect: [0, sliceStartY, slicePlan.width, sliceHeight]},
-          clearColor: false
-        });
-        try {
-          this.compositeModel.draw(compositePass);
-        } finally {
-          compositePass.end();
-        }
+        resolvedTexture = this.resolveRenderer.renderToTexture({
+          sourceTexture: resolvedTexture,
+          bindings: {
+            headPointers: this.headPointers!,
+            fragments: this.fragments!
+          },
+          uniforms: {
+            aBufferResolve: {
+              framebufferSize: [slicePlan.width, slicePlan.height],
+              sliceStartY,
+              sliceHeight
+            }
+          }
+        })!;
       }
     } finally {
       captureFramebuffer.destroy();
     }
+    return resolvedTexture;
   }
 
   /** Reallocates storage buffers when the target dimensions or slice plan changes. */
@@ -324,6 +239,7 @@ export class ABufferRenderer {
 
     this.destroyBuffers();
     this.slicePlan = nextSlicePlan;
+    this.resolveRenderer.resize([size.width, size.height]);
 
     const headPointerInitData = new Uint32Array(nextSlicePlan.headPointerByteLength / 4);
 
@@ -460,20 +376,24 @@ function resolveABufferRendererProps(props: ABufferRendererProps): ResolvedABuff
   return {averageFragmentsPerPixel, maxFragmentsPerPixel, maxBufferByteLength};
 }
 
-function validateABufferFramebuffer(framebuffer: Framebuffer): void {
-  if (framebuffer.colorAttachments.length === 0) {
-    throw new Error('A-buffer OIT requires a color attachment.');
+function validateABufferRenderOptions(options: ABufferRenderOptions): void {
+  const {sourceTexture, opaqueDepthTexture} = options;
+  if (sourceTexture.samples !== 1 || opaqueDepthTexture.texture.samples !== 1) {
+    throw new Error('A-buffer OIT only supports single-sample source textures.');
   }
-  if (!framebuffer.depthStencilAttachment) {
-    throw new Error('A-buffer OIT requires a depth attachment.');
+  if (!(sourceTexture.props.usage & Texture.SAMPLE)) {
+    throw new Error('A-buffer sourceTexture must be sampleable.');
   }
-  if (framebuffer.colorAttachments[0].texture.samples !== 1) {
-    throw new Error('A-buffer OIT only supports single-sample color targets in v1.');
+  if (!(sourceTexture.props.usage & Texture.RENDER)) {
+    throw new Error('A-buffer sourceTexture must be renderable.');
   }
-  if (framebuffer.depthStencilAttachment.texture.samples !== 1) {
-    throw new Error('A-buffer OIT only supports single-sample depth targets in v1.');
+  if (!(opaqueDepthTexture.texture.props.usage & Texture.SAMPLE)) {
+    throw new Error('A-buffer opaqueDepthTexture must be sampleable.');
   }
-  if (!(framebuffer.depthStencilAttachment.texture.props.usage & Texture.SAMPLE)) {
-    throw new Error('A-buffer OIT requires a sampleable depth attachment.');
+  if (
+    sourceTexture.width !== opaqueDepthTexture.texture.width ||
+    sourceTexture.height !== opaqueDepthTexture.texture.height
+  ) {
+    throw new Error('A-buffer source and opaque depth dimensions must match.');
   }
 }

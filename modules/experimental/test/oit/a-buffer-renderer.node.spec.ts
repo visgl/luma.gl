@@ -3,12 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Buffer, type Device, type Framebuffer, type Texture} from '@luma.gl/core';
+import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
   ABufferRenderer,
   aBuffer,
   aBufferPlugin,
+  createABufferResolveShaderPassPipeline,
   getABufferSlicePlan,
   getABufferSupport
 } from '@luma.gl/experimental';
@@ -32,6 +33,23 @@ test('aBuffer plugin exposes the WGSL module only', t => {
     aBuffer.source,
     /textureLoad\(opaqueDepthTexture, fragmentCoordinates, 0\)/,
     'capture explicitly tests opaque depth before storing fragments'
+  );
+  t.end();
+});
+
+test('A-buffer resolve is packaged as a ShaderPassPipeline', t => {
+  const pipeline = createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 8});
+  t.equal(pipeline.steps.length, 1, 'resolve pipeline has one fullscreen step');
+  t.equal(pipeline.steps[0].shaderPass.name, 'aBufferResolve', 'pipeline uses the resolve pass');
+  t.deepEqual(
+    pipeline.steps[0].inputs,
+    {sourceTexture: 'previous'},
+    'resolve composites over the previous color'
+  );
+  t.throws(
+    () => createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 0}),
+    /at least 1/,
+    'invalid fragment limits are rejected'
   );
   t.end();
 });
@@ -100,12 +118,7 @@ test('ABufferRenderer composites instanced translucent fragments independent of 
     return;
   }
 
-  const framebuffer = device.createFramebuffer({
-    width: 1,
-    height: 1,
-    colorAttachments: ['rgba8unorm'],
-    depthStencilAttachment: 'depth24plus'
-  });
+  const {framebuffer, colorTexture, depthTexture} = createFramebuffer(device, 1, 1);
   const renderer = new ABufferRenderer(device);
   const forwardColor = await renderInstancedTransparency(device, renderer, framebuffer, false);
   const reverseColor = await renderInstancedTransparency(device, renderer, framebuffer, true);
@@ -115,6 +128,8 @@ test('ABufferRenderer composites instanced translucent fragments independent of 
 
   renderer.destroy();
   framebuffer.destroy();
+  colorTexture.destroy();
+  depthTexture.destroy();
   t.end();
 });
 
@@ -126,28 +141,37 @@ test('ABufferRenderer composites bounded-memory slices', async t => {
     return;
   }
 
-  const framebuffer = device.createFramebuffer({
-    width: 2,
-    height: 2,
-    colorAttachments: ['rgba8unorm'],
-    depthStencilAttachment: 'depth24plus'
-  });
+  const {framebuffer, colorTexture, depthTexture} = createFramebuffer(device, 2, 2);
   const renderer = new ABufferRenderer(device, {
     averageFragmentsPerPixel: 1,
     maxFragmentsPerPixel: 2,
     maxBufferByteLength: 24
   });
-  const pixels = await renderInstancedTransparency(device, renderer, framebuffer, false);
-  const expectedPixel = [128, 0, 64, 191];
+  const referenceRenderer = new ABufferRenderer(device, {
+    averageFragmentsPerPixel: 1,
+    maxFragmentsPerPixel: 2
+  });
+  const pixels = await renderInstancedTransparency(device, renderer, framebuffer, false, true);
+  const referencePixels = await renderInstancedTransparency(
+    device,
+    referenceRenderer,
+    framebuffer,
+    false,
+    true
+  );
 
   t.deepEqual(
     pixels,
-    [...expectedPixel, ...expectedPixel, ...expectedPixel, ...expectedPixel],
-    'both horizontal slices composite the same translucent instances'
+    referencePixels,
+    'bounded horizontal slices match a single-slice resolve for row-varying colors'
   );
+  t.notDeepEqual(pixels.slice(0, 4), pixels.slice(8, 12), 'test data distinguishes output rows');
 
   renderer.destroy();
+  referenceRenderer.destroy();
   framebuffer.destroy();
+  colorTexture.destroy();
+  depthTexture.destroy();
   t.end();
 });
 
@@ -159,12 +183,7 @@ test('ABufferRenderer rejects translucent fragments behind opaque depth', async 
     return;
   }
 
-  const framebuffer = device.createFramebuffer({
-    width: 1,
-    height: 1,
-    colorAttachments: ['rgba8unorm'],
-    depthStencilAttachment: 'depth24plus'
-  });
+  const {framebuffer, colorTexture, depthTexture} = createFramebuffer(device, 1, 1);
   const renderer = new ABufferRenderer(device);
   const pixel = await renderOpaqueOcclusion(device, renderer, framebuffer);
 
@@ -172,6 +191,8 @@ test('ABufferRenderer rejects translucent fragments behind opaque depth', async 
 
   renderer.destroy();
   framebuffer.destroy();
+  colorTexture.destroy();
+  depthTexture.destroy();
   t.end();
 });
 
@@ -179,22 +200,23 @@ async function renderInstancedTransparency(
   device: Device,
   renderer: ABufferRenderer,
   framebuffer: Framebuffer,
-  reverseOrder: boolean
+  reverseOrder: boolean,
+  varyByRow = false
 ): Promise<number[]> {
   const shaderInputs = new ShaderInputs({aBuffer});
   const model = new Model(device, {
-    source: getInstancedTransparencyShader(reverseOrder),
+    source: getInstancedTransparencyShader(reverseOrder, varyByRow),
     plugins: [aBufferPlugin],
     shaderInputs,
     vertexCount: 3,
     instanceCount: 2
   });
 
-  renderer.render({
-    framebuffer,
-    clearColor: [0, 0, 0, 0],
-    clearDepth: 1,
-    drawBase: () => {},
+  const basePass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+  basePass.end();
+  const outputTexture = renderer.render({
+    sourceTexture: framebuffer.colorAttachments[0].texture,
+    opaqueDepthTexture: framebuffer.depthStencilAttachment!,
     prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
       shaderInputs.setProps({aBuffer: shaderModuleProps});
       model.setParameters(captureParameters);
@@ -206,17 +228,13 @@ async function renderInstancedTransparency(
   });
   device.submit();
 
-  const pixels = await readPixels(
-    framebuffer.colorAttachments[0].texture,
-    framebuffer.width,
-    framebuffer.height
-  );
+  const pixels = await readPixels(outputTexture, framebuffer.width, framebuffer.height);
   model.destroy();
   shaderInputs.destroy();
   return Array.from(pixels);
 }
 
-function getInstancedTransparencyShader(reverseOrder: boolean): string {
+function getInstancedTransparencyShader(reverseOrder: boolean, varyByRow: boolean): string {
   return /* wgsl */ `\
 struct FragmentInputs {
   @builtin(position) Position: vec4<f32>,
@@ -247,7 +265,11 @@ fn vertexMain(
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  return aBuffer_capturePremultipliedColor(inputs.color, inputs.Position);
+  var color = inputs.color;
+  if (${varyByRow} && inputs.Position.y > 1.0) {
+    color = vec4<f32>(color.b, color.r, color.g, color.a);
+  }
+  return aBuffer_capturePremultipliedColor(color, inputs.Position);
 }
 `;
 }
@@ -273,12 +295,18 @@ async function renderOpaqueOcclusion(
     vertexCount: 3
   });
 
-  renderer.render({
+  opaqueModel.predraw(device.commandEncoder);
+  const basePass = device.beginRenderPass({
     framebuffer,
     clearColor: [0, 0, 0, 0],
-    clearDepth: 1,
-    prepareBase: commandEncoder => opaqueModel.predraw(commandEncoder),
-    drawBase: renderPass => opaqueModel.draw(renderPass),
+    clearDepth: 1
+  });
+  opaqueModel.draw(basePass);
+  basePass.end();
+
+  const outputTexture = renderer.render({
+    sourceTexture: framebuffer.colorAttachments[0].texture,
+    opaqueDepthTexture: framebuffer.depthStencilAttachment!,
     prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
       shaderInputs.setProps({aBuffer: shaderModuleProps});
       translucentModel.setParameters(captureParameters);
@@ -288,7 +316,7 @@ async function renderOpaqueOcclusion(
   });
   device.submit();
 
-  const pixels = await readPixels(framebuffer.colorAttachments[0].texture, 1, 1);
+  const pixels = await readPixels(outputTexture, 1, 1);
   opaqueModel.destroy();
   translucentModel.destroy();
   shaderInputs.destroy();
@@ -312,6 +340,35 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
   return ${fragmentExpression};
 }
 `;
+}
+
+function createFramebuffer(
+  device: Device,
+  width: number,
+  height: number
+): {framebuffer: Framebuffer; colorTexture: Texture; depthTexture: Texture} {
+  const colorTexture = device.createTexture({
+    width,
+    height,
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC
+  });
+  const depthTexture = device.createTexture({
+    width,
+    height,
+    format: 'depth24plus',
+    usage: Texture.SAMPLE | Texture.RENDER
+  });
+  return {
+    framebuffer: device.createFramebuffer({
+      width,
+      height,
+      colorAttachments: [colorTexture],
+      depthStencilAttachment: depthTexture
+    }),
+    colorTexture,
+    depthTexture
+  };
 }
 
 async function readPixels(texture: Texture, width: number, height: number): Promise<number[]> {

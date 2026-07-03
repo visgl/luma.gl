@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Model} from '@luma.gl/engine';
-import {aBufferPlugin} from '@luma.gl/experimental';
+import {Model, ShaderPassRenderer} from '@luma.gl/engine';
+import {aBufferPlugin, createABufferResolveShaderPassPipeline} from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const SHADER_STAGE_FRAGMENT = 0x2;
@@ -62,5 +62,25 @@ test('aBufferPlugin applies fragment-only storage visibility to WebGPU models', 
   }
 
   model.destroy();
+  t.end();
+});
+
+test('A-buffer resolve ShaderPassPipeline compiles on WebGPU', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 12})]
+  });
+  t.equal(
+    renderer.passRenderers[0].passDefinition.name,
+    'aBufferResolveShaderPassPipeline',
+    'resolve pipeline creates a WebGPU fullscreen model'
+  );
+  renderer.destroy();
   t.end();
 });

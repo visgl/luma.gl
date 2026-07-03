@@ -5,7 +5,14 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {WBOITRenderer, getWBOITSupport, wboit, wboitPlugin} from '@luma.gl/experimental';
+import {
+  WBOITRenderer,
+  createWBOITResolveShaderPassPipeline,
+  getWBOITSupport,
+  wboit,
+  wboitPlugin,
+  wboitResolve
+} from '@luma.gl/experimental';
 import {getTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
 test('wboit module exposes portable capture helpers', t => {
@@ -20,6 +27,18 @@ test('wboit module exposes portable capture helpers', t => {
   );
   t.deepEqual(wboit.getUniforms?.({pass: 'revealage'}), {capturePass: 2}, 'selects revealage');
   t.deepEqual(wboit.getUniforms?.({}), {capturePass: 0}, 'defaults to inactive');
+  t.end();
+});
+
+test('WBOIT resolve is packaged as a ShaderPassPipeline', t => {
+  const pipeline = createWBOITResolveShaderPassPipeline();
+  t.equal(pipeline.steps.length, 1, 'resolve pipeline has one fullscreen step');
+  t.equal(pipeline.steps[0].shaderPass, wboitResolve, 'pipeline uses the exported resolve pass');
+  t.deepEqual(
+    pipeline.steps[0].inputs,
+    {sourceTexture: 'previous'},
+    'resolve composites over the previous color'
+  );
   t.end();
 });
 
@@ -96,11 +115,11 @@ async function renderTransparency(
     parameters: {depthWriteEnabled: false, depthCompare: 'less-equal'}
   });
 
-  renderer.render({
-    framebuffer,
-    clearColor: [0, 0, 0, 0],
-    clearDepth: 1,
-    drawBase: () => {},
+  const basePass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+  basePass.end();
+  const outputTexture = renderer.render({
+    sourceTexture: framebuffer.colorAttachments[0].texture,
+    drawOpaqueDepth: () => {},
     prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
       shaderInputs.setProps({wboit: shaderModuleProps});
       model.setParameters(captureParameters);
@@ -109,7 +128,7 @@ async function renderTransparency(
     drawTranslucent: renderPass => model.draw(renderPass)
   });
   device.submit();
-  const pixels = await readPixels(framebuffer.colorAttachments[0].texture, 1, 1);
+  const pixels = await readPixels(outputTexture, 1, 1);
   model.destroy();
   shaderInputs.destroy();
   return pixels;
@@ -143,12 +162,19 @@ async function renderOpaqueOcclusion(
     parameters: {depthWriteEnabled: false, depthCompare: 'less-equal'}
   });
 
-  renderer.render({
+  opaqueModel.predraw(device.commandEncoder);
+  const basePass = device.beginRenderPass({
     framebuffer,
     clearColor: [0, 0, 0, 0],
-    clearDepth: 1,
-    prepareBase: commandEncoder => opaqueModel.predraw(commandEncoder),
-    drawBase: renderPass => opaqueModel.draw(renderPass),
+    clearDepth: 1
+  });
+  opaqueModel.draw(basePass);
+  basePass.end();
+
+  const outputTexture = renderer.render({
+    sourceTexture: framebuffer.colorAttachments[0].texture,
+    prepareOpaqueDepth: commandEncoder => opaqueModel.predraw(commandEncoder),
+    drawOpaqueDepth: renderPass => opaqueModel.draw(renderPass),
     prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
       shaderInputs.setProps({wboit: shaderModuleProps});
       translucentModel.setParameters(captureParameters);
@@ -158,7 +184,7 @@ async function renderOpaqueOcclusion(
   });
   device.submit();
 
-  const pixels = await readPixels(framebuffer.colorAttachments[0].texture, 1, 1);
+  const pixels = await readPixels(outputTexture, 1, 1);
   opaqueModel.destroy();
   translucentModel.destroy();
   shaderInputs.destroy();
@@ -174,7 +200,7 @@ function createFramebuffer(
     width,
     height,
     format: 'rgba8unorm',
-    usage: Texture.RENDER | Texture.COPY_SRC
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC
   });
   const framebuffer = device.createFramebuffer({
     width,

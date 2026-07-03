@@ -36,6 +36,12 @@ compaction, stable key/value sorting, and GPU-written indirect draw commands.
 
 ## Order-independent Transparency
 
+OIT keeps scene-level geometry capture in its renderers and exposes fullscreen resolve as standard
+`ShaderPassPipeline`s. The resolve pipelines run through the existing `ShaderPassRenderer`, where
+they can be ordered alongside color, blur, bloom, and other advanced effects.
+
+![Order-independent transparency architecture showing renderer-owned capture feeding reusable WBOIT and A-buffer resolve pipelines in the advanced effects system](/images/docs/oit-resolve-pipelines-white.png)
+
 - [`ABufferRenderer`](/docs/api-reference/experimental/a-buffer-renderer) captures, sorts, and
   composites per-pixel fragment lists on WebGPU. It offers the most accurate result but consumes
   bounded storage and performs per-pixel sorting.

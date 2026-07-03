@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray4} from '@math.gl/types';
 import {
   type CommandEncoder,
   Device,
@@ -11,75 +10,15 @@ import {
   type RenderPipelineParameters,
   Texture
 } from '@luma.gl/core';
-import {ClipSpace} from '@luma.gl/engine';
+import {ShaderPassRenderer} from '@luma.gl/engine';
 import {type WBOITPass, type WBOITShaderModuleProps} from './wboit';
+import {
+  createWBOITResolveShaderPassPipeline,
+  type WBOITResolveBindings
+} from './wboit-resolve-shader-pass-pipeline';
 
 const WBOIT_COLOR_FORMAT = 'rgba16float';
 let nextWBOITResourceId = 0;
-
-const WBOIT_COMPOSITE_WGSL = /* wgsl */ `\
-@group(0) @binding(auto) var accumulationTexture: texture_2d<f32>;
-@group(0) @binding(auto) var accumulationTextureSampler: sampler;
-@group(0) @binding(auto) var revealageTexture: texture_2d<f32>;
-@group(0) @binding(auto) var revealageTextureSampler: sampler;
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-#if FLIP_WBOIT_TEXTURE_Y
-  let textureCoordinates = vec2<f32>(inputs.uv.x, 1.0 - inputs.uv.y);
-#else
-  let textureCoordinates = inputs.uv;
-#endif
-  let accumulation = textureSample(
-    accumulationTexture,
-    accumulationTextureSampler,
-    textureCoordinates
-  );
-  let revealage = textureSample(
-    revealageTexture,
-    revealageTextureSampler,
-    textureCoordinates
-  ).r;
-  let alpha = 1.0 - revealage;
-  let weightedColor = accumulation.rgb / max(accumulation.a, 1e-5);
-  return vec4<f32>(weightedColor * alpha, alpha);
-}
-`;
-
-const WBOIT_COMPOSITE_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform sampler2D accumulationTexture;
-uniform sampler2D revealageTexture;
-
-in vec2 uv;
-out vec4 fragColor;
-
-void main(void) {
-#if FLIP_WBOIT_TEXTURE_Y
-  vec2 textureCoordinates = vec2(uv.x, 1.0 - uv.y);
-#else
-  vec2 textureCoordinates = uv;
-#endif
-  vec4 accumulation = texture(accumulationTexture, textureCoordinates);
-  float revealage = texture(revealageTexture, textureCoordinates).r;
-  float alpha = 1.0 - revealage;
-  vec3 weightedColor = accumulation.rgb / max(accumulation.a, 1e-5);
-  fragColor = vec4(weightedColor * alpha, alpha);
-}
-`;
-
-const WBOIT_COMPOSITE_PARAMETERS = {
-  depthWriteEnabled: false,
-  blend: true,
-  blendColorOperation: 'add',
-  blendColorSrcFactor: 'one',
-  blendColorDstFactor: 'one-minus-src-alpha',
-  blendAlphaOperation: 'add',
-  blendAlphaSrcFactor: 'one',
-  blendAlphaDstFactor: 'one-minus-src-alpha'
-} as const satisfies RenderPipelineParameters;
 
 /** Result returned by {@link getWBOITSupport}. */
 export type WBOITSupport = {
@@ -89,7 +28,7 @@ export type WBOITSupport = {
   reason?: string;
 };
 
-/** Per-pass resources supplied to `WBOITRenderOptions.prepareTranslucent`. */
+/** Per-pass resources supplied to `WBOITCaptureOptions.prepareTranslucent`. */
 export type WBOITCaptureContext = {
   /** Active command encoder, used to prepare models before the capture pass opens. */
   commandEncoder: CommandEncoder;
@@ -101,24 +40,29 @@ export type WBOITCaptureContext = {
   captureParameters: Readonly<RenderPipelineParameters>;
 };
 
-/** Callbacks and target configuration used by {@link WBOITRenderer.render}. */
-export type WBOITRenderOptions = {
-  /** Target color/depth framebuffer. Defaults to the current canvas framebuffer. */
-  framebuffer?: Framebuffer | null;
-  /** Base pass clear color. */
-  clearColor?: NumberArray4 | false;
-  /** Base pass clear depth. */
-  clearDepth?: number | false;
-  /** Prepare uploads and opaque models before render passes open. */
-  prepareBase?: (commandEncoder: CommandEncoder) => void;
-  /** Draw the opaque base scene into the target framebuffer. */
-  drawBase: (renderPass: RenderPass) => void;
-  /** Draw opaque depth into the internal WBOIT target. Defaults to `drawBase`. */
-  drawOpaqueDepth?: (renderPass: RenderPass) => void;
+/** Geometry callbacks used by {@link WBOITRenderer.capture}. */
+export type WBOITCaptureOptions = {
+  /** Width and height of the opaque source texture that will be resolved. */
+  size: {width: number; height: number};
+  /** Prepare opaque depth models before the internal depth pass opens. */
+  prepareOpaqueDepth?: (commandEncoder: CommandEncoder) => void;
+  /** Draw opaque geometry into the internal depth target. */
+  drawOpaqueDepth: (renderPass: RenderPass) => void;
   /** Bind WBOIT props and prepare translucent pipelines before each capture pass. */
   prepareTranslucent: (context: WBOITCaptureContext) => void;
   /** Draw translucent models. Called once for accumulation and once for revealage. */
   drawTranslucent: (renderPass: RenderPass) => void;
+};
+
+/** Capture textures returned by {@link WBOITRenderer.capture}. */
+export type WBOITCapture = {
+  bindings: Required<WBOITResolveBindings>;
+};
+
+/** Inputs used by {@link WBOITRenderer.render}. */
+export type WBOITRenderOptions = Omit<WBOITCaptureOptions, 'size'> & {
+  /** Opaque color to resolve the captured transparency over. */
+  sourceTexture: Texture;
 };
 
 type WBOITRenderTargets = {
@@ -132,7 +76,7 @@ type WBOITRenderTargets = {
 };
 
 /**
- * Renders approximate order-independent transparency with weighted color and revealage buffers.
+ * Captures approximate weighted-blended transparency and resolves it through a ShaderPassPipeline.
  *
  * The renderer supports WebGPU and WebGL2 devices with blendable `rgba16float` render targets.
  * It does not submit the device command encoder.
@@ -166,7 +110,7 @@ export class WBOITRenderer {
 
   readonly device: Device;
   private renderTargets: WBOITRenderTargets;
-  private readonly compositeModel: ClipSpace;
+  private readonly resolveRenderer: ShaderPassRenderer;
 
   /** Creates a renderer and validates floating-point render-target blending support. */
   constructor(device: Device) {
@@ -177,47 +121,21 @@ export class WBOITRenderer {
 
     this.device = device;
     this.renderTargets = createWBOITRenderTargets(device, 1, 1);
-    this.compositeModel = new ClipSpace(device, {
-      id: makeWBOITResourceId('wboit-composite'),
-      source: WBOIT_COMPOSITE_WGSL,
-      fs: WBOIT_COMPOSITE_GLSL,
-      bindings: {
-        accumulationTexture: this.renderTargets.accumulationTexture,
-        revealageTexture: this.renderTargets.revealageTexture
-      },
-      defines: {FLIP_WBOIT_TEXTURE_Y: device.type === 'webgpu' ? 1 : 0},
-      parameters: WBOIT_COMPOSITE_PARAMETERS
+    this.resolveRenderer = new ShaderPassRenderer(device, {
+      shaderPasses: [createWBOITResolveShaderPassPipeline()]
     });
   }
 
-  /** Destroys the composite model and all owned render targets. */
+  /** Destroys the resolve pipeline and all owned capture targets. */
   destroy(): void {
-    this.compositeModel.destroy();
+    this.resolveRenderer.destroy();
     destroyWBOITRenderTargets(this.renderTargets);
   }
 
-  /** Records opaque, accumulation, revealage, and composite passes. */
-  render(options: WBOITRenderOptions): void {
-    const framebuffer =
-      options.framebuffer ?? this.device.getDefaultCanvasContext().getCurrentFramebuffer();
-    this.resize({width: framebuffer.width, height: framebuffer.height});
-
-    const commandEncoder = this.device.commandEncoder;
-    options.prepareBase?.(commandEncoder);
-    this.compositeModel.predraw(commandEncoder);
-
-    const basePass = this.device.beginRenderPass({
-      id: makeWBOITResourceId('wboit-base'),
-      framebuffer,
-      clearColor: options.clearColor,
-      clearDepth: options.clearDepth
-    });
-    try {
-      options.drawBase(basePass);
-    } finally {
-      basePass.end();
-    }
-
+  /** Records opaque depth plus accumulation and revealage capture passes. */
+  capture(options: WBOITCaptureOptions): WBOITCapture {
+    this.resize(options.size);
+    options.prepareOpaqueDepth?.(this.device.commandEncoder);
     const opaqueDepthPass = this.device.beginRenderPass({
       id: makeWBOITResourceId('wboit-opaque-depth'),
       framebuffer: this.renderTargets.accumulationFramebuffer,
@@ -226,7 +144,7 @@ export class WBOITRenderer {
       clearDepth: 1
     });
     try {
-      (options.drawOpaqueDepth ?? options.drawBase)(opaqueDepthPass);
+      options.drawOpaqueDepth(opaqueDepthPass);
     } finally {
       opaqueDepthPass.end();
     }
@@ -234,18 +152,25 @@ export class WBOITRenderer {
     this.renderCapturePass(options, 'accumulation');
     this.renderCapturePass(options, 'revealage');
 
-    const compositePass = this.device.beginRenderPass({
-      id: makeWBOITResourceId('wboit-composite'),
-      framebuffer,
-      clearColor: false,
-      clearDepth: false,
-      depthReadOnly: true
+    return {
+      bindings: {
+        accumulationTexture: this.renderTargets.accumulationTexture,
+        revealageTexture: this.renderTargets.revealageTexture
+      }
+    };
+  }
+
+  /** Captures translucent geometry and resolves it over `sourceTexture`. */
+  render(options: WBOITRenderOptions): Texture {
+    validateWBOITSourceTexture(options.sourceTexture);
+    const capture = this.capture({
+      ...options,
+      size: {width: options.sourceTexture.width, height: options.sourceTexture.height}
     });
-    try {
-      this.compositeModel.draw(compositePass);
-    } finally {
-      compositePass.end();
-    }
+    return this.resolveRenderer.renderToTexture({
+      sourceTexture: options.sourceTexture,
+      bindings: capture.bindings
+    })!;
   }
 
   /** Reallocates internal render targets when output dimensions change. */
@@ -259,14 +184,11 @@ export class WBOITRenderer {
 
     const previousRenderTargets = this.renderTargets;
     this.renderTargets = createWBOITRenderTargets(this.device, size.width, size.height);
-    this.compositeModel.setBindings({
-      accumulationTexture: this.renderTargets.accumulationTexture,
-      revealageTexture: this.renderTargets.revealageTexture
-    });
+    this.resolveRenderer.resize([size.width, size.height]);
     destroyWBOITRenderTargets(previousRenderTargets);
   }
 
-  private renderCapturePass(options: WBOITRenderOptions, pass: WBOITPass): void {
+  private renderCapturePass(options: WBOITCaptureOptions, pass: WBOITPass): void {
     const captureParameters =
       pass === 'accumulation'
         ? WBOITRenderer.accumulationParameters
@@ -293,6 +215,12 @@ export class WBOITRenderer {
     } finally {
       renderPass.end();
     }
+  }
+}
+
+function validateWBOITSourceTexture(sourceTexture: Texture): void {
+  if (!(sourceTexture.props.usage & Texture.SAMPLE)) {
+    throw new Error('WBOIT sourceTexture must be sampleable.');
   }
 }
 

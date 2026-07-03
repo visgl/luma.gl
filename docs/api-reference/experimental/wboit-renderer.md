@@ -5,15 +5,17 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 <ExperimentalDocsTabs active="wboit-renderer" />
 
 `WBOITRenderer` implements weighted blended order-independent transparency on WebGPU and WebGL2.
-It owns floating-point accumulation and revealage targets, records the required passes, and
-composites a premultiplied result over the opaque target.
+It owns floating-point accumulation and revealage targets, records geometry capture passes, and
+resolves the captured transparency over an application-owned opaque color texture through a
+`ShaderPassPipeline`.
 
 ## Usage
 
 ```ts
-import {Model, ShaderInputs} from '@luma.gl/engine';
+import {Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
 import {
   WBOITRenderer,
+  createWBOITResolveShaderPassPipeline,
   wboit,
   wboitPlugin
 } from '@luma.gl/experimental';
@@ -27,11 +29,16 @@ const model = new Model(device, {
 });
 const renderer = new WBOITRenderer(device);
 
-renderer.render({
-  clearColor: [0, 0, 0, 1],
-  clearDepth: 1,
-  prepareBase: commandEncoder => opaqueModel.predraw(commandEncoder),
-  drawBase: renderPass => opaqueModel.draw(renderPass),
+// Render opaque color and depth into an application-owned scene framebuffer first.
+opaqueModel.predraw(device.commandEncoder);
+const opaquePass = device.beginRenderPass({framebuffer: sceneFramebuffer});
+opaqueModel.draw(opaquePass);
+opaquePass.end();
+
+const outputTexture = renderer.render({
+  sourceTexture: sceneFramebuffer.colorAttachments[0].texture,
+  prepareOpaqueDepth: commandEncoder => opaqueModel.predraw(commandEncoder),
+  drawOpaqueDepth: renderPass => opaqueModel.draw(renderPass),
   prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
     shaderInputs.setProps({wboit: shaderModuleProps});
     model.setParameters({...model.parameters, ...captureParameters});
@@ -53,19 +60,36 @@ fragColor = wboit_captureStraightColor(color, gl_FragCoord);
 
 Use `wboit_capturePremultipliedColor` when RGB is already multiplied by alpha.
 
+`render()` returns the resolved texture. To compose WBOIT directly into a larger advanced-effects
+stack, call `capture()` and pass its bindings to a `ShaderPassRenderer` containing
+`createWBOITResolveShaderPassPipeline()`:
+
+```ts
+const capture = renderer.capture({
+  size: {width: sceneColor.width, height: sceneColor.height},
+  drawOpaqueDepth,
+  prepareTranslucent,
+  drawTranslucent
+});
+
+const effects = new ShaderPassRenderer(device, {
+  shaderPasses: [createWBOITResolveShaderPassPipeline(), bloomShaderPassPipeline]
+});
+const output = effects.renderToTexture({sourceTexture: sceneColor, bindings: capture.bindings});
+```
+
 ## Rendering Model
 
 For each frame the renderer:
 
-1. Draws the opaque scene into the destination target.
-2. Draws opaque depth into an internal depth target shared by both capture passes.
-3. Accumulates weighted premultiplied color and weighted alpha into `rgba16float`.
-4. Accumulates multiplicative revealage into a second `rgba16float` target.
-5. Composites the normalized weighted color and revealage over the destination.
+1. Draws opaque depth into an internal depth target shared by both capture passes.
+2. Accumulates weighted premultiplied color and weighted alpha into `rgba16float`.
+3. Accumulates multiplicative revealage into a second `rgba16float` target.
+4. Runs `createWBOITResolveShaderPassPipeline()` to composite the normalized weighted color and
+   revealage over `sourceTexture`.
 
-`drawOpaqueDepth` may provide an optimized depth-only scene callback. When omitted, `drawBase` is
-called a second time for the internal depth pass. `prepareTranslucent` and `drawTranslucent` are
-called twice, once with `pass: 'accumulation'` and once with `pass: 'revealage'`.
+`prepareTranslucent` and `drawTranslucent` are called twice, once with `pass: 'accumulation'` and
+once with `pass: 'revealage'`.
 
 ## Support
 
@@ -82,15 +106,13 @@ The approximation can lose depth detail in scenes with many strongly overlapping
 export type WBOITPass = 'accumulation' | 'revealage';
 
 export type WBOITRenderOptions = {
-  framebuffer?: Framebuffer | null;
-  clearColor?: NumberArray4 | false;
-  clearDepth?: number | false;
-  prepareBase?: (commandEncoder: CommandEncoder) => void;
-  drawBase: (renderPass: RenderPass) => void;
-  drawOpaqueDepth?: (renderPass: RenderPass) => void;
+  sourceTexture: Texture;
+  prepareOpaqueDepth?: (commandEncoder: CommandEncoder) => void;
+  drawOpaqueDepth: (renderPass: RenderPass) => void;
   prepareTranslucent: (context: WBOITCaptureContext) => void;
   drawTranslucent: (renderPass: RenderPass) => void;
 };
 ```
 
-The renderer records commands but does not submit the device command encoder.
+`sourceTexture` must include `Texture.SAMPLE` usage. The renderer records commands but does not
+submit the device command encoder.

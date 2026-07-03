@@ -12,6 +12,14 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/experimental**
+- `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque
+  `sourceTexture` and return the resolved color texture. Applications must render opaque color and
+  depth before invoking the OIT renderer; the former base-pass/framebuffer callbacks were removed.
+- OIT fullscreen resolution is now exposed as `createABufferResolveShaderPassPipeline()` and
+  `createWBOITResolveShaderPassPipeline()`. `WBOITRenderer.capture()` returns the accumulation and
+  revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
+
 **@luma.gl/core**
 - WebGPU device creation now defaults to `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass `featureLevel: 'max'`.
 - Render draw state is now owned by `RenderPass`. `RenderPipelineProps.bindings`,
