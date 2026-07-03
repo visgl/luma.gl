@@ -59,7 +59,9 @@ export function createArrowPolygonLayerDeck(
         deck.setProps({layers: [makeArrowPolygonLayer(activeUpdate, dataSource)]});
       }
     },
-    preferStorage: true
+    preferStorage: true,
+    inputMode: 'stream',
+    showInputModeControl: false
   });
   return deck;
 }
@@ -81,14 +83,21 @@ function getPolygonScrollCenter(
 }
 
 function makeArrowPolygonLayer(
-  update: ArrowPolygonDataSourceUpdate,
+  dataSourceUpdate: ArrowPolygonDataSourceUpdate,
   dataSource: ArrowPolygonDataSource
 ): ArrowPolygonLayer {
-  const {viewState: _viewState, ...layerProps} = update;
   return new ArrowPolygonLayer({
     id: 'arrow-polygons',
     pickable: true,
-    ...layerProps,
+    model: dataSourceUpdate.model ?? 'attribute',
+    data: dataSourceUpdate.data,
+    polygons: 'polygons',
+    colors: dataSourceUpdate.colors === null ? null : 'colors',
+    tessellated: dataSourceUpdate.tessellated,
+    color: [0, 96, 255, 255],
+    center: dataSourceUpdate.center,
+    scale: dataSourceUpdate.scale,
+    onDataBatch: dataSourceUpdate.onDataBatch,
     onHover: (info: ArrowLayerPickingInfo) => {
       dataSource.setPickedRow(info.arrow?.batchIndex ?? null, info.index ?? null);
     }

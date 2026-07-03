@@ -21,16 +21,11 @@ import {
   type ArrowLineRowCountKind,
   type ArrowLineTimeKind
 } from '../../arrow/arrow-lines/arrow-line-data';
-import {
-  ARROW_EXAMPLE_INPUT_MODE_OPTIONS,
-  type ArrowExampleInputMode
-} from '../../arrow/arrow-example-input';
 import {DeckArrowSourcePanel} from '../arrow-example-source-panel';
 
 type PathWidthKind = 'constant' | 'row-widths';
 
 type ArrowPathDataSourceState = Record<string, unknown> & {
-  inputMode: ArrowExampleInputMode;
   rowCountKind: ArrowLineRowCountKind;
   coordinateKind: Exclude<ArrowLineCoordinateKind, 'dense-union'>;
   colorKind: ArrowLineColorKind;
@@ -40,20 +35,17 @@ type ArrowPathDataSourceState = Record<string, unknown> & {
   modelKind: 'attribute' | 'storage';
 };
 
-export type ArrowPathDataSourceUpdate = Pick<
-  ArrowPathLayerProps,
-  | 'data'
-  | 'paths'
-  | 'colors'
-  | 'widths'
-  | 'color'
-  | 'width'
-  | 'currentTime'
-  | 'trailLength'
-  | 'temporalEnabled'
-  | 'model'
-  | 'onDataBatch'
-> & {animate: boolean};
+export type ArrowPathDataSourceUpdate = {
+  asyncIterator: AsyncIterable<arrow.RecordBatch>;
+  model: ArrowPathLayerProps['model'];
+  colors: ArrowPathLayerProps['colors'];
+  widths: ArrowPathLayerProps['widths'];
+  currentTime: number;
+  trailLength: number;
+  temporalEnabled: boolean;
+  animate: boolean;
+  onDataBatch: NonNullable<ArrowPathLayerProps['onDataBatch']>;
+};
 
 export type ArrowPathDataSourceProps = {
   onDataUpdated: (update: ArrowPathDataSourceUpdate) => void;
@@ -62,7 +54,6 @@ export type ArrowPathDataSourceProps = {
 /** Owns data selection and the shared Arrow panels for the deck path example. */
 export class ArrowPathDataSource {
   private state: ArrowPathDataSourceState = {
-    inputMode: 'stream',
     rowCountKind: '240-stream',
     coordinateKind: 'float32',
     colorKind: 'row-colors',
@@ -85,7 +76,7 @@ export class ArrowPathDataSource {
     this.panel = new DeckArrowSourcePanel({
       id: 'deck-arrow-paths',
       description:
-        'Variable-length Arrow paths preserve RecordBatch boundaries and can be supplied as a stream, named table columns, or direct vectors.',
+        'Variable-length Arrow paths stream progressively from an async iterable of RecordBatch values while preserving source batch boundaries.',
       schema: makeArrowPathDataSourceSchema(supportsStorage),
       initialState: this.state,
       onSettingsChange: state => {
@@ -119,12 +110,10 @@ export class ArrowPathDataSource {
       0,
       STREAMING_PATH_BATCH_COUNT
     );
-    const sourceTable = new arrow.Table(recordBatches);
     const tableStream = panel.beginTableStream(recordBatches);
-    const commonProps: ArrowPathDataSourceUpdate = {
+    this.onDataUpdated({
+      asyncIterator: createStreamingPathRecordBatchIterator(recordBatches),
       model: this.state.modelKind,
-      color: [199, 219, 245, 235],
-      width: 0.0035,
       currentTime: MEASURE_SWEEP_DURATION,
       trailLength: TEMPORAL_TRAIL_LENGTH_MILLISECONDS / TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT,
       temporalEnabled: this.state.timeKind === 'xyzm',
@@ -136,28 +125,6 @@ export class ArrowPathDataSource {
           tableStream.setLoadedBatchCount(update.loadedBatchCount);
         }
       }
-    };
-
-    if (this.state.inputMode === 'vectors') {
-      this.onDataUpdated({
-        ...commonProps,
-        paths: sourceData.sourceVectors.paths as ArrowPathLayerProps['paths'],
-        colors:
-          this.state.colorKind === 'none' ? null : (sourceData.sourceVectors.colors ?? undefined),
-        widths: this.state.widthKind === 'constant' ? null : sourceData.sourceVectors.widths
-      });
-      return;
-    }
-
-    this.onDataUpdated({
-      ...commonProps,
-      data:
-        this.state.inputMode === 'stream'
-          ? createStreamingPathRecordBatchIterator(recordBatches)
-          : sourceTable,
-      paths: 'paths',
-      colors: this.state.colorKind === 'none' ? null : 'colors',
-      widths: this.state.widthKind === 'constant' ? null : 'widths'
     });
   }
 }
@@ -171,13 +138,6 @@ function makeArrowPathDataSourceSchema(supportsStorage: boolean): SettingsSchema
         name: 'Data',
         initiallyCollapsed: false,
         settings: [
-          {
-            name: 'inputMode',
-            label: 'Input',
-            type: 'select',
-            persist: 'none',
-            options: [...ARROW_EXAMPLE_INPUT_MODE_OPTIONS]
-          },
           {
             name: 'rowCountKind',
             label: 'Rows',

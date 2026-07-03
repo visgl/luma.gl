@@ -5,8 +5,10 @@
 import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/core';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Table, type RecordBatch} from 'apache-arrow';
 import {
   makeArrowLineRecordBatches,
@@ -14,7 +16,6 @@ import {
 } from '../../../../examples/arrow/arrow-lines/arrow-line-data';
 import {makeArrowPolygonExampleData} from '../../../../examples/arrow/arrow-polygons/arrow-polygon-data';
 import {makeArrowTextSource} from '../../../../examples/arrow/arrow-text-2d/arrow-text-data';
-import {getDeckExampleDeviceProps} from '../../../../examples/deck/deck-example-device';
 
 const TEST_VIEWPORT_WIDTH = 640;
 const TEST_VIEWPORT_HEIGHT = 480;
@@ -161,6 +162,12 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
 });
 
 test('ArrowPathLayer storage draws streamed batches incrementally and preserves picking provenance', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
   const source = makeArrowLineSourceData(
     {pathCount: 12, pointCount: 8, label: 'streaming test paths'},
     'lines',
@@ -198,7 +205,7 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     parent,
     width: TEST_VIEWPORT_WIDTH,
     height: TEST_VIEWPORT_HEIGHT,
-    deviceProps: getDeckExampleDeviceProps('webgpu'),
+    device,
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 8},
     layers: []
@@ -213,8 +220,15 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     t.equal(firstModel.device.type, 'webgpu', 'streaming path test uses WebGPU');
     t.ok(firstModel.instanceCount > 0, 'first streamed batch has drawable path segments');
     deck.redraw(true);
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-    t.notOk(dataError, 'first streamed WebGPU batch draws before completion');
+    const firstBatchPicks = await deck.pickObjectsAsync({
+      x: 0,
+      y: 0,
+      width: TEST_VIEWPORT_WIDTH,
+      height: TEST_VIEWPORT_HEIGHT,
+      layerIds: [layer.id],
+      maxObjects: 1
+    });
+    t.ok(firstBatchPicks.length > 0, 'first streamed WebGPU batch is drawable before completion');
     t.deepEqual(loadedBatchCounts, [1], 'first batch is reported before the source completes');
     releaseSecondBatch();
     await waitForModelCount(layer, 2);
@@ -239,13 +253,18 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
 });
 
 test('Arrow polygon and text layers render storage-backed WebGPU models', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
   const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
-  const polygonTable = new Table(polygonSource.recordBatches.slice(0, 1)).slice(0, 128);
   let polygonDataError: unknown;
   const polygonLayer = new ArrowPolygonLayer({
     id: 'arrow-polygons-storage-test',
     pickable: true,
-    data: polygonTable,
+    data: new Table(polygonSource.recordBatches.slice(0, 1)),
     polygons: 'polygons',
     colors: 'colors',
     tessellated: polygonSource.tessellated,
@@ -321,64 +340,24 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
   ];
 
   for (const {layer, initialViewState, getError} of cases) {
-    await drawLayerAndInspect(
+    const pickingInfo = await pickFirstLayerObject(
       layer,
       initialViewState,
       getError,
-      model => {
-        t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`);
-        t.ok(
-          model.vertexCount > 0 || model.instanceCount > 0,
-          `${layer.id} has drawable vertices or instances`
-        );
-      },
-      'webgpu'
+      model => t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`),
+      device
     );
+    t.ok(pickingInfo?.picked, `${layer.id} returns a picked storage-backed object`);
   }
   t.end();
 });
-
-async function drawLayerAndInspect(
-  layer: Layer,
-  initialViewState: {target: [number, number]; zoom: number},
-  getError: () => unknown,
-  inspectModel: (model: Model) => void,
-  deviceType: 'webgpu' | 'webgl'
-): Promise<void> {
-  const parent = document.createElement('div');
-  parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
-  parent.style.height = `${TEST_VIEWPORT_HEIGHT}px`;
-  document.body.append(parent);
-  const deck = new Deck({
-    parent,
-    width: TEST_VIEWPORT_WIDTH,
-    height: TEST_VIEWPORT_HEIGHT,
-    deviceProps: getDeckExampleDeviceProps(deviceType),
-    views: new OrthographicView({id: 'main'}),
-    initialViewState,
-    layers: [layer]
-  });
-
-  try {
-    const model = await waitForLayerModel(layer, getError);
-    inspectModel(model);
-    await waitForPipeline(model);
-    deck.redraw(true);
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-    const error = getError();
-    if (error) throw error;
-  } finally {
-    deck.finalize();
-    parent.remove();
-  }
-}
 
 async function pickFirstLayerObject(
   layer: Layer,
   initialViewState: {target: [number, number]; zoom: number},
   getError: () => unknown = () => undefined,
   inspectModel: (model: Model) => void = () => {},
-  deviceType?: 'webgpu' | 'webgl'
+  device?: Device
 ): Promise<PickingInfo | null> {
   const parent = document.createElement('div');
   parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
@@ -388,7 +367,7 @@ async function pickFirstLayerObject(
     parent,
     width: TEST_VIEWPORT_WIDTH,
     height: TEST_VIEWPORT_HEIGHT,
-    deviceProps: deviceType ? getDeckExampleDeviceProps(deviceType) : undefined,
+    ...(device ? {device} : {}),
     views: new OrthographicView({id: 'main'}),
     initialViewState,
     layers: [layer]

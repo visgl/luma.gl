@@ -30,6 +30,8 @@ export type ArrowPolygonDataSourceProps = {
   onDataUpdated: (update: ArrowPolygonDataSourceUpdate) => void;
   onRendererPropsUpdated: (props: Pick<ArrowPolygonRendererProps, 'model'>) => void;
   preferStorage?: boolean;
+  inputMode?: ArrowExampleInputMode;
+  showInputModeControl?: boolean;
 };
 
 /** Owns polygon data generation, controls, and Arrow table inspection. */
@@ -43,17 +45,22 @@ export class ArrowPolygonDataSource {
   modelKind: ArrowPolygonRendererModel = 'attribute';
   private isFinalized = false;
   private readonly preferStorage: boolean;
+  private readonly showInputModeControl: boolean;
   private readonly onDataUpdated: ArrowPolygonDataSourceProps['onDataUpdated'];
   private readonly onRendererPropsUpdated: ArrowPolygonDataSourceProps['onRendererPropsUpdated'];
 
   constructor({
     onDataUpdated,
     onRendererPropsUpdated,
-    preferStorage = false
+    preferStorage = false,
+    inputMode = 'stream',
+    showInputModeControl = true
   }: ArrowPolygonDataSourceProps) {
     this.onDataUpdated = onDataUpdated;
     this.onRendererPropsUpdated = onRendererPropsUpdated;
     this.preferStorage = preferStorage;
+    this.inputMode = inputMode;
+    this.showInputModeControl = showInputModeControl;
   }
 
   initialize(device: Device): void {
@@ -81,6 +88,7 @@ export class ArrowPolygonDataSource {
         onModelKindChange: this.handleModelKindChange
       },
       supportedModelKinds,
+      showInputModeControl: this.showInputModeControl,
       onRefresh: () => this.panels.refresh()
     });
     this.panels.mount();

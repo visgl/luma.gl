@@ -54,17 +54,25 @@ export function createArrowPathLayerDeck(
 
 function setPathLayer(
   deck: Deck<OrthographicView>,
-  update: ArrowPathDataSourceUpdate,
+  dataSource: ArrowPathDataSourceUpdate,
   currentTime: number | undefined
 ): void {
-  const {animate: _animate, ...layerProps} = update;
   deck.setProps({
     layers: [
       new ArrowPathLayer({
         id: 'arrow-paths',
         pickable: true,
-        ...layerProps,
-        currentTime
+        model: dataSource.model ?? 'auto',
+        data: dataSource.asyncIterator,
+        paths: 'paths',
+        colors: dataSource.colors === null ? null : 'colors',
+        widths: dataSource.widths === null ? null : 'widths',
+        color: [199, 219, 245, 235],
+        width: 0.0035,
+        currentTime,
+        trailLength: dataSource.trailLength,
+        temporalEnabled: dataSource.temporalEnabled,
+        onDataBatch: dataSource.onDataBatch
       })
     ]
   });
