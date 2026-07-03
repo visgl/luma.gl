@@ -4,7 +4,6 @@
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture, Model, type ModelProps} from '@luma.gl/engine';
-import FontAtlasManager from '../atlas/font-atlas-manager';
 import {
   getFirstTextStorageBatch,
   getFirstTextStorageRenderBatch,
@@ -78,8 +77,6 @@ export class TextStorageModel extends Model {
   /** Prepared GPU vectors consumed by the storage-backed text model. */
   static readonly gpuInputSchema = TEXT_STORAGE_GPU_INPUT_SCHEMA;
 
-  /** Optional atlas manager retained when this model built the atlas. */
-  fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this model storage state. */
   atlasTexture?: DynamicTexture;
   /** Optional character set accumulated while laying out glyphs. */

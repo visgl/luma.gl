@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /** Minimal insertion-ordered LRU cache used by font atlas generation. */
-export default class LRUCache<ValueT> {
+export class LRUCache<ValueT> {
   private readonly cache = new Map<string, ValueT>();
   private readonly limit: number;
 

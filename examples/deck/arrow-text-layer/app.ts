@@ -4,8 +4,23 @@
 
 import {Deck, OrthographicView} from '@deck.gl/core';
 import {ArrowTextLayer} from '@deck.gl-community/arrow-layers';
+import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
 import {initializeArrowTextLayerSource} from './arrow-text-layer-source';
+
+let fontAtlas: FontAtlas | undefined;
+
+function getFontAtlas(): FontAtlas {
+  fontAtlas ??= buildSdfFontAtlas({
+    characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
+    fontFamily: 'Monaco, Menlo, monospace',
+    fontWeight: '600',
+    fontSize: 64,
+    buffer: 6,
+    radius: 12
+  });
+  return fontAtlas;
+}
 
 /** Creates the standalone or website-hosted Deck text-layer example. */
 export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
@@ -31,7 +46,7 @@ export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
         sizes: null,
         pixelOffsets: null,
         model: 'attribute',
-        characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
+        fontAtlas: getFontAtlas()
       })
     ]
   });

@@ -5,7 +5,11 @@
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
-import type {TextStorageModelProps, TextStorageState} from '@luma.gl/text';
+import {
+  supportsGpuUtf8TextExpansion,
+  type TextStorageModelProps,
+  type TextStorageState
+} from '@luma.gl/text';
 import {
   createArrowTextStorageState,
   createTextStorageStateFromGPUVectors,
@@ -68,12 +72,7 @@ export function convertArrowTextToStorageModelProps(
   props: ArrowTextStorageInputProps
 ): TextStorageModelProps & TextStorageState {
   const storageState = convertArrowTextToStorageState(device, props);
-  const {
-    sourceVectors: _sourceVectors,
-    rowIndexColumn: _rowIndexColumn,
-    fontAtlasManager: _fontAtlasManager,
-    ...modelProps
-  } = props;
+  const {sourceVectors: _sourceVectors, rowIndexColumn: _rowIndexColumn, ...modelProps} = props;
   return {
     ...modelProps,
     ...storageState,
@@ -89,10 +88,9 @@ function canUseGPUVectorTextStorageState(
 ): props is ArrowTextStorageInputProps & GPUVectorTextStorageInputProps & {texts: GPUVector} {
   return (
     device.type === 'webgpu' &&
+    supportsGpuUtf8TextExpansion(device) &&
     props.rowIndexColumn !== true &&
-    props.texts.format === 'value-list<uint8>' &&
-    props.characterSet !== 'auto' &&
-    (props.characterMapping !== undefined || props.characterSet !== undefined)
+    props.texts.format === 'value-list<uint8>'
   );
 }
 

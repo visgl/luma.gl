@@ -18,12 +18,17 @@ import {
 } from '@luma.gl/arrow';
 import type {RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import {TextAttributeModel, TextDictionaryModel, TextStorageModel} from '@luma.gl/text';
-import {NullDevice} from '@luma.gl/test-utils';
+import {
+  buildBitmapFontAtlas,
+  TextAttributeModel,
+  TextDictionaryModel,
+  TextStorageModel
+} from '@luma.gl/text';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
 const CHARACTER_SET = ' AB';
-const FONT_SETTINGS = {fontSize: 10};
+const FONT_ATLAS = buildBitmapFontAtlas({characterSet: CHARACTER_SET, fontSize: 10});
 
 test('ArrowTextRenderer prepares attribute text and draws attribute picking batches', async t => {
   const device = new NullDevice({});
@@ -31,8 +36,7 @@ test('ArrowTextRenderer prepares attribute text and draws attribute picking batc
   const renderer = await ArrowTextRenderer.create(device, {
     ...sourceVectors,
     model: 'attribute',
-    characterSet: CHARACTER_SET,
-    fontSettings: FONT_SETTINGS
+    fontAtlas: FONT_ATLAS
   });
 
   t.equal(renderer.resolvedModel, 'attribute', 'NullDevice keeps text on the attribute path');
@@ -114,8 +118,7 @@ test('ArrowTextRenderer streams data-backed text batches into prepared updates',
   const renderer = await ArrowTextRenderer.create(device, {
     data: new arrow.Table([makeTextRecordBatch(new Float32Array([0, 0]), ['A'])]),
     model: 'attribute',
-    characterSet: CHARACTER_SET,
-    fontSettings: FONT_SETTINGS
+    fontAtlas: FONT_ATLAS
   });
   const updates = await waitForTextBatches(
     renderer,
@@ -140,6 +143,35 @@ test('ArrowTextRenderer streams data-backed text batches into prepared updates',
   t.equal(renderer.textInput.texts.length, 3, 'streamed renderer retains every text row');
 
   renderer.destroy();
+  t.end();
+});
+
+test('ArrowTextRenderer keeps auto text on attributes below compact compute limits', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const originalMaxStorageBuffersPerShaderStage = device.limits.maxStorageBuffersPerShaderStage;
+  Object.defineProperty(device.limits, 'maxStorageBuffersPerShaderStage', {
+    configurable: true,
+    value: 8
+  });
+  try {
+    const renderer = await ArrowTextRenderer.create(device, {
+      ...makeArrowTextSourceVectors(['AB', 'A']),
+      fontAtlas: FONT_ATLAS
+    });
+    t.equal(renderer.resolvedModel, 'attribute', 'portable compute limits use attribute text');
+    renderer.destroy();
+  } finally {
+    Object.defineProperty(device.limits, 'maxStorageBuffersPerShaderStage', {
+      configurable: true,
+      value: originalMaxStorageBuffersPerShaderStage
+    });
+  }
   t.end();
 });
 

@@ -2,22 +2,41 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextSdfRenderSettings} from './text-storage-state';
+import type {FontAtlasRenderSettings} from '../atlas/font-atlas';
+
+/** Uniform values consumed by bitmap and SDF fragment shader branches. */
+export type FontAtlasShaderProps = {
+  renderMode: number;
+  sdfThreshold: number;
+  sdfSmoothing: number;
+};
+
+/** Maps normalized render settings to the compact fragment shader contract. */
+export function getFontAtlasShaderProps(
+  fontRenderSettings: FontAtlasRenderSettings
+): FontAtlasShaderProps {
+  return {
+    renderMode: fontRenderSettings.mode === 'bitmap' ? 0 : 1,
+    sdfThreshold: fontRenderSettings.threshold,
+    sdfSmoothing: fontRenderSettings.smoothing
+  };
+}
 
 export function createTextDefaultFragmentShaderUniforms(
   uniforms: Record<string, unknown> | undefined,
-  sdfRenderSettings: TextSdfRenderSettings
+  fontRenderSettings: FontAtlasRenderSettings
 ): Record<string, unknown> {
   const nextUniforms = {...(uniforms || {})};
-  updateTextDefaultFragmentShaderUniforms(nextUniforms, sdfRenderSettings);
+  updateTextDefaultFragmentShaderUniforms(nextUniforms, fontRenderSettings);
   return nextUniforms;
 }
 
 export function updateTextDefaultFragmentShaderUniforms(
   uniforms: Record<string, unknown>,
-  sdfRenderSettings: TextSdfRenderSettings
+  fontRenderSettings: FontAtlasRenderSettings
 ): void {
-  uniforms['textUsesSdf'] = sdfRenderSettings.sdf ? 1 : 0;
-  uniforms['textSdfThreshold'] = sdfRenderSettings.threshold;
-  uniforms['textSdfSmoothing'] = sdfRenderSettings.smoothing;
+  const fontShaderProps = getFontAtlasShaderProps(fontRenderSettings);
+  uniforms['textFontRenderMode'] = fontShaderProps.renderMode;
+  uniforms['textSdfThreshold'] = fontShaderProps.sdfThreshold;
+  uniforms['textSdfSmoothing'] = fontShaderProps.sdfSmoothing;
 }

@@ -12,6 +12,10 @@
     "@deck.gl-community/arrow-layers": "workspace:*",
     "@deck.gl/core": "9.3.4",
     "@luma.gl/arrow": "~9.3.0",
+    "@luma.gl/core": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/shadertools": "~9.3.0",
+    "@luma.gl/text": "~9.3.0",
     "apache-arrow": "^17.0.0"
   },
   "devDependencies": {

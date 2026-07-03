@@ -16,7 +16,14 @@ import {
   type ArrowTextRendererProps
 } from '@luma.gl/arrow';
 import type {Model} from '@luma.gl/engine';
+import {makeTextGlyphAlphaGlsl, type TextGlyphAlphaShaderSettings} from '@luma.gl/text';
 import {DECK_ARROW_ALPHA_BLEND_PARAMETERS} from './arrow-layer-types';
+
+const TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS = {
+  renderMode: {expression: 'textViewport.textFontRenderMode', kind: 'float'},
+  sdfThreshold: 'textViewport.textSdfThreshold',
+  sdfSmoothing: 'textViewport.textSdfSmoothing'
+} as const satisfies TextGlyphAlphaShaderSettings;
 
 const DECK_TEXT_VS = `#version 300 es
 precision highp float;
@@ -25,6 +32,7 @@ precision highp int;
 in vec2 positions;
 in ivec2 glyphOffsets;
 in uvec4 glyphFrames;
+in uint glyphPages;
 in uint rowIndices;
 in ivec4 glyphClipRects;
 in vec4 colors;
@@ -36,11 +44,15 @@ layout(std140) uniform textViewportUniforms {
   float time;
   float clippingEnabled;
   float colorsEnabled;
+  float textFontRenderMode;
+  float textSdfThreshold;
+  float textSdfSmoothing;
 } textViewport;
 
-uniform sampler2D fontAtlasTexture;
+uniform highp sampler2DArray fontAtlasTexture;
 out vec2 vTextureCoordinate;
 out vec4 vTextColor;
+flat out uint vAtlasPage;
 
 vec3 encodeDeckPickingColor(int objectIndex) {
   int colorIndex = objectIndex + 1;
@@ -87,7 +99,7 @@ void main() {
   vec2 glyphPixelOffset = glyphVertexOffset * textViewport.glyphWorldScale;
   vec4 clipPosition = project_position_to_clipspace(vec3(positions, 0.0), vec3(0.0), vec3(0.0));
   clipPosition.xy += project_pixel_size_to_clipspace(glyphPixelOffset) * clipPosition.w;
-  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0));
+  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0).xy);
   vec2 atlasCorner = vec2(corner.x, 1.0 - corner.y);
   vec2 atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
 
@@ -99,6 +111,7 @@ void main() {
   geometry.pickingColor = encodeDeckPickingColor(int(rowIndices));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
   vTextureCoordinate = atlasPixel / atlasSize;
+  vAtlasPage = glyphPages;
   vec4 neutralTextColor = vec4(0.78, 0.86, 0.96, 1.0);
   vTextColor = mix(neutralTextColor, colors, textViewport.colorsEnabled);
   DECKGL_FILTER_COLOR(vTextColor, geometry);
@@ -108,15 +121,34 @@ void main() {
 const DECK_TEXT_FS = `#version 300 es
 precision highp float;
 
-uniform sampler2D fontAtlasTexture;
+layout(std140) uniform textViewportUniforms {
+  vec2 cameraOffset;
+  vec2 viewportScale;
+  float glyphWorldScale;
+  float time;
+  float clippingEnabled;
+  float colorsEnabled;
+  float textFontRenderMode;
+  float textSdfThreshold;
+  float textSdfSmoothing;
+} textViewport;
+
+uniform highp sampler2DArray fontAtlasTexture;
 
 in vec2 vTextureCoordinate;
 in vec4 vTextColor;
+flat in uint vAtlasPage;
 out vec4 fragColor;
 
+${makeTextGlyphAlphaGlsl({
+  functionName: 'getGlyphAlpha',
+  textureCoordinate: 'vTextureCoordinate',
+  atlasPage: 'vAtlasPage',
+  settings: TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS
+})}
+
 void main() {
-  float sampledAlpha = texture(fontAtlasTexture, vTextureCoordinate).a;
-  float glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
+  float glyphAlpha = getGlyphAlpha();
   fragColor = vec4(vTextColor.rgb, vTextColor.a * glyphAlpha);
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }
@@ -177,8 +209,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     if (renderer) {
       void renderer.setProps({
         model: props.model,
-        characterSet: props.characterSet,
-        fontSettings: props.fontSettings,
+        fontAtlas: props.fontAtlas,
         color: props.color,
         angle: props.angle,
         size: props.size
@@ -230,6 +261,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
         ...props,
         model: 'attribute',
         modelProps: this.getShaders({
+          shaderAssembler: this.context.shaderAssembler,
           modules: [project32, picking],
           vs: getDeckTextVertexShader(props.colors !== undefined && props.colors !== null),
           fs: DECK_TEXT_FS

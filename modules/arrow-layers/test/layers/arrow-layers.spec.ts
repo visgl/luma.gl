@@ -6,6 +6,7 @@ import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/cor
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {Model} from '@luma.gl/engine';
+import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {
   makeArrowLineRecordBatches,
   makeArrowLineSourceData
@@ -16,6 +17,9 @@ import {makeArrowTextSource} from '../../../../examples/arrow/arrow-text-2d/arro
 const TEST_VIEWPORT_WIDTH = 640;
 const TEST_VIEWPORT_HEIGHT = 480;
 const TEST_MODEL_TIMEOUT_MILLISECONDS = 10_000;
+const TEXT_FONT_ATLAS = buildBitmapFontAtlas({
+  characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
+});
 
 test('Arrow deck layers return source row indices from Deck picking', async t => {
   const pathSource = makeArrowLineSourceData(
@@ -53,7 +57,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     sizes: null,
     pixelOffsets: null,
     model: 'attribute',
-    characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
+    fontAtlas: TEXT_FONT_ATLAS
   });
 
   const cases: Array<{

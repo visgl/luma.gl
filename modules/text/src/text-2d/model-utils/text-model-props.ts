@@ -11,8 +11,7 @@ import {
   type ValueList,
   type VertexList
 } from '@luma.gl/tables';
-import type {FontAtlas, FontSettings} from '../atlas/font-atlas-manager';
-import type {CharacterMapping} from '../atlas/text-utils';
+import type {FontAtlas} from '../atlas/font-atlas';
 
 const TEXT_DICTIONARY_INDEX_FORMATS = [
   'sint8',
@@ -164,16 +163,10 @@ export interface TextInputProps extends ModelProps {
    * Negative width or height disables clipping on that axis.
    */
   clipRects?: GPUVector<'sint16x4'>;
-  /** Character set for atlas generation. Pass `'auto'` when the adapter should derive it. */
-  characterSet?: FontSettings['characterSet'] | 'auto';
-  /** Font atlas generation settings. */
-  fontSettings?: FontSettings;
+  /** Normalized atlas-backed font consumed by text layout and rendering. */
+  fontAtlas: FontAtlas;
   /** Multiplier applied to the atlas font size for one-line baseline layout. */
   lineHeight?: number;
-  /** Optional deterministic mapping, mainly useful when atlas generation is managed externally. */
-  characterMapping?: CharacterMapping;
-  /** Optional prebuilt atlas for texture binding when `characterMapping` is injected. */
-  fontAtlas?: FontAtlas;
 }
 
 /** GPUVector inputs for attribute-backed 2D text preparation. */
