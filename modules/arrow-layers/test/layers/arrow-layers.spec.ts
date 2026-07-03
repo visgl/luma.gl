@@ -25,17 +25,10 @@ const TEST_MODEL_TIMEOUT_MILLISECONDS = 10_000;
 const TEXT_FONT_ATLAS = buildBitmapFontAtlas({
   characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
 });
-const deferredDeckCleanups: Array<{deck: Deck; parent: HTMLDivElement}> = [];
 let sharedStorageDeck: {deck: Deck; parent: HTMLDivElement} | null = null;
 
 afterAll(() => {
-  for (const {deck, parent} of deferredDeckCleanups) {
-    deck.finalize();
-    parent.remove();
-  }
-  sharedStorageDeck?.deck.finalize();
-  sharedStorageDeck?.parent.remove();
-  sharedStorageDeck = null;
+  finalizeSharedStorageDeck();
 });
 
 test('Arrow deck layers return source row indices from Deck picking', async t => {
@@ -314,9 +307,8 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
       );
     }
   } finally {
-    deck.setProps({layers: []});
-    deck.animationLoop?.stop();
-    deferredDeckCleanups.push({deck, parent});
+    deck.finalize();
+    parent.remove();
   }
 
   t.end();
@@ -545,6 +537,7 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
       }
       vector.destroy();
     }
+    finalizeSharedStorageDeck();
   }
   t.end();
 });
@@ -603,6 +596,12 @@ function createTestDeck(device?: Device): {deck: Deck; parent: HTMLDivElement} {
 function getSharedStorageDeck(device: Device): {deck: Deck; parent: HTMLDivElement} {
   sharedStorageDeck ??= createTestDeck(device);
   return sharedStorageDeck;
+}
+
+function finalizeSharedStorageDeck(): void {
+  sharedStorageDeck?.deck.finalize();
+  sharedStorageDeck?.parent.remove();
+  sharedStorageDeck = null;
 }
 
 function isSoftwareBackedDevice(device: Device): boolean {
