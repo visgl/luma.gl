@@ -88,6 +88,45 @@ valid absolute value when no origin is stored, and uses origin `0` for
 durations. Raw Arrow inputs use CPU fallback where WebGPU is unavailable;
 GPU-resident temporal inputs use WebGPU compute.
 
+`ArrowTimeline` accepts an Apache Arrow temporal `DataType`: `Date`, `Time`,
+`Timestamp`, or `Duration`. It derives playback scale from that type. Timeline
+controls and optional loop ranges use absolute `number` or `bigint` values in
+the selected Arrow temporal domain. Numeric Arrow types such as `Float32` are
+not valid timeline domains.
+
+```ts
+import {ArrowTimeline} from '@luma.gl/arrow';
+import * as arrow from 'apache-arrow';
+
+const epochMilliseconds = 1_700_000_000_000n;
+const timeline = new ArrowTimeline({
+  dataType: new arrow.TimestampMillisecond(),
+  initialTime: epochMilliseconds + 2_500n,
+  range: [epochMilliseconds, epochMilliseconds + 10_000n],
+  playbackRate: 0.24,
+  loop: true
+});
+```
+
+The `DataType` describes the scalar comparison domain, not a particular Arrow
+`Field` or column name. A consuming layer subtracts the prepared column's
+persisted origin before uploading the relative `f32` value. A layer backed by a
+numeric measure such as an XYZM coordinate supplies its own origin and scale
+mapping from the temporal domain into that column. This preserves exact
+microsecond and nanosecond epoch values until origin subtraction, while reusing
+the layer's existing temporal attribute or buffer without another shader
+binding. Layers with typed temporal columns can warn on a known `DataType`
+mismatch and continue rendering.
+
+For example, an XYZM layer whose M values are seconds relative to the epoch can
+use `timelineOrigin: epochMilliseconds` and `timelineScale: 0.001` with the
+millisecond timestamp timeline above. The mapping belongs to the layer because
+the numeric M component is not the timeline's Arrow temporal domain.
+
+The resulting relative value still needs to fit the visualization's required
+`f32` precision. Millisecond detail across centuries requires a nearby origin
+or a split high/low temporal representation.
+
 ## Global Grid Columns
 
 DGGS helpers keep compact global grid keys on the GPU. `convertDggsCellIdsToGPUKeys()`

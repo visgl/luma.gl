@@ -6,11 +6,12 @@ import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/cor
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {ArrowTimeline} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
-import type {Model} from '@luma.gl/engine';
+import type {Model, Timeline} from '@luma.gl/engine';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Table, vectorFromArray, type RecordBatch} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {afterAll} from 'vitest';
 import {
   makeArrowLineRecordBatches,
@@ -49,7 +50,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   const constantPathLayer = new ArrowPathLayer({
     id: 'arrow-paths-constant-picking-test',
     pickable: true,
-    data: new Table({paths: pathSource.sourceVectors.paths}),
+    data: new arrow.Table({paths: pathSource.sourceVectors.paths}),
     paths: 'paths',
     color: [255, 180, 90, 255],
     width: 0.004,
@@ -58,7 +59,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
       constantPathDataError = error;
     }
   });
-  const nullablePathColors = vectorFromArray(
+  const nullablePathColors = arrow.vectorFromArray(
     Array.from({length: pathSource.sourceVectors.paths.length}, (_, rowIndex) =>
       rowIndex % 2 === 0 ? [20, 120, 240, 255] : null
     ),
@@ -68,7 +69,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   const nullablePathLayer = new ArrowPathLayer({
     id: 'arrow-paths-nullable-color-test',
     pickable: true,
-    data: new Table({paths: pathSource.sourceVectors.paths, colors: nullablePathColors}),
+    data: new arrow.Table({paths: pathSource.sourceVectors.paths, colors: nullablePathColors}),
     paths: 'paths',
     color: {source: 'colors', nullValue: [255, 80, 40, 255]},
     width: 0.004,
@@ -81,7 +82,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   const missingPathStyleLayer = new ArrowPathLayer({
     id: 'arrow-paths-missing-style-test',
     pickable: true,
-    data: new Table({paths: pathSource.sourceVectors.paths}),
+    data: new arrow.Table({paths: pathSource.sourceVectors.paths}),
     paths: 'paths',
     color: 'missingColors',
     width: {source: 'missingWidths', nullValue: 0.004},
@@ -93,7 +94,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
   const polygonBatch = polygonSource.recordBatches[0]!;
   const polygonColors = polygonBatch.getChild('colors')!;
-  const nullablePolygonColors = vectorFromArray(
+  const nullablePolygonColors = arrow.vectorFromArray(
     Array.from({length: polygonColors.length}, (_, rowIndex) =>
       rowIndex % 2 === 0 ? polygonColors.get(rowIndex) : null
     ),
@@ -102,7 +103,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   const polygonLayer = new ArrowPolygonLayer({
     id: 'arrow-polygons-picking-test',
     pickable: true,
-    data: new Table({
+    data: new arrow.Table({
       polygons: polygonBatch.getChild('polygons')!,
       colors: nullablePolygonColors
     }),
@@ -122,7 +123,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   const missingPolygonColorLayer = new ArrowPolygonLayer({
     id: 'arrow-polygons-missing-color-test',
     pickable: true,
-    data: new Table({polygons: polygonBatch.getChild('polygons')!}),
+    data: new arrow.Table({polygons: polygonBatch.getChild('polygons')!}),
     polygons: 'polygons',
     color: {source: 'missingColors', nullValue: [255, 80, 40, 255]},
     tessellated: polygonSource.tessellated,
@@ -137,7 +138,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     {clipRects: true, angles: true, sizes: true}
   );
   const slicedTextColors = textSource.colors!.slice(190, 210);
-  const nullableTextColors = vectorFromArray(
+  const nullableTextColors = arrow.vectorFromArray(
     Array.from({length: slicedTextColors.length}, (_, rowIndex) =>
       rowIndex % 2 === 0 ? slicedTextColors.get(rowIndex) : null
     ),
@@ -180,7 +181,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   const missingTextColorLayer = new ArrowTextLayer({
     id: 'arrow-text-missing-color-test',
     pickable: true,
-    data: new Table({
+    data: new arrow.Table({
       positions: textSource.positions.slice(190, 210),
       texts: textSource.texts.slice(190, 210)
     }),
@@ -393,6 +394,74 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     }
     callerColorVector.destroy();
   }
+  t.end();
+});
+
+test('ArrowPathLayer timeline invalidates an existing layer and cleans up its subscription', async t => {
+  const source = makeArrowLineSourceData(
+    {pathCount: 12, pointCount: 8, label: 'timeline test paths'},
+    'lines',
+    'float32',
+    'row-colors',
+    'xyzm'
+  );
+  const timelineOrigin = 1_700_000_000_000n;
+  const timeline = new ArrowTimeline({
+    dataType: new arrow.TimestampMillisecond(),
+    initialTime: timelineOrigin + 1_000n,
+    range: [timelineOrigin, timelineOrigin + 10_000n],
+    playbackRate: 0.24,
+    loop: true
+  });
+  const layer = new ArrowPathLayer({
+    id: 'arrow-path-timeline-test',
+    data: makeArrowLineRecordBatches(source),
+    model: 'attribute',
+    timeline,
+    timelineOrigin,
+    timelineScale: 0.001,
+    trailLength: 1
+  });
+  const parent = document.createElement('div');
+  parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
+  parent.style.height = `${TEST_VIEWPORT_HEIGHT}px`;
+  document.body.append(parent);
+  const deck = new Deck({
+    parent,
+    width: TEST_VIEWPORT_WIDTH,
+    height: TEST_VIEWPORT_HEIGHT,
+    views: new OrthographicView({id: 'main'}),
+    initialViewState: {target: [0, 0], zoom: 8},
+    layers: [layer]
+  });
+
+  let deckTimeline: Timeline | undefined;
+  try {
+    const model = await waitForLayerModel(layer);
+    deckTimeline = layer.context.timeline;
+    await waitForPipeline(model);
+    deck.needsRedraw({clearRedrawFlags: true});
+
+    timeline.setTime(timelineOrigin + 2_000n);
+    t.equal(
+      (model.vertexArray.attributes[7] as Float32Array)[0],
+      2,
+      'seek updates the existing time attribute'
+    );
+    timeline.play();
+    deckTimeline.setTime(deckTimeline.getTime() + 1_000);
+    t.ok(
+      Math.abs((model.vertexArray.attributes[7] as Float32Array)[0] - 2.24) < 0.00001,
+      'timeline advancement updates the existing time attribute'
+    );
+    t.ok(deck.needsRedraw(), 'timeline changes request a redraw');
+    t.equal(layer.getModels()[0], model, 'timeline advancement preserves the existing model');
+    t.equal(deckTimeline.animations.size, 1, 'layer attaches one timeline animation');
+  } finally {
+    deck.finalize();
+    parent.remove();
+  }
+  t.equal(deckTimeline?.animations.size, 0, 'layer finalization removes the timeline animation');
   t.end();
 });
 
@@ -652,9 +721,9 @@ async function waitForModelCount(
 }
 
 async function* makeControlledPathStream(
-  recordBatches: RecordBatch[],
+  recordBatches: arrow.RecordBatch[],
   secondBatchReady: Promise<void>
-): AsyncGenerator<RecordBatch> {
+): AsyncGenerator<arrow.RecordBatch> {
   const firstBatch = recordBatches[0];
   const secondBatch = recordBatches[1];
   if (firstBatch) {
