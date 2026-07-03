@@ -84,6 +84,25 @@ test('WebGPU indirect draw methods forward native buffers and byte offsets', t =
   t.end();
 });
 
+test('WebGPU non-indexed draws forward firstVertex', t => {
+  const calls: unknown[][] = [];
+  const handle = {
+    draw: (...args: unknown[]) => calls.push(args)
+  };
+  const renderPass = Object.create(WebGPURenderPass.prototype) as WebGPURenderPass;
+  const pipeline = {shaderLayout: {bindings: []}};
+  const vertexArray = {
+    bindBeforeRender: () => {},
+    unbindAfterRender: () => {}
+  };
+  Object.assign(renderPass, {handle, pipeline, vertexArray});
+
+  renderPass.draw({vertexCount: 12, instanceCount: 3, firstVertex: 7, firstIndex: 19});
+
+  t.deepEqual(calls, [[12, 3, 7, undefined]], 'draw() uses firstVertex for non-indexed draws');
+  t.end();
+});
+
 function makeRenderPass(props: RenderPassProps): {
   getRenderPassDescriptor: (framebuffer: any) => GPURenderPassDescriptor;
 } {

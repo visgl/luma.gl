@@ -254,6 +254,17 @@ test('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance 
     false,
     'model-ready attribute props are flat'
   );
+  const renderTableFieldNames =
+    modelProps.modelProps.table?.schema.fields.map(field => field.name) ?? [];
+  t.deepEqual(
+    renderTableFieldNames.filter(fieldName =>
+      ['glyphOffsets', 'glyphFrames', 'glyphPages', 'glyphClipRects', 'rowIndices'].includes(
+        fieldName
+      )
+    ),
+    [],
+    'generated glyph attributes are supplied only by expandedGlyphVertexData'
+  );
   const model = new TextAttributeModel(device, modelProps);
 
   t.equal(model.instanceCount, 3, 'instance count uses generated glyph rows');

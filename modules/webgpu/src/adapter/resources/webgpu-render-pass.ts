@@ -196,7 +196,7 @@ export class WebGPURenderPass extends RenderPass {
       this.handle.draw(
         options.vertexCount || 0,
         options.instanceCount || 1,
-        options.firstIndex,
+        options.firstVertex,
         options.firstInstance
       );
     }
