@@ -16,12 +16,28 @@ import {
   type ArrowTextRendererDataBatchUpdate,
   type ArrowTextRendererProps
 } from '@luma.gl/arrow';
-import type {ShaderLayout} from '@luma.gl/core';
-import type {Model} from '@luma.gl/engine';
+import {
+  Buffer,
+  type BufferLayout,
+  type Device,
+  type ShaderLayout,
+  type TypedArray
+} from '@luma.gl/core';
+import {ShaderInputs, type Model} from '@luma.gl/engine';
 import {makeTextGlyphAlphaGlsl, type TextGlyphAlphaShaderSettings} from '@luma.gl/text';
 import type {GPURecordBatchSourceInfo} from '@luma.gl/tables';
-import {DECK_ARROW_ALPHA_BLEND_PARAMETERS} from './arrow-layer-types';
+import {
+  deckArrowViewport,
+  DECK_ARROW_ALPHA_BLEND_PARAMETERS,
+  DECK_ARROW_WGSL_COLOR_UTILS,
+  setDeckArrowViewport,
+  watchDeckArrowModelPipeline
+} from './arrow-layer-types';
 import type {ArrowLayerPickingInfo} from './arrow-layer-types';
+import {
+  DECK_TEXT_STORAGE_SHADER_LAYOUT,
+  DECK_TEXT_STORAGE_WGSL
+} from './arrow-text-storage-shaders';
 
 const TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS = {
   renderMode: {expression: 'textViewport.textFontRenderMode', kind: 'float'},
@@ -125,8 +141,7 @@ void main() {
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
   vTextureCoordinate = atlasPixel / atlasSize;
   vAtlasPage = glyphPages;
-  vec4 neutralTextColor = vec4(0.78, 0.86, 0.96, 1.0);
-  vTextColor = mix(neutralTextColor, colors, textViewport.colorsEnabled);
+  vTextColor = colors;
   DECKGL_FILTER_COLOR(vTextColor, geometry);
 }
 `;
@@ -168,113 +183,164 @@ void main() {
 }
 `;
 
-function getDeckTextVertexShader(props: ArrowTextLayerProps): string {
-  const colorsEnabled = props.colors !== undefined && props.colors !== null;
-  const clippingEnabled = props.clipRects !== undefined && props.clipRects !== null;
-  const anglesEnabled = props.angles !== undefined && props.angles !== null;
-  const sizesEnabled = props.sizes !== undefined && props.sizes !== null;
-  const pixelOffsetsEnabled = props.pixelOffsets !== undefined && props.pixelOffsets !== null;
-  const color = props.color ?? [199, 219, 245, 255];
-  const constantColor = color.map(component => component / 255).join(', ');
-  let shader = DECK_TEXT_VS.replace(
-    'vec4 neutralTextColor = vec4(0.78, 0.86, 0.96, 1.0);',
-    `vec4 neutralTextColor = vec4(${constantColor});`
-  );
-  if (!colorsEnabled) {
-    shader = shader
-      .replace(`in vec4 colors;\n`, ``)
-      .replace(
-        '  vTextColor = mix(neutralTextColor, colors, textViewport.colorsEnabled);',
-        '  vTextColor = neutralTextColor;'
-      );
-  }
-  if (!clippingEnabled) {
-    shader = shader.replace(`in ivec4 glyphClipRects;\n`, ``).replace(
-      `  gl_Position = textViewport.clippingEnabled > 0.5 &&
-    isGlyphVertexClipped(glyphVertexOffset, glyphClipRects)
-    ? vec4(0.0)
-    : clipPosition;`,
-      '  gl_Position = clipPosition;'
-    );
-  }
-  if (!anglesEnabled) {
-    shader = shader
-      .replace(`in float angles;\n`, ``)
-      .replace(
-        '  float rowAngle = radians(angles);',
-        `  float rowAngle = radians(${(props.angle ?? 0).toFixed(1)});`
-      );
-  }
-  if (!sizesEnabled) {
-    shader = shader
-      .replace(`in float sizes;\n`, ``)
-      .replace('  float rowSize = sizes;', `  float rowSize = ${(props.size ?? 32).toFixed(1)};`);
-  }
-  if (!pixelOffsetsEnabled) {
-    shader = shader
-      .replace(`in vec2 pixelOffsets;\n`, ``)
-      .replace(
-        '  glyphPixelOffset = rowRotation * glyphPixelOffset + pixelOffsets;',
-        '  glyphPixelOffset = rowRotation * glyphPixelOffset;'
-      );
-  }
-  return shader;
+const DECK_TEXT_WGSL = /* wgsl */ `
+${DECK_ARROW_WGSL_COLOR_UTILS}
+
+@group(0) @binding(auto) var fontAtlasTexture: texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTextureSampler: sampler;
+
+struct TextVertexInputs {
+  @location(0) positions: vec2<f32>,
+  @location(1) glyphOffsets: vec2<i32>,
+  @location(2) glyphFrames: vec4<u32>,
+  @location(3) rowIndices: u32,
+  @location(4) glyphClipRects: vec4<i32>,
+  @location(5) colors: vec4<f32>,
+  @location(6) angles: f32,
+  @location(7) sizes: f32,
+  @location(8) pixelOffsets: vec2<f32>,
+};
+
+struct TextVertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) textureCoordinate: vec2<f32>,
+  @location(1) color: vec4<f32>,
+  @location(2) @interpolate(flat) pickingColor: vec3<f32>,
+  @location(3) @interpolate(flat) visible: f32,
+};
+
+fn getCorner(vertexIndex: u32) -> vec2<f32> {
+  if (vertexIndex == 0u) { return vec2<f32>(0.0, 0.0); }
+  if (vertexIndex == 1u) { return vec2<f32>(1.0, 0.0); }
+  if (vertexIndex == 2u) { return vec2<f32>(1.0, 1.0); }
+  if (vertexIndex == 3u) { return vec2<f32>(0.0, 0.0); }
+  if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
+  return vec2<f32>(0.0, 1.0);
 }
 
-function getDeckTextShaderLayout(props: ArrowTextLayerProps): ShaderLayout {
-  return {
-    attributes: [
-      {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
-      {name: 'glyphOffsets', location: 1, type: 'vec2<i32>', stepMode: 'instance'},
-      {name: 'glyphFrames', location: 2, type: 'vec4<u32>', stepMode: 'instance'},
-      {name: 'rowIndices', location: 3, type: 'u32', stepMode: 'instance'},
-      ...(props.clipRects !== undefined && props.clipRects !== null
-        ? ([
-            {name: 'glyphClipRects', location: 4, type: 'vec4<i32>', stepMode: 'instance'}
-          ] as const)
-        : []),
-      ...(props.colors !== undefined && props.colors !== null
-        ? ([{name: 'colors', location: 5, type: 'vec4<f32>', stepMode: 'instance'}] as const)
-        : []),
-      ...(props.angles !== undefined && props.angles !== null
-        ? ([{name: 'angles', location: 6, type: 'f32', stepMode: 'instance'}] as const)
-        : []),
-      ...(props.sizes !== undefined && props.sizes !== null
-        ? ([{name: 'sizes', location: 7, type: 'f32', stepMode: 'instance'}] as const)
-        : []),
-      ...(props.pixelOffsets !== undefined && props.pixelOffsets !== null
-        ? ([{name: 'pixelOffsets', location: 8, type: 'vec2<f32>', stepMode: 'instance'}] as const)
-        : [])
-    ],
-    bindings: []
-  };
+fn isGlyphVertexClipped(glyphVertexOffset: vec2<f32>, clipRect: vec4<i32>) -> bool {
+  if (clipRect.z >= 0) {
+    let clipMinX = f32(clipRect.x);
+    let clipMaxX = clipMinX + f32(clipRect.z);
+    if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) { return true; }
+  }
+  if (clipRect.w >= 0) {
+    let clipMinY = f32(clipRect.y);
+    let clipMaxY = clipMinY + f32(clipRect.w);
+    if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) { return true; }
+  }
+  return false;
 }
+
+@vertex
+fn vertexMain(inputs: TextVertexInputs, @builtin(vertex_index) vertexIndex: u32) -> TextVertexOutputs {
+  var outputs: TextVertexOutputs;
+  let corner = getCorner(vertexIndex % 6u);
+  let glyphFrame = vec4<f32>(inputs.glyphFrames);
+  let glyphOffset = vec2<f32>(inputs.glyphOffsets);
+  let glyphSize = glyphFrame.zw;
+  let glyphVertexOffset = glyphOffset + corner * glyphSize;
+  let rowAngle = radians(inputs.angles);
+  var glyphPixelOffset = glyphVertexOffset * 0.36 * (inputs.sizes / 32.0);
+  let rowRotation = mat2x2<f32>(cos(rowAngle), sin(rowAngle), -sin(rowAngle), cos(rowAngle));
+  glyphPixelOffset = rowRotation * glyphPixelOffset + inputs.pixelOffsets;
+  var clipPosition = deck_projectPosition(vec3<f32>(inputs.positions, 0.0));
+  clipPosition.x += glyphPixelOffset.x * deckArrowViewport.pixelToClipScale.x * clipPosition.w;
+  clipPosition.y += glyphPixelOffset.y * deckArrowViewport.pixelToClipScale.y * clipPosition.w;
+  let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
+  let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
+  let atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
+
+  outputs.position = clipPosition;
+  outputs.textureCoordinate = atlasPixel / atlasSize;
+  outputs.color = inputs.colors;
+  outputs.pickingColor = deck_encodePickingColor(inputs.rowIndices);
+  outputs.visible = select(
+    1.0,
+    0.0,
+    isGlyphVertexClipped(glyphVertexOffset, inputs.glyphClipRects)
+  );
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: TextVertexOutputs) -> @location(0) vec4<f32> {
+  if (inputs.visible < 0.5) { discard; }
+  let sampledAlpha = textureSample(
+    fontAtlasTexture,
+    fontAtlasTextureSampler,
+    inputs.textureCoordinate
+  ).a;
+  let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
+  if (picking.isActive > 0.5 && glyphAlpha <= 0.0) { discard; }
+  return deck_filterColor(
+    vec4<f32>(inputs.color.rgb, inputs.color.a * glyphAlpha),
+    inputs.pickingColor
+  );
+}
+`;
+
+const DECK_TEXT_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [
+    {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
+    {name: 'glyphOffsets', location: 1, type: 'vec2<i32>', stepMode: 'instance'},
+    {name: 'glyphFrames', location: 2, type: 'vec4<u32>', stepMode: 'instance'},
+    {name: 'rowIndices', location: 3, type: 'u32', stepMode: 'instance'},
+    {name: 'glyphClipRects', location: 4, type: 'vec4<i32>', stepMode: 'instance'},
+    {name: 'colors', location: 5, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'angles', location: 6, type: 'f32', stepMode: 'instance'},
+    {name: 'sizes', location: 7, type: 'f32', stepMode: 'instance'},
+    {name: 'pixelOffsets', location: 8, type: 'vec2<f32>', stepMode: 'instance'}
+  ],
+  bindings: []
+};
 
 /** Deck-facing props for an Arrow-backed text layer. */
 export type ArrowTextLayerProps = Omit<LayerProps, 'data'> & ArrowTextRendererProps;
 
 type ArrowTextLayerState = {
   renderer: ArrowTextRenderer | null;
+  constantBuffers: Buffer[];
   loadVersion: number;
+  sourceInitialized: boolean;
   sourceInfos: GPURecordBatchSourceInfo[];
 };
 
 /** deck.gl layer that keeps text columns in Arrow-owned GPU vectors. */
 export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
   static override layerName = 'ArrowTextLayer';
-  static override defaultProps = {parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS};
+  static override defaultProps = {
+    data: {type: 'object', value: null, optional: true},
+    parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS
+  };
 
   override getAttributeManager() {
     return null;
   }
 
+  override setShaderModuleProps(props: Parameters<Model['shaderInputs']['setProps']>[0]): void {
+    super.setShaderModuleProps(
+      this.context.device.type === 'webgpu'
+        ? {layer: props['layer'], picking: props['picking']}
+        : {layer: props['layer'], project: props['project'], picking: props['picking']}
+    );
+  }
+
   override initializeState(): void {
-    this.setState({renderer: null, loadVersion: 0, sourceInfos: []} satisfies ArrowTextLayerState);
+    this.setState({
+      renderer: null,
+      constantBuffers: [],
+      loadVersion: 0,
+      sourceInitialized: false,
+      sourceInfos: []
+    } satisfies ArrowTextLayerState);
   }
 
   override updateState(params: UpdateParameters<this>): void {
     const {props, oldProps, changeFlags} = params;
+    const state = this.getLayerState();
     const sourceChanged =
+      !state.sourceInitialized ||
       changeFlags.dataChanged ||
       props.positions !== oldProps.positions ||
       props.texts !== oldProps.texts ||
@@ -285,12 +351,14 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
       props.pixelOffsets !== oldProps.pixelOffsets ||
       props.textAnchors !== oldProps.textAnchors ||
       props.alignmentBaselines !== oldProps.alignmentBaselines ||
+      props.model !== oldProps.model ||
       props.color !== oldProps.color ||
       props.angle !== oldProps.angle ||
       props.size !== oldProps.size;
 
     if (sourceChanged) {
-      this.getLayerState().sourceInfos = [];
+      state.sourceInitialized = true;
+      state.sourceInfos = [];
       void this.createRenderer(props);
       return;
     }
@@ -317,20 +385,23 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     if (!renderer) {
       return;
     }
-    renderer.shaderInputs.setProps({
-      textViewport: {
-        cameraOffset: [0, 0],
-        viewportScale: [
-          2 / Math.max(context.viewport.width, 1),
-          2 / Math.max(context.viewport.height, 1)
-        ],
-        glyphWorldScale: 0.36,
-        time: 0,
-        clippingEnabled: this.props.clipRects === null ? 0 : 1,
-        colorsEnabled: this.props.colors === null ? 0 : 1
-      }
-    } as never);
-    renderer.predraw(context.device.commandEncoder);
+    if (renderer.model.device.type === 'webgpu') {
+      setDeckArrowViewport(renderer.model, context.viewport);
+    } else {
+      renderer.shaderInputs.setProps({
+        textViewport: {
+          cameraOffset: [0, 0],
+          viewportScale: [
+            2 / Math.max(context.viewport.width, 1),
+            2 / Math.max(context.viewport.height, 1)
+          ],
+          glyphWorldScale: 0.36,
+          time: 0,
+          clippingEnabled: this.props.clipRects === null ? 0 : 1,
+          colorsEnabled: this.props.colors === null ? 0 : 1
+        }
+      } as never);
+    }
     renderer.draw(renderPass);
   }
 
@@ -356,9 +427,12 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     const state = this.getLayerState();
     state.loadVersion++;
     state.renderer?.destroy();
+    destroyBuffers(state.constantBuffers);
     this.setState({
       renderer: null,
+      constantBuffers: [],
       loadVersion: state.loadVersion,
+      sourceInitialized: true,
       sourceInfos: []
     } satisfies ArrowTextLayerState);
     super.finalizeState(context);
@@ -368,34 +442,65 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     const state = this.getLayerState();
     const loadVersion = state.loadVersion + 1;
     state.loadVersion = loadVersion;
+    const model = resolveDeckTextModel(this.context.device, props.model);
+    const constantStyle =
+      model === 'attribute'
+        ? createDeckTextConstantStyle(this.context.device, props)
+        : createEmptyDeckTextConstantStyle();
     try {
       const renderer = await ArrowTextRenderer.create(this.context.device, {
         ...props,
-        model: 'attribute',
-        attributeShaderLayout: getDeckTextShaderLayout(props),
-        modelProps: this.getShaders({
-          shaderAssembler: this.context.shaderAssembler,
-          modules: [project32, picking],
-          vs: getDeckTextVertexShader(props),
-          fs: DECK_TEXT_FS
-        }),
+        model,
+        attributeShaderLayout: DECK_TEXT_SHADER_LAYOUT,
+        storageShaderLayout: DECK_TEXT_STORAGE_SHADER_LAYOUT,
+        modelProps: {
+          ...this.getShaders(
+            this.context.device.type === 'webgpu'
+              ? {
+                  shaderAssembler: this.context.shaderAssembler,
+                  modules: [deckArrowViewport, picking],
+                  source: model === 'storage' ? DECK_TEXT_STORAGE_WGSL : DECK_TEXT_WGSL
+                }
+              : {
+                  shaderAssembler: this.context.shaderAssembler,
+                  modules: [project32, picking],
+                  vs: DECK_TEXT_VS,
+                  fs: DECK_TEXT_FS
+                }
+          ),
+          shaderInputs: this.context.device.type === 'webgpu' ? new ShaderInputs({}) : undefined,
+          bufferLayout: constantStyle.bufferLayout,
+          attributes: constantStyle.attributes,
+          constantAttributes: constantStyle.constantAttributes
+        },
         onDataBatch: update => this.handleDataBatch(update, props.onDataBatch)
       });
       if (this.getLayerState().loadVersion !== loadVersion) {
         renderer.destroy();
+        destroyBuffers(constantStyle.buffers);
         return;
       }
       const previousRenderer = this.getRendererOrNull();
+      const previousConstantBuffers = this.getLayerState().constantBuffers;
       this.setState({
         renderer,
+        constantBuffers: constantStyle.buffers,
         loadVersion,
+        sourceInitialized: true,
         sourceInfos: this.getLayerState().sourceInfos
       } satisfies ArrowTextLayerState);
       previousRenderer?.destroy();
+      destroyBuffers(previousConstantBuffers);
       this.setNeedsRedraw();
+      this.watchRendererPipeline(renderer);
     } catch (error) {
+      destroyBuffers(constantStyle.buffers);
       if (this.getLayerState().loadVersion === loadVersion) {
-        props.onDataError?.(error);
+        if (props.onDataError) {
+          props.onDataError(error);
+        } else {
+          this.raiseError(toError(error), `loading Arrow data in ${this}`);
+        }
       }
     }
   }
@@ -417,6 +522,8 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
       }
     );
     this.setNeedsRedraw();
+    const renderer = this.getRendererOrNull();
+    if (renderer) this.watchRendererPipeline(renderer);
     onDataBatch?.(update);
   }
 
@@ -424,7 +531,171 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     return (this.state as ArrowTextLayerState | undefined)?.renderer ?? null;
   }
 
+  private watchRendererPipeline(renderer: ArrowTextRenderer): void {
+    const model = renderer.model;
+    watchDeckArrowModelPipeline(
+      model,
+      () => {
+        if (this.getRendererOrNull() === renderer && renderer.model === model) {
+          this.setNeedsRedraw();
+        }
+      },
+      error => {
+        if (this.getRendererOrNull() === renderer && renderer.model === model) {
+          if (this.props.onDataError) this.props.onDataError(error);
+          else this.raiseError(error, `linking Arrow shaders in ${this}`);
+        }
+      }
+    );
+  }
+
   private getLayerState(): ArrowTextLayerState {
     return this.state as ArrowTextLayerState;
+  }
+}
+
+function resolveDeckTextModel(
+  device: Device,
+  model: ArrowTextLayerProps['model'] = 'auto'
+): 'attribute' | 'storage' {
+  if (model === 'storage' && device.type !== 'webgpu') {
+    throw new Error('ArrowTextLayer storage rendering requires WebGPU');
+  }
+  if (model === 'auto') {
+    return device.type === 'webgpu' ? 'storage' : 'attribute';
+  }
+  if (model !== 'attribute' && model !== 'storage') {
+    throw new Error(`ArrowTextLayer does not support the ${model} model`);
+  }
+  return model;
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+type DeckTextConstantStyle = {
+  bufferLayout: BufferLayout[];
+  attributes: Record<string, Buffer>;
+  constantAttributes: Record<string, TypedArray>;
+  buffers: Buffer[];
+};
+
+function createEmptyDeckTextConstantStyle(): DeckTextConstantStyle {
+  return {bufferLayout: [], attributes: {}, constantAttributes: {}, buffers: []};
+}
+
+function createDeckTextConstantStyle(
+  device: Device,
+  props: ArrowTextLayerProps
+): DeckTextConstantStyle {
+  const style: DeckTextConstantStyle = {
+    bufferLayout: [],
+    attributes: {},
+    constantAttributes: {},
+    buffers: []
+  };
+  const id = props.id ?? 'arrow-text';
+
+  if (props.clipRects === undefined || props.clipRects === null) {
+    addDeckTextConstantAttribute(
+      device,
+      style,
+      `${id}-constant-clip-rect`,
+      'glyphClipRects',
+      {
+        name: 'constantTextClipRect',
+        byteStride: 0,
+        stepMode: 'instance',
+        attributes: [{attribute: 'glyphClipRects', format: 'sint32x4', byteOffset: 0}]
+      },
+      new Int32Array([0, 0, -1, -1])
+    );
+  }
+  if (props.colors === undefined || props.colors === null) {
+    const color = props.color ?? [199, 219, 245, 255];
+    addDeckTextConstantAttribute(
+      device,
+      style,
+      `${id}-constant-color`,
+      'colors',
+      {
+        name: 'constantTextColor',
+        byteStride: 0,
+        stepMode: 'instance',
+        attributes: [{attribute: 'colors', format: 'float32x4', byteOffset: 0}]
+      },
+      new Float32Array(color.map(component => component / 255))
+    );
+  }
+  if (props.angles === undefined || props.angles === null) {
+    addDeckTextConstantAttribute(
+      device,
+      style,
+      `${id}-constant-angle`,
+      'angles',
+      {
+        name: 'constantTextAngle',
+        byteStride: 0,
+        stepMode: 'instance',
+        attributes: [{attribute: 'angles', format: 'float32', byteOffset: 0}]
+      },
+      new Float32Array([props.angle ?? 0])
+    );
+  }
+  if (props.sizes === undefined || props.sizes === null) {
+    addDeckTextConstantAttribute(
+      device,
+      style,
+      `${id}-constant-size`,
+      'sizes',
+      {
+        name: 'constantTextSize',
+        byteStride: 0,
+        stepMode: 'instance',
+        attributes: [{attribute: 'sizes', format: 'float32', byteOffset: 0}]
+      },
+      new Float32Array([props.size ?? 32])
+    );
+  }
+  if (props.pixelOffsets === undefined || props.pixelOffsets === null) {
+    addDeckTextConstantAttribute(
+      device,
+      style,
+      `${id}-constant-pixel-offset`,
+      'pixelOffsets',
+      {
+        name: 'constantTextPixelOffset',
+        byteStride: 0,
+        stepMode: 'instance',
+        attributes: [{attribute: 'pixelOffsets', format: 'float32x2', byteOffset: 0}]
+      },
+      new Float32Array([0, 0])
+    );
+  }
+  return style;
+}
+
+function addDeckTextConstantAttribute(
+  device: Device,
+  style: DeckTextConstantStyle,
+  id: string,
+  attributeName: string,
+  bufferLayout: BufferLayout,
+  value: TypedArray
+): void {
+  style.bufferLayout.push(bufferLayout);
+  if (device.type === 'webgl') {
+    style.constantAttributes[attributeName] = value;
+  } else {
+    const buffer = device.createBuffer({id, data: value});
+    style.attributes[bufferLayout.name] = buffer;
+    style.buffers.push(buffer);
+  }
+}
+
+function destroyBuffers(buffers: Buffer[]): void {
+  for (const buffer of buffers) {
+    buffer.destroy();
   }
 }

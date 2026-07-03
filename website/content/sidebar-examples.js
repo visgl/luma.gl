@@ -71,7 +71,7 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'GPU Command Graph',
+      label: 'GPU Command Graph - luma v10',
       items: [
         'experimental/gpu-frustum-culling',
         'experimental/gpu-trace-viewer',

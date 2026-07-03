@@ -9,9 +9,12 @@ import {
   createStreamingPathRecordBatchIterator,
   makeArrowLineRecordBatches,
   makeArrowLineSourceData,
+  MEASURE_SWEEP_DURATION,
   PATH_DATASETS,
   STREAMING_PATH_BATCH_COUNT,
   STREAMING_PATH_ROWS_PER_CHUNK,
+  TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT,
+  TEMPORAL_TRAIL_LENGTH_MILLISECONDS,
   type ArrowLineColorKind,
   type ArrowLineCoordinateKind,
   type ArrowLineRowCountKind,
@@ -32,7 +35,8 @@ type ArrowPathDataSourceState = Record<string, unknown> & {
   colorKind: ArrowLineColorKind;
   widthKind: PathWidthKind;
   timeKind: ArrowLineTimeKind;
-  modelKind: 'attribute';
+  animate: boolean;
+  modelKind: 'attribute' | 'storage';
 };
 
 export type ArrowPathDataSourceUpdate = Pick<
@@ -41,12 +45,14 @@ export type ArrowPathDataSourceUpdate = Pick<
   | 'paths'
   | 'colors'
   | 'widths'
-  | 'timestamps'
   | 'color'
   | 'width'
+  | 'currentTime'
+  | 'trailLength'
+  | 'temporalEnabled'
   | 'model'
   | 'onDataBatch'
->;
+> & {animate: boolean};
 
 /** Owns data selection and the shared Arrow panels for the deck path example. */
 export class ArrowPathDataSource {
@@ -57,22 +63,30 @@ export class ArrowPathDataSource {
     colorKind: 'row-colors',
     widthKind: 'row-widths',
     timeKind: 'none',
-    modelKind: 'attribute'
+    animate: true,
+    modelKind: 'storage'
   };
-  private readonly panel = new DeckArrowSourcePanel({
-    id: 'deck-arrow-paths',
-    description:
-      'Variable-length Arrow paths preserve RecordBatch boundaries and can be supplied as a stream, named table columns, or direct vectors.',
-    schema: makeArrowPathDataSourceSchema(),
-    initialState: this.state,
-    onSettingsChange: state => {
-      this.state = state;
-      this.emitDataSource();
-    }
-  });
+  private readonly panel: DeckArrowSourcePanel<ArrowPathDataSourceState>;
   private isFinalized = false;
 
-  constructor(private readonly onDataSourceChange: (update: ArrowPathDataSourceUpdate) => void) {}
+  constructor(
+    private readonly onDataSourceChange: (update: ArrowPathDataSourceUpdate) => void,
+    options: {supportsStorage?: boolean} = {}
+  ) {
+    const supportsStorage = options.supportsStorage ?? true;
+    if (!supportsStorage) this.state.modelKind = 'attribute';
+    this.panel = new DeckArrowSourcePanel({
+      id: 'deck-arrow-paths',
+      description:
+        'Variable-length Arrow paths preserve RecordBatch boundaries and can be supplied as a stream, named table columns, or direct vectors.',
+      schema: makeArrowPathDataSourceSchema(supportsStorage),
+      initialState: this.state,
+      onSettingsChange: state => {
+        this.state = state;
+        this.emitDataSource();
+      }
+    });
+  }
 
   initialize(): void {
     this.panel.initialize();
@@ -101,12 +115,15 @@ export class ArrowPathDataSource {
     const sourceTable = new arrow.Table(recordBatches);
     const tableStream = this.panel.beginTableStream(recordBatches);
     const commonProps: ArrowPathDataSourceUpdate = {
-      model: 'attribute',
+      model: this.state.modelKind,
       color: [199, 219, 245, 235],
       width: 0.0035,
+      currentTime: MEASURE_SWEEP_DURATION,
+      trailLength: TEMPORAL_TRAIL_LENGTH_MILLISECONDS / TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT,
+      temporalEnabled: this.state.timeKind === 'xyzm',
+      animate: this.state.animate,
       colors: this.state.colorKind === 'none' ? null : undefined,
       widths: this.state.widthKind === 'constant' ? null : undefined,
-      timestamps: this.state.timeKind === 'timestamps' ? undefined : null,
       onDataBatch: update => {
         if (!this.isFinalized) {
           tableStream.setLoadedBatchCount(update.loadedBatchCount);
@@ -120,9 +137,7 @@ export class ArrowPathDataSource {
         paths: sourceData.sourceVectors.paths as ArrowPathLayerProps['paths'],
         colors:
           this.state.colorKind === 'none' ? null : (sourceData.sourceVectors.colors ?? undefined),
-        widths: this.state.widthKind === 'constant' ? null : sourceData.sourceVectors.widths,
-        timestamps:
-          this.state.timeKind === 'timestamps' ? sourceData.sourceVectors.timestamps : null
+        widths: this.state.widthKind === 'constant' ? null : sourceData.sourceVectors.widths
       });
       return;
     }
@@ -135,13 +150,12 @@ export class ArrowPathDataSource {
           : sourceTable,
       paths: 'paths',
       colors: this.state.colorKind === 'none' ? null : 'colors',
-      widths: this.state.widthKind === 'constant' ? null : 'widths',
-      timestamps: this.state.timeKind === 'timestamps' ? 'timestamps' : null
+      widths: this.state.widthKind === 'constant' ? null : 'widths'
     });
   }
 }
 
-function makeArrowPathDataSourceSchema(): SettingsSchema {
+function makeArrowPathDataSourceSchema(supportsStorage: boolean): SettingsSchema {
   return {
     title: 'Settings',
     sections: [
@@ -205,9 +219,14 @@ function makeArrowPathDataSourceSchema(): SettingsSchema {
             persist: 'none',
             options: [
               {label: 'None', value: 'none'},
-              {label: 'XYZM coordinate', value: 'xyzm'},
-              {label: 'Timestamp column', value: 'timestamps'}
+              {label: 'XYZM coordinate', value: 'xyzm'}
             ]
+          },
+          {
+            name: 'animate',
+            label: 'Animate',
+            type: 'boolean',
+            persist: 'none'
           }
         ]
       },
@@ -221,7 +240,10 @@ function makeArrowPathDataSourceSchema(): SettingsSchema {
             label: 'Model',
             type: 'select',
             persist: 'none',
-            options: [{label: 'Attribute (deck.gl)', value: 'attribute'}]
+            options: [
+              ...(supportsStorage ? [{label: 'Storage (WebGPU)', value: 'storage'}] : []),
+              {label: 'Attribute', value: 'attribute'}
+            ]
           }
         ]
       }

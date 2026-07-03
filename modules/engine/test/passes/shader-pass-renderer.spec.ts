@@ -630,7 +630,8 @@ test('ShaderPassRenderer supports persistent history targets', async t => {
       'explicit reset reinitializes history'
     );
 
-    renderer.resize([2, 2]);
+    const historyTarget = renderer.passRenderers[0].renderTargets.historyColor.texture;
+    renderer.resize([historyTarget.width + 1, historyTarget.height + 1]);
     const resizedOutput = renderer.renderToTexture({sourceTexture});
     t.deepEqual(
       Array.from(await readPixels(resizedOutput!)).slice(0, 4),

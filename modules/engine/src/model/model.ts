@@ -609,7 +609,7 @@ export class Model {
             : renderPass.draw({
                 isInstanced: this.isInstanced,
                 vertexCount: this.vertexCount,
-                instanceCount: this.instanceCount,
+                instanceCount: this.isInstanced ? this.instanceCount : undefined,
                 indexCount,
                 firstVertex: this.firstVertex,
                 firstIndex: this.firstIndex,

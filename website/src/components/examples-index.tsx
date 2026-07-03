@@ -337,24 +337,39 @@ function normalizeItem(item: SidebarDocItem, category: string): CatalogItem {
     category,
     description: customProps.description || `${item.label} — ${category.toLowerCase()} example.`,
     difficulty: customProps.difficulty || getDefaultDifficulty(category),
-    maturity: customProps.maturity || (category === 'Experimental' ? 'experimental' : 'stable'),
+    maturity: customProps.maturity || getDefaultMaturity(category),
     topics: customProps.topics || [topic]
   };
 }
 
 function getDefaultBackends(category: string): ExampleBackend[] {
-  return category.includes('GPU Data') ? ['webgpu'] : ['webgpu', 'webgl2'];
+  return category.includes('GPU Data') || category.includes('GPU Command Graph')
+    ? ['webgpu']
+    : ['webgpu', 'webgl2'];
 }
 
 function getDefaultDifficulty(category: string): ExampleDifficulty {
   if (category === 'Tutorials') return 'beginner';
-  if (category === 'Experimental' || category.includes('Arrow')) return 'advanced';
+  if (
+    category === 'Experimental' ||
+    category.includes('Arrow') ||
+    category.includes('GPU Command Graph')
+  ) {
+    return 'advanced';
+  }
   return 'intermediate';
+}
+
+function getDefaultMaturity(category: string): ExampleMaturity {
+  return category === 'Experimental' || category.includes('GPU Command Graph')
+    ? 'experimental'
+    : 'stable';
 }
 
 function getDefaultTopic(category: string): string {
   if (category === 'Tutorials') return 'fundamentals';
   if (category === 'Integrations') return 'integration';
+  if (category.includes('GPU Command Graph')) return 'compute';
   if (category.includes('GPU Data') || category.includes('Arrow')) return 'data';
   if (category === 'API') return 'api';
   return 'rendering';

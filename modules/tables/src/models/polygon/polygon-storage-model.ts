@@ -97,12 +97,14 @@ function preparePolygonStorageModel(
     table,
     modelProps: {
       ...modelProps,
-      source: POLYGON_STORAGE_WGSL_SHADER,
+      source: modelProps.source ?? POLYGON_STORAGE_WGSL_SHADER,
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
-      modules: [
-        picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)
-      ] as never,
-      shaderLayout: POLYGON_STORAGE_SHADER_LAYOUT,
+      modules:
+        modelProps.modules ??
+        ([
+          picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)
+        ] as never),
+      shaderLayout: modelProps.shaderLayout ?? POLYGON_STORAGE_SHADER_LAYOUT,
       shaderInputs,
       bindings: {
         ...(modelProps.bindings || {}),

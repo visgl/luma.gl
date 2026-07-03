@@ -392,7 +392,7 @@ function getRequestedDeviceTypes(
   for (const device of devices) {
     const mappedDeviceTypes =
       device === 'webgpu'
-        ? (['webgpu-core', 'webgpu-max', 'webgpu-compatibility'] as const)
+        ? (['webgpu-max', 'webgpu-core', 'webgpu-compatibility'] as const)
         : device === 'webgl2'
           ? (['webgl'] as const)
           : ([device] as const);

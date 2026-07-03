@@ -14,6 +14,7 @@ import {
 } from '../../../../examples/arrow/arrow-lines/arrow-line-data';
 import {makeArrowPolygonExampleData} from '../../../../examples/arrow/arrow-polygons/arrow-polygon-data';
 import {makeArrowTextSource} from '../../../../examples/arrow/arrow-text-2d/arrow-text-data';
+import {getDeckExampleDeviceProps} from '../../../../examples/deck/deck-example-device';
 
 const TEST_VIEWPORT_WIDTH = 640;
 const TEST_VIEWPORT_HEIGHT = 480;
@@ -117,7 +118,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
         );
         t.deepEqual(
           constantLayouts.map(layout => layout.byteStride),
-          [0, 0],
+          [0, 0, 0],
           `${model.device.type} path constants use zero-stride attribute layouts`
         );
         if (model.device.type === 'webgl') {
@@ -159,7 +160,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   t.end();
 });
 
-test('ArrowPathLayer draws streamed batches incrementally and preserves picking provenance', async t => {
+test('ArrowPathLayer storage draws streamed batches incrementally and preserves picking provenance', async t => {
   const source = makeArrowLineSourceData(
     {pathCount: 12, pointCount: 8, label: 'streaming test paths'},
     'lines',
@@ -179,11 +180,11 @@ test('ArrowPathLayer draws streamed batches incrementally and preserves picking 
   const layer = new ArrowPathLayer({
     id: 'arrow-path-streaming-test',
     pickable: true,
-    data: makeBareAsyncIterator(makeControlledPathStream(recordBatches, secondBatchReady)),
+    data: makeControlledPathStream(recordBatches, secondBatchReady),
     paths: 'paths',
     colors: 'colors',
     widths: 'widths',
-    model: 'attribute',
+    model: 'storage',
     onDataBatch: update => loadedBatchCounts.push(update.loadedBatchCount),
     onDataError: error => {
       dataError = error;
@@ -197,13 +198,30 @@ test('ArrowPathLayer draws streamed batches incrementally and preserves picking 
     parent,
     width: TEST_VIEWPORT_WIDTH,
     height: TEST_VIEWPORT_HEIGHT,
+    deviceProps: getDeckExampleDeviceProps('webgpu'),
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 8},
-    layers: [layer]
+    layers: []
   });
 
   try {
+    await waitForDeckInitialization(deck);
+    deck.setProps({layers: [layer]});
     await waitForModelCount(layer, 1, () => dataError);
+    const firstModel = layer.getModels()[0]!;
+    await waitForPipeline(firstModel);
+    t.equal(firstModel.device.type, 'webgpu', 'streaming path test uses WebGPU');
+    t.ok(firstModel.instanceCount > 0, 'first streamed batch has drawable path segments');
+    deck.redraw(true);
+    const firstBatchPicks = await deck.pickObjectsAsync({
+      x: 0,
+      y: 0,
+      width: TEST_VIEWPORT_WIDTH,
+      height: TEST_VIEWPORT_HEIGHT,
+      layerIds: [layer.id],
+      maxObjects: 1
+    });
+    t.ok(firstBatchPicks.length > 0, 'first streamed WebGPU batch is drawable before completion');
     t.deepEqual(loadedBatchCounts, [1], 'first batch is reported before the source completes');
     releaseSecondBatch();
     await waitForModelCount(layer, 2);
@@ -227,11 +245,106 @@ test('ArrowPathLayer draws streamed batches incrementally and preserves picking 
   t.end();
 });
 
+test('Arrow polygon and text layers render storage-backed WebGPU models', async t => {
+  const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
+  let polygonDataError: unknown;
+  const polygonLayer = new ArrowPolygonLayer({
+    id: 'arrow-polygons-storage-test',
+    pickable: true,
+    data: new Table(polygonSource.recordBatches.slice(0, 1)),
+    polygons: 'polygons',
+    colors: 'colors',
+    tessellated: polygonSource.tessellated,
+    model: 'storage',
+    onDataError: error => {
+      polygonDataError = error;
+    }
+  });
+  const textSource = makeArrowTextSource(
+    {labelCount: 400, label: 'storage test texts', textType: 'utf8'},
+    'string-colors',
+    {clipRects: true, angles: true, sizes: true}
+  );
+  let textDataError: unknown;
+  const textLayer = new ArrowTextLayer({
+    id: 'arrow-text-storage-test',
+    pickable: true,
+    positions: textSource.positions.slice(190, 210),
+    texts: textSource.texts.slice(190, 210),
+    clipRects: textSource.clipRects?.slice(190, 210) ?? null,
+    colors: textSource.colors?.slice(190, 210),
+    angles: textSource.angles?.slice(190, 210),
+    sizes: textSource.sizes?.slice(190, 210),
+    pixelOffsets: null,
+    model: 'storage',
+    characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
+    onDataError: error => {
+      textDataError = error;
+    }
+  });
+  const dictionaryTextSource = makeArrowTextSource(
+    {labelCount: 400, label: 'storage dictionary test texts', textType: 'dictionary'},
+    'string-colors',
+    {clipRects: true, angles: true, sizes: true}
+  );
+  let dictionaryTextDataError: unknown;
+  const dictionaryTextLayer = new ArrowTextLayer({
+    id: 'arrow-text-dictionary-storage-test',
+    pickable: true,
+    positions: dictionaryTextSource.positions.slice(190, 210),
+    texts: dictionaryTextSource.texts.slice(190, 210),
+    clipRects: dictionaryTextSource.clipRects?.slice(190, 210) ?? null,
+    colors: null,
+    angles: null,
+    sizes: null,
+    pixelOffsets: null,
+    color: [255, 180, 90, 255],
+    angle: 4,
+    size: 36,
+    model: 'storage',
+    characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
+    onDataError: error => {
+      dictionaryTextDataError = error;
+    }
+  });
+
+  const cases = [
+    {
+      layer: polygonLayer,
+      initialViewState: {target: polygonSource.viewState.startCenter, zoom: 9},
+      getError: () => polygonDataError
+    },
+    {
+      layer: textLayer,
+      initialViewState: {target: [0, 0] as [number, number], zoom: 0},
+      getError: () => textDataError
+    },
+    {
+      layer: dictionaryTextLayer,
+      initialViewState: {target: [0, 0] as [number, number], zoom: 0},
+      getError: () => dictionaryTextDataError
+    }
+  ];
+
+  for (const {layer, initialViewState, getError} of cases) {
+    const pickingInfo = await pickFirstLayerObject(
+      layer,
+      initialViewState,
+      getError,
+      model => t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`),
+      'webgpu'
+    );
+    t.ok(pickingInfo?.picked, `${layer.id} returns a picked storage-backed object`);
+  }
+  t.end();
+});
+
 async function pickFirstLayerObject(
   layer: Layer,
   initialViewState: {target: [number, number]; zoom: number},
   getError: () => unknown = () => undefined,
-  inspectModel: (model: Model) => void = () => {}
+  inspectModel: (model: Model) => void = () => {},
+  deviceType?: 'webgpu' | 'webgl'
 ): Promise<PickingInfo | null> {
   const parent = document.createElement('div');
   parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
@@ -241,6 +354,7 @@ async function pickFirstLayerObject(
     parent,
     width: TEST_VIEWPORT_WIDTH,
     height: TEST_VIEWPORT_HEIGHT,
+    deviceProps: deviceType ? getDeckExampleDeviceProps(deviceType) : undefined,
     views: new OrthographicView({id: 'main'}),
     initialViewState,
     layers: [layer]
@@ -328,9 +442,14 @@ async function* makeControlledPathStream(
   }
 }
 
-function makeBareAsyncIterator<T>(source: AsyncIterable<T>): AsyncIterator<T> {
-  const iterator = source[Symbol.asyncIterator]();
-  return {next: () => iterator.next()};
+async function waitForDeckInitialization(deck: Deck): Promise<void> {
+  const timeout = Date.now() + TEST_MODEL_TIMEOUT_MILLISECONDS;
+  while (Date.now() < timeout && !deck.isInitialized) {
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  }
+  if (!deck.isInitialized) {
+    throw new Error('Deck did not initialize');
+  }
 }
 
 async function waitForPipeline(model: Model): Promise<void> {

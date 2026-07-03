@@ -45,6 +45,9 @@ export class ArrowPolygonDataSource {
     ) => void,
     options: {supportedModelKinds?: readonly ArrowPolygonRendererModel[]} = {}
   ) {
+    if (options.supportedModelKinds?.includes('storage')) {
+      this.modelKind = 'storage';
+    }
     this.panels = new ArrowExamplePanelManager({
       descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
       settingsPanel: () => this.controlPanel.makeSettingsPanel()

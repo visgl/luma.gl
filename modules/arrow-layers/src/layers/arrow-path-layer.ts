@@ -27,9 +27,16 @@ import {
   type TypedArray
 } from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import {PathAttributeModel} from '@luma.gl/tables';
+import {PathAttributeModel, PathStorageModel} from '@luma.gl/tables';
 import type {RecordBatch} from 'apache-arrow';
-import {DECK_ARROW_ALPHA_BLEND_PARAMETERS, type ArrowLayerPickingInfo} from './arrow-layer-types';
+import {
+  deckArrowViewport,
+  DECK_ARROW_ALPHA_BLEND_PARAMETERS,
+  DECK_ARROW_WGSL_COLOR_UTILS,
+  setDeckArrowViewport,
+  watchDeckArrowModelPipeline,
+  type ArrowLayerPickingInfo
+} from './arrow-layer-types';
 
 type ArrowPathColor = [number, number, number, number];
 
@@ -38,14 +45,17 @@ const DEFAULT_PATH_WIDTH = 0.0035;
 
 const CONSTANT_PATH_COLOR_BUFFER = 'constantPathColor';
 const CONSTANT_PATH_WIDTH_BUFFER = 'constantPathWidth';
+const CONSTANT_PATH_TEMPORAL_BUFFER = 'constantPathTemporal';
 
 const DECK_PATH_FS = `#version 300 es
 precision highp float;
 
 in vec4 vColor;
+in float vVisible;
 out vec4 fragColor;
 
 void main() {
+  if (vVisible < 0.5) discard;
   fragColor = vColor;
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }
@@ -59,7 +69,10 @@ const DECK_PATH_SHADER_LAYOUT: ShaderLayout = {
     {name: 'segmentStartColors', location: 3, type: 'u32', stepMode: 'instance'},
     {name: 'segmentEndColors', location: 4, type: 'u32', stepMode: 'instance'},
     {name: 'widths', location: 5, type: 'f32', stepMode: 'instance'},
-    {name: 'pathViewOrigins', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
+    {name: 'pathViewOrigins', location: 6, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'currentTime', location: 7, type: 'f32', stepMode: 'instance'},
+    {name: 'trailLength', location: 8, type: 'f32', stepMode: 'instance'},
+    {name: 'temporalEnabled', location: 9, type: 'f32', stepMode: 'instance'}
   ],
   bindings: []
 };
@@ -75,8 +88,12 @@ in uint segmentStartColors;
 in uint segmentEndColors;
 in float widths;
 in vec4 pathViewOrigins;
+in float currentTime;
+in float trailLength;
+in float temporalEnabled;
 
 out vec4 vColor;
+out float vVisible;
 
 vec3 encodeDeckPickingColor(int objectIndex) {
   int colorIndex = objectIndex + 1;
@@ -115,6 +132,10 @@ void main() {
   vec4 pathPosition = mix(startPosition, endPosition, corner.x);
   pathPosition.xy += normal * corner.y * widths;
   gl_Position = project_position_to_clipspace(pathPosition.xyz, vec3(0.0), vec3(0.0));
+  float startMeasure = segmentStartPositions.w + pathViewOrigins.w;
+  float endMeasure = segmentEndPositions.w + pathViewOrigins.w;
+  vVisible = temporalEnabled < 0.5 ||
+    (endMeasure >= currentTime - trailLength && startMeasure <= currentTime) ? 1.0 : 0.0;
   geometry.position = gl_Position;
   geometry.pickingColor = encodeDeckPickingColor(int(rowIndices));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
@@ -127,6 +148,232 @@ void main() {
 }
 `;
 
+const DECK_PATH_WGSL = /* wgsl */ `
+${DECK_ARROW_WGSL_COLOR_UTILS}
+
+struct PathVertexInputs {
+  @location(0) segmentStartPositions: vec4<f32>,
+  @location(1) segmentEndPositions: vec4<f32>,
+  @location(2) rowIndices: u32,
+  @location(3) segmentStartColors: u32,
+  @location(4) segmentEndColors: u32,
+  @location(5) widths: f32,
+  @location(6) pathViewOrigins: vec4<f32>,
+  @location(7) currentTime: f32,
+  @location(8) trailLength: f32,
+  @location(9) temporalEnabled: f32,
+};
+
+struct PathVertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) color: vec4<f32>,
+  @location(1) @interpolate(flat) pickingColor: vec3<f32>,
+  @location(2) @interpolate(flat) visible: f32,
+};
+
+fn unpackPathColor(colorWord: u32) -> vec4<f32> {
+  return vec4<f32>(
+    f32(colorWord & 255u),
+    f32((colorWord >> 8u) & 255u),
+    f32((colorWord >> 16u) & 255u),
+    f32((colorWord >> 24u) & 255u)
+  ) / 255.0;
+}
+
+fn getTriangleCorner(vertexIndex: u32) -> vec2<f32> {
+  if (vertexIndex == 0u) { return vec2<f32>(0.0, -1.0); }
+  if (vertexIndex == 1u) { return vec2<f32>(1.0, -1.0); }
+  if (vertexIndex == 2u) { return vec2<f32>(1.0, 1.0); }
+  if (vertexIndex == 3u) { return vec2<f32>(0.0, -1.0); }
+  if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
+  return vec2<f32>(0.0, 1.0);
+}
+
+@vertex
+fn vertexMain(inputs: PathVertexInputs, @builtin(vertex_index) vertexIndex: u32) -> PathVertexOutputs {
+  var outputs: PathVertexOutputs;
+  let corner = getTriangleCorner(vertexIndex % 6u);
+  let startPosition = inputs.pathViewOrigins + inputs.segmentStartPositions;
+  let endPosition = inputs.pathViewOrigins + inputs.segmentEndPositions;
+  let delta = endPosition.xy - startPosition.xy;
+  var direction = vec2<f32>(1.0, 0.0);
+  if (length(delta) > 0.000001) {
+    direction = normalize(delta);
+  }
+  let normal = vec2<f32>(-direction.y, direction.x);
+  var pathPosition = mix(startPosition, endPosition, corner.x);
+  pathPosition.x += normal.x * corner.y * inputs.widths;
+  pathPosition.y += normal.y * corner.y * inputs.widths;
+  outputs.position = deck_projectPosition(pathPosition.xyz);
+  outputs.color = mix(
+    unpackPathColor(inputs.segmentStartColors),
+    unpackPathColor(inputs.segmentEndColors),
+    corner.x
+  );
+  outputs.pickingColor = deck_encodePickingColor(inputs.rowIndices);
+  let startMeasure = inputs.segmentStartPositions.w + inputs.pathViewOrigins.w;
+  let endMeasure = inputs.segmentEndPositions.w + inputs.pathViewOrigins.w;
+  outputs.visible = select(
+    0.0,
+    1.0,
+    inputs.temporalEnabled < 0.5 ||
+      (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
+  );
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: PathVertexOutputs) -> @location(0) vec4<f32> {
+  if (inputs.visible < 0.5) { discard; }
+  return deck_filterColor(inputs.color, inputs.pickingColor);
+}
+`;
+
+const DECK_PATH_STORAGE_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [
+    {name: 'segmentStartPointIndices', location: 0, type: 'u32', stepMode: 'instance'},
+    {name: 'segmentFlags', location: 1, type: 'u32', stepMode: 'instance'},
+    {name: 'rowIndices', location: 2, type: 'u32', stepMode: 'instance'},
+    {name: 'currentTime', location: 3, type: 'f32', stepMode: 'instance'},
+    {name: 'trailLength', location: 4, type: 'f32', stepMode: 'instance'},
+    {name: 'temporalEnabled', location: 5, type: 'f32', stepMode: 'instance'}
+  ],
+  bindings: []
+};
+
+const DECK_PATH_STORAGE_WGSL = /* wgsl */ `
+${DECK_ARROW_WGSL_COLOR_UTILS}
+
+@group(0) @binding(auto) var<storage, read> pathValues: array<f32>;
+@group(0) @binding(auto) var<storage, read> pathRanges: array<vec4<u32>>;
+@group(0) @binding(auto) var<storage, read> pathViewOrigins: array<vec4<f32>>;
+@group(0) @binding(auto) var<storage, read> pathRowColors: array<u32>;
+@group(0) @binding(auto) var<storage, read> pathVertexColors: array<u32>;
+@group(0) @binding(auto) var<storage, read> pathRowWidths: array<f32>;
+
+struct PathStorageStyleConfig {
+  constantColor: vec4<f32>,
+  constantWidth: f32,
+  useRowColors: u32,
+  useRowWidths: u32,
+  batchRowIndexBase: u32,
+  pathComponentCount: u32,
+  useViewOrigins: u32,
+  useVertexColors: u32,
+  _padding1: u32,
+};
+
+@group(0) @binding(auto) var<uniform> pathStorageStyleConfig: PathStorageStyleConfig;
+
+struct PathStorageVertexInputs {
+  @location(0) segmentStartPointIndex: u32,
+  @location(1) segmentFlags: u32,
+  @location(2) rowIndex: u32,
+  @location(3) currentTime: f32,
+  @location(4) trailLength: f32,
+  @location(5) temporalEnabled: f32,
+};
+
+struct PathStorageVertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) color: vec4<f32>,
+  @location(1) @interpolate(flat) pickingColor: vec3<f32>,
+  @location(2) @interpolate(flat) visible: f32,
+};
+
+fn unpackStoragePathColor(colorWord: u32) -> vec4<f32> {
+  return vec4<f32>(
+    f32(colorWord & 255u),
+    f32((colorWord >> 8u) & 255u),
+    f32((colorWord >> 16u) & 255u),
+    f32((colorWord >> 24u) & 255u)
+  ) / 255.0;
+}
+
+fn readStoragePathComponent(pointIndex: u32, componentIndex: u32) -> f32 {
+  if (componentIndex >= pathStorageStyleConfig.pathComponentCount) { return 0.0; }
+  return pathValues[pointIndex * pathStorageStyleConfig.pathComponentCount + componentIndex];
+}
+
+fn readStoragePathPoint(pointIndex: u32) -> vec4<f32> {
+  return vec4<f32>(
+    readStoragePathComponent(pointIndex, 0u),
+    readStoragePathComponent(pointIndex, 1u),
+    readStoragePathComponent(pointIndex, 2u),
+    readStoragePathComponent(pointIndex, 3u)
+  );
+}
+
+fn readStoragePathViewOrigin(rowIndex: u32) -> vec4<f32> {
+  if (pathStorageStyleConfig.useViewOrigins == 0u) { return vec4<f32>(0.0); }
+  return pathViewOrigins[rowIndex];
+}
+
+fn getStoragePathCorner(vertexIndex: u32) -> vec2<f32> {
+  if (vertexIndex == 0u) { return vec2<f32>(0.0, -1.0); }
+  if (vertexIndex == 1u) { return vec2<f32>(1.0, -1.0); }
+  if (vertexIndex == 2u) { return vec2<f32>(1.0, 1.0); }
+  if (vertexIndex == 3u) { return vec2<f32>(0.0, -1.0); }
+  if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
+  return vec2<f32>(0.0, 1.0);
+}
+
+@vertex
+fn vertexMain(
+  inputs: PathStorageVertexInputs,
+  @builtin(vertex_index) vertexIndex: u32
+) -> PathStorageVertexOutputs {
+  let localRowIndex = inputs.rowIndex - pathStorageStyleConfig.batchRowIndexBase;
+  let pathRange = pathRanges[localRowIndex];
+  let segmentEndPointIndex = min(inputs.segmentStartPointIndex + 1u, pathRange.y - 1u);
+  let viewOrigin = readStoragePathViewOrigin(localRowIndex);
+  let startPosition = readStoragePathPoint(inputs.segmentStartPointIndex) + viewOrigin;
+  let endPosition = readStoragePathPoint(segmentEndPointIndex) + viewOrigin;
+  let delta = endPosition.xy - startPosition.xy;
+  var direction = vec2<f32>(1.0, 0.0);
+  if (length(delta) > 0.000001) { direction = normalize(delta); }
+  let normal = vec2<f32>(-direction.y, direction.x);
+  let corner = getStoragePathCorner(vertexIndex % 6u);
+  let pathWidth = select(
+    pathStorageStyleConfig.constantWidth,
+    pathRowWidths[localRowIndex],
+    pathStorageStyleConfig.useRowWidths != 0u
+  );
+  var pathPosition = mix(startPosition, endPosition, corner.x);
+  pathPosition.x += normal.x * corner.y * pathWidth;
+  pathPosition.y += normal.y * corner.y * pathWidth;
+
+  var outputs: PathStorageVertexOutputs;
+  outputs.position = deck_projectPosition(pathPosition.xyz);
+  outputs.color = pathStorageStyleConfig.constantColor;
+  if (pathStorageStyleConfig.useVertexColors != 0u) {
+    outputs.color = mix(
+      unpackStoragePathColor(pathVertexColors[inputs.segmentStartPointIndex]),
+      unpackStoragePathColor(pathVertexColors[segmentEndPointIndex]),
+      corner.x
+    );
+  } else if (pathStorageStyleConfig.useRowColors != 0u) {
+    outputs.color = unpackStoragePathColor(pathRowColors[localRowIndex]);
+  }
+  outputs.pickingColor = deck_encodePickingColor(inputs.rowIndex);
+  let startMeasure = startPosition.w;
+  let endMeasure = endPosition.w;
+  outputs.visible = select(
+    0.0,
+    1.0,
+    inputs.temporalEnabled < 0.5 ||
+      (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
+  );
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: PathStorageVertexOutputs) -> @location(0) vec4<f32> {
+  if (inputs.visible < 0.5) { discard; }
+  return deck_filterColor(inputs.color, inputs.pickingColor);
+}
+`;
+
 type ArrowPathLayerBatch = {
   model: Model;
   prepared: PreparedArrowPathRendererGPUVectors;
@@ -134,19 +381,26 @@ type ArrowPathLayerBatch = {
   batchIndex: number;
   rowIndexOffset: number;
   rowCount: number;
+  temporalBuffer: Buffer | null;
 };
 
 /** Deck-facing props for an Arrow-backed path layer. */
 export type ArrowPathLayerProps = Omit<LayerProps, 'data'> &
-  ArrowPathSourceVectorSelectors & {
+  Omit<ArrowPathSourceVectorSelectors, 'timestamps'> & {
     /** Arrow table or preserved record-batch source. */
     data?: ArrowRecordBatchSource | null;
-    /** Deck projection currently requires the attribute-backed path model. */
-    model?: 'attribute' | 'auto';
+    /** GPU path model. Storage is available on WebGPU; auto selects it when supported. */
+    model?: 'attribute' | 'storage' | 'auto';
     /** Constant RGBA fallback used when `colors` is null or absent. */
     color?: ArrowPathColor;
     /** Constant path width fallback used when `widths` is null or absent. */
     width?: number;
+    /** Current path measure used by temporal trail filtering. */
+    currentTime?: number;
+    /** Visible temporal trail length in path measure units. */
+    trailLength?: number;
+    /** Enables temporal filtering against the fourth coordinate component. */
+    temporalEnabled?: boolean;
     /** Called after one streamed record batch has been prepared and appended. */
     onDataBatch?: (update: {
       loadedBatchCount: number;
@@ -162,33 +416,62 @@ export type ArrowPathLayerProps = Omit<LayerProps, 'data'> &
 type ArrowPathLayerState = {
   batches: ArrowPathLayerBatch[];
   loadVersion: number;
+  sourceInitialized: boolean;
 };
 
 /** deck.gl layer that converts and appends Arrow path batches without materializing the stream. */
 export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
   static override layerName = 'ArrowPathLayer';
-  static override defaultProps = {parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS};
+  static override defaultProps = {
+    data: {type: 'object', value: null, optional: true},
+    parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS
+  };
 
   override getAttributeManager() {
     return null;
   }
 
+  override setShaderModuleProps(props: Parameters<Model['shaderInputs']['setProps']>[0]): void {
+    super.setShaderModuleProps(
+      this.context.device.type === 'webgpu'
+        ? {layer: props['layer'], picking: props['picking']}
+        : {layer: props['layer'], project: props['project'], picking: props['picking']}
+    );
+  }
+
   override initializeState(): void {
-    this.setState({batches: [], loadVersion: 0} satisfies ArrowPathLayerState);
+    this.setState({
+      batches: [],
+      loadVersion: 0,
+      sourceInitialized: false
+    } satisfies ArrowPathLayerState);
   }
 
   override updateState({props, oldProps, changeFlags}: UpdateParameters<this>): void {
-    if (
+    const state = this.getLayerState();
+    const sourceChanged =
+      !state.sourceInitialized ||
       changeFlags.dataChanged ||
       props.paths !== oldProps.paths ||
       props.colors !== oldProps.colors ||
       props.widths !== oldProps.widths ||
-      props.timestamps !== oldProps.timestamps ||
       props.model !== oldProps.model ||
       props.color !== oldProps.color ||
-      props.width !== oldProps.width
-    ) {
+      props.width !== oldProps.width;
+    if (sourceChanged) {
+      state.sourceInitialized = true;
       void this.loadSource(props);
+      return;
+    }
+    if (
+      props.currentTime !== oldProps.currentTime ||
+      props.trailLength !== oldProps.trailLength ||
+      props.temporalEnabled !== oldProps.temporalEnabled
+    ) {
+      for (const batch of state.batches) {
+        updateDeckPathTemporalStyle(batch, props);
+      }
+      this.setNeedsRedraw();
     }
   }
 
@@ -198,7 +481,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
 
   override draw({renderPass, context}: Parameters<Layer<ArrowPathLayerProps>['draw']>[0]): void {
     for (const {model} of this.getLayerState().batches) {
-      model.predraw(context.device.commandEncoder);
+      if (model.device.type === 'webgpu') setDeckArrowViewport(model, context.viewport);
       model.draw(renderPass);
     }
   }
@@ -225,7 +508,11 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const state = this.getLayerState();
     state.loadVersion++;
     destroyPathBatches(state.batches);
-    this.setState({batches: [], loadVersion: state.loadVersion} satisfies ArrowPathLayerState);
+    this.setState({
+      batches: [],
+      loadVersion: state.loadVersion,
+      sourceInitialized: true
+    } satisfies ArrowPathLayerState);
     super.finalizeState(context);
   }
 
@@ -234,7 +521,11 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const loadVersion = state.loadVersion + 1;
     state.loadVersion = loadVersion;
     const previousBatches = state.batches;
-    this.setState({batches: [], loadVersion} satisfies ArrowPathLayerState);
+    this.setState({
+      batches: [],
+      loadVersion,
+      sourceInitialized: true
+    } satisfies ArrowPathLayerState);
     destroyPathBatches(previousBatches);
     this.setNeedsRedraw();
 
@@ -246,7 +537,11 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       }
     } catch (error) {
       if (this.isActiveLoad(loadVersion)) {
-        props.onDataError?.(error);
+        if (props.onDataError) {
+          props.onDataError(error);
+        } else {
+          this.raiseError(toError(error), `loading Arrow data in ${this}`);
+        }
       }
     }
   }
@@ -276,20 +571,23 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     rowIndexOffset: number,
     loadVersion: number
   ): Promise<void> {
-    const sourceVectors = resolveArrowPathSourceVectors(PathAttributeModel, {
-      data: recordBatch,
-      selectors: {
-        paths: props.paths,
-        colors: props.colors,
-        widths: props.widths,
-        timestamps: props.timestamps
+    const model = resolveDeckPathModel(this.context.device, props.model);
+    const sourceVectors = resolveArrowPathSourceVectors(
+      model === 'storage' ? PathStorageModel : PathAttributeModel,
+      {
+        data: recordBatch,
+        selectors: {
+          paths: props.paths,
+          colors: props.colors,
+          widths: props.widths
+        }
       }
-    });
+    );
     const prepared = await ArrowPathRenderer.convertToGPUVectors(
       this.context.device,
       sourceVectors,
       {
-        model: 'attribute',
+        model,
         id: `${props.id}-batch-${batchIndex}`,
         rowIndexBase: rowIndexOffset
       }
@@ -301,36 +599,58 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
 
     const constantStyle = createDeckPathConstantStyle(this.context.device, {
       id: `${props.id}-batch-${batchIndex}`,
-      hasColors: Boolean(sourceVectors.colors),
-      hasWidths: Boolean(sourceVectors.widths),
+      hasColors: model === 'storage' || Boolean(sourceVectors.colors),
+      hasWidths: model === 'storage' || Boolean(sourceVectors.widths),
       color: props.color ?? DEFAULT_PATH_COLOR,
-      width: props.width ?? DEFAULT_PATH_WIDTH
+      width: props.width ?? DEFAULT_PATH_WIDTH,
+      currentTime: props.currentTime ?? 0,
+      trailLength: props.trailLength ?? 0,
+      temporalEnabled: props.temporalEnabled ?? false
     });
-    let model: Model;
+    let renderModel: Model;
     try {
-      model = ArrowPathRenderer.createModel(this.context.device, {
-        ...prepared,
-        model: 'attribute',
-        id: `${props.id}-batch-${batchIndex}`,
-        ...this.getShaders({
-          modules: [project32, picking],
-          vs: DECK_PATH_VS,
-          fs: DECK_PATH_FS
-        }),
-        shaderLayout: DECK_PATH_SHADER_LAYOUT,
-        bufferLayout: constantStyle.bufferLayout,
-        attributes: constantStyle.attributes,
-        constantAttributes: constantStyle.constantAttributes,
-        topology: 'triangle-list',
-        vertexCount: 6
-      } as never);
+      if (model === 'storage') {
+        renderModel = ArrowPathRenderer.createModel(this.context.device, {
+          ...prepared,
+          model: 'storage',
+          id: `${props.id}-batch-${batchIndex}`,
+          ...this.getShaders({
+            modules: [deckArrowViewport, picking],
+            source: DECK_PATH_STORAGE_WGSL
+          }),
+          shaderLayout: DECK_PATH_STORAGE_SHADER_LAYOUT,
+          bufferLayout: constantStyle.bufferLayout,
+          attributes: constantStyle.attributes,
+          color: props.color ?? DEFAULT_PATH_COLOR,
+          width: props.width ?? DEFAULT_PATH_WIDTH,
+          topology: 'triangle-list',
+          vertexCount: 6
+        });
+      } else {
+        renderModel = ArrowPathRenderer.createModel(this.context.device, {
+          ...prepared,
+          model: 'attribute',
+          id: `${props.id}-batch-${batchIndex}`,
+          ...this.getShaders(
+            this.context.device.type === 'webgpu'
+              ? {modules: [deckArrowViewport, picking], source: DECK_PATH_WGSL}
+              : {modules: [project32, picking], vs: DECK_PATH_VS, fs: DECK_PATH_FS}
+          ),
+          shaderLayout: DECK_PATH_SHADER_LAYOUT,
+          bufferLayout: constantStyle.bufferLayout,
+          attributes: constantStyle.attributes,
+          constantAttributes: constantStyle.constantAttributes,
+          topology: 'triangle-list',
+          vertexCount: 6
+        });
+      }
     } catch (error) {
       destroyBuffers(constantStyle.buffers);
       prepared.destroy();
       throw error;
     }
     if (!this.isActiveLoad(loadVersion)) {
-      model.destroy();
+      renderModel.destroy();
       destroyBuffers(constantStyle.buffers);
       prepared.destroy();
       return;
@@ -338,16 +658,29 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
 
     const rowCount = sourceVectors.paths.length;
     const batch: ArrowPathLayerBatch = {
-      model,
+      model: renderModel,
       prepared,
       constantBuffers: constantStyle.buffers,
       batchIndex,
       rowIndexOffset,
-      rowCount
+      rowCount,
+      temporalBuffer: constantStyle.temporalBuffer
     };
     const batches = [...this.getLayerState().batches, batch];
-    this.setState({batches, loadVersion} satisfies ArrowPathLayerState);
+    this.setState({batches, loadVersion, sourceInitialized: true} satisfies ArrowPathLayerState);
     this.setNeedsRedraw();
+    watchDeckArrowModelPipeline(
+      renderModel,
+      () => {
+        if (this.isActiveLoad(loadVersion)) this.setNeedsRedraw();
+      },
+      error => {
+        if (this.isActiveLoad(loadVersion)) {
+          if (props.onDataError) props.onDataError(error);
+          else this.raiseError(error, `linking Arrow shaders in ${this}`);
+        }
+      }
+    );
     props.onDataBatch?.({
       loadedBatchCount: batches.length,
       isFirstBatch: batchIndex === 0,
@@ -373,24 +706,32 @@ function createDeckPathConstantStyle(
     hasColors,
     hasWidths,
     color,
-    width
+    width,
+    currentTime,
+    trailLength,
+    temporalEnabled
   }: {
     id: string;
     hasColors: boolean;
     hasWidths: boolean;
     color: ArrowPathColor;
     width: number;
+    currentTime: number;
+    trailLength: number;
+    temporalEnabled: boolean;
   }
 ): {
   bufferLayout: BufferLayout[];
   attributes: Record<string, Buffer>;
   constantAttributes: Record<string, TypedArray>;
   buffers: Buffer[];
+  temporalBuffer: Buffer | null;
 } {
   const bufferLayout: BufferLayout[] = [];
   const attributes: Record<string, Buffer> = {};
   const constantAttributes: Record<string, TypedArray> = {};
   const buffers: Buffer[] = [];
+  let temporalBuffer: Buffer | null = null;
 
   if (!hasColors) {
     // WebGL sets integer constant attributes through vertexAttribI4uiv, so retain four lanes.
@@ -432,7 +773,70 @@ function createDeckPathConstantStyle(
     }
   }
 
-  return {bufferLayout, attributes, constantAttributes, buffers};
+  const temporalValues = makeDeckPathTemporalValues({currentTime, trailLength, temporalEnabled});
+  bufferLayout.push({
+    name: CONSTANT_PATH_TEMPORAL_BUFFER,
+    byteStride: 0,
+    stepMode: 'instance',
+    attributes: [
+      {attribute: 'currentTime', format: 'float32', byteOffset: 0},
+      {attribute: 'trailLength', format: 'float32', byteOffset: 4},
+      {attribute: 'temporalEnabled', format: 'float32', byteOffset: 8}
+    ]
+  });
+  if (device.type === 'webgl') {
+    constantAttributes['currentTime'] = temporalValues.subarray(0, 1);
+    constantAttributes['trailLength'] = temporalValues.subarray(1, 2);
+    constantAttributes['temporalEnabled'] = temporalValues.subarray(2, 3);
+  } else {
+    temporalBuffer = device.createBuffer({id: `${id}-constant-temporal`, data: temporalValues});
+    attributes[CONSTANT_PATH_TEMPORAL_BUFFER] = temporalBuffer;
+    buffers.push(temporalBuffer);
+  }
+
+  return {bufferLayout, attributes, constantAttributes, buffers, temporalBuffer};
+}
+
+function updateDeckPathTemporalStyle(batch: ArrowPathLayerBatch, props: ArrowPathLayerProps): void {
+  const temporalValues = makeDeckPathTemporalValues({
+    currentTime: props.currentTime ?? 0,
+    trailLength: props.trailLength ?? 0,
+    temporalEnabled: props.temporalEnabled ?? false
+  });
+  if (batch.model.device.type === 'webgl') {
+    batch.model.setConstantAttributes({
+      currentTime: temporalValues.subarray(0, 1),
+      trailLength: temporalValues.subarray(1, 2),
+      temporalEnabled: temporalValues.subarray(2, 3)
+    });
+  } else {
+    batch.temporalBuffer?.write(temporalValues);
+  }
+}
+
+function makeDeckPathTemporalValues({
+  currentTime,
+  trailLength,
+  temporalEnabled
+}: {
+  currentTime: number;
+  trailLength: number;
+  temporalEnabled: boolean;
+}): Float32Array {
+  return new Float32Array([currentTime, trailLength, temporalEnabled ? 1 : 0]);
+}
+
+function resolveDeckPathModel(
+  device: Device,
+  model: ArrowPathLayerProps['model'] = 'auto'
+): 'attribute' | 'storage' {
+  if (model === 'storage' && device.type !== 'webgpu') {
+    throw new Error('ArrowPathLayer storage rendering requires WebGPU');
+  }
+  if (model === 'auto') {
+    return device.type === 'webgpu' ? 'storage' : 'attribute';
+  }
+  return model;
 }
 
 function packPathColor(color: ArrowPathColor): number {
@@ -454,4 +858,8 @@ function destroyPathBatches(batches: ArrowPathLayerBatch[]): void {
     destroyBuffers(batch.constantBuffers);
     batch.prepared.destroy();
   }
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }

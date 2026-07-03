@@ -7,6 +7,8 @@ import type {ArrowTextLayerProps} from '@deck.gl-community/arrow-layers';
 import * as arrow from 'apache-arrow';
 import {
   createStreamingRecordBatchIterator,
+  LABEL_COLUMN_COUNT,
+  LABEL_ROW_SPACING,
   makeArrowTextSource,
   makeStreamingArrowTextSourceAsync,
   STREAMING_TEXT_BATCH_COUNT,
@@ -32,7 +34,8 @@ type ArrowTextDataSourceState = Record<string, unknown> & {
   sizeKind: TextColumnKind;
   angleKind: TextColumnKind;
   clipKind: TextClipKind;
-  modelKind: 'attribute';
+  animate: boolean;
+  modelKind: 'attribute' | 'storage';
 };
 
 export type ArrowTextDataSourceUpdate = Pick<
@@ -51,7 +54,7 @@ export type ArrowTextDataSourceUpdate = Pick<
   | 'size'
   | 'characterSet'
   | 'onDataBatch'
->;
+> & {animate: boolean; labelFieldHeight: number};
 
 /** Owns data selection and the shared Arrow panels for the deck text example. */
 export class ArrowTextDataSource {
@@ -63,23 +66,40 @@ export class ArrowTextDataSource {
     sizeKind: 'constant',
     angleKind: 'constant',
     clipKind: 'column',
-    modelKind: 'attribute'
+    animate: true,
+    modelKind: 'storage'
   };
-  private readonly panel = new DeckArrowSourcePanel({
-    id: 'deck-arrow-text',
-    description:
-      'Arrow UTF-8 or dictionary strings and style columns can stream by RecordBatch, resolve by table column name, or be supplied as direct vectors.',
-    schema: makeArrowTextDataSourceSchema(),
-    initialState: this.state,
-    onSettingsChange: state => {
-      this.state = state;
-      void this.emitDataSource();
-    }
-  });
+  private readonly panel: DeckArrowSourcePanel<ArrowTextDataSourceState>;
+  private readonly supportsStorage: boolean;
   private sourceVersion = 0;
   private isFinalized = false;
 
-  constructor(private readonly onDataSourceChange: (update: ArrowTextDataSourceUpdate) => void) {}
+  constructor(
+    private readonly onDataSourceChange: (update: ArrowTextDataSourceUpdate) => void,
+    options: {supportsStorage?: boolean} = {}
+  ) {
+    const supportsStorage = options.supportsStorage ?? true;
+    this.supportsStorage = supportsStorage;
+    if (!supportsStorage) this.state.modelKind = 'attribute';
+    this.panel = new DeckArrowSourcePanel({
+      id: 'deck-arrow-text',
+      description:
+        'Arrow UTF-8 or dictionary strings and style columns can stream by RecordBatch, resolve by table column name, or be supplied as direct vectors.',
+      schema: makeArrowTextDataSourceSchema(supportsStorage, this.state.colorKind),
+      initialState: this.state,
+      onSettingsChange: state => {
+        if (state.colorKind === 'character-colors' && state.modelKind === 'storage') {
+          state = {...state, modelKind: 'attribute'};
+        }
+        this.state = state;
+        this.panel.setSettings(
+          makeArrowTextDataSourceSchema(this.supportsStorage, state.colorKind),
+          state
+        );
+        void this.emitDataSource();
+      }
+    });
+  }
 
   initialize(): void {
     this.panel.initialize();
@@ -121,7 +141,7 @@ export class ArrowTextDataSource {
     }
     const tableStream = this.panel.beginTableStream(recordBatches);
     const commonProps: ArrowTextDataSourceUpdate = {
-      model: 'attribute',
+      model: this.state.modelKind,
       color: [199, 219, 245, 255],
       angle: 0,
       size: 32,
@@ -131,6 +151,8 @@ export class ArrowTextDataSource {
       angles: this.state.angleKind === 'constant' ? null : undefined,
       clipRects: this.state.clipKind === 'none' ? null : undefined,
       pixelOffsets: null,
+      animate: this.state.animate,
+      labelFieldHeight: (dataset.labelCount / LABEL_COLUMN_COUNT) * LABEL_ROW_SPACING,
       onDataBatch: update => {
         if (!this.isFinalized) {
           tableStream.setLoadedBatchCount(update.loadedBatchCount);
@@ -180,7 +202,10 @@ export class ArrowTextDataSource {
   }
 }
 
-function makeArrowTextDataSourceSchema(): SettingsSchema {
+function makeArrowTextDataSourceSchema(
+  supportsStorage: boolean,
+  colorKind: TextColorKind
+): SettingsSchema {
   return {
     title: 'Settings',
     sections: [
@@ -257,6 +282,12 @@ function makeArrowTextDataSourceSchema(): SettingsSchema {
               {label: 'None', value: 'none'},
               {label: 'Row clip column', value: 'column'}
             ]
+          },
+          {
+            name: 'animate',
+            label: 'Animate',
+            type: 'boolean',
+            persist: 'none'
           }
         ]
       },
@@ -270,7 +301,12 @@ function makeArrowTextDataSourceSchema(): SettingsSchema {
             label: 'Model',
             type: 'select',
             persist: 'none',
-            options: [{label: 'Attribute (deck.gl)', value: 'attribute'}]
+            options: [
+              ...(supportsStorage && colorKind !== 'character-colors'
+                ? [{label: 'Storage (WebGPU)', value: 'storage'}]
+                : []),
+              {label: 'Attribute', value: 'attribute'}
+            ]
           }
         ]
       }

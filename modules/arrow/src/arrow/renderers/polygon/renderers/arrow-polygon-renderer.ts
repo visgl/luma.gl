@@ -74,7 +74,7 @@ export type ArrowPolygonRendererProps = {
   /** Called when renderer-owned Arrow batch loading fails. */
   onDataError?: (error: unknown) => void;
   /** Optional shader overrides for hosts that provide their own projection modules. */
-  modelProps?: Pick<ModelProps, 'source' | 'vs' | 'fs' | 'modules'>;
+  modelProps?: Pick<ModelProps, 'source' | 'vs' | 'fs' | 'modules' | 'shaderLayout'>;
 };
 
 /** GPU polygon model selected by the Arrow-facing renderer. */
