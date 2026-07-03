@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.6
+
+- fix(core): type import error (#2712)
+
 ### v9.3.5
 
 - fix(core): use content-box observer and Math.floor in css-dpr mode (#2676)
