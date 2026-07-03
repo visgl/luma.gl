@@ -1,11 +1,11 @@
 import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
-import {ArrowGeoArrowExample} from '@site/src/examples';
+import {ArrowGeoArrowExample, ArrowRenderingDocsExample} from '@site/src/examples';
 
 # Overview
 
 <ArrowDocsTabs active="overview" />
 
-<p class="badges">
+<p className="badges">
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
   <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
 </p>
@@ -13,6 +13,15 @@ import {ArrowGeoArrowExample} from '@site/src/examples';
 Apache Arrow utilities for luma.gl.
 
 <ArrowGeoArrowExample embedded showStats={false} />
+
+## Arrow Rendering
+
+These live examples exercise luma.gl's Arrow path, polygon, and text conversion and rendering
+stack through temporary deck.gl integration layers. They demonstrate progressive `RecordBatch`
+streaming, direct columnar inputs, constant and column styling, attribute rendering, and WebGPU
+storage rendering.
+
+<ArrowRenderingDocsExample />
 
 ## API Reference
 

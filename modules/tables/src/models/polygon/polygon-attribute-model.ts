@@ -59,6 +59,7 @@ export class PolygonAttributeModel extends GPUTableModel {
   addBatch(props: PolygonBatchProps): void {
     assertPolygonBatchColorMode(this.polygonTable, props.colors);
     this.polygonTable.addBatch(createPolygonAttributeRecordBatch(props));
+    this.setTable(this.polygonTable);
     this.setNeedsRedraw('Polygon batch added');
   }
 }

@@ -171,6 +171,7 @@ test('PolygonStorageModel binds flattened polygon vectors as storage', async t =
     return;
   }
   const vectors = makePolygonGPUVectors(device, 0, Buffer.VERTEX | Buffer.STORAGE);
+  const secondVectors = makePolygonGPUVectors(device, 1, Buffer.VERTEX | Buffer.STORAGE);
   const customModule = {name: 'polygonStorageCustomModule'} satisfies ShaderModule;
   const model = new PolygonStorageModel(device, {
     id: 'polygon-storage-model-test',
@@ -196,8 +197,15 @@ test('PolygonStorageModel binds flattened polygon vectors as storage', async t =
     'keeps the caller shader module'
   );
 
+  model.addBatch({
+    ...secondVectors,
+    sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
+  });
+  t.equal(model.table?.batches.length, 2, 'prepares bindings for appended storage batches');
+
   model.destroy();
   destroyPolygonGPUVectors(vectors);
+  destroyPolygonGPUVectors(secondVectors);
   t.end();
 });
 

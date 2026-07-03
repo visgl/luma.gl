@@ -216,7 +216,23 @@ function DeckArrowLayerCanvas({
   );
 }
 
-export const DeckArrowPathLayerExample: React.FC = () => (
+type DeckArrowLayerExampleProps = {
+  embedded?: boolean;
+};
+
+const DECK_ARROW_LAYER_EMBEDDED_STYLE: React.CSSProperties = {
+  boxSizing: 'border-box',
+  height: '640px',
+  minHeight: '640px',
+  margin: '1rem 0 2rem',
+  border: '1px solid var(--ifm-color-emphasis-300)',
+  borderRadius: '8px',
+  overflow: 'hidden'
+};
+
+export const DeckArrowPathLayerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
@@ -227,10 +243,13 @@ export const DeckArrowPathLayerExample: React.FC = () => (
       }
     }}
     showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
   />
 );
 
-export const DeckArrowPolygonLayerExample: React.FC = () => (
+export const DeckArrowPolygonLayerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
@@ -241,10 +260,13 @@ export const DeckArrowPolygonLayerExample: React.FC = () => (
       }
     }}
     showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
   />
 );
 
-export const DeckArrowTextLayerExample: React.FC = () => (
+export const DeckArrowTextLayerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
@@ -255,8 +277,54 @@ export const DeckArrowTextLayerExample: React.FC = () => (
       }
     }}
     showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
   />
 );
+
+type DeckArrowLayerExampleId = 'path' | 'polygon' | 'text';
+
+const DECK_ARROW_LAYER_DOC_EXAMPLES: Array<{
+  id: DeckArrowLayerExampleId;
+  label: string;
+  Example: React.FC<DeckArrowLayerExampleProps>;
+}> = [
+  {id: 'path', label: 'Paths', Example: DeckArrowPathLayerExample},
+  {id: 'polygon', label: 'Polygons', Example: DeckArrowPolygonLayerExample},
+  {id: 'text', label: 'Text', Example: DeckArrowTextLayerExample}
+];
+
+/** Embeds one live Arrow renderer example at a time in the luma.gl Arrow documentation. */
+export const ArrowRenderingDocsExample: React.FC = () => {
+  const [activeExampleId, setActiveExampleId] = useState<DeckArrowLayerExampleId>('path');
+  const activeExample = DECK_ARROW_LAYER_DOC_EXAMPLES.find(
+    example => example.id === activeExampleId
+  )!;
+  const ActiveExample = activeExample.Example;
+
+  return (
+    <section aria-label="Arrow rendering examples">
+      <div className="docs-page-tabs" role="tablist" aria-label="Arrow renderers">
+        {DECK_ARROW_LAYER_DOC_EXAMPLES.map(example => (
+          <button
+            key={example.id}
+            className={
+              example.id === activeExampleId
+                ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
+                : 'docs-page-tabs__tab'
+            }
+            type="button"
+            role="tab"
+            aria-selected={example.id === activeExampleId}
+            onClick={() => setActiveExampleId(example.id)}
+          >
+            {example.label}
+          </button>
+        ))}
+      </div>
+      <ActiveExample embedded />
+    </section>
+  );
+};
 
 const GPGPU_EXAMPLE_STYLE = `
   .gpgpu-showcase {
