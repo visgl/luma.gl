@@ -21,34 +21,61 @@ import {
 const REDUCTION_WORKGROUP_SIZE = 256;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
 
-/** Operation performed by {@link GPUReduction}. */
+/**
+ * Operation performed by {@link GPUReduction}.
+ *
+ * `sum`, `min`, and `max` produce one row. `extent` produces two rows containing the minimum and
+ * maximum respectively.
+ */
 export type GPUReductionOperation = 'sum' | 'min' | 'max' | 'extent';
 
-/** One scalar chunk or an ordered scalar vector reduced by {@link GPUReduction}. */
+/**
+ * One packed scalar chunk or an ordered, fixed-width scalar vector reduced by
+ * {@link GPUReduction}.
+ */
 export type GPUReductionInput<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | GraphVectorView<T>;
 
 /** Properties for a graph-native scalar reduction. */
 export type GPUReductionProps<T extends GPUScalarFormat = GPUScalarFormat> = {
+  /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
+  /** Packed scalar data view or ordered vector of packed scalar chunks. */
   input: GPUReductionInput<T>;
+  /** Caller-owned result view: one row, or two rows for `extent`. */
   output: GraphDataView<T>;
+  /** Aggregate to compute. */
   operation: GPUReductionOperation;
 };
 
 /**
  * Hierarchical reduction over packed 32-bit scalar graph data views and vectors.
  *
- * @remarks Inputs and outputs are caller-owned. Hierarchical scratch is graph-owned, and adding
- * the reduction to a graph never submits work or reads data back.
+ * Each 256-thread workgroup reduces at most 256 input rows to one partial row. Additional levels
+ * repeat that process until one row remains. Multi-chunk vectors first produce one partial per
+ * non-empty chunk, then reduce those partials to one global result.
+ *
+ * @remarks Inputs and outputs are caller-owned. Hierarchical scratch is graph-owned. Adding the
+ * reduction to a graph only declares nodes and resources; it does not compile, encode, submit,
+ * map, or read data back.
  */
 export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
+  /** Prefix for generated graph node and transient resource IDs. */
   readonly id: string;
+  /** Scalar input chunk or vector. */
   readonly input: GPUReductionInput<T>;
+  /** Caller-owned result view. */
   readonly output: GraphDataView<T>;
+  /** Aggregate computed by this reduction. */
   readonly operation: GPUReductionOperation;
 
+  /**
+   * Creates and validates a graph-native reduction description.
+   *
+   * @throws If views are not packed 32-bit scalar data, formats differ, the output has the wrong
+   * length, or input and output use the same physical graph buffer.
+   */
   constructor(props: GPUReductionProps<T>) {
     this.id = props.id ?? 'gpu-reduction';
     this.input = props.input;
@@ -77,7 +104,16 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
     }
   }
 
-  /** Adds hierarchical reduction passes and hidden scratch to a command graph. */
+  /**
+   * Adds hierarchical reduction passes and graph-owned scratch to a command graph.
+   *
+   * Empty inputs add a one-thread clear pass. A single non-empty chunk is reduced directly.
+   * Multiple non-empty chunks are reduced independently, then their partial rows are merged. A
+   * final pass converts an invalid floating-point min/max/extent result to zero and writes the
+   * caller-owned output.
+   *
+   * @param graph Mutable graph that owns all input/output handles and generated scratch.
+   */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const inputs = getReductionInputs(this.input);
     if (inputs.some(input => input.buffer.graph !== graph) || this.output.buffer.graph !== graph) {
@@ -163,77 +199,101 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
 }
 
 type ReductionResult<T extends GPUScalarFormat> = {
+  /** One packed row for sum/min/max, or two packed components for extent. */
   values: GraphDataView<T>;
+  /** One row indicating whether a finite min/max/extent value was observed. */
   validity?: GraphDataView<'uint32'>;
 };
 
+type ReductionLevelsProps<T extends GPUScalarFormat> = {
+  /** Prefix for generated level node and resource IDs. */
+  id: string;
+  /** Scalar format of all value views. */
+  format: T;
+  /** Aggregate computed at every level. */
+  operation: GPUReductionOperation;
+  /** Packed values consumed by the first generated level. */
+  inputValues: GraphDataView<T>;
+  /** Optional validity rows paired with already-reduced input rows. */
+  inputValidity?: GraphDataView<'uint32'>;
+  /** Number of logical rows consumed by the first generated level. */
+  inputLength: number;
+  /** Components in each partial row: two for extent, otherwise one. */
+  valuesPerRow: number;
+  /** Whether the first level reads raw scalar rows instead of partial rows. */
+  firstLevel: boolean;
+  /** Whether levels must preserve finite-value validity. */
+  needsValidity: boolean;
+  /** Optional destination for the last level's value row. */
+  finalValues?: GraphDataView<T>;
+  /** Optional destination for the last level's validity row. */
+  finalValidity?: GraphDataView<'uint32'>;
+};
+
+/**
+ * Adds a complete hierarchy that reduces `inputLength` rows to one partial row.
+ *
+ * Level `n` consumes the views produced by level `n - 1`. Each level emits
+ * `ceil(currentLength / 256)` rows, so the hierarchy always converges. Intermediate levels allocate
+ * graph-owned views. When supplied, `finalValues` and `finalValidity` replace only the last
+ * allocation; multi-chunk reduction uses that facility to write each chunk's partial directly into
+ * its slot in the shared merge input.
+ */
 function addReductionLevels<Parameters, T extends GPUScalarFormat>(
   graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    format: T;
-    operation: GPUReductionOperation;
-    inputValues: GraphDataView<T>;
-    inputValidity?: GraphDataView<'uint32'>;
-    inputLength: number;
-    valuesPerRow: number;
-    firstLevel: boolean;
-    needsValidity: boolean;
-    finalValues?: GraphDataView<T>;
-    finalValidity?: GraphDataView<'uint32'>;
-  }
+  props: ReductionLevelsProps<T>
 ): ReductionResult<T> {
-  let inputValues = props.inputValues;
-  let inputValidity = props.inputValidity;
-  let inputLength = props.inputLength;
+  let currentValues = props.inputValues;
+  let currentValidity = props.inputValidity;
+  let currentLength = props.inputLength;
   let levelIndex = 0;
 
-  while (true) {
-    const outputLength = Math.ceil(inputLength / REDUCTION_WORKGROUP_SIZE);
-    const isFinalLevel = outputLength === 1;
-    const outputValues =
-      isFinalLevel && props.finalValues
+  // One workgroup produces one next-level row. The last level is therefore the first level whose
+  // output contains exactly one row.
+  while (currentLength > 1 || levelIndex === 0) {
+    const nextLength = Math.ceil(currentLength / REDUCTION_WORKGROUP_SIZE);
+    const isLastLevel = nextLength === 1;
+    const nextValues =
+      isLastLevel && props.finalValues
         ? props.finalValues
         : (createTransientView(
             graph,
             `${props.id}-level-${levelIndex}-values`,
             props.format,
-            outputLength * props.valuesPerRow
+            nextLength * props.valuesPerRow
           ) as GraphDataView<T>);
-    const outputValidity = props.needsValidity
-      ? isFinalLevel && props.finalValidity
+    const nextValidity = props.needsValidity
+      ? isLastLevel && props.finalValidity
         ? props.finalValidity
         : createTransientView(
             graph,
             `${props.id}-level-${levelIndex}-validity`,
             'uint32',
-            outputLength
+            nextLength
           )
       : undefined;
     addReductionLevelPass(graph, {
       id: `${props.id}-level-${levelIndex}`,
       format: props.format,
       operation: props.operation,
-      inputValues,
-      inputValidity,
-      outputValues,
-      outputValidity,
-      inputLength,
+      inputValues: currentValues,
+      inputValidity: currentValidity,
+      outputValues: nextValues,
+      outputValidity: nextValidity,
+      inputLength: currentLength,
       valuesPerRow: props.valuesPerRow,
       firstLevel: props.firstLevel && levelIndex === 0
     });
-    inputValues = outputValues;
-    inputValidity = outputValidity;
-    inputLength = outputLength;
+    currentValues = nextValues;
+    currentValidity = nextValidity;
+    currentLength = nextLength;
     levelIndex++;
-    if (inputLength === 1) {
-      break;
-    }
   }
 
-  return {values: inputValues, validity: inputValidity};
+  return {values: currentValues, validity: currentValidity};
 }
 
+/** Creates a packed logical slice without allocating or changing hazard granularity. */
 function createPackedSubview<T extends GPUScalarFormat, Parameters>(
   graph: GPUCommandGraph<Parameters>,
   view: GraphDataView<T>,
@@ -247,12 +307,14 @@ function createPackedSubview<T extends GPUScalarFormat, Parameters>(
   });
 }
 
+/** Normalizes a single data view or vector view into its ordered chunk list. */
 function getReductionInputs<T extends GPUScalarFormat>(
   input: GPUReductionInput<T>
 ): readonly GraphDataView<T>[] {
   return input instanceof GraphVectorView ? input.data : [input];
 }
 
+/** Adds one 256-way reduction level from raw or already-reduced rows. */
 function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -370,6 +432,7 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
   });
 }
 
+/** Copies the single partial row to caller output and maps an invalid aggregate to zero. */
 function addFinalizeReductionPass<Parameters, T extends GPUScalarFormat>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -417,6 +480,7 @@ ${props.inputValidity ? '@group(0) @binding(1) var<storage, read> inputValidity:
   });
 }
 
+/** Writes the documented zero result for an input with no rows. */
 function addClearReductionPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
@@ -438,6 +502,7 @@ function addClearReductionPass<Parameters>(
   });
 }
 
+/** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
 function addComputationPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -480,10 +545,12 @@ function addComputationPass<Parameters>(
   });
 }
 
+/** Returns the WGSL scalar type corresponding to a supported GPU storage format. */
 function getShaderType(format: GPUScalarFormat): 'u32' | 'i32' | 'f32' {
   return format === 'uint32' ? 'u32' : format === 'sint32' ? 'i32' : 'f32';
 }
 
+/** Returns a type-correct WGSL zero literal for a supported GPU storage format. */
 function getZeroLiteral(format: GPUScalarFormat): string {
   return format === 'uint32' ? '0u' : format === 'sint32' ? '0' : '0.0';
 }

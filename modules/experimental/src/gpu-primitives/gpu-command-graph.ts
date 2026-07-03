@@ -2,17 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Texture, textureFormatDecoder} from '@luma.gl/core';
-import type {
-  CommandEncoder,
-  ComputePass,
-  Device,
-  Framebuffer,
-  RenderPass,
-  RenderPassProps,
-  TextureFormat,
-  TextureView
-} from '@luma.gl/core';
+import {Buffer, Texture} from '@luma.gl/core';
+import type {CommandEncoder, Device, Framebuffer, TextureFormat, TextureView} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
 import {
   GPUData,
@@ -22,371 +13,79 @@ import {
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
 } from '@luma.gl/tables';
+import {
+  compileGPUCommandGraph,
+  getBufferHandle,
+  getTextureHandle,
+  isGraphBufferUse,
+  type BufferTransientAllocation,
+  type CompiledNode,
+  type GPUCommandGraphCompilation,
+  type TextureTransientAllocation
+} from './gpu-command-graph-compiler';
+import {
+  GraphBufferHandle,
+  GraphDataView,
+  GraphTextureHandle,
+  GraphTextureView,
+  GraphVectorView
+} from './gpu-command-graph-types';
+import type {
+  GPUCommandGraphComputeExecutable,
+  GPUCommandGraphComputeNode,
+  GPUCommandGraphCopyExecutable,
+  GPUCommandGraphCopyNode,
+  GPUCommandGraphEncodeContext,
+  GPUCommandGraphEncodeOptions,
+  GPUCommandGraphNode,
+  GPUCommandGraphRenderExecutable,
+  GPUCommandGraphRenderNode,
+  GPUCommandGraphStats,
+  GraphBufferDescriptor,
+  GraphBufferUsage,
+  GraphImportedBuffer,
+  GraphImportedTexture,
+  GraphRenderPassAttachments,
+  GraphTextureDescriptor,
+  GraphTextureUsage,
+  GraphTextureUse,
+  GraphTextureViewProps,
+  NormalizedGraphTextureDescriptor
+} from './gpu-command-graph-types';
 
-/** GPU buffer use declared by one graph node. */
-export type GraphBufferUsage =
-  | 'storage-read'
-  | 'storage-write'
-  | 'storage-read-write'
-  | 'uniform'
-  | 'copy-source'
-  | 'copy-destination'
-  | 'indirect'
-  | 'vertex'
-  | 'index';
-
-/** GPU texture use declared by one graph node. */
-export type GraphTextureUsage =
-  | 'sampled'
-  | 'storage-read'
-  | 'storage-write'
-  | 'storage-read-write'
-  | 'render-attachment'
-  | 'copy-source'
-  | 'copy-destination';
-
-/** Buffer accepted as a fixed or per-encoding graph import. */
-export type GraphImportedBuffer = Buffer | DynamicBuffer;
-
-/** Texture accepted as a fixed or per-encoding graph import. */
-export type GraphImportedTexture = Texture | DynamicTexture;
-
-/** Descriptor for one imported or transient graph buffer. */
-export type GraphBufferDescriptor = {
-  id: string;
-  byteLength: number;
-  usage: number;
-};
-
-export type GraphTextureDimension = '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-export type GraphTextureAspect = 'all' | 'stencil-only' | 'depth-only';
-
-/** Descriptor for one fixed-size imported or transient graph texture. */
-export type GraphTextureDescriptor<Format extends TextureFormat = TextureFormat> = {
-  id: string;
-  format: Format;
-  width: number;
-  height: number;
-  usage: number;
-  dimension?: GraphTextureDimension;
-  depth?: number;
-  mipLevels?: number;
-  samples?: number;
-};
-
-type NormalizedGraphTextureDescriptor<Format extends TextureFormat = TextureFormat> = {
-  id: string;
-  format: Format;
-  width: number;
-  height: number;
-  usage: number;
-  dimension: GraphTextureDimension;
-  depth: number;
-  mipLevels: number;
-  samples: number;
-};
-
-/** Opaque logical buffer tracked by a {@link GPUCommandGraph}. */
-export class GraphBufferHandle {
-  readonly id: string;
-  readonly byteLength: number;
-  readonly usage: number;
-  readonly transient: boolean;
-  /** @internal */
-  readonly graph: GPUCommandGraph<any>;
-  /** @internal */
-  readonly defaultBuffer?: GraphImportedBuffer;
-
-  /** @internal */
-  constructor(
-    graph: GPUCommandGraph<any>,
-    descriptor: GraphBufferDescriptor,
-    transient: boolean,
-    defaultBuffer?: GraphImportedBuffer
-  ) {
-    this.graph = graph;
-    this.id = descriptor.id;
-    this.byteLength = descriptor.byteLength;
-    this.usage = descriptor.usage;
-    this.transient = transient;
-    this.defaultBuffer = defaultBuffer;
-  }
-}
-
-/** Typed logical range within one graph buffer. */
-export class GraphDataView<T extends GPUVectorFormat = GPUVectorFormat> {
-  readonly buffer: GraphBufferHandle;
-  readonly format: T;
-  readonly length: number;
-  readonly byteOffset: number;
-  readonly byteStride: number;
-  readonly rowByteLength: number;
-
-  /** @internal */
-  constructor(
-    buffer: GraphBufferHandle,
-    props: {
-      format: T;
-      length: number;
-      byteOffset: number;
-      byteStride: number;
-      rowByteLength: number;
-    }
-  ) {
-    this.buffer = buffer;
-    this.format = props.format;
-    this.length = props.length;
-    this.byteOffset = props.byteOffset;
-    this.byteStride = props.byteStride;
-    this.rowByteLength = props.rowByteLength;
-  }
-}
-
-/** Ordered graph data views that preserve one fixed-width GPUVector's chunk boundaries. */
-export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat> {
-  readonly id: string;
-  readonly name: string;
-  readonly format: T;
-  readonly length: number;
-  readonly valueLength: number;
-  readonly stride: number;
-  readonly byteStride: number;
-  readonly rowByteLength: number;
-  readonly data: readonly GraphDataView<T>[];
-
-  /** @internal */
-  constructor(props: {
-    id: string;
-    name: string;
-    format: T;
-    length: number;
-    valueLength: number;
-    stride: number;
-    byteStride: number;
-    rowByteLength: number;
-    data: readonly GraphDataView<T>[];
-  }) {
-    this.id = props.id;
-    this.name = props.name;
-    this.format = props.format;
-    this.length = props.length;
-    this.valueLength = props.valueLength;
-    this.stride = props.stride;
-    this.byteStride = props.byteStride;
-    this.rowByteLength = props.rowByteLength;
-    this.data = props.data;
-  }
-}
-
-/** Opaque logical texture tracked by a {@link GPUCommandGraph}. */
-export class GraphTextureHandle<Format extends TextureFormat = TextureFormat> {
-  readonly id: string;
-  readonly format: Format;
-  readonly width: number;
-  readonly height: number;
-  readonly usage: number;
-  readonly dimension: GraphTextureDimension;
-  readonly depth: number;
-  readonly mipLevels: number;
-  readonly samples: number;
-  readonly transient: boolean;
-  /** @internal */
-  readonly graph: GPUCommandGraph<any>;
-  /** @internal */
-  readonly defaultTexture?: GraphImportedTexture;
-
-  /** @internal */
-  constructor(
-    graph: GPUCommandGraph<any>,
-    descriptor: NormalizedGraphTextureDescriptor<Format>,
-    transient: boolean,
-    defaultTexture?: GraphImportedTexture
-  ) {
-    this.graph = graph;
-    this.id = descriptor.id;
-    this.format = descriptor.format;
-    this.width = descriptor.width;
-    this.height = descriptor.height;
-    this.usage = descriptor.usage;
-    this.dimension = descriptor.dimension;
-    this.depth = descriptor.depth;
-    this.mipLevels = descriptor.mipLevels;
-    this.samples = descriptor.samples;
-    this.transient = transient;
-    this.defaultTexture = defaultTexture;
-  }
-}
-
-export type GraphTextureViewProps = {
-  dimension?: GraphTextureDimension;
-  aspect?: GraphTextureAspect;
-  baseMipLevel?: number;
-  mipLevelCount?: number;
-  baseArrayLayer?: number;
-  arrayLayerCount?: number;
-};
-
-/** Logical mip, layer, and aspect range within one graph texture. */
-export class GraphTextureView<Format extends TextureFormat = TextureFormat> {
-  readonly texture: GraphTextureHandle<Format>;
-  readonly format: Format;
-  readonly dimension: GraphTextureDimension;
-  readonly aspect: GraphTextureAspect;
-  readonly baseMipLevel: number;
-  readonly mipLevelCount: number;
-  readonly baseArrayLayer: number;
-  readonly arrayLayerCount: number;
-  readonly width: number;
-  readonly height: number;
-  readonly depth: number;
-
-  /** @internal */
-  constructor(
-    texture: GraphTextureHandle<Format>,
-    props: Required<GraphTextureViewProps> & {width: number; height: number; depth: number}
-  ) {
-    this.texture = texture;
-    this.format = texture.format;
-    this.dimension = props.dimension;
-    this.aspect = props.aspect;
-    this.baseMipLevel = props.baseMipLevel;
-    this.mipLevelCount = props.mipLevelCount;
-    this.baseArrayLayer = props.baseArrayLayer;
-    this.arrayLayerCount = props.arrayLayerCount;
-    this.width = props.width;
-    this.height = props.height;
-    this.depth = props.depth;
-  }
-}
-
-/** One buffer use declared by a graph node. */
-export type GraphBufferUse = {
-  buffer: GraphBufferHandle | GraphDataView;
-  usage: GraphBufferUsage;
-};
-
-/** One texture or texture-view use declared by a graph node. */
-export type GraphTextureUse = {
-  texture: GraphTextureHandle | GraphTextureView;
-  usage: GraphTextureUsage;
-};
-
-/** One resource use declared by a graph node. */
-export type GraphResourceUse = GraphBufferUse | GraphTextureUse;
-
-/** Graph-owned texture attachments resolved into a framebuffer for a render node. */
-export type GraphRenderPassAttachments = {
-  colorAttachments: GraphTextureView[];
-  depthStencilAttachment?: GraphTextureView;
-};
-
-/** Context available while compiling one graph node. */
-export type GPUCommandGraphCompileContext = {
-  device: Device;
-};
-
-/** Context shared by every executable graph node. */
-export type GPUCommandGraphEncodeContext<Parameters> = {
-  commandEncoder: CommandEncoder;
-  parameters: Parameters;
-  getBuffer: (buffer: GraphBufferHandle | GraphDataView) => Buffer;
-  getTexture: (texture: GraphTextureHandle | GraphTextureView) => Texture;
-  getTextureView: (texture: GraphTextureHandle | GraphTextureView) => TextureView;
-};
-
-/** Compiled compute-pass callback. */
-export type GPUCommandGraphComputeExecutable<Parameters> = {
-  encode: (context: GPUCommandGraphEncodeContext<Parameters> & {computePass: ComputePass}) => void;
-  destroy?: () => void;
-};
-
-/** Compiled render-pass callback. */
-export type GPUCommandGraphRenderExecutable<Parameters> = {
-  getRenderPassProps?: (context: GPUCommandGraphEncodeContext<Parameters>) => RenderPassProps;
-  encode: (context: GPUCommandGraphEncodeContext<Parameters> & {renderPass: RenderPass}) => void;
-  destroy?: () => void;
-};
-
-/** Compiled command-encoder callback used for copies and other pass-independent commands. */
-export type GPUCommandGraphCopyExecutable<Parameters> = {
-  encode: (context: GPUCommandGraphEncodeContext<Parameters>) => void;
-  destroy?: () => void;
-};
-
-type GPUCommandGraphNodeBase = {
-  id: string;
-  resources?: GraphResourceUse[];
-  dependsOn?: string[];
-};
-
-export type GPUCommandGraphComputeNode<Parameters> = GPUCommandGraphNodeBase & {
-  type: 'compute';
-  compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphComputeExecutable<Parameters>;
-};
-
-export type GPUCommandGraphRenderNode<Parameters> = GPUCommandGraphNodeBase & {
-  type: 'render';
-  attachments?: GraphRenderPassAttachments;
-  compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphRenderExecutable<Parameters>;
-};
-
-export type GPUCommandGraphCopyNode<Parameters> = GPUCommandGraphNodeBase & {
-  type: 'copy';
-  compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphCopyExecutable<Parameters>;
-};
-
-export type GPUCommandGraphNode<Parameters> =
-  | GPUCommandGraphComputeNode<Parameters>
-  | GPUCommandGraphRenderNode<Parameters>
-  | GPUCommandGraphCopyNode<Parameters>;
-
-/** Resource-allocation and scheduling statistics for one compiled graph. */
-export type GPUCommandGraphStats = {
-  nodeOrder: string[];
-  logicalTransientBufferCount: number;
-  physicalTransientBufferCount: number;
-  logicalTransientBytes: number;
-  physicalTransientBytes: number;
-  reusedTransientBytes: number;
-  reusePercentage: number;
-  logicalTransientTextureCount: number;
-  physicalTransientTextureCount: number;
-  logicalTransientTextureBytes: number;
-  physicalTransientTextureBytes: number;
-  reusedTransientTextureBytes: number;
-  textureReusePercentage: number;
-};
-
-/** Options supplied while encoding one compiled graph. */
-export type GPUCommandGraphEncodeOptions<Parameters> = {
-  parameters: Parameters;
-  buffers?: Record<string, GraphImportedBuffer>;
-  textures?: Record<string, GraphImportedTexture>;
-};
-
-type CompiledNode<Parameters> = {
-  node: GPUCommandGraphNode<Parameters>;
-  executable:
-    | GPUCommandGraphComputeExecutable<Parameters>
-    | GPUCommandGraphRenderExecutable<Parameters>
-    | GPUCommandGraphCopyExecutable<Parameters>;
-};
-
-type BufferTransientAllocation = {
-  byteLength: number;
-  usage: number;
-  lastUse: number;
-  handles: GraphBufferHandle[];
-  buffer?: Buffer;
-};
-
-type TextureTransientAllocation = {
-  descriptor: NormalizedGraphTextureDescriptor;
-  byteLength: number;
-  lastUse: number;
-  handles: GraphTextureHandle[];
-  texture?: Texture;
-};
+export {
+  GraphBufferHandle,
+  GraphDataView,
+  GraphTextureHandle,
+  GraphTextureView,
+  GraphVectorView
+} from './gpu-command-graph-types';
+export type {
+  GPUCommandGraphCompileContext,
+  GPUCommandGraphComputeExecutable,
+  GPUCommandGraphComputeNode,
+  GPUCommandGraphCopyExecutable,
+  GPUCommandGraphCopyNode,
+  GPUCommandGraphEncodeContext,
+  GPUCommandGraphEncodeOptions,
+  GPUCommandGraphNode,
+  GPUCommandGraphRenderExecutable,
+  GPUCommandGraphRenderNode,
+  GPUCommandGraphStats,
+  GraphBufferDescriptor,
+  GraphBufferUsage,
+  GraphBufferUse,
+  GraphImportedBuffer,
+  GraphImportedTexture,
+  GraphRenderPassAttachments,
+  GraphResourceUse,
+  GraphTextureAspect,
+  GraphTextureDescriptor,
+  GraphTextureDimension,
+  GraphTextureUsage,
+  GraphTextureUse,
+  GraphTextureViewProps
+} from './gpu-command-graph-types';
 
 type CachedTextureView = {
   logicalView: GraphTextureView;
@@ -408,7 +107,9 @@ type CachedFramebuffer = {
  * but encoding and submission remain controlled by the application.
  */
 export class GPUCommandGraph<Parameters = void> {
+  /** WebGPU device that owns compilation and transient resources. */
   readonly device: Device;
+  /** Identifier used as a prefix for graph-owned GPU resources. */
   readonly id: string;
 
   private readonly buffers = new Map<string, GraphBufferHandle>();
@@ -418,6 +119,13 @@ export class GPUCommandGraph<Parameters = void> {
   private readonly nodeIds = new Set<string>();
   private compiled = false;
 
+  /**
+   * Creates a mutable graph definition.
+   *
+   * @param device WebGPU device used to compile and execute the graph.
+   * @param props Optional graph identity.
+   * @throws If `device` is not a WebGPU device.
+   */
   constructor(device: Device, props: {id?: string} = {}) {
     if (device.type !== 'webgpu') {
       throw new Error('GPUCommandGraph requires a WebGPU device');
@@ -426,7 +134,13 @@ export class GPUCommandGraph<Parameters = void> {
     this.id = props.id ?? 'gpu-command-graph';
   }
 
-  /** Declares a caller-owned buffer that can be supplied now or for each encoding. */
+  /**
+   * Declares a caller-owned buffer that can be supplied now or for each encoding.
+   *
+   * @param descriptor Required capacity and usage.
+   * @param defaultBuffer Optional default binding used when an encoding supplies no override.
+   * @returns An opaque logical handle used by graph nodes and data views.
+   */
   importBuffer(
     descriptor: GraphBufferDescriptor,
     defaultBuffer?: GraphImportedBuffer
@@ -439,14 +153,22 @@ export class GPUCommandGraph<Parameters = void> {
     return this.addBuffer(new GraphBufferHandle(this, descriptor, false, defaultBuffer));
   }
 
-  /** Declares one graph-owned scratch buffer. */
+  /**
+   * Declares one graph-owned scratch buffer.
+   *
+   * Compatible transient buffers with disjoint compiled lifetimes may share a physical allocation.
+   */
   createTransientBuffer(descriptor: GraphBufferDescriptor): GraphBufferHandle {
     this.assertMutable();
     validateGraphBufferDescriptor(descriptor);
     return this.addBuffer(new GraphBufferHandle(this, descriptor, true));
   }
 
-  /** Creates one typed range over a graph buffer. */
+  /**
+   * Creates one typed range over a graph buffer.
+   *
+   * The view is non-owning. Its layout is validated against the logical buffer capacity.
+   */
   createDataView<T extends GPUVectorFormat>(
     buffer: GraphBufferHandle,
     props: {
@@ -477,12 +199,21 @@ export class GPUCommandGraph<Parameters = void> {
     });
   }
 
-  /** Imports one borrowed GPUData range and returns its typed graph view. */
+  /**
+   * Imports one borrowed `GPUData` chunk and returns a typed view preserving its layout.
+   *
+   * The graph never destroys the imported buffer.
+   */
   importGPUData<T extends GPUVectorFormat>(id: string, data: GPUData<T>): GraphDataView<T> {
     return this.importGPUDataView(id, data);
   }
 
-  /** Imports all chunks of one fixed-width GPUVector without packing them. */
+  /**
+   * Imports all chunks of one fixed-width `GPUVector` without packing them.
+   *
+   * Shared physical buffers map to one graph handle while each chunk retains its own offset and
+   * layout. Interleaved and variable-length vectors are rejected.
+   */
   importGPUVector<T extends GPUVectorFormat>(id: string, vector: GPUVector<T>): GraphVectorView<T> {
     if (vector.bufferLayout) {
       throw new Error(`GPUCommandGraph import "${id}" does not accept interleaved GPUVector data`);
@@ -514,7 +245,11 @@ export class GPUCommandGraph<Parameters = void> {
     });
   }
 
-  /** Declares a caller-owned fixed-size texture that can be supplied now or while encoding. */
+  /**
+   * Declares a caller-owned fixed-size texture supplied now or while encoding.
+   *
+   * Replacements must exactly match format, dimension, extent, mip count, and sample count.
+   */
   importTexture<Format extends TextureFormat>(
     descriptor: GraphTextureDescriptor<Format>,
     defaultTexture?: GraphImportedTexture
@@ -529,7 +264,11 @@ export class GPUCommandGraph<Parameters = void> {
     );
   }
 
-  /** Declares one graph-owned fixed-size transient texture. */
+  /**
+   * Declares one graph-owned fixed-size transient texture.
+   *
+   * Descriptor-compatible textures with disjoint compiled lifetimes may share an allocation.
+   */
   createTransientTexture<Format extends TextureFormat>(
     descriptor: GraphTextureDescriptor<Format>
   ): GraphTextureHandle<Format> {
@@ -538,7 +277,11 @@ export class GPUCommandGraph<Parameters = void> {
     return this.addTexture(new GraphTextureHandle(this, normalizedDescriptor, true));
   }
 
-  /** Creates one logical mip, layer, and aspect range over a graph texture. */
+  /**
+   * Creates one logical mip, layer, and aspect range over a graph texture.
+   *
+   * The normalized range is used for texture hazard inference and concrete view creation.
+   */
   createTextureView<Format extends TextureFormat>(
     texture: GraphTextureHandle<Format>,
     props: GraphTextureViewProps = {}
@@ -548,10 +291,22 @@ export class GPUCommandGraph<Parameters = void> {
     return new GraphTextureView(texture, normalizedProps);
   }
 
+  /**
+   * Adds a compute node.
+   *
+   * The graph opens and closes the compute pass; the compiled executable only records commands.
+   * Declared resource uses participate in automatic dependency inference.
+   */
   addComputePass(node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>): void {
     this.addNode({...node, type: 'compute'});
   }
 
+  /**
+   * Adds a render node.
+   *
+   * Graph attachments are validated, added to the node's resource uses, and resolved to a cached
+   * framebuffer at encode time. The graph opens and closes the render pass.
+   */
   addRenderPass(node: Omit<GPUCommandGraphRenderNode<Parameters>, 'type'>): void {
     if (node.attachments) {
       this.validateRenderAttachments(node.id, node.attachments);
@@ -579,113 +334,34 @@ export class GPUCommandGraph<Parameters = void> {
     });
   }
 
+  /**
+   * Adds a copy or pass-independent node.
+   *
+   * Its executable records directly into the caller-owned command encoder.
+   */
   addCopyPass(node: Omit<GPUCommandGraphCopyNode<Parameters>, 'type'>): void {
     this.addNode({...node, type: 'copy'});
   }
 
-  /** Compiles scheduling, transient allocations, and executable node resources. */
+  /**
+   * Compiles scheduling, transient allocations, and executable node resources.
+   *
+   * Compilation freezes this graph. A graph can be compiled only once.
+   *
+   * @returns An executable graph that owns compiled node state and transient allocations.
+   */
   compile(): CompiledGPUCommandGraph<Parameters> {
     this.assertMutable();
     this.compiled = true;
-    const nodeOrder = getNodeOrder(this.nodes);
-    const bufferPlan = getBufferTransientAllocationPlan(nodeOrder, this.buffers.values());
-    const texturePlan = getTextureTransientAllocationPlan(nodeOrder, this.textures.values());
-    const transientBuffers = new Map<GraphBufferHandle, Buffer>();
-    const transientTextures = new Map<GraphTextureHandle, Texture>();
-
-    for (const allocation of bufferPlan) {
-      allocation.buffer = this.device.createBuffer({
-        id: `${this.id}-transient-buffer-${bufferPlan.indexOf(allocation)}`,
-        byteLength: allocation.byteLength,
-        usage: allocation.usage
-      });
-      for (const handle of allocation.handles) {
-        transientBuffers.set(handle, allocation.buffer);
-      }
-    }
-    for (const allocation of texturePlan) {
-      allocation.texture = this.device.createTexture({
-        ...allocation.descriptor,
-        id: `${this.id}-transient-texture-${texturePlan.indexOf(allocation)}`
-      });
-      for (const handle of allocation.handles) {
-        transientTextures.set(handle, allocation.texture);
-      }
-    }
-
-    const compiledNodes: CompiledNode<Parameters>[] = [];
-    try {
-      for (const node of nodeOrder) {
-        compiledNodes.push({node, executable: node.compile({device: this.device})});
-      }
-    } catch (error) {
-      for (const compiledNode of compiledNodes) {
-        compiledNode.executable.destroy?.();
-      }
-      for (const allocation of bufferPlan) {
-        allocation.buffer?.destroy();
-      }
-      for (const allocation of texturePlan) {
-        allocation.texture?.destroy();
-      }
-      throw error;
-    }
-
-    const logicalTransientBytes = Array.from(this.buffers.values())
-      .filter(buffer => buffer.transient)
-      .reduce((sum, buffer) => sum + buffer.byteLength, 0);
-    const physicalTransientBytes = bufferPlan.reduce(
-      (sum, allocation) => sum + allocation.byteLength,
-      0
+    return new CompiledGPUCommandGraph(
+      compileGPUCommandGraph({
+        device: this.device,
+        id: this.id,
+        buffers: this.buffers,
+        textures: this.textures,
+        nodes: this.nodes
+      })
     );
-    const reusedTransientBytes = Math.max(0, logicalTransientBytes - physicalTransientBytes);
-    const logicalTransientTextureBytes = Array.from(this.textures.values())
-      .filter(texture => texture.transient)
-      .reduce((sum, texture) => sum + getTextureByteLength(texture), 0);
-    const physicalTransientTextureBytes = texturePlan.reduce(
-      (sum, allocation) => sum + allocation.byteLength,
-      0
-    );
-    const reusedTransientTextureBytes = Math.max(
-      0,
-      logicalTransientTextureBytes - physicalTransientTextureBytes
-    );
-    const stats: GPUCommandGraphStats = {
-      nodeOrder: nodeOrder.map(node => node.id),
-      logicalTransientBufferCount: Array.from(this.buffers.values()).filter(
-        buffer => buffer.transient
-      ).length,
-      physicalTransientBufferCount: bufferPlan.length,
-      logicalTransientBytes,
-      physicalTransientBytes,
-      reusedTransientBytes,
-      reusePercentage:
-        logicalTransientBytes > 0 ? (reusedTransientBytes / logicalTransientBytes) * 100 : 0,
-      logicalTransientTextureCount: Array.from(this.textures.values()).filter(
-        texture => texture.transient
-      ).length,
-      physicalTransientTextureCount: texturePlan.length,
-      logicalTransientTextureBytes,
-      physicalTransientTextureBytes,
-      reusedTransientTextureBytes,
-      textureReusePercentage:
-        logicalTransientTextureBytes > 0
-          ? (reusedTransientTextureBytes / logicalTransientTextureBytes) * 100
-          : 0
-    };
-
-    return new CompiledGPUCommandGraph({
-      device: this.device,
-      id: this.id,
-      buffers: new Map(this.buffers),
-      textures: new Map(this.textures),
-      compiledNodes,
-      transientBuffers,
-      transientTextures,
-      bufferTransientAllocations: bufferPlan,
-      textureTransientAllocations: texturePlan,
-      stats
-    });
   }
 
   private addNode(node: GPUCommandGraphNode<Parameters>): void {
@@ -808,10 +484,18 @@ export class GPUCommandGraph<Parameters = void> {
   }
 }
 
-/** Executable, fixed-capacity command graph. */
+/**
+ * Executable, fixed-capacity command graph.
+ *
+ * The compiled graph owns transient allocations, compiled node state, and cached views and
+ * framebuffers. Imported buffers and textures remain caller-owned.
+ */
 export class CompiledGPUCommandGraph<Parameters = void> {
+  /** WebGPU device that owns the compiled resources. */
   readonly device: Device;
+  /** Identifier inherited from the graph definition. */
   readonly id: string;
+  /** Scheduling and transient-allocation statistics. */
   readonly stats: GPUCommandGraphStats;
 
   private readonly buffers: Map<string, GraphBufferHandle>;
@@ -826,18 +510,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private destroyed = false;
 
   /** @internal */
-  constructor(props: {
-    device: Device;
-    id: string;
-    buffers: Map<string, GraphBufferHandle>;
-    textures: Map<string, GraphTextureHandle>;
-    compiledNodes: CompiledNode<Parameters>[];
-    transientBuffers: Map<GraphBufferHandle, Buffer>;
-    transientTextures: Map<GraphTextureHandle, Texture>;
-    bufferTransientAllocations: BufferTransientAllocation[];
-    textureTransientAllocations: TextureTransientAllocation[];
-    stats: GPUCommandGraphStats;
-  }) {
+  constructor(props: GPUCommandGraphCompilation<Parameters>) {
     this.device = props.device;
     this.id = props.id;
     this.buffers = props.buffers;
@@ -850,7 +523,15 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     this.stats = props.stats;
   }
 
-  /** Records every graph node into a caller-owned command encoder. */
+  /**
+   * Records every graph node into a caller-owned command encoder.
+   *
+   * Imported resources are resolved from per-encoding overrides first, then from defaults supplied
+   * at graph construction. This method records only; it does not finish or submit the encoder.
+   *
+   * @param commandEncoder Encoder that receives all graph commands.
+   * @param options Per-encoding parameters and optional imported-resource replacements.
+   */
   encode(commandEncoder: CommandEncoder, options: GPUCommandGraphEncodeOptions<Parameters>): void {
     if (this.destroyed) {
       throw new Error(`CompiledGPUCommandGraph "${this.id}" has been destroyed`);
@@ -962,7 +643,11 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     }
   }
 
-  /** Releases compiled node resources and graph-owned transient resources. */
+  /**
+   * Releases compiled node state, cached views and framebuffers, and graph-owned transients.
+   *
+   * Imported resources are borrowed and are never destroyed. Repeated calls are safe.
+   */
   destroy(): void {
     if (this.destroyed) {
       return;
@@ -1071,18 +756,12 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   }
 }
 
-function getBufferHandle(buffer: GraphBufferHandle | GraphDataView): GraphBufferHandle {
-  return buffer instanceof GraphDataView ? buffer.buffer : buffer;
-}
-
-function getTextureHandle(texture: GraphTextureHandle | GraphTextureView): GraphTextureHandle {
-  return texture instanceof GraphTextureView ? texture.texture : texture;
-}
-
+/** Unwraps a dynamic import to the concrete buffer used for validation and encoding. */
 function getCoreBuffer(buffer: GraphImportedBuffer): Buffer {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 
+/** Unwraps a ready dynamic import to the concrete texture used for validation and encoding. */
 function getCoreTexture(texture: GraphImportedTexture): Texture {
   if (texture instanceof DynamicTexture) {
     if (!texture.isReady) {
@@ -1093,10 +772,7 @@ function getCoreTexture(texture: GraphImportedTexture): Texture {
   return texture;
 }
 
-function isGraphBufferUse(resource: GraphResourceUse): resource is GraphBufferUse {
-  return 'buffer' in resource;
-}
-
+/** Validates graph identity, capacity, and usage fields for a logical buffer. */
 function validateGraphBufferDescriptor(descriptor: GraphBufferDescriptor): void {
   if (!descriptor.id) {
     throw new Error('GPUCommandGraph buffer id is required');
@@ -1109,6 +785,7 @@ function validateGraphBufferDescriptor(descriptor: GraphBufferDescriptor): void 
   }
 }
 
+/** Applies texture defaults and validates limits and dimension-specific invariants. */
 function normalizeGraphTextureDescriptor<Format extends TextureFormat>(
   descriptor: GraphTextureDescriptor<Format>,
   device: Device
@@ -1168,6 +845,7 @@ function normalizeGraphTextureDescriptor<Format extends TextureFormat>(
   };
 }
 
+/** Applies view defaults, validates subresource bounds, and computes the selected extent. */
 function normalizeGraphTextureView<Format extends TextureFormat>(
   texture: GraphTextureHandle<Format>,
   props: GraphTextureViewProps
@@ -1216,6 +894,7 @@ function normalizeGraphTextureView<Format extends TextureFormat>(
   };
 }
 
+/** Validates a strided logical range against its buffer capacity. */
 function validateGraphDataView(
   buffer: GraphBufferHandle,
   props: {length: number; byteOffset: number; byteStride: number; rowByteLength: number}
@@ -1238,6 +917,7 @@ function validateGraphDataView(
   }
 }
 
+/** Validates an imported buffer's device, capacity, and usage against its logical descriptor. */
 function validateImportedBuffer(
   importedBuffer: GraphImportedBuffer,
   descriptor: Pick<GraphBufferDescriptor, 'id' | 'byteLength' | 'usage'>,
@@ -1255,6 +935,7 @@ function validateImportedBuffer(
   }
 }
 
+/** Validates an imported texture's exact shape and format plus required usage flags. */
 function validateImportedTexture(
   importedTexture: GraphImportedTexture,
   descriptor: NormalizedGraphTextureDescriptor,
@@ -1284,6 +965,7 @@ function validateImportedTexture(
   }
 }
 
+/** Checks that a logical buffer descriptor permits a node's declared access mode. */
 function validateBufferUseAgainstDescriptor(
   buffer: GraphBufferHandle,
   usage: GraphBufferUsage
@@ -1296,6 +978,7 @@ function validateBufferUseAgainstDescriptor(
   }
 }
 
+/** Checks that a logical texture descriptor permits a node's declared access mode. */
 function validateTextureUseAgainstDescriptor(
   texture: GraphTextureHandle,
   usage: GraphTextureUsage
@@ -1308,6 +991,7 @@ function validateTextureUseAgainstDescriptor(
   }
 }
 
+/** Validates view restrictions imposed by the declared texture access mode. */
 function validateTextureViewForUsage(
   textureOrView: GraphTextureHandle | GraphTextureView,
   usage: GraphTextureUsage
@@ -1321,6 +1005,7 @@ function validateTextureViewForUsage(
   }
 }
 
+/** Maps a graph access mode to its required luma.gl buffer usage flag. */
 function getRequiredBufferUsage(usage: GraphBufferUsage): number {
   switch (usage) {
     case 'storage-read':
@@ -1342,6 +1027,7 @@ function getRequiredBufferUsage(usage: GraphBufferUsage): number {
   }
 }
 
+/** Maps a graph access mode to its required luma.gl texture usage flag. */
 function getRequiredTextureUsage(usage: GraphTextureUsage): number {
   switch (usage) {
     case 'sampled':
@@ -1359,339 +1045,7 @@ function getRequiredTextureUsage(usage: GraphTextureUsage): number {
   }
 }
 
-function isBufferReadUsage(usage: GraphBufferUsage): boolean {
-  return (
-    usage === 'storage-read' ||
-    usage === 'storage-read-write' ||
-    usage === 'uniform' ||
-    usage === 'copy-source' ||
-    usage === 'indirect' ||
-    usage === 'vertex' ||
-    usage === 'index'
-  );
-}
-
-function isBufferWriteUsage(usage: GraphBufferUsage): boolean {
-  return (
-    usage === 'storage-write' || usage === 'storage-read-write' || usage === 'copy-destination'
-  );
-}
-
-function isTextureReadUsage(usage: GraphTextureUsage): boolean {
-  return (
-    usage === 'sampled' ||
-    usage === 'storage-read' ||
-    usage === 'storage-read-write' ||
-    usage === 'render-attachment' ||
-    usage === 'copy-source'
-  );
-}
-
-function isTextureWriteUsage(usage: GraphTextureUsage): boolean {
-  return (
-    usage === 'storage-write' ||
-    usage === 'storage-read-write' ||
-    usage === 'render-attachment' ||
-    usage === 'copy-destination'
-  );
-}
-
-function getNodeOrder<Parameters>(
-  nodes: GPUCommandGraphNode<Parameters>[]
-): GPUCommandGraphNode<Parameters>[] {
-  const nodeById = new Map(nodes.map(node => [node.id, node]));
-  const dependencies = new Map<string, Set<string>>();
-  const lastBufferWriter = new Map<GraphBufferHandle, string>();
-  const activeBufferReaders = new Map<GraphBufferHandle, Set<string>>();
-  const textureHistory = new Map<
-    GraphTextureHandle,
-    {nodeId: string; resource: GraphTextureUse}[]
-  >();
-
-  for (const node of nodes) {
-    const nodeDependencies = new Set(node.dependsOn ?? []);
-    for (const dependency of nodeDependencies) {
-      if (!nodeById.has(dependency)) {
-        throw new Error(
-          `GPUCommandGraph node "${node.id}" depends on missing node "${dependency}"`
-        );
-      }
-    }
-    for (const resource of node.resources ?? []) {
-      if (isGraphBufferUse(resource)) {
-        const handle = getBufferHandle(resource.buffer);
-        if (isBufferReadUsage(resource.usage)) {
-          const writer = lastBufferWriter.get(handle);
-          if (writer) {
-            nodeDependencies.add(writer);
-          }
-          const readers = activeBufferReaders.get(handle) ?? new Set<string>();
-          readers.add(node.id);
-          activeBufferReaders.set(handle, readers);
-        }
-        if (isBufferWriteUsage(resource.usage)) {
-          const writer = lastBufferWriter.get(handle);
-          if (writer) {
-            nodeDependencies.add(writer);
-          }
-          for (const reader of activeBufferReaders.get(handle) ?? []) {
-            if (reader !== node.id) {
-              nodeDependencies.add(reader);
-            }
-          }
-          activeBufferReaders.set(handle, new Set());
-          lastBufferWriter.set(handle, node.id);
-        }
-      } else {
-        const handle = getTextureHandle(resource.texture);
-        const history = textureHistory.get(handle) ?? [];
-        for (const previous of history) {
-          if (
-            previous.nodeId !== node.id &&
-            textureUsesOverlap(previous.resource, resource) &&
-            ((isTextureReadUsage(resource.usage) && isTextureWriteUsage(previous.resource.usage)) ||
-              (isTextureWriteUsage(resource.usage) &&
-                (isTextureReadUsage(previous.resource.usage) ||
-                  isTextureWriteUsage(previous.resource.usage))))
-          ) {
-            nodeDependencies.add(previous.nodeId);
-          }
-        }
-        history.push({nodeId: node.id, resource});
-        textureHistory.set(handle, history);
-      }
-    }
-    nodeDependencies.delete(node.id);
-    dependencies.set(node.id, nodeDependencies);
-  }
-
-  const insertionIndex = new Map(nodes.map((node, index) => [node.id, index]));
-  const remaining = new Map(
-    Array.from(dependencies, ([id, values]) => [id, new Set(values)] as const)
-  );
-  const ordered: GPUCommandGraphNode<Parameters>[] = [];
-  while (remaining.size > 0) {
-    const ready = Array.from(remaining)
-      .filter(([, values]) => values.size === 0)
-      .map(([id]) => id)
-      .sort((left, right) => insertionIndex.get(left)! - insertionIndex.get(right)!);
-    if (ready.length === 0) {
-      throw new Error('GPUCommandGraph contains a dependency cycle');
-    }
-    for (const id of ready) {
-      ordered.push(nodeById.get(id)!);
-      remaining.delete(id);
-      for (const values of remaining.values()) {
-        values.delete(id);
-      }
-    }
-  }
-  return ordered;
-}
-
-function textureUsesOverlap(left: GraphTextureUse, right: GraphTextureUse): boolean {
-  const leftHandle = getTextureHandle(left.texture);
-  const rightHandle = getTextureHandle(right.texture);
-  if (leftHandle !== rightHandle) {
-    return false;
-  }
-  const leftRange = getTextureSubresourceRange(left.texture);
-  const rightRange = getTextureSubresourceRange(right.texture);
-  return (
-    aspectsOverlap(leftRange.aspect, rightRange.aspect) &&
-    intervalsOverlap(
-      leftRange.baseMipLevel,
-      leftRange.mipLevelCount,
-      rightRange.baseMipLevel,
-      rightRange.mipLevelCount
-    ) &&
-    intervalsOverlap(
-      leftRange.baseArrayLayer,
-      leftRange.arrayLayerCount,
-      rightRange.baseArrayLayer,
-      rightRange.arrayLayerCount
-    )
-  );
-}
-
-function getTextureSubresourceRange(texture: GraphTextureHandle | GraphTextureView): {
-  aspect: GraphTextureAspect;
-  baseMipLevel: number;
-  mipLevelCount: number;
-  baseArrayLayer: number;
-  arrayLayerCount: number;
-} {
-  if (texture instanceof GraphTextureView) {
-    return texture;
-  }
-  return {
-    aspect: 'all',
-    baseMipLevel: 0,
-    mipLevelCount: texture.mipLevels,
-    baseArrayLayer: 0,
-    arrayLayerCount: texture.dimension === '3d' ? 1 : texture.depth
-  };
-}
-
-function aspectsOverlap(left: GraphTextureAspect, right: GraphTextureAspect): boolean {
-  return left === 'all' || right === 'all' || left === right;
-}
-
-function intervalsOverlap(
-  leftStart: number,
-  leftCount: number,
-  rightStart: number,
-  rightCount: number
-): boolean {
-  return leftStart < rightStart + rightCount && rightStart < leftStart + leftCount;
-}
-
-function getBufferTransientAllocationPlan<Parameters>(
-  nodes: GPUCommandGraphNode<Parameters>[],
-  buffers: Iterable<GraphBufferHandle>
-): BufferTransientAllocation[] {
-  const lifetimes = getResourceLifetimes(nodes, resource =>
-    isGraphBufferUse(resource) ? getBufferHandle(resource.buffer) : null
-  );
-  const allocations: BufferTransientAllocation[] = [];
-  const transientBuffers = Array.from(buffers)
-    .filter(buffer => buffer.transient)
-    .map(buffer => ({buffer, lifetime: lifetimes.get(buffer)}))
-    .sort(
-      (left, right) =>
-        (left.lifetime?.firstUse ?? Number.MAX_SAFE_INTEGER) -
-        (right.lifetime?.firstUse ?? Number.MAX_SAFE_INTEGER)
-    );
-
-  for (const {buffer, lifetime} of transientBuffers) {
-    if (!lifetime) {
-      continue;
-    }
-    let allocation = allocations
-      .filter(candidate => candidate.lastUse < lifetime.firstUse)
-      .sort((left, right) => left.byteLength - right.byteLength)[0];
-    if (!allocation) {
-      allocation = {byteLength: 0, usage: 0, lastUse: -1, handles: []};
-      allocations.push(allocation);
-    }
-    allocation.byteLength = Math.max(allocation.byteLength, buffer.byteLength);
-    allocation.usage |= buffer.usage;
-    allocation.lastUse = lifetime.lastUse;
-    allocation.handles.push(buffer);
-  }
-  return allocations;
-}
-
-function getTextureTransientAllocationPlan<Parameters>(
-  nodes: GPUCommandGraphNode<Parameters>[],
-  textures: Iterable<GraphTextureHandle>
-): TextureTransientAllocation[] {
-  const lifetimes = getResourceLifetimes(nodes, resource =>
-    isGraphBufferUse(resource) ? null : getTextureHandle(resource.texture)
-  );
-  const allocations: TextureTransientAllocation[] = [];
-  const transientTextures = Array.from(textures)
-    .filter(texture => texture.transient)
-    .map(texture => ({texture, lifetime: lifetimes.get(texture)}))
-    .sort(
-      (left, right) =>
-        (left.lifetime?.firstUse ?? Number.MAX_SAFE_INTEGER) -
-        (right.lifetime?.firstUse ?? Number.MAX_SAFE_INTEGER)
-    );
-
-  for (const {texture, lifetime} of transientTextures) {
-    if (!lifetime) {
-      continue;
-    }
-    let allocation = allocations.find(
-      candidate =>
-        candidate.lastUse < lifetime.firstUse &&
-        areTextureDescriptorsCompatible(candidate.descriptor, texture)
-    );
-    if (!allocation) {
-      const descriptor = getNormalizedTextureDescriptor(texture);
-      allocation = {
-        descriptor,
-        byteLength: getTextureByteLength(texture),
-        lastUse: -1,
-        handles: []
-      };
-      allocations.push(allocation);
-    }
-    allocation.descriptor.usage |= texture.usage;
-    allocation.lastUse = lifetime.lastUse;
-    allocation.handles.push(texture);
-  }
-  return allocations;
-}
-
-function getResourceLifetimes<Parameters, Resource extends object>(
-  nodes: GPUCommandGraphNode<Parameters>[],
-  getResource: (resource: GraphResourceUse) => Resource | null
-): Map<Resource, {firstUse: number; lastUse: number}> {
-  const lifetimes = new Map<Resource, {firstUse: number; lastUse: number}>();
-  nodes.forEach((node, nodeIndex) => {
-    for (const resourceUse of node.resources ?? []) {
-      const resource = getResource(resourceUse);
-      if (!resource || !('transient' in resource) || !resource.transient) {
-        continue;
-      }
-      const lifetime = lifetimes.get(resource);
-      if (lifetime) {
-        lifetime.lastUse = nodeIndex;
-      } else {
-        lifetimes.set(resource, {firstUse: nodeIndex, lastUse: nodeIndex});
-      }
-    }
-  });
-  return lifetimes;
-}
-
-function getNormalizedTextureDescriptor(
-  texture: GraphTextureHandle
-): NormalizedGraphTextureDescriptor {
-  return {
-    id: texture.id,
-    format: texture.format,
-    width: texture.width,
-    height: texture.height,
-    usage: texture.usage,
-    dimension: texture.dimension,
-    depth: texture.depth,
-    mipLevels: texture.mipLevels,
-    samples: texture.samples
-  };
-}
-
-function areTextureDescriptorsCompatible(
-  descriptor: NormalizedGraphTextureDescriptor,
-  texture: GraphTextureHandle
-): boolean {
-  return (
-    descriptor.format === texture.format &&
-    descriptor.width === texture.width &&
-    descriptor.height === texture.height &&
-    descriptor.dimension === texture.dimension &&
-    descriptor.depth === texture.depth &&
-    descriptor.mipLevels === texture.mipLevels &&
-    descriptor.samples === texture.samples
-  );
-}
-
-function getTextureByteLength(texture: GraphTextureHandle): number {
-  let byteLength = 0;
-  for (let mipLevel = 0; mipLevel < texture.mipLevels; mipLevel++) {
-    byteLength += textureFormatDecoder.computeMemoryLayout({
-      format: texture.format,
-      width: Math.max(1, texture.width >> mipLevel),
-      height: texture.dimension === '1d' ? 1 : Math.max(1, texture.height >> mipLevel),
-      depth: texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth,
-      byteAlignment: 1
-    }).byteLength;
-  }
-  return byteLength * texture.samples;
-}
-
+/** Returns whether a logical view is exactly the texture's default full-resource view. */
 function isDefaultGraphTextureView(view: GraphTextureView): boolean {
   const texture = view.texture;
   return (

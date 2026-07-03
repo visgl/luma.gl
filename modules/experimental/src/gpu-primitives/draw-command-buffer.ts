@@ -9,41 +9,75 @@ const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const DRAW_RECORD_WORDS = 4;
 const DRAW_INDEXED_RECORD_WORDS = 5;
 
+/** CPU description of one WebGPU `drawIndirect` record. */
 export type DrawCommand = {
+  /** Number of vertices drawn by each instance. */
   vertexCount: number;
+  /** Number of instances. Defaults to `1`. */
   instanceCount?: number;
+  /** First vertex. Defaults to `0`. */
   firstVertex?: number;
+  /** First instance. Defaults to `0`. */
   firstInstance?: number;
 };
 
+/** CPU description of one WebGPU `drawIndexedIndirect` record. */
 export type DrawIndexedCommand = {
+  /** Number of indices drawn by each instance. */
   indexCount: number;
+  /** Number of instances. Defaults to `1`. */
   instanceCount?: number;
+  /** First index. Defaults to `0`. */
   firstIndex?: number;
+  /** Signed vertex offset added to each index. Defaults to `0`. */
   baseVertex?: number;
+  /** First instance. Defaults to `0`. */
   firstInstance?: number;
 };
 
+/** Properties for one typed WebGPU indirect-command buffer. */
 export type DrawCommandBufferProps = {
+  /** Buffer identifier. */
   id?: string;
+  /** Indirect record layout. */
   type: 'draw' | 'draw-indexed';
+  /** Record capacity. Defaults to `commands.length`. */
   capacity?: number;
+  /** Optional initial CPU records. Unspecified capacity slots are zero-filled. */
   commands?: DrawCommand[] | DrawIndexedCommand[];
+  /** Optional compatible caller-supplied buffer. */
   buffer?: Buffer;
+  /** Whether `destroy()` should destroy a supplied buffer. Defaults to `false`. */
   ownsBuffer?: boolean;
 };
 
-/** Typed owner or borrower of WebGPU indirect draw records. */
+/**
+ * Typed owner or borrower of WebGPU indirect draw records.
+ *
+ * The backing buffer supports storage, indirect, and copy access so compute primitives can update
+ * counts before a render pass consumes the same records.
+ */
 export class DrawCommandBuffer {
+  /** WebGPU device owning the backing buffer. */
   readonly device: Device;
+  /** Buffer identifier. */
   readonly id: string;
+  /** Indirect record layout. */
   readonly type: 'draw' | 'draw-indexed';
+  /** Maximum record count. */
   readonly capacity: number;
+  /** Byte size of one indirect record. */
   readonly recordByteLength: number;
+  /** Concrete storage/indirect buffer. */
   readonly buffer: Buffer;
   private ownsBuffer: boolean;
   private destroyed = false;
 
+  /**
+   * Creates or adopts an indirect-command buffer and optionally uploads initial records.
+   *
+   * @throws If the device, capacity, initial values, or supplied buffer are incompatible.
+   */
   constructor(device: Device, props: DrawCommandBufferProps) {
     if (device.type !== 'webgpu') {
       throw new Error('DrawCommandBuffer requires a WebGPU device');
@@ -94,11 +128,13 @@ export class DrawCommandBuffer {
     }
   }
 
+  /** Returns the byte offset of one indirect record after validating its index. */
   getCommandByteOffset(commandIndex: number): number {
     this.validateCommandIndex(commandIndex);
     return commandIndex * this.recordByteLength;
   }
 
+  /** Returns the byte offset of one record's GPU-writable `instanceCount` field. */
   getInstanceCountByteOffset(commandIndex: number): number {
     return this.getCommandByteOffset(commandIndex) + UINT32_BYTE_LENGTH;
   }
@@ -145,6 +181,7 @@ export class DrawCommandBuffer {
   }
 }
 
+/** Encodes validated CPU command descriptions into little-endian WebGPU indirect records. */
 function makeCommandData(
   type: 'draw' | 'draw-indexed',
   capacity: number,
@@ -174,6 +211,7 @@ function makeCommandData(
   return new Uint32Array(data);
 }
 
+/** Validates and writes one unsigned indirect-record component. */
 function setUint32(view: DataView, byteOffset: number, value: number, name: string): void {
   if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
     throw new Error(`DrawCommandBuffer ${name} must be a uint32 value`);
@@ -181,6 +219,7 @@ function setUint32(view: DataView, byteOffset: number, value: number, name: stri
   view.setUint32(byteOffset, value, true);
 }
 
+/** Validates and writes one signed indirect-record component. */
 function setInt32(view: DataView, byteOffset: number, value: number, name: string): void {
   if (!Number.isSafeInteger(value) || value < -0x80000000 || value > 0x7fffffff) {
     throw new Error(`DrawCommandBuffer ${name} must be an int32 value`);

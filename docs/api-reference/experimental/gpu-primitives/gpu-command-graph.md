@@ -38,6 +38,17 @@ const compiled = graph.compile();
 compiled.encode(device.commandEncoder, {parameters: {time}});
 ```
 
+## Lifecycle and ownership
+
+A graph definition is mutable until `compile()` is called. Compilation freezes the definition,
+infers a stable node order, plans transient allocation reuse, creates physical transients, and calls
+each node's `compile` callback once. The returned `CompiledGPUCommandGraph` can then be encoded
+repeatedly with different parameters and compatible imported-resource replacements.
+
+Imported buffers, textures, `GPUData`, and `GPUVector` chunks are borrowed. The compiled graph owns
+only node-created resources, physical transients, and cached texture views/framebuffers. Calling
+`destroy()` releases those owned resources and never destroys an import.
+
 ## Buffer APIs
 
 ### `importBuffer(descriptor, defaultBuffer?)`
@@ -118,6 +129,44 @@ dependency.
 Executable contexts expose `getBuffer()`, `getTexture()`, and `getTextureView()`. Concrete texture
 views and framebuffers are cached for repeated encodings and rebuilt when an imported texture is
 replaced.
+
+## Hazards and scheduling
+
+A hazard is an ordering requirement caused by accesses to the same physical resource. The compiler
+adds dependencies for read-after-write, write-after-read, and write-after-write access. Read-after-
+read access does not require ordering.
+
+Buffer hazards are tracked at `GraphBufferHandle` granularity. Consequently, distinct
+`GraphDataView`s that share a handle alias even when their byte ranges do not overlap. A
+`GraphVectorView` is not itself a node resource; primitives declare uses of its individual data
+views, which map back to their physical buffer handles.
+
+Texture hazards are more precise: two `GraphTextureView` uses alias only when their aspect, mip,
+and array-layer ranges overlap. A `GraphTextureHandle` use covers the complete texture.
+
+Explicit `dependsOn` edges are combined with inferred resource edges. Compilation rejects missing
+dependency IDs and cycles. Independent nodes retain declaration order, making the compiled schedule
+stable.
+
+## Compilation
+
+The compiler performs four steps:
+
+1. Infer hazards and topologically order nodes.
+2. Compute inclusive first/last use indices for every referenced transient.
+3. Reuse compatible physical allocations across non-overlapping lifetimes.
+4. Create physical resources and invoke node `compile` callbacks in scheduled order.
+
+Buffer reuse grows an allocation to the maximum required capacity and unions usage flags. Texture
+reuse requires equal format, extent, dimension, mip count, and sample count; usage flags are
+unioned. If node compilation throws, already-created node resources and transients are destroyed
+before the error is rethrown.
+
+The implementation keeps dependencies one-directional: `gpu-command-graph-types.ts` owns shared
+handles, views, node contracts, executable contexts, and statistics;
+`gpu-command-graph-compiler.ts` consumes those contracts to produce a compilation; and
+`gpu-command-graph.ts` owns graph construction and encoding. The compiler never imports the graph
+implementation.
 
 ## `CompiledGPUCommandGraph`
 

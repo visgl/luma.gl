@@ -27,12 +27,19 @@ export type GPUSortDirection = 'ascending' | 'descending';
 
 /** Properties for one graph-native stable uint32 key/value sort. */
 export type GPUSortProps = {
+  /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
+  /** Packed unsigned sort keys. */
   keys: GraphDataView<'uint32'>;
+  /** Packed payload values paired row-for-row with `keys`. */
   values: GraphDataView<'uint32'>;
+  /** Caller-owned sorted key destination. */
   outputKeys: GraphDataView<'uint32'>;
+  /** Caller-owned payload destination permuted with the keys. */
   outputValues: GraphDataView<'uint32'>;
+  /** Requested implementation. Defaults to `'auto'`. */
   algorithm?: GPUSortAlgorithm;
+  /** Requested final order. Defaults to `'ascending'`. */
   direction?: GPUSortDirection;
 };
 
@@ -50,15 +57,29 @@ type BitonicStage = {
  * control of graph compilation, command encoding, submission, and optional readback.
  */
 export class GPUSort {
+  /** Prefix for generated graph node and transient resource IDs. */
   readonly id: string;
+  /** Packed unsigned sort keys. */
   readonly keys: GraphDataView<'uint32'>;
+  /** Packed payload values paired with the keys. */
   readonly values: GraphDataView<'uint32'>;
+  /** Caller-owned sorted key destination. */
   readonly outputKeys: GraphDataView<'uint32'>;
+  /** Caller-owned sorted payload destination. */
   readonly outputValues: GraphDataView<'uint32'>;
+  /** Algorithm requested by the caller. */
   readonly algorithm: GPUSortAlgorithm;
+  /** Final key ordering. */
   readonly direction: GPUSortDirection;
+  /** Concrete implementation selected after resolving `'auto'`. */
   readonly resolvedAlgorithm: Exclude<GPUSortAlgorithm, 'auto'>;
 
+  /**
+   * Creates and validates an out-of-place stable sort description.
+   *
+   * @throws If views are not packed `uint32` data, lengths differ, writable buffers alias, or an
+   * option or row count is unsupported.
+   */
   constructor(props: GPUSortProps) {
     this.id = props.id ?? 'gpu-sort';
     this.keys = props.keys;
@@ -102,7 +123,12 @@ export class GPUSort {
         : this.algorithm;
   }
 
-  /** Adds the selected sort implementation and its scratch buffers to a command graph. */
+  /**
+   * Adds the selected sort implementation and graph-owned scratch to a command graph.
+   *
+   * Empty inputs add no nodes; one-row inputs add one copy pass. This method does not compile,
+   * encode, submit, or read back commands.
+   */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     for (const view of [this.keys, this.values, this.outputKeys, this.outputValues]) {
       if (view.buffer.graph !== graph) {
@@ -124,6 +150,7 @@ export class GPUSort {
   }
 }
 
+/** Enforces out-of-place writes and distinct writable destinations. */
 function validateSeparateWritableBuffers(sort: GPUSort): void {
   if (
     sort.outputKeys.buffer === sort.outputValues.buffer ||
@@ -136,6 +163,7 @@ function validateSeparateWritableBuffers(sort: GPUSort): void {
   }
 }
 
+/** Copies a one-row key/value pair without allocating sort scratch. */
 function addCopyPairPass<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUSort): void {
   const source = /* wgsl */ `
 const KEYS_OFFSET: u32 = ${getViewElementOffset(sort.keys)}u;
@@ -170,6 +198,7 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
   });
 }
 
+/** Adds padded-index initialization, every bitonic stage, and the final stable gather. */
 function addBitonicSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUSort): void {
   const paddedLength = getNextPowerOfTwo(sort.keys.length);
   const indicesA = createTransientView(
@@ -195,6 +224,7 @@ function addBitonicSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GP
   addBitonicGatherPass(graph, sort, currentIndices);
 }
 
+/** Initializes logical indices and invalid padding for a power-of-two bitonic network. */
 function addBitonicInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
@@ -225,6 +255,7 @@ const INDICES_OFFSET: u32 = ${getViewElementOffset(indices)}u;
   });
 }
 
+/** Adds one compare/exchange stage of the stable bitonic sorting network. */
 function addBitonicStagePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
@@ -293,6 +324,7 @@ fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
   });
 }
 
+/** Gathers keys and payloads through the final sorted logical-index permutation. */
 function addBitonicGatherPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
@@ -341,6 +373,7 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
   });
 }
 
+/** Adds 32 stable least-significant-bit radix partitions and the final output copy if needed. */
 function addRadixSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUSort): void {
   const scratchKeys = createTransientView(
     graph,
@@ -394,6 +427,7 @@ function addRadixSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUS
   }
 }
 
+/** Classifies one key bit into packed zero/one flags for the radix prefix scan. */
 function addRadixClassifyPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
@@ -431,6 +465,7 @@ const FLAGS_OFFSET: u32 = ${getViewElementOffset(flags)}u;
   });
 }
 
+/** Stably scatters key/value pairs according to one scanned radix bit. */
 function addRadixScatterPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
@@ -487,6 +522,7 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(outputValues)}u;
   });
 }
 
+/** Returns the smallest power of two greater than or equal to `length`. */
 function getNextPowerOfTwo(length: number): number {
   let paddedLength = 1;
   while (paddedLength < length) {
@@ -495,6 +531,7 @@ function getNextPowerOfTwo(length: number): number {
   return paddedLength;
 }
 
+/** Enumerates compare/exchange stages for a complete bitonic network. */
 function getBitonicStages(paddedLength: number): BitonicStage[] {
   const stages: BitonicStage[] = [];
   for (let blockWidth = 2; blockWidth <= paddedLength; blockWidth *= 2) {
@@ -505,6 +542,7 @@ function getBitonicStages(paddedLength: number): BitonicStage[] {
   return stages;
 }
 
+/** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
 function addComputationPass<GraphParameters>(
   graph: GPUCommandGraph<GraphParameters>,
   props: {

@@ -12,18 +12,25 @@ import {
   type GraphTextureView
 } from './gpu-command-graph';
 
-const INDEX_PICKING_READBACK_BYTE_LENGTH = 256;
+/** WebGPU-aligned byte capacity required by the single-pixel picking readback buffer. */
+export const INDEX_PICKING_READBACK_BYTE_LENGTH = 256;
 const INDEX_PICKING_INVALID_INDEX = -1;
 
+/** Properties for one fixed-size graph-native index-picking target. */
 export type GPUIndexPickingTargetProps = {
+  /** Prefix for logical texture, buffer, and node IDs. */
   id?: string;
+  /** Target width in device pixels. */
   width: number;
+  /** Target height in device pixels. */
   height: number;
   /** Optional caller-owned default. Per-encoding graph buffer overrides remain supported. */
   readbackBuffer?: Buffer;
 };
 
+/** Properties for the target's optional single-pixel readback copy node. */
 export type GPUIndexPickingReadbackProps<Parameters> = {
+  /** Copy node ID. Defaults to the target ID plus `-readback`. */
   id?: string;
   /** Render node that must complete before the texture-to-buffer copy. */
   after: string;
@@ -38,19 +45,33 @@ export type GPUIndexPickingReadbackProps<Parameters> = {
  * command submission, staging buffers, readback timing, decoded state, and highlighting.
  */
 export class GPUIndexPickingTarget<Parameters = void> {
+  /** Prefix for logical texture, buffer, and node IDs. */
   readonly id: string;
+  /** Target width in device pixels. */
   readonly width: number;
+  /** Target height in device pixels. */
   readonly height: number;
+  /** Normalized color attachment available to the application render node. */
   readonly colorAttachment: GraphTextureView<'rgba8unorm'>;
+  /** Signed object/batch index attachment copied during readback. */
   readonly indexAttachment: GraphTextureView<'rg32sint'>;
+  /** Depth attachment shared by the picking render node. */
   readonly depthStencilAttachment: GraphTextureView<'depth24plus'>;
+  /** Complete attachment set for `GPUCommandGraph.addRenderPass`. */
   readonly attachments: GraphRenderPassAttachments;
+  /** Clear values matching the color, index, and depth attachments. */
   readonly renderPassProps: Pick<RenderPassProps, 'clearColors' | 'clearDepth'>;
+  /** Borrowed logical handle for the caller-owned readback buffer. */
   readonly readback: GraphBufferHandle;
 
   private readonly graph: GPUCommandGraph<Parameters>;
   private readbackPassAdded = false;
 
+  /**
+   * Declares fixed-size transient attachments and one imported readback buffer in `graph`.
+   *
+   * @throws If width or height is not a positive safe integer.
+   */
   constructor(graph: GPUCommandGraph<Parameters>, props: GPUIndexPickingTargetProps) {
     validatePickingTargetSize(props.width, props.height);
     this.graph = graph;
@@ -104,7 +125,12 @@ export class GPUIndexPickingTarget<Parameters = void> {
     );
   }
 
-  /** Adds one explicit single-pixel texture-to-buffer copy after the picking render node. */
+  /**
+   * Adds one explicit single-pixel texture-to-buffer copy after the picking render node.
+   *
+   * The pixel callback runs for each encoding, allowing pointer coordinates to arrive through graph
+   * parameters. At most one readback pass may be added per target.
+   */
   addReadbackPass(props: GPUIndexPickingReadbackProps<Parameters>): void {
     if (this.readbackPassAdded) {
       throw new Error(`${this.id} readback pass has already been added`);
@@ -139,7 +165,11 @@ export class GPUIndexPickingTarget<Parameters = void> {
   }
 }
 
-/** Decodes the first `rg32sint` texel copied into a picking readback buffer. */
+/**
+ * Decodes the first `rg32sint` texel copied into a picking readback buffer.
+ *
+ * The clear sentinel `[-1, -1]` maps to null object and batch indices.
+ */
 export function decodeGPUIndexPickInfo(data: ArrayBuffer | ArrayBufferView): PickInfo {
   const byteOffset = ArrayBuffer.isView(data) ? data.byteOffset : 0;
   const byteLength = ArrayBuffer.isView(data) ? data.byteLength : data.byteLength;
@@ -156,12 +186,14 @@ export function decodeGPUIndexPickInfo(data: ArrayBuffer | ArrayBufferView): Pic
   };
 }
 
+/** Validates the fixed attachment extent. */
 function validatePickingTargetSize(width: number, height: number): void {
   if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
     throw new Error('GPUIndexPickingTarget requires positive integer width and height');
   }
 }
 
+/** Validates an encode-time device-pixel coordinate against the attachment extent. */
 function validatePickingPixel(x: number, y: number, width: number, height: number): void {
   if (
     !Number.isSafeInteger(x) ||
@@ -176,5 +208,3 @@ function validatePickingPixel(x: number, y: number, width: number, height: numbe
     );
   }
 }
-
-export {INDEX_PICKING_READBACK_BYTE_LENGTH};

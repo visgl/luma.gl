@@ -457,11 +457,15 @@ test('GPUScan propagates carries across GPUVector chunks without changing topolo
     Uint32Array.from([7, 8])
   ];
   const result = await runVectorScan(device, chunks);
-  t.equal(result.length, 3, 'output preserves all source chunks');
-  t.equal(result[0].length, 300, 'first chunk length is preserved');
-  t.deepEqual(result[1], [], 'empty middle chunk is preserved');
-  t.equal(result[0][299], 299, 'hierarchical local scan completes within the first chunk');
-  t.deepEqual(result[2], [300, 307], 'later chunks receive the sum of all preceding chunks');
+  t.equal(result.chunks.length, 3, 'output preserves all source chunks');
+  t.equal(result.chunks[0].length, 300, 'first chunk length is preserved');
+  t.deepEqual(result.chunks[1], [], 'empty middle chunk is preserved');
+  t.equal(result.chunks[0][299], 299, 'hierarchical local scan completes within the first chunk');
+  t.deepEqual(result.chunks[2], [300, 307], 'later chunks receive the sum of all preceding chunks');
+  t.notOk(
+    result.nodeOrder.some(id => id.includes('clear-chunk-totals') || id.endsWith('-total')),
+    'final local scan levels write compact chunk totals without separate passes'
+  );
   t.end();
 });
 
@@ -589,17 +593,36 @@ test('GPUCompaction preserves GPUVector topology while selecting across chunks',
 
   const result = await runVectorCompaction(
     device,
-    [Uint32Array.from([10, 11, 12]), new Uint32Array(0), Uint32Array.from([20, 21, 22])],
-    [Uint32Array.from([1, 0, 1]), new Uint32Array(0), Uint32Array.from([1, 1, 0])]
+    [
+      Uint32Array.from([10, 11, 12]),
+      new Uint32Array(0),
+      new Uint32Array(0),
+      Uint32Array.from([20, 21, 22])
+    ],
+    [
+      Uint32Array.from([1, 0, 1]),
+      new Uint32Array(0),
+      new Uint32Array(0),
+      Uint32Array.from([1, 1, 0])
+    ]
   );
   t.equal(result.count, 4, 'count spans the complete logical vector');
   t.deepEqual(
     result.chunks.map(chunk => chunk.length),
-    [3, 0, 3],
+    [3, 0, 0, 3],
     'output chunk boundaries remain intact'
   );
   t.deepEqual(result.chunks[0], [10, 12, 20], 'selection crosses into the first output chunk');
-  t.equal(result.chunks[2][0], 21, 'selection continues in the next non-empty output chunk');
+  t.equal(result.chunks[3][0], 21, 'selection continues in the next non-empty output chunk');
+  t.notOk(
+    result.nodeOrder.some(id => id.endsWith('-write-count')),
+    'the final scatter writes the vector-wide count without a separate pass'
+  );
+  t.equal(
+    result.logicalTransientBufferCount,
+    5,
+    'zero-length offset chunks share one transient backing view'
+  );
   t.end();
 });
 
@@ -691,47 +714,27 @@ async function readPixels(texture: Texture, width: number, height: number): Prom
   }
 }
 
-async function runVectorScan(device: Device, chunks: Uint32Array[]): Promise<number[][]> {
-  const inputBuffers = chunks.map(chunk =>
-    device.createBuffer({
-      data: chunk.length > 0 ? chunk : new Uint32Array(1),
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    })
-  );
-  const outputBuffers = chunks.map(chunk =>
-    device.createBuffer({
-      byteLength: Math.max(chunk.length, 1) * Uint32Array.BYTES_PER_ELEMENT,
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
-    })
-  );
-  const inputVector = createUint32Vector(
-    'input',
-    inputBuffers,
-    chunks.map(chunk => chunk.length)
-  );
-  const outputVector = createUint32Vector(
-    'output',
-    outputBuffers,
-    chunks.map(chunk => chunk.length)
-  );
+async function runVectorScan(
+  device: Device,
+  chunks: Uint32Array[]
+): Promise<{chunks: number[][]; nodeOrder: string[]}> {
+  const inputFixture = createUint32VectorFixture(device, 'input', chunks);
+  const outputFixture = createUint32VectorFixture(device, 'output', chunks, 0);
   const graph = new GPUCommandGraph(device, {id: 'vector-scan'});
-  const input = graph.importGPUVector('input', inputVector);
-  const output = graph.importGPUVector('output', outputVector);
+  const input = graph.importGPUVector('input', inputFixture.vector);
+  const output = graph.importGPUVector('output', outputFixture.vector);
   new GPUScan({input, output}).addToGraph(graph);
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-scan-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
-  const result = await Promise.all(
-    outputBuffers.map(async (buffer, chunkIndex) => {
-      const bytes = await buffer.readAsync();
-      return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, chunks[chunkIndex].length));
-    })
-  );
+  const result = {
+    chunks: await readUint32VectorFixture(outputFixture),
+    nodeOrder: compiled.stats.nodeOrder
+  };
   compiled.destroy();
-  inputVector.destroy();
-  outputVector.destroy();
-  for (const buffer of [...inputBuffers, ...outputBuffers]) buffer.destroy();
+  destroyUint32VectorFixture(inputFixture);
+  destroyUint32VectorFixture(outputFixture);
   return result;
 }
 
@@ -739,37 +742,23 @@ async function runVectorCompaction(
   device: Device,
   valueChunks: Uint32Array[],
   flagChunks: Uint32Array[]
-): Promise<{chunks: number[][]; count: number}> {
-  const valueBuffers = valueChunks.map(chunk =>
-    device.createBuffer({
-      data: chunk.length > 0 ? chunk : new Uint32Array(1),
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    })
-  );
-  const flagBuffers = flagChunks.map(chunk =>
-    device.createBuffer({
-      data: chunk.length > 0 ? chunk : new Uint32Array(1),
-      usage: Buffer.STORAGE | Buffer.COPY_DST
-    })
-  );
-  const outputBuffers = valueChunks.map(chunk =>
-    device.createBuffer({
-      data: Uint32Array.from({length: Math.max(chunk.length, 1)}, () => 0xffffffff),
-      usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
-    })
-  );
+): Promise<{
+  chunks: number[][];
+  count: number;
+  nodeOrder: string[];
+  logicalTransientBufferCount: number;
+}> {
+  const valuesFixture = createUint32VectorFixture(device, 'values', valueChunks);
+  const flagsFixture = createUint32VectorFixture(device, 'flags', flagChunks);
+  const outputFixture = createUint32VectorFixture(device, 'output', valueChunks, 0xffffffff);
   const countBuffer = device.createBuffer({
     byteLength: Uint32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
-  const lengths = valueChunks.map(chunk => chunk.length);
-  const valuesVector = createUint32Vector('values', valueBuffers, lengths);
-  const flagsVector = createUint32Vector('flags', flagBuffers, lengths);
-  const outputVector = createUint32Vector('output', outputBuffers, lengths);
   const graph = new GPUCommandGraph(device, {id: 'vector-compaction'});
-  const values = graph.importGPUVector('values', valuesVector);
-  const flags = graph.importGPUVector('flags', flagsVector);
-  const output = graph.importGPUVector('output', outputVector);
+  const values = graph.importGPUVector('values', valuesFixture.vector);
+  const flags = graph.importGPUVector('flags', flagsFixture.vector);
+  const output = graph.importGPUVector('output', outputFixture.vector);
   const countHandle = graph.importBuffer(
     {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
     countBuffer
@@ -781,34 +770,48 @@ async function runVectorCompaction(
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
   const [chunks, countBytes] = await Promise.all([
-    Promise.all(
-      outputBuffers.map(async (buffer, chunkIndex) => {
-        const bytes = await buffer.readAsync();
-        return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, lengths[chunkIndex]));
-      })
-    ),
+    readUint32VectorFixture(outputFixture),
     countBuffer.readAsync()
   ]);
   const result = {
     chunks,
-    count: new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0]
+    count: new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0],
+    nodeOrder: compiled.stats.nodeOrder,
+    logicalTransientBufferCount: compiled.stats.logicalTransientBufferCount
   };
   compiled.destroy();
-  valuesVector.destroy();
-  flagsVector.destroy();
-  outputVector.destroy();
-  for (const buffer of [...valueBuffers, ...flagBuffers, ...outputBuffers, countBuffer]) {
-    buffer.destroy();
-  }
+  destroyUint32VectorFixture(valuesFixture);
+  destroyUint32VectorFixture(flagsFixture);
+  destroyUint32VectorFixture(outputFixture);
+  countBuffer.destroy();
   return result;
 }
 
-function createUint32Vector(
+type Uint32VectorFixture = {
+  vector: GPUVector<'uint32'>;
+  buffers: Buffer[];
+  lengths: number[];
+};
+
+function createUint32VectorFixture(
+  device: Device,
   name: string,
-  buffers: Buffer[],
-  lengths: number[]
-): GPUVector<'uint32'> {
-  return new GPUVector({
+  chunks: Uint32Array[],
+  fill?: number
+): Uint32VectorFixture {
+  const lengths = chunks.map(chunk => chunk.length);
+  const buffers = chunks.map(chunk =>
+    device.createBuffer({
+      data:
+        fill === undefined
+          ? chunk.length > 0
+            ? chunk
+            : new Uint32Array(1)
+          : Uint32Array.from({length: Math.max(chunk.length, 1)}, () => fill),
+      usage: Buffer.STORAGE | Buffer.COPY_DST | (fill === undefined ? 0 : Buffer.COPY_SRC)
+    })
+  );
+  const vector = new GPUVector({
     type: 'data',
     name,
     format: 'uint32',
@@ -823,6 +826,23 @@ function createUint32Vector(
     ),
     ownsData: false
   });
+  return {vector, buffers, lengths};
+}
+
+async function readUint32VectorFixture(fixture: Uint32VectorFixture): Promise<number[][]> {
+  return Promise.all(
+    fixture.buffers.map(async (buffer, chunkIndex) => {
+      const bytes = await buffer.readAsync();
+      return Array.from(
+        new Uint32Array(bytes.buffer, bytes.byteOffset, fixture.lengths[chunkIndex])
+      );
+    })
+  );
+}
+
+function destroyUint32VectorFixture(fixture: Uint32VectorFixture): void {
+  fixture.vector.destroy();
+  for (const buffer of fixture.buffers) buffer.destroy();
 }
 
 async function runCompaction(

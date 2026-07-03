@@ -20,7 +20,7 @@ import {
 const GRID_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_CELL_COUNT = 256;
 
-/** Bounds accepted by {@link GPUGridBinning}. */
+/** Literal `[minX, minY, maxX, maxY]` bounds or one GPU-resident `float32x4` row. */
 export type GPUGridBinningBounds =
   | readonly [number, number, number, number]
   | GraphDataView<'float32x4'>;
@@ -30,21 +30,42 @@ export type GPUGridBinningPositions = GraphDataView<'float32x2'> | GraphVectorVi
 
 /** Properties for graph-native two-dimensional grid counting. */
 export type GPUGridBinningProps = {
+  /** Prefix for generated graph node IDs. */
   id?: string;
+  /** One packed position view or an ordered vector of packed position chunks. */
   positions: GPUGridBinningPositions;
+  /** Caller-owned row-major cell counts. */
   output: GraphDataView<'uint32'>;
+  /** Positive integer `[width, height]` cell dimensions. */
   gridSize: readonly [number, number];
+  /** Inclusive literal or GPU-resident spatial bounds. */
   bounds: GPUGridBinningBounds;
 };
 
-/** Graph-native row-major count accumulation for packed float32x2 positions. */
+/**
+ * Graph-native row-major count accumulation for packed `float32x2` positions.
+ *
+ * Output is cleared on every encoding. Grids with up to 256 cells use workgroup-local atomics;
+ * larger grids use global atomics. Non-finite and out-of-bounds positions are ignored, while exact
+ * maximum boundaries enter the final row or column.
+ */
 export class GPUGridBinning {
+  /** Prefix for generated graph node IDs. */
   readonly id: string;
+  /** Packed two-dimensional positions or ordered position vector. */
   readonly positions: GPUGridBinningPositions;
+  /** Caller-owned row-major cell counts. */
   readonly output: GraphDataView<'uint32'>;
+  /** Positive integer grid dimensions. */
   readonly gridSize: readonly [number, number];
+  /** Literal or GPU-resident spatial bounds. */
   readonly bounds: GPUGridBinningBounds;
 
+  /**
+   * Creates and validates a two-dimensional grid-binning description.
+   *
+   * @throws If view layouts, grid dimensions, output length, ownership, or bounds are invalid.
+   */
   constructor(props: GPUGridBinningProps) {
     this.id = props.id ?? 'gpu-grid-binning';
     this.positions = props.positions;
@@ -91,7 +112,11 @@ export class GPUGridBinning {
     }
   }
 
-  /** Adds output clearing and grid accumulation nodes to a graph. */
+  /**
+   * Adds one output-clear pass and, for non-empty input, one accumulation pass to a graph.
+   *
+   * This method declares work only and does not submit or read back commands.
+   */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     if (
       getPositionChunks(this.positions).some(chunk => chunk.buffer.graph !== graph) ||
@@ -120,6 +145,7 @@ export class GPUGridBinning {
   }
 }
 
+/** Clears every output cell before accumulation for the current graph encoding. */
 function addClearGridPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
@@ -144,6 +170,7 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
   });
 }
 
+/** Adds the local- or global-atomic row-major grid accumulation pass. */
 function addGridPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   binning: {
@@ -242,6 +269,7 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   });
 }
 
+/** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
 function addComputationPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -283,10 +311,12 @@ function addComputationPass<Parameters>(
   });
 }
 
+/** Formats a finite JavaScript number as a WGSL `f32` literal. */
 function getFloatLiteral(value: number): string {
   return Number.isInteger(value) ? `${value}.0` : `${value}`;
 }
 
+/** Narrows grid bounds to their GPU-resident `float32x4` view form. */
 function isGPUGridBoundsView(bounds: GPUGridBinningBounds): bounds is GraphDataView<'float32x4'> {
   return !Array.isArray(bounds);
 }
