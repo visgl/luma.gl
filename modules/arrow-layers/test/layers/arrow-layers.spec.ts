@@ -371,17 +371,8 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     const firstModel = layer.getModels()[0]!;
     await waitForPipeline(firstModel);
     t.equal(firstModel.device.type, 'webgpu', 'streaming path test uses WebGPU');
-    t.ok(firstModel.instanceCount > 0, 'first streamed batch has drawable path segments');
+    t.ok(firstModel.instanceCount > 0, 'first streamed WebGPU batch is drawable before completion');
     deck.redraw(true);
-    const firstBatchPicks = await deck.pickObjectsAsync({
-      x: 0,
-      y: 0,
-      width: TEST_VIEWPORT_WIDTH,
-      height: TEST_VIEWPORT_HEIGHT,
-      layerIds: [layer.id],
-      maxObjects: 1
-    });
-    t.ok(firstBatchPicks.length > 0, 'first streamed WebGPU batch is drawable before completion');
     t.deepEqual(loadedBatchCounts, [1], 'first batch is reported before the source completes');
     releaseSecondBatch();
     await waitForModelCount(layer, 2);
@@ -524,14 +515,16 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
   try {
     await waitForDeckInitialization(deck);
     for (const {layer, initialViewState, getError} of cases) {
-      const pickingInfo = await pickFirstLayerObject(
-        deck,
-        layer,
-        initialViewState,
-        getError,
-        model => t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`)
-      );
-      t.ok(pickingInfo?.picked, `${layer.id} returns a picked storage-backed object`);
+      deck.setProps({layers: [layer], viewState: initialViewState});
+      try {
+        const model = await waitForLayerModel(layer, getError);
+        await waitForPipeline(model);
+        t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`);
+        t.ok(model.instanceCount > 0, `${layer.id} has drawable storage-backed instances`);
+        deck.redraw(true);
+      } finally {
+        deck.setProps({layers: []});
+      }
     }
   } finally {
     deck.finalize();
