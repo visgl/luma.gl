@@ -16,7 +16,8 @@ import {
   populateUtf8TextIndices,
   type ArrowUtf8Dictionary
 } from '@luma.gl/arrow';
-import type {CharacterMapping} from '../../src/index';
+import type {CharacterMapping, FontAtlas, TextKerning} from '../../src/index';
+import {createTextKerning} from '../../src/text-2d/atlas/text-utils';
 
 type TextDatum = {
   rowIndex: number;
@@ -82,9 +83,7 @@ test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph
   const characterSet = new Set<string>();
   const layout = buildArrowGlyphLayout({
     texts,
-    mapping,
-    baselineOffset: 1,
-    lineHeight: 10,
+    fontAtlas: makeFontAtlas(mapping),
     characterSet
   });
 
@@ -92,6 +91,50 @@ test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph
   t.equal(layout.glyphCount, 3, 'glyph count includes the emoji once');
   t.deepEqual(Array.from(layout.glyphOffsets), [2, 6, 7, 6, 4, 6], 'offsets use advances');
   t.ok(characterSet.has('🙂'), 'auto character collection sees Unicode');
+  t.end();
+});
+
+test('Arrow glyph layouts preserve atlas pages, BMFont offsets, and kerning', t => {
+  const mapping: CharacterMapping = {
+    A: {
+      x: 0,
+      y: 0,
+      width: 4,
+      height: 6,
+      atlasPage: 1,
+      anchorX: 2,
+      anchorY: 3,
+      layoutOffsetX: -1,
+      layoutOffsetY: 3,
+      advance: 5
+    },
+    B: {
+      x: 4,
+      y: 0,
+      width: 4,
+      height: 6,
+      atlasPage: 2,
+      anchorX: 2,
+      anchorY: 3,
+      layoutOffsetX: 2,
+      layoutOffsetY: 4,
+      advance: 7
+    }
+  };
+  const kerning = createTextKerning([{first: 65, second: 66, amount: -2}]);
+  const layout = buildArrowGlyphLayout({
+    texts: arrow.vectorFromArray(['AB'], new arrow.Utf8()),
+    fontAtlas: makeFontAtlas(mapping, kerning)
+  });
+  const stream = buildGpuExpandedTextStream({
+    texts: arrow.vectorFromArray(['AB'], new arrow.Utf8()),
+    fontAtlas: makeFontAtlas(mapping, kerning)
+  });
+
+  t.deepEqual(Array.from(layout.glyphOffsets), [-1, 9, 5, 10], 'layout uses offsets and kerning');
+  t.deepEqual(Array.from(layout.glyphPages), [1, 2], 'layout carries atlas pages per glyph');
+  t.deepEqual(Array.from(stream.glyphPages), [0, 1, 2], 'shared glyph pages align with ids');
+  t.deepEqual(Array.from(stream.glyphKernings), [1, 2, -2, 0], 'GPU kerning uses glyph ids');
   t.end();
 });
 
@@ -109,9 +152,7 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
   };
   const layout = buildArrowGlyphLayout({
     texts: chunked,
-    mapping,
-    baselineOffset: 1,
-    lineHeight: 10,
+    fontAtlas: makeFontAtlas(mapping),
     characterSet: new Set<string>()
   });
 
@@ -137,9 +178,7 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
   t.equal(slicedTextInput.byteLength, 3, 'sliced dictionary output reserves glyphs per row');
   const slicedStream = buildGpuTextDictionaryCompressedStream({
     texts: sliced,
-    mapping,
-    baselineOffset: 1,
-    lineHeight: 10
+    fontAtlas: makeFontAtlas(mapping)
   });
   t.deepEqual(
     slicedStream.startIndices,
@@ -177,9 +216,7 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
   );
   const nullableLayout = buildArrowGlyphLayout({
     texts: nullableDictionaryValues,
-    mapping,
-    baselineOffset: 1,
-    lineHeight: 10
+    fontAtlas: makeFontAtlas(mapping)
   });
   t.deepEqual(
     nullableLayout.startIndices,
@@ -197,9 +234,7 @@ test('buildGpuExpandedTextStream packs glyph ids and shared definitions determin
   };
   const stream = buildGpuExpandedTextStream({
     texts: arrow.vectorFromArray(['AB', '🙂A'], new arrow.Utf8()),
-    mapping,
-    baselineOffset: 1,
-    lineHeight: 10,
+    fontAtlas: makeFontAtlas(mapping),
     characterSet: new Set<string>()
   });
 
@@ -217,8 +252,8 @@ test('buildGpuExpandedTextStream packs glyph ids and shared definitions determin
   );
   t.deepEqual(
     Array.from(stream.glyphMetrics),
-    [0, 32, 2, 5, 2, 7, 4, 9],
-    'glyph metrics carry anchor and advance for compute expansion'
+    [0, 0, 32, 0, 2, 0, 5, 0, 2, 0, 7, 0, 4, 0, 9, 0],
+    'glyph metrics carry layout offset and advance for compute expansion'
   );
   t.equal(stream.baselineOffsetY, 6, 'baseline output offset is prevalidated and stored once');
   t.equal(stream.glyphCount, 4, 'glyph count stays CPU-known');
@@ -263,9 +298,7 @@ test('buildGpuTextDictionaryCompressedStream shares dictionary glyph records per
   const texts = makeExplicitArrowTextDictionaries(['AB', 'A'], new Int32Array([0, 1, 0, 1]));
   const stream = buildGpuTextDictionaryCompressedStream({
     texts,
-    mapping,
-    baselineOffset: 1,
-    lineHeight: 10,
+    fontAtlas: makeFontAtlas(mapping),
     characterSet: new Set<string>()
   });
 
@@ -312,6 +345,22 @@ test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding',
   t.equal(textInput.byteLength, 6, 'one render slot can be reserved per source byte');
   t.end();
 });
+
+function makeFontAtlas(mapping: CharacterMapping, kerning?: TextKerning): FontAtlas {
+  return {
+    baselineOffset: 1,
+    lineHeight: 10,
+    xOffset: 0,
+    yOffsetMin: 0,
+    yOffsetMax: 10,
+    mapping,
+    kerning,
+    renderSettings: {mode: 'bitmap', threshold: 0.5, smoothing: 0},
+    pages: [],
+    width: 16,
+    height: 16
+  };
+}
 
 function makeArrowTextDictionaries(
   labels: readonly (string | null)[],

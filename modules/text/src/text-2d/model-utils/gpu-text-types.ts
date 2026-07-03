@@ -12,6 +12,8 @@ export type TextGlyphLayout = {
   glyphOffsets: Int16Array;
   /** Packed atlas XYWH glyph frames, four Uint16 values per glyph. */
   glyphFrames: Uint16Array;
+  /** Packed atlas page index per glyph. */
+  glyphPages: Uint16Array;
   /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
 };
@@ -28,8 +30,12 @@ export type GpuExpandedTextStream = {
   packedGlyphIds: Uint32Array;
   /** Shared Float32 atlas XYWH glyph frames. */
   glyphFrames: Float32Array;
-  /** Shared Int32 glyph anchor/advance pairs. */
+  /** Shared Int32 glyph layout offset XY plus advance tuples. */
   glyphMetrics: Int32Array;
+  /** Shared Uint32 atlas page index per glyph definition. */
+  glyphPages: Uint32Array;
+  /** Shared Int32 glyph-id kerning tuples `[first, second, amount, 0]`. */
+  glyphKernings: Int32Array;
   /** Signed Float32-compatible baseline offset retained by generated glyph vertices. */
   baselineOffsetY: number;
   /** Optional character set accumulated while laying out glyphs. */

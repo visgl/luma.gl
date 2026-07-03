@@ -2,14 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-export {
-  default as FontAtlasManager,
-  DEFAULT_FONT_SETTINGS,
-  setFontAtlasCacheLimit,
-  type FontAtlasBuildMetrics,
-  type FontRenderer,
-  type FontSettings
-} from './atlas/font-atlas-manager';
 export {type FontAtlas} from './atlas/font-atlas';
 export {
   buildBitmapFontAtlas,
@@ -19,11 +11,15 @@ export {buildSdfFontAtlas, type SdfFontAtlasSettings} from './build-sdf-font-atl
 export {
   autoWrapping,
   buildMapping,
+  getCharacterAtlasPage,
+  getCharacterLayoutOffset,
+  getTextKerningOffset,
   getTextFromBuffer,
   nextPowOfTwo,
   transformParagraph,
   type Character,
-  type CharacterMapping
+  type CharacterMapping,
+  type TextKerning
 } from './atlas/text-utils';
 export {
   type GpuTextDictionaryCompressedStream,
@@ -33,17 +29,33 @@ export {
   type TextGlyphLayout
 } from './model-utils/gpu-text-types';
 export {
+  buildTextGlyphLayout,
+  buildTextGpuDictionaryCompressedStream,
+  buildTextGpuExpandedStream,
+  buildTextGpuGlyphDefinitions,
+  type TextCodePointSource,
+  type TextDictionaryCodePointSource,
+  type TextGpuGlyphDefinitions,
+  type TextLayoutOptions
+} from './model-utils/text-layout';
+export {
   createGpuTextDictionaryUtf8ExpandedInput,
   createGpuTextDictionaryUtf8ExpansionConfig,
   createGpuExpandedCompactInput,
   createGpuExpandedGeneratedState,
   createGpuUtf8ExpandedInput,
   createGpuUtf8ExpandedInputFromBuffers,
+  GPU_TEXT_EXPANSION_STORAGE_BUFFER_COUNT,
+  GPU_UTF8_TEXT_EXPANSION_STORAGE_BUFFER_COUNT,
+  createTextStorageGlyphKernings,
   createTextStorageGlyphLookup,
   createTextStorageGlyphMetrics,
+  createTextStorageGlyphPages,
   dispatchGpuTextDictionaryUtf8ExpandedCompute,
   dispatchGpuExpandedTextCompute,
   dispatchGpuUtf8ExpandedTextCompute,
+  supportsGpuTextExpansion,
+  supportsGpuUtf8TextExpansion,
   type GpuTextDictionaryUtf8ExpandedInputState,
   type GpuTextDictionaryUtf8ExpansionConfigState,
   type GpuExpandedCompactInputState,
@@ -52,7 +64,9 @@ export {
   type GpuTextExpansionResourceOptions,
   type GpuUtf8ExpandedInputState,
   type TextStorageGlyphLookupState,
-  type TextStorageGlyphMetricState
+  type TextStorageGlyphKerningState,
+  type TextStorageGlyphMetricState,
+  type TextStorageGlyphPageState
 } from './model-utils/gpu-text-expansion';
 export {
   DEFAULT_GPU_UTF8_MAP_BINDING_NAMES,
@@ -66,6 +80,7 @@ export {
   DEFAULT_TEXT_FS,
   DEFAULT_TEXT_SHADER_LAYOUT,
   DEFAULT_TEXT_VS,
+  GLYPH_PAGES_COLUMN,
   DEFAULT_CLIPPED_TEXT_SHADER_LAYOUT,
   DEFAULT_CLIPPED_TEXT_VS,
   DEFAULT_TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
@@ -76,14 +91,24 @@ export {
   DEFAULT_TEXT_STORAGE_INDEXED_SHADER_LAYOUT,
   DEFAULT_TEXT_STORAGE_INDEXED_SOURCE
 } from './model-utils/text-shaders';
-export {createTextDefaultFragmentShaderUniforms} from './model-utils/text-fragment-uniforms';
+export {
+  createTextDefaultFragmentShaderUniforms,
+  getFontAtlasShaderProps,
+  type FontAtlasShaderProps
+} from './model-utils/text-fragment-uniforms';
+export {
+  makeTextGlyphAlphaGlsl,
+  makeTextGlyphAlphaWgsl,
+  type TextGlyphAlphaShaderProps,
+  type TextGlyphAlphaShaderRenderMode,
+  type TextGlyphAlphaShaderSettings
+} from './model-utils/text-fragment-shaders';
 export {
   getFirstTextDictionaryBatch,
   getFirstTextDictionaryRenderBatch,
   getFirstTextStorageBatch,
   getFirstTextStorageRenderBatch,
   getTextStorageRowGlyphStartsBuffer,
-  type TextSdfRenderSettings,
   type TextStorageBuffer
 } from './model-utils/text-storage-state';
 export {

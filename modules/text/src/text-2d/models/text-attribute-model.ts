@@ -10,7 +10,6 @@ import {
   type GPUTableModelProps,
   type GPUTable
 } from '@luma.gl/tables';
-import FontAtlasManager from '../atlas/font-atlas-manager';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
 import {
@@ -39,8 +38,6 @@ export type TextAttributeState = {
   modelProps: GPUTableModelProps;
   /** One-line glyph offsets and atlas frames expanded from source text rows. */
   glyphLayout: TextGlyphLayout;
-  /** Optional atlas manager retained when this state built the atlas. */
-  fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this state. */
   atlasTexture?: DynamicTexture;
   /** Optional character set accumulated while laying out glyphs. */
@@ -53,8 +50,8 @@ export type TextAttributeState = {
   expandedGlyphVertexData: Buffer;
   /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: TextAttributeRenderBatchState[];
-  /** SDF render settings retained for built-in fragment shader uniforms. */
-  sdfRenderSettings?: unknown;
+  /** Raster font render settings retained for built-in fragment shader uniforms. */
+  fontRenderSettings?: unknown;
   /** Default fragment shader uniforms, when the built-in shader is used. */
   defaultFragmentShaderUniforms?: Record<string, unknown>;
 };
@@ -92,8 +89,6 @@ export class TextAttributeModel extends GPUTableModel {
   /** Prepared GPU vectors consumed by the attribute-backed text model. */
   static readonly gpuInputSchema = TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA;
 
-  /** Optional atlas manager retained when this model built the atlas. */
-  fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this model. */
   atlasTexture?: DynamicTexture;
   /** One-line glyph offsets and atlas frames expanded from source text rows. */
@@ -119,7 +114,6 @@ export class TextAttributeModel extends GPUTableModel {
     super(device, props.modelProps);
     this.attributeState = props;
     this.ownsAttributeState = props.ownsAttributeState === true;
-    this.fontAtlasManager = props.fontAtlasManager;
     this.atlasTexture = props.atlasTexture;
     this.glyphLayout = props.glyphLayout;
     this.characterSet = props.characterSet;
@@ -185,7 +179,6 @@ export class TextAttributeModel extends GPUTableModel {
     }
     this.attributeState = attributeState;
     this.ownsAttributeState = ownsAttributeState;
-    this.fontAtlasManager = attributeState.fontAtlasManager;
     this.atlasTexture = attributeState.atlasTexture;
     this.glyphLayout = attributeState.glyphLayout;
     this.characterSet = attributeState.characterSet;

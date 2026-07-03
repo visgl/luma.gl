@@ -34,9 +34,12 @@ test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
     y: 10,
     width: 4,
     height: 4,
+    atlasPage: 0,
     advance: 4,
     anchorX: 2,
-    anchorY: 3
+    anchorY: 3,
+    layoutOffsetX: 0,
+    layoutOffsetY: -3
   });
   t.end();
 });

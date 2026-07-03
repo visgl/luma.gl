@@ -4,16 +4,10 @@
 
 import {type Buffer} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
-import FontAtlasManager from '../atlas/font-atlas-manager';
+import type {FontAtlasRenderSettings} from '../atlas/font-atlas';
 import type {GpuExpandedTextStream, GpuTextDictionaryCompressedStream} from './gpu-text-types';
 
 export type TextStorageBuffer = Buffer | DynamicBuffer;
-
-export type TextSdfRenderSettings = {
-  sdf: boolean;
-  threshold: number;
-  smoothing: number;
-};
 
 type TextStorageOwnedResource = {
   destroy: () => void;
@@ -71,8 +65,6 @@ export type TextStorageRenderBatchState = {
 
 /** Reusable WebGPU storage text expansion and row-binding state. */
 export type TextStorageState = {
-  /** Optional atlas manager retained when this state built the atlas. */
-  fontAtlasManager?: FontAtlasManager;
   /** Optional atlas texture owned by this storage state. */
   atlasTexture?: DynamicTexture;
   /** Optional character set accumulated while laying out glyphs. */
@@ -101,8 +93,8 @@ export type TextStorageState = {
   transientComputeInputByteLength: number;
   /** Whether generated glyph records include a per-glyph source-row index attribute. */
   hasGlyphRowIndices?: boolean;
-  /** SDF render settings retained for built-in fragment shader uniforms. */
-  sdfRenderSettings: TextSdfRenderSettings;
+  /** Raster font render settings retained for built-in fragment shader uniforms. */
+  fontRenderSettings: FontAtlasRenderSettings;
   /** Read-only storage buffer for glyph atlas frames. */
   glyphFramesBuffer: Buffer;
   /** Per-source-batch row bindings. */

@@ -4,7 +4,55 @@
 
 import type {ShaderLayout} from '@luma.gl/core';
 import {picking, ShaderInputs} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import {
+  makeTextGlyphAlphaGlsl,
+  makeTextGlyphAlphaWgsl,
+  type TextGlyphAlphaShaderSettings
+} from '@luma.gl/text';
+
+const TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS = {
+  renderMode: {expression: 'textViewport.textFontRenderMode', kind: 'float'},
+  sdfThreshold: 'textViewport.textSdfThreshold',
+  sdfSmoothing: 'textViewport.textSdfSmoothing'
+} as const satisfies TextGlyphAlphaShaderSettings;
+const TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS = {
+  renderMode: {expression: 'textStorageStyleConfig.fontRenderMode', kind: 'uint'},
+  sdfThreshold: 'textStorageStyleConfig.sdfThreshold',
+  sdfSmoothing: 'textStorageStyleConfig.sdfSmoothing'
+} as const satisfies TextGlyphAlphaShaderSettings;
+
+const configuredAttributeVertexHooks = new WeakMap<ShaderAssembler, Set<string>>();
+
+/**
+ * Registers the attribute-text vertex extension point on an assembler.
+ *
+ * The generated hook is a no-op until a shader module injects code at
+ * `vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM`. Keeping registration in the renderer package guarantees
+ * that ordinary text shaders compile while allowing hosts such as Space Crawl to replace
+ * projection and texture orientation without forking the text shader.
+ */
+export function configureArrowTextShaderAssembler(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'glsl' | 'wgsl'
+): ShaderAssembler {
+  let configuredLanguages = configuredAttributeVertexHooks.get(shaderAssembler);
+  if (!configuredLanguages) {
+    configuredLanguages = new Set();
+    configuredAttributeVertexHooks.set(shaderAssembler, configuredLanguages);
+  }
+  if (configuredLanguages.has(shaderLanguage)) {
+    return shaderAssembler;
+  }
+
+  shaderAssembler.addShaderHook(
+    shaderLanguage === 'wgsl'
+      ? 'vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM(outputs: ptr<function, FragmentInputs>, worldPosition: vec2<f32>, glyphFrame: vec4<f32>, corner: vec2<f32>, glyphSize: vec2<f32>, atlasSize: vec2<f32>)'
+      : 'vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM(inout vec4 position, inout vec2 textureCoordinate, inout vec4 textColor, vec2 worldPosition, vec4 glyphFrame, vec2 corner, vec2 glyphSize, vec2 atlasSize)'
+  );
+  configuredLanguages.add(shaderLanguage);
+  return shaderAssembler;
+}
 
 export const STREAMING_TEXT_INPUT_SHADER_LAYOUT = {
   attributes: [
@@ -27,9 +75,10 @@ export const TEXT_SHADER_LAYOUT = {
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
     {name: 'glyphOffsets', location: 1, type: 'vec2<i32>', stepMode: 'instance'},
     {name: 'glyphFrames', location: 2, type: 'vec4<u32>', stepMode: 'instance'},
-    {name: 'rowIndices', location: 3, type: 'u32', stepMode: 'instance'},
-    {name: 'glyphClipRects', location: 4, type: 'vec4<i32>', stepMode: 'instance'},
-    {name: 'colors', location: 5, type: 'vec4<f32>', stepMode: 'instance'}
+    {name: 'glyphPages', location: 3, type: 'u32', stepMode: 'instance'},
+    {name: 'rowIndices', location: 4, type: 'u32', stepMode: 'instance'},
+    {name: 'glyphClipRects', location: 5, type: 'vec4<i32>', stepMode: 'instance'},
+    {name: 'colors', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
   ],
   bindings: []
 } satisfies ShaderLayout;
@@ -63,19 +112,23 @@ struct TextViewportUniforms {
   time : f32,
   clippingEnabled : f32,
   colorsEnabled : f32,
+  textFontRenderMode : f32,
+  textSdfThreshold : f32,
+  textSdfSmoothing : f32,
 };
 
 @group(0) @binding(auto) var<uniform> textViewport : TextViewportUniforms;
-@group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTexture : texture_2d_array<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 struct VertexInputs {
   @builtin(vertex_index) vertexIndex : u32,
   @location(0) positions : vec2<f32>,
   @location(1) glyphOffsets : vec2<i32>,
   @location(2) glyphFrames : vec4<u32>,
-  @location(3) rowIndices : u32,
-  @location(4) glyphClipRects : vec4<i32>,
-  @location(5) colors : vec4<f32>,
+  @location(3) glyphPages : u32,
+  @location(4) rowIndices : u32,
+  @location(5) glyphClipRects : vec4<i32>,
+  @location(6) colors : vec4<f32>,
 };
 
 struct FragmentInputs {
@@ -84,6 +137,8 @@ struct FragmentInputs {
   @location(1) textColor : vec4<f32>,
   @interpolate(flat, either)
   @location(2) objectIndex : i32,
+  @interpolate(flat)
+  @location(3) atlasPage : u32,
 };
 
 struct PickingFragmentOutputs {
@@ -118,6 +173,13 @@ fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<i32>) -> 
   return false;
 }
 
+${makeTextGlyphAlphaWgsl({
+  functionName: 'getGlyphAlpha',
+  textureCoordinate: 'inputs.textureCoordinate',
+  atlasPage: 'inputs.atlasPage',
+  settings: TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS
+})}
+
 @vertex
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
@@ -140,24 +202,31 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
     isGlyphVertexClipped(glyphVertexOffset, inputs.glyphClipRects)
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
+  outputs.atlasPage = inputs.glyphPages;
   let neutralTextColor = vec4<f32>(0.78, 0.86, 0.96, 1.0);
   outputs.textColor = mix(neutralTextColor, inputs.colors, textViewport.colorsEnabled);
   outputs.objectIndex = i32(inputs.rowIndices);
+  TEXT_ATTRIBUTE_VERTEX_TRANSFORM(
+    &outputs,
+    worldPosition,
+    glyphFrame,
+    corner,
+    glyphSize,
+    atlasSize
+  );
   return outputs;
 }
 
 @fragment
 fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
+  let glyphAlpha = getGlyphAlpha(inputs);
   let fragColor = vec4<f32>(inputs.textColor.rgb, inputs.textColor.a * glyphAlpha);
   return picking_filterHighlightColor(fragColor, inputs.objectIndex);
 }
 
 @fragment
 fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  if (sampledAlpha <= 0.68) {
+  if (getGlyphAlpha(inputs) <= 0.0) {
     discard;
   }
   var outputs : PickingFragmentOutputs;
@@ -178,7 +247,7 @@ struct TextViewportUniforms {
 };
 
 @group(0) @binding(auto) var<uniform> textViewport : TextViewportUniforms;
-@group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTexture : texture_2d_array<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 @group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowColors : array<u32>;
@@ -202,6 +271,10 @@ struct TextStorageStyleConfig {
   batchRowIndexBase : u32,
   rowStorageIndexBase : u32,
   _padding : u32,
+  sdfThreshold : f32,
+  sdfSmoothing : f32,
+  fontRenderMode : u32,
+  _padding1 : u32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -228,6 +301,8 @@ struct FragmentInputs {
   @location(1) textColor : vec4<f32>,
   @interpolate(flat, either)
   @location(2) objectIndex : i32,
+  @interpolate(flat)
+  @location(3) atlasPage : u32,
 };
 
 struct PickingFragmentOutputs {
@@ -367,6 +442,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
     isClipped
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
+  outputs.atlasPage = inputs.glyphIndices.y;
   outputs.textColor = textStorageStyleConfig.constantColor;
   if (textStorageStyleConfig.useRowColors != 0u) {
     outputs.textColor = unpackTextColor(textRowColors[rowStorageIndex]);
@@ -375,18 +451,23 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   return outputs;
 }
 
+${makeTextGlyphAlphaWgsl({
+  functionName: 'getStorageGlyphAlpha',
+  textureCoordinate: 'inputs.textureCoordinate',
+  atlasPage: 'inputs.atlasPage',
+  settings: TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS
+})}
+
 @fragment
 fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
+  let glyphAlpha = getStorageGlyphAlpha(inputs);
   let fragColor = vec4<f32>(inputs.textColor.rgb, inputs.textColor.a * glyphAlpha);
   return picking_filterHighlightColor(fragColor, inputs.objectIndex);
 }
 
 @fragment
 fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  if (sampledAlpha <= 0.68) {
+  if (getStorageGlyphAlpha(inputs) <= 0.0) {
     discard;
   }
   var outputs : PickingFragmentOutputs;
@@ -413,7 +494,7 @@ struct TextViewportUniforms {
 };
 
 @group(0) @binding(auto) var<uniform> textViewport : TextViewportUniforms;
-@group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTexture : texture_2d_array<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 @group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowColors : array<u32>;
@@ -445,6 +526,10 @@ struct TextStorageStyleConfig {
   batchRowIndexBase : u32,
   rowStorageIndexBase : u32,
   _padding : u32,
+  sdfThreshold : f32,
+  sdfSmoothing : f32,
+  fontRenderMode : u32,
+  _padding1 : u32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -469,6 +554,8 @@ struct FragmentInputs {
   @location(1) textColor : vec4<f32>,
   @interpolate(flat, either)
   @location(2) objectIndex : i32,
+  @interpolate(flat)
+  @location(3) atlasPage : u32,
 };
 
 struct PickingFragmentOutputs {
@@ -549,6 +636,7 @@ fn emptyFragmentInputs() -> FragmentInputs {
   outputs.textureCoordinate = vec2<f32>(0.0);
   outputs.textColor = vec4<f32>(0.0);
   outputs.objectIndex = -1;
+  outputs.atlasPage = 0u;
   return outputs;
 }
 
@@ -601,7 +689,9 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
   let corner = getCorner(inputs.vertexIndex % 6u);
   let glyphRecord = textDictionaryGlyphRecords[dictionaryGlyphIndex];
-  let glyphFrame = textGlyphFrames[glyphRecord.y];
+  let glyphId = glyphRecord.y & 0xffffu;
+  let glyphPage = glyphRecord.y >> 16u;
+  let glyphFrame = textGlyphFrames[glyphId];
   let glyphOffset = vec2<f32>(
     f32(unpackLowInt16(glyphRecord.x)),
     f32(unpackHighInt16(glyphRecord.x))
@@ -645,6 +735,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
     isClipped
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
+  outputs.atlasPage = glyphPage;
   outputs.textColor = textStorageStyleConfig.constantColor;
   if (textStorageStyleConfig.useRowColors != 0u) {
     outputs.textColor = unpackTextColor(textRowColors[rowStorageIndex]);
@@ -653,18 +744,23 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   return outputs;
 }
 
+${makeTextGlyphAlphaWgsl({
+  functionName: 'getStorageGlyphAlpha',
+  textureCoordinate: 'inputs.textureCoordinate',
+  atlasPage: 'inputs.atlasPage',
+  settings: TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS
+})}
+
 @fragment
 fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
+  let glyphAlpha = getStorageGlyphAlpha(inputs);
   let fragColor = vec4<f32>(inputs.textColor.rgb, inputs.textColor.a * glyphAlpha);
   return picking_filterHighlightColor(fragColor, inputs.objectIndex);
 }
 
 @fragment
 fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  if (sampledAlpha <= 0.68) {
+  if (getStorageGlyphAlpha(inputs) <= 0.0) {
     discard;
   }
   var outputs : PickingFragmentOutputs;
@@ -682,6 +778,7 @@ precision highp int;
 in vec2 positions;
 in ivec2 glyphOffsets;
 in uvec4 glyphFrames;
+in uint glyphPages;
 in uint rowIndices;
 in ivec4 glyphClipRects;
 in vec4 colors;
@@ -693,11 +790,15 @@ layout(std140) uniform textViewportUniforms {
   float time;
   float clippingEnabled;
   float colorsEnabled;
+  float textFontRenderMode;
+  float textSdfThreshold;
+  float textSdfSmoothing;
 } textViewport;
 
-uniform sampler2D fontAtlasTexture;
+uniform highp sampler2DArray fontAtlasTexture;
 out vec2 vTextureCoordinate;
 out vec4 vTextColor;
+flat out uint vAtlasPage;
 
 vec2 getCorner(int vertexIndex) {
   if (vertexIndex == 0) return vec2(0.0, 0.0);
@@ -736,7 +837,7 @@ void main() {
   vec2 glyphWorldOffset = glyphVertexOffset * textViewport.glyphWorldScale;
   vec2 worldPosition = positions + glyphWorldOffset;
   vec2 clipPosition = (worldPosition - textViewport.cameraOffset) * textViewport.viewportScale;
-  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0));
+  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0).xy);
   vec2 atlasCorner = vec2(corner.x, 1.0 - corner.y);
   vec2 atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
 
@@ -745,8 +846,19 @@ void main() {
     ? vec4(0.0)
     : vec4(clipPosition, 0.0, 1.0);
   vTextureCoordinate = atlasPixel / atlasSize;
+  vAtlasPage = glyphPages;
   vec4 neutralTextColor = vec4(0.78, 0.86, 0.96, 1.0);
   vTextColor = mix(neutralTextColor, colors, textViewport.colorsEnabled);
+  TEXT_ATTRIBUTE_VERTEX_TRANSFORM(
+    gl_Position,
+    vTextureCoordinate,
+    vTextColor,
+    worldPosition,
+    glyphFrame,
+    corner,
+    glyphSize,
+    atlasSize
+  );
 }
 `;
 
@@ -754,15 +866,34 @@ export const FS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 
-uniform sampler2D fontAtlasTexture;
+layout(std140) uniform textViewportUniforms {
+  vec2 cameraOffset;
+  vec2 viewportScale;
+  float glyphWorldScale;
+  float time;
+  float clippingEnabled;
+  float colorsEnabled;
+  float textFontRenderMode;
+  float textSdfThreshold;
+  float textSdfSmoothing;
+} textViewport;
+
+uniform highp sampler2DArray fontAtlasTexture;
 
 in vec2 vTextureCoordinate;
 in vec4 vTextColor;
+flat in uint vAtlasPage;
 out vec4 fragColor;
 
+${makeTextGlyphAlphaGlsl({
+  functionName: 'getGlyphAlpha',
+  textureCoordinate: 'vTextureCoordinate',
+  atlasPage: 'vAtlasPage',
+  settings: TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS
+})}
+
 void main() {
-  float sampledAlpha = texture(fontAtlasTexture, vTextureCoordinate).a;
-  float glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
+  float glyphAlpha = getGlyphAlpha();
   fragColor = vec4(vTextColor.rgb, vTextColor.a * glyphAlpha);
   fragColor = picking_filterColor(fragColor);
 }
@@ -773,15 +904,35 @@ export const PICKING_FS_GLSL = /* glsl */ `\
 precision highp float;
 precision highp int;
 
-uniform sampler2D fontAtlasTexture;
+layout(std140) uniform textViewportUniforms {
+  vec2 cameraOffset;
+  vec2 viewportScale;
+  float glyphWorldScale;
+  float time;
+  float clippingEnabled;
+  float colorsEnabled;
+  float textFontRenderMode;
+  float textSdfThreshold;
+  float textSdfSmoothing;
+} textViewport;
+
+uniform highp sampler2DArray fontAtlasTexture;
 
 in vec2 vTextureCoordinate;
+flat in uint vAtlasPage;
 layout(location = 0) out vec4 fragColor;
 layout(location = 1) out ivec4 pickingColor;
 
+${makeTextGlyphAlphaGlsl({
+  functionName: 'getGlyphAlpha',
+  textureCoordinate: 'vTextureCoordinate',
+  atlasPage: 'vAtlasPage',
+  settings: TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS
+})}
+
 void main() {
-  float sampledAlpha = texture(fontAtlasTexture, vTextureCoordinate).a;
-  if (sampledAlpha <= 0.68) {
+  float glyphAlpha = getGlyphAlpha();
+  if (glyphAlpha <= 0.0) {
     discard;
   }
   fragColor = vec4(0.0);
@@ -796,6 +947,9 @@ export type TextViewportUniforms = {
   time: number;
   clippingEnabled: number;
   colorsEnabled: number;
+  textFontRenderMode: number;
+  textSdfThreshold: number;
+  textSdfSmoothing: number;
 };
 
 export const textViewport: ShaderModule<TextViewportUniforms> = {
@@ -806,7 +960,10 @@ export const textViewport: ShaderModule<TextViewportUniforms> = {
     glyphWorldScale: 'f32',
     time: 'f32',
     clippingEnabled: 'f32',
-    colorsEnabled: 'f32'
+    colorsEnabled: 'f32',
+    textFontRenderMode: 'f32',
+    textSdfThreshold: 'f32',
+    textSdfSmoothing: 'f32'
   }
 };
 
@@ -818,10 +975,11 @@ export type ArrowTextShaderInputs = ShaderInputs<{
 export function createArrowTextShaderInputs(
   pickingModule: typeof picking = picking
 ): ArrowTextShaderInputs {
-  return new ShaderInputs<{textViewport: typeof textViewport.props; picking: typeof picking.props}>(
-    {
-      textViewport,
-      picking: pickingModule
-    }
-  );
+  return new ShaderInputs<{
+    textViewport: typeof textViewport.props;
+    picking: typeof picking.props;
+  }>({
+    textViewport,
+    picking: pickingModule
+  });
 }

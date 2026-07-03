@@ -26,6 +26,7 @@ import {
   type PickingShouldPickOptions
 } from '@luma.gl/engine';
 import type {GPUTable} from '@luma.gl/tables';
+import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 import {
   ArrowText2DControlPanel,
@@ -78,8 +79,21 @@ const VIEW_HEIGHT = 820;
 const CAMERA_PAN_SPEED_X = 72;
 const CAMERA_PAN_SPEED_Y = 56;
 const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
+let fontAtlas: FontAtlas | undefined;
 const TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT = 8;
 const TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT = 10;
+
+function getFontAtlas(): FontAtlas {
+  fontAtlas ??= buildSdfFontAtlas({
+    characterSet: CHARACTER_SET,
+    fontFamily: 'Monaco, Menlo, monospace',
+    fontWeight: '600',
+    fontSize: 64,
+    buffer: 6,
+    radius: 12
+  });
+  return fontAtlas;
+}
 
 export class ArrowText2DSourceController extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
@@ -267,15 +281,7 @@ export class ArrowText2DSourceController extends AnimationLoopTemplate {
       id: 'arrow-text-2d',
       ...this.getRendererSourceProps(data),
       model: modelKind,
-      characterSet: CHARACTER_SET,
-      fontSettings: {
-        fontFamily: 'Monaco, Menlo, monospace',
-        fontWeight: '600',
-        fontSize: 64,
-        buffer: 6,
-        sdf: true,
-        radius: 12
-      }
+      fontAtlas: getFontAtlas()
     });
   }
 

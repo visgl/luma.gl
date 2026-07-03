@@ -20,6 +20,7 @@ import {
   makeArrowFixedSizeListVector
 } from '@luma.gl/arrow';
 import {
+  buildSdfFontAtlas,
   TextAttributeModel
 } from '@luma.gl/text';
 
@@ -38,12 +39,14 @@ const convertedText = convertArrowTextToAttribute(device, {
 
 const model = new TextAttributeModel(device, convertArrowTextToAttributeModelProps(device, {
   ...convertedText,
-  characterSet: 'auto',
-  fontSettings: {sdf: true}
+  fontAtlas: buildSdfFontAtlas({characterSet: 'helo,lum.ag'})
 }));
 ```
 
 `@luma.gl/arrow` owns Arrow source vectors, table mapping, upload, and glyph preparation. `@luma.gl/text` models consume flat prepared GPUVector props plus generated GPU resources.
+
+Atlas-backed text consumes the common `FontAtlas` format. Build generated browser-font atlases
+with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`.
 
 Text input vector support:
 
@@ -81,6 +84,6 @@ Text draw buffers:
 | glyph frames | vertex | data | Per-glyph atlas frame attributes in the attribute model; shared atlas-frame storage indexed by glyph id in the storage model. |
 | atlas texture | data | data | Font atlas sampled by the fragment shader. |
 | sampler | data | data | Sampler paired with the atlas texture. |
-| style config uniform | - | data | Per-draw fallback style values, row-style presence flags, clip flag, row bases, and SDF alpha threshold/smoothing. |
+| style config uniform | - | data | Per-draw fallback style values, row-style presence flags, clip flag, row bases, and font alpha settings. |
 
 `getGpuUtf8MapShaderSource()` and `getGpuUtf8MapShaderBindings()` expose reusable WebGPU UTF-8 mapping helpers. Consumers can compose sparse UTF-8 byte traversal, code point decode, and lookup-table mapping into text-oriented compute shaders.

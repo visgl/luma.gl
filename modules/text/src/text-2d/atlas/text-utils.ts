@@ -131,9 +131,12 @@ export function buildMapping({
       y: yMin + buffer,
       width,
       height,
+      atlasPage: 0,
       advance,
       anchorX: width / 2,
-      anchorY: ascent
+      anchorY: ascent,
+      layoutOffsetX: 0,
+      layoutOffsetY: -ascent
     };
     x += width + buffer * 2;
     yMax = Math.max(yMax, yMin + height + buffer * 2);

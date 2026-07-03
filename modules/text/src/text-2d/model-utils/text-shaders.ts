@@ -3,9 +3,26 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderLayout} from '@luma.gl/core';
+import {
+  makeTextGlyphAlphaGlsl,
+  makeTextGlyphAlphaWgsl,
+  type TextGlyphAlphaShaderSettings
+} from './text-fragment-shaders';
+
+const DEFAULT_TEXT_FRAGMENT_SHADER_SETTINGS = {
+  renderMode: {expression: 'textFontRenderMode', kind: 'float'},
+  sdfThreshold: 'textSdfThreshold',
+  sdfSmoothing: 'textSdfSmoothing'
+} as const satisfies TextGlyphAlphaShaderSettings;
+const TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS = {
+  renderMode: {expression: 'textStorageStyleConfig.fontRenderMode', kind: 'uint'},
+  sdfThreshold: 'textStorageStyleConfig.sdfThreshold',
+  sdfSmoothing: 'textStorageStyleConfig.sdfSmoothing'
+} as const satisfies TextGlyphAlphaShaderSettings;
 
 export const GLYPH_OFFSETS_COLUMN = 'glyphOffsets';
 export const GLYPH_FRAMES_COLUMN = 'glyphFrames';
+export const GLYPH_PAGES_COLUMN = 'glyphPages';
 export const GLYPH_INDICES_COLUMN = 'glyphIndices';
 export const GLYPH_ROW_INDICES_COLUMN = 'glyphRowIndices';
 export const GLYPH_CLIP_RECTS_COLUMN = 'glyphClipRects';
@@ -22,7 +39,8 @@ export const DEFAULT_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
     {name: GLYPH_OFFSETS_COLUMN, location: 1, type: 'vec2<i32>', stepMode: 'instance'},
-    {name: GLYPH_FRAMES_COLUMN, location: 2, type: 'vec4<u32>', stepMode: 'instance'}
+    {name: GLYPH_FRAMES_COLUMN, location: 2, type: 'vec4<u32>', stepMode: 'instance'},
+    {name: GLYPH_PAGES_COLUMN, location: 3, type: 'u32', stepMode: 'instance'}
   ],
   bindings: []
 };
@@ -30,7 +48,7 @@ export const DEFAULT_TEXT_SHADER_LAYOUT: ShaderLayout = {
 export const DEFAULT_CLIPPED_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     ...DEFAULT_TEXT_SHADER_LAYOUT.attributes,
-    {name: GLYPH_CLIP_RECTS_COLUMN, location: 3, type: 'vec4<i32>', stepMode: 'instance'}
+    {name: GLYPH_CLIP_RECTS_COLUMN, location: 4, type: 'vec4<i32>', stepMode: 'instance'}
   ],
   bindings: []
 };
@@ -62,10 +80,12 @@ precision highp float;
 in vec2 positions;
 in ivec2 glyphOffsets;
 in uvec4 glyphFrames;
+in uint glyphPages;
 
 out vec2 vTextureCoordinate;
+flat out uint vAtlasPage;
 
-uniform sampler2D fontAtlasTexture;
+uniform highp sampler2DArray fontAtlasTexture;
 
 vec2 getCorner(int vertexIndex) {
   if (vertexIndex == 0) return vec2(0.0, 0.0);
@@ -78,13 +98,14 @@ vec2 getCorner(int vertexIndex) {
 
 void main() {
   vec2 corner = getCorner(gl_VertexID % 6);
-  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0));
+  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0).xy);
   vec4 glyphFrame = vec4(glyphFrames);
   vec2 glyphOffset = vec2(glyphOffsets);
   vec2 glyphSize = glyphFrame.zw;
   vec2 glyphPosition = positions + (glyphOffset + corner * glyphSize) * 0.001;
   gl_Position = vec4(glyphPosition, 0.0, 1.0);
   vTextureCoordinate = (glyphFrame.xy + corner * glyphSize) / atlasSize;
+  vAtlasPage = glyphPages;
 }
 `;
 
@@ -94,11 +115,13 @@ precision highp float;
 in vec2 positions;
 in ivec2 glyphOffsets;
 in uvec4 glyphFrames;
+in uint glyphPages;
 in ivec4 glyphClipRects;
 
 out vec2 vTextureCoordinate;
+flat out uint vAtlasPage;
 
-uniform sampler2D fontAtlasTexture;
+uniform highp sampler2DArray fontAtlasTexture;
 
 vec2 getCorner(int vertexIndex) {
   if (vertexIndex == 0) return vec2(0.0, 0.0);
@@ -129,7 +152,7 @@ bool isGlyphVertexClipped(vec2 glyphVertexOffset, ivec4 clipRect) {
 
 void main() {
   vec2 corner = getCorner(gl_VertexID % 6);
-  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0));
+  vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0).xy);
   vec4 glyphFrame = vec4(glyphFrames);
   vec2 glyphOffset = vec2(glyphOffsets);
   vec2 glyphSize = glyphFrame.zw;
@@ -139,35 +162,34 @@ void main() {
     ? vec4(0.0)
     : vec4(glyphPosition, 0.0, 1.0);
   vTextureCoordinate = (glyphFrame.xy + corner * glyphSize) / atlasSize;
+  vAtlasPage = glyphPages;
 }
 `;
 
 export const DEFAULT_TEXT_FS = `#version 300 es
 precision highp float;
 
-uniform sampler2D fontAtlasTexture;
-uniform float textUsesSdf;
+uniform highp sampler2DArray fontAtlasTexture;
+uniform float textFontRenderMode;
 uniform float textSdfThreshold;
 uniform float textSdfSmoothing;
 in vec2 vTextureCoordinate;
+flat in uint vAtlasPage;
 out vec4 fragColor;
 
+${makeTextGlyphAlphaGlsl({
+  textureCoordinate: 'vTextureCoordinate',
+  atlasPage: 'vAtlasPage',
+  settings: DEFAULT_TEXT_FRAGMENT_SHADER_SETTINGS
+})}
+
 void main() {
-  float sampledAlpha = texture(fontAtlasTexture, vTextureCoordinate).a;
-  float sdfAlpha = textSdfSmoothing > 0.0
-    ? smoothstep(
-        textSdfThreshold - textSdfSmoothing,
-        textSdfThreshold + textSdfSmoothing,
-        sampledAlpha
-      )
-    : step(textSdfThreshold, sampledAlpha);
-  float alpha = textUsesSdf > 0.5 ? sdfAlpha : sampledAlpha;
-  fragColor = vec4(1.0, 1.0, 1.0, alpha);
+  fragColor = vec4(1.0, 1.0, 1.0, getTextGlyphAlpha());
 }
 `;
 
 export const DEFAULT_TEXT_STORAGE_INDEXED_SOURCE = /* wgsl */ `
-@group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTexture : texture_2d_array<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 @group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowColors : array<u32>;
@@ -193,7 +215,8 @@ struct TextStorageStyleConfig {
   _padding0 : u32,
   sdfThreshold : f32,
   sdfSmoothing : f32,
-  _padding1 : vec2<f32>,
+  fontRenderMode : u32,
+  _padding1 : u32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -218,6 +241,7 @@ struct FragmentInputs {
   @builtin(position) position : vec4<f32>,
   @location(0) atlasUV : vec2<f32>,
   @location(1) color : vec4<f32>,
+  @location(2) @interpolate(flat) atlasPage : u32,
 };
 
 fn getGlyphCorner(vertexIndex: u32) -> vec2<f32> {
@@ -346,6 +370,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
     isClipped
   );
   outputs.atlasUV = (glyphFrame.xy + corner * glyphSize) / vec2<f32>(textureDimensions(fontAtlasTexture));
+  outputs.atlasPage = inputs.glyphIndices.y;
   outputs.color = textStorageStyleConfig.constantColor;
   if (textStorageStyleConfig.useRowColors != 0u) {
     outputs.color = unpackTextColor(textRowColors[rowStorageIndex]);
@@ -353,22 +378,15 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   return outputs;
 }
 
+${makeTextGlyphAlphaWgsl({
+  textureCoordinate: 'inputs.atlasUV',
+  atlasPage: 'inputs.atlasPage',
+  settings: TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS
+})}
+
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.atlasUV).a;
-  var alpha = sampledAlpha;
-  if (textStorageStyleConfig.sdfThreshold >= 0.0) {
-    if (textStorageStyleConfig.sdfSmoothing > 0.0) {
-      alpha = smoothstep(
-        textStorageStyleConfig.sdfThreshold - textStorageStyleConfig.sdfSmoothing,
-        textStorageStyleConfig.sdfThreshold + textStorageStyleConfig.sdfSmoothing,
-        sampledAlpha
-      );
-    } else {
-      alpha = select(0.0, 1.0, sampledAlpha >= textStorageStyleConfig.sdfThreshold);
-    }
-  }
-  return vec4<f32>(inputs.color.rgb, inputs.color.a * alpha);
+  return vec4<f32>(inputs.color.rgb, inputs.color.a * getTextGlyphAlpha(inputs));
 }
 `;
 
@@ -379,7 +397,7 @@ export const DEFAULT_TEXT_ROW_INDEXED_STORAGE_SOURCE = DEFAULT_TEXT_STORAGE_INDE
 ).replace('let rowIndex = findRowIndex(glyphIndex);', 'let rowIndex = inputs.glyphRowIndices;');
 
 export const DEFAULT_TEXT_DICTIONARY_STORAGE_SOURCE = /* wgsl */ `
-@group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTexture : texture_2d_array<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 // Dictionary text keeps row styling in row buffers, shared glyph layout in
 // dictionary buffers, and uses instance_index for visible glyph occurrences.
@@ -416,7 +434,8 @@ struct TextStorageStyleConfig {
   _padding0 : u32,
   sdfThreshold : f32,
   sdfSmoothing : f32,
-  _padding1 : vec2<f32>,
+  fontRenderMode : u32,
+  _padding1 : u32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -439,6 +458,7 @@ struct FragmentInputs {
   @builtin(position) position : vec4<f32>,
   @location(0) atlasUV : vec2<f32>,
   @location(1) color : vec4<f32>,
+  @location(2) @interpolate(flat) atlasPage : u32,
 };
 
 fn getGlyphCorner(vertexIndex: u32) -> vec2<f32> {
@@ -516,6 +536,7 @@ fn emptyFragmentInputs() -> FragmentInputs {
   outputs.position = vec4<f32>(0.0);
   outputs.atlasUV = vec2<f32>(0.0);
   outputs.color = vec4<f32>(0.0);
+  outputs.atlasPage = 0u;
   return outputs;
 }
 
@@ -567,7 +588,9 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
   let corner = getGlyphCorner(inputs.vertexIndex);
   let glyphRecord = textDictionaryGlyphRecords[dictionaryGlyphIndex];
-  let glyphFrame = textGlyphFrames[glyphRecord.y];
+  let glyphId = glyphRecord.y & 0xffffu;
+  let glyphPage = glyphRecord.y >> 16u;
+  let glyphFrame = textGlyphFrames[glyphId];
   let glyphOffset = vec2<f32>(
     f32(unpackLowInt16(glyphRecord.x)),
     f32(unpackHighInt16(glyphRecord.x))
@@ -603,6 +626,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
     isClipped
   );
   outputs.atlasUV = (glyphFrame.xy + corner * glyphSize) / vec2<f32>(textureDimensions(fontAtlasTexture));
+  outputs.atlasPage = glyphPage;
   outputs.color = textStorageStyleConfig.constantColor;
   if (textStorageStyleConfig.useRowColors != 0u) {
     outputs.color = unpackTextColor(textRowColors[rowStorageIndex]);
@@ -610,21 +634,14 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   return outputs;
 }
 
+${makeTextGlyphAlphaWgsl({
+  textureCoordinate: 'inputs.atlasUV',
+  atlasPage: 'inputs.atlasPage',
+  settings: TEXT_STORAGE_FRAGMENT_SHADER_SETTINGS
+})}
+
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.atlasUV).a;
-  var alpha = sampledAlpha;
-  if (textStorageStyleConfig.sdfThreshold >= 0.0) {
-    if (textStorageStyleConfig.sdfSmoothing > 0.0) {
-      alpha = smoothstep(
-        textStorageStyleConfig.sdfThreshold - textStorageStyleConfig.sdfSmoothing,
-        textStorageStyleConfig.sdfThreshold + textStorageStyleConfig.sdfSmoothing,
-        sampledAlpha
-      );
-    } else {
-      alpha = select(0.0, 1.0, sampledAlpha >= textStorageStyleConfig.sdfThreshold);
-    }
-  }
-  return vec4<f32>(inputs.color.rgb, inputs.color.a * alpha);
+  return vec4<f32>(inputs.color.rgb, inputs.color.a * getTextGlyphAlpha(inputs));
 }
 `;

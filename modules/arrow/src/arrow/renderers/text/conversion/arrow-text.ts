@@ -15,17 +15,21 @@ import {
   Vector
 } from 'apache-arrow';
 import type {
-  Character,
-  CharacterMapping,
+  FontAtlas,
   GpuTextDictionaryCompressedStream,
   GpuTextDictionaryUtf8Input,
   GpuExpandedTextStream,
   GpuUtf8TextInput,
+  TextCodePointSource,
+  TextDictionaryCodePointSource,
   TextGlyphLayout
 } from '@luma.gl/text';
+import {
+  buildTextGlyphLayout,
+  buildTextGpuDictionaryCompressedStream,
+  buildTextGpuExpandedStream
+} from '@luma.gl/text';
 
-const MISSING_CHAR_WIDTH = 32;
-const MAX_UINT16 = 65535;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 
 /** Integer Arrow dictionary key types accepted by UTF-8 text helpers. */
@@ -428,331 +432,73 @@ function countArrowUtf8CodePoints(
   return codePointCount;
 }
 
-/** Build one-line glyph offsets and atlas frames without materializing row strings. */
+/** Adapts Arrow UTF-8 rows to the renderer-independent text layout builder. */
 export function buildArrowGlyphLayout({
   texts,
-  mapping,
-  baselineOffset,
+  fontAtlas,
   lineHeight,
   characterSet
 }: {
   texts: ArrowUtf8TextVector;
-  mapping: CharacterMapping;
-  baselineOffset: number;
-  lineHeight: number;
+  fontAtlas: FontAtlas;
+  lineHeight?: number;
   characterSet?: Set<string>;
 }): TextGlyphLayout {
-  const decoder = createArrowTextRowDecoder(texts);
-  const startIndices = new Array<number>(texts.length + 1);
-  startIndices[0] = 0;
-  let glyphCount = 0;
-
-  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
-    glyphCount += decoder.countCodePoints(rowIndex);
-    startIndices[rowIndex + 1] = glyphCount;
-  }
-
-  const glyphOffsets = new Int16Array(glyphCount * 2);
-  const glyphFrames = new Uint16Array(glyphCount * 4);
-  const glyphFramesByCodePoint = new Map<number, Character | undefined>();
-  const charactersByCodePoint = characterSet ? new Map<number, string>() : null;
-  let glyphOffsetIndex = 0;
-  let glyphFrameIndex = 0;
-
-  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
-    let width = 0;
-    decoder.visitCodePoints(rowIndex, codePoint => {
-      let frame: Character | undefined;
-      if (glyphFramesByCodePoint.has(codePoint)) {
-        frame = glyphFramesByCodePoint.get(codePoint);
-      } else {
-        const character = String.fromCodePoint(codePoint);
-        frame = mapping[character];
-        glyphFramesByCodePoint.set(codePoint, frame);
-        if (charactersByCodePoint) {
-          charactersByCodePoint.set(codePoint, character);
-          characterSet?.add(character);
-        }
-      }
-      glyphOffsets[glyphOffsetIndex++] = toInt16(frame ? width + frame.anchorX : width);
-      glyphOffsets[glyphOffsetIndex++] = toInt16(baselineOffset + lineHeight / 2);
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.x ?? 0);
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.y ?? 0);
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.width ?? 0);
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.height ?? 0);
-      width += frame?.advance ?? MISSING_CHAR_WIDTH;
-    });
-  }
-
-  return {
-    startIndices,
-    glyphCount,
-    glyphOffsets,
-    glyphFrames,
+  return buildTextGlyphLayout(createArrowTextRowDecoder(texts), {
+    fontAtlas,
+    lineHeight,
     characterSet
-  };
+  });
 }
 
-/** Build compact glyph IDs and shared definitions for WebGPU text expansion. */
+/** Adapts Arrow UTF-8 rows to compact GPU text expansion. */
 export function buildGpuExpandedTextStream({
   texts,
-  mapping,
-  baselineOffset,
+  fontAtlas,
   lineHeight,
   characterSet
 }: {
   texts: ArrowUtf8TextVector;
-  mapping: CharacterMapping;
-  baselineOffset: number;
-  lineHeight: number;
+  fontAtlas: FontAtlas;
+  lineHeight?: number;
   characterSet?: Set<string>;
 }): GpuExpandedTextStream {
-  const glyphStreamBuildStartTime = getNow();
-  const decoder = createArrowTextRowDecoder(texts);
-  const startIndices = new Array<number>(texts.length + 1);
-  startIndices[0] = 0;
-  let glyphCount = 0;
-
-  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
-    glyphCount += decoder.countCodePoints(rowIndex);
-    startIndices[rowIndex + 1] = glyphCount;
-  }
-
-  const baselineOffsetY = toInt16(baselineOffset + lineHeight / 2);
-  const labelGlyphRanges = new Uint32Array(texts.length * 2);
-  const packedGlyphIds = new Uint32Array(Math.ceil(glyphCount / 2));
-  const glyphDefinitionsByCodePoint = new Map<
-    number,
-    {frame: Character | undefined; glyphId: number}
-  >();
-  const charactersByCodePoint = characterSet ? new Map<number, string>() : null;
-  // Index zero is the missing-glyph definition.
-  const glyphFrameValues = [0, 0, 0, 0];
-  const glyphMetricValues = [0, MISSING_CHAR_WIDTH];
-  let glyphWriteIndex = 0;
-
-  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
-    const glyphStart = startIndices[rowIndex];
-    const glyphEnd = startIndices[rowIndex + 1];
-    labelGlyphRanges[rowIndex * 2] = glyphStart;
-    labelGlyphRanges[rowIndex * 2 + 1] = glyphEnd;
-    let width = 0;
-    decoder.visitCodePoints(rowIndex, codePoint => {
-      let definition = glyphDefinitionsByCodePoint.get(codePoint);
-      if (!definition) {
-        const character = String.fromCodePoint(codePoint);
-        const frame = mapping[character];
-        let glyphId = 0;
-        if (frame) {
-          glyphId = glyphFrameValues.length / 4;
-          if (glyphId > MAX_UINT16) {
-            throw new Error('GPU expanded text glyph definitions exceed the uint16 glyph id range');
-          }
-          glyphFrameValues.push(frame.x, frame.y, frame.width, frame.height);
-          glyphMetricValues.push(frame.anchorX, frame.advance);
-        }
-        definition = {frame, glyphId};
-        glyphDefinitionsByCodePoint.set(codePoint, definition);
-        if (charactersByCodePoint) {
-          charactersByCodePoint.set(codePoint, character);
-          characterSet?.add(character);
-        }
-      }
-
-      const {frame, glyphId} = definition;
-      toInt16(frame ? width + frame.anchorX : width);
-      writePackedUint16(packedGlyphIds, glyphWriteIndex, glyphId);
-      glyphWriteIndex++;
-      width += frame?.advance ?? MISSING_CHAR_WIDTH;
-    });
-  }
-
-  const glyphFrames = new Float32Array(glyphFrameValues);
-  const glyphMetrics = new Int32Array(glyphMetricValues);
-  const compactStreamByteLength = labelGlyphRanges.byteLength + packedGlyphIds.byteLength;
-  const glyphDefinitionByteLength = glyphFrames.byteLength + glyphMetrics.byteLength;
-
-  return {
-    startIndices,
-    glyphCount,
-    labelGlyphRanges,
-    packedGlyphIds,
-    glyphFrames,
-    glyphMetrics,
-    baselineOffsetY,
-    characterSet,
-    compactStreamByteLength,
-    glyphDefinitionByteLength,
-    glyphStreamBuildTimeMs: getNow() - glyphStreamBuildStartTime
-  };
+  return buildTextGpuExpandedStream(createArrowTextRowDecoder(texts), {
+    fontAtlas,
+    lineHeight,
+    characterSet
+  });
 }
 
-/** Build shared glyph runs for dictionary values plus compact per-row glyph occurrences. */
+/** Adapts Arrow dictionary rows to compressed dictionary text layout. */
 export function buildGpuTextDictionaryCompressedStream({
   texts,
-  mapping,
-  baselineOffset,
+  fontAtlas,
   lineHeight,
   characterSet
 }: {
   texts: Vector<ArrowUtf8Dictionary>;
-  mapping: CharacterMapping;
-  baselineOffset: number;
-  lineHeight: number;
+  fontAtlas: FontAtlas;
+  lineHeight?: number;
   characterSet?: Set<string>;
 }): GpuTextDictionaryCompressedStream {
-  const glyphStreamBuildStartTime = getNow();
-  const chunks = buildArrowUtf8DictionaryChunks(texts);
-  const dictionaryValueCount = chunks.reduce((count, chunk) => count + chunk.dictionaryLength, 0);
-  const baselineOffsetY = toInt16(baselineOffset + lineHeight / 2);
-  const rowGlyphRanges = new Uint32Array(texts.length * 2);
-  const rowDictionaryIndices = new Uint32Array(texts.length);
-  const dictionaryGlyphRanges = new Uint32Array(dictionaryValueCount * 2);
-  const dictionaryGlyphRecordValues: number[] = [];
-  const startIndices = new Array<number>(texts.length + 1);
-  const glyphDefinitionsByCodePoint = new Map<
-    number,
-    {frame: Character | undefined; glyphId: number}
-  >();
-  const charactersByCodePoint = characterSet ? new Map<number, string>() : null;
-  // Index zero is the missing-glyph definition.
-  const glyphFrameValues = [0, 0, 0, 0];
-  let glyphCount = 0;
-
-  startIndices[0] = 0;
-  rowDictionaryIndices.fill(INVALID_DICTIONARY_INDEX);
-
-  // Pass 1: lay out each dictionary value once. These records are the shared
-  // payload uploaded to the dictionary model and scale with unique strings.
-  for (const chunk of chunks) {
-    for (let dictionaryIndex = 0; dictionaryIndex < chunk.dictionaryLength; dictionaryIndex++) {
-      const normalizedDictionaryIndex = chunk.dictionaryValueBase + dictionaryIndex;
-      const dictionaryGlyphStart = dictionaryGlyphRecordValues.length / 2;
-      const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
-      let width = 0;
-
-      populateUtf8TextIndices(chunk.dictionaryChunks, dictionaryIndex, target);
-      decodeArrowUtf8CodePoints(
-        chunk.dictionaryChunks,
-        target.startIndex,
-        target.endIndex,
-        codePoint => {
-          let definition = glyphDefinitionsByCodePoint.get(codePoint);
-          if (!definition) {
-            const character = String.fromCodePoint(codePoint);
-            const frame = mapping[character];
-            let glyphId = 0;
-            if (frame) {
-              glyphId = glyphFrameValues.length / 4;
-              if (glyphId > MAX_UINT16) {
-                throw new Error(
-                  'Dictionary compressed text glyph definitions exceed the uint16 glyph id range'
-                );
-              }
-              glyphFrameValues.push(frame.x, frame.y, frame.width, frame.height);
-            }
-            definition = {frame, glyphId};
-            glyphDefinitionsByCodePoint.set(codePoint, definition);
-            if (charactersByCodePoint) {
-              charactersByCodePoint.set(codePoint, character);
-              characterSet?.add(character);
-            }
-          }
-
-          const {frame, glyphId} = definition;
-          dictionaryGlyphRecordValues.push(
-            packSignedInt16Pair(frame ? width + frame.anchorX : width, baselineOffsetY),
-            glyphId
-          );
-          width += frame?.advance ?? MISSING_CHAR_WIDTH;
-        }
-      );
-
-      dictionaryGlyphRanges[normalizedDictionaryIndex * 2] = dictionaryGlyphStart;
-      dictionaryGlyphRanges[normalizedDictionaryIndex * 2 + 1] =
-        dictionaryGlyphRecordValues.length / 2;
-    }
-  }
-
-  // Pass 2: build row-to-dictionary and row-to-visible-glyph ranges. These
-  // records scale with rows, while repeated labels only add draw instances.
-  for (const chunk of chunks) {
-    for (let localRowIndex = 0; localRowIndex < chunk.rowEnd - chunk.rowStart; localRowIndex++) {
-      const rowIndex = chunk.rowStart + localRowIndex;
-      const dictionaryIndex = getArrowUtf8DictionaryIndex(chunk, localRowIndex);
-      const normalizedDictionaryIndex =
-        dictionaryIndex >= 0
-          ? chunk.dictionaryValueBase + dictionaryIndex
-          : INVALID_DICTIONARY_INDEX;
-      rowDictionaryIndices[rowIndex] = normalizedDictionaryIndex;
-      rowGlyphRanges[rowIndex * 2] = glyphCount;
-
-      if (normalizedDictionaryIndex !== INVALID_DICTIONARY_INDEX) {
-        const dictionaryGlyphStart = dictionaryGlyphRanges[normalizedDictionaryIndex * 2] ?? 0;
-        const dictionaryGlyphEnd =
-          dictionaryGlyphRanges[normalizedDictionaryIndex * 2 + 1] ?? dictionaryGlyphStart;
-        const dictionaryGlyphCount = Math.max(0, dictionaryGlyphEnd - dictionaryGlyphStart);
-        glyphCount += dictionaryGlyphCount;
-      }
-
-      rowGlyphRanges[rowIndex * 2 + 1] = glyphCount;
-      startIndices[rowIndex + 1] = glyphCount;
-    }
-  }
-
-  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
-    startIndices[rowIndex + 1] ??= startIndices[rowIndex] ?? 0;
-  }
-
-  const dictionaryGlyphRecords = new Uint32Array(dictionaryGlyphRecordValues);
-  const glyphFrames = new Float32Array(glyphFrameValues);
-  // This byte count intentionally excludes visible glyph occurrences; they are
-  // represented by draw instance count, not by an occurrence buffer.
-  const compressedStreamByteLength =
-    rowGlyphRanges.byteLength +
-    rowDictionaryIndices.byteLength +
-    dictionaryGlyphRanges.byteLength +
-    dictionaryGlyphRecords.byteLength;
-
-  return {
-    startIndices,
-    rowGlyphRanges,
-    rowDictionaryIndices,
-    dictionaryGlyphRanges,
-    dictionaryGlyphRecords,
-    glyphFrames,
-    glyphCount,
-    dictionaryGlyphCount: dictionaryGlyphRecords.length / 2,
-    dictionaryValueCount,
-    characterSet,
-    compressedStreamByteLength,
-    glyphDefinitionByteLength: glyphFrames.byteLength,
-    glyphStreamBuildTimeMs: getNow() - glyphStreamBuildStartTime
-  };
-}
-
-function writePackedUint16(values: Uint32Array, index: number, value: number): void {
-  const wordIndex = index >> 1;
-  const word = values[wordIndex] ?? 0;
-  values[wordIndex] = index & 1 ? word | ((value & MAX_UINT16) << 16) : word | (value & MAX_UINT16);
-}
-
-function packSignedInt16Pair(lowerValue: number, upperValue: number): number {
-  return ((upperValue & 0xffff) << 16) | (lowerValue & 0xffff);
+  return buildTextGpuDictionaryCompressedStream(createArrowTextDictionaryCodePointSource(texts), {
+    fontAtlas,
+    lineHeight,
+    characterSet
+  });
 }
 
 function isArrowUtf8DictionaryIndexType(type: DataType): type is ArrowUtf8DictionaryIndexType {
   return DataType.isInt(type) && type.bitWidth <= 32;
 }
 
-function createArrowTextRowDecoder(texts: ArrowUtf8TextVector): {
-  countCodePoints: (rowIndex: number) => number;
-  visitCodePoints: (rowIndex: number, visitCodePoint: (codePoint: number) => void) => number;
-} {
+function createArrowTextRowDecoder(texts: ArrowUtf8TextVector): TextCodePointSource {
   if (texts.type instanceof Utf8) {
     const chunks = buildArrowUtf8Chunks(texts as Vector<Utf8>);
     const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
     return {
+      rowCount: texts.length,
       countCodePoints: rowIndex => {
         populateUtf8TextIndices(chunks, rowIndex, target);
         return countArrowUtf8CodePoints(chunks, target.startIndex, target.endIndex);
@@ -775,6 +521,7 @@ function createArrowTextRowDecoder(texts: ArrowUtf8TextVector): {
 
   const chunks = buildArrowUtf8DictionaryChunks(texts as Vector<ArrowUtf8Dictionary>);
   return {
+    rowCount: texts.length,
     countCodePoints: rowIndex => getArrowUtf8DictionaryCodePoints(chunks, rowIndex).length,
     visitCodePoints: (rowIndex, visitCodePoint) => {
       const codePoints = getArrowUtf8DictionaryCodePoints(chunks, rowIndex);
@@ -782,6 +529,40 @@ function createArrowTextRowDecoder(texts: ArrowUtf8TextVector): {
         visitCodePoint(codePoint);
       }
       return codePoints.length;
+    }
+  };
+}
+
+function createArrowTextDictionaryCodePointSource(
+  texts: Vector<ArrowUtf8Dictionary>
+): TextDictionaryCodePointSource {
+  const chunks = buildArrowUtf8DictionaryChunks(texts);
+  const dictionaryValueCount = chunks.reduce((count, chunk) => count + chunk.dictionaryLength, 0);
+  const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
+  return {
+    rowCount: texts.length,
+    dictionaryValueCount,
+    getRowDictionaryIndex: rowIndex => {
+      const chunk = findDictionaryChunkByRowIndex(chunks, rowIndex);
+      if (!chunk) {
+        return -1;
+      }
+      const dictionaryIndex = getArrowUtf8DictionaryIndex(chunk, rowIndex - chunk.rowStart);
+      return dictionaryIndex < 0 ? -1 : chunk.dictionaryValueBase + dictionaryIndex;
+    },
+    visitDictionaryCodePoints: (dictionaryIndex, visitCodePoint) => {
+      const chunk = findDictionaryChunkByValueIndex(chunks, dictionaryIndex);
+      if (!chunk) {
+        return;
+      }
+      const localDictionaryIndex = dictionaryIndex - chunk.dictionaryValueBase;
+      populateUtf8TextIndices(chunk.dictionaryChunks, localDictionaryIndex, target);
+      decodeArrowUtf8CodePoints(
+        chunk.dictionaryChunks,
+        target.startIndex,
+        target.endIndex,
+        visitCodePoint
+      );
     }
   };
 }
@@ -894,22 +675,6 @@ function getNow(): number {
   return globalThis.performance?.now() ?? Date.now();
 }
 
-function toInt16(value: number): number {
-  const integerValue = Math.round(value);
-  if (integerValue < -32768 || integerValue > 32767) {
-    throw new Error(`Arrow text glyph offset ${value} is outside the signed 16-bit range`);
-  }
-  return integerValue;
-}
-
-function toUint16(value: number): number {
-  const integerValue = Math.round(value);
-  if (integerValue < 0 || integerValue > 65535) {
-    throw new Error(`Arrow text glyph frame value ${value} is outside the unsigned 16-bit range`);
-  }
-  return integerValue;
-}
-
 function findChunkByRowIndex(
   chunks: readonly ArrowUtf8Chunk[],
   rowIndex: number
@@ -940,6 +705,21 @@ function findDictionaryChunkByRowIndex(
 ): ArrowUtf8DictionaryChunk | null {
   for (const chunk of chunks) {
     if (rowIndex >= chunk.rowStart && rowIndex < chunk.rowEnd) {
+      return chunk;
+    }
+  }
+  return null;
+}
+
+function findDictionaryChunkByValueIndex(
+  chunks: readonly ArrowUtf8DictionaryChunk[],
+  dictionaryIndex: number
+): ArrowUtf8DictionaryChunk | null {
+  for (const chunk of chunks) {
+    if (
+      dictionaryIndex >= chunk.dictionaryValueBase &&
+      dictionaryIndex < chunk.dictionaryValueBase + chunk.dictionaryLength
+    ) {
       return chunk;
     }
   }

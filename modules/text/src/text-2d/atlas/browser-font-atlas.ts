@@ -7,7 +7,7 @@
 import {log} from '@luma.gl/core';
 import {buildMapping} from './text-utils';
 import type {FontAtlas, FontAtlasRenderSettings} from './font-atlas';
-import LRUCache from './lru-cache';
+import {LRUCache} from './lru-cache';
 
 /** Character collection accepted by browser-backed font atlas builders. */
 export type FontAtlasCharacterSet = Set<string> | string[] | string;
@@ -68,7 +68,7 @@ const CACHE_LIMIT = 3;
 let cache = new LRUCache<FontAtlas>(CACHE_LIMIT);
 
 /** Increases the process-wide generated atlas LRU capacity. */
-export function setGeneratedFontAtlasCacheLimit(limit: number): void {
+export function setFontAtlasCacheLimit(limit: number): void {
   log.assert(Number.isFinite(limit) && limit >= CACHE_LIMIT, 'Invalid cache limit');
   cache = new LRUCache(limit);
 }

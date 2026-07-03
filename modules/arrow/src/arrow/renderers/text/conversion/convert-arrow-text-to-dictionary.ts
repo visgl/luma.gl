@@ -55,12 +55,7 @@ export function convertArrowTextToDictionaryModelProps(
   props: ArrowTextDictionaryStorageInputProps
 ): TextDictionaryModelProps & TextDictionaryState {
   const storageState = convertArrowTextToDictionaryState(device, props);
-  const {
-    sourceVectors: _sourceVectors,
-    rowIndexColumn: _rowIndexColumn,
-    fontAtlasManager: _fontAtlasManager,
-    ...modelProps
-  } = props;
+  const {sourceVectors: _sourceVectors, rowIndexColumn: _rowIndexColumn, ...modelProps} = props;
   return {
     ...modelProps,
     ...storageState,

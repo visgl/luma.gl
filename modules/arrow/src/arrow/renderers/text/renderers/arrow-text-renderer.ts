@@ -13,13 +13,16 @@ import {
   makeGPUTableFromArrowTable
 } from '../../../gpu/arrow-gpu-table-adapters';
 import {type ModelProps} from '@luma.gl/engine';
+import {ShaderAssembler} from '@luma.gl/shadertools';
 import {GPURenderable, GPUVector, GPUTable, getRequiredGPUVector} from '@luma.gl/tables';
 import {
   TextAttributeModel,
   TextDictionaryModel,
   TextRowIndexedStorageModel,
   TextStorageModel,
-  type FontSettings
+  getFontAtlasShaderProps,
+  supportsGpuTextExpansion,
+  type FontAtlas
 } from '@luma.gl/text';
 import {
   type ArrowUtf8TextVector,
@@ -37,6 +40,7 @@ import {
 import * as arrow from 'apache-arrow';
 import {
   createArrowTextShaderInputs,
+  configureArrowTextShaderAssembler,
   TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
   TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
   FS_GLSL,
@@ -77,10 +81,8 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
   data?: ArrowRecordBatchSource;
   /** Text model path. `auto` prefers WebGPU storage paths when the source shape supports them. */
   model?: 'attribute' | 'storage' | 'storage-row-indexed' | 'dictionary' | 'auto';
-  /** Fixed character set used by text atlas/layout conversion. */
-  characterSet?: string;
-  /** Font atlas settings forwarded to the luma.gl text models. */
-  fontSettings?: FontSettings;
+  /** Normalized atlas-backed font consumed directly by text layout and rendering. */
+  fontAtlas: FontAtlas;
   /** Constant fallback RGBA color used when no row color vector is present. */
   color?: [number, number, number, number];
   /** Constant fallback row angle in degrees used when no row angle vector is present. */
@@ -95,7 +97,10 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
    * Optional shader overrides for hosts that provide their own projection modules.
    * GPUVector preparation and renderer-owned model lifecycle remain unchanged.
    */
-  modelProps?: Pick<ModelProps, 'source' | 'vs' | 'fs' | 'modules' | 'shaderInputs'>;
+  modelProps?: Pick<
+    ModelProps,
+    'source' | 'vs' | 'fs' | 'modules' | 'shaderInputs' | 'shaderAssembler'
+  >;
 };
 
 export type {CharacterColorDataType, RowColorColumnDataType};
@@ -347,6 +352,7 @@ export class ArrowTextRenderer extends GPURenderable<
     const dataChanged = hasDataProp && props.data !== previousProps.data;
     const hasModelPropChanged = props.model !== undefined && props.model !== previousProps.model;
     const hasSourcePropsChanged = hasArrowTextSourcePropsChanged(props);
+    const hasFontPropsChanged = hasChangedProp(props, previousProps, 'fontAtlas');
     if (!options.preserveDataLoad && shouldLoadTextDataBatches(nextProps, dataChanged)) {
       const dataLoadVersion = this.beginDataLoad();
       this.props = nextProps;
@@ -355,7 +361,8 @@ export class ArrowTextRenderer extends GPURenderable<
     }
 
     const shouldCancelStreaming =
-      !options.preserveDataLoad && (dataChanged || hasModelPropChanged || hasSourcePropsChanged);
+      !options.preserveDataLoad &&
+      (dataChanged || hasModelPropChanged || hasSourcePropsChanged || hasFontPropsChanged);
     const streamingTextTableToDestroy = shouldCancelStreaming
       ? this.activeStreamingTextTable
       : null;
@@ -376,6 +383,7 @@ export class ArrowTextRenderer extends GPURenderable<
     const modelChanged =
       shouldPrepareTextInput ||
       (props.model !== undefined && props.model !== previousProps.model) ||
+      hasFontPropsChanged ||
       hasArrowTextConstantStylePropsChanged(props, previousProps) ||
       nextModel !== this.resolvedModel;
     const needsRedraw = modelChanged;
@@ -585,11 +593,16 @@ export class ArrowTextRenderer extends GPURenderable<
     const color = props.color ?? DEFAULT_TEXT_COLOR;
     const angle = props.angle ?? DEFAULT_TEXT_ANGLE;
     const size = props.size ?? DEFAULT_TEXT_SIZE;
+    setArrowTextFontAtlasShaderProps(this.shaderInputs, props.fontAtlas);
+    const shaderAssembler = configureArrowTextShaderAssembler(
+      props.modelProps?.shaderAssembler ?? new ShaderAssembler(),
+      this.device.info.shadingLanguage
+    );
     const commonProps = {
       id: props.id,
-      characterSet: props.characterSet,
-      fontSettings: props.fontSettings,
+      fontAtlas: props.fontAtlas,
       ...props.modelProps,
+      shaderAssembler,
       shaderInputs: this.shaderInputs,
       modules: mergeHostShaderModules(
         getArrowTextRenderModules(this.device),
@@ -653,10 +666,9 @@ export class ArrowTextRenderer extends GPURenderable<
   ): ArrowTextRendererResolvedModel {
     const hasCharacterColors = isArrowTextCharacterColorType(data.sourceVectors.colors?.type);
     const hasTextDictionary = arrow.DataType.isDictionary(data.sourceVectors.texts.type);
-    const supportsTextStorage = supportsVertexStorageBuffers(
-      this.device,
-      TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT
-    );
+    const supportsTextStorage =
+      supportsVertexStorageBuffers(this.device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT) &&
+      supportsGpuTextExpansion(this.device);
     const supportsTextDictionary = supportsVertexStorageBuffers(
       this.device,
       TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT
@@ -750,6 +762,34 @@ export class ArrowTextRenderer extends GPURenderable<
       ...(data.alignmentBaselines ? {alignmentBaselines: data.alignmentBaselines} : {})
     };
   }
+}
+
+function setArrowTextFontAtlasShaderProps(
+  shaderInputs: ArrowTextRenderer['shaderInputs'],
+  fontAtlas: FontAtlas
+): void {
+  const fontShaderProps = getFontAtlasShaderProps(fontAtlas.renderSettings);
+  const moduleNames = new Set(shaderInputs.getModules().map(module => module.name));
+  if (moduleNames.has('textViewport')) {
+    shaderInputs.setProps({
+      textViewport: {
+        textFontRenderMode: fontShaderProps.renderMode,
+        textSdfThreshold: fontShaderProps.sdfThreshold,
+        textSdfSmoothing: fontShaderProps.sdfSmoothing
+      }
+    } as never);
+  }
+  if (moduleNames.has('textFont')) {
+    shaderInputs.setProps({textFont: fontShaderProps} as never);
+  }
+}
+
+function hasChangedProp<Props, Key extends keyof Props>(
+  props: Partial<Props>,
+  previousProps: Props,
+  key: Key
+): boolean {
+  return Object.prototype.hasOwnProperty.call(props, key) && props[key] !== previousProps[key];
 }
 
 /** Uploads explicit Arrow source vectors and attaches source byte-length metadata. */

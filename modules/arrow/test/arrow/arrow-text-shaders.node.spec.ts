@@ -7,9 +7,11 @@ import {getArrowTextRenderModules} from '@luma.gl/arrow';
 import {ShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
+  configureArrowTextShaderAssembler,
   TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
   TEXT_ROW_INDEXED_STORAGE_WGSL_SHADER,
-  TEXT_STORAGE_INDEXED_WGSL_SHADER
+  TEXT_STORAGE_INDEXED_WGSL_SHADER,
+  WGSL_SHADER
 } from '../../src/arrow/renderers/text/renderers/arrow-text-shaders';
 
 const WEBGPU_PLATFORM_INFO: PlatformInfo = {
@@ -45,5 +47,28 @@ test('Arrow text storage WGSL shaders resolve application auto bindings', t => {
     );
   }
 
+  t.end();
+});
+
+test('Arrow attribute text WGSL exposes a vertex transform hook before returning', t => {
+  const shaderAssembler = configureArrowTextShaderAssembler(new ShaderAssembler(), 'wgsl');
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: WEBGPU_PLATFORM_INFO,
+    source: WGSL_SHADER,
+    modules: [
+      ...getArrowTextRenderModules(new NullDevice({})),
+      {
+        name: 'textTransformTest',
+        inject: {
+          'vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM': '(*outputs).Position.x += 1.0;'
+        }
+      }
+    ]
+  });
+  const injectionIndex = assembledShader.source.indexOf('(*outputs).Position.x += 1.0;');
+  const returnIndex = assembledShader.source.indexOf('return outputs;', injectionIndex);
+
+  t.ok(injectionIndex >= 0, 'host vertex transform is assembled');
+  t.ok(returnIndex > injectionIndex, 'host vertex transform executes before the vertex return');
   t.end();
 });
