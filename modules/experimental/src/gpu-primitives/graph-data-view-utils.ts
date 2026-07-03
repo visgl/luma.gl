@@ -4,7 +4,7 @@
 
 import {Buffer, type Binding} from '@luma.gl/core';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/tables';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const STORAGE_BINDING_ALIGNMENT = 256;
@@ -72,4 +72,40 @@ export function createTransientView<T extends GPUVectorFormat, Parameters>(
     usage: Buffer.STORAGE
   });
   return graph.createDataView(buffer, {format, length});
+}
+
+/** Creates graph-owned scratch storage with the same chunk topology as a vector. @internal */
+export function createTransientVectorView<T extends GPUVectorFormat, Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  id: string,
+  template: GraphVectorView<T>
+): GraphVectorView<T> {
+  return new GraphVectorView({
+    id,
+    name: id,
+    format: template.format,
+    length: template.length,
+    valueLength: template.valueLength,
+    stride: template.stride,
+    byteStride: template.byteStride,
+    rowByteLength: template.rowByteLength,
+    data: template.data.map((chunk, chunkIndex) =>
+      createTransientView(graph, `${id}-chunk-${chunkIndex}`, template.format, chunk.length)
+    )
+  });
+}
+
+/** Validates that two vectors have identical ordered chunk lengths. @internal */
+export function validateMatchingVectorTopology(
+  first: GraphVectorView,
+  second: GraphVectorView,
+  name: string
+): void {
+  if (
+    first.length !== second.length ||
+    first.data.length !== second.data.length ||
+    first.data.some((chunk, chunkIndex) => chunk.length !== second.data[chunkIndex].length)
+  ) {
+    throw new Error(`${name} must preserve the same chunk topology`);
+  }
 }

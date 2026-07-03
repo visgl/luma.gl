@@ -332,6 +332,30 @@ test('GPUGridBinning handles literal/GPU bounds, boundaries, and both atomic pat
   t.end();
 });
 
+test('GPUGridBinning clears once and accumulates GPUVector chunks in order', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runVectorGrid(
+    device,
+    [Float32Array.from([0, 0, 1, 0]), new Float32Array(0), Float32Array.from([0, 1, 2, 2, 2, 2])],
+    [2, 2],
+    [0, 0, 2, 2]
+  );
+  t.deepEqual(result.counts, [1, 1, 1, 2], 'every non-empty position chunk contributes');
+  t.deepEqual(
+    result.nodeOrder,
+    ['gpu-grid-binning-clear', 'gpu-grid-binning-chunk-0-local', 'gpu-grid-binning-chunk-2-local'],
+    'one clear precedes ordered accumulation and empty chunks keep their source index'
+  );
+  t.equal(result.logicalTransientBufferCount, 0, 'position chunks are not packed or concatenated');
+  t.end();
+});
+
 test('GPU data analysis primitives validate layouts and ownership', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -556,6 +580,46 @@ async function runGrid(
   outputBuffer.destroy();
   boundsBuffer?.destroy();
   return result;
+}
+
+async function runVectorGrid(
+  device: Device,
+  chunks: Float32Array[],
+  gridSize: readonly [number, number],
+  bounds: readonly [number, number, number, number]
+): Promise<{counts: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
+  const positionBuffers = chunks.map(chunk => createInputBuffer(device, chunk));
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'positions',
+    format: 'float32x2',
+    data: chunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: positionBuffers[chunkIndex],
+          format: 'float32x2',
+          length: chunk.length / 2,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const outputBuffer = createOutputBuffer(device, gridSize[0] * gridSize[1]);
+  const graph = new GPUCommandGraph(device);
+  const positions = graph.importGPUVector('positions', vector);
+  const output = importView(graph, 'output', outputBuffer, 'uint32', gridSize[0] * gridSize[1]);
+  new GPUGridBinning({positions, output, gridSize, bounds}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-grid-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const counts = await readUint32(outputBuffer, output.length);
+  const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
+  compiled.destroy();
+  vector.destroy();
+  for (const buffer of positionBuffers) buffer.destroy();
+  outputBuffer.destroy();
+  return {counts, nodeOrder, logicalTransientBufferCount};
 }
 
 function createInputBuffer(device: Device, values: ScalarArray): Buffer {

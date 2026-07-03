@@ -443,6 +443,28 @@ test('GPUScan computes exclusive uint32 prefixes', async t => {
   t.end();
 });
 
+test('GPUScan propagates carries across GPUVector chunks without changing topology', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const chunks = [
+    Uint32Array.from({length: 300}, () => 1),
+    new Uint32Array(0),
+    Uint32Array.from([7, 8])
+  ];
+  const result = await runVectorScan(device, chunks);
+  t.equal(result.length, 3, 'output preserves all source chunks');
+  t.equal(result[0].length, 300, 'first chunk length is preserved');
+  t.deepEqual(result[1], [], 'empty middle chunk is preserved');
+  t.equal(result[0][299], 299, 'hierarchical local scan completes within the first chunk');
+  t.deepEqual(result[2], [300, 307], 'later chunks receive the sum of all preceding chunks');
+  t.end();
+});
+
 test('GPUCompaction preserves selected order and writes indirect instance count', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -557,6 +579,30 @@ test('GPUCompaction handles empty, none, all, alternating, and random masks', as
   t.end();
 });
 
+test('GPUCompaction preserves GPUVector topology while selecting across chunks', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runVectorCompaction(
+    device,
+    [Uint32Array.from([10, 11, 12]), new Uint32Array(0), Uint32Array.from([20, 21, 22])],
+    [Uint32Array.from([1, 0, 1]), new Uint32Array(0), Uint32Array.from([1, 1, 0])]
+  );
+  t.equal(result.count, 4, 'count spans the complete logical vector');
+  t.deepEqual(
+    result.chunks.map(chunk => chunk.length),
+    [3, 0, 3],
+    'output chunk boundaries remain intact'
+  );
+  t.deepEqual(result.chunks[0], [10, 12, 20], 'selection crosses into the first output chunk');
+  t.equal(result.chunks[2][0], 21, 'selection continues in the next non-empty output chunk');
+  t.end();
+});
+
 test('DrawCommandBuffer replays an indirect draw through a render bundle', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -643,6 +689,140 @@ async function readPixels(texture: Texture, width: number, height: number): Prom
   } finally {
     buffer.destroy();
   }
+}
+
+async function runVectorScan(device: Device, chunks: Uint32Array[]): Promise<number[][]> {
+  const inputBuffers = chunks.map(chunk =>
+    device.createBuffer({
+      data: chunk.length > 0 ? chunk : new Uint32Array(1),
+      usage: Buffer.STORAGE | Buffer.COPY_DST
+    })
+  );
+  const outputBuffers = chunks.map(chunk =>
+    device.createBuffer({
+      byteLength: Math.max(chunk.length, 1) * Uint32Array.BYTES_PER_ELEMENT,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    })
+  );
+  const inputVector = createUint32Vector(
+    'input',
+    inputBuffers,
+    chunks.map(chunk => chunk.length)
+  );
+  const outputVector = createUint32Vector(
+    'output',
+    outputBuffers,
+    chunks.map(chunk => chunk.length)
+  );
+  const graph = new GPUCommandGraph(device, {id: 'vector-scan'});
+  const input = graph.importGPUVector('input', inputVector);
+  const output = graph.importGPUVector('output', outputVector);
+  new GPUScan({input, output}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-scan-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const result = await Promise.all(
+    outputBuffers.map(async (buffer, chunkIndex) => {
+      const bytes = await buffer.readAsync();
+      return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, chunks[chunkIndex].length));
+    })
+  );
+  compiled.destroy();
+  inputVector.destroy();
+  outputVector.destroy();
+  for (const buffer of [...inputBuffers, ...outputBuffers]) buffer.destroy();
+  return result;
+}
+
+async function runVectorCompaction(
+  device: Device,
+  valueChunks: Uint32Array[],
+  flagChunks: Uint32Array[]
+): Promise<{chunks: number[][]; count: number}> {
+  const valueBuffers = valueChunks.map(chunk =>
+    device.createBuffer({
+      data: chunk.length > 0 ? chunk : new Uint32Array(1),
+      usage: Buffer.STORAGE | Buffer.COPY_DST
+    })
+  );
+  const flagBuffers = flagChunks.map(chunk =>
+    device.createBuffer({
+      data: chunk.length > 0 ? chunk : new Uint32Array(1),
+      usage: Buffer.STORAGE | Buffer.COPY_DST
+    })
+  );
+  const outputBuffers = valueChunks.map(chunk =>
+    device.createBuffer({
+      data: Uint32Array.from({length: Math.max(chunk.length, 1)}, () => 0xffffffff),
+      usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+    })
+  );
+  const countBuffer = device.createBuffer({
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const lengths = valueChunks.map(chunk => chunk.length);
+  const valuesVector = createUint32Vector('values', valueBuffers, lengths);
+  const flagsVector = createUint32Vector('flags', flagBuffers, lengths);
+  const outputVector = createUint32Vector('output', outputBuffers, lengths);
+  const graph = new GPUCommandGraph(device, {id: 'vector-compaction'});
+  const values = graph.importGPUVector('values', valuesVector);
+  const flags = graph.importGPUVector('flags', flagsVector);
+  const output = graph.importGPUVector('output', outputVector);
+  const countHandle = graph.importBuffer(
+    {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
+    countBuffer
+  );
+  const count = graph.createDataView(countHandle, {format: 'uint32', length: 1});
+  new GPUCompaction({input: values, flags, output, count}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-compaction-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const [chunks, countBytes] = await Promise.all([
+    Promise.all(
+      outputBuffers.map(async (buffer, chunkIndex) => {
+        const bytes = await buffer.readAsync();
+        return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, lengths[chunkIndex]));
+      })
+    ),
+    countBuffer.readAsync()
+  ]);
+  const result = {
+    chunks,
+    count: new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0]
+  };
+  compiled.destroy();
+  valuesVector.destroy();
+  flagsVector.destroy();
+  outputVector.destroy();
+  for (const buffer of [...valueBuffers, ...flagBuffers, ...outputBuffers, countBuffer]) {
+    buffer.destroy();
+  }
+  return result;
+}
+
+function createUint32Vector(
+  name: string,
+  buffers: Buffer[],
+  lengths: number[]
+): GPUVector<'uint32'> {
+  return new GPUVector({
+    type: 'data',
+    name,
+    format: 'uint32',
+    data: buffers.map(
+      (buffer, chunkIndex) =>
+        new GPUData({
+          buffer,
+          format: 'uint32',
+          length: lengths[chunkIndex],
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
 }
 
 async function runCompaction(

@@ -39,9 +39,9 @@ export type {
 } from './gpu-command-graph';
 
 export {GPUScan} from './gpu-scan';
-export type {GPUScanProps} from './gpu-scan';
+export type {GPUScanInput, GPUScanProps} from './gpu-scan';
 export {GPUCompaction} from './gpu-compaction';
-export type {GPUCompactionProps} from './gpu-compaction';
+export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
 
 export {GPUSort} from './gpu-sort';
 export type {GPUSortAlgorithm, GPUSortDirection, GPUSortProps} from './gpu-sort';
@@ -53,7 +53,11 @@ export {GPUHistogram} from './gpu-histogram';
 export type {GPUHistogramDomain, GPUHistogramInput, GPUHistogramProps} from './gpu-histogram';
 
 export {GPUGridBinning} from './gpu-grid-binning';
-export type {GPUGridBinningBounds, GPUGridBinningProps} from './gpu-grid-binning';
+export type {
+  GPUGridBinningBounds,
+  GPUGridBinningPositions,
+  GPUGridBinningProps
+} from './gpu-grid-binning';
 
 export {
   decodeGPUIndexPickInfo,
