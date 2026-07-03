@@ -15,7 +15,9 @@ export {
   getPresentationWebGLTestDevice,
   getWebGPUTestDevice,
   getWebGPUTestDevices,
-  getNullTestDevice
+  getNullTestDevice,
+  destroyWebGLTestDevices,
+  destroyTestDevices
 } from './create-test-device';
 
 // Null device
