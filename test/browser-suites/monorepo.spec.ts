@@ -11,6 +11,7 @@ import.meta.glob(
     '!../../modules/arrow-layers/test/**/*.spec.ts',
     '!../../modules/constants/test/**/*.spec.ts',
     '!../../modules/core/test/**/*.spec.ts',
+    '!../../modules/engine/test/**/*.spec.ts',
     '!../../modules/geoarrow/test/**/*.spec.ts',
     '!../../modules/tables/test/**/*.spec.ts',
     '!../../modules/test-utils/test/**/*.spec.ts',
@@ -19,8 +20,6 @@ import.meta.glob(
     '!../../modules/webgpu/test/**/*.spec.ts',
     '!../../modules/**/test/**/*.node.spec.ts',
     '!../../modules/**/test/**/wip/**/*.spec.ts',
-    '!../../modules/engine/test/geometry/gpu-geometry.spec.ts',
-    '!../../modules/engine/test/shader-inputs-types.spec.ts',
     '!../../modules/shadertools/test/lib/uniform-types.spec.ts',
     '!../../modules/shadertools/test/modules/lighting/dirlight.spec.ts',
     '!../../modules/webgl/test/adapter/helpers/get-shader-layout.spec.ts'
