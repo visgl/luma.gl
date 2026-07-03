@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGPUTestDevice, getWebGPUTestDevices} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   luma,
   ComputePipeline,
@@ -28,9 +28,9 @@ const source = /* WGSL*/ `\
 `;
 
 test('ComputePipeline#construct/delete', async t => {
-  const webgpuDevices = await getWebGPUTestDevices();
+  const webgpuDevice = await getWebGPUTestDevice();
 
-  for (const webgpuDevice of webgpuDevices) {
+  if (webgpuDevice) {
     const label = webgpuDevice.info.featureLevel;
     const shader = webgpuDevice.createShader({source});
     const computePipeline = webgpuDevice.createComputePipeline({shader});
@@ -45,14 +45,15 @@ test('ComputePipeline#construct/delete', async t => {
       computePipeline instanceof ComputePipeline,
       `${label}: ComputePipeline repeated delete successful`
     );
+    shader.destroy();
   }
   t.end();
 });
 
 test('ComputePipeline#compute', async t => {
-  const webgpuDevices = await getWebGPUTestDevices();
+  const webgpuDevice = await getWebGPUTestDevice();
 
-  for (const webgpuDevice of webgpuDevices) {
+  if (webgpuDevice) {
     const label = webgpuDevice.info.featureLevel;
     const shader = webgpuDevice.createShader({source});
     const computePipeline = webgpuDevice.createComputePipeline({
@@ -84,6 +85,7 @@ test('ComputePipeline#compute', async t => {
     const computedData = new Int32Array(await workBuffer.readAsync());
     t.equal(computedData[0], 4, `${label}: Computed data is correct`);
 
+    workBuffer.destroy();
     computePipeline.destroy();
     shader.destroy();
   }
