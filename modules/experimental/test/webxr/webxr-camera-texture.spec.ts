@@ -89,7 +89,6 @@ test('webxr#WebXRCameraTexture resolves borrowed raw camera textures once per ge
   } finally {
     gl.deleteTexture = originalDeleteTexture;
     originalDeleteTexture(cameraTextureHandle);
-    device.destroy();
   }
 
   t.end();

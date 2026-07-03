@@ -20,6 +20,18 @@ function createTestLabel(
   return `[${method}][${format}][${dimension}] ${detail}`;
 }
 
+test('DynamicTexture#mipLevels clamps zero to one', async t => {
+  const device = await getWebGLTestDevice();
+  const texture = new DynamicTexture(device, {
+    data: {data: new Uint8Array(4), width: 1, height: 1},
+    mipLevels: 0
+  });
+  await texture.ready;
+  t.is(texture.texture.mipLevels, 1, 'mipLevels set to 1 when specified as 0');
+  texture.destroy();
+  t.end();
+});
+
 test('DynamicTexture#readAsync', async t => {
   const device = await getWebGLTestDevice();
   const data = new Uint8Array([1, 2, 3, 4]);

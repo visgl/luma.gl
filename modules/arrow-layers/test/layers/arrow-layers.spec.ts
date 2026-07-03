@@ -281,14 +281,27 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     }
   ];
 
-  for (const {layer, initialViewState, getError, inspectModel} of cases) {
-    const pickingInfo = await pickFirstLayerObject(layer, initialViewState, getError, inspectModel);
-    t.ok(pickingInfo?.picked, `${layer.id} returns a picked object`);
-    t.equal(pickingInfo?.layer?.id, layer.id, `${layer.id} decodes the picked layer`);
-    t.ok(
-      Number.isInteger(pickingInfo?.index) && pickingInfo!.index >= 0,
-      `${layer.id} returns a source row index`
-    );
+  const {deck, parent} = createTestDeck();
+  try {
+    await waitForDeckInitialization(deck);
+    for (const {layer, initialViewState, getError, inspectModel} of cases) {
+      const pickingInfo = await pickFirstLayerObject(
+        deck,
+        layer,
+        initialViewState,
+        getError,
+        inspectModel
+      );
+      t.ok(pickingInfo?.picked, `${layer.id} returns a picked object`);
+      t.equal(pickingInfo?.layer?.id, layer.id, `${layer.id} decodes the picked layer`);
+      t.ok(
+        Number.isInteger(pickingInfo?.index) && pickingInfo!.index >= 0,
+        `${layer.id} returns a source row index`
+      );
+    }
+  } finally {
+    deck.finalize();
+    parent.remove();
   }
 
   t.end();
@@ -505,48 +518,43 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     }
   ];
 
-  for (const {layer, initialViewState, getError} of cases) {
-    const pickingInfo = await pickFirstLayerObject(
-      layer,
-      initialViewState,
-      getError,
-      model => t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`),
-      device
-    );
-    t.ok(pickingInfo?.picked, `${layer.id} returns a picked storage-backed object`);
-  }
-  for (const vector of [polygonColorVector, textColorVector]) {
-    for (const data of vector.data) {
-      t.notOk(
-        data.buffer.destroyed,
-        `${vector.name} remains caller-owned after layer finalization`
+  const {deck, parent} = createTestDeck(device);
+  try {
+    await waitForDeckInitialization(deck);
+    for (const {layer, initialViewState, getError} of cases) {
+      const pickingInfo = await pickFirstLayerObject(
+        deck,
+        layer,
+        initialViewState,
+        getError,
+        model => t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`)
       );
+      t.ok(pickingInfo?.picked, `${layer.id} returns a picked storage-backed object`);
     }
-    vector.destroy();
+  } finally {
+    deck.finalize();
+    parent.remove();
+    for (const vector of [polygonColorVector, textColorVector]) {
+      for (const data of vector.data) {
+        t.notOk(
+          data.buffer.destroyed,
+          `${vector.name} remains caller-owned after layer finalization`
+        );
+      }
+      vector.destroy();
+    }
   }
   t.end();
 });
 
 async function pickFirstLayerObject(
+  deck: Deck,
   layer: Layer,
   initialViewState: {target: [number, number]; zoom: number},
   getError: () => unknown = () => undefined,
-  inspectModel: (model: Model) => void = () => {},
-  device?: Device
+  inspectModel: (model: Model) => void = () => {}
 ): Promise<PickingInfo | null> {
-  const parent = document.createElement('div');
-  parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
-  parent.style.height = `${TEST_VIEWPORT_HEIGHT}px`;
-  document.body.append(parent);
-  const deck = new Deck({
-    parent,
-    width: TEST_VIEWPORT_WIDTH,
-    height: TEST_VIEWPORT_HEIGHT,
-    ...(device ? {device} : {}),
-    views: new OrthographicView({id: 'main'}),
-    initialViewState,
-    layers: [layer]
-  });
+  deck.setProps({layers: [layer], viewState: initialViewState});
 
   try {
     const model = await waitForLayerModel(layer, getError);
@@ -569,9 +577,25 @@ async function pickFirstLayerObject(
     }
     return pickingInfos[0] ?? null;
   } finally {
-    deck.finalize();
-    parent.remove();
+    deck.setProps({layers: []});
   }
+}
+
+function createTestDeck(device?: Device): {deck: Deck; parent: HTMLDivElement} {
+  const parent = document.createElement('div');
+  parent.style.width = `${TEST_VIEWPORT_WIDTH}px`;
+  parent.style.height = `${TEST_VIEWPORT_HEIGHT}px`;
+  document.body.append(parent);
+  const deck = new Deck({
+    parent,
+    width: TEST_VIEWPORT_WIDTH,
+    height: TEST_VIEWPORT_HEIGHT,
+    ...(device ? {device} : {}),
+    views: new OrthographicView({id: 'main'}),
+    initialViewState: {target: [0, 0], zoom: 0},
+    layers: []
+  });
+  return {deck, parent};
 }
 
 async function waitForLayerModel(
