@@ -128,6 +128,7 @@ type CompressedTextureProps = {
   device: Device;
   image: TextureSource;
   model: Model;
+  size?: number;
 };
 
 type TextureStat = {
@@ -721,6 +722,7 @@ export class CompressedTexture extends React.PureComponent<
 
   render() {
     const {isReady, textureError, textureFormatLabel} = this.state;
+    const size = this.props.size ?? 256;
     const textureLabel = this.getTextureLabel();
 
     return (
@@ -731,8 +733,8 @@ export class CompressedTexture extends React.PureComponent<
           alignItems: 'flex-start',
           justifyContent: 'flex-start',
           verticalAlign: 'top',
-          height: 256,
-          width: 256,
+          height: size,
+          width: size,
           border: '1px solid black',
           margin: '1em',
           position: 'relative',

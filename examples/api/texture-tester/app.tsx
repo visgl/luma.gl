@@ -16,6 +16,7 @@ import {CompressedTexture, createModel} from './components/compressed-texture';
 export type DeviceType = 'webgl' | 'webgpu';
 
 type AppProps = {
+  compact?: boolean;
   deviceType?: DeviceType;
   device?: Device | null;
   presentationDevice?: Device | null;
@@ -133,14 +134,15 @@ export default class App extends React.PureComponent<AppProps, AppState> {
 
   render() {
     const {device, model, initializationError} = this.state;
+    const {compact = false} = this.props;
     return (
-      <div>
+      <div className={compact ? 'texture-tester-compact' : undefined}>
         {initializationError ? <div>{initializationError}</div> : null}
         {!initializationError && !device ? <div>Initializing device...</div> : null}
         {device && model ? (
           <>
-            <TexturesBlocks device={device} model={model} />
-            <TextureUploaderCard device={device} model={model} />
+            <TexturesBlocks compact={compact} device={device} model={model} />
+            {!compact ? <TextureUploaderCard device={device} model={model} /> : null}
           </>
         ) : null}
       </div>
@@ -232,18 +234,39 @@ class TextureUploaderCard extends React.PureComponent<
   }
 }
 
-function TexturesBlocks(props: {device: Device; model: Model}) {
-  const {device, model} = props;
+const COMPACT_TEXTURE_SOURCES = new Set([
+  'kodim20.basis',
+  'kodim23.ktx2',
+  'shannon-dxt5.dds',
+  'shannon-astc-4x4.pvr',
+  'shannon-etc1.pvr'
+]);
 
-  return IMAGES_DATA.map((imagesData, index) => {
-    return (
-      <div key={index}>
-        <TexturesHeader imagesData={imagesData} />
-        <TexturesDescription imagesData={imagesData} />
-        <TexturesList device={device} model={model} images={imagesData.images} />
-      </div>
-    );
-  });
+function TexturesBlocks(props: {compact: boolean; device: Device; model: Model}) {
+  const {compact, device, model} = props;
+  const imageGroups = compact
+    ? IMAGES_DATA.map(imagesData => ({
+        ...imagesData,
+        images: imagesData.images.filter(image => COMPACT_TEXTURE_SOURCES.has(image.src))
+      })).filter(imagesData => imagesData.images.length > 0)
+    : IMAGES_DATA;
+
+  return (
+    <div className={compact ? 'texture-format-grid' : undefined}>
+      {imageGroups.map(imagesData => (
+        <section key={imagesData.formatName}>
+          <TexturesHeader imagesData={imagesData} />
+          <TexturesDescription imagesData={imagesData} />
+          <TexturesList
+            compact={compact}
+            device={device}
+            model={model}
+            images={imagesData.images}
+          />
+        </section>
+      ))}
+    </div>
+  );
 }
 
 function TexturesHeader(props: {imagesData: TextureFormatsInfo}) {
@@ -292,12 +315,23 @@ function TexturesDescription(props: {imagesData: TextureFormatsInfo}) {
   );
 }
 
-function TexturesList(props: {device: Device; model: Model; images: TextureFormatsInfo['images']}) {
-  const {device, model, images} = props;
+function TexturesList(props: {
+  compact?: boolean;
+  device: Device;
+  model: Model;
+  images: TextureFormatsInfo['images'];
+}) {
+  const {compact = false, device, model, images} = props;
   return (
     <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start'}}>
       {images.map((image, index) => (
-        <CompressedTexture key={index} image={image} device={device} model={model} />
+        <CompressedTexture
+          key={index}
+          image={image}
+          device={device}
+          model={model}
+          size={compact ? 192 : undefined}
+        />
       ))}
     </div>
   );

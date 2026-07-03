@@ -1,4 +1,5 @@
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+import {CubemapExample} from '@site/src/examples';
 
 # DynamicTexture
 
@@ -10,6 +11,10 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 `DynamicTexture` is the engine-level convenience wrapper around core [`Texture`](/docs/api-reference/core/resources/texture) resources.
 It adds async initialization, resizing, mipmap generation, and helpers for more complex texture layouts while still producing a normal `Texture`, `Sampler`, and `TextureView` once ready.
+
+This cubemap loads six faces asynchronously, generates mipmaps, and samples the result for both the room and the reflective object:
+
+<CubemapExample embedded showStats={false} />
 
 ## Usage
 

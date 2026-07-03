@@ -1,4 +1,5 @@
 import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-tabs';
+import {PostprocessingExample} from '@site/src/examples';
 
 # Shader Passes
 
@@ -7,6 +8,10 @@ import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-t
 A shader pass is a shader module that can run as a fullscreen texture-processing
 stage. The pass descriptor lives in `@luma.gl/shadertools`; the renderer that
 executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
+
+Choose an effect and adjust its parameters to see a shader pass update the source texture live:
+
+<PostprocessingExample embedded showStats={false} />
 
 ## Components
 

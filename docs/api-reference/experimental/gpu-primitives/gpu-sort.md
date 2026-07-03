@@ -1,4 +1,5 @@
 import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+import {GPUSortExample} from '@site/src/examples';
 
 # GPUSort
 
@@ -6,6 +7,10 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 `GPUSort` adds a stable, out-of-place key/value sort to a `GPUCommandGraph`. It sorts paired
 packed `uint32` graph views without submitting commands or reading results back to the CPU.
+
+The live example exposes dataset size, algorithm selection, sort direction, graph statistics, and result validation:
+
+<GPUSortExample embedded />
 
 ```ts
 import {GPUCommandGraph, GPUSort} from '@luma.gl/experimental';

@@ -8,6 +8,7 @@ import {
   InfoBox,
   LumaExample,
   ReactExample,
+  type ExampleDisplayProps,
   useStore
 } from './react-luma';
 
@@ -92,6 +93,13 @@ import {createArrowPolygonLayerDeck} from '../../examples/deck/arrow-polygon-lay
 import {createArrowTextLayerDeck} from '../../examples/deck/arrow-text-layer/app';
 
 const exampleConfig = {};
+
+type WebsiteExampleProps = ExampleDisplayProps & {
+  panel?: boolean;
+  showHeader?: boolean;
+  showStats?: boolean;
+  templateInfoPlacement?: 'header' | 'page';
+};
 
 type DeckExampleHandle = {
   finalize: () => void;
@@ -758,7 +766,7 @@ export const GPGPUExample: React.FC = () => {
 };
 
 /** Docusaurus wrapper for the graph-native paired GPU sort example. */
-export const GPUSortExample: React.FC = () => {
+export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -776,7 +784,11 @@ export const GPUSortExample: React.FC = () => {
   }, []);
 
   return (
-    <ExamplePage style={{background: '#f7f8fb', overflow: 'hidden'}}>
+    <ExamplePage
+      {...props}
+      embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      style={{background: '#f7f8fb', overflow: 'auto', ...props.style}}
+    >
       <main id="gpu-sort-app" />
       {errorMessage ? (
         <p role="alert" style={{padding: 22}}>
@@ -788,7 +800,10 @@ export const GPUSortExample: React.FC = () => {
 };
 
 /** Docusaurus wrapper for the graph-native data-analysis example. */
-export const GPUDataAnalysisExample: React.FC = () => {
+export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
+  embeddedHeight,
+  ...props
+}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -803,7 +818,11 @@ export const GPUDataAnalysisExample: React.FC = () => {
   }, []);
 
   return (
-    <ExamplePage style={{background: '#f6f8fb', overflow: 'hidden'}}>
+    <ExamplePage
+      {...props}
+      embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      style={{background: '#f6f8fb', overflow: 'auto', ...props.style}}
+    >
       <main id="gpu-data-analysis-app" />
       {errorMessage ? (
         <p role="alert" style={{padding: 22}}>
@@ -850,7 +869,7 @@ export const PersistenceExample: React.FC = props => (
   />
 );
 
-export const PostprocessingExample: React.FC = props => (
+export const PostprocessingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="postprocessing"
     directory="showcase"
@@ -894,7 +913,7 @@ export const AdvancedEffectsExample: React.FC = props => (
   />
 );
 
-export const OITExample: React.FC = props => (
+export const OITExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="a-buffer"
     title="Order-independent Transparency"
@@ -917,7 +936,7 @@ export const BloomExample: React.FC = props => (
   />
 );
 
-export const VideoTextureExample: React.FC = props => {
+export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
   const [cameraStatus, setCameraStatus] = useState<'idle' | 'pending' | 'live' | 'error'>('idle');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraBlocked, setIsCameraBlocked] = useState(false);
@@ -1164,7 +1183,7 @@ export const AnimationExample: React.FC = props => (
   />
 );
 
-export const CubemapExample: React.FC = props => (
+export const CubemapExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="cubemap"
     title="Texture Cube"
@@ -1196,7 +1215,7 @@ export const MultiCanvasExample: React.FC = () => {
   );
 };
 
-export const FP64Example: React.FC = () => {
+export const FP64Example: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
   const deviceType = useStore(store => store.deviceType);
   const presentationDevice = useStore(store => store.presentationDevice);
   const presentationDeviceError = useStore(store => store.presentationDeviceError);
@@ -1206,15 +1225,25 @@ export const FP64Example: React.FC = () => {
   }
 
   return deviceType && presentationDevice ? (
-    <ReactExample component={FP64App} componentProps={{presentationDevice}} showStats={false} />
+    <ReactExample
+      {...props}
+      component={FP64App}
+      componentProps={{presentationDevice}}
+      embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      showStats={false}
+      style={{overflow: 'auto', ...props.style}}
+    />
   ) : (
-    <ExamplePage>
+    <ExamplePage
+      {...props}
+      embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+    >
       <div>Initializing device...</div>
     </ExamplePage>
   );
 };
 
-export const Texture3DExample: React.FC = props => (
+export const Texture3DExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="texture-3d"
     directory="api-3d"
@@ -1225,24 +1254,47 @@ export const Texture3DExample: React.FC = props => (
   />
 );
 
-export const TextureTesterExample: React.FC = () => {
+export const TextureTesterExample: React.FC<WebsiteExampleProps> = ({
+  embeddedHeight,
+  ...props
+}) => {
   const deviceType = useStore(store => store.deviceType);
   const presentationDevice = useStore(store => store.presentationDevice);
   const presentationDeviceError = useStore(store => store.presentationDeviceError);
 
   return (
     <ExamplePage
+      {...props}
+      className={
+        props.className ||
+        (props.embedded ? 'docs-embedded-example docs-embedded-example--content' : undefined)
+      }
+      embeddedHeight={embeddedHeight ?? (props.embedded ? 'auto' : undefined)}
       style={{
         width: '100%',
-        height: '100%',
-        overflowY: 'auto',
-        overflowX: 'hidden'
+        height: props.embedded ? 'auto' : '100%',
+        overflowX: 'hidden',
+        overflowY: props.embedded ? 'visible' : 'auto',
+        ...props.style
       }}
     >
+      {props.embedded ? (
+        <div className="texture-tester-embedded-header">
+          <div>
+            <strong>Compressed texture support on this device</strong>
+            <div>Hover a preview for upload, format, and memory details.</div>
+          </div>
+          <DeviceTabs
+            devices={['webgpu', 'webgl2']}
+            style={{maxWidth: '100%', overflowX: 'auto'}}
+          />
+        </div>
+      ) : null}
       {presentationDeviceError ? (
         <div>{presentationDeviceError}</div>
       ) : deviceType && presentationDevice ? (
         <TextureTesterApp
+          compact={props.embedded}
           deviceType={getExampleDeviceType(presentationDevice)}
           presentationDevice={presentationDevice}
         />
@@ -1253,9 +1305,8 @@ export const TextureTesterExample: React.FC = () => {
   );
 };
 
-export const RenderBundlesExample: React.FC<{embedded?: boolean}> = ({embedded = false}) => (
+export const RenderBundlesExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
-    className={embedded ? 'render-bundles-embedded-example' : undefined}
     id="render-bundles"
     title="Render Bundles"
     directory="api"
@@ -1263,18 +1314,7 @@ export const RenderBundlesExample: React.FC<{embedded?: boolean}> = ({embedded =
     config={exampleConfig}
     devices={['webgpu']}
     showStats
-    style={
-      embedded
-        ? {
-            boxSizing: 'border-box',
-            height: '560px',
-            minHeight: '560px',
-            margin: '1rem 0 2rem',
-            border: '1px solid var(--ifm-color-emphasis-300)',
-            borderRadius: '8px'
-          }
-        : undefined
-    }
+    {...props}
   />
 );
 
