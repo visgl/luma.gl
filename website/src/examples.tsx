@@ -144,7 +144,15 @@ function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
         pointerEvents: 'none'
       }}
     >
-      <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12}}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12
+        }}
+      >
         <InfoBox
           id={id}
           title={title}
@@ -154,7 +162,7 @@ function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
         />
         <DeviceTabs
           devices={['webgpu', 'webgl2']}
-          style={{flexShrink: 0, pointerEvents: 'auto'}}
+          style={{flexShrink: 0, marginLeft: 'auto', pointerEvents: 'auto'}}
         />
       </div>
     </div>

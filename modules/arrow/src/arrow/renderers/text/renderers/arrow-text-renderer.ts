@@ -644,10 +644,14 @@ export class ArrowTextRenderer extends GPURenderable<
     const angle = props.angle ?? DEFAULT_TEXT_ANGLE;
     const size = props.size ?? DEFAULT_TEXT_SIZE;
     setArrowTextFontAtlasShaderProps(this.shaderInputs, props.fontAtlas);
-    const shaderAssembler = configureArrowTextShaderAssembler(
-      props.modelProps?.shaderAssembler ?? new ShaderAssembler(),
-      this.device.info.shadingLanguage
-    );
+    const shaderAssembler = props.modelProps?.shaderAssembler ?? new ShaderAssembler();
+    const usesCustomShaderSource =
+      this.device.info.shadingLanguage === 'wgsl'
+        ? Boolean(props.modelProps?.source)
+        : Boolean(props.modelProps?.vs || props.modelProps?.fs);
+    if (!usesCustomShaderSource) {
+      configureArrowTextShaderAssembler(shaderAssembler, this.device.info.shadingLanguage);
+    }
     const commonProps = {
       id: props.id,
       fontAtlas: props.fontAtlas,

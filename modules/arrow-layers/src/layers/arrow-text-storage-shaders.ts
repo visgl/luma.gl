@@ -18,7 +18,7 @@ export const DECK_TEXT_STORAGE_SHADER_LAYOUT = {
 export const DECK_TEXT_STORAGE_WGSL = /* wgsl */ `
 ${DECK_ARROW_WGSL_COLOR_UTILS}
 
-@group(0) @binding(auto) var fontAtlasTexture: texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTexture: texture_2d_array<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler: sampler;
 @group(0) @binding(auto) var<storage, read> textRowPositions: array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowColors: array<u32>;
@@ -66,6 +66,7 @@ struct TextStorageVertexOutputs {
   @location(1) color: vec4<f32>,
   @location(2) @interpolate(flat) pickingColor: vec3<f32>,
   @location(3) @interpolate(flat) visible: f32,
+  @location(4) @interpolate(flat) atlasPage: u32,
 };
 
 fn getStorageTextCorner(vertexIndex: u32) -> vec2<f32> {
@@ -195,6 +196,7 @@ fn vertexMain(
     textStorageStyleConfig.batchRowIndexBase + rowIndex
   );
   outputs.visible = select(0.0, 1.0, visible);
+  outputs.atlasPage = inputs.glyphIndices.y;
   return outputs;
 }
 
@@ -204,7 +206,8 @@ fn fragmentMain(inputs: TextStorageVertexOutputs) -> @location(0) vec4<f32> {
   let sampledAlpha = textureSample(
     fontAtlasTexture,
     fontAtlasTextureSampler,
-    inputs.textureCoordinate
+    inputs.textureCoordinate,
+    i32(inputs.atlasPage)
   ).a;
   let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
   if (picking.isActive > 0.5 && glyphAlpha <= 0.0) { discard; }

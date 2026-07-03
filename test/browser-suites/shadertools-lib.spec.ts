@@ -7,6 +7,10 @@ import {registerTestDeviceCleanup} from './test-device-cleanup';
 registerTestDeviceCleanup();
 
 import.meta.glob(
-  ['../../modules/effects/test/**/*.spec.ts', '!../../modules/effects/test/**/*.node.spec.ts'],
+  [
+    '../../modules/shadertools/test/lib/**/*.spec.ts',
+    '!../../modules/shadertools/test/**/*.node.spec.ts',
+    '!../../modules/shadertools/test/lib/uniform-types.spec.ts'
+  ],
   {eager: true}
 );

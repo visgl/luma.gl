@@ -163,6 +163,11 @@ export function drawPreparedTextStorageBatches<
   let drawSuccess = true;
   const usePreparedDraw =
     props.model.device.type === 'webgpu' && props.storageState.renderBatches.length > 1;
+  if (usePreparedDraw) {
+    // The direct batch draw path bypasses Model.draw(), so flush host-provided shader inputs
+    // (for example Deck viewport uniforms) before reading the model's bind groups below.
+    props.model.updateShaderInputs();
+  }
   for (const renderBatch of props.storageState.renderBatches) {
     const batch = props.storageState.batches[renderBatch.rowBindingBatchIndex];
     if (!batch) {

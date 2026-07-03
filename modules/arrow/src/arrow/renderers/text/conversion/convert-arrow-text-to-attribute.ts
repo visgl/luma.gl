@@ -8,7 +8,6 @@ import type {GPUVector} from '@luma.gl/tables';
 import type {TextAttributeModelProps} from '@luma.gl/text';
 import {DataType} from 'apache-arrow';
 import type {ArrowUtf8TextVector} from './arrow-text';
-import {DataType} from 'apache-arrow';
 import {
   createArrowTextAttributeState,
   type ArrowTextAttributeState,

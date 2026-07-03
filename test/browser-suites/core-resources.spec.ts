@@ -8,8 +8,8 @@ registerTestDeviceCleanup();
 
 import.meta.glob(
   [
-    '../../modules/test-utils/test/**/*.spec.ts',
-    '!../../modules/test-utils/test/**/*.node.spec.ts'
+    '../../modules/core/test/adapter/resources/{buffer,command-encoder,compute-pipeline,fence,framebuffer,query-set,render-bundle,render-pipeline,sampler,shader}.spec.ts',
+    '!../../modules/core/test/**/*.node.spec.ts'
   ],
   {eager: true}
 );

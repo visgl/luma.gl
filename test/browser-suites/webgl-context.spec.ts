@@ -7,6 +7,10 @@ import {registerTestDeviceCleanup} from './test-device-cleanup';
 registerTestDeviceCleanup();
 
 import.meta.glob(
-  ['../../modules/effects/test/**/*.spec.ts', '!../../modules/effects/test/**/*.node.spec.ts'],
+  [
+    '../../modules/webgl/test/context/**/*.spec.ts',
+    '../../modules/webgl/test/utils/**/*.spec.ts',
+    '!../../modules/webgl/test/context/**/*.node.spec.ts'
+  ],
   {eager: true}
 );

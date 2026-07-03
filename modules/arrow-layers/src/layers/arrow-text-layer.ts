@@ -209,19 +209,20 @@ void main() {
 const DECK_TEXT_WGSL = /* wgsl */ `
 ${DECK_ARROW_WGSL_COLOR_UTILS}
 
-@group(0) @binding(auto) var fontAtlasTexture: texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTexture: texture_2d_array<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler: sampler;
 
 struct TextVertexInputs {
   @location(0) positions: vec2<f32>,
   @location(1) glyphOffsets: vec2<i32>,
   @location(2) glyphFrames: vec4<u32>,
-  @location(3) rowIndices: u32,
-  @location(4) glyphClipRects: vec4<i32>,
-  @location(5) colors: vec4<f32>,
-  @location(6) angles: f32,
-  @location(7) sizes: f32,
-  @location(8) pixelOffsets: vec2<f32>,
+  @location(3) glyphPages: u32,
+  @location(4) rowIndices: u32,
+  @location(5) glyphClipRects: vec4<i32>,
+  @location(6) colors: vec4<f32>,
+  @location(7) angles: f32,
+  @location(8) sizes: f32,
+  @location(9) pixelOffsets: vec2<f32>,
 };
 
 struct TextVertexOutputs {
@@ -230,6 +231,7 @@ struct TextVertexOutputs {
   @location(1) color: vec4<f32>,
   @location(2) @interpolate(flat) pickingColor: vec3<f32>,
   @location(3) @interpolate(flat) visible: f32,
+  @location(4) @interpolate(flat) atlasPage: u32,
 };
 
 fn getCorner(vertexIndex: u32) -> vec2<f32> {
@@ -283,6 +285,7 @@ fn vertexMain(inputs: TextVertexInputs, @builtin(vertex_index) vertexIndex: u32)
     0.0,
     isGlyphVertexClipped(glyphVertexOffset, inputs.glyphClipRects)
   );
+  outputs.atlasPage = inputs.glyphPages;
   return outputs;
 }
 
@@ -292,7 +295,8 @@ fn fragmentMain(inputs: TextVertexOutputs) -> @location(0) vec4<f32> {
   let sampledAlpha = textureSample(
     fontAtlasTexture,
     fontAtlasTextureSampler,
-    inputs.textureCoordinate
+    inputs.textureCoordinate,
+    i32(inputs.atlasPage)
   ).a;
   let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
   if (picking.isActive > 0.5 && glyphAlpha <= 0.0) { discard; }
@@ -308,12 +312,13 @@ const DECK_TEXT_SHADER_LAYOUT: ShaderLayout = {
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
     {name: 'glyphOffsets', location: 1, type: 'vec2<i32>', stepMode: 'instance'},
     {name: 'glyphFrames', location: 2, type: 'vec4<u32>', stepMode: 'instance'},
-    {name: 'rowIndices', location: 3, type: 'u32', stepMode: 'instance'},
-    {name: 'glyphClipRects', location: 4, type: 'vec4<i32>', stepMode: 'instance'},
-    {name: 'colors', location: 5, type: 'vec4<f32>', stepMode: 'instance'},
-    {name: 'angles', location: 6, type: 'f32', stepMode: 'instance'},
-    {name: 'sizes', location: 7, type: 'f32', stepMode: 'instance'},
-    {name: 'pixelOffsets', location: 8, type: 'vec2<f32>', stepMode: 'instance'}
+    {name: 'glyphPages', location: 3, type: 'u32', stepMode: 'instance'},
+    {name: 'rowIndices', location: 4, type: 'u32', stepMode: 'instance'},
+    {name: 'glyphClipRects', location: 5, type: 'vec4<i32>', stepMode: 'instance'},
+    {name: 'colors', location: 6, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'angles', location: 7, type: 'f32', stepMode: 'instance'},
+    {name: 'sizes', location: 8, type: 'f32', stepMode: 'instance'},
+    {name: 'pixelOffsets', location: 9, type: 'vec2<f32>', stepMode: 'instance'}
   ],
   bindings: []
 };
