@@ -60,6 +60,23 @@ Imports every fixed-width `GPUData` chunk without packing and returns a `GraphVe
 order, vector metadata, per-chunk offsets, and shared backing buffers are preserved. Interleaved and
 variable-length vectors require explicit adapters and are rejected.
 
+## Primitive multi-chunk support
+
+The multi-chunk column means that the primitive directly accepts a `GraphVectorView` and computes
+one globally correct result across its ordered `GraphDataView` chunks. A ❌ primitive still accepts
+its documented atomic graph resources; callers must select, adapt, or explicitly pack chunks.
+
+| Primitive | Primary graph input | Multi-chunk `GraphVectorView` |
+| --- | --- | :---: |
+| `GPUScan` | `GraphDataView<'uint32'>` | ❌ |
+| `GPUCompaction` | Input and flag `GraphDataView`s | ❌ |
+| `GPUSort` | Key and value `GraphDataView`s | ❌ |
+| `GPUReduction` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
+| `GPUHistogram` | Scalar `GraphDataView` | ❌ |
+| `GPUGridBinning` | Position `GraphDataView` | ❌ |
+| `GPUIndexPickingTarget` | Texture and readback resources | ❌ |
+| `DrawCommandBuffer` | Indirect command buffer | ❌ |
+
 ## Texture APIs
 
 ### `importTexture(descriptor, defaultTexture?)`

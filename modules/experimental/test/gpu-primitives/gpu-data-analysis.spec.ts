@@ -12,7 +12,7 @@ import {
   type GPUReductionOperation
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import type {GPUVectorFormat} from '@luma.gl/tables';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 
 test('GPUReduction handles operations, formats, hierarchy, and invalid floats', async t => {
   const device = await getWebGPUTestDevice();
@@ -55,6 +55,62 @@ test('GPUReduction handles operations, formats, hierarchy, and invalid floats', 
     [0]
   );
   t.deepEqual(await runReduction(device, new Float32Array(0), 'float32', 'extent'), [0, 0]);
+  t.end();
+});
+
+test('GPUReduction combines fixed-width GPUVector chunks', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  t.deepEqual(
+    await runVectorReduction(
+      device,
+      [Uint32Array.from([7, 3]), new Uint32Array(0), Uint32Array.from([9, 4])],
+      'uint32',
+      'sum'
+    ),
+    [23],
+    'sum combines non-empty chunks and skips empty chunks'
+  );
+  t.deepEqual(
+    await runVectorReduction(
+      device,
+      [Uint32Array.from([7, 3]), Uint32Array.from([9, 4])],
+      'uint32',
+      'extent'
+    ),
+    [3, 9],
+    'extent combines per-chunk minima and maxima'
+  );
+  t.deepEqual(
+    await runVectorReduction(
+      device,
+      [Float32Array.from([Number.NaN, Number.POSITIVE_INFINITY]), Float32Array.from([4, -2])],
+      'float32',
+      'min'
+    ),
+    [-2],
+    'invalid-only chunks do not inject zero into a valid floating reduction'
+  );
+  t.deepEqual(
+    await runVectorReduction(
+      device,
+      [Float32Array.from([Number.NaN]), Float32Array.from([Number.NEGATIVE_INFINITY])],
+      'float32',
+      'max'
+    ),
+    [0],
+    'all-invalid floating chunks produce zero'
+  );
+  t.deepEqual(
+    await runVectorReduction(device, [new Int32Array(0), new Int32Array(0)], 'sint32', 'extent'),
+    [0, 0],
+    'an all-empty vector produces zero'
+  );
   t.end();
 });
 
@@ -290,6 +346,44 @@ async function runReduction(
   const result = Array.from(new ResultArray(bytes.buffer, bytes.byteOffset, outputLength));
   compiled.destroy();
   inputBuffer.destroy();
+  outputBuffer.destroy();
+  return result;
+}
+
+async function runVectorReduction(
+  device: Device,
+  chunks: ScalarArray[],
+  format: ScalarFormat,
+  operation: GPUReductionOperation
+): Promise<number[]> {
+  const outputLength = operation === 'extent' ? 2 : 1;
+  const inputBuffers = chunks.map(chunk => createInputBuffer(device, chunk));
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'input',
+    format,
+    data: chunks.map(
+      (chunk, index) =>
+        new GPUData({buffer: inputBuffers[index], format, length: chunk.length, ownsBuffer: false})
+    ),
+    ownsData: false
+  });
+  const outputBuffer = createOutputBuffer(device, outputLength);
+  const graph = new GPUCommandGraph(device);
+  const input = graph.importGPUVector('input', vector);
+  const output = importView(graph, 'output', outputBuffer, format, outputLength);
+  new GPUReduction({input, output, operation}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-reduction-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const bytes = await outputBuffer.readAsync();
+  const ResultArray =
+    format === 'uint32' ? Uint32Array : format === 'sint32' ? Int32Array : Float32Array;
+  const result = Array.from(new ResultArray(bytes.buffer, bytes.byteOffset, outputLength));
+  compiled.destroy();
+  vector.destroy();
+  for (const buffer of inputBuffers) buffer.destroy();
   outputBuffer.destroy();
   return result;
 }

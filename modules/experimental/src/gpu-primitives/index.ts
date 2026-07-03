@@ -47,7 +47,7 @@ export {GPUSort} from './gpu-sort';
 export type {GPUSortAlgorithm, GPUSortDirection, GPUSortProps} from './gpu-sort';
 
 export {GPUReduction} from './gpu-reduction';
-export type {GPUReductionOperation, GPUReductionProps} from './gpu-reduction';
+export type {GPUReductionInput, GPUReductionOperation, GPUReductionProps} from './gpu-reduction';
 
 export {GPUHistogram} from './gpu-histogram';
 export type {GPUHistogramDomain, GPUHistogramProps} from './gpu-histogram';
