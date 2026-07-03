@@ -133,7 +133,7 @@ export async function getNullTestDevice(): Promise<NullDevice> {
 
 /** Destroys and clears cached WebGL test devices without replacing shared WebGPU adapters. */
 export async function destroyWebGLTestDevices(): Promise<void> {
-  const devicePromises: Promise<Device | null>[] = [];
+  const devicePromises: Promise<WebGLDevice | null>[] = [];
   if (testDeviceCache.webglDevicePromise) {
     devicePromises.push(testDeviceCache.webglDevicePromise);
   }
@@ -146,6 +146,7 @@ export async function destroyWebGLTestDevices(): Promise<void> {
 
   const devices = await Promise.all(devicePromises);
   for (const device of new Set(devices)) {
+    device?.loseDevice();
     device?.destroy();
   }
 }
