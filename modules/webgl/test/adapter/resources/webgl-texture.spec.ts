@@ -83,6 +83,7 @@ test('WEBGLTexture keeps borrowed handles read-only', async t => {
     gl.texParameteri = originalTexParameteri;
     gl.texStorage2D = originalTexStorage2D;
     originalDeleteTexture(textureHandle);
+    device.destroy();
   }
 
   t.end();

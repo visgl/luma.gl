@@ -115,6 +115,7 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
     renderPipeline.destroy();
     vs.destroy();
     fs.destroy();
+    device.destroy();
     t.end();
     return;
   }
@@ -203,6 +204,7 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
   renderPipeline.destroy();
   vs.destroy();
   fs.destroy();
+  device.destroy();
   t.end();
 });
 
@@ -223,6 +225,7 @@ test('WEBGLRenderPipeline initializes mixed sampler uniforms before validation',
   renderPipeline.destroy();
   vs.destroy();
   fs.destroy();
+  device.destroy();
   t.end();
 });
 
@@ -239,6 +242,7 @@ test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
     renderPipeline.destroy();
     vs.destroy();
     fs.destroy();
+    device.destroy();
     t.end();
     return;
   }
@@ -290,5 +294,6 @@ test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
   renderPipeline.destroy();
   vs.destroy();
   fs.destroy();
+  device.destroy();
   t.end();
 });

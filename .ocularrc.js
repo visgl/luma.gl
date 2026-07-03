@@ -2,20 +2,10 @@
 
 import {dirname, join} from 'path';
 import {fileURLToPath} from 'url';
-import {BaseSequencer} from 'vitest/node';
 
 const packageRoot = dirname(fileURLToPath(import.meta.url));
 const devModules = join(packageRoot, 'dev-modules');
 const testDir = join(packageRoot, 'test');
-
-class BrowserSuiteSequencer extends BaseSequencer {
-  async sort(files) {
-    const sortedFiles = await super.sort(files);
-    const catchAllFiles = sortedFiles.filter(file => file.moduleId.includes('monorepo.spec.ts'));
-    const focusedFiles = sortedFiles.filter(file => !file.moduleId.includes('monorepo.spec.ts'));
-    return [...focusedFiles, ...catchAllFiles];
-  }
-}
 
 /** @type {OcularConfig} */
 const config = {
@@ -83,21 +73,11 @@ const config = {
     },
     // Local Vitest configuration layered on top of the reusable config factory.
     vitest: {
-      // Group browser tests into a few substantial realms. This isolates Deck shader hooks and
-      // bounds per-context GPU resources without recreating a device for every source test file.
-      browserIncludePatterns: ['test/browser-suites/*.spec.ts'],
-      browserSequencer: BrowserSuiteSequencer,
-      // Release WebGL contexts between aggregate realms while retaining the shared WebGPU device.
-      // Chromium/Dawn adapters cannot reliably create a replacement WebGPU device in one process.
-      browserSetupFiles: ['test/browser-suites/browser-test-cleanup.ts'],
       // Force Chromium browser projects onto SwiftShader in CI for deterministic rendering.
       // Local runs should use the machine GPU unless explicitly overridden.
       softwareGpu: Boolean(process.env.CI),
-      // Browser packages share native GPU process limits, so create their cached devices
-      // sequentially in local and CI runs.
-      fileParallelism: false,
-      // Let aggregate test realms collect detached canvases before the next realm starts.
-      launchOptions: {args: ['--js-flags=--expose-gc']},
+      // CI runners intermittently close Chromium under high parallel WebGL/WebGPU load.
+      fileParallelism: !process.env.CI,
       // Istanbul instruments only the product source allowlist before browser execution.
       // This keeps generated bundles, source maps, examples, and large fixtures out of the
       // transient coverage chunks that can exhaust smaller GitHub-hosted runner disks.

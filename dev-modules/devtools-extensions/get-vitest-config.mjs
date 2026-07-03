@@ -22,13 +22,7 @@ export async function getVitestConfig(options = {}) {
   const vitestConfig = ocularConfig.devtools?.vitest || {};
   const tsconfigProjects = vitestConfig.tsconfigProjects || ['./tsconfig.json'];
   const excludePatterns = vitestConfig.excludePatterns || [];
-  const browserIncludePatterns = vitestConfig.browserIncludePatterns || [
-    'modules/**/*.spec.{ts,js}',
-    'test/**/*.spec.{ts,js}'
-  ];
   const browserName = vitestConfig.browserName || 'chromium';
-  const browserSequencer = vitestConfig.browserSequencer;
-  const browserSetupFiles = vitestConfig.browserSetupFiles || [];
   const testTimeout = vitestConfig.testTimeout || 60_000;
   const fileParallelism = vitestConfig.fileParallelism;
   const coverageConfig = vitestConfig.coverage || {};
@@ -85,10 +79,9 @@ export async function getVitestConfig(options = {}) {
             color: 'green',
             environment: 'node',
             fileParallelism,
-            sequence: browserSequencer ? {sequencer: browserSequencer} : undefined,
             testTimeout,
-            setupFiles: [BROWSER_PROCESS_SHIM_PATH, ...browserSetupFiles],
-            include: browserIncludePatterns,
+            setupFiles: [BROWSER_PROCESS_SHIM_PATH],
+            include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
             exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...excludePatterns],
             browser: {
               enabled: true,
@@ -104,10 +97,9 @@ export async function getVitestConfig(options = {}) {
             color: 'cyan',
             environment: 'node',
             fileParallelism,
-            sequence: browserSequencer ? {sequencer: browserSequencer} : undefined,
             testTimeout,
-            setupFiles: [BROWSER_PROCESS_SHIM_PATH, ...browserSetupFiles],
-            include: browserIncludePatterns,
+            setupFiles: [BROWSER_PROCESS_SHIM_PATH],
+            include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
             exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...excludePatterns],
             browser: {
               enabled: true,

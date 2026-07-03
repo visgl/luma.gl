@@ -47,8 +47,7 @@ type TestDeviceType =
   | 'unknown';
 
 /**
- * Returns borrowed, cached test devices for the requested backend types.
- * Callers may destroy resources created on these devices, but must not destroy the devices.
+ * Returns available test devices for the requested backend types.
  * @param types Backend types to create. `'webgpu'` preserves the legacy max-feature WebGPU test device.
  */
 export async function getTestDevices(
@@ -60,8 +59,7 @@ export async function getTestDevices(
 }
 
 /**
- * Returns a borrowed, cached test device, or `null` when that backend is unavailable.
- * The caller must not destroy the returned device.
+ * Returns a test device for one backend type, or `null` when that backend is unavailable.
  * @param type Backend type to create.
  */
 export async function getTestDevice(type: TestDeviceType): Promise<Device | null> {
@@ -84,8 +82,7 @@ export async function getTestDevice(type: TestDeviceType): Promise<Device | null
 }
 
 /**
- * Returns a borrowed, cached WebGPU test device, or `null` when WebGPU is unavailable.
- * The caller must not destroy the returned device.
+ * Returns a WebGPU test device for one feature level, or `null` when WebGPU is unavailable.
  * @param featureLevel WebGPU feature level to request. Defaults to `'max'` for existing tests.
  */
 export async function getWebGPUTestDevice(
@@ -100,8 +97,7 @@ export async function getWebGPUTestDevice(
 }
 
 /**
- * Returns borrowed, cached WebGPU test devices for the requested feature levels.
- * Callers must not destroy the returned devices.
+ * Returns available WebGPU test devices for the requested feature levels.
  * @param featureLevels WebGPU feature levels to request. Defaults to both `'core'` and `'max'`.
  */
 export async function getWebGPUTestDevices(
@@ -114,68 +110,21 @@ export async function getWebGPUTestDevices(
   return devices.filter((device): device is WebGPUDevice => device !== null);
 }
 
-/** Returns a borrowed, cached WebGL test device. The caller must not destroy it. */
+/** returns WebGL device promise, if available */
 export async function getWebGLTestDevice(): Promise<WebGLDevice> {
   return _refreshLostCachedTestDevice(getOrCreateWebGLTestDevicePromise, () => {
     testDeviceCache.webglDevicePromise = null;
   });
 }
 
-/** Returns a borrowed, cached offscreen WebGL device. The caller must not destroy it. */
+/** returns an offscreen WebGL device promise for presentation-context tests, if available */
 export async function getPresentationWebGLTestDevice(): Promise<WebGLDevice | null> {
   return getOrCreatePresentationWebGLTestDevicePromise();
 }
 
-/** Returns a borrowed, cached null test device. The caller must not destroy it. */
+/** returns null device promise, if available */
 export async function getNullTestDevice(): Promise<NullDevice> {
   return getOrCreateNullTestDevicePromise();
-}
-
-/** Destroys and clears cached WebGL test devices without replacing shared WebGPU adapters. */
-export async function destroyWebGLTestDevices(): Promise<void> {
-  const devicePromises: Promise<WebGLDevice | null>[] = [];
-  if (testDeviceCache.webglDevicePromise) {
-    devicePromises.push(testDeviceCache.webglDevicePromise);
-  }
-  if (testDeviceCache.presentationWebglDevicePromise) {
-    devicePromises.push(testDeviceCache.presentationWebglDevicePromise);
-  }
-
-  testDeviceCache.webglDevicePromise = null;
-  testDeviceCache.presentationWebglDevicePromise = null;
-
-  const devices = await Promise.all(devicePromises);
-  for (const device of new Set(devices)) {
-    device?.destroy();
-    device?.canvasContext.destroy();
-    device?.canvasContext.htmlCanvas?.remove();
-  }
-}
-
-/**
- * Destroys and clears every cached test device created in the current test realm.
- * Package-level browser suites call this once after their tests complete so native GPU
- * instances do not accumulate across the full monorepo test run.
- */
-export async function destroyTestDevices(): Promise<void> {
-  const devicePromises: Promise<Device | null>[] = [];
-  if (testDeviceCache.nullDevicePromise) {
-    devicePromises.push(testDeviceCache.nullDevicePromise);
-  }
-  for (const webgpuDevicePromise of Object.values(testDeviceCache.webgpuDevicePromises)) {
-    if (webgpuDevicePromise) {
-      devicePromises.push(webgpuDevicePromise);
-    }
-  }
-
-  testDeviceCache.nullDevicePromise = null;
-  testDeviceCache.webgpuDevicePromises = {};
-
-  await destroyWebGLTestDevices();
-  const devices = await Promise.all(devicePromises);
-  for (const device of new Set(devices)) {
-    device?.destroy();
-  }
 }
 
 function getOrCreateWebGPUTestDevicePromise(

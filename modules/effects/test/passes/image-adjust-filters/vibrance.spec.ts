@@ -1,0 +1,11 @@
+import {vibrance} from '@luma.gl/effects';
+import {getShaderModuleUniforms} from '@luma.gl/shadertools';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
+
+test('vibrance#build/uniform', t => {
+  const uniforms = getShaderModuleUniforms(vibrance, {}, {});
+
+  t.ok(uniforms, 'vibrance module build is ok');
+  t.equal(uniforms.amount, 0, 'vibrance amount uniform is ok');
+  t.end();
+});

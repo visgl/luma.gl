@@ -15,7 +15,6 @@ Responsibilities:
 
 Repo customization:
 - `devtools.vitest.excludePatterns`
-- `devtools.vitest.browserIncludePatterns`
 - `devtools.vitest.tsconfigProjects`
 - `devtools.vitest.browserName`
 - `devtools.vitest.testTimeout`

@@ -9,19 +9,6 @@ import {webgl2Adapter} from '@luma.gl/webgl';
 test('WebGLDevice#lost (Promise)', async t => {
   const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
 
-  if (
-    device.info.gpu === 'software' ||
-    device.info.gpuType === 'cpu' ||
-    Boolean(device.info.fallback)
-  ) {
-    t.comment('Skipping explicit WebGL context loss on a software-backed adapter');
-    device.destroy();
-    device.canvasContext.destroy();
-    device.canvasContext.htmlCanvas?.remove();
-    t.end();
-    return;
-  }
-
   // Wrap in a promise to make sure tape waits for us
   await new Promise<void>(resolve => {
     setTimeout(() => {

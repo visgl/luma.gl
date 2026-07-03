@@ -80,6 +80,7 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
     gl.makeXRCompatible = originalMakeXRCompatible;
     gl.deleteFramebuffer = originalDeleteFramebuffer;
     originalDeleteFramebuffer(xrFramebufferHandle);
+    device.destroy();
   }
 
   t.end();
@@ -122,6 +123,7 @@ test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t
   } finally {
     globalThis.XRWebGLLayer = originalXRWebGLLayer;
     gl.makeXRCompatible = originalMakeXRCompatible;
+    device.destroy();
   }
 
   t.end();
