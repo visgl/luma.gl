@@ -8,17 +8,24 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 
 /** Owns filter source generation and controls. */
 export class ArrowFilteringDataSource {
+  private readonly onDataUpdated: (table: ArrowFilteringTable) => void;
+  private readonly onFilterPropsUpdated: (state: ArrowFilteringControlState) => void;
   readonly panels: ArrowExamplePanelManager;
   readonly controlPanel: ArrowFilteringControlPanel;
   readonly initialState: ArrowFilteringControlState = {enabled: true, min: 0.2, max: 0.8};
 
-  constructor(
-    private readonly onDataSourceChange: (table: ArrowFilteringTable) => void,
-    private readonly onFilterPropsChange: (state: ArrowFilteringControlState) => void
-  ) {
+  constructor({
+    onDataUpdated,
+    onFilterPropsUpdated
+  }: {
+    onDataUpdated: (table: ArrowFilteringTable) => void;
+    onFilterPropsUpdated: (state: ArrowFilteringControlState) => void;
+  }) {
+    this.onDataUpdated = onDataUpdated;
+    this.onFilterPropsUpdated = onFilterPropsUpdated;
     this.controlPanel = new ArrowFilteringControlPanel(
       this.initialState,
-      state => this.onFilterPropsChange(state),
+      state => this.onFilterPropsUpdated(state),
       () => this.panels.refresh()
     );
     this.panels = new ArrowExamplePanelManager({
@@ -33,7 +40,7 @@ export class ArrowFilteringDataSource {
     this.panels.setTableEntries([
       {id: 'arrow-filtering-data-source', label: 'Filterable points', kind: 'source', table}
     ]);
-    this.onDataSourceChange(table);
+    this.onDataUpdated(table);
     this.onFilterPropsChange(this.initialState);
   }
 

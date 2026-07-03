@@ -4,6 +4,7 @@
 
 import type {SettingsSchema} from '@deck.gl-community/panels';
 import type {ArrowTextLayerProps} from '@deck.gl-community/arrow-layers';
+import type {Device} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
 import {
   createStreamingRecordBatchIterator,
@@ -56,6 +57,10 @@ export type ArrowTextDataSourceUpdate = Pick<
   | 'onDataBatch'
 > & {animate: boolean; labelFieldHeight: number};
 
+export type ArrowTextDataSourceProps = {
+  onDataUpdated: (update: ArrowTextDataSourceUpdate) => void;
+};
+
 /** Owns data selection and the shared Arrow panels for the deck text example. */
 export class ArrowTextDataSource {
   private state: ArrowTextDataSourceState = {
@@ -69,16 +74,18 @@ export class ArrowTextDataSource {
     animate: true,
     modelKind: 'storage'
   };
-  private readonly panel: DeckArrowSourcePanel<ArrowTextDataSourceState>;
-  private readonly supportsStorage: boolean;
+  private panel: DeckArrowSourcePanel<ArrowTextDataSourceState> | null = null;
+  private supportsStorage = false;
+  private readonly onDataUpdated: ArrowTextDataSourceProps['onDataUpdated'];
   private sourceVersion = 0;
   private isFinalized = false;
 
-  constructor(
-    private readonly onDataSourceChange: (update: ArrowTextDataSourceUpdate) => void,
-    options: {supportsStorage?: boolean} = {}
-  ) {
-    const supportsStorage = options.supportsStorage ?? true;
+  constructor({onDataUpdated}: ArrowTextDataSourceProps) {
+    this.onDataUpdated = onDataUpdated;
+  }
+
+  initialize(device: Device): void {
+    const supportsStorage = device.type === 'webgpu';
     this.supportsStorage = supportsStorage;
     if (!supportsStorage) this.state.modelKind = 'attribute';
     this.panel = new DeckArrowSourcePanel({
@@ -92,27 +99,27 @@ export class ArrowTextDataSource {
           state = {...state, modelKind: 'attribute'};
         }
         this.state = state;
-        this.panel.setSettings(
+        this.panel?.setSettings(
           makeArrowTextDataSourceSchema(this.supportsStorage, state.colorKind),
           state
         );
         void this.emitDataSource();
       }
     });
-  }
-
-  initialize(): void {
     this.panel.initialize();
     void this.emitDataSource();
   }
 
   finalize(): void {
+    if (this.isFinalized) return;
     this.isFinalized = true;
     this.sourceVersion++;
-    this.panel.finalize();
+    this.panel?.finalize();
   }
 
   private async emitDataSource(): Promise<void> {
+    const panel = this.panel;
+    if (!panel) return;
     const sourceVersion = ++this.sourceVersion;
     const datasetKey = `${this.state.rowCountKind}${
       this.state.sourceKind === 'dictionary' ? '-dict' : ''
@@ -139,7 +146,7 @@ export class ArrowTextDataSource {
     if (!positions || !texts) {
       throw new Error('Arrow text example requires positions and texts columns');
     }
-    const tableStream = this.panel.beginTableStream(recordBatches);
+    const tableStream = panel.beginTableStream(recordBatches);
     const commonProps: ArrowTextDataSourceUpdate = {
       model: this.state.modelKind,
       color: [199, 219, 245, 255],
@@ -162,7 +169,7 @@ export class ArrowTextDataSource {
 
     if (this.state.inputMode === 'vectors') {
       tableStream.setLoadedBatchCount(recordBatches.length);
-      this.onDataSourceChange({
+      this.onDataUpdated({
         ...commonProps,
         positions: positions as ArrowTextLayerProps['positions'],
         texts: texts as ArrowTextLayerProps['texts'],
@@ -186,7 +193,7 @@ export class ArrowTextDataSource {
       return;
     }
 
-    this.onDataSourceChange({
+    this.onDataUpdated({
       ...commonProps,
       data:
         this.state.inputMode === 'stream'

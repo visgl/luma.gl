@@ -4,6 +4,7 @@
 
 import type {SettingsSchema} from '@deck.gl-community/panels';
 import type {ArrowPathLayerProps} from '@deck.gl-community/arrow-layers';
+import type {Device} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
 import {
   createStreamingPathRecordBatchIterator,
@@ -54,6 +55,10 @@ export type ArrowPathDataSourceUpdate = Pick<
   | 'onDataBatch'
 > & {animate: boolean};
 
+export type ArrowPathDataSourceProps = {
+  onDataUpdated: (update: ArrowPathDataSourceUpdate) => void;
+};
+
 /** Owns data selection and the shared Arrow panels for the deck path example. */
 export class ArrowPathDataSource {
   private state: ArrowPathDataSourceState = {
@@ -66,14 +71,16 @@ export class ArrowPathDataSource {
     animate: true,
     modelKind: 'storage'
   };
-  private readonly panel: DeckArrowSourcePanel<ArrowPathDataSourceState>;
+  private panel: DeckArrowSourcePanel<ArrowPathDataSourceState> | null = null;
+  private readonly onDataUpdated: ArrowPathDataSourceProps['onDataUpdated'];
   private isFinalized = false;
 
-  constructor(
-    private readonly onDataSourceChange: (update: ArrowPathDataSourceUpdate) => void,
-    options: {supportsStorage?: boolean} = {}
-  ) {
-    const supportsStorage = options.supportsStorage ?? true;
+  constructor({onDataUpdated}: ArrowPathDataSourceProps) {
+    this.onDataUpdated = onDataUpdated;
+  }
+
+  initialize(device: Device): void {
+    const supportsStorage = device.type === 'webgpu';
     if (!supportsStorage) this.state.modelKind = 'attribute';
     this.panel = new DeckArrowSourcePanel({
       id: 'deck-arrow-paths',
@@ -86,19 +93,19 @@ export class ArrowPathDataSource {
         this.emitDataSource();
       }
     });
-  }
-
-  initialize(): void {
     this.panel.initialize();
     this.emitDataSource();
   }
 
   finalize(): void {
+    if (this.isFinalized) return;
     this.isFinalized = true;
-    this.panel.finalize();
+    this.panel?.finalize();
   }
 
   private emitDataSource(): void {
+    const panel = this.panel;
+    if (!panel) return;
     const datasetKind = this.state.rowCountKind === '240-stream' ? '240' : '2400';
     const sourceData = makeArrowLineSourceData(
       PATH_DATASETS[datasetKind],
@@ -113,7 +120,7 @@ export class ArrowPathDataSource {
       STREAMING_PATH_BATCH_COUNT
     );
     const sourceTable = new arrow.Table(recordBatches);
-    const tableStream = this.panel.beginTableStream(recordBatches);
+    const tableStream = panel.beginTableStream(recordBatches);
     const commonProps: ArrowPathDataSourceUpdate = {
       model: this.state.modelKind,
       color: [199, 219, 245, 235],
@@ -132,7 +139,7 @@ export class ArrowPathDataSource {
     };
 
     if (this.state.inputMode === 'vectors') {
-      this.onDataSourceChange({
+      this.onDataUpdated({
         ...commonProps,
         paths: sourceData.sourceVectors.paths as ArrowPathLayerProps['paths'],
         colors:
@@ -142,7 +149,7 @@ export class ArrowPathDataSource {
       return;
     }
 
-    this.onDataSourceChange({
+    this.onDataUpdated({
       ...commonProps,
       data:
         this.state.inputMode === 'stream'

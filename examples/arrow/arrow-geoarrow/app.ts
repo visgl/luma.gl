@@ -22,17 +22,19 @@ export default class GeoArrowAnimationLoopTemplate extends AnimationLoopTemplate
   constructor({device}: AnimationProps) {
     super();
     this.renderer = new GeoArrowRenderer(device as Device);
-    this.dataSource = new GeoArrowDataSource(async data => {
-      await this.renderer.setProps({
-        data: data.table,
-        geometries: 'geometries',
-        colors: 'colors',
-        widths: 'widths',
-        radii: 'radii',
-        center: [0, 0],
-        scale: 1
-      });
-      this.dataSource.setRendererResult(this.renderer, data);
+    this.dataSource = new GeoArrowDataSource({
+      onDataUpdated: async data => {
+        await this.renderer.setProps({
+          data: data.table,
+          geometries: 'geometries',
+          colors: 'colors',
+          widths: 'widths',
+          radii: 'radii',
+          center: [0, 0],
+          scale: 1
+        });
+        this.dataSource.setRendererResult(this.renderer, data);
+      }
     });
   }
 

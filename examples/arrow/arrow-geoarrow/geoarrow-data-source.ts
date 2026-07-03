@@ -9,17 +9,24 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 
 /** Owns the mixed-geometry Arrow source and inspection panels. */
 export class GeoArrowDataSource {
+  private readonly onDataUpdated: (data: GeoArrowExampleData) => Promise<void>;
   readonly controlPanel = new GeoArrowControlPanel();
   readonly panels = new ArrowExamplePanelManager({
     descriptionPanel: () => this.controlPanel.makeDescriptionPanel()
   });
 
-  constructor(private readonly onDataSourceChange: (data: GeoArrowExampleData) => Promise<void>) {}
+  constructor({
+    onDataUpdated
+  }: {
+    onDataUpdated: (data: GeoArrowExampleData) => Promise<void>;
+  }) {
+    this.onDataUpdated = onDataUpdated;
+  }
 
   async initialize(): Promise<void> {
     this.panels.mount();
     this.controlPanel.initialize();
-    await this.onDataSourceChange(makeGeoArrowExampleData());
+    await this.onDataUpdated(makeGeoArrowExampleData());
   }
 
   setRendererResult(renderer: GeoArrowRenderer, data: GeoArrowExampleData): void {

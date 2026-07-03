@@ -21,11 +21,11 @@ export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoop
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowTimeColumnsRenderer(device as Device);
-    this.dataSource = new ArrowTimeColumnsDataSource(
-      device as Device,
-      async table => this.layer.initialize(table),
-      props => this.layer.setProps(props)
-    );
+    this.dataSource = new ArrowTimeColumnsDataSource({
+      device: device as Device,
+      onDataUpdated: async table => this.layer.initialize(table),
+      onRendererPropsUpdated: props => this.layer.setProps(props)
+    });
   }
 
   override async onInitialize(): Promise<void> {

@@ -26,26 +26,40 @@ export type ArrowPolygonDataSourceUpdate = Pick<
   'data' | 'onDataBatch' | 'tessellated' | 'polygons' | 'colors' | 'model' | 'center' | 'scale'
 > & {viewState: ArrowPolygonViewState};
 
+export type ArrowPolygonDataSourceProps = {
+  onDataUpdated: (update: ArrowPolygonDataSourceUpdate) => void;
+  onRendererPropsUpdated: (props: Pick<ArrowPolygonRendererProps, 'model'>) => void;
+  preferStorage?: boolean;
+};
+
 /** Owns polygon data generation, controls, and Arrow table inspection. */
 export class ArrowPolygonDataSource {
-  readonly panels: ArrowExamplePanelManager;
-  readonly controlPanel: ArrowPolygonControlPanel;
+  panels!: ArrowExamplePanelManager;
+  controlPanel!: ArrowPolygonControlPanel;
   inputMode: ArrowExampleInputMode = 'stream';
   rowCountKind: ArrowPolygonRowCountKind = '10k-stream';
   sourceKind: ArrowPolygonSourceKind = 'polygon';
   colorKind: ArrowPolygonColorKind = 'row-colors';
   modelKind: ArrowPolygonRendererModel = 'attribute';
   private isFinalized = false;
+  private readonly preferStorage: boolean;
+  private readonly onDataUpdated: ArrowPolygonDataSourceProps['onDataUpdated'];
+  private readonly onRendererPropsUpdated: ArrowPolygonDataSourceProps['onRendererPropsUpdated'];
 
-  constructor(
-    device: Device,
-    private readonly onDataSourceChange: (update: ArrowPolygonDataSourceUpdate) => void,
-    private readonly onRendererPropsChange: (
-      props: Pick<ArrowPolygonRendererProps, 'model'>
-    ) => void,
-    options: {supportedModelKinds?: readonly ArrowPolygonRendererModel[]} = {}
-  ) {
-    if (options.supportedModelKinds?.includes('storage')) {
+  constructor({
+    onDataUpdated,
+    onRendererPropsUpdated,
+    preferStorage = false
+  }: ArrowPolygonDataSourceProps) {
+    this.onDataUpdated = onDataUpdated;
+    this.onRendererPropsUpdated = onRendererPropsUpdated;
+    this.preferStorage = preferStorage;
+  }
+
+  initialize(device: Device): void {
+    const supportedModelKinds: readonly ArrowPolygonRendererModel[] =
+      device.type === 'webgpu' ? ['storage', 'attribute'] : ['attribute'];
+    if (this.preferStorage && supportedModelKinds.includes('storage')) {
       this.modelKind = 'storage';
     }
     this.panels = new ArrowExamplePanelManager({
@@ -66,21 +80,19 @@ export class ArrowPolygonDataSource {
           this.setPolygonInput(this.inputMode, this.rowCountKind, this.sourceKind, colorKind),
         onModelKindChange: this.handleModelKindChange
       },
-      supportedModelKinds: options.supportedModelKinds,
+      supportedModelKinds,
       onRefresh: () => this.panels.refresh()
     });
-  }
-
-  initialize(): void {
     this.panels.mount();
     this.controlPanel.initialize();
     this.setPolygonInput(this.inputMode, this.rowCountKind, this.sourceKind, this.colorKind);
   }
 
   finalize(): void {
+    if (this.isFinalized) return;
     this.isFinalized = true;
-    this.controlPanel.destroy();
-    this.panels.finalize();
+    this.controlPanel?.destroy();
+    this.panels?.finalize();
   }
 
   setPickedRow(batchIndex: number | null, rowIndex: number | null): void {
@@ -148,14 +160,14 @@ export class ArrowPolygonDataSource {
       }
     };
     if (inputMode === 'vectors') {
-      this.onDataSourceChange({
+      this.onDataUpdated({
         ...commonUpdate,
         polygons: polygonVector,
         colors: effectiveColorKind === 'constant' ? null : (colorVector ?? undefined)
       });
       return;
     }
-    this.onDataSourceChange({
+    this.onDataUpdated({
       ...commonUpdate,
       data:
         inputMode === 'stream'
@@ -172,6 +184,6 @@ export class ArrowPolygonDataSource {
     if (modelKind === this.modelKind) return;
     this.modelKind = modelKind;
     this.controlPanel.syncControls({modelKind});
-    this.onRendererPropsChange({model: modelKind});
+    this.onRendererPropsUpdated({model: modelKind});
   };
 }

@@ -29,18 +29,18 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowPointRenderer(device as Device, {modelMode: 'attributes'});
-    this.dataSource = new ArrowPointDataSource(
-      device as Device,
-      update => {
+    this.dataSource = new ArrowPointDataSource({
+      device: device as Device,
+      onDataUpdated: update => {
         this.currentTimeMilliseconds = 0;
         this.lastRenderSeconds = null;
         this.layer.setProps(update);
       },
-      props => {
+      onRendererPropsUpdated: props => {
         this.layer.setProps(props);
         this.dataSource.setMetrics(this.layer.getMetrics());
       }
-    );
+    });
   }
 
   override async onInitialize(): Promise<void> {

@@ -40,10 +40,10 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
       backgroundTexture: this.sceneFramebuffer.colorAttachments[0].texture,
       flipY: this.device.type === 'webgpu'
     });
-    this.dataSource = new ArrowColumnDataSource(
-      sourceData => void this.initializeLayer(sourceData),
-      () => this.dataSource.setRenderingStatus()
-    );
+    this.dataSource = new ArrowColumnDataSource({
+      onDataUpdated: sourceData => void this.initializeLayer(sourceData),
+      onTransparencyModeUpdated: () => this.dataSource.setRenderingStatus()
+    });
   }
 
   override async onInitialize(): Promise<void> {

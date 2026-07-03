@@ -31,6 +31,11 @@ export type ArrowPointDataSourceUpdate = Pick<
 
 /** Owns point source generation, controls, and Arrow table inspection. */
 export class ArrowPointDataSource {
+  private readonly device: Device;
+  private readonly onDataUpdated: (update: ArrowPointDataSourceUpdate) => void;
+  private readonly onRendererPropsUpdated: (
+    props: Pick<ArrowPointRendererProps, 'modelMode'>
+  ) => void;
   readonly panels: ArrowExamplePanelManager;
   readonly controlPanel: ArrowPointControlPanel;
   rowCountKind: ArrowPointRowCountKind = '10k-stream';
@@ -42,13 +47,18 @@ export class ArrowPointDataSource {
   animate = true;
   private isFinalized = false;
 
-  constructor(
-    private readonly device: Device,
-    private readonly onDataSourceChange: (update: ArrowPointDataSourceUpdate) => void,
-    private readonly onRendererPropsChange: (
-      props: Pick<ArrowPointRendererProps, 'modelMode'>
-    ) => void
-  ) {
+  constructor({
+    device,
+    onDataUpdated,
+    onRendererPropsUpdated
+  }: {
+    device: Device;
+    onDataUpdated: (update: ArrowPointDataSourceUpdate) => void;
+    onRendererPropsUpdated: (props: Pick<ArrowPointRendererProps, 'modelMode'>) => void;
+  }) {
+    this.device = device;
+    this.onDataUpdated = onDataUpdated;
+    this.onRendererPropsUpdated = onRendererPropsUpdated;
     this.panels = new ArrowExamplePanelManager({
       descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
       settingsPanel: () => this.controlPanel.makeSettingsPanel()
@@ -180,7 +190,7 @@ export class ArrowPointDataSource {
       kind: 'source',
       recordBatches: sourceData.recordBatches
     });
-    this.onDataSourceChange({
+    this.onDataUpdated({
       data: createStreamingPointRecordBatchIterator(sourceData.recordBatches)[
         Symbol.asyncIterator
       ](),
@@ -204,6 +214,6 @@ export class ArrowPointDataSource {
     if (effectiveMode === this.modelMode) return;
     this.modelMode = effectiveMode;
     this.controlPanel.syncControls({modelMode: effectiveMode});
-    this.onRendererPropsChange({modelMode: effectiveMode});
+    this.onRendererPropsUpdated({modelMode: effectiveMode});
   };
 }

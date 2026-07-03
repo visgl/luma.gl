@@ -2,18 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Deck, OrthographicView} from '@deck.gl/core';
+import {OrthographicView} from '@deck.gl/core';
 import {ArrowPolygonLayer, type ArrowLayerPickingInfo} from '@deck.gl-community/arrow-layers';
-import type {Device} from '@luma.gl/core';
 import {
   ArrowPolygonDataSource,
   type ArrowPolygonDataSourceUpdate
 } from '../../arrow/arrow-polygons/arrow-polygon-data-source';
-import {
-  getDeckExampleDeviceProps,
-  initializeDeckExampleWhenReady,
-  type DeckExampleDeviceOptions
-} from '../deck-example-device';
+import {ArrowDeck} from '../arrow-deck';
+import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
 
 /** Creates the standalone or website-hosted Deck polygon-layer example. */
@@ -21,81 +17,51 @@ export function createArrowPolygonLayerDeck(
   parent?: HTMLDivElement,
   options: DeckExampleDeviceOptions = {}
 ) {
-  let dataSource: ArrowPolygonDataSource | null = null;
   let activeUpdate: ArrowPolygonDataSourceUpdate | null = null;
-  let deck: Deck<OrthographicView> | null = null;
-  let device: Device | null = options.device ?? null;
-  let animationFrameId: number | null = null;
   let animationSeconds = 0;
   let lastAnimationMilliseconds: number | null = null;
-  const initializeDataSource = (): void => {
-    if (!deck || !device) {
-      return;
-    }
-    if (dataSource) {
-      return;
-    }
-    dataSource = new ArrowPolygonDataSource(
-      device,
-      update => {
-        activeUpdate = update;
-        animationSeconds = 0;
-        lastAnimationMilliseconds = null;
-        deck?.setProps({
-          viewState: {target: update.viewState.startCenter, zoom: 9},
-          layers: [makeArrowPolygonLayer(update, dataSource)]
-        });
-      },
-      props => {
-        if (activeUpdate) {
-          activeUpdate = {...activeUpdate, ...props};
-          deck?.setProps({layers: [makeArrowPolygonLayer(activeUpdate, dataSource)]});
-        }
-      },
-      {
-        supportedModelKinds: device.type === 'webgpu' ? ['storage', 'attribute'] : ['attribute']
-      }
-    );
-    dataSource.initialize();
-  };
 
-  deck = new Deck<OrthographicView>({
+  const deck = new ArrowDeck({
     parent,
-    device: options.device,
-    deviceProps: options.device
-      ? undefined
-      : getDeckExampleDeviceProps(options.deviceType ?? 'webgpu'),
+    ...getDeckExampleProps(options),
     views: new OrthographicView({id: 'main', controller: true}),
     initialViewState: {target: [0, 0], zoom: 9},
     getTooltip: getArrowLayerTooltip,
     layers: [],
-    onDeviceInitialized: initializedDevice => {
-      device = initializedDevice as Device;
-    }
+    onLoad: ({device}) => dataSource.initialize(device),
+    onBeforeRender: ({deck}) => {
+      const timeMilliseconds = performance.now();
+      if (lastAnimationMilliseconds !== null) {
+        animationSeconds += Math.max(timeMilliseconds - lastAnimationMilliseconds, 0) / 1000;
+      }
+      lastAnimationMilliseconds = timeMilliseconds;
+      if (activeUpdate) {
+        deck.setProps({
+          viewState: {target: getPolygonScrollCenter(activeUpdate, animationSeconds), zoom: 9}
+        });
+      }
+    },
+    onFinalize: () => dataSource.finalize()
   });
-  const cancelInitialization = initializeDeckExampleWhenReady(deck, initializeDataSource);
-  const animate = (timeMilliseconds: number): void => {
-    if (lastAnimationMilliseconds !== null) {
-      animationSeconds += Math.max(timeMilliseconds - lastAnimationMilliseconds, 0) / 1000;
-    }
-    lastAnimationMilliseconds = timeMilliseconds;
-    if (activeUpdate) {
-      deck?.setProps({
-        viewState: {target: getPolygonScrollCenter(activeUpdate, animationSeconds), zoom: 9}
+  const dataSource = new ArrowPolygonDataSource({
+    onDataUpdated: update => {
+      activeUpdate = update;
+      animationSeconds = 0;
+      lastAnimationMilliseconds = null;
+      deck.setProps({
+        viewState: {target: update.viewState.startCenter, zoom: 9},
+        layers: [makeArrowPolygonLayer(update, dataSource)]
       });
-    }
-    animationFrameId = requestAnimationFrame(animate);
-  };
-  animationFrameId = requestAnimationFrame(animate);
-
-  return {
-    finalize: () => {
-      cancelInitialization();
-      if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
-      dataSource?.finalize();
-      deck?.finalize();
-    }
-  };
+    },
+    onRendererPropsUpdated: rendererProps => {
+      if (activeUpdate) {
+        activeUpdate = {...activeUpdate, ...rendererProps};
+        deck.setProps({layers: [makeArrowPolygonLayer(activeUpdate, dataSource)]});
+      }
+    },
+    preferStorage: true
+  });
+  return deck;
 }
 
 function getPolygonScrollCenter(
@@ -116,7 +82,7 @@ function getPolygonScrollCenter(
 
 function makeArrowPolygonLayer(
   update: ArrowPolygonDataSourceUpdate,
-  dataSource: ArrowPolygonDataSource | null
+  dataSource: ArrowPolygonDataSource
 ): ArrowPolygonLayer {
   const {viewState: _viewState, ...layerProps} = update;
   return new ArrowPolygonLayer({
@@ -124,7 +90,7 @@ function makeArrowPolygonLayer(
     pickable: true,
     ...layerProps,
     onHover: (info: ArrowLayerPickingInfo) => {
-      dataSource?.setPickedRow(info.arrow?.batchIndex ?? null, info.index ?? null);
+      dataSource.setPickedRow(info.arrow?.batchIndex ?? null, info.index ?? null);
     }
   });
 }

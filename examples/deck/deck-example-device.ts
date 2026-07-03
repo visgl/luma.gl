@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Deck, View} from '@deck.gl/core';
 import type {Device} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -26,28 +25,7 @@ export function getDeckExampleDeviceProps(deviceType: DeckExampleDeviceType) {
   };
 }
 
-/** Runs example initialization once Deck has created its layer manager and presentation context. */
-export function initializeDeckExampleWhenReady<ViewsT extends View | View[]>(
-  deck: Deck<ViewsT>,
-  initialize: () => void
-): () => void {
-  let animationFrameId: number | null = null;
-  let isCancelled = false;
-  const checkDeck = (): void => {
-    if (isCancelled) {
-      return;
-    }
-    if (deck.isInitialized) {
-      initialize();
-      return;
-    }
-    animationFrameId = requestAnimationFrame(checkDeck);
-  };
-  checkDeck();
-  return () => {
-    isCancelled = true;
-    if (animationFrameId !== null) {
-      cancelAnimationFrame(animationFrameId);
-    }
-  };
+/** Resolves host device selection into Deck construction props. */
+export function getDeckExampleProps({device, deviceType = 'webgpu'}: DeckExampleDeviceOptions) {
+  return device ? {device} : {deviceProps: getDeckExampleDeviceProps(deviceType)};
 }

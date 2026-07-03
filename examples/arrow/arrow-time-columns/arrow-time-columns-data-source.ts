@@ -17,15 +17,25 @@ const TIME_COLUMNS_VERTEX_STORAGE_BUFFER_COUNT = 5;
 
 /** Owns the temporal source table and rendering-mode controls. */
 export class ArrowTimeColumnsDataSource {
+  private readonly device: Device;
+  private readonly onDataUpdated: (table: arrow.Table) => Promise<void>;
+  private readonly onRendererPropsUpdated: (props: ArrowTimeColumnsRendererProps) => void;
   readonly controlPanel: ArrowTimeColumnsControlPanel;
   readonly panels: ArrowExamplePanelManager;
   activeRenderMode: TimeColumnsRenderMode;
 
-  constructor(
-    private readonly device: Device,
-    private readonly onDataSourceChange: (table: arrow.Table) => Promise<void>,
-    private readonly onRendererPropsChange: (props: ArrowTimeColumnsRendererProps) => void
-  ) {
+  constructor({
+    device,
+    onDataUpdated,
+    onRendererPropsUpdated
+  }: {
+    device: Device;
+    onDataUpdated: (table: arrow.Table) => Promise<void>;
+    onRendererPropsUpdated: (props: ArrowTimeColumnsRendererProps) => void;
+  }) {
+    this.device = device;
+    this.onDataUpdated = onDataUpdated;
+    this.onRendererPropsUpdated = onRendererPropsUpdated;
     const supportsStorage = supportsVertexStorageBuffers(
       device,
       TIME_COLUMNS_VERTEX_STORAGE_BUFFER_COUNT
@@ -49,7 +59,7 @@ export class ArrowTimeColumnsDataSource {
     this.panels.setTableEntries([
       {id: 'time-columns-source', label: 'Temporal schedule source', kind: 'source', table}
     ]);
-    await this.onDataSourceChange(table);
+    await this.onDataUpdated(table);
   }
 
   updateLabels(renderer: ArrowTimeColumnsRenderer): void {
@@ -73,6 +83,6 @@ export class ArrowTimeColumnsDataSource {
     this.controlPanel.syncControls({renderMode: nextRenderMode});
     if (nextRenderMode === this.activeRenderMode) return;
     this.activeRenderMode = nextRenderMode;
-    this.onRendererPropsChange({renderMode: nextRenderMode});
+    this.onRendererPropsUpdated({renderMode: nextRenderMode});
   };
 }

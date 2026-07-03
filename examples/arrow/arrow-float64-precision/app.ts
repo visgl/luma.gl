@@ -23,12 +23,14 @@ export default class ArrowFloat64PrecisionAnimationLoopTemplate extends Animatio
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.dataSource = new ArrowFloat64PrecisionDataSource(async sourceData => {
-      const renderer = await ArrowFloat64PrecisionRenderer.create(this.device, sourceData);
-      const previousRenderer = this.renderer;
-      this.renderer = renderer;
-      scheduleRendererDestroy(this.device, previousRenderer);
-      return renderer;
+    this.dataSource = new ArrowFloat64PrecisionDataSource({
+      onDataUpdated: async sourceData => {
+        const renderer = await ArrowFloat64PrecisionRenderer.create(this.device, sourceData);
+        const previousRenderer = this.renderer;
+        this.renderer = renderer;
+        scheduleRendererDestroy(this.device, previousRenderer);
+        return renderer;
+      }
     });
   }
 

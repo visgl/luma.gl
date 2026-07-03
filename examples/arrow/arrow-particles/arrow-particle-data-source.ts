@@ -13,13 +13,20 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 
 /** Owns the particle stream and its table-inspection UI. */
 export class ArrowParticleDataSource {
+  private readonly onDataUpdated: (props: ArrowParticleRendererProps) => void;
   readonly controlPanel = new ArrowParticlesControlPanel();
   readonly panels = new ArrowExamplePanelManager({
     descriptionHtml: makeArrowParticlesControlPanelHtml()
   });
   private isFinalized = false;
 
-  constructor(private readonly onDataSourceChange: (props: ArrowParticleRendererProps) => void) {}
+  constructor({
+    onDataUpdated
+  }: {
+    onDataUpdated: (props: ArrowParticleRendererProps) => void;
+  }) {
+    this.onDataUpdated = onDataUpdated;
+  }
 
   initialize(): void {
     this.panels.mount();
@@ -37,7 +44,7 @@ export class ArrowParticleDataSource {
       kind: 'source',
       recordBatches
     });
-    this.onDataSourceChange({
+    this.onDataUpdated({
       data: createStreamingParticleRecordBatchIterator(recordBatches),
       onDataBatch: ({loadedBatchCount}) => {
         if (this.isFinalized) return;

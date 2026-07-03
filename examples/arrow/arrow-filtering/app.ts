@@ -19,13 +19,13 @@ export default class ArrowFilteringAnimationLoopTemplate extends AnimationLoopTe
 
   constructor({device}: AnimationProps) {
     super();
-    this.dataSource = new ArrowFilteringDataSource(
-      table => {
+    this.dataSource = new ArrowFilteringDataSource({
+      onDataUpdated: table => {
         this.renderer?.destroy();
         this.renderer = new ArrowFilteringRenderer(device, table);
       },
-      state => this.renderer?.setFilterProps(state)
-    );
+      onFilterPropsUpdated: state => this.renderer?.setFilterProps(state)
+    });
   }
 
   override async onInitialize(): Promise<void> {

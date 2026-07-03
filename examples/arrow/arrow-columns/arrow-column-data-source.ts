@@ -13,19 +13,26 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 
 /** Owns asynchronous column source loading and the example controls. */
 export class ArrowColumnDataSource {
+  private readonly onDataUpdated: (sourceData: ArrowColumnSourceData) => void;
+  private readonly onTransparencyModeUpdated: (mode: ArrowColumnTransparencyMode) => void;
   readonly controlPanel: ArrowColumnRendererControlPanel;
   readonly panels: ArrowExamplePanelManager;
   transparencyMode: ArrowColumnTransparencyMode = 'a-buffer';
   private isFinalized = false;
 
-  constructor(
-    private readonly onDataSourceChange: (sourceData: ArrowColumnSourceData) => void,
-    private readonly onTransparencyModeChange: (mode: ArrowColumnTransparencyMode) => void
-  ) {
+  constructor({
+    onDataUpdated,
+    onTransparencyModeUpdated
+  }: {
+    onDataUpdated: (sourceData: ArrowColumnSourceData) => void;
+    onTransparencyModeUpdated: (mode: ArrowColumnTransparencyMode) => void;
+  }) {
+    this.onDataUpdated = onDataUpdated;
+    this.onTransparencyModeUpdated = onTransparencyModeUpdated;
     this.controlPanel = new ArrowColumnRendererControlPanel({
       onTransparencyModeChange: mode => {
         this.transparencyMode = mode;
-        this.onTransparencyModeChange(mode);
+        this.onTransparencyModeUpdated(mode);
       }
     });
     this.panels = new ArrowExamplePanelManager({
@@ -57,7 +64,7 @@ export class ArrowColumnDataSource {
           table: sourceData.geometryTable
         }
       ]);
-      this.onDataSourceChange(sourceData);
+      this.onDataUpdated(sourceData);
     } catch (error) {
       this.controlPanel.setStatus(error instanceof Error ? error.message : String(error));
       throw error;

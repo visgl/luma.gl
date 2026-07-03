@@ -29,20 +29,19 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
       model: 'attribute',
       onPick: this.handlePolygonPicked
     });
-    this.dataSource = new ArrowPolygonDataSource(
-      device as Device,
-      update => {
+    this.dataSource = new ArrowPolygonDataSource({
+      onDataUpdated: update => {
         this.viewState = update.viewState;
         this.animationSeconds = 0;
         this.lastRenderSeconds = null;
         this.layer.setProps(update);
       },
-      props => this.layer.setProps(props)
-    );
+      onRendererPropsUpdated: props => this.layer.setProps(props)
+    });
   }
 
   override async onInitialize(): Promise<void> {
-    this.dataSource.initialize();
+    this.dataSource.initialize(this.layer.device);
   }
 
   override onRender({aspect, device, time, _mousePosition}: AnimationProps): void {

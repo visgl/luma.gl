@@ -21,11 +21,11 @@ export default class ArrowTemporalStarfieldAnimationLoopTemplate extends Animati
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowTemporalStarfieldRenderer(device as Device);
-    this.dataSource = new ArrowTemporalStarfieldDataSource(
-      device as Device,
-      props => this.layer.setProps(props),
-      props => this.layer.setProps(props)
-    );
+    this.dataSource = new ArrowTemporalStarfieldDataSource({
+      device: device as Device,
+      onDataUpdated: props => this.layer.setProps(props),
+      onRendererPropsUpdated: props => this.layer.setProps(props)
+    });
   }
 
   override async onInitialize(): Promise<void> {

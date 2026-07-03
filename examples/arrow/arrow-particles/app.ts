@@ -21,7 +21,9 @@ export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTe
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowParticleRenderer(device as Device);
-    this.dataSource = new ArrowParticleDataSource(props => this.layer.setProps(props));
+    this.dataSource = new ArrowParticleDataSource({
+      onDataUpdated: props => this.layer.setProps(props)
+    });
   }
 
   override async onInitialize(): Promise<void> {
