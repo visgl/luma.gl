@@ -25,8 +25,8 @@ const outputValueHandle = graph.importBuffer(
 const sort = new GPUSort({
   keys,
   values,
-  outputKeys: graph.createBufferView(outputKeyHandle, {format: 'uint32', length}),
-  outputValues: graph.createBufferView(outputValueHandle, {format: 'uint32', length}),
+  outputKeys: graph.createDataView(outputKeyHandle, {format: 'uint32', length}),
+  outputValues: graph.createDataView(outputValueHandle, {format: 'uint32', length}),
   algorithm: 'auto',
   direction: 'ascending'
 });
@@ -45,10 +45,10 @@ device.submit(commandEncoder.finish());
 ```ts
 type GPUSortProps = {
   id?: string;
-  keys: GraphBufferView<'uint32'>;
-  values: GraphBufferView<'uint32'>;
-  outputKeys: GraphBufferView<'uint32'>;
-  outputValues: GraphBufferView<'uint32'>;
+  keys: GraphDataView<'uint32'>;
+  values: GraphDataView<'uint32'>;
+  outputKeys: GraphDataView<'uint32'>;
+  outputValues: GraphDataView<'uint32'>;
   algorithm?: 'auto' | 'bitonic' | 'radix';
   direction?: 'ascending' | 'descending';
 };

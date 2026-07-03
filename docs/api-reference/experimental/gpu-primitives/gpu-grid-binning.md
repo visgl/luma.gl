@@ -20,10 +20,10 @@ new GPUGridBinning({
 ```ts
 type GPUGridBinningProps = {
   id?: string;
-  positions: GraphBufferView<'float32x2'>;
-  output: GraphBufferView<'uint32'>;
+  positions: GraphDataView<'float32x2'>;
+  output: GraphDataView<'uint32'>;
   gridSize: readonly [number, number];
-  bounds: readonly [number, number, number, number] | GraphBufferView<'float32x4'>;
+  bounds: readonly [number, number, number, number] | GraphDataView<'float32x4'>;
 };
 ```
 

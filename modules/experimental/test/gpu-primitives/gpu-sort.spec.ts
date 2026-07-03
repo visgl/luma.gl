@@ -133,16 +133,16 @@ test('GPUSort validates layouts, lengths, graph ownership, and output buffers', 
     byteLength: 32,
     usage: Buffer.STORAGE
   });
-  const keys = graph.createBufferView(keysHandle, {format: 'uint32', length: 4});
-  const values = graph.createBufferView(valuesHandle, {format: 'uint32', length: 4});
-  const outputKeys = graph.createBufferView(outputKeysHandle, {format: 'uint32', length: 4});
-  const outputValues = graph.createBufferView(outputValuesHandle, {format: 'uint32', length: 4});
+  const keys = graph.createDataView(keysHandle, {format: 'uint32', length: 4});
+  const values = graph.createDataView(valuesHandle, {format: 'uint32', length: 4});
+  const outputKeys = graph.createDataView(outputKeysHandle, {format: 'uint32', length: 4});
+  const outputValues = graph.createDataView(outputValuesHandle, {format: 'uint32', length: 4});
 
   t.throws(
     () =>
       new GPUSort({
         keys,
-        values: graph.createBufferView(valuesHandle, {format: 'uint32', length: 3}),
+        values: graph.createDataView(valuesHandle, {format: 'uint32', length: 3}),
         outputKeys,
         outputValues
       }),
@@ -154,7 +154,7 @@ test('GPUSort validates layouts, lengths, graph ownership, and output buffers', 
     /separate buffers/,
     'input/output alias is rejected'
   );
-  const unaligned = graph.createBufferView(outputKeysHandle, {
+  const unaligned = graph.createDataView(outputKeysHandle, {
     format: 'uint32',
     length: 1,
     byteOffset: 2
@@ -253,7 +253,7 @@ function importView(graph: GPUCommandGraph, id: string, buffer: Buffer, length: 
     {id, byteLength: buffer.byteLength, usage: buffer.usage},
     buffer
   );
-  return graph.createBufferView(handle, {format: 'uint32', length});
+  return graph.createDataView(handle, {format: 'uint32', length});
 }
 
 function makeUncompiledSort(
@@ -265,7 +265,7 @@ function makeUncompiledSort(
   const byteLength = Math.max(length, 1) * Uint32Array.BYTES_PER_ELEMENT;
   const createView = (id: string) => {
     const handle = graph.createTransientBuffer({id, byteLength, usage: Buffer.STORAGE});
-    return graph.createBufferView(handle, {format: 'uint32', length});
+    return graph.createDataView(handle, {format: 'uint32', length});
   };
   return new GPUSort({
     keys: createView('keys'),

@@ -304,7 +304,7 @@ function importOutput<T extends 'float32' | 'uint32'>(
     {id, byteLength: buffer.byteLength, usage: buffer.usage},
     buffer
   );
-  return graph.createBufferView(handle, {format, length});
+  return graph.createDataView(handle, {format, length});
 }
 
 function renderHistogram(element: HTMLElement, counts: number[]): void {

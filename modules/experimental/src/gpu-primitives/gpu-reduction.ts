@@ -4,14 +4,14 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphBufferView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   type GPUScalarFormat,
   validatePackedView
-} from './graph-buffer-view-utils';
+} from './graph-data-view-utils';
 
 const REDUCTION_WORKGROUP_SIZE = 256;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
@@ -22,8 +22,8 @@ export type GPUReductionOperation = 'sum' | 'min' | 'max' | 'extent';
 /** Properties for a graph-native scalar reduction. */
 export type GPUReductionProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
-  input: GraphBufferView<T>;
-  output: GraphBufferView<T>;
+  input: GraphDataView<T>;
+  output: GraphDataView<T>;
   operation: GPUReductionOperation;
 };
 
@@ -35,8 +35,8 @@ export type GPUReductionProps<T extends GPUScalarFormat = GPUScalarFormat> = {
  */
 export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly id: string;
-  readonly input: GraphBufferView<T>;
-  readonly output: GraphBufferView<T>;
+  readonly input: GraphDataView<T>;
+  readonly output: GraphDataView<T>;
   readonly operation: GPUReductionOperation;
 
   constructor(props: GPUReductionProps<T>) {
@@ -74,8 +74,8 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
     const valuesPerRow = this.operation === 'extent' ? 2 : 1;
     const needsValidity =
       this.input.format === 'float32' && ['min', 'max', 'extent'].includes(this.operation);
-    let inputValues: GraphBufferView<T> = this.input;
-    let inputValidity: GraphBufferView<'uint32'> | undefined;
+    let inputValues: GraphDataView<T> = this.input;
+    let inputValidity: GraphDataView<'uint32'> | undefined;
     let inputLength = this.input.length;
     let levelIndex = 0;
 
@@ -86,7 +86,7 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
         `${this.id}-level-${levelIndex}-values`,
         this.input.format,
         outputLength * valuesPerRow
-      ) as GraphBufferView<T>;
+      ) as GraphDataView<T>;
       const outputValidity = needsValidity
         ? createTransientView(
             graph,
@@ -133,10 +133,10 @@ function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
     id: string;
     format: T;
     operation: GPUReductionOperation;
-    inputValues: GraphBufferView<T>;
-    inputValidity?: GraphBufferView<'uint32'>;
-    outputValues: GraphBufferView<T>;
-    outputValidity?: GraphBufferView<'uint32'>;
+    inputValues: GraphDataView<T>;
+    inputValidity?: GraphDataView<'uint32'>;
+    outputValues: GraphDataView<T>;
+    outputValidity?: GraphDataView<'uint32'>;
     inputLength: number;
     valuesPerRow: number;
     firstLevel: boolean;
@@ -231,7 +231,7 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
       ? ([{buffer: props.outputValidity, usage: 'storage-write'}] as GraphBufferUse[])
       : [])
   ];
-  const bindings: Record<string, GraphBufferView> = {inputValues: props.inputValues};
+  const bindings: Record<string, GraphDataView> = {inputValues: props.inputValues};
   if (props.inputValidity) bindings['inputValidity'] = props.inputValidity;
   bindings['outputValues'] = props.outputValues;
   if (props.outputValidity) bindings['outputValidity'] = props.outputValidity;
@@ -249,9 +249,9 @@ function addFinalizeReductionPass<Parameters, T extends GPUScalarFormat>(
   props: {
     id: string;
     format: T;
-    inputValues: GraphBufferView<T>;
-    inputValidity?: GraphBufferView<'uint32'>;
-    output: GraphBufferView<T>;
+    inputValues: GraphDataView<T>;
+    inputValidity?: GraphDataView<'uint32'>;
+    output: GraphDataView<T>;
     valuesPerRow: number;
   }
 ): void {
@@ -294,7 +294,7 @@ ${props.inputValidity ? '@group(0) @binding(1) var<storage, read> inputValidity:
 function addClearReductionPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
-  output: GraphBufferView<GPUScalarFormat>
+  output: GraphDataView<GPUScalarFormat>
 ): void {
   const passId = `${id}-clear`;
   const shaderType = getShaderType(output.format);
@@ -318,7 +318,7 @@ function addComputationPass<Parameters>(
     id: string;
     source: string;
     resources: GraphBufferUse[];
-    bindings: Record<string, GraphBufferView>;
+    bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
 ): void {

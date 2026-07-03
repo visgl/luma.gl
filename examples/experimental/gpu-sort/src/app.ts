@@ -179,8 +179,8 @@ class GPUSortExample {
       const sort = new GPUSort({
         keys: keyView,
         values: valueView,
-        outputKeys: graph.createBufferView(outputKeyHandle, {format: 'uint32', length}),
-        outputValues: graph.createBufferView(outputValueHandle, {format: 'uint32', length}),
+        outputKeys: graph.createDataView(outputKeyHandle, {format: 'uint32', length}),
+        outputValues: graph.createDataView(outputValueHandle, {format: 'uint32', length}),
         algorithm,
         direction
       });

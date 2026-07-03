@@ -16,9 +16,9 @@ new GPUHistogram({input: values, output: counts, domain: 'auto'}).addToGraph(gra
 ```ts
 type GPUHistogramProps<T extends 'uint32' | 'sint32' | 'float32'> = {
   id?: string;
-  input: GraphBufferView<T>;
-  output: GraphBufferView<'uint32'>;
-  domain: readonly [number, number] | GraphBufferView<T> | 'auto';
+  input: GraphDataView<T>;
+  output: GraphDataView<'uint32'>;
+  domain: readonly [number, number] | GraphDataView<T> | 'auto';
 };
 ```
 

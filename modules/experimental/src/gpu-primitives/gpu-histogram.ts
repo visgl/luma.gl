@@ -4,7 +4,7 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphBufferView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
   createTransientView,
   getViewBinding,
@@ -12,7 +12,7 @@ import {
   type GPUScalarFormat,
   validatePackedUint32View,
   validatePackedView
-} from './graph-buffer-view-utils';
+} from './graph-data-view-utils';
 import {GPUReduction} from './gpu-reduction';
 
 const HISTOGRAM_WORKGROUP_SIZE = 256;
@@ -22,22 +22,22 @@ const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
 /** Domain accepted by {@link GPUHistogram}. */
 export type GPUHistogramDomain<T extends GPUScalarFormat = GPUScalarFormat> =
   | readonly [number, number]
-  | GraphBufferView<T>
+  | GraphDataView<T>
   | 'auto';
 
 /** Properties for graph-native scalar histogram counting. */
 export type GPUHistogramProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
-  input: GraphBufferView<T>;
-  output: GraphBufferView<'uint32'>;
+  input: GraphDataView<T>;
+  output: GraphDataView<'uint32'>;
   domain: GPUHistogramDomain<T>;
 };
 
 /** Graph-native histogram counting for packed 32-bit scalar values. */
 export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly id: string;
-  readonly input: GraphBufferView<T>;
-  readonly output: GraphBufferView<'uint32'>;
+  readonly input: GraphDataView<T>;
+  readonly output: GraphDataView<'uint32'>;
   readonly domain: GPUHistogramDomain<T>;
 
   constructor(props: GPUHistogramProps<T>) {
@@ -81,7 +81,7 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
         `${this.id}-auto-domain`,
         this.input.format,
         2
-      ) as GraphBufferView<T>;
+      ) as GraphDataView<T>;
       new GPUReduction({
         id: `${this.id}-extent`,
         input: this.input,
@@ -105,7 +105,7 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
 function addClearHistogramPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
-  output: GraphBufferView<'uint32'>
+  output: GraphDataView<'uint32'>
 ): void {
   const passId = `${id}-clear`;
   const source = /* wgsl */ `
@@ -130,9 +130,9 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
-    input: GraphBufferView<T>;
-    output: GraphBufferView<'uint32'>;
-    domain: readonly [number, number] | GraphBufferView<T>;
+    input: GraphDataView<T>;
+    output: GraphDataView<'uint32'>;
+    domain: readonly [number, number] | GraphDataView<T>;
   }
 ): void {
   const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
@@ -207,7 +207,7 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
 const ELEMENT_COUNT: u32 = ${props.input.length}u;
 const BIN_COUNT: u32 = ${props.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
-${gpuDomain ? `const DOMAIN_OFFSET: u32 = ${getViewElementOffset(props.domain as GraphBufferView)}u;` : ''}
+${gpuDomain ? `const DOMAIN_OFFSET: u32 = ${getViewElementOffset(props.domain as GraphDataView)}u;` : ''}
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 @group(0) @binding(0) var<storage, read> inputValues: array<${shaderType}>;
 ${domainBinding}
@@ -245,7 +245,7 @@ ${integerBinningFunction}
   const resources: GraphBufferUse[] = [
     {buffer: props.input, usage: 'storage-read'},
     ...(gpuDomain
-      ? ([{buffer: props.domain as GraphBufferView, usage: 'storage-read'}] as GraphBufferUse[])
+      ? ([{buffer: props.domain as GraphDataView, usage: 'storage-read'}] as GraphBufferUse[])
       : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
@@ -255,7 +255,7 @@ ${integerBinningFunction}
     resources,
     bindings: {
       inputValues: props.input,
-      ...(gpuDomain ? {domainValues: props.domain as GraphBufferView} : {}),
+      ...(gpuDomain ? {domainValues: props.domain as GraphDataView} : {}),
       outputCounts: props.output
     },
     dispatchCount: Math.ceil(props.input.length / HISTOGRAM_WORKGROUP_SIZE)
@@ -268,7 +268,7 @@ function addComputationPass<Parameters>(
     id: string;
     source: string;
     resources: GraphBufferUse[];
-    bindings: Record<string, GraphBufferView>;
+    bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
 ): void {
@@ -322,7 +322,7 @@ function validateLiteralDomain(
 
 function isGPUHistogramDomainView<T extends GPUScalarFormat>(
   domain: GPUHistogramDomain<T>
-): domain is GraphBufferView<T> {
+): domain is GraphDataView<T> {
   return domain !== 'auto' && !Array.isArray(domain);
 }
 

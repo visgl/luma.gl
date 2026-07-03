@@ -237,9 +237,9 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
     byteLength: 64,
     usage: Buffer.STORAGE
   });
-  const input = graph.createBufferView(inputHandle, {format: 'uint32', length: 4});
-  const one = graph.createBufferView(outputHandle, {format: 'uint32', length: 1});
-  const two = graph.createBufferView(outputHandle, {format: 'uint32', length: 2});
+  const input = graph.createDataView(inputHandle, {format: 'uint32', length: 4});
+  const one = graph.createDataView(outputHandle, {format: 'uint32', length: 1});
+  const two = graph.createDataView(outputHandle, {format: 'uint32', length: 2});
   t.throws(
     () => new GPUReduction({input, output: two, operation: 'sum'}),
     /must contain 1 row/,
@@ -255,7 +255,7 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
     /finite \[min, max\]/,
     'inverted literal histogram domain is rejected'
   );
-  const positions = graph.createBufferView(inputHandle, {format: 'float32x2', length: 4});
+  const positions = graph.createDataView(inputHandle, {format: 'float32x2', length: 4});
   t.throws(
     () => new GPUGridBinning({positions, output: two, gridSize: [2, 2], bounds: [0, 0, 1, 1]}),
     /output.length/,
@@ -394,7 +394,7 @@ function importView<T extends GPUVectorFormat>(
     {id, byteLength: buffer.byteLength, usage: buffer.usage},
     buffer
   );
-  return graph.createBufferView(handle, {format, length});
+  return graph.createDataView(handle, {format, length});
 }
 
 async function readUint32(buffer: Buffer, length: number): Promise<number[]> {

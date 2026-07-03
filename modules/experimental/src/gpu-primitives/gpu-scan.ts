@@ -4,27 +4,27 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
-} from './graph-buffer-view-utils';
+} from './graph-data-view-utils';
 
 const SCAN_WORKGROUP_SIZE = 256;
 
 export type GPUScanProps = {
   id?: string;
-  input: GraphBufferView<'uint32'>;
-  output: GraphBufferView<'uint32'>;
+  input: GraphDataView<'uint32'>;
+  output: GraphDataView<'uint32'>;
 };
 
 /** Hierarchical exclusive prefix sum over packed uint32 graph buffers. */
 export class GPUScan {
   readonly id: string;
-  readonly input: GraphBufferView<'uint32'>;
-  readonly output: GraphBufferView<'uint32'>;
+  readonly input: GraphDataView<'uint32'>;
+  readonly output: GraphDataView<'uint32'>;
 
   constructor(props: GPUScanProps) {
     this.id = props.id ?? 'gpu-scan';
@@ -47,9 +47,9 @@ export class GPUScan {
     }
 
     const levels: Array<{
-      output: GraphBufferView<'uint32'>;
+      output: GraphDataView<'uint32'>;
       length: number;
-      blockOffsets?: GraphBufferView<'uint32'>;
+      blockOffsets?: GraphDataView<'uint32'>;
     }> = [];
     let levelInput = this.input;
     let levelOutput = this.output;
@@ -58,7 +58,7 @@ export class GPUScan {
 
     while (true) {
       const blockCount = Math.ceil(levelLength / SCAN_WORKGROUP_SIZE);
-      let blockSums: GraphBufferView<'uint32'> | undefined;
+      let blockSums: GraphDataView<'uint32'> | undefined;
       if (blockCount > 1) {
         blockSums = createTransientView(
           graph,
@@ -110,9 +110,9 @@ function addBlockScanPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
-    input: GraphBufferView<'uint32'>;
-    output: GraphBufferView<'uint32'>;
-    blockSums?: GraphBufferView<'uint32'>;
+    input: GraphDataView<'uint32'>;
+    output: GraphDataView<'uint32'>;
+    blockSums?: GraphDataView<'uint32'>;
     length: number;
     blockCount: number;
   }
@@ -207,8 +207,8 @@ function addBlockOffsetPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
-    output: GraphBufferView<'uint32'>;
-    blockOffsets: GraphBufferView<'uint32'>;
+    output: GraphDataView<'uint32'>;
+    blockOffsets: GraphDataView<'uint32'>;
     length: number;
   }
 ): void {

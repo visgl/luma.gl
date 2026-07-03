@@ -116,7 +116,7 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
     /does not declare usage/,
     'node uses must be compatible with descriptors'
   );
-  const unaligned = validationGraph.createBufferView(copyOnly, {
+  const unaligned = validationGraph.createDataView(copyOnly, {
     format: 'uint32',
     length: 1,
     byteOffset: 2
@@ -128,7 +128,7 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
   );
   t.throws(
     () =>
-      validationGraph.createBufferView(copyOnly, {
+      validationGraph.createDataView(copyOnly, {
         format: 'uint32',
         length: 4,
         byteOffset: 4
@@ -285,8 +285,8 @@ test('GPUScan computes exclusive uint32 prefixes', async t => {
       {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
       outputBuffer
     );
-    const input = graph.createBufferView(inputHandle, {format: 'uint32', length});
-    const output = graph.createBufferView(outputHandle, {format: 'uint32', length});
+    const input = graph.createDataView(inputHandle, {format: 'uint32', length});
+    const output = graph.createDataView(outputHandle, {format: 'uint32', length});
     new GPUScan({input, output}).addToGraph(graph);
     const compiled = graph.compile();
     const commandEncoder = device.createCommandEncoder({id: `scan-${length}-encoder`});
@@ -346,15 +346,15 @@ test('GPUCompaction preserves selected order and writes indirect instance count'
     {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
     outputBuffer
   );
-  const valuesView = graph.createBufferView(valuesHandle, {
+  const valuesView = graph.createDataView(valuesHandle, {
     format: 'uint32',
     length: values.length
   });
-  const flagsView = graph.createBufferView(flagsHandle, {
+  const flagsView = graph.createDataView(flagsHandle, {
     format: 'uint32',
     length: flags.length
   });
-  const outputView = graph.createBufferView(outputHandle, {
+  const outputView = graph.createDataView(outputHandle, {
     format: 'uint32',
     length: values.length
   });
@@ -550,10 +550,10 @@ async function runCompaction(
     countBuffer
   );
   new GPUCompaction({
-    input: graph.createBufferView(valuesHandle, {format: 'uint32', length: values.length}),
-    flags: graph.createBufferView(flagsHandle, {format: 'uint32', length: flags.length}),
-    output: graph.createBufferView(outputHandle, {format: 'uint32', length: values.length}),
-    count: graph.createBufferView(countHandle, {format: 'uint32', length: 1})
+    input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
+    flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
+    output: graph.createDataView(outputHandle, {format: 'uint32', length: values.length}),
+    count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
   }).addToGraph(graph);
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: `compaction-${id}-encoder`});

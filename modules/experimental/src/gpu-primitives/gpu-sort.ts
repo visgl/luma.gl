@@ -4,14 +4,14 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphBufferView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {GPUScan} from './gpu-scan';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
-} from './graph-buffer-view-utils';
+} from './graph-data-view-utils';
 
 const BITONIC_WORKGROUP_SIZE = 256;
 const RADIX_WORKGROUP_SIZE = 256;
@@ -28,10 +28,10 @@ export type GPUSortDirection = 'ascending' | 'descending';
 /** Properties for one graph-native stable uint32 key/value sort. */
 export type GPUSortProps = {
   id?: string;
-  keys: GraphBufferView<'uint32'>;
-  values: GraphBufferView<'uint32'>;
-  outputKeys: GraphBufferView<'uint32'>;
-  outputValues: GraphBufferView<'uint32'>;
+  keys: GraphDataView<'uint32'>;
+  values: GraphDataView<'uint32'>;
+  outputKeys: GraphDataView<'uint32'>;
+  outputValues: GraphDataView<'uint32'>;
   algorithm?: GPUSortAlgorithm;
   direction?: GPUSortDirection;
 };
@@ -51,10 +51,10 @@ type BitonicStage = {
  */
 export class GPUSort {
   readonly id: string;
-  readonly keys: GraphBufferView<'uint32'>;
-  readonly values: GraphBufferView<'uint32'>;
-  readonly outputKeys: GraphBufferView<'uint32'>;
-  readonly outputValues: GraphBufferView<'uint32'>;
+  readonly keys: GraphDataView<'uint32'>;
+  readonly values: GraphDataView<'uint32'>;
+  readonly outputKeys: GraphDataView<'uint32'>;
+  readonly outputValues: GraphDataView<'uint32'>;
   readonly algorithm: GPUSortAlgorithm;
   readonly direction: GPUSortDirection;
   readonly resolvedAlgorithm: Exclude<GPUSortAlgorithm, 'auto'>;
@@ -198,7 +198,7 @@ function addBitonicSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GP
 function addBitonicInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
-  indices: GraphBufferView<'uint32'>,
+  indices: GraphDataView<'uint32'>,
   paddedLength: number
 ): void {
   const source = /* wgsl */ `
@@ -228,8 +228,8 @@ const INDICES_OFFSET: u32 = ${getViewElementOffset(indices)}u;
 function addBitonicStagePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
-  indicesIn: GraphBufferView<'uint32'>,
-  indicesOut: GraphBufferView<'uint32'>,
+  indicesIn: GraphDataView<'uint32'>,
+  indicesOut: GraphDataView<'uint32'>,
   paddedLength: number,
   stage: BitonicStage
 ): void {
@@ -296,7 +296,7 @@ fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
 function addBitonicGatherPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
-  indices: GraphBufferView<'uint32'>
+  indices: GraphDataView<'uint32'>
 ): void {
   const source = /* wgsl */ `
 const LOGICAL_LENGTH: u32 = ${sort.keys.length}u;
@@ -397,8 +397,8 @@ function addRadixSort<Parameters>(graph: GPUCommandGraph<Parameters>, sort: GPUS
 function addRadixClassifyPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
-  keys: GraphBufferView<'uint32'>,
-  flags: GraphBufferView<'uint32'>,
+  keys: GraphDataView<'uint32'>,
+  flags: GraphDataView<'uint32'>,
   bit: number
 ): void {
   const firstBit = sort.direction === 'ascending' ? 0 : 1;
@@ -434,12 +434,12 @@ const FLAGS_OFFSET: u32 = ${getViewElementOffset(flags)}u;
 function addRadixScatterPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
-  keys: GraphBufferView<'uint32'>,
-  values: GraphBufferView<'uint32'>,
-  flags: GraphBufferView<'uint32'>,
-  offsets: GraphBufferView<'uint32'>,
-  outputKeys: GraphBufferView<'uint32'>,
-  outputValues: GraphBufferView<'uint32'>,
+  keys: GraphDataView<'uint32'>,
+  values: GraphDataView<'uint32'>,
+  flags: GraphDataView<'uint32'>,
+  offsets: GraphDataView<'uint32'>,
+  outputKeys: GraphDataView<'uint32'>,
+  outputValues: GraphDataView<'uint32'>,
   bit: number
 ): void {
   const lastIndex = sort.keys.length - 1;
@@ -511,7 +511,7 @@ function addComputationPass<GraphParameters>(
     id: string;
     source: string;
     resources: GraphBufferUse[];
-    bindings: Record<string, GraphBufferView>;
+    bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
 ): void {

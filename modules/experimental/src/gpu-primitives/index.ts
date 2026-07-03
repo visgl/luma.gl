@@ -6,7 +6,7 @@ export {
   CompiledGPUCommandGraph,
   GPUCommandGraph,
   GraphBufferHandle,
-  GraphBufferView,
+  GraphDataView,
   GraphTextureHandle,
   GraphTextureView
 } from './gpu-command-graph';
