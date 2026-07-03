@@ -85,7 +85,7 @@ const sidebars = {
         'arrow/arrow-geoarrow',
         'arrow/arrow-float64-precision',
         'arrow/arrow-text-2d',
-        'arrow/arrow-text-3d',
+        'arrow/arrow-text-space-crawl',
         'arrow/arrow-temporal-starfield',
         'arrow/arrow-time-columns',
         'arrow/arrow-mesh-geometry',

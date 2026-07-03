@@ -37,6 +37,7 @@ export type ArrowText3DAppUniforms = {
   time: number;
   crawlColor: Readonly<NumberArray4>;
   fade: Readonly<NumberArray4>;
+  glyphWorldScale: number;
 };
 
 /** Public renderer construction props for the Arrow 3D crawl example. */
@@ -56,6 +57,7 @@ struct AppUniforms {
   time : f32,
   crawlColor : vec4<f32>,
   fade : vec4<f32>,
+  glyphWorldScale : f32,
 };
 
 @group(0) @binding(auto) var<uniform> app : AppUniforms;
@@ -111,6 +113,7 @@ uniform appUniforms {
   float time;
   vec4 crawlColor;
   vec4 fade;
+  float glyphWorldScale;
 } app;
 
 layout(location=0) in vec3 positions;
@@ -143,6 +146,7 @@ uniform appUniforms {
   float time;
   vec4 crawlColor;
   vec4 fade;
+  float glyphWorldScale;
 } app;
 
 in vec3 vNormal;
@@ -172,7 +176,8 @@ const app: ShaderModule<ArrowText3DAppUniforms, ArrowText3DAppUniforms> = {
     normalMatrix: 'mat4x4<f32>',
     time: 'f32',
     crawlColor: 'vec4<f32>',
-    fade: 'vec4<f32>'
+    fade: 'vec4<f32>',
+    glyphWorldScale: 'f32'
   }
 };
 
@@ -201,6 +206,8 @@ export class ArrowText3DRenderer {
   readonly glyphDrawRanges: ArrowText3DGlyphDrawRange[];
   /** Positioned visible glyph bounds before crawl world transforms. */
   readonly bounds: Text3DBounds;
+  /** Extruded geometry already uses crawl-world font units. */
+  readonly glyphWorldScale = 1;
   /** Shader inputs updated by the crawl app each frame. */
   readonly shaderInputs = new ShaderInputs<{app: typeof app.props}>({app});
   /** Glyph-ranged instanced model. */
@@ -228,7 +235,8 @@ export class ArrowText3DRenderer {
         normalMatrix: IDENTITY_MATRIX,
         time: 0,
         crawlColor: [1, 1, 1, 1],
-        fade: [0, 0, 0, 0]
+        fade: [0, 0, 0, 0],
+        glyphWorldScale: 1
       }
     });
 

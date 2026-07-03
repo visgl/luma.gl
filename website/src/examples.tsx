@@ -66,7 +66,7 @@ import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
-import ArrowText3DApp from '../../examples/arrow/arrow-text-3d/app';
+import ArrowTextSpaceCrawlApp from '../../examples/arrow/arrow-text-space-crawl/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import Text3DApp from '../../examples/experimental/text-3d/app';
@@ -539,12 +539,12 @@ export const ArrowText2DExample: React.FC = props => (
   />
 );
 
-export const ArrowText3DExample: React.FC = props => (
+export const ArrowTextSpaceCrawlExample: React.FC = props => (
   <LumaExample
-    id="arrow-text-3d"
-    title="3D Text"
+    id="arrow-text-space-crawl"
+    title="Arrow Space Crawl"
     directory="arrow"
-    template={ArrowText3DApp}
+    template={ArrowTextSpaceCrawlApp}
     config={exampleConfig}
     {...props}
   />
