@@ -50,7 +50,7 @@ export {GPUReduction} from './gpu-reduction';
 export type {GPUReductionInput, GPUReductionOperation, GPUReductionProps} from './gpu-reduction';
 
 export {GPUHistogram} from './gpu-histogram';
-export type {GPUHistogramDomain, GPUHistogramProps} from './gpu-histogram';
+export type {GPUHistogramDomain, GPUHistogramInput, GPUHistogramProps} from './gpu-histogram';
 
 export {GPUGridBinning} from './gpu-grid-binning';
 export type {GPUGridBinningBounds, GPUGridBinningProps} from './gpu-grid-binning';

@@ -4,7 +4,12 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
+import {
+  GPUCommandGraph,
+  GraphVectorView,
+  type GraphBufferUse,
+  type GraphDataView
+} from './gpu-command-graph';
 import {
   createTransientView,
   getViewBinding,
@@ -25,10 +30,15 @@ export type GPUHistogramDomain<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | 'auto';
 
+/** One scalar chunk or an ordered scalar vector counted by {@link GPUHistogram}. */
+export type GPUHistogramInput<T extends GPUScalarFormat = GPUScalarFormat> =
+  | GraphDataView<T>
+  | GraphVectorView<T>;
+
 /** Properties for graph-native scalar histogram counting. */
 export type GPUHistogramProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
-  input: GraphDataView<T>;
+  input: GPUHistogramInput<T>;
   output: GraphDataView<'uint32'>;
   domain: GPUHistogramDomain<T>;
 };
@@ -36,7 +46,7 @@ export type GPUHistogramProps<T extends GPUScalarFormat = GPUScalarFormat> = {
 /** Graph-native histogram counting for packed 32-bit scalar values. */
 export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly id: string;
-  readonly input: GraphDataView<T>;
+  readonly input: GPUHistogramInput<T>;
   readonly output: GraphDataView<'uint32'>;
   readonly domain: GPUHistogramDomain<T>;
 
@@ -45,12 +55,18 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
     this.input = props.input;
     this.output = props.output;
     this.domain = props.domain;
-    validatePackedView(this.input, SCALAR_FORMATS, `${this.id} input`);
+    for (const [chunkIndex, input] of getHistogramInputs(this.input).entries()) {
+      const name = this.input instanceof GraphVectorView ? ` input chunk ${chunkIndex}` : ' input';
+      validatePackedView(input, SCALAR_FORMATS, `${this.id}${name}`);
+      if (input.format !== this.input.format) {
+        throw new Error(`${this.id}${name} format must match the input format`);
+      }
+    }
     validatePackedUint32View(this.output, `${this.id} output`);
     if (this.output.length === 0) {
       throw new Error(`${this.id} output must contain at least one bin`);
     }
-    if (this.input.buffer === this.output.buffer) {
+    if (getHistogramInputs(this.input).some(input => input.buffer === this.output.buffer)) {
       throw new Error(`${this.id} input and output must use separate buffers`);
     }
     if (isGPUHistogramDomainView(this.domain)) {
@@ -68,7 +84,8 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
 
   /** Adds domain inference, output clearing, and accumulation nodes to a graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    if (this.input.buffer.graph !== graph || this.output.buffer.graph !== graph) {
+    const inputs = getHistogramInputs(this.input);
+    if (inputs.some(input => input.buffer.graph !== graph) || this.output.buffer.graph !== graph) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     let domain = this.domain;
@@ -91,15 +108,28 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
       domain = inferredDomain;
     }
     addClearHistogramPass(graph, this.id, this.output);
-    if (this.input.length > 0) {
+    const accumulationPath = this.output.length <= MAXIMUM_LOCAL_BIN_COUNT ? 'local' : 'global';
+    inputs.forEach((input, chunkIndex) => {
+      if (input.length === 0) {
+        return;
+      }
       addHistogramPass(graph, {
-        id: `${this.id}-${this.output.length <= MAXIMUM_LOCAL_BIN_COUNT ? 'local' : 'global'}`,
-        input: this.input,
+        id:
+          this.input instanceof GraphVectorView
+            ? `${this.id}-chunk-${chunkIndex}-${accumulationPath}`
+            : `${this.id}-${accumulationPath}`,
+        input,
         output: this.output,
         domain
       });
-    }
+    });
   }
+}
+
+function getHistogramInputs<T extends GPUScalarFormat>(
+  input: GPUHistogramInput<T>
+): readonly GraphDataView<T>[] {
+  return input instanceof GraphVectorView ? input.data : [input];
 }
 
 function addClearHistogramPass<Parameters>(

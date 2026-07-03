@@ -203,6 +203,63 @@ test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
   t.end();
 });
 
+test('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const literal = await runVectorHistogram(
+    device,
+    [Uint32Array.from([0, 1]), new Uint32Array(0), Uint32Array.from([2, 3, 3])],
+    'uint32',
+    4,
+    [0, 3]
+  );
+  t.deepEqual(literal.counts, [1, 1, 1, 2], 'every non-empty chunk contributes counts');
+  t.deepEqual(
+    literal.nodeOrder,
+    ['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local'],
+    'one clear precedes ordered per-chunk accumulation and empty chunks keep their source index'
+  );
+  t.equal(
+    literal.logicalTransientBufferCount,
+    0,
+    'a literal-domain histogram does not pack or concatenate input chunks'
+  );
+
+  const automatic = await runVectorHistogram(
+    device,
+    [
+      Float32Array.from([Number.NaN, Number.POSITIVE_INFINITY]),
+      Float32Array.from([-2, 0]),
+      Float32Array.from([4, 6])
+    ],
+    'float32',
+    4,
+    'auto'
+  );
+  t.deepEqual(
+    automatic.counts,
+    [1, 1, 0, 2],
+    'automatic domain reduction spans all chunks and ignores non-finite values'
+  );
+
+  const globalValues = [
+    Uint32Array.from({length: 150}, (_, index) => index),
+    Uint32Array.from({length: 150}, (_, index) => index + 150)
+  ];
+  const global = await runVectorHistogram(device, globalValues, 'uint32', 300, [0, 299]);
+  t.deepEqual(
+    global.counts,
+    Array.from({length: 300}, () => 1),
+    'the global atomic path accumulates every chunk'
+  );
+  t.end();
+});
+
 test('GPUHistogram clears counts for every graph encoding and composes with reduction', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -420,6 +477,42 @@ async function runHistogram(
   outputBuffer.destroy();
   domainBuffer?.destroy();
   return result;
+}
+
+async function runVectorHistogram(
+  device: Device,
+  chunks: ScalarArray[],
+  format: ScalarFormat,
+  binCount: number,
+  domain: readonly [number, number] | 'auto'
+): Promise<{counts: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
+  const inputBuffers = chunks.map(chunk => createInputBuffer(device, chunk));
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'input',
+    format,
+    data: chunks.map(
+      (chunk, index) =>
+        new GPUData({buffer: inputBuffers[index], format, length: chunk.length, ownsBuffer: false})
+    ),
+    ownsData: false
+  });
+  const outputBuffer = createOutputBuffer(device, binCount);
+  const graph = new GPUCommandGraph(device);
+  const input = graph.importGPUVector('input', vector);
+  const output = importView(graph, 'output', outputBuffer, 'uint32', binCount);
+  new GPUHistogram({input, output, domain}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-histogram-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const counts = await readUint32(outputBuffer, binCount);
+  const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
+  compiled.destroy();
+  vector.destroy();
+  for (const buffer of inputBuffers) buffer.destroy();
+  outputBuffer.destroy();
+  return {counts, nodeOrder, logicalTransientBufferCount};
 }
 
 async function runGrid(
