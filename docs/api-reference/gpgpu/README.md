@@ -101,7 +101,7 @@ registering CPU handlers for another device type.
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) shows how to define lazy operations and register backend handlers.
-- [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator) documents `GPUDataEvaluator` for one packed `GPUData` chunk and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.
+- [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator) documents `GPUDataEvaluator` for one fixed-width `GPUData` or borrowed strided `GPUDataView`, and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate) evaluates final result tables and cleans up intermediate dependencies in one step.
 
 ## Related Engine APIs

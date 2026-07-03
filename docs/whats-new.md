@@ -52,6 +52,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/gpgpu** NEW MODULE
 
 - **`GPUDataEvaluator`** lazy GPUData operations and **`GPUVectorEvaluator`** chunk-preserving GPUVector transforms with CPU/WebGL/WebGPU backends.
+- **Interleaved GPGPU inputs** - Borrowed `GPUDataView` values expose fixed-width strided attributes over shared buffers, allowing existing lazy operations to read interleaved data while continuing to produce packed outputs.
 
 **@luma.gl/arrow** NEW MODULE
 

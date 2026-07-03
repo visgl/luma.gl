@@ -11,12 +11,15 @@ Each operation returns a new [`GPUDataEvaluator`](/docs/api-reference/gpgpu/gpu-
 ## Common Behavior
 
 - Each operation returns a new `GPUDataEvaluator`.
-- Inputs can be `GPUDataEvaluator` instances or packed numeric `GPUData` chunks.
+- Inputs can be `GPUDataEvaluator` instances, fixed-width `GPUData` chunks, or borrowed
+  `GPUDataView` values, including strided attributes in interleaved buffers.
 - Arithmetic operations can also use scalar literals or literal row values.
 - Multi-input operations deduce output `type`, `length`, and constant-ness from their inputs.
 - Output evaluation is backend-driven through `backendRegistry`.
 - Operations can be chained to build larger compute graphs.
 - Operation result evaluators own their materialized immutable output buffer.
+- Strided inputs do not make outputs strided; operation results are packed unless an operation
+  explicitly documents another layout.
 - Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply the
   same leaf operation independently across preserved `GPUVector.data[]` chunks.
 - The CPU backend is available by default. If no backend has been registered for

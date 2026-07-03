@@ -13,8 +13,10 @@ import {
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
   GPUData,
+  GPUDataView,
   GPUVector,
   getGPUVectorFormatInfo,
+  isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/tables';
@@ -45,6 +47,12 @@ export type GPUDataEvaluatorFromGPUDataOptions = {
   id?: string;
 };
 
+/** Options for adapting one existing {@link GPUDataView} into an evaluator. */
+export type GPUDataEvaluatorFromGPUDataViewOptions = {
+  /** Optional debug name used by {@link GPUDataEvaluator.toString}. */
+  id?: string;
+};
+
 /** Properties used to construct one {@link GPUDataEvaluator}. */
 export type GPUDataEvaluatorProps = {
   /** Optional debug name used by {@link GPUDataEvaluator.toString}. */
@@ -66,7 +74,7 @@ export type GPUDataEvaluatorProps = {
   /** CPU buffer that initializes the evaluator, required unless another source is supplied. */
   value?: TypedArray;
   /** External GPU buffer that backs this evaluator and is not owned by it. */
-  buffer?: Buffer;
+  buffer?: Buffer | DynamicBuffer;
   /** External GPUData chunk that backs this evaluator and is not owned by it. */
   gpuData?: GPUData;
   /** Optional memory format preserved for GPUVector interop. */
@@ -203,9 +211,9 @@ export class GPUDataEvaluator {
   }
 
   /**
-   * Creates one evaluator view over an existing packed numeric `GPUData` chunk.
+   * Creates one evaluator view over an existing fixed-width `GPUData` chunk.
    *
-   * @param data - Packed fixed-width `GPUData` chunk to borrow.
+   * @param data - Fixed-width `GPUData` chunk to borrow.
    * @param options - Optional debug metadata for the borrowed chunk.
    * @returns One lazy evaluator that borrows `data.buffer`.
    */
@@ -213,18 +221,36 @@ export class GPUDataEvaluator {
     data: GPUData,
     options: GPUDataEvaluatorFromGPUDataOptions = {}
   ): GPUDataEvaluator {
-    validatePackedNumericGPUData(data);
-    const {type, size} = getGPUDataEvaluatorPropsFromGPUData(data);
-
-    return new GPUDataEvaluator({
-      id: options.id,
-      type,
-      size,
-      offset: data.byteOffset,
-      stride: data.byteStride,
+    validateFixedWidthGPUData(data);
+    const view = new GPUDataView({
+      buffer: data.buffer,
+      format: data.format as VertexFormat,
       length: data.length,
-      gpuData: data,
-      format: data.format
+      byteOffset: data.byteOffset,
+      byteStride: data.byteStride
+    });
+    return new GPUDataEvaluator({
+      ...getGPUDataEvaluatorPropsFromGPUDataView(view),
+      id: options.id,
+      gpuData: data
+    });
+  }
+
+  /**
+   * Creates one evaluator over an existing borrowed fixed-width strided data view.
+   *
+   * @param view - Physical value view to borrow without copying.
+   * @param options - Optional debug metadata for the borrowed view.
+   * @returns One evaluator preserving the view's format, offset, stride, and length.
+   */
+  static fromGPUDataView(
+    view: GPUDataView,
+    options: GPUDataEvaluatorFromGPUDataViewOptions = {}
+  ): GPUDataEvaluator {
+    return new GPUDataEvaluator({
+      ...getGPUDataEvaluatorPropsFromGPUDataView(view),
+      id: options.id,
+      buffer: view.buffer
     });
   }
 
@@ -279,7 +305,8 @@ export class GPUDataEvaluator {
     }
     this.isConstant = isConstant;
     this.length = length;
-    this.byteLength = this.stride * length;
+    const rowByteLength = this.ValueType.BYTES_PER_ELEMENT * this.size;
+    this.byteLength = length === 0 ? 0 : (length - 1) * this.stride + rowByteLength;
     this._value = value;
     this._bufferOwnership =
       source instanceof GPUDataEvaluator || buffer || gpuData ? 'borrowed' : 'owned';
@@ -379,7 +406,7 @@ export class GPUDataEvaluator {
 
   /** Creates a single-chunk `GPUVector` view over a materialized backing buffer. */
   private createGPUVectorView(
-    options: GPUDataEvaluatorEvaluateOptions & {buffer: Buffer}
+    options: GPUDataEvaluatorEvaluateOptions & {buffer: Buffer | DynamicBuffer}
   ): GPUVector {
     const name = options.name ?? this._id ?? 'vector';
     const format =
@@ -468,6 +495,25 @@ export class GPUDataEvaluator {
     return new ValueType(compactBytes.buffer);
   }
 
+  /** Loads the complete backing buffer into the CPU value cache for CPU operation handlers. @internal */
+  async ensureCPUValue(): Promise<TypedArray> {
+    const existingValue = this.value;
+    if (existingValue) {
+      return existingValue;
+    }
+    const bytes = await this.buffer.readAsync(0, this.offset + this.byteLength);
+    if (bytes.byteLength % this.ValueType.BYTES_PER_ELEMENT !== 0) {
+      throw new Error(`${this} backing buffer byte length is not aligned to its scalar type`);
+    }
+    const copiedBytes = bytes.slice();
+    this._value = new this.ValueType(
+      copiedBytes.buffer,
+      copiedBytes.byteOffset,
+      copiedBytes.byteLength / this.ValueType.BYTES_PER_ELEMENT
+    ) as TypedArray;
+    return this._value;
+  }
+
   /** Returns the debug id, source description, or class name. */
   toString(): string {
     return this._id ?? this.source?.toString() ?? this.constructor.name;
@@ -509,13 +555,13 @@ function getRowsFromValue(
   return result;
 }
 
-/** Input accepted by leaf operations that normalize one `GPUData` chunk into an evaluator. */
-export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData;
+/** Input accepted by leaf operations that normalize one fixed-width value view into an evaluator. */
+export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData | GPUDataView;
 
 /**
  * Returns one evaluator, adapting `GPUData` inputs when needed.
  *
- * @param input - Existing evaluator or one packed fixed-width `GPUData` chunk.
+ * @param input - Existing evaluator, fixed-width `GPUData`, or borrowed `GPUDataView`.
  * @returns One `GPUDataEvaluator` for leaf GPGPU operations.
  */
 export function getGPUDataEvaluator(input: GPUDataEvaluatorInput): GPUDataEvaluator {
@@ -525,7 +571,10 @@ export function getGPUDataEvaluator(input: GPUDataEvaluatorInput): GPUDataEvalua
   if (input instanceof GPUData) {
     return GPUDataEvaluator.fromGPUData(input);
   }
-  throw new Error('getGPUDataEvaluator() requires GPUDataEvaluator or GPUData');
+  if (input instanceof GPUDataView) {
+    return GPUDataEvaluator.fromGPUDataView(input);
+  }
+  throw new Error('getGPUDataEvaluator() requires GPUDataEvaluator, GPUData, or GPUDataView');
 }
 
 /**
@@ -547,12 +596,12 @@ export function getCompatibleGPUDataEvaluatorFormat(
   return input.format === expectedFormat ? input.format : undefined;
 }
 
-function validatePackedNumericGPUData(data: GPUData): void {
+function validateFixedWidthGPUData(data: GPUData): void {
   if (!data.format) {
     throw new Error('GPUDataEvaluator.fromGPUData() requires GPUData format metadata');
   }
-  if (isVertexListGPUVectorFormat(data.format)) {
-    throw new Error('GPUDataEvaluator.fromGPUData() does not support vertex-list input');
+  if (isVertexListGPUVectorFormat(data.format) || isValueListGPUVectorFormat(data.format)) {
+    throw new Error('GPUDataEvaluator.fromGPUData() does not support variable-length input');
   }
   const formatInfo = getGPUVectorFormatInfo(data.format);
   const expectedRowByteLength = formatInfo.byteLength;
@@ -561,20 +610,41 @@ function validatePackedNumericGPUData(data: GPUData): void {
       `GPUDataEvaluator.fromGPUData() requires rowByteLength ${expectedRowByteLength} for GPUData`
     );
   }
-  if (data.byteStride !== data.rowByteLength) {
-    throw new Error('GPUDataEvaluator.fromGPUData() requires packed GPUData');
-  }
 }
 
-function getGPUDataEvaluatorPropsFromGPUData(data: GPUData): {
-  type: SignedDataType;
-  size: number;
-} {
-  if (!data.format) {
-    throw new Error('GPUDataEvaluator.fromGPUData() requires GPUData format metadata');
+function getGPUDataEvaluatorPropsFromGPUDataView(
+  view: GPUDataView
+): Pick<
+  GPUDataEvaluatorProps,
+  'type' | 'size' | 'offset' | 'stride' | 'normalized' | 'length' | 'format'
+> {
+  const formatInfo = getGPUVectorFormatInfo(view.format);
+  const ValueType = getTypedArrayFromDataType(formatInfo.signedDataType);
+  const evaluatorRowByteLength = ValueType.BYTES_PER_ELEMENT * formatInfo.components;
+  if (formatInfo.byteLength !== evaluatorRowByteLength) {
+    throw new Error(
+      `GPUDataEvaluator does not support packed vertex format ${view.format}: ` +
+        `${formatInfo.byteLength} physical bytes cannot expose ${formatInfo.components} ` +
+        `${formatInfo.signedDataType} components`
+    );
   }
-  const formatInfo = getGPUVectorFormatInfo(data.format);
-  return {type: formatInfo.signedDataType, size: formatInfo.components};
+  if (
+    view.byteOffset % ValueType.BYTES_PER_ELEMENT !== 0 ||
+    view.byteStride % ValueType.BYTES_PER_ELEMENT !== 0
+  ) {
+    throw new Error(
+      `GPUDataEvaluator requires ${view.format} offset and stride aligned to ${ValueType.BYTES_PER_ELEMENT} bytes`
+    );
+  }
+  return {
+    type: formatInfo.signedDataType,
+    size: formatInfo.components,
+    offset: view.byteOffset,
+    stride: view.byteStride,
+    normalized: formatInfo.normalized,
+    length: view.length,
+    format: view.format
+  };
 }
 
 /** Returns the concrete Buffer for a GPUVector, unwrapping DynamicBuffer when needed. */

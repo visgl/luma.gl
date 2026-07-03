@@ -57,6 +57,11 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
       await dep.evaluate(device);
     }
     const handlerRegistry = this.shouldExecuteOnCPU() ? 'cpu' : device.type;
+    if (handlerRegistry === 'cpu' || device.type === 'null') {
+      for (const dependency of this.dependencies) {
+        await dependency.ensureCPUValue();
+      }
+    }
     const handler = await backendRegistry.get(handlerRegistry, this.name);
     return handler({
       device: target.device,

@@ -7,6 +7,7 @@ export {getGPUDataEvaluator, GPUDataEvaluator} from './operation/gpu-data-evalua
 export type {
   GPUDataEvaluatorEvaluateOptions,
   GPUDataEvaluatorFromGPUDataOptions,
+  GPUDataEvaluatorFromGPUDataViewOptions,
   GPUDataEvaluatorInput,
   GPUDataEvaluatorProps
 } from './operation/gpu-data-evaluator';
