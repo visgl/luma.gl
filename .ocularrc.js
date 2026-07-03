@@ -76,6 +76,9 @@ const config = {
       // Group browser tests into a few substantial realms. This isolates Deck shader hooks and
       // bounds per-context GPU resources without recreating a device for every source test file.
       browserIncludePatterns: ['test/browser-suites/*.spec.ts'],
+      // Release WebGL contexts between aggregate realms while retaining the shared WebGPU device.
+      // Chromium/Dawn adapters cannot reliably create a replacement WebGPU device in one process.
+      browserSetupFiles: ['test/browser-suites/browser-test-cleanup.ts'],
       // Force Chromium browser projects onto SwiftShader in CI for deterministic rendering.
       // Local runs should use the machine GPU unless explicitly overridden.
       softwareGpu: Boolean(process.env.CI),

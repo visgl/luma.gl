@@ -16,6 +16,7 @@ export {
   getWebGPUTestDevice,
   getWebGPUTestDevices,
   getNullTestDevice,
+  destroyWebGLTestDevices,
   destroyTestDevices
 } from './create-test-device';
 

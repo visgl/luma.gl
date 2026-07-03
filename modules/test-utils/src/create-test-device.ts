@@ -131,6 +131,25 @@ export async function getNullTestDevice(): Promise<NullDevice> {
   return getOrCreateNullTestDevicePromise();
 }
 
+/** Destroys and clears cached WebGL test devices without replacing shared WebGPU adapters. */
+export async function destroyWebGLTestDevices(): Promise<void> {
+  const devicePromises: Promise<Device | null>[] = [];
+  if (testDeviceCache.webglDevicePromise) {
+    devicePromises.push(testDeviceCache.webglDevicePromise);
+  }
+  if (testDeviceCache.presentationWebglDevicePromise) {
+    devicePromises.push(testDeviceCache.presentationWebglDevicePromise);
+  }
+
+  testDeviceCache.webglDevicePromise = null;
+  testDeviceCache.presentationWebglDevicePromise = null;
+
+  const devices = await Promise.all(devicePromises);
+  for (const device of new Set(devices)) {
+    device?.destroy();
+  }
+}
+
 /**
  * Destroys and clears every cached test device created in the current test realm.
  * Package-level browser suites call this once after their tests complete so native GPU
@@ -141,12 +160,6 @@ export async function destroyTestDevices(): Promise<void> {
   if (testDeviceCache.nullDevicePromise) {
     devicePromises.push(testDeviceCache.nullDevicePromise);
   }
-  if (testDeviceCache.webglDevicePromise) {
-    devicePromises.push(testDeviceCache.webglDevicePromise);
-  }
-  if (testDeviceCache.presentationWebglDevicePromise) {
-    devicePromises.push(testDeviceCache.presentationWebglDevicePromise);
-  }
   for (const webgpuDevicePromise of Object.values(testDeviceCache.webgpuDevicePromises)) {
     if (webgpuDevicePromise) {
       devicePromises.push(webgpuDevicePromise);
@@ -154,10 +167,9 @@ export async function destroyTestDevices(): Promise<void> {
   }
 
   testDeviceCache.nullDevicePromise = null;
-  testDeviceCache.webglDevicePromise = null;
-  testDeviceCache.presentationWebglDevicePromise = null;
   testDeviceCache.webgpuDevicePromises = {};
 
+  await destroyWebGLTestDevices();
   const devices = await Promise.all(devicePromises);
   for (const device of new Set(devices)) {
     device?.destroy();
