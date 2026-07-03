@@ -6,11 +6,10 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 `ABufferRenderer` provides experimental WebGPU-only order-independent transparency for models that append final fragment colors into the `aBuffer` shader module.
 
-The renderer owns the per-frame linked-list buffers and runs three stages:
+The renderer owns the per-frame linked-list buffers and runs two stages:
 
-- a base scene pass,
 - one or more translucent capture slices,
-- a fullscreen composite over the existing color target.
+- a fullscreen `ShaderPassPipeline` resolve for each captured slice.
 
 ## Usage
 
@@ -38,12 +37,10 @@ const model = new Model(device, {
   shaderInputs
 });
 
-renderer.render({
-  clearColor: [0, 0, 0, 1],
-  clearDepth: 1,
-  drawBase: renderPass => {
-    drawOpaqueScene(renderPass);
-  },
+// Render opaque color and sampleable depth into an application-owned framebuffer first.
+const outputTexture = renderer.render({
+  sourceTexture: sceneFramebuffer.colorAttachments[0].texture,
+  opaqueDepthTexture: sceneFramebuffer.depthStencilAttachment!,
   prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
     shaderInputs.setProps({aBuffer: shaderModuleProps});
     model.setParameters({...model.parameters, ...captureParameters});
@@ -93,11 +90,8 @@ export type ABufferRendererProps = {
 };
 
 export type ABufferRenderOptions = {
-  framebuffer?: Framebuffer | null;
-  clearColor?: NumberArray4 | false;
-  clearDepth?: number | false;
-  prepareBase?: (commandEncoder: CommandEncoder) => void;
-  drawBase: (renderPass: RenderPass) => void;
+  sourceTexture: Texture;
+  opaqueDepthTexture: TextureView;
   prepareTranslucent: (context: ABufferCaptureContext) => void;
   drawTranslucent: (renderPass: RenderPass) => void;
 };
@@ -106,6 +100,10 @@ export type ABufferRenderOptions = {
 `getABufferSupport(device)` reports whether the device provides the required WebGPU fragment-stage
 storage buffers. `getABufferSlicePlan(...)` exposes the renderer's bounded-memory allocation
 calculation for diagnostics and tests.
+
+`createABufferResolveShaderPassPipeline({maxFragmentsPerPixel})` exposes the same one-slice
+fullscreen resolve used internally by `ABufferRenderer`. The renderer invokes it once per captured
+slice so storage buffers can be reused without allocating full-frame fragment storage.
 
 ## Rendering Model
 
@@ -117,14 +115,16 @@ For each horizontal slice, the renderer:
 1. Clears linked-list heads and allocation counters.
 2. Captures visible translucent fragments after sampling opaque depth.
 3. Reads at most `maxFragmentsPerPixel` records per pixel.
-4. Sorts the records back-to-front and composites premultiplied color over the base target.
+4. Runs `createABufferResolveShaderPassPipeline()` to sort records back-to-front and composite
+   premultiplied color over the previous slice result.
 
 If storage capacity is exhausted, additional fragments are dropped. If a pixel contains more than
 `maxFragmentsPerPixel`, only that many linked-list records are composited.
 
 ## Remarks
 
-- `ABufferRenderer` requires WebGPU and a single-sample color/depth framebuffer. Custom depth attachments must include `Texture.SAMPLE` usage.
+- `ABufferRenderer` requires WebGPU and single-sample source color/depth textures. Source color
+  must include `Texture.SAMPLE | Texture.RENDER`; opaque depth must include `Texture.SAMPLE`.
 - The base pass depth texture is sampled during translucent capture so fragments behind opaque geometry are rejected before linked-list storage writes.
 - The renderer does not submit the device command encoder; the surrounding render loop keeps that responsibility.
 - `prepareTranslucent` runs once per horizontal capture slice. Update A-buffer shader props and call `Model.predraw()` there before the render pass opens.

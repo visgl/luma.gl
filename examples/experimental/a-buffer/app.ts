@@ -2,9 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type Device, type RenderPipelineParameters} from '@luma.gl/core';
+import {type Device, type Framebuffer, type RenderPipelineParameters, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, SphereGeometry, Model, ShaderInputs} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  BackgroundTextureModel,
+  SphereGeometry,
+  Model,
+  ShaderInputs
+} from '@luma.gl/engine';
 import {
   ABufferRenderer,
   WBOITRenderer,
@@ -238,6 +244,8 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
   readonly aBufferModel: Model | null;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
+  private sceneFramebuffer: Framebuffer;
+  private readonly presentModel: BackgroundTextureModel;
 
   transparencyMode: TransparencyMode = 'a-buffer';
   opacity = 0.34;
@@ -316,6 +324,12 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
           aBufferEnabled: true
         })
       : null;
+    this.sceneFramebuffer = createSceneFramebuffer(device, 1, 1);
+    this.presentModel = new BackgroundTextureModel(device, {
+      id: 'oit-present',
+      backgroundTexture: this.sceneFramebuffer.colorAttachments[0].texture,
+      flipY: device.type === 'webgpu'
+    });
   }
 
   override async onInitialize(): Promise<void> {
@@ -328,18 +342,25 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     const translucentProps = this.getSceneProps(viewProjectionMatrix, true);
     const aBufferRenderer = this.aBufferRenderer;
     const aBufferModel = this.aBufferModel;
+    const [width, height] = this.device.getCanvasContext().getDrawingBufferSize();
+    this.resizeSceneFramebuffer(width, height);
+
+    this.opaqueShaderInputs.setProps({scene: opaqueProps});
+    this.opaqueModel.predraw(this.device.commandEncoder);
+    const basePass = this.device.beginRenderPass({
+      framebuffer: this.sceneFramebuffer,
+      clearColor: [0.004, 0.008, 0.018, 1],
+      clearDepth: 1
+    });
+    this.opaqueModel.draw(basePass);
+    basePass.end();
+
+    let outputTexture = this.sceneFramebuffer.colorAttachments[0].texture;
 
     if (this.transparencyMode === 'a-buffer' && aBufferRenderer && aBufferModel) {
-      aBufferRenderer.render({
-        clearColor: [0.004, 0.008, 0.018, 1],
-        clearDepth: 1,
-        prepareBase: commandEncoder => {
-          this.opaqueShaderInputs.setProps({scene: opaqueProps});
-          this.opaqueModel.predraw(commandEncoder);
-        },
-        drawBase: renderPass => {
-          this.opaqueModel.draw(renderPass);
-        },
+      outputTexture = aBufferRenderer.render({
+        sourceTexture: outputTexture,
+        opaqueDepthTexture: this.sceneFramebuffer.depthStencilAttachment!,
         prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
           this.aBufferShaderInputs.setProps({scene: translucentProps, aBuffer: shaderModuleProps});
           aBufferModel.setParameters({...TRANSLUCENT_PARAMETERS, ...captureParameters});
@@ -349,18 +370,17 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
           aBufferModel.draw(renderPass);
         }
       });
-      return;
-    }
-
-    if (this.transparencyMode === 'weighted-blended' && this.wboitRenderer && this.wboitModel) {
-      this.wboitRenderer.render({
-        clearColor: [0.004, 0.008, 0.018, 1],
-        clearDepth: 1,
-        prepareBase: commandEncoder => {
-          this.opaqueShaderInputs.setProps({scene: opaqueProps});
+    } else if (
+      this.transparencyMode === 'weighted-blended' &&
+      this.wboitRenderer &&
+      this.wboitModel
+    ) {
+      outputTexture = this.wboitRenderer.render({
+        sourceTexture: outputTexture,
+        prepareOpaqueDepth: commandEncoder => {
           this.opaqueModel.predraw(commandEncoder);
         },
-        drawBase: renderPass => {
+        drawOpaqueDepth: renderPass => {
           this.opaqueModel.draw(renderPass);
         },
         prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
@@ -372,20 +392,26 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
           this.wboitModel?.draw(renderPass);
         }
       });
-      return;
+    } else {
+      this.alphaShaderInputs.setProps({scene: translucentProps});
+      this.alphaModel.predraw(this.device.commandEncoder);
+      const alphaPass = this.device.beginRenderPass({
+        framebuffer: this.sceneFramebuffer,
+        clearColor: false,
+        clearDepth: false
+      });
+      this.alphaModel.draw(alphaPass);
+      alphaPass.end();
     }
 
-    this.opaqueShaderInputs.setProps({scene: opaqueProps});
-    this.alphaShaderInputs.setProps({scene: translucentProps});
-    this.opaqueModel.predraw(this.device.commandEncoder);
-    this.alphaModel.predraw(this.device.commandEncoder);
-    const renderPass = this.device.beginRenderPass({
+    this.presentModel.setProps({backgroundTexture: outputTexture});
+    this.presentModel.predraw(this.device.commandEncoder);
+    const presentPass = this.device.beginRenderPass({
       clearColor: [0.004, 0.008, 0.018, 1],
       clearDepth: 1
     });
-    this.opaqueModel.draw(renderPass);
-    this.alphaModel.draw(renderPass);
-    renderPass.end();
+    this.presentModel.draw(presentPass);
+    presentPass.end();
   }
 
   override onFinalize(): void {
@@ -401,6 +427,16 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     this.aBufferShaderInputs.destroy();
     this.aBufferRenderer?.destroy();
     this.wboitRenderer?.destroy();
+    destroySceneFramebuffer(this.sceneFramebuffer);
+    this.presentModel.destroy();
+  }
+
+  private resizeSceneFramebuffer(width: number, height: number): void {
+    if (this.sceneFramebuffer.width === width && this.sceneFramebuffer.height === height) {
+      return;
+    }
+    destroySceneFramebuffer(this.sceneFramebuffer);
+    this.sceneFramebuffer = createSceneFramebuffer(this.device, width, height);
   }
 
   private createModel(options: {
@@ -484,10 +520,10 @@ export default class OrderIndependentTransparencyExample extends AnimationLoopTe
     _settings: Record<string, unknown>,
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
-    const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.value;
-    const opacity = getChangedSetting(changedSettings, 'opacity')?.value;
-    const sphereSize = getChangedSetting(changedSettings, 'sphereSize')?.value;
-    const rotationEnabled = getChangedSetting(changedSettings, 'rotationEnabled')?.value;
+    const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.nextValue;
+    const opacity = getChangedSetting(changedSettings, 'opacity')?.nextValue;
+    const sphereSize = getChangedSetting(changedSettings, 'sphereSize')?.nextValue;
+    const rotationEnabled = getChangedSetting(changedSettings, 'rotationEnabled')?.nextValue;
 
     if (isTransparencyMode(transparencyMode)) {
       this.transparencyMode = transparencyMode;
@@ -532,7 +568,7 @@ function makeABufferSettingsSchema(
           {
             name: 'opacity',
             label: 'Opacity',
-            type: 'range',
+            type: 'number',
             min: 0.1,
             max: 0.7,
             step: 0.01,
@@ -541,7 +577,7 @@ function makeABufferSettingsSchema(
           {
             name: 'sphereSize',
             label: 'Sphere size',
-            type: 'range',
+            type: 'number',
             min: 3,
             max: 10,
             step: 0.1,
@@ -566,3 +602,35 @@ const A_BUFFER_DESCRIPTION_HTML = `\
   <div><strong>Weighted blended OIT</strong><br>Accumulates weighted color and revealage into floating-point offscreen targets, then composites once. It avoids sorting and works on WebGPU or WebGL2 when float render-target blending is available, but it is approximate.</div>
   <div><strong>Standard alpha blending</strong><br>Blends translucent draws directly into the framebuffer in submission order. It is the cheapest fallback, but unsorted overlaps produce visibly incorrect results.</div>
 </div>`;
+
+function createSceneFramebuffer(device: Device, width: number, height: number): Framebuffer {
+  const colorTexture = device.createTexture({
+    id: 'oit-scene-color',
+    width,
+    height,
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.RENDER
+  });
+  const depthTexture = device.createTexture({
+    id: 'oit-scene-depth',
+    width,
+    height,
+    format: 'depth24plus',
+    usage: Texture.SAMPLE | Texture.RENDER
+  });
+  return device.createFramebuffer({
+    id: 'oit-scene-framebuffer',
+    width,
+    height,
+    colorAttachments: [colorTexture],
+    depthStencilAttachment: depthTexture
+  });
+}
+
+function destroySceneFramebuffer(framebuffer: Framebuffer): void {
+  const colorTexture = framebuffer.colorAttachments[0].texture;
+  const depthTexture = framebuffer.depthStencilAttachment?.texture;
+  framebuffer.destroy();
+  colorTexture.destroy();
+  depthTexture?.destroy();
+}

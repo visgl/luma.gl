@@ -192,7 +192,7 @@ export class ShaderPassRenderer {
     // render pass begins to avoid command-encoder locking errors on WebGPU.
     this.textureModel.predraw(this.device.commandEncoder);
 
-    const sourceFramebuffer = this.swapFramebuffers.current;
+    const sourceFramebuffer = getSeedFramebuffer(this.swapFramebuffers, originalTexture);
     const seedRenderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-seed-source',
       framebuffer: sourceFramebuffer,
@@ -809,6 +809,16 @@ function getNextPreviousFramebuffer(
   previousFramebuffer: Framebuffer | null
 ): Framebuffer {
   if (previousFramebuffer === swapFramebuffers.current) {
+    return swapFramebuffers.next;
+  }
+  return swapFramebuffers.current;
+}
+
+function getSeedFramebuffer(
+  swapFramebuffers: SwapFramebuffers,
+  originalTexture: Texture
+): Framebuffer {
+  if (getFramebufferTexture(swapFramebuffers.current) === originalTexture) {
     return swapFramebuffers.next;
   }
   return swapFramebuffers.current;

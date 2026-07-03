@@ -16,6 +16,11 @@ export type {
 } from './oit/a-buffer';
 export {aBuffer, aBufferPlugin} from './oit/a-buffer';
 export type {
+  ABufferResolveProps,
+  ABufferResolveShaderPassPipelineOptions
+} from './oit/a-buffer-resolve-shader-pass-pipeline';
+export {createABufferResolveShaderPassPipeline} from './oit/a-buffer-resolve-shader-pass-pipeline';
+export type {
   ABufferCaptureContext,
   ABufferRenderOptions,
   ABufferRendererProps,
@@ -29,7 +34,18 @@ export {
 } from './oit/a-buffer-renderer';
 export type {WBOITPass, WBOITShaderModuleProps, WBOITShaderModuleUniforms} from './oit/wboit';
 export {wboit, wboitPlugin} from './oit/wboit';
-export type {WBOITCaptureContext, WBOITRenderOptions, WBOITSupport} from './oit/wboit-renderer';
+export type {WBOITResolveBindings} from './oit/wboit-resolve-shader-pass-pipeline';
+export {
+  createWBOITResolveShaderPassPipeline,
+  wboitResolve
+} from './oit/wboit-resolve-shader-pass-pipeline';
+export type {
+  WBOITCapture,
+  WBOITCaptureContext,
+  WBOITCaptureOptions,
+  WBOITRenderOptions,
+  WBOITSupport
+} from './oit/wboit-renderer';
 export {getWBOITSupport, WBOITRenderer} from './oit/wboit-renderer';
 
 export type {
