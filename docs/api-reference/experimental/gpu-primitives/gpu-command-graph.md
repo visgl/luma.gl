@@ -72,7 +72,7 @@ its documented atomic graph resources; callers must select, adapt, or explicitly
 | `GPUCompaction` | Input and flag `GraphDataView`s | ❌ |
 | `GPUSort` | Key and value `GraphDataView`s | ❌ |
 | `GPUReduction` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
-| `GPUHistogram` | Scalar `GraphDataView` | ❌ |
+| `GPUHistogram` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUGridBinning` | Position `GraphDataView` | ❌ |
 | `GPUIndexPickingTarget` | Texture and readback resources | ❌ |
 | `DrawCommandBuffer` | Indirect command buffer | ❌ |
