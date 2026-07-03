@@ -9,7 +9,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Table, vectorFromArray, type RecordBatch} from 'apache-arrow';
 import {
   makeArrowLineRecordBatches,
@@ -282,8 +282,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     }
   ];
 
-  const device = await getWebGLTestDevice();
-  const {deck, parent} = createTestDeck(device);
+  const {deck, parent} = createTestDeck();
   try {
     await waitForDeckInitialization(deck);
     for (const {layer, initialViewState, getError, inspectModel} of cases) {
@@ -372,10 +371,9 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     await waitForPipeline(firstModel);
     t.equal(firstModel.device.type, 'webgpu', 'streaming path test uses WebGPU');
     t.ok(firstModel.instanceCount > 0, 'first streamed WebGPU batch is drawable before completion');
-    deck.redraw(true);
     t.deepEqual(loadedBatchCounts, [1], 'first batch is reported before the source completes');
     releaseSecondBatch();
-    await waitForModelCount(layer, 2);
+    await waitForModelCount(layer, 2, () => dataError);
     t.deepEqual(loadedBatchCounts, [1, 2], 'second batch appends without replacing the first');
     const pickingInfo = layer.getPickingInfo({
       info: {index: 7, picked: true} as PickingInfo,
@@ -521,7 +519,6 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
         await waitForPipeline(model);
         t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`);
         t.ok(model.instanceCount > 0, `${layer.id} has drawable storage-backed instances`);
-        deck.redraw(true);
       } finally {
         deck.setProps({layers: []});
       }
