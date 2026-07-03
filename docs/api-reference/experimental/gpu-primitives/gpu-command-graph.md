@@ -45,9 +45,9 @@ construction, or the caller may provide a compatible override to each encoding.
 Declares graph-owned scratch storage. Compatible logical transients with non-overlapping lifetimes
 may share one physical buffer.
 
-### `createBufferView(handle, props)`
+### `createDataView(handle, props)`
 
-Creates a `GraphBufferView<T extends GPUVectorFormat>` with `format`, `length`, `byteOffset`,
+Creates a `GraphDataView<T extends GPUVectorFormat>` with `format`, `length`, `byteOffset`,
 `byteStride`, and `rowByteLength` metadata.
 
 ### `importGPUData(id, data)`

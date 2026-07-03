@@ -3,32 +3,32 @@
 // Copyright (c) vis.gl contributors
 
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {GPUScan} from './gpu-scan';
 import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
-} from './graph-buffer-view-utils';
+} from './graph-data-view-utils';
 
 const COMPACTION_WORKGROUP_SIZE = 256;
 
 export type GPUCompactionProps = {
   id?: string;
-  input: GraphBufferView<'uint32'>;
-  flags: GraphBufferView<'uint32'>;
-  output: GraphBufferView<'uint32'>;
-  count: GraphBufferView<'uint32'>;
+  input: GraphDataView<'uint32'>;
+  flags: GraphDataView<'uint32'>;
+  output: GraphDataView<'uint32'>;
+  count: GraphDataView<'uint32'>;
 };
 
 /** Stable graph-composed compaction of uint32 values selected by 0/1 flags. */
 export class GPUCompaction {
   readonly id: string;
-  readonly input: GraphBufferView<'uint32'>;
-  readonly flags: GraphBufferView<'uint32'>;
-  readonly output: GraphBufferView<'uint32'>;
-  readonly count: GraphBufferView<'uint32'>;
+  readonly input: GraphDataView<'uint32'>;
+  readonly flags: GraphDataView<'uint32'>;
+  readonly output: GraphDataView<'uint32'>;
+  readonly count: GraphDataView<'uint32'>;
 
   constructor(props: GPUCompactionProps) {
     this.id = props.id ?? 'gpu-compaction';
@@ -84,7 +84,7 @@ export class GPUCompaction {
 function addClearCountPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
-  count: GraphBufferView<'uint32'>
+  count: GraphDataView<'uint32'>
 ): void {
   const passId = `${id}-clear-count`;
   graph.addComputePass({
@@ -115,11 +115,11 @@ function addScatterPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
-    input: GraphBufferView<'uint32'>;
-    flags: GraphBufferView<'uint32'>;
-    offsets: GraphBufferView<'uint32'>;
-    output: GraphBufferView<'uint32'>;
-    count: GraphBufferView<'uint32'>;
+    input: GraphDataView<'uint32'>;
+    flags: GraphDataView<'uint32'>;
+    offsets: GraphDataView<'uint32'>;
+    output: GraphDataView<'uint32'>;
+    count: GraphDataView<'uint32'>;
   }
 ): void {
   const length = props.input.length;

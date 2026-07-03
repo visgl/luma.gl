@@ -4,7 +4,7 @@
 
 import {Buffer, type Binding} from '@luma.gl/core';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/tables';
-import {GPUCommandGraph, type GraphBufferView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const STORAGE_BINDING_ALIGNMENT = 256;
@@ -14,10 +14,10 @@ export type GPUScalarFormat = 'uint32' | 'sint32' | 'float32';
 
 /** @internal */
 export function validatePackedView<T extends GPUVectorFormat>(
-  view: GraphBufferView,
+  view: GraphDataView,
   formats: readonly T[],
   name: string
-): asserts view is GraphBufferView<T> {
+): asserts view is GraphDataView<T> {
   const formatInfo = getGPUVectorFormatInfo(view.format);
   if (
     !formats.includes(view.format as T) ||
@@ -30,14 +30,14 @@ export function validatePackedView<T extends GPUVectorFormat>(
 }
 
 /** @internal */
-export function validatePackedUint32View(view: GraphBufferView, name: string): void {
+export function validatePackedUint32View(view: GraphDataView, name: string): void {
   validatePackedView(view, ['uint32'], name);
 }
 
 /** @internal */
 export function getViewBinding(
-  view: GraphBufferView,
-  getBuffer: (view: GraphBufferView) => Buffer
+  view: GraphDataView,
+  getBuffer: (view: GraphDataView) => Buffer
 ): Binding {
   const alignedByteOffset =
     Math.floor(view.byteOffset / STORAGE_BINDING_ALIGNMENT) * STORAGE_BINDING_ALIGNMENT;
@@ -54,7 +54,7 @@ export function getViewBinding(
 }
 
 /** Offset in 32-bit components from the aligned storage binding. @internal */
-export function getViewElementOffset(view: GraphBufferView): number {
+export function getViewElementOffset(view: GraphDataView): number {
   return (view.byteOffset % STORAGE_BINDING_ALIGNMENT) / UINT32_BYTE_LENGTH;
 }
 
@@ -64,12 +64,12 @@ export function createTransientView<T extends GPUVectorFormat, Parameters>(
   id: string,
   format: T,
   length: number
-): GraphBufferView<T> {
+): GraphDataView<T> {
   const formatInfo = getGPUVectorFormatInfo(format);
   const buffer = graph.createTransientBuffer({
     id,
     byteLength: Math.max(length, 1) * formatInfo.byteLength,
     usage: Buffer.STORAGE
   });
-  return graph.createBufferView(buffer, {format, length});
+  return graph.createDataView(buffer, {format, length});
 }

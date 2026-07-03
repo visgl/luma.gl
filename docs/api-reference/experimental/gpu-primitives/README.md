@@ -41,7 +41,7 @@ indirect draw arguments
 pre-recorded render commands
 ```
 
-The implementation consists of `GPUCommandGraph`, typed graph buffer views, `GPUScan`,
+The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
 `GPUCompaction`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
 `DrawCommandBuffer`. The accompanying trace viewer runs filtering and compaction over up to four
 million spans, while the sort and data-analysis examples demonstrate composable buffer-native
@@ -270,7 +270,7 @@ A `GraphBufferHandle` describes a complete logical allocation. It has an ID, a r
 length, a union of buffer usage flags, and an imported or transient lifetime. It is opaque: users
 do not construct handles directly.
 
-A `GraphBufferView<T>` describes a typed range within a handle. Its format uses
+A `GraphDataView<T>` describes a typed range within a handle. Its format uses
 `GPUVectorFormat`, and it records logical length, byte offset, byte stride, and row byte length.
 Views let algorithms bind a subrange without losing table-oriented metadata.
 
@@ -286,7 +286,7 @@ const sourceBuffer = graph.importBuffer(
   source
 );
 
-const sourceIds = graph.createBufferView(sourceBuffer, {
+const sourceIds = graph.createDataView(sourceBuffer, {
   format: 'uint32',
   length: objectCount
 });
@@ -812,7 +812,7 @@ The intended v10 layering is:
 ```text
 @luma.gl/engine
   GPUData, GPUVector, GPUTable
-  GPUCommandGraph and graph buffer views
+  GPUCommandGraph and graph data views
   DrawCommandBuffer
   compute/render kernel integration
 

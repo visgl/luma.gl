@@ -253,16 +253,16 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         byteLength: group.count * UINT32_BYTE_LENGTH,
         usage: Buffer.STORAGE
       });
-      const flags = graph.createBufferView(flagsBuffer, {format: 'uint32', length: group.count});
-      const sourceIds = graph.createBufferView(sourceIdsBuffer, {
+      const flags = graph.createDataView(flagsBuffer, {format: 'uint32', length: group.count});
+      const sourceIds = graph.createDataView(sourceIdsBuffer, {
         format: 'uint32',
         length: group.count
       });
-      const visibleIdView = graph.createBufferView(visibleIds, {
+      const visibleIdView = graph.createDataView(visibleIds, {
         format: 'uint32',
         length: group.count
       });
-      const count = graph.createBufferView(drawCommandHandle, {
+      const count = graph.createDataView(drawCommandHandle, {
         format: 'uint32',
         length: 1,
         byteOffset: drawCommands.getInstanceCountByteOffset(groupIndex)

@@ -4,13 +4,13 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphBufferView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
-} from './graph-buffer-view-utils';
+} from './graph-data-view-utils';
 
 const GRID_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_CELL_COUNT = 256;
@@ -18,13 +18,13 @@ const MAXIMUM_LOCAL_CELL_COUNT = 256;
 /** Bounds accepted by {@link GPUGridBinning}. */
 export type GPUGridBinningBounds =
   | readonly [number, number, number, number]
-  | GraphBufferView<'float32x4'>;
+  | GraphDataView<'float32x4'>;
 
 /** Properties for graph-native two-dimensional grid counting. */
 export type GPUGridBinningProps = {
   id?: string;
-  positions: GraphBufferView<'float32x2'>;
-  output: GraphBufferView<'uint32'>;
+  positions: GraphDataView<'float32x2'>;
+  output: GraphDataView<'uint32'>;
   gridSize: readonly [number, number];
   bounds: GPUGridBinningBounds;
 };
@@ -32,8 +32,8 @@ export type GPUGridBinningProps = {
 /** Graph-native row-major count accumulation for packed float32x2 positions. */
 export class GPUGridBinning {
   readonly id: string;
-  readonly positions: GraphBufferView<'float32x2'>;
-  readonly output: GraphBufferView<'uint32'>;
+  readonly positions: GraphDataView<'float32x2'>;
+  readonly output: GraphDataView<'uint32'>;
   readonly gridSize: readonly [number, number];
   readonly bounds: GPUGridBinningBounds;
 
@@ -99,7 +99,7 @@ export class GPUGridBinning {
 function addClearGridPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
-  output: GraphBufferView<'uint32'>
+  output: GraphDataView<'uint32'>
 ): void {
   const passId = `${id}-clear`;
   const source = /* wgsl */ `
@@ -154,7 +154,7 @@ const WIDTH: u32 = ${width}u;
 const HEIGHT: u32 = ${height}u;
 const CELL_COUNT: u32 = ${binning.output.length}u;
 const POSITIONS_OFFSET: u32 = ${getViewElementOffset(binning.positions)}u;
-${gpuBounds ? `const BOUNDS_OFFSET: u32 = ${getViewElementOffset(binning.bounds as GraphBufferView)}u;` : ''}
+${gpuBounds ? `const BOUNDS_OFFSET: u32 = ${getViewElementOffset(binning.bounds as GraphDataView)}u;` : ''}
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(binning.output)}u;
 @group(0) @binding(0) var<storage, read> positions: array<f32>;
 ${boundsBinding}
@@ -195,7 +195,7 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   const resources: GraphBufferUse[] = [
     {buffer: binning.positions, usage: 'storage-read'},
     ...(gpuBounds
-      ? ([{buffer: binning.bounds as GraphBufferView, usage: 'storage-read'}] as GraphBufferUse[])
+      ? ([{buffer: binning.bounds as GraphDataView, usage: 'storage-read'}] as GraphBufferUse[])
       : []),
     {buffer: binning.output, usage: 'storage-read-write'}
   ];
@@ -205,7 +205,7 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
     resources,
     bindings: {
       positions: binning.positions,
-      ...(gpuBounds ? {boundsValues: binning.bounds as GraphBufferView} : {}),
+      ...(gpuBounds ? {boundsValues: binning.bounds as GraphDataView} : {}),
       outputCounts: binning.output
     },
     dispatchCount: Math.ceil(binning.positions.length / GRID_WORKGROUP_SIZE)
@@ -218,7 +218,7 @@ function addComputationPass<Parameters>(
     id: string;
     source: string;
     resources: GraphBufferUse[];
-    bindings: Record<string, GraphBufferView>;
+    bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
 ): void {
@@ -257,6 +257,6 @@ function getFloatLiteral(value: number): string {
   return Number.isInteger(value) ? `${value}.0` : `${value}`;
 }
 
-function isGPUGridBoundsView(bounds: GPUGridBinningBounds): bounds is GraphBufferView<'float32x4'> {
+function isGPUGridBoundsView(bounds: GPUGridBinningBounds): bounds is GraphDataView<'float32x4'> {
   return !Array.isArray(bounds);
 }

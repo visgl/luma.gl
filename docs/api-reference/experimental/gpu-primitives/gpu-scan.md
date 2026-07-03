@@ -14,7 +14,7 @@ new GPUScan({
 }).addToGraph(graph);
 ```
 
-Both views must be packed, four-byte-aligned `GraphBufferView<'uint32'>` values. The output must
+Both views must be packed, four-byte-aligned `GraphDataView<'uint32'>` values. The output must
 contain at least as many rows as the input.
 
 For input `[1, 0, 1, 1]`, the output is `[0, 1, 1, 2]`.

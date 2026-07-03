@@ -16,8 +16,8 @@ new GPUReduction({input: values, output: extent, operation: 'extent'}).addToGrap
 ```ts
 type GPUReductionProps<T extends 'uint32' | 'sint32' | 'float32'> = {
   id?: string;
-  input: GraphBufferView<T>;
-  output: GraphBufferView<T>;
+  input: GraphDataView<T>;
+  output: GraphDataView<T>;
   operation: 'sum' | 'min' | 'max' | 'extent';
 };
 ```

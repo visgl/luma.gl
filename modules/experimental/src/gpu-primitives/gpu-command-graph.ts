@@ -112,7 +112,7 @@ export class GraphBufferHandle {
 }
 
 /** Typed logical range within one graph buffer. */
-export class GraphBufferView<T extends GPUVectorFormat = GPUVectorFormat> {
+export class GraphDataView<T extends GPUVectorFormat = GPUVectorFormat> {
   readonly buffer: GraphBufferHandle;
   readonly format: T;
   readonly length: number;
@@ -223,7 +223,7 @@ export class GraphTextureView<Format extends TextureFormat = TextureFormat> {
 
 /** One buffer use declared by a graph node. */
 export type GraphBufferUse = {
-  buffer: GraphBufferHandle | GraphBufferView;
+  buffer: GraphBufferHandle | GraphDataView;
   usage: GraphBufferUsage;
 };
 
@@ -251,7 +251,7 @@ export type GPUCommandGraphCompileContext = {
 export type GPUCommandGraphEncodeContext<Parameters> = {
   commandEncoder: CommandEncoder;
   parameters: Parameters;
-  getBuffer: (buffer: GraphBufferHandle | GraphBufferView) => Buffer;
+  getBuffer: (buffer: GraphBufferHandle | GraphDataView) => Buffer;
   getTexture: (texture: GraphTextureHandle | GraphTextureView) => Texture;
   getTextureView: (texture: GraphTextureHandle | GraphTextureView) => TextureView;
 };
@@ -408,7 +408,7 @@ export class GPUCommandGraph<Parameters = void> {
   }
 
   /** Creates one typed range over a graph buffer. */
-  createBufferView<T extends GPUVectorFormat>(
+  createDataView<T extends GPUVectorFormat>(
     buffer: GraphBufferHandle,
     props: {
       format: T;
@@ -417,19 +417,19 @@ export class GPUCommandGraph<Parameters = void> {
       byteStride?: number;
       rowByteLength?: number;
     }
-  ): GraphBufferView<T> {
+  ): GraphDataView<T> {
     this.assertBuffer(buffer);
     const formatInfo = getGPUVectorFormatInfo(props.format);
     const byteOffset = props.byteOffset ?? 0;
     const rowByteLength = props.rowByteLength ?? formatInfo.byteLength;
     const byteStride = props.byteStride ?? rowByteLength;
-    validateGraphBufferView(buffer, {
+    validateGraphDataView(buffer, {
       length: props.length,
       byteOffset,
       byteStride,
       rowByteLength
     });
-    return new GraphBufferView(buffer, {
+    return new GraphDataView(buffer, {
       format: props.format,
       length: props.length,
       byteOffset,
@@ -439,7 +439,7 @@ export class GPUCommandGraph<Parameters = void> {
   }
 
   /** Imports one borrowed GPUData range and returns its typed graph view. */
-  importGPUData<T extends GPUVectorFormat>(id: string, data: GPUData<T>): GraphBufferView<T> {
+  importGPUData<T extends GPUVectorFormat>(id: string, data: GPUData<T>): GraphDataView<T> {
     if (!data.format) {
       throw new Error(`GPUCommandGraph import "${id}" requires GPUData.format`);
     }
@@ -448,7 +448,7 @@ export class GPUCommandGraph<Parameters = void> {
       {id, byteLength: coreBuffer.byteLength, usage: coreBuffer.usage},
       data.buffer
     );
-    return this.createBufferView(handle, {
+    return this.createDataView(handle, {
       format: data.format,
       length: data.length,
       byteOffset: data.byteOffset,
@@ -458,7 +458,7 @@ export class GPUCommandGraph<Parameters = void> {
   }
 
   /** Imports one packed, single-chunk GPUVector. */
-  importGPUVector<T extends GPUVectorFormat>(id: string, vector: GPUVector<T>): GraphBufferView<T> {
+  importGPUVector<T extends GPUVectorFormat>(id: string, vector: GPUVector<T>): GraphDataView<T> {
     const [data, ...remainingData] = vector.data;
     if (!data || remainingData.length > 0) {
       throw new Error(`GPUCommandGraph import "${id}" requires exactly one GPUVector chunk`);
@@ -791,7 +791,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
 
     const importedBuffers = this.resolveImportedBuffers(options.buffers ?? {});
     const importedTextures = this.resolveImportedTextures(options.textures ?? {});
-    const getBuffer = (bufferOrView: GraphBufferHandle | GraphBufferView): Buffer => {
+    const getBuffer = (bufferOrView: GraphBufferHandle | GraphDataView): Buffer => {
       const handle = getBufferHandle(bufferOrView);
       const buffer = handle.transient
         ? this.transientBuffers.get(handle)
@@ -1001,8 +1001,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   }
 }
 
-function getBufferHandle(buffer: GraphBufferHandle | GraphBufferView): GraphBufferHandle {
-  return buffer instanceof GraphBufferView ? buffer.buffer : buffer;
+function getBufferHandle(buffer: GraphBufferHandle | GraphDataView): GraphBufferHandle {
+  return buffer instanceof GraphDataView ? buffer.buffer : buffer;
 }
 
 function getTextureHandle(texture: GraphTextureHandle | GraphTextureView): GraphTextureHandle {
@@ -1146,25 +1146,25 @@ function normalizeGraphTextureView<Format extends TextureFormat>(
   };
 }
 
-function validateGraphBufferView(
+function validateGraphDataView(
   buffer: GraphBufferHandle,
   props: {length: number; byteOffset: number; byteStride: number; rowByteLength: number}
 ): void {
   for (const [name, value] of Object.entries(props)) {
     if (!Number.isSafeInteger(value) || value < 0) {
-      throw new Error(`Graph buffer view ${name} must be a non-negative safe integer`);
+      throw new Error(`Graph data view ${name} must be a non-negative safe integer`);
     }
   }
   if (props.length > 1 && props.byteStride === 0) {
-    throw new Error('Graph buffer view byteStride must be positive for multiple rows');
+    throw new Error('Graph data view byteStride must be positive for multiple rows');
   }
   if (props.rowByteLength > props.byteStride && props.length > 1) {
-    throw new Error('Graph buffer view rowByteLength cannot exceed byteStride');
+    throw new Error('Graph data view rowByteLength cannot exceed byteStride');
   }
   const byteLength =
     props.length === 0 ? 0 : (props.length - 1) * props.byteStride + props.rowByteLength;
   if (props.byteOffset + byteLength > buffer.byteLength) {
-    throw new Error(`Graph buffer view exceeds buffer "${buffer.id}" byte length`);
+    throw new Error(`Graph data view exceeds buffer "${buffer.id}" byte length`);
   }
 }
 

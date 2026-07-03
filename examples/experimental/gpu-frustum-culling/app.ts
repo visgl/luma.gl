@@ -370,13 +370,13 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       byteLength: capacity * UINT32_BYTE_LENGTH,
       usage: Buffer.STORAGE
     });
-    const flags = graph.createBufferView(flagsBuffer, {format: 'uint32', length: capacity});
-    const sourceIds = graph.createBufferView(sourceIdsBuffer, {format: 'uint32', length: capacity});
-    const visibleIdView = graph.createBufferView(visibleIds, {
+    const flags = graph.createDataView(flagsBuffer, {format: 'uint32', length: capacity});
+    const sourceIds = graph.createDataView(sourceIdsBuffer, {format: 'uint32', length: capacity});
+    const visibleIdView = graph.createDataView(visibleIds, {
       format: 'uint32',
       length: capacity
     });
-    const instanceCount = graph.createBufferView(drawCommandBuffer, {
+    const instanceCount = graph.createDataView(drawCommandBuffer, {
       format: 'uint32',
       length: 1,
       byteOffset: drawCommands.getInstanceCountByteOffset(0)
