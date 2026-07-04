@@ -8,20 +8,24 @@ import {
   GPUData,
   getBufferLayoutFromGPUDataStructFormat,
   isGPUDataStructFormat,
-  makeGPUDataStructFormat,
   type GPUDataView
 } from '@luma.gl/tables';
 
-test('makeGPUDataStructFormat applies WebGPU vertex alignment to packed fields', t => {
-  const format = makeGPUDataStructFormat(
-    {
+test('GPUData applies WebGPU vertex alignment to packed struct fields', t => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 64});
+  const data = new GPUData({
+    buffer,
+    length: 1,
+    format: {
       tag: 'uint8',
       pair: 'uint8x2',
       color: 'unorm8x4',
       position: 'float32x3'
     },
-    {layout: 'packed'}
-  );
+    layout: 'packed'
+  });
+  const format = data.format!;
 
   t.ok(isGPUDataStructFormat(format), 'recognizes struct metadata');
   t.equal(format.fields.tag.byteOffset, 0, 'one-byte fields can start at any byte');
@@ -32,7 +36,12 @@ test('makeGPUDataStructFormat applies WebGPU vertex alignment to packed fields',
   t.equal(format.rowByteLength, 20, 'tracks the final field payload');
   t.equal(format.byteStride, 20, 'rounds the row stride to four bytes');
 
-  const singleByteFormat = makeGPUDataStructFormat({tag: 'uint8'}, {layout: 'packed'});
+  const singleByteFormat = new GPUData({
+    buffer,
+    length: 1,
+    format: {tag: 'uint8'},
+    layout: 'packed'
+  }).format!;
   t.equal(singleByteFormat.rowByteLength, 1, 'does not count trailing padding as payload');
   t.equal(singleByteFormat.byteStride, 4, 'pads a one-byte row to a valid vertex stride');
 
@@ -53,24 +62,37 @@ test('makeGPUDataStructFormat applies WebGPU vertex alignment to packed fields',
   );
 
   t.throws(
-    () => makeGPUDataStructFormat({}, {layout: 'packed'}),
+    () => new GPUData({buffer, length: 1, format: {}, layout: 'packed'}),
     /at least one field/,
     'rejects empty structs'
   );
   t.throws(
-    () => makeGPUDataStructFormat({legacy: 'uint8x3-webgl'}, {layout: 'packed'}),
+    () =>
+      new GPUData({
+        buffer,
+        length: 1,
+        format: {legacy: 'uint8x3-webgl'},
+        layout: 'packed'
+      }),
     /WebGL-only format/,
     'rejects formats that are not valid WebGPU vertex attributes'
   );
+  buffer.destroy();
   t.end();
 });
 
-test('makeGPUDataStructFormat applies WGSL storage carrier alignment', t => {
-  const format = makeGPUDataStructFormat({
-    tag: 'uint8',
-    position: 'float32x3',
-    color: 'unorm8x4'
-  });
+test('GPUData applies WGSL storage carrier alignment to struct fields', t => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 32});
+  const format = new GPUData({
+    buffer,
+    length: 1,
+    format: {
+      tag: 'uint8',
+      position: 'float32x3',
+      color: 'unorm8x4'
+    }
+  }).format!;
 
   t.equal(format.layout, 'wgsl-storage', 'defaults to WGSL storage layout');
   t.equal(format.fields.tag.byteOffset, 0, 'places the first u32 carrier at zero');
@@ -78,14 +100,20 @@ test('makeGPUDataStructFormat applies WGSL storage carrier alignment', t => {
   t.equal(format.fields.color.byteOffset, 28, 'uses the vec3 tail for the packed color carrier');
   t.equal(format.rowByteLength, 32, 'tracks physical field payloads');
   t.equal(format.byteStride, 32, 'aligns the complete storage struct');
+  buffer.destroy();
   t.end();
 });
 
 test('GPUData exposes zero-copy typed struct children', t => {
   const device = new NullDevice({});
-  const format = makeGPUDataStructFormat({a: 'sint32', b: 'float32'}, {layout: 'packed'});
   const buffer = device.createBuffer({byteLength: 24});
-  const data = new GPUData({buffer, format, length: 2, byteOffset: 4});
+  const data: GPUData<{a: 'sint32'; b: 'float32'}, 'packed'> = new GPUData({
+    buffer,
+    format: {a: 'sint32', b: 'float32'},
+    layout: 'packed',
+    length: 2,
+    byteOffset: 4
+  });
 
   const a: GPUDataView<'sint32'> | null = data.getChild('a');
   const b: GPUDataView<'float32'> | null = data.getChild('b');
@@ -106,7 +134,14 @@ test('GPUData exposes zero-copy typed struct children', t => {
   const scalarData = new GPUData({buffer, format: 'float32', length: 1});
   t.equal(scalarData.getChild('value'), null, 'returns null for non-struct data');
   t.throws(
-    () => new GPUData({buffer, format, length: 1, byteStride: 4}),
+    () =>
+      new GPUData({
+        buffer,
+        format: {a: 'sint32', b: 'float32'},
+        layout: 'packed',
+        length: 1,
+        byteStride: 4
+      }),
     /smaller than its struct row layout/,
     'rejects a row stride smaller than the struct layout'
   );

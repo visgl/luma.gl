@@ -84,12 +84,12 @@ Use segmented layout when a table should have one allocation but columns should 
 
 Render pipelines use `BufferLayout` and vertex formats to interpret bytes. This supports normalized attributes such as `unorm8x4` because vertex fetch converts them to shader-visible values.
 
-The `packed` mode of `makeGPUDataStructFormat()` follows WebGPU vertex layout
-requirements: field offsets are aligned to `min(4, format byte length)` and the
-row stride is a multiple of four. Small formats can therefore use one- or
-two-byte alignment, while the complete row can still be bound as a vertex
-buffer. These are WebGPU vertex-fetch rules rather than a `wgsl-vertex` memory
-layout.
+The `packed` mode for an inline `GPUData` struct format follows WebGPU vertex
+layout requirements: field offsets are aligned to
+`min(4, format byte length)` and the row stride is a multiple of four. Small
+formats can therefore use one- or two-byte alignment, while the complete row
+can still be bound as a vertex buffer. These are WebGPU vertex-fetch rules
+rather than a `wgsl-vertex` memory layout.
 
 Compute pipelines use storage bindings. They read raw storage values, so normalized formats are not decoded unless the compute shader does that work explicitly.
 

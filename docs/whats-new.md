@@ -48,7 +48,7 @@ Target Release Date: Q3, 2026
 - **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
 - **Vertex storage planning** - `GPUTableBufferPlanner` now checks vertex-stage storage buffer limits before choosing storage-backed table attributes, allowing core WebGPU devices to fall back to vertex attributes when needed.
 - **Execution helpers** - `TableTransform`, `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` now live beside the generic table runtime instead of the Arrow adapter module.
-- **Physical GPU data structs** - `makeGPUDataStructFormat()` describes interleaved `GPUData` rows with `wgsl-storage` or minimally padded WebGPU vertex layouts, while `GPUData.getChild()` and `getChildAt()` expose typed zero-copy field views.
+- **Physical GPU data structs** - Inline `GPUData` format records describe interleaved rows with `wgsl-storage` or minimally padded WebGPU vertex layouts, while `GPUData.getChild()` and `getChildAt()` expose typed zero-copy field views.
 
 **@luma.gl/gpgpu** NEW MODULE
 

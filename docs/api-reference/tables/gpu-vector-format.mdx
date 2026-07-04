@@ -11,8 +11,8 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 
 `GPUVectorFormat` is the canonical memory-layout string for
 [`GPUVector`](/docs/api-reference/tables/gpu-vector). [`GPUData`](/docs/api-reference/tables/gpu-data)
-accepts the broader `GPUDataFormat`, which also includes physical interleaved
-struct formats.
+also accepts an inline record of physical field formats and retains the resulting
+`GPUDataStructFormat` in its broader `GPUDataFormat` property.
 
 It describes bytes in GPU memory, not the shader value written in WGSL or GLSL.
 Shader values are declared by `ShaderLayout`, for example `vec4<f32>`.

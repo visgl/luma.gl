@@ -36,17 +36,17 @@ Interleaved rows can use a physical struct format. Field declarations use the
 same fixed-width format strings as `GPUVectorFormat`:
 
 ```ts
-import {GPUData, makeGPUDataStructFormat} from '@luma.gl/tables';
+import {GPUData} from '@luma.gl/tables';
 
-const format = makeGPUDataStructFormat(
-  {
+const data = new GPUData({
+  buffer,
+  length,
+  format: {
     a: 'sint32',
     b: 'float32'
   },
-  {layout: 'packed'}
-);
-
-const data = new GPUData({buffer, format, length});
+  layout: 'packed'
+});
 const b = data.getChild('b'); // GPUDataView<'float32'> | null
 ```
 
@@ -90,9 +90,11 @@ returns a borrowed strided view without allocating or copying GPU storage.
 
 ## Struct Formats
 
-`makeGPUDataStructFormat(fields, options?)` describes several named fixed-width
-fields stored in each `GPUData` row. The declaration is physical: it describes
-the bytes in the buffer and does not declare a parallel shader struct type.
+An object passed to `GPUData.format` describes several named fixed-width fields
+stored in each row. `GPUData` resolves the physical offsets and retains the
+canonical `GPUDataStructFormat` in its `format` property. The declaration
+describes bytes in the buffer and does not declare a parallel shader struct
+type.
 
 The supported `layout` strings are:
 
@@ -137,7 +139,8 @@ order, offsets, formats, row stride, and optional `stepMode`.
 | Prop | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `buffer` | `Buffer \| DynamicBuffer` | Required | GPU buffer containing this chunk's bytes. |
-| `format` | `GPUDataFormat` | `undefined` | Canonical memory-layout descriptor: a `GPUVectorFormat` string or a physical `GPUDataStructFormat`. |
+| `format` | `GPUVectorFormat \| GPUDataStructFields` | `undefined` | A scalar/list format string or an inline record of named fixed-width field formats. |
+| `layout` | `wgsl-storage \| packed` | `wgsl-storage` | Physical packing rules for an inline struct format. Invalid with a scalar/list format. |
 | `length` | `number` | Required | Number of logical rows in this chunk. |
 | `valueLength` | `number` | `length` | Number of fixed rows or flattened vertex-list element values. |
 | `stride` | `number` | Derived from `format` | Number of scalar values represented by one fixed row or flattened element. |

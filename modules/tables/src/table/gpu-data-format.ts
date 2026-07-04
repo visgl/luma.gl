@@ -17,7 +17,7 @@ export type GPUDataStructFields = Readonly<Record<string, VertexFormat>>;
 /** Supported physical packing rules for one GPU data struct row. */
 export type GPUDataStructLayout = 'wgsl-storage' | 'packed';
 
-/** Resolved physical metadata for one field in a GPU data struct row. */
+/** Computed physical metadata for one field in a GPU data struct row. */
 export type GPUDataStructField<Format extends VertexFormat = VertexFormat> = Readonly<{
   /** Fixed-width memory format stored for this field. */
   format: Format;
@@ -28,30 +28,37 @@ export type GPUDataStructField<Format extends VertexFormat = VertexFormat> = Rea
 }>;
 
 /** Physical format for named fixed-width fields interleaved in one GPU data row. */
-export type GPUDataStructFormat<Fields extends GPUDataStructFields = GPUDataStructFields> =
-  Readonly<{
-    /** Discriminator separating struct formats from string GPU vector formats. */
-    type: 'struct';
-    /** Packing rules used to resolve field offsets. */
-    layout: GPUDataStructLayout;
-    /** Resolved fields in declaration order. */
-    fields: Readonly<{[Name in keyof Fields]: GPUDataStructField<Fields[Name]>}>;
-    /** Total number of scalar components represented by one row. */
-    components: number;
-    /** Bytes between adjacent struct rows. */
-    byteStride: number;
-    /** Bytes through the end of the final field payload, excluding trailing row padding. */
-    rowByteLength: number;
-  }>;
+export type GPUDataStructFormat<
+  Fields extends GPUDataStructFields = GPUDataStructFields,
+  Layout extends GPUDataStructLayout = GPUDataStructLayout
+> = Readonly<{
+  /** Discriminator separating struct formats from string GPU vector formats. */
+  type: 'struct';
+  /** Packing rules used to resolve field offsets. */
+  layout: Layout;
+  /** Computed fields in declaration order. */
+  fields: Readonly<{[Name in keyof Fields]: GPUDataStructField<Fields[Name]>}>;
+  /** Total number of scalar components represented by one row. */
+  components: number;
+  /** Bytes between adjacent struct rows. */
+  byteStride: number;
+  /** Bytes through the end of the final field payload, excluding trailing row padding. */
+  rowByteLength: number;
+}>;
 
 /** Canonical physical metadata accepted by GPUData. */
 export type GPUDataFormat = GPUVectorFormat | GPUDataStructFormat;
 
-/** Options for creating a physical GPU data struct format. */
-export type MakeGPUDataStructFormatOptions = {
-  /** Packing rules. Defaults to `wgsl-storage`. */
-  layout?: GPUDataStructLayout;
-};
+/** Format declaration accepted by the GPUData constructor. */
+export type GPUDataFormatDeclaration = GPUVectorFormat | GPUDataStructFields;
+
+/** Canonical runtime format stored by GPUData. @internal */
+export type GPUDataFormatT<
+  Format extends GPUDataFormatDeclaration,
+  Layout extends GPUDataStructLayout | null
+> = Layout extends GPUDataStructLayout
+  ? GPUDataStructFormat<Extract<Format, GPUDataStructFields>, Layout>
+  : Extract<Format, GPUVectorFormat>;
 
 /** Options for deriving a vertex buffer layout from a GPU data struct format. */
 export type BufferLayoutFromGPUDataStructFormatOptions = {
@@ -67,25 +74,23 @@ export function isGPUDataStructFormat(
 }
 
 /**
- * Resolves named physical field formats into one immutable interleaved row format.
- *
- * `packed` applies WebGPU vertex-buffer alignment: each field offset is aligned to
- * `min(4, byteLength)` and the final byte stride is aligned to four bytes.
- * `wgsl-storage` uses WGSL storage-struct alignment for raw storage carrier types.
+ * Normalizes named physical field formats into one immutable interleaved row format.
+ * @internal GPUData constructor implementation.
  */
-export function makeGPUDataStructFormat<const Fields extends GPUDataStructFields>(
-  fieldFormats: Fields,
-  options: MakeGPUDataStructFormatOptions = {}
-): GPUDataStructFormat<Fields> {
+export function normalizeGPUDataStructFormat<
+  const Fields extends GPUDataStructFields,
+  const Layout extends GPUDataStructLayout
+>(fieldFormats: Fields, layout: Layout): GPUDataStructFormat<Fields, Layout> {
   const fieldEntries = Object.entries(fieldFormats) as [keyof Fields & string, VertexFormat][];
   if (fieldEntries.length === 0) {
     throw new Error('GPUData struct format must declare at least one field');
   }
 
-  const layout = options.layout ?? 'wgsl-storage';
-  return layout === 'packed'
-    ? makePackedGPUDataStructFormat(fieldEntries)
-    : makeStorageGPUDataStructFormat(fieldEntries);
+  return (
+    layout === 'packed'
+      ? makePackedGPUDataStructFormat(fieldEntries)
+      : makeStorageGPUDataStructFormat(fieldEntries)
+  ) as GPUDataStructFormat<Fields, Layout>;
 }
 
 /** Converts physical GPU data struct metadata into an interleaved vertex buffer layout. */
@@ -108,7 +113,7 @@ export function getBufferLayoutFromGPUDataStructFormat(
 
 function makePackedGPUDataStructFormat<Fields extends GPUDataStructFields>(
   fieldEntries: [keyof Fields & string, VertexFormat][]
-): GPUDataStructFormat<Fields> {
+): GPUDataStructFormat<Fields, 'packed'> {
   const fieldLayouts: [string, GPUDataStructField][] = [];
   let byteOffset = 0;
   let components = 0;
@@ -140,12 +145,12 @@ function makePackedGPUDataStructFormat<Fields extends GPUDataStructFields>(
     components,
     byteStride: alignTo(byteOffset, 4),
     rowByteLength: byteOffset
-  }) as GPUDataStructFormat<Fields>;
+  }) as GPUDataStructFormat<Fields, 'packed'>;
 }
 
 function makeStorageGPUDataStructFormat<Fields extends GPUDataStructFields>(
   fieldEntries: [keyof Fields & string, VertexFormat][]
-): GPUDataStructFormat<Fields> {
+): GPUDataStructFormat<Fields, 'wgsl-storage'> {
   const storageTypes = Object.fromEntries(
     fieldEntries.map(([fieldName, format]) => [fieldName, getStorageType(format)])
   ) as Record<string, VariableShaderType>;
@@ -177,7 +182,7 @@ function makeStorageGPUDataStructFormat<Fields extends GPUDataStructFields>(
     components,
     byteStride: storageLayout.byteLength,
     rowByteLength
-  }) as GPUDataStructFormat<Fields>;
+  }) as GPUDataStructFormat<Fields, 'wgsl-storage'>;
 }
 
 function getStorageType(format: VertexFormat): VariableShaderType {

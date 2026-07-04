@@ -96,8 +96,8 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   }
 }
 
-function getGPUDataCollectionRowCount(
-  gpuData: Record<string, GPUData>,
+function getGPUDataCollectionRowCount<T extends GPUTypeMap>(
+  gpuData: GPURecordBatchFromDataProps<T>['gpuData'],
   explicitNumRows?: number
 ): number {
   const firstData = Object.values(gpuData)[0];
@@ -113,8 +113,8 @@ function getGPUDataCollectionRowCount(
   return numRows;
 }
 
-function getGPUDataCollectionBufferLayout(
-  gpuData: Record<string, GPUData>,
+function getGPUDataCollectionBufferLayout<T extends GPUTypeMap>(
+  gpuData: GPURecordBatchFromDataProps<T>['gpuData'],
   explicitBufferLayout?: BufferLayout[]
 ): BufferLayout[] {
   if (explicitBufferLayout) {
@@ -161,8 +161,8 @@ function synthesizeGPUDataBufferLayout(name: string, data: GPUData): BufferLayou
   ];
 }
 
-function getGPUDataCollectionFields(
-  gpuData: Record<string, GPUData>,
+function getGPUDataCollectionFields<T extends GPUTypeMap>(
+  gpuData: GPURecordBatchFromDataProps<T>['gpuData'],
   explicitFields: GPUField[] | undefined,
   bufferLayout: BufferLayout[]
 ): GPUField[] {

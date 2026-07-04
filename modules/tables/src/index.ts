@@ -16,14 +16,12 @@ export {
 export {
   getBufferLayoutFromGPUDataStructFormat,
   isGPUDataStructFormat,
-  makeGPUDataStructFormat,
   type BufferLayoutFromGPUDataStructFormatOptions,
   type GPUDataFormat,
   type GPUDataStructField,
   type GPUDataStructFields,
   type GPUDataStructFormat,
-  type GPUDataStructLayout,
-  type MakeGPUDataStructFormatOptions
+  type GPUDataStructLayout
 } from './table/gpu-data-format';
 export {
   GPUDataView,
