@@ -318,23 +318,6 @@ export type ArrowTextDictionaryStorageInputProps = ArrowTextStorageSharedInputPr
   sourceVectors: ArrowTextDictionaryStorageSourceVectors;
 };
 
-/** Render-only props left after Arrow attribute conversion has produced prepared state. */
-export type ArrowTextAttributeRenderProps = Omit<
-  ArrowTextModelProps,
-  | 'positions'
-  | 'texts'
-  | 'colors'
-  | 'angles'
-  | 'sizes'
-  | 'pixelOffsets'
-  | 'clipRects'
-  | 'lineHeight'
-  | 'fontAtlas'
-  | 'resources'
-  | 'rowIndexBase'
-  | 'sourceVectors'
->;
-
 /** Prepared attribute text state plus Arrow diagnostics retained by conversion helpers. */
 export type ArrowTextAttributeState = TextAttributeState & {
   /** Props used to build the prepared attribute state. */
@@ -346,46 +329,6 @@ export type ArrowTextAttributeState = TextAttributeState & {
   /** Character mapping retained for follow-on conversion diagnostics. */
   mappingState: ResolvedCharacterMapping;
 };
-
-/** Render-only props left after Arrow storage conversion has produced prepared state. */
-export type ArrowTextStorageRenderProps = Omit<
-  ArrowTextStorageInputProps,
-  | 'positions'
-  | 'texts'
-  | 'colors'
-  | 'angles'
-  | 'sizes'
-  | 'pixelOffsets'
-  | 'textAnchors'
-  | 'alignmentBaselines'
-  | 'rowIndexColumn'
-  | 'clipRects'
-  | 'lineHeight'
-  | 'fontAtlas'
-  | 'resources'
-  | 'rowIndexBase'
-  | 'sourceVectors'
->;
-
-/** Render-only props left after Arrow dictionary conversion has produced prepared state. */
-export type ArrowTextDictionaryStorageRenderProps = Omit<
-  ArrowTextDictionaryStorageInputProps,
-  | 'positions'
-  | 'texts'
-  | 'colors'
-  | 'angles'
-  | 'sizes'
-  | 'pixelOffsets'
-  | 'textAnchors'
-  | 'alignmentBaselines'
-  | 'rowIndexColumn'
-  | 'clipRects'
-  | 'lineHeight'
-  | 'fontAtlas'
-  | 'resources'
-  | 'rowIndexBase'
-  | 'sourceVectors'
->;
 
 /** Generated attribute text render-batch state. */
 export type ArrowTextRenderBatchState = {
@@ -1310,7 +1253,7 @@ function makeArrowTextModelProps(
     props,
     mappingState.fontAtlas
   );
-  const modelProps: GPUTableModelProps = {
+  const modelProps = {
     ...props,
     vs: props.vs ?? (textInputs.clipRects ? DEFAULT_CLIPPED_TEXT_VS : DEFAULT_TEXT_VS),
     fs: props.fs ?? DEFAULT_TEXT_FS,
@@ -1333,7 +1276,7 @@ function makeArrowTextModelProps(
       {shaderLayout}
     ),
     tableCount: 'none'
-  };
+  } satisfies GPUTableModelProps;
   let destroyed = false;
 
   return {
