@@ -7,9 +7,9 @@ import {
   ArrowTextRenderer,
   createArrowTextPickingManager,
   createArrowTextPickingModel,
-  createArrowTextShaderInputs,
   drawArrowTextPickingPass,
   getArrowTextRenderModules,
+  makeGPUTextDataFromArrow,
   makeArrowFixedSizeListVector,
   prepareArrowTextInput,
   prepareArrowTextInputFromData,
@@ -18,12 +18,12 @@ import {
 } from '@luma.gl/arrow';
 import type {RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
+import {buildBitmapFontAtlas, TextRenderer} from '@luma.gl/text';
 import {
-  buildBitmapFontAtlas,
   TextAttributeModel,
   TextDictionaryModel,
   TextStorageModel
-} from '@luma.gl/text';
+} from '@luma.gl/text/experimental';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -40,6 +40,9 @@ test('ArrowTextRenderer prepares attribute text and draws attribute picking batc
   });
 
   t.equal(renderer.resolvedModel, 'attribute', 'NullDevice keeps text on the attribute path');
+  t.ok(renderer.textRenderer instanceof TextRenderer, 'renderer uses the stable text facade');
+  t.equal(renderer.textData.strategy, 'attribute', 'prepared data records the selected strategy');
+  t.equal(renderer.textData.stats.glyphCount, 3, 'prepared data exposes compact glyph statistics');
   t.ok(renderer.model instanceof TextAttributeModel, 'attribute renderer owns an attribute model');
   t.equal(getArrowTextRenderModules(device).length, 1, 'renderer resolves one picking module');
   t.notOk(supportsTextIndexPicking(device), 'NullDevice does not support index picking');
@@ -58,7 +61,14 @@ test('ArrowTextRenderer prepares attribute text and draws attribute picking batc
 
   const preparedFromData = await prepareArrowTextInputFromData(device, sourceVectors);
   t.ok(preparedFromData.arrowVectorByteLength > 0, 'direct source preparation measures text bytes');
-  preparedFromData.destroy();
+  const preparedTextData = makeGPUTextDataFromArrow(device, {
+    ...preparedFromData,
+    fontAtlas: FONT_ATLAS
+  });
+  t.equal(preparedTextData.strategy, 'attribute', 'automatic preparation falls back to attributes');
+  const preparedTextRenderer = new TextRenderer(device, {data: preparedTextData});
+  preparedTextRenderer.destroy();
+  preparedTextData.destroy();
 
   const pickingModel = createArrowTextPickingModel(device, renderer.model, renderer.shaderInputs);
   t.equal(
@@ -110,6 +120,22 @@ test('ArrowTextRenderer prepares attribute text and draws attribute picking batc
 
   pickingModel.destroy();
   renderer.destroy();
+  t.end();
+});
+
+test('ArrowTextRenderer can transfer GPUTextData ownership to a host', async t => {
+  const device = new NullDevice({});
+  const renderer = await ArrowTextRenderer.create(device, {
+    ...makeArrowTextSourceVectors(['AB']),
+    fontAtlas: FONT_ATLAS
+  });
+  const textData = renderer.transferTextDataOwnership(() => {});
+
+  renderer.destroy();
+  t.equal(textData.glyphCount, 2, 'destroying the borrowing renderer preserves host-owned data');
+  textData.destroy();
+  textData.destroy();
+  t.pass('caller-owned GPUTextData destruction is idempotent');
   t.end();
 });
 
@@ -175,65 +201,28 @@ test('ArrowTextRenderer keeps auto text on attributes below compact compute limi
   t.end();
 });
 
-test('Arrow text picking rebuilds storage and dictionary picking models from state', t => {
-  const device = new NullDevice({});
-  const shaderInputs = createArrowTextShaderInputs();
+test('Arrow text picking draws storage and dictionary models with borrowed state', t => {
   const dictionaryTextModel = makeTextModelStateStub(TextDictionaryModel, 'dictionary-text');
   const storageTextModel = makeTextModelStateStub(TextStorageModel, 'storage-text');
-  const dictionaryPickingModel = {} as TextDictionaryModel;
-  const storagePickingModel = {} as TextStorageModel;
-  const originalDictionaryFromState = TextDictionaryModel.fromState;
-  const originalStorageFromState = TextStorageModel.fromState;
-  let dictionaryPickingProps: Parameters<typeof TextDictionaryModel.fromState>[1] | undefined;
-  let storagePickingProps: Parameters<typeof TextStorageModel.fromState>[1] | undefined;
+  const storageDrawState = makePickingDrawState();
+  drawArrowTextPickingPass(
+    {} as RenderPass,
+    makePickingDrawModel(storageDrawState),
+    storageTextModel,
+    {onBatch: batchIndex => storageDrawState.batchIndices.push(batchIndex)}
+  );
+  t.deepEqual(storageDrawState.batchIndices, [0], 'storage picking reports one render batch');
+  t.equal(storageDrawState.drawCount, 1, 'storage picking draws once');
 
-  TextDictionaryModel.fromState = ((
-    _: Parameters<typeof TextDictionaryModel.fromState>[0],
-    props: Parameters<typeof TextDictionaryModel.fromState>[1]
-  ) => {
-    dictionaryPickingProps = props;
-    return dictionaryPickingModel;
-  }) as typeof TextDictionaryModel.fromState;
-  TextStorageModel.fromState = ((
-    _: Parameters<typeof TextStorageModel.fromState>[0],
-    props: Parameters<typeof TextStorageModel.fromState>[1]
-  ) => {
-    storagePickingProps = props;
-    return storagePickingModel;
-  }) as typeof TextStorageModel.fromState;
-
-  try {
-    t.equal(
-      createArrowTextPickingModel(device, dictionaryTextModel, shaderInputs),
-      dictionaryPickingModel,
-      'dictionary picking rebuilds through dictionary state'
-    );
-    t.equal(
-      createArrowTextPickingModel(device, storageTextModel, shaderInputs),
-      storagePickingModel,
-      'storage picking rebuilds through storage state'
-    );
-    t.equal(
-      dictionaryPickingProps?.fragmentEntryPoint,
-      'fragmentPicking',
-      'dictionary picking selects picking fragment entrypoint'
-    );
-    t.equal(
-      storagePickingProps?.fragmentEntryPoint,
-      'fragmentPicking',
-      'storage picking selects picking fragment entrypoint'
-    );
-
-    const drawState = makePickingDrawState();
-    drawArrowTextPickingPass({} as RenderPass, makePickingDrawModel(drawState), storageTextModel, {
-      onBatch: batchIndex => drawState.batchIndices.push(batchIndex)
-    });
-    t.deepEqual(drawState.batchIndices, [0], 'storage picking reports its single render batch');
-    t.equal(drawState.drawCount, 1, 'storage picking draws once');
-  } finally {
-    TextDictionaryModel.fromState = originalDictionaryFromState;
-    TextStorageModel.fromState = originalStorageFromState;
-  }
+  const dictionaryDrawState = makePickingDrawState();
+  drawArrowTextPickingPass(
+    {} as RenderPass,
+    makePickingDrawModel(dictionaryDrawState),
+    dictionaryTextModel,
+    {onBatch: batchIndex => dictionaryDrawState.batchIndices.push(batchIndex)}
+  );
+  t.deepEqual(dictionaryDrawState.batchIndices, [0], 'dictionary picking reports one render batch');
+  t.equal(dictionaryDrawState.drawCount, 1, 'dictionary picking draws once');
   t.end();
 });
 

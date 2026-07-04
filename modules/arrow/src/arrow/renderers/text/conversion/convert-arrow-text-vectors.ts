@@ -41,7 +41,9 @@ import {
   makeVector,
   util
 } from 'apache-arrow';
+import {type FontAtlas, type TextGlyphLayout} from '@luma.gl/text';
 import {
+  buildTextGpuGlyphDefinitions,
   createTextDefaultFragmentShaderUniforms,
   createGpuExpandedCompactInput,
   createGpuExpandedGeneratedState,
@@ -54,7 +56,6 @@ import {
   DEFAULT_CLIPPED_TEXT_VS,
   dispatchGpuExpandedTextCompute,
   dispatchGpuUtf8ExpandedTextCompute,
-  buildTextGpuGlyphDefinitions,
   GPU_TEXT_EXPANSION_STORAGE_BUFFER_COUNT,
   GPU_UTF8_TEXT_EXPANSION_STORAGE_BUFFER_COUNT,
   ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
@@ -66,25 +67,18 @@ import {
   supportsGpuUtf8TextExpansion,
   assertTextStorageGPUVectorInputs,
   type TextAttributeState,
-  type FontAtlas,
   type GpuExpandedTextStream,
   type GpuTextDictionaryCompressedStream,
   type GpuUtf8TextInput,
   type TextDictionaryBatchState,
   type TextDictionaryRenderBatchState,
   type TextDictionaryState,
-  type TextGlyphLayout,
   type TextStorageBatchState,
   type TextStorageBuffer,
   type TextStorageInputProps,
   type TextStorageRenderBatchState,
-  type TextStorageState,
-  getFirstTextDictionaryBatch,
-  getFirstTextDictionaryRenderBatch,
-  getFirstTextStorageBatch,
-  getFirstTextStorageRenderBatch,
-  getTextStorageRowGlyphStartsBuffer
-} from '@luma.gl/text';
+  type TextStorageState
+} from '@luma.gl/text/experimental';
 import {
   buildArrowGlyphLayout,
   buildGpuTextDictionaryCompressedStream,
@@ -1821,8 +1815,6 @@ export function createArrowTextStorageState(
   }
 
   glyphFrames ??= createTextStorageGlyphFrames(device, props, new Float32Array(4));
-  const firstBatch = getFirstTextStorageBatch({batches});
-  const firstRenderBatch = getFirstTextStorageRenderBatch({renderBatches});
   let destroyed = false;
   const storageState: ArrowTextStorageState = {
     glyphStream,
@@ -1844,19 +1836,7 @@ export function createArrowTextStorageState(
     renderBatches,
     ownedRowBindingResources: ownedRowStorageResources,
     ownedGlyphResources,
-    rowPositionsBuffer: firstBatch.rowPositionsBuffer,
-    rowColorsBuffer: firstBatch.rowColorsBuffer,
-    rowAnglesBuffer: firstBatch.rowAnglesBuffer,
-    rowSizesBuffer: firstBatch.rowSizesBuffer,
-    rowPixelOffsetsBuffer: firstBatch.rowPixelOffsetsBuffer,
-    rowTextAnchorsBuffer: firstBatch.rowTextAnchorsBuffer,
-    rowAlignmentBaselinesBuffer: firstBatch.rowAlignmentBaselinesBuffer,
-    rowClipRectsBuffer: firstBatch.rowClipRectsBuffer,
-    rowGlyphStartsBuffer: getTextStorageRowGlyphStartsBuffer(firstBatch),
-    styleConfigBuffer: firstBatch.styleConfigBuffer,
-    storageRenderConfigBuffer: firstRenderBatch.storageRenderConfigBuffer,
     glyphFramesBuffer: glyphFrames.buffer,
-    compactGlyphVertexData: firstRenderBatch.compactGlyphVertexData,
     arrowAppendContext: {
       defaultBuffers,
       mappingState,
@@ -2066,8 +2046,6 @@ export function createTextStorageStateFromGPUVectors(
     }
   }
 
-  const firstBatch = getFirstTextStorageBatch({batches});
-  const firstRenderBatch = getFirstTextStorageRenderBatch({renderBatches});
   let destroyed = false;
   return {
     atlasTexture,
@@ -2089,18 +2067,6 @@ export function createTextStorageStateFromGPUVectors(
     renderBatches,
     ownedRowBindingResources: ownedRowStorageResources,
     ownedGlyphResources,
-    rowPositionsBuffer: firstBatch.rowPositionsBuffer,
-    rowColorsBuffer: firstBatch.rowColorsBuffer,
-    rowAnglesBuffer: firstBatch.rowAnglesBuffer,
-    rowSizesBuffer: firstBatch.rowSizesBuffer,
-    rowPixelOffsetsBuffer: firstBatch.rowPixelOffsetsBuffer,
-    rowTextAnchorsBuffer: firstBatch.rowTextAnchorsBuffer,
-    rowAlignmentBaselinesBuffer: firstBatch.rowAlignmentBaselinesBuffer,
-    rowClipRectsBuffer: firstBatch.rowClipRectsBuffer,
-    rowGlyphStartsBuffer: getTextStorageRowGlyphStartsBuffer(firstBatch),
-    styleConfigBuffer: firstBatch.styleConfigBuffer,
-    storageRenderConfigBuffer: firstRenderBatch.storageRenderConfigBuffer,
-    compactGlyphVertexData: firstRenderBatch.compactGlyphVertexData,
     destroy: () => {
       if (destroyed) {
         return;
@@ -2252,8 +2218,6 @@ export function createArrowTextDictionaryStorageState(
     );
   }
 
-  const firstBatch = getFirstTextDictionaryBatch({batches});
-  const firstRenderBatch = getFirstTextDictionaryRenderBatch({renderBatches});
   let destroyed = false;
   const storageState: TextDictionaryState = {
     glyphStream,
@@ -2275,20 +2239,6 @@ export function createArrowTextDictionaryStorageState(
     renderBatches,
     ownedRowBindingResources: ownedRowStorageResources,
     ownedDictionaryResources,
-    rowPositionsBuffer: firstBatch.rowPositionsBuffer,
-    rowColorsBuffer: firstBatch.rowColorsBuffer,
-    rowAnglesBuffer: firstBatch.rowAnglesBuffer,
-    rowSizesBuffer: firstBatch.rowSizesBuffer,
-    rowPixelOffsetsBuffer: firstBatch.rowPixelOffsetsBuffer,
-    rowTextAnchorsBuffer: firstBatch.rowTextAnchorsBuffer,
-    rowAlignmentBaselinesBuffer: firstBatch.rowAlignmentBaselinesBuffer,
-    rowClipRectsBuffer: firstBatch.rowClipRectsBuffer,
-    rowDictionaryRecordsBuffer: firstBatch.rowDictionaryRecordsBuffer,
-    dictionaryGlyphRangesBuffer: firstBatch.dictionaryGlyphRangesBuffer,
-    dictionaryGlyphRecordsBuffer: firstBatch.dictionaryGlyphRecordsBuffer,
-    dictionaryRenderConfigBuffer: firstRenderBatch.dictionaryRenderConfigBuffer,
-    styleConfigBuffer: firstBatch.styleConfigBuffer,
-    glyphFramesBuffer: firstBatch.glyphFramesBuffer,
     destroy: () => {
       if (destroyed) {
         return;
@@ -2936,7 +2886,6 @@ export function appendArrowTextStorageStateBatches(
 
   storageState.glyphAttributeByteLength =
     storageState.generatedRenderBufferByteLength + storageState.renderControlByteLength;
-  syncArrowTextStorageStateFirstBatch(storageState);
 }
 
 function assertTextStorageAppendCompatible(
@@ -3013,7 +2962,6 @@ export function refreshArrowTextStorageRowBindings(
   if (appendContext) {
     appendContext.defaultBuffers = defaultBuffers;
   }
-  syncArrowTextStorageStateFirstBatch(storageState);
 }
 
 function assertTextStorageRowBindingRefreshCompatible(
@@ -3045,23 +2993,6 @@ function isArrowTextStorageState(
   storageState: TextStorageState
 ): storageState is ArrowTextStorageState {
   return 'arrowAppendContext' in storageState;
-}
-
-function syncArrowTextStorageStateFirstBatch(storageState: TextStorageState): void {
-  const firstBatch = getFirstTextStorageBatch(storageState);
-  const firstRenderBatch = getFirstTextStorageRenderBatch(storageState);
-  storageState.rowPositionsBuffer = firstBatch.rowPositionsBuffer;
-  storageState.rowColorsBuffer = firstBatch.rowColorsBuffer;
-  storageState.rowAnglesBuffer = firstBatch.rowAnglesBuffer;
-  storageState.rowSizesBuffer = firstBatch.rowSizesBuffer;
-  storageState.rowPixelOffsetsBuffer = firstBatch.rowPixelOffsetsBuffer;
-  storageState.rowTextAnchorsBuffer = firstBatch.rowTextAnchorsBuffer;
-  storageState.rowAlignmentBaselinesBuffer = firstBatch.rowAlignmentBaselinesBuffer;
-  storageState.rowClipRectsBuffer = firstBatch.rowClipRectsBuffer;
-  storageState.rowGlyphStartsBuffer = getTextStorageRowGlyphStartsBuffer(firstBatch);
-  storageState.styleConfigBuffer = firstBatch.styleConfigBuffer;
-  storageState.storageRenderConfigBuffer = firstRenderBatch.storageRenderConfigBuffer;
-  storageState.compactGlyphVertexData = firstRenderBatch.compactGlyphVertexData;
 }
 
 /** Rebuilds row/style binding buffers for an existing dictionary text state without replacing glyph buffers. */
@@ -3116,7 +3047,6 @@ export function refreshArrowTextDictionaryStorageRowBindings(
   );
   storageState.batches = nextBatches;
   storageState.rowStorageByteLength = rowStorageByteLength;
-  syncArrowTextDictionaryStorageStateFirstBatch(storageState);
 }
 
 function assertTextDictionaryStorageRowBindingRefreshCompatible(
@@ -3141,25 +3071,6 @@ function assertTextDictionaryStorageRowBindingRefreshCompatible(
       );
     }
   }
-}
-
-function syncArrowTextDictionaryStorageStateFirstBatch(storageState: TextDictionaryState): void {
-  const firstBatch = getFirstTextDictionaryBatch(storageState);
-  const firstRenderBatch = getFirstTextDictionaryRenderBatch(storageState);
-  storageState.rowPositionsBuffer = firstBatch.rowPositionsBuffer;
-  storageState.rowColorsBuffer = firstBatch.rowColorsBuffer;
-  storageState.rowAnglesBuffer = firstBatch.rowAnglesBuffer;
-  storageState.rowSizesBuffer = firstBatch.rowSizesBuffer;
-  storageState.rowPixelOffsetsBuffer = firstBatch.rowPixelOffsetsBuffer;
-  storageState.rowTextAnchorsBuffer = firstBatch.rowTextAnchorsBuffer;
-  storageState.rowAlignmentBaselinesBuffer = firstBatch.rowAlignmentBaselinesBuffer;
-  storageState.rowClipRectsBuffer = firstBatch.rowClipRectsBuffer;
-  storageState.rowDictionaryRecordsBuffer = firstBatch.rowDictionaryRecordsBuffer;
-  storageState.dictionaryGlyphRangesBuffer = firstBatch.dictionaryGlyphRangesBuffer;
-  storageState.dictionaryGlyphRecordsBuffer = firstBatch.dictionaryGlyphRecordsBuffer;
-  storageState.dictionaryRenderConfigBuffer = firstRenderBatch.dictionaryRenderConfigBuffer;
-  storageState.styleConfigBuffer = firstBatch.styleConfigBuffer;
-  storageState.glyphFramesBuffer = firstBatch.glyphFramesBuffer;
 }
 
 function destroyTextStorageResources(resources: TextStorageOwnedResource[]): void {
@@ -3629,12 +3540,24 @@ export function appendTextGlyphLayout(
   );
   glyphPages.set(glyphLayout.glyphPages);
   glyphPages.set(appendedGlyphLayout.glyphPages, glyphLayout.glyphPages.length);
+  const rowAdvances = new Float32Array(
+    glyphLayout.rowAdvances.length + appendedGlyphLayout.rowAdvances.length
+  );
+  rowAdvances.set(glyphLayout.rowAdvances);
+  rowAdvances.set(appendedGlyphLayout.rowAdvances, glyphLayout.rowAdvances.length);
+  const rowBounds = new Float32Array(
+    glyphLayout.rowBounds.length + appendedGlyphLayout.rowBounds.length
+  );
+  rowBounds.set(glyphLayout.rowBounds);
+  rowBounds.set(appendedGlyphLayout.rowBounds, glyphLayout.rowBounds.length);
   return {
     startIndices: nextStartIndices,
     glyphCount: glyphLayout.glyphCount + appendedGlyphLayout.glyphCount,
     glyphOffsets,
     glyphFrames,
     glyphPages,
+    rowAdvances,
+    rowBounds,
     characterSet: glyphLayout.characterSet
   };
 }

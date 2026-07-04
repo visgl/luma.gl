@@ -10,7 +10,11 @@ import {
 } from '../../../engine/arrow-picking';
 import {indexPicking, Model, type PickingManager, type ShaderInputs} from '@luma.gl/engine';
 import {getGPUDataBuffersForLayout, type GPUTable} from '@luma.gl/tables';
-import {TextAttributeModel, TextDictionaryModel, TextStorageModel} from '@luma.gl/text';
+import {
+  TextAttributeModel,
+  TextDictionaryModel,
+  TextStorageModel
+} from '@luma.gl/text/experimental';
 import type {ArrowTextRendererActiveModel} from './arrow-text-renderer';
 import {
   TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
@@ -48,9 +52,9 @@ export function createArrowTextPickingModel(
   shaderInputs: ShaderInputs<any>
 ): Model {
   if (textModel instanceof TextDictionaryModel) {
-    return TextDictionaryModel.fromState(device, {
+    return new TextDictionaryModel(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
-      ...textModel.storageState,
+      storageState: textModel.storageState,
       source: TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,
@@ -65,9 +69,9 @@ export function createArrowTextPickingModel(
   }
 
   if (textModel instanceof TextStorageModel) {
-    return TextStorageModel.fromState(device, {
+    return new TextStorageModel(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
-      ...textModel.storageState,
+      storageState: textModel.storageState,
       source: TEXT_STORAGE_INDEXED_WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,
@@ -92,7 +96,7 @@ export function createArrowTextPickingModel(
     bufferLayout: textModel.bufferLayout,
     attributes: {
       ...getArrowTextPickingTableAttributes(textModel.table),
-      expandedGlyphVertexData: textModel.expandedGlyphVertexData
+      expandedGlyphVertexData: textModel.attributeState.expandedGlyphVertexData
     },
     instanceCount: textModel.instanceCount,
     vertexCount: 6,
@@ -125,7 +129,7 @@ function drawArrowTextPickingBatches(
   {onBatch}: {onBatch?: (batchIndex: number) => void}
 ): void {
   const gpuBatches = textModel.table?.batches || [];
-  for (const [batchIndex, renderBatch] of textModel.renderBatches.entries()) {
+  for (const [batchIndex, renderBatch] of textModel.attributeState.renderBatches.entries()) {
     const gpuBatch = gpuBatches[batchIndex];
     if (!gpuBatch) {
       throw new Error('Arrow text picking requires aligned GPU and glyph render batches');
@@ -140,9 +144,9 @@ function drawArrowTextPickingBatches(
   }
   pickingModel.setAttributes({
     ...getArrowTextPickingTableAttributes(textModel.table),
-    expandedGlyphVertexData: textModel.expandedGlyphVertexData
+    expandedGlyphVertexData: textModel.attributeState.expandedGlyphVertexData
   });
-  pickingModel.setInstanceCount(textModel.glyphLayout.glyphCount);
+  pickingModel.setInstanceCount(textModel.attributeState.glyphLayout.glyphCount);
 }
 
 function getArrowTextPickingTableAttributes(

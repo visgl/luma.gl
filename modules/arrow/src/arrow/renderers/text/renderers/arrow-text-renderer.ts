@@ -15,15 +15,16 @@ import {
 import {type ModelProps} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {GPURenderable, GPUVector, GPUTable, getRequiredGPUVector} from '@luma.gl/tables';
+import {TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
 import {
   TextAttributeModel,
   TextDictionaryModel,
-  TextRowIndexedStorageModel,
   TextStorageModel,
+  createGPUTextData,
   getFontAtlasShaderProps,
-  supportsGpuTextExpansion,
-  type FontAtlas
-} from '@luma.gl/text';
+  getTextRendererModel,
+  supportsGpuTextExpansion
+} from '@luma.gl/text/experimental';
 import {
   type ArrowUtf8TextVector,
   type ArrowTextAttributeInputProps,
@@ -257,13 +258,21 @@ export class ArrowTextRenderer extends GPURenderable<
   props: ArrowTextRendererProps;
   /** Prepared GPUVector text input currently consumed by the active model. */
   textInput: ArrowTextRendererInput;
-  /** Active luma.gl text model. Recreated when data or model selection changes. */
-  model: ArrowTextRendererActiveModel;
+  /** Caller-owned prepared GPU resources borrowed by the text renderer. */
+  textData: GPUTextData;
+  /** Stable renderer facade over the active implementation model. */
+  textRenderer: TextRenderer;
   /** Concrete model path after resolving `props.model === 'auto'`. */
   resolvedModel: ArrowTextRendererResolvedModel;
   private activeStreamingTextTable: GPUTable | null = null;
   private dataLoadVersion = 0;
   private isDestroyed = false;
+  private textDataOwner?: (nextData: GPUTextData, previousData: GPUTextData) => void;
+
+  /** Active implementation model, retained for compatibility with host layer integration. */
+  get model(): ArrowTextRendererActiveModel {
+    return getTextRendererModel(this.textRenderer);
+  }
 
   /** Creates a layer from Arrow source props after GPUVector conversion. */
   private constructor(
@@ -282,7 +291,9 @@ export class ArrowTextRenderer extends GPURenderable<
     }
     this.textInput = textInput;
     this.resolvedModel = this.resolveModel(this.props.model ?? 'auto', this.textInput);
-    this.model = this.createModel(this.resolvedModel, this.props, this.textInput);
+    const prepared = this.createTextRenderer(this.resolvedModel, this.props, this.textInput);
+    this.textData = prepared.textData;
+    this.textRenderer = prepared.textRenderer;
   }
 
   /** Resolves table or record-batch source props, prepares GPUVectors, and constructs a layer. */
@@ -324,6 +335,20 @@ export class ArrowTextRenderer extends GPURenderable<
     textInput: ArrowTextRendererInput
   ): ArrowTextRenderer {
     return new ArrowTextRenderer(device, props, textInput);
+  }
+
+  /**
+   * Transfers ownership of current and future GPUTextData objects to a host such as ArrowTextLayer.
+   * The callback runs after borrowing models have stopped using the previous data.
+   */
+  transferTextDataOwnership(
+    onDataChanged: (nextData: GPUTextData, previousData: GPUTextData) => void
+  ): GPUTextData {
+    if (this.textDataOwner) {
+      throw new Error('ArrowTextRenderer GPUTextData ownership has already been transferred');
+    }
+    this.textDataOwner = onDataChanged;
+    return this.textData;
   }
 
   /** Uploads explicit Arrow source vectors and selects the best prepared data representation. */
@@ -447,14 +472,17 @@ export class ArrowTextRenderer extends GPURenderable<
       return {modelChanged};
     }
 
-    const previousModel = this.model;
+    const previousRenderer = this.textRenderer;
+    const previousTextData = this.textData;
     const previousTextInput = this.textInput;
-    const nextTextModel = this.createModel(nextModel, nextProps, nextTextInput);
+    const prepared = this.createTextRenderer(nextModel, nextProps, nextTextInput);
     this.props = nextProps;
     this.textInput = nextTextInput;
     this.resolvedModel = nextModel;
-    this.model = nextTextModel;
-    previousModel.destroy();
+    this.textData = prepared.textData;
+    this.textRenderer = prepared.textRenderer;
+    previousRenderer.destroy();
+    this.releaseReplacedTextData(prepared.textData, previousTextData);
     if (previousTextInput !== nextTextInput) {
       previousTextInput.destroy();
     }
@@ -585,14 +613,17 @@ export class ArrowTextRenderer extends GPURenderable<
       return {modelChanged};
     }
 
-    const previousModel = this.model;
+    const previousRenderer = this.textRenderer;
+    const previousTextData = this.textData;
     const previousTextInput = this.textInput;
-    const nextTextModel = this.createModel(nextModel, nextProps, nextTextInput);
+    const prepared = this.createTextRenderer(nextModel, nextProps, nextTextInput);
     this.props = nextProps;
     this.textInput = nextTextInput;
     this.resolvedModel = nextModel;
-    this.model = nextTextModel;
-    previousModel.destroy();
+    this.textData = prepared.textData;
+    this.textRenderer = prepared.textRenderer;
+    previousRenderer.destroy();
+    this.releaseReplacedTextData(prepared.textData, previousTextData);
     if (previousTextInput !== nextTextInput) {
       previousTextInput.destroy();
     }
@@ -630,16 +661,27 @@ export class ArrowTextRenderer extends GPURenderable<
     this.dataLoadVersion++;
     const streamingTextTable = this.activeStreamingTextTable;
     this.activeStreamingTextTable = null;
-    this.model.destroy();
+    this.textRenderer.destroy();
+    if (!this.textDataOwner) {
+      this.textData.destroy();
+    }
     this.textInput.destroy();
     streamingTextTable?.destroy();
   }
 
-  private createModel(
+  private releaseReplacedTextData(nextData: GPUTextData, previousData: GPUTextData): void {
+    if (this.textDataOwner) {
+      this.textDataOwner(nextData, previousData);
+    } else {
+      previousData.destroy();
+    }
+  }
+
+  private createTextRenderer(
     modelKind: ArrowTextRendererResolvedModel,
     props: ArrowTextRendererProps,
     data: ArrowTextRendererData
-  ): ArrowTextRendererActiveModel {
+  ): {textData: GPUTextData; textRenderer: TextRenderer} {
     const color = props.color ?? DEFAULT_TEXT_COLOR;
     const angle = props.angle ?? DEFAULT_TEXT_ANGLE;
     const size = props.size ?? DEFAULT_TEXT_SIZE;
@@ -669,51 +711,58 @@ export class ArrowTextRenderer extends GPURenderable<
     };
 
     if (modelKind === 'dictionary') {
-      return new TextDictionaryModel(
-        this.device,
-        convertArrowTextToDictionaryModelProps(this.device, {
-          ...this.getStorageInputProps(data),
-          ...commonProps,
-          source: props.modelProps?.source ?? TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
-          shaderLayout: props.dictionaryStorageShaderLayout ?? TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT
-        })
+      const prepared = convertArrowTextToDictionaryModelProps(this.device, {
+        ...this.getStorageInputProps(data),
+        ...commonProps,
+        source: props.modelProps?.source ?? TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
+        shaderLayout: props.dictionaryStorageShaderLayout ?? TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT
+      });
+      const {storageState, ...modelProps} = prepared;
+      const textData = createGPUTextData(
+        {strategy: 'dictionary', modelProps, state: storageState},
+        {rowCount: data.positions.length}
       );
+      return {textData, textRenderer: new TextRenderer(this.device, {data: textData})};
     }
 
     if (modelKind === 'storage' || modelKind === 'storage-row-indexed') {
-      const StorageModel =
-        modelKind === 'storage-row-indexed' ? TextRowIndexedStorageModel : TextStorageModel;
-      return new StorageModel(
-        this.device,
-        convertArrowTextToStorageModelProps(this.device, {
-          ...this.getStorageInputProps(data),
-          ...commonProps,
-          rowIndexColumn: modelKind === 'storage-row-indexed',
-          source:
-            props.modelProps?.source ??
-            (modelKind === 'storage-row-indexed'
-              ? TEXT_ROW_INDEXED_STORAGE_WGSL_SHADER
-              : TEXT_STORAGE_INDEXED_WGSL_SHADER),
-          shaderLayout:
-            props.storageShaderLayout ??
-            (modelKind === 'storage-row-indexed'
-              ? TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
-              : TEXT_STORAGE_INDEXED_SHADER_LAYOUT)
-        })
+      const prepared = convertArrowTextToStorageModelProps(this.device, {
+        ...this.getStorageInputProps(data),
+        ...commonProps,
+        rowIndexColumn: modelKind === 'storage-row-indexed',
+        source:
+          props.modelProps?.source ??
+          (modelKind === 'storage-row-indexed'
+            ? TEXT_ROW_INDEXED_STORAGE_WGSL_SHADER
+            : TEXT_STORAGE_INDEXED_WGSL_SHADER),
+        shaderLayout:
+          props.storageShaderLayout ??
+          (modelKind === 'storage-row-indexed'
+            ? TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
+            : TEXT_STORAGE_INDEXED_SHADER_LAYOUT)
+      });
+      const {storageState, ...modelProps} = prepared;
+      const textData = createGPUTextData(
+        {strategy: modelKind, modelProps, state: storageState},
+        {rowCount: data.positions.length}
       );
+      return {textData, textRenderer: new TextRenderer(this.device, {data: textData})};
     }
 
-    return new TextAttributeModel(
-      this.device,
-      convertArrowTextToAttributeModelProps(this.device, {
-        ...this.getInputProps(data),
-        ...commonProps,
-        source: props.modelProps?.source ?? WGSL_SHADER,
-        vs: props.modelProps?.vs ?? VS_GLSL,
-        fs: props.modelProps?.fs ?? FS_GLSL,
-        shaderLayout: props.attributeShaderLayout ?? TEXT_SHADER_LAYOUT
-      })
+    const prepared = convertArrowTextToAttributeModelProps(this.device, {
+      ...this.getInputProps(data),
+      ...commonProps,
+      source: props.modelProps?.source ?? WGSL_SHADER,
+      vs: props.modelProps?.vs ?? VS_GLSL,
+      fs: props.modelProps?.fs ?? FS_GLSL,
+      shaderLayout: props.attributeShaderLayout ?? TEXT_SHADER_LAYOUT
+    });
+    const {attributeState, ...modelProps} = prepared;
+    const textData = createGPUTextData(
+      {strategy: 'attribute', modelProps, state: attributeState},
+      {rowCount: data.positions.length}
     );
+    return {textData, textRenderer: new TextRenderer(this.device, {data: textData})};
   }
 
   private resolveModel(

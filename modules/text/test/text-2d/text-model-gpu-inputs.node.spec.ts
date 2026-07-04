@@ -13,7 +13,7 @@ import {
   TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA,
   TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
   TEXT_STORAGE_GPU_INPUT_SCHEMA
-} from '@luma.gl/text';
+} from '@luma.gl/text/experimental';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 

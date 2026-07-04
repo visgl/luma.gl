@@ -3,7 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getGpuUtf8MapShaderBindings, getGpuUtf8MapShaderSource} from '../../src/index';
+import {
+  getGpuUtf8MapShaderBindings,
+  getGpuUtf8MapShaderSource
+} from '../../src/text-2d/experimental';
 
 test('getGpuUtf8MapShaderBindings reserves generic read-only storage inputs', t => {
   const bindings = getGpuUtf8MapShaderBindings({

@@ -4,6 +4,10 @@
 
 export type {NumericArrowType, ArrowColumnInfo} from './arrow/arrow-utils/arrow-types';
 export {
+  makeGPUTextDataFromArrow,
+  type MakeGPUTextDataFromArrowProps
+} from './arrow/renderers/text/conversion/make-gpu-text-data-from-arrow';
+export {
   getArrowListNestingLevel,
   isNumericArrowType
   // isInstanceArrowType,

@@ -5,7 +5,7 @@
 import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/tables';
-import type {TextAttributeModelProps} from '@luma.gl/text';
+import type {TextAttributeModelProps} from '@luma.gl/text/experimental';
 import {DataType} from 'apache-arrow';
 import type {ArrowUtf8TextVector} from './arrow-text';
 import {
@@ -197,8 +197,7 @@ export function convertArrowTextToAttribute(
  * Builds prepared attribute text state from Arrow-backed GPU inputs.
  *
  * The returned state contains generated glyph vertex buffers and the GPU table consumed by
- * {@link TextAttributeModel}. The caller decides whether the model owns that state by setting
- * `ownsAttributeState` on the model props.
+ * {@link TextAttributeModel}. The caller owns and must destroy the returned prepared state.
  */
 export function convertArrowTextToAttributeState(
   device: Device,
@@ -216,12 +215,7 @@ export function convertArrowTextToAttributeState(
 export function convertArrowTextToAttributeModelProps(
   device: Device,
   props: ArrowTextModelProps
-): TextAttributeModelProps & ArrowTextAttributeState {
+): TextAttributeModelProps {
   const attributeState = convertArrowTextToAttributeState(device, props);
-  const {sourceVectors: _sourceVectors, ...modelProps} = props;
-  return {
-    ...modelProps,
-    ...attributeState,
-    ownsAttributeState: true
-  } as TextAttributeModelProps & ArrowTextAttributeState;
+  return {attributeState};
 }

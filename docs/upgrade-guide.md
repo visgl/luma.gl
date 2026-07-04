@@ -44,6 +44,15 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 - Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
 - The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/experimental` with explicit key/value output views and command submission.
 
+**@luma.gl/text**
+- `TextAttributeModel`, `TextStorageModel`, `TextRowIndexedStorageModel`, `TextDictionaryModel`,
+  and low-level shader/compute contracts moved to `@luma.gl/text/experimental`. Applications
+  should prepare caller-owned `GPUTextData` and render it through `TextRenderer`.
+- Specialized model constructor props now contain one borrowed `attributeState` or `storageState`.
+  Flattened prepared fields, first-batch aliases, ownership flags, and `fromState()` were removed.
+- `transformParagraph()`, automatic wrapping helpers, and `getTextFromBuffer()` were removed. The
+  supported renderer continues to lay out one-line labels.
+
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**

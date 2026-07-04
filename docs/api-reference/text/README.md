@@ -1,6 +1,6 @@
 # @luma.gl/text
 
-`@luma.gl/text` provides experimental GPU-only 2D text rendering utilities.
+`@luma.gl/text` provides an intent-level facade for experimental GPU-only 2D text rendering.
 
 ## Font Atlases
 
@@ -20,15 +20,49 @@ Both builders cache identical inputs and incrementally add newly requested chara
 
 | Responsibility | Public APIs |
 | --- | --- |
-| Arrow facade in `@luma.gl/arrow` | `ArrowTextRenderer`, `resolveArrowTextSourceVectors()`, `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()` |
-| Pure rendering in `@luma.gl/text` | `TextAttributeModel`, `TextStorageModel`, `TextRowIndexedStorageModel`, `TextDictionaryModel` |
-| GPU input contracts in `@luma.gl/text` | `TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA`, `TEXT_STORAGE_GPU_INPUT_SCHEMA`, `TEXT_DICTIONARY_GPU_INPUT_SCHEMA` |
+| Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `ArrowTextRenderer`, source mapping helpers |
+| Stable rendering in `@luma.gl/text` | `GPUTextData`, `TextRenderer` |
+| Benchmark internals | `@luma.gl/text/experimental` specialized models and forced strategies |
 
-New code should perform Arrow conversion through `@luma.gl/arrow` and construct one of the pure models with flat prepared props.
+New code should prepare caller-owned `GPUTextData`, pass it to `TextRenderer`, destroy the
+renderer first, and then destroy the data.
+
+```ts
+const data = makeGPUTextDataFromArrow(device, textProps);
+const renderer = new TextRenderer(device, {data});
+
+renderer.draw(renderPass);
+
+const nextData = makeGPUTextDataFromArrow(device, nextTextProps);
+renderer.setProps({data: nextData});
+data.destroy();
+
+renderer.destroy();
+nextData.destroy();
+```
+
+`setProps()` creates and binds the replacement model before destroying the previous model. It
+never destroys caller-owned data. `destroy()` is idempotent and releases only the renderer's
+render and picking models.
+
+## Automatic Strategy Selection
+
+| Condition | Strategy |
+| --- | --- |
+| WebGL, per-character colors, or unsupported WebGPU storage | Attribute |
+| Supported WebGPU dictionary input | Dictionary storage |
+| Other supported WebGPU text | Storage |
+
+Row-indexed storage remains force-selectable from `@luma.gl/text/experimental` for benchmarks but
+is not selected automatically.
+
+`GPUTextData.stats` exposes strategy, row and glyph counts, source and render batch counts,
+preparation time, retained bytes, and transient compute-input bytes. Strategy-specific buffers,
+schemas, shader contracts, and prepared state remain experimental.
 
 ## Attribute Path
 
-Use `convertArrowTextToAttribute()` to upload Arrow source vectors, then `convertArrowTextToAttributeModelProps()` to build flat model props for `TextAttributeModel`.
+The automatic strategy uses the attribute path for WebGL and per-character colors.
 
 The attribute path supports row colors and per-character color lists. It expands text rows into generated glyph vertex attributes and renders through a GPU table.
 
@@ -38,14 +72,19 @@ Atlas-backed text requires a normalized `fontAtlas`. Build browser-font atlases 
 
 ## Storage Path
 
-Use `convertArrowTextToStorage()` and `convertArrowTextToStorageModelProps()` when rendering with WebGPU storage buffers. Pass the resulting flat props to `TextStorageModel` or `TextRowIndexedStorageModel`.
+Supported WebGPU inputs automatically use storage-backed text.
 
 `TextRowIndexedStorageModel` stores one extra source-row index per generated glyph. This avoids shader-side row lookup by binary search at the cost of a larger generated glyph vertex record.
 
 ## Dictionary Path
 
-Use `convertArrowTextToDictionary()` and `convertArrowTextToDictionaryModelProps()` for dictionary-encoded UTF-8 text. The dictionary model stores shared glyph records per dictionary value and per-row dictionary references.
+Supported dictionary-encoded WebGPU input automatically uses compressed dictionary storage.
 
 ## Resource Ownership
 
-Conversion results and prepared props own GPU resources. Layers should destroy converted `GPUVector` bundles when they are replaced or removed. Models should be constructed with `ownsAttributeState` or `ownsStorageState` when the model should destroy prepared resources.
+`GPUTextData` owns source batches, generated buffers, atlas textures, and metrics. `TextRenderer`
+and its internal models borrow these resources. Hosts must destroy renderers before their data.
+
+Direct specialized model construction is intentionally unstable. Import the models and forced
+strategy preparation contracts from `@luma.gl/text/experimental` only in benchmarks and
+diagnostic tools.

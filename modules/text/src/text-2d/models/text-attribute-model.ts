@@ -3,17 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
-import {DynamicTexture, type ModelProps} from '@luma.gl/engine';
-import {
-  GPUTableModel,
-  getGPUDataBuffersForLayout,
-  type GPUTableModelProps,
-  type GPUTable
-} from '@luma.gl/tables';
+import type {DynamicTexture, ModelProps} from '@luma.gl/engine';
+import {GPUTableModel, getGPUDataBuffersForLayout, type GPUTableModelProps} from '@luma.gl/tables';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
 import {
-  assertTextAttributeGPUVectorInputs,
   TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA,
   type TextAttributeInputProps
 } from '../model-utils/text-model-props';
@@ -64,81 +58,42 @@ export type TextAttributeState = {
  */
 export interface TextAttributeRenderProps extends ModelProps {}
 
-/** Flat prepared props accepted by the attribute text renderer. */
-export type TextAttributeModelProps = TextAttributeInputProps &
-  TextAttributeState & {
-    /** Whether this model owns and should destroy the prepared attribute state. */
-    ownsAttributeState?: boolean;
-  };
+/** Explicit prepared-state constructor props. The model borrows `attributeState`. */
+export type TextAttributeModelProps = TextAttributeRenderProps & {
+  attributeState: TextAttributeState;
+};
 
-/** Explicit prepared-state constructor props, used when sharing state with a companion model. */
-export type PreparedTextAttributeModelProps = TextAttributeRenderProps &
-  Partial<TextAttributeInputProps> &
-  TextAttributeState & {
-    /** Whether this model owns and should destroy the prepared attribute state. */
-    ownsAttributeState?: boolean;
-  };
+export type PreparedTextAttributeModelProps = TextAttributeModelProps;
 
 /**
  * Attribute text renderer that consumes typed GPUVector model props plus prepared render state.
  *
- * Source adapters do layout work before constructing this model, then pass flat prepared GPU
- * vectors and generated render resources through {@link TextAttributeModelProps}.
+ * Source adapters do layout work before constructing this model, then pass one borrowed prepared
+ * state object through {@link TextAttributeModelProps}.
  */
 export class TextAttributeModel extends GPUTableModel {
   /** Prepared GPU vectors consumed by the attribute-backed text model. */
   static readonly gpuInputSchema = TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA;
 
-  /** Optional atlas texture owned by this model. */
-  atlasTexture?: DynamicTexture;
-  /** One-line glyph offsets and atlas frames expanded from source text rows. */
-  glyphLayout: TextGlyphLayout;
-  /** Optional character set accumulated while laying out glyphs. */
-  characterSet?: Set<string>;
-  /** CPU time spent building generated glyph-instance attributes. */
-  glyphAttributeBuildTimeMs: number;
-  /** Bytes occupied by generated glyph-instance attributes. */
-  glyphAttributeByteLength: number;
-  /** First generated expanded glyph vertex attribute buffer. */
-  expandedGlyphVertexData: Buffer;
-  /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches: TextAttributeRenderBatchState[];
-  protected defaultFragmentShaderUniforms?: Record<string, unknown>;
-  private ownsAttributeState: boolean;
-  private attributeState: TextAttributeState;
+  /** Borrowed generated glyph layout and render resources. */
+  readonly attributeState: TextAttributeState;
 
-  constructor(device: Device, props: TextAttributeModelProps | PreparedTextAttributeModelProps) {
-    if (isTextAttributeInputProps(props)) {
-      assertTextAttributeGPUVectorInputs(props);
-    }
-    super(device, props.modelProps);
-    this.attributeState = props;
-    this.ownsAttributeState = props.ownsAttributeState === true;
-    this.atlasTexture = props.atlasTexture;
-    this.glyphLayout = props.glyphLayout;
-    this.characterSet = props.characterSet;
-    this.glyphAttributeBuildTimeMs = props.glyphAttributeBuildTimeMs;
-    this.glyphAttributeByteLength = props.glyphAttributeByteLength;
-    this.expandedGlyphVertexData = props.expandedGlyphVertexData;
-    this.renderBatches = props.renderBatches;
-    this.defaultFragmentShaderUniforms = props.defaultFragmentShaderUniforms;
-  }
-
-  /** Constructs a render-only model from an existing prepared attribute state. */
-  static fromState(device: Device, props: PreparedTextAttributeModelProps): TextAttributeModel {
-    return new TextAttributeModel(device, props);
+  constructor(device: Device, props: TextAttributeModelProps) {
+    const {attributeState, ...modelProps} = props;
+    super(device, {...attributeState.modelProps, ...modelProps});
+    this.attributeState = attributeState;
   }
 
   /** Draws each generated glyph render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
     const gpuTable = this.table;
-    if (!gpuTable || gpuTable.batches.length !== this.renderBatches.length) {
+    if (!gpuTable || gpuTable.batches.length !== this.attributeState.renderBatches.length) {
       throw new Error('TextAttributeModel draw batches must align with generated glyph batches');
     }
 
     let drawSuccess = true;
     try {
-      for (const [batchIndex, renderBatch] of this.renderBatches.entries()) {
+      for (const [batchIndex, renderBatch] of this.attributeState.renderBatches.entries()) {
         const gpuBatch = gpuTable.batches[batchIndex];
         if (!gpuBatch) {
           throw new Error('TextAttributeModel is missing a GPU render batch');
@@ -156,57 +111,11 @@ export class TextAttributeModel extends GPUTableModel {
         ...(firstGpuBatch
           ? getGPUDataBuffersForLayout(firstGpuBatch.bufferLayout, firstGpuBatch.gpuData)
           : {}),
-        [EXPANDED_GLYPH_VERTEX_DATA]: this.expandedGlyphVertexData
+        [EXPANDED_GLYPH_VERTEX_DATA]: this.attributeState.expandedGlyphVertexData
       });
-      this.setInstanceCount(this.glyphLayout.glyphCount);
+      this.setInstanceCount(this.attributeState.glyphLayout.glyphCount);
     }
 
     return drawSuccess;
-  }
-
-  /** Releases owned atlas and generated glyph render buffers. */
-  override destroy(): void {
-    if (this.ownsAttributeState) {
-      destroyTextAttributeState(this.attributeState);
-      this.ownsAttributeState = false;
-    }
-    super.destroy();
-  }
-
-  protected setAttributeState(attributeState: TextAttributeState, ownsAttributeState = true): void {
-    if (this.ownsAttributeState) {
-      destroyTextAttributeState(this.attributeState);
-    }
-    this.attributeState = attributeState;
-    this.ownsAttributeState = ownsAttributeState;
-    this.atlasTexture = attributeState.atlasTexture;
-    this.glyphLayout = attributeState.glyphLayout;
-    this.characterSet = attributeState.characterSet;
-    this.glyphAttributeBuildTimeMs = attributeState.glyphAttributeBuildTimeMs;
-    this.glyphAttributeByteLength = attributeState.glyphAttributeByteLength;
-    this.expandedGlyphVertexData = attributeState.expandedGlyphVertexData;
-    this.renderBatches = attributeState.renderBatches;
-    this.defaultFragmentShaderUniforms = attributeState.defaultFragmentShaderUniforms;
-    this.setProps({table: attributeState.modelProps.table as GPUTable});
-    this.setAttributes({
-      ...(attributeState.modelProps.attributes || {}),
-      [EXPANDED_GLYPH_VERTEX_DATA]: attributeState.expandedGlyphVertexData
-    });
-    this.setBindings(attributeState.modelProps.bindings || {});
-    this.setInstanceCount(attributeState.glyphLayout.glyphCount);
-    this.setNeedsRedraw('Attribute text state updated');
-  }
-}
-
-function isTextAttributeInputProps(
-  props: TextAttributeModelProps | PreparedTextAttributeModelProps
-): props is TextAttributeModelProps {
-  return 'positions' in props && 'texts' in props;
-}
-
-function destroyTextAttributeState(attributeState: TextAttributeState): void {
-  attributeState.atlasTexture?.destroy();
-  for (const renderBatch of attributeState.renderBatches) {
-    renderBatch.expandedGlyphVertexData.destroy();
   }
 }

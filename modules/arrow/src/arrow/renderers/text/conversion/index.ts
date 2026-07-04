@@ -67,3 +67,7 @@ export {
   convertArrowTextToDictionaryModelProps,
   convertArrowTextToDictionaryState
 } from './convert-arrow-text-to-dictionary';
+export {
+  makeGPUTextDataFromArrow,
+  type MakeGPUTextDataFromArrowProps
+} from './make-gpu-text-data-from-arrow';

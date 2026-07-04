@@ -5,24 +5,22 @@ Experimental 2D text utilities for luma.gl. The package contains:
 - `FontAtlas`, the normalized glyph metrics, image pages, and sampling settings used by
   atlas-backed text.
 - `buildBitmapFontAtlas()` and `buildSdfFontAtlas()`, explicit browser-font atlas builders.
-- GPU-only text input schemas and preparation primitives.
-- `TextAttributeModel`, a one-line label renderer that renders prepared attribute vertex buffers.
-- `TextStorageModel`, a WebGPU-only renderer that renders prepared storage-backed glyph state.
-- `TextDictionaryModel`, a WebGPU-only renderer that renders prepared dictionary-compressed glyph state.
+- `GPUTextData`, caller-owned prepared text resources with representation-independent statistics.
+- `TextRenderer`, a stable facade that borrows `GPUTextData` and selects an internal model.
+- An `@luma.gl/text/experimental` entry point for forced strategies and low-level benchmarks.
 
 ## Usage
 
 ```ts
 import * as arrow from 'apache-arrow';
 import {
+  makeGPUTextDataFromArrow,
   convertArrowTextToAttribute,
-  convertArrowTextToAttributeModelProps,
   makeArrowFixedSizeListVector
 } from '@luma.gl/arrow';
 import {
   buildSdfFontAtlas,
-  loadMsdfFontAtlas,
-  TextAttributeModel
+  TextRenderer
 } from '@luma.gl/text';
 
 const sourceVectors = {
@@ -37,20 +35,46 @@ const sourceVectors = {
 const convertedText = convertArrowTextToAttribute(device, {
   sourceVectors
 });
+const fontAtlas = buildSdfFontAtlas({characterSet: 'helo,lum.ag'});
 
-const model = new TextAttributeModel(device, convertArrowTextToAttributeModelProps(device, {
+const data = makeGPUTextDataFromArrow(device, {
   ...convertedText,
-  fontAtlas: buildSdfFontAtlas({characterSet: 'helo,lum.ag'})
-}));
+  fontAtlas,
+  destroy: convertedText.destroy
+});
+const renderer = new TextRenderer(device, {data});
 
-const msdfFontAtlas = await loadMsdfFontAtlas('/fonts/inter-msdf.json');
-const msdfModel = new TextAttributeModel(device, convertArrowTextToAttributeModelProps(device, {
-  ...convertedText,
-  fontAtlas: msdfFontAtlas
-}));
+// Later, replace data without invalidating the old buffers while they are still bound.
+const nextSourceVectors = {
+  ...sourceVectors,
+  texts: arrow.vectorFromArray(['updated', 'labels'], new arrow.Utf8())
+};
+const nextConvertedText = convertArrowTextToAttribute(device, {sourceVectors: nextSourceVectors});
+const nextData = makeGPUTextDataFromArrow(device, {
+  ...nextConvertedText,
+  fontAtlas,
+  destroy: nextConvertedText.destroy
+});
+renderer.setProps({data: nextData});
+data.destroy();
+
+// Destroy borrowing models before caller-owned data.
+renderer.destroy();
+nextData.destroy();
 ```
 
-`@luma.gl/arrow` owns Arrow source vectors, table mapping, upload, and glyph preparation. `@luma.gl/text` models consume flat prepared GPUVector props plus generated GPU resources.
+`@luma.gl/arrow` owns Arrow column mapping and conversion. The returned `GPUTextData` owns
+uploaded and generated GPU resources. `TextRenderer` and its internal render/picking models borrow
+that data.
+
+Automatic strategy selection uses attributes for WebGL, per-character colors, and fallback;
+dictionary storage for supported WebGPU dictionary input; and storage for other supported WebGPU
+text. Row-indexed storage is available only through `@luma.gl/text/experimental` until benchmark
+data supports an automatic-selection heuristic.
+
+`GPUTextData.stats` reports the selected strategy, row and glyph counts, preserved source and
+render batch counts, preparation time, retained bytes, and transient compute-input bytes without
+exposing implementation buffers.
 
 Atlas-backed text consumes the common `FontAtlas` format. Build generated browser-font atlases
 with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`. Build or load BMFont JSON MSDF atlases

@@ -75,9 +75,9 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/text** - NEW MODULE
 
-- **GPU-only 2D text** - New atlas, layout, UTF-8 glyph expansion utilities, and flat GPUVector model schemas support deck.gl-style text rendering in `@luma.gl/text`.
-- **Pure GPUVector text models** - New `TextAttributeModel`, `TextStorageModel`, and `TextDictionaryModel` render prepared GPUVector-backed or storage-backed text state while Arrow conversion remains layer-owned.
-- **Arrow text conversion helpers** - `@luma.gl/arrow` exports helpers such as `ArrowTextRenderer`, `resolveArrowTextSourceVectors()`, `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()`, `createArrowTextStorageState()`, and `createArrowTextDictionaryStorageState()` to prepare glyph state from Arrow source vectors.
+- **GPU-only 2D text facade** - `TextRenderer` renders caller-owned `GPUTextData` while selecting attribute, WebGPU storage, or dictionary strategies automatically.
+- **Experimental text strategies** - Specialized model classes and low-level shader/compute contracts remain available from `@luma.gl/text/experimental` for benchmarking.
+- **Arrow text conversion helpers** - `@luma.gl/arrow` exports `makeGPUTextDataFromArrow()` for automatic strategy selection, plus `ArrowTextRenderer`, source mapping, and low-level conversion helpers for specialized workflows.
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
 - **MSDF text fonts** - `@luma.gl/text` can build or load prebuilt BMFont JSON MSDF atlases, including kerning and multi-page atlas metadata, through the same `FontAtlas` format used by generated bitmap and SDF atlases.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.

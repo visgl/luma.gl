@@ -14,21 +14,19 @@ import {
   Utf8,
   Vector
 } from 'apache-arrow';
+import type {FontAtlas, TextCodePointSource, TextGlyphLayout} from '@luma.gl/text';
 import type {
-  FontAtlas,
   GpuTextDictionaryCompressedStream,
   GpuTextDictionaryUtf8Input,
   GpuExpandedTextStream,
   GpuUtf8TextInput,
-  TextCodePointSource,
-  TextDictionaryCodePointSource,
-  TextGlyphLayout
-} from '@luma.gl/text';
+  TextDictionaryCodePointSource
+} from '@luma.gl/text/experimental';
+import {buildTextGlyphLayout} from '@luma.gl/text';
 import {
-  buildTextGlyphLayout,
   buildTextGpuDictionaryCompressedStream,
   buildTextGpuExpandedStream
-} from '@luma.gl/text';
+} from '@luma.gl/text/experimental';
 
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 
