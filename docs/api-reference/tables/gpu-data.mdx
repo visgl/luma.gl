@@ -144,7 +144,9 @@ order, offsets, formats, row stride, and optional `stepMode`.
 
 Returns a borrowed, precisely typed field view for struct-formatted data. The
 view combines the parent byte offset with the field offset and preserves the
-parent row stride. Returns `null` for an unknown field or non-struct data.
+parent row stride. Literal field names return the corresponding precise view
+type; a runtime `string` returns the union of the struct's child view types.
+Returns `null` for an unknown field or non-struct data.
 
 ### `getChildAt(index): GPUDataView | null`
 

@@ -389,6 +389,8 @@ export const GPUData = GPUDataImpl as unknown as GPUDataConstructor;
 
 /**
  * Borrowed view type returned for one named GPU data struct field.
+ * Literal names resolve to one precise view type, while a runtime `string` resolves to the union
+ * of all field view types.
  *
  * @typeParam Format - Inline struct field declaration.
  * @typeParam Name - Requested field name.
@@ -398,9 +400,11 @@ export type GPUDataChild<Format extends GPUDataFormatDeclaration, Name extends s
 ] extends [never]
   ? never
   : Extract<Format, GPUDataStructFields> extends infer Fields extends GPUDataStructFields
-    ? Name extends keyof Fields
-      ? GPUDataView<Fields[Name]>
-      : never
+    ? string extends Name
+      ? GPUDataChildAt<Fields>
+      : Name extends keyof Fields
+        ? GPUDataView<Fields[Name]>
+        : never
     : never;
 
 /**
@@ -413,5 +417,5 @@ export type GPUDataChildAt<Format extends GPUDataFormatDeclaration> = [
 ] extends [never]
   ? never
   : Extract<Format, GPUDataStructFields> extends infer Fields extends GPUDataStructFields
-    ? GPUDataView<Fields[keyof Fields]>
+    ? {[Name in keyof Fields]: GPUDataView<Fields[Name]>}[keyof Fields]
     : never;

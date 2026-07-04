@@ -19,6 +19,10 @@ test('GPUData infers inline struct field types', () => {
   data satisfies GPUData<{a: 'sint32'; b: 'float32'}, 'packed'>;
   expectTypeOf(data.getChild('b')).toEqualTypeOf<GPUDataView<'float32'> | null>();
   expectTypeOf(data.getChild('missing')).toEqualTypeOf<null>();
+  const dynamicFieldName: string = 'b';
+  expectTypeOf(data.getChild(dynamicFieldName)).toEqualTypeOf<
+    GPUDataView<'sint32'> | GPUDataView<'float32'> | null
+  >();
   expectTypeOf(data.format?.layout).toEqualTypeOf<'packed' | undefined>();
 
   const scalarData = new GPUData({buffer, length: 2, format: 'float32'});
