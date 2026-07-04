@@ -4,16 +4,22 @@
 
 import {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
+import {GPUDataView} from './gpu-data-view';
+import {
+  isGPUDataStructFormat,
+  type GPUDataFormat,
+  type GPUDataStructFormat
+} from './gpu-data-format';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
 
 /** Optional caller-owned metadata retained on a GPU data range. */
 export type GPUDataReadbackMetadata = any;
 
 /** Constructor props that wrap one existing GPU data buffer. */
-export type GPUDataFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> = {
+export type GPUDataFromBufferProps<T extends GPUDataFormat = GPUVectorFormat> = {
   /** Stable dynamic GPU buffer wrapper for this data range. */
   buffer: Buffer | DynamicBuffer;
-  /** Canonical memory-layout descriptor for this data range, when this chunk has one value view. */
+  /** Canonical memory-layout descriptor for this data range. */
   format?: T;
   /** Number of logical rows in the data range. */
   length: number;
@@ -47,12 +53,12 @@ export type GPUDataFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat> 
  * `GPUData` is Arrow-agnostic. Format-specific adapters upload bytes and retain
  * any extra schema/readback metadata outside table core.
  */
-export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
+export class GPUData<T extends GPUDataFormat = GPUVectorFormat> {
   /** GPU buffer containing this chunk's bytes. */
   readonly buffer: Buffer | DynamicBuffer;
   /** Optional adapter-owned metadata; core tables do not inspect this value. */
   readonly dataType?: unknown;
-  /** Canonical memory-layout descriptor for this data range, when this chunk has one value view. */
+  /** Canonical memory-layout descriptor for this data range. */
   readonly format?: T;
   /** Number of logical rows in this chunk. */
   readonly length: number;
@@ -92,16 +98,40 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
     valueByteLength,
     dataType
   }: GPUDataFromBufferProps<T>) {
-    const formatInfo = format ? getGPUVectorFormatInfo(format) : undefined;
+    const structFormat = isGPUDataStructFormat(format) ? format : undefined;
+    const formatInfo = typeof format === 'string' ? getGPUVectorFormatInfo(format) : undefined;
     this.buffer = buffer;
     this.dataType = dataType;
     this.format = format;
     this.length = length;
     this.valueLength = valueLength ?? length;
-    this.stride = stride ?? formatInfo?.components ?? byteStride ?? rowByteLength ?? 1;
+    this.stride =
+      stride ??
+      formatInfo?.components ??
+      structFormat?.components ??
+      byteStride ??
+      rowByteLength ??
+      1;
     this.byteOffset = byteOffset;
-    this.rowByteLength = rowByteLength ?? formatInfo?.byteLength ?? byteStride ?? this.stride;
-    this.byteStride = byteStride ?? this.rowByteLength;
+    this.rowByteLength =
+      rowByteLength ??
+      structFormat?.rowByteLength ??
+      formatInfo?.byteLength ??
+      byteStride ??
+      this.stride;
+    this.byteStride = byteStride ?? structFormat?.byteStride ?? this.rowByteLength;
+    if (structFormat) {
+      if (this.rowByteLength < structFormat.rowByteLength) {
+        throw new Error(
+          `GPUData rowByteLength ${this.rowByteLength} is smaller than struct format row byte length ${structFormat.rowByteLength}`
+        );
+      }
+      if (this.byteStride < Math.max(structFormat.byteStride, this.rowByteLength)) {
+        throw new Error(
+          `GPUData byteStride ${this.byteStride} is smaller than its struct row layout`
+        );
+      }
+    }
     this.readbackMetadata = readbackMetadata;
     this.valueOffsets = valueOffsets;
     this.nullBitmap = nullBitmap;
@@ -114,8 +144,44 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
     return this.ownsDataBuffer;
   }
 
+  /** Returns a borrowed zero-copy view of one named struct field, or null for non-struct data. */
+  getChild<Name extends string>(name: Name): GPUDataChild<T, Name> | null {
+    if (!isGPUDataStructFormat(this.format)) {
+      return null;
+    }
+    const field = this.format.fields[name];
+    if (!field) {
+      return null;
+    }
+    return new GPUDataView({
+      buffer: this.buffer,
+      format: field.format,
+      length: this.length,
+      byteOffset: this.byteOffset + field.byteOffset,
+      byteStride: this.byteStride
+    }) as GPUDataChild<T, Name>;
+  }
+
+  /** Returns a borrowed zero-copy view of one struct field by declaration order. */
+  getChildAt(index: number): GPUDataChildAt<T> | null {
+    if (!isGPUDataStructFormat(this.format)) {
+      return null;
+    }
+    const field = Object.values(this.format.fields)[index];
+    if (!field) {
+      return null;
+    }
+    return new GPUDataView({
+      buffer: this.buffer,
+      format: field.format,
+      length: this.length,
+      byteOffset: this.byteOffset + field.byteOffset,
+      byteStride: this.byteStride
+    }) as GPUDataChildAt<T>;
+  }
+
   /** Transfers backing-buffer ownership to another GPUData chunk over the same buffer. */
-  transferBufferOwnership(target: GPUData): void {
+  transferBufferOwnership(target: GPUData<GPUDataFormat>): void {
     if (target.buffer !== this.buffer) {
       throw new Error('GPUData ownership can only be transferred to the same buffer');
     }
@@ -131,3 +197,15 @@ export class GPUData<T extends GPUVectorFormat = GPUVectorFormat> {
     }
   }
 }
+
+/** Borrowed view type returned for one named GPU data struct field. */
+export type GPUDataChild<Format extends GPUDataFormat, Name extends string> =
+  Format extends GPUDataStructFormat<infer Fields>
+    ? Name extends keyof Fields
+      ? GPUDataView<Fields[Name]>
+      : never
+    : never;
+
+/** Borrowed view type returned for a GPU data struct field selected by index. */
+export type GPUDataChildAt<Format extends GPUDataFormat> =
+  Format extends GPUDataStructFormat<infer Fields> ? GPUDataView<Fields[keyof Fields]> : never;

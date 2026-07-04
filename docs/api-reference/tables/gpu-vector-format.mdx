@@ -10,8 +10,9 @@ import {TablesDocsTabs} from '@site/src/components/docs/tables-docs-tabs';
 </p>
 
 `GPUVectorFormat` is the canonical memory-layout string for
-[`GPUVector`](/docs/api-reference/tables/gpu-vector) and
-[`GPUData`](/docs/api-reference/tables/gpu-data).
+[`GPUVector`](/docs/api-reference/tables/gpu-vector). [`GPUData`](/docs/api-reference/tables/gpu-data)
+accepts the broader `GPUDataFormat`, which also includes physical interleaved
+struct formats.
 
 It describes bytes in GPU memory, not the shader value written in WGSL or GLSL.
 Shader values are declared by `ShaderLayout`, for example `vec4<f32>`.
@@ -25,6 +26,8 @@ export type VertexList<Format extends VertexFormat = VertexFormat> =
   `vertex-list<${Format}>`;
 
 export type GPUVectorFormat = VertexFormat | VertexList;
+
+export type GPUDataFormat = GPUVectorFormat | GPUDataStructFormat;
 ```
 
 Fixed-width vectors reuse core
@@ -53,6 +56,12 @@ maps, and similar topology metadata are adapter-owned.
 
 Generic `list<format>` is intentionally reserved for a possible future
 non-vertex offset-list type.
+
+`GPUDataStructFormat` is an object rather than another format string because it
+contains named field formats, offsets, and row-stride metadata. It remains a
+physical memory description; shader value types stay separate. Struct formats
+currently apply to `GPUData`, while `GPUVectorFormat` remains the scalar or list
+format of one logical vector.
 
 ## Helpers
 

@@ -40,8 +40,9 @@ Typed, batch-preserving GPU table primitives for rendering, transforms, and comp
 
 The `@luma.gl/tables` module owns reusable table-side GPU objects such as
 `GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, and `GPUTable`, plus structural typing
-types such as `GPUSchema`, `GPUField`, `GPUTypeMap`, `GPUVectorFormat`, and
-`VertexList`. Models can publish `GPUInputSchema` declarations for the
+types such as `GPUSchema`, `GPUField`, `GPUTypeMap`, `GPUVectorFormat`,
+`GPUDataStructFormat`, and `VertexList`. Physical struct formats let one
+`GPUData` expose named zero-copy child views over interleaved rows. Models can publish `GPUInputSchema` declarations for the
 prepared table inputs they accept. `GPUTableShaderBindings`
 resolves those declarations into owned, batch-preserving attribute and storage
 resources for a shader layout. Table-oriented execution helpers include

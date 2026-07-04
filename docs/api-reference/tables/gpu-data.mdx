@@ -32,6 +32,27 @@ const gpuData = new GPUData({
 });
 ```
 
+Interleaved rows can use a physical struct format. Field declarations use the
+same fixed-width format strings as `GPUVectorFormat`:
+
+```ts
+import {GPUData, makeGPUDataStructFormat} from '@luma.gl/tables';
+
+const format = makeGPUDataStructFormat(
+  {
+    a: 'sint32',
+    b: 'float32'
+  },
+  {layout: 'packed'}
+);
+
+const data = new GPUData({buffer, format, length});
+const b = data.getChild('b'); // GPUDataView<'float32'> | null
+```
+
+`getChild()` follows the Apache Arrow-style child API. It creates a borrowed
+strided view of the selected field without allocating storage or copying bytes.
+
 When the input starts as Apache Arrow, prefer
 [`makeGPUDataFromArrowData()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`; it uploads Arrow values into GPU buffers and fills in the
@@ -67,6 +88,48 @@ their buffers.
 interleaved `BufferLayout`, combines the caller's base and attribute offsets, and
 returns a borrowed strided view without allocating or copying GPU storage.
 
+## Struct Formats
+
+`makeGPUDataStructFormat(fields, options?)` describes several named fixed-width
+fields stored in each `GPUData` row. The declaration is physical: it describes
+the bytes in the buffer and does not declare a parallel shader struct type.
+
+The supported `layout` strings are:
+
+| Layout | Meaning |
+| --- | --- |
+| `wgsl-storage` | Default. Aligns raw field carrier types using WGSL storage-struct rules. Compact formats such as `unorm8x4` use `u32` carriers. |
+| `packed` | Applies the minimum padding required by WebGPU vertex-buffer layout rules. |
+
+For `packed`, each field offset is aligned to
+`min(4, byteLength(format))`, and the final `byteStride` is rounded up to four
+bytes. It therefore means minimally padded and vertex-valid, not unconditional
+byte concatenation. For example, `{tag: 'uint8', value: 'float32'}` uses offsets
+`0` and `4` with an eight-byte stride. These are
+[WebGPU vertex-buffer rules](https://gpuweb.github.io/gpuweb/#dom-gpuvertexbufferlayout-arraystride),
+not an additional WGSL memory layout, so there is no `wgsl-vertex` layout name.
+
+The returned format contains:
+
+| Property | Meaning |
+| --- | --- |
+| `type` | Always `struct`. |
+| `layout` | `wgsl-storage` or `packed`. |
+| `fields` | Fields in declaration order, each with `format`, `byteOffset`, and `byteLength`. |
+| `components` | Total scalar components represented by one row. |
+| `rowByteLength` | Bytes through the end of the final physical field, excluding trailing row padding. |
+| `byteStride` | Bytes between adjacent rows, including required trailing padding. |
+
+For `wgsl-storage`, layout is based on raw carriers for the stored bytes, not
+decoded shader value types. For example, `unorm8x4` occupies a `u32` carrier; a
+storage shader must explicitly decode it, while vertex fetch exposes normalized
+values. The public format remains physical and does not publish a parallel
+shader struct declaration.
+
+Use `getBufferLayoutFromGPUDataStructFormat(name, format, options?)` to lower a
+struct format into an interleaved `BufferLayout`. The helper preserves field
+order, offsets, formats, row stride, and optional `stepMode`.
+
 ## Constructor
 
 ### `new GPUData(props)`
@@ -74,7 +137,7 @@ returns a borrowed strided view without allocating or copying GPU storage.
 | Prop | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `buffer` | `Buffer \| DynamicBuffer` | Required | GPU buffer containing this chunk's bytes. |
-| `format` | `GPUVectorFormat` | `undefined` | Canonical memory-layout descriptor, such as `float32x3` or `vertex-list<float32x3>`. |
+| `format` | `GPUDataFormat` | `undefined` | Canonical memory-layout descriptor: a `GPUVectorFormat` string or a physical `GPUDataStructFormat`. |
 | `length` | `number` | Required | Number of logical rows in this chunk. |
 | `valueLength` | `number` | `length` | Number of fixed rows or flattened vertex-list element values. |
 | `stride` | `number` | Derived from `format` | Number of scalar values represented by one fixed row or flattened element. |
@@ -90,7 +153,7 @@ returns a borrowed strided view without allocating or copying GPU storage.
 | Property | Type | Meaning |
 | --- | --- | --- |
 | `buffer` | `Buffer \| DynamicBuffer` | GPU buffer containing this chunk's bytes. |
-| `format` | `GPUVectorFormat \| undefined` | Canonical memory-layout descriptor when this chunk has one value view. |
+| `format` | `GPUDataFormat \| undefined` | Canonical memory-layout descriptor when this chunk has a typed physical view. |
 | `type` | `unknown` | Deprecated adapter-owned logical metadata. |
 | `dataType` | `unknown` | Deprecated adapter-owned logical metadata. |
 | `length` | `number` | Number of logical rows in this chunk. |
@@ -103,6 +166,17 @@ returns a borrowed strided view without allocating or copying GPU storage.
 | `ownsBuffer` | `boolean` | Whether this data range currently owns its backing buffer. |
 
 ## Methods
+
+### `getChild(name): GPUDataView | null`
+
+Returns a borrowed, precisely typed field view for struct-formatted data. The
+view combines the parent byte offset with the field offset and preserves the
+parent row stride. Returns `null` for an unknown field or non-struct data.
+
+### `getChildAt(index): GPUDataView | null`
+
+Returns a borrowed field view by declaration order, or `null` when the index is
+out of range or the data is not struct-formatted.
 
 ### `destroy(): void`
 

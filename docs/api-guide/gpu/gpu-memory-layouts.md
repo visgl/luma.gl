@@ -9,9 +9,11 @@ GPU buffers are byte ranges. A layout describes how shader-visible rows and colu
 For the WGSL-facing difference between vertex-fetch layouts and storage-buffer
 layouts, see [Tabular Data in WGSL](./tabular-data-in-wgsl).
 
-When one logical GPU record needs several named field views, describe them
-directly with `BufferLayout.attributes`, their byte offsets, and a shared
-`byteStride`.
+When one existing GPU buffer contains logical records with several named field
+views, an inline `GPUData` struct declaration retains the physical row
+description and exposes borrowed children through `GPUData.getChild()`.
+`getBufferLayoutFromGPUDataStructFormat()` lowers the canonical format into
+`BufferLayout.attributes`, their byte offsets, and a shared `byteStride`.
 
 This page uses three layout terms:
 
@@ -82,6 +84,13 @@ Use segmented layout when a table should have one allocation but columns should 
 
 Render pipelines use `BufferLayout` and vertex formats to interpret bytes. This supports normalized attributes such as `unorm8x4` because vertex fetch converts them to shader-visible values.
 
+The `packed` mode of `makeGPUDataStructFormat()` follows WebGPU vertex layout
+requirements: field offsets are aligned to `min(4, format byte length)` and the
+row stride is a multiple of four. Small formats can therefore use one- or
+two-byte alignment, while the complete row can still be bound as a vertex
+buffer. These are WebGPU vertex-fetch rules rather than a `wgsl-vertex` memory
+layout.
+
 Compute pipelines use storage bindings. They read raw storage values, so normalized formats are not decoded unless the compute shader does that work explicitly.
 
 ## luma.gl Concepts
@@ -90,7 +99,8 @@ Compute pipelines use storage bindings. They read raw storage values, so normali
 | --- | --- | --- | --- |
 | `Buffer` | One buffer per column | One buffer for several columns | One buffer for several column segments |
 | `BufferLayout` | `name` plus `format` | `attributes` with offsets and shared `byteStride` | Multiple layouts or explicit segment metadata |
-| `GPUVector` | Numeric Arrow type | `Binary` plus `bufferLayout` | Numeric or `Binary` view plus segment metadata |
+| `GPUData` | One fixed-width format | `GPUDataStructFormat` with named child views | Explicit segment views |
+| `GPUVector` | One logical vector format | Explicit interleaved construction | Numeric view plus segment metadata |
 | `GPUTable` | Multiple vectors | Interleaved vector contributes multiple attributes | Future table layout can map names to segments |
 
 ## Operation Patterns

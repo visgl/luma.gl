@@ -5,6 +5,7 @@
 import './table/table-buffer-planner.spec';
 import './table/generated-buffer-batches.spec';
 import './table/gpu-vector-format.node.spec';
+import './table/gpu-data-struct.node.spec';
 import './table/gpu-constant.node.spec';
 import './table/table-computation.spec';
 import './table/table-transform.spec';
