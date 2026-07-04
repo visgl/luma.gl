@@ -4,14 +4,14 @@
 
 import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/core';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Table, vectorFromArray, type RecordBatch} from 'apache-arrow';
+import {Float32, Table, Vector, vectorFromArray, type RecordBatch} from 'apache-arrow';
 import {afterAll, vi} from 'vitest';
 import {
   makeArrowLineRecordBatches,
@@ -344,10 +344,14 @@ it('ArrowPathLayer storage draws streamed batches incrementally and preserves pi
   );
   const recordBatches = makeArrowLineRecordBatches(source);
   expect(recordBatches.length, 'test source contains two batches').toBe(2);
-  const callerColorVector = makeGPUVectorFromArrow(device, source.sourceVectors.colors!, {
-    name: 'caller-path-colors',
-    format: 'unorm8x4'
-  });
+  const callerColorVector = makeGPUVectorFromArrow(
+    device,
+    makeFloat32ColorVector(source.sourceVectors.colors!),
+    {
+      name: 'caller-path-colors',
+      format: 'float32x4'
+    }
+  );
   const callerColorBuffers = callerColorVector.data.map(data => data.buffer);
   let releaseSecondBatch = () => {};
   const secondBatchReady = new Promise<void>(resolve => {
@@ -423,10 +427,14 @@ it('Arrow polygon and text layers render storage-backed WebGPU models', async ()
   }
   const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
   const polygonBatch = polygonSource.recordBatches[0]!;
-  const polygonColorVector = makeGPUVectorFromArrow(device, polygonBatch.getChild('colors')!, {
-    name: 'caller-polygon-colors',
-    format: 'unorm8x4'
-  });
+  const polygonColorVector = makeGPUVectorFromArrow(
+    device,
+    makeFloat32ColorVector(polygonBatch.getChild('colors')!),
+    {
+      name: 'caller-polygon-colors',
+      format: 'float32x4'
+    }
+  );
   let polygonDataError: unknown;
   const polygonLayer = new ArrowPolygonLayer({
     id: 'arrow-polygons-storage-test',
@@ -456,10 +464,14 @@ it('Arrow polygon and text layers render storage-backed WebGPU models', async ()
     'string-colors',
     {clipRects: true, angles: true, sizes: true}
   );
-  const textColorVector = makeGPUVectorFromArrow(device, textSource.colors!.slice(190, 210), {
-    name: 'caller-text-colors',
-    format: 'unorm8x4'
-  });
+  const textColorVector = makeGPUVectorFromArrow(
+    device,
+    makeFloat32ColorVector(textSource.colors!.slice(190, 210)),
+    {
+      name: 'caller-text-colors',
+      format: 'float32x4'
+    }
+  );
   let textDataError: unknown;
   const textLayer = new ArrowTextLayer({
     id: 'arrow-text-storage-test',
@@ -533,7 +545,7 @@ it('Arrow polygon and text layers render storage-backed WebGPU models', async ()
     for (const {layer, initialViewState, getError} of cases) {
       deck.setProps({layers: [layer], viewState: initialViewState});
       try {
-        const model = await waitForLayerModel(layer, getError);
+        const model = await waitForDrawableLayerModel(layer, getError);
         await waitForPipeline(model);
         expect(model.device.type, `${layer.id} uses WebGPU storage`).toBe('webgpu');
         const drawCount = model.isInstanced === true ? model.instanceCount : model.vertexCount;
@@ -592,6 +604,22 @@ async function pickFirstLayerObject(
   } finally {
     deck.setProps({layers: []});
   }
+}
+
+function makeFloat32ColorVector(colors: Vector) {
+  let sourceRowOffset = 0;
+  const data = colors.data.map(sourceData => {
+    const values = new Float32Array(sourceData.length * 4);
+    for (let rowIndex = 0; rowIndex < sourceData.length; rowIndex++) {
+      const color = Array.from(colors.get(sourceRowOffset + rowIndex) as Iterable<number>);
+      for (let componentIndex = 0; componentIndex < 4; componentIndex++) {
+        values[rowIndex * 4 + componentIndex] = color[componentIndex] / 255;
+      }
+    }
+    sourceRowOffset += sourceData.length;
+    return makeArrowFixedSizeListVector(new Float32(), 4, values).data[0];
+  });
+  return new Vector(data);
 }
 
 function createTestDeck(device?: Device): {deck: Deck; parent: HTMLDivElement} {
@@ -669,6 +697,33 @@ async function waitForLayerModel(
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
   }
   throw new Error(`${layer.id} did not create a draw model`);
+}
+
+async function waitForDrawableLayerModel(
+  layer: Layer,
+  getError: () => unknown = () => undefined
+): Promise<Model> {
+  const timeout = Date.now() + TEST_MODEL_TIMEOUT_MILLISECONDS;
+  while (Date.now() < timeout) {
+    const model = layer.getModels()[0];
+    if (model && (model.instanceCount > 0 || model.vertexCount > 0)) {
+      return model;
+    }
+    const error = getError();
+    if (error) {
+      throw error;
+    }
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  }
+  const state = layer.state as {
+    renderer?: {getMetrics?: () => {rowCount?: number}};
+  } | null;
+  const rowCount = state?.renderer?.getMetrics?.().rowCount;
+  const instanceCount = layer.getModels()[0]?.instanceCount;
+  const vertexCount = layer.getModels()[0]?.vertexCount;
+  throw new Error(
+    `${layer.id} did not create a drawable model (rows=${rowCount ?? 'unknown'}, instances=${instanceCount ?? 'missing'}, vertices=${vertexCount ?? 'missing'})`
+  );
 }
 
 async function waitForModelCount(

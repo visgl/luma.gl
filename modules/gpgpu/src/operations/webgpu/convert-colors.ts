@@ -50,6 +50,10 @@ function getConvertColorsWGSL(
 @group(0) @binding(0) var<storage, read> source: array<u32>;
 @group(0) @binding(1) var<storage, read_write> result: array<u32>;
 
+// Treat the storage binding as raw 32-bit words so one shader can address packed Uint8, Float16,
+// and Float32 rows with arbitrary supported strides. The float readers decode IEEE bit patterns;
+// they do not numerically convert integer values to floats.
+
 fn readByte(byteIndex: u32) -> u32 {
   let word = source[byteIndex / 4u];
   let shift = (byteIndex % 4u) * 8u;
@@ -60,14 +64,13 @@ fn readUint8(byteIndex: u32) -> f32 {
   return f32(readByte(byteIndex)) / 255.0;
 }
 
-fn readFloat16(byteIndex: u32) -> f32 {
+fn readFloat16Bits(byteIndex: u32) -> f32 {
   let word = source[byteIndex / 4u];
-  let shift = (byteIndex % 4u) * 8u;
-  let halfBits = (word >> shift) & 0xffffu;
-  return unpack2x16float(halfBits).x;
+  let values = unpack2x16float(word);
+  return select(values.x, values.y, byteIndex % 4u == 2u);
 }
 
-fn readFloat32(byteIndex: u32) -> f32 {
+fn readFloat32Bits(byteIndex: u32) -> f32 {
   return bitcast<f32>(source[byteIndex / 4u]);
 }
 
@@ -107,31 +110,31 @@ function getReadColorWGSL(inputFormat: ConvertColorsInputs['inputFormat']): stri
   );`;
     case 'float16x3':
       return `  return vec4<f32>(
-    readFloat16(rowByteOffset),
-    readFloat16(rowByteOffset + 2u),
-    readFloat16(rowByteOffset + 4u),
+    readFloat16Bits(rowByteOffset),
+    readFloat16Bits(rowByteOffset + 2u),
+    readFloat16Bits(rowByteOffset + 4u),
     1.0
   );`;
     case 'float16x4':
       return `  return vec4<f32>(
-    readFloat16(rowByteOffset),
-    readFloat16(rowByteOffset + 2u),
-    readFloat16(rowByteOffset + 4u),
-    readFloat16(rowByteOffset + 6u)
+    readFloat16Bits(rowByteOffset),
+    readFloat16Bits(rowByteOffset + 2u),
+    readFloat16Bits(rowByteOffset + 4u),
+    readFloat16Bits(rowByteOffset + 6u)
   );`;
     case 'float32x3':
       return `  return vec4<f32>(
-    readFloat32(rowByteOffset),
-    readFloat32(rowByteOffset + 4u),
-    readFloat32(rowByteOffset + 8u),
+    readFloat32Bits(rowByteOffset),
+    readFloat32Bits(rowByteOffset + 4u),
+    readFloat32Bits(rowByteOffset + 8u),
     1.0
   );`;
     case 'float32x4':
       return `  return vec4<f32>(
-    readFloat32(rowByteOffset),
-    readFloat32(rowByteOffset + 4u),
-    readFloat32(rowByteOffset + 8u),
-    readFloat32(rowByteOffset + 12u)
+    readFloat32Bits(rowByteOffset),
+    readFloat32Bits(rowByteOffset + 4u),
+    readFloat32Bits(rowByteOffset + 8u),
+    readFloat32Bits(rowByteOffset + 12u)
   );`;
     default: {
       const unreachable: never = inputFormat;
