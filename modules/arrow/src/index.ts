@@ -4,6 +4,15 @@
 
 export type {NumericArrowType, ArrowColumnInfo} from './arrow/arrow-utils/arrow-types';
 export {
+  ArrowTimeline,
+  getArrowTimelineDataTypeMismatch,
+  getArrowTimelineUnitsPerSecond,
+  type ArrowTimelineDataType,
+  type ArrowTimelineProps,
+  type ArrowTimelineTime,
+  type ArrowTimelineUpdate
+} from './arrow/animation/arrow-timeline';
+export {
   getArrowListNestingLevel,
   isNumericArrowType
   // isInstanceArrowType,
