@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, VertexFormat} from '@luma.gl/core';
+import {Buffer, type Device, type VertexFormat} from '@luma.gl/core';
 import {
   convertColorData,
   GPUDataEvaluator,
@@ -12,6 +12,7 @@ import {
 import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/gpgpu/gpu-data';
 import {DataType, Field, FixedSizeList, Float16, Float32, Uint8, Vector} from 'apache-arrow';
 import {makeGPUVectorFromArrow} from './gpu/arrow-gpu-table-adapters';
+import type {GPUDataReadbackMetadata} from './gpu/arrow-gpu-data';
 
 export type ArrowColorType = FixedSizeList<Uint8> | FixedSizeList<Float16> | FixedSizeList<Float32>;
 type ArrowUint8ColorType = FixedSizeList<Uint8>;
@@ -41,14 +42,28 @@ export async function convertColors(
   const converted = source.mapGPUData(data =>
     convertColorData(data, {inputFormat: props.inputFormat})
   );
-  const evaluated = await converted.evaluate(device, {
-    name: props.name ?? 'colors',
-    format: 'unorm8x4'
+  const outputBuffers = converted.gpuDataEvaluators.map((evaluator, chunkIndex) => {
+    const buffer = device.createBuffer({
+      id: `${props.name ?? 'colors'}-${chunkIndex}`,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      byteLength: evaluator.byteLength
+    });
+    evaluator.setTargetBuffer({buffer});
+    return buffer;
   });
-  const data = evaluated.data.map(
-    chunk =>
-      new GPUData<'unorm8x4'>({
-        buffer: chunk.buffer,
+
+  try {
+    const evaluated = await converted.evaluate(device, {
+      name: props.name ?? 'colors',
+      format: 'unorm8x4'
+    });
+    const data = evaluated.data.map((chunk, chunkIndex) => {
+      const sourceData = colors.data[chunkIndex];
+      const readbackMetadata = sourceData
+        ? getConvertedColorReadbackMetadata(sourceData)
+        : undefined;
+      return new GPUData<'unorm8x4'>({
+        buffer: outputBuffers[chunkIndex],
         dataType: ARROW_UINT8_COLOR_TYPE,
         format: 'unorm8x4',
         length: chunk.length,
@@ -56,18 +71,29 @@ export async function convertColors(
         byteOffset: chunk.byteOffset,
         byteStride: 4,
         rowByteLength: 4,
-        ownsBuffer: true
-      })
-  );
+        ownsBuffer: true,
+        nullBitmap: readbackMetadata?.nullBitmap,
+        readbackMetadata
+      });
+    });
 
-  return new GPUVector({
-    type: 'data',
-    name: evaluated.name,
-    dataType: ARROW_UINT8_COLOR_TYPE,
-    format: 'unorm8x4',
-    data,
-    ownsData: true
-  });
+    return new GPUVector({
+      type: 'data',
+      name: evaluated.name,
+      dataType: ARROW_UINT8_COLOR_TYPE,
+      format: 'unorm8x4',
+      data,
+      ownsData: true
+    });
+  } catch (error) {
+    for (const buffer of outputBuffers) {
+      buffer.destroy();
+    }
+    throw error;
+  } finally {
+    converted.destroy();
+    source.destroy();
+  }
 }
 
 /** Returns true when an Arrow vector or fixed-width GPUVector can be converted to Uint8 RGBA. */
@@ -164,8 +190,30 @@ function getArrowColorGPUFormat(inputFormat: ColorInputFormat): VertexFormat {
     case 'uint8x3':
       return 'uint8x3-webgl';
     case 'float16x3':
+      // VertexFormat has no float16x3 entry. This adapter uses the byte-identical Uint16x3
+      // storage layout while inputFormat retains the Float16 interpretation for conversion.
       return 'uint16x3-webgl';
     default:
       return inputFormat;
   }
+}
+
+function getConvertedColorReadbackMetadata(
+  source: GPUData
+): Extract<GPUDataReadbackMetadata, {kind: 'fixed-size-list'}> | undefined {
+  const sourceNullBitmap = source.nullBitmap;
+  if (!sourceNullBitmap) {
+    return undefined;
+  }
+
+  const nullBitmap = new Uint8Array(sourceNullBitmap);
+  let nullCount = 0;
+  for (let rowIndex = 0; rowIndex < source.length; rowIndex++) {
+    if ((nullBitmap[rowIndex >> 3] & (1 << (rowIndex & 7))) === 0) {
+      nullCount++;
+    }
+  }
+  return nullCount > 0
+    ? {kind: 'fixed-size-list', nullCount, nullBitmap, childNullCount: 0}
+    : undefined;
 }
