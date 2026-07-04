@@ -7,6 +7,7 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 - [GPU initialization](/docs/api-guide/gpu/gpu-initialization) - Open a GPU device and query its capabilities.
 - [GPU memory management](/docs/api-guide/gpu/gpu-memory) - Create, upload memory to and read from [Buffers](/docs/api-guide/gpu/gpu-buffers), [Textures](/docs/api-guide/gpu/gpu-textures) etc.
 - [GPU tables](/docs/api-guide/gpu/gpu-tables) - Represent typed, batch-preserving columns and lower varying or constant values to attributes and storage buffers.
+- [GPU data processing](/docs/api-guide/gpu/gpu-data-processing) - Choose between portable GPGPU evaluators, reusable WebGPU command graphs, and lower-level compute helpers.
 - [Video textures](/docs/api-guide/gpu/video-textures) - Choose copied texture bindings or WebGPU external-texture sampling for live video.
 - [HTML-in-Canvas](/docs/api-guide/gpu/html-in-canvas) - Detect experimental DOM subtree rasterization into Canvas, WebGL, or WebGPU texture paths.
 - [GPU command encoding](/docs/api-guide/gpu/gpu-commands) - Decide when to use immediate resource helpers versus explicit `CommandEncoder` recording.

@@ -12,6 +12,7 @@ export type GpuGuideDocsTabId =
   | 'overview'
   | 'initialization'
   | 'resources'
+  | 'data-processing'
   | 'rendering'
   | 'parameters'
   | 'bindings'
@@ -29,6 +30,11 @@ const GPU_GUIDE_DOCS_TABS: Record<GpuGuideDocsTabGroupId, GpuGuideDocsTab[]> = {
     {id: 'overview', label: 'Overview', href: '/docs/api-guide/gpu'},
     {id: 'initialization', label: 'Initialization', href: '/docs/api-guide/gpu/gpu-initialization'},
     {id: 'resources', label: 'Resources', href: '/docs/api-guide/gpu/gpu-resources'},
+    {
+      id: 'data-processing',
+      label: 'Data Processing',
+      href: '/docs/api-guide/gpu/gpu-data-processing'
+    },
     {id: 'rendering', label: 'Rendering', href: '/docs/api-guide/gpu/gpu-rendering'},
     {id: 'parameters', label: 'Parameters', href: '/docs/api-guide/gpu/gpu-parameters'}
   ],
