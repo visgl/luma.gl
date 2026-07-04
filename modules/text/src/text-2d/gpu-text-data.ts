@@ -129,9 +129,6 @@ export class GPUTextDataImpl implements GPUTextData {
   }
 
   getInternalProps(): GPUTextDataProps {
-    if (this.destroyed) {
-      throw new Error('GPUTextData has been destroyed');
-    }
     return this.props;
   }
 }
@@ -158,10 +155,7 @@ export function createGPUTextData(
 
 /** @internal */
 export function getGPUTextDataProps(data: GPUTextData): GPUTextDataProps {
-  if (!(data instanceof GPUTextDataImpl)) {
-    throw new Error('TextRenderer requires GPUTextData created by @luma.gl/text');
-  }
-  return data.getInternalProps();
+  return (data as GPUTextDataImpl).getInternalProps();
 }
 
 function makeGPUTextStats(props: GPUTextDataProps, rowCount: number): GPUTextStats {

@@ -78,9 +78,6 @@ export class TextStorageModel extends Model {
 
   /** Appends one prepared batch without replacing existing state or models. */
   addState(storageState: TextStorageState): void {
-    if (storageState.hasGlyphRowIndices !== this.storageState.hasGlyphRowIndices) {
-      throw new Error('TextStorageModel appended batches must use the same row-index mode');
-    }
     this.storageStates.push(storageState);
     this.setNeedsRedraw('Text storage batch appended');
   }

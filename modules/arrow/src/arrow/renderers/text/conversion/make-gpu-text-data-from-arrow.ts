@@ -72,7 +72,8 @@ function makeGPUTextDataFromArrowWithBases(
   const strategy = resolveGPUTextStrategy(device, props);
   const batchCount = props.positions.data.length;
   if (batchCount === 0) {
-    throw new Error('makeGPUTextDataFromArrow requires at least one source batch');
+    props.destroy?.();
+    return {data: [], nextBases: bases};
   }
   let remainingSourceOwners = batchCount;
   let sourceReleased = false;
@@ -242,10 +243,7 @@ function getArrowTextBatchProps(
 }
 
 function getGPUVectorBatch(vector: GPUVector, batchIndex: number): GPUVector {
-  const data = vector.data[batchIndex];
-  if (!data) {
-    throw new Error(`GPU text vector "${vector.name}" is missing source batch ${batchIndex}`);
-  }
+  const data = vector.data[batchIndex]!;
   return new GPUVector({
     type: 'data',
     name: vector.name,
@@ -267,10 +265,7 @@ function getArrowTextSourceBatch(
 ): ArrowTextSourceVectors {
   return Object.fromEntries(
     Object.entries(sourceVectors).map(([name, vector]) => {
-      const data = vector.data[batchIndex];
-      if (!data) {
-        throw new Error(`Arrow text source vector "${name}" is missing batch ${batchIndex}`);
-      }
+      const data = vector.data[batchIndex]!;
       return [name, new arrow.Vector([data as never])];
     })
   ) as unknown as ArrowTextSourceVectors;

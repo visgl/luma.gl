@@ -140,10 +140,7 @@ function drawArrowTextPickingBatches(
   for (const attributeState of textModel.attributeStates) {
     const gpuBatches = attributeState.modelProps.table?.batches || [];
     for (const [stateBatchIndex, renderBatch] of attributeState.renderBatches.entries()) {
-      const gpuBatch = gpuBatches[stateBatchIndex];
-      if (!gpuBatch) {
-        throw new Error('Arrow text picking requires aligned GPU and glyph render batches');
-      }
+      const gpuBatch = gpuBatches[stateBatchIndex]!;
       pickingModel.setAttributes({
         ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
         expandedGlyphVertexData: renderBatch.expandedGlyphVertexData

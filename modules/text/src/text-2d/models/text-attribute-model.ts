@@ -102,17 +102,9 @@ export class TextAttributeModel extends GPUTableModel {
     let drawSuccess = true;
     try {
       for (const attributeState of this.attributeStates) {
-        const gpuTable = attributeState.modelProps.table;
-        if (!gpuTable || gpuTable.batches.length !== attributeState.renderBatches.length) {
-          throw new Error(
-            'TextAttributeModel draw batches must align with generated glyph batches'
-          );
-        }
+        const gpuTable = attributeState.modelProps.table!;
         for (const [batchIndex, renderBatch] of attributeState.renderBatches.entries()) {
-          const gpuBatch = gpuTable.batches[batchIndex];
-          if (!gpuBatch) {
-            throw new Error('TextAttributeModel is missing a GPU render batch');
-          }
+          const gpuBatch = gpuTable.batches[batchIndex]!;
           this.setAttributes({
             ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
             [EXPANDED_GLYPH_VERTEX_DATA]: renderBatch.expandedGlyphVertexData

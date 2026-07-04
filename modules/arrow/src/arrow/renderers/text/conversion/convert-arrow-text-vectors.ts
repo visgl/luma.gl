@@ -3155,12 +3155,6 @@ function getTextAtlasTexture(
   fontAtlas: FontAtlas
 ): {atlasTexture: DynamicTexture; ownsAtlasTexture: boolean} {
   if (props.resources) {
-    if (props.resources.device !== device) {
-      throw new Error('GPUTextResources must use the text preparation device');
-    }
-    if (props.resources.fontAtlas !== fontAtlas) {
-      throw new Error('GPUTextResources fontAtlas must match text preparation');
-    }
     return {atlasTexture: props.resources.atlasTexture, ownsAtlasTexture: false};
   }
   return {

@@ -39,7 +39,7 @@ export class TextRenderer {
   /** Creates a renderer that borrows caller-owned prepared text data. */
   constructor(device: Device, props: TextRendererProps) {
     this.device = device;
-    this.data = normalizeGPUTextData(device, props.data);
+    this.data = normalizeGPUTextData(props.data);
     this.modelProps = props.modelProps;
     this.model = createTextModel(device, this.data, props.modelProps);
     this.pickingModel = props.pickingModel;
@@ -67,7 +67,6 @@ export class TextRenderer {
 
   /** Appends one independently owned prepared batch without rebuilding existing models or data. */
   appendData(data: GPUTextData): void {
-    assertCompatibleGPUTextData(this.device, this.data[0]!, data);
     appendTextModelState(this.model, data);
     this.data.push(data);
   }
@@ -79,7 +78,7 @@ export class TextRenderer {
    * responsible for destroying replaced {@link GPUTextData} after this method returns.
    */
   setProps(props: Partial<TextRendererProps>): void {
-    const nextData = props.data ? normalizeGPUTextData(this.device, props.data) : this.data;
+    const nextData = props.data ? normalizeGPUTextData(props.data) : this.data;
     const nextModelProps = props.modelProps ?? this.modelProps;
     if (props.data !== undefined || props.modelProps !== undefined) {
       const nextModel = createTextModel(this.device, nextData, nextModelProps);
@@ -157,7 +156,6 @@ function createTextModel(
     }
   }
   for (const appendedData of data.slice(1)) {
-    assertCompatibleGPUTextData(device, firstData, appendedData);
     appendTextModelState(model, appendedData);
   }
   return model;
@@ -168,53 +166,22 @@ function appendTextModelState(
   data: GPUTextData
 ): void {
   const internal = getGPUTextDataProps(data);
-  if (model instanceof TextAttributeModel && internal.strategy === 'attribute') {
-    model.addState(internal.state);
-    return;
+  switch (internal.strategy) {
+    case 'attribute':
+      (model as TextAttributeModel).addState(internal.state);
+      break;
+    case 'dictionary':
+      (model as TextDictionaryModel).addState(internal.state);
+      break;
+    case 'storage':
+    case 'storage-row-indexed':
+      (model as TextStorageModel).addState(internal.state);
+      break;
   }
-  if (model instanceof TextDictionaryModel && internal.strategy === 'dictionary') {
-    model.addState(internal.state);
-    return;
-  }
-  if (
-    model instanceof TextStorageModel &&
-    (internal.strategy === 'storage' || internal.strategy === 'storage-row-indexed')
-  ) {
-    model.addState(internal.state);
-    return;
-  }
-  throw new Error('TextRenderer cannot append data prepared with a different strategy');
 }
 
-function normalizeGPUTextData(
-  device: Device,
-  data: GPUTextData | readonly GPUTextData[]
-): GPUTextData[] {
-  const batches = Array.isArray(data) ? [...data] : [data];
-  const firstBatch = batches[0];
-  if (!firstBatch) {
-    throw new Error('TextRenderer requires at least one GPUTextData batch');
-  }
-  for (const batch of batches) {
-    assertCompatibleGPUTextData(device, firstBatch, batch);
-  }
-  return batches;
-}
-
-function assertCompatibleGPUTextData(
-  device: Device,
-  firstBatch: GPUTextData,
-  batch: GPUTextData
-): void {
-  if (batch.resources.device !== device) {
-    throw new Error('TextRenderer GPUTextData must use the renderer device');
-  }
-  if (batch.resources !== firstBatch.resources) {
-    throw new Error('TextRenderer batches must share GPUTextResources');
-  }
-  if (batch.strategy !== firstBatch.strategy) {
-    throw new Error('TextRenderer batches must use the same strategy');
-  }
+function normalizeGPUTextData(data: GPUTextData | readonly GPUTextData[]): GPUTextData[] {
+  return 'strategy' in data ? [data] : [...data];
 }
 
 function aggregateGPUTextStats(data: readonly GPUTextData[]): GPUTextStats {

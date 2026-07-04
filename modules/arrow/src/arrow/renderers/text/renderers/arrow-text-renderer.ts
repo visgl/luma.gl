@@ -360,9 +360,6 @@ export class ArrowTextRenderer extends GPURenderable<
   transferTextDataOwnership(
     onDataChanged: (update: ArrowTextRendererTextDataUpdate) => void
   ): readonly GPUTextData[] {
-    if (this.textDataOwner) {
-      throw new Error('ArrowTextRenderer GPUTextData ownership has already been transferred');
-    }
     this.textDataOwner = onDataChanged;
     return this.textData;
   }
@@ -991,10 +988,7 @@ function getArrowTextRendererDataBatches(data: ArrowTextRendererData): ArrowText
       texts: getGPUVectorBatch(data.texts, batchIndex),
       sourceVectors: Object.fromEntries(
         Object.entries(data.sourceVectors).map(([name, vector]) => {
-          const arrowData = vector.data[batchIndex];
-          if (!arrowData) {
-            throw new Error(`Arrow text source vector "${name}" is missing batch ${batchIndex}`);
-          }
+          const arrowData = vector.data[batchIndex]!;
           return [name, new arrow.Vector([arrowData as never])];
         })
       ),
@@ -1021,10 +1015,7 @@ function getArrowTextRendererDataBatches(data: ArrowTextRendererData): ArrowText
 }
 
 function getGPUVectorBatch(vector: GPUVector, batchIndex: number): GPUVector {
-  const data = vector.data[batchIndex];
-  if (!data) {
-    throw new Error(`GPU text vector "${vector.name}" is missing batch ${batchIndex}`);
-  }
+  const data = vector.data[batchIndex]!;
   return new GPUVector({
     type: 'data',
     name: vector.name,
@@ -1160,10 +1151,7 @@ function prepareArrowTextInputFromGPUTableBatch(
   recordBatch: arrow.RecordBatch,
   props: ArrowTextRendererPrepareInputProps
 ): ArrowTextRendererInput {
-  const gpuBatch = gpuTable.batches[gpuTable.batches.length - 1];
-  if (!gpuBatch) {
-    throw new Error('Arrow text GPU table requires a batch to append');
-  }
+  const gpuBatch = gpuTable.batches[gpuTable.batches.length - 1]!;
   const batchTable = new GPUTable({batches: [gpuBatch]});
   return prepareArrowTextInputFromGPUTable(batchTable, [recordBatch], props);
 }
