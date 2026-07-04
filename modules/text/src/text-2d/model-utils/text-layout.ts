@@ -3,13 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {FontAtlas} from '../atlas/font-atlas';
-import {
-  getCharacterAtlasPage,
-  getCharacterLayoutOffset,
-  getTextKerningOffset,
-  type Character
-} from '../atlas/text-utils';
-import {getAlignmentBaselineOffset, getTextAnchorOffset} from '../atlas/text-metrics';
+import {getCharacterAtlasPage, getCharacterLayoutOffset, type Character} from '../atlas/text-utils';
+import {walkTextGlyphs} from '../atlas/text-glyph-walker';
 import type {
   GpuExpandedTextStream,
   GpuTextDictionaryCompressedStream,
@@ -98,52 +93,64 @@ export function buildTextGlyphLayout(
   options: TextLayoutOptions
 ): TextGlyphLayout {
   const {fontAtlas, characterSet} = options;
-  const lineHeight = options.lineHeight ?? fontAtlas.lineHeight;
   const missingCharacterWidth = options.missingCharacterWidth ?? DEFAULT_MISSING_CHARACTER_WIDTH;
   const startIndices = buildTextGlyphStartIndices(source);
   const glyphCount = startIndices[source.rowCount] ?? 0;
   const glyphOffsets = new Int16Array(glyphCount * 2);
   const glyphFrames = new Uint16Array(glyphCount * 4);
   const glyphPages = new Uint16Array(glyphCount);
-  const definitions = createTextGlyphDefinitionState(fontAtlas, characterSet);
+  const rowAdvances = new Float32Array(source.rowCount);
+  const rowBounds = new Float32Array(source.rowCount * 4);
+  const definitions = createTextGlyphDefinitionState(
+    fontAtlas,
+    characterSet,
+    missingCharacterWidth
+  );
   let glyphOffsetIndex = 0;
   let glyphFrameIndex = 0;
 
   for (let rowIndex = 0; rowIndex < source.rowCount; rowIndex++) {
     const rowGlyphOffsetStart = glyphOffsetIndex;
-    let width = 0;
-    let previousCodePoint: number | undefined;
-    source.visitCodePoints(rowIndex, codePoint => {
-      const {frame} = getTextGlyphDefinition(definitions, codePoint);
-      width += getTextKerningOffset(fontAtlas.kerning, previousCodePoint, codePoint);
-      const [layoutOffsetX, layoutOffsetY] = frame ? getCharacterLayoutOffset(frame) : [0, 0];
-      glyphOffsets[glyphOffsetIndex++] = toInt16(width + layoutOffsetX);
-      glyphOffsets[glyphOffsetIndex++] = toInt16(
-        fontAtlas.baselineOffset + lineHeight / 2 + layoutOffsetY
-      );
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.x ?? 0);
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.y ?? 0);
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.width ?? 0);
-      glyphFrames[glyphFrameIndex++] = toUint16(frame?.height ?? 0);
-      glyphPages[glyphFrameIndex / 4 - 1] = toUint16(frame ? getCharacterAtlasPage(frame) : 0);
-      width += frame?.advance ?? missingCharacterWidth;
-      previousCodePoint = codePoint;
-    });
-    const anchorOffset = getTextAnchorOffset(width, options.textAnchor);
-    const baselineOffset = getAlignmentBaselineOffset(lineHeight, options.alignmentBaseline);
+    const metrics = walkTextGlyphs(
+      visitCodePoint => source.visitCodePoints(rowIndex, visitCodePoint),
+      options,
+      ({codePoint, atlasPage, offsetX, offsetY}) => {
+        const {frame} = getTextGlyphDefinition(definitions, codePoint);
+        glyphOffsets[glyphOffsetIndex++] = toInt16(offsetX);
+        glyphOffsets[glyphOffsetIndex++] = toInt16(offsetY);
+        glyphFrames[glyphFrameIndex++] = toUint16(frame?.x ?? 0);
+        glyphFrames[glyphFrameIndex++] = toUint16(frame?.y ?? 0);
+        glyphFrames[glyphFrameIndex++] = toUint16(frame?.width ?? 0);
+        glyphFrames[glyphFrameIndex++] = toUint16(frame?.height ?? 0);
+        glyphPages[glyphFrameIndex / 4 - 1] = toUint16(atlasPage);
+      }
+    );
     for (
       let rowGlyphOffsetIndex = rowGlyphOffsetStart;
       rowGlyphOffsetIndex < glyphOffsetIndex;
       rowGlyphOffsetIndex += 2
     ) {
-      glyphOffsets[rowGlyphOffsetIndex] = toInt16(glyphOffsets[rowGlyphOffsetIndex] + anchorOffset);
+      glyphOffsets[rowGlyphOffsetIndex] = toInt16(
+        glyphOffsets[rowGlyphOffsetIndex] + metrics.anchorOffsetX
+      );
       glyphOffsets[rowGlyphOffsetIndex + 1] = toInt16(
-        glyphOffsets[rowGlyphOffsetIndex + 1] + baselineOffset
+        glyphOffsets[rowGlyphOffsetIndex + 1] + metrics.baselineOffsetY
       );
     }
+    rowAdvances[rowIndex] = metrics.advance;
+    rowBounds.set([...metrics.bounds.min, ...metrics.bounds.max], rowIndex * 4);
   }
 
-  return {startIndices, glyphCount, glyphOffsets, glyphFrames, glyphPages, characterSet};
+  return {
+    startIndices,
+    glyphCount,
+    glyphOffsets,
+    glyphFrames,
+    glyphPages,
+    rowAdvances,
+    rowBounds,
+    characterSet
+  };
 }
 
 /** Builds compact glyph IDs and shared definitions for GPU text expansion. */
@@ -171,18 +178,15 @@ export function buildTextGpuExpandedStream(
     const glyphEnd = startIndices[rowIndex + 1] ?? glyphStart;
     labelGlyphRanges[rowIndex * 2] = glyphStart;
     labelGlyphRanges[rowIndex * 2 + 1] = glyphEnd;
-    let width = 0;
-    let previousCodePoint: number | undefined;
-    source.visitCodePoints(rowIndex, codePoint => {
-      const {frame, glyphId} = getTextGlyphDefinition(definitions, codePoint);
-      width += getTextKerningOffset(fontAtlas.kerning, previousCodePoint, codePoint);
-      const [layoutOffsetX] = frame ? getCharacterLayoutOffset(frame) : [0, 0];
-      toInt16(width + layoutOffsetX);
-      writePackedUint16(packedGlyphIds, glyphWriteIndex, glyphId);
-      glyphWriteIndex++;
-      width += frame?.advance ?? missingCharacterWidth;
-      previousCodePoint = codePoint;
-    });
+    walkTextGlyphs(
+      visitCodePoint => source.visitCodePoints(rowIndex, visitCodePoint),
+      options,
+      ({codePoint}) => {
+        const {glyphId} = getTextGlyphDefinition(definitions, codePoint);
+        writePackedUint16(packedGlyphIds, glyphWriteIndex, glyphId);
+        glyphWriteIndex++;
+      }
+    );
   }
 
   const glyphFrames = new Float32Array(definitions.glyphFrameValues);
@@ -220,9 +224,7 @@ export function buildTextGpuDictionaryCompressedStream(
 ): GpuTextDictionaryCompressedStream {
   const buildStartTime = getNow();
   const {fontAtlas, characterSet} = options;
-  const lineHeight = options.lineHeight ?? fontAtlas.lineHeight;
   const missingCharacterWidth = options.missingCharacterWidth ?? DEFAULT_MISSING_CHARACTER_WIDTH;
-  const baselineOffsetY = toInt16(fontAtlas.baselineOffset + lineHeight / 2);
   const rowGlyphRanges = new Uint32Array(source.rowCount * 2);
   const rowDictionaryIndices = new Uint32Array(source.rowCount);
   const dictionaryGlyphRanges = new Uint32Array(source.dictionaryValueCount * 2);
@@ -240,19 +242,29 @@ export function buildTextGpuDictionaryCompressedStream(
 
   for (let dictionaryIndex = 0; dictionaryIndex < source.dictionaryValueCount; dictionaryIndex++) {
     const dictionaryGlyphStart = dictionaryGlyphRecordValues.length / 2;
-    let width = 0;
-    let previousCodePoint: number | undefined;
-    source.visitDictionaryCodePoints(dictionaryIndex, codePoint => {
-      const {frame, glyphId} = getTextGlyphDefinition(definitions, codePoint);
-      width += getTextKerningOffset(fontAtlas.kerning, previousCodePoint, codePoint);
-      const [layoutOffsetX, layoutOffsetY] = frame ? getCharacterLayoutOffset(frame) : [0, 0];
+    const glyphRecords: Array<{
+      offsetX: number;
+      offsetY: number;
+      glyphId: number;
+      atlasPage: number;
+    }> = [];
+    const metrics = walkTextGlyphs(
+      visitCodePoint => source.visitDictionaryCodePoints(dictionaryIndex, visitCodePoint),
+      options,
+      ({codePoint, offsetX, offsetY, atlasPage}) => {
+        const {glyphId} = getTextGlyphDefinition(definitions, codePoint);
+        glyphRecords.push({offsetX, offsetY, glyphId, atlasPage});
+      }
+    );
+    for (const glyphRecord of glyphRecords) {
       dictionaryGlyphRecordValues.push(
-        packSignedInt16Pair(width + layoutOffsetX, baselineOffsetY + layoutOffsetY),
-        packGlyphPageAndId(glyphId, frame ? getCharacterAtlasPage(frame) : 0)
+        packSignedInt16Pair(
+          glyphRecord.offsetX + metrics.anchorOffsetX,
+          glyphRecord.offsetY + metrics.baselineOffsetY
+        ),
+        packGlyphPageAndId(glyphRecord.glyphId, glyphRecord.atlasPage)
       );
-      width += frame?.advance ?? missingCharacterWidth;
-      previousCodePoint = codePoint;
-    });
+    }
     dictionaryGlyphRanges[dictionaryIndex * 2] = dictionaryGlyphStart;
     dictionaryGlyphRanges[dictionaryIndex * 2 + 1] = dictionaryGlyphRecordValues.length / 2;
   }

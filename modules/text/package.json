@@ -25,6 +25,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./experimental": {
+      "types": "./dist/experimental.d.ts",
+      "import": "./dist/experimental.js",
+      "require": "./dist/experimental.cjs"
+    },
     "./text-3d": {
       "types": "./dist/text-3d/index.d.ts",
       "import": "./dist/text-3d/index.js",

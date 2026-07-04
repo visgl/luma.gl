@@ -3,13 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {
-  buildMapping,
-  getTextFromBuffer,
-  nextPowOfTwo,
-  transformParagraph,
-  type CharacterMapping
-} from '../../src/index';
+import {buildMapping, nextPowOfTwo} from '../../src/index';
 
 test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
   const {mapping, xOffset, yOffsetMin, yOffsetMax, canvasHeight} = buildMapping({
@@ -41,26 +35,5 @@ test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
     layoutOffsetX: 0,
     layoutOffsetY: -3
   });
-  t.end();
-});
-
-test('transformParagraph and getTextFromBuffer preserve deck-compatible layout behavior', t => {
-  const mapping: CharacterMapping = {
-    a: {width: 1, height: 4, advance: 2, anchorX: 0.5, anchorY: 3, x: 0, y: 0},
-    b: {width: 2, height: 4, advance: 3, anchorX: 1, anchorY: 3, x: 0, y: 0},
-    c: {width: 3, height: 4, advance: 4, anchorX: 1.5, anchorY: 3, x: 0, y: 0}
-  };
-  const transformed = transformParagraph('ab\nc', 1, 4, null, null, mapping);
-  t.deepEqual(transformed, {
-    x: [0.5, 3, 0, 1.5],
-    y: [3, 3, 0, 7],
-    rowWidth: [5, 5, 0, 4],
-    size: [5, 8]
-  });
-
-  const value = new Uint8Array([72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33]);
-  const result = getTextFromBuffer({value, length: 2, startIndices: [0, 6]});
-  t.deepEqual(result.texts, ['Hello ', 'world!'], 'binary text decoding matches deck contract');
-  t.equal(result.characterCount, 12, 'binary character count matches input');
   t.end();
 });

@@ -25,14 +25,13 @@ import {GPUVector} from '@luma.gl/tables';
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
+import {type CharacterMapping, type FontAtlas} from '../../src/index';
 import {
   TextAttributeModel,
   TextDictionaryModel,
   TextRowIndexedStorageModel,
-  TextStorageModel,
-  type CharacterMapping,
-  type FontAtlas
-} from '../../src/index';
+  TextStorageModel
+} from '../../src/text-2d/experimental';
 
 const CHARACTER_MAPPING: CharacterMapping = {
   A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
@@ -251,11 +250,11 @@ test('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance 
   );
   t.equal(
     Object.prototype.hasOwnProperty.call(modelProps, 'attributeState'),
-    false,
-    'model-ready attribute props are flat'
+    true,
+    'model-ready attribute props contain one prepared state object'
   );
   const renderTableFieldNames =
-    modelProps.modelProps.table?.schema.fields.map(field => field.name) ?? [];
+    modelProps.attributeState.modelProps.table?.schema.fields.map(field => field.name) ?? [];
   t.deepEqual(
     renderTableFieldNames.filter(fieldName =>
       ['glyphOffsets', 'glyphFrames', 'glyphPages', 'glyphClipRects', 'rowIndices'].includes(
@@ -268,8 +267,16 @@ test('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance 
   const model = new TextAttributeModel(device, modelProps);
 
   t.equal(model.instanceCount, 3, 'instance count uses generated glyph rows');
-  t.deepEqual(model.glyphLayout.startIndices, [0, 2, 3], 'model exposes glyph start indices');
-  t.equal(modelProps.glyphTable.table.numRows, 3, 'conversion state retains generated glyph table');
+  t.deepEqual(
+    model.attributeState.glyphLayout.startIndices,
+    [0, 2, 3],
+    'model exposes glyph start indices'
+  );
+  t.equal(
+    modelProps.attributeState.glyphTable.table.numRows,
+    3,
+    'conversion state retains generated glyph table'
+  );
 
   const updatedTextSource = makeArrowTexts(['A', 'A']);
   const updatedTexts = makeGpuTexts(device, updatedTextSource);
@@ -281,7 +288,11 @@ test('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance 
     fontAtlas: FONT_ATLAS
   });
   t.equal(updatedModel.instanceCount, 2, 'rebuilt model uses updated text glyph count');
-  t.deepEqual(updatedModel.glyphLayout.startIndices, [0, 1, 2], 'rebuilt model updates starts');
+  t.deepEqual(
+    updatedModel.attributeState.glyphLayout.startIndices,
+    [0, 1, 2],
+    'rebuilt model updates starts'
+  );
 
   model.destroy();
   updatedModel.destroy();
@@ -298,7 +309,7 @@ test('TextAttributeModel accepts dictionary UTF-8 source vectors', async t => {
     ...textProps,
     fontAtlas: FONT_ATLAS
   });
-  const expandedGlyphBytes = await model.expandedGlyphVertexData.readAsync();
+  const expandedGlyphBytes = await model.attributeState.expandedGlyphVertexData.readAsync();
   const expandedGlyphWords = new Uint32Array(
     expandedGlyphBytes.buffer,
     expandedGlyphBytes.byteOffset,
@@ -306,7 +317,11 @@ test('TextAttributeModel accepts dictionary UTF-8 source vectors', async t => {
   );
 
   t.equal(model.instanceCount, 5, 'dictionary labels expand into repeated glyph instances');
-  t.deepEqual(model.glyphLayout.startIndices, [0, 2, 3, 5, 5], 'null rows render empty');
+  t.deepEqual(
+    model.attributeState.glyphLayout.startIndices,
+    [0, 2, 3, 5, 5],
+    'null rows render empty'
+  );
   t.deepEqual(
     Array.from(expandedGlyphWords),
     [
@@ -397,7 +412,7 @@ test('TextAttributeModel interleaves expanded glyph vertex records', async t => 
     ...textProps,
     fontAtlas: FONT_ATLAS
   });
-  const expandedGlyphBytes = await model.expandedGlyphVertexData.readAsync();
+  const expandedGlyphBytes = await model.attributeState.expandedGlyphVertexData.readAsync();
   const expandedGlyphWords = new Uint32Array(
     expandedGlyphBytes.buffer,
     expandedGlyphBytes.byteOffset,
@@ -454,9 +469,13 @@ test('TextAttributeModel splits expanded glyph vertex buffers by device limits',
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(model.renderBatches.length, 2, 'generated glyph output splits into two render batches');
+  t.equal(
+    model.attributeState.renderBatches.length,
+    2,
+    'generated glyph output splits into two render batches'
+  );
   t.deepEqual(
-    model.renderBatches.map(batch => batch.glyphCount),
+    model.attributeState.renderBatches.map(batch => batch.glyphCount),
     [2, 1],
     'batching preserves whole source-label rows'
   );
@@ -506,7 +525,11 @@ test('TextAttributeModel expands chunked UTF-8 GPUVector data', t => {
 
   t.equal(textProps.texts.data.length, 2, 'GPUVector preserves both UTF-8 GPUData chunks');
   t.equal(model.instanceCount, 3, 'glyph expansion spans every retained UTF-8 chunk');
-  t.deepEqual(model.glyphLayout.startIndices, [0, 2, 3], 'row starts cross chunk boundaries');
+  t.deepEqual(
+    model.attributeState.glyphLayout.startIndices,
+    [0, 2, 3],
+    'row starts cross chunk boundaries'
+  );
 
   model.destroy();
   destroyGpuTextProps(textProps);
@@ -529,7 +552,11 @@ test('TextAttributeModel rebuilds from streamed GPUTable-backed text batches', t
     sourceVectors: firstSourceVectors,
     fontAtlas: FONT_ATLAS
   });
-  t.equal(model.glyphLayout.glyphCount, 2, 'starts from the first streamed text batch');
+  t.equal(
+    model.attributeState.glyphLayout.glyphCount,
+    2,
+    'starts from the first streamed text batch'
+  );
 
   gpuTable.addBatch(
     makeGPURecordBatchFromArrowRecordBatch(device, secondBatch, {
@@ -543,7 +570,11 @@ test('TextAttributeModel rebuilds from streamed GPUTable-backed text batches', t
     sourceVectors: makeArrowTextSourceVectorsFromBatches([firstBatch, secondBatch]),
     fontAtlas: FONT_ATLAS
   });
-  t.equal(rebuiltModel.glyphLayout.glyphCount, 3, 'rebuilt model includes every text batch');
+  t.equal(
+    rebuiltModel.attributeState.glyphLayout.glyphCount,
+    3,
+    'rebuilt model includes every text batch'
+  );
 
   model.destroy();
   rebuiltModel.destroy();
@@ -572,11 +603,11 @@ test('TextStorageModel packs SDF alpha settings into the style config uniform', 
   );
   t.equal(
     Object.prototype.hasOwnProperty.call(modelProps, 'storageState'),
-    false,
-    'model-ready storage props are flat'
+    true,
+    'model-ready storage props contain one owning state object'
   );
   const model = new TextStorageModel(device, modelProps);
-  const styleConfigBytes = await model.styleConfigBuffer.readAsync();
+  const styleConfigBytes = await model.storageState.batches[0]!.styleConfigBuffer.readAsync();
   const styleConfigFloats = new Float32Array(
     styleConfigBytes.buffer,
     styleConfigBytes.byteOffset,
@@ -617,17 +648,22 @@ test('TextStorageModel interleaves compact glyph vertex records', async t => {
     ...textProps,
     fontAtlas: FONT_ATLAS
   });
-  const glyphVertexBytes = await model.compactGlyphVertexData.readAsync();
+  const glyphVertexBytes =
+    await model.storageState.renderBatches[0]!.compactGlyphVertexData.readAsync();
   const generatedGlyphVertexWords = new Uint32Array(
     glyphVertexBytes.buffer,
     glyphVertexBytes.byteOffset,
-    model.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
+    model.storageState.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
   );
   const generatedGlyphVertexLayout = model.bufferLayout.find(
     layout => layout.name === 'compactGlyphVertexData'
   );
 
-  t.equal(model.generatedRenderBufferByteLength, 24, 'three glyphs keep the 8-byte record budget');
+  t.equal(
+    model.storageState.generatedRenderBufferByteLength,
+    24,
+    'three glyphs keep the 8-byte record budget'
+  );
   t.equal(generatedGlyphVertexLayout?.byteStride, 8, 'generated records use an 8-byte stride');
   t.deepEqual(
     generatedGlyphVertexLayout?.attributes,
@@ -642,13 +678,15 @@ test('TextStorageModel interleaves compact glyph vertex records', async t => {
     [packSignedInt16Pair(2, 6), 1, packSignedInt16Pair(7, 6), 2, packSignedInt16Pair(2, 6), 1],
     'generated records store packed offsets and glyph ids in order'
   );
-  const rowGlyphStartsBytes = await model.rowGlyphStartsBuffer.readAsync();
+  const rowGlyphStartsBytes =
+    await model.storageState.batches[0]!.rowGlyphStartsBuffer!.readAsync();
   const rowGlyphStarts = new Uint32Array(
     rowGlyphStartsBytes.buffer,
     rowGlyphStartsBytes.byteOffset,
     3
   );
-  const renderConfigBytes = await model.storageRenderConfigBuffer.readAsync();
+  const renderConfigBytes =
+    await model.storageState.renderBatches[0]!.storageRenderConfigBuffer.readAsync();
   const renderConfig = new Uint32Array(renderConfigBytes.buffer, renderConfigBytes.byteOffset, 4);
   t.deepEqual(Array.from(rowGlyphStarts), [0, 2, 3], 'row glyph starts map glyphs back to rows');
   t.deepEqual(Array.from(renderConfig), [0, 0, 2, 0], 'render config scopes row lookup');
@@ -673,7 +711,7 @@ test('createTextStorageStateFromGPUVectors prepares storage text without sourceV
     texts: textProps.texts,
     fontAtlas: FONT_ATLAS
   });
-  const glyphVertexBytes = await storageState.compactGlyphVertexData.readAsync();
+  const glyphVertexBytes = await storageState.renderBatches[0]!.compactGlyphVertexData.readAsync();
   const generatedGlyphVertexWords = new Uint32Array(
     glyphVertexBytes.buffer,
     glyphVertexBytes.byteOffset,
@@ -798,17 +836,22 @@ test('TextRowIndexedStorageModel stores row indices in compact glyph records', a
     'model-ready row-indexed storage props do not expose Arrow source vectors'
   );
   const model = new TextRowIndexedStorageModel(device, modelProps);
-  const glyphVertexBytes = await model.compactGlyphVertexData.readAsync();
+  const glyphVertexBytes =
+    await model.storageState.renderBatches[0]!.compactGlyphVertexData.readAsync();
   const generatedGlyphVertexWords = new Uint32Array(
     glyphVertexBytes.buffer,
     glyphVertexBytes.byteOffset,
-    model.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
+    model.storageState.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
   );
   const generatedGlyphVertexLayout = model.bufferLayout.find(
     layout => layout.name === 'compactGlyphVertexData'
   );
 
-  t.equal(model.generatedRenderBufferByteLength, 36, 'three glyphs keep a 12-byte record budget');
+  t.equal(
+    model.storageState.generatedRenderBufferByteLength,
+    36,
+    'three glyphs keep a 12-byte record budget'
+  );
   t.equal(generatedGlyphVertexLayout?.byteStride, 12, 'generated records use a 12-byte stride');
   t.deepEqual(
     generatedGlyphVertexLayout?.attributes,
@@ -854,16 +897,21 @@ test('TextStorageModel accepts dictionary UTF-8 text through CPU glyph expansion
     ...textProps,
     fontAtlas: FONT_ATLAS
   });
-  const glyphVertexBytes = await model.compactGlyphVertexData.readAsync();
+  const glyphVertexBytes =
+    await model.storageState.renderBatches[0]!.compactGlyphVertexData.readAsync();
   const generatedGlyphVertexWords = new Uint32Array(
     glyphVertexBytes.buffer,
     glyphVertexBytes.byteOffset,
-    model.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
+    model.storageState.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
   );
 
-  t.equal(model.glyphCount, 5, 'storage model expands repeated dictionary labels per row');
   t.equal(
-    model.generatedRenderBufferByteLength,
+    model.storageState.glyphCount,
+    5,
+    'storage model expands repeated dictionary labels per row'
+  );
+  t.equal(
+    model.storageState.generatedRenderBufferByteLength,
     40,
     'naive dictionary storage keeps one compact glyph record per visible glyph'
   );
@@ -909,24 +957,33 @@ test('TextDictionaryModel shares dictionary glyph records per batch', async t =>
     'model-ready dictionary props do not expose Arrow source vectors'
   );
   const model = new TextDictionaryModel(device, modelProps);
-  const dictionaryGlyphRecordBytes = await model.dictionaryGlyphRecordsBuffer.readAsync();
+  const firstBatch = model.storageState.batches[0]!;
+  const dictionaryGlyphRecordBytes = await firstBatch.dictionaryGlyphRecordsBuffer.readAsync();
   const dictionaryGlyphRecordWords = new Uint32Array(
     dictionaryGlyphRecordBytes.buffer,
     dictionaryGlyphRecordBytes.byteOffset,
-    model.dictionaryGlyphCount * 2
+    model.storageState.dictionaryGlyphCount * 2
   );
-  const rowDictionaryRecordBytes = await model.rowDictionaryRecordsBuffer.readAsync();
+  const rowDictionaryRecordBytes = await firstBatch.rowDictionaryRecordsBuffer.readAsync();
   const rowDictionaryRecords = new Uint32Array(
     rowDictionaryRecordBytes.buffer,
     rowDictionaryRecordBytes.byteOffset,
     8
   );
 
-  t.equal(model.glyphCount, 5, 'visible glyph count still expands per row occurrence');
-  t.equal(model.dictionaryValueCount, 2, 'dictionary batch keeps two unique string values');
-  t.equal(model.dictionaryGlyphCount, 3, 'shared dictionary glyph records store AB and A once');
+  t.equal(model.storageState.glyphCount, 5, 'visible glyph count still expands per row occurrence');
   t.equal(
-    model.generatedRenderBufferByteLength,
+    model.storageState.dictionaryValueCount,
+    2,
+    'dictionary batch keeps two unique string values'
+  );
+  t.equal(
+    model.storageState.dictionaryGlyphCount,
+    3,
+    'shared dictionary glyph records store AB and A once'
+  );
+  t.equal(
+    model.storageState.generatedRenderBufferByteLength,
     0,
     'dictionary model has no generated per-visible-glyph vertex buffer'
   );
@@ -962,7 +1019,7 @@ test('TextDictionaryModel draws every dictionary source batch', async t => {
     shaderLayout: DICTIONARY_DRAW_TEST_SHADER_LAYOUT,
     fontAtlas: FONT_ATLAS
   });
-  await model.atlasTexture?.ready;
+  await model.storageState.atlasTexture?.ready;
   model.predraw(device.commandEncoder);
   const drawCalls: {
     instanceCount?: number;
@@ -1011,21 +1068,23 @@ test('TextDictionaryModel draws every dictionary source batch', async t => {
     );
     t.deepEqual(
       drawCalls.map(drawCall => drawCall.dictionaryRenderConfigBuffer),
-      model.renderBatches.map(renderBatch => renderBatch.dictionaryRenderConfigBuffer.buffer),
+      model.storageState.renderBatches.map(
+        renderBatch => renderBatch.dictionaryRenderConfigBuffer.buffer
+      ),
       'binds each batch dictionary render config buffer'
     );
     t.deepEqual(
       drawCalls.map(drawCall => drawCall.styleConfigBuffer),
-      model.batches.map(batch => batch.styleConfigBuffer.buffer),
+      model.storageState.batches.map(batch => batch.styleConfigBuffer.buffer),
       'binds each batch style config buffer'
     );
     t.deepEqual(
       drawCalls.map(drawCall => drawCall.rowPositionsBuffer),
-      model.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer)),
+      model.storageState.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer)),
       'binds each row storage batch'
     );
     const styleConfigRows = await Promise.all(
-      model.batches.map(async batch => {
+      model.storageState.batches.map(async batch => {
         const styleConfigBytes = await batch.styleConfigBuffer.readAsync();
         const styleConfigWords = new Uint32Array(
           styleConfigBytes.buffer,
@@ -1091,8 +1150,12 @@ test('TextStorageModel rebuilds from streamed GPUTable-backed text batches', asy
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(rebuiltModel.glyphCount, 3, 'rebuilt storage text reads every UTF-8 batch');
-  t.equal(rebuiltModel.batches.length, 2, 'rebuilt storage row bindings preserve chunk boundaries');
+  t.equal(rebuiltModel.storageState.glyphCount, 3, 'rebuilt storage text reads every UTF-8 batch');
+  t.equal(
+    rebuiltModel.storageState.batches.length,
+    2,
+    'rebuilt storage row bindings preserve chunk boundaries'
+  );
 
   model.destroy();
   rebuiltModel.destroy();
@@ -1140,9 +1203,13 @@ test('TextStorageModel rebuilds dictionary GPUTable-backed text batches', async 
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(rebuiltModel.glyphCount, 5, 'rebuilt storage expands dictionary text from all batches');
   t.equal(
-    rebuiltModel.batches.length,
+    rebuiltModel.storageState.glyphCount,
+    5,
+    'rebuilt storage expands dictionary text from all batches'
+  );
+  t.equal(
+    rebuiltModel.storageState.batches.length,
     2,
     'rebuilt dictionary row bindings retain chunk boundaries'
   );
@@ -1179,14 +1246,18 @@ test('TextStorageModel splits compact glyph buffers by device limits', async t =
       1,
       'row bindings remain in their original input batch'
     );
-    t.equal(model.renderBatches.length, 2, 'generated glyph output splits into render batches');
+    t.equal(
+      model.storageState.renderBatches.length,
+      2,
+      'generated glyph output splits into render batches'
+    );
     t.deepEqual(
-      model.renderBatches.map(batch => batch.glyphCount),
+      model.storageState.renderBatches.map(batch => batch.glyphCount),
       [2, 1],
       'storage batching preserves whole source-label rows'
     );
     t.equal(
-      model.generatedRenderBufferByteLength,
+      model.storageState.generatedRenderBufferByteLength,
       24,
       'aggregate generated byte accounting stays exact'
     );
@@ -1246,8 +1317,8 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
     fontAtlas: FONT_ATLAS
   });
   const storageState = model.storageState;
-  const compactGlyphVertexData = model.compactGlyphVertexData;
-  const styleConfigBuffer = model.styleConfigBuffer;
+  const compactGlyphVertexData = model.storageState.renderBatches[0]!.compactGlyphVertexData;
+  const styleConfigBuffer = model.storageState.batches[0]!.styleConfigBuffer;
 
   const colorModel = createTextStorageModel(device, {
     id: 'arrow-text-storage-row-binding-rebuild-color-test',
@@ -1257,9 +1328,13 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
   });
 
   t.notEqual(colorModel.storageState, storageState, 'color updates build a new storage state');
-  t.equal(colorModel.glyphCount, model.glyphCount, 'color updates preserve glyph count');
+  t.equal(
+    colorModel.storageState.glyphCount,
+    model.storageState.glyphCount,
+    'color updates preserve glyph count'
+  );
   t.notEqual(
-    colorModel.styleConfigBuffer,
+    colorModel.storageState.batches[0]!.styleConfigBuffer,
     styleConfigBuffer,
     'color updates rebuild style config buffers'
   );
@@ -1276,11 +1351,11 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
 
   t.notEqual(textModel.storageState, storageState, 'text updates build a new storage state');
   t.notEqual(
-    textModel.compactGlyphVertexData,
+    textModel.storageState.renderBatches[0]!.compactGlyphVertexData,
     compactGlyphVertexData,
     'text updates rebuild compact glyph vertex data'
   );
-  t.equal(textModel.glyphCount, 2, 'text updates reflect the replacement text source');
+  t.equal(textModel.storageState.glyphCount, 2, 'text updates reflect the replacement text source');
 
   model.destroy();
   colorModel.destroy();

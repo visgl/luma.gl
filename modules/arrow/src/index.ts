@@ -4,6 +4,13 @@
 
 export type {NumericArrowType, ArrowColumnInfo} from './arrow/arrow-utils/arrow-types';
 export {
+  makeGPUTextDataFromArrow,
+  makeGPUTextDataFromArrowStream,
+  type GPUTextArrowStreamBatch,
+  type MakeGPUTextDataFromArrowStreamOptions,
+  type MakeGPUTextDataFromArrowProps
+} from './arrow/renderers/text/conversion/make-gpu-text-data-from-arrow';
+export {
   getArrowListNestingLevel,
   isNumericArrowType
   // isInstanceArrowType,
@@ -122,13 +129,10 @@ export {
   createTextStorageStateFromGPUVectors,
   packTextStorageClipRects,
   type ArrowTextAttributeInputProps,
-  type ArrowTextAttributeRenderProps,
   type ArrowTextAttributeState,
   type ArrowTextDictionaryStorageInputProps,
-  type ArrowTextDictionaryStorageRenderProps,
   type ArrowTextDictionaryStorageSourceVectors,
   type ArrowTextStorageInputProps,
-  type ArrowTextStorageRenderProps,
   type ArrowTextStorageSourceVectors,
   type ArrowTextStorageState,
   type ArrowTextGlyphTable,

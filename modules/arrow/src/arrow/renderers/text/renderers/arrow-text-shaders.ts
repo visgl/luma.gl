@@ -9,7 +9,7 @@ import {
   makeTextGlyphAlphaGlsl,
   makeTextGlyphAlphaWgsl,
   type TextGlyphAlphaShaderSettings
-} from '@luma.gl/text';
+} from '@luma.gl/text/experimental';
 
 const TEXT_VIEWPORT_FRAGMENT_SHADER_SETTINGS = {
   renderMode: {expression: 'textViewport.textFontRenderMode', kind: 'float'},
