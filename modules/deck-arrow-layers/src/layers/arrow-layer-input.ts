@@ -98,14 +98,14 @@ export async function convertArrowLayerColorGPUVector(
   return {vector: await convertColors(device, vector, {name}), converted: true};
 }
 
-/** Normalizes one supported fixed-width Arrow RGB/RGBA vector to Uint8 RGBA rows. */
+/** Normalizes convertible fixed-width Arrow colors and preserves specialized nested vectors. */
 export async function convertArrowLayerColorVector(
   device: Device,
   vector: Vector,
   name: string
 ): Promise<Vector> {
   if (!canConvertColors(vector)) {
-    throw new Error(`Arrow color vector type ${vector.type} is not convertible to Uint8 RGBA`);
+    return vector;
   }
   const converted = await convertArrowColors(device, vector as Vector<ArrowColorType>, {name});
   try {

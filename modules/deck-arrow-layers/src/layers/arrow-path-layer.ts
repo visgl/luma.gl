@@ -647,11 +647,21 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const colorSelector =
       model === 'storage' && isArrowLayerGPUVector(colorSource)
         ? undefined
-        : await this.resolvePathStyleSource(colorSource, rowIndexOffset, recordBatch?.numRows);
+        : await this.resolvePathStyleSource(
+            colorSource,
+            rowIndexOffset,
+            recordBatch?.numRows,
+            true
+          );
     const widthSelector =
       model === 'storage' && isArrowLayerGPUVector(widthSource)
         ? undefined
-        : await this.resolvePathStyleSource(widthSource, rowIndexOffset, recordBatch?.numRows);
+        : await this.resolvePathStyleSource(
+            widthSource,
+            rowIndexOffset,
+            recordBatch?.numRows,
+            false
+          );
     let sourceVectors = fillNullablePathStyleVectors(
       resolveArrowPathSourceVectors(model === 'storage' ? PathStorageModel : PathAttributeModel, {
         data: recordBatch,
@@ -830,7 +840,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
   private async resolvePathStyleSource<Source extends ArrowPathColorSource | ArrowPathWidthSource>(
     source: Source | undefined,
     rowIndexOffset: number,
-    rowCount: number | undefined
+    rowCount: number | undefined,
+    normalizeColor: boolean
   ): Promise<Exclude<Source, GPUVector> | undefined> {
     if (!isArrowLayerGPUVector(source)) {
       return source as Exclude<Source, GPUVector> | undefined;
@@ -838,20 +849,22 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const cache = this.getLayerState().gpuVectorSourceCache;
     let arrowVectorPromise = cache.get(source);
     if (!arrowVectorPromise) {
-      arrowVectorPromise = (async () => {
-        const normalized = await convertArrowLayerColorGPUVector(
-          this.context.device,
-          source,
-          `${this.id}-colors`
-        );
-        try {
-          return await readArrowGPUVectorAsync(normalized.vector);
-        } finally {
-          if (normalized.converted) {
-            normalized.vector.destroy();
-          }
-        }
-      })();
+      arrowVectorPromise = normalizeColor
+        ? (async () => {
+            const normalized = await convertArrowLayerColorGPUVector(
+              this.context.device,
+              source,
+              `${this.id}-colors`
+            );
+            try {
+              return await readArrowGPUVectorAsync(normalized.vector);
+            } finally {
+              if (normalized.converted) {
+                normalized.vector.destroy();
+              }
+            }
+          })()
+        : readArrowGPUVectorAsync(source);
       cache.set(source, arrowVectorPromise);
     }
     const arrowVector = await arrowVectorPromise;
