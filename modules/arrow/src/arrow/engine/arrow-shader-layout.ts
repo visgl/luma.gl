@@ -10,7 +10,6 @@ import type {
   VertexFormat
 } from '@luma.gl/core';
 import {shaderTypeDecoder, vertexFormatDecoder} from '@luma.gl/core';
-import {getAttributeLayoutFromBufferSchema, type BufferSchema} from '@luma.gl/engine';
 import {Table, Vector} from 'apache-arrow';
 import {getArrowPaths, getArrowVectorByPath} from '../arrow-utils/arrow-paths';
 import {getArrowColumnInfo, getInstanceColumnInfo} from '../arrow-utils/arrow-column-info';
@@ -182,22 +181,16 @@ function getArrowMatrixBufferLayouts(
     }
 
     const firstAttributeName = attributes[0].name;
-    const schema: BufferSchema = Object.fromEntries(
-      attributes.map((attribute, columnIndex) => [
-        attribute.name,
-        {
-          format,
-          elementOffset: columnIndex * matrixInfo.columnStride
-        }
-      ])
-    );
-    const layout = getAttributeLayoutFromBufferSchema({
+    const layout: BufferLayout = {
       name: arrowPath,
       byteStride: matrixInfo.byteStride,
-      bytesPerElement: Float32Array.BYTES_PER_ELEMENT,
-      schema,
+      attributes: attributes.map((attribute, columnIndex) => ({
+        attribute: attribute.name,
+        format,
+        byteOffset: columnIndex * matrixInfo.columnStride * Float32Array.BYTES_PER_ELEMENT
+      })),
       ...(attributes[0].stepMode ? {stepMode: attributes[0].stepMode} : {})
-    });
+    };
     const selection = {firstAttributeName, layout};
     for (const attribute of attributes) {
       matrixSelections.set(attribute.name, selection);

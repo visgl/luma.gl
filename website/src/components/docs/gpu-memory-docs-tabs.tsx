@@ -15,7 +15,6 @@ export type GpuMemoryDocsTabId =
   | 'gpu-memory'
   | 'gpu-buffers'
   | 'gpu-memory-layouts'
-  | 'buffer-schemas'
   | 'gpu-storage-buffers';
 
 const GPU_MEMORY_DOCS_TABS: GpuMemoryDocsTab[] = [
@@ -25,11 +24,6 @@ const GPU_MEMORY_DOCS_TABS: GpuMemoryDocsTab[] = [
     id: 'gpu-memory-layouts',
     label: 'Memory Layouts',
     href: '/docs/api-guide/gpu/gpu-memory-layouts'
-  },
-  {
-    id: 'buffer-schemas',
-    label: 'Buffer Schemas',
-    href: '/docs/api-guide/gpu/buffer-schemas'
   },
   {
     id: 'gpu-storage-buffers',

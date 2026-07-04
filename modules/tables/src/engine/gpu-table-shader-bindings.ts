@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  assert,
   Buffer,
   type Binding,
   type BufferLayout,
@@ -14,6 +15,7 @@ import {
 import {DynamicBuffer} from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {
+  getGPUInputAttributeNames,
   validateGPUInputVectors,
   type GPUInputDeclaration,
   type GPUInputSchema
@@ -24,6 +26,12 @@ import type {GPUTable} from '../table/gpu-table';
 import {getGPUVectorFormatInfo} from '../table/gpu-vector-format';
 
 type GPUBuffer = Buffer | DynamicBuffer;
+
+/** One normalized shader attribute supplied by a logical GPU input. */
+type GPUAttributeInput = {
+  input: GPUInputDeclaration;
+  attributeName: string;
+};
 
 /** Construction props for one table-to-shader binding preparation object. */
 export type GPUTableShaderBindingsProps = {
@@ -141,8 +149,10 @@ function prepareBindings(
       .filter(binding => binding.type === 'storage' || binding.type === 'read-only-storage')
       .map(binding => binding.name)
   );
-  const attributeInputs = gpuInputSchema.filter(
-    input => input.attributeName && shaderAttributeNames.has(input.attributeName)
+  const attributeInputs = gpuInputSchema.flatMap(input =>
+    getGPUInputAttributeNames(input)
+      .filter(attributeName => shaderAttributeNames.has(attributeName))
+      .map(attributeName => ({input, attributeName}))
   );
   const storageInputs = gpuInputSchema.filter(
     input => input.storageBindingName && storageBindingNames.has(input.storageBindingName)
@@ -153,18 +163,20 @@ function prepareBindings(
   const constantLayouts: BufferLayout[] = [];
   const constantAttributeBuffers: Record<string, Buffer> = {};
 
+  validateCompositeConstantInputs(table, gpuInputSchema);
+
   if (device.type === 'webgl') {
-    for (const input of attributeInputs) {
+    for (const {input, attributeName} of attributeInputs) {
       const constant = table.gpuConstants[input.columnName];
-      if (constant && input.attributeName) {
-        constantAttributes[input.attributeName] = getWebGLConstantValue(constant);
+      if (constant) {
+        constantAttributes[attributeName] = getWebGLConstantValue(constant);
       }
     }
   } else {
     for (const stepMode of ['vertex', 'instance'] as const) {
-      const stepInputs = attributeInputs.filter(input => {
+      const stepInputs = attributeInputs.filter(({input, attributeName}) => {
         const shaderAttribute = shaderLayout.attributes.find(
-          attribute => attribute.name === input.attributeName
+          attribute => attribute.name === attributeName
         );
         return (
           table.gpuConstants[input.columnName] &&
@@ -295,7 +307,19 @@ function sortBufferLayoutsByShaderLocation(
   const locations = new Map(
     shaderLayout.attributes.map(attribute => [attribute.name, attribute.location])
   );
-  return bufferLayouts.sort((layoutA, layoutB) => {
+  const sortedLayouts = bufferLayouts.map(layout => ({
+    ...layout,
+    ...(layout.attributes
+      ? {
+          attributes: [...layout.attributes].sort(
+            (attributeA, attributeB) =>
+              (locations.get(attributeA.attribute) ?? Infinity) -
+              (locations.get(attributeB.attribute) ?? Infinity)
+          )
+        }
+      : {})
+  }));
+  return sortedLayouts.sort((layoutA, layoutB) => {
     const getLocation = (layout: BufferLayout): number =>
       Math.min(
         ...(layout.attributes ?? [{attribute: layout.name}]).map(
@@ -308,34 +332,27 @@ function sortBufferLayoutsByShaderLocation(
 
 function getVaryingAttributeLayouts(
   table: GPUTable,
-  attributeInputs: GPUInputDeclaration[]
+  attributeInputs: GPUAttributeInput[]
 ): BufferLayout[] {
   const layouts = new Map<string, BufferLayout>();
-  for (const input of attributeInputs) {
-    if (table.gpuConstants[input.columnName] || !input.attributeName) {
+  for (const {input, attributeName} of attributeInputs) {
+    if (table.gpuConstants[input.columnName]) {
       continue;
     }
     const sourceLayout = table.bufferLayout.find(layout => layout.name === input.columnName);
-    if (!sourceLayout) {
-      throw new Error(
-        `GPUTableShaderBindings GPU input "${input.columnName}" requires a table buffer layout`
-      );
-    }
+    // Every active varying input must have a physical table layout.
+    assert(sourceLayout);
     if (!sourceLayout.attributes) {
-      layouts.set(
-        sourceLayout.name,
-        getShaderAttributeBufferLayout(sourceLayout, input.attributeName)
-      );
+      // Flat layouts expose exactly one shader attribute.
+      assert(getGPUInputAttributeNames(input).length === 1);
+      layouts.set(sourceLayout.name, getShaderAttributeBufferLayout(sourceLayout, attributeName));
       continue;
     }
     const attribute = sourceLayout.attributes.find(
-      candidate => candidate.attribute === input.attributeName
+      candidate => candidate.attribute === attributeName
     );
-    if (!attribute) {
-      throw new Error(
-        `GPUTableShaderBindings buffer layout "${sourceLayout.name}" does not contain shader attribute "${input.attributeName}"`
-      );
-    }
+    // Composite layouts must expose every active declared view.
+    assert(attribute);
     const existing = layouts.get(sourceLayout.name);
     if (existing?.attributes) {
       existing.attributes.push(attribute);
@@ -347,12 +364,12 @@ function getVaryingAttributeLayouts(
 }
 
 function packConstantAttributes(
-  inputs: GPUInputDeclaration[],
+  inputs: GPUAttributeInput[],
   constants: Record<string, GPUConstant>
 ): {data: Uint8Array; attributes: NonNullable<BufferLayout['attributes']>} {
   const offsets: number[] = [];
   let byteLength = 0;
-  for (const input of inputs) {
+  for (const {input} of inputs) {
     const constant = constants[input.columnName];
     const alignment = Math.min(4, constant.byteLength);
     byteLength = Math.ceil(byteLength / alignment) * alignment;
@@ -360,19 +377,27 @@ function packConstantAttributes(
     byteLength += constant.byteLength;
   }
   const data = new Uint8Array(Math.max(4, Math.ceil(byteLength / 4) * 4));
-  const attributes = inputs.map((input, index) => {
+  const attributes = inputs.map(({input, attributeName}, index) => {
     const constant = constants[input.columnName];
     data.set(
       new Uint8Array(constant.value.buffer, constant.value.byteOffset, constant.value.byteLength),
       offsets[index]
     );
     return {
-      attribute: input.attributeName!,
+      attribute: attributeName,
       format: constant.format,
       byteOffset: offsets[index]
     };
   });
   return {data, attributes};
+}
+
+/** Rejects constants that cannot represent a composite input's complete physical row. */
+function validateCompositeConstantInputs(table: GPUTable, gpuInputSchema: GPUInputSchema): void {
+  for (const input of gpuInputSchema) {
+    // GPUConstant describes one formatted value, not a composite physical row.
+    assert(!(getGPUInputAttributeNames(input).length > 1 && table.gpuConstants[input.columnName]));
+  }
 }
 
 function acquireBuffer(

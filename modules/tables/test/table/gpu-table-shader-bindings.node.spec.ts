@@ -6,7 +6,9 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
+  getGPUInputAttributeNames,
   GPUConstant,
+  GPUData,
   GPURecordBatch,
   GPUTable,
   GPUTableShaderBindings,
@@ -166,6 +168,216 @@ test('GPUTableShaderBindings can bind one input as an attribute and storage', t 
   t.end();
 });
 
+test('GPUTableShaderBindings maps one composite input to attributes or storage', t => {
+  const device = new NullDevice({});
+  const matrix = makeMatrixVector(device, 2);
+  const table = new GPUTable({vectors: {matrix}});
+  const schema = [
+    {
+      columnName: 'matrix',
+      attributeNames: ['matrixColumn3', 'matrixColumn1', 'matrixColumn0', 'matrixColumn2'],
+      storageBindingName: 'matrix',
+      kind: 'matrices',
+      required: true,
+      formats: ['float32x4']
+    }
+  ] as const satisfies GPUInputSchema;
+  const attributeShaderLayout = {
+    attributes: [
+      {name: 'matrixColumn0', location: 0, type: 'vec4<f32>', stepMode: 'instance'},
+      {name: 'matrixColumn1', location: 1, type: 'vec4<f32>', stepMode: 'instance'},
+      {name: 'matrixColumn2', location: 2, type: 'vec4<f32>', stepMode: 'instance'},
+      {name: 'matrixColumn3', location: 3, type: 'vec4<f32>', stepMode: 'instance'}
+    ],
+    bindings: []
+  } as const satisfies ShaderLayout;
+  const attributeBindings = new GPUTableShaderBindings(device, {
+    table,
+    gpuInputSchema: schema,
+    shaderLayout: attributeShaderLayout
+  });
+
+  t.equal(attributeBindings.bufferLayout.length, 1, 'binds one physical matrix buffer');
+  t.deepEqual(
+    attributeBindings.bufferLayout[0],
+    {
+      name: 'matrix',
+      stepMode: 'instance',
+      byteStride: 64,
+      attributes: [
+        {attribute: 'matrixColumn0', format: 'float32x4', byteOffset: 0},
+        {attribute: 'matrixColumn1', format: 'float32x4', byteOffset: 16},
+        {attribute: 'matrixColumn2', format: 'float32x4', byteOffset: 32},
+        {attribute: 'matrixColumn3', format: 'float32x4', byteOffset: 48}
+      ]
+    },
+    'orders projected attributes by shader location'
+  );
+  t.deepEqual(
+    attributeBindings.batches[0].attributeBuffers,
+    [matrix.data[0].buffer],
+    'binds the shared physical buffer once'
+  );
+
+  const storageBindings = new GPUTableShaderBindings(device, {
+    table,
+    gpuInputSchema: schema,
+    shaderLayout: {
+      attributes: [],
+      bindings: [{name: 'matrix', type: 'read-only-storage', group: 0, location: 0}]
+    }
+  });
+  t.equal(storageBindings.bufferLayout.length, 0, 'omits inactive attribute projections');
+  t.deepEqual(
+    storageBindings.batches[0].bindings.matrix,
+    {buffer: matrix.data[0].buffer, offset: 0, size: 128},
+    'binds the same column as storage'
+  );
+
+  attributeBindings.destroy();
+  storageBindings.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('composite GPU input validation rejects malformed declarations and constants', t => {
+  const validInput = {
+    columnName: 'matrix',
+    attributeNames: ['matrixColumn0', 'matrixColumn1'],
+    kind: 'matrices',
+    required: true,
+    formats: ['float32x4']
+  } as const satisfies GPUInputSchema[number];
+  t.deepEqual(
+    getGPUInputAttributeNames(validInput),
+    ['matrixColumn0', 'matrixColumn1'],
+    'returns composite attribute names'
+  );
+  t.deepEqual(
+    getGPUInputAttributeNames({
+      ...validInput,
+      attributeName: 'matrixColumn0'
+    } as unknown as GPUInputSchema[number]),
+    ['matrixColumn0', 'matrixColumn1'],
+    'prefers composite names in unchecked JavaScript input'
+  );
+  t.throws(
+    () =>
+      getGPUInputAttributeNames({
+        ...validInput,
+        attributeNames: ['matrixColumn0']
+      } as unknown as GPUInputSchema[number]),
+    'rejects a singular name in the composite field'
+  );
+  t.throws(
+    () =>
+      getGPUInputAttributeNames({
+        ...validInput,
+        attributeNames: ['matrixColumn0', 'matrixColumn0']
+      }),
+    'rejects duplicate composite mappings'
+  );
+
+  const device = new NullDevice({});
+  const table = new GPUTable({
+    columns: {
+      matrix: new GPUConstant({format: 'float32x4', value: new Float32Array(4)})
+    },
+    numRows: 2
+  });
+  t.throws(
+    () =>
+      new GPUTableShaderBindings(device, {
+        table,
+        gpuInputSchema: [{...validInput, required: false}],
+        shaderLayout: {
+          attributes: [
+            {name: 'matrixColumn0', location: 0, type: 'vec4<f32>'},
+            {name: 'matrixColumn1', location: 1, type: 'vec4<f32>'}
+          ],
+          bindings: []
+        }
+      }),
+    'rejects composite constant attributes'
+  );
+  t.throws(
+    () =>
+      new GPUTableShaderBindings(device, {
+        table,
+        gpuInputSchema: [{...validInput, required: false, storageBindingName: 'matrixStorage'}],
+        shaderLayout: {
+          attributes: [],
+          bindings: [
+            {
+              name: 'matrixStorage',
+              type: 'read-only-storage',
+              group: 0,
+              location: 0
+            }
+          ]
+        }
+      }),
+    'rejects composite constants when only their storage binding is active'
+  );
+  table.destroy();
+  t.end();
+});
+
+test('composite GPU inputs require matching table attribute views', t => {
+  const device = new NullDevice({});
+  const shaderLayout = {
+    attributes: [
+      {name: 'matrixColumn0', location: 0, type: 'vec4<f32>'},
+      {name: 'matrixColumn1', location: 1, type: 'vec4<f32>'}
+    ],
+    bindings: []
+  } as const satisfies ShaderLayout;
+  const schema = [
+    {
+      columnName: 'matrix',
+      attributeNames: ['matrixColumn0', 'matrixColumn1'],
+      kind: 'matrices',
+      required: true,
+      formats: ['float32x4']
+    }
+  ] as const satisfies GPUInputSchema;
+  const packedTable = new GPUTable({
+    vectors: {matrix: makeVector(device, 'matrix', 'float32x4', 2)}
+  });
+  t.throws(
+    () =>
+      new GPUTableShaderBindings(device, {
+        table: packedTable,
+        gpuInputSchema: schema,
+        shaderLayout
+      }),
+    'rejects a composite input backed by a flat layout'
+  );
+  packedTable.destroy();
+
+  const matrixTable = new GPUTable({vectors: {matrix: makeMatrixVector(device, 2)}});
+  const missingViewSchema = [
+    {...schema[0], attributeNames: ['matrixColumn0', 'missingMatrixColumn']}
+  ] as const satisfies GPUInputSchema;
+  t.throws(
+    () =>
+      new GPUTableShaderBindings(device, {
+        table: matrixTable,
+        gpuInputSchema: missingViewSchema,
+        shaderLayout: {
+          attributes: [
+            shaderLayout.attributes[0],
+            {name: 'missingMatrixColumn', location: 1, type: 'vec4<f32>'}
+          ],
+          bindings: []
+        }
+      }),
+    'rejects a composite name missing from the table layout'
+  );
+  matrixTable.destroy();
+  t.end();
+});
+
 test('GPUTableShaderBindings prepares zero-stride attribute and one-row storage constants', t => {
   const device = new NullDevice({});
   const colors = new GPUConstant({
@@ -321,5 +533,38 @@ function makeVector(
     stride: componentCount,
     byteStride: Float32Array.BYTES_PER_ELEMENT * componentCount,
     ownsBuffer: true
+  });
+}
+
+function makeMatrixVector(device: NullDevice, rowCount: number): GPUVector<'float32x4'> {
+  const data = new GPUData({
+    buffer: device.createBuffer({data: new Float32Array(rowCount * 16)}),
+    format: 'float32x4',
+    length: rowCount,
+    stride: 16,
+    byteStride: 64,
+    rowByteLength: 64,
+    ownsBuffer: true
+  });
+  return new GPUVector({
+    type: 'data',
+    name: 'matrix',
+    format: 'float32x4',
+    data: [data],
+    stride: 16,
+    byteStride: 64,
+    rowByteLength: 64,
+    bufferLayout: {
+      name: 'matrix',
+      stepMode: 'instance',
+      byteStride: 64,
+      attributes: [
+        {attribute: 'matrixColumn0', format: 'float32x4', byteOffset: 0},
+        {attribute: 'matrixColumn1', format: 'float32x4', byteOffset: 16},
+        {attribute: 'matrixColumn2', format: 'float32x4', byteOffset: 32},
+        {attribute: 'matrixColumn3', format: 'float32x4', byteOffset: 48}
+      ]
+    },
+    ownsData: true
   });
 }

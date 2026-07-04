@@ -302,5 +302,5 @@ attribute buffer is a valid WGSL storage struct.
 - [GPU Memory Layouts](./gpu-memory-layouts)
 - [Attributes](./gpu-attributes)
 - [Storage Buffers](./gpu-storage-buffers)
-- [Buffer Schemas and Columnar Records](./buffer-schemas)
+- [GPU Tables](./gpu-tables)
 - [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)

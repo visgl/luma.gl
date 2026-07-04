@@ -9,7 +9,13 @@ import {
 } from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {indexPicking, ShaderInputs} from '@luma.gl/engine';
-import {GPUTableModel, getGPUVectorBuffer, type GPUTable, type GPUVector} from '@luma.gl/tables';
+import {
+  GPUTableModel,
+  getGPUVectorBuffer,
+  type GPUInputSchema,
+  type GPUTable,
+  type GPUVector
+} from '@luma.gl/tables';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {
   FS_GLSL,
@@ -28,6 +34,16 @@ export const MESH_GEOMETRY_MATRIX_ARROW_PATHS = {
   matrixColumn2: 'matrix',
   matrixColumn3: 'matrix'
 };
+export const MESH_GEOMETRY_GPU_INPUT_SCHEMA = [
+  {
+    columnName: 'matrix',
+    attributeNames: ['matrixColumn0', 'matrixColumn1', 'matrixColumn2', 'matrixColumn3'],
+    storageBindingName: 'matrix',
+    kind: 'matrices',
+    required: true,
+    formats: ['float32x4']
+  }
+] as const satisfies GPUInputSchema;
 const MESH_VERTEX_STORAGE_BUFFER_COUNT = 2;
 
 export type MeshGeometryShaderInputs = ShaderInputs<{
@@ -72,6 +88,7 @@ export function createMeshGeometryModel(
     id,
     geometry,
     table,
+    gpuInputSchema: MESH_GEOMETRY_GPU_INPUT_SCHEMA,
     tableCount: 'instance',
     source: WGSL_SHADER,
     vs: VS_GLSL,
@@ -98,6 +115,7 @@ export function createMeshGeometryPickingModel(
     id,
     geometry,
     table,
+    gpuInputSchema: MESH_GEOMETRY_GPU_INPUT_SCHEMA,
     tableCount: 'instance',
     source: WGSL_SHADER,
     vs: VS_GLSL,

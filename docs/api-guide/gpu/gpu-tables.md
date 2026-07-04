@@ -97,6 +97,32 @@ Required inputs must be varying vectors. Optional fixed-width inputs may be vect
 constants, or absent. `attributeName` and `storageBindingName` allow the same logical table
 to feed attribute-backed and storage-backed shaders.
 
+Composite inputs use `attributeNames` to map one logical column to several attribute views.
+For example, the same matrix column can serve portable vertex attributes or a
+WebGPU storage binding:
+
+```ts
+const transformInputs = [
+  {
+    columnName: 'instanceModelMatrix',
+    attributeNames: [
+      'instanceModelMatrixCol0',
+      'instanceModelMatrixCol1',
+      'instanceModelMatrixCol2',
+      'instanceModelMatrixCol3'
+    ],
+    storageBindingName: 'instanceModelMatrix',
+    kind: 'matrices',
+    required: true,
+    formats: ['float32x4']
+  }
+] as const satisfies GPUInputSchema;
+```
+
+The vector's `BufferLayout` describes the four offsets and shared row stride.
+Binding preparation keeps the buffer shared: it does not copy or split matrix
+columns.
+
 ## Preparing Bindings
 
 ```ts
