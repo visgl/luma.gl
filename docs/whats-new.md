@@ -34,7 +34,6 @@ Target Release Date: Q3, 2026
 - **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
 - **Temporal shader-pass targets** - `ShaderPassRenderer` supports persistent ping-pong history targets, explicit reset, and safe same-target temporal reads and writes.
 - **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`.
-- **[`BufferSchema`](/docs/api-reference/engine/buffer-schema)** - Record-oriented GPU row descriptions lower shared layouts into vertex `BufferLayout`s.
 - **Semantic attribute normalization** - `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0` are normalized to shader attribute names.
 - **Interleaved CPU geometry** - `makeInterleavedGeometry()` packs attributes into one CPU-side vertex buffer.
 - **Interleaved primitive uploads** - Built-in primitives upload as one vertex buffer plus an optional index buffer.
@@ -44,6 +43,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/tables** NEW MODULE
 
+- **Composite GPU inputs** - `GPUInputSchema.attributeNames` maps one logical table column to several shader attributes, allowing a shared matrix buffer to feed portable vertex attributes or a WebGPU storage binding without repacking. Ordinary inputs retain the singular `attributeName`.
 - **Generic GPU tables** - Canonical `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable` runtime classes for reusable non-Arrow-specific GPU table ownership and batching.
 - **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
 - **Vertex storage planning** - `GPUTableBufferPlanner` now checks vertex-stage storage buffer limits before choosing storage-backed table attributes, allowing core WebGPU devices to fall back to vertex attributes when needed.

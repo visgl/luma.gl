@@ -243,9 +243,9 @@ The main decision is how the shader should read each selected Arrow column.
 | Matrix record | One logical matrix should stay one storage binding on WebGPU but split into vector attributes where needed | Arrow matrix vectors created by `makeArrowMatrix*Vector()` |
 | Expanded vector | A compact lookup table must become one row per vertex/instance for attribute paths | `expandArrowVector()` plus an integer row map |
 
-Use [Buffer Schemas and Columnar Records](/docs/api-guide/gpu/buffer-schemas) when one logical row
-needs several attribute views or when you want record-oriented naming that also
-makes sense next to WGSL storage structs.
+Use a multi-attribute `BufferLayout` when one logical row needs several
+attribute views. `GPUInputSchema.attributeNames` can then connect that one
+logical table column to every shader-visible view.
 
 The GPU representation does not always stay byte-for-byte identical to the
 source Arrow representation:
@@ -363,9 +363,8 @@ const bufferLayout = getArrowBufferLayout(shaderLayout, {
 });
 ```
 
-The Arrow helper recognizes the matrix metadata and lowers the matrix row through
-the engine [`BufferSchema`](/docs/api-reference/engine/buffer-schema) path into
-one shared interleaved buffer layout.
+The Arrow helper recognizes the matrix metadata and creates one shared
+`BufferLayout` with a vector attribute view for each matrix column.
 
 ## Temporal Columns
 
@@ -719,8 +718,7 @@ For portable WebGPU layouts, prefer `Float32` for `vec3<f32>` attributes or pad
 - [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
 - [Attributes](/docs/api-guide/gpu/gpu-attributes)
 - [Storage Buffers](/docs/api-guide/gpu/gpu-storage-buffers)
-- [Buffer Schemas and Columnar Records](/docs/api-guide/gpu/buffer-schemas)
-- [BufferSchema API Reference](/docs/api-reference/engine/buffer-schema)
+- [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema)
 - [ShaderLayout](/docs/api-reference/core/shader-layout)
 - [BufferLayout](/docs/api-reference/core/buffer-layout)
 - [Vertex Formats](/docs/api-reference/core/vertex-formats)

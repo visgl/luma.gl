@@ -119,6 +119,7 @@ export {
   getTypedArrayFromDataType
 } from '@luma.gl/core';
 export {
+  getGPUInputAttributeNames,
   validateGPUInputVectors,
   type GPUInputColumns,
   type GPUInputDeclaration,

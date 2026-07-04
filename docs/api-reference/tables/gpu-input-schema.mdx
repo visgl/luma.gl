@@ -28,20 +28,22 @@ It is distinct from [`GPUSchema`](/docs/api-reference/tables/gpu-schema):
 ```ts
 import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/tables';
 
-export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
+export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'matrices' | 'text' | 'time';
 
 export type GPUInputDeclaration<
   ColumnName extends string = string,
   Format extends GPUVectorFormat = GPUVectorFormat
 > = {
   columnName: ColumnName;
-  attributeName?: string;
   storageBindingName?: string;
   kind: GPUInputKind;
   required: boolean;
   formats: readonly Format[];
   internal?: boolean;
-};
+} & (
+  | {attributeName?: string; attributeNames?: never}
+  | {attributeName?: never; attributeNames: readonly [string, string, ...string[]]}
+);
 
 export type GPUInputSchema = readonly GPUInputDeclaration[];
 
@@ -53,7 +55,12 @@ Each declaration selects one prepared table column:
 
 - `columnName` is the model prop and vector name, such as `paths`, `colors`, or
   `timestamps`.
-- `attributeName` optionally names the shader attribute supplied by that column.
+- `attributeName` optionally names the single shader attribute supplied by an
+  ordinary column.
+- `attributeNames` names two or more shader attributes supplied by views of one
+  composite column. It is mutually exclusive with `attributeName`; the array
+  must contain at least two unique names. In unchecked JavaScript input that
+  supplies both fields, `attributeNames` takes precedence.
 - `storageBindingName` optionally names the shader storage binding supplied by that
   column.
 - `kind` is a semantic role for adapters and diagnostics. It is not a shader
@@ -68,6 +75,33 @@ Each declaration selects one prepared table column:
 layout. For example, a path model can accept 2D, 3D, or 4D vertex-list
 coordinates without weakening the runtime contract to an arbitrary
 `GPUVectorFormat`.
+
+One logical column can supply several attributes when its `BufferLayout`
+contains corresponding named views. This is useful for matrices, which vertex
+fetch exposes as one vector attribute per matrix column while a WebGPU shader
+may read the same physical bytes through one storage binding:
+
+```ts
+const matrixInputs = [
+  {
+    columnName: 'instanceModelMatrix',
+    attributeNames: [
+      'instanceModelMatrixCol0',
+      'instanceModelMatrixCol1',
+      'instanceModelMatrixCol2',
+      'instanceModelMatrixCol3'
+    ],
+    storageBindingName: 'instanceModelMatrix',
+    kind: 'matrices',
+    required: true,
+    formats: ['float32x4']
+  }
+] as const satisfies GPUInputSchema;
+```
+
+`GPUTableShaderBindings` selects only the names present in the active
+`ShaderLayout`. It therefore binds the matrix buffer once for four WebGL vertex
+attributes, or once as a WebGPU storage buffer, without repacking it.
 
 ## Declaring Model Inputs
 
@@ -91,6 +125,7 @@ export const PATH_GPU_INPUT_SCHEMA = [
   },
   {
     columnName: 'colors',
+    attributeName: 'colors',
     kind: 'colors',
     required: false,
     formats: ['unorm8x4', 'vertex-list<unorm8x4>']
@@ -132,6 +167,7 @@ The helper rejects:
 - a supplied vector whose `GPUVector.format` is absent or not listed in
   `formats`.
 - a `GPUConstant` supplied for a declaration with `required: true`.
+- a singular or duplicate `attributeNames` declaration.
 
 Optional absence does not satisfy a statically declared storage binding. Such a
 shader still needs a constant, varying vector, or model-specific dummy binding.
@@ -145,11 +181,13 @@ attributes or storage bindings, use
 [`GPUTableShaderBindings`](/docs/api-reference/tables/gpu-table-shader-bindings)
 to resolve batch-preserving draw resources.
 
-For example, one table column can map to a differently named storage binding:
+For example, one table column can map to a differently named attribute and
+storage binding:
 
 ```ts
 {
   columnName: 'positions',
+  attributeName: 'positions',
   storageBindingName: 'polygonPositions',
   kind: 'positions',
   required: true,

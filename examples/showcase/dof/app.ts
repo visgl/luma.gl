@@ -26,7 +26,7 @@ import {
 } from '@luma.gl/engine';
 import {dofShaderPassPipeline} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTable, GPUTableModel} from '@luma.gl/tables';
+import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 import {
@@ -99,6 +99,22 @@ const SCENE_STORAGE_SHADER_LAYOUT = {
   ],
   bindings: [{name: 'instanceModelMatrix', type: 'read-only-storage', group: 0, location: 3}]
 } satisfies ShaderLayout;
+
+const SCENE_GPU_INPUT_SCHEMA = [
+  {
+    columnName: 'instanceModelMatrix',
+    attributeNames: [
+      'instanceModelMatrixCol0',
+      'instanceModelMatrixCol1',
+      'instanceModelMatrixCol2',
+      'instanceModelMatrixCol3'
+    ],
+    storageBindingName: 'instanceModelMatrix',
+    kind: 'matrices',
+    required: true,
+    formats: ['float32x4']
+  }
+] as const satisfies GPUInputSchema;
 
 // Pass 1 renders cubes into an offscreen color + depth framebuffer. The color target stores
 // shaded surface color while the depth attachment remains the visibility buffer used by the GPU
@@ -348,6 +364,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'dof-scene',
       shaderInputs: this.appShaderInputs,
       shaderLayout: sceneShaderLayout,
+      gpuInputSchema: SCENE_GPU_INPUT_SCHEMA,
       table: this.sceneTable,
       tableCount: 'instance',
       ...(device.info.shadingLanguage === 'wgsl'
