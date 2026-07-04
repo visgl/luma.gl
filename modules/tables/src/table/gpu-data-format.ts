@@ -52,14 +52,6 @@ export type GPUDataFormat = GPUVectorFormat | GPUDataStructFormat;
 /** Format declaration accepted by the GPUData constructor. */
 export type GPUDataFormatDeclaration = GPUVectorFormat | GPUDataStructFields;
 
-/** Canonical runtime format stored by GPUData. @internal */
-export type GPUDataFormatT<
-  Format extends GPUDataFormatDeclaration,
-  Layout extends GPUDataStructLayout | null
-> = Layout extends GPUDataStructLayout
-  ? GPUDataStructFormat<Extract<Format, GPUDataStructFields>, Layout>
-  : Extract<Format, GPUVectorFormat>;
-
 /** Options for deriving a vertex buffer layout from a GPU data struct format. */
 export type BufferLayoutFromGPUDataStructFormatOptions = {
   /** Whether rows advance per vertex or per instance. */

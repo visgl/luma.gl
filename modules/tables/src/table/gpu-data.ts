@@ -11,13 +11,24 @@ import {
   type GPUDataFormat,
   type GPUDataFormatDeclaration,
   type GPUDataStructFields,
-  type GPUDataStructLayout,
-  type GPUDataFormatT
+  type GPUDataStructFormat,
+  type GPUDataStructLayout
 } from './gpu-data-format';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
 
 /** Optional caller-owned metadata retained on a GPU data range. */
 export type GPUDataReadbackMetadata = any;
+
+// Remains disjoint from string layouts when example CI disables strict null checks.
+declare const SCALAR_GPU_DATA_LAYOUT: unique symbol;
+type ScalarGPUDataLayout = typeof SCALAR_GPU_DATA_LAYOUT;
+type GPUDataLayout = GPUDataStructLayout | ScalarGPUDataLayout;
+type GPUDataFormatT<
+  Format extends GPUDataFormatDeclaration,
+  Layout extends GPUDataLayout
+> = Layout extends GPUDataStructLayout
+  ? GPUDataStructFormat<Extract<Format, GPUDataStructFields>, Layout>
+  : Extract<Format, GPUVectorFormat>;
 
 /** Constructor props that wrap one existing GPU data buffer. */
 type GPUDataFromBufferBaseProps = {
@@ -165,10 +176,14 @@ class GPUDataImpl extends GPUDataBufferOwner {
       dataType
     } = props;
     super(buffer, ownsBuffer);
-    const canonicalFormat: GPUDataFormat | undefined =
-      format && typeof format === 'object'
-        ? normalizeGPUDataStructFormat(format, props.layout ?? 'wgsl-storage')
-        : format;
+    let canonicalFormat: GPUDataFormat | undefined;
+    if (!format) {
+      canonicalFormat = undefined;
+    } else if (typeof format === 'string') {
+      canonicalFormat = format;
+    } else {
+      canonicalFormat = normalizeGPUDataStructFormat(format, props.layout ?? 'wgsl-storage');
+    }
     const structFormat = isGPUDataStructFormat(canonicalFormat) ? canonicalFormat : undefined;
     const formatInfo =
       typeof canonicalFormat === 'string' ? getGPUVectorFormatInfo(canonicalFormat) : undefined;
@@ -295,24 +310,24 @@ interface GPUDataBase<Format extends GPUDataFormat = GPUDataFormat> {
 /** Typed GPU data object for scalar, list, or inline struct format declarations. */
 export type GPUData<
   Format extends GPUDataFormatDeclaration = GPUVectorFormat,
-  Layout extends GPUDataStructLayout | null = null
+  Layout extends GPUDataLayout = ScalarGPUDataLayout
 > = Omit<GPUDataBase<GPUDataFormatT<Format, Layout>>, 'getChild' | 'getChildAt'> &
   GPUDataChildMethods<Format, Layout>;
 
 type GPUDataChildMethods<
   Format extends GPUDataFormatDeclaration,
-  Layout extends GPUDataStructLayout | null
-> = Layout extends null
-  ? {
-      getChild(name: string): GPUDataView | null;
-      getChildAt(index: number): GPUDataView | null;
-    }
-  : Extract<Format, GPUDataStructFields> extends infer Fields extends GPUDataStructFields
+  Layout extends GPUDataLayout
+> = Layout extends GPUDataStructLayout
+  ? Extract<Format, GPUDataStructFields> extends infer Fields extends GPUDataStructFields
     ? {
         getChild<Name extends string>(name: Name): GPUDataChild<Fields, Name> | null;
         getChildAt(index: number): GPUDataChildAt<Fields> | null;
       }
-    : {};
+    : {}
+  : {
+      getChild(name: string): GPUDataView | null;
+      getChildAt(index: number): GPUDataView | null;
+    };
 
 type GPUDataConstructor = {
   new <const Format extends GPUVectorFormat = GPUVectorFormat>(
