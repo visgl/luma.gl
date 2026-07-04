@@ -3,8 +3,9 @@
 // Copyright (c) vis.gl contributors
 // Adapted from THREE.js helvetiker_regular.typeface.json (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {type TypefaceFontData} from '@luma.gl/text/text-3d';
+import type {TypefaceFontData} from '../text-3d/font';
 
+/** Bundled Helvetiker typeface data for examples and simple extruded-text applications. */
 export const helvetiker: TypefaceFontData = {
   glyphs: {
     '0': {

@@ -12,6 +12,7 @@ import {
   type FontAtlas
 } from '@luma.gl/text';
 import {parseFont, type Text3DBounds} from '@luma.gl/text/text-3d';
+import {helvetiker} from '@luma.gl/text/fonts';
 import {Matrix4} from '@math.gl/core';
 import {
   ExamplePanelManager,
@@ -33,7 +34,6 @@ import {
   type TextSpaceCrawlRenderingKind
 } from './control-panel';
 import {ExtrudedTextRenderer} from './extruded-text-renderer';
-import {helvetiker} from './helvetiker-font';
 
 export const title = 'Text Space Crawl';
 export const description =

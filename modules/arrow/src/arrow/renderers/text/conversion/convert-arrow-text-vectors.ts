@@ -214,10 +214,6 @@ export type ArrowTextModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount
   fontAtlas: FontAtlas;
   /** Multiplier applied to the atlas font size for the single-line baseline layout. */
   lineHeight?: number;
-  /** Constant fallback horizontal text anchor. */
-  textAnchor?: 'start' | 'middle' | 'end';
-  /** Constant fallback vertical alignment baseline. */
-  alignmentBaseline?: 'center' | 'top' | 'bottom';
 };
 
 /**
@@ -413,8 +409,6 @@ export function buildArrowTextGlyphTable(props: {
   fontAtlas: FontAtlas;
   lineHeight?: number;
   characterSet?: Set<string>;
-  textAnchor?: 'start' | 'middle' | 'end';
-  alignmentBaseline?: 'center' | 'top' | 'bottom';
   rowIndexBase?: number;
   color?: [number, number, number, number];
   angle?: number;
@@ -435,9 +429,7 @@ export function buildArrowTextGlyphTable(props: {
     texts: props.texts,
     fontAtlas: props.fontAtlas,
     lineHeight: props.lineHeight,
-    characterSet: props.characterSet,
-    textAnchor: props.textAnchor,
-    alignmentBaseline: props.alignmentBaseline
+    characterSet: props.characterSet
   });
   const fields: Field[] = [];
   const columns: Record<string, Vector> = {};
@@ -1275,8 +1267,6 @@ function makeArrowTextModelProps(
     fontAtlas: mappingState.fontAtlas,
     lineHeight: mappingState.lineHeight,
     characterSet: mappingState.characterSet,
-    textAnchor: props.textAnchor,
-    alignmentBaseline: props.alignmentBaseline,
     color: props.color,
     angle: props.angle,
     size: props.size
