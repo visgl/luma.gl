@@ -59,6 +59,7 @@ const sidebars = {
         {type: 'doc', id: 'experimental/bloom', label: 'Effects: Bloom'},
         'experimental/fp64',
         'experimental/gpt-2',
+        'experimental/text-space-crawl',
         {type: 'doc', id: 'experimental/video-texture', label: 'Texture Video'},
         {type: 'doc', id: 'experimental/html-ui-prism', label: 'Texture HTML-in-Canvas'},
         {type: 'doc', id: 'experimental/webxr-kaleidoscope', label: 'Texture WebXR'}
@@ -90,7 +91,6 @@ const sidebars = {
         'arrow/arrow-geoarrow',
         'arrow/arrow-float64-precision',
         'arrow/arrow-text-2d',
-        'arrow/arrow-text-space-crawl',
         'arrow/arrow-temporal-starfield',
         'arrow/arrow-time-columns',
         'arrow/arrow-mesh-geometry',

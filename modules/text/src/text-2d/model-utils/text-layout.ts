@@ -9,6 +9,7 @@ import {
   getTextKerningOffset,
   type Character
 } from '../atlas/text-utils';
+import {getAlignmentBaselineOffset, getTextAnchorOffset} from '../atlas/text-metrics';
 import type {
   GpuExpandedTextStream,
   GpuTextDictionaryCompressedStream,
@@ -54,6 +55,10 @@ export type TextLayoutOptions = {
   characterSet?: Set<string>;
   /** Advance assigned to characters missing from the atlas. */
   missingCharacterWidth?: number;
+  /** Horizontal alignment relative to each row origin. */
+  textAnchor?: 'start' | 'middle' | 'end';
+  /** Vertical alignment relative to each row origin. */
+  alignmentBaseline?: 'center' | 'top' | 'bottom';
 };
 
 /** Shared GPU glyph definitions used by direct UTF-8 text expansion. */
@@ -105,6 +110,7 @@ export function buildTextGlyphLayout(
   let glyphFrameIndex = 0;
 
   for (let rowIndex = 0; rowIndex < source.rowCount; rowIndex++) {
+    const rowGlyphOffsetStart = glyphOffsetIndex;
     let width = 0;
     let previousCodePoint: number | undefined;
     source.visitCodePoints(rowIndex, codePoint => {
@@ -123,6 +129,18 @@ export function buildTextGlyphLayout(
       width += frame?.advance ?? missingCharacterWidth;
       previousCodePoint = codePoint;
     });
+    const anchorOffset = getTextAnchorOffset(width, options.textAnchor);
+    const baselineOffset = getAlignmentBaselineOffset(lineHeight, options.alignmentBaseline);
+    for (
+      let rowGlyphOffsetIndex = rowGlyphOffsetStart;
+      rowGlyphOffsetIndex < glyphOffsetIndex;
+      rowGlyphOffsetIndex += 2
+    ) {
+      glyphOffsets[rowGlyphOffsetIndex] = toInt16(glyphOffsets[rowGlyphOffsetIndex] + anchorOffset);
+      glyphOffsets[rowGlyphOffsetIndex + 1] = toInt16(
+        glyphOffsets[rowGlyphOffsetIndex + 1] + baselineOffset
+      );
+    }
   }
 
   return {startIndices, glyphCount, glyphOffsets, glyphFrames, glyphPages, characterSet};

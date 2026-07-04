@@ -8,6 +8,7 @@ import {
   buildTextGpuDictionaryCompressedStream,
   buildTextGpuExpandedStream,
   buildTextGpuGlyphDefinitions,
+  measureFontAtlasText,
   type FontAtlas,
   type TextCodePointSource,
   type TextDictionaryCodePointSource
@@ -80,6 +81,33 @@ test('text layout helpers own atlas offsets, pages, kerning, and GPU definitions
     'direct UTF-8 lookup uses the same glyph ids'
   );
   t.ok(characterSet.has('A') && characterSet.has('B'), 'layout collects encountered characters');
+  t.end();
+});
+
+test('text layout and measurement share anchor and baseline semantics', t => {
+  const source = makeTextCodePointSource([[65, 66]]);
+  const layout = buildTextGlyphLayout(source, {
+    fontAtlas: FONT_ATLAS,
+    textAnchor: 'middle',
+    alignmentBaseline: 'top'
+  });
+  const metrics = measureFontAtlasText('AB', FONT_ATLAS, {
+    textAnchor: 'middle',
+    alignmentBaseline: 'top'
+  });
+
+  t.deepEqual(
+    Array.from(layout.glyphOffsets),
+    [-6, 14, 0, 15],
+    'layout applies centered advance and top baseline offsets'
+  );
+  t.equal(metrics.advance, 10, 'measurement applies pair kerning to the final advance');
+  t.deepEqual(metrics.bounds, {min: [-6, 14], max: [4, 21]}, 'measurement returns ink bounds');
+  t.deepEqual(
+    measureFontAtlasText('', FONT_ATLAS).bounds,
+    {min: [0, 0], max: [0, 0]},
+    'empty text returns finite bounds'
+  );
   t.end();
 });
 

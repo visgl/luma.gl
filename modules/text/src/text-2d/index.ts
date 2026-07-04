@@ -4,6 +4,11 @@
 
 export {type FontAtlas} from './atlas/font-atlas';
 export {
+  measureFontAtlasText,
+  type FontAtlasTextMetrics,
+  type FontAtlasTextMetricsOptions
+} from './atlas/text-metrics';
+export {
   buildBitmapFontAtlas,
   type BitmapFontAtlasSettings
 } from './build-bitmap-font-atlas';
