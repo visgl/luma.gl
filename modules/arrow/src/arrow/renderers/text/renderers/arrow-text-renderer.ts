@@ -15,7 +15,7 @@ import {
 import {type ModelProps} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {GPURenderable, GPUVector, GPUTable, getRequiredGPUVector} from '@luma.gl/tables';
-import {TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
+import {GPUTextResources, TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
 import {
   TextAttributeModel,
   TextDictionaryModel,
@@ -198,6 +198,16 @@ export type ArrowTextRendererDataBatchUpdate = {
   setPropsResult: ArrowTextRendererSetPropsResult;
 };
 
+/** Ownership update emitted when prepared batches are appended or replaced. */
+export type ArrowTextRendererTextDataUpdate = {
+  /** Complete ordered batch list after the update. */
+  data: readonly GPUTextData[];
+  /** Newly prepared batches. */
+  added: readonly GPUTextData[];
+  /** Superseded batches that the owner may now destroy. */
+  removed: readonly GPUTextData[];
+};
+
 type ArrowTextRendererSetPropsOptions = {
   preserveDataLoad?: boolean;
 };
@@ -259,7 +269,9 @@ export class ArrowTextRenderer extends GPURenderable<
   /** Prepared GPUVector text input currently consumed by the active model. */
   textInput: ArrowTextRendererInput;
   /** Caller-owned prepared GPU resources borrowed by the text renderer. */
-  textData: GPUTextData;
+  textData: GPUTextData[];
+  /** Shared atlas resources borrowed by every prepared batch. */
+  textResources: GPUTextResources;
   /** Stable renderer facade over the active implementation model. */
   textRenderer: TextRenderer;
   /** Concrete model path after resolving `props.model === 'auto'`. */
@@ -267,7 +279,7 @@ export class ArrowTextRenderer extends GPURenderable<
   private activeStreamingTextTable: GPUTable | null = null;
   private dataLoadVersion = 0;
   private isDestroyed = false;
-  private textDataOwner?: (nextData: GPUTextData, previousData: GPUTextData) => void;
+  private textDataOwner?: (update: ArrowTextRendererTextDataUpdate) => void;
 
   /** Active implementation model, retained for compatibility with host layer integration. */
   get model(): ArrowTextRendererActiveModel {
@@ -290,6 +302,10 @@ export class ArrowTextRenderer extends GPURenderable<
       this.shaderInputs.addModules(props.modelProps.modules);
     }
     this.textInput = textInput;
+    this.textResources = new GPUTextResources(device, {
+      id: props.id,
+      fontAtlas: props.fontAtlas
+    });
     this.resolvedModel = this.resolveModel(this.props.model ?? 'auto', this.textInput);
     const prepared = this.createTextRenderer(this.resolvedModel, this.props, this.textInput);
     this.textData = prepared.textData;
@@ -342,8 +358,8 @@ export class ArrowTextRenderer extends GPURenderable<
    * The callback runs after borrowing models have stopped using the previous data.
    */
   transferTextDataOwnership(
-    onDataChanged: (nextData: GPUTextData, previousData: GPUTextData) => void
-  ): GPUTextData {
+    onDataChanged: (update: ArrowTextRendererTextDataUpdate) => void
+  ): readonly GPUTextData[] {
     if (this.textDataOwner) {
       throw new Error('ArrowTextRenderer GPUTextData ownership has already been transferred');
     }
@@ -475,7 +491,23 @@ export class ArrowTextRenderer extends GPURenderable<
     const previousRenderer = this.textRenderer;
     const previousTextData = this.textData;
     const previousTextInput = this.textInput;
-    const prepared = this.createTextRenderer(nextModel, nextProps, nextTextInput);
+    const previousTextResources = this.textResources;
+    if (hasFontPropsChanged) {
+      this.textResources = new GPUTextResources(this.device, {
+        id: nextProps.id,
+        fontAtlas: nextProps.fontAtlas
+      });
+    }
+    let prepared: ReturnType<ArrowTextRenderer['createTextRenderer']>;
+    try {
+      prepared = this.createTextRenderer(nextModel, nextProps, nextTextInput);
+    } catch (error) {
+      if (this.textResources !== previousTextResources) {
+        this.textResources.destroy();
+        this.textResources = previousTextResources;
+      }
+      throw error;
+    }
     this.props = nextProps;
     this.textInput = nextTextInput;
     this.resolvedModel = nextModel;
@@ -483,6 +515,9 @@ export class ArrowTextRenderer extends GPURenderable<
     this.textRenderer = prepared.textRenderer;
     previousRenderer.destroy();
     this.releaseReplacedTextData(prepared.textData, previousTextData);
+    if (previousTextResources !== this.textResources) {
+      previousTextResources.destroy();
+    }
     if (previousTextInput !== nextTextInput) {
       previousTextInput.destroy();
     }
@@ -558,12 +593,21 @@ export class ArrowTextRenderer extends GPURenderable<
         if (!isSourceVectorStreaming) {
           addArrowTextGPUTableBatch(this.device, streamingTextTable!, recordBatch, props);
         }
-        const textInput = isSourceVectorStreaming
-          ? prepareArrowTextInputFromRecordBatches(this.device, sourceRecordBatches, props)
-          : prepareArrowTextInputFromGPUTable(streamingTextTable!, sourceRecordBatches, props);
-        const setPropsResult = this.setPreparedTextInput(props, textInput, redrawReason, {
-          preserveDataLoad: true
-        });
+        const batchTextInput = isSourceVectorStreaming
+          ? prepareArrowTextInputFromRecordBatches(this.device, [recordBatch], props)
+          : prepareArrowTextInputFromGPUTableBatch(streamingTextTable!, recordBatch, props);
+        const textInput = this.textInput;
+        const setPropsResult = this.appendPreparedTextInput(
+          props,
+          batchTextInput,
+          textInput,
+          redrawReason
+        );
+        if (isSourceVectorStreaming) {
+          appendArrowTextInputBatch(textInput, batchTextInput);
+        } else {
+          appendArrowTextInputSourceMetadata(textInput, batchTextInput);
+        }
         props.onDataBatch?.({
           textInput,
           loadedBatchCount: isSourceVectorStreaming
@@ -578,6 +622,41 @@ export class ArrowTextRenderer extends GPURenderable<
         props.onDataError?.(error);
       }
     }
+  }
+
+  private appendPreparedTextInput(
+    nextProps: ArrowTextRendererProps,
+    batchTextInput: ArrowTextRendererInput,
+    nextTextInput: ArrowTextRendererInput,
+    redrawReason: string
+  ): ArrowTextRendererSetPropsResult {
+    const nextModel = this.resolveModel(
+      nextProps.model ?? this.props.model ?? 'auto',
+      batchTextInput
+    );
+    if (nextModel !== this.resolvedModel) {
+      return this.setPreparedTextInput(nextProps, nextTextInput, redrawReason, {
+        preserveDataLoad: true
+      });
+    }
+    const stats = this.textRenderer.stats;
+    const nextData = this.createGPUTextData(nextModel, nextProps, batchTextInput, {
+      sourceBatchIndex: this.textData.length,
+      rowIndexBase: stats.rowCount,
+      glyphIndexBase: stats.glyphCount
+    });
+    try {
+      this.textRenderer.appendData(nextData);
+    } catch (error) {
+      nextData.destroy();
+      throw error;
+    }
+    this.textData.push(nextData);
+    this.props = nextProps;
+    this.textInput = nextTextInput;
+    this.textDataOwner?.({data: this.textData, added: [nextData], removed: []});
+    this.model.setNeedsRedraw(redrawReason);
+    return {modelChanged: false};
   }
 
   private setPreparedTextInput(
@@ -663,17 +742,22 @@ export class ArrowTextRenderer extends GPURenderable<
     this.activeStreamingTextTable = null;
     this.textRenderer.destroy();
     if (!this.textDataOwner) {
-      this.textData.destroy();
+      for (const data of this.textData) {
+        data.destroy();
+      }
     }
     this.textInput.destroy();
     streamingTextTable?.destroy();
+    this.textResources.destroy();
   }
 
-  private releaseReplacedTextData(nextData: GPUTextData, previousData: GPUTextData): void {
+  private releaseReplacedTextData(nextData: GPUTextData[], previousData: GPUTextData[]): void {
     if (this.textDataOwner) {
-      this.textDataOwner(nextData, previousData);
+      this.textDataOwner({data: nextData, added: nextData, removed: previousData});
     } else {
-      previousData.destroy();
+      for (const data of previousData) {
+        data.destroy();
+      }
     }
   }
 
@@ -681,7 +765,36 @@ export class ArrowTextRenderer extends GPURenderable<
     modelKind: ArrowTextRendererResolvedModel,
     props: ArrowTextRendererProps,
     data: ArrowTextRendererData
-  ): {textData: GPUTextData; textRenderer: TextRenderer} {
+  ): {textData: GPUTextData[]; textRenderer: TextRenderer} {
+    const textData: GPUTextData[] = [];
+    let rowIndexBase = 0;
+    let glyphIndexBase = 0;
+    try {
+      for (const [sourceBatchIndex, batch] of getArrowTextRendererDataBatches(data).entries()) {
+        const preparedBatch = this.createGPUTextData(modelKind, props, batch, {
+          sourceBatchIndex,
+          rowIndexBase,
+          glyphIndexBase
+        });
+        textData.push(preparedBatch);
+        rowIndexBase += preparedBatch.rowCount;
+        glyphIndexBase += preparedBatch.glyphCount;
+      }
+    } catch (error) {
+      for (const preparedBatch of textData) {
+        preparedBatch.destroy();
+      }
+      throw error;
+    }
+    return {textData, textRenderer: new TextRenderer(this.device, {data: textData})};
+  }
+
+  private createGPUTextData(
+    modelKind: ArrowTextRendererResolvedModel,
+    props: ArrowTextRendererProps,
+    data: ArrowTextRendererData,
+    metadata: {sourceBatchIndex?: number; rowIndexBase?: number; glyphIndexBase?: number} = {}
+  ): GPUTextData {
     const color = props.color ?? DEFAULT_TEXT_COLOR;
     const angle = props.angle ?? DEFAULT_TEXT_ANGLE;
     const size = props.size ?? DEFAULT_TEXT_SIZE;
@@ -697,6 +810,8 @@ export class ArrowTextRenderer extends GPURenderable<
     const commonProps = {
       id: props.id,
       fontAtlas: props.fontAtlas,
+      resources: this.textResources,
+      rowIndexBase: metadata.rowIndexBase,
       ...props.modelProps,
       shaderAssembler,
       shaderInputs: this.shaderInputs,
@@ -720,9 +835,9 @@ export class ArrowTextRenderer extends GPURenderable<
       const {storageState, ...modelProps} = prepared;
       const textData = createGPUTextData(
         {strategy: 'dictionary', modelProps, state: storageState},
-        {rowCount: data.positions.length}
+        {resources: this.textResources, rowCount: data.positions.length, ...metadata}
       );
-      return {textData, textRenderer: new TextRenderer(this.device, {data: textData})};
+      return textData;
     }
 
     if (modelKind === 'storage' || modelKind === 'storage-row-indexed') {
@@ -744,9 +859,9 @@ export class ArrowTextRenderer extends GPURenderable<
       const {storageState, ...modelProps} = prepared;
       const textData = createGPUTextData(
         {strategy: modelKind, modelProps, state: storageState},
-        {rowCount: data.positions.length}
+        {resources: this.textResources, rowCount: data.positions.length, ...metadata}
       );
-      return {textData, textRenderer: new TextRenderer(this.device, {data: textData})};
+      return textData;
     }
 
     const prepared = convertArrowTextToAttributeModelProps(this.device, {
@@ -760,9 +875,9 @@ export class ArrowTextRenderer extends GPURenderable<
     const {attributeState, ...modelProps} = prepared;
     const textData = createGPUTextData(
       {strategy: 'attribute', modelProps, state: attributeState},
-      {rowCount: data.positions.length}
+      {resources: this.textResources, rowCount: data.positions.length, ...metadata}
     );
-    return {textData, textRenderer: new TextRenderer(this.device, {data: textData})};
+    return textData;
   }
 
   private resolveModel(
@@ -867,6 +982,62 @@ export class ArrowTextRenderer extends GPURenderable<
       ...(data.alignmentBaselines ? {alignmentBaselines: data.alignmentBaselines} : {})
     };
   }
+}
+
+function getArrowTextRendererDataBatches(data: ArrowTextRendererData): ArrowTextRendererData[] {
+  return data.positions.data.map((_, batchIndex) => {
+    const batch = {
+      positions: getGPUVectorBatch(data.positions, batchIndex),
+      texts: getGPUVectorBatch(data.texts, batchIndex),
+      sourceVectors: Object.fromEntries(
+        Object.entries(data.sourceVectors).map(([name, vector]) => {
+          const arrowData = vector.data[batchIndex];
+          if (!arrowData) {
+            throw new Error(`Arrow text source vector "${name}" is missing batch ${batchIndex}`);
+          }
+          return [name, new arrow.Vector([arrowData as never])];
+        })
+      ),
+      destroy: () => {}
+    } as ArrowTextRendererData;
+    const batchRecord = batch as unknown as Record<string, GPUVector | undefined>;
+    const dataRecord = data as unknown as Record<string, GPUVector | undefined>;
+    for (const name of [
+      'clipRects',
+      'colors',
+      'angles',
+      'sizes',
+      'pixelOffsets',
+      'textAnchors',
+      'alignmentBaselines'
+    ]) {
+      const vector = dataRecord[name];
+      if (vector) {
+        batchRecord[name] = getGPUVectorBatch(vector, batchIndex);
+      }
+    }
+    return batch;
+  });
+}
+
+function getGPUVectorBatch(vector: GPUVector, batchIndex: number): GPUVector {
+  const data = vector.data[batchIndex];
+  if (!data) {
+    throw new Error(`GPU text vector "${vector.name}" is missing batch ${batchIndex}`);
+  }
+  return new GPUVector({
+    type: 'data',
+    name: vector.name,
+    data: [data],
+    format: vector.format,
+    stride: vector.stride,
+    valueLength: data.valueLength,
+    byteStride: vector.byteStride,
+    rowByteLength: vector.rowByteLength,
+    bufferLayout: vector.bufferLayout,
+    ownsData: false,
+    dataType: vector.dataType
+  });
 }
 
 function setArrowTextFontAtlasShaderProps(
@@ -981,6 +1152,68 @@ export function prepareArrowTextInputFromGPUTable(
     ...prepared,
     arrowVectorByteLength: getArrowVectorByteLength(texts as ArrowUtf8TextVector)
   };
+}
+
+/** Builds a borrowed one-batch text input view without copying or repacking GPU buffers. */
+function prepareArrowTextInputFromGPUTableBatch(
+  gpuTable: GPUTable,
+  recordBatch: arrow.RecordBatch,
+  props: ArrowTextRendererPrepareInputProps
+): ArrowTextRendererInput {
+  const gpuBatch = gpuTable.batches[gpuTable.batches.length - 1];
+  if (!gpuBatch) {
+    throw new Error('Arrow text GPU table requires a batch to append');
+  }
+  const batchTable = new GPUTable({batches: [gpuBatch]});
+  return prepareArrowTextInputFromGPUTable(batchTable, [recordBatch], props);
+}
+
+function appendArrowTextInputBatch(
+  target: ArrowTextRendererInput,
+  source: ArrowTextRendererInput
+): ArrowTextRendererInput {
+  const vectorNames = [
+    'positions',
+    'texts',
+    'clipRects',
+    'colors',
+    'angles',
+    'sizes',
+    'pixelOffsets',
+    'textAnchors',
+    'alignmentBaselines'
+  ] as const;
+  const targetRecord = target as unknown as Record<string, GPUVector | undefined>;
+  const sourceRecord = source as unknown as Record<string, GPUVector | undefined>;
+  for (const name of vectorNames) {
+    const targetVector = targetRecord[name];
+    const sourceVector = sourceRecord[name];
+    if (!targetVector || !sourceVector) {
+      continue;
+    }
+    for (const data of [...sourceVector.data]) {
+      targetVector.addData(data);
+    }
+    sourceVector.data.splice(0, sourceVector.data.length);
+  }
+  appendArrowTextInputSourceMetadata(target, source);
+  return target;
+}
+
+function appendArrowTextInputSourceMetadata(
+  target: ArrowTextRendererInput,
+  source: ArrowTextRendererInput
+): void {
+  const targetSourceRecord = target.sourceVectors as unknown as Record<string, arrow.Vector>;
+  const sourceSourceRecord = source.sourceVectors as unknown as Record<string, arrow.Vector>;
+  for (const [name, sourceVector] of Object.entries(sourceSourceRecord)) {
+    const targetVector = targetSourceRecord[name];
+    targetSourceRecord[name] = targetVector
+      ? new arrow.Vector([...targetVector.data, ...sourceVector.data] as never)
+      : sourceVector;
+  }
+  target.arrowVectorByteLength += source.arrowVectorByteLength;
+  source.destroy();
 }
 
 function prepareArrowTextInputFromRecordBatches(

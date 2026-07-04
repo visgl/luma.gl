@@ -53,8 +53,12 @@ export class TextDictionaryModel extends Model {
   /** Prepared GPU vectors consumed by the dictionary text model. */
   static readonly gpuInputSchema = TEXT_DICTIONARY_GPU_INPUT_SCHEMA;
 
-  /** Borrowed compressed dictionary text state. */
-  readonly storageState: TextDictionaryState;
+  /** Borrowed compressed dictionary text batches in append order. */
+  readonly storageStates: TextDictionaryState[];
+  /** First borrowed state retained for low-level integrations. */
+  get storageState(): TextDictionaryState {
+    return this.storageStates[0]!;
+  }
   protected readonly renderProps: TextDictionaryRenderProps;
 
   constructor(device: Device, props: TextDictionaryModelProps) {
@@ -62,39 +66,77 @@ export class TextDictionaryModel extends Model {
     const {storageState, ...renderProps} = props;
     super(device, createTextDictionaryModelProps(renderProps, storageState));
     this.renderProps = renderProps;
-    this.storageState = storageState;
+    this.storageStates = [storageState];
+  }
+
+  /** Appends one prepared dictionary batch without replacing existing state or models. */
+  addState(storageState: TextDictionaryState): void {
+    this.storageStates.push(storageState);
+    this.setNeedsRedraw('Text dictionary batch appended');
   }
 
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    return drawPreparedTextStorageBatches<
-      TextDictionaryBatchState,
-      TextDictionaryRenderBatchState,
-      TextDictionaryState
-    >({
-      model: this,
-      renderPass,
-      storageState: this.storageState,
-      missingBatchError: 'TextDictionaryModel render batch is missing its row-binding batch',
-      drawModelBatch: () => super.draw(renderPass),
-      prepareBatch: (batch, renderBatch) => {
-        this.setBindings(
-          createTextDictionaryBindings(this.renderProps, this.storageState, batch, renderBatch)
-        );
-      },
-      restoreFirstBatch: () => {
-        const firstBatch = getFirstTextDictionaryBatch(this.storageState);
-        const firstRenderBatch = getFirstTextDictionaryRenderBatch(this.storageState);
-        this.setBindings(
-          createTextDictionaryBindings(
-            this.renderProps,
-            this.storageState,
-            firstBatch,
-            firstRenderBatch
-          )
-        );
-      }
-    });
+    let drawSuccess = true;
+    for (const storageState of this.storageStates) {
+      const stateFirstBatch = getFirstTextDictionaryBatch(storageState);
+      const stateFirstRenderBatch = getFirstTextDictionaryRenderBatch(storageState);
+      this.setBindings(
+        createTextDictionaryBindings(
+          this.renderProps,
+          storageState,
+          stateFirstBatch,
+          stateFirstRenderBatch
+        )
+      );
+      this.setInstanceCount(stateFirstRenderBatch.glyphCount);
+      drawSuccess =
+        drawPreparedTextStorageBatches<
+          TextDictionaryBatchState,
+          TextDictionaryRenderBatchState,
+          TextDictionaryState
+        >({
+          model: this,
+          renderPass,
+          storageState,
+          missingBatchError: 'TextDictionaryModel render batch is missing its row-binding batch',
+          drawModelBatch: () => super.draw(renderPass),
+          prepareBatch: (batch, renderBatch) => {
+            this.setBindings(
+              createTextDictionaryBindings(this.renderProps, storageState, batch, renderBatch)
+            );
+          },
+          restoreFirstBatch: () => {
+            const firstBatch = getFirstTextDictionaryBatch(storageState);
+            const firstRenderBatch = getFirstTextDictionaryRenderBatch(storageState);
+            this.setBindings(
+              createTextDictionaryBindings(
+                this.renderProps,
+                storageState,
+                firstBatch,
+                firstRenderBatch
+              )
+            );
+          }
+        }) && drawSuccess;
+    }
+    const firstBatch = getFirstTextDictionaryBatch(this.storageState);
+    const firstRenderBatch = getFirstTextDictionaryRenderBatch(this.storageState);
+    this.setBindings(
+      createTextDictionaryBindings(
+        this.renderProps,
+        this.storageState,
+        firstBatch,
+        firstRenderBatch
+      )
+    );
+    this.setInstanceCount(
+      this.storageStates.reduce(
+        (glyphCount, storageState) => glyphCount + storageState.glyphCount,
+        0
+      )
+    );
+    return drawSuccess;
   }
 }
 

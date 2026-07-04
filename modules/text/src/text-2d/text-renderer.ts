@@ -11,8 +11,8 @@ import {TextRowIndexedStorageModel, TextStorageModel} from './models/text-storag
 
 /** Construction and update properties for {@link TextRenderer}. */
 export type TextRendererProps = {
-  /** Caller-owned prepared data borrowed by the renderer and its implementation models. */
-  data: GPUTextData;
+  /** Caller-owned prepared batches borrowed in source order. */
+  data: GPUTextData | readonly GPUTextData[];
   /** Advanced render-model overrides applied after values retained during data preparation. */
   modelProps?: ModelProps;
   /** Optional picking model whose lifecycle is transferred to the renderer. */
@@ -30,7 +30,7 @@ export type TextRendererProps = {
 export class TextRenderer {
   /** Device used to create the internal render models. */
   readonly device: Device;
-  private data: GPUTextData;
+  private data: GPUTextData[];
   private model: TextAttributeModel | TextStorageModel | TextDictionaryModel;
   private pickingModel?: Model;
   private modelProps?: ModelProps;
@@ -39,15 +39,20 @@ export class TextRenderer {
   /** Creates a renderer that borrows caller-owned prepared text data. */
   constructor(device: Device, props: TextRendererProps) {
     this.device = device;
-    this.data = props.data;
+    this.data = normalizeGPUTextData(device, props.data);
     this.modelProps = props.modelProps;
-    this.model = createTextModel(device, props.data, props.modelProps);
+    this.model = createTextModel(device, this.data, props.modelProps);
     this.pickingModel = props.pickingModel;
   }
 
   /** Current representation-independent preparation and memory statistics. */
   get stats(): GPUTextStats {
-    return this.data.stats;
+    return aggregateGPUTextStats(this.data);
+  }
+
+  /** Prepared batches currently borrowed by the renderer. */
+  get batches(): readonly GPUTextData[] {
+    return this.data;
   }
 
   /** Draws every prepared render batch into `renderPass`. */
@@ -60,6 +65,13 @@ export class TextRenderer {
     return (this.pickingModel ?? this.model).draw(renderPass);
   }
 
+  /** Appends one independently owned prepared batch without rebuilding existing models or data. */
+  appendData(data: GPUTextData): void {
+    assertCompatibleGPUTextData(this.device, this.data[0]!, data);
+    appendTextModelState(this.model, data);
+    this.data.push(data);
+  }
+
   /**
    * Replaces borrowed data or model configuration.
    *
@@ -67,9 +79,9 @@ export class TextRenderer {
    * responsible for destroying replaced {@link GPUTextData} after this method returns.
    */
   setProps(props: Partial<TextRendererProps>): void {
-    const nextData = props.data ?? this.data;
+    const nextData = props.data ? normalizeGPUTextData(this.device, props.data) : this.data;
     const nextModelProps = props.modelProps ?? this.modelProps;
-    if (nextData !== this.data || props.modelProps !== undefined) {
+    if (props.data !== undefined || props.modelProps !== undefined) {
       const nextModel = createTextModel(this.device, nextData, nextModelProps);
       const previousModel = this.model;
       this.data = nextData;
@@ -104,38 +116,117 @@ export function getTextRendererModel(
 
 function createTextModel(
   device: Device,
-  data: GPUTextData,
+  data: readonly GPUTextData[],
   modelProps?: ModelProps
 ): TextAttributeModel | TextStorageModel | TextDictionaryModel {
-  const internal = getGPUTextDataProps(data);
+  const firstData = data[0]!;
+  const internal = getGPUTextDataProps(firstData);
+  let model: TextAttributeModel | TextStorageModel | TextDictionaryModel;
   switch (internal.strategy) {
     case 'attribute': {
-      return new TextAttributeModel(device, {
+      model = new TextAttributeModel(device, {
         ...internal.modelProps,
         ...modelProps,
         attributeState: internal.state
       });
+      break;
     }
     case 'dictionary': {
-      return new TextDictionaryModel(device, {
+      model = new TextDictionaryModel(device, {
         ...internal.modelProps,
         ...modelProps,
         storageState: internal.state
       });
+      break;
     }
     case 'storage-row-indexed': {
-      return new TextRowIndexedStorageModel(device, {
+      model = new TextRowIndexedStorageModel(device, {
         ...internal.modelProps,
         ...modelProps,
         storageState: internal.state
       });
+      break;
     }
     case 'storage': {
-      return new TextStorageModel(device, {
+      model = new TextStorageModel(device, {
         ...internal.modelProps,
         ...modelProps,
         storageState: internal.state
       });
+      break;
     }
   }
+  for (const appendedData of data.slice(1)) {
+    assertCompatibleGPUTextData(device, firstData, appendedData);
+    appendTextModelState(model, appendedData);
+  }
+  return model;
+}
+
+function appendTextModelState(
+  model: TextAttributeModel | TextStorageModel | TextDictionaryModel,
+  data: GPUTextData
+): void {
+  const internal = getGPUTextDataProps(data);
+  if (model instanceof TextAttributeModel && internal.strategy === 'attribute') {
+    model.addState(internal.state);
+    return;
+  }
+  if (model instanceof TextDictionaryModel && internal.strategy === 'dictionary') {
+    model.addState(internal.state);
+    return;
+  }
+  if (
+    model instanceof TextStorageModel &&
+    (internal.strategy === 'storage' || internal.strategy === 'storage-row-indexed')
+  ) {
+    model.addState(internal.state);
+    return;
+  }
+  throw new Error('TextRenderer cannot append data prepared with a different strategy');
+}
+
+function normalizeGPUTextData(
+  device: Device,
+  data: GPUTextData | readonly GPUTextData[]
+): GPUTextData[] {
+  const batches = Array.isArray(data) ? [...data] : [data];
+  const firstBatch = batches[0];
+  if (!firstBatch) {
+    throw new Error('TextRenderer requires at least one GPUTextData batch');
+  }
+  for (const batch of batches) {
+    assertCompatibleGPUTextData(device, firstBatch, batch);
+  }
+  return batches;
+}
+
+function assertCompatibleGPUTextData(
+  device: Device,
+  firstBatch: GPUTextData,
+  batch: GPUTextData
+): void {
+  if (batch.resources.device !== device) {
+    throw new Error('TextRenderer GPUTextData must use the renderer device');
+  }
+  if (batch.resources !== firstBatch.resources) {
+    throw new Error('TextRenderer batches must share GPUTextResources');
+  }
+  if (batch.strategy !== firstBatch.strategy) {
+    throw new Error('TextRenderer batches must use the same strategy');
+  }
+}
+
+function aggregateGPUTextStats(data: readonly GPUTextData[]): GPUTextStats {
+  const first = data[0]!;
+  return {
+    strategy: first.strategy,
+    rowCount: data.reduce((sum, batch) => sum + batch.rowCount, 0),
+    glyphCount: data.reduce((sum, batch) => sum + batch.glyphCount, 0),
+    sourceBatchCount: data.length,
+    renderBatchCount: data.reduce((sum, batch) => sum + batch.stats.renderBatchCount, 0),
+    preparationTimeMs: data.reduce((sum, batch) => sum + batch.stats.preparationTimeMs, 0),
+    retainedByteLength: data.reduce((sum, batch) => sum + batch.stats.retainedByteLength, 0),
+    transientByteLength: data.reduce((sum, batch) => sum + batch.stats.transientByteLength, 0)
+  };
 }

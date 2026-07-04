@@ -8,6 +8,7 @@ export {
   type GPUTextStats,
   type GPUTextStrategy
 } from './gpu-text-data';
+export {GPUTextResources, type GPUTextResourcesProps} from './gpu-text-resources';
 export {TextRenderer, type TextRendererProps} from './text-renderer';
 export {
   measureFontAtlasText,

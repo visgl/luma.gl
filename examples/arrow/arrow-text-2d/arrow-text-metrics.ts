@@ -18,7 +18,7 @@ export function getArrowTextRendererMetrics(
   textInput: ArrowTextRendererInput,
   arrowVectorBuildTimeMs: number
 ): ArrowText2DControlPanelMetrics {
-  const stats = textRenderer.textData.stats;
+  const stats = textRenderer.textRenderer.stats;
   const colorEnabled = Boolean(textInput.colors);
   const angleEnabled = Boolean(textInput.angles);
   const sizeEnabled = Boolean(textInput.sizes);

@@ -336,7 +336,7 @@ export type ArrowTextLayerProps = Omit<LayerProps, 'data'> &
 
 type ArrowTextLayerState = {
   renderer: ArrowTextRenderer | null;
-  textData: GPUTextData | null;
+  textData: GPUTextData[];
   constantBuffers: Buffer[];
   loadVersion: number;
   sourceInitialized: boolean;
@@ -367,7 +367,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
   override initializeState(): void {
     this.setState({
       renderer: null,
-      textData: null,
+      textData: [],
       constantBuffers: [],
       loadVersion: 0,
       sourceInitialized: false,
@@ -465,11 +465,13 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     const state = this.getLayerState();
     state.loadVersion++;
     state.renderer?.destroy();
-    state.textData?.destroy();
+    for (const data of state.textData) {
+      data.destroy();
+    }
     destroyBuffers(state.constantBuffers);
     this.setState({
       renderer: null,
-      textData: null,
+      textData: [],
       constantBuffers: [],
       loadVersion: state.loadVersion,
       sourceInitialized: true,
@@ -573,17 +575,23 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
             }
           )
         : await ArrowTextRenderer.create(this.context.device, rendererProps);
-      let ownedTextData = renderer.transferTextDataOwnership((nextData, previousData) => {
-        previousData.destroy();
-        ownedTextData = nextData;
-        const currentState = this.getLayerState();
-        if (currentState.renderer === renderer) {
-          currentState.textData = nextData;
-        }
-      });
+      let ownedTextData = [
+        ...renderer.transferTextDataOwnership(({data, removed}) => {
+          for (const previousData of removed) {
+            previousData.destroy();
+          }
+          ownedTextData = [...data];
+          const currentState = this.getLayerState();
+          if (currentState.renderer === renderer) {
+            currentState.textData = ownedTextData;
+          }
+        })
+      ];
       if (this.getLayerState().loadVersion !== loadVersion) {
         renderer.destroy();
-        ownedTextData.destroy();
+        for (const data of ownedTextData) {
+          data.destroy();
+        }
         destroyBuffers(constantStyle.buffers);
         return;
       }
@@ -600,7 +608,9 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
         gpuVectorSourceCache: this.getLayerState().gpuVectorSourceCache
       } satisfies ArrowTextLayerState);
       previousRenderer?.destroy();
-      previousTextData?.destroy();
+      for (const data of previousTextData) {
+        data.destroy();
+      }
       destroyBuffers(previousConstantBuffers);
       this.setNeedsRedraw();
       this.watchRendererPipeline(renderer);

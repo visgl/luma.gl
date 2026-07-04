@@ -6,6 +6,7 @@ import type {TextAttributeRenderProps, TextAttributeState} from './models/text-a
 import type {TextStorageRenderProps} from './models/text-storage-model';
 import type {TextDictionaryRenderProps} from './models/text-dictionary-model';
 import type {TextDictionaryState, TextStorageState} from './model-utils/text-storage-state';
+import type {GPUTextResources} from './gpu-text-resources';
 
 /** Prepared text representation selected by an adapter or forced through the experimental API. */
 export type GPUTextStrategy = 'attribute' | 'storage' | 'storage-row-indexed' | 'dictionary';
@@ -59,21 +60,33 @@ export type GPUTextDataProps = GPUTextAttributeData | GPUTextStorageData | GPUTe
  * point. Destroy every borrowing renderer before destroying its data.
  */
 export interface GPUTextData {
+  /** Shared atlas resources borrowed by this batch. */
+  readonly resources: GPUTextResources;
   /** Strategy selected while preparing this data. */
   readonly strategy: GPUTextStrategy;
-  /** Number of source text rows. */
+  /** Source stream batch index. */
+  readonly sourceBatchIndex: number;
+  /** Global source-row index assigned to local row zero. */
+  readonly rowIndexBase: number;
+  /** Global glyph index assigned to local glyph zero. */
+  readonly glyphIndexBase: number;
+  /** Number of source text rows in this batch. */
   readonly rowCount: number;
-  /** Number of visible glyph instances. */
+  /** Number of visible glyph instances in this batch. */
   readonly glyphCount: number;
   /** Compact representation-independent preparation statistics. */
   readonly stats: GPUTextStats;
-  /** Releases owned source batches, generated buffers, atlas resources, and tables. Idempotent. */
+  /** Releases the owned source batch, generated buffers, and tables. Idempotent. */
   destroy(): void;
 }
 
 /** @internal */
 export class GPUTextDataImpl implements GPUTextData {
+  readonly resources: GPUTextResources;
   readonly strategy: GPUTextStrategy;
+  readonly sourceBatchIndex: number;
+  readonly rowIndexBase: number;
+  readonly glyphIndexBase: number;
   readonly rowCount: number;
   readonly glyphCount: number;
   readonly stats: GPUTextStats;
@@ -81,9 +94,23 @@ export class GPUTextDataImpl implements GPUTextData {
   private readonly destroySource?: () => void;
   private destroyed = false;
 
-  constructor(props: GPUTextDataProps, options: {rowCount: number; destroySource?: () => void}) {
+  constructor(
+    props: GPUTextDataProps,
+    options: {
+      resources: GPUTextResources;
+      sourceBatchIndex: number;
+      rowIndexBase: number;
+      glyphIndexBase: number;
+      rowCount: number;
+      destroySource?: () => void;
+    }
+  ) {
     this.props = props;
+    this.resources = options.resources;
     this.strategy = props.strategy;
+    this.sourceBatchIndex = options.sourceBatchIndex;
+    this.rowIndexBase = options.rowIndexBase;
+    this.glyphIndexBase = options.glyphIndexBase;
     this.rowCount = options.rowCount;
     this.destroySource = options.destroySource;
     this.glyphCount =
@@ -112,9 +139,21 @@ export class GPUTextDataImpl implements GPUTextData {
 /** @internal */
 export function createGPUTextData(
   props: GPUTextDataProps,
-  options: {rowCount: number; destroySource?: () => void}
+  options: {
+    resources: GPUTextResources;
+    sourceBatchIndex?: number;
+    rowIndexBase?: number;
+    glyphIndexBase?: number;
+    rowCount: number;
+    destroySource?: () => void;
+  }
 ): GPUTextData {
-  return new GPUTextDataImpl(props, options);
+  return new GPUTextDataImpl(props, {
+    sourceBatchIndex: 0,
+    rowIndexBase: 0,
+    glyphIndexBase: 0,
+    ...options
+  });
 }
 
 /** @internal */
@@ -132,7 +171,7 @@ function makeGPUTextStats(props: GPUTextDataProps, rowCount: number): GPUTextSta
       strategy: props.strategy,
       rowCount,
       glyphCount: state.glyphLayout.glyphCount,
-      sourceBatchCount: state.modelProps.table?.batches.length ?? state.renderBatches.length,
+      sourceBatchCount: 1,
       renderBatchCount: state.renderBatches.length,
       preparationTimeMs: state.glyphAttributeBuildTimeMs,
       retainedByteLength: state.glyphAttributeByteLength,
@@ -144,7 +183,7 @@ function makeGPUTextStats(props: GPUTextDataProps, rowCount: number): GPUTextSta
     strategy: props.strategy,
     rowCount,
     glyphCount: state.glyphCount,
-    sourceBatchCount: state.batches.length,
+    sourceBatchCount: 1,
     renderBatchCount: state.renderBatches.length,
     preparationTimeMs: state.glyphAttributeBuildTimeMs + state.compactStreamBuildTimeMs,
     retainedByteLength:
@@ -158,12 +197,7 @@ function makeGPUTextStats(props: GPUTextDataProps, rowCount: number): GPUTextSta
 
 function destroyGPUTextState(props: GPUTextDataProps): void {
   if (props.strategy === 'attribute') {
-    const state = props.state;
-    state.atlasTexture?.destroy();
-    for (const renderBatch of state.renderBatches) {
-      renderBatch.expandedGlyphVertexData.destroy();
-    }
-    state.modelProps.table?.destroy();
+    props.state.destroy();
     return;
   }
   props.state.destroy();

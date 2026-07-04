@@ -48,6 +48,8 @@ export type TextAttributeState = {
   fontRenderSettings?: unknown;
   /** Default fragment shader uniforms, when the built-in shader is used. */
   defaultFragmentShaderUniforms?: Record<string, unknown>;
+  /** Releases generated batch buffers and the generated GPU table. */
+  destroy: () => void;
 };
 
 /**
@@ -75,45 +77,65 @@ export class TextAttributeModel extends GPUTableModel {
   /** Prepared GPU vectors consumed by the attribute-backed text model. */
   static readonly gpuInputSchema = TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA;
 
-  /** Borrowed generated glyph layout and render resources. */
-  readonly attributeState: TextAttributeState;
+  /** Borrowed generated glyph layouts and render resources in append order. */
+  readonly attributeStates: TextAttributeState[];
+
+  /** First borrowed state retained for compatibility with low-level integrations. */
+  get attributeState(): TextAttributeState {
+    return this.attributeStates[0]!;
+  }
 
   constructor(device: Device, props: TextAttributeModelProps) {
     const {attributeState, ...modelProps} = props;
     super(device, {...attributeState.modelProps, ...modelProps});
-    this.attributeState = attributeState;
+    this.attributeStates = [attributeState];
+  }
+
+  /** Appends one prepared batch without replacing existing state or models. */
+  addState(attributeState: TextAttributeState): void {
+    this.attributeStates.push(attributeState);
+    this.setNeedsRedraw('Text attribute batch appended');
   }
 
   /** Draws each generated glyph render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    const gpuTable = this.table;
-    if (!gpuTable || gpuTable.batches.length !== this.attributeState.renderBatches.length) {
-      throw new Error('TextAttributeModel draw batches must align with generated glyph batches');
-    }
-
     let drawSuccess = true;
     try {
-      for (const [batchIndex, renderBatch] of this.attributeState.renderBatches.entries()) {
-        const gpuBatch = gpuTable.batches[batchIndex];
-        if (!gpuBatch) {
-          throw new Error('TextAttributeModel is missing a GPU render batch');
+      for (const attributeState of this.attributeStates) {
+        const gpuTable = attributeState.modelProps.table;
+        if (!gpuTable || gpuTable.batches.length !== attributeState.renderBatches.length) {
+          throw new Error(
+            'TextAttributeModel draw batches must align with generated glyph batches'
+          );
         }
-        this.setAttributes({
-          ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
-          [EXPANDED_GLYPH_VERTEX_DATA]: renderBatch.expandedGlyphVertexData
-        });
-        this.setInstanceCount(renderBatch.glyphCount);
-        drawSuccess = super.draw(renderPass) && drawSuccess;
+        for (const [batchIndex, renderBatch] of attributeState.renderBatches.entries()) {
+          const gpuBatch = gpuTable.batches[batchIndex];
+          if (!gpuBatch) {
+            throw new Error('TextAttributeModel is missing a GPU render batch');
+          }
+          this.setAttributes({
+            ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
+            [EXPANDED_GLYPH_VERTEX_DATA]: renderBatch.expandedGlyphVertexData
+          });
+          this.setInstanceCount(renderBatch.glyphCount);
+          drawSuccess = super.draw(renderPass) && drawSuccess;
+        }
       }
     } finally {
-      const firstGpuBatch = gpuTable.batches[0];
+      const gpuTable = this.attributeState.modelProps.table;
+      const firstGpuBatch = gpuTable?.batches[0];
       this.setAttributes({
         ...(firstGpuBatch
           ? getGPUDataBuffersForLayout(firstGpuBatch.bufferLayout, firstGpuBatch.gpuData)
           : {}),
         [EXPANDED_GLYPH_VERTEX_DATA]: this.attributeState.expandedGlyphVertexData
       });
-      this.setInstanceCount(this.attributeState.glyphLayout.glyphCount);
+      this.setInstanceCount(
+        this.attributeStates.reduce(
+          (glyphCount, attributeState) => glyphCount + attributeState.glyphLayout.glyphCount,
+          0
+        )
+      );
     }
 
     return drawSuccess;

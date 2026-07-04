@@ -76,6 +76,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/text** - NEW MODULE
 
 - **GPU-only 2D text facade** - `TextRenderer` renders caller-owned `GPUTextData` while selecting attribute, WebGPU storage, or dictionary strategies automatically.
+- **Incremental text streaming** - Arrow chunks produce independent `GPUTextData` objects that append to a stable `TextRenderer` model without rebuilding earlier batches; `GPUTextResources` lets batches and renderers share one uploaded atlas texture.
 - **Experimental text strategies** - Specialized model classes and low-level shader/compute contracts remain available from `@luma.gl/text/experimental` for benchmarking.
 - **Arrow text conversion helpers** - `@luma.gl/arrow` exports `makeGPUTextDataFromArrow()` for automatic strategy selection, plus `ArrowTextRenderer`, source mapping, and low-level conversion helpers for specialized workflows.
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.

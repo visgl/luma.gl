@@ -20,30 +20,38 @@ Both builders cache identical inputs and incrementally add newly requested chara
 
 | Responsibility | Public APIs |
 | --- | --- |
-| Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `ArrowTextRenderer`, source mapping helpers |
-| Stable rendering in `@luma.gl/text` | `GPUTextData`, `TextRenderer` |
+| Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `makeGPUTextDataFromArrowStream()`, `ArrowTextRenderer` |
+| Stable rendering in `@luma.gl/text` | `GPUTextResources`, `GPUTextData`, `TextRenderer` |
 | Benchmark internals | `@luma.gl/text/experimental` specialized models and forced strategies |
 
-New code should prepare caller-owned `GPUTextData`, pass it to `TextRenderer`, destroy the
-renderer first, and then destroy the data.
+`FontAtlas` contains CPU-side pages and metrics. `GPUTextResources` owns their device-specific
+texture upload and can be shared by any number of prepared batches and renderers. Each
+`GPUTextData` owns one source batch's generated buffers while borrowing the shared resources.
 
 ```ts
-const data = makeGPUTextDataFromArrow(device, textProps);
+const resources = new GPUTextResources(device, {fontAtlas});
+const data = makeGPUTextDataFromArrow(device, {...textProps, resources});
 const renderer = new TextRenderer(device, {data});
 
 renderer.draw(renderPass);
 
-const nextData = makeGPUTextDataFromArrow(device, nextTextProps);
-renderer.setProps({data: nextData});
-data.destroy();
+const [nextBatch] = makeGPUTextDataFromArrow(device, {...nextTextProps, resources});
+renderer.appendData(nextBatch);
 
 renderer.destroy();
-nextData.destroy();
+for (const batch of data) batch.destroy();
+nextBatch.destroy();
+resources.destroy();
 ```
 
-`setProps()` creates and binds the replacement model before destroying the previous model. It
-never destroys caller-owned data. `destroy()` is idempotent and releases only the renderer's
-render and picking models.
+`appendData()` adds a prepared source batch without reconstructing the model or touching existing
+batches. `setProps()` remains available for complete replacement. Neither method destroys
+caller-owned data, and `destroy()` releases only the renderer's render and picking models.
+
+`makeGPUTextDataFromArrowStream()` yields one `GPUTextData` per source chunk and preserves global
+row and glyph bases. The caller appends each yielded object and retains it until the renderer is
+destroyed. `ArrowTextRenderer.create()` is the convenience path for raw Arrow streams: it creates
+and owns shared resources internally and incrementally uploads and appends each arriving batch.
 
 ## Automatic Strategy Selection
 
@@ -82,8 +90,10 @@ Supported dictionary-encoded WebGPU input automatically uses compressed dictiona
 
 ## Resource Ownership
 
-`GPUTextData` owns source batches, generated buffers, atlas textures, and metrics. `TextRenderer`
-and its internal models borrow these resources. Hosts must destroy renderers before their data.
+`GPUTextData` owns one source batch and its generated buffers. `GPUTextResources` separately owns
+the uploaded atlas texture. `TextRenderer` and its internal models borrow both. Destroy renderers
+first, then every data batch, and finally the shared resources. This split permits multiple
+renderers and streams to share one atlas upload without hidden caches or ambiguous ownership.
 
 Direct specialized model construction is intentionally unstable. Import the models and forced
 strategy preparation contracts from `@luma.gl/text/experimental` only in benchmarks and

@@ -52,7 +52,7 @@ export function createArrowTextPickingModel(
   shaderInputs: ShaderInputs<any>
 ): Model {
   if (textModel instanceof TextDictionaryModel) {
-    return new TextDictionaryModel(device, {
+    const pickingModel = new TextDictionaryModel(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
       storageState: textModel.storageState,
       source: TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
@@ -66,10 +66,14 @@ export function createArrowTextPickingModel(
       depthStencilAttachmentFormat: 'depth24plus',
       parameters: {depthWriteEnabled: false, blend: false}
     });
+    for (const storageState of textModel.storageStates.slice(1)) {
+      pickingModel.addState(storageState);
+    }
+    return pickingModel;
   }
 
   if (textModel instanceof TextStorageModel) {
-    return new TextStorageModel(device, {
+    const pickingModel = new TextStorageModel(device, {
       id: (textModel.id || 'arrow-text-2d') + '-picking',
       storageState: textModel.storageState,
       source: TEXT_STORAGE_INDEXED_WGSL_SHADER,
@@ -83,6 +87,10 @@ export function createArrowTextPickingModel(
       depthStencilAttachmentFormat: 'depth24plus',
       parameters: {depthWriteEnabled: false, blend: false}
     });
+    for (const storageState of textModel.storageStates.slice(1)) {
+      pickingModel.addState(storageState);
+    }
+    return pickingModel;
   }
 
   return new Model(device, {
@@ -128,19 +136,22 @@ function drawArrowTextPickingBatches(
   textModel: TextAttributeModel,
   {onBatch}: {onBatch?: (batchIndex: number) => void}
 ): void {
-  const gpuBatches = textModel.table?.batches || [];
-  for (const [batchIndex, renderBatch] of textModel.attributeState.renderBatches.entries()) {
-    const gpuBatch = gpuBatches[batchIndex];
-    if (!gpuBatch) {
-      throw new Error('Arrow text picking requires aligned GPU and glyph render batches');
+  let batchIndex = 0;
+  for (const attributeState of textModel.attributeStates) {
+    const gpuBatches = attributeState.modelProps.table?.batches || [];
+    for (const [stateBatchIndex, renderBatch] of attributeState.renderBatches.entries()) {
+      const gpuBatch = gpuBatches[stateBatchIndex];
+      if (!gpuBatch) {
+        throw new Error('Arrow text picking requires aligned GPU and glyph render batches');
+      }
+      pickingModel.setAttributes({
+        ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
+        expandedGlyphVertexData: renderBatch.expandedGlyphVertexData
+      });
+      pickingModel.setInstanceCount(renderBatch.glyphCount);
+      onBatch?.(batchIndex++);
+      pickingModel.draw(pickingPass);
     }
-    pickingModel.setAttributes({
-      ...getGPUDataBuffersForLayout(gpuBatch.bufferLayout, gpuBatch.gpuData),
-      expandedGlyphVertexData: renderBatch.expandedGlyphVertexData
-    });
-    pickingModel.setInstanceCount(renderBatch.glyphCount);
-    onBatch?.(batchIndex);
-    pickingModel.draw(pickingPass);
   }
   pickingModel.setAttributes({
     ...getArrowTextPickingTableAttributes(textModel.table),

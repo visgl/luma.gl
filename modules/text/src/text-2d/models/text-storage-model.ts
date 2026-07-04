@@ -60,8 +60,12 @@ export class TextStorageModel extends Model {
   /** Prepared GPU vectors consumed by the storage-backed text model. */
   static readonly gpuInputSchema = TEXT_STORAGE_GPU_INPUT_SCHEMA;
 
-  /** Borrowed storage text expansion and row-binding state. */
-  readonly storageState: TextStorageState;
+  /** Borrowed storage text batches in append order. */
+  readonly storageStates: TextStorageState[];
+  /** First borrowed state retained for low-level integrations. */
+  get storageState(): TextStorageState {
+    return this.storageStates[0]!;
+  }
   protected readonly renderProps: TextStorageRenderProps;
 
   constructor(device: Device, props: TextStorageModelProps) {
@@ -69,45 +73,85 @@ export class TextStorageModel extends Model {
     const {storageState, ...renderProps} = props;
     super(device, createTextStorageModelProps(renderProps, storageState));
     this.renderProps = renderProps;
-    this.storageState = storageState;
+    this.storageStates = [storageState];
+  }
+
+  /** Appends one prepared batch without replacing existing state or models. */
+  addState(storageState: TextStorageState): void {
+    if (storageState.hasGlyphRowIndices !== this.storageState.hasGlyphRowIndices) {
+      throw new Error('TextStorageModel appended batches must use the same row-index mode');
+    }
+    this.storageStates.push(storageState);
+    this.setNeedsRedraw('Text storage batch appended');
   }
 
   /** Draws each generated storage text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
-    return drawPreparedTextStorageBatches<
-      TextStorageBatchState,
-      TextStorageRenderBatchState,
-      TextStorageState
-    >({
-      model: this,
-      renderPass,
-      storageState: this.storageState,
-      missingBatchError: 'TextStorageModel render batch is missing its row-binding batch',
-      drawModelBatch: () => super.draw(renderPass),
-      prepareBatch: (batch, renderBatch) => {
-        this.setAttributes({
-          [COMPACT_GLYPH_VERTEX_DATA]: renderBatch.compactGlyphVertexData
-        });
-        this.setBindings(
-          createTextStorageBindings(this.renderProps, this.storageState, batch, renderBatch)
-        );
-      },
-      restoreFirstBatch: () => {
-        const firstBatch = getFirstTextStorageBatch(this.storageState);
-        const firstRenderBatch = getFirstTextStorageRenderBatch(this.storageState);
-        this.setAttributes({
-          [COMPACT_GLYPH_VERTEX_DATA]: firstRenderBatch.compactGlyphVertexData
-        });
-        this.setBindings(
-          createTextStorageBindings(
-            this.renderProps,
-            this.storageState,
-            firstBatch,
-            firstRenderBatch
-          )
-        );
-      }
-    });
+    let drawSuccess = true;
+    for (const storageState of this.storageStates) {
+      const stateFirstBatch = getFirstTextStorageBatch(storageState);
+      const stateFirstRenderBatch = getFirstTextStorageRenderBatch(storageState);
+      this.setAttributes({
+        [COMPACT_GLYPH_VERTEX_DATA]: stateFirstRenderBatch.compactGlyphVertexData
+      });
+      this.setBindings(
+        createTextStorageBindings(
+          this.renderProps,
+          storageState,
+          stateFirstBatch,
+          stateFirstRenderBatch
+        )
+      );
+      this.setInstanceCount(stateFirstRenderBatch.glyphCount);
+      drawSuccess =
+        drawPreparedTextStorageBatches<
+          TextStorageBatchState,
+          TextStorageRenderBatchState,
+          TextStorageState
+        >({
+          model: this,
+          renderPass,
+          storageState,
+          missingBatchError: 'TextStorageModel render batch is missing its row-binding batch',
+          drawModelBatch: () => super.draw(renderPass),
+          prepareBatch: (batch, renderBatch) => {
+            this.setAttributes({
+              [COMPACT_GLYPH_VERTEX_DATA]: renderBatch.compactGlyphVertexData
+            });
+            this.setBindings(
+              createTextStorageBindings(this.renderProps, storageState, batch, renderBatch)
+            );
+          },
+          restoreFirstBatch: () => {
+            const firstBatch = getFirstTextStorageBatch(storageState);
+            const firstRenderBatch = getFirstTextStorageRenderBatch(storageState);
+            this.setAttributes({
+              [COMPACT_GLYPH_VERTEX_DATA]: firstRenderBatch.compactGlyphVertexData
+            });
+            this.setBindings(
+              createTextStorageBindings(
+                this.renderProps,
+                storageState,
+                firstBatch,
+                firstRenderBatch
+              )
+            );
+          }
+        }) && drawSuccess;
+    }
+    const firstBatch = getFirstTextStorageBatch(this.storageState);
+    const firstRenderBatch = getFirstTextStorageRenderBatch(this.storageState);
+    this.setAttributes({[COMPACT_GLYPH_VERTEX_DATA]: firstRenderBatch.compactGlyphVertexData});
+    this.setBindings(
+      createTextStorageBindings(this.renderProps, this.storageState, firstBatch, firstRenderBatch)
+    );
+    this.setInstanceCount(
+      this.storageStates.reduce(
+        (glyphCount, storageState) => glyphCount + storageState.glyphCount,
+        0
+      )
+    );
+    return drawSuccess;
   }
 }
 

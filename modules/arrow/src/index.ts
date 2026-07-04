@@ -5,6 +5,9 @@
 export type {NumericArrowType, ArrowColumnInfo} from './arrow/arrow-utils/arrow-types';
 export {
   makeGPUTextDataFromArrow,
+  makeGPUTextDataFromArrowStream,
+  type GPUTextArrowStreamBatch,
+  type MakeGPUTextDataFromArrowStreamOptions,
   type MakeGPUTextDataFromArrowProps
 } from './arrow/renderers/text/conversion/make-gpu-text-data-from-arrow';
 export {
