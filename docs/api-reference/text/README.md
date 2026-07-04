@@ -35,12 +35,12 @@ const renderer = new TextRenderer(device, {data});
 
 renderer.draw(renderPass);
 
-const [nextBatch] = makeGPUTextDataFromArrow(device, {...nextTextProps, resources});
-renderer.appendData(nextBatch);
+const nextData = makeGPUTextDataFromArrow(device, {...nextTextProps, resources});
+for (const batch of nextData) renderer.appendData(batch);
 
 renderer.destroy();
 for (const batch of data) batch.destroy();
-nextBatch.destroy();
+for (const batch of nextData) batch.destroy();
 resources.destroy();
 ```
 

@@ -20,6 +20,7 @@ import {
 } from '@luma.gl/arrow';
 import {
   buildSdfFontAtlas,
+  GPUTextResources,
   TextRenderer
 } from '@luma.gl/text';
 
@@ -36,10 +37,11 @@ const convertedText = convertArrowTextToAttribute(device, {
   sourceVectors
 });
 const fontAtlas = buildSdfFontAtlas({characterSet: 'helo,lum.ag'});
+const resources = new GPUTextResources(device, {fontAtlas});
 
 const data = makeGPUTextDataFromArrow(device, {
   ...convertedText,
-  fontAtlas,
+  resources,
   destroy: convertedText.destroy
 });
 const renderer = new TextRenderer(device, {data});
@@ -52,20 +54,25 @@ const nextSourceVectors = {
 const nextConvertedText = convertArrowTextToAttribute(device, {sourceVectors: nextSourceVectors});
 const nextData = makeGPUTextDataFromArrow(device, {
   ...nextConvertedText,
-  fontAtlas,
+  resources,
   destroy: nextConvertedText.destroy
 });
 renderer.setProps({data: nextData});
-data.destroy();
+for (const batch of data) {
+  batch.destroy();
+}
 
 // Destroy borrowing models before caller-owned data.
 renderer.destroy();
-nextData.destroy();
+for (const batch of nextData) {
+  batch.destroy();
+}
+resources.destroy();
 ```
 
-`@luma.gl/arrow` owns Arrow column mapping and conversion. The returned `GPUTextData` owns
-uploaded and generated GPU resources. `TextRenderer` and its internal render/picking models borrow
-that data.
+`@luma.gl/arrow` owns Arrow column mapping and conversion. Each returned `GPUTextData` owns one
+batch's uploaded and generated GPU resources while borrowing the shared `GPUTextResources` atlas.
+`TextRenderer` and its internal render/picking models borrow both.
 
 Automatic strategy selection uses attributes for WebGL, per-character colors, and fallback;
 dictionary storage for supported WebGPU dictionary input; and storage for other supported WebGPU
