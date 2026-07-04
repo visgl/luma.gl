@@ -8,9 +8,21 @@ export {
 } from './table/gpu-constant';
 export {
   GPUData,
+  type GPUDataChild,
+  type GPUDataChildAt,
   type GPUDataFromBufferProps,
   type GPUDataReadbackMetadata
 } from './table/gpu-data';
+export {
+  getBufferLayoutFromGPUDataStructFormat,
+  isGPUDataStructFormat,
+  type BufferLayoutFromGPUDataStructFormatOptions,
+  type GPUDataFormat,
+  type GPUDataStructField,
+  type GPUDataStructFields,
+  type GPUDataStructFormat,
+  type GPUDataStructLayout
+} from './table/gpu-data-format';
 export {
   GPUDataView,
   makeGPUDataViewFromAttribute,

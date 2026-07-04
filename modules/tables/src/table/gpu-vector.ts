@@ -194,7 +194,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         this.byteStride = byteStride;
         this.rowByteLength = rowByteLength;
         this.data.push(
-          new GPUData({
+          new GPUData<T>({
             buffer,
             format,
             length,
@@ -233,7 +233,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         this.rowByteLength = byteStride;
         this.bufferLayout = {name, byteStride, attributes};
         this.data.push(
-          new GPUData({
+          new GPUData<T>({
             buffer,
             format,
             length,
@@ -424,8 +424,10 @@ function getResolvedGPUVectorLayout<T extends GPUVectorFormat>(props: {
   };
 }
 
+/** Returns the first chunk format using the vector's shared generic specialization. */
 function getFirstGPUVectorDataFormat<T extends GPUVectorFormat>(data: GPUData<T>[]): T | undefined {
-  return data[0]?.format;
+  // GPUVector validation guarantees that every chunk uses the vector's shared format T.
+  return data[0]?.format as T | undefined;
 }
 
 function validateGPUVectorDataFormats<T extends GPUVectorFormat>(

@@ -25,12 +25,19 @@
       ],
       "@luma.gl/engine/*": [
         "modules/engine/src/*"
+      ],
+      "@luma.gl/tables": [
+        "modules/tables/src/index.ts"
+      ],
+      "@luma.gl/tables/*": [
+        "modules/tables/src/*"
       ]
     }
   },
   "include": [
     "modules/shadertools/test/lib/uniform-types.spec.ts",
-    "modules/engine/test/shader-inputs-types.spec.ts"
+    "modules/engine/test/shader-inputs-types.spec.ts",
+    "modules/tables/test/table/gpu-data-types.node.spec.ts"
   ],
   "exclude": [
     "modules/**/dist",

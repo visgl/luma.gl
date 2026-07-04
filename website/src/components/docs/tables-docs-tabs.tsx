@@ -20,6 +20,7 @@ export type TablesDocsTabId =
   | 'record-batch'
   | 'vector'
   | 'data'
+  | 'data-view'
   | 'schema'
   | 'input-schema'
   | 'shader-bindings'
@@ -35,6 +36,7 @@ const TABLES_DOCS_TABS: TablesDocsTab[] = [
   {id: 'record-batch', label: 'GPURecordBatch', href: '/docs/api-reference/tables/gpu-record-batch'},
   {id: 'vector', label: 'GPUVector', href: '/docs/api-reference/tables/gpu-vector'},
   {id: 'data', label: 'GPUData', href: '/docs/api-reference/tables/gpu-data'},
+  {id: 'data-view', label: 'GPUDataView', href: '/docs/api-reference/tables/gpu-data-view'},
   {id: 'schema', label: 'GPUSchema', href: '/docs/api-reference/tables/gpu-schema'},
   {
     id: 'input-schema',

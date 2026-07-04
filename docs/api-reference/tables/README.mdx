@@ -31,6 +31,7 @@ Typed, batch-preserving GPU table primitives for rendering, transforms, and comp
 - [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch)
 - [GPUVector](/docs/api-reference/tables/gpu-vector)
 - [GPUData](/docs/api-reference/tables/gpu-data)
+- [GPUDataView](/docs/api-reference/tables/gpu-data-view)
 - [GPUSchema](/docs/api-reference/tables/gpu-schema)
 - [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema)
 - [GPUTable Shader Bindings](/docs/api-reference/tables/gpu-table-shader-bindings)
@@ -39,9 +40,11 @@ Typed, batch-preserving GPU table primitives for rendering, transforms, and comp
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 
 The `@luma.gl/tables` module owns reusable table-side GPU objects such as
-`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, and `GPUTable`, plus structural typing
-types such as `GPUSchema`, `GPUField`, `GPUTypeMap`, `GPUVectorFormat`, and
-`VertexList`. Models can publish `GPUInputSchema` declarations for the
+`GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, and
+`GPUTable`, plus structural typing types such as `GPUSchema`, `GPUField`,
+`GPUTypeMap`, `GPUVectorFormat`, `GPUDataStructFormat`, and `VertexList`.
+Physical struct formats let one `GPUData` expose named zero-copy child views
+over interleaved rows. Models can publish `GPUInputSchema` declarations for the
 prepared table inputs they accept. `GPUTableShaderBindings`
 resolves those declarations into owned, batch-preserving attribute and storage
 resources for a shader layout. Table-oriented execution helpers include
