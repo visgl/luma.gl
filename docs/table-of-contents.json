@@ -59,6 +59,7 @@
           "api-guide/gpu/gpu-memory",
           "api-guide/gpu/gpu-memory-layouts",
           "api-guide/gpu/gpu-tables",
+          "api-guide/gpu/gpu-data-processing",
           "api-guide/gpu/buffer-schemas",
           "api-guide/gpu/gpu-commands",
           "api-guide/gpu/gpu-buffers",

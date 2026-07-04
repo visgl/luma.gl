@@ -99,6 +99,7 @@ registering CPU handlers for another device type.
 
 ## Concepts
 
+- [`Choosing a GPU Data-Processing API`](/docs/api-guide/gpu/gpu-data-processing) compares portable GPGPU evaluators with `GPUCommandGraph` and lower-level compute helpers.
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation) shows how to define lazy operations and register backend handlers.
 - [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator) documents `GPUDataEvaluator` for one fixed-width `GPUData` or borrowed strided `GPUDataView`, and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.

@@ -9,6 +9,9 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns
 transient resources and node state but borrows every import.
 
+See [Choosing a GPU Data-Processing API](/docs/api-guide/gpu/gpu-data-processing) for guidance on
+when to use a command graph, portable GPGPU evaluators, or lower-level compute helpers.
+
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 
 <GPUDataAnalysisExample embedded />
