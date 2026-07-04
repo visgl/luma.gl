@@ -33,13 +33,10 @@ export {
   createTextStorageStateFromGPUVectors,
   packTextStorageClipRects,
   type ArrowTextAttributeInputProps,
-  type ArrowTextAttributeRenderProps,
   type ArrowTextAttributeState,
   type ArrowTextDictionaryStorageInputProps,
-  type ArrowTextDictionaryStorageRenderProps,
   type ArrowTextDictionaryStorageSourceVectors,
   type ArrowTextStorageInputProps,
-  type ArrowTextStorageRenderProps,
   type ArrowTextStorageSourceVectors,
   type ArrowTextStorageState,
   type ArrowTextGlyphTable,
@@ -67,3 +64,10 @@ export {
   convertArrowTextToDictionaryModelProps,
   convertArrowTextToDictionaryState
 } from './convert-arrow-text-to-dictionary';
+export {
+  makeGPUTextDataFromArrow,
+  makeGPUTextDataFromArrowStream,
+  type GPUTextArrowStreamBatch,
+  type MakeGPUTextDataFromArrowStreamOptions,
+  type MakeGPUTextDataFromArrowProps
+} from './make-gpu-text-data-from-arrow';

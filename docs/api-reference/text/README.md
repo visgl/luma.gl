@@ -1,6 +1,6 @@
 # @luma.gl/text
 
-`@luma.gl/text` provides experimental GPU-only 2D text rendering utilities.
+`@luma.gl/text` provides an intent-level facade for experimental GPU-only 2D text rendering.
 
 ## Font Atlases
 
@@ -20,15 +20,57 @@ Both builders cache identical inputs and incrementally add newly requested chara
 
 | Responsibility | Public APIs |
 | --- | --- |
-| Arrow facade in `@luma.gl/arrow` | `ArrowTextRenderer`, `resolveArrowTextSourceVectors()`, `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()` |
-| Pure rendering in `@luma.gl/text` | `TextAttributeModel`, `TextStorageModel`, `TextRowIndexedStorageModel`, `TextDictionaryModel` |
-| GPU input contracts in `@luma.gl/text` | `TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA`, `TEXT_STORAGE_GPU_INPUT_SCHEMA`, `TEXT_DICTIONARY_GPU_INPUT_SCHEMA` |
+| Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `makeGPUTextDataFromArrowStream()`, `ArrowTextRenderer` |
+| Stable rendering in `@luma.gl/text` | `GPUTextResources`, `GPUTextData`, `TextRenderer` |
+| Benchmark internals | `@luma.gl/text/experimental` specialized models and forced strategies |
 
-New code should perform Arrow conversion through `@luma.gl/arrow` and construct one of the pure models with flat prepared props.
+`FontAtlas` contains CPU-side pages and metrics. `GPUTextResources` owns their device-specific
+texture upload and can be shared by any number of prepared batches and renderers. Each
+`GPUTextData` owns one source batch's generated buffers while borrowing the shared resources.
+
+```ts
+const resources = new GPUTextResources(device, {fontAtlas});
+const data = makeGPUTextDataFromArrow(device, {...textProps, resources});
+const renderer = new TextRenderer(device, {data});
+
+renderer.draw(renderPass);
+
+const nextData = makeGPUTextDataFromArrow(device, {...nextTextProps, resources});
+for (const batch of nextData) renderer.appendData(batch);
+
+renderer.destroy();
+for (const batch of data) batch.destroy();
+for (const batch of nextData) batch.destroy();
+resources.destroy();
+```
+
+`appendData()` adds a prepared source batch without reconstructing the model or touching existing
+batches. `setProps()` remains available for complete replacement. Neither method destroys
+caller-owned data, and `destroy()` releases only the renderer's render and picking models.
+
+`makeGPUTextDataFromArrowStream()` yields one `GPUTextData` per source chunk and preserves global
+row and glyph bases. The caller appends each yielded object and retains it until the renderer is
+destroyed. `ArrowTextRenderer.create()` is the convenience path for raw Arrow streams: it creates
+and owns shared resources internally and incrementally uploads and appends each arriving batch.
+
+## Automatic Strategy Selection
+
+| Condition | Strategy |
+| --- | --- |
+| WebGL, per-character colors, or unsupported WebGPU storage | Attribute |
+| Supported WebGPU dictionary input | Dictionary storage |
+| Other supported WebGPU text | Storage |
+
+Row-indexed storage remains force-selectable from `@luma.gl/text/experimental` for benchmarks but
+is not selected automatically.
+
+`GPUTextData.stats` exposes strategy, row and glyph counts, source and render batch counts,
+preparation time, retained bytes, and transient compute-input bytes. Strategy-specific buffers,
+schemas, shader contracts, and prepared state remain experimental.
 
 ## Attribute Path
 
-Use `convertArrowTextToAttribute()` to upload Arrow source vectors, then `convertArrowTextToAttributeModelProps()` to build flat model props for `TextAttributeModel`.
+The automatic strategy uses the attribute path for WebGL and per-character colors.
 
 The attribute path supports row colors and per-character color lists. It expands text rows into generated glyph vertex attributes and renders through a GPU table.
 
@@ -38,14 +80,21 @@ Atlas-backed text requires a normalized `fontAtlas`. Build browser-font atlases 
 
 ## Storage Path
 
-Use `convertArrowTextToStorage()` and `convertArrowTextToStorageModelProps()` when rendering with WebGPU storage buffers. Pass the resulting flat props to `TextStorageModel` or `TextRowIndexedStorageModel`.
+Supported WebGPU inputs automatically use storage-backed text.
 
 `TextRowIndexedStorageModel` stores one extra source-row index per generated glyph. This avoids shader-side row lookup by binary search at the cost of a larger generated glyph vertex record.
 
 ## Dictionary Path
 
-Use `convertArrowTextToDictionary()` and `convertArrowTextToDictionaryModelProps()` for dictionary-encoded UTF-8 text. The dictionary model stores shared glyph records per dictionary value and per-row dictionary references.
+Supported dictionary-encoded WebGPU input automatically uses compressed dictionary storage.
 
 ## Resource Ownership
 
-Conversion results and prepared props own GPU resources. Layers should destroy converted `GPUVector` bundles when they are replaced or removed. Models should be constructed with `ownsAttributeState` or `ownsStorageState` when the model should destroy prepared resources.
+`GPUTextData` owns one source batch and its generated buffers. `GPUTextResources` separately owns
+the uploaded atlas texture. `TextRenderer` and its internal models borrow both. Destroy renderers
+first, then every data batch, and finally the shared resources. This split permits multiple
+renderers and streams to share one atlas upload without hidden caches or ambiguous ownership.
+
+Direct specialized model construction is intentionally unstable. Import the models and forced
+strategy preparation contracts from `@luma.gl/text/experimental` only in benchmarks and
+diagnostic tools.

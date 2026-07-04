@@ -13,7 +13,10 @@ import {
   ArrowExamplePanelManager,
   makeArrowExamplePanelHostHtml
 } from '../../examples/arrow/arrow-example-panels';
-import {getText3DCrawlColorKind, setText3DCrawlColorKind} from '../../examples/text-3d-crawl-color';
+import {
+  getTextSpaceCrawlColorKind,
+  setTextSpaceCrawlColorKind
+} from '../../examples/text-space-crawl-color';
 import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
 import {
   flattenEffectSettings,
@@ -305,7 +308,7 @@ describe('text 3D crawl color compatibility', () => {
     const storage = makeMemoryStorage();
     const replaceStateCalls: string[] = [];
     const currentWindow = {
-      location: {pathname: '/examples/experimental/text-3d', search: '', hash: '#demo'},
+      location: {pathname: '/examples/experimental/text-space-crawl', search: '', hash: '#demo'},
       localStorage: storage,
       history: {
         replaceState: (_state: unknown, _title: string, url: string) => {
@@ -314,12 +317,14 @@ describe('text 3D crawl color compatibility', () => {
       }
     } as Pick<Window, 'history' | 'localStorage' | 'location'>;
 
-    setText3DCrawlColorKind('yellow', currentWindow);
+    setTextSpaceCrawlColorKind('yellow', currentWindow);
 
-    expect(storage.getItem('text-3d-crawl-color')).toBe('yellow');
-    expect(replaceStateCalls).toEqual(['/examples/experimental/text-3d?crawlColor=yellow#demo']);
+    expect(storage.getItem('text-space-crawl-color')).toBe('yellow');
+    expect(replaceStateCalls).toEqual([
+      '/examples/experimental/text-space-crawl?crawlColor=yellow#demo'
+    ]);
     currentWindow.location.search = '?crawlColor=yellow';
-    expect(getText3DCrawlColorKind(currentWindow)).toBe('yellow');
+    expect(getTextSpaceCrawlColorKind(currentWindow)).toBe('yellow');
   });
 });
 

@@ -2,22 +2,36 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {assert} from '@luma.gl/core';
 import type {GPUVector} from '../table/gpu-vector';
 import type {GPUConstant} from '../table/gpu-constant';
 import type {GPUVectorFormat} from '../table/gpu-vector-format';
 
 /** Semantic role consumed by one GPU input. */
-export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'text' | 'time';
+export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'matrices' | 'text' | 'time';
+
+/** Shader-attribute mapping supplied by one logical GPU input. */
+type GPUInputAttributeMapping =
+  | {
+      /** Optional shader attribute supplied by this column. */
+      attributeName?: string;
+      /** Composite attribute mappings are mutually exclusive with `attributeName`. */
+      attributeNames?: never;
+    }
+  | {
+      /** Singular attribute mappings are mutually exclusive with `attributeNames`. */
+      attributeName?: never;
+      /** Two or more shader attributes supplied by views of the same physical column. */
+      attributeNames: readonly [string, string, ...string[]];
+    };
 
 /** Runtime declaration for one prepared GPUVector consumed by a model or renderer. */
 export type GPUInputDeclaration<
   ColumnName extends string = string,
   Format extends GPUVectorFormat = GPUVectorFormat
-> = {
+> = GPUInputAttributeMapping & {
   /** Prepared GPUTable column and GPUVector map key. */
   columnName: ColumnName;
-  /** Optional shader attribute supplied by this column. */
-  attributeName?: string;
   /** Optional shader storage binding supplied by this column. */
   storageBindingName?: string;
   /** Semantic role consumed by the model or renderer. */
@@ -42,6 +56,24 @@ export type GPUInputVectors = Record<string, GPUVector | undefined>;
 /** Prepared logical GPU columns keyed by declared GPU input column name. */
 export type GPUInputColumns = Record<string, GPUVector | GPUConstant | undefined>;
 
+/**
+ * Returns the shader attributes supplied by one logical GPU input.
+ *
+ * Runtime validation complements the composite tuple type for JavaScript callers and values that
+ * reach the API through an unchecked cast.
+ */
+export function getGPUInputAttributeNames(input: GPUInputDeclaration): readonly string[] {
+  if (input.attributeNames !== undefined) {
+    // Singular mappings use attributeName.
+    assert(input.attributeNames.length >= 2);
+    const uniqueNames = new Set(input.attributeNames);
+    // Each name identifies a distinct shader-visible view.
+    assert(uniqueNames.size === input.attributeNames.length);
+    return input.attributeNames;
+  }
+  return input.attributeName === undefined ? [] : [input.attributeName];
+}
+
 /** Validates prepared GPU vectors against one runtime GPU input schema. */
 export function validateGPUInputVectors(
   ownerName: string,
@@ -49,6 +81,7 @@ export function validateGPUInputVectors(
   vectors: GPUInputColumns
 ): void {
   for (const input of schema) {
+    getGPUInputAttributeNames(input);
     const column = vectors[input.columnName];
     if (!column) {
       if (input.required) {

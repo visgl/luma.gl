@@ -14,6 +14,10 @@ export type TextGlyphLayout = {
   glyphFrames: Uint16Array;
   /** Packed atlas page index per glyph. */
   glyphPages: Uint16Array;
+  /** Horizontal pen advance for each source row. */
+  rowAdvances: Float32Array;
+  /** Packed minX, minY, maxX, maxY ink bounds for each source row. */
+  rowBounds: Float32Array;
   /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
 };

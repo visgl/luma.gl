@@ -6,7 +6,6 @@
 import './utils/deep-equal.spec';
 import './utils/split-uniforms-and-bindings.spec';
 import './utils/buffer-layout-order.spec';
-import './utils/buffer-schema.spec';
 
 // model etc
 import './lib/model.spec';

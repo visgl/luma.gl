@@ -97,8 +97,11 @@ Repeated calls are safe. Updating a destroyed object throws.
 
 ## Attribute Resolution
 
-For varying inputs, `columnName` selects the table layout and `attributeName` selects
-the shader attribute. Interleaved layouts retain only attributes selected as varying.
+For varying inputs, `columnName` selects the table layout. `attributeName`
+selects one ordinary shader attribute, while `attributeNames` selects several
+shader-visible views for a composite input. The selected names must exist in the
+table `BufferLayout`. Shared physical layouts are bound once even when they
+expose several attributes, and inactive attribute views are omitted.
 
 For WebGPU constants, compatible values with the same step mode are packed into a
 single buffer layout with `byteStride: 0`. Every draw therefore reads the same payload

@@ -9,9 +9,9 @@ GPU buffers are byte ranges. A layout describes how shader-visible rows and colu
 For the WGSL-facing difference between vertex-fetch layouts and storage-buffer
 layouts, see [Tabular Data in WGSL](./tabular-data-in-wgsl).
 
-When one logical GPU record needs several named field views, use the
-record-oriented [`BufferSchema`](./buffer-schemas) helpers in `@luma.gl/engine`
-instead of hand-writing every shared-buffer attribute offset.
+When one logical GPU record needs several named field views, describe them
+directly with `BufferLayout.attributes`, their byte offsets, and a shared
+`byteStride`.
 
 This page uses three layout terms:
 
@@ -125,5 +125,5 @@ Segmented buffers are still columnar, but the columns share one GPU allocation. 
 
 ## Related References
 
-- [Buffer Schemas and Columnar Records](./buffer-schemas)
+- [GPU Tables](./gpu-tables)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)

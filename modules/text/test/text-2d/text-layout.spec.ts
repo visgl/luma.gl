@@ -5,13 +5,16 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   buildTextGlyphLayout,
+  measureFontAtlasText,
+  type FontAtlas,
+  type TextCodePointSource
+} from '../../src/index';
+import {
   buildTextGpuDictionaryCompressedStream,
   buildTextGpuExpandedStream,
   buildTextGpuGlyphDefinitions,
-  type FontAtlas,
-  type TextCodePointSource,
   type TextDictionaryCodePointSource
-} from '../../src/index';
+} from '../../src/text-2d/experimental';
 import {createTextKerning} from '../../src/text-2d/atlas/text-utils';
 
 const FONT_ATLAS: FontAtlas = {
@@ -72,6 +75,12 @@ test('text layout helpers own atlas offsets, pages, kerning, and GPU definitions
     'layout applies atlas offsets and pair kerning'
   );
   t.deepEqual(Array.from(layout.glyphPages), [1, 2, 2, 1], 'layout retains atlas pages');
+  t.deepEqual(Array.from(layout.rowAdvances), [10, 12], 'layout retains row advances');
+  t.deepEqual(
+    Array.from(layout.rowBounds),
+    [-1, 9, 9, 16, 2, 9, 10, 16],
+    'layout retains canonical row ink bounds'
+  );
   t.deepEqual(Array.from(stream.glyphPages), [0, 1, 2], 'GPU definitions retain atlas pages');
   t.deepEqual(Array.from(stream.glyphKernings), [1, 2, -2, 0], 'GPU stream uses glyph kerning');
   t.deepEqual(
@@ -80,6 +89,39 @@ test('text layout helpers own atlas offsets, pages, kerning, and GPU definitions
     'direct UTF-8 lookup uses the same glyph ids'
   );
   t.ok(characterSet.has('A') && characterSet.has('B'), 'layout collects encountered characters');
+  t.end();
+});
+
+test('text layout and measurement share anchor and baseline semantics', t => {
+  const source = makeTextCodePointSource([[65, 66]]);
+  const layout = buildTextGlyphLayout(source, {
+    fontAtlas: FONT_ATLAS,
+    textAnchor: 'middle',
+    alignmentBaseline: 'top'
+  });
+  const metrics = measureFontAtlasText('AB', FONT_ATLAS, {
+    textAnchor: 'middle',
+    alignmentBaseline: 'top'
+  });
+
+  t.deepEqual(
+    Array.from(layout.glyphOffsets),
+    [-6, 14, 0, 15],
+    'layout applies centered advance and top baseline offsets'
+  );
+  t.equal(metrics.advance, 10, 'measurement applies pair kerning to the final advance');
+  t.equal(layout.rowAdvances[0], metrics.advance, 'layout and measurement share row advance');
+  t.deepEqual(
+    Array.from(layout.rowBounds),
+    [...metrics.bounds.min, ...metrics.bounds.max],
+    'layout and measurement share row bounds'
+  );
+  t.deepEqual(metrics.bounds, {min: [-6, 14], max: [4, 21]}, 'measurement returns ink bounds');
+  t.deepEqual(
+    measureFontAtlasText('', FONT_ATLAS).bounds,
+    {min: [0, 0], max: [0, 0]},
+    'empty text returns finite bounds'
+  );
   t.end();
 });
 

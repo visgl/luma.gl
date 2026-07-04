@@ -5,9 +5,6 @@ import {ExamplesIndex} from '@site/src/components/examples-index';
 <ExamplesIndex
   getThumbnail={item => {
     const exampleName = typeof item === 'string' ? item : item.docId || item.label.toLowerCase();
-    if (exampleName === 'arrow/arrow-text-space-crawl') {
-      return '/images/examples/experimental/text-3d.jpg'
-    }
     if (exampleName === 'v10/gpgpu') {
       return '/images/examples/gpu-tables/gpu-vector-storage-particles.jpg'
     }

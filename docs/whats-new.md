@@ -34,7 +34,6 @@ Target Release Date: Q3, 2026
 - **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
 - **Temporal shader-pass targets** - `ShaderPassRenderer` supports persistent ping-pong history targets, explicit reset, and safe same-target temporal reads and writes.
 - **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`.
-- **[`BufferSchema`](/docs/api-reference/engine/buffer-schema)** - Record-oriented GPU row descriptions lower shared layouts into vertex `BufferLayout`s.
 - **Semantic attribute normalization** - `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0` are normalized to shader attribute names.
 - **Interleaved CPU geometry** - `makeInterleavedGeometry()` packs attributes into one CPU-side vertex buffer.
 - **Interleaved primitive uploads** - Built-in primitives upload as one vertex buffer plus an optional index buffer.
@@ -44,6 +43,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/tables** NEW MODULE
 
+- **Composite GPU inputs** - `GPUInputSchema.attributeNames` maps one logical table column to several shader attributes, allowing a shared matrix buffer to feed portable vertex attributes or a WebGPU storage binding without repacking. Ordinary inputs retain the singular `attributeName`.
 - **Generic GPU tables** - Canonical `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable` runtime classes for reusable non-Arrow-specific GPU table ownership and batching.
 - **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
 - **Vertex storage planning** - `GPUTableBufferPlanner` now checks vertex-stage storage buffer limits before choosing storage-backed table attributes, allowing core WebGPU devices to fall back to vertex attributes when needed.
@@ -75,9 +75,10 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/text** - NEW MODULE
 
-- **GPU-only 2D text** - New atlas, layout, UTF-8 glyph expansion utilities, and flat GPUVector model schemas support deck.gl-style text rendering in `@luma.gl/text`.
-- **Pure GPUVector text models** - New `TextAttributeModel`, `TextStorageModel`, and `TextDictionaryModel` render prepared GPUVector-backed or storage-backed text state while Arrow conversion remains layer-owned.
-- **Arrow text conversion helpers** - `@luma.gl/arrow` exports helpers such as `ArrowTextRenderer`, `resolveArrowTextSourceVectors()`, `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()`, `createArrowTextStorageState()`, and `createArrowTextDictionaryStorageState()` to prepare glyph state from Arrow source vectors.
+- **GPU-only 2D text facade** - `TextRenderer` renders caller-owned `GPUTextData` while selecting attribute, WebGPU storage, or dictionary strategies automatically.
+- **Incremental text streaming** - Arrow chunks produce independent `GPUTextData` objects that append to a stable `TextRenderer` model without rebuilding earlier batches; `GPUTextResources` lets batches and renderers share one uploaded atlas texture.
+- **Experimental text strategies** - Specialized model classes and low-level shader/compute contracts remain available from `@luma.gl/text/experimental` for benchmarking.
+- **Arrow text conversion helpers** - `@luma.gl/arrow` exports `makeGPUTextDataFromArrow()` for automatic strategy selection, plus `ArrowTextRenderer`, source mapping, and low-level conversion helpers for specialized workflows.
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
 - **MSDF text fonts** - `@luma.gl/text` can build or load prebuilt BMFont JSON MSDF atlases, including kerning and multi-page atlas metadata, through the same `FontAtlas` format used by generated bitmap and SDF atlases.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.

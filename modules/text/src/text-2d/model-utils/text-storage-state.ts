@@ -105,30 +105,6 @@ export type TextStorageState = {
   ownedRowBindingResources: TextStorageOwnedResource[];
   /** Glyph definition and render-control resources owned by this storage state. */
   ownedGlyphResources: TextStorageOwnedResource[];
-  /** First batch label origin buffer. */
-  rowPositionsBuffer: TextStorageBuffer;
-  /** First batch packed RGBA8 row color buffer. */
-  rowColorsBuffer: TextStorageBuffer;
-  /** First batch row angle buffer. */
-  rowAnglesBuffer: TextStorageBuffer;
-  /** First batch row text size buffer. */
-  rowSizesBuffer: TextStorageBuffer;
-  /** First batch row pixel offset buffer. */
-  rowPixelOffsetsBuffer: TextStorageBuffer;
-  /** First batch packed row text anchor buffer. */
-  rowTextAnchorsBuffer: TextStorageBuffer;
-  /** First batch packed row alignment baseline buffer. */
-  rowAlignmentBaselinesBuffer: TextStorageBuffer;
-  /** First batch packed row clip rectangle buffer. */
-  rowClipRectsBuffer: Buffer;
-  /** First batch cumulative row glyph start buffer. */
-  rowGlyphStartsBuffer: Buffer;
-  /** First batch row style config uniform buffer. */
-  styleConfigBuffer: DynamicBuffer;
-  /** First render batch row/glyph lookup config uniform buffer. */
-  storageRenderConfigBuffer: DynamicBuffer;
-  /** First generated compact glyph vertex buffer. */
-  compactGlyphVertexData: Buffer;
   /** Releases owned atlas, row, glyph, and generated render resources. */
   destroy: () => void;
 };
@@ -172,6 +148,7 @@ export type TextDictionaryState = Omit<
   | 'batches'
   | 'renderBatches'
   | 'ownedGlyphResources'
+  | 'glyphFramesBuffer'
   | 'rowGlyphStartsBuffer'
   | 'storageRenderConfigBuffer'
   | 'compactGlyphVertexData'
@@ -189,14 +166,6 @@ export type TextDictionaryState = Omit<
   renderBatches: TextDictionaryRenderBatchState[];
   /** Dictionary glyph and render-control resources owned by this dictionary storage state. */
   ownedDictionaryResources: TextStorageOwnedResource[];
-  /** First batch per-row dictionary reference buffer. */
-  rowDictionaryRecordsBuffer: Buffer;
-  /** First batch per-dictionary-value glyph range buffer. */
-  dictionaryGlyphRangesBuffer: Buffer;
-  /** First batch shared dictionary glyph record buffer. */
-  dictionaryGlyphRecordsBuffer: Buffer;
-  /** First render batch dictionary lookup config uniform buffer. */
-  dictionaryRenderConfigBuffer: DynamicBuffer;
 };
 
 export function getFirstTextStorageBatch(

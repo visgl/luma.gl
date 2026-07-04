@@ -10,10 +10,6 @@ import {
   parseFont,
   TextGeometry
 } from '../../src/text-3d/index';
-import {
-  makeArrowText3DGlyphData,
-  makeArrowText3DTextTable
-} from '../../../../examples/arrow/arrow-text-space-crawl/arrow-text-3d-data';
 import {simpleFont} from './data/simple-font';
 import {Vector3} from '@math.gl/core';
 
@@ -48,6 +44,10 @@ test('TextGeometry exposes luma.gl attribute layout', t => {
     (geometry.attributes.positions.value.length / 3) * 2,
     'uvs match vertex count'
   );
+  t.deepEqual(geometry.bounds.min, [0, 0, 0], 'bounds expose the mesh minimum');
+  t.ok(geometry.bounds.max[0] > 0, 'bounds expose the mesh width');
+  t.ok(geometry.bounds.max[1] > 0, 'bounds expose the mesh height');
+  t.equal(geometry.bounds.max[2], 2, 'bounds expose the extrusion depth');
   t.end();
 });
 
@@ -179,37 +179,6 @@ test('Text3D glyph layout centers each row using the current font advances', t =
     secondRowSecondGlyph.offset[0],
     secondRowFirstGlyph.offset[0] + font.getGlyphAdvance('A', 10),
     'later glyphs retain source advance after centered start'
-  );
-  t.end();
-});
-
-test('Arrow 3D text groups repeated glyph ids and keeps only used atlas glyphs', t => {
-  const font = parseFont(simpleFont);
-  const textTable = makeArrowText3DTextTable(['A A']);
-  const glyphAtlas = buildText3DGlyphAtlas(['A A'], {
-    font,
-    size: 10,
-    depth: 2,
-    curveSegments: 2
-  });
-  const glyphData = makeArrowText3DGlyphData(textTable, glyphAtlas);
-  const glyphIds = glyphData.glyphInstanceTable.getChild('glyphIds');
-
-  t.deepEqual(
-    glyphIds?.toArray(),
-    new Uint32Array([0, 0]),
-    'repeated visible glyphs reuse one grouped glyph id'
-  );
-  t.deepEqual(
-    glyphAtlas.glyphs.map(glyph => glyph.glyphCharacter),
-    ['A'],
-    'shared glyph geometry excludes whitespace-only source characters'
-  );
-  t.equal(glyphData.drawRanges.length, 1, 'one used glyph produces one ranged draw');
-  t.equal(
-    glyphData.glyphInstanceTable.batches[0]?.numRows,
-    2,
-    'grouped Arrow record batch retains both visible glyph occurrences'
   );
   t.end();
 });

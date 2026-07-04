@@ -83,10 +83,9 @@ This is not the same thing as vertex attribute layout:
 - padding rules matter for storage arrays, structs, and matrix columns.
 
 When one logical row may need both interpretations, choose names and row layouts
-with the record view in mind. The engine [`BufferSchema`](./buffer-schemas)
-helpers do not generate WGSL structs today, but they intentionally use
-record-oriented vocabulary so attribute-side lowering does not fight the storage
-mental model.
+with the record view in mind. Describe attribute-side views directly with
+`BufferLayout`; keep the corresponding WGSL struct or matrix layout explicit in
+the shader.
 
 ## Columnar Arrow Data
 
@@ -145,6 +144,6 @@ batch-by-batch before dispatch.
 
 - [Attributes](./gpu-attributes)
 - [Tabular Data in WGSL](./tabular-data-in-wgsl)
-- [Buffer Schemas and Columnar Records](./buffer-schemas)
+- [GPU Tables](./gpu-tables)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)

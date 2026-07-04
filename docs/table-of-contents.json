@@ -38,7 +38,7 @@
       },
       {
         "type": "category",
-        "label": "Engine-Level Programming",
+        "label": "Graphics Engine Programming",
         "items": [
           "api-guide/engine/engine",
           "api-guide/engine/interactivity",
@@ -51,28 +51,24 @@
       },
       {
         "type": "category",
-        "label": "GPU-Level Programming",
+        "label": "Core GPU Programming",
         "items": [
           "api-guide/gpu/README",
           "api-guide/gpu/gpu-initialization",
           "api-guide/gpu/gpu-resources",
           "api-guide/gpu/gpu-memory",
           "api-guide/gpu/gpu-memory-layouts",
-          "api-guide/gpu/gpu-tables",
-          "api-guide/gpu/gpu-data-processing",
-          "api-guide/gpu/buffer-schemas",
           "api-guide/gpu/gpu-commands",
-          "api-guide/gpu/gpu-buffers",
-          "api-guide/gpu/gpu-textures",
-          "api-guide/gpu/video-textures",
-          "api-guide/gpu/html-in-canvas",
           "api-guide/gpu/gpu-rendering",
           "api-guide/gpu/gpu-parameters",
           "api-guide/gpu/gpu-bindings",
           "api-guide/gpu/gpu-attributes",
           "api-guide/gpu/gpu-uniforms",
+          "api-guide/gpu/gpu-buffers",
           "api-guide/gpu/gpu-storage-buffers",
-          "api-guide/gpu/tabular-data-in-wgsl"
+          "api-guide/gpu/gpu-textures",
+          "api-guide/gpu/video-textures",
+          "api-guide/gpu/html-in-canvas"
         ]
       },
       {
@@ -84,6 +80,16 @@
           "api-guide/shaders/writing-customizable-shaders",
           "api-guide/shaders/writing-portable-shaders",
           "api-guide/shaders/shader-passes"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "GPGPU Programming",
+        "items": [
+          "api-guide/gpu/README",
+          "api-guide/gpu/gpu-data-processing",
+          "api-guide/gpu/gpu-tables",
+          "api-guide/gpu/tabular-data-in-wgsl"
         ]
       }
     ]
@@ -147,7 +153,6 @@
           "api-reference/engine/clip-space",
           "api-reference/engine/background-texture-model",
           "api-reference/engine/shader-inputs",
-          "api-reference/engine/buffer-schema",
           "api-reference/engine/dynamic-buffer",
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",

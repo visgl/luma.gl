@@ -9,7 +9,7 @@ import {
   supportsGpuUtf8TextExpansion,
   type TextStorageModelProps,
   type TextStorageState
-} from '@luma.gl/text';
+} from '@luma.gl/text/experimental';
 import {
   createArrowTextStorageState,
   createTextStorageStateFromGPUVectors,
@@ -70,14 +70,10 @@ export function convertArrowTextToStorageState(
 export function convertArrowTextToStorageModelProps(
   device: Device,
   props: ArrowTextStorageInputProps
-): TextStorageModelProps & TextStorageState {
+): TextStorageModelProps {
   const storageState = convertArrowTextToStorageState(device, props);
   const {sourceVectors: _sourceVectors, rowIndexColumn: _rowIndexColumn, ...modelProps} = props;
-  return {
-    ...modelProps,
-    ...storageState,
-    ownsStorageState: true
-  } as TextStorageModelProps & TextStorageState;
+  return {...modelProps, storageState};
 }
 
 export type {ConvertedArrowTextData, ConvertArrowTextProps};
