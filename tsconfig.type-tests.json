@@ -37,7 +37,7 @@
   "include": [
     "modules/shadertools/test/lib/uniform-types.spec.ts",
     "modules/engine/test/shader-inputs-types.spec.ts",
-    "modules/tables/test/table/gpu-data-types.ts"
+    "modules/tables/test/table/gpu-data-types.node.spec.ts"
   ],
   "exclude": [
     "modules/**/dist",
