@@ -11,13 +11,23 @@ import {
 } from '@luma.gl/core';
 import type {GPUVectorFormat} from './gpu-vector-format';
 
-/** Named fixed-width memory formats stored in one interleaved GPU data row. */
+/**
+ * Named fixed-width memory formats stored in one interleaved GPU data row.
+ * Object insertion order defines field declaration order.
+ */
 export type GPUDataStructFields = Readonly<Record<string, VertexFormat>>;
 
-/** Supported physical packing rules for one GPU data struct row. */
+/**
+ * Supported physical packing rules for one GPU data struct row.
+ * `wgsl-storage` follows WGSL storage alignment; `packed` follows WebGPU vertex alignment.
+ */
 export type GPUDataStructLayout = 'wgsl-storage' | 'packed';
 
-/** Computed physical metadata for one field in a GPU data struct row. */
+/**
+ * Computed physical metadata for one field in a GPU data struct row.
+ *
+ * @typeParam Format - Fixed-width format stored for the field.
+ */
 export type GPUDataStructField<Format extends VertexFormat = VertexFormat> = Readonly<{
   /** Fixed-width memory format stored for this field. */
   format: Format;
@@ -27,7 +37,13 @@ export type GPUDataStructField<Format extends VertexFormat = VertexFormat> = Rea
   byteLength: number;
 }>;
 
-/** Physical format for named fixed-width fields interleaved in one GPU data row. */
+/**
+ * Canonical physical metadata for named fixed-width fields interleaved in one GPU data row.
+ * The constructor derives this immutable object from an inline field declaration.
+ *
+ * @typeParam Fields - Field names and fixed-width formats in declaration order.
+ * @typeParam Layout - Physical alignment rules applied to the fields.
+ */
 export type GPUDataStructFormat<
   Fields extends GPUDataStructFields = GPUDataStructFields,
   Layout extends GPUDataStructLayout = GPUDataStructLayout
@@ -46,19 +62,28 @@ export type GPUDataStructFormat<
   rowByteLength: number;
 }>;
 
-/** Canonical physical metadata accepted by GPUData. */
+/** Canonical physical metadata retained by a `GPUData` instance. */
 export type GPUDataFormat = GPUVectorFormat | GPUDataStructFormat;
 
-/** Format declaration accepted by the GPUData constructor. */
+/**
+ * Scalar/list format string or inline struct fields accepted by the `GPUData` constructor.
+ *
+ * @internal
+ */
 export type GPUDataFormatDeclaration = GPUVectorFormat | GPUDataStructFields;
 
-/** Options for deriving a vertex buffer layout from a GPU data struct format. */
+/** Options for lowering a GPU data struct format into a vertex buffer layout. */
 export type BufferLayoutFromGPUDataStructFormatOptions = {
   /** Whether rows advance per vertex or per instance. */
   stepMode?: 'vertex' | 'instance';
 };
 
-/** Returns true when a GPU data format describes named interleaved fields. */
+/**
+ * Tests whether canonical GPU data metadata describes named interleaved fields.
+ *
+ * @param format - Canonical GPU data metadata to inspect.
+ * @returns `true` when `format` is a `GPUDataStructFormat`.
+ */
 export function isGPUDataStructFormat(
   format: GPUDataFormat | undefined
 ): format is GPUDataStructFormat {
@@ -67,7 +92,12 @@ export function isGPUDataStructFormat(
 
 /**
  * Normalizes named physical field formats into one immutable interleaved row format.
- * @internal GPUData constructor implementation.
+ *
+ * @param fieldFormats - Named fixed-width formats in declaration order.
+ * @param layout - Physical alignment rules to apply.
+ * @returns Canonical field offsets and row metadata.
+ *
+ * @internal
  */
 export function normalizeGPUDataStructFormat<
   const Fields extends GPUDataStructFields,
@@ -85,7 +115,14 @@ export function normalizeGPUDataStructFormat<
   ) as GPUDataStructFormat<Fields, Layout>;
 }
 
-/** Converts physical GPU data struct metadata into an interleaved vertex buffer layout. */
+/**
+ * Converts physical GPU data struct metadata into an interleaved vertex buffer layout.
+ *
+ * @param name - Logical buffer binding name.
+ * @param format - Canonical struct metadata to lower.
+ * @param options - Optional vertex step mode.
+ * @returns A buffer layout that preserves field order, offsets, formats, and row stride.
+ */
 export function getBufferLayoutFromGPUDataStructFormat(
   name: string,
   format: GPUDataStructFormat,
@@ -103,6 +140,7 @@ export function getBufferLayoutFromGPUDataStructFormat(
   };
 }
 
+/** Computes the minimum padding permitted by WebGPU vertex buffer layout rules. */
 function makePackedGPUDataStructFormat<Fields extends GPUDataStructFields>(
   fieldEntries: [keyof Fields & string, VertexFormat][]
 ): GPUDataStructFormat<Fields, 'packed'> {
@@ -117,6 +155,7 @@ function makePackedGPUDataStructFormat<Fields extends GPUDataStructFields>(
         `Packed GPUData struct field "${fieldName}" uses WebGL-only format ${format}`
       );
     }
+    // WebGPU vertex attributes align to their byte width, capped at four bytes.
     byteOffset = alignTo(byteOffset, Math.min(4, formatInfo.byteLength));
     fieldLayouts.push([
       fieldName,
@@ -140,6 +179,7 @@ function makePackedGPUDataStructFormat<Fields extends GPUDataStructFields>(
   }) as GPUDataStructFormat<Fields, 'packed'>;
 }
 
+/** Computes WGSL storage offsets using shader types that can carry each physical format. */
 function makeStorageGPUDataStructFormat<Fields extends GPUDataStructFields>(
   fieldEntries: [keyof Fields & string, VertexFormat][]
 ): GPUDataStructFormat<Fields, 'wgsl-storage'> {
@@ -177,6 +217,7 @@ function makeStorageGPUDataStructFormat<Fields extends GPUDataStructFields>(
   }) as GPUDataStructFormat<Fields, 'wgsl-storage'>;
 }
 
+/** Returns the WGSL scalar or vector carrier used to lay out one physical field. */
 function getStorageType(format: VertexFormat): VariableShaderType {
   const formatInfo = vertexFormatDecoder.getVertexFormatInfo(format);
   switch (formatInfo.type) {
@@ -187,12 +228,14 @@ function getStorageType(format: VertexFormat): VariableShaderType {
     case 'uint32':
       return getComponentStorageType('u32', formatInfo.components);
     default: {
+      // Compact and normalized formats are stored in one or more raw u32 words.
       const wordCount = Math.ceil(formatInfo.byteLength / 4);
       return getComponentStorageType('u32', wordCount as 1 | 2);
     }
   }
 }
 
+/** Builds a scalar or vector shader type for a primitive carrier and component count. */
 function getComponentStorageType(
   primitiveType: 'f32' | 'i32' | 'u32',
   components: 1 | 2 | 3 | 4
@@ -200,6 +243,7 @@ function getComponentStorageType(
   return components === 1 ? primitiveType : `vec${components}<${primitiveType}>`;
 }
 
+/** Rounds a byte offset up to the requested positive alignment. */
 function alignTo(value: number, alignment: number): number {
   return Math.ceil(value / alignment) * alignment;
 }

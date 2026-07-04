@@ -96,6 +96,7 @@ export class GPURecordBatch<T extends GPUTypeMap = GPUTypeMap> {
   }
 }
 
+/** Returns the shared row count after validating every named data chunk. */
 function getGPUDataCollectionRowCount<T extends GPUTypeMap>(
   gpuData: GPURecordBatchFromDataProps<T>['gpuData'],
   explicitNumRows?: number
@@ -113,6 +114,7 @@ function getGPUDataCollectionRowCount<T extends GPUTypeMap>(
   return numRows;
 }
 
+/** Returns producer-supplied layouts or synthesizes layouts from typed data chunks. */
 function getGPUDataCollectionBufferLayout<T extends GPUTypeMap>(
   gpuData: GPURecordBatchFromDataProps<T>['gpuData'],
   explicitBufferLayout?: BufferLayout[]
@@ -161,6 +163,7 @@ function synthesizeGPUDataBufferLayout(name: string, data: GPUData): BufferLayou
   ];
 }
 
+/** Returns producer-supplied fields or synthesizes batch fields from typed data chunks. */
 function getGPUDataCollectionFields<T extends GPUTypeMap>(
   gpuData: GPURecordBatchFromDataProps<T>['gpuData'],
   explicitFields: GPUField[] | undefined,

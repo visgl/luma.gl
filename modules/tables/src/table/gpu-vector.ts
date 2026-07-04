@@ -424,7 +424,9 @@ function getResolvedGPUVectorLayout<T extends GPUVectorFormat>(props: {
   };
 }
 
+/** Returns the first chunk format using the vector's shared generic specialization. */
 function getFirstGPUVectorDataFormat<T extends GPUVectorFormat>(data: GPUData<T>[]): T | undefined {
+  // GPUVector validation guarantees that every chunk uses the vector's shared format T.
   return data[0]?.format as T | undefined;
 }
 

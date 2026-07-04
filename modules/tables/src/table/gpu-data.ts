@@ -19,10 +19,16 @@ import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format'
 /** Optional caller-owned metadata retained on a GPU data range. */
 export type GPUDataReadbackMetadata = any;
 
-// Remains disjoint from string layouts when example CI disables strict null checks.
+/**
+ * Private scalar specialization marker. Unlike `null` or `undefined`, a unique symbol remains
+ * disjoint from string layouts when downstream projects disable strict null checks.
+ */
 declare const SCALAR_GPU_DATA_LAYOUT: unique symbol;
+/** Type of the private scalar specialization marker. */
 type ScalarGPUDataLayout = typeof SCALAR_GPU_DATA_LAYOUT;
+/** Internal discriminator between scalar/list and struct `GPUData` specializations. */
 type GPUDataLayout = GPUDataStructLayout | ScalarGPUDataLayout;
+/** Maps constructor declarations to the canonical metadata retained by `GPUData.format`. */
 type GPUDataFormatT<
   Format extends GPUDataFormatDeclaration,
   Layout extends GPUDataLayout
@@ -60,7 +66,14 @@ type GPUDataFromBufferBaseProps = {
   dataType?: unknown;
 };
 
-/** Constructor props that wrap one existing GPU data buffer. */
+/**
+ * Constructor props that wrap one existing GPU data buffer.
+ * Scalar/list declarations accept a format string and reject `layout`; struct declarations require
+ * named fixed-width fields and optionally select physical alignment rules.
+ *
+ * @typeParam Format - Scalar/list format string or inline struct field declaration.
+ * @typeParam Layout - Struct alignment rules, defaulting to `wgsl-storage`.
+ */
 export type GPUDataFromBufferProps<
   Format extends GPUDataFormatDeclaration = GPUVectorFormat,
   Layout extends GPUDataStructLayout = 'wgsl-storage'
@@ -82,11 +95,13 @@ export type GPUDataFromBufferProps<
           })
   );
 
+/** Internal constructor props for scalar and list formats. */
 type GPUDataScalarFromBufferProps<Format extends GPUVectorFormat> = GPUDataFromBufferBaseProps & {
   format?: Format;
   layout?: never;
 };
 
+/** Internal constructor props for inline struct field declarations. */
 type GPUDataStructFromBufferProps<
   Fields extends GPUDataStructFields,
   Layout extends GPUDataStructLayout
@@ -95,11 +110,13 @@ type GPUDataStructFromBufferProps<
   layout?: Layout;
 };
 
+/** Implements the single-buffer ownership protocol shared by all typed `GPUData` variants. */
 class GPUDataBufferOwner {
   /** GPU buffer containing this chunk's bytes. */
   readonly buffer: Buffer | DynamicBuffer;
   private ownsDataBuffer: boolean;
 
+  /** Creates an owner or borrower for one backing buffer. */
   constructor(buffer: Buffer | DynamicBuffer, ownsBuffer: boolean) {
     this.buffer = buffer;
     this.ownsDataBuffer = ownsBuffer;
@@ -154,6 +171,7 @@ class GPUDataImpl extends GPUDataBufferOwner {
   readonly nullBitmap?: Uint8Array;
   /** Optional number of uploaded value bytes referenced by this data chunk. */
   readonly valueByteLength?: number;
+  /** Normalizes constructor declarations and derives missing row metadata. */
   constructor(
     props:
       | GPUDataFromBufferProps<GPUVectorFormat>
@@ -176,6 +194,8 @@ class GPUDataImpl extends GPUDataBufferOwner {
       dataType
     } = props;
     super(buffer, ownsBuffer);
+
+    // Store only canonical metadata; inline field declarations are constructor input syntax.
     let canonicalFormat: GPUDataFormat | undefined;
     if (!format) {
       canonicalFormat = undefined;
@@ -206,6 +226,8 @@ class GPUDataImpl extends GPUDataBufferOwner {
       byteStride ??
       this.stride;
     this.byteStride = byteStride ?? structFormat?.byteStride ?? this.rowByteLength;
+
+    // Explicit row overrides may add padding but cannot truncate the computed struct layout.
     if (structFormat) {
       if (this.rowByteLength < structFormat.rowByteLength) {
         throw new Error(
@@ -307,13 +329,21 @@ interface GPUDataBase<Format extends GPUDataFormat = GPUDataFormat> {
   destroy(): void;
 }
 
-/** Typed GPU data object for scalar, list, or inline struct format declarations. */
+/**
+ * GPU memory and canonical format metadata for one contiguous data chunk.
+ * Inline struct field declarations retain their field names in the type and expose typed child
+ * views, while scalar and list formats preserve the existing `GPUVectorFormat` specialization.
+ *
+ * @typeParam Format - Scalar/list format string or inline struct field declaration.
+ * @typeParam Layout - Struct alignment rules; omitted for scalar and list formats.
+ */
 export type GPUData<
   Format extends GPUDataFormatDeclaration = GPUVectorFormat,
   Layout extends GPUDataLayout = ScalarGPUDataLayout
 > = Omit<GPUDataBase<GPUDataFormatT<Format, Layout>>, 'getChild' | 'getChildAt'> &
   GPUDataChildMethods<Format, Layout>;
 
+/** Selects broad scalar child methods or field-aware struct child methods. */
 type GPUDataChildMethods<
   Format extends GPUDataFormatDeclaration,
   Layout extends GPUDataLayout
@@ -329,16 +359,21 @@ type GPUDataChildMethods<
       getChildAt(index: number): GPUDataView | null;
     };
 
+/** Constructor overloads that infer scalar formats, default storage structs, and explicit layouts. */
 type GPUDataConstructor = {
+  /** Constructs scalar or list data while preserving its literal format. */
   new <const Format extends GPUVectorFormat = GPUVectorFormat>(
     props: GPUDataScalarFromBufferProps<Format>
   ): GPUData<Format>;
+  /** Constructs struct data using the default `wgsl-storage` layout. */
   new <const Fields extends GPUDataStructFields>(
     props: GPUDataStructFromBufferProps<Fields, 'wgsl-storage'>
   ): GPUData<Fields, 'wgsl-storage'>;
+  /** Constructs struct data using an explicitly selected layout. */
   new <const Fields extends GPUDataStructFields, const Layout extends GPUDataStructLayout>(
     props: GPUDataStructFromBufferProps<Fields, Layout> & {layout: Layout}
   ): GPUData<Fields, Layout>;
+  /** Broad runtime signature used when callers do not retain literal format information. */
   new (
     props:
       | GPUDataScalarFromBufferProps<GPUVectorFormat>
@@ -346,10 +381,18 @@ type GPUDataConstructor = {
   ): GPUData;
 };
 
-/** Typed constructor for scalar, list, and inline struct GPUData declarations. */
+/**
+ * Typed constructor for scalar, list, and inline struct `GPUData` declarations.
+ * Inline struct fields are normalized into canonical `GPUDataStructFormat` metadata at runtime.
+ */
 export const GPUData = GPUDataImpl as unknown as GPUDataConstructor;
 
-/** Borrowed view type returned for one named GPU data struct field. */
+/**
+ * Borrowed view type returned for one named GPU data struct field.
+ *
+ * @typeParam Format - Inline struct field declaration.
+ * @typeParam Name - Requested field name.
+ */
 export type GPUDataChild<Format extends GPUDataFormatDeclaration, Name extends string> = [
   Extract<Format, GPUDataStructFields>
 ] extends [never]
@@ -360,7 +403,11 @@ export type GPUDataChild<Format extends GPUDataFormatDeclaration, Name extends s
       : never
     : never;
 
-/** Borrowed view type returned for a GPU data struct field selected by index. */
+/**
+ * Union of borrowed view types returned when selecting a struct field by numeric index.
+ *
+ * @typeParam Format - Inline struct field declaration.
+ */
 export type GPUDataChildAt<Format extends GPUDataFormatDeclaration> = [
   Extract<Format, GPUDataStructFields>
 ] extends [never]
