@@ -14,9 +14,9 @@ lowest-level storage object in `@luma.gl/tables`: each `GPUData` owns or borrows
 its own `Buffer` or `DynamicBuffer`, and higher-level table objects refer to
 buffers through `GPUData`.
 
-`GPUDataView` is the non-owning physical counterpart: one fixed-width format,
-value count, byte offset, and byte stride over any buffer-like resource. It does
-not carry logical list topology, validity, adapter metadata, or ownership.
+[`GPUDataView`](/docs/api-reference/tables/gpu-data-view) is the non-owning
+physical counterpart: one fixed-width format, value count, byte offset, and byte
+stride over any buffer-like resource.
 
 ## Usage
 
@@ -57,36 +57,6 @@ When the input starts as Apache Arrow, prefer
 [`makeGPUDataFromArrowData()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`; it uploads Arrow values into GPU buffers and fills in the
 required format, layout, and readback metadata.
-
-## GPUDataView
-
-```ts
-import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/tables';
-
-const positions = new GPUDataView({
-  buffer,
-  format: 'float32x3',
-  length: vertexCount,
-  byteOffset: 4,
-  byteStride: 16
-});
-
-const colors = makeGPUDataViewFromAttribute({
-  buffer,
-  bufferLayout,
-  attributeName: 'colors',
-  length: vertexCount
-});
-```
-
-`GPUDataView` derives `elementByteLength` from its fixed-width format and
-`byteLength` from its value count and stride. Construction rejects invalid or
-out-of-bounds ranges. Destroying a view is unnecessary because views never own
-their buffers.
-
-`makeGPUDataViewFromAttribute()` resolves one named attribute from an explicit
-interleaved `BufferLayout`, combines the caller's base and attribute offsets, and
-returns a borrowed strided view without allocating or copying GPU storage.
 
 ## Struct Formats
 

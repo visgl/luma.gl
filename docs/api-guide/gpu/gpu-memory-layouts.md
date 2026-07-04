@@ -100,8 +100,12 @@ Compute pipelines use storage bindings. They read raw storage values, so normali
 | `Buffer` | One buffer per column | One buffer for several columns | One buffer for several column segments |
 | `BufferLayout` | `name` plus `format` | `attributes` with offsets and shared `byteStride` | Multiple layouts or explicit segment metadata |
 | `GPUData` | One fixed-width format | `GPUDataStructFormat` with named child views | Explicit segment views |
+| [`GPUDataView`](/docs/api-reference/tables/gpu-data-view) | Contiguous borrowed values | Strided borrowed child or attribute values | Contiguous borrowed values at a segment offset |
 | `GPUVector` | One logical vector format | Explicit interleaved construction | Numeric view plus segment metadata |
+| `GPURecordBatch` | Named packed `GPUData` chunks | Named chunks with producer-supplied `BufferLayout` | Named borrowed segment chunks |
 | `GPUTable` | Multiple vectors | Interleaved vector contributes multiple attributes | Future table layout can map names to segments |
+
+`GPUDataView` describes physical fixed-width values without owning their buffer. `GPURecordBatch` groups named `GPUData` chunks and their layouts but does not choose or change the underlying memory layout.
 
 ## Operation Patterns
 
