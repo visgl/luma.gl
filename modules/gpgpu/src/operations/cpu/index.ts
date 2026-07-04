@@ -15,7 +15,7 @@ import {swizzle} from './swizzle';
 /** CPU fallback backend for built-in GPGPU operations. Registered by default. */
 export {
   arithmetic,
-  'convert-colors': convertColors,
+  convertColors,
   dot,
   equalAll,
   extent,

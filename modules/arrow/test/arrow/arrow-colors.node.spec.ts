@@ -10,7 +10,8 @@ import {
   makeArrowFixedSizeListVector,
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
-import {backendRegistry, cpuBackend} from '@luma.gl/gpgpu';
+import {backendRegistry} from '@luma.gl/gpgpu';
+import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -36,9 +37,10 @@ test('convertArrowColors uploads Uint8 RGB/RGBA rows and returns a Uint8 RGBA GP
   t.equal(rgbResult.stride, 4, 'returns RGBA stride');
   t.equal(rgbResult.byteStride, 4, 'returns tightly packed byte stride');
   t.equal(rgbResult.rowByteLength, 4, 'returns tightly packed row byte length');
-  t.ok(arrow.DataType.isFixedSizeList(rgbResult.type), 'returns FixedSizeList type');
-  t.equal(rgbResult.type.listSize, 4, 'returns four-channel rows');
-  t.ok(rgbResult.type.children[0].type instanceof arrow.Uint8, 'returns Uint8 child values');
+  const rgbResultType = rgbResult.dataType as arrow.FixedSizeList<arrow.Uint8>;
+  t.ok(arrow.DataType.isFixedSizeList(rgbResultType), 'returns FixedSizeList type');
+  t.equal(rgbResultType.listSize, 4, 'returns four-channel rows');
+  t.ok(rgbResultType.children[0].type instanceof arrow.Uint8, 'returns Uint8 child values');
   t.deepEqual(
     getArrowFixedSizeListValues(await readArrowGPUVectorAsync(rgbResult)),
     new Uint8Array([255, 128, 0, 255, 1, 2, 3, 255]),
