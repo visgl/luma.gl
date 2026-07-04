@@ -11,7 +11,7 @@ import {
   POINT_TRAIL_LENGTH_MILLISECONDS
 } from './arrow-point-generator';
 import {ArrowPointRenderer} from './arrow-point-renderer';
-import {ArrowPointSource} from './arrow-point-source';
+import {ArrowPointDataSource} from './arrow-point-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Points: XY/XYM/XYZM';
@@ -22,29 +22,29 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
   static info = makeArrowExamplePanelHostHtml();
   static props = {useDevicePixels: true};
   readonly layer: ArrowPointRenderer;
-  readonly source: ArrowPointSource;
+  readonly dataSource: ArrowPointDataSource;
   currentTimeMilliseconds = 0;
   lastRenderSeconds: number | null = null;
 
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowPointRenderer(device as Device, {modelMode: 'attributes'});
-    this.source = new ArrowPointSource(
-      device as Device,
-      update => {
+    this.dataSource = new ArrowPointDataSource({
+      device: device as Device,
+      onDataUpdated: update => {
         this.currentTimeMilliseconds = 0;
         this.lastRenderSeconds = null;
         this.layer.setProps(update);
       },
-      props => {
+      onRendererPropsUpdated: props => {
         this.layer.setProps(props);
-        this.source.setMetrics(this.layer.getMetrics());
+        this.dataSource.setMetrics(this.layer.getMetrics());
       }
-    );
+    });
   }
 
   override async onInitialize(): Promise<void> {
-    this.source.initialize();
+    this.dataSource.initialize();
   }
 
   override onRender({aspect, device, time, _mousePosition}: AnimationProps): void {
@@ -52,7 +52,7 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
     if (this.lastRenderSeconds === null) this.lastRenderSeconds = seconds;
     const elapsedSeconds = Math.max(seconds - this.lastRenderSeconds, 0);
     this.lastRenderSeconds = seconds;
-    if (this.source.animate && this.source.timeKind !== 'none') {
+    if (this.dataSource.animate && this.dataSource.timeKind !== 'none') {
       this.currentTimeMilliseconds =
         (this.currentTimeMilliseconds +
           elapsedSeconds * CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND) %
@@ -66,13 +66,13 @@ export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTempla
     this.layer.draw(renderPass, {aspect});
     renderPass.end();
     this.layer.pick(_mousePosition, {
-      force: this.source.animate && this.source.timeKind !== 'none'
+      force: this.dataSource.animate && this.dataSource.timeKind !== 'none'
     });
-    this.source.setCurrentTime(this.currentTimeMilliseconds);
+    this.dataSource.setCurrentTime(this.currentTimeMilliseconds);
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.layer.destroy();
   }
 }

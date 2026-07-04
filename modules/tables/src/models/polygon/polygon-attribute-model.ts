@@ -6,6 +6,7 @@ import type {BufferLayout, Device} from '@luma.gl/core';
 import {getIndexPickingModule, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
 import {GPUTableModel, type GPUTableModelProps} from '../../engine/gpu-table-model';
 import {GPURecordBatch} from '../../table/gpu-record-batch';
+import {GPUConstant} from '../../table/gpu-constant';
 import type {GPUTypeMap} from '../../table/gpu-schema';
 import {GPUTable} from '../../table/gpu-table';
 import {getGPUVectorData} from '../../table/gpu-vector-utils';
@@ -20,6 +21,7 @@ import {
   POLYGON_ATTRIBUTE_VS_GLSL,
   POLYGON_ATTRIBUTE_WGSL_SHADER,
   getPolygonPickingParameters,
+  mergePolygonShaderModules,
   POLYGON_FS_GLSL,
   POLYGON_PICKING_FS_GLSL,
   type PolygonShaderInputs
@@ -55,7 +57,9 @@ export class PolygonAttributeModel extends GPUTableModel {
 
   /** Appends one retained prepared polygon batch without repacking its GPU buffers. */
   addBatch(props: PolygonBatchProps): void {
+    assertPolygonBatchColorMode(this.polygonTable, props.colors);
     this.polygonTable.addBatch(createPolygonAttributeRecordBatch(props));
+    this.setTable(this.polygonTable);
     this.setNeedsRedraw('Polygon batch added');
   }
 }
@@ -96,14 +100,15 @@ function preparePolygonAttributeModel(
         modelProps.fs ??
         (picking && indexPickingSupported ? POLYGON_PICKING_FS_GLSL : POLYGON_FS_GLSL),
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
-      modules: mergeHostShaderModules(
+      modules: mergePolygonShaderModules(
         [picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)],
         modelProps.modules ?? []
       ) as never,
-      shaderLayout: POLYGON_ATTRIBUTE_SHADER_LAYOUT,
+      shaderLayout: modelProps.shaderLayout ?? POLYGON_ATTRIBUTE_SHADER_LAYOUT,
       shaderInputs,
       table,
       tableCount: 'none',
+      gpuInputSchema: POLYGON_GPU_INPUT_SCHEMA,
       topology: 'triangle-list',
       ...(picking && indexPickingSupported
         ? {
@@ -116,42 +121,45 @@ function preparePolygonAttributeModel(
   };
 }
 
-function mergeHostShaderModules(
-  defaultModules: unknown[],
-  hostModules: NonNullable<PolygonAttributeModelProps['modules']>
-): unknown[] {
-  const hostModuleNames = new Set(hostModules.map(module => module.name));
-  return [
-    ...defaultModules.filter(module => {
-      const moduleName = (module as {name?: string}).name;
-      return !moduleName || !hostModuleNames.has(moduleName);
-    }),
-    ...hostModules
-  ];
-}
-
 function createPolygonAttributeTable(props: PolygonBatchProps): GPUTable {
   const batch = createPolygonAttributeRecordBatch(props);
-  return new GPUTable({batches: [batch]});
+  return new GPUTable({
+    batches: [batch],
+    constants: props.colors instanceof GPUConstant ? {colors: props.colors} : undefined
+  });
 }
 
 function createPolygonAttributeRecordBatch(props: PolygonBatchProps): GPURecordBatch {
-  const {sourceInfo, nullCount = 0, ...vectors} = props;
-  assertPolygonGPUVectorInputs('PolygonAttributeModel', vectors);
+  const {sourceInfo, nullCount = 0, colors, ...vectors} = props;
+  assertPolygonGPUVectorInputs('PolygonAttributeModel', {...vectors, colors});
+  const varyingVectors = colors instanceof GPUConstant ? vectors : {...vectors, colors};
   return new GPURecordBatch<GPUTypeMap>({
     gpuData: Object.fromEntries(
-      Object.entries(vectors).map(([name, vector]) => [name, getGPUVectorData(vector)])
+      Object.entries(varyingVectors).map(([name, vector]) => [name, getGPUVectorData(vector)])
     ),
-    bufferLayout: getPolygonAttributeBufferLayout(vectors),
+    bufferLayout: getPolygonAttributeBufferLayout(varyingVectors),
     sourceInfo,
     nullCount
   });
 }
 
-function getPolygonAttributeBufferLayout(vectors: PolygonGPUVectors): BufferLayout[] {
+function getPolygonAttributeBufferLayout(
+  vectors: Omit<PolygonGPUVectors, 'colors'> & {
+    colors?: Exclude<PolygonGPUVectors['colors'], GPUConstant>;
+  }
+): BufferLayout[] {
   return [
     {name: 'positions', byteStride: vectors.positions.byteStride, format: 'float32x4'},
-    {name: 'colors', byteStride: vectors.colors.byteStride, format: 'unorm8x4'},
+    ...(vectors.colors
+      ? [{name: 'colors', byteStride: vectors.colors.byteStride, format: 'unorm8x4'} as const]
+      : []),
     {name: 'rowIndices', byteStride: vectors.rowIndices.byteStride, format: 'uint32'}
   ];
+}
+
+function assertPolygonBatchColorMode(table: GPUTable, colors: PolygonBatchProps['colors']): void {
+  const tableUsesConstant = Boolean(table.gpuConstants['colors']);
+  if (tableUsesConstant !== colors instanceof GPUConstant) {
+    throw new Error('PolygonAttributeModel appended batches must use the same color input mode');
+  }
 }

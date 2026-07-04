@@ -313,6 +313,7 @@ function preparePathAttributeModel(props: PathAttributeModelProps): PreparedPath
   if (!firstRenderBatch) {
     throw new Error('PathAttributeModel requires at least one prepared path render batch');
   }
+  const explicitShaderAttributeNames = getExplicitShaderAttributeNames(props);
 
   return {
     modelProps: {
@@ -324,7 +325,10 @@ function preparePathAttributeModel(props: PathAttributeModelProps): PreparedPath
         ...(props.attributes || {}),
         ...getPathAttributeModelBatchAttributes(shaderLayout, firstRenderBatch)
       },
-      bufferLayout: [...(props.bufferLayout || []), ...createArrowPathBufferLayouts(shaderLayout)],
+      bufferLayout: [
+        ...(props.bufferLayout || []),
+        ...createArrowPathBufferLayouts(shaderLayout, explicitShaderAttributeNames)
+      ],
       topology: props.topology ?? 'line-list',
       vertexCount: props.vertexCount ?? 2,
       instanceCount: props.pathState.segmentLayout.segmentCount,
@@ -415,8 +419,29 @@ function arePathOffsetsEqual(left: Int32Array, right: Int32Array): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function createArrowPathBufferLayouts(shaderLayout: ShaderLayout): BufferLayout[] {
-  const shaderAttributeNames = new Set(shaderLayout.attributes.map(attribute => attribute.name));
+function getExplicitShaderAttributeNames(props: PathAttributeModelProps): Set<string> {
+  const attributeNames = new Set(Object.keys(props.constantAttributes || {}));
+  for (const layout of props.bufferLayout || []) {
+    if (layout.attributes) {
+      for (const attribute of layout.attributes) {
+        attributeNames.add(attribute.attribute);
+      }
+    } else {
+      attributeNames.add(layout.name);
+    }
+  }
+  return attributeNames;
+}
+
+function createArrowPathBufferLayouts(
+  shaderLayout: ShaderLayout,
+  excludedAttributeNames: Set<string>
+): BufferLayout[] {
+  const shaderAttributeNames = new Set(
+    shaderLayout.attributes
+      .map(attribute => attribute.name)
+      .filter(attributeName => !excludedAttributeNames.has(attributeName))
+  );
   const expandedAttributes: NonNullable<BufferLayout['attributes']> = [];
   if (shaderAttributeNames.has(SEGMENT_START_POSITIONS_COLUMN)) {
     expandedAttributes.push({

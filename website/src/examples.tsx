@@ -5,14 +5,17 @@ import {
   DeviceTabs,
   ExampleHeader,
   ExamplePage,
+  getCanvasContainer,
   InfoBox,
   LumaExample,
   ReactExample,
   type ExampleDisplayProps,
   useStore
 } from './react-luma';
+import type {Device} from '@luma.gl/core';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
+import {makeArrowExamplePanelHostHtml} from '../../examples/arrow/arrow-example-panels';
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
@@ -104,67 +107,29 @@ type WebsiteExampleProps = ExampleDisplayProps & {
 type DeckExampleHandle = {
   finalize: () => void;
 };
-type CreateDeckExample = (parent: HTMLDivElement) =>
+type CreateDeckExample = (
+  parent: HTMLDivElement,
+  options: {device: Device}
+) =>
   | DeckExampleHandle
   | Promise<DeckExampleHandle>;
 type DeckArrowLayerPanelProps = {
   id: string;
   title: string;
-  description: string;
-  metrics: readonly {label: string; value: string}[];
 };
 
-function escapeDeckArrowPanelHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function makeDeckArrowLayerInfoPanel({
-  id,
-  title,
-  description,
-  metrics
-}: DeckArrowLayerPanelProps) {
-  const metricHtml = metrics
-    .map(
-      metric => `
-        <div style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
-          <div style="color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;">
-            ${escapeDeckArrowPanelHtml(metric.label)}
-          </div>
-          <div style="margin-top: 3px; color: #0f172a; font-size: 13px; font-weight: 700;">
-            ${escapeDeckArrowPanelHtml(metric.value)}
-          </div>
-        </div>`
-    )
-    .join('');
-
+function makeDeckArrowLayerInfoPanel({id, title}: DeckArrowLayerPanelProps) {
   return makeHtmlCustomPanel({
     id: `${id}-info`,
     title,
-    html: `
-      <p style="margin: 0 0 12px; color: #475569; font-size: 13px; line-height: 1.5;">
-        ${escapeDeckArrowPanelHtml(description)}
-      </p>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-        ${metricHtml}
-      </div>`
+    html: makeArrowExamplePanelHostHtml()
   });
 }
 
-function DeckArrowLayerPanel({
-  id,
-  title,
-  description,
-  metrics
-}: DeckArrowLayerPanelProps) {
+function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
   const panel = useMemo(
-    () => makeDeckArrowLayerInfoPanel({id, title, description, metrics}),
-    [description, id, metrics, title]
+    () => makeDeckArrowLayerInfoPanel({id, title}),
+    [id, title]
   );
 
   return (
@@ -179,13 +144,27 @@ function DeckArrowLayerPanel({
         pointerEvents: 'none'
       }}
     >
-      <InfoBox
-        id={id}
-        title={title}
-        sourcePath={`examples/deck/${id}/app.ts`}
-        style={{pointerEvents: 'auto'}}
-        panel={panel}
-      />
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12
+        }}
+      >
+        <InfoBox
+          id={id}
+          title={title}
+          sourcePath={`examples/deck/${id}/app.ts`}
+          style={{pointerEvents: 'auto'}}
+          panel={panel}
+        />
+        <DeviceTabs
+          devices={['webgpu', 'webgl2']}
+          style={{flexShrink: 0, marginLeft: 'auto', pointerEvents: 'auto'}}
+        />
+      </div>
     </div>
   );
 }
@@ -198,16 +177,30 @@ function DeckArrowLayerCanvas({
   panel: DeckArrowLayerPanelProps;
 }): React.ReactNode {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const device = useStore(state => state.device);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
+    if (!container || !device) {
       return;
     }
 
+    const deviceCanvas = device.getDefaultCanvasContext().canvas;
+    if (!(deviceCanvas instanceof HTMLCanvasElement)) {
+      throw new Error('Website Deck examples require the shared device canvas to be an HTMLCanvasElement');
+    }
+    Object.assign(deviceCanvas.style, {
+      display: 'block',
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      height: '100%'
+    });
+    container.replaceChildren(deviceCanvas);
+
     let isFinalized = false;
     let deck: DeckExampleHandle | null = null;
-    void Promise.resolve(createDeck(container)).then(createdDeck => {
+    void Promise.resolve(createDeck(container, {device})).then(createdDeck => {
       if (isFinalized) {
         createdDeck.finalize();
         return;
@@ -218,8 +211,10 @@ function DeckArrowLayerCanvas({
     return () => {
       isFinalized = true;
       deck?.finalize();
+      container.replaceChildren();
+      getCanvasContainer().appendChild(deviceCanvas);
     };
-  }, [createDeck]);
+  }, [createDeck, device]);
 
   return (
     <>
@@ -229,68 +224,115 @@ function DeckArrowLayerCanvas({
   );
 }
 
-export const DeckArrowPathLayerExample: React.FC = () => (
+type DeckArrowLayerExampleProps = {
+  embedded?: boolean;
+};
+
+const DECK_ARROW_LAYER_EMBEDDED_STYLE: React.CSSProperties = {
+  boxSizing: 'border-box',
+  height: '640px',
+  minHeight: '640px',
+  margin: '1rem 0 2rem',
+  border: '1px solid var(--ifm-color-emphasis-300)',
+  borderRadius: '8px',
+  overflow: 'hidden'
+};
+
+export const DeckArrowPathLayerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
       createDeck: createArrowPathLayerDeck,
       panel: {
         id: 'arrow-path-layer',
-        title: 'Arrow Path Layer',
-        description:
-          'Variable-length Arrow path columns become GPUVector-backed segment buffers without Deck attribute generation.',
-        metrics: [
-          {label: 'Rows', value: '240 paths'},
-          {label: 'Model', value: 'Attribute'},
-          {label: 'Attributes', value: 'GPUVector'}
-        ]
+        title: 'Arrow Path Layer'
       }
     }}
     showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
   />
 );
 
-export const DeckArrowPolygonLayerExample: React.FC = () => (
+export const DeckArrowPolygonLayerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
       createDeck: createArrowPolygonLayerDeck,
       panel: {
         id: 'arrow-polygon-layer',
-        title: 'Arrow Polygon Layer',
-        description:
-          'Streamed Arrow polygon rows retain GPUVector-backed geometry and styling through tessellation and draw.',
-        metrics: [
-          {label: 'Rows', value: '10k stream'},
-          {label: 'Geometry', value: 'Tessellated'},
-          {label: 'Attributes', value: 'GPUVector'}
-        ]
+        title: 'Arrow Polygon Layer'
       }
     }}
     showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
   />
 );
 
-export const DeckArrowTextLayerExample: React.FC = () => (
+export const DeckArrowTextLayerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
       createDeck: createArrowTextLayerDeck,
       panel: {
         id: 'arrow-text-layer',
-        title: 'Arrow Text Layer',
-        description:
-          'Arrow string and style columns stay columnar while the text renderer prepares GPUVector glyph inputs.',
-        metrics: [
-          {label: 'Rows', value: '800 labels'},
-          {label: 'Model', value: 'Attribute'},
-          {label: 'Attributes', value: 'GPUVector'}
-        ]
+        title: 'Arrow Text Layer'
       }
     }}
     showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
   />
 );
+
+type DeckArrowLayerExampleId = 'path' | 'polygon' | 'text';
+
+const DECK_ARROW_LAYER_DOC_EXAMPLES: Array<{
+  id: DeckArrowLayerExampleId;
+  label: string;
+  Example: React.FC<DeckArrowLayerExampleProps>;
+}> = [
+  {id: 'path', label: 'Paths', Example: DeckArrowPathLayerExample},
+  {id: 'polygon', label: 'Polygons', Example: DeckArrowPolygonLayerExample},
+  {id: 'text', label: 'Text', Example: DeckArrowTextLayerExample}
+];
+
+/** Embeds one live Arrow renderer example at a time in the luma.gl Arrow documentation. */
+export const ArrowRenderingDocsExample: React.FC = () => {
+  const [activeExampleId, setActiveExampleId] = useState<DeckArrowLayerExampleId>('path');
+  const activeExample = DECK_ARROW_LAYER_DOC_EXAMPLES.find(
+    example => example.id === activeExampleId
+  )!;
+  const ActiveExample = activeExample.Example;
+
+  return (
+    <section aria-label="Arrow rendering examples">
+      <div className="docs-page-tabs" role="tablist" aria-label="Arrow renderers">
+        {DECK_ARROW_LAYER_DOC_EXAMPLES.map(example => (
+          <button
+            key={example.id}
+            className={
+              example.id === activeExampleId
+                ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
+                : 'docs-page-tabs__tab'
+            }
+            type="button"
+            role="tab"
+            aria-selected={example.id === activeExampleId}
+            onClick={() => setActiveExampleId(example.id)}
+          >
+            {example.label}
+          </button>
+        ))}
+      </div>
+      <ActiveExample embedded />
+    </section>
+  );
+};
 
 const GPGPU_EXAMPLE_STYLE = `
   .gpgpu-showcase {

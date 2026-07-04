@@ -6,7 +6,7 @@ import type {Panel} from '@deck.gl-community/panels';
 import {makeHtmlCustomPanel} from '../../example-panels';
 import type {GeoArrowRendererMetrics} from './geoarrow-renderer';
 
-const SOURCE_ROWS_ID = 'arrow-geoarrow-source-rows';
+const SOURCE_ROWS_ID = 'arrow-geoarrow-data-source-rows';
 const POINT_ROWS_ID = 'arrow-geoarrow-point-rows';
 const LINE_ROWS_ID = 'arrow-geoarrow-line-rows';
 const POLYGON_ROWS_ID = 'arrow-geoarrow-polygon-rows';

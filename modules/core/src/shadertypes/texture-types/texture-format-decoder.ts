@@ -214,7 +214,7 @@ export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
 
 /** Decode texture format info from the table */
 function getTextureFormatInfoUsingTable(format: TextureFormat): TextureFormatInfo {
-  const info = getTextureFormatDefinition(format);
+  const info = {...getTextureFormatDefinition(format)};
 
   const bytesPerPixel = info.bytesPerPixel || 1;
   const bitsPerChannel = info.bitsPerChannel || [8, 8, 8, 8];

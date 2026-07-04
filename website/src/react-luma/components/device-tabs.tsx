@@ -17,13 +17,13 @@ interface DeviceTabsProps {
 }
 
 const DEFAULT_DEVICE_TYPES: DeviceType[] = [
-  'webgpu-core',
   'webgpu-max',
+  'webgpu-core',
   'webgpu-compatibility',
   'webgl'
 ];
 
-const WEBGPU_DEVICE_TYPES: DeviceType[] = ['webgpu-core', 'webgpu-max', 'webgpu-compatibility'];
+const WEBGPU_DEVICE_TYPES: DeviceType[] = ['webgpu-max', 'webgpu-core', 'webgpu-compatibility'];
 
 const DEVICE_TAB_LABELS: Record<DeviceType, string> = {
   'webgpu-core': 'WebGPU',

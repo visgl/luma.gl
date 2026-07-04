@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type CommandEncoder, type Device} from '@luma.gl/core';
+import {type CommandEncoder, type Device, type ShaderLayout} from '@luma.gl/core';
 import {
   getArrowPickingModules,
   makeArrowRecordBatchSourceInfo
@@ -89,6 +89,12 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
   angle?: number;
   /** Constant fallback row text size used when no row size vector is present. */
   size?: number;
+  /** Attribute-model shader layout override used after Arrow source preparation. */
+  attributeShaderLayout?: ShaderLayout;
+  /** Storage-model shader layout override used after Arrow source preparation. */
+  storageShaderLayout?: ShaderLayout;
+  /** Dictionary-storage shader layout override used after Arrow source preparation. */
+  dictionaryStorageShaderLayout?: ShaderLayout;
   /** Called after one Arrow record batch has been prepared and appended. */
   onDataBatch?: (update: ArrowTextRendererDataBatchUpdate) => void;
   /** Called when renderer-owned Arrow batch loading fails. */
@@ -99,7 +105,15 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
    */
   modelProps?: Pick<
     ModelProps,
-    'source' | 'vs' | 'fs' | 'modules' | 'shaderInputs' | 'shaderAssembler'
+    | 'source'
+    | 'vs'
+    | 'fs'
+    | 'modules'
+    | 'shaderInputs'
+    | 'bufferLayout'
+    | 'attributes'
+    | 'constantAttributes'
+    | 'shaderAssembler'
   >;
 };
 
@@ -273,7 +287,43 @@ export class ArrowTextRenderer extends GPURenderable<
 
   /** Resolves table or record-batch source props, prepares GPUVectors, and constructs a layer. */
   static async create(device: Device, props: ArrowTextRendererProps): Promise<ArrowTextRenderer> {
-    return new ArrowTextRenderer(device, props, await prepareArrowTextInputFromData(device, props));
+    const asyncSource = props.data && Symbol.asyncIterator in props.data ? props.data : null;
+    if (!asyncSource) {
+      return new ArrowTextRenderer(
+        device,
+        props,
+        await prepareArrowTextInputFromData(device, props)
+      );
+    }
+
+    const iterator = getArrowRecordBatchAsyncIterator(asyncSource);
+    const firstResult = await iterator.next();
+    if (firstResult.done) {
+      throw new Error('ArrowTextRenderer data requires at least one Arrow record batch');
+    }
+    const firstRecordBatch = firstResult.value;
+    const initialProps = {...props, data: new arrow.Table([firstRecordBatch])};
+    const renderer = new ArrowTextRenderer(
+      device,
+      initialProps,
+      await prepareArrowTextInputFromData(device, initialProps)
+    );
+    const dataLoadVersion = renderer.beginDataLoad();
+    void renderer.loadDataBatches(
+      {...props, data: replayArrowTextRecordBatches(firstRecordBatch, iterator)},
+      dataLoadVersion,
+      'streamed Arrow text batch'
+    );
+    return renderer;
+  }
+
+  /** Creates a renderer from already prepared GPUVector input. */
+  static createFromPreparedInput(
+    device: Device,
+    props: ArrowTextRendererProps,
+    textInput: ArrowTextRendererInput
+  ): ArrowTextRenderer {
+    return new ArrowTextRenderer(device, props, textInput);
   }
 
   /** Uploads explicit Arrow source vectors and selects the best prepared data representation. */
@@ -594,10 +644,14 @@ export class ArrowTextRenderer extends GPURenderable<
     const angle = props.angle ?? DEFAULT_TEXT_ANGLE;
     const size = props.size ?? DEFAULT_TEXT_SIZE;
     setArrowTextFontAtlasShaderProps(this.shaderInputs, props.fontAtlas);
-    const shaderAssembler = configureArrowTextShaderAssembler(
-      props.modelProps?.shaderAssembler ?? new ShaderAssembler(),
-      this.device.info.shadingLanguage
-    );
+    const shaderAssembler = props.modelProps?.shaderAssembler ?? new ShaderAssembler();
+    const usesCustomShaderSource =
+      this.device.info.shadingLanguage === 'wgsl'
+        ? Boolean(props.modelProps?.source)
+        : Boolean(props.modelProps?.vs || props.modelProps?.fs);
+    if (!usesCustomShaderSource) {
+      configureArrowTextShaderAssembler(shaderAssembler, this.device.info.shadingLanguage);
+    }
     const commonProps = {
       id: props.id,
       fontAtlas: props.fontAtlas,
@@ -620,8 +674,8 @@ export class ArrowTextRenderer extends GPURenderable<
         convertArrowTextToDictionaryModelProps(this.device, {
           ...this.getStorageInputProps(data),
           ...commonProps,
-          source: TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
-          shaderLayout: TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT
+          source: props.modelProps?.source ?? TEXT_DICTIONARY_STORAGE_WGSL_SHADER,
+          shaderLayout: props.dictionaryStorageShaderLayout ?? TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT
         })
       );
     }
@@ -636,13 +690,15 @@ export class ArrowTextRenderer extends GPURenderable<
           ...commonProps,
           rowIndexColumn: modelKind === 'storage-row-indexed',
           source:
-            modelKind === 'storage-row-indexed'
+            props.modelProps?.source ??
+            (modelKind === 'storage-row-indexed'
               ? TEXT_ROW_INDEXED_STORAGE_WGSL_SHADER
-              : TEXT_STORAGE_INDEXED_WGSL_SHADER,
+              : TEXT_STORAGE_INDEXED_WGSL_SHADER),
           shaderLayout:
-            modelKind === 'storage-row-indexed'
+            props.storageShaderLayout ??
+            (modelKind === 'storage-row-indexed'
               ? TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
-              : TEXT_STORAGE_INDEXED_SHADER_LAYOUT
+              : TEXT_STORAGE_INDEXED_SHADER_LAYOUT)
         })
       );
     }
@@ -655,7 +711,7 @@ export class ArrowTextRenderer extends GPURenderable<
         source: props.modelProps?.source ?? WGSL_SHADER,
         vs: props.modelProps?.vs ?? VS_GLSL,
         fs: props.modelProps?.fs ?? FS_GLSL,
-        shaderLayout: TEXT_SHADER_LAYOUT
+        shaderLayout: props.attributeShaderLayout ?? TEXT_SHADER_LAYOUT
       })
     );
   }
@@ -900,6 +956,16 @@ function prepareArrowTextInputFromSourceVectors(
     ...prepared,
     arrowVectorByteLength: textInput.arrowVectorByteLength
   };
+}
+
+async function* replayArrowTextRecordBatches(
+  firstRecordBatch: arrow.RecordBatch,
+  iterator: AsyncIterator<arrow.RecordBatch>
+): AsyncGenerator<arrow.RecordBatch> {
+  yield firstRecordBatch;
+  for (let result = await iterator.next(); !result.done; result = await iterator.next()) {
+    yield result.value;
+  }
 }
 
 /** Resolves table or record-batch source data, uploads it, and returns prepared text input. */

@@ -603,20 +603,23 @@ export class Model {
             _bindGroupCacheKeys: this._getBindGroupCacheKeys()
           });
           renderPass.setVertexArray(this.vertexArray);
-          drawSuccess = renderPass.draw({
-            isInstanced: this.isInstanced,
-            vertexCount: this.vertexCount,
-            instanceCount: this.instanceCount,
-            indexCount,
-            firstVertex: this.firstVertex,
-            firstIndex: this.firstIndex,
-            transformFeedback: this.transformFeedback || undefined,
-            uniforms: this.props.uniforms,
-            // WebGL shares underlying cached programs even for models that have different
-            // parameters and topology, so those compatibility overrides remain per draw.
-            parameters: this.parameters,
-            topology: this.topology
-          });
+          const hasNoInstances = this.isInstanced === true && this.instanceCount === 0;
+          drawSuccess = hasNoInstances
+            ? true
+            : renderPass.draw({
+                isInstanced: this.isInstanced,
+                vertexCount: this.vertexCount,
+                instanceCount: this.isInstanced ? this.instanceCount : undefined,
+                indexCount,
+                firstVertex: this.firstVertex,
+                firstIndex: this.firstIndex,
+                transformFeedback: this.transformFeedback || undefined,
+                uniforms: this.props.uniforms,
+                // WebGL shares underlying cached programs even for models that have different
+                // parameters and topology, so those compatibility overrides remain per draw.
+                parameters: this.parameters,
+                topology: this.topology
+              });
         }
       }
     } finally {

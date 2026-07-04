@@ -2,28 +2,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {
-  DynamicBuffer,
-  getIndexPickingModule,
-  indexPicking,
-  supportsIndexPicking
-} from '@luma.gl/engine';
+import {type Device} from '@luma.gl/core';
+import {getIndexPickingModule, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
 import {GPUTableModel, type GPUTableModelProps} from '../../engine/gpu-table-model';
 import {GPURecordBatch} from '../../table/gpu-record-batch';
-import type {GPUData} from '../../table/gpu-data';
+import {GPUConstant} from '../../table/gpu-constant';
 import type {GPUTypeMap} from '../../table/gpu-schema';
 import {GPUTable} from '../../table/gpu-table';
-import type {GPUVector} from '../../table/gpu-vector';
 import {getGPUVectorData} from '../../table/gpu-vector-utils';
 import {
   assertPolygonGPUVectorInputs,
   POLYGON_GPU_INPUT_SCHEMA,
-  type PolygonBatchProps,
-  type PolygonGPUVectors
+  type PolygonBatchProps
 } from './polygon-gpu-inputs';
 import {
   getPolygonPickingParameters,
+  mergePolygonShaderModules,
   POLYGON_STORAGE_SHADER_LAYOUT,
   POLYGON_STORAGE_WGSL_SHADER,
   type PolygonShaderInputs
@@ -62,7 +56,9 @@ export class PolygonStorageModel extends GPUTableModel {
 
   /** Appends one retained prepared polygon batch without repacking its GPU buffers. */
   addBatch(props: PolygonBatchProps): void {
+    assertPolygonBatchColorMode(this.polygonTable, props.colors);
     this.polygonTable.addBatch(createPolygonStorageRecordBatch(props));
+    this.setTable(this.polygonTable);
     this.setNeedsRedraw('Polygon batch added');
   }
 }
@@ -97,19 +93,17 @@ function preparePolygonStorageModel(
     table,
     modelProps: {
       ...modelProps,
-      source: POLYGON_STORAGE_WGSL_SHADER,
+      source: modelProps.source ?? POLYGON_STORAGE_WGSL_SHADER,
       ...(picking && indexPickingSupported ? {fragmentEntryPoint: 'fragmentPicking'} : {}),
-      modules: [
-        picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)
-      ] as never,
-      shaderLayout: POLYGON_STORAGE_SHADER_LAYOUT,
+      modules: mergePolygonShaderModules(
+        [picking && indexPickingSupported ? indexPicking : getIndexPickingModule(device)],
+        modelProps.modules ?? []
+      ) as never,
+      shaderLayout: modelProps.shaderLayout ?? POLYGON_STORAGE_SHADER_LAYOUT,
       shaderInputs,
-      bindings: {
-        ...(modelProps.bindings || {}),
-        ...getPolygonStorageBindings({positions, colors, rowIndices, indices})
-      },
       table,
       tableCount: 'none',
+      gpuInputSchema: POLYGON_GPU_INPUT_SCHEMA,
       topology: 'triangle-list',
       ...(picking && indexPickingSupported
         ? {
@@ -124,15 +118,19 @@ function preparePolygonStorageModel(
 
 function createPolygonStorageTable(props: PolygonBatchProps): GPUTable {
   const batch = createPolygonStorageRecordBatch(props);
-  return new GPUTable({batches: [batch]});
+  return new GPUTable({
+    batches: [batch],
+    constants: props.colors instanceof GPUConstant ? {colors: props.colors} : undefined
+  });
 }
 
 function createPolygonStorageRecordBatch(props: PolygonBatchProps): GPURecordBatch {
-  const {sourceInfo, nullCount = 0, ...vectors} = props;
-  assertPolygonGPUVectorInputs('PolygonStorageModel', vectors);
+  const {sourceInfo, nullCount = 0, colors, ...vectors} = props;
+  assertPolygonGPUVectorInputs('PolygonStorageModel', {...vectors, colors});
+  const varyingVectors = colors instanceof GPUConstant ? vectors : {...vectors, colors};
   return new GPURecordBatch<GPUTypeMap>({
     gpuData: Object.fromEntries(
-      Object.entries(vectors).map(([name, vector]) => [name, getGPUVectorData(vector)])
+      Object.entries(varyingVectors).map(([name, vector]) => [name, getGPUVectorData(vector)])
     ),
     bufferLayout: [],
     sourceInfo,
@@ -140,27 +138,9 @@ function createPolygonStorageRecordBatch(props: PolygonBatchProps): GPURecordBat
   });
 }
 
-function getPolygonStorageBindings(vectors: PolygonGPUVectors): Record<string, Binding> {
-  return {
-    polygonPositions: getPolygonStorageBinding(vectors.positions),
-    polygonColors: getPolygonStorageBinding(vectors.colors),
-    polygonRowIndices: getPolygonStorageBinding(vectors.rowIndices)
-  };
-}
-
-function getPolygonStorageBinding(vector: GPUVector): Binding {
-  const data = getGPUVectorData(vector);
-  const buffer = getPolygonStorageBuffer(data);
-  if (!(buffer.usage & Buffer.STORAGE)) {
-    throw new Error(`PolygonStorageModel ${vector.name} requires Buffer.STORAGE usage`);
+function assertPolygonBatchColorMode(table: GPUTable, colors: PolygonBatchProps['colors']): void {
+  const tableUsesConstant = Boolean(table.gpuConstants['colors']);
+  if (tableUsesConstant !== colors instanceof GPUConstant) {
+    throw new Error('PolygonStorageModel appended batches must use the same color input mode');
   }
-  return {
-    buffer,
-    offset: data.byteOffset,
-    size: data.valueLength * data.byteStride
-  };
-}
-
-function getPolygonStorageBuffer(data: GPUData): Buffer {
-  return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
 }

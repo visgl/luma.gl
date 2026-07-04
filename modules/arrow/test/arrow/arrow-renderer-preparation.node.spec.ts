@@ -140,7 +140,6 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
     {rowIndexOffset: 9, sourceBatchIndex: 4, id: 'polygon-conversion-test'}
   );
   const positionsBuffer = prepared.positions.data[0].buffer;
-  const colorsBuffer = prepared.colors.data[0].buffer;
   const rowIndicesBuffer = prepared.rowIndices.data[0].buffer;
   const indexVector = prepared.indices;
   const indexBuffer = indexVector.data[0].buffer;
@@ -151,7 +150,11 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
   t.equal(prepared.positions.length, 1, 'keeps source polygon rows on prepared positions');
   t.equal(prepared.positions.valueLength, 3, 'stores flattened tessellated position values');
   t.ok(positionsBuffer.usage & Buffer.STORAGE, 'creates polygon positions for storage draws');
-  t.ok(colorsBuffer.usage & Buffer.STORAGE, 'creates polygon colors for storage draws');
+  t.equal(prepared.colors.format, 'unorm8x4', 'keeps constant polygon color as a GPUConstant');
+  t.ok('isConstant' in prepared.colors, 'uses a logical constant polygon color');
+  if ('isConstant' in prepared.colors) {
+    t.equal(prepared.colors.byteLength, 4, 'stores one constant polygon color value');
+  }
   t.ok(rowIndicesBuffer.usage & Buffer.STORAGE, 'creates polygon row indices for storage draws');
   t.equal(indexVector.format, 'vertex-list<uint32>', 'stores polygon indices as a list vector');
   t.equal(indexVector.valueLength, 3, 'stores the flattened triangle index count');

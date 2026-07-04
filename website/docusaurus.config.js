@@ -1,4 +1,6 @@
 const {getDocusaurusConfig} = require('@vis.gl/docusaurus-website');
+const {OptionDefaults: typedocOptionDefaults} = require('typedoc');
+const path = require('path');
 
 const websiteBaseUrl = process.env.WEBSITE_BASE_URL || '/';
 
@@ -113,12 +115,34 @@ module.exports = {
         excludeInternal: true,
         excludePrivate: true,
         excludeProtected: true,
+        blockTags: [...typedocOptionDefaults.blockTags, '@note', '@todo'],
         gitRevision: 'master',
         sidebar: {
           autoConfiguration: false
         }
       }
-    ]
+    ],
+    function arrowLayersSourceAlias() {
+      return {
+        name: 'arrow-layers-source-alias',
+        configureWebpack() {
+          return {
+            resolve: {
+              alias: {
+                '@deck.gl-community/arrow-layers$': path.resolve(
+                  __dirname,
+                  '../modules/arrow-layers/src/index.ts'
+                )
+              }
+            },
+            watchOptions: {
+              aggregateTimeout: 200,
+              poll: 1000
+            }
+          };
+        }
+      };
+    }
   ],
   future: {
     v4: true

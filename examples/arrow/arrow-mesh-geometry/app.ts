@@ -3,11 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import type {AnimationProps} from '@luma.gl/engine';
-import {ArrowMeshGeometrySourceController} from './arrow-mesh-geometry-source';
-export {title, description} from './arrow-mesh-geometry-source';
+import {ArrowMeshGeometryDataSourceController} from './arrow-mesh-geometry-data-source';
+export {title, description} from './arrow-mesh-geometry-data-source';
 
-/** Rendering-only entrypoint; source generation and controls live in the source controller. */
-export default class ArrowMeshGeometryAnimationLoopTemplate extends ArrowMeshGeometrySourceController {
+/** Rendering-only entrypoint; data generation and controls live in the data-source controller. */
+export default class ArrowMeshGeometryAnimationLoopTemplate extends ArrowMeshGeometryDataSourceController {
   override onRender(animationProps: AnimationProps): void {
     super.onRender(animationProps);
   }

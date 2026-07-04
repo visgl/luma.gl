@@ -440,7 +440,10 @@ function getGPUTableModelConstructorState(
         : modelProps.modules,
       bufferLayout: [...explicitBufferLayout, ...tableBufferLayout],
       attributes: {...explicitAttributes, ...tableAttributes},
-      constantAttributes: shaderBindings?.constantAttributes,
+      constantAttributes: {
+        ...(modelProps.constantAttributes || {}),
+        ...(shaderBindings?.constantAttributes || {})
+      },
       bindings: {
         ...explicitBindings,
         ...tableBindings

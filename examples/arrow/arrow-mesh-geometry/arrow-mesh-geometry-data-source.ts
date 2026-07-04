@@ -13,7 +13,7 @@ export const title = 'Matrices: FixedSizeList<Float32, 16>';
 export const description =
   'CubeGeometry face ids routed through Mesh Arrow data and instanced through one Arrow matrix column.';
 
-export class ArrowMeshGeometrySourceController extends AnimationLoopTemplate {
+export class ArrowMeshGeometryDataSourceController extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
 
   readonly layer: ArrowMeshRenderer;

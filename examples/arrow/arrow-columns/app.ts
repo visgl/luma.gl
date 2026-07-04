@@ -7,7 +7,7 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, BackgroundTextureModel} from '@luma.gl/engine';
 import {ABufferRenderer, WBOITRenderer} from '@luma.gl/experimental';
 import {ArrowColumnRenderer, formatActiveTimeBucket} from './arrow-column-renderer';
-import {ArrowColumnSource} from './arrow-column-source';
+import {ArrowColumnDataSource} from './arrow-column-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'DGGS + time';
@@ -20,7 +20,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
   readonly device: Device;
   readonly aBufferRenderer: ABufferRenderer;
   readonly wboitRenderer: WBOITRenderer;
-  readonly source: ArrowColumnSource;
+  readonly dataSource: ArrowColumnDataSource;
   private sceneFramebuffer: Framebuffer;
   private readonly presentModel: BackgroundTextureModel;
   layer: ArrowColumnRenderer | null = null;
@@ -40,14 +40,14 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
       backgroundTexture: this.sceneFramebuffer.colorAttachments[0].texture,
       flipY: this.device.type === 'webgpu'
     });
-    this.source = new ArrowColumnSource(
-      sourceData => void this.initializeLayer(sourceData),
-      () => this.source.setRenderingStatus()
-    );
+    this.dataSource = new ArrowColumnDataSource({
+      onDataUpdated: sourceData => void this.initializeLayer(sourceData),
+      onTransparencyModeUpdated: () => this.dataSource.setRenderingStatus()
+    });
   }
 
   override async onInitialize(): Promise<void> {
-    await this.source.initialize();
+    await this.dataSource.initialize();
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
@@ -61,7 +61,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     clearPass.end();
 
     let outputTexture = this.sceneFramebuffer.colorAttachments[0].texture;
-    if (this.source.transparencyMode === 'a-buffer') {
+    if (this.dataSource.transparencyMode === 'a-buffer') {
       outputTexture = this.aBufferRenderer.render({
         sourceTexture: outputTexture,
         opaqueDepthTexture: this.sceneFramebuffer.depthStencilAttachment!,
@@ -74,7 +74,7 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
           ),
         drawTranslucent: renderPass => this.layer?.drawABuffer(renderPass)
       });
-    } else if (this.source.transparencyMode === 'weighted-blended') {
+    } else if (this.dataSource.transparencyMode === 'weighted-blended') {
       outputTexture = this.wboitRenderer.render({
         sourceTexture: outputTexture,
         drawOpaqueDepth: () => {},
@@ -106,11 +106,11 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     this.presentModel.draw(presentPass);
     presentPass.end();
     if (this.layer)
-      this.source.setActiveTimeBucket(formatActiveTimeBucket(this.layer.getActiveTimeBucket()));
+      this.dataSource.setActiveTimeBucket(formatActiveTimeBucket(this.layer.getActiveTimeBucket()));
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.aBufferRenderer.destroy();
     this.wboitRenderer.destroy();
     destroySceneFramebuffer(this.sceneFramebuffer);
@@ -133,8 +133,8 @@ export default class ArrowColumnRendererAnimationLoopTemplate extends AnimationL
     await layer.initialize();
     this.layer?.destroy();
     this.layer = layer;
-    this.source.setRenderingStatus();
-    this.source.setRendererMetrics(layer.getMetrics());
+    this.dataSource.setRenderingStatus();
+    this.dataSource.setRendererMetrics(layer.getMetrics());
   }
 }
 

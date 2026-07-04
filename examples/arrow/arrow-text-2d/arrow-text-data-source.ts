@@ -95,7 +95,7 @@ function getFontAtlas(): FontAtlas {
   return fontAtlas;
 }
 
-export class ArrowText2DSourceController extends AnimationLoopTemplate {
+export class ArrowText2DDataSourceController extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
 
   static props = {createFramebuffer: true, useDevicePixels: true};

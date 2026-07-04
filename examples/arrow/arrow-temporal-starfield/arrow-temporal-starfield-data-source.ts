@@ -22,18 +22,28 @@ import {ArrowExamplePanelManager} from '../arrow-example-panels';
 const TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT = 6;
 
 /** Owns starfield source streams and controls. */
-export class ArrowTemporalStarfieldSource {
+export class ArrowTemporalStarfieldDataSource {
+  private readonly device: Device;
+  private readonly onDataUpdated: (props: ArrowTemporalStarfieldRendererProps) => void;
+  private readonly onRendererPropsUpdated: (props: ArrowTemporalStarfieldRendererProps) => void;
   readonly controlPanel: ArrowTemporalStarfieldControlPanel;
   readonly panels: ArrowExamplePanelManager;
   activeRenderMode: 'attributes' | 'storage';
   activeTimeColumn: 'timestamp' | 'xyzm' = 'timestamp';
   private isFinalized = false;
 
-  constructor(
-    private readonly device: Device,
-    private readonly onSourceChange: (props: ArrowTemporalStarfieldRendererProps) => void,
-    private readonly onRendererPropsChange: (props: ArrowTemporalStarfieldRendererProps) => void
-  ) {
+  constructor({
+    device,
+    onDataUpdated,
+    onRendererPropsUpdated
+  }: {
+    device: Device;
+    onDataUpdated: (props: ArrowTemporalStarfieldRendererProps) => void;
+    onRendererPropsUpdated: (props: ArrowTemporalStarfieldRendererProps) => void;
+  }) {
+    this.device = device;
+    this.onDataUpdated = onDataUpdated;
+    this.onRendererPropsUpdated = onRendererPropsUpdated;
     const supportsStorage = supportsVertexStorageBuffers(
       device,
       TEMPORAL_STARFIELD_VERTEX_STORAGE_BUFFER_COUNT
@@ -88,7 +98,7 @@ export class ArrowTemporalStarfieldSource {
       kind: 'source',
       recordBatches
     });
-    this.onSourceChange({
+    this.onDataUpdated({
       data: createStreamingTemporalStarfieldRecordBatchIterator(recordBatches),
       onDataBatch: (update: ArrowTemporalStarfieldRendererDataBatchUpdate) => {
         if (this.isFinalized) return;
@@ -112,14 +122,14 @@ export class ArrowTemporalStarfieldSource {
     this.controlPanel.syncControls({renderMode: nextRenderMode});
     if (nextRenderMode === this.activeRenderMode) return;
     this.activeRenderMode = nextRenderMode;
-    this.onRendererPropsChange({renderMode: nextRenderMode});
+    this.onRendererPropsUpdated({renderMode: nextRenderMode});
   };
 
   private readonly handleTimeColumnSelection = (timeColumn: 'timestamp' | 'xyzm'): void => {
     if (timeColumn === this.activeTimeColumn) return;
     this.activeTimeColumn = timeColumn;
     this.controlPanel.syncControls({timeColumn});
-    this.onRendererPropsChange({timeColumn});
+    this.onRendererPropsUpdated({timeColumn});
     this.startStreaming();
   };
 }

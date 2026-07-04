@@ -4,6 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device} from '@luma.gl/core';
+import {getIndexPickingModule} from '@luma.gl/engine';
 import {
   PolygonAttributeModel,
   createPolygonShaderInputs,
@@ -14,6 +15,7 @@ import {
   type VertexList
 } from '@luma.gl/tables';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import type {ShaderModule} from '@luma.gl/shadertools';
 
 test('filled polygon models declare generated row-preserving GPU inputs', t => {
   t.deepEqual(POLYGON_GPU_INPUT_SCHEMA, [
@@ -31,8 +33,8 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
       attributeName: 'colors',
       storageBindingName: 'polygonColors',
       kind: 'colors',
-      required: true,
-      formats: ['vertex-list<unorm8x4>'],
+      required: false,
+      formats: ['unorm8x4', 'vertex-list<unorm8x4>'],
       internal: true
     },
     {
@@ -169,10 +171,13 @@ test('PolygonStorageModel binds flattened polygon vectors as storage', async t =
     return;
   }
   const vectors = makePolygonGPUVectors(device, 0, Buffer.VERTEX | Buffer.STORAGE);
+  const secondVectors = makePolygonGPUVectors(device, 1, Buffer.VERTEX | Buffer.STORAGE);
+  const customModule = {name: 'polygonStorageCustomModule'} satisfies ShaderModule;
   const model = new PolygonStorageModel(device, {
     id: 'polygon-storage-model-test',
     ...vectors,
-    shaderInputs: createPolygonShaderInputs(device)
+    shaderInputs: createPolygonShaderInputs(device),
+    modules: [customModule]
   });
 
   t.equal(model.table?.numRows, 1, 'keeps one logical source polygon row');
@@ -183,9 +188,24 @@ test('PolygonStorageModel binds flattened polygon vectors as storage', async t =
   t.ok(model.bindings.polygonPositions, 'binds prepared positions as storage');
   t.ok(model.bindings.polygonColors, 'binds prepared colors as storage');
   t.ok(model.bindings.polygonRowIndices, 'binds prepared row indices as storage');
+  t.ok(
+    model.props.modules?.some(module => module.name === getIndexPickingModule(device).name),
+    'keeps the required picking shader module'
+  );
+  t.ok(
+    model.props.modules?.some(module => module.name === customModule.name),
+    'keeps the caller shader module'
+  );
+
+  model.addBatch({
+    ...secondVectors,
+    sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
+  });
+  t.equal(model.table?.batches.length, 2, 'prepares bindings for appended storage batches');
 
   model.destroy();
   destroyPolygonGPUVectors(vectors);
+  destroyPolygonGPUVectors(secondVectors);
   t.end();
 });
 
@@ -256,7 +276,7 @@ function makePolygonGPUVector<FormatT extends VertexList>(
 
 function destroyPolygonGPUVectors(vectors: PolygonGPUVectors): void {
   vectors.positions.destroy();
-  vectors.colors.destroy();
+  if ('destroy' in vectors.colors) vectors.colors.destroy();
   vectors.rowIndices.destroy();
   vectors.indices.destroy();
 }

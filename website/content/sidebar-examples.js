@@ -10,7 +10,6 @@ const sidebars = {
       label: 'Showcase',
       items: [
         'showcase/gltf',
-        'showcase/instancing',
         'showcase/globe',
         {type: 'doc', id: 'showcase/postprocessing', label: 'Effects: Postprocessing'},
         {type: 'doc', id: 'showcase/dof', label: 'Effects: Depth of Field'},
@@ -57,16 +56,12 @@ const sidebars = {
       items: [
         'experimental/a-buffer',
         {type: 'doc', id: 'experimental/advanced-effects', label: 'Effects: Visualization City'},
-        'experimental/bloom',
+        {type: 'doc', id: 'experimental/bloom', label: 'Effects: Bloom'},
         'experimental/fp64',
         'experimental/gpt-2',
-        'experimental/video-texture',
-        'experimental/gpu-frustum-culling',
-        'experimental/gpu-trace-viewer',
-        'experimental/gpu-sort',
-        'experimental/gpu-data-analysis',
-        'experimental/html-ui-prism',
-        'experimental/webxr-kaleidoscope'
+        {type: 'doc', id: 'experimental/video-texture', label: 'Texture Video'},
+        {type: 'doc', id: 'experimental/html-ui-prism', label: 'Texture HTML-in-Canvas'},
+        {type: 'doc', id: 'experimental/webxr-kaleidoscope', label: 'Texture WebXR'}
       ]
     },
     {
@@ -76,10 +71,20 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'GPU Command Graph - luma v10',
+      items: [
+        'experimental/gpu-frustum-culling',
+        'experimental/gpu-trace-viewer',
+        'experimental/gpu-sort',
+        'experimental/gpu-data-analysis'
+      ]
+    },
+    {
+      type: 'category',
       label: 'Apache Arrow - luma.gl v10',
       items: [
-        'arrow/arrow-filtering',
         'arrow/arrow-points',
+        'arrow/arrow-filtering',
         'arrow/arrow-lines',
         'arrow/arrow-polygons',
         'arrow/arrow-geoarrow',

@@ -5,8 +5,11 @@
 import {Deck, OrthographicView} from '@deck.gl/core';
 import {ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
+import {ArrowDeck} from '../arrow-deck';
+import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
-import {initializeArrowTextLayerSource} from './arrow-text-layer-source';
+import {LABEL_FIELD_WIDTH} from '../../arrow/arrow-text-2d/arrow-text-data';
+import {ArrowTextDataSource, type ArrowTextDataSourceUpdate} from './arrow-text-data-source';
 
 let fontAtlas: FontAtlas | undefined;
 
@@ -21,34 +24,91 @@ function getFontAtlas(): FontAtlas {
   });
   return fontAtlas;
 }
+const CAMERA_PAN_SPEED_X = 72;
+const CAMERA_PAN_SPEED_Y = 56;
 
 /** Creates the standalone or website-hosted Deck text-layer example. */
-export function createArrowTextLayerDeck(parent?: HTMLDivElement) {
-  let initialSource!: Parameters<Parameters<typeof initializeArrowTextLayerSource>[0]>[0];
-  initializeArrowTextLayerSource(sourceData => {
-    initialSource = sourceData;
-  });
-  const deck = new Deck({
+export function createArrowTextLayerDeck(
+  parent?: HTMLDivElement,
+  options: DeckExampleDeviceOptions = {}
+) {
+  let activeUpdate: ArrowTextDataSourceUpdate | null = null;
+  let animationSeconds = 0;
+  let lastAnimationMilliseconds: number | null = null;
+
+  const deck = new ArrowDeck({
     parent,
+    ...getDeckExampleProps(options),
     views: new OrthographicView({id: 'main'}),
     initialViewState: {target: [0, 0], zoom: 0},
     controller: true,
     getTooltip: getArrowLayerTooltip,
+    layers: [],
+    onLoad: ({device}) => dataSource.initialize(device),
+    onBeforeRender: ({deck}) => {
+      const timeMilliseconds = performance.now();
+      if (lastAnimationMilliseconds !== null && activeUpdate?.animate) {
+        animationSeconds += Math.max(timeMilliseconds - lastAnimationMilliseconds, 0) / 1000;
+      }
+      lastAnimationMilliseconds = timeMilliseconds;
+      if (activeUpdate) {
+        deck?.setProps({
+          viewState: {
+            target: getTextCameraTarget(activeUpdate.labelFieldHeight, animationSeconds),
+            zoom: 0
+          }
+        });
+      }
+    },
+    onFinalize: () => dataSource.finalize()
+  });
+
+  const dataSource = new ArrowTextDataSource({
+    onDataUpdated: (update: ArrowTextDataSourceUpdate) => {
+      activeUpdate = update;
+      animationSeconds = 0;
+      lastAnimationMilliseconds = null;
+      setTextLayer(deck, update);
+    }
+  });
+
+  return deck;
+}
+
+function setTextLayer(deck: Deck<OrthographicView>, dataSource: ArrowTextDataSourceUpdate): void {
+  deck.setProps({
     layers: [
       new ArrowTextLayer({
         id: 'arrow-text',
         pickable: true,
-        positions: initialSource.positions,
-        texts: initialSource.texts,
-        clipRects: initialSource.clipRects,
-        colors: null,
-        angles: null,
-        sizes: null,
+        fontAtlas: getFontAtlas(),
+        model: dataSource.model ?? 'auto',
+        data: dataSource.asyncIterator,
+        positions: 'positions',
+        texts: 'texts',
+        clipRects: dataSource.clipRects === null ? null : 'clipRects',
+        color: dataSource.colorColumn
+          ? {source: 'colors', nullValue: [199, 219, 245, 255]}
+          : [199, 219, 245, 255],
+        angles: dataSource.angles === null ? null : 'angles',
+        sizes: dataSource.sizes === null ? null : 'sizes',
         pixelOffsets: null,
-        model: 'attribute',
-        fontAtlas: getFontAtlas()
+        angle: 0,
+        size: 32,
+        characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
+        ...dataSource.layerProps
       })
     ]
   });
-  return deck;
+}
+
+function getTextCameraTarget(labelFieldHeight: number, animationSeconds: number): [number, number] {
+  const cameraOffsetAmplitudeX = LABEL_FIELD_WIDTH * 0.43;
+  const cameraOffsetAmplitudeY = labelFieldHeight * 0.38;
+  return [
+    Math.sin(animationSeconds * (CAMERA_PAN_SPEED_X / cameraOffsetAmplitudeX)) *
+      cameraOffsetAmplitudeX,
+    Math.cos(animationSeconds * (CAMERA_PAN_SPEED_Y / cameraOffsetAmplitudeY)) *
+      cameraOffsetAmplitudeY
+  ];
 }

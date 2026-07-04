@@ -24,13 +24,18 @@ import {
 import {ArrowPointControlPanel} from './control-panel';
 import {ArrowExamplePanelManager} from '../arrow-example-panels';
 
-export type ArrowPointSourceUpdate = Pick<
+export type ArrowPointDataSourceUpdate = Pick<
   ArrowPointRendererProps,
   'data' | 'onDataBatch' | 'timeColumn' | 'timeOrigin' | 'colors' | 'radii' | 'center' | 'scale'
 >;
 
 /** Owns point source generation, controls, and Arrow table inspection. */
-export class ArrowPointSource {
+export class ArrowPointDataSource {
+  private readonly device: Device;
+  private readonly onDataUpdated: (update: ArrowPointDataSourceUpdate) => void;
+  private readonly onRendererPropsUpdated: (
+    props: Pick<ArrowPointRendererProps, 'modelMode'>
+  ) => void;
   readonly panels: ArrowExamplePanelManager;
   readonly controlPanel: ArrowPointControlPanel;
   rowCountKind: ArrowPointRowCountKind = '10k-stream';
@@ -42,13 +47,18 @@ export class ArrowPointSource {
   animate = true;
   private isFinalized = false;
 
-  constructor(
-    private readonly device: Device,
-    private readonly onSourceChange: (update: ArrowPointSourceUpdate) => void,
-    private readonly onRendererPropsChange: (
-      props: Pick<ArrowPointRendererProps, 'modelMode'>
-    ) => void
-  ) {
+  constructor({
+    device,
+    onDataUpdated,
+    onRendererPropsUpdated
+  }: {
+    device: Device;
+    onDataUpdated: (update: ArrowPointDataSourceUpdate) => void;
+    onRendererPropsUpdated: (props: Pick<ArrowPointRendererProps, 'modelMode'>) => void;
+  }) {
+    this.device = device;
+    this.onDataUpdated = onDataUpdated;
+    this.onRendererPropsUpdated = onRendererPropsUpdated;
     this.panels = new ArrowExamplePanelManager({
       descriptionPanel: () => this.controlPanel.makeDescriptionPanel(),
       settingsPanel: () => this.controlPanel.makeSettingsPanel()
@@ -180,7 +190,7 @@ export class ArrowPointSource {
       kind: 'source',
       recordBatches: sourceData.recordBatches
     });
-    this.onSourceChange({
+    this.onDataUpdated({
       data: createStreamingPointRecordBatchIterator(sourceData.recordBatches)[
         Symbol.asyncIterator
       ](),
@@ -204,6 +214,6 @@ export class ArrowPointSource {
     if (effectiveMode === this.modelMode) return;
     this.modelMode = effectiveMode;
     this.controlPanel.syncControls({modelMode: effectiveMode});
-    this.onRendererPropsChange({modelMode: effectiveMode});
+    this.onRendererPropsUpdated({modelMode: effectiveMode});
   };
 }
