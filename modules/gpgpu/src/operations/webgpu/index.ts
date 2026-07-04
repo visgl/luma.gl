@@ -15,7 +15,7 @@ import {swizzle} from './swizzle';
 /** WebGPU backend handlers. */
 export {
   arithmetic,
-  'convert-colors': convertColors,
+  convertColors,
   dot,
   equalAll,
   extent,

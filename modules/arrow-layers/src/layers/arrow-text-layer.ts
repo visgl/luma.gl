@@ -14,8 +14,8 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowTextRenderer,
-  prepareArrowTextInputFromData,
   readArrowGPUVectorAsync,
+  type ArrowColorType,
   type ArrowTextRendererDataBatchUpdate,
   type ArrowTextRendererProps
 } from '@luma.gl/arrow';
@@ -30,10 +30,11 @@ import {ShaderInputs, type Model} from '@luma.gl/engine';
 import type {GPUTextData} from '@luma.gl/text';
 import {
   makeTextGlyphAlphaGlsl,
+  supportsGpuTextExpansion,
   type TextGlyphAlphaShaderSettings
 } from '@luma.gl/text/experimental';
-import {GPUVector, type GPURecordBatchSourceInfo, type VertexList} from '@luma.gl/tables';
-import type {Vector} from 'apache-arrow';
+import {GPUVector, type GPURecordBatchSourceInfo} from '@luma.gl/tables';
+import {Vector} from 'apache-arrow';
 import {
   deckArrowViewport,
   DECK_ARROW_ALPHA_BLEND_PARAMETERS,
@@ -47,7 +48,9 @@ import {
   DECK_TEXT_STORAGE_WGSL
 } from './arrow-text-storage-shaders';
 import {
-  assertArrowLayerGPUVector,
+  assertArrowLayerColorGPUVector,
+  convertArrowLayerColorGPUVector,
+  convertArrowLayerColorVector,
   getArrowLayerInputNullValue,
   getArrowLayerInputSource,
   inspectArrowLayerColumn,
@@ -59,7 +62,8 @@ import {
 type ArrowTextColor = [number, number, number, number];
 type ArrowTextColorSource =
   | Exclude<ArrowTextRendererProps['colors'], null | undefined>
-  | GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
+  | Vector<ArrowColorType>
+  | GPUVector;
 
 /** Constant, Arrow column, or GPU column accepted by ArrowTextLayer.color. */
 export type ArrowTextColorInput = ArrowLayerInput<ArrowTextColor, ArrowTextColorSource>;
@@ -507,18 +511,17 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
           colorSource = undefined;
         }
       }
+      if (colorSource instanceof Vector) {
+        colorSource = (await convertArrowLayerColorVector(
+          this.context.device,
+          colorSource,
+          `${this.id}-colors`
+        )) as Vector<ArrowColorType>;
+      }
       if (isArrowLayerGPUVector(colorSource)) {
         this.assertTextColorGPUVector(colorSource, effectiveProps);
       }
-      const directGPUColor =
-        model === 'storage' &&
-        isArrowLayerGPUVector(colorSource) &&
-        colorSource.format === 'unorm8x4'
-          ? colorSource
-          : undefined;
-      const resolvedColorSource = directGPUColor
-        ? undefined
-        : await this.resolveTextColorSource(colorSource, effectiveProps);
+      const resolvedColorSource = await this.resolveTextColorSource(colorSource, effectiveProps);
       const colorNullValue = getArrowLayerInputNullValue(
         props.color,
         DEFAULT_TEXT_COLOR,
@@ -535,7 +538,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
           : createEmptyDeckTextConstantStyle();
       const rendererProps: ArrowTextRendererProps = {
         ...effectiveProps,
-        colors: resolvedColorSource ?? null,
+        colors: (resolvedColorSource ?? null) as ArrowTextRendererProps['colors'],
         color: colorNullValue,
         model,
         attributeShaderLayout: DECK_TEXT_SHADER_LAYOUT,
@@ -562,19 +565,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
         },
         onDataBatch: update => this.handleDataBatch(update, props.onDataBatch)
       };
-      const renderer = directGPUColor
-        ? ArrowTextRenderer.createFromPreparedInput(
-            this.context.device,
-            {...rendererProps, colors: null},
-            {
-              ...(await prepareArrowTextInputFromData(this.context.device, {
-                ...rendererProps,
-                colors: null
-              })),
-              colors: directGPUColor
-            }
-          )
-        : await ArrowTextRenderer.create(this.context.device, rendererProps);
+      const renderer = await ArrowTextRenderer.create(this.context.device, rendererProps);
       let ownedTextData = [
         ...renderer.transferTextDataOwnership(({data, removed}) => {
           for (const previousData of removed) {
@@ -637,7 +628,20 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     const cache = this.getLayerState().gpuVectorSourceCache;
     let arrowVectorPromise = cache.get(source);
     if (!arrowVectorPromise) {
-      arrowVectorPromise = readArrowGPUVectorAsync(source);
+      arrowVectorPromise = (async () => {
+        const normalized = await convertArrowLayerColorGPUVector(
+          this.context.device,
+          source,
+          `${this.id}-colors`
+        );
+        try {
+          return await readArrowGPUVectorAsync(normalized.vector);
+        } finally {
+          if (normalized.converted) {
+            normalized.vector.destroy();
+          }
+        }
+      })();
       cache.set(source, arrowVectorPromise);
     }
     return (await arrowVectorPromise) as Exclude<ArrowTextColorSource, GPUVector>;
@@ -662,12 +666,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     }
     const textRowCount =
       props.positions && typeof props.positions !== 'string' ? props.positions.length : undefined;
-    assertArrowLayerGPUVector(
-      'ArrowTextLayer color',
-      source,
-      ['unorm8x4', 'vertex-list<unorm8x4>'],
-      textRowCount
-    );
+    assertArrowLayerColorGPUVector('ArrowTextLayer color', source, textRowCount);
   }
 
   private handleDataBatch(
@@ -726,13 +725,14 @@ function resolveDeckTextModel(
   if (model === 'storage' && device.type !== 'webgpu') {
     throw new Error('ArrowTextLayer storage rendering requires WebGPU');
   }
+  const storageSupported = supportsGpuTextExpansion(device);
   if (model === 'auto') {
-    return device.type === 'webgpu' ? 'storage' : 'attribute';
+    return storageSupported ? 'storage' : 'attribute';
   }
   if (model !== 'attribute' && model !== 'storage') {
     throw new Error(`ArrowTextLayer does not support the ${model} model`);
   }
-  return model;
+  return model === 'storage' && !storageSupported ? 'attribute' : model;
 }
 
 function toError(error: unknown): Error {

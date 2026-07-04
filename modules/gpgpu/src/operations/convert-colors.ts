@@ -27,7 +27,7 @@ export type ConvertColorsInputs = {
 };
 
 class ConvertColorsOperation extends Operation<ConvertColorsInputs> {
-  name = 'convert-colors';
+  name = 'convertColors';
 
   output: GPUDataEvaluator;
 

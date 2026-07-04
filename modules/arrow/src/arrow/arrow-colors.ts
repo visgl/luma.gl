@@ -147,7 +147,10 @@ function getArrowColorInputFormat(type: ArrowColorType): ColorInputFormat {
   return `${scalarType}x${type.listSize}`;
 }
 
-function validateArrowColorType(type: DataType, functionName: string): asserts type is ArrowColorType {
+function validateArrowColorType(
+  type: DataType,
+  functionName: string
+): asserts type is ArrowColorType {
   const childType = DataType.isFixedSizeList(type) ? type.children[0].type : null;
   const supportedChildType =
     childType instanceof Uint8 || childType instanceof Float16 || childType instanceof Float32;
@@ -161,6 +164,8 @@ function getArrowColorGPUFormat(inputFormat: ColorInputFormat): VertexFormat {
     case 'uint8x3':
       return 'uint8x3-webgl';
     case 'float16x3':
+      // VertexFormat has no float16x3 entry. This adapter uses the byte-identical Uint16x3
+      // storage layout while inputFormat retains the Float16 interpretation for conversion.
       return 'uint16x3-webgl';
     default:
       return inputFormat;
