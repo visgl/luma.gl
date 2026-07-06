@@ -106,7 +106,8 @@ const sidebars = {
       items: [
         'deck/arrow-path-layer',
         'deck/arrow-polygon-layer',
-        'deck/arrow-text-layer'
+        'deck/arrow-text-layer',
+        'deck/gpu-culled-trace'
       ]
     }
   ]

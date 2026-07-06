@@ -59,7 +59,7 @@ export function configureArrowTextShaderAssembler(
 export const STREAMING_TEXT_INPUT_SHADER_LAYOUT = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
-    {name: 'clipRects', location: 1, type: 'vec4<i32>', stepMode: 'instance'},
+    {name: 'clipRects', location: 1, type: 'vec4<f32>', stepMode: 'instance'},
     {name: 'colors', location: 2, type: 'vec4<f32>', stepMode: 'instance'},
     {name: 'angles', location: 3, type: 'f32', stepMode: 'instance'},
     {name: 'sizes', location: 4, type: 'f32', stepMode: 'instance'},
@@ -79,7 +79,7 @@ export const TEXT_SHADER_LAYOUT = {
     {name: 'glyphFrames', location: 2, type: 'vec4<u32>', stepMode: 'instance'},
     {name: 'glyphPages', location: 3, type: 'u32', stepMode: 'instance'},
     {name: 'rowIndices', location: 4, type: 'u32', stepMode: 'instance'},
-    {name: 'glyphClipRects', location: 5, type: 'vec4<i32>', stepMode: 'instance'},
+    {name: 'glyphClipRects', location: 5, type: 'vec4<f32>', stepMode: 'instance'},
     {name: 'colors', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
   ],
   bindings: []
@@ -130,7 +130,7 @@ struct VertexInputs {
   @location(2) glyphFrames : vec4<u32>,
   @location(3) glyphPages : u32,
   @location(4) rowIndices : u32,
-  @location(5) glyphClipRects : vec4<i32>,
+  @location(5) glyphClipRects : vec4<f32>,
   @location(6) colors : vec4<f32>,
 };
 
@@ -158,17 +158,17 @@ fn getCorner(vertexIndex : u32) -> vec2<f32> {
   return vec2<f32>(0.0, 1.0);
 }
 
-fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<i32>) -> bool {
+fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<f32>) -> bool {
   if (clipRect.z >= 0) {
-    let clipMinX = f32(clipRect.x);
-    let clipMaxX = clipMinX + f32(clipRect.z);
+    let clipMinX = clipRect.x;
+    let clipMaxX = clipMinX + clipRect.z;
     if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) {
       return true;
     }
   }
   if (clipRect.w >= 0) {
-    let clipMinY = f32(clipRect.y);
-    let clipMaxY = clipMinY + f32(clipRect.w);
+    let clipMinY = clipRect.y;
+    let clipMaxY = clipMinY + clipRect.w;
     if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) {
       return true;
     }
@@ -257,7 +257,7 @@ struct TextViewportUniforms {
 @group(0) @binding(auto) var<storage, read> textRowAngles : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
-@group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
+@group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec4<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowGlyphStarts : array<u32>;
 @group(0) @binding(auto) var<storage, read> textGlyphFrames : array<vec4<f32>>;
 
@@ -330,26 +330,21 @@ fn unpackHighInt16(word : u32) -> i32 {
   return i32(word) >> 16;
 }
 
-fn unpackClipRect(words : vec2<u32>) -> vec4<i32> {
-  return vec4<i32>(
-    unpackLowInt16(words.x),
-    unpackHighInt16(words.x),
-    unpackLowInt16(words.y),
-    unpackHighInt16(words.y)
-  );
+fn unpackClipRect(words : vec4<f32>) -> vec4<f32> {
+  return words;
 }
 
-fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<i32>) -> bool {
+fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<f32>) -> bool {
   if (clipRect.z >= 0) {
-    let clipMinX = f32(clipRect.x);
-    let clipMaxX = clipMinX + f32(clipRect.z);
+    let clipMinX = clipRect.x;
+    let clipMaxX = clipMinX + clipRect.z;
     if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) {
       return true;
     }
   }
   if (clipRect.w >= 0) {
-    let clipMinY = f32(clipRect.y);
-    let clipMaxY = clipMinY + f32(clipRect.w);
+    let clipMinY = clipRect.y;
+    let clipMaxY = clipMinY + clipRect.w;
     if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) {
       return true;
     }
@@ -504,7 +499,7 @@ struct TextViewportUniforms {
 @group(0) @binding(auto) var<storage, read> textRowAngles : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
-@group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
+@group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec4<f32>>;
 // Dictionary model memory: row buffers hold styling and row starts, dictionary
 // buffers hold shared glyph runs, and visible glyph occurrences are implicit
 // draw instances. There is no per-visible-glyph occurrence/vertex buffer.
@@ -583,26 +578,21 @@ fn unpackHighInt16(word : u32) -> i32 {
   return i32(word) >> 16;
 }
 
-fn unpackClipRect(words : vec2<u32>) -> vec4<i32> {
-  return vec4<i32>(
-    unpackLowInt16(words.x),
-    unpackHighInt16(words.x),
-    unpackLowInt16(words.y),
-    unpackHighInt16(words.y)
-  );
+fn unpackClipRect(words : vec4<f32>) -> vec4<f32> {
+  return words;
 }
 
-fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<i32>) -> bool {
+fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<f32>) -> bool {
   if (clipRect.z >= 0) {
-    let clipMinX = f32(clipRect.x);
-    let clipMaxX = clipMinX + f32(clipRect.z);
+    let clipMinX = clipRect.x;
+    let clipMaxX = clipMinX + clipRect.z;
     if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) {
       return true;
     }
   }
   if (clipRect.w >= 0) {
-    let clipMinY = f32(clipRect.y);
-    let clipMaxY = clipMinY + f32(clipRect.w);
+    let clipMinY = clipRect.y;
+    let clipMaxY = clipMinY + clipRect.w;
     if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) {
       return true;
     }
@@ -783,7 +773,7 @@ in ivec2 glyphOffsets;
 in uvec4 glyphFrames;
 in uint glyphPages;
 in uint rowIndices;
-in ivec4 glyphClipRects;
+in vec4 glyphClipRects;
 in vec4 colors;
 
 layout(std140) uniform textViewportUniforms {
@@ -813,17 +803,17 @@ vec2 getCorner(int vertexIndex) {
   return vec2(0.0, 1.0);
 }
 
-bool isGlyphVertexClipped(vec2 glyphVertexOffset, ivec4 clipRect) {
+bool isGlyphVertexClipped(vec2 glyphVertexOffset, vec4 clipRect) {
   if (clipRect.z >= 0) {
-    float clipMinX = float(clipRect.x);
-    float clipMaxX = clipMinX + float(clipRect.z);
+    float clipMinX = clipRect.x;
+    float clipMaxX = clipMinX + clipRect.z;
     if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) {
       return true;
     }
   }
   if (clipRect.w >= 0) {
-    float clipMinY = float(clipRect.y);
-    float clipMaxY = clipMinY + float(clipRect.w);
+    float clipMinY = clipRect.y;
+    float clipMaxY = clipMinY + clipRect.w;
     if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) {
       return true;
     }
@@ -957,6 +947,8 @@ export type TextViewportUniforms = {
   textSdfThreshold: number;
   textSdfSmoothing: number;
   textMsdfDistanceRange: number;
+  contentCutoffPixels?: [number, number];
+  contentAlign?: [number, number];
 };
 
 export const textViewport: ShaderModule<TextViewportUniforms> = {
@@ -971,7 +963,23 @@ export const textViewport: ShaderModule<TextViewportUniforms> = {
     textFontRenderMode: 'f32',
     textSdfThreshold: 'f32',
     textSdfSmoothing: 'f32',
-    textMsdfDistanceRange: 'f32'
+    textMsdfDistanceRange: 'f32',
+    contentCutoffPixels: 'vec2<f32>',
+    contentAlign: 'vec2<f32>'
+  },
+  defaultUniforms: {
+    cameraOffset: [0, 0],
+    viewportScale: [1, 1],
+    glyphWorldScale: 1,
+    time: 0,
+    clippingEnabled: 0,
+    colorsEnabled: 0,
+    textFontRenderMode: 0,
+    textSdfThreshold: 0.5,
+    textSdfSmoothing: 0.1,
+    textMsdfDistanceRange: 0,
+    contentCutoffPixels: [0, 0],
+    contentAlign: [0, 0]
   }
 };
 

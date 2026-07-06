@@ -83,7 +83,8 @@ Target Release Date: Q3, 2026
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
 - **MSDF text fonts** - `@luma.gl/text` can build or load prebuilt BMFont JSON MSDF atlases, including kerning and multi-page atlas metadata, through the same `FontAtlas` format used by generated bitmap and SDF atlases.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
-- **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
+- **View-aware Arrow text clipping** - Arrow 2D text accepts optional `FixedSizeList<Float32>[4]` clip rectangles. `ArrowTextLayer` interprets them as world-space anchor offsets, projects them through the active deck viewport, and supports visible-region alignment and pixel cutoffs; omitting `clipRects` retains a constant no-clipping fallback instead of allocating per-row data.
+- **GPU-selected text** - `GPUTextSelection` filters row-indexed compact glyph records from GPU row flags, preserves original row identity, and writes the selected glyph count directly into an indirect draw command. The [GPU-Culled deck Trace](/examples/deck/gpu-culled-trace) shares one culling result between blocks, Arrow labels, and picking.
 
 **@luma.gl/shadertools**
 

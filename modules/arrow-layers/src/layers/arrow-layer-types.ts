@@ -62,6 +62,12 @@ struct DeckArrowViewportUniforms {
   center: vec2<f32>,
   worldToClipScale: vec2<f32>,
   pixelToClipScale: vec2<f32>,
+  worldToPixelScale: vec2<f32>,
+  viewportSize: vec2<f32>,
+  contentCutoffPixels: vec2<f32>,
+  contentAlign: vec2<u32>,
+  flipY: u32,
+  _padding: u32,
 };
 
 @group(0) @binding(auto) var<uniform> deckArrowViewport: DeckArrowViewportUniforms;
@@ -73,16 +79,102 @@ fn deck_projectPosition(position: vec3<f32>) -> vec4<f32> {
     1.0
   );
 }
+
+fn deck_getContentAlignmentOffset(
+  anchor: f32,
+  extent: f32,
+  clipStart: f32,
+  clipEnd: f32,
+  mode: u32
+) -> f32 {
+  if (clipEnd < clipStart) { return 0.0; }
+  if (mode == 1u) { return max(-(anchor + clipStart), 0.0); }
+  if (mode == 2u) {
+    let visibleStart = max(0.0, anchor + clipStart);
+    let visibleEnd = min(extent, anchor + clipEnd);
+    return select(0.0, (visibleStart + visibleEnd) * 0.5 - anchor, visibleStart < visibleEnd);
+  }
+  if (mode == 3u) { return min(extent - (anchor + clipEnd), 0.0); }
+  return 0.0;
+}
+
+fn deck_getTextAnchorScreen(anchorClip: vec4<f32>) -> vec2<f32> {
+  let normalized = anchorClip.xy / anchorClip.w;
+  return vec2<f32>(normalized.x + 1.0, 1.0 - normalized.y) * 0.5 *
+    deckArrowViewport.viewportSize;
+}
+
+fn deck_getTextClipRectPixels(clipRect: vec4<f32>) -> vec4<f32> {
+  var origin = clipRect.xy * deckArrowViewport.worldToPixelScale;
+  let size = clipRect.zw * deckArrowViewport.worldToPixelScale;
+  if (deckArrowViewport.flipY != 0u) { origin.y = -origin.y - size.y; }
+  return vec4<f32>(origin, size);
+}
+
+fn deck_getTextContentOffset(anchorClip: vec4<f32>, clipRect: vec4<f32>) -> vec2<f32> {
+  let anchor = deck_getTextAnchorScreen(anchorClip);
+  let rect = deck_getTextClipRectPixels(clipRect);
+  return vec2<f32>(
+    deck_getContentAlignmentOffset(
+      anchor.x,
+      deckArrowViewport.viewportSize.x,
+      rect.x,
+      rect.x + rect.z,
+      deckArrowViewport.contentAlign.x
+    ),
+    -deck_getContentAlignmentOffset(
+      anchor.y,
+      deckArrowViewport.viewportSize.y,
+      -rect.y - rect.w,
+      -rect.y,
+      deckArrowViewport.contentAlign.y
+    )
+  );
+}
+
+fn deck_isTextContentVisible(
+  pixelOffset: vec2<f32>,
+  anchorClip: vec4<f32>,
+  clipRect: vec4<f32>
+) -> bool {
+  let anchor = deck_getTextAnchorScreen(anchorClip);
+  let rect = deck_getTextClipRectPixels(clipRect);
+  if (rect.z >= 0.0) {
+    if (pixelOffset.x < rect.x || pixelOffset.x > rect.x + rect.z) { return false; }
+    let visibleStart = max(anchor.x + rect.x, 0.0);
+    let visibleEnd = min(anchor.x + rect.x + rect.z, deckArrowViewport.viewportSize.x);
+    if (visibleEnd - visibleStart < deckArrowViewport.contentCutoffPixels.x) { return false; }
+  }
+  if (rect.w >= 0.0) {
+    if (pixelOffset.y < rect.y || pixelOffset.y > rect.y + rect.w) { return false; }
+    let visibleStart = max(anchor.y - rect.y - rect.w, 0.0);
+    let visibleEnd = min(anchor.y - rect.y, deckArrowViewport.viewportSize.y);
+    if (visibleEnd - visibleStart < deckArrowViewport.contentCutoffPixels.y) { return false; }
+  }
+  return true;
+}
 `,
   uniformTypes: {
     center: 'vec2<f32>',
     worldToClipScale: 'vec2<f32>',
-    pixelToClipScale: 'vec2<f32>'
+    pixelToClipScale: 'vec2<f32>',
+    worldToPixelScale: 'vec2<f32>',
+    viewportSize: 'vec2<f32>',
+    contentCutoffPixels: 'vec2<f32>',
+    contentAlign: 'vec2<u32>',
+    flipY: 'u32',
+    _padding: 'u32'
   },
   defaultUniforms: {
     center: [0, 0],
     worldToClipScale: [1, -1],
-    pixelToClipScale: [1, 1]
+    pixelToClipScale: [1, 1],
+    worldToPixelScale: [1, 1],
+    viewportSize: [1, 1],
+    contentCutoffPixels: [0, 0],
+    contentAlign: [0, 0],
+    flipY: 1,
+    _padding: 0
   }
 } as const satisfies ShaderModule;
 
@@ -97,7 +189,12 @@ export function setDeckArrowViewport(
     zoomX?: number;
     zoomY?: number;
     flipY?: boolean;
-  }
+  },
+  textOptions: {
+    contentCutoffPixels?: readonly [number, number];
+    contentAlignHorizontal?: 'none' | 'start' | 'center' | 'end';
+    contentAlignVertical?: 'none' | 'start' | 'center' | 'end';
+  } = {}
 ): void {
   const zoomX = viewport.zoomX ?? viewport.zoom ?? 0;
   const zoomY = viewport.zoomY ?? viewport.zoom ?? 0;
@@ -109,9 +206,31 @@ export function setDeckArrowViewport(
         (2 * 2 ** zoomX) / Math.max(viewport.width, 1),
         ((viewport.flipY === false ? 2 : -2) * 2 ** zoomY) / Math.max(viewport.height, 1)
       ],
-      pixelToClipScale: [2 / Math.max(viewport.width, 1), 2 / Math.max(viewport.height, 1)]
+      pixelToClipScale: [2 / Math.max(viewport.width, 1), 2 / Math.max(viewport.height, 1)],
+      worldToPixelScale: [2 ** zoomX, 2 ** zoomY],
+      viewportSize: [viewport.width, viewport.height],
+      contentCutoffPixels: textOptions.contentCutoffPixels ?? [0, 0],
+      contentAlign: [
+        getDeckArrowContentAlign(textOptions.contentAlignHorizontal),
+        getDeckArrowContentAlign(textOptions.contentAlignVertical)
+      ],
+      flipY: viewport.flipY === false ? 0 : 1,
+      _padding: 0
     }
   });
+}
+
+function getDeckArrowContentAlign(value: 'none' | 'start' | 'center' | 'end' | undefined): number {
+  switch (value) {
+    case 'start':
+      return 1;
+    case 'center':
+      return 2;
+    case 'end':
+      return 3;
+    default:
+      return 0;
+  }
 }
 
 /** Arrow row identity attached to deck.gl picking results. */

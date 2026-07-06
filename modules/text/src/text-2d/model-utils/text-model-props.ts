@@ -65,7 +65,7 @@ export const TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA = [
     columnName: 'clipRects',
     kind: 'positions',
     required: false,
-    formats: ['sint16x4']
+    formats: ['float32x4']
   }
 ] as const satisfies GPUInputSchema;
 
@@ -123,7 +123,7 @@ export const TEXT_STORAGE_GPU_INPUT_SCHEMA = [
     columnName: 'clipRects',
     kind: 'positions',
     required: false,
-    formats: ['sint16x4']
+    formats: ['float32x4']
   }
 ] as const satisfies GPUInputSchema;
 
@@ -162,7 +162,7 @@ export interface TextInputProps extends ModelProps {
    * Optional GPU packed per-label clip rectangles `[x, y, width, height]`.
    * Negative width or height disables clipping on that axis.
    */
-  clipRects?: GPUVector<'sint16x4'>;
+  clipRects?: GPUVector<'float32x4'>;
   /** Normalized atlas-backed font consumed by text layout and rendering. */
   fontAtlas: FontAtlas;
   /** Multiplier applied to the atlas font size for one-line baseline layout. */

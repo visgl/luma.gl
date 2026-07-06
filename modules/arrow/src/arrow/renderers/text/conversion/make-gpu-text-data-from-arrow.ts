@@ -161,10 +161,13 @@ export function resolveGPUTextStrategy(
   const hasCharacterColors = Boolean(
     props.sourceVectors.colors && arrow.DataType.isList(props.sourceVectors.colors.type)
   );
+  const alignmentBufferCount =
+    Number(Boolean(props.sourceVectors.textAnchors)) +
+    Number(Boolean(props.sourceVectors.alignmentBaselines));
   const supportsStorage =
     device.type === 'webgpu' &&
     supportsVertexStorageBuffers(device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT) &&
-    supportsGpuTextExpansion(device);
+    supportsGpuTextExpansion(device, alignmentBufferCount);
   const supportsDictionary =
     device.type === 'webgpu' &&
     supportsVertexStorageBuffers(device, TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT);

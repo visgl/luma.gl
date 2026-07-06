@@ -90,6 +90,12 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
   angle?: number;
   /** Constant fallback row text size used when no row size vector is present. */
   size?: number;
+  /** Constant fallback pixel offset used when no row pixel-offset vector is present. */
+  pixelOffset?: [number, number];
+  /** Constant fallback horizontal anchor used when no row anchor vector is present. */
+  textAnchor?: 'start' | 'middle' | 'end';
+  /** Constant fallback vertical baseline used when no row baseline vector is present. */
+  alignmentBaseline?: 'center' | 'top' | 'bottom';
   /** Attribute-model shader layout override used after Arrow source preparation. */
   attributeShaderLayout?: ShaderLayout;
   /** Storage-model shader layout override used after Arrow source preparation. */
@@ -114,6 +120,7 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
     | 'bufferLayout'
     | 'attributes'
     | 'constantAttributes'
+    | 'bindings'
     | 'shaderAssembler'
   >;
 };
@@ -819,7 +826,10 @@ export class ArrowTextRenderer extends GPURenderable<
       parameters: DEFAULT_RENDER_PARAMETERS,
       color,
       angle,
-      size
+      size,
+      pixelOffset: props.pixelOffset,
+      textAnchor: props.textAnchor,
+      alignmentBaseline: props.alignmentBaseline
     };
 
     if (modelKind === 'dictionary') {
@@ -883,9 +893,12 @@ export class ArrowTextRenderer extends GPURenderable<
   ): ArrowTextRendererResolvedModel {
     const hasCharacterColors = isArrowTextCharacterColorType(data.sourceVectors.colors?.type);
     const hasTextDictionary = arrow.DataType.isDictionary(data.sourceVectors.texts.type);
+    const alignmentBufferCount =
+      Number(Boolean(data.sourceVectors.textAnchors)) +
+      Number(Boolean(data.sourceVectors.alignmentBaselines));
     const supportsTextStorage =
       supportsVertexStorageBuffers(this.device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT) &&
-      supportsGpuTextExpansion(this.device);
+      supportsGpuTextExpansion(this.device, alignmentBufferCount);
     const supportsTextDictionary = supportsVertexStorageBuffers(
       this.device,
       TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT
@@ -1453,7 +1466,22 @@ function hasArrowTextConstantStylePropsChanged(
   return (
     (props.color !== undefined && !areTextColorsEqual(props.color, previousProps.color)) ||
     (props.angle !== undefined && props.angle !== previousProps.angle) ||
-    (props.size !== undefined && props.size !== previousProps.size)
+    (props.size !== undefined && props.size !== previousProps.size) ||
+    (props.pixelOffset !== undefined &&
+      !areTextVec2Equal(props.pixelOffset, previousProps.pixelOffset)) ||
+    (props.textAnchor !== undefined && props.textAnchor !== previousProps.textAnchor) ||
+    (props.alignmentBaseline !== undefined &&
+      props.alignmentBaseline !== previousProps.alignmentBaseline)
+  );
+}
+
+function areTextVec2Equal(
+  value: [number, number] | undefined,
+  otherValue: [number, number] | undefined
+): boolean {
+  return (
+    value === otherValue ||
+    Boolean(value && otherValue && value[0] === otherValue[0] && value[1] === otherValue[1])
   );
 }
 

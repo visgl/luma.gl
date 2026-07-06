@@ -93,6 +93,7 @@ import TransformApp from '../../examples/tutorials/transform/app';
 import {createArrowPathLayerDeck} from '../../examples/deck/arrow-path-layer/app';
 import {createArrowPolygonLayerDeck} from '../../examples/deck/arrow-polygon-layer/app';
 import {createArrowTextLayerDeck} from '../../examples/deck/arrow-text-layer/app';
+import {createGPUCulledTraceDeck} from '../../examples/deck/gpu-culled-trace/app';
 
 const exampleConfig = {};
 
@@ -115,6 +116,7 @@ type CreateDeckExample = (
 type DeckArrowLayerPanelProps = {
   id: string;
   title: string;
+  devices?: Array<'webgpu' | 'webgl2'>;
 };
 
 function makeDeckArrowLayerInfoPanel({id, title}: DeckArrowLayerPanelProps) {
@@ -125,7 +127,7 @@ function makeDeckArrowLayerInfoPanel({id, title}: DeckArrowLayerPanelProps) {
   });
 }
 
-function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
+function DeckArrowLayerPanel({id, title, devices = ['webgpu', 'webgl2']}: DeckArrowLayerPanelProps) {
   const panel = useMemo(
     () => makeDeckArrowLayerInfoPanel({id, title}),
     [id, title]
@@ -160,7 +162,7 @@ function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
           panel={panel}
         />
         <DeviceTabs
-          devices={['webgpu', 'webgl2']}
+          devices={devices}
           style={{flexShrink: 0, marginLeft: 'auto', pointerEvents: 'auto'}}
         />
       </div>
@@ -281,6 +283,24 @@ export const DeckArrowTextLayerExample: React.FC<DeckArrowLayerExampleProps> = (
       panel: {
         id: 'arrow-text-layer',
         title: 'Arrow Text Layer'
+      }
+    }}
+    showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+  />
+);
+
+export const DeckGPUCulledTraceExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
+  <ReactExample
+    component={DeckArrowLayerCanvas}
+    componentProps={{
+      createDeck: createGPUCulledTraceDeck,
+      panel: {
+        id: 'gpu-culled-trace',
+        title: 'GPU-Culled Trace with Arrow Text',
+        devices: ['webgpu']
       }
     }}
     showStats={false}
