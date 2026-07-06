@@ -30,6 +30,7 @@ import {ShaderInputs, type Model} from '@luma.gl/engine';
 import type {GPUTextData} from '@luma.gl/text';
 import {
   makeTextGlyphAlphaGlsl,
+  supportsGpuTextExpansion,
   type TextGlyphAlphaShaderSettings
 } from '@luma.gl/text/experimental';
 import {GPUVector, type GPURecordBatchSourceInfo, type VertexList} from '@luma.gl/tables';
@@ -43,6 +44,8 @@ import {
 } from './arrow-layer-types';
 import type {ArrowLayerPickingInfo} from './arrow-layer-types';
 import {
+  DECK_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT,
+  DECK_TEXT_ROW_INDEXED_STORAGE_WGSL,
   DECK_TEXT_STORAGE_SHADER_LAYOUT,
   DECK_TEXT_STORAGE_WGSL
 } from './arrow-text-storage-shaders';
@@ -82,7 +85,7 @@ in ivec2 glyphOffsets;
 in uvec4 glyphFrames;
 in uint glyphPages;
 in uint rowIndices;
-in ivec4 glyphClipRects;
+in vec4 glyphClipRects;
 in vec4 colors;
 in float angles;
 in float sizes;
@@ -99,6 +102,8 @@ layout(std140) uniform textViewportUniforms {
   float textSdfThreshold;
   float textSdfSmoothing;
   float textMsdfDistanceRange;
+  vec2 contentCutoffPixels;
+  vec2 contentAlign;
 } textViewport;
 
 uniform highp sampler2DArray fontAtlasTexture;
@@ -124,22 +129,16 @@ vec2 getCorner(int vertexIndex) {
   return vec2(0.0, 1.0);
 }
 
-bool isGlyphVertexClipped(vec2 glyphVertexOffset, ivec4 clipRect) {
-  if (clipRect.z >= 0) {
-    float clipMinX = float(clipRect.x);
-    float clipMaxX = clipMinX + float(clipRect.z);
-    if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) {
-      return true;
-    }
+float getContentAlignmentOffset(float anchor, float extent, float start, float end, float mode) {
+  if (end < start) return 0.0;
+  if (mode == 1.0) return max(-(anchor + start), 0.0);
+  if (mode == 2.0) {
+    float visibleStart = max(0.0, anchor + start);
+    float visibleEnd = min(extent, anchor + end);
+    return visibleStart < visibleEnd ? (visibleStart + visibleEnd) * 0.5 - anchor : 0.0;
   }
-  if (clipRect.w >= 0) {
-    float clipMinY = float(clipRect.y);
-    float clipMaxY = clipMinY + float(clipRect.w);
-    if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) {
-      return true;
-    }
-  }
-  return false;
+  if (mode == 3.0) return min(extent - (anchor + end), 0.0);
+  return 0.0;
 }
 
 void main() {
@@ -153,16 +152,53 @@ void main() {
   vec2 glyphPixelOffset = glyphVertexOffset * textViewport.glyphWorldScale * (rowSize / 32.0);
   mat2 rowRotation = mat2(cos(rowAngle), sin(rowAngle), -sin(rowAngle), cos(rowAngle));
   glyphPixelOffset = rowRotation * glyphPixelOffset + pixelOffsets;
-  vec4 clipPosition = project_position_to_clipspace(vec3(positions, 0.0), vec3(0.0), vec3(0.0));
+  glyphPixelOffset.y *= -1.0;
+  vec4 anchorPosition = project_position_to_clipspace(vec3(positions, 0.0), vec3(0.0), vec3(0.0));
+  vec2 anchorScreen = vec2(
+    anchorPosition.x / anchorPosition.w + 1.0,
+    1.0 - anchorPosition.y / anchorPosition.w
+  ) * 0.5 * project.viewportSize / project.devicePixelRatio;
+  vec2 clipOrigin = project_size_to_pixel(glyphClipRects.xy);
+  vec2 clipSize = project_size_to_pixel(glyphClipRects.zw);
+  vec2 viewportPixels = project.viewportSize / project.devicePixelRatio;
+  vec2 contentOffset = vec2(
+    getContentAlignmentOffset(
+      anchorScreen.x,
+      viewportPixels.x,
+      clipOrigin.x,
+      clipOrigin.x + clipSize.x,
+      textViewport.contentAlign.x
+    ),
+    -getContentAlignmentOffset(
+      anchorScreen.y,
+      viewportPixels.y,
+      -clipOrigin.y - clipSize.y,
+      -clipOrigin.y,
+      textViewport.contentAlign.y
+    )
+  );
+  glyphPixelOffset += contentOffset;
+  vec4 clipPosition = anchorPosition;
   clipPosition.xy += project_pixel_size_to_clipspace(glyphPixelOffset) * clipPosition.w;
   vec2 atlasSize = vec2(textureSize(fontAtlasTexture, 0).xy);
-  vec2 atlasCorner = vec2(corner.x, 1.0 - corner.y);
-  vec2 atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
+  vec2 atlasPixel = glyphFrame.xy + corner * glyphSize;
 
-  gl_Position = textViewport.clippingEnabled > 0.5 &&
-    isGlyphVertexClipped(glyphVertexOffset, glyphClipRects)
-    ? vec4(0.0)
-    : clipPosition;
+  bool visible = true;
+  if (textViewport.clippingEnabled > 0.5 && glyphClipRects.z >= 0.0) {
+    visible = glyphPixelOffset.x >= clipOrigin.x &&
+      glyphPixelOffset.x <= clipOrigin.x + clipSize.x;
+    float visibleStart = max(anchorScreen.x + clipOrigin.x, 0.0);
+    float visibleEnd = min(anchorScreen.x + clipOrigin.x + clipSize.x, viewportPixels.x);
+    visible = visible && visibleEnd - visibleStart >= textViewport.contentCutoffPixels.x;
+  }
+  if (textViewport.clippingEnabled > 0.5 && glyphClipRects.w >= 0.0) {
+    visible = visible && glyphPixelOffset.y >= clipOrigin.y &&
+      glyphPixelOffset.y <= clipOrigin.y + clipSize.y;
+    float visibleStart = max(anchorScreen.y - clipOrigin.y - clipSize.y, 0.0);
+    float visibleEnd = min(anchorScreen.y - clipOrigin.y, viewportPixels.y);
+    visible = visible && visibleEnd - visibleStart >= textViewport.contentCutoffPixels.y;
+  }
+  gl_Position = visible ? clipPosition : vec4(0.0);
   geometry.position = gl_Position;
   geometry.pickingColor = encodeDeckPickingColor(int(rowIndices));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
@@ -187,6 +223,8 @@ layout(std140) uniform textViewportUniforms {
   float textSdfThreshold;
   float textSdfSmoothing;
   float textMsdfDistanceRange;
+  vec2 contentCutoffPixels;
+  vec2 contentAlign;
 } textViewport;
 
 uniform highp sampler2DArray fontAtlasTexture;
@@ -222,7 +260,7 @@ struct TextVertexInputs {
   @location(2) glyphFrames: vec4<u32>,
   @location(3) glyphPages: u32,
   @location(4) rowIndices: u32,
-  @location(5) glyphClipRects: vec4<i32>,
+  @location(5) glyphClipRects: vec4<f32>,
   @location(6) colors: vec4<f32>,
   @location(7) angles: f32,
   @location(8) sizes: f32,
@@ -247,20 +285,6 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
   return vec2<f32>(0.0, 1.0);
 }
 
-fn isGlyphVertexClipped(glyphVertexOffset: vec2<f32>, clipRect: vec4<i32>) -> bool {
-  if (clipRect.z >= 0) {
-    let clipMinX = f32(clipRect.x);
-    let clipMaxX = clipMinX + f32(clipRect.z);
-    if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) { return true; }
-  }
-  if (clipRect.w >= 0) {
-    let clipMinY = f32(clipRect.y);
-    let clipMaxY = clipMinY + f32(clipRect.w);
-    if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) { return true; }
-  }
-  return false;
-}
-
 @vertex
 fn vertexMain(inputs: TextVertexInputs, @builtin(vertex_index) vertexIndex: u32) -> TextVertexOutputs {
   var outputs: TextVertexOutputs;
@@ -273,22 +297,21 @@ fn vertexMain(inputs: TextVertexInputs, @builtin(vertex_index) vertexIndex: u32)
   var glyphPixelOffset = glyphVertexOffset * 0.36 * (inputs.sizes / 32.0);
   let rowRotation = mat2x2<f32>(cos(rowAngle), sin(rowAngle), -sin(rowAngle), cos(rowAngle));
   glyphPixelOffset = rowRotation * glyphPixelOffset + inputs.pixelOffsets;
-  var clipPosition = deck_projectPosition(vec3<f32>(inputs.positions, 0.0));
+  glyphPixelOffset.y *= -1.0;
+  let anchorPosition = deck_projectPosition(vec3<f32>(inputs.positions, 0.0));
+  glyphPixelOffset += deck_getTextContentOffset(anchorPosition, inputs.glyphClipRects);
+  var clipPosition = anchorPosition;
   clipPosition.x += glyphPixelOffset.x * deckArrowViewport.pixelToClipScale.x * clipPosition.w;
   clipPosition.y += glyphPixelOffset.y * deckArrowViewport.pixelToClipScale.y * clipPosition.w;
   let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
-  let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
-  let atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
+  let atlasPixel = glyphFrame.xy + corner * glyphSize;
 
-  outputs.position = clipPosition;
+  let visible = deck_isTextContentVisible(glyphPixelOffset, anchorPosition, inputs.glyphClipRects);
+  outputs.position = select(vec4<f32>(0.0), clipPosition, visible);
   outputs.textureCoordinate = atlasPixel / atlasSize;
   outputs.color = inputs.colors;
   outputs.pickingColor = deck_encodePickingColor(inputs.rowIndices);
-  outputs.visible = select(
-    1.0,
-    0.0,
-    isGlyphVertexClipped(glyphVertexOffset, inputs.glyphClipRects)
-  );
+  outputs.visible = 1.0;
   outputs.atlasPage = inputs.glyphPages;
   return outputs;
 }
@@ -318,7 +341,7 @@ const DECK_TEXT_SHADER_LAYOUT: ShaderLayout = {
     {name: 'glyphFrames', location: 2, type: 'vec4<u32>', stepMode: 'instance'},
     {name: 'glyphPages', location: 3, type: 'u32', stepMode: 'instance'},
     {name: 'rowIndices', location: 4, type: 'u32', stepMode: 'instance'},
-    {name: 'glyphClipRects', location: 5, type: 'vec4<i32>', stepMode: 'instance'},
+    {name: 'glyphClipRects', location: 5, type: 'vec4<f32>', stepMode: 'instance'},
     {name: 'colors', location: 6, type: 'vec4<f32>', stepMode: 'instance'},
     {name: 'angles', location: 7, type: 'f32', stepMode: 'instance'},
     {name: 'sizes', location: 8, type: 'f32', stepMode: 'instance'},
@@ -332,6 +355,12 @@ export type ArrowTextLayerProps = Omit<LayerProps, 'data'> &
   Omit<ArrowTextRendererProps, 'colors' | 'color'> & {
     /** Constant color, color source, or color source with an explicit null replacement. */
     color?: ArrowTextColorInput;
+    /** Minimum visible clip rectangle in screen pixels before text is hidden. */
+    contentCutoffPixels?: [number, number];
+    /** Deck-style horizontal alignment within the visible portion of a clip rectangle. */
+    contentAlignHorizontal?: 'none' | 'start' | 'center' | 'end';
+    /** Deck-style vertical alignment within the visible portion of a clip rectangle. */
+    contentAlignVertical?: 'none' | 'start' | 'center' | 'end';
   };
 
 type ArrowTextLayerState = {
@@ -349,7 +378,10 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
   static override layerName = 'ArrowTextLayer';
   static override defaultProps = {
     data: {type: 'object', value: null, optional: true},
-    parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS
+    parameters: DECK_ARROW_ALPHA_BLEND_PARAMETERS,
+    contentCutoffPixels: {type: 'array', value: [0, 0]},
+    contentAlignHorizontal: 'none',
+    contentAlignVertical: 'none'
   };
 
   override getAttributeManager() {
@@ -393,7 +425,10 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
       props.model !== oldProps.model ||
       props.color !== oldProps.color ||
       props.angle !== oldProps.angle ||
-      props.size !== oldProps.size;
+      props.size !== oldProps.size ||
+      props.pixelOffset !== oldProps.pixelOffset ||
+      props.textAnchor !== oldProps.textAnchor ||
+      props.alignmentBaseline !== oldProps.alignmentBaseline;
 
     if (sourceChanged) {
       state.sourceInitialized = true;
@@ -408,7 +443,10 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
         model: props.model,
         fontAtlas: props.fontAtlas,
         angle: props.angle,
-        size: props.size
+        size: props.size,
+        pixelOffset: props.pixelOffset,
+        textAnchor: props.textAnchor,
+        alignmentBaseline: props.alignmentBaseline
       });
     }
   }
@@ -424,7 +462,11 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
       return;
     }
     if (renderer.model.device.type === 'webgpu') {
-      setDeckArrowViewport(renderer.model, context.viewport);
+      setDeckArrowViewport(renderer.model, context.viewport, {
+        contentCutoffPixels: this.props.contentCutoffPixels,
+        contentAlignHorizontal: this.props.contentAlignHorizontal,
+        contentAlignVertical: this.props.contentAlignVertical
+      });
     } else {
       renderer.shaderInputs.setProps({
         textViewport: {
@@ -436,10 +478,23 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
           glyphWorldScale: 0.36,
           time: 0,
           clippingEnabled: this.props.clipRects === null ? 0 : 1,
-          colorsEnabled: getArrowLayerInputSource(this.props.color, isArrowLayerColor) ? 1 : 0
+          colorsEnabled: getArrowLayerInputSource(this.props.color, isArrowLayerColor) ? 1 : 0,
+          contentCutoffPixels: this.props.contentCutoffPixels ?? [0, 0],
+          contentAlign: [
+            getContentAlignEnum(this.props.contentAlignHorizontal),
+            getContentAlignEnum(this.props.contentAlignVertical)
+          ]
         }
       } as never);
     }
+    this.drawTextRenderer(renderer, renderPass);
+  }
+
+  /** Draw hook for WebGPU-only example layers that replace the normal instance draw. */
+  protected drawTextRenderer(
+    renderer: ArrowTextRenderer,
+    renderPass: Parameters<Layer<ArrowTextLayerProps>['draw']>[0]['renderPass']
+  ): void {
     renderer.draw(renderPass);
   }
 
@@ -539,14 +594,23 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
         color: colorNullValue,
         model,
         attributeShaderLayout: DECK_TEXT_SHADER_LAYOUT,
-        storageShaderLayout: DECK_TEXT_STORAGE_SHADER_LAYOUT,
+        storageShaderLayout:
+          model === 'storage-row-indexed'
+            ? DECK_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
+            : DECK_TEXT_STORAGE_SHADER_LAYOUT,
         modelProps: {
+          ...effectiveProps.modelProps,
           ...this.getShaders(
             this.context.device.type === 'webgpu'
               ? {
                   shaderAssembler: this.context.shaderAssembler,
                   modules: [deckArrowViewport, picking],
-                  source: model === 'storage' ? DECK_TEXT_STORAGE_WGSL : DECK_TEXT_WGSL
+                  source:
+                    model === 'storage-row-indexed'
+                      ? DECK_TEXT_ROW_INDEXED_STORAGE_WGSL
+                      : model === 'storage'
+                        ? DECK_TEXT_STORAGE_WGSL
+                        : DECK_TEXT_WGSL
                 }
               : {
                   shaderAssembler: this.context.shaderAssembler,
@@ -556,9 +620,18 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
                 }
           ),
           shaderInputs: this.context.device.type === 'webgpu' ? new ShaderInputs({}) : undefined,
-          bufferLayout: constantStyle.bufferLayout,
-          attributes: constantStyle.attributes,
-          constantAttributes: constantStyle.constantAttributes
+          bufferLayout: [
+            ...(effectiveProps.modelProps?.bufferLayout ?? []),
+            ...constantStyle.bufferLayout
+          ],
+          attributes: {
+            ...effectiveProps.modelProps?.attributes,
+            ...constantStyle.attributes
+          },
+          constantAttributes: {
+            ...effectiveProps.modelProps?.constantAttributes,
+            ...constantStyle.constantAttributes
+          }
         },
         onDataBatch: update => this.handleDataBatch(update, props.onDataBatch)
       };
@@ -692,7 +765,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     onDataBatch?.(update);
   }
 
-  private getRendererOrNull(): ArrowTextRenderer | null {
+  protected getRendererOrNull(): ArrowTextRenderer | null {
     return (this.state as ArrowTextLayerState | undefined)?.renderer ?? null;
   }
 
@@ -722,21 +795,37 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
 function resolveDeckTextModel(
   device: Device,
   model: ArrowTextLayerProps['model'] = 'auto'
-): 'attribute' | 'storage' {
-  if (model === 'storage' && device.type !== 'webgpu') {
+): 'attribute' | 'storage' | 'storage-row-indexed' {
+  if ((model === 'storage' || model === 'storage-row-indexed') && device.type !== 'webgpu') {
     throw new Error('ArrowTextLayer storage rendering requires WebGPU');
   }
+  const storageSupported = supportsGpuTextExpansion(device);
   if (model === 'auto') {
-    return device.type === 'webgpu' ? 'storage' : 'attribute';
+    return storageSupported ? 'storage' : 'attribute';
   }
-  if (model !== 'attribute' && model !== 'storage') {
+  if (model !== 'attribute' && model !== 'storage' && model !== 'storage-row-indexed') {
     throw new Error(`ArrowTextLayer does not support the ${model} model`);
   }
-  return model;
+  return (model === 'storage' || model === 'storage-row-indexed') && !storageSupported
+    ? 'attribute'
+    : model;
 }
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
+}
+
+function getContentAlignEnum(value: 'none' | 'start' | 'center' | 'end' | undefined): number {
+  switch (value) {
+    case 'start':
+      return 1;
+    case 'center':
+      return 2;
+    case 'end':
+      return 3;
+    default:
+      return 0;
+  }
 }
 
 type DeckTextConstantStyle = {
@@ -774,9 +863,9 @@ function createDeckTextConstantStyle(
         name: 'constantTextClipRect',
         byteStride: 0,
         stepMode: 'instance',
-        attributes: [{attribute: 'glyphClipRects', format: 'sint32x4', byteOffset: 0}]
+        attributes: [{attribute: 'glyphClipRects', format: 'float32x4', byteOffset: 0}]
       },
-      new Int32Array([0, 0, -1, -1])
+      new Float32Array([0, 0, -1, -1])
     );
   }
   if (!hasColorSource) {

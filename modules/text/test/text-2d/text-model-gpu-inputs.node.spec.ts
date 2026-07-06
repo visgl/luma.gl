@@ -59,7 +59,7 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       columnName: 'clipRects',
       kind: 'positions',
       required: false,
-      formats: ['sint16x4']
+      formats: ['float32x4']
     }
   ]);
   t.deepEqual(TEXT_STORAGE_GPU_INPUT_SCHEMA, [
@@ -115,7 +115,7 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       columnName: 'clipRects',
       kind: 'positions',
       required: false,
-      formats: ['sint16x4']
+      formats: ['float32x4']
     }
   ]);
   t.deepEqual(TEXT_DICTIONARY_GPU_INPUT_SCHEMA, [

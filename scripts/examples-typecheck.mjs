@@ -24,6 +24,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/fluid-foundry',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
+  'deck/gpu-culled-trace',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
   'experimental/volumetric-fire-forge',

@@ -14,7 +14,7 @@ export type Character = {
   anchorY: number;
   /** Glyph quad origin relative to the current pen. Defaults to `anchorX`. */
   layoutOffsetX?: number;
-  /** Glyph quad vertical offset relative to the line baseline. Defaults to zero. */
+  /** Glyph quad top offset relative to the line baseline. Defaults to zero. */
   layoutOffsetY?: number;
   advance: number;
 };

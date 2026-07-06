@@ -10,6 +10,7 @@ import {
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {measureFontAtlasText, type FontAtlas, type TextGlyphLayout} from '@luma.gl/text';
+import type {TextAttributeModel} from '@luma.gl/text/experimental';
 import type {Text3DBounds} from '@luma.gl/text/text-3d';
 import * as arrow from 'apache-arrow';
 import {
@@ -192,7 +193,7 @@ export class AtlasTextRenderer implements TextSpaceCrawlRenderer {
 
 function makeAtlasTextTable(textRows: readonly string[], fontAtlas: FontAtlas): AtlasTextTable {
   const positions = new Float32Array(textRows.length * 2);
-  const clipRects = new Int16Array(textRows.length * DISABLED_CLIP_RECT.length);
+  const clipRects = new Float32Array(textRows.length * DISABLED_CLIP_RECT.length);
   const colors = new Uint8Array(textRows.length * OPAQUE_WHITE.length);
   for (const [rowIndex, textRow] of textRows.entries()) {
     const metrics = measureFontAtlasText(textRow, fontAtlas);
@@ -204,7 +205,7 @@ function makeAtlasTextTable(textRows: readonly string[], fontAtlas: FontAtlas): 
   return new arrow.Table({
     positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
     texts: arrow.vectorFromArray([...textRows], new arrow.Utf8()) as arrow.Vector<arrow.Utf8>,
-    clipRects: makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects),
+    clipRects: makeArrowFixedSizeListVector(new arrow.Float32(), 4, clipRects),
     colors: makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors)
   });
 }
@@ -266,10 +267,10 @@ function measureAtlasTextBounds(
 }
 
 function getTextGlyphLayout(textRenderer: ArrowTextRenderer): TextGlyphLayout {
-  if (!('glyphLayout' in textRenderer.model)) {
+  if (!('attributeState' in textRenderer.model)) {
     throw new Error('Atlas text crawl requires the attribute text model');
   }
-  return textRenderer.model.glyphLayout;
+  return (textRenderer.model as TextAttributeModel).attributeState.glyphLayout;
 }
 
 function extendBounds(bounds: Text3DBounds, point: [number, number, number]): void {
