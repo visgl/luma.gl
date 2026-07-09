@@ -1,5 +1,5 @@
 {
-  "name": "luma.gl-examples-experimental-video-texture",
+  "name": "luma.gl-examples-api-video-texture",
   "version": "9.3.0",
   "private": true,
   "scripts": {

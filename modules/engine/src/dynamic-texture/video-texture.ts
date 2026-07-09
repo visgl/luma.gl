@@ -82,6 +82,8 @@ export class VideoTexture implements TextureBindingSource {
    * @param props Live video source and copied texture options.
    */
   constructor(device: Device, props: VideoTextureProps) {
+    assertVideoTextureSource(props?.source);
+
     this.device = device;
     this.id = props.id || uid('video-texture');
     this._source = props.source;
@@ -97,6 +99,8 @@ export class VideoTexture implements TextureBindingSource {
    * @param source Next caller-owned video source to follow.
    */
   setSource(source: VideoTextureSource): void {
+    assertVideoTextureSource(source);
+
     this._destroyExternalTexture();
     this._source = source;
     this._sourceVersion++;
@@ -156,10 +160,18 @@ export class VideoTexture implements TextureBindingSource {
   private _resolveCopiedTexture(): Texture {
     const texture = this._getOrCreateCopiedTexture();
     if (!Object.is(this._textureFrameToken, this._sourceFrameToken)) {
-      texture.copyExternalImage({
-        image: this._source,
-        colorSpace: this._colorSpace
-      });
+      try {
+        texture.copyExternalImage({
+          image: this._source,
+          colorSpace: this._colorSpace
+        });
+      } catch (error) {
+        log.probe(1, `${this} cannot copy current video frame`, error)();
+        throw new Error(
+          `${this} cannot copy current video frame; verify that the source is ready, CORS-accessible, and any VideoFrame remains open through draw resolution`,
+          {cause: error}
+        );
+      }
       this._textureFrameToken = this._sourceFrameToken;
     }
     return texture;
@@ -215,7 +227,8 @@ export class VideoTexture implements TextureBindingSource {
     } catch (error) {
       log.probe(1, `${this} native WebGPU external texture import unavailable`, error)();
       throw new Error(
-        `${this} cannot resolve WebGPU texture_external binding; use texture_2d for copied video path`
+        `${this} cannot resolve WebGPU texture_external binding; use texture_2d for copied video path`,
+        {cause: error}
       );
     }
   }
@@ -273,14 +286,40 @@ export class VideoTexture implements TextureBindingSource {
   }
 }
 
+/** Throws when a runtime caller supplies an unsupported video source. */
+function assertVideoTextureSource(source: unknown): asserts source is VideoTextureSource {
+  if (!isHTMLVideoElementSource(source) && !isVideoFrameSource(source)) {
+    throw new TypeError('VideoTexture source must be an HTMLVideoElement or VideoFrame');
+  }
+}
+
 /** Returns whether a video source exposes HTML video element playback state. */
-function isHTMLVideoElementSource(source: VideoTextureSource): source is HTMLVideoElement {
+function isHTMLVideoElementSource(source: unknown): source is HTMLVideoElement {
+  if (!source || typeof source !== 'object') {
+    return false;
+  }
+
   return (
     (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) ||
     ('videoWidth' in source &&
       'videoHeight' in source &&
       'readyState' in source &&
       'currentTime' in source)
+  );
+}
+
+/** Returns whether a video source exposes VideoFrame dimensions and timestamp. */
+function isVideoFrameSource(source: unknown): source is VideoFrame {
+  if (!source || typeof source !== 'object') {
+    return false;
+  }
+
+  return (
+    (typeof VideoFrame !== 'undefined' && source instanceof VideoFrame) ||
+    ('displayWidth' in source &&
+      'displayHeight' in source &&
+      'timestamp' in source &&
+      !('videoWidth' in source))
   );
 }
 

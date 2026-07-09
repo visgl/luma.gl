@@ -25,6 +25,7 @@ const sidebars = {
         'api/cubemap',
         'api/texture-3d',
         'api/texture-tester',
+        {type: 'doc', id: 'api/video-texture', label: 'Texture Video'},
         'api/render-bundles'
       ]
     },
@@ -60,7 +61,6 @@ const sidebars = {
         'experimental/fp64',
         'experimental/gpt-2',
         'experimental/text-space-crawl',
-        {type: 'doc', id: 'experimental/video-texture', label: 'Texture Video'},
         {type: 'doc', id: 'experimental/html-ui-prism', label: 'Texture HTML-in-Canvas'},
         {type: 'doc', id: 'experimental/webxr-kaleidoscope', label: 'Texture WebXR'}
       ]

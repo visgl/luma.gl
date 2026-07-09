@@ -38,6 +38,10 @@ const config = getDocusaurusConfig({
             to: '/examples/arrow/arrow-lines'
           },
           {
+            from: ['/examples/experimental/video-texture'],
+            to: '/examples/api/video-texture'
+          },
+          {
             from: ['/docs/api-reference/tables/gpu-table-object-model'],
             to: '/docs/api-reference/tables/gpu-table-lifecycle'
           },
