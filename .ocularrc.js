@@ -66,6 +66,7 @@ const config = {
         'shader-modules': '/examples/tutorials/shader-modules',
         'texture-3d': '/examples/api/texture-3d',
         'texture-tester': '/examples/api/texture-tester',
+        'video-texture': '/examples/api/video-texture',
         transform: '/examples/tutorials/transform',
         'transform-feedback': '/examples/tutorials/transform-feedback',
         'two-cubes': '/examples/tutorials/two-cubes'

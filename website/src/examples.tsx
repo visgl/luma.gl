@@ -41,7 +41,7 @@ import {
 } from '../../examples/experimental/gpu-data-analysis/src/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPT2App from '../../examples/experimental/gpt-2/app';
-import VideoTextureApp from '../../examples/experimental/video-texture/app';
+import VideoTextureApp from '../../examples/api/video-texture/app';
 import WebXRKaleidoscopeApp from '../../examples/experimental/webxr-kaleidoscope/app';
 import {
   initializeGPGPUShowcase,
@@ -995,7 +995,7 @@ export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
     <LumaExample
       id="video-texture"
       title="Video Texture"
-      directory="experimental"
+      directory="api"
       template={VideoTextureApp}
       config={exampleConfig}
       headerControls={

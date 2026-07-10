@@ -93,21 +93,7 @@ export {
   _resolveLoadFileUrl
 } from './application-utils/load-file';
 
-// EXPERIMENTAL
-export type {
-  ShaderPassBinding,
-  ShaderPassRendererProps,
-  ShaderPassRendererRenderOptions,
-  ShaderPassSourceTexture
-} from './passes/shader-pass-renderer';
-export {ShaderPassRenderer} from './passes/shader-pass-renderer';
-
-export {Swap} from './compute/swap';
-export {SwapBuffers} from './compute/swap';
-export {SwapFramebuffers} from './compute/swap';
-
-export type {ComputationProps} from './compute/computation';
-export {Computation} from './compute/computation';
+// Dynamic Resources
 
 export type {
   TextureCubeFace,
@@ -126,7 +112,7 @@ export type {
   TextureBindingLayout,
   TextureBindingSource
 } from './dynamic-texture/texture-binding-source';
-export type {VideoTextureProps, VideoTextureSource} from './dynamic-texture/video-texture';
+export type {VideoTextureProps} from './dynamic-texture/video-texture';
 export {VideoTexture} from './dynamic-texture/video-texture';
 export type {
   BufferBindingSource,
@@ -134,6 +120,22 @@ export type {
   DynamicBufferRange
 } from './dynamic-buffer/dynamic-buffer';
 export {DynamicBuffer} from './dynamic-buffer/dynamic-buffer';
+
+// EXPERIMENTAL
+export type {
+  ShaderPassBinding,
+  ShaderPassRendererProps,
+  ShaderPassRendererRenderOptions,
+  ShaderPassSourceTexture
+} from './passes/shader-pass-renderer';
+export {ShaderPassRenderer} from './passes/shader-pass-renderer';
+
+export {Swap} from './compute/swap';
+export {SwapBuffers} from './compute/swap';
+export {SwapFramebuffers} from './compute/swap';
+
+export type {ComputationProps} from './compute/computation';
+export {Computation} from './compute/computation';
 
 export type {
   PickInfo,

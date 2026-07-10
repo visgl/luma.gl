@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import type {Device} from '@luma.gl/core';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+import type {Device, SamplerProps, Texture} from '@luma.gl/core';
+import {getNullTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {VideoTexture} from '../../src';
 
 const TEXTURE_BINDING = {
@@ -77,27 +77,211 @@ test('VideoTexture waits for HTMLVideoElement current frame data', async t => {
   t.end();
 });
 
-test('VideoTexture does not bind copied textures through WebGPU external slots', t => {
-  const videoTexture = new VideoTexture(makeFakeWebGPUDevice(), {
-    source: makeFakeVideoFrame(1).frame
-  });
+test('VideoTexture copies successive browser VideoFrames', async t => {
+  if (typeof document === 'undefined' || typeof VideoFrame === 'undefined') {
+    t.pass('browser VideoFrame smoke test requires browser WebCodecs');
+    t.end();
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext('2d');
+  t.ok(context, '2D canvas context is available');
+  if (!context) {
+    t.end();
+    return;
+  }
+
+  context.fillStyle = '#ff0000';
+  context.fillRect(0, 0, 1, 1);
+  const firstFrame = new VideoFrame(canvas, {timestamp: 1});
+  const device = await getWebGLTestDevice();
+  const videoTexture = new VideoTexture(device, {source: firstFrame});
+  let secondFrame: VideoFrame | null = null;
+
+  try {
+    const texture = videoTexture.resolveTextureBinding(TEXTURE_BINDING) as Texture;
+    t.deepEquals(
+      device.readPixelsToArrayWebGL(texture),
+      new Uint8Array([255, 0, 0, 255]),
+      'first browser VideoFrame is copied'
+    );
+
+    context.fillStyle = '#0000ff';
+    context.fillRect(0, 0, 1, 1);
+    secondFrame = new VideoFrame(canvas, {timestamp: 2});
+    videoTexture.setSource(secondFrame);
+    videoTexture.resolveTextureBinding(TEXTURE_BINDING);
+    t.deepEquals(
+      device.readPixelsToArrayWebGL(texture),
+      new Uint8Array([0, 0, 255, 255]),
+      'next browser VideoFrame replaces copied pixels'
+    );
+  } finally {
+    videoTexture.destroy();
+    secondFrame?.close();
+    firstFrame.close();
+  }
+
+  t.end();
+});
+
+test('VideoTexture resolves native WebGPU external bindings from browser VideoFrames', async t => {
+  if (
+    typeof document === 'undefined' ||
+    typeof VideoFrame === 'undefined' ||
+    typeof navigator === 'undefined' ||
+    !navigator.gpu
+  ) {
+    t.pass('native external texture smoke test requires browser WebGPU and WebCodecs');
+    t.end();
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const frame = new VideoFrame(canvas, {timestamp: 1});
+  const device = await getWebGPUTestDevice();
+  const videoTexture = new VideoTexture(device, {source: frame});
+
+  try {
+    t.ok(
+      videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
+      'browser VideoFrame resolves to native WebGPU external binding'
+    );
+  } finally {
+    videoTexture.destroy();
+    frame.close();
+  }
+
+  t.end();
+});
+
+test('VideoTexture uses lightweight assertions for runtime sources', async t => {
+  const device = await getNullTestDevice();
 
   t.throws(
-    () => videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
-    /use texture_2d for copied video path/,
-    'native external import failure requires a copied texture shader slot'
+    () => new VideoTexture(device, {source: null as unknown as VideoFrame}),
+    /luma.gl assertion failed/,
+    'constructor asserts unsupported sources'
+  );
+
+  const videoTexture = new VideoTexture(device, {source: makeFakeVideoFrame(1).frame});
+  t.throws(
+    () => videoTexture.setSource({} as VideoFrame),
+    /luma.gl assertion failed/,
+    'setSource asserts unsupported sources'
   );
 
   videoTexture.destroy();
   t.end();
 });
 
-function makeFakeVideoFrame(timestamp: number): {frame: VideoFrame; closeCount: number} {
+test('VideoTexture recreates resized copied textures and updates samplers', t => {
+  const {device, textures} = makeFakeCopiedTextureDevice();
+  const videoTexture = new VideoTexture(device, {
+    source: makeFakeVideoFrame(1, 2, 2).frame
+  });
+
+  const firstTexture = videoTexture.resolveTextureBinding(TEXTURE_BINDING);
+  t.equal(textures.length, 1, 'first resolution creates a copied texture');
+  t.equal(textures[0]!.copyCount, 1, 'first resolution copies one frame');
+
+  videoTexture.resolveTextureBinding(TEXTURE_BINDING);
+  t.equal(textures[0]!.copyCount, 1, 'same frame does not copy again');
+
+  const sampler: SamplerProps = {magFilter: 'nearest'};
+  videoTexture.setSampler(sampler);
+  t.equal(textures[0]!.sampler, sampler, 'sampler updates the existing copied texture');
+
+  videoTexture.setSource(makeFakeVideoFrame(2, 4, 3).frame);
+  const secondTexture = videoTexture.resolveTextureBinding(TEXTURE_BINDING);
+
+  t.notEqual(secondTexture, firstTexture, 'size changes replace the copied texture');
+  t.equal(textures.length, 2, 'size change creates one replacement texture');
+  t.equal(textures[0]!.destroyCount, 1, 'size change destroys the previous copied texture');
+  t.equal(textures[1]!.width, 4, 'replacement texture uses new width');
+  t.equal(textures[1]!.height, 3, 'replacement texture uses new height');
+
+  videoTexture.destroy();
+  t.equal(textures[1]!.destroyCount, 1, 'destroy releases the replacement copied texture');
+  videoTexture.destroy();
+  t.equal(textures[1]!.destroyCount, 1, 'destroy is idempotent');
+  t.end();
+});
+
+test('VideoTexture preserves copied frame failures', t => {
+  const {device} = makeFakeCopiedTextureDevice({throwOnCopy: true});
+  const videoTexture = new VideoTexture(device, {source: makeFakeVideoFrame(1).frame});
+
+  t.throws(
+    () => videoTexture.resolveTextureBinding(TEXTURE_BINDING),
+    /source cannot be copied/,
+    'copied frame errors surface without a verbose wrapper'
+  );
+
+  videoTexture.destroy();
+  t.end();
+});
+
+test('VideoTexture reacquires native WebGPU external textures per resolution', t => {
+  const {device, externalTextures} = makeSuccessfulFakeWebGPUDevice();
+  const frame = makeFakeVideoFrame(1);
+  const videoTexture = new VideoTexture(device, {source: frame.frame});
+  const initialGeneration = videoTexture.generation;
+
+  const firstExternalTexture = videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING);
+  const firstGeneration = videoTexture.generation;
+  const secondExternalTexture = videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING);
+
+  t.notEqual(
+    secondExternalTexture,
+    firstExternalTexture,
+    'each resolution acquires a fresh binding'
+  );
+  t.equal(externalTextures.length, 2, 'two native external textures are acquired');
+  t.equal(externalTextures[0]!.destroyCount, 1, 'reacquisition releases the previous wrapper');
+  t.ok(firstGeneration > initialGeneration, 'first external binding advances generation');
+  t.ok(videoTexture.generation > firstGeneration, 'fresh external binding advances generation');
+
+  const sampler: SamplerProps = {minFilter: 'nearest'};
+  videoTexture.setSampler(sampler);
+  t.equal(externalTextures[1]!.sampler, sampler, 'sampler updates the current external binding');
+
+  videoTexture.destroy();
+  t.equal(externalTextures[1]!.destroyCount, 1, 'destroy releases the current external binding');
+  t.equal(frame.closeCount, 0, 'destroy leaves external VideoFrame source caller-owned');
+  t.end();
+});
+
+test('VideoTexture preserves native WebGPU external import failures', t => {
+  const videoTexture = new VideoTexture(makeFakeWebGPUDevice(), {
+    source: makeFakeVideoFrame(1).frame
+  });
+
+  t.throws(
+    () => videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
+    /native external textures unavailable/,
+    'native external import failures surface without a copied fallback'
+  );
+
+  videoTexture.destroy();
+  t.end();
+});
+
+function makeFakeVideoFrame(
+  timestamp: number,
+  width: number = 2,
+  height: number = 2
+): {frame: VideoFrame; closeCount: number} {
   const result = {
     closeCount: 0,
     frame: {
-      displayWidth: 2,
-      displayHeight: 2,
+      displayWidth: width,
+      displayHeight: height,
       timestamp,
       close: () => {
         result.closeCount++;
@@ -119,6 +303,87 @@ function makeFakeVideoElement(): {
     readyState: 0,
     currentTime: 0
   };
+}
+
+type FakeCopiedTexture = {
+  width: number;
+  height: number;
+  copyCount: number;
+  destroyCount: number;
+  sampler: SamplerProps | null;
+  copyExternalImage: () => void;
+  setSampler: (sampler: SamplerProps) => void;
+  destroy: () => void;
+};
+
+function makeFakeCopiedTextureDevice(options?: {throwOnCopy?: boolean}): {
+  device: Device;
+  textures: FakeCopiedTexture[];
+} {
+  let timestamp = 0;
+  const textures: FakeCopiedTexture[] = [];
+  const device = {
+    type: 'webgl',
+    incrementTimestamp: () => ++timestamp,
+    createTexture: ({width, height}: {width: number; height: number}) => {
+      const texture: FakeCopiedTexture = {
+        width,
+        height,
+        copyCount: 0,
+        destroyCount: 0,
+        sampler: null,
+        copyExternalImage: () => {
+          if (options?.throwOnCopy) {
+            throw new Error('source cannot be copied');
+          }
+          texture.copyCount++;
+        },
+        setSampler: sampler => {
+          texture.sampler = sampler;
+        },
+        destroy: () => {
+          texture.destroyCount++;
+        }
+      };
+      textures.push(texture);
+      return texture;
+    }
+  } as unknown as Device;
+  return {device, textures};
+}
+
+type FakeExternalTexture = {
+  destroyCount: number;
+  sampler: SamplerProps | null;
+  destroy: () => void;
+  setSampler: (sampler: SamplerProps) => void;
+};
+
+function makeSuccessfulFakeWebGPUDevice(): {
+  device: Device;
+  externalTextures: FakeExternalTexture[];
+} {
+  let timestamp = 0;
+  const externalTextures: FakeExternalTexture[] = [];
+  const device = {
+    type: 'webgpu',
+    incrementTimestamp: () => ++timestamp,
+    createExternalTexture: () => {
+      const externalTexture: FakeExternalTexture = {
+        destroyCount: 0,
+        sampler: null,
+        destroy: () => {
+          externalTexture.destroyCount++;
+        },
+        setSampler: sampler => {
+          externalTexture.sampler = sampler;
+        }
+      };
+      externalTextures.push(externalTexture);
+      return externalTexture;
+    }
+  } as unknown as Device;
+  return {device, externalTextures};
 }
 
 function makeFakeWebGPUDevice(): Device {

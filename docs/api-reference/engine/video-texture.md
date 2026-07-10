@@ -5,13 +5,20 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 <EngineDocsTabs group="dynamic-resources" active="video-texture" />
 
 <p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From-v9.4" />
 </p>
 
-`VideoTexture` is the engine-level live video binding source. It accepts an `HTMLVideoElement` or `VideoFrame` and resolves the concrete core binding that matches the shader slot used by the current draw.
+`VideoTexture` is the engine-level live video binding source. It accepts a caller-owned
+`HTMLVideoElement` or `VideoFrame` and resolves the concrete core binding that matches the shader
+slot used by the current draw.
 
-For the copied-vs-external texture tradeoff, see [Working With Video Textures](/docs/api-guide/gpu/video-textures).
+Use [`Texture`](/docs/api-reference/core/resources/texture) for one uploaded image or when the
+shader needs ordinary texture features such as mipmaps, repeat addressing, render-target usage, or
+storage usage. Use `VideoTexture` when a `Model` or `Material` should follow a live video source
+across draws.
+
+For the copied-versus-external texture tradeoff, see
+[Working With Video Textures](/docs/api-guide/gpu/video-textures).
 
 ## Usage
 
@@ -26,14 +33,12 @@ const model = new Model(device, {
 });
 ```
 
-For WebGL, bind through a normal GLSL sampler:
+The shader declaration selects the concrete representation:
 
 ```glsl
 uniform sampler2D videoTexture;
 vec4 color = texture(videoTexture, uv);
 ```
-
-For copied WebGPU sampling, use a normal WGSL texture:
 
 ```wgsl
 @group(0) @binding(auto) var videoTexture: texture_2d<f32>;
@@ -41,7 +46,8 @@ For copied WebGPU sampling, use a normal WGSL texture:
 let color = textureSample(videoTexture, videoTextureSampler, uv);
 ```
 
-For native WebGPU video sampling, opt into `texture_external`:
+Both declarations above use the portable copied texture path. WebGPU callers may opt into native
+external-video sampling with:
 
 ```wgsl
 @group(0) @binding(auto) var videoTexture: texture_external;
@@ -49,16 +55,107 @@ For native WebGPU video sampling, opt into `texture_external`:
 let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 ```
 
-## Behavior
+## Types
 
-- WebGL `sampler2D` and WebGPU `texture_2d` resolve to copied luma `Texture` resources.
-- WebGPU `texture_external` resolves to a native `GPUExternalTexture` when the browser accepts the import. A copied `Texture` cannot satisfy that WebGPU slot; use a `texture_2d<f32>` shader binding for the copied path.
-- `HTMLVideoElement` sources are ready only after they expose nonzero video dimensions and current frame data.
-- `VideoFrame` sources are ready immediately. Frames are caller-owned; `VideoTexture` never calls `VideoFrame.close()`.
-- `setSource()` replaces the current source. Same-size copied frames reuse the same texture identity; size changes recreate the copied texture and invalidate bind-group identity.
+### `VideoTextureProps`
 
-## Remarks
+```ts
+export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
+  source: HTMLVideoElement | VideoFrame;
+  colorSpace?: 'srgb';
+  sampler?: Sampler | SamplerProps;
+};
+```
 
-- Shader binding type selects the representation. There is no single native external-texture shader declaration shared by GLSL and WGSL.
-- `texture_external` is for base-level clamp-style external sampling. Upload into an ordinary `Texture` when the shader needs mipmaps, repeat addressing, or ordinary `textureSample` semantics.
-- Future copied DOM sources such as HTML-in-Canvas textures and experimental [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture) use the same `TextureBindingSource` framework without making `VideoTexture` their public API.
+- `source` is required and remains caller-owned.
+- `colorSpace` defaults to `'srgb'` for copied and imported video data.
+- `sampler` supplies the default sampler for copied and native external bindings.
+
+## Properties
+
+### `device`, `id`
+
+The device that resolves bindings and the application-provided or generated resource identifier.
+
+### `source: HTMLVideoElement | VideoFrame`
+
+The current caller-owned source. Replace it with `setSource()`.
+
+### `isReady: boolean`
+
+`HTMLVideoElement` sources become ready after exposing nonzero `videoWidth` and `videoHeight` plus
+current frame data (`readyState >= HAVE_CURRENT_DATA`). `VideoFrame` sources with positive display
+dimensions are ready immediately.
+
+### `generation: number`
+
+Advances when concrete binding identity may change, such as source replacement, sampler
+replacement, copied texture resize, or native external texture reacquisition. Engine bind-group
+caches use it to decide when to rebind.
+
+### `updateTimestamp: number`
+
+Tracks observed readiness, frame, source, sampler, and binding changes. `VideoTexture` observes
+HTML video advancement while its readiness or binding is queried during draw preparation.
+
+### `destroyed: boolean`
+
+Indicates whether `destroy()` has released owned copied and external bindings.
+
+## Methods
+
+### `constructor(device: Device, props: VideoTextureProps)`
+
+Creates a live binding source. A lightweight assertion guards unsupported runtime source values.
+
+### `setSource(source: HTMLVideoElement | VideoFrame): void`
+
+Replaces the source and invalidates resolved bindings. Same-size copied sources reuse the existing
+texture; a new source size recreates it.
+
+### `setSampler(sampler: Sampler | SamplerProps): void`
+
+Replaces the default sampler for existing and future copied or native external bindings.
+
+### `resolveTextureBinding(bindingLayout: TextureBindingLayout): Texture | ExternalTexture | null`
+
+Resolves the current source for one reflected shader texture slot. Returns `null` while the source
+is not ready or after destruction.
+
+### `destroy(): void`
+
+Idempotently releases the copied `Texture` and any acquired `ExternalTexture`. It never pauses an
+`HTMLVideoElement`, stops a `MediaStream`, or calls `VideoFrame.close()`.
+
+## Binding Behavior
+
+| Shader slot | Resolution |
+| --- | --- |
+| WebGL `sampler2D` | Copies the current frame into a one-mip `rgba8unorm` luma `Texture`. |
+| WGSL `texture_2d<f32>` | Copies the current frame into the same portable luma `Texture` path. |
+| WGSL `texture_external` | Acquires a fresh native WebGPU `GPUExternalTexture` for the current draw. |
+
+The copied texture is uploaded only after the observed frame token changes. A native external
+texture is deliberately reacquired because WebGPU external textures are short-lived bindings.
+There is no copied fallback for a `texture_external` slot: use `texture_2d<f32>` when copied
+texture semantics are required.
+
+## Ownership and Errors
+
+- The caller owns every source. Keep a `VideoFrame` open until the draw that resolves it has
+  completed binding preparation; close replaced frames only after they can no longer be resolved.
+- The caller owns video playback, autoplay handling, camera permission prompts, and stopping
+  `MediaStream` tracks.
+- Copied uploads can fail when a video is not ready, a cross-origin video is not CORS-accessible,
+  or a `VideoFrame` was closed too early. The underlying browser error surfaces directly.
+- Native WebGPU import failures surface from the device. Switch the shader slot to
+  `texture_2d<f32>` for the copied path when the browser cannot import the source.
+
+## Related APIs
+
+- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) wraps asynchronous or replaceable
+  ordinary texture data.
+- [`ExternalTexture`](/docs/api-reference/core/resources/external-texture) is the low-level concrete
+  one-shot WebGPU external binding.
+- Experimental [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture)
+  handles WebXR Raw Camera Access without making WebXR part of `VideoTexture`.
