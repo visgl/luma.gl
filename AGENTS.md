@@ -39,6 +39,8 @@
 - Single quotes
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
+- Keep shipped runtime validation minimal to protect bundle size. Prefer static typing and simple assertions over heavy validation or verbose runtime error paths.
+- When a runtime invariant needs an assertion, put the explanatory error message in a comment next to the assertion so users can break on it and read the nearby context instead of shipping a long error string.
 - Always import individual symbols from `'apache-arrow'` in `modules/*/src`.
 - It is preferred to use `import * as arrow from 'apache-arrow'` in tests, examples, and docs.
 
