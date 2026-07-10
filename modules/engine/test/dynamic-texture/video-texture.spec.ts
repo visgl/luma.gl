@@ -160,20 +160,20 @@ test('VideoTexture resolves native WebGPU external bindings from browser VideoFr
   t.end();
 });
 
-test('VideoTexture validates runtime sources', async t => {
+test('VideoTexture uses lightweight assertions for runtime sources', async t => {
   const device = await getNullTestDevice();
 
   t.throws(
     () => new VideoTexture(device, {source: null as unknown as VideoFrame}),
-    /source must be an HTMLVideoElement or VideoFrame/,
-    'constructor rejects unsupported sources'
+    /luma.gl assertion failed/,
+    'constructor asserts unsupported sources'
   );
 
   const videoTexture = new VideoTexture(device, {source: makeFakeVideoFrame(1).frame});
   t.throws(
     () => videoTexture.setSource({} as VideoFrame),
-    /source must be an HTMLVideoElement or VideoFrame/,
-    'setSource rejects unsupported sources'
+    /luma.gl assertion failed/,
+    'setSource asserts unsupported sources'
   );
 
   videoTexture.destroy();
@@ -213,14 +213,14 @@ test('VideoTexture recreates resized copied textures and updates samplers', t =>
   t.end();
 });
 
-test('VideoTexture reports actionable copied frame failures', t => {
+test('VideoTexture preserves copied frame failures', t => {
   const {device} = makeFakeCopiedTextureDevice({throwOnCopy: true});
   const videoTexture = new VideoTexture(device, {source: makeFakeVideoFrame(1).frame});
 
   t.throws(
     () => videoTexture.resolveTextureBinding(TEXTURE_BINDING),
-    /verify that the source is ready, CORS-accessible, and any VideoFrame remains open/,
-    'copied frame errors explain likely source failures'
+    /source cannot be copied/,
+    'copied frame errors surface without a verbose wrapper'
   );
 
   videoTexture.destroy();
@@ -257,15 +257,15 @@ test('VideoTexture reacquires native WebGPU external textures per resolution', t
   t.end();
 });
 
-test('VideoTexture does not bind copied textures through WebGPU external slots', t => {
+test('VideoTexture preserves native WebGPU external import failures', t => {
   const videoTexture = new VideoTexture(makeFakeWebGPUDevice(), {
     source: makeFakeVideoFrame(1).frame
   });
 
   t.throws(
     () => videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
-    /use texture_2d for copied video path/,
-    'native external import failure requires a copied texture shader slot'
+    /native external textures unavailable/,
+    'native external import failures surface without a copied fallback'
   );
 
   videoTexture.destroy();

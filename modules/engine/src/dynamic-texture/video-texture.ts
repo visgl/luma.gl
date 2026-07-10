@@ -3,17 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, ExternalTexture, ResourceProps, Sampler, SamplerProps} from '@luma.gl/core';
-import {Texture, log} from '@luma.gl/core';
+import {Texture, assert} from '@luma.gl/core';
 import {uid} from '../utils/uid';
 import type {TextureBindingLayout, TextureBindingSource} from './texture-binding-source';
-
-/** Browser source accepted by {@link VideoTexture}. */
-export type VideoTextureSource = HTMLVideoElement | VideoFrame;
 
 /** Properties for a live video binding source. */
 export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
   /** Caller-owned live video source followed by this binding source. */
-  source: VideoTextureSource;
+  source: HTMLVideoElement | VideoFrame;
   /** Color space requested for copied or imported video data. */
   colorSpace?: 'srgb';
   /** Default sampler used by copied and native external bindings. */
@@ -37,7 +34,7 @@ export class VideoTexture implements TextureBindingSource {
   /** Monotonic binding generation advanced when concrete draw bindings may need recreation. */
   generation = 0;
 
-  private _source: VideoTextureSource;
+  private _source: HTMLVideoElement | VideoFrame;
   private _colorSpace: 'srgb';
   private _sampler: Sampler | SamplerProps;
   private _isReady = false;
@@ -49,7 +46,7 @@ export class VideoTexture implements TextureBindingSource {
   private _externalTexture: ExternalTexture | null = null;
 
   /** Current caller-owned live video source. */
-  get source(): VideoTextureSource {
+  get source(): HTMLVideoElement | VideoFrame {
     return this._source;
   }
 
@@ -82,7 +79,8 @@ export class VideoTexture implements TextureBindingSource {
    * @param props Live video source and copied texture options.
    */
   constructor(device: Device, props: VideoTextureProps) {
-    assertVideoTextureSource(props?.source);
+    // Error: VideoTexture source must be an HTMLVideoElement or VideoFrame.
+    assert(isHTMLVideoElementSource(props?.source) || isVideoFrameSource(props?.source));
 
     this.device = device;
     this.id = props.id || uid('video-texture');
@@ -98,8 +96,9 @@ export class VideoTexture implements TextureBindingSource {
    * Replaces the caller-owned video source and invalidates resolved bindings.
    * @param source Next caller-owned video source to follow.
    */
-  setSource(source: VideoTextureSource): void {
-    assertVideoTextureSource(source);
+  setSource(source: HTMLVideoElement | VideoFrame): void {
+    // Error: VideoTexture source must be an HTMLVideoElement or VideoFrame.
+    assert(isHTMLVideoElementSource(source) || isVideoFrameSource(source));
 
     this._destroyExternalTexture();
     this._source = source;
@@ -160,18 +159,12 @@ export class VideoTexture implements TextureBindingSource {
   private _resolveCopiedTexture(): Texture {
     const texture = this._getOrCreateCopiedTexture();
     if (!Object.is(this._textureFrameToken, this._sourceFrameToken)) {
-      try {
-        texture.copyExternalImage({
-          image: this._source,
-          colorSpace: this._colorSpace
-        });
-      } catch (error) {
-        log.probe(1, `${this} cannot copy current video frame`, error)();
-        throw new Error(
-          `${this} cannot copy current video frame; verify that the source is ready, CORS-accessible, and any VideoFrame remains open through draw resolution`,
-          {cause: error}
-        );
-      }
+      // A copy failure usually means that the video is not ready or CORS-accessible, or that the
+      // caller closed the current VideoFrame before draw binding resolution completed.
+      texture.copyExternalImage({
+        image: this._source,
+        colorSpace: this._colorSpace
+      });
       this._textureFrameToken = this._sourceFrameToken;
     }
     return texture;
@@ -214,23 +207,17 @@ export class VideoTexture implements TextureBindingSource {
    * @returns Fresh acquired external texture.
    */
   private _createNativeExternalTexture(): ExternalTexture {
-    try {
-      this._destroyExternalTexture();
-      this._externalTexture = this.device.createExternalTexture({
-        id: `${this.id}-external`,
-        source: this._source,
-        colorSpace: this._colorSpace,
-        sampler: this._sampler
-      });
-      this.generation++;
-      return this._externalTexture;
-    } catch (error) {
-      log.probe(1, `${this} native WebGPU external texture import unavailable`, error)();
-      throw new Error(
-        `${this} cannot resolve WebGPU texture_external binding; use texture_2d for copied video path`,
-        {cause: error}
-      );
-    }
+    // A WebGPU external-texture slot cannot accept a copied Texture fallback. Callers that need
+    // the portable copied path must declare texture_2d<f32> in the shader instead.
+    this._destroyExternalTexture();
+    this._externalTexture = this.device.createExternalTexture({
+      id: `${this.id}-external`,
+      source: this._source,
+      colorSpace: this._colorSpace,
+      sampler: this._sampler
+    });
+    this.generation++;
+    return this._externalTexture;
   }
 
   /** Releases the current acquired external texture wrapper. */
@@ -245,9 +232,8 @@ export class VideoTexture implements TextureBindingSource {
    */
   private _getResolvedSize(): {width: number; height: number} {
     const size = getVideoTextureSourceSize(this._source);
-    if (size.width <= 0 || size.height <= 0) {
-      throw new Error(`${this} source has no current frame size`);
-    }
+    // Error: VideoTexture source has no current frame size.
+    assert(size.width > 0 && size.height > 0);
     return size;
   }
 
@@ -286,13 +272,6 @@ export class VideoTexture implements TextureBindingSource {
   }
 }
 
-/** Throws when a runtime caller supplies an unsupported video source. */
-function assertVideoTextureSource(source: unknown): asserts source is VideoTextureSource {
-  if (!isHTMLVideoElementSource(source) && !isVideoFrameSource(source)) {
-    throw new TypeError('VideoTexture source must be an HTMLVideoElement or VideoFrame');
-  }
-}
-
 /** Returns whether a video source exposes HTML video element playback state. */
 function isHTMLVideoElementSource(source: unknown): source is HTMLVideoElement {
   if (!source || typeof source !== 'object') {
@@ -324,7 +303,7 @@ function isVideoFrameSource(source: unknown): source is VideoFrame {
 }
 
 /** Returns whether a video source exposes dimensions and a current sampleable frame. */
-function isVideoTextureSourceReady(source: VideoTextureSource): boolean {
+function isVideoTextureSourceReady(source: HTMLVideoElement | VideoFrame): boolean {
   const size = getVideoTextureSourceSize(source);
   if (size.width <= 0 || size.height <= 0) {
     return false;
@@ -333,7 +312,10 @@ function isVideoTextureSourceReady(source: VideoTextureSource): boolean {
 }
 
 /** Returns current sampleable source dimensions. */
-function getVideoTextureSourceSize(source: VideoTextureSource): {width: number; height: number} {
+function getVideoTextureSourceSize(source: HTMLVideoElement | VideoFrame): {
+  width: number;
+  height: number;
+} {
   if (isHTMLVideoElementSource(source)) {
     return {width: source.videoWidth, height: source.videoHeight};
   }
@@ -342,7 +324,7 @@ function getVideoTextureSourceSize(source: VideoTextureSource): {width: number; 
 
 /** Returns the source token used to detect video frame replacement or advancement. */
 function getVideoTextureSourceFrameToken(
-  source: VideoTextureSource,
+  source: HTMLVideoElement | VideoFrame,
   sourceVersion: number
 ): unknown {
   if (isHTMLVideoElementSource(source)) {

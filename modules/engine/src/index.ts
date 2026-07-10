@@ -112,7 +112,7 @@ export type {
   TextureBindingLayout,
   TextureBindingSource
 } from './dynamic-texture/texture-binding-source';
-export type {VideoTextureProps, VideoTextureSource} from './dynamic-texture/video-texture';
+export type {VideoTextureProps} from './dynamic-texture/video-texture';
 export {VideoTexture} from './dynamic-texture/video-texture';
 export type {
   BufferBindingSource,

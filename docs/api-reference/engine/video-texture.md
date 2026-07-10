@@ -57,17 +57,11 @@ let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 
 ## Types
 
-### `VideoTextureSource`
-
-```ts
-export type VideoTextureSource = HTMLVideoElement | VideoFrame;
-```
-
 ### `VideoTextureProps`
 
 ```ts
 export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
-  source: VideoTextureSource;
+  source: HTMLVideoElement | VideoFrame;
   colorSpace?: 'srgb';
   sampler?: Sampler | SamplerProps;
 };
@@ -83,7 +77,7 @@ export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
 
 The device that resolves bindings and the application-provided or generated resource identifier.
 
-### `source: VideoTextureSource`
+### `source: HTMLVideoElement | VideoFrame`
 
 The current caller-owned source. Replace it with `setSource()`.
 
@@ -112,10 +106,9 @@ Indicates whether `destroy()` has released owned copied and external bindings.
 
 ### `constructor(device: Device, props: VideoTextureProps)`
 
-Creates a live binding source. Runtime callers must supply an `HTMLVideoElement` or `VideoFrame`;
-unsupported values throw a `TypeError`.
+Creates a live binding source. A lightweight assertion guards unsupported runtime source values.
 
-### `setSource(source: VideoTextureSource): void`
+### `setSource(source: HTMLVideoElement | VideoFrame): void`
 
 Replaces the source and invalidates resolved bindings. Same-size copied sources reuse the existing
 texture; a new source size recreates it.
@@ -154,9 +147,8 @@ texture semantics are required.
 - The caller owns video playback, autoplay handling, camera permission prompts, and stopping
   `MediaStream` tracks.
 - Copied uploads can fail when a video is not ready, a cross-origin video is not CORS-accessible,
-  or a `VideoFrame` was closed too early. `VideoTexture` reports these cases with source-oriented
-  guidance while preserving the original error as its cause.
-- Native WebGPU import failures are reported explicitly. Switch the shader slot to
+  or a `VideoFrame` was closed too early. The underlying browser error surfaces directly.
+- Native WebGPU import failures surface from the device. Switch the shader slot to
   `texture_2d<f32>` for the copied path when the browser cannot import the source.
 
 ## Related APIs
