@@ -7,6 +7,7 @@ import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CylinderGeometry, Model, VideoTexture} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
+import {Input, ALL_FORMATS, BlobSource, VideoSampleSink} from 'mediabunny';
 
 export const title = 'Video Texture';
 export const description = 'Wraps a live video texture around a rotating cylinder.';
@@ -23,6 +24,15 @@ type LiveVideoSource = {
   drawFrame: (time: number) => void;
   destroy: () => void;
 };
+
+type MediabunnySource = {
+  input: Input;
+  sink: VideoSampleSink;
+  currentFrame: VideoFrame | null;
+  duration: number;
+};
+
+const VIDEO_URL = 'https://assets.mixkit.co/videos/188/188-720.mp4';
 
 const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
   uniformTypes: {
@@ -151,11 +161,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly modelViewProjectionMatrix = new Matrix4();
   readonly viewMatrix = new Matrix4().lookAt({eye: [0, 0.1, 4.4], center: [0, 0, 0]});
   readonly uniformStore: UniformStore<{app: AppUniforms}>;
-  videoSource: LiveVideoSource;
+  videoSource: LiveVideoSource | null;
   readonly videoTexture: VideoTexture;
   readonly model: Model;
   private _isFinalized = false;
   private _videoFlipX = 0;
+  private _mediabunnySource: MediabunnySource | null = null;
+  private _scrubberContainer: HTMLDivElement | null = null;
+  private _scrubber: HTMLInputElement | null = null;
+  private _timeDisplay: HTMLSpanElement | null = null;
+  private _playButton: HTMLButtonElement | null = null;
+  private _seekGeneration = 0;
+  private _playing = false;
+  private _playbackAbort: AbortController | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -198,13 +216,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
     this.model.destroy();
     this.videoTexture.destroy();
-    this.videoSource.destroy();
+    this._teardownMediabunny();
+    this.videoSource?.destroy();
     this.uniformStore.destroy();
+    this._scrubberContainer?.remove();
   }
 
   onRender({device, aspect, tick}: AnimationProps): void {
     const time = tick * 0.001;
-    this.videoSource.drawFrame(time);
+    this.videoSource?.drawFrame(time);
     this.modelMatrix
       .identity()
       .rotateX(-0.12 + Math.sin(time * 0.9) * 0.08)
@@ -238,11 +258,190 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
+    this._teardownMediabunny();
     const previousVideoSource = this.videoSource;
     this.videoSource = cameraVideoSource;
     this.videoTexture.setSource(cameraVideoSource.video);
     this._videoFlipX = 1;
-    previousVideoSource.destroy();
+    previousVideoSource?.destroy();
+    this._hideScrubber();
+  }
+
+  async useMediabunny(): Promise<void> {
+    const response = await fetch(VIDEO_URL);
+    const blob = await response.blob();
+    const input = new Input({
+      formats: ALL_FORMATS,
+      source: new BlobSource(blob)
+    });
+    const videoTrack = await input.getPrimaryVideoTrack();
+    if (!videoTrack) {
+      throw new Error('No video track found in media file');
+    }
+    const sink = new VideoSampleSink(videoTrack);
+    const duration = (await videoTrack.getDurationFromMetadata()) ?? 596;
+
+    if (this._isFinalized) {
+      input.dispose();
+      return;
+    }
+
+    this._teardownMediabunny();
+    this._mediabunnySource = {input, sink, currentFrame: null, duration};
+
+    this.videoSource?.destroy();
+    this.videoSource = null;
+
+    this._videoFlipX = 0;
+    this._showScrubber(duration);
+    await this._seekMediabunny(0);
+  }
+
+  private async _seekMediabunny(timeSeconds: number): Promise<void> {
+    const src = this._mediabunnySource;
+    if (!src) return;
+
+    const generation = ++this._seekGeneration;
+    const sample = await src.sink.getSample(timeSeconds);
+    if (!sample || generation !== this._seekGeneration) {
+      sample?.close();
+      return;
+    }
+
+    const frame = sample.toVideoFrame();
+    sample.close();
+    if (generation !== this._seekGeneration) {
+      frame.close();
+      return;
+    }
+
+    const previousFrame = src.currentFrame;
+    src.currentFrame = frame;
+    this.videoTexture.setSource(frame);
+    previousFrame?.close();
+  }
+
+  private _startPlayback(fromTime = 0): void {
+    this._stopPlayback();
+    const src = this._mediabunnySource;
+    if (!src) return;
+
+    this._playing = true;
+    if (this._playButton) this._playButton.textContent = '⏸';
+    const abort = new AbortController();
+    this._playbackAbort = abort;
+
+    (async () => {
+      let lastFrameTime = performance.now();
+      for await (const sample of src.sink.samples(fromTime)) {
+        if (abort.signal.aborted) {
+          sample.close();
+          break;
+        }
+        const frame = sample.toVideoFrame();
+        const frameDuration = (sample.duration ?? 1 / 30) * 1000;
+        sample.close();
+
+        const elapsed = performance.now() - lastFrameTime;
+        if (elapsed < frameDuration) {
+          await new Promise(r => setTimeout(r, frameDuration - elapsed));
+        }
+        if (abort.signal.aborted) {
+          frame.close();
+          break;
+        }
+
+        lastFrameTime = performance.now();
+        const previousFrame = src.currentFrame;
+        src.currentFrame = frame;
+        this.videoTexture.setSource(frame);
+        previousFrame?.close();
+
+        if (this._scrubber) {
+          this._scrubber.value = String(sample.timestamp);
+          this._updateTimeDisplay(sample.timestamp);
+        }
+      }
+      if (!abort.signal.aborted) {
+        this._playing = false;
+        if (this._playButton) this._playButton.textContent = '▶';
+      }
+    })();
+  }
+
+  private _stopPlayback(): void {
+    this._playbackAbort?.abort();
+    this._playbackAbort = null;
+    this._playing = false;
+    if (this._playButton) this._playButton.textContent = '▶';
+  }
+
+  private _teardownMediabunny(): void {
+    this._stopPlayback();
+    if (this._mediabunnySource) {
+      this._mediabunnySource.currentFrame?.close();
+      this._mediabunnySource.input.dispose();
+      this._mediabunnySource = null;
+    }
+  }
+
+  private _showScrubber(duration: number): void {
+    if (!this._scrubberContainer) {
+      this._scrubberContainer = document.createElement('div');
+      this._scrubberContainer.style.cssText =
+        'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+        'display:flex;align-items:center;gap:10px;padding:8px 16px;' +
+        'background:rgba(0,0,0,0.75);border-radius:8px;z-index:1000;';
+
+      this._playButton = document.createElement('button');
+      this._playButton.textContent = '▶';
+      this._playButton.style.cssText =
+        'background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px;';
+      this._playButton.addEventListener('click', () => {
+        if (this._playing) {
+          this._stopPlayback();
+        } else {
+          const fromTime = Number(this._scrubber?.value ?? 0);
+          this._startPlayback(fromTime);
+        }
+      });
+
+      this._scrubber = document.createElement('input');
+      this._scrubber.type = 'range';
+      this._scrubber.min = '0';
+      this._scrubber.step = 'any';
+      this._scrubber.style.cssText = 'width:320px;cursor:pointer;';
+      this._scrubber.addEventListener('input', () => {
+        this._stopPlayback();
+        const timeSec = Number(this._scrubber!.value);
+        this._seekMediabunny(timeSec);
+        this._updateTimeDisplay(timeSec);
+      });
+
+      this._timeDisplay = document.createElement('span');
+      this._timeDisplay.style.cssText = 'color:#fff;font:12px monospace;min-width:80px;';
+
+      this._scrubberContainer.append(this._playButton, this._scrubber, this._timeDisplay);
+      document.body.appendChild(this._scrubberContainer);
+    }
+    this._scrubber!.max = String(duration);
+    this._scrubber!.value = '0';
+    this._updateTimeDisplay(0);
+    this._scrubberContainer.style.display = 'flex';
+  }
+
+  private _hideScrubber(): void {
+    if (this._scrubberContainer) {
+      this._scrubberContainer.style.display = 'none';
+    }
+  }
+
+  private _updateTimeDisplay(timeSec: number): void {
+    if (!this._timeDisplay) return;
+    const m = Math.floor(timeSec / 60);
+    const s = Math.floor(timeSec % 60);
+    const ms = Math.floor((timeSec % 1) * 100);
+    this._timeDisplay.textContent = `${m}:${String(s).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
   }
 }
 

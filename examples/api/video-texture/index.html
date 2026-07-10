@@ -9,5 +9,17 @@
     adapters: [webgpuAdapter, webgl2Adapter]
   });
   animationLoop.start();
+
+  document.getElementById('use-mediabunny').addEventListener('click', () => {
+    AnimationLoopTemplate.current?.useMediabunny();
+  });
+  document.getElementById('use-camera').addEventListener('click', () => {
+    AnimationLoopTemplate.current?.useCamera();
+  });
 </script>
-<body></body>
+<body>
+  <div style="position:fixed;top:12px;left:12px;z-index:1000;display:flex;gap:8px;">
+    <button id="use-mediabunny" style="padding:6px 12px;cursor:pointer;">Video File</button>
+    <button id="use-camera" style="padding:6px 12px;cursor:pointer;">Camera</button>
+  </div>
+</body>
