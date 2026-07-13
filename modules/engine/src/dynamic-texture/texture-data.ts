@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {TypedArray, TextureFormat, ExternalImage} from '@luma.gl/core';
 import {isExternalImage, getExternalImageSize} from '@luma.gl/core';
 
@@ -53,6 +57,9 @@ export type Texture1DData = TextureSliceData;
 /** Texture data can be one or more mip levels */
 export type Texture2DData = TextureSliceData;
 
+/** Texture data accepted when initializing a standalone 2D texture. */
+type Texture2DDataSource = Texture2DData | TypedArray;
+
 /** 6 face textures */
 export type TextureCubeData = Record<TextureCubeFace, TextureSliceData>;
 
@@ -75,7 +82,7 @@ type TextureData =
 /** Sync data props */
 export type TextureDataProps =
   | {dimension: '1d'; data: Texture1DData | null}
-  | {dimension?: '2d'; data: Texture2DData | null}
+  | {dimension?: '2d'; data: Texture2DDataSource | null}
   | {dimension: '3d'; data: Texture3DData | null}
   | {dimension: '2d-array'; data: TextureArrayData | null}
   | {dimension: 'cube'; data: TextureCubeData | null}
@@ -84,7 +91,7 @@ export type TextureDataProps =
 /** Async data props */
 export type TextureDataAsyncProps =
   | {dimension: '1d'; data?: Promise<Texture1DData> | Texture1DData | null}
-  | {dimension?: '2d'; data?: Promise<Texture2DData> | Texture2DData | null}
+  | {dimension?: '2d'; data?: Promise<Texture2DDataSource> | Texture2DDataSource | null}
   | {dimension: '3d'; data?: Promise<Texture3DData> | Texture3DData | null}
   | {dimension: '2d-array'; data?: Promise<TextureArrayData> | TextureArrayData | null}
   | {dimension: 'cube'; data?: Promise<TextureCubeData> | TextureCubeData | null}
@@ -137,6 +144,7 @@ export function getTextureSizeFromData(
       return {width, height: 1};
     }
     case '2d': {
+      if (ArrayBuffer.isView(data)) return null;
       const mipLevel = getFirstMipLevel(data);
       return mipLevel ? getTextureMipLevelSize(mipLevel) : null;
     }
@@ -240,7 +248,7 @@ export function getTexture1DSubresources(data: Texture1DData): TextureSubresourc
 
 /** Normalize 2D layer payload into an array of mip-level items */
 function _normalizeTexture2DData(
-  data: Texture2DData
+  data: Texture2DDataSource
 ): (TextureImageData | ExternalImage | TypedArray)[] {
   return Array.isArray(data) ? data : [data];
 }
@@ -248,7 +256,7 @@ function _normalizeTexture2DData(
 /** Experimental: Set multiple mip levels (2D), optionally at `z` (depth/array index) */
 export function getTexture2DSubresources(
   slice: number,
-  lodData: Texture2DData,
+  lodData: Texture2DDataSource,
   baseLevelSize?: {width: number; height: number},
   textureFormat?: TextureFormat
 ): TextureSubresource[] {

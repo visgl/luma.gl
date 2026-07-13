@@ -73,6 +73,12 @@ test('getTextureSizeFromData: 2d (single & mips)', t => {
     '2d first mip from array'
   );
 
+  t.equal(
+    getTextureSizeFromData({dimension: '2d', data: new Uint8Array([1, 2, 3, 4])}),
+    null,
+    '2d bare typed array requires explicit props size'
+  );
+
   t.end();
 });
 
@@ -193,7 +199,7 @@ test('getTextureSizeFromData: invalid 2d payload throws', t => {
 test('getTexture2DSubresources: bare typed arrays use explicit base size', t => {
   const subresources = getTexture2DSubresources(
     0,
-    new Uint8Array([1, 2, 3, 4]) as any,
+    new Uint8Array([1, 2, 3, 4]),
     {width: 1, height: 1},
     'rgba8unorm'
   );
