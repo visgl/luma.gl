@@ -49,7 +49,7 @@ test('CubeGeometry exposes stable face indices for indexed and non-indexed cubes
 });
 
 test('makeGPUGeometry interleaves built-in geometry attributes', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   for (const {name, Geometry} of BUILT_IN_GEOMETRY_TESTS) {
     const gpuGeometry = makeGPUGeometry(device, new Geometry());
@@ -72,7 +72,7 @@ test('makeGPUGeometry interleaves built-in geometry attributes', async t => {
 });
 
 test('makeGPUGeometry interleaves cube geometry into one vertex buffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const gpuGeometry = makeGPUGeometry(device, new CubeGeometry({indices: true}));
 
   t.deepEqual(gpuGeometry.bufferLayout, [

@@ -202,7 +202,7 @@ export class Luma {
     // TODO - delegate handle identification to adapters
 
     // WebGL
-    if (handle instanceof WebGL2RenderingContext) {
+    if (typeof WebGL2RenderingContext !== 'undefined' && handle instanceof WebGL2RenderingContext) {
       return 'webgl';
     }
 

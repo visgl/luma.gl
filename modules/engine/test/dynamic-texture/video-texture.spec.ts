@@ -97,7 +97,7 @@ test('VideoTexture copies successive browser VideoFrames', async t => {
   context.fillStyle = '#ff0000';
   context.fillRect(0, 0, 1, 1);
   const firstFrame = new VideoFrame(canvas, {timestamp: 1});
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const videoTexture = new VideoTexture(device, {source: firstFrame});
   let secondFrame: VideoFrame | null = null;
 

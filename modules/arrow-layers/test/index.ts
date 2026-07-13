@@ -2,4 +2,4 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import './layers/arrow-layers.node.spec';
+import './layers/arrow-layers-rendering.spec';

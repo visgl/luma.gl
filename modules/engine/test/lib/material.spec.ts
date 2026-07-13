@@ -37,7 +37,7 @@ const dynamicTextureMaterial: ShaderModule<Record<string, never>> = {
 };
 
 test('Material initializes uniform buffers with default module uniforms', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const materialFactory = new MaterialFactory<{defaultUniformMaterial: {value?: number}}, {}>(
     webglDevice,
     {
@@ -58,7 +58,7 @@ test('Material initializes uniform buffers with default module uniforms', async 
 });
 
 test('Material preserves prior waterMaterial uniforms across partial updates', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const materialFactory = new MaterialFactory<{waterMaterial: typeof waterMaterial.props}, {}>(
     webglDevice,
     {
@@ -116,7 +116,7 @@ test('Material preserves prior waterMaterial uniforms across partial updates', a
 });
 
 test('Material invalidates bind-group cache keys when DynamicBuffer generation changes', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const materialFactory = new MaterialFactory<{}, {materialBuffer: DynamicBuffer}>(webglDevice, {
     modules: [dynamicBufferMaterial as ShaderModule]
   });
@@ -150,7 +150,7 @@ test('Material invalidates bind-group cache keys when DynamicBuffer generation c
 });
 
 test('Material invalidates bind-group cache keys when DynamicTexture generation changes', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const materialFactory = new MaterialFactory<{}, {materialTexture: DynamicTexture}>(webglDevice, {
     modules: [dynamicTextureMaterial as ShaderModule]
   });
@@ -187,7 +187,7 @@ test('Material invalidates bind-group cache keys when DynamicTexture generation 
 });
 
 test('Material invalidates bind-group cache keys for volatile external texture resolutions', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const materialFactory = new MaterialFactory<{}, {materialTexture: TextureBindingSource}>(
     webglDevice,
     {

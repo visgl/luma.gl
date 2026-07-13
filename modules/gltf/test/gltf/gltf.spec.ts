@@ -5,7 +5,6 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
@@ -14,7 +13,8 @@ import {DynamicTexture} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
+  await import('@loaders.gl/polyfills');
   const gltf = await load('test/data/box.glb', GLTFLoader);
 
   const processedGLTF = postProcessGLTF(gltf);
@@ -37,7 +37,8 @@ test('gltf#loading', async t => {
 });
 
 test('gltf#animator', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
+  await import('@loaders.gl/polyfills');
 
   const gltf = await load('test/data/BoxAnimated.glb', GLTFLoader);
   const processedGLTF = postProcessGLTF(gltf);
@@ -65,7 +66,7 @@ test('gltf#animator', async t => {
 });
 
 test('gltf#environment', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const environment = loadPBREnvironment(webglDevice, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
@@ -90,7 +91,7 @@ test('gltf#environment', async t => {
 });
 
 test('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer material channels', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const gltf: GLTFPostprocessed = {
     id: 'pointer-gltf',
     accessors: [
@@ -162,7 +163,7 @@ test('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer mater
 });
 
 test('gltf#createScenegraphsFromGLTF wires texture-transform KHR_animation_pointer channels', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const gltf: GLTFPostprocessed = {
     id: 'texture-pointer-gltf',
     accessors: [

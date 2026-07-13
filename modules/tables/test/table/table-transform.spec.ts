@@ -27,7 +27,7 @@ const TRANSFORM_SHADER_LAYOUT = {
 } satisfies ShaderLayout;
 
 test('TableTransform copies dense outputs back into inputVectors', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const values = makeGPUVectorFromArrow(device, arrow.makeVector(new Float32Array([1, 2, 3])), {
     name: 'values'
   });
@@ -54,7 +54,7 @@ test('TableTransform copies dense outputs back into inputVectors', async t => {
 });
 
 test('TableTransform rejects padded automatic writeback vectors', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const buffer = device.createBuffer({byteLength: 16});
   const values = new GPUVector({
     type: 'buffer',

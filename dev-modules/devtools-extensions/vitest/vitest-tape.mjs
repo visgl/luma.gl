@@ -88,7 +88,8 @@ class VitestTape {
 
   timeoutMilliseconds;
 
-  constructor() {
+  constructor(testContext) {
+    this.testContext = testContext;
     this.endPromise = new Promise(resolve => {
       this.endResolver = resolve;
     });
@@ -194,6 +195,10 @@ class VitestTape {
     this.plannedAssertionCount = assertionCount;
   }
 
+  skip(message) {
+    return this.testContext.skip(message);
+  }
+
   teardown(callback) {
     this.teardownCallbacks.push(callback);
   }
@@ -268,12 +273,12 @@ class VitestTape {
 
 function wrapTest(vitestImplementation) {
   return (name, callback) =>
-    vitestImplementation(name, async () => {
+    vitestImplementation(name, async testContext => {
       if (!callback) {
         return;
       }
 
-      const tapeTest = new VitestTape();
+      const tapeTest = new VitestTape(testContext);
       const result = tapeTest.run(callback);
 
       if (isPromiseLike(result)) {
@@ -288,4 +293,3 @@ test.only = wrapTest(vitestTest.only);
 test.skip = wrapTest(vitestTest.skip);
 
 export default test;
-

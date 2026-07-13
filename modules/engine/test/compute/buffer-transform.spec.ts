@@ -22,14 +22,14 @@ void main() { fragColor.x = dst; }
 `;
 
 test('BufferTransform#constructor', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   t.ok(createBufferTransform(webglDevice), 'WebGL succeeds');
   t.end();
 });
 
 test('BufferTransform#run', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const SRC_ARRAY = new Float32Array([0, 1, 2, 3, 4, 5]);
   const DST_ARRAY = new Float32Array([0, 1, 4, 9, 16, 25]);

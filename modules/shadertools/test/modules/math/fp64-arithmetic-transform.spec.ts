@@ -268,7 +268,7 @@ function splitCasesForOperation(
 
 for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
   test(`fp64#${arithmeticOperation.operationName}`, async tapeTest => {
-    const webGLDevice = await getWebGLTestDevice();
+    const webGLDevice = await getWebGLTestDevice(tapeTest);
     const platformInfo = getTransformPlatformInfo(webGLDevice);
     if (platformInfo.isAppleMetal && arithmeticOperation.operationName === 'sqrt_fp64') {
       tapeTest.comment('Skipping sqrt_fp64 transform coverage on Apple Metal');
@@ -303,7 +303,7 @@ for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
 
 for (const helperOperation of HELPER_DIAGNOSTICS) {
   test(`fp64#${helperOperation.operationName} diagnostic`, async tapeTest => {
-    const webGLDevice = await getWebGLTestDevice();
+    const webGLDevice = await getWebGLTestDevice(tapeTest);
     const platformInfo = getTransformPlatformInfo(webGLDevice);
     tapeTest.comment(`Platform ${platformInfo.label}`);
 

@@ -270,7 +270,7 @@ function assertElementIsCanvasChild(
 }
 
 function getElementBorderBoxSize(element: ElementTextureSource): {width: number; height: number} {
-  if (element instanceof HTMLElement) {
+  if (typeof HTMLElement !== 'undefined' && element instanceof HTMLElement) {
     return {
       width: element.offsetWidth,
       height: element.offsetHeight

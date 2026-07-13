@@ -13,7 +13,7 @@ const WIDTH = 4;
 const HEIGHT = 4;
 
 test('clipShaderPlugin#WebGL2 clips instances and geometry without rebuilding', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const shaderAssembler = new ShaderAssembler();
   shaderAssembler.addShaderHook(
     'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'

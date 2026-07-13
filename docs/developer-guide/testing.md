@@ -15,10 +15,9 @@ The primary test runner is Vitest.
 - `yarn test-fast` runs linting and the Node-only suite.
 - `yarn test-coverage` runs the Node-only suite plus the headless browser suite with coverage enabled.
 
-Vitest discovers tests directly from spec files:
-
-- Use `*.spec.ts` / `*.spec.js` for the default browser-backed test path.
-- Use `*.node.spec.ts` / `*.node.spec.js` only for tests that must stay in the Node project.
+Vitest discovers the same spec files in both the Node and browser projects. Test cases should request
+the devices and runtime capabilities they require, and skip when those capabilities are unavailable.
+Do not split tests into Node-only and browser-only files.
 
 ## Test device creation
 

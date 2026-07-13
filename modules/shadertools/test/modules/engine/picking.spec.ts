@@ -178,7 +178,7 @@ test('picking#getUniforms', async t => {
 });
 
 test('picking#highlightedObjectColor', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   if (!BufferTransform.isSupported(device)) {
     t.comment('Transform not available, skipping tests');
@@ -207,7 +207,7 @@ test('picking#highlightedObjectColor', async t => {
 });
 
 test('picking#picking_setPickingColor', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   if (!BufferTransform.isSupported(device)) {
     t.comment('Transform not available, skipping tests');
@@ -238,7 +238,7 @@ test('picking#picking_setPickingColor', async t => {
 });
 
 test('picking#useByteColors', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   if (!BufferTransform.isSupported(device)) {
     t.comment('Transform not available, skipping tests');
@@ -297,7 +297,7 @@ test('picking#useByteColors', async t => {
 });
 
 test('picking#picking_setPickingAttribute', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   if (!BufferTransform.isSupported(device)) {
     t.comment('Transform not available, skipping tests');

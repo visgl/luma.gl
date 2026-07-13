@@ -102,7 +102,7 @@ async function waitForLinkStatus(renderPipeline: {
 }
 
 test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct argument position', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   const vs = device.createShader({stage: 'vertex', source: VS_THREE_UBOS});
@@ -209,7 +209,7 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
 });
 
 test('WEBGLRenderPipeline initializes mixed sampler uniforms before validation', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   const vs = device.createShader({stage: 'vertex', source: VS_MIXED_SAMPLERS});
   const fs = device.createShader({stage: 'fragment', source: FS_MIXED_SAMPLERS});
@@ -230,7 +230,7 @@ test('WEBGLRenderPipeline initializes mixed sampler uniforms before validation',
 });
 
 test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
   const vs = device.createShader({stage: 'vertex', source: VS_INDEXED_DRAW});
   const fs = device.createShader({stage: 'fragment', source: FS_THREE_UBOS});

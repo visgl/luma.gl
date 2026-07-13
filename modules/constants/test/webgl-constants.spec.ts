@@ -13,7 +13,7 @@ test('@luma.gl/constants', t => {
 });
 
 test('@luma.gl/constants#WebGL2RenderingContext comparison', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   for (const device of [webglDevice]) {
     // @ts-ignore

@@ -634,7 +634,7 @@ function uploadTexture(
 }
 
 test('Texture#copyImageData handles padded rows on WebGL', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   if (!device) {
     t.comment('WebGL not available');
     t.end();
@@ -1822,7 +1822,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
 });
 
 test('Texture#readBuffer reuses the cached WebGL read framebuffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   if (!device) {
     t.comment('WebGL not available');
     t.end();
@@ -2122,7 +2122,11 @@ test('Texture#format creation with data', async t => {
 });
 
 test('Texture#dimension=3d,format=r32float', async t => {
-  for (const device of await getTestDevices()) {
+  const devices = await getTestDevices();
+  if (devices.length === 0) {
+    t.skip('No GPU device is available in this test runtime');
+  }
+  for (const device of devices) {
     if (device.info.type === 'webgpu') {
       // TODO validation fails due to insufficient texture layers?
       continue;
@@ -2143,8 +2147,8 @@ test('Texture#dimension=3d,format=r32float', async t => {
       }
     });
     t.ok(texture, `${device.type}: Texture(dimension=3d,format=r32float) created`);
-    t.end();
   }
+  t.end();
 });
 
 test('Texture#copyExternalImage', async t => {
@@ -2223,7 +2227,7 @@ test('Texture#copyExternalImage', async t => {
 });
 
 test.skip('Texture#setImageData', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const texture = webglDevice.createTexture({
     width: 2,

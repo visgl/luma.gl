@@ -108,7 +108,7 @@ test('GroupNode#traverse', async t => {
 });
 
 test('GroupNode#getBounds', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
 

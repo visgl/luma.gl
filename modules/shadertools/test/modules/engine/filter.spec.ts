@@ -9,7 +9,7 @@ import {filterShaderPlugin, ShaderAssembler} from '@luma.gl/shadertools';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 test('filterShaderPlugin#WebGL2 model binds, updates, and draws', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const shaderAssembler = new ShaderAssembler();
   shaderAssembler.addShaderHook('vs:FILTER_POSITION(inout vec4 position)');
   const filterValues = device.createBuffer({

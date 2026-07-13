@@ -22,9 +22,6 @@ import {makeArrowTextSource} from '../../../../examples/arrow/arrow-text-2d/arro
 const TEST_VIEWPORT_WIDTH = 640;
 const TEST_VIEWPORT_HEIGHT = 480;
 const TEST_MODEL_TIMEOUT_MILLISECONDS = 10_000;
-const TEXT_FONT_ATLAS = buildBitmapFontAtlas({
-  characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
-});
 let sharedStorageDeck: {deck: Deck; parent: HTMLDivElement} | null = null;
 
 afterAll(() => {
@@ -32,6 +29,12 @@ afterAll(() => {
 });
 
 test('Arrow deck layers return source row indices from Deck picking', async t => {
+  if (typeof document === 'undefined') {
+    t.skip('The Deck layer test requires a browser DOM');
+  }
+  const textFontAtlas = buildBitmapFontAtlas({
+    characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
+  });
   const pathSource = makeArrowLineSourceData(
     {pathCount: 12, pointCount: 8, label: 'picking test paths'},
     'lines',
@@ -155,7 +158,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     sizes: textSource.sizes?.slice(190, 210),
     pixelOffsets: null,
     model: 'attribute',
-    fontAtlas: TEXT_FONT_ATLAS,
+    fontAtlas: textFontAtlas,
     characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
     onDataError: error => {
       textDataError = error;
@@ -174,7 +177,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     angle: 4,
     size: 36,
     model: 'attribute',
-    fontAtlas: TEXT_FONT_ATLAS
+    fontAtlas: textFontAtlas
   });
   let missingTextColorDataError: unknown;
   const missingTextColorLayer = new ArrowTextLayer({
@@ -192,7 +195,7 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     pixelOffsets: null,
     color: 'missingColors',
     model: 'attribute',
-    fontAtlas: TEXT_FONT_ATLAS,
+    fontAtlas: textFontAtlas,
     characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
     onDataError: error => {
       missingTextColorDataError = error;
@@ -315,6 +318,9 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
 });
 
 test('ArrowPathLayer storage draws streamed batches incrementally and preserves picking provenance', async t => {
+  if (typeof document === 'undefined') {
+    t.skip('The Deck layer test requires a browser DOM');
+  }
   const device = await getWebGPUTestDevice('core');
   if (!device) {
     t.comment('WebGPU is not available');
@@ -397,6 +403,9 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
 });
 
 test('Arrow polygon and text layers render storage-backed WebGPU models', async t => {
+  if (typeof document === 'undefined') {
+    t.skip('The Deck layer test requires a browser DOM');
+  }
   const device = await getWebGPUTestDevice('core');
   if (!device) {
     t.comment('WebGPU is not available');

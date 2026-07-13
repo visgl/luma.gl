@@ -477,7 +477,7 @@ test('Abandoned WebGPU command buffers release transient upload buffers on destr
 });
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   if (isSoftwareBackedDevice(device)) {
     t.comment('Skipping WebGL buffer copy test on a software-backed adapter');
     t.end();
@@ -587,7 +587,7 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
 ];
 
 test('CommandBuffer#copyTextureToBuffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   if (isSoftwareBackedDevice(device)) {
     t.comment('Skipping WebGL texture-to-buffer copy test on a software-backed adapter');
     t.end();
@@ -812,7 +812,7 @@ async function readAsyncF32(source: Buffer): Promise<Float32Array> {
 }
 
 test('CommandEncoder#copyTextureToTexture', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   if (isSoftwareBackedDevice(device)) {
     t.comment('Skipping WebGL texture-to-texture copy test on a software-backed adapter');
     t.end();
@@ -1008,7 +1008,7 @@ test('WebGL1#CopyAndBlit readPixelsToArray', async t => {
 });
 
 test('Unsupported command encoder operations fail explicitly', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const webglCommandEncoder = webglDevice.createCommandEncoder();
   t.throws(
     () => webglCommandEncoder.resolveQuerySet(null as unknown as QuerySet, null as unknown as Buffer),

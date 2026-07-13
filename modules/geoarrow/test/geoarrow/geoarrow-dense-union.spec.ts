@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {readFileSync} from 'node:fs';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   convertGeoArrowTableToDenseUnion,
@@ -10,6 +9,7 @@ import {
   tessellateArrowPolygons
 } from '@math.gl/geoarrow';
 import * as arrow from 'apache-arrow';
+import {loadBinaryFixture} from './load-binary-fixture';
 
 const GEOMETRY_FIXTURE_PAIRS = [
   ['example_point_wkb.arrows', 'example_point_wkt.arrows', 2],
@@ -179,7 +179,7 @@ test('convertGeoArrowTableToDenseUnion rejects WKB/WKT GeometryCollection rows',
 
 function loadGeoArrowFixture(name: string): arrow.Table {
   const url = new URL(`../data/geoarrow-data/${name}`, import.meta.url);
-  return arrow.tableFromIPC(readFileSync(url));
+  return arrow.tableFromIPC(loadBinaryFixture(url));
 }
 
 function getDenseUnionCoordinateDimension(vector: arrow.Vector): number {

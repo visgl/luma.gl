@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 test('WEBGLTexture keeps borrowed handles read-only', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
   const textureHandle = gl.createTexture()!;
   const methodCallCounts = {

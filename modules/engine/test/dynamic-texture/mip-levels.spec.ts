@@ -8,7 +8,7 @@ import {DynamicTexture} from '../../src/index';
 // Verify that specifying mipLevels: 0 is clamped to at least 1
 // See issue or commit reference for details.
 test('DynamicTexture#mipLevels clamped to minimum 1', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const texture = new DynamicTexture(device, {
     data: {data: new Uint8Array(4), width: 1, height: 1},
     mipLevels: 0

@@ -63,7 +63,7 @@ test('transpileGLSLShader#minified shaders', async t => {
 });
 
 test('transpileGLSLShader#compilation', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   for (const tc of COMPILATION_TEST_CASES) {
     const {title, VS_300_VALID, FS_300_VALID} = tc;

@@ -7,7 +7,7 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 test('isUniformValue', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   t.ok(isUniformValue(3), 'Number is uniform value');
   t.ok(isUniformValue(3.412), 'Number is uniform value');

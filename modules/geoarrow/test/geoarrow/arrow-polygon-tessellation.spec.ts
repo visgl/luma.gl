@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {readFileSync} from 'node:fs';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {tesselateAsync, tessellateArrowPolygons} from '@math.gl/geoarrow';
 import * as arrow from 'apache-arrow';
 import {dehydrateArrowTable, hydrateArrowTable} from '../../src/arrow-table-transport';
+import {loadBinaryFixture} from './load-binary-fixture';
 
 type Coordinate = [number, number] | [number, number, number] | [number, number, number, number];
 type Color = [number, number, number, number];
@@ -798,6 +798,6 @@ function flattenNumbers(value: unknown): number[] {
 
 function getGeoArrowFixtureGeometry(name: string): arrow.Vector<any> {
   const url = new URL(`../data/geoarrow-data/${name}`, import.meta.url);
-  const table = arrow.tableFromIPC(readFileSync(url));
+  const table = arrow.tableFromIPC(loadBinaryFixture(url));
   return table.getChild('geometry')!;
 }

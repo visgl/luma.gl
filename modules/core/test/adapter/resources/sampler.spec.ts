@@ -67,7 +67,7 @@ export const SAMPLER_PARAMETERS = {
 };
 
 test('WebGL#Sampler setParameters', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   testSampler(t, webglDevice);
   testSampler(t, webglDevice);

@@ -1,5 +1,3 @@
-import babel from '@babel/core';
-import plugin from '../../dev-modules/babel-plugin-inline-webgl-constants/index.js';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 const ES6_ENV = {
@@ -62,7 +60,14 @@ function clean(code) {
   return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
 }
 
-test('InlineGLSLConstants Babel Plugin', t => {
+test('InlineGLSLConstants Babel Plugin', async t => {
+  if (process.browser) {
+    t.skip('The Babel plugin requires Node.js module APIs');
+  }
+  const [{default: babel}, {default: plugin}] = await Promise.all([
+    import('@babel/core'),
+    import('../../dev-modules/babel-plugin-inline-webgl-constants/index.js')
+  ]);
   TEST_CASES.forEach(testCase => {
     const transform = () =>
       babel.transform(testCase.input, {

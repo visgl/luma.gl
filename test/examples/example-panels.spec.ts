@@ -192,7 +192,10 @@ describe('ExampleSettingsPanelManager', () => {
     ]);
   });
 
-  test('closes other dropdowns and lets open menus exceed the trigger width', async () => {
+  test('closes other dropdowns and lets open menus exceed the trigger width', async t => {
+    if (typeof document === 'undefined') {
+      t.skip('The example panel interaction test requires a browser DOM');
+    }
     document.body.innerHTML = makeExamplePanelHostHtml();
     const settingsPanel = new ExampleSettingsPanelManager({
       id: 'test-settings',
@@ -266,7 +269,10 @@ describe('ExampleSettingsPanelManager', () => {
 });
 
 describe('ArrowExamplePanelManager', () => {
-  test('renders description, settings, and tables tabs', () => {
+  test('renders description, settings, and tables tabs', t => {
+    if (typeof document === 'undefined') {
+      t.skip('The example panel interaction test requires a browser DOM');
+    }
     document.body.innerHTML = makeArrowExamplePanelHostHtml();
     const panelManager = new ArrowExamplePanelManager({
       descriptionHtml: '<p>Description</p>',

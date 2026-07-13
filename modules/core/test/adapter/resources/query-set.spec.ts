@@ -121,7 +121,7 @@ test('WebGPU QuerySet defers inline resolve when a readback is already in flight
 });
 
 test('WebGL QuerySet timestamp pair validation', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   if (!device.features.has('timestamp-query')) {
     t.comment('WebGL timestamp queries are not supported');
     t.end();
@@ -152,7 +152,7 @@ test('WebGL QuerySet timestamp pair validation', async t => {
 });
 
 test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const querySet = device.createQuerySet({type: 'timestamp', count: 2}) as any;
   const queryHandle = device.gl.createQuery();
 

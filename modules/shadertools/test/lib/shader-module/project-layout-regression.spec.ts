@@ -76,7 +76,7 @@ const projectUniforms = {
 } as const;
 
 test('ShaderModule project layout regression reads original deck project uniforms on GPU', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   if (!BufferTransform.isSupported(device)) {
     t.comment('Transform not available, skipping tests');

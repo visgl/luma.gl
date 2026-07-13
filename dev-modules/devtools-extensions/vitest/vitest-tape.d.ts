@@ -22,6 +22,7 @@ export interface Test {
   ok(value: unknown, message?: string): void;
   pass(message?: string): void;
   plan(assertionCount: number): void;
+  skip(message?: string): never;
   teardown(callback: () => void | Promise<void>): void;
   throws(
     callback: () => unknown,
@@ -41,4 +42,3 @@ export type TapeTestFunction = {
 declare const test: TapeTestFunction;
 
 export default test;
-

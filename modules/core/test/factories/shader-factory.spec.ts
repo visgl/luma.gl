@@ -25,7 +25,7 @@ test('ShaderFactory#import', async t => {
 });
 
 test('ShaderFactory#getDefaultShaderFactory', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const factory1 = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const factory2 = ShaderFactory.getDefaultShaderFactory(webglDevice);
@@ -37,7 +37,7 @@ test('ShaderFactory#getDefaultShaderFactory', async t => {
 });
 
 test('ShaderFactory#createShader', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cacheShaders) {
     t.comment('Shader caching not enabled');
     t.end();
@@ -66,7 +66,7 @@ test('ShaderFactory#createShader', async t => {
 });
 
 test('ShaderFactory#release', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cacheShaders) {
     t.comment('Shader caching not enabled');
     t.end();

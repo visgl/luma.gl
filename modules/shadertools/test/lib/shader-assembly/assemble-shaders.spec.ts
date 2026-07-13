@@ -323,7 +323,7 @@ test('assembleGLSLShaderPair#import', async t => {
 });
 
 test('assembleGLSLShaderPair#version_directive', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -468,7 +468,7 @@ void main(void) {
 });
 
 test('assembleGLSLShaderPair#getUniforms', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   // inject spy into the picking module's getUniforms
   // const module = getShaderModule(picking);
@@ -512,7 +512,7 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
 });
 
 test('assembleGLSLShaderPair#defines', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -528,7 +528,7 @@ test('assembleGLSLShaderPair#defines', async t => {
 });
 
 test('assembleGLSLShaderPair#fp64 platform defines compile', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const basePlatformInfo = getInfo(webglDevice);
   const platformTestCases = [
     {
@@ -599,7 +599,7 @@ const pickingInject = {
 };
 
 test('assembleGLSLShaderPair#shaderhooks', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const hookFunctions = [
     'vs:LUMAGL_pickColor(inout vec4 color)',
@@ -826,7 +826,7 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 });
 
 test('assembleGLSLShaderPair#injection order', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -867,7 +867,7 @@ test('assembleGLSLShaderPair#injection order', async t => {
 
 // TODO - restore if we ever support transpilation of uniform blocks
 test.skip('assembleGLSLShaderPair#transpilation', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),

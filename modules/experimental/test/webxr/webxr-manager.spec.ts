@@ -7,7 +7,7 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {WebXRManager} from '../../src';
 
 test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebuffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
   const xrFramebufferHandle = gl.createFramebuffer()!;
   const referenceSpace = {} as XRReferenceSpace;
@@ -87,7 +87,7 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
 });
 
 test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
   const referenceSpace = {} as XRReferenceSpace;
   const session = makeXRSession(referenceSpace);

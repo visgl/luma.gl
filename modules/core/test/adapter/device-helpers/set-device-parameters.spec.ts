@@ -17,7 +17,7 @@ const getGLParameter = (gl: WebGL2RenderingContext, parameter: keyof GLParameter
 };
 
 test('setDeviceParameters#cullMode', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const gl = webglDevice.gl;
 
   resetGLParameters(gl);
@@ -39,7 +39,7 @@ test('setDeviceParameters#cullMode', async t => {
 });
 
 test('setDeviceParameters#frontFace', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const gl = webglDevice.gl;
 
   resetGLParameters(gl);
@@ -56,7 +56,7 @@ test('setDeviceParameters#frontFace', async t => {
 });
 
 test('setDeviceParameters#depthWriteEnabled', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const gl = webglDevice.gl;
 
   resetGLParameters(gl);
@@ -95,7 +95,7 @@ function testClauses(t: Test, device: WebGLDevice, name: string, clauses: TestCl
 }
 
 test('setDeviceParameters#depthWriteEnabled', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   testClauses(t, webglDevice, 'depthWriteEnabled', [
     {check: {[GL.DEPTH_WRITEMASK]: true}},
@@ -109,7 +109,7 @@ test('setDeviceParameters#depthWriteEnabled', async t => {
 });
 
 test('setDeviceParameters#depthClearValue', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const gl = webglDevice.gl;
 
   resetGLParameters(gl);

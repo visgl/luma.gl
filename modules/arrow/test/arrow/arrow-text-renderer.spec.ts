@@ -19,12 +19,7 @@ import {
 } from '@luma.gl/arrow';
 import type {RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import {
-  buildBitmapFontAtlas,
-  GPUTextResources,
-  TextRenderer,
-  type GPUTextData
-} from '@luma.gl/text';
+import {GPUTextResources, TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
 import {
   TextAttributeModel,
   TextDictionaryModel,
@@ -33,8 +28,29 @@ import {
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-const CHARACTER_SET = ' AB';
-const FONT_ATLAS = buildBitmapFontAtlas({characterSet: CHARACTER_SET, fontSize: 10});
+const FONT_ATLAS: FontAtlas = {
+  baselineOffset: 0,
+  lineHeight: 10,
+  xOffset: 0,
+  yOffsetMin: 0,
+  yOffsetMax: 10,
+  mapping: {
+    ' ': {x: 0, y: 0, width: 0, height: 0, anchorX: 0, anchorY: 0, advance: 4},
+    A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
+    B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5}
+  },
+  renderSettings: {mode: 'bitmap', threshold: 0, smoothing: 0},
+  pages: [
+    {
+      colorSpace: 'srgb',
+      data: new Uint8ClampedArray(8 * 8 * 4),
+      height: 8,
+      width: 8
+    } as ImageData
+  ],
+  width: 8,
+  height: 8
+};
 
 test('ArrowTextRenderer prepares attribute text and draws attribute picking batches', async t => {
   const device = new NullDevice({});
