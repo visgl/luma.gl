@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {GL} from '@luma.gl/webgl/constants';
 import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 
 // TODO - duplicates core spec?
@@ -93,6 +94,12 @@ test('WebGLAdapter#attach retains existing devices until final detach', async t 
     t.end();
     return;
   }
+  const nativeEnable = webglContext.enable.bind(webglContext);
+  let nativeEnableCallCount = 0;
+  webglContext.enable = ((capability: number) => {
+    nativeEnableCallCount++;
+    nativeEnable(capability);
+  }) as typeof webglContext.enable;
 
   const firstDevice = await webgl2Adapter.attach(webglContext);
   const canvasContext = firstDevice.getDefaultCanvasContext();
@@ -124,6 +131,11 @@ test('WebGLAdapter#attach retains existing devices until final detach', async t 
 
   t.equal(fourthDevice, thirdDevice, 'attaching an existing Device retains it');
 
+  nativeEnableCallCount = 0;
+  webglContext.enable(GL.BLEND);
+  t.equal(nativeEnableCallCount, 1, 'reattached state tracker reaches the native setter');
+  webglContext.disable(GL.BLEND);
+
   thirdDevice.destroy();
   t.equal(
     (thirdDevice.getDefaultCanvasContext() as any).device,
@@ -132,5 +144,6 @@ test('WebGLAdapter#attach retains existing devices until final detach', async t 
   );
 
   fourthDevice.detach();
+  webglContext.enable = nativeEnable;
   t.end();
 });

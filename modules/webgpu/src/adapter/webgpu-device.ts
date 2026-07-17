@@ -93,8 +93,16 @@ export class WebGPUDevice extends Device {
 
   override canvasContext: WebGPUCanvasContext | null = null;
 
-  private _isLost: boolean = false;
+  private readonly _lostState = {isLost: false};
   private _defaultSampler: WebGPUSampler | null = null;
+  private readonly _onUncapturedError = (event: Event) => {
+    event.preventDefault();
+    // TODO is this the right way to make sure the error is an Error instance?
+    const errorMessage =
+      event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
+    this.reportError(new Error(errorMessage), this)();
+    this.debug();
+  };
   commandEncoder: WebGPUCommandEncoder;
 
   override get [Symbol.toStringTag](): string {
@@ -121,18 +129,12 @@ export class WebGPUDevice extends Device {
     this.limits = getWebGPUDeviceLimits(this.handle.limits);
 
     // Listen for uncaptured WebGPU errors
-    device.addEventListener('uncapturederror', (event: Event) => {
-      event.preventDefault();
-      // TODO is this the right way to make sure the error is an Error instance?
-      const errorMessage =
-        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
-      this.reportError(new Error(errorMessage), this)();
-      this.debug();
-    });
+    device.addEventListener('uncapturederror', this._onUncapturedError);
 
     // "Context" loss handling
+    const lostState = this._lostState;
     this.lost = this.handle.lost.then(lostInfo => {
-      this._isLost = true;
+      lostState.isLost = true;
       return {reason: 'destroyed', message: lostInfo.message};
     });
 
@@ -167,6 +169,7 @@ export class WebGPUDevice extends Device {
   }
 
   private _finalizeDevice(options: {destroyHandle: boolean}): void {
+    this.handle.removeEventListener('uncapturederror', this._onUncapturedError);
     this._destroyCanvasSurfaces();
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
@@ -177,7 +180,7 @@ export class WebGPUDevice extends Device {
   }
 
   get isLost(): boolean {
-    return this._isLost;
+    return this._lostState.isLost;
   }
 
   getShaderLayout(source: string) {
@@ -539,7 +542,7 @@ export class WebGPUDevice extends Device {
     return (
       errorMessage.includes('Instance dropped') &&
       (!operation || errorMessage.includes(operation)) &&
-      (this._isLost ||
+      (this._lostState.isLost ||
         this.info.gpu === 'software' ||
         this.info.gpuType === 'cpu' ||
         Boolean(this.info.fallback))

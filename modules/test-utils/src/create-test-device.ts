@@ -49,6 +49,7 @@ type TestDeviceType =
 /**
  * Returns available test devices for the requested backend types.
  * @param types Backend types to create. `'webgpu'` preserves the legacy max-feature WebGPU test device.
+ * @note Returned devices are shared cached fixtures and reject destroy() and detach().
  */
 export async function getTestDevices(
   types: Readonly<TestDeviceType[]> = ['webgl', 'webgpu']
@@ -110,19 +111,19 @@ export async function getWebGPUTestDevices(
   return devices.filter((device): device is WebGPUDevice => device !== null);
 }
 
-/** returns WebGL device promise, if available */
+/** Returns a shared cached WebGL device. The fixture rejects destroy() and detach(). */
 export async function getWebGLTestDevice(): Promise<WebGLDevice> {
   return _refreshLostCachedTestDevice(getOrCreateWebGLTestDevicePromise, () => {
     testDeviceCache.webglDevicePromise = null;
   });
 }
 
-/** returns an offscreen WebGL device promise for presentation-context tests, if available */
+/** Returns a shared cached offscreen WebGL device for presentation-context tests. */
 export async function getPresentationWebGLTestDevice(): Promise<WebGLDevice | null> {
   return getOrCreatePresentationWebGLTestDevicePromise();
 }
 
-/** returns null device promise, if available */
+/** Returns a shared cached NullDevice. The fixture rejects destroy() and detach(). */
 export async function getNullTestDevice(): Promise<NullDevice> {
   return getOrCreateNullTestDevicePromise();
 }
@@ -162,6 +163,7 @@ async function makeWebGPUTestDevice(
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as WebGPUDevice;
+    protectCachedTestDevice(webgpuDevice);
     webgpuDevice.lost.finally(() => {
       if (testDeviceCache.webgpuDevicePromises[featureLevel] === webgpuDeviceResolvers.promise) {
         delete testDeviceCache.webgpuDevicePromises[featureLevel];
@@ -187,6 +189,7 @@ async function makeWebGLTestDevice(): Promise<WebGLDevice> {
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as WebGLDevice;
+    protectCachedTestDevice(webglDevice);
     webglDevice.lost.finally(() => {
       if (testDeviceCache.webglDevicePromise === webglDeviceResolvers.promise) {
         testDeviceCache.webglDevicePromise = null;
@@ -215,6 +218,7 @@ async function makePresentationWebGLTestDevice(): Promise<WebGLDevice | null> {
       createCanvasContext: {canvas: new OffscreenCanvas(4, 4)},
       debug: true
     })) as unknown as WebGLDevice;
+    protectCachedTestDevice(webglDevice);
     webglDevice.lost.finally(() => {
       if (
         testDeviceCache.presentationWebglDevicePromise === presentationWebGLDeviceResolvers.promise
@@ -241,6 +245,7 @@ async function makeNullTestDevice(): Promise<NullDevice> {
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as NullDevice;
+    protectCachedTestDevice(nullDevice);
     nullDeviceResolvers.resolve(nullDevice);
   } catch (error) {
     log.error(String(error))();
@@ -261,6 +266,27 @@ export async function _refreshLostCachedTestDevice<DeviceT extends LostAwareDevi
     clearCachedDevice();
     return getOrCreateDevice();
   }
+  return device;
+}
+
+/** Prevent individual tests from terminally invalidating shared cached fixtures. */
+function protectCachedTestDevice<DeviceT extends Device>(device: DeviceT): DeviceT {
+  Object.defineProperties(device, {
+    destroy: {
+      configurable: false,
+      writable: false,
+      value: () => {
+        throw new Error('Cached test devices are shared and cannot be destroyed');
+      }
+    },
+    detach: {
+      configurable: false,
+      writable: false,
+      value: () => {
+        throw new Error('Cached test devices are shared and cannot be detached');
+      }
+    }
+  });
   return device;
 }
 

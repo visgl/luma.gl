@@ -8,8 +8,6 @@ import {GL} from '@luma.gl/webgl/constants';
 import {WEBGLRenderPass} from '@luma.gl/webgl';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-// getWebGLTestDevice() returns a cached shared fixture; individual tests must not destroy it.
-
 test('WEBGLRenderPass#drawBuffers for framebuffer attachments', async t => {
   const device = await getWebGLTestDevice();
   const {gl} = device;

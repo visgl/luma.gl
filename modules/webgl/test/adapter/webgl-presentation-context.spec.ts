@@ -125,10 +125,15 @@ test('WebGPUDevice#detach preserves its native handle', async t => {
     return;
   }
 
+  let uncapturedErrorCallCount = 0;
   let device: WebGPUDevice;
   try {
     device = await webgpuAdapter.create({
       createCanvasContext: {width: 1, height: 1},
+      onError: () => {
+        uncapturedErrorCallCount++;
+        return true;
+      },
       debug: false
     });
   } catch {
@@ -139,16 +144,21 @@ test('WebGPUDevice#detach preserves its native handle', async t => {
 
   const canvasContext = device.getDefaultCanvasContext();
   const webgpuHandle = device.detach();
+  webgpuHandle.dispatchEvent(new Event('uncapturederror'));
   const buffer = webgpuHandle.createBuffer({
     size: 4,
     usage: GPUBufferUsage.COPY_DST
   });
 
   t.ok(buffer, 'native WebGPU handle remains usable after detach');
+  t.equal(uncapturedErrorCallCount, 0, 'detach removes the uncaptured error listener');
   t.equal((canvasContext as any).device, null, 'detach destroys luma canvas wrappers');
 
   buffer.destroy();
   webgpuHandle.destroy();
+  const lostInfo = await device.lost;
+  t.equal(lostInfo.reason, 'destroyed', 'detached device still reports native handle loss');
+  t.equal(device.isLost, true, 'detached device loss state remains observable');
   t.end();
 });
 
