@@ -4,7 +4,12 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, Texture, luma} from '@luma.gl/core';
-import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {
+  getNullTestDevice,
+  getTestDevices,
+  getWebGPUTestDevice,
+  NullDevice
+} from '@luma.gl/test-utils';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {_getDefaultDebugValue} from '../../src/adapter/device';
 
@@ -35,6 +40,77 @@ test('Device and Resource JSON debug output stays compact', async t => {
   );
 
   buffer.destroy();
+  t.end();
+});
+
+test('Device destroys managed canvas wrappers in reverse creation order', t => {
+  const device = new NullDevice({createCanvasContext: {width: 1, height: 1}});
+  const defaultCanvasContext = device.getDefaultCanvasContext();
+  const destroyedCanvasContext = device.createCanvasContext({width: 1, height: 1});
+  const additionalCanvasContext = device.createCanvasContext({width: 1, height: 1});
+  const destroyOrder: string[] = [];
+
+  const wrapDestroy = (label: string, canvasContext: typeof defaultCanvasContext) => {
+    const destroy = canvasContext.destroy.bind(canvasContext);
+    canvasContext.destroy = () => {
+      destroyOrder.push(label);
+      destroy();
+    };
+  };
+
+  wrapDestroy('default', defaultCanvasContext);
+  wrapDestroy('destroyed', destroyedCanvasContext);
+  wrapDestroy('additional', additionalCanvasContext);
+
+  destroyedCanvasContext.destroy();
+  destroyedCanvasContext.destroy();
+
+  t.equal(
+    (device as any)._canvasSurfaces.size,
+    2,
+    'explicitly destroyed canvas wrapper unregisters from its device'
+  );
+
+  device.destroy();
+  device.destroy();
+
+  t.deepEqual(
+    destroyOrder,
+    ['destroyed', 'destroyed', 'additional', 'default'],
+    'final device teardown destroys remaining wrappers in reverse creation order'
+  );
+  t.equal(
+    (defaultCanvasContext as any).device,
+    null,
+    'final device teardown clears the default wrapper device reference'
+  );
+  t.equal(
+    (additionalCanvasContext as any).device,
+    null,
+    'final device teardown clears additional wrapper device references'
+  );
+  t.throws(
+    () => device.createCanvasContext({width: 1, height: 1}),
+    /Device is destroyed/,
+    'destroyed devices reject new canvas wrappers'
+  );
+  t.equal(
+    (device as any)._canvasSurfaces.size,
+    0,
+    'final device teardown clears the wrapper registry'
+  );
+
+  t.end();
+});
+
+test('Device#detach destroys managed canvas wrappers and returns the handle', t => {
+  const device = new NullDevice({createCanvasContext: {width: 1, height: 1}});
+  const canvasContext = device.getDefaultCanvasContext();
+
+  t.equal(device.detach(), null, 'detach returns the backend handle');
+  t.equal((canvasContext as any).device, null, 'detach destroys managed canvas wrappers');
+  t.throws(() => device.detach(), /Device is destroyed/, 'detach is terminal');
+
   t.end();
 });
 

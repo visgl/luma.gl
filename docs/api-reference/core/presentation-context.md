@@ -43,6 +43,9 @@ presentationContext.present();
 - On WebGL, all `PresentationContext` instances on a device share that single default `CanvasContext`, so they must be used sequentially.
 - On WebGPU, each `PresentationContext` owns its own destination `GPUCanvasContext`.
 - `present()` is explicit. On WebGL it performs the copy to the destination canvas. On WebGPU it submits the frame.
+- `PresentationContext` wrappers are managed by the device that created them. Applications may
+  call `presentationContext.destroy()` to release one early; otherwise `device.destroy()` releases
+  all remaining wrappers without removing their destination canvases.
 
 ## Backend Behavior
 

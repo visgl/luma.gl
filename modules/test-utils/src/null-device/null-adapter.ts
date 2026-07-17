@@ -24,7 +24,7 @@ export class NullAdapter extends Adapter {
   }
 
   async attach(handle: null, props: DeviceProps = {}): Promise<NullDevice> {
-    return new NullDevice(props);
+    return new NullDevice({...props, _ownsHandle: false});
   }
 
   async create(props: DeviceProps = {}): Promise<NullDevice> {

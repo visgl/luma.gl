@@ -53,10 +53,12 @@ export class WebGLAdapter extends Adapter {
   async attach(gl: Device | WebGL2RenderingContext, props: DeviceProps = {}): Promise<WebGLDevice> {
     const {WebGLDevice} = await import('./webgl-device');
     if (gl instanceof WebGLDevice) {
+      gl._retainDeviceReference();
       return gl;
     }
     const existingDevice = WebGLDevice.getDeviceFromContext(gl as WebGL2RenderingContext | null);
     if (existingDevice) {
+      existingDevice._retainDeviceReference();
       return existingDevice;
     }
     if (!isWebGL(gl)) {
@@ -70,6 +72,7 @@ export class WebGLAdapter extends Adapter {
     return new WebGLDevice({
       ...props,
       _handle: gl,
+      _ownsHandle: false,
       createCanvasContext: {canvas: gl.canvas, autoResize: false, ...createCanvasContext}
     });
   }

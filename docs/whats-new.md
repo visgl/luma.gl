@@ -24,6 +24,14 @@ Target Release Date: Q3, 2026
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 - **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering, atlas construction, and Arrow text adapters.
 
+**@luma.gl/core**
+
+- **[Device and canvas lifecycle](/docs/api-reference/core/device#lifecycle)** - Devices now manage
+  their `CanvasContext` and `PresentationContext` wrappers, so final teardown disconnects canvas
+  observers and releases backend presentation resources. Reused and repeatedly attached WebGL
+  devices retain logical references until the final release, and the new `device.detach()` API
+  preserves and returns an exclusively owned backend handle.
+
 **@luma.gl/experimental**
 
 - **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.

@@ -32,11 +32,12 @@ const device = new luma.createDevice({type: 'webgl2', ...});
 Attaching a `Device` to an externally created `WebGL2RenderingContext`.
 
 ```typescript
-import {Device} from '@luma.gl/core';
+import {luma} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import {webgl2Adapter} from '@luma.gl/webgl';
 
 const gl = canvas.getContext('webgl2', ...);
-const device = Device.attach(gl);
+const device = await luma.attachDevice(gl, {adapters: [webgl2Adapter]});
 
 const model = new Model(device, options);
 ```
@@ -51,6 +52,26 @@ if (!device.isLost) {
 const {message} = await device.lost;
 console.error(message);
 ```
+
+## Lifecycle
+
+A `Device` owns the luma.gl wrappers created through it, not the underlying DOM canvases.
+Created devices own their backend handle; attached devices borrow an externally created handle.
+
+| Operation | Wrapper behavior | Backend handle behavior |
+| --- | --- | --- |
+| `canvasContext.destroy()` | Destroys one canvas or presentation wrapper early. | Preserves the device and handle. |
+| `device.destroy()` | Releases one logical device reference; the final release destroys all remaining wrappers. | Destroys an owned WebGPU handle, but preserves borrowed handles and WebGL contexts. |
+| `device.detach()` | Requires exclusive ownership, destroys all remaining wrappers, and permanently invalidates the luma device. | Preserves and returns the backend handle. |
+
+Each successful `createDevice()` or `attachDevice()` acquisition owns one logical reference.
+Release it with `device.destroy()`, or use `device.detach()` instead when the device has one
+exclusive owner. Reusable WebGL devices and repeated attachment can return the same `Device`
+instance while retaining another logical reference; wrappers remain live until the final matching
+release. `device.detach()` rejects shared devices so one owner cannot invalidate another.
+
+Destroying or detaching a device never removes an `HTMLCanvasElement` or `OffscreenCanvas`.
+A detached handle may be attached again later, but its old luma context wrappers cannot be reused.
 
 ## Types
 
@@ -274,10 +295,14 @@ Use the static `Device.create()` method to create classes.
 
 ### destroy()
 
-Releases resources associated with this `Device`.
+Releases one logical reference to this `Device`. The final release destroys every remaining
+`CanvasContext` and `PresentationContext` wrapper created through it. Destroying a context
+wrapper stops its canvas observers and releases backend-specific presentation resources, but does
+not remove or destroy the underlying `HTMLCanvasElement` or `OffscreenCanvas`.
 
 :::info
-Calling `device.destroy()` releases GPU resources immediately on WebGPU. On WebGL it will not immediately release GPU resources.
+Calling `device.destroy()` releases an owned WebGPU handle immediately after the final release.
+Attached WebGPU handles are borrowed and are not destroyed. On WebGL it will not immediately release GPU resources.
 The WebGL API does not provide a context destroy function,
 instead relying on garbage collection to eventually release the resources.
 :::
@@ -287,6 +312,17 @@ Interaction between `Device.destroy()`, `Device.lost` and `Device.isLost` is imp
 The application should not assume that destroying a device triggers a device loss,
 or that the `lost` promise is resolved before any API errors are triggered by access to the destroyed device.
 :::
+
+### detach()
+
+```typescript
+detach(): unknown
+```
+
+Detaches luma.gl from this device and returns the backend handle without destroying it.
+Detaching is terminal: it destroys all remaining context wrappers, clears backend association
+metadata, and invalidates the luma `Device`. It requires the device to have exactly one logical
+reference; call `destroy()` to release shared references first.
 
 ### createCanvasContext()
 
@@ -300,6 +336,9 @@ createCanvasContext(props?: CanvasContextProps): CanvasContext
 ```
 
 Creates a new [`CanvasContext`](./canvas-context). WebGL devices can only render into the canvas they were created with.
+
+The returned wrapper is managed by the device. The application may call `canvasContext.destroy()`
+to release it early; otherwise `device.destroy()` releases it during final device teardown.
 
 ### createPresentationContext()
 

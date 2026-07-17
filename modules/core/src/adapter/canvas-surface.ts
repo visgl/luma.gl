@@ -200,6 +200,7 @@ export abstract class CanvasSurface {
     if (!this.destroyed) {
       this.destroyed = true;
       this._stopObservers();
+      this.device?._unregisterCanvasSurface?.(this);
       // @ts-expect-error Clear the device to make sure we don't access it after destruction.
       this.device = null;
     }

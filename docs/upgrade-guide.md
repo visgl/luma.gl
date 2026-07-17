@@ -21,6 +21,14 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   `createWBOITResolveShaderPassPipeline()`. `WBOITRenderer.capture()` returns the accumulation and
   revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
 
+**@luma.gl/core**
+
+- `Device.destroy()` now releases one logical device reference and, on final release, destroys all
+  `CanvasContext` and `PresentationContext` wrappers created through that device. Applications
+  that previously kept using a context wrapper after `device.destroy()` must keep the device alive
+  instead. Repeated reusable-device or `attachDevice()` acquisitions each require a matching
+  `destroy()` call; an exclusive owner can call `device.detach()` to tear down luma wrappers
+  while preserving and returning the backend handle.
 **@luma.gl/arrow**
 
 - Generic GPU table/runtime APIs moved to `@luma.gl/tables`:

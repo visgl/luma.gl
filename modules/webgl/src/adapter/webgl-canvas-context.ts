@@ -30,6 +30,16 @@ export class WebGLCanvasContext extends CanvasContext {
     this._configureDevice();
   }
 
+  override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this._framebuffer?.destroy();
+    this._framebuffer = null;
+    super.destroy();
+  }
+
   // IMPLEMENTATION OF ABSTRACT METHODS
 
   _configureDevice(): void {
