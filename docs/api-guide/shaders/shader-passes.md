@@ -59,6 +59,9 @@ the application applies the same transform to those auxiliary attachments.
 - Reusable effects that should be configured as shader modules but executed by
   an engine-owned pass renderer.
 
+For FXAA, TAA, and the ordering between resolved render targets and postprocessing, see
+[Antialiasing and Multisampling](/docs/api-guide/gpu/gpu-antialiasing).
+
 Do not use shader passes for ordinary geometry shading. Use `Model` with
 modules or plugins when the shader participates in a model's vertex and
 fragment pipeline.

@@ -74,6 +74,7 @@ import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
+import AntialiasingApp from '../../examples/showcase/antialiasing/app';
 import GlobeApp from '../../examples/showcase/globe/app';
 // import WanderingApp from '../../examples/showcase/wandering/app';
 
@@ -904,6 +905,17 @@ export const PostprocessingExample: React.FC<WebsiteExampleProps> = props => (
     id="postprocessing"
     directory="showcase"
     template={PostprocessingApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const AntialiasingExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="antialiasing"
+    title="Antialiasing Techniques"
+    directory="showcase"
+    template={AntialiasingApp}
     config={exampleConfig}
     {...props}
   />

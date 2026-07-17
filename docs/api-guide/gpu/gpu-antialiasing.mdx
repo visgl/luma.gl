@@ -1,0 +1,262 @@
+import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
+import {AntialiasingExample} from '@site/src/examples';
+
+# Antialiasing and Multisampling
+
+<GpuGuideDocsTabs group="execution" active="antialiasing" />
+
+Aliasing is not one problem with one switch. A jagged triangle edge, a shimmering checkerboard,
+an alpha-cutout leaf, a noisy shadow boundary, and a depth-aware postprocess halo come from
+different sampling problems and need different fixes.
+
+Start by identifying which artifact is aliasing:
+
+| Artifact | First technique to try | Why |
+| --- | --- | --- |
+| Geometry edges on a WebGL canvas | Request `webgl.antialias` | The browser can antialias the default drawing buffer. |
+| Geometry edges in an offscreen pass | MSAA or supersampling | Offscreen color and depth attachments need their own sampling strategy. |
+| A final image with isolated jagged edges | FXAA | A single postprocess pass smooths contrast edges without changing scene rendering. |
+| Motion shimmer or subpixel geometry | TAA | Jitter, history, velocity, and depth accumulate information across frames. |
+| Minified or oblique textures | Mipmaps and anisotropy | Texture filters address texel-frequency aliasing, not polygon coverage. |
+| Alpha-cutout edges | Alpha-to-coverage or analytic coverage | A binary `discard` creates hard coverage edges. |
+| Depth and shadow edges | Matching multisampled depth, depth-aware filtering, or PCF | Visibility and shadow maps alias independently from final color. |
+
+## Where Antialiasing Fits
+
+<style>{`
+  .docs-antialiasing-flow {
+    display: grid;
+    gap: 12px;
+    margin: 18px 0;
+  }
+  .docs-antialiasing-flow__row {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .docs-antialiasing-flow__node {
+    background: var(--ifm-color-emphasis-100);
+    border: 1px solid var(--ifm-color-emphasis-300);
+    border-radius: 8px;
+    min-height: 54px;
+    padding: 10px;
+    text-align: center;
+  }
+  .docs-antialiasing-flow__node--accent {
+    border-color: var(--ifm-color-primary);
+  }
+  .docs-antialiasing-flow__arrow {
+    color: var(--ifm-color-primary);
+    font-size: 20px;
+    text-align: center;
+  }
+  .docs-antialiasing-flow__caption {
+    color: var(--ifm-color-emphasis-700);
+    font-size: 0.9em;
+    margin: 0;
+  }
+  @media (max-width: 700px) {
+    .docs-antialiasing-flow__row {
+      grid-template-columns: 1fr;
+    }
+    .docs-antialiasing-flow__arrow {
+      transform: rotate(90deg);
+    }
+  }
+`}</style>
+
+<div className="docs-antialiasing-flow" role="figure" aria-label="Antialiasing render flow">
+  <div className="docs-antialiasing-flow__row">
+    <div className="docs-antialiasing-flow__node">Geometry, alpha cutouts, textures</div>
+    <div className="docs-antialiasing-flow__arrow" aria-hidden="true">→</div>
+    <div className="docs-antialiasing-flow__node docs-antialiasing-flow__node--accent">
+      Raster coverage<br /><code>MSAA</code> or supersampling
+    </div>
+    <div className="docs-antialiasing-flow__arrow" aria-hidden="true">→</div>
+  </div>
+  <div className="docs-antialiasing-flow__row">
+    <div className="docs-antialiasing-flow__node">Resolved color texture</div>
+    <div className="docs-antialiasing-flow__arrow" aria-hidden="true">→</div>
+    <div className="docs-antialiasing-flow__node docs-antialiasing-flow__node--accent">
+      Postprocess<br /><code>FXAA</code> or <code>TAA</code>
+    </div>
+    <div className="docs-antialiasing-flow__arrow" aria-hidden="true">→</div>
+  </div>
+  <div className="docs-antialiasing-flow__row">
+    <div className="docs-antialiasing-flow__node">Canvas presentation</div>
+    <div className="docs-antialiasing-flow__arrow" aria-hidden="true">←</div>
+    <div className="docs-antialiasing-flow__node">Sampleable depth, normals, velocity, shadows</div>
+    <div className="docs-antialiasing-flow__arrow" aria-hidden="true">←</div>
+  </div>
+  <p className="docs-antialiasing-flow__caption">
+    Depth participates in scene visibility during rasterization, then often becomes a separate
+    sampled input for later effects.
+  </p>
+</div>
+
+The best result is often a combination: correct device-pixel resolution, mipmapped textures,
+coverage antialiasing for geometry, then a postprocess pass only where it adds value.
+
+## Try Common Techniques
+
+The comparison below keeps the left half as the single-sample baseline and applies the selected
+technique on the right. It intentionally uses techniques available through the portable luma.gl
+API today; canvas-context antialiasing, raw WebGL MSAA, and TAA are explained in later sections.
+
+<AntialiasingExample embedded showStats={false} />
+
+## Resolution and Supersampling
+
+Before adding an AA algorithm, make sure the drawing buffer matches the intended display
+resolution. A canvas rendered at CSS-pixel resolution on a high-DPI display will look soft or
+jagged even when other settings are correct. Use
+[`CanvasContext`](/docs/api-reference/core/canvas-context) sizing controls to choose device pixels
+or an explicit render scale.
+
+Supersampling renders the scene into a larger texture and downsamples it with a filter. It is
+portable and handles geometry, shader, and texture detail together, but it scales color, depth,
+and fragment-shader cost with the number of rendered pixels. Use it as a quality fallback or for
+small targets rather than as the default for a large scene.
+
+## WebGL Canvas Antialiasing
+
+WebGL exposes `antialias` as a context-creation attribute:
+
+```ts
+const device = await luma.createDevice({
+  type: 'webgl2',
+  createCanvasContext: true,
+  webgl: {antialias: true}
+});
+```
+
+This is a request for the default drawing buffer only. The browser chooses the technique and
+quality, and the actual value may differ from the requested one. Inspect the created context when
+the distinction matters:
+
+```ts
+const gl = device.gl as WebGL2RenderingContext;
+const antialias = gl.getContextAttributes()?.antialias;
+```
+
+The request does not antialias textures attached to application-created framebuffers. The WebGL
+specification describes `antialias` as a best-effort drawing-buffer request, not a requirement.
+See the [WebGL context attributes specification](https://registry.khronos.org/webgl/specs/latest/1.0/).
+
+## Explicit Multisampling
+
+Multisample antialiasing stores more than one coverage/depth/color sample per pixel during
+rasterization, then resolves those samples into a normal single-sample image. It usually improves
+polygon and alpha-to-coverage edges without running the fragment shader once for every
+supersampled pixel.
+
+| Backend | Canvas path | Offscreen path | luma.gl status |
+| --- | --- | --- | --- |
+| WebGL 2 | `webgl.antialias` controls the default drawing buffer. | Render to multisampled renderbuffers, then `blitFramebuffer` into textures. | No managed offscreen resolve path yet; `Texture.samples` is ignored by `WEBGLTexture`. |
+| WebGPU | No context-level antialias switch. | Render into a multisampled `GPUTexture`, use a matching pipeline sample count, and provide a single-sample resolve target. | `Texture.samples` and pipeline `sampleCount` reach WebGPU, but luma.gl does not yet expose a complete managed resolve workflow. |
+
+For the raw WebGL sequence, see the
+[WebGL2Samples `fbo_multisample` example](https://webglsamples.org/WebGL2Samples/samples/fbo_multisample.html).
+For WebGPU concepts and sample-count constraints, see the
+[WebGPU multisampling guide](https://webgpufundamentals.org/webgpu/lessons/webgpu-multisampling.html)
+and the [WebGPU specification](https://gpuweb.github.io/gpuweb/).
+
+:::caution Proposed API, not implemented
+
+[RFC #2741](https://github.com/visgl/luma.gl/issues/2741) proposes a framebuffer-level
+request for color-only offscreen MSAA:
+
+```ts
+const colorTexture = device.createTexture({
+  width,
+  height,
+  format: 'rgba8unorm',
+  usage: Texture.RENDER | Texture.SAMPLE
+});
+
+const framebuffer = device.createFramebuffer({
+  width,
+  height,
+  samples: 4,
+  colorAttachments: [colorTexture]
+});
+```
+
+Under that proposal, the color texture remains single-sampled and sampleable. WebGL would render
+into private multisampled renderbuffers and resolve into the supplied texture when
+`RenderPass.end()` is called. The first scope is color-only and rejects depth/stencil attachments.
+
+:::
+
+## Depth, Stencil, and Shadows
+
+Depth is part of antialiasing in two different ways:
+
+- During scene rendering, depth and stencil tests determine which covered samples survive. A
+  multisampled color attachment needs depth/stencil attachments with the same sample count to keep
+  visibility correct at polygon boundaries.
+- After scene rendering, many effects sample a depth texture. DOF, SSAO, SSR, outlines, motion
+  blur, and TAA generally expect an ordinary single-sample depth texture. A multisampled depth
+  attachment cannot silently replace that input; the application needs a resolve, per-sample
+  shader access, or a separate single-sample depth path.
+
+The current luma.gl effects use sampleable depth textures for these later passes. For example,
+[`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) accepts
+application-owned depth bindings for scene-aware effects, while the
+[Depth of Field example](/examples/showcase/dof) renders a texture-backed depth attachment before
+sampling it.
+
+Shadow maps are another depth image and have their own aliasing. Increasing shadow-map
+resolution, filtering comparisons such as PCF, stabilizing cascades, and temporal filtering can
+reduce shadow-edge shimmer; scene MSAA alone does not fix a low-resolution or unstable shadow map.
+
+## Alpha Cutouts and Transparency
+
+Alpha testing with `discard` creates a hard coverage edge. With multisampling enabled,
+`sampleAlphaToCoverageEnabled` can convert fragment alpha into a sample coverage mask, which is
+often useful for foliage, fences, and similar cutouts. It is not a replacement for correct
+transparency ordering or blending, and it does little without multiple samples.
+
+For analytic shapes such as circles, lines, and signed-distance-field text, shader-computed
+coverage with a smooth transition can be more precise than postprocessing. Prefer geometry or
+shader-level coverage when the primitive has a known mathematical boundary.
+
+## Postprocess and Temporal Antialiasing
+
+FXAA is a single-frame screen-space pass. It is cheap, works after a resolved color image, and
+helps high-contrast jagged edges, but it can soften details and cannot recover information that was
+never rasterized.
+
+TAA accumulates samples over time. It is better at subpixel motion and shimmer, but it requires a
+jittered projection, history buffers, velocity, and depth rejection to avoid ghosting. luma.gl
+exports [`fxaa`](/docs/api-guide/shaders/shader-passes) for WebGL and WebGPU shader-pass chains and
+`createTAAShaderPassPipeline()` for the WebGPU-oriented advanced-effects path. See the
+[Advanced Effects example](/examples/experimental/advanced-effects) for TAA combined with depth,
+velocity, SSAO, SSR, and motion blur.
+
+When combining techniques, resolve MSAA before a normal texture-sampling postprocess. Apply FXAA
+near the end of the color chain. Apply TAA where its history, depth, and velocity represent the
+same jittered scene.
+
+## Texture Aliasing
+
+Texture minification is not fixed by canvas antialiasing or MSAA. Use linear filtering for
+magnification, generate mipmaps for distant texture sampling, choose trilinear mipmap filtering
+when transitions between mip levels are visible, and raise anisotropy for oblique surfaces.
+
+See [GPU Textures](/docs/api-guide/gpu/gpu-textures#mipmaps) and
+[`Sampler`](/docs/api-reference/core/resources/sampler) for the concrete luma.gl texture and
+sampler settings.
+
+## Practical Recipes
+
+| Situation | Recommended stack |
+| --- | --- |
+| Simple WebGL canvas scene | Device pixels + `webgl.antialias` + mipmapped textures. |
+| Portable offscreen effect today | Single-sample render target + appropriate texture filtering + FXAA or carefully chosen supersampling. |
+| WebGPU scene with explicit MSAA | Matching multisampled color/depth attachments and pipeline sample count, then resolve before ordinary postprocessing. |
+| Thin moving geometry | Stable device-pixel sizing, then TAA or supersampling; FXAA alone may still shimmer. |
+| Alpha-cutout foliage | MSAA + alpha-to-coverage where available, with texture mipmaps and correct blending. |
+| Depth-aware postprocessing | Keep a deliberate sampleable depth path and treat depth discontinuities as effect inputs, not just color edges. |
+| Shadow shimmer | Improve shadow-map sampling/resolution/stability; combine with TAA only after the shadow path is stable. |

@@ -15,4 +15,5 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 - [GPU binding management](/docs/api-guide/gpu/gpu-bindings) - Make attribute buffers, uniforms, textures, samplers available to GPU shaders.
 - [Tabular data in WGSL](/docs/api-guide/gpu/tabular-data-in-wgsl) - Map logical table columns to vertex attributes or WebGPU storage arrays and structs.
 - [Shader execution / rendering](/docs/api-guide/gpu/gpu-rendering) - Drawing into textures, running compute shaders.
+- [Antialiasing and multisampling](/docs/api-guide/gpu/gpu-antialiasing) - Choose between canvas antialiasing, MSAA, supersampling, postprocess AA, and texture filtering.
 - [GPU parameter management](/docs/api-guide/gpu/gpu-parameters) - Configuring blending, clipping, depth tests etc.

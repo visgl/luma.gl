@@ -59,7 +59,7 @@ Describes luma.gl setting names and values
 0. Vertex Fetch (buffers)
 1. Vertex Shader
 2. Primitive assembly (`topology`)
-3. Rasterization (multisampling parameters)
+3. Rasterization ([multisampling parameters](/docs/api-guide/gpu/gpu-antialiasing))
 4. Fragment shader `Framebuffer`
 5. Stencil test and operation (stencil parameters)
 6. Depth test and write (depth parameters)

@@ -15770,6 +15770,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-antialiasing@workspace:examples/showcase/antialiasing":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-antialiasing@workspace:examples/showcase/antialiasing"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/effects": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-api-video-texture@workspace:examples/api/video-texture":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-api-video-texture@workspace:examples/api/video-texture"
