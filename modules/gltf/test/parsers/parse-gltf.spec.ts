@@ -136,7 +136,6 @@ test('gltf#parseGLTF - box.glb integration', async t => {
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
     t.equals(vertexCounts[0], 36, 'Vertex count should be 36 (from indices)');
   } finally {
-    webglDevice.destroy();
   }
 
   t.end();
@@ -159,7 +158,6 @@ test('gltf#parseGLTF - non-indexed geometry', async t => {
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
     t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
   } finally {
-    webglDevice.destroy();
   }
 
   t.end();
@@ -193,7 +191,6 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
     t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
   } finally {
-    webglDevice.destroy();
   }
 
   t.end();
@@ -226,7 +223,6 @@ test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
     t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
   } finally {
-    webglDevice.destroy();
   }
 
   t.end();
@@ -262,7 +258,6 @@ test('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async t => {
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
     t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
   } finally {
-    webglDevice.destroy();
   }
 
   t.end();

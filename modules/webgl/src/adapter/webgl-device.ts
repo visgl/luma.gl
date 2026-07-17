@@ -104,6 +104,7 @@ export class WebGLDevice extends Device {
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
+  private _stateTracker: WebGLStateTracker | null = null;
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
@@ -252,10 +253,10 @@ export class WebGLDevice extends Device {
     }
 
     // Install context state tracking
-    const glState = new WebGLStateTracker(this.gl, {
+    this._stateTracker = new WebGLStateTracker(this.gl, {
       log: (...args: any[]) => log.log(1, ...args)()
     });
-    glState.trackState(this.gl, {copyState: false});
+    this._stateTracker.trackState(this.gl, {copyState: false});
 
     // props.debug - instrument the WebGL context with Khronos debug tools
     // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
@@ -298,6 +299,8 @@ export class WebGLDevice extends Device {
   private _finalizeDevice(): void {
     this._destroyCanvasSurfaces();
     this.commandEncoder?.destroy();
+    this._stateTracker?.untrackState();
+    this._stateTracker = null;
 
     // Delete the reference to the device that we store on the WebGL context.
     const contextData = getWebGLContextData(this.handle);

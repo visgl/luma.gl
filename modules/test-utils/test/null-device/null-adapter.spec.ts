@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {_refreshLostCachedTestDevice} from '../../src/create-test-device';
+import {getNullTestDevice, _refreshLostCachedTestDevice} from '../../src/create-test-device';
 
 test('NullAdapter imports from the ESM package entry without circular init errors', async () => {
   // Import the local entry file directly to avoid workspace alias resolution mixing src/dist modules.
@@ -42,4 +42,13 @@ test('refreshLostCachedTestDevice recreates a lost cached device', async () => {
   expect(refreshedDevice.isLost).toBe(false);
   expect(refreshedDevice.id).toBe('fresh-device-1');
   expect(createCount).toBe(1);
+});
+
+test('cached test devices reject terminal lifecycle operations', async () => {
+  const device = await getNullTestDevice();
+
+  expect(Object.getOwnPropertyDescriptor(device, 'destroy')?.writable).toBe(false);
+  expect(Object.getOwnPropertyDescriptor(device, 'detach')?.writable).toBe(false);
+  expect(() => device.destroy()).toThrow(/Cached test devices.*cannot be destroyed/);
+  expect(() => device.detach()).toThrow(/Cached test devices.*cannot be detached/);
 });

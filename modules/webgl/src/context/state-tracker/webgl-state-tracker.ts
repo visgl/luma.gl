@@ -32,6 +32,7 @@ export class WebGLStateTracker {
   log;
 
   protected initialized = false;
+  protected originalFunctions: Record<string, Function> = {};
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -80,17 +81,46 @@ export class WebGLStateTracker {
     // @ts-expect-error
     this.gl.lumaState = this;
 
-    installProgramSpy(gl);
+    this.originalFunctions.useProgram = gl.useProgram;
+    installProgramSpy(gl, this.originalFunctions.useProgram);
 
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
       const setter = GL_HOOKED_SETTERS[key];
-      installSetterSpy(gl, key, setter);
+      if (gl[key]) {
+        this.originalFunctions[key] = gl[key];
+      }
+      installSetterSpy(gl, key, setter, this.originalFunctions[key]);
     }
 
     // intercept all getter functions in the table
-    installGetterOverride(gl, 'getParameter');
-    installGetterOverride(gl, 'isEnabled');
+    this.originalFunctions.getParameter = gl.getParameter;
+    this.originalFunctions.isEnabled = gl.isEnabled;
+    installGetterOverride(gl, 'getParameter', this.originalFunctions.getParameter);
+    installGetterOverride(gl, 'isEnabled', this.originalFunctions.isEnabled);
+  }
+
+  /** Restore the native WebGL methods that were wrapped by trackState(). */
+  untrackState(): void {
+    if (!this.initialized) {
+      return;
+    }
+
+    for (const functionName in this.originalFunctions) {
+      this.gl[functionName] = this.originalFunctions[functionName];
+    }
+
+    // @ts-expect-error lumaState is luma.gl metadata on the WebGL context.
+    if (this.gl.lumaState === this) {
+      // @ts-expect-error lumaState is luma.gl metadata on the WebGL context.
+      this.gl.lumaState = undefined;
+    }
+
+    this.originalFunctions = {};
+    this.stateStack.length = 0;
+    this.program = null;
+    this.cache = null!;
+    this.initialized = false;
   }
 
   /**
@@ -139,9 +169,13 @@ export class WebGLStateTracker {
  * @param gl
  * @param functionName
  */
-function installGetterOverride(gl: WebGL2RenderingContext, functionName: string) {
+function installGetterOverride(
+  gl: WebGL2RenderingContext,
+  functionName: string,
+  originalGetter: Function
+) {
   // Get the original function from the WebGL2RenderingContext
-  const originalGetterFunc = gl[functionName].bind(gl);
+  const originalGetterFunc = originalGetter.bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
   gl[functionName] = function get(pname) {
@@ -180,7 +214,12 @@ function installGetterOverride(gl: WebGL2RenderingContext, functionName: string)
  * @param setter
  * @returns
  */
-function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, setter: Function) {
+function installSetterSpy(
+  gl: WebGL2RenderingContext,
+  functionName: string,
+  setter: Function,
+  originalSetter: Function
+) {
   // Get the original function from the WebGL2RenderingContext
   if (!gl[functionName]) {
     // TODO - remove?
@@ -188,7 +227,7 @@ function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, sett
     return;
   }
 
-  const originalSetterFunc = gl[functionName].bind(gl);
+  const originalSetterFunc = originalSetter.bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
   gl[functionName] = function set(...params) {
@@ -218,8 +257,8 @@ function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, sett
   });
 }
 
-function installProgramSpy(gl: WebGL2RenderingContext): void {
-  const originalUseProgram = gl.useProgram.bind(gl);
+function installProgramSpy(gl: WebGL2RenderingContext, originalUseProgramFunction: Function): void {
+  const originalUseProgram = originalUseProgramFunction.bind(gl);
 
   gl.useProgram = function useProgramLuma(handle) {
     const glState = WebGLStateTracker.get(gl);

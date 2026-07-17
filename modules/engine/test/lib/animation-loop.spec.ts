@@ -138,7 +138,6 @@ test('engine#AnimationLoop passes frame payload from custom animation frame prov
 
   t.equal(cancelAnimationFrameCallCount, 1, 'stopping cancels scheduled custom frame');
   animationLoop.destroy();
-  device.destroy();
   t.end();
 });
 
