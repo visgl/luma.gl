@@ -32,9 +32,19 @@
     "label": "API",
     "items": [
       "api/animation",
+      {
+        "type": "doc",
+        "id": "api/blending",
+        "label": "Blending"
+      },
       "api/multi-canvas",
       "api/cubemap",
       "api/texture-3d",
+      {
+        "type": "doc",
+        "id": "api/texture-sampling",
+        "label": "Texture Sampling"
+      },
       "api/texture-tester",
       {
         "type": "doc",
