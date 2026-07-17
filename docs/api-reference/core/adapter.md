@@ -55,8 +55,10 @@ create(props: DeviceProps): Promise<Device>;
 
 ### `attach()`
 
-Attaches a device to a GPU device handle from this backend.
+Attaches a device to a GPU device handle from this backend. The returned device borrows the handle.
+Each successful attach call owns one logical device reference; release it with `device.destroy()`
+or, when exclusively owned, `device.detach()`.
 
 ```ts
-attach?(handle: unknown): Promise<Device>;
+attach(handle: unknown, props?: DeviceProps): Promise<Device>;
 ```

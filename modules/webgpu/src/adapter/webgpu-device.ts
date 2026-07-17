@@ -139,7 +139,9 @@ export class WebGPUDevice extends Device {
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
     const canvasContextProps = Device._getCanvasContextProps(props);
     if (canvasContextProps) {
-      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
+      this.canvasContext = this._registerCanvasSurface(
+        new WebGPUCanvasContext(this, this.adapter, canvasContextProps)
+      );
     }
 
     this.commandEncoder = this.createCommandEncoder({});
@@ -151,10 +153,27 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    if (!this._releaseDeviceReference()) {
+      return;
+    }
+
+    this._finalizeDevice({destroyHandle: this._ownsHandle});
+  }
+
+  override detach(): GPUDevice {
+    this._detachDeviceReference();
+    this._finalizeDevice({destroyHandle: false});
+    return this.handle;
+  }
+
+  private _finalizeDevice(options: {destroyHandle: boolean}): void {
+    this._destroyCanvasSurfaces();
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
     this._defaultSampler = null;
-    this.handle.destroy();
+    if (options.destroyHandle) {
+      this.handle.destroy();
+    }
   }
 
   get isLost(): boolean {
@@ -265,11 +284,11 @@ export class WebGPUDevice extends Device {
   }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
-    return new WebGPUCanvasContext(this, this.adapter, props);
+    return this._registerCanvasSurface(new WebGPUCanvasContext(this, this.adapter, props));
   }
 
   createPresentationContext(props?: PresentationContextProps): PresentationContext {
-    return new WebGPUPresentationContext(this, props);
+    return this._registerCanvasSurface(new WebGPUPresentationContext(this, props));
   }
 
   createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {

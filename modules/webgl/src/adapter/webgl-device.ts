@@ -161,7 +161,9 @@ export class WebGLDevice extends Device {
     }
 
     // Create and instrument context
-    this.canvasContext = new WebGLCanvasContext(this, canvasContextProps);
+    this.canvasContext = this._registerCanvasSurface(
+      new WebGLCanvasContext(this, canvasContextProps)
+    );
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
@@ -217,6 +219,7 @@ export class WebGLDevice extends Device {
         // Destroy the orphaned canvas context that was created above (line 149)
         // to prevent its ResizeObserver from firing callbacks with undefined device
         this.canvasContext.destroy();
+        device._retainDeviceReference();
         device._reused = true;
         return device;
       }
@@ -271,7 +274,7 @@ export class WebGLDevice extends Device {
   /**
    * Destroys the device
    *
-   * @note "Detaches" from the WebGL context unless _reuseDevices is true.
+   * @note Shared devices created with _reuseDevices are detached after their final release.
    *
    * @note The underlying WebGL context is not immediately destroyed,
    * but may be destroyed later through normal JavaScript garbage collection.
@@ -279,17 +282,26 @@ export class WebGLDevice extends Device {
    * browser API for destroying WebGL contexts.
    */
   destroy(): void {
-    this.commandEncoder?.destroy();
-    // Note that deck.gl (especially in React strict mode) depends on being able
-    // to asynchronously create a Device against the same canvas (i.e. WebGL context)
-    // multiple times and getting the same device back. Since deck.gl is not aware
-    // of this sharing, it might call destroy() multiple times on the same device.
-    // Therefore we must do nothing in destroy() if props._reuseDevices is true
-    if (!this.props._reuseDevices && !this._reused) {
-      // Delete the reference to the device that we store on the WebGL context
-      const contextData = getWebGLContextData(this.handle);
-      contextData.device = null;
+    if (!this._releaseDeviceReference()) {
+      return;
     }
+
+    this._finalizeDevice();
+  }
+
+  override detach(): WebGL2RenderingContext {
+    this._detachDeviceReference();
+    this._finalizeDevice();
+    return this.handle;
+  }
+
+  private _finalizeDevice(): void {
+    this._destroyCanvasSurfaces();
+    this.commandEncoder?.destroy();
+
+    // Delete the reference to the device that we store on the WebGL context.
+    const contextData = getWebGLContextData(this.handle);
+    contextData.device = null;
   }
 
   get isLost(): boolean {
@@ -303,7 +315,7 @@ export class WebGLDevice extends Device {
   }
 
   createPresentationContext(props?: PresentationContextProps): PresentationContext {
-    return new WebGLPresentationContext(this, props || {});
+    return this._registerCanvasSurface(new WebGLPresentationContext(this, props || {}));
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {

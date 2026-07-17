@@ -47,6 +47,10 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   /** Destroy any textures produced while configured and remove the context configuration. */
   override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
     if (this.framebuffer) {
       this.framebuffer.destroy();
       this.framebuffer = null;

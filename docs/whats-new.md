@@ -15,6 +15,11 @@ Target Release Date: Q3, 2026
 **@luma.gl/core**
 
 - **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` reports whether the active browser and backend expose the experimental DOM-to-texture rasterization path.
+- **[Device and canvas lifecycle](/docs/api-reference/core/device#lifecycle)** - Devices now manage
+  their `CanvasContext` and `PresentationContext` wrappers, so final teardown disconnects canvas
+  observers and releases backend presentation resources. Reused and repeatedly attached WebGL
+  devices retain logical references until the final release, and the new `device.detach()` API
+  preserves and returns an exclusively owned backend handle.
 
 **@luma.gl/experimental**
 

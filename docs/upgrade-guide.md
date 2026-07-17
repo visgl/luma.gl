@@ -22,6 +22,12 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 **@luma.gl/core**
 - WebGPU device creation now defaults to `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass `featureLevel: 'max'`.
+- `Device.destroy()` now releases one logical device reference and, on final release, destroys all
+  `CanvasContext` and `PresentationContext` wrappers created through that device. Applications
+  that previously kept using a context wrapper after `device.destroy()` must keep the device alive
+  instead. Repeated reusable-device or `attachDevice()` acquisitions each require a matching
+  `destroy()` call; an exclusive owner can call `device.detach()` to tear down luma wrappers
+  while preserving and returning the backend handle.
 - Render draw state is now owned by `RenderPass`. `RenderPipelineProps.bindings`,
   `RenderPipelineProps.bindGroups`, `RenderPipeline.setBindings()`, and
   `RenderPipeline.draw()` are deprecated compatibility APIs and will be

@@ -17,7 +17,10 @@ export abstract class Adapter {
   abstract isDeviceHandle(handle: unknown): boolean;
   /** Create a new device for this backend */
   abstract create(props: DeviceProps): Promise<Device>;
-  /** Attach a Device to a valid handle for this backend (GPUDevice, WebGL2RenderingContext etc) */
+  /**
+   * Attach a Device to a valid handle for this backend (GPUDevice, WebGL2RenderingContext etc).
+   * Each successful attachment owns one logical reference that must be released through the Device.
+   */
   abstract attach(handle: unknown, props: DeviceProps): Promise<Device>;
 
   /**

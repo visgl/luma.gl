@@ -151,9 +151,18 @@ luma.attachDevice(handle: WebGL2RenderingContext | GPUDevice | null, {adapters, 
 A luma.gl Device can be attached to an externally created `WebGL2RenderingContext` or `GPUDevice`.
 This allows applications to use the luma.gl API to "interleave" rendering with other GPU libraries.
 
+WebGL attachment is currently implemented. WebGPU handle attachment is reserved by this API but
+is not yet implemented by `webgpuAdapter`.
+
 - `handle` - The externally created `WebGL2RenderingContext` or `GPUDevice` that should be attached to a luma `Device`.
 - `adapters` - list of `Device` backend classes. Can be omitted if `luma.registerAdapters()` has been called.
 - `...deviceProps`: See [`DeviceProps`](./device.md#deviceprops) for device specific options.
+
+The returned luma `Device` borrows the supplied handle. Each successful attachment owns one
+logical device reference; release it with `device.destroy()`, or use `device.detach()` when the
+device has one exclusive owner. Repeated attachments may return the same luma `Device` instance
+with another retained reference. Detach destroys luma wrappers, preserves the external handle, and
+returns it.
 
 Note that while you cannot directly attach a luma.gl `Device` to a WebGL 1 `WebGLRenderingContext`, you may be able to work around it using `luma.enforceWebGL2()`.
 
