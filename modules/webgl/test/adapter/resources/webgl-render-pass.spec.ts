@@ -8,6 +8,8 @@ import {GL} from '@luma.gl/webgl/constants';
 import {WEBGLRenderPass} from '@luma.gl/webgl';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
+// getWebGLTestDevice() returns a cached shared fixture; individual tests must not destroy it.
+
 test('WEBGLRenderPass#drawBuffers for framebuffer attachments', async t => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
@@ -32,7 +34,6 @@ test('WEBGLRenderPass#drawBuffers for framebuffer attachments', async t => {
 
   gl.drawBuffers = originalDrawBuffers;
   framebuffer.destroy();
-  device.destroy();
   t.end();
 });
 
@@ -53,7 +54,6 @@ test('WEBGLRenderPass#drawBuffers for default framebuffer', async t => {
   t.deepEqual(drawBufferCalls[0], [GL.BACK], 'draws to GL.BACK for default framebuffer');
 
   gl.drawBuffers = originalDrawBuffers;
-  device.destroy();
   t.end();
 });
 
@@ -75,7 +75,6 @@ test('WEBGLRenderPass#drawBuffers for explicit default framebuffer wrapper', asy
   t.deepEqual(drawBufferCalls[0], [GL.BACK], 'explicit default framebuffer still draws to GL.BACK');
 
   gl.drawBuffers = originalDrawBuffers;
-  device.destroy();
   t.end();
 });
 
@@ -117,7 +116,6 @@ test('WEBGLRenderPass#drawBuffers for wrapped external WebGLFramebuffer', async 
   framebuffer.destroy();
   gl.deleteRenderbuffer(rb);
   gl.deleteFramebuffer(externalFbo);
-  device.destroy();
   t.end();
 });
 
@@ -145,6 +143,5 @@ test('WEBGLRenderPass flushes deferred default canvas resize', async t => {
   );
 
   renderPass.end();
-  device.destroy();
   t.end();
 });
