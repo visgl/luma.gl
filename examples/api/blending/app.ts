@@ -74,8 +74,8 @@ type DisplayUniforms = {
 const OFFSCREEN_SIZE = 512;
 const SOURCE_RECT: Color = [0.18, 0.12, 1.15, 1.05];
 const DESTINATION_RECT: Color = [-0.18, -0.1, 1.15, 1.05];
-const RGB_DISPLAY_RECT: Color = [-0.5, 0, 0.92, 1.55];
-const ALPHA_DISPLAY_RECT: Color = [0.5, 0, 0.92, 1.55];
+const RGB_DISPLAY_RECT: Color = [0.5, 0, 0.92, 1.55];
+const ALPHA_DISPLAY_RECT: Color = [-0.5, 0, 0.92, 1.55];
 
 const BLEND_OPERATIONS: BlendOperation[] = ['add', 'subtract', 'reverse-subtract', 'min', 'max'];
 const BLEND_FACTORS: BlendFactor[] = [
@@ -958,7 +958,7 @@ function cloneSettings(settings: BlendSettings): BlendSettings {
 function makeStatusHtml(device: Device, settings: BlendSettings): string {
   const parameters = makeBlendParameters(settings);
   const notes: string[] = [
-    '<b>Left:</b> RGB over checkerboard. <b>Right:</b> resulting alpha.',
+    '<b>Left:</b> resulting alpha. <b>Right:</b> RGB over checkerboard.',
     `Backend: <code>${escapeHtml(device.type)}${device.info.featureLevel ? ` (${device.info.featureLevel})` : ''}</code>.`
   ];
   if (!settings.blend) {
