@@ -74,6 +74,7 @@ const RECEDING_RECT: Vec4 = [0.5, 0, 0.92, 1.58];
 const ADDRESS_MODES: AddressMode[] = ['clamp-to-edge', 'repeat', 'mirror-repeat'];
 const FILTER_MODES: FilterMode[] = ['nearest', 'linear'];
 const MIPMAP_FILTERS: MipmapFilter[] = ['none', 'nearest', 'linear'];
+const ANISOTROPY_VALUES = [1, 2, 4, 8, 16];
 const COMPARE_FUNCTIONS: CompareFunction[] = [
   'never',
   'less',
@@ -120,12 +121,14 @@ const PRESETS: Record<Exclude<TexturePreset, 'custom'>, Partial<TextureSamplingS
     maxAnisotropy: 1
   },
   trilinear: {
+    mipChain: 'generated',
     magFilter: 'linear',
     minFilter: 'linear',
     mipmapFilter: 'linear',
     maxAnisotropy: 1
   },
   anisotropic: {
+    mipChain: 'generated',
     magFilter: 'linear',
     minFilter: 'linear',
     mipmapFilter: 'linear',
@@ -807,7 +810,7 @@ function makeSettingsSchema(device: Device, settings: TextureSamplingSettings): 
           label: 'Max anisotropy',
           group: 'Sampler',
           type: 'select' as const,
-          options: getAnisotropyOptions(device),
+          options: getAnisotropyOptions(device, hasMipmaps),
           defaultValue: 1
         }
       ]
@@ -871,11 +874,29 @@ function makeSelectSetting(
   };
 }
 
-function getAnisotropyOptions(device: Device): SettingOption[] {
-  const supportsAnisotropy =
-    device.type === 'webgpu' || device.features.has('texture-filterable-anisotropic-webgl');
-  const values = supportsAnisotropy ? [1, 2, 4, 8, 16] : [1];
+function getAnisotropyOptions(device: Device, hasMipmaps: boolean): SettingOption[] {
+  const values = hasMipmaps ? getSupportedAnisotropyValues(device) : [1];
   return values.map(value => ({label: String(value), value}));
+}
+
+function getSupportedAnisotropyValues(device: Device): number[] {
+  if (device.type === 'webgpu') {
+    return ANISOTROPY_VALUES;
+  }
+  if (!device.features.has('texture-filterable-anisotropic-webgl')) {
+    return [1];
+  }
+  const gl = device.handle;
+  if (!(gl instanceof WebGL2RenderingContext)) {
+    return [1];
+  }
+  const anisotropyExtension = gl.getExtension('EXT_texture_filter_anisotropic');
+  if (!anisotropyExtension) {
+    return [1];
+  }
+  const maxAnisotropy = Number(gl.getParameter(anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+  const values = ANISOTROPY_VALUES.filter(value => value <= maxAnisotropy);
+  return values.length > 0 ? values : [1];
 }
 
 function makeColorSamplerProps(settings: TextureSamplingSettings, device: Device): SamplerProps {
@@ -951,20 +972,19 @@ function normalizeSettings(
   next.lodMaxClamp = clamp(next.lodMaxClamp, next.lodMinClamp, MAX_MIP_LEVEL);
   if (next.mipChain === 'single-level') {
     next.mipmapFilter = 'none';
-    next.lodMinClamp = 0;
-    next.lodMaxClamp = 0;
   }
-  const supportsAnisotropy =
-    device.type === 'webgpu' || device.features.has('texture-filterable-anisotropic-webgl');
-  next.maxAnisotropy = supportsAnisotropy
-    ? [1, 2, 4, 8, 16].includes(next.maxAnisotropy)
-      ? next.maxAnisotropy
-      : 1
-    : 1;
+  const anisotropyValues =
+    next.mipChain === 'generated' ? getSupportedAnisotropyValues(device) : [1];
+  const supportedAnisotropyValues = anisotropyValues.filter(value => value <= next.maxAnisotropy);
+  next.maxAnisotropy = supportedAnisotropyValues[supportedAnisotropyValues.length - 1] ?? 1;
   if (next.maxAnisotropy > 1) {
     next.magFilter = 'linear';
     next.minFilter = 'linear';
     next.mipmapFilter = next.mipChain === 'generated' ? 'linear' : 'none';
+  }
+  if (next.mipmapFilter === 'none') {
+    next.lodMinClamp = 0;
+    next.lodMaxClamp = 0;
   }
   return next;
 }
@@ -1075,6 +1095,8 @@ function makeStatusHtml(device: Device, settings: TextureSamplingSettings): stri
     );
   } else if (settings.mipChain === 'single-level') {
     notes.push('Single-level allocation forces mipmapFilter to none and both LOD clamps to 0.');
+  } else if (settings.mipmapFilter === 'none') {
+    notes.push('No mipmap filtering forces both LOD clamps to 0.');
   }
   if (device.type === 'webgl' && !device.features.has('texture-filterable-anisotropic-webgl')) {
     notes.push('EXT_texture_filter_anisotropic is unavailable; maxAnisotropy is fixed at 1.');
