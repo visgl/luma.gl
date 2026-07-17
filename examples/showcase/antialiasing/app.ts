@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Framebuffer, SamplerProps, Texture} from '@luma.gl/core';
+import type {Framebuffer, Sampler, SamplerProps, Texture} from '@luma.gl/core';
 import {Texture as TextureResource, UniformStore} from '@luma.gl/core';
 import {fxaa} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -58,6 +58,15 @@ type RenderTarget = {
   depthTexture: Texture;
   width: number;
   height: number;
+  sampleLod: number;
+};
+
+const LINEAR_SAMPLER_PROPS: SamplerProps = {
+  minFilter: 'linear',
+  magFilter: 'linear',
+  mipmapFilter: 'none',
+  addressModeU: 'clamp-to-edge',
+  addressModeV: 'clamp-to-edge'
 };
 
 const DEFAULT_SETTINGS: AntialiasingSettings = {
@@ -255,6 +264,7 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
   private readonly comparisonModel: ClipSpace;
   private readonly uniformStore: UniformStore<{app: AppUniforms}>;
   private readonly fxaaRenderer: ShaderPassRenderer;
+  private readonly linearSampler: Sampler;
   private readonly checkerTextures: Record<TextureSamplingMode, DynamicTexture>;
   private readonly settingsPanel: ExampleSettingsPanelManager;
   private readonly panels: ExamplePanelManager;
@@ -262,12 +272,15 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
   private settings: AntialiasingSettings = {...DEFAULT_SETTINGS};
   private baselineTarget: RenderTarget | null = null;
   private supersampledTarget: RenderTarget | null = null;
+  private effectiveSupersampleScale: 1 | 2 | 4 = 1;
+  private fxaaSize: [number, number] | null = null;
   private frozenTime = 0;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
     this.uniformStore = new UniformStore(device, {app: appShaderModule});
+    this.linearSampler = device.createSampler(LINEAR_SAMPLER_PROPS);
     this.checkerTextures = makeCheckerTextures(device);
     this.sceneModel = new Model(device, {
       id: 'antialiasing-scene',
@@ -311,6 +324,7 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
     this.comparisonModel.destroy();
     this.uniformStore.destroy();
     this.fxaaRenderer.destroy();
+    this.linearSampler.destroy();
     for (const checkerTexture of Object.values(this.checkerTextures)) {
       checkerTexture.destroy();
     }
@@ -342,13 +356,14 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
 
     this.renderScene(this.baselineTarget);
     let techniqueTexture = this.baselineTarget.colorTexture;
-    const supersampleScale = getSupersampleScale(this.settings.technique);
+    const supersampleScale = this.effectiveSupersampleScale;
 
     if (supersampleScale > 1 && this.supersampledTarget) {
       this.renderScene(this.supersampledTarget);
+      generateMipmaps(this.device, this.supersampledTarget.colorTexture);
       techniqueTexture = this.supersampledTarget.colorTexture;
     } else if (this.settings.technique === 'FXAA') {
-      this.fxaaRenderer.resize([width, height]);
+      this.resizeFxaaRenderer(width, height);
       techniqueTexture =
         this.fxaaRenderer.renderToTexture({sourceTexture: this.baselineTarget.colorTexture}) ||
         this.baselineTarget.colorTexture;
@@ -383,7 +398,16 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
       this.baselineTarget = createRenderTarget(this.device, width, height, 'baseline');
     }
 
-    const supersampleScale = getSupersampleScale(this.settings.technique);
+    const supersampleScale = getSupportedSupersampleScale(
+      this.device,
+      width,
+      height,
+      this.settings.technique
+    );
+    if (supersampleScale !== this.effectiveSupersampleScale) {
+      this.effectiveSupersampleScale = supersampleScale;
+      this.panels.setPanel(this.makePanel());
+    }
     if (supersampleScale === 1) {
       destroyRenderTarget(this.supersampledTarget);
       this.supersampledTarget = null;
@@ -392,19 +416,36 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
 
     const supersampledWidth = Math.max(1, Math.round(width * supersampleScale));
     const supersampledHeight = Math.max(1, Math.round(height * supersampleScale));
+    const sampleLod = Math.log2(supersampleScale);
     if (
       !this.supersampledTarget ||
       this.supersampledTarget.width !== supersampledWidth ||
-      this.supersampledTarget.height !== supersampledHeight
+      this.supersampledTarget.height !== supersampledHeight ||
+      this.supersampledTarget.sampleLod !== sampleLod
     ) {
       destroyRenderTarget(this.supersampledTarget);
       this.supersampledTarget = createRenderTarget(
         this.device,
         supersampledWidth,
         supersampledHeight,
-        'supersampled'
+        'supersampled',
+        sampleLod
       );
     }
+  }
+
+  private resizeFxaaRenderer(width: number, height: number): void {
+    if (this.fxaaSize?.[0] === width && this.fxaaSize[1] === height) {
+      return;
+    }
+    this.fxaaRenderer.resize([width, height]);
+    this.fxaaRenderer.swapFramebuffers.current.colorAttachments[0].texture.setSampler(
+      this.linearSampler
+    );
+    this.fxaaRenderer.swapFramebuffers.next.colorAttachments[0].texture.setSampler(
+      this.linearSampler
+    );
+    this.fxaaSize = [width, height];
   }
 
   private destroyTargets(): void {
@@ -422,7 +463,7 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
         makeHtmlCustomPanel({
           id: 'antialiasing-description',
           title: '',
-          html: makeDescriptionHtml(this.settings)
+          html: makeDescriptionHtml(this.settings, this.effectiveSupersampleScale)
         }),
         this.settingsPanel.makePanel()
       ]
@@ -446,19 +487,22 @@ function createRenderTarget(
   device: AnimationProps['device'],
   width: number,
   height: number,
-  id: string
+  id: string,
+  sampleLod = 0
 ): RenderTarget {
+  const usesMipmaps = sampleLod > 0;
   const colorTexture = device.createTexture({
     id: 'antialiasing-' + id + '-color',
     format: 'rgba8unorm',
     width,
     height,
+    mipLevels: usesMipmaps ? getMipLevelCount(width, height) : 1,
     usage: TextureResource.SAMPLE | TextureResource.RENDER | TextureResource.COPY_DST,
     sampler: {
-      minFilter: 'linear',
-      magFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
+      ...LINEAR_SAMPLER_PROPS,
+      mipmapFilter: usesMipmaps ? 'linear' : 'none',
+      lodMinClamp: sampleLod,
+      lodMaxClamp: sampleLod
     }
   });
   const depthTexture = device.createTexture({
@@ -475,7 +519,19 @@ function createRenderTarget(
     colorAttachments: [colorTexture],
     depthStencilAttachment: depthTexture
   });
-  return {framebuffer, colorTexture, depthTexture, width, height};
+  return {framebuffer, colorTexture, depthTexture, width, height, sampleLod};
+}
+
+function generateMipmaps(device: AnimationProps['device'], texture: Texture): void {
+  if (device.type === 'webgpu') {
+    device.generateMipmapsWebGPU(texture);
+  } else {
+    texture.generateMipmapsWebGL();
+  }
+}
+
+function getMipLevelCount(width: number, height: number): number {
+  return Math.floor(Math.log2(Math.max(width, height))) + 1;
 }
 
 function destroyRenderTarget(renderTarget: RenderTarget | null): void {
@@ -709,6 +765,23 @@ function getSupersampleScale(technique: Technique): 1 | 2 | 4 {
   }
 }
 
+function getSupportedSupersampleScale(
+  device: AnimationProps['device'],
+  width: number,
+  height: number,
+  technique: Technique
+): 1 | 2 | 4 {
+  const requestedScale = getSupersampleScale(technique);
+  const maxDimension = device.limits.maxTextureDimension2D;
+  if (width * requestedScale <= maxDimension && height * requestedScale <= maxDimension) {
+    return requestedScale;
+  }
+  if (requestedScale === 4 && width * 2 <= maxDimension && height * 2 <= maxDimension) {
+    return 2;
+  }
+  return 1;
+}
+
 function makeSettingsSchema(): SettingsSchema {
   return {
     title: 'Antialiasing',
@@ -750,12 +823,21 @@ function makeSettingsState(settings: AntialiasingSettings): SettingsState {
   return {...settings};
 }
 
-function makeDescriptionHtml(settings: AntialiasingSettings): string {
+function makeDescriptionHtml(
+  settings: AntialiasingSettings,
+  effectiveSupersampleScale: 1 | 2 | 4
+): string {
+  const requestedSupersampleScale = getSupersampleScale(settings.technique);
+  const supersampleLimitNote =
+    requestedSupersampleScale > effectiveSupersampleScale
+      ? `<p>Requested ${requestedSupersampleScale}x supersampling is capped to ${effectiveSupersampleScale}x by the device texture-size limit.</p>`
+      : '';
   return (
     '<p><b>Left:</b> single-sample baseline. <b>Right:</b> ' +
     settings.technique +
     '.</p><p>The scene combines thin geometry, minified texture detail, alpha cutouts, and depth discontinuities. ' +
-    'Canvas antialiasing and explicit MSAA are documented separately because they are not portable runtime toggles.</p>'
+    'Canvas antialiasing and explicit MSAA are documented separately because they are not portable runtime toggles.</p>' +
+    supersampleLimitNote
   );
 }
 
