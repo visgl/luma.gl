@@ -1,3 +1,5 @@
+import {BlendingExample} from '@site/src/examples';
+
 # GPU Parameters
 
 GPU parameters provide control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
@@ -302,6 +304,11 @@ A `RenderPipeline` requires information about each color attachments:
 ### Blending
 
 Blending mixes the source color and the target color:
+
+Use the interactive playground to compare blend operations, source and destination factors,
+blend constants, and separate color and alpha output.
+
+<BlendingExample embedded showStats={false} />
 
 - The two colors are first multiplied with chosen factors (controlled by "blend function" parameters).
 - The two colors are then either added, subtracted, or the min or max color is used per the "blend operation" parameter.
