@@ -96,13 +96,23 @@ model.draw({
 | `depth?` | `number` | `1` | Depth or array layer count for 3D textures and texture arrays. |
 | `usage?` | `number` | `Texture.SAMPLE \| Texture.RENDER \| Texture.COPY_DST` | Bit mask that declares how the texture will be used. See [Usage](#usage). |
 | `mipLevels?` | `number` | `1` | Number of mip levels allocated for the texture. |
-| `samples?` | `number` | backend default | Multisample count for renderable textures. Provide values >1 to request MSAA. |
+| `samples?` | `number` | backend default | WebGPU sample count for a true multisampled render attachment. WebGL textures remain single-sampled; see [Antialiasing and Multisampling](/docs/api-guide/gpu/gpu-antialiasing). |
 | `sampler?` | `Sampler \| SamplerProps` | `{}` | Sampler instance or props used to create the texture's default sampler. |
 | `view?` | `TextureViewProps` | backend default | Props used when creating the default texture view. |
 
 ### Usage
 
 Usage expresses two things: the texture type and which operations can be performed.
+
+:::caution
+
+`Texture.samples` does not provide a portable “render, resolve, then sample” workflow today.
+WebGL ignores it when allocating textures, and WebGPU multisampled textures need a compatible
+pipeline and explicit resolve path. See
+[Antialiasing and Multisampling](/docs/api-guide/gpu/gpu-antialiasing) and
+[RFC #2741](https://github.com/visgl/luma.gl/issues/2741).
+
+:::
 
 Note that the allowed combinations are very limited, especially in WebGPU.
 

@@ -25,6 +25,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'api/video-texture',
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
+  'showcase/antialiasing',
   'showcase/dof',
   'showcase/persistence',
   'tutorials/hello-instanced-cubes',

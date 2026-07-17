@@ -6,6 +6,8 @@ import {GpuGuideDocsTabs} from '@site/src/components/docs/gpu-guide-docs-tabs';
 
 See also [Issuing GPU Commands](/docs/api-guide/gpu/gpu-commands) for how render passes relate to `CommandEncoder`, `CommandBuffer`, and `device.submit()` on WebGL and WebGPU.
 
+See [Antialiasing and Multisampling](/docs/api-guide/gpu/gpu-antialiasing) for how canvas, offscreen, depth, texture, and postprocess sampling choices fit into this render flow.
+
 :::info
 Note that the luma.gl documentation includes a series of tutorials that explain how to render with the luma.gl API.
 :::

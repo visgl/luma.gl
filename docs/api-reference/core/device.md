@@ -111,7 +111,7 @@ For detailed control over WebGL context can specify what [`WebGLContextAttribute
 | ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
 | `webgl.preserveDrawingBuffers?: boolean` | `true`  | Default render target buffers will preserve their values until overwritten. Useful for screen capture. |
 | `webgl.alpha?: boolean`                  | `true`  | Default render target has an alpha buffer.                                                             |
-| `webgl.antialias?: boolean`              | `true`  | Boolean that indicates whether or not to perform anti-aliasing.                                        |
+| `webgl.antialias?: boolean`              | `true`  | Best-effort request to antialias the WebGL default drawing buffer. See [Antialiasing and Multisampling](/docs/api-guide/gpu/gpu-antialiasing). |
 | `webgl.depth?: boolean`                  | `true`  | Default render target has a depth buffer of at least `16` bits.                                        |
 | `webgl.premultipliedAlpha?: boolean`     | `true`  | The page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.          |
 | `webgl.stencil?: boolean`                | `false` | Default render target has a stencil buffer of at least `8` bits.                                       |

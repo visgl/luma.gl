@@ -87,6 +87,11 @@ A primary purpose of textures is to allow the GPU to read from them.
 ### Filtering
 
 Texture formats that are filterable which means that during sampling texel values can be interpolated by the GPU for better results.
+
+Texture filtering solves texture minification and magnification aliasing. It is separate from
+polygon coverage antialiasing; see
+[Antialiasing and Multisampling](/docs/api-guide/gpu/gpu-antialiasing) for how the techniques fit
+together.
 Sampling is a highly configuratble process that is specified using by binding a separate `Sampler` object for each texture.
 
 Sampling can be specified separately for

@@ -78,6 +78,15 @@ const screenRenderPass = device.beginRenderPass();
 model2.draw({renderPass: screenRenderPass, ...});
 ```
 
+:::caution
+
+luma.gl does not yet expose a managed offscreen MSAA resolve path. For the current WebGL and
+WebGPU landscape, and the proposed color-only framebuffer API, see
+[Antialiasing and Multisampling](/docs/api-guide/gpu/gpu-antialiasing) and
+[RFC #2741](https://github.com/visgl/luma.gl/issues/2741).
+
+:::
+
 ## Overview
 
 ### Framebuffer Attachment Values
