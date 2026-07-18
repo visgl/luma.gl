@@ -16476,6 +16476,7 @@ __metadata:
   dependencies:
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/webgl": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
