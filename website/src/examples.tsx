@@ -17,6 +17,7 @@ import type {Device} from '@luma.gl/core';
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import {makeArrowExamplePanelHostHtml} from '../../examples/arrow/arrow-example-panels';
 import AnimationApp from '../../examples/api/animation/app';
+import BlendingApp from '../../examples/api/blending/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
 import ArrowColumnRendererApp from '../../examples/arrow/arrow-columns/app';
@@ -50,6 +51,7 @@ import {
 import ArrowParticlesApp from '../../examples/arrow/arrow-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
+import TextureSamplingApp from '../../examples/api/texture-sampling/app';
 import TextureTesterApp from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
@@ -74,7 +76,7 @@ import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
-import AntialiasingApp from '../../examples/showcase/antialiasing/app';
+import AntialiasingApp from '../../examples/experimental/antialiasing/app';
 import GlobeApp from '../../examples/showcase/globe/app';
 // import WanderingApp from '../../examples/showcase/wandering/app';
 
@@ -914,7 +916,7 @@ export const AntialiasingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="antialiasing"
     title="Antialiasing Techniques"
-    directory="showcase"
+    directory="experimental"
     template={AntialiasingApp}
     config={exampleConfig}
     {...props}
@@ -1225,6 +1227,18 @@ export const AnimationExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
+export const BlendingExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="blending"
+    title="Blending"
+    directory="api"
+    template={BlendingApp}
+    config={exampleConfig}
+    devices={['webgpu', 'webgl2']}
+    {...props}
+  />
+);
+
 export const CubemapExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="cubemap"
@@ -1304,6 +1318,18 @@ export const Texture3DExample: React.FC<WebsiteExampleProps> = props => (
     sourceDirectory="api"
     template={Texture3DApp}
     config={exampleConfig}
+    {...props}
+  />
+);
+
+export const TextureSamplingExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="texture-sampling"
+    title="Texture Sampling"
+    directory="api"
+    template={TextureSamplingApp}
+    config={exampleConfig}
+    devices={['webgpu', 'webgl2']}
     {...props}
   />
 );

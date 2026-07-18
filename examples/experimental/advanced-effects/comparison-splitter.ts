@@ -4,6 +4,7 @@
 
 type ComparisonSplitterProps = {
   canvas: HTMLCanvasElement;
+  id?: string;
   value: number;
   onChange: (value: number) => void;
   onCommit: (value: number) => void;
@@ -20,14 +21,20 @@ export class ComparisonSplitter {
   private visible = true;
   private dragging = false;
 
-  constructor({canvas, value, onChange, onCommit}: ComparisonSplitterProps) {
+  constructor({
+    canvas,
+    id = 'advanced-effects-comparison-splitter',
+    value,
+    onChange,
+    onCommit
+  }: ComparisonSplitterProps) {
     this.canvas = canvas;
     this.value = clampSplit(value);
     this.onChange = onChange;
     this.onCommit = onCommit;
 
     this.element = document.createElement('div');
-    this.element.id = 'advanced-effects-comparison-splitter';
+    this.element.id = id;
     this.element.tabIndex = 0;
     this.element.setAttribute('role', 'separator');
     this.element.setAttribute('aria-label', 'Before and after comparison');

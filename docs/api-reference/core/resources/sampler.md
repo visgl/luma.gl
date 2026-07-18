@@ -1,4 +1,5 @@
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {TextureSamplingExample} from '@site/src/examples';
 
 # Sampler
 
@@ -70,6 +71,11 @@ const sampler = device.createSampler(gl, {
 | `lodMinClamp?`    | `number`                                                | Minimum level of detail to use when sampling                        |
 | `lodMaxClamp?`    | `number`                                                | Maximum level of detail to use when sampling                        |
 | `compare?`        | `less-equal` etc (see below)                            | Specifies compare function for a depth "comparison sampler"         |
+
+Use the interactive playground to compare wrapping, filtering, mipmaps, LOD clamps,
+anisotropy, and depth comparison sampling.
+
+<TextureSamplingExample embedded showStats={false} />
 
 #### Texture Wrapping
 

@@ -15770,9 +15770,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-antialiasing@workspace:examples/showcase/antialiasing":
+"luma.gl-examples-antialiasing@workspace:examples/experimental/antialiasing":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-antialiasing@workspace:examples/showcase/antialiasing"
+  resolution: "luma.gl-examples-antialiasing@workspace:examples/experimental/antialiasing"
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:~9.3.0"
@@ -16049,6 +16049,21 @@ __metadata:
     "@luma.gl/webgl": "npm:~9.3.0"
     "@luma.gl/webgpu": "npm:~9.3.0"
     apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-blending@workspace:examples/api/blending":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-blending@workspace:examples/api/blending"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -16637,6 +16652,21 @@ __metadata:
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     ktx-parse: "npm:^1.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-texture-sampling@workspace:examples/api/texture-sampling":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-texture-sampling@workspace:examples/api/texture-sampling"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
