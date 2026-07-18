@@ -4629,6 +4629,7 @@ __metadata:
   dependencies:
     "@luma.gl/core": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/gpgpu": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/tables": "npm:~9.3.0"
     "@luma.gl/text": "npm:~9.3.0"
