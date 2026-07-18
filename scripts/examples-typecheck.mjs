@@ -29,6 +29,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'integrations/hello-react',
   'experimental/antialiasing',
   'showcase/dof',
+  'showcase/instancing',
   'showcase/persistence',
   'tutorials/hello-instanced-cubes',
   'tutorials/hello-instancing',

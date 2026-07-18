@@ -11,6 +11,7 @@ const sidebars = {
       items: [
         'showcase/gltf',
         'showcase/globe',
+        'showcase/instancing',
         {type: 'doc', id: 'showcase/postprocessing', label: 'Effects: Postprocessing'},
         {type: 'doc', id: 'showcase/dof', label: 'Effects: Depth of Field'},
         {type: 'doc', id: 'showcase/persistence', label: 'Effects: Persistence'}
@@ -21,10 +22,12 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
+        {type: 'doc', id: 'api/blending', label: 'Blending'},
         'api/multi-canvas',
         'api/cubemap',
         'api/texture-3d',
-        'api/texture-tester',
+        {type: 'doc', id: 'api/texture-sampling', label: 'Texture Sampling'},
+        {type: 'doc', id: 'api/texture-tester', label: 'Texture Compression'},
         {type: 'doc', id: 'api/video-texture', label: 'Texture Video'},
         'api/render-bundles'
       ]
@@ -96,7 +99,6 @@ const sidebars = {
         'arrow/arrow-time-columns',
         'arrow/arrow-mesh-geometry',
         'arrow/arrow-particles',
-        'arrow/arrow-instancing',
         'arrow/arrow-dggs-polygons',
         'arrow/arrow-columns'
       ]

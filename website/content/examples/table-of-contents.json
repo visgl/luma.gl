@@ -10,6 +10,7 @@
     "items": [
       "showcase/gltf",
       "showcase/globe",
+      "showcase/instancing",
       {
         "type": "doc",
         "id": "showcase/postprocessing",
@@ -45,7 +46,11 @@
         "id": "api/texture-sampling",
         "label": "Texture Sampling"
       },
-      "api/texture-tester",
+      {
+        "type": "doc",
+        "id": "api/texture-tester",
+        "label": "Texture Compression"
+      },
       {
         "type": "doc",
         "id": "api/video-texture",
@@ -142,7 +147,6 @@
       "arrow/arrow-time-columns",
       "arrow/arrow-mesh-geometry",
       "arrow/arrow-particles",
-      "arrow/arrow-instancing",
       "arrow/arrow-dggs-polygons",
       "arrow/arrow-columns"
     ]

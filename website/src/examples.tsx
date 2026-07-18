@@ -67,7 +67,6 @@ import ABufferApp from '../../examples/experimental/a-buffer/app';
 // import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
-import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
 import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
@@ -560,17 +559,6 @@ export const InstancingExample: React.FC = props => (
   />
 );
 
-export const ArrowInstancingExample: React.FC = props => (
-  <LumaExample
-    id="arrow-instancing"
-    title="Instancing"
-    directory="arrow"
-    template={ArrowInstancingApp}
-    config={exampleConfig}
-    {...props}
-  />
-);
-
 export const ArrowText2DExample: React.FC = props => (
   <LumaExample
     id="arrow-text-2d"
@@ -981,9 +969,34 @@ export const BloomExample: React.FC<WebsiteExampleProps> = props => (
 );
 
 export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
+  const [videoFileStatus, setVideoFileStatus] = useState<'idle' | 'pending' | 'live' | 'error'>(
+    'idle'
+  );
+  const [videoFileError, setVideoFileError] = useState<string | null>(null);
   const [cameraStatus, setCameraStatus] = useState<'idle' | 'pending' | 'live' | 'error'>('idle');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraBlocked, setIsCameraBlocked] = useState(false);
+  const handleUseVideoFile = async () => {
+    const app = VideoTextureApp.current;
+    if (!app) {
+      setVideoFileStatus('error');
+      setVideoFileError('Example is still starting');
+      return;
+    }
+
+    setVideoFileStatus('pending');
+    setVideoFileError(null);
+    try {
+      await app.useMediabunny();
+      setVideoFileStatus('live');
+      setCameraStatus('idle');
+      setCameraError(null);
+      setIsCameraBlocked(false);
+    } catch (error) {
+      setVideoFileStatus('error');
+      setVideoFileError(getErrorMessage(error));
+    }
+  };
   const handleUseCamera = async () => {
     const app = VideoTextureApp.current;
     if (!app) {
@@ -998,6 +1011,8 @@ export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
     try {
       await app.useCamera();
       setCameraStatus('live');
+      setVideoFileStatus('idle');
+      setVideoFileError(null);
     } catch (error) {
       setCameraStatus('error');
       setCameraError(getCameraErrorMessage(error));
@@ -1014,6 +1029,31 @@ export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
       config={exampleConfig}
       headerControls={
         <div style={{display: 'flex', alignItems: 'center', gap: 10, marginTop: 12}}>
+          <button
+            type="button"
+            onClick={() => void handleUseVideoFile()}
+            disabled={videoFileStatus === 'pending' || videoFileStatus === 'live'}
+            style={{
+              border: '1px solid #0f766e',
+              borderRadius: 999,
+              background: videoFileStatus === 'live' ? '#ccfbf1' : '#fff',
+              color: '#0f172a',
+              cursor:
+                videoFileStatus === 'pending' || videoFileStatus === 'live'
+                  ? 'default'
+                  : 'pointer',
+              font: '600 14px system-ui, sans-serif',
+              padding: '8px 12px'
+            }}
+          >
+            {videoFileStatus === 'pending'
+              ? 'Loading video'
+              : videoFileStatus === 'live'
+                ? 'Video file active'
+                : videoFileStatus === 'error'
+                  ? 'Retry video file'
+                  : 'Video File'}
+          </button>
           <button
             type="button"
             onClick={() => void handleUseCamera()}
@@ -1042,6 +1082,7 @@ export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
                   : 'Use camera'}
           </button>
           {cameraStatus === 'pending' ? <span>Waiting for first frame</span> : null}
+          {videoFileError ? <span>{videoFileError}</span> : null}
           {cameraError ? <span>{cameraError}</span> : null}
         </div>
       }
