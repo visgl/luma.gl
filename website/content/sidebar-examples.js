@@ -56,6 +56,7 @@ const sidebars = {
       label: 'Experimental',
       items: [
         'experimental/a-buffer',
+        {type: 'doc', id: 'experimental/antialiasing', label: 'Antialiasing Techniques'},
         {type: 'doc', id: 'experimental/advanced-effects', label: 'Effects: Visualization City'},
         {type: 'doc', id: 'experimental/bloom', label: 'Effects: Bloom'},
         'experimental/fp64',
