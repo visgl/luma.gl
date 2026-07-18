@@ -19,9 +19,20 @@ export class WebGPUSampler extends Sampler {
     super(device, props);
     this.device = device;
 
+    if (
+      [props.addressModeU, props.addressModeV, props.addressModeW].includes(
+        'mirror-clamp-to-edge-webgl'
+      )
+    ) {
+      throw new Error('mirror-clamp-to-edge-webgl is only supported in WebGL');
+    }
+
     // Prepare sampler props. Mostly identical
     const samplerDescriptor: Partial<GPUSamplerDescriptor> = {
       ...this.props,
+      addressModeU: this.props.addressModeU as GPUAddressMode,
+      addressModeV: this.props.addressModeV as GPUAddressMode,
+      addressModeW: this.props.addressModeW as GPUAddressMode,
       mipmapFilter: undefined
     };
 

@@ -4833,7 +4833,7 @@ __metadata:
   resolution: "@luma.gl/webgpu@workspace:modules/webgpu"
   dependencies:
     "@probe.gl/env": "npm:^4.1.1"
-    "@webgpu/types": "npm:^0.1.69"
+    "@webgpu/types": "npm:^0.1.71"
     wgsl_reflect: "npm:^1.2.3"
   peerDependencies:
     "@luma.gl/core": ~9.3.0
@@ -7751,6 +7751,13 @@ __metadata:
   version: 0.1.69
   resolution: "@webgpu/types@npm:0.1.69"
   checksum: 10c0/52b95a176de5ee918fd1d7132103c35029006a0b4eb321767479a9e430560d272926c0994c3795a5bbaa22cebcc7dce71e66ba8b6496e01c90c0d179a02bd968
+  languageName: node
+  linkType: hard
+
+"@webgpu/types@npm:^0.1.71":
+  version: 0.1.71
+  resolution: "@webgpu/types@npm:0.1.71"
+  checksum: 10c0/79e83a6e3afc71e6034f85e4af848d6083c41d3275d192aadeea019b3555eb1b8757d99aaf6b4ec705a5392f3c82d1b117a7a6296bbae2c1d9b977f6861762cb
   languageName: node
   linkType: hard
 
@@ -16459,6 +16466,18 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     typescript: "npm:^5.5.0"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-multi-draw@workspace:examples/api/multi-draw":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-multi-draw@workspace:examples/api/multi-draw"
+  dependencies:
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
   linkType: soft

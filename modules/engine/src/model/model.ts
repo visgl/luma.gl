@@ -47,7 +47,8 @@ import type {
 import {
   mergeShaderPluginModules,
   resolveShaderPlugins,
-  ShaderAssembler
+  ShaderAssembler,
+  getShaderFeatures
 } from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
@@ -1369,6 +1370,7 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     gpu: device.info.gpu,
     limits: device.limits as unknown as Record<string, number | undefined>,
     // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
-    features: device.features as unknown as Set<DeviceFeature>
+    features: device.features as unknown as Set<DeviceFeature>,
+    shaderFeatures: getShaderFeatures(device.features)
   };
 }

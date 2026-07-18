@@ -5,16 +5,13 @@
 import {GLExtensions} from '@luma.gl/webgl/constants';
 
 /** Ensure extensions are only requested once */
-export function getWebGLExtension(
+export function getWebGLExtension<K extends keyof GLExtensions>(
   gl: WebGL2RenderingContext,
-  name: string,
+  name: K,
   extensions: GLExtensions
-): unknown {
-  // @ts-ignore TODO
+): GLExtensions[K] {
   if (extensions[name] === undefined) {
-    // @ts-ignore TODO
-    extensions[name] = gl.getExtension(name) || null;
+    extensions[name] = (gl.getExtension(name) || null) as GLExtensions[K];
   }
-  // @ts-ignore TODO
   return extensions[name];
 }

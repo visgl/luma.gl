@@ -51,6 +51,7 @@ export class WebGLAdapter extends Adapter {
    * @returns
    */
   async attach(gl: Device | WebGL2RenderingContext, props: DeviceProps = {}): Promise<WebGLDevice> {
+    assertNoRequiredWebGPUFeatures(props);
     const {WebGLDevice} = await import('./webgl-device');
     if (gl instanceof WebGLDevice) {
       return gl;
@@ -75,6 +76,7 @@ export class WebGLAdapter extends Adapter {
   }
 
   async create(props: DeviceProps = {}): Promise<WebGLDevice> {
+    assertNoRequiredWebGPUFeatures(props);
     const {WebGLDevice} = await import('./webgl-device');
 
     const promises: Promise<unknown>[] = [];
@@ -116,6 +118,13 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
         'color: white; background: blue; padding: 2px 6px; border-radius: 3px;'
       )();
     }
+  }
+}
+
+/** WebGL discovers extensions after context creation and cannot honor WebGPU device requests. */
+function assertNoRequiredWebGPUFeatures(props: DeviceProps): void {
+  if (props.requiredFeatures?.length) {
+    throw new Error('DeviceProps.requiredFeatures is only supported in WebGPU');
   }
 }
 

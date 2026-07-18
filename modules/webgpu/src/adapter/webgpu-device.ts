@@ -510,6 +510,10 @@ export class WebGPUDevice extends Device {
       gpuArchitecture,
       fallback,
       featureLevel: getWebGPUDeviceFeatureLevel(this.props.featureLevel),
+      subgroupMinSize: (this.adapterInfo as GPUAdapterInfo & {subgroupMinSize?: number})
+        .subgroupMinSize,
+      subgroupMaxSize: (this.adapterInfo as GPUAdapterInfo & {subgroupMaxSize?: number})
+        .subgroupMaxSize,
       shadingLanguage: 'wgsl',
       shadingLanguageVersion: 100
     };
@@ -541,6 +545,14 @@ export class WebGPUDevice extends Device {
     // Some subsets of WebGPU extensions correspond to WebGL extensions
     if (features.has('texture-compression-bc')) {
       features.add('texture-compression-bc5-webgl');
+    }
+
+    if (features.has('texture-formats-tier2')) {
+      features.add('texture-formats-tier1');
+    }
+
+    if (features.has('subgroup-size-control')) {
+      features.add('subgroups');
     }
 
     if (this.handle.features.has('chromium-experimental-norm16-texture-formats')) {
@@ -583,7 +595,17 @@ export class WebGPUDevice extends Device {
   ): DeviceTextureFormatCapabilities {
     const {format} = capabilities;
     if (format.includes('webgl')) {
-      return {format, create: false, render: false, filter: false, blend: false, store: false};
+      return {
+        format,
+        create: false,
+        render: false,
+        filter: false,
+        blend: false,
+        store: false,
+        storageRead: false,
+        storageWrite: false,
+        storageReadWrite: false
+      };
     }
     return capabilities;
   }

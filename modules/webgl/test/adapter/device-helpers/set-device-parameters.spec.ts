@@ -192,3 +192,23 @@ test('setDeviceParameters#depthClearValue', async t => {
 
   t.end();
 });
+
+test('setDeviceParameters#depthBias uses WebGPU-compatible factor and units order', async t => {
+  const device = await getOrSkipWebGLTestDevice(t);
+  if (!device) {
+    return;
+  }
+  const {gl} = device;
+  const originalPolygonOffset = gl.polygonOffset.bind(gl);
+  const calls: [number, number][] = [];
+  gl.polygonOffset = ((factor: number, units: number) => {
+    calls.push([factor, units]);
+    originalPolygonOffset(factor, units);
+  }) as typeof gl.polygonOffset;
+
+  setDeviceParameters(device, {depthBias: 3, depthBiasSlopeScale: 2});
+
+  t.deepEqual(calls[0], [2, 3], 'maps slope scale to factor and bias to units');
+  gl.polygonOffset = originalPolygonOffset;
+  t.end();
+});

@@ -18,6 +18,7 @@ import {makeHtmlCustomPanel} from '../../examples/example-panels';
 import {makeArrowExamplePanelHostHtml} from '../../examples/arrow/arrow-example-panels';
 import AnimationApp from '../../examples/api/animation/app';
 import BlendingApp from '../../examples/api/blending/app';
+import MultiDrawApp from '../../examples/api/multi-draw/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
 import ArrowColumnRendererApp from '../../examples/arrow/arrow-columns/app';
@@ -1276,6 +1277,18 @@ export const BlendingExample: React.FC<WebsiteExampleProps> = props => (
     template={BlendingApp}
     config={exampleConfig}
     devices={['webgpu', 'webgl2']}
+    {...props}
+  />
+);
+
+export const MultiDrawExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="multi-draw"
+    title="Multi Draw"
+    directory="api"
+    template={MultiDrawApp}
+    config={exampleConfig}
+    devices={['webgl2']}
     {...props}
   />
 );

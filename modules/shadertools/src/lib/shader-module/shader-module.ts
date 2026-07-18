@@ -11,6 +11,7 @@ import {
 } from '../filters/prop-types';
 import type {ShaderModuleUniformValue, UniformTypes, UniformValue} from '../utils/uniform-types';
 import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
+import type {ShaderFeature} from '../shader-assembly/platform-info';
 
 // To avoid dependency on core module, do not import `Binding` type.
 // The ShaderModule is not concerned with the type of `Binding`,
@@ -57,6 +58,12 @@ export type ShaderModule<
   bindingLayout?: readonly ShaderModuleBindingLayout[];
   /** Preferred starting binding slot for this module's WGSL `@binding(auto)` declarations. */
   firstBindingSlot?: number;
+  /**
+   * Shader-language capabilities required by this module.
+   * Assembly throws when the current platform lacks any listed feature. Modules remain
+   * responsible for authoring required GLSL extension directives or WGSL syntax.
+   */
+  requiredFeatures?: readonly ShaderFeature[];
 
   name: string;
 

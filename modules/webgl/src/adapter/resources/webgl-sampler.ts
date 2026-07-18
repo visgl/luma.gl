@@ -20,6 +20,14 @@ export class WEBGLSampler extends Sampler {
   constructor(device: WebGLDevice, props: SamplerProps) {
     super(device, props);
     this.device = device;
+    if (
+      [props.addressModeU, props.addressModeV, props.addressModeW].includes(
+        'mirror-clamp-to-edge-webgl'
+      ) &&
+      !device.features.has('texture-mirror-clamp-to-edge-webgl')
+    ) {
+      throw new Error('mirror-clamp-to-edge-webgl requires texture-mirror-clamp-to-edge-webgl');
+    }
     this.parameters = convertSamplerParametersToWebGL(props);
     this.handle = props.handle || this.device.gl.createSampler();
     this._setSamplerParameters(this.parameters);

@@ -3,7 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
+import type {
+  ColorParameters,
+  PrimitiveTopology,
+  RenderPipelineParameters
+} from '../types/parameters';
 import type {ShaderLayout, Bindings, BindingsByGroup} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
 import type {
@@ -45,6 +49,12 @@ export type RenderPipelineProps = ResourceProps & {
 
   /** Color attachments expected by this pipeline. Defaults to [device.preferredColorFormat]. Array needs not be contiguous. */
   colorAttachmentFormats?: (TextureFormatColor | null)[];
+  /**
+   * Per-color-attachment blend and write-mask parameters.
+   * WebGPU applies these to matching color targets. WebGL requires
+   * `draw-buffers-indexed-webgl` when more than the first attachment is configured.
+   */
+  colorAttachmentParameters?: (ColorParameters | null)[];
   /** Depth attachment expected by this pipeline. Defaults to device.preferredDepthFormat, if depthWriteEnables parameter is set */
   depthStencilAttachmentFormat?: TextureFormatDepthStencil;
 
@@ -171,6 +181,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     topology: 'triangle-list',
 
     colorAttachmentFormats: undefined!,
+    colorAttachmentParameters: undefined!,
     depthStencilAttachmentFormat: undefined!,
 
     parameters: {},

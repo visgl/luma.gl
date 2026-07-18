@@ -36,7 +36,7 @@ import type {
   VertexFormat
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
-import type {GLExtensions} from '@luma.gl/webgl/constants';
+import {GL, type GLExtensions} from '@luma.gl/webgl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getWebGLContextData} from '../context/helpers/webgl-context-data';
@@ -129,6 +129,32 @@ export class WebGLDevice extends Device {
 
   override toString(): string {
     return `${this[Symbol.toStringTag]}(${this.id})`;
+  }
+
+  /**
+   * Sets clip-space origin and depth range through `EXT_clip_control`.
+   * @returns `true` when the extension was available and the state was applied.
+   */
+  setClipControlWebGL(options: {
+    /** Clip-space origin. */
+    origin: 'lower-left' | 'upper-left';
+    /** Clip-space depth range. */
+    depthMode: 'negative-one-to-one' | 'zero-to-one';
+  }): boolean {
+    if (!this.features.has('clip-control-webgl')) {
+      return false;
+    }
+
+    const extension = this.getExtension('EXT_clip_control').EXT_clip_control;
+    if (!extension) {
+      return false;
+    }
+
+    extension.clipControlEXT(
+      options.origin === 'lower-left' ? GL.LOWER_LEFT_EXT : GL.UPPER_LEFT_EXT,
+      options.depthMode === 'negative-one-to-one' ? GL.NEGATIVE_ONE_TO_ONE_EXT : GL.ZERO_TO_ONE_EXT
+    );
+    return true;
   }
 
   override isVertexFormatSupported(format: VertexFormat): boolean {

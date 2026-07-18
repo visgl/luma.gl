@@ -23,6 +23,7 @@ const sidebars = {
       items: [
         'api/animation',
         {type: 'doc', id: 'api/blending', label: 'Blending'},
+        {type: 'doc', id: 'api/multi-draw', label: 'Multi Draw'},
         'api/multi-canvas',
         'api/cubemap',
         'api/texture-3d',

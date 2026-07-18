@@ -187,7 +187,11 @@ export type GLBlendFunction =
   | GL.ONE_MINUS_CONSTANT_COLOR
   | GL.CONSTANT_ALPHA
   | GL.ONE_MINUS_CONSTANT_ALPHA
-  | GL.SRC_ALPHA_SATURATE;
+  | GL.SRC_ALPHA_SATURATE
+  | GL.SRC1_COLOR_WEBGL
+  | GL.ONE_MINUS_SRC1_COLOR_WEBGL
+  | GL.SRC1_ALPHA_WEBGL
+  | GL.ONE_MINUS_SRC1_ALPHA_WEBGL;
 
 /**
  * Stencil actions
@@ -210,11 +214,23 @@ export type GLProvokingVertex = GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTE
 /** Parameters for textures and samplers */
 export type GLSamplerParameters = {
   /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. */
-  [GL.TEXTURE_WRAP_S]?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
+  [GL.TEXTURE_WRAP_S]?:
+    | GL.CLAMP_TO_EDGE
+    | GL.REPEAT
+    | GL.MIRRORED_REPEAT
+    | GL.MIRROR_CLAMP_TO_EDGE_EXT;
   /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. */
-  [GL.TEXTURE_WRAP_T]?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
+  [GL.TEXTURE_WRAP_T]?:
+    | GL.CLAMP_TO_EDGE
+    | GL.REPEAT
+    | GL.MIRRORED_REPEAT
+    | GL.MIRROR_CLAMP_TO_EDGE_EXT;
   /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. */
-  [GL.TEXTURE_WRAP_R]?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
+  [GL.TEXTURE_WRAP_R]?:
+    | GL.CLAMP_TO_EDGE
+    | GL.REPEAT
+    | GL.MIRRORED_REPEAT
+    | GL.MIRROR_CLAMP_TO_EDGE_EXT;
 
   /** The texture magnification function is used when the pixel being textured maps to an area less than or equal to one texture element. It sets the texture magnification function to either GL_NEAREST or GL_LINEAR (see below). GL_NEAREST is generally faster than GL_LINEAR, but it can produce textured images with sharper edges because the transition between texture elements is not as smooth. Default: GL_LINEAR.  */
   [GL.TEXTURE_MAG_FILTER]?: GL.NEAREST | GL.LINEAR;
@@ -480,6 +496,8 @@ export type GLExtensions = {
   EXT_texture_filter_anisotropic?: EXT_texture_filter_anisotropic | null;
   /** https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile */
   KHR_parallel_shader_compile?: KHR_parallel_shader_compile | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_disjoint_timer_query_webgl2 */
+  EXT_disjoint_timer_query_webgl2?: EXT_disjoint_timer_query_webgl2 | null;
   /** https://registry.khronos.org/webgl/extensions/OES_fbo_render_mipmap */
   OES_fbo_render_mipmap?: OES_fbo_render_mipmap | null;
   /** https://registry.khronos.org/webgl/extensions/OES_texture_float */
@@ -498,6 +516,8 @@ export type GLExtensions = {
   OVR_multiview2?: OVR_multiview2 | null;
   /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_astc */
   WEBGL_compressed_texture_astc?: WEBGL_compressed_texture_astc | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_atc */
+  WEBGL_compressed_texture_atc?: WEBGL_compressed_texture_atc | null;
   /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_etc */
   WEBGL_compressed_texture_etc?: WEBGL_compressed_texture_etc | null;
   /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_etc1 */
@@ -521,6 +541,10 @@ export type GLExtensions = {
   EXT_norm16?: EXT_norm16 | null;
   /** https://registry.khronos.org/webgl/extensions/EXT_snorm/ */
   EXT_snorm?: EXT_snorm | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_texture_norm16/ */
+  EXT_texture_norm16?: EXT_texture_norm16 | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_render_snorm/ */
+  EXT_render_snorm?: EXT_render_snorm | null;
   /** https://registry.khronos.org/webgl/extensions/WEBGL_render_shared_exponent/ */
   WEBGL_render_shared_exponent?: WEBGL_render_shared_exponent | null;
 
@@ -543,6 +567,9 @@ export type GLExtensions = {
   /** OES_sample_variables https://registry.khronos.org/webgl/extensions/OES_sample_variables/ */
   OES_sample_variables?: OES_sample_variables | null;
 
+  /** OES_shader_multisample_interpolation https://registry.khronos.org/webgl/extensions/OES_shader_multisample_interpolation/ */
+  OES_shader_multisample_interpolation?: OES_shader_multisample_interpolation | null;
+
   /** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
   EXT_polygon_offset_clamp?: EXT_polygon_offset_clamp | null;
 
@@ -551,7 +578,7 @@ export type GLExtensions = {
 
   /** EXT_texture_mirror_clamp_to_edge https://registry.khronos.org/webgl/extensions/EXT_texture_mirror_clamp_to_edge/ */
   EXT_texture_mirror_clamp_to_edge?: EXT_texture_mirror_clamp_to_edge | null;
-  /** EXT_texture_mirror_clamp_to_edge https://registry.khronos.org/webgl/extensions/EXT_texture_mirror_clamp_to_edge/ */
+  /** WEBGL_stencil_texturing https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/ */
   WEBGL_stencil_texturing?: WEBGL_stencil_texturing | null;
 
   /** WEBGL_blend_func_extended https://registry.khronos.org/webgl/extensions/WEBGL_blend_func_extended/ */
@@ -588,8 +615,33 @@ type EXT_norm16 = {
   // Constants in GL enum
 };
 
+/** https://registry.khronos.org/webgl/extensions/EXT_disjoint_timer_query_webgl2/ */
+type EXT_disjoint_timer_query_webgl2 = {
+  QUERY_COUNTER_BITS_EXT: 0x8864;
+  TIME_ELAPSED_EXT: 0x88bf;
+  TIMESTAMP_EXT: 0x8e28;
+  GPU_DISJOINT_EXT: 0x8fbb;
+  /** Records a timestamp into a WebGL query object. */
+  queryCounterEXT(query: WebGLQuery, target: GL): void;
+};
+
 /** https://registry.khronos.org/webgl/extensions/EXT_snorm/ */
 type EXT_snorm = {
+  // Constants in GL enum
+};
+
+/** https://registry.khronos.org/webgl/extensions/EXT_texture_norm16/ */
+type EXT_texture_norm16 = {
+  // Constants in GL enum
+};
+
+/** https://registry.khronos.org/webgl/extensions/EXT_render_snorm/ */
+type EXT_render_snorm = {
+  // Constants in GL enum
+};
+
+/** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_atc/ */
+type WEBGL_compressed_texture_atc = {
   // Constants in GL enum
 };
 
@@ -653,6 +705,9 @@ type EXT_conservative_depth = {};
 
 /** OES_sample_variables https://registry.khronos.org/webgl/extensions/OES_sample_variables/ */
 type OES_sample_variables = {};
+
+/** OES_shader_multisample_interpolation https://registry.khronos.org/webgl/extensions/OES_shader_multisample_interpolation/ */
+type OES_shader_multisample_interpolation = {};
 
 /** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
 type EXT_polygon_offset_clamp = {
@@ -725,30 +780,48 @@ type WEBGL_draw_instanced_base_vertex_base_instance = {
 
 /** WEBGL_multi_draw https://registry.khronos.org/webgl/extensions/WEBGL_multi_draw/ */
 type WEBGL_multi_draw = {
-  //   multiDrawArraysWEBGL(
-  //       GLenum mode,
-  //       ([AllowShared] Int32Array or sequence<GLint>) firstsList, unsigned long long firstsOffset,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
-  //       GLsizei drawcount);
-  //   multiDrawElementsWEBGL(
-  //       GLenum mode,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
-  //       GLenum type,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) offsetsList, unsigned long long offsetsOffset,
-  //       GLsizei drawcount);
-  //   multiDrawArraysInstancedWEBGL(
-  //       GLenum mode,
-  //       ([AllowShared] Int32Array or sequence<GLint>) firstsList, unsigned long long firstsOffset,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) instanceCountsList, unsigned long long instanceCountsOffset,
-  //       GLsizei drawcount);
-  //   multiDrawElementsInstancedWEBGL(
-  //       GLenum mode,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
-  //       GLenum type,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) offsetsList, unsigned long long offsetsOffset,
-  //       ([AllowShared] Int32Array or sequence<GLsizei>) instanceCountsList, unsigned long long instanceCountsOffset,
-  //       GLsizei drawcount);
+  /** Draws multiple non-indexed primitive ranges. Offsets are element offsets, not byte offsets. */
+  multiDrawArraysWEBGL(
+    mode: GL,
+    firstsList: Int32Array | number[],
+    firstsOffset: number,
+    countsList: Int32Array | number[],
+    countsOffset: number,
+    drawCount: number
+  ): void;
+  /** Draws multiple indexed primitive ranges. Offsets are byte offsets into the index buffer. */
+  multiDrawElementsWEBGL(
+    mode: GL,
+    countsList: Int32Array | number[],
+    countsOffset: number,
+    type: GL,
+    offsetsList: Int32Array | number[],
+    offsetsOffset: number,
+    drawCount: number
+  ): void;
+  /** Draws multiple instanced non-indexed primitive ranges. */
+  multiDrawArraysInstancedWEBGL(
+    mode: GL,
+    firstsList: Int32Array | number[],
+    firstsOffset: number,
+    countsList: Int32Array | number[],
+    countsOffset: number,
+    instanceCountsList: Int32Array | number[],
+    instanceCountsOffset: number,
+    drawCount: number
+  ): void;
+  /** Draws multiple instanced indexed primitive ranges. */
+  multiDrawElementsInstancedWEBGL(
+    mode: GL,
+    countsList: Int32Array | number[],
+    countsOffset: number,
+    type: GL,
+    offsetsList: Int32Array | number[],
+    offsetsOffset: number,
+    instanceCountsList: Int32Array | number[],
+    instanceCountsOffset: number,
+    drawCount: number
+  ): void;
 };
 
 /** WEBGL_multi_draw_instanced_base_vertex_base_instance https://registry.khronos.org/webgl/extensions/WEBGL_multi_draw_instanced_base_vertex_base_instance/ */

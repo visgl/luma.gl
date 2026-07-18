@@ -67,6 +67,10 @@ export type DeviceInfo = {
   fallback?: boolean;
   /** Effective WebGPU feature level used to create this device. Undefined for non-WebGPU devices. */
   featureLevel?: WebGPUDeviceFeatureLevel;
+  /** Smallest supported subgroup size when exposed by the WebGPU adapter. */
+  subgroupMinSize?: number;
+  /** Largest supported subgroup size when exposed by the WebGPU adapter. */
+  subgroupMaxSize?: number;
   /** Shader language supported by device.createShader() */
   shadingLanguage: 'wgsl' | 'glsl';
   /** Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100 */
@@ -302,20 +306,46 @@ export type WebGPUDeviceFeature =
   | 'float32-blendable' // Is the float32 format blendable?
   | 'clip-distances'
   | 'dual-source-blending'
-  | 'subgroups';
+  | 'subgroups'
+  /** Enables the first optional tier of texture formats. */
+  | 'texture-formats-tier1'
+  /** Enables the second optional tier of texture formats. Implies `texture-formats-tier1`. */
+  | 'texture-formats-tier2'
+  /** Makes the primitive index builtin available to shaders. */
+  | 'primitive-index'
+  /** Allows texture component swizzles on texture views. */
+  | 'texture-component-swizzle'
+  /** Allows applications to control subgroup size. Implies `subgroups`. */
+  | 'subgroup-size-control';
 // | 'depth-clamping' // removed from the WebGPU spec...
 // | 'pipeline-statistics-query' // removed from the WebGPU spec...
 
 export type WebGLDeviceFeature =
   // webgl extension features
+  /** `EXT_clip_control` is available through `WebGLDevice.setClipControlWebGL()`. */
+  | 'clip-control-webgl'
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
+  /** `OES_draw_buffers_indexed` supports per-color-attachment blend and color-mask state. */
+  | 'draw-buffers-indexed-webgl'
+  /** `EXT_polygon_offset_clamp` supports non-zero `parameters.depthBiasClamp`. */
+  | 'polygon-offset-clamp-webgl'
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+  /** `EXT_texture_mirror_clamp_to_edge` supports `mirror-clamp-to-edge-webgl` samplers. */
+  | 'texture-mirror-clamp-to-edge-webgl'
+  /** `WEBGL_multi_draw` supports the WebGL render-pass multi-draw methods. */
+  | 'multi-draw-webgl'
+  /** `WEBGL_stencil_texturing` supports stencil-only texture views. */
+  | 'stencil-texturing-webgl'
 
   // GLSL extension features
   | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
   | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test
   | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
+  /** `OES_sample_variables` exposes per-sample GLSL variables. */
+  | 'shader-sample-variables-webgl'
+  /** `OES_shader_multisample_interpolation` exposes multisample interpolation builtins. */
+  | 'shader-multisample-interpolation-webgl'
 
   // texture rendering
   | 'float32-renderable-webgl'
@@ -356,6 +386,12 @@ export type DeviceTextureFormatCapabilities = {
   blend: boolean;
   /** Is the format storeable. */
   store: boolean;
+  /** Can shaders read the format through a storage texture binding? */
+  storageRead: boolean;
+  /** Can shaders write the format through a storage texture binding? */
+  storageWrite: boolean;
+  /** Can shaders both read and write the format through one storage texture binding? */
+  storageReadWrite: boolean;
 };
 
 /** Device properties */
@@ -370,6 +406,12 @@ export type DeviceProps = {
   failIfMajorPerformanceCaveat?: boolean;
   /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to opt into compatibility mode, or `'best-available'` to upgrade a compatibility adapter to core when possible. */
   featureLevel?: WebGPUFeatureLevel;
+  /**
+   * WebGPU only: optional features that must be enabled when the device is created.
+   * Creation fails when the selected adapter does not expose one of these features.
+   * WebGL rejects a non-empty list because WebGL extensions are discovered after context creation.
+   */
+  requiredFeatures?: WebGPUDeviceFeature[];
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
@@ -492,6 +534,7 @@ export abstract class Device {
     powerPreference: 'high-performance',
     failIfMajorPerformanceCaveat: false,
     featureLevel: undefined!,
+    requiredFeatures: [],
     createCanvasContext: undefined!,
     // WebGL specific
     webgl: {},
@@ -1057,13 +1100,17 @@ or create a device with the 'debug: true' prop.`;
       (typeof feature === 'string' ? this.features.has(feature) : feature) ?? true;
 
     const supported = checkFeature(genericCapabilities.create);
+    const store = supported && checkFeature(genericCapabilities.store);
     return {
       format,
       create: supported,
       render: supported && checkFeature(genericCapabilities.render),
       filter: supported && checkFeature(genericCapabilities.filter),
       blend: supported && checkFeature(genericCapabilities.blend),
-      store: supported && checkFeature(genericCapabilities.store)
+      store,
+      storageRead: store,
+      storageWrite: store,
+      storageReadWrite: store
     } as const satisfies DeviceTextureFormatCapabilities;
   }
 

@@ -15,6 +15,11 @@ export type TextureViewProps = ResourceProps & {
   dimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
   /** Which aspect(s) of the texture are accessible to the texture view. default "all"*/
   aspect?: 'all' | 'stencil-only' | 'depth-only';
+  /**
+   * WebGPU-only texture component swizzle. Defaults to `rgba`.
+   * Non-default swizzles require the `texture-component-swizzle` feature.
+   */
+  swizzle?: string;
   /** The first (most detailed) mipmap level accessible to the texture view.  default 0*/
   baseMipLevel?: number;
   /** How many mipmap levels, starting with baseMipLevel, are accessible to the texture view. */
@@ -43,6 +48,7 @@ export abstract class TextureView extends Resource<TextureViewProps> {
     format: undefined!,
     dimension: undefined!,
     aspect: 'all',
+    swizzle: 'rgba',
     baseMipLevel: 0,
     mipLevelCount: undefined!,
     baseArrayLayer: 0,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Parameters, log} from '@luma.gl/core';
+import {ColorParameters, Parameters, log} from '@luma.gl/core';
 
 function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStencilState {
   descriptor.depthStencil = descriptor.depthStencil || {
@@ -292,6 +292,43 @@ export function applyParametersToRenderPipelineDescriptor(
   setParameters(pipelineDescriptor, parameters);
 }
 
+/** Applies one color attachment's blend and write-mask state to a WebGPU pipeline descriptor. */
+export function applyColorParametersToRenderPipelineDescriptor(
+  pipelineDescriptor: GPURenderPipelineDescriptor,
+  parameters: ColorParameters,
+  attachment: number
+): void {
+  const target = addColorState(pipelineDescriptor, attachment);
+  if (parameters.colorMask !== undefined) {
+    target.writeMask = parameters.colorMask;
+  }
+  if (parameters.blend === false) {
+    target.blend = undefined;
+    return;
+  }
+  if (
+    parameters.blend ||
+    parameters.blendColorOperation ||
+    parameters.blendColorSrcFactor ||
+    parameters.blendColorDstFactor ||
+    parameters.blendAlphaOperation ||
+    parameters.blendAlphaSrcFactor ||
+    parameters.blendAlphaDstFactor
+  ) {
+    const blend = addBlendState(pipelineDescriptor, attachment);
+    blend.color = {
+      operation: parameters.blendColorOperation || 'add',
+      srcFactor: parameters.blendColorSrcFactor || 'one',
+      dstFactor: parameters.blendColorDstFactor || 'zero'
+    };
+    blend.alpha = {
+      operation: parameters.blendAlphaOperation || 'add',
+      srcFactor: parameters.blendAlphaSrcFactor || 'one',
+      dstFactor: parameters.blendAlphaDstFactor || 'zero'
+    };
+  }
+}
+
 // Apply any supplied parameters
 function setParameters(
   pipelineDescriptor: GPURenderPipelineDescriptor,
@@ -310,7 +347,6 @@ function setParameters(
   }
 }
 
-/** @todo - support multiple color targets... */
 function addColorState(
   descriptor: GPURenderPipelineDescriptor,
   attachment: number
@@ -321,12 +357,12 @@ function addColorState(
     log.warn('parameters: no targets array')();
   }
   // @ts-expect-error GPU types as iterator
-  if (descriptor.fragment?.targets?.length === 0) {
+  while ((descriptor.fragment?.targets?.length || 0) <= attachment) {
     // @ts-expect-error GPU types as iterator
     descriptor.fragment.targets?.push({});
   }
   // @ts-expect-error GPU types as iterator
-  return descriptor.fragment?.targets?.[0] as GPUColorTargetState;
+  return descriptor.fragment?.targets?.[attachment] as GPUColorTargetState;
 }
 
 function addBlendState(descriptor: GPURenderPipelineDescriptor, attachment: number): GPUBlendState {

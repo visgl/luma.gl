@@ -222,6 +222,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     let textureUnit = 0;
     let uniformBufferIndex = 0;
+    const boundTextureAspects = new Map<WEBGLTexture, string>();
     for (const binding of this.shaderLayout.bindings) {
       const value = getBindingValueForLayoutBinding(bindings, binding.name);
       if (!value) {
@@ -280,6 +281,14 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
           gl.activeTexture(GL.TEXTURE0 + textureUnit);
           gl.bindTexture(texture.glTarget, texture.handle);
+          if (value instanceof WEBGLTextureView) {
+            const previousAspect = boundTextureAspects.get(texture);
+            if (previousAspect && previousAspect !== value.props.aspect) {
+              throw new Error('WebGL cannot bind conflicting aspects of one texture in a draw');
+            }
+            boundTextureAspects.set(texture, value.props.aspect);
+            value._applyAspectMode();
+          }
           // gl.bindSampler(textureUnit, sampler.handle);
           textureUnit += 1;
           break;

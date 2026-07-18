@@ -22,6 +22,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 **@luma.gl/core**
 - WebGPU device creation now defaults to `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass `featureLevel: 'max'`.
+- WebGL `depthBias` and `depthBiasSlopeScale` now map to `gl.polygonOffset(factor, units)` in the WebGPU-compatible order. Code that compensated for the old reversed mapping must remove that workaround.
 - Render draw state is now owned by `RenderPass`. `RenderPipelineProps.bindings`,
   `RenderPipelineProps.bindGroups`, `RenderPipeline.setBindings()`, and
   `RenderPipeline.draw()` are deprecated compatibility APIs and will be

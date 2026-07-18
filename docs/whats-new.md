@@ -15,6 +15,12 @@ Target Release Date: Q3, 2026
 **@luma.gl/core**
 
 - **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` reports whether the active browser and backend expose the experimental DOM-to-texture rasterization path.
+- **Current WebGPU feature parity** - Device feature typing now includes texture format tiers, primitive index, texture component swizzle, and subgroup size control; `DeviceProps.requiredFeatures` can request optional features explicitly.
+- **WebGL extension-backed APIs** - Feature detection and typed APIs now cover clip control, polygon offset clamp, mirrored clamp samplers, indexed draw-buffer state, dual-source blending, multi-draw, stencil texture views, and multisample shader extensions.
+
+**@luma.gl/shadertools**
+
+- **Shader feature requirements** - `ShaderFeature`, `PlatformInfo.shaderFeatures`, and `ShaderModule.requiredFeatures` validate language capabilities before assembly while leaving directives caller-authored.
 
 **@luma.gl/experimental**
 

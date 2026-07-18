@@ -24,7 +24,8 @@ import {
   type PlatformInfo,
   mergeShaderPluginModules,
   resolveShaderPlugins,
-  ShaderAssembler
+  ShaderAssembler,
+  getShaderFeatures
 } from '@luma.gl/shadertools';
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
@@ -402,6 +403,7 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     gpu: device.info.gpu,
     limits: device.limits as unknown as Record<string, number | undefined>,
     // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
-    features: device.features as unknown as Set<DeviceFeature>
+    features: device.features as unknown as Set<DeviceFeature>,
+    shaderFeatures: getShaderFeatures(device.features)
   };
 }

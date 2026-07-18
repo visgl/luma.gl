@@ -4,6 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
+  expandRequiredWebGPUFeatures,
   getEffectiveWebGPUFeatureLevel,
   getRequiredWebGPUFeatures,
   getRequiredWebGPULimits,
@@ -133,5 +134,31 @@ test('WebGPUAdapter feature helpers keep requested profiles separate', t => {
     'best available reports compatibility when core is unavailable'
   );
 
+  t.end();
+});
+
+test('WebGPUAdapter required feature helpers validate and expand explicit requests', t => {
+  const features = new Set([
+    'texture-formats-tier1',
+    'texture-formats-tier2',
+    'subgroups',
+    'subgroup-size-control'
+  ]) as GPUSupportedFeatures;
+
+  t.deepEqual(
+    expandRequiredWebGPUFeatures(['texture-formats-tier2', 'subgroup-size-control']),
+    ['texture-formats-tier2', 'texture-formats-tier1', 'subgroup-size-control', 'subgroups'],
+    'implied features are included once'
+  );
+  t.deepEqual(
+    getRequiredWebGPUFeatures(features, 'core', ['texture-formats-tier2']),
+    ['texture-formats-tier2', 'texture-formats-tier1'],
+    'explicit requests are forwarded with implied features'
+  );
+  t.throws(
+    () => getRequiredWebGPUFeatures(features, 'core', ['shader-f16']),
+    /Required WebGPU feature is not supported: shader-f16/,
+    'unsupported explicit requests fail before device creation'
+  );
   t.end();
 });
