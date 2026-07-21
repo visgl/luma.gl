@@ -1,0 +1,46 @@
+---
+title: 'Effects: Shadow Map Quality'
+sidebar_custom_props:
+  backends: [webgpu]
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {ShadowMapExample} from '@site/src/examples';
+
+<ExampleHeader
+  id="shadow-map"
+  title="Effects: Shadow Map Quality"
+  directory="experimental"
+  devices={['webgpu']}
+>
+  <div id="example-panel-host" data-example-panel-host="" />
+</ExampleHeader>
+
+<ShadowMapExample />
+
+## What to inspect
+
+- The thin yellow fence stresses map resolution and PCSS filtering; low quality should lose more of
+  the individual slat detail.
+- The tall colored blocks cast long shadows whose penumbrae widen across the neutral receiver.
+- The receding stair lane crosses fitted cascade ranges. Select **Cascades** to see the active
+  light-space view and its blend region.
+- The small blocks near the camera make shadow attachment and receiver bias easier to judge.
+
+Use **Visibility** to remove material lighting and inspect only the directional shadow factor.
+**Sun Angular Radius** controls the apparent light size, so increasing it makes the PCSS penumbrae
+wider. Drag the canvas to orbit manually and use the wheel or trackpad to zoom; disable **Auto
+Orbit** when comparing presets from a fixed angle.
+
+## Quality presets
+
+The example passes the selected preset directly to `ShadowMapRenderer`:
+
+| Preset | Directional map | Cascades | Blocker / filter samples |
+| --- | ---: | ---: | ---: |
+| Low | 1024 | 3 | 8 / 12 |
+| Balanced | 1536 | 4 | 16 / 24 |
+| Cinematic | 2048 | 4 | 24 / 48 |
+
+The geometry and default light stay fixed while presets change. Pause **Auto Orbit** before a
+side-by-side comparison so camera movement does not change cascade fitting or texel alignment.

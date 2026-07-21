@@ -58,6 +58,7 @@ const sidebars = {
         'experimental/a-buffer',
         {type: 'doc', id: 'experimental/antialiasing', label: 'Antialiasing Techniques'},
         {type: 'doc', id: 'experimental/advanced-effects', label: 'Effects: Visualization City'},
+        {type: 'doc', id: 'experimental/shadow-map', label: 'Effects: Shadow Map Quality'},
         {type: 'doc', id: 'experimental/bloom', label: 'Effects: Bloom'},
         'experimental/fp64',
         'experimental/gpt-2',
