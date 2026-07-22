@@ -9,7 +9,7 @@ import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for clustered participating-media integration. */
 export type ClusteredVolumetricLightingShaderPassPipelineOptions = {
-  /** Fractional integration, history, and denoising resolution. Defaults to 0.4. */
+  /** Fractional integration, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
 
@@ -631,7 +631,7 @@ export function createClusteredVolumetricLightingShaderPassPipeline(
   | 'clusteredVolumeScratch'
   | 'clusteredVolumeScattering'
 > {
-  const scale = options.resolutionScale || 0.4;
+  const scale = options.resolutionScale ?? 1;
   return {
     name: 'clusteredVolumetricLightingShaderPassPipeline',
     renderTargets: {

@@ -8,7 +8,7 @@ import type {NumberArray16} from '@math.gl/core';
 
 /** Construction options for temporally stabilized diffuse screen-space global illumination. */
 export type SSGIShaderPassPipelineOptions = {
-  /** Fractional tracing, history, and denoising resolution. Defaults to half resolution. */
+  /** Fractional tracing, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
 
@@ -528,7 +528,7 @@ export function createSSGIShaderPassPipeline(
 ): ShaderPassPipeline<
   'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
 > {
-  const scale = options.resolutionScale || 0.5;
+  const scale = options.resolutionScale ?? 1;
   return {
     name: 'ssgiShaderPassPipeline',
     renderTargets: {

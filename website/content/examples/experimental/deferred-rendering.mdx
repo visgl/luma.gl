@@ -31,6 +31,9 @@ accordions for clustered deferred lighting, GTAO, diffuse global illumination, s
 reflections, clustered volumetric scattering, and crepuscular god rays. Expand a section to
 adjust its quality, transport, or temporal-history controls without scrolling through one
 flattened settings list.
+GTAO, diffuse global illumination, screen-space reflections, and clustered volumetric lighting
+start with full-resolution intermediate buffers. Lower **Buffer Resolution** in the corresponding
+section when reduced GPU cost matters more than edge fidelity.
 
 ## Why This Is Not Visualization City
 
@@ -98,11 +101,11 @@ from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back i
 ordered shader-pass chain. `createDeferredAmbientLightingShaderPassPipeline()` separately extracts
 the linear ambient contribution from the same material attachments.
 `createGTAOShaderPassPipeline({composition: 'ambient-only'})` then analytically integrates
-half-resolution horizon angles over the unchanged depth and view-normal attachments, rotates and
-jitters sampling across animation frames, reprojects the previous AO result through the velocity
-buffer, rejects disocclusions with depth history, and applies a depth-aware separable blur. Its
-final composite attenuates only the isolated ambient contribution, leaving directional and point
-lights plus emissive materials untouched.
+horizon angles at the configured buffer resolution over the unchanged depth and view-normal
+attachments, rotates and jitters sampling across animation frames, reprojects the previous AO
+result through the velocity buffer, rejects disocclusions with depth history, and applies a
+depth-aware separable blur. Its final composite attenuates only the isolated ambient contribution,
+leaving directional and point lights plus emissive materials untouched.
 `createSSGIShaderPassPipeline()` traces cosine-weighted hemisphere rays through that lit scene,
 gathers nearby colored radiance, reprojects indirect-light history, rejects disocclusions in
 linearized view depth, and applies two depth/normal-aware denoising passes before composing the
@@ -113,7 +116,7 @@ applies a roughness-adaptive depth/normal-aware blur, and adds the result back i
 `createClusteredVolumetricLightingShaderPassPipeline()` then integrates real clustered point
 lights and occluded directional light through exponential height fog, applies Beer-Lambert
 extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
-sun for crepuscular god rays, stabilizes low-resolution in-scattering with
+sun for crepuscular god rays, stabilizes in-scattering at the configured buffer resolution with
 velocity/depth history, and composites the participating medium over the existing opaque result.
 A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection/
 volume debug view.
