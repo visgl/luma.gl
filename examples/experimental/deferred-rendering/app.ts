@@ -19,6 +19,7 @@ import {
   GBuffer,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
+  OrbitControls,
   type DeferredPointLight
 } from '@luma.gl/experimental';
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
@@ -66,6 +67,7 @@ type DeferredRenderingSettings = {
   debugView: DebugView;
   pointLightCount: number;
   animate: boolean;
+  autoOrbitCamera: boolean;
   exposure: number;
   sunIntensity: number;
   ambientOcclusionRadius: number;
@@ -82,6 +84,7 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   debugView: 'Final',
   pointLightCount: 256,
   animate: true,
+  autoOrbitCamera: true,
   exposure: 1.15,
   sunIntensity: 2.8,
   ambientOcclusionRadius: 2.2,
@@ -476,6 +479,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly clusteredLightGrid: ClusteredLightGrid;
   readonly panels: ExamplePanelManager;
   readonly settingsPanel: ExampleSettingsPanelManager;
+  orbitControls: OrbitControls | null = null;
   sceneGBuffer: GBuffer;
   renderer: ShaderPassRenderer;
   settings: DeferredRenderingSettings = {...DEFAULT_SETTINGS};
@@ -529,6 +533,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.panels.mount();
   }
 
+  override async onInitialize({canvas}: AnimationProps): Promise<void> {
+    if (canvas instanceof HTMLCanvasElement) {
+      this.orbitControls = new OrbitControls(canvas, {
+        target: [0, 0.9, 0],
+        distance: 20,
+        yaw: 0,
+        pitch: 0.44,
+        minDistance: 6,
+        maxDistance: 42,
+        minPitch: 0.06,
+        maxPitch: 1.38,
+        autoRotate: this.settings.autoOrbitCamera,
+        autoRotateSpeed: 0.08
+      });
+    }
+  }
+
   onRender({device, width, height, aspect, tick}: AnimationProps): void {
     if (this.framebufferSize[0] !== width || this.framebufferSize[1] !== height) {
       this.framebufferSize = [width, height];
@@ -538,12 +559,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const time = this.settings.animate ? tick / 1000 : 1.8;
-    const cameraAngle = this.settings.animate ? time * 0.08 : 0.72;
-    const eye: NumberArray3 = [
-      Math.sin(cameraAngle) * 18,
-      9.5 + Math.sin(cameraAngle * 0.7) * 1.2,
-      Math.cos(cameraAngle) * 18
-    ];
+    this.orbitControls?.update(tick);
+    const eye: NumberArray3 = this.orbitControls?.getEyePosition() || [0, 9.5, 18];
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(47),
       aspect,
@@ -677,6 +694,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize(): void {
     this.settingsPanel.finalize();
     this.panels.finalize();
+    this.orbitControls?.destroy();
     this.materialSpheres.destroy();
     this.floor.destroy();
     this.reflectionFeatures.destroy();
@@ -695,7 +713,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
           title: 'Overview',
-          html: '<p><b>One geometry pass. Hundreds of lights. Reflections everywhere.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>Temporally stabilized GTAO grounds the contacts, then roughness-aware screen-space reflection rays bounce that same lit scene across polished floors, chrome frames, and the moving material grid. Switch Debug View to inspect the actual G-buffer, AO, reflection radiance, and reflection confidence.</p>'
+          html: '<p><b>One geometry pass. Hundreds of lights. Reflections everywhere.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>Temporally stabilized GTAO grounds the contacts, then roughness-aware screen-space reflection rays bounce that same lit scene across polished floors, chrome frames, and the moving material grid.</p><p>Drag the canvas to orbit, use the mouse wheel or trackpad to zoom, and disable <b>Auto Orbit</b> to inspect one material or reflection closely. Switch Debug View to inspect the actual G-buffer, AO, reflection radiance, and reflection confidence.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -712,6 +730,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     _changedSettings?: SettingsChangeDescriptor[]
   ): void => {
     this.settings = {...this.settings, ...(nextSettings as DeferredRenderingSettings)};
+    this.orbitControls?.setAutoRotate(this.settings.autoOrbitCamera);
   };
 }
 
@@ -970,6 +989,19 @@ function makeSettingsSchema(): SettingsSchema {
             min: 0.2,
             max: 2.5,
             step: 0.05
+          }
+        ]
+      },
+      {
+        id: 'camera',
+        name: 'Camera',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'autoOrbitCamera',
+            label: 'Auto Orbit',
+            type: 'boolean',
+            persist: 'none'
           }
         ]
       },
