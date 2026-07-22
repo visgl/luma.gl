@@ -538,6 +538,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'advanced-effects-settings',
       schema: makeSettingsSchema(),
       settings: this.settings,
+      sectionPresentation: 'accordion',
       onSettingsChange: this.handleSettingsChange
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
@@ -933,11 +934,12 @@ function makeSettingsSchema(): SettingsSchema {
     persist: 'none' as const
   });
   return {
-    title: 'Advanced Effects',
+    title: 'Visualization Effects',
     sections: [
       {
         id: 'presentation',
-        name: 'Presentation',
+        name: 'Scene & Comparison',
+        description: 'Choose a preset and compare the base scene against the effect stack.',
         initiallyCollapsed: false,
         settings: [
           {
@@ -946,13 +948,6 @@ function makeSettingsSchema(): SettingsSchema {
             type: 'select',
             persist: 'none',
             options: Object.keys(PRESETS)
-          },
-          {
-            name: 'shadowQuality',
-            label: 'Shadow Quality',
-            type: 'select',
-            persist: 'none',
-            options: Object.keys(SHADOW_QUALITY_SCALE)
           },
           {
             name: 'debugView',
@@ -987,29 +982,78 @@ function makeSettingsSchema(): SettingsSchema {
         ]
       },
       {
-        id: 'shadows',
-        name: 'Hybrid Shadows',
-        initiallyCollapsed: false,
+        id: 'shadow-maps',
+        name: 'Cascaded & Local Shadow Maps',
+        description: 'Directional cascades, moving spotlights, and point-light shadows.',
+        initiallyCollapsed: true,
         settings: [
+          {
+            name: 'shadowQuality',
+            label: 'Shadow Quality',
+            type: 'select',
+            persist: 'none',
+            options: Object.keys(SHADOW_QUALITY_SCALE)
+          },
           toggle('directionalShadowsEnabled', 'Directional Cascades'),
           toggle('spotShadowsEnabled', 'Moving Spotlight'),
-          toggle('pointShadowsEnabled', 'Neon Point Light'),
-          toggle('contactShadowsEnabled', 'Contact Refinement')
+          toggle('pointShadowsEnabled', 'Neon Point Light')
         ]
       },
       {
-        id: 'effects',
-        name: 'Effect Stack',
-        initiallyCollapsed: false,
-        settings: [
-          toggle('ssaoEnabled', 'SSAO'),
-          toggle('depthBlurEnabled', 'Depth-aware Blur'),
-          toggle('ssrEnabled', 'Screen-space Reflections'),
-          toggle('fogEnabled', 'Volumetric Fog'),
-          toggle('outlinesEnabled', 'Outlines'),
-          toggle('taaEnabled', 'Temporal AA'),
-          toggle('motionBlurEnabled', 'Motion Blur')
-        ]
+        id: 'contact-shadows',
+        name: 'Screen-space Contact Shadows',
+        description: 'Recover fine shadow detail beside visible geometry.',
+        initiallyCollapsed: true,
+        settings: [toggle('contactShadowsEnabled', 'Enable Contact Shadows')]
+      },
+      {
+        id: 'ambient-occlusion',
+        name: 'Ambient Occlusion · SSAO',
+        description: 'Low-cost screen-space contact darkening.',
+        initiallyCollapsed: true,
+        settings: [toggle('ssaoEnabled', 'Enable Ambient Occlusion')]
+      },
+      {
+        id: 'reflections',
+        name: 'Screen-space Reflections · SSR',
+        description: 'The same reusable reflection pipeline as Illumination Lab.',
+        initiallyCollapsed: true,
+        settings: [toggle('ssrEnabled', 'Enable Reflections')]
+      },
+      {
+        id: 'atmosphere',
+        name: 'Volumetric Height Fog',
+        description: 'Compact atmospheric depth and stylized directional glow.',
+        initiallyCollapsed: true,
+        settings: [toggle('fogEnabled', 'Enable Height Fog')]
+      },
+      {
+        id: 'outlines',
+        name: 'Depth & Normal Outlines',
+        description: 'Emphasize geometry silhouettes and hard surface edges.',
+        initiallyCollapsed: true,
+        settings: [toggle('outlinesEnabled', 'Enable Outlines')]
+      },
+      {
+        id: 'temporal-antialiasing',
+        name: 'Temporal Antialiasing · TAA',
+        description: 'Stabilize subpixel edges using motion and frame history.',
+        initiallyCollapsed: true,
+        settings: [toggle('taaEnabled', 'Enable Temporal AA')]
+      },
+      {
+        id: 'motion-blur',
+        name: 'Velocity Motion Blur',
+        description: 'Follow the motion vectors captured in the G-buffer.',
+        initiallyCollapsed: true,
+        settings: [toggle('motionBlurEnabled', 'Enable Motion Blur')]
+      },
+      {
+        id: 'depth-aware-blur',
+        name: 'Depth-aware Blur',
+        description: 'Bilateral smoothing that preserves geometric boundaries.',
+        initiallyCollapsed: true,
+        settings: [toggle('depthBlurEnabled', 'Enable Depth-aware Blur')]
       }
     ]
   };

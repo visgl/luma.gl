@@ -79,20 +79,24 @@ type DeferredRenderingSettings = {
   autoOrbitCamera: boolean;
   exposure: number;
   sunIntensity: number;
+  ambientOcclusionEnabled: boolean;
   ambientOcclusionRadius: number;
   ambientOcclusionIntensity: number;
   ambientOcclusionStrength: number;
+  globalIlluminationEnabled: boolean;
   globalIlluminationRadius: number;
   globalIlluminationIntensity: number;
   globalIlluminationStrength: number;
   globalIlluminationRayCount: number;
   globalIlluminationStepCount: number;
   globalIlluminationHistoryWeight: number;
+  reflectionEnabled: boolean;
   reflectionStrength: number;
   reflectionIntensity: number;
   reflectionMaxDistance: number;
   reflectionSampleCount: number;
   reflectionHistoryWeight: number;
+  atmosphereEnabled: boolean;
   atmosphereDensity: number;
   atmosphereHeightFalloff: number;
   atmosphereAnisotropy: number;
@@ -111,20 +115,24 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   autoOrbitCamera: true,
   exposure: 1.15,
   sunIntensity: 2.8,
+  ambientOcclusionEnabled: true,
   ambientOcclusionRadius: 2.2,
   ambientOcclusionIntensity: 3.2,
   ambientOcclusionStrength: 0.68,
+  globalIlluminationEnabled: true,
   globalIlluminationRadius: 5.2,
   globalIlluminationIntensity: 3.4,
   globalIlluminationStrength: 1.35,
   globalIlluminationRayCount: 8,
   globalIlluminationStepCount: 9,
   globalIlluminationHistoryWeight: 0.88,
+  reflectionEnabled: true,
   reflectionStrength: 1.15,
   reflectionIntensity: 1.8,
   reflectionMaxDistance: 26,
   reflectionSampleCount: 56,
   reflectionHistoryWeight: 0.84,
+  atmosphereEnabled: true,
   atmosphereDensity: 0.055,
   atmosphereHeightFalloff: 0.28,
   atmosphereAnisotropy: 0.46,
@@ -575,6 +583,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'deferred-rendering-settings',
       schema: makeSettingsSchema(),
       settings: this.settings,
+      sectionPresentation: 'accordion',
       onSettingsChange: this.handleSettingsChange
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
@@ -705,7 +714,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         },
         gtaoTemporal: {inverseProjectionMatrix},
         gtaoComposite: {
-          strength: this.settings.ambientOcclusionStrength,
+          strength: this.settings.ambientOcclusionEnabled
+            ? this.settings.ambientOcclusionStrength
+            : 0,
           debugMode: this.settings.debugView === 'Ambient Occlusion' ? 1 : 0
         },
         ssgiTrace: {
@@ -714,9 +725,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           radius: this.settings.globalIlluminationRadius,
           thickness: 0.38,
           intensity:
-            this.settings.debugView === 'Ambient Occlusion'
-              ? 0
-              : this.settings.globalIlluminationIntensity,
+            this.settings.globalIlluminationEnabled &&
+            this.settings.debugView !== 'Ambient Occlusion'
+              ? this.settings.globalIlluminationIntensity
+              : 0,
           rayCount: this.settings.globalIlluminationRayCount,
           stepCount: this.settings.globalIlluminationStepCount,
           frameIndex: this.frameIndex
@@ -738,11 +750,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           projectionMatrix,
           inverseProjectionMatrix,
           intensity:
-            this.settings.debugView === 'Ambient Occlusion' ||
-            this.settings.debugView === 'Indirect Lighting' ||
-            this.settings.debugView === 'Bounce Confidence'
-              ? 0
-              : this.settings.reflectionIntensity,
+            this.settings.reflectionEnabled &&
+            this.settings.debugView !== 'Ambient Occlusion' &&
+            this.settings.debugView !== 'Indirect Lighting' &&
+            this.settings.debugView !== 'Bounce Confidence'
+              ? this.settings.reflectionIntensity
+              : 0,
           maxDistance: this.settings.reflectionMaxDistance,
           thickness: 0.32,
           sampleCount: this.settings.reflectionSampleCount,
@@ -770,9 +783,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           directionalLightColor: [1, 0.82, 0.57],
           fogColor: [0.17, 0.29, 0.43],
           density:
-            this.settings.debugView === 'Final' ||
-            this.settings.debugView === 'Volumetric Lighting' ||
-            this.settings.debugView === 'Volume Transmittance'
+            this.settings.atmosphereEnabled &&
+            (this.settings.debugView === 'Final' ||
+              this.settings.debugView === 'Volumetric Lighting' ||
+              this.settings.debugView === 'Volume Transmittance')
               ? this.settings.atmosphereDensity
               : 0,
           heightFalloff: this.settings.atmosphereHeightFalloff,
@@ -1125,11 +1139,12 @@ function getDebugMode(debugView: DebugView): number {
 
 function makeSettingsSchema(): SettingsSchema {
   return {
-    title: 'Deferred Rendering',
+    title: 'Illumination Effects',
     sections: [
       {
         id: 'inspect',
-        name: 'Inspect',
+        name: 'G-buffer & Diagnostics',
+        description: 'Inspect the actual material, lighting, and transport buffers.',
         initiallyCollapsed: false,
         settings: [
           {
@@ -1169,7 +1184,8 @@ function makeSettingsSchema(): SettingsSchema {
       {
         id: 'camera',
         name: 'Camera',
-        initiallyCollapsed: false,
+        description: 'Orbit and inspect the lighting laboratory.',
+        initiallyCollapsed: true,
         settings: [
           {
             name: 'autoOrbitCamera',
@@ -1181,7 +1197,8 @@ function makeSettingsSchema(): SettingsSchema {
       },
       {
         id: 'lighting',
-        name: 'Lighting',
+        name: 'Clustered Deferred Lighting',
+        description: 'One geometry pass, one sun, and hundreds of nearby point lights.',
         initiallyCollapsed: false,
         settings: [
           {
@@ -1212,9 +1229,16 @@ function makeSettingsSchema(): SettingsSchema {
       },
       {
         id: 'ambient-occlusion',
-        name: 'Ambient Occlusion',
-        initiallyCollapsed: false,
+        name: 'Ground-truth Ambient Occlusion · GTAO',
+        description: 'Horizon-based contact visibility with temporal stabilization.',
+        initiallyCollapsed: true,
         settings: [
+          {
+            name: 'ambientOcclusionEnabled',
+            label: 'Enable GTAO',
+            type: 'boolean',
+            persist: 'none'
+          },
           {
             name: 'ambientOcclusionRadius',
             label: 'GTAO Radius',
@@ -1246,9 +1270,16 @@ function makeSettingsSchema(): SettingsSchema {
       },
       {
         id: 'global-illumination',
-        name: 'Diffuse Global Illumination',
-        initiallyCollapsed: false,
+        name: 'Diffuse Global Illumination · SSGI',
+        description: 'Colored light bouncing between visible surfaces.',
+        initiallyCollapsed: true,
         settings: [
+          {
+            name: 'globalIlluminationEnabled',
+            label: 'Enable Diffuse Bounce',
+            type: 'boolean',
+            persist: 'none'
+          },
           {
             name: 'globalIlluminationRadius',
             label: 'Bounce Radius',
@@ -1308,8 +1339,15 @@ function makeSettingsSchema(): SettingsSchema {
       {
         id: 'atmosphere',
         name: 'Clustered Volumetric Lighting',
-        initiallyCollapsed: false,
+        description: 'Colored light halos, directional shafts, and atmospheric extinction.',
+        initiallyCollapsed: true,
         settings: [
+          {
+            name: 'atmosphereEnabled',
+            label: 'Enable Volumetric Lighting',
+            type: 'boolean',
+            persist: 'none'
+          },
           {
             name: 'atmosphereDensity',
             label: 'Fog Density',
@@ -1395,9 +1433,16 @@ function makeSettingsSchema(): SettingsSchema {
       },
       {
         id: 'reflections',
-        name: 'Screen-space Reflections',
-        initiallyCollapsed: false,
+        name: 'Screen-space Reflections · SSR',
+        description: 'Temporally stabilized mirror and glossy reflections.',
+        initiallyCollapsed: true,
         settings: [
+          {
+            name: 'reflectionEnabled',
+            label: 'Enable Reflections',
+            type: 'boolean',
+            persist: 'none'
+          },
           {
             name: 'reflectionStrength',
             label: 'SSR Strength',
