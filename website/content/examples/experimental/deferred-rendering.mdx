@@ -16,7 +16,8 @@ import {DeferredRenderingExample} from '@site/src/examples';
   <div>
     A WebGPU-only material laboratory that writes five surface targets once, then reconstructs
     view position from depth and resolves a directional light plus hundreds of compute-clustered
-    storage-buffer point lights in one fullscreen pass.
+    storage-buffer point lights in one fullscreen pass. A temporally stabilized GTAO pass then
+    reuses the same depth, normals, and velocity for grounded contact shading.
   </div>
 </ExampleHeader>
 
@@ -32,7 +33,10 @@ import {DeferredRenderingExample} from '@site/src/examples';
   geometry.
 - **Base Color**, **Normals**, **Roughness**, **Metallic**, **Emissive**, and **Depth** expose the
   actual G-buffer channels rather than a recreated diagnostic view. **Cluster Occupancy** shows
-  the per-pixel cluster list pressure as a cold-to-hot heatmap.
+  the per-pixel cluster list pressure as a cold-to-hot heatmap. **Ambient Occlusion** exposes the
+  denoised, temporally reprojected GTAO visibility buffer.
+- Raise **GTAO Radius** to make larger-scale creases visible, then use **GTAO Intensity** and
+  **GTAO Strength** to separate visibility estimation from how strongly it affects lit color.
 
 ## Render stack
 
@@ -48,8 +52,11 @@ velocity, and depth channels plus two named material extras:
 screen/log-depth grid. `createClusteredDeferredLightingShaderPassPipeline()` then reads those
 material targets plus the current pixel's bounded cluster list, reconstructs view-space position
 from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back into the normal
-ordered shader-pass chain. A final display pass tone maps the result or selects a G-buffer/cluster
-debug view.
+ordered shader-pass chain. `createGTAOShaderPassPipeline()` then performs a half-resolution
+horizon search over the unchanged depth and view-normal attachments, reprojects the previous AO
+result through the velocity buffer, rejects disocclusions with depth history, and applies a
+depth-aware separable blur before compositing ambient visibility into lit color. A final display
+pass tone maps the result or selects a G-buffer/cluster/AO debug view.
 
 The point-light positions are transformed to view space on the CPU and packed with
 `makeDeferredPointLightBufferData()` into two `vec4f` records per light:
@@ -59,5 +66,5 @@ position.xyz, range, color.rgb, intensity
 ```
 
 That fixed representation keeps the example focused on the deferred boundary: geometry owns
-material capture, compute owns light assignment, the fullscreen pass owns lighting, and later
-effects can consume the unchanged depth, normal, velocity, and scene-color contract.
+material capture, compute owns light assignment, the lighting pass owns direct light, and later
+effects such as GTAO can consume the unchanged depth, normal, velocity, and scene-color contract.

@@ -69,16 +69,16 @@ surface attachments without owning scene traversal or material shading. Multiple
 | Render-stack value | Producer | Consumers |
 | --- | --- | --- |
 | `sourceTexture` | `GBuffer.colorTexture` | Every shader pass through `previous` or `original`. |
-| `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, SSR, outlines, contact shadows, TAA, motion blur, fog. |
-| `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, SSR, normal-aware outlines, contact-shadow filtering. |
-| `velocityTexture` | `GBuffer.velocityTexture` | TAA and motion blur. |
+| `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, GTAO, SSR, outlines, contact shadows, TAA, motion blur, fog. |
+| `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, GTAO, SSR, normal-aware outlines, contact-shadow filtering. |
+| `velocityTexture` | `GBuffer.velocityTexture` | GTAO temporal reprojection, TAA, and motion blur. |
 | named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific material, debug, lighting, or resolve passes. |
 
 ```ts
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   createMotionBlurShaderPassPipeline,
-  createSSAOShaderPassPipeline,
+  createGTAOShaderPassPipeline,
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline
 } from '@luma.gl/effects';
@@ -101,7 +101,7 @@ scenePass.end();
 
 const effects = new ShaderPassRenderer(device, {
   shaderPasses: [
-    createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
+    createGTAOShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createTAAShaderPassPipeline(),
     createMotionBlurShaderPassPipeline()
@@ -123,7 +123,7 @@ lighting result into the same ordered color chain:
 const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [
     createDeferredLightingShaderPassPipeline(),
-    createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
+    createGTAOShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createTAAShaderPassPipeline()
   ]
@@ -139,7 +139,7 @@ while preserving the same effect-facing depth, normal, velocity, and scene-color
 | --- | --- | --- |
 | Geometry and opaque surface capture | MRT scene color, normal-roughness, velocity, depth, material extras | Establish one coherent surface snapshot. |
 | Opaque lighting resolve | Deferred PBR lighting, contact shadows, other direct-light corrections | These still need unwarped depth, normals, and material terms. |
-| Surface effects | SSAO, SSR, fog, outlines, depth-aware blur | These consume the original semantic attachments. |
+| Surface effects | SSAO, GTAO, SSR, fog, outlines, depth-aware blur | These consume the original semantic attachments. |
 | Transparency resolve | WBOIT or A-buffer resolve pipeline | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
 | Temporal effects | TAA, then motion blur | Reproject the composed image before display-space processing. |
 | Display effects | Bloom, color adjustment, vignette, tone mapping | These operate on final color and usually do not need scene attachments. |
@@ -166,9 +166,10 @@ effects without creating a second postprocessing system.
 The [Advanced Effects example](/examples/experimental/advanced-effects) shows the full MRT surface
 pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug views.
 
-The [Deferred Material Lab](/examples/experimental/deferred-rendering) shows the earlier opaque
-phase: one five-target geometry pass, depth reconstruction, directional lighting, animated
-storage-buffer point lights, tone mapping, and direct G-buffer debug views.
+The [Deferred Material Lab](/examples/experimental/deferred-rendering) shows the opaque phase and
+its first screen-space consumer: one five-target geometry pass, depth reconstruction, clustered
+directional/point lighting, temporally stabilized GTAO, tone mapping, and direct G-buffer/AO debug
+views.
 
 ## When To Use Shader Passes
 

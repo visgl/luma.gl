@@ -10,6 +10,7 @@ import {
   bloomShaderPassPipeline,
   brightnessContrast,
   createMotionBlurShaderPassPipeline,
+  createGTAOShaderPassPipeline,
   createOutlineShaderPassPipeline,
   createSSAOShaderPassPipeline,
   createSSRShaderPassPipeline,
@@ -30,6 +31,21 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     ssao.steps[0].inputs?.normalTexture,
     undefined,
     'normal-texture mode consumes the external normal binding'
+  );
+
+  const gtao = createGTAOShaderPassPipeline({resolutionScale: 0.5});
+  testCase.equal(gtao.steps.length, 6, 'GTAO evaluates, stabilizes, denoises, and composites');
+  testCase.deepEqual(gtao.renderTargets?.gtaoRaw.scale, [0.5, 0.5], 'GTAO honors scale');
+  testCase.equal(gtao.renderTargets?.gtaoHistory.lifetime, 'history', 'GTAO retains AO history');
+  testCase.equal(
+    gtao.renderTargets?.gtaoHistoryDepth.lifetime,
+    'history',
+    'GTAO retains depth history for disocclusion rejection'
+  );
+  testCase.equal(
+    gtao.steps[1].inputs?.historyTexture,
+    gtao.steps[1].output,
+    'GTAO intentionally reprojects one logical history target'
   );
 
   const reconstructedSSAO = createSSAOShaderPassPipeline();
@@ -112,6 +128,7 @@ test('advanced effects compose in order with existing effects', async testCase =
   const mixedEffectStack = [
     brightnessContrast,
     createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
+    createGTAOShaderPassPipeline(),
     bloomShaderPassPipeline,
     dofShaderPassPipeline,
     createTAAShaderPassPipeline(),
@@ -169,6 +186,9 @@ test('advanced effects compose in order with existing effects', async testCase =
     );
     testCase.ok(hasBinding('ssaoEvaluate', 'depthTexture'), 'SSAO receives scene depth');
     testCase.ok(hasBinding('ssaoEvaluate', 'normalTexture'), 'SSAO receives scene normals');
+    testCase.ok(hasBinding('gtaoEvaluate', 'depthTexture'), 'GTAO receives scene depth');
+    testCase.ok(hasBinding('gtaoEvaluate', 'normalTexture'), 'GTAO receives scene normals');
+    testCase.ok(hasBinding('gtaoTemporal', 'velocityTexture'), 'GTAO receives scene velocity');
     testCase.notOk(
       hasBinding('bloomExtract', 'velocityTexture'),
       'bloom does not receive scene velocity'

@@ -122,6 +122,14 @@ export {
   depthAwareBlurShaderPassPipeline
 } from './passes/screen-space/depth-aware-blur';
 export {createMotionBlurShaderPassPipeline} from './passes/screen-space/motion-blur';
+export type {GTAOShaderPassPipelineOptions} from './passes/screen-space/gtao';
+export {
+  createGTAOShaderPassPipeline,
+  gtaoComposite,
+  gtaoDepthHistoryCopy,
+  gtaoEvaluate,
+  gtaoTemporal
+} from './passes/screen-space/gtao';
 export type {OutlineShaderPassPipelineOptions} from './passes/screen-space/outlines';
 export {createOutlineShaderPassPipeline} from './passes/screen-space/outlines';
 export {createSSRShaderPassPipeline} from './passes/screen-space/screen-space-reflections';
