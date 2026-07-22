@@ -60,6 +60,7 @@ import HelloReactApp from '../../examples/integrations/hello-react/app';
 import {getErrorMessage, logError} from './react-luma/utils/error-utils';
 import DOFApp from '../../examples/showcase/dof/app';
 import AdvancedEffectsApp from '../../examples/experimental/advanced-effects/app';
+import DeferredRenderingApp from '../../examples/experimental/deferred-rendering/app';
 import ShadowMapApp from '../../examples/experimental/shadow-map/app';
 import ABufferApp from '../../examples/experimental/a-buffer/app';
 
@@ -952,6 +953,18 @@ export const AdvancedEffectsExample: React.FC = props => (
     title="Advanced Effects: Visualization City"
     directory="experimental"
     template={AdvancedEffectsApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    {...props}
+  />
+);
+
+export const DeferredRenderingExample: React.FC = props => (
+  <LumaExample
+    id="deferred-rendering"
+    title="Deferred Rendering: Material Lab"
+    directory="experimental"
+    template={DeferredRenderingApp}
     config={exampleConfig}
     devices={['webgpu']}
     {...props}

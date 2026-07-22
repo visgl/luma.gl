@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
 import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {Buffer, CommandEncoder, Texture} from '@luma.gl/core';
@@ -254,6 +254,34 @@ const reservedTargetPipeline: ShaderPassPipeline<'original'> = {
   renderTargets: {original: {}},
   steps: [{shaderPass: copyPass}]
 };
+
+test('ShaderPassRenderer uses the configured previous-chain color format', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [],
+    colorFormat: 'rgba16float'
+  });
+
+  t.equal(
+    renderer.swapFramebuffers.current.colorAttachments[0]?.texture.props.format,
+    'rgba16float',
+    'current previous-chain texture keeps the requested HDR format'
+  );
+  t.equal(
+    renderer.swapFramebuffers.next.colorAttachments[0]?.texture.props.format,
+    'rgba16float',
+    'next previous-chain texture keeps the requested HDR format'
+  );
+
+  renderer.destroy();
+  t.end();
+});
 
 test('ShaderPassRenderer#renderToTexture', async t => {
   const devices = await getTestDevices();

@@ -70,6 +70,13 @@ export type {
   GBufferShaderPassBindings
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
+export type {DeferredLightingProps, DeferredPointLight} from './rendering/deferred-lighting';
+export {
+  createDeferredLightingShaderPassPipeline,
+  deferredLighting,
+  makeDeferredPointLightBufferData,
+  MAX_DEFERRED_POINT_LIGHTS
+} from './rendering/deferred-lighting';
 
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';

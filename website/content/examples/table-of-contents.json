@@ -94,6 +94,11 @@
       },
       {
         "type": "doc",
+        "id": "experimental/deferred-rendering",
+        "label": "Deferred Rendering: Material Lab"
+      },
+      {
+        "type": "doc",
         "id": "experimental/shadow-map",
         "label": "Effects: Shadow Map Quality"
       },

@@ -7,6 +7,7 @@ type ExperimentalDocsTab = {id: ExperimentalDocsTabId; label: string; href: stri
 export type ExperimentalDocsTabId =
   | 'overview'
   | 'g-buffer'
+  | 'deferred-lighting'
   | 'shadow-map-renderer'
   | 'a-buffer-renderer'
   | 'wboit-renderer';
@@ -14,6 +15,11 @@ export type ExperimentalDocsTabId =
 const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/experimental'},
   {id: 'g-buffer', label: 'GBuffer', href: '/docs/api-reference/experimental/g-buffer'},
+  {
+    id: 'deferred-lighting',
+    label: 'Deferred Lighting',
+    href: '/docs/api-reference/experimental/deferred-lighting'
+  },
   {
     id: 'shadow-map-renderer',
     label: 'ShadowMapRenderer',

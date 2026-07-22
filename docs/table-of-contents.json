@@ -181,6 +181,7 @@
         "items": [
           "api-reference/experimental/README",
           "api-reference/experimental/g-buffer",
+          "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/shadow-map-renderer",
           {
             "type": "category",
@@ -260,6 +261,7 @@
         "items": [
           "api-reference/experimental/README",
           "api-reference/experimental/g-buffer",
+          "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/shadow-map-renderer",
           {
             "type": "category",

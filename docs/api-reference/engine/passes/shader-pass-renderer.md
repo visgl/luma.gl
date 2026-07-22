@@ -146,9 +146,14 @@ in `shaderPasses`. `original` remains available for an intentional bypass of pre
 export type ShaderPassRendererProps = {
   shaderPasses: (ShaderPass | ShaderPassPipeline)[];
   shaderInputs?: ShaderInputs;
+  colorFormat?: TextureFormatColor;
   flipY?: boolean;
 };
 ```
+
+`colorFormat` controls the shared `previous` ping-pong textures and defaults to
+`device.preferredColorFormat`. Use `rgba16float` when HDR-producing passes must retain values
+above 1.0 until a later tone-mapping pass.
 
 `flipY` controls texture sampling in the fullscreen copies and every shader subpass. It defaults
 to `true` on WebGPU so framebuffer attachments retain a consistent top-left screen orientation

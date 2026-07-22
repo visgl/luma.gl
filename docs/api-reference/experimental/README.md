@@ -34,9 +34,13 @@ normal-roughness, velocity, and depth attachments used by depth-aware and tempor
 pipelines. It also exposes named extra MRT channels for application-specific lighting, material,
 picking, or debug data.
 
+[`deferredLighting`](/docs/api-reference/experimental/deferred-lighting) is a composable fullscreen
+consumer of those targets. It reconstructs view position from depth and resolves a directional
+light plus a fixed-capacity storage buffer of point lights from two named material attachments.
+
 The [Shader Passes guide](/docs/api-guide/shaders/shader-passes) explains how a scene render,
-`GBuffer` bindings, ordered `ShaderPassPipeline` effects, temporal history, and OIT resolve
-pipelines compose into one render stack.
+`GBuffer` bindings, deferred lighting, ordered `ShaderPassPipeline` effects, temporal history, and
+OIT resolve pipelines compose into one render stack.
 
 ## GPU Primitives and Command Graphs
 
