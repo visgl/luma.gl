@@ -75,6 +75,13 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
     const next = device.createFramebuffer({...props, colorAttachments});
 
     super({current, next});
+
+    for (const [index, colorAttachment] of (props.colorAttachments || []).entries()) {
+      if (typeof colorAttachment === 'string') {
+        current.attachResource(current.colorAttachments[index].texture);
+        next.attachResource(next.colorAttachments[index].texture);
+      }
+    }
   }
 
   /**
@@ -89,12 +96,24 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
     const {current, next} = this;
 
     this.current = current.clone(size);
+    attachFramebufferAttachments(this.current);
     current.destroy();
 
     this.next = next.clone(size);
+    attachFramebufferAttachments(this.next);
     next.destroy();
 
     return true;
+  }
+}
+
+/** Framebuffer.clone() creates fresh attachments that the replacement framebuffer must own. */
+function attachFramebufferAttachments(framebuffer: Framebuffer): void {
+  for (const colorAttachment of framebuffer.colorAttachments) {
+    framebuffer.attachResource(colorAttachment.texture);
+  }
+  if (framebuffer.depthStencilAttachment) {
+    framebuffer.attachResource(framebuffer.depthStencilAttachment.texture);
   }
 }
 

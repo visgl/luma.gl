@@ -742,7 +742,7 @@ function createRenderer(device: Device): ShaderPassRenderer {
     shaderPasses: [
       createClusteredDeferredLightingShaderPassPipeline(),
       createGTAOShaderPassPipeline(),
-      createSSRShaderPassPipeline({resolutionScale: 1}),
+      createSSRShaderPassPipeline(),
       deferredDisplayPipeline
     ],
     colorFormat: 'rgba16float',
