@@ -23,6 +23,7 @@ import {useEffect, useState} from 'preact/hooks';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
 const EXAMPLE_SETTINGS_PANEL_ATTRIBUTE = 'data-example-settings-panel';
+const EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE = 'data-example-settings-sections';
 const EXAMPLE_SOURCE_PANEL_ID = 'example-source';
 const EXAMPLES_PATH_PREFIX = '/examples/';
 const MODEL_SETTING_NAMES = new Set(['modelKind', 'renderMode']);
@@ -37,6 +38,18 @@ const EXAMPLE_PANEL_STYLE = `
 [id^='settings-panel-input-'][role='listbox'] > button[role='option'] {
   font-size: 15px !important;
 }
+[${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
+button[aria-expanded] {
+  margin-top: 4px !important;
+  padding: 10px 11px !important;
+  border-radius: 8px !important;
+  background: rgba(70, 104, 159, 0.08) !important;
+}
+[${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
+button[aria-expanded] > span:first-child > span:first-child {
+  font-size: 13px !important;
+  letter-spacing: 0.01em;
+}
 `;
 
 export type ExampleCustomPanelRenderer = (rootElement: HTMLElement) => void | (() => void);
@@ -46,6 +59,8 @@ export type ExampleSettingsPanelProps = {
   label?: string;
   schema: SettingsSchema;
   settings: SettingsState;
+  /** Keep sections visible as named accordion groups instead of flattening their controls. */
+  sectionPresentation?: 'inline' | 'accordion';
   onSettingsChange?: SettingsManagerOnChange;
   localStorageConfig?: SettingsManagerLocalStorageConfig;
 };
@@ -281,6 +296,7 @@ export class ExamplePanelManager {
 export class ExampleSettingsPanelManager {
   private readonly id: string;
   private readonly label: string;
+  private readonly sectionPresentation: 'inline' | 'accordion';
   private readonly settingsManager = new SettingsManager();
   private readonly unsubscribe: () => void;
   private schema: SettingsSchema;
@@ -291,11 +307,13 @@ export class ExampleSettingsPanelManager {
     label = 'Settings',
     schema,
     settings,
+    sectionPresentation = 'inline',
     onSettingsChange,
     localStorageConfig
   }: ExampleSettingsPanelProps) {
     this.id = id;
     this.label = label;
+    this.sectionPresentation = sectionPresentation;
     this.schema = schema;
     this.settings = settings;
     this.settingsManager.setLocalStoragePersistence(localStorageConfig);
@@ -331,6 +349,19 @@ export class ExampleSettingsPanelManager {
   }
 
   makePanel(): Panel {
+    if (this.sectionPresentation === 'accordion') {
+      return makeExampleSettingsPanel(
+        new SettingsPanel({
+          id: this.id,
+          label: this.label,
+          schema: this.schema,
+          settings: this.settings,
+          onSettingsChange: nextSettings => this.setSettingsFromPanel(nextSettings)
+        }),
+        this.sectionPresentation
+      );
+    }
+
     const [settingsPanel] = SettingsPanel.createSectionPanels({
       label: this.label,
       schema: makeInlineSettingsSchema(this.schema),
@@ -385,9 +416,19 @@ export function makeInlineSettingsSchema(schema: SettingsSchema): SettingsSchema
   };
 }
 
-function makeExampleSettingsPanel(panel: Panel): Panel {
+function makeExampleSettingsPanel(
+  panel: Panel,
+  sectionPresentation: 'inline' | 'accordion' = 'inline'
+): Panel {
   panel.setProps({
-    content: h('div', {[EXAMPLE_SETTINGS_PANEL_ATTRIBUTE]: ''}, panel.content)
+    content: h(
+      'div',
+      {
+        [EXAMPLE_SETTINGS_PANEL_ATTRIBUTE]: '',
+        [EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE]: sectionPresentation
+      },
+      panel.content
+    )
   });
   return panel;
 }

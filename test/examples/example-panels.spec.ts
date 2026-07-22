@@ -161,6 +161,73 @@ describe('ExampleSettingsPanelManager', () => {
     });
   });
 
+  test('preserves named effect sections as independently collapsible accordions', async () => {
+    document.body.innerHTML = makeExamplePanelHostHtml();
+    const settingsPanel = new ExampleSettingsPanelManager({
+      id: 'effect-settings',
+      sectionPresentation: 'accordion',
+      schema: {
+        title: 'Rendering Effects',
+        sections: [
+          {
+            id: 'lighting',
+            name: 'Clustered Deferred Lighting',
+            description: 'Hundreds of local lights.',
+            initiallyCollapsed: false,
+            settings: TEST_SETTINGS_SCHEMA.sections[0].settings
+          },
+          {
+            id: 'reflections',
+            name: 'Screen-space Reflections · SSR',
+            description: 'Temporally stabilized glossy reflections.',
+            initiallyCollapsed: true,
+            settings: [
+              {
+                name: 'reflectionsEnabled',
+                label: 'Enable Reflections',
+                type: 'boolean',
+                persist: 'none'
+              }
+            ]
+          }
+        ]
+      },
+      settings: {mode: 'alpha', reflectionsEnabled: true}
+    });
+    const panelManager = new ExamplePanelManager({panel: settingsPanel.makePanel()});
+    panelManager.mount();
+
+    try {
+      const sectionButtons = Array.from(
+        document.body.querySelectorAll('button[aria-expanded]')
+      ).filter(
+        button =>
+          button.textContent?.includes('Clustered Deferred Lighting') ||
+          button.textContent?.includes('Screen-space Reflections · SSR')
+      );
+      expect(sectionButtons.map(button => button.textContent)).toEqual([
+        expect.stringContaining('Clustered Deferred Lighting'),
+        expect.stringContaining('Screen-space Reflections · SSR')
+      ]);
+      expect(sectionButtons[0].getAttribute('aria-expanded')).toBe('true');
+      expect(sectionButtons[1].getAttribute('aria-expanded')).toBe('false');
+      expect(document.body.querySelector('[data-setting-row-for="reflectionsEnabled"]')).toBeNull();
+
+      sectionButtons[1].dispatchEvent(new MouseEvent('click', {bubbles: true}));
+      await Promise.resolve();
+
+      expect(sectionButtons[1].getAttribute('aria-expanded')).toBe('true');
+      expect(
+        document.body.querySelector('[data-setting-row-for="reflectionsEnabled"]')
+      ).toBeTruthy();
+      expect(sectionButtons[0].getAttribute('aria-expanded')).toBe('true');
+    } finally {
+      panelManager.finalize();
+      settingsPanel.finalize();
+      document.body.replaceChildren();
+    }
+  });
+
   test('puts Arrow model settings before other flattened settings', () => {
     const inlineSchema = makeInlineSettingsSchema({
       title: 'Settings',
