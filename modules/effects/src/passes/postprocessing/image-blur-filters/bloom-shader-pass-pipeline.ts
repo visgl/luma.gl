@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {Texture, TextureFormatColor} from '@luma.gl/core';
+import type {ShaderPass, ShaderPassPipeline, ShaderPassRenderTarget} from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
 
 const MAX_BLOOM_BLUR_RADIUS = 24;
@@ -18,6 +18,14 @@ type BloomTargetName =
   | 'extractEighth'
   | 'blurEighthScratch'
   | 'blurEighth';
+
+/** Construction options for HDR-capable multiscale bloom. */
+export type BloomShaderPassPipelineOptions = {
+  /** Fractional size multiplier applied to the half, quarter, and eighth-resolution pyramid. */
+  resolutionScale?: number;
+  /** Intermediate color format. Defaults to rgba16float to preserve HDR highlight energy. */
+  colorFormat?: TextureFormatColor;
+};
 
 const bloomExtractPass = {
   name: 'bloomExtract',
@@ -83,7 +91,7 @@ struct bloomBlurUniforms {
 @group(0) @binding(auto) var<uniform> bloomBlur: bloomBlurUniforms;
 
 fn bloomBlur_applySample(color: vec4f) -> vec4f {
-  return vec4f(color.rgb * vec3f(color.a), color.a);
+  return color;
 }
 
 fn bloomBlur_getEffectiveRadius() -> f32 {
@@ -147,10 +155,7 @@ fn bloomBlur_sampleColor(
     totalWeight += combinedWeight * 2.0;
   }
 
-  color /= totalWeight;
-  let unpremultipliedRgb = color.rgb / vec3f(color.a + 0.00001);
-
-  return vec4f(unpremultipliedRgb, color.a);
+  return color / totalWeight;
 }
 `,
   fs: /* glsl */ `
@@ -163,7 +168,7 @@ layout(std140) uniform bloomBlurUniforms {
 } bloomBlur;
 
 vec4 bloomBlur_applySample(vec4 color) {
-  return vec4(color.rgb * color.a, color.a);
+  return color;
 }
 
 float bloomBlur_getEffectiveRadius() {
@@ -214,10 +219,7 @@ vec4 bloomBlur_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord)
     totalWeight += combinedWeight * 2.0;
   }
 
-  color /= totalWeight;
-  color.rgb /= color.a + 0.00001;
-
-  return color;
+  return color / totalWeight;
 }
 `,
   uniformTypes: {
@@ -395,3 +397,30 @@ export const bloomShaderPassPipeline = {
     }
   ]
 } as const satisfies ShaderPassPipeline<BloomTargetName>;
+
+/** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
+export function createBloomShaderPassPipeline(
+  options: BloomShaderPassPipelineOptions = {}
+): ShaderPassPipeline<BloomTargetName> {
+  const resolutionScale = options.resolutionScale ?? 1;
+  const colorFormat = options.colorFormat ?? 'rgba16float';
+  const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
+    scale: [scale * resolutionScale, scale * resolutionScale],
+    format: colorFormat
+  });
+
+  return {
+    ...bloomShaderPassPipeline,
+    renderTargets: {
+      extractHalf: makeRenderTarget(0.5),
+      blurHalfScratch: makeRenderTarget(0.5),
+      blurHalf: makeRenderTarget(0.5),
+      extractQuarter: makeRenderTarget(0.25),
+      blurQuarterScratch: makeRenderTarget(0.25),
+      blurQuarter: makeRenderTarget(0.25),
+      extractEighth: makeRenderTarget(0.125),
+      blurEighthScratch: makeRenderTarget(0.125),
+      blurEighth: makeRenderTarget(0.125)
+    }
+  };
+}

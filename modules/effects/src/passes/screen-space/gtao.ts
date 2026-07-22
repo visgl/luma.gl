@@ -9,7 +9,7 @@ import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for the horizon-based GTAO pipeline. */
 export type GTAOShaderPassPipelineOptions = {
-  /** Fractional AO evaluation resolution. Defaults to half resolution. */
+  /** Fractional AO evaluation, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
 
@@ -365,7 +365,7 @@ export function createGTAOShaderPassPipeline(
 ): ShaderPassPipeline<
   'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
 > {
-  const scale = options.resolutionScale || 0.5;
+  const scale = options.resolutionScale ?? 1;
   return {
     name: 'gtaoShaderPassPipeline',
     renderTargets: {

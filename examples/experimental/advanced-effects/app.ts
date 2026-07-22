@@ -204,6 +204,7 @@ const DEFAULT_SETTINGS: AdvancedEffectsSettings = {
 const ADVANCED_EFFECTS_BACKGROUND_HTML = `
 <p><b>Hybrid render stack:</b> the city first writes a shared G-buffer with scene color, depth, normals, and velocity. Shadow maps handle geometric visibility from directional, spot, and point lights; screen-space passes then reuse the same buffers for contact shadows, ambient occlusion, reflections, fog, outlines, temporal antialiasing, and motion blur.</p>
 <p><b>Why this is composable:</b> each fullscreen effect declares the textures it reads and writes into an ordered <code>ShaderPassPipeline</code>. Effects can be toggled or reordered without changing the scene draw, while depth/normal/velocity-aware passes avoid treating the image as a flat bitmap.</p>
+<p><b>Visualization City vs. Illumination Lab:</b> this is the breadth-first showcase for cascaded, spot, point, and contact shadows plus SSAO, simple height fog, outlines, temporal AA, and motion blur. <b>Deferred Illumination Lab</b> goes deeper into deferred Cook-Torrance materials, hundreds of clustered lights, GTAO, colored diffuse bounce, and participating-media scattering. Both examples reuse the same screen-space reflection pipeline; they are not competing copies of SSR.</p>
 <p><b>Where the GPU work goes:</b> shadow maps trade extra light-view geometry passes for stable long-range occlusion. Screen-space effects trade texture bandwidth and fullscreen pixels for details that would be expensive to model with more scene geometry or rays. TAA and motion blur additionally consume frame history and velocity.</p>
 <p><b>What to watch:</b> debug views expose the intermediate contracts. The comparison split shows the cost/quality boundary between the base draw and the composed stack.</p>
 `;
@@ -537,6 +538,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'advanced-effects-settings',
       schema: makeSettingsSchema(),
       settings: this.settings,
+      sectionPresentation: 'accordion',
       onSettingsChange: this.handleSettingsChange
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
@@ -767,7 +769,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'advanced-effects-description',
           title: 'Overview',
-          html: '<p><b>Hybrid shadows + screen-space rendering</b></p><p>Drag the divider to compare the unshadowed city with cascaded sun, spot, point, and contact shadows followed by SSAO, SSR, fog, outlines, TAA, and motion blur.</p>'
+          html: '<p><b>Hybrid shadows + composable screen-space effects.</b></p><p>Drag the divider to compare the unshadowed city with cascaded sun, spot, point, and contact shadows followed by SSAO, shared SSR, height fog, outlines, TAA, and motion blur.</p><p><b>Why this is different:</b> Visualization City emphasizes effect breadth and geometric shadows. Visit <b>Deferred Illumination Lab</b> for clustered deferred lighting, higher-quality GTAO, colored global illumination, glossy reflections, and volumetric light transport.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -932,11 +934,12 @@ function makeSettingsSchema(): SettingsSchema {
     persist: 'none' as const
   });
   return {
-    title: 'Advanced Effects',
+    title: 'Visualization Effects',
     sections: [
       {
         id: 'presentation',
-        name: 'Presentation',
+        name: 'Scene & Comparison',
+        description: 'Choose a preset and compare the base scene against the effect stack.',
         initiallyCollapsed: false,
         settings: [
           {
@@ -945,13 +948,6 @@ function makeSettingsSchema(): SettingsSchema {
             type: 'select',
             persist: 'none',
             options: Object.keys(PRESETS)
-          },
-          {
-            name: 'shadowQuality',
-            label: 'Shadow Quality',
-            type: 'select',
-            persist: 'none',
-            options: Object.keys(SHADOW_QUALITY_SCALE)
           },
           {
             name: 'debugView',
@@ -986,29 +982,78 @@ function makeSettingsSchema(): SettingsSchema {
         ]
       },
       {
-        id: 'shadows',
-        name: 'Hybrid Shadows',
-        initiallyCollapsed: false,
+        id: 'shadow-maps',
+        name: 'Cascaded & Local Shadow Maps',
+        description: 'Directional cascades, moving spotlights, and point-light shadows.',
+        initiallyCollapsed: true,
         settings: [
+          {
+            name: 'shadowQuality',
+            label: 'Shadow Quality',
+            type: 'select',
+            persist: 'none',
+            options: Object.keys(SHADOW_QUALITY_SCALE)
+          },
           toggle('directionalShadowsEnabled', 'Directional Cascades'),
           toggle('spotShadowsEnabled', 'Moving Spotlight'),
-          toggle('pointShadowsEnabled', 'Neon Point Light'),
-          toggle('contactShadowsEnabled', 'Contact Refinement')
+          toggle('pointShadowsEnabled', 'Neon Point Light')
         ]
       },
       {
-        id: 'effects',
-        name: 'Effect Stack',
-        initiallyCollapsed: false,
-        settings: [
-          toggle('ssaoEnabled', 'SSAO'),
-          toggle('depthBlurEnabled', 'Depth-aware Blur'),
-          toggle('ssrEnabled', 'Screen-space Reflections'),
-          toggle('fogEnabled', 'Volumetric Fog'),
-          toggle('outlinesEnabled', 'Outlines'),
-          toggle('taaEnabled', 'Temporal AA'),
-          toggle('motionBlurEnabled', 'Motion Blur')
-        ]
+        id: 'contact-shadows',
+        name: 'Screen-space Contact Shadows',
+        description: 'Recover fine shadow detail beside visible geometry.',
+        initiallyCollapsed: true,
+        settings: [toggle('contactShadowsEnabled', 'Enable Contact Shadows')]
+      },
+      {
+        id: 'ambient-occlusion',
+        name: 'Ambient Occlusion · SSAO',
+        description: 'Low-cost screen-space contact darkening.',
+        initiallyCollapsed: true,
+        settings: [toggle('ssaoEnabled', 'Enable Ambient Occlusion')]
+      },
+      {
+        id: 'reflections',
+        name: 'Screen-space Reflections · SSR',
+        description: 'The same reusable reflection pipeline as Illumination Lab.',
+        initiallyCollapsed: true,
+        settings: [toggle('ssrEnabled', 'Enable Reflections')]
+      },
+      {
+        id: 'atmosphere',
+        name: 'Volumetric Height Fog',
+        description: 'Compact atmospheric depth and stylized directional glow.',
+        initiallyCollapsed: true,
+        settings: [toggle('fogEnabled', 'Enable Height Fog')]
+      },
+      {
+        id: 'outlines',
+        name: 'Depth & Normal Outlines',
+        description: 'Emphasize geometry silhouettes and hard surface edges.',
+        initiallyCollapsed: true,
+        settings: [toggle('outlinesEnabled', 'Enable Outlines')]
+      },
+      {
+        id: 'temporal-antialiasing',
+        name: 'Temporal Antialiasing · TAA',
+        description: 'Stabilize subpixel edges using motion and frame history.',
+        initiallyCollapsed: true,
+        settings: [toggle('taaEnabled', 'Enable Temporal AA')]
+      },
+      {
+        id: 'motion-blur',
+        name: 'Velocity Motion Blur',
+        description: 'Follow the motion vectors captured in the G-buffer.',
+        initiallyCollapsed: true,
+        settings: [toggle('motionBlurEnabled', 'Enable Motion Blur')]
+      },
+      {
+        id: 'depth-aware-blur',
+        name: 'Depth-aware Blur',
+        description: 'Bilateral smoothing that preserves geometric boundaries.',
+        initiallyCollapsed: true,
+        settings: [toggle('depthBlurEnabled', 'Enable Depth-aware Blur')]
       }
     ]
   };

@@ -52,7 +52,11 @@ export type {
   BloomUniforms
 } from './passes/postprocessing/image-blur-filters/bloom';
 export {bloom} from './passes/postprocessing/image-blur-filters/bloom';
-export {bloomShaderPassPipeline} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
+export type {BloomShaderPassPipelineOptions} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
+export {
+  bloomShaderPassPipeline,
+  createBloomShaderPassPipeline
+} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
 export type {
   DofProps,
   DofUniforms
@@ -116,11 +120,27 @@ export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-f
 export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
 
 // Screen-space effects
+export type {ClusteredVolumetricLightingShaderPassPipelineOptions} from './passes/screen-space/clustered-volumetric-lighting';
+export {
+  clusteredVolumetricComposite,
+  clusteredVolumetricDepthHistoryCopy,
+  clusteredVolumetricTemporal,
+  clusteredVolumetricTrace,
+  createClusteredVolumetricLightingShaderPassPipeline
+} from './passes/screen-space/clustered-volumetric-lighting';
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
   depthAwareBlur,
   depthAwareBlurShaderPassPipeline
 } from './passes/screen-space/depth-aware-blur';
+export type {HDRAutoExposureShaderPassPipelineOptions} from './passes/screen-space/hdr-auto-exposure';
+export {
+  createHDRAutoExposureShaderPassPipeline,
+  hdrAutoExposureAdapt,
+  hdrAutoExposureApply,
+  hdrLuminanceExtract,
+  hdrLuminanceReduce
+} from './passes/screen-space/hdr-auto-exposure';
 export {createMotionBlurShaderPassPipeline} from './passes/screen-space/motion-blur';
 export type {GTAOShaderPassPipelineOptions} from './passes/screen-space/gtao';
 export {

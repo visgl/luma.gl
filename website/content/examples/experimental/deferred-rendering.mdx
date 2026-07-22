@@ -18,12 +18,35 @@ import {DeferredRenderingExample} from '@site/src/examples';
     view position from depth and resolves a directional light plus hundreds of compute-clustered
     storage-buffer point lights in one fullscreen pass. Temporally stabilized GTAO grounds the
     contacts, diffuse screen-space global illumination transfers colored light between surfaces,
-    and stochastic reflections bounce the animated scene across polished floors, chrome accents,
-    and glossy-to-mirror materials.
+    stochastic reflections bounce the animated scene across polished floors, and clustered
+    participating media turns the same point lights and sun into colored atmospheric halos and
+    depth-occluded crepuscular god rays. GPU-driven adaptive exposure and floating-point
+    multiscale bloom finish the scene without clipping its brightest highlights.
   </div>
 </ExampleHeader>
 
 <DeferredRenderingExample />
+
+Open **Illumination Effects** to inspect the actual render-stack stages through separate
+accordions for clustered deferred lighting, GTAO, diffuse global illumination, screen-space
+reflections, clustered volumetric scattering, and crepuscular god rays. Expand a section to
+adjust its quality, transport, or temporal-history controls without scrolling through one
+flattened settings list. Dedicated **Adaptive HDR Exposure** and **Cinematic HDR Bloom** sections
+make the camera response and highlight pyramid independently inspectable.
+Each effect starts with a full-resolution framebuffer; lower **Buffer Resolution** inside an
+individual section when reduced GPU cost is more important than edge fidelity.
+
+## Why This Is Not Visualization City
+
+Illumination Lab prioritizes physically based deferred light transport: one G-buffer feeds
+compute-clustered direct lighting, GTAO, diffuse global illumination, shared screen-space
+reflections, and light-driven atmospheric scattering.
+
+[Effects: Visualization City](/examples/experimental/advanced-effects) instead demonstrates a
+broader hybrid effects stack, including cascaded, spot, point, and contact shadows; lower-cost
+SSAO; simple height fog; outlines; temporal AA; and motion blur. The two examples intentionally
+share the same SSR implementation rather than duplicating a "standard" and an "advanced"
+reflection effect.
 
 ## What to inspect
 
@@ -44,7 +67,9 @@ import {DeferredRenderingExample} from '@site/src/examples';
   denoised, temporally reprojected GTAO visibility buffer. **Indirect Lighting** isolates diffuse
   bounced HDR radiance, and **Bounce Confidence** exposes visible hemisphere-ray coverage.
   **Reflections** isolates reflected HDR radiance, while **Reflection Confidence** makes
-  screen-edge and roughness falloff visible.
+  screen-edge and roughness falloff visible. **Volumetric Lighting** isolates colored
+  participating-media in-scattering, **Volume Transmittance** exposes atmospheric extinction,
+  and **God Rays** isolates the depth-occluded directional shafts.
 - Raise **GTAO Radius** to make larger-scale creases visible, then use **GTAO Intensity** and
   **GTAO Strength** to separate visibility estimation from how strongly it affects lit color.
 - Tune **Bounce Radius**, **Bounce Intensity**, **Bounce Strength**, **Bounce Rays**, and
@@ -53,6 +78,17 @@ import {DeferredRenderingExample} from '@site/src/examples';
 - Adjust **SSR Strength**, **SSR Intensity**, **SSR Distance**, and **SSR Samples** to compare
   mirror-sharp hits against rough glossy lobes. **SSR History** shows the temporal trade-off
   between responsive animated highlights and stable low-noise reflections.
+- Adjust **Fog Density**, **Height Falloff**, **Light Halos**, **Sun Shafts**, and
+  **Scattering Direction** to distinguish height-based extinction, clustered point-light
+  scattering, directional occlusion, and anisotropic phase response. **Volume History** controls
+  atmospheric temporal stability.
+- Expand **Crepuscular God Rays** and adjust **Ray Intensity**, **Ray Reach**, **Ray Persistence**,
+  **Ray Samples**, and **Sun Position** to reveal radial sunlight shafts behind visible occluders.
+- Select **HDR Luminance** to inspect the logarithmic scene-luminance heat map. Tune **Middle
+  Gray**, adaptation speeds, and exposure limits to watch the virtual camera respond to changing
+  lighting.
+- Adjust **Highlight Threshold**, **Glow Intensity**, and **Glow Radius** to spread emissive and
+  specular highlights across a floating-point multiscale bloom pyramid without clipping HDR color.
 
 ## Render stack
 
@@ -68,7 +104,7 @@ velocity, and depth channels plus two named material extras:
 screen/log-depth grid. `createClusteredDeferredLightingShaderPassPipeline()` then reads those
 material targets plus the current pixel's bounded cluster list, reconstructs view-space position
 from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back into the normal
-ordered shader-pass chain. `createGTAOShaderPassPipeline()` then performs a half-resolution
+ordered shader-pass chain. `createGTAOShaderPassPipeline()` then performs a configurable-resolution
 horizon search over the unchanged depth and view-normal attachments, reprojects the previous AO
 result through the velocity buffer, rejects disocclusions with depth history, and applies a
 depth-aware separable blur before compositing ambient visibility into lit color.
@@ -79,8 +115,17 @@ diffuse bounce.
 `createSSRShaderPassPipeline()` then launches roughness-jittered reflection rays into the lit
 scene, reprojects reflection history through G-buffer velocity, rejects depth disocclusions,
 applies a roughness-adaptive depth/normal-aware blur, and adds the result back into `previous`.
-A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection
-debug view.
+`createClusteredVolumetricLightingShaderPassPipeline()` then integrates real clustered point
+lights and occluded directional light through exponential height fog, applies Beer-Lambert
+extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
+sun for crepuscular god rays, stabilizes configurable-resolution in-scattering with
+velocity/depth history, and composites the participating medium over the existing opaque result.
+`createHDRAutoExposureShaderPassPipeline()` builds a center-weighted logarithmic luminance
+pyramid, adapts a persistent GPU exposure target without CPU readback, and applies the current
+camera response. `createBloomShaderPassPipeline()` then extracts, blurs, and combines bright
+highlights across three `rgba16float` scales.
+A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection/
+volume debug view.
 
 The point-light positions are transformed to view space on the CPU and packed with
 `makeDeferredPointLightBufferData()` into two `vec4f` records per light:

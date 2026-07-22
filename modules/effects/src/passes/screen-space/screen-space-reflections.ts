@@ -8,7 +8,7 @@ import type {NumberArray16} from '@math.gl/core';
 
 /** Construction options for temporally stabilized screen-space reflections. */
 export type SSRShaderPassPipelineOptions = {
-  /** Fractional ray-tracing, history, and denoising resolution. Defaults to half resolution. */
+  /** Fractional ray-tracing, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
 
@@ -118,7 +118,8 @@ fn ssrTrace_sampleColor(
   let normal = normalize(normalRoughness.xyz * 2.0 - 1.0);
   let roughness = clamp(normalRoughness.a, 0.0, 1.0);
   let centerDepth = textureSampleLevel(depthTexture, depthTextureSampler, sceneCoord, 0);
-  if (centerDepth >= 0.99999 || roughness >= ssrTrace.maxRoughness) {
+  if (centerDepth >= 0.99999 || roughness >= ssrTrace.maxRoughness ||
+      ssrTrace.intensity <= 0.0001) {
     return vec4f(0.0);
   }
 
@@ -608,7 +609,7 @@ export function createSSRShaderPassPipeline(
 ): ShaderPassPipeline<
   'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection'
 > {
-  const scale = options.resolutionScale || 0.5;
+  const scale = options.resolutionScale ?? 1;
   return {
     name: 'ssrShaderPassPipeline',
     renderTargets: {

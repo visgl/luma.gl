@@ -9,6 +9,7 @@ import {depthHelpers} from './screen-space-shader-helpers';
 
 export type SSAOShaderPassPipelineOptions = {
   normalSource?: 'reconstruct-from-depth' | 'normal-texture';
+  /** Fractional intermediate framebuffer resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
 
@@ -99,7 +100,7 @@ export const ssaoEvaluate = {
 export function createSSAOShaderPassPipeline(
   options: SSAOShaderPassPipelineOptions = {}
 ): ShaderPassPipeline<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
-  const scale = options.resolutionScale || 0.5;
+  const scale = options.resolutionScale ?? 1;
   const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
   const evaluateInputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
   if (!useNormalTexture) {
