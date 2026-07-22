@@ -485,7 +485,7 @@ class InstancedSurfaceModel {
   }
 }
 
-/** WebGPU-only material laboratory for G-buffer deferred lighting. */
+/** WebGPU-only illumination laboratory for deferred material and light transport. */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
@@ -769,7 +769,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private makePanel(): Panel {
     return makeExampleTabbedPanel({
       id: 'deferred-rendering-tabs',
-      title: 'Deferred Material Lab',
+      title: 'Deferred Illumination Lab',
       panels: [
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
@@ -801,7 +801,7 @@ function createRenderer(device: Device): ShaderPassRenderer {
       createClusteredDeferredLightingShaderPassPipeline(),
       createGTAOShaderPassPipeline(),
       createSSGIShaderPassPipeline(),
-      createSSRShaderPassPipeline(),
+      createSSRShaderPassPipeline({resolutionScale: 0.75}),
       deferredDisplayPipeline
     ],
     colorFormat: 'rgba16float',

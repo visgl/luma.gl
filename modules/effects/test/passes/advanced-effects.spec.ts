@@ -279,6 +279,11 @@ test('advanced effects compose in order with existing effects', async testCase =
       'SSR history receives scene velocity'
     );
     testCase.ok(hasBinding('ssrSpatial', 'normalTexture'), 'SSR denoising receives scene normals');
+    testCase.ok(hasBinding('ssrComposite', 'depthTexture'), 'SSR upsampling preserves depth edges');
+    testCase.ok(
+      hasBinding('ssrComposite', 'normalTexture'),
+      'SSR upsampling preserves surface-normal edges'
+    );
     testCase.notOk(
       hasBinding('bloomExtract', 'velocityTexture'),
       'bloom does not receive scene velocity'

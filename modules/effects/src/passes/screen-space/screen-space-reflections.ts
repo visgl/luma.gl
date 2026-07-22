@@ -57,6 +57,12 @@ type SSRSpatialBindings = {
   normalTexture?: Texture;
 };
 
+type SSRCompositeBindings = {
+  reflectionTexture?: Texture;
+  depthTexture?: Texture;
+  normalTexture?: Texture;
+};
+
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
 /** Stochastically traces roughness-aware reflection rays through G-buffer depth. */
@@ -504,6 +510,57 @@ struct SSRCompositeUniforms {
 @group(0) @binding(auto) var<uniform> ssrComposite: SSRCompositeUniforms;
 @group(0) @binding(auto) var reflectionTexture: texture_2d<f32>;
 @group(0) @binding(auto) var reflectionTextureSampler: sampler;
+@group(0) @binding(auto) var depthTexture: texture_depth_2d;
+@group(0) @binding(auto) var depthTextureSampler: sampler;
+@group(0) @binding(auto) var normalTexture: texture_2d<f32>;
+@group(0) @binding(auto) var normalTextureSampler: sampler;
+
+fn ssrComposite_upsampleReflection(texCoord: vec2f) -> vec4f {
+  let reflectionSize = vec2f(textureDimensions(reflectionTexture));
+  let reflectionPosition = texCoord * reflectionSize - vec2f(0.5);
+  let reflectionBase = vec2i(floor(reflectionPosition));
+  let reflectionFraction = fract(reflectionPosition);
+  let centerDepth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
+  if (centerDepth >= 0.99999) {
+    return textureSampleLevel(reflectionTexture, reflectionTextureSampler, texCoord, 0);
+  }
+  let centerNormal = normalize(
+    textureSampleLevel(normalTexture, normalTextureSampler, texCoord, 0).rgb * 2.0 - 1.0
+  );
+
+  var reflection = vec4f(0.0);
+  var totalWeight = 0.0;
+  for (var sampleY: i32 = 0; sampleY <= 1; sampleY++) {
+    for (var sampleX: i32 = 0; sampleX <= 1; sampleX++) {
+      let reflectionPixel = clamp(
+        reflectionBase + vec2i(sampleX, sampleY),
+        vec2i(0),
+        vec2i(reflectionSize) - vec2i(1)
+      );
+      let sampleCoord = (vec2f(reflectionPixel) + vec2f(0.5)) / reflectionSize;
+      let sampleDepth = textureSampleLevel(depthTexture, depthTextureSampler, sampleCoord, 0);
+      let sampleNormal = normalize(
+        textureSampleLevel(normalTexture, normalTextureSampler, sampleCoord, 0).rgb * 2.0 - 1.0
+      );
+      let horizontalWeight = select(
+        1.0 - reflectionFraction.x,
+        reflectionFraction.x,
+        sampleX == 1
+      );
+      let verticalWeight = select(
+        1.0 - reflectionFraction.y,
+        reflectionFraction.y,
+        sampleY == 1
+      );
+      let depthWeight = exp(-abs(sampleDepth - centerDepth) * 140.0);
+      let normalWeight = pow(max(dot(centerNormal, sampleNormal), 0.0), 12.0);
+      let weight = horizontalWeight * verticalWeight * depthWeight * normalWeight;
+      reflection += textureLoad(reflectionTexture, reflectionPixel, 0) * weight;
+      totalWeight += weight;
+    }
+  }
+  return reflection / max(totalWeight, 0.00001);
+}
 
 fn ssrComposite_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -512,7 +569,7 @@ fn ssrComposite_sampleColor(
   texCoord: vec2f
 ) -> vec4f {
   let color = textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0);
-  let reflection = textureSampleLevel(reflectionTexture, reflectionTextureSampler, texCoord, 0);
+  let reflection = ssrComposite_upsampleReflection(texCoord);
   if (ssrComposite.debugMode > 1.5) {
     let confidence = clamp(reflection.a, 0.0, 1.0);
     let lowConfidence = vec3f(0.045, 0.08, 0.22);
@@ -525,16 +582,25 @@ fn ssrComposite_sampleColor(
   let reflectionWeight = clamp(reflection.a * ssrComposite.strength, 0.0, 1.0);
   return vec4f(color.rgb + reflection.rgb * reflectionWeight, color.a);
 }`,
-  bindingLayout: [{name: 'reflectionTexture', group: 0}],
-  props: {} as Partial<SSRCompositeUniforms>,
+  bindingLayout: [
+    {name: 'reflectionTexture', group: 0},
+    {name: 'depthTexture', group: 0},
+    {name: 'normalTexture', group: 0}
+  ],
+  props: {} as Partial<SSRCompositeUniforms> & SSRCompositeBindings,
   uniforms: {} as SSRCompositeUniforms,
+  bindings: {} as SSRCompositeBindings,
   uniformTypes: {strength: 'f32', debugMode: 'f32'},
   propTypes: {
     strength: {value: 1, min: 0, softMax: 2},
     debugMode: {value: 0, min: 0, max: 2, private: true}
   },
   passes: [{sampler: true}]
-} as const satisfies ShaderPass<Partial<SSRCompositeUniforms>, SSRCompositeUniforms>;
+} as const satisfies ShaderPass<
+  Partial<SSRCompositeUniforms> & SSRCompositeBindings,
+  SSRCompositeUniforms,
+  SSRCompositeBindings
+>;
 
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
 export function createSSRShaderPassPipeline(

@@ -962,7 +962,7 @@ export const AdvancedEffectsExample: React.FC = props => (
 export const DeferredRenderingExample: React.FC = props => (
   <LumaExample
     id="deferred-rendering"
-    title="Deferred Rendering: Material Lab"
+    title="Deferred Rendering: Illumination Lab"
     directory="experimental"
     template={DeferredRenderingApp}
     config={exampleConfig}

@@ -27,6 +27,24 @@ whether its cost scales with scene geometry, visible pixels, light count, or tem
 | Fast transparent layering | `WBOITRenderer` | Use `ABufferRenderer` when exact fragment ordering is more important. | Weighted blending approximates heavily overlapping transparent layers. |
 | Broad cinematic glow | `bloomShaderPassPipeline` | Keep the single `bloom` pass for simpler, cheaper glow. | Bloom operates on color; it is not reflected lighting or global illumination. |
 
+## Example Profiles: Visualization City Versus Illumination Lab
+
+The two WebGPU showcases emphasize different rendering problems; they are not independent
+implementations of the same effect catalog.
+
+| | Visualization City | Deferred Illumination Lab |
+| --- | --- | --- |
+| Main purpose | Demonstrate a broad, switchable hybrid shadow/effect stack on recognizable city geometry. | Inspect physically based materials and advanced direct, diffuse-indirect, and specular light transport. |
+| Direct-light strategy | Scene shading with directional, spot, and point-light shadow maps. | Deferred Cook-Torrance shading with hundreds of compute-clustered point lights. |
+| Ambient visibility | Lower-cost SSAO and optional screen-space contact shadows. | Temporally stabilized horizon-based GTAO. |
+| Indirect diffuse light | Not included. | Cosine-weighted, temporally stabilized screen-space global illumination. |
+| Reflections | Shared `createSSRShaderPassPipeline()`, tuned by city quality presets. | The **same** SSR pipeline, tuned for polished materials and edge-aware upsampling. |
+| Other strengths | Cascaded shadows, split comparisons, outlines, fog, temporal AA, and motion blur. | Roughness/metalness inspection, light clustering, emissive color bleeding, and transport-confidence diagnostics. |
+
+Visualization City is therefore broader in shadow and presentation effects, while Illumination
+Lab goes deeper into deferred shading and higher-order light transport. Shared techniques such
+as SSR remain composable, reusable implementations rather than duplicated algorithms.
+
 ## Reflections: Environment Maps Versus Screen-Space Rays
 
 The two reflection mechanisms answer different questions.
@@ -56,14 +74,15 @@ hardware ray-tracing pipeline. Neither should be confused with the implemented S
 ### One SSR Implementation, Multiple Examples
 
 [Effects: Visualization City](/examples/experimental/advanced-effects) and
-[Deferred Rendering: Material Lab](/examples/experimental/deferred-rendering) use the **same**
+[Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering) use the **same**
 exported `createSSRShaderPassPipeline()`. They are examples of one implementation in different
 render stacks, not competing copies of the reflection algorithm.
 
 - Visualization City selects approximately 35%, 50%, or 100% tracing resolution from its quality
   preset and combines reflections with light-space shadows, SSAO, fog, and temporal AA.
-- Material Lab traces at full resolution to showcase polished floors, chrome accents, roughness
-  variation, reflection-confidence diagnostics, and clustered animated lights.
+- Illumination Lab traces at 75% resolution and uses depth/normal-aware upsampling to showcase
+  polished floors, chrome accents, roughness variation, reflection-confidence diagnostics, and
+  clustered animated lights without paying the full-resolution tracing cost.
 - `ssrTrace`, `ssrTemporal`, `ssrDepthHistoryCopy`, `ssrSpatial`, and `ssrComposite` are the
   reusable stages of that same pipeline, exposed for applications that need custom composition.
 
@@ -249,4 +268,4 @@ camera matrices, and presentation. `GBuffer` standardizes surface attachments, w
 For the underlying execution model, see [Shader Passes](/docs/api-guide/shaders/shader-passes).
 For complete live stacks, compare
 [Effects: Visualization City](/examples/experimental/advanced-effects) and
-[Deferred Rendering: Material Lab](/examples/experimental/deferred-rendering).
+[Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering).

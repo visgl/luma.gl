@@ -213,7 +213,7 @@ effects without creating a second postprocessing system.
 The [Advanced Effects example](/examples/experimental/advanced-effects) shows the full MRT surface
 pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug views.
 
-The [Deferred Material Lab](/examples/experimental/deferred-rendering) shows one five-target
+The [Deferred Illumination Lab](/examples/experimental/deferred-rendering) shows one five-target
 geometry pass feeding clustered directional/point lighting, temporally stabilized GTAO,
 diffuse screen-space global illumination, roughness-aware screen-space reflections, tone mapping,
 and direct G-buffer/AO/bounce/reflection debug views.

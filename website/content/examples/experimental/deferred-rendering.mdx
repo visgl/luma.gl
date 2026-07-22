@@ -1,5 +1,5 @@
 ---
-title: 'Deferred Rendering: Material Lab'
+title: 'Deferred Rendering: Illumination Lab'
 sidebar_custom_props:
   backends: [webgpu]
 ---
@@ -9,12 +9,12 @@ import {DeferredRenderingExample} from '@site/src/examples';
 
 <ExampleHeader
   id="deferred-rendering"
-  title="Deferred Rendering: Material Lab"
+  title="Deferred Rendering: Illumination Lab"
   directory="experimental"
   devices={['webgpu']}
 >
   <div>
-    A WebGPU-only material laboratory that writes five surface targets once, then reconstructs
+    A WebGPU-only illumination laboratory that writes five surface targets once, then reconstructs
     view position from depth and resolves a directional light plus hundreds of compute-clustered
     storage-buffer point lights in one fullscreen pass. Temporally stabilized GTAO grounds the
     contacts, diffuse screen-space global illumination transfers colored light between surfaces,
