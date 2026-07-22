@@ -167,45 +167,47 @@ fn ssrTrace_sampleColor(
     let depthDelta = (-rayPosition.z) - (-scenePosition.z);
     let rayStepLength = max(travel - previousTravel, 0.001);
     let hitThickness = max(ssrTrace.thickness, rayStepLength * 1.2) + travel * 0.008;
-    let candidateNormal = normalize(
-      textureSampleLevel(normalTexture, normalTextureSampler, sampleCoord, 0).rgb * 2.0 - 1.0
-    );
-    let entersCandidateSurface = dot(reflectedRay, candidateNormal) < -0.015;
     let crossesCandidateSurface = previousDepthDelta <= 0.0 && depthDelta >= 0.0;
     let screenTravelPixels = length((sampleCoord - sceneCoord) * texSize);
-    if (crossesCandidateSurface && depthDelta < hitThickness &&
-        entersCandidateSurface && screenTravelPixels > 1.25) {
-      var nearTravel = previousTravel;
-      var farTravel = travel;
-      var hitCoord = sampleCoord;
-      for (var refinementIndex: i32 = 0; refinementIndex < 5; refinementIndex++) {
-        let refinedTravel = (nearTravel + farTravel) * 0.5;
-        let refinedPosition = rayOrigin + reflectedRay * refinedTravel;
-        let refinedCoord = ssrTrace_projectViewPosition(refinedPosition);
-        let refinedDepth = textureSampleLevel(depthTexture, depthTextureSampler, refinedCoord, 0);
-        let refinedScenePosition = ssrTrace_reconstructViewPosition(refinedCoord, refinedDepth);
-        if ((-refinedPosition.z) - (-refinedScenePosition.z) >= 0.0) {
-          farTravel = refinedTravel;
-          hitCoord = refinedCoord;
-        } else {
-          nearTravel = refinedTravel;
+    var entersCandidateSurface = true;
+    if (crossesCandidateSurface && depthDelta < hitThickness && screenTravelPixels > 1.25) {
+      let candidateNormal = normalize(
+        textureSampleLevel(normalTexture, normalTextureSampler, sampleCoord, 0).rgb * 2.0 - 1.0
+      );
+      entersCandidateSurface = dot(reflectedRay, candidateNormal) < -0.015;
+      if (entersCandidateSurface) {
+        var nearTravel = previousTravel;
+        var farTravel = travel;
+        var hitCoord = sampleCoord;
+        for (var refinementIndex: i32 = 0; refinementIndex < 5; refinementIndex++) {
+          let refinedTravel = (nearTravel + farTravel) * 0.5;
+          let refinedPosition = rayOrigin + reflectedRay * refinedTravel;
+          let refinedCoord = ssrTrace_projectViewPosition(refinedPosition);
+          let refinedDepth = textureSampleLevel(depthTexture, depthTextureSampler, refinedCoord, 0);
+          let refinedScenePosition = ssrTrace_reconstructViewPosition(refinedCoord, refinedDepth);
+          if ((-refinedPosition.z) - (-refinedScenePosition.z) >= 0.0) {
+            farTravel = refinedTravel;
+            hitCoord = refinedCoord;
+          } else {
+            nearTravel = refinedTravel;
+          }
         }
+        reflection = textureSampleLevel(sourceTexture, sourceTextureSampler, hitCoord, 0).rgb;
+        let screenEdge = min(
+          min(hitCoord.x, hitCoord.y),
+          min(1.0 - hitCoord.x, 1.0 - hitCoord.y)
+        );
+        let fresnel = mix(
+          0.32,
+          1.0,
+          pow(1.0 - max(dot(-incidentDirection, normal), 0.0), 5.0)
+        );
+        let roughnessFade = pow(1.0 - roughness / max(ssrTrace.maxRoughness, 0.001), 1.5);
+        let distanceFade = 1.0 - clamp(farTravel / ssrTrace.maxDistance, 0.0, 1.0);
+        confidence = smoothstep(0.0, 0.09, screenEdge) * roughnessFade * fresnel *
+          distanceFade * ssrTrace.intensity;
+        break;
       }
-      reflection = textureSampleLevel(sourceTexture, sourceTextureSampler, hitCoord, 0).rgb;
-      let screenEdge = min(
-        min(hitCoord.x, hitCoord.y),
-        min(1.0 - hitCoord.x, 1.0 - hitCoord.y)
-      );
-      let fresnel = mix(
-        0.32,
-        1.0,
-        pow(1.0 - max(dot(-incidentDirection, normal), 0.0), 5.0)
-      );
-      let roughnessFade = pow(1.0 - roughness / max(ssrTrace.maxRoughness, 0.001), 1.5);
-      let distanceFade = 1.0 - clamp(farTravel / ssrTrace.maxDistance, 0.0, 1.0);
-      confidence = smoothstep(0.0, 0.09, screenEdge) * roughnessFade * fresnel *
-        distanceFade * ssrTrace.intensity;
-      break;
     }
     previousTravel = travel;
     previousDepthDelta = select(-ssrTrace.thickness, depthDelta, entersCandidateSurface);

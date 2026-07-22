@@ -73,6 +73,8 @@ test('SwapFramebuffers#resize', async t => {
 
   resized = swap.resize({width: 8, height: 8});
   t.equal(resized, true, 'resize with new size returns true');
+  t.equal(currentTexture.destroyed, true, 'resize destroys the previous current texture');
+  t.equal(nextTexture.destroyed, true, 'resize destroys the previous next texture');
   t.equal(swap.current.width, 8, 'current framebuffer width updated');
   t.equal(swap.current.height, 8, 'current framebuffer height updated');
   t.notEqual(
@@ -97,6 +99,28 @@ test('SwapFramebuffers#resize', async t => {
   );
 
   swap.destroy();
+  t.equal(newCurrent.destroyed, true, 'destroy releases the current framebuffer texture');
+  t.equal(newNext.destroyed, true, 'destroy releases the next framebuffer texture');
+
+  t.end();
+});
+
+test('SwapFramebuffers preserves borrowed attachment ownership', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const borrowedTexture = webglDevice.createTexture({
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4
+  });
+  const swap = new SwapFramebuffers(webglDevice, {
+    colorAttachments: [borrowedTexture],
+    width: 4,
+    height: 4
+  });
+
+  swap.destroy();
+  t.equal(borrowedTexture.destroyed, false, 'destroy does not release a borrowed texture');
+  borrowedTexture.destroy();
 
   t.end();
 });
