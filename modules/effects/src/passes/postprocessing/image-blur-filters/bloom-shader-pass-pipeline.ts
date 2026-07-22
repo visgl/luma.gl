@@ -91,7 +91,7 @@ struct bloomBlurUniforms {
 @group(0) @binding(auto) var<uniform> bloomBlur: bloomBlurUniforms;
 
 fn bloomBlur_applySample(color: vec4f) -> vec4f {
-  return vec4f(color.rgb * vec3f(color.a), color.a);
+  return color;
 }
 
 fn bloomBlur_getEffectiveRadius() -> f32 {
@@ -155,10 +155,7 @@ fn bloomBlur_sampleColor(
     totalWeight += combinedWeight * 2.0;
   }
 
-  color /= totalWeight;
-  let unpremultipliedRgb = color.rgb / vec3f(color.a + 0.00001);
-
-  return vec4f(unpremultipliedRgb, color.a);
+  return color / totalWeight;
 }
 `,
   fs: /* glsl */ `
@@ -171,7 +168,7 @@ layout(std140) uniform bloomBlurUniforms {
 } bloomBlur;
 
 vec4 bloomBlur_applySample(vec4 color) {
-  return vec4(color.rgb * color.a, color.a);
+  return color;
 }
 
 float bloomBlur_getEffectiveRadius() {
@@ -222,10 +219,7 @@ vec4 bloomBlur_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord)
     totalWeight += combinedWeight * 2.0;
   }
 
-  color /= totalWeight;
-  color.rgb /= color.a + 0.00001;
-
-  return color;
+  return color / totalWeight;
 }
 `,
   uniformTypes: {
