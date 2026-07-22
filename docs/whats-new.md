@@ -82,7 +82,6 @@ Target Release Date: Q3, 2026
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
 
-
 ## Version 9.4
 
 Target Release Date: TBD
@@ -123,7 +122,7 @@ Target Release Date: TBD
 - **`dof`** - New depth-of-field postprocessing effect and shader-pass pipeline.
 - **`gaussianBlur`** - New gaussian blur postprocessing effect.
 - **`persistenceEffect`** - Moved into `@luma.gl/effects` as a first-class postprocessing effect.
-- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, and volumetric fog. The pipelines can consume application-provided depth, normal, velocity, and material textures without depending on the private v10 G-buffer implementation.
+- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, compact height fog, and clustered participating-media lighting. The pipelines can consume application-provided depth, normal, velocity, and material textures without depending on the private v10 G-buffer implementation.
 
 **@luma.gl/shadertools**
 
