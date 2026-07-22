@@ -8,7 +8,7 @@ import type {NumberArray16} from '@math.gl/core';
 
 /** Construction options for temporally stabilized screen-space reflections. */
 export type SSRShaderPassPipelineOptions = {
-  /** Fractional ray-tracing, history, and denoising resolution. Defaults to half resolution. */
+  /** Fractional ray-tracing, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
 
@@ -609,7 +609,7 @@ export function createSSRShaderPassPipeline(
 ): ShaderPassPipeline<
   'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection'
 > {
-  const scale = options.resolutionScale || 0.5;
+  const scale = options.resolutionScale ?? 1;
   return {
     name: 'ssrShaderPassPipeline',
     renderTargets: {

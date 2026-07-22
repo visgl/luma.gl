@@ -10,6 +10,8 @@ compact height fog, and reusable
 depth-aware blur.
 Applications keep ownership of scene rendering and provide matching color, depth,
 normal/roughness, and velocity textures to `ShaderPassRenderer`.
+Scene-aware intermediate framebuffers default to full resolution; applications can pass
+`resolutionScale` to explicitly select a lower quality/performance tradeoff.
 
 Notable exports include:
 

@@ -84,6 +84,7 @@ type DeferredRenderingSettings = {
   ambientOcclusionRadius: number;
   ambientOcclusionIntensity: number;
   ambientOcclusionStrength: number;
+  ambientOcclusionResolution: number;
   globalIlluminationEnabled: boolean;
   globalIlluminationRadius: number;
   globalIlluminationIntensity: number;
@@ -91,12 +92,14 @@ type DeferredRenderingSettings = {
   globalIlluminationRayCount: number;
   globalIlluminationStepCount: number;
   globalIlluminationHistoryWeight: number;
+  globalIlluminationResolution: number;
   reflectionEnabled: boolean;
   reflectionStrength: number;
   reflectionIntensity: number;
   reflectionMaxDistance: number;
   reflectionSampleCount: number;
   reflectionHistoryWeight: number;
+  reflectionResolution: number;
   atmosphereEnabled: boolean;
   atmosphereDensity: number;
   atmosphereHeightFalloff: number;
@@ -107,6 +110,7 @@ type DeferredRenderingSettings = {
   atmosphereSampleCount: number;
   atmosphereHistoryWeight: number;
   atmosphereShadowStrength: number;
+  atmosphereResolution: number;
   godRaysEnabled: boolean;
   godRayIntensity: number;
   godRayDensity: number;
@@ -127,6 +131,7 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   ambientOcclusionRadius: 2.2,
   ambientOcclusionIntensity: 3.2,
   ambientOcclusionStrength: 0.68,
+  ambientOcclusionResolution: 1,
   globalIlluminationEnabled: true,
   globalIlluminationRadius: 5.2,
   globalIlluminationIntensity: 3.4,
@@ -134,12 +139,14 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   globalIlluminationRayCount: 8,
   globalIlluminationStepCount: 9,
   globalIlluminationHistoryWeight: 0.88,
+  globalIlluminationResolution: 1,
   reflectionEnabled: true,
   reflectionStrength: 1.15,
   reflectionIntensity: 1.8,
   reflectionMaxDistance: 26,
   reflectionSampleCount: 56,
   reflectionHistoryWeight: 0.84,
+  reflectionResolution: 1,
   atmosphereEnabled: true,
   atmosphereDensity: 0.055,
   atmosphereHeightFalloff: 0.28,
@@ -150,6 +157,7 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   atmosphereSampleCount: 10,
   atmosphereHistoryWeight: 0.88,
   atmosphereShadowStrength: 0.76,
+  atmosphereResolution: 1,
   godRaysEnabled: true,
   godRayIntensity: 1.65,
   godRayDensity: 0.94,
@@ -163,10 +171,10 @@ const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why deferred rendering scales:</b> forward shading repeats material work for every light that touches every draw. Here the geometry pass writes base color, metalness, roughness, emissive, normal, velocity, and depth once; the fullscreen resolve reuses those screen-space values for lighting.</p>
 <p><b>Illumination Lab vs. Visualization City:</b> this example concentrates on advanced deferred light transport: compute-clustered point lights, physically based material response, higher-quality GTAO, colored diffuse bounce, shared screen-space reflections, and clustered participating media. <b>Visualization City</b> instead emphasizes breadth, with directional/spot/point shadow maps, contact shadows, lower-cost SSAO, simple fog, outlines, temporal AA, and motion blur. Both reuse the same SSR implementation.</p>
 <p><b>Why clustering wins:</b> a WebGPU compute stage projects each view-space light sphere into a <code>16 × 9 × 24</code> screen/log-depth grid. Each pixel reconstructs its view position from depth, finds one cluster, and normally evaluates only that short local list instead of all 512 lights.</p>
-<p><b>Why GTAO belongs after lighting:</b> a half-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO is composed into lit color.</p>
+<p><b>Why GTAO belongs after lighting:</b> a configurable-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining noise before the AO is composed into lit color.</p>
 <p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
-<p><b>Why light becomes visible in the air:</b> low-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Radial camera-depth visibility traces toward the sun to reveal crepuscular god rays behind occluders; velocity and depth history stabilize the colored light volumes.</p>
+<p><b>Why light becomes visible in the air:</b> configurable-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Radial camera-depth visibility traces toward the sun to reveal crepuscular god rays behind occluders; velocity and depth history stabilize the colored light volumes.</p>
 <p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
 <p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, <b>Volumetric Lighting</b>, <b>Volume Transmittance</b>, and <b>God Rays</b> reveal where transport work, uncertain screen-space hits, atmospheric extinction, or directional light shafts accumulate.</p>
 `;
@@ -591,7 +599,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       maxLightCount: MAX_CLUSTERED_POINT_LIGHTS
     });
     this.sceneGBuffer = createSceneGBuffer(device, width, height);
-    this.renderer = createRenderer(device);
+    this.renderer = createRenderer(device, this.settings);
     this.renderer.resize([width, height]);
     this.framebufferSize = [width, height];
     this.settingsPanel = new ExampleSettingsPanelManager({
@@ -889,19 +897,34 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     nextSettings: Record<string, unknown>,
     _changedSettings?: SettingsChangeDescriptor[]
   ): void => {
+    const previousSettings = this.settings;
     this.settings = {...this.settings, ...(nextSettings as DeferredRenderingSettings)};
     this.orbitControls?.setAutoRotate(this.settings.autoOrbitCamera);
+    if (
+      previousSettings.ambientOcclusionResolution !== this.settings.ambientOcclusionResolution ||
+      previousSettings.globalIlluminationResolution !==
+        this.settings.globalIlluminationResolution ||
+      previousSettings.reflectionResolution !== this.settings.reflectionResolution ||
+      previousSettings.atmosphereResolution !== this.settings.atmosphereResolution
+    ) {
+      this.renderer.destroy();
+      this.renderer = createRenderer(this.device, this.settings);
+      this.renderer.resize(this.framebufferSize);
+      this.frameIndex = 0;
+    }
   };
 }
 
-function createRenderer(device: Device): ShaderPassRenderer {
+function createRenderer(device: Device, settings: DeferredRenderingSettings): ShaderPassRenderer {
   return new ShaderPassRenderer(device, {
     shaderPasses: [
       createClusteredDeferredLightingShaderPassPipeline(),
-      createGTAOShaderPassPipeline(),
-      createSSGIShaderPassPipeline(),
-      createSSRShaderPassPipeline({resolutionScale: 0.75}),
-      createClusteredVolumetricLightingShaderPassPipeline(),
+      createGTAOShaderPassPipeline({resolutionScale: settings.ambientOcclusionResolution}),
+      createSSGIShaderPassPipeline({resolutionScale: settings.globalIlluminationResolution}),
+      createSSRShaderPassPipeline({resolutionScale: settings.reflectionResolution}),
+      createClusteredVolumetricLightingShaderPassPipeline({
+        resolutionScale: settings.atmosphereResolution
+      }),
       deferredDisplayPipeline
     ],
     colorFormat: 'rgba16float',
@@ -1266,6 +1289,15 @@ function makeSettingsSchema(): SettingsSchema {
             persist: 'none'
           },
           {
+            name: 'ambientOcclusionResolution',
+            label: 'Buffer Resolution',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 1,
+            step: 0.25
+          },
+          {
             name: 'ambientOcclusionRadius',
             label: 'GTAO Radius',
             type: 'number',
@@ -1305,6 +1337,15 @@ function makeSettingsSchema(): SettingsSchema {
             label: 'Enable Diffuse Bounce',
             type: 'boolean',
             persist: 'none'
+          },
+          {
+            name: 'globalIlluminationResolution',
+            label: 'Buffer Resolution',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 1,
+            step: 0.25
           },
           {
             name: 'globalIlluminationRadius',
@@ -1373,6 +1414,15 @@ function makeSettingsSchema(): SettingsSchema {
             label: 'Enable Volumetric Lighting',
             type: 'boolean',
             persist: 'none'
+          },
+          {
+            name: 'atmosphereResolution',
+            label: 'Buffer Resolution',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 1,
+            step: 0.25
           },
           {
             name: 'atmosphereDensity',
@@ -1536,6 +1586,15 @@ function makeSettingsSchema(): SettingsSchema {
             label: 'Enable Reflections',
             type: 'boolean',
             persist: 'none'
+          },
+          {
+            name: 'reflectionResolution',
+            label: 'Buffer Resolution',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 1,
+            step: 0.25
           },
           {
             name: 'reflectionStrength',

@@ -103,14 +103,15 @@ render stacks, not competing copies of the reflection algorithm.
 
 - Visualization City selects approximately 35%, 50%, or 100% tracing resolution from its quality
   preset and combines reflections with light-space shadows, SSAO, fog, and temporal AA.
-- Illumination Lab traces at 75% resolution and uses depth/normal-aware upsampling to showcase
-  polished floors, chrome accents, roughness variation, reflection-confidence diagnostics, and
-  clustered animated lights without paying the full-resolution tracing cost.
+- Illumination Lab defaults to full-resolution reflection tracing and uses depth/normal-aware
+  reconstruction to showcase polished floors, chrome accents, roughness variation,
+  reflection-confidence diagnostics, and clustered animated lights. Its SSR **Buffer
+  Resolution** control can explicitly lower tracing cost when desired.
 - `ssrTrace`, `ssrTemporal`, `ssrDepthHistoryCopy`, `ssrSpatial`, and `ssrComposite` are the
   reusable stages of that same pipeline, exposed for applications that need custom composition.
 
-The default `createSSRShaderPassPipeline()` uses half-resolution internal targets. Raising
-`resolutionScale` increases ray-tracing and history memory approximately with the square of the
+The default `createSSRShaderPassPipeline()` uses full-resolution internal targets. Lowering
+`resolutionScale` reduces ray-tracing and history memory approximately with the square of the
 scale. Increasing `sampleCount` increases ray work approximately linearly. Longer ray distances
 usually require more samples to avoid visible marching bands. Temporal history and bilateral
 denoising improve stability, but are not substitutes for adequate ray density.

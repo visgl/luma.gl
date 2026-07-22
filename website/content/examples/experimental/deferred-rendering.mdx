@@ -31,6 +31,8 @@ accordions for clustered deferred lighting, GTAO, diffuse global illumination, s
 reflections, clustered volumetric scattering, and crepuscular god rays. Expand a section to
 adjust its quality, transport, or temporal-history controls without scrolling through one
 flattened settings list.
+Each effect starts with a full-resolution framebuffer; lower **Buffer Resolution** inside an
+individual section when reduced GPU cost is more important than edge fidelity.
 
 ## Why This Is Not Visualization City
 
@@ -95,7 +97,7 @@ velocity, and depth channels plus two named material extras:
 screen/log-depth grid. `createClusteredDeferredLightingShaderPassPipeline()` then reads those
 material targets plus the current pixel's bounded cluster list, reconstructs view-space position
 from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back into the normal
-ordered shader-pass chain. `createGTAOShaderPassPipeline()` then performs a half-resolution
+ordered shader-pass chain. `createGTAOShaderPassPipeline()` then performs a configurable-resolution
 horizon search over the unchanged depth and view-normal attachments, reprojects the previous AO
 result through the velocity buffer, rejects disocclusions with depth history, and applies a
 depth-aware separable blur before compositing ambient visibility into lit color.
@@ -109,7 +111,7 @@ applies a roughness-adaptive depth/normal-aware blur, and adds the result back i
 `createClusteredVolumetricLightingShaderPassPipeline()` then integrates real clustered point
 lights and occluded directional light through exponential height fog, applies Beer-Lambert
 extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
-sun for crepuscular god rays, stabilizes low-resolution in-scattering with
+sun for crepuscular god rays, stabilizes configurable-resolution in-scattering with
 velocity/depth history, and composites the participating medium over the existing opaque result.
 A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection/
 volume debug view.

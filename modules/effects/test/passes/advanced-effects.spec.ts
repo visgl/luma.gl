@@ -28,6 +28,32 @@ import {
 } from '../../src';
 
 test('advanced effects expose composable pipeline shapes', testCase => {
+  testCase.deepEqual(
+    createSSAOShaderPassPipeline().renderTargets?.ssaoRaw.scale,
+    [1, 1],
+    'SSAO defaults to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createGTAOShaderPassPipeline().renderTargets?.gtaoRaw.scale,
+    [1, 1],
+    'GTAO defaults to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createSSGIShaderPassPipeline().renderTargets?.ssgiRaw.scale,
+    [1, 1],
+    'diffuse global illumination defaults to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createSSRShaderPassPipeline().renderTargets?.ssrRaw.scale,
+    [1, 1],
+    'screen-space reflections default to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createClusteredVolumetricLightingShaderPassPipeline().renderTargets?.clusteredVolumeRaw.scale,
+    [1, 1],
+    'clustered volumetric lighting defaults to full-resolution intermediate framebuffers'
+  );
+
   const ssao = createSSAOShaderPassPipeline({
     normalSource: 'normal-texture',
     resolutionScale: 0.5

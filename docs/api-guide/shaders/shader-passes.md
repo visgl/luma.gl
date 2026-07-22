@@ -188,7 +188,7 @@ screen-edge confidence fades reduce the resulting discontinuities.
 `createClusteredVolumetricLightingShaderPassPipeline()` turns the same clustered point-light
 storage buffers used by deferred shading into actual participating-media illumination:
 
-1. March reduced-resolution view rays through exponential world-height density.
+1. March configurable-resolution view rays through exponential world-height density.
 2. Integrate nearby clustered point lights and directional light using an anisotropic phase
    function; stable global-index light selection prevents cluster-tile seams in the medium.
 3. Trace radial screen-depth visibility toward a configurable sun position to produce
@@ -202,6 +202,10 @@ storage buffers used by deferred shading into actual participating-media illumin
 This is the higher-fidelity alternative to `createVolumetricFogShaderPassPipeline()`, whose
 compact height fog does not evaluate the real scene-light storage buffers. Both remain composable
 ordered pipelines; normally choose one atmospheric implementation rather than stacking both.
+
+SSAO, GTAO, screen-space global illumination, reflections, and clustered volumetric lighting
+default to full-resolution intermediate framebuffers. Pass `resolutionScale: 0.5`, for example,
+to explicitly trade edge quality for fewer shaded pixels and smaller history textures.
 
 ### Recommended ordering
 
