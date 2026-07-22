@@ -18,7 +18,8 @@ import {
   createVolumetricFogShaderPassPipeline,
   depthAwareBlurShaderPassPipeline,
   dofShaderPassPipeline,
-  gtaoTemporal
+  gtaoTemporal,
+  ssrTemporal
 } from '../../src';
 
 test('advanced effects expose composable pipeline shapes', testCase => {
@@ -82,7 +83,37 @@ test('advanced effects expose composable pipeline shapes', testCase => {
 
   testCase.equal(depthAwareBlurShaderPassPipeline.steps.length, 2, 'depth blur is separable');
   testCase.equal(createMotionBlurShaderPassPipeline().steps.length, 1, 'motion blur is one stage');
-  testCase.equal(createSSRShaderPassPipeline().steps.length, 2, 'SSR traces then composites');
+  const reflections = createSSRShaderPassPipeline({resolutionScale: 0.5});
+  testCase.equal(
+    reflections.steps.length,
+    6,
+    'SSR traces, stabilizes, denoises twice, and composites'
+  );
+  testCase.deepEqual(
+    reflections.renderTargets?.ssrRaw.scale,
+    [0.5, 0.5],
+    'SSR honors the requested tracing resolution'
+  );
+  testCase.equal(
+    reflections.renderTargets?.ssrHistory.lifetime,
+    'history',
+    'SSR retains reflection radiance history'
+  );
+  testCase.equal(
+    reflections.renderTargets?.ssrHistoryDepth.lifetime,
+    'history',
+    'SSR retains depth history for disocclusion rejection'
+  );
+  testCase.equal(
+    reflections.steps[1].inputs?.historyTexture,
+    reflections.steps[1].output,
+    'SSR intentionally reprojects one logical reflection history target'
+  );
+  testCase.equal(
+    ssrTemporal.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'SSR temporal rejection reconstructs linear view-space depth'
+  );
   testCase.end();
 });
 
@@ -135,6 +166,7 @@ test('advanced effects compose in order with existing effects', async testCase =
     brightnessContrast,
     createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
     createGTAOShaderPassPipeline(),
+    createSSRShaderPassPipeline(),
     bloomShaderPassPipeline,
     dofShaderPassPipeline,
     createTAAShaderPassPipeline(),
@@ -195,6 +227,13 @@ test('advanced effects compose in order with existing effects', async testCase =
     testCase.ok(hasBinding('gtaoEvaluate', 'depthTexture'), 'GTAO receives scene depth');
     testCase.ok(hasBinding('gtaoEvaluate', 'normalTexture'), 'GTAO receives scene normals');
     testCase.ok(hasBinding('gtaoTemporal', 'velocityTexture'), 'GTAO receives scene velocity');
+    testCase.ok(hasBinding('ssrTrace', 'depthTexture'), 'SSR tracing receives scene depth');
+    testCase.ok(hasBinding('ssrTrace', 'normalTexture'), 'SSR tracing receives scene normals');
+    testCase.ok(
+      hasBinding('ssrTemporal', 'velocityTexture'),
+      'SSR history receives scene velocity'
+    );
+    testCase.ok(hasBinding('ssrSpatial', 'normalTexture'), 'SSR denoising receives scene normals');
     testCase.notOk(
       hasBinding('bloomExtract', 'velocityTexture'),
       'bloom does not receive scene velocity'

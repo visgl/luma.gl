@@ -79,7 +79,8 @@
           "api-guide/shaders/shader-assembly",
           "api-guide/shaders/writing-customizable-shaders",
           "api-guide/shaders/writing-portable-shaders",
-          "api-guide/shaders/shader-passes"
+          "api-guide/shaders/shader-passes",
+          "api-guide/shaders/rendering-techniques"
         ]
       },
       {

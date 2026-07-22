@@ -684,6 +684,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           intensity: this.settings.preset === 'Reflective Night' ? 1.8 : 1.35,
           maxDistance: this.settings.shadowQuality === 'low' ? 55 : 95,
           thickness: this.settings.shadowQuality === 'cinematic' ? 0.48 : 0.72,
+          frameIndex: this.frameIndex,
           sampleCount:
             this.settings.shadowQuality === 'low'
               ? 20
@@ -691,6 +692,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
                 ? 56
                 : 36
         },
+        ssrTemporal: {inverseProjectionMatrix},
         ssrComposite: {debugMode: this.settings.debugView === 'Reflections' ? 1 : 0},
         volumetricFog: {
           density: this.settings.preset === 'Foggy Depth' ? 0.2 : 0.08,
