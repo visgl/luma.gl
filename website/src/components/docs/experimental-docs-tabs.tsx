@@ -8,6 +8,7 @@ export type ExperimentalDocsTabId =
   | 'overview'
   | 'g-buffer'
   | 'deferred-lighting'
+  | 'clustered-lighting'
   | 'shadow-map-renderer'
   | 'a-buffer-renderer'
   | 'wboit-renderer';
@@ -19,6 +20,11 @@ const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
     id: 'deferred-lighting',
     label: 'Deferred Lighting',
     href: '/docs/api-reference/experimental/deferred-lighting'
+  },
+  {
+    id: 'clustered-lighting',
+    label: 'Clustered Lighting',
+    href: '/docs/api-reference/experimental/clustered-lighting'
   },
   {
     id: 'shadow-map-renderer',

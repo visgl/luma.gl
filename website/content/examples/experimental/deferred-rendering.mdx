@@ -15,8 +15,8 @@ import {DeferredRenderingExample} from '@site/src/examples';
 >
   <div>
     A WebGPU-only material laboratory that writes five surface targets once, then reconstructs
-    view position from depth and resolves a directional light plus animated storage-buffer point
-    lights in one fullscreen pass.
+    view position from depth and resolves a directional light plus hundreds of compute-clustered
+    storage-buffer point lights in one fullscreen pass.
   </div>
 </ExampleHeader>
 
@@ -28,10 +28,11 @@ import {DeferredRenderingExample} from '@site/src/examples';
 - Rows increase metalness while changing the base material family, so dielectric diffuse response
   gives way to colored metallic reflections.
 - The orbiting emissive markers are the same point lights consumed by the deferred resolve. Raise
-  **Point Lights** to stress a larger fixed-capacity storage buffer without redrawing the material
+  **Point Lights** toward 512 to stress compute-built cluster lists without redrawing the material
   geometry.
 - **Base Color**, **Normals**, **Roughness**, **Metallic**, **Emissive**, and **Depth** expose the
-  actual G-buffer channels rather than a recreated diagnostic view.
+  actual G-buffer channels rather than a recreated diagnostic view. **Cluster Occupancy** shows
+  the per-pixel cluster list pressure as a cold-to-hot heatmap.
 
 ## Render stack
 
@@ -43,10 +44,12 @@ velocity, and depth channels plus two named material extras:
 | `baseColorMetallic` | Linear base color in RGB and metalness in A. |
 | `emissiveOcclusion` | Linear emissive color in RGB and ambient occlusion in A. |
 
-`createDeferredLightingShaderPassPipeline()` then reads those material targets, reconstructs
-view-space position from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back
-into the normal ordered shader-pass chain. A final display pass tone maps the result or selects a
-G-buffer debug view.
+`ClusteredLightGrid` first bins each view-space point-light sphere into a `16 × 9 × 24`
+screen/log-depth grid. `createClusteredDeferredLightingShaderPassPipeline()` then reads those
+material targets plus the current pixel's bounded cluster list, reconstructs view-space position
+from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back into the normal
+ordered shader-pass chain. A final display pass tone maps the result or selects a G-buffer/cluster
+debug view.
 
 The point-light positions are transformed to view space on the CPU and packed with
 `makeDeferredPointLightBufferData()` into two `vec4f` records per light:
@@ -56,5 +59,5 @@ position.xyz, range, color.rgb, intensity
 ```
 
 That fixed representation keeps the example focused on the deferred boundary: geometry owns
-material capture, the fullscreen pass owns lighting, and later effects can consume the unchanged
-depth, normal, velocity, and scene-color contract.
+material capture, compute owns light assignment, the fullscreen pass owns lighting, and later
+effects can consume the unchanged depth, normal, velocity, and scene-color contract.

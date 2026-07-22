@@ -15,16 +15,12 @@ import {
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {
-  ColumnPanel,
-  type Panel,
-  type SettingsSchema,
-  type SettingsState
-} from '@deck.gl-community/panels';
+import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
   ExampleSettingsPanelManager,
   makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {ComparisonSplitter} from '../../experimental/advanced-effects/comparison-splitter';
@@ -128,6 +124,13 @@ const DEFAULT_SETTINGS: AntialiasingSettings = {
   zoom: 1,
   split: 0.5
 };
+
+const ANTIALIASING_BACKGROUND_HTML = `
+<p><b>Aliasing is under-sampling:</b> one pixel sample cannot represent thin geometry, diagonal edges, alpha cutouts, or minified texture detail that changes faster than the pixel grid.</p>
+<p><b>FXAA:</b> a fullscreen shader detects high-contrast edges in the finished image and smooths along them. It is cheap and works after any render path, but it cannot recover hidden subpixel geometry or texture detail.</p>
+<p><b>Supersampling:</b> render the scene into a 2× or 4× larger offscreen target, then filter down once. It improves geometry, shading, and texture aliasing together, but pixel cost grows with area: 2× per axis means roughly 4× fragments; 4× means roughly 16×.</p>
+<p><b>Texture sampling:</b> mipmaps choose prefiltered resolution for minification and anisotropy spends extra samples along steep texture footprints. These solve texture-frequency aliasing, complementing edge antialiasing rather than replacing it.</p>
+`;
 
 const appShaderModule = {
   name: 'app',
@@ -579,16 +582,21 @@ export default class AntialiasingAnimationLoopTemplate extends AnimationLoopTemp
   }
 
   private makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'antialiasing-controls',
-      title: 'Controls',
+    return makeExampleTabbedPanel({
+      id: 'antialiasing-tabs',
+      title: 'Antialiasing Techniques',
       panels: [
         makeHtmlCustomPanel({
           id: 'antialiasing-description',
-          title: '',
+          title: 'Overview',
           html: makeDescriptionHtml(this.settings, this.effectiveSupersampleScale)
         }),
-        this.settingsPanel.makePanel()
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'antialiasing-background',
+          title: 'Background',
+          html: ANTIALIASING_BACKGROUND_HTML
+        })
       ]
     });
   }

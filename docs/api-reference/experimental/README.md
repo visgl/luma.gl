@@ -38,6 +38,11 @@ picking, or debug data.
 consumer of those targets. It reconstructs view position from depth and resolves a directional
 light plus a fixed-capacity storage buffer of point lights from two named material attachments.
 
+[`ClusteredLightGrid`](/docs/api-reference/experimental/clustered-lighting) scales the same
+material contract to hundreds of local lights. A WebGPU compute pass bins view-space light spheres
+into screen/depth clusters, and `clusteredDeferredLighting` evaluates only the current pixel's
+bounded light list.
+
 The [Shader Passes guide](/docs/api-guide/shaders/shader-passes) explains how a scene render,
 `GBuffer` bindings, deferred lighting, ordered `ShaderPassPipeline` effects, temporal history, and
 OIT resolve pipelines compose into one render stack.

@@ -30,7 +30,6 @@ import {
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -40,6 +39,7 @@ import {
   ExampleSettingsPanelManager,
   getChangedSetting,
   makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {ComparisonSplitter} from './comparison-splitter';
@@ -200,6 +200,13 @@ const DEFAULT_SETTINGS: AdvancedEffectsSettings = {
   pointShadowsEnabled: true,
   contactShadowsEnabled: true
 };
+
+const ADVANCED_EFFECTS_BACKGROUND_HTML = `
+<p><b>Hybrid render stack:</b> the city first writes a shared G-buffer with scene color, depth, normals, and velocity. Shadow maps handle geometric visibility from directional, spot, and point lights; screen-space passes then reuse the same buffers for contact shadows, ambient occlusion, reflections, fog, outlines, temporal antialiasing, and motion blur.</p>
+<p><b>Why this is composable:</b> each fullscreen effect declares the textures it reads and writes into an ordered <code>ShaderPassPipeline</code>. Effects can be toggled or reordered without changing the scene draw, while depth/normal/velocity-aware passes avoid treating the image as a flat bitmap.</p>
+<p><b>Where the GPU work goes:</b> shadow maps trade extra light-view geometry passes for stable long-range occlusion. Screen-space effects trade texture bandwidth and fullscreen pixels for details that would be expensive to model with more scene geometry or rays. TAA and motion blur additionally consume frame history and velocity.</p>
+<p><b>What to watch:</b> debug views expose the intermediate contracts. The comparison split shows the cost/quality boundary between the base draw and the composed stack.</p>
+`;
 
 type CityUniforms = {
   viewProjectionMatrix: Matrix4;
@@ -751,16 +758,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   private makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'advanced-effects-controls',
+    return makeExampleTabbedPanel({
+      id: 'advanced-effects-tabs',
       title: 'Visualization City',
       panels: [
         makeHtmlCustomPanel({
           id: 'advanced-effects-description',
-          title: '',
+          title: 'Overview',
           html: '<p><b>Hybrid shadows + screen-space rendering</b></p><p>Drag the divider to compare the unshadowed city with cascaded sun, spot, point, and contact shadows followed by SSAO, SSR, fog, outlines, TAA, and motion blur.</p>'
         }),
-        this.settingsPanel.makePanel()
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'advanced-effects-background',
+          title: 'Background',
+          html: ADVANCED_EFFECTS_BACKGROUND_HTML
+        })
       ]
     });
   }
