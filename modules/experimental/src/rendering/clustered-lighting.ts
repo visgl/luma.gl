@@ -54,6 +54,7 @@ export type ClusteredLightGridShaderPassUniforms = {
   clusterCountY: number;
   clusterCountZ: number;
   maxLightsPerCluster: number;
+  pointLightCount: number;
   clusterNearPlane: number;
   clusterFarPlane: number;
 };
@@ -82,6 +83,7 @@ export class ClusteredLightGrid {
   private readonly clearComputation: Computation;
   private readonly binningComputation: Computation;
   private readonly compactComputation: Computation;
+  private activePointLightCount = 0;
 
   constructor(device: Device, props: ClusteredLightGridProps = {}) {
     if (device.type !== 'webgpu') {
@@ -164,6 +166,7 @@ export class ClusteredLightGrid {
   /** Rebuilds cluster counts and light-index lists on the supplied command encoder. */
   encode(commandEncoder: CommandEncoder, options: ClusteredLightGridEncodeOptions): void {
     validateClusteredLightGridEncodeOptions(options, this.maxLightCount);
+    this.activePointLightCount = options.pointLightCount;
     this.uniformBuffer.write(makeClusteredLightGridUniformData(options));
     this.binningComputation.setBindings({
       pointLights: options.pointLights,
@@ -213,6 +216,7 @@ export class ClusteredLightGrid {
       clusterCountY: this.clusterDimensions[1],
       clusterCountZ: this.clusterDimensions[2],
       maxLightsPerCluster: this.maxLightsPerCluster,
+      pointLightCount: this.activePointLightCount,
       clusterNearPlane: nearPlane,
       clusterFarPlane: farPlane
     };
@@ -265,6 +269,7 @@ struct ClusteredDeferredLightingUniforms {
   clusterCountY: u32,
   clusterCountZ: u32,
   maxLightsPerCluster: u32,
+  pointLightCount: u32,
   clusterNearPlane: f32,
   clusterFarPlane: f32,
 };
@@ -474,7 +479,11 @@ fn clusteredDeferredLighting_sampleColor(
   let clusterIndex = clusteredDeferredLighting_getClusterIndex(sceneCoord, viewPosition);
   let candidateLightCount = clusterLightCounts[clusterIndex];
   if (candidateLightCount > clusteredDeferredLighting.maxLightsPerCluster) {
-    for (var lightIndex = 0u; lightIndex < arrayLength(&pointLights); lightIndex++) {
+    let activePointLightCount = min(
+      clusteredDeferredLighting.pointLightCount,
+      arrayLength(&pointLights)
+    );
+    for (var lightIndex = 0u; lightIndex < activePointLightCount; lightIndex++) {
       color += clusteredDeferredLighting_evaluatePointLight(
         pointLights[lightIndex],
         viewPosition,
@@ -528,6 +537,7 @@ fn clusteredDeferredLighting_sampleColor(
     clusterCountY: 'u32',
     clusterCountZ: 'u32',
     maxLightsPerCluster: 'u32',
+    pointLightCount: 'u32',
     clusterNearPlane: 'f32',
     clusterFarPlane: 'f32'
   },
@@ -541,6 +551,7 @@ fn clusteredDeferredLighting_sampleColor(
     clusterCountY: {value: DEFAULT_CLUSTER_DIMENSIONS[1], private: true},
     clusterCountZ: {value: DEFAULT_CLUSTER_DIMENSIONS[2], private: true},
     maxLightsPerCluster: {value: DEFAULT_MAX_LIGHTS_PER_CLUSTER, private: true},
+    pointLightCount: {value: 0, private: true},
     clusterNearPlane: {value: 0.1, private: true},
     clusterFarPlane: {value: 100, private: true}
   },
@@ -639,27 +650,33 @@ fn clusteredLightGrid_getDepthSlice(distance: f32) -> u32 {
   }
 
   let centerClip = clusteredLightGrid.projectionMatrix * vec4f(light.positionRange.xyz, 1.0);
-  if (centerClip.w <= 0.0) {
-    return;
-  }
-  let centerNdc = centerClip.xy / centerClip.w;
-  let radiusNdc = vec2f(
-    abs(clusteredLightGrid.projectionMatrix[0][0]) * light.positionRange.w /
-      max(minimumDepth, clusteredLightGrid.depthRange.x),
-    abs(clusteredLightGrid.projectionMatrix[1][1]) * light.positionRange.w /
-      max(minimumDepth, clusteredLightGrid.depthRange.x)
-  );
-  let centerUv = vec2f(centerNdc.x * 0.5 + 0.5, 0.5 - centerNdc.y * 0.5);
-  let radiusUv = radiusNdc * 0.5;
-  let unclampedMinimumUv = centerUv - radiusUv;
-  let unclampedMaximumUv = centerUv + radiusUv;
-  if (unclampedMaximumUv.x < 0.0 || unclampedMinimumUv.x > 1.0 ||
-      unclampedMaximumUv.y < 0.0 || unclampedMinimumUv.y > 1.0) {
-    return;
-  }
+  let isOrthographicProjection = abs(clusteredLightGrid.projectionMatrix[3][3]) > 0.5;
+  var minimumUv = vec2f(0.0);
+  var maximumUv = vec2f(0.999999);
+  if (centerClip.w > 0.0) {
+    let centerNdc = centerClip.xy / centerClip.w;
+    let projectionScale = vec2f(
+      abs(clusteredLightGrid.projectionMatrix[0][0]),
+      abs(clusteredLightGrid.projectionMatrix[1][1])
+    );
+    let radiusNdc = select(
+      projectionScale * light.positionRange.w /
+        max(minimumDepth, clusteredLightGrid.depthRange.x),
+      projectionScale * light.positionRange.w,
+      isOrthographicProjection
+    );
+    let centerUv = vec2f(centerNdc.x * 0.5 + 0.5, 0.5 - centerNdc.y * 0.5);
+    let radiusUv = radiusNdc * 0.5;
+    let unclampedMinimumUv = centerUv - radiusUv;
+    let unclampedMaximumUv = centerUv + radiusUv;
+    if (unclampedMaximumUv.x < 0.0 || unclampedMinimumUv.x > 1.0 ||
+        unclampedMaximumUv.y < 0.0 || unclampedMinimumUv.y > 1.0) {
+      return;
+    }
 
-  let minimumUv = clamp(unclampedMinimumUv, vec2f(0.0), vec2f(0.999999));
-  let maximumUv = clamp(unclampedMaximumUv, vec2f(0.0), vec2f(0.999999));
+    minimumUv = clamp(unclampedMinimumUv, vec2f(0.0), vec2f(0.999999));
+    maximumUv = clamp(unclampedMaximumUv, vec2f(0.0), vec2f(0.999999));
+  }
   let minimumX = clusteredLightGrid_getCoordinate(minimumUv.x, CLUSTER_COUNT_X);
   let maximumX = clusteredLightGrid_getCoordinate(maximumUv.x, CLUSTER_COUNT_X);
   let minimumY = clusteredLightGrid_getCoordinate(minimumUv.y, CLUSTER_COUNT_Y);

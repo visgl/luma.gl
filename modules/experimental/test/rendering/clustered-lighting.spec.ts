@@ -28,6 +28,95 @@ test('clustered lighting exposes one composable fullscreen resolve', testCase =>
   testCase.end();
 });
 
+test('clustered light grid conservatively bins camera-plane and orthographic lights', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU is not available');
+    testCase.end();
+    return;
+  }
+
+  const pointLights = device.createBuffer({
+    id: 'clustered-lighting-projection-point-lights',
+    data: makeDeferredPointLightBufferData(
+      [{position: [0, 0, 0.25], range: 0.5, color: [1, 1, 1], intensity: 1}],
+      1
+    ),
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusteredLightGrid = new ClusteredLightGrid(device, {
+    id: 'clustered-lighting-projection-test-grid',
+    clusterDimensions: [4, 4, 1],
+    maxLightsPerCluster: 1,
+    maxLightCount: 1
+  });
+
+  try {
+    clusteredLightGrid.encode(device.commandEncoder, {
+      pointLights,
+      pointLightCount: 1,
+      projectionMatrix: new Matrix4().perspective({
+        fovy: radians(45),
+        aspect: 1,
+        near: 0.1,
+        far: 20
+      }),
+      nearPlane: 0.1,
+      farPlane: 20
+    });
+    device.submit();
+
+    const perspectiveClusterCounts = await readClusterLightCounts(
+      clusteredLightGrid.clusterLightCounts
+    );
+    testCase.ok(
+      perspectiveClusterCounts.every(clusterCount => clusterCount === 1),
+      'a visible sphere centered behind the camera conservatively covers every screen tile'
+    );
+
+    pointLights.write(
+      makeDeferredPointLightBufferData(
+        [{position: [0.49, 0, -10], range: 0.3, color: [1, 1, 1], intensity: 1}],
+        1
+      )
+    );
+    clusteredLightGrid.encode(device.commandEncoder, {
+      pointLights,
+      pointLightCount: 1,
+      projectionMatrix: new Matrix4().ortho({
+        left: -1,
+        right: 1,
+        bottom: -1,
+        top: 1,
+        near: 0.1,
+        far: 20
+      }),
+      nearPlane: 0.1,
+      farPlane: 20
+    });
+    device.submit();
+
+    const orthographicClusterCounts = await readClusterLightCounts(
+      clusteredLightGrid.clusterLightCounts
+    );
+    testCase.equal(
+      orthographicClusterCounts[2 * 4 + 3],
+      1,
+      'orthographic light bounds retain their world-space radius at far depths'
+    );
+    testCase.equal(
+      orthographicClusterCounts[2 * 4 + 1],
+      0,
+      'orthographic light bounds do not expand into unrelated screen tiles'
+    );
+  } finally {
+    clusteredLightGrid.destroy();
+    pointLights.destroy();
+  }
+
+  testCase.end();
+});
+
 test('clustered light grid bins lights and resolves materials on WebGPU', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -44,8 +133,8 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
     near: 0.1,
     far: 20
   });
-  const clusteredTestLights: DeferredPointLight[] = Array.from({length: 8}, (_, lightIndex) => ({
-    position: [0, 0, -4],
+  const clusteredTestLights: DeferredPointLight[] = Array.from({length: 4}, (_, lightIndex) => ({
+    position: [0, 0, -0.1],
     range: 2,
     color: [1, 0.4 + lightIndex * 0.01, 0.2],
     intensity: 4
@@ -135,36 +224,34 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
     });
     sceneRenderPass.end();
 
-    const outputTexture = renderer.renderToTexture({
-      sourceTexture,
-      bindings: {
-        depthTexture,
-        normalTexture,
-        baseColorMetallicTexture,
-        emissiveOcclusionTexture,
-        pointLights,
-        ...clusteredLightGrid.getShaderPassBindings()
-      },
-      uniforms: {
-        clusteredDeferredLighting: {
-          inverseProjectionMatrix: new Matrix4(projectionMatrix).invert(),
-          ambientColor: [0.04, 0.04, 0.05],
-          directionalLightDirectionView: [0.2, 0.7, -0.5],
-          directionalLightColor: [1, 0.95, 0.9],
-          directionalLightIntensity: 2,
-          ...clusteredLightGrid.getShaderPassUniforms(0.1, 20)
+    const renderClusteredLighting = () =>
+      renderer.renderToTexture({
+        sourceTexture,
+        bindings: {
+          depthTexture,
+          normalTexture,
+          baseColorMetallicTexture,
+          emissiveOcclusionTexture,
+          pointLights,
+          ...clusteredLightGrid.getShaderPassBindings()
+        },
+        uniforms: {
+          clusteredDeferredLighting: {
+            inverseProjectionMatrix: new Matrix4(projectionMatrix).invert(),
+            ambientColor: [0.04, 0.04, 0.05],
+            directionalLightDirectionView: [0.2, 0.7, -0.5],
+            directionalLightColor: [1, 0.95, 0.9],
+            directionalLightIntensity: 2,
+            ...clusteredLightGrid.getShaderPassUniforms(0.1, 20)
+          }
         }
-      }
-    });
+      });
+
+    const outputTexture = renderClusteredLighting();
     device.submit();
 
-    const clusterCountBytes = await clusteredLightGrid.clusterLightCounts.readAsync();
+    const clusterCounts = await readClusterLightCounts(clusteredLightGrid.clusterLightCounts);
     const clusterIndexBytes = await clusteredLightGrid.clusterLightIndices.readAsync();
-    const clusterCounts = new Uint32Array(
-      clusterCountBytes.buffer,
-      clusterCountBytes.byteOffset,
-      clusterCountBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
-    );
     const clusterLightIndices = new Uint32Array(
       clusterIndexBytes.buffer,
       clusterIndexBytes.byteOffset,
@@ -180,7 +267,42 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
       [0, 1],
       'overflow compaction retains a deterministic light-index prefix'
     );
+    testCase.equal(
+      clusteredLightGrid.getShaderPassUniforms(0.1, 20).pointLightCount,
+      clusteredTestLights.length,
+      'the fullscreen resolve receives the active point-light prefix'
+    );
     testCase.ok(outputTexture, 'the clustered material G-buffer resolves through the pass');
+
+    if (outputTexture) {
+      const originalOutput = await readTexturePixel(outputTexture);
+      const inactiveLights: DeferredPointLight[] = Array.from({length: 4}, () => ({
+        position: [0, 0, -0.1],
+        range: 2,
+        color: [0, 1, 0],
+        intensity: 100
+      }));
+      pointLights.write(
+        makeDeferredPointLightBufferData([...clusteredTestLights, ...inactiveLights], 8)
+      );
+      clusteredLightGrid.encode(device.commandEncoder, {
+        pointLights,
+        pointLightCount: clusteredTestLights.length,
+        projectionMatrix,
+        nearPlane: 0.1,
+        farPlane: 20
+      });
+      const outputWithInactiveLights = renderClusteredLighting();
+      device.submit();
+
+      if (outputWithInactiveLights) {
+        testCase.deepEqual(
+          Array.from(await readTexturePixel(outputWithInactiveLights)),
+          Array.from(originalOutput),
+          'overflow fallback ignores stale light records beyond the active prefix'
+        );
+      }
+    }
   } finally {
     renderer.destroy();
     sceneFramebuffer.destroy();
@@ -195,3 +317,27 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
 
   testCase.end();
 });
+
+async function readClusterLightCounts(clusterLightCounts: Buffer): Promise<Uint32Array> {
+  const clusterCountBytes = await clusterLightCounts.readAsync();
+  return new Uint32Array(
+    clusterCountBytes.buffer,
+    clusterCountBytes.byteOffset,
+    clusterCountBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+  );
+}
+
+async function readTexturePixel(texture: Texture): Promise<Uint8Array> {
+  const layout = texture.computeMemoryLayout({width: 1, height: 1});
+  const readbackBuffer = texture.device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    texture.readBuffer({width: 1, height: 1}, readbackBuffer);
+    const pixelBytes = await readbackBuffer.readAsync(0, layout.byteLength);
+    return new Uint8Array(pixelBytes.buffer, pixelBytes.byteOffset, 8).slice();
+  } finally {
+    readbackBuffer.destroy();
+  }
+}

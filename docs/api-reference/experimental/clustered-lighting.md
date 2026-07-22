@@ -34,10 +34,10 @@ slices between the camera near and far planes. Each cluster retains up to 64 lig
 | `clusterLightIndices` | Fixed-stride light-index list: `clusterIndex * maxLightsPerCluster + slot`. |
 
 The fullscreen resolve uses the compact list while it fits. Overflow is compacted in stable
-light-index order, then saturated pixels fall back to checking the full fixed-size point-light
-buffer so the image stays correct instead of exposing cluster-shaped truncation artifacts. That
-fallback is intentionally slower and makes the occupancy debug view useful for tuning dimensions,
-light ranges, and retained capacity.
+light-index order, then saturated pixels fall back to checking the active prefix of the fixed-size
+point-light buffer so the image stays correct instead of exposing cluster-shaped truncation
+artifacts or reusing stale light records. That fallback is intentionally slower and makes the
+occupancy debug view useful for tuning dimensions, light ranges, and retained capacity.
 
 ## Usage
 
@@ -121,8 +121,8 @@ Returns `clusterLightCounts` and `clusterLightIndices` for
 
 ### `getShaderPassUniforms(nearPlane, farPlane)`
 
-Returns the dimensions, retained capacity, and logarithmic depth-range uniforms needed by the
-fullscreen resolve.
+Returns the dimensions, retained capacity, active point-light count from the latest `encode()`,
+and logarithmic depth-range uniforms needed by the fullscreen resolve.
 
 ### `createClusteredDeferredLightingShaderPassPipeline()`
 
