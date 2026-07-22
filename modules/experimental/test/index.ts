@@ -8,6 +8,8 @@ import './oit/a-buffer-renderer.spec';
 import './oit/wboit-renderer.spec';
 import './shadows/shadow-map-renderer.spec';
 import './shadows/shadow-wgsl.spec';
+import './rendering/g-buffer.spec';
+
 import './controls/orbit-controls.spec';
 
 import './webxr';

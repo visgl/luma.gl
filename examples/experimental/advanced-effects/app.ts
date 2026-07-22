@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextureFormatColor, TextureFormatDepthStencil} from '@luma.gl/core';
-import {Device, Framebuffer, Texture} from '@luma.gl/core';
+import {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -23,6 +22,7 @@ import {
 } from '@luma.gl/effects';
 import {
   createContactShadowShaderPassPipeline,
+  GBuffer,
   shadow,
   ShadowMapRenderer,
   type ShadowShaderProps
@@ -505,7 +505,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly panels: ExamplePanelManager;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly comparisonSplitter: ComparisonSplitter | null;
-  sceneFramebuffer: Framebuffer;
+  sceneGBuffer: GBuffer;
   renderer: ShaderPassRenderer;
   settings: AdvancedEffectsSettings = {...DEFAULT_SETTINGS};
   previousTime = 0;
@@ -523,7 +523,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.city.buffers,
       this.city.instanceCount
     );
-    this.sceneFramebuffer = createSceneFramebuffer(device, width, height);
+    this.sceneGBuffer = createSceneGBuffer(device, width, height);
     this.renderer = this.createRenderer();
     this.framebufferSize = [width, height];
     this.settingsPanel = new ExampleSettingsPanelManager({
@@ -556,7 +556,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.renderer.resetHistory();
       this.frameIndex = 0;
     }
-    this.sceneFramebuffer.resize({width, height});
+    this.sceneGBuffer.resize({width, height});
     this.renderer.resize([width, height]);
     this.comparisonSplitter?.setVisible(this.settings.debugView === 'Final');
     this.comparisonSplitter?.updateLayout();
@@ -611,7 +611,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     const renderPass = device.beginRenderPass({
-      framebuffer: this.sceneFramebuffer,
+      framebuffer: this.sceneGBuffer.framebuffer,
       clearColors: [
         new Float32Array([0.015, 0.025, 0.06, 1]),
         new Float32Array([0.5, 0.5, 1, 1]),
@@ -625,26 +625,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.city.model.draw(renderPass);
     renderPass.end();
 
-    const [
-      colorTexture,
-      normalTexture,
-      velocityTexture,
-      unshadowedColorTexture,
-      directionalDirectTexture,
-      shadowDebugTexture
-    ] = this.sceneFramebuffer.colorAttachments.map(attachment => attachment.texture);
-    const depthTexture = this.sceneFramebuffer.depthStencilAttachment?.texture;
-    if (
-      !colorTexture ||
-      !normalTexture ||
-      !velocityTexture ||
-      !unshadowedColorTexture ||
-      !directionalDirectTexture ||
-      !shadowDebugTexture ||
-      !depthTexture
-    ) {
-      return;
-    }
+    const colorTexture = this.sceneGBuffer.colorTexture;
+    const unshadowedColorTexture = this.sceneGBuffer.getExtraColorTexture('unshadowedColor');
+    const directionalDirectTexture = this.sceneGBuffer.getExtraColorTexture('directionalDirect');
+    const shadowDebugTexture = this.sceneGBuffer.getExtraColorTexture('shadowDebug');
     const debugMode = getDebugMode(this.settings.debugView);
     const lightDirectionView = normalize3(
       viewMatrix.transformAsVector(SUN_DIRECTION) as NumberArray3
@@ -652,9 +636,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.renderer.renderToScreen({
       sourceTexture: colorTexture,
       bindings: {
-        depthTexture,
-        normalTexture,
-        velocityTexture,
+        ...this.sceneGBuffer.getShaderPassBindings(),
         unshadowedColorTexture,
         directionalDirectTexture,
         shadowDebugTexture
@@ -725,7 +707,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.shadowRenderer.destroy();
     this.city.destroy();
     this.renderer.destroy();
-    this.sceneFramebuffer.destroy();
+    this.sceneGBuffer.destroy();
   }
 
   private createRenderer(): ShaderPassRenderer {
@@ -804,113 +786,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   };
 }
 
-function createSceneFramebuffer(device: Device, width: number, height: number): Framebuffer {
-  const colorTexture = createColorTexture(
-    device,
-    'advanced-effects-color',
-    'rgba8unorm',
-    width,
-    height
-  );
-  const normalTexture = createColorTexture(
-    device,
-    'advanced-effects-normal-roughness',
-    'rgba8unorm',
-    width,
-    height
-  );
-  const velocityTexture = createColorTexture(
-    device,
-    'advanced-effects-velocity',
-    'rg16float',
-    width,
-    height
-  );
-  const unshadowedColorTexture = createColorTexture(
-    device,
-    'advanced-effects-unshadowed-color',
-    'rgba8unorm',
-    width,
-    height
-  );
-  const directionalDirectTexture = createColorTexture(
-    device,
-    'advanced-effects-directional-direct',
-    'rgba16float',
-    width,
-    height
-  );
-  const shadowDebugTexture = createColorTexture(
-    device,
-    'advanced-effects-shadow-debug',
-    'rgba16float',
-    width,
-    height
-  );
-  const depthTexture = createDepthTexture(
-    device,
-    'advanced-effects-depth',
-    'depth24plus',
-    width,
-    height
-  );
-  return device.createFramebuffer({
-    id: 'advanced-effects-scene-framebuffer',
+function createSceneGBuffer(device: Device, width: number, height: number): GBuffer {
+  return new GBuffer(device, {
+    id: 'advanced-effects-scene',
     width,
     height,
-    colorAttachments: [
-      colorTexture,
-      normalTexture,
-      velocityTexture,
-      unshadowedColorTexture,
-      directionalDirectTexture,
-      shadowDebugTexture
-    ],
-    depthStencilAttachment: depthTexture
-  });
-}
-
-function createColorTexture(
-  device: Device,
-  id: string,
-  format: TextureFormatColor,
-  width: number,
-  height: number
-): Texture {
-  return device.createTexture({
-    id,
-    format,
-    width,
-    height,
-    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
-    sampler: {
-      minFilter: 'linear',
-      magFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    }
-  });
-}
-
-function createDepthTexture(
-  device: Device,
-  id: string,
-  format: TextureFormatDepthStencil,
-  width: number,
-  height: number
-): Texture {
-  return device.createTexture({
-    id,
-    format,
-    width,
-    height,
-    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
-    sampler: {
-      minFilter: 'nearest',
-      magFilter: 'nearest',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    }
+    colorFormat: 'rgba8unorm',
+    normalRoughnessFormat: 'rgba8unorm',
+    velocityFormat: 'rg16float',
+    depthStencilFormat: 'depth24plus',
+    extraColorAttachments: [
+      {name: 'unshadowedColor', format: 'rgba8unorm'},
+      {name: 'directionalDirect', format: 'rgba16float'},
+      {name: 'shadowDebug', format: 'rgba16float'}
+    ]
   });
 }
 

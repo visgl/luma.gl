@@ -64,6 +64,13 @@ export {shadow} from './shadows/shadow';
 export type {ContactShadowProps} from './shadows/contact-shadow';
 export {createContactShadowShaderPassPipeline} from './shadows/contact-shadow';
 
+export type {
+  GBufferExtraColorAttachment,
+  GBufferProps,
+  GBufferShaderPassBindings
+} from './rendering/g-buffer';
+export {GBuffer} from './rendering/g-buffer';
+
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
 
