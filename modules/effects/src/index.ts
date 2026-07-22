@@ -132,6 +132,15 @@ export {
 } from './passes/screen-space/gtao';
 export type {OutlineShaderPassPipelineOptions} from './passes/screen-space/outlines';
 export {createOutlineShaderPassPipeline} from './passes/screen-space/outlines';
+export type {SSGIShaderPassPipelineOptions} from './passes/screen-space/screen-space-global-illumination';
+export {
+  createSSGIShaderPassPipeline,
+  ssgiComposite,
+  ssgiDepthHistoryCopy,
+  ssgiSpatial,
+  ssgiTemporal,
+  ssgiTrace
+} from './passes/screen-space/screen-space-global-illumination';
 export type {SSRShaderPassPipelineOptions} from './passes/screen-space/screen-space-reflections';
 export {
   createSSRShaderPassPipeline,

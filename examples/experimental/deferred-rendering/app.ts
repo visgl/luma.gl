@@ -12,7 +12,11 @@ import {
   ShaderPassRenderer,
   SphereGeometry
 } from '@luma.gl/engine';
-import {createGTAOShaderPassPipeline, createSSRShaderPassPipeline} from '@luma.gl/effects';
+import {
+  createGTAOShaderPassPipeline,
+  createSSGIShaderPassPipeline,
+  createSSRShaderPassPipeline
+} from '@luma.gl/effects';
 import {
   ClusteredLightGrid,
   createClusteredDeferredLightingShaderPassPipeline,
@@ -60,6 +64,8 @@ type DebugView =
   | 'Depth'
   | 'Cluster Occupancy'
   | 'Ambient Occlusion'
+  | 'Indirect Lighting'
+  | 'Bounce Confidence'
   | 'Reflections'
   | 'Reflection Confidence';
 
@@ -73,6 +79,12 @@ type DeferredRenderingSettings = {
   ambientOcclusionRadius: number;
   ambientOcclusionIntensity: number;
   ambientOcclusionStrength: number;
+  globalIlluminationRadius: number;
+  globalIlluminationIntensity: number;
+  globalIlluminationStrength: number;
+  globalIlluminationRayCount: number;
+  globalIlluminationStepCount: number;
+  globalIlluminationHistoryWeight: number;
   reflectionStrength: number;
   reflectionIntensity: number;
   reflectionMaxDistance: number;
@@ -90,6 +102,12 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   ambientOcclusionRadius: 2.2,
   ambientOcclusionIntensity: 3.2,
   ambientOcclusionStrength: 0.68,
+  globalIlluminationRadius: 5.2,
+  globalIlluminationIntensity: 3.4,
+  globalIlluminationStrength: 1.35,
+  globalIlluminationRayCount: 8,
+  globalIlluminationStepCount: 9,
+  globalIlluminationHistoryWeight: 0.88,
   reflectionStrength: 1.15,
   reflectionIntensity: 1.8,
   reflectionMaxDistance: 26,
@@ -101,9 +119,10 @@ const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why deferred rendering scales:</b> forward shading repeats material work for every light that touches every draw. Here the geometry pass writes base color, metalness, roughness, emissive, normal, velocity, and depth once; the fullscreen resolve reuses those screen-space values for lighting.</p>
 <p><b>Why clustering wins:</b> a WebGPU compute stage projects each view-space light sphere into a <code>16 × 9 × 24</code> screen/log-depth grid. Each pixel reconstructs its view position from depth, finds one cluster, and normally evaluates only that short local list instead of all 512 lights.</p>
 <p><b>Why GTAO belongs after lighting:</b> a half-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO is composed into lit color.</p>
+<p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
-<p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
-<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Reflections</b>, and <b>Reflection Confidence</b> expose exactly where work or uncertain screen-space hits accumulate.</p>
+<p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
+<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, and <b>Reflection Confidence</b> reveal where work or uncertain screen-space hits accumulate.</p>
 `;
 
 type DeferredSurfaceUniforms = {
@@ -466,13 +485,14 @@ class InstancedSurfaceModel {
   }
 }
 
-/** WebGPU-only material laboratory for G-buffer deferred lighting. */
+/** WebGPU-only illumination laboratory for deferred material and light transport. */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
   readonly device: Device;
   readonly materialSpheres: InstancedSurfaceModel;
   readonly floor: InstancedSurfaceModel;
+  readonly bounceEmitters: InstancedSurfaceModel;
   readonly reflectionFeatures: InstancedSurfaceModel;
   readonly lightMarkers: InstancedSurfaceModel;
   readonly pointLightBuffer: Buffer;
@@ -499,6 +519,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'deferred-material-floor',
       geometry: new CubeGeometry({indices: true}),
       data: makeFloorData()
+    });
+    this.bounceEmitters = new InstancedSurfaceModel(device, {
+      id: 'deferred-bounce-emitters',
+      geometry: new CubeGeometry({indices: true}),
+      data: makeBounceEmitterData()
     });
     this.reflectionFeatures = new InstancedSurfaceModel(device, {
       id: 'deferred-reflection-features',
@@ -581,6 +606,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     };
     this.materialSpheres.setUniforms(surfaceUniforms);
     this.floor.setUniforms(surfaceUniforms);
+    this.bounceEmitters.setUniforms(surfaceUniforms);
     this.reflectionFeatures.setUniforms(surfaceUniforms);
     this.lightMarkers.setUniforms(surfaceUniforms);
 
@@ -613,6 +639,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearDepth: 1
     });
     this.floor.model.draw(renderPass);
+    this.bounceEmitters.model.draw(renderPass);
     this.reflectionFeatures.model.draw(renderPass);
     this.materialSpheres.model.draw(renderPass);
     this.lightMarkers.model.draw(renderPass);
@@ -657,11 +684,41 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           strength: this.settings.ambientOcclusionStrength,
           debugMode: this.settings.debugView === 'Ambient Occlusion' ? 1 : 0
         },
+        ssgiTrace: {
+          projectionMatrix,
+          inverseProjectionMatrix,
+          radius: this.settings.globalIlluminationRadius,
+          thickness: 0.38,
+          intensity:
+            this.settings.debugView === 'Ambient Occlusion'
+              ? 0
+              : this.settings.globalIlluminationIntensity,
+          rayCount: this.settings.globalIlluminationRayCount,
+          stepCount: this.settings.globalIlluminationStepCount,
+          frameIndex: this.frameIndex
+        },
+        ssgiTemporal: {
+          inverseProjectionMatrix,
+          historyWeight: this.settings.globalIlluminationHistoryWeight
+        },
+        ssgiComposite: {
+          strength: this.settings.globalIlluminationStrength,
+          debugMode:
+            this.settings.debugView === 'Indirect Lighting'
+              ? 1
+              : this.settings.debugView === 'Bounce Confidence'
+                ? 2
+                : 0
+        },
         ssrTrace: {
           projectionMatrix,
           inverseProjectionMatrix,
           intensity:
-            this.settings.debugView === 'Ambient Occlusion' ? 0 : this.settings.reflectionIntensity,
+            this.settings.debugView === 'Ambient Occlusion' ||
+            this.settings.debugView === 'Indirect Lighting' ||
+            this.settings.debugView === 'Bounce Confidence'
+              ? 0
+              : this.settings.reflectionIntensity,
           maxDistance: this.settings.reflectionMaxDistance,
           thickness: 0.32,
           sampleCount: this.settings.reflectionSampleCount,
@@ -700,6 +757,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.orbitControls?.destroy();
     this.materialSpheres.destroy();
     this.floor.destroy();
+    this.bounceEmitters.destroy();
     this.reflectionFeatures.destroy();
     this.lightMarkers.destroy();
     this.pointLightBuffer.destroy();
@@ -711,12 +769,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private makePanel(): Panel {
     return makeExampleTabbedPanel({
       id: 'deferred-rendering-tabs',
-      title: 'Deferred Material Lab',
+      title: 'Deferred Illumination Lab',
       panels: [
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
           title: 'Overview',
-          html: '<p><b>One geometry pass. Hundreds of lights. Reflections everywhere.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>Temporally stabilized GTAO grounds the contacts, then roughness-aware screen-space reflection rays bounce that same lit scene across polished floors, chrome frames, and the moving material grid.</p><p>Drag the canvas to orbit, use the mouse wheel or trackpad to zoom, and disable <b>Auto Orbit</b> to inspect one material or reflection closely. Switch Debug View to inspect the actual G-buffer, AO, reflection radiance, and reflection confidence.</p>'
+          html: '<p><b>One geometry pass. Hundreds of lights. Color bouncing everywhere.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>Temporally stabilized GTAO grounds the contacts, screen-space global illumination transfers colored light from nearby emitter panels and materials, and roughness-aware reflections bounce the same lit scene across polished floors and chrome accents.</p><p>Drag the canvas to orbit, use the mouse wheel or trackpad to zoom, and disable <b>Auto Orbit</b> to inspect one material closely. Switch Debug View to inspect actual G-buffer channels, diffuse bounce, bounce confidence, AO, reflections, and reflection confidence.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -742,7 +800,8 @@ function createRenderer(device: Device): ShaderPassRenderer {
     shaderPasses: [
       createClusteredDeferredLightingShaderPassPipeline(),
       createGTAOShaderPassPipeline(),
-      createSSRShaderPassPipeline({resolutionScale: 1}),
+      createSSGIShaderPassPipeline(),
+      createSSRShaderPassPipeline({resolutionScale: 0.75}),
       deferredDisplayPipeline
     ],
     colorFormat: 'rgba16float',
@@ -802,6 +861,49 @@ function makeFloorData(): SurfaceInstanceData {
     materials: new Float32Array([0.12, 0.82]),
     emissiveColors: new Float32Array([0.002, 0.004, 0.012]),
     instanceCount: 1
+  };
+}
+
+function makeBounceEmitterData(): SurfaceInstanceData {
+  const emitterPositions: NumberArray3[] = [
+    [-8.4, 1.25, -5.2],
+    [-8.4, 1.25, 3.5],
+    [8.4, 1.25, -5.2],
+    [8.4, 1.25, 3.5],
+    [-3.5, 1.35, -9.0],
+    [3.5, 1.35, -9.0]
+  ];
+  const emitterColors: NumberArray3[] = [
+    [0.08, 0.9, 0.78],
+    [0.2, 0.38, 1],
+    [1, 0.2, 0.63],
+    [1, 0.64, 0.12],
+    [0.88, 0.2, 1],
+    [1, 0.8, 0.15]
+  ];
+  const positions: number[] = [];
+  const scales: number[] = [];
+  const baseColors: number[] = [];
+  const materials: number[] = [];
+  const emissiveColors: number[] = [];
+
+  for (const [emitterIndex, emitterPosition] of emitterPositions.entries()) {
+    const emitterColor = emitterColors[emitterIndex]!;
+    const isRearPanel = emitterIndex >= 4;
+    positions.push(...emitterPosition);
+    scales.push(...(isRearPanel ? [2.35, 1.1, 0.11] : [0.11, 1.1, 1.4]));
+    baseColors.push(emitterColor[0], emitterColor[1], emitterColor[2], 1);
+    materials.push(0.78, 0.06);
+    emissiveColors.push(emitterColor[0], emitterColor[1], emitterColor[2]);
+  }
+
+  return {
+    positions: new Float32Array(positions),
+    scales: new Float32Array(scales),
+    baseColors: new Float32Array(baseColors),
+    materials: new Float32Array(materials),
+    emissiveColors: new Float32Array(emissiveColors),
+    instanceCount: emitterPositions.length
   };
 }
 
@@ -947,6 +1049,10 @@ function getDebugMode(debugView: DebugView): number {
       return 7;
     case 'Ambient Occlusion':
       return 8;
+    case 'Indirect Lighting':
+      return 11;
+    case 'Bounce Confidence':
+      return 12;
     case 'Reflections':
       return 9;
     case 'Reflection Confidence':
@@ -980,6 +1086,8 @@ function makeSettingsSchema(): SettingsSchema {
               'Depth',
               'Cluster Occupancy',
               'Ambient Occlusion',
+              'Indirect Lighting',
+              'Bounce Confidence',
               'Reflections',
               'Reflection Confidence'
             ]
@@ -1070,6 +1178,67 @@ function makeSettingsSchema(): SettingsSchema {
             min: 0,
             max: 1,
             step: 0.02
+          }
+        ]
+      },
+      {
+        id: 'global-illumination',
+        name: 'Diffuse Global Illumination',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'globalIlluminationRadius',
+            label: 'Bounce Radius',
+            type: 'number',
+            persist: 'none',
+            min: 0.5,
+            max: 12,
+            step: 0.1
+          },
+          {
+            name: 'globalIlluminationIntensity',
+            label: 'Bounce Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 6,
+            step: 0.1
+          },
+          {
+            name: 'globalIlluminationStrength',
+            label: 'Bounce Strength',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 3,
+            step: 0.05
+          },
+          {
+            name: 'globalIlluminationRayCount',
+            label: 'Bounce Rays',
+            type: 'number',
+            persist: 'none',
+            min: 1,
+            max: 12,
+            step: 1
+          },
+          {
+            name: 'globalIlluminationStepCount',
+            label: 'Ray Steps',
+            type: 'number',
+            persist: 'none',
+            min: 2,
+            max: 12,
+            step: 1
+          },
+          {
+            name: 'globalIlluminationHistoryWeight',
+            label: 'Bounce History',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.97,
+            step: 0.01
           }
         ]
       },

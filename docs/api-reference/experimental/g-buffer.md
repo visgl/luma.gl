@@ -83,7 +83,7 @@ struct FragmentOutputs {
 The [Advanced Effects example](/examples/experimental/advanced-effects) uses `GBuffer` with three
 extra channels for unshadowed color, directional direct light, and shadow debugging.
 
-The [Deferred Material Lab](/examples/experimental/deferred-rendering) uses two extra channels,
+The [Deferred Illumination Lab](/examples/experimental/deferred-rendering) uses two extra channels,
 `baseColorMetallic` and `emissiveOcclusion`, then resolves them with 64-capacity storage-buffer
 point lighting:
 

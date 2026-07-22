@@ -27,7 +27,7 @@ Target Release Date: Q3, 2026
 - **Graph-native GPU sort** - `GPUSort` stably orders paired packed `uint32` keys and values in either direction, automatically selecting bitonic or binary LSD radix passes. The [GPU Sort example](/examples/experimental/gpu-sort) exposes graph compilation and transient reuse.
 - **Graph-native GPU data analysis** - `GPUReduction`, `GPUHistogram`, and `GPUGridBinning` add deterministic scalar aggregates, reusable histogram counts, and row-major spatial counts. Grid binning supports clear-once, ordered accumulation over fixed-width vector chunks. The [GPU Data Analysis example](/examples/experimental/gpu-data-analysis) composes the operations without hidden submission or readback.
 - **Semantic G-buffer targets** - `GBuffer` owns WebGPU MRT scene color, normal-roughness, velocity, and depth targets plus named extra channels, then exposes the standard depth, normal, and velocity bindings consumed by screen-space effect pipelines.
-- **Composable deferred lighting** - `deferredLighting` resolves Cook-Torrance opaque lighting from G-buffer material channels, reconstructed depth, one directional light, and a fixed-capacity WebGPU point-light storage buffer. The [Deferred Material Lab](/examples/experimental/deferred-rendering) exposes the material channels and animated lights live.
+- **Composable deferred lighting** - `deferredLighting` resolves Cook-Torrance opaque lighting from G-buffer material channels, reconstructed depth, one directional light, and a fixed-capacity WebGPU point-light storage buffer. The [Deferred Illumination Lab](/examples/experimental/deferred-rendering) exposes the material channels and animated lights live.
 - **Hybrid shadows** - `ShadowMapRenderer`, the group-2 `shadow` WGSL module, and the contact-shadow shader-pass pipeline add WebGPU cascaded directional, spot, and point-light shadows with PCSS filtering. Visualization City demonstrates the complete ordered stack.
 
 **@luma.gl/engine**
@@ -94,7 +94,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/effects**
 
-- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, and volumetric fog. They share strict ordered composition with existing effects such as bloom and depth of field.
+- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, and volumetric fog. They share strict ordered composition with existing effects such as bloom and depth of field.
 - **[Visualization City](/examples/experimental/advanced-effects)** - New MRT showcase combines the complete effect stack with presets, quality levels, debug views, and before/after comparison.
 
 

@@ -17,6 +17,7 @@ whether its cost scales with scene geometry, visible pixels, light count, or tem
 | --- | --- | --- | --- |
 | Stable environment reflections | `pbrMaterial` with `ibl` and `loadPBREnvironment()` | Add screen-space reflections for nearby animated scene detail. | Environment maps do not automatically capture the current local scene. |
 | Dynamic reflections of visible geometry | `createSSRShaderPassPipeline()` | Increase tracing resolution, ray samples, and temporal history quality. | Screen-space rays cannot reflect geometry outside the current depth/color buffers. |
+| Colored light bouncing between visible surfaces | `createSSGIShaderPassPipeline()` | Increase hemisphere rays, ray steps, tracing radius, and temporal quality. | Indirect light is limited to visible scene radiance and is not full-scene ray tracing. |
 | Low-cost contact darkening | `createSSAOShaderPassPipeline()` | Switch to GTAO when contact quality and temporal stability matter. | Use SSAO **or** GTAO; stacking both normally double-darkens surfaces. |
 | Higher-quality ambient visibility | `createGTAOShaderPassPipeline()` | Tune radius, history, and denoising for the scene scale. | Requires coherent depth, view normals, velocity, and projection matrices. |
 | A modest number of local lights | `createDeferredLightingShaderPassPipeline()` | Switch to clustered lighting when many lights overlap the scene. | The baseline shader supports at most 64 point lights. |
@@ -25,6 +26,24 @@ whether its cost scales with scene geometry, visible pixels, light count, or tem
 | Tiny near-surface shadow detail | `createContactShadowShaderPassPipeline()` | Combine with stable cascaded or local-light shadow maps. | Camera-space contact rays cannot see occluders outside the current depth buffer. |
 | Fast transparent layering | `WBOITRenderer` | Use `ABufferRenderer` when exact fragment ordering is more important. | Weighted blending approximates heavily overlapping transparent layers. |
 | Broad cinematic glow | `bloomShaderPassPipeline` | Keep the single `bloom` pass for simpler, cheaper glow. | Bloom operates on color; it is not reflected lighting or global illumination. |
+
+## Example Profiles: Visualization City Versus Illumination Lab
+
+The two WebGPU showcases emphasize different rendering problems; they are not independent
+implementations of the same effect catalog.
+
+| | Visualization City | Deferred Illumination Lab |
+| --- | --- | --- |
+| Main purpose | Demonstrate a broad, switchable hybrid shadow/effect stack on recognizable city geometry. | Inspect physically based materials and advanced direct, diffuse-indirect, and specular light transport. |
+| Direct-light strategy | Scene shading with directional, spot, and point-light shadow maps. | Deferred Cook-Torrance shading with hundreds of compute-clustered point lights. |
+| Ambient visibility | Lower-cost SSAO and optional screen-space contact shadows. | Temporally stabilized horizon-based GTAO. |
+| Indirect diffuse light | Not included. | Cosine-weighted, temporally stabilized screen-space global illumination. |
+| Reflections | Shared `createSSRShaderPassPipeline()`, tuned by city quality presets. | The **same** SSR pipeline, tuned for polished materials and edge-aware upsampling. |
+| Other strengths | Cascaded shadows, split comparisons, outlines, fog, temporal AA, and motion blur. | Roughness/metalness inspection, light clustering, emissive color bleeding, and transport-confidence diagnostics. |
+
+Visualization City is therefore broader in shadow and presentation effects, while Illumination
+Lab goes deeper into deferred shading and higher-order light transport. Shared techniques such
+as SSR remain composable, reusable implementations rather than duplicated algorithms.
 
 ## Reflections: Environment Maps Versus Screen-Space Rays
 
@@ -55,14 +74,15 @@ hardware ray-tracing pipeline. Neither should be confused with the implemented S
 ### One SSR Implementation, Multiple Examples
 
 [Effects: Visualization City](/examples/experimental/advanced-effects) and
-[Deferred Rendering: Material Lab](/examples/experimental/deferred-rendering) use the **same**
+[Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering) use the **same**
 exported `createSSRShaderPassPipeline()`. They are examples of one implementation in different
 render stacks, not competing copies of the reflection algorithm.
 
 - Visualization City selects approximately 35%, 50%, or 100% tracing resolution from its quality
   preset and combines reflections with light-space shadows, SSAO, fog, and temporal AA.
-- Material Lab traces at full resolution to showcase polished floors, chrome accents, roughness
-  variation, reflection-confidence diagnostics, and clustered animated lights.
+- Illumination Lab traces at 75% resolution and uses depth/normal-aware upsampling to showcase
+  polished floors, chrome accents, roughness variation, reflection-confidence diagnostics, and
+  clustered animated lights without paying the full-resolution tracing cost.
 - `ssrTrace`, `ssrTemporal`, `ssrDepthHistoryCopy`, `ssrSpatial`, and `ssrComposite` are the
   reusable stages of that same pipeline, exposed for applications that need custom composition.
 
@@ -90,6 +110,27 @@ geometry or computes full global illumination.
 Use one AO estimator per stack. GTAO is usually the higher-quality replacement for SSAO, not a
 second layer to multiply on top of it. Reset history after camera cuts, resize events, or changes
 that invalidate scene velocity.
+
+## Indirect Lighting: Ambient Occlusion, SSGI, and SSR
+
+Ambient occlusion, diffuse global illumination, and specular reflections all read similar
+G-buffer attachments, but transfer different kinds of light.
+
+| | SSAO / GTAO | Diffuse screen-space global illumination | Screen-space reflections |
+| --- | --- | --- | --- |
+| Public entry point | `createSSAOShaderPassPipeline()` or `createGTAOShaderPassPipeline()` | `createSSGIShaderPassPipeline()` | `createSSRShaderPassPipeline()` |
+| Effect on color | Darkens regions with limited ambient visibility. | Adds colored radiance bounced from nearby visible lit surfaces. | Adds directional glossy or mirror-like reflected scene color. |
+| Sample distribution | Local visibility kernel or horizon search. | Cosine-weighted rays over the surface hemisphere. | Roughness-jittered rays around the mirror-reflection direction. |
+| Strongest visual cue | Grounded corners and sphere/floor contacts. | Cyan, magenta, or amber color bleeding onto nearby diffuse materials. | Reflected lights and geometry on polished floors or chrome. |
+| Typical surface | Any visible opaque surface. | Primarily rough and diffuse surfaces. | Primarily smooth, glossy, or metallic surfaces. |
+| Typical cost | Neighborhood/horizon samples; GTAO also has temporal history. | Visible tracing pixels × hemisphere rays × ray steps, plus temporal denoising. | Visible tracing pixels × reflection-ray steps, plus temporal denoising. |
+| Off-screen information | Unavailable. | Unavailable without an application-provided fallback. | Unavailable without an environment-map or other fallback. |
+
+These are not duplicate effects: GTAO controls how much ambient light reaches a surface, SSGI
+adds indirect diffuse light, and SSR adds indirect specular light. A representative order is
+**direct lighting → GTAO → SSGI → SSR**, allowing mirror reflections to include the bounced
+diffuse result. Half-resolution tracing and stable velocity history are useful starting points
+for both SSGI and SSR.
 
 ## Lighting: Baseline Deferred Versus Clustered Deferred
 
@@ -178,6 +219,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   bloomShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline
 } from '@luma.gl/effects';
@@ -187,6 +229,7 @@ const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [
     createClusteredDeferredLightingShaderPassPipeline(),
     createGTAOShaderPassPipeline({resolutionScale: 0.5}),
+    createSSGIShaderPassPipeline({resolutionScale: 0.5}),
     createSSRShaderPassPipeline({resolutionScale: 0.5}),
     createTAAShaderPassPipeline(),
     bloomShaderPassPipeline
@@ -210,6 +253,8 @@ renderer.renderToScreen({
     },
     gtaoEvaluate: {projectionMatrix, inverseProjectionMatrix},
     gtaoTemporal: {inverseProjectionMatrix},
+    ssgiTrace: {projectionMatrix, inverseProjectionMatrix},
+    ssgiTemporal: {inverseProjectionMatrix},
     ssrTrace: {projectionMatrix, inverseProjectionMatrix},
     ssrTemporal: {inverseProjectionMatrix}
   }
@@ -223,4 +268,4 @@ camera matrices, and presentation. `GBuffer` standardizes surface attachments, w
 For the underlying execution model, see [Shader Passes](/docs/api-guide/shaders/shader-passes).
 For complete live stacks, compare
 [Effects: Visualization City](/examples/experimental/advanced-effects) and
-[Deferred Rendering: Material Lab](/examples/experimental/deferred-rendering).
+[Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering).
