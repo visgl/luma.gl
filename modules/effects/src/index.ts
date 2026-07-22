@@ -116,6 +116,14 @@ export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-f
 export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
 
 // Screen-space effects
+export type {ClusteredVolumetricLightingShaderPassPipelineOptions} from './passes/screen-space/clustered-volumetric-lighting';
+export {
+  clusteredVolumetricComposite,
+  clusteredVolumetricDepthHistoryCopy,
+  clusteredVolumetricTemporal,
+  clusteredVolumetricTrace,
+  createClusteredVolumetricLightingShaderPassPipeline
+} from './passes/screen-space/clustered-volumetric-lighting';
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
   depthAwareBlur,
