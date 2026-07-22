@@ -23,6 +23,21 @@ yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertool
 
 - [WebXR](/docs/api-reference/experimental/webxr): WebGL-only session, frame, and raw camera helpers.
 
+## Surface Targets and Composable Effects
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`GBuffer`](/docs/api-reference/experimental/g-buffer) owns the standard scene color,
+normal-roughness, velocity, and depth attachments used by depth-aware and temporal shader-pass
+pipelines. It also exposes named extra MRT channels for application-specific lighting, material,
+picking, or debug data.
+
+The [Shader Passes guide](/docs/api-guide/shaders/shader-passes) explains how a scene render,
+`GBuffer` bindings, ordered `ShaderPassPipeline` effects, temporal history, and OIT resolve
+pipelines compose into one render stack.
+
 ## GPU Primitives and Command Graphs
 
 <p class="badges">

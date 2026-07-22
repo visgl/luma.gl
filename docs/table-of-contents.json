@@ -180,6 +180,7 @@
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          "api-reference/experimental/g-buffer",
           "api-reference/experimental/shadow-map-renderer",
           {
             "type": "category",
@@ -258,6 +259,7 @@
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          "api-reference/experimental/g-buffer",
           "api-reference/experimental/shadow-map-renderer",
           {
             "type": "category",

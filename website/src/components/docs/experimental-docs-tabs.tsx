@@ -6,12 +6,14 @@ type ExperimentalDocsTab = {id: ExperimentalDocsTabId; label: string; href: stri
 /** Experimental documentation tab identifiers. */
 export type ExperimentalDocsTabId =
   | 'overview'
+  | 'g-buffer'
   | 'shadow-map-renderer'
   | 'a-buffer-renderer'
   | 'wboit-renderer';
 
 const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/experimental'},
+  {id: 'g-buffer', label: 'GBuffer', href: '/docs/api-reference/experimental/g-buffer'},
   {
     id: 'shadow-map-renderer',
     label: 'ShadowMapRenderer',
