@@ -52,6 +52,105 @@ attachments. Color adjustments can be placed anywhere in the chain, but an
 effect that warps screen coordinates should run after scene-aware effects unless
 the application applies the same transform to those auxiliary attachments.
 
+## Composable Scene Render Stack
+
+The advanced-effects path has three separate responsibilities:
+
+1. Application geometry produces one scene color texture plus semantic surface attachments.
+2. `ShaderPassRenderer` orders fullscreen effects and owns their internal named and temporal
+   targets.
+3. The application presents the final texture, or passes it to another explicit workflow such as
+   transparency capture and resolve.
+
+On WebGPU, experimental [`GBuffer`](/docs/api-reference/experimental/g-buffer) packages the common
+surface attachments without owning scene traversal or material shading. Multiple render targets
+(MRT) means one fragment shader writes several color attachments in the same render pass:
+
+| Render-stack value | Producer | Consumers |
+| --- | --- | --- |
+| `sourceTexture` | `GBuffer.colorTexture` | Every shader pass through `previous` or `original`. |
+| `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, SSR, outlines, contact shadows, TAA, motion blur, fog. |
+| `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, SSR, normal-aware outlines, contact-shadow filtering. |
+| `velocityTexture` | `GBuffer.velocityTexture` | TAA and motion blur. |
+| named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific lighting, material, debug, or resolve passes. |
+
+```ts
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {
+  createMotionBlurShaderPassPipeline,
+  createSSAOShaderPassPipeline,
+  createSSRShaderPassPipeline,
+  createTAAShaderPassPipeline
+} from '@luma.gl/effects';
+import {GBuffer} from '@luma.gl/experimental';
+
+const gBuffer = new GBuffer(device, {width, height});
+
+// Geometry shaders write color, normalRoughness, and velocity in one MRT render pass.
+const scenePass = device.beginRenderPass({
+  framebuffer: gBuffer.framebuffer,
+  clearColors: [
+    new Float32Array([0, 0, 0, 1]),
+    new Float32Array([0.5, 0.5, 1, 1]),
+    new Float32Array([0, 0, 0, 0])
+  ],
+  clearDepth: 1
+});
+sceneModel.draw(scenePass);
+scenePass.end();
+
+const effects = new ShaderPassRenderer(device, {
+  shaderPasses: [
+    createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
+    createSSRShaderPassPipeline(),
+    createTAAShaderPassPipeline(),
+    createMotionBlurShaderPassPipeline()
+  ]
+});
+
+effects.renderToScreen({
+  sourceTexture: gBuffer.colorTexture,
+  bindings: gBuffer.getShaderPassBindings()
+});
+```
+
+`GBuffer` is intentionally a target and binding contract, not a complete deferred-lighting
+renderer. A later clustered-lighting or visibility-buffer workflow can write its result into the
+same scene-color slot while preserving the effect-facing contract.
+
+### Recommended ordering
+
+| Phase | Typical work | Why |
+| --- | --- | --- |
+| Geometry and opaque shading | MRT scene color, normal-roughness, velocity, depth | Establish one coherent surface snapshot. |
+| Lighting refinement | Contact shadows and other direct-light corrections | These still need unwarped depth, normals, and direct-light terms. |
+| Surface effects | SSAO, SSR, fog, outlines, depth-aware blur | These consume the original semantic attachments. |
+| Transparency resolve | WBOIT or A-buffer resolve pipeline | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
+| Temporal effects | TAA, then motion blur | Reproject the composed image before display-space processing. |
+| Display effects | Bloom, color adjustment, vignette, tone mapping | These operate on final color and usually do not need scene attachments. |
+
+This is a default, not a hard rule. A debug view may intentionally bypass earlier color processing
+through `original`, and a stylized stack may place display-space effects earlier.
+
+### Temporal history and resize
+
+Pass pipelines with persistent history targets keep those textures inside `ShaderPassRenderer`.
+Call `renderer.resetHistory()` after a camera cut, a discontinuous animation jump, or a semantic
+change in the G-buffer. When the drawing size changes, call both `gBuffer.resize()` and
+`renderer.resize()`; resizing invalidates history because old pixels no longer describe the same
+screen locations.
+
+### Transparency composition
+
+Opaque geometry should populate the G-buffer first. [`WBOITRenderer`](/docs/api-reference/experimental/wboit-renderer)
+and [`ABufferRenderer`](/docs/api-reference/experimental/a-buffer-renderer) keep transparent geometry
+capture separate, then expose resolve as ordinary `ShaderPassPipeline` steps. Put the chosen
+resolve pipeline into the same ordered `shaderPasses` array so transparency participates in later
+effects without creating a second postprocessing system.
+
+The [Advanced Effects example](/examples/experimental/advanced-effects) shows the full MRT surface
+pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug views.
+
 ## When To Use Shader Passes
 
 - Postprocessing color, blur, bloom, depth-of-field, and temporal effects.
