@@ -692,6 +692,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
                 ? 56
                 : 36
         },
+        ssrTemporal: {inverseProjectionMatrix},
         ssrComposite: {debugMode: this.settings.debugView === 'Reflections' ? 1 : 0},
         volumetricFog: {
           density: this.settings.preset === 'Foggy Depth' ? 0.2 : 0.08,

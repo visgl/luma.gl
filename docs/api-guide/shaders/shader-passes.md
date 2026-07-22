@@ -133,6 +133,10 @@ const renderer = new ShaderPassRenderer(device, {
 More specialized clustered-lighting or visibility-buffer workflows can replace the first resolve
 while preserving the same effect-facing depth, normal, velocity, and scene-color contract.
 
+For side-by-side choices between reflections, ambient occlusion, light assignment, shadows,
+transparency, blur, and temporal effects, see
+[Rendering Techniques and Tradeoffs](/docs/api-guide/shaders/rendering-techniques).
+
 ### Screen-space reflection composition
 
 `createSSRShaderPassPipeline()` consumes the already-lit `previous` color plus the shared depth,

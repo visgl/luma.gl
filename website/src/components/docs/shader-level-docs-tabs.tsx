@@ -16,7 +16,8 @@ export type ShaderLevelDocsTabId =
   | 'shader-assembly'
   | 'writing-portable-shaders'
   | 'writing-customizable-shaders'
-  | 'shader-passes';
+  | 'shader-passes'
+  | 'rendering-techniques';
 
 const SHADER_LEVEL_DOCS_TABS: ShaderLevelDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-guide/shaders'},
@@ -35,7 +36,12 @@ const SHADER_LEVEL_DOCS_TABS: ShaderLevelDocsTab[] = [
     label: 'Portable Shaders',
     href: '/docs/api-guide/shaders/writing-portable-shaders'
   },
-  {id: 'shader-passes', label: 'Shader Passes', href: '/docs/api-guide/shaders/shader-passes'}
+  {id: 'shader-passes', label: 'Shader Passes', href: '/docs/api-guide/shaders/shader-passes'},
+  {
+    id: 'rendering-techniques',
+    label: 'Rendering Techniques',
+    href: '/docs/api-guide/shaders/rendering-techniques'
+  }
 ];
 
 /**

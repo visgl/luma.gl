@@ -79,3 +79,7 @@ That fixed representation keeps the example focused on the deferred boundary: ge
 material capture, compute owns light assignment, the lighting pass owns direct light, and later
 effects such as GTAO and SSR consume the unchanged depth, normal, velocity, and scene-color
 contract without drawing the reflective geometry a second time.
+
+For a comparison with environment-map reflections, SSAO, baseline deferred lighting, and other
+composable effect alternatives, see
+[Rendering Techniques and Tradeoffs](/docs/api-guide/shaders/rendering-techniques).

@@ -14,4 +14,5 @@ Notable exports include:
 - `dof` and `dofShaderPassPipeline`
 - `createGTAOShaderPassPipeline` and `createSSRShaderPassPipeline`
 
-See [luma.gl](http://luma.gl) for documentation.
+See [Rendering Techniques and Tradeoffs](https://luma.gl/docs/api-guide/shaders/rendering-techniques)
+for comparisons between related effects, their GPU inputs, backend support, and composition order.
