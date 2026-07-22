@@ -24,6 +24,7 @@ type SSRTraceUniforms = {
 };
 
 type SSRTemporalUniforms = {
+  inverseProjectionMatrix: Readonly<NumberArray16>;
   historyWeight: number;
   depthThreshold: number;
 };
@@ -253,6 +254,7 @@ export const ssrTemporal = {
   name: 'ssrTemporal',
   source: /* wgsl */ `\
 struct SSRTemporalUniforms {
+  inverseProjectionMatrix: mat4x4f,
   historyWeight: f32,
   depthThreshold: f32,
 };
@@ -266,6 +268,12 @@ struct SSRTemporalUniforms {
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 @group(0) @binding(auto) var previousDepthTexture: texture_2d<f32>;
 @group(0) @binding(auto) var previousDepthTextureSampler: sampler;
+
+fn ssrTemporal_reconstructViewDepth(texCoord: vec2f, depth: f32) -> f32 {
+  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
+  let viewPosition = ssrTemporal.inverseProjectionMatrix * clip;
+  return abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
+}
 
 fn ssrTemporal_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -290,7 +298,11 @@ fn ssrTemporal_sampleColor(
     clampedPreviousCoord,
     0
   ).r;
-  let validDepth = abs(previousDepth - currentDepth) < ssrTemporal.depthThreshold;
+  let currentViewDepth = ssrTemporal_reconstructViewDepth(texCoord, currentDepth);
+  let previousViewDepth = ssrTemporal_reconstructViewDepth(clampedPreviousCoord, previousDepth);
+  let relativeDepthDifference = abs(previousViewDepth - currentViewDepth) /
+    max(currentViewDepth, 0.0001);
+  let validDepth = relativeDepthDifference < ssrTemporal.depthThreshold;
 
   let texel = 1.0 / vec2f(textureDimensions(sourceTexture));
   var minimumReflection = current;
@@ -333,10 +345,12 @@ fn ssrTemporal_sampleColor(
   uniforms: {} as SSRTemporalUniforms,
   bindings: {} as SSRTemporalBindings,
   uniformTypes: {
+    inverseProjectionMatrix: 'mat4x4<f32>',
     historyWeight: 'f32',
     depthThreshold: 'f32'
   },
   propTypes: {
+    inverseProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
     historyWeight: {value: 0.86, min: 0, max: 0.97},
     depthThreshold: {value: 0.018, min: 0.0001, softMax: 0.1}
   },

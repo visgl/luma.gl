@@ -668,7 +668,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           maxRoughness: 0.9,
           frameIndex: this.frameIndex
         },
-        ssrTemporal: {historyWeight: this.settings.reflectionHistoryWeight},
+        ssrTemporal: {
+          inverseProjectionMatrix,
+          historyWeight: this.settings.reflectionHistoryWeight
+        },
         ssrComposite: {
           strength: this.settings.reflectionStrength,
           debugMode:

@@ -18,7 +18,8 @@ import {
   createVolumetricFogShaderPassPipeline,
   depthAwareBlurShaderPassPipeline,
   dofShaderPassPipeline,
-  gtaoTemporal
+  gtaoTemporal,
+  ssrTemporal
 } from '../../src';
 
 test('advanced effects expose composable pipeline shapes', testCase => {
@@ -107,6 +108,11 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     reflections.steps[1].inputs?.historyTexture,
     reflections.steps[1].output,
     'SSR intentionally reprojects one logical reflection history target'
+  );
+  testCase.equal(
+    ssrTemporal.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'SSR temporal rejection reconstructs linear view-space depth'
   );
   testCase.end();
 });
