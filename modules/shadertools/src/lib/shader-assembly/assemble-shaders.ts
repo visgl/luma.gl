@@ -128,6 +128,21 @@ type AssembleStageOptions = {
   _bindingRegistry?: Map<string, number>;
 };
 
+/** Throws before assembly when a shader module requires unavailable language features. */
+function validateShaderModuleFeatures(platformInfo: PlatformInfo, modules: ShaderModule[]): void {
+  const availableFeatures = platformInfo.shaderFeatures || platformInfo.features;
+  for (const module of modules) {
+    const missingFeatures = (module.requiredFeatures || []).filter(
+      feature => !availableFeatures.has(feature)
+    );
+    if (missingFeatures.length > 0) {
+      throw new Error(
+        `Shader module ${module.name} requires unsupported shader features: ${missingFeatures.join(', ')}`
+      );
+    }
+  }
+}
+
 export type HookFunction = {hook: string; header: string; footer: string; signature?: string};
 
 /**
@@ -232,6 +247,7 @@ export function assembleShaderWGSL(
   } = options;
 
   assert(typeof source === 'string', 'shader source must be a string');
+  validateShaderModuleFeatures(platformInfo, modules);
 
   // const isVertex = type === 'vs';
   // const sourceLines = source.split('\n');
@@ -425,6 +441,7 @@ function assembleShaderGLSL(
   } = options;
 
   assert(typeof source === 'string', 'shader source must be a string');
+  validateShaderModuleFeatures(platformInfo, modules);
 
   const sourceVersion = language === 'glsl' ? getShaderInfo(source).version : -1;
   const targetVersion = platformInfo.shaderLanguageVersion;

@@ -9,7 +9,8 @@ import {
   type Device,
   type Framebuffer,
   type Sampler,
-  type SamplerProps
+  type SamplerProps,
+  type SamplerAddressMode
 } from '@luma.gl/core';
 import {AnimationLoopTemplate, DynamicTexture, type AnimationProps, Model} from '@luma.gl/engine';
 import {
@@ -35,7 +36,7 @@ type Vec4 = [number, number, number, number];
 type SampleMode = 'color-texture' | 'depth-comparison';
 type TexturePreset = 'nearest-pixels' | 'bilinear' | 'trilinear' | 'anisotropic' | 'custom';
 type MipChain = 'generated' | 'single-level';
-type AddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
+type AddressMode = SamplerAddressMode;
 type FilterMode = 'nearest' | 'linear';
 type MipmapFilter = 'none' | 'nearest' | 'linear';
 
@@ -71,7 +72,7 @@ const MAX_MIP_LEVEL = 8;
 const MAGNIFIED_RECT: Vec4 = [-0.5, 0, 0.92, 1.58];
 const RECEDING_RECT: Vec4 = [0.5, 0, 0.92, 1.58];
 
-const ADDRESS_MODES: AddressMode[] = ['clamp-to-edge', 'repeat', 'mirror-repeat'];
+const PORTABLE_ADDRESS_MODES: AddressMode[] = ['clamp-to-edge', 'repeat', 'mirror-repeat'];
 const FILTER_MODES: FilterMode[] = ['nearest', 'linear'];
 const MIPMAP_FILTERS: MipmapFilter[] = ['none', 'nearest', 'linear'];
 const ANISOTROPY_VALUES = [1, 2, 4, 8, 16];
@@ -732,14 +733,14 @@ function makeSettingsSchema(device: Device, settings: TextureSamplingSettings): 
       'addressModeU',
       'Address U',
       'Sampler',
-      ADDRESS_MODES,
+      getSupportedAddressModes(device),
       DEFAULT_SETTINGS.addressModeU
     ),
     makeSelectSetting(
       'addressModeV',
       'Address V',
       'Sampler',
-      ADDRESS_MODES,
+      getSupportedAddressModes(device),
       DEFAULT_SETTINGS.addressModeV
     ),
     makeSelectSetting(
@@ -937,8 +938,8 @@ function readSettings(
       sampleMode: readSampleMode(state.sampleMode, previous.sampleMode),
       preset: readTexturePreset(state.preset, previous.preset),
       mipChain: readMipChain(state.mipChain, previous.mipChain),
-      addressModeU: readAddressMode(state.addressModeU, previous.addressModeU),
-      addressModeV: readAddressMode(state.addressModeV, previous.addressModeV),
+      addressModeU: readAddressMode(state.addressModeU, previous.addressModeU, device),
+      addressModeV: readAddressMode(state.addressModeV, previous.addressModeV, device),
       magFilter: readFilterMode(state.magFilter, previous.magFilter),
       minFilter: readFilterMode(state.minFilter, previous.minFilter),
       mipmapFilter: readMipmapFilter(state.mipmapFilter, previous.mipmapFilter),
@@ -962,6 +963,13 @@ function normalizeSettings(
   device: Device
 ): TextureSamplingSettings {
   const next = cloneSettings(settings);
+  const supportedAddressModes = getSupportedAddressModes(device);
+  if (!supportedAddressModes.includes(next.addressModeU)) {
+    next.addressModeU = 'clamp-to-edge';
+  }
+  if (!supportedAddressModes.includes(next.addressModeV)) {
+    next.addressModeV = 'clamp-to-edge';
+  }
   next.uvScale = clamp(next.uvScale, 0.25, 16);
   next.uvOffsetU = clamp(next.uvOffsetU, -2, 2);
   next.uvOffsetV = clamp(next.uvOffsetV, -2, 2);
@@ -1015,10 +1023,18 @@ function readMipChain(value: unknown, fallback: MipChain): MipChain {
   return value === 'generated' || value === 'single-level' ? value : fallback;
 }
 
-function readAddressMode(value: unknown, fallback: AddressMode): AddressMode {
-  return typeof value === 'string' && ADDRESS_MODES.includes(value as AddressMode)
+function readAddressMode(value: unknown, fallback: AddressMode, device: Device): AddressMode {
+  return typeof value === 'string' &&
+    getSupportedAddressModes(device).includes(value as AddressMode)
     ? (value as AddressMode)
     : fallback;
+}
+
+/** Returns portable modes plus the WebGL-only extension mode when the device exposes it. */
+function getSupportedAddressModes(device: Device): AddressMode[] {
+  return device.type === 'webgl' && device.features.has('texture-mirror-clamp-to-edge-webgl')
+    ? [...PORTABLE_ADDRESS_MODES, 'mirror-clamp-to-edge-webgl']
+    : PORTABLE_ADDRESS_MODES;
 }
 
 function readFilterMode(value: unknown, fallback: FilterMode): FilterMode {
@@ -1100,6 +1116,11 @@ function makeStatusHtml(device: Device, settings: TextureSamplingSettings): stri
   }
   if (device.type === 'webgl' && !device.features.has('texture-filterable-anisotropic-webgl')) {
     notes.push('EXT_texture_filter_anisotropic is unavailable; maxAnisotropy is fixed at 1.');
+  }
+  if (device.type === 'webgl' && device.features.has('texture-mirror-clamp-to-edge-webgl')) {
+    notes.push(
+      'EXT_texture_mirror_clamp_to_edge adds the mirror-clamp-to-edge-webgl address mode.'
+    );
   }
   return `
     <p style="margin:0 0 8px"><b>Texture sampling playground</b></p>

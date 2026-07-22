@@ -179,6 +179,34 @@ test('ShaderAssembler#hooks', t => {
   t.end();
 });
 
+test('ShaderAssembler validates shader module required features', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const module = {
+    name: 'requires-sample-variables',
+    requiredFeatures: ['shader-sample-variables-webgl'] as const
+  };
+
+  t.throws(
+    () => shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, modules: [module]}),
+    /requires unsupported shader features: shader-sample-variables-webgl/,
+    'missing shader feature fails before source assembly'
+  );
+  t.doesNotThrow(
+    () =>
+      shaderAssembler.assembleGLSLShaderPair({
+        platformInfo: {
+          ...platformInfo,
+          shaderFeatures: new Set(['shader-sample-variables-webgl'])
+        },
+        vs,
+        fs,
+        modules: [module]
+      }),
+    'available shader feature allows assembly'
+  );
+  t.end();
+});
+
 test('ShaderAssembler#defaultModules', t => {
   const shaderAssembler = new ShaderAssembler();
 

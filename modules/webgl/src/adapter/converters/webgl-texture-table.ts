@@ -18,20 +18,20 @@ import {getGLFromVertexType} from './webgl-vertex-formats';
 // TEXTURE FEATURES
 
 // Define local webgl extension strings to optimize minification
-const X_S3TC = 'WEBGL_compressed_texture_s3tc'; // BC1, BC2, BC3
-const X_S3TC_SRGB = 'WEBGL_compressed_texture_s3tc_srgb'; // BC1, BC2, BC3
-const X_RGTC = 'EXT_texture_compression_rgtc'; // BC4, BC5
-const X_BPTC = 'EXT_texture_compression_bptc'; // BC6, BC7
-const X_ETC2 = 'WEBGL_compressed_texture_etc'; // Renamed from 'WEBGL_compressed_texture_es3'
-const X_ASTC = 'WEBGL_compressed_texture_astc';
-const X_ETC1 = 'WEBGL_compressed_texture_etc1';
-const X_PVRTC = 'WEBGL_compressed_texture_pvrtc';
-const X_ATC = 'WEBGL_compressed_texture_atc';
+const X_S3TC = 'WEBGL_compressed_texture_s3tc' as const; // BC1, BC2, BC3
+const X_S3TC_SRGB = 'WEBGL_compressed_texture_s3tc_srgb' as const; // BC1, BC2, BC3
+const X_RGTC = 'EXT_texture_compression_rgtc' as const; // BC4, BC5
+const X_BPTC = 'EXT_texture_compression_bptc' as const; // BC6, BC7
+const X_ETC2 = 'WEBGL_compressed_texture_etc' as const; // Renamed from 'WEBGL_compressed_texture_es3'
+const X_ASTC = 'WEBGL_compressed_texture_astc' as const;
+const X_ETC1 = 'WEBGL_compressed_texture_etc1' as const;
+const X_PVRTC = 'WEBGL_compressed_texture_pvrtc' as const;
+const X_ATC = 'WEBGL_compressed_texture_atc' as const;
 
 // Define local webgl extension strings to optimize minification
-const EXT_texture_norm16 = 'EXT_texture_norm16';
-const EXT_render_snorm = 'EXT_render_snorm';
-const EXT_color_buffer_float = 'EXT_color_buffer_float';
+const EXT_texture_norm16 = 'EXT_texture_norm16' as const;
+const EXT_render_snorm = 'EXT_render_snorm' as const;
+const EXT_color_buffer_float = 'EXT_color_buffer_float' as const;
 const SNORM8_COLOR_RENDERABLE: DeviceFeature = 'snorm8-renderable-webgl';
 const NORM16_COLOR_RENDERABLE: DeviceFeature = 'norm16-renderable-webgl';
 const SNORM16_COLOR_RENDERABLE: DeviceFeature = 'snorm16-renderable-webgl';
@@ -40,7 +40,7 @@ const FLOAT32_COLOR_RENDERABLE: DeviceFeature = 'float32-renderable-webgl';
 const RGB9E5UFLOAT_COLOR_RENDERABLE: DeviceFeature = 'rgb9e5ufloat-renderable-webgl';
 
 type TextureFeatureDefinition = {
-  extensions?: string[];
+  extensions?: (keyof GLExtensions)[];
   features?: DeviceFeature[];
 };
 
@@ -120,7 +120,7 @@ function hasTextureFeature(
 type WebGLFormatInfo = {
   gl?: GL;
   /** compressed */
-  x?: string;
+  x?: keyof GLExtensions;
   /** color-renderable capability gate. false means never color-renderable on WebGL. */
   r?: DeviceFeature | false;
   types?: GLPixelType[];
@@ -358,7 +358,10 @@ export function getTextureFormatCapabilitiesWebGL(
     // @ts-ignore
     blend: supported && formatSupport.blend,
     // @ts-ignore
-    store: supported && formatSupport.store
+    store: false,
+    storageRead: false,
+    storageWrite: false,
+    storageReadWrite: false
   };
 }
 

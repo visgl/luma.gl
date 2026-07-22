@@ -39,7 +39,7 @@ Common assembly props:
 
 | Property | Description |
 | --- | --- |
-| `platformInfo: PlatformInfo` | Current backend, shader language, device limits, and features. |
+| `platformInfo: PlatformInfo` | Current backend, shader language, device limits, backend `features`, and derived `shaderFeatures`. |
 | `source?: string` | Unified WGSL source for `assembleWGSLShader()`. |
 | `vs?: string` | GLSL vertex shader source for `assembleGLSLShaderPair()`. |
 | `fs?: string` | GLSL fragment shader source for `assembleGLSLShaderPair()`. |
@@ -89,6 +89,10 @@ modules, bindingAssignments, bindingTable}`. Module WGSL source is prepended to
 application WGSL, inactive conditional branches are removed, and
 `@binding(auto)` declarations are assigned concrete binding numbers before WebGPU
 reflection.
+
+Before either GLSL or WGSL assembly, module `requiredFeatures` are checked against
+`platformInfo.shaderFeatures` (falling back to `features` for older callers). This keeps feature
+requirements explicit without rewriting shader source or adding extension directives.
 
 ## Hooks And Injections
 

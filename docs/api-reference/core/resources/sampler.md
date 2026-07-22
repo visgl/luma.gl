@@ -61,9 +61,9 @@ const sampler = device.createSampler(gl, {
 | Sampler Parameter | Values                                                  | Description                                                         |
 | ----------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
 | `type`            | `'color-sampler'` \* \| `'comparison-sampler'`          | Specify `'comparison-sampler'` to create a depth comparison sampler |
-| `addressModeU?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `u` (`s`)                   |
-| `addressModeV?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `v` (`t`)                   |
-| `addressModeW?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `w` (`r`)                   |
+| `addressModeU?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` \| `'mirror-clamp-to-edge-webgl'` | Texture wrapping for texture coordinate `u` (`s`) |
+| `addressModeV?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` \| `'mirror-clamp-to-edge-webgl'` | Texture wrapping for texture coordinate `v` (`t`) |
+| `addressModeW?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` \| `'mirror-clamp-to-edge-webgl'` | Texture wrapping for texture coordinate `w` (`r`) |
 | `magFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
 | `minFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
 | `mipmapFilter?`   | `'none'` \* \| `'nearest'` \| `'linear'`                | Sample closest mipmap, or interpolate two closest mipmaps           |
@@ -88,6 +88,11 @@ Controls how texture coordinates outside of the [0, 1] range are sampled.
 | `repeat` (default) | use fractional part of texture coordinates                                             |
 | `clamp-to-edge`    | clamp texture coordinates                                                              |
 | `mirrored-repeat`  | use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac` |
+| `mirror-clamp-to-edge-webgl` | WebGL-only mirrored clamp; requires `texture-mirror-clamp-to-edge-webgl` |
+
+`mirror-clamp-to-edge-webgl` deliberately carries the backend suffix because WebGPU does not
+support that address mode. The texture-sampling playground exposes it only when the active WebGL
+device has `EXT_texture_mirror_clamp_to_edge`.
 
 #### Texture Magnification Filter
 

@@ -34,6 +34,11 @@ const textureView = texture.createView({...});
 
 ### TextureViewProps
 
+| Property | Description |
+| --- | --- |
+| `aspect?: 'all' \| 'depth-only' \| 'stencil-only'` | Selects accessible depth/stencil aspects. WebGL `stencil-only` requires `stencil-texturing-webgl`; conflicting aspects of the same WebGL texture cannot be bound in one draw because WebGL view state is texture-global. |
+| `swizzle?: string` | WebGPU-only component swizzle, defaulting to `rgba`. Non-default values require `texture-component-swizzle`; WebGL rejects them. |
+
 ## Methods
 
 ### `constructor`

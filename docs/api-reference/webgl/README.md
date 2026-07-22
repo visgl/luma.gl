@@ -43,3 +43,26 @@ const gpuDevice: WebGL2RenderingContext = webglDevice.handle;
 const buffer = device.createBuffer(...);
 const gpuBuffer: WebGLBuffer = buffer.handle;
 ```
+
+## Extension-backed WebGL APIs
+
+Check `device.features` before using optional extension-backed behavior. WebGL-only public names
+carry a `-webgl` suffix when they appear in shared string unions.
+
+```typescript
+if (webglDevice.features.has('clip-control-webgl')) {
+  webglDevice.setClipControlWebGL({
+    origin: 'upper-left',
+    depthMode: 'zero-to-one'
+  });
+}
+```
+
+`WEBGLRenderPass.multiDrawArrays()` and `multiDrawElements()` require `multi-draw-webgl`, an
+active pipeline, bindings, and vertex array. They do not silently emulate multi-draw with a loop.
+`stencil-only` texture views require `stencil-texturing-webgl`, and WebGL cannot bind conflicting
+depth/stencil aspects of one texture in the same draw because the mode is texture-global.
+
+Shader-only extensions are reported as features such as `shader-sample-variables-webgl` and
+`shader-multisample-interpolation-webgl`. Applications and shader modules still author their own
+GLSL `#extension` directives.

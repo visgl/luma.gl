@@ -39,11 +39,16 @@ export class WebGPUTextureView extends TextureView {
     this.device = device;
     this.texture = props.texture;
 
+    if (this.props.swizzle !== 'rgba' && !device.features.has('texture-component-swizzle')) {
+      throw new Error('Texture view swizzle requires texture-component-swizzle');
+    }
+
     this.device.pushErrorScope('validation');
     this.handle = this.texture.handle.createView({
       format: (this.props.format || this.texture.format) as GPUTextureFormat,
       dimension: this.props.dimension || this.texture.dimension,
       aspect: this.props.aspect,
+      swizzle: this.props.swizzle,
       baseMipLevel: this.props.baseMipLevel,
       mipLevelCount: this.props.mipLevelCount,
       baseArrayLayer: this.props.baseArrayLayer,
@@ -85,6 +90,7 @@ export class WebGPUTextureView extends TextureView {
       format: (this.props.format || this.texture.format) as GPUTextureFormat,
       dimension: this.props.dimension || this.texture.dimension,
       aspect: this.props.aspect,
+      swizzle: this.props.swizzle,
       baseMipLevel: this.props.baseMipLevel,
       mipLevelCount: this.props.mipLevelCount,
       baseArrayLayer: this.props.baseArrayLayer,

@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
+import type {
+  CompareFunction,
+  StencilOperation,
+  BlendOperation,
+  BlendFactor,
+  ColorParameters
+} from '@luma.gl/core';
 import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import type {
@@ -147,9 +153,27 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     }
   }
 
-  if (parameters.depthBias !== undefined) {
+  if (
+    parameters.depthBias !== undefined ||
+    parameters.depthBiasSlopeScale !== undefined ||
+    parameters.depthBiasClamp !== undefined
+  ) {
     gl.enable(GL.POLYGON_OFFSET_FILL);
-    gl.polygonOffset(parameters.depthBias, parameters.depthBiasSlopeScale || 0);
+    const factor = parameters.depthBiasSlopeScale || 0;
+    const units = parameters.depthBias || 0;
+    const clamp = parameters.depthBiasClamp || 0;
+    if (clamp !== 0) {
+      if (!device.features.has('polygon-offset-clamp-webgl')) {
+        throw new Error('Non-zero depthBiasClamp requires polygon-offset-clamp-webgl');
+      }
+      const extension = webglDevice.getExtension(
+        'EXT_polygon_offset_clamp'
+      ).EXT_polygon_offset_clamp;
+      extension?.polygonOffsetClampEXT(factor, units, clamp);
+    } else {
+      // WebGPU names `factor` depthBiasSlopeScale and `units` depthBias.
+      gl.polygonOffset(factor, units);
+    }
   }
 
   // depthBiasSlopeScale: {
@@ -294,6 +318,9 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.blendColorOperation || parameters.blendAlphaOperation) {
+    if (hasDualSourceBlendFactor(parameters) && !device.features.has('dual-source-blending')) {
+      throw new Error('src1 blend factors require dual-source-blending');
+    }
     const colorEquation = convertBlendOperationToEquation(
       'blendColorOperation',
       parameters.blendColorOperation || 'add'
@@ -321,6 +348,93 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
       parameters.blendAlphaDstFactor || 'zero'
     );
     gl.blendFuncSeparate(colorSrcFactor, colorDstFactor, alphaSrcFactor, alphaDstFactor);
+  }
+}
+
+/**
+ * Applies per-color-attachment state through `OES_draw_buffers_indexed`.
+ * The first attachment can fall back to WebGL's global color state; later attachments require
+ * `draw-buffers-indexed-webgl` because WebGL has no portable per-target state.
+ */
+export function setColorAttachmentParameters(
+  device: Device,
+  colorAttachmentParameters: readonly (ColorParameters | null)[]
+): void {
+  const webglDevice = device as WebGLDevice;
+  const extension = device.features.has('draw-buffers-indexed-webgl')
+    ? webglDevice.getExtension('OES_draw_buffers_indexed').OES_draw_buffers_indexed
+    : null;
+
+  for (const [attachment, parameters] of colorAttachmentParameters.entries()) {
+    if (!parameters) {
+      continue;
+    }
+    if (!extension) {
+      if (attachment > 0) {
+        throw new Error('Multiple color attachment parameters require draw-buffers-indexed-webgl');
+      }
+      setDeviceParameters(device, parameters);
+      continue;
+    }
+    if (hasDualSourceBlendFactor(parameters) && !device.features.has('dual-source-blending')) {
+      throw new Error('src1 blend factors require dual-source-blending');
+    }
+
+    if (parameters.blend !== undefined) {
+      parameters.blend
+        ? extension.enableiOES(GL.BLEND, attachment)
+        : extension.disableiOES(GL.BLEND, attachment);
+    }
+    if (parameters.blendColorOperation || parameters.blendAlphaOperation) {
+      extension.blendEquationSeparateiOES(
+        attachment,
+        convertBlendOperationToEquation(
+          'blendColorOperation',
+          parameters.blendColorOperation || 'add'
+        ),
+        convertBlendOperationToEquation(
+          'blendAlphaOperation',
+          parameters.blendAlphaOperation || 'add'
+        )
+      );
+    }
+    if (
+      parameters.blendColorSrcFactor ||
+      parameters.blendColorDstFactor ||
+      parameters.blendAlphaSrcFactor ||
+      parameters.blendAlphaDstFactor
+    ) {
+      extension.blendFuncSeparateiOES(
+        attachment,
+        convertBlendFactorToFunction(
+          'blendColorSrcFactor',
+          parameters.blendColorSrcFactor || 'one'
+        ),
+        convertBlendFactorToFunction(
+          'blendColorDstFactor',
+          parameters.blendColorDstFactor || 'zero'
+        ),
+        convertBlendFactorToFunction(
+          'blendAlphaSrcFactor',
+          parameters.blendAlphaSrcFactor || 'one',
+          'alpha'
+        ),
+        convertBlendFactorToFunction(
+          'blendAlphaDstFactor',
+          parameters.blendAlphaDstFactor || 'zero',
+          'alpha'
+        )
+      );
+    }
+    if (parameters.colorMask !== undefined) {
+      extension.colorMaskiOES(
+        attachment,
+        Boolean(parameters.colorMask & 0x1),
+        Boolean(parameters.colorMask & 0x2),
+        Boolean(parameters.colorMask & 0x4),
+        Boolean(parameters.colorMask & 0x8)
+      );
+    }
   }
 }
 
@@ -421,12 +535,21 @@ function convertBlendFactorToFunction(
       type === 'color' ? GL.ONE_MINUS_CONSTANT_COLOR : GL.ONE_MINUS_CONSTANT_ALPHA,
     // 'constant-alpha': GL.CONSTANT_ALPHA,
     // 'one-minus-constant-alpha': GL.ONE_MINUS_CONSTANT_ALPHA,
-    // TODO not supported in WebGL2
-    src1: GL.SRC_COLOR,
-    'one-minus-src1': GL.ONE_MINUS_SRC_COLOR,
-    'src1-alpha': GL.SRC_ALPHA,
-    'one-minus-src1-alpha': GL.ONE_MINUS_SRC_ALPHA
+    src1: GL.SRC1_COLOR_WEBGL,
+    'one-minus-src1': GL.ONE_MINUS_SRC1_COLOR_WEBGL,
+    'src1-alpha': GL.SRC1_ALPHA_WEBGL,
+    'one-minus-src1-alpha': GL.ONE_MINUS_SRC1_ALPHA_WEBGL
   });
+}
+
+/** Returns true when any configured blend factor consumes the secondary shader output. */
+function hasDualSourceBlendFactor(parameters: Parameters): boolean {
+  return [
+    parameters.blendColorSrcFactor,
+    parameters.blendColorDstFactor,
+    parameters.blendAlphaSrcFactor,
+    parameters.blendAlphaDstFactor
+  ].some(factor => factor?.startsWith('src1') || factor?.startsWith('one-minus-src1'));
 }
 
 function message(parameter: string, value: any): string {

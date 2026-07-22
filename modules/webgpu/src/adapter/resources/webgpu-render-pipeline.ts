@@ -2,7 +2,10 @@
 
 import type {Bindings, BindingsByGroup, RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline, RenderPipelineProps, log, normalizeBindingsByGroup} from '@luma.gl/core';
-import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
+import {
+  applyColorParametersToRenderPipelineDescriptor,
+  applyParametersToRenderPipelineDescriptor
+} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
 
@@ -205,6 +208,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // Set parameters on the descriptor
     applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
+    for (const [attachment, parameters] of (this.props.colorAttachmentParameters || []).entries()) {
+      if (parameters) {
+        applyColorParametersToRenderPipelineDescriptor(descriptor, parameters, attachment);
+      }
+    }
 
     return descriptor;
   }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Device} from '@luma.gl/core';
+import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -19,6 +19,7 @@ import {
   indexPicking
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
+import {GPUVector} from '@luma.gl/tables';
 import {Matrix4, radians} from '@math.gl/core';
 import {
   ColumnPanel,
@@ -200,9 +201,8 @@ function storeInstanceSide(instanceSide: number): void {
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Model {
-  // uniformBuffer: Buffer;
-  instanceOffsetsBuffer: Buffer;
-  instanceColorsBuffer: Buffer;
+  readonly instanceOffsets: GPUVector<'float32x2'>;
+  readonly instanceColors: GPUVector<'unorm8x4'>;
 
   constructor(device: Device, instanceSide: number, props?: Partial<ModelProps>) {
     const instanceCount = instanceSide * instanceSide;
@@ -227,8 +227,22 @@ class InstancedCube extends Model {
       colors[colorIndex + 3] = 255;
     }
 
-    const offsetsBuffer = device.createBuffer(offsets);
-    const colorsBuffer = device.createBuffer(colors);
+    const instanceOffsets = new GPUVector({
+      type: 'buffer',
+      name: 'instanceOffsets',
+      buffer: device.createBuffer(offsets),
+      format: 'float32x2',
+      length: instanceCount,
+      ownsBuffer: true
+    });
+    const instanceColors = new GPUVector({
+      type: 'buffer',
+      name: 'instanceColors',
+      buffer: device.createBuffer(colors),
+      format: 'unorm8x4',
+      length: instanceCount,
+      ownsBuffer: true
+    });
 
     // Model
     super(device, {
@@ -236,7 +250,7 @@ class InstancedCube extends Model {
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
-      // @ts-expect-error Remove once npm package updated with new types
+      // @ts-ignore Published example dependencies use a narrower ShaderModule type.
       modules: [dirlight, device.type === 'webgpu' ? indexPicking : colorPicking],
       instanceCount,
       geometry: new CubeGeometry({indices: true}),
@@ -246,8 +260,8 @@ class InstancedCube extends Model {
       ],
       attributes: {
         // instanceSizes: device.createBuffer(new Float32Array([1])), // Constant attribute
-        instanceOffsets: offsetsBuffer,
-        instanceColors: colorsBuffer
+        instanceOffsets: instanceOffsets.data[0]!.buffer,
+        instanceColors: instanceColors.data[0]!.buffer
       },
       parameters: {
         depthWriteEnabled: true,
@@ -255,8 +269,14 @@ class InstancedCube extends Model {
       }
     });
 
-    this.instanceOffsetsBuffer = offsetsBuffer;
-    this.instanceColorsBuffer = colorsBuffer;
+    this.instanceOffsets = instanceOffsets;
+    this.instanceColors = instanceColors;
+  }
+
+  override destroy(): void {
+    super.destroy();
+    this.instanceOffsets.destroy();
+    this.instanceColors.destroy();
   }
 
   createPickingModel(props?: Partial<ModelProps>): Model {
@@ -264,8 +284,8 @@ class InstancedCube extends Model {
       layout.name.startsWith('instance')
     );
     const instanceAttributes = {
-      instanceOffsets: this.instanceOffsetsBuffer,
-      instanceColors: this.instanceColorsBuffer
+      instanceOffsets: this.instanceOffsets.data[0]!.buffer,
+      instanceColors: this.instanceColors.data[0]!.buffer
     };
     const cubeGeometry = new CubeGeometry({indices: true});
     const pickingGeometry = new Geometry({
@@ -284,7 +304,7 @@ class InstancedCube extends Model {
       vs: VS_GLSL,
       fs: FS_GLSL,
       fragmentEntryPoint: 'fragmentPicking',
-      // @ts-expect-error Remove once npm package updated with new types
+      // @ts-ignore Published example dependencies use a narrower ShaderModule type.
       modules: [dirlight, indexPicking],
       bufferLayout: instanceBufferLayout,
       instanceCount: this.instanceCount,
@@ -465,7 +485,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           id: 'showcase-instancing-description',
           title: '',
           html: `\
-          <p>A luma.gl <code>Cube</code>, rendering up to 4,194,304 instances in a single GPU draw call using instanced vertex attributes.</p>
+          <p>A luma.gl <code>Cube</code>, rendering up to 4,194,304 instances in a single GPU draw call using <code>GPUVector</code>-backed instanced vertex attributes.</p>
           `
         }),
         this.settingsPanel.makePanel()

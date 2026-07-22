@@ -6,8 +6,12 @@ import type {Device} from '../device';
 import {CompareFunction} from '../types/parameters';
 import {Resource, ResourceProps} from './resource';
 
-/** Edge values sampling mode */
-export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
+/** Edge values sampling mode. `mirror-clamp-to-edge-webgl` requires the WebGL-only `texture-mirror-clamp-to-edge-webgl` feature. */
+export type SamplerAddressMode =
+  | 'clamp-to-edge'
+  | 'repeat'
+  | 'mirror-repeat'
+  | 'mirror-clamp-to-edge-webgl';
 
 /** Sampler filtering mode */
 export type SamplerFilterMode = 'nearest' | 'linear';
@@ -18,12 +22,12 @@ export type SamplerFilterMode = 'nearest' | 'linear';
 export type SamplerProps = ResourceProps & {
   /** Comparison / shadow samplers are used with depth textures. See the `Sampler.compare` field */
   type?: 'color-sampler' | 'comparison-sampler';
-  /** Edge value sampling in X direction */
-  addressModeU?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
-  /** Edge value sampling in Y direction */
-  addressModeV?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
-  /** Edge value sampling in Z direction */
-  addressModeW?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
+  /** Edge value sampling in X direction. `mirror-clamp-to-edge-webgl` is WebGL-only and requires `texture-mirror-clamp-to-edge-webgl`. */
+  addressModeU?: SamplerAddressMode;
+  /** Edge value sampling in Y direction. `mirror-clamp-to-edge-webgl` is WebGL-only and requires `texture-mirror-clamp-to-edge-webgl`. */
+  addressModeV?: SamplerAddressMode;
+  /** Edge value sampling in Z direction. `mirror-clamp-to-edge-webgl` is WebGL-only and requires `texture-mirror-clamp-to-edge-webgl`. */
+  addressModeW?: SamplerAddressMode;
 
   /** Magnification: the area of the fragment in texture space is smaller than a texel */
   magFilter?: 'nearest' | 'linear';

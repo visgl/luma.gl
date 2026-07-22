@@ -81,8 +81,7 @@ class GPUDataAnalysisExample {
     try {
       this.device = await luma.createDevice({
         type: 'webgpu',
-        adapters: [webgpuAdapter],
-        createCanvasContext: true
+        adapters: [webgpuAdapter]
       });
       await this.run();
     } catch (error) {

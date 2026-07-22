@@ -9,6 +9,7 @@ import {
   Adapter,
   type DeviceInfo,
   type DeviceProps,
+  type WebGPUDeviceFeature,
   log
 } from '@luma.gl/core';
 import type {WebGPUDevice} from './webgpu-device';
@@ -16,8 +17,23 @@ import type {WebGPUDevice} from './webgpu-device';
 type WebGPUSupportedLimitName = Exclude<keyof GPUSupportedLimits, '__brand'>;
 type RequestedWebGPUFeatureLevel = NonNullable<DeviceProps['featureLevel']>;
 type EffectiveWebGPUFeatureLevel = NonNullable<DeviceInfo['featureLevel']>;
+type AssertNever<T extends never> = T;
+/** Compile-time guard that keeps luma.gl feature names aligned with `@webgpu/types`. */
+export type WebGPUFeatureNamesMissingFromLuma = AssertNever<
+  Exclude<GPUFeatureName, WebGPUDeviceFeature>
+>;
+/** Compile-time guard that rejects stale luma.gl WebGPU feature names. */
+export type LumaWebGPUFeatureNamesMissingFromWebGPU = AssertNever<
+  Exclude<WebGPUDeviceFeature, GPUFeatureName>
+>;
 
 const CORE_FEATURES_AND_LIMITS = 'core-features-and-limits' as GPUFeatureName;
+
+/** Optional WebGPU features that imply other feature names in luma.gl's portable feature set. */
+const IMPLIED_WEBGPU_FEATURES: Partial<Record<WebGPUDeviceFeature, WebGPUDeviceFeature[]>> = {
+  'texture-formats-tier2': ['texture-formats-tier1'],
+  'subgroup-size-control': ['subgroups']
+};
 
 const WEBGPU_SUPPORTED_LIMIT_NAMES: readonly WebGPUSupportedLimitName[] = [
   'maxTextureDimension1D',
@@ -116,20 +132,54 @@ export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAd
  */
 export function getRequiredWebGPUFeatures(
   supportedFeatures: GPUSupportedFeatures,
-  featureLevel: RequestedWebGPUFeatureLevel
+  featureLevel: RequestedWebGPUFeatureLevel,
+  requestedFeatures: readonly WebGPUDeviceFeature[] = []
 ): GPUFeatureName[] {
+  const requiredFeatures = new Set<GPUFeatureName>();
+
   if (featureLevel === 'max') {
-    return Array.from(supportedFeatures) as GPUFeatureName[];
+    for (const feature of supportedFeatures) {
+      requiredFeatures.add(feature as GPUFeatureName);
+    }
   }
 
   if (featureLevel === 'best-available' && supportedFeatures.has(CORE_FEATURES_AND_LIMITS)) {
     // Compatibility adapters expose this opt-in when they can be upgraded to
     // core. See WebGPU Fundamentals:
     // https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html
-    return [CORE_FEATURES_AND_LIMITS];
+    requiredFeatures.add(CORE_FEATURES_AND_LIMITS);
   }
 
-  return [];
+  for (const feature of expandRequiredWebGPUFeatures(requestedFeatures)) {
+    if (!supportedFeatures.has(feature as GPUFeatureName)) {
+      throw new Error(`Required WebGPU feature is not supported: ${feature}`);
+    }
+    requiredFeatures.add(feature as GPUFeatureName);
+  }
+
+  return Array.from(requiredFeatures);
+}
+
+/** Expands requested WebGPU features with feature names implied by the WebGPU specification. */
+export function expandRequiredWebGPUFeatures(
+  requestedFeatures: readonly WebGPUDeviceFeature[]
+): WebGPUDeviceFeature[] {
+  const expandedFeatures = new Set<WebGPUDeviceFeature>();
+  const addFeature = (feature: WebGPUDeviceFeature) => {
+    if (expandedFeatures.has(feature)) {
+      return;
+    }
+    expandedFeatures.add(feature);
+    for (const impliedFeature of IMPLIED_WEBGPU_FEATURES[feature] || []) {
+      addFeature(impliedFeature);
+    }
+  };
+
+  for (const feature of requestedFeatures) {
+    addFeature(feature);
+  }
+
+  return Array.from(expandedFeatures);
 }
 
 /**
@@ -203,7 +253,11 @@ export class WebGPUAdapter extends Adapter {
 
     const deviceDescriptor: GPUDeviceDescriptor = {};
 
-    const requiredFeatures = getRequiredWebGPUFeatures(adapter.features, requestedFeatureLevel);
+    const requiredFeatures = getRequiredWebGPUFeatures(
+      adapter.features,
+      requestedFeatureLevel,
+      props.requiredFeatures
+    );
     if (requiredFeatures.length > 0) {
       deviceDescriptor.requiredFeatures = requiredFeatures;
     }

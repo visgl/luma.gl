@@ -32,7 +32,10 @@ import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLRenderPipeline} from './webgl-render-pipeline';
 import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 import {getGLDrawMode} from '../helpers/webgl-topology-utils';
-import {withDeviceAndGLParameters} from '../converters/device-parameters';
+import {
+  setColorAttachmentParameters,
+  withDeviceAndGLParameters
+} from '../converters/device-parameters';
 
 const COLOR_CHANNELS: NumberArray4 = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
@@ -250,6 +253,9 @@ export class WEBGLRenderPass extends RenderPass {
     pipeline._applyUniforms(uniforms as Record<string, UniformValue>);
 
     withDeviceAndGLParameters(this.device, parameters, this.glParameters, () => {
+      if (pipeline.props.colorAttachmentParameters) {
+        setColorAttachmentParameters(this.device, pipeline.props.colorAttachmentParameters);
+      }
       if (isIndexed && isInstanced) {
         this.device.gl.drawElementsInstanced(
           glDrawMode,
@@ -277,6 +283,200 @@ export class WEBGLRenderPass extends RenderPass {
     });
 
     vertexArray.unbindAfterRender(this);
+    return true;
+  }
+
+  /**
+   * Draws several non-indexed ranges with one `WEBGL_multi_draw` call.
+   * The active pipeline, bindings, and vertex array must be set first. No draw-loop fallback is
+   * performed when the extension is unavailable.
+   */
+  multiDrawArrays(options: {
+    /** First vertex for each draw. */
+    firstsList: Int32Array | number[];
+    /** Element offset into `firstsList`. */
+    firstsOffset?: number;
+    /** Vertex count for each draw. */
+    countsList: Int32Array | number[];
+    /** Element offset into `countsList`. */
+    countsOffset?: number;
+    /** Number of draws to issue. */
+    drawCount: number;
+    /** Optional instance count for each draw. */
+    instanceCountsList?: Int32Array | number[];
+    /** Element offset into `instanceCountsList`. */
+    instanceCountsOffset?: number;
+    /** Parameters to override for this call. */
+    parameters?: RenderPassDrawOptions['parameters'];
+    /** Topology to override for this call. */
+    topology?: RenderPassDrawOptions['topology'];
+    /** WebGL-only uniforms to apply for this call. */
+    uniforms?: Record<string, unknown>;
+    /** Optional transform feedback. */
+    transformFeedback?: RenderPassDrawOptions['transformFeedback'];
+  }): boolean {
+    const extension = this._getMultiDrawExtension();
+    return this._withPreparedMultiDraw(options, glDrawMode => {
+      if (options.instanceCountsList) {
+        extension.multiDrawArraysInstancedWEBGL(
+          glDrawMode,
+          options.firstsList,
+          options.firstsOffset || 0,
+          options.countsList,
+          options.countsOffset || 0,
+          options.instanceCountsList,
+          options.instanceCountsOffset || 0,
+          options.drawCount
+        );
+      } else {
+        extension.multiDrawArraysWEBGL(
+          glDrawMode,
+          options.firstsList,
+          options.firstsOffset || 0,
+          options.countsList,
+          options.countsOffset || 0,
+          options.drawCount
+        );
+      }
+    });
+  }
+
+  /**
+   * Draws several indexed ranges with one `WEBGL_multi_draw` call.
+   * The active pipeline, bindings, and indexed vertex array must be set first. Offsets in
+   * `offsetsList` are byte offsets into the active index buffer.
+   */
+  multiDrawElements(options: {
+    /** Index count for each draw. */
+    countsList: Int32Array | number[];
+    /** Element offset into `countsList`. */
+    countsOffset?: number;
+    /** Byte offset into the index buffer for each draw. */
+    offsetsList: Int32Array | number[];
+    /** Element offset into `offsetsList`. */
+    offsetsOffset?: number;
+    /** Number of draws to issue. */
+    drawCount: number;
+    /** Optional instance count for each draw. */
+    instanceCountsList?: Int32Array | number[];
+    /** Element offset into `instanceCountsList`. */
+    instanceCountsOffset?: number;
+    /** Parameters to override for this call. */
+    parameters?: RenderPassDrawOptions['parameters'];
+    /** Topology to override for this call. */
+    topology?: RenderPassDrawOptions['topology'];
+    /** WebGL-only uniforms to apply for this call. */
+    uniforms?: Record<string, unknown>;
+    /** Optional transform feedback. */
+    transformFeedback?: RenderPassDrawOptions['transformFeedback'];
+  }): boolean {
+    const extension = this._getMultiDrawExtension();
+    const indexBuffer = this.vertexArray?.indexBuffer as WEBGLBuffer | undefined;
+    if (!indexBuffer) {
+      throw new Error('RenderPass.multiDrawElements() requires an indexed vertex array');
+    }
+    return this._withPreparedMultiDraw(options, glDrawMode => {
+      if (options.instanceCountsList) {
+        extension.multiDrawElementsInstancedWEBGL(
+          glDrawMode,
+          options.countsList,
+          options.countsOffset || 0,
+          indexBuffer.glIndexType,
+          options.offsetsList,
+          options.offsetsOffset || 0,
+          options.instanceCountsList,
+          options.instanceCountsOffset || 0,
+          options.drawCount
+        );
+      } else {
+        extension.multiDrawElementsWEBGL(
+          glDrawMode,
+          options.countsList,
+          options.countsOffset || 0,
+          indexBuffer.glIndexType,
+          options.offsetsList,
+          options.offsetsOffset || 0,
+          options.drawCount
+        );
+      }
+    });
+  }
+
+  /** Gets the typed extension object or throws instead of silently changing draw semantics. */
+  private _getMultiDrawExtension() {
+    if (!this.device.features.has('multi-draw-webgl')) {
+      throw new Error('WEBGL_multi_draw is not supported');
+    }
+    const extension = this.device.getExtension('WEBGL_multi_draw').WEBGL_multi_draw;
+    if (!extension) {
+      throw new Error('WEBGL_multi_draw is not supported');
+    }
+    return extension;
+  }
+
+  /** Applies the same active render state used by `draw()` around a multi-draw extension call. */
+  private _withPreparedMultiDraw(
+    options: {
+      parameters?: RenderPassDrawOptions['parameters'];
+      topology?: RenderPassDrawOptions['topology'];
+      uniforms?: Record<string, unknown>;
+      transformFeedback?: RenderPassDrawOptions['transformFeedback'];
+    },
+    draw: (glDrawMode: GL) => void
+  ): boolean {
+    const pipeline = this.pipeline;
+    const vertexArray = this.vertexArray;
+    if (!pipeline) {
+      throw new Error('RenderPass.setPipeline() must be called before multi-draw');
+    }
+    if (!vertexArray) {
+      throw new Error('RenderPass.setVertexArray() must be called before multi-draw');
+    }
+    if (pipeline.shaderLayout.bindings.length > 0 && this.bindingsPipeline !== pipeline) {
+      throw new Error(
+        'RenderPass.setBindings() must be called after setPipeline() before multi-draw'
+      );
+    }
+
+    pipeline._syncLinkStatus();
+    if (pipeline.linkStatus !== 'success') {
+      log.info(
+        2,
+        `RenderPipeline:${pipeline.id}.multiDraw() aborted - waiting for shader linking`
+      )();
+      return false;
+    }
+    if (!pipeline._areTexturesRenderable(this.bindings)) {
+      log.info(2, `RenderPipeline:${pipeline.id}.multiDraw() aborted - textures not yet loaded`)();
+      return false;
+    }
+
+    const parameters = options.parameters || pipeline.props.parameters;
+    const topology = options.topology || pipeline.props.topology;
+    const glDrawMode = getGLDrawMode(topology);
+    const uniforms = options.uniforms || pipeline.uniforms;
+    const webglTransformFeedback = options.transformFeedback as WEBGLTransformFeedback | undefined;
+
+    this.device.gl.useProgram(pipeline.handle);
+    vertexArray.bindBeforeRender(this);
+    try {
+      if (webglTransformFeedback) {
+        webglTransformFeedback.begin(pipeline.props.topology);
+      }
+      pipeline._applyBindings(this.bindings, {disableWarnings: pipeline.props.disableWarnings});
+      pipeline._applyUniforms(uniforms as Record<string, UniformValue>);
+      withDeviceAndGLParameters(this.device, parameters, this.glParameters, () => {
+        if (pipeline.props.colorAttachmentParameters) {
+          setColorAttachmentParameters(this.device, pipeline.props.colorAttachmentParameters);
+        }
+        draw(glDrawMode);
+      });
+      if (webglTransformFeedback) {
+        webglTransformFeedback.end();
+      }
+    } finally {
+      vertexArray.unbindAfterRender(this);
+    }
     return true;
   }
 

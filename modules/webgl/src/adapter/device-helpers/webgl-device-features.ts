@@ -18,7 +18,10 @@ import {
  * Defines luma.gl "feature" names and semantics
  * when value is 'string' it is the name of the extension that enables this feature
  */
-type WebGLFeatureDefinition = boolean | string | ((gl: WebGL2RenderingContext) => boolean);
+type WebGLFeatureDefinition =
+  | boolean
+  | keyof GLExtensions
+  | ((gl: WebGL2RenderingContext) => boolean);
 
 const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
   // optional WebGPU features
@@ -29,7 +32,9 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
   // 'depth32float-stencil8' // GPUTextureFormat 'depth32float-stencil8'
 
   // optional WebGL features
+  'clip-control-webgl': 'EXT_clip_control',
   'compilation-status-async-webgl': 'KHR_parallel_shader_compile',
+  'draw-buffers-indexed-webgl': 'OES_draw_buffers_indexed',
   'html-in-canvas': gl =>
     isHTMLInCanvasSupported() &&
     typeof (
@@ -38,10 +43,17 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
       }
     ).texElementImage2D === 'function',
   'polygon-mode-webgl': 'WEBGL_polygon_mode',
+  'polygon-offset-clamp-webgl': 'EXT_polygon_offset_clamp',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
+  'texture-mirror-clamp-to-edge-webgl': 'EXT_texture_mirror_clamp_to_edge',
+  'multi-draw-webgl': 'WEBGL_multi_draw',
+  'stencil-texturing-webgl': 'WEBGL_stencil_texturing',
   'shader-clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
   'shader-noperspective-interpolation-webgl': 'NV_shader_noperspective_interpolation',
-  'shader-conservative-depth-webgl': 'EXT_conservative_depth'
+  'shader-conservative-depth-webgl': 'EXT_conservative_depth',
+  'shader-sample-variables-webgl': 'OES_sample_variables',
+  'shader-multisample-interpolation-webgl': 'OES_shader_multisample_interpolation',
+  'dual-source-blending': 'WEBGL_blend_func_extended'
 
   // Textures are handled by getTextureFeatures()
 };

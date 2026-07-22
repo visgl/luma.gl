@@ -14,6 +14,8 @@ export type {
   DeviceInfo,
   DeviceFeature,
   BrowserDeviceFeature,
+  WebGPUDeviceFeature,
+  WebGLDeviceFeature,
   DeviceTextureFormatCapabilities,
   WebGPUFeatureLevel,
   WebGPUDeviceFeatureLevel
@@ -40,7 +42,11 @@ export {ExternalTexture} from './adapter/resources/external-texture';
 export type {ShaderProps} from './adapter/resources/shader';
 export {Shader} from './adapter/resources/shader';
 
-export type {SamplerProps, SamplerParameters} from './adapter/resources/sampler';
+export type {
+  SamplerProps,
+  SamplerParameters,
+  SamplerAddressMode
+} from './adapter/resources/sampler';
 export {Sampler} from './adapter/resources/sampler';
 
 export type {FramebufferProps} from './adapter/resources/framebuffer';

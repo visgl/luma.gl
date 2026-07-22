@@ -317,6 +317,24 @@ void main(void) {
 }
 `;
 
+const DUAL_SOURCE_SOLID_FS_GLSL = /* glsl */ `#version 300 es
+#extension GL_EXT_blend_func_extended : require
+precision highp float;
+
+uniform appUniforms {
+  vec4 rect;
+  vec4 color;
+} app;
+
+layout(location = 0, index = 0) out vec4 fragColor;
+layout(location = 0, index = 1) out vec4 secondaryColor;
+
+void main(void) {
+  fragColor = app.color;
+  secondaryColor = vec4(vec3(1.0) - app.color.rgb, app.color.a);
+}
+`;
+
 const DISPLAY_WGSL = /* wgsl */ `
 struct AppUniforms {
   rect: vec4<f32>,
@@ -519,7 +537,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id,
       source: dualSource ? DUAL_SOURCE_SOLID_WGSL : SOLID_WGSL,
       vs: SOLID_VS_GLSL,
-      fs: SOLID_FS_GLSL,
+      fs: dualSource ? DUAL_SOURCE_SOLID_FS_GLSL : SOLID_FS_GLSL,
       topology: 'triangle-list',
       vertexCount: 6,
       bindings: {app: uniformStore.getManagedUniformBuffer('app')},
@@ -812,13 +830,13 @@ function makeBlendFactorOptions(device: Device, alpha: boolean): SettingOption[]
       label: factor,
       value: factor,
       description: DUAL_SOURCE_FACTORS.has(factor)
-        ? 'Uses the complementary secondary source emitted by the WebGPU shader.'
+        ? 'Uses the complementary secondary source emitted by the shader.'
         : undefined
     }));
 }
 
 function supportsDualSourceBlending(device: Device): boolean {
-  return device.type === 'webgpu' && device.features.has('dual-source-blending');
+  return device.features.has('dual-source-blending');
 }
 
 function readSettings(
@@ -971,7 +989,7 @@ function makeStatusHtml(device: Device, settings: BlendSettings): string {
     notes.push('Alpha source and destination factors are ignored by min/max operations.');
   }
   if (!supportsDualSourceBlending(device)) {
-    notes.push('Dual-source src1 factors require a WebGPU MAX device with dual-source-blending.');
+    notes.push('Dual-source src1 factors require the dual-source-blending feature.');
   } else {
     notes.push('src1 factors use a complementary secondary source color emitted by the shader.');
   }

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 // SAMPLER FILTERS
-import {SamplerProps} from '@luma.gl/core';
+import {SamplerAddressMode, SamplerProps} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/webgl/constants';
 import {convertCompareFunction} from './device-parameters';
 
@@ -57,8 +57,8 @@ export function convertSamplerParametersToWebGL(props: SamplerProps): GLSamplerP
 
 /** Convert address more */
 function convertAddressMode(
-  addressMode: 'clamp-to-edge' | 'repeat' | 'mirror-repeat'
-): GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT {
+  addressMode: SamplerAddressMode
+): GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT | GL.MIRROR_CLAMP_TO_EDGE_EXT {
   switch (addressMode) {
     case 'clamp-to-edge':
       return GL.CLAMP_TO_EDGE;
@@ -66,6 +66,8 @@ function convertAddressMode(
       return GL.REPEAT;
     case 'mirror-repeat':
       return GL.MIRRORED_REPEAT;
+    case 'mirror-clamp-to-edge-webgl':
+      return GL.MIRROR_CLAMP_TO_EDGE_EXT;
   }
 }
 

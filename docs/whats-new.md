@@ -15,6 +15,12 @@ Target Release Date: Q3, 2026
 **@luma.gl/core**
 
 - **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` reports whether the active browser and backend expose the experimental DOM-to-texture rasterization path.
+- **Current WebGPU feature parity** - Device feature typing now includes texture format tiers, primitive index, texture component swizzle, and subgroup size control; `DeviceProps.requiredFeatures` can request optional features explicitly.
+- **WebGL extension-backed APIs** - Feature detection and typed APIs now cover clip control, polygon offset clamp, mirrored clamp samplers, indexed draw-buffer state, dual-source blending, multi-draw, stencil texture views, and multisample shader extensions.
+
+**@luma.gl/shadertools**
+
+- **Shader feature requirements** - `ShaderFeature`, `PlatformInfo.shaderFeatures`, and `ShaderModule.requiredFeatures` validate language capabilities before assembly while leaving directives caller-authored.
 
 **@luma.gl/experimental**
 
@@ -73,7 +79,7 @@ Target Release Date: Q3, 2026
 - **[Blinking Stars Example](/examples/arrow/arrow-temporal-starfield)** - New showcase prepares aligned scalar `TimestampMillisecond` and `DurationMillisecond` rows into relative Float32 GPU vectors, then uses them as per-instance visibility windows and pulse periods through instanced attributes or WebGPU storage bindings.
 - **[Lines Example](/examples/arrow/arrow-lines)** - New showcase expands nested Arrow XYZM line rows and DenseUnion LineString rows into styled GPU segment instances with attribute-backed and storage-backed models, then adds an `ArrowPathTripsStorageModel` mode that prepares aligned `List<Timestamp>` rows into relative Float32 milliseconds for storage-backed trail filtering.
 - **[GeoArrow Example](/examples/arrow/arrow-geoarrow)** - New mixed-geometry showcase routes one GeoArrow-style DenseUnion column through Arrow point, line, and polygon renderers.
-- **[Instancing Example](/examples/arrow/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
+- **[Instancing Example](/examples/showcase/instancing)** - Showcase example renders instanced cubes from generic GPU vectors.
 
 **@luma.gl/text** - NEW MODULE
 
@@ -142,7 +148,7 @@ Release Date: March 31, 2026
 
 **New Examples**
 
-- **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
+- **[Texture Compression Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
 - **[Multi-Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
 - **[External Context Example](/examples/integrations/external-context)** - New example showing integration with external WebGL contexts.
 - **[React Strict Mode Example](/examples/integrations/react-strict-mode)** - Improved resource cleanup for better compatibility when using luma.gl in React `<StrictMode>` apps

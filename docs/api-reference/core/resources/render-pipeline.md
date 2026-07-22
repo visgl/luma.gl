@@ -73,6 +73,7 @@ Important properties:
 - `bufferLayout?: BufferLayout[]`
 - `topology?: PrimitiveTopology`
 - `parameters?: RenderPipelineParameters`
+- `colorAttachmentParameters?: (ColorParameters | null)[]`
 - `bindings?: Bindings` (deprecated)
 - `bindGroups?: BindingsByGroup` (deprecated)
 - `varyings?: string[]`
@@ -85,6 +86,15 @@ Deprecated default flat bindings stored on the pipeline for compatibility paths.
 ### `bindGroups`
 
 Deprecated default grouped bindings stored on the pipeline.
+
+### `colorAttachmentParameters`
+
+Per-target blend and write-mask state. WebGPU applies each entry to the matching color target.
+WebGL applies target zero through ordinary color state and requires `draw-buffers-indexed-webgl`
+for additional targets. These entries override matching flat color fields in `parameters`.
+
+`src1` blend factors require `dual-source-blending`. Shader code must emit the secondary blend
+source explicitly; luma.gl does not inject WGSL attributes or GLSL extension directives.
 
 ## `draw()` (deprecated)
 

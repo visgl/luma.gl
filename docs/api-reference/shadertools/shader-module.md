@@ -127,6 +127,14 @@ Each entry has `name` and `group`. For current bind-group guidance, see
 
 This affects module-owned WGSL `@binding(auto)` relocation.
 
+#### `requiredFeatures` (_Array_) - Required shader-language capabilities
+
+`requiredFeatures?: ShaderFeature[]` declares language features needed by the module, such as
+`shader-f16`, `subgroups`, `primitive-index`, `dual-source-blending`, or
+`shader-sample-variables-webgl`. Assembly throws before generating source when
+`platformInfo.shaderFeatures` lacks a required feature. Modules must still author their own GLSL
+`#extension` directives or WGSL feature syntax; shadertools validates but does not inject them.
+
 #### `defines` (_Object_) - Constant defines to be injected into shader
 
 #### `inject` (_Object_) - Injections the module will make into shader hooks or anchors
