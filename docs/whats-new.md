@@ -122,7 +122,7 @@ Target Release Date: TBD
 - **`dof`** - New depth-of-field postprocessing effect and shader-pass pipeline.
 - **`gaussianBlur`** - New gaussian blur postprocessing effect.
 - **`persistenceEffect`** - Moved into `@luma.gl/effects` as a first-class postprocessing effect.
-- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, compact height fog, and clustered participating-media lighting. The pipelines can consume application-provided depth, normal, velocity, and material textures without depending on the private v10 G-buffer implementation.
+- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, compact height fog, clustered participating-media lighting, GPU-driven adaptive exposure, and HDR-safe multiscale bloom. The pipelines can consume application-provided depth, normal, velocity, and material textures without depending on the private v10 G-buffer implementation.
 
 **@luma.gl/shadertools**
 

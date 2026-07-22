@@ -11,9 +11,11 @@ import {
   brightnessContrast,
   clusteredVolumetricTemporal,
   clusteredVolumetricTrace,
+  createBloomShaderPassPipeline,
   createClusteredVolumetricLightingShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
   createOutlineShaderPassPipeline,
   createSSAOShaderPassPipeline,
   createSSGIShaderPassPipeline,
@@ -25,6 +27,7 @@ import {
   gtaoAmbientComposite,
   gtaoEvaluate,
   gtaoTemporal,
+  hdrAutoExposureAdapt,
   ssgiTemporal,
   ssrTemporal
 } from '../../src';
@@ -166,6 +169,40 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     clusteredVolumetricTemporal.uniformTypes.inverseProjectionMatrix,
     'mat4x4<f32>',
     'clustered volumetric temporal rejection reconstructs linear view-space depth'
+  );
+
+  const adaptiveExposure = createHDRAutoExposureShaderPassPipeline();
+  testCase.equal(
+    adaptiveExposure.steps.length,
+    7,
+    'HDR auto exposure extracts, reduces, adapts persistent history, and applies exposure'
+  );
+  testCase.equal(
+    adaptiveExposure.renderTargets?.hdrExposureHistory.lifetime,
+    'history',
+    'HDR auto exposure keeps its adapted state on the GPU between frames'
+  );
+  testCase.equal(
+    adaptiveExposure.steps[5].inputs?.historyTexture,
+    adaptiveExposure.steps[5].output,
+    'HDR auto exposure reprojects one logical exposure-history target'
+  );
+  testCase.equal(
+    hdrAutoExposureAdapt.uniformTypes.deltaTime,
+    'f32',
+    'HDR auto exposure adapts according to elapsed frame time'
+  );
+
+  const hdrBloom = createBloomShaderPassPipeline({resolutionScale: 0.75});
+  testCase.equal(
+    hdrBloom.renderTargets?.blurHalf.format,
+    'rgba16float',
+    'cinematic bloom preserves HDR highlight energy in floating-point intermediates'
+  );
+  testCase.deepEqual(
+    hdrBloom.renderTargets?.blurHalf.scale,
+    [0.375, 0.375],
+    'cinematic bloom scales its complete multiresolution pyramid'
   );
   testCase.ok(
     clusteredVolumetricTrace.source.includes('lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS'),
@@ -547,6 +584,7 @@ test('advanced effects compose in order with existing effects', async testCase =
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createClusteredVolumetricLightingShaderPassPipeline(),
+    createHDRAutoExposureShaderPassPipeline(),
     bloomShaderPassPipeline,
     dofShaderPassPipeline,
     createTAAShaderPassPipeline(),
@@ -651,6 +689,14 @@ test('advanced effects compose in order with existing effects', async testCase =
     testCase.ok(
       hasBinding('clusteredVolumetricTemporal', 'velocityTexture'),
       'volumetric history receives scene velocity'
+    );
+    testCase.ok(
+      hasBinding('hdrAutoExposureAdapt', 'historyTexture'),
+      'GPU-driven HDR metering retains adapted exposure history'
+    );
+    testCase.ok(
+      hasBinding('hdrAutoExposureApply', 'exposureTexture'),
+      'HDR exposure resolve receives the adapted luminance state'
     );
     testCase.notOk(
       hasBinding('bloomExtract', 'velocityTexture'),
