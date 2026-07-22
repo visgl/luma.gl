@@ -5,7 +5,8 @@ A set of ShaderPasses implementing post processing effects for luma.gl
 Advanced WebGPU-first scene-aware pipelines include SSAO, temporally stabilized GTAO,
 cosine-weighted screen-space diffuse global illumination, roughness-aware screen-space
 reflections with temporal reprojection and bilateral denoising, real clustered volumetric
-lighting, scene outlines, temporal AA, motion blur, compact height fog, and reusable
+lighting with depth-occluded crepuscular god rays, scene outlines, temporal AA, motion blur,
+compact height fog, and reusable
 depth-aware blur.
 Applications keep ownership of scene rendering and provide matching color, depth,
 normal/roughness, and velocity textures to `ShaderPassRenderer`.

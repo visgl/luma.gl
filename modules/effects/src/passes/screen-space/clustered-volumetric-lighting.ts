@@ -20,12 +20,17 @@ type ClusteredVolumetricTraceUniforms = {
   directionalLightDirectionView: Readonly<NumberArray3>;
   directionalLightColor: Readonly<NumberArray3>;
   fogColor: Readonly<NumberArray3>;
+  godRayPosition: readonly [number, number];
   density: number;
   heightFalloff: number;
   fogHeight: number;
   anisotropy: number;
   directionalIntensity: number;
   pointLightIntensity: number;
+  godRayIntensity: number;
+  godRayDensity: number;
+  godRayDecay: number;
+  godRaySampleCount: number;
   maxDistance: number;
   sampleCount: number;
   shadowStrength: number;
@@ -72,6 +77,7 @@ export const clusteredVolumetricTrace = {
 const CLUSTERED_VOLUMETRIC_PI: f32 = 3.141592653589793;
 const CLUSTERED_VOLUMETRIC_MAX_STEPS: u32 = 20u;
 const CLUSTERED_VOLUMETRIC_MAX_LIGHTS: u32 = 10u;
+const CLUSTERED_VOLUMETRIC_MAX_GOD_RAY_STEPS: u32 = 32u;
 
 struct ClusteredVolumetricTraceUniforms {
   projectionMatrix: mat4x4f,
@@ -80,12 +86,17 @@ struct ClusteredVolumetricTraceUniforms {
   directionalLightDirectionView: vec3f,
   directionalLightColor: vec3f,
   fogColor: vec3f,
+  godRayPosition: vec2f,
   density: f32,
   heightFalloff: f32,
   fogHeight: f32,
   anisotropy: f32,
   directionalIntensity: f32,
   pointLightIntensity: f32,
+  godRayIntensity: f32,
+  godRayDensity: f32,
+  godRayDecay: f32,
+  godRaySampleCount: f32,
   maxDistance: f32,
   sampleCount: f32,
   shadowStrength: f32,
@@ -183,6 +194,44 @@ fn clusteredVolumetricTrace_directionalVisibility(viewPosition: vec3f) -> f32 {
   return 1.0;
 }
 
+fn clusteredVolumetricTrace_godRayVisibility(texCoord: vec2f) -> f32 {
+  if (clusteredVolumetricTrace.godRayIntensity <= 0.0001) {
+    return 0.0;
+  }
+
+  let sampleCount = clamp(
+    u32(clusteredVolumetricTrace.godRaySampleCount),
+    3u,
+    CLUSTERED_VOLUMETRIC_MAX_GOD_RAY_STEPS
+  );
+  let sampleOffset = (texCoord - clusteredVolumetricTrace.godRayPosition) *
+    clusteredVolumetricTrace.godRayDensity / f32(sampleCount);
+  var sampleCoord = texCoord;
+  var illumination = 0.0;
+  var totalWeight = 0.0;
+  var illuminationDecay = 1.0;
+
+  for (var sampleIndex: u32 = 0u;
+      sampleIndex < CLUSTERED_VOLUMETRIC_MAX_GOD_RAY_STEPS;
+      sampleIndex++) {
+    if (sampleIndex >= sampleCount) {
+      break;
+    }
+    sampleCoord -= sampleOffset;
+    if (any(sampleCoord < vec2f(0.0)) || any(sampleCoord > vec2f(1.0))) {
+      break;
+    }
+    let occluderDepth = textureSampleLevel(depthTexture, depthTextureSampler, sampleCoord, 0);
+    let visibility = smoothstep(0.9985, 0.99999, occluderDepth);
+    illumination += visibility * illuminationDecay;
+    totalWeight += illuminationDecay;
+    illuminationDecay *= clusteredVolumetricTrace.godRayDecay;
+  }
+
+  let distanceFromSun = distance(texCoord, clusteredVolumetricTrace.godRayPosition);
+  return illumination / max(totalWeight, 0.0001) * exp(-distanceFromSun * 1.6);
+}
+
 fn clusteredVolumetricTrace_pointRadiance(
   texCoord: vec2f,
   viewPosition: vec3f,
@@ -192,28 +241,48 @@ fn clusteredVolumetricTrace_pointRadiance(
   let clusterCount = clusterLightCounts[clusterIndex];
   let overflowed = clusterCount > clusteredVolumetricTrace.maxLightsPerCluster;
   let candidateCount = select(
-    min(clusterCount, CLUSTERED_VOLUMETRIC_MAX_LIGHTS),
-    min(clusteredVolumetricTrace.pointLightCount, CLUSTERED_VOLUMETRIC_MAX_LIGHTS),
+    clusterCount,
+    min(clusteredVolumetricTrace.pointLightCount, arrayLength(&pointLights)),
     overflowed
   );
-  let overflowStride = max(
-    clusteredVolumetricTrace.pointLightCount / CLUSTERED_VOLUMETRIC_MAX_LIGHTS,
-    1u
-  );
-  var radiance = vec3f(0.0);
-  for (var candidateIndex: u32 = 0u;
-      candidateIndex < CLUSTERED_VOLUMETRIC_MAX_LIGHTS;
-      candidateIndex++) {
-    if (candidateIndex >= candidateCount) {
-      break;
-    }
-    let lightIndex = select(
-      clusterLightIndices[
+  var selectedLightIndices: array<u32, CLUSTERED_VOLUMETRIC_MAX_LIGHTS>;
+  var selectedLightScores: array<f32, CLUSTERED_VOLUMETRIC_MAX_LIGHTS>;
+  for (var slotIndex: u32 = 0u; slotIndex < CLUSTERED_VOLUMETRIC_MAX_LIGHTS; slotIndex++) {
+    selectedLightIndices[slotIndex] = 0xffffffffu;
+    selectedLightScores[slotIndex] = 1.0e20;
+  }
+
+  // Global-index slots keep the selected nearby lights stable across neighboring clusters.
+  // Truncating each tile to its first candidates instead exposes the cluster grid in fog.
+  for (var candidateIndex: u32 = 0u; candidateIndex < candidateCount; candidateIndex++) {
+    var lightIndex = candidateIndex;
+    if (!overflowed) {
+      lightIndex = clusterLightIndices[
         clusterIndex * clusteredVolumetricTrace.maxLightsPerCluster + candidateIndex
-      ],
-      candidateIndex * overflowStride,
-      overflowed
-    );
+      ];
+    }
+    if (lightIndex >= arrayLength(&pointLights)) {
+      continue;
+    }
+    let light = pointLights[lightIndex];
+    let toLight = light.positionRange.xyz - viewPosition;
+    let distanceSquared = dot(toLight, toLight);
+    let rangeSquared = light.positionRange.w * light.positionRange.w;
+    if (distanceSquared >= rangeSquared || distanceSquared <= 0.0004) {
+      continue;
+    }
+    let slotIndex = lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS;
+    let lightScore = distanceSquared /
+      max(rangeSquared * max(light.colorIntensity.a, 0.05), 0.0001);
+    if (lightScore < selectedLightScores[slotIndex]) {
+      selectedLightIndices[slotIndex] = lightIndex;
+      selectedLightScores[slotIndex] = lightScore;
+    }
+  }
+
+  var radiance = vec3f(0.0);
+  for (var slotIndex: u32 = 0u; slotIndex < CLUSTERED_VOLUMETRIC_MAX_LIGHTS; slotIndex++) {
+    let lightIndex = selectedLightIndices[slotIndex];
     if (lightIndex >= arrayLength(&pointLights)) {
       continue;
     }
@@ -263,6 +332,7 @@ fn clusteredVolumetricTrace_sampleColor(
     dot(-viewDirection, normalize(clusteredVolumetricTrace.directionalLightDirectionView)),
     clusteredVolumetricTrace.anisotropy
   );
+  let godRayVisibility = clusteredVolumetricTrace_godRayVisibility(texCoord);
 
   var opticalDepth = 0.0;
   var scattering = vec3f(0.0);
@@ -283,7 +353,8 @@ fn clusteredVolumetricTrace_sampleColor(
     let directionalVisibility = clusteredVolumetricTrace_directionalVisibility(viewPosition);
     let directionalRadiance = clusteredVolumetricTrace.directionalLightColor *
       clusteredVolumetricTrace.directionalIntensity * directionalPhase *
-      directionalVisibility;
+      (directionalVisibility +
+        godRayVisibility * clusteredVolumetricTrace.godRayIntensity * 2.4);
     let localRadiance = clusteredVolumetricTrace_pointRadiance(
       texCoord,
       viewPosition,
@@ -312,12 +383,17 @@ fn clusteredVolumetricTrace_sampleColor(
     directionalLightDirectionView: 'vec3<f32>',
     directionalLightColor: 'vec3<f32>',
     fogColor: 'vec3<f32>',
+    godRayPosition: 'vec2<f32>',
     density: 'f32',
     heightFalloff: 'f32',
     fogHeight: 'f32',
     anisotropy: 'f32',
     directionalIntensity: 'f32',
     pointLightIntensity: 'f32',
+    godRayIntensity: 'f32',
+    godRayDensity: 'f32',
+    godRayDecay: 'f32',
+    godRaySampleCount: 'f32',
     maxDistance: 'f32',
     sampleCount: 'f32',
     shadowStrength: 'f32',
@@ -336,12 +412,17 @@ fn clusteredVolumetricTrace_sampleColor(
     directionalLightDirectionView: {value: [0.35, 0.82, 0.38], private: true},
     directionalLightColor: {value: [1, 0.85, 0.66], private: true},
     fogColor: {value: [0.18, 0.3, 0.48]},
+    godRayPosition: {value: [0.72, 0.16]},
     density: {value: 0.055, min: 0, softMax: 0.22},
     heightFalloff: {value: 0.23, min: 0, softMax: 2},
     fogHeight: {value: 0.2, min: -5, softMax: 5},
     anisotropy: {value: 0.45, min: -0.8, max: 0.85},
     directionalIntensity: {value: 2.2, min: 0, softMax: 8},
     pointLightIntensity: {value: 1.8, min: 0, softMax: 6},
+    godRayIntensity: {value: 0, min: 0, softMax: 6},
+    godRayDensity: {value: 0.94, min: 0.1, max: 1.2},
+    godRayDecay: {value: 0.96, min: 0.7, max: 1},
+    godRaySampleCount: {value: 18, min: 3, max: 32},
     maxDistance: {value: 28, min: 1, softMax: 80},
     sampleCount: {value: 10, min: 3, max: 20},
     shadowStrength: {value: 0.74, min: 0, max: 1},
