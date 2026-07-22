@@ -94,7 +94,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/effects**
 
-- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, compact height fog, and clustered participating-media lighting. They share strict ordered composition with existing effects such as bloom and depth of field.
+- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, compact height fog, clustered participating-media lighting, GPU-driven adaptive exposure, and HDR-safe multiscale bloom. They share strict ordered composition with existing effects such as depth of field.
 - **[Visualization City](/examples/experimental/advanced-effects)** - New MRT showcase combines the complete effect stack with presets, quality levels, debug views, and before/after comparison.
 
 

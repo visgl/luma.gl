@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {Texture, TextureFormatColor} from '@luma.gl/core';
+import type {ShaderPass, ShaderPassPipeline, ShaderPassRenderTarget} from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
 
 const MAX_BLOOM_BLUR_RADIUS = 24;
@@ -18,6 +18,14 @@ type BloomTargetName =
   | 'extractEighth'
   | 'blurEighthScratch'
   | 'blurEighth';
+
+/** Construction options for HDR-capable multiscale bloom. */
+export type BloomShaderPassPipelineOptions = {
+  /** Fractional size multiplier applied to the half, quarter, and eighth-resolution pyramid. */
+  resolutionScale?: number;
+  /** Intermediate color format. Defaults to rgba16float to preserve HDR highlight energy. */
+  colorFormat?: TextureFormatColor;
+};
 
 const bloomExtractPass = {
   name: 'bloomExtract',
@@ -395,3 +403,30 @@ export const bloomShaderPassPipeline = {
     }
   ]
 } as const satisfies ShaderPassPipeline<BloomTargetName>;
+
+/** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
+export function createBloomShaderPassPipeline(
+  options: BloomShaderPassPipelineOptions = {}
+): ShaderPassPipeline<BloomTargetName> {
+  const resolutionScale = options.resolutionScale ?? 1;
+  const colorFormat = options.colorFormat ?? 'rgba16float';
+  const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
+    scale: [scale * resolutionScale, scale * resolutionScale],
+    format: colorFormat
+  });
+
+  return {
+    ...bloomShaderPassPipeline,
+    renderTargets: {
+      extractHalf: makeRenderTarget(0.5),
+      blurHalfScratch: makeRenderTarget(0.5),
+      blurHalf: makeRenderTarget(0.5),
+      extractQuarter: makeRenderTarget(0.25),
+      blurQuarterScratch: makeRenderTarget(0.25),
+      blurQuarter: makeRenderTarget(0.25),
+      extractEighth: makeRenderTarget(0.125),
+      blurEighthScratch: makeRenderTarget(0.125),
+      blurEighth: makeRenderTarget(0.125)
+    }
+  };
+}

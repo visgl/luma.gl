@@ -13,8 +13,10 @@ import {
   SphereGeometry
 } from '@luma.gl/engine';
 import {
+  createBloomShaderPassPipeline,
   createClusteredVolumetricLightingShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
   createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline
 } from '@luma.gl/effects';
@@ -71,7 +73,8 @@ type DebugView =
   | 'Reflection Confidence'
   | 'Volumetric Lighting'
   | 'Volume Transmittance'
-  | 'God Rays';
+  | 'God Rays'
+  | 'HDR Luminance';
 
 type DeferredRenderingSettings = {
   debugView: DebugView;
@@ -79,6 +82,17 @@ type DeferredRenderingSettings = {
   animate: boolean;
   autoOrbitCamera: boolean;
   exposure: number;
+  autoExposureEnabled: boolean;
+  exposureKeyValue: number;
+  minimumExposure: number;
+  maximumExposure: number;
+  exposureBrightenSpeed: number;
+  exposureDarkenSpeed: number;
+  bloomEnabled: boolean;
+  bloomThreshold: number;
+  bloomIntensity: number;
+  bloomRadius: number;
+  bloomResolution: number;
   sunIntensity: number;
   ambientOcclusionEnabled: boolean;
   ambientOcclusionRadius: number;
@@ -126,6 +140,17 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   animate: true,
   autoOrbitCamera: true,
   exposure: 1.15,
+  autoExposureEnabled: true,
+  exposureKeyValue: 0.48,
+  minimumExposure: 0.45,
+  maximumExposure: 2.4,
+  exposureBrightenSpeed: 1.6,
+  exposureDarkenSpeed: 2.8,
+  bloomEnabled: true,
+  bloomThreshold: 0.78,
+  bloomIntensity: 0.34,
+  bloomRadius: 8,
+  bloomResolution: 1,
   sunIntensity: 2.8,
   ambientOcclusionEnabled: true,
   ambientOcclusionRadius: 2.2,
@@ -175,6 +200,7 @@ const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
 <p><b>Why light becomes visible in the air:</b> configurable-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Radial camera-depth visibility traces toward the sun to reveal crepuscular god rays behind occluders; velocity and depth history stabilize the colored light volumes.</p>
+<p><b>Why the highlights feel cinematic:</b> a GPU-resident logarithmic luminance pyramid meters the scene without CPU readback, while persistent exposure history adapts at separate brightening and darkening rates. A half/quarter/eighth-resolution HDR bloom pyramid spreads emissive and specular energy before the final ACES-style tone map.</p>
 <p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
 <p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, <b>Volumetric Lighting</b>, <b>Volume Transmittance</b>, and <b>God Rays</b> reveal where transport work, uncertain screen-space hits, atmospheric extinction, or directional light shafts accumulate.</p>
 `;
@@ -560,6 +586,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   framebufferSize: [number, number];
   previousViewProjectionMatrix = new Matrix4();
   frameIndex = 0;
+  previousFrameTick = 0;
 
   constructor({device, width, height}: AnimationProps) {
     super();
@@ -639,6 +666,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const time = this.settings.animate ? tick / 1000 : 1.8;
+    const frameDeltaTime =
+      this.frameIndex === 0
+        ? 1 / 60
+        : Math.min(Math.max((tick - this.previousFrameTick) / 1000, 1 / 240), 0.12);
     this.orbitControls?.update(tick);
     const eye: NumberArray3 = this.orbitControls?.getEyePosition() || [0, 9.5, 18];
     const projectionMatrix = new Matrix4().perspective({
@@ -845,6 +876,30 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
                 ? 2
                 : 0
         },
+        hdrAutoExposureAdapt: {
+          keyValue: this.settings.exposureKeyValue,
+          minimumExposure: this.settings.minimumExposure,
+          maximumExposure: this.settings.maximumExposure,
+          brightenSpeed: this.settings.exposureBrightenSpeed,
+          darkenSpeed: this.settings.exposureDarkenSpeed,
+          deltaTime: frameDeltaTime,
+          enabled:
+            this.settings.autoExposureEnabled &&
+            (this.settings.debugView === 'Final' || this.settings.debugView === 'HDR Luminance')
+              ? 1
+              : 0
+        },
+        hdrAutoExposureApply: {
+          debugMode: this.settings.debugView === 'HDR Luminance' ? 1 : 0
+        },
+        bloomExtract: {threshold: this.settings.bloomThreshold},
+        bloomBlur: {radius: this.settings.bloomRadius},
+        bloomComposite: {
+          intensity:
+            this.settings.bloomEnabled && this.settings.debugView === 'Final'
+              ? this.settings.bloomIntensity
+              : 0
+        },
         deferredDisplay: {
           inverseProjectionMatrix,
           debugMode: getDebugMode(this.settings.debugView),
@@ -855,6 +910,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.previousViewProjectionMatrix = new Matrix4(viewProjectionMatrix);
+    this.previousFrameTick = tick;
     this.frameIndex++;
   }
 
@@ -881,7 +937,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
           title: 'Overview',
-          html: '<p><b>One geometry pass. Hundreds of lights. God rays through the atmosphere.</b></p><p>Compute-clustered deferred lighting, GTAO, colored screen-space global illumination, shared glossy SSR, and anisotropic participating-media scattering all consume one coherent G-buffer.</p><p><b>Why this is different:</b> Illumination Lab goes deeper into physically based materials and advanced light transport. <b>Visualization City</b> is the broader shadow/effect showcase, with cascaded, spot, point, and contact shadows plus SSAO, height fog, outlines, TAA, and motion blur.</p><p>Drag to orbit and switch Debug View to isolate diffuse bounce, reflections, volumetric in-scattering, atmospheric transmittance, or crepuscular god rays.</p>'
+          html: '<p><b>One geometry pass. Hundreds of lights. A cinematic HDR camera.</b></p><p>Compute-clustered deferred lighting, GTAO, colored screen-space global illumination, shared glossy SSR, anisotropic god rays, GPU-driven eye adaptation, and floating-point bloom all consume one coherent G-buffer.</p><p><b>Why this is different:</b> Illumination Lab goes deeper into physically based materials and advanced light transport. <b>Visualization City</b> is the broader shadow/effect showcase, with cascaded, spot, point, and contact shadows plus SSAO, height fog, outlines, TAA, and motion blur.</p><p>Drag to orbit and switch Debug View to isolate diffuse bounce, reflections, volumetric in-scattering, crepuscular god rays, or HDR luminance.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -905,7 +961,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       previousSettings.globalIlluminationResolution !==
         this.settings.globalIlluminationResolution ||
       previousSettings.reflectionResolution !== this.settings.reflectionResolution ||
-      previousSettings.atmosphereResolution !== this.settings.atmosphereResolution
+      previousSettings.atmosphereResolution !== this.settings.atmosphereResolution ||
+      previousSettings.bloomResolution !== this.settings.bloomResolution ||
+      previousSettings.bloomEnabled !== this.settings.bloomEnabled
     ) {
       this.renderer.destroy();
       this.renderer = createRenderer(this.device, this.settings);
@@ -925,6 +983,10 @@ function createRenderer(device: Device, settings: DeferredRenderingSettings): Sh
       createClusteredVolumetricLightingShaderPassPipeline({
         resolutionScale: settings.atmosphereResolution
       }),
+      createHDRAutoExposureShaderPassPipeline(),
+      ...(settings.bloomEnabled
+        ? [createBloomShaderPassPipeline({resolutionScale: settings.bloomResolution})]
+        : []),
       deferredDisplayPipeline
     ],
     colorFormat: 'rgba16float',
@@ -1180,6 +1242,8 @@ function getDebugMode(debugView: DebugView): number {
       return 9;
     case 'Reflection Confidence':
       return 10;
+    case 'HDR Luminance':
+      return 8;
     default:
       return 0;
   }
@@ -1216,7 +1280,8 @@ function makeSettingsSchema(): SettingsSchema {
               'Reflection Confidence',
               'Volumetric Lighting',
               'Volume Transmittance',
-              'God Rays'
+              'God Rays',
+              'HDR Luminance'
             ]
           },
           {
@@ -1273,6 +1338,115 @@ function makeSettingsSchema(): SettingsSchema {
             label: 'Animate Lights',
             type: 'boolean',
             persist: 'none'
+          }
+        ]
+      },
+      {
+        id: 'auto-exposure',
+        name: 'Adaptive HDR Exposure',
+        description: 'GPU luminance metering and temporally adapted camera exposure.',
+        initiallyCollapsed: true,
+        settings: [
+          {
+            name: 'autoExposureEnabled',
+            label: 'Enable Auto Exposure',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'exposureKeyValue',
+            label: 'Middle Gray',
+            type: 'number',
+            persist: 'none',
+            min: 0.08,
+            max: 1.5,
+            step: 0.02
+          },
+          {
+            name: 'minimumExposure',
+            label: 'Minimum Exposure',
+            type: 'number',
+            persist: 'none',
+            min: 0.05,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'maximumExposure',
+            label: 'Maximum Exposure',
+            type: 'number',
+            persist: 'none',
+            min: 0.5,
+            max: 6,
+            step: 0.1
+          },
+          {
+            name: 'exposureBrightenSpeed',
+            label: 'Adapt to Darkness',
+            type: 'number',
+            persist: 'none',
+            min: 0.1,
+            max: 8,
+            step: 0.1
+          },
+          {
+            name: 'exposureDarkenSpeed',
+            label: 'Adapt to Light',
+            type: 'number',
+            persist: 'none',
+            min: 0.1,
+            max: 8,
+            step: 0.1
+          }
+        ]
+      },
+      {
+        id: 'cinematic-bloom',
+        name: 'Cinematic HDR Bloom',
+        description: 'Multiscale, unclipped glow from emissive and specular highlights.',
+        initiallyCollapsed: true,
+        settings: [
+          {
+            name: 'bloomEnabled',
+            label: 'Enable Bloom',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'bloomThreshold',
+            label: 'Highlight Threshold',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.02
+          },
+          {
+            name: 'bloomIntensity',
+            label: 'Glow Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'bloomRadius',
+            label: 'Glow Radius',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 24,
+            step: 1
+          },
+          {
+            name: 'bloomResolution',
+            label: 'Pyramid Resolution',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 1,
+            step: 0.25
           }
         ]
       },

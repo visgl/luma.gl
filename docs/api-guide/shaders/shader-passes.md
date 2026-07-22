@@ -77,9 +77,11 @@ surface attachments without owning scene traversal or material shading. Multiple
 ```ts
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
+  createBloomShaderPassPipeline,
   createClusteredVolumetricLightingShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
   createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline
@@ -107,6 +109,8 @@ const effects = new ShaderPassRenderer(device, {
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createClusteredVolumetricLightingShaderPassPipeline(),
+    createHDRAutoExposureShaderPassPipeline(),
+    createBloomShaderPassPipeline(),
     createTAAShaderPassPipeline(),
     createMotionBlurShaderPassPipeline()
   ]
@@ -131,6 +135,8 @@ const renderer = new ShaderPassRenderer(device, {
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createClusteredVolumetricLightingShaderPassPipeline(),
+    createHDRAutoExposureShaderPassPipeline(),
+    createBloomShaderPassPipeline(),
     createTAAShaderPassPipeline()
   ]
 });
@@ -206,6 +212,20 @@ ordered pipelines; normally choose one atmospheric implementation rather than st
 SSAO, GTAO, screen-space global illumination, reflections, and clustered volumetric lighting
 default to full-resolution intermediate framebuffers. Pass `resolutionScale: 0.5`, for example,
 to explicitly trade edge quality for fewer shaded pixels and smaller history textures.
+
+### Adaptive HDR exposure and cinematic bloom
+
+`createHDRAutoExposureShaderPassPipeline()` meters and adapts scene brightness entirely on the GPU:
+
+1. Extract center-weighted logarithmic luminance from floating-point scene color.
+2. Reduce four successively smaller luminance-pyramid levels into a near-global geometric mean.
+3. Adapt persistent exposure history with independent brightening and darkening response rates.
+4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
+
+Pair it with `createBloomShaderPassPipeline()`, which extracts and blurs HDR highlights at half,
+quarter, and eighth resolution using `rgba16float` intermediate targets. Its optional
+`resolutionScale` controls the entire pyramid without clamping highlight radiance to 8-bit
+normalized color. Apply both effects before final tone mapping.
 
 ### Recommended ordering
 

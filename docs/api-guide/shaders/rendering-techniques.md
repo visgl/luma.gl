@@ -27,6 +27,8 @@ whether its cost scales with scene geometry, visible pixels, light count, or tem
 | Sun, spot, or point-light visibility | `ShadowMapRenderer` | Add contact shadows for missing near-surface detail. | Light-space shadows need caster geometry; they are not a color-only effect. |
 | Tiny near-surface shadow detail | `createContactShadowShaderPassPipeline()` | Combine with stable cascaded or local-light shadow maps. | Camera-space contact rays cannot see occluders outside the current depth buffer. |
 | Fast transparent layering | `WBOITRenderer` | Use `ABufferRenderer` when exact fragment ordering is more important. | Weighted blending approximates heavily overlapping transparent layers. |
+| Camera-like adaptation to changing HDR light | `createHDRAutoExposureShaderPassPipeline()` | Tune center-weighted metering, exposure limits, and adaptation response. | Exposure history remains on the GPU and should reset after camera cuts. |
+| HDR highlight spread without clipping | `createBloomShaderPassPipeline()` | Tune threshold, blur radius, intensity, and pyramid resolution. | Keep the bloom pyramid in `rgba16float` and compose before tone mapping. |
 | Broad cinematic glow | `bloomShaderPassPipeline` | Keep the single `bloom` pass for simpler, cheaper glow. | Bloom operates on color; it is not reflected lighting or global illumination. |
 
 ## Example Profiles: Visualization City Versus Illumination Lab
@@ -43,6 +45,10 @@ implementations of the same effect catalog.
 | Reflections | Shared `createSSRShaderPassPipeline()`, tuned by city quality presets. | The **same** SSR pipeline, tuned for polished materials and edge-aware upsampling. |
 | Atmospheric effects | Compact height fog with an inexpensive stylized directional glow. | Real clustered point-light scattering, depth-occluded crepuscular god rays, height-dependent extinction, and anisotropic phase response. |
 | Other strengths | Cascaded shadows, split comparisons, outlines, temporal AA, and motion blur. | Roughness/metalness inspection, emissive color bleeding, and transport-confidence diagnostics. |
+
+Illumination Lab additionally demonstrates GPU-resident adaptive exposure and an HDR-safe bloom
+pyramid, making intense animated emitters and directional shafts respond like a cinematic camera
+without CPU luminance readback or 8-bit highlight clipping.
 
 Visualization City is therefore broader in shadow and presentation effects, while Illumination
 Lab goes deeper into deferred shading and higher-order light transport. Shared techniques such
@@ -241,8 +247,9 @@ A representative WebGPU stack is:
 ```ts
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
-  bloomShaderPassPipeline,
+  createBloomShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
   createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline
@@ -256,7 +263,8 @@ const renderer = new ShaderPassRenderer(device, {
     createSSGIShaderPassPipeline({resolutionScale: 0.5}),
     createSSRShaderPassPipeline({resolutionScale: 0.5}),
     createTAAShaderPassPipeline(),
-    bloomShaderPassPipeline
+    createHDRAutoExposureShaderPassPipeline(),
+    createBloomShaderPassPipeline()
   ],
   colorFormat: 'rgba16float'
 });

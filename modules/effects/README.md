@@ -6,8 +6,8 @@ Advanced WebGPU-first scene-aware pipelines include SSAO, temporally stabilized 
 cosine-weighted screen-space diffuse global illumination, roughness-aware screen-space
 reflections with temporal reprojection and bilateral denoising, real clustered volumetric
 lighting with depth-occluded crepuscular god rays, scene outlines, temporal AA, motion blur,
-compact height fog, and reusable
-depth-aware blur.
+compact height fog, GPU-resident adaptive HDR exposure, floating-point multiscale bloom,
+and reusable depth-aware blur.
 Applications keep ownership of scene rendering and provide matching color, depth,
 normal/roughness, and velocity textures to `ShaderPassRenderer`.
 Scene-aware intermediate framebuffers default to full resolution; applications can pass
@@ -15,12 +15,14 @@ Scene-aware intermediate framebuffers default to full resolution; applications c
 
 Notable exports include:
 
-- `bloom` and `bloomShaderPassPipeline`
+- `bloom`, `bloomShaderPassPipeline`, and `createBloomShaderPassPipeline`
 - `dof` and `dofShaderPassPipeline`
 - `createGTAOShaderPassPipeline`, `createSSGIShaderPassPipeline`, and
   `createSSRShaderPassPipeline`
 - `createClusteredVolumetricLightingShaderPassPipeline` for light-driven participating media;
   `createVolumetricFogShaderPassPipeline` remains the simpler, lower-cost height-fog option.
+- `createHDRAutoExposureShaderPassPipeline` for center-weighted GPU luminance metering and
+  temporally adapted exposure.
 
 The [Visualization City](https://luma.gl/examples/experimental/advanced-effects) example
 emphasizes geometric shadows and the breadth of composable effects. The

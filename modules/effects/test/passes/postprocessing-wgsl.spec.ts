@@ -12,6 +12,7 @@ import {
   colorHalftone,
   createClusteredVolumetricLightingShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createOutlineShaderPassPipeline,
   createSSAOShaderPassPipeline,
@@ -78,6 +79,7 @@ const PLATFORM_INFO = {
 const ADVANCED_SHADER_PASSES = [
   createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
   createGTAOShaderPassPipeline(),
+  createHDRAutoExposureShaderPassPipeline(),
   createSSGIShaderPassPipeline(),
   createClusteredVolumetricLightingShaderPassPipeline(),
   createOutlineShaderPassPipeline({normalSource: 'normal-texture'}),

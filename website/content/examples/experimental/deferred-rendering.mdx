@@ -20,7 +20,8 @@ import {DeferredRenderingExample} from '@site/src/examples';
     contacts, diffuse screen-space global illumination transfers colored light between surfaces,
     stochastic reflections bounce the animated scene across polished floors, and clustered
     participating media turns the same point lights and sun into colored atmospheric halos and
-    depth-occluded crepuscular god rays.
+    depth-occluded crepuscular god rays. GPU-driven adaptive exposure and floating-point
+    multiscale bloom finish the scene without clipping its brightest highlights.
   </div>
 </ExampleHeader>
 
@@ -30,7 +31,8 @@ Open **Illumination Effects** to inspect the actual render-stack stages through 
 accordions for clustered deferred lighting, GTAO, diffuse global illumination, screen-space
 reflections, clustered volumetric scattering, and crepuscular god rays. Expand a section to
 adjust its quality, transport, or temporal-history controls without scrolling through one
-flattened settings list.
+flattened settings list. Dedicated **Adaptive HDR Exposure** and **Cinematic HDR Bloom** sections
+make the camera response and highlight pyramid independently inspectable.
 Each effect starts with a full-resolution framebuffer; lower **Buffer Resolution** inside an
 individual section when reduced GPU cost is more important than edge fidelity.
 
@@ -82,6 +84,11 @@ reflection effect.
   atmospheric temporal stability.
 - Expand **Crepuscular God Rays** and adjust **Ray Intensity**, **Ray Reach**, **Ray Persistence**,
   **Ray Samples**, and **Sun Position** to reveal radial sunlight shafts behind visible occluders.
+- Select **HDR Luminance** to inspect the logarithmic scene-luminance heat map. Tune **Middle
+  Gray**, adaptation speeds, and exposure limits to watch the virtual camera respond to changing
+  lighting.
+- Adjust **Highlight Threshold**, **Glow Intensity**, and **Glow Radius** to spread emissive and
+  specular highlights across a floating-point multiscale bloom pyramid without clipping HDR color.
 
 ## Render stack
 
@@ -113,6 +120,10 @@ lights and occluded directional light through exponential height fog, applies Be
 extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
 sun for crepuscular god rays, stabilizes configurable-resolution in-scattering with
 velocity/depth history, and composites the participating medium over the existing opaque result.
+`createHDRAutoExposureShaderPassPipeline()` builds a center-weighted logarithmic luminance
+pyramid, adapts a persistent GPU exposure target without CPU readback, and applies the current
+camera response. `createBloomShaderPassPipeline()` then extracts, blurs, and combines bright
+highlights across three `rgba16float` scales.
 A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection/
 volume debug view.
 
