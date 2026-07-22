@@ -739,7 +739,7 @@ function createRenderer(device: Device): ShaderPassRenderer {
     shaderPasses: [
       createClusteredDeferredLightingShaderPassPipeline(),
       createGTAOShaderPassPipeline(),
-      createSSRShaderPassPipeline(),
+      createSSRShaderPassPipeline({resolutionScale: 1}),
       deferredDisplayPipeline
     ],
     colorFormat: 'rgba16float',
@@ -857,7 +857,7 @@ function makeLightMarkerData(): SurfaceInstanceData {
     const color = LIGHT_COLORS[lightIndex % LIGHT_COLORS.length]!;
     scales.push(0.095, 0.095, 0.095);
     baseColors.push(color[0], color[1], color[2], 1);
-    materials.push(0.18, 0);
+    materials.push(0.98, 0);
     emissiveColors.push(color[0], color[1], color[2]);
   }
   return {

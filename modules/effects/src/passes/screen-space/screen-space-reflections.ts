@@ -134,17 +134,23 @@ fn ssrTrace_sampleColor(
   let reflectedRay = normalize(
     mirrorDirection + (tangent * cos(noiseAngle) + bitangent * sin(noiseAngle)) * roughnessCone
   );
+  let rayOrigin = viewPosition + normal * max(ssrTrace.thickness * 0.12, 0.025);
 
   var reflection = vec3f(0.0);
   var confidence = 0.0;
   var previousTravel = 0.06;
+  var previousDepthDelta = -ssrTrace.thickness;
+  let minimumSampleCount = ceil(
+    ssrTrace.maxDistance / max(ssrTrace.thickness * 0.72, 0.12)
+  );
+  let effectiveSampleCount = min(96.0, max(ssrTrace.sampleCount, minimumSampleCount));
   for (var sampleIndex: i32 = 1; sampleIndex <= 96; sampleIndex++) {
-    if (f32(sampleIndex) > ssrTrace.sampleCount) {
+    if (f32(sampleIndex) > effectiveSampleCount) {
       break;
     }
-    let fraction = (f32(sampleIndex) - noise * 0.42) / max(ssrTrace.sampleCount, 1.0);
+    let fraction = (f32(sampleIndex) - noise * 0.42) / max(effectiveSampleCount, 1.0);
     let travel = 0.08 + pow(max(fraction, 0.0), 1.3) * ssrTrace.maxDistance;
-    let rayPosition = viewPosition + reflectedRay * travel;
+    let rayPosition = rayOrigin + reflectedRay * travel;
     if (rayPosition.z >= -0.04) {
       break;
     }
@@ -155,18 +161,27 @@ fn ssrTrace_sampleColor(
     let sampleDepth = textureSampleLevel(depthTexture, depthTextureSampler, sampleCoord, 0);
     if (sampleDepth >= 0.99999) {
       previousTravel = travel;
+      previousDepthDelta = -ssrTrace.thickness;
       continue;
     }
     let scenePosition = ssrTrace_reconstructViewPosition(sampleCoord, sampleDepth);
     let depthDelta = (-rayPosition.z) - (-scenePosition.z);
-    let hitThickness = ssrTrace.thickness + travel * 0.018;
-    if (depthDelta >= 0.0 && depthDelta < hitThickness) {
+    let rayStepLength = max(travel - previousTravel, 0.001);
+    let hitThickness = max(ssrTrace.thickness, rayStepLength * 1.2) + travel * 0.008;
+    let candidateNormal = normalize(
+      textureSampleLevel(normalTexture, normalTextureSampler, sampleCoord, 0).rgb * 2.0 - 1.0
+    );
+    let entersCandidateSurface = dot(reflectedRay, candidateNormal) < -0.015;
+    let crossesCandidateSurface = previousDepthDelta <= 0.0 && depthDelta >= 0.0;
+    let screenTravelPixels = length((sampleCoord - sceneCoord) * texSize);
+    if (crossesCandidateSurface && depthDelta < hitThickness &&
+        entersCandidateSurface && screenTravelPixels > 1.25) {
       var nearTravel = previousTravel;
       var farTravel = travel;
       var hitCoord = sampleCoord;
       for (var refinementIndex: i32 = 0; refinementIndex < 5; refinementIndex++) {
         let refinedTravel = (nearTravel + farTravel) * 0.5;
-        let refinedPosition = viewPosition + reflectedRay * refinedTravel;
+        let refinedPosition = rayOrigin + reflectedRay * refinedTravel;
         let refinedCoord = ssrTrace_projectViewPosition(refinedPosition);
         let refinedDepth = textureSampleLevel(depthTexture, depthTextureSampler, refinedCoord, 0);
         let refinedScenePosition = ssrTrace_reconstructViewPosition(refinedCoord, refinedDepth);
@@ -194,6 +209,7 @@ fn ssrTrace_sampleColor(
       break;
     }
     previousTravel = travel;
+    previousDepthDelta = select(-ssrTrace.thickness, depthDelta, entersCandidateSurface);
   }
 
   return vec4f(reflection, clamp(confidence, 0.0, 1.0));
@@ -376,16 +392,27 @@ fn ssrSpatial_sampleColor(
   let centerReflection = textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0);
   let centerNormalRoughness = textureSampleLevel(normalTexture, normalTextureSampler, texCoord, 0);
   let roughness = clamp(centerNormalRoughness.a, 0.0, 1.0);
-  let radius = clamp(roughness * roughness * ssrSpatial.maxRadius, 0.0, 6.0);
-  if (radius < 0.55 || centerReflection.a <= 0.001) {
+  let centerDepth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
+  if (centerDepth >= 0.99999) {
+    return vec4f(0.0);
+  }
+  let hasCenterReflection = centerReflection.a > 0.001;
+  if (!hasCenterReflection && roughness >= 0.28) {
     return centerReflection;
   }
+  let minimumRadius = select(5.0, 0.95, hasCenterReflection);
+  let radius = clamp(
+    max(roughness * roughness * ssrSpatial.maxRadius, minimumRadius),
+    minimumRadius,
+    6.0
+  );
 
-  let centerDepth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
   let centerNormal = normalize(centerNormalRoughness.rgb * 2.0 - 1.0);
   let texel = ssrSpatial.direction / vec2f(textureDimensions(sourceTexture));
-  var reflection = centerReflection;
-  var totalWeight = 1.0;
+  let centerWeight = select(0.0, 1.0, hasCenterReflection);
+  var reflection = centerReflection * centerWeight;
+  var totalWeight = centerWeight;
+  var supportingSampleCount = 0u;
   for (var sampleIndex: i32 = 1; sampleIndex <= 6; sampleIndex++) {
     if (f32(sampleIndex) > ceil(radius)) {
       break;
@@ -409,12 +436,22 @@ fn ssrSpatial_sampleColor(
       let distanceWeight = exp(
         -f32(sampleIndex * sampleIndex) / max(2.0 * radius * radius, 0.1)
       );
-      let weight = depthWeight * normalWeight * distanceWeight;
-      reflection += textureSampleLevel(sourceTexture, sourceTextureSampler, sampleCoord, 0) * weight;
+      let sampleReflection = textureSampleLevel(sourceTexture, sourceTextureSampler, sampleCoord, 0);
+      let confidenceWeight = smoothstep(0.001, 0.12, sampleReflection.a);
+      let belongsToSamePlane = dot(centerNormal, sampleNormal) > 0.9995;
+      let surfaceWeight = select(0.0, 1.0, hasCenterReflection || belongsToSamePlane);
+      let weight = depthWeight * normalWeight * distanceWeight * confidenceWeight * surfaceWeight;
+      if (weight > 0.001) {
+        supportingSampleCount += 1u;
+      }
+      reflection += sampleReflection * weight;
       totalWeight += weight;
     }
   }
 
+  if ((!hasCenterReflection && supportingSampleCount < 2u) || totalWeight <= 0.0001) {
+    return centerReflection;
+  }
   return reflection / totalWeight;
 }`,
   bindingLayout: [
