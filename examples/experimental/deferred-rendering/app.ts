@@ -610,6 +610,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           intensity: this.settings.ambientOcclusionIntensity,
           frameIndex: this.frameIndex
         },
+        gtaoTemporal: {inverseProjectionMatrix},
         gtaoComposite: {
           strength: this.settings.ambientOcclusionStrength,
           debugMode: this.settings.debugView === 'Ambient Occlusion' ? 1 : 0

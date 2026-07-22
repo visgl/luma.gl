@@ -23,6 +23,7 @@ type GTAOEvaluateUniforms = {
 };
 
 type GTAOTemporalUniforms = {
+  inverseProjectionMatrix: Matrix4;
   historyWeight: number;
   depthThreshold: number;
 };
@@ -200,6 +201,7 @@ export const gtaoTemporal = {
   name: 'gtaoTemporal',
   source: /* wgsl */ `\
 struct GTAOTemporalUniforms {
+  inverseProjectionMatrix: mat4x4f,
   historyWeight: f32,
   depthThreshold: f32,
 };
@@ -213,6 +215,12 @@ struct GTAOTemporalUniforms {
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 @group(0) @binding(auto) var previousDepthTexture: texture_2d<f32>;
 @group(0) @binding(auto) var previousDepthTextureSampler: sampler;
+
+fn gtaoTemporal_reconstructViewDepth(texCoord: vec2f, depth: f32) -> f32 {
+  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
+  let viewPosition = gtaoTemporal.inverseProjectionMatrix * clip;
+  return abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
+}
 
 fn gtaoTemporal_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -231,7 +239,14 @@ fn gtaoTemporal_sampleColor(
     previousDepthTextureSampler,
     clampedPreviousCoord
   ).r;
-  let validDepth = abs(previousDepth - currentDepth) < gtaoTemporal.depthThreshold;
+  let currentViewDepth = gtaoTemporal_reconstructViewDepth(texCoord, currentDepth);
+  let previousViewDepth = gtaoTemporal_reconstructViewDepth(
+    clampedPreviousCoord,
+    previousDepth
+  );
+  let relativeDepthDifference = abs(previousViewDepth - currentViewDepth) /
+    max(currentViewDepth, 0.0001);
+  let validDepth = relativeDepthDifference < gtaoTemporal.depthThreshold;
 
   let texel = 1.0 / vec2f(textureDimensions(sourceTexture));
   var minimumVisibility = current.r;
@@ -266,10 +281,12 @@ fn gtaoTemporal_sampleColor(
   uniforms: {} as GTAOTemporalUniforms,
   bindings: {} as GTAOTemporalBindings,
   uniformTypes: {
+    inverseProjectionMatrix: 'mat4x4<f32>',
     historyWeight: 'f32',
     depthThreshold: 'f32'
   },
   propTypes: {
+    inverseProjectionMatrix: {value: new Matrix4(), private: true},
     historyWeight: {value: 0.88, min: 0, max: 0.97},
     depthThreshold: {value: 0.015, min: 0.0001, softMax: 0.1}
   },

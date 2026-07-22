@@ -17,7 +17,8 @@ import {
   createTAAShaderPassPipeline,
   createVolumetricFogShaderPassPipeline,
   depthAwareBlurShaderPassPipeline,
-  dofShaderPassPipeline
+  dofShaderPassPipeline,
+  gtaoTemporal
 } from '../../src';
 
 test('advanced effects expose composable pipeline shapes', testCase => {
@@ -46,6 +47,11 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     gtao.steps[1].inputs?.historyTexture,
     gtao.steps[1].output,
     'GTAO intentionally reprojects one logical history target'
+  );
+  testCase.equal(
+    gtaoTemporal.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'GTAO temporal rejection reconstructs linear view-space depth'
   );
 
   const reconstructedSSAO = createSSAOShaderPassPipeline();
