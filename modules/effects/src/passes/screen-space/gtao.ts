@@ -132,10 +132,7 @@ fn gtaoEvaluate_sampleColor(
     max(-centerPosition.z, 0.0001) * depthDimensions.y * 0.5;
   let radiusPixels = clamp(projectedRadius, 2.0, 72.0);
   let pixelCoordinate = sceneCoord * depthDimensions;
-  let rotation = (
-    gtaoEvaluate_hash(floor(pixelCoordinate) + vec2f(gtaoEvaluate.frameIndex * 0.754877)) *
-    GTAO_PI
-  );
+  let rotation = gtaoEvaluate_hash(floor(pixelCoordinate)) * GTAO_PI;
 
   var accumulatedOcclusion = 0.0;
   for (var sliceIndex: i32 = 0; sliceIndex < GTAO_SLICE_COUNT; sliceIndex++) {

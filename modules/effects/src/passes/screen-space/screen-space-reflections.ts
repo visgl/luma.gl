@@ -120,9 +120,7 @@ fn ssrTrace_sampleColor(
   let incidentDirection = normalize(viewPosition);
   let mirrorDirection = normalize(reflect(incidentDirection, normal));
   let pixelCoordinate = floor(sceneCoord * vec2f(textureDimensions(depthTexture)));
-  let noise = ssrTrace_hash(
-    pixelCoordinate + vec2f(ssrTrace.frameIndex * 0.754877, ssrTrace.frameIndex * 0.56984)
-  );
+  let noise = ssrTrace_hash(pixelCoordinate);
   let noiseAngle = noise * SSR_TWO_PI;
   let referenceAxis = select(
     vec3f(0.0, 1.0, 0.0),
