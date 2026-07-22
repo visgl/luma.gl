@@ -64,6 +64,9 @@ export {shadow} from './shadows/shadow';
 export type {ContactShadowProps} from './shadows/contact-shadow';
 export {createContactShadowShaderPassPipeline} from './shadows/contact-shadow';
 
+export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
+export {OrbitControls} from './controls/orbit-controls';
+
 export * from './webxr/index';
 
 export * from './gpu-primitives/index';
