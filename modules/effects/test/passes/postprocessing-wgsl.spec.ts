@@ -10,6 +10,7 @@ import {
   brightnessContrast,
   bulgePinch,
   colorHalftone,
+  createGTAOShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createOutlineShaderPassPipeline,
   createSSAOShaderPassPipeline,
@@ -74,6 +75,7 @@ const PLATFORM_INFO = {
 
 const ADVANCED_SHADER_PASSES = [
   createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
+  createGTAOShaderPassPipeline(),
   createOutlineShaderPassPipeline({normalSource: 'normal-texture'}),
   createTAAShaderPassPipeline(),
   createMotionBlurShaderPassPipeline(),

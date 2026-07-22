@@ -12,6 +12,7 @@ import {
   ShaderPassRenderer,
   SphereGeometry
 } from '@luma.gl/engine';
+import {createGTAOShaderPassPipeline} from '@luma.gl/effects';
 import {
   ClusteredLightGrid,
   createClusteredDeferredLightingShaderPassPipeline,
@@ -56,7 +57,8 @@ type DebugView =
   | 'Metallic'
   | 'Emissive'
   | 'Depth'
-  | 'Cluster Occupancy';
+  | 'Cluster Occupancy'
+  | 'Ambient Occlusion';
 
 type DeferredRenderingSettings = {
   debugView: DebugView;
@@ -64,6 +66,9 @@ type DeferredRenderingSettings = {
   animate: boolean;
   exposure: number;
   sunIntensity: number;
+  ambientOcclusionRadius: number;
+  ambientOcclusionIntensity: number;
+  ambientOcclusionStrength: number;
 };
 
 const DEFAULT_SETTINGS: DeferredRenderingSettings = {
@@ -71,13 +76,17 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   pointLightCount: 256,
   animate: true,
   exposure: 1.15,
-  sunIntensity: 2.8
+  sunIntensity: 2.8,
+  ambientOcclusionRadius: 2.2,
+  ambientOcclusionIntensity: 3.2,
+  ambientOcclusionStrength: 0.68
 };
 
 const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why deferred rendering scales:</b> forward shading repeats material work for every light that touches every draw. Here the geometry pass writes base color, metalness, roughness, emissive, normal, velocity, and depth once; the fullscreen resolve reuses those screen-space values for lighting.</p>
 <p><b>Why clustering wins:</b> a WebGPU compute stage projects each view-space light sphere into a <code>16 × 9 × 24</code> screen/log-depth grid. Each pixel reconstructs its view position from depth, finds one cluster, and normally evaluates only that short local list instead of all 512 lights.</p>
-<p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds later SSAO, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
+<p><b>Why GTAO belongs after lighting:</b> a half-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO is composed into lit color.</p>
+<p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
 <p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the full fixed-size light buffer rather than showing tile-shaped truncation; the <b>Cluster Occupancy</b> view shows where that slower fallback is being requested.</p>
 `;
 
@@ -286,6 +295,10 @@ fn deferredDisplay_sampleColor(
     let emissive = vec3f(textureLoad(emissiveOcclusionTexture, emissiveCoordinates, 0).rgb) /
       255.0;
     return vec4f(deferredDisplay_toneMap(emissive), 1.0);
+  }
+  if (deferredDisplay.debugMode > 7.5) {
+    let color = textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0).rgb;
+    return vec4f(color, 1.0);
   }
   if (deferredDisplay.debugMode > 5.5) {
     let depth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
@@ -575,6 +588,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       bindings: {
         depthTexture: this.sceneGBuffer.depthTexture,
         normalTexture,
+        velocityTexture: this.sceneGBuffer.velocityTexture,
         baseColorMetallicTexture,
         emissiveOcclusionTexture,
         pointLights: this.pointLightBuffer,
@@ -588,6 +602,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           directionalLightColor: [1, 0.86, 0.68],
           directionalLightIntensity: this.settings.sunIntensity,
           ...clusterUniforms
+        },
+        gtaoEvaluate: {
+          projectionMatrix,
+          inverseProjectionMatrix,
+          radius: this.settings.ambientOcclusionRadius,
+          intensity: this.settings.ambientOcclusionIntensity,
+          frameIndex: this.frameIndex
+        },
+        gtaoTemporal: {inverseProjectionMatrix},
+        gtaoComposite: {
+          strength: this.settings.ambientOcclusionStrength,
+          debugMode: this.settings.debugView === 'Ambient Occlusion' ? 1 : 0
         },
         deferredDisplay: {
           inverseProjectionMatrix,
@@ -622,7 +648,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
           title: 'Overview',
-          html: '<p><b>One geometry pass. Hundreds of lights.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>Switch Debug View to inspect the actual G-buffer contract.</p>'
+          html: '<p><b>One geometry pass. Hundreds of lights.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>A temporally stabilized GTAO pass then turns the same depth, normals, and velocity into grounded contact shading without redrawing geometry. Switch Debug View to inspect the actual G-buffer and AO contracts.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -644,7 +670,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 function createRenderer(device: Device): ShaderPassRenderer {
   return new ShaderPassRenderer(device, {
-    shaderPasses: [createClusteredDeferredLightingShaderPassPipeline(), deferredDisplayPipeline],
+    shaderPasses: [
+      createClusteredDeferredLightingShaderPassPipeline(),
+      createGTAOShaderPassPipeline(),
+      deferredDisplayPipeline
+    ],
     colorFormat: 'rgba16float',
     flipY: true
   });
@@ -801,6 +831,8 @@ function getDebugMode(debugView: DebugView): number {
       return 6;
     case 'Cluster Occupancy':
       return 7;
+    case 'Ambient Occlusion':
+      return 8;
     default:
       return 0;
   }
@@ -828,7 +860,8 @@ function makeSettingsSchema(): SettingsSchema {
               'Metallic',
               'Emissive',
               'Depth',
-              'Cluster Occupancy'
+              'Cluster Occupancy',
+              'Ambient Occlusion'
             ]
           },
           {
@@ -870,6 +903,40 @@ function makeSettingsSchema(): SettingsSchema {
             label: 'Animate Lights',
             type: 'boolean',
             persist: 'none'
+          }
+        ]
+      },
+      {
+        id: 'ambient-occlusion',
+        name: 'Ambient Occlusion',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'ambientOcclusionRadius',
+            label: 'GTAO Radius',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 8,
+            step: 0.1
+          },
+          {
+            name: 'ambientOcclusionIntensity',
+            label: 'GTAO Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 8,
+            step: 0.1
+          },
+          {
+            name: 'ambientOcclusionStrength',
+            label: 'GTAO Strength',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.02
           }
         ]
       }
