@@ -22,6 +22,17 @@ import {AdvancedEffectsExample} from '@site/src/examples';
 
 <AdvancedEffectsExample />
 
+## Why This Is Not Illumination Lab
+
+Visualization City is the breadth-first hybrid rendering showcase: light-space directional,
+spot, point, and contact shadows combine with SSAO, height fog, outlines, temporal AA, and motion
+blur. Its split view makes those shadow and postprocessing choices easy to compare.
+
+[Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering) focuses on
+physically based deferred materials, hundreds of compute-clustered lights, higher-quality GTAO,
+colored diffuse global illumination, and participating-media scattering. Both examples use the
+same reusable `createSSRShaderPassPipeline()`; they do not maintain competing reflection effects.
+
 ## Scene contract
 
 The example deliberately keeps scene rendering outside `ShaderPassRenderer`. Its MRT pass writes:

@@ -13,6 +13,7 @@ import {
   SphereGeometry
 } from '@luma.gl/engine';
 import {
+  createClusteredVolumetricLightingShaderPassPipeline,
   createGTAOShaderPassPipeline,
   createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline
@@ -67,7 +68,9 @@ type DebugView =
   | 'Indirect Lighting'
   | 'Bounce Confidence'
   | 'Reflections'
-  | 'Reflection Confidence';
+  | 'Reflection Confidence'
+  | 'Volumetric Lighting'
+  | 'Volume Transmittance';
 
 type DeferredRenderingSettings = {
   debugView: DebugView;
@@ -90,6 +93,15 @@ type DeferredRenderingSettings = {
   reflectionMaxDistance: number;
   reflectionSampleCount: number;
   reflectionHistoryWeight: number;
+  atmosphereDensity: number;
+  atmosphereHeightFalloff: number;
+  atmosphereAnisotropy: number;
+  atmospherePointLightIntensity: number;
+  atmosphereSunIntensity: number;
+  atmosphereStrength: number;
+  atmosphereSampleCount: number;
+  atmosphereHistoryWeight: number;
+  atmosphereShadowStrength: number;
 };
 
 const DEFAULT_SETTINGS: DeferredRenderingSettings = {
@@ -112,17 +124,28 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   reflectionIntensity: 1.8,
   reflectionMaxDistance: 26,
   reflectionSampleCount: 56,
-  reflectionHistoryWeight: 0.84
+  reflectionHistoryWeight: 0.84,
+  atmosphereDensity: 0.055,
+  atmosphereHeightFalloff: 0.28,
+  atmosphereAnisotropy: 0.46,
+  atmospherePointLightIntensity: 1.65,
+  atmosphereSunIntensity: 1.1,
+  atmosphereStrength: 0.82,
+  atmosphereSampleCount: 10,
+  atmosphereHistoryWeight: 0.88,
+  atmosphereShadowStrength: 0.76
 };
 
 const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why deferred rendering scales:</b> forward shading repeats material work for every light that touches every draw. Here the geometry pass writes base color, metalness, roughness, emissive, normal, velocity, and depth once; the fullscreen resolve reuses those screen-space values for lighting.</p>
+<p><b>Illumination Lab vs. Visualization City:</b> this example concentrates on advanced deferred light transport: compute-clustered point lights, physically based material response, higher-quality GTAO, colored diffuse bounce, shared screen-space reflections, and clustered participating media. <b>Visualization City</b> instead emphasizes breadth, with directional/spot/point shadow maps, contact shadows, lower-cost SSAO, simple fog, outlines, temporal AA, and motion blur. Both reuse the same SSR implementation.</p>
 <p><b>Why clustering wins:</b> a WebGPU compute stage projects each view-space light sphere into a <code>16 × 9 × 24</code> screen/log-depth grid. Each pixel reconstructs its view position from depth, finds one cluster, and normally evaluates only that short local list instead of all 512 lights.</p>
 <p><b>Why GTAO belongs after lighting:</b> a half-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO is composed into lit color.</p>
 <p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
+<p><b>Why light becomes visible in the air:</b> low-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Screen-depth visibility carves sun shafts around nearby geometry, while velocity and depth history stabilize the colored light volumes.</p>
 <p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
-<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, and <b>Reflection Confidence</b> reveal where work or uncertain screen-space hits accumulate.</p>
+<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, <b>Volumetric Lighting</b>, and <b>Volume Transmittance</b> reveal where transport work, uncertain screen-space hits, or atmospheric extinction accumulate.</p>
 `;
 
 type DeferredSurfaceUniforms = {
@@ -594,6 +617,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     const inverseProjectionMatrix = new Matrix4(projectionMatrix).invert();
     const viewMatrix = new Matrix4().lookAt({eye, center: [0, 0.9, 0], up: [0, 1, 0]});
+    const inverseViewMatrix = new Matrix4(viewMatrix).invert();
     const viewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
     if (this.frameIndex === 0) {
       this.previousViewProjectionMatrix = new Matrix4(viewProjectionMatrix);
@@ -738,6 +762,42 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
                 ? 2
                 : 0
         },
+        clusteredVolumetricTrace: {
+          projectionMatrix,
+          inverseProjectionMatrix,
+          inverseViewMatrix,
+          directionalLightDirectionView,
+          directionalLightColor: [1, 0.82, 0.57],
+          fogColor: [0.17, 0.29, 0.43],
+          density:
+            this.settings.debugView === 'Final' ||
+            this.settings.debugView === 'Volumetric Lighting' ||
+            this.settings.debugView === 'Volume Transmittance'
+              ? this.settings.atmosphereDensity
+              : 0,
+          heightFalloff: this.settings.atmosphereHeightFalloff,
+          fogHeight: 0.2,
+          anisotropy: this.settings.atmosphereAnisotropy,
+          directionalIntensity: this.settings.atmosphereSunIntensity,
+          pointLightIntensity: this.settings.atmospherePointLightIntensity,
+          maxDistance: 27,
+          sampleCount: this.settings.atmosphereSampleCount,
+          shadowStrength: this.settings.atmosphereShadowStrength,
+          ...clusterUniforms
+        },
+        clusteredVolumetricTemporal: {
+          inverseProjectionMatrix,
+          historyWeight: this.settings.atmosphereHistoryWeight
+        },
+        clusteredVolumetricComposite: {
+          strength: this.settings.atmosphereStrength,
+          debugMode:
+            this.settings.debugView === 'Volumetric Lighting'
+              ? 1
+              : this.settings.debugView === 'Volume Transmittance'
+                ? 2
+                : 0
+        },
         deferredDisplay: {
           inverseProjectionMatrix,
           debugMode: getDebugMode(this.settings.debugView),
@@ -774,7 +834,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
           title: 'Overview',
-          html: '<p><b>One geometry pass. Hundreds of lights. Color bouncing everywhere.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>Temporally stabilized GTAO grounds the contacts, screen-space global illumination transfers colored light from nearby emitter panels and materials, and roughness-aware reflections bounce the same lit scene across polished floors and chrome accents.</p><p>Drag the canvas to orbit, use the mouse wheel or trackpad to zoom, and disable <b>Auto Orbit</b> to inspect one material closely. Switch Debug View to inspect actual G-buffer channels, diffuse bounce, bounce confidence, AO, reflections, and reflection confidence.</p>'
+          html: '<p><b>One geometry pass. Hundreds of lights. Light in the air.</b></p><p>Compute-clustered deferred lighting, GTAO, colored screen-space global illumination, shared glossy SSR, and anisotropic participating-media scattering all consume one coherent G-buffer.</p><p><b>Why this is different:</b> Illumination Lab goes deeper into physically based materials and advanced light transport. <b>Visualization City</b> is the broader shadow/effect showcase, with cascaded, spot, point, and contact shadows plus SSAO, height fog, outlines, TAA, and motion blur.</p><p>Drag to orbit and switch Debug View to isolate diffuse bounce, reflections, volumetric in-scattering, or atmospheric transmittance.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -802,6 +862,7 @@ function createRenderer(device: Device): ShaderPassRenderer {
       createGTAOShaderPassPipeline(),
       createSSGIShaderPassPipeline(),
       createSSRShaderPassPipeline({resolutionScale: 0.75}),
+      createClusteredVolumetricLightingShaderPassPipeline(),
       deferredDisplayPipeline
     ],
     colorFormat: 'rgba16float',
@@ -1089,7 +1150,9 @@ function makeSettingsSchema(): SettingsSchema {
               'Indirect Lighting',
               'Bounce Confidence',
               'Reflections',
-              'Reflection Confidence'
+              'Reflection Confidence',
+              'Volumetric Lighting',
+              'Volume Transmittance'
             ]
           },
           {
@@ -1234,6 +1297,94 @@ function makeSettingsSchema(): SettingsSchema {
           {
             name: 'globalIlluminationHistoryWeight',
             label: 'Bounce History',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.97,
+            step: 0.01
+          }
+        ]
+      },
+      {
+        id: 'atmosphere',
+        name: 'Clustered Volumetric Lighting',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'atmosphereDensity',
+            label: 'Fog Density',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.2,
+            step: 0.005
+          },
+          {
+            name: 'atmosphereHeightFalloff',
+            label: 'Height Falloff',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
+            step: 0.05
+          },
+          {
+            name: 'atmosphereAnisotropy',
+            label: 'Scattering Direction',
+            type: 'number',
+            persist: 'none',
+            min: -0.7,
+            max: 0.8,
+            step: 0.05
+          },
+          {
+            name: 'atmospherePointLightIntensity',
+            label: 'Light Halos',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 5,
+            step: 0.1
+          },
+          {
+            name: 'atmosphereSunIntensity',
+            label: 'Sun Shafts',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 5,
+            step: 0.1
+          },
+          {
+            name: 'atmosphereShadowStrength',
+            label: 'Shaft Shadows',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.05
+          },
+          {
+            name: 'atmosphereStrength',
+            label: 'Atmosphere Strength',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'atmosphereSampleCount',
+            label: 'Volume Steps',
+            type: 'number',
+            persist: 'none',
+            min: 3,
+            max: 20,
+            step: 1
+          },
+          {
+            name: 'atmosphereHistoryWeight',
+            label: 'Volume History',
             type: 'number',
             persist: 'none',
             min: 0,

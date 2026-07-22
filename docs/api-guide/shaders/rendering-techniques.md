@@ -22,6 +22,8 @@ whether its cost scales with scene geometry, visible pixels, light count, or tem
 | Higher-quality ambient visibility | `createGTAOShaderPassPipeline()` | Tune radius, history, and denoising for the scene scale. | Requires coherent depth, view normals, velocity, and projection matrices. |
 | A modest number of local lights | `createDeferredLightingShaderPassPipeline()` | Switch to clustered lighting when many lights overlap the scene. | The baseline shader supports at most 64 point lights. |
 | Hundreds of local lights | `ClusteredLightGrid` plus `createClusteredDeferredLightingShaderPassPipeline()` | Tune grid dimensions, light ranges, and per-cluster capacity. | Overflow stays correct but can fall back to a more expensive full light scan. |
+| Inexpensive atmospheric depth | `createVolumetricFogShaderPassPipeline()` | Upgrade to clustered volumetric lighting when visible local lights or shafts matter. | Simple height fog does not evaluate the scene's actual point-light list. |
+| Colored light halos and visible sun shafts | `createClusteredVolumetricLightingShaderPassPipeline()` | Tune media density, low-resolution integration, anisotropy, and temporal history. | Requires WebGPU point-light and compute-built cluster storage buffers. |
 | Sun, spot, or point-light visibility | `ShadowMapRenderer` | Add contact shadows for missing near-surface detail. | Light-space shadows need caster geometry; they are not a color-only effect. |
 | Tiny near-surface shadow detail | `createContactShadowShaderPassPipeline()` | Combine with stable cascaded or local-light shadow maps. | Camera-space contact rays cannot see occluders outside the current depth buffer. |
 | Fast transparent layering | `WBOITRenderer` | Use `ABufferRenderer` when exact fragment ordering is more important. | Weighted blending approximates heavily overlapping transparent layers. |
@@ -39,11 +41,32 @@ implementations of the same effect catalog.
 | Ambient visibility | Lower-cost SSAO and optional screen-space contact shadows. | Temporally stabilized horizon-based GTAO. |
 | Indirect diffuse light | Not included. | Cosine-weighted, temporally stabilized screen-space global illumination. |
 | Reflections | Shared `createSSRShaderPassPipeline()`, tuned by city quality presets. | The **same** SSR pipeline, tuned for polished materials and edge-aware upsampling. |
-| Other strengths | Cascaded shadows, split comparisons, outlines, fog, temporal AA, and motion blur. | Roughness/metalness inspection, light clustering, emissive color bleeding, and transport-confidence diagnostics. |
+| Atmospheric effects | Compact height fog with an inexpensive stylized directional glow. | Real clustered point-light scattering, directional visibility, height-dependent extinction, and anisotropic phase response. |
+| Other strengths | Cascaded shadows, split comparisons, outlines, temporal AA, and motion blur. | Roughness/metalness inspection, emissive color bleeding, and transport-confidence diagnostics. |
 
 Visualization City is therefore broader in shadow and presentation effects, while Illumination
 Lab goes deeper into deferred shading and higher-order light transport. Shared techniques such
 as SSR remain composable, reusable implementations rather than duplicated algorithms.
+
+## Atmosphere: Height Fog Versus Clustered Participating Media
+
+Both atmospheric effects compose into the same ordered scene-color chain, but answer different
+questions.
+
+| | Compact volumetric fog | Clustered volumetric lighting |
+| --- | --- | --- |
+| Public entry point | `createVolumetricFogShaderPassPipeline()` | `createClusteredVolumetricLightingShaderPassPipeline()` |
+| Light source | A configurable fog color plus a compact stylized sun response. | The actual clustered point-light storage buffer and directional scene light. |
+| Medium | Screen-depth-guided exponential height fog. | View-ray integration through world-height density with Beer-Lambert extinction. |
+| Local colored halos | Not evaluated. | Each ray sample looks up nearby lights through the existing compute-built cluster lists. |
+| Directional shafts | Approximate stylized screen-space glow. | Anisotropic directional scattering with screen-depth occluder visibility. |
+| Stabilization | Persistent fog-color history. | Velocity reprojection, linear-depth disocclusion rejection, and depth-aware denoising. |
+| Main cost | One lightweight fullscreen integration and copy. | Reduced-resolution pixels × ray steps × nearby cluster lights, plus history and blur. |
+
+Use the compact fog pass when atmospheric depth is sufficient and cost matters. Choose clustered
+volumetric lighting when visible light transport through dust, haze, or mist is central to the
+scene. Neither pass is hardware ray tracing, and camera-depth shaft visibility cannot include
+off-screen occluders without an application-provided shadow-volume or light-space fallback.
 
 ## Reflections: Environment Maps Versus Screen-Space Rays
 

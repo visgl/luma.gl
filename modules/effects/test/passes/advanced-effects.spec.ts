@@ -3,12 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Texture} from '@luma.gl/core';
+import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   bloomShaderPassPipeline,
   brightnessContrast,
+  clusteredVolumetricTemporal,
+  createClusteredVolumetricLightingShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
   createOutlineShaderPassPipeline,
@@ -87,6 +89,35 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     ssgiTemporal.uniformTypes.inverseProjectionMatrix,
     'mat4x4<f32>',
     'SSGI temporal rejection reconstructs linear view-space depth'
+  );
+
+  const volumetricLighting = createClusteredVolumetricLightingShaderPassPipeline({
+    resolutionScale: 0.4
+  });
+  testCase.equal(
+    volumetricLighting.steps.length,
+    6,
+    'clustered volumetric lighting integrates, stabilizes, denoises, and composites'
+  );
+  testCase.deepEqual(
+    volumetricLighting.renderTargets?.clusteredVolumeRaw.scale,
+    [0.4, 0.4],
+    'clustered volumetric lighting honors low-resolution integration'
+  );
+  testCase.equal(
+    volumetricLighting.renderTargets?.clusteredVolumeHistory.lifetime,
+    'history',
+    'clustered volumetric lighting retains scattering history'
+  );
+  testCase.equal(
+    volumetricLighting.renderTargets?.clusteredVolumeDepthHistory.lifetime,
+    'history',
+    'clustered volumetric lighting retains depth history'
+  );
+  testCase.equal(
+    clusteredVolumetricTemporal.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric temporal rejection reconstructs linear view-space depth'
   );
 
   const reconstructedSSAO = createSSAOShaderPassPipeline();
@@ -189,6 +220,21 @@ test('advanced effects compose in order with existing effects', async testCase =
     height,
     usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
   });
+  const pointLights = device.createBuffer({
+    id: 'mixed-effects-point-lights',
+    byteLength: 32,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterLightCounts = device.createBuffer({
+    id: 'mixed-effects-cluster-counts',
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterLightIndices = device.createBuffer({
+    id: 'mixed-effects-cluster-indices',
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
   const sceneFramebuffer = device.createFramebuffer({
     id: 'mixed-effects-scene',
     width,
@@ -202,6 +248,7 @@ test('advanced effects compose in order with existing effects', async testCase =
     createGTAOShaderPassPipeline(),
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
+    createClusteredVolumetricLightingShaderPassPipeline(),
     bloomShaderPassPipeline,
     dofShaderPassPipeline,
     createTAAShaderPassPipeline(),
@@ -242,7 +289,14 @@ test('advanced effects compose in order with existing effects', async testCase =
 
     const outputTexture = renderer.renderToTexture({
       sourceTexture,
-      bindings: {depthTexture, normalTexture, velocityTexture}
+      bindings: {
+        depthTexture,
+        normalTexture,
+        velocityTexture,
+        pointLights,
+        clusterLightCounts,
+        clusterLightIndices
+      }
     });
     device.submit();
 
@@ -284,6 +338,22 @@ test('advanced effects compose in order with existing effects', async testCase =
       hasBinding('ssrComposite', 'normalTexture'),
       'SSR upsampling preserves surface-normal edges'
     );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTrace', 'pointLights'),
+      'volumetric integration receives the shared point-light storage buffer'
+    );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTrace', 'clusterLightCounts'),
+      'volumetric integration receives compute-built cluster occupancy'
+    );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTrace', 'clusterLightIndices'),
+      'volumetric integration receives compute-built local light lists'
+    );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTemporal', 'velocityTexture'),
+      'volumetric history receives scene velocity'
+    );
     testCase.notOk(
       hasBinding('bloomExtract', 'velocityTexture'),
       'bloom does not receive scene velocity'
@@ -302,6 +372,9 @@ test('advanced effects compose in order with existing effects', async testCase =
     normalTexture.destroy();
     velocityTexture.destroy();
     depthTexture.destroy();
+    pointLights.destroy();
+    clusterLightCounts.destroy();
+    clusterLightIndices.destroy();
   }
 
   testCase.end();
