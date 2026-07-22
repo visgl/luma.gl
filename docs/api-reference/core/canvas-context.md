@@ -48,6 +48,16 @@ const canvasContext1 = device.createCanvasContext(...);
 const canvasContext2 = device.createCanvasContext(...);
 ```
 
+`CanvasContext` wrappers created through a device are managed children of that device. See the
+[`Device` lifecycle](./device.md#lifecycle) for ownership, reuse, attach, and detach behavior. Call
+`canvasContext.destroy()` to release one wrapper early, or call `device.destroy()` to release all
+remaining context wrappers during final device teardown. Destroying a wrapper stops its DOM
+observers and releases backend-specific resources, but it never removes the underlying canvas.
+
+On WebGPU, destroying a luma.gl `CanvasContext` unconfigures its native `GPUCanvasContext`.
+The destroyed luma.gl wrapper cannot be reused, but the same canvas can later be wrapped and
+configured by another device.
+
 WebGPU supports multiple `CanvasContext`s. A WebGL `Device` always has exactly one `CanvasContext` that must be created when the device is created, and a WebGL device can only render into that single canvas. This is a fundamental limitation of the WebGL API.
 
 Because of this, the `Device` class provides a `DeviceProps.createCanvasContext` property that creates a default `CanvasContext`:

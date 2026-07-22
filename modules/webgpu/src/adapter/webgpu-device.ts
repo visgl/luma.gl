@@ -93,8 +93,16 @@ export class WebGPUDevice extends Device {
 
   override canvasContext: WebGPUCanvasContext | null = null;
 
-  private _isLost: boolean = false;
+  private readonly _lostState = {isLost: false};
   private _defaultSampler: WebGPUSampler | null = null;
+  private readonly _onUncapturedError = (event: Event) => {
+    event.preventDefault();
+    // TODO is this the right way to make sure the error is an Error instance?
+    const errorMessage =
+      event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
+    this.reportError(new Error(errorMessage), this)();
+    this.debug();
+  };
   commandEncoder: WebGPUCommandEncoder;
 
   override get [Symbol.toStringTag](): string {
@@ -121,25 +129,21 @@ export class WebGPUDevice extends Device {
     this.limits = getWebGPUDeviceLimits(this.handle.limits);
 
     // Listen for uncaptured WebGPU errors
-    device.addEventListener('uncapturederror', (event: Event) => {
-      event.preventDefault();
-      // TODO is this the right way to make sure the error is an Error instance?
-      const errorMessage =
-        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
-      this.reportError(new Error(errorMessage), this)();
-      this.debug();
-    });
+    device.addEventListener('uncapturederror', this._onUncapturedError);
 
     // "Context" loss handling
+    const lostState = this._lostState;
     this.lost = this.handle.lost.then(lostInfo => {
-      this._isLost = true;
+      lostState.isLost = true;
       return {reason: 'destroyed', message: lostInfo.message};
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
     const canvasContextProps = Device._getCanvasContextProps(props);
     if (canvasContextProps) {
-      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
+      this.canvasContext = this._registerCanvasSurface(
+        new WebGPUCanvasContext(this, this.adapter, canvasContextProps)
+      );
     }
 
     this.commandEncoder = this.createCommandEncoder({});
@@ -151,14 +155,32 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    if (!this._releaseDeviceReference()) {
+      return;
+    }
+
+    this._finalizeDevice({destroyHandle: this._ownsHandle});
+  }
+
+  override detach(): GPUDevice {
+    this._detachDeviceReference();
+    this._finalizeDevice({destroyHandle: false});
+    return this.handle;
+  }
+
+  private _finalizeDevice(options: {destroyHandle: boolean}): void {
+    this.handle.removeEventListener('uncapturederror', this._onUncapturedError);
+    this._destroyCanvasSurfaces();
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
     this._defaultSampler = null;
-    this.handle.destroy();
+    if (options.destroyHandle) {
+      this.handle.destroy();
+    }
   }
 
   get isLost(): boolean {
-    return this._isLost;
+    return this._lostState.isLost;
   }
 
   getShaderLayout(source: string) {
@@ -265,11 +287,11 @@ export class WebGPUDevice extends Device {
   }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
-    return new WebGPUCanvasContext(this, this.adapter, props);
+    return this._registerCanvasSurface(new WebGPUCanvasContext(this, this.adapter, props));
   }
 
   createPresentationContext(props?: PresentationContextProps): PresentationContext {
-    return new WebGPUPresentationContext(this, props);
+    return this._registerCanvasSurface(new WebGPUPresentationContext(this, props));
   }
 
   createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {
@@ -520,7 +542,7 @@ export class WebGPUDevice extends Device {
     return (
       errorMessage.includes('Instance dropped') &&
       (!operation || errorMessage.includes(operation)) &&
-      (this._isLost ||
+      (this._lostState.isLost ||
         this.info.gpu === 'software' ||
         this.info.gpuType === 'cpu' ||
         Boolean(this.info.fallback))

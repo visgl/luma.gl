@@ -13,6 +13,7 @@ import type {
 } from '../shadertypes/texture-types/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {PresentationContext, PresentationContextProps} from './presentation-context';
+import type {CanvasSurface} from './canvas-surface';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
@@ -444,6 +445,8 @@ export type DeviceProps = {
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
+  /** @internal Whether final device teardown owns destruction of the backend handle. */
+  _ownsHandle?: boolean;
 };
 
 type DeviceFactories = {
@@ -536,7 +539,8 @@ export abstract class Device {
     },
 
     // INTERNAL
-    _handle: undefined!
+    _handle: undefined!,
+    _ownsHandle: true
   };
 
   get [Symbol.toStringTag](): string {
@@ -572,6 +576,14 @@ export abstract class Device {
 
   /** True if this device has been reused during device creation (app has multiple references) */
   _reused: boolean = false;
+  /** Canvas and presentation wrappers created through this device. */
+  private _canvasSurfaces = new Set<CanvasSurface>();
+  /** Number of logical owners that still need to release this device. */
+  private _referenceCount = 1;
+  /** Whether the final device teardown has run. */
+  private _destroyed = false;
+  /** Whether final teardown should destroy the backend handle. */
+  protected readonly _ownsHandle: boolean;
   /** Used by other luma.gl modules to store data on the device */
   private _moduleData: Record<string, Record<string, unknown>> = {};
 
@@ -598,9 +610,99 @@ export abstract class Device {
   constructor(props: DeviceProps) {
     this.props = {...Device.defaultProps, ...props};
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
+    this._ownsHandle = this.props._ownsHandle;
   }
 
+  /**
+   * Releases one logical reference to this device.
+   * Final release destroys managed canvas surfaces and owned backend handles.
+   */
   abstract destroy(): void;
+
+  /**
+   * Detaches luma.gl from this device and returns its backend handle without destroying it.
+   * @remarks Detach is terminal and requires exclusive ownership of the device reference.
+   */
+  abstract detach(): unknown;
+
+  /**
+   * Registers a canvas-backed wrapper as a child of this device.
+   * @internal
+   */
+  protected _registerCanvasSurface<T extends CanvasSurface>(canvasSurface: T): T {
+    if (this._destroyed) {
+      canvasSurface.destroy();
+      throw new Error('Device is destroyed');
+    }
+
+    this._canvasSurfaces.add(canvasSurface);
+    return canvasSurface;
+  }
+
+  /**
+   * Removes a canvas-backed wrapper that has been explicitly destroyed.
+   * @internal
+   */
+  _unregisterCanvasSurface(canvasSurface: CanvasSurface): void {
+    this._canvasSurfaces.delete(canvasSurface);
+  }
+
+  /**
+   * Retains one logical reference to a shared device.
+   * @internal
+   */
+  _retainDeviceReference(): void {
+    if (this._destroyed) {
+      throw new Error('Device is destroyed');
+    }
+
+    this._referenceCount++;
+  }
+
+  /**
+   * Releases one logical reference and returns true only for the final release.
+   * @internal
+   */
+  protected _releaseDeviceReference(): boolean {
+    if (this._destroyed || this._referenceCount === 0) {
+      return false;
+    }
+
+    this._referenceCount--;
+    if (this._referenceCount > 0) {
+      return false;
+    }
+
+    this._destroyed = true;
+    return true;
+  }
+
+  /**
+   * Claims the exclusive reference required for terminal detach.
+   * @internal
+   */
+  protected _detachDeviceReference(): void {
+    if (this._destroyed) {
+      throw new Error('Device is destroyed');
+    }
+    if (this._referenceCount !== 1) {
+      throw new Error('Device is shared');
+    }
+
+    this._referenceCount = 0;
+    this._destroyed = true;
+  }
+
+  /**
+   * Destroys canvas-backed wrappers in reverse creation order.
+   * @internal
+   */
+  protected _destroyCanvasSurfaces(): void {
+    for (const canvasSurface of [...this._canvasSurfaces].reverse()) {
+      canvasSurface.destroy();
+    }
+    this._canvasSurfaces.clear();
+  }
 
   // TODO - just expose the shadertypes decoders?
 

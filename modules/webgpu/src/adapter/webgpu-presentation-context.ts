@@ -44,6 +44,10 @@ export class WebGPUPresentationContext extends PresentationContext {
   }
 
   override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
     if (this.framebuffer) {
       this.framebuffer.destroy();
       this.framebuffer = null;

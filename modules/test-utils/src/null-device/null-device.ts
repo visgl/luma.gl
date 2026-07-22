@@ -68,16 +68,32 @@ export class NullDevice extends Device {
     super({...props, id: props.id || 'null-device'});
 
     const canvasContextProps = Device._getCanvasContextProps(props);
-    this.canvasContext = new NullCanvasContext(this, canvasContextProps);
+    this.canvasContext = this._registerCanvasSurface(
+      new NullCanvasContext(this, canvasContextProps)
+    );
     this.lost = new Promise(_resolve => {});
     this.commandEncoder = new NullCommandEncoder(this, {id: 'null-command-encoder'});
   }
 
   /**
-   * Destroys the context
-   * @note Has no effect for null contexts
+   * Destroys managed canvas wrappers and the command encoder.
    */
   destroy(): void {
+    if (!this._releaseDeviceReference()) {
+      return;
+    }
+
+    this._finalizeDevice();
+  }
+
+  override detach(): null {
+    this._detachDeviceReference();
+    this._finalizeDevice();
+    return this.handle;
+  }
+
+  private _finalizeDevice(): void {
+    this._destroyCanvasSurfaces();
     this.commandEncoder?.destroy();
   }
 
@@ -88,7 +104,7 @@ export class NullDevice extends Device {
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
   createCanvasContext(props: CanvasContextProps): NullCanvasContext {
-    return new NullCanvasContext(this, props);
+    return this._registerCanvasSurface(new NullCanvasContext(this, props));
   }
 
   createPresentationContext(_props?: PresentationContextProps): PresentationContext {

@@ -10,6 +10,157 @@ import {
   getWebGLTestDevice,
   getWebGPUTestDevice
 } from '@luma.gl/test-utils';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
+
+test('WebGLDevice#destroy releases managed presentation contexts', async t => {
+  if (typeof OffscreenCanvas === 'undefined' || typeof document === 'undefined') {
+    t.pass('Canvas APIs unavailable, skipped managed WebGL presentation lifecycle test');
+    t.end();
+    return;
+  }
+
+  const device = await webgl2Adapter.create({
+    createCanvasContext: {canvas: new OffscreenCanvas(4, 4)},
+    debug: false
+  });
+  const defaultCanvasContext = device.getDefaultCanvasContext();
+  const destinationCanvas = document.createElement('canvas');
+  const presentationContext = device.createPresentationContext({canvas: destinationCanvas});
+
+  defaultCanvasContext.getCurrentFramebuffer();
+  t.ok((defaultCanvasContext as any)._framebuffer, 'default context creates a framebuffer');
+
+  device.destroy();
+
+  t.equal(
+    (defaultCanvasContext as any)._framebuffer,
+    null,
+    'device teardown releases the WebGL default framebuffer wrapper'
+  );
+  t.equal(
+    (defaultCanvasContext as any).device,
+    null,
+    'device teardown destroys the default canvas wrapper'
+  );
+  t.equal(
+    (presentationContext as any).device,
+    null,
+    'device teardown destroys presentation wrappers'
+  );
+
+  t.end();
+});
+
+test('WebGPUDevice#destroy releases managed canvas and presentation contexts', async t => {
+  if (typeof document === 'undefined') {
+    t.pass('Document unavailable, skipped managed WebGPU context lifecycle test');
+    t.end();
+    return;
+  }
+
+  let device: WebGPUDevice;
+  try {
+    device = await webgpuAdapter.create({
+      createCanvasContext: {width: 1, height: 1},
+      debug: false
+    });
+  } catch {
+    t.pass('WebGPU unavailable, skipped managed WebGPU context lifecycle test');
+    t.end();
+    return;
+  }
+
+  const defaultCanvasContext = device.getDefaultCanvasContext();
+  const additionalCanvasContext = device.createCanvasContext({
+    canvas: document.createElement('canvas'),
+    width: 1,
+    height: 1
+  });
+  const presentationContext = device.createPresentationContext({
+    canvas: document.createElement('canvas'),
+    width: 1,
+    height: 1
+  });
+
+  defaultCanvasContext.getCurrentFramebuffer();
+  additionalCanvasContext.getCurrentFramebuffer();
+  presentationContext.getCurrentFramebuffer();
+
+  device.destroy();
+
+  t.equal(
+    (defaultCanvasContext as any).device,
+    null,
+    'device teardown destroys the default WebGPU canvas wrapper'
+  );
+  t.equal(
+    (additionalCanvasContext as any).device,
+    null,
+    'device teardown destroys additional WebGPU canvas wrappers'
+  );
+  t.equal(
+    (presentationContext as any).device,
+    null,
+    'device teardown destroys WebGPU presentation wrappers'
+  );
+  t.equal(
+    (additionalCanvasContext as any).framebuffer,
+    null,
+    'device teardown releases additional WebGPU framebuffer wrappers'
+  );
+  t.equal(
+    (presentationContext as any).framebuffer,
+    null,
+    'device teardown releases WebGPU presentation framebuffer wrappers'
+  );
+
+  t.end();
+});
+
+test('WebGPUDevice#detach preserves its native handle', async t => {
+  if (typeof document === 'undefined') {
+    t.pass('Document unavailable, skipped WebGPU detach lifecycle test');
+    t.end();
+    return;
+  }
+
+  let uncapturedErrorCallCount = 0;
+  let device: WebGPUDevice;
+  try {
+    device = await webgpuAdapter.create({
+      createCanvasContext: {width: 1, height: 1},
+      onError: () => {
+        uncapturedErrorCallCount++;
+        return true;
+      },
+      debug: false
+    });
+  } catch {
+    t.pass('WebGPU unavailable, skipped WebGPU detach lifecycle test');
+    t.end();
+    return;
+  }
+
+  const canvasContext = device.getDefaultCanvasContext();
+  const webgpuHandle = device.detach();
+  webgpuHandle.dispatchEvent(new Event('uncapturederror'));
+  const buffer = webgpuHandle.createBuffer({
+    size: 4,
+    usage: GPUBufferUsage.COPY_DST
+  });
+
+  t.ok(buffer, 'native WebGPU handle remains usable after detach');
+  t.equal(uncapturedErrorCallCount, 0, 'detach removes the uncaptured error listener');
+  t.equal((canvasContext as any).device, null, 'detach destroys luma canvas wrappers');
+
+  buffer.destroy();
+  webgpuHandle.destroy();
+  const lostInfo = await device.lost;
+  t.equal(lostInfo.reason, 'destroyed', 'detached device still reports native handle loss');
+  t.equal(device.isLost, true, 'detached device loss state remains observable');
+  t.end();
+});
 
 test('WebGLPresentationContext delegates framebuffer sizing and present()', async t => {
   const device = await getPresentationWebGLTestDevice();

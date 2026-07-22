@@ -32,6 +32,16 @@ export class NullCanvasContext extends CanvasContext {
     this._startObservers();
   }
 
+  override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this._framebuffer?.destroy();
+    this._framebuffer = null;
+    super.destroy();
+  }
+
   _getCurrentFramebuffer(): NullFramebuffer {
     // Setting handle to null returns a reference to the default framebuffer
     this._framebuffer = this._framebuffer || new NullFramebuffer(this.device, {handle: null});
