@@ -10,6 +10,7 @@ import {
   bloomShaderPassPipeline,
   brightnessContrast,
   clusteredVolumetricTemporal,
+  clusteredVolumetricTrace,
   createClusteredVolumetricLightingShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
@@ -119,6 +120,23 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     'mat4x4<f32>',
     'clustered volumetric temporal rejection reconstructs linear view-space depth'
   );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS'),
+    'clustered volumetric lighting chooses nearby lights in stable global-index slots'
+  );
+  testCase.notOk(
+    clusteredVolumetricTrace.source.includes('min(clusterCount, CLUSTERED_VOLUMETRIC_MAX_LIGHTS)'),
+    'clustered volumetric lighting never truncates tile-local candidates before selection'
+  );
+  testCase.equal(
+    clusteredVolumetricTrace.uniformTypes.godRayPosition,
+    'vec2<f32>',
+    'crepuscular god rays expose a configurable screen-space sun position'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('clusteredVolumetricTrace_godRayVisibility'),
+    'crepuscular god rays trace scene-depth visibility toward the sun'
+  );
 
   const reconstructedSSAO = createSSAOShaderPassPipeline();
   testCase.equal(
@@ -179,6 +197,150 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     'mat4x4<f32>',
     'SSR temporal rejection reconstructs linear view-space depth'
   );
+  testCase.end();
+});
+
+test('clustered volumetric lighting stays continuous across screen-tile boundaries', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU unavailable, skipping volumetric tile-boundary regression');
+    testCase.end();
+    return;
+  }
+
+  const width = 8;
+  const height = 1;
+  const maxLightsPerCluster = 12;
+  const pointLightCount = 11;
+  const sourceTexture = device.createTexture({
+    id: 'volumetric-tile-boundary-source',
+    format: 'rgba8unorm',
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
+  });
+  const depthTexture = device.createTexture({
+    id: 'volumetric-tile-boundary-depth',
+    format: 'depth24plus',
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
+  });
+  const sceneFramebuffer = device.createFramebuffer({
+    id: 'volumetric-tile-boundary-scene',
+    width,
+    height,
+    colorAttachments: [sourceTexture],
+    depthStencilAttachment: depthTexture
+  });
+  const pointLightData = new Float32Array(pointLightCount * 8);
+  for (let lightIndex = 0; lightIndex < pointLightCount - 1; lightIndex++) {
+    pointLightData.set([4, 4, 0.5, 0.1, 1, 0, 0, 1], lightIndex * 8);
+  }
+  pointLightData.set([0, 0, 0.5, 0.48, 0, 1, 0, 18], (pointLightCount - 1) * 8);
+  const pointLights = device.createBuffer({
+    id: 'volumetric-tile-boundary-lights',
+    data: pointLightData,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterLightCounts = device.createBuffer({
+    id: 'volumetric-tile-boundary-counts',
+    data: new Uint32Array([pointLightCount, 1]),
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterIndexData = new Uint32Array(2 * maxLightsPerCluster);
+  for (let lightIndex = 0; lightIndex < pointLightCount; lightIndex++) {
+    clusterIndexData[lightIndex] = lightIndex;
+  }
+  clusterIndexData[maxLightsPerCluster] = pointLightCount - 1;
+  const clusterLightIndices = device.createBuffer({
+    id: 'volumetric-tile-boundary-indices',
+    data: clusterIndexData,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [clusteredVolumetricTrace],
+    colorFormat: 'rgba8unorm',
+    flipY: false
+  });
+  renderer.resize([width, height]);
+  const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
+
+  try {
+    const sceneRenderPass = device.beginRenderPass({
+      framebuffer: sceneFramebuffer,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    });
+    sceneRenderPass.end();
+
+    const outputTexture = renderer.renderToTexture({
+      sourceTexture,
+      bindings: {depthTexture, pointLights, clusterLightCounts, clusterLightIndices},
+      uniforms: {
+        clusteredVolumetricTrace: {
+          projectionMatrix: identityMatrix,
+          inverseProjectionMatrix: identityMatrix,
+          inverseViewMatrix: identityMatrix,
+          directionalLightDirectionView: [0, 0, 1],
+          directionalLightColor: [0, 0, 0],
+          fogColor: [0, 0, 0],
+          density: 0.35,
+          heightFalloff: 0,
+          fogHeight: 0,
+          anisotropy: 0,
+          directionalIntensity: 0,
+          pointLightIntensity: 4,
+          maxDistance: 1,
+          sampleCount: 8,
+          shadowStrength: 0,
+          clusterCountX: 2,
+          clusterCountY: 1,
+          clusterCountZ: 1,
+          maxLightsPerCluster,
+          pointLightCount,
+          clusterNearPlane: 0.1,
+          clusterFarPlane: 10
+        }
+      }
+    });
+    device.submit();
+
+    testCase.ok(outputTexture, 'clustered volumetric regression scene renders');
+    if (outputTexture) {
+      const memoryLayout = outputTexture.computeMemoryLayout({width, height});
+      const readbackBuffer = device.createBuffer({
+        id: 'volumetric-tile-boundary-readback',
+        byteLength: memoryLayout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      try {
+        outputTexture.readBuffer({width, height}, readbackBuffer);
+        const pixelBytes = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
+        const leftScattering = pixelBytes[(width / 2 - 1) * 4 + 1]!;
+        const rightScattering = pixelBytes[(width / 2) * 4 + 1]!;
+        testCase.ok(
+          leftScattering > 20 && rightScattering > 20,
+          'both tiles retain the shared nearby light beyond the old ten-light prefix'
+        );
+        testCase.ok(
+          Math.abs(leftScattering - rightScattering) < 45,
+          'adjacent tiles produce comparable fog scattering'
+        );
+      } finally {
+        readbackBuffer.destroy();
+      }
+    }
+  } finally {
+    renderer.destroy();
+    clusterLightIndices.destroy();
+    clusterLightCounts.destroy();
+    pointLights.destroy();
+    sceneFramebuffer.destroy();
+    depthTexture.destroy();
+    sourceTexture.destroy();
+  }
+
   testCase.end();
 });
 

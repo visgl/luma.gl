@@ -190,11 +190,13 @@ storage buffers used by deferred shading into actual participating-media illumin
 
 1. March reduced-resolution view rays through exponential world-height density.
 2. Integrate nearby clustered point lights and directional light using an anisotropic phase
-   function; screen-depth visibility carves directional shafts around local occluders.
-3. Reproject atmospheric history with velocity and reject linear-depth disocclusions.
-4. Capture current depth for the next frame.
-5. Denoise the radiance/transmittance result with separable depth-aware blur.
-6. Composite Beer-Lambert extinction and in-scattered light, or expose volume/transmittance
+   function; stable global-index light selection prevents cluster-tile seams in the medium.
+3. Trace radial screen-depth visibility toward a configurable sun position to produce
+   recognizable, depth-occluded crepuscular god rays.
+4. Reproject atmospheric history with velocity and reject linear-depth disocclusions.
+5. Capture current depth for the next frame.
+6. Denoise the radiance/transmittance result with separable depth-aware blur.
+7. Composite Beer-Lambert extinction and in-scattered light, or expose volume/transmittance
    diagnostics.
 
 This is the higher-fidelity alternative to `createVolumetricFogShaderPassPipeline()`, whose

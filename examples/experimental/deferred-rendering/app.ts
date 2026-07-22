@@ -70,7 +70,8 @@ type DebugView =
   | 'Reflections'
   | 'Reflection Confidence'
   | 'Volumetric Lighting'
-  | 'Volume Transmittance';
+  | 'Volume Transmittance'
+  | 'God Rays';
 
 type DeferredRenderingSettings = {
   debugView: DebugView;
@@ -106,6 +107,13 @@ type DeferredRenderingSettings = {
   atmosphereSampleCount: number;
   atmosphereHistoryWeight: number;
   atmosphereShadowStrength: number;
+  godRaysEnabled: boolean;
+  godRayIntensity: number;
+  godRayDensity: number;
+  godRayDecay: number;
+  godRaySampleCount: number;
+  godRayPositionX: number;
+  godRayPositionY: number;
 };
 
 const DEFAULT_SETTINGS: DeferredRenderingSettings = {
@@ -141,7 +149,14 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   atmosphereStrength: 0.82,
   atmosphereSampleCount: 10,
   atmosphereHistoryWeight: 0.88,
-  atmosphereShadowStrength: 0.76
+  atmosphereShadowStrength: 0.76,
+  godRaysEnabled: true,
+  godRayIntensity: 1.65,
+  godRayDensity: 0.94,
+  godRayDecay: 0.96,
+  godRaySampleCount: 18,
+  godRayPositionX: 0.72,
+  godRayPositionY: 0.16
 };
 
 const DEFERRED_RENDERING_BACKGROUND_HTML = `
@@ -151,9 +166,9 @@ const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why GTAO belongs after lighting:</b> a half-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO is composed into lit color.</p>
 <p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
-<p><b>Why light becomes visible in the air:</b> low-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Screen-depth visibility carves sun shafts around nearby geometry, while velocity and depth history stabilize the colored light volumes.</p>
+<p><b>Why light becomes visible in the air:</b> low-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Radial camera-depth visibility traces toward the sun to reveal crepuscular god rays behind occluders; velocity and depth history stabilize the colored light volumes.</p>
 <p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
-<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, <b>Volumetric Lighting</b>, and <b>Volume Transmittance</b> reveal where transport work, uncertain screen-space hits, or atmospheric extinction accumulate.</p>
+<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, <b>Volumetric Lighting</b>, <b>Volume Transmittance</b>, and <b>God Rays</b> reveal where transport work, uncertain screen-space hits, atmospheric extinction, or directional light shafts accumulate.</p>
 `;
 
 type DeferredSurfaceUniforms = {
@@ -786,14 +801,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             this.settings.atmosphereEnabled &&
             (this.settings.debugView === 'Final' ||
               this.settings.debugView === 'Volumetric Lighting' ||
-              this.settings.debugView === 'Volume Transmittance')
+              this.settings.debugView === 'Volume Transmittance' ||
+              this.settings.debugView === 'God Rays')
               ? this.settings.atmosphereDensity
               : 0,
           heightFalloff: this.settings.atmosphereHeightFalloff,
           fogHeight: 0.2,
           anisotropy: this.settings.atmosphereAnisotropy,
           directionalIntensity: this.settings.atmosphereSunIntensity,
-          pointLightIntensity: this.settings.atmospherePointLightIntensity,
+          pointLightIntensity:
+            this.settings.debugView === 'God Rays'
+              ? 0
+              : this.settings.atmospherePointLightIntensity,
+          godRayPosition: [this.settings.godRayPositionX, this.settings.godRayPositionY],
+          godRayIntensity: this.settings.godRaysEnabled ? this.settings.godRayIntensity : 0,
+          godRayDensity: this.settings.godRayDensity,
+          godRayDecay: this.settings.godRayDecay,
+          godRaySampleCount: this.settings.godRaySampleCount,
           maxDistance: 27,
           sampleCount: this.settings.atmosphereSampleCount,
           shadowStrength: this.settings.atmosphereShadowStrength,
@@ -806,7 +830,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         clusteredVolumetricComposite: {
           strength: this.settings.atmosphereStrength,
           debugMode:
-            this.settings.debugView === 'Volumetric Lighting'
+            this.settings.debugView === 'Volumetric Lighting' ||
+            this.settings.debugView === 'God Rays'
               ? 1
               : this.settings.debugView === 'Volume Transmittance'
                 ? 2
@@ -848,7 +873,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
           title: 'Overview',
-          html: '<p><b>One geometry pass. Hundreds of lights. Light in the air.</b></p><p>Compute-clustered deferred lighting, GTAO, colored screen-space global illumination, shared glossy SSR, and anisotropic participating-media scattering all consume one coherent G-buffer.</p><p><b>Why this is different:</b> Illumination Lab goes deeper into physically based materials and advanced light transport. <b>Visualization City</b> is the broader shadow/effect showcase, with cascaded, spot, point, and contact shadows plus SSAO, height fog, outlines, TAA, and motion blur.</p><p>Drag to orbit and switch Debug View to isolate diffuse bounce, reflections, volumetric in-scattering, or atmospheric transmittance.</p>'
+          html: '<p><b>One geometry pass. Hundreds of lights. God rays through the atmosphere.</b></p><p>Compute-clustered deferred lighting, GTAO, colored screen-space global illumination, shared glossy SSR, and anisotropic participating-media scattering all consume one coherent G-buffer.</p><p><b>Why this is different:</b> Illumination Lab goes deeper into physically based materials and advanced light transport. <b>Visualization City</b> is the broader shadow/effect showcase, with cascaded, spot, point, and contact shadows plus SSAO, height fog, outlines, TAA, and motion blur.</p><p>Drag to orbit and switch Debug View to isolate diffuse bounce, reflections, volumetric in-scattering, atmospheric transmittance, or crepuscular god rays.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -1167,7 +1192,8 @@ function makeSettingsSchema(): SettingsSchema {
               'Reflections',
               'Reflection Confidence',
               'Volumetric Lighting',
-              'Volume Transmittance'
+              'Volume Transmittance',
+              'God Rays'
             ]
           },
           {
@@ -1428,6 +1454,74 @@ function makeSettingsSchema(): SettingsSchema {
             min: 0,
             max: 0.97,
             step: 0.01
+          }
+        ]
+      },
+      {
+        id: 'god-rays',
+        name: 'Crepuscular God Rays',
+        description: 'Depth-occluded sunlight shafts through the participating medium.',
+        initiallyCollapsed: true,
+        settings: [
+          {
+            name: 'godRaysEnabled',
+            label: 'Enable God Rays',
+            type: 'boolean',
+            persist: 'none'
+          },
+          {
+            name: 'godRayIntensity',
+            label: 'Ray Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 6,
+            step: 0.1
+          },
+          {
+            name: 'godRayDensity',
+            label: 'Ray Reach',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 1.2,
+            step: 0.05
+          },
+          {
+            name: 'godRayDecay',
+            label: 'Ray Persistence',
+            type: 'number',
+            persist: 'none',
+            min: 0.7,
+            max: 1,
+            step: 0.01
+          },
+          {
+            name: 'godRaySampleCount',
+            label: 'Ray Samples',
+            type: 'number',
+            persist: 'none',
+            min: 3,
+            max: 32,
+            step: 1
+          },
+          {
+            name: 'godRayPositionX',
+            label: 'Sun Position X',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.02
+          },
+          {
+            name: 'godRayPositionY',
+            label: 'Sun Position Y',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.02
           }
         ]
       },

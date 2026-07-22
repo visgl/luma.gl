@@ -19,7 +19,8 @@ import {DeferredRenderingExample} from '@site/src/examples';
     storage-buffer point lights in one fullscreen pass. Temporally stabilized GTAO grounds the
     contacts, diffuse screen-space global illumination transfers colored light between surfaces,
     stochastic reflections bounce the animated scene across polished floors, and clustered
-    participating media turns the same point lights and sun into colored atmospheric halos.
+    participating media turns the same point lights and sun into colored atmospheric halos and
+    depth-occluded crepuscular god rays.
   </div>
 </ExampleHeader>
 
@@ -27,8 +28,9 @@ import {DeferredRenderingExample} from '@site/src/examples';
 
 Open **Illumination Effects** to inspect the actual render-stack stages through separate
 accordions for clustered deferred lighting, GTAO, diffuse global illumination, screen-space
-reflections, and clustered volumetric scattering. Expand a section to adjust its quality,
-transport, or temporal-history controls without scrolling through one flattened settings list.
+reflections, clustered volumetric scattering, and crepuscular god rays. Expand a section to
+adjust its quality, transport, or temporal-history controls without scrolling through one
+flattened settings list.
 
 ## Why This Is Not Visualization City
 
@@ -62,7 +64,8 @@ reflection effect.
   bounced HDR radiance, and **Bounce Confidence** exposes visible hemisphere-ray coverage.
   **Reflections** isolates reflected HDR radiance, while **Reflection Confidence** makes
   screen-edge and roughness falloff visible. **Volumetric Lighting** isolates colored
-  participating-media in-scattering, while **Volume Transmittance** exposes atmospheric extinction.
+  participating-media in-scattering, **Volume Transmittance** exposes atmospheric extinction,
+  and **God Rays** isolates the depth-occluded directional shafts.
 - Raise **GTAO Radius** to make larger-scale creases visible, then use **GTAO Intensity** and
   **GTAO Strength** to separate visibility estimation from how strongly it affects lit color.
 - Tune **Bounce Radius**, **Bounce Intensity**, **Bounce Strength**, **Bounce Rays**, and
@@ -75,6 +78,8 @@ reflection effect.
   **Scattering Direction** to distinguish height-based extinction, clustered point-light
   scattering, directional occlusion, and anisotropic phase response. **Volume History** controls
   atmospheric temporal stability.
+- Expand **Crepuscular God Rays** and adjust **Ray Intensity**, **Ray Reach**, **Ray Persistence**,
+  **Ray Samples**, and **Sun Position** to reveal radial sunlight shafts behind visible occluders.
 
 ## Render stack
 
@@ -103,7 +108,8 @@ scene, reprojects reflection history through G-buffer velocity, rejects depth di
 applies a roughness-adaptive depth/normal-aware blur, and adds the result back into `previous`.
 `createClusteredVolumetricLightingShaderPassPipeline()` then integrates real clustered point
 lights and occluded directional light through exponential height fog, applies Beer-Lambert
-extinction and an anisotropic phase function, stabilizes low-resolution in-scattering with
+extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
+sun for crepuscular god rays, stabilizes low-resolution in-scattering with
 velocity/depth history, and composites the participating medium over the existing opaque result.
 A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection/
 volume debug view.
