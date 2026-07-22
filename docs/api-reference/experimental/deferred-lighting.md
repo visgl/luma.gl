@@ -129,6 +129,8 @@ across frames. `MAX_DEFERRED_POINT_LIGHTS` is 64 and matches the shader loop bou
 
 - [`GBuffer`](/docs/api-reference/experimental/g-buffer) owns the MRT attachments and standard
   depth, normal, and velocity bindings.
+- [Clustered Lighting](/docs/api-reference/experimental/clustered-lighting) reuses the same
+  material attachments with compute-built light lists for hundreds of local lights.
 - [Shader Passes](/docs/api-guide/shaders/shader-passes) explains the ordered composable render
   stack.
 - [Advanced Effects](/examples/experimental/advanced-effects) shows the broader scene-aware and

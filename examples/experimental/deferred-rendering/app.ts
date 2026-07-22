@@ -13,16 +13,16 @@ import {
   SphereGeometry
 } from '@luma.gl/engine';
 import {
-  createDeferredLightingShaderPassPipeline,
+  ClusteredLightGrid,
+  createClusteredDeferredLightingShaderPassPipeline,
   GBuffer,
   makeDeferredPointLightBufferData,
-  MAX_DEFERRED_POINT_LIGHTS,
+  MAX_CLUSTERED_POINT_LIGHTS,
   type DeferredPointLight
 } from '@luma.gl/experimental';
 import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -31,13 +31,14 @@ import {
   ExamplePanelManager,
   ExampleSettingsPanelManager,
   makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 100;
 const GRID_SIZE = 7;
-const MAX_EXAMPLE_POINT_LIGHTS = 32;
+const MAX_EXAMPLE_POINT_LIGHTS = MAX_CLUSTERED_POINT_LIGHTS;
 const LIGHT_COLORS: readonly NumberArray3[] = [
   [1, 0.18, 0.08],
   [0.18, 0.55, 1],
@@ -54,7 +55,8 @@ type DebugView =
   | 'Roughness'
   | 'Metallic'
   | 'Emissive'
-  | 'Depth';
+  | 'Depth'
+  | 'Cluster Occupancy';
 
 type DeferredRenderingSettings = {
   debugView: DebugView;
@@ -66,11 +68,18 @@ type DeferredRenderingSettings = {
 
 const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   debugView: 'Final',
-  pointLightCount: 18,
+  pointLightCount: 256,
   animate: true,
   exposure: 1.15,
   sunIntensity: 2.8
 };
+
+const DEFERRED_RENDERING_BACKGROUND_HTML = `
+<p><b>Why deferred rendering scales:</b> forward shading repeats material work for every light that touches every draw. Here the geometry pass writes base color, metalness, roughness, emissive, normal, velocity, and depth once; the fullscreen resolve reuses those screen-space values for lighting.</p>
+<p><b>Why clustering wins:</b> a WebGPU compute stage projects each view-space light sphere into a <code>16 × 9 × 24</code> screen/log-depth grid. Each pixel reconstructs its view position from depth, finds one cluster, and normally evaluates only that short local list instead of all 512 lights.</p>
+<p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds later SSAO, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
+<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the full fixed-size light buffer rather than showing tile-shaped truncation; the <b>Cluster Occupancy</b> view shows where that slower fallback is being requested.</p>
+`;
 
 type DeferredSurfaceUniforms = {
   viewProjectionMatrix: Matrix4;
@@ -159,8 +168,15 @@ fn fragmentMain(inputs: FragmentInputs) -> FragmentOutputs {
 }`;
 
 type DeferredDisplayUniforms = {
+  inverseProjectionMatrix: Matrix4;
   debugMode: number;
   exposure: number;
+  clusterCountX: number;
+  clusterCountY: number;
+  clusterCountZ: number;
+  maxLightsPerCluster: number;
+  clusterNearPlane: number;
+  clusterFarPlane: number;
 };
 
 type DeferredDisplayBindings = {
@@ -168,14 +184,22 @@ type DeferredDisplayBindings = {
   normalTexture?: Texture;
   baseColorMetallicTexture?: Texture;
   emissiveOcclusionTexture?: Texture;
+  clusterLightCounts?: Buffer;
 };
 
 const deferredDisplay = {
   name: 'deferredDisplay',
   source: /* wgsl */ `\
 struct DeferredDisplayUniforms {
+  inverseProjectionMatrix: mat4x4f,
   debugMode: f32,
   exposure: f32,
+  clusterCountX: u32,
+  clusterCountY: u32,
+  clusterCountZ: u32,
+  maxLightsPerCluster: u32,
+  clusterNearPlane: f32,
+  clusterFarPlane: f32,
 };
 @group(0) @binding(auto) var<uniform> deferredDisplay: DeferredDisplayUniforms;
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
@@ -185,12 +209,54 @@ struct DeferredDisplayUniforms {
 @group(0) @binding(auto) var baseColorMetallicTexture: texture_2d<f32>;
 @group(0) @binding(auto) var baseColorMetallicTextureSampler: sampler;
 @group(0) @binding(auto) var emissiveOcclusionTexture: texture_2d<u32>;
+@group(0) @binding(auto) var<storage, read> clusterLightCounts: array<u32>;
 
 fn deferredDisplay_toneMap(color: vec3f) -> vec3f {
   let exposed = max(color * deferredDisplay.exposure, vec3f(0.0));
   let mapped = (exposed * (2.51 * exposed + 0.03)) /
     (exposed * (2.43 * exposed + 0.59) + 0.14);
   return pow(clamp(mapped, vec3f(0.0), vec3f(1.0)), vec3f(1.0 / 2.2));
+}
+
+fn deferredDisplay_reconstructViewPosition(uv: vec2f, depth: f32) -> vec3f {
+  let clip = vec4f(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
+  let viewPosition = deferredDisplay.inverseProjectionMatrix * clip;
+  return viewPosition.xyz / max(viewPosition.w, 0.00001);
+}
+
+fn deferredDisplay_getClusterIndex(texCoord: vec2f, viewPosition: vec3f) -> u32 {
+  let tileX = min(
+    u32(clamp(texCoord.x, 0.0, 0.999999) * f32(deferredDisplay.clusterCountX)),
+    deferredDisplay.clusterCountX - 1u
+  );
+  let tileY = min(
+    u32(clamp(texCoord.y, 0.0, 0.999999) * f32(deferredDisplay.clusterCountY)),
+    deferredDisplay.clusterCountY - 1u
+  );
+  let viewDepth = clamp(
+    -viewPosition.z,
+    deferredDisplay.clusterNearPlane,
+    deferredDisplay.clusterFarPlane
+  );
+  let normalizedDepth = clamp(
+    log(viewDepth / deferredDisplay.clusterNearPlane) /
+      log(deferredDisplay.clusterFarPlane / deferredDisplay.clusterNearPlane),
+    0.0,
+    0.999999
+  );
+  let depthSlice = min(
+    u32(normalizedDepth * f32(deferredDisplay.clusterCountZ)),
+    deferredDisplay.clusterCountZ - 1u
+  );
+  return (depthSlice * deferredDisplay.clusterCountY + tileY) *
+    deferredDisplay.clusterCountX + tileX;
+}
+
+fn deferredDisplay_heatMap(value: f32) -> vec3f {
+  let cold = vec3f(0.04, 0.08, 0.35);
+  let warm = vec3f(0.95, 0.18, 0.08);
+  let hot = vec3f(1.0, 0.92, 0.22);
+  return mix(mix(cold, warm, clamp(value * 2.0, 0.0, 1.0)), hot, clamp(value * 2.0 - 1.0, 0.0, 1.0));
 }
 
 fn deferredDisplay_sampleColor(
@@ -223,6 +289,19 @@ fn deferredDisplay_sampleColor(
   }
   if (deferredDisplay.debugMode > 5.5) {
     let depth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
+    if (deferredDisplay.debugMode > 6.5) {
+      if (depth >= 0.99999) {
+        return vec4f(0.0, 0.0, 0.0, 1.0);
+      }
+      let viewPosition = deferredDisplay_reconstructViewPosition(texCoord, depth);
+      let clusterIndex = deferredDisplay_getClusterIndex(texCoord, viewPosition);
+      let occupancy = clamp(
+        f32(clusterLightCounts[clusterIndex]) / f32(max(deferredDisplay.maxLightsPerCluster, 1u)),
+        0.0,
+        1.0
+      );
+      return vec4f(deferredDisplay_heatMap(occupancy), 1.0);
+    }
     return vec4f(vec3f(pow(depth, 24.0)), 1.0);
   }
   let color = textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0).rgb;
@@ -232,14 +311,32 @@ fn deferredDisplay_sampleColor(
     {name: 'depthTexture', group: 0},
     {name: 'normalTexture', group: 0},
     {name: 'baseColorMetallicTexture', group: 0},
-    {name: 'emissiveOcclusionTexture', group: 0}
+    {name: 'emissiveOcclusionTexture', group: 0},
+    {name: 'clusterLightCounts', group: 0}
   ],
   uniforms: {} as DeferredDisplayUniforms,
   bindings: {} as DeferredDisplayBindings,
-  uniformTypes: {debugMode: 'f32', exposure: 'f32'},
+  uniformTypes: {
+    inverseProjectionMatrix: 'mat4x4<f32>',
+    debugMode: 'f32',
+    exposure: 'f32',
+    clusterCountX: 'u32',
+    clusterCountY: 'u32',
+    clusterCountZ: 'u32',
+    maxLightsPerCluster: 'u32',
+    clusterNearPlane: 'f32',
+    clusterFarPlane: 'f32'
+  },
   propTypes: {
+    inverseProjectionMatrix: {value: new Matrix4(), private: true},
     debugMode: {value: 0, private: true},
-    exposure: {value: DEFAULT_SETTINGS.exposure, min: 0.1, softMax: 3}
+    exposure: {value: DEFAULT_SETTINGS.exposure, min: 0.1, softMax: 3},
+    clusterCountX: {value: 16, private: true},
+    clusterCountY: {value: 9, private: true},
+    clusterCountZ: {value: 24, private: true},
+    maxLightsPerCluster: {value: 64, private: true},
+    clusterNearPlane: {value: NEAR_PLANE, private: true},
+    clusterFarPlane: {value: FAR_PLANE, private: true}
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
@@ -345,6 +442,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly floor: InstancedSurfaceModel;
   readonly lightMarkers: InstancedSurfaceModel;
   readonly pointLightBuffer: Buffer;
+  readonly clusteredLightGrid: ClusteredLightGrid;
   readonly panels: ExamplePanelManager;
   readonly settingsPanel: ExampleSettingsPanelManager;
   sceneGBuffer: GBuffer;
@@ -374,8 +472,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.pointLightBuffer = device.createBuffer({
       id: 'deferred-point-lights',
-      data: makeDeferredPointLightBufferData([], MAX_DEFERRED_POINT_LIGHTS),
+      data: makeDeferredPointLightBufferData([], MAX_CLUSTERED_POINT_LIGHTS),
       usage: Buffer.STORAGE | Buffer.COPY_DST
+    });
+    this.clusteredLightGrid = new ClusteredLightGrid(device, {
+      id: 'deferred-clustered-lights',
+      maxLightCount: MAX_CLUSTERED_POINT_LIGHTS
     });
     this.sceneGBuffer = createSceneGBuffer(device, width, height);
     this.renderer = createRenderer(device);
@@ -434,9 +536,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     );
     const lightState = makeAnimatedPointLights(time, activeLightCount, viewMatrix);
     this.pointLightBuffer.write(
-      makeDeferredPointLightBufferData(lightState.viewLights, MAX_DEFERRED_POINT_LIGHTS)
+      makeDeferredPointLightBufferData(lightState.viewLights, MAX_CLUSTERED_POINT_LIGHTS)
     );
     this.lightMarkers.positionBuffer.write(lightState.markerPositions);
+    this.clusteredLightGrid.encode(device.commandEncoder, {
+      pointLights: this.pointLightBuffer,
+      pointLightCount: activeLightCount,
+      projectionMatrix,
+      nearPlane: NEAR_PLANE,
+      farPlane: FAR_PLANE
+    });
 
     const renderPass = device.beginRenderPass({
       framebuffer: this.sceneGBuffer.framebuffer,
@@ -460,6 +569,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const directionalLightDirectionView = normalize3(
       viewMatrix.transformAsVector([0.42, 0.82, 0.38]) as NumberArray3
     );
+    const clusterUniforms = this.clusteredLightGrid.getShaderPassUniforms(NEAR_PLANE, FAR_PLANE);
     this.renderer.renderToScreen({
       sourceTexture: this.sceneGBuffer.colorTexture,
       bindings: {
@@ -467,20 +577,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         normalTexture,
         baseColorMetallicTexture,
         emissiveOcclusionTexture,
-        pointLights: this.pointLightBuffer
+        pointLights: this.pointLightBuffer,
+        ...this.clusteredLightGrid.getShaderPassBindings()
       },
       uniforms: {
-        deferredLighting: {
+        clusteredDeferredLighting: {
           inverseProjectionMatrix,
           ambientColor: [0.028, 0.034, 0.055],
           directionalLightDirectionView,
           directionalLightColor: [1, 0.86, 0.68],
           directionalLightIntensity: this.settings.sunIntensity,
-          pointLightCount: activeLightCount
+          ...clusterUniforms
         },
         deferredDisplay: {
+          inverseProjectionMatrix,
           debugMode: getDebugMode(this.settings.debugView),
-          exposure: this.settings.exposure
+          exposure: this.settings.exposure,
+          ...clusterUniforms
         }
       }
     });
@@ -496,21 +609,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.floor.destroy();
     this.lightMarkers.destroy();
     this.pointLightBuffer.destroy();
+    this.clusteredLightGrid.destroy();
     this.renderer.destroy();
     this.sceneGBuffer.destroy();
   }
 
   private makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'deferred-rendering-controls',
+    return makeExampleTabbedPanel({
+      id: 'deferred-rendering-tabs',
       title: 'Deferred Material Lab',
       panels: [
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
-          title: '',
-          html: '<p><b>One geometry pass. Dozens of lights.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A fullscreen Cook-Torrance resolve reconstructs view position from depth and evaluates the animated storage-buffer lights.</p><p>Switch Debug View to inspect the actual G-buffer contract.</p>'
+          title: 'Overview',
+          html: '<p><b>One geometry pass. Hundreds of lights.</b></p><p>Each sphere writes base color, metalness, roughness, emissive, normal, velocity, and depth once. A WebGPU compute pass bins animated lights into screen/depth clusters before the fullscreen Cook-Torrance resolve evaluates only the current pixel cluster.</p><p>Switch Debug View to inspect the actual G-buffer contract.</p>'
         }),
-        this.settingsPanel.makePanel()
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'deferred-rendering-background',
+          title: 'Background',
+          html: DEFERRED_RENDERING_BACKGROUND_HTML
+        })
       ]
     });
   }
@@ -525,7 +644,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 function createRenderer(device: Device): ShaderPassRenderer {
   return new ShaderPassRenderer(device, {
-    shaderPasses: [createDeferredLightingShaderPassPipeline(), deferredDisplayPipeline],
+    shaderPasses: [createClusteredDeferredLightingShaderPassPipeline(), deferredDisplayPipeline],
     colorFormat: 'rgba16float',
     flipY: true
   });
@@ -595,7 +714,7 @@ function makeLightMarkerData(): SurfaceInstanceData {
   for (let lightIndex = 0; lightIndex < MAX_EXAMPLE_POINT_LIGHTS; lightIndex++) {
     positions[lightIndex * 3 + 1] = -1000;
     const color = LIGHT_COLORS[lightIndex % LIGHT_COLORS.length]!;
-    scales.push(0.14, 0.14, 0.14);
+    scales.push(0.075, 0.075, 0.075);
     baseColors.push(color[0], color[1], color[2], 1);
     materials.push(0.18, 0);
     emissiveColors.push(color[0], color[1], color[2]);
@@ -624,22 +743,25 @@ function makeAnimatedPointLights(
       continue;
     }
 
-    const ring = lightIndex % 2;
-    const ringCount = Math.max(1, Math.ceil(lightCount / 2));
-    const angle = (lightIndex / ringCount) * Math.PI * 2 + time * (ring === 0 ? 0.42 : -0.31);
-    const radius = ring === 0 ? 8.4 : 5.2;
+    const ring = lightIndex % 8;
+    const ringCount = Math.max(1, Math.ceil(lightCount / 8));
+    const angle =
+      (Math.floor(lightIndex / 8) / ringCount) * Math.PI * 2 +
+      ring * 0.41 +
+      time * (ring % 2 === 0 ? 0.42 : -0.31);
+    const radius = 3.4 + ring * 1.45;
     const worldPosition: NumberArray3 = [
       Math.cos(angle) * radius,
-      2.2 + ring * 2.2 + Math.sin(time * 1.7 + lightIndex) * 0.75,
+      0.9 + (ring % 4) * 1.1 + Math.sin(time * 1.7 + lightIndex) * 0.48,
       Math.sin(angle) * radius
     ];
     const color = LIGHT_COLORS[lightIndex % LIGHT_COLORS.length]!;
     markerPositions.set(worldPosition, offset);
     viewLights.push({
       position: viewMatrix.transformAsPoint(worldPosition) as [number, number, number],
-      range: ring === 0 ? 7.8 : 6.2,
+      range: 3.6 + (ring % 3) * 0.55,
       color: [color[0], color[1], color[2]],
-      intensity: ring === 0 ? 15 : 11
+      intensity: 7.5 + (ring % 3) * 1.2
     });
   }
   return {viewLights, markerPositions};
@@ -677,6 +799,8 @@ function getDebugMode(debugView: DebugView): number {
       return 5;
     case 'Depth':
       return 6;
+    case 'Cluster Occupancy':
+      return 7;
     default:
       return 0;
   }
@@ -703,7 +827,8 @@ function makeSettingsSchema(): SettingsSchema {
               'Roughness',
               'Metallic',
               'Emissive',
-              'Depth'
+              'Depth',
+              'Cluster Occupancy'
             ]
           },
           {

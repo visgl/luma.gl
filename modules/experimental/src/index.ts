@@ -77,6 +77,21 @@ export {
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
 } from './rendering/deferred-lighting';
+export type {
+  ClusteredDeferredLightingProps,
+  ClusteredLightGridBindings,
+  ClusteredLightGridEncodeOptions,
+  ClusteredLightGridProps,
+  ClusteredLightGridShaderPassUniforms
+} from './rendering/clustered-lighting';
+export {
+  ClusteredLightGrid,
+  clusteredDeferredLighting,
+  createClusteredDeferredLightingShaderPassPipeline,
+  DEFAULT_CLUSTER_DIMENSIONS,
+  DEFAULT_MAX_LIGHTS_PER_CLUSTER,
+  MAX_CLUSTERED_POINT_LIGHTS
+} from './rendering/clustered-lighting';
 
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
