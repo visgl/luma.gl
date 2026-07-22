@@ -71,6 +71,9 @@ export type {
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
 
+export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
+export {OrbitControls} from './controls/orbit-controls';
+
 export * from './webxr/index';
 
 export * from './gpu-primitives/index';

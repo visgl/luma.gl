@@ -10,6 +10,8 @@ import './shadows/shadow-map-renderer.spec';
 import './shadows/shadow-wgsl.spec';
 import './rendering/g-buffer.spec';
 
+import './controls/orbit-controls.spec';
+
 import './webxr';
 import './gpu-primitives/gpu-command-graph.spec';
 import './gpu-primitives/gpu-command-graph-textures.spec';
