@@ -17,8 +17,9 @@ import {DeferredRenderingExample} from '@site/src/examples';
     A WebGPU-only material laboratory that writes five surface targets once, then reconstructs
     view position from depth and resolves a directional light plus hundreds of compute-clustered
     storage-buffer point lights in one fullscreen pass. Temporally stabilized GTAO grounds the
-    contacts, then stochastic screen-space reflections bounce the animated scene across polished
-    floors, chrome accents, and glossy-to-mirror materials.
+    contacts, diffuse screen-space global illumination transfers colored light between surfaces,
+    and stochastic reflections bounce the animated scene across polished floors, chrome accents,
+    and glossy-to-mirror materials.
   </div>
 </ExampleHeader>
 
@@ -34,13 +35,21 @@ import {DeferredRenderingExample} from '@site/src/examples';
 - The orbiting emissive markers are the same point lights consumed by the deferred resolve. Raise
   **Point Lights** toward 512 to stress compute-built cluster lists without redrawing the material
   geometry.
+- Cyan, magenta, and amber emitter panels transfer their color onto nearby floors, walls, and
+  diffuse spheres. Compare **Indirect Lighting** against the final image to isolate the actual
+  screen-space bounce contribution.
 - **Base Color**, **Normals**, **Roughness**, **Metallic**, **Emissive**, and **Depth** expose the
   actual G-buffer channels rather than a recreated diagnostic view. **Cluster Occupancy** shows
   the per-pixel cluster list pressure as a cold-to-hot heatmap. **Ambient Occlusion** exposes the
-  denoised, temporally reprojected GTAO visibility buffer. **Reflections** isolates reflected HDR
-  radiance, while **Reflection Confidence** makes screen-edge and roughness falloff visible.
+  denoised, temporally reprojected GTAO visibility buffer. **Indirect Lighting** isolates diffuse
+  bounced HDR radiance, and **Bounce Confidence** exposes visible hemisphere-ray coverage.
+  **Reflections** isolates reflected HDR radiance, while **Reflection Confidence** makes
+  screen-edge and roughness falloff visible.
 - Raise **GTAO Radius** to make larger-scale creases visible, then use **GTAO Intensity** and
   **GTAO Strength** to separate visibility estimation from how strongly it affects lit color.
+- Tune **Bounce Radius**, **Bounce Intensity**, **Bounce Strength**, **Bounce Rays**, and
+  **Ray Steps** to compare subtle indirect fill against more saturated local color transfer.
+  **Bounce History** trades responsiveness for temporally stable low-noise indirect light.
 - Adjust **SSR Strength**, **SSR Intensity**, **SSR Distance**, and **SSR Samples** to compare
   mirror-sharp hits against rough glossy lobes. **SSR History** shows the temporal trade-off
   between responsive animated highlights and stable low-noise reflections.
@@ -63,10 +72,15 @@ ordered shader-pass chain. `createGTAOShaderPassPipeline()` then performs a half
 horizon search over the unchanged depth and view-normal attachments, reprojects the previous AO
 result through the velocity buffer, rejects disocclusions with depth history, and applies a
 depth-aware separable blur before compositing ambient visibility into lit color.
+`createSSGIShaderPassPipeline()` traces cosine-weighted hemisphere rays through that lit scene,
+gathers nearby colored radiance, reprojects indirect-light history, rejects disocclusions in
+linearized view depth, and applies two depth/normal-aware denoising passes before composing the
+diffuse bounce.
 `createSSRShaderPassPipeline()` then launches roughness-jittered reflection rays into the lit
 scene, reprojects reflection history through G-buffer velocity, rejects depth disocclusions,
 applies a roughness-adaptive depth/normal-aware blur, and adds the result back into `previous`.
-A final display pass tone maps the result or selects a G-buffer/cluster/AO/reflection debug view.
+A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection
+debug view.
 
 The point-light positions are transformed to view space on the CPU and packed with
 `makeDeferredPointLightBufferData()` into two `vec4f` records per light:
@@ -78,7 +92,8 @@ position.xyz, range, color.rgb, intensity
 That fixed representation keeps the example focused on the deferred boundary: geometry owns
 material capture, compute owns light assignment, the lighting pass owns direct light, and later
 effects such as GTAO and SSR consume the unchanged depth, normal, velocity, and scene-color
-contract without drawing the reflective geometry a second time.
+contract. SSGI and SSR then add complementary diffuse and specular indirect lighting without
+drawing the contributing geometry a second time.
 
 For a comparison with environment-map reflections, SSAO, baseline deferred lighting, and other
 composable effect alternatives, see

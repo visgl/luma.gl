@@ -69,9 +69,9 @@ surface attachments without owning scene traversal or material shading. Multiple
 | Render-stack value | Producer | Consumers |
 | --- | --- | --- |
 | `sourceTexture` | `GBuffer.colorTexture` | Every shader pass through `previous` or `original`. |
-| `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, GTAO, SSR, outlines, contact shadows, TAA, motion blur, fog. |
-| `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, GTAO, SSR, normal-aware outlines, contact-shadow filtering. |
-| `velocityTexture` | `GBuffer.velocityTexture` | GTAO/SSR temporal reprojection, TAA, and motion blur. |
+| `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, GTAO, SSGI, SSR, outlines, contact shadows, TAA, motion blur, fog. |
+| `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, GTAO, SSGI, SSR, normal-aware outlines, contact-shadow filtering. |
+| `velocityTexture` | `GBuffer.velocityTexture` | GTAO/SSGI/SSR temporal reprojection, TAA, and motion blur. |
 | named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific material, debug, lighting, or resolve passes. |
 
 ```ts
@@ -79,6 +79,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline
 } from '@luma.gl/effects';
@@ -102,6 +103,7 @@ scenePass.end();
 const effects = new ShaderPassRenderer(device, {
   shaderPasses: [
     createGTAOShaderPassPipeline(),
+    createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createTAAShaderPassPipeline(),
     createMotionBlurShaderPassPipeline()
@@ -124,6 +126,7 @@ const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [
     createDeferredLightingShaderPassPipeline(),
     createGTAOShaderPassPipeline(),
+    createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createTAAShaderPassPipeline()
   ]
@@ -136,6 +139,25 @@ while preserving the same effect-facing depth, normal, velocity, and scene-color
 For side-by-side choices between reflections, ambient occlusion, light assignment, shadows,
 transparency, blur, and temporal effects, see
 [Rendering Techniques and Tradeoffs](/docs/api-guide/shaders/rendering-techniques).
+
+### Screen-space diffuse global illumination
+
+`createSSGIShaderPassPipeline()` gathers already-lit scene radiance from the hemisphere above
+each visible surface. Its stages mirror the reusable temporal render-stack contract:
+
+1. Trace cosine-weighted hemisphere rays through the shared scene depth and view normals.
+2. Reproject indirect-radiance history with velocity and reject perspective-correct depth
+   disocclusions.
+3. Save current depth for the next-frame history comparison.
+4. Denoise diffuse bounce horizontally while preserving depth and normal edges.
+5. Repeat the bilateral denoising vertically.
+6. Add stabilized colored bounce to `previous`, or expose indirect-radiance/confidence debug
+   views.
+
+SSGI adds diffuse energy; GTAO removes unavailable ambient energy, while SSR adds directional
+specular reflection. They are complementary effects rather than interchangeable copies. Place
+SSGI after the direct-light/GTAO resolve and before SSR when mirror reflections should include
+the newly bounced illumination.
 
 ### Screen-space reflection composition
 
@@ -164,7 +186,7 @@ screen-edge confidence fades reduce the resulting discontinuities.
 | --- | --- | --- |
 | Geometry and opaque surface capture | MRT scene color, normal-roughness, velocity, depth, material extras | Establish one coherent surface snapshot. |
 | Opaque lighting resolve | Deferred PBR lighting, contact shadows, other direct-light corrections | These still need unwarped depth, normals, and material terms. |
-| Surface effects | SSAO, GTAO, SSR, fog, outlines, depth-aware blur | These consume the original semantic attachments. |
+| Surface effects | SSAO/GTAO, SSGI, SSR, fog, outlines, depth-aware blur | These consume the original semantic attachments. |
 | Transparency resolve | WBOIT or A-buffer resolve pipeline | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
 | Temporal effects | TAA, then motion blur | Reproject the composed image before display-space processing. |
 | Display effects | Bloom, color adjustment, vignette, tone mapping | These operate on final color and usually do not need scene attachments. |
@@ -193,8 +215,8 @@ pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug view
 
 The [Deferred Material Lab](/examples/experimental/deferred-rendering) shows one five-target
 geometry pass feeding clustered directional/point lighting, temporally stabilized GTAO,
-roughness-aware screen-space reflections, tone mapping, and direct G-buffer/AO/reflection debug
-views.
+diffuse screen-space global illumination, roughness-aware screen-space reflections, tone mapping,
+and direct G-buffer/AO/bounce/reflection debug views.
 
 ## When To Use Shader Passes
 

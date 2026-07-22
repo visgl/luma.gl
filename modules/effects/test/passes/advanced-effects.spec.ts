@@ -13,12 +13,14 @@ import {
   createGTAOShaderPassPipeline,
   createOutlineShaderPassPipeline,
   createSSAOShaderPassPipeline,
+  createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline,
   createVolumetricFogShaderPassPipeline,
   depthAwareBlurShaderPassPipeline,
   dofShaderPassPipeline,
   gtaoTemporal,
+  ssgiTemporal,
   ssrTemporal
 } from '../../src';
 
@@ -53,6 +55,38 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     gtaoTemporal.uniformTypes.inverseProjectionMatrix,
     'mat4x4<f32>',
     'GTAO temporal rejection reconstructs linear view-space depth'
+  );
+
+  const globalIllumination = createSSGIShaderPassPipeline({resolutionScale: 0.5});
+  testCase.equal(
+    globalIllumination.steps.length,
+    6,
+    'SSGI traces, stabilizes, denoises twice, and composites diffuse bounce'
+  );
+  testCase.deepEqual(
+    globalIllumination.renderTargets?.ssgiRaw.scale,
+    [0.5, 0.5],
+    'SSGI honors the requested tracing resolution'
+  );
+  testCase.equal(
+    globalIllumination.renderTargets?.ssgiHistory.lifetime,
+    'history',
+    'SSGI retains indirect-radiance history'
+  );
+  testCase.equal(
+    globalIllumination.renderTargets?.ssgiHistoryDepth.lifetime,
+    'history',
+    'SSGI retains depth history for disocclusion rejection'
+  );
+  testCase.equal(
+    globalIllumination.steps[1].inputs?.historyTexture,
+    globalIllumination.steps[1].output,
+    'SSGI intentionally reprojects one logical indirect-radiance history target'
+  );
+  testCase.equal(
+    ssgiTemporal.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'SSGI temporal rejection reconstructs linear view-space depth'
   );
 
   const reconstructedSSAO = createSSAOShaderPassPipeline();
@@ -166,6 +200,7 @@ test('advanced effects compose in order with existing effects', async testCase =
     brightnessContrast,
     createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
     createGTAOShaderPassPipeline(),
+    createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     bloomShaderPassPipeline,
     dofShaderPassPipeline,
@@ -227,6 +262,16 @@ test('advanced effects compose in order with existing effects', async testCase =
     testCase.ok(hasBinding('gtaoEvaluate', 'depthTexture'), 'GTAO receives scene depth');
     testCase.ok(hasBinding('gtaoEvaluate', 'normalTexture'), 'GTAO receives scene normals');
     testCase.ok(hasBinding('gtaoTemporal', 'velocityTexture'), 'GTAO receives scene velocity');
+    testCase.ok(hasBinding('ssgiTrace', 'depthTexture'), 'SSGI tracing receives scene depth');
+    testCase.ok(hasBinding('ssgiTrace', 'normalTexture'), 'SSGI tracing receives scene normals');
+    testCase.ok(
+      hasBinding('ssgiTemporal', 'velocityTexture'),
+      'SSGI history receives scene velocity'
+    );
+    testCase.ok(
+      hasBinding('ssgiSpatial', 'normalTexture'),
+      'SSGI denoising receives scene normals'
+    );
     testCase.ok(hasBinding('ssrTrace', 'depthTexture'), 'SSR tracing receives scene depth');
     testCase.ok(hasBinding('ssrTrace', 'normalTexture'), 'SSR tracing receives scene normals');
     testCase.ok(

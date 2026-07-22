@@ -14,6 +14,7 @@ import {
   createMotionBlurShaderPassPipeline,
   createOutlineShaderPassPipeline,
   createSSAOShaderPassPipeline,
+  createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
   createTAAShaderPassPipeline,
   createVolumetricFogShaderPassPipeline,
@@ -76,6 +77,7 @@ const PLATFORM_INFO = {
 const ADVANCED_SHADER_PASSES = [
   createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
   createGTAOShaderPassPipeline(),
+  createSSGIShaderPassPipeline(),
   createOutlineShaderPassPipeline({normalSource: 'normal-texture'}),
   createTAAShaderPassPipeline(),
   createMotionBlurShaderPassPipeline(),
