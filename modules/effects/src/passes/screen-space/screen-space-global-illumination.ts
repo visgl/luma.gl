@@ -124,9 +124,7 @@ fn ssgiTrace_sampleColor(
   let tangent = normalize(cross(referenceAxis, centerNormal));
   let bitangent = normalize(cross(centerNormal, tangent));
   let pixelCoordinate = floor(texCoord * vec2f(textureDimensions(depthTexture)));
-  let rotation = ssgiTrace_hash(
-    pixelCoordinate + vec2f(ssgiTrace.frameIndex * 0.754877, ssgiTrace.frameIndex * 0.56984)
-  ) * SSGI_TWO_PI;
+  let rotation = ssgiTrace_hash(pixelCoordinate) * SSGI_TWO_PI;
   let activeRayCount = clamp(i32(ssgiTrace.rayCount), 1, SSGI_MAX_RAYS);
   let activeStepCount = clamp(i32(ssgiTrace.stepCount), 2, SSGI_MAX_STEPS);
 
