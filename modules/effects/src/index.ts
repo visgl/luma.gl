@@ -132,7 +132,15 @@ export {
 } from './passes/screen-space/gtao';
 export type {OutlineShaderPassPipelineOptions} from './passes/screen-space/outlines';
 export {createOutlineShaderPassPipeline} from './passes/screen-space/outlines';
-export {createSSRShaderPassPipeline} from './passes/screen-space/screen-space-reflections';
+export type {SSRShaderPassPipelineOptions} from './passes/screen-space/screen-space-reflections';
+export {
+  createSSRShaderPassPipeline,
+  ssrComposite,
+  ssrDepthHistoryCopy,
+  ssrSpatial,
+  ssrTemporal,
+  ssrTrace
+} from './passes/screen-space/screen-space-reflections';
 export type {SSAOShaderPassPipelineOptions} from './passes/screen-space/ssao';
 export {createSSAOShaderPassPipeline} from './passes/screen-space/ssao';
 export {createTAAShaderPassPipeline} from './passes/screen-space/temporal-antialiasing';

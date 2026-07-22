@@ -684,6 +684,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           intensity: this.settings.preset === 'Reflective Night' ? 1.8 : 1.35,
           maxDistance: this.settings.shadowQuality === 'low' ? 55 : 95,
           thickness: this.settings.shadowQuality === 'cinematic' ? 0.48 : 0.72,
+          frameIndex: this.frameIndex,
           sampleCount:
             this.settings.shadowQuality === 'low'
               ? 20

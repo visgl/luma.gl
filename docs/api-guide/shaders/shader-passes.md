@@ -71,7 +71,7 @@ surface attachments without owning scene traversal or material shading. Multiple
 | `sourceTexture` | `GBuffer.colorTexture` | Every shader pass through `previous` or `original`. |
 | `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, GTAO, SSR, outlines, contact shadows, TAA, motion blur, fog. |
 | `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, GTAO, SSR, normal-aware outlines, contact-shadow filtering. |
-| `velocityTexture` | `GBuffer.velocityTexture` | GTAO temporal reprojection, TAA, and motion blur. |
+| `velocityTexture` | `GBuffer.velocityTexture` | GTAO/SSR temporal reprojection, TAA, and motion blur. |
 | named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific material, debug, lighting, or resolve passes. |
 
 ```ts
@@ -133,6 +133,27 @@ const renderer = new ShaderPassRenderer(device, {
 More specialized clustered-lighting or visibility-buffer workflows can replace the first resolve
 while preserving the same effect-facing depth, normal, velocity, and scene-color contract.
 
+### Screen-space reflection composition
+
+`createSSRShaderPassPipeline()` consumes the already-lit `previous` color plus the shared depth,
+normal/roughness, and velocity attachments. Its six explicit stages demonstrate how a complex
+effect remains one composable pipeline:
+
+1. Trace stochastic, roughness-aware reflection rays against the G-buffer depth at half
+   resolution.
+2. Reproject persistent reflection history with screen-space velocity and reject depth
+   disocclusions.
+3. Save current depth into the reflection history target for the next frame.
+4. Denoise reflection radiance horizontally using roughness, scene depth, and normals.
+5. Repeat the depth/normal-aware denoising vertically.
+6. Composite the stabilized HDR reflection into `previous`, or expose reflection/confidence debug
+   views.
+
+Mirror-like materials retain narrow highlights, while rough surfaces accumulate wider glossy
+lobes. Because tracing samples existing scene color, its cost depends on visible pixels and ray
+steps instead of drawing every reflected object again. Off-screen geometry cannot contribute;
+screen-edge confidence fades reduce the resulting discontinuities.
+
 ### Recommended ordering
 
 | Phase | Typical work | Why |
@@ -166,9 +187,9 @@ effects without creating a second postprocessing system.
 The [Advanced Effects example](/examples/experimental/advanced-effects) shows the full MRT surface
 pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug views.
 
-The [Deferred Material Lab](/examples/experimental/deferred-rendering) shows the opaque phase and
-its first screen-space consumer: one five-target geometry pass, depth reconstruction, clustered
-directional/point lighting, temporally stabilized GTAO, tone mapping, and direct G-buffer/AO debug
+The [Deferred Material Lab](/examples/experimental/deferred-rendering) shows one five-target
+geometry pass feeding clustered directional/point lighting, temporally stabilized GTAO,
+roughness-aware screen-space reflections, tone mapping, and direct G-buffer/AO/reflection debug
 views.
 
 ## When To Use Shader Passes
