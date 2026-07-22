@@ -72,7 +72,7 @@ surface attachments without owning scene traversal or material shading. Multiple
 | `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, SSR, outlines, contact shadows, TAA, motion blur, fog. |
 | `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, SSR, normal-aware outlines, contact-shadow filtering. |
 | `velocityTexture` | `GBuffer.velocityTexture` | TAA and motion blur. |
-| named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific lighting, material, debug, or resolve passes. |
+| named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific material, debug, lighting, or resolve passes. |
 
 ```ts
 import {ShaderPassRenderer} from '@luma.gl/engine';
@@ -114,16 +114,31 @@ effects.renderToScreen({
 });
 ```
 
-`GBuffer` is intentionally a target and binding contract, not a complete deferred-lighting
-renderer. A later clustered-lighting or visibility-buffer workflow can write its result into the
-same scene-color slot while preserving the effect-facing contract.
+`GBuffer` is intentionally a target and binding contract, not a scene renderer. Experimental
+[`deferredLighting`](/docs/api-reference/experimental/deferred-lighting) consumes two named material
+extras plus depth and normal-roughness, reconstructs view position, and writes a Cook-Torrance
+lighting result into the same ordered color chain:
+
+```ts
+const renderer = new ShaderPassRenderer(device, {
+  shaderPasses: [
+    createDeferredLightingShaderPassPipeline(),
+    createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
+    createSSRShaderPassPipeline(),
+    createTAAShaderPassPipeline()
+  ]
+});
+```
+
+More specialized clustered-lighting or visibility-buffer workflows can replace the first resolve
+while preserving the same effect-facing depth, normal, velocity, and scene-color contract.
 
 ### Recommended ordering
 
 | Phase | Typical work | Why |
 | --- | --- | --- |
-| Geometry and opaque shading | MRT scene color, normal-roughness, velocity, depth | Establish one coherent surface snapshot. |
-| Lighting refinement | Contact shadows and other direct-light corrections | These still need unwarped depth, normals, and direct-light terms. |
+| Geometry and opaque surface capture | MRT scene color, normal-roughness, velocity, depth, material extras | Establish one coherent surface snapshot. |
+| Opaque lighting resolve | Deferred PBR lighting, contact shadows, other direct-light corrections | These still need unwarped depth, normals, and material terms. |
 | Surface effects | SSAO, SSR, fog, outlines, depth-aware blur | These consume the original semantic attachments. |
 | Transparency resolve | WBOIT or A-buffer resolve pipeline | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
 | Temporal effects | TAA, then motion blur | Reproject the composed image before display-space processing. |
@@ -150,6 +165,10 @@ effects without creating a second postprocessing system.
 
 The [Advanced Effects example](/examples/experimental/advanced-effects) shows the full MRT surface
 pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug views.
+
+The [Deferred Material Lab](/examples/experimental/deferred-rendering) shows the earlier opaque
+phase: one five-target geometry pass, depth reconstruction, directional lighting, animated
+storage-buffer point lights, tone mapping, and direct G-buffer debug views.
 
 ## When To Use Shader Passes
 

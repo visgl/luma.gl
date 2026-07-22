@@ -9,9 +9,12 @@ scene-aware fullscreen effects. It gives geometry shaders one stable attachment 
 `ShaderPassRenderer` the depth, normal, and velocity bindings expected by SSAO, SSR, outlines,
 TAA, motion blur, depth-aware blur, and related pipelines.
 
-`GBuffer` owns render targets and semantic bindings. It is not yet a full material-deferred
-renderer: applications still draw geometry, choose clear values, shade scene color, and decide
-whether additional attachments carry lighting, material, picking, or debug data.
+`GBuffer` owns render targets and semantic bindings. It is not a scene renderer: applications
+still draw geometry, choose clear values, and decide whether additional attachments carry
+lighting, material, picking, or debug data. The separate
+[`deferredLighting`](/docs/api-reference/experimental/deferred-lighting) shader-pass pipeline
+provides one reusable material-lighting resolve without coupling target ownership to scene
+traversal.
 
 ## Attachment contract
 
@@ -80,6 +83,26 @@ struct FragmentOutputs {
 The [Advanced Effects example](/examples/experimental/advanced-effects) uses `GBuffer` with three
 extra channels for unshadowed color, directional direct light, and shadow debugging.
 
+The [Deferred Material Lab](/examples/experimental/deferred-rendering) uses two extra channels,
+`baseColorMetallic` and `emissiveOcclusion`, then resolves them with 64-capacity storage-buffer
+point lighting:
+
+```ts
+const gBuffer = new GBuffer(device, {
+  width,
+  height,
+  colorFormat: 'rgba16float',
+  extraColorAttachments: [
+    {name: 'baseColorMetallic', format: 'rgba8unorm'},
+    {name: 'emissiveOcclusion', format: 'rgba8uint'}
+  ]
+});
+```
+
+That five-target layout uses exactly 32 color-attachment bytes per sample: HDR scene color stays
+`rgba16float`, while normalized emissive/AO is explicitly packed into the four-byte
+`rgba8uint` target for WebGPU CORE devices.
+
 ## Props
 
 | Prop | Default | Meaning |
@@ -130,6 +153,8 @@ Destroys the framebuffer and every owned texture.
 
 - [Shader Passes](/docs/api-guide/shaders/shader-passes) explains the composable render-stack model
   and effect ordering.
+- [Deferred Lighting](/docs/api-reference/experimental/deferred-lighting) defines the material
+  attachment convention and fullscreen lighting resolve.
 - [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) documents routing,
   named targets, runtime bindings, and temporal history.
 - [`WBOITRenderer`](/docs/api-reference/experimental/wboit-renderer) and

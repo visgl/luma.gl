@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding, CommandEncoder} from '@luma.gl/core';
+import type {Binding, CommandEncoder, TextureFormatColor} from '@luma.gl/core';
 import {Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
 import type {
   ShaderPass,
@@ -52,6 +52,8 @@ export type ShaderPassRendererProps = {
   shaderPasses: ShaderPassLike[];
   /** Optional typed ShaderInputs object for setting uniforms */
   shaderInputs?: ShaderInputs;
+  /** Format of the shared previous-chain textures. Defaults to the canvas-preferred format. */
+  colorFormat?: TextureFormatColor;
   /** Flip source and presentation sampling vertically. Defaults to true on WebGPU. */
   flipY?: boolean;
 };
@@ -103,7 +105,7 @@ export class ShaderPassRenderer {
 
     const size = device.getCanvasContext().getDrawingBufferSize();
     this.swapFramebuffers = new SwapFramebuffers(device, {
-      colorAttachments: [device.preferredColorFormat],
+      colorAttachments: [props.colorFormat || device.preferredColorFormat],
       width: size[0],
       height: size[1]
     });

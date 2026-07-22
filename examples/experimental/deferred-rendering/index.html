@@ -1,0 +1,21 @@
+<!doctype html>
+<head>
+  <style>
+    body { margin: 0; background: #01030b; color-scheme: dark; }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const device = luma.createDevice({
+    id: 'deferred-rendering',
+    adapters: [webgpuAdapter],
+    createCanvasContext: true,
+    featureLevel: 'max'
+  });
+  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+</script>
+<body></body>
