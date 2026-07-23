@@ -1,5 +1,43 @@
 # luma.gl CHANGELOG
 
+## v9.4
+
+### v9.4.0-alpha.1
+
+- feat(core, webgpu): Add WebGPU render bundles and render-pass bundle execution (#2681)
+- feat(core, webgl, webgpu): Move draw state to `RenderPass`, including bindings, vertex arrays, direct and indirect draws (#2689, #2701)
+- feat(core, webgpu, test-utils): Add portable WebGPU feature levels, stage-specific limits, and feature-level test devices (#2663, #2665)
+- feat(core, webgl, webgpu): Add browser and backend support detection for HTML-in-Canvas texture copies (#2674)
+- feat(core): Add shared logical buffer-layout and GPU data-type utilities (#2616, #2637, #2646, #2665, #2695)
+- fix(core): Avoid redundant uniform buffer writes (#2644)
+- fix(core): Preserve ordered buffer uploads across explicit pre-draw and render-pass workflows (#2590)
+- fix(core): Restore legacy canvas sizing and correct CSS-to-device-pixel observation (#2588, #2676)
+- fix(core): Correct the public `RenderPipeline` type import (#2712)
+- feat(engine): Add `DynamicBuffer` support for attributes, indices, materials, and shader bindings (#2587)
+- feat(engine): Add portable texture binding sources and stabilize `VideoTexture` for copied and external video sampling (#2677, #2679, #2737, #2738)
+- feat(engine): Add generic `Animator` and animation clip controllers (#2575)
+- feat(engine): Add always-populated geometry buffer layouts and interleaved CPU-to-GPU geometry uploads while preserving source attribute keys (#2604, #2671)
+- feat(engine): Add index-based color picking, vertex-index picking, picking invalidation, and tooltip support (#2607, #2615, #2618, #2666, #2669)
+- feat(engine): Add deferred shader bindings, custom animation-frame providers, and dynamic shader module registration (#2684)
+- feat(engine, shadertools): Add structured, multi-pass, and temporal shader-pass pipelines (#2569, #2591, #2592, #2664, #2682, #2700, #2703, #2727, #2750)
+- feat(engine): Make model buffer-layout updates idempotent and merge explicit shader layouts with inferred bindings (#2611, #2614, #2616, #2633, #2669, #2710)
+- fix(engine): Prevent pre-draw buffer overwrites and support non-indexed draw offsets (#2590, #2718)
+- feat(effects): Add bloom, depth-of-field, gaussian blur, and persistence postprocessing effects (#2569, #2591, #2592)
+- feat(effects): Add depth-aware blur, SSAO, GTAO, SSGI, SSR, outlines, temporal AA, motion blur, and volumetric fog pipelines (#2700, #2752, #2753, #2754)
+- feat(shadertools): Add portable `ShaderPlugin` composition with generated varyings and vertex inputs (#2664)
+- feat(shadertools): Add WGSL hooks, named injections, numeric/boolean shader conditionals, and capability defines (#2665)
+- feat(shadertools): Add `colors`, packed `storageColors`, and the WGSL `dggs` helper while retaining `floatColors` compatibility (#2633, #2636)
+- feat(shadertools): Add a WGSL helper for subtracting packed IEEE 754 double-precision values (#2632)
+- feat(shadertools): Add the portable `waterMaterial` shader module (#2575)
+- fix(shadertools): Correct `useByteColors` handling in Gouraud and Phong materials (#2584)
+- feat(webgpu): Reflect external textures, comparison samplers, and named depth-texture samplers from WGSL (#2665, #2677)
+- fix(webgpu): Preserve explicit default texture-view mip and array-layer ranges (#2665)
+- fix(webgpu): Support mapped buffer initialization and report the correct GPU resolution (#2586, #2631)
+- fix(webgpu): Correct non-indexed draw offsets (#2718)
+- fix(webgl): Support external framebuffer handles and correct CommonJS subpath exports (#2582, #2597)
+- fix(gltf): Recognize both glTF semantic and shader-facing attribute names when configuring PBR materials (#2654)
+- chore(constants): Restore the deprecated constants entry point for compatibility (#2583)
+
 ## v9.3
 
 ### v9.3.0
