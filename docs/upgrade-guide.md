@@ -13,6 +13,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 ## Upgrading to v10.0
 
 **@luma.gl/experimental**
+
 - `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque
   `sourceTexture` and return the resolved color texture. Applications must render opaque color and
   depth before invoking the OIT renderer; the former base-pass/framebuffer callbacks were removed.
@@ -20,16 +21,8 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   `createWBOITResolveShaderPassPipeline()`. `WBOITRenderer.capture()` returns the accumulation and
   revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
 
-**@luma.gl/core**
-- WebGPU device creation now defaults to `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every supported WebGPU feature and limit by default should pass `featureLevel: 'max'`.
-- Render draw state is now owned by `RenderPass`. `RenderPipelineProps.bindings`,
-  `RenderPipelineProps.bindGroups`, `RenderPipeline.setBindings()`, and
-  `RenderPipeline.draw()` are deprecated compatibility APIs and will be
-  removed in the next major release. New low-level code should call
-  `renderPass.setPipeline()`, `setBindings()`, `setVertexArray()`, and
-  `draw()`.
-
 **@luma.gl/arrow**
+
 - Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
   - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
   - `TableTransform`, `GPUTableComputation`
@@ -40,9 +33,23 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 - Arrow append-in-place helpers and streaming wrapper classes have been removed. Convert each Arrow record batch with `makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, ...)` and retain it with `gpuTable.addBatch(...)`.
 
 **@luma.gl/gpgpu**
+
 - `GPUTableEvaluator` and `getGPUTableEvaluator()` have been removed. Use `GPUDataEvaluator` and `getGPUDataEvaluator()` for one packed fixed-width `GPUData` chunk.
 - Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
 - The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/experimental` with explicit key/value output views and command submission.
+
+## Upgrading to v9.4
+
+**@luma.gl/core**
+
+- WebGPU device creation now defaults to the portable `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every adapter feature and supported limit should pass `featureLevel: 'max'`.
+- Render draw state is now owned by `RenderPass`. `RenderPipelineProps.bindings`, `RenderPipelineProps.bindGroups`, `RenderPipeline.setBindings()`, and `RenderPipeline.draw()` are deprecated compatibility APIs. Migrate low-level rendering code to `renderPass.setPipeline()`, `renderPass.setBindings()`, `renderPass.setVertexArray()`, and `renderPass.draw()`.
+- `CommandEncoder.finish()` no longer accepts command-buffer properties, and the `CommandBufferProps` type has been removed. Set `id` and `userData` on the command encoder; the finished command buffer inherits them.
+
+**@luma.gl/engine**
+
+- `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
+- `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
 
 ## Upgrading to v9.3
 

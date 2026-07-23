@@ -11,10 +11,7 @@ Target Release Date: Q3, 2026
 - **`@luma.gl/tables`** - Generic GPU table/runtime, planning, transform, and compute helpers.
 - **`@luma.gl/arrow`** - New module for working with binary columnar data on the GPU.
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
-
-**@luma.gl/core**
-
-- **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` reports whether the active browser and backend expose the experimental DOM-to-texture rasterization path.
+- **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering, atlas construction, and Arrow text adapters.
 
 **@luma.gl/experimental**
 
@@ -29,19 +26,10 @@ Target Release Date: Q3, 2026
 - **Semantic G-buffer targets** - `GBuffer` owns WebGPU MRT scene color, normal-roughness, velocity, and depth targets plus named extra channels, then exposes the standard depth, normal, and velocity bindings consumed by screen-space effect pipelines.
 - **Composable deferred lighting** - `deferredLighting` resolves Cook-Torrance opaque lighting from G-buffer material channels, reconstructed depth, one directional light, and a fixed-capacity WebGPU point-light storage buffer. The [Deferred Illumination Lab](/examples/experimental/deferred-rendering) exposes the material channels and animated lights live.
 - **Hybrid shadows** - `ShadowMapRenderer`, the group-2 `shadow` WGSL module, and the contact-shadow shader-pass pipeline add WebGPU cascaded directional, spot, and point-light shadows with PCSS filtering. Visualization City demonstrates the complete ordered stack.
-
-**@luma.gl/engine**
-
-- **`Animator`** - New animation helper for timeline-driven animation updates.
-- **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
-- **Temporal shader-pass targets** - `ShaderPassRenderer` supports persistent ping-pong history targets, explicit reset, and safe same-target temporal reads and writes.
-- **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`.
-- **Semantic attribute normalization** - `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0` are normalized to shader attribute names.
-- **Interleaved CPU geometry** - `makeInterleavedGeometry()` packs attributes into one CPU-side vertex buffer.
-- **Interleaved primitive uploads** - Built-in primitives upload as one vertex buffer plus an optional index buffer.
-- **Index-based color picking** - New `indexColorPicking` module encodes integer object indexes into color-picking output without requiring application-provided picking color attributes.
-- **Model layout updates** - `Model.setBufferLayout()` is now idempotent, and explicit WGSL attribute layouts are merged with inferred bindings to support shader metadata without manually declaring uniform bindings.
-- **`ShaderInputs.addModules()`** - `ShaderInputs` can register shader modules and their dependencies after construction, so later uniform and binding updates can include modules discovered after the input store was created.
+- **Clustered deferred lighting** - `ClusteredLightGrid` bins point lights into a configurable 3D screen-space grid and feeds the clustered deferred resolve pipeline.
+- **Orbit controls** - `OrbitControls` provides reusable pointer-driven orbit positioning for experimental scenes.
+- **WebXR** - Experimental animation-frame, camera-texture, and session helpers integrate immersive WebXR rendering with luma.gl.
+- **Visualization City** - The [Advanced Effects example](/examples/experimental/advanced-effects) combines the private G-buffer, deferred-lighting, and shadow stack with the public screen-space effects in one v10 showcase.
 
 **@luma.gl/tables** NEW MODULE
 
@@ -76,7 +64,7 @@ Target Release Date: Q3, 2026
 - **[GeoArrow Example](/examples/arrow/arrow-geoarrow)** - New mixed-geometry showcase routes one GeoArrow-style DenseUnion column through Arrow point, line, and polygon renderers.
 - **[Instancing Example](/examples/arrow/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
 
-**@luma.gl/text** - NEW MODULE
+**@luma.gl/text**
 
 - **GPU-only 2D text facade** - `TextRenderer` renders caller-owned `GPUTextData` while selecting attribute, WebGPU storage, or dictionary strategies automatically.
 - **Incremental text streaming** - Arrow chunks produce independent `GPUTextData` objects that append to a stable `TextRenderer` model without rebuilding earlier batches; `GPUTextResources` lets batches and renderers share one uploaded atlas texture.
@@ -87,51 +75,68 @@ Target Release Date: Q3, 2026
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
 
-**@luma.gl/shadertools**
-
-- **[`dggs`](/docs/api-reference/shadertools/shader-modules/dggs)** - New WGSL helper module decodes compact Uint64 DGGS cell keys for WebGPU storage and boundary extraction workflows.
-- **[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin)** - Reusable shader assembly plugins group shader modules, defines, named injections, portable caller-owned vertex inputs, and generated cross-stage varyings. The new [`filterShaderPlugin`](/examples/arrow/arrow-filtering) and `clipShaderPlugin` demonstrate scalar filtering and instance/geometry clipping on WebGL 2 and WebGPU.
-
-**@luma.gl/effects**
-
-- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, and volumetric fog. They share strict ordered composition with existing effects such as bloom and depth of field.
-- **[Visualization City](/examples/experimental/advanced-effects)** - New MRT showcase combines the complete effect stack with presets, quality levels, debug views, and before/after comparison.
-
 
 ## Version 9.4
 
-Target Release Date: June 30, 2026
+Target Release Date: TBD
 
 **@luma.gl/core**
 
 - **[WebGPU render bundles](/examples/api/render-bundles)** - Record reusable draw commands with `RenderBundleEncoder` and replay them from a `RenderPass`, reducing CPU command-recording time for repeated scenes.
+- **Render-pass draw commands** - `RenderPass` now owns pipeline, binding, vertex-array, direct-draw, indirect-draw, and render-bundle commands. The former `RenderPipeline` draw and binding APIs remain as deprecated compatibility paths.
 - **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.
 - **Stage-specific storage limits** - `device.limits` now reports storage buffer and storage texture availability separately for vertex and fragment stages, so applications can choose storage-backed rendering only where the requested device supports it.
+- **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper remains deferred with `@luma.gl/experimental` until v10.
+- **GPU data and buffer-layout utilities** - New exported helpers decode GPU data types, select native or emulated Float16 arrays, and resolve logical attributes over shared or composite buffer layouts.
 
 **@luma.gl/engine**
 
 - **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
 - **[`VideoTexture`](/docs/api-reference/engine/video-texture)** - Stable live video binding source for caller-owned `HTMLVideoElement` and `VideoFrame` inputs. Portable shaders use copied textures on WebGL and WebGPU, while WGSL `texture_external` can opt into native WebGPU external-video sampling.
+- **`Animator`** - New generic `Animator` and `AnimationClipController` classes manage timeline-driven animation updates. `GLTFAnimator` now builds on the shared controller.
+- **Custom animation-frame providers** - `AnimationLoop` can consume a caller-provided animation-frame source and forward its frame payload, enabling integrations such as WebXR without changing the normal browser loop.
+- **Shader pass pipelines** - `ShaderPassRenderer` supports structured multi-pass effects such as bloom and depth of field.
+- **Temporal shader-pass targets** - `ShaderPassRenderer` supports persistent ping-pong history targets, explicit reset, safe same-target temporal reads and writes, and caller-selected output formats.
+- **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`. CPU attribute keys remain exactly as supplied; synthesized shader-facing layouts map supported glTF semantics such as `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0`.
+- **Interleaved geometry uploads** - `makeInterleavedGeometry()` packs CPU attributes into one buffer, and `makeGPUGeometry()` uses the packed representation by default for one vertex buffer plus an optional index buffer.
+- **Index-based color picking** - `indexColorPicking` encodes integer object indexes without application-provided picking colors. Picking also supports vertex indexes, redraw invalidation, and optional tooltips.
+- **Model layout updates** - `Model.setBufferLayout()` is idempotent, and explicit WGSL attribute layouts are merged with inferred bindings to support shader metadata without manually declaring uniform bindings.
+- **`ShaderInputs.addModules()`** - `ShaderInputs` can register shader modules and dependencies after construction, and it can carry deferred texture and buffer bindings until draw time.
 
 **@luma.gl/webgpu**
 
 - **WGSL depth sampler reflection** - `getShaderLayoutFromWGSL()` now recognizes comparison samplers and named depth texture samplers when building sampler layouts from reflected WGSL.
+- **WGSL external textures** - Reflected `texture_external` declarations now produce external-texture bindings for native video sampling.
 - **Texture default views** - WebGPU texture default views now preserve explicit `TextureProps.view` mip and array-layer ranges.
+- **Mapped buffer initialization** - WebGPU buffers can be initialized through mapped ranges without losing byte offsets or debug data.
 
 **@luma.gl/effects**
 
 - **`bloom`** - New bloom postprocessing effect and shader-pass pipeline.
 - **`dof`** - New depth-of-field postprocessing effect and shader-pass pipeline.
-- **`gaussianblur`** - New gaussian blur postprocessing effect.
+- **`gaussianBlur`** - New gaussian blur postprocessing effect.
 - **`persistenceEffect`** - Moved into `@luma.gl/effects` as a first-class postprocessing effect.
+- **Advanced screen-space effects** - New WebGPU-first composable pipelines provide depth-aware blur, SSAO, temporally stabilized GTAO, colored screen-space diffuse global illumination, outlines, temporal AA, motion blur, roughness-aware temporally stabilized screen-space reflections, and volumetric fog. The pipelines can consume application-provided depth, normal, velocity, and material textures without depending on the private v10 G-buffer implementation.
 
 **@luma.gl/shadertools**
 
 - **[`colors`, `floatColors`, and `storageColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - Semantic color normalization now has a `colors` helper namespace, the legacy `floatColors` alias remains available, and WebGPU shaders can read packed RGBA storage rows through `storageColors`.
+- **[`dggs`](/docs/api-reference/shadertools/shader-modules/dggs)** - New WGSL helpers decode compact Uint64 DGGS cell keys for storage-buffer and boundary-extraction workflows.
+- **WGSL double-precision arithmetic** - The `fp64` shader module can subtract packed IEEE 754 double-precision values directly in WGSL and convert the result to `f32`.
+- **[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin)** - Reusable shader assembly plugins group modules, defines, named injections, caller-owned vertex inputs, and generated cross-stage varyings.
 - **WGSL hooks and injections** - `ShaderAssembler` now applies registered hook functions and standard named injections such as `vs:#main-start` and `fs:#main-end` while assembling unified WGSL shaders.
 - **WGSL shader conditionals** - Shadertools preprocessing accepts simple boolean and numeric `#if` expressions, and assembled WGSL exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS` so inactive resource branches are removed before `@binding(auto)` assignment.
 - **`ShaderPassPipeline`** - New shader-pass pipeline type for structured multi-pass postprocessing.
 - **`waterMaterial`** - New water material shader module with GLSL and WGSL shaders.
+
+**@luma.gl/gltf**
+
+- **Animation controllers** - `GLTFAnimator` uses the shared engine `Animator` while retaining its existing `animations`, `animate()`, `setTime()`, and `getAnimations()` compatibility surface.
+- **Attribute identification** - PBR material setup recognizes both source glTF semantics and their shader-facing aliases.
+
+**@luma.gl/test-utils**
+
+- **Feature-level WebGPU devices** - `getWebGPUTestDevice()` accepts a WebGPU feature level, while `getWebGPUTestDevices()` returns the available requested profiles.
 
 ## Version 9.3
 
