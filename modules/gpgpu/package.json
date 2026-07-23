@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "9.3.2",
+  "version": "9.4.0-alpha.1",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -59,7 +59,7 @@
     "@luma.gl/webgpu": "~9.3.0"
   },
   "dependencies": {
-    "@luma.gl/tables": "~9.3.0",
+    "@luma.gl/tables": "9.4.0-alpha.1",
     "@math.gl/core": "^4.1.0",
     "@math.gl/types": "^4.1.0",
     "@probe.gl/log": "^4.0.8",

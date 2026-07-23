@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-arrow-columns",
-  "version": "9.3.0",
+  "version": "9.4.0-alpha.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@luma.gl/arrow": "~9.3.0",
-    "@luma.gl/core": "~9.3.0",
-    "@luma.gl/engine": "~9.3.0",
-    "@luma.gl/experimental": "~9.3.0",
-    "@luma.gl/shadertools": "~9.3.0",
-    "@luma.gl/tables": "~9.3.0",
-    "@luma.gl/webgpu": "~9.3.0",
+    "@luma.gl/arrow": "9.4.0-alpha.1",
+    "@luma.gl/core": "9.4.0-alpha.1",
+    "@luma.gl/engine": "9.4.0-alpha.1",
+    "@luma.gl/experimental": "9.4.0-alpha.1",
+    "@luma.gl/shadertools": "9.4.0-alpha.1",
+    "@luma.gl/tables": "9.4.0-alpha.1",
+    "@luma.gl/webgpu": "9.4.0-alpha.1",
     "apache-arrow": "^17.0.0",
     "h3-js": "^4.4.0"
   },

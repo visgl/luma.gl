@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-showcase-globe",
-  "version": "9.3.0-alpha.11",
+  "version": "9.4.0-alpha.1",
   "private": true,
   "scripts": {
     "start": "vite",

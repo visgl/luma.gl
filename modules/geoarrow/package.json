@@ -2,7 +2,7 @@
   "private": true,
   "name": "@math.gl/geoarrow",
   "description": "GeoArrow utilities for math.gl",
-  "version": "9.3.0",
+  "version": "9.4.0-alpha.1",
   "license": "MIT",
   "type": "module",
   "repository": {

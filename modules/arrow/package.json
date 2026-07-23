@@ -2,7 +2,7 @@
   "private": true,
   "name": "@luma.gl/arrow",
   "description": "luma.gl Apache Arrow bindings",
-  "version": "9.3.0",
+  "version": "9.4.0-alpha.1",
   "license": "MIT",
   "type": "module",
   "publishConfig": {
@@ -41,11 +41,11 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "dependencies": {
-    "@luma.gl/core": "~9.3.0",
-    "@luma.gl/engine": "~9.3.0",
-    "@luma.gl/shadertools": "~9.3.0",
-    "@luma.gl/tables": "~9.3.0",
-    "@luma.gl/text": "~9.3.0",
+    "@luma.gl/core": "9.4.0-alpha.1",
+    "@luma.gl/engine": "9.4.0-alpha.1",
+    "@luma.gl/shadertools": "9.4.0-alpha.1",
+    "@luma.gl/tables": "9.4.0-alpha.1",
+    "@luma.gl/text": "9.4.0-alpha.1",
     "@math.gl/geoarrow": "workspace:*",
     "@math.gl/polygon": "^4.1.0",
     "@math.gl/types": "^4.1.0",
