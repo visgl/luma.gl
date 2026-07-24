@@ -99,7 +99,7 @@ export class BufferTransform {
     if (options?.outputBuffers) {
       this.transformFeedback.setBuffers(options.outputBuffers);
     }
-    const renderPass = this.device.beginRenderPass({discard: true, ...options});
+    const renderPass = this.device.beginRenderPass({discard: false, ...options});
     this.model.draw(renderPass);
     renderPass.end();
   }
