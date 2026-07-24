@@ -14,6 +14,15 @@ export const DECK_TEXT_STORAGE_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
+/** Row-indexed variant used when each compact glyph record carries its original source row. */
+export const DECK_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT = {
+  attributes: [
+    ...DECK_TEXT_STORAGE_SHADER_LAYOUT.attributes,
+    {name: 'glyphRowIndices', location: 2, type: 'u32', stepMode: 'instance'}
+  ],
+  bindings: []
+} satisfies ShaderLayout;
+
 /** Deck-projected shader for the luma.gl storage text model. */
 export const DECK_TEXT_STORAGE_WGSL = /* wgsl */ `
 ${DECK_ARROW_WGSL_COLOR_UTILS}
@@ -25,7 +34,7 @@ ${DECK_ARROW_WGSL_COLOR_UTILS}
 @group(0) @binding(auto) var<storage, read> textRowAngles: array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowSizes: array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowPixelOffsets: array<vec2<f32>>;
-@group(0) @binding(auto) var<storage, read> textRowClipRects: array<vec2<u32>>;
+@group(0) @binding(auto) var<storage, read> textRowClipRects: array<vec4<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowGlyphStarts: array<u32>;
 @group(0) @binding(auto) var<storage, read> textGlyphFrames: array<vec4<f32>>;
 
@@ -76,35 +85,6 @@ fn getStorageTextCorner(vertexIndex: u32) -> vec2<f32> {
   if (vertexIndex == 3u) { return vec2<f32>(0.0, 0.0); }
   if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
   return vec2<f32>(0.0, 1.0);
-}
-
-fn unpackLowInt16(word: u32) -> i32 {
-  return i32(word << 16u) >> 16;
-}
-
-fn unpackHighInt16(word: u32) -> i32 {
-  return i32(word) >> 16;
-}
-
-fn unpackStorageTextClipRect(words: vec2<u32>) -> vec4<i32> {
-  return vec4<i32>(
-    unpackLowInt16(words.x),
-    unpackHighInt16(words.x),
-    unpackLowInt16(words.y),
-    unpackHighInt16(words.y)
-  );
-}
-
-fn isStorageTextVertexClipped(glyphVertexOffset: vec2<f32>, clipRect: vec4<i32>) -> bool {
-  if (clipRect.z >= 0) {
-    let clipMaxX = f32(clipRect.x + clipRect.z);
-    if (glyphVertexOffset.x < f32(clipRect.x) || glyphVertexOffset.x > clipMaxX) { return true; }
-  }
-  if (clipRect.w >= 0) {
-    let clipMaxY = f32(clipRect.y + clipRect.w);
-    if (glyphVertexOffset.y < f32(clipRect.y) || glyphVertexOffset.y > clipMaxY) { return true; }
-  }
-  return false;
 }
 
 fn unpackStorageTextColor(colorWord: u32) -> vec4<f32> {
@@ -168,25 +148,25 @@ fn vertexMain(
   if (textStorageStyleConfig.useRowPixelOffsets != 0u) {
     pixelOffset = textRowPixelOffsets[rowStorageIndex];
   }
-  let glyphPixelOffset =
+  var glyphPixelOffset =
     rotateStorageTextOffset(glyphVertexOffset * (textSize / 32.0), angleDegrees) * 0.36 +
     pixelOffset;
-  var clipPosition = deck_projectPosition(vec3<f32>(textRowPositions[rowStorageIndex], 0.0));
+  glyphPixelOffset.y *= -1.0;
+  let anchorPosition = deck_projectPosition(vec3<f32>(textRowPositions[rowStorageIndex], 0.0));
+  let clipRect = textRowClipRects[rowStorageIndex];
+  glyphPixelOffset += deck_getTextContentOffset(anchorPosition, clipRect);
+  var clipPosition = anchorPosition;
   clipPosition.x += glyphPixelOffset.x * deckArrowViewport.pixelToClipScale.x * clipPosition.w;
   clipPosition.y += glyphPixelOffset.y * deckArrowViewport.pixelToClipScale.y * clipPosition.w;
 
   var visible = true;
   if (textStorageStyleConfig.hasClipRects != 0u) {
-    visible = !isStorageTextVertexClipped(
-      glyphVertexOffset,
-      unpackStorageTextClipRect(textRowClipRects[rowIndex])
-    );
+    visible = deck_isTextContentVisible(glyphPixelOffset, anchorPosition, clipRect);
   }
-  let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
-  let atlasPixel = glyphFrame.xy + atlasCorner * glyphFrame.zw;
+  let atlasPixel = glyphFrame.xy + corner * glyphFrame.zw;
 
   var outputs: TextStorageVertexOutputs;
-  outputs.position = clipPosition;
+  outputs.position = select(vec4<f32>(0.0), clipPosition, visible);
   outputs.textureCoordinate = atlasPixel / vec2<f32>(textureDimensions(fontAtlasTexture));
   outputs.color = textStorageStyleConfig.constantColor;
   if (textStorageStyleConfig.useRowColors != 0u) {
@@ -195,7 +175,7 @@ fn vertexMain(
   outputs.pickingColor = deck_encodePickingColor(
     textStorageStyleConfig.batchRowIndexBase + rowIndex
   );
-  outputs.visible = select(0.0, 1.0, visible);
+  outputs.visible = 1.0;
   outputs.atlasPage = inputs.glyphIndices.y;
   return outputs;
 }
@@ -217,3 +197,13 @@ fn fragmentMain(inputs: TextStorageVertexOutputs) -> @location(0) vec4<f32> {
   );
 }
 `;
+
+/** Deck storage shader that reads the source row directly from each generated glyph record. */
+export const DECK_TEXT_ROW_INDEXED_STORAGE_WGSL = DECK_TEXT_STORAGE_WGSL.replace(
+  '@location(1) glyphIndices: vec2<u32>,',
+  `@location(1) glyphIndices: vec2<u32>,
+  @location(2) glyphRowIndices: u32,`
+).replace(
+  'let rowIndex = findStorageTextRowIndex(glyphIndex);',
+  'let rowIndex = inputs.glyphRowIndices;'
+);

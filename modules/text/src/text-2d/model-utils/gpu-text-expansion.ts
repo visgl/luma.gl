@@ -123,16 +123,17 @@ export type GpuTextAlignmentExpansionOptions = {
   lineHeight?: number;
 };
 
-/** Storage bindings required by compact glyph expansion compute. */
-export const GPU_TEXT_EXPANSION_STORAGE_BUFFER_COUNT = 9;
+/** Storage bindings required by compact glyph expansion compute before optional row alignment. */
+export const GPU_TEXT_EXPANSION_STORAGE_BUFFER_COUNT = 7;
 /** Storage bindings required by UTF-8 glyph expansion compute. */
 export const GPU_UTF8_TEXT_EXPANSION_STORAGE_BUFFER_COUNT = 10;
 
 /** Whether the device can run compact glyph expansion compute. */
-export function supportsGpuTextExpansion(device: Device): boolean {
+export function supportsGpuTextExpansion(device: Device, alignmentBufferCount = 0): boolean {
   return (
     device.type === 'webgpu' &&
-    device.limits.maxStorageBuffersPerShaderStage >= GPU_TEXT_EXPANSION_STORAGE_BUFFER_COUNT
+    device.limits.maxStorageBuffersPerShaderStage >=
+      GPU_TEXT_EXPANSION_STORAGE_BUFFER_COUNT + alignmentBufferCount
   );
 }
 
@@ -296,6 +297,63 @@ const GPU_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   ],
   attributes: []
 };
+
+function specializeGpuExpandedTextCompute(
+  source: string,
+  useRowTextAnchors: boolean,
+  useRowAlignmentBaselines: boolean
+): {source: string; shaderLayout: ShaderLayout} {
+  let specializedSource = source;
+  const omittedBindings = new Set<string>();
+  if (!useRowTextAnchors) {
+    specializedSource = specializedSource
+      .replace('@group(0) @binding(7) var<storage, read> textRowTextAnchors : array<u32>;\n', '')
+      .replace(
+        `fn getTextAnchor(rowIndex: u32) -> u32 {
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[3], 0));
+  if (textExpansionConfig[5] != 0) {
+    let packedAnchorWord = textRowTextAnchors[rowStorageIndex >> 2u];
+    return (packedAnchorWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
+  }
+  return u32(max(textExpansionConfig[4], 0));
+}`,
+        `fn getTextAnchor(rowIndex: u32) -> u32 {
+  return u32(max(textExpansionConfig[4], 0));
+}`
+      );
+    omittedBindings.add('textRowTextAnchors');
+  }
+  if (!useRowAlignmentBaselines) {
+    specializedSource = specializedSource
+      .replace(
+        '@group(0) @binding(8) var<storage, read> textRowAlignmentBaselines : array<u32>;\n',
+        ''
+      )
+      .replace(
+        `fn getAlignmentBaseline(rowIndex: u32) -> u32 {
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[3], 0));
+  if (textExpansionConfig[7] != 0) {
+    let packedBaselineWord = textRowAlignmentBaselines[rowStorageIndex >> 2u];
+    return (packedBaselineWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
+  }
+  return u32(max(textExpansionConfig[6], 0));
+}`,
+        `fn getAlignmentBaseline(rowIndex: u32) -> u32 {
+  return u32(max(textExpansionConfig[6], 0));
+}`
+      );
+    omittedBindings.add('textRowAlignmentBaselines');
+  }
+  return {
+    source: specializedSource,
+    shaderLayout: {
+      ...GPU_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT,
+      bindings: GPU_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT.bindings.filter(
+        binding => !omittedBindings.has(binding.name)
+      )
+    }
+  };
+}
 
 const GPU_UTF8_MAP_BINDING_OPTIONS = {
   rowByteRanges: 'textRowByteRanges',
@@ -971,15 +1029,23 @@ export function dispatchGpuExpandedTextCompute(
     labelCount: number;
     alignment: Required<
       Pick<GpuTextAlignmentExpansionOptions, 'rowTextAnchorsBuffer' | 'rowAlignmentBaselinesBuffer'>
-    >;
+    > &
+      Pick<GpuTextAlignmentExpansionOptions, 'useRowTextAnchors' | 'useRowAlignmentBaselines'>;
   }
 ): void {
-  const computation = new Computation(device, {
-    id: `${options.id || 'gpu-expanded-text-model'}-compute`,
-    source: state.generated.hasGlyphRowIndices
+  const useRowTextAnchors = state.alignment.useRowTextAnchors ?? false;
+  const useRowAlignmentBaselines = state.alignment.useRowAlignmentBaselines ?? false;
+  const specializedCompute = specializeGpuExpandedTextCompute(
+    state.generated.hasGlyphRowIndices
       ? GPU_EXPANDED_TEXT_COMPUTE_WITH_ROW_INDICES_SOURCE
       : GPU_EXPANDED_TEXT_COMPUTE_SOURCE,
-    shaderLayout: GPU_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT,
+    useRowTextAnchors,
+    useRowAlignmentBaselines
+  );
+  const computation = new Computation(device, {
+    id: `${options.id || 'gpu-expanded-text-model'}-compute`,
+    source: specializedCompute.source,
+    shaderLayout: specializedCompute.shaderLayout,
     bindings: {
       textGlyphRanges: state.compactInput.glyphRangesBuffer,
       textGlyphIds: state.compactInput.glyphIdsBuffer,
@@ -988,8 +1054,10 @@ export function dispatchGpuExpandedTextCompute(
       textGlyphKernings: state.glyphKernings.buffer,
       textExpansionConfig: state.compactInput.expansionConfigBuffer,
       generatedGlyphVertices: state.generated.compactGlyphVertexData,
-      textRowTextAnchors: state.alignment.rowTextAnchorsBuffer,
-      textRowAlignmentBaselines: state.alignment.rowAlignmentBaselinesBuffer
+      ...(useRowTextAnchors ? {textRowTextAnchors: state.alignment.rowTextAnchorsBuffer} : {}),
+      ...(useRowAlignmentBaselines
+        ? {textRowAlignmentBaselines: state.alignment.rowAlignmentBaselinesBuffer}
+        : {})
     }
   });
   if (state.glyphCount > 0 && state.labelCount > 0) {

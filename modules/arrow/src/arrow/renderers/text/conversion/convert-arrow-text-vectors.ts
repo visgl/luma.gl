@@ -103,7 +103,7 @@ const EXPANDED_GLYPH_VERTEX_DATA = 'expandedGlyphVertexData';
 const COMPACT_GLYPH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 2;
 const EXPANDED_GLYPH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 5;
 const CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE =
-  EXPANDED_GLYPH_VERTEX_BYTE_STRIDE + Int16Array.BYTES_PER_ELEMENT * 4;
+  EXPANDED_GLYPH_VERTEX_BYTE_STRIDE + Float32Array.BYTES_PER_ELEMENT * 4;
 const DEFAULT_TEXT_STORAGE_COLOR: [number, number, number, number] = [0, 0, 0, 255];
 const DEFAULT_TEXT_STORAGE_ANGLE = 0;
 const DEFAULT_TEXT_STORAGE_SIZE = 32;
@@ -160,7 +160,7 @@ export type ArrowTextSourceVectors = {
   /** Optional CPU per-row alignment baseline enum values. */
   alignmentBaselines?: Vector<Uint8>;
   /** Optional CPU packed clip rectangles aligned with label rows. */
-  clipRects?: Vector<FixedSizeList<Int16>>;
+  clipRects?: Vector<FixedSizeList<Float32>>;
 };
 
 /** CPU Arrow vectors still needed by storage-backed text expansion. */
@@ -168,7 +168,7 @@ export type ArrowTextStorageSourceVectors = {
   /** CPU plain or dictionary-encoded UTF-8 labels used for storage glyph expansion. */
   texts: ArrowUtf8TextVector;
   /** Optional CPU packed clip rectangles aligned with label rows. */
-  clipRects?: Vector<FixedSizeList<Int16>>;
+  clipRects?: Vector<FixedSizeList<Float32>>;
 };
 
 /**
@@ -307,7 +307,7 @@ export type ArrowTextDictionaryStorageSourceVectors = {
   /** CPU UTF-8 labels validated as dictionary-encoded before compressed glyph layout. */
   texts: ArrowUtf8TextVector;
   /** Optional CPU packed clip rectangles aligned with label rows. */
-  clipRects?: Vector<FixedSizeList<Int16>>;
+  clipRects?: Vector<FixedSizeList<Float32>>;
 };
 
 /** Arrow-to-dictionary-storage conversion input consumed by layer/data-conversion code. */
@@ -352,7 +352,7 @@ type AnyTextStorageInputProps =
 export function buildArrowTextGlyphTable(props: {
   labelTable: Table;
   texts: ArrowUtf8TextVector;
-  clipRects?: Vector<FixedSizeList<Int16>>;
+  clipRects?: Vector<FixedSizeList<Float32>>;
   fontAtlas: FontAtlas;
   lineHeight?: number;
   characterSet?: Set<string>;
@@ -449,7 +449,7 @@ export function buildArrowTextGlyphTable(props: {
 type ResolvedArrowTextInputs = {
   labelTable: Table;
   texts: ArrowUtf8TextVector;
-  clipRects?: Vector<FixedSizeList<Int16>>;
+  clipRects?: Vector<FixedSizeList<Float32>>;
 };
 
 function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextInputs {
@@ -503,7 +503,7 @@ export function resolveArrowTextBatchInputs(
     texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
     clipRects: sourceVectors.clipRects
       ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as Vector<
-          FixedSizeList<Int16>
+          FixedSizeList<Float32>
         >)
       : undefined
   };
@@ -699,7 +699,7 @@ function assertSourceVectorMatchesGPUVector(
 type ResolvedTextStorageBatchRowInputs = {
   batchRowIndexBase: number;
   rowStorageIndexBase: number;
-  clipRects?: Vector<FixedSizeList<Int16>>;
+  clipRects?: Vector<FixedSizeList<Float32>>;
   clipRectsBuffer?: TextStorageBuffer;
   positionsBuffer: TextStorageBuffer;
   colorsBuffer?: TextStorageBuffer;
@@ -743,7 +743,7 @@ function resolveArrowTextStorageInputs(
       texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
       clipRects: sourceVectors.clipRects
         ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as Vector<
-            FixedSizeList<Int16>
+            FixedSizeList<Float32>
           >)
         : undefined,
       positionsBuffer: positionsData.buffer,
@@ -784,7 +784,7 @@ function resolveArrowTextDictionaryStorageInputs(
       texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
       clipRects: sourceVectors.clipRects
         ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as Vector<
-            FixedSizeList<Int16>
+            FixedSizeList<Float32>
           >)
         : undefined,
       positionsBuffer: positionsData.buffer,
@@ -915,7 +915,7 @@ function assertStorageVectorTypes(props: ArrowTextStorageInputProps): void {
     throw new Error('ArrowTextStorageModel alignmentBaselines must be GPUVector');
   }
   const clipRects = props.sourceVectors.clipRects;
-  assertClipRects(clipRects as Vector<FixedSizeList<Int16>> | undefined, props.texts.length);
+  assertClipRects(clipRects as Vector<FixedSizeList<Float32>> | undefined, props.texts.length);
 }
 
 function assertGPUVectorTextStorageInputTypes(props: GPUVectorTextStorageInputProps): void {
@@ -985,10 +985,10 @@ function getGPUVectorTextStorageClipRectsBuffer(
   }
   if (
     clipRectsData.byteOffset !== 0 ||
-    clipRectsData.byteStride !== Int16Array.BYTES_PER_ELEMENT * 4
+    clipRectsData.byteStride !== Float32Array.BYTES_PER_ELEMENT * 4
   ) {
     throw new Error(
-      'TextStorageModel GPUVector clipRects batches must be zero-offset packed Int16x4 buffers'
+      'TextStorageModel GPUVector clipRects batches must be zero-offset packed Float32x4 buffers'
     );
   }
   return clipRectsData.buffer;
@@ -1123,7 +1123,7 @@ function assertTextDictionaryStorageVectorTypes(props: ArrowTextDictionaryStorag
     throw new Error('ArrowTextDictionaryStorageModel alignmentBaselines must be GPUVector');
   }
   const clipRects = props.sourceVectors.clipRects;
-  assertClipRects(clipRects as Vector<FixedSizeList<Int16>> | undefined, props.texts.length);
+  assertClipRects(clipRects as Vector<FixedSizeList<Float32>> | undefined, props.texts.length);
 }
 
 function assertTextDictionaryStorageSourceVectorAlignment(
@@ -1374,10 +1374,10 @@ export function createExpandedGlyphVertexData(
 } {
   const {glyphLayout} = glyphTable;
   const glyphClipRects = glyphTable.table.getChild(GLYPH_CLIP_RECTS_COLUMN) as Vector<
-    FixedSizeList<Int16>
+    FixedSizeList<Float32>
   > | null;
   const glyphClipRectValues = glyphClipRects
-    ? (getArrowVectorBufferSource(glyphClipRects) as Int16Array)
+    ? (getArrowVectorBufferSource(glyphClipRects) as Float32Array)
     : undefined;
   const byteStride = glyphClipRectValues
     ? CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE
@@ -1387,6 +1387,7 @@ export function createExpandedGlyphVertexData(
   const int16Values = new Int16Array(arrayBuffer);
   const uint16Values = new Uint16Array(arrayBuffer);
   const uint32Values = new Uint32Array(arrayBuffer);
+  const float32Values = new Float32Array(arrayBuffer);
   const rowIndices = makeGlyphRowIndices(glyphLayout.startIndices, rowIndexBase);
 
   for (
@@ -1397,6 +1398,7 @@ export function createExpandedGlyphVertexData(
     const batchGlyphIndex = glyphIndex - generatedBufferBatch.recordStart;
     const recordInt16Index = (batchGlyphIndex * byteStride) / Int16Array.BYTES_PER_ELEMENT;
     const recordUint32Index = (batchGlyphIndex * byteStride) / Uint32Array.BYTES_PER_ELEMENT;
+    const recordFloat32Index = (batchGlyphIndex * byteStride) / Float32Array.BYTES_PER_ELEMENT;
     const glyphOffsetIndex = glyphIndex * 2;
     const glyphFrameIndex = glyphIndex * 4;
 
@@ -1411,10 +1413,10 @@ export function createExpandedGlyphVertexData(
 
     if (glyphClipRectValues) {
       const glyphClipRectIndex = glyphIndex * 4;
-      int16Values[recordInt16Index + 10] = glyphClipRectValues[glyphClipRectIndex];
-      int16Values[recordInt16Index + 11] = glyphClipRectValues[glyphClipRectIndex + 1];
-      int16Values[recordInt16Index + 12] = glyphClipRectValues[glyphClipRectIndex + 2];
-      int16Values[recordInt16Index + 13] = glyphClipRectValues[glyphClipRectIndex + 3];
+      float32Values[recordFloat32Index + 5] = glyphClipRectValues[glyphClipRectIndex];
+      float32Values[recordFloat32Index + 6] = glyphClipRectValues[glyphClipRectIndex + 1];
+      float32Values[recordFloat32Index + 7] = glyphClipRectValues[glyphClipRectIndex + 2];
+      float32Values[recordFloat32Index + 8] = glyphClipRectValues[glyphClipRectIndex + 3];
     }
   }
 
@@ -1447,7 +1449,7 @@ export function createExpandedGlyphVertexData(
   if (glyphClipRectValues && shaderAttributeNames.has(GLYPH_CLIP_RECTS_COLUMN)) {
     attributes.push({
       attribute: GLYPH_CLIP_RECTS_COLUMN,
-      format: 'sint16x4',
+      format: 'float32x4',
       byteOffset: EXPANDED_GLYPH_VERTEX_BYTE_STRIDE
     });
   }
@@ -1745,7 +1747,9 @@ export function createArrowTextStorageState(
               rowTextAnchorsBuffer: getComputeTextStorageBuffer(rowState.rowTextAnchorsBuffer),
               rowAlignmentBaselinesBuffer: getComputeTextStorageBuffer(
                 rowState.rowAlignmentBaselinesBuffer
-              )
+              ),
+              useRowTextAnchors: Boolean(props.textAnchors),
+              useRowAlignmentBaselines: Boolean(props.alignmentBaselines)
             }
           }
         );
@@ -2356,7 +2360,7 @@ function assertColumnAvailable(table: Table, columnName: string): void {
 }
 
 function assertClipRects(
-  clipRects: Vector<FixedSizeList<Int16>> | undefined,
+  clipRects: Vector<FixedSizeList<Float32>> | undefined,
   labelCount: number
 ): void {
   if (!clipRects) {
@@ -2368,9 +2372,9 @@ function assertClipRects(
   if (
     !DataType.isFixedSizeList(clipRects.type) ||
     clipRects.type.listSize !== 4 ||
-    !(clipRects.type.children[0]?.type instanceof Int16)
+    !(clipRects.type.children[0]?.type instanceof Float32)
   ) {
-    throw new Error('ArrowTextModel clipRects must be FixedSizeList<Int16>[4]');
+    throw new Error('ArrowTextModel clipRects must be FixedSizeList<Float32>[4]');
   }
 }
 
@@ -2468,7 +2472,7 @@ function createTextStorageDefaultBuffers(
   const clipRectsVector = createTextStorageOwnedGpuVector(
     device,
     `${id}-default-row-clip-rects`,
-    makeArrowFixedSizeListVector(new Uint32(), 2, new Uint32Array(2))
+    makeArrowFixedSizeListVector(new Float32(), 4, new Float32Array([0, 0, -1, -1]))
   );
   return {
     colorsBuffer: getTextStorageGpuVectorBuffer(colorsVector),
@@ -2485,7 +2489,7 @@ function createTextStorageDefaultBuffers(
       Float32Array.BYTES_PER_ELEMENT * 2 +
       Uint32Array.BYTES_PER_ELEMENT +
       Uint32Array.BYTES_PER_ELEMENT +
-      Uint32Array.BYTES_PER_ELEMENT * 2,
+      Float32Array.BYTES_PER_ELEMENT * 4,
     ownedResources: [
       colorsVector,
       anglesVector,
@@ -2513,9 +2517,9 @@ function createTextStorageBatchRowState(
         device,
         `${props.id || 'text-storage-model'}-row-clip-rects-${batchInput.batchRowIndexBase}`,
         makeArrowFixedSizeListVector(
-          new Uint32(),
-          2,
-          packedClipRects.byteLength > 0 ? packedClipRects : new Uint32Array(2)
+          new Float32(),
+          4,
+          packedClipRects.byteLength > 0 ? packedClipRects : new Float32Array(4)
         )
       )
     : undefined;
@@ -2830,7 +2834,9 @@ export function appendArrowTextStorageStateBatches(
               rowTextAnchorsBuffer: getComputeTextStorageBuffer(rowState.rowTextAnchorsBuffer),
               rowAlignmentBaselinesBuffer: getComputeTextStorageBuffer(
                 rowState.rowAlignmentBaselinesBuffer
-              )
+              ),
+              useRowTextAnchors: Boolean(props.textAnchors),
+              useRowAlignmentBaselines: Boolean(props.alignmentBaselines)
             }
           }
         );
@@ -3167,27 +3173,10 @@ function getTextAtlasTexture(
   };
 }
 
-/** Pack signed `[x, y, width, height]` Int16 clip rows into two uint32 words per row. */
-export function packTextStorageClipRects(clipRects: Vector<FixedSizeList<Int16>>): Uint32Array {
+/** Copies deck-style `[x, y, width, height]` Float32 clip rows into packed GPU storage. */
+export function packTextStorageClipRects(clipRects: Vector<FixedSizeList<Float32>>): Float32Array {
   assertClipRects(clipRects, clipRects.length);
-  const clipRectValues = getArrowVectorBufferSource(clipRects) as Int16Array;
-  const packedClipRects = new Uint32Array(clipRects.length * 2);
-  for (let rowIndex = 0; rowIndex < clipRects.length; rowIndex++) {
-    const valueIndex = rowIndex * 4;
-    packedClipRects[rowIndex * 2] = packSignedInt16Pair(
-      clipRectValues[valueIndex],
-      clipRectValues[valueIndex + 1]
-    );
-    packedClipRects[rowIndex * 2 + 1] = packSignedInt16Pair(
-      clipRectValues[valueIndex + 2],
-      clipRectValues[valueIndex + 3]
-    );
-  }
-  return packedClipRects;
-}
-
-function packSignedInt16Pair(lowerValue: number, upperValue: number): number {
-  return ((upperValue & 0xffff) << 16) | (lowerValue & 0xffff);
+  return new Float32Array(getArrowVectorBufferSource(clipRects) as Float32Array);
 }
 
 function getTextAnchorEnum(textAnchor: AnyTextStorageInputProps['textAnchor']): number {

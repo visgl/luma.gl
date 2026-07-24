@@ -42,6 +42,8 @@ export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
+export {GPUTextSelection} from './gpu-text-selection';
+export type {GPUTextSelectionProps} from './gpu-text-selection';
 
 export {GPUSort} from './gpu-sort';
 export type {GPUSortAlgorithm, GPUSortDirection, GPUSortProps} from './gpu-sort';

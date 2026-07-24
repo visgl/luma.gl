@@ -5,7 +5,13 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
-import {DrawCommandBuffer, GPUCommandGraph, GPUCompaction, GPUScan} from '@luma.gl/experimental';
+import {
+  DrawCommandBuffer,
+  GPUCommandGraph,
+  GPUCompaction,
+  GPUScan,
+  GPUTextSelection
+} from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -545,6 +551,116 @@ test('GPUCompaction preserves selected order and writes indirect instance count'
   valuesBuffer.destroy();
   flagsBuffer.destroy();
   outputBuffer.destroy();
+  drawCommands.destroy();
+  t.end();
+});
+
+test('GPUTextSelection gathers selected row-indexed glyph records and indirect count', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const records = new Uint32Array([10, 100, 2, 11, 101, 0, 12, 102, 1, 13, 103, 2, 14, 104, 0]);
+  const rowFlags = new Uint32Array([1, 0, 1]);
+  const recordBuffer = device.createBuffer({
+    data: records,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const rowFlagBuffer = device.createBuffer({
+    data: rowFlags,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const selectedIdBuffer = device.createBuffer({
+    byteLength: 5 * Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const selectedRecordBuffer = device.createBuffer({
+    byteLength: records.byteLength,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const drawCommands = new DrawCommandBuffer(device, {
+    type: 'draw',
+    commands: [{vertexCount: 6, instanceCount: 0}]
+  });
+  const graph = new GPUCommandGraph(device, {id: 'text-selection-test'});
+  const recordsHandle = graph.importBuffer(
+    {id: 'records', byteLength: recordBuffer.byteLength, usage: recordBuffer.usage},
+    recordBuffer
+  );
+  const rowFlagsHandle = graph.importBuffer(
+    {id: 'row-flags', byteLength: rowFlagBuffer.byteLength, usage: rowFlagBuffer.usage},
+    rowFlagBuffer
+  );
+  const selectedIdsHandle = graph.importBuffer(
+    {
+      id: 'selected-ids',
+      byteLength: selectedIdBuffer.byteLength,
+      usage: selectedIdBuffer.usage
+    },
+    selectedIdBuffer
+  );
+  const selectedRecordsHandle = graph.importBuffer(
+    {
+      id: 'selected-records',
+      byteLength: selectedRecordBuffer.byteLength,
+      usage: selectedRecordBuffer.usage
+    },
+    selectedRecordBuffer
+  );
+  new GPUTextSelection({
+    glyphRows: graph.createDataView(recordsHandle, {
+      format: 'uint32',
+      length: 5,
+      byteOffset: 2 * Uint32Array.BYTES_PER_ELEMENT,
+      byteStride: 3 * Uint32Array.BYTES_PER_ELEMENT
+    }),
+    rowFlags: graph.createDataView(rowFlagsHandle, {format: 'uint32', length: 3}),
+    output: graph.createDataView(selectedIdsHandle, {format: 'uint32', length: 5}),
+    count: graph.importGPUData('selected-count', drawCommands.getInstanceCountData(0)),
+    sourceRecords: graph.createDataView(recordsHandle, {
+      format: 'uint32',
+      length: records.length
+    }),
+    outputRecords: graph.createDataView(selectedRecordsHandle, {
+      format: 'uint32',
+      length: records.length
+    }),
+    recordWordLength: 3
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'text-selection-test-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+
+  const selectedIdBytes = await selectedIdBuffer.readAsync();
+  t.deepEqual(
+    Array.from(new Uint32Array(selectedIdBytes.buffer, selectedIdBytes.byteOffset, 4)),
+    [0, 1, 3, 4],
+    'selection preserves original glyph order'
+  );
+  const selectedRecordBytes = await selectedRecordBuffer.readAsync();
+  t.deepEqual(
+    Array.from(new Uint32Array(selectedRecordBytes.buffer, selectedRecordBytes.byteOffset, 12)),
+    [10, 100, 2, 11, 101, 0, 13, 103, 2, 14, 104, 0],
+    'selected compact records retain original row ids'
+  );
+  const countBytes = await drawCommands.buffer.readAsync(
+    drawCommands.getInstanceCountByteOffset(0),
+    Uint32Array.BYTES_PER_ELEMENT
+  );
+  t.equal(
+    new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0],
+    4,
+    'selection writes exact indirect glyph count'
+  );
+
+  compiled.destroy();
+  recordBuffer.destroy();
+  rowFlagBuffer.destroy();
+  selectedIdBuffer.destroy();
+  selectedRecordBuffer.destroy();
   drawCommands.destroy();
   t.end();
 });

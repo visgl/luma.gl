@@ -243,7 +243,7 @@ test('ArrowTextRenderer keeps auto text on attributes below compact compute limi
   const originalMaxStorageBuffersPerShaderStage = device.limits.maxStorageBuffersPerShaderStage;
   Object.defineProperty(device.limits, 'maxStorageBuffersPerShaderStage', {
     configurable: true,
-    value: 8
+    value: 6
   });
   try {
     const renderer = await ArrowTextRenderer.create(device, {

@@ -133,9 +133,9 @@ test('buildArrowTextGlyphTable expands character color lists per glyph', t => {
 
 test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
   const clipRects = makeArrowFixedSizeListVector(
-    new arrow.Int16(),
+    new arrow.Float32(),
     4,
-    new Int16Array([0, 1, 12, -1, 3, 4, -1, 9])
+    new Float32Array([0, 1, 12, -1, 3, 4, -1, 9])
   );
   const result = buildArrowTextGlyphTable({
     labelTable: makeLabelTable(),
@@ -145,7 +145,9 @@ test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
   });
 
   t.deepEqual(
-    Array.from(result.table.getChild('glyphClipRects')!.data[0]!.children[0]!.values as Int16Array),
+    Array.from(
+      result.table.getChild('glyphClipRects')!.data[0]!.children[0]!.values as Float32Array
+    ),
     [0, 1, 12, -1, 0, 1, 12, -1, 3, 4, -1, 9],
     'packed i16x4 clip rectangles repeat for each generated glyph'
   );
@@ -222,15 +224,19 @@ test('convertArrowTextToAttribute uploads packed colors as normalized vectors', 
   t.end();
 });
 
-test('packTextStorageClipRects preserves signed Int16 clip lanes', t => {
+test('packTextStorageClipRects preserves Float32 world-space clip lanes', t => {
   const packedClipRects = packTextStorageClipRects(
-    makeArrowFixedSizeListVector(new arrow.Int16(), 4, new Int16Array([0, 1, 12, -1, -4, 8, -1, 9]))
+    makeArrowFixedSizeListVector(
+      new arrow.Float32(),
+      4,
+      new Float32Array([0, 1, 12, -1, -4, 8, -1, 9])
+    )
   );
 
   t.deepEqual(
-    Array.from(packedClipRects).flatMap(unpackSignedInt16Pair),
+    Array.from(packedClipRects),
     [0, 1, 12, -1, -4, 8, -1, 9],
-    'packed storage rows decode to original signed clip lanes'
+    'storage rows retain original world-space clip lanes'
   );
   t.end();
 });
@@ -1555,10 +1561,6 @@ function makeTextColorListVector(
   >;
 }
 
-function unpackSignedInt16Pair(word: number): [number, number] {
-  return [toSignedInt16(word & 0xffff), toSignedInt16((word >>> 16) & 0xffff)];
-}
-
 function packSignedInt16Pair(lowerValue: number, upperValue: number): number {
   return ((lowerValue & 0xffff) | ((upperValue & 0xffff) << 16)) >>> 0;
 }
@@ -1571,8 +1573,4 @@ function resolveTestStorageBuffer(buffer: unknown): unknown {
 
 function packUint16Pair(lowerValue: number, upperValue: number): number {
   return ((lowerValue & 0xffff) | ((upperValue & 0xffff) << 16)) >>> 0;
-}
-
-function toSignedInt16(value: number): number {
-  return value & 0x8000 ? value - 0x10000 : value;
 }

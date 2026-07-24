@@ -16121,6 +16121,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-deck-gpu-culled-trace@workspace:examples/deck/gpu-culled-trace":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-gpu-culled-trace@workspace:examples/deck/gpu-culled-trace"
+  dependencies:
+    "@deck.gl-community/arrow-layers": "workspace:*"
+    "@deck.gl/core": "npm:9.3.4"
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/experimental": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/text": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-a-buffer@workspace:examples/experimental/a-buffer":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-a-buffer@workspace:examples/experimental/a-buffer"

@@ -26,7 +26,7 @@ export type ArrowTextConversionColumns = {
   positions?: string;
   /** Source column containing plain or dictionary-encoded UTF-8 labels. */
   text?: string;
-  /** Optional source column containing `FixedSizeList<Int16>[4]` clip rectangles. */
+  /** Optional source column containing deck-style `FixedSizeList<Float32>[4]` clip rectangles. */
   clipRects?: string;
   /** Optional source column containing packed row or character RGBA8 colors. */
   colors?: string;

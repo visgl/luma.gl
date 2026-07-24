@@ -339,7 +339,7 @@ export function makeArrowText2DSettingsSchema(
             persist: 'none',
             options: [
               {label: 'None', value: 'none'},
-              {label: 'Row - FixedSizeList<Int16, 4>', value: 'row-clip-rects'}
+              {label: 'Row - FixedSizeList<Float32, 4>', value: 'row-clip-rects'}
             ]
           }
         ]

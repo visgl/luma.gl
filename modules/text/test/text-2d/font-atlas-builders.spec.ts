@@ -74,3 +74,25 @@ test('browser font builders cache and incrementally extend atlases', t => {
   t.deepEqual(Object.keys(extendedAtlas.mapping), ['A', 'B', 'C'], 'extension adds new glyphs');
   t.end();
 });
+
+test('browser font builders align glyphs to a shared baseline', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  for (const [label, fontAtlas] of [
+    [
+      'bitmap',
+      buildBitmapFontAtlas(createFontAtlasSettings('descender-bitmap', {characterSet: 'ag'}))
+    ],
+    ['SDF', buildSdfFontAtlas(createFontAtlasSettings('descender-sdf', {characterSet: 'ag'}))]
+  ] as const) {
+    t.ok(
+      (fontAtlas.mapping.g?.layoutOffsetY ?? 0) + (fontAtlas.mapping.g?.height ?? 0) >
+        (fontAtlas.mapping.a?.layoutOffsetY ?? 0) + (fontAtlas.mapping.a?.height ?? 0),
+      `${label} g extends below the a baseline`
+    );
+  }
+  t.end();
+});

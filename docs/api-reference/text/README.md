@@ -84,6 +84,20 @@ Supported WebGPU inputs automatically use storage-backed text.
 
 `TextRowIndexedStorageModel` stores one extra source-row index per generated glyph. This avoids shader-side row lookup by binary search at the cost of a larger generated glyph vertex record.
 
+## Clip Rectangles
+
+Arrow text clipping is optional. When `clipRects` is absent, renderers bind a constant disabled
+rectangle and do not maintain one rectangle per text row. When supplied, the column is a
+`FixedSizeList<Float32, 4>` (or a `GPUVector<'float32x4'>`) containing `[x, y, width, height]`.
+Negative width disables horizontal clipping and negative height disables vertical clipping.
+
+In `ArrowTextLayer`, rectangle values are world-space offsets from the text anchor. The layer
+projects the rectangle through the active deck viewport, including independent X/Y scale and
+`flipY`. `contentAlignHorizontal` and `contentAlignVertical` can keep text aligned to the visible
+part of a partially off-screen rectangle; `contentCutoffPixels` hides content when the visible
+rectangle becomes smaller than the requested screen-pixel threshold. Glyph atlas coordinates are
+independent of this feature—the rectangle clips positioned text, not atlas sampling.
+
 ## Dictionary Path
 
 Supported dictionary-encoded WebGPU input automatically uses compressed dictionary storage.

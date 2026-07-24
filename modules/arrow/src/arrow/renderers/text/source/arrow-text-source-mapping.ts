@@ -33,7 +33,7 @@ export type ArrowTextSourceVectorSelectors = {
   texts?: string | ArrowUtf8TextVector;
   /** Clip rectangles. Defaults to `clipRects`; `null` disables them. */
   clipRects?: OptionalArrowTextColumnSelector<
-    import('apache-arrow').FixedSizeList<import('apache-arrow').Int16>
+    import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>
   >;
   /** Row/character colors. Defaults to `colors`; `null` disables them. */
   colors?: OptionalArrowTextColumnSelector<RowColorColumnDataType | CharacterColorDataType>;
@@ -54,7 +54,7 @@ export type ArrowTextSourceVectorSelectors = {
 export type ArrowTextMappedSourceVectors = {
   positions: Vector<import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>>;
   texts: ArrowUtf8TextVector;
-  clipRects?: Vector<import('apache-arrow').FixedSizeList<import('apache-arrow').Int16>>;
+  clipRects?: Vector<import('apache-arrow').FixedSizeList<import('apache-arrow').Float32>>;
   colors?: Vector<RowColorColumnDataType | CharacterColorDataType>;
   angles?: Vector<import('apache-arrow').Float32>;
   sizes?: Vector<import('apache-arrow').Float32>;
