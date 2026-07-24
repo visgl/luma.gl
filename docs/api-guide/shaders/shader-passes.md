@@ -136,6 +136,44 @@ const renderer = new ShaderPassRenderer(device, {
 More specialized clustered-lighting or visibility-buffer workflows can replace the first resolve
 while preserving the same effect-facing depth, normal, velocity, and scene-color contract.
 
+GTAO defaults to its backward-compatible full-color composite. Deferred applications that can
+isolate ambient light should request the physically accurate ambient-only mode instead:
+
+```ts
+import {createGTAOShaderPassPipeline} from '@luma.gl/effects';
+import {createDeferredAmbientLightingShaderPassPipeline} from '@luma.gl/experimental';
+
+const ambientRenderer = new ShaderPassRenderer(device, {
+  shaderPasses: [createDeferredAmbientLightingShaderPassPipeline()]
+});
+const ambientLightingTexture = ambientRenderer.renderToTexture({
+  sourceTexture: gBuffer.colorTexture,
+  bindings: {
+    depthTexture: gBuffer.depthTexture,
+    baseColorMetallicTexture: gBuffer.getExtraColorTexture('baseColorMetallic'),
+    emissiveOcclusionTexture: gBuffer.getExtraColorTexture('emissiveOcclusion')
+  },
+  uniforms: {deferredAmbientLighting: {ambientColor: [0.04, 0.04, 0.05]}}
+});
+
+const effects = new ShaderPassRenderer(device, {
+  shaderPasses: [
+    createDeferredLightingShaderPassPipeline(),
+    createGTAOShaderPassPipeline({composition: 'ambient-only'})
+  ]
+});
+
+effects.renderToScreen({
+  sourceTexture: gBuffer.colorTexture,
+  bindings: {...gBuffer.getShaderPassBindings(), ambientLightingTexture}
+});
+```
+
+Ambient-only composition subtracts `ambientLightingTexture * (1 - visibility)` from the lit
+scene. Direct light, material emission, and alpha therefore remain unchanged. The separate
+ambient texture is an explicit application-owned integration boundary; the effect does not
+depend on hidden cross-pipeline render targets.
+
 For side-by-side choices between reflections, ambient occlusion, light assignment, shadows,
 transparency, blur, and temporal effects, see
 [Rendering Techniques and Tradeoffs](/docs/api-guide/shaders/rendering-techniques).

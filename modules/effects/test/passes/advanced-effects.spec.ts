@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Texture} from '@luma.gl/core';
+import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
@@ -19,6 +19,8 @@ import {
   createVolumetricFogShaderPassPipeline,
   depthAwareBlurShaderPassPipeline,
   dofShaderPassPipeline,
+  gtaoAmbientComposite,
+  gtaoEvaluate,
   gtaoTemporal,
   ssgiTemporal,
   ssrTemporal
@@ -55,6 +57,25 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     gtaoTemporal.uniformTypes.inverseProjectionMatrix,
     'mat4x4<f32>',
     'GTAO temporal rejection reconstructs linear view-space depth'
+  );
+  testCase.ok(
+    gtaoEvaluate.source.includes('gtaoEvaluate_integrateSlice'),
+    'GTAO integrates cosine-weighted visibility between signed horizon angles'
+  );
+  testCase.ok(
+    gtaoEvaluate.source.includes('gtaoEvaluate.frameIndex *'),
+    'GTAO rotates and jitters horizon samples across animation frames'
+  );
+
+  const ambientOnlyGTAO = createGTAOShaderPassPipeline({composition: 'ambient-only'});
+  testCase.equal(
+    ambientOnlyGTAO.steps[5].shaderPass,
+    gtaoAmbientComposite,
+    'ambient-only GTAO selects the composable ambient-light correction'
+  );
+  testCase.ok(
+    gtaoAmbientComposite.bindingLayout.some(binding => binding.name === 'ambientLightingTexture'),
+    'ambient-only composition explicitly consumes the isolated ambient contribution'
   );
 
   const globalIllumination = createSSGIShaderPassPipeline({resolutionScale: 0.5});
@@ -148,6 +169,95 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     'mat4x4<f32>',
     'SSR temporal rejection reconstructs linear view-space depth'
   );
+  testCase.end();
+});
+
+test('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU unavailable, skipping ambient-only composition execution');
+    testCase.end();
+    return;
+  }
+
+  const width = 4;
+  const height = 4;
+  const textureProperties = {
+    format: 'rgba8unorm' as const,
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
+  };
+  const sourceTexture = device.createTexture({id: 'gtao-ambient-source', ...textureProperties});
+  const ambientLightingTexture = device.createTexture({
+    id: 'gtao-ambient-lighting',
+    ...textureProperties
+  });
+  const ambientOcclusionTexture = device.createTexture({
+    id: 'gtao-ambient-visibility',
+    ...textureProperties
+  });
+  const framebuffer = device.createFramebuffer({
+    id: 'gtao-ambient-inputs',
+    width,
+    height,
+    colorAttachments: [sourceTexture, ambientLightingTexture, ambientOcclusionTexture]
+  });
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [gtaoAmbientComposite],
+    colorFormat: 'rgba8unorm',
+    flipY: false
+  });
+  renderer.resize([width, height]);
+
+  try {
+    const renderPass = device.beginRenderPass({
+      framebuffer,
+      clearColors: [
+        new Float32Array([0.8, 0.6, 0.4, 1]),
+        new Float32Array([0.2, 0.1, 0.05, 1]),
+        new Float32Array([0.25, 0.25, 0.25, 1])
+      ]
+    });
+    renderPass.end();
+
+    const outputTexture = renderer.renderToTexture({
+      sourceTexture,
+      bindings: {ambientLightingTexture, ambientOcclusionTexture},
+      uniforms: {gtaoAmbientComposite: {strength: 1}}
+    });
+    device.submit();
+
+    testCase.ok(outputTexture, 'ambient-only composition produces a scene-color texture');
+    if (outputTexture) {
+      const layout = outputTexture.computeMemoryLayout({width: 1, height: 1});
+      const readbackBuffer = device.createBuffer({
+        byteLength: layout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      try {
+        outputTexture.readBuffer({width: 1, height: 1}, readbackBuffer);
+        const outputBytes = await readbackBuffer.readAsync(0, layout.byteLength);
+        const pixel = new Uint8Array(outputBytes.buffer, outputBytes.byteOffset, 4);
+        const expected = [0.65, 0.525, 0.3625];
+        for (let channel = 0; channel < expected.length; channel++) {
+          testCase.ok(
+            Math.abs(pixel[channel]! / 255 - expected[channel]!) < 0.015,
+            `channel ${channel} preserves direct/emissive light while occluding ambient`
+          );
+        }
+      } finally {
+        readbackBuffer.destroy();
+      }
+    }
+  } finally {
+    renderer.destroy();
+    framebuffer.destroy();
+    sourceTexture.destroy();
+    ambientLightingTexture.destroy();
+    ambientOcclusionTexture.destroy();
+  }
+
   testCase.end();
 });
 

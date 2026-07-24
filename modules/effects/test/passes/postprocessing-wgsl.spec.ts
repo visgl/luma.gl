@@ -77,6 +77,7 @@ const PLATFORM_INFO = {
 const ADVANCED_SHADER_PASSES = [
   createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
   createGTAOShaderPassPipeline(),
+  createGTAOShaderPassPipeline({composition: 'ambient-only'}),
   createSSGIShaderPassPipeline(),
   createOutlineShaderPassPipeline({normalSource: 'normal-texture'}),
   createTAAShaderPassPipeline(),

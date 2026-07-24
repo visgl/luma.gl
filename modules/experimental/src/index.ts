@@ -70,6 +70,11 @@ export type {
   GBufferShaderPassBindings
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
+export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';
+export {
+  createDeferredAmbientLightingShaderPassPipeline,
+  deferredAmbientLighting
+} from './rendering/deferred-ambient-lighting';
 export type {DeferredLightingProps, DeferredPointLight} from './rendering/deferred-lighting';
 export {
   createDeferredLightingShaderPassPipeline,
