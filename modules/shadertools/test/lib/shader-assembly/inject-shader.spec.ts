@@ -141,7 +141,7 @@ test('injectShader#injectShader', async t => {
 });
 
 test('injectShader#assembleGLSLShaderPair', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),

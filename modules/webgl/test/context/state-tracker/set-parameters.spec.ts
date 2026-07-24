@@ -15,7 +15,7 @@ import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 
 // Settings test, don't reuse a context
 test('WebGL#set and get', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 
@@ -37,7 +37,7 @@ test('WebGL#set and get', async t => {
 });
 
 test('WebGL#composite setter', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const compositeStateKeys = [GL.STENCIL_FUNC, GL.STENCIL_REF, GL.STENCIL_VALUE_MASK];
 
@@ -74,7 +74,7 @@ test('WebGL#composite setter', async t => {
 });
 
 test('WebGL#setGLParameters per-face stencil state', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 
@@ -188,7 +188,7 @@ test('WebGL#setGLParameters per-face stencil state', async t => {
 });
 
 test('WebGLState#get all parameters', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 
@@ -221,7 +221,7 @@ test('WebGLState#get all parameters', async t => {
 });
 
 test('WebGLRenderPass#setParameters stencil reference', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 
@@ -263,7 +263,7 @@ test('WebGLRenderPass#setParameters stencil reference', async t => {
 });
 
 test('WebGL#reset', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   // Set custom values and verify.
   setGLParameters(webglDevice.gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
@@ -297,7 +297,7 @@ test('WebGL#reset', async t => {
 });
 
 test('WebGLState#setGLParameters framebuffer', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 
@@ -322,7 +322,7 @@ test('WebGLState#setGLParameters framebuffer', async t => {
 });
 
 test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 

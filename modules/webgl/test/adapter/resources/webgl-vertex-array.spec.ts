@@ -17,7 +17,7 @@ function createVertexArray(device): WEBGLVertexArray {
 }
 
 test('VertexArray#construct/delete', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   const vertexArray = device.createVertexArray({
     shaderLayout: {attributes: [], bindings: []},
@@ -34,7 +34,7 @@ test('VertexArray#construct/delete', async t => {
 });
 
 test('WEBGLVertexArray#divisors', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   const vertexArray = createVertexArray(device);
 
@@ -54,7 +54,7 @@ test('WEBGLVertexArray#divisors', async t => {
 });
 
 test('WEBGLVertexArray#enable', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   const vertexArray = createVertexArray(device);
 
@@ -104,7 +104,7 @@ test('WEBGLVertexArray#enable', async t => {
 });
 
 test('WEBGLVertexArray#getConstantBuffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   const vertexArray = createVertexArray(device);
 

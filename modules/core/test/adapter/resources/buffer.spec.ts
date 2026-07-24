@@ -684,7 +684,7 @@ test('Buffer#debugData', async t => {
 // WEBGL specific tests
 
 test('WEBGLBuffer#construction', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   let buffer;
 

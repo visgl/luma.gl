@@ -5,7 +5,7 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 // TODO - these tests could run on NullDevice
 
 test('Swap#constructor', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
@@ -18,7 +18,7 @@ test('Swap#constructor', async t => {
 });
 
 test('Swap#destroy', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
@@ -36,7 +36,7 @@ test('Swap#destroy', async t => {
 });
 
 test('Swap#swap', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
@@ -51,7 +51,7 @@ test('Swap#swap', async t => {
 });
 
 test('SwapFramebuffers#resize', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const swap = new SwapFramebuffers(webglDevice, {
     colorAttachments: ['rgba8unorm'],

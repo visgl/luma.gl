@@ -21,7 +21,7 @@ function createTestLabel(
 }
 
 test('DynamicTexture#readAsync', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const data = new Uint8Array([1, 2, 3, 4]);
 
   const texture = new DynamicTexture(device, {
@@ -42,7 +42,7 @@ test('DynamicTexture#readAsync', async t => {
 });
 
 test('DynamicTexture accepts bare typed-array 2d payloads', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const data = new Uint8Array([9, 8, 7, 6]);
 
   const texture = new DynamicTexture(device, {

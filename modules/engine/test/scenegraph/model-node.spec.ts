@@ -20,7 +20,7 @@ void main() { fragmentColor = vec4(1.0); }
 `;
 
 test('ModelNode#constructor', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   for (const device of [webglDevice]) {
     const model = new Model(device, {vs: DUMMY_VS, fs: DUMMY_FS});
@@ -32,7 +32,7 @@ test('ModelNode#constructor', async t => {
 });
 
 test('ModelNode#setProps', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const model = new Model(webglDevice, {vs: DUMMY_VS, fs: DUMMY_FS});
   const modelNode = new ModelNode({model});
 

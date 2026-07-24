@@ -70,7 +70,7 @@ const invalidPointLightModelProps: PointLightModelProps = {
 void invalidPointLightModelProps;
 
 test('Light models filter mixed Light[] input', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   t.equal(TYPECHECK_VALUE_COUNT, 3, 'type-level props compile for all three models');
 
@@ -106,7 +106,7 @@ test('Light models filter mixed Light[] input', async t => {
 });
 
 test('Light models ignore ambient lights', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const ambientLights: Light[] = [{type: 'ambient', color: [255, 255, 255], intensity: 1}];
 
   const pointLightModel = new PointLightModel(device, {
@@ -137,7 +137,7 @@ test('Light models ignore ambient lights', async t => {
 });
 
 test('SpotLightModel derives cone scale from outerConeAngle', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const spotLight = new SpotLightModel(device, {
     lights: [
       {
@@ -165,7 +165,7 @@ test('SpotLightModel derives cone scale from outerConeAngle', async t => {
 });
 
 test('DirectionalLightModel uses explicit bounds for anchors', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const directionalLightModel = new DirectionalLightModel(device, {
     bounds: [
       [-1, -1, -1],
@@ -193,7 +193,7 @@ test('DirectionalLightModel uses explicit bounds for anchors', async t => {
 });
 
 test('DirectionalLightModel falls back to positional light bounds', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const directionalLightModel = new DirectionalLightModel(device, {
     lights: [
       {type: 'point', color: [255, 255, 255], position: [-2, 0, 0]},
@@ -222,7 +222,7 @@ test('DirectionalLightModel falls back to positional light bounds', async t => {
 });
 
 test('DirectionalLightModel falls back to unit scene without positional lights', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const directionalLightModel = new DirectionalLightModel(device, {
     lights: [{type: 'directional', color: [255, 255, 255], direction: [1, 0, 0]}],
     projectionMatrix: PROJECTION_MATRIX,
@@ -246,7 +246,7 @@ test('DirectionalLightModel falls back to unit scene without positional lights',
 });
 
 test('Light model marker colors clamp very large intensities', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const pointLightModel = new PointLightModel(device, {
     lights: [{type: 'point', color: [255, 255, 255], intensity: 1e9, position: [0, 0, 0]}],
     projectionMatrix: PROJECTION_MATRIX,
@@ -262,7 +262,7 @@ test('Light model marker colors clamp very large intensities', async t => {
 });
 
 test('Light models update camera uniforms without rebuilding buffers', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const pointLightModel = new PointLightModel(device, {
     lights: [{type: 'point', color: [255, 255, 255], position: [0, 0, 0]}],
     projectionMatrix: PROJECTION_MATRIX,
@@ -290,7 +290,7 @@ test('Light models update camera uniforms without rebuilding buffers', async t =
 });
 
 test('Light models rebuild buffers when lights change', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const pointLightModel = new PointLightModel(device, {
     lights: [{type: 'point', color: [255, 255, 255], position: [0, 0, 0]}],
     projectionMatrix: PROJECTION_MATRIX,

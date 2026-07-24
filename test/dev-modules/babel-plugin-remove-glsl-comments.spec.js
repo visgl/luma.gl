@@ -1,5 +1,3 @@
-import babel from '@babel/core';
-import plugin from '../../dev-modules/babel-plugin-remove-glsl-comments/index.js';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 const ES6_ENV = {
@@ -110,7 +108,11 @@ function clean(code) {
 }
 
 // TODO - RESTORE
-test.skip('RemoveGLSLComments Babel Plugin', t => {
+test.skip('RemoveGLSLComments Babel Plugin', async t => {
+  const [{default: babel}, {default: plugin}] = await Promise.all([
+    import('@babel/core'),
+    import('../../dev-modules/babel-plugin-remove-glsl-comments/index.js')
+  ]);
   TEST_CASES.forEach(testCase => {
     const {code} = babel.transform(testCase.input, {
       comments: true,

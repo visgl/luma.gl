@@ -123,7 +123,7 @@ test('gltf#getVertexCount - null attributes skipped', t => {
 });
 
 test('gltf#parseGLTF - box.glb integration', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   try {
     const gltf = await load('test/data/box.glb', GLTFLoader);
@@ -143,7 +143,7 @@ test('gltf#parseGLTF - box.glb integration', async t => {
 });
 
 test('gltf#parseGLTF - non-indexed geometry', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   try {
     const gltf = await load('test/data/box-non-indexed.glb', GLTFLoader);
@@ -166,7 +166,7 @@ test('gltf#parseGLTF - non-indexed geometry', async t => {
 });
 
 test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   try {
     const gltf = await load('test/data/quantized-point-cloud.glb', GLTFLoader);
@@ -200,7 +200,7 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
 });
 
 test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   try {
     const gltf = await load('test/data/nonquantized.glb', GLTFLoader);
@@ -233,7 +233,7 @@ test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
 });
 
 test('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   try {
     const gltf = await load('test/data/quantized.glb', GLTFLoader);

@@ -38,6 +38,19 @@ const CHARACTER_MAPPING: CharacterMapping = {
   B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7},
   '🙂': {x: 8, y: 0, width: 8, height: 8, anchorX: 4, anchorY: 4, advance: 9}
 };
+
+function makeTestImageData(width: number, height: number): ImageData {
+  if (typeof ImageData !== 'undefined') {
+    return new ImageData(width, height);
+  }
+  return {
+    colorSpace: 'srgb',
+    data: new Uint8ClampedArray(width * height * 4),
+    height,
+    width
+  } as ImageData;
+}
+
 const FONT_ATLAS: FontAtlas = {
   baselineOffset: 1,
   lineHeight: 10,
@@ -46,7 +59,7 @@ const FONT_ATLAS: FontAtlas = {
   yOffsetMax: 10,
   mapping: CHARACTER_MAPPING,
   renderSettings: {mode: 'bitmap', threshold: 0, smoothing: 0},
-  pages: [new ImageData(16, 16)],
+  pages: [makeTestImageData(16, 16)],
   width: 16,
   height: 16
 };

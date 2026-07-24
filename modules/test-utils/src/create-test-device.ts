@@ -16,7 +16,7 @@ type TestDeviceCache = {
   /** A null device intended for testing - @note Only available after getTestDevices() has completed */
   nullDevicePromise: Promise<NullDevice> | null;
   /** This WebGL Device can be used directly but will not have WebGL debugging initialized */
-  webglDevicePromise: Promise<WebGLDevice> | null;
+  webglDevicePromise: Promise<WebGLDevice | null> | null;
   /** A shared offscreen WebGL device for presentation-context tests */
   presentationWebglDevicePromise: Promise<WebGLDevice | null> | null;
   /** WebGPU Devices intended for testing, keyed by featureLevel */
@@ -35,6 +35,10 @@ const testDeviceCache = getOrCreateTestDeviceCache();
 
 type LostAwareDevice = {
   isLost: boolean;
+};
+
+type TestContext = {
+  skip: (message?: string) => never;
 };
 
 type TestDeviceType =
@@ -110,11 +114,17 @@ export async function getWebGPUTestDevices(
   return devices.filter((device): device is WebGPUDevice => device !== null);
 }
 
-/** returns WebGL device promise, if available */
-export async function getWebGLTestDevice(): Promise<WebGLDevice> {
-  return _refreshLostCachedTestDevice(getOrCreateWebGLTestDevicePromise, () => {
+/** Returns a WebGL test device, or skips the current test when a context is supplied. */
+export async function getWebGLTestDevice(testContext: TestContext): Promise<WebGLDevice>;
+export async function getWebGLTestDevice(): Promise<WebGLDevice | null>;
+export async function getWebGLTestDevice(testContext?: TestContext): Promise<WebGLDevice | null> {
+  const device = await _refreshLostCachedTestDevice(getOrCreateWebGLTestDevicePromise, () => {
     testDeviceCache.webglDevicePromise = null;
   });
+  if (!device && testContext) {
+    testContext.skip('WebGL is not available in this test runtime');
+  }
+  return device;
 }
 
 /** returns an offscreen WebGL device promise for presentation-context tests, if available */
@@ -134,7 +144,7 @@ function getOrCreateWebGPUTestDevicePromise(
   return testDeviceCache.webgpuDevicePromises[featureLevel];
 }
 
-function getOrCreateWebGLTestDevicePromise(): Promise<WebGLDevice> {
+function getOrCreateWebGLTestDevicePromise(): Promise<WebGLDevice | null> {
   testDeviceCache.webglDevicePromise ||= makeWebGLTestDevice();
   return testDeviceCache.webglDevicePromise;
 }
@@ -177,8 +187,8 @@ async function makeWebGPUTestDevice(
 }
 
 /** returns WebGL device promise, if available */
-async function makeWebGLTestDevice(): Promise<WebGLDevice> {
-  const webglDeviceResolvers = withResolvers<WebGLDevice>();
+async function makeWebGLTestDevice(): Promise<WebGLDevice | null> {
+  const webglDeviceResolvers = withResolvers<WebGLDevice | null>();
   try {
     const webglDevice = (await luma.createDevice({
       id: 'webgl-test-device',

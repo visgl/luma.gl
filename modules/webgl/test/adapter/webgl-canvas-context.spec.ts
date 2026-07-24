@@ -8,7 +8,7 @@ import {WebGLCanvasContext} from '@luma.gl/webgl';
 
 test('WebGLDevice#canvas context creation', async t => {
   t.ok(WebGLCanvasContext, 'WebGLCanvasContext defined');
-  const webGLTestDevice = await getWebGLTestDevice();
+  const webGLTestDevice = await getWebGLTestDevice(t);
   t.ok(
     webGLTestDevice.getDefaultCanvasContext() instanceof WebGLCanvasContext,
     'Default context creation ok'

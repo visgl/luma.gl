@@ -29,7 +29,7 @@ void main()
 `;
 
 test('WebGL#TransformFeedback#constructor/destroy', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const buffer1 = webglDevice.createBuffer({byteLength: 16});
   const buffer2 = webglDevice.createBuffer({byteLength: 16});
@@ -52,7 +52,7 @@ test('WebGL#TransformFeedback#constructor/destroy', async t => {
 });
 
 test('WebGL#TransformFeedback#setBuffers', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const buffer1 = webglDevice.createBuffer({byteLength: 100});
   const buffer2 = webglDevice.createBuffer({byteLength: 200});
@@ -106,7 +106,7 @@ test('WebGL#TransformFeedback#setBuffers', async t => {
 });
 
 test('WebGL#TransformFeedback#capture', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   // TODO(v9) Test writing with offset into output buffer.
 

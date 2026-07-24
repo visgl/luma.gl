@@ -8,25 +8,17 @@ import {
   GL_PARAMETER_SETTERS
 } from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 
-import {luma} from '@luma.gl/core';
 import {
-  WebGLDevice,
   getGLParameters,
   setGLParameters,
   resetGLParameters,
   WebGLStateTracker
 } from '@luma.gl/webgl';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {stringifyTypedArray} from './context-state.spec';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-enum-settings';
-
-// Settings test, don't reuse a context
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-const devicePromise = luma.createDevice({
-  type: 'webgl',
-  createCanvasContext: true
-}) as Promise<WebGLDevice>;
 
 test('WebGLStateTracker#imports', async t => {
   t.ok(typeof WebGLStateTracker === 'function', 'WebGLStateTracker imported OK');
@@ -43,7 +35,7 @@ test('WebGLStateTracker#imports', async t => {
 // });
 
 test('WebGLStateTracker#push & pop', async t => {
-  const device = await devicePromise;
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -115,7 +107,7 @@ test('WebGLStateTracker#push & pop', async t => {
 });
 
 test('WebGLStateTracker#gl API', async t => {
-  const device = await devicePromise;
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -172,7 +164,7 @@ test('WebGLStateTracker#gl API', async t => {
 });
 
 test('WebGLStateTracker#intercept gl calls', async t => {
-  const device = await devicePromise;
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -216,7 +208,7 @@ test('WebGLStateTracker#intercept gl calls', async t => {
 });
 
 test('WebGLStateTracker#not cached parameters', async t => {
-  const device = await devicePromise;
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -241,7 +233,7 @@ test('WebGLStateTracker#not cached parameters', async t => {
 });
 
 test('WebGLStateTracker#tracks metadata on gl.lumaState', async t => {
-  const device = await devicePromise;
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   const state = WebGLStateTracker.get(gl);

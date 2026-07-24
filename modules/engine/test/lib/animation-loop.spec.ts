@@ -10,7 +10,7 @@ import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 import {AnimationLoop, AnimationLoopTemplate, makeAnimationLoop} from '@luma.gl/engine';
 
 test('engine#AnimationLoop constructor', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   t.ok(AnimationLoop, 'AnimationLoop imported');
   const animationLoop = new AnimationLoop({device});
@@ -19,7 +19,7 @@ test('engine#AnimationLoop constructor', async t => {
 });
 
 test('engine#AnimationLoop uses provided stats object', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const customStats = luma.stats.get('GPU Time and Memory');
   customStats.reset();
   const frameRate = customStats.get('Frame Rate');
@@ -54,7 +54,7 @@ test('engine#AnimationLoop uses provided stats object', async t => {
 });
 
 test('engine#AnimationLoop start,stop', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   let initializeCalled = 0;
   let renderCalled = 0;
@@ -85,7 +85,7 @@ test('engine#AnimationLoop start,stop', async t => {
 });
 
 test('engine#AnimationLoop redraw', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   let renderCalled = 0;
 
@@ -106,7 +106,7 @@ test('engine#AnimationLoop redraw', async t => {
 });
 
 test('engine#AnimationLoop passes frame payload from custom animation frame provider', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const animationFrame = {};
   let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
     null;
@@ -143,7 +143,7 @@ test('engine#AnimationLoop passes frame payload from custom animation frame prov
 });
 
 test('engine#AnimationLoop should not call initialize more than once', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   let initializeCalled = 0;
 
@@ -162,7 +162,7 @@ test('engine#AnimationLoop should not call initialize more than once', async t =
 });
 
 test('engine#AnimationLoop two start()s should only run one loop', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   let renderCalled = 0;
 
@@ -183,7 +183,7 @@ test('engine#AnimationLoop two start()s should only run one loop', async t => {
 });
 
 test('engine#AnimationLoop start followed immediately by stop() should stop', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   let initializeCalled = 0;
 
@@ -201,7 +201,7 @@ test('engine#AnimationLoop start followed immediately by stop() should stop', as
 });
 
 test('engine#makeAnimationLoop stops after template initialization failure', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   let renderCalled = 0;
 
   class FailingAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -238,7 +238,7 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
 });
 
 test('engine#AnimationLoop a start/stop/start should not call initialize again', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   let initializeCalled = 0;
 
@@ -259,7 +259,7 @@ test('engine#AnimationLoop a start/stop/start should not call initialize again',
 });
 
 test('engine#AnimationLoop GPU timing graceful fallback', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
 
   const animationLoop = new AnimationLoop({device});
   await animationLoop.start();

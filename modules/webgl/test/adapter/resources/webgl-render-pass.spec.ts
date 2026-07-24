@@ -9,7 +9,7 @@ import {WEBGLRenderPass} from '@luma.gl/webgl';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 test('WEBGLRenderPass#drawBuffers for framebuffer attachments', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   const drawBufferCalls: number[][] = [];
@@ -37,7 +37,7 @@ test('WEBGLRenderPass#drawBuffers for framebuffer attachments', async t => {
 });
 
 test('WEBGLRenderPass#drawBuffers for default framebuffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   const drawBufferCalls: number[][] = [];
@@ -58,7 +58,7 @@ test('WEBGLRenderPass#drawBuffers for default framebuffer', async t => {
 });
 
 test('WEBGLRenderPass#drawBuffers for explicit default framebuffer wrapper', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   const drawBufferCalls: number[][] = [];
@@ -80,7 +80,7 @@ test('WEBGLRenderPass#drawBuffers for explicit default framebuffer wrapper', asy
 });
 
 test('WEBGLRenderPass#drawBuffers for wrapped external WebGLFramebuffer', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
 
   const drawBufferCalls: number[][] = [];
@@ -122,7 +122,7 @@ test('WEBGLRenderPass#drawBuffers for wrapped external WebGLFramebuffer', async 
 });
 
 test('WEBGLRenderPass flushes deferred default canvas resize', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const canvasContext = device.getDefaultCanvasContext();
   const canvas = canvasContext.canvas as HTMLCanvasElement;
   const {gl} = device;

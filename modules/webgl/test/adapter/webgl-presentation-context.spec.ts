@@ -148,7 +148,7 @@ test('WebGLPresentationContext fails without a default canvas context', async t 
 });
 
 test('WebGLPresentationContext fails when default canvas is not offscreen', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const destinationCanvas = document.createElement('canvas');
 
   t.throws(

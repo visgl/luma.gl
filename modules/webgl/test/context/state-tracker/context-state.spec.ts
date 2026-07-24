@@ -40,7 +40,7 @@ test('WebGL#state', async t => {
 });
 
 test('WebGLState#getGLParameters (WebGL)', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
   const parameters = getGLParameters(webglDevice.gl);
@@ -57,7 +57,7 @@ test('WebGLState#getGLParameters (WebGL)', async t => {
 
 // TODO - restore asap
 test('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 
@@ -77,7 +77,7 @@ test('WebGLState#setGLParameters (Mixing enum and function style keys)', async t
 
 // TODO - restore asap
 test('WebGLState#setGLParameters (Argument expansion for ***SeparateFunc setters))', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const expectedValues = {
     // blendFunc
@@ -122,7 +122,7 @@ test('WebGLState#setGLParameters (Argument expansion for ***SeparateFunc setters
 });
 
 test('WebGLState#withGLParameters', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const checkParameters = expected => {
     const parameters = getGLParameters(webglDevice.gl);
@@ -196,7 +196,7 @@ test('WebGLState#withGLParameters', async t => {
 });
 
 test('WebGLState#withGLParameters: recursive', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 
@@ -326,7 +326,7 @@ test('WebGLState#withGLParameters: recursive', async t => {
 
 // EXT_blend_minmax
 test('WebGLState#BlendEquationMinMax', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   // Verify if state set is scuccessful, we could be just returning the value from cache.
 
@@ -377,7 +377,7 @@ test('WebGLState#BlendEquationMinMax', async t => {
 });
 
 test('WebGLState#bindFramebuffer', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const framebuffer = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
   const framebufferTwo = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
@@ -447,7 +447,7 @@ test('WebGLState#bindFramebuffer', async t => {
 });
 
 test('WebGLState#withGLParameters framebuffer', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const framebufferOne = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
 
@@ -486,7 +486,7 @@ test('WebGLState#withGLParameters framebuffer', async t => {
 });
 
 test('WebGLState#withGLParameters empty parameters object', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   resetGLParameters(webglDevice.gl);
 

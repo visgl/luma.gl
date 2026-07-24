@@ -54,7 +54,7 @@ type BenchmarkSummary = {
 };
 
 test('WebGPU CPU hotspot benchmark distinguishes default canvas and explicit framebuffer paths', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const webgpuDevice = await getWebGPUTestDevice();
 
   const webglDefaultSummary = measureScenario(webglDevice, () => renderEmptyFrame(webglDevice, {}));

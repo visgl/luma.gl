@@ -9,7 +9,7 @@ import {Device, Texture} from '@luma.gl/core';
 
 /** Creates a minimal, no-op transform. */
 test('TextureTransform#constructor', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const targetTexture = webglDevice.createTexture({
     data: new Float32Array([201, 202, 203, 1.0]),
@@ -32,7 +32,7 @@ test('TextureTransform#constructor', async t => {
 
 /** Computes a sum over vertex attribute values by writing to framebuffer. */
 test('TextureTransform#attribute', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const src = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
   const targetTexture = webglDevice.createTexture({
@@ -74,7 +74,7 @@ test('TextureTransform#attribute', async t => {
 
 /** Computes a sum over texture pixels by writing to framebuffer. */
 test('TextureTransform#texture', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const srcData = new Uint8Array([2, 10, 255, 255]);
   const dstData = new Uint8Array([8, 40, 255, 255]); // src x 4

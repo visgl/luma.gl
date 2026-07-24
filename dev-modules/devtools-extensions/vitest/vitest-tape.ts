@@ -1,4 +1,4 @@
-import {test as vitestTest, expect} from 'vitest';
+import {test as vitestTest, expect, type TestContext} from 'vitest';
 
 type TestCallback = (test: Test) => void | Promise<void>;
 
@@ -103,6 +103,7 @@ export interface Test {
   ok(value: unknown, message?: string): void;
   pass(message?: string): void;
   plan(assertionCount: number): void;
+  skip(message?: string): never;
   teardown(callback: () => void | Promise<void>): void;
   throws(
     callback: () => unknown,
@@ -122,7 +123,7 @@ class VitestTape implements Test {
   private teardownCallbacks: Array<() => void | Promise<void>> = [];
   private timeoutMilliseconds?: number;
 
-  constructor() {
+  constructor(private readonly testContext: TestContext) {
     this.endPromise = new Promise(resolve => {
       this.endResolver = resolve;
     });
@@ -229,6 +230,10 @@ class VitestTape implements Test {
     this.plannedAssertionCount = assertionCount;
   }
 
+  skip(message?: string): never {
+    return this.testContext.skip(message);
+  }
+
   teardown(callback: () => void | Promise<void>): void {
     this.teardownCallbacks.push(callback);
   }
@@ -315,12 +320,12 @@ function wrapTest(
   vitestImplementation: typeof vitestTest | typeof vitestTest.only
 ): (name: string, callback?: TestCallback) => ReturnType<typeof vitestImplementation> {
   return ((name: string, callback?: TestCallback) =>
-    vitestImplementation(name, async () => {
+    vitestImplementation(name, async testContext => {
       if (!callback) {
         return;
       }
 
-      const tapeTest = new VitestTape();
+      const tapeTest = new VitestTape(testContext);
       const result = tapeTest.run(callback);
 
       if (isPromiseLike(result)) {

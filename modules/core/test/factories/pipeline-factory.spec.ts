@@ -98,7 +98,7 @@ test('PipelineFactory#import', t => {
 });
 
 test('PipelineFactory#getDefaultPipelineFactory', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const pm1 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const pm2 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
@@ -110,7 +110,7 @@ test('PipelineFactory#getDefaultPipelineFactory', async t => {
 });
 
 test('PipelineFactory#release', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching not enabled');
     t.end();
@@ -134,7 +134,7 @@ test('PipelineFactory#release', async t => {
 });
 
 test('PipelineFactory#caching with parameters', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching not enabled');
     t.end();
@@ -207,7 +207,7 @@ test('PipelineFactory#caching with parameters', async t => {
 });
 
 test('PipelineFactory#caching with topology on webgl', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching not enabled');
     t.end();
@@ -248,7 +248,7 @@ test('PipelineFactory#caching with topology on webgl', async t => {
 });
 
 test('PipelineFactory#caching with bufferLayout on webgl', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching not enabled');
     t.end();
@@ -411,7 +411,7 @@ test('PipelineFactory#caching with explicit WebGPU depth attachments when depth 
 });
 
 test('PipelineFactory#caching with shaderLayout on webgl', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching not enabled');
     t.end();
@@ -456,7 +456,7 @@ test('PipelineFactory#caching with shaderLayout on webgl', async t => {
 });
 
 test('PipelineFactory#shared WebGL program cache is keyed by shader identity', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching not enabled');
     t.end();
@@ -557,7 +557,7 @@ test.skip('PipelineFactory#sharing can be disabled independently from wrapper ca
 });
 
 test('PipelineFactory#shared WebGL program cache is keyed by transform feedback varyings', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching not enabled');
     t.end();

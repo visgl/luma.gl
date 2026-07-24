@@ -21,7 +21,7 @@ const EXTERNAL_TEXTURE_BINDING = {
 } as const;
 
 test('webxr#WebXRCameraTexture resolves borrowed raw camera textures once per generation', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   const {gl} = device;
   const cameraTextureHandle = gl.createTexture()!;
   let deleteTextureCallCount = 0;

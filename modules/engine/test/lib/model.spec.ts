@@ -123,7 +123,7 @@ function makeCountingTextureBindingSource(texture: Texture): TextureBindingSourc
 }
 
 test('Model#construct/destruct', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const model = new Model(webglDevice, {
     id: 'construct-destruct-test',
@@ -179,7 +179,7 @@ test('Model#draw skips zero-instance submissions', async t => {
 });
 
 test('Model#multiple delete', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const model1 = new Model(webglDevice, {
     id: 'multiple-delete-test-1',
@@ -208,7 +208,7 @@ test('Model#multiple delete', async t => {
 });
 
 test('Model reuses one texture source resolution while preparing bind groups', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const texture = webglDevice.createTexture({width: 1, height: 1});
   const textureBindingSource = makeCountingTextureBindingSource(texture);
   const model = new Model(webglDevice, {
@@ -235,7 +235,7 @@ test('Model reuses one texture source resolution while preparing bind groups', a
 });
 
 test('Model#setAttributes', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const buffer1 = webglDevice.createBuffer({data: new Float32Array(9).fill(0)});
   const buffer2 = webglDevice.createBuffer({data: new Float32Array(9).fill(1)});
@@ -282,7 +282,7 @@ test('Model#setAttributes', async t => {
 });
 
 test('Model#setters, getters', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const model = new Model(webglDevice, {
     id: 'setters-getters-test',
     topology: 'point-list',
@@ -305,7 +305,7 @@ test('Model#setters, getters', async t => {
 });
 
 test('Model#draw', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   const model = new Model(webglDevice, {
     id: 'draw-test',
@@ -504,7 +504,7 @@ test('Model resolves DynamicBuffer shader bindings to the current backing buffer
 
 // TODO - Re-enable after headless Chromium stops rejecting this valid GLSL shader with no compiler log.
 test.skip('Model rebinds DynamicBuffer attributes during predraw', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const dynamicBuffer = new DynamicBuffer(webglDevice, {
     data: new Float32Array(16).fill(1),
     usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC
@@ -541,7 +541,7 @@ test.skip('Model rebinds DynamicBuffer attributes during predraw', async t => {
 
 // TODO - Re-enable after headless Chromium stops rejecting this valid GLSL shader with no compiler log.
 test.skip('Model rebinds DynamicBuffer index buffers during predraw', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const dynamicIndexBuffer = new DynamicBuffer(webglDevice, {
     data: new Uint16Array([0, 1, 2]),
     usage: Buffer.INDEX | Buffer.COPY_DST | Buffer.COPY_SRC
@@ -627,7 +627,7 @@ test('Model#getBindingDebugTable', async t => {
 
   wgslModel.destroy();
 
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const glslModel = new Model(webglDevice, {
     id: 'binding-debug-table-glsl-test',
     vs: DUMMY_VS,
@@ -746,7 +746,7 @@ async function waitForPipelineError(pipeline: {
 }
 
 test('Model#pipeline caching', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (isSoftwareBackedDevice(webglDevice)) {
     t.comment('Skipping WebGL pipeline caching test on a software-backed adapter');
     t.end();
@@ -804,7 +804,7 @@ test('Model#pipeline caching', async t => {
 });
 
 test('Model#setBufferLayout is idempotent', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   const model = new Model(webglDevice, {
     id: 'set-buffer-layout-idempotent-test',
     topology: 'point-list',
@@ -825,7 +825,7 @@ test('Model#setBufferLayout is idempotent', async t => {
 });
 
 test('Model#pipeline caching with defines and modules', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
   if (isSoftwareBackedDevice(webglDevice)) {
     t.comment('Skipping WebGL pipeline caching-with-modules test on a software-backed adapter');
     t.end();

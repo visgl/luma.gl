@@ -1,2 +1,2 @@
-import './arrow-polygon-model.node.spec';
-import './arrow-polygon-source-mapping.node.spec';
+import './arrow-polygon-model.spec';
+import './arrow-polygon-source-mapping.spec';

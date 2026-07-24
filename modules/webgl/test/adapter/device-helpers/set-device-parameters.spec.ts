@@ -14,7 +14,7 @@ const getOrSkipWebGLTestDevice = async (t: {
   comment: (...messages: unknown[]) => void;
   end: () => void;
 }): Promise<WebGLDevice | null> => {
-  const device = await getWebGLTestDevice();
+  const device = await getWebGLTestDevice(t);
   if (!device || !device.gl || device.isLost) {
     t.comment('WebGL device not available');
     t.end();

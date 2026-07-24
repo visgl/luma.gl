@@ -28,6 +28,7 @@ export async function getVitestConfig(options = {}) {
   const coverageConfig = vitestConfig.coverage || {};
   const softwareGpu = Boolean(vitestConfig.softwareGpu);
   const tsconfigAliases = getTsconfigAliases(tsconfigProjects);
+  const testPatterns = ['modules/**/test/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'];
 
   const createPlaywrightProvider = () =>
     playwright({
@@ -65,7 +66,7 @@ export async function getVitestConfig(options = {}) {
             name: 'node',
             color: 'blue',
             environment: 'node',
-            include: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}'],
+            include: testPatterns,
             exclude: excludePatterns,
             browser: {
               enabled: false
@@ -81,8 +82,8 @@ export async function getVitestConfig(options = {}) {
             fileParallelism,
             testTimeout,
             setupFiles: [BROWSER_PROCESS_SHIM_PATH],
-            include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
-            exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...excludePatterns],
+            include: testPatterns,
+            exclude: excludePatterns,
             browser: {
               enabled: true,
               provider: createPlaywrightProvider(),
@@ -99,8 +100,8 @@ export async function getVitestConfig(options = {}) {
             fileParallelism,
             testTimeout,
             setupFiles: [BROWSER_PROCESS_SHIM_PATH],
-            include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
-            exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...excludePatterns],
+            include: testPatterns,
+            exclude: excludePatterns,
             browser: {
               enabled: true,
               provider: createPlaywrightProvider(),

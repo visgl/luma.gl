@@ -26,8 +26,9 @@ Repo customization:
 Project assumptions:
 - Vitest is available in the repo
 - `tsconfig.json` exists
-- browser tests are matched by `modules/**/*.spec.{ts,js}` and `test/**/*.spec.{ts,js}`
-- node-only tests are matched by `*.node.spec.*`
+- node and browser projects run the same `modules/**/*.spec.{ts,js}` and
+  `test/**/*.spec.{ts,js}` files
+- tests skip individual cases when their required device or runtime capability is unavailable
 
 Tape-style compatibility:
 - the canonical helper now lives at `dev-modules/devtools-extensions/vitest/vitest-tape.ts`

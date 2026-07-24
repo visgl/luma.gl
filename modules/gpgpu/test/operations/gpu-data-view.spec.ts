@@ -131,25 +131,24 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
 }
 
 describe('GPGPU#GPUDataView', () => {
-  test.each([
-    'uint8x2',
-    'unorm8x4'
-  ] as const)('WebGPU reports unsupported %s storage formats', async (format, t) => {
-    const device = await getTestDevice('webgpu');
-    if (!device) {
-      t.skip('webgpu not available');
-      return;
-    }
+  for (const format of ['uint8x2', 'unorm8x4'] as const) {
+    test(`WebGPU reports unsupported ${format} storage formats`, async t => {
+      const device = await getTestDevice('webgpu');
+      if (!device) {
+        t.skip('webgpu not available');
+        return;
+      }
 
-    const buffer = device.createBuffer({
-      data: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
+      const buffer = device.createBuffer({
+        data: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+        usage: Buffer.STORAGE | Buffer.COPY_SRC
+      });
+      const result = add(new GPUDataView({buffer, format, length: 2}), 1);
+
+      await expect(result.evaluate(device)).rejects.toThrow(/only support 32-bit/);
+
+      result.destroy();
+      buffer.destroy();
     });
-    const result = add(new GPUDataView({buffer, format, length: 2}), 1);
-
-    await expect(result.evaluate(device)).rejects.toThrow(/only support 32-bit/);
-
-    result.destroy();
-    buffer.destroy();
-  });
+  }
 });

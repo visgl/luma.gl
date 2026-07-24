@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {readFileSync} from 'node:fs';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   convertGeoArrowTableToInterleaved,
   convertGeoArrowVectorToInterleaved
 } from '@math.gl/geoarrow';
 import * as arrow from 'apache-arrow';
+import {loadBinaryFixture} from './load-binary-fixture';
 
 const FIXTURE_PAIRS = [
   ['example_point.arrows', 'example_point_interleaved.arrows'],
@@ -68,7 +68,7 @@ test('convertGeoArrowVectorToInterleaved returns already-interleaved vectors unc
 
 function loadGeoArrowFixture(name: string): arrow.Table {
   const url = new URL(`../data/geoarrow-data/${name}`, import.meta.url);
-  return arrow.tableFromIPC(readFileSync(url));
+  return arrow.tableFromIPC(loadBinaryFixture(url));
 }
 
 function getVectorRows(vector: arrow.Vector): unknown[] {

@@ -61,6 +61,9 @@ interface TestHTMLCanvasElement {
 }
 
 test('luma#enforceWebGL2', async t => {
+  if (typeof HTMLCanvasElement === 'undefined') {
+    t.skip('HTMLCanvasElement is not available in this test runtime');
+  }
   const prototype = HTMLCanvasElement.prototype as unknown as TestHTMLCanvasElement;
 
   // Setup mock getContext

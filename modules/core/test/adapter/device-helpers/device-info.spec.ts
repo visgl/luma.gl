@@ -71,7 +71,7 @@ test('Device#limits (WebGPU style limits)', async t => {
 });
 
 test('Device#features (unknown features)', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   // @ts-expect-error
   t.notOk(webglDevice.features.has('unknown'), 'features.has should return false');
@@ -110,7 +110,7 @@ test('isHTMLInCanvasSupported checks canvas proposal APIs', t => {
 });
 
 test('Device#hasFeatures (WebGL)', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  const webglDevice = await getWebGLTestDevice(t);
 
   for (const feature of WEBGL2_ALWAYS_FEATURES) {
     t.equal(webglDevice.features.has(feature), true, `${feature} is always supported under WebGL`);

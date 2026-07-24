@@ -996,7 +996,7 @@ function configureCanvasContext(
 
 test('WebGLCanvasContext#cssToDevicePixels', async t => {
   // Create a fresh device since are going to modify it
-  const canvasContextDevice = await getWebGLTestDevice();
+  const canvasContextDevice = await getWebGLTestDevice(t);
   const canvasContext = canvasContextDevice?.canvasContext;
 
   MAP_TEST_CASES.forEach(tc => {
@@ -1027,7 +1027,7 @@ test('WebGLCanvasContext#cssToDevicePixels', async t => {
 });
 
 test('WebGLCanvasContext#cssToDeviceRatio', async t => {
-  const canvasContextDevice = await getWebGLTestDevice();
+  const canvasContextDevice = await getWebGLTestDevice(t);
   const canvasContext = canvasContextDevice?.canvasContext;
 
   MAP_TEST_CASES.forEach(tc => {
