@@ -11,7 +11,8 @@ import type {
 import {
   getLogicalBufferSlots,
   getMinimumAttributeLocation,
-  resolveLogicalAttributeMappings
+  resolveLogicalAttributeMappings,
+  vertexFormatDecoder
 } from '@luma.gl/core';
 
 /** Describes one physical WebGPU vertex-buffer slot derived from a logical buffer layout. */
@@ -26,7 +27,7 @@ export type ResolvedVertexBufferSlot = {
 
 /** Throw error on any WebGL-only vertex formats. */
 function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
-  if (format.endsWith('-webgl')) {
+  if (vertexFormatDecoder.getVertexFormatInfo(format).webglOnly) {
     throw new Error(`WebGPU does not support vertex format ${format}`);
   }
   return format as GPUVertexFormat;

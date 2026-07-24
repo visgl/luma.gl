@@ -290,6 +290,9 @@ export class Model {
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
   private props: Required<ModelProps>;
+  private _baseBufferLayout: BufferLayout[] = [];
+  private _attributeBufferSources: Record<string, ModelBuffer> = {};
+  private _constantAttributeValues: Record<string, TypedArray> = {};
   private _dynamicIndexBufferSource: {source: DynamicBuffer; generation: number} | null = null;
   private _dynamicAttributeBufferSources: Record<
     number,
@@ -413,6 +416,7 @@ export class Model {
 
     this.topology = this.props.topology;
     this.bufferLayout = this.props.bufferLayout;
+    this._baseBufferLayout = this.props.bufferLayout;
     this.parameters = this.props.parameters;
     // Seed attachment formats before creating the initial WebGPU pipeline. This is required for
     // depth-only models whose intentional empty color target list must not fall back to the canvas
@@ -481,6 +485,7 @@ export class Model {
         this.shaderFactory.release(this.pipeline.fs);
       }
       this._uniformStore.destroy();
+      this.vertexArray.destroy();
       // TODO - mark resource as managed and destroyIfManaged() ?
       this._gpuGeometry?.destroy();
       this._destroyed = true;
@@ -651,20 +656,29 @@ export class Model {
    * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
    */
   setGeometry(geometry: GPUGeometry | Geometry | null): void {
-    this._gpuGeometry?.destroy();
+    const previousGPUGeometry = this._gpuGeometry;
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
+    this._gpuGeometry = gpuGeometry;
+
     if (gpuGeometry) {
       this.setTopology(gpuGeometry.topology || 'triangle-list');
-      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-      this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(
-        gpuGeometry.bufferLayout,
-        this.bufferLayout
-      );
-      if (this.vertexArray) {
+    }
+
+    const nextBufferLayout = this._getCombinedBufferLayout(gpuGeometry);
+    const bufferLayoutChanged = this._setResolvedBufferLayout(nextBufferLayout);
+
+    if (this.vertexArray && !bufferLayoutChanged) {
+      if (gpuGeometry) {
         this._setGeometryAttributes(gpuGeometry);
+      } else {
+        this.setIndexBuffer(null);
+        this.setVertexCount(0);
       }
     }
-    this._gpuGeometry = gpuGeometry;
+
+    if (previousGPUGeometry && previousGPUGeometry !== gpuGeometry) {
+      previousGPUGeometry.destroy();
+    }
   }
 
   /**
@@ -683,31 +697,56 @@ export class Model {
    * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
-    const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-    const nextBufferLayout = this._gpuGeometry
-      ? bufferLayoutHelper.mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
-      : bufferLayout;
+    this._baseBufferLayout = bufferLayout;
+    const nextBufferLayout = this._getCombinedBufferLayout(this._gpuGeometry);
+    this._setResolvedBufferLayout(nextBufferLayout);
+  }
+
+  private _getCombinedBufferLayout(gpuGeometry: GPUGeometry | null): BufferLayout[] {
+    if (!gpuGeometry) {
+      return this._baseBufferLayout;
+    }
+
+    const bufferLayoutHelper = new BufferLayoutHelper(gpuGeometry.bufferLayout);
+    return bufferLayoutHelper.mergeBufferLayouts(gpuGeometry.bufferLayout, this._baseBufferLayout);
+  }
+
+  private _setResolvedBufferLayout(nextBufferLayout: BufferLayout[]): boolean {
     if (deepEqual(nextBufferLayout, this.bufferLayout, -1)) {
-      return;
+      return false;
     }
 
     this.bufferLayout = nextBufferLayout;
     this._setPipelineNeedsUpdate('bufferLayout');
+
+    if (!this.vertexArray) {
+      return true;
+    }
 
     // Recreate the pipeline
     this.pipeline = this._updatePipeline();
 
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
+    const previousVertexArray = this.vertexArray;
     this.vertexArray = this.device.createVertexArray({
       shaderLayout: this.pipeline.shaderLayout,
       bufferLayout: this.pipeline.bufferLayout
     });
+    this._dynamicAttributeBufferSources = {};
 
     // Reapply geometry attributes to the new vertex array
     if (this._gpuGeometry) {
       this._setGeometryAttributes(this._gpuGeometry);
     }
+    this._setAttributes(this._attributeBufferSources, {
+      disableWarnings: this.props.disableWarnings
+    });
+    this._setConstantAttributes(this._constantAttributeValues, {
+      disableWarnings: this.props.disableWarnings
+    });
+    previousVertexArray.destroy();
+    return true;
   }
 
   /**
@@ -831,6 +870,14 @@ export class Model {
    * @note Overrides any attributes previously set with the same name
    */
   setAttributes(buffers: Record<string, ModelBuffer>, options?: {disableWarnings?: boolean}): void {
+    Object.assign(this._attributeBufferSources, buffers);
+    this._setAttributes(buffers, options);
+  }
+
+  private _setAttributes(
+    buffers: Record<string, ModelBuffer>,
+    options?: {disableWarnings?: boolean}
+  ): void {
     this._drawBlockedReason = false;
     const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
     if (buffers['indices']) {
@@ -908,6 +955,14 @@ export class Model {
    * @param constantAttributes
    */
   setConstantAttributes(
+    attributes: Record<string, TypedArray>,
+    options?: {disableWarnings?: boolean}
+  ): void {
+    Object.assign(this._constantAttributeValues, attributes);
+    this._setConstantAttributes(attributes, options);
+  }
+
+  private _setConstantAttributes(
     attributes: Record<string, TypedArray>,
     options?: {disableWarnings?: boolean}
   ): void {
@@ -1052,8 +1107,8 @@ export class Model {
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
     this.setIndexBuffer(gpuGeometry.indices || null);
-    this.setAttributes(gpuGeometry.attributes, {disableWarnings: true});
-    this.setAttributes(attributes, {disableWarnings: this.props.disableWarnings});
+    this._setAttributes(gpuGeometry.attributes, {disableWarnings: true});
+    this._setAttributes(attributes, {disableWarnings: this.props.disableWarnings});
 
     this.setNeedsRedraw('geometry attributes');
   }

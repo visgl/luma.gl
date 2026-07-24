@@ -13,7 +13,7 @@ import {
   type ShaderLayout,
   type Texture
 } from '@luma.gl/core';
-import {DynamicBuffer, Model, type TextureBindingSource} from '@luma.gl/engine';
+import {DynamicBuffer, Geometry, Model, type TextureBindingSource} from '@luma.gl/engine';
 import {ShaderInputs} from '../../src/shader-inputs';
 import {
   getNullTestDevice,
@@ -821,6 +821,75 @@ test('Model#setBufferLayout is idempotent', async t => {
   t.equal(model.vertexArray, vertexArray, 'same buffer layout does not recreate vertex array');
 
   model.destroy();
+  t.end();
+});
+
+test('Model#setGeometry rebuilds an interleaved layout and preserves attributes', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const instanceOffsets = webglDevice.createBuffer({data: new Float32Array([0, 0, 0])});
+  const model = new Model(webglDevice, {
+    id: 'set-geometry-layout-test',
+    topology: 'triangle-list',
+    vs: `#version 300 es
+in vec3 positions;
+in vec3 normals;
+in vec3 instanceOffsets;
+void main() {
+  gl_Position = vec4(positions + instanceOffsets + normals * 0.0, 1.0);
+}`,
+    fs: DUMMY_FS,
+    bufferLayout: [{name: 'instanceOffsets', format: 'float32x3', stepMode: 'instance'}],
+    attributes: {instanceOffsets},
+    isInstanced: true,
+    instanceCount: 1
+  });
+  const initialVertexArray = model.vertexArray;
+
+  model.setGeometry(
+    new Geometry({
+      topology: 'triangle-strip',
+      attributes: {
+        POSITION: {
+          size: 3,
+          value: new Float32Array([-1, -1, 0, 1, -1, 0, 0, 1, 0])
+        },
+        NORMAL: {size: 3, value: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])}
+      }
+    })
+  );
+
+  t.notEqual(model.vertexArray, initialVertexArray, 'vertex array is rebuilt for the new layout');
+  t.deepEqual(
+    model.bufferLayout.map(layout => layout.name),
+    ['geometry', 'instanceOffsets'],
+    'geometry and application layouts are combined'
+  );
+  t.equal(
+    model.vertexArray.attributes[model._attributeInfos.instanceOffsets.location],
+    instanceOffsets,
+    'application attribute is rebound'
+  );
+
+  const pipeline = model.pipeline;
+  const vertexArray = model.vertexArray;
+  model.setGeometry(
+    new Geometry({
+      topology: 'triangle-strip',
+      attributes: {
+        POSITION: {
+          size: 3,
+          value: new Float32Array([-0.5, -0.5, 0, 0.5, -0.5, 0, 0, 0.5, 0])
+        },
+        NORMAL: {size: 3, value: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])}
+      }
+    })
+  );
+
+  t.equal(model.pipeline, pipeline, 'pipeline is reused when the geometry layout is unchanged');
+  t.equal(model.vertexArray, vertexArray, 'vertex array is reused when the layout is unchanged');
+
+  model.destroy();
+  instanceOffsets.destroy();
   t.end();
 });
 

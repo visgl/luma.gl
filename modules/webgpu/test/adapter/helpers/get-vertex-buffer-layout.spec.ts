@@ -222,6 +222,22 @@ test('WebGPU#getVertexBufferLayout preserves explicit zero stride', t => {
   t.end();
 });
 
+test('WebGPU#getVertexBufferLayout rejects legacy WebGL-only formats', t => {
+  t.throws(
+    () =>
+      getVertexBufferLayout(
+        {
+          attributes: [{name: 'colors', location: 0, type: 'vec3<f32>', stepMode: 'vertex'}],
+          bindings: []
+        },
+        [{name: 'colors', format: 'unorm8x3'}]
+      ),
+    /WebGPU does not support vertex format unorm8x3/,
+    'legacy format is recognized before it reaches WebGPU'
+  );
+  t.end();
+});
+
 test('WebGPU#resolveVertexBufferLayouts splits oversized interleaved offsets into repeated bindings', t => {
   const {vertexBufferLayouts, resolvedSlots} = resolveVertexBufferLayouts(
     fp64ShaderLayout,
