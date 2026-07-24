@@ -825,9 +825,9 @@ test('Model#setBufferLayout is idempotent', async t => {
 });
 
 test('Model#setGeometry rebuilds an interleaved layout and preserves attributes', async t => {
-  const webglDevice = await getWebGLTestDevice();
-  const instanceOffsets = webglDevice.createBuffer({data: new Float32Array([0, 0, 0])});
-  const model = new Model(webglDevice, {
+  const device = await getNullTestDevice();
+  const instanceOffsets = device.createBuffer({data: new Float32Array([0, 0, 0])});
+  const model = new Model(device, {
     id: 'set-geometry-layout-test',
     topology: 'triangle-list',
     vs: `#version 300 es
@@ -838,6 +838,14 @@ void main() {
   gl_Position = vec4(positions + instanceOffsets + normals * 0.0, 1.0);
 }`,
     fs: DUMMY_FS,
+    shaderLayout: {
+      attributes: [
+        {name: 'positions', location: 0, type: 'vec3<f32>', stepMode: 'vertex'},
+        {name: 'normals', location: 1, type: 'vec3<f32>', stepMode: 'vertex'},
+        {name: 'instanceOffsets', location: 2, type: 'vec3<f32>', stepMode: 'instance'}
+      ],
+      bindings: []
+    },
     bufferLayout: [{name: 'instanceOffsets', format: 'float32x3', stepMode: 'instance'}],
     attributes: {instanceOffsets},
     isInstanced: true,
