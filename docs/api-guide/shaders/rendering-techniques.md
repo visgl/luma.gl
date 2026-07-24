@@ -100,16 +100,23 @@ geometry or computes full global illumination.
 | | SSAO | GTAO |
 | --- | --- | --- |
 | Public entry point | `createSSAOShaderPassPipeline()` | `createGTAOShaderPassPipeline()` |
-| Main estimator | A compact depth-neighborhood sample kernel. | A multi-direction horizon search in reconstructed view space. |
+| Main estimator | A compact depth-neighborhood sample kernel. | Analytic cosine-weighted integration between signed view-space horizon angles. |
 | Pipeline stages | Evaluate, horizontal blur, vertical blur, composite. | Evaluate, temporal reprojection, depth-history capture, two blur passes, composite. |
-| Required inputs | Depth, with optional supplied view normals. | Depth, view normals, velocity, and camera projection/inverse projection. |
+| Required inputs | Depth, with optional supplied view normals. | Depth, view normals, velocity, projection matrices, and an optional isolated ambient-light texture. |
 | History targets | None. | Persistent AO and previous-depth targets. |
-| Main strength | Smaller setup cost and an inexpensive contact-darkening option. | Better grounding, larger-scale creases, and steadier animated results. |
+| Main strength | Smaller setup cost and an inexpensive contact-darkening option. | Integrated horizon visibility, frame-varying sampling, stable history, and optional ambient-only composition. |
 | Typical tradeoff | More visible noise or less faithful horizon detail. | More samples, texture memory, and temporal-history management. |
 
 Use one AO estimator per stack. GTAO is usually the higher-quality replacement for SSAO, not a
 second layer to multiply on top of it. Reset history after camera cuts, resize events, or changes
 that invalidate scene velocity.
+
+`createGTAOShaderPassPipeline()` retains its backward-compatible full-color composite. Select
+`createGTAOShaderPassPipeline({composition: 'ambient-only'})` when the application can bind an
+`ambientLightingTexture` containing the isolated linear ambient contribution. The ambient-only
+path preserves direct lighting and emissive color instead of darkening the entire resolved image.
+Deferred applications can create that texture with
+`createDeferredAmbientLightingShaderPassPipeline()` from `@luma.gl/experimental`.
 
 ## Indirect Lighting: Ambient Occlusion, SSGI, and SSR
 
