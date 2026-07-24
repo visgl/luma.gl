@@ -68,10 +68,14 @@ velocity, and depth channels plus two named material extras:
 screen/log-depth grid. `createClusteredDeferredLightingShaderPassPipeline()` then reads those
 material targets plus the current pixel's bounded cluster list, reconstructs view-space position
 from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back into the normal
-ordered shader-pass chain. `createGTAOShaderPassPipeline()` then performs a half-resolution
-horizon search over the unchanged depth and view-normal attachments, reprojects the previous AO
-result through the velocity buffer, rejects disocclusions with depth history, and applies a
-depth-aware separable blur before compositing ambient visibility into lit color.
+ordered shader-pass chain. `createDeferredAmbientLightingShaderPassPipeline()` separately extracts
+the linear ambient contribution from the same material attachments.
+`createGTAOShaderPassPipeline({composition: 'ambient-only'})` then analytically integrates
+half-resolution horizon angles over the unchanged depth and view-normal attachments, rotates and
+jitters sampling across animation frames, reprojects the previous AO result through the velocity
+buffer, rejects disocclusions with depth history, and applies a depth-aware separable blur. Its
+final composite attenuates only the isolated ambient contribution, leaving directional and point
+lights plus emissive materials untouched.
 `createSSGIShaderPassPipeline()` traces cosine-weighted hemisphere rays through that lit scene,
 gathers nearby colored radiance, reprojects indirect-light history, rejects disocclusions in
 linearized view depth, and applies two depth/normal-aware denoising passes before composing the
