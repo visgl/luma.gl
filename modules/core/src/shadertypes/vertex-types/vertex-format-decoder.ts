@@ -43,8 +43,6 @@ export class VertexFormatDecoder {
     const type = typeString as NormalizedDataType;
     const components = getVertexFormatComponents(format, componentString);
     const decodedType = getVertexFormatDataTypeInfo(format, type);
-    const legacyWebGLOnly = !webglOnly && isWebGLOnlyVertexFormat(type, components);
-    webglOnly ||= legacyWebGLOnly;
     let expectedFormat: VertexFormat;
     try {
       expectedFormat = webglOnly
@@ -53,8 +51,7 @@ export class VertexFormatDecoder {
     } catch {
       throw new Error(`Unsupported vertex format: ${format}`);
     }
-    const canonicalFormat = webglOnly ? `${normalizedFormat}-webgl` : normalizedFormat;
-    if (expectedFormat !== canonicalFormat) {
+    if (expectedFormat !== (webglOnly ? format : normalizedFormat)) {
       throw new Error(`Unsupported vertex format: ${format}`);
     }
     const result: VertexFormatInfo = {
@@ -103,8 +100,9 @@ export class VertexFormatDecoder {
 
       case 'uint8':
       case 'sint8':
+        // WebGPU does not support 3-component 8 bit formats.
         if (components === 3) {
-          return `${dataType}x3-webgl`;
+          throw new Error(`size: ${components}`);
         }
         return components === 1 ? dataType : `${dataType}x${components}`;
 
@@ -234,19 +232,8 @@ function getWebGLOnlyVertexFormat(
   type: NormalizedDataType,
   components: 1 | 2 | 3 | 4
 ): VertexFormat {
-  if (!isWebGLOnlyVertexFormat(type, components)) {
-    throw new Error(`Unsupported vertex format: ${format}`);
-  }
-
-  return `${type}x3-webgl`;
-}
-
-function isWebGLOnlyVertexFormat(
-  type: NormalizedDataType,
-  components: 1 | 2 | 3 | 4
-): type is 'uint8' | 'sint8' | 'unorm8' | 'snorm8' | 'uint16' | 'sint16' | 'unorm16' | 'snorm16' {
   if (components !== 3) {
-    return false;
+    throw new Error(`Unsupported vertex format: ${format}`);
   }
 
   switch (type) {
@@ -258,8 +245,8 @@ function isWebGLOnlyVertexFormat(
     case 'sint16':
     case 'unorm16':
     case 'snorm16':
-      return true;
+      return `${type}x3-webgl`;
     default:
-      return false;
+      throw new Error(`Unsupported vertex format: ${format}`);
   }
 }

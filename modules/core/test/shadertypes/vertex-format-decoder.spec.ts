@@ -57,22 +57,6 @@ test('shadertypes#vertexFormatDecoder.getVertexFormatInfo validates parsed forma
     },
     'decodes webgl-only x3 formats'
   );
-  for (const format of [
-    'uint8x3',
-    'sint8x3',
-    'unorm8x3',
-    'snorm8x3',
-    'uint16x3',
-    'sint16x3',
-    'unorm16x3',
-    'snorm16x3'
-  ] as VertexFormat[]) {
-    t.equal(
-      vertexFormatDecoder.getVertexFormatInfo(format).webglOnly,
-      true,
-      `accepts legacy WebGL-only format '${format}'`
-    );
-  }
   t.deepEqual(
     vertexFormatDecoder.getVertexFormatInfo('unorm8x4-bgra'),
     {type: 'unorm8', components: 4, byteLength: 4, integer: false, signed: false, normalized: true},
@@ -123,8 +107,6 @@ const TEST_CASES_2: {
 
   {typedArray: new Int16Array(), size: 3, result: 'sint16x3-webgl'},
   {typedArray: new Uint16Array(), size: 3, result: 'uint16x3-webgl'},
-  {typedArray: new Uint8Array(), size: 3, result: 'uint8x3-webgl'},
-  {typedArray: new Int8Array(), size: 3, result: 'sint8x3-webgl'},
   {typedArray: new Uint16Array(), size: 3, normalized: true, result: 'unorm16x3-webgl'},
   {typedArray: new Int16Array(), size: 3, normalized: true, result: 'snorm16x3-webgl'},
   {typedArray: new Uint8Array(), size: 3, normalized: true, result: 'unorm8x3-webgl'},
