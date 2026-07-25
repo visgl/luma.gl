@@ -1,6 +1,6 @@
 {
   "name": "@deck.gl-community/arrow-layers",
-  "version": "9.3.0",
+  "version": "9.4.0-alpha.1",
   "private": true,
   "description": "deck.gl layers backed by Apache Arrow and luma.gl GPU vectors",
   "license": "MIT",
@@ -23,11 +23,11 @@
   "sideEffects": false,
   "dependencies": {
     "@deck.gl/core": "9.3.4",
-    "@luma.gl/arrow": "~9.3.0",
-    "@luma.gl/core": "~9.3.0",
-    "@luma.gl/engine": "~9.3.0",
-    "@luma.gl/shadertools": "~9.3.0",
-    "@luma.gl/tables": "~9.3.0",
+    "@luma.gl/arrow": "9.4.0-alpha.1",
+    "@luma.gl/core": "9.4.0-alpha.1",
+    "@luma.gl/engine": "9.4.0-alpha.1",
+    "@luma.gl/shadertools": "9.4.0-alpha.1",
+    "@luma.gl/tables": "9.4.0-alpha.1",
     "apache-arrow": "^17.0.0"
   }
 }

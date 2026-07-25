@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-shader-plugins",
-  "version": "9.3.0",
+  "version": "9.4.0-alpha.1",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -9,11 +9,11 @@
   },
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@luma.gl/core": "~9.3.0",
-    "@luma.gl/engine": "~9.3.0",
-    "@luma.gl/shadertools": "~9.3.0",
-    "@luma.gl/webgl": "~9.3.0",
-    "@luma.gl/webgpu": "~9.3.0"
+    "@luma.gl/core": "9.4.0-alpha.1",
+    "@luma.gl/engine": "9.4.0-alpha.1",
+    "@luma.gl/shadertools": "9.4.0-alpha.1",
+    "@luma.gl/webgl": "9.4.0-alpha.1",
+    "@luma.gl/webgpu": "9.4.0-alpha.1"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
