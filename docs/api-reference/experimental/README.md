@@ -80,6 +80,18 @@ Compare A-buffer, weighted-blended, and ordinary alpha blending on the same over
 
 <OITExample embedded showStats={false} />
 
+## Optical Materials
+
+[`glassMaterial`](/docs/api-reference/experimental/glass-material) provides portable WGSL and GLSL
+screen-space refraction, Schlick Fresnel reflection, chromatic dispersion, and Beer-Lambert
+absorption. [`reflectiveMaterial`](/docs/api-reference/experimental/reflective-material) adds
+lightweight glossy highlights and Fresnel-weighted environment reflection for other surfaces.
+
+Both modules share `opticalLighting`, expose a `ShaderPlugin`, and can be composed with sorted
+alpha, weighted-blended OIT, or A-buffer OIT. The [Transparency](/docs/api-guide/shaders/transparency)
+and [Glass Effects](/docs/api-guide/shaders/glass-effects) guides describe their render ordering,
+backend constraints, and physically based limitations.
+
 ## Hybrid Shadows
 
 [`ShadowMapRenderer`](/docs/api-reference/experimental/shadow-map-renderer) provides WebGPU-only

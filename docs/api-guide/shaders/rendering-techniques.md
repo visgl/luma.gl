@@ -180,6 +180,11 @@ light shadows.
 Both resolve into the same shader-pass color chain, so later bloom, temporal AA, or display
 effects remain composable.
 
+For opaque-depth handling, sorted-alpha fallbacks, scene-color capture, and backend selection,
+see [Transparency](/docs/api-guide/shaders/transparency). Refractive and reflective surface
+shading is separate from fragment ordering; see [Glass Effects](/docs/api-guide/shaders/glass-effects)
+for composable material modules and their current quality limits.
+
 ## Bloom, Blur, and Depth of Field
 
 | Technique | Public entry point | Choose it when | Avoid confusing it with |

@@ -80,7 +80,9 @@
           "api-guide/shaders/writing-customizable-shaders",
           "api-guide/shaders/writing-portable-shaders",
           "api-guide/shaders/shader-passes",
-          "api-guide/shaders/rendering-techniques"
+          "api-guide/shaders/rendering-techniques",
+          "api-guide/shaders/transparency",
+          "api-guide/shaders/glass-effects"
         ]
       },
       {
@@ -185,6 +187,8 @@
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
           "api-reference/experimental/shadow-map-renderer",
+          "api-reference/experimental/glass-material",
+          "api-reference/experimental/reflective-material",
           {
             "type": "category",
             "label": "GPU Primitives",

@@ -9,6 +9,19 @@ export {TEXTURE_FORMAT_PIXEL_DECODERS} from './textures/packed-pixels';
 export type {HTMLTextureProps} from './textures/html-texture';
 export {HTMLTexture} from './textures/html-texture';
 
+export {opticalLighting} from './materials/optical-lighting';
+export type {
+  GlassMaterialBindings,
+  GlassMaterialProps,
+  GlassMaterialUniforms
+} from './materials/glass-material';
+export {glassMaterial, glassMaterialPlugin} from './materials/glass-material';
+export type {
+  ReflectiveMaterialProps,
+  ReflectiveMaterialUniforms
+} from './materials/reflective-material';
+export {reflectiveMaterial, reflectiveMaterialPlugin} from './materials/reflective-material';
+
 export type {
   ABufferShaderModuleBindings,
   ABufferShaderModuleProps,
