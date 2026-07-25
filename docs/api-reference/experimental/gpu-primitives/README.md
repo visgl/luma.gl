@@ -42,11 +42,15 @@ pre-recorded render commands
 ```
 
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
-`GPUCompaction`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
-`DrawCommandBuffer`. The accompanying trace viewer runs filtering and compaction over up to four
-million spans, while the sort and data-analysis examples demonstrate composable buffer-native
-algorithms. The implementation is intentionally experimental: it is concrete enough to
-measure and use, but small enough that its API can still respond to experience.
+`GPUCompaction`, `GPUMask`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
+`GPUAncestorProjection`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
+`DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+process and thread collapse, source and topology filtering, dependency focusing, visible-parent
+projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
+four million spans. The sort and data-analysis examples demonstrate independent composable
+buffer-native algorithms.
+The implementation is intentionally experimental: it is concrete enough to measure and use, but
+small enough that its API can still respond to experience.
 
 <GPUTraceViewerExample embedded />
 
@@ -159,7 +163,11 @@ pipelines would confuse multi-pass algorithms with `GPUComputePipeline`.
 ### Algorithms
 
 Algorithms provide data semantics across one or more kernels. `GPUScan` promises an exclusive
-prefix sum. `GPUCompaction` promises stable selection. `GPUSort` promises stable paired `uint32`
+prefix sum. `GPUCompaction` promises stable selection. `GPUMask` promises canonical boolean
+composition over source-aligned masks. `GPUGraphTraversal` promises bounded, cycle-safe
+reachability over stable compressed sparse adjacency. `GPUAncestorProjection` promises bounded
+nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
+parent/child row offsets. `GPUSort` promises stable paired `uint32`
 ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones.
 `GPUReduction`, `GPUHistogram`, and `GPUGridBinning` promise aggregate and binning results while
 selecting hierarchical and atomic implementations internally.
@@ -425,6 +433,95 @@ For matching vector input, flags, and output, compaction uses vector-wide scan o
 existing output chunks as one logical sequence. It does not concatenate, repack, or replace caller
 buffers, and the count remains a single total for the complete vector.
 
+## Composable visibility masks
+
+Interactive applications rarely have one visibility predicate. A trace viewer may combine its
+time range, process expansion, thread expansion, duration threshold, selected statuses, runtime
+classification, and dependency-focused neighborhood. Each predicate can write a source-aligned
+packed `uint32` mask; `GPUMask` combines those decisions into one renderer-facing result.
+
+```ts
+new GPUMask({
+  id: 'focused-visible-spans',
+  inputs: [viewportMask, hierarchyMask, focusedSpanMask],
+  output: visibleSpanMask,
+  operation: 'and'
+}).addToGraph(graph);
+```
+
+`'and'`, `'or'`, `'xor'`, `'difference'`, and `'not'` use zero/nonzero semantics and always
+produce canonical zero or one. Matching `GraphVectorView` masks retain their original ordered
+chunks. Composition does not repack source data, submit commands, or read back results.
+
+## Bounded graph traversal
+
+Topology-based selection uses `GPUGraphTraversal`. It accepts forward and optional reverse
+compressed sparse adjacency and publishes one node-aligned reachability mask.
+
+```ts
+new GPUGraphTraversal({
+  id: 'selected-dependency-neighborhood',
+  offsets: outgoingOffsets,
+  neighbors: outgoingNeighbors,
+  reverseOffsets: incomingOffsets,
+  reverseNeighbors: incomingNeighbors,
+  seeds: selectedSpanIds,
+  seedCount: activeSeedCount,
+  output: reachedSpanMask,
+  direction: 'both',
+  maxDepth: 4,
+  activeDepth: requestedDepth
+}).addToGraph(graph);
+```
+
+Frontiers are graph-owned transients. Atomic node claims ensure that cycles, duplicate edges, and
+shared descendants cannot repeatedly publish the same node. GPU-resident seed counts and active
+depth change the focused neighborhood without rebuilding the fixed-capacity graph.
+
+## Hierarchy-aware layout
+
+Expansion changes both visibility and row position. `GPUHierarchyLayout` first converts parent
+and child expansion flags into effective child heights, then composes `GPUScan` to produce stable
+exclusive offsets.
+
+```ts
+new GPUHierarchyLayout({
+  id: 'process-thread-layout',
+  parentStates: processStates,
+  childStates: threadStates,
+  heights: threadHeights,
+  offsets: threadOffsets,
+  childrenPerParent: 4,
+  expandedChildHeight: 4,
+  collapsedChildHeight: 1,
+  collapsedParentHeight: 1
+}).addToGraph(graph);
+```
+
+A collapsed parent contributes one summary row; its remaining children contribute zero. Expanded
+parents retain child-specific full or collapsed heights. A renderer fetches the resulting offsets
+directly from storage, so expand/collapse modifies no source records or render bundle.
+
+## Visible parent projection
+
+Filtering an intermediate parent must not sever the visual dependency between its surviving
+ancestor and descendant. `GPUAncestorProjection` resolves every canonical node to the closest
+currently visible source row without rewriting original edge data.
+
+```ts
+new GPUAncestorProjection({
+  id: 'visible-dependency-endpoints',
+  parents: canonicalParentIds,
+  visibility: visibleSpanMask,
+  output: nearestVisibleAncestors,
+  maxDepth: 32
+}).addToGraph(graph);
+```
+
+Visible nodes project to themselves. Missing parents, cycles, and chains beyond `maxDepth`
+produce a caller-configurable invalid sentinel. Edge shaders can then redirect hidden endpoints
+to visible ancestors while retaining stable original dependency IDs.
+
 ## Indirect drawing and stable draw groups
 
 WebGPU exposes `drawIndirect()` and `drawIndexedIndirect()`. Each call reads one fixed record from a
@@ -459,16 +556,27 @@ graphs.
 
 ## The trace-viewer graph
 
-The example synthesizes spans for compute, network, and storage activity. Each 16-byte span stores
-start time, duration, lane, and group. Source records remain in storage buffers for the lifetime of
-the selected capacity.
+The example synthesizes stable compute, network, and storage span ranges. Each 32-byte canonical
+span stores start time, duration, lane, group, process, thread, source identity, and numeric
+classification flags. Fixed-width dependency records preserve source and destination span IDs.
+Forward and reverse CSR indexes support dependency selection without string parsing or per-frame
+CPU adjacency construction.
 
-For each group, the graph performs:
+At the start of each encoding, process and thread expansion buffers determine thread heights.
+`GPUScan` converts those heights into packed lane offsets. Collapsing a process hides its
+individual spans, recomputes following row positions, and exposes a GPU-binned activity summary.
+Collapsing a thread retains one representative row without changing any source identity.
+
+For each span group, the graph performs:
 
 ```text
-visibility
-  reads: spans, view uniforms
-  writes: flags, source IDs
+hierarchical visibility
+  reads: canonical spans, process state, thread offsets, filters, view uniforms
+  writes: base flags, source IDs, optional picked source ID
+
+focused mask composition
+  reads: base flags, dependency-reachability mask
+  writes: final visible flags
 
 scan block passes
   reads: flags or block sums
@@ -483,19 +591,23 @@ compaction scatter
   writes: visible IDs, indirect instance count
 ```
 
-After all three groups, the render node reads each span/visible-ID pair and consumes the command
-buffer indirectly. A pre-recorded render bundle contains exactly three draws. Disabling a group
-causes its predicate to write zero flags, compaction writes count zero, and the corresponding draw
-becomes inert without changing the command list.
+After all three span groups, dependency visibility tests canonical edge endpoints against the
+final span masks and collapsed-process ownership. A separate stable compaction writes the edge
+instance count directly to a fourth indirect draw. A fifth pre-recorded draw consumes collapsed
+process activity bins.
 
-The render vertex shader uses `instance_index` to read a compacted source ID, fetches the original
-span, and constructs a six-vertex rectangle. Panning, zooming, lane changes, and group toggles only
-update a small uniform buffer. No source buffer or render bundle is rebuilt.
+The span vertex shader uses `instance_index` to fetch its stable compacted source record and
+resolves the current Y position from GPU-scanned thread offsets. Dependency shaders retain
+original edge IDs and route collapsed endpoints to their summary rows.
 
-Auto-scroll changes the visible time window every frame, forcing the GPU dataflow to remain live.
-The inspector periodically performs an explicit diagnostic readback of the three counts. The
-displayed count may lag the rendered frame; this is acceptable because it is telemetry rather than
-an input.
+Canvas picking reuses the visibility dispatch: a pointer request uploads one time and lane, and
+matching visible spans atomically publish a canonical source ID. Only an explicit click reads
+that single result. An ordinary frame does not depend on picking or count readback.
+
+Panning, zooming, group and status filters, duration thresholds, process and thread expansion,
+dependency visibility, selected seeds, and focus depth update small interaction buffers or
+uniforms. The source allocation, compiled graph, and five-command render bundle remain stable.
+The inspector periodically reads indirect counts for telemetry without gating rendering.
 
 ## A frame from construction to presentation
 
@@ -827,6 +939,7 @@ The intended v10 layering is:
 
 @luma.gl/gpgpu
   GPUScan, GPUCompaction
+  GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
   GPUReduction, GPUSort, GPUHistogram
   higher-level table algorithms
 
@@ -855,10 +968,13 @@ Completed milestones include:
 - Fixed-capacity buffer and logical-texture scheduling across compute, render, and copy nodes.
 - Buffer and texture hazard inference, imported-resource overrides, graph-owned attachments,
   transient allocation reuse, ownership validation, and allocation statistics.
-- Exclusive scan, stable compaction, paired sort, scalar reduction, histogram counting, spatial
+- Exclusive scan, stable compaction, chunk-preserving boolean masks, bounded CSR graph traversal,
+  nearest-visible parent projection, paired sort, scalar reduction, histogram counting, spatial
   grid binning, and GPU-written indirect draw commands.
 - Single-pixel integer object and batch picking through `GPUIndexPickingTarget`.
-- Independent trace-viewer, frustum-culling/picking, and GPU data-analysis consumers.
+- A hierarchical trace viewer with GPU-scanned process/thread layout, source filtering,
+  dependency focusing, click picking, collapsed activity, and stable indirect span/edge groups.
+- Independent frustum-culling/picking and GPU data-analysis consumers.
 
 ### Implemented data analysis
 
@@ -869,6 +985,16 @@ atomic accumulation strategy to packed positions and row-major cells. Reduction,
 grid binning accept fixed-width vectors directly; grid binning clears once before ordered
 per-chunk accumulation. All three keep input, output, submission, and readback ownership with the
 caller.
+
+### Implemented hierarchical visibility and traversal
+
+`GPUMask` composes fixed-width masks with intersection, union, exclusive union, difference, and
+inversion while preserving original `GPUVector` chunk layout. `GPUHierarchyLayout` scans mutable
+parent and child expansion states into row offsets. `GPUGraphTraversal` expands source
+selections through forward, reverse, or bidirectional CSR adjacency using cycle-safe atomic
+frontiers. `GPUAncestorProjection` bridges filtered intermediate nodes to the nearest visible
+canonical parent. All three publish ordinary graph data views and leave submission, interaction
+policy, picking readback, and source ownership with the caller.
 
 ### Implemented textures and picking
 
@@ -960,6 +1086,10 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph)
 - [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan)
 - [`GPUCompaction`](/docs/api-reference/experimental/gpu-primitives/gpu-compaction)
+- [`GPUMask`](/docs/api-reference/experimental/gpu-primitives/gpu-mask)
+- [`GPUHierarchyLayout`](/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout)
+- [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal)
+- [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection)
 - [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)

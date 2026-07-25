@@ -89,6 +89,10 @@ its documented atomic graph resources; callers must select, adapt, or explicitly
 | --- | --- | :---: |
 | `GPUScan` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUCompaction` | Scalar `GraphDataView`s or matching `GraphVectorView`s | ✅ |
+| `GPUMask` | Scalar masks or matching mask `GraphVectorView`s | ✅ |
+| `GPUHierarchyLayout` | Parent state, child state, heights, and offsets | ❌ |
+| `GPUGraphTraversal` | CSR adjacency and scalar graph data views | ❌ |
+| `GPUAncestorProjection` | Source-aligned parent, mask, and output views | ❌ |
 | `GPUSort` | Key and value `GraphDataView`s | ❌ |
 | `GPUReduction` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUHistogram` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
