@@ -80,6 +80,7 @@ import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
 import AntialiasingApp from '../../examples/experimental/antialiasing/app';
 import GlobeApp from '../../examples/showcase/globe/app';
+import PacketSprayingApp from '../../examples/showcase/packet-spraying/app';
 // import WanderingApp from '../../examples/showcase/wandering/app';
 
 import HelloTriangleGeometryApp from '../../examples/tutorials/hello-triangle-geometry/app';
@@ -931,6 +932,17 @@ export const GlobeExample: React.FC = props => (
     title="Globe"
     directory="showcase"
     template={GlobeApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const PacketSprayingExample: React.FC = props => (
+  <LumaExample
+    id="packet-spraying"
+    title="Network Packet Spraying"
+    directory="showcase"
+    template={PacketSprayingApp}
     config={exampleConfig}
     {...props}
   />

@@ -10,6 +10,7 @@
     "items": [
       "showcase/gltf",
       "showcase/globe",
+      "showcase/packet-spraying",
       {
         "type": "doc",
         "id": "showcase/postprocessing",

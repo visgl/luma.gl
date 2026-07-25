@@ -1,0 +1,35 @@
+<!doctype html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script type="module">
+    import {makeAnimationLoop} from '@luma.gl/engine';
+    import {webgl2Adapter} from '@luma.gl/webgl';
+    import {webgpuAdapter} from '@luma.gl/webgpu';
+    import AnimationLoopTemplate from './app.ts';
+
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+      adapters: [webgpuAdapter, webgl2Adapter]
+    });
+    animationLoop.start();
+  </script>
+  <style>
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      background: #010207;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      height: 100% !important;
+      width: 100% !important;
+    }
+
+  </style>
+</head>
+<body>
+</body>

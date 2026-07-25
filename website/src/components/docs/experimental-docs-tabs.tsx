@@ -10,6 +10,8 @@ export type ExperimentalDocsTabId =
   | 'deferred-lighting'
   | 'clustered-lighting'
   | 'shadow-map-renderer'
+  | 'glass-material'
+  | 'reflective-material'
   | 'a-buffer-renderer'
   | 'wboit-renderer';
 
@@ -30,6 +32,16 @@ const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
     id: 'shadow-map-renderer',
     label: 'ShadowMapRenderer',
     href: '/docs/api-reference/experimental/shadow-map-renderer'
+  },
+  {
+    id: 'glass-material',
+    label: 'Glass Material',
+    href: '/docs/api-reference/experimental/glass-material'
+  },
+  {
+    id: 'reflective-material',
+    label: 'Reflective Material',
+    href: '/docs/api-reference/experimental/reflective-material'
   },
   {
     id: 'a-buffer-renderer',

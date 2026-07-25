@@ -17,7 +17,9 @@ export type ShaderLevelDocsTabId =
   | 'writing-portable-shaders'
   | 'writing-customizable-shaders'
   | 'shader-passes'
-  | 'rendering-techniques';
+  | 'rendering-techniques'
+  | 'transparency'
+  | 'glass-effects';
 
 const SHADER_LEVEL_DOCS_TABS: ShaderLevelDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-guide/shaders'},
@@ -41,7 +43,9 @@ const SHADER_LEVEL_DOCS_TABS: ShaderLevelDocsTab[] = [
     id: 'rendering-techniques',
     label: 'Rendering Techniques',
     href: '/docs/api-guide/shaders/rendering-techniques'
-  }
+  },
+  {id: 'transparency', label: 'Transparency', href: '/docs/api-guide/shaders/transparency'},
+  {id: 'glass-effects', label: 'Glass Effects', href: '/docs/api-guide/shaders/glass-effects'}
 ];
 
 /**
