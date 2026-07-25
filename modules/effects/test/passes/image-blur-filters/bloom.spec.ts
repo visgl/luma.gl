@@ -29,5 +29,18 @@ test('bloomShaderPassPipeline#routing', t => {
       'bloom extraction consumes the preceding effect output'
     );
   }
+  for (const target of Object.values(bloomShaderPassPipeline.renderTargets)) {
+    t.equal(target.sampler.minFilter, 'linear', 'bloom intermediates use linear minification');
+    t.equal(target.sampler.magFilter, 'linear', 'bloom intermediates use linear magnification');
+  }
+  const blurPass = bloomShaderPassPipeline.steps.find(
+    step => step.shaderPass.name === 'bloomBlur'
+  )?.shaderPass;
+  t.ok(blurPass, 'multiscale bloom includes a separable blur');
+  t.match(blurPass?.source || '', /return color \/ totalWeight/, 'blur preserves smooth falloff');
+  t.notOk(
+    /unpremultipliedRgb/.test(blurPass?.source || ''),
+    'blur does not amplify tiny alpha into square halos'
+  );
   t.end();
 });

@@ -26,6 +26,11 @@ export {persistenceEffect} from './passes/postprocessing/image-adjust-filters/pe
 export type {SepiaProps, SepiaUniforms} from './passes/postprocessing/image-adjust-filters/sepia';
 export {sepia} from './passes/postprocessing/image-adjust-filters/sepia';
 export type {
+  ToneMappingProps,
+  ToneMappingUniforms
+} from './passes/postprocessing/image-adjust-filters/tone-mapping';
+export {toneMapping} from './passes/postprocessing/image-adjust-filters/tone-mapping';
+export type {
   VibranceProps,
   VibranceUniforms
 } from './passes/postprocessing/image-adjust-filters/vibrance';

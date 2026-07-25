@@ -3,8 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {Texture} from '@luma.gl/core';
 import {Model, ShaderPassRenderer} from '@luma.gl/engine';
-import {aBufferPlugin, createABufferResolveShaderPassPipeline} from '@luma.gl/experimental';
+import {
+  ABufferRenderer,
+  aBufferPlugin,
+  createABufferResolveShaderPassPipeline
+} from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const SHADER_STAGE_FRAGMENT = 0x2;
@@ -82,5 +87,58 @@ test('A-buffer resolve ShaderPassPipeline compiles on WebGPU', async t => {
     'resolve pipeline creates a WebGPU fullscreen model'
   );
   renderer.destroy();
+  t.end();
+});
+
+test('ABufferRenderer preserves the configured rgba16float resolve format', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const capabilities = device.getTextureFormatCapabilities('rgba16float');
+  if (!capabilities.render || !capabilities.filter) {
+    t.comment('Renderable, filterable rgba16float textures are not available');
+    t.end();
+    return;
+  }
+
+  const sourceTexture = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba16float',
+    usage: Texture.SAMPLE | Texture.RENDER
+  });
+  const opaqueDepthTexture = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'depth24plus',
+    usage: Texture.SAMPLE | Texture.RENDER
+  });
+  const renderer = new ABufferRenderer(device, {colorFormat: 'rgba16float'});
+  const outputTexture = renderer.render({
+    sourceTexture,
+    opaqueDepthTexture: opaqueDepthTexture.view,
+    prepareTranslucent: () => {},
+    drawTranslucent: () => {}
+  });
+  device.submit();
+
+  t.equal(outputTexture.format, 'rgba16float', 'resolved output retains the requested HDR format');
+  t.deepEqual(
+    renderer.props,
+    {
+      averageFragmentsPerPixel: 4,
+      maxFragmentsPerPixel: 12,
+      maxBufferByteLength: Number.MAX_SAFE_INTEGER
+    },
+    'optional output format does not alter existing resolved capture properties'
+  );
+
+  renderer.destroy();
+  sourceTexture.destroy();
+  opaqueDepthTexture.destroy();
   t.end();
 });

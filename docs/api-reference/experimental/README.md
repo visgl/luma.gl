@@ -88,9 +88,14 @@ absorption. [`reflectiveMaterial`](/docs/api-reference/experimental/reflective-m
 lightweight glossy highlights and Fresnel-weighted environment reflection for other surfaces.
 
 Both modules share `opticalLighting`, expose a `ShaderPlugin`, and can be composed with sorted
-alpha, weighted-blended OIT, or A-buffer OIT. The [Transparency](/docs/api-guide/shaders/transparency)
-and [Glass Effects](/docs/api-guide/shaders/glass-effects) guides describe their render ordering,
-backend constraints, and physically based limitations.
+alpha, weighted-blended OIT, or A-buffer OIT. `emissiveMaterial` shades self-illuminated objects,
+and `opticalPointLights` supplies a bounded, portable array of moving colored lights for the
+illuminated glass and reflective helpers. HDR transparency output can then feed reusable bloom
+and tone-mapping shader passes.
+
+The [Transparency](/docs/api-guide/shaders/transparency) and
+[Glass Effects](/docs/api-guide/shaders/glass-effects) guides describe render ordering, backend
+constraints, local lighting, and physically based limitations.
 
 ## Hybrid Shadows
 

@@ -3,16 +3,23 @@
 // Copyright (c) vis.gl contributors
 
 import {Texture} from '@luma.gl/core';
-import type {Buffer, Device, Framebuffer, RenderPipelineParameters} from '@luma.gl/core';
+import type {
+  Buffer,
+  Device,
+  Framebuffer,
+  RenderPipelineParameters,
+  TextureFormatColor
+} from '@luma.gl/core';
+import {bloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
-  BackgroundTextureModel,
   colorPicking,
   CubeGeometry,
   CylinderGeometry,
   Model,
   PickingManager,
+  ShaderPassRenderer,
   ShaderInputs,
   SphereGeometry
 } from '@luma.gl/engine';
@@ -22,20 +29,27 @@ import {
   WBOITRenderer,
   aBuffer,
   aBufferPlugin,
+  emissiveMaterial,
+  emissiveMaterialPlugin,
   glassMaterial,
   glassMaterialPlugin,
   getABufferSupport,
   getWBOITSupport,
+  opticalPointLights,
+  opticalPointLightsPlugin,
   reflectiveMaterial,
   reflectiveMaterialPlugin,
   type ABufferShaderModuleProps,
+  type EmissiveMaterialProps,
   type GlassMaterialProps,
+  type OpticalPointLight,
+  type OpticalPointLightsProps,
   type ReflectiveMaterialProps,
   type WBOITShaderModuleProps,
   wboit,
   wboitPlugin
 } from '@luma.gl/experimental';
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPassPipeline, ShaderPlugin} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 import {
   type Panel,
@@ -182,7 +196,24 @@ fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
 const REFLECTIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
 @fragment
 fn fragmentReflective(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  return reflectiveMaterial_getColor(
+  let color = reflectiveMaterial_getIlluminatedColor(
+    inputs.normal,
+    inputs.worldPosition,
+    inputs.color,
+    app.cameraPosition
+  );
+#if OPAQUE_REFLECTIVE
+  return vec4<f32>(color.rgb, inputs.color.a);
+#else
+  return color;
+#endif
+}
+`;
+
+const EMISSIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentEmissive(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  return emissiveMaterial_getColor(
     inputs.normal,
     inputs.worldPosition,
     inputs.color,
@@ -194,7 +225,7 @@ fn fragmentReflective(inputs: VertexOutputs) -> @location(0) vec4<f32> {
 const GLASS_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
 @fragment
 fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let color = glassMaterial_getColor(
+  let color = glassMaterial_getIlluminatedColor(
     inputs.normal,
     inputs.worldPosition,
     inputs.color,
@@ -319,7 +350,7 @@ in vec3 vWorldPosition;
 out vec4 fragColor;
 
 void main(void) {
-  vec4 color = glassMaterial_getColor(
+  vec4 color = glassMaterial_getIlluminatedColor(
     vNormal,
     vWorldPosition,
     vColor,
@@ -365,12 +396,37 @@ in vec3 vWorldPosition;
 out vec4 fragColor;
 
 void main(void) {
-  fragColor = reflectiveMaterial_getColor(
+  vec4 color = reflectiveMaterial_getIlluminatedColor(
     vNormal,
     vWorldPosition,
     vColor,
     app.cameraPosition
   );
+#if OPAQUE_REFLECTIVE
+  fragColor = vec4(color.rgb, vColor.a);
+#else
+  fragColor = color;
+#endif
+}
+`;
+
+const EMISSIVE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+in vec3 vNormal;
+in vec4 vColor;
+in vec3 vWorldPosition;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = emissiveMaterial_getColor(vNormal, vWorldPosition, vColor, app.cameraPosition);
 }
 `;
 
@@ -400,8 +456,8 @@ const AGGREGATION_SWITCH_RADIUS = 0.4;
 const SPINE_Y = 2.05;
 const SPINE_SWITCH_RADIUS = 0.55;
 const TRAFFIC_COLORS: Color[] = [
-  [1, 0.16, 0.1, 1],
-  [0.08, 1, 0.34, 1]
+  [1, 0, 0, 1],
+  [0, 1, 0, 1]
 ];
 const PACKETS_PER_BURST = 24;
 const BURST_PACKET_INTERVAL = 0.14;
@@ -458,6 +514,7 @@ class InstancedMesh<
       colors,
       transparent = false,
       glass = false,
+      emissive = false,
       pickable = false,
       reflective = false,
       sceneTexture,
@@ -469,6 +526,7 @@ class InstancedMesh<
       colors: Float32Array;
       transparent?: boolean;
       glass?: boolean;
+      emissive?: boolean;
       pickable?: boolean;
       reflective?: boolean;
       sceneTexture?: Texture;
@@ -487,7 +545,9 @@ class InstancedMesh<
           ? GLASS_WGSL_SHADER
           : reflective
             ? REFLECTIVE_WGSL_SHADER
-            : WGSL_SHADER,
+            : emissive
+              ? EMISSIVE_WGSL_SHADER
+              : WGSL_SHADER,
       vs: pickable ? PICKING_VERTEX_SHADER : VERTEX_SHADER,
       fs: pickable
         ? PICKING_FRAGMENT_SHADER
@@ -495,23 +555,30 @@ class InstancedMesh<
           ? GLASS_FRAGMENT_SHADER
           : reflective
             ? REFLECTIVE_FRAGMENT_SHADER
-            : FRAGMENT_SHADER,
+            : emissive
+              ? EMISSIVE_FRAGMENT_SHADER
+              : FRAGMENT_SHADER,
       fragmentEntryPoint: pickable
         ? 'fragmentPicking'
         : glass
           ? 'fragmentGlass'
           : reflective
             ? 'fragmentReflective'
-            : 'fragmentMain',
+            : emissive
+              ? 'fragmentEmissive'
+              : 'fragmentMain',
       shaderInputs,
       defines: {
         A_BUFFER_ENABLED: usesABuffer ? 1 : 0,
-        WBOIT_ENABLED: usesWeightedBlending ? 1 : 0
+        WBOIT_ENABLED: usesWeightedBlending ? 1 : 0,
+        OPAQUE_REFLECTIVE: reflective && !transparent ? 1 : 0
       },
       plugins: [
         ...(pickable ? [networkNodePickingPlugin] : []),
+        ...(glass || reflective ? [opticalPointLightsPlugin] : []),
         ...(glass ? [glassMaterialPlugin] : []),
         ...(reflective ? [reflectiveMaterialPlugin] : []),
+        ...(emissive ? [emissiveMaterialPlugin] : []),
         ...(usesABuffer ? [aBufferPlugin] : []),
         ...(usesWeightedBlending ? [wboitPlugin] : [])
       ],
@@ -636,39 +703,58 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly shaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
   readonly reflectiveShaderInputs = new ShaderInputs<{
     app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
-  }>({app: appShaderModule, reflectiveMaterial});
+  }>({app: appShaderModule, opticalPointLights, reflectiveMaterial});
+  readonly metallicShaderInputs = new ShaderInputs<{
+    app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
+    reflectiveMaterial: ReflectiveMaterialProps;
+  }>({app: appShaderModule, opticalPointLights, reflectiveMaterial});
+  readonly emissiveShaderInputs = new ShaderInputs<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>({app: appShaderModule, emissiveMaterial});
   readonly glassShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
-  }>({app: appShaderModule, glassMaterial});
+    opticalPointLights: OpticalPointLightsProps;
+  }>({app: appShaderModule, glassMaterial, opticalPointLights});
   readonly aBufferShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    opticalPointLights: OpticalPointLightsProps;
     aBuffer: ABufferShaderModuleProps;
-  }>({app: appShaderModule, glassMaterial, aBuffer});
+  }>({app: appShaderModule, glassMaterial, opticalPointLights, aBuffer});
   readonly weightedBlendedShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    opticalPointLights: OpticalPointLightsProps;
     wboit: WBOITShaderModuleProps;
-  }>({app: appShaderModule, glassMaterial, wboit});
+  }>({app: appShaderModule, glassMaterial, opticalPointLights, wboit});
   readonly pickingShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     picking: typeof colorPicking.props;
   }>({app: appShaderModule, picking: colorPicking});
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
+  readonly sceneColorFormat: TextureFormatColor;
   readonly sceneFramebuffer: Framebuffer;
-  readonly sceneBackground: BackgroundTextureModel;
+  readonly postprocessingRenderer: ShaderPassRenderer;
   readonly aBufferRenderer: ABufferRenderer | null;
   readonly weightedBlendedRenderer: WBOITRenderer | null;
   sceneTexture: Texture;
   refractionTexture: Texture;
   readonly links: InstancedMesh<{
     app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
   }>;
-  readonly hosts: InstancedMesh;
+  readonly hosts: InstancedMesh<{
+    app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
+    reflectiveMaterial: ReflectiveMaterialProps;
+  }>;
   readonly pickingHosts: InstancedMesh<{
     app: AppUniforms;
     picking: typeof colorPicking.props;
@@ -683,18 +769,24 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly sortedGlass: InstancedMesh<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    opticalPointLights: OpticalPointLightsProps;
   }>;
   readonly aBufferGlass: InstancedMesh<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    opticalPointLights: OpticalPointLightsProps;
     aBuffer: ABufferShaderModuleProps;
   }> | null;
   readonly weightedBlendedGlass: InstancedMesh<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    opticalPointLights: OpticalPointLightsProps;
     wboit: WBOITShaderModuleProps;
   }> | null;
-  readonly packets: InstancedMesh;
+  readonly packets: InstancedMesh<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
   readonly packetDefinitions: Packet[];
   readonly packetMatrices: Float32Array;
   orbitControls: OrbitControls | null = null;
@@ -712,10 +804,22 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   glassRoughness = 0.14;
   glassDispersion = 0.022;
   glassThickness = 1.05;
+  packetEmission = 5.2;
+  packetLightIntensity = 0.66;
+  packetLightRadius = 1.05;
+  bloomIntensity = 1.7;
+  bloomThreshold = 0.42;
+  exposure = 0.96;
 
   constructor({device, width, height}: AnimationProps) {
     super();
 
+    const requestedOrbit = new URLSearchParams(window.location.search).get('orbit');
+    if (requestedOrbit !== null && Number.isFinite(Number(requestedOrbit))) {
+      this.orbit = Math.max(0, Math.min(Number(requestedOrbit), 0.5));
+    }
+
+    this.sceneColorFormat = getSceneColorFormat(device);
     const supportsABuffer = getABufferSupport(device).supported;
     const supportsWeightedBlending = getWBOITSupport(device).supported;
     this.transparencyMode = supportsABuffer
@@ -727,12 +831,15 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       ? new ABufferRenderer(device, {
           averageFragmentsPerPixel: 6,
           maxFragmentsPerPixel: 20,
-          maxBufferByteLength: 64 * 1024 * 1024
+          maxBufferByteLength: 64 * 1024 * 1024,
+          colorFormat: this.sceneColorFormat
         })
       : null;
-    this.weightedBlendedRenderer = supportsWeightedBlending ? new WBOITRenderer(device) : null;
-    this.sceneTexture = makeSceneTexture(device, width, height);
-    this.refractionTexture = makeRefractionTexture(device, width, height);
+    this.weightedBlendedRenderer = supportsWeightedBlending
+      ? new WBOITRenderer(device, {colorFormat: this.sceneColorFormat})
+      : null;
+    this.sceneTexture = makeSceneTexture(device, width, height, this.sceneColorFormat);
+    this.refractionTexture = makeRefractionTexture(device, width, height, this.sceneColorFormat);
     this.sceneFramebuffer = device.createFramebuffer({
       id: 'packet-spraying-scene-framebuffer',
       width,
@@ -740,10 +847,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       colorAttachments: [this.sceneTexture],
       depthStencilAttachment: 'depth24plus'
     });
-    this.sceneBackground = new BackgroundTextureModel(device, {
-      id: 'packet-spraying-scene-background',
-      backgroundTexture: this.sceneTexture,
-      flipY: device.type === 'webgpu'
+    this.postprocessingRenderer = new ShaderPassRenderer(device, {
+      shaderPasses: [makeBloomPipeline(this.sceneColorFormat), toneMapping],
+      colorFormat: this.sceneColorFormat
     });
 
     const conversationRoutes = makeConversationRoutes();
@@ -751,19 +857,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.links = new InstancedMesh(device, this.reflectiveShaderInputs, {
       id: 'packet-spraying-links',
       geometry: new CylinderGeometry({radius: 1, height: 1, nradial: 16, nvertical: 1}),
-      matrices: flattenMatrices(links.map(link => makeLinkMatrix(link, 0.07))),
+      matrices: flattenMatrices(links.map(link => makeLinkMatrix(link, 0.09))),
       colors: flattenColors(links.map(({color}) => color)),
       transparent: true,
       reflective: true
     });
 
-    this.hosts = new InstancedMesh(device, this.shaderInputs, {
+    this.hosts = new InstancedMesh(device, this.metallicShaderInputs, {
       id: 'packet-spraying-hosts',
       geometry: new CubeGeometry({indices: true}),
       matrices: flattenMatrices(
         HOST_POSITIONS.map(position => makeObjectMatrix(position, HOST_HALF_EXTENTS))
       ),
-      colors: flattenColors(HOST_POSITIONS.map(() => [0.18, 0.4, 0.92, 1]))
+      colors: flattenColors(HOST_POSITIONS.map((_, hostIndex) => makeHostColor(hostIndex))),
+      reflective: true
     });
 
     this.glassInstances = makeGlassInstances();
@@ -824,18 +931,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packetDefinitions = makePackets(conversationRoutes);
     this.packetMatrices = new Float32Array(this.packetDefinitions.length * 16);
     this.updatePacketMatrices(0);
-    this.packets = new InstancedMesh(device, this.shaderInputs, {
+    this.packets = new InstancedMesh(device, this.emissiveShaderInputs, {
       id: 'packet-spraying-packets',
       geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
       matrices: this.packetMatrices,
       colors: flattenColors(
-        this.packetDefinitions.map(packet => [
-          packet.color[0],
-          packet.color[1],
-          packet.color[2],
-          packet.alpha
-        ])
-      )
+        this.packetDefinitions.map(packet => makeBalancedEmissionColor(packet.color, packet.alpha))
+      ),
+      emissive: true
     });
 
     this.settingsPanel = new ExampleSettingsPanelManager({
@@ -848,7 +951,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         glassIndexOfRefraction: this.glassIndexOfRefraction,
         glassRoughness: this.glassRoughness,
         glassDispersion: this.glassDispersion,
-        glassThickness: this.glassThickness
+        glassThickness: this.glassThickness,
+        packetEmission: this.packetEmission,
+        packetLightIntensity: this.packetLightIntensity,
+        packetLightRadius: this.packetLightRadius,
+        bloomIntensity: this.bloomIntensity,
+        bloomThreshold: this.bloomThreshold,
+        exposure: this.exposure
       },
       onSettingsChange: this.handleSettingsChange
     });
@@ -904,9 +1013,35 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       dispersion: this.glassDispersion,
       thickness: this.glassThickness
     };
+    const pointLightProps: OpticalPointLightsProps = {
+      lights: this.makePacketLights(),
+      intensity: this.packetLightIntensity
+    };
     this.shaderInputs.setProps({app: uniforms});
-    this.reflectiveShaderInputs.setProps({app: uniforms, reflectiveMaterial: {}});
-    this.glassShaderInputs.setProps({app: uniforms, glassMaterial: glassMaterialProps});
+    this.emissiveShaderInputs.setProps({
+      app: uniforms,
+      emissiveMaterial: {intensity: this.packetEmission, rimStrength: 0.32}
+    });
+    this.reflectiveShaderInputs.setProps({
+      app: uniforms,
+      reflectiveMaterial: {},
+      opticalPointLights: pointLightProps
+    });
+    this.metallicShaderInputs.setProps({
+      app: uniforms,
+      reflectiveMaterial: {
+        roughness: 0.32,
+        reflectionStrength: 0.26,
+        specularStrength: 0.58,
+        opacityScale: 1
+      },
+      opticalPointLights: pointLightProps
+    });
+    this.glassShaderInputs.setProps({
+      app: uniforms,
+      glassMaterial: glassMaterialProps,
+      opticalPointLights: pointLightProps
+    });
 
     this.hosts.model.predraw(device.commandEncoder);
     this.packets.model.predraw(device.commandEncoder);
@@ -935,6 +1070,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
           this.aBufferShaderInputs.setProps({
             app: uniforms,
             glassMaterial: glassMaterialProps,
+            opticalPointLights: pointLightProps,
             aBuffer: shaderModuleProps
           });
           this.aBufferGlass?.model.setParameters({...TRANSPARENT_PARAMETERS, ...captureParameters});
@@ -963,6 +1099,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
           this.weightedBlendedShaderInputs.setProps({
             app: uniforms,
             glassMaterial: glassMaterialProps,
+            opticalPointLights: pointLightProps,
             wboit: shaderModuleProps
           });
           this.weightedBlendedGlass?.model.setParameters({
@@ -987,14 +1124,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       glassRenderPass.end();
     }
 
-    this.sceneBackground.setProps({backgroundTexture: outputTexture});
-    this.sceneBackground.predraw(device.commandEncoder);
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.003, 0.006, 0.012, 1],
-      clearDepth: 1
+    this.postprocessingRenderer.renderToScreen({
+      sourceTexture: outputTexture,
+      uniforms: {
+        bloomExtract: {
+          threshold:
+            this.sceneColorFormat === 'rgba16float'
+              ? this.bloomThreshold
+              : Math.min(this.bloomThreshold, 0.38)
+        },
+        bloomBlur: {radius: 4},
+        bloomComposite: {intensity: this.bloomIntensity},
+        toneMapping: {exposure: this.exposure}
+      }
     });
-    this.sceneBackground.draw(renderPass);
-    renderPass.end();
 
     this.pickHoveredNode(device, uniforms);
   }
@@ -1016,10 +1159,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.aBufferGlass?.destroy();
     this.weightedBlendedGlass?.destroy();
     this.packets.destroy();
-    this.sceneBackground.destroy();
+    this.postprocessingRenderer.destroy();
     this.aBufferRenderer?.destroy();
     this.weightedBlendedRenderer?.destroy();
     this.shaderInputs.destroy();
+    this.emissiveShaderInputs.destroy();
     this.reflectiveShaderInputs.destroy();
     this.pickingShaderInputs.destroy();
     this.glassShaderInputs.destroy();
@@ -1117,7 +1261,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const previousRefractionTexture = this.refractionTexture;
     this.sceneFramebuffer.resize({width, height});
     this.sceneTexture = this.sceneFramebuffer.colorAttachments[0].texture;
-    this.refractionTexture = makeRefractionTexture(this.sceneTexture.device, width, height);
+    this.refractionTexture = makeRefractionTexture(
+      this.sceneTexture.device,
+      width,
+      height,
+      this.sceneColorFormat
+    );
+    this.postprocessingRenderer.resize([width, height]);
     this.sortedGlass.model.setBindings({glassSceneColorTexture: this.refractionTexture});
     this.aBufferGlass?.model.setBindings({glassSceneColorTexture: this.refractionTexture});
     this.weightedBlendedGlass?.model.setBindings({glassSceneColorTexture: this.refractionTexture});
@@ -1149,6 +1299,55 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       const matrix = makeObjectMatrix(position, [packet.scale, packet.scale, packet.scale]);
       this.packetMatrices.set(matrix, packetIndex * 16);
     }
+  }
+
+  private makePacketLights(): OpticalPointLight[] {
+    if (this.packetLightIntensity <= 0 || this.packetLightRadius <= 0) {
+      return [];
+    }
+
+    const switchPositions = [...LEAF_POSITIONS, ...AGGREGATION_POSITIONS, ...SPINE_POSITIONS];
+    const candidatesByRoute = new Map<
+      Route,
+      {color: Vector3; position: Vector3; switchDistance: number}[]
+    >();
+
+    for (let packetIndex = 0; packetIndex < this.packetDefinitions.length; packetIndex++) {
+      const matrixOffset = packetIndex * 16;
+      const position: Vector3 = [
+        this.packetMatrices[matrixOffset + 12],
+        this.packetMatrices[matrixOffset + 13],
+        this.packetMatrices[matrixOffset + 14]
+      ];
+      if (position[1] < HOST_Y - 1) {
+        continue;
+      }
+
+      const packet = this.packetDefinitions[packetIndex];
+      const candidates = candidatesByRoute.get(packet.route) || [];
+      candidates.push({
+        color: [packet.color[0], packet.color[1], packet.color[2]],
+        position,
+        switchDistance: Math.min(
+          ...switchPositions.map(switchPosition => getDistanceSquared(position, switchPosition))
+        )
+      });
+      candidatesByRoute.set(packet.route, candidates);
+    }
+
+    const lights: OpticalPointLight[] = [];
+    for (const candidates of candidatesByRoute.values()) {
+      candidates.sort((first, second) => first.switchDistance - second.switchDistance);
+      for (const candidate of candidates.slice(0, 2)) {
+        lights.push({
+          position: candidate.position,
+          color: candidate.color,
+          intensity: 1,
+          radius: this.packetLightRadius
+        });
+      }
+    }
+    return lights.slice(0, 16);
   }
 
   private makePanel(): Panel {
@@ -1216,6 +1415,39 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     if (typeof glassThickness === 'number') {
       this.glassThickness = glassThickness;
     }
+
+    const packetEmission = getChangedSetting(changedSettings, 'packetEmission')?.nextValue;
+    if (typeof packetEmission === 'number') {
+      this.packetEmission = packetEmission;
+    }
+
+    const packetLightIntensity = getChangedSetting(
+      changedSettings,
+      'packetLightIntensity'
+    )?.nextValue;
+    if (typeof packetLightIntensity === 'number') {
+      this.packetLightIntensity = packetLightIntensity;
+    }
+
+    const packetLightRadius = getChangedSetting(changedSettings, 'packetLightRadius')?.nextValue;
+    if (typeof packetLightRadius === 'number') {
+      this.packetLightRadius = packetLightRadius;
+    }
+
+    const bloomIntensity = getChangedSetting(changedSettings, 'bloomIntensity')?.nextValue;
+    if (typeof bloomIntensity === 'number') {
+      this.bloomIntensity = bloomIntensity;
+    }
+
+    const bloomThreshold = getChangedSetting(changedSettings, 'bloomThreshold')?.nextValue;
+    if (typeof bloomThreshold === 'number') {
+      this.bloomThreshold = bloomThreshold;
+    }
+
+    const exposure = getChangedSetting(changedSettings, 'exposure')?.nextValue;
+    if (typeof exposure === 'number') {
+      this.exposure = exposure;
+    }
   };
 }
 
@@ -1224,7 +1456,7 @@ const PACKET_SPRAYING_ARTICLE_URL = 'https://openai.com/index/mrc-supercomputer-
 const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
 <p>Packets enter their local Tier 0 switch as separate streams. Once the streams meet, the switch forwards alternating red and green packets across four representative independent network planes. The destination-side switches separate the traffic again and deliver each color to its intended server.</p>
-<p>Blue cubes are servers, glass spheres are switches, and faint tubes show the available fabric links. Only the links needed by the two conversations carry moving packets.</p>
+<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and faint tubes show the available fabric links. Emissive packets cast localized colored light onto nearby switches and active links, with restrained multiscale bloom.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Read OpenAI's supercomputer networking and MRC article</a></p>`;
 
 const PACKET_SPRAYING_BACKGROUND_HTML = `\
@@ -1234,7 +1466,7 @@ const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
 <p><strong>Resilience:</strong> if a link, plane, or switch fails, the sender quickly retires the affected path and keeps using the remaining ones. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
-<p><strong>Rendering:</strong> this example composes reusable glass and reflective-material shader modules with exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending.</p>
+<p><strong>Rendering:</strong> reusable emissive materials and bounded point lights illuminate refractive glass and reflective links. Floating-point scene color preserves bright packet cores through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
 
 function makeLinks(conversationRoutes: ConversationRoute[]): NetworkLink[] {
@@ -1454,7 +1686,7 @@ function makePackets(conversationRoutes: ConversationRoute[]): Packet[] {
         route,
         color: conversation.color,
         launchTime,
-        scale: 0.115,
+        scale: 0.05,
         alpha: 1
       });
     }
@@ -1463,16 +1695,66 @@ function makePackets(conversationRoutes: ConversationRoute[]): Packet[] {
   return packets;
 }
 
+function makeHostColor(hostIndex: number): Color {
+  const conversationIndex = CONVERSATIONS.findIndex(
+    conversation =>
+      conversation.sourceHostIndex === hostIndex || conversation.destinationHostIndex === hostIndex
+  );
+  if (conversationIndex === 0) {
+    return [0.48, 0.09, 0.08, 1];
+  }
+  if (conversationIndex === 1) {
+    return [0.07, 0.38, 0.1, 1];
+  }
+  return [0.18, 0.4, 0.92, 1];
+}
+
 function makeLinkKey(start: Vector3, end: Vector3): string {
   const startKey = start.join(',');
   const endKey = end.join(',');
   return startKey < endKey ? `${startKey}:${endKey}` : `${endKey}:${startKey}`;
 }
 
-function makeSceneTexture(device: Device, width: number, height: number): Texture {
+function makeBalancedEmissionColor(color: Color, alpha: number): Color {
+  const luminance = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722;
+  const brightnessScale = 0.45 / Math.max(luminance, 0.2);
+  return [
+    color[0] * brightnessScale,
+    color[1] * brightnessScale,
+    color[2] * brightnessScale,
+    alpha
+  ];
+}
+
+function makeBloomPipeline(colorFormat: TextureFormatColor): ShaderPassPipeline {
+  return {
+    ...bloomShaderPassPipeline,
+    renderTargets: Object.fromEntries(
+      Object.entries(bloomShaderPassPipeline.renderTargets).map(([targetName, renderTarget]) => [
+        targetName,
+        {...renderTarget, format: colorFormat}
+      ])
+    )
+  };
+}
+
+function getSceneColorFormat(device: Device): TextureFormatColor {
+  const floatingPointCapabilities = device.getTextureFormatCapabilities('rgba16float');
+  if (floatingPointCapabilities.render && floatingPointCapabilities.filter) {
+    return 'rgba16float';
+  }
+  return device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm';
+}
+
+function makeSceneTexture(
+  device: Device,
+  width: number,
+  height: number,
+  format: TextureFormatColor
+): Texture {
   return device.createTexture({
     id: 'packet-spraying-scene-color',
-    format: device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm',
+    format,
     width,
     height,
     usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC,
@@ -1485,10 +1767,15 @@ function makeSceneTexture(device: Device, width: number, height: number): Textur
   });
 }
 
-function makeRefractionTexture(device: Device, width: number, height: number): Texture {
+function makeRefractionTexture(
+  device: Device,
+  width: number,
+  height: number,
+  format: TextureFormatColor
+): Texture {
   return device.createTexture({
     id: 'packet-spraying-refraction-color',
-    format: device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm',
+    format,
     width,
     height,
     usage: Texture.SAMPLE | Texture.COPY_DST,
@@ -1679,6 +1966,67 @@ function makeSettingsSchema(
             min: 0,
             max: 0.5,
             step: 0.01
+          }
+        ]
+      },
+      {
+        id: 'packet-lighting',
+        name: 'Emissive Packets',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'packetEmission',
+            label: 'Packet Emission',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 8,
+            step: 0.1
+          },
+          {
+            name: 'packetLightIntensity',
+            label: 'Local Light Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'packetLightRadius',
+            label: 'Local Light Radius',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'bloomIntensity',
+            label: 'Bloom Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.02
+          },
+          {
+            name: 'bloomThreshold',
+            label: 'Bloom Threshold',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 2.5,
+            step: 0.02
+          },
+          {
+            name: 'exposure',
+            label: 'Exposure',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 2.5,
+            step: 0.05
           }
         ]
       },

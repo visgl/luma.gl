@@ -3,7 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
+import {
+  Buffer,
+  type Device,
+  type Framebuffer,
+  Texture,
+  type TextureFormatColor
+} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
   WBOITRenderer,
@@ -93,6 +99,49 @@ test('WBOITRenderer is order independent and rejects fragments behind opaque dep
   }
 
   t.ok(testedDeviceCount > 0, 'at least one WBOIT backend was tested');
+  t.end();
+});
+
+test('WBOITRenderer preserves the configured rgba16float resolve format', async t => {
+  let testedDeviceCount = 0;
+
+  for (const device of await getTestDevices()) {
+    const capabilities = device.getTextureFormatCapabilities('rgba16float');
+    if (!getWBOITSupport(device).supported || !capabilities.filter) {
+      t.comment(`${device.type} does not support filterable rgba16float resolve textures`);
+      continue;
+    }
+
+    testedDeviceCount += 1;
+    const {framebuffer, colorTexture} = createFramebuffer(device, 1, 1, 'rgba16float');
+    const renderer = new WBOITRenderer(device, {colorFormat: 'rgba16float'});
+    const opaquePass = device.beginRenderPass({
+      framebuffer,
+      clearColor: [2, 0.5, 0.25, 1],
+      clearDepth: 1
+    });
+    opaquePass.end();
+
+    const outputTexture = renderer.render({
+      sourceTexture: colorTexture,
+      drawOpaqueDepth: () => {},
+      prepareTranslucent: () => {},
+      drawTranslucent: () => {}
+    });
+    device.submit();
+
+    t.equal(
+      outputTexture.format,
+      'rgba16float',
+      `${device.type} resolved output retains the requested HDR format`
+    );
+
+    renderer.destroy();
+    framebuffer.destroy();
+    colorTexture.destroy();
+  }
+
+  t.ok(testedDeviceCount > 0, 'at least one HDR-capable WBOIT backend was tested');
   t.end();
 });
 
@@ -194,12 +243,13 @@ async function renderOpaqueOcclusion(
 function createFramebuffer(
   device: Device,
   width: number,
-  height: number
+  height: number,
+  colorFormat: TextureFormatColor = 'rgba8unorm'
 ): {framebuffer: Framebuffer; colorTexture: Texture} {
   const colorTexture = device.createTexture({
     width,
     height,
-    format: 'rgba8unorm',
+    format: colorFormat,
     usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC
   });
   const framebuffer = device.createFramebuffer({

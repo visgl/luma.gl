@@ -9,6 +9,7 @@ import {
   type RenderPass,
   type RenderPipelineParameters,
   Texture,
+  type TextureFormatColor,
   type TextureView
 } from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
@@ -34,6 +35,8 @@ export type ABufferRendererProps = {
   maxFragmentsPerPixel?: number;
   /** Maximum size of each A-buffer storage buffer in bytes. Smaller values force more slices. */
   maxBufferByteLength?: number;
+  /** Format of the resolved color texture. Defaults to the canvas-preferred format. */
+  colorFormat?: TextureFormatColor;
 };
 
 /** Result returned by {@link getABufferSupport}. */
@@ -85,7 +88,7 @@ export type ABufferRenderOptions = {
   drawTranslucent: (renderPass: RenderPass) => void;
 };
 
-type ResolvedABufferRendererProps = Required<ABufferRendererProps>;
+type ResolvedABufferRendererProps = Required<Omit<ABufferRendererProps, 'colorFormat'>>;
 
 /**
  * Captures exact order-independent transparency and resolves each slice through a ShaderPassPipeline.
@@ -133,6 +136,7 @@ export class ABufferRenderer {
     this.device = device;
     this.props = resolveABufferRendererProps(props);
     this.resolveRenderer = new ShaderPassRenderer(device, {
+      colorFormat: props.colorFormat,
       shaderPasses: [
         createABufferResolveShaderPassPipeline({
           maxFragmentsPerPixel: this.props.maxFragmentsPerPixel

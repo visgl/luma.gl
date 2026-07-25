@@ -62,6 +62,12 @@ type ShaderPassPipeline<TargetNameT extends string = string> = {
   steps: ShaderPassPipelineStep<TargetNameT>[];
 };
 
+type ShaderPassRenderTarget = {
+  scale?: [number, number];
+  format?: TextureFormat;
+  sampler?: SamplerProps;
+};
+
 type ShaderPassPipelineStep<TargetNameT extends string = string> = {
   shaderPass: ShaderPass;
   inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
@@ -193,6 +199,10 @@ Destroys owned pass renderers, swap framebuffers, and texture model.
 Resizes the internal swap framebuffers and all pipeline render targets to match the provided size or the current canvas size.
 
 Named targets respect their declared `scale`. For example, a target with `scale: [0.5, 0.5]` is resized to half width and half height.
+
+Set `sampler: {minFilter: 'linear', magFilter: 'linear'}` on downsampled color targets when they
+will be upsampled later. Linear sampling prevents block-shaped bloom halos while leaving existing
+nearest-sampled passes unchanged.
 
 Resizing invalidates history targets whose allocation size changes.
 

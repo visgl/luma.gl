@@ -119,6 +119,29 @@ fn glassMaterial_getColor(
   );
   return vec4<f32>(color, opacity);
 }
+
+#ifdef LUMA_OPTICAL_POINT_LIGHTS
+fn glassMaterial_getIlluminatedColor(
+  normal: vec3<f32>,
+  worldPosition: vec3<f32>,
+  baseColor: vec4<f32>,
+  cameraPosition: vec3<f32>,
+  fragmentPosition: vec4<f32>
+) -> vec4<f32> {
+  let glassColor = glassMaterial_getColor(
+    normal,
+    worldPosition,
+    baseColor,
+    cameraPosition,
+    fragmentPosition
+  );
+  let pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  return vec4<f32>(
+    glassColor.rgb + pointLightColor * glassMaterial.reflectionStrength,
+    glassColor.a
+  );
+}
+#endif
 `;
 
 const GLASS_MATERIAL_GLSL = /* glsl */ `\
@@ -191,6 +214,31 @@ vec4 glassMaterial_getColor(
   );
   return vec4(color, opacity);
 }
+
+#ifdef LUMA_OPTICAL_POINT_LIGHTS
+vec3 opticalPointLights_getColor(vec3 normal, vec3 worldPosition, vec3 cameraPosition);
+
+vec4 glassMaterial_getIlluminatedColor(
+  vec3 normal,
+  vec3 worldPosition,
+  vec4 baseColor,
+  vec3 cameraPosition,
+  vec4 fragmentPosition
+) {
+  vec4 glassColor = glassMaterial_getColor(
+    normal,
+    worldPosition,
+    baseColor,
+    cameraPosition,
+    fragmentPosition
+  );
+  vec3 pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  return vec4(
+    glassColor.rgb + pointLightColor * glassMaterial.reflectionStrength,
+    glassColor.a
+  );
+}
+#endif
 `;
 
 function getGlassMaterialUniforms(

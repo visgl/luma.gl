@@ -47,6 +47,12 @@ GLSL exposes the equivalent `vec4 glassMaterial_getColor(...)` function. Add
 `glassMaterialPlugin` to the model so the helper and its shared `opticalLighting` dependency are
 installed before compilation.
 
+For surfaces illuminated by nearby moving lights, install `opticalPointLightsPlugin` alongside
+`glassMaterialPlugin` and call `glassMaterial_getIlluminatedColor(...)` with the same arguments.
+Bind `opticalPointLights` through `ShaderInputs` with up to `MAX_OPTICAL_POINT_LIGHTS` world-space
+light positions, colors, radii, and intensities. The original `glassMaterial_getColor(...)`
+remains available for scenes without dynamic local lights.
+
 ## Usage
 
 ```ts
