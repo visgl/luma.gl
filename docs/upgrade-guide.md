@@ -44,6 +44,13 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 - Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
 - The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/experimental` with explicit key/value output views and command submission.
 
+## Upgrading to v9.4
+
+**@luma.gl/engine**
+- `BufferTransform.run()` now creates its render pass with `discard: true` by default, avoiding
+  unnecessary attachment stores for transform-feedback-only workloads. Applications that attach a
+  framebuffer and consume rasterized fragment output must pass `discard: false` to `run()`.
+
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**
