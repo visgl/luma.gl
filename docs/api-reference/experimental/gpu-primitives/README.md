@@ -52,6 +52,8 @@ buffer-native algorithms.
 The implementation is intentionally experimental: it is concrete enough to measure and use, but
 small enough that its API can still respond to experience.
 
+![GPU-native trace manipulation pipeline showing canonical trace data, GPU mask filtering, hierarchy and graph operations, and indirect GPU rendering](./gpu-trace-manipulation-infographic.png)
+
 <GPUTraceViewerExample embedded />
 
 The GPU frustum-culling example applies the same primitives to a conventional 3D scene. It tests
