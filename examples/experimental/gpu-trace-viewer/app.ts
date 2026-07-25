@@ -165,7 +165,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private capacityElement: HTMLElement | null = null;
   private selectionElement: HTMLElement | null = null;
 
-  constructor({device}: AnimationProps) {
+  constructor({
+    device,
+    traceCapacity = DEFAULT_CAPACITY
+  }: AnimationProps & {traceCapacity?: number}) {
     super();
     if (device.type !== 'webgpu') {
       throw new Error('GPU Hierarchical Trace Viewer requires WebGPU');
@@ -180,7 +183,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.dependencyModel = this.createDependencyModel();
     this.activityModel = this.createActivityModel();
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
-    this.rebuild(DEFAULT_CAPACITY);
+    this.rebuild(traceCapacity);
     this.panels.mount();
   }
 

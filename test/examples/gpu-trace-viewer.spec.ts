@@ -24,7 +24,10 @@ describe('GPU hierarchical trace viewer', () => {
     document.body.append(host);
     let viewer: GPUTraceViewerAnimationLoopTemplate | null = null;
     try {
-      viewer = new GPUTraceViewerAnimationLoopTemplate({device} as AnimationProps);
+      viewer = new GPUTraceViewerAnimationLoopTemplate({
+        device,
+        traceCapacity: 4096
+      } as AnimationProps & {traceCapacity: number});
       const state = viewer as unknown as {
         resources: {
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
@@ -42,7 +45,7 @@ describe('GPU hierarchical trace viewer', () => {
         focusOnly: boolean;
         filterFlags: number;
       };
-      expect(state.resources.spanCount).toBe(250_000);
+      expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
