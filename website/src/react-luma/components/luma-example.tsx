@@ -53,6 +53,7 @@ export type LumaExampleProps = React.PropsWithChildren<
   ExampleDisplayProps & {
   id?: string;
   title?: string;
+  subtitle?: string;
   template: Function;
   config: unknown;
   directory?: string;
@@ -149,6 +150,7 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
       <InfoBox
         id={props.id}
         title={props.title}
+        subtitle={props.subtitle}
         directory={props.directory}
         sourceDirectory={props.sourceDirectory}
         sourceFiles={props.sourceFiles}
@@ -345,6 +347,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         <ExampleHeader
           id={props.id}
           title={props.title}
+          subtitle={props.subtitle}
           directory={props.directory}
           sourceDirectory={props.sourceDirectory}
           sourceFiles={props.sourceFiles}

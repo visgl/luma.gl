@@ -940,7 +940,8 @@ export const GlobeExample: React.FC = props => (
 export const PacketSprayingExample: React.FC = props => (
   <LumaExample
     id="packet-spraying"
-    title="Network Packet Spraying"
+    title="Effects: Glass"
+    subtitle="Network Packet Spraying"
     directory="showcase"
     template={PacketSprayingApp}
     config={exampleConfig}

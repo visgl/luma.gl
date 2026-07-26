@@ -116,5 +116,5 @@ and should be introduced as explicitly composable modules or render passes rathe
 an individual showcase.
 
 For a complete application, see
-[Network Packet Spraying](/examples/showcase/packet-spraying), which combines glass switches,
+[Effects: Glass - Network Packet Spraying](/examples/showcase/packet-spraying), which combines glass switches,
 reflective network links, exact or approximate transparency, and interactive camera controls.

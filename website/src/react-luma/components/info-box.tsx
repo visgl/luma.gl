@@ -39,6 +39,7 @@ export type ExampleInfoProps = {
   sourceFiles?: string[];
   sourcePath?: string;
   stackBlitz?: boolean;
+  subtitle?: string;
   title?: string;
 };
 
@@ -319,6 +320,11 @@ function InfoBoxView(props: InfoBoxViewProps) {
           }}
         >
           {title ? <h3 style={{marginTop: 0, marginBottom: 0}}>{title}</h3> : null}
+          {props.subtitle ? (
+            <div style={{color: '#596579', fontSize: 12, lineHeight: 1.35, marginTop: 2}}>
+              {props.subtitle}
+            </div>
+          ) : null}
         </button>
         <div style={{display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0}}>
           {sourceUrl ? (

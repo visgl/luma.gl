@@ -34,6 +34,17 @@ test('aBuffer plugin exposes the WGSL module only', t => {
     /textureLoad\(opaqueDepthTexture, fragmentCoordinates, 0\)/,
     'capture explicitly tests opaque depth before storing fragments'
   );
+  t.match(
+    aBuffer.source,
+    /pack2x16float\(packedColor\.rg\)/,
+    'capture preserves HDR red and green channels in packed half floats'
+  );
+  t.match(
+    aBuffer.source,
+    /pack2x16float\(packedColor\.ba\)/,
+    'capture preserves HDR blue and alpha channels in packed half floats'
+  );
+  t.notOk(/pack4x8unorm/.test(aBuffer.source), 'capture does not clamp HDR color to RGBA8');
   t.end();
 });
 
@@ -45,6 +56,16 @@ test('A-buffer resolve is packaged as a ShaderPassPipeline', t => {
     pipeline.steps[0].inputs,
     {sourceTexture: 'previous'},
     'resolve composites over the previous color'
+  );
+  t.match(
+    pipeline.steps[0].shaderPass.source,
+    /unpack2x16float\(capturedFragment\.colorRedGreen\)/,
+    'resolve restores HDR red and green channels'
+  );
+  t.match(
+    pipeline.steps[0].shaderPass.source,
+    /unpack2x16float\(capturedFragment\.colorBlueAlpha\)/,
+    'resolve restores HDR blue and alpha channels'
   );
   t.throws(
     () => createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 0}),
@@ -68,12 +89,12 @@ test('getABufferSlicePlan fits fragments inside storage limits', t => {
     {
       width: 100,
       height: 50,
-      sliceHeight: 5,
-      sliceCount: 10,
-      maxSlicePixelCount: 500,
-      fragmentCapacity: 2000,
-      headPointerByteLength: 2008,
-      fragmentByteLength: 24_000
+      sliceHeight: 3,
+      sliceCount: 17,
+      maxSlicePixelCount: 300,
+      fragmentCapacity: 1200,
+      headPointerByteLength: 1208,
+      fragmentByteLength: 19_200
     },
     'slice plan budgets fragment storage and scanline slices'
   );
@@ -145,7 +166,7 @@ test('ABufferRenderer composites bounded-memory slices', async t => {
   const renderer = new ABufferRenderer(device, {
     averageFragmentsPerPixel: 1,
     maxFragmentsPerPixel: 2,
-    maxBufferByteLength: 24
+    maxBufferByteLength: 32
   });
   const referenceRenderer = new ABufferRenderer(device, {
     averageFragmentsPerPixel: 1,

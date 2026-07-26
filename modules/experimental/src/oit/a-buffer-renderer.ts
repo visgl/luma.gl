@@ -18,7 +18,7 @@ import {createABufferResolveShaderPassPipeline} from './a-buffer-resolve-shader-
 
 const A_BUFFER_HEAD_POINTER_HEADER_BYTE_LENGTH = 8;
 const A_BUFFER_HEAD_POINTER_BYTE_LENGTH = 4;
-const A_BUFFER_FRAGMENT_BYTE_LENGTH = 12;
+const A_BUFFER_FRAGMENT_BYTE_LENGTH = 16;
 const DEFAULT_AVERAGE_FRAGMENTS_PER_PIXEL = 4;
 const DEFAULT_MAX_FRAGMENTS_PER_PIXEL = 12;
 let nextABufferResourceId = 0;

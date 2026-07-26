@@ -700,7 +700,6 @@ class NetworkNodePopup {
 export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
-  readonly shaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
   readonly reflectiveShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     opticalPointLights: OpticalPointLightsProps;
@@ -829,7 +828,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         : 'sorted-alpha';
     this.aBufferRenderer = supportsABuffer
       ? new ABufferRenderer(device, {
-          averageFragmentsPerPixel: 6,
+          averageFragmentsPerPixel: 4,
           maxFragmentsPerPixel: 20,
           maxBufferByteLength: 64 * 1024 * 1024,
           colorFormat: this.sceneColorFormat
@@ -1017,7 +1016,6 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       lights: this.makePacketLights(),
       intensity: this.packetLightIntensity
     };
-    this.shaderInputs.setProps({app: uniforms});
     this.emissiveShaderInputs.setProps({
       app: uniforms,
       emissiveMaterial: {intensity: this.packetEmission, rimStrength: 0.32}
@@ -1162,9 +1160,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.postprocessingRenderer.destroy();
     this.aBufferRenderer?.destroy();
     this.weightedBlendedRenderer?.destroy();
-    this.shaderInputs.destroy();
     this.emissiveShaderInputs.destroy();
     this.reflectiveShaderInputs.destroy();
+    this.metallicShaderInputs.destroy();
     this.pickingShaderInputs.destroy();
     this.glassShaderInputs.destroy();
     this.aBufferShaderInputs.destroy();
@@ -1353,7 +1351,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private makePanel(): Panel {
     return makeExampleTabbedPanel({
       id: 'packet-spraying-info',
-      title: 'Network Packet Spraying',
+      title: 'Effects: Glass',
       panels: [
         makeHtmlCustomPanel({
           id: 'packet-spraying-overview',
@@ -1454,6 +1452,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 const PACKET_SPRAYING_ARTICLE_URL = 'https://openai.com/index/mrc-supercomputer-networking/';
 
 const PACKET_SPRAYING_OVERVIEW_HTML = `\
+<p><strong>Network Packet Spraying</strong></p>
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
 <p>Packets enter their local Tier 0 switch as separate streams. Once the streams meet, the switch forwards alternating red and green packets across four representative independent network planes. The destination-side switches separate the traffic again and deliver each color to its intended server.</p>
 <p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and faint tubes show the available fabric links. Emissive packets cast localized colored light onto nearby switches and active links, with restrained multiscale bloom.</p>
