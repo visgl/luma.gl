@@ -51,8 +51,9 @@ fn reflectiveMaterial_getColor(
     max(dot(normalFacingCamera, fillHalfVector), 0.0),
     specularExponent * 0.545
   );
+  let reflectionDirection = reflect(-viewDirection, normalFacingCamera);
   let reflectedColor = opticalLighting_sampleEnvironment(
-    normalFacingCamera,
+    reflectionDirection,
     vec3<f32>(0.08, 0.14, 0.25),
     vec3<f32>(0.52, 0.7, 0.95),
     0.0
@@ -65,7 +66,7 @@ fn reflectiveMaterial_getColor(
     baseColor.a * reflectiveMaterial.opacityScale *
       (0.85 + fresnel * 0.2 + (keySpecular + fillSpecular) * 0.35),
     0.0,
-    0.72
+    1.0
   );
   return vec4<f32>(color, opacity);
 }
@@ -121,8 +122,9 @@ vec4 reflectiveMaterial_getColor(
     max(dot(normalFacingCamera, fillHalfVector), 0.0),
     specularExponent * 0.545
   );
+  vec3 reflectionDirection = reflect(-viewDirection, normalFacingCamera);
   vec3 reflectedColor = opticalLighting_sampleEnvironment(
-    normalFacingCamera,
+    reflectionDirection,
     vec3(0.08, 0.14, 0.25),
     vec3(0.52, 0.7, 0.95),
     0.0
@@ -135,7 +137,7 @@ vec4 reflectiveMaterial_getColor(
     baseColor.a * reflectiveMaterial.opacityScale *
       (0.85 + fresnel * 0.2 + (keySpecular + fillSpecular) * 0.35),
     0.0,
-    0.72
+    1.0
   );
   return vec4(color, opacity);
 }

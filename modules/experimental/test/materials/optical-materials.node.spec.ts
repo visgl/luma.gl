@@ -229,6 +229,40 @@ test('optical materials retain defaults while applying partial updates', testCas
   testCase.end();
 });
 
+test('reflective materials follow the reflected view direction and preserve opaque alpha', testCase => {
+  testCase.match(
+    reflectiveMaterial.source,
+    /let reflectionDirection = reflect\(-viewDirection, normalFacingCamera\);/,
+    'WGSL environment reflections follow the camera-reflected view ray'
+  );
+  testCase.match(
+    reflectiveMaterial.fs,
+    /vec3 reflectionDirection = reflect\(-viewDirection, normalFacingCamera\);/,
+    'GLSL environment reflections follow the camera-reflected view ray'
+  );
+  testCase.match(
+    reflectiveMaterial.source,
+    /opticalLighting_sampleEnvironment\(\s*reflectionDirection,/,
+    'WGSL samples the environment along the reflected ray'
+  );
+  testCase.match(
+    reflectiveMaterial.fs,
+    /opticalLighting_sampleEnvironment\(\s*reflectionDirection,/,
+    'GLSL samples the environment along the reflected ray'
+  );
+  testCase.match(
+    reflectiveMaterial.source,
+    /let opacity = clamp\([\s\S]*?0\.0,\s*1\.0\s*\);/,
+    'WGSL reflective opacity supports the complete zero-to-one alpha range'
+  );
+  testCase.match(
+    reflectiveMaterial.fs,
+    /float opacity = clamp\([\s\S]*?0\.0,\s*1\.0\s*\);/,
+    'GLSL reflective opacity supports the complete zero-to-one alpha range'
+  );
+  testCase.end();
+});
+
 test('optical point lights pack and retain a bounded portable uniform array', testCase => {
   const initialUniforms = opticalPointLights.getUniforms({});
   testCase.equal(initialUniforms.lightCount, 0, 'point lights start disabled');

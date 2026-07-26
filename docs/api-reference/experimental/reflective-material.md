@@ -8,6 +8,10 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 Fresnel-weighted environment reflection with roughness-adjusted key and fill highlights, without
 requiring the captured scene-color texture used by `glassMaterial`.
 
+Environment reflections follow the camera-reflected view direction as the viewpoint moves. Output
+opacity is clamped to the full zero-to-one range, allowing translucent links and fully opaque
+metallic surfaces to share the same material.
+
 ```ts
 import {
   reflectiveMaterial,
