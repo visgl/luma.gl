@@ -96,7 +96,15 @@ const ILLUMINATED_OPTICAL_MATERIAL_SHADER = OPTICAL_MATERIAL_SHADER.replace(
     inputs.worldPosition,
     cameraPosition
   );
-  return mix(glassColor, reflectedColor, 0.25) + emittedColor * 0.2 +
+  let trailColor = emissiveMaterial_getTrailColor(
+    normal,
+    inputs.worldPosition,
+    vec4<f32>(0.2, 1.0, 0.1, 0.5),
+    cameraPosition,
+    0.65,
+    0.5
+  );
+  return mix(glassColor, reflectedColor, 0.25) + emittedColor * 0.2 + trailColor * 0.1 +
     vec4<f32>(pointLightColor, 0.0);`
   );
 
@@ -158,6 +166,26 @@ test('optical material modules expose portable shared shader helpers', testCase 
   testCase.match(opticalLighting.fs, /float opticalLighting_getFresnel/, 'GLSL helpers exist');
   testCase.match(emissiveMaterial.source, /fn emissiveMaterial_getColor/, 'WGSL emission exists');
   testCase.match(emissiveMaterial.fs, /vec4 emissiveMaterial_getColor/, 'GLSL emission exists');
+  testCase.match(
+    emissiveMaterial.source,
+    /fn emissiveMaterial_getTrailColor/,
+    'WGSL directional emission exists'
+  );
+  testCase.match(
+    emissiveMaterial.fs,
+    /vec4 emissiveMaterial_getTrailColor/,
+    'GLSL directional emission exists'
+  );
+  testCase.match(
+    emissiveMaterial.source,
+    /pow\(smoothstep\(0\.0, 1\.0, trailProgress\), 1\.5\)/,
+    'WGSL trails fade toward the packet tail'
+  );
+  testCase.match(
+    emissiveMaterial.fs,
+    /pow\(smoothstep\(0\.0, 1\.0, trailProgress\), 1\.5\)/,
+    'GLSL trails fade toward the packet tail'
+  );
   testCase.match(
     opticalPointLights.source,
     /fn opticalPointLights_getColor/,
@@ -452,6 +480,11 @@ test('illuminated optical materials compose once with emission and transparency'
   );
   testCase.match(
     assembledShader.source,
+    /fn emissiveMaterial_getTrailColor/,
+    'directional emissive helper composes with optical materials'
+  );
+  testCase.match(
+    assembledShader.source,
     /lights: array<OpticalPointLightUniform, 16>/,
     'WGSL exposes a fixed 16-light uniform array'
   );
@@ -498,7 +531,8 @@ void main(void) {
     cameraPosition
   );
   fragmentColor = mix(glassColor, reflectedColor, 0.25) +
-    emissiveMaterial_getColor(normal, worldPosition, baseColor, cameraPosition);
+    emissiveMaterial_getColor(normal, worldPosition, baseColor, cameraPosition) +
+    emissiveMaterial_getTrailColor(normal, worldPosition, baseColor, cameraPosition, 0.65, 0.5);
 }
 `,
     modules: [glassMaterial, reflectiveMaterial, emissiveMaterial, opticalPointLights]
@@ -520,5 +554,10 @@ void main(void) {
     'GLSL illuminated reflections compose'
   );
   testCase.match(assembledShader.fs, /vec4 emissiveMaterial_getColor/, 'GLSL emission composes');
+  testCase.match(
+    assembledShader.fs,
+    /vec4 emissiveMaterial_getTrailColor/,
+    'GLSL directional emission composes'
+  );
   testCase.end();
 });

@@ -258,10 +258,9 @@ fn bloomComposite_sampleColor(
   texCoord: vec2f
 ) -> vec4f {
   let sourceColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
-  let renderTargetCoord = shaderPassRenderer_getRenderTargetUV(texCoord);
-  let halfGlow = textureSample(glowHalf, glowHalfSampler, renderTargetCoord).rgb;
-  let quarterGlow = textureSample(glowQuarter, glowQuarterSampler, renderTargetCoord).rgb;
-  let eighthGlow = textureSample(glowEighth, glowEighthSampler, renderTargetCoord).rgb;
+  let halfGlow = textureSample(glowHalf, glowHalfSampler, texCoord).rgb;
+  let quarterGlow = textureSample(glowQuarter, glowQuarterSampler, texCoord).rgb;
+  let eighthGlow = textureSample(glowEighth, glowEighthSampler, texCoord).rgb;
   let glowColor = halfGlow * 0.50 + quarterGlow * 0.32 + eighthGlow * 0.18;
   return vec4f(sourceColor.rgb + glowColor * bloomComposite.intensity, sourceColor.a);
 }
@@ -277,10 +276,9 @@ uniform sampler2D glowEighth;
 
 vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   vec4 sourceColor = texture(sourceTexture, texCoord);
-  vec2 renderTargetCoord = shaderPassRenderer_getRenderTargetUV(texCoord);
-  vec3 halfGlow = texture(glowHalf, renderTargetCoord).rgb;
-  vec3 quarterGlow = texture(glowQuarter, renderTargetCoord).rgb;
-  vec3 eighthGlow = texture(glowEighth, renderTargetCoord).rgb;
+  vec3 halfGlow = texture(glowHalf, texCoord).rgb;
+  vec3 quarterGlow = texture(glowQuarter, texCoord).rgb;
+  vec3 eighthGlow = texture(glowEighth, texCoord).rgb;
   vec3 glowColor = halfGlow * 0.50 + quarterGlow * 0.32 + eighthGlow * 0.18;
   return vec4(sourceColor.rgb + glowColor * bloomComposite.intensity, sourceColor.a);
 }

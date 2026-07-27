@@ -37,6 +37,19 @@ fn emissiveMaterial_getColor(
   let emission = emissiveMaterial.intensity * (1.0 + emissiveMaterial.rimStrength * rim);
   return vec4<f32>(baseColor.rgb * emission, baseColor.a);
 }
+
+fn emissiveMaterial_getTrailColor(
+  normal: vec3<f32>,
+  worldPosition: vec3<f32>,
+  baseColor: vec4<f32>,
+  cameraPosition: vec3<f32>,
+  trailProgress: f32,
+  trailStrength: f32
+) -> vec4<f32> {
+  let emission = emissiveMaterial_getColor(normal, worldPosition, baseColor, cameraPosition);
+  let fade = pow(smoothstep(0.0, 1.0, trailProgress), 1.5);
+  return vec4<f32>(emission.rgb * fade * trailStrength, emission.a * fade);
+}
 `;
 
 const EMISSIVE_MATERIAL_GLSL = /* glsl */ `\
@@ -57,6 +70,19 @@ vec4 emissiveMaterial_getColor(
   float rim = pow(1.0 - viewAlignment, 2.0);
   float emission = emissiveMaterial.intensity * (1.0 + emissiveMaterial.rimStrength * rim);
   return vec4(baseColor.rgb * emission, baseColor.a);
+}
+
+vec4 emissiveMaterial_getTrailColor(
+  vec3 normal,
+  vec3 worldPosition,
+  vec4 baseColor,
+  vec3 cameraPosition,
+  float trailProgress,
+  float trailStrength
+) {
+  vec4 emission = emissiveMaterial_getColor(normal, worldPosition, baseColor, cameraPosition);
+  float fade = pow(smoothstep(0.0, 1.0, trailProgress), 1.5);
+  return vec4(emission.rgb * fade * trailStrength, emission.a * fade);
 }
 `;
 

@@ -42,5 +42,24 @@ test('bloomShaderPassPipeline#routing', t => {
     /unpremultipliedRgb/.test(blurPass?.source || ''),
     'blur does not amplify tiny alpha into square halos'
   );
+
+  const compositePass = bloomShaderPassPipeline.steps.find(
+    step => step.shaderPass.name === 'bloomComposite'
+  )?.shaderPass;
+  t.ok(compositePass, 'multiscale bloom includes a glow composite');
+  t.match(
+    compositePass?.source || '',
+    /textureSample\(glowHalf, glowHalfSampler, texCoord\)/,
+    'WGSL composites glow in the same orientation as the scene'
+  );
+  t.match(
+    compositePass?.fs || '',
+    /texture\(glowHalf, texCoord\)/,
+    'GLSL composites glow in the same orientation as the scene'
+  );
+  t.notOk(
+    /shaderPassRenderer_getRenderTargetUV/.test(compositePass?.fs || ''),
+    'GLSL does not vertically mirror named bloom targets'
+  );
   t.end();
 });

@@ -29,6 +29,11 @@ portable, bounded local lighting. Emission makes an object bright; point lightin
 illuminate nearby surfaces; bloom spreads the brightest pixels in screen space. These effects can
 be combined independently.
 
+For moving emitters, `emissiveMaterial_getTrailColor(...)` applies a smooth axial falloff to a
+velocity-aligned mesh. A tapered cone behind each packet produces directional bloom without
+blurring stationary glass, links, or neighboring packet colors. Brief additive switch-arrival
+flashes can share the same emissive material while bounded point lights illuminate nearby surfaces.
+
 ## Attach a Glass Material
 
 ```ts
