@@ -74,6 +74,13 @@ export type PickableNetworkNode = {
   title: string;
 };
 
+export type NetworkSwitchGroupId = 'spine' | 'plane-1' | 'plane-2';
+
+export type NetworkSwitchGroup = {
+  id: NetworkSwitchGroupId;
+  switchIndices: number[];
+};
+
 export const HOST_X_POSITIONS = [-3.6, -1.2, 1.2, 3.6];
 export const HOST_Z_POSITIONS = [2.4, 0.8, -0.8, -2.4];
 export const HOST_Y = -2.75;
@@ -117,6 +124,42 @@ export const SWITCH_POSITIONS: Vector3[] = [
   ...AGGREGATION_POSITIONS,
   ...SPINE_POSITIONS
 ];
+
+/** Keeps semantic switch planes intact while allowing camera-depth-ordered glass composition. */
+export function makeSwitchGroups(): NetworkSwitchGroup[] {
+  const leafPlaneWidth = LEAF_POSITIONS.length / 2;
+  const aggregationPlaneWidth = AGGREGATION_POSITIONS.length / 2;
+  const aggregationOffset = LEAF_POSITIONS.length;
+  const spineOffset = aggregationOffset + AGGREGATION_POSITIONS.length;
+
+  return [
+    {
+      id: 'spine',
+      switchIndices: SPINE_POSITIONS.map((_, switchIndex) => spineOffset + switchIndex)
+    },
+    {
+      id: 'plane-1',
+      switchIndices: [
+        ...Array.from({length: leafPlaneWidth}, (_, switchIndex) => switchIndex),
+        ...Array.from(
+          {length: aggregationPlaneWidth},
+          (_, switchIndex) => aggregationOffset + switchIndex
+        )
+      ]
+    },
+    {
+      id: 'plane-2',
+      switchIndices: [
+        ...Array.from({length: leafPlaneWidth}, (_, switchIndex) => leafPlaneWidth + switchIndex),
+        ...Array.from(
+          {length: aggregationPlaneWidth},
+          (_, switchIndex) => aggregationOffset + aggregationPlaneWidth + switchIndex
+        )
+      ]
+    }
+  ];
+}
+
 export const CONVERSATIONS: Conversation[] = [
   {sourceHostIndex: 3, destinationHostIndex: 8, color: TRAFFIC_COLORS[0]},
   {sourceHostIndex: 7, destinationHostIndex: 12, color: TRAFFIC_COLORS[1]}

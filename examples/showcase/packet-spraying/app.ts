@@ -17,7 +17,9 @@ import {
   colorPicking,
   CubeGeometry,
   CylinderGeometry,
+  GroupNode,
   Model,
+  ModelNode,
   PickingManager,
   ShaderPassRenderer,
   ShaderInputs,
@@ -34,6 +36,8 @@ import {
   emissiveMaterialPlugin,
   glassMaterial,
   glassMaterialPlugin,
+  glassTransmission,
+  glassTransmissionPlugin,
   getABufferSupport,
   getWBOITSupport,
   opticalPointLights,
@@ -43,6 +47,7 @@ import {
   type ABufferShaderModuleProps,
   type EmissiveMaterialProps,
   type GlassMaterialProps,
+  type GlassTransmissionProps,
   type OpticalPointLight,
   type OpticalPointLightsProps,
   type ReflectiveMaterialProps,
@@ -99,6 +104,7 @@ import {
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
   makeSwitchProbeEvent,
+  makeSwitchGroups,
   makeSwitchArrivals,
   reroutePackets,
   type Color,
@@ -106,6 +112,7 @@ import {
   type NetworkLink,
   type NetworkPacketEvent,
   type NetworkScenario,
+  type NetworkSwitchGroupId,
   type Packet,
   type PickableNetworkNode,
   type SwitchArrival,
@@ -124,6 +131,33 @@ type GlassInstance = {
   color: Color;
   matrix: Matrix4;
   position: Vector3;
+};
+
+type GlassRenderGroup = {
+  id: NetworkSwitchGroupId;
+  instances: GlassInstance[];
+  node: ModelNode;
+  backfaces: InstancedMesh<{app: AppUniforms}>;
+  sorted: InstancedMesh<{
+    app: AppUniforms;
+    glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
+  }>;
+  aBuffer: InstancedMesh<{
+    app: AppUniforms;
+    glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
+    aBuffer: ABufferShaderModuleProps;
+  }> | null;
+  weightedBlended: InstancedMesh<{
+    app: AppUniforms;
+    glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
+    wboit: WBOITShaderModuleProps;
+  }> | null;
 };
 
 type NetworkNodePickRequest = {
@@ -247,7 +281,7 @@ fn fragmentTrail(inputs: VertexOutputs) -> @location(0) vec4<f32> {
 const GLASS_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
 @fragment
 fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let glassColor = glassMaterial_getIlluminatedColor(
+  let glassColor = glassTransmission_getIlluminatedColor(
     inputs.normal,
     inputs.worldPosition,
     inputs.color,
@@ -265,6 +299,14 @@ fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
   return color;
 #endif
 #endif
+}
+`;
+
+const GLASS_BACKFACE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentGlassBackface(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let encodedNormal = normalize(inputs.normal) * 0.5 + vec3<f32>(0.5);
+  return vec4<f32>(encodedNormal, inputs.position.z);
 }
 `;
 
@@ -376,7 +418,7 @@ in vec3 vWorldPosition;
 out vec4 fragColor;
 
 void main(void) {
-  vec4 glassColor = glassMaterial_getIlluminatedColor(
+  vec4 glassColor = glassTransmission_getIlluminatedColor(
     vNormal,
     vWorldPosition,
     vColor,
@@ -390,6 +432,18 @@ void main(void) {
 #else
   fragColor = color;
 #endif
+}
+`;
+
+const GLASS_BACKFACE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+in vec3 vNormal;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = vec4(normalize(vNormal) * 0.5 + vec3(0.5), gl_FragCoord.z);
 }
 `;
 
@@ -522,6 +576,11 @@ const TRANSPARENT_PARAMETERS = {
   cullMode: 'none'
 } as const satisfies RenderPipelineParameters;
 
+const GLASS_PARAMETERS = {
+  ...TRANSPARENT_PARAMETERS,
+  cullMode: 'back'
+} as const satisfies RenderPipelineParameters;
+
 const ADDITIVE_PARAMETERS = {
   blend: true,
   blendColorOperation: 'add',
@@ -562,7 +621,12 @@ class InstancedMesh<
       trail = false,
       pickable = false,
       reflective = false,
+      backface = false,
       sceneTexture,
+      sceneDepthTexture,
+      backfaceTexture,
+      environmentTexture,
+      colorAttachmentFormat,
       transparencyMode
     }: {
       id: string;
@@ -576,7 +640,12 @@ class InstancedMesh<
       trail?: boolean;
       pickable?: boolean;
       reflective?: boolean;
+      backface?: boolean;
       sceneTexture?: Texture;
+      sceneDepthTexture?: Texture;
+      backfaceTexture?: Texture;
+      environmentTexture?: Texture;
+      colorAttachmentFormat?: TextureFormatColor;
       transparencyMode?: TransparencyMode;
     }
   ) {
@@ -588,38 +657,44 @@ class InstancedMesh<
       id,
       source: pickable
         ? PICKING_WGSL_SHADER
-        : glass
-          ? GLASS_WGSL_SHADER
-          : reflective
-            ? REFLECTIVE_WGSL_SHADER
-            : trail
-              ? TRAIL_WGSL_SHADER
-              : emissive
-                ? EMISSIVE_WGSL_SHADER
-                : WGSL_SHADER,
+        : backface
+          ? GLASS_BACKFACE_WGSL_SHADER
+          : glass
+            ? GLASS_WGSL_SHADER
+            : reflective
+              ? REFLECTIVE_WGSL_SHADER
+              : trail
+                ? TRAIL_WGSL_SHADER
+                : emissive
+                  ? EMISSIVE_WGSL_SHADER
+                  : WGSL_SHADER,
       vs: pickable ? PICKING_VERTEX_SHADER : VERTEX_SHADER,
       fs: pickable
         ? PICKING_FRAGMENT_SHADER
-        : glass
-          ? GLASS_FRAGMENT_SHADER
-          : reflective
-            ? REFLECTIVE_FRAGMENT_SHADER
-            : trail
-              ? TRAIL_FRAGMENT_SHADER
-              : emissive
-                ? EMISSIVE_FRAGMENT_SHADER
-                : FRAGMENT_SHADER,
+        : backface
+          ? GLASS_BACKFACE_FRAGMENT_SHADER
+          : glass
+            ? GLASS_FRAGMENT_SHADER
+            : reflective
+              ? REFLECTIVE_FRAGMENT_SHADER
+              : trail
+                ? TRAIL_FRAGMENT_SHADER
+                : emissive
+                  ? EMISSIVE_FRAGMENT_SHADER
+                  : FRAGMENT_SHADER,
       fragmentEntryPoint: pickable
         ? 'fragmentPicking'
-        : glass
-          ? 'fragmentGlass'
-          : reflective
-            ? 'fragmentReflective'
-            : trail
-              ? 'fragmentTrail'
-              : emissive
-                ? 'fragmentEmissive'
-                : 'fragmentMain',
+        : backface
+          ? 'fragmentGlassBackface'
+          : glass
+            ? 'fragmentGlass'
+            : reflective
+              ? 'fragmentReflective'
+              : trail
+                ? 'fragmentTrail'
+                : emissive
+                  ? 'fragmentEmissive'
+                  : 'fragmentMain',
       shaderInputs,
       defines: {
         A_BUFFER_ENABLED: usesABuffer ? 1 : 0,
@@ -630,6 +705,7 @@ class InstancedMesh<
         ...(pickable ? [networkNodePickingPlugin] : []),
         ...(glass || reflective ? [opticalPointLightsPlugin] : []),
         ...(glass ? [glassMaterialPlugin] : []),
+        ...(glass ? [glassTransmissionPlugin] : []),
         ...(reflective ? [reflectiveMaterialPlugin] : []),
         ...(emissive || trail ? [emissiveMaterialPlugin] : []),
         ...(usesABuffer ? [aBufferPlugin] : []),
@@ -642,22 +718,45 @@ class InstancedMesh<
         instanceModelMatrices: this.matrixBuffer,
         instanceColor: this.colorBuffer
       },
-      ...(sceneTexture ? {bindings: {glassSceneColorTexture: sceneTexture}} : {}),
+      ...(sceneTexture
+        ? {
+            bindings: {
+              glassSceneColorTexture: sceneTexture,
+              ...(sceneDepthTexture ? {glassSceneDepthTexture: sceneDepthTexture} : {}),
+              ...(backfaceTexture ? {glassBackfaceTexture: backfaceTexture} : {}),
+              ...(environmentTexture ? {glassEnvironmentTexture: environmentTexture} : {})
+            }
+          }
+        : {}),
       ...(pickable
         ? {
             colorAttachmentFormats: ['rgba8unorm' as const],
             depthStencilAttachmentFormat: 'depth24plus' as const
           }
         : {}),
+      ...(backface && colorAttachmentFormat
+        ? {
+            colorAttachmentFormats: [colorAttachmentFormat],
+            depthStencilAttachmentFormat: 'depth24plus' as const
+          }
+        : {}),
       parameters: additive
         ? ADDITIVE_PARAMETERS
-        : transparent || glass
-          ? TRANSPARENT_PARAMETERS
-          : {
+        : backface
+          ? {
               depthWriteEnabled: true,
-              depthCompare: 'less-equal',
-              cullMode: 'back'
+              depthCompare: 'greater-equal',
+              cullMode: 'front'
             }
+          : glass
+            ? GLASS_PARAMETERS
+            : transparent
+              ? TRANSPARENT_PARAMETERS
+              : {
+                  depthWriteEnabled: true,
+                  depthCompare: 'less-equal',
+                  cullMode: 'back'
+                }
     });
   }
 
@@ -760,6 +859,7 @@ class NetworkNodePopup {
 export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
+  readonly backfaceShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
   readonly reflectiveShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     opticalPointLights: OpticalPointLightsProps;
@@ -777,20 +877,23 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly glassShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
     opticalPointLights: OpticalPointLightsProps;
-  }>({app: appShaderModule, glassMaterial, opticalPointLights});
+  }>({app: appShaderModule, glassMaterial, glassTransmission, opticalPointLights});
   readonly aBufferShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
     opticalPointLights: OpticalPointLightsProps;
     aBuffer: ABufferShaderModuleProps;
-  }>({app: appShaderModule, glassMaterial, opticalPointLights, aBuffer});
+  }>({app: appShaderModule, glassMaterial, glassTransmission, opticalPointLights, aBuffer});
   readonly weightedBlendedShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
     opticalPointLights: OpticalPointLightsProps;
     wboit: WBOITShaderModuleProps;
-  }>({app: appShaderModule, glassMaterial, opticalPointLights, wboit});
+  }>({app: appShaderModule, glassMaterial, glassTransmission, opticalPointLights, wboit});
   readonly pickingShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     picking: typeof colorPicking.props;
@@ -799,11 +902,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly panels: ExamplePanelManager;
   readonly sceneColorFormat: TextureFormatColor;
   readonly sceneFramebuffer: Framebuffer;
+  readonly glassBackfaceFramebuffer: Framebuffer;
   readonly postprocessingRenderer: ShaderPassRenderer;
   readonly aBufferRenderer: ABufferRenderer | null;
   readonly weightedBlendedRenderer: WBOITRenderer | null;
   sceneTexture: Texture;
   refractionTexture: Texture;
+  glassBackfaceTexture: Texture;
+  readonly environmentTexture: Texture;
   readonly links: InstancedMesh<{
     app: AppUniforms;
     opticalPointLights: OpticalPointLightsProps;
@@ -825,28 +931,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly pickingManager: PickingManager;
   readonly pickableNodes: PickableNetworkNode[];
   readonly glassInstances: GlassInstance[];
+  readonly glassGroups: GlassRenderGroup[];
+  readonly glassScenegraph: GroupNode;
   readonly originalGlassColors: Color[];
   readonly congestedSwitchIndices = new Set<number>();
   readonly failedSwitchIndices = new Set<number>();
   readonly conversationRoutes: ConversationRoute[];
   readonly networkLinks: NetworkLink[];
-  readonly sortedGlass: InstancedMesh<{
-    app: AppUniforms;
-    glassMaterial: GlassMaterialProps;
-    opticalPointLights: OpticalPointLightsProps;
-  }>;
-  readonly aBufferGlass: InstancedMesh<{
-    app: AppUniforms;
-    glassMaterial: GlassMaterialProps;
-    opticalPointLights: OpticalPointLightsProps;
-    aBuffer: ABufferShaderModuleProps;
-  }> | null;
-  readonly weightedBlendedGlass: InstancedMesh<{
-    app: AppUniforms;
-    glassMaterial: GlassMaterialProps;
-    opticalPointLights: OpticalPointLightsProps;
-    wboit: WBOITShaderModuleProps;
-  }> | null;
   readonly packets: InstancedMesh<{
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
@@ -893,9 +984,17 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   speed = 0.85;
   orbit = 0.08;
   glassIndexOfRefraction = 1.48;
-  glassRoughness = 0.14;
-  glassDispersion = 0.022;
-  glassThickness = 1.05;
+  glassRoughness = 0.11;
+  glassDispersion = 0.026;
+  glassThickness = 1.16;
+  glassRefractionStrength = 1.32;
+  glassFresnelStrength = 1.28;
+  glassClearcoatStrength = 1.15;
+  glassIridescenceStrength = 0.16;
+  glassInternalReflectionStrength = 0.72;
+  glassTransmissionStrength = 1.12;
+  glassEnvironmentIntensity = 1.25;
+  glassVolumeThickness = 1;
   packetEmission = 5.2;
   packetTrailLength = 0.19;
   packetTrailIntensity = 0.55;
@@ -942,6 +1041,15 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       colorAttachments: [this.sceneTexture],
       depthStencilAttachment: 'depth24plus'
     });
+    this.glassBackfaceTexture = makeBackfaceTexture(device, width, height, this.sceneColorFormat);
+    this.glassBackfaceFramebuffer = device.createFramebuffer({
+      id: 'packet-spraying-glass-backface-framebuffer',
+      width,
+      height,
+      colorAttachments: [this.glassBackfaceTexture],
+      depthStencilAttachment: 'depth24plus'
+    });
+    this.environmentTexture = makeStudioEnvironmentTexture(device);
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [makeBloomPipeline(this.sceneColorFormat), toneMapping],
       colorFormat: this.sceneColorFormat
@@ -993,36 +1101,70 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       ),
       pickable: true
     });
-    const glassMatrices = flattenMatrices(this.glassInstances.map(instance => instance.matrix));
-    const glassColors = flattenColors(this.glassInstances.map(instance => instance.color));
-    const makeGlassMeshOptions = (id: string, transparencyMode: TransparencyMode) => ({
-      id,
-      geometry: new SphereGeometry({radius: 1, nlat: 16, nlong: 24}),
-      matrices: glassMatrices,
-      colors: glassColors,
-      glass: true,
-      sceneTexture: this.refractionTexture,
-      transparencyMode
+    this.glassGroups = makeSwitchGroups().map(({id, switchIndices}): GlassRenderGroup => {
+      const instances = switchIndices.map(switchIndex => this.glassInstances[switchIndex]);
+      const matrices = flattenMatrices(instances.map(instance => instance.matrix));
+      const colors = flattenColors(instances.map(instance => instance.color));
+      const makeGlassMeshOptions = (mode: string, transparencyMode: TransparencyMode) => ({
+        id: `packet-spraying-${id}-${mode}-glass`,
+        geometry: new SphereGeometry({radius: 1, nlat: 16, nlong: 24}),
+        matrices,
+        colors,
+        glass: true,
+        sceneTexture: this.refractionTexture,
+        sceneDepthTexture: this.sceneFramebuffer.depthStencilAttachment!.texture,
+        backfaceTexture: this.glassBackfaceTexture,
+        environmentTexture: this.environmentTexture,
+        transparencyMode
+      });
+
+      const sorted = new InstancedMesh(
+        device,
+        this.glassShaderInputs,
+        makeGlassMeshOptions('sorted', 'sorted-alpha')
+      );
+
+      return {
+        id,
+        instances,
+        node: new ModelNode({
+          id,
+          model: sorted.model,
+          bounds: [
+            [-1, -1, -1],
+            [1, 1, 1]
+          ],
+          instanceMatrices: instances.map(instance => instance.matrix)
+        }),
+        backfaces: new InstancedMesh(device, this.backfaceShaderInputs, {
+          id: `packet-spraying-${id}-glass-backfaces`,
+          geometry: new SphereGeometry({radius: 1, nlat: 16, nlong: 24}),
+          matrices,
+          colors,
+          backface: true,
+          colorAttachmentFormat: this.sceneColorFormat
+        }),
+        sorted,
+        aBuffer: supportsABuffer
+          ? new InstancedMesh(
+              device,
+              this.aBufferShaderInputs,
+              makeGlassMeshOptions('a-buffer', 'a-buffer')
+            )
+          : null,
+        weightedBlended: supportsWeightedBlending
+          ? new InstancedMesh(
+              device,
+              this.weightedBlendedShaderInputs,
+              makeGlassMeshOptions('weighted', 'weighted-blended')
+            )
+          : null
+      };
     });
-    this.sortedGlass = new InstancedMesh(
-      device,
-      this.glassShaderInputs,
-      makeGlassMeshOptions('packet-spraying-sorted-glass', 'sorted-alpha')
-    );
-    this.aBufferGlass = supportsABuffer
-      ? new InstancedMesh(
-          device,
-          this.aBufferShaderInputs,
-          makeGlassMeshOptions('packet-spraying-a-buffer-glass', 'a-buffer')
-        )
-      : null;
-    this.weightedBlendedGlass = supportsWeightedBlending
-      ? new InstancedMesh(
-          device,
-          this.weightedBlendedShaderInputs,
-          makeGlassMeshOptions('packet-spraying-weighted-glass', 'weighted-blended')
-        )
-      : null;
+    this.glassScenegraph = new GroupNode({
+      id: 'packet-spraying-glass-scenegraph',
+      children: this.glassGroups.map(group => group.node)
+    });
 
     this.packetDefinitions = makePackets(this.conversationRoutes);
     this.packetMatrices = new Float32Array(this.packetDefinitions.length * 16);
@@ -1087,6 +1229,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         glassRoughness: this.glassRoughness,
         glassDispersion: this.glassDispersion,
         glassThickness: this.glassThickness,
+        glassRefractionStrength: this.glassRefractionStrength,
+        glassFresnelStrength: this.glassFresnelStrength,
+        glassClearcoatStrength: this.glassClearcoatStrength,
+        glassIridescenceStrength: this.glassIridescenceStrength,
+        glassInternalReflectionStrength: this.glassInternalReflectionStrength,
+        glassTransmissionStrength: this.glassTransmissionStrength,
+        glassEnvironmentIntensity: this.glassEnvironmentIntensity,
+        glassVolumeThickness: this.glassVolumeThickness,
         packetEmission: this.packetEmission,
         packetTrailLength: this.packetTrailLength,
         packetTrailIntensity: this.packetTrailIntensity,
@@ -1103,9 +1253,15 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.panels.mount();
   }
 
-  override async onInitialize({canvas}: AnimationProps): Promise<void> {
+  override async onInitialize({canvas, device}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      canvas.dataset.packetSprayingDevice = device.info.type;
+      canvas.dataset.packetSprayingGpu = device.info.gpu;
+      canvas.dataset.packetSprayingGpuArchitecture = device.info.gpuArchitecture || '';
+      canvas.dataset.packetSprayingAdapterVendor = device.info.vendor;
+      canvas.dataset.packetSprayingFallback = String(Boolean(device.info.fallback));
+      canvas.dataset.packetSprayingGlassGroups = this.glassGroups.map(group => group.id).join(',');
       this.nodePopup = new NetworkNodePopup(canvas);
       this.orbitControls = new OrbitControls(canvas, {
         target: [0, -0.9, 0],
@@ -1156,7 +1312,22 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       indexOfRefraction: this.glassIndexOfRefraction,
       roughness: this.glassRoughness,
       dispersion: this.glassDispersion,
-      thickness: this.glassThickness
+      thickness: this.glassThickness,
+      refractionStrength: this.glassRefractionStrength,
+      fresnelStrength: this.glassFresnelStrength,
+      clearcoatStrength: this.glassClearcoatStrength,
+      iridescenceStrength: this.glassIridescenceStrength,
+      internalReflectionStrength: this.glassInternalReflectionStrength,
+      transmissionStrength: this.glassTransmissionStrength
+    };
+    const glassTransmissionProps: GlassTransmissionProps = {
+      viewportSize: [width, height],
+      depthRange: [0.1, 60],
+      sceneDepthTexture: this.sceneFramebuffer.depthStencilAttachment!.texture,
+      backfaceTexture: this.glassBackfaceTexture,
+      environmentTexture: this.environmentTexture,
+      environmentIntensity: this.glassEnvironmentIntensity,
+      thicknessStrength: this.glassVolumeThickness
     };
     const pointLightProps: OpticalPointLightsProps = {
       lights: this.makePacketLights(),
@@ -1184,8 +1355,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.glassShaderInputs.setProps({
       app: uniforms,
       glassMaterial: glassMaterialProps,
+      glassTransmission: glassTransmissionProps,
       opticalPointLights: pointLightProps
     });
+    this.backfaceShaderInputs.setProps({app: uniforms});
 
     this.hosts.model.predraw(device.commandEncoder);
     this.packets.model.predraw(device.commandEncoder);
@@ -1206,72 +1379,92 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.links.model.draw(sceneRenderPass);
     sceneRenderPass.end();
 
-    device.commandEncoder.copyTextureToTexture({
-      sourceTexture: this.sceneTexture,
-      destinationTexture: this.refractionTexture
-    });
-
     let outputTexture = this.sceneTexture;
-    if (this.transparencyMode === 'a-buffer' && this.aBufferRenderer && this.aBufferGlass) {
-      outputTexture = this.aBufferRenderer.render({
-        sourceTexture: this.sceneTexture,
-        opaqueDepthTexture: this.sceneFramebuffer.depthStencilAttachment!,
-        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
-          this.aBufferShaderInputs.setProps({
-            app: uniforms,
-            glassMaterial: glassMaterialProps,
-            opticalPointLights: pointLightProps,
-            aBuffer: shaderModuleProps
-          });
-          this.aBufferGlass?.model.setParameters({...TRANSPARENT_PARAMETERS, ...captureParameters});
-          this.aBufferGlass?.model.predraw(commandEncoder);
-        },
-        drawTranslucent: renderPass => {
-          this.aBufferGlass?.model.draw(renderPass);
-        }
+    const sortedGroups = this.sortGlassGroups(uniforms.viewMatrix);
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingGlassGroupOrder = sortedGroups
+        .map(group => group.id)
+        .join(',');
+    }
+
+    for (const group of sortedGroups) {
+      group.backfaces.model.predraw(device.commandEncoder);
+      const backfaceRenderPass = device.beginRenderPass({
+        framebuffer: this.glassBackfaceFramebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: 0
       });
-    } else if (
-      this.transparencyMode === 'weighted-blended' &&
-      this.weightedBlendedRenderer &&
-      this.weightedBlendedGlass
-    ) {
-      outputTexture = this.weightedBlendedRenderer.render({
-        sourceTexture: this.sceneTexture,
-        prepareOpaqueDepth: commandEncoder => {
-          this.hosts.model.predraw(commandEncoder);
-          this.packets.model.predraw(commandEncoder);
-        },
-        drawOpaqueDepth: renderPass => {
-          this.hosts.model.draw(renderPass);
-          this.packets.model.draw(renderPass);
-        },
-        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
-          this.weightedBlendedShaderInputs.setProps({
-            app: uniforms,
-            glassMaterial: glassMaterialProps,
-            opticalPointLights: pointLightProps,
-            wboit: shaderModuleProps
-          });
-          this.weightedBlendedGlass?.model.setParameters({
-            ...TRANSPARENT_PARAMETERS,
-            ...captureParameters
-          });
-          this.weightedBlendedGlass?.model.predraw(commandEncoder);
-        },
-        drawTranslucent: renderPass => {
-          this.weightedBlendedGlass?.model.draw(renderPass);
-        }
+      group.backfaces.model.draw(backfaceRenderPass);
+      backfaceRenderPass.end();
+
+      device.commandEncoder.copyTextureToTexture({
+        sourceTexture: outputTexture,
+        destinationTexture: this.refractionTexture
       });
-    } else {
-      this.sortGlassInstances(eye);
-      this.sortedGlass.model.predraw(device.commandEncoder);
-      const glassRenderPass = device.beginRenderPass({
-        framebuffer: this.sceneFramebuffer,
-        clearColor: false,
-        clearDepth: false
-      });
-      this.sortedGlass.model.draw(glassRenderPass);
-      glassRenderPass.end();
+
+      if (this.transparencyMode === 'a-buffer' && this.aBufferRenderer && group.aBuffer) {
+        outputTexture = this.aBufferRenderer.render({
+          sourceTexture: outputTexture,
+          opaqueDepthTexture: this.sceneFramebuffer.depthStencilAttachment!,
+          prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+            this.aBufferShaderInputs.setProps({
+              app: uniforms,
+              glassMaterial: glassMaterialProps,
+              glassTransmission: glassTransmissionProps,
+              opticalPointLights: pointLightProps,
+              aBuffer: shaderModuleProps
+            });
+            group.aBuffer?.model.setParameters({...GLASS_PARAMETERS, ...captureParameters});
+            group.aBuffer?.model.predraw(commandEncoder);
+          },
+          drawTranslucent: renderPass => {
+            group.aBuffer?.model.draw(renderPass);
+          }
+        });
+      } else if (
+        this.transparencyMode === 'weighted-blended' &&
+        this.weightedBlendedRenderer &&
+        group.weightedBlended
+      ) {
+        outputTexture = this.weightedBlendedRenderer.render({
+          sourceTexture: outputTexture,
+          prepareOpaqueDepth: commandEncoder => {
+            this.hosts.model.predraw(commandEncoder);
+            this.packets.model.predraw(commandEncoder);
+          },
+          drawOpaqueDepth: renderPass => {
+            this.hosts.model.draw(renderPass);
+            this.packets.model.draw(renderPass);
+          },
+          prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+            this.weightedBlendedShaderInputs.setProps({
+              app: uniforms,
+              glassMaterial: glassMaterialProps,
+              glassTransmission: glassTransmissionProps,
+              opticalPointLights: pointLightProps,
+              wboit: shaderModuleProps
+            });
+            group.weightedBlended?.model.setParameters({
+              ...GLASS_PARAMETERS,
+              ...captureParameters
+            });
+            group.weightedBlended?.model.predraw(commandEncoder);
+          },
+          drawTranslucent: renderPass => {
+            group.weightedBlended?.model.draw(renderPass);
+          }
+        });
+      } else {
+        this.sortGlassInstances(group, eye);
+        group.sorted.model.predraw(device.commandEncoder);
+        const glassRenderPass = device.beginRenderPass({
+          framebuffer: this.sceneFramebuffer,
+          clearColor: false,
+          clearDepth: false
+        });
+        group.sorted.model.draw(glassRenderPass);
+        glassRenderPass.end();
+      }
     }
 
     this.postprocessingRenderer.renderToScreen({
@@ -1306,9 +1499,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.pickingHosts.destroy();
     this.pickingSwitches.destroy();
     this.pickingManager.destroy();
-    this.sortedGlass.destroy();
-    this.aBufferGlass?.destroy();
-    this.weightedBlendedGlass?.destroy();
+    this.glassScenegraph.removeAll();
+    for (const group of this.glassGroups) {
+      group.backfaces.destroy();
+      group.sorted.destroy();
+      group.aBuffer?.destroy();
+      group.weightedBlended?.destroy();
+    }
     this.packets.destroy();
     this.packetTrails.destroy();
     this.switchFlashes.destroy();
@@ -1316,6 +1513,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.postprocessingRenderer.destroy();
     this.aBufferRenderer?.destroy();
     this.weightedBlendedRenderer?.destroy();
+    this.backfaceShaderInputs.destroy();
     this.emissiveShaderInputs.destroy();
     this.reflectiveShaderInputs.destroy();
     this.metallicShaderInputs.destroy();
@@ -1323,9 +1521,12 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.glassShaderInputs.destroy();
     this.aBufferShaderInputs.destroy();
     this.weightedBlendedShaderInputs.destroy();
+    this.glassBackfaceFramebuffer.destroy();
     this.sceneFramebuffer.destroy();
     this.sceneTexture.destroy();
     this.refractionTexture.destroy();
+    this.glassBackfaceTexture.destroy();
+    this.environmentTexture.destroy();
   }
 
   private pickHoveredNode(device: Device, uniforms: AppUniforms): void {
@@ -1576,11 +1777,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private updateSwitchColors(): void {
-    const matrices = flattenMatrices(this.glassInstances.map(instance => instance.matrix));
-    const colors = flattenColors(this.glassInstances.map(instance => instance.color));
-    this.sortedGlass.updateInstances(matrices, colors);
-    this.aBufferGlass?.updateInstances(matrices, colors);
-    this.weightedBlendedGlass?.updateInstances(matrices, colors);
+    for (const group of this.glassGroups) {
+      const matrices = flattenMatrices(group.instances.map(instance => instance.matrix));
+      const colors = flattenColors(group.instances.map(instance => instance.color));
+      group.sorted.updateInstances(matrices, colors);
+      group.aBuffer?.updateInstances(matrices, colors);
+      group.weightedBlended?.updateInstances(matrices, colors);
+    }
   }
 
   private updateHealthyRoutes(): void {
@@ -1642,8 +1845,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     const previousSceneTexture = this.sceneTexture;
     const previousRefractionTexture = this.refractionTexture;
+    const previousBackfaceTexture = this.glassBackfaceTexture;
     this.sceneFramebuffer.resize({width, height});
+    this.glassBackfaceFramebuffer.resize({width, height});
     this.sceneTexture = this.sceneFramebuffer.colorAttachments[0].texture;
+    this.glassBackfaceTexture = this.glassBackfaceFramebuffer.colorAttachments[0].texture;
     this.refractionTexture = makeRefractionTexture(
       this.sceneTexture.device,
       width,
@@ -1651,20 +1857,45 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.sceneColorFormat
     );
     this.postprocessingRenderer.resize([width, height]);
-    this.sortedGlass.model.setBindings({glassSceneColorTexture: this.refractionTexture});
-    this.aBufferGlass?.model.setBindings({glassSceneColorTexture: this.refractionTexture});
-    this.weightedBlendedGlass?.model.setBindings({glassSceneColorTexture: this.refractionTexture});
+    const glassBindings = {
+      glassSceneColorTexture: this.refractionTexture,
+      glassSceneDepthTexture: this.sceneFramebuffer.depthStencilAttachment!.texture,
+      glassBackfaceTexture: this.glassBackfaceTexture,
+      glassEnvironmentTexture: this.environmentTexture
+    };
+    for (const group of this.glassGroups) {
+      group.sorted.model.setBindings(glassBindings);
+      group.aBuffer?.model.setBindings(glassBindings);
+      group.weightedBlended?.model.setBindings(glassBindings);
+    }
     previousSceneTexture.destroy();
     previousRefractionTexture.destroy();
+    previousBackfaceTexture.destroy();
   }
 
-  private sortGlassInstances(cameraPosition: Vector3): void {
-    const sortedInstances = [...this.glassInstances].sort(
+  private sortGlassGroups(viewMatrix: Matrix4): GlassRenderGroup[] {
+    const sortedGroups: GlassRenderGroup[] = [];
+
+    this.glassScenegraph.traverseDepthSorted(
+      node => {
+        const group = this.glassGroups.find(candidate => candidate.node === node);
+        if (group) {
+          sortedGroups.push(group);
+        }
+      },
+      {viewMatrix}
+    );
+
+    return sortedGroups;
+  }
+
+  private sortGlassInstances(group: GlassRenderGroup, cameraPosition: Vector3): void {
+    const sortedInstances = [...group.instances].sort(
       (first, second) =>
         getDistanceSquared(second.position, cameraPosition) -
         getDistanceSquared(first.position, cameraPosition)
     );
-    this.sortedGlass.updateInstances(
+    group.sorted.updateInstances(
       flattenMatrices(sortedInstances.map(instance => instance.matrix)),
       flattenColors(sortedInstances.map(instance => instance.color))
     );
@@ -1997,6 +2228,70 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.glassThickness = glassThickness;
     }
 
+    const glassRefractionStrength = getChangedSetting(
+      changedSettings,
+      'glassRefractionStrength'
+    )?.nextValue;
+    if (typeof glassRefractionStrength === 'number') {
+      this.glassRefractionStrength = glassRefractionStrength;
+    }
+
+    const glassFresnelStrength = getChangedSetting(
+      changedSettings,
+      'glassFresnelStrength'
+    )?.nextValue;
+    if (typeof glassFresnelStrength === 'number') {
+      this.glassFresnelStrength = glassFresnelStrength;
+    }
+
+    const glassClearcoatStrength = getChangedSetting(
+      changedSettings,
+      'glassClearcoatStrength'
+    )?.nextValue;
+    if (typeof glassClearcoatStrength === 'number') {
+      this.glassClearcoatStrength = glassClearcoatStrength;
+    }
+
+    const glassIridescenceStrength = getChangedSetting(
+      changedSettings,
+      'glassIridescenceStrength'
+    )?.nextValue;
+    if (typeof glassIridescenceStrength === 'number') {
+      this.glassIridescenceStrength = glassIridescenceStrength;
+    }
+
+    const glassInternalReflectionStrength = getChangedSetting(
+      changedSettings,
+      'glassInternalReflectionStrength'
+    )?.nextValue;
+    if (typeof glassInternalReflectionStrength === 'number') {
+      this.glassInternalReflectionStrength = glassInternalReflectionStrength;
+    }
+
+    const glassTransmissionStrength = getChangedSetting(
+      changedSettings,
+      'glassTransmissionStrength'
+    )?.nextValue;
+    if (typeof glassTransmissionStrength === 'number') {
+      this.glassTransmissionStrength = glassTransmissionStrength;
+    }
+
+    const glassEnvironmentIntensity = getChangedSetting(
+      changedSettings,
+      'glassEnvironmentIntensity'
+    )?.nextValue;
+    if (typeof glassEnvironmentIntensity === 'number') {
+      this.glassEnvironmentIntensity = glassEnvironmentIntensity;
+    }
+
+    const glassVolumeThickness = getChangedSetting(
+      changedSettings,
+      'glassVolumeThickness'
+    )?.nextValue;
+    if (typeof glassVolumeThickness === 'number') {
+      this.glassVolumeThickness = glassVolumeThickness;
+    }
+
     const packetEmission = getChangedSetting(changedSettings, 'packetEmission')?.nextValue;
     if (typeof packetEmission === 'number') {
       this.packetEmission = packetEmission;
@@ -2072,7 +2367,7 @@ const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
 <p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
-<p><strong>Rendering:</strong> reusable emissive materials shade compact packet cores, velocity-aligned trails, and switch-arrival flashes; bounded point lights illuminate refractive glass and reflective links. Floating-point scene color preserves the directional highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
+<p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, internal shell reflection, thin-film iridescence, and roughness-aware chromatic transmission. Emissive packet cores, directional trails, and switch flashes illuminate the glass through bounded point lights. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
 
 function makeGlassInstances(): GlassInstance[] {
@@ -2166,6 +2461,93 @@ function makeRefractionTexture(
       addressModeV: 'clamp-to-edge'
     }
   });
+}
+
+function makeBackfaceTexture(
+  device: Device,
+  width: number,
+  height: number,
+  format: TextureFormatColor
+): Texture {
+  return device.createTexture({
+    id: 'packet-spraying-glass-backfaces',
+    format,
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER,
+    sampler: {
+      minFilter: 'linear',
+      magFilter: 'linear',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge'
+    }
+  });
+}
+
+function makeStudioEnvironmentTexture(device: Device): Texture {
+  const width = 256;
+  const height = 128;
+  const pixels = new Uint8Array(width * height * 4);
+  const studioLights = [
+    {direction: [-0.58, 0.64, 0.5], color: [1, 0.92, 0.78], width: 0.11},
+    {direction: [0.72, 0.24, -0.58], color: [0.35, 0.62, 1], width: 0.16},
+    {direction: [0.05, 0.94, 0.33], color: [0.78, 0.88, 1], width: 0.085},
+    {direction: [-0.8, -0.12, -0.58], color: [0.42, 0.35, 0.8], width: 0.2}
+  ];
+
+  for (let row = 0; row < height; row++) {
+    const elevation = (row / (height - 1)) * Math.PI;
+    for (let column = 0; column < width; column++) {
+      const azimuth = (column / (width - 1) - 0.5) * Math.PI * 2;
+      const direction: Vector3 = [
+        Math.cos(azimuth) * Math.sin(elevation),
+        Math.cos(elevation),
+        Math.sin(azimuth) * Math.sin(elevation)
+      ];
+      const horizon = Math.pow(1 - Math.abs(direction[1]), 8);
+      const sky = Math.max(direction[1], 0);
+      const color: Vector3 = [
+        0.035 + sky * 0.065 + horizon * 0.09,
+        0.045 + sky * 0.085 + horizon * 0.12,
+        0.075 + sky * 0.16 + horizon * 0.19
+      ];
+
+      for (const light of studioLights) {
+        const alignment = Math.max(
+          direction[0] * light.direction[0] +
+            direction[1] * light.direction[1] +
+            direction[2] * light.direction[2],
+          0
+        );
+        const intensity = Math.pow(alignment, 1 / light.width ** 2);
+        color[0] += light.color[0] * intensity * 0.78;
+        color[1] += light.color[1] * intensity * 0.78;
+        color[2] += light.color[2] * intensity * 0.78;
+      }
+
+      const pixelOffset = (row * width + column) * 4;
+      pixels[pixelOffset] = Math.round(Math.min(color[0], 1) * 255);
+      pixels[pixelOffset + 1] = Math.round(Math.min(color[1], 1) * 255);
+      pixels[pixelOffset + 2] = Math.round(Math.min(color[2], 1) * 255);
+      pixels[pixelOffset + 3] = 255;
+    }
+  }
+
+  const environmentTexture = device.createTexture({
+    id: 'packet-spraying-studio-environment',
+    width,
+    height,
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.COPY_DST,
+    sampler: {
+      minFilter: 'linear',
+      magFilter: 'linear',
+      addressModeU: 'repeat',
+      addressModeV: 'clamp-to-edge'
+    }
+  });
+  environmentTexture.writeData(pixels);
+  return environmentTexture;
 }
 
 function makeObjectMatrix(position: Vector3, scale: Vector3): Matrix4 {
@@ -2424,6 +2806,78 @@ function makeSettingsSchema(
             persist: 'none',
             min: 0.2,
             max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassRefractionStrength',
+            label: 'Lens Distortion',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassFresnelStrength',
+            label: 'Fresnel Edge',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassClearcoatStrength',
+            label: 'Clearcoat Highlight',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassIridescenceStrength',
+            label: 'Spectral Edge',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.6,
+            step: 0.01
+          },
+          {
+            name: 'glassInternalReflectionStrength',
+            label: 'Internal Reflection',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'glassTransmissionStrength',
+            label: 'Transmission',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.6,
+            step: 0.05
+          },
+          {
+            name: 'glassEnvironmentIntensity',
+            label: 'Studio Reflections',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 3,
+            step: 0.05
+          },
+          {
+            name: 'glassVolumeThickness',
+            label: 'Volume Thickness',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 2,
             step: 0.05
           }
         ]

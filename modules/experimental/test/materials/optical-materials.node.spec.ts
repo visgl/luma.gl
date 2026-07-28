@@ -10,6 +10,8 @@ import {
   emissiveMaterialPlugin,
   glassMaterial,
   glassMaterialPlugin,
+  glassTransmission,
+  glassTransmissionPlugin,
   MAX_OPTICAL_POINT_LIGHTS,
   opticalLighting,
   type OpticalPointLight,
@@ -112,6 +114,16 @@ test('optical material modules expose portable shared shader helpers', testCase 
   testCase.equal(glassMaterialPlugin.name, 'glassMaterial', 'glass plugin has a stable name');
   testCase.deepEqual(glassMaterialPlugin.modules, [glassMaterial], 'glass plugin installs glass');
   testCase.equal(
+    glassTransmissionPlugin.name,
+    'glassTransmission',
+    'rasterized transmission plugin has a stable name'
+  );
+  testCase.deepEqual(
+    glassTransmissionPlugin.modules,
+    [glassTransmission],
+    'rasterized transmission plugin installs its optional extension'
+  );
+  testCase.equal(
     reflectiveMaterialPlugin.name,
     'reflectiveMaterial',
     'reflective plugin has a stable name'
@@ -147,6 +159,11 @@ test('optical material modules expose portable shared shader helpers', testCase 
     'glass reuses shared optical lighting'
   );
   testCase.deepEqual(
+    glassTransmission.dependencies,
+    [glassMaterial],
+    'rasterized transmission composes the existing glass material'
+  );
+  testCase.deepEqual(
     reflectiveMaterial.dependencies,
     [opticalLighting],
     'reflective shading reuses shared optical lighting'
@@ -164,6 +181,16 @@ test('optical material modules expose portable shared shader helpers', testCase 
   testCase.equal(MAX_OPTICAL_POINT_LIGHTS, 16, 'point lights have a portable fixed capacity');
   testCase.match(opticalLighting.source, /fn opticalLighting_getFresnel/, 'WGSL helpers exist');
   testCase.match(opticalLighting.fs, /float opticalLighting_getFresnel/, 'GLSL helpers exist');
+  testCase.match(
+    opticalLighting.source,
+    /fn opticalLighting_getMicrofacetSpecular/,
+    'WGSL exposes GGX microfacet highlights'
+  );
+  testCase.match(
+    opticalLighting.fs,
+    /float opticalLighting_getMicrofacetSpecular/,
+    'GLSL exposes GGX microfacet highlights'
+  );
   testCase.match(emissiveMaterial.source, /fn emissiveMaterial_getColor/, 'WGSL emission exists');
   testCase.match(emissiveMaterial.fs, /vec4 emissiveMaterial_getColor/, 'GLSL emission exists');
   testCase.match(
@@ -209,7 +236,13 @@ test('optical materials retain defaults while applying partial updates', testCas
       roughness: 0.14,
       dispersion: 0.022,
       thickness: 1.05,
-      reflectionStrength: 1
+      refractionStrength: 1,
+      reflectionStrength: 1,
+      fresnelStrength: 1,
+      clearcoatStrength: 0.7,
+      iridescenceStrength: 0.1,
+      internalReflectionStrength: 0.42,
+      transmissionStrength: 1
     },
     'glass uniforms expose stable defaults'
   );
@@ -221,6 +254,61 @@ test('optical materials retain defaults while applying partial updates', testCas
   testCase.equal(updatedGlassUniforms.indexOfRefraction, 1.6, 'glass refraction updates');
   testCase.equal(updatedGlassUniforms.thickness, 1.8, 'glass thickness updates');
   testCase.equal(updatedGlassUniforms.roughness, 0.14, 'glass roughness is retained');
+  testCase.equal(updatedGlassUniforms.refractionStrength, 1, 'lens distortion is retained');
+  testCase.equal(updatedGlassUniforms.clearcoatStrength, 0.7, 'glass clearcoat is retained');
+
+  const cinematicGlassUniforms = glassMaterial.getUniforms(
+    {fresnelStrength: 1.4, iridescenceStrength: 0.25, transmissionStrength: 1.1},
+    updatedGlassUniforms
+  );
+  testCase.equal(cinematicGlassUniforms.fresnelStrength, 1.4, 'Fresnel edges are configurable');
+  testCase.equal(
+    cinematicGlassUniforms.iridescenceStrength,
+    0.25,
+    'spectral edge highlights are configurable'
+  );
+  testCase.equal(
+    cinematicGlassUniforms.transmissionStrength,
+    1.1,
+    'glass transmission is configurable'
+  );
+  testCase.equal(
+    cinematicGlassUniforms.internalReflectionStrength,
+    0.42,
+    'internal reflection is retained across partial updates'
+  );
+
+  const initialTransmissionUniforms = glassTransmission.getUniforms({});
+  testCase.deepEqual(
+    initialTransmissionUniforms,
+    {
+      viewportSize: [1, 1],
+      depthRange: [0.1, 100],
+      environmentIntensity: 1,
+      thicknessStrength: 1,
+      depthBias: 0.00008
+    },
+    'rasterized transmission exposes stable optical defaults'
+  );
+  const updatedTransmissionUniforms = glassTransmission.getUniforms(
+    {environmentIntensity: 1.6, thicknessStrength: 1.25},
+    initialTransmissionUniforms
+  );
+  testCase.equal(
+    updatedTransmissionUniforms.environmentIntensity,
+    1.6,
+    'environment reflections remain adjustable'
+  );
+  testCase.equal(
+    updatedTransmissionUniforms.thicknessStrength,
+    1.25,
+    'backface-derived thickness remains adjustable'
+  );
+  testCase.equal(
+    updatedTransmissionUniforms.depthBias,
+    0.00008,
+    'foreground-depth tolerance is retained'
+  );
 
   const initialReflectiveUniforms = reflectiveMaterial.getUniforms({});
   testCase.deepEqual(
@@ -291,6 +379,100 @@ test('reflective materials follow the reflected view direction and preserve opaq
   testCase.end();
 });
 
+test('glass materials compose portable clearcoat, spectral rims, and soft transmission', testCase => {
+  for (const [shaderSource, language] of [
+    [glassMaterial.source, 'WGSL'],
+    [glassMaterial.fs, 'GLSL']
+  ] as const) {
+    testCase.match(
+      shaderSource,
+      /glassMaterial_sampleTransmission/,
+      `${language} isolates reusable chromatic transmission sampling`
+    );
+    testCase.match(
+      shaderSource,
+      /rayDeflection = refractionDirection \+ viewDirection/,
+      `${language} distorts the background using the actual refracted ray`
+    );
+    testCase.match(
+      shaderSource,
+      /cameraRight/,
+      `${language} projects refraction into camera-aligned screen coordinates`
+    );
+    testCase.match(
+      shaderSource,
+      /refractionStrength/,
+      `${language} exposes adjustable lens distortion`
+    );
+    testCase.match(
+      shaderSource,
+      /transmissionCoverage/,
+      `${language} preserves displaced background instead of blending it away`
+    );
+    testCase.match(
+      shaderSource,
+      /opticalLighting_getMicrofacetSpecular/,
+      `${language} shades glass with GGX microfacet highlights`
+    );
+    testCase.match(shaderSource, /clearcoatStrength/, `${language} supports a clearcoat lobe`);
+    testCase.match(
+      shaderSource,
+      /internalReflectionStrength/,
+      `${language} supports internal shell reflection`
+    );
+    testCase.match(
+      shaderSource,
+      /iridescenceStrength/,
+      `${language} supports restrained spectral rim interference`
+    );
+    testCase.match(
+      shaderSource,
+      /softenedTransmission/,
+      `${language} softens refraction according to surface roughness`
+    );
+    testCase.match(
+      shaderSource,
+      /studioRibbon/,
+      `${language} adds camera-responsive studio-light reflections`
+    );
+    testCase.match(shaderSource, /glassBody/, `${language} retains a visible tinted glass body`);
+  }
+  testCase.end();
+});
+
+test('rasterized glass transmission composes thickness, depth, and environment maps', testCase => {
+  for (const [shaderSource, language] of [
+    [glassTransmission.source, 'WGSL'],
+    [glassTransmission.fs, 'GLSL']
+  ] as const) {
+    testCase.match(shaderSource, /glassBackfaceTexture/, `${language} samples sphere backfaces`);
+    testCase.match(shaderSource, /glassSceneDepthTexture/, `${language} samples opaque depth`);
+    testCase.match(
+      shaderSource,
+      /glassEnvironmentTexture/,
+      `${language} samples a studio environment map`
+    );
+    testCase.match(
+      shaderSource,
+      /glassTransmission_linearizeDepth/,
+      `${language} measures optical thickness in linear view depth`
+    );
+    testCase.match(shaderSource, /entryDirection = refract/, `${language} refracts at entry`);
+    testCase.match(shaderSource, /exitDirection = refract/, `${language} refracts at exit`);
+    testCase.match(
+      shaderSource,
+      /foregroundOcclusion/,
+      `${language} preserves opaque foreground geometry`
+    );
+    testCase.match(
+      shaderSource,
+      /hasExitRay/,
+      `${language} handles total internal reflection without ray marching`
+    );
+  }
+  testCase.end();
+});
+
 test('optical point lights pack and retain a bounded portable uniform array', testCase => {
   const initialUniforms = opticalPointLights.getUniforms({});
   testCase.equal(initialUniforms.lightCount, 0, 'point lights start disabled');
@@ -347,7 +529,7 @@ test('optical point lights pack and retain a bounded portable uniform array', te
 });
 
 test('optical materials expose matching WGSL and GLSL uniform layouts', testCase => {
-  for (const shaderModule of [emissiveMaterial, opticalPointLights]) {
+  for (const shaderModule of [emissiveMaterial, opticalPointLights, glassTransmission]) {
     const wgslValidation = getShaderModuleUniformLayoutValidationResult(shaderModule, 'wgsl');
     const fragmentValidation = getShaderModuleUniformLayoutValidationResult(
       shaderModule,
@@ -377,6 +559,42 @@ test('optical materials expose matching WGSL and GLSL uniform layouts', testCase
     shaderBlockFieldNames.slice(-4),
     ['lights[15].position', 'lights[15].radius', 'lights[15].color', 'lights[15].intensity'],
     'uniform block includes the final fixed-capacity light'
+  );
+  testCase.end();
+});
+
+test('rasterized glass transmission assembles portable optical and depth bindings', testCase => {
+  const assembler = new ShaderAssembler();
+  const transmissionShader = ILLUMINATED_OPTICAL_MATERIAL_SHADER.replace(
+    'glassMaterial_getIlluminatedColor(',
+    'glassTransmission_getIlluminatedColor('
+  );
+  const assembledShader = assembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: transmissionShader,
+    modules: [glassTransmission, reflectiveMaterial, emissiveMaterial, opticalPointLights]
+  });
+  const reflectedShader = new WgslReflect(assembledShader.source);
+  const textureNames = reflectedShader.textures.map(texture => texture.name);
+
+  testCase.equal(
+    assembledShader.source.match(/fn glassMaterial_getColor\(/g)?.length,
+    1,
+    'existing glass helpers are installed once'
+  );
+  testCase.match(
+    assembledShader.source,
+    /fn glassTransmission_getIlluminatedColor/,
+    'rasterized transmission composes with local point lights'
+  );
+  testCase.ok(textureNames.includes('glassSceneDepthTexture'), 'opaque-depth binding is reflected');
+  testCase.ok(
+    textureNames.includes('glassBackfaceTexture'),
+    'backface-normal and depth binding is reflected'
+  );
+  testCase.ok(
+    textureNames.includes('glassEnvironmentTexture'),
+    'studio environment binding is reflected'
   );
   testCase.end();
 });

@@ -18,6 +18,30 @@ fn opticalLighting_getFresnel(
     pow(1.0 - clamp(viewAlignment, 0.0, 1.0), exponent);
 }
 
+fn opticalLighting_getMicrofacetSpecular(
+  normal: vec3<f32>,
+  viewDirection: vec3<f32>,
+  lightDirection: vec3<f32>,
+  roughness: f32
+) -> f32 {
+  let halfDirection = normalize(viewDirection + lightDirection);
+  let normalAlignment = max(dot(normal, viewDirection), 0.001);
+  let lightAlignment = max(dot(normal, lightDirection), 0.0);
+  let halfAlignment = max(dot(normal, halfDirection), 0.0);
+  let alpha = max(roughness * roughness, 0.045);
+  let alphaSquared = alpha * alpha;
+  let distributionDenominator = halfAlignment * halfAlignment * (alphaSquared - 1.0) + 1.0;
+  let distribution = alphaSquared /
+    max(3.14159265 * distributionDenominator * distributionDenominator, 0.001);
+  let visibilityFactor = pow(roughness + 1.0, 2.0) * 0.125;
+  let viewVisibility = normalAlignment /
+    (normalAlignment * (1.0 - visibilityFactor) + visibilityFactor);
+  let lightVisibility = lightAlignment /
+    (lightAlignment * (1.0 - visibilityFactor) + visibilityFactor);
+  return distribution * viewVisibility * lightVisibility * lightAlignment /
+    max(4.0 * normalAlignment * lightAlignment, 0.001);
+}
+
 fn opticalLighting_getKeyLight() -> vec3<f32> {
   return normalize(vec3<f32>(-0.45, 0.82, 0.34));
 }
@@ -49,6 +73,30 @@ vec3 opticalLighting_faceNormal(vec3 normal, vec3 viewDirection) {
 float opticalLighting_getFresnel(float viewAlignment, float baseReflectance, float exponent) {
   return baseReflectance + (1.0 - baseReflectance) *
     pow(1.0 - clamp(viewAlignment, 0.0, 1.0), exponent);
+}
+
+float opticalLighting_getMicrofacetSpecular(
+  vec3 normal,
+  vec3 viewDirection,
+  vec3 lightDirection,
+  float roughness
+) {
+  vec3 halfDirection = normalize(viewDirection + lightDirection);
+  float normalAlignment = max(dot(normal, viewDirection), 0.001);
+  float lightAlignment = max(dot(normal, lightDirection), 0.0);
+  float halfAlignment = max(dot(normal, halfDirection), 0.0);
+  float alpha = max(roughness * roughness, 0.045);
+  float alphaSquared = alpha * alpha;
+  float distributionDenominator = halfAlignment * halfAlignment * (alphaSquared - 1.0) + 1.0;
+  float distribution = alphaSquared /
+    max(3.14159265 * distributionDenominator * distributionDenominator, 0.001);
+  float visibilityFactor = pow(roughness + 1.0, 2.0) * 0.125;
+  float viewVisibility = normalAlignment /
+    (normalAlignment * (1.0 - visibilityFactor) + visibilityFactor);
+  float lightVisibility = lightAlignment /
+    (lightAlignment * (1.0 - visibilityFactor) + visibilityFactor);
+  return distribution * viewVisibility * lightVisibility * lightAlignment /
+    max(4.0 * normalAlignment * lightAlignment, 0.001);
 }
 
 vec3 opticalLighting_getKeyLight() {

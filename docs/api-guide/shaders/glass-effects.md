@@ -12,11 +12,17 @@ GLSL shader modules, while transparency renderers remain responsible for composi
 
 | Effect | Implementation | Visible result |
 | --- | --- | --- |
-| Fresnel reflection | Schlick-style view-angle approximation. | Stronger reflections around silhouettes. |
-| Refraction | Samples an independently captured scene-color texture. | Background and packets bend behind the glass surface. |
+| Fresnel reflection | Adjustable Schlick-style grazing-angle response. | Sculpted, luminous reflections around silhouettes. |
+| Refraction | Projects Snell's refracted ray into camera-aligned screen space and samples an independently captured scene-color texture. | Background links and packets visibly bend and magnify behind polished or frosted glass. |
+| Backface thickness | Rasterizes sphere backfaces into a normal-and-depth texture and linearizes the front-to-back depth difference. | Glass centers and silhouettes acquire different optical path lengths. |
+| Two-surface transmission | Applies analytic entry and exit refraction while checking opaque scene depth. | Background bends convincingly without distorting geometry in front of the glass. |
+| Studio environment | Samples a generated equirectangular environment along the reflected viewing direction. | Polished surfaces receive camera-responsive studio reflections. |
 | Chromatic dispersion | Offsets red, green, and blue scene-color samples. | Subtle colored separation around refracted features. |
 | Beer-Lambert absorption | Attenuates transmitted light with material color and thickness. | Longer optical paths produce darker, more tinted transmission. |
-| Glossy highlights | Roughness-dependent key and fill light highlights. | Adjustable apparent surface polish. |
+| GGX microfacets | Shared distribution and visibility helpers shade key and fill lights. | Roughness-dependent, camera-responsive polished highlights. |
+| Clearcoat | Adds a second narrow microfacet lobe above the base surface. | Crisp, bright reflections that make the outer shell readable. |
+| Internal reflection | Approximates a colored secondary environment bounce inside the shell. | A softer inner Fresnel band and greater visible depth. |
+| Thin-film interference | Applies restrained wavelength-dependent color near grazing angles. | Subtle spectral variation without coloring the whole object. |
 | Localized point lights | Evaluates a bounded array of nearby colored light sources. | Moving emissive objects tint adjacent glass and reflective surfaces. |
 
 [`glassMaterial`](/docs/api-reference/experimental/glass-material) provides the transmissive
@@ -50,7 +56,13 @@ shaderInputs.setProps({
     roughness: 0.14,
     dispersion: 0.022,
     thickness: 1.05,
-    reflectionStrength: 1
+    refractionStrength: 1,
+    reflectionStrength: 1,
+    fresnelStrength: 1.2,
+    clearcoatStrength: 0.8,
+    iridescenceStrength: 0.12,
+    internalReflectionStrength: 0.5,
+    transmissionStrength: 1
   }
 });
 
@@ -76,6 +88,42 @@ let color = glassMaterial_getColor(
 
 `inputs.position` must be the fragment's built-in framebuffer position. Keep `viewportSize` in
 physical pixels and update it whenever the scene-color texture is resized.
+
+`refractionStrength` controls the lens displacement independently of material thickness. The
+refracted ray is projected into the current camera basis, so links and other background geometry
+remain correctly distorted as the camera orbits. Transmission coverage is kept high enough that
+the displaced scene remains visible instead of being overwhelmed by the original background during
+translucent compositing.
+
+## Add Rasterized Volume Transmission
+
+`glassTransmissionPlugin` extends `glassMaterialPlugin` without changing the existing glass helper
+or adding iterative ray tracing. Render outward-facing sphere backfaces into an RGBA texture whose
+RGB channels contain the encoded world normal and whose alpha channel contains framebuffer depth.
+The opaque scene depth must remain available as a sampleable depth texture.
+
+```ts
+import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/experimental';
+
+const shaderInputs = new ShaderInputs({glassMaterial, glassTransmission});
+
+shaderInputs.setProps({
+  glassTransmission: {
+    viewportSize: [width, height],
+    depthRange: [0.1, 60],
+    sceneDepthTexture,
+    backfaceTexture,
+    environmentTexture,
+    environmentIntensity: 1.25,
+    thicknessStrength: 1
+  }
+});
+```
+
+Call `glassTransmission_getColor(...)`, or install `opticalPointLightsPlugin` and call
+`glassTransmission_getIlluminatedColor(...)`. These helpers retain the base glass material while
+adding depth-derived thickness, analytic entry/exit refraction, foreground-depth rejection,
+total-internal-reflection handling, and sampled equirectangular environment reflections.
 
 ## Separate Optical Shading From Transparency
 
@@ -110,10 +158,9 @@ appropriate when no dynamic local lights are needed.
 These materials are advanced raster approximations, not a complete physically based transmission
 system. In particular, the current implementation does not provide:
 
-- Depth-derived or backface-derived per-pixel thickness.
-- GGX or other energy-conserving microfacet reflection and transmission.
-- Roughness-dependent blurred transmission or filtered environment probes.
-- Multiple refraction events, internal reflections, total internal reflection, or caustics.
+- Full energy-conserving multiple-scattering or microfacet transmission.
+- Filtered environment probes and geometry-aware rough transmission.
+- Physically traced multiple refraction events or caustics.
 - Off-screen background recovery or geometry-aware refracted-ray tracing.
 
 Those capabilities require additional depth, normal, backface, environment, or ray-tracing data

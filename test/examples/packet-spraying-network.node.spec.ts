@@ -22,6 +22,7 @@ import {
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
   makeSwitchProbeEvent,
+  makeSwitchGroups,
   makeSwitchArrivals,
   reroutePackets
 } from '../../examples/showcase/packet-spraying/network';
@@ -65,6 +66,35 @@ test('packet-spraying network defines an independent four-plane topology', testC
   testCase.ok(
     Math.abs(greenAccessArrival - redAccessArrival - 0.07) < 0.00001,
     'red and green conversations arrive half a packet interval apart'
+  );
+  testCase.end();
+});
+
+test('packet-spraying switches form spine and two complete physical-plane groups', testCase => {
+  const groups = makeSwitchGroups();
+
+  testCase.deepEqual(
+    groups.map(group => group.id),
+    ['spine', 'plane-1', 'plane-2'],
+    'semantic switch groups identify the spine and both planes'
+  );
+  testCase.deepEqual(
+    groups.map(group => group.switchIndices.length),
+    [4, 8, 8],
+    'spines contain four switches and each plane contains its access and aggregation switches'
+  );
+  testCase.deepEqual(
+    groups.flatMap(group => group.switchIndices).sort((first, second) => first - second),
+    SWITCH_POSITIONS.map((_, switchIndex) => switchIndex),
+    'every pickable switch belongs to exactly one rendering group'
+  );
+  testCase.ok(
+    groups[1].switchIndices.every(switchIndex => SWITCH_POSITIONS[switchIndex][2] > 0),
+    'the first physical plane keeps its positive-depth switch row together'
+  );
+  testCase.ok(
+    groups[2].switchIndices.every(switchIndex => SWITCH_POSITIONS[switchIndex][2] < 0),
+    'the second physical plane keeps its negative-depth switch row together'
   );
   testCase.end();
 });

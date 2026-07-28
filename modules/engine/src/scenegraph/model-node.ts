@@ -3,18 +3,29 @@
 // Copyright (c) vis.gl contributors
 
 import {RenderPass} from '@luma.gl/core';
+import type {NumericArray} from '@math.gl/core';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
+import {
+  areScenegraphBoundsDefined,
+  expandScenegraphBounds,
+  makeEmptyScenegraphBounds
+} from './scenegraph-bounds';
+import type {ScenegraphBounds} from './scenegraph-bounds';
 import {Model} from '../model/model';
 
 export type ModelNodeProps = ScenegraphNodeProps & {
   model: Model;
   managedResources?: any[];
-  bounds?: [[number, number, number], [number, number, number]];
+  /** Bounds of one model instance before instance and node transforms. */
+  bounds?: ScenegraphBounds;
+  /** Optional per-instance transforms used to calculate aggregate local bounds. */
+  instanceMatrices?: readonly NumericArray[];
 };
 
 export class ModelNode extends ScenegraphNode {
   readonly model: Model;
-  bounds: [[number, number, number], [number, number, number]] | null = null;
+  readonly instanceMatrices: readonly NumericArray[] | null;
+  bounds: ScenegraphBounds | null = null;
   managedResources: any[];
 
   // TODO - is this used? override callbacks to make sure we call them with this
@@ -28,7 +39,12 @@ export class ModelNode extends ScenegraphNode {
     // Create new Model or used supplied Model
     this.model = props.model;
     this.managedResources = props.managedResources || [];
-    this.bounds = props.bounds || null;
+    this.instanceMatrices = props.instanceMatrices || null;
+    this.bounds = props.bounds
+      ? this.instanceMatrices
+        ? getInstancedScenegraphBounds(props.bounds, this.instanceMatrices)
+        : props.bounds
+      : null;
     this.setProps(props);
   }
 
@@ -51,4 +67,17 @@ export class ModelNode extends ScenegraphNode {
     // Return value indicates if something was actually drawn
     return this.model.draw(renderPass);
   }
+}
+
+function getInstancedScenegraphBounds(
+  bounds: ScenegraphBounds,
+  instanceMatrices: readonly NumericArray[]
+): ScenegraphBounds | null {
+  const instancedBounds = makeEmptyScenegraphBounds();
+
+  for (const instanceMatrix of instanceMatrices) {
+    expandScenegraphBounds(instancedBounds, bounds, instanceMatrix);
+  }
+
+  return areScenegraphBoundsDefined(instancedBounds) ? instancedBounds : null;
 }

@@ -33,6 +33,12 @@ export type {
 } from './materials/glass-material';
 export {glassMaterial, glassMaterialPlugin} from './materials/glass-material';
 export type {
+  GlassTransmissionBindings,
+  GlassTransmissionProps,
+  GlassTransmissionUniforms
+} from './materials/glass-transmission';
+export {glassTransmission, glassTransmissionPlugin} from './materials/glass-transmission';
+export type {
   ReflectiveMaterialProps,
   ReflectiveMaterialUniforms
 } from './materials/reflective-material';
