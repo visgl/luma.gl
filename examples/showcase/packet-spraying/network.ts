@@ -16,6 +16,25 @@ export type Packet = {
   scale: number;
 };
 
+export type NetworkScenario = 'failure' | 'congestion';
+
+export type NetworkPacketEventKind =
+  | 'dropped-payload'
+  | 'trimmed-payload'
+  | 'trimmed-header'
+  | 'retransmission'
+  | 'probe';
+
+export type NetworkPacketEvent = {
+  color: Color;
+  conversationIndex: number;
+  duration: number;
+  kind: NetworkPacketEventKind;
+  route: Route;
+  startedAt: number;
+  switchIndex: number;
+};
+
 export type SwitchArrival = {
   arrivalTime: number;
   conversationIndex: number;
@@ -51,7 +70,7 @@ export type PickableNetworkNode = {
   description: string;
   detail: string;
   role: string;
-  status?: 'offline' | 'online';
+  status?: 'congested' | 'detecting' | 'offline' | 'online';
   title: string;
 };
 
@@ -74,7 +93,10 @@ const PACKETS_PER_BURST = 24;
 const BURST_PACKET_INTERVAL = 0.14;
 
 export const BURST_CYCLE_DURATION = 11;
+export const CONGESTION_TRIM_INTERVAL = 1.35;
+export const FAILURE_DETECTION_DELAY = 0.52;
 export const PACKET_TRAVEL_SPEED = 3.4;
+export const SWITCH_PROBE_INTERVAL = 2.2;
 
 export const HOST_POSITIONS: Vector3[] = HOST_Z_POSITIONS.flatMap(zPosition =>
   HOST_X_POSITIONS.map(xPosition => [xPosition, HOST_Y, zPosition] as Vector3)
@@ -186,8 +208,120 @@ export function makeSwitchArrivals(packets: Packet[]): SwitchArrival[] {
   return arrivals;
 }
 
+export function makeSwitchPacketEvents({
+  packets,
+  conversationRoutes,
+  scenario,
+  startedAt,
+  switchIndex
+}: {
+  packets: readonly Packet[];
+  conversationRoutes: readonly ConversationRoute[];
+  scenario: NetworkScenario;
+  startedAt: number;
+  switchIndex: number;
+}): NetworkPacketEvent[] {
+  const switchPosition = SWITCH_POSITIONS[switchIndex];
+  if (!switchPosition) {
+    return [];
+  }
+
+  const affectedPackets = packets.filter(packet =>
+    packet.route.points.some(position => position === switchPosition)
+  );
+  const alternateRoutes = getHealthyConversationRoutes(conversationRoutes, new Set([switchIndex]));
+  const events: NetworkPacketEvent[] = [];
+  const packetsPerConversation = scenario === 'failure' ? 2 : 1;
+
+  for (let sequenceIndex = 0; sequenceIndex < packetsPerConversation; sequenceIndex++) {
+    for (let conversationIndex = 0; conversationIndex < CONVERSATIONS.length; conversationIndex++) {
+      const affectedPacket = affectedPackets.find(
+        packet =>
+          packet.conversationIndex === conversationIndex &&
+          Math.floor(packet.preferredRouteIndex / SPINE_POSITIONS.length) === sequenceIndex
+      );
+      if (!affectedPacket) {
+        continue;
+      }
+
+      const eventIndex = sequenceIndex * CONVERSATIONS.length + conversationIndex;
+      const eventStartedAt = startedAt + 0.08 + eventIndex * 0.085;
+      const baseEvent = {
+        color: affectedPacket.color,
+        conversationIndex,
+        route: affectedPacket.route,
+        switchIndex
+      };
+
+      if (scenario === 'failure') {
+        events.push({
+          ...baseEvent,
+          duration: 0.68,
+          kind: 'dropped-payload',
+          startedAt: eventStartedAt
+        });
+      } else {
+        events.push({
+          ...baseEvent,
+          duration: 0.58,
+          kind: 'trimmed-payload',
+          startedAt: eventStartedAt
+        });
+        events.push({
+          ...baseEvent,
+          duration: 1.05,
+          kind: 'trimmed-header',
+          startedAt: eventStartedAt
+        });
+      }
+
+      const alternateRoute = alternateRoutes.find(
+        candidate => candidate.conversationIndex === conversationIndex
+      );
+      if (alternateRoute) {
+        events.push({
+          ...baseEvent,
+          duration: alternateRoute.route.totalLength / (PACKET_TRAVEL_SPEED * 1.16),
+          kind: 'retransmission',
+          route: alternateRoute.route,
+          startedAt:
+            startedAt +
+            (scenario === 'failure' ? FAILURE_DETECTION_DELAY + 0.08 : 0.42) +
+            eventIndex * 0.085
+        });
+      }
+    }
+  }
+
+  return events;
+}
+
+export function makeSwitchProbeEvent(
+  conversationRoutes: readonly ConversationRoute[],
+  switchIndex: number,
+  startedAt: number
+): NetworkPacketEvent | null {
+  const switchPosition = SWITCH_POSITIONS[switchIndex];
+  const conversationRoute = conversationRoutes.find(({route}) =>
+    route.points.some(position => position === switchPosition)
+  );
+  if (!conversationRoute) {
+    return null;
+  }
+
+  return {
+    color: [0.35, 0.7, 1, 0.76],
+    conversationIndex: conversationRoute.conversationIndex,
+    duration: 0.66,
+    kind: 'probe',
+    route: conversationRoute.route,
+    startedAt,
+    switchIndex
+  };
+}
+
 export function getHealthyConversationRoutes(
-  conversationRoutes: ConversationRoute[],
+  conversationRoutes: readonly ConversationRoute[],
   failedSwitchIndices: ReadonlySet<number>
 ): ConversationRoute[] {
   return conversationRoutes.filter(({route}) =>
@@ -291,9 +425,17 @@ export function makeLinks(conversationRoutes: ConversationRoute[]): NetworkLink[
   return links;
 }
 
-export function makeLinkColor(start: Vector3, active: boolean, failed = false): Color {
+export function makeLinkColor(
+  start: Vector3,
+  active: boolean,
+  failed = false,
+  congested = false
+): Color {
   if (failed) {
     return [0.86, 0.32, 0.08, 0.085];
+  }
+  if (congested) {
+    return [0.92, 0.24, 0.1, active ? 0.16 : 0.07];
   }
   if (start[1] === HOST_Y) {
     return active ? [0.43, 0.61, 0.91, 0.2] : [0.3, 0.42, 0.66, 0.045];

@@ -5,6 +5,7 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   AGGREGATION_POSITIONS,
+  FAILURE_DETECTION_DELAY,
   CONVERSATIONS,
   HOST_POSITIONS,
   LEAF_POSITIONS,
@@ -19,6 +20,8 @@ import {
   makeLinks,
   makePackets,
   makePickableNetworkNodes,
+  makeSwitchPacketEvents,
+  makeSwitchProbeEvent,
   makeSwitchArrivals,
   reroutePackets
 } from '../../examples/showcase/packet-spraying/network';
@@ -129,5 +132,79 @@ test('packet-spraying stops a conversation when its only access switch fails', t
     'unreachable packets are hidden'
   );
   testCase.equal(makeSwitchArrivals(packets).length, 0, 'disabled traffic cannot flash switches');
+  testCase.end();
+});
+
+test('packet-spraying failure drops packets before retransmitting on healthy planes', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const failedSpineIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const startedAt = 12;
+  const events = makeSwitchPacketEvents({
+    packets,
+    conversationRoutes: routes,
+    scenario: 'failure',
+    startedAt,
+    switchIndex: failedSpineIndex
+  });
+  const droppedPackets = events.filter(event => event.kind === 'dropped-payload');
+  const retransmittedPackets = events.filter(event => event.kind === 'retransmission');
+
+  testCase.equal(droppedPackets.length, 4, 'both conversations lose two in-flight packets');
+  testCase.equal(retransmittedPackets.length, 4, 'each lost packet receives a retransmission');
+  testCase.deepEqual(
+    droppedPackets.map(event => event.conversationIndex),
+    [0, 1, 0, 1],
+    'dropped red and green packets preserve their interleaved ordering'
+  );
+  testCase.ok(
+    droppedPackets.every(event => event.startedAt < startedAt + FAILURE_DETECTION_DELAY),
+    'packets are only lost during the brief failure-detection window'
+  );
+  testCase.ok(
+    retransmittedPackets.every(event => event.startedAt >= startedAt + FAILURE_DETECTION_DELAY),
+    'retransmissions begin once the failed path is retired'
+  );
+  testCase.ok(
+    retransmittedPackets.every(event =>
+      event.route.points.every(position => position !== SPINE_POSITIONS[0])
+    ),
+    'retransmissions take healthy independent network planes'
+  );
+  testCase.end();
+});
+
+test('packet-spraying congestion trims payloads while preserving packet headers', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const congestedSpineIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const events = makeSwitchPacketEvents({
+    packets,
+    conversationRoutes: routes,
+    scenario: 'congestion',
+    startedAt: 8,
+    switchIndex: congestedSpineIndex
+  });
+
+  testCase.equal(
+    events.filter(event => event.kind === 'trimmed-payload').length,
+    2,
+    'each conversation sheds one congested payload'
+  );
+  testCase.equal(
+    events.filter(event => event.kind === 'trimmed-header').length,
+    2,
+    'each trimmed payload retains a forwarding header'
+  );
+  testCase.equal(
+    events.filter(event => event.kind === 'retransmission').length,
+    2,
+    'trim notifications trigger retransmissions through other planes'
+  );
+  testCase.equal(getActivePlaneCount(routes), 4, 'congestion does not retire the plane');
+
+  const probe = makeSwitchProbeEvent(routes, congestedSpineIndex, 15);
+  testCase.equal(probe?.kind, 'probe', 'failed paths can be tested with a control probe');
+  testCase.equal(probe?.switchIndex, congestedSpineIndex, 'the probe targets the affected switch');
   testCase.end();
 });

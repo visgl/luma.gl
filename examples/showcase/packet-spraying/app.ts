@@ -69,7 +69,9 @@ import {
   AGGREGATION_POSITIONS,
   AGGREGATION_SWITCH_RADIUS,
   BURST_CYCLE_DURATION,
+  CONGESTION_TRIM_INTERVAL,
   CONVERSATIONS,
+  FAILURE_DETECTION_DELAY,
   HOST_HALF_EXTENTS,
   HOST_POSITIONS,
   HOST_Y,
@@ -78,6 +80,7 @@ import {
   PACKET_TRAVEL_SPEED,
   SPINE_POSITIONS,
   SPINE_SWITCH_RADIUS,
+  SWITCH_PROBE_INTERVAL,
   SWITCH_POSITIONS,
   getActivePlaneCount,
   getDistance,
@@ -94,11 +97,15 @@ import {
   makeLinks,
   makePackets,
   makePickableNetworkNodes,
+  makeSwitchPacketEvents,
+  makeSwitchProbeEvent,
   makeSwitchArrivals,
   reroutePackets,
   type Color,
   type ConversationRoute,
   type NetworkLink,
+  type NetworkPacketEvent,
+  type NetworkScenario,
   type Packet,
   type PickableNetworkNode,
   type SwitchArrival,
@@ -497,7 +504,10 @@ const INSTANCE_BUFFER_LAYOUT = [
 const PACKET_TRAIL_RADIUS = 0.033;
 const SWITCH_FLASH_DURATION = 0.16;
 const MAX_SWITCH_FLASH_LIGHTS = 6;
-const FAILED_SWITCH_COLOR: Color = [1, 0.34, 0.07, 0.56];
+const MAX_STORY_PACKET_INSTANCES = 160;
+const CONGESTED_SWITCH_COLOR: Color = [1, 0.42, 0.065, 0.56];
+const DETECTING_SWITCH_COLOR: Color = [1, 0.21, 0.035, 0.59];
+const FAILED_SWITCH_COLOR: Color = [1, 0.065, 0.035, 0.59];
 
 const TRANSPARENT_PARAMETERS = {
   blend: true,
@@ -722,7 +732,12 @@ class NetworkNodePopup {
   show(node: PickableNetworkNode, clientPosition: [number, number]): void {
     this.titleElement.textContent = node.title;
     this.roleElement.textContent = node.role;
-    this.roleElement.style.color = node.status === 'offline' ? '#ffad52' : '#82acf2';
+    this.roleElement.style.color =
+      node.status === 'offline'
+        ? '#ff665a'
+        : node.status === 'congested' || node.status === 'detecting'
+          ? '#ffad52'
+          : '#82acf2';
     this.descriptionElement.textContent = node.description;
     this.detailElement.textContent = node.detail;
     this.popupElement.style.display = 'block';
@@ -811,6 +826,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly pickableNodes: PickableNetworkNode[];
   readonly glassInstances: GlassInstance[];
   readonly originalGlassColors: Color[];
+  readonly congestedSwitchIndices = new Set<number>();
   readonly failedSwitchIndices = new Set<number>();
   readonly conversationRoutes: ConversationRoute[];
   readonly networkLinks: NetworkLink[];
@@ -843,6 +859,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
   }>;
+  readonly storyPackets: InstancedMesh<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
   readonly packetDefinitions: Packet[];
   readonly packetMatrices: Float32Array;
   readonly packetTrailMatrices: Float32Array;
@@ -851,11 +871,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly switchFlashMatrices: Float32Array;
   readonly switchFlashColors: Float32Array;
   readonly switchFlashStrengths: Float32Array;
+  readonly storyPacketMatrices = new Float32Array(MAX_STORY_PACKET_INSTANCES * 16);
+  readonly storyPacketColors = new Float32Array(MAX_STORY_PACKET_INSTANCES * 4);
+  readonly networkPacketEvents: NetworkPacketEvent[] = [];
   orbitControls: OrbitControls | null = null;
   nodePopup: NetworkNodePopup | null = null;
 
   private canvas: HTMLCanvasElement | null = null;
   private pendingPickRequest: NetworkNodePickRequest | null = null;
+  private readonly detectingSwitchTimes = new Map<number, number>();
+  private readonly nextCongestionTrimTimes = new Map<number, number>();
+  private readonly nextSwitchProbeTimes = new Map<number, number>();
+  private animationTime = 0;
+  private droppedPacketCount = 0;
+  private trimmedPacketCount = 0;
   private pickingInProgress = false;
   private pointerDownPosition: [number, number] | null = null;
   private pointerSequence = 0;
@@ -1038,6 +1067,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       additive: true,
       emissive: true
     });
+    this.storyPackets = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-network-story-packets',
+      geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
+      matrices: this.storyPacketMatrices,
+      colors: this.storyPacketColors,
+      additive: true,
+      emissive: true
+    });
 
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'packet-spraying-settings',
@@ -1092,11 +1129,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
   override onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.resizeSceneFramebuffer(width, height);
-    const animationTime = time / 1000;
-    this.updatePacketVisuals(animationTime * this.speed);
+    this.animationTime = (time / 1000) * this.speed;
+    this.updateSwitchStoryState(this.animationTime);
+    this.updatePacketVisuals(this.animationTime);
+    this.updateStoryPacketVisuals(this.animationTime);
     this.packets.updateMatrices(this.packetMatrices);
     this.packetTrails.updateInstances(this.packetTrailMatrices, this.packetTrailColors);
     this.switchFlashes.updateInstances(this.switchFlashMatrices, this.switchFlashColors);
+    this.storyPackets.updateInstances(this.storyPacketMatrices, this.storyPacketColors);
 
     this.orbitControls?.update(time);
     const eye: Vector3 = this.orbitControls?.getEyePosition() || [5.2, 6.2, 9.1];
@@ -1151,6 +1191,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.model.predraw(device.commandEncoder);
     this.packetTrails.model.predraw(device.commandEncoder);
     this.switchFlashes.model.predraw(device.commandEncoder);
+    this.storyPackets.model.predraw(device.commandEncoder);
     this.links.model.predraw(device.commandEncoder);
     const sceneRenderPass = device.beginRenderPass({
       framebuffer: this.sceneFramebuffer,
@@ -1161,6 +1202,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.model.draw(sceneRenderPass);
     this.packetTrails.model.draw(sceneRenderPass);
     this.switchFlashes.model.draw(sceneRenderPass);
+    this.storyPackets.model.draw(sceneRenderPass);
     this.links.model.draw(sceneRenderPass);
     sceneRenderPass.end();
 
@@ -1270,6 +1312,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.destroy();
     this.packetTrails.destroy();
     this.switchFlashes.destroy();
+    this.storyPackets.destroy();
     this.postprocessingRenderer.destroy();
     this.aBufferRenderer?.destroy();
     this.weightedBlendedRenderer?.destroy();
@@ -1327,7 +1370,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         ) {
           const switchIndex = objectIndex - HOST_POSITIONS.length;
           if (switchIndex >= 0 && switchIndex < this.glassInstances.length) {
-            this.toggleSwitchFailure(switchIndex);
+            this.advanceSwitchState(switchIndex);
           }
         }
 
@@ -1410,33 +1453,126 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     if (this.failedSwitchIndices.has(switchIndex)) {
       return {
         ...node,
-        role: `OFFLINE / ${node.role}`,
+        role: `FAILED / ${node.role}`,
         description:
-          'This switch is unavailable. MRC immediately removes every affected route and sprays packets across the remaining healthy paths.',
+          'This switch dropped in-flight packets. MRC retired its paths, retransmitted the missing data, and now sends occasional recovery probes.',
         detail: 'Click again to restore this switch and return its paths to service.',
         status: 'offline'
       };
     }
 
+    if (this.detectingSwitchTimes.has(switchIndex)) {
+      return {
+        ...node,
+        role: `FAILURE DETECTED / ${node.role}`,
+        description:
+          'Packets reaching this switch are briefly lost while MRC detects the fault and prepares healthy replacement routes.',
+        detail: 'The affected plane will be retired after the packet-loss detection interval.',
+        status: 'detecting'
+      };
+    }
+
+    if (this.congestedSwitchIndices.has(switchIndex)) {
+      return {
+        ...node,
+        role: `CONGESTED / ${node.role}`,
+        description:
+          'This switch trims overloaded packet payloads while forwarding their small headers, allowing senders to retransmit through other paths.',
+        detail: 'Click again to fail this switch and demonstrate path retirement.',
+        status: 'congested'
+      };
+    }
+
     return {
       ...node,
-      detail: `${node.detail} Click to simulate a switch failure.`,
+      detail: `${node.detail} Click to introduce congestion.`,
       status: 'online'
     };
   }
 
-  private toggleSwitchFailure(switchIndex: number): void {
+  private advanceSwitchState(switchIndex: number): void {
     if (this.failedSwitchIndices.has(switchIndex)) {
       this.failedSwitchIndices.delete(switchIndex);
+      this.nextSwitchProbeTimes.delete(switchIndex);
       this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
+    } else if (this.detectingSwitchTimes.has(switchIndex)) {
+      this.completeSwitchFailure(switchIndex);
+      return;
+    } else if (this.congestedSwitchIndices.has(switchIndex)) {
+      this.congestedSwitchIndices.delete(switchIndex);
+      this.nextCongestionTrimTimes.delete(switchIndex);
+      this.detectingSwitchTimes.set(switchIndex, this.animationTime + FAILURE_DETECTION_DELAY);
+      this.glassInstances[switchIndex].color = [...DETECTING_SWITCH_COLOR];
+      this.enqueueSwitchPacketEvents(switchIndex, 'failure', this.animationTime);
     } else {
-      this.failedSwitchIndices.add(switchIndex);
-      this.glassInstances[switchIndex].color = [...FAILED_SWITCH_COLOR];
+      this.congestedSwitchIndices.add(switchIndex);
+      this.nextCongestionTrimTimes.set(switchIndex, this.animationTime);
+      this.glassInstances[switchIndex].color = [...CONGESTED_SWITCH_COLOR];
     }
 
     this.updateSwitchColors();
     this.updateHealthyRoutes();
     this.updateFailureAccessibility();
+  }
+
+  private completeSwitchFailure(switchIndex: number): void {
+    this.detectingSwitchTimes.delete(switchIndex);
+    this.failedSwitchIndices.add(switchIndex);
+    this.nextSwitchProbeTimes.set(switchIndex, this.animationTime + SWITCH_PROBE_INTERVAL);
+    this.glassInstances[switchIndex].color = [...FAILED_SWITCH_COLOR];
+    this.updateSwitchColors();
+    this.updateHealthyRoutes();
+    this.updateFailureAccessibility();
+  }
+
+  private enqueueSwitchPacketEvents(
+    switchIndex: number,
+    scenario: NetworkScenario,
+    startedAt: number
+  ): void {
+    const events = makeSwitchPacketEvents({
+      packets: this.packetDefinitions,
+      conversationRoutes: this.conversationRoutes,
+      scenario,
+      startedAt,
+      switchIndex
+    });
+    this.networkPacketEvents.push(...events);
+    this.droppedPacketCount += events.filter(event => event.kind === 'dropped-payload').length;
+    this.trimmedPacketCount += events.filter(event => event.kind === 'trimmed-payload').length;
+  }
+
+  private updateSwitchStoryState(animationTime: number): void {
+    for (const [switchIndex, detectionTime] of this.detectingSwitchTimes) {
+      if (animationTime >= detectionTime) {
+        this.completeSwitchFailure(switchIndex);
+      }
+    }
+
+    for (const [switchIndex, nextTrimTime] of this.nextCongestionTrimTimes) {
+      if (animationTime >= nextTrimTime) {
+        this.enqueueSwitchPacketEvents(switchIndex, 'congestion', nextTrimTime);
+        this.nextCongestionTrimTimes.set(switchIndex, nextTrimTime + CONGESTION_TRIM_INTERVAL);
+        this.updateFailureAccessibility();
+      }
+    }
+
+    for (const [switchIndex, nextProbeTime] of this.nextSwitchProbeTimes) {
+      if (animationTime >= nextProbeTime) {
+        const probe = makeSwitchProbeEvent(this.conversationRoutes, switchIndex, nextProbeTime);
+        if (probe) {
+          this.networkPacketEvents.push(probe);
+        }
+        this.nextSwitchProbeTimes.set(switchIndex, nextProbeTime + SWITCH_PROBE_INTERVAL);
+      }
+    }
+
+    for (let eventIndex = this.networkPacketEvents.length - 1; eventIndex >= 0; eventIndex--) {
+      const event = this.networkPacketEvents[eventIndex];
+      if (animationTime > event.startedAt + event.duration) {
+        this.networkPacketEvents.splice(eventIndex, 1);
+      }
+    }
   }
 
   private updateSwitchColors(): void {
@@ -1460,10 +1596,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       const failed =
         isFailedSwitchPosition(link.start, this.failedSwitchIndices) ||
         isFailedSwitchPosition(link.end, this.failedSwitchIndices);
+      const congested =
+        isFailedSwitchPosition(link.start, this.congestedSwitchIndices) ||
+        isFailedSwitchPosition(link.end, this.congestedSwitchIndices);
       link.color = makeLinkColor(
         link.start,
         activeLinkKeys.has(makeLinkKey(link.start, link.end)),
-        failed
+        failed,
+        congested
       );
     }
     this.links.updateInstances(
@@ -1477,17 +1617,21 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
 
+    const congestedCount = this.congestedSwitchIndices.size;
     const failedCount = this.failedSwitchIndices.size;
     const activePlaneCount = getActivePlaneCount(
       getHealthyConversationRoutes(this.conversationRoutes, this.failedSwitchIndices)
     );
+    this.canvas.dataset.packetSprayingCongestedSwitches = String(congestedCount);
     this.canvas.dataset.packetSprayingFailedSwitches = String(failedCount);
     this.canvas.dataset.packetSprayingActivePlanes = String(activePlaneCount);
+    this.canvas.dataset.packetSprayingDroppedPackets = String(this.droppedPacketCount);
+    this.canvas.dataset.packetSprayingTrimmedPackets = String(this.trimmedPacketCount);
     this.canvas.setAttribute(
       'aria-label',
-      failedCount === 0
+      failedCount === 0 && congestedCount === 0
         ? 'Network packet spraying: all switches online'
-        : `Network packet spraying: ${failedCount} switch${failedCount === 1 ? '' : 'es'} offline, ${activePlaneCount} healthy network plane${activePlaneCount === 1 ? '' : 's'}`
+        : `Network packet spraying: ${congestedCount} congested, ${failedCount} failed, ${activePlaneCount} healthy network plane${activePlaneCount === 1 ? '' : 's'}`
     );
   }
 
@@ -1524,6 +1668,98 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       flattenMatrices(sortedInstances.map(instance => instance.matrix)),
       flattenColors(sortedInstances.map(instance => instance.color))
     );
+  }
+
+  private updateStoryPacketVisuals(animationTime: number): void {
+    this.storyPacketMatrices.fill(0);
+    this.storyPacketColors.fill(0);
+    let instanceIndex = 0;
+
+    const addParticle = (position: Vector3, radius: number, color: Color): void => {
+      if (instanceIndex >= MAX_STORY_PACKET_INSTANCES) {
+        return;
+      }
+      this.storyPacketMatrices.set(
+        makeObjectMatrix(position, [radius, radius, radius]),
+        instanceIndex * 16
+      );
+      this.storyPacketColors.set(color, instanceIndex * 4);
+      instanceIndex++;
+    };
+
+    for (const event of this.networkPacketEvents) {
+      const age = animationTime - event.startedAt;
+      if (age < 0 || age > event.duration) {
+        continue;
+      }
+
+      const switchPosition = SWITCH_POSITIONS[event.switchIndex];
+      const routePointIndex = event.route.points.indexOf(switchPosition);
+      if (!switchPosition || routePointIndex < 0) {
+        continue;
+      }
+
+      if (event.kind === 'dropped-payload' || event.kind === 'trimmed-payload') {
+        const progress = age / event.duration;
+        const fragmentCount = event.kind === 'dropped-payload' ? 8 : 6;
+        const spread = (event.kind === 'dropped-payload' ? 1.15 : 0.78) * age;
+        const fragmentRadius =
+          (event.kind === 'dropped-payload' ? 0.036 : 0.028) * (1 - progress * 0.8);
+        const fragmentColor = makeBalancedEmissionColor(
+          event.color,
+          Math.max(0, (1 - progress) * 0.82)
+        );
+
+        for (let fragmentIndex = 0; fragmentIndex < fragmentCount; fragmentIndex++) {
+          const angle =
+            fragmentIndex * 2.399963 + event.conversationIndex * 0.74 + event.switchIndex * 0.33;
+          const elevation = (fragmentIndex % 3) * 0.34 - 0.3;
+          addParticle(
+            [
+              switchPosition[0] + Math.cos(angle) * spread,
+              switchPosition[1] + elevation * spread - age * age * 0.46,
+              switchPosition[2] + Math.sin(angle) * spread
+            ],
+            fragmentRadius,
+            fragmentColor
+          );
+        }
+        continue;
+      }
+
+      if (event.kind === 'trimmed-header') {
+        const startDistance = event.route.cumulativeLengths[routePointIndex];
+        const distance = Math.min(
+          event.route.totalLength,
+          startDistance + age * PACKET_TRAVEL_SPEED
+        );
+        addParticle(
+          getPointAlongRoute(event.route, distance / event.route.totalLength),
+          0.024,
+          makeBalancedEmissionColor(event.color, 0.76)
+        );
+        continue;
+      }
+
+      if (event.kind === 'retransmission') {
+        const distance = Math.min(event.route.totalLength, age * PACKET_TRAVEL_SPEED * 1.16);
+        addParticle(
+          getPointAlongRoute(event.route, distance / event.route.totalLength),
+          0.046,
+          makeBalancedEmissionColor(event.color, 0.92)
+        );
+        continue;
+      }
+
+      const startDistance = event.route.cumulativeLengths[Math.max(0, routePointIndex - 1)];
+      const endDistance = event.route.cumulativeLengths[routePointIndex];
+      const distance = startDistance + (endDistance - startDistance) * (age / event.duration);
+      addParticle(
+        getPointAlongRoute(event.route, distance / event.route.totalLength),
+        0.021,
+        event.color
+      );
+    }
   }
 
   private updatePacketVisuals(animationTime: number): void {
@@ -1823,7 +2059,8 @@ const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Network Packet Spraying</strong></p>
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
 <p>Packets enter their local Tier 0 switch as separate streams. Once the streams meet, the switch forwards alternating red and green packets across four representative independent network planes. The destination-side switches separate the traffic again and deliver each color to its intended server.</p>
-<p>Click a glass switch to simulate a failure. Its sphere turns orange, affected links dim, and packets immediately respray across the remaining healthy routes. Click the switch again to restore it.</p>
+<p>Click any glass switch to move it through three states: healthy, orange and congested, red and failed, then healthy again.</p>
+<p>An orange switch trims overloaded packet payloads while their smaller headers continue. A red switch briefly loses in-flight packets before MRC retires the failed plane, retransmits over healthy routes, and sends occasional recovery probes.</p>
 <p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and faint tubes show the available fabric links. Emissive packets leave short directional trails, briefly illuminate arriving switches, and cast localized colored light onto nearby surfaces.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Read OpenAI's supercomputer networking and MRC article</a></p>`;
 
@@ -1832,7 +2069,8 @@ const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>How the two conversations mix:</strong> the red source talks to one destination, and the green source talks to another. Their packets can share the same switch-to-switch link, interleaving one red packet with one green packet before being separated near their destinations.</p>
 <p><strong>Planes and packet spraying:</strong> a high-bandwidth network interface can be split across multiple independent physical planes. In the article's example, an 800 Gb/s interface becomes eight 100 Gb/s connections. This visualization shows four representative paths; each conversation sprays successive packets across all four instead of waiting behind one busy link.</p>
 <p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
-<p><strong>Resilience:</strong> if a link, plane, or switch fails, the sender quickly retires the affected path and keeps using the remaining ones. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
+<p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
+<p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
 <p><strong>Rendering:</strong> reusable emissive materials shade compact packet cores, velocity-aligned trails, and switch-arrival flashes; bounded point lights illuminate refractive glass and reflective links. Floating-point scene color preserves the directional highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
