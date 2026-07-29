@@ -7,9 +7,14 @@
     import {webgpuAdapter} from '@luma.gl/webgpu';
     import AnimationLoopTemplate from './app.ts';
 
-    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
-      adapters: [webgpuAdapter, webgl2Adapter]
-    });
+    const requestedDevice = new URLSearchParams(window.location.search).get('device');
+    const adapters =
+      requestedDevice === 'webgl'
+        ? [webgl2Adapter]
+        : requestedDevice === 'webgpu'
+          ? [webgpuAdapter]
+          : [webgpuAdapter, webgl2Adapter];
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters});
     animationLoop.start();
   </script>
   <style>

@@ -7,6 +7,7 @@ import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
 
 const MAX_BLOOM_BLUR_RADIUS = 24;
+const BLOOM_TARGET_SAMPLER = {minFilter: 'linear', magFilter: 'linear'} as const;
 
 type BloomTargetName =
   | 'extractHalf'
@@ -83,7 +84,7 @@ struct bloomBlurUniforms {
 @group(0) @binding(auto) var<uniform> bloomBlur: bloomBlurUniforms;
 
 fn bloomBlur_applySample(color: vec4f) -> vec4f {
-  return vec4f(color.rgb * vec3f(color.a), color.a);
+  return color;
 }
 
 fn bloomBlur_getEffectiveRadius() -> f32 {
@@ -147,10 +148,7 @@ fn bloomBlur_sampleColor(
     totalWeight += combinedWeight * 2.0;
   }
 
-  color /= totalWeight;
-  let unpremultipliedRgb = color.rgb / vec3f(color.a + 0.00001);
-
-  return vec4f(unpremultipliedRgb, color.a);
+  return color / totalWeight;
 }
 `,
   fs: /* glsl */ `
@@ -163,7 +161,7 @@ layout(std140) uniform bloomBlurUniforms {
 } bloomBlur;
 
 vec4 bloomBlur_applySample(vec4 color) {
-  return vec4(color.rgb * color.a, color.a);
+  return color;
 }
 
 float bloomBlur_getEffectiveRadius() {
@@ -215,8 +213,6 @@ vec4 bloomBlur_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord)
   }
 
   color /= totalWeight;
-  color.rgb /= color.a + 0.00001;
-
   return color;
 }
 `,
@@ -262,10 +258,9 @@ fn bloomComposite_sampleColor(
   texCoord: vec2f
 ) -> vec4f {
   let sourceColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
-  let renderTargetCoord = shaderPassRenderer_getRenderTargetUV(texCoord);
-  let halfGlow = textureSample(glowHalf, glowHalfSampler, renderTargetCoord).rgb;
-  let quarterGlow = textureSample(glowQuarter, glowQuarterSampler, renderTargetCoord).rgb;
-  let eighthGlow = textureSample(glowEighth, glowEighthSampler, renderTargetCoord).rgb;
+  let halfGlow = textureSample(glowHalf, glowHalfSampler, texCoord).rgb;
+  let quarterGlow = textureSample(glowQuarter, glowQuarterSampler, texCoord).rgb;
+  let eighthGlow = textureSample(glowEighth, glowEighthSampler, texCoord).rgb;
   let glowColor = halfGlow * 0.50 + quarterGlow * 0.32 + eighthGlow * 0.18;
   return vec4f(sourceColor.rgb + glowColor * bloomComposite.intensity, sourceColor.a);
 }
@@ -281,10 +276,9 @@ uniform sampler2D glowEighth;
 
 vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   vec4 sourceColor = texture(sourceTexture, texCoord);
-  vec2 renderTargetCoord = shaderPassRenderer_getRenderTargetUV(texCoord);
-  vec3 halfGlow = texture(glowHalf, renderTargetCoord).rgb;
-  vec3 quarterGlow = texture(glowQuarter, renderTargetCoord).rgb;
-  vec3 eighthGlow = texture(glowEighth, renderTargetCoord).rgb;
+  vec3 halfGlow = texture(glowHalf, texCoord).rgb;
+  vec3 quarterGlow = texture(glowQuarter, texCoord).rgb;
+  vec3 eighthGlow = texture(glowEighth, texCoord).rgb;
   vec3 glowColor = halfGlow * 0.50 + quarterGlow * 0.32 + eighthGlow * 0.18;
   return vec4(sourceColor.rgb + glowColor * bloomComposite.intensity, sourceColor.a);
 }
@@ -317,15 +311,15 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
 export const bloomShaderPassPipeline = {
   name: 'bloomShaderPassPipeline',
   renderTargets: {
-    extractHalf: {scale: [0.5, 0.5]},
-    blurHalfScratch: {scale: [0.5, 0.5]},
-    blurHalf: {scale: [0.5, 0.5]},
-    extractQuarter: {scale: [0.25, 0.25]},
-    blurQuarterScratch: {scale: [0.25, 0.25]},
-    blurQuarter: {scale: [0.25, 0.25]},
-    extractEighth: {scale: [0.125, 0.125]},
-    blurEighthScratch: {scale: [0.125, 0.125]},
-    blurEighth: {scale: [0.125, 0.125]}
+    extractHalf: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
+    blurHalfScratch: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
+    blurHalf: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
+    extractQuarter: {scale: [0.25, 0.25], sampler: BLOOM_TARGET_SAMPLER},
+    blurQuarterScratch: {scale: [0.25, 0.25], sampler: BLOOM_TARGET_SAMPLER},
+    blurQuarter: {scale: [0.25, 0.25], sampler: BLOOM_TARGET_SAMPLER},
+    extractEighth: {scale: [0.125, 0.125], sampler: BLOOM_TARGET_SAMPLER},
+    blurEighthScratch: {scale: [0.125, 0.125], sampler: BLOOM_TARGET_SAMPLER},
+    blurEighth: {scale: [0.125, 0.125], sampler: BLOOM_TARGET_SAMPLER}
   },
   steps: [
     {

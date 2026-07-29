@@ -51,8 +51,9 @@ fn reflectiveMaterial_getColor(
     max(dot(normalFacingCamera, fillHalfVector), 0.0),
     specularExponent * 0.545
   );
+  let reflectionDirection = reflect(-viewDirection, normalFacingCamera);
   let reflectedColor = opticalLighting_sampleEnvironment(
-    normalFacingCamera,
+    reflectionDirection,
     vec3<f32>(0.08, 0.14, 0.25),
     vec3<f32>(0.52, 0.7, 0.95),
     0.0
@@ -65,10 +66,31 @@ fn reflectiveMaterial_getColor(
     baseColor.a * reflectiveMaterial.opacityScale *
       (0.85 + fresnel * 0.2 + (keySpecular + fillSpecular) * 0.35),
     0.0,
-    0.72
+    1.0
   );
   return vec4<f32>(color, opacity);
 }
+
+#ifdef LUMA_OPTICAL_POINT_LIGHTS
+fn reflectiveMaterial_getIlluminatedColor(
+  normal: vec3<f32>,
+  worldPosition: vec3<f32>,
+  baseColor: vec4<f32>,
+  cameraPosition: vec3<f32>
+) -> vec4<f32> {
+  let reflectedColor = reflectiveMaterial_getColor(
+    normal,
+    worldPosition,
+    baseColor,
+    cameraPosition
+  );
+  let pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  return vec4<f32>(
+    reflectedColor.rgb + pointLightColor * reflectiveMaterial.specularStrength,
+    reflectedColor.a
+  );
+}
+#endif
 `;
 
 const REFLECTIVE_MATERIAL_GLSL = /* glsl */ `\
@@ -100,8 +122,9 @@ vec4 reflectiveMaterial_getColor(
     max(dot(normalFacingCamera, fillHalfVector), 0.0),
     specularExponent * 0.545
   );
+  vec3 reflectionDirection = reflect(-viewDirection, normalFacingCamera);
   vec3 reflectedColor = opticalLighting_sampleEnvironment(
-    normalFacingCamera,
+    reflectionDirection,
     vec3(0.08, 0.14, 0.25),
     vec3(0.52, 0.7, 0.95),
     0.0
@@ -114,10 +137,33 @@ vec4 reflectiveMaterial_getColor(
     baseColor.a * reflectiveMaterial.opacityScale *
       (0.85 + fresnel * 0.2 + (keySpecular + fillSpecular) * 0.35),
     0.0,
-    0.72
+    1.0
   );
   return vec4(color, opacity);
 }
+
+#ifdef LUMA_OPTICAL_POINT_LIGHTS
+vec3 opticalPointLights_getColor(vec3 normal, vec3 worldPosition, vec3 cameraPosition);
+
+vec4 reflectiveMaterial_getIlluminatedColor(
+  vec3 normal,
+  vec3 worldPosition,
+  vec4 baseColor,
+  vec3 cameraPosition
+) {
+  vec4 reflectedColor = reflectiveMaterial_getColor(
+    normal,
+    worldPosition,
+    baseColor,
+    cameraPosition
+  );
+  vec3 pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  return vec4(
+    reflectedColor.rgb + pointLightColor * reflectiveMaterial.specularStrength,
+    reflectedColor.a
+  );
+}
+#endif
 `;
 
 function getReflectiveMaterialUniforms(

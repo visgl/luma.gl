@@ -59,7 +59,8 @@ struct ABufferHeadPointers {
 };
 
 struct ABufferFragment {
-  color: u32,
+  colorRedGreen: u32,
+  colorBlueAlpha: u32,
   depth: f32,
   next: u32,
 };
@@ -107,8 +108,13 @@ fn aBuffer_capturePremultipliedColor(
 
   let fragmentPointer = fragmentIndex + 1u;
   let nextFragmentPointer = atomicExchange(&headPointers.heads[pixelIndex], fragmentPointer);
+  let packedColor = vec4<f32>(
+    clamp(color.rgb, vec3<f32>(0.0), vec3<f32>(65504.0)),
+    clamp(color.a, 0.0, 1.0)
+  );
   fragments.fragments[fragmentIndex] = ABufferFragment(
-    pack4x8unorm(clamp(color, vec4<f32>(0.0), vec4<f32>(1.0))),
+    pack2x16float(packedColor.rg),
+    pack2x16float(packedColor.ba),
     fragmentPosition.z,
     nextFragmentPointer
   );

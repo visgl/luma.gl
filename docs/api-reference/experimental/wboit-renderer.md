@@ -27,7 +27,7 @@ const model = new Model(device, {
   plugins: [wboitPlugin],
   shaderInputs
 });
-const renderer = new WBOITRenderer(device);
+const renderer = new WBOITRenderer(device, {colorFormat: 'rgba16float'});
 
 // Render opaque color and depth into an application-owned scene framebuffer first.
 opaqueModel.predraw(device.commandEncoder);
@@ -105,6 +105,10 @@ The approximation can lose depth detail in scenes with many strongly overlapping
 ```ts
 export type WBOITPass = 'accumulation' | 'revealage';
 
+export type WBOITRendererProps = {
+  colorFormat?: TextureFormatColor;
+};
+
 export type WBOITRenderOptions = {
   sourceTexture: Texture;
   prepareOpaqueDepth?: (commandEncoder: CommandEncoder) => void;
@@ -114,5 +118,8 @@ export type WBOITRenderOptions = {
 };
 ```
 
-`sourceTexture` must include `Texture.SAMPLE` usage. The renderer records commands but does not
-submit the device command encoder.
+`sourceTexture` must include `Texture.SAMPLE` usage. `colorFormat` selects the resolved output
+format and defaults to the canvas-preferred format; set it to a supported, filterable
+`rgba16float` format to retain HDR color for later bloom or tone mapping. Existing
+`new WBOITRenderer(device)` calls remain valid. The renderer records commands but does not submit
+the device command encoder.

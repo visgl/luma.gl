@@ -140,3 +140,103 @@ test('GroupNode#getBounds', async t => {
   );
   t.end();
 });
+
+test('GroupNode#getBounds applies leaf transforms and rotated box corners', async t => {
+  const device = await getWebGLTestDevice();
+  const model = new Model(device, {vs: DUMMY_VS, fs: DUMMY_FS});
+  const node = new ModelNode({
+    model,
+    bounds: [
+      [-1, -2, -1],
+      [1, 2, 1]
+    ],
+    matrix: new Matrix4().translate([3, 0, 0]).rotateZ(Math.PI / 4)
+  });
+  const group = new GroupNode({
+    matrix: new Matrix4().translate([0, 2, 0]),
+    children: [node]
+  });
+  const bounds = group.getBounds();
+  const rotatedHalfExtent = 3 / Math.sqrt(2);
+
+  t.ok(bounds, 'transformed model contributes bounds');
+  t.ok(
+    Math.abs(bounds![0][0] - (3 - rotatedHalfExtent)) < 0.000001 &&
+      Math.abs(bounds![1][0] - (3 + rotatedHalfExtent)) < 0.000001,
+    'all rotated horizontal corners contribute to the aggregate bounds'
+  );
+  t.ok(
+    Math.abs(bounds![0][1] - (2 - rotatedHalfExtent)) < 0.000001 &&
+      Math.abs(bounds![1][1] - (2 + rotatedHalfExtent)) < 0.000001,
+    'leaf and parent transforms are included in world-space bounds'
+  );
+
+  group.destroy();
+  t.end();
+});
+
+test('GroupNode#traverseDepthSorted orders transformed leaf bounds by camera depth', async t => {
+  const nearNode = new ScenegraphNode({
+    id: 'near',
+    matrix: new Matrix4().translate([0, 0, -2])
+  });
+  const middleNode = new ScenegraphNode({
+    id: 'middle',
+    matrix: new Matrix4().translate([0, 0, -3])
+  });
+  const farNode = new ScenegraphNode({
+    id: 'far',
+    matrix: new Matrix4().translate([0, 0, -9])
+  });
+
+  for (const node of [nearNode, middleNode, farNode]) {
+    node.getBounds = () => [
+      [-1, -1, -1],
+      [1, 1, 1]
+    ];
+  }
+
+  const group = new GroupNode({
+    children: [
+      nearNode,
+      new GroupNode({matrix: new Matrix4().translate([0, 0, -2]), children: [middleNode]}),
+      farNode
+    ]
+  });
+  const backToFrontIds: string[] = [];
+  const depths: number[] = [];
+
+  group.traverseDepthSorted(
+    (node, context) => {
+      backToFrontIds.push(node.id);
+      depths.push(context.depth);
+    },
+    {viewMatrix: new Matrix4()}
+  );
+
+  t.deepEqual(
+    backToFrontIds,
+    ['far', 'middle', 'near'],
+    'default traversal visits far nodes first'
+  );
+  t.deepEqual(depths, [9, 5, 2], 'nested and leaf transforms contribute to camera depth');
+
+  const frontToBackIds: string[] = [];
+  group.traverseDepthSorted((node: ScenegraphNode) => frontToBackIds.push(node.id), {
+    viewMatrix: new Matrix4(),
+    order: 'front-to-back'
+  });
+  t.deepEqual(frontToBackIds, ['near', 'middle', 'far'], 'front-to-back traversal is available');
+
+  const reverseViewIds: string[] = [];
+  group.traverseDepthSorted((node: ScenegraphNode) => reverseViewIds.push(node.id), {
+    viewMatrix: new Matrix4().lookAt({eye: [0, 0, -20], center: [0, 0, 0], up: [0, 1, 0]})
+  });
+  t.deepEqual(
+    reverseViewIds,
+    ['near', 'middle', 'far'],
+    'camera direction determines ordering instead of fixed world-space depth'
+  );
+
+  t.end();
+});

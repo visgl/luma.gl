@@ -6,6 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 // import {makeSpy} from '@probe.gl/test-utils';
 import {Model, ModelNode} from '@luma.gl/engine';
+import {Matrix4} from '@math.gl/core';
 
 export const DUMMY_VS = `\
 #version 300 es
@@ -43,5 +44,44 @@ test('ModelNode#setProps', async t => {
     'setProps updates position on scenegraph node'
   );
 
+  t.end();
+});
+
+test('ModelNode#getBounds combines transformed instance bounds', async t => {
+  const device = await getWebGLTestDevice();
+  const model = new Model(device, {vs: DUMMY_VS, fs: DUMMY_FS});
+  const node = new ModelNode({
+    model,
+    bounds: [
+      [-1, -1, -1],
+      [1, 1, 1]
+    ],
+    instanceMatrices: [
+      new Matrix4().translate([-2, 0, 1]).scale([1, 2, 1]),
+      new Matrix4().translate([3, 1, -2]).scale([0.5, 1, 2])
+    ]
+  });
+
+  t.deepEqual(
+    node.getBounds(),
+    [
+      [-3, -2, -4],
+      [3.5, 2, 2]
+    ],
+    'one model node exposes aggregate bounds for every transformed instance'
+  );
+
+  const emptyNode = new ModelNode({
+    model: new Model(device, {vs: DUMMY_VS, fs: DUMMY_FS}),
+    bounds: [
+      [-1, -1, -1],
+      [1, 1, 1]
+    ],
+    instanceMatrices: []
+  });
+  t.equal(emptyNode.getBounds(), null, 'an empty instanced model has no visible bounds');
+
+  node.destroy();
+  emptyNode.destroy();
   t.end();
 });

@@ -28,7 +28,8 @@ const shaderInputs = new ShaderInputs({aBuffer});
 const renderer = new ABufferRenderer(device, {
   averageFragmentsPerPixel: 4,
   maxFragmentsPerPixel: 12,
-  maxBufferByteLength: 64 * 1024 * 1024
+  maxBufferByteLength: 64 * 1024 * 1024,
+  colorFormat: 'rgba16float'
 });
 
 const model = new Model(device, {
@@ -87,6 +88,7 @@ export type ABufferRendererProps = {
   averageFragmentsPerPixel?: number;
   maxFragmentsPerPixel?: number;
   maxBufferByteLength?: number;
+  colorFormat?: TextureFormatColor;
 };
 
 export type ABufferRenderOptions = {
@@ -107,8 +109,10 @@ slice so storage buffers can be reused without allocating full-frame fragment st
 
 ## Rendering Model
 
-Each captured fragment occupies 12 bytes: packed premultiplied RGBA8 color, depth, and a linked-list
-pointer. Head pointers use a zero sentinel and fragment pointers are one-based.
+Each captured fragment occupies 16 bytes: premultiplied RGBA color stored as two packed half-float
+pairs, depth, and a linked-list pointer. Half-float storage preserves translucent HDR highlights
+above `1.0` instead of clipping them before resolve. Head pointers use a zero sentinel and fragment
+pointers are one-based.
 
 For each horizontal slice, the renderer:
 
@@ -125,6 +129,9 @@ If storage capacity is exhausted, additional fragments are dropped. If a pixel c
 
 - `ABufferRenderer` requires WebGPU and single-sample source color/depth textures. Source color
   must include `Texture.SAMPLE | Texture.RENDER`; opaque depth must include `Texture.SAMPLE`.
+- `colorFormat` controls the resolved output texture and defaults to the canvas-preferred format.
+  Set it to a supported, filterable `rgba16float` format to preserve both opaque HDR source color
+  and captured translucent HDR highlights through compositing before bloom or tone mapping.
 - The base pass depth texture is sampled during translucent capture so fragments behind opaque geometry are rejected before linked-list storage writes.
 - The renderer does not submit the device command encoder; the surrounding render loop keeps that responsibility.
 - `prepareTranslucent` runs once per horizontal capture slice. Update A-buffer shader props and call `Model.predraw()` there before the render pass opens.

@@ -53,6 +53,12 @@ export {DirectionalLightModel} from './models/directional-light-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
+export type {ScenegraphBounds} from './scenegraph/scenegraph-bounds';
+export type {
+  DepthSortedTraversalContext,
+  DepthSortedTraversalOptions,
+  GroupNodeProps
+} from './scenegraph/group-node';
 export {GroupNode} from './scenegraph/group-node';
 export type {ModelNodeProps} from './scenegraph/model-node';
 export {ModelNode} from './scenegraph/model-node';

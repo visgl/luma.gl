@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding, TextureFormat} from '@luma.gl/core';
+import type {Binding, SamplerProps, TextureFormat} from '@luma.gl/core';
 import type {PickBindings, PickUniforms, ShaderModule} from './shader-module';
 import type {UniformValue} from '../utils/uniform-types';
 
@@ -11,6 +11,8 @@ export type ShaderPassRenderTarget = {
   scale?: [number, number];
   /** Render target format. Defaults to the device preferred color format. */
   format?: TextureFormat;
+  /** Optional sampling behavior when later passes read this target. */
+  sampler?: SamplerProps;
   /** Resource lifetime. History targets retain their last successfully rendered value. */
   lifetime?: 'transient' | 'history';
   /** Initial value used after construction, resize, or an explicit history reset. */

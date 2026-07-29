@@ -29,5 +29,37 @@ test('bloomShaderPassPipeline#routing', t => {
       'bloom extraction consumes the preceding effect output'
     );
   }
+  for (const target of Object.values(bloomShaderPassPipeline.renderTargets)) {
+    t.equal(target.sampler.minFilter, 'linear', 'bloom intermediates use linear minification');
+    t.equal(target.sampler.magFilter, 'linear', 'bloom intermediates use linear magnification');
+  }
+  const blurPass = bloomShaderPassPipeline.steps.find(
+    step => step.shaderPass.name === 'bloomBlur'
+  )?.shaderPass;
+  t.ok(blurPass, 'multiscale bloom includes a separable blur');
+  t.match(blurPass?.source || '', /return color \/ totalWeight/, 'blur preserves smooth falloff');
+  t.notOk(
+    /unpremultipliedRgb/.test(blurPass?.source || ''),
+    'blur does not amplify tiny alpha into square halos'
+  );
+
+  const compositePass = bloomShaderPassPipeline.steps.find(
+    step => step.shaderPass.name === 'bloomComposite'
+  )?.shaderPass;
+  t.ok(compositePass, 'multiscale bloom includes a glow composite');
+  t.match(
+    compositePass?.source || '',
+    /textureSample\(glowHalf, glowHalfSampler, texCoord\)/,
+    'WGSL composites glow in the same orientation as the scene'
+  );
+  t.match(
+    compositePass?.fs || '',
+    /texture\(glowHalf, texCoord\)/,
+    'GLSL composites glow in the same orientation as the scene'
+  );
+  t.notOk(
+    /shaderPassRenderer_getRenderTargetUV/.test(compositePass?.fs || ''),
+    'GLSL does not vertically mirror named bloom targets'
+  );
   t.end();
 });

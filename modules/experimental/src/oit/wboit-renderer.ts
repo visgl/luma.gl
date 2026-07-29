@@ -8,7 +8,8 @@ import {
   type Framebuffer,
   type RenderPass,
   type RenderPipelineParameters,
-  Texture
+  Texture,
+  type TextureFormatColor
 } from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {type WBOITPass, type WBOITShaderModuleProps} from './wboit';
@@ -19,6 +20,12 @@ import {
 
 const WBOIT_COLOR_FORMAT = 'rgba16float';
 let nextWBOITResourceId = 0;
+
+/** Construction options for {@link WBOITRenderer}. */
+export type WBOITRendererProps = {
+  /** Format of the resolved color texture. Defaults to the canvas-preferred format. */
+  colorFormat?: TextureFormatColor;
+};
 
 /** Result returned by {@link getWBOITSupport}. */
 export type WBOITSupport = {
@@ -113,7 +120,7 @@ export class WBOITRenderer {
   private readonly resolveRenderer: ShaderPassRenderer;
 
   /** Creates a renderer and validates floating-point render-target blending support. */
-  constructor(device: Device) {
+  constructor(device: Device, props: WBOITRendererProps = {}) {
     const support = getWBOITSupport(device);
     if (!support.supported) {
       throw new Error(support.reason);
@@ -122,6 +129,7 @@ export class WBOITRenderer {
     this.device = device;
     this.renderTargets = createWBOITRenderTargets(device, 1, 1);
     this.resolveRenderer = new ShaderPassRenderer(device, {
+      colorFormat: props.colorFormat,
       shaderPasses: [createWBOITResolveShaderPassPipeline()]
     });
   }

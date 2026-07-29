@@ -38,3 +38,42 @@ This maps well to luma.gl's binding ownership model:
 - group `0` is typically model or draw-local engine state,
 - group `2` is typically scene-shared state such as lighting or IBL,
 - group `3` is material state that can be reused across many renderable nodes.
+
+## Instanced Bounds And Depth Sorting
+
+An instanced model can remain one renderable scenegraph node while providing all of its instance
+transforms for aggregate bounds:
+
+```ts
+import {GroupNode, ModelNode} from '@luma.gl/engine';
+
+const switches = new ModelNode({
+  model: switchModel,
+  bounds: [
+    [-1, -1, -1],
+    [1, 1, 1]
+  ],
+  instanceMatrices: switchTransforms
+});
+
+const scene = new GroupNode({children: [switches]});
+
+scene.traverseDepthSorted(
+  node => {
+    if (node instanceof ModelNode) {
+      node.draw(renderPass);
+    }
+  },
+  {viewMatrix, order: 'back-to-front'}
+);
+```
+
+`ModelNode` calculates one bounding box enclosing every transformed instance. `GroupNode` combines
+those bounds with ancestor and leaf transforms, orders nodes by their camera-space bounding-box
+centers, and still visits the instanced model only once.
+
+This is useful when translucent objects naturally divide into a small number of semantic groups.
+For example, the glass showcase renders its spine switches and two network planes as three instanced
+models, sorts those models back to front, and refreshes the refraction source between groups. This
+improves layered transmission without replacing per-group order-independent transparency or
+requiring one draw call per switch.

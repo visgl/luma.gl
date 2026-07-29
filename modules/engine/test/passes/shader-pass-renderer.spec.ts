@@ -163,7 +163,7 @@ const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   name: 'stagedPipeline',
   renderTargets: {
     extract: {},
-    blurred: {scale: [0.5, 0.5]}
+    blurred: {scale: [0.5, 0.5], sampler: {minFilter: 'linear', magFilter: 'linear'}}
   },
   steps: [
     {
@@ -610,6 +610,11 @@ test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
     >;
     t.equal(pipelineTargets.extract.texture.width, 4, 'resizes full-size pipeline target width');
     t.equal(pipelineTargets.blurred.texture.height, 2, 'resizes scaled pipeline target height');
+    t.equal(
+      pipelineTargets.blurred.texture.sampler?.props.minFilter,
+      'linear',
+      'applies named target sampler configuration'
+    );
 
     renderer.destroy();
     sourceTexture.destroy();

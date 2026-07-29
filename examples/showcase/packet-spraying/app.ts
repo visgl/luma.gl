@@ -3,18 +3,28 @@
 // Copyright (c) vis.gl contributors
 
 import {Texture} from '@luma.gl/core';
-import type {Buffer, Device, Framebuffer, RenderPipelineParameters} from '@luma.gl/core';
+import type {
+  Buffer,
+  Device,
+  Framebuffer,
+  RenderPipelineParameters,
+  TextureFormatColor
+} from '@luma.gl/core';
+import {bloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
-  BackgroundTextureModel,
   colorPicking,
   CubeGeometry,
   CylinderGeometry,
+  GroupNode,
   Model,
+  ModelNode,
   PickingManager,
+  ShaderPassRenderer,
   ShaderInputs,
-  SphereGeometry
+  SphereGeometry,
+  TruncatedConeGeometry
 } from '@luma.gl/engine';
 import {
   ABufferRenderer,
@@ -22,20 +32,30 @@ import {
   WBOITRenderer,
   aBuffer,
   aBufferPlugin,
+  emissiveMaterial,
+  emissiveMaterialPlugin,
   glassMaterial,
   glassMaterialPlugin,
+  glassTransmission,
+  glassTransmissionPlugin,
   getABufferSupport,
   getWBOITSupport,
+  opticalPointLights,
+  opticalPointLightsPlugin,
   reflectiveMaterial,
   reflectiveMaterialPlugin,
   type ABufferShaderModuleProps,
+  type EmissiveMaterialProps,
   type GlassMaterialProps,
+  type GlassTransmissionProps,
+  type OpticalPointLight,
+  type OpticalPointLightsProps,
   type ReflectiveMaterialProps,
   type WBOITShaderModuleProps,
   wboit,
   wboitPlugin
 } from '@luma.gl/experimental';
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPassPipeline, ShaderPlugin} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 import {
   type Panel,
@@ -50,9 +70,55 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {
+  AGGREGATION_POSITIONS,
+  AGGREGATION_SWITCH_RADIUS,
+  BURST_CYCLE_DURATION,
+  CONGESTION_TRIM_INTERVAL,
+  CONVERSATIONS,
+  FAILURE_DETECTION_DELAY,
+  HOST_HALF_EXTENTS,
+  HOST_POSITIONS,
+  HOST_Y,
+  LEAF_POSITIONS,
+  LEAF_SWITCH_RADIUS,
+  PACKET_TRAVEL_SPEED,
+  SPINE_POSITIONS,
+  SPINE_SWITCH_RADIUS,
+  SWITCH_PROBE_INTERVAL,
+  SWITCH_POSITIONS,
+  getActivePlaneCount,
+  getDistance,
+  getDistanceSquared,
+  getHealthyConversationRoutes,
+  getPointAlongRoute,
+  getRouteSegmentStartDistance,
+  isFailedSwitchPosition,
+  makeActiveLinkKeys,
+  makeConversationRoutes,
+  makeHostColor,
+  makeLinkColor,
+  makeLinkKey,
+  makeLinks,
+  makePackets,
+  makePickableNetworkNodes,
+  makeSwitchPacketEvents,
+  makeSwitchProbeEvent,
+  makeSwitchGroups,
+  makeSwitchArrivals,
+  reroutePackets,
+  type Color,
+  type ConversationRoute,
+  type NetworkLink,
+  type NetworkPacketEvent,
+  type NetworkScenario,
+  type NetworkSwitchGroupId,
+  type Packet,
+  type PickableNetworkNode,
+  type SwitchArrival,
+  type Vector3
+} from './network';
 
-type Vector3 = [number, number, number];
-type Color = [number, number, number, number];
 type TransparencyMode = 'a-buffer' | 'weighted-blended' | 'sorted-alpha';
 
 type AppUniforms = {
@@ -61,53 +127,41 @@ type AppUniforms = {
   viewMatrix: Matrix4;
 };
 
-type Packet = {
-  alpha: number;
-  color: Color;
-  launchTime: number;
-  route: Route;
-  scale: number;
-};
-
-type NetworkLink = {
-  color: Color;
-  end: Vector3;
-  endInset: number;
-  start: Vector3;
-  startInset: number;
-};
-
-type Conversation = {
-  color: Color;
-  destinationHostIndex: number;
-  sourceHostIndex: number;
-};
-
-type ConversationRoute = {
-  conversationIndex: number;
-  route: Route;
-};
-
-type Route = {
-  cumulativeLengths: number[];
-  points: Vector3[];
-  totalLength: number;
-};
-
 type GlassInstance = {
   color: Color;
   matrix: Matrix4;
   position: Vector3;
 };
 
-type PickableNetworkNode = {
-  description: string;
-  detail: string;
-  role: string;
-  title: string;
+type GlassRenderGroup = {
+  id: NetworkSwitchGroupId;
+  instances: GlassInstance[];
+  node: ModelNode;
+  backfaces: InstancedMesh<{app: AppUniforms}>;
+  sorted: InstancedMesh<{
+    app: AppUniforms;
+    glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
+  }>;
+  aBuffer: InstancedMesh<{
+    app: AppUniforms;
+    glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
+    aBuffer: ABufferShaderModuleProps;
+  }> | null;
+  weightedBlended: InstancedMesh<{
+    app: AppUniforms;
+    glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
+    wboit: WBOITShaderModuleProps;
+  }> | null;
 };
 
 type NetworkNodePickRequest = {
+  action: 'hover' | 'toggle-switch';
   canvasPosition: [number, number];
   clientPosition: [number, number];
   pointerSequence: number;
@@ -146,6 +200,7 @@ struct VertexOutputs {
   @location(0) normal: vec3<f32>,
   @location(1) color: vec4<f32>,
   @location(2) worldPosition: vec3<f32>,
+  @location(3) localPosition: vec3<f32>,
 };
 
 @vertex
@@ -168,6 +223,7 @@ fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
   outputs.normal = normalize(normalMatrix * inputs.normals);
   outputs.color = inputs.instanceColor;
   outputs.worldPosition = worldPosition.xyz;
+  outputs.localPosition = inputs.positions;
   return outputs;
 }
 
@@ -182,7 +238,24 @@ fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
 const REFLECTIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
 @fragment
 fn fragmentReflective(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  return reflectiveMaterial_getColor(
+  let color = reflectiveMaterial_getIlluminatedColor(
+    inputs.normal,
+    inputs.worldPosition,
+    inputs.color,
+    app.cameraPosition
+  );
+#if OPAQUE_REFLECTIVE
+  return vec4<f32>(color.rgb, inputs.color.a);
+#else
+  return color;
+#endif
+}
+`;
+
+const EMISSIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentEmissive(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  return emissiveMaterial_getColor(
     inputs.normal,
     inputs.worldPosition,
     inputs.color,
@@ -191,16 +264,32 @@ fn fragmentReflective(inputs: VertexOutputs) -> @location(0) vec4<f32> {
 }
 `;
 
+const TRAIL_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentTrail(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  return emissiveMaterial_getTrailColor(
+    inputs.normal,
+    inputs.worldPosition,
+    inputs.color,
+    app.cameraPosition,
+    inputs.localPosition.y + 0.5,
+    1.0
+  );
+}
+`;
+
 const GLASS_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
 @fragment
 fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let color = glassMaterial_getColor(
+  let glassColor = glassTransmission_getIlluminatedColor(
     inputs.normal,
     inputs.worldPosition,
     inputs.color,
     app.cameraPosition,
     inputs.position
   );
+  let failureTint = smoothstep(0.44, 0.54, inputs.color.a);
+  let color = vec4<f32>(glassColor.rgb + inputs.color.rgb * failureTint * 0.46, glassColor.a);
 #if A_BUFFER_ENABLED
   return aBuffer_captureStraightColor(color, inputs.position);
 #else
@@ -210,6 +299,14 @@ fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
   return color;
 #endif
 #endif
+}
+`;
+
+const GLASS_BACKFACE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentGlassBackface(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let encodedNormal = normalize(inputs.normal) * 0.5 + vec3<f32>(0.5);
+  return vec4<f32>(encodedNormal, inputs.position.z);
 }
 `;
 
@@ -240,6 +337,7 @@ uniform appUniforms {
 out vec3 vNormal;
 out vec4 vColor;
 out vec3 vWorldPosition;
+out vec3 vLocalPosition;
 
 void main(void) {
   mat4 modelMatrix = mat4(
@@ -258,6 +356,7 @@ void main(void) {
   vNormal = normalize(normalMatrix * normals);
   vColor = instanceColor;
   vWorldPosition = worldPosition.xyz;
+  vLocalPosition = positions;
 }
 `;
 
@@ -319,18 +418,32 @@ in vec3 vWorldPosition;
 out vec4 fragColor;
 
 void main(void) {
-  vec4 color = glassMaterial_getColor(
+  vec4 glassColor = glassTransmission_getIlluminatedColor(
     vNormal,
     vWorldPosition,
     vColor,
     app.cameraPosition,
     gl_FragCoord
   );
+  float failureTint = smoothstep(0.44, 0.54, vColor.a);
+  vec4 color = vec4(glassColor.rgb + vColor.rgb * failureTint * 0.46, glassColor.a);
 #if WBOIT_ENABLED
   fragColor = wboit_captureStraightColor(color, gl_FragCoord);
 #else
   fragColor = color;
 #endif
+}
+`;
+
+const GLASS_BACKFACE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+in vec3 vNormal;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = vec4(normalize(vNormal) * 0.5 + vec3(0.5), gl_FragCoord.z);
 }
 `;
 
@@ -365,11 +478,64 @@ in vec3 vWorldPosition;
 out vec4 fragColor;
 
 void main(void) {
-  fragColor = reflectiveMaterial_getColor(
+  vec4 color = reflectiveMaterial_getIlluminatedColor(
     vNormal,
     vWorldPosition,
     vColor,
     app.cameraPosition
+  );
+#if OPAQUE_REFLECTIVE
+  fragColor = vec4(color.rgb, vColor.a);
+#else
+  fragColor = color;
+#endif
+}
+`;
+
+const EMISSIVE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+in vec3 vNormal;
+in vec4 vColor;
+in vec3 vWorldPosition;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = emissiveMaterial_getColor(vNormal, vWorldPosition, vColor, app.cameraPosition);
+}
+`;
+
+const TRAIL_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+in vec3 vNormal;
+in vec4 vColor;
+in vec3 vWorldPosition;
+in vec3 vLocalPosition;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = emissiveMaterial_getTrailColor(
+    vNormal,
+    vWorldPosition,
+    vColor,
+    app.cameraPosition,
+    vLocalPosition.y + 0.5,
+    1.0
   );
 }
 `;
@@ -389,39 +555,13 @@ const INSTANCE_BUFFER_LAYOUT = [
   {name: 'instanceColor', format: 'float32x4' as const, stepMode: 'instance' as const}
 ];
 
-const HOST_X_POSITIONS = [-3.6, -1.2, 1.2, 3.6];
-const HOST_Z_POSITIONS = [2.4, 0.8, -0.8, -2.4];
-const HOST_Y = -2.75;
-const HOST_HALF_EXTENTS: Vector3 = [0.42, 0.27, 0.32];
-const LEAF_Y = -1.05;
-const LEAF_SWITCH_RADIUS = 0.42;
-const AGGREGATION_Y = 0.35;
-const AGGREGATION_SWITCH_RADIUS = 0.4;
-const SPINE_Y = 2.05;
-const SPINE_SWITCH_RADIUS = 0.55;
-const TRAFFIC_COLORS: Color[] = [
-  [1, 0.16, 0.1, 1],
-  [0.08, 1, 0.34, 1]
-];
-const PACKETS_PER_BURST = 24;
-const BURST_PACKET_INTERVAL = 0.14;
-const BURST_CYCLE_DURATION = 11;
-const PACKET_TRAVEL_SPEED = 3.4;
-
-const HOST_POSITIONS: Vector3[] = HOST_Z_POSITIONS.flatMap(zPosition =>
-  HOST_X_POSITIONS.map(xPosition => [xPosition, HOST_Y, zPosition] as Vector3)
-);
-const LEAF_POSITIONS: Vector3[] = [0.85, -0.85].flatMap(zPosition =>
-  HOST_X_POSITIONS.map(xPosition => [xPosition, LEAF_Y, zPosition] as Vector3)
-);
-const AGGREGATION_POSITIONS: Vector3[] = [0.85, -0.85].flatMap(zPosition =>
-  HOST_X_POSITIONS.map(xPosition => [xPosition, AGGREGATION_Y, zPosition] as Vector3)
-);
-const SPINE_POSITIONS: Vector3[] = HOST_Z_POSITIONS.map(zPosition => [0, SPINE_Y, zPosition]);
-const CONVERSATIONS: Conversation[] = [
-  {sourceHostIndex: 3, destinationHostIndex: 8, color: TRAFFIC_COLORS[0]},
-  {sourceHostIndex: 7, destinationHostIndex: 12, color: TRAFFIC_COLORS[1]}
-];
+const PACKET_TRAIL_RADIUS = 0.033;
+const SWITCH_FLASH_DURATION = 0.16;
+const MAX_SWITCH_FLASH_LIGHTS = 6;
+const MAX_STORY_PACKET_INSTANCES = 160;
+const CONGESTED_SWITCH_COLOR: Color = [1, 0.42, 0.065, 0.56];
+const DETECTING_SWITCH_COLOR: Color = [1, 0.21, 0.035, 0.59];
+const FAILED_SWITCH_COLOR: Color = [1, 0.065, 0.035, 0.59];
 
 const TRANSPARENT_PARAMETERS = {
   blend: true,
@@ -431,6 +571,24 @@ const TRANSPARENT_PARAMETERS = {
   blendAlphaOperation: 'add',
   blendAlphaSrcFactor: 'one',
   blendAlphaDstFactor: 'one-minus-src-alpha',
+  depthWriteEnabled: false,
+  depthCompare: 'less-equal',
+  cullMode: 'none'
+} as const satisfies RenderPipelineParameters;
+
+const GLASS_PARAMETERS = {
+  ...TRANSPARENT_PARAMETERS,
+  cullMode: 'back'
+} as const satisfies RenderPipelineParameters;
+
+const ADDITIVE_PARAMETERS = {
+  blend: true,
+  blendColorOperation: 'add',
+  blendColorSrcFactor: 'src-alpha',
+  blendColorDstFactor: 'one',
+  blendAlphaOperation: 'add',
+  blendAlphaSrcFactor: 'zero',
+  blendAlphaDstFactor: 'one',
   depthWriteEnabled: false,
   depthCompare: 'less-equal',
   cullMode: 'none'
@@ -457,10 +615,18 @@ class InstancedMesh<
       matrices,
       colors,
       transparent = false,
+      additive = false,
       glass = false,
+      emissive = false,
+      trail = false,
       pickable = false,
       reflective = false,
+      backface = false,
       sceneTexture,
+      sceneDepthTexture,
+      backfaceTexture,
+      environmentTexture,
+      colorAttachmentFormat,
       transparencyMode
     }: {
       id: string;
@@ -468,10 +634,18 @@ class InstancedMesh<
       matrices: Float32Array;
       colors: Float32Array;
       transparent?: boolean;
+      additive?: boolean;
       glass?: boolean;
+      emissive?: boolean;
+      trail?: boolean;
       pickable?: boolean;
       reflective?: boolean;
+      backface?: boolean;
       sceneTexture?: Texture;
+      sceneDepthTexture?: Texture;
+      backfaceTexture?: Texture;
+      environmentTexture?: Texture;
+      colorAttachmentFormat?: TextureFormatColor;
       transparencyMode?: TransparencyMode;
     }
   ) {
@@ -483,35 +657,57 @@ class InstancedMesh<
       id,
       source: pickable
         ? PICKING_WGSL_SHADER
-        : glass
-          ? GLASS_WGSL_SHADER
-          : reflective
-            ? REFLECTIVE_WGSL_SHADER
-            : WGSL_SHADER,
+        : backface
+          ? GLASS_BACKFACE_WGSL_SHADER
+          : glass
+            ? GLASS_WGSL_SHADER
+            : reflective
+              ? REFLECTIVE_WGSL_SHADER
+              : trail
+                ? TRAIL_WGSL_SHADER
+                : emissive
+                  ? EMISSIVE_WGSL_SHADER
+                  : WGSL_SHADER,
       vs: pickable ? PICKING_VERTEX_SHADER : VERTEX_SHADER,
       fs: pickable
         ? PICKING_FRAGMENT_SHADER
-        : glass
-          ? GLASS_FRAGMENT_SHADER
-          : reflective
-            ? REFLECTIVE_FRAGMENT_SHADER
-            : FRAGMENT_SHADER,
+        : backface
+          ? GLASS_BACKFACE_FRAGMENT_SHADER
+          : glass
+            ? GLASS_FRAGMENT_SHADER
+            : reflective
+              ? REFLECTIVE_FRAGMENT_SHADER
+              : trail
+                ? TRAIL_FRAGMENT_SHADER
+                : emissive
+                  ? EMISSIVE_FRAGMENT_SHADER
+                  : FRAGMENT_SHADER,
       fragmentEntryPoint: pickable
         ? 'fragmentPicking'
-        : glass
-          ? 'fragmentGlass'
-          : reflective
-            ? 'fragmentReflective'
-            : 'fragmentMain',
+        : backface
+          ? 'fragmentGlassBackface'
+          : glass
+            ? 'fragmentGlass'
+            : reflective
+              ? 'fragmentReflective'
+              : trail
+                ? 'fragmentTrail'
+                : emissive
+                  ? 'fragmentEmissive'
+                  : 'fragmentMain',
       shaderInputs,
       defines: {
         A_BUFFER_ENABLED: usesABuffer ? 1 : 0,
-        WBOIT_ENABLED: usesWeightedBlending ? 1 : 0
+        WBOIT_ENABLED: usesWeightedBlending ? 1 : 0,
+        OPAQUE_REFLECTIVE: reflective && !transparent ? 1 : 0
       },
       plugins: [
         ...(pickable ? [networkNodePickingPlugin] : []),
+        ...(glass || reflective ? [opticalPointLightsPlugin] : []),
         ...(glass ? [glassMaterialPlugin] : []),
+        ...(glass ? [glassTransmissionPlugin] : []),
         ...(reflective ? [reflectiveMaterialPlugin] : []),
+        ...(emissive || trail ? [emissiveMaterialPlugin] : []),
         ...(usesABuffer ? [aBufferPlugin] : []),
         ...(usesWeightedBlending ? [wboitPlugin] : [])
       ],
@@ -522,21 +718,45 @@ class InstancedMesh<
         instanceModelMatrices: this.matrixBuffer,
         instanceColor: this.colorBuffer
       },
-      ...(sceneTexture ? {bindings: {glassSceneColorTexture: sceneTexture}} : {}),
+      ...(sceneTexture
+        ? {
+            bindings: {
+              glassSceneColorTexture: sceneTexture,
+              ...(sceneDepthTexture ? {glassSceneDepthTexture: sceneDepthTexture} : {}),
+              ...(backfaceTexture ? {glassBackfaceTexture: backfaceTexture} : {}),
+              ...(environmentTexture ? {glassEnvironmentTexture: environmentTexture} : {})
+            }
+          }
+        : {}),
       ...(pickable
         ? {
             colorAttachmentFormats: ['rgba8unorm' as const],
             depthStencilAttachmentFormat: 'depth24plus' as const
           }
         : {}),
-      parameters:
-        transparent || glass
-          ? TRANSPARENT_PARAMETERS
-          : {
+      ...(backface && colorAttachmentFormat
+        ? {
+            colorAttachmentFormats: [colorAttachmentFormat],
+            depthStencilAttachmentFormat: 'depth24plus' as const
+          }
+        : {}),
+      parameters: additive
+        ? ADDITIVE_PARAMETERS
+        : backface
+          ? {
               depthWriteEnabled: true,
-              depthCompare: 'less-equal',
-              cullMode: 'back'
+              depthCompare: 'greater-equal',
+              cullMode: 'front'
             }
+          : glass
+            ? GLASS_PARAMETERS
+            : transparent
+              ? TRANSPARENT_PARAMETERS
+              : {
+                  depthWriteEnabled: true,
+                  depthCompare: 'less-equal',
+                  cullMode: 'back'
+                }
     });
   }
 
@@ -611,6 +831,12 @@ class NetworkNodePopup {
   show(node: PickableNetworkNode, clientPosition: [number, number]): void {
     this.titleElement.textContent = node.title;
     this.roleElement.textContent = node.role;
+    this.roleElement.style.color =
+      node.status === 'offline'
+        ? '#ff665a'
+        : node.status === 'congested' || node.status === 'detecting'
+          ? '#ffad52'
+          : '#82acf2';
     this.descriptionElement.textContent = node.description;
     this.detailElement.textContent = node.detail;
     this.popupElement.style.display = 'block';
@@ -633,42 +859,67 @@ class NetworkNodePopup {
 export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
-  readonly shaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
+  readonly backfaceShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
   readonly reflectiveShaderInputs = new ShaderInputs<{
     app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
-  }>({app: appShaderModule, reflectiveMaterial});
+  }>({app: appShaderModule, opticalPointLights, reflectiveMaterial});
+  readonly metallicShaderInputs = new ShaderInputs<{
+    app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
+    reflectiveMaterial: ReflectiveMaterialProps;
+  }>({app: appShaderModule, opticalPointLights, reflectiveMaterial});
+  readonly emissiveShaderInputs = new ShaderInputs<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>({app: appShaderModule, emissiveMaterial});
   readonly glassShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
-  }>({app: appShaderModule, glassMaterial});
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
+  }>({app: appShaderModule, glassMaterial, glassTransmission, opticalPointLights});
   readonly aBufferShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
     aBuffer: ABufferShaderModuleProps;
-  }>({app: appShaderModule, glassMaterial, aBuffer});
+  }>({app: appShaderModule, glassMaterial, glassTransmission, opticalPointLights, aBuffer});
   readonly weightedBlendedShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     glassMaterial: GlassMaterialProps;
+    glassTransmission: GlassTransmissionProps;
+    opticalPointLights: OpticalPointLightsProps;
     wboit: WBOITShaderModuleProps;
-  }>({app: appShaderModule, glassMaterial, wboit});
+  }>({app: appShaderModule, glassMaterial, glassTransmission, opticalPointLights, wboit});
   readonly pickingShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     picking: typeof colorPicking.props;
   }>({app: appShaderModule, picking: colorPicking});
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
+  readonly sceneColorFormat: TextureFormatColor;
   readonly sceneFramebuffer: Framebuffer;
-  readonly sceneBackground: BackgroundTextureModel;
+  readonly glassBackfaceFramebuffer: Framebuffer;
+  readonly postprocessingRenderer: ShaderPassRenderer;
   readonly aBufferRenderer: ABufferRenderer | null;
   readonly weightedBlendedRenderer: WBOITRenderer | null;
   sceneTexture: Texture;
   refractionTexture: Texture;
+  glassBackfaceTexture: Texture;
+  readonly environmentTexture: Texture;
   readonly links: InstancedMesh<{
     app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
   }>;
-  readonly hosts: InstancedMesh;
+  readonly hosts: InstancedMesh<{
+    app: AppUniforms;
+    opticalPointLights: OpticalPointLightsProps;
+    reflectiveMaterial: ReflectiveMaterialProps;
+  }>;
   readonly pickingHosts: InstancedMesh<{
     app: AppUniforms;
     picking: typeof colorPicking.props;
@@ -680,42 +931,89 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly pickingManager: PickingManager;
   readonly pickableNodes: PickableNetworkNode[];
   readonly glassInstances: GlassInstance[];
-  readonly sortedGlass: InstancedMesh<{
+  readonly glassGroups: GlassRenderGroup[];
+  readonly glassScenegraph: GroupNode;
+  readonly originalGlassColors: Color[];
+  readonly congestedSwitchIndices = new Set<number>();
+  readonly failedSwitchIndices = new Set<number>();
+  readonly conversationRoutes: ConversationRoute[];
+  readonly networkLinks: NetworkLink[];
+  readonly packets: InstancedMesh<{
     app: AppUniforms;
-    glassMaterial: GlassMaterialProps;
+    emissiveMaterial: EmissiveMaterialProps;
   }>;
-  readonly aBufferGlass: InstancedMesh<{
+  readonly packetTrails: InstancedMesh<{
     app: AppUniforms;
-    glassMaterial: GlassMaterialProps;
-    aBuffer: ABufferShaderModuleProps;
-  }> | null;
-  readonly weightedBlendedGlass: InstancedMesh<{
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
+  readonly switchFlashes: InstancedMesh<{
     app: AppUniforms;
-    glassMaterial: GlassMaterialProps;
-    wboit: WBOITShaderModuleProps;
-  }> | null;
-  readonly packets: InstancedMesh;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
+  readonly storyPackets: InstancedMesh<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
   readonly packetDefinitions: Packet[];
   readonly packetMatrices: Float32Array;
+  readonly packetTrailMatrices: Float32Array;
+  readonly packetTrailColors: Float32Array;
+  switchArrivalEvents: SwitchArrival[];
+  readonly switchFlashMatrices: Float32Array;
+  readonly switchFlashColors: Float32Array;
+  readonly switchFlashStrengths: Float32Array;
+  readonly storyPacketMatrices = new Float32Array(MAX_STORY_PACKET_INSTANCES * 16);
+  readonly storyPacketColors = new Float32Array(MAX_STORY_PACKET_INSTANCES * 4);
+  readonly networkPacketEvents: NetworkPacketEvent[] = [];
   orbitControls: OrbitControls | null = null;
   nodePopup: NetworkNodePopup | null = null;
 
   private canvas: HTMLCanvasElement | null = null;
   private pendingPickRequest: NetworkNodePickRequest | null = null;
+  private readonly detectingSwitchTimes = new Map<number, number>();
+  private readonly nextCongestionTrimTimes = new Map<number, number>();
+  private readonly nextSwitchProbeTimes = new Map<number, number>();
+  private animationTime = 0;
+  private droppedPacketCount = 0;
+  private trimmedPacketCount = 0;
   private pickingInProgress = false;
+  private pointerDownPosition: [number, number] | null = null;
   private pointerSequence = 0;
 
   transparencyMode: TransparencyMode;
   speed = 0.85;
   orbit = 0.08;
   glassIndexOfRefraction = 1.48;
-  glassRoughness = 0.14;
-  glassDispersion = 0.022;
-  glassThickness = 1.05;
+  glassRoughness = 0.11;
+  glassDispersion = 0.026;
+  glassThickness = 1.16;
+  glassRefractionStrength = 1.32;
+  glassFresnelStrength = 1.28;
+  glassClearcoatStrength = 1.15;
+  glassIridescenceStrength = 0.16;
+  glassInternalReflectionStrength = 0.72;
+  glassTransmissionStrength = 1.12;
+  glassEnvironmentIntensity = 1.25;
+  glassVolumeThickness = 1;
+  packetEmission = 5.2;
+  packetTrailLength = 0.19;
+  packetTrailIntensity = 0.55;
+  switchFlashIntensity = 0.8;
+  packetLightIntensity = 0.66;
+  packetLightRadius = 1.05;
+  bloomIntensity = 1.7;
+  bloomThreshold = 0.42;
+  exposure = 0.96;
 
   constructor({device, width, height}: AnimationProps) {
     super();
 
+    const requestedOrbit = new URLSearchParams(window.location.search).get('orbit');
+    if (requestedOrbit !== null && Number.isFinite(Number(requestedOrbit))) {
+      this.orbit = Math.max(0, Math.min(Number(requestedOrbit), 0.5));
+    }
+
+    this.sceneColorFormat = getSceneColorFormat(device);
     const supportsABuffer = getABufferSupport(device).supported;
     const supportsWeightedBlending = getWBOITSupport(device).supported;
     this.transparencyMode = supportsABuffer
@@ -725,14 +1023,17 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         : 'sorted-alpha';
     this.aBufferRenderer = supportsABuffer
       ? new ABufferRenderer(device, {
-          averageFragmentsPerPixel: 6,
+          averageFragmentsPerPixel: 4,
           maxFragmentsPerPixel: 20,
-          maxBufferByteLength: 64 * 1024 * 1024
+          maxBufferByteLength: 64 * 1024 * 1024,
+          colorFormat: this.sceneColorFormat
         })
       : null;
-    this.weightedBlendedRenderer = supportsWeightedBlending ? new WBOITRenderer(device) : null;
-    this.sceneTexture = makeSceneTexture(device, width, height);
-    this.refractionTexture = makeRefractionTexture(device, width, height);
+    this.weightedBlendedRenderer = supportsWeightedBlending
+      ? new WBOITRenderer(device, {colorFormat: this.sceneColorFormat})
+      : null;
+    this.sceneTexture = makeSceneTexture(device, width, height, this.sceneColorFormat);
+    this.refractionTexture = makeRefractionTexture(device, width, height, this.sceneColorFormat);
     this.sceneFramebuffer = device.createFramebuffer({
       id: 'packet-spraying-scene-framebuffer',
       width,
@@ -740,33 +1041,43 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       colorAttachments: [this.sceneTexture],
       depthStencilAttachment: 'depth24plus'
     });
-    this.sceneBackground = new BackgroundTextureModel(device, {
-      id: 'packet-spraying-scene-background',
-      backgroundTexture: this.sceneTexture,
-      flipY: device.type === 'webgpu'
+    this.glassBackfaceTexture = makeBackfaceTexture(device, width, height, this.sceneColorFormat);
+    this.glassBackfaceFramebuffer = device.createFramebuffer({
+      id: 'packet-spraying-glass-backface-framebuffer',
+      width,
+      height,
+      colorAttachments: [this.glassBackfaceTexture],
+      depthStencilAttachment: 'depth24plus'
+    });
+    this.environmentTexture = makeStudioEnvironmentTexture(device);
+    this.postprocessingRenderer = new ShaderPassRenderer(device, {
+      shaderPasses: [makeBloomPipeline(this.sceneColorFormat), toneMapping],
+      colorFormat: this.sceneColorFormat
     });
 
-    const conversationRoutes = makeConversationRoutes();
-    const links = makeLinks(conversationRoutes);
+    this.conversationRoutes = makeConversationRoutes();
+    this.networkLinks = makeLinks(this.conversationRoutes);
     this.links = new InstancedMesh(device, this.reflectiveShaderInputs, {
       id: 'packet-spraying-links',
       geometry: new CylinderGeometry({radius: 1, height: 1, nradial: 16, nvertical: 1}),
-      matrices: flattenMatrices(links.map(link => makeLinkMatrix(link, 0.07))),
-      colors: flattenColors(links.map(({color}) => color)),
+      matrices: flattenMatrices(this.networkLinks.map(link => makeLinkMatrix(link, 0.09))),
+      colors: flattenColors(this.networkLinks.map(({color}) => color)),
       transparent: true,
       reflective: true
     });
 
-    this.hosts = new InstancedMesh(device, this.shaderInputs, {
+    this.hosts = new InstancedMesh(device, this.metallicShaderInputs, {
       id: 'packet-spraying-hosts',
       geometry: new CubeGeometry({indices: true}),
       matrices: flattenMatrices(
         HOST_POSITIONS.map(position => makeObjectMatrix(position, HOST_HALF_EXTENTS))
       ),
-      colors: flattenColors(HOST_POSITIONS.map(() => [0.18, 0.4, 0.92, 1]))
+      colors: flattenColors(HOST_POSITIONS.map((_, hostIndex) => makeHostColor(hostIndex))),
+      reflective: true
     });
 
     this.glassInstances = makeGlassInstances();
+    this.originalGlassColors = this.glassInstances.map(instance => [...instance.color] as Color);
     this.pickableNodes = makePickableNetworkNodes();
     this.pickingManager = new PickingManager(device, {
       shaderInputs: this.pickingShaderInputs,
@@ -790,52 +1101,121 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       ),
       pickable: true
     });
-    const glassMatrices = flattenMatrices(this.glassInstances.map(instance => instance.matrix));
-    const glassColors = flattenColors(this.glassInstances.map(instance => instance.color));
-    const makeGlassMeshOptions = (id: string, transparencyMode: TransparencyMode) => ({
-      id,
-      geometry: new SphereGeometry({radius: 1, nlat: 16, nlong: 24}),
-      matrices: glassMatrices,
-      colors: glassColors,
-      glass: true,
-      sceneTexture: this.refractionTexture,
-      transparencyMode
-    });
-    this.sortedGlass = new InstancedMesh(
-      device,
-      this.glassShaderInputs,
-      makeGlassMeshOptions('packet-spraying-sorted-glass', 'sorted-alpha')
-    );
-    this.aBufferGlass = supportsABuffer
-      ? new InstancedMesh(
-          device,
-          this.aBufferShaderInputs,
-          makeGlassMeshOptions('packet-spraying-a-buffer-glass', 'a-buffer')
-        )
-      : null;
-    this.weightedBlendedGlass = supportsWeightedBlending
-      ? new InstancedMesh(
-          device,
-          this.weightedBlendedShaderInputs,
-          makeGlassMeshOptions('packet-spraying-weighted-glass', 'weighted-blended')
-        )
-      : null;
+    this.glassGroups = makeSwitchGroups().map(({id, switchIndices}): GlassRenderGroup => {
+      const instances = switchIndices.map(switchIndex => this.glassInstances[switchIndex]);
+      const matrices = flattenMatrices(instances.map(instance => instance.matrix));
+      const colors = flattenColors(instances.map(instance => instance.color));
+      const makeGlassMeshOptions = (mode: string, transparencyMode: TransparencyMode) => ({
+        id: `packet-spraying-${id}-${mode}-glass`,
+        geometry: new SphereGeometry({radius: 1, nlat: 16, nlong: 24}),
+        matrices,
+        colors,
+        glass: true,
+        sceneTexture: this.refractionTexture,
+        sceneDepthTexture: this.sceneFramebuffer.depthStencilAttachment!.texture,
+        backfaceTexture: this.glassBackfaceTexture,
+        environmentTexture: this.environmentTexture,
+        transparencyMode
+      });
 
-    this.packetDefinitions = makePackets(conversationRoutes);
+      const sorted = new InstancedMesh(
+        device,
+        this.glassShaderInputs,
+        makeGlassMeshOptions('sorted', 'sorted-alpha')
+      );
+
+      return {
+        id,
+        instances,
+        node: new ModelNode({
+          id,
+          model: sorted.model,
+          bounds: [
+            [-1, -1, -1],
+            [1, 1, 1]
+          ],
+          instanceMatrices: instances.map(instance => instance.matrix)
+        }),
+        backfaces: new InstancedMesh(device, this.backfaceShaderInputs, {
+          id: `packet-spraying-${id}-glass-backfaces`,
+          geometry: new SphereGeometry({radius: 1, nlat: 16, nlong: 24}),
+          matrices,
+          colors,
+          backface: true,
+          colorAttachmentFormat: this.sceneColorFormat
+        }),
+        sorted,
+        aBuffer: supportsABuffer
+          ? new InstancedMesh(
+              device,
+              this.aBufferShaderInputs,
+              makeGlassMeshOptions('a-buffer', 'a-buffer')
+            )
+          : null,
+        weightedBlended: supportsWeightedBlending
+          ? new InstancedMesh(
+              device,
+              this.weightedBlendedShaderInputs,
+              makeGlassMeshOptions('weighted', 'weighted-blended')
+            )
+          : null
+      };
+    });
+    this.glassScenegraph = new GroupNode({
+      id: 'packet-spraying-glass-scenegraph',
+      children: this.glassGroups.map(group => group.node)
+    });
+
+    this.packetDefinitions = makePackets(this.conversationRoutes);
     this.packetMatrices = new Float32Array(this.packetDefinitions.length * 16);
-    this.updatePacketMatrices(0);
-    this.packets = new InstancedMesh(device, this.shaderInputs, {
+    this.packetTrailMatrices = new Float32Array(this.packetDefinitions.length * 16);
+    this.packetTrailColors = flattenColors(
+      this.packetDefinitions.map(packet => makeBalancedEmissionColor(packet.color, 0.42))
+    );
+    this.switchArrivalEvents = makeSwitchArrivals(this.packetDefinitions);
+    const switchFlashCount = this.glassInstances.length * CONVERSATIONS.length;
+    this.switchFlashMatrices = new Float32Array(switchFlashCount * 16);
+    this.switchFlashColors = new Float32Array(switchFlashCount * 4);
+    this.switchFlashStrengths = new Float32Array(switchFlashCount);
+    this.updatePacketVisuals(0);
+    this.packets = new InstancedMesh(device, this.emissiveShaderInputs, {
       id: 'packet-spraying-packets',
       geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
       matrices: this.packetMatrices,
       colors: flattenColors(
-        this.packetDefinitions.map(packet => [
-          packet.color[0],
-          packet.color[1],
-          packet.color[2],
-          packet.alpha
-        ])
-      )
+        this.packetDefinitions.map(packet => makeBalancedEmissionColor(packet.color, packet.alpha))
+      ),
+      emissive: true
+    });
+    this.packetTrails = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-packet-trails',
+      geometry: new TruncatedConeGeometry({
+        bottomRadius: 0.14,
+        topRadius: 1,
+        height: 1,
+        nradial: 10,
+        nvertical: 3
+      }),
+      matrices: this.packetTrailMatrices,
+      colors: this.packetTrailColors,
+      additive: true,
+      trail: true
+    });
+    this.switchFlashes = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-switch-arrival-flashes',
+      geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
+      matrices: this.switchFlashMatrices,
+      colors: this.switchFlashColors,
+      additive: true,
+      emissive: true
+    });
+    this.storyPackets = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-network-story-packets',
+      geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
+      matrices: this.storyPacketMatrices,
+      colors: this.storyPacketColors,
+      additive: true,
+      emissive: true
     });
 
     this.settingsPanel = new ExampleSettingsPanelManager({
@@ -848,7 +1228,24 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         glassIndexOfRefraction: this.glassIndexOfRefraction,
         glassRoughness: this.glassRoughness,
         glassDispersion: this.glassDispersion,
-        glassThickness: this.glassThickness
+        glassThickness: this.glassThickness,
+        glassRefractionStrength: this.glassRefractionStrength,
+        glassFresnelStrength: this.glassFresnelStrength,
+        glassClearcoatStrength: this.glassClearcoatStrength,
+        glassIridescenceStrength: this.glassIridescenceStrength,
+        glassInternalReflectionStrength: this.glassInternalReflectionStrength,
+        glassTransmissionStrength: this.glassTransmissionStrength,
+        glassEnvironmentIntensity: this.glassEnvironmentIntensity,
+        glassVolumeThickness: this.glassVolumeThickness,
+        packetEmission: this.packetEmission,
+        packetTrailLength: this.packetTrailLength,
+        packetTrailIntensity: this.packetTrailIntensity,
+        switchFlashIntensity: this.switchFlashIntensity,
+        packetLightIntensity: this.packetLightIntensity,
+        packetLightRadius: this.packetLightRadius,
+        bloomIntensity: this.bloomIntensity,
+        bloomThreshold: this.bloomThreshold,
+        exposure: this.exposure
       },
       onSettingsChange: this.handleSettingsChange
     });
@@ -856,9 +1253,15 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.panels.mount();
   }
 
-  override async onInitialize({canvas}: AnimationProps): Promise<void> {
+  override async onInitialize({canvas, device}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      canvas.dataset.packetSprayingDevice = device.info.type;
+      canvas.dataset.packetSprayingGpu = device.info.gpu;
+      canvas.dataset.packetSprayingGpuArchitecture = device.info.gpuArchitecture || '';
+      canvas.dataset.packetSprayingAdapterVendor = device.info.vendor;
+      canvas.dataset.packetSprayingFallback = String(Boolean(device.info.fallback));
+      canvas.dataset.packetSprayingGlassGroups = this.glassGroups.map(group => group.id).join(',');
       this.nodePopup = new NetworkNodePopup(canvas);
       this.orbitControls = new OrbitControls(canvas, {
         target: [0, -0.9, 0],
@@ -875,14 +1278,21 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.addEventListener('pointermove', this.handlePointerMove);
       canvas.addEventListener('pointerdown', this.handlePointerDown);
       canvas.addEventListener('pointerleave', this.handlePointerLeave);
+      canvas.addEventListener('click', this.handleSwitchClick);
+      this.updateFailureAccessibility();
     }
   }
 
   override onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.resizeSceneFramebuffer(width, height);
-    const animationTime = time / 1000;
-    this.updatePacketMatrices(animationTime * this.speed);
+    this.animationTime = (time / 1000) * this.speed;
+    this.updateSwitchStoryState(this.animationTime);
+    this.updatePacketVisuals(this.animationTime);
+    this.updateStoryPacketVisuals(this.animationTime);
     this.packets.updateMatrices(this.packetMatrices);
+    this.packetTrails.updateInstances(this.packetTrailMatrices, this.packetTrailColors);
+    this.switchFlashes.updateInstances(this.switchFlashMatrices, this.switchFlashColors);
+    this.storyPackets.updateInstances(this.storyPacketMatrices, this.storyPacketColors);
 
     this.orbitControls?.update(time);
     const eye: Vector3 = this.orbitControls?.getEyePosition() || [5.2, 6.2, 9.1];
@@ -902,14 +1312,59 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       indexOfRefraction: this.glassIndexOfRefraction,
       roughness: this.glassRoughness,
       dispersion: this.glassDispersion,
-      thickness: this.glassThickness
+      thickness: this.glassThickness,
+      refractionStrength: this.glassRefractionStrength,
+      fresnelStrength: this.glassFresnelStrength,
+      clearcoatStrength: this.glassClearcoatStrength,
+      iridescenceStrength: this.glassIridescenceStrength,
+      internalReflectionStrength: this.glassInternalReflectionStrength,
+      transmissionStrength: this.glassTransmissionStrength
     };
-    this.shaderInputs.setProps({app: uniforms});
-    this.reflectiveShaderInputs.setProps({app: uniforms, reflectiveMaterial: {}});
-    this.glassShaderInputs.setProps({app: uniforms, glassMaterial: glassMaterialProps});
+    const glassTransmissionProps: GlassTransmissionProps = {
+      viewportSize: [width, height],
+      depthRange: [0.1, 60],
+      sceneDepthTexture: this.sceneFramebuffer.depthStencilAttachment!.texture,
+      backfaceTexture: this.glassBackfaceTexture,
+      environmentTexture: this.environmentTexture,
+      environmentIntensity: this.glassEnvironmentIntensity,
+      thicknessStrength: this.glassVolumeThickness
+    };
+    const pointLightProps: OpticalPointLightsProps = {
+      lights: this.makePacketLights(),
+      intensity: this.packetLightIntensity
+    };
+    this.emissiveShaderInputs.setProps({
+      app: uniforms,
+      emissiveMaterial: {intensity: this.packetEmission, rimStrength: 0.32}
+    });
+    this.reflectiveShaderInputs.setProps({
+      app: uniforms,
+      reflectiveMaterial: {},
+      opticalPointLights: pointLightProps
+    });
+    this.metallicShaderInputs.setProps({
+      app: uniforms,
+      reflectiveMaterial: {
+        roughness: 0.32,
+        reflectionStrength: 0.26,
+        specularStrength: 0.58,
+        opacityScale: 1
+      },
+      opticalPointLights: pointLightProps
+    });
+    this.glassShaderInputs.setProps({
+      app: uniforms,
+      glassMaterial: glassMaterialProps,
+      glassTransmission: glassTransmissionProps,
+      opticalPointLights: pointLightProps
+    });
+    this.backfaceShaderInputs.setProps({app: uniforms});
 
     this.hosts.model.predraw(device.commandEncoder);
     this.packets.model.predraw(device.commandEncoder);
+    this.packetTrails.model.predraw(device.commandEncoder);
+    this.switchFlashes.model.predraw(device.commandEncoder);
+    this.storyPackets.model.predraw(device.commandEncoder);
     this.links.model.predraw(device.commandEncoder);
     const sceneRenderPass = device.beginRenderPass({
       framebuffer: this.sceneFramebuffer,
@@ -918,83 +1373,114 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     });
     this.hosts.model.draw(sceneRenderPass);
     this.packets.model.draw(sceneRenderPass);
+    this.packetTrails.model.draw(sceneRenderPass);
+    this.switchFlashes.model.draw(sceneRenderPass);
+    this.storyPackets.model.draw(sceneRenderPass);
     this.links.model.draw(sceneRenderPass);
     sceneRenderPass.end();
 
-    device.commandEncoder.copyTextureToTexture({
-      sourceTexture: this.sceneTexture,
-      destinationTexture: this.refractionTexture
-    });
-
     let outputTexture = this.sceneTexture;
-    if (this.transparencyMode === 'a-buffer' && this.aBufferRenderer && this.aBufferGlass) {
-      outputTexture = this.aBufferRenderer.render({
-        sourceTexture: this.sceneTexture,
-        opaqueDepthTexture: this.sceneFramebuffer.depthStencilAttachment!,
-        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
-          this.aBufferShaderInputs.setProps({
-            app: uniforms,
-            glassMaterial: glassMaterialProps,
-            aBuffer: shaderModuleProps
-          });
-          this.aBufferGlass?.model.setParameters({...TRANSPARENT_PARAMETERS, ...captureParameters});
-          this.aBufferGlass?.model.predraw(commandEncoder);
-        },
-        drawTranslucent: renderPass => {
-          this.aBufferGlass?.model.draw(renderPass);
-        }
-      });
-    } else if (
-      this.transparencyMode === 'weighted-blended' &&
-      this.weightedBlendedRenderer &&
-      this.weightedBlendedGlass
-    ) {
-      outputTexture = this.weightedBlendedRenderer.render({
-        sourceTexture: this.sceneTexture,
-        prepareOpaqueDepth: commandEncoder => {
-          this.hosts.model.predraw(commandEncoder);
-          this.packets.model.predraw(commandEncoder);
-        },
-        drawOpaqueDepth: renderPass => {
-          this.hosts.model.draw(renderPass);
-          this.packets.model.draw(renderPass);
-        },
-        prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
-          this.weightedBlendedShaderInputs.setProps({
-            app: uniforms,
-            glassMaterial: glassMaterialProps,
-            wboit: shaderModuleProps
-          });
-          this.weightedBlendedGlass?.model.setParameters({
-            ...TRANSPARENT_PARAMETERS,
-            ...captureParameters
-          });
-          this.weightedBlendedGlass?.model.predraw(commandEncoder);
-        },
-        drawTranslucent: renderPass => {
-          this.weightedBlendedGlass?.model.draw(renderPass);
-        }
-      });
-    } else {
-      this.sortGlassInstances(eye);
-      this.sortedGlass.model.predraw(device.commandEncoder);
-      const glassRenderPass = device.beginRenderPass({
-        framebuffer: this.sceneFramebuffer,
-        clearColor: false,
-        clearDepth: false
-      });
-      this.sortedGlass.model.draw(glassRenderPass);
-      glassRenderPass.end();
+    const sortedGroups = this.sortGlassGroups(uniforms.viewMatrix);
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingGlassGroupOrder = sortedGroups
+        .map(group => group.id)
+        .join(',');
     }
 
-    this.sceneBackground.setProps({backgroundTexture: outputTexture});
-    this.sceneBackground.predraw(device.commandEncoder);
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.003, 0.006, 0.012, 1],
-      clearDepth: 1
+    for (const group of sortedGroups) {
+      group.backfaces.model.predraw(device.commandEncoder);
+      const backfaceRenderPass = device.beginRenderPass({
+        framebuffer: this.glassBackfaceFramebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: 0
+      });
+      group.backfaces.model.draw(backfaceRenderPass);
+      backfaceRenderPass.end();
+
+      device.commandEncoder.copyTextureToTexture({
+        sourceTexture: outputTexture,
+        destinationTexture: this.refractionTexture
+      });
+
+      if (this.transparencyMode === 'a-buffer' && this.aBufferRenderer && group.aBuffer) {
+        outputTexture = this.aBufferRenderer.render({
+          sourceTexture: outputTexture,
+          opaqueDepthTexture: this.sceneFramebuffer.depthStencilAttachment!,
+          prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+            this.aBufferShaderInputs.setProps({
+              app: uniforms,
+              glassMaterial: glassMaterialProps,
+              glassTransmission: glassTransmissionProps,
+              opticalPointLights: pointLightProps,
+              aBuffer: shaderModuleProps
+            });
+            group.aBuffer?.model.setParameters({...GLASS_PARAMETERS, ...captureParameters});
+            group.aBuffer?.model.predraw(commandEncoder);
+          },
+          drawTranslucent: renderPass => {
+            group.aBuffer?.model.draw(renderPass);
+          }
+        });
+      } else if (
+        this.transparencyMode === 'weighted-blended' &&
+        this.weightedBlendedRenderer &&
+        group.weightedBlended
+      ) {
+        outputTexture = this.weightedBlendedRenderer.render({
+          sourceTexture: outputTexture,
+          prepareOpaqueDepth: commandEncoder => {
+            this.hosts.model.predraw(commandEncoder);
+            this.packets.model.predraw(commandEncoder);
+          },
+          drawOpaqueDepth: renderPass => {
+            this.hosts.model.draw(renderPass);
+            this.packets.model.draw(renderPass);
+          },
+          prepareTranslucent: ({commandEncoder, shaderModuleProps, captureParameters}) => {
+            this.weightedBlendedShaderInputs.setProps({
+              app: uniforms,
+              glassMaterial: glassMaterialProps,
+              glassTransmission: glassTransmissionProps,
+              opticalPointLights: pointLightProps,
+              wboit: shaderModuleProps
+            });
+            group.weightedBlended?.model.setParameters({
+              ...GLASS_PARAMETERS,
+              ...captureParameters
+            });
+            group.weightedBlended?.model.predraw(commandEncoder);
+          },
+          drawTranslucent: renderPass => {
+            group.weightedBlended?.model.draw(renderPass);
+          }
+        });
+      } else {
+        this.sortGlassInstances(group, eye);
+        group.sorted.model.predraw(device.commandEncoder);
+        const glassRenderPass = device.beginRenderPass({
+          framebuffer: this.sceneFramebuffer,
+          clearColor: false,
+          clearDepth: false
+        });
+        group.sorted.model.draw(glassRenderPass);
+        glassRenderPass.end();
+      }
+    }
+
+    this.postprocessingRenderer.renderToScreen({
+      sourceTexture: outputTexture,
+      uniforms: {
+        bloomExtract: {
+          threshold:
+            this.sceneColorFormat === 'rgba16float'
+              ? this.bloomThreshold
+              : Math.min(this.bloomThreshold, 0.38)
+        },
+        bloomBlur: {radius: 4},
+        bloomComposite: {intensity: this.bloomIntensity},
+        toneMapping: {exposure: this.exposure}
+      }
     });
-    this.sceneBackground.draw(renderPass);
-    renderPass.end();
 
     this.pickHoveredNode(device, uniforms);
   }
@@ -1003,6 +1489,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.canvas?.removeEventListener('pointermove', this.handlePointerMove);
     this.canvas?.removeEventListener('pointerdown', this.handlePointerDown);
     this.canvas?.removeEventListener('pointerleave', this.handlePointerLeave);
+    this.canvas?.removeEventListener('click', this.handleSwitchClick);
     this.nodePopup?.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
@@ -1012,22 +1499,34 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.pickingHosts.destroy();
     this.pickingSwitches.destroy();
     this.pickingManager.destroy();
-    this.sortedGlass.destroy();
-    this.aBufferGlass?.destroy();
-    this.weightedBlendedGlass?.destroy();
+    this.glassScenegraph.removeAll();
+    for (const group of this.glassGroups) {
+      group.backfaces.destroy();
+      group.sorted.destroy();
+      group.aBuffer?.destroy();
+      group.weightedBlended?.destroy();
+    }
     this.packets.destroy();
-    this.sceneBackground.destroy();
+    this.packetTrails.destroy();
+    this.switchFlashes.destroy();
+    this.storyPackets.destroy();
+    this.postprocessingRenderer.destroy();
     this.aBufferRenderer?.destroy();
     this.weightedBlendedRenderer?.destroy();
-    this.shaderInputs.destroy();
+    this.backfaceShaderInputs.destroy();
+    this.emissiveShaderInputs.destroy();
     this.reflectiveShaderInputs.destroy();
+    this.metallicShaderInputs.destroy();
     this.pickingShaderInputs.destroy();
     this.glassShaderInputs.destroy();
     this.aBufferShaderInputs.destroy();
     this.weightedBlendedShaderInputs.destroy();
+    this.glassBackfaceFramebuffer.destroy();
     this.sceneFramebuffer.destroy();
     this.sceneTexture.destroy();
     this.refractionTexture.destroy();
+    this.glassBackfaceTexture.destroy();
+    this.environmentTexture.destroy();
   }
 
   private pickHoveredNode(device: Device, uniforms: AppUniforms): void {
@@ -1037,7 +1536,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     const pickRequest = this.pendingPickRequest;
     this.pendingPickRequest = null;
-    if (!this.pickingManager.shouldPick(pickRequest.canvasPosition)) {
+    if (
+      pickRequest.action === 'hover' &&
+      !this.pickingManager.shouldPick(pickRequest.canvasPosition)
+    ) {
       return;
     }
 
@@ -1062,10 +1564,21 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         }
 
         const objectIndex = pickInfo?.objectIndex;
+        if (
+          pickRequest.action === 'toggle-switch' &&
+          objectIndex !== null &&
+          objectIndex !== undefined
+        ) {
+          const switchIndex = objectIndex - HOST_POSITIONS.length;
+          if (switchIndex >= 0 && switchIndex < this.glassInstances.length) {
+            this.advanceSwitchState(switchIndex);
+          }
+        }
+
         const node =
           objectIndex === null || objectIndex === undefined
             ? undefined
-            : this.pickableNodes[objectIndex];
+            : this.getPickableNode(objectIndex);
         if (node) {
           this.nodePopup?.show(node, pickRequest.clientPosition);
           if (this.canvas) {
@@ -1091,14 +1604,37 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     const bounds = this.canvas.getBoundingClientRect();
     this.pendingPickRequest = {
+      action: 'hover',
       canvasPosition: [event.clientX - bounds.left, event.clientY - bounds.top],
       clientPosition: [event.clientX, event.clientY],
       pointerSequence: ++this.pointerSequence
     };
   };
 
-  private readonly handlePointerDown = (): void => {
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    this.pointerDownPosition = [event.clientX, event.clientY];
     this.handlePointerLeave();
+  };
+
+  private readonly handleSwitchClick = (event: MouseEvent): void => {
+    const pointerDownPosition = this.pointerDownPosition;
+    this.pointerDownPosition = null;
+    if (
+      !this.canvas ||
+      event.button !== 0 ||
+      !pointerDownPosition ||
+      Math.hypot(event.clientX - pointerDownPosition[0], event.clientY - pointerDownPosition[1]) > 5
+    ) {
+      return;
+    }
+
+    const bounds = this.canvas.getBoundingClientRect();
+    this.pendingPickRequest = {
+      action: 'toggle-switch',
+      canvasPosition: [event.clientX - bounds.left, event.clientY - bounds.top],
+      clientPosition: [event.clientX, event.clientY],
+      pointerSequence: ++this.pointerSequence
+    };
   };
 
   private readonly handlePointerLeave = (): void => {
@@ -1108,6 +1644,200 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.nodePopup?.hide();
   };
 
+  private getPickableNode(objectIndex: number): PickableNetworkNode | undefined {
+    const node = this.pickableNodes[objectIndex];
+    if (!node || objectIndex < HOST_POSITIONS.length) {
+      return node;
+    }
+
+    const switchIndex = objectIndex - HOST_POSITIONS.length;
+    if (this.failedSwitchIndices.has(switchIndex)) {
+      return {
+        ...node,
+        role: `FAILED / ${node.role}`,
+        description:
+          'This switch dropped in-flight packets. MRC retired its paths, retransmitted the missing data, and now sends occasional recovery probes.',
+        detail: 'Click again to restore this switch and return its paths to service.',
+        status: 'offline'
+      };
+    }
+
+    if (this.detectingSwitchTimes.has(switchIndex)) {
+      return {
+        ...node,
+        role: `FAILURE DETECTED / ${node.role}`,
+        description:
+          'Packets reaching this switch are briefly lost while MRC detects the fault and prepares healthy replacement routes.',
+        detail: 'The affected plane will be retired after the packet-loss detection interval.',
+        status: 'detecting'
+      };
+    }
+
+    if (this.congestedSwitchIndices.has(switchIndex)) {
+      return {
+        ...node,
+        role: `CONGESTED / ${node.role}`,
+        description:
+          'This switch trims overloaded packet payloads while forwarding their small headers, allowing senders to retransmit through other paths.',
+        detail: 'Click again to fail this switch and demonstrate path retirement.',
+        status: 'congested'
+      };
+    }
+
+    return {
+      ...node,
+      detail: `${node.detail} Click to introduce congestion.`,
+      status: 'online'
+    };
+  }
+
+  private advanceSwitchState(switchIndex: number): void {
+    if (this.failedSwitchIndices.has(switchIndex)) {
+      this.failedSwitchIndices.delete(switchIndex);
+      this.nextSwitchProbeTimes.delete(switchIndex);
+      this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
+    } else if (this.detectingSwitchTimes.has(switchIndex)) {
+      this.completeSwitchFailure(switchIndex);
+      return;
+    } else if (this.congestedSwitchIndices.has(switchIndex)) {
+      this.congestedSwitchIndices.delete(switchIndex);
+      this.nextCongestionTrimTimes.delete(switchIndex);
+      this.detectingSwitchTimes.set(switchIndex, this.animationTime + FAILURE_DETECTION_DELAY);
+      this.glassInstances[switchIndex].color = [...DETECTING_SWITCH_COLOR];
+      this.enqueueSwitchPacketEvents(switchIndex, 'failure', this.animationTime);
+    } else {
+      this.congestedSwitchIndices.add(switchIndex);
+      this.nextCongestionTrimTimes.set(switchIndex, this.animationTime);
+      this.glassInstances[switchIndex].color = [...CONGESTED_SWITCH_COLOR];
+    }
+
+    this.updateSwitchColors();
+    this.updateHealthyRoutes();
+    this.updateFailureAccessibility();
+  }
+
+  private completeSwitchFailure(switchIndex: number): void {
+    this.detectingSwitchTimes.delete(switchIndex);
+    this.failedSwitchIndices.add(switchIndex);
+    this.nextSwitchProbeTimes.set(switchIndex, this.animationTime + SWITCH_PROBE_INTERVAL);
+    this.glassInstances[switchIndex].color = [...FAILED_SWITCH_COLOR];
+    this.updateSwitchColors();
+    this.updateHealthyRoutes();
+    this.updateFailureAccessibility();
+  }
+
+  private enqueueSwitchPacketEvents(
+    switchIndex: number,
+    scenario: NetworkScenario,
+    startedAt: number
+  ): void {
+    const events = makeSwitchPacketEvents({
+      packets: this.packetDefinitions,
+      conversationRoutes: this.conversationRoutes,
+      scenario,
+      startedAt,
+      switchIndex
+    });
+    this.networkPacketEvents.push(...events);
+    this.droppedPacketCount += events.filter(event => event.kind === 'dropped-payload').length;
+    this.trimmedPacketCount += events.filter(event => event.kind === 'trimmed-payload').length;
+  }
+
+  private updateSwitchStoryState(animationTime: number): void {
+    for (const [switchIndex, detectionTime] of this.detectingSwitchTimes) {
+      if (animationTime >= detectionTime) {
+        this.completeSwitchFailure(switchIndex);
+      }
+    }
+
+    for (const [switchIndex, nextTrimTime] of this.nextCongestionTrimTimes) {
+      if (animationTime >= nextTrimTime) {
+        this.enqueueSwitchPacketEvents(switchIndex, 'congestion', nextTrimTime);
+        this.nextCongestionTrimTimes.set(switchIndex, nextTrimTime + CONGESTION_TRIM_INTERVAL);
+        this.updateFailureAccessibility();
+      }
+    }
+
+    for (const [switchIndex, nextProbeTime] of this.nextSwitchProbeTimes) {
+      if (animationTime >= nextProbeTime) {
+        const probe = makeSwitchProbeEvent(this.conversationRoutes, switchIndex, nextProbeTime);
+        if (probe) {
+          this.networkPacketEvents.push(probe);
+        }
+        this.nextSwitchProbeTimes.set(switchIndex, nextProbeTime + SWITCH_PROBE_INTERVAL);
+      }
+    }
+
+    for (let eventIndex = this.networkPacketEvents.length - 1; eventIndex >= 0; eventIndex--) {
+      const event = this.networkPacketEvents[eventIndex];
+      if (animationTime > event.startedAt + event.duration) {
+        this.networkPacketEvents.splice(eventIndex, 1);
+      }
+    }
+  }
+
+  private updateSwitchColors(): void {
+    for (const group of this.glassGroups) {
+      const matrices = flattenMatrices(group.instances.map(instance => instance.matrix));
+      const colors = flattenColors(group.instances.map(instance => instance.color));
+      group.sorted.updateInstances(matrices, colors);
+      group.aBuffer?.updateInstances(matrices, colors);
+      group.weightedBlended?.updateInstances(matrices, colors);
+    }
+  }
+
+  private updateHealthyRoutes(): void {
+    const healthyRoutes = getHealthyConversationRoutes(
+      this.conversationRoutes,
+      this.failedSwitchIndices
+    );
+    reroutePackets(this.packetDefinitions, healthyRoutes);
+    this.switchArrivalEvents = makeSwitchArrivals(this.packetDefinitions);
+    const activeLinkKeys = makeActiveLinkKeys(healthyRoutes);
+
+    for (const link of this.networkLinks) {
+      const failed =
+        isFailedSwitchPosition(link.start, this.failedSwitchIndices) ||
+        isFailedSwitchPosition(link.end, this.failedSwitchIndices);
+      const congested =
+        isFailedSwitchPosition(link.start, this.congestedSwitchIndices) ||
+        isFailedSwitchPosition(link.end, this.congestedSwitchIndices);
+      link.color = makeLinkColor(
+        link.start,
+        activeLinkKeys.has(makeLinkKey(link.start, link.end)),
+        failed,
+        congested
+      );
+    }
+    this.links.updateInstances(
+      flattenMatrices(this.networkLinks.map(link => makeLinkMatrix(link, 0.09))),
+      flattenColors(this.networkLinks.map(link => link.color))
+    );
+  }
+
+  private updateFailureAccessibility(): void {
+    if (!this.canvas) {
+      return;
+    }
+
+    const congestedCount = this.congestedSwitchIndices.size;
+    const failedCount = this.failedSwitchIndices.size;
+    const activePlaneCount = getActivePlaneCount(
+      getHealthyConversationRoutes(this.conversationRoutes, this.failedSwitchIndices)
+    );
+    this.canvas.dataset.packetSprayingCongestedSwitches = String(congestedCount);
+    this.canvas.dataset.packetSprayingFailedSwitches = String(failedCount);
+    this.canvas.dataset.packetSprayingActivePlanes = String(activePlaneCount);
+    this.canvas.dataset.packetSprayingDroppedPackets = String(this.droppedPacketCount);
+    this.canvas.dataset.packetSprayingTrimmedPackets = String(this.trimmedPacketCount);
+    this.canvas.setAttribute(
+      'aria-label',
+      failedCount === 0 && congestedCount === 0
+        ? 'Network packet spraying: all switches online'
+        : `Network packet spraying: ${congestedCount} congested, ${failedCount} failed, ${activePlaneCount} healthy network plane${activePlaneCount === 1 ? '' : 's'}`
+    );
+  }
+
   private resizeSceneFramebuffer(width: number, height: number): void {
     if (this.sceneFramebuffer.width === width && this.sceneFramebuffer.height === height) {
       return;
@@ -1115,46 +1845,327 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     const previousSceneTexture = this.sceneTexture;
     const previousRefractionTexture = this.refractionTexture;
+    const previousBackfaceTexture = this.glassBackfaceTexture;
     this.sceneFramebuffer.resize({width, height});
+    this.glassBackfaceFramebuffer.resize({width, height});
     this.sceneTexture = this.sceneFramebuffer.colorAttachments[0].texture;
-    this.refractionTexture = makeRefractionTexture(this.sceneTexture.device, width, height);
-    this.sortedGlass.model.setBindings({glassSceneColorTexture: this.refractionTexture});
-    this.aBufferGlass?.model.setBindings({glassSceneColorTexture: this.refractionTexture});
-    this.weightedBlendedGlass?.model.setBindings({glassSceneColorTexture: this.refractionTexture});
+    this.glassBackfaceTexture = this.glassBackfaceFramebuffer.colorAttachments[0].texture;
+    this.refractionTexture = makeRefractionTexture(
+      this.sceneTexture.device,
+      width,
+      height,
+      this.sceneColorFormat
+    );
+    this.postprocessingRenderer.resize([width, height]);
+    const glassBindings = {
+      glassSceneColorTexture: this.refractionTexture,
+      glassSceneDepthTexture: this.sceneFramebuffer.depthStencilAttachment!.texture,
+      glassBackfaceTexture: this.glassBackfaceTexture,
+      glassEnvironmentTexture: this.environmentTexture
+    };
+    for (const group of this.glassGroups) {
+      group.sorted.model.setBindings(glassBindings);
+      group.aBuffer?.model.setBindings(glassBindings);
+      group.weightedBlended?.model.setBindings(glassBindings);
+    }
     previousSceneTexture.destroy();
     previousRefractionTexture.destroy();
+    previousBackfaceTexture.destroy();
   }
 
-  private sortGlassInstances(cameraPosition: Vector3): void {
-    const sortedInstances = [...this.glassInstances].sort(
+  private sortGlassGroups(viewMatrix: Matrix4): GlassRenderGroup[] {
+    const sortedGroups: GlassRenderGroup[] = [];
+
+    this.glassScenegraph.traverseDepthSorted(
+      node => {
+        const group = this.glassGroups.find(candidate => candidate.node === node);
+        if (group) {
+          sortedGroups.push(group);
+        }
+      },
+      {viewMatrix}
+    );
+
+    return sortedGroups;
+  }
+
+  private sortGlassInstances(group: GlassRenderGroup, cameraPosition: Vector3): void {
+    const sortedInstances = [...group.instances].sort(
       (first, second) =>
         getDistanceSquared(second.position, cameraPosition) -
         getDistanceSquared(first.position, cameraPosition)
     );
-    this.sortedGlass.updateInstances(
+    group.sorted.updateInstances(
       flattenMatrices(sortedInstances.map(instance => instance.matrix)),
       flattenColors(sortedInstances.map(instance => instance.color))
     );
   }
 
-  private updatePacketMatrices(animationTime: number): void {
+  private updateStoryPacketVisuals(animationTime: number): void {
+    this.storyPacketMatrices.fill(0);
+    this.storyPacketColors.fill(0);
+    let instanceIndex = 0;
+
+    const addParticle = (position: Vector3, radius: number, color: Color): void => {
+      if (instanceIndex >= MAX_STORY_PACKET_INSTANCES) {
+        return;
+      }
+      this.storyPacketMatrices.set(
+        makeObjectMatrix(position, [radius, radius, radius]),
+        instanceIndex * 16
+      );
+      this.storyPacketColors.set(color, instanceIndex * 4);
+      instanceIndex++;
+    };
+
+    for (const event of this.networkPacketEvents) {
+      const age = animationTime - event.startedAt;
+      if (age < 0 || age > event.duration) {
+        continue;
+      }
+
+      const switchPosition = SWITCH_POSITIONS[event.switchIndex];
+      const routePointIndex = event.route.points.indexOf(switchPosition);
+      if (!switchPosition || routePointIndex < 0) {
+        continue;
+      }
+
+      if (event.kind === 'dropped-payload' || event.kind === 'trimmed-payload') {
+        const progress = age / event.duration;
+        const fragmentCount = event.kind === 'dropped-payload' ? 8 : 6;
+        const spread = (event.kind === 'dropped-payload' ? 1.15 : 0.78) * age;
+        const fragmentRadius =
+          (event.kind === 'dropped-payload' ? 0.036 : 0.028) * (1 - progress * 0.8);
+        const fragmentColor = makeBalancedEmissionColor(
+          event.color,
+          Math.max(0, (1 - progress) * 0.82)
+        );
+
+        for (let fragmentIndex = 0; fragmentIndex < fragmentCount; fragmentIndex++) {
+          const angle =
+            fragmentIndex * 2.399963 + event.conversationIndex * 0.74 + event.switchIndex * 0.33;
+          const elevation = (fragmentIndex % 3) * 0.34 - 0.3;
+          addParticle(
+            [
+              switchPosition[0] + Math.cos(angle) * spread,
+              switchPosition[1] + elevation * spread - age * age * 0.46,
+              switchPosition[2] + Math.sin(angle) * spread
+            ],
+            fragmentRadius,
+            fragmentColor
+          );
+        }
+        continue;
+      }
+
+      if (event.kind === 'trimmed-header') {
+        const startDistance = event.route.cumulativeLengths[routePointIndex];
+        const distance = Math.min(
+          event.route.totalLength,
+          startDistance + age * PACKET_TRAVEL_SPEED
+        );
+        addParticle(
+          getPointAlongRoute(event.route, distance / event.route.totalLength),
+          0.024,
+          makeBalancedEmissionColor(event.color, 0.76)
+        );
+        continue;
+      }
+
+      if (event.kind === 'retransmission') {
+        const distance = Math.min(event.route.totalLength, age * PACKET_TRAVEL_SPEED * 1.16);
+        addParticle(
+          getPointAlongRoute(event.route, distance / event.route.totalLength),
+          0.046,
+          makeBalancedEmissionColor(event.color, 0.92)
+        );
+        continue;
+      }
+
+      const startDistance = event.route.cumulativeLengths[Math.max(0, routePointIndex - 1)];
+      const endDistance = event.route.cumulativeLengths[routePointIndex];
+      const distance = startDistance + (endDistance - startDistance) * (age / event.duration);
+      addParticle(
+        getPointAlongRoute(event.route, distance / event.route.totalLength),
+        0.021,
+        event.color
+      );
+    }
+  }
+
+  private updatePacketVisuals(animationTime: number): void {
+    this.switchFlashStrengths.fill(0);
+
     for (let packetIndex = 0; packetIndex < this.packetDefinitions.length; packetIndex++) {
       const packet = this.packetDefinitions[packetIndex];
       const packetAge = wrap(animationTime - packet.launchTime, BURST_CYCLE_DURATION);
       const packetDistance = packetAge * PACKET_TRAVEL_SPEED;
-      const position: Vector3 =
-        packetDistance <= packet.route.totalLength
-          ? getPointAlongRoute(packet.route, packetDistance / packet.route.totalLength)
-          : [0, -100, 0];
+      const packetIsVisible = packet.enabled && packetDistance <= packet.route.totalLength;
+      const position: Vector3 = packetIsVisible
+        ? getPointAlongRoute(packet.route, packetDistance / packet.route.totalLength)
+        : [0, -100, 0];
       const matrix = makeObjectMatrix(position, [packet.scale, packet.scale, packet.scale]);
       this.packetMatrices.set(matrix, packetIndex * 16);
+
+      const trailStartDistance = Math.max(
+        getRouteSegmentStartDistance(packet.route, packetDistance),
+        packetDistance - this.packetTrailLength
+      );
+      const trailLength = packetDistance - trailStartDistance;
+      const trailMatrix =
+        packetIsVisible && this.packetTrailIntensity > 0 && trailLength > 0.012
+          ? makeSegmentMatrix(
+              getPointAlongRoute(packet.route, trailStartDistance / packet.route.totalLength),
+              position,
+              PACKET_TRAIL_RADIUS
+            )
+          : makeObjectMatrix([0, -100, 0], [0.001, 0.001, 0.001]);
+      this.packetTrailMatrices.set(trailMatrix, packetIndex * 16);
+      const trailColor = makeBalancedEmissionColor(packet.color, 0.48);
+      const colorOffset = packetIndex * 4;
+      this.packetTrailColors.set(
+        [
+          trailColor[0] * this.packetTrailIntensity,
+          trailColor[1] * this.packetTrailIntensity,
+          trailColor[2] * this.packetTrailIntensity,
+          trailColor[3]
+        ],
+        colorOffset
+      );
     }
+
+    for (const arrival of this.switchArrivalEvents) {
+      const arrivalAge = wrap(animationTime - arrival.arrivalTime, BURST_CYCLE_DURATION);
+      if (arrivalAge >= SWITCH_FLASH_DURATION) {
+        continue;
+      }
+
+      const attack = smoothstep(0, 0.018, arrivalAge);
+      const decay = Math.exp(-arrivalAge * 15);
+      const flashIndex = arrival.switchIndex * CONVERSATIONS.length + arrival.conversationIndex;
+      this.switchFlashStrengths[flashIndex] = Math.min(
+        1,
+        this.switchFlashStrengths[flashIndex] + attack * decay
+      );
+    }
+
+    for (let switchIndex = 0; switchIndex < this.glassInstances.length; switchIndex++) {
+      const glassInstance = this.glassInstances[switchIndex];
+      for (
+        let conversationIndex = 0;
+        conversationIndex < CONVERSATIONS.length;
+        conversationIndex++
+      ) {
+        const flashIndex = switchIndex * CONVERSATIONS.length + conversationIndex;
+        const flashStrength = this.switchFlashStrengths[flashIndex] * this.switchFlashIntensity;
+        const flashRadius = 0.055 + Math.min(flashStrength, 1) * 0.085;
+        const flashMatrix =
+          flashStrength > 0.01
+            ? makeObjectMatrix(glassInstance.position, [flashRadius, flashRadius, flashRadius])
+            : makeObjectMatrix([0, -100, 0], [0.001, 0.001, 0.001]);
+        this.switchFlashMatrices.set(flashMatrix, flashIndex * 16);
+
+        const flashColor = makeBalancedEmissionColor(CONVERSATIONS[conversationIndex].color, 1);
+        this.switchFlashColors.set(
+          [
+            flashColor[0] * flashStrength * 0.32,
+            flashColor[1] * flashStrength * 0.32,
+            flashColor[2] * flashStrength * 0.32,
+            Math.min(flashStrength * 0.58, 0.55)
+          ],
+          flashIndex * 4
+        );
+      }
+    }
+  }
+
+  private makePacketLights(): OpticalPointLight[] {
+    if (this.packetLightIntensity <= 0 || this.packetLightRadius <= 0) {
+      return [];
+    }
+
+    const candidatesByRoute = new Map<
+      Packet['route'],
+      {color: Vector3; position: Vector3; switchDistance: number}[]
+    >();
+
+    for (let packetIndex = 0; packetIndex < this.packetDefinitions.length; packetIndex++) {
+      const matrixOffset = packetIndex * 16;
+      const position: Vector3 = [
+        this.packetMatrices[matrixOffset + 12],
+        this.packetMatrices[matrixOffset + 13],
+        this.packetMatrices[matrixOffset + 14]
+      ];
+      if (position[1] < HOST_Y - 1) {
+        continue;
+      }
+
+      const packet = this.packetDefinitions[packetIndex];
+      const candidates = candidatesByRoute.get(packet.route) || [];
+      candidates.push({
+        color: [packet.color[0], packet.color[1], packet.color[2]],
+        position,
+        switchDistance: Math.min(
+          ...SWITCH_POSITIONS.map(switchPosition => getDistanceSquared(position, switchPosition))
+        )
+      });
+      candidatesByRoute.set(packet.route, candidates);
+    }
+
+    const lights: OpticalPointLight[] = [];
+    const secondaryLights: OpticalPointLight[] = [];
+    for (const candidates of candidatesByRoute.values()) {
+      candidates.sort((first, second) => first.switchDistance - second.switchDistance);
+      for (const [candidateIndex, candidate] of candidates.slice(0, 2).entries()) {
+        const light = {
+          position: candidate.position,
+          color: candidate.color,
+          intensity: 1,
+          radius: this.packetLightRadius
+        };
+        if (candidateIndex === 0) {
+          lights.push(light);
+        } else {
+          secondaryLights.push(light);
+        }
+      }
+    }
+
+    const switchFlashLights: OpticalPointLight[] = [];
+    for (let switchIndex = 0; switchIndex < this.glassInstances.length; switchIndex++) {
+      for (
+        let conversationIndex = 0;
+        conversationIndex < CONVERSATIONS.length;
+        conversationIndex++
+      ) {
+        const flashIndex = switchIndex * CONVERSATIONS.length + conversationIndex;
+        const flashStrength = this.switchFlashStrengths[flashIndex] * this.switchFlashIntensity;
+        if (flashStrength <= 0.08) {
+          continue;
+        }
+
+        const color = CONVERSATIONS[conversationIndex].color;
+        switchFlashLights.push({
+          position: this.glassInstances[switchIndex].position,
+          color: [color[0], color[1], color[2]],
+          intensity: flashStrength * 1.7,
+          radius: this.packetLightRadius * 0.8
+        });
+      }
+    }
+
+    switchFlashLights.sort((first, second) => (second.intensity || 0) - (first.intensity || 0));
+    return [
+      ...lights,
+      ...switchFlashLights.slice(0, MAX_SWITCH_FLASH_LIGHTS),
+      ...secondaryLights
+    ].slice(0, 16);
   }
 
   private makePanel(): Panel {
     return makeExampleTabbedPanel({
       id: 'packet-spraying-info',
-      title: 'Network Packet Spraying',
+      title: 'Effects: Glass',
       panels: [
         makeHtmlCustomPanel({
           id: 'packet-spraying-overview',
@@ -1216,15 +2227,136 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     if (typeof glassThickness === 'number') {
       this.glassThickness = glassThickness;
     }
+
+    const glassRefractionStrength = getChangedSetting(
+      changedSettings,
+      'glassRefractionStrength'
+    )?.nextValue;
+    if (typeof glassRefractionStrength === 'number') {
+      this.glassRefractionStrength = glassRefractionStrength;
+    }
+
+    const glassFresnelStrength = getChangedSetting(
+      changedSettings,
+      'glassFresnelStrength'
+    )?.nextValue;
+    if (typeof glassFresnelStrength === 'number') {
+      this.glassFresnelStrength = glassFresnelStrength;
+    }
+
+    const glassClearcoatStrength = getChangedSetting(
+      changedSettings,
+      'glassClearcoatStrength'
+    )?.nextValue;
+    if (typeof glassClearcoatStrength === 'number') {
+      this.glassClearcoatStrength = glassClearcoatStrength;
+    }
+
+    const glassIridescenceStrength = getChangedSetting(
+      changedSettings,
+      'glassIridescenceStrength'
+    )?.nextValue;
+    if (typeof glassIridescenceStrength === 'number') {
+      this.glassIridescenceStrength = glassIridescenceStrength;
+    }
+
+    const glassInternalReflectionStrength = getChangedSetting(
+      changedSettings,
+      'glassInternalReflectionStrength'
+    )?.nextValue;
+    if (typeof glassInternalReflectionStrength === 'number') {
+      this.glassInternalReflectionStrength = glassInternalReflectionStrength;
+    }
+
+    const glassTransmissionStrength = getChangedSetting(
+      changedSettings,
+      'glassTransmissionStrength'
+    )?.nextValue;
+    if (typeof glassTransmissionStrength === 'number') {
+      this.glassTransmissionStrength = glassTransmissionStrength;
+    }
+
+    const glassEnvironmentIntensity = getChangedSetting(
+      changedSettings,
+      'glassEnvironmentIntensity'
+    )?.nextValue;
+    if (typeof glassEnvironmentIntensity === 'number') {
+      this.glassEnvironmentIntensity = glassEnvironmentIntensity;
+    }
+
+    const glassVolumeThickness = getChangedSetting(
+      changedSettings,
+      'glassVolumeThickness'
+    )?.nextValue;
+    if (typeof glassVolumeThickness === 'number') {
+      this.glassVolumeThickness = glassVolumeThickness;
+    }
+
+    const packetEmission = getChangedSetting(changedSettings, 'packetEmission')?.nextValue;
+    if (typeof packetEmission === 'number') {
+      this.packetEmission = packetEmission;
+    }
+
+    const packetTrailLength = getChangedSetting(changedSettings, 'packetTrailLength')?.nextValue;
+    if (typeof packetTrailLength === 'number') {
+      this.packetTrailLength = packetTrailLength;
+    }
+
+    const packetTrailIntensity = getChangedSetting(
+      changedSettings,
+      'packetTrailIntensity'
+    )?.nextValue;
+    if (typeof packetTrailIntensity === 'number') {
+      this.packetTrailIntensity = packetTrailIntensity;
+    }
+
+    const switchFlashIntensity = getChangedSetting(
+      changedSettings,
+      'switchFlashIntensity'
+    )?.nextValue;
+    if (typeof switchFlashIntensity === 'number') {
+      this.switchFlashIntensity = switchFlashIntensity;
+    }
+
+    const packetLightIntensity = getChangedSetting(
+      changedSettings,
+      'packetLightIntensity'
+    )?.nextValue;
+    if (typeof packetLightIntensity === 'number') {
+      this.packetLightIntensity = packetLightIntensity;
+    }
+
+    const packetLightRadius = getChangedSetting(changedSettings, 'packetLightRadius')?.nextValue;
+    if (typeof packetLightRadius === 'number') {
+      this.packetLightRadius = packetLightRadius;
+    }
+
+    const bloomIntensity = getChangedSetting(changedSettings, 'bloomIntensity')?.nextValue;
+    if (typeof bloomIntensity === 'number') {
+      this.bloomIntensity = bloomIntensity;
+    }
+
+    const bloomThreshold = getChangedSetting(changedSettings, 'bloomThreshold')?.nextValue;
+    if (typeof bloomThreshold === 'number') {
+      this.bloomThreshold = bloomThreshold;
+    }
+
+    const exposure = getChangedSetting(changedSettings, 'exposure')?.nextValue;
+    if (typeof exposure === 'number') {
+      this.exposure = exposure;
+    }
   };
 }
 
 const PACKET_SPRAYING_ARTICLE_URL = 'https://openai.com/index/mrc-supercomputer-networking/';
 
 const PACKET_SPRAYING_OVERVIEW_HTML = `\
+<p><strong>Network Packet Spraying</strong></p>
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
 <p>Packets enter their local Tier 0 switch as separate streams. Once the streams meet, the switch forwards alternating red and green packets across four representative independent network planes. The destination-side switches separate the traffic again and deliver each color to its intended server.</p>
-<p>Blue cubes are servers, glass spheres are switches, and faint tubes show the available fabric links. Only the links needed by the two conversations carry moving packets.</p>
+<p>Click any glass switch to move it through three states: healthy, orange and congested, red and failed, then healthy again.</p>
+<p>An orange switch trims overloaded packet payloads while their smaller headers continue. A red switch briefly loses in-flight packets before MRC retires the failed plane, retransmits over healthy routes, and sends occasional recovery probes.</p>
+<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and faint tubes show the available fabric links. Emissive packets leave short directional trails, briefly illuminate arriving switches, and cast localized colored light onto nearby surfaces.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Read OpenAI's supercomputer networking and MRC article</a></p>`;
 
 const PACKET_SPRAYING_BACKGROUND_HTML = `\
@@ -1232,78 +2364,11 @@ const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>How the two conversations mix:</strong> the red source talks to one destination, and the green source talks to another. Their packets can share the same switch-to-switch link, interleaving one red packet with one green packet before being separated near their destinations.</p>
 <p><strong>Planes and packet spraying:</strong> a high-bandwidth network interface can be split across multiple independent physical planes. In the article's example, an 800 Gb/s interface becomes eight 100 Gb/s connections. This visualization shows four representative paths; each conversation sprays successive packets across all four instead of waiting behind one busy link.</p>
 <p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
-<p><strong>Resilience:</strong> if a link, plane, or switch fails, the sender quickly retires the affected path and keeps using the remaining ones. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
+<p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
+<p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
-<p><strong>Rendering:</strong> this example composes reusable glass and reflective-material shader modules with exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending.</p>
+<p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, internal shell reflection, thin-film iridescence, and roughness-aware chromatic transmission. Emissive packet cores, directional trails, and switch flashes illuminate the glass through bounded point lights. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
-
-function makeLinks(conversationRoutes: ConversationRoute[]): NetworkLink[] {
-  const links: NetworkLink[] = [];
-  const activeLinkKeys = new Set<string>();
-
-  for (const {route} of conversationRoutes) {
-    for (let pointIndex = 0; pointIndex < route.points.length - 1; pointIndex++) {
-      activeLinkKeys.add(makeLinkKey(route.points[pointIndex], route.points[pointIndex + 1]));
-    }
-  }
-
-  for (let hostIndex = 0; hostIndex < HOST_POSITIONS.length; hostIndex++) {
-    const rowIndex = Math.floor(hostIndex / HOST_X_POSITIONS.length);
-    const columnIndex = hostIndex % HOST_X_POSITIONS.length;
-    const leafRowOffset = rowIndex < 2 ? 0 : HOST_X_POSITIONS.length;
-    const start = HOST_POSITIONS[hostIndex];
-    const end = LEAF_POSITIONS[leafRowOffset + columnIndex];
-    links.push({
-      start,
-      end,
-      startInset: getBoxSurfaceDistance(start, end, HOST_HALF_EXTENTS),
-      endInset: LEAF_SWITCH_RADIUS,
-      color: activeLinkKeys.has(makeLinkKey(start, end))
-        ? [0.43, 0.61, 0.91, 0.2]
-        : [0.3, 0.42, 0.66, 0.045]
-    });
-  }
-
-  for (let rowIndex = 0; rowIndex < 2; rowIndex++) {
-    const rowOffset = rowIndex * HOST_X_POSITIONS.length;
-    for (let leafColumnIndex = 0; leafColumnIndex < HOST_X_POSITIONS.length; leafColumnIndex++) {
-      for (
-        let aggregationColumnIndex = 0;
-        aggregationColumnIndex < HOST_X_POSITIONS.length;
-        aggregationColumnIndex++
-      ) {
-        const start = LEAF_POSITIONS[rowOffset + leafColumnIndex];
-        const end = AGGREGATION_POSITIONS[rowOffset + aggregationColumnIndex];
-        links.push({
-          start,
-          end,
-          startInset: LEAF_SWITCH_RADIUS,
-          endInset: AGGREGATION_SWITCH_RADIUS,
-          color: activeLinkKeys.has(makeLinkKey(start, end))
-            ? [0.45, 0.61, 0.91, 0.18]
-            : [0.3, 0.42, 0.66, 0.038]
-        });
-      }
-    }
-  }
-
-  for (const aggregationPosition of AGGREGATION_POSITIONS) {
-    for (let spineIndex = 0; spineIndex < SPINE_POSITIONS.length; spineIndex++) {
-      const end = SPINE_POSITIONS[spineIndex];
-      links.push({
-        start: aggregationPosition,
-        end,
-        startInset: AGGREGATION_SWITCH_RADIUS,
-        endInset: SPINE_SWITCH_RADIUS,
-        color: activeLinkKeys.has(makeLinkKey(aggregationPosition, end))
-          ? [0.47, 0.64, 0.93, 0.16]
-          : [0.3, 0.42, 0.66, 0.034]
-      });
-    }
-  }
-
-  return links;
-}
 
 function makeGlassInstances(): GlassInstance[] {
   const makeInstance = (position: Vector3, radius: number, color: Color): GlassInstance => ({
@@ -1325,154 +2390,46 @@ function makeGlassInstances(): GlassInstance[] {
   ];
 }
 
-function makePickableNetworkNodes(): PickableNetworkNode[] {
-  const servers = HOST_POSITIONS.map((_, hostIndex) => {
-    const sourceConversationIndex = CONVERSATIONS.findIndex(
-      conversation => conversation.sourceHostIndex === hostIndex
-    );
-    const destinationConversationIndex = CONVERSATIONS.findIndex(
-      conversation => conversation.destinationHostIndex === hostIndex
-    );
-    const rowIndex = Math.floor(hostIndex / HOST_X_POSITIONS.length) + 1;
-    const columnIndex = (hostIndex % HOST_X_POSITIONS.length) + 1;
-
-    if (sourceConversationIndex >= 0) {
-      const trafficColor = sourceConversationIndex === 0 ? 'red' : 'green';
-      return {
-        title: `Server ${hostIndex + 1}`,
-        role: `${trafficColor.toUpperCase()} source / grid row ${rowIndex}, column ${columnIndex}`,
-        description: `This server originates the ${trafficColor} transfer and sends its packets to a local Tier 0 switch.`,
-        detail:
-          'The outgoing stream is sprayed across independent network planes after meeting the other conversation.'
-      };
-    }
-
-    if (destinationConversationIndex >= 0) {
-      const trafficColor = destinationConversationIndex === 0 ? 'red' : 'green';
-      return {
-        title: `Server ${hostIndex + 1}`,
-        role: `${trafficColor.toUpperCase()} destination / grid row ${rowIndex}, column ${columnIndex}`,
-        description: `This server receives the ${trafficColor} transfer after the destination-side switches separate the interleaved streams.`,
-        detail:
-          'MRC writes each packet to its final memory address, so packets can arrive through different paths and out of order.'
-      };
-    }
-
-    return {
-      title: `Server ${hostIndex + 1}`,
-      role: `Available compute server / grid row ${rowIndex}, column ${columnIndex}`,
-      description:
-        'This server represents another GPU host connected to the same resilient network fabric.',
-      detail:
-        'It is not part of the two active conversations, so its links do not carry moving packets.'
-    };
-  });
-
-  const leafSwitches = LEAF_POSITIONS.map((_, switchIndex) => {
-    const side = switchIndex < HOST_X_POSITIONS.length ? 'source' : 'destination';
-    const columnIndex = (switchIndex % HOST_X_POSITIONS.length) + 1;
-    return {
-      title: `Tier 0 access switch ${switchIndex + 1}`,
-      role: `${side.toUpperCase()} side / server column ${columnIndex}`,
-      description:
-        side === 'source'
-          ? 'This switch gathers outgoing server traffic and forwards packets toward the independent planes.'
-          : 'This switch separates returning red and green packets and delivers each stream to the correct destination server.',
-      detail:
-        'Multiple local servers share the access tier; only the active source and destination paths carry packets.'
-    };
-  });
-
-  const aggregationSwitches = AGGREGATION_POSITIONS.map((_, switchIndex) => {
-    const planeIndex = (switchIndex % HOST_X_POSITIONS.length) + 1;
-    const side = switchIndex < HOST_X_POSITIONS.length ? 'ingress' : 'egress';
-    return {
-      title: `Plane ${planeIndex} ${side} switch`,
-      role: `Tier 1 switch / independent network plane ${planeIndex}`,
-      description:
-        side === 'ingress'
-          ? 'This ingress switch accepts alternating red and green packets from the source-side access tier.'
-          : 'This egress switch receives the mixed packet stream and forwards each packet toward its destination.',
-      detail: `Plane ${planeIndex} can continue carrying traffic independently of the other planes.`
-    };
-  });
-
-  const spineSwitches = SPINE_POSITIONS.map((_, switchIndex) => ({
-    title: `Spine switch ${switchIndex + 1}`,
-    role: `Fabric backbone / independent network plane ${switchIndex + 1}`,
-    description:
-      'This spine connects the ingress and egress sides of one independent routing plane.',
-    detail:
-      'Both conversations can share this path, interleaving one red packet with one green packet while other planes carry additional packets.'
-  }));
-
-  return [...servers, ...leafSwitches, ...aggregationSwitches, ...spineSwitches];
+function makeBalancedEmissionColor(color: Color, alpha: number): Color {
+  const luminance = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722;
+  const brightnessScale = 0.45 / Math.max(luminance, 0.2);
+  return [
+    color[0] * brightnessScale,
+    color[1] * brightnessScale,
+    color[2] * brightnessScale,
+    alpha
+  ];
 }
 
-function makeConversationRoutes(): ConversationRoute[] {
-  const conversationRoutes: ConversationRoute[] = [];
-  for (let conversationIndex = 0; conversationIndex < CONVERSATIONS.length; conversationIndex++) {
-    const conversation = CONVERSATIONS[conversationIndex];
-    const sourceColumnIndex = conversation.sourceHostIndex % HOST_X_POSITIONS.length;
-    const destinationColumnIndex = conversation.destinationHostIndex % HOST_X_POSITIONS.length;
-    for (let spineIndex = 0; spineIndex < SPINE_POSITIONS.length; spineIndex++) {
-      conversationRoutes.push({
-        conversationIndex,
-        route: makeRoute([
-          HOST_POSITIONS[conversation.sourceHostIndex],
-          LEAF_POSITIONS[sourceColumnIndex],
-          AGGREGATION_POSITIONS[spineIndex],
-          SPINE_POSITIONS[spineIndex],
-          AGGREGATION_POSITIONS[HOST_X_POSITIONS.length + spineIndex],
-          LEAF_POSITIONS[HOST_X_POSITIONS.length + destinationColumnIndex],
-          HOST_POSITIONS[conversation.destinationHostIndex]
-        ])
-      });
-    }
+function makeBloomPipeline(colorFormat: TextureFormatColor): ShaderPassPipeline {
+  return {
+    ...bloomShaderPassPipeline,
+    renderTargets: Object.fromEntries(
+      Object.entries(bloomShaderPassPipeline.renderTargets).map(([targetName, renderTarget]) => [
+        targetName,
+        {...renderTarget, format: colorFormat}
+      ])
+    )
+  };
+}
+
+function getSceneColorFormat(device: Device): TextureFormatColor {
+  const floatingPointCapabilities = device.getTextureFormatCapabilities('rgba16float');
+  if (floatingPointCapabilities.render && floatingPointCapabilities.filter) {
+    return 'rgba16float';
   }
-
-  return conversationRoutes;
+  return device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm';
 }
 
-function makePackets(conversationRoutes: ConversationRoute[]): Packet[] {
-  const packets: Packet[] = [];
-
-  for (let conversationIndex = 0; conversationIndex < CONVERSATIONS.length; conversationIndex++) {
-    const conversation = CONVERSATIONS[conversationIndex];
-    const routes = conversationRoutes.filter(
-      route => route.conversationIndex === conversationIndex
-    );
-    for (let packetIndex = 0; packetIndex < PACKETS_PER_BURST; packetIndex++) {
-      const {route} = routes[packetIndex % routes.length];
-      const sourceTravelTime = getDistance(route.points[0], route.points[1]) / PACKET_TRAVEL_SPEED;
-      const launchTime =
-        1 +
-        packetIndex * BURST_PACKET_INTERVAL +
-        (conversationIndex * BURST_PACKET_INTERVAL) / CONVERSATIONS.length -
-        sourceTravelTime;
-      packets.push({
-        route,
-        color: conversation.color,
-        launchTime,
-        scale: 0.115,
-        alpha: 1
-      });
-    }
-  }
-
-  return packets;
-}
-
-function makeLinkKey(start: Vector3, end: Vector3): string {
-  const startKey = start.join(',');
-  const endKey = end.join(',');
-  return startKey < endKey ? `${startKey}:${endKey}` : `${endKey}:${startKey}`;
-}
-
-function makeSceneTexture(device: Device, width: number, height: number): Texture {
+function makeSceneTexture(
+  device: Device,
+  width: number,
+  height: number,
+  format: TextureFormatColor
+): Texture {
   return device.createTexture({
     id: 'packet-spraying-scene-color',
-    format: device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm',
+    format,
     width,
     height,
     usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC,
@@ -1485,10 +2442,15 @@ function makeSceneTexture(device: Device, width: number, height: number): Textur
   });
 }
 
-function makeRefractionTexture(device: Device, width: number, height: number): Texture {
+function makeRefractionTexture(
+  device: Device,
+  width: number,
+  height: number,
+  format: TextureFormatColor
+): Texture {
   return device.createTexture({
     id: 'packet-spraying-refraction-color',
-    format: device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm',
+    format,
     width,
     height,
     usage: Texture.SAMPLE | Texture.COPY_DST,
@@ -1501,36 +2463,91 @@ function makeRefractionTexture(device: Device, width: number, height: number): T
   });
 }
 
-function makeRoute(points: Vector3[]): Route {
-  const cumulativeLengths = [0];
-  let totalLength = 0;
-  for (let pointIndex = 1; pointIndex < points.length; pointIndex++) {
-    totalLength += getDistance(points[pointIndex - 1], points[pointIndex]);
-    cumulativeLengths.push(totalLength);
-  }
-  return {points, cumulativeLengths, totalLength};
+function makeBackfaceTexture(
+  device: Device,
+  width: number,
+  height: number,
+  format: TextureFormatColor
+): Texture {
+  return device.createTexture({
+    id: 'packet-spraying-glass-backfaces',
+    format,
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER,
+    sampler: {
+      minFilter: 'linear',
+      magFilter: 'linear',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge'
+    }
+  });
 }
 
-function getPointAlongRoute(route: Route, progress: number): Vector3 {
-  const distance = progress * route.totalLength;
-  let segmentIndex = 0;
-  while (
-    segmentIndex < route.cumulativeLengths.length - 2 &&
-    route.cumulativeLengths[segmentIndex + 1] < distance
-  ) {
-    segmentIndex++;
+function makeStudioEnvironmentTexture(device: Device): Texture {
+  const width = 256;
+  const height = 128;
+  const pixels = new Uint8Array(width * height * 4);
+  const studioLights = [
+    {direction: [-0.58, 0.64, 0.5], color: [1, 0.92, 0.78], width: 0.11},
+    {direction: [0.72, 0.24, -0.58], color: [0.35, 0.62, 1], width: 0.16},
+    {direction: [0.05, 0.94, 0.33], color: [0.78, 0.88, 1], width: 0.085},
+    {direction: [-0.8, -0.12, -0.58], color: [0.42, 0.35, 0.8], width: 0.2}
+  ];
+
+  for (let row = 0; row < height; row++) {
+    const elevation = (row / (height - 1)) * Math.PI;
+    for (let column = 0; column < width; column++) {
+      const azimuth = (column / (width - 1) - 0.5) * Math.PI * 2;
+      const direction: Vector3 = [
+        Math.cos(azimuth) * Math.sin(elevation),
+        Math.cos(elevation),
+        Math.sin(azimuth) * Math.sin(elevation)
+      ];
+      const horizon = Math.pow(1 - Math.abs(direction[1]), 8);
+      const sky = Math.max(direction[1], 0);
+      const color: Vector3 = [
+        0.035 + sky * 0.065 + horizon * 0.09,
+        0.045 + sky * 0.085 + horizon * 0.12,
+        0.075 + sky * 0.16 + horizon * 0.19
+      ];
+
+      for (const light of studioLights) {
+        const alignment = Math.max(
+          direction[0] * light.direction[0] +
+            direction[1] * light.direction[1] +
+            direction[2] * light.direction[2],
+          0
+        );
+        const intensity = Math.pow(alignment, 1 / light.width ** 2);
+        color[0] += light.color[0] * intensity * 0.78;
+        color[1] += light.color[1] * intensity * 0.78;
+        color[2] += light.color[2] * intensity * 0.78;
+      }
+
+      const pixelOffset = (row * width + column) * 4;
+      pixels[pixelOffset] = Math.round(Math.min(color[0], 1) * 255);
+      pixels[pixelOffset + 1] = Math.round(Math.min(color[1], 1) * 255);
+      pixels[pixelOffset + 2] = Math.round(Math.min(color[2], 1) * 255);
+      pixels[pixelOffset + 3] = 255;
+    }
   }
 
-  const startDistance = route.cumulativeLengths[segmentIndex];
-  const endDistance = route.cumulativeLengths[segmentIndex + 1];
-  const segmentProgress = (distance - startDistance) / (endDistance - startDistance);
-  const start = route.points[segmentIndex];
-  const end = route.points[segmentIndex + 1];
-  return [
-    start[0] + (end[0] - start[0]) * segmentProgress,
-    start[1] + (end[1] - start[1]) * segmentProgress,
-    start[2] + (end[2] - start[2]) * segmentProgress
-  ];
+  const environmentTexture = device.createTexture({
+    id: 'packet-spraying-studio-environment',
+    width,
+    height,
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.COPY_DST,
+    sampler: {
+      minFilter: 'linear',
+      magFilter: 'linear',
+      addressModeU: 'repeat',
+      addressModeV: 'clamp-to-edge'
+    }
+  });
+  environmentTexture.writeData(pixels);
+  return environmentTexture;
 }
 
 function makeObjectMatrix(position: Vector3, scale: Vector3): Matrix4 {
@@ -1597,33 +2614,13 @@ function flattenColors(colors: Color[]): Float32Array {
   return new Float32Array(colors.flat());
 }
 
-function getDistance(start: Vector3, end: Vector3): number {
-  return Math.hypot(end[0] - start[0], end[1] - start[1], end[2] - start[2]);
-}
-
-function getDistanceSquared(start: Vector3, end: Vector3): number {
-  const differenceX = end[0] - start[0];
-  const differenceY = end[1] - start[1];
-  const differenceZ = end[2] - start[2];
-  return differenceX * differenceX + differenceY * differenceY + differenceZ * differenceZ;
-}
-
-function getBoxSurfaceDistance(start: Vector3, end: Vector3, halfExtents: Vector3): number {
-  const distance = getDistance(start, end);
-  const direction: Vector3 = [
-    (end[0] - start[0]) / distance,
-    (end[1] - start[1]) / distance,
-    (end[2] - start[2]) / distance
-  ];
-  return Math.min(
-    direction[0] === 0 ? Infinity : halfExtents[0] / Math.abs(direction[0]),
-    direction[1] === 0 ? Infinity : halfExtents[1] / Math.abs(direction[1]),
-    direction[2] === 0 ? Infinity : halfExtents[2] / Math.abs(direction[2])
-  );
-}
-
 function wrap(value: number, limit: number): number {
   return ((value % limit) + limit) % limit;
+}
+
+function smoothstep(edgeStart: number, edgeEnd: number, value: number): number {
+  const progress = Math.max(0, Math.min(1, (value - edgeStart) / (edgeEnd - edgeStart)));
+  return progress * progress * (3 - 2 * progress);
 }
 
 function isTransparencyMode(value: unknown): value is TransparencyMode {
@@ -1683,6 +2680,94 @@ function makeSettingsSchema(
         ]
       },
       {
+        id: 'packet-lighting',
+        name: 'Emissive Packets',
+        initiallyCollapsed: false,
+        settings: [
+          {
+            name: 'packetEmission',
+            label: 'Packet Emission',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 8,
+            step: 0.1
+          },
+          {
+            name: 'packetTrailLength',
+            label: 'Packet Trail Length',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.35,
+            step: 0.01
+          },
+          {
+            name: 'packetTrailIntensity',
+            label: 'Packet Trail Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
+            step: 0.05
+          },
+          {
+            name: 'switchFlashIntensity',
+            label: 'Switch Arrival Flash',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
+            step: 0.05
+          },
+          {
+            name: 'packetLightIntensity',
+            label: 'Local Light Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'packetLightRadius',
+            label: 'Local Light Radius',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'bloomIntensity',
+            label: 'Bloom Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.02
+          },
+          {
+            name: 'bloomThreshold',
+            label: 'Bloom Threshold',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 2.5,
+            step: 0.02
+          },
+          {
+            name: 'exposure',
+            label: 'Exposure',
+            type: 'number',
+            persist: 'none',
+            min: 0.25,
+            max: 2.5,
+            step: 0.05
+          }
+        ]
+      },
+      {
         id: 'glass',
         name: 'Glass Material',
         initiallyCollapsed: false,
@@ -1721,6 +2806,78 @@ function makeSettingsSchema(
             persist: 'none',
             min: 0.2,
             max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassRefractionStrength',
+            label: 'Lens Distortion',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassFresnelStrength',
+            label: 'Fresnel Edge',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassClearcoatStrength',
+            label: 'Clearcoat Highlight',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'glassIridescenceStrength',
+            label: 'Spectral Edge',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.6,
+            step: 0.01
+          },
+          {
+            name: 'glassInternalReflectionStrength',
+            label: 'Internal Reflection',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'glassTransmissionStrength',
+            label: 'Transmission',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.6,
+            step: 0.05
+          },
+          {
+            name: 'glassEnvironmentIntensity',
+            label: 'Studio Reflections',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 3,
+            step: 0.05
+          },
+          {
+            name: 'glassVolumeThickness',
+            label: 'Volume Thickness',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 2,
             step: 0.05
           }
         ]

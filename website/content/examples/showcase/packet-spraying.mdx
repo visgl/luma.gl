@@ -1,5 +1,5 @@
 ---
-title: Network Packet Spraying
+title: 'Effects: Glass'
 ---
 
 import {ExampleHeader} from '@site/src/react-luma';
@@ -7,15 +7,18 @@ import {PacketSprayingExample} from '@site/src/examples';
 
 <ExampleHeader
   id="packet-spraying"
-  title="Network Packet Spraying"
+  title="Effects: Glass"
+  subtitle="Network Packet Spraying"
   directory="showcase"
   devices={['webgl2', 'webgpu']}
 >
   <div>
     Two servers send red and green transfers to two destination servers. Their packets interleave
     on shared links, spread across independent network planes, and separate again at their
-    destinations. The example demonstrates the throughput and resilience advantages of Multipath
-    Reliable Connection (MRC), alongside reusable glass materials and order-independent transparency.
+    destinations. Emissive packets illuminate nearby glass switches, metallic server cubes, and
+    reflective links before selective bloom and filmic tone mapping. The example demonstrates the
+    throughput and resilience advantages of Multipath Reliable Connection (MRC), alongside reusable
+    optical materials and order-independent transparency.
   </div>
 </ExampleHeader>
 

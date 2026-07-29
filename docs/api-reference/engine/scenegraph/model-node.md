@@ -15,6 +15,7 @@ export type ModelNodeProps = ScenegraphNodeProps & {
   model: Model;
   managedResources?: any[];
   bounds?: [[number, number, number], [number, number, number]];
+  instanceMatrices?: readonly NumericArray[];
 };
 ```
 
@@ -26,7 +27,14 @@ The model drawn by this node.
 
 ### `bounds`
 
-Optional bounds returned by `getBounds()`.
+Optional local bounds for one model instance. When `instanceMatrices` is provided, the constructor
+transforms all eight corners by every instance matrix and stores their aggregate bounding box.
+
+### `instanceMatrices`
+
+Optional transforms corresponding to the model's instanced draw. Providing these matrices lets a
+single `ModelNode` participate in scenegraph bounds and depth sorting without splitting its draw
+into individual nodes. An empty instance list has no bounds.
 
 ### `managedResources`
 
@@ -44,7 +52,7 @@ Destroys the model and any managed resources.
 
 ### `getBounds(): [number[], number[]] | null`
 
-Returns the configured bounds.
+Returns the configured local bounds, or aggregate local bounds across all configured instances.
 
 ### `draw(renderPass: RenderPass): boolean`
 

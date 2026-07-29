@@ -51,7 +51,8 @@ struct ABufferHeadPointers {
 };
 
 struct ABufferFragment {
-  color: u32,
+  colorRedGreen: u32,
+  colorBlueAlpha: u32,
   depth: f32,
   next: u32,
 };
@@ -123,7 +124,11 @@ fn aBufferResolve_sampleColor(
   var transparentColor = vec4<f32>(0.0);
   var compositeIndex = 0u;
   while (compositeIndex < fragmentCount) {
-    let fragmentColor = unpack4x8unorm(capturedFragments[compositeIndex].color);
+    let capturedFragment = capturedFragments[compositeIndex];
+    let fragmentColor = vec4<f32>(
+      unpack2x16float(capturedFragment.colorRedGreen),
+      unpack2x16float(capturedFragment.colorBlueAlpha)
+    );
     transparentColor = fragmentColor + transparentColor * (1.0 - fragmentColor.a);
     compositeIndex += 1u;
   }

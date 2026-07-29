@@ -8,6 +8,10 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 Fresnel-weighted environment reflection with roughness-adjusted key and fill highlights, without
 requiring the captured scene-color texture used by `glassMaterial`.
 
+Environment reflections follow the camera-reflected view direction as the viewpoint moves. Output
+opacity is clamped to the full zero-to-one range, allowing translucent links and fully opaque
+metallic surfaces to share the same material.
+
 ```ts
 import {
   reflectiveMaterial,
@@ -40,6 +44,11 @@ fn reflectiveMaterial_getColor(
 GLSL exposes the equivalent `vec4 reflectiveMaterial_getColor(...)` function. Install
 `reflectiveMaterialPlugin` when creating the model so the helper and shared optical-lighting
 dependency are present in the assembled shader.
+
+Install `opticalPointLightsPlugin` as well and call
+`reflectiveMaterial_getIlluminatedColor(...)` to add bounded world-space point lights. Its
+arguments match `reflectiveMaterial_getColor(...)`, and the original helper retains its existing
+behavior when dynamic local lighting is unnecessary.
 
 ```ts
 import {Model, ShaderInputs} from '@luma.gl/engine';

@@ -765,7 +765,8 @@ function createTargetResources(
     width: targetSize[0],
     height: targetSize[1],
     format: spec.format || device.preferredColorFormat,
-    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+    ...(spec.sampler ? {sampler: spec.sampler} : {})
   });
   const framebuffer = device.createFramebuffer({
     id: `${name}-framebuffer`,

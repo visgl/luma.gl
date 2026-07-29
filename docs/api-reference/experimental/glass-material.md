@@ -12,6 +12,8 @@ Beer-Lambert absorption, and roughness-dependent highlights.
 import {
   glassMaterial,
   glassMaterialPlugin,
+  glassTransmission,
+  glassTransmissionPlugin,
   opticalLighting,
   type GlassMaterialBindings,
   type GlassMaterialProps,
@@ -29,7 +31,13 @@ import {
 | `roughness` | `number` | `0.14` | Surface roughness between zero and one. |
 | `dispersion` | `number` | `0.022` | Separation of red, green, and blue transmission samples. |
 | `thickness` | `number` | `1.05` | Approximate optical distance used for transmission and absorption. |
+| `refractionStrength` | `number` | `1` | Camera-aligned background lens displacement. |
 | `reflectionStrength` | `number` | `1` | Multiplier for environment reflection and highlights. |
+| `fresnelStrength` | `number` | `1` | Grazing-angle reflection multiplier. |
+| `clearcoatStrength` | `number` | `0.7` | Secondary polished surface highlight. |
+| `iridescenceStrength` | `number` | `0.1` | Thin-film spectral edge variation. |
+| `internalReflectionStrength` | `number` | `0.42` | Internal environment-bounce multiplier. |
+| `transmissionStrength` | `number` | `1` | Amount of transmitted scene color. |
 
 ## Shader Helper
 
@@ -46,6 +54,32 @@ fn glassMaterial_getColor(
 GLSL exposes the equivalent `vec4 glassMaterial_getColor(...)` function. Add
 `glassMaterialPlugin` to the model so the helper and its shared `opticalLighting` dependency are
 installed before compilation.
+
+For surfaces illuminated by nearby moving lights, install `opticalPointLightsPlugin` alongside
+`glassMaterialPlugin` and call `glassMaterial_getIlluminatedColor(...)` with the same arguments.
+Bind `opticalPointLights` through `ShaderInputs` with up to `MAX_OPTICAL_POINT_LIGHTS` world-space
+light positions, colors, radii, and intensities. The original `glassMaterial_getColor(...)`
+remains available for scenes without dynamic local lights.
+
+## Rasterized Volume Extension
+
+Install `glassTransmissionPlugin` to add depth-aware, two-surface transmission without changing
+existing `glassMaterial_getColor(...)` consumers.
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `viewportSize` | `[number, number]` | `[1, 1]` | Dimensions shared by the scene and backface textures. |
+| `depthRange` | `[number, number]` | `[0.1, 100]` | Near and far perspective clip planes. |
+| `sceneDepthTexture` | `Texture` | Required for rendering. | Sampleable opaque-scene depth attachment. |
+| `backfaceTexture` | `Texture` | Required for rendering. | Encoded world-space backface normals and depth. |
+| `environmentTexture` | `Texture` | Required for rendering. | Equirectangular studio or HDR environment. |
+| `environmentIntensity` | `number` | `1` | Environment reflection multiplier. |
+| `thicknessStrength` | `number` | `1` | Measured optical-path multiplier. |
+| `depthBias` | `number` | `0.00008` | Foreground depth-comparison tolerance. |
+
+Use `glassTransmission_getColor(...)`, or add `opticalPointLightsPlugin` and use
+`glassTransmission_getIlluminatedColor(...)` for localized illumination. Both are available in
+matching WGSL and GLSL forms.
 
 ## Usage
 

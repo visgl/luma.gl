@@ -11,11 +11,33 @@ export {HTMLTexture} from './textures/html-texture';
 
 export {opticalLighting} from './materials/optical-lighting';
 export type {
+  OpticalPointLight,
+  OpticalPointLightUniform,
+  OpticalPointLightsProps,
+  OpticalPointLightsUniforms
+} from './materials/optical-point-lights';
+export {
+  MAX_OPTICAL_POINT_LIGHTS,
+  opticalPointLights,
+  opticalPointLightsPlugin
+} from './materials/optical-point-lights';
+export type {
+  EmissiveMaterialProps,
+  EmissiveMaterialUniforms
+} from './materials/emissive-material';
+export {emissiveMaterial, emissiveMaterialPlugin} from './materials/emissive-material';
+export type {
   GlassMaterialBindings,
   GlassMaterialProps,
   GlassMaterialUniforms
 } from './materials/glass-material';
 export {glassMaterial, glassMaterialPlugin} from './materials/glass-material';
+export type {
+  GlassTransmissionBindings,
+  GlassTransmissionProps,
+  GlassTransmissionUniforms
+} from './materials/glass-transmission';
+export {glassTransmission, glassTransmissionPlugin} from './materials/glass-transmission';
 export type {
   ReflectiveMaterialProps,
   ReflectiveMaterialUniforms
@@ -57,6 +79,7 @@ export type {
   WBOITCaptureContext,
   WBOITCaptureOptions,
   WBOITRenderOptions,
+  WBOITRendererProps,
   WBOITSupport
 } from './oit/wboit-renderer';
 export {getWBOITSupport, WBOITRenderer} from './oit/wboit-renderer';
