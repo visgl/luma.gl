@@ -10,6 +10,7 @@ type DeveloperDocsTab = {
 /** Developer documentation tab identifiers. */
 export type DeveloperDocsTabId =
   | 'overview'
+  | 'ai'
   | 'contributing'
   | 'editing'
   | 'testing'
@@ -19,6 +20,11 @@ export type DeveloperDocsTabId =
 
 const DEVELOPER_DOCS_TABS: DeveloperDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/developer-guide'},
+  {
+    id: 'ai',
+    label: 'AI Agents',
+    href: '/docs/developer-guide/working-with-ai'
+  },
   {id: 'contributing', label: 'Contributing', href: '/docs/developer-guide/contributing'},
   {id: 'editing', label: 'Editing', href: '/docs/developer-guide/editing'},
   {id: 'testing', label: 'Testing', href: '/docs/developer-guide/testing'},

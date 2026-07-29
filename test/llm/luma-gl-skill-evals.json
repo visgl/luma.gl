@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "description": "Offline prompts and scoring criteria for manually comparing luma.gl agent behavior before and after loading the luma-gl skill.",
+  "cases": [
+    {
+      "id": "application-setup-current-packages",
+      "category": "application-setup",
+      "prompt": "Add luma.gl to this TypeScript application and render a first frame with WebGPU preferred and WebGL 2 fallback.",
+      "expectedBehaviors": [
+        "Inspect the package manager, lockfile, installed @luma.gl package versions, and exported declarations before choosing APIs.",
+        "Choose Engine for the application loop and model-level work, with concrete WebGPU and WebGL adapters.",
+        "Keep backend selection at device or animation-loop startup.",
+        "Run the application typecheck and observe the frame in a real browser."
+      ],
+      "forbiddenMistakes": [
+        "Assume an API signature from model memory without checking the installed declarations.",
+        "Install or use @luma.gl/core without importing a concrete adapter."
+      ],
+      "canonicalSources": [
+        "docs/getting-started.mdx",
+        "docs/api-guide/README.md",
+        "docs/developer-guide/installing.md",
+        "skills/luma-gl/references/architecture.md"
+      ]
+    },
+    {
+      "id": "outdated-program-api",
+      "category": "outdated-apis",
+      "prompt": "Fix this luma.gl v9 application that copied an old Program-based rendering example and no longer typechecks.",
+      "expectedBehaviors": [
+        "Confirm the installed luma.gl major and exact package versions.",
+        "Inspect the declarations to determine the current RenderPipeline, Model, or resource API that matches the task.",
+        "Use matching release documentation and explain the narrow migration being made.",
+        "Typecheck the migrated path and exercise it in the browser."
+      ],
+      "forbiddenMistakes": [
+        "Invent a compatibility shim for a removed API without evidence that the project needs one.",
+        "Upgrade packages or rewrite unrelated rendering code merely to make the old sample compile."
+      ],
+      "canonicalSources": [
+        "docs/developer-guide/installing.md",
+        "docs/api-guide/gpu/gpu-resources.md",
+        "docs/api-reference/core/resources/render-pipeline.md",
+        "skills/luma-gl/references/architecture.md"
+      ]
+    },
+    {
+      "id": "webgpu-only-storage-feature",
+      "category": "webgpu-only-features",
+      "prompt": "Implement a compute feature backed by storage buffers, but keep the existing WebGL 2 rendering application usable.",
+      "expectedBehaviors": [
+        "Identify compute and storage buffers as WebGPU-only capabilities.",
+        "Put the feature behind an explicit backend or feature check.",
+        "Keep the existing WebGL 2 render path usable without pretending it executes the compute feature.",
+        "Test the supported WebGPU path and the clear unsupported WebGL 2 behavior."
+      ],
+      "forbiddenMistakes": [
+        "Claim that luma.gl automatically translates the compute path to WebGL 2.",
+        "Request maximum device capabilities without checking the feature actually needed."
+      ],
+      "canonicalSources": [
+        "docs/api-guide/background/webgpu-vs-webgl.md",
+        "docs/api-guide/gpu/gpu-storage-buffers.md",
+        "docs/api-reference/core/device-features.mdx",
+        "skills/luma-gl/references/portability.md"
+      ]
+    },
+    {
+      "id": "blank-canvas-debugging",
+      "category": "blank-canvases",
+      "prompt": "The application typechecks and starts without throwing, but the luma.gl canvas stays blank. Diagnose it.",
+      "expectedBehaviors": [
+        "Reproduce the issue and collect the selected backend, console output, page errors, failed requests, and a screenshot.",
+        "Check device and adapters, canvas context, shader compilation, layouts and bindings, data, then render pass and draw in that order.",
+        "Confirm that draw counts, viewport, attachments, pass completion, and presentation are valid.",
+        "Force each supported backend separately to distinguish a portable bug from a backend-specific bug."
+      ],
+      "forbiddenMistakes": [
+        "Declare success because typechecking or the development server process passed.",
+        "Change shader math at random before confirming device, context, and binding state."
+      ],
+      "canonicalSources": [
+        "docs/developer-guide/debugging.md",
+        "docs/api-guide/gpu/gpu-rendering.md",
+        "dev-modules/devtools-extensions/docs/playwright.md",
+        "skills/luma-gl/references/debugging.md"
+      ]
+    },
+    {
+      "id": "binding-layout-mismatch",
+      "category": "bindings-and-layouts",
+      "prompt": "A model compiles, but WebGPU reports a binding or layout mismatch and WebGL 2 renders corrupted attributes.",
+      "expectedBehaviors": [
+        "Compare the shader layout, vertex buffer layout, logical binding names, resource types, offsets, strides, and formats.",
+        "Inspect the assembled WGSL bindings and matching GLSL contract.",
+        "Inspect a small sample of uploaded data and reject undefined or non-finite values.",
+        "Keep the fix localized at the layout, adapter, or model boundary that owns the mismatch."
+      ],
+      "forbiddenMistakes": [
+        "Silence TypeScript with broad casts instead of reconciling layouts and resource types.",
+        "Rename shader inputs on one backend without updating the shared application-facing contract."
+      ],
+      "canonicalSources": [
+        "docs/api-guide/gpu/gpu-bindings.md",
+        "docs/api-guide/gpu/gpu-memory-layouts.md",
+        "docs/api-reference/core/shader-layout.md",
+        "skills/luma-gl/references/debugging.md"
+      ]
+    },
+    {
+      "id": "owned-resource-cleanup",
+      "category": "resource-cleanup",
+      "prompt": "A component repeatedly mounts and unmounts a luma.gl model and GPU buffers. Stop its GPU memory growth.",
+      "expectedBehaviors": [
+        "Identify which models, buffers, textures, animation loops, or helpers the component owns.",
+        "Destroy owned resources at the matching unmount or lifecycle boundary.",
+        "Avoid destroying devices or resources borrowed from the application.",
+        "Use resource identifiers and profiling evidence to verify that repeated mounts no longer grow the live resource set."
+      ],
+      "forbiddenMistakes": [
+        "Rely on JavaScript garbage collection to release GPU resources promptly.",
+        "Destroy shared or borrowed resources to make the local leak counter fall."
+      ],
+      "canonicalSources": [
+        "docs/api-reference/core/resources/resource.md",
+        "docs/api-reference/engine/model.md",
+        "docs/developer-guide/profiling.md",
+        "skills/luma-gl/references/architecture.md"
+      ]
+    },
+    {
+      "id": "dual-backend-shader-portability",
+      "category": "backend-portability",
+      "prompt": "Add a reusable rendering effect that must behave the same on WebGPU and WebGL 2.",
+      "expectedBehaviors": [
+        "Maintain matching WGSL and GLSL ES 3.00 implementations with one logical input contract.",
+        "Align attributes, varyings, bindings, uniforms, module props, and observable output.",
+        "Use named auto bindings for WGSL assembled by shadertools when supported by the installed version.",
+        "Force and compare both backends with logs and screenshots."
+      ],
+      "forbiddenMistakes": [
+        "Claim that luma.gl transpiles the application shader between WGSL and GLSL.",
+        "Allow automatic fallback to count as verification of both backends."
+      ],
+      "canonicalSources": [
+        "docs/api-guide/shaders/writing-portable-shaders.md",
+        "docs/api-reference/shadertools/wgsl-support.md",
+        "docs/api-guide/gpu/gpu-bindings.md",
+        "skills/luma-gl/references/portability.md"
+      ]
+    },
+    {
+      "id": "repository-contributor-tests",
+      "category": "contributor-testing",
+      "prompt": "Make a shared luma.gl package API change and get it ready for merge.",
+      "expectedBehaviors": [
+        "Read AGENTS.md and any scoped repository instructions before editing.",
+        "Use the stable root test scripts and run focused tests while iterating.",
+        "Run yarn lint fix after changes.",
+        "Run the final yarn build and yarn test gates rather than substituting yarn test-node."
+      ],
+      "forbiddenMistakes": [
+        "Call internal Vitest or Playwright wiring directly when a stable root command exists.",
+        "Present a focused Node test as sufficient merge verification for a shared API change."
+      ],
+      "canonicalSources": [
+        "AGENTS.md",
+        "dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md",
+        "docs/developer-guide/testing.md",
+        "skills/luma-gl/references/contributing.md"
+      ]
+    },
+    {
+      "id": "website-debug-artifacts",
+      "category": "website-debugging",
+      "prompt": "Debug a luma.gl website example that works in WebGL 2 but fails in WebGPU and report evidence.",
+      "expectedBehaviors": [
+        "Run yarn website-debug from the repository root with the example and explicit WebGPU backend.",
+        "Inspect the final URL, screenshot, WebGPU probe, and page diagnostics artifacts.",
+        "Compare against an explicit WebGL 2 run without automatic fallback.",
+        "Report console errors, selected backend, screenshot evidence, and the smallest isolated difference."
+      ],
+      "forbiddenMistakes": [
+        "Claim the visual task passed only because website-debug exited successfully.",
+        "Ignore the saved page diagnostics or screenshot while guessing at a shader fix."
+      ],
+      "canonicalSources": [
+        "AGENTS.md",
+        "dev-modules/devtools-extensions/docs/playwright.md",
+        "dev-modules/devtools-extensions/docs/browser-debug.md",
+        "skills/luma-gl/references/contributing.md"
+      ]
+    }
+  ]
+}

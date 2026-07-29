@@ -107,6 +107,35 @@ module.exports = {
       return plugin;
     }),
     [
+      '@signalwire/docusaurus-plugin-llms-txt',
+      {
+        siteTitle: 'luma.gl',
+        siteDescription:
+          'WebGPU and WebGL2 framework documentation for visualization and compute.',
+        depth: 3,
+        enableDescriptions: true,
+        includeOrder: [
+          '/docs/getting-started',
+          '/docs/tutorials/**',
+          '/docs/api-guide/**',
+          '/docs/api-reference/**',
+          '/docs/developer-guide/**'
+        ],
+        onRouteError: 'throw',
+        content: {
+          enableMarkdownFiles: true,
+          enableLlmsFullTxt: false,
+          relativePaths: false,
+          includeBlog: false,
+          includePages: false,
+          includeDocs: true,
+          includeVersionedDocs: false,
+          includeGeneratedIndex: true,
+          excludeRoutes: ['/docs/legacy/**', '/examples/**']
+        }
+      }
+    ],
+    [
       'docusaurus-plugin-typedoc',
       {
         id: 'core-api-reference',

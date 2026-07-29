@@ -69,7 +69,8 @@
     "h3-js": "^4.4.0",
     "pre-commit": "^1.2.2",
     "vite": "^8.0.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "yaml": "^2.8.1"
   },
   "resolutions": {
     "@docusaurus/plugin-client-redirects": "^3.9.2",
