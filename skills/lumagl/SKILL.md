@@ -1,5 +1,5 @@
 ---
-name: luma-gl
+name: lumagl
 description: Design, implement, update, and debug luma.gl applications and repository changes with version-aware API selection, WebGPU/WebGL portability, browser-based GPU diagnosis, and project-specific verification. Use when working with @luma.gl packages, luma.gl shaders or resources, blank or incorrect canvases, backend compatibility, or the visgl/luma.gl repository.
 ---
 

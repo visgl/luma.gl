@@ -19,9 +19,9 @@ type EvalCorpus = {
 };
 
 const repositoryDirectory = process.cwd();
-const skillDirectory = path.join(repositoryDirectory, 'skills/luma-gl');
+const skillDirectory = path.join(repositoryDirectory, 'skills/lumagl');
 const skillPath = path.join(skillDirectory, 'SKILL.md');
-const evalPath = path.join(repositoryDirectory, 'test/llm/luma-gl-skill-evals.json');
+const evalPath = path.join(repositoryDirectory, 'test/llm/lumagl-skill-evals.json');
 
 function readSkillFrontmatter(): {frontmatter: Record<string, unknown>; body: string} {
   const skill = readFileSync(skillPath, 'utf8');
@@ -34,12 +34,12 @@ function readSkillFrontmatter(): {frontmatter: Record<string, unknown>; body: st
   };
 }
 
-describe('luma-gl Agent Skill', () => {
+describe('lumagl Agent Skill', () => {
   test('uses valid portable frontmatter and local references', () => {
     const {frontmatter, body} = readSkillFrontmatter();
 
     expect(Object.keys(frontmatter).sort()).toEqual(['description', 'name']);
-    expect(frontmatter.name).toBe('luma-gl');
+    expect(frontmatter.name).toBe('lumagl');
     expect(typeof frontmatter.description).toBe('string');
     expect((frontmatter.description as string).length).toBeGreaterThan(80);
 

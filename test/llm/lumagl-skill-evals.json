@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Offline prompts and scoring criteria for manually comparing luma.gl agent behavior before and after loading the luma-gl skill.",
+  "description": "Offline prompts and scoring criteria for manually comparing luma.gl agent behavior before and after loading the lumagl skill.",
   "cases": [
     {
       "id": "application-setup-current-packages",
@@ -20,7 +20,7 @@
         "docs/getting-started.mdx",
         "docs/api-guide/README.md",
         "docs/developer-guide/installing.md",
-        "skills/luma-gl/references/architecture.md"
+        "skills/lumagl/references/architecture.md"
       ]
     },
     {
@@ -41,7 +41,7 @@
         "docs/developer-guide/installing.md",
         "docs/api-guide/gpu/gpu-resources.md",
         "docs/api-reference/core/resources/render-pipeline.md",
-        "skills/luma-gl/references/architecture.md"
+        "skills/lumagl/references/architecture.md"
       ]
     },
     {
@@ -62,7 +62,7 @@
         "docs/api-guide/background/webgpu-vs-webgl.md",
         "docs/api-guide/gpu/gpu-storage-buffers.md",
         "docs/api-reference/core/device-features.mdx",
-        "skills/luma-gl/references/portability.md"
+        "skills/lumagl/references/portability.md"
       ]
     },
     {
@@ -83,7 +83,7 @@
         "docs/developer-guide/debugging.md",
         "docs/api-guide/gpu/gpu-rendering.md",
         "dev-modules/devtools-extensions/docs/playwright.md",
-        "skills/luma-gl/references/debugging.md"
+        "skills/lumagl/references/debugging.md"
       ]
     },
     {
@@ -104,7 +104,7 @@
         "docs/api-guide/gpu/gpu-bindings.md",
         "docs/api-guide/gpu/gpu-memory-layouts.md",
         "docs/api-reference/core/shader-layout.md",
-        "skills/luma-gl/references/debugging.md"
+        "skills/lumagl/references/debugging.md"
       ]
     },
     {
@@ -125,7 +125,7 @@
         "docs/api-reference/core/resources/resource.md",
         "docs/api-reference/engine/model.md",
         "docs/developer-guide/profiling.md",
-        "skills/luma-gl/references/architecture.md"
+        "skills/lumagl/references/architecture.md"
       ]
     },
     {
@@ -146,7 +146,7 @@
         "docs/api-guide/shaders/writing-portable-shaders.md",
         "docs/api-reference/shadertools/wgsl-support.md",
         "docs/api-guide/gpu/gpu-bindings.md",
-        "skills/luma-gl/references/portability.md"
+        "skills/lumagl/references/portability.md"
       ]
     },
     {
@@ -167,7 +167,7 @@
         "AGENTS.md",
         "dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md",
         "docs/developer-guide/testing.md",
-        "skills/luma-gl/references/contributing.md"
+        "skills/lumagl/references/contributing.md"
       ]
     },
     {
@@ -188,7 +188,7 @@
         "AGENTS.md",
         "dev-modules/devtools-extensions/docs/playwright.md",
         "dev-modules/devtools-extensions/docs/browser-debug.md",
-        "skills/luma-gl/references/contributing.md"
+        "skills/lumagl/references/contributing.md"
       ]
     }
   ]

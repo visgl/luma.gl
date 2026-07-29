@@ -49,13 +49,13 @@ The repository contains an official progressive Agent Skill that routes applicat
 design, portability, GPU debugging, and repository contribution tasks:
 
 ```bash
-npx skills add visgl/luma.gl --skill luma-gl
+npx skills add visgl/luma.gl --skill lumagl
 ```
 
-After installation, ask your agent to use the `luma-gl` skill. A useful prompt names the
+After installation, ask your agent to use the `lumagl` skill. A useful prompt names the
 goal, supported backends, installed luma.gl version, and observable success condition:
 
-> Use the luma-gl skill to add this render path for WebGPU and WebGL 2. Confirm the
+> Use the lumagl skill to add this render path for WebGPU and WebGL 2. Confirm the
 > installed package APIs, run the typecheck, exercise both backends in a real browser,
 > and report console errors and screenshots.
 
