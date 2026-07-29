@@ -7,7 +7,7 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from '@luma.gl/arrow';
 import type {ArrowPolygonViewState} from './arrow-polygon-data';
-import {ArrowPolygonSource} from './arrow-polygon-source';
+import {ArrowPolygonDataSource} from './arrow-polygon-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Polygons';
@@ -18,7 +18,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   static info = makeArrowExamplePanelHostHtml();
   static props = {useDevicePixels: true};
   readonly layer: ArrowPolygonRenderer;
-  readonly source: ArrowPolygonSource;
+  readonly dataSource: ArrowPolygonDataSource;
   viewState: ArrowPolygonViewState | null = null;
   animationSeconds = 0;
   lastRenderSeconds: number | null = null;
@@ -29,20 +29,20 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
       model: 'attribute',
       onPick: this.handlePolygonPicked
     });
-    this.source = new ArrowPolygonSource(
-      device as Device,
-      update => {
+    this.dataSource = new ArrowPolygonDataSource({
+      onDataUpdated: update => {
         this.viewState = update.viewState;
         this.animationSeconds = 0;
         this.lastRenderSeconds = null;
-        this.layer.setProps(update);
+        const {viewState: _viewState, layerProps, ...rendererProps} = update;
+        this.layer.setProps({...rendererProps, ...layerProps});
       },
-      props => this.layer.setProps(props)
-    );
+      onRendererPropsUpdated: props => this.layer.setProps(props)
+    });
   }
 
   override async onInitialize(): Promise<void> {
-    this.source.initialize();
+    this.dataSource.initialize(this.layer.device);
   }
 
   override onRender({aspect, device, time, _mousePosition}: AnimationProps): void {
@@ -58,7 +58,7 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.layer.destroy();
   }
 
@@ -83,6 +83,6 @@ export default class ArrowPolygonAnimationLoopTemplate extends AnimationLoopTemp
     batchIndex,
     rowIndex
   }: ArrowPolygonRendererPickingInfo): void => {
-    this.source.setPickedRow(batchIndex, rowIndex);
+    this.dataSource.setPickedRow(batchIndex, rowIndex);
   };
 }

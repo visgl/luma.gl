@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowParticleRenderer} from './arrow-particle-renderer';
-import {ArrowParticleSource} from './arrow-particle-source';
+import {ArrowParticleDataSource} from './arrow-particle-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Particles: FixedSizeList<Float32, 2>';
@@ -16,27 +16,29 @@ export const description =
 export default class ArrowParticlesAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
   readonly layer: ArrowParticleRenderer;
-  readonly source: ArrowParticleSource;
+  readonly dataSource: ArrowParticleDataSource;
 
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowParticleRenderer(device as Device);
-    this.source = new ArrowParticleSource(props => this.layer.setProps(props));
+    this.dataSource = new ArrowParticleDataSource({
+      onDataUpdated: props => this.layer.setProps(props)
+    });
   }
 
   override async onInitialize(): Promise<void> {
-    this.source.initialize();
+    this.dataSource.initialize();
   }
 
   override onRender({device, time}: AnimationProps): void {
-    if (this.layer.update(time)) this.source.restart();
+    if (this.layer.update(time)) this.dataSource.restart();
     const renderPass = device.beginRenderPass({clearColor: [0.01, 0.02, 0.05, 1]});
     this.layer.draw(renderPass);
     renderPass.end();
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.layer.destroy();
   }
 }

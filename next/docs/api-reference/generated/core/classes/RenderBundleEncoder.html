@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-api-reference/generated/core/classes/RenderBundleEncoder" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">Abstract Class: RenderBundleEncoder | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Abstract Class: RenderBundleEncoder | luma.gl"><meta data-rh="true" name="description" content="Defined in75"><meta data-rh="true" property="og:description" content="Defined in75"><link data-rh="true" rel="icon" href="/next/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder"><link data-rh="true" rel="alternate" href="https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder" hreflang="x-default"><link rel="stylesheet" href="/next/assets/css/styles.60cc7285.css">
+<script src="/next/assets/js/runtime~main.78a25e48.js" defer="defer"></script>
+<script src="/next/assets/js/main.0b57a307.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"light"),document.documentElement.setAttribute("data-theme-choice",t||"light")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_oPtH" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/next/"><div class="navbar__logo"><img src="/next/visgl-logo-dark.png" alt="vis.gl Logo" class="themedComponent_siVc themedComponent--light_hHel"><img src="/next/visgl-logo-light.png" alt="vis.gl Logo" class="themedComponent_siVc themedComponent--dark_yETr"></div><b class="navbar__title text--truncate">luma.gl</b></a><a class="navbar__item navbar__link" href="/next/examples">Examples</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/next/docs">Docs</a><a class="navbar__item navbar__link" href="/next/docs/tutorials">Tutorials</a><a href="https://medium.com/vis-gl" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/visgl/luma.gl" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_ki11 colorModeToggle_Hewu"><button class="clean-btn toggleButton_MMFG toggleButtonDisabled_Uw7m" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_k9hJ lightToggleIcon_lgto"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_k9hJ darkToggleIcon_U96C"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_k9hJ systemToggleIcon_E5c0"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_bzqh"><div class="dsla-search-wrapper"><div class="dsla-search-field" data-tags="default,docs-default-current,docs-examples-current"></div></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_MB5r"><div class="docsWrapper__sE8"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_iEvu" type="button"></button><div class="docRoot_DfVB"><main class="docMainContainer_a9sJ docMainContainerEnhanced_grEJ"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_Qr34"><div class="docItemContainer_tjFy"><article><div class="tocCollapsible_wXna theme-doc-toc-mobile tocMobile_Ojys"><button type="button" class="clean-btn tocCollapsibleButton_iI2p">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Abstract Class: RenderBundleEncoder</h1></header>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L75" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:75</a></p>
+<p>Records reusable WebGPU draw commands without beginning a render pass.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id="remarks">Remarks<a href="#remarks" class="hash-link" aria-label="Direct link to Remarks" title="Direct link to Remarks" translate="no">​</a></h2>
+<p>Call <a href="#finish" class="">RenderBundleEncoder.finish</a> to create an immutable <a class="" href="/next/docs/api-reference/generated/core/classes/RenderBundle">RenderBundle</a>. The
+attachment formats and sample count supplied when creating the encoder must match every
+<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass">RenderPass</a> that executes the finished bundle.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id="extends">Extends<a href="#extends" class="hash-link" aria-label="Direct link to Extends" title="Direct link to Extends" translate="no">​</a></h2>
+<ul>
+<li class=""><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a></li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id="constructors">Constructors<a href="#constructors" class="hash-link" aria-label="Direct link to Constructors" title="Direct link to Constructors" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="constructor">Constructor<a href="#constructor" class="hash-link" aria-label="Direct link to Constructor" title="Direct link to Constructor" translate="no">​</a></h3>
+<blockquote>
+<p><strong>new RenderBundleEncoder</strong>(<code>device</code>, <code>props?</code>): <code>RenderBundleEncoder</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L84" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:84</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters">Parameters<a href="#parameters" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="device">device<a href="#device" class="hash-link" aria-label="Direct link to device" title="Direct link to device" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/Device"><code>Device</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="props">props?<a href="#props" class="hash-link" aria-label="Direct link to props?" title="Direct link to props?" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/type-aliases/RenderBundleEncoderProps"><code>RenderBundleEncoderProps</code></a> = <code>{}</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns">Returns<a href="#returns" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>RenderBundleEncoder</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="overrides">Overrides<a href="#overrides" class="hash-link" aria-label="Direct link to Overrides" title="Direct link to Overrides" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#constructor"><code>constructor</code></a></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id="properties">Properties<a href="#properties" class="hash-link" aria-label="Direct link to Properties" title="Direct link to Properties" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="destroyed">destroyed<a href="#destroyed" class="hash-link" aria-label="Direct link to destroyed" title="Direct link to destroyed" translate="no">​</a></h3>
+<blockquote>
+<p><strong>destroyed</strong>: <code>boolean</code> = <code>false</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L131" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:131</a></p>
+<p>Whether this resource has been destroyed</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from">Inherited from<a href="#inherited-from" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#destroyed"><code>destroyed</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="device-1">device<a href="#device-1" class="hash-link" aria-label="Direct link to device" title="Direct link to device" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <code>readonly</code> <strong>device</strong>: <a class="" href="/next/docs/api-reference/generated/core/classes/Device"><code>Device</code></a></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L124" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:124</a></p>
+<p>The device that this resource is associated with</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-1">Inherited from<a href="#inherited-from-1" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#device"><code>device</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="handle">handle<a href="#handle" class="hash-link" aria-label="Direct link to handle" title="Direct link to handle" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <code>readonly</code> <strong>handle</strong>: <code>unknown</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L126" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:126</a></p>
+<p>The handle for the underlying resource, e.g. WebGL object or WebGPU handle</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-2">Inherited from<a href="#inherited-from-2" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#handle"><code>handle</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="id">id<a href="#id" class="hash-link" aria-label="Direct link to id" title="Direct link to id" translate="no">​</a></h3>
+<blockquote>
+<p><strong>id</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L118" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:118</a></p>
+<p>props.id, for debugging.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-3">Inherited from<a href="#inherited-from-3" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#id"><code>id</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="props-1">props<a href="#props-1" class="hash-link" aria-label="Direct link to props" title="Direct link to props" translate="no">​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>props</strong>: <code>Required</code>&lt;<code>Props</code>&gt;</p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L120" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:120</a></p>
+<p>The props that this resource was created with</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-4">Inherited from<a href="#inherited-from-4" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#props"><code>props</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="userdata">userData<a href="#userdata" class="hash-link" aria-label="Direct link to userData" title="Direct link to userData" translate="no">​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>userData</strong>: <code>Record</code>&lt;<code>string</code>, <code>unknown</code>&gt; = <code>{}</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L122" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:122</a></p>
+<p>User data object, reserved for the application</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-5">Inherited from<a href="#inherited-from-5" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#userdata"><code>userData</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="defaultclearcolor">defaultClearColor<a href="#defaultclearcolor" class="hash-link" aria-label="Direct link to defaultClearColor" title="Direct link to defaultClearColor" translate="no">​</a></h3>
+<blockquote>
+<p><code>static</code> <strong>defaultClearColor</strong>: [<code>number</code>, <code>number</code>, <code>number</code>, <code>number</code>]</p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L101" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:101</a></p>
+<p>TODO - should be [0, 0, 0, 0], update once deck.gl tests run clean</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-6">Inherited from<a href="#inherited-from-6" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#defaultclearcolor"><code>defaultClearColor</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="defaultcleardepth">defaultClearDepth<a href="#defaultcleardepth" class="hash-link" aria-label="Direct link to defaultClearDepth" title="Direct link to defaultClearDepth" translate="no">​</a></h3>
+<blockquote>
+<p><code>static</code> <strong>defaultClearDepth</strong>: <code>number</code> = <code>1</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L103" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:103</a></p>
+<p>Depth 1.0 represents the far plance</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-7">Inherited from<a href="#inherited-from-7" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#defaultcleardepth"><code>defaultClearDepth</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="defaultclearstencil">defaultClearStencil<a href="#defaultclearstencil" class="hash-link" aria-label="Direct link to defaultClearStencil" title="Direct link to defaultClearStencil" translate="no">​</a></h3>
+<blockquote>
+<p><code>static</code> <strong>defaultClearStencil</strong>: <code>number</code> = <code>0</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L105" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:105</a></p>
+<p>Clears all stencil bits</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-8">Inherited from<a href="#inherited-from-8" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#defaultclearstencil"><code>defaultClearStencil</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="defaultprops">defaultProps<a href="#defaultprops" class="hash-link" aria-label="Direct link to defaultProps" title="Direct link to defaultProps" translate="no">​</a></h3>
+<blockquote>
+<p><code>static</code> <strong>defaultProps</strong>: <code>Required</code>&lt;<a class="" href="/next/docs/api-reference/generated/core/type-aliases/RenderPassProps"><code>RenderPassProps</code></a>&gt;</p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L174" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:174</a></p>
+<p>Default properties for RenderPass</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-9">Inherited from<a href="#inherited-from-9" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#defaultprops"><code>defaultProps</code></a></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id="accessors">Accessors<a href="#accessors" class="hash-link" aria-label="Direct link to Accessors" title="Direct link to Accessors" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="tostringtag">[toStringTag]<a href="#tostringtag" class="hash-link" aria-label="Direct link to [toStringTag]" title="Direct link to [toStringTag]" translate="no">​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="get-signature">Get Signature<a href="#get-signature" class="hash-link" aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate="no">​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>[toStringTag]</strong>(): <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L76" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:76</a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="returns-1">Returns<a href="#returns-1" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h5>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="overrides-1">Overrides<a href="#overrides-1" class="hash-link" aria-label="Direct link to Overrides" title="Direct link to Overrides" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#tostringtag"><code>[toStringTag]</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="ishandleborrowed">isHandleBorrowed<a href="#ishandleborrowed" class="hash-link" aria-label="Direct link to isHandleBorrowed" title="Direct link to isHandleBorrowed" translate="no">​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="get-signature-1">Get Signature<a href="#get-signature-1" class="hash-link" aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate="no">​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>isHandleBorrowed</strong>(): <code>boolean</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L147" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:147</a></p>
+<p>Whether luma.gl may only reference the opaque externally owned resource handle.</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="returns-2">Returns<a href="#returns-2" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h5>
+<p><code>boolean</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-10">Inherited from<a href="#inherited-from-10" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#ishandleborrowed"><code>isHandleBorrowed</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="ownshandle">ownsHandle<a href="#ownshandle" class="hash-link" aria-label="Direct link to ownsHandle" title="Direct link to ownsHandle" translate="no">​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="get-signature-2">Get Signature<a href="#get-signature-2" class="hash-link" aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate="no">​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>ownsHandle</strong>(): <code>boolean</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L140" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:140</a></p>
+<p>Whether luma.gl created and owns the underlying resource handle.</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="returns-3">Returns<a href="#returns-3" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h5>
+<p><code>boolean</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-11">Inherited from<a href="#inherited-from-11" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#ownshandle"><code>ownsHandle</code></a></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id="methods">Methods<a href="#methods" class="hash-link" aria-label="Direct link to Methods" title="Direct link to Methods" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="attachresource">attachResource()<a href="#attachresource" class="hash-link" aria-label="Direct link to attachResource()" title="Direct link to attachResource()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>attachResource</strong>(<code>resource</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L200" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:200</a></p>
+<p>Attaches a resource. Attached resources are auto destroyed when this resource is destroyed
+Called automatically when sub resources are auto created but can be called by application</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-1">Parameters<a href="#parameters-1" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="resource">resource<a href="#resource" class="hash-link" aria-label="Direct link to resource" title="Direct link to resource" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/Resource"><code>Resource</code></a>&lt;<a class="" href="/next/docs/api-reference/generated/core/type-aliases/ResourceProps"><code>ResourceProps</code></a>&gt;</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-4">Returns<a href="#returns-4" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-12">Inherited from<a href="#inherited-from-12" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#attachresource"><code>attachResource</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="beginocclusionquery">beginOcclusionQuery()<a href="#beginocclusionquery" class="hash-link" aria-label="Direct link to beginOcclusionQuery()" title="Direct link to beginOcclusionQuery()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>beginOcclusionQuery</strong>(<code>_queryIndex</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L119" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:119</a></p>
+<p>Render bundle encoders cannot begin occlusion queries.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-2">Parameters<a href="#parameters-2" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="_queryindex">_queryIndex<a href="#_queryindex" class="hash-link" aria-label="Direct link to _queryIndex" title="Direct link to _queryIndex" translate="no">​</a></h5>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-5">Returns<a href="#returns-5" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="throws">Throws<a href="#throws" class="hash-link" aria-label="Direct link to Throws" title="Direct link to Throws" translate="no">​</a></h4>
+<p>Always throws.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="overrides-2">Overrides<a href="#overrides-2" class="hash-link" aria-label="Direct link to Overrides" title="Direct link to Overrides" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#beginocclusionquery"><code>beginOcclusionQuery</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="delete"><del>delete()</del><a href="#delete" class="hash-link" aria-label="Direct link to delete" title="Direct link to delete" translate="no">​</a></h3>
+<blockquote>
+<p><strong>delete</strong>(): <code>this</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L181" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:181</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-6">Returns<a href="#returns-6" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>this</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="deprecated">Deprecated<a href="#deprecated" class="hash-link" aria-label="Direct link to Deprecated" title="Direct link to Deprecated" translate="no">​</a></h4>
+<p>Use destroy()</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-13">Inherited from<a href="#inherited-from-13" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#delete"><code>delete</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="destroy">destroy()<a href="#destroy" class="hash-link" aria-label="Direct link to destroy()" title="Direct link to destroy()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>destroy</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L173" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:173</a></p>
+<p>destroy can be called on any resource to release it before it is garbage collected.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-7">Returns<a href="#returns-7" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-14">Inherited from<a href="#inherited-from-14" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#destroy"><code>destroy</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="destroyattachedresource">destroyAttachedResource()<a href="#destroyattachedresource" class="hash-link" aria-label="Direct link to destroyAttachedResource()" title="Direct link to destroyAttachedResource()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>destroyAttachedResource</strong>(<code>resource</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L214" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:214</a></p>
+<p>Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-3">Parameters<a href="#parameters-3" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="resource-1">resource<a href="#resource-1" class="hash-link" aria-label="Direct link to resource" title="Direct link to resource" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/Resource"><code>Resource</code></a>&lt;<a class="" href="/next/docs/api-reference/generated/core/type-aliases/ResourceProps"><code>ResourceProps</code></a>&gt;</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-8">Returns<a href="#returns-8" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-15">Inherited from<a href="#inherited-from-15" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#destroyattachedresource"><code>destroyAttachedResource</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="destroyattachedresources">destroyAttachedResources()<a href="#destroyattachedresources" class="hash-link" aria-label="Direct link to destroyAttachedResources()" title="Direct link to destroyAttachedResources()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>destroyAttachedResources</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L221" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:221</a></p>
+<p>Destroy all owned resources. Make sure the resources are no longer needed before calling.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-9">Returns<a href="#returns-9" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-16">Inherited from<a href="#inherited-from-16" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#destroyattachedresources"><code>destroyAttachedResources</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="detachresource">detachResource()<a href="#detachresource" class="hash-link" aria-label="Direct link to detachResource()" title="Direct link to detachResource()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>detachResource</strong>(<code>resource</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L207" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:207</a></p>
+<p>Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-4">Parameters<a href="#parameters-4" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="resource-2">resource<a href="#resource-2" class="hash-link" aria-label="Direct link to resource" title="Direct link to resource" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/Resource"><code>Resource</code></a>&lt;<a class="" href="/next/docs/api-reference/generated/core/type-aliases/ResourceProps"><code>ResourceProps</code></a>&gt;</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-10">Returns<a href="#returns-10" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-17">Inherited from<a href="#inherited-from-17" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#detachresource"><code>detachResource</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="draw">draw()<a href="#draw" class="hash-link" aria-label="Direct link to draw()" title="Direct link to draw()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>draw</strong>(<code>options</code>): <code>boolean</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L142" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:142</a></p>
+<p>Issues a draw using the currently selected pipeline, bindings, and vertex array.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-5">Parameters<a href="#parameters-5" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="options">options<a href="#options" class="hash-link" aria-label="Direct link to options" title="Direct link to options" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/type-aliases/RenderPassDrawOptions"><code>RenderPassDrawOptions</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-11">Returns<a href="#returns-11" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>boolean</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-18">Inherited from<a href="#inherited-from-18" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#draw"><code>draw</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="drawindexedindirect">drawIndexedIndirect()<a href="#drawindexedindirect" class="hash-link" aria-label="Direct link to drawIndexedIndirect()" title="Direct link to drawIndexedIndirect()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>drawIndexedIndirect</strong>(<code>indirectBuffer</code>, <code>indirectByteOffset?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L148" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:148</a></p>
+<p>Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-6">Parameters<a href="#parameters-6" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="indirectbuffer">indirectBuffer<a href="#indirectbuffer" class="hash-link" aria-label="Direct link to indirectBuffer" title="Direct link to indirectBuffer" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/Buffer"><code>Buffer</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="indirectbyteoffset">indirectByteOffset?<a href="#indirectbyteoffset" class="hash-link" aria-label="Direct link to indirectByteOffset?" title="Direct link to indirectByteOffset?" translate="no">​</a></h5>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-12">Returns<a href="#returns-12" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-19">Inherited from<a href="#inherited-from-19" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#drawindexedindirect"><code>drawIndexedIndirect</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="drawindirect">drawIndirect()<a href="#drawindirect" class="hash-link" aria-label="Direct link to drawIndirect()" title="Direct link to drawIndirect()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>drawIndirect</strong>(<code>indirectBuffer</code>, <code>indirectByteOffset?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L145" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:145</a></p>
+<p>Issues a non-indexed draw using four uint32 arguments stored in an indirect buffer.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-7">Parameters<a href="#parameters-7" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="indirectbuffer-1">indirectBuffer<a href="#indirectbuffer-1" class="hash-link" aria-label="Direct link to indirectBuffer" title="Direct link to indirectBuffer" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/Buffer"><code>Buffer</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="indirectbyteoffset-1">indirectByteOffset?<a href="#indirectbyteoffset-1" class="hash-link" aria-label="Direct link to indirectByteOffset?" title="Direct link to indirectByteOffset?" translate="no">​</a></h5>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-13">Returns<a href="#returns-13" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-20">Inherited from<a href="#inherited-from-20" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#drawindirect"><code>drawIndirect</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="end">end()<a href="#end" class="hash-link" aria-label="Direct link to end()" title="Direct link to end()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>end</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L103" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:103</a></p>
+<p>Render bundle encoders cannot be ended like render passes.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-14">Returns<a href="#returns-14" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="throws-1">Throws<a href="#throws-1" class="hash-link" aria-label="Direct link to Throws" title="Direct link to Throws" translate="no">​</a></h4>
+<p>Always throws. Call <a href="#finish" class="">RenderBundleEncoder.finish</a> instead.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="overrides-3">Overrides<a href="#overrides-3" class="hash-link" aria-label="Direct link to Overrides" title="Direct link to Overrides" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#end"><code>end</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="endocclusionquery">endOcclusionQuery()<a href="#endocclusionquery" class="hash-link" aria-label="Direct link to endOcclusionQuery()" title="Direct link to endOcclusionQuery()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>endOcclusionQuery</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L127" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:127</a></p>
+<p>Render bundle encoders cannot end occlusion queries.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-15">Returns<a href="#returns-15" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="throws-2">Throws<a href="#throws-2" class="hash-link" aria-label="Direct link to Throws" title="Direct link to Throws" translate="no">​</a></h4>
+<p>Always throws.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="overrides-4">Overrides<a href="#overrides-4" class="hash-link" aria-label="Direct link to Overrides" title="Direct link to Overrides" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#endocclusionquery"><code>endOcclusionQuery</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="executebundles">executeBundles()<a href="#executebundles" class="hash-link" aria-label="Direct link to executeBundles()" title="Direct link to executeBundles()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>executeBundles</strong>(<code>bundles</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L155" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:155</a></p>
+<p>Replays reusable draw commands recorded by one or more render bundle encoders.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-8">Parameters<a href="#parameters-8" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="bundles">bundles<a href="#bundles" class="hash-link" aria-label="Direct link to bundles" title="Direct link to bundles" translate="no">​</a></h5>
+<p><code>Iterable</code>&lt;<a class="" href="/next/docs/api-reference/generated/core/classes/RenderBundle"><code>RenderBundle</code></a>&gt;</p>
+<p>Bundles whose attachment formats and sample count are compatible with this pass.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-16">Returns<a href="#returns-16" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="throws-3">Throws<a href="#throws-3" class="hash-link" aria-label="Direct link to Throws" title="Direct link to Throws" translate="no">​</a></h4>
+<p>On backends other than WebGPU.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-21">Inherited from<a href="#inherited-from-21" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#executebundles"><code>executeBundles</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="finish">finish()<a href="#finish" class="hash-link" aria-label="Direct link to finish()" title="Direct link to finish()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>finish</strong>(): <a class="" href="/next/docs/api-reference/generated/core/classes/RenderBundle"><code>RenderBundle</code></a></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L97" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:97</a></p>
+<p>Completes recording and invalidates this encoder.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-17">Returns<a href="#returns-17" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderBundle"><code>RenderBundle</code></a></p>
+<p>An immutable reusable bundle that inherits this encoder&#x27;s <code>id</code> and <code>userData</code>.</p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="getprops">getProps()<a href="#getprops" class="hash-link" aria-label="Direct link to getProps()" title="Direct link to getProps()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>getProps</strong>(): <code>object</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L190" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:190</a></p>
+<p>Combines a map of user props and default props, only including props from defaultProps</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-18">Returns<a href="#returns-18" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>object</code></p>
+<p>returns a map of overridden default props</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-22">Inherited from<a href="#inherited-from-22" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#getprops"><code>getProps</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="insertdebugmarker">insertDebugMarker()<a href="#insertdebugmarker" class="hash-link" aria-label="Direct link to insertDebugMarker()" title="Direct link to insertDebugMarker()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>insertDebugMarker</strong>(<code>markerLabel</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L167" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:167</a></p>
+<p>Marks a point in a stream of commands with a label</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-9">Parameters<a href="#parameters-9" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="markerlabel">markerLabel<a href="#markerlabel" class="hash-link" aria-label="Direct link to markerLabel" title="Direct link to markerLabel" translate="no">​</a></h5>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-19">Returns<a href="#returns-19" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-23">Inherited from<a href="#inherited-from-23" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#insertdebugmarker"><code>insertDebugMarker</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="popdebuggroup">popDebugGroup()<a href="#popdebuggroup" class="hash-link" aria-label="Direct link to popDebugGroup()" title="Direct link to popDebugGroup()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>popDebugGroup</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L165" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:165</a></p>
+<p>Ends the labeled debug group most recently started by pushDebugGroup()</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-20">Returns<a href="#returns-20" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-24">Inherited from<a href="#inherited-from-24" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#popdebuggroup"><code>popDebugGroup</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="pushdebuggroup">pushDebugGroup()<a href="#pushdebuggroup" class="hash-link" aria-label="Direct link to pushDebugGroup()" title="Direct link to pushDebugGroup()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>pushDebugGroup</strong>(<code>groupLabel</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L163" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:163</a></p>
+<p>Begins a labeled debug group containing subsequent commands</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-10">Parameters<a href="#parameters-10" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="grouplabel">groupLabel<a href="#grouplabel" class="hash-link" aria-label="Direct link to groupLabel" title="Direct link to groupLabel" translate="no">​</a></h5>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-21">Returns<a href="#returns-21" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-25">Inherited from<a href="#inherited-from-25" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#pushdebuggroup"><code>pushDebugGroup</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="setbindings">setBindings()<a href="#setbindings" class="hash-link" aria-label="Direct link to setBindings()" title="Direct link to setBindings()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>setBindings</strong>(<code>bindings</code>, <code>options?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L133" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:133</a></p>
+<p>Replaces the complete binding set used by subsequent draw commands.
+A pipeline must be selected first so bindings can be resolved against its shader layout.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-11">Parameters<a href="#parameters-11" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="bindings">bindings<a href="#bindings" class="hash-link" aria-label="Direct link to bindings" title="Direct link to bindings" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/type-aliases/Bindings"><code>Bindings</code></a> | <code>Partial</code>&lt;<code>Record</code>&lt;<code>number</code>, <a class="" href="/next/docs/api-reference/generated/core/type-aliases/Bindings"><code>Bindings</code></a>&gt;&gt;</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="options-1">options?<a href="#options-1" class="hash-link" aria-label="Direct link to options?" title="Direct link to options?" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/type-aliases/RenderPassBindingOptions"><code>RenderPassBindingOptions</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-22">Returns<a href="#returns-22" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-26">Inherited from<a href="#inherited-from-26" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#setbindings"><code>setBindings</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="setparameters">setParameters()<a href="#setparameters" class="hash-link" aria-label="Direct link to setParameters()" title="Direct link to setParameters()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>setParameters</strong>(<code>_parameters</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L111" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-bundle.ts:111</a></p>
+<p>Render bundle encoders do not support render-pass dynamic state.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-12">Parameters<a href="#parameters-12" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="_parameters">_parameters<a href="#_parameters" class="hash-link" aria-label="Direct link to _parameters" title="Direct link to _parameters" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/type-aliases/RenderPassParameters"><code>RenderPassParameters</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-23">Returns<a href="#returns-23" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="throws-4">Throws<a href="#throws-4" class="hash-link" aria-label="Direct link to Throws" title="Direct link to Throws" translate="no">​</a></h4>
+<p>Always throws.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="overrides-5">Overrides<a href="#overrides-5" class="hash-link" aria-label="Direct link to Overrides" title="Direct link to Overrides" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#setparameters"><code>setParameters</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="setpipeline">setPipeline()<a href="#setpipeline" class="hash-link" aria-label="Direct link to setPipeline()" title="Direct link to setPipeline()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>setPipeline</strong>(<code>pipeline</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L127" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:127</a></p>
+<p>Selects the pipeline used by subsequent binding and draw commands.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-13">Parameters<a href="#parameters-13" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="pipeline">pipeline<a href="#pipeline" class="hash-link" aria-label="Direct link to pipeline" title="Direct link to pipeline" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPipeline"><code>RenderPipeline</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-24">Returns<a href="#returns-24" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-27">Inherited from<a href="#inherited-from-27" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#setpipeline"><code>setPipeline</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="setvertexarray">setVertexArray()<a href="#setvertexarray" class="hash-link" aria-label="Direct link to setVertexArray()" title="Direct link to setVertexArray()" translate="no">​</a></h3>
+<blockquote>
+<p><code>abstract</code> <strong>setVertexArray</strong>(<code>vertexArray</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L139" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/render-pass.ts:139</a></p>
+<p>Selects the vertex array used by subsequent draw commands.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="parameters-14">Parameters<a href="#parameters-14" class="hash-link" aria-label="Direct link to Parameters" title="Direct link to Parameters" translate="no">​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id="vertexarray">vertexArray<a href="#vertexarray" class="hash-link" aria-label="Direct link to vertexArray" title="Direct link to vertexArray" translate="no">​</a></h5>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/VertexArray"><code>VertexArray</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-25">Returns<a href="#returns-25" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-28">Inherited from<a href="#inherited-from-28" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#setvertexarray"><code>setVertexArray</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="tojson">toJSON()<a href="#tojson" class="hash-link" aria-label="Direct link to toJSON()" title="Direct link to toJSON()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>toJSON</strong>(): <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L113" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:113</a></p>
+<p>Compact serialization for assertion diffs and structured debug logs.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-26">Returns<a href="#returns-26" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-29">Inherited from<a href="#inherited-from-29" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#tojson"><code>toJSON</code></a></p>
+<hr>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id="tostring">toString()<a href="#tostring" class="hash-link" aria-label="Direct link to toString()" title="Direct link to toString()" translate="no">​</a></h3>
+<blockquote>
+<p><strong>toString</strong>(): <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href="https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108" target="_blank" rel="noopener noreferrer" class="">modules/core/src/adapter/resources/resource.ts:108</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="returns-27">Returns<a href="#returns-27" class="hash-link" aria-label="Direct link to Returns" title="Direct link to Returns" translate="no">​</a></h4>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id="inherited-from-30">Inherited from<a href="#inherited-from-30" class="hash-link" aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate="no">​</a></h4>
+<p><a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass"><code>RenderPass</code></a>.<a class="" href="/next/docs/api-reference/generated/core/classes/RenderPass#tostring"><code>toString</code></a></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_QeZL"><a href="https://github.com/visgl/luma.gl/tree/master/docs/../docs/api-reference/generated/core/classes/RenderBundleEncoder.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_bHB7" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_ydrU"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"></nav></div></div><div class="col col--3"><div class="tableOfContents_XG6w thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#remarks" class="table-of-contents__link toc-highlight">Remarks</a></li><li><a href="#extends" class="table-of-contents__link toc-highlight">Extends</a></li><li><a href="#constructors" class="table-of-contents__link toc-highlight">Constructors</a><ul><li><a href="#constructor" class="table-of-contents__link toc-highlight">Constructor</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href="#destroyed" class="table-of-contents__link toc-highlight">destroyed</a></li><li><a href="#device-1" class="table-of-contents__link toc-highlight">device</a></li><li><a href="#handle" class="table-of-contents__link toc-highlight">handle</a></li><li><a href="#id" class="table-of-contents__link toc-highlight">id</a></li><li><a href="#props-1" class="table-of-contents__link toc-highlight">props</a></li><li><a href="#userdata" class="table-of-contents__link toc-highlight">userData</a></li><li><a href="#defaultclearcolor" class="table-of-contents__link toc-highlight">defaultClearColor</a></li><li><a href="#defaultcleardepth" class="table-of-contents__link toc-highlight">defaultClearDepth</a></li><li><a href="#defaultclearstencil" class="table-of-contents__link toc-highlight">defaultClearStencil</a></li><li><a href="#defaultprops" class="table-of-contents__link toc-highlight">defaultProps</a></li></ul></li><li><a href="#accessors" class="table-of-contents__link toc-highlight">Accessors</a><ul><li><a href="#tostringtag" class="table-of-contents__link toc-highlight">[toStringTag]</a></li><li><a href="#ishandleborrowed" class="table-of-contents__link toc-highlight">isHandleBorrowed</a></li><li><a href="#ownshandle" class="table-of-contents__link toc-highlight">ownsHandle</a></li></ul></li><li><a href="#methods" class="table-of-contents__link toc-highlight">Methods</a><ul><li><a href="#attachresource" class="table-of-contents__link toc-highlight">attachResource()</a></li><li><a href="#beginocclusionquery" class="table-of-contents__link toc-highlight">beginOcclusionQuery()</a></li><li><a href="#delete" class="table-of-contents__link toc-highlight"><del>delete()</del></a></li><li><a href="#destroy" class="table-of-contents__link toc-highlight">destroy()</a></li><li><a href="#destroyattachedresource" class="table-of-contents__link toc-highlight">destroyAttachedResource()</a></li><li><a href="#destroyattachedresources" class="table-of-contents__link toc-highlight">destroyAttachedResources()</a></li><li><a href="#detachresource" class="table-of-contents__link toc-highlight">detachResource()</a></li><li><a href="#draw" class="table-of-contents__link toc-highlight">draw()</a></li><li><a href="#drawindexedindirect" class="table-of-contents__link toc-highlight">drawIndexedIndirect()</a></li><li><a href="#drawindirect" class="table-of-contents__link toc-highlight">drawIndirect()</a></li><li><a href="#end" class="table-of-contents__link toc-highlight">end()</a></li><li><a href="#endocclusionquery" class="table-of-contents__link toc-highlight">endOcclusionQuery()</a></li><li><a href="#executebundles" class="table-of-contents__link toc-highlight">executeBundles()</a></li><li><a href="#finish" class="table-of-contents__link toc-highlight">finish()</a></li><li><a href="#getprops" class="table-of-contents__link toc-highlight">getProps()</a></li><li><a href="#insertdebugmarker" class="table-of-contents__link toc-highlight">insertDebugMarker()</a></li><li><a href="#popdebuggroup" class="table-of-contents__link toc-highlight">popDebugGroup()</a></li><li><a href="#pushdebuggroup" class="table-of-contents__link toc-highlight">pushDebugGroup()</a></li><li><a href="#setbindings" class="table-of-contents__link toc-highlight">setBindings()</a></li><li><a href="#setparameters" class="table-of-contents__link toc-highlight">setParameters()</a></li><li><a href="#setpipeline" class="table-of-contents__link toc-highlight">setPipeline()</a></li><li><a href="#setvertexarray" class="table-of-contents__link toc-highlight">setVertexArray()</a></li><li><a href="#tojson" class="table-of-contents__link toc-highlight">toJSON()</a></li><li><a href="#tostring" class="table-of-contents__link toc-highlight">toString()</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Other vis.gl Libraries</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https:/deck.gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">deck.gl<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://loaders.gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">loaders.gl<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://visgl.github.io/react-map-gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">react-map-gl<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://visgl.github.io/deck.gl-community/" target="_blank" rel="noopener noreferrer" class="footer__link-item">deck.gl-community<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">More</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://medium.com/vis-gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">vis.gl blog on Medium<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/visgl/luma.gl" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPrP"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 OpenJS Foundation</div></div></div></footer></div>
+</body>
+</html>

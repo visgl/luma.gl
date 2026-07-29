@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {ArrowTimeColumnsRenderer} from './arrow-time-columns-renderer';
-import {ArrowTimeColumnsSource} from './arrow-time-columns-source';
+import {ArrowTimeColumnsDataSource} from './arrow-time-columns-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Time: Date/Time/Timestamp/Duration';
@@ -16,31 +16,31 @@ export const description =
 export default class ArrowTimeColumnsAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();
   readonly layer: ArrowTimeColumnsRenderer;
-  readonly source: ArrowTimeColumnsSource;
+  readonly dataSource: ArrowTimeColumnsDataSource;
 
   constructor({device}: AnimationProps) {
     super();
     this.layer = new ArrowTimeColumnsRenderer(device as Device);
-    this.source = new ArrowTimeColumnsSource(
-      device as Device,
-      async table => this.layer.initialize(table),
-      props => this.layer.setProps(props)
-    );
+    this.dataSource = new ArrowTimeColumnsDataSource({
+      device: device as Device,
+      onDataUpdated: async table => this.layer.initialize(table),
+      onRendererPropsUpdated: props => this.layer.setProps(props)
+    });
   }
 
   override async onInitialize(): Promise<void> {
-    await this.source.initialize();
+    await this.dataSource.initialize();
   }
 
   override onRender({device, time}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: [0.025, 0.04, 0.075, 1]});
     this.layer.draw(renderPass, {time});
     renderPass.end();
-    this.source.updateLabels(this.layer);
+    this.dataSource.updateLabels(this.layer);
   }
 
   override onFinalize(): void {
-    this.source.finalize();
+    this.dataSource.finalize();
     this.layer.destroy();
   }
 }

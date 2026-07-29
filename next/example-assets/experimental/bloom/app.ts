@@ -13,7 +13,6 @@ import {Device} from '@luma.gl/core';
 import {bloom, bloomShaderPassPipeline} from '@luma.gl/effects';
 import type {ShaderPassPipeline} from '@luma.gl/shadertools';
 import {
-  ColumnPanel,
   type Panel,
   type SettingsChangeDescriptor,
   type SettingsSchema
@@ -23,6 +22,7 @@ import {
   ExampleSettingsPanelManager,
   getChangedSetting,
   makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
 
@@ -31,6 +31,13 @@ const BLOOM_UNIFORMS = {
   intensity: 1.8,
   radius: 8
 } as const;
+
+const BLOOM_BACKGROUND_HTML = `
+<p><b>Bloom is an HDR post-process:</b> the scene is rendered first, then a bright-pass threshold extracts only energetic pixels into a smaller offscreen texture.</p>
+<p><b>Why multiple blur stages:</b> separable horizontal/vertical blurs and downsampled targets spread highlights over a wide radius with far fewer texture reads than one huge full-resolution kernel. The blurred pyramid is then recomposed over the original image.</p>
+<p><b>Performance model:</b> cost is mostly fullscreen texture bandwidth, not scene complexity. Lower-resolution blur targets make glow radius cheap, while threshold and intensity control how much energy enters and returns from the bloom chain.</p>
+<p><b>What to inspect:</b> raise threshold to isolate only the brightest source pixels, increase radius to expose the blur footprint, and adjust intensity to see the final additive recomposition.</p>
+`;
 
 type BloomState = Record<'threshold' | 'intensity' | 'radius', number>;
 type ShaderPropType = NonNullable<typeof bloom.propTypes>[string];
@@ -103,16 +110,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   private makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'bloom-controls',
-      title: 'Controls',
+    return makeExampleTabbedPanel({
+      id: 'bloom-tabs',
+      title: 'Effects: Bloom',
       panels: [
         makeHtmlCustomPanel({
           id: 'bloom-description',
-          title: '',
+          title: 'Overview',
           html: '<p>Experimental bloom pipeline demo using extracted highlights, multi-stage blur targets, and final recomposition.</p>'
         }),
-        this.settingsPanel.makePanel()
+        this.settingsPanel.makePanel(),
+        makeHtmlCustomPanel({
+          id: 'bloom-background',
+          title: 'Background',
+          html: BLOOM_BACKGROUND_HTML
+        })
       ]
     });
   }
