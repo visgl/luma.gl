@@ -11,6 +11,17 @@ export {HTMLTexture} from './textures/html-texture';
 
 export {opticalLighting} from './materials/optical-lighting';
 export type {
+  OpticalCausticLens,
+  OpticalCausticLensUniform,
+  OpticalCausticsProps,
+  OpticalCausticsUniforms
+} from './materials/optical-caustics';
+export {
+  MAX_OPTICAL_CAUSTIC_LENSES,
+  opticalCaustics,
+  opticalCausticsPlugin
+} from './materials/optical-caustics';
+export type {
   OpticalPointLight,
   OpticalPointLightUniform,
   OpticalPointLightsProps,

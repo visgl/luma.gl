@@ -49,6 +49,12 @@ export type NetworkLink = {
   startInset: number;
 };
 
+/** Number of red and green packets currently traveling through one physical link. */
+export type NetworkLinkTraffic = {
+  red: number;
+  green: number;
+};
+
 export type Conversation = {
   color: Color;
   destinationHostIndex: number;
@@ -70,7 +76,7 @@ export type PickableNetworkNode = {
   description: string;
   detail: string;
   role: string;
-  status?: 'congested' | 'detecting' | 'offline' | 'online';
+  status?: 'congested' | 'detecting' | 'offline' | 'online' | 'probing';
   title: string;
 };
 
@@ -342,11 +348,19 @@ export function makeSwitchPacketEvents({
 export function makeSwitchProbeEvent(
   conversationRoutes: readonly ConversationRoute[],
   switchIndex: number,
-  startedAt: number
+  startedAt: number,
+  unavailableSwitchIndices?: ReadonlySet<number>
 ): NetworkPacketEvent | null {
   const switchPosition = SWITCH_POSITIONS[switchIndex];
-  const conversationRoute = conversationRoutes.find(({route}) =>
-    route.points.some(position => position === switchPosition)
+  const conversationRoute = conversationRoutes.find(
+    ({route}) =>
+      route.points.some(position => position === switchPosition) &&
+      route.points.every(
+        position =>
+          position === switchPosition ||
+          !unavailableSwitchIndices ||
+          !isFailedSwitchPosition(position, unavailableSwitchIndices)
+      )
   );
   if (!conversationRoute) {
     return null;
@@ -365,10 +379,15 @@ export function makeSwitchProbeEvent(
 
 export function getHealthyConversationRoutes(
   conversationRoutes: readonly ConversationRoute[],
-  failedSwitchIndices: ReadonlySet<number>
+  failedSwitchIndices: ReadonlySet<number>,
+  recoveringSwitchIndices?: ReadonlySet<number>
 ): ConversationRoute[] {
   return conversationRoutes.filter(({route}) =>
-    route.points.every(position => !isFailedSwitchPosition(position, failedSwitchIndices))
+    route.points.every(
+      position =>
+        !isFailedSwitchPosition(position, failedSwitchIndices) &&
+        (!recoveringSwitchIndices || !isFailedSwitchPosition(position, recoveringSwitchIndices))
+    )
   );
 }
 
@@ -407,6 +426,47 @@ export function makeActiveLinkKeys(conversationRoutes: ConversationRoute[]): Set
   }
 
   return activeLinkKeys;
+}
+
+/** Classifies visible packets by their current route segment and traffic color. */
+export function makeLinkTraffic(
+  packets: readonly Packet[],
+  animationTime: number
+): Map<string, NetworkLinkTraffic> {
+  const trafficByLink = new Map<string, NetworkLinkTraffic>();
+
+  for (const packet of packets) {
+    if (!packet.enabled) {
+      continue;
+    }
+
+    const packetAge =
+      (((animationTime - packet.launchTime) % BURST_CYCLE_DURATION) + BURST_CYCLE_DURATION) %
+      BURST_CYCLE_DURATION;
+    const packetDistance = packetAge * PACKET_TRAVEL_SPEED;
+    if (packetDistance > packet.route.totalLength) {
+      continue;
+    }
+
+    let segmentIndex = 0;
+    while (
+      segmentIndex < packet.route.cumulativeLengths.length - 2 &&
+      packet.route.cumulativeLengths[segmentIndex + 1] < packetDistance
+    ) {
+      segmentIndex++;
+    }
+
+    const linkKey = makeLinkKey(
+      packet.route.points[segmentIndex],
+      packet.route.points[segmentIndex + 1]
+    );
+    const linkTraffic = trafficByLink.get(linkKey) || {red: 0, green: 0};
+    linkTraffic.red += packet.color[0];
+    linkTraffic.green += packet.color[1];
+    trafficByLink.set(linkKey, linkTraffic);
+  }
+
+  return trafficByLink;
 }
 
 export function makeLinks(conversationRoutes: ConversationRoute[]): NetworkLink[] {

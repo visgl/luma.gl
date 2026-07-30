@@ -40,6 +40,9 @@ import {
   glassTransmissionPlugin,
   getABufferSupport,
   getWBOITSupport,
+  MAX_OPTICAL_CAUSTIC_LENSES,
+  opticalCaustics,
+  opticalCausticsPlugin,
   opticalPointLights,
   opticalPointLightsPlugin,
   reflectiveMaterial,
@@ -48,6 +51,8 @@ import {
   type EmissiveMaterialProps,
   type GlassMaterialProps,
   type GlassTransmissionProps,
+  type OpticalCausticLens,
+  type OpticalCausticsProps,
   type OpticalPointLight,
   type OpticalPointLightsProps,
   type ReflectiveMaterialProps,
@@ -99,6 +104,7 @@ import {
   makeHostColor,
   makeLinkColor,
   makeLinkKey,
+  makeLinkTraffic,
   makeLinks,
   makePackets,
   makePickableNetworkNodes,
@@ -118,6 +124,14 @@ import {
   type SwitchArrival,
   type Vector3
 } from './network';
+import {
+  getNetworkStoryChapter,
+  getWrappedStoryChapterIndex,
+  GUIDED_STORY_SWITCH_INDEX,
+  NETWORK_STORY_CHAPTERS,
+  type NetworkStoryCamera,
+  type NetworkStoryChapter
+} from './story';
 
 type TransparencyMode = 'a-buffer' | 'weighted-blended' | 'sorted-alpha';
 
@@ -238,12 +252,18 @@ fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
 const REFLECTIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
 @fragment
 fn fragmentReflective(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let color = reflectiveMaterial_getIlluminatedColor(
+  let reflectiveColor = reflectiveMaterial_getIlluminatedColor(
     inputs.normal,
     inputs.worldPosition,
     inputs.color,
     app.cameraPosition
   );
+  let causticColor = opticalCaustics_getColor(
+    inputs.normal,
+    inputs.worldPosition,
+    app.cameraPosition
+  );
+  let color = vec4<f32>(reflectiveColor.rgb + causticColor, reflectiveColor.a);
 #if OPAQUE_REFLECTIVE
   return vec4<f32>(color.rgb, inputs.color.a);
 #else
@@ -478,12 +498,18 @@ in vec3 vWorldPosition;
 out vec4 fragColor;
 
 void main(void) {
-  vec4 color = reflectiveMaterial_getIlluminatedColor(
+  vec4 reflectiveColor = reflectiveMaterial_getIlluminatedColor(
     vNormal,
     vWorldPosition,
     vColor,
     app.cameraPosition
   );
+  vec3 causticColor = opticalCaustics_getColor(
+    vNormal,
+    vWorldPosition,
+    app.cameraPosition
+  );
+  vec4 color = vec4(reflectiveColor.rgb + causticColor, reflectiveColor.a);
 #if OPAQUE_REFLECTIVE
   fragColor = vec4(color.rgb, vColor.a);
 #else
@@ -557,6 +583,7 @@ const INSTANCE_BUFFER_LAYOUT = [
 
 const PACKET_TRAIL_RADIUS = 0.033;
 const SWITCH_FLASH_DURATION = 0.16;
+const SWITCH_RIPPLE_DURATION = 0.38;
 const MAX_SWITCH_FLASH_LIGHTS = 6;
 const MAX_STORY_PACKET_INSTANCES = 160;
 const CONGESTED_SWITCH_COLOR: Color = [1, 0.42, 0.065, 0.56];
@@ -704,6 +731,7 @@ class InstancedMesh<
       plugins: [
         ...(pickable ? [networkNodePickingPlugin] : []),
         ...(glass || reflective ? [opticalPointLightsPlugin] : []),
+        ...(reflective ? [opticalCausticsPlugin] : []),
         ...(glass ? [glassMaterialPlugin] : []),
         ...(glass ? [glassTransmissionPlugin] : []),
         ...(reflective ? [reflectiveMaterialPlugin] : []),
@@ -766,6 +794,10 @@ class InstancedMesh<
 
   updateInstances(matrices: Float32Array, colors: Float32Array): void {
     this.matrixBuffer.write(matrices);
+    this.colorBuffer.write(colors);
+  }
+
+  updateColors(colors: Float32Array): void {
     this.colorBuffer.write(colors);
   }
 
@@ -836,7 +868,9 @@ class NetworkNodePopup {
         ? '#ff665a'
         : node.status === 'congested' || node.status === 'detecting'
           ? '#ffad52'
-          : '#82acf2';
+          : node.status === 'probing'
+            ? '#73d3ff'
+            : '#82acf2';
     this.descriptionElement.textContent = node.description;
     this.detailElement.textContent = node.detail;
     this.popupElement.style.display = 'block';
@@ -856,20 +890,158 @@ class NetworkNodePopup {
   }
 }
 
+class NetworkStoryControls {
+  private readonly rootElement: HTMLDivElement;
+  private readonly titleElement: HTMLDivElement;
+  private readonly descriptionElement: HTMLParagraphElement;
+  private readonly chapterPositionElement: HTMLSpanElement;
+  private readonly playbackButton: HTMLButtonElement;
+
+  constructor(
+    canvas: HTMLCanvasElement,
+    {
+      onNext,
+      onPrevious,
+      onTogglePlayback
+    }: {
+      onNext: () => void;
+      onPrevious: () => void;
+      onTogglePlayback: () => void;
+    }
+  ) {
+    this.rootElement = document.createElement('div');
+    this.rootElement.dataset.networkStoryControls = '';
+    this.rootElement.setAttribute('role', 'region');
+    this.rootElement.setAttribute('aria-label', 'Network packet spraying guided tour');
+    Object.assign(this.rootElement.style, {
+      position: 'fixed',
+      left: '18px',
+      bottom: '18px',
+      zIndex: '15',
+      width: 'min(360px, calc(100vw - 36px))',
+      padding: '14px 16px',
+      boxSizing: 'border-box',
+      border: '1px solid rgba(126, 157, 205, 0.26)',
+      borderRadius: '8px',
+      background: 'rgba(8, 12, 20, 0.86)',
+      backdropFilter: 'blur(12px)',
+      color: '#eff4fd',
+      font: '13px/1.45 system-ui, sans-serif'
+    });
+
+    const headingElement = document.createElement('div');
+    headingElement.textContent = 'GUIDED NETWORK TOUR';
+    Object.assign(headingElement.style, {
+      color: '#88a9d6',
+      fontSize: '10px',
+      fontWeight: '650'
+    });
+
+    this.titleElement = document.createElement('div');
+    this.titleElement.setAttribute('aria-live', 'polite');
+    Object.assign(this.titleElement.style, {
+      marginTop: '5px',
+      fontSize: '15px',
+      fontWeight: '650'
+    });
+
+    this.descriptionElement = document.createElement('p');
+    Object.assign(this.descriptionElement.style, {
+      margin: '6px 0 12px',
+      color: '#bcc9dc'
+    });
+
+    const actionsElement = document.createElement('div');
+    Object.assign(actionsElement.style, {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '7px'
+    });
+
+    const previousButton = this.makeButton('Back', 'Previous story chapter', onPrevious);
+    previousButton.dataset.networkStoryPrevious = '';
+    this.playbackButton = this.makeButton('Play', 'Play guided network tour', onTogglePlayback);
+    this.playbackButton.dataset.networkStoryPlayback = '';
+    const nextButton = this.makeButton('Next', 'Next story chapter', onNext);
+    nextButton.dataset.networkStoryNext = '';
+    this.chapterPositionElement = document.createElement('span');
+    Object.assign(this.chapterPositionElement.style, {
+      marginLeft: 'auto',
+      color: '#90a2bd',
+      fontSize: '12px'
+    });
+
+    actionsElement.append(
+      previousButton,
+      this.playbackButton,
+      nextButton,
+      this.chapterPositionElement
+    );
+    this.rootElement.append(
+      headingElement,
+      this.titleElement,
+      this.descriptionElement,
+      actionsElement
+    );
+    (canvas.parentElement || document.body).appendChild(this.rootElement);
+  }
+
+  update(chapter: NetworkStoryChapter, chapterIndex: number, isPlaying: boolean): void {
+    this.titleElement.textContent = chapter.title;
+    this.descriptionElement.textContent = chapter.description;
+    this.chapterPositionElement.textContent = `${chapterIndex + 1} / ${NETWORK_STORY_CHAPTERS.length}`;
+    this.playbackButton.textContent = isPlaying ? 'Pause' : 'Play';
+    this.playbackButton.setAttribute(
+      'aria-label',
+      isPlaying ? 'Pause guided network tour' : 'Play guided network tour'
+    );
+    this.rootElement.dataset.networkStoryChapter = chapter.id;
+    this.rootElement.dataset.networkStoryPlaying = String(isPlaying);
+  }
+
+  destroy(): void {
+    this.rootElement.remove();
+  }
+
+  private makeButton(
+    label: string,
+    accessibleLabel: string,
+    onClick: () => void
+  ): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.setAttribute('aria-label', accessibleLabel);
+    Object.assign(button.style, {
+      padding: '5px 10px',
+      border: '1px solid rgba(140, 169, 211, 0.3)',
+      borderRadius: '5px',
+      background: 'rgba(30, 41, 58, 0.75)',
+      color: '#edf3fc',
+      cursor: 'pointer',
+      font: '12px system-ui, sans-serif'
+    });
+    button.addEventListener('click', onClick);
+    return button;
+  }
+}
+
 export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
   readonly backfaceShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
   readonly reflectiveShaderInputs = new ShaderInputs<{
     app: AppUniforms;
+    opticalCaustics: OpticalCausticsProps;
     opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
-  }>({app: appShaderModule, opticalPointLights, reflectiveMaterial});
+  }>({app: appShaderModule, opticalCaustics, opticalPointLights, reflectiveMaterial});
   readonly metallicShaderInputs = new ShaderInputs<{
     app: AppUniforms;
+    opticalCaustics: OpticalCausticsProps;
     opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
-  }>({app: appShaderModule, opticalPointLights, reflectiveMaterial});
+  }>({app: appShaderModule, opticalCaustics, opticalPointLights, reflectiveMaterial});
   readonly emissiveShaderInputs = new ShaderInputs<{
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
@@ -912,11 +1084,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly environmentTexture: Texture;
   readonly links: InstancedMesh<{
     app: AppUniforms;
+    opticalCaustics: OpticalCausticsProps;
     opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
   }>;
   readonly hosts: InstancedMesh<{
     app: AppUniforms;
+    opticalCaustics: OpticalCausticsProps;
     opticalPointLights: OpticalPointLightsProps;
     reflectiveMaterial: ReflectiveMaterialProps;
   }>;
@@ -936,8 +1110,12 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly originalGlassColors: Color[];
   readonly congestedSwitchIndices = new Set<number>();
   readonly failedSwitchIndices = new Set<number>();
+  readonly recoveringSwitchIndices = new Set<number>();
   readonly conversationRoutes: ConversationRoute[];
   readonly networkLinks: NetworkLink[];
+  readonly linkColors: Float32Array;
+  readonly redLinkTrafficStrengths: Float32Array;
+  readonly greenLinkTrafficStrengths: Float32Array;
   readonly packets: InstancedMesh<{
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
@@ -947,6 +1125,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     emissiveMaterial: EmissiveMaterialProps;
   }>;
   readonly switchFlashes: InstancedMesh<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
+  readonly switchRipples: InstancedMesh<{
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
   }>;
@@ -962,23 +1144,39 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly switchFlashMatrices: Float32Array;
   readonly switchFlashColors: Float32Array;
   readonly switchFlashStrengths: Float32Array;
+  readonly switchRippleMatrices: Float32Array;
+  readonly switchRippleColors: Float32Array;
+  readonly switchRippleAges: Float32Array;
+  readonly causticLensLightColors = new Float32Array(SWITCH_POSITIONS.length * 3);
   readonly storyPacketMatrices = new Float32Array(MAX_STORY_PACKET_INSTANCES * 16);
   readonly storyPacketColors = new Float32Array(MAX_STORY_PACKET_INSTANCES * 4);
   readonly networkPacketEvents: NetworkPacketEvent[] = [];
   orbitControls: OrbitControls | null = null;
   nodePopup: NetworkNodePopup | null = null;
+  storyControls: NetworkStoryControls | null = null;
 
   private canvas: HTMLCanvasElement | null = null;
   private pendingPickRequest: NetworkNodePickRequest | null = null;
   private readonly detectingSwitchTimes = new Map<number, number>();
   private readonly nextCongestionTrimTimes = new Map<number, number>();
   private readonly nextSwitchProbeTimes = new Map<number, number>();
+  private readonly recoveryProbeCompletionTimes = new Map<number, number>();
   private animationTime = 0;
   private droppedPacketCount = 0;
   private trimmedPacketCount = 0;
   private pickingInProgress = false;
   private pointerDownPosition: [number, number] | null = null;
   private pointerSequence = 0;
+  private previousLinkTrafficTime: number | null = null;
+  private previousCausticTime: number | null = null;
+  private guidedStoryChapterIndex = 0;
+  private guidedStoryChapterStartedAt = 0;
+  private guidedStoryElapsedAtPause = 0;
+  private guidedStoryPlaying = false;
+  private guidedStoryStarted = false;
+  private guidedStoryCamera: NetworkStoryCamera | null = null;
+  private guidedStoryCameraTransitionEndsAt = 0;
+  private guidedStoryPreviousCameraTime: number | null = null;
 
   transparencyMode: TransparencyMode;
   speed = 0.85;
@@ -995,12 +1193,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   glassTransmissionStrength = 1.12;
   glassEnvironmentIntensity = 1.25;
   glassVolumeThickness = 1;
+  glassDynamicReflectionStrength = 0.38;
+  glassSecondaryBounceStrength = 0.55;
+  glassFaultDistortionStrength = 0.42;
   packetEmission = 5.2;
   packetTrailLength = 0.19;
   packetTrailIntensity = 0.55;
   switchFlashIntensity = 0.8;
+  switchRippleIntensity = 0.44;
   packetLightIntensity = 0.66;
   packetLightRadius = 1.05;
+  linkTrafficGlow = 0.58;
+  causticIntensity = 0.48;
+  causticFocus = 1.15;
   bloomIntensity = 1.7;
   bloomThreshold = 0.42;
   exposure = 0.96;
@@ -1057,11 +1262,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     this.conversationRoutes = makeConversationRoutes();
     this.networkLinks = makeLinks(this.conversationRoutes);
+    this.linkColors = flattenColors(this.networkLinks.map(({color}) => color));
+    this.redLinkTrafficStrengths = new Float32Array(this.networkLinks.length);
+    this.greenLinkTrafficStrengths = new Float32Array(this.networkLinks.length);
     this.links = new InstancedMesh(device, this.reflectiveShaderInputs, {
       id: 'packet-spraying-links',
       geometry: new CylinderGeometry({radius: 1, height: 1, nradial: 16, nvertical: 1}),
       matrices: flattenMatrices(this.networkLinks.map(link => makeLinkMatrix(link, 0.09))),
-      colors: flattenColors(this.networkLinks.map(({color}) => color)),
+      colors: this.linkColors,
       transparent: true,
       reflective: true
     });
@@ -1177,6 +1385,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.switchFlashMatrices = new Float32Array(switchFlashCount * 16);
     this.switchFlashColors = new Float32Array(switchFlashCount * 4);
     this.switchFlashStrengths = new Float32Array(switchFlashCount);
+    this.switchRippleMatrices = new Float32Array(switchFlashCount * 16);
+    this.switchRippleColors = new Float32Array(switchFlashCount * 4);
+    this.switchRippleAges = new Float32Array(switchFlashCount);
     this.updatePacketVisuals(0);
     this.packets = new InstancedMesh(device, this.emissiveShaderInputs, {
       id: 'packet-spraying-packets',
@@ -1209,6 +1420,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       additive: true,
       emissive: true
     });
+    this.switchRipples = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-switch-arrival-ripples',
+      geometry: new SphereGeometry({radius: 1, nlat: 12, nlong: 18}),
+      matrices: this.switchRippleMatrices,
+      colors: this.switchRippleColors,
+      additive: true,
+      emissive: true
+    });
     this.storyPackets = new InstancedMesh(device, this.emissiveShaderInputs, {
       id: 'packet-spraying-network-story-packets',
       geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
@@ -1237,12 +1456,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         glassTransmissionStrength: this.glassTransmissionStrength,
         glassEnvironmentIntensity: this.glassEnvironmentIntensity,
         glassVolumeThickness: this.glassVolumeThickness,
+        glassDynamicReflectionStrength: this.glassDynamicReflectionStrength,
+        glassSecondaryBounceStrength: this.glassSecondaryBounceStrength,
+        glassFaultDistortionStrength: this.glassFaultDistortionStrength,
         packetEmission: this.packetEmission,
         packetTrailLength: this.packetTrailLength,
         packetTrailIntensity: this.packetTrailIntensity,
         switchFlashIntensity: this.switchFlashIntensity,
+        switchRippleIntensity: this.switchRippleIntensity,
         packetLightIntensity: this.packetLightIntensity,
         packetLightRadius: this.packetLightRadius,
+        linkTrafficGlow: this.linkTrafficGlow,
+        causticIntensity: this.causticIntensity,
+        causticFocus: this.causticFocus,
         bloomIntensity: this.bloomIntensity,
         bloomThreshold: this.bloomThreshold,
         exposure: this.exposure
@@ -1279,19 +1505,32 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.addEventListener('pointerdown', this.handlePointerDown);
       canvas.addEventListener('pointerleave', this.handlePointerLeave);
       canvas.addEventListener('click', this.handleSwitchClick);
+      this.storyControls = new NetworkStoryControls(canvas, {
+        onNext: () => this.moveGuidedStoryChapter(1),
+        onPrevious: () => this.moveGuidedStoryChapter(-1),
+        onTogglePlayback: () => this.setGuidedStoryPlaying(!this.guidedStoryPlaying)
+      });
+      this.updateGuidedStoryControls();
       this.updateFailureAccessibility();
+
+      if (new URLSearchParams(window.location.search).get('story') === '1') {
+        this.setGuidedStoryPlaying(true);
+      }
     }
   }
 
   override onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.resizeSceneFramebuffer(width, height);
     this.animationTime = (time / 1000) * this.speed;
+    this.updateGuidedStory(this.animationTime);
     this.updateSwitchStoryState(this.animationTime);
     this.updatePacketVisuals(this.animationTime);
+    this.updateLinkTraffic(this.animationTime);
     this.updateStoryPacketVisuals(this.animationTime);
     this.packets.updateMatrices(this.packetMatrices);
     this.packetTrails.updateInstances(this.packetTrailMatrices, this.packetTrailColors);
     this.switchFlashes.updateInstances(this.switchFlashMatrices, this.switchFlashColors);
+    this.switchRipples.updateInstances(this.switchRippleMatrices, this.switchRippleColors);
     this.storyPackets.updateInstances(this.storyPacketMatrices, this.storyPacketColors);
 
     this.orbitControls?.update(time);
@@ -1327,23 +1566,39 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       backfaceTexture: this.glassBackfaceTexture,
       environmentTexture: this.environmentTexture,
       environmentIntensity: this.glassEnvironmentIntensity,
-      thicknessStrength: this.glassVolumeThickness
+      thicknessStrength: this.glassVolumeThickness,
+      dynamicReflectionStrength: this.glassDynamicReflectionStrength,
+      secondaryBounceStrength: this.glassSecondaryBounceStrength,
+      faultDistortionStrength: this.glassFaultDistortionStrength,
+      time: this.animationTime
     };
+    const packetLights = this.makePacketLights();
     const pointLightProps: OpticalPointLightsProps = {
-      lights: this.makePacketLights(),
+      lights: packetLights,
       intensity: this.packetLightIntensity
     };
+    const causticLenses = this.makeCausticLenses(packetLights, this.animationTime);
+    const causticProps: OpticalCausticsProps = {
+      lenses: causticLenses,
+      intensity: this.causticIntensity,
+      focus: this.causticFocus
+    };
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingCausticLenses = String(causticLenses.length);
+    }
     this.emissiveShaderInputs.setProps({
       app: uniforms,
       emissiveMaterial: {intensity: this.packetEmission, rimStrength: 0.32}
     });
     this.reflectiveShaderInputs.setProps({
       app: uniforms,
+      opticalCaustics: causticProps,
       reflectiveMaterial: {},
       opticalPointLights: pointLightProps
     });
     this.metallicShaderInputs.setProps({
       app: uniforms,
+      opticalCaustics: causticProps,
       reflectiveMaterial: {
         roughness: 0.32,
         reflectionStrength: 0.26,
@@ -1364,6 +1619,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.model.predraw(device.commandEncoder);
     this.packetTrails.model.predraw(device.commandEncoder);
     this.switchFlashes.model.predraw(device.commandEncoder);
+    this.switchRipples.model.predraw(device.commandEncoder);
     this.storyPackets.model.predraw(device.commandEncoder);
     this.links.model.predraw(device.commandEncoder);
     const sceneRenderPass = device.beginRenderPass({
@@ -1375,6 +1631,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.model.draw(sceneRenderPass);
     this.packetTrails.model.draw(sceneRenderPass);
     this.switchFlashes.model.draw(sceneRenderPass);
+    this.switchRipples.model.draw(sceneRenderPass);
     this.storyPackets.model.draw(sceneRenderPass);
     this.links.model.draw(sceneRenderPass);
     sceneRenderPass.end();
@@ -1491,6 +1748,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.canvas?.removeEventListener('pointerleave', this.handlePointerLeave);
     this.canvas?.removeEventListener('click', this.handleSwitchClick);
     this.nodePopup?.destroy();
+    this.storyControls?.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.orbitControls?.destroy();
@@ -1509,6 +1767,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.destroy();
     this.packetTrails.destroy();
     this.switchFlashes.destroy();
+    this.switchRipples.destroy();
     this.storyPackets.destroy();
     this.postprocessingRenderer.destroy();
     this.aBufferRenderer?.destroy();
@@ -1571,6 +1830,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         ) {
           const switchIndex = objectIndex - HOST_POSITIONS.length;
           if (switchIndex >= 0 && switchIndex < this.glassInstances.length) {
+            if (this.guidedStoryPlaying) {
+              this.setGuidedStoryPlaying(false);
+            }
             this.advanceSwitchState(switchIndex);
           }
         }
@@ -1644,6 +1906,167 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.nodePopup?.hide();
   };
 
+  private setGuidedStoryPlaying(isPlaying: boolean): void {
+    if (isPlaying === this.guidedStoryPlaying) {
+      return;
+    }
+
+    this.guidedStoryPlaying = isPlaying;
+    if (isPlaying) {
+      this.orbitControls?.setAutoRotate(false);
+      if (this.guidedStoryStarted) {
+        this.guidedStoryChapterStartedAt = this.animationTime - this.guidedStoryElapsedAtPause;
+      } else {
+        this.guidedStoryStarted = true;
+        this.enterGuidedStoryChapter(this.guidedStoryChapterIndex);
+      }
+    } else {
+      this.guidedStoryElapsedAtPause = this.animationTime - this.guidedStoryChapterStartedAt;
+      this.guidedStoryCameraTransitionEndsAt = this.animationTime;
+      this.orbitControls?.setAutoRotate(this.orbit > 0);
+    }
+
+    this.updateGuidedStoryControls();
+  }
+
+  private moveGuidedStoryChapter(direction: number): void {
+    this.guidedStoryStarted = true;
+    this.enterGuidedStoryChapter(this.guidedStoryChapterIndex + direction);
+  }
+
+  private enterGuidedStoryChapter(chapterIndex: number): void {
+    this.guidedStoryChapterIndex = getWrappedStoryChapterIndex(chapterIndex);
+    this.guidedStoryChapterStartedAt = this.animationTime;
+    this.guidedStoryElapsedAtPause = 0;
+    this.guidedStoryCamera = getNetworkStoryChapter(this.guidedStoryChapterIndex).camera;
+    this.guidedStoryCameraTransitionEndsAt = this.animationTime + 1.4;
+    this.guidedStoryPreviousCameraTime = null;
+
+    const switchIndex = GUIDED_STORY_SWITCH_INDEX;
+    const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
+
+    switch (chapter.networkState) {
+      case 'healthy':
+        this.resetGuidedStoryNetwork();
+        break;
+
+      case 'congested':
+        this.resetGuidedStoryNetwork();
+        this.advanceSwitchState(switchIndex);
+        break;
+
+      case 'failed':
+        if (this.recoveringSwitchIndices.has(switchIndex)) {
+          this.resetGuidedStoryNetwork();
+        }
+        if (!this.failedSwitchIndices.has(switchIndex)) {
+          if (!this.congestedSwitchIndices.has(switchIndex)) {
+            this.advanceSwitchState(switchIndex);
+          }
+          if (this.congestedSwitchIndices.has(switchIndex)) {
+            this.advanceSwitchState(switchIndex);
+          }
+        }
+        break;
+
+      case 'recovering':
+        if (this.recoveringSwitchIndices.has(switchIndex)) {
+          break;
+        }
+        if (this.detectingSwitchTimes.has(switchIndex)) {
+          this.completeSwitchFailure(switchIndex);
+        }
+        if (this.congestedSwitchIndices.has(switchIndex)) {
+          this.advanceSwitchState(switchIndex);
+          this.completeSwitchFailure(switchIndex);
+        }
+        if (!this.failedSwitchIndices.has(switchIndex)) {
+          this.completeSwitchFailure(switchIndex);
+        }
+        this.advanceSwitchState(switchIndex);
+        break;
+    }
+
+    this.updateGuidedStoryControls();
+  }
+
+  private resetGuidedStoryNetwork(): void {
+    const affectedSwitchIndices = new Set([
+      ...this.congestedSwitchIndices,
+      ...this.failedSwitchIndices,
+      ...this.recoveringSwitchIndices,
+      ...this.detectingSwitchTimes.keys()
+    ]);
+
+    for (const switchIndex of affectedSwitchIndices) {
+      this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
+    }
+
+    this.congestedSwitchIndices.clear();
+    this.failedSwitchIndices.clear();
+    this.recoveringSwitchIndices.clear();
+    this.detectingSwitchTimes.clear();
+    this.nextCongestionTrimTimes.clear();
+    this.nextSwitchProbeTimes.clear();
+    this.recoveryProbeCompletionTimes.clear();
+    this.networkPacketEvents.splice(0, this.networkPacketEvents.length);
+    this.updateSwitchColors();
+    this.updateHealthyRoutes();
+    this.updateFailureAccessibility();
+  }
+
+  private updateGuidedStory(animationTime: number): void {
+    if (!this.guidedStoryStarted) {
+      return;
+    }
+
+    if (this.guidedStoryPlaying) {
+      const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
+      if (animationTime - this.guidedStoryChapterStartedAt >= chapter.duration) {
+        this.enterGuidedStoryChapter(this.guidedStoryChapterIndex + 1);
+      }
+    }
+
+    if (
+      !this.guidedStoryCamera ||
+      !this.orbitControls ||
+      (!this.guidedStoryPlaying && animationTime >= this.guidedStoryCameraTransitionEndsAt)
+    ) {
+      return;
+    }
+
+    const elapsedTime = Math.min(
+      Math.max(animationTime - (this.guidedStoryPreviousCameraTime ?? animationTime - 1 / 60), 0),
+      0.12
+    );
+    const smoothing = 1 - Math.exp(-elapsedTime * 3.8);
+    const controls = this.orbitControls;
+    const camera = this.guidedStoryCamera;
+    const yawDelta = Math.atan2(
+      Math.sin(camera.yaw - controls.yaw),
+      Math.cos(camera.yaw - controls.yaw)
+    );
+
+    controls.yaw += yawDelta * smoothing;
+    controls.pitch += (camera.pitch - controls.pitch) * smoothing;
+    controls.distance += (camera.distance - controls.distance) * smoothing;
+    controls.props.target = [
+      controls.props.target[0] + (camera.target[0] - controls.props.target[0]) * smoothing,
+      controls.props.target[1] + (camera.target[1] - controls.props.target[1]) * smoothing,
+      controls.props.target[2] + (camera.target[2] - controls.props.target[2]) * smoothing
+    ];
+    this.guidedStoryPreviousCameraTime = animationTime;
+  }
+
+  private updateGuidedStoryControls(): void {
+    const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
+    this.storyControls?.update(chapter, this.guidedStoryChapterIndex, this.guidedStoryPlaying);
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingStoryChapter = chapter.id;
+      this.canvas.dataset.packetSprayingStoryPlaying = String(this.guidedStoryPlaying);
+    }
+  }
+
   private getPickableNode(objectIndex: number): PickableNetworkNode | undefined {
     const node = this.pickableNodes[objectIndex];
     if (!node || objectIndex < HOST_POSITIONS.length) {
@@ -1657,8 +2080,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         role: `FAILED / ${node.role}`,
         description:
           'This switch dropped in-flight packets. MRC retired its paths, retransmitted the missing data, and now sends occasional recovery probes.',
-        detail: 'Click again to restore this switch and return its paths to service.',
+        detail: 'Click again to repair this switch and verify its path with a control probe.',
         status: 'offline'
+      };
+    }
+
+    if (this.recoveringSwitchIndices.has(switchIndex)) {
+      return {
+        ...node,
+        role: `RECOVERY PROBE / ${node.role}`,
+        description:
+          'This repaired switch remains out of service while a blue control packet verifies that its path is reachable.',
+        detail: 'Ordinary red and green traffic resumes only after the recovery probe arrives.',
+        status: 'probing'
       };
     }
 
@@ -1692,10 +2126,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private advanceSwitchState(switchIndex: number): void {
+    if (this.recoveringSwitchIndices.has(switchIndex)) {
+      return;
+    }
+
     if (this.failedSwitchIndices.has(switchIndex)) {
       this.failedSwitchIndices.delete(switchIndex);
       this.nextSwitchProbeTimes.delete(switchIndex);
       this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
+
+      if (makeSwitchProbeEvent(this.conversationRoutes, switchIndex, this.animationTime)) {
+        this.recoveringSwitchIndices.add(switchIndex);
+        this.nextSwitchProbeTimes.set(switchIndex, this.animationTime);
+      }
     } else if (this.detectingSwitchTimes.has(switchIndex)) {
       this.completeSwitchFailure(switchIndex);
       return;
@@ -1721,6 +2164,15 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.failedSwitchIndices.add(switchIndex);
     this.nextSwitchProbeTimes.set(switchIndex, this.animationTime + SWITCH_PROBE_INTERVAL);
     this.glassInstances[switchIndex].color = [...FAILED_SWITCH_COLOR];
+    this.updateSwitchColors();
+    this.updateHealthyRoutes();
+    this.updateFailureAccessibility();
+  }
+
+  private completeSwitchRecovery(switchIndex: number): void {
+    this.recoveringSwitchIndices.delete(switchIndex);
+    this.recoveryProbeCompletionTimes.delete(switchIndex);
+    this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
     this.updateSwitchColors();
     this.updateHealthyRoutes();
     this.updateFailureAccessibility();
@@ -1760,11 +2212,31 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     for (const [switchIndex, nextProbeTime] of this.nextSwitchProbeTimes) {
       if (animationTime >= nextProbeTime) {
-        const probe = makeSwitchProbeEvent(this.conversationRoutes, switchIndex, nextProbeTime);
+        const unavailableSwitchIndices = new Set([
+          ...this.failedSwitchIndices,
+          ...this.recoveringSwitchIndices
+        ]);
+        const probe = makeSwitchProbeEvent(
+          this.conversationRoutes,
+          switchIndex,
+          nextProbeTime,
+          unavailableSwitchIndices
+        );
         if (probe) {
           this.networkPacketEvents.push(probe);
+          if (this.recoveringSwitchIndices.has(switchIndex)) {
+            this.recoveryProbeCompletionTimes.set(switchIndex, probe.startedAt + probe.duration);
+            this.nextSwitchProbeTimes.delete(switchIndex);
+            continue;
+          }
         }
         this.nextSwitchProbeTimes.set(switchIndex, nextProbeTime + SWITCH_PROBE_INTERVAL);
+      }
+    }
+
+    for (const [switchIndex, completionTime] of this.recoveryProbeCompletionTimes) {
+      if (animationTime >= completionTime) {
+        this.completeSwitchRecovery(switchIndex);
       }
     }
 
@@ -1789,7 +2261,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateHealthyRoutes(): void {
     const healthyRoutes = getHealthyConversationRoutes(
       this.conversationRoutes,
-      this.failedSwitchIndices
+      this.failedSwitchIndices,
+      this.recoveringSwitchIndices
     );
     reroutePackets(this.packetDefinitions, healthyRoutes);
     this.switchArrivalEvents = makeSwitchArrivals(this.packetDefinitions);
@@ -1815,6 +2288,62 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     );
   }
 
+  private updateLinkTraffic(animationTime: number): void {
+    const trafficByLink = makeLinkTraffic(this.packetDefinitions, animationTime);
+    const elapsedTime = Math.min(
+      Math.max(animationTime - (this.previousLinkTrafficTime ?? animationTime - 1 / 60), 0),
+      0.12
+    );
+    const attack = 1 - Math.exp(-elapsedTime * 12);
+    const decay = 1 - Math.exp(-elapsedTime * 4.5);
+    let illuminatedLinkCount = 0;
+
+    for (let linkIndex = 0; linkIndex < this.networkLinks.length; linkIndex++) {
+      const link = this.networkLinks[linkIndex];
+      const traffic = trafficByLink.get(makeLinkKey(link.start, link.end));
+      const targetRedStrength = Math.min((traffic?.red ?? 0) * 0.42, 1);
+      const targetGreenStrength = Math.min((traffic?.green ?? 0) * 0.42, 1);
+      const previousRedStrength = this.redLinkTrafficStrengths[linkIndex];
+      const previousGreenStrength = this.greenLinkTrafficStrengths[linkIndex];
+      const redStrength =
+        previousRedStrength +
+        (targetRedStrength - previousRedStrength) *
+          (targetRedStrength > previousRedStrength ? attack : decay);
+      const greenStrength =
+        previousGreenStrength +
+        (targetGreenStrength - previousGreenStrength) *
+          (targetGreenStrength > previousGreenStrength ? attack : decay);
+      this.redLinkTrafficStrengths[linkIndex] = redStrength;
+      this.greenLinkTrafficStrengths[linkIndex] = greenStrength;
+
+      const redGlow = redStrength * this.linkTrafficGlow;
+      const greenGlow = greenStrength * this.linkTrafficGlow;
+      const totalGlow = Math.min(redGlow + greenGlow, 1);
+      const colorOffset = linkIndex * 4;
+      this.linkColors[colorOffset] = Math.min(link.color[0] + redGlow * 0.3 + greenGlow * 0.055, 1);
+      this.linkColors[colorOffset + 1] = Math.min(
+        link.color[1] + redGlow * 0.04 + greenGlow * 0.27,
+        1
+      );
+      this.linkColors[colorOffset + 2] = Math.min(link.color[2] + totalGlow * 0.065, 1);
+      this.linkColors[colorOffset + 3] = Math.min(link.color[3] + totalGlow * 0.11, 0.34);
+
+      if (totalGlow > 0.025) {
+        illuminatedLinkCount++;
+      }
+    }
+
+    this.links.updateColors(this.linkColors);
+    this.previousLinkTrafficTime = animationTime;
+
+    if (
+      this.canvas &&
+      this.canvas.dataset.packetSprayingIlluminatedLinks !== String(illuminatedLinkCount)
+    ) {
+      this.canvas.dataset.packetSprayingIlluminatedLinks = String(illuminatedLinkCount);
+    }
+  }
+
   private updateFailureAccessibility(): void {
     if (!this.canvas) {
       return;
@@ -1822,19 +2351,25 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     const congestedCount = this.congestedSwitchIndices.size;
     const failedCount = this.failedSwitchIndices.size;
+    const recoveringCount = this.recoveringSwitchIndices.size;
     const activePlaneCount = getActivePlaneCount(
-      getHealthyConversationRoutes(this.conversationRoutes, this.failedSwitchIndices)
+      getHealthyConversationRoutes(
+        this.conversationRoutes,
+        this.failedSwitchIndices,
+        this.recoveringSwitchIndices
+      )
     );
     this.canvas.dataset.packetSprayingCongestedSwitches = String(congestedCount);
     this.canvas.dataset.packetSprayingFailedSwitches = String(failedCount);
+    this.canvas.dataset.packetSprayingRecoveringSwitches = String(recoveringCount);
     this.canvas.dataset.packetSprayingActivePlanes = String(activePlaneCount);
     this.canvas.dataset.packetSprayingDroppedPackets = String(this.droppedPacketCount);
     this.canvas.dataset.packetSprayingTrimmedPackets = String(this.trimmedPacketCount);
     this.canvas.setAttribute(
       'aria-label',
-      failedCount === 0 && congestedCount === 0
+      failedCount === 0 && congestedCount === 0 && recoveringCount === 0
         ? 'Network packet spraying: all switches online'
-        : `Network packet spraying: ${congestedCount} congested, ${failedCount} failed, ${activePlaneCount} healthy network plane${activePlaneCount === 1 ? '' : 's'}`
+        : `Network packet spraying: ${congestedCount} congested, ${failedCount} failed, ${recoveringCount} recovering, ${activePlaneCount} healthy network plane${activePlaneCount === 1 ? '' : 's'}`
     );
   }
 
@@ -1995,6 +2530,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
   private updatePacketVisuals(animationTime: number): void {
     this.switchFlashStrengths.fill(0);
+    this.switchRippleAges.fill(Number.POSITIVE_INFINITY);
 
     for (let packetIndex = 0; packetIndex < this.packetDefinitions.length; packetIndex++) {
       const packet = this.packetDefinitions[packetIndex];
@@ -2036,21 +2572,31 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     for (const arrival of this.switchArrivalEvents) {
       const arrivalAge = wrap(animationTime - arrival.arrivalTime, BURST_CYCLE_DURATION);
+      const flashIndex = arrival.switchIndex * CONVERSATIONS.length + arrival.conversationIndex;
+      if (arrivalAge < SWITCH_RIPPLE_DURATION) {
+        this.switchRippleAges[flashIndex] = Math.min(this.switchRippleAges[flashIndex], arrivalAge);
+      }
       if (arrivalAge >= SWITCH_FLASH_DURATION) {
         continue;
       }
 
       const attack = smoothstep(0, 0.018, arrivalAge);
       const decay = Math.exp(-arrivalAge * 15);
-      const flashIndex = arrival.switchIndex * CONVERSATIONS.length + arrival.conversationIndex;
       this.switchFlashStrengths[flashIndex] = Math.min(
         1,
         this.switchFlashStrengths[flashIndex] + attack * decay
       );
     }
 
+    let activeRippleCount = 0;
     for (let switchIndex = 0; switchIndex < this.glassInstances.length; switchIndex++) {
       const glassInstance = this.glassInstances[switchIndex];
+      const switchRadius =
+        switchIndex < LEAF_POSITIONS.length
+          ? LEAF_SWITCH_RADIUS
+          : switchIndex < LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length
+            ? AGGREGATION_SWITCH_RADIUS
+            : SPINE_SWITCH_RADIUS;
       for (
         let conversationIndex = 0;
         conversationIndex < CONVERSATIONS.length;
@@ -2075,7 +2621,41 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
           ],
           flashIndex * 4
         );
+
+        const rippleAge = this.switchRippleAges[flashIndex];
+        const rippleProgress = rippleAge / SWITCH_RIPPLE_DURATION;
+        const rippleStrength =
+          rippleProgress < 1
+            ? Math.sin(rippleProgress * Math.PI) *
+              (1 - rippleProgress * 0.35) *
+              this.switchRippleIntensity
+            : 0;
+        const rippleRadius = switchRadius * (0.2 + rippleProgress * 0.72);
+        const rippleMatrix =
+          rippleStrength > 0.004
+            ? makeObjectMatrix(glassInstance.position, [rippleRadius, rippleRadius, rippleRadius])
+            : makeObjectMatrix([0, -100, 0], [0.001, 0.001, 0.001]);
+        this.switchRippleMatrices.set(rippleMatrix, flashIndex * 16);
+        this.switchRippleColors.set(
+          [
+            flashColor[0] * rippleStrength * 0.14,
+            flashColor[1] * rippleStrength * 0.14,
+            flashColor[2] * rippleStrength * 0.14,
+            Math.min(rippleStrength * 0.28, 0.22)
+          ],
+          flashIndex * 4
+        );
+        if (rippleStrength > 0.004) {
+          activeRippleCount++;
+        }
       }
+    }
+
+    if (
+      this.canvas &&
+      this.canvas.dataset.packetSprayingSwitchRipples !== String(activeRippleCount)
+    ) {
+      this.canvas.dataset.packetSprayingSwitchRipples = String(activeRippleCount);
     }
   }
 
@@ -2160,6 +2740,70 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       ...switchFlashLights.slice(0, MAX_SWITCH_FLASH_LIGHTS),
       ...secondaryLights
     ].slice(0, 16);
+  }
+
+  private makeCausticLenses(
+    packetLights: readonly OpticalPointLight[],
+    animationTime: number
+  ): OpticalCausticLens[] {
+    const previousTime = this.previousCausticTime;
+    const timeDelta = previousTime === null ? 1 : Math.min(animationTime - previousTime, 0.15);
+    const attack = previousTime === null ? 1 : 1 - Math.exp(-Math.max(timeDelta, 0) * 9);
+    const decay = previousTime === null ? 1 : 1 - Math.exp(-Math.max(timeDelta, 0) * 4);
+    const lenses: OpticalCausticLens[] = [];
+    this.previousCausticTime = animationTime;
+
+    for (let switchIndex = 0; switchIndex < this.glassInstances.length; switchIndex++) {
+      const glassInstance = this.glassInstances[switchIndex];
+      const radius =
+        switchIndex < LEAF_POSITIONS.length
+          ? LEAF_SWITCH_RADIUS
+          : switchIndex < LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length
+            ? AGGREGATION_SWITCH_RADIUS
+            : SPINE_SWITCH_RADIUS;
+      const incomingColor: Vector3 = [0, 0, 0];
+
+      for (const packetLight of packetLights) {
+        const distance = getDistance(packetLight.position, glassInstance.position);
+        const influenceRadius = radius * 1.9;
+        if (distance >= influenceRadius) {
+          continue;
+        }
+
+        const contribution = (1 - distance / influenceRadius) ** 2 * (packetLight.intensity ?? 1);
+        incomingColor[0] += packetLight.color[0] * contribution;
+        incomingColor[1] += packetLight.color[1] * contribution;
+        incomingColor[2] += packetLight.color[2] * contribution;
+      }
+
+      const colorOffset = switchIndex * 3;
+      for (let colorIndex = 0; colorIndex < 3; colorIndex++) {
+        const previousColor = this.causticLensLightColors[colorOffset + colorIndex];
+        const targetColor = incomingColor[colorIndex];
+        const smoothing = targetColor > previousColor ? attack : decay;
+        this.causticLensLightColors[colorOffset + colorIndex] =
+          previousColor + (targetColor - previousColor) * smoothing;
+      }
+
+      const red = this.causticLensLightColors[colorOffset];
+      const green = this.causticLensLightColors[colorOffset + 1];
+      const blue = this.causticLensLightColors[colorOffset + 2];
+      const intensity = Math.max(red, green, blue);
+      if (intensity < 0.035) {
+        continue;
+      }
+
+      lenses.push({
+        position: glassInstance.position,
+        radius,
+        color: [red / intensity, green / intensity, blue / intensity],
+        intensity: Math.min(intensity * 0.68, 1.2)
+      });
+    }
+
+    return lenses
+      .sort((first, second) => (second.intensity ?? 0) - (first.intensity ?? 0))
+      .slice(0, MAX_OPTICAL_CAUSTIC_LENSES);
   }
 
   private makePanel(): Panel {
@@ -2292,6 +2936,30 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.glassVolumeThickness = glassVolumeThickness;
     }
 
+    const glassDynamicReflectionStrength = getChangedSetting(
+      changedSettings,
+      'glassDynamicReflectionStrength'
+    )?.nextValue;
+    if (typeof glassDynamicReflectionStrength === 'number') {
+      this.glassDynamicReflectionStrength = glassDynamicReflectionStrength;
+    }
+
+    const glassSecondaryBounceStrength = getChangedSetting(
+      changedSettings,
+      'glassSecondaryBounceStrength'
+    )?.nextValue;
+    if (typeof glassSecondaryBounceStrength === 'number') {
+      this.glassSecondaryBounceStrength = glassSecondaryBounceStrength;
+    }
+
+    const glassFaultDistortionStrength = getChangedSetting(
+      changedSettings,
+      'glassFaultDistortionStrength'
+    )?.nextValue;
+    if (typeof glassFaultDistortionStrength === 'number') {
+      this.glassFaultDistortionStrength = glassFaultDistortionStrength;
+    }
+
     const packetEmission = getChangedSetting(changedSettings, 'packetEmission')?.nextValue;
     if (typeof packetEmission === 'number') {
       this.packetEmission = packetEmission;
@@ -2318,6 +2986,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.switchFlashIntensity = switchFlashIntensity;
     }
 
+    const switchRippleIntensity = getChangedSetting(
+      changedSettings,
+      'switchRippleIntensity'
+    )?.nextValue;
+    if (typeof switchRippleIntensity === 'number') {
+      this.switchRippleIntensity = switchRippleIntensity;
+    }
+
     const packetLightIntensity = getChangedSetting(
       changedSettings,
       'packetLightIntensity'
@@ -2329,6 +3005,21 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const packetLightRadius = getChangedSetting(changedSettings, 'packetLightRadius')?.nextValue;
     if (typeof packetLightRadius === 'number') {
       this.packetLightRadius = packetLightRadius;
+    }
+
+    const linkTrafficGlow = getChangedSetting(changedSettings, 'linkTrafficGlow')?.nextValue;
+    if (typeof linkTrafficGlow === 'number') {
+      this.linkTrafficGlow = linkTrafficGlow;
+    }
+
+    const causticIntensity = getChangedSetting(changedSettings, 'causticIntensity')?.nextValue;
+    if (typeof causticIntensity === 'number') {
+      this.causticIntensity = causticIntensity;
+    }
+
+    const causticFocus = getChangedSetting(changedSettings, 'causticFocus')?.nextValue;
+    if (typeof causticFocus === 'number') {
+      this.causticFocus = causticFocus;
     }
 
     const bloomIntensity = getChangedSetting(changedSettings, 'bloomIntensity')?.nextValue;
@@ -2353,10 +3044,11 @@ const PACKET_SPRAYING_ARTICLE_URL = 'https://openai.com/index/mrc-supercomputer-
 const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Network Packet Spraying</strong></p>
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
+<p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. Use Play, Back, and Next to follow or inspect each chapter.</p>
 <p>Packets enter their local Tier 0 switch as separate streams. Once the streams meet, the switch forwards alternating red and green packets across four representative independent network planes. The destination-side switches separate the traffic again and deliver each color to its intended server.</p>
-<p>Click any glass switch to move it through three states: healthy, orange and congested, red and failed, then healthy again.</p>
+<p>Click any glass switch to move it from healthy to orange and congested, then red and failed. Clicking a failed switch repairs it, but its path stays offline until a blue recovery probe confirms that the switch is reachable.</p>
 <p>An orange switch trims overloaded packet payloads while their smaller headers continue. A red switch briefly loses in-flight packets before MRC retires the failed plane, retransmits over healthy routes, and sends occasional recovery probes.</p>
-<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and faint tubes show the available fabric links. Emissive packets leave short directional trails, briefly illuminate arriving switches, and cast localized colored light onto nearby surfaces.</p>
+<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and fabric links softly brighten with red or green light only while packets are traveling through them. Packet arrivals send faint expanding ripples through each switch. Emissive packets leave short directional trails, reflect inside nearby glass, and project focused colored caustics onto adjacent reflective surfaces.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Read OpenAI's supercomputer networking and MRC article</a></p>`;
 
 const PACKET_SPRAYING_BACKGROUND_HTML = `\
@@ -2365,9 +3057,9 @@ const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>Planes and packet spraying:</strong> a high-bandwidth network interface can be split across multiple independent physical planes. In the article's example, an 800 Gb/s interface becomes eight 100 Gb/s connections. This visualization shows four representative paths; each conversation sprays successive packets across all four instead of waiting behind one busy link.</p>
 <p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
 <p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
-<p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
+<p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. A repaired path does not carry ordinary traffic again until a control probe confirms it is reachable. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
-<p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, internal shell reflection, thin-film iridescence, and roughness-aware chromatic transmission. Emissive packet cores, directional trails, and switch flashes illuminate the glass through bounded point lights. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
+<p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, two internal shell bounces, moving scene reflections, thin-film iridescence, and roughness-aware chromatic transmission. Emissive packet cores, directional trails, and switch flashes illuminate nearby glass through bounded point lights and focused raster caustics. Fault-tinted switches add subtle animated lens distortion. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
 
 function makeGlassInstances(): GlassInstance[] {
@@ -2721,6 +3413,15 @@ function makeSettingsSchema(
             step: 0.05
           },
           {
+            name: 'switchRippleIntensity',
+            label: 'Switch Arrival Ripple',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.2,
+            step: 0.05
+          },
+          {
             name: 'packetLightIntensity',
             label: 'Local Light Intensity',
             type: 'number',
@@ -2732,6 +3433,33 @@ function makeSettingsSchema(
           {
             name: 'packetLightRadius',
             label: 'Local Light Radius',
+            type: 'number',
+            persist: 'none',
+            min: 0.2,
+            max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'linkTrafficGlow',
+            label: 'Link Traffic Glow',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.4,
+            step: 0.05
+          },
+          {
+            name: 'causticIntensity',
+            label: 'Glass Caustic Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
+            step: 0.05
+          },
+          {
+            name: 'causticFocus',
+            label: 'Glass Caustic Focus',
             type: 'number',
             persist: 'none',
             min: 0.2,
@@ -2878,6 +3606,33 @@ function makeSettingsSchema(
             persist: 'none',
             min: 0.2,
             max: 2,
+            step: 0.05
+          },
+          {
+            name: 'glassDynamicReflectionStrength',
+            label: 'Moving Scene Reflections',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
+            step: 0.05
+          },
+          {
+            name: 'glassSecondaryBounceStrength',
+            label: 'Secondary Internal Bounce',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
+            step: 0.05
+          },
+          {
+            name: 'glassFaultDistortionStrength',
+            label: 'Fault Surface Distortion',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
             step: 0.05
           }
         ]

@@ -22,18 +22,23 @@ GLSL shader modules, while transparency renderers remain responsible for composi
 | GGX microfacets | Shared distribution and visibility helpers shade key and fill lights. | Roughness-dependent, camera-responsive polished highlights. |
 | Clearcoat | Adds a second narrow microfacet lobe above the base surface. | Crisp, bright reflections that make the outer shell readable. |
 | Internal reflection | Approximates a colored secondary environment bounce inside the shell. | A softer inner Fresnel band and greater visible depth. |
+| Multiple internal bounces | Reflects the refracted ray against both measured shell surfaces before sampling the studio environment again. | A second curved highlight suggests the depth of polished solid glass. |
 | Thin-film interference | Applies restrained wavelength-dependent color near grazing angles. | Subtle spectral variation without coloring the whole object. |
 | Localized point lights | Evaluates a bounded array of nearby colored light sources. | Moving emissive objects tint adjacent glass and reflective surfaces. |
+| Dynamic scene reflections | Samples captured opaque scene color along a curved screen-space reflection offset. | Moving packets and active links appear as localized reflections on glass switches. |
+| Focused raster caustics | Projects bounded colored glass-lens contributions onto nearby reflective receivers. | Active switches concentrate moving red and green light onto adjacent links and servers. |
+| Fault-driven distortion | Modulates refraction and narrow internal filaments only on warm fault-tinted glass. | Congested and failed switches acquire subtle animated optical instability. |
 
 [`glassMaterial`](/docs/api-reference/experimental/glass-material) provides the transmissive
 surface model. [`reflectiveMaterial`](/docs/api-reference/experimental/reflective-material)
 provides a lower-cost glossy treatment for links and other non-glass surfaces. Both depend on the
 shared `opticalLighting` shader module.
 
-`emissiveMaterial` provides self-illuminated geometry, while `opticalPointLights` supplies
-portable, bounded local lighting. Emission makes an object bright; point lighting makes it
-illuminate nearby surfaces; bloom spreads the brightest pixels in screen space. These effects can
-be combined independently.
+`emissiveMaterial` provides self-illuminated geometry, `opticalPointLights` supplies portable,
+bounded local lighting, and `opticalCaustics` approximates focused light cast through nearby glass.
+Emission makes an object bright; point lighting illuminates nearby surfaces; caustics concentrate
+light around a focusing lens; bloom spreads the brightest pixels in screen space. These effects
+can be combined independently.
 
 For moving emitters, `emissiveMaterial_getTrailColor(...)` applies a smooth axial falloff to a
 velocity-aligned mesh. A tapered cone behind each packet produces directional bloom without
@@ -115,7 +120,11 @@ shaderInputs.setProps({
     backfaceTexture,
     environmentTexture,
     environmentIntensity: 1.25,
-    thicknessStrength: 1
+    thicknessStrength: 1,
+    dynamicReflectionStrength: 0.38,
+    secondaryBounceStrength: 0.55,
+    faultDistortionStrength: 0.42,
+    time: animationTime
   }
 });
 ```
@@ -123,7 +132,37 @@ shaderInputs.setProps({
 Call `glassTransmission_getColor(...)`, or install `opticalPointLightsPlugin` and call
 `glassTransmission_getIlluminatedColor(...)`. These helpers retain the base glass material while
 adding depth-derived thickness, analytic entry/exit refraction, foreground-depth rejection,
-total-internal-reflection handling, and sampled equirectangular environment reflections.
+total-internal-reflection handling, sampled equirectangular environment reflections, optional
+screen-space scene reflections, secondary internal bounces, and fault-tinted optical distortion.
+The additional controls default to zero so existing transmission consumers retain their appearance.
+
+## Add Focused Raster Caustics
+
+`opticalCausticsPlugin` installs an independent bounded lens array. Register the module alongside
+the receiving material, update nearby lens colors from actual scene lights, and add the returned
+RGB contribution to the receiver's fragment color.
+
+```ts
+import {
+  MAX_OPTICAL_CAUSTIC_LENSES,
+  opticalCaustics,
+  opticalCausticsPlugin
+} from '@luma.gl/experimental';
+
+const shaderInputs = new ShaderInputs({reflectiveMaterial, opticalCaustics});
+
+shaderInputs.setProps({
+  opticalCaustics: {
+    intensity: 0.48,
+    focus: 1.15,
+    lenses: nearbyGlassLenses.slice(0, MAX_OPTICAL_CAUSTIC_LENSES)
+  }
+});
+```
+
+Both WGSL and GLSL expose `opticalCaustics_getColor(normal, worldPosition, cameraPosition)`.
+Caustics are receiver-local raster approximations; they do not require ray tracing, additional
+framebuffers, or installation on unrelated scene geometry.
 
 ## Separate Optical Shading From Transparency
 
@@ -160,7 +199,8 @@ system. In particular, the current implementation does not provide:
 
 - Full energy-conserving multiple-scattering or microfacet transmission.
 - Filtered environment probes and geometry-aware rough transmission.
-- Physically traced multiple refraction events or caustics.
+- Physically traced multiple refraction events or caustics; the available focused-light module is
+  an intentionally bounded raster approximation.
 - Off-screen background recovery or geometry-aware refracted-ray tracing.
 
 Those capabilities require additional depth, normal, backface, environment, or ray-tracing data
