@@ -42,8 +42,10 @@ can be combined independently.
 
 For moving emitters, `emissiveMaterial_getTrailColor(...)` applies a smooth axial falloff to a
 velocity-aligned mesh. A tapered cone behind each packet produces directional bloom without
-blurring stationary glass, links, or neighboring packet colors. Brief additive switch-arrival
-flashes can share the same emissive material while bounded point lights illuminate nearby surfaces.
+blurring stationary glass, links, or neighboring packet colors. Narrow packet-aligned optical wakes
+can remain inside reflective link geometry, while brief additive arrival flashes and expanding
+state-transition waves share the same emissive material. Bounded point lights carry these local
+color changes onto nearby glass without brightening the entire scene.
 
 ## Attach a Glass Material
 

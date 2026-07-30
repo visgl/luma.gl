@@ -23,7 +23,8 @@ export type NetworkPacketEventKind =
   | 'trimmed-payload'
   | 'trimmed-header'
   | 'retransmission'
-  | 'probe';
+  | 'probe'
+  | 'probe-confirmation';
 
 export type NetworkPacketEvent = {
   color: Color;
@@ -53,6 +54,25 @@ export type NetworkLink = {
 export type NetworkLinkTraffic = {
   red: number;
   green: number;
+};
+
+/** One packet-aligned optical wake constrained to a single physical network link. */
+export type NetworkLinkPulse = {
+  color: Color;
+  conversationIndex: number;
+  end: Vector3;
+  linkKey: string;
+  start: Vector3;
+};
+
+export type NetworkSwitchTransitionKind = 'failure' | 'recovery';
+
+export type NetworkSwitchTransitionWave = {
+  color: Color;
+  duration: number;
+  kind: NetworkSwitchTransitionKind;
+  startedAt: number;
+  switchIndex: number;
 };
 
 export type Conversation = {
@@ -109,7 +129,9 @@ export const BURST_CYCLE_DURATION = 11;
 export const CONGESTION_TRIM_INTERVAL = 1.35;
 export const FAILURE_DETECTION_DELAY = 0.52;
 export const PACKET_TRAVEL_SPEED = 3.4;
+export const SWITCH_CONFIRMATION_DURATION = 0.46;
 export const SWITCH_PROBE_INTERVAL = 2.2;
+export const SWITCH_TRANSITION_WAVE_DURATION = 0.78;
 
 export const HOST_POSITIONS: Vector3[] = HOST_Z_POSITIONS.flatMap(zPosition =>
   HOST_X_POSITIONS.map(xPosition => [xPosition, HOST_Y, zPosition] as Vector3)
@@ -352,6 +374,10 @@ export function makeSwitchProbeEvent(
   unavailableSwitchIndices?: ReadonlySet<number>
 ): NetworkPacketEvent | null {
   const switchPosition = SWITCH_POSITIONS[switchIndex];
+  if (!switchPosition) {
+    return null;
+  }
+
   const conversationRoute = conversationRoutes.find(
     ({route}) =>
       route.points.some(position => position === switchPosition) &&
@@ -362,16 +388,93 @@ export function makeSwitchProbeEvent(
           !isFailedSwitchPosition(position, unavailableSwitchIndices)
       )
   );
-  if (!conversationRoute) {
+  const route =
+    conversationRoute?.route ||
+    makePhysicalSwitchProbeRoute(conversationRoutes, switchPosition, unavailableSwitchIndices);
+  if (!route) {
     return null;
   }
 
   return {
     color: [0.35, 0.7, 1, 0.76],
-    conversationIndex: conversationRoute.conversationIndex,
+    conversationIndex: conversationRoute?.conversationIndex ?? 0,
     duration: 0.66,
     kind: 'probe',
-    route: conversationRoute.route,
+    route,
+    startedAt,
+    switchIndex
+  };
+}
+
+function makePhysicalSwitchProbeRoute(
+  conversationRoutes: readonly ConversationRoute[],
+  targetSwitchPosition: Vector3,
+  unavailableSwitchIndices?: ReadonlySet<number>
+): Route | null {
+  const neighbors = new Map<Vector3, Vector3[]>();
+
+  for (const {start, end} of makeLinks(conversationRoutes)) {
+    const startNeighbors = neighbors.get(start) || [];
+    startNeighbors.push(end);
+    neighbors.set(start, startNeighbors);
+
+    const endNeighbors = neighbors.get(end) || [];
+    endNeighbors.push(start);
+    neighbors.set(end, endNeighbors);
+  }
+
+  const queue = HOST_POSITIONS.map(position => ({position, path: [position]}));
+  const visitedPositions = new Set<Vector3>(HOST_POSITIONS);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) {
+      break;
+    }
+
+    if (current.position === targetSwitchPosition) {
+      return makeRoute(current.path);
+    }
+
+    for (const neighbor of neighbors.get(current.position) || []) {
+      if (
+        visitedPositions.has(neighbor) ||
+        (neighbor !== targetSwitchPosition &&
+          unavailableSwitchIndices &&
+          isFailedSwitchPosition(neighbor, unavailableSwitchIndices))
+      ) {
+        continue;
+      }
+
+      visitedPositions.add(neighbor);
+      queue.push({position: neighbor, path: [...current.path, neighbor]});
+    }
+  }
+
+  return null;
+}
+
+/** Sends a successful cyan path confirmation back toward the recovery-probe source. */
+export function makeSwitchProbeConfirmationEvent(probe: NetworkPacketEvent): NetworkPacketEvent {
+  return {
+    ...probe,
+    color: [0.2, 1, 0.8, 0.84],
+    duration: SWITCH_CONFIRMATION_DURATION,
+    kind: 'probe-confirmation',
+    startedAt: probe.startedAt + probe.duration
+  };
+}
+
+/** Creates a restrained state-transition wave centered on a physical switch. */
+export function makeSwitchTransitionWave(
+  switchIndex: number,
+  kind: NetworkSwitchTransitionKind,
+  startedAt: number
+): NetworkSwitchTransitionWave {
+  return {
+    color: kind === 'failure' ? [1, 0.24, 0.07, 0.58] : [0.18, 0.88, 1, 0.52],
+    duration: SWITCH_TRANSITION_WAVE_DURATION,
+    kind,
     startedAt,
     switchIndex
   };
@@ -416,7 +519,7 @@ export function getActivePlaneCount(conversationRoutes: ConversationRoute[]): nu
   return new Set(conversationRoutes.map(({route}) => route.points[3].join(','))).size;
 }
 
-export function makeActiveLinkKeys(conversationRoutes: ConversationRoute[]): Set<string> {
+export function makeActiveLinkKeys(conversationRoutes: readonly ConversationRoute[]): Set<string> {
   const activeLinkKeys = new Set<string>();
 
   for (const {route} of conversationRoutes) {
@@ -436,29 +539,14 @@ export function makeLinkTraffic(
   const trafficByLink = new Map<string, NetworkLinkTraffic>();
 
   for (const packet of packets) {
-    if (!packet.enabled) {
+    const segment = getVisiblePacketRouteSegment(packet, animationTime);
+    if (!segment) {
       continue;
-    }
-
-    const packetAge =
-      (((animationTime - packet.launchTime) % BURST_CYCLE_DURATION) + BURST_CYCLE_DURATION) %
-      BURST_CYCLE_DURATION;
-    const packetDistance = packetAge * PACKET_TRAVEL_SPEED;
-    if (packetDistance > packet.route.totalLength) {
-      continue;
-    }
-
-    let segmentIndex = 0;
-    while (
-      segmentIndex < packet.route.cumulativeLengths.length - 2 &&
-      packet.route.cumulativeLengths[segmentIndex + 1] < packetDistance
-    ) {
-      segmentIndex++;
     }
 
     const linkKey = makeLinkKey(
-      packet.route.points[segmentIndex],
-      packet.route.points[segmentIndex + 1]
+      packet.route.points[segment.segmentIndex],
+      packet.route.points[segment.segmentIndex + 1]
     );
     const linkTraffic = trafficByLink.get(linkKey) || {red: 0, green: 0};
     linkTraffic.red += packet.color[0];
@@ -469,7 +557,78 @@ export function makeLinkTraffic(
   return trafficByLink;
 }
 
-export function makeLinks(conversationRoutes: ConversationRoute[]): NetworkLink[] {
+/** Produces directional packet wakes that never cross a switch or server boundary. */
+export function makeLinkPulses(
+  packets: readonly Packet[],
+  animationTime: number,
+  pulseLength: number
+): NetworkLinkPulse[] {
+  if (pulseLength <= 0) {
+    return [];
+  }
+
+  const pulses: NetworkLinkPulse[] = [];
+
+  for (const packet of packets) {
+    const segment = getVisiblePacketRouteSegment(packet, animationTime);
+    if (!segment) {
+      continue;
+    }
+
+    const startPosition = packet.route.points[segment.segmentIndex];
+    const endPosition = packet.route.points[segment.segmentIndex + 1];
+    const segmentStart =
+      packet.route.cumulativeLengths[segment.segmentIndex] +
+      getNetworkNodeSurfaceInset(startPosition, endPosition);
+    const segmentEnd =
+      packet.route.cumulativeLengths[segment.segmentIndex + 1] -
+      getNetworkNodeSurfaceInset(endPosition, startPosition);
+    const pulseStart = Math.max(segmentStart, segment.packetDistance - pulseLength * 0.82);
+    const pulseEnd = Math.min(segmentEnd, segment.packetDistance + pulseLength * 0.18);
+    if (pulseEnd - pulseStart < 0.015) {
+      continue;
+    }
+
+    pulses.push({
+      color: packet.color,
+      conversationIndex: packet.conversationIndex,
+      end: getPointAlongRoute(packet.route, pulseEnd / packet.route.totalLength),
+      linkKey: makeLinkKey(startPosition, endPosition),
+      start: getPointAlongRoute(packet.route, pulseStart / packet.route.totalLength)
+    });
+  }
+
+  return pulses;
+}
+
+function getVisiblePacketRouteSegment(
+  packet: Packet,
+  animationTime: number
+): {packetDistance: number; segmentIndex: number} | null {
+  if (!packet.enabled) {
+    return null;
+  }
+
+  const packetAge =
+    (((animationTime - packet.launchTime) % BURST_CYCLE_DURATION) + BURST_CYCLE_DURATION) %
+    BURST_CYCLE_DURATION;
+  const packetDistance = packetAge * PACKET_TRAVEL_SPEED;
+  if (packetDistance > packet.route.totalLength) {
+    return null;
+  }
+
+  let segmentIndex = 0;
+  while (
+    segmentIndex < packet.route.cumulativeLengths.length - 2 &&
+    packet.route.cumulativeLengths[segmentIndex + 1] < packetDistance
+  ) {
+    segmentIndex++;
+  }
+
+  return {packetDistance, segmentIndex};
+}
+
+export function makeLinks(conversationRoutes: readonly ConversationRoute[]): NetworkLink[] {
   const links: NetworkLink[] = [];
   const activeLinkKeys = makeActiveLinkKeys(conversationRoutes);
 
@@ -705,6 +864,19 @@ function makeRoute(points: Vector3[]): Route {
     cumulativeLengths.push(totalLength);
   }
   return {points, cumulativeLengths, totalLength};
+}
+
+function getNetworkNodeSurfaceInset(position: Vector3, toward: Vector3): number {
+  if (position[1] === HOST_Y) {
+    return getBoxSurfaceDistance(position, toward, HOST_HALF_EXTENTS);
+  }
+  if (position[1] === LEAF_Y) {
+    return LEAF_SWITCH_RADIUS;
+  }
+  if (position[1] === AGGREGATION_Y) {
+    return AGGREGATION_SWITCH_RADIUS;
+  }
+  return SPINE_SWITCH_RADIUS;
 }
 
 function getBoxSurfaceDistance(start: Vector3, end: Vector3, halfExtents: Vector3): number {

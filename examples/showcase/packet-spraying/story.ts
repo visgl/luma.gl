@@ -64,7 +64,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
     id: 'recovery',
     title: 'Probe, confirm, restore',
     description:
-      'A blue probe verifies the repaired switch before its plane accepts ordinary traffic again.',
+      'A blue probe reaches the repaired switch, then a cyan acknowledgment restores its plane.',
     duration: 7,
     networkState: 'recovering',
     camera: {target: [0, 0.9, 0.65], distance: 9.8, yaw: 0.16, pitch: 0.46}
