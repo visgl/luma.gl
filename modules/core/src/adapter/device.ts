@@ -362,8 +362,14 @@ export type DeviceTextureFormatCapabilities = {
 export type DeviceProps = {
   /** string id for debugging. Stored on the object, used in logging and set on underlying GPU objects when feasible. */
   id?: string;
-  /** Properties for creating a default canvas context */
-  createCanvasContext?: CanvasContextProps | true;
+  /**
+   * Whether to create a default canvas context.
+   * Supplying a `CanvasContextProps` object is deprecated; set this to `true` and use
+   * `canvasContextProps` instead.
+   */
+  createCanvasContext?: CanvasContextProps | boolean;
+  /** Properties for creating or attaching the default canvas context. */
+  canvasContextProps?: CanvasContextProps;
   /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to "high-performance" / discrete GPU. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
@@ -493,6 +499,7 @@ export abstract class Device {
     failIfMajorPerformanceCaveat: false,
     featureLevel: undefined!,
     createCanvasContext: undefined!,
+    canvasContextProps: undefined!,
     // WebGL specific
     webgl: {},
 
@@ -1044,7 +1051,12 @@ or create a device with the 'debug: true' prop.`;
 
   /** Helper to get the canvas context props */
   static _getCanvasContextProps(props: DeviceProps): CanvasContextProps | undefined {
-    return props.createCanvasContext === true ? {} : props.createCanvasContext;
+    if (!props.createCanvasContext) {
+      return undefined;
+    }
+    const legacyCanvasContextProps =
+      props.createCanvasContext === true ? {} : props.createCanvasContext;
+    return {...legacyCanvasContextProps, ...props.canvasContextProps};
   }
 
   protected _getDeviceTextureFormatCapabilities(

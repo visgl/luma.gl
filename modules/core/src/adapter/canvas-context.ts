@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-export type {CanvasContextProps, MutableCanvasContextProps} from './canvas-surface';
+export type {
+  CanvasContextProps,
+  DrawingBufferSizingMode,
+  MutableCanvasContextProps
+} from './canvas-surface';
 import {CanvasSurface} from './canvas-surface';
 
 /**

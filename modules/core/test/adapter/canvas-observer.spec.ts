@@ -267,6 +267,64 @@ test('CanvasObserver#resizeObserverBox uses content-box when specified', t => {
   t.end();
 });
 
+test('CanvasObserver#setResizeObserverBox reobserves an active canvas', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis;
+  const originals = getOriginalGlobals(globalScope);
+  const observedBoxes: Array<ResizeObserverBoxOptions | undefined> = [];
+  let resizeDisconnectCalls = 0;
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe(_target: Element, options?: ResizeObserverOptions) {
+      observedBoxes.push(options?.box);
+    }
+    disconnect() {
+      resizeDisconnectCalls++;
+    }
+  } as typeof ResizeObserver;
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {}
+    disconnect() {}
+  } as typeof IntersectionObserver;
+  globalScope.setTimeout = (callback: TimerHandler, delay?: number) =>
+    originals.setTimeout.call(globalScope, callback, delay);
+
+  try {
+    const observer = new CanvasObserver({
+      canvas: document.createElement('canvas'),
+      trackPosition: false,
+      resizeObserverBox: 'device-pixel-content-box',
+      onResize: () => {},
+      onIntersection: () => {},
+      onDevicePixelRatioChange: () => {},
+      onPositionChange: () => {}
+    });
+
+    observer.start();
+    observer.setResizeObserverBox('device-pixel-content-box');
+    observer.setResizeObserverBox('content-box');
+
+    t.deepEqual(
+      observedBoxes,
+      ['device-pixel-content-box', 'content-box'],
+      'changing the resize box reobserves the canvas exactly once'
+    );
+    t.equal(resizeDisconnectCalls, 1, 'changing the resize box disconnects the old observation');
+
+    observer.stop();
+  } finally {
+    restoreGlobals(globalScope, originals);
+  }
+
+  t.end();
+});
+
 test('CanvasObserver#start is a no-op without an HTML canvas', t => {
   if (!isBrowser()) {
     t.end();

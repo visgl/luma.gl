@@ -20,7 +20,11 @@ export type {
 } from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits, isHTMLInCanvasSupported} from './adapter/device';
 
-export type {CanvasContextProps} from './adapter/canvas-context';
+export type {
+  CanvasContextProps,
+  DrawingBufferSizingMode,
+  MutableCanvasContextProps
+} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
 export type {PresentationContextProps} from './adapter/presentation-context';
 export {PresentationContext} from './adapter/presentation-context';

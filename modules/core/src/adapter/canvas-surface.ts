@@ -11,7 +11,10 @@ import type {Framebuffer} from './resources/framebuffer';
 import type {TextureFormatDepthStencil} from '../shadertypes/texture-types/texture-formats';
 import {uid} from '../utils/uid';
 import {withResolvers} from '../utils/promise-utils';
-import {assertDefined} from '../utils/assert';
+import {assert, assertDefined} from '../utils/assert';
+
+/** Selects how a canvas drawing buffer is resized. */
+export type DrawingBufferSizingMode = 'manual' | 'track-device-pixels' | 'track-css-pixels';
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
@@ -27,7 +30,15 @@ export type CanvasContextProps = {
   height?: number;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
-  /** Whether to size the drawing buffer to the pixel size during auto resize. If a number is provided it is used as a static pixel ratio */
+  /** How luma.gl should resize the drawing buffer. */
+  drawingBufferSizingMode?: DrawingBufferSizingMode;
+  /** Fixed ratio applied to CSS dimensions. Only valid in `track-css-pixels` mode. */
+  pixelRatio?: number;
+  /**
+   * Whether to size the drawing buffer to the pixel size during auto resize. If a number is
+   * provided it is used as a static pixel ratio.
+   * @deprecated Use `drawingBufferSizingMode` and `pixelRatio`.
+   */
   useDevicePixels?: boolean | number;
   /**
    * How to derive the tracked device pixel size for HTML canvases when auto-resizing.
@@ -36,9 +47,13 @@ export type CanvasContextProps = {
    *   browser's exact physical pixel coverage.
    * - `'css-dpr'` uses `Math.floor(cssSize * devicePixelRatio)` to match overlays and external
    *   canvases that size their drawing buffer via implicit truncation (e.g. `canvas.width = css * dpr`).
+   * @deprecated Use `drawingBufferSizingMode`.
    */
   pixelSizeSource?: 'exact' | 'css-dpr';
-  /** Whether to track window resizes. */
+  /**
+   * Whether to track window resizes.
+   * @deprecated Use `drawingBufferSizingMode: 'manual'`.
+   */
   autoResize?: boolean;
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
   alphaMode?: 'opaque' | 'premultiplied';
@@ -53,7 +68,15 @@ export type CanvasContextProps = {
 };
 
 export type MutableCanvasContextProps = {
-  /** Whether to size the drawing buffer to the pixel size during auto resize. If a number is provided it is used as a static pixel ratio */
+  /** How luma.gl should resize the drawing buffer. */
+  drawingBufferSizingMode?: DrawingBufferSizingMode;
+  /** Fixed ratio applied to CSS dimensions. Only valid in `track-css-pixels` mode. */
+  pixelRatio?: number;
+  /**
+   * Whether to size the drawing buffer to the pixel size during auto resize. If a number is
+   * provided it is used as a static pixel ratio.
+   * @deprecated Use `drawingBufferSizingMode` and `pixelRatio`.
+   */
   useDevicePixels?: boolean | number;
 };
 
@@ -83,6 +106,8 @@ export abstract class CanvasSurface {
     canvas: null,
     width: 800,
     height: 600,
+    drawingBufferSizingMode: 'track-device-pixels',
+    pixelRatio: undefined!,
     useDevicePixels: true,
     pixelSizeSource: 'exact',
     autoResize: true,
@@ -126,9 +151,9 @@ export abstract class CanvasSurface {
   /** Exact height of canvas in physical pixels (tracked by a ResizeObserver) */
   devicePixelHeight: number;
 
-  /** Width of drawing buffer: automatically tracks this.pixelWidth if props.autoResize is true */
+  /** Width of the drawing buffer, maintained according to drawingBufferSizingMode. */
   drawingBufferWidth: number;
-  /** Height of drawing buffer: automatically tracks this.pixelHeight if props.autoResize is true */
+  /** Height of the drawing buffer, maintained according to drawingBufferSizingMode. */
   drawingBufferHeight: number;
 
   /** Resolves when the canvas is initialized, i.e. when the ResizeObserver has updated the pixel size */
@@ -138,6 +163,8 @@ export abstract class CanvasSurface {
   protected _position: [number, number] = [0, 0];
   /** Whether this canvas context has been destroyed */
   protected destroyed = false;
+  /** Whether deprecated sizing props still control the normalized sizing configuration. */
+  protected _usesLegacyDrawingBufferSizing: boolean;
   /** Whether the drawing buffer size needs to be resized (deferred resizing to avoid flicker) */
   protected _needsDrawingBufferResize: boolean = true;
 
@@ -148,7 +175,10 @@ export abstract class CanvasSurface {
   }
 
   constructor(props?: CanvasContextProps) {
-    this.props = {...CanvasSurface.defaultProps, ...props};
+    this._usesLegacyDrawingBufferSizing =
+      props?.drawingBufferSizingMode === undefined && props?.pixelRatio === undefined;
+    const drawingBufferSizingProps = normalizeDrawingBufferSizingProps(props);
+    this.props = {...CanvasSurface.defaultProps, ...props, ...drawingBufferSizingProps};
     props = this.props;
 
     this.initialized = this._initializedResolvers.promise;
@@ -187,8 +217,7 @@ export abstract class CanvasSurface {
     this._canvasObserver = new CanvasObserver({
       canvas: this.htmlCanvas,
       trackPosition: this.props.trackPosition,
-      resizeObserverBox:
-        this.props.pixelSizeSource === 'css-dpr' ? 'content-box' : 'device-pixel-content-box',
+      resizeObserverBox: getResizeObserverBox(this.props.drawingBufferSizingMode),
       onResize: entries => this._handleResize(entries),
       onIntersection: entries => this._handleIntersection(entries),
       onDevicePixelRatioChange: () => this._observeDevicePixelRatio(),
@@ -206,9 +235,29 @@ export abstract class CanvasSurface {
   }
 
   setProps(props: MutableCanvasContextProps): this {
-    if ('useDevicePixels' in props) {
-      this.props.useDevicePixels = props.useDevicePixels || false;
-      this._updateDrawingBufferSize();
+    const hasNewDrawingBufferSizingProps =
+      'drawingBufferSizingMode' in props || 'pixelRatio' in props;
+    if (hasNewDrawingBufferSizingProps) {
+      const previousUsesLegacyDrawingBufferSizing = this._usesLegacyDrawingBufferSizing;
+      const drawingBufferSizingMode =
+        props.drawingBufferSizingMode ?? this.props.drawingBufferSizingMode;
+      let pixelRatio = 'pixelRatio' in props ? props.pixelRatio : this.props.pixelRatio;
+      if (
+        'drawingBufferSizingMode' in props &&
+        (drawingBufferSizingMode !== 'track-css-pixels' || previousUsesLegacyDrawingBufferSizing)
+      ) {
+        pixelRatio = props.pixelRatio;
+      }
+      validateDrawingBufferSizingProps(drawingBufferSizingMode, pixelRatio);
+      this._usesLegacyDrawingBufferSizing = false;
+      this._setDrawingBufferSizingProps(drawingBufferSizingMode, pixelRatio);
+    } else if ('useDevicePixels' in props && this._usesLegacyDrawingBufferSizing) {
+      this.props.useDevicePixels = props.useDevicePixels ?? false;
+      const drawingBufferSizingProps = normalizeLegacyDrawingBufferSizingProps(this.props);
+      this._setDrawingBufferSizingProps(
+        drawingBufferSizingProps.drawingBufferSizingMode,
+        drawingBufferSizingProps.pixelRatio
+      );
     }
     return this;
   }
@@ -378,17 +427,16 @@ export abstract class CanvasSurface {
   }
 
   protected _updateDrawingBufferSize() {
-    if (this.props.autoResize) {
-      if (typeof this.props.useDevicePixels === 'number') {
-        const devicePixelRatio = this.props.useDevicePixels;
-        this.setDrawingBufferSize(
-          this.cssWidth * devicePixelRatio,
-          this.cssHeight * devicePixelRatio
-        );
-      } else if (this.props.useDevicePixels) {
+    switch (this.props.drawingBufferSizingMode) {
+      case 'manual':
+        break;
+      case 'track-device-pixels':
         this.setDrawingBufferSize(this.devicePixelWidth, this.devicePixelHeight);
-      } else {
-        this.setDrawingBufferSize(this.cssWidth, this.cssHeight);
+        break;
+      case 'track-css-pixels': {
+        const pixelRatio = this.props.pixelRatio ?? this.getDevicePixelRatio();
+        this.setDrawingBufferSize(this.cssWidth * pixelRatio, this.cssHeight * pixelRatio);
+        break;
       }
     }
 
@@ -401,7 +449,7 @@ export abstract class CanvasSurface {
   protected _getDevicePixelSizeFromResizeEntry(entry: ResizeObserverEntry): DevicePixelSize {
     const contentBoxSize = assertDefined(entry.contentBoxSize?.[0]);
 
-    if (this.props.pixelSizeSource === 'css-dpr') {
+    if (this.props.drawingBufferSizingMode === 'track-css-pixels') {
       return this._getDevicePixelSizeFromCSSSize(
         contentBoxSize.inlineSize,
         contentBoxSize.blockSize
@@ -432,6 +480,18 @@ export abstract class CanvasSurface {
     this.devicePixelHeight = Math.max(1, Math.min(devicePixelHeight, maxDevicePixelHeight));
   }
 
+  protected _setDrawingBufferSizingProps(
+    drawingBufferSizingMode: DrawingBufferSizingMode,
+    pixelRatio: number | undefined
+  ): void {
+    validateDrawingBufferSizingProps(drawingBufferSizingMode, pixelRatio);
+    this.props.drawingBufferSizingMode = drawingBufferSizingMode;
+    this.props.pixelRatio = pixelRatio!;
+    this._canvasObserver.setResizeObserverBox(getResizeObserverBox(drawingBufferSizingMode));
+    this._setDevicePixelSize(this._getDevicePixelSizeFromCSSSize(this.cssWidth, this.cssHeight));
+    this._updateDrawingBufferSize();
+  }
+
   _resizeDrawingBufferIfNeeded() {
     if (this._needsDrawingBufferResize) {
       this._needsDrawingBufferResize = false;
@@ -453,9 +513,9 @@ export abstract class CanvasSurface {
     const oldRatio = this.devicePixelRatio;
     this.devicePixelRatio = window.devicePixelRatio;
 
-    if (this.props.pixelSizeSource === 'css-dpr') {
-      // In css-dpr mode the ResizeObserver watches content-box, which won't fire on a pure DPR
-      // change (CSS size unchanged). Recalculate the drawing buffer from the new DPR here.
+    if (this.props.drawingBufferSizingMode === 'track-css-pixels') {
+      // In track-css-pixels mode the ResizeObserver won't fire on a pure DPR change (CSS size
+      // unchanged). Recalculate the drawing buffer from the new DPR here.
       const oldPixelSize = this.getDevicePixelSize();
       this._setDevicePixelSize(this._getDevicePixelSizeFromCSSSize(this.cssWidth, this.cssHeight));
       this._updateDrawingBufferSize();
@@ -488,6 +548,59 @@ export abstract class CanvasSurface {
       }
     }
   }
+}
+
+function normalizeDrawingBufferSizingProps(
+  props: CanvasContextProps = {}
+): Required<Pick<CanvasContextProps, 'drawingBufferSizingMode' | 'pixelRatio'>> {
+  if (props.drawingBufferSizingMode !== undefined || props.pixelRatio !== undefined) {
+    // Supplying a fixed ratio requires explicitly opting into CSS-pixel tracking.
+    assert(props.drawingBufferSizingMode !== undefined);
+    validateDrawingBufferSizingProps(props.drawingBufferSizingMode, props.pixelRatio);
+    return {
+      drawingBufferSizingMode: props.drawingBufferSizingMode,
+      pixelRatio: props.pixelRatio!
+    };
+  }
+  return normalizeLegacyDrawingBufferSizingProps(props);
+}
+
+function normalizeLegacyDrawingBufferSizingProps(
+  props: Pick<CanvasContextProps, 'autoResize' | 'useDevicePixels' | 'pixelSizeSource'>
+): Required<Pick<CanvasContextProps, 'drawingBufferSizingMode' | 'pixelRatio'>> {
+  if (props.autoResize === false) {
+    return {drawingBufferSizingMode: 'manual', pixelRatio: undefined!};
+  }
+  if (typeof props.useDevicePixels === 'number') {
+    validateDrawingBufferSizingProps('track-css-pixels', props.useDevicePixels);
+    return {drawingBufferSizingMode: 'track-css-pixels', pixelRatio: props.useDevicePixels};
+  }
+  if (props.useDevicePixels === false) {
+    return {drawingBufferSizingMode: 'track-css-pixels', pixelRatio: 1};
+  }
+  return {
+    drawingBufferSizingMode:
+      props.pixelSizeSource === 'css-dpr' ? 'track-css-pixels' : 'track-device-pixels',
+    pixelRatio: undefined!
+  };
+}
+
+function validateDrawingBufferSizingProps(
+  drawingBufferSizingMode: DrawingBufferSizingMode,
+  pixelRatio: number | undefined
+): void {
+  // Fixed pixel ratios are only defined for CSS-pixel tracking.
+  assert(pixelRatio === undefined || drawingBufferSizingMode === 'track-css-pixels');
+  // Drawing buffer dimensions require a positive finite scale.
+  assert(pixelRatio === undefined || (Number.isFinite(pixelRatio) && pixelRatio > 0));
+}
+
+function getResizeObserverBox(
+  drawingBufferSizingMode: DrawingBufferSizingMode
+): ResizeObserverBoxOptions {
+  return drawingBufferSizingMode === 'track-css-pixels'
+    ? 'content-box'
+    : 'device-pixel-content-box';
 }
 
 function getContainer(container: HTMLElement | string | null): HTMLElement {

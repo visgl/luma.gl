@@ -63,14 +63,21 @@ export class WebGLAdapter extends Adapter {
       throw new Error('Invalid WebGL2RenderingContext');
     }
 
-    const createCanvasContext = props.createCanvasContext === true ? {} : props.createCanvasContext;
+    const legacyCanvasContextProps =
+      typeof props.createCanvasContext === 'object' ? props.createCanvasContext : {};
 
     // We create a new device using the provided WebGL context and its canvas
     // Assume that whoever created the external context will be handling resizes.
     return new WebGLDevice({
       ...props,
       _handle: gl,
-      createCanvasContext: {canvas: gl.canvas, autoResize: false, ...createCanvasContext}
+      createCanvasContext: true,
+      canvasContextProps: {
+        canvas: gl.canvas,
+        autoResize: false,
+        ...legacyCanvasContextProps,
+        ...props.canvasContextProps
+      }
     });
   }
 

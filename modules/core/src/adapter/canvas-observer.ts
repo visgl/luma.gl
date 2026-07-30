@@ -53,6 +53,18 @@ export class CanvasObserver {
     this.props = props;
   }
 
+  /** Changes the observed resize box and re-registers an active ResizeObserver. */
+  setResizeObserverBox(resizeObserverBox: ResizeObserverBoxOptions): void {
+    if (resizeObserverBox === this.props.resizeObserverBox) {
+      return;
+    }
+    this.props.resizeObserverBox = resizeObserverBox;
+    if (this._started) {
+      this._resizeObserver?.disconnect();
+      this._observeResize();
+    }
+  }
+
   /** Starts DOM observation and optional position polling. */
   start(): void {
     if (this._started || !this.props.canvas) {
@@ -66,12 +78,7 @@ export class CanvasObserver {
     this._resizeObserver ||= new ResizeObserver(entries => this.props.onResize(entries));
 
     this._intersectionObserver.observe(this.props.canvas);
-    const box = this.props.resizeObserverBox;
-    try {
-      this._resizeObserver.observe(this.props.canvas, {box});
-    } catch {
-      this._resizeObserver.observe(this.props.canvas, {box: 'content-box'});
-    }
+    this._observeResize();
 
     this._observeDevicePixelRatioTimeout = setTimeout(() => this._refreshDevicePixelRatio(), 0);
 
@@ -130,6 +137,19 @@ export class CanvasObserver {
       this._handleDevicePixelRatioChange,
       {once: true}
     );
+  }
+
+  /** Registers the ResizeObserver with the currently configured box. */
+  private _observeResize(): void {
+    if (!this.props.canvas || !this._resizeObserver) {
+      return;
+    }
+    const box = this.props.resizeObserverBox;
+    try {
+      this._resizeObserver.observe(this.props.canvas, {box});
+    } catch {
+      this._resizeObserver.observe(this.props.canvas, {box: 'content-box'});
+    }
   }
 
   /**
