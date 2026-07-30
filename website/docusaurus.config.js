@@ -20,6 +20,10 @@ const config = getDocusaurusConfig({
   customCss: ['./src/custom.css'],
   navbarItems: [
     {
+      to: '/showcase',
+      label: 'Showcase'
+    },
+    {
       to: '/docs/tutorials',
       label: 'Tutorials'
     },
