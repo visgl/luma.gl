@@ -362,15 +362,15 @@ type GPUDataChildMethods<
 /** Constructor overloads that infer scalar formats, default storage structs, and explicit layouts. */
 type GPUDataConstructor = {
   /** Constructs scalar or list data while preserving its literal format. */
-  new <const Format extends GPUVectorFormat = GPUVectorFormat>(
+  new <Format extends GPUVectorFormat = GPUVectorFormat>(
     props: GPUDataScalarFromBufferProps<Format>
   ): GPUData<Format>;
   /** Constructs struct data using the default `wgsl-storage` layout. */
-  new <const Fields extends GPUDataStructFields>(
+  new <Fields extends GPUDataStructFields>(
     props: GPUDataStructFromBufferProps<Fields, 'wgsl-storage'>
   ): GPUData<Fields, 'wgsl-storage'>;
   /** Constructs struct data using an explicitly selected layout. */
-  new <const Fields extends GPUDataStructFields, const Layout extends GPUDataStructLayout>(
+  new <Fields extends GPUDataStructFields, Layout extends GPUDataStructLayout>(
     props: GPUDataStructFromBufferProps<Fields, Layout> & {layout: Layout}
   ): GPUData<Fields, Layout>;
   /** Broad runtime signature used when callers do not retain literal format information. */

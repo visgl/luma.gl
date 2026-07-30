@@ -100,8 +100,8 @@ export function isGPUDataStructFormat(
  * @internal
  */
 export function normalizeGPUDataStructFormat<
-  const Fields extends GPUDataStructFields,
-  const Layout extends GPUDataStructLayout
+  Fields extends GPUDataStructFields,
+  Layout extends GPUDataStructLayout
 >(fieldFormats: Fields, layout: Layout): GPUDataStructFormat<Fields, Layout> {
   const fieldEntries = Object.entries(fieldFormats) as [keyof Fields & string, VertexFormat][];
   if (fieldEntries.length === 0) {
