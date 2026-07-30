@@ -46,7 +46,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
     id: 'congestion',
     title: 'Congestion and packet trimming',
     description:
-      'An overloaded switch trims packet payloads while small headers trigger retransmission.',
+      'Packets shift toward healthy planes while an overloaded switch trims payloads into headers.',
     duration: 7,
     networkState: 'congested',
     camera: {target: [0, 0.65, 0.55], distance: 10.6, yaw: 0.42, pitch: 0.45}

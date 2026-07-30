@@ -101,6 +101,7 @@ import {
   isFailedSwitchPosition,
   makeActiveLinkKeys,
   makeConversationRoutes,
+  makeEndpointSignals,
   makeHostColor,
   makeLinkColor,
   makeLinkKey,
@@ -108,6 +109,7 @@ import {
   makeLinkTraffic,
   makeLinks,
   makePackets,
+  makeNetworkPlaneTelemetry,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
   makeSwitchProbeConfirmationEvent,
@@ -119,6 +121,8 @@ import {
   type Color,
   type ConversationRoute,
   type NetworkLink,
+  type NetworkEndpointSignal,
+  type NetworkPlaneTelemetry,
   type NetworkPacketEvent,
   type NetworkScenario,
   type NetworkSwitchTransitionWave,
@@ -591,6 +595,7 @@ const SWITCH_FLASH_DURATION = 0.16;
 const SWITCH_RIPPLE_DURATION = 0.38;
 const MAX_SWITCH_FLASH_LIGHTS = 6;
 const MAX_SWITCH_TRANSITION_WAVES = 12;
+const MAX_ENDPOINT_SIGNALS = CONVERSATIONS.length * 2;
 const MAX_STORY_PACKET_INSTANCES = 160;
 const CONGESTED_SWITCH_COLOR: Color = [1, 0.42, 0.065, 0.56];
 const DETECTING_SWITCH_COLOR: Color = [1, 0.21, 0.035, 0.59];
@@ -900,8 +905,15 @@ class NetworkStoryControls {
   private readonly rootElement: HTMLDivElement;
   private readonly titleElement: HTMLDivElement;
   private readonly descriptionElement: HTMLParagraphElement;
+  private readonly fabricStatusElement: HTMLSpanElement;
+  private readonly planeIndicators: {
+    greenBar: HTMLDivElement;
+    redBar: HTMLDivElement;
+    status: HTMLSpanElement;
+  }[];
   private readonly chapterPositionElement: HTMLSpanElement;
   private readonly playbackButton: HTMLButtonElement;
+  private previousTelemetrySignature = '';
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -957,6 +969,71 @@ class NetworkStoryControls {
       color: '#bcc9dc'
     });
 
+    const telemetryElement = document.createElement('div');
+    Object.assign(telemetryElement.style, {
+      margin: '0 0 13px',
+      paddingTop: '9px',
+      borderTop: '1px solid rgba(137, 166, 211, 0.17)'
+    });
+
+    const telemetryHeading = document.createElement('div');
+    Object.assign(telemetryHeading.style, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginBottom: '5px',
+      color: '#91a6c3',
+      fontSize: '10px'
+    });
+    const telemetryLabel = document.createElement('span');
+    telemetryLabel.textContent = 'FABRIC PLANES';
+    this.fabricStatusElement = document.createElement('span');
+    telemetryHeading.append(telemetryLabel, this.fabricStatusElement);
+    telemetryElement.appendChild(telemetryHeading);
+
+    this.planeIndicators = SPINE_POSITIONS.map((_, planeIndex) => {
+      const rowElement = document.createElement('div');
+      rowElement.dataset.networkPlane = String(planeIndex + 1);
+      Object.assign(rowElement.style, {
+        display: 'grid',
+        gridTemplateColumns: '42px minmax(0, 1fr) 56px',
+        alignItems: 'center',
+        gap: '7px',
+        height: '18px'
+      });
+
+      const labelElement = document.createElement('span');
+      labelElement.textContent = `Plane ${planeIndex + 1}`;
+      Object.assign(labelElement.style, {color: '#becce0', fontSize: '10px'});
+
+      const trackElement = document.createElement('div');
+      Object.assign(trackElement.style, {
+        display: 'flex',
+        height: '5px',
+        overflow: 'hidden',
+        borderRadius: '3px',
+        background: 'rgba(93, 113, 146, 0.3)'
+      });
+      const redBar = document.createElement('div');
+      const greenBar = document.createElement('div');
+      Object.assign(redBar.style, {
+        height: '100%',
+        background: '#ff504d',
+        transition: 'width 260ms ease'
+      });
+      Object.assign(greenBar.style, {
+        height: '100%',
+        background: '#34db87',
+        transition: 'width 260ms ease'
+      });
+      trackElement.append(redBar, greenBar);
+
+      const status = document.createElement('span');
+      Object.assign(status.style, {textAlign: 'right', fontSize: '9px'});
+      rowElement.append(labelElement, trackElement, status);
+      telemetryElement.appendChild(rowElement);
+      return {greenBar, redBar, status};
+    });
+
     const actionsElement = document.createElement('div');
     Object.assign(actionsElement.style, {
       display: 'flex',
@@ -987,6 +1064,7 @@ class NetworkStoryControls {
       headingElement,
       this.titleElement,
       this.descriptionElement,
+      telemetryElement,
       actionsElement
     );
     (canvas.parentElement || document.body).appendChild(this.rootElement);
@@ -1003,6 +1081,49 @@ class NetworkStoryControls {
     );
     this.rootElement.dataset.networkStoryChapter = chapter.id;
     this.rootElement.dataset.networkStoryPlaying = String(isPlaying);
+  }
+
+  updateTelemetry(planes: readonly NetworkPlaneTelemetry[]): void {
+    const signature = planes
+      .map(plane => `${plane.status}:${plane.redPacketCount}:${plane.greenPacketCount}`)
+      .join('|');
+    if (signature === this.previousTelemetrySignature) {
+      return;
+    }
+    this.previousTelemetrySignature = signature;
+
+    const availablePlaneCount = planes.filter(
+      plane => plane.status !== 'failed' && plane.status !== 'recovering'
+    ).length;
+    const maximumPlaneLoad = Math.max(
+      ...planes.map(plane => plane.redPacketCount + plane.greenPacketCount),
+      1
+    );
+    this.fabricStatusElement.textContent = `${availablePlaneCount} / ${planes.length} AVAILABLE`;
+
+    for (const plane of planes) {
+      const indicator = this.planeIndicators[plane.planeIndex];
+      indicator.redBar.style.width = `${(plane.redPacketCount / maximumPlaneLoad) * 100}%`;
+      indicator.greenBar.style.width = `${(plane.greenPacketCount / maximumPlaneLoad) * 100}%`;
+      indicator.status.textContent =
+        plane.status === 'healthy'
+          ? 'ONLINE'
+          : plane.status === 'congested'
+            ? 'PRESSURE'
+            : plane.status === 'recovering'
+              ? 'PROBING'
+              : 'OFFLINE';
+      indicator.status.style.color =
+        plane.status === 'healthy'
+          ? '#8ba6c7'
+          : plane.status === 'congested'
+            ? '#ffac59'
+            : plane.status === 'recovering'
+              ? '#72d4ff'
+              : '#ff7065';
+    }
+
+    this.rootElement.dataset.networkPlaneStates = planes.map(plane => plane.status).join(',');
   }
 
   destroy(): void {
@@ -1134,6 +1255,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
   }>;
+  readonly endpointSignals: InstancedMesh<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
   readonly switchFlashes: InstancedMesh<{
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
@@ -1156,6 +1281,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly packetTrailColors: Float32Array;
   readonly linkPulseMatrices: Float32Array;
   readonly linkPulseColors: Float32Array;
+  readonly endpointSignalMatrices = new Float32Array(MAX_ENDPOINT_SIGNALS * 16);
+  readonly endpointSignalColors = new Float32Array(MAX_ENDPOINT_SIGNALS * 4);
   switchArrivalEvents: SwitchArrival[];
   readonly switchFlashMatrices: Float32Array;
   readonly switchFlashColors: Float32Array;
@@ -1170,6 +1297,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly storyPacketMatrices = new Float32Array(MAX_STORY_PACKET_INSTANCES * 16);
   readonly storyPacketColors = new Float32Array(MAX_STORY_PACKET_INSTANCES * 4);
   readonly networkPacketEvents: NetworkPacketEvent[] = [];
+  private endpointSignalDefinitions: NetworkEndpointSignal[] = [];
   orbitControls: OrbitControls | null = null;
   nodePopup: NetworkNodePopup | null = null;
   storyControls: NetworkStoryControls | null = null;
@@ -1198,6 +1326,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private guidedStoryPreviousCameraTime: number | null = null;
 
   transparencyMode: TransparencyMode;
+  adaptiveRouting = true;
   speed = 0.85;
   orbit = 0.08;
   glassIndexOfRefraction = 1.48;
@@ -1226,6 +1355,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   linkTrafficGlow = 0.58;
   linkPulseLength = 0.31;
   linkPulseIntensity = 0.48;
+  endpointSignalIntensity = 0.54;
   congestionPressureIntensity = 0.32;
   causticIntensity = 0.48;
   causticFocus = 1.15;
@@ -1451,6 +1581,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       additive: true,
       trail: true
     });
+    this.endpointSignals = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-endpoint-activity',
+      geometry: new SphereGeometry({radius: 1, nlat: 10, nlong: 18}),
+      matrices: this.endpointSignalMatrices,
+      colors: this.endpointSignalColors,
+      additive: true,
+      emissive: true
+    });
     this.switchFlashes = new InstancedMesh(device, this.emissiveShaderInputs, {
       id: 'packet-spraying-switch-arrival-flashes',
       geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
@@ -1489,6 +1627,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       schema: makeSettingsSchema(supportsABuffer, supportsWeightedBlending),
       settings: {
         transparencyMode: this.transparencyMode,
+        adaptiveRouting: this.adaptiveRouting,
         speed: this.speed,
         orbit: this.orbit,
         glassIndexOfRefraction: this.glassIndexOfRefraction,
@@ -1517,6 +1656,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         linkTrafficGlow: this.linkTrafficGlow,
         linkPulseLength: this.linkPulseLength,
         linkPulseIntensity: this.linkPulseIntensity,
+        endpointSignalIntensity: this.endpointSignalIntensity,
         congestionPressureIntensity: this.congestionPressureIntensity,
         causticIntensity: this.causticIntensity,
         causticFocus: this.causticFocus,
@@ -1562,6 +1702,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         onTogglePlayback: () => this.setGuidedStoryPlaying(!this.guidedStoryPlaying)
       });
       this.updateGuidedStoryControls();
+      this.updateNetworkTelemetry();
       this.updateFailureAccessibility();
 
       if (new URLSearchParams(window.location.search).get('story') === '1') {
@@ -1577,6 +1718,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.updateSwitchStoryState(this.animationTime);
     this.updateSwitchPressure(this.animationTime);
     this.updatePacketVisuals(this.animationTime);
+    this.updateEndpointSignals(this.animationTime);
     this.updateLinkPulseVisuals(this.animationTime);
     this.updateLinkTraffic(this.animationTime);
     this.updateSwitchTransitionVisuals(this.animationTime);
@@ -1584,6 +1726,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.updateMatrices(this.packetMatrices);
     this.packetTrails.updateInstances(this.packetTrailMatrices, this.packetTrailColors);
     this.linkPulses.updateInstances(this.linkPulseMatrices, this.linkPulseColors);
+    this.endpointSignals.updateInstances(this.endpointSignalMatrices, this.endpointSignalColors);
     this.switchFlashes.updateInstances(this.switchFlashMatrices, this.switchFlashColors);
     this.switchRipples.updateInstances(this.switchRippleMatrices, this.switchRippleColors);
     this.switchTransitionVisuals.updateInstances(
@@ -1682,6 +1825,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.model.predraw(device.commandEncoder);
     this.packetTrails.model.predraw(device.commandEncoder);
     this.linkPulses.model.predraw(device.commandEncoder);
+    this.endpointSignals.model.predraw(device.commandEncoder);
     this.switchFlashes.model.predraw(device.commandEncoder);
     this.switchRipples.model.predraw(device.commandEncoder);
     this.switchTransitionVisuals.model.predraw(device.commandEncoder);
@@ -1696,6 +1840,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.model.draw(sceneRenderPass);
     this.packetTrails.model.draw(sceneRenderPass);
     this.linkPulses.model.draw(sceneRenderPass);
+    this.endpointSignals.model.draw(sceneRenderPass);
     this.switchFlashes.model.draw(sceneRenderPass);
     this.switchRipples.model.draw(sceneRenderPass);
     this.switchTransitionVisuals.model.draw(sceneRenderPass);
@@ -1834,6 +1979,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packets.destroy();
     this.packetTrails.destroy();
     this.linkPulses.destroy();
+    this.endpointSignals.destroy();
     this.switchFlashes.destroy();
     this.switchRipples.destroy();
     this.switchTransitionVisuals.destroy();
@@ -2369,7 +2515,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.failedSwitchIndices,
       this.recoveringSwitchIndices
     );
-    reroutePackets(this.packetDefinitions, healthyRoutes);
+    reroutePackets(
+      this.packetDefinitions,
+      healthyRoutes,
+      this.adaptiveRouting ? this.congestedSwitchIndices : undefined
+    );
     this.switchArrivalEvents = makeSwitchArrivals(this.packetDefinitions);
     const activeLinkKeys = makeActiveLinkKeys(healthyRoutes);
 
@@ -2391,6 +2541,74 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       flattenMatrices(this.networkLinks.map(link => makeLinkMatrix(link, 0.09))),
       flattenColors(this.networkLinks.map(link => link.color))
     );
+    this.updateNetworkTelemetry();
+  }
+
+  private updateNetworkTelemetry(): void {
+    const telemetry = makeNetworkPlaneTelemetry(
+      this.conversationRoutes,
+      this.packetDefinitions,
+      this.failedSwitchIndices,
+      this.recoveringSwitchIndices,
+      this.congestedSwitchIndices
+    );
+    this.storyControls?.updateTelemetry(telemetry);
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingPlaneStates = telemetry
+        .map(plane => plane.status)
+        .join(',');
+      this.canvas.dataset.packetSprayingPlaneAllocation = telemetry
+        .map(plane => `${plane.redPacketCount}:${plane.greenPacketCount}`)
+        .join(',');
+      this.canvas.dataset.packetSprayingAdaptiveRouting = String(this.adaptiveRouting);
+    }
+  }
+
+  private updateEndpointSignals(animationTime: number): void {
+    this.endpointSignalMatrices.fill(0);
+    this.endpointSignalColors.fill(0);
+    this.endpointSignalDefinitions =
+      this.endpointSignalIntensity > 0
+        ? makeEndpointSignals(this.packetDefinitions, animationTime)
+        : [];
+
+    for (const [signalIndex, signal] of this.endpointSignalDefinitions.entries()) {
+      if (signalIndex >= MAX_ENDPOINT_SIGNALS) {
+        break;
+      }
+
+      const hostPosition = HOST_POSITIONS[signal.hostIndex];
+      const destinationSignal = signal.kind === 'destination';
+      const radius =
+        (destinationSignal ? 0.22 : 0.17) + signal.strength * (destinationSignal ? 0.14 : 0.09);
+      const position: Vector3 = [
+        hostPosition[0],
+        hostPosition[1] + HOST_HALF_EXTENTS[1] + 0.035,
+        hostPosition[2]
+      ];
+      this.endpointSignalMatrices.set(
+        makeObjectMatrix(position, [radius, 0.038 + signal.strength * 0.014, radius]),
+        signalIndex * 16
+      );
+      const signalColor = makeBalancedEmissionColor(signal.color, 1);
+      const intensity = signal.strength * this.endpointSignalIntensity;
+      this.endpointSignalColors.set(
+        [
+          signalColor[0] * intensity * 0.37,
+          signalColor[1] * intensity * 0.37,
+          signalColor[2] * intensity * 0.37,
+          Math.min(intensity * 0.42, 0.32)
+        ],
+        signalIndex * 4
+      );
+    }
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingEndpointSignals = String(
+        this.endpointSignalDefinitions.length
+      );
+    }
   }
 
   private updateSwitchPressure(animationTime: number): void {
@@ -3000,8 +3218,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       });
     }
 
+    const endpointLights: OpticalPointLight[] = this.endpointSignalDefinitions.map(signal => ({
+      position: [
+        HOST_POSITIONS[signal.hostIndex][0],
+        HOST_POSITIONS[signal.hostIndex][1] + HOST_HALF_EXTENTS[1] + 0.045,
+        HOST_POSITIONS[signal.hostIndex][2]
+      ],
+      color: [signal.color[0], signal.color[1], signal.color[2]],
+      intensity: signal.strength * this.endpointSignalIntensity * 0.65,
+      radius: this.packetLightRadius * 0.65
+    }));
+
     return [
       ...lights,
+      ...endpointLights,
       ...transitionLights,
       ...switchFlashLights.slice(0, MAX_SWITCH_FLASH_LIGHTS),
       ...secondaryLights
@@ -3099,6 +3329,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.nextValue;
     if (isTransparencyMode(transparencyMode)) {
       this.transparencyMode = transparencyMode;
+    }
+
+    const adaptiveRouting = getChangedSetting(changedSettings, 'adaptiveRouting')?.nextValue;
+    if (typeof adaptiveRouting === 'boolean') {
+      this.adaptiveRouting = adaptiveRouting;
+      this.updateHealthyRoutes();
+      this.updateFailureAccessibility();
     }
 
     const speed = getChangedSetting(changedSettings, 'speed')?.nextValue;
@@ -3296,6 +3533,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.linkPulseIntensity = linkPulseIntensity;
     }
 
+    const endpointSignalIntensity = getChangedSetting(
+      changedSettings,
+      'endpointSignalIntensity'
+    )?.nextValue;
+    if (typeof endpointSignalIntensity === 'number') {
+      this.endpointSignalIntensity = endpointSignalIntensity;
+    }
+
     const congestionPressureIntensity = getChangedSetting(
       changedSettings,
       'congestionPressureIntensity'
@@ -3338,16 +3583,17 @@ const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
 <p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. Use Play, Back, and Next to follow or inspect each chapter.</p>
 <p>Packets enter their local Tier 0 switch as separate streams. Once the streams meet, the switch forwards alternating red and green packets across four representative independent network planes. The destination-side switches separate the traffic again and deliver each color to its intended server.</p>
+<p>The live plane monitor shows red and green allocation on every path. Under pressure, adaptive routing moves most packets away from a congested plane without retiring it; an offline or recovering plane carries none until its control handshake succeeds.</p>
 <p>Click any glass switch to move it from healthy to orange and congested, then red and failed. Clicking a failed switch repairs it, but its path stays offline while a blue recovery probe travels to the switch and a cyan acknowledgment returns to its source.</p>
 <p>An orange switch trims overloaded packet payloads while their smaller headers continue. A red switch briefly loses in-flight packets before MRC retires the failed plane, retransmits over healthy routes, and sends occasional recovery probes.</p>
-<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and fabric links softly brighten with red or green light only while packets are traveling through them. Directional light wakes remain inside each link, congested switches breathe amber, and failures or confirmed recoveries send restrained red or cyan waves through nearby glass. Emissive packets leave short trails, reflect inside nearby glass, and project focused colored caustics onto adjacent reflective surfaces.</p>
+<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Each active server emits a restrained colored pulse when it launches or receives a packet. Glass spheres are switches, and fabric links softly brighten with red or green light only while packets are traveling through them. Directional light wakes remain inside each link, congested switches breathe amber, and failures or confirmed recoveries send restrained red or cyan waves through nearby glass. Emissive packets leave short trails, reflect inside nearby glass, and project focused colored caustics onto adjacent reflective surfaces.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Read OpenAI's supercomputer networking and MRC article</a></p>`;
 
 const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>Multipath Reliable Connection (MRC)</strong> extends RDMA over Converged Ethernet so a single transfer is no longer pinned to one network path.</p>
 <p><strong>How the two conversations mix:</strong> the red source talks to one destination, and the green source talks to another. Their packets can share the same switch-to-switch link, interleaving one red packet with one green packet before being separated near their destinations.</p>
 <p><strong>Planes and packet spraying:</strong> a high-bandwidth network interface can be split across multiple independent physical planes. In the article's example, an 800 Gb/s interface becomes eight 100 Gb/s connections. This visualization shows four representative paths; each conversation sprays successive packets across all four instead of waiting behind one busy link.</p>
-<p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
+<p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. When a path becomes congested, MRC reduces its share and spreads subsequent packets across healthier planes while still testing the pressured route. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
 <p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
 <p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. A repaired path does not carry ordinary traffic again until an outbound control probe reaches the switch and its acknowledgment successfully returns. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
@@ -3660,6 +3906,12 @@ function makeSettingsSchema(
             min: 0,
             max: 0.5,
             step: 0.01
+          },
+          {
+            name: 'adaptiveRouting',
+            label: 'Adaptive Routing',
+            type: 'boolean',
+            persist: 'none'
           }
         ]
       },
@@ -3761,6 +4013,15 @@ function makeSettingsSchema(
           {
             name: 'linkPulseIntensity',
             label: 'Link Pulse Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.4,
+            step: 0.05
+          },
+          {
+            name: 'endpointSignalIntensity',
+            label: 'Server Activity Glow',
             type: 'number',
             persist: 'none',
             min: 0,

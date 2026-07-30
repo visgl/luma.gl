@@ -45,7 +45,9 @@ velocity-aligned mesh. A tapered cone behind each packet produces directional bl
 blurring stationary glass, links, or neighboring packet colors. Narrow packet-aligned optical wakes
 can remain inside reflective link geometry, while brief additive arrival flashes and expanding
 state-transition waves share the same emissive material. Bounded point lights carry these local
-color changes onto nearby glass without brightening the entire scene.
+color changes onto nearby glass without brightening the entire scene. Small, flattened emissive
+endpoint pulses can mark packet transmission and delivery while reflecting their true conversation
+color from adjacent metallic server surfaces.
 
 ## Attach a Glass Material
 

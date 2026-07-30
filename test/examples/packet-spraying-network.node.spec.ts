@@ -8,6 +8,7 @@ import {
   AGGREGATION_SWITCH_RADIUS,
   FAILURE_DETECTION_DELAY,
   CONVERSATIONS,
+  ENDPOINT_SIGNAL_DURATION,
   HOST_POSITIONS,
   LEAF_SWITCH_RADIUS,
   LEAF_POSITIONS,
@@ -21,10 +22,12 @@ import {
   getHealthyConversationRoutes,
   isFailedSwitchPosition,
   makeConversationRoutes,
+  makeEndpointSignals,
   makeLinks,
   makeLinkPulses,
   makeLinkTraffic,
   makePackets,
+  makeNetworkPlaneTelemetry,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
   makeSwitchProbeConfirmationEvent,
@@ -259,6 +262,156 @@ test('packet-spraying traffic immediately avoids and restores failed planes', te
     4,
     'packets resume using all four paths'
   );
+  testCase.end();
+});
+
+test('packet-spraying adaptively shifts load away from congested physical planes', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const congestedSpineIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const congestedSwitches = new Set([congestedSpineIndex]);
+
+  reroutePackets(packets, routes, congestedSwitches);
+
+  for (let conversationIndex = 0; conversationIndex < CONVERSATIONS.length; conversationIndex++) {
+    const conversationPackets = packets.filter(
+      packet => packet.conversationIndex === conversationIndex
+    );
+    const congestedPackets = conversationPackets.filter(packet =>
+      packet.route.points.includes(SPINE_POSITIONS[0])
+    );
+    const healthyPackets = conversationPackets.filter(
+      packet => !packet.route.points.includes(SPINE_POSITIONS[0])
+    );
+
+    testCase.ok(congestedPackets.length > 0, 'a congested plane still receives low-rate traffic');
+    testCase.ok(
+      congestedPackets.length < 4,
+      'the congested plane carries fewer packets than equal round-robin spraying'
+    );
+    testCase.equal(
+      healthyPackets.length + congestedPackets.length,
+      conversationPackets.length,
+      'congestion-aware routing preserves every packet in the transfer'
+    );
+  }
+
+  reroutePackets(packets, routes);
+  testCase.equal(
+    packets.filter(packet => packet.route.points.includes(SPINE_POSITIONS[0])).length,
+    12,
+    'disabling adaptive pressure restores equal traffic across every plane'
+  );
+
+  reroutePackets(packets, routes, new Set([3]));
+  testCase.equal(
+    packets.filter(packet => packet.route.points.includes(SPINE_POSITIONS[0])).length,
+    12,
+    'a shared access bottleneck cannot be bypassed by choosing a different plane'
+  );
+  testCase.end();
+});
+
+test('packet-spraying telemetry reports per-plane load, failure, and recovery', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const planeSwitchIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const congestedSwitches = new Set([planeSwitchIndex]);
+
+  reroutePackets(packets, routes, congestedSwitches);
+  const congestedTelemetry = makeNetworkPlaneTelemetry(
+    routes,
+    packets,
+    new Set(),
+    new Set(),
+    congestedSwitches
+  );
+
+  testCase.equal(congestedTelemetry.length, 4, 'telemetry includes all four physical planes');
+  testCase.equal(congestedTelemetry[0].status, 'congested');
+  testCase.ok(
+    congestedTelemetry[0].redPacketCount < congestedTelemetry[1].redPacketCount,
+    'telemetry exposes reduced red allocation on the congested plane'
+  );
+  testCase.ok(
+    congestedTelemetry[0].greenPacketCount < congestedTelemetry[1].greenPacketCount,
+    'telemetry exposes reduced green allocation on the congested plane'
+  );
+
+  const failedSwitches = new Set([planeSwitchIndex]);
+  reroutePackets(packets, getHealthyConversationRoutes(routes, failedSwitches));
+  const failedTelemetry = makeNetworkPlaneTelemetry(
+    routes,
+    packets,
+    failedSwitches,
+    new Set(),
+    new Set()
+  );
+  testCase.equal(failedTelemetry[0].status, 'failed', 'a retired plane is visibly marked offline');
+  testCase.equal(failedTelemetry[0].redPacketCount, 0, 'retired planes carry no red packets');
+  testCase.equal(failedTelemetry[0].greenPacketCount, 0, 'retired planes carry no green packets');
+
+  const recoveringSwitches = new Set([planeSwitchIndex]);
+  reroutePackets(packets, getHealthyConversationRoutes(routes, new Set(), recoveringSwitches));
+  const recoveringTelemetry = makeNetworkPlaneTelemetry(
+    routes,
+    packets,
+    new Set(),
+    recoveringSwitches,
+    new Set()
+  );
+  testCase.equal(
+    recoveringTelemetry[0].status,
+    'recovering',
+    'a repaired plane remains in recovery until its acknowledgment returns'
+  );
+  testCase.ok(
+    recoveringTelemetry.slice(1).every(plane => plane.status === 'healthy'),
+    'unaffected planes continue operating normally'
+  );
+  testCase.end();
+});
+
+test('packet-spraying endpoint signals follow packet launch and delivery', testCase => {
+  const packets = makePackets(makeConversationRoutes());
+  const redPacket = packets.find(packet => packet.conversationIndex === 0)!;
+  const launchTime = redPacket.launchTime + ENDPOINT_SIGNAL_DURATION * 0.4;
+  const sourceSignals = makeEndpointSignals(packets, launchTime);
+  const redSourceSignal = sourceSignals.find(
+    signal => signal.conversationIndex === 0 && signal.kind === 'source'
+  );
+
+  testCase.equal(
+    redSourceSignal?.hostIndex,
+    CONVERSATIONS[0].sourceHostIndex,
+    'red launch activity remains attached to the source server'
+  );
+  testCase.ok(
+    (redSourceSignal?.strength ?? 0) > 0 && (redSourceSignal?.strength ?? 0) <= 1,
+    'launch signals remain smoothly bounded'
+  );
+
+  const deliveryTime =
+    redPacket.launchTime +
+    redPacket.route.totalLength / PACKET_TRAVEL_SPEED +
+    ENDPOINT_SIGNAL_DURATION * 0.4;
+  const redDeliverySignal = makeEndpointSignals(packets, deliveryTime).find(
+    signal => signal.conversationIndex === 0 && signal.kind === 'destination'
+  );
+  testCase.equal(
+    redDeliverySignal?.hostIndex,
+    CONVERSATIONS[0].destinationHostIndex,
+    'delivery signals arrive at the intended destination server'
+  );
+
+  for (const packet of packets.filter(packet => packet.conversationIndex === 0)) {
+    packet.enabled = false;
+  }
+  testCase.ok(
+    makeEndpointSignals(packets, launchTime).every(signal => signal.conversationIndex !== 0),
+    'disabled traffic cannot illuminate its source or destination'
+  );
+  testCase.deepEqual(makeEndpointSignals(packets, launchTime, 0), [], 'zero duration disables');
   testCase.end();
 });
 
