@@ -5,26 +5,33 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   AGGREGATION_POSITIONS,
+  AGGREGATION_SWITCH_RADIUS,
   FAILURE_DETECTION_DELAY,
   CONVERSATIONS,
   HOST_POSITIONS,
+  LEAF_SWITCH_RADIUS,
   LEAF_POSITIONS,
   PACKET_TRAVEL_SPEED,
   SPINE_POSITIONS,
+  SWITCH_CONFIRMATION_DURATION,
   SWITCH_POSITIONS,
+  SWITCH_TRANSITION_WAVE_DURATION,
   getActivePlaneCount,
   getDistance,
   getHealthyConversationRoutes,
   isFailedSwitchPosition,
   makeConversationRoutes,
   makeLinks,
+  makeLinkPulses,
   makeLinkTraffic,
   makePackets,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
+  makeSwitchProbeConfirmationEvent,
   makeSwitchProbeEvent,
   makeSwitchGroups,
   makeSwitchArrivals,
+  makeSwitchTransitionWave,
   makeLinkKey,
   reroutePackets
 } from '../../examples/showcase/packet-spraying/network';
@@ -134,6 +141,77 @@ test('packet-spraying link traffic follows visible red and green packets', testC
   testCase.end();
 });
 
+test('packet-spraying link pulses follow alternating packets inside physical links', testCase => {
+  const packets = makePackets(makeConversationRoutes());
+  const firstRedPacket = packets.find(packet => packet.conversationIndex === 0)!;
+  const firstGreenPacket = packets.find(packet => packet.conversationIndex === 1)!;
+  const linkStart = firstRedPacket.route.points[1];
+  const linkEnd = firstRedPacket.route.points[2];
+  const sharedLinkKey = makeLinkKey(linkStart, linkEnd);
+  const animationTime =
+    firstRedPacket.launchTime +
+    (firstRedPacket.route.cumulativeLengths[1] + 0.8) / PACKET_TRAVEL_SPEED;
+  const pulseLength = 0.31;
+  const pulses = makeLinkPulses(packets, animationTime, pulseLength).filter(
+    pulse => pulse.linkKey === sharedLinkKey
+  );
+
+  testCase.deepEqual(
+    pulses.map(pulse => pulse.conversationIndex).sort(),
+    [0, 1],
+    'the shared link contains one red wake and one green wake'
+  );
+  testCase.ok(
+    pulses.every(pulse => getDistance(pulse.start, pulse.end) <= pulseLength + 0.00001),
+    'each directional wake stays within its configured physical length'
+  );
+  testCase.ok(
+    pulses.every(pulse =>
+      [pulse.start, pulse.end].every(
+        position =>
+          Math.abs(
+            getDistance(linkStart, position) +
+              getDistance(position, linkEnd) -
+              getDistance(linkStart, linkEnd)
+          ) < 0.00001
+      )
+    ),
+    'wake endpoints remain inside the current physical link'
+  );
+  testCase.ok(
+    pulses.every(pulse => getDistance(linkStart, pulse.start) >= LEAF_SWITCH_RADIUS - 0.00001),
+    'link wakes begin outside the access-switch glass surface'
+  );
+  testCase.ok(
+    pulses.every(pulse => getDistance(pulse.end, linkEnd) >= AGGREGATION_SWITCH_RADIUS - 0.00001),
+    'link wakes stop before the aggregation-switch glass surface'
+  );
+
+  firstRedPacket.enabled = false;
+  testCase.deepEqual(
+    makeLinkPulses(packets, animationTime, pulseLength)
+      .filter(pulse => pulse.linkKey === sharedLinkKey)
+      .map(pulse => pulse.conversationIndex),
+    [1],
+    'disabling a packet removes its optical wake'
+  );
+
+  firstGreenPacket.enabled = false;
+  testCase.equal(
+    makeLinkPulses(packets, animationTime, pulseLength).filter(
+      pulse => pulse.linkKey === sharedLinkKey
+    ).length,
+    0,
+    'idle links do not receive packet wakes'
+  );
+  testCase.deepEqual(
+    makeLinkPulses(packets, animationTime, 0),
+    [],
+    'zero pulse length disables directional wakes'
+  );
+  testCase.end();
+});
+
 test('packet-spraying traffic immediately avoids and restores failed planes', testCase => {
   const routes = makeConversationRoutes();
   const packets = makePackets(routes);
@@ -205,8 +283,24 @@ test('packet-spraying keeps repaired planes offline until a recovery probe confi
     'the recovery probe reaches the repaired switch'
   );
 
-  const blockedProbe = makeSwitchProbeEvent(routes, recoveringSpineIndex, 15, new Set([3]));
-  testCase.equal(blockedProbe, null, 'a probe cannot pass through a separate unavailable switch');
+  const alternateProbe = makeSwitchProbeEvent(routes, recoveringSpineIndex, 15, new Set([3]));
+  testCase.ok(alternateProbe, 'control traffic can use another physical access route');
+  testCase.ok(
+    alternateProbe?.route.points.every(position => position !== LEAF_POSITIONS[3]),
+    'the physical probe avoids the unavailable conversation access switch'
+  );
+
+  const blockedProbe = makeSwitchProbeEvent(
+    routes,
+    recoveringSpineIndex,
+    15,
+    new Set(LEAF_POSITIONS.map((_, switchIndex) => switchIndex))
+  );
+  testCase.equal(
+    blockedProbe,
+    null,
+    'a probe cannot reach the switch when every access switch is unavailable'
+  );
 
   recoveringSwitches.clear();
   const confirmedRoutes = getHealthyConversationRoutes(routes, new Set(), recoveringSwitches);
@@ -216,6 +310,63 @@ test('packet-spraying keeps repaired planes offline until a recovery probe confi
     packets.some(packet => packet.route.points.includes(SPINE_POSITIONS[0])),
     'ordinary traffic resumes after the repaired route is confirmed'
   );
+  testCase.end();
+});
+
+test('packet-spraying physically probes unused switches and confirms the return path', testCase => {
+  const routes = makeConversationRoutes();
+  const unusedLeafIndex = 0;
+  const probe = makeSwitchProbeEvent(routes, unusedLeafIndex, 9, new Set([unusedLeafIndex]));
+
+  testCase.ok(
+    routes.every(({route}) => !route.points.includes(LEAF_POSITIONS[unusedLeafIndex])),
+    'the access switch is absent from configured application conversations'
+  );
+  testCase.deepEqual(
+    probe?.route.points,
+    [HOST_POSITIONS[unusedLeafIndex], LEAF_POSITIONS[unusedLeafIndex]],
+    'a physical control packet can still reach the unused access switch'
+  );
+  testCase.ok(
+    SWITCH_POSITIONS.every((_, switchIndex) => makeSwitchProbeEvent(routes, switchIndex, 9)),
+    'every physical switch has a recovery-probe path'
+  );
+
+  const confirmation = makeSwitchProbeConfirmationEvent(probe!);
+  testCase.equal(confirmation.kind, 'probe-confirmation', 'the response is a confirmation packet');
+  testCase.equal(
+    confirmation.startedAt,
+    probe!.startedAt + probe!.duration,
+    'the acknowledgment departs after the outbound control probe arrives'
+  );
+  testCase.equal(
+    confirmation.duration,
+    SWITCH_CONFIRMATION_DURATION,
+    'confirmation uses the bounded acknowledgment duration'
+  );
+  testCase.deepEqual(
+    confirmation.route,
+    probe!.route,
+    'the acknowledgment returns through the verified physical route'
+  );
+  testCase.ok(
+    confirmation.color[1] > confirmation.color[0] && confirmation.color[2] > confirmation.color[0],
+    'the returning acknowledgment has a distinct cyan color'
+  );
+  testCase.end();
+});
+
+test('packet-spraying transition waves distinguish switch failure from recovery', testCase => {
+  const switchIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const failureWave = makeSwitchTransitionWave(switchIndex, 'failure', 4);
+  const recoveryWave = makeSwitchTransitionWave(switchIndex, 'recovery', 8);
+
+  testCase.equal(failureWave.switchIndex, switchIndex, 'failure stays anchored to its switch');
+  testCase.equal(recoveryWave.switchIndex, switchIndex, 'recovery stays anchored to its switch');
+  testCase.equal(failureWave.duration, SWITCH_TRANSITION_WAVE_DURATION);
+  testCase.equal(recoveryWave.duration, SWITCH_TRANSITION_WAVE_DURATION);
+  testCase.ok(failureWave.color[0] > failureWave.color[1], 'failure waves are warm red');
+  testCase.ok(recoveryWave.color[1] > recoveryWave.color[0], 'recovery waves are cool cyan');
   testCase.end();
 });
 

@@ -104,12 +104,15 @@ import {
   makeHostColor,
   makeLinkColor,
   makeLinkKey,
+  makeLinkPulses,
   makeLinkTraffic,
   makeLinks,
   makePackets,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
+  makeSwitchProbeConfirmationEvent,
   makeSwitchProbeEvent,
+  makeSwitchTransitionWave,
   makeSwitchGroups,
   makeSwitchArrivals,
   reroutePackets,
@@ -118,6 +121,7 @@ import {
   type NetworkLink,
   type NetworkPacketEvent,
   type NetworkScenario,
+  type NetworkSwitchTransitionWave,
   type NetworkSwitchGroupId,
   type Packet,
   type PickableNetworkNode,
@@ -582,9 +586,11 @@ const INSTANCE_BUFFER_LAYOUT = [
 ];
 
 const PACKET_TRAIL_RADIUS = 0.033;
+const LINK_PULSE_RADIUS = 0.046;
 const SWITCH_FLASH_DURATION = 0.16;
 const SWITCH_RIPPLE_DURATION = 0.38;
 const MAX_SWITCH_FLASH_LIGHTS = 6;
+const MAX_SWITCH_TRANSITION_WAVES = 12;
 const MAX_STORY_PACKET_INSTANCES = 160;
 const CONGESTED_SWITCH_COLOR: Color = [1, 0.42, 0.065, 0.56];
 const DETECTING_SWITCH_COLOR: Color = [1, 0.21, 0.035, 0.59];
@@ -1124,11 +1130,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
   }>;
+  readonly linkPulses: InstancedMesh<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
   readonly switchFlashes: InstancedMesh<{
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
   }>;
   readonly switchRipples: InstancedMesh<{
+    app: AppUniforms;
+    emissiveMaterial: EmissiveMaterialProps;
+  }>;
+  readonly switchTransitionVisuals: InstancedMesh<{
     app: AppUniforms;
     emissiveMaterial: EmissiveMaterialProps;
   }>;
@@ -1140,6 +1154,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly packetMatrices: Float32Array;
   readonly packetTrailMatrices: Float32Array;
   readonly packetTrailColors: Float32Array;
+  readonly linkPulseMatrices: Float32Array;
+  readonly linkPulseColors: Float32Array;
   switchArrivalEvents: SwitchArrival[];
   readonly switchFlashMatrices: Float32Array;
   readonly switchFlashColors: Float32Array;
@@ -1147,6 +1163,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly switchRippleMatrices: Float32Array;
   readonly switchRippleColors: Float32Array;
   readonly switchRippleAges: Float32Array;
+  readonly switchTransitionMatrices = new Float32Array(MAX_SWITCH_TRANSITION_WAVES * 16);
+  readonly switchTransitionColors = new Float32Array(MAX_SWITCH_TRANSITION_WAVES * 4);
+  readonly switchTransitionWaves: NetworkSwitchTransitionWave[] = [];
   readonly causticLensLightColors = new Float32Array(SWITCH_POSITIONS.length * 3);
   readonly storyPacketMatrices = new Float32Array(MAX_STORY_PACKET_INSTANCES * 16);
   readonly storyPacketColors = new Float32Array(MAX_STORY_PACKET_INSTANCES * 4);
@@ -1201,9 +1220,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   packetTrailIntensity = 0.55;
   switchFlashIntensity = 0.8;
   switchRippleIntensity = 0.44;
+  switchTransitionIntensity = 0.62;
   packetLightIntensity = 0.66;
   packetLightRadius = 1.05;
   linkTrafficGlow = 0.58;
+  linkPulseLength = 0.31;
+  linkPulseIntensity = 0.48;
+  congestionPressureIntensity = 0.32;
   causticIntensity = 0.48;
   causticFocus = 1.15;
   bloomIntensity = 1.7;
@@ -1377,6 +1400,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.packetDefinitions = makePackets(this.conversationRoutes);
     this.packetMatrices = new Float32Array(this.packetDefinitions.length * 16);
     this.packetTrailMatrices = new Float32Array(this.packetDefinitions.length * 16);
+    this.linkPulseMatrices = new Float32Array(this.packetDefinitions.length * 16);
+    this.linkPulseColors = new Float32Array(this.packetDefinitions.length * 4);
     this.packetTrailColors = flattenColors(
       this.packetDefinitions.map(packet => makeBalancedEmissionColor(packet.color, 0.42))
     );
@@ -1412,6 +1437,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       additive: true,
       trail: true
     });
+    this.linkPulses = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-directional-link-pulses',
+      geometry: new TruncatedConeGeometry({
+        bottomRadius: 0.2,
+        topRadius: 1,
+        height: 1,
+        nradial: 10,
+        nvertical: 3
+      }),
+      matrices: this.linkPulseMatrices,
+      colors: this.linkPulseColors,
+      additive: true,
+      trail: true
+    });
     this.switchFlashes = new InstancedMesh(device, this.emissiveShaderInputs, {
       id: 'packet-spraying-switch-arrival-flashes',
       geometry: new SphereGeometry({radius: 1, nlat: 8, nlong: 12}),
@@ -1425,6 +1464,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       geometry: new SphereGeometry({radius: 1, nlat: 12, nlong: 18}),
       matrices: this.switchRippleMatrices,
       colors: this.switchRippleColors,
+      additive: true,
+      emissive: true
+    });
+    this.switchTransitionVisuals = new InstancedMesh(device, this.emissiveShaderInputs, {
+      id: 'packet-spraying-switch-transition-waves',
+      geometry: new SphereGeometry({radius: 1, nlat: 12, nlong: 18}),
+      matrices: this.switchTransitionMatrices,
+      colors: this.switchTransitionColors,
       additive: true,
       emissive: true
     });
@@ -1464,9 +1511,13 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         packetTrailIntensity: this.packetTrailIntensity,
         switchFlashIntensity: this.switchFlashIntensity,
         switchRippleIntensity: this.switchRippleIntensity,
+        switchTransitionIntensity: this.switchTransitionIntensity,
         packetLightIntensity: this.packetLightIntensity,
         packetLightRadius: this.packetLightRadius,
         linkTrafficGlow: this.linkTrafficGlow,
+        linkPulseLength: this.linkPulseLength,
+        linkPulseIntensity: this.linkPulseIntensity,
+        congestionPressureIntensity: this.congestionPressureIntensity,
         causticIntensity: this.causticIntensity,
         causticFocus: this.causticFocus,
         bloomIntensity: this.bloomIntensity,
@@ -1524,13 +1575,21 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.animationTime = (time / 1000) * this.speed;
     this.updateGuidedStory(this.animationTime);
     this.updateSwitchStoryState(this.animationTime);
+    this.updateSwitchPressure(this.animationTime);
     this.updatePacketVisuals(this.animationTime);
+    this.updateLinkPulseVisuals(this.animationTime);
     this.updateLinkTraffic(this.animationTime);
+    this.updateSwitchTransitionVisuals(this.animationTime);
     this.updateStoryPacketVisuals(this.animationTime);
     this.packets.updateMatrices(this.packetMatrices);
     this.packetTrails.updateInstances(this.packetTrailMatrices, this.packetTrailColors);
+    this.linkPulses.updateInstances(this.linkPulseMatrices, this.linkPulseColors);
     this.switchFlashes.updateInstances(this.switchFlashMatrices, this.switchFlashColors);
     this.switchRipples.updateInstances(this.switchRippleMatrices, this.switchRippleColors);
+    this.switchTransitionVisuals.updateInstances(
+      this.switchTransitionMatrices,
+      this.switchTransitionColors
+    );
     this.storyPackets.updateInstances(this.storyPacketMatrices, this.storyPacketColors);
 
     this.orbitControls?.update(time);
@@ -1543,7 +1602,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         near: 0.1,
         far: 60
       }),
-      viewMatrix: new Matrix4().lookAt({eye, center: [0, -0.9, 0], up: [0, 1, 0]})
+      viewMatrix: new Matrix4().lookAt({
+        eye,
+        center: this.orbitControls?.props.target || [0, -0.9, 0],
+        up: [0, 1, 0]
+      })
     };
     const glassMaterialProps: GlassMaterialProps = {
       viewportSize: [width, height],
@@ -1618,8 +1681,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.hosts.model.predraw(device.commandEncoder);
     this.packets.model.predraw(device.commandEncoder);
     this.packetTrails.model.predraw(device.commandEncoder);
+    this.linkPulses.model.predraw(device.commandEncoder);
     this.switchFlashes.model.predraw(device.commandEncoder);
     this.switchRipples.model.predraw(device.commandEncoder);
+    this.switchTransitionVisuals.model.predraw(device.commandEncoder);
     this.storyPackets.model.predraw(device.commandEncoder);
     this.links.model.predraw(device.commandEncoder);
     const sceneRenderPass = device.beginRenderPass({
@@ -1630,8 +1695,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.hosts.model.draw(sceneRenderPass);
     this.packets.model.draw(sceneRenderPass);
     this.packetTrails.model.draw(sceneRenderPass);
+    this.linkPulses.model.draw(sceneRenderPass);
     this.switchFlashes.model.draw(sceneRenderPass);
     this.switchRipples.model.draw(sceneRenderPass);
+    this.switchTransitionVisuals.model.draw(sceneRenderPass);
     this.storyPackets.model.draw(sceneRenderPass);
     this.links.model.draw(sceneRenderPass);
     sceneRenderPass.end();
@@ -1766,8 +1833,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     }
     this.packets.destroy();
     this.packetTrails.destroy();
+    this.linkPulses.destroy();
     this.switchFlashes.destroy();
     this.switchRipples.destroy();
+    this.switchTransitionVisuals.destroy();
     this.storyPackets.destroy();
     this.postprocessingRenderer.destroy();
     this.aBufferRenderer?.destroy();
@@ -2010,6 +2079,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.nextSwitchProbeTimes.clear();
     this.recoveryProbeCompletionTimes.clear();
     this.networkPacketEvents.splice(0, this.networkPacketEvents.length);
+    this.switchTransitionWaves.splice(0, this.switchTransitionWaves.length);
     this.updateSwitchColors();
     this.updateHealthyRoutes();
     this.updateFailureAccessibility();
@@ -2090,8 +2160,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         ...node,
         role: `RECOVERY PROBE / ${node.role}`,
         description:
-          'This repaired switch remains out of service while a blue control packet verifies that its path is reachable.',
-        detail: 'Ordinary red and green traffic resumes only after the recovery probe arrives.',
+          'This repaired switch remains out of service while a blue control probe reaches it and a cyan confirmation returns.',
+        detail:
+          'Ordinary red and green traffic resumes only after the complete recovery handshake.',
         status: 'probing'
       };
     }
@@ -2164,6 +2235,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.failedSwitchIndices.add(switchIndex);
     this.nextSwitchProbeTimes.set(switchIndex, this.animationTime + SWITCH_PROBE_INTERVAL);
     this.glassInstances[switchIndex].color = [...FAILED_SWITCH_COLOR];
+    this.switchTransitionWaves.push(
+      makeSwitchTransitionWave(switchIndex, 'failure', this.animationTime)
+    );
     this.updateSwitchColors();
     this.updateHealthyRoutes();
     this.updateFailureAccessibility();
@@ -2173,6 +2247,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.recoveringSwitchIndices.delete(switchIndex);
     this.recoveryProbeCompletionTimes.delete(switchIndex);
     this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
+    this.switchTransitionWaves.push(
+      makeSwitchTransitionWave(switchIndex, 'recovery', this.animationTime)
+    );
     this.updateSwitchColors();
     this.updateHealthyRoutes();
     this.updateFailureAccessibility();
@@ -2225,7 +2302,12 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         if (probe) {
           this.networkPacketEvents.push(probe);
           if (this.recoveringSwitchIndices.has(switchIndex)) {
-            this.recoveryProbeCompletionTimes.set(switchIndex, probe.startedAt + probe.duration);
+            const confirmation = makeSwitchProbeConfirmationEvent(probe);
+            this.networkPacketEvents.push(confirmation);
+            this.recoveryProbeCompletionTimes.set(
+              switchIndex,
+              confirmation.startedAt + confirmation.duration
+            );
             this.nextSwitchProbeTimes.delete(switchIndex);
             continue;
           }
@@ -2245,6 +2327,29 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       if (animationTime > event.startedAt + event.duration) {
         this.networkPacketEvents.splice(eventIndex, 1);
       }
+    }
+
+    for (let waveIndex = this.switchTransitionWaves.length - 1; waveIndex >= 0; waveIndex--) {
+      const wave = this.switchTransitionWaves[waveIndex];
+      if (animationTime > wave.startedAt + wave.duration) {
+        this.switchTransitionWaves.splice(waveIndex, 1);
+      }
+    }
+
+    if (this.canvas) {
+      const activeHandshake = this.networkPacketEvents.find(
+        event =>
+          this.recoveringSwitchIndices.has(event.switchIndex) &&
+          (event.kind === 'probe' || event.kind === 'probe-confirmation') &&
+          animationTime >= event.startedAt &&
+          animationTime <= event.startedAt + event.duration
+      );
+      this.canvas.dataset.packetSprayingProbePhase =
+        activeHandshake?.kind === 'probe-confirmation'
+          ? 'confirming'
+          : activeHandshake?.kind === 'probe'
+            ? 'probing'
+            : 'idle';
     }
   }
 
@@ -2288,6 +2393,102 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     );
   }
 
+  private updateSwitchPressure(animationTime: number): void {
+    if (this.congestedSwitchIndices.size === 0) {
+      return;
+    }
+
+    for (const switchIndex of this.congestedSwitchIndices) {
+      const pressure =
+        (0.5 + 0.5 * Math.sin(animationTime * 7.2 + switchIndex * 0.63)) *
+        this.congestionPressureIntensity;
+      this.glassInstances[switchIndex].color = [
+        1,
+        CONGESTED_SWITCH_COLOR[1] + pressure * 0.16,
+        CONGESTED_SWITCH_COLOR[2] + pressure * 0.065,
+        Math.min(CONGESTED_SWITCH_COLOR[3] + pressure * 0.11, 0.64)
+      ];
+    }
+
+    this.updateSwitchColors();
+  }
+
+  private updateLinkPulseVisuals(animationTime: number): void {
+    this.linkPulseMatrices.fill(0);
+    this.linkPulseColors.fill(0);
+    if (this.linkPulseIntensity <= 0 || this.linkPulseLength <= 0) {
+      if (this.canvas) {
+        this.canvas.dataset.packetSprayingLinkPulses = '0';
+      }
+      return;
+    }
+
+    const pulses = makeLinkPulses(this.packetDefinitions, animationTime, this.linkPulseLength);
+    for (let pulseIndex = 0; pulseIndex < pulses.length; pulseIndex++) {
+      const pulse = pulses[pulseIndex];
+      const pulseColor = makeBalancedEmissionColor(pulse.color, 1);
+      this.linkPulseMatrices.set(
+        makeSegmentMatrix(pulse.start, pulse.end, LINK_PULSE_RADIUS),
+        pulseIndex * 16
+      );
+      this.linkPulseColors.set(
+        [
+          pulseColor[0] * this.linkPulseIntensity * 0.34,
+          pulseColor[1] * this.linkPulseIntensity * 0.34,
+          pulseColor[2] * this.linkPulseIntensity * 0.34,
+          Math.min(this.linkPulseIntensity * 0.42, 0.42)
+        ],
+        pulseIndex * 4
+      );
+    }
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingLinkPulses = String(pulses.length);
+    }
+  }
+
+  private updateSwitchTransitionVisuals(animationTime: number): void {
+    this.switchTransitionMatrices.fill(0);
+    this.switchTransitionColors.fill(0);
+    let activeWaveCount = 0;
+
+    for (const wave of this.switchTransitionWaves.slice(0, MAX_SWITCH_TRANSITION_WAVES)) {
+      const progress = (animationTime - wave.startedAt) / wave.duration;
+      if (progress < 0 || progress >= 1) {
+        continue;
+      }
+
+      const switchRadius =
+        wave.switchIndex < LEAF_POSITIONS.length
+          ? LEAF_SWITCH_RADIUS
+          : wave.switchIndex < LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length
+            ? AGGREGATION_SWITCH_RADIUS
+            : SPINE_SWITCH_RADIUS;
+      const radius = switchRadius * (0.72 + progress * 1.24);
+      const intensity =
+        Math.sin(progress * Math.PI) * (1 - progress * 0.38) * this.switchTransitionIntensity;
+      const waveColor = makeBalancedEmissionColor(wave.color, wave.color[3]);
+      this.switchTransitionMatrices.set(
+        makeObjectMatrix(SWITCH_POSITIONS[wave.switchIndex], [radius, radius, radius]),
+        activeWaveCount * 16
+      );
+      this.switchTransitionColors.set(
+        [
+          waveColor[0] * intensity * 0.16,
+          waveColor[1] * intensity * 0.16,
+          waveColor[2] * intensity * 0.16,
+          Math.min(intensity * 0.28, 0.24)
+        ],
+        activeWaveCount * 4
+      );
+      activeWaveCount++;
+    }
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingTransitionWaves = String(activeWaveCount);
+    }
+  }
+
   private updateLinkTraffic(animationTime: number): void {
     const trafficByLink = makeLinkTraffic(this.packetDefinitions, animationTime);
     const elapsedTime = Math.min(
@@ -2318,15 +2519,58 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
       const redGlow = redStrength * this.linkTrafficGlow;
       const greenGlow = greenStrength * this.linkTrafficGlow;
-      const totalGlow = Math.min(redGlow + greenGlow, 1);
+      let failureGlow = 0;
+      let recoveryGlow = 0;
+      for (const wave of this.switchTransitionWaves) {
+        const switchPosition = SWITCH_POSITIONS[wave.switchIndex];
+        if (link.start !== switchPosition && link.end !== switchPosition) {
+          continue;
+        }
+
+        const progress = (animationTime - wave.startedAt) / wave.duration;
+        if (progress < 0 || progress >= 1) {
+          continue;
+        }
+
+        const strength =
+          Math.sin(progress * Math.PI) * (1 - progress * 0.5) * this.switchTransitionIntensity;
+        if (wave.kind === 'failure') {
+          failureGlow = Math.max(failureGlow, strength);
+        } else {
+          recoveryGlow = Math.max(recoveryGlow, strength);
+        }
+      }
+
+      const congested =
+        isFailedSwitchPosition(link.start, this.congestedSwitchIndices) ||
+        isFailedSwitchPosition(link.end, this.congestedSwitchIndices);
+      const pressureGlow = congested
+        ? (0.5 + 0.5 * Math.sin(animationTime * 7.2 + linkIndex * 0.41)) *
+          this.congestionPressureIntensity
+        : 0;
+      const signalGlow = failureGlow + recoveryGlow + pressureGlow;
+      const totalGlow = Math.min(redGlow + greenGlow + signalGlow * 0.48, 1);
       const colorOffset = linkIndex * 4;
-      this.linkColors[colorOffset] = Math.min(link.color[0] + redGlow * 0.3 + greenGlow * 0.055, 1);
-      this.linkColors[colorOffset + 1] = Math.min(
-        link.color[1] + redGlow * 0.04 + greenGlow * 0.27,
+      this.linkColors[colorOffset] = Math.min(
+        link.color[0] + redGlow * 0.3 + greenGlow * 0.055 + failureGlow * 0.2 + pressureGlow * 0.16,
         1
       );
-      this.linkColors[colorOffset + 2] = Math.min(link.color[2] + totalGlow * 0.065, 1);
-      this.linkColors[colorOffset + 3] = Math.min(link.color[3] + totalGlow * 0.11, 0.34);
+      this.linkColors[colorOffset + 1] = Math.min(
+        link.color[1] +
+          redGlow * 0.04 +
+          greenGlow * 0.27 +
+          recoveryGlow * 0.14 +
+          pressureGlow * 0.085,
+        1
+      );
+      this.linkColors[colorOffset + 2] = Math.min(
+        link.color[2] + totalGlow * 0.065 + recoveryGlow * 0.17,
+        1
+      );
+      this.linkColors[colorOffset + 3] = Math.min(
+        link.color[3] + totalGlow * 0.11 + signalGlow * 0.055,
+        0.38
+      );
 
       if (totalGlow > 0.025) {
         illuminatedLinkCount++;
@@ -2517,13 +2761,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         continue;
       }
 
-      const startDistance = event.route.cumulativeLengths[Math.max(0, routePointIndex - 1)];
+      const startDistance = 0;
       const endDistance = event.route.cumulativeLengths[routePointIndex];
-      const distance = startDistance + (endDistance - startDistance) * (age / event.duration);
+      const progress = age / event.duration;
+      const distance =
+        event.kind === 'probe-confirmation'
+          ? endDistance - (endDistance - startDistance) * progress
+          : startDistance + (endDistance - startDistance) * progress;
       addParticle(
         getPointAlongRoute(event.route, distance / event.route.totalLength),
-        0.021,
-        event.color
+        event.kind === 'probe-confirmation' ? 0.026 : 0.021,
+        event.kind === 'probe-confirmation'
+          ? makeBalancedEmissionColor(event.color, event.color[3])
+          : event.color
       );
     }
   }
@@ -2735,8 +2985,24 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     }
 
     switchFlashLights.sort((first, second) => (second.intensity || 0) - (first.intensity || 0));
+    const transitionLights: OpticalPointLight[] = [];
+    for (const wave of this.switchTransitionWaves) {
+      const progress = (this.animationTime - wave.startedAt) / wave.duration;
+      if (progress <= 0 || progress >= 1) {
+        continue;
+      }
+
+      transitionLights.push({
+        position: SWITCH_POSITIONS[wave.switchIndex],
+        color: [wave.color[0], wave.color[1], wave.color[2]],
+        intensity: Math.sin(progress * Math.PI) * this.switchTransitionIntensity * 1.25,
+        radius: this.packetLightRadius * 1.3
+      });
+    }
+
     return [
       ...lights,
+      ...transitionLights,
       ...switchFlashLights.slice(0, MAX_SWITCH_FLASH_LIGHTS),
       ...secondaryLights
     ].slice(0, 16);
@@ -2994,6 +3260,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.switchRippleIntensity = switchRippleIntensity;
     }
 
+    const switchTransitionIntensity = getChangedSetting(
+      changedSettings,
+      'switchTransitionIntensity'
+    )?.nextValue;
+    if (typeof switchTransitionIntensity === 'number') {
+      this.switchTransitionIntensity = switchTransitionIntensity;
+    }
+
     const packetLightIntensity = getChangedSetting(
       changedSettings,
       'packetLightIntensity'
@@ -3010,6 +3284,24 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const linkTrafficGlow = getChangedSetting(changedSettings, 'linkTrafficGlow')?.nextValue;
     if (typeof linkTrafficGlow === 'number') {
       this.linkTrafficGlow = linkTrafficGlow;
+    }
+
+    const linkPulseLength = getChangedSetting(changedSettings, 'linkPulseLength')?.nextValue;
+    if (typeof linkPulseLength === 'number') {
+      this.linkPulseLength = linkPulseLength;
+    }
+
+    const linkPulseIntensity = getChangedSetting(changedSettings, 'linkPulseIntensity')?.nextValue;
+    if (typeof linkPulseIntensity === 'number') {
+      this.linkPulseIntensity = linkPulseIntensity;
+    }
+
+    const congestionPressureIntensity = getChangedSetting(
+      changedSettings,
+      'congestionPressureIntensity'
+    )?.nextValue;
+    if (typeof congestionPressureIntensity === 'number') {
+      this.congestionPressureIntensity = congestionPressureIntensity;
     }
 
     const causticIntensity = getChangedSetting(changedSettings, 'causticIntensity')?.nextValue;
@@ -3046,9 +3338,9 @@ const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
 <p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. Use Play, Back, and Next to follow or inspect each chapter.</p>
 <p>Packets enter their local Tier 0 switch as separate streams. Once the streams meet, the switch forwards alternating red and green packets across four representative independent network planes. The destination-side switches separate the traffic again and deliver each color to its intended server.</p>
-<p>Click any glass switch to move it from healthy to orange and congested, then red and failed. Clicking a failed switch repairs it, but its path stays offline until a blue recovery probe confirms that the switch is reachable.</p>
+<p>Click any glass switch to move it from healthy to orange and congested, then red and failed. Clicking a failed switch repairs it, but its path stays offline while a blue recovery probe travels to the switch and a cyan acknowledgment returns to its source.</p>
 <p>An orange switch trims overloaded packet payloads while their smaller headers continue. A red switch briefly loses in-flight packets before MRC retires the failed plane, retransmits over healthy routes, and sends occasional recovery probes.</p>
-<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and fabric links softly brighten with red or green light only while packets are traveling through them. Packet arrivals send faint expanding ripples through each switch. Emissive packets leave short directional trails, reflect inside nearby glass, and project focused colored caustics onto adjacent reflective surfaces.</p>
+<p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Glass spheres are switches, and fabric links softly brighten with red or green light only while packets are traveling through them. Directional light wakes remain inside each link, congested switches breathe amber, and failures or confirmed recoveries send restrained red or cyan waves through nearby glass. Emissive packets leave short trails, reflect inside nearby glass, and project focused colored caustics onto adjacent reflective surfaces.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Read OpenAI's supercomputer networking and MRC article</a></p>`;
 
 const PACKET_SPRAYING_BACKGROUND_HTML = `\
@@ -3057,7 +3349,7 @@ const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>Planes and packet spraying:</strong> a high-bandwidth network interface can be split across multiple independent physical planes. In the article's example, an 800 Gb/s interface becomes eight 100 Gb/s connections. This visualization shows four representative paths; each conversation sprays successive packets across all four instead of waiting behind one busy link.</p>
 <p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
 <p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
-<p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. A repaired path does not carry ordinary traffic again until a control probe confirms it is reachable. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
+<p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. A repaired path does not carry ordinary traffic again until an outbound control probe reaches the switch and its acknowledgment successfully returns. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
 <p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, two internal shell bounces, moving scene reflections, thin-film iridescence, and roughness-aware chromatic transmission. Emissive packet cores, directional trails, and switch flashes illuminate nearby glass through bounded point lights and focused raster caustics. Fault-tinted switches add subtle animated lens distortion. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
@@ -3422,6 +3714,15 @@ function makeSettingsSchema(
             step: 0.05
           },
           {
+            name: 'switchTransitionIntensity',
+            label: 'Switch Transition Wave',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.4,
+            step: 0.05
+          },
+          {
             name: 'packetLightIntensity',
             label: 'Local Light Intensity',
             type: 'number',
@@ -3446,6 +3747,33 @@ function makeSettingsSchema(
             persist: 'none',
             min: 0,
             max: 1.4,
+            step: 0.05
+          },
+          {
+            name: 'linkPulseLength',
+            label: 'Link Pulse Length',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 0.65,
+            step: 0.01
+          },
+          {
+            name: 'linkPulseIntensity',
+            label: 'Link Pulse Intensity',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.4,
+            step: 0.05
+          },
+          {
+            name: 'congestionPressureIntensity',
+            label: 'Congestion Pressure',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.2,
             step: 0.05
           },
           {
