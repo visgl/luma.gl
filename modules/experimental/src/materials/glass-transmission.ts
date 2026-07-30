@@ -22,6 +22,16 @@ export type GlassTransmissionProps = {
   environmentIntensity?: number;
   /** Multiplier applied to the measured front-to-back optical path. */
   thicknessStrength?: number;
+  /** Strength of thickness-aware multisample transmission blur. */
+  roughTransmissionStrength?: number;
+  /** Strength of wavelength-dependent absorption through the measured glass volume. */
+  spectralAbsorptionStrength?: number;
+  /** Thickness in nanometers of an optional thin-film surface coating. */
+  thinFilmThickness?: number;
+  /** Strength of angular spectral interference from the thin-film coating. */
+  thinFilmStrength?: number;
+  /** Strength of colored in-volume scattering around nearby optical point lights. */
+  volumeScatteringStrength?: number;
   /** Normalized-depth tolerance used to preserve foreground geometry. */
   depthBias?: number;
   /** Strength of nearby opaque-scene reflections sampled from captured scene color. */
@@ -40,6 +50,11 @@ export type GlassTransmissionUniforms = {
   depthRange: [number, number];
   environmentIntensity: number;
   thicknessStrength: number;
+  roughTransmissionStrength: number;
+  spectralAbsorptionStrength: number;
+  thinFilmThickness: number;
+  thinFilmStrength: number;
+  volumeScatteringStrength: number;
   depthBias: number;
   dynamicReflectionStrength: number;
   secondaryBounceStrength: number;
@@ -62,6 +77,11 @@ struct glassTransmissionUniforms {
   depthRange: vec2<f32>,
   environmentIntensity: f32,
   thicknessStrength: f32,
+  roughTransmissionStrength: f32,
+  spectralAbsorptionStrength: f32,
+  thinFilmThickness: f32,
+  thinFilmStrength: f32,
+  volumeScatteringStrength: f32,
   depthBias: f32,
   dynamicReflectionStrength: f32,
   secondaryBounceStrength: f32,
@@ -117,11 +137,109 @@ fn glassTransmission_sampleEnvironment(reflectionDirection: vec3<f32>) -> vec3<f
     environmentCoordinate - blurOffset,
     0.0
   ).rgb;
+  let baselineEnvironment = (centered + forward + backward) / 3.0;
+  if (glassTransmission.roughTransmissionStrength <= 0.0) {
+    return mix(
+      centered,
+      baselineEnvironment,
+      smoothstep(0.08, 0.7, glassMaterial.roughness)
+    ) * glassTransmission.environmentIntensity;
+  }
+  let crossOffset = vec2<f32>(-blurOffset.y, blurOffset.x);
+  let upper = textureSampleLevel(
+    glassEnvironmentTexture,
+    glassEnvironmentTextureSampler,
+    environmentCoordinate + crossOffset,
+    0.0
+  ).rgb;
+  let lower = textureSampleLevel(
+    glassEnvironmentTexture,
+    glassEnvironmentTextureSampler,
+    environmentCoordinate - crossOffset,
+    0.0
+  ).rgb;
+  let filteredEnvironment = mix(
+    baselineEnvironment,
+    (centered + forward + backward + upper + lower) / 5.0,
+    clamp(glassTransmission.roughTransmissionStrength, 0.0, 1.0)
+  );
   return mix(
     centered,
-    (centered + forward + backward) / 3.0,
+    filteredEnvironment,
     smoothstep(0.08, 0.7, glassMaterial.roughness)
   ) * glassTransmission.environmentIntensity;
+}
+
+fn glassTransmission_sampleRoughTransmission(
+  screenCoordinate: vec2<f32>,
+  refractionOffset: vec2<f32>,
+  dispersionOffset: vec2<f32>,
+  measuredThickness: f32
+) -> vec3<f32> {
+  let centered = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset,
+    dispersionOffset
+  );
+  let roughness = glassMaterial.roughness * glassTransmission.roughTransmissionStrength;
+  if (roughness <= 0.0001) {
+    return centered;
+  }
+  let pixelSize = vec2<f32>(1.0) / max(glassTransmission.viewportSize, vec2<f32>(1.0));
+  let blurOffset = pixelSize * roughness * (2.0 + measuredThickness * 11.0);
+  let horizontalOffset = vec2<f32>(blurOffset.x, 0.0);
+  let verticalOffset = vec2<f32>(0.0, blurOffset.y);
+  let positiveHorizontal = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset + horizontalOffset,
+    dispersionOffset
+  );
+  let negativeHorizontal = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset - horizontalOffset,
+    dispersionOffset
+  );
+  let positiveVertical = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset + verticalOffset,
+    dispersionOffset
+  );
+  let negativeVertical = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset - verticalOffset,
+    dispersionOffset
+  );
+  let filteredTransmission = (
+    centered * 2.0 + positiveHorizontal + negativeHorizontal + positiveVertical + negativeVertical
+  ) / 6.0;
+  return mix(centered, filteredTransmission, smoothstep(0.02, 0.42, roughness));
+}
+
+fn glassTransmission_getSpectralAbsorption(
+  baseColor: vec3<f32>,
+  measuredThickness: f32
+) -> vec3<f32> {
+  let baselineExtinction = vec3<f32>(0.1, 0.065, 0.032) + (1.0 - baseColor) * 0.22;
+  let spectralExtinction = (
+    vec3<f32>(0.11, 0.045, 0.022) * 0.35 +
+    (1.0 - baseColor) * vec3<f32>(0.46, 0.26, 0.15)
+  ) * glassTransmission.spectralAbsorptionStrength;
+  return exp(-(baselineExtinction + spectralExtinction) * measuredThickness);
+}
+
+fn glassTransmission_getThinFilm(viewAlignment: f32) -> vec3<f32> {
+  let refractiveIndex = max(glassMaterial.indexOfRefraction, 1.001);
+  let filmAlignment = sqrt(max(
+    1.0 - (1.0 - viewAlignment * viewAlignment) / (refractiveIndex * refractiveIndex),
+    0.02
+  ));
+  let wavelengths = vec3<f32>(650.0, 530.0, 460.0);
+  let phase = 12.56637061 * glassTransmission.thinFilmThickness *
+    refractiveIndex * filmAlignment / wavelengths;
+  let spectralInterference = 0.5 + 0.5 * cos(phase);
+  let filmPresence = select(0.0, 1.0, glassTransmission.thinFilmThickness > 0.0);
+  return spectralInterference * pow(1.0 - viewAlignment, 1.45) *
+    glassTransmission.thinFilmStrength * filmPresence * 0.18;
 }
 
 fn glassTransmission_getColor(
@@ -204,14 +322,13 @@ fn glassTransmission_getColor(
   let safeOffset = select(proposedOffset, vec2<f32>(0.0), foregroundOcclusion);
   let dispersionOffset = projectedNormal * glassMaterial.dispersion *
     measuredThickness * 0.3;
-  let transmittedColor = glassMaterial_sampleTransmission(
+  let transmittedColor = glassTransmission_sampleRoughTransmission(
     screenCoordinate,
     safeOffset,
-    dispersionOffset
+    dispersionOffset,
+    measuredThickness
   );
-  let absorption = exp(-(
-    vec3<f32>(0.1, 0.065, 0.032) + (1.0 - baseColor.rgb) * 0.22
-  ) * measuredThickness);
+  let absorption = glassTransmission_getSpectralAbsorption(baseColor.rgb, measuredThickness);
   let reflectionDirection = reflect(-viewDirection, frontNormal);
   let environmentReflection = glassTransmission_sampleEnvironment(reflectionDirection);
   let viewAlignment = clamp(dot(frontNormal, viewDirection), 0.0, 1.0);
@@ -222,6 +339,9 @@ fn glassTransmission_getColor(
   let secondaryDirection = reflect(reflect(entryDirection, -backNormal), frontNormal);
   let secondaryReflection = glassTransmission_sampleEnvironment(secondaryDirection) *
     glassTransmission.secondaryBounceStrength * pow(1.0 - viewAlignment, 1.45) * 0.24;
+  let thinFilmReflection = glassTransmission_getThinFilm(viewAlignment);
+  let volumeScattering = baseColor.rgb * (1.0 - exp(-measuredThickness * 1.3)) *
+    glassTransmission.volumeScatteringStrength * (0.045 + (1.0 - viewAlignment) * 0.09);
   let reflectionCoordinate = clamp(
     screenCoordinate + projectedNormal * (0.025 + measuredThickness * 0.018),
     vec2<f32>(0.001),
@@ -244,7 +364,7 @@ fn glassTransmission_getColor(
   let opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength +
     environmentReflection * (0.09 + fresnel * 0.65) +
     internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
-    dynamicReflection + faultFilament;
+    thinFilmReflection + volumeScattering + dynamicReflection + faultFilament;
   return vec4<f32>(mix(surfaceColor.rgb, opticalColor, 0.64), surfaceColor.a);
 }
 
@@ -264,8 +384,11 @@ fn glassTransmission_getIlluminatedColor(
     fragmentPosition
   );
   let pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  let volumeLightScattering = pointLightColor *
+    glassTransmission.volumeScatteringStrength * 0.24;
   return vec4<f32>(
-    transmittedColor.rgb + pointLightColor * glassMaterial.reflectionStrength,
+    transmittedColor.rgb + pointLightColor * glassMaterial.reflectionStrength +
+      volumeLightScattering,
     transmittedColor.a
   );
 }
@@ -278,6 +401,11 @@ layout(std140) uniform glassTransmissionUniforms {
   vec2 depthRange;
   float environmentIntensity;
   float thicknessStrength;
+  float roughTransmissionStrength;
+  float spectralAbsorptionStrength;
+  float thinFilmThickness;
+  float thinFilmStrength;
+  float volumeScatteringStrength;
   float depthBias;
   float dynamicReflectionStrength;
   float secondaryBounceStrength;
@@ -313,11 +441,96 @@ vec3 glassTransmission_sampleEnvironment(vec3 reflectionDirection) {
   vec3 centered = texture(glassEnvironmentTexture, environmentCoordinate).rgb;
   vec3 forward = texture(glassEnvironmentTexture, environmentCoordinate + blurOffset).rgb;
   vec3 backward = texture(glassEnvironmentTexture, environmentCoordinate - blurOffset).rgb;
+  vec3 baselineEnvironment = (centered + forward + backward) / 3.0;
+  if (glassTransmission.roughTransmissionStrength <= 0.0) {
+    return mix(
+      centered,
+      baselineEnvironment,
+      smoothstep(0.08, 0.7, glassMaterial.roughness)
+    ) * glassTransmission.environmentIntensity;
+  }
+  vec2 crossOffset = vec2(-blurOffset.y, blurOffset.x);
+  vec3 upper = texture(glassEnvironmentTexture, environmentCoordinate + crossOffset).rgb;
+  vec3 lower = texture(glassEnvironmentTexture, environmentCoordinate - crossOffset).rgb;
+  vec3 filteredEnvironment = mix(
+    baselineEnvironment,
+    (centered + forward + backward + upper + lower) / 5.0,
+    clamp(glassTransmission.roughTransmissionStrength, 0.0, 1.0)
+  );
   return mix(
     centered,
-    (centered + forward + backward) / 3.0,
+    filteredEnvironment,
     smoothstep(0.08, 0.7, glassMaterial.roughness)
   ) * glassTransmission.environmentIntensity;
+}
+
+vec3 glassTransmission_sampleRoughTransmission(
+  vec2 screenCoordinate,
+  vec2 refractionOffset,
+  vec2 dispersionOffset,
+  float measuredThickness
+) {
+  vec3 centered = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset,
+    dispersionOffset
+  );
+  float roughness = glassMaterial.roughness * glassTransmission.roughTransmissionStrength;
+  if (roughness <= 0.0001) {
+    return centered;
+  }
+  vec2 pixelSize = vec2(1.0) / max(glassTransmission.viewportSize, vec2(1.0));
+  vec2 blurOffset = pixelSize * roughness * (2.0 + measuredThickness * 11.0);
+  vec2 horizontalOffset = vec2(blurOffset.x, 0.0);
+  vec2 verticalOffset = vec2(0.0, blurOffset.y);
+  vec3 positiveHorizontal = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset + horizontalOffset,
+    dispersionOffset
+  );
+  vec3 negativeHorizontal = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset - horizontalOffset,
+    dispersionOffset
+  );
+  vec3 positiveVertical = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset + verticalOffset,
+    dispersionOffset
+  );
+  vec3 negativeVertical = glassMaterial_sampleTransmission(
+    screenCoordinate,
+    refractionOffset - verticalOffset,
+    dispersionOffset
+  );
+  vec3 filteredTransmission = (
+    centered * 2.0 + positiveHorizontal + negativeHorizontal + positiveVertical + negativeVertical
+  ) / 6.0;
+  return mix(centered, filteredTransmission, smoothstep(0.02, 0.42, roughness));
+}
+
+vec3 glassTransmission_getSpectralAbsorption(vec3 baseColor, float measuredThickness) {
+  vec3 baselineExtinction = vec3(0.1, 0.065, 0.032) + (1.0 - baseColor) * 0.22;
+  vec3 spectralExtinction = (
+    vec3(0.11, 0.045, 0.022) * 0.35 +
+    (1.0 - baseColor) * vec3(0.46, 0.26, 0.15)
+  ) * glassTransmission.spectralAbsorptionStrength;
+  return exp(-(baselineExtinction + spectralExtinction) * measuredThickness);
+}
+
+vec3 glassTransmission_getThinFilm(float viewAlignment) {
+  float refractiveIndex = max(glassMaterial.indexOfRefraction, 1.001);
+  float filmAlignment = sqrt(max(
+    1.0 - (1.0 - viewAlignment * viewAlignment) / (refractiveIndex * refractiveIndex),
+    0.02
+  ));
+  vec3 wavelengths = vec3(650.0, 530.0, 460.0);
+  vec3 phase = 12.56637061 * glassTransmission.thinFilmThickness *
+    refractiveIndex * filmAlignment / wavelengths;
+  vec3 spectralInterference = 0.5 + 0.5 * cos(phase);
+  float filmPresence = glassTransmission.thinFilmThickness > 0.0 ? 1.0 : 0.0;
+  return spectralInterference * pow(1.0 - viewAlignment, 1.45) *
+    glassTransmission.thinFilmStrength * filmPresence * 0.18;
 }
 
 vec4 glassTransmission_getColor(
@@ -398,14 +611,13 @@ vec4 glassTransmission_getColor(
   vec2 safeOffset = foregroundOcclusion ? vec2(0.0) : proposedOffset;
   vec2 dispersionOffset = projectedNormal * glassMaterial.dispersion *
     measuredThickness * 0.3;
-  vec3 transmittedColor = glassMaterial_sampleTransmission(
+  vec3 transmittedColor = glassTransmission_sampleRoughTransmission(
     screenCoordinate,
     safeOffset,
-    dispersionOffset
+    dispersionOffset,
+    measuredThickness
   );
-  vec3 absorption = exp(-(
-    vec3(0.1, 0.065, 0.032) + (1.0 - baseColor.rgb) * 0.22
-  ) * measuredThickness);
+  vec3 absorption = glassTransmission_getSpectralAbsorption(baseColor.rgb, measuredThickness);
   vec3 reflectionDirection = reflect(-viewDirection, frontNormal);
   vec3 environmentReflection = glassTransmission_sampleEnvironment(reflectionDirection);
   float viewAlignment = clamp(dot(frontNormal, viewDirection), 0.0, 1.0);
@@ -416,6 +628,9 @@ vec4 glassTransmission_getColor(
   vec3 secondaryDirection = reflect(reflect(entryDirection, -backNormal), frontNormal);
   vec3 secondaryReflection = glassTransmission_sampleEnvironment(secondaryDirection) *
     glassTransmission.secondaryBounceStrength * pow(1.0 - viewAlignment, 1.45) * 0.24;
+  vec3 thinFilmReflection = glassTransmission_getThinFilm(viewAlignment);
+  vec3 volumeScattering = baseColor.rgb * (1.0 - exp(-measuredThickness * 1.3)) *
+    glassTransmission.volumeScatteringStrength * (0.045 + (1.0 - viewAlignment) * 0.09);
   vec2 reflectionCoordinate = clamp(
     screenCoordinate + projectedNormal * (0.025 + measuredThickness * 0.018),
     vec2(0.001),
@@ -433,7 +648,7 @@ vec4 glassTransmission_getColor(
   vec3 opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength +
     environmentReflection * (0.09 + fresnel * 0.65) +
     internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
-    dynamicReflection + faultFilament;
+    thinFilmReflection + volumeScattering + dynamicReflection + faultFilament;
   return vec4(mix(surfaceColor.rgb, opticalColor, 0.64), surfaceColor.a);
 }
 
@@ -453,8 +668,11 @@ vec4 glassTransmission_getIlluminatedColor(
     fragmentPosition
   );
   vec3 pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  vec3 volumeLightScattering = pointLightColor *
+    glassTransmission.volumeScatteringStrength * 0.24;
   return vec4(
-    transmittedColor.rgb + pointLightColor * glassMaterial.reflectionStrength,
+    transmittedColor.rgb + pointLightColor * glassMaterial.reflectionStrength +
+      volumeLightScattering,
     transmittedColor.a
   );
 }
@@ -470,6 +688,14 @@ function getGlassTransmissionUniforms(
     depthRange: props.depthRange ?? previousUniforms?.depthRange ?? [0.1, 100],
     environmentIntensity: props.environmentIntensity ?? previousUniforms?.environmentIntensity ?? 1,
     thicknessStrength: props.thicknessStrength ?? previousUniforms?.thicknessStrength ?? 1,
+    roughTransmissionStrength:
+      props.roughTransmissionStrength ?? previousUniforms?.roughTransmissionStrength ?? 0,
+    spectralAbsorptionStrength:
+      props.spectralAbsorptionStrength ?? previousUniforms?.spectralAbsorptionStrength ?? 0,
+    thinFilmThickness: props.thinFilmThickness ?? previousUniforms?.thinFilmThickness ?? 0,
+    thinFilmStrength: props.thinFilmStrength ?? previousUniforms?.thinFilmStrength ?? 0,
+    volumeScatteringStrength:
+      props.volumeScatteringStrength ?? previousUniforms?.volumeScatteringStrength ?? 0,
     depthBias: props.depthBias ?? previousUniforms?.depthBias ?? 0.00008,
     dynamicReflectionStrength:
       props.dynamicReflectionStrength ?? previousUniforms?.dynamicReflectionStrength ?? 0,
@@ -502,6 +728,11 @@ export const glassTransmission = {
     depthRange: 'vec2<f32>',
     environmentIntensity: 'f32',
     thicknessStrength: 'f32',
+    roughTransmissionStrength: 'f32',
+    spectralAbsorptionStrength: 'f32',
+    thinFilmThickness: 'f32',
+    thinFilmStrength: 'f32',
+    volumeScatteringStrength: 'f32',
     depthBias: 'f32',
     dynamicReflectionStrength: 'f32',
     secondaryBounceStrength: 'f32',
@@ -513,6 +744,11 @@ export const glassTransmission = {
     depthRange: [0.1, 100],
     environmentIntensity: 1,
     thicknessStrength: 1,
+    roughTransmissionStrength: 0,
+    spectralAbsorptionStrength: 0,
+    thinFilmThickness: 0,
+    thinFilmStrength: 0,
+    volumeScatteringStrength: 0,
     depthBias: 0.00008,
     dynamicReflectionStrength: 0,
     secondaryBounceStrength: 0,

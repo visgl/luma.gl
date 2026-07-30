@@ -1341,6 +1341,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   glassTransmissionStrength = 1.12;
   glassEnvironmentIntensity = 1.25;
   glassVolumeThickness = 1;
+  glassRoughTransmissionStrength = 0.85;
+  glassSpectralAbsorptionStrength = 0.42;
+  glassThinFilmThickness = 420;
+  glassThinFilmStrength = 0.22;
+  glassVolumeScatteringStrength = 0.38;
   glassDynamicReflectionStrength = 0.38;
   glassSecondaryBounceStrength = 0.55;
   glassFaultDistortionStrength = 0.42;
@@ -1642,6 +1647,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         glassTransmissionStrength: this.glassTransmissionStrength,
         glassEnvironmentIntensity: this.glassEnvironmentIntensity,
         glassVolumeThickness: this.glassVolumeThickness,
+        glassRoughTransmissionStrength: this.glassRoughTransmissionStrength,
+        glassSpectralAbsorptionStrength: this.glassSpectralAbsorptionStrength,
+        glassThinFilmThickness: this.glassThinFilmThickness,
+        glassThinFilmStrength: this.glassThinFilmStrength,
+        glassVolumeScatteringStrength: this.glassVolumeScatteringStrength,
         glassDynamicReflectionStrength: this.glassDynamicReflectionStrength,
         glassSecondaryBounceStrength: this.glassSecondaryBounceStrength,
         glassFaultDistortionStrength: this.glassFaultDistortionStrength,
@@ -1773,6 +1783,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       environmentTexture: this.environmentTexture,
       environmentIntensity: this.glassEnvironmentIntensity,
       thicknessStrength: this.glassVolumeThickness,
+      roughTransmissionStrength: this.glassRoughTransmissionStrength,
+      spectralAbsorptionStrength: this.glassSpectralAbsorptionStrength,
+      thinFilmThickness: this.glassThinFilmThickness,
+      thinFilmStrength: this.glassThinFilmStrength,
+      volumeScatteringStrength: this.glassVolumeScatteringStrength,
       dynamicReflectionStrength: this.glassDynamicReflectionStrength,
       secondaryBounceStrength: this.glassSecondaryBounceStrength,
       faultDistortionStrength: this.glassFaultDistortionStrength,
@@ -3439,6 +3454,46 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.glassVolumeThickness = glassVolumeThickness;
     }
 
+    const glassRoughTransmissionStrength = getChangedSetting(
+      changedSettings,
+      'glassRoughTransmissionStrength'
+    )?.nextValue;
+    if (typeof glassRoughTransmissionStrength === 'number') {
+      this.glassRoughTransmissionStrength = glassRoughTransmissionStrength;
+    }
+
+    const glassSpectralAbsorptionStrength = getChangedSetting(
+      changedSettings,
+      'glassSpectralAbsorptionStrength'
+    )?.nextValue;
+    if (typeof glassSpectralAbsorptionStrength === 'number') {
+      this.glassSpectralAbsorptionStrength = glassSpectralAbsorptionStrength;
+    }
+
+    const glassThinFilmThickness = getChangedSetting(
+      changedSettings,
+      'glassThinFilmThickness'
+    )?.nextValue;
+    if (typeof glassThinFilmThickness === 'number') {
+      this.glassThinFilmThickness = glassThinFilmThickness;
+    }
+
+    const glassThinFilmStrength = getChangedSetting(
+      changedSettings,
+      'glassThinFilmStrength'
+    )?.nextValue;
+    if (typeof glassThinFilmStrength === 'number') {
+      this.glassThinFilmStrength = glassThinFilmStrength;
+    }
+
+    const glassVolumeScatteringStrength = getChangedSetting(
+      changedSettings,
+      'glassVolumeScatteringStrength'
+    )?.nextValue;
+    if (typeof glassVolumeScatteringStrength === 'number') {
+      this.glassVolumeScatteringStrength = glassVolumeScatteringStrength;
+    }
+
     const glassDynamicReflectionStrength = getChangedSetting(
       changedSettings,
       'glassDynamicReflectionStrength'
@@ -3597,7 +3652,7 @@ const PACKET_SPRAYING_BACKGROUND_HTML = `\
 <p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
 <p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. A repaired path does not carry ordinary traffic again until an outbound control probe reaches the switch and its acknowledgment successfully returns. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
 <p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
-<p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, two internal shell bounces, moving scene reflections, thin-film iridescence, and roughness-aware chromatic transmission. Emissive packet cores, directional trails, and switch flashes illuminate nearby glass through bounded point lights and focused raster caustics. Fault-tinted switches add subtle animated lens distortion. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
+<p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, two internal shell bounces, moving scene reflections, wavelength-dependent volume absorption, thickness-aware frosted transmission, and angular thin-film interference. Emissive packet cores, directional trails, and switch flashes illuminate nearby glass through bounded point lights, colored in-volume scattering, and focused raster caustics. Fault-tinted switches add subtle animated lens distortion. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
 
 function makeGlassInstances(): GlassInstance[] {
@@ -4195,6 +4250,51 @@ function makeSettingsSchema(
             persist: 'none',
             min: 0.2,
             max: 2,
+            step: 0.05
+          },
+          {
+            name: 'glassRoughTransmissionStrength',
+            label: 'Frosted Transmission',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'glassSpectralAbsorptionStrength',
+            label: 'Spectral Absorption',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'glassThinFilmThickness',
+            label: 'Film Thickness (nm)',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 900,
+            step: 10
+          },
+          {
+            name: 'glassThinFilmStrength',
+            label: 'Thin-Film Interference',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
+            step: 0.02
+          },
+          {
+            name: 'glassVolumeScatteringStrength',
+            label: 'Volume Light Scattering',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1.5,
             step: 0.05
           },
           {
