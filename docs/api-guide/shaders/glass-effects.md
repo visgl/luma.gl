@@ -19,12 +19,15 @@ GLSL shader modules, while transparency renderers remain responsible for composi
 | Studio environment | Samples a generated equirectangular environment along the reflected viewing direction. | Polished surfaces receive camera-responsive studio reflections. |
 | Chromatic dispersion | Offsets red, green, and blue scene-color samples. | Subtle colored separation around refracted features. |
 | Beer-Lambert absorption | Attenuates transmitted light with material color and thickness. | Longer optical paths produce darker, more tinted transmission. |
+| Spectral volume absorption | Applies independent red, green, and blue extinction over measured shell thickness. | Deep glass acquires wavelength-dependent tint without recoloring thin silhouettes. |
+| Rough transmission | Filters refracted scene samples over a thickness- and roughness-dependent footprint. | Frosted glass softly blurs background packets while polished switches remain clear. |
 | GGX microfacets | Shared distribution and visibility helpers shade key and fill lights. | Roughness-dependent, camera-responsive polished highlights. |
 | Clearcoat | Adds a second narrow microfacet lobe above the base surface. | Crisp, bright reflections that make the outer shell readable. |
 | Internal reflection | Approximates a colored secondary environment bounce inside the shell. | A softer inner Fresnel band and greater visible depth. |
 | Multiple internal bounces | Reflects the refracted ray against both measured shell surfaces before sampling the studio environment again. | A second curved highlight suggests the depth of polished solid glass. |
-| Thin-film interference | Applies restrained wavelength-dependent color near grazing angles. | Subtle spectral variation without coloring the whole object. |
+| Thin-film interference | Evaluates nanometer-scale coating thickness across representative red, green, and blue wavelengths. | Angle-dependent spectral bands follow grazing highlights without coloring the whole object. |
 | Localized point lights | Evaluates a bounded array of nearby colored light sources. | Moving emissive objects tint adjacent glass and reflective surfaces. |
+| Optical volume scattering | Couples nearby colored point lights into the measured glass interior. | Passing packets briefly illuminate the inside of a switch without washing out the network. |
 | Dynamic scene reflections | Samples captured opaque scene color along a curved screen-space reflection offset. | Moving packets and active links appear as localized reflections on glass switches. |
 | Focused raster caustics | Projects bounded colored glass-lens contributions onto nearby reflective receivers. | Active switches concentrate moving red and green light onto adjacent links and servers. |
 | Fault-driven distortion | Modulates refraction and narrow internal filaments only on warm fault-tinted glass. | Congested and failed switches acquire subtle animated optical instability. |
@@ -125,6 +128,11 @@ shaderInputs.setProps({
     environmentTexture,
     environmentIntensity: 1.25,
     thicknessStrength: 1,
+    roughTransmissionStrength: 0.85,
+    spectralAbsorptionStrength: 0.42,
+    thinFilmThickness: 420,
+    thinFilmStrength: 0.22,
+    volumeScatteringStrength: 0.38,
     dynamicReflectionStrength: 0.38,
     secondaryBounceStrength: 0.55,
     faultDistortionStrength: 0.42,
@@ -138,7 +146,12 @@ Call `glassTransmission_getColor(...)`, or install `opticalPointLightsPlugin` an
 adding depth-derived thickness, analytic entry/exit refraction, foreground-depth rejection,
 total-internal-reflection handling, sampled equirectangular environment reflections, optional
 screen-space scene reflections, secondary internal bounces, and fault-tinted optical distortion.
-The additional controls default to zero so existing transmission consumers retain their appearance.
+Optional spectral-volume controls add bounded multisample rough transmission, wavelength-dependent
+Beer-Lambert absorption, nanometer-scale thin-film interference, and colored in-volume scattering
+from nearby point lights. These additional controls default to zero so existing transmission
+consumers retain their appearance. Rough transmission requires four additional chromatic scene
+samples and two additional environment samples; it remains a bounded raster approximation rather
+than geometry-aware ray tracing.
 
 ## Add Focused Raster Caustics
 
@@ -202,7 +215,8 @@ These materials are advanced raster approximations, not a complete physically ba
 system. In particular, the current implementation does not provide:
 
 - Full energy-conserving multiple-scattering or microfacet transmission.
-- Filtered environment probes and geometry-aware rough transmission.
+- Prefiltered environment probes, off-screen reflection recovery, or geometry-aware rough
+  transmission beyond the bounded screen-space footprint.
 - Physically traced multiple refraction events or caustics; the available focused-light module is
   an intentionally bounded raster approximation.
 - Off-screen background recovery or geometry-aware refracted-ray tracing.
@@ -210,6 +224,38 @@ system. In particular, the current implementation does not provide:
 Those capabilities require additional depth, normal, backface, environment, or ray-tracing data
 and should be introduced as explicitly composable modules or render passes rather than hidden in
 an individual showcase.
+
+## Optical Roadmap
+
+### Available Now: Portable Raster Optics
+
+- Camera-responsive Fresnel, GGX microfacet highlights, clearcoat, chromatic dispersion, and
+  analytic entry/exit refraction work across WebGL and WebGPU.
+- Backface-derived thickness, foreground rejection, wavelength-dependent volume absorption,
+  thickness-aware rough transmission, and nanometer-scale thin-film interference give glass
+  measurable optical depth without per-pixel ray tracing.
+- Bounded colored point lights, in-volume scattering, screen-space scene reflections, secondary
+  environment bounces, and focused raster caustics connect moving emitters to nearby glass.
+- Exact A-buffer transparency, weighted-blended transparency, and depth-sorted alpha blending
+  preserve the strongest supported compositing strategy on each backend.
+
+### Next: Richer Raster Light Transport
+
+- Add temporally accumulated rough transmission and history rejection to reduce multisample cost
+  while preserving animated packet detail.
+- Introduce filtered environment probes and roughness-selected reflection levels with explicit
+  capability-aware fallbacks.
+- Improve geometry-aware screen-space reflections and thickness-guided indirect packet lighting
+  without reading from active render attachments.
+- Add adaptive local scattering and neighborhood-aware translucent contact shadows while keeping
+  light counts bounded and diagrams legible.
+
+### Future: Opt-In Physically Traced Effects
+
+- Investigate energy-conserving microfacet transmission, multiple internal scattering events, and
+  ray-traced refraction only behind explicit backend and performance capability checks.
+- Treat physically traced caustics, off-screen background recovery, and hardware-ray-tracing
+  integration as separately composable render passes rather than hidden showcase requirements.
 
 For a complete application, see
 [Effects: Glass - Network Packet Spraying](/examples/showcase/packet-spraying), which combines glass switches,

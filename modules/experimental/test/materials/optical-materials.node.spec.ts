@@ -321,6 +321,11 @@ test('optical materials retain defaults while applying partial updates', testCas
       depthRange: [0.1, 100],
       environmentIntensity: 1,
       thicknessStrength: 1,
+      roughTransmissionStrength: 0,
+      spectralAbsorptionStrength: 0,
+      thinFilmThickness: 0,
+      thinFilmStrength: 0,
+      volumeScatteringStrength: 0,
       depthBias: 0.00008,
       dynamicReflectionStrength: 0,
       secondaryBounceStrength: 0,
@@ -358,6 +363,11 @@ test('optical materials retain defaults while applying partial updates', testCas
       dynamicReflectionStrength: 0.45,
       secondaryBounceStrength: 0.7,
       faultDistortionStrength: 0.3,
+      roughTransmissionStrength: 0.85,
+      spectralAbsorptionStrength: 0.42,
+      thinFilmThickness: 420,
+      thinFilmStrength: 0.22,
+      volumeScatteringStrength: 0.38,
       time: 2.5
     },
     updatedTransmissionUniforms
@@ -377,7 +387,56 @@ test('optical materials retain defaults while applying partial updates', testCas
     0.3,
     'fault-driven lens distortion is configurable'
   );
+  testCase.equal(
+    animatedTransmissionUniforms.roughTransmissionStrength,
+    0.85,
+    'thickness-aware rough transmission is configurable'
+  );
+  testCase.equal(
+    animatedTransmissionUniforms.spectralAbsorptionStrength,
+    0.42,
+    'wavelength-dependent volume absorption is configurable'
+  );
+  testCase.equal(
+    animatedTransmissionUniforms.thinFilmThickness,
+    420,
+    'thin-film coating thickness is configured in nanometers'
+  );
+  testCase.equal(
+    animatedTransmissionUniforms.thinFilmStrength,
+    0.22,
+    'angular thin-film interference is configurable'
+  );
+  testCase.equal(
+    animatedTransmissionUniforms.volumeScatteringStrength,
+    0.38,
+    'localized optical volume scattering is configurable'
+  );
   testCase.equal(animatedTransmissionUniforms.time, 2.5, 'fault animation accepts a scene clock');
+  const retainedOpticalUniforms = glassTransmission.getUniforms(
+    {environmentIntensity: 1.8},
+    animatedTransmissionUniforms
+  );
+  testCase.equal(
+    retainedOpticalUniforms.roughTransmissionStrength,
+    0.85,
+    'partial updates preserve rough transmission'
+  );
+  testCase.equal(
+    retainedOpticalUniforms.spectralAbsorptionStrength,
+    0.42,
+    'partial updates preserve spectral volume absorption'
+  );
+  testCase.equal(
+    retainedOpticalUniforms.thinFilmThickness,
+    420,
+    'partial updates preserve the coating thickness'
+  );
+  testCase.equal(
+    retainedOpticalUniforms.volumeScatteringStrength,
+    0.38,
+    'partial updates preserve optical volume scattering'
+  );
 
   const initialReflectiveUniforms = reflectiveMaterial.getUniforms({});
   testCase.deepEqual(
@@ -552,6 +611,36 @@ test('rasterized glass transmission composes thickness, depth, and environment m
       shaderSource,
       /faultRipple/,
       `${language} confines animated distortion to warm fault-colored glass`
+    );
+    testCase.match(
+      shaderSource,
+      /glassTransmission_sampleRoughTransmission/,
+      `${language} filters transmission using optical thickness and surface roughness`
+    );
+    testCase.match(
+      shaderSource,
+      /glassTransmission_getSpectralAbsorption/,
+      `${language} applies wavelength-dependent volume absorption`
+    );
+    testCase.match(
+      shaderSource,
+      /glassTransmission_getThinFilm/,
+      `${language} computes angular thin-film interference`
+    );
+    testCase.match(
+      shaderSource,
+      /650\.0, 530\.0, 460\.0/,
+      `${language} evaluates representative red, green, and blue wavelengths`
+    );
+    testCase.match(
+      shaderSource,
+      /volumeLightScattering/,
+      `${language} scatters nearby colored lights inside the glass volume`
+    );
+    testCase.match(
+      shaderSource,
+      /filteredEnvironment/,
+      `${language} filters environment reflections for rough optical surfaces`
     );
   }
   testCase.end();

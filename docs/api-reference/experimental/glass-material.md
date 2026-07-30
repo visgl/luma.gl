@@ -75,6 +75,11 @@ existing `glassMaterial_getColor(...)` consumers.
 | `environmentTexture` | `Texture` | Required for rendering. | Equirectangular studio or HDR environment. |
 | `environmentIntensity` | `number` | `1` | Environment reflection multiplier. |
 | `thicknessStrength` | `number` | `1` | Measured optical-path multiplier. |
+| `roughTransmissionStrength` | `number` | `0` | Thickness-aware rough transmission and filtered environment reflection strength. |
+| `spectralAbsorptionStrength` | `number` | `0` | Wavelength-dependent Beer-Lambert extinction inside the measured glass volume. |
+| `thinFilmThickness` | `number` | `0` | Surface coating thickness in nanometers; zero disables coating interference. |
+| `thinFilmStrength` | `number` | `0` | Intensity of angle-dependent red, green, and blue coating interference. |
+| `volumeScatteringStrength` | `number` | `0` | Strength of restrained in-volume scattering and nearby point-light coupling. |
 | `depthBias` | `number` | `0.00008` | Foreground depth-comparison tolerance. |
 | `dynamicReflectionStrength` | `number` | `0` | Captured-scene reflection strength for nearby moving objects. |
 | `secondaryBounceStrength` | `number` | `0` | Additional reflected environment bounce inside the glass shell. |
@@ -84,6 +89,12 @@ existing `glassMaterial_getColor(...)` consumers.
 Use `glassTransmission_getColor(...)`, or add `opticalPointLightsPlugin` and use
 `glassTransmission_getIlluminatedColor(...)` for localized illumination. Both are available in
 matching WGSL and GLSL forms.
+
+The optional volume controls preserve existing output when left at their zero defaults. Rough
+transmission adds bounded scene-color and environment samples; spectral absorption uses the
+backface-measured optical path; thin-film interference evaluates representative red, green, and
+blue wavelengths from the coating thickness; and volume scattering couples nearby optical point
+lights into the glass interior. No mode requires per-pixel ray tracing.
 
 `opticalCausticsPlugin` separately adds a bounded array of focused glass lenses for nearby
 reflective receiver surfaces. Call `opticalCaustics_getColor(normal, worldPosition,
