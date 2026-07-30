@@ -18,12 +18,14 @@ import {
   isFailedSwitchPosition,
   makeConversationRoutes,
   makeLinks,
+  makeLinkTraffic,
   makePackets,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
   makeSwitchProbeEvent,
   makeSwitchGroups,
   makeSwitchArrivals,
+  makeLinkKey,
   reroutePackets
 } from '../../examples/showcase/packet-spraying/network';
 
@@ -99,6 +101,39 @@ test('packet-spraying switches form spine and two complete physical-plane groups
   testCase.end();
 });
 
+test('packet-spraying link traffic follows visible red and green packets', testCase => {
+  const packets = makePackets(makeConversationRoutes());
+  const firstRedPacket = packets.find(packet => packet.conversationIndex === 0)!;
+  const firstGreenPacket = packets.find(packet => packet.conversationIndex === 1)!;
+  const sharedLinkKey = makeLinkKey(firstRedPacket.route.points[1], firstRedPacket.route.points[2]);
+  const timeOnSharedLink =
+    firstRedPacket.launchTime +
+    (firstRedPacket.route.cumulativeLengths[1] + 0.5) / PACKET_TRAVEL_SPEED;
+  const traffic = makeLinkTraffic(packets, timeOnSharedLink);
+
+  testCase.deepEqual(
+    traffic.get(sharedLinkKey),
+    {red: 1, green: 1},
+    'shared switch links report interleaved red and green packets'
+  );
+
+  firstRedPacket.enabled = false;
+  testCase.deepEqual(
+    makeLinkTraffic(packets, timeOnSharedLink).get(sharedLinkKey),
+    {red: 0, green: 1},
+    'disabled or rerouted packets stop illuminating their former link'
+  );
+
+  firstGreenPacket.enabled = false;
+  testCase.equal(
+    makeLinkTraffic(packets, timeOnSharedLink).get(sharedLinkKey),
+    undefined,
+    'an empty link has no traffic illumination'
+  );
+
+  testCase.end();
+});
+
 test('packet-spraying traffic immediately avoids and restores failed planes', testCase => {
   const routes = makeConversationRoutes();
   const packets = makePackets(routes);
@@ -145,6 +180,41 @@ test('packet-spraying traffic immediately avoids and restores failed planes', te
     new Set(packets.map(packet => packet.route.points[3].join(','))).size,
     4,
     'packets resume using all four paths'
+  );
+  testCase.end();
+});
+
+test('packet-spraying keeps repaired planes offline until a recovery probe confirms them', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const recoveringSpineIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const recoveringSwitches = new Set([recoveringSpineIndex]);
+  const recoveringRoutes = getHealthyConversationRoutes(routes, new Set(), recoveringSwitches);
+
+  testCase.equal(getActivePlaneCount(recoveringRoutes), 3, 'a repaired plane remains unavailable');
+  reroutePackets(packets, recoveringRoutes);
+  testCase.ok(
+    packets.every(packet => packet.route.points.every(position => position !== SPINE_POSITIONS[0])),
+    'ordinary traffic cannot enter a recovering switch'
+  );
+
+  const recoveryProbe = makeSwitchProbeEvent(routes, recoveringSpineIndex, 15, recoveringSwitches);
+  testCase.equal(recoveryProbe?.kind, 'probe', 'a blue control packet verifies the repaired path');
+  testCase.ok(
+    recoveryProbe?.route.points.includes(SPINE_POSITIONS[0]),
+    'the recovery probe reaches the repaired switch'
+  );
+
+  const blockedProbe = makeSwitchProbeEvent(routes, recoveringSpineIndex, 15, new Set([3]));
+  testCase.equal(blockedProbe, null, 'a probe cannot pass through a separate unavailable switch');
+
+  recoveringSwitches.clear();
+  const confirmedRoutes = getHealthyConversationRoutes(routes, new Set(), recoveringSwitches);
+  reroutePackets(packets, confirmedRoutes);
+  testCase.equal(getActivePlaneCount(confirmedRoutes), 4, 'probe confirmation restores the plane');
+  testCase.ok(
+    packets.some(packet => packet.route.points.includes(SPINE_POSITIONS[0])),
+    'ordinary traffic resumes after the repaired route is confirmed'
   );
   testCase.end();
 });

@@ -24,6 +24,14 @@ export type GlassTransmissionProps = {
   thicknessStrength?: number;
   /** Normalized-depth tolerance used to preserve foreground geometry. */
   depthBias?: number;
+  /** Strength of nearby opaque-scene reflections sampled from captured scene color. */
+  dynamicReflectionStrength?: number;
+  /** Strength of an additional environment bounce inside the glass shell. */
+  secondaryBounceStrength?: number;
+  /** Strength of animated lens distortion on warm-tinted fault surfaces. */
+  faultDistortionStrength?: number;
+  /** Animation clock used by optional fault-driven surface distortion. */
+  time?: number;
 };
 
 /** Uniform values consumed by {@link glassTransmission}. */
@@ -33,6 +41,10 @@ export type GlassTransmissionUniforms = {
   environmentIntensity: number;
   thicknessStrength: number;
   depthBias: number;
+  dynamicReflectionStrength: number;
+  secondaryBounceStrength: number;
+  faultDistortionStrength: number;
+  time: number;
 };
 
 /** Rasterized volume textures consumed by {@link glassTransmission}. */
@@ -51,6 +63,10 @@ struct glassTransmissionUniforms {
   environmentIntensity: f32,
   thicknessStrength: f32,
   depthBias: f32,
+  dynamicReflectionStrength: f32,
+  secondaryBounceStrength: f32,
+  faultDistortionStrength: f32,
+  time: f32,
 };
 
 @group(0) @binding(auto) var<uniform> glassTransmission: glassTransmissionUniforms;
@@ -163,8 +179,21 @@ fn glassTransmission_getColor(
     dot(combinedDeflection, cameraRight) / viewportAspect,
     -dot(combinedDeflection, cameraUp)
   );
+  let projectedNormal = vec2<f32>(
+    dot(frontNormal, cameraRight) / viewportAspect,
+    -dot(frontNormal, cameraUp)
+  );
+  let faultStrength = clamp(
+    (baseColor.r - max(baseColor.g, baseColor.b)) * 1.55 - 0.16,
+    0.0,
+    1.0
+  );
+  let faultRipple = sin(
+    dot(worldPosition.xz, vec2<f32>(11.0, 8.0)) +
+      glassTransmission.time * 5.5 + measuredThickness * 12.0
+  ) * faultStrength * glassTransmission.faultDistortionStrength;
   let proposedOffset = projectedDeflection * measuredThickness *
-    glassMaterial.refractionStrength * 0.18;
+    glassMaterial.refractionStrength * 0.18 + projectedNormal * faultRipple * 0.018;
   let proposedCoordinate = clamp(
     screenCoordinate + proposedOffset,
     vec2<f32>(0.001),
@@ -173,10 +202,6 @@ fn glassTransmission_getColor(
   let sampledDepth = glassTransmission_sampleDepth(proposedCoordinate);
   let foregroundOcclusion = sampledDepth + glassTransmission.depthBias < fragmentPosition.z;
   let safeOffset = select(proposedOffset, vec2<f32>(0.0), foregroundOcclusion);
-  let projectedNormal = vec2<f32>(
-    dot(frontNormal, cameraRight) / viewportAspect,
-    -dot(frontNormal, cameraUp)
-  );
   let dispersionOffset = projectedNormal * glassMaterial.dispersion *
     measuredThickness * 0.3;
   let transmittedColor = glassMaterial_sampleTransmission(
@@ -194,9 +219,32 @@ fn glassTransmission_getColor(
   let internalReflection = glassTransmission_sampleEnvironment(
     reflect(entryDirection, -backNormal)
   ) * select(0.18, 0.42, !hasExitRay);
+  let secondaryDirection = reflect(reflect(entryDirection, -backNormal), frontNormal);
+  let secondaryReflection = glassTransmission_sampleEnvironment(secondaryDirection) *
+    glassTransmission.secondaryBounceStrength * pow(1.0 - viewAlignment, 1.45) * 0.24;
+  let reflectionCoordinate = clamp(
+    screenCoordinate + projectedNormal * (0.025 + measuredThickness * 0.018),
+    vec2<f32>(0.001),
+    vec2<f32>(0.999)
+  );
+  let reflectedSceneColor = textureSampleLevel(
+    glassSceneColorTexture,
+    glassSceneColorTextureSampler,
+    reflectionCoordinate,
+    0.0
+  ).rgb;
+  let reflectedSceneLuminance = dot(reflectedSceneColor, vec3<f32>(0.2126, 0.7152, 0.0722));
+  let reflectedSceneResponse = smoothstep(0.045, 0.9, reflectedSceneLuminance);
+  let dynamicReflection = reflectedSceneColor * reflectedSceneResponse *
+    glassTransmission.dynamicReflectionStrength * (0.045 + fresnel * 0.5);
+  let faultFilament = baseColor.rgb * faultStrength *
+    glassTransmission.faultDistortionStrength *
+    pow(max(sin(dot(worldPosition, vec3<f32>(14.0, 10.0, 17.0)) +
+      glassTransmission.time * 7.0), 0.0), 10.0) * 0.12;
   let opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength +
     environmentReflection * (0.09 + fresnel * 0.65) +
-    internalReflection * pow(1.0 - viewAlignment, 2.0);
+    internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
+    dynamicReflection + faultFilament;
   return vec4<f32>(mix(surfaceColor.rgb, opticalColor, 0.64), surfaceColor.a);
 }
 
@@ -231,6 +279,10 @@ layout(std140) uniform glassTransmissionUniforms {
   float environmentIntensity;
   float thicknessStrength;
   float depthBias;
+  float dynamicReflectionStrength;
+  float secondaryBounceStrength;
+  float faultDistortionStrength;
+  float time;
 } glassTransmission;
 
 uniform sampler2D glassSceneDepthTexture;
@@ -321,8 +373,21 @@ vec4 glassTransmission_getColor(
     dot(combinedDeflection, cameraRight) / viewportAspect,
     dot(combinedDeflection, cameraUp)
   );
+  vec2 projectedNormal = vec2(
+    dot(frontNormal, cameraRight) / viewportAspect,
+    dot(frontNormal, cameraUp)
+  );
+  float faultStrength = clamp(
+    (baseColor.r - max(baseColor.g, baseColor.b)) * 1.55 - 0.16,
+    0.0,
+    1.0
+  );
+  float faultRipple = sin(
+    dot(worldPosition.xz, vec2(11.0, 8.0)) +
+      glassTransmission.time * 5.5 + measuredThickness * 12.0
+  ) * faultStrength * glassTransmission.faultDistortionStrength;
   vec2 proposedOffset = projectedDeflection * measuredThickness *
-    glassMaterial.refractionStrength * 0.18;
+    glassMaterial.refractionStrength * 0.18 + projectedNormal * faultRipple * 0.018;
   vec2 proposedCoordinate = clamp(
     screenCoordinate + proposedOffset,
     vec2(0.001),
@@ -331,10 +396,6 @@ vec4 glassTransmission_getColor(
   float sampledDepth = glassTransmission_sampleDepth(proposedCoordinate);
   bool foregroundOcclusion = sampledDepth + glassTransmission.depthBias < fragmentPosition.z;
   vec2 safeOffset = foregroundOcclusion ? vec2(0.0) : proposedOffset;
-  vec2 projectedNormal = vec2(
-    dot(frontNormal, cameraRight) / viewportAspect,
-    dot(frontNormal, cameraUp)
-  );
   vec2 dispersionOffset = projectedNormal * glassMaterial.dispersion *
     measuredThickness * 0.3;
   vec3 transmittedColor = glassMaterial_sampleTransmission(
@@ -352,9 +413,27 @@ vec4 glassTransmission_getColor(
   vec3 internalReflection = glassTransmission_sampleEnvironment(
     reflect(entryDirection, -backNormal)
   ) * (hasExitRay ? 0.18 : 0.42);
+  vec3 secondaryDirection = reflect(reflect(entryDirection, -backNormal), frontNormal);
+  vec3 secondaryReflection = glassTransmission_sampleEnvironment(secondaryDirection) *
+    glassTransmission.secondaryBounceStrength * pow(1.0 - viewAlignment, 1.45) * 0.24;
+  vec2 reflectionCoordinate = clamp(
+    screenCoordinate + projectedNormal * (0.025 + measuredThickness * 0.018),
+    vec2(0.001),
+    vec2(0.999)
+  );
+  vec3 reflectedSceneColor = texture(glassSceneColorTexture, reflectionCoordinate).rgb;
+  float reflectedSceneLuminance = dot(reflectedSceneColor, vec3(0.2126, 0.7152, 0.0722));
+  float reflectedSceneResponse = smoothstep(0.045, 0.9, reflectedSceneLuminance);
+  vec3 dynamicReflection = reflectedSceneColor * reflectedSceneResponse *
+    glassTransmission.dynamicReflectionStrength * (0.045 + fresnel * 0.5);
+  vec3 faultFilament = baseColor.rgb * faultStrength *
+    glassTransmission.faultDistortionStrength *
+    pow(max(sin(dot(worldPosition, vec3(14.0, 10.0, 17.0)) +
+      glassTransmission.time * 7.0), 0.0), 10.0) * 0.12;
   vec3 opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength +
     environmentReflection * (0.09 + fresnel * 0.65) +
-    internalReflection * pow(1.0 - viewAlignment, 2.0);
+    internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
+    dynamicReflection + faultFilament;
   return vec4(mix(surfaceColor.rgb, opticalColor, 0.64), surfaceColor.a);
 }
 
@@ -392,6 +471,13 @@ function getGlassTransmissionUniforms(
     environmentIntensity: props.environmentIntensity ?? previousUniforms?.environmentIntensity ?? 1,
     thicknessStrength: props.thicknessStrength ?? previousUniforms?.thicknessStrength ?? 1,
     depthBias: props.depthBias ?? previousUniforms?.depthBias ?? 0.00008,
+    dynamicReflectionStrength:
+      props.dynamicReflectionStrength ?? previousUniforms?.dynamicReflectionStrength ?? 0,
+    secondaryBounceStrength:
+      props.secondaryBounceStrength ?? previousUniforms?.secondaryBounceStrength ?? 0,
+    faultDistortionStrength:
+      props.faultDistortionStrength ?? previousUniforms?.faultDistortionStrength ?? 0,
+    time: props.time ?? previousUniforms?.time ?? 0,
     ...(props.sceneDepthTexture ? {glassSceneDepthTexture: props.sceneDepthTexture} : {}),
     ...(props.backfaceTexture ? {glassBackfaceTexture: props.backfaceTexture} : {}),
     ...(props.environmentTexture ? {glassEnvironmentTexture: props.environmentTexture} : {})
@@ -416,14 +502,22 @@ export const glassTransmission = {
     depthRange: 'vec2<f32>',
     environmentIntensity: 'f32',
     thicknessStrength: 'f32',
-    depthBias: 'f32'
+    depthBias: 'f32',
+    dynamicReflectionStrength: 'f32',
+    secondaryBounceStrength: 'f32',
+    faultDistortionStrength: 'f32',
+    time: 'f32'
   },
   defaultUniforms: {
     viewportSize: [1, 1],
     depthRange: [0.1, 100],
     environmentIntensity: 1,
     thicknessStrength: 1,
-    depthBias: 0.00008
+    depthBias: 0.00008,
+    dynamicReflectionStrength: 0,
+    secondaryBounceStrength: 0,
+    faultDistortionStrength: 0,
+    time: 0
   },
   getUniforms: getGlassTransmissionUniforms
 } as const satisfies ShaderModule<

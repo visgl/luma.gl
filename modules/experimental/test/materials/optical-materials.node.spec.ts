@@ -12,7 +12,11 @@ import {
   glassMaterialPlugin,
   glassTransmission,
   glassTransmissionPlugin,
+  MAX_OPTICAL_CAUSTIC_LENSES,
   MAX_OPTICAL_POINT_LIGHTS,
+  type OpticalCausticLens,
+  opticalCaustics,
+  opticalCausticsPlugin,
   opticalLighting,
   type OpticalPointLight,
   opticalPointLights,
@@ -98,6 +102,11 @@ const ILLUMINATED_OPTICAL_MATERIAL_SHADER = OPTICAL_MATERIAL_SHADER.replace(
     inputs.worldPosition,
     cameraPosition
   );
+  let causticColor = opticalCaustics_getColor(
+    normal,
+    inputs.worldPosition,
+    cameraPosition
+  );
   let trailColor = emissiveMaterial_getTrailColor(
     normal,
     inputs.worldPosition,
@@ -107,7 +116,7 @@ const ILLUMINATED_OPTICAL_MATERIAL_SHADER = OPTICAL_MATERIAL_SHADER.replace(
     0.5
   );
   return mix(glassColor, reflectedColor, 0.25) + emittedColor * 0.2 + trailColor * 0.1 +
-    vec4<f32>(pointLightColor, 0.0);`
+    vec4<f32>(pointLightColor + causticColor, 0.0);`
   );
 
 test('optical material modules expose portable shared shader helpers', testCase => {
@@ -153,6 +162,16 @@ test('optical material modules expose portable shared shader helpers', testCase 
     [opticalPointLights],
     'point-light plugin installs local lighting explicitly'
   );
+  testCase.equal(
+    opticalCausticsPlugin.name,
+    'opticalCaustics',
+    'caustic-lens plugin has a stable name'
+  );
+  testCase.deepEqual(
+    opticalCausticsPlugin.modules,
+    [opticalCaustics],
+    'caustic-lens plugin installs focused lighting explicitly'
+  );
   testCase.deepEqual(
     glassMaterial.dependencies,
     [opticalLighting],
@@ -178,7 +197,13 @@ test('optical material modules expose portable shared shader helpers', testCase 
     [opticalLighting],
     'point-light shading reuses shared optical lighting'
   );
+  testCase.deepEqual(
+    opticalCaustics.dependencies,
+    [opticalLighting],
+    'caustic shading reuses shared optical lighting'
+  );
   testCase.equal(MAX_OPTICAL_POINT_LIGHTS, 16, 'point lights have a portable fixed capacity');
+  testCase.equal(MAX_OPTICAL_CAUSTIC_LENSES, 8, 'focusing lenses have a portable fixed capacity');
   testCase.match(opticalLighting.source, /fn opticalLighting_getFresnel/, 'WGSL helpers exist');
   testCase.match(opticalLighting.fs, /float opticalLighting_getFresnel/, 'GLSL helpers exist');
   testCase.match(
@@ -222,6 +247,16 @@ test('optical material modules expose portable shared shader helpers', testCase 
     opticalPointLights.fs,
     /vec3 opticalPointLights_getColor/,
     'GLSL point-light helper exists'
+  );
+  testCase.match(
+    opticalCaustics.source,
+    /fn opticalCaustics_getColor/,
+    'WGSL focused-light helper exists'
+  );
+  testCase.match(
+    opticalCaustics.fs,
+    /vec3 opticalCaustics_getColor/,
+    'GLSL focused-light helper exists'
   );
   testCase.end();
 });
@@ -286,7 +321,11 @@ test('optical materials retain defaults while applying partial updates', testCas
       depthRange: [0.1, 100],
       environmentIntensity: 1,
       thicknessStrength: 1,
-      depthBias: 0.00008
+      depthBias: 0.00008,
+      dynamicReflectionStrength: 0,
+      secondaryBounceStrength: 0,
+      faultDistortionStrength: 0,
+      time: 0
     },
     'rasterized transmission exposes stable optical defaults'
   );
@@ -309,6 +348,36 @@ test('optical materials retain defaults while applying partial updates', testCas
     0.00008,
     'foreground-depth tolerance is retained'
   );
+  testCase.equal(
+    updatedTransmissionUniforms.dynamicReflectionStrength,
+    0,
+    'dynamic reflections remain opt-in for existing consumers'
+  );
+  const animatedTransmissionUniforms = glassTransmission.getUniforms(
+    {
+      dynamicReflectionStrength: 0.45,
+      secondaryBounceStrength: 0.7,
+      faultDistortionStrength: 0.3,
+      time: 2.5
+    },
+    updatedTransmissionUniforms
+  );
+  testCase.equal(
+    animatedTransmissionUniforms.dynamicReflectionStrength,
+    0.45,
+    'captured-scene reflections are configurable'
+  );
+  testCase.equal(
+    animatedTransmissionUniforms.secondaryBounceStrength,
+    0.7,
+    'secondary internal reflections are configurable'
+  );
+  testCase.equal(
+    animatedTransmissionUniforms.faultDistortionStrength,
+    0.3,
+    'fault-driven lens distortion is configurable'
+  );
+  testCase.equal(animatedTransmissionUniforms.time, 2.5, 'fault animation accepts a scene clock');
 
   const initialReflectiveUniforms = reflectiveMaterial.getUniforms({});
   testCase.deepEqual(
@@ -469,6 +538,21 @@ test('rasterized glass transmission composes thickness, depth, and environment m
       /hasExitRay/,
       `${language} handles total internal reflection without ray marching`
     );
+    testCase.match(
+      shaderSource,
+      /reflectedSceneColor/,
+      `${language} reflects nearby captured-scene objects`
+    );
+    testCase.match(
+      shaderSource,
+      /secondaryDirection/,
+      `${language} approximates a second internal environment bounce`
+    );
+    testCase.match(
+      shaderSource,
+      /faultRipple/,
+      `${language} confines animated distortion to warm fault-colored glass`
+    );
   }
   testCase.end();
 });
@@ -528,8 +612,70 @@ test('optical point lights pack and retain a bounded portable uniform array', te
   testCase.end();
 });
 
+test('optical caustics pack and retain a bounded portable lens array', testCase => {
+  const initialUniforms = opticalCaustics.getUniforms({});
+  testCase.equal(initialUniforms.lensCount, 0, 'focusing lenses start disabled');
+  testCase.equal(initialUniforms.intensity, 1, 'caustics expose a stable global intensity');
+  testCase.equal(initialUniforms.focus, 1, 'caustics expose a stable focus multiplier');
+  testCase.equal(
+    initialUniforms.lenses.length,
+    MAX_OPTICAL_CAUSTIC_LENSES,
+    'default lenses occupy every fixed uniform slot'
+  );
+
+  const suppliedLenses = Array.from(
+    {length: MAX_OPTICAL_CAUSTIC_LENSES + 2},
+    (_, lensIndex): OpticalCausticLens => ({
+      position: [lensIndex, lensIndex + 1, lensIndex + 2],
+      color: [lensIndex % 2, 1, 0],
+      ...(lensIndex === 1 ? {intensity: 1.6, radius: 0.45} : {})
+    })
+  );
+  const packedUniforms = opticalCaustics.getUniforms({
+    lenses: suppliedLenses,
+    intensity: 0.6,
+    focus: 1.4
+  });
+
+  testCase.equal(
+    packedUniforms.lensCount,
+    MAX_OPTICAL_CAUSTIC_LENSES,
+    'additional lenses beyond the fixed capacity are ignored'
+  );
+  testCase.equal(packedUniforms.intensity, 0.6, 'global caustic intensity is configurable');
+  testCase.equal(packedUniforms.focus, 1.4, 'caustic focus is configurable');
+  testCase.deepEqual(
+    packedUniforms.lenses[0],
+    {position: [0, 1, 2], radius: 1, color: [0, 1, 0], intensity: 1},
+    'caustic-lens defaults are packed in portable field order'
+  );
+  testCase.deepEqual(
+    packedUniforms.lenses[1],
+    {position: [1, 2, 3], radius: 0.45, color: [1, 1, 0], intensity: 1.6},
+    'per-lens radius and intensity are preserved'
+  );
+
+  const updatedUniforms = opticalCaustics.getUniforms({focus: 0.8}, packedUniforms);
+  testCase.equal(updatedUniforms.focus, 0.8, 'focus updates independently');
+  testCase.equal(updatedUniforms.lensCount, 8, 'partial updates preserve active lenses');
+  testCase.equal(updatedUniforms.lenses, packedUniforms.lenses, 'packed lens arrays are reused');
+
+  const clearedUniforms = opticalCaustics.getUniforms({lenses: []}, updatedUniforms);
+  testCase.equal(clearedUniforms.lensCount, 0, 'an explicit empty lens list clears caustics');
+  testCase.ok(
+    clearedUniforms.lenses.every(lens => lens.intensity === 0),
+    'cleared lens slots are reset'
+  );
+  testCase.end();
+});
+
 test('optical materials expose matching WGSL and GLSL uniform layouts', testCase => {
-  for (const shaderModule of [emissiveMaterial, opticalPointLights, glassTransmission]) {
+  for (const shaderModule of [
+    emissiveMaterial,
+    opticalPointLights,
+    opticalCaustics,
+    glassTransmission
+  ]) {
     const wgslValidation = getShaderModuleUniformLayoutValidationResult(shaderModule, 'wgsl');
     const fragmentValidation = getShaderModuleUniformLayoutValidationResult(
       shaderModule,
@@ -572,7 +718,13 @@ test('rasterized glass transmission assembles portable optical and depth binding
   const assembledShader = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: transmissionShader,
-    modules: [glassTransmission, reflectiveMaterial, emissiveMaterial, opticalPointLights]
+    modules: [
+      glassTransmission,
+      reflectiveMaterial,
+      emissiveMaterial,
+      opticalPointLights,
+      opticalCaustics
+    ]
   });
   const reflectedShader = new WgslReflect(assembledShader.source);
   const textureNames = reflectedShader.textures.map(texture => texture.name);
@@ -665,6 +817,7 @@ test('illuminated optical materials compose once with emission and transparency'
       reflectiveMaterial,
       emissiveMaterial,
       opticalPointLights,
+      opticalCaustics,
       aBuffer,
       wboit
     ]
@@ -680,6 +833,11 @@ test('illuminated optical materials compose once with emission and transparency'
     assembledShader.source.match(/fn opticalPointLights_getColor\(/g)?.length,
     1,
     'point-light helper is emitted once'
+  );
+  testCase.equal(
+    assembledShader.source.match(/fn opticalCaustics_getColor\(/g)?.length,
+    1,
+    'focused-light helper is emitted once'
   );
   testCase.match(
     assembledShader.source,
@@ -713,6 +871,10 @@ test('illuminated optical materials compose once with emission and transparency'
   testCase.ok(
     reflectedShader.uniforms.some(resource => resource.name === 'emissiveMaterial'),
     'emissive material uniforms are reflected'
+  );
+  testCase.ok(
+    reflectedShader.uniforms.some(resource => resource.name === 'opticalCaustics'),
+    'caustic-lens uniforms are reflected'
   );
   testCase.end();
 });
@@ -750,10 +912,17 @@ void main(void) {
   );
   fragmentColor = mix(glassColor, reflectedColor, 0.25) +
     emissiveMaterial_getColor(normal, worldPosition, baseColor, cameraPosition) +
-    emissiveMaterial_getTrailColor(normal, worldPosition, baseColor, cameraPosition, 0.65, 0.5);
+    emissiveMaterial_getTrailColor(normal, worldPosition, baseColor, cameraPosition, 0.65, 0.5) +
+    vec4(opticalCaustics_getColor(normal, worldPosition, cameraPosition), 0.0);
 }
 `,
-    modules: [glassMaterial, reflectiveMaterial, emissiveMaterial, opticalPointLights]
+    modules: [
+      glassMaterial,
+      reflectiveMaterial,
+      emissiveMaterial,
+      opticalPointLights,
+      opticalCaustics
+    ]
   });
 
   testCase.match(
@@ -776,6 +945,11 @@ void main(void) {
     assembledShader.fs,
     /vec4 emissiveMaterial_getTrailColor/,
     'GLSL directional emission composes'
+  );
+  testCase.match(
+    assembledShader.fs,
+    /vec3 opticalCaustics_getColor/,
+    'GLSL focused lighting composes'
   );
   testCase.end();
 });

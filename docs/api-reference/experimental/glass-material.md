@@ -76,10 +76,20 @@ existing `glassMaterial_getColor(...)` consumers.
 | `environmentIntensity` | `number` | `1` | Environment reflection multiplier. |
 | `thicknessStrength` | `number` | `1` | Measured optical-path multiplier. |
 | `depthBias` | `number` | `0.00008` | Foreground depth-comparison tolerance. |
+| `dynamicReflectionStrength` | `number` | `0` | Captured-scene reflection strength for nearby moving objects. |
+| `secondaryBounceStrength` | `number` | `0` | Additional reflected environment bounce inside the glass shell. |
+| `faultDistortionStrength` | `number` | `0` | Animated lens distortion and internal filaments on warm fault-tinted glass. |
+| `time` | `number` | `0` | Animation clock for optional fault-driven surface effects. |
 
 Use `glassTransmission_getColor(...)`, or add `opticalPointLightsPlugin` and use
 `glassTransmission_getIlluminatedColor(...)` for localized illumination. Both are available in
 matching WGSL and GLSL forms.
+
+`opticalCausticsPlugin` separately adds a bounded array of focused glass lenses for nearby
+reflective receiver surfaces. Call `opticalCaustics_getColor(normal, worldPosition,
+cameraPosition)` and add its RGB result to the receiver's existing material color. At most
+`MAX_OPTICAL_CAUSTIC_LENSES` entries are uploaded, and each entry specifies a world-space
+`position`, `radius`, `color`, and optional `intensity`.
 
 ## Usage
 
