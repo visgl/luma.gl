@@ -75,6 +75,25 @@ export type NetworkSwitchTransitionWave = {
   switchIndex: number;
 };
 
+export type NetworkPlaneStatus = 'healthy' | 'congested' | 'failed' | 'recovering';
+
+export type NetworkPlaneTelemetry = {
+  greenPacketCount: number;
+  planeIndex: number;
+  redPacketCount: number;
+  status: NetworkPlaneStatus;
+};
+
+export type NetworkEndpointSignalKind = 'source' | 'destination';
+
+export type NetworkEndpointSignal = {
+  color: Color;
+  conversationIndex: number;
+  hostIndex: number;
+  kind: NetworkEndpointSignalKind;
+  strength: number;
+};
+
 export type Conversation = {
   color: Color;
   destinationHostIndex: number;
@@ -129,6 +148,7 @@ export const BURST_CYCLE_DURATION = 11;
 export const CONGESTION_TRIM_INTERVAL = 1.35;
 export const FAILURE_DETECTION_DELAY = 0.52;
 export const PACKET_TRAVEL_SPEED = 3.4;
+export const ENDPOINT_SIGNAL_DURATION = 0.34;
 export const SWITCH_CONFIRMATION_DURATION = 0.46;
 export const SWITCH_PROBE_INTERVAL = 2.2;
 export const SWITCH_TRANSITION_WAVE_DURATION = 0.78;
@@ -494,17 +514,138 @@ export function getHealthyConversationRoutes(
   );
 }
 
-export function reroutePackets(packets: Packet[], healthyRoutes: ConversationRoute[]): void {
-  for (const packet of packets) {
+export function reroutePackets(
+  packets: Packet[],
+  healthyRoutes: readonly ConversationRoute[],
+  congestedSwitchIndices?: ReadonlySet<number>
+): void {
+  const scheduledRoutesByConversation = new Map<number, ConversationRoute[]>();
+
+  for (let conversationIndex = 0; conversationIndex < CONVERSATIONS.length; conversationIndex++) {
     const conversationRoutes = healthyRoutes.filter(
-      route => route.conversationIndex === packet.conversationIndex
+      route => route.conversationIndex === conversationIndex
     );
+    const uncongestedRoutes = congestedSwitchIndices
+      ? conversationRoutes.filter(({route}) =>
+          route.points.every(position => !isFailedSwitchPosition(position, congestedSwitchIndices))
+        )
+      : conversationRoutes;
+
+    if (uncongestedRoutes.length === 0 || uncongestedRoutes.length === conversationRoutes.length) {
+      scheduledRoutesByConversation.set(conversationIndex, conversationRoutes);
+      continue;
+    }
+
+    const congestedRoutes = conversationRoutes.filter(route => !uncongestedRoutes.includes(route));
+    scheduledRoutesByConversation.set(conversationIndex, [
+      ...uncongestedRoutes,
+      ...congestedRoutes,
+      ...uncongestedRoutes,
+      ...uncongestedRoutes
+    ]);
+  }
+
+  for (const packet of packets) {
+    const conversationRoutes = scheduledRoutesByConversation.get(packet.conversationIndex) || [];
     packet.enabled = conversationRoutes.length > 0;
     if (packet.enabled) {
       packet.route =
         conversationRoutes[packet.preferredRouteIndex % conversationRoutes.length].route;
     }
   }
+}
+
+/** Summarizes the health and red/green packet allocation of each independent spine plane. */
+export function makeNetworkPlaneTelemetry(
+  conversationRoutes: readonly ConversationRoute[],
+  packets: readonly Packet[],
+  failedSwitchIndices: ReadonlySet<number>,
+  recoveringSwitchIndices: ReadonlySet<number>,
+  congestedSwitchIndices: ReadonlySet<number>
+): NetworkPlaneTelemetry[] {
+  return SPINE_POSITIONS.map((spinePosition, planeIndex) => {
+    const planeRoutes = conversationRoutes.filter(({route}) =>
+      route.points.includes(spinePosition)
+    );
+    const failed = planeRoutes.every(({route}) =>
+      route.points.some(position => isFailedSwitchPosition(position, failedSwitchIndices))
+    );
+    const recovering = planeRoutes.every(({route}) =>
+      route.points.some(
+        position =>
+          isFailedSwitchPosition(position, failedSwitchIndices) ||
+          isFailedSwitchPosition(position, recoveringSwitchIndices)
+      )
+    );
+    const congested = planeRoutes.some(({route}) =>
+      route.points.some(position => isFailedSwitchPosition(position, congestedSwitchIndices))
+    );
+    const planePackets = packets.filter(
+      packet => packet.enabled && packet.route.points.includes(spinePosition)
+    );
+
+    return {
+      planeIndex,
+      redPacketCount: planePackets.filter(packet => packet.conversationIndex === 0).length,
+      greenPacketCount: planePackets.filter(packet => packet.conversationIndex === 1).length,
+      status: failed ? 'failed' : recovering ? 'recovering' : congested ? 'congested' : 'healthy'
+    };
+  });
+}
+
+/** Produces bounded source-launch and destination-delivery activity for active conversations. */
+export function makeEndpointSignals(
+  packets: readonly Packet[],
+  animationTime: number,
+  duration = ENDPOINT_SIGNAL_DURATION
+): NetworkEndpointSignal[] {
+  if (duration <= 0) {
+    return [];
+  }
+
+  const signalsByHost = new Map<number, NetworkEndpointSignal>();
+
+  for (const packet of packets) {
+    if (!packet.enabled) {
+      continue;
+    }
+
+    const conversation = CONVERSATIONS[packet.conversationIndex];
+    const endpointEvents: [number, NetworkEndpointSignalKind, number][] = [
+      [conversation.sourceHostIndex, 'source', packet.launchTime],
+      [
+        conversation.destinationHostIndex,
+        'destination',
+        packet.launchTime + packet.route.totalLength / PACKET_TRAVEL_SPEED
+      ]
+    ];
+
+    for (const [hostIndex, kind, eventTime] of endpointEvents) {
+      const age =
+        (((animationTime - eventTime) % BURST_CYCLE_DURATION) + BURST_CYCLE_DURATION) %
+        BURST_CYCLE_DURATION;
+      if (age > duration) {
+        continue;
+      }
+
+      const progress = age / duration;
+      const strength = Math.sin(progress * Math.PI) * (1 - progress * 0.28);
+      const currentSignal = signalsByHost.get(hostIndex);
+      if (currentSignal) {
+        currentSignal.strength = Math.min(currentSignal.strength + strength * 0.55, 1);
+      } else {
+        signalsByHost.set(hostIndex, {
+          color: packet.color,
+          conversationIndex: packet.conversationIndex,
+          hostIndex,
+          kind,
+          strength
+        });
+      }
+    }
+  }
+
+  return [...signalsByHost.values()];
 }
 
 export function isFailedSwitchPosition(
