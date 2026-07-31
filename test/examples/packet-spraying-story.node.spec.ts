@@ -5,12 +5,17 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network';
 import {
+  DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
+  getNetworkStoryBeat,
   getNetworkStoryChapter,
   getNetworkStoryProgress,
   getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
+  makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
+  makeNetworkSwitchHighlightColor,
+  MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
   NETWORK_STORY_CHAPTERS
 } from '../../examples/showcase/packet-spraying/story';
@@ -70,6 +75,41 @@ test('packet-spraying chapter timeline tracks duration-weighted guided playback'
   testCase.end();
 });
 
+test('packet-spraying cinematic story beats explain load, failure, and confirmed recovery', testCase => {
+  testCase.ok(
+    NETWORK_STORY_CHAPTERS.every(chapter =>
+      chapter.beats.every(
+        (beat, beatIndex) =>
+          beat.position >= 0 &&
+          beat.position < 1 &&
+          (beatIndex === 0 || beat.position >= chapter.beats[beatIndex - 1].position)
+      )
+    ),
+    'chapter event markers remain ordered within their timeline segments'
+  );
+  testCase.deepEqual(
+    NETWORK_STORY_CHAPTERS[1].beats.map(beat => beat.pathIndex),
+    [0, 1, 2, 3],
+    'the spraying chapter visits all four independent spine paths'
+  );
+  testCase.equal(getNetworkStoryBeat(1, 0), null, 'the first path waits for its explicit beat');
+  testCase.equal(getNetworkStoryBeat(1, 2.5)?.id, 'path-2');
+  testCase.equal(getNetworkStoryBeat(1, 7.5)?.id, 'path-4');
+  testCase.equal(getNetworkStoryBeat(2, 0)?.id, 'pressure', 'congestion is visible immediately');
+  testCase.equal(getNetworkStoryBeat(3, 0)?.id, 'packet-loss', 'failure begins with packet loss');
+  testCase.equal(
+    getNetworkStoryBeat(4, 4)?.id,
+    'confirmation',
+    'recovery waits for its cyan confirmation beat'
+  );
+  testCase.equal(
+    getNetworkStoryBeat(4, Number.NaN)?.id,
+    'probe',
+    'invalid elapsed times safely remain at the initial recovery beat'
+  );
+  testCase.end();
+});
+
 test('packet-spraying visual style introduces optical effects in readable cinematic stages', testCase => {
   const diagram = makeNetworkOpticsProfile(0);
   const clearGlass = makeNetworkOpticsProfile(3);
@@ -107,6 +147,146 @@ test('packet-spraying visual style introduces optical effects in readable cinema
     makeNetworkOpticsProfile(Number.NaN).level,
     DEFAULT_NETWORK_OPTICS_LEVEL,
     'invalid values return to the cinematic default'
+  );
+  testCase.end();
+});
+
+test('packet-spraying hover highlights glass without washing out transparency or switch faults', testCase => {
+  const clearSwitch: [number, number, number, number] = [0.28, 0.48, 0.82, 0.3];
+  const failedSwitch: [number, number, number, number] = [1, 0.065, 0.035, 0.59];
+  const planeHighlight = makeNetworkSwitchHighlightColor(clearSwitch, 1, 0);
+  const pathHighlight = makeNetworkSwitchHighlightColor(clearSwitch, 0, 1);
+
+  testCase.deepEqual(
+    makeNetworkSwitchHighlightColor(clearSwitch, 0, 0),
+    clearSwitch,
+    'unfocused switches retain their original glass color'
+  );
+  testCase.ok(
+    planeHighlight[1] > clearSwitch[1] && planeHighlight[2] > clearSwitch[2],
+    'hovered plane switches ease toward a visible cool glass highlight'
+  );
+  testCase.ok(
+    pathHighlight[1] > planeHighlight[1],
+    'focused backbone paths retain a distinct cyan glass accent'
+  );
+  testCase.equal(planeHighlight[3], clearSwitch[3], 'plane highlighting preserves glass opacity');
+  testCase.equal(pathHighlight[3], clearSwitch[3], 'path highlighting preserves glass opacity');
+  testCase.deepEqual(
+    makeNetworkSwitchHighlightColor(failedSwitch, 1, 1),
+    failedSwitch,
+    'failed or congested switch colors remain visually authoritative'
+  );
+  testCase.end();
+});
+
+test('packet-spraying floating-point highlights preserve honest display capabilities', testCase => {
+  const standardProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgl',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: 0.35,
+    presentationColorFormat: 'rgba8unorm',
+    sceneColorFormat: 'rgba8unorm',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
+  const floatingPointProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgl',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: 0.35,
+    presentationColorFormat: 'rgba8unorm',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
+  const extendedProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgpu',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: 0.35,
+    presentationColorFormat: 'rgba16float',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
+  const defaultExtendedProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgpu',
+    displaySupportsHighDynamicRange: true,
+    presentationColorFormat: 'rgba16float',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
+  const diagramExtendedProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgpu',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: 0.35,
+    presentationColorFormat: 'rgba16float',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: 0
+  });
+
+  testCase.equal(standardProfile.displayMode, 'standard', '8-bit scenes remain standard range');
+  testCase.equal(standardProfile.highlightBoost, 0, 'standard scenes do not claim false headroom');
+  testCase.equal(
+    floatingPointProfile.displayMode,
+    'floating-point',
+    'floating-point scene color is distinguished from display HDR'
+  );
+  testCase.equal(
+    floatingPointProfile.maximumLuminance,
+    1,
+    'SDR presentation never emits unsupported extended-range values'
+  );
+  testCase.ok(
+    floatingPointProfile.highlightBoost > 0,
+    'floating-point scenes retain bright detail'
+  );
+  testCase.ok(
+    floatingPointProfile.emissionScale < 1.2,
+    'SDR presentation receives only restrained floating-point accents'
+  );
+  testCase.equal(extendedProfile.displayMode, 'extended-hdr', 'true HDR requires an FP16 canvas');
+  testCase.ok(
+    extendedProfile.highlightBoost > floatingPointProfile.highlightBoost,
+    'an extended display may use more of the available highlight headroom'
+  );
+  testCase.ok(
+    extendedProfile.maximumLuminance > 2,
+    'true HDR preserves packet and glass highlights well above SDR white'
+  );
+  testCase.ok(
+    Math.abs(defaultExtendedProfile.highlightBoost - DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST) < 0.01,
+    'the guided tour uses a restrained HDR highlight setting by default'
+  );
+  testCase.ok(
+    defaultExtendedProfile.maximumLuminance < 2,
+    'default HDR highlights remain below twice SDR white'
+  );
+  testCase.equal(
+    diagramExtendedProfile.highlightBoost,
+    extendedProfile.highlightBoost,
+    'visual style does not change independently selected HDR brightness'
+  );
+  testCase.equal(
+    diagramExtendedProfile.maximumLuminance,
+    extendedProfile.maximumLuminance,
+    'diagram mode preserves extended display headroom'
+  );
+  testCase.ok(
+    extendedProfile.bloomThresholdScale > floatingPointProfile.bloomThresholdScale,
+    'selective bloom remains above ordinary scene brightness'
+  );
+  testCase.ok(
+    extendedProfile.illuminationScale > floatingPointProfile.illuminationScale,
+    'HDR displays can show stronger packet-driven glass lighting without washing out SDR'
+  );
+  testCase.equal(
+    makeNetworkDynamicRangeProfile({
+      deviceType: 'webgpu',
+      displaySupportsHighDynamicRange: true,
+      highlightBoost: 8,
+      presentationColorFormat: 'rgba16float',
+      sceneColorFormat: 'rgba16float',
+      visualIntensity: 0
+    }).highlightBoost,
+    MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
+    'the HDR control remains bounded independently of visual style'
   );
   testCase.end();
 });
