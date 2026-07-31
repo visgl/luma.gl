@@ -1,5 +1,10 @@
 # ANARI Cameras, Renderers, and Frames
 
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+</p>
+
 An `ANARICamera` describes the view, an `ANARIRenderer` selects shading and presentation settings, and an `ANARIFrame` combines both with a world to produce an image.
 
 ## `ANARICamera`
@@ -266,4 +271,4 @@ type ANARICameraSubtype = 'perspective' | 'orthographic';
 type ANARIRendererSubtype = 'default' | 'debugNormals' | 'debugDepth';
 ```
 
-All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/anari-js`.
+All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/anari`.

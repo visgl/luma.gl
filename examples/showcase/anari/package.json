@@ -8,7 +8,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/anari-js": "9.4.0-alpha.1",
+    "@luma.gl/anari": "workspace:*",
     "@luma.gl/core": "9.4.0-alpha.1",
     "@luma.gl/effects": "9.4.0-alpha.1",
     "@luma.gl/engine": "9.4.0-alpha.1",

@@ -1,11 +1,16 @@
 # ANARIDevice and Object Lifecycle
 
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+</p>
+
 `ANARIDevice` adapts an existing luma.gl `Device` into a retained, ANARI-inspired scene API. It creates scene objects, advertises supported subtypes and extensions, renders frames, and owns the renderer's cached GPU resources.
 
 ```ts
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
-import {ANARIDevice} from '@luma.gl/anari-js';
+import {ANARIDevice} from '@luma.gl/anari';
 
 const graphicsDevice = await luma.createDevice({
   adapters: [webgpuAdapter],
@@ -89,7 +94,7 @@ newFrame(parameters: ANARIFrameParameters): ANARIFrame;
 
 `newRenderer()` defaults to subtype `default`. Newly created objects immediately commit their initial parameters, so their initial `version` is `1`.
 
-See [arrays and geometry](/docs/api-reference/anari-js/anari-geometry), [materials and lighting](/docs/api-reference/anari-js/anari-materials-and-lights), [scene hierarchy](/docs/api-reference/anari-js/anari-scene), and [cameras, renderers, and frames](/docs/api-reference/anari-js/anari-rendering) for complete parameter details.
+See [arrays and geometry](/docs/api-reference/anari/anari-geometry), [materials and lighting](/docs/api-reference/anari/anari-materials-and-lights), [scene hierarchy](/docs/api-reference/anari/anari-scene), and [cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering) for complete parameter details.
 
 ## Capability discovery
 

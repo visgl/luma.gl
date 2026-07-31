@@ -14,7 +14,7 @@
     "moduleResolution": "Bundler",
     "baseUrl": "../../..",
     "paths": {
-      "@luma.gl/anari-js": ["modules/anari-js/src/index.ts"]
+      "@luma.gl/anari": ["modules/anari/src/index.ts"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true

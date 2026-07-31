@@ -181,15 +181,15 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/anari-js",
+        "label": "@luma.gl/anari (Experimental)",
         "items": [
-          "api-reference/anari-js/README",
-          "api-reference/anari-js/anari-device",
-          "api-reference/anari-js/anari-geometry",
-          "api-reference/anari-js/anari-materials-and-lights",
-          "api-reference/anari-js/anari-scene",
-          "api-reference/anari-js/anari-rendering",
-          "api-reference/anari-js/anari-api-mapping"
+          "api-reference/anari/README",
+          "api-reference/anari/anari-device",
+          "api-reference/anari/anari-geometry",
+          "api-reference/anari/anari-materials-and-lights",
+          "api-reference/anari/anari-scene",
+          "api-reference/anari/anari-rendering",
+          "api-reference/anari/anari-api-mapping"
         ]
       },
       {

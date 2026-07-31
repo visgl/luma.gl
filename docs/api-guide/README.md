@@ -14,7 +14,8 @@ Scenegraphs are included and glTF support is available through the `@luma.gl/glt
 
 For an experimental retained, renderer-independent scene contract, see
 [Declarative Rendering with ANARI](/docs/api-guide/engine/anari-rendering). It introduces
-`@luma.gl/anari-js`, scene objects, committed parameters, instancing, physically based lighting,
+the experimental, private `@luma.gl/anari` workspace, scene objects, committed parameters,
+instancing, physically based lighting,
 and HDR presentation.
 
 ## Core API

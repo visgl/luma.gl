@@ -1,12 +1,10 @@
 {
-  "name": "@luma.gl/anari-js",
+  "name": "@luma.gl/anari",
   "version": "9.4.0-alpha.1",
+  "private": true,
   "description": "ANARI-inspired declarative rendering for luma.gl",
   "type": "module",
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
   "types": "dist/index.d.ts",
   "main": "dist/index.cjs",
   "module": "dist/index.js",

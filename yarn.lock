@@ -4623,9 +4623,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/anari-js@npm:9.4.0-alpha.1, @luma.gl/anari-js@workspace:modules/anari-js":
+"@luma.gl/anari@workspace:*, @luma.gl/anari@workspace:modules/anari":
   version: 0.0.0-use.local
-  resolution: "@luma.gl/anari-js@workspace:modules/anari-js"
+  resolution: "@luma.gl/anari@workspace:modules/anari"
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
@@ -16604,7 +16604,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-anari@workspace:examples/showcase/anari"
   dependencies:
-    "@luma.gl/anari-js": "npm:9.4.0-alpha.1"
+    "@luma.gl/anari": "workspace:*"
     "@luma.gl/core": "npm:9.4.0-alpha.1"
     "@luma.gl/effects": "npm:9.4.0-alpha.1"
     "@luma.gl/engine": "npm:9.4.0-alpha.1"

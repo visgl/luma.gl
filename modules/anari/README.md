@@ -1,26 +1,28 @@
-# @luma.gl/anari-js
+# @luma.gl/anari
 
-An experimental, ANARI-inspired declarative rendering interface implemented on top of luma.gl.
+![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)
+![Private workspace](https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square)
+
+A private, experimental, ANARI-inspired declarative rendering interface implemented on top of luma.gl.
 
 Applications describe cameras, worlds, groups, instances, surfaces, geometry, materials, lights,
 renderers, and frames. The luma.gl-backed device compiles that retained scene into GPU-instanced
 models, physically based shaders, portable WebGL/WebGPU render passes, optional bloom, and HDR
 presentation when the WebGPU canvas is configured for extended dynamic range.
 
-## Installation
+## Private workspace
 
-```bash
-yarn add @luma.gl/anari-js @luma.gl/core @luma.gl/engine @luma.gl/effects @luma.gl/shadertools @luma.gl/webgpu
-```
+`@luma.gl/anari` is a private luma.gl workspace and is not published to npm.
 
-Add `@luma.gl/webgl` when your application also needs a WebGL 2 fallback.
+From a luma.gl checkout, install repository dependencies with `yarn install`. Other repository
+workspaces can declare a dependency on the package with `"@luma.gl/anari": "workspace:*"`.
 
 ## Quick start
 
 The following example assumes the page contains a `<canvas></canvas>` element:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/anari-js';
+import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -117,8 +119,8 @@ The ANARI renderer automatically preserves over-white highlights when the device
 ## Documentation
 
 - [ANARI developer guide](https://luma.gl/docs/api-guide/engine/anari-rendering)
-- [Complete ANARI API reference](https://luma.gl/docs/api-reference/anari-js)
-- [ANARI C API and THREE.js mapping](https://luma.gl/docs/api-reference/anari-js/anari-api-mapping)
+- [Complete ANARI API reference](https://luma.gl/docs/api-reference/anari)
+- [ANARI C API and THREE.js mapping](https://luma.gl/docs/api-reference/anari/anari-api-mapping)
 
 The reference covers device and object lifecycles, arrays, geometry, materials, lights, scene
 hierarchy, cameras, renderers, frames, supported parameters, defaults, and current limitations.

@@ -1,6 +1,11 @@
-# @luma.gl/anari-js
+# @luma.gl/anari
 
-`@luma.gl/anari-js` provides an experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+</p>
+
+`@luma.gl/anari` provides a private, experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
 
 :::caution Experimental proof of concept
 This package follows concepts from the ANARI object model, but it is not an ANARI C binding, does not implement the full ANARI specification, and does not claim Khronos conformance. Its TypeScript API and supported feature set can change.
@@ -8,23 +13,26 @@ This package follows concepts from the ANARI object model, but it is not an ANAR
 
 ## Reference pages
 
-- [Device and object lifecycle](/docs/api-reference/anari-js/anari-device): `ANARIDevice`, object creation, discovery, staged parameters, commits, and destruction.
-- [Arrays and geometry](/docs/api-reference/anari-js/anari-geometry): `ANARIArray`, typed data, triangle meshes, spheres, cylinders, cones, and quads.
-- [Materials and lighting](/docs/api-reference/anari-js/anari-materials-and-lights): matte and physically based materials; ambient, directional, point, and spot lights.
-- [Scene hierarchy](/docs/api-reference/anari-js/anari-scene): surfaces, groups, transform instances, worlds, and instancing behavior.
-- [Cameras, renderers, and frames](/docs/api-reference/anari-js/anari-rendering): camera projections, renderer controls, bloom, fog, frame rendering, and statistics.
-- [ANARI C API and THREE.js mapping](/docs/api-reference/anari-js/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
+- [Device and object lifecycle](/docs/api-reference/anari/anari-device): `ANARIDevice`, object creation, discovery, staged parameters, commits, and destruction.
+- [Arrays and geometry](/docs/api-reference/anari/anari-geometry): `ANARIArray`, typed data, triangle meshes, spheres, cylinders, cones, and quads.
+- [Materials and lighting](/docs/api-reference/anari/anari-materials-and-lights): matte and physically based materials; ambient, directional, point, and spot lights.
+- [Scene hierarchy](/docs/api-reference/anari/anari-scene): surfaces, groups, transform instances, worlds, and instancing behavior.
+- [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, renderer controls, bloom, fog, frame rendering, and statistics.
+- [ANARI C API and THREE.js mapping](/docs/api-reference/anari/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
 
-## Installation
+## Private workspace availability
 
-Install the ANARI package, its luma.gl peer dependencies, and at least one backend:
+`@luma.gl/anari` is a private, unpublished luma.gl workspace. Install dependencies from a luma.gl
+checkout:
 
 ```bash
-yarn add @luma.gl/anari-js @luma.gl/core @luma.gl/engine @luma.gl/effects @luma.gl/shadertools @luma.gl/webgpu
+yarn install
 ```
 
-Add `@luma.gl/webgl` if your application also needs a WebGL 2 fallback. During development in the luma.gl repository, the package is available as a local Yarn workspace.
+Another workspace inside the same checkout can depend on it through
+`"@luma.gl/anari": "workspace:*"`. It cannot currently be installed from npm. Add `@luma.gl/webgl`
+to the consuming workspace if a WebGL 2 fallback is required.
 
 ## Object model
 
@@ -59,7 +67,7 @@ import {
   ANARICamera,
   ANARIRenderer,
   ANARIFrame
-} from '@luma.gl/anari-js';
+} from '@luma.gl/anari';
 ```
 
 The package also exports parameter interfaces, subtype unions, object metadata, frame statistics, and shared vector/matrix aliases. Each reference page documents its related exported types.

@@ -1,7 +1,7 @@
 import {defineConfig} from 'vite';
 
 const alias = {
-  '@luma.gl/anari-js': `${__dirname}/../../../modules/anari-js/src`,
+  '@luma.gl/anari': `${__dirname}/../../../modules/anari/src`,
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
   '@luma.gl/effects': `${__dirname}/../../../modules/effects/src`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,

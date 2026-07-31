@@ -1,5 +1,10 @@
 # ANARI Materials and Lights
 
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+</p>
+
 Materials define how a surface responds to light. Lights are attached to a world or an instanced group and contribute ambient, directional, point, or spot illumination.
 
 ## `ANARIMaterial`

@@ -1,10 +1,15 @@
 # Declarative Rendering with ANARI
 
-`@luma.gl/anari-js` is an experimental retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+</p>
 
-This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/anari-js` API reference](/docs/api-reference/anari-js).
+`@luma.gl/anari` is an experimental, private retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
 
-For a function-by-function comparison with the Khronos ANARI 1.1 C API and a conceptual THREE.js migration table, see [ANARI C API and THREE.js Mapping](/docs/api-reference/anari-js/anari-api-mapping).
+This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/anari` API reference](/docs/api-reference/anari).
+
+For a function-by-function comparison with the Khronos ANARI 1.1 C API and a conceptual THREE.js migration table, see [ANARI C API and THREE.js Mapping](/docs/api-reference/anari/anari-api-mapping).
 
 :::caution
 This package is ANARI-inspired, not a JavaScript binding for the ANARI C API. It implements a useful subset of ANARI concepts but does not claim Khronos conformance.
@@ -28,20 +33,33 @@ The renderer chooses model creation, shader selection, instance batching, light 
 
 This is particularly useful when an application should expose a stable scene contract to multiple visualization tools, scene importers, or potential rendering backends.
 
-## Install the packages
+## Use the private workspace
+
+`@luma.gl/anari` is a private luma.gl workspace and is not published to npm. Install repository
+dependencies from a luma.gl checkout:
 
 ```bash
-yarn add @luma.gl/anari-js @luma.gl/core @luma.gl/engine @luma.gl/effects @luma.gl/shadertools @luma.gl/webgpu @luma.gl/webgl
+yarn install
 ```
 
-At least one backend is required. Use `@luma.gl/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/webgl` when a WebGL 2 fallback is important.
+Other in-repository workspaces can depend on the private package through:
+
+```json
+{
+  "dependencies": {
+    "@luma.gl/anari": "workspace:*"
+  }
+}
+```
+
+At least one luma.gl backend is required. Use `@luma.gl/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/webgl` when a WebGL 2 fallback is important.
 
 ## Create a graphics device
 
 Start with an ordinary luma.gl `Device` and wrap it in `ANARIDevice`:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/anari-js';
+import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
@@ -69,7 +87,7 @@ Adapter order determines preference: this example uses WebGPU when available and
 The following complete scene adds a metallic sphere, floor, directional light, animated point light, camera, renderer, and animation loop. It assumes a page containing `<canvas></canvas>`.
 
 ```ts
-import {ANARIDevice} from '@luma.gl/anari-js';
+import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {webgl2Adapter} from '@luma.gl/webgl';
@@ -473,7 +491,7 @@ The user-visible HDR effect depends on the monitor, browser, operating-system di
 The repository showcase uses `AnimationLoopTemplate` to coordinate drawing, resizing, and cleanup:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/anari-js';
+import {ANARIDevice} from '@luma.gl/anari';
 import {
   AnimationLoopTemplate,
   makeAnimationLoop,
@@ -632,4 +650,4 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - WebGL 2 preserves the same scene API but does not support the WebGPU HDR presentation path.
 - The ANARI device releases its renderer resources but does not destroy the underlying shared luma.gl graphics device.
 
-For exact supported parameters and defaults, continue to the [`@luma.gl/anari-js` API reference](/docs/api-reference/anari-js).
+For exact supported parameters and defaults, continue to the [`@luma.gl/anari` API reference](/docs/api-reference/anari).

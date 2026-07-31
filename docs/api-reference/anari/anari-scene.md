@@ -1,5 +1,10 @@
 # ANARI Scene Hierarchy
 
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+</p>
+
 The scene hierarchy combines geometry and materials into surfaces, groups related surfaces and lights, places groups through transform instances, and collects everything in a world.
 
 ```text
