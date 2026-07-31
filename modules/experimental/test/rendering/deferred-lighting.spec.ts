@@ -6,7 +6,9 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
+  createDeferredAmbientLightingShaderPassPipeline,
   createDeferredLightingShaderPassPipeline,
+  deferredAmbientLighting,
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
 } from '@luma.gl/experimental';
@@ -63,6 +65,26 @@ test('deferred lighting exposes one composable fullscreen resolve', testCase => 
   );
   testCase.equal(pipeline.steps[0].output, 'previous', 'lighting composes into the color chain');
   testCase.equal(MAX_DEFERRED_POINT_LIGHTS, 64, 'the exported capacity matches the WGSL loop');
+  testCase.end();
+});
+
+test('deferred ambient lighting isolates the material ambient contribution', testCase => {
+  const pipeline = createDeferredAmbientLightingShaderPassPipeline();
+  testCase.equal(pipeline.steps.length, 1, 'ambient extraction remains one composable pass');
+  testCase.equal(
+    pipeline.steps[0].shaderPass,
+    deferredAmbientLighting,
+    'the pipeline exposes the reusable deferred ambient-light shader'
+  );
+  testCase.equal(
+    deferredAmbientLighting.uniformTypes.ambientColor,
+    'vec3<f32>',
+    'ambient extraction uses the same linear ambient color as the lighting resolve'
+  );
+  testCase.ok(
+    deferredAmbientLighting.source.includes('baseColor * deferredAmbientLighting.ambientColor'),
+    'ambient extraction excludes direct lighting and emissive radiance'
+  );
   testCase.end();
 });
 

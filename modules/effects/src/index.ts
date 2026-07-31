@@ -130,6 +130,7 @@ export {createMotionBlurShaderPassPipeline} from './passes/screen-space/motion-b
 export type {GTAOShaderPassPipelineOptions} from './passes/screen-space/gtao';
 export {
   createGTAOShaderPassPipeline,
+  gtaoAmbientComposite,
   gtaoComposite,
   gtaoDepthHistoryCopy,
   gtaoEvaluate,

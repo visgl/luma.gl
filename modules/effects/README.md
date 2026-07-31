@@ -8,6 +8,8 @@ reflections with temporal reprojection and bilateral denoising, scene outlines, 
 motion blur, volumetric fog, and reusable depth-aware blur.
 Applications keep ownership of scene rendering and provide matching color, depth,
 normal/roughness, and velocity textures to `ShaderPassRenderer`.
+GTAO additionally supports `composition: 'ambient-only'` with an explicit
+`ambientLightingTexture`, preserving direct lighting and emissive scene contributions.
 
 Notable exports include:
 

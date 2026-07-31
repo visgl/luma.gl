@@ -19,6 +19,7 @@ import {
 } from '@luma.gl/effects';
 import {
   ClusteredLightGrid,
+  createDeferredAmbientLightingShaderPassPipeline,
   createClusteredDeferredLightingShaderPassPipeline,
   GBuffer,
   makeDeferredPointLightBufferData,
@@ -120,7 +121,7 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
 const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why deferred rendering scales:</b> forward shading repeats material work for every light that touches every draw. Here the geometry pass writes base color, metalness, roughness, emissive, normal, velocity, and depth once; the fullscreen resolve reuses those screen-space values for lighting.</p>
 <p><b>Why clustering wins:</b> a WebGPU compute stage projects each view-space light sphere into a <code>16 × 9 × 24</code> screen/log-depth grid. Each pixel reconstructs its view position from depth, finds one cluster, and normally evaluates only that short local list instead of all 512 lights.</p>
-<p><b>Why GTAO belongs after lighting:</b> a half-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO is composed into lit color.</p>
+<p><b>Why GTAO belongs after lighting:</b> a half-resolution analytic horizon integral reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO affects only the isolated ambient contribution, preserving direct light and emissive surfaces.</p>
 <p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
 <p><b>Why HDR changes the image:</b> floating-point G-buffer and lighting passes retain radiance above SDR white. On compatible displays, a Display P3, <code>rgba16float</code>, extended-tone-mapping canvas preserves those concentrated specular highlights and emissive panels instead of clipping them.</p>
@@ -521,6 +522,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly settingsPanel: ExampleSettingsPanelManager;
   orbitControls: OrbitControls | null = null;
   sceneGBuffer: GBuffer;
+  ambientLightingRenderer: ShaderPassRenderer;
   renderer: ShaderPassRenderer;
   settings: DeferredRenderingSettings = {...DEFAULT_SETTINGS};
   framebufferSize: [number, number];
@@ -565,6 +567,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       maxLightCount: MAX_CLUSTERED_POINT_LIGHTS
     });
     this.sceneGBuffer = createSceneGBuffer(device, width, height);
+    this.ambientLightingRenderer = createAmbientLightingRenderer(device);
+    this.ambientLightingRenderer.resize([width, height]);
     this.renderer = createRenderer(device);
     this.renderer.resize([width, height]);
     this.framebufferSize = [width, height];
@@ -604,6 +608,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (this.framebufferSize[0] !== width || this.framebufferSize[1] !== height) {
       this.framebufferSize = [width, height];
       this.sceneGBuffer.resize({width, height});
+      this.ambientLightingRenderer.resize([width, height]);
       this.renderer.resize([width, height]);
       this.frameIndex = 0;
     }
@@ -680,6 +685,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const normalTexture = this.sceneGBuffer.normalRoughnessTexture;
     const baseColorMetallicTexture = this.sceneGBuffer.getExtraColorTexture('baseColorMetallic');
     const emissiveOcclusionTexture = this.sceneGBuffer.getExtraColorTexture('emissiveOcclusion');
+    const ambientColor: NumberArray3 = [0.028, 0.034, 0.055];
+    const ambientLightingTexture = this.ambientLightingRenderer.renderToTexture({
+      sourceTexture: this.sceneGBuffer.colorTexture,
+      bindings: {
+        depthTexture: this.sceneGBuffer.depthTexture,
+        baseColorMetallicTexture,
+        emissiveOcclusionTexture
+      },
+      uniforms: {
+        deferredAmbientLighting: {ambientColor}
+      }
+    });
+    if (!ambientLightingTexture) {
+      return;
+    }
     const directionalLightDirectionView = normalize3(
       viewMatrix.transformAsVector([0.42, 0.82, 0.38]) as NumberArray3
     );
@@ -692,13 +712,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         velocityTexture: this.sceneGBuffer.velocityTexture,
         baseColorMetallicTexture,
         emissiveOcclusionTexture,
+        ambientLightingTexture,
         pointLights: this.pointLightBuffer,
         ...this.clusteredLightGrid.getShaderPassBindings()
       },
       uniforms: {
         clusteredDeferredLighting: {
           inverseProjectionMatrix,
-          ambientColor: [0.028, 0.034, 0.055],
+          ambientColor,
           directionalLightDirectionView,
           directionalLightColor: [1, 0.86, 0.68],
           directionalLightIntensity: this.settings.sunIntensity,
@@ -712,7 +733,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           frameIndex: this.frameIndex
         },
         gtaoTemporal: {inverseProjectionMatrix},
-        gtaoComposite: {
+        gtaoAmbientComposite: {
           strength: this.settings.ambientOcclusionStrength,
           debugMode: this.settings.debugView === 'Ambient Occlusion' ? 1 : 0
         },
@@ -799,6 +820,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.lightMarkers.destroy();
     this.pointLightBuffer.destroy();
     this.clusteredLightGrid.destroy();
+    this.ambientLightingRenderer.destroy();
     this.renderer.destroy();
     this.sceneGBuffer.destroy();
   }
@@ -863,11 +885,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
+function createAmbientLightingRenderer(device: Device): ShaderPassRenderer {
+  return new ShaderPassRenderer(device, {
+    shaderPasses: [createDeferredAmbientLightingShaderPassPipeline()],
+    colorFormat: 'rgba16float',
+    flipY: true
+  });
+}
+
 function createRenderer(device: Device): ShaderPassRenderer {
   return new ShaderPassRenderer(device, {
     shaderPasses: [
       createClusteredDeferredLightingShaderPassPipeline(),
-      createGTAOShaderPassPipeline(),
+      createGTAOShaderPassPipeline({composition: 'ambient-only'}),
       createSSGIShaderPassPipeline(),
       createSSRShaderPassPipeline({resolutionScale: 0.75}),
       deferredDisplayPipeline

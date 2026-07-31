@@ -11,6 +11,8 @@ import {depthAwareBlur} from './depth-aware-blur';
 export type GTAOShaderPassPipelineOptions = {
   /** Fractional AO evaluation resolution. Defaults to half resolution. */
   resolutionScale?: number;
+  /** Apply visibility to the full image or only to a separately supplied ambient-light texture. */
+  composition?: 'color' | 'ambient-only';
 };
 
 type GTAOEvaluateUniforms = {
@@ -31,6 +33,10 @@ type GTAOTemporalUniforms = {
 type GTAOCompositeUniforms = {
   strength: number;
   debugMode: number;
+};
+
+type GTAOAmbientCompositeBindings = {
+  ambientLightingTexture?: Texture;
 };
 
 type GTAOBindings = {
@@ -80,19 +86,26 @@ fn gtaoEvaluate_hash(value: vec2f) -> f32 {
 
 fn gtaoEvaluate_sampleHorizon(
   centerPosition: vec3f,
-  normal: vec3f,
+  viewDirection: vec3f,
+  sliceDirection: vec3f,
   sceneCoord: vec2f,
   direction: vec2f,
   side: f32,
   radiusPixels: f32,
-  depthDimensions: vec2f
+  depthDimensions: vec2f,
+  radialJitter: f32
 ) -> f32 {
-  var horizon = 0.0;
+  let hemisphereEdge = side * GTAO_PI * 0.5;
+  var horizon = hemisphereEdge;
   for (var stepIndex: i32 = 1; stepIndex <= GTAO_STEPS_PER_SIDE; stepIndex++) {
     let fraction = f32(stepIndex) / f32(GTAO_STEPS_PER_SIDE);
-    let jitteredFraction = (f32(stepIndex) - 0.35) / f32(GTAO_STEPS_PER_SIDE);
+    let jitteredFraction =
+      (f32(stepIndex) - 1.0 + radialJitter) / f32(GTAO_STEPS_PER_SIDE);
     let sampleOffset = direction * side * radiusPixels * jitteredFraction / depthDimensions;
-    let sampleCoord = clamp(sceneCoord + sampleOffset, vec2f(0.0), vec2f(1.0));
+    let sampleCoord = sceneCoord + sampleOffset;
+    if (any(sampleCoord < vec2f(0.0)) || any(sampleCoord > vec2f(1.0))) {
+      continue;
+    }
     let sampleDepth = textureSampleLevel(depthTexture, depthTextureSampler, sampleCoord, 0);
     if (sampleDepth >= 0.99999) {
       continue;
@@ -103,12 +116,46 @@ fn gtaoEvaluate_sampleHorizon(
     if (distanceToSample <= 0.0001 || distanceToSample >= gtaoEvaluate.radius) {
       continue;
     }
-    let hemisphere = max(dot(normal, delta / distanceToSample) - gtaoEvaluate.bias, 0.0);
+    let sampleDirection = delta / distanceToSample;
+    let sliceProjection = dot(sampleDirection, sliceDirection);
+    if (sliceProjection * side <= 0.0) {
+      continue;
+    }
+    let sampleAngle = atan2(sliceProjection, dot(sampleDirection, viewDirection));
+    let biasedAngle = sampleAngle + side * gtaoEvaluate.bias;
+    let boundedAngle = select(
+      clamp(biasedAngle, -GTAO_PI * 0.5, 0.0),
+      clamp(biasedAngle, 0.0, GTAO_PI * 0.5),
+      side > 0.0
+    );
     let distanceFalloff = 1.0 - smoothstep(gtaoEvaluate.radius * 0.35, gtaoEvaluate.radius, distanceToSample);
     let stepFalloff = 1.0 - fraction * 0.15;
-    horizon = max(horizon, hemisphere * distanceFalloff * stepFalloff);
+    let weightedAngle = mix(hemisphereEdge, boundedAngle, distanceFalloff * stepFalloff);
+    horizon = select(max(horizon, weightedAngle), min(horizon, weightedAngle), side > 0.0);
   }
   return horizon;
+}
+
+fn gtaoEvaluate_integrateSlice(
+  negativeHorizon: f32,
+  positiveHorizon: f32,
+  normalAngle: f32
+) -> f32 {
+  let lowerHemisphere = normalAngle - GTAO_PI * 0.5;
+  let upperHemisphere = normalAngle + GTAO_PI * 0.5;
+  let visibleLower = clamp(negativeHorizon, lowerHemisphere, upperHemisphere);
+  let visibleUpper = clamp(positiveHorizon, lowerHemisphere, upperHemisphere);
+  let unoccludedLower = clamp(-GTAO_PI * 0.5, lowerHemisphere, upperHemisphere);
+  let unoccludedUpper = clamp(GTAO_PI * 0.5, lowerHemisphere, upperHemisphere);
+  let visibilityIntegral = max(
+    sin(visibleUpper - normalAngle) - sin(visibleLower - normalAngle),
+    0.0
+  );
+  let hemisphereIntegral = max(
+    sin(unoccludedUpper - normalAngle) - sin(unoccludedLower - normalAngle),
+    0.0001
+  );
+  return clamp(visibilityIntegral / hemisphereIntegral, 0.0, 1.0);
 }
 
 fn gtaoEvaluate_sampleColor(
@@ -132,35 +179,71 @@ fn gtaoEvaluate_sampleColor(
     max(-centerPosition.z, 0.0001) * depthDimensions.y * 0.5;
   let radiusPixels = clamp(projectedRadius, 2.0, 72.0);
   let pixelCoordinate = sceneCoord * depthDimensions;
-  let rotation = gtaoEvaluate_hash(floor(pixelCoordinate)) * GTAO_PI;
+  let frameOffset = vec2f(gtaoEvaluate.frameIndex * 0.754877666, gtaoEvaluate.frameIndex * 0.569840291);
+  let rotation = gtaoEvaluate_hash(floor(pixelCoordinate) + frameOffset) * GTAO_PI;
+  let radialJitter = 0.25 + gtaoEvaluate_hash(floor(pixelCoordinate) + frameOffset.yx + 17.0) * 0.75;
+  let viewDirection = normalize(-centerPosition);
 
-  var accumulatedOcclusion = 0.0;
+  var accumulatedVisibility = 0.0;
+  var accumulatedWeight = 0.0;
   for (var sliceIndex: i32 = 0; sliceIndex < GTAO_SLICE_COUNT; sliceIndex++) {
     let angle = rotation + f32(sliceIndex) * GTAO_PI / f32(GTAO_SLICE_COUNT);
     let direction = vec2f(cos(angle), sin(angle));
+    let sliceSampleCoord = clamp(sceneCoord + direction / depthDimensions, vec2f(0.0), vec2f(1.0));
+    let slicePosition = gtaoEvaluate_reconstructViewPosition(sliceSampleCoord, depth);
+    let sliceDelta = slicePosition - centerPosition;
+    if (length(sliceDelta) <= 0.00001) {
+      continue;
+    }
+    let slicePlaneNormal = normalize(cross(sliceDelta, viewDirection));
+    let sliceDirection = normalize(cross(viewDirection, slicePlaneNormal));
+    let projectedNormal = normal - slicePlaneNormal * dot(normal, slicePlaneNormal);
+    let projectedNormalLength = length(projectedNormal);
+    if (projectedNormalLength <= 0.00001) {
+      continue;
+    }
+    let normalizedProjectedNormal = projectedNormal / projectedNormalLength;
+    let normalAngle = atan2(
+      dot(normalizedProjectedNormal, sliceDirection),
+      dot(normalizedProjectedNormal, viewDirection)
+    );
     let positiveHorizon = gtaoEvaluate_sampleHorizon(
       centerPosition,
-      normal,
+      viewDirection,
+      sliceDirection,
       sceneCoord,
       direction,
       1.0,
       radiusPixels,
-      depthDimensions
+      depthDimensions,
+      radialJitter
     );
     let negativeHorizon = gtaoEvaluate_sampleHorizon(
       centerPosition,
-      normal,
+      viewDirection,
+      sliceDirection,
       sceneCoord,
       direction,
       -1.0,
       radiusPixels,
-      depthDimensions
+      depthDimensions,
+      radialJitter
     );
-    accumulatedOcclusion += positiveHorizon * positiveHorizon + negativeHorizon * negativeHorizon;
+    let sliceVisibility = gtaoEvaluate_integrateSlice(
+      negativeHorizon,
+      positiveHorizon,
+      normalAngle
+    );
+    accumulatedVisibility += sliceVisibility * projectedNormalLength;
+    accumulatedWeight += projectedNormalLength;
   }
 
-  let normalizedOcclusion = accumulatedOcclusion / f32(GTAO_SLICE_COUNT * 2);
-  let visibility = clamp(1.0 - normalizedOcclusion * gtaoEvaluate.intensity, 0.0, 1.0);
+  let integratedVisibility = accumulatedVisibility / max(accumulatedWeight, 0.0001);
+  let visibility = clamp(
+    1.0 - (1.0 - integratedVisibility) * gtaoEvaluate.intensity,
+    0.0,
+    1.0
+  );
   return vec4f(vec3f(visibility), 1.0);
 }`,
   bindingLayout: [
@@ -359,6 +442,70 @@ fn gtaoComposite_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<Partial<GTAOCompositeUniforms>, GTAOCompositeUniforms>;
 
+/** Applies ambient visibility without darkening direct lighting or emissive scene color. */
+export const gtaoAmbientComposite = {
+  name: 'gtaoAmbientComposite',
+  source: /* wgsl */ `\
+struct GTAOAmbientCompositeUniforms {
+  strength: f32,
+  debugMode: f32,
+};
+
+@group(0) @binding(auto) var<uniform> gtaoAmbientComposite: GTAOAmbientCompositeUniforms;
+@group(0) @binding(auto) var ambientOcclusionTexture: texture_2d<f32>;
+@group(0) @binding(auto) var ambientOcclusionTextureSampler: sampler;
+@group(0) @binding(auto) var ambientLightingTexture: texture_2d<f32>;
+@group(0) @binding(auto) var ambientLightingTextureSampler: sampler;
+
+fn gtaoAmbientComposite_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let color = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  let visibility = textureSample(
+    ambientOcclusionTexture,
+    ambientOcclusionTextureSampler,
+    texCoord
+  ).r;
+  if (gtaoAmbientComposite.debugMode > 0.5) {
+    return vec4f(vec3f(visibility), 1.0);
+  }
+  let ambientLighting = textureSample(
+    ambientLightingTexture,
+    ambientLightingTextureSampler,
+    texCoord
+  ).rgb;
+  let ambientVisibility = mix(
+    1.0,
+    visibility,
+    clamp(gtaoAmbientComposite.strength, 0.0, 1.0)
+  );
+  return vec4f(color.rgb + ambientLighting * (ambientVisibility - 1.0), color.a);
+}`,
+  bindingLayout: [
+    {name: 'ambientOcclusionTexture', group: 0},
+    {name: 'ambientLightingTexture', group: 0}
+  ],
+  props: {} as Partial<GTAOCompositeUniforms> & GTAOAmbientCompositeBindings,
+  uniforms: {} as GTAOCompositeUniforms,
+  bindings: {} as GTAOAmbientCompositeBindings,
+  uniformTypes: {
+    strength: 'f32',
+    debugMode: 'f32'
+  },
+  propTypes: {
+    strength: {value: 0.68, min: 0, max: 1},
+    debugMode: {value: 0, min: 0, max: 1, private: true}
+  },
+  passes: [{sampler: true}]
+} as const satisfies ShaderPass<
+  Partial<GTAOCompositeUniforms> & GTAOAmbientCompositeBindings,
+  GTAOCompositeUniforms,
+  GTAOAmbientCompositeBindings
+>;
+
 /** Creates a temporally stabilized horizon-based ambient-occlusion pipeline. */
 export function createGTAOShaderPassPipeline(
   options: GTAOShaderPassPipelineOptions = {}
@@ -366,6 +513,7 @@ export function createGTAOShaderPassPipeline(
   'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
 > {
   const scale = options.resolutionScale || 0.5;
+  const composite = options.composition === 'ambient-only' ? gtaoAmbientComposite : gtaoComposite;
   return {
     name: 'gtaoShaderPassPipeline',
     renderTargets: {
@@ -418,7 +566,7 @@ export function createGTAOShaderPassPipeline(
         uniforms: {direction: [0, 1], radius: 3, spatialSigma: 2.5, depthSigma: 0.008}
       },
       {
-        shaderPass: gtaoComposite,
+        shaderPass: composite,
         inputs: {sourceTexture: 'previous', ambientOcclusionTexture: 'gtaoBlurred'},
         output: 'previous'
       }
