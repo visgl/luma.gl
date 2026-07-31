@@ -4,8 +4,31 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {cleanEvaluate, interleave, GPUDataEvaluator} from '@luma.gl/gpgpu';
-import {getTestDevice, TestData, verifyTableValue, isSupportedByWebGPU} from './fixtures';
+import {cleanEvaluate, interleave, GPUDataEvaluator, Operation} from '@luma.gl/gpgpu';
+import {
+  getRunStats,
+  getTestDevice,
+  TestData,
+  verifyTableValue,
+  isSupportedByWebGPU
+} from './fixtures';
+
+test('GPGPU#interleave preserves input array order', () => {
+  const inputs = [
+    GPUDataEvaluator.fromConstant([1]),
+    GPUDataEvaluator.fromConstant([2]),
+    GPUDataEvaluator.fromConstant([3])
+  ];
+  const result = interleave(...inputs);
+
+  expect(result.source).toBeInstanceOf(Operation);
+  expect((result.source as Operation<GPUDataEvaluator[]>).inputs).toEqual(inputs);
+
+  result.destroy();
+  for (const input of inputs) {
+    input.destroy();
+  }
+});
 
 for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
   describe(`GPGPU#interleave#execute:${deviceType}`, () => {
@@ -18,6 +41,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
     const TEST_CASES: {
       eval: GPUDataEvaluator;
       expected: TestData;
+      runCount?: number;
     }[] = [
       {
         eval: interleave(
@@ -46,7 +70,8 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           GPUDataEvaluator.fromConstant([0, 1, 2]),
           GPUDataEvaluator.fromConstant([1, 2, 3])
         ),
-        expected: {constant: [0, 1, 2, 1, 2, 3], type: 'float32', size: 6}
+        expected: {constant: [0, 1, 2, 1, 2, 3], type: 'float32', size: 6},
+        runCount: 0
       },
       {
         eval: interleave(
@@ -58,7 +83,8 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           value: [0, 1, 2, 3, 0, 0, 1, 4, 5, 6, 7, 1, 1, 2, 8, 9, 10, 11, 2, 2, 1],
           type: 'float32',
           size: 7
-        }
+        },
+        runCount: 1
       }
     ];
     for (const testCase of TEST_CASES) {
@@ -70,8 +96,13 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           t.skip(`${deviceType} not available`);
           return;
         }
+        const stat = getRunStats(device);
+        const beforeCount = stat?.count ?? 0;
         await cleanEvaluate(device, testCase);
         expect(await verifyTableValue(testCase.eval, testCase.expected)).toBe(null);
+        if (stat) {
+          expect(stat.count - beforeCount).toBe(testCase.runCount ?? 1);
+        }
         testCase.eval.destroy();
       });
     }

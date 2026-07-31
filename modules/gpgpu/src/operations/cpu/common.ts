@@ -6,18 +6,20 @@ import type {Buffer, TypedArray} from '@luma.gl/core';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import type {OperationHandlerResult} from '../../operation/operation';
 
+type CPUTransformInputs = {[name: string]: GPUDataEvaluator} | GPUDataEvaluator[];
+
 type CPUTransformProps =
   | {
       elementWise: true;
       func: (...args: number[]) => number;
-      inputs: {[name: string]: GPUDataEvaluator};
+      inputs: CPUTransformInputs;
       output: GPUDataEvaluator;
       outputBuffer: Buffer;
     }
   | {
       elementWise?: false;
       func: (...args: TypedArray[]) => void;
-      inputs: {[name: string]: GPUDataEvaluator};
+      inputs: CPUTransformInputs;
       output: GPUDataEvaluator;
       outputBuffer: Buffer;
     };
@@ -30,16 +32,16 @@ export function runCPUTransform({
   outputBuffer
 }: CPUTransformProps): OperationHandlerResult {
   // validate
-  for (const id in inputs) {
-    const value = inputs[id].value;
-    if (!value) throw new Error(`${inputs[id]} does not have CPU value`);
+  const inputEvaluators = Array.isArray(inputs) ? inputs : Object.values(inputs);
+  for (const input of inputEvaluators) {
+    if (!input.value) throw new Error(`${input} does not have CPU value`);
   }
 
   const vertexCount = output.length;
   const outputSize = output.size;
   const target = new output.ValueType(vertexCount * outputSize);
   for (let i = 0; i < vertexCount; i++) {
-    const inputVertices = Object.values(inputs).map(table => getValueAtRow(table, i));
+    const inputVertices = inputEvaluators.map(table => getValueAtRow(table, i));
     if (elementWise) {
       for (let j = 0; j < outputSize; j++) {
         target[i * outputSize + j] = func.apply(

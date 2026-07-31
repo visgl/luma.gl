@@ -6,22 +6,34 @@ import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {runRowTransform} from './common/row-transform';
 
-const vs = `\
-void interleave(in TYPE x[X_LEN], in TYPE y[Y_LEN], out TYPE result[RESULT_LEN]) {
-  for (int i = 0; i < X_LEN; i++) {
-    result[i] = x[i];
-  }
-  for (int i = 0; i < Y_LEN; i++) {
-    result[i + X_LEN] = y[i];
-  }
+export const interleave: OperationHandler<GPUDataEvaluator[]> = ({inputs, output, target}) => {
+  const inputEntries: [string, GPUDataEvaluator][] = inputs.map((input, index) => [
+    `x${index}`,
+    input
+  ]);
+  validateInterleaveInputs(target.device.limits.maxVertexAttributes, inputEntries);
+  validateInterleaveOutput(target.device.limits.maxInterStageShaderVariables, output);
+
+  const argumentList = inputEntries
+    .map(([name, input]) => `in TYPE ${name}[${input.size}]`)
+    .join(', ');
+  let elementOffset = 0;
+  const assignments = inputEntries
+    .map(([name, input]) => {
+      const block = Array.from(
+        {length: input.size},
+        (_, elementIndex) => `  result[${elementOffset + elementIndex}] = ${name}[${elementIndex}];`
+      ).join('\n');
+      elementOffset += input.size;
+      return block;
+    })
+    .join('\n');
+  const vs = `\
+void interleave(${argumentList}, out TYPE result[RESULT_LEN]) {
+${assignments}
 }
 `;
 
-export const interleave: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
-  inputs,
-  output,
-  target
-}) => {
   runRowTransform({
     module: {name: 'interleave', vs},
     inputs,
@@ -30,3 +42,29 @@ export const interleave: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvalua
   });
   return {success: true};
 };
+
+function validateInterleaveInputs(
+  maxVertexAttributes: number,
+  inputEntries: [string, GPUDataEvaluator][]
+): void {
+  const attributeCount = inputEntries.reduce(
+    (count, [, input]) => count + Math.ceil(input.size / 4),
+    0
+  );
+  if (attributeCount > maxVertexAttributes) {
+    throw new Error(
+      `interleave() requires ${attributeCount} vertex attributes, exceeding device limit ${maxVertexAttributes}`
+    );
+  }
+}
+
+function validateInterleaveOutput(
+  maxInterStageShaderVariables: number,
+  output: GPUDataEvaluator
+): void {
+  if (output.size > maxInterStageShaderVariables) {
+    throw new Error(
+      `interleave() output size ${output.size} exceeds device inter-stage component limit ${maxInterStageShaderVariables}`
+    );
+  }
+}

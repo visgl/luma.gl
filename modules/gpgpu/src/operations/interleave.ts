@@ -11,21 +11,21 @@ import {Operation} from '../operation/operation';
 import {deduceOutputProps} from '../utils/output-props';
 
 /** Deferred row interleave operation. */
-class InterleaveOperation extends Operation<{x: GPUDataEvaluator; y: GPUDataEvaluator}> {
+class InterleaveOperation extends Operation<GPUDataEvaluator[]> {
   /** Operation name used for backend lookup. */
   name = 'interleave';
 
   /** Lazy output table for the interleaved result. */
   output: GPUDataEvaluator;
 
-  constructor(x: GPUDataEvaluator, y: GPUDataEvaluator) {
-    super({x, y});
+  constructor(inputs: GPUDataEvaluator[]) {
+    super(inputs);
 
-    const {isConstant, type, length} = deduceOutputProps(x, y);
+    const {isConstant, type, length} = deduceOutputProps(...inputs);
     this.output = new GPUDataEvaluator({
       isConstant,
       type,
-      size: x.size + y.size,
+      size: inputs.reduce((size, input) => size + input.size, 0),
       length,
       source: this
     });
@@ -33,8 +33,7 @@ class InterleaveOperation extends Operation<{x: GPUDataEvaluator; y: GPUDataEval
 
   /** Returns a compact expression for debug output. */
   toString(): string {
-    const {x, y} = this.inputs;
-    return `_${x}_${y}_`;
+    return `_${this.inputs.join('_')}_`;
   }
 }
 
@@ -45,9 +44,11 @@ class InterleaveOperation extends Operation<{x: GPUDataEvaluator; y: GPUDataEval
  * {@link GPUDataEvaluator.evaluate} is called on the result.
  */
 export function interleave(...args: GPUDataEvaluatorInput[]): GPUDataEvaluator {
-  let result = getGPUDataEvaluator(args[0]);
-  for (let i = 1; i < args.length; i++) {
-    result = new InterleaveOperation(result, getGPUDataEvaluator(args[i])).output;
+  if (args.length === 0) {
+    throw new Error('interleave() requires at least one input');
   }
-  return result;
+  if (args.length === 1) {
+    return getGPUDataEvaluator(args[0]);
+  }
+  return new InterleaveOperation(args.map(getGPUDataEvaluator)).output;
 }

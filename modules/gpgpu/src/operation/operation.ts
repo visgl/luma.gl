@@ -8,7 +8,9 @@ import {GPUDataEvaluator} from './gpu-data-evaluator';
 import {backendRegistry} from './backend-registry';
 
 /** Backend implementation for a single lazy GPGPU operation. */
-export type OperationHandler<InputsT extends Record<string, any> = any> = (args: {
+export type OperationInputs = Record<string, any> | readonly any[];
+
+export type OperationHandler<InputsT extends OperationInputs = any> = (args: {
   /** Device selected for execution. */
   device: Device;
   /** Operation inputs. */
@@ -30,15 +32,17 @@ export type OperationHandlerResult = {
  * Operations form a lazy dependency graph. Calling {@link Operation.execute} first materializes
  * dependent evaluators, then dispatches either a CPU handler or a backend-specific GPU handler.
  */
-export abstract class Operation<InputsT extends Record<string, any> = Record<string, any>> {
-  /** Input evaluator map for this operation. */
+export abstract class Operation<InputsT extends OperationInputs = Record<string, any>> {
+  /** Inputs for this operation. */
   inputs: InputsT;
   /** Input evaluators that need evaluation before this operation can run. */
   dependencies: GPUDataEvaluator[];
 
   constructor(inputs: InputsT) {
     this.inputs = inputs;
-    this.dependencies = Object.values(inputs).filter(i => i instanceof GPUDataEvaluator);
+    this.dependencies = Array.from(inputs instanceof Array ? inputs : Object.values(inputs)).filter(
+      i => i instanceof GPUDataEvaluator
+    );
   }
 
   /** Unique identifier of this operation, e.g. 'add' */

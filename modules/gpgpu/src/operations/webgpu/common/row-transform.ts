@@ -25,7 +25,7 @@ export function runRowComputation({
   module: ShaderModule;
   elementWise?: boolean;
   expression?: (laneIndex: number) => string;
-  inputs: {[name: string]: GPUDataEvaluator};
+  inputs: {[name: string]: GPUDataEvaluator} | GPUDataEvaluator[];
   output: GPUDataEvaluator;
   operationType?: SignedDataType;
   outputBuffer: Buffer;
@@ -34,7 +34,8 @@ export function runRowComputation({
     throw new Error(`WebGPU computation ${module.name} requires WGSL source`);
   }
 
-  const bindings = Object.entries(inputs).map(([name, input]) => ({name, input}));
+  const inputEntries = getInputEntries(inputs);
+  const bindings = inputEntries.map(([name, input]) => ({name, input}));
   const storageBindings = bindings
     .filter(({input}) => !input.isConstant)
     .map((binding, index) => ({...binding, index}));
@@ -49,8 +50,7 @@ export function runRowComputation({
     outputBuffer.device.limits.maxComputeWorkgroupsPerDimension
   );
 
-  for (const name in inputs) {
-    const input = inputs[name];
+  for (const [name, input] of inputEntries) {
     defines[`${name.toUpperCase()}_LEN`] = input.size.toString();
   }
 
@@ -72,7 +72,7 @@ ${getOutputWriter(output)}
 
 ${bindings.map(({name}) => `  let ${name} = read_${name}(rowIndex);`).join('\n')}
   var result: array<${outputType}, ${output.size}>;
-${getComputeBlock(module.name, inputs, output, elementWise, expression)}
+${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
   write_result(rowIndex, result);
 }
 `;
@@ -158,7 +158,7 @@ ${Array.from({length: output.size}, (_, elementIndex) => `  result[rowOffset + $
 
 function getComputeBlock(
   operationName: string,
-  inputs: {[name: string]: GPUDataEvaluator},
+  inputEntries: [string, GPUDataEvaluator][],
   output: GPUDataEvaluator,
   elementWise: boolean,
   expression?: (laneIndex: number) => string
@@ -174,9 +174,9 @@ function getComputeBlock(
     const outputType = getWGSLType(output.type);
 
     for (let elementIndex = 0; elementIndex < output.size; elementIndex++) {
-      const elementInputs = Object.keys(inputs).map(name => {
-        if (elementIndex < inputs[name].size) {
-          const inputType = getWGSLType(inputs[name].type);
+      const elementInputs = inputEntries.map(([name, input]) => {
+        if (elementIndex < input.size) {
+          const inputType = getWGSLType(input.type);
           if (inputType === outputType) {
             return `${name}[${elementIndex}]`;
           }
@@ -187,10 +187,18 @@ function getComputeBlock(
       result += `  result[${elementIndex}] = ${operationName}(${elementInputs.join(', ')});\n`;
     }
   } else {
-    result += `result = ${operationName}(${Object.keys(inputs).join(', ')});`;
+    result += `result = ${operationName}(${inputEntries.map(([name]) => name).join(', ')});`;
   }
 
   return result.trimEnd();
+}
+
+function getInputEntries(
+  inputs: {[name: string]: GPUDataEvaluator} | GPUDataEvaluator[]
+): [string, GPUDataEvaluator][] {
+  return Array.isArray(inputs)
+    ? inputs.map((input, index) => [`x${index}`, input])
+    : Object.entries(inputs);
 }
 
 function getConstantValues(input: GPUDataEvaluator, asType: string): string {
