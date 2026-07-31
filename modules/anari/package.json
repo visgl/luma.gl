@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/anari",
-  "version": "9.4.0-alpha.1",
+  "version": "9.4.0-alpha.2",
   "private": true,
   "description": "ANARI-inspired declarative rendering for luma.gl",
   "type": "module",
@@ -26,10 +26,10 @@
   ],
   "sideEffects": false,
   "peerDependencies": {
-    "@luma.gl/core": "~9.4.0-alpha.1",
-    "@luma.gl/effects": "~9.4.0-alpha.1",
-    "@luma.gl/engine": "~9.4.0-alpha.1",
-    "@luma.gl/shadertools": "~9.4.0-alpha.1"
+    "@luma.gl/core": "~9.4.0-alpha.2",
+    "@luma.gl/effects": "~9.4.0-alpha.2",
+    "@luma.gl/engine": "~9.4.0-alpha.2",
+    "@luma.gl/shadertools": "~9.4.0-alpha.2"
   },
   "dependencies": {
     "@math.gl/core": "^4.1.0",
