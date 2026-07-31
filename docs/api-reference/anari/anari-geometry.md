@@ -3,6 +3,7 @@
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 `ANARIArray` describes shared application data, and `ANARIGeometry` describes one reusable geometric primitive. Geometry becomes visible when paired with a material in an [`ANARISurface`](/docs/api-reference/anari/anari-scene).
@@ -108,6 +109,7 @@ type ANARIGeometryParameters = {
   'vertex.position'?: Float32Array | ANARIArray;
   'vertex.normal'?: Float32Array | ANARIArray;
   'vertex.attribute0'?: Float32Array | ANARIArray;
+  'vertex.attribute1'?: Float32Array | ANARIArray;
   'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
   radius?: number;
   height?: number;
@@ -120,7 +122,8 @@ type ANARIGeometryParameters = {
 | --- | --- | --- | --- |
 | `'vertex.position'` | `triangle` | Required | Packed XYZ positions as `Float32Array` or an `ANARIArray` wrapping one. |
 | `'vertex.normal'` | `triangle` | Generated | Packed XYZ normals as `Float32Array` or an `ANARIArray` wrapping one. |
-| `'vertex.attribute0'` | None currently | — | Accepted for API compatibility; not consumed by the current shader. |
+| `'vertex.attribute0'` | `triangle` | White | Packed linear RGB vertex colors multiplied by the material base color. |
+| `'vertex.attribute1'` | `triangle` | `[0, 0]` | Packed `TEXCOORD_0` UV pairs sampled by material image samplers. |
 | `'primitive.index'` | `triangle` | No index buffer | Optional `Uint16Array`, `Uint32Array`, or wrapped ANARI array. |
 | `radius` | `sphere`, `cylinder`, `cone` | `1` | Primitive radius. |
 | `height` | `cylinder`, `cone`, `quad` | `1` | Cylinder/cone height, or quad Z extent. |

@@ -3,6 +3,7 @@
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 The scene hierarchy combines geometry and materials into surfaces, groups related surfaces and lights, places groups through transform instances, and collects everything in a world.

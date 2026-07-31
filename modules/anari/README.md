@@ -1,5 +1,11 @@
 # @luma.gl/anari
 
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+</p>
+
 ![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)
 ![Private workspace](https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square)
 
@@ -142,9 +148,51 @@ transform instances, animated lights, renderer controls, and live HDR-capable re
 Three presets represent the complete **Chromatic Atlas**, **Crystal Cathedral**, and
 **Celestial Engine** showcase scenes entirely in JSON, including procedural torus, crystal, and
 beveled prism meshes, deterministic starfields, hundreds of retained instances, composable animations,
-and real point lights following orbiting satellites. Live edits preserve the last valid scene
-when JSON or object references are invalid. The playground JSON schema is an example-level
-convention, not an official ANARI serialization format or an exported package API.
+and real point lights following orbiting satellites. A Monaco editor provides syntax highlighting,
+schema-aware completion, property descriptions, and exact error indicators. Live edits preserve the
+last valid scene when JSON, parameter values, or retained object references are invalid.
+
+The **GLTF ↓** and **USD ↓** actions export the currently valid scene as a static interchange
+snapshot. Procedural meshes, starfields, and retained instances are baked into glTF 2.0 or ASCII
+USD meshes with materials, textures, camera, and supported lights. ANARI animations and
+renderer-specific bloom, fog, and HDR presentation settings stay in the editable ANARI JSON.
+
+The optional, experimental `@luma.gl/anari/schemas` entry point exports Zod schemas and the
+generated draft-07 JSON Schema without adding Zod to imports of the core ANARI rendering API:
+
+```ts
+import {ANARISceneSchema, ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/anari/schemas';
+
+const result = ANARISceneSchema.safeParse(scene);
+```
+
+The editor associates `ANARI_SCENE_JSON_SCHEMA` with its JSON document for subtype-aware
+IntelliSense. `ANARISceneSchema` additionally validates retained geometry, material, surface,
+group, instance, and animated-light references that plain JSON Schema cannot express. The scene
+format is experimental and is not an official ANARI serialization format.
+
+### Experimental OpenUSD and glTF import
+
+Both showcase pages include a 3D asset selector with production-quality CC0 glTF Antique Camera,
+Lantern, and Toy Car assets; a detailed public-domain OpenUSD Utah/Fancy teapot atelier; an
+attributed Open Chess Set knight triptych; bundled CC0 USD vehicle assets; a composed vehicle
+gallery; and a procedural material laboratory. Choosing an asset imports its meshes, material
+bindings, transforms, retained instances, and supported lights into editable ANARI JSON. Imported
+models receive a normalized studio presentation with animated cyan and amber point lights, glossy
+materials, HDR emissive accents, and bloom.
+
+The glTF adapter uses `@loaders.gl/gltf`, preserves indexed meshes and physically based material
+parameters, and retains base-color, normal, metallic-roughness, emissive, occlusion, clearcoat,
+transmission, and sheen maps as real GPU image samplers. It reuses `@luma.gl/gltf` texture-transform
+math for `KHR_texture_transform`. Skinning and glTF animations remain unsupported.
+
+The format loader lives under `examples/showcase/anari/usd-loader` and follows the loaders.gl
+loader contract so it can eventually move into a dedicated `@loaders.gl/usd` module. It currently
+supports ASCII `.usda` / `.usd` stages and uncompressed `.usdz` packages with an ASCII root layer.
+Binary USDC crates, complete USD layer composition, and arbitrary MaterialX/MDL shading networks
+are not implemented. `UsdPreviewSurface` networks connected through `UsdUVTexture` are retained
+as image samplers. The local-file picker supports standalone ASCII stages and
+self-contained ASCII-root USDZ archives; loose external references require an accessible base URL.
 
 ## Status
 

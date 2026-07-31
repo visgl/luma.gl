@@ -6,6 +6,7 @@ import {
   type ANARILight,
   type ANARIMaterial,
   type ANARIRenderer,
+  type ANARIRendererParameters,
   type ANARIRendererSubtype,
   type ANARISurface,
   type ANARIVector3,
@@ -13,6 +14,8 @@ import {
 } from '@luma.gl/anari';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
+import {createANARIJSONScene, type ANARIJSONScene} from './playground-scene';
+import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
 
 type SceneAnimation = (time: number) => void;
 
@@ -26,6 +29,7 @@ type ShowcaseScene = {
   distance: number;
   elevation: number;
   azimuth: number;
+  rendererParameters?: ANARIRendererParameters;
 };
 
 type SceneContents = {
@@ -43,6 +47,16 @@ type InstanceTransform = {
 };
 
 const TAU = Math.PI * 2;
+const DEFAULT_RENDERER_PARAMETERS: ANARIRendererParameters = {
+  background: [0.016, 0.019, 0.044, 1],
+  ambientRadiance: 0.1,
+  exposure: 1.5,
+  bloomIntensity: 0.82,
+  bloomThreshold: 0.64,
+  bloomRadius: 8,
+  fogColor: [0.018, 0.025, 0.065],
+  fogDensity: 0.00024
+};
 
 export default class ANARIShowcase extends AnimationLoopTemplate {
   static info = '';
@@ -60,22 +74,15 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private bloomEnabled = true;
   private lastStatisticsUpdate = 0;
   private canvas: HTMLCanvasElement | null = null;
+  private readonly importedScenes = new Map<string, number>();
+  private importRequest = 0;
 
   constructor({device}: AnimationProps) {
     super();
 
     this.anari = new ANARIDevice(device);
     this.renderers = {
-      default: this.anari.newRenderer('default', {
-        background: [0.016, 0.019, 0.044, 1],
-        ambientRadiance: 0.1,
-        exposure: 1.5,
-        bloomIntensity: 0.82,
-        bloomThreshold: 0.64,
-        bloomRadius: 8,
-        fogColor: [0.018, 0.025, 0.065],
-        fogDensity: 0.00024
-      }),
+      default: this.anari.newRenderer('default', DEFAULT_RENDERER_PARAMETERS),
       debugNormals: this.anari.newRenderer('debugNormals', {
         background: [0.027, 0.033, 0.06, 1]
       }),
@@ -175,6 +182,30 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
       sceneList?.appendChild(button);
     }
 
+    const usdSelector = document.getElementById('usd-scene-selector');
+    if (usdSelector instanceof HTMLSelectElement) {
+      for (const sample of SCENE_SAMPLES) {
+        const option = document.createElement('option');
+        option.value = sample.identifier;
+        option.textContent = sample.label;
+        usdSelector.appendChild(option);
+      }
+      usdSelector.addEventListener('change', () => {
+        if (usdSelector.value === 'local-file') {
+          document.getElementById('usd-file-input')?.click();
+        } else if (usdSelector.value) {
+          void this.importScene(usdSelector.value, loadSceneSample(usdSelector.value));
+        }
+      });
+    }
+
+    document.getElementById('usd-file-input')?.addEventListener('change', event => {
+      const input = event.currentTarget;
+      if (input instanceof HTMLInputElement && input.files?.[0]) {
+        void this.importScene(`local-${input.files[0].name}`, loadSceneFile(input.files[0]));
+      }
+    });
+
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-renderer]')) {
       button.addEventListener('click', () => {
         const rendererName = button.dataset['renderer'];
@@ -193,8 +224,10 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
 
     document.getElementById('bloom-toggle')?.addEventListener('click', () => {
       this.bloomEnabled = !this.bloomEnabled;
+      const rendererParameters =
+        this.scenes[this.activeSceneIndex].rendererParameters || DEFAULT_RENDERER_PARAMETERS;
       this.renderers.default
-        .setParameter('bloomIntensity', this.bloomEnabled ? 0.82 : 0)
+        .setParameter('bloomIntensity', this.bloomEnabled ? rendererParameters.bloomIntensity : 0)
         .commitParameters();
       document.getElementById('bloom-toggle')?.classList.toggle('active', this.bloomEnabled);
     });
@@ -206,12 +239,85 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     this.orbitAzimuth = scene.azimuth;
     this.orbitElevation = scene.elevation;
     this.orbitDistance = scene.distance;
+    const rendererParameters = scene.rendererParameters || DEFAULT_RENDERER_PARAMETERS;
+    this.renderers.default
+      .setParameters({
+        ...DEFAULT_RENDERER_PARAMETERS,
+        ...rendererParameters,
+        bloomIntensity: this.bloomEnabled ? rendererParameters.bloomIntensity : 0
+      })
+      .commitParameters();
     this.frame.setParameter('world', scene.world).commitParameters();
-    setElementText('scene-number', `${String(sceneIndex + 1).padStart(2, '0')} / 03`);
+    setElementText(
+      'scene-number',
+      `${String(sceneIndex + 1).padStart(2, '0')} / ${String(this.scenes.length).padStart(2, '0')}`
+    );
     setElementText('scene-title', scene.title);
     setElementText('scene-description', scene.description);
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-scene]')) {
       button.classList.toggle('active', button.dataset['scene'] === String(sceneIndex));
+    }
+  }
+
+  private async importScene(
+    identifier: string,
+    pendingScene: Promise<ANARIJSONScene>
+  ): Promise<void> {
+    const cachedIndex = this.importedScenes.get(identifier);
+    if (cachedIndex !== undefined) {
+      this.selectScene(cachedIndex);
+      return;
+    }
+
+    const request = ++this.importRequest;
+    setElementText('usd-import-status', 'IMPORTING 3D SCENE…');
+    try {
+      const description = await pendingScene;
+      if (request !== this.importRequest) {
+        return;
+      }
+
+      const importedScene = createANARIJSONScene(this.anari, description);
+      const world = importedScene.frame.getParameter('world');
+      if (!world) {
+        throw new Error('The imported 3D scene did not produce an ANARI world.');
+      }
+
+      const cameraPosition = importedScene.cameraPosition;
+      const target = importedScene.cameraTarget;
+      const horizontalDistance = Math.hypot(
+        cameraPosition[0] - target[0],
+        cameraPosition[2] - target[2]
+      );
+      const sceneIndex =
+        this.scenes.push({
+          label: description.name,
+          title: description.name.replace(/ /, '\n'),
+          description: description.description || 'Imported 3D asset.',
+          world,
+          animations: [time => importedScene.update(time)],
+          target,
+          distance: Math.hypot(horizontalDistance, cameraPosition[1] - target[1]),
+          elevation: Math.atan2(cameraPosition[1] - target[1], horizontalDistance),
+          azimuth: Math.atan2(cameraPosition[0] - target[0], cameraPosition[2] - target[2]),
+          rendererParameters: {
+            background: description.renderer.background,
+            ambientRadiance: description.renderer.ambientRadiance,
+            exposure: description.renderer.exposure,
+            bloomIntensity: description.renderer.bloomIntensity,
+            bloomThreshold: description.renderer.bloomThreshold,
+            bloomRadius: description.renderer.bloomRadius,
+            fogColor: description.renderer.fogColor,
+            fogDensity: description.renderer.fogDensity
+          }
+        }) - 1;
+      importedScene.frame.destroy();
+      this.importedScenes.set(identifier, sceneIndex);
+      this.selectScene(sceneIndex);
+      setElementText('usd-import-status', '3D SCENE IMPORTED');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setElementText('usd-import-status', `IMPORT FAILED: ${message}`);
     }
   }
 
@@ -343,7 +449,7 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
   const spireGeometry = device.newGeometry('cone', {radius: 0.53, height: 1.65, segments: 32});
   const archGeometry = makeTorusGeometry(device, 1, 0.052, 66, 9);
   const shardGeometry = makeCrystalGeometry(device, 0.47, 2.6, 10);
-  const beaconGeometry = device.newGeometry('sphere', {radius: 0.18, segments: 14});
+  const beaconGeometry = device.newGeometry('sphere', {radius: 0.22, segments: 18});
   const towerGroups = [
     makeSurfaceGroup(
       device,
@@ -401,9 +507,9 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
     device,
     beaconGeometry,
     device.newMaterial('physicallyBased', {
-      baseColor: [1, 0.5, 0.2],
-      emissive: [1, 0.38, 0.08],
-      emissiveStrength: 2.8,
+      baseColor: [1, 0.84, 0.56],
+      emissive: [1, 0.74, 0.4],
+      emissiveStrength: 16,
       roughness: 0.08,
       clearcoat: 0.82
     })

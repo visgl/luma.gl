@@ -55,6 +55,7 @@ const sidebars = {
       type: 'category',
       label: 'Experimental',
       items: [
+        {type: 'doc', id: 'experimental/anari-playground', label: 'ANARI Playground'},
         'experimental/a-buffer',
         {type: 'doc', id: 'experimental/antialiasing', label: 'Antialiasing Techniques'},
         {type: 'doc', id: 'experimental/advanced-effects', label: 'Effects: Visualization City'},

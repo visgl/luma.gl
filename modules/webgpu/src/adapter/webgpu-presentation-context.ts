@@ -23,6 +23,10 @@ export class WebGPUPresentationContext extends PresentationContext {
   private depthStencilAttachment: WebGPUTexture | null = null;
   private framebuffer: WebGPUFramebuffer | null = null;
 
+  private get colorFormat(): 'rgba8unorm' | 'bgra8unorm' | 'rgba16float' {
+    return this.props.colorFormat || this.device.preferredColorFormat;
+  }
+
   get [Symbol.toStringTag](): string {
     return 'WebGPUPresentationContext';
   }
@@ -72,7 +76,7 @@ export class WebGPUPresentationContext extends PresentationContext {
 
     this.handle.configure({
       device: this.device.handle,
-      format: this.device.preferredColorFormat,
+      format: this.colorFormat,
       colorSpace: this.props.colorSpace,
       alphaMode: this.props.alphaMode,
       toneMapping: {mode: this.props.toneMapping}
@@ -143,7 +147,7 @@ export class WebGPUPresentationContext extends PresentationContext {
       this.colorAttachment = this.device.createTexture({
         id: `${this.id}#color-texture`,
         handle,
-        format: this.device.preferredColorFormat,
+        format: this.colorFormat,
         width: handle.width,
         height: handle.height
       });
@@ -152,7 +156,7 @@ export class WebGPUPresentationContext extends PresentationContext {
 
     this.colorAttachment._reinitialize(handle, {
       handle,
-      format: this.device.preferredColorFormat,
+      format: this.colorFormat,
       width: handle.width,
       height: handle.height
     });

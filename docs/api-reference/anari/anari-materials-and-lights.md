@@ -3,6 +3,7 @@
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 Materials define how a surface responds to light. Lights are attached to a world or an instanced group and contribute ambient, directional, point, or spot illumination.
@@ -35,7 +36,22 @@ type ANARIMaterialParameters = {
   opacity?: number;
   alphaMode?: 'opaque' | 'blend';
   clearcoat?: number;
+  clearcoatRoughness?: number;
   iridescence?: number;
+  transmission?: number;
+  indexOfRefraction?: number;
+  sheenColor?: ANARIVector3;
+  sheenRoughness?: number;
+  normalScale?: number;
+  occlusionStrength?: number;
+  baseColorTexture?: ANARISampler;
+  normalTexture?: ANARISampler;
+  metallicRoughnessTexture?: ANARISampler;
+  emissiveTexture?: ANARISampler;
+  occlusionTexture?: ANARISampler;
+  clearcoatTexture?: ANARISampler;
+  transmissionTexture?: ANARISampler;
+  sheenColorTexture?: ANARISampler;
 };
 ```
 
@@ -50,7 +66,26 @@ type ANARIMaterialParameters = {
 | `opacity` | Alpha component of the selected color, otherwise `1` | Surface opacity. Values below `1` enable alpha blending when the model is first compiled. |
 | `alphaMode` | — | Accepted parameter; the current runtime chooses blending from `opacity`, not `alphaMode`. |
 | `clearcoat` | `0` | Additional glossy clearcoat response. |
+| `clearcoatRoughness` | `0.18` | Width of the clearcoat highlight. |
 | `iridescence` | `0` | Angle-dependent spectral color effect. |
+| `transmission`, `indexOfRefraction` | `0`, `1.5` | Approximate glass transmission and Fresnel response. |
+| `sheenColor`, `sheenRoughness` | `[0, 0, 0]`, `0.5` | Cloth-like grazing response. |
+| `normalScale`, `occlusionStrength` | `1`, `1` | Multipliers for sampled normal and occlusion maps. |
+
+### Image samplers
+
+```ts
+const sampler = anariDevice.newSampler('image2D', {
+  image: texture,
+  transform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+});
+```
+
+`image2D` samplers retain a luma.gl `Texture` and an optional column-major 3×3 UV transform.
+Assign them to `baseColorTexture`, `normalTexture`, `metallicRoughnessTexture`,
+`emissiveTexture`, `occlusionTexture`, `clearcoatTexture`, `transmissionTexture`, or
+`sheenColorTexture`. glTF metallic-roughness maps follow the standard green roughness / blue
+metallic packing.
 
 Values are not automatically clamped or validated. Treat metallic, roughness, opacity, clearcoat, and iridescence as normalized values unless intentionally experimenting with the implementation.
 

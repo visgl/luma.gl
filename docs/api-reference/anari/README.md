@@ -3,6 +3,7 @@
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 `@luma.gl/anari` provides a private, experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
@@ -18,6 +19,7 @@ This package follows concepts from the ANARI object model, but it is not an ANAR
 - [Materials and lighting](/docs/api-reference/anari/anari-materials-and-lights): matte and physically based materials; ambient, directional, point, and spot lights.
 - [Scene hierarchy](/docs/api-reference/anari/anari-scene): surfaces, groups, transform instances, worlds, and instancing behavior.
 - [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, renderer controls, bloom, fog, frame rendering, and statistics.
+- [Scene schemas and JSON validation](/docs/api-reference/anari/anari-schemas): optional Zod object schemas, retained-reference validation, generated JSON Schema, and editor integration.
 - [ANARI C API and THREE.js mapping](/docs/api-reference/anari/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
 - [JSON scene playground](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
@@ -40,6 +42,7 @@ to the consuming workspace if a WebGL 2 fallback is required.
 ```text
 ANARIDevice
   ├── ANARIArray
+  ├── ANARISampler → ANARIMaterial
   ├── ANARIGeometry + ANARIMaterial → ANARISurface
   ├── ANARISurface + ANARILight → ANARIGroup
   ├── ANARIGroup + transform → ANARIInstance
@@ -59,6 +62,7 @@ import {
   ANARIObject,
   ANARIArray,
   ANARIGeometry,
+  ANARISampler,
   ANARIMaterial,
   ANARISurface,
   ANARIGroup,
@@ -80,6 +84,7 @@ The package also exports parameter interfaces, subtype unions, object metadata, 
 | Array | `array1D` |
 | Geometry | `triangle`, `sphere`, `cylinder`, `cone`, `quad` |
 | Material | `matte`, `physicallyBased` |
+| Sampler | `image2D` |
 | Surface | `default` |
 | Group | `default` |
 | Instance | `transform` |
@@ -97,6 +102,7 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | --- | --- | --- |
 | Retained scene objects and instanced surfaces | Supported | Supported |
 | Matte and physically based materials | Supported | Supported |
+| PBR image samplers and UV transforms | Supported | Supported |
 | Ambient, directional, point, and spot lighting | Supported | Supported |
 | Debug normals and depth renderers | Supported | Supported |
 | Bloom and fog | Supported | Supported |
@@ -116,7 +122,8 @@ instances, cameras, and renderer options into the API documented on these pages.
 Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable
 JSON presets.
 
-The playground format and scene loader are experimental example utilities, not public package
-exports or an official ANARI serialization format. See the
+The optional `@luma.gl/anari/schemas` entry point exports experimental Zod schemas and generated JSON
+Schema for editor integration. The scene format is not an official ANARI serialization format.
+See the [schema API reference](/docs/api-reference/anari/anari-schemas) and the
 [JSON scene playground developer guide](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground)
 for the full schema, animation vocabulary, and editing controls.

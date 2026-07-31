@@ -1,4 +1,5 @@
 import {ANARIDevice, type ANARIVector3} from '@luma.gl/anari';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
 import {
@@ -6,6 +7,9 @@ import {
   type ANARIJSONScene,
   type ANARIJSONSceneHandle
 } from './playground-scene';
+import {ANARISceneEditor} from './scene-editor';
+import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
+import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
 
 export default class ANARIPlayground extends AnimationLoopTemplate {
   static info = '';
@@ -21,14 +25,18 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private orbitElevation = 0.2;
   private orbitDistance = 20;
   private lastStatisticsUpdate = 0;
-  private readonly editor: HTMLTextAreaElement;
+  private readonly editor: ANARISceneEditor;
   private readonly canvas: HTMLCanvasElement;
+  private importRequest = 0;
 
   constructor({device}: AnimationProps) {
     super();
 
     this.anari = new ANARIDevice(device);
-    this.editor = getRequiredElement('scene-editor', HTMLTextAreaElement);
+    this.editor = new ANARISceneEditor(
+      getRequiredElement('scene-editor', HTMLTextAreaElement),
+      getRequiredElement('scene-monaco-editor', HTMLDivElement)
+    );
     this.canvas = getRequiredElement('playground-canvas', HTMLCanvasElement);
 
     this.initializeControls();
@@ -85,9 +93,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     this.canvas.removeEventListener('pointerup', this.handlePointerUp);
     this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
     this.canvas.removeEventListener('wheel', this.handleWheel);
-    this.editor.removeEventListener('input', this.handleEditorInput);
-    this.editor.removeEventListener('scroll', this.handleEditorScroll);
-    this.editor.removeEventListener('keydown', this.handleEditorKeyDown);
+    this.editor.dispose();
     this.scene?.destroy();
     this.anari.destroy();
   }
@@ -104,9 +110,29 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       presetList.appendChild(button);
     }
 
-    this.editor.addEventListener('input', this.handleEditorInput);
-    this.editor.addEventListener('scroll', this.handleEditorScroll);
-    this.editor.addEventListener('keydown', this.handleEditorKeyDown);
+    const usdSelector = getRequiredElement('usd-scene-selector', HTMLSelectElement);
+    for (const sample of SCENE_SAMPLES) {
+      const option = document.createElement('option');
+      option.value = sample.identifier;
+      option.textContent = sample.label;
+      usdSelector.appendChild(option);
+    }
+    usdSelector.addEventListener('change', () => {
+      if (usdSelector.value === 'local-file') {
+        getRequiredElement('usd-file-input', HTMLInputElement).click();
+      } else if (usdSelector.value) {
+        void this.importScene(loadSceneSample(usdSelector.value));
+      }
+    });
+    getRequiredElement('usd-file-input', HTMLInputElement).addEventListener('change', event => {
+      const input = event.currentTarget;
+      if (input instanceof HTMLInputElement && input.files?.[0]) {
+        void this.importScene(loadSceneFile(input.files[0]));
+      }
+    });
+
+    this.editor.onChange(this.handleEditorInput);
+    this.editor.onApply(() => this.applyEditorScene());
     this.canvas.addEventListener('pointerdown', this.handlePointerDown);
     this.canvas.addEventListener('pointermove', this.handlePointerMove);
     this.canvas.addEventListener('pointerup', this.handlePointerUp);
@@ -126,6 +152,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       void navigator.clipboard.writeText(this.editor.value);
       setElementText('editor-feedback', 'Scene JSON copied');
     });
+    getRequiredElement('export-gltf', HTMLButtonElement).addEventListener('click', () => {
+      void this.exportScene('gltf');
+    });
+    getRequiredElement('export-usd', HTMLButtonElement).addEventListener('click', () => {
+      void this.exportScene('usd');
+    });
     getRequiredElement('live-apply', HTMLButtonElement).addEventListener('click', event => {
       this.liveApplyEnabled = !this.liveApplyEnabled;
       const button = event.currentTarget;
@@ -142,6 +174,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private selectPreset(presetIndex: number): void {
     const preset = PLAYGROUND_PRESETS[presetIndex];
     this.activePresetIndex = presetIndex;
+    getRequiredElement('usd-scene-selector', HTMLSelectElement).value = '';
     this.editor.value = formatSceneJSON(preset.scene);
     this.updateEditorMetadata();
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) {
@@ -150,9 +183,42 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     this.applyEditorScene();
   }
 
+  private async importScene(pendingScene: Promise<ANARIJSONScene>): Promise<void> {
+    const request = ++this.importRequest;
+    setElementText('editor-feedback', 'Importing 3D scene…');
+    try {
+      const scene = await pendingScene;
+      if (request !== this.importRequest) {
+        return;
+      }
+      this.editor.value = formatSceneJSON(scene);
+      this.updateEditorMetadata();
+      for (const button of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) {
+        button.classList.remove('active');
+      }
+      this.applyEditorScene();
+      setElementText('editor-feedback', '3D asset translated into editable ANARI JSON');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setElementText('editor-feedback', '3D import failed; last valid scene preserved');
+      setElementText('scene-error', message);
+      document.getElementById('scene-error')?.classList.add('visible');
+      document.getElementById('editor-status')?.classList.add('invalid');
+    }
+  }
+
   private applyEditorScene(): void {
     try {
-      const sceneDescription = JSON.parse(this.editor.value) as ANARIJSONScene;
+      const parsedScene: unknown = JSON.parse(this.editor.value);
+      const validatedScene = ANARISceneSchema.safeParse(parsedScene);
+      if (!validatedScene.success) {
+        this.editor.setIssues(validatedScene.error.issues);
+        const issue = validatedScene.error.issues[0];
+        const path = issue.path.length > 0 ? `${issue.path.join('.')} · ` : '';
+        throw new Error(`${path}${issue.message}`);
+      }
+      this.editor.clearIssues();
+      const sceneDescription: ANARIJSONScene = validatedScene.data;
       const nextScene = createANARIJSONScene(this.anari, sceneDescription);
       const previousScene = this.scene;
       this.scene = nextScene;
@@ -185,13 +251,37 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     }
   }
 
+  private async exportScene(format: 'gltf' | 'usd'): Promise<void> {
+    try {
+      const parsedScene: unknown = JSON.parse(this.editor.value);
+      const validatedScene = ANARISceneSchema.safeParse(parsedScene);
+      if (!validatedScene.success) {
+        const issue = validatedScene.error.issues[0];
+        const path = issue.path.length > 0 ? issue.path.join('.') + ' · ' : '';
+        throw new Error(path + issue.message);
+      }
+      setElementText('editor-feedback', 'Exporting ' + format.toUpperCase() + ' scene…');
+      const scene = validatedScene.data as ANARIJSONScene;
+      const contents =
+        format === 'gltf'
+          ? await exportANARIJSONSceneToGLTF(scene)
+          : exportANARIJSONSceneToUSD(scene);
+      downloadTextFile(
+        contents,
+        makeExportFilename(scene.name, format === 'gltf' ? 'gltf' : 'usda'),
+        format === 'gltf' ? 'model/gltf+json' : 'model/vnd.usda'
+      );
+      setElementText('editor-feedback', format.toUpperCase() + ' scene downloaded');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setElementText('editor-feedback', 'Export failed; fix scene errors first');
+      setElementText('scene-error', message);
+      document.getElementById('scene-error')?.classList.add('visible');
+    }
+  }
+
   private updateEditorMetadata(): void {
-    const lines = this.editor.value.split('\n').length;
-    setElementText(
-      'editor-lines',
-      Array.from({length: lines}, (_, line) => String(line + 1)).join('\n')
-    );
-    setElementText('editor-line-count', `${lines.toLocaleString()} LINES`);
+    setElementText('editor-line-count', `${this.editor.lineCount.toLocaleString()} LINES`);
   }
 
   private resetCamera(scene: ANARIJSONSceneHandle): void {
@@ -227,28 +317,6 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         this.pendingApply = null;
         this.applyEditorScene();
       }, 480);
-    }
-  };
-
-  private readonly handleEditorScroll = (): void => {
-    const lineNumbers = document.getElementById('editor-lines');
-    if (lineNumbers) {
-      lineNumbers.style.transform = `translateY(-${this.editor.scrollTop}px)`;
-    }
-  };
-
-  private readonly handleEditorKeyDown = (event: KeyboardEvent): void => {
-    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-      event.preventDefault();
-      this.applyEditorScene();
-      return;
-    }
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      const selectionStart = this.editor.selectionStart;
-      const selectionEnd = this.editor.selectionEnd;
-      this.editor.setRangeText('  ', selectionStart, selectionEnd, 'end');
-      this.handleEditorInput();
     }
   };
 
@@ -307,4 +375,21 @@ function formatSceneJSON(scene: unknown): string {
     /\[\n((?:[ \t]+-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?,?\n)+)[ \t]*\]/g,
     (_match, components: string) => `[${components.trim().replace(/,\s+/g, ', ')}]`
   );
+}
+
+function makeExportFilename(name: string, extension: string): string {
+  const normalized = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return (normalized || 'anari-scene') + '.' + extension;
+}
+
+function downloadTextFile(contents: string, filename: string, mimeType: string): void {
+  const url = URL.createObjectURL(new Blob([contents], {type: mimeType}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }

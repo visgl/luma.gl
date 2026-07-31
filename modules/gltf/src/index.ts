@@ -4,6 +4,12 @@ export {loadPBREnvironment, type PBREnvironment} from './pbr/pbr-environment';
 export {type ParsedPBRMaterial} from './pbr/pbr-material';
 export {parsePBRMaterial, type ParsePBRMaterialOptions} from './parsers/parse-pbr-material';
 export {parseGLTFLights, type ParseGLTFLightsOptions} from './parsers/parse-gltf-lights';
+export {
+  getTextureTransformMatrix,
+  resolveTextureCoordinateSet,
+  resolveTextureTransform,
+  type PBRTextureTransform
+} from './pbr/texture-transform';
 
 // glTF Scenegraph Instantiator
 export {

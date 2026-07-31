@@ -17,6 +17,8 @@ import type {
   ANARIObjectType,
   ANARIRendererParameters,
   ANARIRendererSubtype,
+  ANARISamplerParameters,
+  ANARISamplerSubtype,
   ANARISurfaceParameters,
   ANARIWorldParameters
 } from './anari-types';
@@ -117,6 +119,18 @@ export class ANARIMaterial extends ANARIObject<ANARIMaterialParameters> {
     parameters: ANARIMaterialParameters = {}
   ) {
     super(device, 'material', subtype, parameters);
+  }
+}
+
+export class ANARISampler extends ANARIObject<ANARISamplerParameters> {
+  declare readonly subtype: ANARISamplerSubtype;
+
+  constructor(
+    device: ANARIDevice,
+    subtype: ANARISamplerSubtype,
+    parameters: ANARISamplerParameters
+  ) {
+    super(device, 'sampler', subtype, parameters);
   }
 }
 

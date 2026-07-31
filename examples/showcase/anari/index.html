@@ -127,6 +127,41 @@
         margin-top: 35px;
       }
 
+      .usd-import-panel {
+        display: grid;
+        gap: 8px;
+        max-width: 275px;
+        margin-top: 27px;
+      }
+
+      .usd-import-label,
+      .usd-import-status {
+        color: rgba(198, 207, 248, 0.52);
+        font-size: 9px;
+        letter-spacing: 0.11em;
+      }
+
+      .usd-scene-selector {
+        width: 100%;
+        padding: 9px 10px;
+        border: 1px solid rgba(170, 147, 246, 0.3);
+        border-radius: 5px;
+        background: rgba(18, 20, 40, 0.87);
+        color: #e8e0ff;
+        cursor: pointer;
+        font: inherit;
+        font-size: 11px;
+      }
+
+      .usd-scene-selector option {
+        background: #111322;
+      }
+
+      .usd-import-status {
+        max-width: 275px;
+        overflow-wrap: anywhere;
+      }
+
       .scene-button,
       .mode-button {
         border: 0;
@@ -268,6 +303,16 @@
           margin-top: 17px;
         }
 
+        .usd-import-panel {
+          max-width: 230px;
+          margin-top: 15px;
+        }
+
+        .usd-import-label,
+        .usd-import-status {
+          display: none;
+        }
+
         .scene-button {
           font-size: 10px;
         }
@@ -311,6 +356,15 @@
       <h1 id="scene-title" class="scene-title"></h1>
       <p id="scene-description" class="scene-description"></p>
       <nav id="scene-list" class="scene-list" aria-label="Scenes"></nav>
+      <section class="usd-import-panel" aria-label="Scene import">
+        <span class="usd-import-label">IMPORT 3D SCENE</span>
+        <select id="usd-scene-selector" class="usd-scene-selector" aria-label="Choose 3D scene">
+          <option value="">Choose a 3D scene…</option>
+          <option value="local-file">Open local USD/glTF file…</option>
+        </select>
+        <input id="usd-file-input" type="file" accept=".usd,.usda,.usdz,.gltf,.glb" hidden />
+        <span id="usd-import-status" class="usd-import-status">USD · USDA · USDZ · glTF · GLB</span>
+      </section>
     </main>
     <aside class="controls" aria-label="Renderer controls">
       <button class="mode-button active" data-renderer="default">LIT</button>

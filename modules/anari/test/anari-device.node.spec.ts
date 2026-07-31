@@ -36,6 +36,29 @@ test('ANARI device reports object subtypes and implemented extensions', testCont
     device.getObjectInfo('material').extensions.includes('KHR_MATERIAL_PHYSICALLY_BASED'),
     'physically based materials are advertised'
   );
+  testContext.deepEqual(
+    device.getObjectSubtypes('sampler'),
+    ['image2D'],
+    'image samplers are discoverable'
+  );
+
+  device.destroy();
+  testContext.end();
+});
+
+test('ANARI image samplers retain GPU textures and transforms', testContext => {
+  const graphicsDevice = new NullDevice({});
+  const device = new ANARIDevice(graphicsDevice);
+  const image = graphicsDevice.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
+  const transform = [2, 0, 0, 0, 2, 0, 0.25, 0.5, 1] as const;
+  const sampler = device.newSampler('image2D', {image, transform});
+
+  testContext.equal(sampler.getParameter('image'), image, 'samplers retain their GPU image');
+  testContext.deepEqual(
+    sampler.getParameter('transform'),
+    transform,
+    'samplers retain column-major UV transforms'
+  );
 
   device.destroy();
   testContext.end();
@@ -95,6 +118,33 @@ test('ANARI renderer batches repeated group instances by surface', testContext =
   testContext.end();
 });
 
+test('ANARI renderer recompiles surfaces after geometry replacement', testContext => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const triangle = device.newGeometry('triangle', {
+    'vertex.position': new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    'vertex.normal': new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])
+  });
+  const sphere = device.newGeometry('sphere', {radius: 1, segments: 8});
+  const material = device.newMaterial('physicallyBased', {baseColor: [1, 1, 1]});
+  const surface = device.newSurface({geometry: triangle, material});
+  const world = device.newWorld({surface: [surface]});
+  const camera = device.newCamera('perspective', {position: [0, 0, 4]});
+  const renderer = device.newRenderer('default');
+  const frame = device.newFrame({world, camera, renderer, size: [320, 240]});
+
+  testContext.equal(frame.render().triangleCount, 1, 'the original geometry is compiled');
+
+  surface.setParameter('geometry', sphere).commitParameters();
+  testContext.ok(
+    frame.render().triangleCount > 1,
+    'a replacement geometry with the same version recompiles the surface'
+  );
+
+  frame.destroy();
+  device.destroy();
+  testContext.end();
+});
+
 test('ANARI object arrays preserve zero-copy typed arrays', testContext => {
   const device = new ANARIDevice(new NullDevice({}));
   const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
@@ -105,6 +155,29 @@ test('ANARI object arrays preserve zero-copy typed arrays', testContext => {
   positions[0] = 3;
   testContext.equal(array.data[0], 3, 'shared array mutations remain observable');
 
+  device.destroy();
+  testContext.end();
+});
+
+test('ANARI triangle geometries render packed RGB vertex colors', testContext => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const geometry = device.newGeometry('triangle', {
+    'vertex.position': new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    'vertex.normal': new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+    'vertex.attribute0': new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1])
+  });
+  const material = device.newMaterial('physicallyBased', {baseColor: [1, 1, 1]});
+  const surface = device.newSurface({geometry, material});
+  const world = device.newWorld({surface: [surface]});
+  const camera = device.newCamera('perspective', {position: [0, 0, 4]});
+  const renderer = device.newRenderer('default');
+  const frame = device.newFrame({world, camera, renderer, size: [320, 240]});
+  const statistics = frame.render();
+
+  testContext.equal(statistics.drawCount, 1, 'colored triangle meshes compile into one draw');
+  testContext.equal(statistics.triangleCount, 1, 'RGB attributes preserve triangle geometry');
+
+  frame.destroy();
   device.destroy();
   testContext.end();
 });

@@ -3,6 +3,7 @@
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 `ANARIDevice` adapts an existing luma.gl `Device` into a retained, ANARI-inspired scene API. It creates scene objects, advertises supported subtypes and extensions, renders frames, and owns the renderer's cached GPU resources.
@@ -50,6 +51,7 @@ KHR_LIGHT_POINT
 KHR_LIGHT_SPOT
 KHR_MATERIAL_MATTE
 KHR_MATERIAL_PHYSICALLY_BASED
+KHR_SAMPLER_IMAGE2D
 ```
 
 The extension list describes this proof of concept's supported concepts; it is not a Khronos conformance claim.
@@ -68,6 +70,11 @@ newMaterial(
   subtype: ANARIMaterialSubtype,
   parameters?: ANARIMaterialParameters
 ): ANARIMaterial;
+
+newSampler(
+  subtype: 'image2D',
+  parameters: ANARISamplerParameters
+): ANARISampler;
 
 newSurface(parameters: ANARISurfaceParameters): ANARISurface;
 newGroup(parameters?: ANARIGroupParameters): ANARIGroup;
@@ -127,6 +134,7 @@ type ANARIObjectType =
   | 'light'
   | 'material'
   | 'renderer'
+  | 'sampler'
   | 'surface'
   | 'world';
 ```

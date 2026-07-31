@@ -174,7 +174,7 @@ function makeCrystalCathedral(): ANARIJSONScene {
         '@@type': 'triangle',
         generator: {'@@type': 'crystal', radius: 0.47, height: 2.6, sides: 10}
       },
-      beacon: {'@@type': 'sphere', radius: 0.18, segments: 14}
+      beacon: {'@@type': 'sphere', radius: 0.22, segments: 18}
     },
     materials: {
       sapphire: {
@@ -218,9 +218,9 @@ function makeCrystalCathedral(): ANARIJSONScene {
       },
       beacon: {
         '@@type': 'physicallyBased',
-        baseColor: [1, 0.5, 0.2],
-        emissive: [1, 0.38, 0.08],
-        emissiveStrength: 2.8,
+        baseColor: [1, 0.84, 0.56],
+        emissive: [1, 0.74, 0.4],
+        emissiveStrength: 16,
         roughness: 0.08,
         clearcoat: 0.82
       },

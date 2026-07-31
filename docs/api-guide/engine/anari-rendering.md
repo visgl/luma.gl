@@ -3,6 +3,7 @@
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 `@luma.gl/anari` is an experimental, private retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
@@ -627,15 +628,56 @@ yarn workspace luma.gl-examples-showcase-anari start
 ```
 
 Open `/playground.html` on the reported development-server URL, or select **JSON LAB** in the
-Observatory. The playground provides a live JSON editor, animated example scenes, WebGPU/WebGL
-selection, automatic HDR presentation when available, orbit controls, validation feedback, and
-live instance, draw-call, and triangle statistics.
+Observatory. The playground provides a Monaco JSON editor with syntax highlighting,
+schema-aware completions, property documentation, red error indicators, animated example scenes,
+WebGPU/WebGL selection, automatic HDR presentation when available, orbit controls, validation
+feedback, and live instance, draw-call, and triangle statistics.
+
+Use **GLTF ↓** or **USD ↓** to download the currently valid retained scene. Export bakes procedural
+geometry, starfield distributions, and retained instances into a static snapshot; transfers mesh
+positions, normals, UVs, vertex colors, materials, texture images, camera, and supported lights;
+and emits standalone JSON glTF with embedded buffers/images or ASCII `.usda`. ANARI animation
+declarations, bloom, fog, and renderer-only HDR controls remain ANARI-specific and are not exported.
 
 :::caution Experimental playground format
-The JSON format is an experimental playground convention. It is not part of the ANARI C
-specification, is not an exported package API, and can change with the private
-`@luma.gl/anari` workspace.
+The JSON format and its optional schema exports are experimental. They are not part of the ANARI C
+specification and can change with the private `@luma.gl/anari` workspace.
 :::
+
+### Validate scenes with Zod and JSON Schema
+
+The optional `@luma.gl/anari/schemas` entry point exports separate Zod schemas for geometry,
+materials, lights, cameras, renderers, surfaces, groups, instances, animations, and complete
+scenes. Importing ordinary rendering objects from `@luma.gl/anari` does not load Zod:
+
+```ts
+import {
+  ANARIGeometrySchema,
+  ANARISceneSchema,
+  ANARI_SCENE_JSON_SCHEMA
+} from '@luma.gl/anari/schemas';
+
+const geometry = ANARIGeometrySchema.safeParse({
+  '@@type': 'sphere',
+  radius: 1,
+  segments: 32
+});
+
+const result = ANARISceneSchema.safeParse(scene);
+
+if (!result.success) {
+  for (const issue of result.error.issues) {
+    console.error(issue.path.join('.'), issue.message);
+  }
+}
+```
+
+`ANARI_SCENE_JSON_SCHEMA` is generated directly from the Zod scene schema as draft-07 JSON Schema.
+Associate it with a Monaco JSON model to provide subtype-aware autocomplete, property hovers,
+numeric bounds, syntax highlighting, and ordinary schema diagnostics. Runtime Zod validation adds
+semantic checks for missing retained resources, duplicate instance identifiers, missing group
+references, and animated lights following nonexistent instances; the playground maps those issue
+paths back to precise Monaco error indicators.
 
 ### Describe a scene with JSON
 
@@ -867,6 +909,53 @@ manual changes, use **APPLY** or `⌘ Enter` / `Ctrl Enter` to commit, and selec
 identifiers, unsupported subtypes, and incompatible animations are reported inline while preserving
 the last successfully rendered scene.
 
+### Import OpenUSD and glTF scenes
+
+Both the Observatory and the JSON playground expose an experimental 3D scene selector supporting
+OpenUSD and glTF. Production-quality glTF samples include an Antique Camera, Brass Lantern, and
+Vintage Toy Car from Khronos Group's CC0 glTF Sample Assets. OpenUSD samples include a detailed
+Utah/Fancy teapot atelier, a cinematic Open Chess Set knight triptych, a composed vehicle gallery,
+a formula racer, a crimson sedan, a reusable wheel assembly, and a material laboratory. The teapot
+and vehicle models are selected from public-domain CC0 USD Working Group assets. The knight is
+attributed to the Academy Software Foundation's Open Chess Set under CC BY 4.0; complete credits
+accompany the bundled assets.
+
+The glTF adapter uses the existing loaders.gl GLTF loader, preserves indexed triangle meshes,
+reuses retained surfaces for repeated nodes, translates physically based materials, and retains
+base-color, normal, metallic-roughness, emissive, occlusion, clearcoat, transmission, and sheen
+maps as real fragment-sampled ANARI image samplers. It shares `@luma.gl/gltf`'s canonical
+`KHR_texture_transform` math. Local file selection supports standalone `.gltf` and `.glb` assets
+as well as supported OpenUSD files.
+
+The example-local `USDLoader` follows the loaders.gl loader contract and is structured for future
+extraction into an `@loaders.gl/usd` module:
+
+```ts
+import {load} from '@loaders.gl/core';
+import {USDLoader} from './usd-loader/usd-loader';
+import {makeANARIJSONSceneFromUSD} from './usd-to-anari';
+
+const stage = await load('/usd/vehicle-gallery.usda', USDLoader, {
+  usd: {variantSelections: {wheels: 'wheelNormal'}}
+});
+
+const scene = makeANARIJSONSceneFromUSD(stage, 'VEHICLE GALLERY');
+```
+
+The loader preserves stage metadata, prim hierarchies, typed attributes, material bindings,
+references, payloads, selected variants, and local overrides. The ANARI adapter converts supported
+meshes, analytic primitives, transform instances, `UsdPreviewSurface` materials, connected
+`UsdUVTexture` images, directional lights, and point lights into the same editable JSON format as
+the built-in playground presets.
+Imported scenes are normalized into a consistent studio-scale coordinate system and automatically
+receive glossy staging, animated cyan/amber HDR emitters, real following point lights, and bloom.
+
+Supported input is ASCII `.usda` / `.usd` plus uncompressed `.usdz` archives whose root layer is
+ASCII. Binary USDC crates, complete USD composition semantics, and arbitrary MaterialX/MDL networks
+remain unsupported. Local uploads must be standalone ASCII stages or
+self-contained ASCII-root USDZ archives; a loose stage with external references needs a resolvable
+URL.
+
 ## Run the showcase
 
 From the repository root:
@@ -895,11 +984,13 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - No ANARI C API binding, binary protocol, conformance claim, or general renderer plug-in mechanism.
 - Geometry subtypes are limited to triangle meshes, spheres, cylinders, cones, and quads.
 - Only one-dimensional data/reference arrays are implemented; array metadata is not interpreted or validated.
-- `'vertex.attribute0'`, material `alphaMode`, and light `falloffAngle` are accepted but not consumed by the renderer.
+- Material `alphaMode` and light `falloffAngle` are accepted but not consumed by the renderer.
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Changing an opaque compiled material to transparent does not rebuild its blending pipeline.
 - Group-attached lights are not transformed by their owning instance.
-- Visibility, picking, textures, sampled material parameters, volumes, clipping planes, shadows, and asynchronous frame mapping are not implemented.
+- Visibility, picking, volumes, clipping planes, shadows, and asynchronous frame mapping are not implemented.
+- Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
+- Experimental glTF import supports common PBR textures and selected material extensions, but not skinning or animations.
 - WebGL 2 preserves the same scene API but does not support the WebGPU HDR presentation path.
 - The ANARI device releases its renderer resources but does not destroy the underlying shared luma.gl graphics device.
 

@@ -1,0 +1,71 @@
+#usda 1.0
+(
+    defaultPrim = "wheelVariant"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "wheelVariant" (
+    variants = {
+        string wheels = "wheelWide"
+    }
+    prepend variantSets = "wheels"
+)
+{
+    variantSet "wheels" = {
+        "wheelBlack" {
+            def "wheelBlackAsset" (
+                prepend references = @./wheelBlack/asset/wheelBlackAsset.usda@</wheelBlack>
+            )
+            {
+            }
+
+        }
+        "wheelLargeRim" {
+            def "wheelLargeRimAsset" (
+                prepend references = @./wheelLargeRim/asset/wheelLargeRimAsset.usda@</wheelLargeRim>
+            )
+            {
+            }
+
+        }
+        "wheelNormal" {
+            def "wheelNormalAsset" (
+                prepend references = @./wheelNormal/asset/wheelNormalAsset.usda@</wheelNormal>
+            )
+            {
+            }
+
+        }
+        "wheelRed" {
+            def "wheelRedAsset" (
+                prepend references = @./wheelRed/asset/wheelRedAsset.usda@
+            )
+            {
+            }
+
+        }
+        "wheelVintage" {
+            def "wheelVintageAsset" (
+                prepend references = @./wheelVintage/asset/wheelVintageAsset.usda@
+            )
+            {
+            }
+
+        }
+        "wheelWide" {
+            def "wheelWideAsset" (
+                prepend references = @./wheelWide/asset/wheelWideAsset.usda@</wheelWide>
+            )
+            {
+            }
+
+        }
+    }
+}
+
+

@@ -13,7 +13,7 @@ import {
   SphereGeometry
 } from '@luma.gl/engine';
 import {type Light, lighting} from '@luma.gl/shadertools';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4, type NumberArray9} from '@math.gl/core';
 import {
   ANARIArray,
   ANARIGroup,
@@ -23,6 +23,7 @@ import {
   type ANARIInstance,
   type ANARILight,
   type ANARIMaterial,
+  type ANARISampler,
   type ANARISurface,
   type ANARIWorld
 } from './anari-objects';
@@ -39,14 +40,27 @@ import type {ANARIFrameStatistics, ANARIVector3} from './anari-types';
 
 type CompiledSurface = {
   surface: ANARISurface;
+  geometry: ANARIGeometry;
   geometryVersion: number;
   materialVersion: number;
   placementCount: number;
   model: Model;
-  material: Material<{anariMaterial: ANARIMaterialUniforms}, {}>;
+  material: Material<{anariMaterial: ANARIMaterialUniforms}, ANARIMaterialBindings>;
   transformBuffers: Buffer[];
   transforms: Float32Array[];
   triangleCount: number;
+  textureSignature: string;
+};
+
+type ANARIMaterialBindings = {
+  anariBaseColorTexture: Texture;
+  anariNormalTexture: Texture;
+  anariMetallicRoughnessTexture: Texture;
+  anariEmissiveTexture: Texture;
+  anariOcclusionTexture: Texture;
+  anariClearcoatTexture: Texture;
+  anariTransmissionTexture: Texture;
+  anariSheenColorTexture: Texture;
 };
 
 type SurfacePlacement = {
@@ -62,15 +76,25 @@ type FrameResources = {
 };
 
 const IDENTITY_MATRIX = new Matrix4();
+const IDENTITY_UV_TRANSFORM = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 
 export class ANARIRenderingRuntime {
   private readonly device: Device;
-  private readonly materialFactory: MaterialFactory<{anariMaterial: ANARIMaterialUniforms}, {}>;
+  private readonly materialFactory: MaterialFactory<
+    {anariMaterial: ANARIMaterialUniforms},
+    ANARIMaterialBindings
+  >;
+  private readonly fallbackWhiteTexture: Texture;
+  private readonly fallbackNormalTexture: Texture;
+  private readonly fallbackBlackTexture: Texture;
   private readonly frames = new Map<ANARIFrame, FrameResources>();
 
   constructor(device: Device) {
     this.device = device;
     this.materialFactory = new MaterialFactory(device, {modules: [anariMaterialModule]});
+    this.fallbackWhiteTexture = createFallbackTexture(device, 'white', [255, 255, 255, 255]);
+    this.fallbackNormalTexture = createFallbackTexture(device, 'normal', [128, 128, 255, 255]);
+    this.fallbackBlackTexture = createFallbackTexture(device, 'black', [0, 0, 0, 255]);
   }
 
   render(frame: ANARIFrame): ANARIFrameStatistics {
@@ -178,6 +202,9 @@ export class ANARIRenderingRuntime {
     for (const frame of Array.from(this.frames.keys())) {
       this.destroyFrame(frame);
     }
+    this.fallbackWhiteTexture.destroy();
+    this.fallbackNormalTexture.destroy();
+    this.fallbackBlackTexture.destroy();
   }
 
   private getFrameResources(frame: ANARIFrame): FrameResources {
@@ -204,7 +231,9 @@ export class ANARIRenderingRuntime {
     let compiledSurface = frameResources.compiledSurfaces.get(surface.id);
     if (
       compiledSurface &&
-      (compiledSurface.geometryVersion !== geometry.version ||
+      (compiledSurface.geometry !== geometry ||
+        compiledSurface.geometryVersion !== geometry.version ||
+        compiledSurface.textureSignature !== getMaterialTextureSignature(material) ||
         compiledSurface.placementCount !== placements.length)
     ) {
       destroyCompiledSurface(compiledSurface);
@@ -236,13 +265,16 @@ export class ANARIRenderingRuntime {
         transforms.push(transformData);
       }
 
-      const engineMaterial = this.materialFactory.createMaterial({id: `${material.id}-material`});
+      const engineMaterial = this.materialFactory.createMaterial({
+        id: `${material.id}-material`,
+        bindings: this.getMaterialBindings(material)
+      });
       updateMaterial(engineMaterial, material);
       const shaderInputs = new ShaderInputs<{
         anariApp: ANARIAppUniforms;
         lighting: typeof lighting.props;
       }>({anariApp: anariAppModule, lighting});
-      const opacity = material.getParameter('opacity') ?? 1;
+      const opacity = getMaterialOpacity(material);
       const model = new Model(this.device, {
         id: `${surface.id}-model`,
         source: ANARI_WGSL_SHADER,
@@ -269,6 +301,7 @@ export class ANARIRenderingRuntime {
 
       compiledSurface = {
         surface,
+        geometry,
         geometryVersion: geometry.version,
         materialVersion: material.version,
         placementCount: placements.length,
@@ -276,11 +309,47 @@ export class ANARIRenderingRuntime {
         material: engineMaterial,
         transformBuffers,
         transforms,
-        triangleCount: (engineGeometry.indices?.value.length ?? engineGeometry.vertexCount) / 3
+        triangleCount: (engineGeometry.indices?.value.length ?? engineGeometry.vertexCount) / 3,
+        textureSignature: getMaterialTextureSignature(material)
       };
       frameResources.compiledSurfaces.set(surface.id, compiledSurface);
     }
     return compiledSurface;
+  }
+
+  private getMaterialBindings(material: ANARIMaterial): ANARIMaterialBindings {
+    const parameters = material.getParameters();
+    return {
+      anariBaseColorTexture: getSamplerTexture(
+        parameters.baseColorTexture,
+        this.fallbackWhiteTexture
+      ),
+      anariNormalTexture: getSamplerTexture(parameters.normalTexture, this.fallbackNormalTexture),
+      anariMetallicRoughnessTexture: getSamplerTexture(
+        parameters.metallicRoughnessTexture,
+        this.fallbackWhiteTexture
+      ),
+      anariEmissiveTexture: getSamplerTexture(
+        parameters.emissiveTexture,
+        this.fallbackBlackTexture
+      ),
+      anariOcclusionTexture: getSamplerTexture(
+        parameters.occlusionTexture,
+        this.fallbackWhiteTexture
+      ),
+      anariClearcoatTexture: getSamplerTexture(
+        parameters.clearcoatTexture,
+        this.fallbackWhiteTexture
+      ),
+      anariTransmissionTexture: getSamplerTexture(
+        parameters.transmissionTexture,
+        this.fallbackWhiteTexture
+      ),
+      anariSheenColorTexture: getSamplerTexture(
+        parameters.sheenColorTexture,
+        this.fallbackWhiteTexture
+      )
+    };
   }
 
   private getFramebuffer(frame: ANARIFrame, frameResources: FrameResources): Framebuffer {
@@ -513,15 +582,17 @@ function getFrameSize(frame: ANARIFrame, device: Device): [number, number] {
 function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
   const parameters = geometry.getParameters();
   const segments = parameters.segments ?? 32;
+  let sourceGeometry: Geometry;
   switch (geometry.subtype) {
     case 'sphere':
-      return new SphereGeometry({
+      sourceGeometry = new SphereGeometry({
         radius: parameters.radius ?? 1,
         nlat: segments,
         nlong: segments * 2
       });
+      break;
     case 'cylinder':
-      return new CylinderGeometry({
+      sourceGeometry = new CylinderGeometry({
         radius: parameters.radius ?? 1,
         height: parameters.height ?? 1,
         nradial: segments,
@@ -529,42 +600,77 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
         topCap: true,
         bottomCap: true
       });
+      break;
     case 'cone':
-      return new ConeGeometry({
+      sourceGeometry = new ConeGeometry({
         radius: parameters.radius ?? 1,
         height: parameters.height ?? 1,
         nradial: segments,
         nvertical: 1,
         cap: true
       });
+      break;
     case 'quad':
-      return new PlaneGeometry({
+      sourceGeometry = new PlaneGeometry({
         type: 'x,z',
         xlen: parameters.width ?? 1,
         zlen: parameters.height ?? parameters.width ?? 1,
         flipCull: true
       });
+      break;
     case 'triangle': {
       const positions = unwrapArray(parameters['vertex.position']);
       const normals = unwrapArray(parameters['vertex.normal']);
+      const textureCoordinates = unwrapArray(parameters['vertex.attribute1']);
       const indices = unwrapArray(parameters['primitive.index']);
       if (!(positions instanceof Float32Array)) {
         throw new Error('Triangle geometry requires vertex.position');
       }
-      return new Geometry({
+      sourceGeometry = new Geometry({
         topology: 'triangle-list',
         attributes: {
           POSITION: {size: 3, value: positions},
           NORMAL: {
             size: 3,
             value: normals instanceof Float32Array ? normals : makeVertexNormals(positions)
+          },
+          TEXCOORD_0: {
+            size: 2,
+            value:
+              textureCoordinates instanceof Float32Array
+                ? textureCoordinates
+                : new Float32Array((positions.length / 3) * 2)
           }
         },
         indices:
           indices instanceof Uint16Array || indices instanceof Uint32Array ? indices : undefined
       });
+      break;
     }
   }
+
+  const positions = sourceGeometry.attributes['POSITION']?.value;
+  const vertexCount = positions ? positions.length / 3 : sourceGeometry.vertexCount;
+  const attributes = unwrapArray(parameters['vertex.attribute0']);
+  const vertexColors =
+    attributes instanceof Float32Array ? attributes : new Float32Array(vertexCount * 3).fill(1);
+  const textureCoordinates = sourceGeometry.attributes['TEXCOORD_0']?.value;
+
+  return new Geometry({
+    topology: sourceGeometry.topology || 'triangle-list',
+    attributes: {
+      ...sourceGeometry.attributes,
+      COLOR_0: {size: 3, value: vertexColors},
+      TEXCOORD_0: {
+        size: 2,
+        value:
+          textureCoordinates instanceof Float32Array
+            ? textureCoordinates
+            : new Float32Array(vertexCount * 2)
+      }
+    },
+    indices: sourceGeometry.indices
+  });
 }
 
 function unwrapArray(value: unknown): unknown {
@@ -609,7 +715,7 @@ function updateTransforms(compiledSurface: CompiledSurface, placements: SurfaceP
 }
 
 function updateMaterial(
-  engineMaterial: Material<{anariMaterial: ANARIMaterialUniforms}, {}>,
+  engineMaterial: Material<{anariMaterial: ANARIMaterialUniforms}, ANARIMaterialBindings>,
   material: ANARIMaterial
 ): void {
   const parameters = material.getParameters();
@@ -624,12 +730,81 @@ function updateMaterial(
         emissive[1] * emissiveStrength,
         emissive[2] * emissiveStrength
       ],
+      sheenColor: parameters.sheenColor || [0, 0, 0],
       metallic: material.subtype === 'matte' ? 0 : (parameters.metallic ?? 0),
       roughness: material.subtype === 'matte' ? 0.92 : (parameters.roughness ?? 0.38),
-      opacity: parameters.opacity ?? (color.length > 3 ? color[3] : 1),
+      opacity: getMaterialOpacity(material),
       clearcoat: parameters.clearcoat ?? 0,
-      iridescence: parameters.iridescence ?? 0
+      clearcoatRoughness: parameters.clearcoatRoughness ?? 0.18,
+      iridescence: parameters.iridescence ?? 0,
+      transmission: parameters.transmission ?? 0,
+      indexOfRefraction: parameters.indexOfRefraction ?? 1.5,
+      sheenRoughness: parameters.sheenRoughness ?? 0.5,
+      normalScale: parameters.normalScale ?? 1,
+      occlusionStrength: parameters.occlusionStrength ?? 1,
+      baseColorTextureEnabled: parameters.baseColorTexture ? 1 : 0,
+      normalTextureEnabled: parameters.normalTexture ? 1 : 0,
+      metallicRoughnessTextureEnabled: parameters.metallicRoughnessTexture ? 1 : 0,
+      emissiveTextureEnabled: parameters.emissiveTexture ? 1 : 0,
+      occlusionTextureEnabled: parameters.occlusionTexture ? 1 : 0,
+      clearcoatTextureEnabled: parameters.clearcoatTexture ? 1 : 0,
+      transmissionTextureEnabled: parameters.transmissionTexture ? 1 : 0,
+      sheenColorTextureEnabled: parameters.sheenColorTexture ? 1 : 0,
+      baseColorUVTransform: getSamplerTransform(parameters.baseColorTexture),
+      normalUVTransform: getSamplerTransform(parameters.normalTexture),
+      metallicRoughnessUVTransform: getSamplerTransform(parameters.metallicRoughnessTexture),
+      emissiveUVTransform: getSamplerTransform(parameters.emissiveTexture),
+      occlusionUVTransform: getSamplerTransform(parameters.occlusionTexture),
+      clearcoatUVTransform: getSamplerTransform(parameters.clearcoatTexture),
+      transmissionUVTransform: getSamplerTransform(parameters.transmissionTexture),
+      sheenColorUVTransform: getSamplerTransform(parameters.sheenColorTexture)
     }
+  });
+}
+
+function getSamplerTexture(sampler: ANARISampler | undefined, fallback: Texture): Texture {
+  return sampler?.getParameter('image') || fallback;
+}
+
+function getSamplerTransform(sampler: ANARISampler | undefined): Readonly<NumberArray9> {
+  return sampler?.getParameter('transform') || IDENTITY_UV_TRANSFORM;
+}
+
+function getMaterialOpacity(material: ANARIMaterial): number {
+  const parameters = material.getParameters();
+  const color = parameters.baseColor || parameters.color;
+  const explicitOpacity = parameters.opacity ?? (color && color.length > 3 ? (color[3] ?? 1) : 1);
+  return Math.min(explicitOpacity, 1 - (parameters.transmission || 0) * 0.68);
+}
+
+function getMaterialTextureSignature(material: ANARIMaterial): string {
+  const parameters = material.getParameters();
+  return [
+    parameters.baseColorTexture,
+    parameters.normalTexture,
+    parameters.metallicRoughnessTexture,
+    parameters.emissiveTexture,
+    parameters.occlusionTexture,
+    parameters.clearcoatTexture,
+    parameters.transmissionTexture,
+    parameters.sheenColorTexture
+  ]
+    .map(sampler => sampler?.id || '')
+    .join(':');
+}
+
+function createFallbackTexture(
+  device: Device,
+  identifier: string,
+  color: readonly [number, number, number, number]
+): Texture {
+  return device.createTexture({
+    id: `anari-${identifier}-texture`,
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    data: new Uint8Array(color),
+    sampler: {minFilter: 'linear', magFilter: 'linear'}
   });
 }
 

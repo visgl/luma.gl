@@ -4628,6 +4628,7 @@ __metadata:
   resolution: "@luma.gl/anari@workspace:modules/anari"
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
+    zod: "npm:^4.4.3"
   peerDependencies:
     "@luma.gl/core": ~9.4.0-alpha.1
     "@luma.gl/effects": ~9.4.0-alpha.1
@@ -16604,6 +16605,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-anari@workspace:examples/showcase/anari"
   dependencies:
+    "@loaders.gl/core": "npm:~4.4.2"
+    "@loaders.gl/gltf": "npm:~4.4.2"
     "@luma.gl/anari": "workspace:*"
     "@luma.gl/core": "npm:9.4.0-alpha.1"
     "@luma.gl/effects": "npm:9.4.0-alpha.1"
@@ -16612,6 +16615,8 @@ __metadata:
     "@luma.gl/webgl": "npm:9.4.0-alpha.1"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.1"
     "@math.gl/core": "npm:^4.1.0"
+    jsonc-parser: "npm:3.2.0"
+    monaco-editor: "npm:^0.53.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -25816,6 +25821,13 @@ __metadata:
   version: 1.2.2
   resolution: "yocto-queue@npm:1.2.2"
   checksum: 10c0/36d4793e9cf7060f9da543baf67c55e354f4862c8d3d34de1a1b1d7c382d44171315cc54abf84d8900b8113d742b830108a1434f4898fb244f9b7e8426d4b8f5
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4.4.3":
+  version: 4.4.3
+  resolution: "zod@npm:4.4.3"
+  checksum: 10c0/7ea31b558e88f9faf44f31dd185e2e1cbf51fed3081787fb96cc2534749b50c0acfc6da7f0922a7353ed092dd358c7d50c28ea96c94d04af64191bd33152eca3
   languageName: node
   linkType: hard
 

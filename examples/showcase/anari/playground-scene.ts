@@ -17,20 +17,27 @@ import {
   type ANARIMatrix4,
   type ANARIRendererParameters,
   type ANARIRendererSubtype,
+  type ANARISampler,
   type ANARISurface,
   type ANARIVector3
 } from '@luma.gl/anari';
+import type {Texture} from '@luma.gl/core';
 import {Matrix4} from '@math.gl/core';
 
 type JSONTypedObject<Subtype extends string> = {'@@type': Subtype};
 
 type JSONGeometryParameters = Omit<
   ANARIGeometryParameters,
-  'vertex.position' | 'vertex.normal' | 'vertex.attribute0' | 'primitive.index'
+  | 'vertex.position'
+  | 'vertex.normal'
+  | 'vertex.attribute0'
+  | 'vertex.attribute1'
+  | 'primitive.index'
 > & {
   'vertex.position'?: readonly number[];
   'vertex.normal'?: readonly number[];
   'vertex.attribute0'?: readonly number[];
+  'vertex.attribute1'?: readonly number[];
   'primitive.index'?: readonly number[];
 };
 
@@ -47,8 +54,25 @@ export type JSONGeometryGenerator =
 
 export type JSONGeometryDeclaration = JSONTypedObject<ANARIGeometrySubtype> &
   JSONGeometryParameters & {generator?: JSONGeometryGenerator};
+type JSONMaterialTextureName =
+  | 'baseColorTexture'
+  | 'normalTexture'
+  | 'metallicRoughnessTexture'
+  | 'emissiveTexture'
+  | 'occlusionTexture'
+  | 'clearcoatTexture'
+  | 'transmissionTexture'
+  | 'sheenColorTexture';
+
 export type JSONMaterialDeclaration = JSONTypedObject<ANARIMaterialSubtype> &
-  ANARIMaterialParameters;
+  Omit<ANARIMaterialParameters, JSONMaterialTextureName> &
+  Partial<Record<JSONMaterialTextureName, string>>;
+
+export type JSONTextureDeclaration = {
+  source: string;
+  colorSpace?: 'srgb' | 'linear';
+  transform?: readonly [number, number, number, number, number, number, number, number, number];
+};
 
 export type JSONSurfaceDeclaration = {
   geometry: string;
@@ -120,6 +144,7 @@ export type ANARIJSONScene = {
   camera: JSONCameraDeclaration;
   renderer: JSONRendererDeclaration;
   geometries: Record<string, JSONGeometryDeclaration>;
+  textures?: Record<string, JSONTextureDeclaration>;
   materials: Record<string, JSONMaterialDeclaration>;
   surfaces: Record<string, JSONSurfaceDeclaration>;
   groups?: Record<string, JSONGroupDeclaration>;
@@ -158,6 +183,49 @@ const RENDERER_SUBTYPES: readonly ANARIRendererSubtype[] = [
   'debugDepth'
 ];
 
+const MATERIAL_TEXTURE_NAMES: readonly JSONMaterialTextureName[] = [
+  'baseColorTexture',
+  'normalTexture',
+  'metallicRoughnessTexture',
+  'emissiveTexture',
+  'occlusionTexture',
+  'clearcoatTexture',
+  'transmissionTexture',
+  'sheenColorTexture'
+];
+
+const loadedTextureImages = new Map<string, ImageBitmap>();
+
+export async function preloadANARIJSONTextures(scene: ANARIJSONScene): Promise<void> {
+  if (typeof createImageBitmap !== 'function') {
+    return;
+  }
+
+  const pendingImages = new Map<string, Promise<void>>();
+  for (const texture of Object.values(scene.textures || {})) {
+    if (loadedTextureImages.has(texture.source) || pendingImages.has(texture.source)) {
+      continue;
+    }
+    pendingImages.set(
+      texture.source,
+      fetch(texture.source)
+        .then(async response => {
+          if (!response.ok) {
+            throw new Error(`Unable to load texture "${texture.source}": ${response.status}.`);
+          }
+          return createImageBitmap(await response.blob());
+        })
+        .then(image => {
+          loadedTextureImages.set(texture.source, image);
+        })
+        .catch(error => {
+          throw new Error(`Unable to load texture "${texture.source}": ${String(error)}`);
+        })
+    );
+  }
+  await Promise.all(pendingImages.values());
+}
+
 export function createANARIJSONScene(
   device: ANARIDevice,
   scene: ANARIJSONScene
@@ -167,6 +235,8 @@ export function createANARIJSONScene(
   }
 
   const geometries = new Map<string, ANARIGeometry>();
+  const samplers = new Map<string, ANARISampler>();
+  const textures: Texture[] = [];
   const materials = new Map<string, ANARIMaterial>();
   const surfaces = new Map<string, ANARISurface>();
   const lights = new Map<string, ANARILight>();
@@ -187,6 +257,7 @@ export function createANARIJSONScene(
       'vertex.position': positions,
       'vertex.normal': normals,
       'vertex.attribute0': attributes,
+      'vertex.attribute1': textureCoordinates,
       'primitive.index': indices,
       generator,
       ...parameters
@@ -202,6 +273,9 @@ export function createANARIJSONScene(
     if (attributes) {
       geometryParameters['vertex.attribute0'] = new Float32Array(attributes);
     }
+    if (textureCoordinates) {
+      geometryParameters['vertex.attribute1'] = new Float32Array(textureCoordinates);
+    }
     if (indices) {
       geometryParameters['primitive.index'] = new Uint32Array(indices);
     }
@@ -214,10 +288,47 @@ export function createANARIJSONScene(
     geometries.set(identifier, device.newGeometry(subtype, geometryParameters));
   }
 
+  for (const [identifier, declaration] of Object.entries(scene.textures || {})) {
+    const image = loadedTextureImages.get(declaration.source);
+    if (!image) {
+      throw new Error(`Texture "${identifier}" must be loaded before creating its ANARI scene.`);
+    }
+    const texture = device.device.createTexture({
+      id: `anari-${identifier}`,
+      width: image.width,
+      height: image.height,
+      format: declaration.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : 'rgba8unorm',
+      data: image,
+      sampler: {
+        addressModeU: 'repeat',
+        addressModeV: 'repeat',
+        minFilter: 'linear',
+        magFilter: 'linear'
+      }
+    });
+    textures.push(texture);
+    samplers.set(
+      identifier,
+      device.newSampler('image2D', {image: texture, transform: declaration.transform})
+    );
+  }
+
   for (const [identifier, declaration] of Object.entries(scene.materials)) {
     const {'@@type': subtype, ...parameters} = declaration;
     assertSubtype('material', subtype, MATERIAL_SUBTYPES);
-    materials.set(identifier, device.newMaterial(subtype, parameters));
+    const materialParameters: ANARIMaterialParameters = {};
+    for (const [parameterName, parameterValue] of Object.entries(parameters)) {
+      if (MATERIAL_TEXTURE_NAMES.includes(parameterName as JSONMaterialTextureName)) {
+        materialParameters[parameterName as JSONMaterialTextureName] = resolveReference(
+          samplers,
+          String(parameterValue),
+          'texture'
+        );
+      } else {
+        Object.assign(materialParameters, {[parameterName]: parameterValue});
+      }
+    }
+    materials.set(identifier, device.newMaterial(subtype, materialParameters));
   }
 
   for (const [identifier, declaration] of Object.entries(scene.surfaces)) {
@@ -336,6 +447,9 @@ export function createANARIJSONScene(
     },
     destroy(): void {
       frame.destroy();
+      for (const texture of textures) {
+        texture.destroy();
+      }
     }
   };
 }
@@ -464,7 +578,7 @@ function getOrbitPosition(
   ];
 }
 
-function createStarfieldInstances(
+export function createStarfieldInstances(
   distribution: JSONStarfieldDeclaration
 ): JSONInstanceDeclaration[] {
   const instances: JSONInstanceDeclaration[] = [];
@@ -488,7 +602,7 @@ function createStarfieldInstances(
   return instances;
 }
 
-function createGeneratedGeometry(generator: JSONGeometryGenerator): ANARIGeometryParameters {
+export function createGeneratedGeometry(generator: JSONGeometryGenerator): ANARIGeometryParameters {
   if (generator['@@type'] === 'torus') {
     return createTorusGeometry(generator);
   }
@@ -642,7 +756,7 @@ function hash(value: number): number {
   return result - Math.floor(result);
 }
 
-function createInstanceTransform(declaration: JSONInstanceDeclaration): ANARIMatrix4 {
+export function createInstanceTransform(declaration: JSONInstanceDeclaration): ANARIMatrix4 {
   if (declaration.matrix) {
     return declaration.matrix;
   }

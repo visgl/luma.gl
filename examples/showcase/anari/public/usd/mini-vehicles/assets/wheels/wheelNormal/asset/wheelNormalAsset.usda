@@ -1,0 +1,52 @@
+#usda 1.0
+(
+    defaultPrim = "wheelNormal"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "wheelNormal"
+{
+    def Xform "geo"
+    {
+        def "wheelNormal" (
+            prepend references = @../geo/wheelNormalGeo.usda@</wheelNormal_8angles>
+        )
+        {
+            over "_1_greyMediumMax" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                rel material:binding = </wheelNormal/materials/mediumGrey/greyMediumMaterial>
+            }
+
+            over "_2_greyLightMax" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                rel material:binding = </wheelNormal/materials/lightGrey/greyLightMaterial>
+            }
+        }
+    }
+
+    def Xform "materials"
+    {
+        def "mediumGrey" (
+            prepend references = @../../../../materials/mediumGrey.usda@</materials>
+        )
+        {
+        }
+
+        def "lightGrey" (
+            prepend references = @../../../../materials/lightGrey.usda@</materials>
+        )
+        {
+        }
+    }
+}
+
+

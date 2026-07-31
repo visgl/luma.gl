@@ -9,6 +9,7 @@ import {
   ANARILight,
   ANARIMaterial,
   ANARIRenderer,
+  ANARISampler,
   ANARISurface,
   ANARIWorld
 } from './anari-objects';
@@ -31,6 +32,8 @@ import type {
   ANARIObjectType,
   ANARIRendererParameters,
   ANARIRendererSubtype,
+  ANARISamplerParameters,
+  ANARISamplerSubtype,
   ANARISurfaceParameters,
   ANARIWorldParameters
 } from './anari-types';
@@ -45,6 +48,7 @@ const OBJECT_SUBTYPES: Record<ANARIObjectType, readonly string[]> = {
   light: ['ambient', 'directional', 'point', 'spot'],
   material: ['matte', 'physicallyBased'],
   renderer: ['default', 'debugNormals', 'debugDepth'],
+  sampler: ['image2D'],
   surface: ['default'],
   world: ['default']
 };
@@ -62,7 +66,8 @@ const SUPPORTED_EXTENSIONS = [
   'KHR_LIGHT_POINT',
   'KHR_LIGHT_SPOT',
   'KHR_MATERIAL_MATTE',
-  'KHR_MATERIAL_PHYSICALLY_BASED'
+  'KHR_MATERIAL_PHYSICALLY_BASED',
+  'KHR_SAMPLER_IMAGE2D'
 ] as const;
 
 export class ANARIDevice {
@@ -91,6 +96,10 @@ export class ANARIDevice {
     parameters: ANARIMaterialParameters = {}
   ): ANARIMaterial {
     return new ANARIMaterial(this, subtype, parameters);
+  }
+
+  newSampler(subtype: ANARISamplerSubtype, parameters: ANARISamplerParameters): ANARISampler {
+    return new ANARISampler(this, subtype, parameters);
   }
 
   newSurface(parameters: ANARISurfaceParameters): ANARISurface {

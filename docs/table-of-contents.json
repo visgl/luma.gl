@@ -189,6 +189,7 @@
           "api-reference/anari/anari-materials-and-lights",
           "api-reference/anari/anari-scene",
           "api-reference/anari/anari-rendering",
+          "api-reference/anari/anari-schemas",
           "api-reference/anari/anari-api-mapping"
         ]
       },

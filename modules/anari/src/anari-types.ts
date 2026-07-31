@@ -1,4 +1,5 @@
-import type {TypedArray} from '@math.gl/core';
+import type {NumberArray9, TypedArray} from '@math.gl/core';
+import type {Texture} from '@luma.gl/core';
 import type {
   ANARIArray,
   ANARICamera,
@@ -7,6 +8,7 @@ import type {
   ANARIInstance,
   ANARILight,
   ANARIMaterial,
+  ANARISampler,
   ANARIRenderer,
   ANARISurface,
   ANARIWorld
@@ -22,11 +24,13 @@ export type ANARIObjectType =
   | 'light'
   | 'material'
   | 'renderer'
+  | 'sampler'
   | 'surface'
   | 'world';
 
 export type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad';
 export type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
+export type ANARISamplerSubtype = 'image2D';
 export type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
 export type ANARICameraSubtype = 'perspective' | 'orthographic';
 export type ANARIRendererSubtype = 'default' | 'debugNormals' | 'debugDepth';
@@ -38,10 +42,16 @@ export type ANARIArrayData = TypedArray | readonly ANARIObjectReference[];
 export type ANARIObjectReference =
   | ANARIGeometry
   | ANARIMaterial
+  | ANARISampler
   | ANARISurface
   | ANARIGroup
   | ANARIInstance
   | ANARILight;
+
+export type ANARISamplerParameters = {
+  image: Texture;
+  transform?: Readonly<NumberArray9>;
+};
 
 export type ANARIArrayParameters = {
   data: ANARIArrayData;
@@ -53,6 +63,7 @@ export type ANARIGeometryParameters = {
   'vertex.position'?: Float32Array | ANARIArray;
   'vertex.normal'?: Float32Array | ANARIArray;
   'vertex.attribute0'?: Float32Array | ANARIArray;
+  'vertex.attribute1'?: Float32Array | ANARIArray;
   'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
   radius?: number;
   height?: number;
@@ -71,6 +82,21 @@ export type ANARIMaterialParameters = {
   alphaMode?: 'opaque' | 'blend';
   clearcoat?: number;
   iridescence?: number;
+  clearcoatRoughness?: number;
+  transmission?: number;
+  indexOfRefraction?: number;
+  sheenColor?: ANARIVector3;
+  sheenRoughness?: number;
+  normalScale?: number;
+  occlusionStrength?: number;
+  baseColorTexture?: ANARISampler;
+  normalTexture?: ANARISampler;
+  metallicRoughnessTexture?: ANARISampler;
+  emissiveTexture?: ANARISampler;
+  occlusionTexture?: ANARISampler;
+  clearcoatTexture?: ANARISampler;
+  transmissionTexture?: ANARISampler;
+  sheenColorTexture?: ANARISampler;
 };
 
 export type ANARISurfaceParameters = {

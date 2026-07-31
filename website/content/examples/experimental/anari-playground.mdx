@@ -1,0 +1,37 @@
+---
+title: ANARI Playground
+sidebar_label: ANARI Playground
+sidebar_custom_props:
+  backends: [webgpu, webgl2]
+  description: Declarative ANARI-style scene editing, OpenUSD/glTF import, HDR rendering, and glTF/USD export.
+  difficulty: advanced
+  maturity: experimental
+  topics: [scenegraph, gltf, usd, hdr, json]
+---
+
+<p className="badges">
+  <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
+  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+</p>
+
+# ANARI Playground
+
+The ANARI Playground is a private v10 proof of concept for declarative retained rendering. It
+provides a Monaco-backed JSON scene editor, WebGPU/WebGL rendering, HDR presentation, retained
+geometry/material/light references, OpenUSD and glTF import, and static glTF/USDA export.
+
+The playground is a standalone full-page Vite app rather than a canvas-only website embed. Run it
+from the repository root:
+
+```bash
+yarn workspace luma.gl-examples-showcase-anari start
+```
+
+Then open `/playground.html` on the reported development-server URL. Use `?backend=webgl` to force
+the WebGL 2 path.
+
+For the full API, JSON format, importer, exporter, and HDR notes, see the
+[ANARI developer guide](/docs/api-guide/engine/anari-rendering).
+
+Source: [`examples/showcase/anari`](https://github.com/visgl/luma.gl/tree/master/examples/showcase/anari)

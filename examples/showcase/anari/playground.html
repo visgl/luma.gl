@@ -125,6 +125,24 @@
         margin-left: 8px;
       }
 
+      .usd-scene-selector {
+        min-width: 192px;
+        max-width: 250px;
+        padding: 8px 10px;
+        border: 1px solid rgba(176, 155, 255, 0.26);
+        border-radius: 5px;
+        background: rgba(152, 128, 255, 0.075);
+        color: #ddd5ff;
+        cursor: pointer;
+        font: inherit;
+        font-size: 10px;
+      }
+
+      .usd-scene-selector option {
+        background: #101322;
+        color: #f0edff;
+      }
+
       button {
         border: 0;
         font: inherit;
@@ -221,49 +239,15 @@
         background: #0d101a;
       }
 
-      .line-numbers,
-      .scene-editor {
-        font-family: "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
-        font-size: 11px;
-        line-height: 19px;
-        tab-size: 2;
-      }
-
-      .line-number-column {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        overflow: hidden;
-        width: 50px;
-        border-right: 1px solid rgba(191, 203, 247, 0.07);
-        pointer-events: none;
-      }
-
-      .line-numbers {
-        margin: 0;
-        padding: 16px 9px 16px 0;
-        color: rgba(178, 189, 226, 0.34);
-        text-align: right;
-        white-space: pre;
-      }
-
-      .scene-editor {
-        display: block;
-        resize: none;
-        padding: 16px 18px 16px 62px;
-        outline: none;
-        border: 0;
+      .monaco-scene-editor {
         width: 100%;
         height: 100%;
-        background: transparent;
-        color: #ced7ff;
-        caret-color: #c8b5ff;
-        white-space: pre;
       }
 
-      .scene-editor::selection {
-        background: rgba(145, 121, 239, 0.38);
+      .monaco-scene-editor .monaco-editor,
+      .monaco-scene-editor .monaco-editor-background,
+      .monaco-scene-editor .margin {
+        background: #0d101a !important;
       }
 
       .scene-error {
@@ -410,6 +394,13 @@
           margin-left: 0;
         }
 
+        .usd-scene-selector {
+          min-width: 132px;
+          max-width: 154px;
+          padding: 7px;
+          font-size: 9px;
+        }
+
         .preset-button {
           flex: none;
           padding: 7px;
@@ -466,6 +457,11 @@
       <section class="preset-bar" aria-label="Scene presets">
         <span class="preset-label">START WITH</span>
         <div id="preset-list" class="preset-list"></div>
+        <select id="usd-scene-selector" class="usd-scene-selector" aria-label="Import USD or glTF scene">
+          <option value="">IMPORT USD / glTF…</option>
+          <option value="local-file">Open local USD/glTF file…</option>
+        </select>
+        <input id="usd-file-input" type="file" accept=".usd,.usda,.usdz,.gltf,.glb" hidden />
         <div id="backend-label" class="backend-label">CONNECTING DEVICE…</div>
       </section>
 
@@ -478,22 +474,14 @@
               <button id="format-scene" class="tool-button">FORMAT</button>
               <button id="reset-scene" class="tool-button">RESET</button>
               <button id="copy-scene" class="tool-button">COPY</button>
+              <button id="export-gltf" class="tool-button">GLTF ↓</button>
+              <button id="export-usd" class="tool-button">USD ↓</button>
               <button id="apply-scene" class="apply-button">APPLY ↵</button>
             </div>
           </div>
           <div class="editor-surface">
-            <div class="line-number-column" aria-hidden="true">
-              <pre id="editor-lines" class="line-numbers"></pre>
-            </div>
-            <textarea
-              id="scene-editor"
-              class="scene-editor"
-              aria-label="ANARI scene JSON"
-              autocapitalize="off"
-              autocomplete="off"
-              autocorrect="off"
-              spellcheck="false"
-            ></textarea>
+            <div id="scene-monaco-editor" class="monaco-scene-editor"></div>
+            <textarea id="scene-editor" aria-hidden="true" hidden></textarea>
           </div>
           <div id="scene-error" class="scene-error" role="alert"></div>
           <footer class="editor-footer">

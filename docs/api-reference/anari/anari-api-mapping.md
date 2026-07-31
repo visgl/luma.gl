@@ -3,6 +3,7 @@
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
   <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 This page maps the official [ANARI 1.1 specification](https://registry.khronos.org/ANARI/specs/1.1/ANARI-1.1.html) to the experimental, private `@luma.gl/anari` implementation and, where helpful, to comparable THREE.js concepts.
@@ -71,7 +72,7 @@ The native concept “select an ANARI device implementation” therefore maps to
 | `anariNewCamera(device, subtype)` | `anariDevice.newCamera(subtype, parameters)` | `PerspectiveCamera` / `OrthographicCamera` | Supported for `perspective` and `orthographic`. |
 | `anariNewRenderer(device, subtype)` | `anariDevice.newRenderer(subtype, parameters)` | Renderer configuration / debug material | Supported for `default`, `debugNormals`, and `debugDepth`. |
 | `anariNewFrame(device)` | `anariDevice.newFrame({world, camera, renderer, size})` | `renderer.render(scene, camera)` / render target | Supported for canvas presentation; arbitrary mapped output channels are not implemented. |
-| `anariNewSampler()` | No equivalent | `Texture`, sampler state, texture-backed material properties | Not implemented. |
+| `anariNewSampler()` | `anariDevice.newSampler('image2D', {image, transform})` | `Texture`, sampler state, texture-backed material properties | Partial: retained 2D image samplers; no procedural or volume samplers. |
 | `anariNewSpatialField()` | No equivalent | 3D texture / volume field | Not implemented. |
 | `anariNewVolume()` | No equivalent | Volume renderer / 3D texture | Not implemented. |
 | `anariNewObject()` | `new ANARIObject(...)` exists, but is not renderer-extensible | Custom `Object3D` subclass | No generic extension-object registration or custom renderer support. |
@@ -223,17 +224,17 @@ Only destroy the graphics device when the application no longer shares it with o
 | Official ANARI concept | `@luma.gl/anari` | Comparable THREE.js property | Notes |
 | --- | --- | --- | --- |
 | `matte.color` | `material.color` / `baseColor` | `material.color` | Constant RGB/RGBA values only. |
-| `physicallyBased.baseColor` | `baseColor` | `MeshStandardMaterial.color` | No texture/sampler/attribute-based material input. |
+| `physicallyBased.baseColor` | `baseColor` / `baseColorTexture` | `MeshStandardMaterial.color` / `map` | Constant color multiplied by an optional image sampler. |
 | `metallic` | `metallic` | `MeshStandardMaterial.metalness` | Same broad metallic-roughness concept; property names differ. |
 | `roughness` | `roughness` | `MeshStandardMaterial.roughness` | Constant scalar only. |
 | `opacity` | `opacity` | `material.opacity` + `material.transparent` | Blend state is selected when this implementation first compiles the surface. |
 | `alphaMode` | Accepted, not interpreted | `transparent`, `alphaTest` | Official `opaque`, `blend`, and `mask` semantics are not fully implemented. |
 | `emissive` | `emissive` | `MeshStandardMaterial.emissive` | Constant emissive RGB. |
 | Emissive scaling | `emissiveStrength` | `MeshStandardMaterial.emissiveIntensity` | JavaScript convenience scalar. |
-| `clearcoat` | `clearcoat` | `MeshPhysicalMaterial.clearcoat` | Simplified clearcoat term; no clearcoat texture/normal/roughness system. |
+| `clearcoat` | `clearcoat`, `clearcoatRoughness`, `clearcoatTexture` | `MeshPhysicalMaterial.clearcoat` | Simplified clearcoat term with factor and map; no clearcoat normal map. |
 | `iridescence` | `iridescence` | `MeshPhysicalMaterial.iridescence` | Simplified angle-dependent spectral effect. |
-| Normal, roughness, metallic, and base-color samplers | Not supported | Material textures/maps | No `ANARISampler` implementation. |
-| Transmission, index of refraction, sheen, attenuation, anisotropy | Not supported | `MeshPhysicalMaterial` advanced properties | Not implemented. |
+| Normal, roughness, metallic, and base-color samplers | `normalTexture`, `metallicRoughnessTexture`, `baseColorTexture` | Material textures/maps | Supported through retained `image2D` samplers and `vertex.attribute1` UVs. |
+| Transmission, index of refraction, sheen, attenuation, anisotropy | `transmission`, `transmissionTexture`, `indexOfRefraction`, `sheenColor`, `sheenRoughness`, `sheenColorTexture` | `MeshPhysicalMaterial` advanced properties | Partial: transmission and sheen are approximated; attenuation and anisotropy remain unsupported. |
 
 ## Light and camera comparison
 
