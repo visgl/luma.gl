@@ -2,6 +2,22 @@
 
 ## v9.4
 
+### v9.4.0-alpha.2
+
+- feat(gpgpu) More efficient interleave operation (#2783)
+- fix(optics): address glass transmission review feedback (#2782)
+- feat(gpgpu): Add synchronous evaluation (#2781)
+- feat(optics): add prefiltered glass reflections and contact shadows (#2780)
+- feat(showcase): add cinematic network events and true HDR optics (#2777)
+- feat(effects): integrate analytic GTAO ambient composition (#2759)
+- Enable HDR presentation for Bloom, Globe, and glTF (#2778)
+- feat: enable HDR illumination lab rendering (#2776)
+- feat(experimental): add spectral volume glass optics (#2770)
+- feat(experimental): add optical caustics and guided MRC storytelling (#2766)
+- feat(engine,effects): add depth-sorted HDR glass showcase (#2763)
+- feat(experimental): add network packet spraying and composable glass (#2761)
+- fix: align v9.4 package peer ranges (#2757)
+
 ### v9.4.0-alpha.1
 
 - feat(core, webgpu): Add WebGPU render bundles and render-pass bundle execution (#2681)
