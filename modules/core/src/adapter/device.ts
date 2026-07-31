@@ -586,8 +586,8 @@ export abstract class Device {
 
   // Texture helpers
 
-  /** Optimal TextureFormat for displaying 8-bit depth, standard dynamic range content on this system. */
-  abstract preferredColorFormat: 'rgba8unorm' | 'bgra8unorm';
+  /** Optimal presentation format, including rgba16float for high-dynamic-range canvases. */
+  abstract preferredColorFormat: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
   /** Default depth format used on this system */
   abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 

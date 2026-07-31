@@ -84,6 +84,69 @@ While there are ways to obtain multiple `CanvasContext` instances on WebGPU, the
 
 For portable multi-canvas rendering, see the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide.
 
+### High-dynamic-range presentation
+
+Rendering into an `rgba16float` offscreen texture does not automatically produce an HDR image on
+the display. The final WebGPU canvas must also use a floating-point presentation format and
+explicitly enable extended tone mapping. Otherwise, the browser clamps displayed colors to the
+standard `[0, 1]` range even when internal lighting and postprocessing retain brighter values.
+
+Detect whether the current display advertises high dynamic range, then configure the default
+canvas when creating the device:
+
+```ts
+import {luma} from '@luma.gl/core';
+import {webgpuAdapter} from '@luma.gl/webgpu';
+
+const supportsHighDynamicRange =
+  typeof window !== 'undefined' && window.matchMedia('(dynamic-range: high)').matches;
+
+const device = await luma.createDevice({
+  adapters: [webgpuAdapter],
+  createCanvasContext: supportsHighDynamicRange
+    ? {
+        colorFormat: 'rgba16float',
+        colorSpace: 'display-p3',
+        toneMapping: 'extended'
+      }
+    : true
+});
+
+const renderingHighDynamicRange = device.preferredColorFormat === 'rgba16float';
+```
+
+The three canvas settings have separate responsibilities:
+
+- `colorFormat: 'rgba16float'` preserves fractional precision and color components above `1.0`.
+- `toneMapping: 'extended'` asks WebGPU to display values above SDR white instead of clipping
+  them to the `[0, 1]` presentation range.
+- `colorSpace: 'display-p3'` selects a wider display gamut; wide color and HDR luminance are
+  related but independent capabilities.
+
+Applications must preserve that range throughout their rendering pipeline:
+
+1. Keep scene lighting, emissive materials, and intermediate postprocessing in floating-point
+   textures such as `rgba16float`.
+2. Match fullscreen render pipelines and presentation targets to `device.preferredColorFormat`.
+3. Avoid unconditional `clamp(color, 0.0, 1.0)` in the final shader when HDR presentation is
+   active. Apply an SDR-safe curve to ordinary colors while preserving brighter specular and
+   emissive highlights.
+4. Retain the normal 8-bit canvas and SDR tone mapping when the display, browser, or backend
+   cannot present HDR.
+
+`window.matchMedia('(dynamic-range: high)')` identifies display capability, not browser WebGPU
+canvas support. On browsers exposing `GPUCanvasContext.getConfiguration()`, inspect
+`configuration.toneMapping?.mode === 'extended'` to verify that extended presentation was
+accepted. Monitor availability can also change when a window moves between displays.
+
+HDR presentation is WebGPU-specific. WebGL applications can still use floating-point intermediate
+render targets where supported, but their ordinary presentation canvas remains SDR. Floating-point
+presentation and intermediate textures also consume more GPU memory than 8-bit formats.
+
+The [Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering) example
+demonstrates clustered lighting, floating-point postprocessing, configurable highlight intensity,
+and automatic HDR/SDR presentation selection.
+
 ### Creating a RenderPipeline
 
 ```typescript

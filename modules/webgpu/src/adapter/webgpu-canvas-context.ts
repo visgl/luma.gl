@@ -79,7 +79,8 @@ export class WebGPUCanvasContext extends CanvasContext {
       // Can be used to define e.g. -srgb views
       // viewFormats: [...]
       colorSpace: this.props.colorSpace,
-      alphaMode: this.props.alphaMode
+      alphaMode: this.props.alphaMode,
+      toneMapping: {mode: this.props.toneMapping}
     });
 
     this._createDepthStencilAttachment(this.device.preferredDepthFormat);

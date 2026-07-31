@@ -74,7 +74,8 @@ export class WebGPUPresentationContext extends PresentationContext {
       device: this.device.handle,
       format: this.device.preferredColorFormat,
       colorSpace: this.props.colorSpace,
-      alphaMode: this.props.alphaMode
+      alphaMode: this.props.alphaMode,
+      toneMapping: {mode: this.props.toneMapping}
     });
 
     this._createDepthStencilAttachment(this.device.preferredDepthFormat);

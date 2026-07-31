@@ -80,9 +80,7 @@ export class WebGPUDevice extends Device {
   /** type of this device */
   readonly type = 'webgpu';
 
-  readonly preferredColorFormat = navigator.gpu.getPreferredCanvasFormat() as
-    | 'rgba8unorm'
-    | 'bgra8unorm';
+  readonly preferredColorFormat: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
   readonly preferredDepthFormat = 'depth24plus';
 
   readonly features: DeviceFeatures;
@@ -112,6 +110,10 @@ export class WebGPUDevice extends Device {
     adapterInfo: GPUAdapterInfo
   ) {
     super({...props, id: props.id || 'webgpu-device'});
+    const canvasContextProps = Device._getCanvasContextProps(props);
+    this.preferredColorFormat =
+      canvasContextProps?.colorFormat ??
+      (navigator.gpu.getPreferredCanvasFormat() as 'rgba8unorm' | 'bgra8unorm');
     this.handle = device;
     this.adapter = adapter;
     this.adapterInfo = adapterInfo;
@@ -137,7 +139,6 @@ export class WebGPUDevice extends Device {
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
-    const canvasContextProps = Device._getCanvasContextProps(props);
     if (canvasContextProps) {
       this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
     }

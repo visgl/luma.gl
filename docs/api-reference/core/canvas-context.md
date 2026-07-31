@@ -73,6 +73,35 @@ const canvasContext = device.getDefaultCanvasContext()
 
 The same `createCanvasContext` options are also used when attaching to an externally created WebGL context through `luma.attachDevice()` or `webgl2Adapter.attach()`, including compatibility options such as `pixelSizeSource`.
 
+### HDR presentation
+
+On an HDR-capable display, configure a WebGPU canvas with a floating-point presentation format,
+wide color gamut, and extended tone mapping:
+
+```ts
+const supportsHighDynamicRange = window.matchMedia('(dynamic-range: high)').matches;
+
+const device = await luma.createDevice({
+  adapters: [webgpuAdapter],
+  createCanvasContext: supportsHighDynamicRange
+    ? {
+        colorFormat: 'rgba16float',
+        colorSpace: 'display-p3',
+        toneMapping: 'extended'
+      }
+    : true
+});
+```
+
+`device.preferredColorFormat` becomes `'rgba16float'` for the HDR device. Render pipelines,
+offscreen passes, and the final fragment shader must preserve values above `1.0`; an SDR tone
+mapping curve that clamps every channel defeats HDR presentation even with an HDR canvas.
+
+On non-HDR displays, use the normal 8-bit presentation format and standard tone mapping. WebGL
+can use floating-point intermediate textures when supported, but HDR canvas presentation is
+currently a WebGPU feature. See [High-dynamic-range presentation](/docs/api-guide/gpu/gpu-rendering#high-dynamic-range-presentation)
+for the complete rendering pipeline and fallback guidance.
+
 Use a device's default canvas context to render into the associated canvas
 
 ```typescript
@@ -139,8 +168,10 @@ canvasContext.getDevicePixelResolution()
 | `canvas?`              | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                                                                          |
 | `container?`           | `HTMLElement`                                        | Parent DOM element for new canvas. Defaults to first child of `document.body`                                                          |
 | `visible?`             | `boolean`                                            | Visibility (only used if new canvas is created).                                                                                       |
-| `alphaMode?: string`   | `'opaque'`                                           | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
-| `colorSpace?: 'string` | `'srgb'`                                             | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace).    |
+| `alphaMode?`           | `'opaque' \| 'premultiplied'`                        | WebGPU presentation alpha mode.                                                                                                        |
+| `colorSpace?`          | `'srgb' \| 'display-p3'`                             | Presentation color space. Use `'display-p3'` for wide-gamut HDR output.                                                               |
+| `colorFormat?`         | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'`      | Optional WebGPU presentation texture format. Use `'rgba16float'` to retain HDR values.                                                |
+| `toneMapping?`         | `'standard' \| 'extended'`                           | WebGPU presentation tone mapping. `'extended'` preserves colors brighter than SDR white.                                              |
 
 ### `useDevicePixels: boolean`
 

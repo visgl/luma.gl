@@ -80,7 +80,9 @@ Because of this design, WebGL presentation contexts are sequential and require t
 | `container?`           | `HTMLElement` \| `string`                            | Parent DOM element for a newly created destination canvas       |
 | `visible?`             | `boolean`                                            | Visibility for a newly created destination canvas               |
 | `alphaMode?`           | `'opaque' \| 'premultiplied'`                        | Canvas alpha mode metadata                                      |
-| `colorSpace?`          | `'srgb'`                                             | Canvas color space metadata                                     |
+| `colorSpace?`          | `'srgb' \| 'display-p3'`                             | Presentation color space                                        |
+| `colorFormat?`         | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'`      | Requested WebGPU presentation texture format                    |
+| `toneMapping?`         | `'standard' \| 'extended'`                           | Whether WebGPU presentation preserves HDR luminance             |
 | `trackPosition?`       | `boolean`                                            | Whether to track destination canvas position                    |
 
 ## Fields

@@ -43,7 +43,11 @@ export type CanvasContextProps = {
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
   alphaMode?: 'opaque' | 'premultiplied';
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace */
-  colorSpace?: 'srgb'; // GPUPredefinedColorSpace
+  colorSpace?: 'srgb' | 'display-p3';
+  /** Optional WebGPU presentation texture format. Use rgba16float for HDR presentation. */
+  colorFormat?: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
+  /** Whether WebGPU presentation preserves colors brighter than SDR white. */
+  toneMapping?: 'standard' | 'extended';
   /** Whether to track position changes. Calls this.device.onPositionChange */
   trackPosition?: boolean;
 };
@@ -86,6 +90,8 @@ export abstract class CanvasSurface {
     visible: true,
     alphaMode: 'opaque',
     colorSpace: 'srgb',
+    colorFormat: undefined!,
+    toneMapping: 'standard',
     trackPosition: false
   };
 
