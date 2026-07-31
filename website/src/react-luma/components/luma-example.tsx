@@ -17,6 +17,7 @@ import {
   createPresentationDevice,
   getCanvasContainer,
   getPreferredAvailableDeviceType,
+  type CanvasContextProfile,
   type DeviceType,
   useStore
 } from '../store/device-store';
@@ -66,6 +67,7 @@ export type LumaExampleProps = React.PropsWithChildren<
   showHeader?: boolean;
   showStats?: boolean;
   devices?: DeviceTabSelection[];
+  canvasContextProfile?: CanvasContextProfile;
   templateInfoPlacement?: 'header' | 'page';
   headerControls?: React.ReactNode;
   }
@@ -214,9 +216,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
 
       if (!requestedDeviceTypes || requestedDeviceTypes.includes(deviceType)) {
+        const exampleDevice =
+          props.canvasContextProfile && props.canvasContextProfile !== 'default'
+            ? await createDevice(deviceType, props.canvasContextProfile)
+            : device;
         if (!isCancelled) {
           setEffectiveDeviceType(deviceType);
-          setEffectiveDevice(device);
+          setEffectiveDevice(exampleDevice);
         }
         return;
       }
@@ -230,7 +236,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         return;
       }
 
-      const fallbackDevice = await createDevice(fallbackDeviceType);
+      const fallbackDevice = await createDevice(fallbackDeviceType, props.canvasContextProfile);
       await createPresentationDevice(fallbackDeviceType);
       if (!isCancelled) {
         setEffectiveDeviceType(fallbackDeviceType);
@@ -243,7 +249,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     return () => {
       isCancelled = true;
     };
-  }, [deviceType, device, requestedDeviceTypesKey]);
+  }, [deviceType, device, props.canvasContextProfile, requestedDeviceTypesKey]);
 
   useEffect(() => {
     if (!canvasContainerRef.current || !effectiveDeviceType || !effectiveDevice) {

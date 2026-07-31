@@ -9,9 +9,9 @@ import {
   loadImageBitmap,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {Device} from '@luma.gl/core';
-import {bloom, bloomShaderPassPipeline} from '@luma.gl/effects';
-import type {ShaderPassPipeline} from '@luma.gl/shadertools';
+import {Device, type TextureFormatColor} from '@luma.gl/core';
+import {bloom, bloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {
   type Panel,
   type SettingsChangeDescriptor,
@@ -27,9 +27,9 @@ import {
 } from '../../example-panels';
 
 const BLOOM_UNIFORMS = {
-  threshold: 0.55,
-  intensity: 1.8,
-  radius: 8
+  threshold: 0.1,
+  intensity: 5,
+  radius: 24
 } as const;
 
 const BLOOM_BACKGROUND_HTML = `
@@ -40,12 +40,21 @@ const BLOOM_BACKGROUND_HTML = `
 `;
 
 type BloomState = Record<'threshold' | 'intensity' | 'radius', number>;
-type ShaderPropType = NonNullable<typeof bloom.propTypes>[string];
+type ShaderPropType = {
+  value: number;
+  private?: boolean;
+  min?: number;
+  max?: number;
+  softMin?: number;
+  softMax?: number;
+};
+type ShaderPassLike = ShaderPass | ShaderPassPipeline;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
   device: Device;
+  colorFormat: TextureFormatColor;
   imageTexture: DynamicTexture;
   bloomValues: BloomState = {...BLOOM_UNIFORMS};
   readonly settingsPanel: ExampleSettingsPanelManager;
@@ -56,6 +65,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.device = device;
+    this.colorFormat = getHighDynamicRangeColorFormat(device);
     this.imageTexture = this.createImageTexture('bloom-scene.png');
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'bloom-settings',
@@ -65,7 +75,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.panels.mount();
-    this.setShaderPasses([this.getBloomPassPipeline()]);
+    this.setShaderPasses(this.getShaderPasses());
   }
 
   onFinalize(): void {
@@ -86,14 +96,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  setShaderPasses(shaderPasses: ShaderPassPipeline[]): void {
+  setShaderPasses(shaderPasses: ShaderPassLike[]): void {
     this.shaderPassRenderer?.destroy();
-    this.shaderPassRenderer = new ShaderPassRenderer(this.device, {shaderPasses});
+    this.shaderPassRenderer = new ShaderPassRenderer(this.device, {
+      shaderPasses,
+      colorFormat: this.colorFormat
+    });
+  }
+
+  getShaderPasses(): ShaderPassLike[] {
+    const shaderPasses: ShaderPassLike[] = [this.getBloomPassPipeline()];
+    if (this.colorFormat === 'rgba16float' && this.device.preferredColorFormat !== 'rgba16float') {
+      shaderPasses.push(toneMapping);
+    }
+    return shaderPasses;
   }
 
   getBloomPassPipeline(): ShaderPassPipeline {
     return {
       ...bloomShaderPassPipeline,
+      renderTargets: Object.fromEntries(
+        Object.entries(bloomShaderPassPipeline.renderTargets).map(([targetName, renderTarget]) => [
+          targetName,
+          {...renderTarget, format: this.colorFormat}
+        ])
+      ),
       steps: bloomShaderPassPipeline.steps.map(step => {
         switch (step.shaderPass.name) {
           case 'bloomExtract':
@@ -117,7 +144,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'bloom-description',
           title: 'Overview',
-          html: '<p>Experimental bloom pipeline demo using extracted highlights, multi-stage blur targets, and final recomposition.</p>'
+          html: this.makeOverviewHtml()
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -139,8 +166,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.bloomValues[propName] = nextValue;
       }
     }
-    this.setShaderPasses([this.getBloomPassPipeline()]);
+    this.setShaderPasses(this.getShaderPasses());
   };
+
+  private makeOverviewHtml(): string {
+    const processingDescription =
+      this.colorFormat === 'rgba16float'
+        ? 'Bloom processing uses floating-point render targets, preserving highlights above SDR white.'
+        : 'This device does not support filterable floating-point render targets, so bloom uses its preferred color format.';
+    const presentationDescription =
+      this.device.preferredColorFormat === 'rgba16float'
+        ? 'The HDR canvas presents extended highlights directly.'
+        : this.colorFormat === 'rgba16float'
+          ? 'ACES tone mapping compresses the HDR result for SDR presentation.'
+          : 'The bloom result uses standard dynamic-range presentation.';
+    return `<p>${processingDescription}</p><p>${presentationDescription}</p>`;
+  }
+}
+
+function getHighDynamicRangeColorFormat(device: Device): TextureFormatColor {
+  const capabilities = device.getTextureFormatCapabilities('rgba16float');
+  return capabilities.render && capabilities.filter ? 'rgba16float' : device.preferredColorFormat;
 }
 
 export function makeBloomSettingsSchema(): SettingsSchema {
@@ -151,7 +197,7 @@ export function makeBloomSettingsSchema(): SettingsSchema {
         id: 'bloom',
         name: 'Bloom',
         initiallyCollapsed: false,
-        settings: Object.entries(bloom.propTypes || {})
+        settings: Object.entries<ShaderPropType>(bloom.propTypes || {})
           .filter(([, propType]) => !propType.private && typeof propType.value === 'number')
           .map(([propName, propType]) => {
             const value = propType.value as number;
@@ -162,7 +208,7 @@ export function makeBloomSettingsSchema(): SettingsSchema {
               type: 'number' as const,
               persist: 'none' as const,
               min: bounds.min,
-              max: bounds.max,
+              max: getBloomControlMaximum(propName, bounds.max),
               step: bounds.step
             };
           })
@@ -191,6 +237,17 @@ function getControlBounds(
       : Math.max(Number(((max - min) / 200).toFixed(4)), 0.001);
 
   return {min, max, step};
+}
+
+function getBloomControlMaximum(propName: string, defaultMaximum: number): number {
+  switch (propName) {
+    case 'radius':
+      return 24;
+    case 'intensity':
+      return 8;
+    default:
+      return defaultMaximum;
+  }
 }
 
 function formatControlLabel(propName: string): string {

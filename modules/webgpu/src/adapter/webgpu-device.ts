@@ -141,6 +141,7 @@ export class WebGPUDevice extends Device {
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
     if (canvasContextProps) {
       this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
+      this.preferredColorFormat = this.canvasContext.colorFormat || this.preferredColorFormat;
     }
 
     this.commandEncoder = this.createCommandEncoder({});
@@ -556,6 +557,7 @@ export class WebGPUDevice extends Device {
       'compilation-status-async-webgl',
       'float32-renderable-webgl',
       'float16-renderable-webgl',
+      'float16-filterable-webgl',
       'norm16-renderable-webgl',
       'texture-filterable-anisotropic-webgl',
       'shader-noperspective-interpolation-webgl'

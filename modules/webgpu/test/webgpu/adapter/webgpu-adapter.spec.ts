@@ -10,6 +10,7 @@ import {
   getWebGPUFeatureLevel,
   getWebGPURequestAdapterOptions
 } from '../../../src/adapter/webgpu-adapter';
+import {isHighDynamicRangeCanvasConfiguration} from '../../../src/adapter/webgpu-canvas-context';
 
 test('WebGPUAdapter imports from the ESM package entry without circular init errors', async t => {
   t.plan(2);
@@ -133,5 +134,33 @@ test('WebGPUAdapter feature helpers keep requested profiles separate', t => {
     'best available reports compatibility when core is unavailable'
   );
 
+  t.end();
+});
+
+test('isHighDynamicRangeCanvasConfiguration verifies accepted HDR presentation', t => {
+  const standardConfiguration = {
+    format: 'rgba16float',
+    toneMapping: {mode: 'standard'}
+  } as GPUCanvasConfigurationOut;
+  const highDynamicRangeConfiguration = {
+    format: 'rgba16float',
+    toneMapping: {mode: 'extended'}
+  } as GPUCanvasConfigurationOut;
+
+  t.equal(
+    isHighDynamicRangeCanvasConfiguration(standardConfiguration),
+    false,
+    'floating-point presentation without extended tone mapping is not HDR'
+  );
+  t.equal(
+    isHighDynamicRangeCanvasConfiguration(highDynamicRangeConfiguration),
+    true,
+    'floating-point presentation with extended tone mapping is HDR'
+  );
+  t.equal(
+    isHighDynamicRangeCanvasConfiguration(null),
+    false,
+    'an unavailable configuration cannot verify HDR support'
+  );
   t.end();
 });
