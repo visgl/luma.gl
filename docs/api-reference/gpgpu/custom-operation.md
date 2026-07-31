@@ -76,6 +76,10 @@ output table, and target GPU buffer. It must write the operation result into
 `target` and return `{success: true}`. Returning `value` is optional, but it
 caches the CPU copy on the output table.
 
+Handlers may be synchronous or async. Synchronous handlers are compatible with
+`executeSync()` / `evaluateSync()` as long as backend registration and all
+required dependencies are already resolved.
+
 ```ts
 import {type OperationHandler} from '@luma.gl/gpgpu';
 
@@ -278,9 +282,9 @@ fn naturalEarth(lon: f32, lat: f32) -> vec2<f32> {
 ## Register the Backends
 
 Register the handler for each device type that should evaluate the operation.
-`backendRegistry.add()` replaces the backend module for that device type, so
-spread the built-in backend module when you want to preserve built-in operation
-handlers.
+`backendRegistry.add()` merges the provided handlers into the backend module for
+that device type. Spreading the built-in backend module is still a useful way to
+show the full effective handler set explicitly.
 
 ```ts
 import {backendRegistry, type BackendModule} from '@luma.gl/gpgpu';
@@ -334,5 +338,6 @@ const result = await projected.readValue();
 - Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` when the same
   custom leaf operation should run independently across preserved vector chunks.
 - Register a handler for every device type that may evaluate the operation.
-- Registering a custom backend module for `cpu`, `webgl`, or `webgpu` replaces
-  the previously registered module for that device type.
+- Registering additional handlers for `cpu`, `webgl`, or `webgpu` augments the
+  previously registered module for that device type. Incoming handler keys win
+  on conflicts.

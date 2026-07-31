@@ -46,6 +46,16 @@ const device = await luma.createDevice({
 const outputVector = await output.evaluate(device);
 ```
 
+For synchronous call sites that cannot propagate `Promise`s, use the sync
+counterparts:
+
+- `output.evaluateSync(device)`
+- `cleanEvaluateSync(device, result)`
+
+Sync evaluation requires any backend modules to already be registered and any
+required CPU values to already be present. If a sync path would need async work,
+it throws immediately instead of waiting.
+
 ## BackendRegistry
 
 The `backendRegistry` dispatches lazy operations to the backend module for the
@@ -69,6 +79,19 @@ import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
 
 backendRegistry.add('webgl', webglBackend);
 backendRegistry.add('webgpu', webgpuBackend);
+```
+
+If you plan to use synchronous evaluation on a `webgl` or `webgpu` device, eager
+registration is recommended so backend lookup is already resolved:
+
+```ts
+import {backendRegistry, cleanEvaluateSync, interleave} from '@luma.gl/gpgpu';
+import * as webgpuBackend from '@luma.gl/gpgpu/webgpu';
+
+backendRegistry.add('webgpu', webgpuBackend);
+
+const packed = interleave(inputA, inputB);
+cleanEvaluateSync(device, packed);
 ```
 
 The same endpoints export individual backend operation handlers. Applications
