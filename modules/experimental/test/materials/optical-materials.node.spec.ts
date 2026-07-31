@@ -688,6 +688,14 @@ test('rasterized glass transmission composes thickness, depth, and environment m
       `${language} anchors translucent shells to nearby opaque geometry`
     );
   }
+  const glslEnvironmentSampleCalls = [
+    ...glassTransmission.fs.matchAll(/(texture(?:Lod)?)\(\s*glassEnvironmentTexture/g)
+  ];
+  testCase.ok(glslEnvironmentSampleCalls.length > 0, 'GLSL samples the environment texture');
+  testCase.ok(
+    glslEnvironmentSampleCalls.every(sampleCall => sampleCall[1] === 'textureLod'),
+    'GLSL uses explicit mip levels for prefiltered and legacy environment sampling'
+  );
   testCase.end();
 });
 

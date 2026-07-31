@@ -549,9 +549,17 @@ vec3 glassTransmission_sampleEnvironmentAtRoughness(
     ) * glassTransmission.environmentIntensity;
   }
   vec2 blurOffset = vec2(0.018, 0.011) * roughness;
-  vec3 centered = texture(glassEnvironmentTexture, environmentCoordinate).rgb;
-  vec3 forward = texture(glassEnvironmentTexture, environmentCoordinate + blurOffset).rgb;
-  vec3 backward = texture(glassEnvironmentTexture, environmentCoordinate - blurOffset).rgb;
+  vec3 centered = textureLod(glassEnvironmentTexture, environmentCoordinate, 0.0).rgb;
+  vec3 forward = textureLod(
+    glassEnvironmentTexture,
+    environmentCoordinate + blurOffset,
+    0.0
+  ).rgb;
+  vec3 backward = textureLod(
+    glassEnvironmentTexture,
+    environmentCoordinate - blurOffset,
+    0.0
+  ).rgb;
   vec3 baselineEnvironment = (centered + forward + backward) / 3.0;
   if (glassTransmission.roughTransmissionStrength <= 0.0) {
     return mix(
@@ -561,8 +569,16 @@ vec3 glassTransmission_sampleEnvironmentAtRoughness(
     ) * glassTransmission.environmentIntensity;
   }
   vec2 crossOffset = vec2(-blurOffset.y, blurOffset.x);
-  vec3 upper = texture(glassEnvironmentTexture, environmentCoordinate + crossOffset).rgb;
-  vec3 lower = texture(glassEnvironmentTexture, environmentCoordinate - crossOffset).rgb;
+  vec3 upper = textureLod(
+    glassEnvironmentTexture,
+    environmentCoordinate + crossOffset,
+    0.0
+  ).rgb;
+  vec3 lower = textureLod(
+    glassEnvironmentTexture,
+    environmentCoordinate - crossOffset,
+    0.0
+  ).rgb;
   vec3 filteredEnvironment = mix(
     baselineEnvironment,
     (centered + forward + backward + upper + lower) / 5.0,

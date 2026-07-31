@@ -243,8 +243,8 @@ These materials are advanced raster approximations, not a complete physically ba
 system. In particular, the current implementation does not provide:
 
 - Full energy-conserving multiple-scattering or microfacet transmission.
-- Prefiltered environment probes, off-screen reflection recovery, or geometry-aware rough
-  transmission beyond the bounded screen-space footprint.
+- Authored HDR environment probes, importance-sampled GGX probe convolution, off-screen reflection
+  recovery, or geometry-aware rough transmission beyond the bounded screen-space footprint.
 - Physically traced multiple refraction events or caustics; the available focused-light module is
   an intentionally bounded raster approximation.
 - Off-screen background recovery or geometry-aware refracted-ray tracing.
