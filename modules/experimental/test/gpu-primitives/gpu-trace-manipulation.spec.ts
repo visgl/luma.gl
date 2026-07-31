@@ -337,6 +337,30 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
     'negative traversal depth is rejected'
   );
   t.throws(
+    () =>
+      new GPUGraphTraversal({
+        offsets,
+        neighbors: first,
+        seeds: first,
+        output: second,
+        maxDepth: 1025
+      }),
+    /at most 1024/,
+    'traversal depth is bounded before graph-node expansion'
+  );
+  t.throws(
+    () =>
+      new GPUGraphTraversal({
+        offsets,
+        neighbors: first,
+        seeds: first,
+        output: second,
+        maxDepth: 0x100000000
+      }),
+    /at most 1024/,
+    'traversal depth cannot reach an unrepresentable WGSL literal'
+  );
+  t.throws(
     () => new GPUAncestorProjection({parents: first, visibility: short, output: second}),
     /matching lengths/,
     'ancestor projection requires source-aligned masks'
@@ -351,6 +375,17 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
       new GPUAncestorProjection({parents: first, visibility: first, output: second, maxDepth: -1}),
     /nonnegative/,
     'ancestor projection rejects negative depth'
+  );
+  t.throws(
+    () =>
+      new GPUAncestorProjection({
+        parents: first,
+        visibility: first,
+        output: second,
+        maxDepth: 0x100000000
+      }),
+    /uint32/,
+    'ancestor projection rejects depth constants that WGSL cannot represent'
   );
   t.end();
 });

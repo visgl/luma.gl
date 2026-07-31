@@ -50,6 +50,13 @@ export type {GPUScanInput, GPUScanProps} from './gpu-scan';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
 
+export {GPUVisibilityWorkflow} from './gpu-visibility-workflow';
+export type {
+  GPUVisibilityPredicate,
+  GPUVisibilityPredicateKind,
+  GPUVisibilityWorkflowProps
+} from './gpu-visibility-workflow';
+
 export {GPUMask} from './gpu-mask';
 export type {GPUMaskInput, GPUMaskOperation, GPUMaskProps} from './gpu-mask';
 

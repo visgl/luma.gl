@@ -33,7 +33,7 @@ All inputs are packed `GraphDataView<'uint32'>` values:
 - `seeds` contains stable source-node IDs.
 - Optional `seedCount` selects how many leading seeds are active.
 - `output` has one row per graph node and receives a canonical reachability mask.
-- `maxDepth` defines the number of compiled frontier-expansion stages.
+- `maxDepth` defines the number of compiled frontier-expansion stages and must not exceed 1024.
 - Optional `activeDepth` changes the number of effective stages without recompiling the graph.
 
 The seed nodes are included at depth zero. Out-of-range seed and neighbor IDs are ignored. Atomic

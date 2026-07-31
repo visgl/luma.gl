@@ -13,6 +13,7 @@ import {
 
 const ANCESTOR_PROJECTION_WORKGROUP_SIZE = 256;
 const DEFAULT_INVALID_ANCESTOR = 0xffffffff;
+const MAXIMUM_UINT32 = 0xffffffff;
 
 /** Properties for nearest-visible canonical parent projection. */
 export type GPUAncestorProjectionProps = {
@@ -74,10 +75,13 @@ export class GPUAncestorProjection {
     if (!Number.isSafeInteger(this.maxDepth) || this.maxDepth < 0) {
       throw new Error(`${this.id} maxDepth must be a nonnegative safe integer`);
     }
+    if (this.maxDepth > MAXIMUM_UINT32) {
+      throw new Error(`${this.id} maxDepth must be a uint32`);
+    }
     if (
       !Number.isSafeInteger(this.invalidValue) ||
       this.invalidValue < 0 ||
-      this.invalidValue > 0xffffffff
+      this.invalidValue > MAXIMUM_UINT32
     ) {
       throw new Error(`${this.id} invalidValue must be a uint32`);
     }

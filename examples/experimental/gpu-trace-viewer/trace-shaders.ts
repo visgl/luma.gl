@@ -291,8 +291,7 @@ const SIMILAR_DURATION_PARENT_FLAG: u32 = ${TRACE_SIMILAR_DURATION_PARENT_FLAG}u
 @group(0) @binding(3) var<storage, read> threadOffsets: array<u32>;
 @group(0) @binding(4) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(5) var<storage, read_write> visibilityFlags: array<u32>;
-@group(0) @binding(6) var<storage, read_write> sourceIds: array<u32>;
-@group(0) @binding(7) var<storage, read_write> pickResult: array<atomic<u32>>;
+@group(0) @binding(6) var<storage, read_write> pickResult: array<atomic<u32>>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -323,7 +322,6 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     statusVisible && runtimeVisible && errorVisible && overlappingChildVisible &&
     similarParentVisible && durationVisible;
   visibilityFlags[sourceIndex] = select(0u, 1u, visible);
-  sourceIds[groupRowIndex] = sourceIndex;
   let pickRequested = viewUniforms.pickLane >= 0.0;
   let timePicked = viewUniforms.pickTime >= span.start &&
     viewUniforms.pickTime <= span.start + span.duration;
@@ -357,7 +355,6 @@ const DEPENDENCY_COUNT: u32 = ${dependencyCount}u;
 @group(0) @binding(4) var<storage, read> visibleAncestors: array<u32>;
 @group(0) @binding(5) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(6) var<storage, read_write> dependencyFlags: array<u32>;
-@group(0) @binding(7) var<storage, read_write> dependencyIds: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -391,7 +388,6 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     1u,
     familyVisible && sourceVisible && destinationVisible && distinctEndpoints
   );
-  dependencyIds[index] = index;
 }`;
 }
 
