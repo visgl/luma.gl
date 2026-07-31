@@ -18,6 +18,13 @@ describe('GPU hierarchical trace viewer', () => {
     if (!device) {
       return;
     }
+    if (
+      device.info.gpu === 'software' ||
+      device.info.gpuType === 'cpu' ||
+      Boolean(device.info.fallback)
+    ) {
+      return;
+    }
 
     const host = document.createElement('div');
     host.id = 'example-panel-host';
