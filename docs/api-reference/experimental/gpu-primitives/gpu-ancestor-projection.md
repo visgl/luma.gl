@@ -29,8 +29,8 @@ For each source node:
 - `invalidValue` can supply a different `uint32` sentinel.
 
 `maxDepth` bounds the number of hidden parent links followed per source row. This makes malformed
-or cyclic inputs safe without CPU-side graph inspection. The writable output cannot alias either
-source view.
+or cyclic inputs safe without CPU-side graph inspection. It must be a `uint32` because it is
+compiled into the WGSL projection bound. The writable output cannot alias either source view.
 
 Projection preserves canonical source IDs; it does not rewrite dependency records, repack span
 buffers, submit GPU work, or read results back. Render and dependency-visibility shaders can use

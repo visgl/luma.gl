@@ -13,6 +13,7 @@ import {
 } from './graph-data-view-utils';
 
 const GRAPH_TRAVERSAL_WORKGROUP_SIZE = 256;
+const MAXIMUM_GRAPH_TRAVERSAL_DEPTH = 1024;
 
 /** Direction in which a compressed sparse graph is traversed. */
 export type GPUGraphTraversalDirection = 'outgoing' | 'incoming' | 'both';
@@ -101,6 +102,9 @@ export class GPUGraphTraversal {
     }
     if (!Number.isSafeInteger(this.maxDepth) || this.maxDepth < 0) {
       throw new Error(`${this.id} maxDepth must be a nonnegative safe integer`);
+    }
+    if (this.maxDepth > MAXIMUM_GRAPH_TRAVERSAL_DEPTH) {
+      throw new Error(`${this.id} maxDepth must be at most ${MAXIMUM_GRAPH_TRAVERSAL_DEPTH}`);
     }
     if (this.offsets.length !== this.output.length + 1) {
       throw new Error(`${this.id} offsets must contain one more row than the output`);
