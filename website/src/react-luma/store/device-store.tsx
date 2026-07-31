@@ -14,6 +14,8 @@ const DEFAULT_DEVICE_TYPE: DeviceType = 'webgpu-core';
 const FALLBACK_DEVICE_TYPE_ORDER: DeviceType[] = ['webgpu-core', 'webgpu-compatibility', 'webgl'];
 
 export type DeviceType = 'webgl' | 'webgpu-core' | 'webgpu-max' | 'webgpu-compatibility';
+export type CanvasContextProfile = 'default' | 'high-dynamic-range';
+type DeviceCacheKey = `${DeviceType}:${CanvasContextProfile}`;
 
 const WEBGPU_FEATURE_LEVELS = {
   'webgpu-core': 'core',
@@ -30,7 +32,7 @@ export type Store = {
   setDeviceType: (type: any) => Promise<void>;
 };
 
-let cachedDevice: Partial<Record<DeviceType, Promise<Device>>> = {};
+let cachedDevice: Partial<Record<DeviceCacheKey, Promise<Device>>> = {};
 let cachedPresentationDevice: Partial<Record<DeviceType, Promise<Device>>> = {};
 let cachedDeviceAvailability: Partial<Record<DeviceType, Promise<boolean>>> = {};
 let deviceRequestGeneration = 0;
@@ -45,26 +47,46 @@ export function getCanvasContainer() {
   return cachedContainer;
 }
 
-export async function createDevice(type: DeviceType): Promise<Device> {
-  cachedDevice[type] ||= (async () => {
+export async function createDevice(
+  type: DeviceType,
+  canvasContextProfile: CanvasContextProfile = 'default'
+): Promise<Device> {
+  const resolvedCanvasContextProfile = resolveCanvasContextProfile(type, canvasContextProfile);
+  const cacheKey: DeviceCacheKey = `${type}:${resolvedCanvasContextProfile}`;
+  cachedDevice[cacheKey] ||= (async () => {
     const device = await luma.createDevice({
       adapters: [webgl2Adapter, webgpuAdapter],
       ...getDeviceRequestProps(type),
       debugGPUTime: true,
       createCanvasContext: {
         container: getCanvasContainer(),
-        alphaMode: 'opaque'
+        alphaMode: 'opaque',
+        ...(resolvedCanvasContextProfile === 'high-dynamic-range'
+          ? {
+              colorFormat: 'rgba16float' as const,
+              colorSpace: 'display-p3' as const,
+              toneMapping: 'extended' as const
+            }
+          : {})
       }
     });
 
     validateCreatedDeviceType(type, device);
     return device;
   })().catch(error => {
-    delete cachedDevice[type];
+    delete cachedDevice[cacheKey];
     throw error;
   });
 
-  return await cachedDevice[type]!;
+  try {
+    return await cachedDevice[cacheKey]!;
+  } catch (error) {
+    if (resolvedCanvasContextProfile === 'high-dynamic-range') {
+      logError(`Failed to create ${type} HDR canvas; falling back to standard presentation`, error);
+      return await createDevice(type);
+    }
+    throw error;
+  }
 }
 
 export async function createPresentationDevice(type: DeviceType): Promise<Device> {
@@ -233,6 +255,21 @@ function getDeviceRequestProps(type: DeviceType): {
 
 function isWebGPUDeviceType(type: DeviceType): boolean {
   return type.startsWith('webgpu-');
+}
+
+function resolveCanvasContextProfile(
+  type: DeviceType,
+  canvasContextProfile: CanvasContextProfile
+): CanvasContextProfile {
+  const supportsHighDynamicRange =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(dynamic-range: high)').matches;
+  return canvasContextProfile === 'high-dynamic-range' &&
+    isWebGPUDeviceType(type) &&
+    supportsHighDynamicRange
+    ? 'high-dynamic-range'
+    : 'default';
 }
 
 function validateCreatedDeviceType(type: DeviceType, device: Device): void {

@@ -1016,6 +1016,7 @@ export const BloomExample: React.FC<WebsiteExampleProps> = props => (
     directory="experimental"
     template={BloomApp}
     config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
