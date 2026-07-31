@@ -2451,7 +2451,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     }
     const packetEmission =
       this.packetEmission *
-      (0.24 + this.opticsProfile.illumination * 0.76) *
+      (0.72 + this.opticsProfile.illumination * 0.28) *
       this.dynamicRangeProfile.emissionScale;
     if (this.canvas) {
       this.canvas.dataset.packetSprayingPacketEmission = packetEmission.toFixed(2);

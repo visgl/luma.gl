@@ -384,13 +384,11 @@ export function makeNetworkDynamicRangeProfile(
     : sceneIsFloatingPoint
       ? 'floating-point'
       : 'standard';
-  const optics = makeNetworkOpticsProfile(options.visualIntensity);
   const requestedBoost = Number.isFinite(options.highlightBoost)
     ? Math.max(0, Math.min(options.highlightBoost ?? 0, MAX_NETWORK_HDR_HIGHLIGHT_BOOST))
     : DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST;
   const availableHeadroom = supportsExtendedPresentation ? 1 : sceneIsFloatingPoint ? 0.7 : 0;
-  const highlightBoost =
-    requestedBoost * availableHeadroom * optics.surface * Math.min(optics.illumination, 1);
+  const highlightBoost = requestedBoost * availableHeadroom;
 
   return {
     bloomIntensityScale: 1 + highlightBoost * 0.28,

@@ -217,7 +217,9 @@ raise bloom extraction with them and finish with restrained filmic exposure. Mul
 existing red or green emission preserves its color without introducing pastel white halos.
 The packet-spraying showcase exposes a compact HDR-range slider next to its visual-style control;
 its default deliberately keeps display highlights below twice SDR white, while higher settings can
-reveal the full extended-range presentation.
+reveal the full extended-range presentation. HDR range and packet-core emission remain independent
+of visual style, so a minimal diagram can retain extended highlights without enabling refraction,
+bloom, or secondary glass lighting.
 
 Interactive path highlighting should remain optically subordinate to the material: emphasize the
 actual links and packet motion instead of filling switches with artificial light, changing their

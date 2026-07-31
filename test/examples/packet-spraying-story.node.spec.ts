@@ -14,6 +14,7 @@ import {
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
+  MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
   NETWORK_STORY_CHAPTERS
 } from '../../examples/showcase/packet-spraying/story';
@@ -181,6 +182,14 @@ test('packet-spraying floating-point highlights preserve honest display capabili
     sceneColorFormat: 'rgba16float',
     visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
   });
+  const diagramExtendedProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgpu',
+    displaySupportsHighDynamicRange: true,
+    highlightBoost: 0.35,
+    presentationColorFormat: 'rgba16float',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: 0
+  });
 
   testCase.equal(standardProfile.displayMode, 'standard', '8-bit scenes remain standard range');
   testCase.equal(standardProfile.highlightBoost, 0, 'standard scenes do not claim false headroom');
@@ -219,6 +228,16 @@ test('packet-spraying floating-point highlights preserve honest display capabili
     defaultExtendedProfile.maximumLuminance < 2,
     'default HDR highlights remain below twice SDR white'
   );
+  testCase.equal(
+    diagramExtendedProfile.highlightBoost,
+    extendedProfile.highlightBoost,
+    'visual style does not change independently selected HDR brightness'
+  );
+  testCase.equal(
+    diagramExtendedProfile.maximumLuminance,
+    extendedProfile.maximumLuminance,
+    'diagram mode preserves extended display headroom'
+  );
   testCase.ok(
     extendedProfile.bloomThresholdScale > floatingPointProfile.bloomThresholdScale,
     'selective bloom remains above ordinary scene brightness'
@@ -236,8 +255,8 @@ test('packet-spraying floating-point highlights preserve honest display capabili
       sceneColorFormat: 'rgba16float',
       visualIntensity: 0
     }).highlightBoost,
-    0,
-    'diagram mode disables additional HDR accents'
+    MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
+    'the HDR control remains bounded independently of visual style'
   );
   testCase.end();
 });
