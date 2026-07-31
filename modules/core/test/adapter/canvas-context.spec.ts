@@ -64,6 +64,24 @@ class TestPresentationContext extends PresentationContext {
   }
 }
 
+test('CanvasContext preserves HDR presentation options', testContext => {
+  const canvasContext = new TestCanvasContext(
+    {
+      colorFormat: 'rgba16float',
+      colorSpace: 'display-p3',
+      toneMapping: 'extended'
+    },
+    false
+  );
+
+  testContext.equal(canvasContext.props.colorFormat, 'rgba16float', 'preserves floating format');
+  testContext.equal(canvasContext.props.colorSpace, 'display-p3', 'preserves wide color gamut');
+  testContext.equal(canvasContext.props.toneMapping, 'extended', 'preserves extended luminance');
+
+  canvasContext.destroy();
+  testContext.end();
+});
+
 function createCanvasContextSpyDevice() {
   const calls = {onResize: 0, onVisibilityChange: 0};
   return {

@@ -75,6 +75,7 @@ type DeferredRenderingSettings = {
   animate: boolean;
   autoOrbitCamera: boolean;
   exposure: number;
+  highlightBoost: number;
   sunIntensity: number;
   ambientOcclusionRadius: number;
   ambientOcclusionIntensity: number;
@@ -98,6 +99,7 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   animate: true,
   autoOrbitCamera: true,
   exposure: 1.15,
+  highlightBoost: 1.4,
   sunIntensity: 2.8,
   ambientOcclusionRadius: 2.2,
   ambientOcclusionIntensity: 3.2,
@@ -121,6 +123,7 @@ const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why GTAO belongs after lighting:</b> a half-resolution horizon search reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining half-resolution noise before the AO is composed into lit color.</p>
 <p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
+<p><b>Why HDR changes the image:</b> floating-point G-buffer and lighting passes retain radiance above SDR white. On compatible displays, a Display P3, <code>rgba16float</code>, extended-tone-mapping canvas preserves those concentrated specular highlights and emissive panels instead of clipping them.</p>
 <p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
 <p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, and <b>Reflection Confidence</b> reveal where work or uncertain screen-space hits accumulate.</p>
 `;
@@ -215,6 +218,8 @@ type DeferredDisplayUniforms = {
   inverseProjectionMatrix: Matrix4;
   debugMode: number;
   exposure: number;
+  highDynamicRange: number;
+  highlightBoost: number;
   clusterCountX: number;
   clusterCountY: number;
   clusterCountZ: number;
@@ -238,6 +243,8 @@ struct DeferredDisplayUniforms {
   inverseProjectionMatrix: mat4x4f,
   debugMode: f32,
   exposure: f32,
+  highDynamicRange: f32,
+  highlightBoost: f32,
   clusterCountX: u32,
   clusterCountY: u32,
   clusterCountZ: u32,
@@ -259,7 +266,16 @@ fn deferredDisplay_toneMap(color: vec3f) -> vec3f {
   let exposed = max(color * deferredDisplay.exposure, vec3f(0.0));
   let mapped = (exposed * (2.51 * exposed + 0.03)) /
     (exposed * (2.43 * exposed + 0.59) + 0.14);
-  return pow(clamp(mapped, vec3f(0.0), vec3f(1.0)), vec3f(1.0 / 2.2));
+  let standardColor = clamp(mapped, vec3f(0.0), vec3f(1.0));
+  let peakIntensity = max(max(exposed.r, exposed.g), exposed.b);
+  let highlightWeight = smoothstep(0.32, 1.35, peakIntensity);
+  let extendedHighlights = exposed * highlightWeight * deferredDisplay.highlightBoost * 0.68;
+  let displayColor = select(
+    standardColor,
+    standardColor + extendedHighlights,
+    deferredDisplay.highDynamicRange > 0.5
+  );
+  return pow(displayColor, vec3f(1.0 / 2.2));
 }
 
 fn deferredDisplay_reconstructViewPosition(uv: vec2f, depth: f32) -> vec3f {
@@ -372,6 +388,8 @@ fn deferredDisplay_sampleColor(
     inverseProjectionMatrix: 'mat4x4<f32>',
     debugMode: 'f32',
     exposure: 'f32',
+    highDynamicRange: 'f32',
+    highlightBoost: 'f32',
     clusterCountX: 'u32',
     clusterCountY: 'u32',
     clusterCountZ: 'u32',
@@ -383,6 +401,8 @@ fn deferredDisplay_sampleColor(
     inverseProjectionMatrix: {value: new Matrix4(), private: true},
     debugMode: {value: 0, private: true},
     exposure: {value: DEFAULT_SETTINGS.exposure, min: 0.1, softMax: 3},
+    highDynamicRange: {value: 0, private: true},
+    highlightBoost: {value: DEFAULT_SETTINGS.highlightBoost, min: 0, softMax: 3},
     clusterCountX: {value: 16, private: true},
     clusterCountY: {value: 9, private: true},
     clusterCountZ: {value: 24, private: true},
@@ -559,6 +579,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
+    document
+      .getElementById('hdr-highlight-boost')
+      ?.addEventListener('input', this.handleHighlightBoostChange);
     if (canvas instanceof HTMLCanvasElement) {
       this.orbitControls = new OrbitControls(canvas, {
         target: [0, 0.9, 0],
@@ -576,6 +599,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, width, height, aspect, tick}: AnimationProps): void {
+    this.synchronizeHighlightBoost();
+
     if (this.framebufferSize[0] !== width || this.framebufferSize[1] !== height) {
       this.framebufferSize = [width, height];
       this.sceneGBuffer.resize({width, height});
@@ -614,7 +639,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       Math.round(this.settings.pointLightCount),
       MAX_EXAMPLE_POINT_LIGHTS
     );
-    const lightState = makeAnimatedPointLights(time, activeLightCount, viewMatrix);
+    const highlightBoost =
+      device.preferredColorFormat === 'rgba16float' ? this.settings.highlightBoost : 0;
+    const lightState = makeAnimatedPointLights(
+      time,
+      activeLightCount,
+      viewMatrix,
+      1 + highlightBoost * 1.45
+    );
     this.pointLightBuffer.write(
       makeDeferredPointLightBufferData(lightState.viewLights, MAX_CLUSTERED_POINT_LIGHTS)
     );
@@ -742,6 +774,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           inverseProjectionMatrix,
           debugMode: getDebugMode(this.settings.debugView),
           exposure: this.settings.exposure,
+          highDynamicRange: device.preferredColorFormat === 'rgba16float' ? 1 : 0,
+          highlightBoost: this.settings.highlightBoost,
           ...clusterUniforms
         }
       }
@@ -752,6 +786,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize(): void {
+    document
+      .getElementById('hdr-highlight-boost')
+      ?.removeEventListener('input', this.handleHighlightBoostChange);
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.orbitControls?.destroy();
@@ -769,7 +806,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private makePanel(): Panel {
     return makeExampleTabbedPanel({
       id: 'deferred-rendering-tabs',
-      title: 'Deferred Illumination Lab',
+      title: `Deferred Illumination Lab${this.device.preferredColorFormat === 'rgba16float' ? ' · HDR' : ''}`,
       panels: [
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
@@ -791,8 +828,39 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     _changedSettings?: SettingsChangeDescriptor[]
   ): void => {
     this.settings = {...this.settings, ...(nextSettings as DeferredRenderingSettings)};
+    const highlightBoostInput = document.getElementById('hdr-highlight-boost');
+    if (highlightBoostInput instanceof HTMLInputElement) {
+      highlightBoostInput.value = String(this.settings.highlightBoost);
+    }
+    this.updateHighlightBoostLabel();
     this.orbitControls?.setAutoRotate(this.settings.autoOrbitCamera);
   };
+
+  private readonly handleHighlightBoostChange = (event: Event): void => {
+    const input = event.currentTarget;
+    if (input instanceof HTMLInputElement) {
+      this.settings = {...this.settings, highlightBoost: input.valueAsNumber};
+      this.updateHighlightBoostLabel();
+    }
+  };
+
+  private synchronizeHighlightBoost(): void {
+    const highlightBoostInput = document.getElementById('hdr-highlight-boost');
+    if (
+      highlightBoostInput instanceof HTMLInputElement &&
+      highlightBoostInput.valueAsNumber !== this.settings.highlightBoost
+    ) {
+      this.settings = {...this.settings, highlightBoost: highlightBoostInput.valueAsNumber};
+      this.updateHighlightBoostLabel();
+    }
+  }
+
+  private updateHighlightBoostLabel(): void {
+    const highlightValue = document.getElementById('hdr-highlight-value');
+    if (highlightValue) {
+      highlightValue.textContent = `${this.settings.highlightBoost.toFixed(2)}×`;
+    }
+  }
 }
 
 function createRenderer(device: Device): ShaderPassRenderer {
@@ -978,7 +1046,8 @@ function makeLightMarkerData(): SurfaceInstanceData {
 function makeAnimatedPointLights(
   time: number,
   lightCount: number,
-  viewMatrix: Matrix4
+  viewMatrix: Matrix4,
+  lightIntensityMultiplier = 1
 ): {viewLights: DeferredPointLight[]; markerPositions: Float32Array} {
   const viewLights: DeferredPointLight[] = [];
   const markerPositions = new Float32Array(MAX_EXAMPLE_POINT_LIGHTS * 3);
@@ -1007,7 +1076,7 @@ function makeAnimatedPointLights(
       position: viewMatrix.transformAsPoint(worldPosition) as [number, number, number],
       range: 3.6 + (ring % 3) * 0.55,
       color: [color[0], color[1], color[2]],
-      intensity: 7.5 + (ring % 3) * 1.2
+      intensity: (7.5 + (ring % 3) * 1.2) * lightIntensityMultiplier
     });
   }
   return {viewLights, markerPositions};
@@ -1099,6 +1168,15 @@ function makeSettingsSchema(): SettingsSchema {
             persist: 'none',
             min: 0.2,
             max: 2.5,
+            step: 0.05
+          },
+          {
+            name: 'highlightBoost',
+            label: 'HDR Highlight Boost',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 4,
             step: 0.05
           }
         ]
