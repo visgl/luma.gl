@@ -93,6 +93,21 @@ export type NetworkPlaneTelemetry = {
   status: NetworkPlaneStatus;
 };
 
+export type NetworkFabricState = 'balanced' | 'congested' | 'rerouting' | 'degraded' | 'probing';
+
+/** Compact, state-derived measurements for the guided network story. */
+export type NetworkFabricTelemetry = {
+  activePathCount: number;
+  capacityPercent: number;
+  controlPacketCount: number;
+  droppedPayloadCount: number;
+  queuedPacketCount: number;
+  retransmissionCount: number;
+  state: NetworkFabricState;
+  totalPathCount: number;
+  trimmedPayloadCount: number;
+};
+
 /** The physical switches, links, and endpoints traversed by one shared backbone path. */
 export type NetworkPathFocus = {
   hostIndices: Set<number>;
@@ -788,6 +803,51 @@ export function makeNetworkSwitchPlaneTelemetry(
       status: failed ? 'failed' : recovering ? 'recovering' : congested ? 'congested' : 'healthy'
     };
   });
+}
+
+/** Measures current path capacity and exceptional packet handling without estimating bandwidth. */
+export function makeNetworkFabricTelemetry(
+  spinePaths: readonly NetworkPlaneTelemetry[],
+  queuedPackets: readonly NetworkQueuedPacket[],
+  packetEvents: readonly NetworkPacketEvent[],
+  animationTime: number
+): NetworkFabricTelemetry {
+  const activeEvents = packetEvents.filter(
+    event => animationTime >= event.startedAt && animationTime <= event.startedAt + event.duration
+  );
+  const totalPathCount = spinePaths.length;
+  const activePathCount = spinePaths.filter(
+    path => path.status !== 'failed' && path.status !== 'recovering'
+  ).length;
+  const droppedPayloadCount = activeEvents.filter(event => event.kind === 'dropped-payload').length;
+  const trimmedPayloadCount = activeEvents.filter(event => event.kind === 'trimmed-payload').length;
+  const retransmissionCount = activeEvents.filter(event => event.kind === 'retransmission').length;
+  const controlPacketCount = activeEvents.filter(
+    event => event.kind === 'probe' || event.kind === 'probe-confirmation'
+  ).length;
+  const hasCongestion = spinePaths.some(path => path.status === 'congested');
+  const hasUnavailablePath = activePathCount < totalPathCount;
+  const state: NetworkFabricState = controlPacketCount
+    ? 'probing'
+    : droppedPayloadCount || retransmissionCount
+      ? 'rerouting'
+      : queuedPackets.length || trimmedPayloadCount || hasCongestion
+        ? 'congested'
+        : hasUnavailablePath
+          ? 'degraded'
+          : 'balanced';
+
+  return {
+    activePathCount,
+    capacityPercent: totalPathCount ? Math.round((activePathCount / totalPathCount) * 100) : 0,
+    controlPacketCount,
+    droppedPayloadCount,
+    queuedPacketCount: queuedPackets.length,
+    retransmissionCount,
+    state,
+    totalPathCount,
+    trimmedPayloadCount
+  };
 }
 
 /** Produces bounded source-launch and destination-delivery activity for active conversations. */

@@ -112,6 +112,7 @@ import {
   makeLinkTraffic,
   makeLinks,
   makePackets,
+  makeNetworkFabricTelemetry,
   makeNetworkPlaneTelemetry,
   makeNetworkPathFocus,
   makeNetworkSwitchPlaneTelemetry,
@@ -128,6 +129,7 @@ import {
   type ConversationRoute,
   type NetworkLink,
   type NetworkEndpointSignal,
+  type NetworkFabricTelemetry,
   type NetworkPlaneTelemetry,
   type NetworkPacketEvent,
   type NetworkPathFocus,
@@ -151,6 +153,7 @@ import {
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
+  makeNetworkStoryCamera,
   makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
@@ -1039,6 +1042,7 @@ class NetworkStoryControls {
   private readonly titleElement: HTMLDivElement;
   private readonly descriptionElement: HTMLParagraphElement;
   private readonly fabricStatusElement: HTMLSpanElement;
+  private readonly fabricMetricsElement: HTMLDivElement;
   private readonly planeIndicators: {
     greenBar: HTMLDivElement;
     redBar: HTMLDivElement;
@@ -1066,6 +1070,7 @@ class NetworkStoryControls {
   private readonly visualIntensityLabel: HTMLSpanElement;
   private readonly visualIntensityTitle: HTMLSpanElement;
   private currentBeatId = '';
+  private previousFabricMetricsSignature = '';
   private previousTelemetrySignature = '';
 
   constructor(
@@ -1366,6 +1371,19 @@ class NetworkStoryControls {
       return {greenBar, redBar, row: rowElement, status};
     });
 
+    this.fabricMetricsElement = document.createElement('div');
+    this.fabricMetricsElement.setAttribute('aria-live', 'polite');
+    Object.assign(this.fabricMetricsElement.style, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      gap: '8px',
+      marginTop: '4px',
+      color: '#8fa5c3',
+      font: '8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace',
+      whiteSpace: 'nowrap'
+    });
+    telemetryElement.appendChild(this.fabricMetricsElement);
+
     const visualIntensityElement = document.createElement('div');
     Object.assign(visualIntensityElement.style, {
       display: 'grid',
@@ -1611,6 +1629,42 @@ class NetworkStoryControls {
     }
 
     this.rootElement.dataset.networkPlaneStates = planes.map(plane => plane.status).join(',');
+  }
+
+  updateFabricTelemetry(telemetry: NetworkFabricTelemetry): void {
+    const signature = [
+      telemetry.state,
+      telemetry.capacityPercent,
+      telemetry.queuedPacketCount,
+      telemetry.trimmedPayloadCount,
+      telemetry.droppedPayloadCount,
+      telemetry.retransmissionCount,
+      telemetry.controlPacketCount
+    ].join(':');
+    if (signature === this.previousFabricMetricsSignature) {
+      return;
+    }
+    this.previousFabricMetricsSignature = signature;
+
+    const stateLabel = telemetry.state.toUpperCase();
+    const eventSummary = telemetry.controlPacketCount
+      ? `PROBE ${telemetry.controlPacketCount}`
+      : `Q ${telemetry.queuedPacketCount} · T ${telemetry.trimmedPayloadCount} · L ${telemetry.droppedPayloadCount} · R ${telemetry.retransmissionCount}`;
+    this.fabricMetricsElement.textContent = `${stateLabel} · CAP ${telemetry.capacityPercent}% · ${eventSummary}`;
+    this.fabricMetricsElement.style.color =
+      telemetry.state === 'balanced'
+        ? '#8fa5c3'
+        : telemetry.state === 'probing'
+          ? '#72dfff'
+          : telemetry.state === 'congested'
+            ? '#ffb764'
+            : '#ff8175';
+    this.fabricMetricsElement.setAttribute(
+      'aria-label',
+      `${stateLabel}. ${telemetry.activePathCount} of ${telemetry.totalPathCount} paths available, ${telemetry.capacityPercent} percent physical path capacity, ${telemetry.queuedPacketCount} queued payloads, ${telemetry.trimmedPayloadCount} trimmed payloads, ${telemetry.droppedPayloadCount} dropped payloads, ${telemetry.retransmissionCount} retransmissions, ${telemetry.controlPacketCount} control packets.`
+    );
+    this.rootElement.dataset.networkFabricState = telemetry.state;
+    this.rootElement.dataset.networkFabricCapacity = String(telemetry.capacityPercent);
   }
 
   setHighlightedPlane(planeIndex: number | null): void {
@@ -2981,6 +3035,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const beat = getNetworkStoryBeat(this.guidedStoryChapterIndex, chapterElapsedTime);
     if (beat !== this.currentStoryBeat) {
       this.currentStoryBeat = beat;
+      this.guidedStoryCamera = makeNetworkStoryCamera(chapter, beat);
+      this.guidedStoryCameraTransitionEndsAt = animationTime + 1.25;
       this.storyControls?.updateBeat(chapter, beat);
       this.setStoryHighlight(beat?.planeIndex ?? null, beat?.pathIndex ?? null);
     }
@@ -3009,9 +3065,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const controls = this.orbitControls;
     const camera = this.guidedStoryCamera;
     const cameraTarget: Vector3 = [...camera.target];
-    if (beat?.pathIndex !== undefined) {
+    if (!beat?.camera?.target && beat?.pathIndex !== undefined) {
       cameraTarget[2] += SPINE_POSITIONS[beat.pathIndex][2] * 0.2;
-    } else if (beat?.planeIndex !== undefined) {
+    } else if (!beat?.camera?.target && beat?.planeIndex !== undefined) {
       cameraTarget[2] += beat.planeIndex === 0 ? 0.32 : -0.32;
     }
     const yawDelta = Math.atan2(
@@ -4114,6 +4170,28 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         event.kind === 'probe-confirmation'
           ? makeBalancedEmissionColor(event.color, event.color[3])
           : event.color
+      );
+    }
+
+    const spinePathTelemetry = makeNetworkPlaneTelemetry(
+      this.conversationRoutes,
+      this.packetDefinitions,
+      this.failedSwitchIndices,
+      this.recoveringSwitchIndices,
+      this.congestedSwitchIndices
+    );
+    const fabricTelemetry = makeNetworkFabricTelemetry(
+      spinePathTelemetry,
+      this.queuedPacketDefinitions,
+      this.networkPacketEvents,
+      animationTime
+    );
+    this.storyControls?.updateFabricTelemetry(fabricTelemetry);
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingFabricState = fabricTelemetry.state;
+      this.canvas.dataset.packetSprayingCapacity = String(fabricTelemetry.capacityPercent);
+      this.canvas.dataset.packetSprayingRetransmissions = String(
+        fabricTelemetry.retransmissionCount
       );
     }
   }
