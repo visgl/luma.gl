@@ -46,7 +46,7 @@ export type {
 } from './gpu-command-graph';
 
 export {GPUScan} from './gpu-scan';
-export type {GPUScanInput, GPUScanProps} from './gpu-scan';
+export type {GPUScanInput, GPUScanMode, GPUScanProps} from './gpu-scan';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
 
