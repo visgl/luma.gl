@@ -22,6 +22,11 @@ export type NetworkStoryChapter = {
   title: string;
 };
 
+export type NetworkStoryProgress = {
+  chapterProgress: number;
+  overallProgress: number;
+};
+
 export type NetworkOpticsProfile = {
   bloom: number;
   caustics: number;
@@ -94,6 +99,31 @@ export function getWrappedStoryChapterIndex(chapterIndex: number): number {
 
 export function getNetworkStoryChapter(chapterIndex: number): NetworkStoryChapter {
   return NETWORK_STORY_CHAPTERS[getWrappedStoryChapterIndex(chapterIndex)];
+}
+
+/** Returns bounded chapter and duration-weighted full-tour playback progress. */
+export function getNetworkStoryProgress(
+  chapterIndex: number,
+  elapsedTime: number
+): NetworkStoryProgress {
+  const wrappedIndex = getWrappedStoryChapterIndex(chapterIndex);
+  const chapter = NETWORK_STORY_CHAPTERS[wrappedIndex];
+  const boundedElapsedTime = Number.isFinite(elapsedTime)
+    ? Math.max(0, Math.min(elapsedTime, chapter.duration))
+    : 0;
+  const elapsedPreviousChapters = NETWORK_STORY_CHAPTERS.slice(0, wrappedIndex).reduce(
+    (totalDuration, previousChapter) => totalDuration + previousChapter.duration,
+    0
+  );
+  const totalDuration = NETWORK_STORY_CHAPTERS.reduce(
+    (duration, storyChapter) => duration + storyChapter.duration,
+    0
+  );
+
+  return {
+    chapterProgress: boundedElapsedTime / chapter.duration,
+    overallProgress: (elapsedPreviousChapters + boundedElapsedTime) / totalDuration
+  };
 }
 
 /** Brings optical techniques online progressively while keeping low settings packet-first. */

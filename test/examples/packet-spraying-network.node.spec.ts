@@ -30,6 +30,7 @@ import {
   makeLinkTraffic,
   makePackets,
   makeNetworkPlaneTelemetry,
+  makeNetworkPathFocus,
   makeNetworkSwitchPlaneTelemetry,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
@@ -112,6 +113,36 @@ test('packet-spraying switches form spine and two complete physical-plane groups
     groups[2].switchIndices.every(switchIndex => SWITCH_POSITIONS[switchIndex][2] < 0),
     'the second physical plane keeps its negative-depth switch row together'
   );
+  testCase.end();
+});
+
+test('packet-spraying path inspection follows both complete conversations through one spine', testCase => {
+  const routes = makeConversationRoutes();
+
+  for (let pathIndex = 0; pathIndex < SPINE_POSITIONS.length; pathIndex++) {
+    const focus = makeNetworkPathFocus(routes, pathIndex)!;
+
+    testCase.equal(focus.pathIndex, pathIndex, 'the focus identifies its physical backbone path');
+    testCase.equal(
+      focus.hostIndices.size,
+      4,
+      'both source and destination server pairs participate'
+    );
+    testCase.equal(focus.switchIndices.size, 5, 'the focused path crosses five physical switches');
+    testCase.equal(focus.linkKeys.size, 8, 'shared links combine with both endpoint branches');
+    testCase.ok(
+      focus.switchIndices.has(LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + pathIndex),
+      'the selected spine belongs to its focused route'
+    );
+  }
+
+  testCase.equal(makeNetworkPathFocus(routes, -1), null, 'negative path indices are rejected');
+  testCase.equal(
+    makeNetworkPathFocus(routes, SPINE_POSITIONS.length),
+    null,
+    'out-of-range path indices are rejected'
+  );
+  testCase.equal(makeNetworkPathFocus([], 0), null, 'missing routes cannot produce a focus');
   testCase.end();
 });
 

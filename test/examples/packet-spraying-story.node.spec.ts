@@ -7,6 +7,7 @@ import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network'
 import {
   DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryChapter,
+  getNetworkStoryProgress,
   getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkOpticsProfile,
@@ -41,6 +42,31 @@ test('packet-spraying guided tour wraps forward and backward between chapters', 
   testCase.equal(getWrappedStoryChapterIndex(NETWORK_STORY_CHAPTERS.length), 0);
   testCase.equal(getNetworkStoryChapter(-1).id, 'recovery');
   testCase.equal(getNetworkStoryChapter(NETWORK_STORY_CHAPTERS.length).id, 'conversations');
+  testCase.end();
+});
+
+test('packet-spraying chapter timeline tracks duration-weighted guided playback', testCase => {
+  const firstChapter = getNetworkStoryProgress(0, 3.5);
+  const secondChapter = getNetworkStoryProgress(1, 4);
+  const finalChapter = getNetworkStoryProgress(NETWORK_STORY_CHAPTERS.length - 1, 7);
+
+  testCase.equal(firstChapter.chapterProgress, 0.5, 'individual chapter progress is normalized');
+  testCase.equal(secondChapter.chapterProgress, 0.5, 'different chapter lengths remain normalized');
+  testCase.ok(
+    secondChapter.overallProgress > firstChapter.overallProgress,
+    'the complete tour advances monotonically'
+  );
+  testCase.equal(finalChapter.overallProgress, 1, 'finishing the final chapter completes the tour');
+  testCase.equal(
+    getNetworkStoryProgress(0, -4).chapterProgress,
+    0,
+    'negative playback times clamp to zero'
+  );
+  testCase.equal(
+    getNetworkStoryProgress(0, Number.NaN).chapterProgress,
+    0,
+    'invalid playback times cannot poison timeline state'
+  );
   testCase.end();
 });
 

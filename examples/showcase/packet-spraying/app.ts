@@ -112,6 +112,7 @@ import {
   makeLinks,
   makePackets,
   makeNetworkPlaneTelemetry,
+  makeNetworkPathFocus,
   makeNetworkSwitchPlaneTelemetry,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
@@ -127,6 +128,7 @@ import {
   type NetworkEndpointSignal,
   type NetworkPlaneTelemetry,
   type NetworkPacketEvent,
+  type NetworkPathFocus,
   type NetworkScenario,
   type NetworkSwitchTransitionWave,
   type NetworkSwitchGroupId,
@@ -138,6 +140,7 @@ import {
 import {
   DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryChapter,
+  getNetworkStoryProgress,
   getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkOpticsProfile,
@@ -1013,6 +1016,16 @@ class NetworkStoryControls {
     row: HTMLButtonElement;
     status: HTMLSpanElement;
   }[];
+  private readonly pathIndicators: {
+    greenBar: HTMLDivElement;
+    redBar: HTMLDivElement;
+    row: HTMLButtonElement;
+    status: HTMLSpanElement;
+  }[];
+  private readonly chapterSegments: {
+    button: HTMLButtonElement;
+    fill: HTMLDivElement;
+  }[];
   private readonly chapterPositionElement: HTMLSpanElement;
   private readonly opticsButton: HTMLButtonElement;
   private readonly playbackButton: HTMLButtonElement;
@@ -1025,16 +1038,20 @@ class NetworkStoryControls {
     {
       onNext,
       onPrevious,
+      onSelectChapter,
       onTogglePlayback,
       onHighlightPlane,
+      onHighlightPath,
       onToggleOptics,
       onVisualIntensityChange,
       visualIntensity
     }: {
       onNext: () => void;
       onPrevious: () => void;
+      onSelectChapter: (chapterIndex: number) => void;
       onTogglePlayback: () => void;
       onHighlightPlane: (planeIndex: number | null) => void;
+      onHighlightPath: (pathIndex: number | null) => void;
       onToggleOptics: () => void;
       onVisualIntensityChange: (level: number) => void;
       visualIntensity: number;
@@ -1080,6 +1097,56 @@ class NetworkStoryControls {
     Object.assign(this.descriptionElement.style, {
       margin: '6px 0 12px',
       color: '#bcc9dc'
+    });
+
+    const chapterTimeline = document.createElement('div');
+    chapterTimeline.setAttribute('role', 'group');
+    chapterTimeline.setAttribute('aria-label', 'Guided network story chapters');
+    Object.assign(chapterTimeline.style, {
+      display: 'flex',
+      gap: '4px',
+      height: '12px',
+      margin: '0 0 11px'
+    });
+    this.chapterSegments = NETWORK_STORY_CHAPTERS.map((chapter, chapterIndex) => {
+      const segmentButton = document.createElement('button');
+      segmentButton.type = 'button';
+      segmentButton.title = chapter.title;
+      segmentButton.dataset.networkStorySegment = chapter.id;
+      segmentButton.setAttribute(
+        'aria-label',
+        `Go to chapter ${chapterIndex + 1}: ${chapter.title}`
+      );
+      Object.assign(segmentButton.style, {
+        position: 'relative',
+        flex: String(chapter.duration),
+        height: '12px',
+        padding: '4px 0',
+        border: '0',
+        background: 'transparent',
+        cursor: 'pointer'
+      });
+
+      const track = document.createElement('div');
+      Object.assign(track.style, {
+        height: '4px',
+        overflow: 'hidden',
+        borderRadius: '2px',
+        background: 'rgba(113, 136, 171, 0.3)'
+      });
+      const fill = document.createElement('div');
+      Object.assign(fill.style, {
+        width: '0%',
+        height: '100%',
+        borderRadius: '2px',
+        background: '#86b6ff',
+        transition: 'width 100ms linear, background 200ms ease'
+      });
+      track.appendChild(fill);
+      segmentButton.appendChild(track);
+      segmentButton.addEventListener('click', () => onSelectChapter(chapterIndex));
+      chapterTimeline.appendChild(segmentButton);
+      return {button: segmentButton, fill};
     });
 
     const telemetryElement = document.createElement('div');
@@ -1165,6 +1232,73 @@ class NetworkStoryControls {
       return {greenBar, redBar, row: rowElement, status};
     });
 
+    const pathHeading = document.createElement('div');
+    pathHeading.textContent = 'BACKBONE PATHS';
+    Object.assign(pathHeading.style, {
+      margin: '9px 0 4px',
+      color: '#91a6c3',
+      fontSize: '10px'
+    });
+    telemetryElement.appendChild(pathHeading);
+
+    this.pathIndicators = SPINE_POSITIONS.map((_, pathIndex) => {
+      const rowElement = document.createElement('button');
+      rowElement.type = 'button';
+      rowElement.dataset.networkPath = String(pathIndex + 1);
+      rowElement.setAttribute('aria-label', `Inspect complete backbone path ${pathIndex + 1}`);
+      rowElement.setAttribute('aria-pressed', 'false');
+      Object.assign(rowElement.style, {
+        display: 'grid',
+        gridTemplateColumns: '42px minmax(0, 1fr) 56px',
+        alignItems: 'center',
+        gap: '7px',
+        width: 'calc(100% + 8px)',
+        height: '19px',
+        padding: '0 4px',
+        margin: '0 -4px',
+        border: '1px solid transparent',
+        borderRadius: '4px',
+        background: 'transparent',
+        cursor: 'pointer',
+        transition: 'background 220ms ease, border-color 220ms ease'
+      });
+      rowElement.addEventListener('pointerenter', () => onHighlightPath(pathIndex));
+      rowElement.addEventListener('pointermove', () => onHighlightPath(pathIndex));
+      rowElement.addEventListener('pointerleave', () => onHighlightPath(null));
+      rowElement.addEventListener('focus', () => onHighlightPath(pathIndex));
+      rowElement.addEventListener('blur', () => onHighlightPath(null));
+
+      const label = document.createElement('span');
+      label.textContent = `Path ${pathIndex + 1}`;
+      Object.assign(label.style, {color: '#becce0', fontSize: '10px'});
+      const track = document.createElement('div');
+      Object.assign(track.style, {
+        display: 'flex',
+        height: '4px',
+        overflow: 'hidden',
+        borderRadius: '2px',
+        background: 'rgba(93, 113, 146, 0.3)'
+      });
+      const redBar = document.createElement('div');
+      const greenBar = document.createElement('div');
+      Object.assign(redBar.style, {
+        height: '100%',
+        background: '#ff504d',
+        transition: 'width 260ms ease'
+      });
+      Object.assign(greenBar.style, {
+        height: '100%',
+        background: '#34db87',
+        transition: 'width 260ms ease'
+      });
+      track.append(redBar, greenBar);
+      const status = document.createElement('span');
+      Object.assign(status.style, {textAlign: 'right', fontSize: '9px'});
+      rowElement.append(label, track, status);
+      telemetryElement.appendChild(rowElement);
+      return {greenBar, redBar, row: rowElement, status};
+    });
+
     const visualIntensityElement = document.createElement('div');
     Object.assign(visualIntensityElement.style, {
       margin: '0 0 13px',
@@ -1239,6 +1373,7 @@ class NetworkStoryControls {
       headingElement,
       this.titleElement,
       this.descriptionElement,
+      chapterTimeline,
       telemetryElement,
       visualIntensityElement,
       actionsElement
@@ -1257,6 +1392,24 @@ class NetworkStoryControls {
     );
     this.rootElement.dataset.networkStoryChapter = chapter.id;
     this.rootElement.dataset.networkStoryPlaying = String(isPlaying);
+    for (const [segmentIndex, segment] of this.chapterSegments.entries()) {
+      segment.button.setAttribute('aria-current', segmentIndex === chapterIndex ? 'step' : 'false');
+    }
+  }
+
+  updateProgress(chapterIndex: number, elapsedTime: number): void {
+    const progress = getNetworkStoryProgress(chapterIndex, elapsedTime);
+    for (const [segmentIndex, segment] of this.chapterSegments.entries()) {
+      const fill =
+        segmentIndex < chapterIndex
+          ? 1
+          : segmentIndex === chapterIndex
+            ? Math.max(progress.chapterProgress, 0.08)
+            : 0;
+      segment.fill.style.width = `${fill * 100}%`;
+      segment.fill.style.background = segmentIndex === chapterIndex ? '#a3c7ff' : '#638cc5';
+    }
+    this.rootElement.dataset.networkStoryProgress = progress.overallProgress.toFixed(3);
   }
 
   updateTelemetry(
@@ -1278,6 +1431,10 @@ class NetworkStoryControls {
     ).length;
     const maximumPlaneLoad = Math.max(
       ...planes.map(plane => plane.redPacketCount + plane.greenPacketCount),
+      1
+    );
+    const maximumPathLoad = Math.max(
+      ...spinePaths.map(path => path.redPacketCount + path.greenPacketCount),
       1
     );
     this.fabricStatusElement.textContent = `${availablePlaneCount} / ${planes.length} · ${availablePathCount} / ${spinePaths.length} PATHS`;
@@ -1304,6 +1461,28 @@ class NetworkStoryControls {
               : '#ff7065';
     }
 
+    for (const path of spinePaths) {
+      const indicator = this.pathIndicators[path.planeIndex];
+      indicator.redBar.style.width = `${(path.redPacketCount / maximumPathLoad) * 100}%`;
+      indicator.greenBar.style.width = `${(path.greenPacketCount / maximumPathLoad) * 100}%`;
+      indicator.status.textContent =
+        path.status === 'healthy'
+          ? 'ONLINE'
+          : path.status === 'congested'
+            ? 'PRESSURE'
+            : path.status === 'recovering'
+              ? 'PROBING'
+              : 'OFFLINE';
+      indicator.status.style.color =
+        path.status === 'healthy'
+          ? '#8ba6c7'
+          : path.status === 'congested'
+            ? '#ffac59'
+            : path.status === 'recovering'
+              ? '#72d4ff'
+              : '#ff7065';
+    }
+
     this.rootElement.dataset.networkPlaneStates = planes.map(plane => plane.status).join(',');
   }
 
@@ -1315,6 +1494,18 @@ class NetworkStoryControls {
       const highlighted = indicatorIndex === planeIndex;
       indicator.row.style.background = highlighted ? 'rgba(97, 145, 216, 0.13)' : 'transparent';
       indicator.row.style.borderColor = highlighted ? 'rgba(137, 184, 255, 0.34)' : 'transparent';
+      indicator.row.setAttribute('aria-pressed', String(highlighted));
+    }
+  }
+
+  setHighlightedPath(pathIndex: number | null): void {
+    this.rootElement.dataset.networkHighlightedPath =
+      pathIndex === null ? '' : String(pathIndex + 1);
+
+    for (const [indicatorIndex, indicator] of this.pathIndicators.entries()) {
+      const highlighted = indicatorIndex === pathIndex;
+      indicator.row.style.background = highlighted ? 'rgba(86, 171, 199, 0.15)' : 'transparent';
+      indicator.row.style.borderColor = highlighted ? 'rgba(112, 211, 230, 0.36)' : 'transparent';
       indicator.row.setAttribute('aria-pressed', String(highlighted));
     }
   }
@@ -1454,6 +1645,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly failedSwitchIndices = new Set<number>();
   readonly recoveringSwitchIndices = new Set<number>();
   readonly conversationRoutes: ConversationRoute[];
+  readonly pathFocuses: NetworkPathFocus[];
   readonly networkLinks: NetworkLink[];
   readonly linkColors: Float32Array;
   readonly redLinkTrafficStrengths: Float32Array;
@@ -1519,6 +1711,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   readonly storyPacketColors = new Float32Array(MAX_STORY_PACKET_INSTANCES * 4);
   readonly networkPacketEvents: NetworkPacketEvent[] = [];
   readonly planeHighlightStrengths = new Float32Array(NETWORK_SWITCH_PLANE_COUNT);
+  readonly pathHighlightStrengths = new Float32Array(SPINE_POSITIONS.length);
   private readonly switchPlaneIndices = new Map<number, number>(
     Array.from({length: NETWORK_SWITCH_PLANE_COUNT}, (_, planeIndex) => planeIndex).flatMap(
       planeIndex =>
@@ -1556,6 +1749,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private guidedStoryCameraTransitionEndsAt = 0;
   private guidedStoryPreviousCameraTime: number | null = null;
   private highlightedPlaneIndex: number | null = null;
+  private highlightedPathIndex: number | null = null;
   private previousPlaneHighlightTime: number | null = null;
   private previousVisualIntensityTime: number | null = null;
   private currentVisualIntensity = DEFAULT_NETWORK_OPTICS_LEVEL;
@@ -1658,6 +1852,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     });
 
     this.conversationRoutes = makeConversationRoutes();
+    this.pathFocuses = SPINE_POSITIONS.map((_, pathIndex) =>
+      makeNetworkPathFocus(this.conversationRoutes, pathIndex)
+    ).filter((focus): focus is NetworkPathFocus => focus !== null);
     this.networkLinks = makeLinks(this.conversationRoutes);
     this.linkColors = flattenColors(this.networkLinks.map(({color}) => color));
     this.redLinkTrafficStrengths = new Float32Array(this.networkLinks.length);
@@ -1959,16 +2156,22 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.storyControls = new NetworkStoryControls(canvas, {
         onNext: () => this.moveGuidedStoryChapter(1),
         onPrevious: () => this.moveGuidedStoryChapter(-1),
+        onSelectChapter: chapterIndex => this.selectGuidedStoryChapter(chapterIndex),
         onTogglePlayback: () => this.setGuidedStoryPlaying(!this.guidedStoryPlaying),
         onHighlightPlane: planeIndex => this.setHighlightedPlane(planeIndex),
+        onHighlightPath: pathIndex => this.setHighlightedPath(pathIndex),
         onToggleOptics: () =>
           this.setOpticsPanelVisible(this.canvas?.dataset.packetSprayingOpticsExpanded !== 'true'),
         onVisualIntensityChange: level => this.setVisualIntensity(level),
         visualIntensity: this.visualIntensity
       });
       canvas.dataset.packetSprayingHighlightedPlane = '';
+      canvas.dataset.packetSprayingHighlightedPath = '';
       canvas.dataset.packetSprayingPlaneHighlightStrength = '0.000';
+      canvas.dataset.packetSprayingPathHighlightStrength = '0.000';
       canvas.dataset.packetSprayingHighlightedSwitches = '0';
+      canvas.dataset.packetSprayingHighlightedPathSwitches = '0';
+      canvas.dataset.packetSprayingHighlightedPathLinks = '0';
       canvas.dataset.packetSprayingOpticsExpanded = 'false';
       canvas.dataset.packetSprayingVisualIntensity = this.visualIntensity.toFixed(2);
       canvas.dataset.packetSprayingVisualTarget = this.visualIntensity.toFixed(2);
@@ -2368,6 +2571,18 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
           objectIndex === null || objectIndex === undefined
             ? undefined
             : this.getPickableNode(objectIndex);
+        if (pickRequest.action === 'hover') {
+          const spineIndex =
+            objectIndex === null || objectIndex === undefined
+              ? -1
+              : objectIndex -
+                HOST_POSITIONS.length -
+                LEAF_POSITIONS.length -
+                AGGREGATION_POSITIONS.length;
+          this.setHighlightedPath(
+            spineIndex >= 0 && spineIndex < SPINE_POSITIONS.length ? spineIndex : null
+          );
+        }
         if (node) {
           this.nodePopup?.show(node, pickRequest.clientPosition);
           if (this.canvas) {
@@ -2431,6 +2646,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.pendingPickRequest = null;
     this.pickingManager.clearPickState();
     this.nodePopup?.hide();
+    this.setHighlightedPath(null);
   };
 
   private setGuidedStoryPlaying(isPlaying: boolean): void {
@@ -2459,6 +2675,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private moveGuidedStoryChapter(direction: number): void {
     this.guidedStoryStarted = true;
     this.enterGuidedStoryChapter(this.guidedStoryChapterIndex + direction);
+  }
+
+  private selectGuidedStoryChapter(chapterIndex: number): void {
+    this.guidedStoryStarted = true;
+    this.enterGuidedStoryChapter(chapterIndex);
   }
 
   private enterGuidedStoryChapter(chapterIndex: number): void {
@@ -2555,6 +2776,17 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       }
     }
 
+    const chapterElapsedTime = this.guidedStoryPlaying
+      ? animationTime - this.guidedStoryChapterStartedAt
+      : this.guidedStoryElapsedAtPause;
+    this.storyControls?.updateProgress(this.guidedStoryChapterIndex, chapterElapsedTime);
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingStoryProgress = getNetworkStoryProgress(
+        this.guidedStoryChapterIndex,
+        chapterElapsedTime
+      ).overallProgress.toFixed(3);
+    }
+
     if (
       !this.guidedStoryCamera ||
       !this.orbitControls ||
@@ -2589,6 +2821,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateGuidedStoryControls(): void {
     const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
     this.storyControls?.update(chapter, this.guidedStoryChapterIndex, this.guidedStoryPlaying);
+    this.storyControls?.updateProgress(
+      this.guidedStoryChapterIndex,
+      this.guidedStoryElapsedAtPause
+    );
     if (this.canvas) {
       this.canvas.dataset.packetSprayingStoryChapter = chapter.id;
       this.canvas.dataset.packetSprayingStoryPlaying = String(this.guidedStoryPlaying);
@@ -2648,6 +2884,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     if (this.canvas) {
       this.canvas.dataset.packetSprayingHighlightedPlane =
         planeIndex === null ? '' : String(planeIndex + 1);
+    }
+  }
+
+  private setHighlightedPath(pathIndex: number | null): void {
+    if (this.highlightedPathIndex === pathIndex) {
+      return;
+    }
+
+    this.highlightedPathIndex = pathIndex;
+    this.storyControls?.setHighlightedPath(pathIndex);
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingHighlightedPath =
+        pathIndex === null ? '' : String(pathIndex + 1);
     }
   }
 
@@ -2891,19 +3140,41 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
   private getHighlightedSwitchColor(color: Color, switchIndex: number): Color {
     const planeIndex = this.switchPlaneIndices.get(switchIndex);
-    const highlightStrength =
-      planeIndex === undefined ? 0 : this.planeHighlightStrengths[planeIndex];
+    const planeStrength = planeIndex === undefined ? 0 : this.planeHighlightStrengths[planeIndex];
+    const pathStrength = this.getPathSwitchHighlightStrength(switchIndex);
+    const highlightStrength = Math.max(planeStrength, pathStrength);
 
     if (highlightStrength < 0.001) {
       return color;
     }
 
+    const blueStrength = planeStrength * (1 - pathStrength);
     return [
-      color[0] + (0.8 - color[0]) * highlightStrength * 0.56,
-      color[1] + (0.92 - color[1]) * highlightStrength * 0.56,
-      color[2] + (1.15 - color[2]) * highlightStrength * 0.56,
-      Math.min(color[3] + highlightStrength * 0.055, 0.68)
+      color[0] + (0.8 - color[0]) * blueStrength * 0.56 + pathStrength * 0.08,
+      color[1] + (0.92 - color[1]) * blueStrength * 0.56 + pathStrength * 0.24,
+      color[2] + (1.15 - color[2]) * blueStrength * 0.56 + pathStrength * 0.31,
+      Math.min(color[3] + highlightStrength * 0.065, 0.68)
     ];
+  }
+
+  private getPathSwitchHighlightStrength(switchIndex: number): number {
+    let maximumStrength = 0;
+    for (const [pathIndex, focus] of this.pathFocuses.entries()) {
+      if (focus.switchIndices.has(switchIndex)) {
+        maximumStrength = Math.max(maximumStrength, this.pathHighlightStrengths[pathIndex]);
+      }
+    }
+    return maximumStrength;
+  }
+
+  private getPathLinkHighlightStrength(linkKey: string): number {
+    let maximumStrength = 0;
+    for (const [pathIndex, focus] of this.pathFocuses.entries()) {
+      if (focus.linkKeys.has(linkKey)) {
+        maximumStrength = Math.max(maximumStrength, this.pathHighlightStrengths[pathIndex]);
+      }
+    }
+    return maximumStrength;
   }
 
   private updatePlaneHighlight(animationTime: number): void {
@@ -2933,15 +3204,37 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       }
     }
 
+    for (let pathIndex = 0; pathIndex < this.pathHighlightStrengths.length; pathIndex++) {
+      const targetStrength = this.highlightedPathIndex === pathIndex ? 1 : 0;
+      const currentStrength = this.pathHighlightStrengths[pathIndex];
+      const responseRate =
+        targetStrength > currentStrength
+          ? NETWORK_PLANE_HIGHLIGHT_ATTACK
+          : NETWORK_PLANE_HIGHLIGHT_DECAY;
+      const nextStrength =
+        currentStrength +
+        (targetStrength - currentStrength) * (1 - Math.exp(-elapsedTime * responseRate));
+      const settledStrength =
+        Math.abs(nextStrength - targetStrength) < 0.001 ? targetStrength : nextStrength;
+
+      if (Math.abs(settledStrength - currentStrength) > 0.0001) {
+        this.pathHighlightStrengths[pathIndex] = settledStrength;
+        requiresColorUpdate = true;
+      }
+    }
+
     if (requiresColorUpdate) {
       this.planeHighlightMatrices.fill(0);
       this.planeHighlightColors.fill(0);
       let highlightedSwitchCount = 0;
+      let highlightedPathSwitchCount = 0;
 
       for (let switchIndex = 0; switchIndex < this.glassInstances.length; switchIndex++) {
         const planeIndex = this.switchPlaneIndices.get(switchIndex);
-        const highlightStrength =
+        const planeStrength =
           planeIndex === undefined ? 0 : this.planeHighlightStrengths[planeIndex];
+        const pathStrength = this.getPathSwitchHighlightStrength(switchIndex);
+        const highlightStrength = Math.max(planeStrength, pathStrength);
         if (highlightStrength < 0.003) {
           continue;
         }
@@ -2963,24 +3256,55 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         );
         this.planeHighlightColors.set(
           [
-            0.17 * highlightStrength,
-            0.42 * highlightStrength,
-            0.94 * highlightStrength,
-            0.19 * highlightStrength
+            0.17 * planeStrength + 0.23 * pathStrength,
+            0.42 * planeStrength + 0.69 * pathStrength,
+            0.94 * planeStrength + 0.95 * pathStrength,
+            Math.min(0.19 * planeStrength + 0.24 * pathStrength, 0.32)
           ],
           switchIndex * 4
         );
         highlightedSwitchCount++;
+        if (pathStrength > 0.003) {
+          highlightedPathSwitchCount++;
+        }
       }
 
       this.updateSwitchColors();
+      this.updateFocusedHostColors();
       if (this.canvas) {
         this.canvas.dataset.packetSprayingPlaneHighlightStrength = Math.max(
           ...this.planeHighlightStrengths
         ).toFixed(3);
         this.canvas.dataset.packetSprayingHighlightedSwitches = String(highlightedSwitchCount);
+        this.canvas.dataset.packetSprayingPathHighlightStrength = Math.max(
+          ...this.pathHighlightStrengths
+        ).toFixed(3);
+        this.canvas.dataset.packetSprayingHighlightedPathSwitches = String(
+          highlightedPathSwitchCount
+        );
       }
     }
+  }
+
+  private updateFocusedHostColors(): void {
+    const maximumPathStrength = Math.max(...this.pathHighlightStrengths);
+    const hostColors = HOST_POSITIONS.map((_, hostIndex) => {
+      const color = makeHostColor(hostIndex);
+      let focusStrength = 0;
+      for (const [pathIndex, focus] of this.pathFocuses.entries()) {
+        if (focus.hostIndices.has(hostIndex)) {
+          focusStrength = Math.max(focusStrength, this.pathHighlightStrengths[pathIndex]);
+        }
+      }
+      const backgroundStrength = 1 - (maximumPathStrength - focusStrength) * 0.36;
+      return [
+        color[0] * backgroundStrength + focusStrength * 0.045,
+        color[1] * backgroundStrength + focusStrength * 0.07,
+        color[2] * backgroundStrength + focusStrength * 0.075,
+        color[3]
+      ] as Color;
+    });
+    this.hosts.updateColors(flattenColors(hostColors));
   }
 
   private updateHealthyRoutes(): void {
@@ -3129,19 +3453,22 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     }
 
     const pulses = makeLinkPulses(this.packetDefinitions, animationTime, this.linkPulseLength);
+    const maximumPathStrength = Math.max(...this.pathHighlightStrengths);
     for (let pulseIndex = 0; pulseIndex < pulses.length; pulseIndex++) {
       const pulse = pulses[pulseIndex];
       const pulseColor = makeBalancedEmissionColor(pulse.color, 1);
+      const pathStrength = this.getPathLinkHighlightStrength(pulse.linkKey);
+      const focusIntensity = 1 - (maximumPathStrength - pathStrength) * 0.6 + pathStrength * 0.3;
       this.linkPulseMatrices.set(
         makeSegmentMatrix(pulse.start, pulse.end, LINK_PULSE_RADIUS),
         pulseIndex * 16
       );
       this.linkPulseColors.set(
         [
-          pulseColor[0] * linkPulseIntensity * 0.34,
-          pulseColor[1] * linkPulseIntensity * 0.34,
-          pulseColor[2] * linkPulseIntensity * 0.34,
-          Math.min(linkPulseIntensity * 0.42, 0.42)
+          pulseColor[0] * linkPulseIntensity * focusIntensity * 0.34,
+          pulseColor[1] * linkPulseIntensity * focusIntensity * 0.34,
+          pulseColor[2] * linkPulseIntensity * focusIntensity * 0.34,
+          Math.min(linkPulseIntensity * focusIntensity * 0.42, 0.46)
         ],
         pulseIndex * 4
       );
@@ -3205,11 +3532,17 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     );
     const attack = 1 - Math.exp(-elapsedTime * 12);
     const decay = 1 - Math.exp(-elapsedTime * 4.5);
+    const maximumPathStrength = Math.max(...this.pathHighlightStrengths);
     let illuminatedLinkCount = 0;
+    let highlightedPathLinkCount = 0;
 
     for (let linkIndex = 0; linkIndex < this.networkLinks.length; linkIndex++) {
       const link = this.networkLinks[linkIndex];
-      const traffic = trafficByLink.get(makeLinkKey(link.start, link.end));
+      const linkKey = makeLinkKey(link.start, link.end);
+      const traffic = trafficByLink.get(linkKey);
+      const pathStrength = this.getPathLinkHighlightStrength(linkKey);
+      const backgroundStrength = 1 - (maximumPathStrength - pathStrength) * 0.55;
+      const routeGlow = pathStrength * (0.075 + this.opticsProfile.surface * 0.085);
       const targetRedStrength = Math.min((traffic?.red ?? 0) * 0.42, 1);
       const targetGreenStrength = Math.min((traffic?.green ?? 0) * 0.42, 1);
       const previousRedStrength = this.redLinkTrafficStrengths[linkIndex];
@@ -3264,28 +3597,41 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       const totalGlow = Math.min(redGlow + greenGlow + signalGlow * 0.48, 1);
       const colorOffset = linkIndex * 4;
       this.linkColors[colorOffset] = Math.min(
-        link.color[0] + redGlow * 0.3 + greenGlow * 0.055 + failureGlow * 0.2 + pressureGlow * 0.16,
+        (link.color[0] +
+          redGlow * 0.3 +
+          greenGlow * 0.055 +
+          failureGlow * 0.2 +
+          pressureGlow * 0.16) *
+          backgroundStrength +
+          routeGlow * 0.24,
         1
       );
       this.linkColors[colorOffset + 1] = Math.min(
-        link.color[1] +
+        (link.color[1] +
           redGlow * 0.04 +
           greenGlow * 0.27 +
           recoveryGlow * 0.14 +
-          pressureGlow * 0.085,
+          pressureGlow * 0.085) *
+          backgroundStrength +
+          routeGlow * 0.7,
         1
       );
       this.linkColors[colorOffset + 2] = Math.min(
-        link.color[2] + totalGlow * 0.065 + recoveryGlow * 0.17,
+        (link.color[2] + totalGlow * 0.065 + recoveryGlow * 0.17) * backgroundStrength +
+          routeGlow * 0.9,
         1
       );
       this.linkColors[colorOffset + 3] = Math.min(
-        link.color[3] + totalGlow * 0.11 + signalGlow * 0.055,
-        0.38
+        (link.color[3] + totalGlow * 0.11 + signalGlow * 0.055) * backgroundStrength +
+          routeGlow * 0.16,
+        0.42
       );
 
       if (totalGlow > 0.025) {
         illuminatedLinkCount++;
+      }
+      if (pathStrength > 0.003) {
+        highlightedPathLinkCount++;
       }
     }
 
@@ -3297,6 +3643,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.canvas.dataset.packetSprayingIlluminatedLinks !== String(illuminatedLinkCount)
     ) {
       this.canvas.dataset.packetSprayingIlluminatedLinks = String(illuminatedLinkCount);
+    }
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingHighlightedPathLinks = String(highlightedPathLinkCount);
     }
   }
 
@@ -4165,10 +4514,10 @@ const PACKET_SPRAYING_ARTICLE_URL = 'https://openai.com/index/mrc-supercomputer-
 const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Network Packet Spraying</strong></p>
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
-<p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. Use Play, Back, and Next to follow or inspect each chapter.</p>
+<p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. Follow the animated chapter timeline or select any chapter directly.</p>
 <p>The visual-style slider moves smoothly from a packet-first diagram through clear and cinematic glass to spectral lighting, focused caustics, and full optical fireworks. Individual material controls remain available in Settings.</p>
 <p>The visualization has two physical switch planes, each containing four Tier 0 access switches and four Tier 1 aggregation switches. Four larger spine switches connect those planes and provide four independent backbone paths for alternating red and green packets.</p>
-<p>The live switch-plane monitor shows red and green allocation across both physical planes and separately reports available backbone paths. Hover or focus a plane to illuminate all eight switches across its two tiers. Under pressure, adaptive routing moves most packets away from a congested path without retiring it; an offline or recovering path carries none until its control handshake succeeds.</p>
+<p>The live fabric monitor shows red and green allocation across both physical planes and each of the four backbone paths. Hover or focus a plane to illuminate all eight switches across its two tiers, or inspect an individual path to trace both complete server-to-server routes through its five switches and eight links. Under pressure, adaptive routing moves most packets away from a congested path without retiring it; an offline or recovering path carries none until its control handshake succeeds.</p>
 <p>Click any glass switch to move it from healthy to orange and congested, then red and failed. Clicking a failed switch repairs it, but its path stays offline while a blue recovery probe travels to the switch and a cyan acknowledgment returns to its source.</p>
 <p>An orange switch trims overloaded packet payloads while their smaller headers continue. A red switch briefly loses in-flight packets before MRC retires the failed path, retransmits over healthy routes, and sends occasional recovery probes.</p>
 <p>Muted red and green cubes identify each conversation's source and destination; blue cubes are inactive servers. Each active server emits a restrained colored pulse when it launches or receives a packet. Glass spheres are switches, and fabric links softly brighten with red or green light only while packets are traveling through them. Directional light wakes remain inside each link, congested switches breathe amber, and failures or confirmed recoveries send restrained red or cyan waves through nearby glass. Emissive packets leave short trails, reflect inside nearby glass, and project focused colored caustics onto adjacent reflective surfaces.</p>
