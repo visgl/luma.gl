@@ -42,7 +42,7 @@ pre-recorded render commands
 ```
 
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
-`GPUCompaction`, `GPUMask`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
+`GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
 `GPUAncestorProjection`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
 `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
@@ -981,7 +981,7 @@ schedule commitment.
 | --- | --- | :---: | :---: | :---: |
 | 0 — Current foundation | Command graph, masks, hierarchy layout, graph traversal, ancestor projection, compaction, indirect drawing, picking, analysis primitives, and three working consumers | Implemented | High | Complete |
 | 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
-| 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Planned | High | Medium |
+| 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted aggregation, richer histograms, and batch-preserving algorithms | Planned | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, swapchain imports, and external-texture contracts | Planned | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
@@ -1031,6 +1031,8 @@ and the repeatable benchmark protocol.
 
 ### Phase 2 — Reusable visibility workflows
 
+**Status:** Implemented in the experimental API.
+
 **Entry dependencies:** Phase 1 establishes measurement, failure, and lifetime contracts.
 
 Standardize graph fragments for bounding spheres, axis-aligned boxes, time ranges, LOD thresholds,
@@ -1041,9 +1043,16 @@ and frustum-culling example to consume the same workflow contract.
 General application-defined WGSL predicates remain deferred until fixed-contract workflows reveal
 the necessary shader-extension points.
 
-**Exit criteria:** At least two consumers share one workflow without application-owned scan or
-compaction plumbing; interaction parameters update without graph recompilation; and counts can stay
-GPU-resident through indirect rendering.
+`GPUVisibilityWorkflow` now accepts source-aligned time-range, bounds, LOD, and selection masks,
+intersects them, optionally publishes the canonical mask, generates or consumes stable source IDs,
+and writes compacted IDs plus one GPU-resident count. Atomic and multi-chunk vector inputs share
+the same contract. The hierarchical trace viewer and frustum-culling example both use the workflow
+and send its count directly to indirect rendering; changing view and selection data does not
+recompile either graph.
+
+**Exit criteria:** Achieved by two consumers sharing one workflow without application-owned scan or
+compaction plumbing, parameter-only interaction updates on compiled graphs, and GPU-resident counts
+flowing directly into indirect rendering.
 
 ### Phase 3 — Algorithm and table scaling
 
@@ -1152,6 +1161,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan)
 - [`GPUCompaction`](/docs/api-reference/experimental/gpu-primitives/gpu-compaction)
 - [`GPUMask`](/docs/api-reference/experimental/gpu-primitives/gpu-mask)
+- [`GPUVisibilityWorkflow`](/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow)
 - [`GPUHierarchyLayout`](/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout)
 - [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal)
 - [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection)

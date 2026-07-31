@@ -9,8 +9,8 @@ import {
   decodeGPUIndexPickInfo,
   DrawCommandBuffer,
   GPUCommandGraph,
-  GPUCompaction,
   GPUIndexPickingTarget,
+  GPUVisibilityWorkflow,
   INDEX_PICKING_READBACK_BYTE_LENGTH,
   type CompiledGPUCommandGraph
 } from '@luma.gl/experimental';
@@ -103,7 +103,10 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   private statsElement: HTMLElement | null = null;
   private nodesElement: HTMLElement | null = null;
 
-  constructor({device}: AnimationProps) {
+  constructor({
+    device,
+    cullingCapacity = DEFAULT_CAPACITY
+  }: AnimationProps & {cullingCapacity?: number}) {
     super();
     if (device.type !== 'webgpu') {
       throw new Error('GPU Frustum Culling requires WebGPU');
@@ -166,7 +169,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       }
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
-    this.rebuild(DEFAULT_CAPACITY);
+    this.rebuild(cullingCapacity);
     this.panels.mount();
   }
 
@@ -365,13 +368,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       byteLength: capacity * UINT32_BYTE_LENGTH,
       usage: Buffer.STORAGE
     });
-    const sourceIdsBuffer = graph.createTransientBuffer({
-      id: 'source-ids',
-      byteLength: capacity * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE
-    });
     const flags = graph.createDataView(flagsBuffer, {format: 'uint32', length: capacity});
-    const sourceIds = graph.createDataView(sourceIdsBuffer, {format: 'uint32', length: capacity});
     const visibleIdView = graph.createDataView(visibleIds, {
       format: 'uint32',
       length: capacity
@@ -387,8 +384,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       resources: [
         {buffer: instances, usage: 'storage-read'},
         {buffer: uniforms, usage: 'uniform'},
-        {buffer: flags, usage: 'storage-write'},
-        {buffer: sourceIds, usage: 'storage-write'}
+        {buffer: flags, usage: 'storage-write'}
       ],
       compile: ({device}) => {
         const computation = new Computation(device, {
@@ -398,8 +394,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
             bindings: [
               {name: 'instances', type: 'storage', group: 0, location: 0},
               {name: 'uniforms', type: 'uniform', group: 0, location: 1},
-              {name: 'flags', type: 'storage', group: 0, location: 2},
-              {name: 'sourceIds', type: 'storage', group: 0, location: 3}
+              {name: 'flags', type: 'storage', group: 0, location: 2}
             ]
           }
         });
@@ -408,8 +403,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
             computation.setBindings({
               instances: getBuffer(instances),
               uniforms: getBuffer(uniforms),
-              flags: getBuffer(flags),
-              sourceIds: getBuffer(sourceIds)
+              flags: getBuffer(flags)
             });
             computation.dispatch(computePass, Math.ceil(capacity / 256));
           },
@@ -418,10 +412,9 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       }
     });
 
-    new GPUCompaction({
-      id: 'visible-instance-compaction',
-      input: sourceIds,
-      flags,
+    new GPUVisibilityWorkflow({
+      id: 'visible-instances',
+      predicates: [{kind: 'bounds', mask: flags}],
       output: visibleIdView,
       count: instanceCount
     }).addToGraph(graph);

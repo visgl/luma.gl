@@ -1,0 +1,97 @@
+import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-docs-tabs';
+
+# GPUVisibilityWorkflow
+
+<GPUPrimitivesDocsTabs active="visibility-workflow" />
+
+`GPUVisibilityWorkflow` is a renderer-independent command-graph fragment that intersects
+source-aligned visibility masks, stably compacts visible source IDs, and publishes the visible
+count. The count can point directly at an indirect draw command, so neither filtering nor drawing
+requires CPU readback.
+
+```ts
+import {GPUVisibilityWorkflow} from '@luma.gl/experimental';
+
+const count = graph.importGPUData(
+  'visible-object-count',
+  drawCommands.getInstanceCountData(0)
+);
+
+new GPUVisibilityWorkflow({
+  id: 'visible-objects',
+  predicates: [
+    {kind: 'time-range', mask: timeRangeMask},
+    {kind: 'bounds', mask: boundsMask},
+    {kind: 'lod', mask: lodMask},
+    {kind: 'selection', mask: selectionMask}
+  ],
+  outputMask: visibleMask,
+  output: visibleIds,
+  count
+}).addToGraph(graph);
+```
+
+The workflow owns mask intersection, identity generation, scan, stable scatter, and count
+publication. Applications remain responsible for producing predicate masks. This fixed contract
+lets a time filter, frustum test, LOD rule, or selection kernel share the same downstream workflow
+without embedding renderer state or application WGSL in the API.
+
+## Predicates
+
+Each predicate has a semantic `kind` and a packed `uint32` mask. A zero rejects the corresponding
+source row; any nonzero value accepts it. All predicates are intersected. The supported semantic
+roles are:
+
+- `'time-range'`
+- `'bounds'`
+- `'lod'`
+- `'selection'`
+
+A producer that fuses several tests into one mask can provide an array of kinds, such as
+`{kind: ['time-range', 'bounds', 'lod'], mask}`. Kinds describe the fixed contract for diagnostics
+and workflow composition; they do not inject shader callbacks.
+
+When `outputMask` is provided, the workflow writes the canonical composed mask as `0` or `1`.
+This allows hierarchy projection or another algorithm to consume the exact visibility decision.
+
+## Stable identity and output
+
+By default, the workflow generates consecutive source IDs beginning at zero. Set
+`firstSourceIndex` when the input represents a slice of a larger stable identity space:
+
+```ts
+new GPUVisibilityWorkflow({
+  predicates: [{kind: 'selection', mask: groupMask}],
+  output: groupVisibleIds,
+  count: groupInstanceCount,
+  firstSourceIndex: group.firstRow
+}).addToGraph(graph);
+```
+
+Alternatively, supply `sourceIds` to compact an explicit ID vector. `sourceIds` and
+`firstSourceIndex` are mutually exclusive. Selected IDs preserve source order.
+
+`count` is one packed `uint32` row. It may be ordinary storage or a borrowed
+`DrawCommandBuffer` count field. Updating predicate data and encoding the compiled graph again
+updates the output IDs and count without recompiling the graph.
+
+## Chunked vectors
+
+Predicates, source IDs, output masks, and outputs may all be atomic
+`GraphDataView<'uint32'>` values or all be `GraphVectorView<'uint32'>` values. Vector inputs must
+have identical ordered chunk topology. The workflow preserves chunk boundaries, generates IDs in
+the global logical order, and reports one vector-wide count; it never concatenates or repacks the
+caller-owned buffers.
+
+Output capacity must cover every source row. All views must belong to the target graph, and
+generated IDs must fit in `uint32`.
+
+## Current consumers
+
+The hierarchical trace viewer combines time-range, viewport, LOD, and focused-selection masks,
+then routes the workflow's stable IDs and counts into grouped indirect draws. The frustum-culling
+example supplies a bounds mask and consumes the same output contract for indexed indirect
+rendering. Neither consumer owns scan or compaction plumbing.
+
+Application-defined WGSL predicate callbacks remain deferred until these fixed mask contracts
+demonstrate which extension points are necessary.

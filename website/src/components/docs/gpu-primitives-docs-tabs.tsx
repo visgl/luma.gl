@@ -7,6 +7,7 @@ export type GPUPrimitivesDocsTabId =
   | 'scan'
   | 'compaction'
   | 'mask'
+  | 'visibility-workflow'
   | 'hierarchy-layout'
   | 'graph-traversal'
   | 'ancestor-projection'
@@ -42,6 +43,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'mask',
     label: 'Masks',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-mask'
+  },
+  {
+    id: 'visibility-workflow',
+    label: 'Visibility',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow'
   },
   {
     id: 'hierarchy-layout',

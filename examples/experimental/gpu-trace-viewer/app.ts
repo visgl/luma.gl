@@ -9,10 +9,9 @@ import {
   DrawCommandBuffer,
   GPUAncestorProjection,
   GPUCommandGraph,
-  GPUCompaction,
   GPUGraphTraversal,
   GPUHierarchyLayout,
-  GPUMask,
+  GPUVisibilityWorkflow,
   type CompiledGPUCommandGraph,
   type GraphBufferHandle,
   type GraphBufferUse
@@ -599,11 +598,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     for (const [groupIndex, group] of resources.groups.entries()) {
       const visibleIds = importTraceBuffer(graph, `${group.name}-visible-ids`, group.visibleIds);
       renderResources.push({buffer: visibleIds, usage: 'storage-read'});
-      const sourceIdsBuffer = graph.createTransientBuffer({
-        id: `${group.name}-source-ids`,
-        byteLength: Math.max(group.count, 1) * UINT32_BYTE_LENGTH,
-        usage: Buffer.STORAGE
-      });
       if (group.count > 0) {
         addTraceComputePass(graph, {
           id: `${group.name}-base-visibility`,
@@ -615,7 +609,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             storageRead('threadOffsets', handles.threadOffsets),
             storageRead('threadStates', handles.threadStates),
             storageWrite('visibilityFlags', handles.baseVisibility),
-            storageWrite('sourceIds', sourceIdsBuffer),
             storageWrite('pickResult', handles.pickResult)
           ],
           length: group.count
@@ -637,21 +630,20 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         length: group.count,
         byteOffset
       });
-      new GPUMask({
-        id: `${group.name}-compose-visibility`,
-        inputs: [baseMask, focusMask],
-        output: finalMask
-      }).addToGraph(graph);
-      new GPUCompaction({
-        id: `${group.name}-compaction`,
-        input: graph.createDataView(sourceIdsBuffer, {format: 'uint32', length: group.count}),
-        flags: finalMask,
+      new GPUVisibilityWorkflow({
+        id: `${group.name}-visibility`,
+        predicates: [
+          {kind: ['time-range', 'bounds', 'lod'], mask: baseMask},
+          {kind: 'selection', mask: focusMask}
+        ],
+        outputMask: finalMask,
         output: graph.createDataView(visibleIds, {format: 'uint32', length: group.count}),
         count: graph.createDataView(handles.drawCommands, {
           format: 'uint32',
           length: 1,
           byteOffset: resources.drawCommands.getInstanceCountByteOffset(groupIndex)
-        })
+        }),
+        firstSourceIndex: group.firstSpanIndex
       }).addToGraph(graph);
     }
 
@@ -676,11 +668,6 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       byteLength: Math.max(resources.dependencyCount, 1) * UINT32_BYTE_LENGTH,
       usage: Buffer.STORAGE
     });
-    const dependencySourceIds = graph.createTransientBuffer({
-      id: 'trace-dependency-source-ids',
-      byteLength: Math.max(resources.dependencyCount, 1) * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE
-    });
     if (resources.dependencyCount > 0) {
       addTraceComputePass(graph, {
         id: 'trace-dependency-visibility',
@@ -692,22 +679,22 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           storageRead('processStates', handles.processStates),
           storageRead('visibleAncestors', handles.visibleAncestors),
           uniformBinding('viewUniforms', handles.uniforms),
-          storageWrite('dependencyFlags', dependencyFlags),
-          storageWrite('dependencyIds', dependencySourceIds)
+          storageWrite('dependencyFlags', dependencyFlags)
         ],
         length: resources.dependencyCount
       });
     }
-    new GPUCompaction({
-      id: 'trace-dependency-compaction',
-      input: graph.createDataView(dependencySourceIds, {
-        format: 'uint32',
-        length: resources.dependencyCount
-      }),
-      flags: graph.createDataView(dependencyFlags, {
-        format: 'uint32',
-        length: resources.dependencyCount
-      }),
+    new GPUVisibilityWorkflow({
+      id: 'trace-dependency-visibility',
+      predicates: [
+        {
+          kind: 'selection',
+          mask: graph.createDataView(dependencyFlags, {
+            format: 'uint32',
+            length: resources.dependencyCount
+          })
+        }
+      ],
       output: graph.createDataView(handles.visibleDependencyIds, {
         format: 'uint32',
         length: resources.dependencyCount
