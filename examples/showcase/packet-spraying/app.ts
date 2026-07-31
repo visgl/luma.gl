@@ -1063,39 +1063,39 @@ class NetworkStoryControls {
     this.rootElement.setAttribute('aria-label', 'Network packet spraying guided tour');
     Object.assign(this.rootElement.style, {
       position: 'fixed',
-      left: '18px',
-      bottom: '18px',
+      left: '12px',
+      bottom: '12px',
       zIndex: '15',
-      width: 'min(360px, calc(100vw - 36px))',
-      padding: '14px 16px',
+      width: 'min(320px, calc(100vw - 24px))',
+      padding: '9px 11px',
       boxSizing: 'border-box',
       border: '1px solid rgba(126, 157, 205, 0.26)',
       borderRadius: '8px',
       background: 'rgba(8, 12, 20, 0.86)',
       backdropFilter: 'blur(12px)',
       color: '#eff4fd',
-      font: '13px/1.45 system-ui, sans-serif'
+      font: '11px/1.35 system-ui, sans-serif'
     });
 
     const headingElement = document.createElement('div');
     headingElement.textContent = 'GUIDED NETWORK TOUR';
     Object.assign(headingElement.style, {
       color: '#88a9d6',
-      fontSize: '10px',
+      fontSize: '9px',
       fontWeight: '650'
     });
 
     this.titleElement = document.createElement('div');
     this.titleElement.setAttribute('aria-live', 'polite');
     Object.assign(this.titleElement.style, {
-      marginTop: '5px',
-      fontSize: '15px',
+      marginTop: '3px',
+      fontSize: '13px',
       fontWeight: '650'
     });
 
     this.descriptionElement = document.createElement('p');
     Object.assign(this.descriptionElement.style, {
-      margin: '6px 0 12px',
+      margin: '3px 0 6px',
       color: '#bcc9dc'
     });
 
@@ -1105,8 +1105,8 @@ class NetworkStoryControls {
     Object.assign(chapterTimeline.style, {
       display: 'flex',
       gap: '4px',
-      height: '12px',
-      margin: '0 0 11px'
+      height: '10px',
+      margin: '0 0 5px'
     });
     this.chapterSegments = NETWORK_STORY_CHAPTERS.map((chapter, chapterIndex) => {
       const segmentButton = document.createElement('button');
@@ -1120,8 +1120,8 @@ class NetworkStoryControls {
       Object.assign(segmentButton.style, {
         position: 'relative',
         flex: String(chapter.duration),
-        height: '12px',
-        padding: '4px 0',
+        height: '10px',
+        padding: '3px 0',
         border: '0',
         background: 'transparent',
         cursor: 'pointer'
@@ -1151,8 +1151,8 @@ class NetworkStoryControls {
 
     const telemetryElement = document.createElement('div');
     Object.assign(telemetryElement.style, {
-      margin: '0 0 13px',
-      paddingTop: '9px',
+      margin: '0 0 7px',
+      paddingTop: '6px',
       borderTop: '1px solid rgba(137, 166, 211, 0.17)'
     });
 
@@ -1160,9 +1160,9 @@ class NetworkStoryControls {
     Object.assign(telemetryHeading.style, {
       display: 'flex',
       justifyContent: 'space-between',
-      marginBottom: '5px',
+      marginBottom: '2px',
       color: '#91a6c3',
-      fontSize: '10px'
+      fontSize: '9px'
     });
     const telemetryLabel = document.createElement('span');
     telemetryLabel.textContent = 'SWITCH PLANES';
@@ -1178,11 +1178,11 @@ class NetworkStoryControls {
       rowElement.setAttribute('aria-pressed', 'false');
       Object.assign(rowElement.style, {
         display: 'grid',
-        gridTemplateColumns: '42px minmax(0, 1fr) 56px',
+        gridTemplateColumns: '39px minmax(0, 1fr) 45px',
         alignItems: 'center',
-        gap: '7px',
+        gap: '5px',
         width: 'calc(100% + 8px)',
-        height: '21px',
+        height: '17px',
         padding: '0 4px',
         margin: '0 -4px',
         border: '1px solid transparent',
@@ -1201,7 +1201,7 @@ class NetworkStoryControls {
 
       const labelElement = document.createElement('span');
       labelElement.textContent = `Plane ${planeIndex + 1}`;
-      Object.assign(labelElement.style, {color: '#becce0', fontSize: '10px'});
+      Object.assign(labelElement.style, {color: '#becce0', fontSize: '9px'});
 
       const trackElement = document.createElement('div');
       Object.assign(trackElement.style, {
@@ -1226,7 +1226,7 @@ class NetworkStoryControls {
       trackElement.append(redBar, greenBar);
 
       const status = document.createElement('span');
-      Object.assign(status.style, {textAlign: 'right', fontSize: '9px'});
+      Object.assign(status.style, {textAlign: 'right', fontSize: '8px'});
       rowElement.append(labelElement, trackElement, status);
       telemetryElement.appendChild(rowElement);
       return {greenBar, redBar, row: rowElement, status};
@@ -1235,11 +1235,19 @@ class NetworkStoryControls {
     const pathHeading = document.createElement('div');
     pathHeading.textContent = 'BACKBONE PATHS';
     Object.assign(pathHeading.style, {
-      margin: '9px 0 4px',
+      margin: '5px 0 2px',
       color: '#91a6c3',
-      fontSize: '10px'
+      fontSize: '9px'
     });
     telemetryElement.appendChild(pathHeading);
+
+    const pathGrid = document.createElement('div');
+    Object.assign(pathGrid.style, {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+      columnGap: '7px'
+    });
+    telemetryElement.appendChild(pathGrid);
 
     this.pathIndicators = SPINE_POSITIONS.map((_, pathIndex) => {
       const rowElement = document.createElement('button');
@@ -1249,13 +1257,13 @@ class NetworkStoryControls {
       rowElement.setAttribute('aria-pressed', 'false');
       Object.assign(rowElement.style, {
         display: 'grid',
-        gridTemplateColumns: '42px minmax(0, 1fr) 56px',
+        gridTemplateColumns: '34px minmax(0, 1fr) 39px',
         alignItems: 'center',
-        gap: '7px',
-        width: 'calc(100% + 8px)',
-        height: '19px',
-        padding: '0 4px',
-        margin: '0 -4px',
+        gap: '4px',
+        width: '100%',
+        height: '17px',
+        padding: '0 2px',
+        margin: '0',
         border: '1px solid transparent',
         borderRadius: '4px',
         background: 'transparent',
@@ -1270,7 +1278,7 @@ class NetworkStoryControls {
 
       const label = document.createElement('span');
       label.textContent = `Path ${pathIndex + 1}`;
-      Object.assign(label.style, {color: '#becce0', fontSize: '10px'});
+      Object.assign(label.style, {color: '#becce0', fontSize: '9px'});
       const track = document.createElement('div');
       Object.assign(track.style, {
         display: 'flex',
@@ -1293,25 +1301,25 @@ class NetworkStoryControls {
       });
       track.append(redBar, greenBar);
       const status = document.createElement('span');
-      Object.assign(status.style, {textAlign: 'right', fontSize: '9px'});
+      Object.assign(status.style, {textAlign: 'right', fontSize: '8px'});
       rowElement.append(label, track, status);
-      telemetryElement.appendChild(rowElement);
+      pathGrid.appendChild(rowElement);
       return {greenBar, redBar, row: rowElement, status};
     });
 
     const visualIntensityElement = document.createElement('div');
     Object.assign(visualIntensityElement.style, {
-      margin: '0 0 13px',
-      paddingTop: '9px',
+      margin: '0 0 7px',
+      paddingTop: '6px',
       borderTop: '1px solid rgba(137, 166, 211, 0.17)'
     });
     const visualIntensityHeading = document.createElement('div');
     Object.assign(visualIntensityHeading.style, {
       display: 'flex',
       justifyContent: 'space-between',
-      marginBottom: '5px',
+      marginBottom: '2px',
       color: '#91a6c3',
-      fontSize: '10px'
+      fontSize: '9px'
     });
     const visualIntensityTitle = document.createElement('span');
     visualIntensityTitle.textContent = 'VISUAL STYLE';
@@ -1327,7 +1335,7 @@ class NetworkStoryControls {
     Object.assign(this.visualIntensityInput.style, {
       display: 'block',
       width: '100%',
-      height: '16px',
+      height: '14px',
       margin: '0',
       accentColor: '#84acff',
       cursor: 'pointer'
@@ -1342,7 +1350,7 @@ class NetworkStoryControls {
     Object.assign(actionsElement.style, {
       display: 'flex',
       alignItems: 'center',
-      gap: '7px'
+      gap: '5px'
     });
 
     const previousButton = this.makeButton('Back', 'Previous story chapter', onPrevious);
@@ -1359,7 +1367,7 @@ class NetworkStoryControls {
     Object.assign(this.chapterPositionElement.style, {
       marginLeft: 'auto',
       color: '#90a2bd',
-      fontSize: '12px'
+      fontSize: '11px'
     });
 
     actionsElement.append(
@@ -1542,13 +1550,13 @@ class NetworkStoryControls {
     button.textContent = label;
     button.setAttribute('aria-label', accessibleLabel);
     Object.assign(button.style, {
-      padding: '5px 10px',
+      padding: '4px 8px',
       border: '1px solid rgba(140, 169, 211, 0.3)',
       borderRadius: '5px',
       background: 'rgba(30, 41, 58, 0.75)',
       color: '#edf3fc',
       cursor: 'pointer',
-      font: '12px system-ui, sans-serif'
+      font: '11px system-ui, sans-serif'
     });
     button.addEventListener('click', onClick);
     return button;
