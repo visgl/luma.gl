@@ -14,6 +14,7 @@ import {
 export type NetworkStoryState = 'healthy' | 'congested' | 'failed' | 'recovering';
 
 export type NetworkStoryBeat = {
+  camera?: Partial<NetworkStoryCamera>;
   color: string;
   description: string;
   id: string;
@@ -99,6 +100,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Independent senders',
         description: 'Separate red and green servers launch their first packets.',
         color: '#a8c7ff',
+        camera: {target: [0, -1.7, 0.2], distance: 10.8, yaw: 0.56, pitch: 0.62},
         pathIndex: 0,
         position: 0.05
       },
@@ -107,6 +109,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Packets interleave',
         description: 'The source-side access plane interleaves one red packet with one green.',
         color: '#77adff',
+        camera: {target: [0, -0.7, 0.15], distance: 9.7, yaw: 0.43, pitch: 0.53},
         planeIndex: 0,
         position: 0.35
       },
@@ -115,6 +118,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Separate destinations',
         description: 'The destination plane separates both streams into their target servers.',
         color: '#77dfa4',
+        camera: {target: [0, -1.25, -0.2], distance: 10.7, yaw: 0.7, pitch: 0.57},
         planeIndex: 1,
         position: 0.71
       }
@@ -134,6 +138,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Backbone path one',
         description: 'The first spine carries alternating red and green packets.',
         color: '#83bcff',
+        camera: {target: [0, 0.15, 0], distance: 10.9, yaw: 0.76, pitch: 0.5},
         pathIndex: 0,
         position: 0.04
       },
@@ -142,6 +147,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Backbone path two',
         description: 'The next packets use an independent second spine.',
         color: '#83bcff',
+        camera: {target: [0, 0.35, 0], distance: 10.2, yaw: 0.58, pitch: 0.46},
         pathIndex: 1,
         position: 0.28
       },
@@ -150,6 +156,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Backbone path three',
         description: 'A third independent path adds throughput without congestion.',
         color: '#83bcff',
+        camera: {target: [0, 0.45, 0], distance: 9.9, yaw: 0.38, pitch: 0.44},
         pathIndex: 2,
         position: 0.52
       },
@@ -158,6 +165,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Backbone path four',
         description: 'The fourth path completes the load-balanced packet spray.',
         color: '#83bcff',
+        camera: {target: [0, 0.35, 0], distance: 10.6, yaw: 0.2, pitch: 0.48},
         pathIndex: 3,
         position: 0.76
       }
@@ -177,6 +185,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Switch congestion',
         description: 'An amber spine becomes congested as incoming packets begin to queue.',
         color: '#ffbd68',
+        camera: {target: [0, 1.05, 0.55], distance: 8.9, yaw: 0.37, pitch: 0.4},
         pathIndex: 1,
         position: 0
       },
@@ -185,6 +194,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Packets queue',
         description: 'Alternating red and green packets briefly accumulate before the switch.',
         color: '#ffc26f',
+        camera: {target: [0, 0.72, 0.6], distance: 8.2, yaw: 0.31, pitch: 0.43},
         pathIndex: 1,
         position: 0.3
       },
@@ -193,6 +203,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Headers continue',
         description: 'The switch trims overloaded payloads while their compact headers continue.',
         color: '#ff9a54',
+        camera: {target: [0, 0.95, 0.58], distance: 7.8, yaw: 0.25, pitch: 0.39},
         pathIndex: 1,
         position: 0.53
       },
@@ -201,6 +212,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Healthy paths absorb load',
         description: 'Senders shift most packets toward healthy spines without retiring the path.',
         color: '#75dfa8',
+        camera: {target: [0, 0.5, 0.15], distance: 10.4, yaw: 0.54, pitch: 0.47},
         pathIndex: 2,
         position: 0.75
       }
@@ -220,6 +232,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'In-flight packets are lost',
         description: 'The failing spine scatters the packets already committed to its path.',
         color: '#ff655e',
+        camera: {target: [0, 1.08, 0.58], distance: 8.2, yaw: 0.22, pitch: 0.4},
         pathIndex: 1,
         position: 0
       },
@@ -228,6 +241,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Failed path retires',
         description: 'MRC detects packet loss and immediately removes the failed spine.',
         color: '#ff7869',
+        camera: {target: [0, 0.92, 0.5], distance: 8.8, yaw: 0.13, pitch: 0.43},
         pathIndex: 1,
         position: 0.28
       },
@@ -236,6 +250,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Missing packets retransmit',
         description: 'Missing red and green payloads retransmit through an independent spine.',
         color: '#85dca7',
+        camera: {target: [0, 0.45, 0.05], distance: 9.8, yaw: 0.42, pitch: 0.46},
         pathIndex: 2,
         position: 0.51
       },
@@ -244,6 +259,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Training continues',
         description: 'The remaining healthy paths keep both conversations moving.',
         color: '#83c6ff',
+        camera: {target: [0, 0.15, 0], distance: 11.1, yaw: 0.66, pitch: 0.5},
         pathIndex: 3,
         position: 0.76
       }
@@ -263,6 +279,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Control probe',
         description: 'A blue control packet probes the repaired spine before traffic resumes.',
         color: '#69aaff',
+        camera: {target: [0, 0.95, 0.58], distance: 8.4, yaw: 0.13, pitch: 0.42},
         pathIndex: 1,
         position: 0
       },
@@ -271,6 +288,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Path confirmation',
         description: 'A cyan acknowledgment returns and confirms the entire route is healthy.',
         color: '#70eddf',
+        camera: {target: [0, 0.75, 0.48], distance: 8, yaw: 0.25, pitch: 0.44},
         pathIndex: 1,
         position: SWITCH_PROBE_DURATION / RECOVERY_CHAPTER_DURATION
       },
@@ -279,6 +297,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         title: 'Ordinary traffic resumes',
         description: 'Only after confirmation do alternating data packets return to the spine.',
         color: '#7de9a5',
+        camera: {target: [0, 0.3, 0], distance: 10.8, yaw: 0.56, pitch: 0.5},
         pathIndex: 1,
         position: (SWITCH_PROBE_DURATION + SWITCH_CONFIRMATION_DURATION) / RECOVERY_CHAPTER_DURATION
       }
@@ -317,6 +336,18 @@ export function getNetworkStoryBeat(
   }
 
   return currentBeat;
+}
+
+/** Resolves an authored beat-level shot while inheriting unspecified chapter framing. */
+export function makeNetworkStoryCamera(
+  chapter: NetworkStoryChapter,
+  beat: NetworkStoryBeat | null
+): NetworkStoryCamera {
+  return {
+    ...chapter.camera,
+    ...beat?.camera,
+    target: beat?.camera?.target ? [...beat.camera.target] : [...chapter.camera.target]
+  };
 }
 
 /** Returns bounded chapter and duration-weighted full-tour playback progress. */

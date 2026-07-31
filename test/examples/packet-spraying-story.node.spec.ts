@@ -18,6 +18,7 @@ import {
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
+  makeNetworkStoryCamera,
   makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
@@ -81,6 +82,10 @@ test('packet-spraying chapter timeline tracks duration-weighted guided playback'
 
 test('packet-spraying cinematic story beats explain load, failure, and confirmed recovery', testCase => {
   testCase.ok(
+    NETWORK_STORY_CHAPTERS.every(chapter => chapter.beats.every(beat => beat.camera)),
+    'every named network event has an authored camera shot'
+  );
+  testCase.ok(
     NETWORK_STORY_CHAPTERS.every(chapter =>
       chapter.beats.every(
         (beat, beatIndex) =>
@@ -120,6 +125,27 @@ test('packet-spraying cinematic story beats explain load, failure, and confirmed
     getNetworkStoryBeat(4, Number.NaN)?.id,
     'probe',
     'invalid elapsed times safely remain at the initial recovery beat'
+  );
+  testCase.end();
+});
+
+test('packet-spraying beat cameras inherit chapter framing without sharing target arrays', testCase => {
+  const chapter = NETWORK_STORY_CHAPTERS[2];
+  const beat = chapter.beats[1];
+  const chapterCamera = makeNetworkStoryCamera(chapter, null);
+  const beatCamera = makeNetworkStoryCamera(chapter, beat);
+
+  testCase.deepEqual(chapterCamera, chapter.camera, 'a chapter starts from its establishing shot');
+  testCase.equal(
+    beatCamera.distance,
+    beat.camera?.distance,
+    'a beat can tighten the camera distance'
+  );
+  testCase.deepEqual(beatCamera.target, beat.camera?.target, 'a beat can focus a network event');
+  testCase.notEqual(
+    beatCamera.target,
+    beat.camera?.target,
+    'resolved camera targets are safe to animate in place'
   );
   testCase.end();
 });

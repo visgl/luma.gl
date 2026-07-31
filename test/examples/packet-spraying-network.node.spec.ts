@@ -32,6 +32,7 @@ import {
   makeLinkPulses,
   makeLinkTraffic,
   makePackets,
+  makeNetworkFabricTelemetry,
   makeNetworkPlaneTelemetry,
   makeNetworkPathFocus,
   makeNetworkSwitchPlaneTelemetry,
@@ -532,6 +533,57 @@ test('packet-spraying telemetry reports per-plane load, failure, and recovery', 
     recoveringTelemetry.slice(1).every(plane => plane.status === 'healthy'),
     'unaffected planes continue operating normally'
   );
+  testCase.end();
+});
+
+test('packet-spraying fabric telemetry measures capacity and exceptional packet handling', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const spineSwitchIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + 1;
+  const congestedSwitches = new Set([spineSwitchIndex]);
+  reroutePackets(packets, routes, congestedSwitches);
+  const congestedPaths = makeNetworkPlaneTelemetry(
+    routes,
+    packets,
+    new Set(),
+    new Set(),
+    congestedSwitches
+  );
+  const queue = makeSwitchQueuePackets(packets, spineSwitchIndex, 12, 6);
+  const congestedMetrics = makeNetworkFabricTelemetry(congestedPaths, queue, [], 12);
+
+  testCase.equal(congestedMetrics.state, 'congested');
+  testCase.equal(congestedMetrics.capacityPercent, 100, 'congestion preserves physical capacity');
+  testCase.equal(congestedMetrics.queuedPacketCount, 6, 'the visible queue is measured directly');
+
+  const failedSwitches = new Set([spineSwitchIndex]);
+  const failureEvents = makeSwitchPacketEvents({
+    packets,
+    conversationRoutes: routes,
+    scenario: 'failure',
+    startedAt: 20,
+    switchIndex: spineSwitchIndex
+  });
+  reroutePackets(packets, getHealthyConversationRoutes(routes, failedSwitches));
+  const failedPaths = makeNetworkPlaneTelemetry(
+    routes,
+    packets,
+    failedSwitches,
+    new Set(),
+    new Set()
+  );
+  const reroutingMetrics = makeNetworkFabricTelemetry(failedPaths, [], failureEvents, 20.8);
+
+  testCase.equal(reroutingMetrics.state, 'rerouting');
+  testCase.equal(reroutingMetrics.activePathCount, 3, 'one failed spine retires one path');
+  testCase.equal(reroutingMetrics.capacityPercent, 75, 'capacity reflects three surviving paths');
+  testCase.ok(reroutingMetrics.droppedPayloadCount > 0, 'in-flight loss is measured');
+  testCase.ok(reroutingMetrics.retransmissionCount > 0, 'replacement traffic is measured');
+
+  const probe = makeSwitchProbeEvent(routes, spineSwitchIndex, 30)!;
+  const probingMetrics = makeNetworkFabricTelemetry(failedPaths, [], [probe], 30.2);
+  testCase.equal(probingMetrics.state, 'probing', 'control traffic takes telemetry precedence');
+  testCase.equal(probingMetrics.controlPacketCount, 1);
   testCase.end();
 });
 
