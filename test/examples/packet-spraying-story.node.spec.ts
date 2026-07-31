@@ -181,8 +181,12 @@ test('packet-spraying hover highlights glass without washing out transparency or
     'hovered plane switches ease toward a visible cool glass highlight'
   );
   testCase.ok(
-    planeHighlight[2] > 0.9 && pathHighlight[2] > 0.9,
-    'focused switch colors activate the dedicated Fresnel rim in both shader backends'
+    planeHighlight[2] >= 1.05 && pathHighlight[2] >= 1.05,
+    'fully focused switches cross the actual Fresnel-rim activation threshold'
+  );
+  testCase.ok(
+    makeNetworkSwitchHighlightColor(clearSwitch, 0.5, 0)[2] < planeHighlight[2],
+    'partial plane focus fades in before reaching the complete Fresnel rim'
   );
   testCase.ok(
     pathHighlight[1] > planeHighlight[1],

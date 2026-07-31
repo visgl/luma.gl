@@ -396,8 +396,8 @@ export function makeNetworkSwitchHighlightColor(
 
   const targetColor: Color =
     boundedPathStrength > boundedPlaneStrength
-      ? [0.42, 1.02, 1.2, color[3]]
-      : [0.6, 0.82, 1.15, color[3]];
+      ? [0.42, 1.02, 1.55, color[3]]
+      : [0.6, 0.82, 1.46, color[3]];
   return [
     color[0] + (targetColor[0] - color[0]) * highlightStrength,
     color[1] + (targetColor[1] - color[1]) * highlightStrength,

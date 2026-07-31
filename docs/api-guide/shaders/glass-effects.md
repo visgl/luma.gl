@@ -17,6 +17,7 @@ GLSL shader modules, while transparency renderers remain responsible for composi
 | Backface thickness | Rasterizes sphere backfaces into a normal-and-depth texture and linearizes the front-to-back depth difference. | Glass centers and silhouettes acquire different optical path lengths. |
 | Two-surface transmission | Applies analytic entry and exit refraction while checking opaque scene depth. | Background bends convincingly without distorting geometry in front of the glass. |
 | Studio environment | Samples a generated equirectangular environment along the reflected viewing direction. | Polished surfaces receive camera-responsive studio reflections. |
+| Prefiltered environment | Selects initialized reflection-probe mip levels from surface roughness, including broader internal-bounce lobes. | Polished clearcoat remains sharp while rough and internal reflections become naturally softer. |
 | Chromatic dispersion | Offsets red, green, and blue scene-color samples. | Subtle colored separation around refracted features. |
 | Beer-Lambert absorption | Attenuates transmitted light with material color and thickness. | Longer optical paths produce darker, more tinted transmission. |
 | Spectral volume absorption | Applies independent red, green, and blue extinction over measured shell thickness. | Deep glass acquires wavelength-dependent tint without recoloring thin silhouettes. |
@@ -28,6 +29,7 @@ GLSL shader modules, while transparency renderers remain responsible for composi
 | Thin-film interference | Evaluates nanometer-scale coating thickness across representative red, green, and blue wavelengths. | Angle-dependent spectral bands follow grazing highlights without coloring the whole object. |
 | Localized point lights | Evaluates a bounded array of nearby colored light sources. | Moving emissive objects tint adjacent glass and reflective surfaces. |
 | Optical volume scattering | Couples nearby colored point lights into the measured glass interior. | Passing packets briefly illuminate the inside of a switch without washing out the network. |
+| Glass contact shadows | Compares captured opaque depth against measured front and back glass surfaces. | Adjacent links and server hardware subtly anchor to transparent switch shells. |
 | Dynamic scene reflections | Samples captured opaque scene color along a curved screen-space reflection offset. | Moving packets and active links appear as localized reflections on glass switches. |
 | Focused raster caustics | Projects bounded colored glass-lens contributions onto nearby reflective receivers. | Active switches concentrate moving red and green light onto adjacent links and servers. |
 | Fault-driven distortion | Modulates refraction and narrow internal filaments only on warm fault-tinted glass. | Congested and failed switches acquire subtle animated optical instability. |
@@ -127,12 +129,15 @@ shaderInputs.setProps({
     backfaceTexture,
     environmentTexture,
     environmentIntensity: 1.25,
+    environmentMipLevels: environmentTexture.mipLevels,
+    environmentPrefilterStrength: 1,
     thicknessStrength: 1,
     roughTransmissionStrength: 0.85,
     spectralAbsorptionStrength: 0.42,
     thinFilmThickness: 420,
     thinFilmStrength: 0.22,
     volumeScatteringStrength: 0.38,
+    contactShadowStrength: 0.35,
     dynamicReflectionStrength: 0.38,
     secondaryBounceStrength: 0.55,
     faultDistortionStrength: 0.42,
@@ -148,10 +153,13 @@ total-internal-reflection handling, sampled equirectangular environment reflecti
 screen-space scene reflections, secondary internal bounces, and fault-tinted optical distortion.
 Optional spectral-volume controls add bounded multisample rough transmission, wavelength-dependent
 Beer-Lambert absorption, nanometer-scale thin-film interference, and colored in-volume scattering
-from nearby point lights. These additional controls default to zero so existing transmission
-consumers retain their appearance. Rough transmission requires four additional chromatic scene
-samples and two additional environment samples; it remains a bounded raster approximation rather
-than geometry-aware ray tracing.
+from nearby point lights. A fully initialized environment mip pyramid enables roughness-selected
+reflection probes and broader internal reflection lobes without repeated per-fragment neighborhood
+filtering. Optional contact shadows compare the existing opaque depth attachment against the
+measured front and back glass surfaces; they affect transmitted scene light without clouding
+unoccupied glass. These additional controls default to zero so existing transmission consumers
+retain their appearance. All modes remain bounded raster approximations rather than geometry-aware
+ray tracing.
 
 ## Add Focused Raster Caustics
 
@@ -254,6 +262,8 @@ an individual showcase.
 - Backface-derived thickness, foreground rejection, wavelength-dependent volume absorption,
   thickness-aware rough transmission, and nanometer-scale thin-film interference give glass
   measurable optical depth without per-pixel ray tracing.
+- Initialized prefiltered studio-probe mip chains support roughness-selected environment reflections
+  and broadened internal bounces; opaque-depth contact shadows anchor hardware to transparent shells.
 - Bounded colored point lights, in-volume scattering, screen-space scene reflections, secondary
   environment bounces, and focused raster caustics connect moving emitters to nearby glass.
 - Linked switch-plane telemetry gradually emphasizes all eight switches across both tiers of each
@@ -273,8 +283,8 @@ an individual showcase.
 
 - Add temporally accumulated rough transmission and history rejection to reduce multisample cost
   while preserving animated packet detail.
-- Introduce filtered environment probes and roughness-selected reflection levels with explicit
-  capability-aware fallbacks.
+- Extend prefiltered environment probes with authored HDR assets, importance-sampled convolution,
+  and explicit capability-aware fallback levels.
 - Improve geometry-aware screen-space reflections and thickness-guided indirect packet lighting
   without reading from active render attachments.
 - Add adaptive local scattering and neighborhood-aware translucent contact shadows while keeping

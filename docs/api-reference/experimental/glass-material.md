@@ -74,12 +74,15 @@ existing `glassMaterial_getColor(...)` consumers.
 | `backfaceTexture` | `Texture` | Required for rendering. | Encoded world-space backface normals and depth. |
 | `environmentTexture` | `Texture` | Required for rendering. | Equirectangular studio or HDR environment. |
 | `environmentIntensity` | `number` | `1` | Environment reflection multiplier. |
+| `environmentMipLevels` | `number` | `1` | Number of initialized environment-probe mip levels available for roughness-selected reflection. |
+| `environmentPrefilterStrength` | `number` | `0` | Opt-in roughness-to-mip multiplier; zero preserves legacy bounded environment filtering. |
 | `thicknessStrength` | `number` | `1` | Measured optical-path multiplier. |
 | `roughTransmissionStrength` | `number` | `0` | Thickness-aware rough transmission and filtered environment reflection strength. |
 | `spectralAbsorptionStrength` | `number` | `0` | Wavelength-dependent Beer-Lambert extinction inside the measured glass volume. |
 | `thinFilmThickness` | `number` | `0` | Surface coating thickness in nanometers; zero disables coating interference. |
 | `thinFilmStrength` | `number` | `0` | Intensity of angle-dependent red, green, and blue coating interference. |
 | `volumeScatteringStrength` | `number` | `0` | Strength of restrained in-volume scattering and nearby point-light coupling. |
+| `contactShadowStrength` | `number` | `0` | Depth-aware optical contact shadows around adjacent opaque network hardware. |
 | `depthBias` | `number` | `0.00008` | Foreground depth-comparison tolerance. |
 | `dynamicReflectionStrength` | `number` | `0` | Captured-scene reflection strength for nearby moving objects. |
 | `secondaryBounceStrength` | `number` | `0` | Additional reflected environment bounce inside the glass shell. |
@@ -91,10 +94,12 @@ Use `glassTransmission_getColor(...)`, or add `opticalPointLightsPlugin` and use
 matching WGSL and GLSL forms.
 
 The optional volume controls preserve existing output when left at their zero defaults. Rough
-transmission adds bounded scene-color and environment samples; spectral absorption uses the
-backface-measured optical path; thin-film interference evaluates representative red, green, and
-blue wavelengths from the coating thickness; and volume scattering couples nearby optical point
-lights into the glass interior. No mode requires per-pixel ray tracing.
+transmission adds bounded scene-color and environment samples; a prefiltered environment texture
+can replace repeated neighborhood sampling with explicit roughness-selected mip levels; spectral
+absorption uses the backface-measured optical path; thin-film interference evaluates representative
+red, green, and blue wavelengths from the coating thickness; volume scattering couples nearby
+optical point lights into the glass interior; and optional contact shadows use the opaque depth
+already captured for foreground rejection. No mode requires per-pixel ray tracing.
 
 `opticalCausticsPlugin` separately adds a bounded array of focused glass lenses for nearby
 reflective receiver surfaces. Call `opticalCaustics_getColor(normal, worldPosition,
