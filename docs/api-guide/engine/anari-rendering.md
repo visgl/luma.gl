@@ -617,6 +617,245 @@ Transforms and material uniform values are updated without reconstructing geomet
 - Enable bloom only when the scene benefits from its extra framebuffer and postprocessing passes.
 - Check `drawCount` and `instanceCount` to verify that scene reuse translates into actual batching.
 
+## Explore the JSON scene playground
+
+The private ANARI showcase includes a deck.gl-style JSON playground for describing complete scenes
+without writing rendering code. Start the showcase from the repository root:
+
+```bash
+yarn workspace luma.gl-examples-showcase-anari start
+```
+
+Open `/playground.html` on the reported development-server URL, or select **JSON LAB** in the
+Observatory. The playground provides a live JSON editor, animated example scenes, WebGPU/WebGL
+selection, automatic HDR presentation when available, orbit controls, validation feedback, and
+live instance, draw-call, and triangle statistics.
+
+:::caution Experimental playground format
+The JSON format is an experimental playground convention. It is not part of the ANARI C
+specification, is not an exported package API, and can change with the private
+`@luma.gl/anari` workspace.
+:::
+
+### Describe a scene with JSON
+
+Use `@@type` to select ANARI object subtypes, registry keys to name shared resources, and `@@id`
+to name individual lights and instances:
+
+```json
+{
+  "version": 1,
+  "name": "MY FIRST ANARI SCENE",
+  "camera": {
+    "@@type": "perspective",
+    "position": [6, 4, 9],
+    "target": [0, 1, 0],
+    "fovy": 0.75,
+    "orbit": {"speed": 0.08}
+  },
+  "renderer": {
+    "@@type": "default",
+    "background": [0.015, 0.02, 0.04, 1],
+    "exposure": 1.5,
+    "bloomIntensity": 0.5
+  },
+  "geometries": {
+    "orb": {"@@type": "sphere", "radius": 0.8, "segments": 28},
+    "floor": {"@@type": "quad", "width": 14, "height": 14}
+  },
+  "materials": {
+    "metal": {
+      "@@type": "physicallyBased",
+      "baseColor": [0.28, 0.45, 0.95],
+      "metallic": 0.85,
+      "roughness": 0.15
+    },
+    "floor": {"@@type": "matte", "color": [0.12, 0.13, 0.2]}
+  },
+  "surfaces": {
+    "orb": {"geometry": "orb", "material": "metal"},
+    "floor": {"geometry": "floor", "material": "floor"}
+  },
+  "instances": [
+    {
+      "@@id": "left-orb",
+      "surface": "orb",
+      "position": [-1.3, 1, 0],
+      "animation": {"@@type": "bob", "amplitude": 0.25, "speed": 1.1}
+    },
+    {
+      "@@id": "right-orb",
+      "surface": "orb",
+      "position": [1.3, 1, 0]
+    }
+  ],
+  "lights": [
+    {
+      "@@id": "sun",
+      "@@type": "directional",
+      "direction": [-1, -1, -0.4],
+      "irradiance": 2
+    },
+    {
+      "@@id": "emitter",
+      "@@type": "point",
+      "position": [3, 2, 0],
+      "color": [1, 0.35, 0.12],
+      "intensity": 22,
+      "animation": {
+        "@@type": "orbit",
+        "center": [0, 2, 0],
+        "radius": 3,
+        "speed": 0.7
+      }
+    }
+  ],
+  "world": {"surfaces": ["floor"]}
+}
+```
+
+Both orb instances reference the same named surface. The playground retains that surface identity
+and caches its implicit group, allowing the runtime to issue one instanced draw instead of one draw
+for each orb.
+
+### Scene properties and object references
+
+| Property | Meaning |
+| --- | --- |
+| `version` | JSON schema version; currently `1`. |
+| `name`, `description` | Human-readable preview title and optional scene description. |
+| `camera` | Camera `@@type`, normal ANARI camera parameters, optional `target`, and optional orbit speed. |
+| `renderer` | Renderer `@@type` and normal ANARI exposure, bloom, background, and fog parameters. |
+| `geometries` | Named geometry declarations; triangle meshes accept number arrays or compact `torus` / `crystal` generators. |
+| `materials` | Named `matte` or `physicallyBased` material declarations. |
+| `surfaces` | Named surface declarations referencing geometry and material identifiers. |
+| `groups` | Optional named groups referencing `surfaces` and optional `lights`. |
+| `instances` | Array of objects with `@@id`, a `group` or `surface` reference, transforms, and optional animation. |
+| `distributions` | Optional compact procedural instance distributions, including seeded `starfield` populations. |
+| `lights` | Array of lights with `@@id`, ANARI subtype/parameters, and optional animation. |
+| `world` | Optional selected `surfaces`, `instances`, and `lights`; all instances and lights are included by default. |
+
+An instance can describe its transform with `position`, `rotation`, and `scale` three-component
+vectors, or supply a complete 16-element `matrix`. Rotations use radians and are applied in X, Y,
+Z order. Instances referencing a `surface` directly share an automatically generated group; use an
+explicit named `group` when multiple surfaces or group-attached lights are required.
+
+Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad`
+geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot`
+lights; `perspective` and `orthographic` cameras; and `default`, `debugNormals`, and `debugDepth`
+renderers.
+
+### Generate compact triangle meshes and starfields
+
+Triangle geometry can provide literal `vertex.position`, `vertex.normal`, and `primitive.index`
+number arrays. For commonly repeated showcase shapes, it can instead declare a procedural mesh
+generator while remaining entirely JSON:
+
+```json
+{
+  "orbit-ring": {
+    "@@type": "triangle",
+    "generator": {
+      "@@type": "torus",
+      "majorRadius": 1,
+      "minorRadius": 0.025,
+      "majorSegments": 110,
+      "minorSegments": 10
+    }
+  },
+  "gemstone": {
+    "@@type": "triangle",
+    "generator": {
+      "@@type": "crystal",
+      "radius": 0.47,
+      "height": 2.6,
+      "sides": 6
+    }
+  }
+}
+```
+
+The `torus` generator creates indexed vertices and normals. The `crystal` generator creates
+flat-shaded triangular facets suitable for translucent, iridescent, or emissive materials.
+
+Similarly, `distributions` expands a concise declaration into deterministic retained instances
+that all share the same surface:
+
+```json
+{
+  "distributions": [
+    {
+      "@@id": "background-stars",
+      "@@type": "starfield",
+      "surface": "star",
+      "count": 260,
+      "radius": 45,
+      "seed": 7
+    }
+  ]
+}
+```
+
+This represents hundreds of individually transformed stars without filling the editable JSON
+with hundreds of nearly identical instance objects.
+
+### Animate retained scene objects
+
+Animations update existing objects through `setParameter(...).commitParameters()`; they do not
+rebuild the world each frame.
+
+| Animation `@@type` | Applies to | Properties |
+| --- | --- | --- |
+| `orbit` | Instances and lights | Optional `center`, `radius`, `speed`, `phase`, inclined orbit, oscillating `height`, and `verticalFrequency`. |
+| `bob` | Instances | Optional vertical `amplitude`, `speed`, and `phase`. |
+| `spin` | Instances | Optional `axis`, angular `speed`, and `phase`. |
+| `wobble` | Instances | Optional `axis`, angular `amplitude`, `speed`, and `phase`. |
+| `pulse` | Lights | Optional intensity `amplitude`, `speed`, and `phase`. |
+| `follow` | Lights | Named instance `target` and optional positional `offset`. |
+
+Use `animation` for one behavior or `animations` to compose several behaviors on a single
+instance:
+
+```json
+{
+  "@@id": "orbit-ring-3",
+  "surface": "violet-ring",
+  "position": [0, 7, 0],
+  "rotation": [0.2, 0, 0.6],
+  "animations": [
+    {"@@type": "wobble", "axis": "x", "amplitude": 0.07, "speed": 0.28},
+    {"@@type": "spin", "axis": "z", "speed": -0.055}
+  ]
+}
+```
+
+An illuminated satellite and its actual point light can be linked without duplicating their
+orbital formulas:
+
+```json
+{
+  "@@id": "satellite-light",
+  "@@type": "point",
+  "position": [4.2, 7, 0],
+  "color": [0.24, 0.54, 1],
+  "intensity": 42,
+  "animation": {"@@type": "follow", "target": "satellite-3"}
+}
+```
+
+The playground includes the complete **Chromatic Atlas**, **Crystal Cathedral**, and
+**Celestial Engine** Observatory scenes as editable JSON presets. They preserve shared retained
+surfaces, generated halo and orbital meshes, hundreds of background stars, composable object
+motion, physically based materials, fog, bloom, HDR presentation, and real lights tracking the
+orbiting satellites. Crystal Cathedral additionally demonstrates faceted translucent crystal
+geometry and iridescent materials.
+
+The editor applies valid changes automatically after a short debounce. Toggle **LIVE** to switch to
+manual changes, use **APPLY** or `⌘ Enter` / `Ctrl Enter` to commit, and select **FORMAT**,
+**RESET**, or **COPY** for common editing actions. Invalid JSON, unknown object references, duplicate
+identifiers, unsupported subtypes, and incompatible animations are reported inline while preserving
+the last successfully rendered scene.
+
 ## Run the showcase
 
 From the repository root:
@@ -631,9 +870,12 @@ The showcase provides three scenes:
 - **Crystal Cathedral**: architectural geometry, emissive accents, and atmospheric lighting.
 - **Celestial Engine**: heavily instanced structures and animated orbiting emitters.
 
-Interactive controls switch scenes, select beauty/normals/depth renderers, toggle bloom, orbit the camera, and show retained instance and draw-call counts. Add `?backend=webgl` to force the WebGL 2 path.
+Interactive controls switch scenes, select beauty/normals/depth renderers, toggle bloom, orbit the camera, and show retained instance and draw-call counts. Select **JSON LAB** to open the live JSON scene playground. Add `?backend=webgl` to either page to force the WebGL 2 path.
 
-The implementation lives in `examples/showcase/anari/app.ts`; package-level tests demonstrate staged parameters, animated lights, shared-surface batching, zero-copy arrays, and rendering on available graphics backends.
+The showcase implementation lives in `examples/showcase/anari/app.ts`; the playground lives in
+`examples/showcase/anari/playground.ts`, `playground-scene.ts`, and `playground-presets.ts`.
+Package-level tests demonstrate staged parameters, animated lights, shared-surface batching,
+zero-copy arrays, and rendering on available graphics backends.
 
 ## Current limitations
 

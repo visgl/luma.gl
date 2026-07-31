@@ -20,6 +20,7 @@ This package follows concepts from the ANARI object model, but it is not an ANAR
 - [Cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering): camera projections, renderer controls, bloom, fog, frame rendering, and statistics.
 - [ANARI C API and THREE.js mapping](/docs/api-reference/anari/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
+- [JSON scene playground](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
 
 ## Private workspace availability
 
@@ -102,3 +103,20 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | Extended-range, Display P3 presentation | Supported on compatible displays and browsers | Not supported; SDR fallback |
 
 See [HDR and backend selection](/docs/api-guide/engine/anari-rendering#hdr-and-backend-selection) for capability detection and canvas setup.
+
+## Experimental JSON playground
+
+The private package includes a JSON scene playground at
+`examples/showcase/anari/playground.html`. Start it with
+`yarn workspace luma.gl-examples-showcase-anari start`, then open `/playground.html` on the
+reported development-server URL. The playground translates deck.gl-inspired `@@type`
+declarations, named ANARI object references, shared retained surfaces, generated torus/crystal
+meshes, starfield distributions, composable transform animations, lights following named
+instances, cameras, and renderer options into the API documented on these pages. The complete
+Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable
+JSON presets.
+
+The playground format and scene loader are experimental example utilities, not public package
+exports or an official ANARI serialization format. See the
+[JSON scene playground developer guide](/docs/api-guide/engine/anari-rendering#explore-the-json-scene-playground)
+for the full schema, animation vocabulary, and editing controls.

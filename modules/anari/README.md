@@ -132,6 +132,20 @@ The interactive showcase lives at `examples/showcase/anari`. Run it with
 fallback instead of automatically selecting WebGPU. HDR-capable displays automatically use an
 `rgba16float`, Display P3, extended-tone-mapping WebGPU presentation surface.
 
+### JSON scene playground
+
+Open `/playground.html` on the same development-server URL, or select **JSON LAB** from the
+showcase. The private, experimental playground provides a deck.gl-style JSON editor with
+`@@type` subtype declarations, named geometries and materials, retained surface references,
+transform instances, animated lights, renderer controls, and live HDR-capable rendering.
+
+Three presets represent the complete **Chromatic Atlas**, **Crystal Cathedral**, and
+**Celestial Engine** showcase scenes entirely in JSON, including procedural torus and faceted
+crystal meshes, deterministic starfields, hundreds of retained instances, composable animations,
+and real point lights following orbiting satellites. Live edits preserve the last valid scene
+when JSON or object references are invalid. The playground JSON schema is an example-level
+convention, not an official ANARI serialization format or an exported package API.
+
 ## Status
 
 This package is a proof of concept inspired by the ANARI object model. It is not an ANARI C API

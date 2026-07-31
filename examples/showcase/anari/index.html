@@ -180,6 +180,21 @@
         letter-spacing: 0.08em;
       }
 
+      .playground-link {
+        border: 1px solid rgba(174, 149, 255, 0.32);
+        border-radius: 4px;
+        padding: 7px 9px;
+        color: rgba(229, 220, 255, 0.88);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+      }
+
+      .playground-link:hover {
+        border-color: rgba(194, 175, 255, 0.66);
+        color: #fff;
+      }
+
       .separator {
         width: 1px;
         height: 15px;
@@ -303,6 +318,8 @@
       <button class="mode-button" data-renderer="debugDepth">DEPTH</button>
       <span class="separator" aria-hidden="true"></span>
       <button id="bloom-toggle" class="mode-button active">BLOOM</button>
+      <span class="separator" aria-hidden="true"></span>
+      <a class="playground-link" href="./playground.html">JSON LAB ↗</a>
     </aside>
     <aside class="telemetry">
       <div>

@@ -13,5 +13,13 @@ const alias = {
 
 export default defineConfig({
   resolve: {alias},
-  server: {open: true}
+  server: {open: true},
+  build: {
+    rollupOptions: {
+      input: {
+        showcase: `${__dirname}/index.html`,
+        playground: `${__dirname}/playground.html`
+      }
+    }
+  }
 });
