@@ -167,6 +167,10 @@ test('packet-spraying hover highlights glass without washing out transparency or
     'hovered plane switches ease toward a visible cool glass highlight'
   );
   testCase.ok(
+    planeHighlight[2] > 0.9 && pathHighlight[2] > 0.9,
+    'focused switch colors activate the dedicated Fresnel rim in both shader backends'
+  );
+  testCase.ok(
     pathHighlight[1] > planeHighlight[1],
     'focused backbone paths retain a distinct cyan glass accent'
   );
