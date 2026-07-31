@@ -5,7 +5,7 @@
 
 ## Summary
 
-This RFC proposes two new `CanvasContext` properties:
+This RFC proposes fresh, non-overloaded `CanvasContext` properties:
 
 ```ts
 export type DrawingBufferSizingMode =
@@ -15,6 +15,7 @@ export type DrawingBufferSizingMode =
 
 export type CanvasContextProps = {
   drawingBufferSizingMode?: DrawingBufferSizingMode;
+  trackCanvas?: HTMLCanvasElement | OffscreenCanvas | null;
   pixelRatio?: number;
 };
 ```
@@ -53,11 +54,44 @@ These interactions leak into higher-level integrations. [deck.gl
 CSS-DPR sizing. [deck.gl #10332](https://github.com/visgl/deck.gl/pull/10332) demonstrates the
 branching required to interpret and forward `useDevicePixels: boolean | number`.
 
-The proposed API starts from the choice the application actually needs to make: who owns
-drawing-buffer resizing, whether luma.gl tracks device or CSS pixels, and whether a fixed ratio
-replaces the browser DPR.
+The proposed API directly represents the two canvas-integration behaviors used by deck.gl:
+
+- **Interleaved:** attach to an externally owned context and canvas. The external renderer changes
+  the drawing-buffer dimensions; luma.gl reads them but never writes them.
+- **Overlaid:** render to a separate luma.gl canvas whose drawing-buffer dimensions mirror the
+  basemap canvas.
+
+The lower-level self-sizing properties remain useful for standalone canvases, but deck.gl no
+longer needs to reproduce the basemap's CSS/DPR sizing algorithm to implement either integration.
 
 ## Proposal
+
+### Track another canvas
+
+`trackCanvas` makes another canvas's actual `width` and `height` authoritative:
+
+```ts
+await luma.createDevice({
+  createCanvasContext: true,
+  canvasContextProps: {
+    canvas: overlayCanvas,
+    trackCanvas: map.getCanvas()
+  }
+});
+```
+
+Before reporting or using the drawing-buffer size, luma.gl compares two integer properties from
+the source canvas with its cached dimensions. It resizes the target only when they differ. This
+does not read CSS layout, use `getBoundingClientRect()`, poll with a timer, or depend on observer
+callback ordering.
+
+When `trackCanvas` is supplied, `drawingBufferSizingMode` defaults to `'manual'`.
+`trackCanvas` is incompatible with an automatic sizing mode or `pixelRatio`, because the tracked
+canvas already supplies authoritative dimensions.
+
+If the tracked canvas is the target canvas itself, luma.gl updates only its size bookkeeping. This
+is the default behavior for an attached WebGL context: the external owner remains responsible for
+resizing the shared canvas.
 
 ### Drawing-buffer sizing
 
@@ -79,6 +113,9 @@ the browser DPR.
 // An external owner controls absolute drawing-buffer dimensions.
 {drawingBufferSizingMode: 'manual'}
 
+// Mirror another canvas's actual drawing-buffer dimensions.
+{trackCanvas: map.getCanvas()}
+
 // Track exact physical pixels using the newer ResizeObserver API.
 {drawingBufferSizingMode: 'track-device-pixels'}
 
@@ -97,7 +134,7 @@ still run, but luma.gl does not call `setDrawingBufferSize()` automatically.
 
 ### Dynamic configuration
 
-Both new properties are mutable:
+The new properties are mutable:
 
 ```ts
 canvasContext.setProps({
@@ -110,6 +147,17 @@ Changing between `track-css-pixels` and `track-device-pixels` re-registers the a
 `ResizeObserver` with the corresponding box. Setting `pixelRatio: undefined` while in
 `track-css-pixels` mode resumes browser DPR tracking. Changing to manual mode leaves the current
 drawing-buffer size unchanged.
+
+`trackCanvas` can be replaced dynamically. Clearing it leaves the context in manual mode and
+preserves the current size; an application can supply an automatic sizing mode in the same update
+to resume self-sizing:
+
+```ts
+canvasContext.setProps({
+  trackCanvas: null,
+  drawingBufferSizingMode: 'track-device-pixels'
+});
+```
 
 ### Default canvas-context configuration
 
@@ -137,13 +185,14 @@ If the deprecated object form of `createCanvasContext` and `canvasContextProps` 
 they are shallow-merged and `canvasContextProps` wins.
 
 Attaching an existing WebGL context necessarily creates a luma.gl `CanvasContext`. It defaults to
-manual sizing because the creator of the WebGL context owns its canvas. `canvasContextProps` can
-explicitly override that default.
+manual sizing and tracks the attached canvas itself because the creator of the WebGL context owns
+its dimensions. `canvasContextProps` can explicitly override that default.
 
 ## Compatibility and precedence
 
-If `drawingBufferSizingMode` is supplied, the new sizing properties are authoritative and the
-three legacy sizing properties are ignored. Supplying `pixelRatio` requires an explicit
+If `trackCanvas` is supplied, it is authoritative and automatic sizing properties are rejected.
+Otherwise, if `drawingBufferSizingMode` is supplied, the new sizing properties are authoritative
+and the three legacy sizing properties are ignored. Supplying `pixelRatio` requires an explicit
 `drawingBufferSizingMode: 'track-css-pixels'`.
 
 When the new mode is absent, legacy properties normalize as follows:
@@ -201,11 +250,12 @@ recreates the current precedence problem. Manual sizing is instead a first-class
 
 The accompanying implementation:
 
+- tracks another canvas's actual dimensions at size-query and render boundaries;
 - normalizes legacy properties into the new sizing model;
 - supports dynamic mode and ratio updates;
 - reconfigures active resize observation;
 - adds `DeviceProps.canvasContextProps`;
-- defaults attached WebGL contexts to manual sizing; and
+- defaults attached WebGL contexts to read-only self-tracking; and
 - exercises new, legacy, dynamic, and attachment behavior in tests.
 
 The proof of concept intentionally leaves stable API documentation and release notes unchanged

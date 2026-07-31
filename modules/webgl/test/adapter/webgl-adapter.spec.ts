@@ -32,10 +32,23 @@ test('WebGLAdapter#attach uses manual sizing by default and accepts canvasContex
   }
 
   const defaultDevice = await webgl2Adapter.attach(defaultGL);
+  const defaultCanvasContext = defaultDevice.getDefaultCanvasContext();
   t.equal(
-    defaultDevice.getDefaultCanvasContext().props.drawingBufferSizingMode,
+    defaultCanvasContext.props.drawingBufferSizingMode,
     'manual',
     'attached WebGL contexts default to manual drawing buffer sizing'
+  );
+  t.equal(
+    defaultCanvasContext.props.trackCanvas,
+    defaultCanvas,
+    'attached WebGL contexts track their externally owned canvas'
+  );
+  defaultCanvas.width = 320;
+  defaultCanvas.height = 180;
+  t.deepEqual(
+    defaultCanvasContext.getDrawingBufferSize(),
+    [320, 180],
+    'attached context dimensions follow external canvas changes before use'
   );
   defaultDevice.destroy();
 
@@ -60,6 +73,11 @@ test('WebGLAdapter#attach uses manual sizing by default and accepts canvasContex
     'canvasContextProps overrides the attached context default'
   );
   t.equal(configuredCanvasContext.props.pixelRatio, 1, 'pixel ratio is forwarded on attach');
+  t.equal(
+    configuredCanvasContext.props.trackCanvas,
+    null,
+    'explicit automatic sizing disables attached-canvas tracking'
+  );
   configuredDevice.destroy();
 
   t.end();

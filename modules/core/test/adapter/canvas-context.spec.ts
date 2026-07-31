@@ -11,6 +11,7 @@ import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 /** Mock CanvasContext */
 class TestCanvasContext extends CanvasContext {
   handle = null;
+  configureCalls = 0;
   [Symbol.toStringTag] = 'TestCanvasContext';
   // @ts-expect-error
   readonly device = {
@@ -32,7 +33,7 @@ class TestCanvasContext extends CanvasContext {
     throw new Error('test');
   }
   protected override _configureDevice(): void {
-    // Mock update device
+    this.configureCalls++;
   }
 }
 
@@ -456,6 +457,87 @@ test('CanvasContext#drawingBufferSizingMode supports explicit automatic and manu
   t.end();
 });
 
+test('CanvasContext#trackCanvas mirrors source dimensions before drawing', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = 320;
+  sourceCanvas.height = 180;
+  const canvasContext = new TestCanvasContext({trackCanvas: sourceCanvas}, false);
+
+  t.equal(
+    canvasContext.props.drawingBufferSizingMode,
+    'manual',
+    'tracking a canvas selects manual observer sizing'
+  );
+  t.deepEqual(
+    canvasContext.getDrawingBufferSize(),
+    [320, 180],
+    'tracked dimensions are exposed without waiting for an observer callback'
+  );
+  t.deepEqual(
+    canvasContext.getDevicePixelSize(),
+    [320, 180],
+    'tracked dimensions are authoritative for device-pixel consumers'
+  );
+
+  sourceCanvas.width = 640;
+  sourceCanvas.height = 360;
+  t.throws(
+    () => canvasContext.getCurrentFramebuffer(),
+    /test/,
+    'framebuffer acquisition continues after synchronizing the tracked canvas'
+  );
+  t.deepEqual(
+    [canvasContext.canvas.width, canvasContext.canvas.height],
+    [640, 360],
+    'tracked dimensions are applied immediately before drawing'
+  );
+  t.equal(canvasContext.configureCalls, 1, 'the target is configured once for a changed size');
+  t.throws(() => canvasContext.getCurrentFramebuffer(), /test/, 'the next draw still proceeds');
+  t.equal(
+    canvasContext.configureCalls,
+    1,
+    'unchanged tracked dimensions do not reconfigure the target'
+  );
+
+  const attachedCanvas = document.createElement('canvas');
+  const attachedCanvasContext = new TestCanvasContext(
+    {canvas: attachedCanvas, trackCanvas: attachedCanvas},
+    false
+  );
+  attachedCanvas.width = 512;
+  attachedCanvas.height = 256;
+  t.deepEqual(
+    attachedCanvasContext.getDrawingBufferSize(),
+    [512, 256],
+    'tracking the target itself follows externally owned drawing-buffer changes'
+  );
+
+  t.throws(
+    () =>
+      new TestCanvasContext(
+        {
+          trackCanvas: sourceCanvas,
+          drawingBufferSizingMode: 'track-css-pixels'
+        },
+        false
+      ),
+    /assertion failed/,
+    'trackCanvas rejects conflicting automatic sizing'
+  );
+  t.throws(
+    () => new TestCanvasContext({trackCanvas: sourceCanvas, pixelRatio: 2}, false),
+    /assertion failed/,
+    'trackCanvas rejects a conflicting pixel ratio'
+  );
+
+  t.end();
+});
+
 test('CanvasContext#setProps updates drawing buffer sizing and observer mode', t => {
   if (!isBrowser()) {
     t.end();
@@ -519,6 +601,28 @@ test('CanvasContext#setProps updates drawing buffer sizing and observer mode', t
     canvasContext.getDrawingBufferSize(),
     [151, 76],
     'switching to manual mode stops automatic drawing buffer changes'
+  );
+
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = 240;
+  sourceCanvas.height = 120;
+  canvasContext.setProps({trackCanvas: sourceCanvas});
+  t.deepEqual(
+    canvasContext.getDrawingBufferSize(),
+    [240, 120],
+    'trackCanvas can take ownership dynamically'
+  );
+
+  canvasContext.setProps({
+    trackCanvas: null,
+    drawingBufferSizingMode: 'track-css-pixels',
+    pixelRatio: 1
+  });
+  t.equal(canvasContext.props.trackCanvas, null, 'tracked canvas can be cleared dynamically');
+  t.equal(
+    canvasContext.props.drawingBufferSizingMode,
+    'track-css-pixels',
+    'automatic sizing can resume when trackCanvas is cleared'
   );
 
   t.end();
