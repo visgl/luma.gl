@@ -20,6 +20,10 @@ export type GlassTransmissionProps = {
   environmentTexture?: Texture;
   /** Multiplier applied to sampled environment reflections. */
   environmentIntensity?: number;
+  /** Number of initialized levels in the optional prefiltered environment texture. */
+  environmentMipLevels?: number;
+  /** Strength of roughness-selected environment mip sampling; zero preserves legacy filtering. */
+  environmentPrefilterStrength?: number;
   /** Multiplier applied to the measured front-to-back optical path. */
   thicknessStrength?: number;
   /** Strength of thickness-aware multisample transmission blur. */
@@ -32,6 +36,8 @@ export type GlassTransmissionProps = {
   thinFilmStrength?: number;
   /** Strength of colored in-volume scattering around nearby optical point lights. */
   volumeScatteringStrength?: number;
+  /** Strength of depth-aware localized darkening where opaque geometry touches the glass. */
+  contactShadowStrength?: number;
   /** Normalized-depth tolerance used to preserve foreground geometry. */
   depthBias?: number;
   /** Strength of nearby opaque-scene reflections sampled from captured scene color. */
@@ -49,12 +55,15 @@ export type GlassTransmissionUniforms = {
   viewportSize: [number, number];
   depthRange: [number, number];
   environmentIntensity: number;
+  environmentMipLevels: number;
+  environmentPrefilterStrength: number;
   thicknessStrength: number;
   roughTransmissionStrength: number;
   spectralAbsorptionStrength: number;
   thinFilmThickness: number;
   thinFilmStrength: number;
   volumeScatteringStrength: number;
+  contactShadowStrength: number;
   depthBias: number;
   dynamicReflectionStrength: number;
   secondaryBounceStrength: number;
@@ -76,12 +85,15 @@ struct glassTransmissionUniforms {
   viewportSize: vec2<f32>,
   depthRange: vec2<f32>,
   environmentIntensity: f32,
+  environmentMipLevels: f32,
+  environmentPrefilterStrength: f32,
   thicknessStrength: f32,
   roughTransmissionStrength: f32,
   spectralAbsorptionStrength: f32,
   thinFilmThickness: f32,
   thinFilmStrength: f32,
   volumeScatteringStrength: f32,
+  contactShadowStrength: f32,
   depthBias: f32,
   dynamicReflectionStrength: f32,
   secondaryBounceStrength: f32,
@@ -112,13 +124,43 @@ fn glassTransmission_sampleDepth(screenCoordinate: vec2<f32>) -> f32 {
   return textureLoad(glassSceneDepthTexture, pixelCoordinate, 0);
 }
 
-fn glassTransmission_sampleEnvironment(reflectionDirection: vec3<f32>) -> vec3<f32> {
+fn glassTransmission_sampleEnvironmentAtRoughness(
+  reflectionDirection: vec3<f32>,
+  surfaceRoughness: f32
+) -> vec3<f32> {
   let normalizedDirection = normalize(reflectionDirection);
   let environmentCoordinate = vec2<f32>(
     atan2(normalizedDirection.z, normalizedDirection.x) * 0.15915494 + 0.5,
     acos(clamp(normalizedDirection.y, -1.0, 1.0)) * 0.31830989
   );
-  let blurOffset = vec2<f32>(0.018, 0.011) * glassMaterial.roughness;
+  let roughness = clamp(surfaceRoughness, 0.0, 1.0);
+  let maximumMipLevel = max(glassTransmission.environmentMipLevels - 1.0, 0.0);
+  if (glassTransmission.environmentPrefilterStrength > 0.0 && maximumMipLevel > 0.0) {
+    let reflectionLevel = clamp(
+      roughness * roughness * maximumMipLevel * glassTransmission.environmentPrefilterStrength,
+      0.0,
+      maximumMipLevel
+    );
+    let clearcoatLevel = max(reflectionLevel - 0.6, 0.0);
+    let filteredEnvironment = textureSampleLevel(
+      glassEnvironmentTexture,
+      glassEnvironmentTextureSampler,
+      environmentCoordinate,
+      reflectionLevel
+    ).rgb;
+    let clearcoatEnvironment = textureSampleLevel(
+      glassEnvironmentTexture,
+      glassEnvironmentTextureSampler,
+      environmentCoordinate,
+      clearcoatLevel
+    ).rgb;
+    return mix(
+      clearcoatEnvironment,
+      filteredEnvironment,
+      smoothstep(0.045, 0.58, roughness)
+    ) * glassTransmission.environmentIntensity;
+  }
+  let blurOffset = vec2<f32>(0.018, 0.011) * roughness;
   let centered = textureSampleLevel(
     glassEnvironmentTexture,
     glassEnvironmentTextureSampler,
@@ -142,7 +184,7 @@ fn glassTransmission_sampleEnvironment(reflectionDirection: vec3<f32>) -> vec3<f
     return mix(
       centered,
       baselineEnvironment,
-      smoothstep(0.08, 0.7, glassMaterial.roughness)
+      smoothstep(0.08, 0.7, roughness)
     ) * glassTransmission.environmentIntensity;
   }
   let crossOffset = vec2<f32>(-blurOffset.y, blurOffset.x);
@@ -166,8 +208,35 @@ fn glassTransmission_sampleEnvironment(reflectionDirection: vec3<f32>) -> vec3<f
   return mix(
     centered,
     filteredEnvironment,
-    smoothstep(0.08, 0.7, glassMaterial.roughness)
+    smoothstep(0.08, 0.7, roughness)
   ) * glassTransmission.environmentIntensity;
+}
+
+fn glassTransmission_sampleEnvironment(reflectionDirection: vec3<f32>) -> vec3<f32> {
+  return glassTransmission_sampleEnvironmentAtRoughness(
+    reflectionDirection,
+    glassMaterial.roughness
+  );
+}
+
+fn glassTransmission_getContactShadow(
+  screenCoordinate: vec2<f32>,
+  frontDepth: f32,
+  backDepth: f32,
+  hasBackface: bool
+) -> f32 {
+  if (glassTransmission.contactShadowStrength <= 0.0 || !hasBackface) {
+    return 1.0;
+  }
+  let opaqueDepth = glassTransmission_sampleDepth(screenCoordinate);
+  if (opaqueDepth >= 0.99999) {
+    return 1.0;
+  }
+  let receiverDepth = glassTransmission_linearizeDepth(opaqueDepth);
+  let receiverIsBehindFront = smoothstep(frontDepth - 0.035, frontDepth + 0.045, receiverDepth);
+  let receiverGap = max(receiverDepth - backDepth, 0.0);
+  let contact = receiverIsBehindFront * (1.0 - smoothstep(0.035, 0.44, receiverGap));
+  return 1.0 - contact * clamp(glassTransmission.contactShadowStrength, 0.0, 1.0) * 0.36;
 }
 
 fn glassTransmission_sampleRoughTransmission(
@@ -333,11 +402,15 @@ fn glassTransmission_getColor(
   let environmentReflection = glassTransmission_sampleEnvironment(reflectionDirection);
   let viewAlignment = clamp(dot(frontNormal, viewDirection), 0.0, 1.0);
   let fresnel = opticalLighting_getFresnel(viewAlignment, 0.04, 5.0);
-  let internalReflection = glassTransmission_sampleEnvironment(
-    reflect(entryDirection, -backNormal)
+  let internalReflection = glassTransmission_sampleEnvironmentAtRoughness(
+    reflect(entryDirection, -backNormal),
+    glassMaterial.roughness + glassTransmission.environmentPrefilterStrength * 0.13
   ) * select(0.18, 0.42, !hasExitRay);
   let secondaryDirection = reflect(reflect(entryDirection, -backNormal), frontNormal);
-  let secondaryReflection = glassTransmission_sampleEnvironment(secondaryDirection) *
+  let secondaryReflection = glassTransmission_sampleEnvironmentAtRoughness(
+    secondaryDirection,
+    glassMaterial.roughness + glassTransmission.environmentPrefilterStrength * 0.25
+  ) *
     glassTransmission.secondaryBounceStrength * pow(1.0 - viewAlignment, 1.45) * 0.24;
   let thinFilmReflection = glassTransmission_getThinFilm(viewAlignment);
   let volumeScattering = baseColor.rgb * (1.0 - exp(-measuredThickness * 1.3)) *
@@ -361,7 +434,14 @@ fn glassTransmission_getColor(
     glassTransmission.faultDistortionStrength *
     pow(max(sin(dot(worldPosition, vec3<f32>(14.0, 10.0, 17.0)) +
       glassTransmission.time * 7.0), 0.0), 10.0) * 0.12;
-  let opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength +
+  let contactShadow = glassTransmission_getContactShadow(
+    screenCoordinate,
+    frontDepth,
+    backDepth,
+    hasBackface
+  );
+  let opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength *
+      contactShadow +
     environmentReflection * (0.09 + fresnel * 0.65) +
     internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
     thinFilmReflection + volumeScattering + dynamicReflection + faultFilament;
@@ -400,12 +480,15 @@ layout(std140) uniform glassTransmissionUniforms {
   vec2 viewportSize;
   vec2 depthRange;
   float environmentIntensity;
+  float environmentMipLevels;
+  float environmentPrefilterStrength;
   float thicknessStrength;
   float roughTransmissionStrength;
   float spectralAbsorptionStrength;
   float thinFilmThickness;
   float thinFilmStrength;
   float volumeScatteringStrength;
+  float contactShadowStrength;
   float depthBias;
   float dynamicReflectionStrength;
   float secondaryBounceStrength;
@@ -431,13 +514,41 @@ float glassTransmission_sampleDepth(vec2 screenCoordinate) {
   ).r;
 }
 
-vec3 glassTransmission_sampleEnvironment(vec3 reflectionDirection) {
+vec3 glassTransmission_sampleEnvironmentAtRoughness(
+  vec3 reflectionDirection,
+  float surfaceRoughness
+) {
   vec3 normalizedDirection = normalize(reflectionDirection);
   vec2 environmentCoordinate = vec2(
     atan(normalizedDirection.z, normalizedDirection.x) * 0.15915494 + 0.5,
     acos(clamp(normalizedDirection.y, -1.0, 1.0)) * 0.31830989
   );
-  vec2 blurOffset = vec2(0.018, 0.011) * glassMaterial.roughness;
+  float roughness = clamp(surfaceRoughness, 0.0, 1.0);
+  float maximumMipLevel = max(glassTransmission.environmentMipLevels - 1.0, 0.0);
+  if (glassTransmission.environmentPrefilterStrength > 0.0 && maximumMipLevel > 0.0) {
+    float reflectionLevel = clamp(
+      roughness * roughness * maximumMipLevel * glassTransmission.environmentPrefilterStrength,
+      0.0,
+      maximumMipLevel
+    );
+    float clearcoatLevel = max(reflectionLevel - 0.6, 0.0);
+    vec3 filteredEnvironment = textureLod(
+      glassEnvironmentTexture,
+      environmentCoordinate,
+      reflectionLevel
+    ).rgb;
+    vec3 clearcoatEnvironment = textureLod(
+      glassEnvironmentTexture,
+      environmentCoordinate,
+      clearcoatLevel
+    ).rgb;
+    return mix(
+      clearcoatEnvironment,
+      filteredEnvironment,
+      smoothstep(0.045, 0.58, roughness)
+    ) * glassTransmission.environmentIntensity;
+  }
+  vec2 blurOffset = vec2(0.018, 0.011) * roughness;
   vec3 centered = texture(glassEnvironmentTexture, environmentCoordinate).rgb;
   vec3 forward = texture(glassEnvironmentTexture, environmentCoordinate + blurOffset).rgb;
   vec3 backward = texture(glassEnvironmentTexture, environmentCoordinate - blurOffset).rgb;
@@ -446,7 +557,7 @@ vec3 glassTransmission_sampleEnvironment(vec3 reflectionDirection) {
     return mix(
       centered,
       baselineEnvironment,
-      smoothstep(0.08, 0.7, glassMaterial.roughness)
+      smoothstep(0.08, 0.7, roughness)
     ) * glassTransmission.environmentIntensity;
   }
   vec2 crossOffset = vec2(-blurOffset.y, blurOffset.x);
@@ -460,8 +571,35 @@ vec3 glassTransmission_sampleEnvironment(vec3 reflectionDirection) {
   return mix(
     centered,
     filteredEnvironment,
-    smoothstep(0.08, 0.7, glassMaterial.roughness)
+    smoothstep(0.08, 0.7, roughness)
   ) * glassTransmission.environmentIntensity;
+}
+
+vec3 glassTransmission_sampleEnvironment(vec3 reflectionDirection) {
+  return glassTransmission_sampleEnvironmentAtRoughness(
+    reflectionDirection,
+    glassMaterial.roughness
+  );
+}
+
+float glassTransmission_getContactShadow(
+  vec2 screenCoordinate,
+  float frontDepth,
+  float backDepth,
+  bool hasBackface
+) {
+  if (glassTransmission.contactShadowStrength <= 0.0 || !hasBackface) {
+    return 1.0;
+  }
+  float opaqueDepth = glassTransmission_sampleDepth(screenCoordinate);
+  if (opaqueDepth >= 0.99999) {
+    return 1.0;
+  }
+  float receiverDepth = glassTransmission_linearizeDepth(opaqueDepth);
+  float receiverIsBehindFront = smoothstep(frontDepth - 0.035, frontDepth + 0.045, receiverDepth);
+  float receiverGap = max(receiverDepth - backDepth, 0.0);
+  float contact = receiverIsBehindFront * (1.0 - smoothstep(0.035, 0.44, receiverGap));
+  return 1.0 - contact * clamp(glassTransmission.contactShadowStrength, 0.0, 1.0) * 0.36;
 }
 
 vec3 glassTransmission_sampleRoughTransmission(
@@ -622,11 +760,15 @@ vec4 glassTransmission_getColor(
   vec3 environmentReflection = glassTransmission_sampleEnvironment(reflectionDirection);
   float viewAlignment = clamp(dot(frontNormal, viewDirection), 0.0, 1.0);
   float fresnel = opticalLighting_getFresnel(viewAlignment, 0.04, 5.0);
-  vec3 internalReflection = glassTransmission_sampleEnvironment(
-    reflect(entryDirection, -backNormal)
+  vec3 internalReflection = glassTransmission_sampleEnvironmentAtRoughness(
+    reflect(entryDirection, -backNormal),
+    glassMaterial.roughness + glassTransmission.environmentPrefilterStrength * 0.13
   ) * (hasExitRay ? 0.18 : 0.42);
   vec3 secondaryDirection = reflect(reflect(entryDirection, -backNormal), frontNormal);
-  vec3 secondaryReflection = glassTransmission_sampleEnvironment(secondaryDirection) *
+  vec3 secondaryReflection = glassTransmission_sampleEnvironmentAtRoughness(
+    secondaryDirection,
+    glassMaterial.roughness + glassTransmission.environmentPrefilterStrength * 0.25
+  ) *
     glassTransmission.secondaryBounceStrength * pow(1.0 - viewAlignment, 1.45) * 0.24;
   vec3 thinFilmReflection = glassTransmission_getThinFilm(viewAlignment);
   vec3 volumeScattering = baseColor.rgb * (1.0 - exp(-measuredThickness * 1.3)) *
@@ -645,7 +787,14 @@ vec4 glassTransmission_getColor(
     glassTransmission.faultDistortionStrength *
     pow(max(sin(dot(worldPosition, vec3(14.0, 10.0, 17.0)) +
       glassTransmission.time * 7.0), 0.0), 10.0) * 0.12;
-  vec3 opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength +
+  float contactShadow = glassTransmission_getContactShadow(
+    screenCoordinate,
+    frontDepth,
+    backDepth,
+    hasBackface
+  );
+  vec3 opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength *
+      contactShadow +
     environmentReflection * (0.09 + fresnel * 0.65) +
     internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
     thinFilmReflection + volumeScattering + dynamicReflection + faultFilament;
@@ -687,6 +836,9 @@ function getGlassTransmissionUniforms(
     viewportSize: props.viewportSize ?? previousUniforms?.viewportSize ?? [1, 1],
     depthRange: props.depthRange ?? previousUniforms?.depthRange ?? [0.1, 100],
     environmentIntensity: props.environmentIntensity ?? previousUniforms?.environmentIntensity ?? 1,
+    environmentMipLevels: props.environmentMipLevels ?? previousUniforms?.environmentMipLevels ?? 1,
+    environmentPrefilterStrength:
+      props.environmentPrefilterStrength ?? previousUniforms?.environmentPrefilterStrength ?? 0,
     thicknessStrength: props.thicknessStrength ?? previousUniforms?.thicknessStrength ?? 1,
     roughTransmissionStrength:
       props.roughTransmissionStrength ?? previousUniforms?.roughTransmissionStrength ?? 0,
@@ -696,6 +848,8 @@ function getGlassTransmissionUniforms(
     thinFilmStrength: props.thinFilmStrength ?? previousUniforms?.thinFilmStrength ?? 0,
     volumeScatteringStrength:
       props.volumeScatteringStrength ?? previousUniforms?.volumeScatteringStrength ?? 0,
+    contactShadowStrength:
+      props.contactShadowStrength ?? previousUniforms?.contactShadowStrength ?? 0,
     depthBias: props.depthBias ?? previousUniforms?.depthBias ?? 0.00008,
     dynamicReflectionStrength:
       props.dynamicReflectionStrength ?? previousUniforms?.dynamicReflectionStrength ?? 0,
@@ -727,12 +881,15 @@ export const glassTransmission = {
     viewportSize: 'vec2<f32>',
     depthRange: 'vec2<f32>',
     environmentIntensity: 'f32',
+    environmentMipLevels: 'f32',
+    environmentPrefilterStrength: 'f32',
     thicknessStrength: 'f32',
     roughTransmissionStrength: 'f32',
     spectralAbsorptionStrength: 'f32',
     thinFilmThickness: 'f32',
     thinFilmStrength: 'f32',
     volumeScatteringStrength: 'f32',
+    contactShadowStrength: 'f32',
     depthBias: 'f32',
     dynamicReflectionStrength: 'f32',
     secondaryBounceStrength: 'f32',
@@ -743,12 +900,15 @@ export const glassTransmission = {
     viewportSize: [1, 1],
     depthRange: [0.1, 100],
     environmentIntensity: 1,
+    environmentMipLevels: 1,
+    environmentPrefilterStrength: 0,
     thicknessStrength: 1,
     roughTransmissionStrength: 0,
     spectralAbsorptionStrength: 0,
     thinFilmThickness: 0,
     thinFilmStrength: 0,
     volumeScatteringStrength: 0,
+    contactShadowStrength: 0,
     depthBias: 0.00008,
     dynamicReflectionStrength: 0,
     secondaryBounceStrength: 0,

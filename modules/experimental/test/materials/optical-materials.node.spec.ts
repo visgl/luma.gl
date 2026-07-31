@@ -320,12 +320,15 @@ test('optical materials retain defaults while applying partial updates', testCas
       viewportSize: [1, 1],
       depthRange: [0.1, 100],
       environmentIntensity: 1,
+      environmentMipLevels: 1,
+      environmentPrefilterStrength: 0,
       thicknessStrength: 1,
       roughTransmissionStrength: 0,
       spectralAbsorptionStrength: 0,
       thinFilmThickness: 0,
       thinFilmStrength: 0,
       volumeScatteringStrength: 0,
+      contactShadowStrength: 0,
       depthBias: 0.00008,
       dynamicReflectionStrength: 0,
       secondaryBounceStrength: 0,
@@ -335,13 +338,30 @@ test('optical materials retain defaults while applying partial updates', testCas
     'rasterized transmission exposes stable optical defaults'
   );
   const updatedTransmissionUniforms = glassTransmission.getUniforms(
-    {environmentIntensity: 1.6, thicknessStrength: 1.25},
+    {
+      environmentIntensity: 1.6,
+      environmentMipLevels: 9,
+      environmentPrefilterStrength: 0.85,
+      contactShadowStrength: 0.4,
+      thicknessStrength: 1.25
+    },
     initialTransmissionUniforms
   );
   testCase.equal(
     updatedTransmissionUniforms.environmentIntensity,
     1.6,
     'environment reflections remain adjustable'
+  );
+  testCase.equal(updatedTransmissionUniforms.environmentMipLevels, 9, 'probe mip capacity updates');
+  testCase.equal(
+    updatedTransmissionUniforms.environmentPrefilterStrength,
+    0.85,
+    'roughness-selected environment filtering is configurable'
+  );
+  testCase.equal(
+    updatedTransmissionUniforms.contactShadowStrength,
+    0.4,
+    'opaque-depth contact shadows are configurable'
   );
   testCase.equal(
     updatedTransmissionUniforms.thicknessStrength,
@@ -436,6 +456,16 @@ test('optical materials retain defaults while applying partial updates', testCas
     retainedOpticalUniforms.volumeScatteringStrength,
     0.38,
     'partial updates preserve optical volume scattering'
+  );
+  testCase.equal(
+    retainedOpticalUniforms.environmentMipLevels,
+    9,
+    'partial updates preserve the prefiltered environment pyramid'
+  );
+  testCase.equal(
+    retainedOpticalUniforms.contactShadowStrength,
+    0.4,
+    'partial updates preserve contact-shadow strength'
   );
 
   const initialReflectiveUniforms = reflectiveMaterial.getUniforms({});
@@ -641,6 +671,21 @@ test('rasterized glass transmission composes thickness, depth, and environment m
       shaderSource,
       /filteredEnvironment/,
       `${language} filters environment reflections for rough optical surfaces`
+    );
+    testCase.match(
+      shaderSource,
+      /glassTransmission_sampleEnvironmentAtRoughness/,
+      `${language} samples explicit roughness-dependent reflection lobes`
+    );
+    testCase.match(
+      shaderSource,
+      /reflectionLevel/,
+      `${language} selects initialized studio-environment mip levels`
+    );
+    testCase.match(
+      shaderSource,
+      /glassTransmission_getContactShadow/,
+      `${language} anchors translucent shells to nearby opaque geometry`
     );
   }
   testCase.end();

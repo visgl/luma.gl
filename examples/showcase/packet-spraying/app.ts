@@ -140,6 +140,7 @@ import {
   type SwitchArrival,
   type Vector3
 } from './network';
+import {makeStudioEnvironmentMipLevels} from './optics';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
@@ -1925,6 +1926,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   glassInternalReflectionStrength = 0.46;
   glassTransmissionStrength = 1.32;
   glassEnvironmentIntensity = 0.86;
+  glassEnvironmentPrefilterStrength = 1;
+  glassContactShadowStrength = 0.36;
   glassVolumeThickness = 1;
   glassRoughTransmissionStrength = 0.2;
   glassSpectralAbsorptionStrength = 0.28;
@@ -2250,6 +2253,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         glassInternalReflectionStrength: this.glassInternalReflectionStrength,
         glassTransmissionStrength: this.glassTransmissionStrength,
         glassEnvironmentIntensity: this.glassEnvironmentIntensity,
+        glassEnvironmentPrefilterStrength: this.glassEnvironmentPrefilterStrength,
+        glassContactShadowStrength: this.glassContactShadowStrength,
         glassVolumeThickness: this.glassVolumeThickness,
         glassRoughTransmissionStrength: this.glassRoughTransmissionStrength,
         glassSpectralAbsorptionStrength: this.glassSpectralAbsorptionStrength,
@@ -2295,6 +2300,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingFallback = String(Boolean(device.info.fallback));
       canvas.dataset.packetSprayingDynamicRange = this.dynamicRangeProfile.displayMode;
       canvas.dataset.packetSprayingSceneColorFormat = this.sceneColorFormat;
+      canvas.dataset.packetSprayingEnvironmentMipLevels = String(this.environmentTexture.mipLevels);
       canvas.dataset.packetSprayingHighlightBoost =
         this.dynamicRangeProfile.highlightBoost.toFixed(3);
       canvas.dataset.packetSprayingMaximumLuminance =
@@ -2436,6 +2442,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         this.glassEnvironmentIntensity *
         (0.16 + this.opticsProfile.surface * 0.84) *
         this.dynamicRangeProfile.specularScale,
+      environmentMipLevels: this.environmentTexture.mipLevels,
+      environmentPrefilterStrength:
+        this.glassEnvironmentPrefilterStrength * this.opticsProfile.surface,
+      contactShadowStrength: this.glassContactShadowStrength * this.opticsProfile.refraction,
       thicknessStrength: this.glassVolumeThickness * (0.45 + this.opticsProfile.refraction * 0.55),
       roughTransmissionStrength: this.glassRoughTransmissionStrength * this.opticsProfile.spectral,
       spectralAbsorptionStrength:
@@ -4590,6 +4600,22 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.glassEnvironmentIntensity = glassEnvironmentIntensity;
     }
 
+    const glassEnvironmentPrefilterStrength = getChangedSetting(
+      changedSettings,
+      'glassEnvironmentPrefilterStrength'
+    )?.nextValue;
+    if (typeof glassEnvironmentPrefilterStrength === 'number') {
+      this.glassEnvironmentPrefilterStrength = glassEnvironmentPrefilterStrength;
+    }
+
+    const glassContactShadowStrength = getChangedSetting(
+      changedSettings,
+      'glassContactShadowStrength'
+    )?.nextValue;
+    if (typeof glassContactShadowStrength === 'number') {
+      this.glassContactShadowStrength = glassContactShadowStrength;
+    }
+
     const glassVolumeThickness = getChangedSetting(
       changedSettings,
       'glassVolumeThickness'
@@ -4798,9 +4824,9 @@ const PACKET_SPRAYING_OPTICS_HTML = `\
 <p>Every switch is a transparent GPU-rendered glass volume; the image is generated live on hardware WebGPU or WebGL without per-pixel ray tracing.</p>
 <p>The guided tour's 0–11 visual-style control introduces these techniques in stages, preserving clear packet movement at the low end and progressively revealing the complete optical pipeline.</p>
 <h3>Glass surfaces</h3>
-<p>Grazing-angle Fresnel reflection, GGX microfacets, a polished clearcoat, angular thin-film interference, and camera-responsive studio lighting define each curved outer surface.</p>
+<p>Grazing-angle Fresnel reflection, GGX microfacets, a polished clearcoat, angular thin-film interference, and roughness-selected prefiltered studio reflections define each curved outer surface.</p>
 <h3>Inside the glass</h3>
-<p>A dedicated backface pass measures optical thickness. Entry and exit refraction bend captured scene color, chromatic dispersion separates wavelengths, spectral Beer-Lambert absorption tints longer paths, and controlled multisampling creates frosted transmission.</p>
+<p>A dedicated backface pass measures optical thickness. Entry and exit refraction bend captured scene color, chromatic dispersion separates wavelengths, spectral Beer-Lambert absorption tints longer paths, controlled multisampling creates frosted transmission, and opaque-depth contact shadows anchor nearby hardware to each glass shell.</p>
 <h3>Light from moving packets</h3>
 <p>Red and green packets emit local light into nearby glass. Colored volume scattering, moving scene reflections, secondary internal bounces, and focused raster caustics transfer that energy onto switches, reflective tubes, and metallic servers.</p>
 <h3>Compositing and display</h3>
@@ -4933,68 +4959,28 @@ function makeBackfaceTexture(
 }
 
 function makeStudioEnvironmentTexture(device: Device): Texture {
-  const width = 256;
-  const height = 128;
-  const pixels = new Uint8Array(width * height * 4);
-  const studioLights = [
-    {direction: [-0.58, 0.64, 0.5], color: [1, 0.92, 0.78], width: 0.11},
-    {direction: [0.72, 0.24, -0.58], color: [0.35, 0.62, 1], width: 0.16},
-    {direction: [0.05, 0.94, 0.33], color: [0.78, 0.88, 1], width: 0.085},
-    {direction: [-0.8, -0.12, -0.58], color: [0.42, 0.35, 0.8], width: 0.2}
-  ];
-
-  for (let row = 0; row < height; row++) {
-    const elevation = (row / (height - 1)) * Math.PI;
-    for (let column = 0; column < width; column++) {
-      const azimuth = (column / (width - 1) - 0.5) * Math.PI * 2;
-      const direction: Vector3 = [
-        Math.cos(azimuth) * Math.sin(elevation),
-        Math.cos(elevation),
-        Math.sin(azimuth) * Math.sin(elevation)
-      ];
-      const horizon = Math.pow(1 - Math.abs(direction[1]), 8);
-      const sky = Math.max(direction[1], 0);
-      const color: Vector3 = [
-        0.035 + sky * 0.065 + horizon * 0.09,
-        0.045 + sky * 0.085 + horizon * 0.12,
-        0.075 + sky * 0.16 + horizon * 0.19
-      ];
-
-      for (const light of studioLights) {
-        const alignment = Math.max(
-          direction[0] * light.direction[0] +
-            direction[1] * light.direction[1] +
-            direction[2] * light.direction[2],
-          0
-        );
-        const intensity = Math.pow(alignment, 1 / light.width ** 2);
-        color[0] += light.color[0] * intensity * 0.78;
-        color[1] += light.color[1] * intensity * 0.78;
-        color[2] += light.color[2] * intensity * 0.78;
-      }
-
-      const pixelOffset = (row * width + column) * 4;
-      pixels[pixelOffset] = Math.round(Math.min(color[0], 1) * 255);
-      pixels[pixelOffset + 1] = Math.round(Math.min(color[1], 1) * 255);
-      pixels[pixelOffset + 2] = Math.round(Math.min(color[2], 1) * 255);
-      pixels[pixelOffset + 3] = 255;
-    }
-  }
-
+  const mipLevels = makeStudioEnvironmentMipLevels();
+  const baseLevel = mipLevels[0];
   const environmentTexture = device.createTexture({
     id: 'packet-spraying-studio-environment',
-    width,
-    height,
+    width: baseLevel.width,
+    height: baseLevel.height,
+    mipLevels: mipLevels.length,
     format: 'rgba8unorm',
     usage: Texture.SAMPLE | Texture.COPY_DST,
     sampler: {
       minFilter: 'linear',
       magFilter: 'linear',
+      mipmapFilter: 'linear',
+      lodMaxClamp: mipLevels.length - 1,
       addressModeU: 'repeat',
       addressModeV: 'clamp-to-edge'
     }
   });
-  environmentTexture.writeData(pixels);
+
+  for (const [mipLevel, {height, pixels, width}] of mipLevels.entries()) {
+    environmentTexture.writeData(pixels, {height, mipLevel, width});
+  }
   return environmentTexture;
 }
 
@@ -5422,6 +5408,24 @@ function makeSettingsSchema(
             persist: 'none',
             min: 0,
             max: 3,
+            step: 0.05
+          },
+          {
+            name: 'glassEnvironmentPrefilterStrength',
+            label: 'Prefiltered Reflections',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
+            step: 0.05
+          },
+          {
+            name: 'glassContactShadowStrength',
+            label: 'Glass Contact Shadows',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 1,
             step: 0.05
           },
           {
