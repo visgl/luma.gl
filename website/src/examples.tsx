@@ -549,6 +549,7 @@ export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
     directory="showcase"
     template={GLTFApp}
     config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
@@ -933,6 +934,7 @@ export const GlobeExample: React.FC = props => (
     directory="showcase"
     template={GlobeApp}
     config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );

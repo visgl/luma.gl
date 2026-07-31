@@ -223,7 +223,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
   litColor += vec3<f32>(0.9, 0.96, 1.0) * iceMask * (iceRim * 0.55) + iceHighlight * iceMask;
   litColor *= mix(0.22, 1.0, sunVisibility);
-  return vec4<f32>(min(litColor, vec3<f32>(1.0, 1.0, 1.0)), 1.0);
+  return vec4<f32>(litColor, 1.0);
 }
 `;
 
@@ -310,7 +310,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
   let iceColor = vec3<f32>(0.95, 0.98, 1.0) + vec3<f32>(0.85, 0.92, 1.0) * iceRim * 0.28 + iceHighlight;
   let finalColor =
-    (waterColor.rgb * openWaterMask + min(iceColor, vec3<f32>(1.0, 1.0, 1.0)) * polarIceMask) *
+    (waterColor.rgb * openWaterMask + iceColor * polarIceMask) *
     mix(0.18, 1.0, sunVisibility);
   let finalAlpha = waterColor.a * openWaterMask + 0.96 * polarIceMask;
   return vec4<f32>(finalColor, finalAlpha);
@@ -412,7 +412,7 @@ void main(void) {
 
   litColor += vec3(0.9, 0.96, 1.0) * iceMask * (iceRim * 0.55) + iceHighlight * iceMask;
   litColor *= mix(0.22, 1.0, sunVisibility);
-  fragColor = vec4(min(litColor, vec3(1.0)), 1.0);
+  fragColor = vec4(litColor, 1.0);
 }
 `;
 
@@ -481,7 +481,7 @@ void main(void) {
     iceHighlight;
   vec3 finalColor =
     waterColor.rgb * openWaterMask +
-    min(iceColor, vec3(1.0)) * polarIceMask;
+    iceColor * polarIceMask;
   finalColor *= mix(0.18, 1.0, sunVisibility);
   float finalAlpha = waterColor.a * openWaterMask + 0.96 * polarIceMask;
   fragColor = vec4(finalColor, finalAlpha);
