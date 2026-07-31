@@ -101,6 +101,7 @@ import {
   getPointAlongRoute,
   getRouteSegmentStartDistance,
   isFailedSwitchPosition,
+  isSwitchProbeRouteAvailable,
   makeActiveLinkKeys,
   makeConversationRoutes,
   makeEndpointSignals,
@@ -338,7 +339,16 @@ fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
     inputs.position
   );
   let failureTint = smoothstep(0.44, 0.54, inputs.color.a);
-  let color = vec4<f32>(glassColor.rgb + inputs.color.rgb * failureTint * 0.46, glassColor.a);
+  let viewDirection = normalize(app.cameraPosition - inputs.worldPosition);
+  let viewAlignment = abs(dot(normalize(inputs.normal), viewDirection));
+  let focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 2.2);
+  let focusStrength = smoothstep(0.9, 1.05, inputs.color.b) * (1.0 - failureTint);
+  let focusColor = vec3<f32>(0.12, 0.38, 0.95) *
+    focusStrength * (0.08 + focusRim * 0.72);
+  let color = vec4<f32>(
+    glassColor.rgb + inputs.color.rgb * failureTint * 0.46 + focusColor,
+    glassColor.a
+  );
 #if A_BUFFER_ENABLED
   return aBuffer_captureStraightColor(color, inputs.position);
 #else
@@ -475,7 +485,15 @@ void main(void) {
     gl_FragCoord
   );
   float failureTint = smoothstep(0.44, 0.54, vColor.a);
-  vec4 color = vec4(glassColor.rgb + vColor.rgb * failureTint * 0.46, glassColor.a);
+  vec3 viewDirection = normalize(app.cameraPosition - vWorldPosition);
+  float viewAlignment = abs(dot(normalize(vNormal), viewDirection));
+  float focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 2.2);
+  float focusStrength = smoothstep(0.9, 1.05, vColor.b) * (1.0 - failureTint);
+  vec3 focusColor = vec3(0.12, 0.38, 0.95) * focusStrength * (0.08 + focusRim * 0.72);
+  vec4 color = vec4(
+    glassColor.rgb + vColor.rgb * failureTint * 0.46 + focusColor,
+    glassColor.a
+  );
 #if WBOIT_ENABLED
   fragColor = wboit_captureStraightColor(color, gl_FragCoord);
 #else
@@ -1626,6 +1644,10 @@ class NetworkStoryControls {
     );
   }
 
+  focusOpticsButton(): void {
+    this.opticsButton.focus();
+  }
+
   setVisualIntensity(level: number): void {
     const profile = makeNetworkOpticsProfile(level);
     this.visualIntensityInput.value = String(profile.level);
@@ -1851,6 +1873,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private readonly nextCongestionTrimTimes = new Map<number, number>();
   private readonly nextSwitchProbeTimes = new Map<number, number>();
   private readonly recoveryProbeCompletionTimes = new Map<number, number>();
+  private readonly recoveryProbeConfirmations = new Map<number, NetworkPacketEvent>();
   private animationTime = 0;
   private droppedPacketCount = 0;
   private trimmedPacketCount = 0;
@@ -2920,6 +2943,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.nextCongestionTrimTimes.clear();
     this.nextSwitchProbeTimes.clear();
     this.recoveryProbeCompletionTimes.clear();
+    this.recoveryProbeConfirmations.clear();
     this.networkPacketEvents.splice(0, this.networkPacketEvents.length);
     this.queuedPacketDefinitions = [];
     this.switchTransitionWaves.splice(0, this.switchTransitionWaves.length);
@@ -3144,8 +3168,12 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private setOpticsPanelVisible(isVisible: boolean): void {
+    const wasVisible = this.canvas?.dataset.packetSprayingOpticsExpanded === 'true';
     this.opticsPanel?.setVisible(isVisible);
     this.storyControls?.setOpticsExpanded(isVisible);
+    if (!isVisible && wasVisible) {
+      this.storyControls?.focusOpticsButton();
+    }
     if (this.canvas) {
       this.canvas.dataset.packetSprayingOpticsExpanded = String(isVisible);
     }
@@ -3219,11 +3247,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.failedSwitchIndices.delete(switchIndex);
       this.nextSwitchProbeTimes.delete(switchIndex);
       this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
-
-      if (makeSwitchProbeEvent(this.conversationRoutes, switchIndex, this.animationTime)) {
-        this.recoveringSwitchIndices.add(switchIndex);
-        this.nextSwitchProbeTimes.set(switchIndex, this.animationTime);
-      }
+      this.recoveringSwitchIndices.add(switchIndex);
+      this.nextSwitchProbeTimes.set(switchIndex, this.animationTime);
     } else if (this.detectingSwitchTimes.has(switchIndex)) {
       this.completeSwitchFailure(switchIndex);
       return;
@@ -3260,6 +3285,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private completeSwitchRecovery(switchIndex: number): void {
     this.recoveringSwitchIndices.delete(switchIndex);
     this.recoveryProbeCompletionTimes.delete(switchIndex);
+    this.recoveryProbeConfirmations.delete(switchIndex);
     this.glassInstances[switchIndex].color = [...this.originalGlassColors[switchIndex]] as Color;
     this.switchTransitionWaves.push(
       makeSwitchTransitionWave(switchIndex, 'recovery', this.animationTime)
@@ -3305,7 +3331,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       if (animationTime >= nextProbeTime) {
         const unavailableSwitchIndices = new Set([
           ...this.failedSwitchIndices,
-          ...this.recoveringSwitchIndices
+          ...this.recoveringSwitchIndices,
+          ...this.detectingSwitchTimes.keys()
         ]);
         const probe = makeSwitchProbeEvent(
           this.conversationRoutes,
@@ -3322,6 +3349,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
               switchIndex,
               confirmation.startedAt + confirmation.duration
             );
+            this.recoveryProbeConfirmations.set(switchIndex, confirmation);
             this.nextSwitchProbeTimes.delete(switchIndex);
             continue;
           }
@@ -3332,7 +3360,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     for (const [switchIndex, completionTime] of this.recoveryProbeCompletionTimes) {
       if (animationTime >= completionTime) {
-        this.completeSwitchRecovery(switchIndex);
+        const confirmation = this.recoveryProbeConfirmations.get(switchIndex);
+        const unavailableSwitchIndices = new Set([
+          ...this.failedSwitchIndices,
+          ...this.recoveringSwitchIndices,
+          ...this.detectingSwitchTimes.keys()
+        ]);
+        if (confirmation && isSwitchProbeRouteAvailable(confirmation, unavailableSwitchIndices)) {
+          this.completeSwitchRecovery(switchIndex);
+        } else {
+          this.recoveryProbeCompletionTimes.delete(switchIndex);
+          this.recoveryProbeConfirmations.delete(switchIndex);
+          this.nextSwitchProbeTimes.set(switchIndex, animationTime + SWITCH_PROBE_INTERVAL);
+        }
       }
     }
 
@@ -3373,17 +3413,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       const colors = flattenColors(
         group.instances.map((instance, instanceIndex) => {
           const switchIndex = group.switchIndices[instanceIndex];
-          const planeIndex = this.switchPlaneIndices.get(switchIndex);
-          const planeStrength =
-            planeIndex === undefined ? 0 : this.planeHighlightStrengths[planeIndex];
-          const pathStrength = this.getPathSwitchHighlightStrength(switchIndex);
-          return makeNetworkSwitchHighlightColor(instance.color, planeStrength, pathStrength);
+          return this.getHighlightedSwitchColor(instance.color, switchIndex);
         })
       );
       group.sorted.updateInstances(matrices, colors);
       group.aBuffer?.updateInstances(matrices, colors);
       group.weightedBlended?.updateInstances(matrices, colors);
     }
+  }
+
+  private getHighlightedSwitchColor(color: Color, switchIndex: number): Color {
+    const planeIndex = this.switchPlaneIndices.get(switchIndex);
+    const planeStrength = planeIndex === undefined ? 0 : this.planeHighlightStrengths[planeIndex];
+    const pathStrength = this.getPathSwitchHighlightStrength(switchIndex);
+    return makeNetworkSwitchHighlightColor(color, planeStrength, pathStrength);
   }
 
   private getPathSwitchHighlightStrength(switchIndex: number): number {
@@ -3945,7 +3988,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       );
     group.sorted.updateInstances(
       flattenMatrices(sortedInstances.map(({instance}) => instance.matrix)),
-      flattenColors(sortedInstances.map(({instance}) => instance.color))
+      flattenColors(
+        sortedInstances.map(({instance, switchIndex}) =>
+          this.getHighlightedSwitchColor(instance.color, switchIndex)
+        )
+      )
     );
   }
 

@@ -17,6 +17,7 @@ import {
   SPINE_POSITIONS,
   SPINE_SWITCH_RADIUS,
   SWITCH_CONFIRMATION_DURATION,
+  SWITCH_PROBE_DURATION,
   SWITCH_POSITIONS,
   SWITCH_TRANSITION_WAVE_DURATION,
   getActivePlaneCount,
@@ -24,6 +25,7 @@ import {
   getHealthyConversationRoutes,
   getNetworkPlaneSwitchIndices,
   isFailedSwitchPosition,
+  isSwitchProbeRouteAvailable,
   makeConversationRoutes,
   makeEndpointSignals,
   makeLinks,
@@ -212,6 +214,27 @@ test('packet-spraying physical-plane telemetry preserves four independent backbo
     3,
     'three of the four independent backbone paths remain available'
   );
+  testCase.end();
+});
+
+test('packet-spraying physical-plane telemetry preserves recovery while data routes are blocked', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const recoveringAccessSwitchIndex = 3;
+  const recoveringSwitches = new Set([recoveringAccessSwitchIndex]);
+
+  reroutePackets(packets, getHealthyConversationRoutes(routes, new Set(), recoveringSwitches));
+  const telemetry = makeNetworkSwitchPlaneTelemetry(
+    routes,
+    packets,
+    new Set(),
+    recoveringSwitches,
+    new Set()
+  );
+
+  testCase.equal(telemetry[0].status, 'recovering', 'the blocked physical plane remains probing');
+  testCase.equal(telemetry[0].redPacketCount, 0, 'recovery prevents ordinary red traffic');
+  testCase.equal(telemetry[0].greenPacketCount, 0, 'recovery prevents ordinary green traffic');
   testCase.end();
 });
 
@@ -610,6 +633,9 @@ test('packet-spraying physically probes unused switches and confirms the return 
   const routes = makeConversationRoutes();
   const unusedLeafIndex = 0;
   const probe = makeSwitchProbeEvent(routes, unusedLeafIndex, 9, new Set([unusedLeafIndex]));
+  const physicalLinkKeys = new Set(
+    makeLinks(routes).map(link => makeLinkKey(link.start, link.end))
+  );
 
   testCase.ok(
     routes.every(({route}) => !route.points.includes(LEAF_POSITIONS[unusedLeafIndex])),
@@ -621,11 +647,24 @@ test('packet-spraying physically probes unused switches and confirms the return 
     'a physical control packet can still reach the unused access switch'
   );
   testCase.ok(
-    SWITCH_POSITIONS.every((_, switchIndex) => makeSwitchProbeEvent(routes, switchIndex, 9)),
-    'every physical switch has a recovery-probe path'
+    SWITCH_POSITIONS.every((switchPosition, switchIndex) => {
+      const physicalProbe = makeSwitchProbeEvent(routes, switchIndex, 9);
+      return (
+        Boolean(physicalProbe?.route.points.includes(switchPosition)) &&
+        physicalProbe!.route.points.every(
+          (position, positionIndex) =>
+            positionIndex === 0 ||
+            physicalLinkKeys.has(
+              makeLinkKey(physicalProbe!.route.points[positionIndex - 1], position)
+            )
+        )
+      );
+    }),
+    'every physical switch has a control path composed entirely of real fabric links'
   );
 
   const confirmation = makeSwitchProbeConfirmationEvent(probe!);
+  testCase.equal(probe?.duration, SWITCH_PROBE_DURATION, 'probe timing uses the shared duration');
   testCase.equal(confirmation.kind, 'probe-confirmation', 'the response is a confirmation packet');
   testCase.equal(
     confirmation.startedAt,
@@ -645,6 +684,43 @@ test('packet-spraying physically probes unused switches and confirms the return 
   testCase.ok(
     confirmation.color[1] > confirmation.color[0] && confirmation.color[2] > confirmation.color[0],
     'the returning acknowledgment has a distinct cyan color'
+  );
+  testCase.end();
+});
+
+test('packet-spraying recovery acknowledgments reject newly unavailable return paths', testCase => {
+  const routes = makeConversationRoutes();
+  const recoveringSpineIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const recoveringSwitches = new Set([recoveringSpineIndex]);
+  const probe = makeSwitchProbeEvent(routes, recoveringSpineIndex, 15, recoveringSwitches)!;
+  const confirmation = makeSwitchProbeConfirmationEvent(probe);
+  const targetPositionIndex = probe.route.points.indexOf(SWITCH_POSITIONS[recoveringSpineIndex]);
+  const intermediateSwitchPosition = probe.route.points.find(
+    position =>
+      position !== SWITCH_POSITIONS[recoveringSpineIndex] &&
+      isFailedSwitchPosition(position, new Set([3]))
+  );
+  const downstreamSwitchIndex = probe.route.points
+    .slice(targetPositionIndex + 1)
+    .map(position => SWITCH_POSITIONS.indexOf(position))
+    .find(switchIndex => switchIndex >= 0);
+
+  testCase.ok(
+    isSwitchProbeRouteAvailable(confirmation, recoveringSwitches),
+    'the target switch itself remains available to control traffic while recovering'
+  );
+  testCase.ok(intermediateSwitchPosition, 'the confirmation traverses another physical switch');
+  testCase.notOk(
+    isSwitchProbeRouteAvailable(confirmation, new Set([...recoveringSwitches, 3])),
+    'a newly failed intermediate switch invalidates the return acknowledgment'
+  );
+  testCase.ok(
+    downstreamSwitchIndex !== undefined &&
+      isSwitchProbeRouteAvailable(
+        confirmation,
+        new Set([...recoveringSwitches, downstreamSwitchIndex])
+      ),
+    'an unrelated downstream switch cannot invalidate the acknowledgment return path'
   );
   testCase.end();
 });

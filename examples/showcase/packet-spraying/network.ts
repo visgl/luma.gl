@@ -167,6 +167,7 @@ export const FAILURE_DETECTION_DELAY = 0.52;
 export const PACKET_TRAVEL_SPEED = 3.4;
 export const ENDPOINT_SIGNAL_DURATION = 0.34;
 export const SWITCH_CONFIRMATION_DURATION = 0.46;
+export const SWITCH_PROBE_DURATION = 0.66;
 export const SWITCH_PROBE_INTERVAL = 2.2;
 export const SWITCH_TRANSITION_WAVE_DURATION = 0.78;
 
@@ -550,7 +551,7 @@ export function makeSwitchProbeEvent(
   return {
     color: [0.35, 0.7, 1, 0.76],
     conversationIndex: conversationRoute?.conversationIndex ?? 0,
-    duration: 0.66,
+    duration: SWITCH_PROBE_DURATION,
     kind: 'probe',
     route,
     startedAt,
@@ -615,6 +616,27 @@ export function makeSwitchProbeConfirmationEvent(probe: NetworkPacketEvent): Net
     kind: 'probe-confirmation',
     startedAt: probe.startedAt + probe.duration
   };
+}
+
+/** Checks whether a control packet can still traverse its complete physical switch route. */
+export function isSwitchProbeRouteAvailable(
+  probe: NetworkPacketEvent,
+  unavailableSwitchIndices: ReadonlySet<number>
+): boolean {
+  const targetSwitchPosition = SWITCH_POSITIONS[probe.switchIndex];
+  const targetPositionIndex = targetSwitchPosition
+    ? probe.route.points.indexOf(targetSwitchPosition)
+    : -1;
+  return (
+    targetPositionIndex >= 0 &&
+    probe.route.points
+      .slice(0, targetPositionIndex + 1)
+      .every(
+        position =>
+          position === targetSwitchPosition ||
+          !isFailedSwitchPosition(position, unavailableSwitchIndices)
+      )
+  );
 }
 
 /** Creates a restrained state-transition wave centered on a physical switch. */
@@ -742,11 +764,7 @@ export function makeNetworkSwitchPlaneTelemetry(
       })
     );
     const failed = planeRoutes.every(({route}) =>
-      route.points.some(
-        position =>
-          isFailedSwitchPosition(position, failedSwitchIndices) ||
-          isFailedSwitchPosition(position, recoveringSwitchIndices)
-      )
+      route.points.some(position => isFailedSwitchPosition(position, failedSwitchIndices))
     );
     const recovering = [...switchIndices].some(switchIndex =>
       recoveringSwitchIndices.has(switchIndex)
