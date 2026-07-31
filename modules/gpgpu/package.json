@@ -4,7 +4,6 @@
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
-  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"
