@@ -142,110 +142,117 @@ function makeCrystalCathedral(): ANARIJSONScene {
     version: 1,
     name: 'CRYSTAL CATHEDRAL',
     description:
-      'Faceted translucent crystal · 168 architectural pillars · luminous nave arches · 190 stars',
+      '168 faceted gemstone pillars · spectral mirror-polished crystals · five moving light sources',
     camera: {
       '@@type': 'perspective',
-      position: makeCameraPosition([0, 4.6, -1], 37, 0.23, 0.63),
-      target: [0, 4.6, -1],
-      fovy: Math.PI / 3.8,
+      position: makeCameraPosition([0, 4.8, -1], 40, 0.19, 0.035),
+      target: [0, 4.8, -1],
+      fovy: 0.8,
       near: 0.05,
       far: 220,
       orbit: {speed: 0.028}
     },
     renderer: {
       ...makeRenderer(),
-      exposure: 1.7,
-      bloomIntensity: 0.88,
-      bloomThreshold: 0.52,
-      fogColor: [0.024, 0.035, 0.105],
-      fogDensity: 0.00034
+      exposure: 1.58,
+      bloomIntensity: 0.58,
+      bloomThreshold: 0.91,
+      fogColor: [0.018, 0.025, 0.065],
+      fogDensity: 0.00017
     },
     geometries: {
-      column: {'@@type': 'cylinder', radius: 0.44, height: 1, segments: 7},
-      spire: {'@@type': 'cone', radius: 0.56, height: 1.65, segments: 7},
+      column: {
+        '@@type': 'triangle',
+        generator: {'@@type': 'prism', radius: 0.52, height: 1, sides: 12, bevel: 0.1}
+      },
+      spire: {'@@type': 'cone', radius: 0.53, height: 1.65, segments: 32},
       arch: {
         '@@type': 'triangle',
         generator: {'@@type': 'torus', minorRadius: 0.052, majorSegments: 66, minorSegments: 9}
       },
       shard: {
         '@@type': 'triangle',
-        generator: {'@@type': 'crystal', radius: 0.47, height: 2.6, sides: 6}
+        generator: {'@@type': 'crystal', radius: 0.47, height: 2.6, sides: 10}
       },
       beacon: {'@@type': 'sphere', radius: 0.18, segments: 14}
     },
     materials: {
       sapphire: {
         '@@type': 'physicallyBased',
-        baseColor: [0.28, 0.57, 0.98],
-        metallic: 0.48,
-        roughness: 0.085,
-        clearcoat: 0.88,
-        iridescence: 0.38
+        baseColor: [0.42, 0.86, 1],
+        emissive: [0.1, 0.34, 0.62],
+        emissiveStrength: 1.1,
+        metallic: 0.76,
+        roughness: 0.095,
+        clearcoat: 1,
+        iridescence: 0.68
       },
-      amethyst: {
+      opal: {
         '@@type': 'physicallyBased',
-        baseColor: [0.66, 0.28, 0.84],
-        metallic: 0.46,
-        roughness: 0.11,
-        clearcoat: 0.76,
-        iridescence: 0.54
+        baseColor: [0.78, 0.9, 1],
+        emissive: [0.28, 0.4, 0.64],
+        emissiveStrength: 0.88,
+        metallic: 0.74,
+        roughness: 0.105,
+        clearcoat: 1,
+        iridescence: 0.76
       },
       gold: {
         '@@type': 'physicallyBased',
-        baseColor: [0.92, 0.68, 0.41],
-        metallic: 0.82,
-        roughness: 0.12,
-        emissive: [0.31, 0.12, 0.035],
+        baseColor: [1, 0.78, 0.35],
+        metallic: 0.97,
+        roughness: 0.07,
+        clearcoat: 1,
+        iridescence: 0.28,
+        emissive: [0.38, 0.16, 0.025],
         emissiveStrength: 0.9
       },
       arch: {
         '@@type': 'physicallyBased',
-        baseColor: [0.12, 0.23, 0.51],
-        emissive: [0.38, 0.3, 1],
-        emissiveStrength: 2.7,
-        metallic: 0.68,
-        roughness: 0.12
+        baseColor: [0.28, 0.39, 0.76],
+        emissive: [0.24, 0.26, 0.8],
+        emissiveStrength: 1.05,
+        metallic: 0.84,
+        roughness: 0.08,
+        clearcoat: 0.92
       },
       beacon: {
         '@@type': 'physicallyBased',
         baseColor: [1, 0.5, 0.2],
         emissive: [1, 0.38, 0.08],
-        emissiveStrength: 4.4,
-        roughness: 0.15
+        emissiveStrength: 2.8,
+        roughness: 0.08,
+        clearcoat: 0.82
       },
       'ice-crystal': {
         '@@type': 'physicallyBased',
-        baseColor: [0.28, 0.8, 1],
-        emissive: [0.08, 0.38, 0.8],
-        emissiveStrength: 0.72,
-        opacity: 0.78,
-        alphaMode: 'blend',
-        metallic: 0.48,
-        roughness: 0.055,
-        clearcoat: 0.95,
-        iridescence: 0.55
+        baseColor: [0.43, 0.92, 1],
+        emissive: [0.19, 0.58, 1],
+        emissiveStrength: 1.4,
+        metallic: 0.91,
+        roughness: 0.065,
+        clearcoat: 1,
+        iridescence: 0.78
       },
-      'rose-crystal': {
+      'aurora-crystal': {
         '@@type': 'physicallyBased',
-        baseColor: [0.93, 0.34, 0.78],
-        emissive: [0.65, 0.12, 0.42],
-        emissiveStrength: 0.7,
-        opacity: 0.81,
-        alphaMode: 'blend',
-        metallic: 0.42,
-        roughness: 0.06,
-        clearcoat: 0.91,
-        iridescence: 0.62
+        baseColor: [0.9, 0.98, 1],
+        emissive: [0.36, 0.58, 0.91],
+        emissiveStrength: 1.3,
+        metallic: 0.9,
+        roughness: 0.065,
+        clearcoat: 1,
+        iridescence: 0.84
       }
     },
     surfaces: {
       'sapphire-column': {geometry: 'column', material: 'sapphire'},
-      'amethyst-column': {geometry: 'column', material: 'amethyst'},
+      'opal-column': {geometry: 'column', material: 'opal'},
       'gold-spire': {geometry: 'spire', material: 'gold'},
       arch: {geometry: 'arch', material: 'arch'},
       beacon: {geometry: 'beacon', material: 'beacon'},
       'ice-crystal': {geometry: 'shard', material: 'ice-crystal'},
-      'rose-crystal': {geometry: 'shard', material: 'rose-crystal'}
+      'aurora-crystal': {geometry: 'shard', material: 'aurora-crystal'}
     },
     instances,
     lights: [
@@ -254,7 +261,7 @@ function makeCrystalCathedral(): ANARIJSONScene {
         '@@type': 'directional',
         direction: [0.25, -1, -0.3],
         color: [0.75, 0.78, 1],
-        irradiance: 1.9
+        irradiance: 4.4
       },
       {
         '@@id': 'sanctuary',
@@ -262,7 +269,7 @@ function makeCrystalCathedral(): ANARIJSONScene {
         position: [0, 18, 7],
         direction: [0, -1, -0.12],
         color: [0.46, 0.47, 1],
-        intensity: 28,
+        intensity: 48,
         openingAngle: 0.7
       },
       {
@@ -270,7 +277,7 @@ function makeCrystalCathedral(): ANARIJSONScene {
         '@@type': 'point',
         position: [0, 5.5, 0],
         color: [1, 0.35, 0.1],
-        intensity: 19,
+        intensity: 34,
         animation: {'@@type': 'orbit', center: [0, 5.5, 0], radius: 8, speed: 0.47}
       },
       {
@@ -278,8 +285,15 @@ function makeCrystalCathedral(): ANARIJSONScene {
         '@@type': 'point',
         position: [0, 2.8, -6],
         color: [0.17, 0.7, 1],
-        intensity: 16,
-        animation: {'@@type': 'pulse', amplitude: 0.28, speed: 1.1}
+        intensity: 38,
+        animation: {'@@type': 'pulse', amplitude: 0.38, speed: 1.1}
+      },
+      {
+        '@@id': 'spectral-edge-light',
+        '@@type': 'directional',
+        direction: [-0.58, -0.42, 0.72],
+        color: [0.54, 0.77, 1],
+        irradiance: 2.8
       }
     ]
   };
@@ -294,7 +308,7 @@ function makeCrystalCathedral(): ANARIJSONScene {
         instances.push(
           {
             '@@id': `column-${depthIndex}-${sideIndex}-${laneIndex}`,
-            surface: (depthIndex + laneIndex) % 2 === 0 ? 'sapphire-column' : 'amethyst-column',
+            surface: (depthIndex + laneIndex) % 2 === 0 ? 'sapphire-column' : 'opal-column',
             position: [
               roundNumber(horizontalPosition),
               roundNumber(towerHeight / 2),
@@ -335,10 +349,10 @@ function makeCrystalCathedral(): ANARIJSONScene {
       const crystalPosition = (sideIndex === 0 ? -1 : 1) * 2.45;
       instances.push({
         '@@id': `crystal-${depthIndex}-${sideIndex}`,
-        surface: sideIndex === 0 ? 'ice-crystal' : 'rose-crystal',
-        position: [crystalPosition, 1.4, depthPosition],
+        surface: sideIndex === 0 ? 'ice-crystal' : 'aurora-crystal',
+        position: [crystalPosition, 1.8, depthPosition],
         rotation: [0, roundNumber(depthIndex * 0.38), sideIndex === 0 ? -0.13 : 0.13],
-        scale: [0.78, roundNumber(1.05 + Math.sin(depthIndex * 0.8 + sideIndex) * 0.22), 0.78],
+        scale: [1.08, roundNumber(1.35 + Math.sin(depthIndex * 0.8 + sideIndex) * 0.3), 1.08],
         animation: {'@@type': 'wobble', axis: 'z', amplitude: 0.035, speed: 0.6, phase: depthIndex}
       });
     }
@@ -356,7 +370,7 @@ function makeCrystalCathedral(): ANARIJSONScene {
           '@@id': `floating-crystal-${depthIndex}`,
           surface: 'ice-crystal',
           position: [0, 7.5, depthPosition],
-          scale: [0.65, 1.1, 0.65],
+          scale: [0.86, 1.45, 0.86],
           animations: [
             {'@@type': 'bob', amplitude: 0.38, speed: 0.7, phase: depthIndex},
             {'@@type': 'spin', speed: 0.18}

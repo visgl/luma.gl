@@ -726,7 +726,7 @@ for each orb.
 | `name`, `description` | Human-readable preview title and optional scene description. |
 | `camera` | Camera `@@type`, normal ANARI camera parameters, optional `target`, and optional orbit speed. |
 | `renderer` | Renderer `@@type` and normal ANARI exposure, bloom, background, and fog parameters. |
-| `geometries` | Named geometry declarations; triangle meshes accept number arrays or compact `torus` / `crystal` generators. |
+| `geometries` | Named geometry declarations; triangle meshes accept number arrays or compact `torus`, `crystal`, and beveled `prism` generators. |
 | `materials` | Named `matte` or `physicallyBased` material declarations. |
 | `surfaces` | Named surface declarations referencing geometry and material identifiers. |
 | `groups` | Optional named groups referencing `surfaces` and optional `lights`. |
@@ -771,12 +771,23 @@ generator while remaining entirely JSON:
       "height": 2.6,
       "sides": 6
     }
+  },
+  "opal-column": {
+    "@@type": "triangle",
+    "generator": {
+      "@@type": "prism",
+      "radius": 0.52,
+      "height": 1,
+      "sides": 12,
+      "bevel": 0.1
+    }
   }
 }
 ```
 
 The `torus` generator creates indexed vertices and normals. The `crystal` generator creates
-flat-shaded triangular facets suitable for translucent, iridescent, or emissive materials.
+pointed, flat-shaded gemstone facets, while the `prism` generator creates finely faceted,
+beveled shafts suitable for polished architectural crystals.
 
 Similarly, `distributions` expands a concise declaration into deterministic retained instances
 that all share the same surface:
@@ -848,7 +859,7 @@ The playground includes the complete **Chromatic Atlas**, **Crystal Cathedral**,
 surfaces, generated halo and orbital meshes, hundreds of background stars, composable object
 motion, physically based materials, fog, bloom, HDR presentation, and real lights tracking the
 orbiting satellites. Crystal Cathedral additionally demonstrates faceted translucent crystal
-geometry and iridescent materials.
+geometry, fine beveled prisms, smooth 32-segment spires, and glossy opalescent materials.
 
 The editor applies valid changes automatically after a short debounce. Toggle **LIVE** to switch to
 manual changes, use **APPLY** or `⌘ Enter` / `Ctrl Enter` to commit, and select **FORMAT**,

@@ -110,7 +110,7 @@ The private package includes a JSON scene playground at
 `examples/showcase/anari/playground.html`. Start it with
 `yarn workspace luma.gl-examples-showcase-anari start`, then open `/playground.html` on the
 reported development-server URL. The playground translates deck.gl-inspired `@@type`
-declarations, named ANARI object references, shared retained surfaces, generated torus/crystal
+declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism
 meshes, starfield distributions, composable transform animations, lights following named
 instances, cameras, and renderer options into the API documented on these pages. The complete
 Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable

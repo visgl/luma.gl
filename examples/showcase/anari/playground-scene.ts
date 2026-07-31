@@ -42,7 +42,8 @@ export type JSONGeometryGenerator =
       majorSegments?: number;
       minorSegments?: number;
     }
-  | {'@@type': 'crystal'; radius?: number; height?: number; sides?: number};
+  | {'@@type': 'crystal'; radius?: number; height?: number; sides?: number}
+  | {'@@type': 'prism'; radius?: number; height?: number; sides?: number; bevel?: number};
 
 export type JSONGeometryDeclaration = JSONTypedObject<ANARIGeometrySubtype> &
   JSONGeometryParameters & {generator?: JSONGeometryGenerator};
@@ -491,7 +492,10 @@ function createGeneratedGeometry(generator: JSONGeometryGenerator): ANARIGeometr
   if (generator['@@type'] === 'torus') {
     return createTorusGeometry(generator);
   }
-  return createCrystalGeometry(generator);
+  if (generator['@@type'] === 'crystal') {
+    return createCrystalGeometry(generator);
+  }
+  return createPrismGeometry(generator);
 }
 
 function createTorusGeometry(
@@ -558,6 +562,49 @@ function createCrystalGeometry(
     const end: ANARIVector3 = [Math.cos(endAngle) * radius, 0, Math.sin(endAngle) * radius];
     appendTriangle(positions, normals, [0, height * 0.66, 0], end, start);
     appendTriangle(positions, normals, [0, -height * 0.34, 0], start, end);
+  }
+
+  return {
+    'vertex.position': new Float32Array(positions),
+    'vertex.normal': new Float32Array(normals)
+  };
+}
+
+function createPrismGeometry(
+  generator: Extract<JSONGeometryGenerator, {'@@type': 'prism'}>
+): ANARIGeometryParameters {
+  const radius = generator.radius ?? 0.5;
+  const height = generator.height ?? 1;
+  const sides = generator.sides ?? 12;
+  const bevel = Math.min(generator.bevel ?? 0.11, height * 0.24);
+  const positions: number[] = [];
+  const normals: number[] = [];
+
+  for (let sideIndex = 0; sideIndex < sides; sideIndex++) {
+    const startAngle = (sideIndex / sides) * Math.PI * 2;
+    const endAngle = ((sideIndex + 1) / sides) * Math.PI * 2;
+    const makeRingPoint = (angle: number, ringRadius: number, elevation: number): ANARIVector3 => [
+      Math.cos(angle) * ringRadius,
+      elevation,
+      Math.sin(angle) * ringRadius
+    ];
+    const lowerCapStart = makeRingPoint(startAngle, radius * 0.77, -height / 2);
+    const lowerCapEnd = makeRingPoint(endAngle, radius * 0.77, -height / 2);
+    const lowerShoulderStart = makeRingPoint(startAngle, radius, -height / 2 + bevel);
+    const lowerShoulderEnd = makeRingPoint(endAngle, radius, -height / 2 + bevel);
+    const upperShoulderStart = makeRingPoint(startAngle, radius, height / 2 - bevel);
+    const upperShoulderEnd = makeRingPoint(endAngle, radius, height / 2 - bevel);
+    const upperCapStart = makeRingPoint(startAngle, radius * 0.77, height / 2);
+    const upperCapEnd = makeRingPoint(endAngle, radius * 0.77, height / 2);
+
+    appendTriangle(positions, normals, lowerCapStart, lowerShoulderStart, lowerShoulderEnd);
+    appendTriangle(positions, normals, lowerCapStart, lowerShoulderEnd, lowerCapEnd);
+    appendTriangle(positions, normals, lowerShoulderStart, upperShoulderStart, upperShoulderEnd);
+    appendTriangle(positions, normals, lowerShoulderStart, upperShoulderEnd, lowerShoulderEnd);
+    appendTriangle(positions, normals, upperShoulderStart, upperCapStart, upperCapEnd);
+    appendTriangle(positions, normals, upperShoulderStart, upperCapEnd, upperShoulderEnd);
+    appendTriangle(positions, normals, [0, -height / 2, 0], lowerCapStart, lowerCapEnd);
+    appendTriangle(positions, normals, [0, height / 2, 0], upperCapEnd, upperCapStart);
   }
 
   return {

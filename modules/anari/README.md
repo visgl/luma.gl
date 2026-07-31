@@ -140,8 +140,8 @@ showcase. The private, experimental playground provides a deck.gl-style JSON edi
 transform instances, animated lights, renderer controls, and live HDR-capable rendering.
 
 Three presets represent the complete **Chromatic Atlas**, **Crystal Cathedral**, and
-**Celestial Engine** showcase scenes entirely in JSON, including procedural torus and faceted
-crystal meshes, deterministic starfields, hundreds of retained instances, composable animations,
+**Celestial Engine** showcase scenes entirely in JSON, including procedural torus, crystal, and
+beveled prism meshes, deterministic starfields, hundreds of retained instances, composable animations,
 and real point lights following orbiting satellites. Live edits preserve the last valid scene
 when JSON or object references are invalid. The playground JSON schema is an example-level
 convention, not an official ANARI serialization format or an exported package API.

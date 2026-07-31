@@ -339,31 +339,36 @@ function makeChromaticAtlas(device: ANARIDevice): ShowcaseScene {
 
 function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
   const contents = makeSceneContents();
-  const towerGeometry = device.newGeometry('cylinder', {radius: 0.44, height: 1, segments: 7});
-  const spireGeometry = device.newGeometry('cone', {radius: 0.56, height: 1.65, segments: 7});
+  const towerGeometry = makePrismGeometry(device, 0.52, 1, 12, 0.1);
+  const spireGeometry = device.newGeometry('cone', {radius: 0.53, height: 1.65, segments: 32});
   const archGeometry = makeTorusGeometry(device, 1, 0.052, 66, 9);
+  const shardGeometry = makeCrystalGeometry(device, 0.47, 2.6, 10);
   const beaconGeometry = device.newGeometry('sphere', {radius: 0.18, segments: 14});
   const towerGroups = [
     makeSurfaceGroup(
       device,
       towerGeometry,
       device.newMaterial('physicallyBased', {
-        baseColor: [0.39, 0.58, 0.98],
-        metallic: 0.7,
-        roughness: 0.15,
-        clearcoat: 0.7,
-        iridescence: 0.31
+        baseColor: [0.42, 0.86, 1],
+        emissive: [0.1, 0.34, 0.62],
+        emissiveStrength: 1.1,
+        metallic: 0.76,
+        roughness: 0.095,
+        clearcoat: 1,
+        iridescence: 0.68
       })
     ),
     makeSurfaceGroup(
       device,
       towerGeometry,
       device.newMaterial('physicallyBased', {
-        baseColor: [0.67, 0.26, 0.69],
-        metallic: 0.56,
-        roughness: 0.18,
-        clearcoat: 0.54,
-        iridescence: 0.46
+        baseColor: [0.78, 0.9, 1],
+        emissive: [0.28, 0.4, 0.64],
+        emissiveStrength: 0.88,
+        metallic: 0.74,
+        roughness: 0.105,
+        clearcoat: 1,
+        iridescence: 0.76
       })
     )
   ];
@@ -371,10 +376,12 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
     device,
     spireGeometry,
     device.newMaterial('physicallyBased', {
-      baseColor: [0.91, 0.66, 0.39],
-      metallic: 0.82,
-      roughness: 0.16,
-      emissive: [0.31, 0.12, 0.035],
+      baseColor: [1, 0.78, 0.35],
+      metallic: 0.97,
+      roughness: 0.07,
+      clearcoat: 1,
+      iridescence: 0.28,
+      emissive: [0.38, 0.16, 0.025],
       emissiveStrength: 0.9
     })
   );
@@ -382,11 +389,12 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
     device,
     archGeometry,
     device.newMaterial('physicallyBased', {
-      baseColor: [0.13, 0.2, 0.49],
-      emissive: [0.4, 0.23, 1],
-      emissiveStrength: 2.2,
-      metallic: 0.7,
-      roughness: 0.17
+      baseColor: [0.28, 0.39, 0.76],
+      emissive: [0.24, 0.26, 0.8],
+      emissiveStrength: 1.05,
+      metallic: 0.84,
+      roughness: 0.08,
+      clearcoat: 0.92
     })
   );
   const beaconGroup = makeSurfaceGroup(
@@ -395,10 +403,39 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
     device.newMaterial('physicallyBased', {
       baseColor: [1, 0.5, 0.2],
       emissive: [1, 0.38, 0.08],
-      emissiveStrength: 4,
-      roughness: 0.19
+      emissiveStrength: 2.8,
+      roughness: 0.08,
+      clearcoat: 0.82
     })
   );
+  const crystalGroups = [
+    makeSurfaceGroup(
+      device,
+      shardGeometry,
+      device.newMaterial('physicallyBased', {
+        baseColor: [0.43, 0.92, 1],
+        emissive: [0.19, 0.58, 1],
+        emissiveStrength: 1.4,
+        metallic: 0.91,
+        roughness: 0.065,
+        clearcoat: 1,
+        iridescence: 0.78
+      })
+    ),
+    makeSurfaceGroup(
+      device,
+      shardGeometry,
+      device.newMaterial('physicallyBased', {
+        baseColor: [0.9, 0.98, 1],
+        emissive: [0.36, 0.58, 0.91],
+        emissiveStrength: 1.3,
+        metallic: 0.9,
+        roughness: 0.065,
+        clearcoat: 1,
+        iridescence: 0.84
+      })
+    )
+  ];
 
   for (let depthIndex = 0; depthIndex < 14; depthIndex++) {
     const depthPosition = (depthIndex - 6.5) * 2.6;
@@ -431,12 +468,51 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
           });
         }
       }
+
+      const horizontalPosition = (sideIndex === 0 ? -1 : 1) * 2.45;
+      const crystalScale = 1.35 + Math.sin(depthIndex * 0.8 + sideIndex) * 0.3;
+      const crystal = addInstance(device, contents, crystalGroups[sideIndex], {
+        position: [horizontalPosition, 1.8, depthPosition],
+        scale: [1.08, crystalScale, 1.08],
+        rotationY: depthIndex * 0.38,
+        rotationZ: sideIndex === 0 ? -0.13 : 0.13
+      });
+      contents.animations.push(time => {
+        crystal
+          .setParameter(
+            'transform',
+            makeTransform({
+              position: [horizontalPosition, 1.8, depthPosition],
+              scale: [1.08, crystalScale, 1.08],
+              rotationY: depthIndex * 0.38,
+              rotationZ:
+                (sideIndex === 0 ? -0.13 : 0.13) + Math.sin(time * 0.6 + depthIndex) * 0.035
+            })
+          )
+          .commitParameters();
+      });
     }
     if (depthIndex % 2 === 0) {
       addInstance(device, contents, archGroup, {
         position: [0, 5.4, depthPosition],
         scale: [5.45, 5.45, 5.45],
         rotationX: Math.PI / 2
+      });
+      const suspendedCrystal = addInstance(device, contents, crystalGroups[0], {
+        position: [0, 7.5, depthPosition],
+        scale: [0.86, 1.45, 0.86]
+      });
+      contents.animations.push(time => {
+        suspendedCrystal
+          .setParameter(
+            'transform',
+            makeTransform({
+              position: [0, 7.5 + Math.sin(time * 0.7 + depthIndex) * 0.38, depthPosition],
+              scale: [0.86, 1.45, 0.86],
+              rotationY: time * 0.18
+            })
+          )
+          .commitParameters();
       });
     }
   }
@@ -446,26 +522,40 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
   const warmLight = device.newLight('point', {
     position: [0, 5, 0],
     color: [1, 0.35, 0.1],
-    intensity: 16
+    intensity: 34
+  });
+  const crystalLight = device.newLight('point', {
+    position: [0, 2.8, -6],
+    color: [0.17, 0.7, 1],
+    intensity: 38
   });
   contents.lights.push(
     device.newLight('directional', {
       direction: [0.25, -1, -0.3],
       color: [0.75, 0.78, 1],
-      irradiance: 1.7
+      irradiance: 4.4
     }),
     device.newLight('spot', {
       position: [0, 18, 7],
       direction: [0, -1, -0.12],
       color: [0.46, 0.47, 1],
-      intensity: 21,
+      intensity: 48,
       openingAngle: 0.7
     }),
-    warmLight
+    warmLight,
+    crystalLight,
+    device.newLight('directional', {
+      direction: [-0.58, -0.42, 0.72],
+      color: [0.54, 0.77, 1],
+      irradiance: 2.8
+    })
   );
   contents.animations.push(time => {
     warmLight
       .setParameter('position', [Math.sin(time * 0.65) * 3, 5.5, Math.cos(time * 0.47) * 11])
+      .commitParameters();
+    crystalLight
+      .setParameter('intensity', 38 * (1 + Math.sin(time * 1.1) * 0.38))
       .commitParameters();
   });
 
@@ -473,13 +563,13 @@ function makeCrystalCathedral(device: ANARIDevice): ShowcaseScene {
     label: 'Crystal Cathedral',
     title: 'Crystal\nCathedral',
     description:
-      'Procedural cylinder, cone, sphere, and triangle geometry share reusable groups, spectral materials, and moving light sources.',
+      'Hundreds of faceted gemstone pillars, mirror-polished crystals, spectral arches, and moving lights share a retained declarative world.',
     world: makeWorld(device, contents),
     animations: contents.animations,
-    target: [0, 4.6, -1],
-    distance: 37,
-    elevation: 0.23,
-    azimuth: 0.63
+    target: [0, 4.8, -1],
+    distance: 40,
+    elevation: 0.19,
+    azimuth: 0.035
   };
 }
 
@@ -741,6 +831,107 @@ function makeTorusGeometry(
     'vertex.normal': normals,
     'primitive.index': indices
   });
+}
+
+function makeCrystalGeometry(
+  device: ANARIDevice,
+  radius: number,
+  height: number,
+  sides: number
+): ANARIGeometry {
+  const positions: number[] = [];
+  const normals: number[] = [];
+
+  for (let sideIndex = 0; sideIndex < sides; sideIndex++) {
+    const startAngle = (sideIndex / sides) * TAU;
+    const endAngle = ((sideIndex + 1) / sides) * TAU;
+    const start: ANARIVector3 = [Math.cos(startAngle) * radius, 0, Math.sin(startAngle) * radius];
+    const end: ANARIVector3 = [Math.cos(endAngle) * radius, 0, Math.sin(endAngle) * radius];
+    appendGeometryFace(positions, normals, [0, height * 0.66, 0], end, start);
+    appendGeometryFace(positions, normals, [0, -height * 0.34, 0], start, end);
+  }
+
+  return device.newGeometry('triangle', {
+    'vertex.position': new Float32Array(positions),
+    'vertex.normal': new Float32Array(normals)
+  });
+}
+
+function makePrismGeometry(
+  device: ANARIDevice,
+  radius: number,
+  height: number,
+  sides: number,
+  bevel: number
+): ANARIGeometry {
+  const positions: number[] = [];
+  const normals: number[] = [];
+
+  for (let sideIndex = 0; sideIndex < sides; sideIndex++) {
+    const startAngle = (sideIndex / sides) * TAU;
+    const endAngle = ((sideIndex + 1) / sides) * TAU;
+    const makeRingPoint = (angle: number, ringRadius: number, elevation: number): ANARIVector3 => [
+      Math.cos(angle) * ringRadius,
+      elevation,
+      Math.sin(angle) * ringRadius
+    ];
+    const lowerCapStart = makeRingPoint(startAngle, radius * 0.77, -height / 2);
+    const lowerCapEnd = makeRingPoint(endAngle, radius * 0.77, -height / 2);
+    const lowerShoulderStart = makeRingPoint(startAngle, radius, -height / 2 + bevel);
+    const lowerShoulderEnd = makeRingPoint(endAngle, radius, -height / 2 + bevel);
+    const upperShoulderStart = makeRingPoint(startAngle, radius, height / 2 - bevel);
+    const upperShoulderEnd = makeRingPoint(endAngle, radius, height / 2 - bevel);
+    const upperCapStart = makeRingPoint(startAngle, radius * 0.77, height / 2);
+    const upperCapEnd = makeRingPoint(endAngle, radius * 0.77, height / 2);
+
+    appendGeometryFace(positions, normals, lowerCapStart, lowerShoulderStart, lowerShoulderEnd);
+    appendGeometryFace(positions, normals, lowerCapStart, lowerShoulderEnd, lowerCapEnd);
+    appendGeometryFace(
+      positions,
+      normals,
+      lowerShoulderStart,
+      upperShoulderStart,
+      upperShoulderEnd
+    );
+    appendGeometryFace(positions, normals, lowerShoulderStart, upperShoulderEnd, lowerShoulderEnd);
+    appendGeometryFace(positions, normals, upperShoulderStart, upperCapStart, upperCapEnd);
+    appendGeometryFace(positions, normals, upperShoulderStart, upperCapEnd, upperShoulderEnd);
+    appendGeometryFace(positions, normals, [0, -height / 2, 0], lowerCapStart, lowerCapEnd);
+    appendGeometryFace(positions, normals, [0, height / 2, 0], upperCapEnd, upperCapStart);
+  }
+
+  return device.newGeometry('triangle', {
+    'vertex.position': new Float32Array(positions),
+    'vertex.normal': new Float32Array(normals)
+  });
+}
+
+function appendGeometryFace(
+  positions: number[],
+  normals: number[],
+  first: ANARIVector3,
+  second: ANARIVector3,
+  third: ANARIVector3
+): void {
+  const firstEdge: ANARIVector3 = [
+    second[0] - first[0],
+    second[1] - first[1],
+    second[2] - first[2]
+  ];
+  const secondEdge: ANARIVector3 = [third[0] - first[0], third[1] - first[1], third[2] - first[2]];
+  const normal: ANARIVector3 = [
+    firstEdge[1] * secondEdge[2] - firstEdge[2] * secondEdge[1],
+    firstEdge[2] * secondEdge[0] - firstEdge[0] * secondEdge[2],
+    firstEdge[0] * secondEdge[1] - firstEdge[1] * secondEdge[0]
+  ];
+  const normalLength = Math.hypot(...normal) || 1;
+  const unitNormal: ANARIVector3 = [
+    normal[0] / normalLength,
+    normal[1] / normalLength,
+    normal[2] / normalLength
+  ];
+  positions.push(...first, ...second, ...third);
+  normals.push(...unitNormal, ...unitNormal, ...unitNormal);
 }
 
 function makeTransform(transform: InstanceTransform): Matrix4 {

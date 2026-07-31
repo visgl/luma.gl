@@ -7,7 +7,7 @@ import {createANARIJSONScene} from '../../examples/showcase/anari/playground-sce
 test('ANARI JSON presets reproduce the complete Observatory scenes', testContext => {
   const device = new ANARIDevice(new NullDevice({}));
   const expectedInstanceCounts = [312, 429, 318];
-  const expectedLightCounts = [3, 4, 5];
+  const expectedLightCounts = [3, 5, 5];
 
   for (const [presetIndex, preset] of PLAYGROUND_PRESETS.entries()) {
     const scene = createANARIJSONScene(device, preset.scene);
