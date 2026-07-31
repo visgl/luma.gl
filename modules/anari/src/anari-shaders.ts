@@ -729,6 +729,16 @@ struct ANARIVertexOutputs {
   @location(3) textureCoordinates: vec2f,
 };
 
+fn getInverseTranspose3x3(matrix: mat3x3f) -> mat3x3f {
+  let firstCofactor = cross(matrix[1], matrix[2]);
+  let inverseDeterminant = 1.0 / dot(matrix[0], firstCofactor);
+  return mat3x3f(
+    firstCofactor,
+    cross(matrix[2], matrix[0]),
+    cross(matrix[0], matrix[1])
+  ) * inverseDeterminant;
+}
+
 @vertex
 fn vertexMain(inputs: ANARIVertexInputs) -> ANARIVertexOutputs {
   let modelMatrix = mat4x4f(
@@ -738,11 +748,11 @@ fn vertexMain(inputs: ANARIVertexInputs) -> ANARIVertexOutputs {
     inputs.instanceModelMatrixCol3
   );
   let worldPosition = modelMatrix * vec4f(inputs.positions, 1.0);
-  let normalMatrix = transpose(inverse(mat3x3f(
+  let normalMatrix = getInverseTranspose3x3(mat3x3f(
     modelMatrix[0].xyz,
     modelMatrix[1].xyz,
     modelMatrix[2].xyz
-  )));
+  ));
   var outputs: ANARIVertexOutputs;
   outputs.position = anariApp.projectionMatrix * anariApp.viewMatrix * worldPosition;
   outputs.worldPosition = worldPosition.xyz;
