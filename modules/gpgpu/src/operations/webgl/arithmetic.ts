@@ -31,7 +31,7 @@ float arithmetic_tan(float x) {
 }
 `;
 
-export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
+export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   inputs,
   output,
   target

@@ -404,6 +404,41 @@ export class GPUDataEvaluator {
     return this._gpuVector;
   }
 
+  /** Materializes this evaluator synchronously and returns the requested output format. */
+  evaluateSync(device: Device, options: GPUDataEvaluatorEvaluateOptions = {}): GPUVector {
+    if (this._destroyed) {
+      throw new Error(`GPUDataEvaluator ${this} already destroyed`);
+    }
+    if (this._gpuVector) {
+      return this._gpuVector;
+    }
+
+    let buffer: Buffer;
+    if (this.source instanceof GPUDataEvaluator) {
+      const sourceGPUVector = this.source.evaluateSync(device);
+      this._gpuVector = this.createGPUVectorView({
+        ...options,
+        buffer: getBufferFromGPUVector(sourceGPUVector)
+      });
+      return this._gpuVector;
+    }
+
+    buffer = bufferPool.createOrReuse(device, this.byteLength);
+    if (this._value) {
+      buffer.write(this._value);
+    } else {
+      const result = this.source!.executeSync(device, buffer);
+      if (!result.success) {
+        throw result.error || new Error(`${this.source} evaluation failed`);
+      }
+      if (result.value) {
+        this._value = result.value;
+      }
+    }
+    this._gpuVector = this.createGPUVectorView({...options, buffer});
+    return this._gpuVector;
+  }
+
   /** Creates a single-chunk `GPUVector` view over a materialized backing buffer. */
   private createGPUVectorView(
     options: GPUDataEvaluatorEvaluateOptions & {buffer: Buffer | DynamicBuffer}
@@ -512,6 +547,15 @@ export class GPUDataEvaluator {
       copiedBytes.byteLength / this.ValueType.BYTES_PER_ELEMENT
     ) as TypedArray;
     return this._value;
+  }
+
+  /** Loads the complete backing buffer from the already-present CPU value cache or throws. @internal */
+  ensureCPUValueSync(): TypedArray {
+    const existingValue = this.value;
+    if (existingValue) {
+      return existingValue;
+    }
+    throw new Error(`${this} CPU value is not available for synchronous evaluation`);
   }
 
   /** Returns the debug id, source description, or class name. */

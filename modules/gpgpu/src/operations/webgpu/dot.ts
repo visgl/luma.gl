@@ -16,7 +16,7 @@ fn row_dot(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<f32, 1
 }
 `;
 
-export const dot: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
+export const dot: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
   target

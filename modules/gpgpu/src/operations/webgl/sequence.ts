@@ -6,7 +6,7 @@ import {BufferTransform} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
 import {getOutputModule} from './common/row-transform';
 
-export const sequence: OperationHandler<{start: number; step: number}> = async ({
+export const sequence: OperationHandler<{start: number; step: number}> = ({
   inputs,
   output,
   target

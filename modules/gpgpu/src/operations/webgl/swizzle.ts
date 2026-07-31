@@ -6,7 +6,7 @@ import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {runRowTransform} from './common/row-transform';
 
-export const swizzle: OperationHandler<{x: GPUDataEvaluator; columns: number[]}> = async ({
+export const swizzle: OperationHandler<{x: GPUDataEvaluator; columns: number[]}> = ({
   inputs,
   output,
   target

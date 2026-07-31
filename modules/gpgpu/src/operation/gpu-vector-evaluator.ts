@@ -186,6 +186,34 @@ export class GPUVectorEvaluator {
     return this._gpuVector;
   }
 
+  /** Materializes every chunk evaluator synchronously and returns one chunk-preserving `GPUVector`. */
+  evaluateSync(device: Device, options: GPUVectorEvaluatorEvaluateOptions = {}): GPUVector {
+    if (this._destroyed) {
+      throw new Error(`GPUVectorEvaluator ${this} already destroyed`);
+    }
+    if (this._gpuVector) {
+      return this._gpuVector;
+    }
+
+    const gpuVectors = this.gpuDataEvaluators.map(evaluator =>
+      evaluator.evaluateSync(device, options)
+    );
+    const firstVector = gpuVectors[0];
+    const data = gpuVectors.map(getSingleGPUVectorData);
+    const format = options.format ?? this.format ?? firstVector.format;
+    this._gpuVector = new GPUVector({
+      type: 'data',
+      name: options.name ?? this.id ?? 'vector',
+      format,
+      data,
+      stride: firstVector.stride,
+      byteStride: firstVector.byteStride,
+      rowByteLength: firstVector.rowByteLength,
+      bufferLayout: firstVector.bufferLayout
+    });
+    return this._gpuVector;
+  }
+
   /** Releases cached GPU resources owned through child `GPUDataEvaluator` instances. */
   destroy(): void {
     if (this._ownsGPUDataEvaluators) {

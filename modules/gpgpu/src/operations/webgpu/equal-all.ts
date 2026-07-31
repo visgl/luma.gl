@@ -19,7 +19,7 @@ fn equalAll(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<u32, 
 }
 `;
 
-export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
+export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
   target

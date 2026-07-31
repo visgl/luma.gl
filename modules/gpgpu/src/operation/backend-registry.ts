@@ -32,16 +32,54 @@ class BackendRegistry {
     deviceType: string,
     moduleOrPromise: BackendModule | Promise<BackendModule>
   ): Promise<BackendModule> {
-    const loader = Promise.resolve(moduleOrPromise);
-    this._modules[deviceType] = loader;
-    loader
-      .then(module => {
-        this._modules[deviceType] = module;
-      })
-      .catch(ex => {
-        log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-      });
-    return loader;
+    const existingModuleOrPromise = this._modules[deviceType];
+
+    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
+      const loader = Promise.all([
+        Promise.resolve(existingModuleOrPromise || {}),
+        moduleOrPromise as Promise<BackendModule>
+      ]).then(([existingModule, incomingModule]) => ({
+        ...existingModule,
+        ...incomingModule
+      }));
+      this._modules[deviceType] = loader;
+      loader
+        .then(module => {
+          this._modules[deviceType] = module;
+        })
+        .catch(ex => {
+          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
+        });
+      return loader;
+    }
+
+    if (
+      existingModuleOrPromise &&
+      typeof (existingModuleOrPromise as Promise<BackendModule>).then === 'function'
+    ) {
+      const loader = Promise.resolve(existingModuleOrPromise)
+        .then(existingModule => ({
+          ...existingModule,
+          ...moduleOrPromise
+        }))
+        .then(module => {
+          this._modules[deviceType] = module;
+          return module;
+        })
+        .catch(ex => {
+          log.error(`Failed to register ${deviceType} backend: ${ex}`)();
+          throw ex;
+        });
+      this._modules[deviceType] = loader;
+      return loader;
+    }
+
+    const mergedModule = {
+      ...(existingModuleOrPromise || {}),
+      ...moduleOrPromise
+    };
+    this._modules[deviceType] = mergedModule;
+    return Promise.resolve(mergedModule);
   }
 
   /**
@@ -62,6 +100,27 @@ class BackendRegistry {
     }
     const resolvedModule = await module;
     const operationHandler = resolvedModule[operationName];
+    if (typeof operationHandler !== 'function') {
+      throw new Error(`${deviceType} backend does not implement ${operationName}`);
+    }
+    return operationHandler as OperationHandler;
+  }
+
+  /**
+   * Resolves an operation handler for a device type without awaiting lazy backend imports.
+   *
+   * @throws if the backend has not been registered synchronously or is still loading.
+   */
+  getSync(deviceType: string, operationName: string): OperationHandler {
+    const moduleOrPromise = this._modules[deviceType];
+    if (!moduleOrPromise) {
+      throw new Error(`${deviceType} backend not registered`);
+    }
+    if (typeof (moduleOrPromise as Promise<BackendModule>).then === 'function') {
+      throw new Error(`${deviceType} backend is not loaded yet`);
+    }
+    const module = moduleOrPromise as BackendModule;
+    const operationHandler = module[operationName];
     if (typeof operationHandler !== 'function') {
       throw new Error(`${deviceType} backend does not implement ${operationName}`);
     }

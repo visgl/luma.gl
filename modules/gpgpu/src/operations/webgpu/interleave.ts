@@ -20,7 +20,7 @@ fn interleave(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<{TY
 }
 `;
 
-export const interleave: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
+export const interleave: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
   target

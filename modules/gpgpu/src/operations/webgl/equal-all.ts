@@ -19,7 +19,7 @@ void equalAll(in TYPE x[X_LEN], in TYPE y[Y_LEN], out uint result[1]) {
 }
 `;
 
-export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
+export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
   target

@@ -180,7 +180,7 @@ function getArithmeticSource(device: Device): string {
   return arithmeticSource.replace('{TAN_IMPL}', 'tan');
 }
 
-export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
+export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   device,
   inputs,
   output,
