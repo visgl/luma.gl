@@ -29,7 +29,7 @@ export function runRowTransform({
   module: ShaderModule;
   elementWise?: boolean;
   expression?: (laneIndex: number) => string;
-  inputs: {[name: string]: GPUDataEvaluator};
+  inputs: {[name: string]: GPUDataEvaluator} | GPUDataEvaluator[];
   output: GPUDataEvaluator;
   /** If specified, coerce all parameters to operation to this type.
    * Default to output's data type.
@@ -52,9 +52,9 @@ export function runRowTransform({
     TYPE: castToType,
     RESULT_LEN: output.size.toString()
   };
+  const inputEntries = getInputEntries(inputs);
 
-  for (const name in inputs) {
-    const input = inputs[name];
+  for (const [name, input] of inputEntries) {
     modules.push(getInputModule(name, input.type, input.size, input.normalized, operationType));
     bufferLayout.push(getInputBufferLayout(name, input));
     if (input instanceof GPUDataEvaluator) {
@@ -78,14 +78,14 @@ export function runRowTransform({
   } else if (elementWise) {
     for (let i = 0; i < output.size; i++) {
       const zero = getZeroLiteral(castToType);
-      const elementInputs = Object.keys(inputs).map(name => {
-        if (i < inputs[name].size) return `${name}[${i}]`;
+      const elementInputs = inputEntries.map(([name, input]) => {
+        if (i < input.size) return `${name}[${i}]`;
         return zero;
       });
       computeResult += `result[${i}]=${module.name}(${elementInputs.join(', ')});\n`;
     }
   } else {
-    computeResult = `${module.name}(${Object.keys(inputs).join(', ')}, result);`;
+    computeResult = `${module.name}(${inputEntries.map(([name]) => name).join(', ')}, result);`;
   }
 
   const vertexShader = /* glsl */ `\
@@ -120,6 +120,14 @@ set_result(result);
   if (placeholderBuffer) {
     bufferPool.recycle(placeholderBuffer);
   }
+}
+
+function getInputEntries(
+  inputs: {[name: string]: GPUDataEvaluator} | GPUDataEvaluator[]
+): [string, GPUDataEvaluator][] {
+  return Array.isArray(inputs)
+    ? inputs.map((input, index) => [`x${index}`, input])
+    : Object.entries(inputs);
 }
 
 export function getInputModule(
