@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070913" />
+    <title>ANARI · The Rendering Observatory</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        background:
+          radial-gradient(ellipse at 50% 25%, rgba(46, 55, 102, 0.38), transparent 58%),
+          #070913;
+        color: #f2f4ff;
+      }
+
+      canvas {
+        display: block;
+        width: 100vw !important;
+        height: 100vh !important;
+        cursor: grab;
+      }
+
+      canvas:active {
+        cursor: grabbing;
+      }
+
+      .veil {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background:
+          linear-gradient(90deg, rgba(6, 8, 18, 0.9), transparent 29%, transparent 75%, rgba(6, 8, 18, 0.58)),
+          linear-gradient(0deg, rgba(5, 7, 16, 0.82), transparent 22%, transparent 79%, rgba(5, 7, 16, 0.66));
+      }
+
+      .header,
+      .story,
+      .controls,
+      .telemetry,
+      .hint {
+        position: fixed;
+        z-index: 2;
+      }
+
+      .header {
+        top: 36px;
+        left: 48px;
+      }
+
+      .eyebrow,
+      .meta-label {
+        color: rgba(196, 205, 255, 0.56);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+      }
+
+      .wordmark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 8px;
+        font-size: 20px;
+        font-weight: 540;
+        letter-spacing: 0.11em;
+      }
+
+      .wordmark::before {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #a991ff;
+        box-shadow: 0 0 18px #a991ff;
+        content: "";
+      }
+
+      .story {
+        top: 27%;
+        left: 48px;
+        width: min(355px, 35vw);
+      }
+
+      .scene-number {
+        color: rgba(184, 163, 255, 0.83);
+        font-size: 12px;
+        letter-spacing: 0.22em;
+      }
+
+      .scene-title {
+        max-width: 380px;
+        margin: 19px 0 14px;
+        font-size: clamp(44px, 5.5vw, 78px);
+        font-weight: 440;
+        letter-spacing: -0.085em;
+        line-height: 0.97;
+      }
+
+      .scene-description {
+        max-width: 298px;
+        color: rgba(224, 230, 255, 0.64);
+        font-size: 13px;
+        line-height: 1.8;
+      }
+
+      .scene-list {
+        display: grid;
+        gap: 9px;
+        margin-top: 35px;
+      }
+
+      .scene-button,
+      .mode-button {
+        border: 0;
+        background: transparent;
+        color: rgba(210, 219, 255, 0.49);
+        cursor: pointer;
+        font: inherit;
+        transition: color 180ms ease;
+      }
+
+      .scene-button {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 8px 0;
+        font-size: 12px;
+        text-align: left;
+      }
+
+      .scene-button::before {
+        width: 19px;
+        height: 1px;
+        background: rgba(210, 219, 255, 0.33);
+        content: "";
+        transition: width 180ms ease, background 180ms ease;
+      }
+
+      .scene-button.active,
+      .mode-button.active,
+      .scene-button:hover,
+      .mode-button:hover {
+        color: #f0edff;
+      }
+
+      .scene-button.active::before {
+        width: 31px;
+        background: #ae95ff;
+      }
+
+      .controls {
+        top: 39px;
+        right: 48px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .mode-button {
+        padding: 8px 1px;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+      }
+
+      .separator {
+        width: 1px;
+        height: 15px;
+        background: rgba(207, 218, 255, 0.2);
+      }
+
+      .telemetry {
+        right: 48px;
+        bottom: 43px;
+        display: flex;
+        gap: 32px;
+        text-align: right;
+      }
+
+      .meta-value {
+        margin-top: 8px;
+        color: rgba(238, 242, 255, 0.87);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hint {
+        bottom: 46px;
+        left: 48px;
+        color: rgba(202, 212, 255, 0.47);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+
+      @media (max-width: 700px) {
+        .header,
+        .story,
+        .hint {
+          left: 23px;
+        }
+
+        .header {
+          top: 23px;
+        }
+
+        .story {
+          top: auto;
+          bottom: 105px;
+          width: calc(100vw - 48px);
+        }
+
+        .scene-title {
+          font-size: 53px;
+        }
+
+        .controls {
+          top: 24px;
+          right: 22px;
+          gap: 12px;
+        }
+
+        .telemetry {
+          right: 22px;
+          bottom: 25px;
+          gap: 16px;
+        }
+
+        .hint,
+        .scene-description {
+          display: none;
+        }
+
+        .scene-list {
+          display: flex;
+          gap: 17px;
+          margin-top: 17px;
+        }
+
+        .scene-button {
+          font-size: 10px;
+        }
+
+        .scene-button::before {
+          display: none;
+        }
+      }
+    </style>
+    <script type="module">
+      import {makeAnimationLoop} from '@luma.gl/engine';
+      import {luma} from '@luma.gl/core';
+      import {webgpuAdapter} from '@luma.gl/webgpu';
+      import {webgl2Adapter} from '@luma.gl/webgl';
+      import ANARIShowcase from './app.ts';
+
+      const forceWebGL = new URLSearchParams(window.location.search).get('backend') === 'webgl';
+      const supportsHighDynamicRange =
+        !forceWebGL && window.matchMedia('(dynamic-range: high)').matches;
+      const device = await luma.createDevice({
+        id: 'anari-showcase',
+        adapters: forceWebGL ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter],
+        createCanvasContext: supportsHighDynamicRange
+          ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+          : true
+      });
+      const animationLoop = makeAnimationLoop(ANARIShowcase, {
+        device
+      });
+      animationLoop.start();
+    </script>
+  </head>
+  <body>
+    <div class="veil" aria-hidden="true"></div>
+    <header class="header">
+      <div class="eyebrow">Luma.gl · Anari proof of concept</div>
+      <div class="wordmark">THE OBSERVATORY</div>
+    </header>
+    <main class="story">
+      <div id="scene-number" class="scene-number">01 / 03</div>
+      <h1 id="scene-title" class="scene-title"></h1>
+      <p id="scene-description" class="scene-description"></p>
+      <nav id="scene-list" class="scene-list" aria-label="Scenes"></nav>
+    </main>
+    <aside class="controls" aria-label="Renderer controls">
+      <button class="mode-button active" data-renderer="default">LIT</button>
+      <button class="mode-button" data-renderer="debugNormals">NORMALS</button>
+      <button class="mode-button" data-renderer="debugDepth">DEPTH</button>
+      <span class="separator" aria-hidden="true"></span>
+      <button id="bloom-toggle" class="mode-button active">BLOOM</button>
+    </aside>
+    <aside class="telemetry">
+      <div>
+        <div class="meta-label">Instances</div>
+        <div id="instance-count" class="meta-value">—</div>
+      </div>
+      <div>
+        <div class="meta-label">Draw calls</div>
+        <div id="draw-count" class="meta-value">—</div>
+      </div>
+      <div>
+        <div class="meta-label">Backend</div>
+        <div id="device-type" class="meta-value">—</div>
+      </div>
+    </aside>
+    <div class="hint">DRAG TO ORBIT · SCROLL TO ZOOM · 1 / 2 / 3 TO SWITCH SCENES</div>
+  </body>
+</html>

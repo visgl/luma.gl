@@ -4623,6 +4623,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@luma.gl/anari-js@npm:9.4.0-alpha.1, @luma.gl/anari-js@workspace:modules/anari-js":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/anari-js@workspace:modules/anari-js"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+  peerDependencies:
+    "@luma.gl/core": ~9.4.0-alpha.1
+    "@luma.gl/effects": ~9.4.0-alpha.1
+    "@luma.gl/engine": ~9.4.0-alpha.1
+    "@luma.gl/shadertools": ~9.4.0-alpha.1
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/arrow@npm:9.4.0-alpha.2, @luma.gl/arrow@workspace:modules/arrow":
   version: 0.0.0-use.local
   resolution: "@luma.gl/arrow@workspace:modules/arrow"
@@ -16582,6 +16595,23 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.4.0-alpha.2"
     "@luma.gl/webgl": "npm:9.4.0-alpha.2"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.2"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-anari@workspace:examples/showcase/anari":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-anari@workspace:examples/showcase/anari"
+  dependencies:
+    "@luma.gl/anari-js": "npm:9.4.0-alpha.1"
+    "@luma.gl/core": "npm:9.4.0-alpha.1"
+    "@luma.gl/effects": "npm:9.4.0-alpha.1"
+    "@luma.gl/engine": "npm:9.4.0-alpha.1"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.1"
+    "@luma.gl/webgl": "npm:9.4.0-alpha.1"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.1"
+    "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown

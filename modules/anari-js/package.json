@@ -1,0 +1,35 @@
+{
+  "name": "@luma.gl/anari-js",
+  "version": "9.4.0-alpha.1",
+  "description": "ANARI-inspired declarative rendering for luma.gl",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@luma.gl/core": "~9.4.0-alpha.1",
+    "@luma.gl/effects": "~9.4.0-alpha.1",
+    "@luma.gl/engine": "~9.4.0-alpha.1",
+    "@luma.gl/shadertools": "~9.4.0-alpha.1"
+  },
+  "dependencies": {
+    "@math.gl/core": "^4.1.0"
+  }
+}

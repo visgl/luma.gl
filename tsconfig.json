@@ -40,6 +40,8 @@
     // END TYPE CHECK SETTINGS
 
     "paths": {
+      "@luma.gl/anari-js": ["modules/anari-js/src/index.ts"],
+      "@luma.gl/anari-js/*": ["modules/anari-js/src/*"],
       "@luma.gl/arrow": ["modules/arrow/src/index.ts"],
       "@luma.gl/arrow/*": ["modules/arrow/src/*"],
       "@luma.gl/arrow/test/*": ["modules/arrow/test/*"],
