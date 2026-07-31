@@ -14,6 +14,7 @@ import {
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
+  makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
   NETWORK_STORY_CHAPTERS
@@ -146,6 +147,35 @@ test('packet-spraying visual style introduces optical effects in readable cinema
     makeNetworkOpticsProfile(Number.NaN).level,
     DEFAULT_NETWORK_OPTICS_LEVEL,
     'invalid values return to the cinematic default'
+  );
+  testCase.end();
+});
+
+test('packet-spraying hover highlights glass without washing out transparency or switch faults', testCase => {
+  const clearSwitch: [number, number, number, number] = [0.28, 0.48, 0.82, 0.3];
+  const failedSwitch: [number, number, number, number] = [1, 0.065, 0.035, 0.59];
+  const planeHighlight = makeNetworkSwitchHighlightColor(clearSwitch, 1, 0);
+  const pathHighlight = makeNetworkSwitchHighlightColor(clearSwitch, 0, 1);
+
+  testCase.deepEqual(
+    makeNetworkSwitchHighlightColor(clearSwitch, 0, 0),
+    clearSwitch,
+    'unfocused switches retain their original glass color'
+  );
+  testCase.ok(
+    planeHighlight[1] > clearSwitch[1] && planeHighlight[2] > clearSwitch[2],
+    'hovered plane switches ease toward a visible cool glass highlight'
+  );
+  testCase.ok(
+    pathHighlight[1] > planeHighlight[1],
+    'focused backbone paths retain a distinct cyan glass accent'
+  );
+  testCase.equal(planeHighlight[3], clearSwitch[3], 'plane highlighting preserves glass opacity');
+  testCase.equal(pathHighlight[3], clearSwitch[3], 'path highlighting preserves glass opacity');
+  testCase.deepEqual(
+    makeNetworkSwitchHighlightColor(failedSwitch, 1, 1),
+    failedSwitch,
+    'failed or congested switch colors remain visually authoritative'
   );
   testCase.end();
 });

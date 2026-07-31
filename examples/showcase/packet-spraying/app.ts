@@ -149,6 +149,7 @@ import {
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
+  makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
   NETWORK_STORY_CHAPTERS,
@@ -3369,7 +3370,16 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateSwitchColors(): void {
     for (const group of this.glassGroups) {
       const matrices = flattenMatrices(group.instances.map(instance => instance.matrix));
-      const colors = flattenColors(group.instances.map(instance => instance.color));
+      const colors = flattenColors(
+        group.instances.map((instance, instanceIndex) => {
+          const switchIndex = group.switchIndices[instanceIndex];
+          const planeIndex = this.switchPlaneIndices.get(switchIndex);
+          const planeStrength =
+            planeIndex === undefined ? 0 : this.planeHighlightStrengths[planeIndex];
+          const pathStrength = this.getPathSwitchHighlightStrength(switchIndex);
+          return makeNetworkSwitchHighlightColor(instance.color, planeStrength, pathStrength);
+        })
+      );
       group.sorted.updateInstances(matrices, colors);
       group.aBuffer?.updateInstances(matrices, colors);
       group.weightedBlended?.updateInstances(matrices, colors);
@@ -3462,6 +3472,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         }
       }
 
+      this.updateSwitchColors();
       this.updateFocusedHostColors();
       if (this.canvas) {
         this.canvas.dataset.packetSprayingPlaneHighlightStrength = Math.max(

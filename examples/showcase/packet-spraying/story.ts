@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AGGREGATION_POSITIONS, LEAF_POSITIONS, type Vector3} from './network';
+import {AGGREGATION_POSITIONS, LEAF_POSITIONS, type Color, type Vector3} from './network';
 
 export type NetworkStoryState = 'healthy' | 'congested' | 'failed' | 'recovering';
 
@@ -367,6 +367,35 @@ export function makeNetworkOpticsProfile(level: number): NetworkOpticsProfile {
     spectral: stage(5, 10) * (1 + fireworks * 0.25),
     surface: stage(0, 3)
   };
+}
+
+/** Brightens selected glass without obscuring its refraction or fault-state color. */
+export function makeNetworkSwitchHighlightColor(
+  color: Color,
+  planeStrength: number,
+  pathStrength: number
+): Color {
+  if (color[3] >= 0.44) {
+    return color;
+  }
+
+  const boundedPlaneStrength = Math.max(0, Math.min(planeStrength, 1));
+  const boundedPathStrength = Math.max(0, Math.min(pathStrength, 1));
+  const highlightStrength = Math.min(boundedPlaneStrength * 0.42 + boundedPathStrength * 0.34, 0.6);
+  if (highlightStrength < 0.001) {
+    return color;
+  }
+
+  const targetColor: Color =
+    boundedPathStrength > boundedPlaneStrength
+      ? [0.42, 1.02, 1.2, color[3]]
+      : [0.6, 0.82, 1.15, color[3]];
+  return [
+    color[0] + (targetColor[0] - color[0]) * highlightStrength,
+    color[1] + (targetColor[1] - color[1]) * highlightStrength,
+    color[2] + (targetColor[2] - color[2]) * highlightStrength,
+    color[3]
+  ];
 }
 
 /** Keeps floating-point highlights restrained without misreporting SDR presentation as HDR. */
