@@ -74,6 +74,8 @@ export type NetworkDynamicRangeOptions = {
 
 export const MAX_NETWORK_OPTICS_LEVEL = 11;
 export const DEFAULT_NETWORK_OPTICS_LEVEL = 7;
+export const MAX_NETWORK_HDR_HIGHLIGHT_BOOST = 0.8;
+export const DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST = 0.28;
 export const GUIDED_STORY_SWITCH_INDEX = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + 1;
 
 export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
@@ -384,8 +386,8 @@ export function makeNetworkDynamicRangeProfile(
       : 'standard';
   const optics = makeNetworkOpticsProfile(options.visualIntensity);
   const requestedBoost = Number.isFinite(options.highlightBoost)
-    ? Math.max(0, Math.min(options.highlightBoost ?? 0, 0.8))
-    : 0.3;
+    ? Math.max(0, Math.min(options.highlightBoost ?? 0, MAX_NETWORK_HDR_HIGHLIGHT_BOOST))
+    : DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST;
   const availableHeadroom = supportsExtendedPresentation ? 1 : sceneIsFloatingPoint ? 0.7 : 0;
   const highlightBoost =
     requestedBoost * availableHeadroom * optics.surface * Math.min(optics.illumination, 1);

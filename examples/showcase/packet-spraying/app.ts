@@ -140,6 +140,7 @@ import {
   type Vector3
 } from './network';
 import {
+  DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryBeat,
   getNetworkStoryChapter,
@@ -148,6 +149,7 @@ import {
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
+  MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
   NETWORK_STORY_CHAPTERS,
   type NetworkDynamicRangeOptions,
@@ -1037,6 +1039,9 @@ class NetworkStoryControls {
   private readonly chapterPositionElement: HTMLSpanElement;
   private readonly opticsButton: HTMLButtonElement;
   private readonly playbackButton: HTMLButtonElement;
+  private readonly hdrHighlightInput: HTMLInputElement;
+  private readonly hdrHighlightLabel: HTMLSpanElement;
+  private readonly hdrHighlightTitle: HTMLSpanElement;
   private readonly visualIntensityInput: HTMLInputElement;
   private readonly visualIntensityLabel: HTMLSpanElement;
   private readonly visualIntensityTitle: HTMLSpanElement;
@@ -1053,7 +1058,9 @@ class NetworkStoryControls {
       onHighlightPlane,
       onHighlightPath,
       onToggleOptics,
+      onHdrHighlightBoostChange,
       onVisualIntensityChange,
+      hdrHighlightBoost,
       visualIntensity
     }: {
       onNext: () => void;
@@ -1063,7 +1070,9 @@ class NetworkStoryControls {
       onHighlightPlane: (planeIndex: number | null) => void;
       onHighlightPath: (pathIndex: number | null) => void;
       onToggleOptics: () => void;
+      onHdrHighlightBoostChange: (highlightBoost: number) => void;
       onVisualIntensityChange: (level: number) => void;
+      hdrHighlightBoost: number;
       visualIntensity: number;
     }
   ) {
@@ -1339,10 +1348,14 @@ class NetworkStoryControls {
 
     const visualIntensityElement = document.createElement('div');
     Object.assign(visualIntensityElement.style, {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+      columnGap: '10px',
       margin: '0 0 7px',
       paddingTop: '6px',
       borderTop: '1px solid rgba(137, 166, 211, 0.17)'
     });
+    const visualIntensityControl = document.createElement('div');
     const visualIntensityHeading = document.createElement('div');
     Object.assign(visualIntensityHeading.style, {
       display: 'flex',
@@ -1373,8 +1386,45 @@ class NetworkStoryControls {
     this.visualIntensityInput.addEventListener('input', () => {
       onVisualIntensityChange(Number(this.visualIntensityInput.value));
     });
-    visualIntensityElement.append(visualIntensityHeading, this.visualIntensityInput);
+    visualIntensityControl.append(visualIntensityHeading, this.visualIntensityInput);
+
+    const hdrHighlightControl = document.createElement('div');
+    const hdrHighlightHeading = document.createElement('div');
+    Object.assign(hdrHighlightHeading.style, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginBottom: '2px',
+      color: '#91a6c3',
+      fontSize: '9px'
+    });
+    this.hdrHighlightTitle = document.createElement('span');
+    this.hdrHighlightTitle.textContent = 'HDR';
+    this.hdrHighlightLabel = document.createElement('span');
+    hdrHighlightHeading.append(this.hdrHighlightTitle, this.hdrHighlightLabel);
+    this.hdrHighlightInput = document.createElement('input');
+    this.hdrHighlightInput.type = 'range';
+    this.hdrHighlightInput.min = '0';
+    this.hdrHighlightInput.max = '100';
+    this.hdrHighlightInput.step = '1';
+    this.hdrHighlightInput.dataset.networkHdrHighlight = '';
+    this.hdrHighlightInput.setAttribute('aria-label', 'HDR highlight intensity');
+    Object.assign(this.hdrHighlightInput.style, {
+      display: 'block',
+      width: '100%',
+      height: '14px',
+      margin: '0',
+      accentColor: '#ffbf80',
+      cursor: 'pointer'
+    });
+    this.hdrHighlightInput.addEventListener('input', () => {
+      onHdrHighlightBoostChange(
+        (Number(this.hdrHighlightInput.value) / 100) * MAX_NETWORK_HDR_HIGHLIGHT_BOOST
+      );
+    });
+    hdrHighlightControl.append(hdrHighlightHeading, this.hdrHighlightInput);
+    visualIntensityElement.append(visualIntensityControl, hdrHighlightControl);
     this.setVisualIntensity(visualIntensity);
+    this.setHdrHighlightBoost(hdrHighlightBoost);
 
     const actionsElement = document.createElement('div');
     Object.assign(actionsElement.style, {
@@ -1579,19 +1629,29 @@ class NetworkStoryControls {
     const profile = makeNetworkOpticsProfile(level);
     this.visualIntensityInput.value = String(profile.level);
     this.visualIntensityInput.setAttribute('aria-valuetext', profile.label);
-    this.visualIntensityLabel.textContent = `${profile.label.toUpperCase()} · ${profile.level.toFixed(
+    this.visualIntensityLabel.textContent = `${profile.label.toUpperCase()} ${profile.level.toFixed(
       profile.level % 1 === 0 ? 0 : 2
-    )} / ${MAX_NETWORK_OPTICS_LEVEL}`;
+    )}`;
     this.rootElement.dataset.networkVisualStyle = profile.label;
+  }
+
+  setHdrHighlightBoost(highlightBoost: number): void {
+    const percentage = Math.round((highlightBoost / MAX_NETWORK_HDR_HIGHLIGHT_BOOST) * 100);
+    this.hdrHighlightInput.value = String(percentage);
+    this.hdrHighlightInput.setAttribute('aria-valuetext', `${percentage}%`);
+    this.hdrHighlightLabel.textContent = `${percentage}%`;
+    this.rootElement.dataset.networkHdrHighlight = String(percentage);
   }
 
   setDynamicRange(profile: NetworkDynamicRangeProfile): void {
     this.visualIntensityTitle.textContent =
       profile.displayMode === 'extended-hdr'
-        ? 'VISUAL STYLE · HDR'
+        ? 'STYLE · HDR'
         : profile.sceneIsFloatingPoint
-          ? 'VISUAL STYLE · FP16'
-          : 'VISUAL STYLE';
+          ? 'STYLE · FP16'
+          : 'STYLE';
+    this.hdrHighlightTitle.textContent =
+      profile.displayMode === 'extended-hdr' ? 'HDR RANGE' : 'HIGHLIGHTS';
     this.rootElement.dataset.networkDynamicRange = profile.displayMode;
   }
 
@@ -1868,7 +1928,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   bloomIntensity = 1.7;
   bloomThreshold = 0.42;
   exposure = 0.96;
-  hdrHighlightBoost = 0.58;
+  hdrHighlightBoost = DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST;
 
   constructor({device, width, height}: AnimationProps) {
     super();
@@ -2243,7 +2303,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         onHighlightPath: pathIndex => this.setHighlightedPath(pathIndex),
         onToggleOptics: () =>
           this.setOpticsPanelVisible(this.canvas?.dataset.packetSprayingOpticsExpanded !== 'true'),
+        onHdrHighlightBoostChange: highlightBoost => this.setHdrHighlightBoost(highlightBoost),
         onVisualIntensityChange: level => this.setVisualIntensity(level),
+        hdrHighlightBoost: this.hdrHighlightBoost,
         visualIntensity: this.visualIntensity
       });
       this.storyControls.setDynamicRange(this.dynamicRangeProfile);
@@ -2962,6 +3024,23 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.canvas.dataset.packetSprayingVisualTarget = nextProfile.level.toFixed(2);
       this.canvas.dataset.packetSprayingVisualStyle = nextProfile.label;
     }
+  }
+
+  private setHdrHighlightBoost(highlightBoost: number, synchronizeSettings = true): void {
+    const nextHighlightBoost = Math.max(
+      0,
+      Math.min(highlightBoost, MAX_NETWORK_HDR_HIGHLIGHT_BOOST)
+    );
+    if (this.hdrHighlightBoost === nextHighlightBoost) {
+      return;
+    }
+
+    this.hdrHighlightBoost = nextHighlightBoost;
+    this.storyControls?.setHdrHighlightBoost(nextHighlightBoost);
+    if (synchronizeSettings) {
+      this.settingsPanel.setSettingValue('hdrHighlightBoost', nextHighlightBoost);
+    }
+    this.updateDynamicRangeProfile();
   }
 
   private updateVisualIntensity(animationTime: number): void {
@@ -4638,8 +4717,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     const hdrHighlightBoost = getChangedSetting(changedSettings, 'hdrHighlightBoost')?.nextValue;
     if (typeof hdrHighlightBoost === 'number') {
-      this.hdrHighlightBoost = hdrHighlightBoost;
-      this.updateDynamicRangeProfile();
+      this.setHdrHighlightBoost(hdrHighlightBoost, false);
     }
   };
 }
@@ -5179,7 +5257,7 @@ function makeSettingsSchema(
             type: 'number',
             persist: 'none',
             min: 0,
-            max: 0.8,
+            max: MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
             step: 0.05
           }
         ]

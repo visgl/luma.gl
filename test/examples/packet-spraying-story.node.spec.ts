@@ -5,6 +5,7 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network';
 import {
+  DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryBeat,
   getNetworkStoryChapter,
@@ -173,6 +174,13 @@ test('packet-spraying floating-point highlights preserve honest display capabili
     sceneColorFormat: 'rgba16float',
     visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
   });
+  const defaultExtendedProfile = makeNetworkDynamicRangeProfile({
+    deviceType: 'webgpu',
+    displaySupportsHighDynamicRange: true,
+    presentationColorFormat: 'rgba16float',
+    sceneColorFormat: 'rgba16float',
+    visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
+  });
 
   testCase.equal(standardProfile.displayMode, 'standard', '8-bit scenes remain standard range');
   testCase.equal(standardProfile.highlightBoost, 0, 'standard scenes do not claim false headroom');
@@ -202,6 +210,14 @@ test('packet-spraying floating-point highlights preserve honest display capabili
   testCase.ok(
     extendedProfile.maximumLuminance > 2,
     'true HDR preserves packet and glass highlights well above SDR white'
+  );
+  testCase.ok(
+    Math.abs(defaultExtendedProfile.highlightBoost - DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST) < 0.01,
+    'the guided tour uses a restrained HDR highlight setting by default'
+  );
+  testCase.ok(
+    defaultExtendedProfile.maximumLuminance < 2,
+    'default HDR highlights remain below twice SDR white'
   );
   testCase.ok(
     extendedProfile.bloomThresholdScale > floatingPointProfile.bloomThresholdScale,

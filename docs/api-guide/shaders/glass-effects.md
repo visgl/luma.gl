@@ -215,6 +215,9 @@ output does not clamp the extended highlight range. Increase emission, local ill
 reflective highlights gradually within available scene headroom;
 raise bloom extraction with them and finish with restrained filmic exposure. Multiplying a packet's
 existing red or green emission preserves its color without introducing pastel white halos.
+The packet-spraying showcase exposes a compact HDR-range slider next to its visual-style control;
+its default deliberately keeps display highlights below twice SDR white, while higher settings can
+reveal the full extended-range presentation.
 
 Interactive path highlighting should remain optically subordinate to the material: emphasize the
 actual links and packet motion instead of filling switches with artificial light, changing their
