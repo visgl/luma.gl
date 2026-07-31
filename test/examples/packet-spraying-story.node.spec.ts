@@ -5,9 +5,12 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network';
 import {
+  DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryChapter,
   getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
+  makeNetworkOpticsProfile,
+  MAX_NETWORK_OPTICS_LEVEL,
   NETWORK_STORY_CHAPTERS
 } from '../../examples/showcase/packet-spraying/story';
 
@@ -38,5 +41,46 @@ test('packet-spraying guided tour wraps forward and backward between chapters', 
   testCase.equal(getWrappedStoryChapterIndex(NETWORK_STORY_CHAPTERS.length), 0);
   testCase.equal(getNetworkStoryChapter(-1).id, 'recovery');
   testCase.equal(getNetworkStoryChapter(NETWORK_STORY_CHAPTERS.length).id, 'conversations');
+  testCase.end();
+});
+
+test('packet-spraying visual style introduces optical effects in readable cinematic stages', testCase => {
+  const diagram = makeNetworkOpticsProfile(0);
+  const clearGlass = makeNetworkOpticsProfile(3);
+  const cinematic = makeNetworkOpticsProfile(DEFAULT_NETWORK_OPTICS_LEVEL);
+  const fireworks = makeNetworkOpticsProfile(MAX_NETWORK_OPTICS_LEVEL);
+
+  testCase.equal(diagram.label, 'Diagram', 'zero preserves a packet-first diagram');
+  testCase.equal(diagram.refraction, 0, 'diagram mode disables background distortion');
+  testCase.equal(diagram.illumination, 0, 'diagram mode disables secondary packet lighting');
+  testCase.equal(diagram.caustics, 0, 'diagram mode disables projected caustics');
+  testCase.equal(diagram.bloom, 0, 'diagram mode disables screen-space bloom');
+
+  testCase.equal(clearGlass.label, 'Clear glass', 'early settings first reveal clean glass');
+  testCase.equal(clearGlass.surface, 1, 'surface highlights are available before heavy optics');
+  testCase.equal(clearGlass.spectral, 0, 'clear glass avoids spectral visual clutter');
+  testCase.equal(clearGlass.caustics, 0, 'caustics wait for higher visual settings');
+
+  testCase.equal(cinematic.label, 'Cinematic', 'the default uses the balanced cinematic profile');
+  testCase.ok(cinematic.refraction > 0.9, 'cinematic mode enables convincing glass refraction');
+  testCase.ok(cinematic.illumination > 0.9, 'cinematic mode lights nearby switches');
+  testCase.ok(cinematic.spectral < 0.5, 'cinematic mode keeps spectral accents restrained');
+  testCase.ok(cinematic.caustics < 0.25, 'cinematic mode keeps caustics below maximum');
+
+  testCase.equal(fireworks.label, 'Fireworks', 'eleven enables the complete visual treatment');
+  testCase.ok(fireworks.spectral > 1, 'fireworks enhances wavelength-dependent glass');
+  testCase.ok(fireworks.caustics > 1, 'fireworks intensifies focused optical caustics');
+  testCase.ok(fireworks.bloom > 1, 'fireworks intensifies selective bloom');
+  testCase.equal(makeNetworkOpticsProfile(-5).level, 0, 'negative values clamp to diagram mode');
+  testCase.equal(
+    makeNetworkOpticsProfile(15).level,
+    MAX_NETWORK_OPTICS_LEVEL,
+    'values above eleven stay bounded'
+  );
+  testCase.equal(
+    makeNetworkOpticsProfile(Number.NaN).level,
+    DEFAULT_NETWORK_OPTICS_LEVEL,
+    'invalid values return to the cinematic default'
+  );
   testCase.end();
 });

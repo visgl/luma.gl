@@ -136,10 +136,14 @@ import {
   type Vector3
 } from './network';
 import {
+  DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryChapter,
   getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
+  makeNetworkOpticsProfile,
+  MAX_NETWORK_OPTICS_LEVEL,
   NETWORK_STORY_CHAPTERS,
+  type NetworkOpticsProfile,
   type NetworkStoryCamera,
   type NetworkStoryChapter
 } from './story';
@@ -1012,6 +1016,8 @@ class NetworkStoryControls {
   private readonly chapterPositionElement: HTMLSpanElement;
   private readonly opticsButton: HTMLButtonElement;
   private readonly playbackButton: HTMLButtonElement;
+  private readonly visualIntensityInput: HTMLInputElement;
+  private readonly visualIntensityLabel: HTMLSpanElement;
   private previousTelemetrySignature = '';
 
   constructor(
@@ -1021,13 +1027,17 @@ class NetworkStoryControls {
       onPrevious,
       onTogglePlayback,
       onHighlightPlane,
-      onToggleOptics
+      onToggleOptics,
+      onVisualIntensityChange,
+      visualIntensity
     }: {
       onNext: () => void;
       onPrevious: () => void;
       onTogglePlayback: () => void;
       onHighlightPlane: (planeIndex: number | null) => void;
       onToggleOptics: () => void;
+      onVisualIntensityChange: (level: number) => void;
+      visualIntensity: number;
     }
   ) {
     this.rootElement = document.createElement('div');
@@ -1155,6 +1165,45 @@ class NetworkStoryControls {
       return {greenBar, redBar, row: rowElement, status};
     });
 
+    const visualIntensityElement = document.createElement('div');
+    Object.assign(visualIntensityElement.style, {
+      margin: '0 0 13px',
+      paddingTop: '9px',
+      borderTop: '1px solid rgba(137, 166, 211, 0.17)'
+    });
+    const visualIntensityHeading = document.createElement('div');
+    Object.assign(visualIntensityHeading.style, {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginBottom: '5px',
+      color: '#91a6c3',
+      fontSize: '10px'
+    });
+    const visualIntensityTitle = document.createElement('span');
+    visualIntensityTitle.textContent = 'VISUAL STYLE';
+    this.visualIntensityLabel = document.createElement('span');
+    visualIntensityHeading.append(visualIntensityTitle, this.visualIntensityLabel);
+    this.visualIntensityInput = document.createElement('input');
+    this.visualIntensityInput.type = 'range';
+    this.visualIntensityInput.min = '0';
+    this.visualIntensityInput.max = String(MAX_NETWORK_OPTICS_LEVEL);
+    this.visualIntensityInput.step = '0.25';
+    this.visualIntensityInput.dataset.networkVisualIntensity = '';
+    this.visualIntensityInput.setAttribute('aria-label', 'Visual effects intensity');
+    Object.assign(this.visualIntensityInput.style, {
+      display: 'block',
+      width: '100%',
+      height: '16px',
+      margin: '0',
+      accentColor: '#84acff',
+      cursor: 'pointer'
+    });
+    this.visualIntensityInput.addEventListener('input', () => {
+      onVisualIntensityChange(Number(this.visualIntensityInput.value));
+    });
+    visualIntensityElement.append(visualIntensityHeading, this.visualIntensityInput);
+    this.setVisualIntensity(visualIntensity);
+
     const actionsElement = document.createElement('div');
     Object.assign(actionsElement.style, {
       display: 'flex',
@@ -1191,6 +1240,7 @@ class NetworkStoryControls {
       this.titleElement,
       this.descriptionElement,
       telemetryElement,
+      visualIntensityElement,
       actionsElement
     );
     (canvas.parentElement || document.body).appendChild(this.rootElement);
@@ -1275,6 +1325,16 @@ class NetworkStoryControls {
       'aria-label',
       isExpanded ? 'Hide GPU optics information' : 'Show GPU optics information'
     );
+  }
+
+  setVisualIntensity(level: number): void {
+    const profile = makeNetworkOpticsProfile(level);
+    this.visualIntensityInput.value = String(profile.level);
+    this.visualIntensityInput.setAttribute('aria-valuetext', profile.label);
+    this.visualIntensityLabel.textContent = `${profile.label.toUpperCase()} · ${profile.level.toFixed(
+      profile.level % 1 === 0 ? 0 : 2
+    )} / ${MAX_NETWORK_OPTICS_LEVEL}`;
+    this.rootElement.dataset.networkVisualStyle = profile.label;
   }
 
   destroy(): void {
@@ -1497,8 +1557,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private guidedStoryPreviousCameraTime: number | null = null;
   private highlightedPlaneIndex: number | null = null;
   private previousPlaneHighlightTime: number | null = null;
+  private previousVisualIntensityTime: number | null = null;
+  private currentVisualIntensity = DEFAULT_NETWORK_OPTICS_LEVEL;
+  private opticsProfile: NetworkOpticsProfile = makeNetworkOpticsProfile(
+    DEFAULT_NETWORK_OPTICS_LEVEL
+  );
 
   transparencyMode: TransparencyMode;
+  visualIntensity = DEFAULT_NETWORK_OPTICS_LEVEL;
   adaptiveRouting = true;
   speed = 0.85;
   orbit = 0.08;
@@ -1814,6 +1880,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       schema: makeSettingsSchema(supportsABuffer, supportsWeightedBlending),
       settings: {
         transparencyMode: this.transparencyMode,
+        visualIntensity: this.visualIntensity,
         adaptiveRouting: this.adaptiveRouting,
         speed: this.speed,
         orbit: this.orbit,
@@ -1895,12 +1962,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         onTogglePlayback: () => this.setGuidedStoryPlaying(!this.guidedStoryPlaying),
         onHighlightPlane: planeIndex => this.setHighlightedPlane(planeIndex),
         onToggleOptics: () =>
-          this.setOpticsPanelVisible(this.canvas?.dataset.packetSprayingOpticsExpanded !== 'true')
+          this.setOpticsPanelVisible(this.canvas?.dataset.packetSprayingOpticsExpanded !== 'true'),
+        onVisualIntensityChange: level => this.setVisualIntensity(level),
+        visualIntensity: this.visualIntensity
       });
       canvas.dataset.packetSprayingHighlightedPlane = '';
       canvas.dataset.packetSprayingPlaneHighlightStrength = '0.000';
       canvas.dataset.packetSprayingHighlightedSwitches = '0';
       canvas.dataset.packetSprayingOpticsExpanded = 'false';
+      canvas.dataset.packetSprayingVisualIntensity = this.visualIntensity.toFixed(2);
+      canvas.dataset.packetSprayingVisualTarget = this.visualIntensity.toFixed(2);
+      canvas.dataset.packetSprayingVisualStyle = this.opticsProfile.label;
+      canvas.dataset.packetSprayingVisualBloom = this.opticsProfile.bloom.toFixed(2);
+      canvas.dataset.packetSprayingVisualCaustics = this.opticsProfile.caustics.toFixed(2);
+      canvas.dataset.packetSprayingVisualRefraction = this.opticsProfile.refraction.toFixed(2);
       this.updateGuidedStoryControls();
       this.updateNetworkTelemetry();
       this.updateFailureAccessibility();
@@ -1913,6 +1988,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
   override onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.resizeSceneFramebuffer(width, height);
+    this.updateVisualIntensity(time / 1000);
     this.animationTime = (time / 1000) * this.speed;
     this.updateGuidedStory(this.animationTime);
     this.updateSwitchStoryState(this.animationTime);
@@ -1961,14 +2037,18 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       sceneColorTexture: this.refractionTexture,
       indexOfRefraction: this.glassIndexOfRefraction,
       roughness: this.glassRoughness,
-      dispersion: this.glassDispersion,
+      dispersion: this.glassDispersion * this.opticsProfile.spectral,
       thickness: this.glassThickness,
-      refractionStrength: this.glassRefractionStrength,
-      fresnelStrength: this.glassFresnelStrength,
-      clearcoatStrength: this.glassClearcoatStrength,
-      iridescenceStrength: this.glassIridescenceStrength,
-      internalReflectionStrength: this.glassInternalReflectionStrength,
-      transmissionStrength: this.glassTransmissionStrength
+      refractionStrength: this.glassRefractionStrength * this.opticsProfile.refraction,
+      fresnelStrength: this.glassFresnelStrength * (0.2 + this.opticsProfile.surface * 0.8),
+      clearcoatStrength: this.glassClearcoatStrength * this.opticsProfile.surface,
+      iridescenceStrength: this.glassIridescenceStrength * this.opticsProfile.spectral,
+      internalReflectionStrength:
+        this.glassInternalReflectionStrength *
+        this.opticsProfile.surface *
+        (0.35 + this.opticsProfile.refraction * 0.65),
+      transmissionStrength:
+        this.glassTransmissionStrength * (0.5 + this.opticsProfile.refraction * 0.5)
     };
     const glassTransmissionProps: GlassTransmissionProps = {
       viewportSize: [width, height],
@@ -1976,27 +2056,37 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       sceneDepthTexture: this.sceneFramebuffer.depthStencilAttachment!.texture,
       backfaceTexture: this.glassBackfaceTexture,
       environmentTexture: this.environmentTexture,
-      environmentIntensity: this.glassEnvironmentIntensity,
-      thicknessStrength: this.glassVolumeThickness,
-      roughTransmissionStrength: this.glassRoughTransmissionStrength,
-      spectralAbsorptionStrength: this.glassSpectralAbsorptionStrength,
+      environmentIntensity:
+        this.glassEnvironmentIntensity * (0.16 + this.opticsProfile.surface * 0.84),
+      thicknessStrength: this.glassVolumeThickness * (0.45 + this.opticsProfile.refraction * 0.55),
+      roughTransmissionStrength: this.glassRoughTransmissionStrength * this.opticsProfile.spectral,
+      spectralAbsorptionStrength:
+        this.glassSpectralAbsorptionStrength * this.opticsProfile.spectral,
       thinFilmThickness: this.glassThinFilmThickness,
-      thinFilmStrength: this.glassThinFilmStrength,
-      volumeScatteringStrength: this.glassVolumeScatteringStrength,
-      dynamicReflectionStrength: this.glassDynamicReflectionStrength,
-      secondaryBounceStrength: this.glassSecondaryBounceStrength,
-      faultDistortionStrength: this.glassFaultDistortionStrength,
+      thinFilmStrength: this.glassThinFilmStrength * this.opticsProfile.spectral,
+      volumeScatteringStrength:
+        this.glassVolumeScatteringStrength *
+        this.opticsProfile.illumination *
+        this.opticsProfile.spectral,
+      dynamicReflectionStrength:
+        this.glassDynamicReflectionStrength * this.opticsProfile.illumination,
+      secondaryBounceStrength: this.glassSecondaryBounceStrength * this.opticsProfile.spectral,
+      faultDistortionStrength:
+        this.glassFaultDistortionStrength * (0.3 + this.opticsProfile.refraction * 0.7),
       time: this.animationTime
     };
     const packetLights = this.makePacketLights();
     const pointLightProps: OpticalPointLightsProps = {
       lights: packetLights,
-      intensity: this.packetLightIntensity
+      intensity: this.packetLightIntensity * this.opticsProfile.illumination
     };
-    const causticLenses = this.makeCausticLenses(packetLights, this.animationTime);
+    const causticLenses =
+      this.opticsProfile.caustics > 0.002
+        ? this.makeCausticLenses(packetLights, this.animationTime)
+        : [];
     const causticProps: OpticalCausticsProps = {
       lenses: causticLenses,
-      intensity: this.causticIntensity,
+      intensity: this.causticIntensity * this.opticsProfile.caustics,
       focus: this.causticFocus
     };
     if (this.canvas) {
@@ -2004,7 +2094,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     }
     this.emissiveShaderInputs.setProps({
       app: uniforms,
-      emissiveMaterial: {intensity: this.packetEmission, rimStrength: 0.32}
+      emissiveMaterial: {
+        intensity: this.packetEmission * (0.24 + this.opticsProfile.illumination * 0.76),
+        rimStrength: 0.12 + this.opticsProfile.surface * 0.2
+      }
     });
     this.planeHighlightShaderInputs.setProps({
       app: uniforms,
@@ -2162,7 +2255,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
               : Math.min(this.bloomThreshold, 0.38)
         },
         bloomBlur: {radius: 4},
-        bloomComposite: {intensity: this.bloomIntensity},
+        bloomComposite: {intensity: this.bloomIntensity * this.opticsProfile.bloom},
         toneMapping: {exposure: this.exposure}
       }
     });
@@ -2499,6 +2592,49 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     if (this.canvas) {
       this.canvas.dataset.packetSprayingStoryChapter = chapter.id;
       this.canvas.dataset.packetSprayingStoryPlaying = String(this.guidedStoryPlaying);
+    }
+  }
+
+  private setVisualIntensity(level: number, synchronizeSettings = true): void {
+    const nextProfile = makeNetworkOpticsProfile(level);
+    if (this.visualIntensity === nextProfile.level) {
+      return;
+    }
+
+    this.visualIntensity = nextProfile.level;
+    this.storyControls?.setVisualIntensity(nextProfile.level);
+    if (synchronizeSettings) {
+      this.settingsPanel.setSettingValue('visualIntensity', nextProfile.level);
+    }
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingVisualTarget = nextProfile.level.toFixed(2);
+      this.canvas.dataset.packetSprayingVisualStyle = nextProfile.label;
+    }
+  }
+
+  private updateVisualIntensity(animationTime: number): void {
+    const previousTime = this.previousVisualIntensityTime;
+    const elapsedTime = Math.min(
+      Math.max(animationTime - (previousTime ?? animationTime - 1 / 60), 0),
+      0.12
+    );
+    this.previousVisualIntensityTime = animationTime;
+    const difference = this.visualIntensity - this.currentVisualIntensity;
+    if (Math.abs(difference) < 0.001) {
+      if (this.currentVisualIntensity === this.visualIntensity) {
+        return;
+      }
+      this.currentVisualIntensity = this.visualIntensity;
+    } else {
+      this.currentVisualIntensity += difference * (1 - Math.exp(-elapsedTime * 7));
+    }
+
+    this.opticsProfile = makeNetworkOpticsProfile(this.currentVisualIntensity);
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingVisualIntensity = this.currentVisualIntensity.toFixed(2);
+      this.canvas.dataset.packetSprayingVisualBloom = this.opticsProfile.bloom.toFixed(2);
+      this.canvas.dataset.packetSprayingVisualCaustics = this.opticsProfile.caustics.toFixed(2);
+      this.canvas.dataset.packetSprayingVisualRefraction = this.opticsProfile.refraction.toFixed(2);
     }
   }
 
@@ -2916,8 +3052,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateEndpointSignals(animationTime: number): void {
     this.endpointSignalMatrices.fill(0);
     this.endpointSignalColors.fill(0);
+    const endpointSignalIntensity = this.endpointSignalIntensity * this.opticsProfile.motion;
     this.endpointSignalDefinitions =
-      this.endpointSignalIntensity > 0
+      endpointSignalIntensity > 0.005
         ? makeEndpointSignals(this.packetDefinitions, animationTime)
         : [];
 
@@ -2940,7 +3077,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         signalIndex * 16
       );
       const signalColor = makeBalancedEmissionColor(signal.color, 1);
-      const intensity = signal.strength * this.endpointSignalIntensity;
+      const intensity = signal.strength * endpointSignalIntensity;
       this.endpointSignalColors.set(
         [
           signalColor[0] * intensity * 0.37,
@@ -2967,7 +3104,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     for (const switchIndex of this.congestedSwitchIndices) {
       const pressure =
         (0.5 + 0.5 * Math.sin(animationTime * 7.2 + switchIndex * 0.63)) *
-        this.congestionPressureIntensity;
+        this.congestionPressureIntensity *
+        (0.35 + this.opticsProfile.motion * 0.65);
       this.glassInstances[switchIndex].color = [
         1,
         CONGESTED_SWITCH_COLOR[1] + pressure * 0.16,
@@ -2982,7 +3120,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updateLinkPulseVisuals(animationTime: number): void {
     this.linkPulseMatrices.fill(0);
     this.linkPulseColors.fill(0);
-    if (this.linkPulseIntensity <= 0 || this.linkPulseLength <= 0) {
+    const linkPulseIntensity = this.linkPulseIntensity * this.opticsProfile.motion;
+    if (linkPulseIntensity <= 0.005 || this.linkPulseLength <= 0) {
       if (this.canvas) {
         this.canvas.dataset.packetSprayingLinkPulses = '0';
       }
@@ -2999,10 +3138,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       );
       this.linkPulseColors.set(
         [
-          pulseColor[0] * this.linkPulseIntensity * 0.34,
-          pulseColor[1] * this.linkPulseIntensity * 0.34,
-          pulseColor[2] * this.linkPulseIntensity * 0.34,
-          Math.min(this.linkPulseIntensity * 0.42, 0.42)
+          pulseColor[0] * linkPulseIntensity * 0.34,
+          pulseColor[1] * linkPulseIntensity * 0.34,
+          pulseColor[2] * linkPulseIntensity * 0.34,
+          Math.min(linkPulseIntensity * 0.42, 0.42)
         ],
         pulseIndex * 4
       );
@@ -3032,7 +3171,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
             : SPINE_SWITCH_RADIUS;
       const radius = switchRadius * (0.72 + progress * 1.24);
       const intensity =
-        Math.sin(progress * Math.PI) * (1 - progress * 0.38) * this.switchTransitionIntensity;
+        Math.sin(progress * Math.PI) *
+        (1 - progress * 0.38) *
+        this.switchTransitionIntensity *
+        this.opticsProfile.motion;
       const waveColor = makeBalancedEmissionColor(wave.color, wave.color[3]);
       this.switchTransitionMatrices.set(
         makeObjectMatrix(SWITCH_POSITIONS[wave.switchIndex], [radius, radius, radius]),
@@ -3083,8 +3225,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.redLinkTrafficStrengths[linkIndex] = redStrength;
       this.greenLinkTrafficStrengths[linkIndex] = greenStrength;
 
-      const redGlow = redStrength * this.linkTrafficGlow;
-      const greenGlow = greenStrength * this.linkTrafficGlow;
+      const redGlow = redStrength * this.linkTrafficGlow * this.opticsProfile.illumination;
+      const greenGlow = greenStrength * this.linkTrafficGlow * this.opticsProfile.illumination;
       let failureGlow = 0;
       let recoveryGlow = 0;
       for (const wave of this.switchTransitionWaves) {
@@ -3099,7 +3241,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         }
 
         const strength =
-          Math.sin(progress * Math.PI) * (1 - progress * 0.5) * this.switchTransitionIntensity;
+          Math.sin(progress * Math.PI) *
+          (1 - progress * 0.5) *
+          this.switchTransitionIntensity *
+          this.opticsProfile.motion;
         if (wave.kind === 'failure') {
           failureGlow = Math.max(failureGlow, strength);
         } else {
@@ -3112,7 +3257,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         isFailedSwitchPosition(link.end, this.congestedSwitchIndices);
       const pressureGlow = congested
         ? (0.5 + 0.5 * Math.sin(animationTime * 7.2 + linkIndex * 0.41)) *
-          this.congestionPressureIntensity
+          this.congestionPressureIntensity *
+          this.opticsProfile.motion
         : 0;
       const signalGlow = failureGlow + recoveryGlow + pressureGlow;
       const totalGlow = Math.min(redGlow + greenGlow + signalGlow * 0.48, 1);
@@ -3356,6 +3502,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private updatePacketVisuals(animationTime: number): void {
     this.switchFlashStrengths.fill(0);
     this.switchRippleAges.fill(Number.POSITIVE_INFINITY);
+    const packetTrailIntensity = this.packetTrailIntensity * this.opticsProfile.motion;
+    const switchFlashIntensity = this.switchFlashIntensity * this.opticsProfile.motion;
+    const switchRippleIntensity = this.switchRippleIntensity * this.opticsProfile.motion;
 
     for (let packetIndex = 0; packetIndex < this.packetDefinitions.length; packetIndex++) {
       const packet = this.packetDefinitions[packetIndex];
@@ -3374,7 +3523,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       );
       const trailLength = packetDistance - trailStartDistance;
       const trailMatrix =
-        packetIsVisible && this.packetTrailIntensity > 0 && trailLength > 0.012
+        packetIsVisible && packetTrailIntensity > 0.005 && trailLength > 0.012
           ? makeSegmentMatrix(
               getPointAlongRoute(packet.route, trailStartDistance / packet.route.totalLength),
               position,
@@ -3386,9 +3535,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       const colorOffset = packetIndex * 4;
       this.packetTrailColors.set(
         [
-          trailColor[0] * this.packetTrailIntensity,
-          trailColor[1] * this.packetTrailIntensity,
-          trailColor[2] * this.packetTrailIntensity,
+          trailColor[0] * packetTrailIntensity,
+          trailColor[1] * packetTrailIntensity,
+          trailColor[2] * packetTrailIntensity,
           trailColor[3]
         ],
         colorOffset
@@ -3428,7 +3577,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         conversationIndex++
       ) {
         const flashIndex = switchIndex * CONVERSATIONS.length + conversationIndex;
-        const flashStrength = this.switchFlashStrengths[flashIndex] * this.switchFlashIntensity;
+        const flashStrength = this.switchFlashStrengths[flashIndex] * switchFlashIntensity;
         const flashRadius = 0.055 + Math.min(flashStrength, 1) * 0.085;
         const flashMatrix =
           flashStrength > 0.01
@@ -3453,7 +3602,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
           rippleProgress < 1
             ? Math.sin(rippleProgress * Math.PI) *
               (1 - rippleProgress * 0.35) *
-              this.switchRippleIntensity
+              switchRippleIntensity
             : 0;
         const rippleRadius = switchRadius * (0.2 + rippleProgress * 0.72);
         const rippleMatrix =
@@ -3485,7 +3634,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private makePacketLights(): OpticalPointLight[] {
-    if (this.packetLightIntensity <= 0 || this.packetLightRadius <= 0) {
+    if (
+      this.packetLightIntensity <= 0 ||
+      this.packetLightRadius <= 0 ||
+      this.opticsProfile.illumination <= 0.002
+    ) {
       return [];
     }
 
@@ -3544,7 +3697,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         conversationIndex++
       ) {
         const flashIndex = switchIndex * CONVERSATIONS.length + conversationIndex;
-        const flashStrength = this.switchFlashStrengths[flashIndex] * this.switchFlashIntensity;
+        const flashStrength =
+          this.switchFlashStrengths[flashIndex] *
+          this.switchFlashIntensity *
+          this.opticsProfile.motion;
         if (flashStrength <= 0.08) {
           continue;
         }
@@ -3570,7 +3726,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       transitionLights.push({
         position: SWITCH_POSITIONS[wave.switchIndex],
         color: [wave.color[0], wave.color[1], wave.color[2]],
-        intensity: Math.sin(progress * Math.PI) * this.switchTransitionIntensity * 1.25,
+        intensity:
+          Math.sin(progress * Math.PI) *
+          this.switchTransitionIntensity *
+          this.opticsProfile.motion *
+          1.25,
         radius: this.packetLightRadius * 1.3
       });
     }
@@ -3582,7 +3742,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         HOST_POSITIONS[signal.hostIndex][2]
       ],
       color: [signal.color[0], signal.color[1], signal.color[2]],
-      intensity: signal.strength * this.endpointSignalIntensity * 0.65,
+      intensity: signal.strength * this.endpointSignalIntensity * this.opticsProfile.motion * 0.65,
       radius: this.packetLightRadius * 0.65
     }));
     const planeHighlightLights: OpticalPointLight[] = [];
@@ -3708,6 +3868,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.nextValue;
     if (isTransparencyMode(transparencyMode)) {
       this.transparencyMode = transparencyMode;
+    }
+
+    const visualIntensity = getChangedSetting(changedSettings, 'visualIntensity')?.nextValue;
+    if (typeof visualIntensity === 'number') {
+      this.setVisualIntensity(visualIntensity, false);
     }
 
     const adaptiveRouting = getChangedSetting(changedSettings, 'adaptiveRouting')?.nextValue;
@@ -4001,6 +4166,7 @@ const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Network Packet Spraying</strong></p>
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
 <p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. Use Play, Back, and Next to follow or inspect each chapter.</p>
+<p>The visual-style slider moves smoothly from a packet-first diagram through clear and cinematic glass to spectral lighting, focused caustics, and full optical fireworks. Individual material controls remain available in Settings.</p>
 <p>The visualization has two physical switch planes, each containing four Tier 0 access switches and four Tier 1 aggregation switches. Four larger spine switches connect those planes and provide four independent backbone paths for alternating red and green packets.</p>
 <p>The live switch-plane monitor shows red and green allocation across both physical planes and separately reports available backbone paths. Hover or focus a plane to illuminate all eight switches across its two tiers. Under pressure, adaptive routing moves most packets away from a congested path without retiring it; an offline or recovering path carries none until its control handshake succeeds.</p>
 <p>Click any glass switch to move it from healthy to orange and congested, then red and failed. Clicking a failed switch repairs it, but its path stays offline while a blue recovery probe travels to the switch and a cyan acknowledgment returns to its source.</p>
@@ -4010,6 +4176,7 @@ const PACKET_SPRAYING_OVERVIEW_HTML = `\
 
 const PACKET_SPRAYING_OPTICS_HTML = `\
 <p>Every switch is a transparent GPU-rendered glass volume; the image is generated live on hardware WebGPU or WebGL without per-pixel ray tracing.</p>
+<p>The guided tour's 0–11 visual-style control introduces these techniques in stages, preserving clear packet movement at the low end and progressively revealing the complete optical pipeline.</p>
 <h3>Glass surfaces</h3>
 <p>Grazing-angle Fresnel reflection, GGX microfacets, a polished clearcoat, angular thin-film interference, and camera-responsive studio lighting define each curved outer surface.</p>
 <h3>Inside the glass</h3>
@@ -4301,6 +4468,15 @@ function makeSettingsSchema(
         initiallyCollapsed: false,
         settings: [
           {
+            name: 'visualIntensity',
+            label: 'Visual Style (0–11)',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: MAX_NETWORK_OPTICS_LEVEL,
+            step: 0.25
+          },
+          {
             name: 'transparencyMode',
             label: 'Transparency',
             type: 'select',
@@ -4349,7 +4525,7 @@ function makeSettingsSchema(
       {
         id: 'packet-lighting',
         name: 'Emissive Packets',
-        initiallyCollapsed: false,
+        initiallyCollapsed: true,
         settings: [
           {
             name: 'packetEmission',
@@ -4518,7 +4694,7 @@ function makeSettingsSchema(
       {
         id: 'glass',
         name: 'Glass Material',
-        initiallyCollapsed: false,
+        initiallyCollapsed: true,
         settings: [
           {
             name: 'glassIndexOfRefraction',
