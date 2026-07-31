@@ -238,6 +238,9 @@ an individual showcase.
   environment bounces, and focused raster caustics connect moving emitters to nearby glass.
 - Linked switch-plane telemetry gradually emphasizes all eight switches across both tiers of each
   physical plane, distinguishes four independent spine paths, and links to a GPU-optics panel.
+- A single guided-story visual-style control progressively introduces surface highlights,
+  refraction, packet lighting, motion accents, spectral glass, caustics, and bloom while keeping
+  advanced material settings independently adjustable.
 - Exact A-buffer transparency, weighted-blended transparency, and depth-sorted alpha blending
   preserve the strongest supported compositing strategy on each backend.
 

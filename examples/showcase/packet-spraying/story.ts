@@ -22,6 +22,20 @@ export type NetworkStoryChapter = {
   title: string;
 };
 
+export type NetworkOpticsProfile = {
+  bloom: number;
+  caustics: number;
+  illumination: number;
+  label: string;
+  level: number;
+  motion: number;
+  refraction: number;
+  spectral: number;
+  surface: number;
+};
+
+export const MAX_NETWORK_OPTICS_LEVEL = 11;
+export const DEFAULT_NETWORK_OPTICS_LEVEL = 7;
 export const GUIDED_STORY_SWITCH_INDEX = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + 1;
 
 export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
@@ -80,4 +94,37 @@ export function getWrappedStoryChapterIndex(chapterIndex: number): number {
 
 export function getNetworkStoryChapter(chapterIndex: number): NetworkStoryChapter {
   return NETWORK_STORY_CHAPTERS[getWrappedStoryChapterIndex(chapterIndex)];
+}
+
+/** Brings optical techniques online progressively while keeping low settings packet-first. */
+export function makeNetworkOpticsProfile(level: number): NetworkOpticsProfile {
+  const normalizedLevel = Number.isFinite(level)
+    ? Math.max(0, Math.min(level, MAX_NETWORK_OPTICS_LEVEL))
+    : DEFAULT_NETWORK_OPTICS_LEVEL;
+  const stage = (start: number, end: number): number => {
+    const progress = Math.max(0, Math.min((normalizedLevel - start) / (end - start), 1));
+    return progress * progress * (3 - 2 * progress);
+  };
+  const fireworks = stage(8, MAX_NETWORK_OPTICS_LEVEL);
+
+  return {
+    bloom: stage(3.5, 8.5) * (1 + fireworks * 0.18),
+    caustics: stage(5.5, MAX_NETWORK_OPTICS_LEVEL) * (1 + fireworks * 0.35),
+    illumination: stage(2, 7.25) * (1 + fireworks * 0.2),
+    label:
+      normalizedLevel < 2
+        ? 'Diagram'
+        : normalizedLevel < 4.5
+          ? 'Clear glass'
+          : normalizedLevel < 7.5
+            ? 'Cinematic'
+            : normalizedLevel < 10
+              ? 'Spectral'
+              : 'Fireworks',
+    level: normalizedLevel,
+    motion: stage(2.75, 7.5) * (1 + fireworks * 0.16),
+    refraction: stage(1.5, 6.25) * (1 + fireworks * 0.12),
+    spectral: stage(5, 10) * (1 + fireworks * 0.25),
+    surface: stage(0, 3)
+  };
 }
