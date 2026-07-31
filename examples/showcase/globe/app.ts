@@ -58,6 +58,7 @@ struct SkyboxSceneUniforms {
   modelMatrix: mat4x4<f32>,
   viewMatrix: mat4x4<f32>,
   projectionMatrix: mat4x4<f32>,
+  hdrStarsEnabled: i32,
 };
 
 @group(0) @binding(auto) var<uniform> skyboxScene : SkyboxSceneUniforms;
@@ -88,13 +89,17 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let skyColor = textureSample(cubeTexture, cubeTextureSampler, normalize(inputs.direction)).rgb;
-  return vec4<f32>(skyColor * 1.35, 1.0);
+  let starPeak = max(max(skyColor.r, skyColor.g), skyColor.b);
+  let hdrStarGain = 1.0 + smoothstep(0.1, 0.45, starPeak) * 5.0;
+  let starGain = select(1.0, hdrStarGain, skyboxScene.hdrStarsEnabled != 0);
+  return vec4<f32>(skyColor * starGain, 1.0);
 }
 `;
 
 const SKYBOX_SHADER_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
+precision highp int;
 
 in vec3 positions;
 
@@ -104,6 +109,7 @@ uniform skyboxSceneUniforms {
   mat4 modelMatrix;
   mat4 viewMatrix;
   mat4 projectionMatrix;
+  int hdrStarsEnabled;
 } skyboxScene;
 
 void main(void) {
@@ -119,16 +125,26 @@ void main(void) {
 const SKYBOX_FRAGMENT_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
+precision highp int;
 
 in vec3 vDirection;
 
 uniform samplerCube cubeTexture;
+uniform skyboxSceneUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  int hdrStarsEnabled;
+} skyboxScene;
 
 out vec4 fragColor;
 
 void main(void) {
   vec3 skyColor = texture(cubeTexture, normalize(vDirection)).rgb;
-  fragColor = vec4(skyColor * 1.35, 1.0);
+  float starPeak = max(max(skyColor.r, skyColor.g), skyColor.b);
+  float hdrStarGain = 1.0 + smoothstep(0.1, 0.45, starPeak) * 5.0;
+  float starGain = skyboxScene.hdrStarsEnabled != 0 ? hdrStarGain : 1.0;
+  fragColor = vec4(skyColor * starGain, 1.0);
 }
 `;
 
@@ -139,6 +155,7 @@ struct GlobeSceneUniforms {
   normalMatrix: mat4x4<f32>,
   cameraPosition: vec3<f32>,
   showLandTexture: i32,
+  oceanReflectionStrength: f32,
 };
 
 @group(0) @binding(auto) var<uniform> globeScene : GlobeSceneUniforms;
@@ -234,6 +251,7 @@ struct GlobeSceneUniforms {
   normalMatrix: mat4x4<f32>,
   cameraPosition: vec3<f32>,
   showLandTexture: i32,
+  oceanReflectionStrength: f32,
 };
 
 @group(0) @binding(auto) var<uniform> globeScene : GlobeSceneUniforms;
@@ -286,6 +304,10 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
     normalizedNormal,
     surfaceUV
   );
+  let waterLuminance = dot(waterColor.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
+  let waterReflectionGain =
+    1.0 + smoothstep(0.6, 0.95, waterLuminance) * globeScene.oceanReflectionStrength;
+  let oceanColor = waterColor.rgb * waterReflectionGain;
   var sunVisibility = 1.0;
   let viewDirection = normalize(globeScene.cameraPosition - inputs.fragPosition);
   let iceRim = pow(1.0 - max(dot(viewDirection, normalizedNormal), 0.0), 5.0);
@@ -310,7 +332,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
   let iceColor = vec3<f32>(0.95, 0.98, 1.0) + vec3<f32>(0.85, 0.92, 1.0) * iceRim * 0.28 + iceHighlight;
   let finalColor =
-    (waterColor.rgb * openWaterMask + iceColor * polarIceMask) *
+    (oceanColor * openWaterMask + iceColor * polarIceMask) *
     mix(0.18, 1.0, sunVisibility);
   let finalAlpha = waterColor.a * openWaterMask + 0.96 * polarIceMask;
   return vec4<f32>(finalColor, finalAlpha);
@@ -337,6 +359,7 @@ uniform globeSceneUniforms {
   mat4 normalMatrix;
   vec3 cameraPosition;
   int showLandTexture;
+  float oceanReflectionStrength;
 } globeScene;
 
 void main(void) {
@@ -368,6 +391,7 @@ uniform globeSceneUniforms {
   mat4 normalMatrix;
   vec3 cameraPosition;
   int showLandTexture;
+  float oceanReflectionStrength;
 } globeScene;
 
 out vec4 fragColor;
@@ -434,6 +458,7 @@ uniform globeSceneUniforms {
   mat4 normalMatrix;
   vec3 cameraPosition;
   int showLandTexture;
+  float oceanReflectionStrength;
 } globeScene;
 
 out vec4 fragColor;
@@ -453,6 +478,10 @@ void main(void) {
     normalizedNormal,
     surfaceUV
   );
+  float waterLuminance = dot(waterColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+  float waterReflectionGain =
+    1.0 + smoothstep(0.6, 0.95, waterLuminance) * globeScene.oceanReflectionStrength;
+  vec3 oceanColor = waterColor.rgb * waterReflectionGain;
   float sunVisibility = 1.0;
   vec3 viewDirection = normalize(globeScene.cameraPosition - vPosition);
   float iceRim = pow(1.0 - max(dot(viewDirection, normalizedNormal), 0.0), 5.0);
@@ -480,7 +509,7 @@ void main(void) {
     vec3(0.85, 0.92, 1.0) * iceRim * 0.28 +
     iceHighlight;
   vec3 finalColor =
-    waterColor.rgb * openWaterMask +
+    oceanColor * openWaterMask +
     iceColor * polarIceMask;
   finalColor *= mix(0.18, 1.0, sunVisibility);
   float finalAlpha = waterColor.a * openWaterMask + 0.96 * polarIceMask;
@@ -495,7 +524,8 @@ const globeScene: ShaderModule<GlobeSceneUniforms, GlobeSceneUniforms> = {
     modelMatrix: 'mat4x4<f32>',
     normalMatrix: 'mat4x4<f32>',
     cameraPosition: 'vec3<f32>',
-    showLandTexture: 'i32'
+    showLandTexture: 'i32',
+    oceanReflectionStrength: 'f32'
   }
 };
 
@@ -504,7 +534,8 @@ const skyboxScene: ShaderModule<SkyboxSceneUniforms, SkyboxSceneUniforms> = {
   uniformTypes: {
     modelMatrix: 'mat4x4<f32>',
     viewMatrix: 'mat4x4<f32>',
-    projectionMatrix: 'mat4x4<f32>'
+    projectionMatrix: 'mat4x4<f32>',
+    hdrStarsEnabled: 'i32'
   }
 };
 
@@ -514,22 +545,26 @@ type GlobeSceneUniforms = {
   normalMatrix: Matrix4;
   cameraPosition: [number, number, number];
   showLandTexture: number;
+  oceanReflectionStrength: number;
 };
 
 type SkyboxSceneUniforms = {
   modelMatrix: Matrix4;
   viewMatrix: Matrix4;
   projectionMatrix: Matrix4;
+  hdrStarsEnabled: number;
 };
 
 type GlobeControls = {
   starBackgroundEnabled: boolean;
+  hdrStarsEnabled: boolean;
   waterEnabled: boolean;
   landTextureEnabled: boolean;
   waveSpeed: number;
   normalStrength: number;
   fresnelPower: number;
   specularIntensity: number;
+  oceanReflectionStrength: number;
   lightAzimuth: number;
   lightElevation: number;
 };
@@ -550,12 +585,14 @@ type SkyboxShaderInputs = {
 
 const DEFAULT_CONTROLS: GlobeControls = {
   starBackgroundEnabled: true,
+  hdrStarsEnabled: true,
   waterEnabled: true,
   landTextureEnabled: true,
   waveSpeed: 1.25,
   normalStrength: 0.52,
   fresnelPower: 6.2,
   specularIntensity: 2.45,
+  oceanReflectionStrength: 0.65,
   lightAzimuth: -38,
   lightElevation: 34
 };
@@ -846,7 +883,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         skyboxScene: {
           modelMatrix: new Matrix4().scale([40, 40, 40]),
           viewMatrix: skyboxViewMatrix,
-          projectionMatrix
+          projectionMatrix,
+          hdrStarsEnabled: this.controls.hdrStarsEnabled ? 1 : 0
         }
       });
       this.backgroundModel.draw(renderPass);
@@ -865,7 +903,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         modelMatrix: globeRotation,
         normalMatrix,
         cameraPosition,
-        showLandTexture: this.controls.landTextureEnabled ? 1 : 0
+        showLandTexture: this.controls.landTextureEnabled ? 1 : 0,
+        oceanReflectionStrength: this.controls.oceanReflectionStrength
       },
       lighting: lightingProps
     });
@@ -876,7 +915,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         modelMatrix: globeRotation,
         normalMatrix,
         cameraPosition,
-        showLandTexture: this.controls.landTextureEnabled ? 1 : 0
+        showLandTexture: this.controls.landTextureEnabled ? 1 : 0,
+        oceanReflectionStrength: this.controls.oceanReflectionStrength
       },
       lighting: lightingProps
     });
@@ -985,6 +1025,12 @@ function makeGlobeSettingsSchema(): SettingsSchema {
             type: 'boolean',
             persist: 'none'
           },
+          {
+            name: 'hdrStarsEnabled',
+            label: 'HDR Stars',
+            type: 'boolean',
+            persist: 'none'
+          },
           {name: 'waterEnabled', label: 'Water Overlay', type: 'boolean', persist: 'none'},
           {name: 'landTextureEnabled', label: 'Land Texture', type: 'boolean', persist: 'none'}
         ]
@@ -1023,11 +1069,20 @@ function makeGlobeSettingsSchema(): SettingsSchema {
           },
           {
             name: 'specularIntensity',
-            label: 'Specular Intensity',
+            label: 'Base Specular',
             type: 'number',
             persist: 'none',
             min: 0,
             max: 5,
+            step: 0.05
+          },
+          {
+            name: 'oceanReflectionStrength',
+            label: 'HDR Reflection Boost',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: 2,
             step: 0.05
           }
         ]
