@@ -236,6 +236,8 @@ an individual showcase.
   measurable optical depth without per-pixel ray tracing.
 - Bounded colored point lights, in-volume scattering, screen-space scene reflections, secondary
   environment bounces, and focused raster caustics connect moving emitters to nearby glass.
+- Linked switch-plane telemetry gradually emphasizes all eight switches across both tiers of each
+  physical plane, distinguishes four independent spine paths, and links to a GPU-optics panel.
 - Exact A-buffer transparency, weighted-blended transparency, and depth-sorted alpha blending
   preserve the strongest supported compositing strategy on each backend.
 

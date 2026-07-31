@@ -12,6 +12,7 @@ import {
   HOST_POSITIONS,
   LEAF_SWITCH_RADIUS,
   LEAF_POSITIONS,
+  NETWORK_SWITCH_PLANE_COUNT,
   PACKET_TRAVEL_SPEED,
   SPINE_POSITIONS,
   SWITCH_CONFIRMATION_DURATION,
@@ -20,6 +21,7 @@ import {
   getActivePlaneCount,
   getDistance,
   getHealthyConversationRoutes,
+  getNetworkPlaneSwitchIndices,
   isFailedSwitchPosition,
   makeConversationRoutes,
   makeEndpointSignals,
@@ -28,6 +30,7 @@ import {
   makeLinkTraffic,
   makePackets,
   makeNetworkPlaneTelemetry,
+  makeNetworkSwitchPlaneTelemetry,
   makePickableNetworkNodes,
   makeSwitchPacketEvents,
   makeSwitchProbeConfirmationEvent,
@@ -39,7 +42,7 @@ import {
   reroutePackets
 } from '../../examples/showcase/packet-spraying/network';
 
-test('packet-spraying network defines an independent four-plane topology', testCase => {
+test('packet-spraying network defines two switch planes and four independent spine paths', testCase => {
   const routes = makeConversationRoutes();
   const packets = makePackets(routes);
 
@@ -51,9 +54,10 @@ test('packet-spraying network defines an independent four-plane topology', testC
     'the plane layer contains two rows of four switches'
   );
   testCase.equal(SPINE_POSITIONS.length, 4, 'the backbone contains four independent spines');
+  testCase.equal(NETWORK_SWITCH_PLANE_COUNT, 2, 'the switch fabric contains two physical planes');
   testCase.equal(SWITCH_POSITIONS.length, 20, 'all switch positions have stable picking indices');
   testCase.equal(routes.length, 8, 'two conversations each have four independent routes');
-  testCase.equal(getActivePlaneCount(routes), 4, 'all four planes start available');
+  testCase.equal(getActivePlaneCount(routes), 4, 'all four backbone paths start available');
   testCase.equal(packets.length, 48, 'each conversation contributes one 24-packet burst');
   testCase.equal(makeLinks(routes).length, 80, 'network links preserve the complete fabric');
   testCase.equal(
@@ -107,6 +111,73 @@ test('packet-spraying switches form spine and two complete physical-plane groups
   testCase.ok(
     groups[2].switchIndices.every(switchIndex => SWITCH_POSITIONS[switchIndex][2] < 0),
     'the second physical plane keeps its negative-depth switch row together'
+  );
+  testCase.end();
+});
+
+test('packet-spraying physical planes contain complete access and aggregation switch tiers', testCase => {
+  for (let planeIndex = 0; planeIndex < NETWORK_SWITCH_PLANE_COUNT; planeIndex++) {
+    const switchIndices = getNetworkPlaneSwitchIndices(planeIndex);
+
+    testCase.deepEqual(
+      switchIndices,
+      [
+        ...Array.from({length: 4}, (_, switchIndex) => planeIndex * 4 + switchIndex),
+        ...Array.from(
+          {length: 4},
+          (_, switchIndex) => LEAF_POSITIONS.length + planeIndex * 4 + switchIndex
+        )
+      ],
+      `plane ${planeIndex + 1} identifies its four access and four aggregation switches`
+    );
+    testCase.ok(
+      switchIndices.every(
+        switchIndex => switchIndex < LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length
+      ),
+      `plane ${planeIndex + 1} excludes the independent backbone spines`
+    );
+  }
+
+  testCase.deepEqual(getNetworkPlaneSwitchIndices(-1), [], 'negative plane indices are ignored');
+  testCase.deepEqual(
+    getNetworkPlaneSwitchIndices(NETWORK_SWITCH_PLANE_COUNT),
+    [],
+    'missing planes do not produce switch indices'
+  );
+  testCase.deepEqual(getNetworkPlaneSwitchIndices(1.5), [], 'fractional plane indices are ignored');
+  testCase.end();
+});
+
+test('packet-spraying physical-plane telemetry preserves four independent backbone paths', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const failedAggregationSwitchIndex = LEAF_POSITIONS.length;
+  const failedSwitches = new Set([failedAggregationSwitchIndex]);
+
+  reroutePackets(packets, getHealthyConversationRoutes(routes, failedSwitches));
+  const switchPlaneTelemetry = makeNetworkSwitchPlaneTelemetry(
+    routes,
+    packets,
+    failedSwitches,
+    new Set(),
+    new Set()
+  );
+
+  testCase.equal(switchPlaneTelemetry.length, 2, 'telemetry reports both physical switch planes');
+  testCase.equal(
+    switchPlaneTelemetry[0].status,
+    'congested',
+    'a failed aggregation switch marks its physical plane as impaired'
+  );
+  testCase.equal(switchPlaneTelemetry[1].status, 'healthy', 'the opposite plane remains healthy');
+  testCase.ok(
+    switchPlaneTelemetry.every(plane => plane.redPacketCount > 0 && plane.greenPacketCount > 0),
+    'both physical planes continue carrying traffic on the remaining backbone paths'
+  );
+  testCase.equal(
+    getActivePlaneCount(getHealthyConversationRoutes(routes, failedSwitches)),
+    3,
+    'three of the four independent backbone paths remain available'
   );
   testCase.end();
 });
@@ -327,7 +398,7 @@ test('packet-spraying telemetry reports per-plane load, failure, and recovery', 
     congestedSwitches
   );
 
-  testCase.equal(congestedTelemetry.length, 4, 'telemetry includes all four physical planes');
+  testCase.equal(congestedTelemetry.length, 4, 'telemetry includes all four backbone paths');
   testCase.equal(congestedTelemetry[0].status, 'congested');
   testCase.ok(
     congestedTelemetry[0].redPacketCount < congestedTelemetry[1].redPacketCount,

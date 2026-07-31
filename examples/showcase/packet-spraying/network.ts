@@ -172,6 +172,23 @@ export const SWITCH_POSITIONS: Vector3[] = [
   ...AGGREGATION_POSITIONS,
   ...SPINE_POSITIONS
 ];
+export const NETWORK_SWITCH_PLANE_COUNT = LEAF_POSITIONS.length / HOST_X_POSITIONS.length;
+
+/** Identifies both four-switch tiers belonging to one physical switch plane. */
+export function getNetworkPlaneSwitchIndices(planeIndex: number): number[] {
+  if (!Number.isInteger(planeIndex) || planeIndex < 0 || planeIndex >= NETWORK_SWITCH_PLANE_COUNT) {
+    return [];
+  }
+
+  const planeWidth = HOST_X_POSITIONS.length;
+  const leafOffset = planeIndex * planeWidth;
+  const aggregationOffset = LEAF_POSITIONS.length + planeIndex * planeWidth;
+
+  return [
+    ...Array.from({length: planeWidth}, (_, switchIndex) => leafOffset + switchIndex),
+    ...Array.from({length: planeWidth}, (_, switchIndex) => aggregationOffset + switchIndex)
+  ];
+}
 
 /** Keeps semantic switch planes intact while allowing camera-depth-ordered glass composition. */
 export function makeSwitchGroups(): NetworkSwitchGroup[] {
@@ -555,7 +572,7 @@ export function reroutePackets(
   }
 }
 
-/** Summarizes the health and red/green packet allocation of each independent spine plane. */
+/** Summarizes the health and red/green packet allocation of each independent spine path. */
 export function makeNetworkPlaneTelemetry(
   conversationRoutes: readonly ConversationRoute[],
   packets: readonly Packet[],
@@ -582,6 +599,53 @@ export function makeNetworkPlaneTelemetry(
     );
     const planePackets = packets.filter(
       packet => packet.enabled && packet.route.points.includes(spinePosition)
+    );
+
+    return {
+      planeIndex,
+      redPacketCount: planePackets.filter(packet => packet.conversationIndex === 0).length,
+      greenPacketCount: planePackets.filter(packet => packet.conversationIndex === 1).length,
+      status: failed ? 'failed' : recovering ? 'recovering' : congested ? 'congested' : 'healthy'
+    };
+  });
+}
+
+/** Summarizes the two physical switch planes independently from their four backbone paths. */
+export function makeNetworkSwitchPlaneTelemetry(
+  conversationRoutes: readonly ConversationRoute[],
+  packets: readonly Packet[],
+  failedSwitchIndices: ReadonlySet<number>,
+  recoveringSwitchIndices: ReadonlySet<number>,
+  congestedSwitchIndices: ReadonlySet<number>
+): NetworkPlaneTelemetry[] {
+  return Array.from({length: NETWORK_SWITCH_PLANE_COUNT}, (_, planeIndex) => {
+    const switchIndices = new Set(getNetworkPlaneSwitchIndices(planeIndex));
+    const planeRoutes = conversationRoutes.filter(({route}) =>
+      route.points.some(position => {
+        const switchIndex = SWITCH_INDICES_BY_POSITION.get(position.join(','));
+        return switchIndex !== undefined && switchIndices.has(switchIndex);
+      })
+    );
+    const failed = planeRoutes.every(({route}) =>
+      route.points.some(
+        position =>
+          isFailedSwitchPosition(position, failedSwitchIndices) ||
+          isFailedSwitchPosition(position, recoveringSwitchIndices)
+      )
+    );
+    const recovering = [...switchIndices].some(switchIndex =>
+      recoveringSwitchIndices.has(switchIndex)
+    );
+    const congested = [...switchIndices].some(
+      switchIndex => congestedSwitchIndices.has(switchIndex) || failedSwitchIndices.has(switchIndex)
+    );
+    const planePackets = packets.filter(
+      packet =>
+        packet.enabled &&
+        packet.route.points.some(position => {
+          const switchIndex = SWITCH_INDICES_BY_POSITION.get(position.join(','));
+          return switchIndex !== undefined && switchIndices.has(switchIndex);
+        })
     );
 
     return {
@@ -894,10 +958,11 @@ export function makePickableNetworkNodes(): PickableNetworkNode[] {
 
   const leafSwitches = LEAF_POSITIONS.map((_, switchIndex) => {
     const side = switchIndex < HOST_X_POSITIONS.length ? 'source' : 'destination';
+    const planeIndex = side === 'source' ? 1 : 2;
     const columnIndex = (switchIndex % HOST_X_POSITIONS.length) + 1;
     return {
-      title: `Tier 0 access switch ${switchIndex + 1}`,
-      role: `${side.toUpperCase()} side / server column ${columnIndex}`,
+      title: `Plane ${planeIndex} access switch ${columnIndex}`,
+      role: `Tier 0 / ${side.toUpperCase()} side / physical switch plane ${planeIndex}`,
       description:
         side === 'source'
           ? 'This switch gathers outgoing server traffic and forwards packets toward the independent planes.'
@@ -908,26 +973,27 @@ export function makePickableNetworkNodes(): PickableNetworkNode[] {
   });
 
   const aggregationSwitches = AGGREGATION_POSITIONS.map((_, switchIndex) => {
-    const planeIndex = (switchIndex % HOST_X_POSITIONS.length) + 1;
     const side = switchIndex < HOST_X_POSITIONS.length ? 'ingress' : 'egress';
+    const planeIndex = side === 'ingress' ? 1 : 2;
+    const pathIndex = (switchIndex % HOST_X_POSITIONS.length) + 1;
     return {
-      title: `Plane ${planeIndex} ${side} switch`,
-      role: `Tier 1 switch / independent network plane ${planeIndex}`,
+      title: `Plane ${planeIndex} ${side} switch ${pathIndex}`,
+      role: `Tier 1 / physical switch plane ${planeIndex} / backbone path ${pathIndex}`,
       description:
         side === 'ingress'
           ? 'This ingress switch accepts alternating red and green packets from the source-side access tier.'
           : 'This egress switch receives the mixed packet stream and forwards each packet toward its destination.',
-      detail: `Plane ${planeIndex} can continue carrying traffic independently of the other planes.`
+      detail: `Plane ${planeIndex} contains both access and aggregation switches; path ${pathIndex} connects through a shared spine.`
     };
   });
 
   const spineSwitches = SPINE_POSITIONS.map((_, switchIndex) => ({
     title: `Spine switch ${switchIndex + 1}`,
-    role: `Fabric backbone / independent network plane ${switchIndex + 1}`,
+    role: `Fabric backbone / independent routing path ${switchIndex + 1}`,
     description:
-      'This spine connects the ingress and egress sides of one independent routing plane.',
+      'This spine connects the two physical switch planes along one independent backbone path.',
     detail:
-      'Both conversations can share this path, interleaving one red packet with one green packet while other planes carry additional packets.'
+      'Both conversations can share this path, interleaving one red packet with one green packet while other backbone paths carry additional packets.'
   }));
 
   return [...servers, ...leafSwitches, ...aggregationSwitches, ...spineSwitches];

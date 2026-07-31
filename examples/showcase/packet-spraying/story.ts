@@ -35,9 +35,9 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   },
   {
     id: 'packet-spraying',
-    title: 'Spraying across four planes',
+    title: 'Spraying across four paths',
     description:
-      'Alternating packets spread across independent network paths and reunite near their destinations.',
+      'Alternating packets cross two switch planes through four independent paths before reuniting.',
     duration: 8,
     networkState: 'healthy',
     camera: {target: [0, -0.2, 0], distance: 11.8, yaw: 0.78, pitch: 0.49}
@@ -46,7 +46,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
     id: 'congestion',
     title: 'Congestion and packet trimming',
     description:
-      'Packets shift toward healthy planes while an overloaded switch trims payloads into headers.',
+      'Packets shift toward healthy backbone paths while an overloaded switch trims payloads into headers.',
     duration: 7,
     networkState: 'congested',
     camera: {target: [0, 0.65, 0.55], distance: 10.6, yaw: 0.42, pitch: 0.45}
@@ -55,7 +55,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
     id: 'failure',
     title: 'Failure and instant rerouting',
     description:
-      'A failed switch drops in-flight packets, then traffic moves onto the surviving planes.',
+      'A failed switch drops in-flight packets, then traffic moves onto the surviving backbone paths.',
     duration: 8,
     networkState: 'failed',
     camera: {target: [0, 0.7, 0.55], distance: 10.2, yaw: 0.24, pitch: 0.43}
@@ -64,7 +64,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
     id: 'recovery',
     title: 'Probe, confirm, restore',
     description:
-      'A blue probe reaches the repaired switch, then a cyan acknowledgment restores its plane.',
+      'A blue probe reaches the repaired switch, then a cyan acknowledgment restores its path.',
     duration: 7,
     networkState: 'recovering',
     camera: {target: [0, 0.9, 0.65], distance: 9.8, yaw: 0.16, pitch: 0.46}
