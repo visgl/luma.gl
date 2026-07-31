@@ -66,17 +66,22 @@ export class WebGLAdapter extends Adapter {
     const legacyCanvasContextProps =
       typeof props.createCanvasContext === 'object' ? props.createCanvasContext : {};
     const canvasContextProps = {...legacyCanvasContextProps, ...props.canvasContextProps};
+    const hasExplicitDrawingBufferTracking =
+      canvasContextProps.drawingBufferSizeTracking !== undefined ||
+      canvasContextProps.drawingBufferSizeSource !== undefined;
     const usesAutomaticDrawingBufferSizing =
-      (canvasContextProps.drawingBufferSizingMode !== undefined &&
-        canvasContextProps.drawingBufferSizingMode !== 'manual') ||
+      canvasContextProps.drawingBufferSizeTracking === 'canvas' ||
       canvasContextProps.pixelRatio !== undefined ||
-      canvasContextProps.autoResize === true;
-    const trackCanvas =
-      'trackCanvas' in canvasContextProps
-        ? canvasContextProps.trackCanvas
-        : usesAutomaticDrawingBufferSizing
-          ? null
-          : gl.canvas;
+      canvasContextProps.autoResize === true ||
+      canvasContextProps.useDevicePixels !== undefined ||
+      canvasContextProps.pixelSizeSource !== undefined;
+    const attachedContextDefaults =
+      hasExplicitDrawingBufferTracking || usesAutomaticDrawingBufferSizing
+        ? {}
+        : {
+            drawingBufferSizeTracking: 'external-canvas' as const,
+            drawingBufferSizeSource: gl.canvas
+          };
 
     // We create a new device using the provided WebGL context and its canvas
     // The external owner resizes the attached canvas; luma.gl mirrors its current dimensions.
@@ -87,7 +92,7 @@ export class WebGLAdapter extends Adapter {
       canvasContextProps: {
         canvas: gl.canvas,
         autoResize: false,
-        trackCanvas,
+        ...attachedContextDefaults,
         ...canvasContextProps
       }
     });

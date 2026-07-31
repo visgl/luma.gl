@@ -22,7 +22,7 @@ export {Device, DeviceFeatures, DeviceLimits, isHTMLInCanvasSupported} from './a
 
 export type {
   CanvasContextProps,
-  DrawingBufferSizingMode,
+  DrawingBufferSizeTracking,
   MutableCanvasContextProps
 } from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';

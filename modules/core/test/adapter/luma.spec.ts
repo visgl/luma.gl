@@ -29,11 +29,11 @@ test('luma#canvasContextProps configures and overrides the default canvas contex
     adapters: [nullAdapter],
     createCanvasContext: {
       width: 4,
-      drawingBufferSizingMode: 'manual'
+      drawingBufferSizeTracking: 'none'
     },
     canvasContextProps: {
       width: 8,
-      drawingBufferSizingMode: 'track-css-pixels',
+      drawingBufferSizeTracking: 'canvas',
       pixelRatio: 1
     }
   });
@@ -41,9 +41,9 @@ test('luma#canvasContextProps configures and overrides the default canvas contex
 
   t.equal(canvasContext.props.width, 8, 'canvasContextProps overrides legacy object props');
   t.equal(
-    canvasContext.props.drawingBufferSizingMode,
-    'track-css-pixels',
-    'preferred sizing mode is forwarded'
+    canvasContext.props.drawingBufferSizeTracking,
+    'canvas',
+    'preferred tracking behavior is forwarded'
   );
   t.equal(canvasContext.props.pixelRatio, 1, 'preferred pixel ratio is forwarded');
   t.end();
@@ -55,16 +55,16 @@ test('luma#createDevice uses canvasContextProps when createCanvasContext is true
     adapters: [nullAdapter],
     createCanvasContext: true,
     canvasContextProps: {
-      drawingBufferSizingMode: 'track-css-pixels',
+      drawingBufferSizeTracking: 'canvas',
       pixelRatio: 1.5
     }
   });
   const canvasContext = device.getDefaultCanvasContext();
 
   t.equal(
-    canvasContext.props.drawingBufferSizingMode,
-    'track-css-pixels',
-    'sizing mode is forwarded'
+    canvasContext.props.drawingBufferSizeTracking,
+    'canvas',
+    'tracking behavior is forwarded'
   );
   t.equal(canvasContext.props.pixelRatio, 1.5, 'pixel ratio is forwarded');
   t.end();

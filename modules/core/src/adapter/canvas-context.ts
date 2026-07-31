@@ -4,7 +4,7 @@
 
 export type {
   CanvasContextProps,
-  DrawingBufferSizingMode,
+  DrawingBufferSizeTracking,
   MutableCanvasContextProps
 } from './canvas-surface';
 import {CanvasSurface} from './canvas-surface';

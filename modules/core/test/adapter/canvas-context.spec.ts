@@ -361,16 +361,13 @@ test('CanvasContext#_handleResize keeps numeric useDevicePixels override across 
   t.end();
 });
 
-test('CanvasContext#drawingBufferSizingMode supports explicit automatic and manual sizing', t => {
+test('CanvasContext#drawingBufferSizeTracking supports canvas, external, and no tracking', t => {
   if (!isBrowser()) {
     t.end();
     return;
   }
 
-  const exactCanvasContext = new TestCanvasContext(
-    {drawingBufferSizingMode: 'track-device-pixels'},
-    false
-  );
+  const exactCanvasContext = new TestCanvasContext({drawingBufferSizeTracking: 'canvas'}, false);
   (exactCanvasContext as any)._handleResize([
     {
       target: exactCanvasContext.canvas,
@@ -381,13 +378,10 @@ test('CanvasContext#drawingBufferSizingMode supports explicit automatic and manu
   t.deepEqual(
     exactCanvasContext.getDrawingBufferSize(),
     [151, 76],
-    'track-device-pixels mode uses exact physical dimensions'
+    'canvas tracking uses exact physical dimensions when available'
   );
 
-  const fallbackCanvasContext = new TestCanvasContext(
-    {drawingBufferSizingMode: 'track-device-pixels'},
-    false
-  );
+  const fallbackCanvasContext = new TestCanvasContext({drawingBufferSizeTracking: 'canvas'}, false);
   (fallbackCanvasContext as any)._handleResize([
     {
       target: fallbackCanvasContext.canvas,
@@ -397,29 +391,11 @@ test('CanvasContext#drawingBufferSizingMode supports explicit automatic and manu
   t.deepEqual(
     fallbackCanvasContext.getDrawingBufferSize(),
     [Math.floor(100.4 * window.devicePixelRatio), Math.floor(50.4 * window.devicePixelRatio)],
-    'track-device-pixels falls back to CSS dimensions times browser DPR'
-  );
-
-  const contentBoxCanvasContext = new TestCanvasContext(
-    {drawingBufferSizingMode: 'track-css-pixels'},
-    false
-  );
-  contentBoxCanvasContext.getDevicePixelRatio = () => 1.5;
-  (contentBoxCanvasContext as any)._handleResize([
-    {
-      target: contentBoxCanvasContext.canvas,
-      contentBoxSize: [{inlineSize: 100.4, blockSize: 50.4}],
-      devicePixelContentBoxSize: [{inlineSize: 151, blockSize: 76}]
-    }
-  ]);
-  t.deepEqual(
-    contentBoxCanvasContext.getDrawingBufferSize(),
-    [150, 75],
-    'track-css-pixels mode uses CSS dimensions times browser DPR'
+    'canvas tracking falls back to CSS dimensions times browser DPR'
   );
 
   const fixedRatioCanvasContext = new TestCanvasContext(
-    {drawingBufferSizingMode: 'track-css-pixels', pixelRatio: 1},
+    {drawingBufferSizeTracking: 'canvas', pixelRatio: 1},
     false
   );
   fixedRatioCanvasContext.getDevicePixelRatio = () => 2;
@@ -432,10 +408,10 @@ test('CanvasContext#drawingBufferSizingMode supports explicit automatic and manu
   t.deepEqual(
     fixedRatioCanvasContext.getDrawingBufferSize(),
     [100, 50],
-    'pixelRatio overrides browser DPR in track-css-pixels mode'
+    'pixelRatio overrides browser DPR in canvas tracking mode'
   );
 
-  const manualCanvasContext = new TestCanvasContext({drawingBufferSizingMode: 'manual'}, false);
+  const manualCanvasContext = new TestCanvasContext({drawingBufferSizeTracking: 'none'}, false);
   const {calls, device} = createCanvasContextSpyDevice();
   // @ts-expect-error read only
   manualCanvasContext.device = device;
@@ -457,7 +433,7 @@ test('CanvasContext#drawingBufferSizingMode supports explicit automatic and manu
   t.end();
 });
 
-test('CanvasContext#trackCanvas mirrors source dimensions before drawing', t => {
+test('CanvasContext#external-canvas tracking mirrors source dimensions before drawing', t => {
   if (!isBrowser()) {
     t.end();
     return;
@@ -466,12 +442,18 @@ test('CanvasContext#trackCanvas mirrors source dimensions before drawing', t => 
   const sourceCanvas = document.createElement('canvas');
   sourceCanvas.width = 320;
   sourceCanvas.height = 180;
-  const canvasContext = new TestCanvasContext({trackCanvas: sourceCanvas}, false);
+  const canvasContext = new TestCanvasContext(
+    {
+      drawingBufferSizeTracking: 'external-canvas',
+      drawingBufferSizeSource: sourceCanvas
+    },
+    false
+  );
 
   t.equal(
-    canvasContext.props.drawingBufferSizingMode,
-    'manual',
-    'tracking a canvas selects manual observer sizing'
+    canvasContext.props.drawingBufferSizeTracking,
+    'external-canvas',
+    'external canvas tracking is explicit'
   );
   t.deepEqual(
     canvasContext.getDrawingBufferSize(),
@@ -506,7 +488,11 @@ test('CanvasContext#trackCanvas mirrors source dimensions before drawing', t => 
 
   const attachedCanvas = document.createElement('canvas');
   const attachedCanvasContext = new TestCanvasContext(
-    {canvas: attachedCanvas, trackCanvas: attachedCanvas},
+    {
+      canvas: attachedCanvas,
+      drawingBufferSizeTracking: 'external-canvas',
+      drawingBufferSizeSource: attachedCanvas
+    },
     false
   );
   attachedCanvas.width = 512;
@@ -521,18 +507,36 @@ test('CanvasContext#trackCanvas mirrors source dimensions before drawing', t => 
     () =>
       new TestCanvasContext(
         {
-          trackCanvas: sourceCanvas,
-          drawingBufferSizingMode: 'track-css-pixels'
+          drawingBufferSizeSource: sourceCanvas,
+          drawingBufferSizeTracking: 'canvas'
         },
         false
       ),
     /assertion failed/,
-    'trackCanvas rejects conflicting automatic sizing'
+    'canvas tracking rejects an external source'
   );
   t.throws(
-    () => new TestCanvasContext({trackCanvas: sourceCanvas, pixelRatio: 2}, false),
+    () =>
+      new TestCanvasContext(
+        {
+          drawingBufferSizeTracking: 'external-canvas',
+          drawingBufferSizeSource: sourceCanvas,
+          pixelRatio: 2
+        },
+        false
+      ),
     /assertion failed/,
-    'trackCanvas rejects a conflicting pixel ratio'
+    'external canvas tracking rejects a conflicting pixel ratio'
+  );
+  t.throws(
+    () => new TestCanvasContext({drawingBufferSizeTracking: 'external-canvas'}, false),
+    /assertion failed/,
+    'external canvas tracking requires a source'
+  );
+  t.throws(
+    () => new TestCanvasContext({drawingBufferSizeSource: sourceCanvas}, false),
+    /assertion failed/,
+    'an external source requires an explicit tracking behavior'
   );
 
   t.end();
@@ -545,7 +549,7 @@ test('CanvasContext#setProps updates drawing buffer sizing and observer mode', t
   }
 
   const canvasContext = new TestCanvasContext(
-    {drawingBufferSizingMode: 'track-css-pixels', pixelRatio: 1},
+    {drawingBufferSizeTracking: 'canvas', pixelRatio: 1},
     false
   );
   canvasContext.getDevicePixelRatio = () => 1.5;
@@ -567,14 +571,12 @@ test('CanvasContext#setProps updates drawing buffer sizing and observer mode', t
   t.deepEqual(
     canvasContext.getDrawingBufferSize(),
     [150, 75],
-    'clearing the fixed ratio resumes browser DPR'
+    'clearing the fixed ratio resumes exact device-pixel tracking'
   );
-
-  canvasContext.setProps({drawingBufferSizingMode: 'track-device-pixels'});
   t.equal(
     (canvasContext as any)._canvasObserver.props.resizeObserverBox,
     'device-pixel-content-box',
-    'switching mode reconfigures the observer box'
+    'clearing pixelRatio reconfigures the observer box'
   );
   (canvasContext as any)._handleResize([
     {
@@ -589,7 +591,7 @@ test('CanvasContext#setProps updates drawing buffer sizing and observer mode', t
     'exact observer dimensions are used after switching mode'
   );
 
-  canvasContext.setProps({drawingBufferSizingMode: 'manual'});
+  canvasContext.setProps({drawingBufferSizeTracking: 'none'});
   (canvasContext as any)._handleResize([
     {
       target: canvasContext.canvas,
@@ -606,23 +608,30 @@ test('CanvasContext#setProps updates drawing buffer sizing and observer mode', t
   const sourceCanvas = document.createElement('canvas');
   sourceCanvas.width = 240;
   sourceCanvas.height = 120;
-  canvasContext.setProps({trackCanvas: sourceCanvas});
+  canvasContext.setProps({
+    drawingBufferSizeTracking: 'external-canvas',
+    drawingBufferSizeSource: sourceCanvas
+  });
   t.deepEqual(
     canvasContext.getDrawingBufferSize(),
     [240, 120],
-    'trackCanvas can take ownership dynamically'
+    'external canvas tracking can take ownership dynamically'
   );
 
   canvasContext.setProps({
-    trackCanvas: null,
-    drawingBufferSizingMode: 'track-css-pixels',
+    drawingBufferSizeSource: null,
+    drawingBufferSizeTracking: 'canvas',
     pixelRatio: 1
   });
-  t.equal(canvasContext.props.trackCanvas, null, 'tracked canvas can be cleared dynamically');
   t.equal(
-    canvasContext.props.drawingBufferSizingMode,
-    'track-css-pixels',
-    'automatic sizing can resume when trackCanvas is cleared'
+    canvasContext.props.drawingBufferSizeSource,
+    null,
+    'external size source can be cleared dynamically'
+  );
+  t.equal(
+    canvasContext.props.drawingBufferSizeTracking,
+    'canvas',
+    'canvas tracking can resume when the external source is cleared'
   );
 
   t.end();
@@ -636,17 +645,17 @@ test('CanvasContext#new drawing buffer sizing props override and validate legacy
 
   const legacyCSSCanvasContext = new TestCanvasContext({useDevicePixels: false}, false);
   t.equal(
-    legacyCSSCanvasContext.props.drawingBufferSizingMode,
-    'track-css-pixels',
-    'legacy false normalizes to track-css-pixels mode'
+    legacyCSSCanvasContext.props.drawingBufferSizeTracking,
+    'canvas',
+    'legacy false normalizes to canvas tracking'
   );
   t.equal(legacyCSSCanvasContext.props.pixelRatio, 1, 'legacy false normalizes to ratio 1');
 
   const legacyNumericCanvasContext = new TestCanvasContext({useDevicePixels: 1.5}, false);
   t.equal(
-    legacyNumericCanvasContext.props.drawingBufferSizingMode,
-    'track-css-pixels',
-    'legacy numeric ratio normalizes to track-css-pixels mode'
+    legacyNumericCanvasContext.props.drawingBufferSizeTracking,
+    'canvas',
+    'legacy numeric ratio normalizes to canvas tracking'
   );
   t.equal(legacyNumericCanvasContext.props.pixelRatio, 1.5, 'legacy numeric ratio is preserved');
 
@@ -655,9 +664,9 @@ test('CanvasContext#new drawing buffer sizing props override and validate legacy
     false
   );
   t.equal(
-    legacyExactCanvasContext.props.drawingBufferSizingMode,
-    'track-device-pixels',
-    'legacy exact sizing normalizes to track-device-pixels mode'
+    legacyExactCanvasContext.props.drawingBufferSizeTracking,
+    'canvas',
+    'legacy exact sizing normalizes to canvas tracking'
   );
 
   const legacyCSSDPRCanvasContext = new TestCanvasContext(
@@ -665,9 +674,9 @@ test('CanvasContext#new drawing buffer sizing props override and validate legacy
     false
   );
   t.equal(
-    legacyCSSDPRCanvasContext.props.drawingBufferSizingMode,
-    'track-css-pixels',
-    'legacy CSS-DPR sizing normalizes to track-css-pixels mode'
+    legacyCSSDPRCanvasContext.props.drawingBufferSizeTracking,
+    'canvas',
+    'legacy CSS-DPR sizing normalizes to canvas tracking'
   );
   t.equal(
     legacyCSSDPRCanvasContext.props.pixelRatio,
@@ -677,14 +686,14 @@ test('CanvasContext#new drawing buffer sizing props override and validate legacy
 
   const legacyManualCanvasContext = new TestCanvasContext({autoResize: false}, false);
   t.equal(
-    legacyManualCanvasContext.props.drawingBufferSizingMode,
-    'manual',
-    'legacy autoResize false normalizes to manual mode'
+    legacyManualCanvasContext.props.drawingBufferSizeTracking,
+    'none',
+    'legacy autoResize false normalizes to no tracking'
   );
 
   const newCanvasContext = new TestCanvasContext(
     {
-      drawingBufferSizingMode: 'track-css-pixels',
+      drawingBufferSizeTracking: 'canvas',
       autoResize: false,
       useDevicePixels: false,
       pixelSizeSource: 'exact'
@@ -695,13 +704,14 @@ test('CanvasContext#new drawing buffer sizing props override and validate legacy
   (newCanvasContext as any)._handleResize([
     {
       target: newCanvasContext.canvas,
-      contentBoxSize: [{inlineSize: 100, blockSize: 50}]
+      contentBoxSize: [{inlineSize: 100, blockSize: 50}],
+      devicePixelContentBoxSize: [{inlineSize: 200, blockSize: 100}]
     }
   ]);
   t.deepEqual(
     newCanvasContext.getDrawingBufferSize(),
     [200, 100],
-    'new track-css-pixels mode ignores conflicting legacy sizing props'
+    'new canvas tracking ignores conflicting legacy sizing props'
   );
   newCanvasContext.setProps({useDevicePixels: 1});
   t.equal(
@@ -711,23 +721,22 @@ test('CanvasContext#new drawing buffer sizing props override and validate legacy
   );
 
   t.throws(
-    () =>
-      new TestCanvasContext({drawingBufferSizingMode: 'track-device-pixels', pixelRatio: 2}, false),
+    () => new TestCanvasContext({drawingBufferSizeTracking: 'none', pixelRatio: 2}, false),
     /assertion failed/,
-    'pixelRatio is rejected outside track-css-pixels mode'
+    'pixelRatio is rejected outside canvas tracking'
   );
   t.throws(
-    () =>
-      new TestCanvasContext({drawingBufferSizingMode: 'track-css-pixels', pixelRatio: 0}, false),
+    () => new TestCanvasContext({pixelRatio: 2}, false),
+    /assertion failed/,
+    'pixelRatio requires explicit canvas tracking'
+  );
+  t.throws(
+    () => new TestCanvasContext({drawingBufferSizeTracking: 'canvas', pixelRatio: 0}, false),
     /assertion failed/,
     'non-positive pixelRatio is rejected'
   );
   t.throws(
-    () =>
-      new TestCanvasContext(
-        {drawingBufferSizingMode: 'track-css-pixels', pixelRatio: Infinity},
-        false
-      ),
+    () => new TestCanvasContext({drawingBufferSizeTracking: 'canvas', pixelRatio: Infinity}, false),
     /assertion failed/,
     'non-finite pixelRatio is rejected'
   );

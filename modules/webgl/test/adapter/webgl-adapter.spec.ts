@@ -17,7 +17,7 @@ test('WebGLAdapter imports from the ESM package entry without circular init erro
   t.equal(webglModule.WebGLDevice.name, 'WebGLDevice', 'exports the WebGL device class');
 });
 
-test('WebGLAdapter#attach uses manual sizing by default and accepts canvasContextProps', async t => {
+test('WebGLAdapter#attach tracks its external canvas by default and accepts canvasContextProps', async t => {
   if (!isBrowser()) {
     t.end();
     return;
@@ -34,12 +34,12 @@ test('WebGLAdapter#attach uses manual sizing by default and accepts canvasContex
   const defaultDevice = await webgl2Adapter.attach(defaultGL);
   const defaultCanvasContext = defaultDevice.getDefaultCanvasContext();
   t.equal(
-    defaultCanvasContext.props.drawingBufferSizingMode,
-    'manual',
-    'attached WebGL contexts default to manual drawing buffer sizing'
+    defaultCanvasContext.props.drawingBufferSizeTracking,
+    'external-canvas',
+    'attached WebGL contexts default to external canvas tracking'
   );
   t.equal(
-    defaultCanvasContext.props.trackCanvas,
+    defaultCanvasContext.props.drawingBufferSizeSource,
     defaultCanvas,
     'attached WebGL contexts track their externally owned canvas'
   );
@@ -62,19 +62,19 @@ test('WebGLAdapter#attach uses manual sizing by default and accepts canvasContex
 
   const configuredDevice = await webgl2Adapter.attach(configuredGL, {
     canvasContextProps: {
-      drawingBufferSizingMode: 'track-css-pixels',
+      drawingBufferSizeTracking: 'canvas',
       pixelRatio: 1
     }
   });
   const configuredCanvasContext = configuredDevice.getDefaultCanvasContext();
   t.equal(
-    configuredCanvasContext.props.drawingBufferSizingMode,
-    'track-css-pixels',
+    configuredCanvasContext.props.drawingBufferSizeTracking,
+    'canvas',
     'canvasContextProps overrides the attached context default'
   );
   t.equal(configuredCanvasContext.props.pixelRatio, 1, 'pixel ratio is forwarded on attach');
   t.equal(
-    configuredCanvasContext.props.trackCanvas,
+    configuredCanvasContext.props.drawingBufferSizeSource,
     null,
     'explicit automatic sizing disables attached-canvas tracking'
   );
