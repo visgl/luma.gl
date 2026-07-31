@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AGGREGATION_POSITIONS, LEAF_POSITIONS, type Color, type Vector3} from './network';
+import {
+  AGGREGATION_POSITIONS,
+  LEAF_POSITIONS,
+  SWITCH_CONFIRMATION_DURATION,
+  SWITCH_PROBE_DURATION,
+  type Color,
+  type Vector3
+} from './network';
 
 export type NetworkStoryState = 'healthy' | 'congested' | 'failed' | 'recovering';
 
@@ -77,6 +84,7 @@ export const DEFAULT_NETWORK_OPTICS_LEVEL = 7;
 export const MAX_NETWORK_HDR_HIGHLIGHT_BOOST = 0.8;
 export const DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST = 0.28;
 export const GUIDED_STORY_SWITCH_INDEX = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + 1;
+const RECOVERY_CHAPTER_DURATION = 7;
 
 export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   {
@@ -247,7 +255,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
     title: 'Probe, confirm, restore',
     description:
       'A blue probe reaches the repaired switch, then a cyan acknowledgment restores its path.',
-    duration: 7,
+    duration: RECOVERY_CHAPTER_DURATION,
     networkState: 'recovering',
     beats: [
       {
@@ -264,7 +272,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         description: 'A cyan acknowledgment returns and confirms the entire route is healthy.',
         color: '#70eddf',
         pathIndex: 1,
-        position: 0.47
+        position: SWITCH_PROBE_DURATION / RECOVERY_CHAPTER_DURATION
       },
       {
         id: 'restored',
@@ -272,7 +280,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
         description: 'Only after confirmation do alternating data packets return to the spine.',
         color: '#7de9a5',
         pathIndex: 1,
-        position: 0.77
+        position: (SWITCH_PROBE_DURATION + SWITCH_CONFIRMATION_DURATION) / RECOVERY_CHAPTER_DURATION
       }
     ],
     camera: {target: [0, 0.9, 0.65], distance: 9.8, yaw: 0.16, pitch: 0.46}

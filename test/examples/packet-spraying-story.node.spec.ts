@@ -3,7 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network';
+import {
+  SWITCH_CONFIRMATION_DURATION,
+  SWITCH_POSITIONS,
+  SWITCH_PROBE_DURATION
+} from '../../examples/showcase/packet-spraying/network';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
@@ -98,9 +102,19 @@ test('packet-spraying cinematic story beats explain load, failure, and confirmed
   testCase.equal(getNetworkStoryBeat(2, 0)?.id, 'pressure', 'congestion is visible immediately');
   testCase.equal(getNetworkStoryBeat(3, 0)?.id, 'packet-loss', 'failure begins with packet loss');
   testCase.equal(
-    getNetworkStoryBeat(4, 4)?.id,
+    getNetworkStoryBeat(4, SWITCH_PROBE_DURATION - 0.01)?.id,
+    'probe',
+    'the outbound probe remains active until it reaches the repaired switch'
+  );
+  testCase.equal(
+    getNetworkStoryBeat(4, SWITCH_PROBE_DURATION)?.id,
     'confirmation',
-    'recovery waits for its cyan confirmation beat'
+    'the cyan confirmation begins exactly when the outbound probe arrives'
+  );
+  testCase.equal(
+    getNetworkStoryBeat(4, SWITCH_PROBE_DURATION + SWITCH_CONFIRMATION_DURATION)?.id,
+    'restored',
+    'ordinary traffic resumes exactly when the recovery acknowledgment completes'
   );
   testCase.equal(
     getNetworkStoryBeat(4, Number.NaN)?.id,
