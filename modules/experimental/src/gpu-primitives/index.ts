@@ -5,6 +5,7 @@
 export {
   CompiledGPUCommandGraph,
   GPUCommandGraph,
+  GPUCommandGraphEncoding,
   GraphBufferHandle,
   GraphDataView,
   GraphTextureHandle,
@@ -12,6 +13,7 @@ export {
   GraphVectorView
 } from './gpu-command-graph';
 export type {
+  GPUCommandGraphCapabilities,
   GPUCommandGraphCompileContext,
   GPUCommandGraphComputeExecutable,
   GPUCommandGraphComputeNode,
@@ -19,10 +21,15 @@ export type {
   GPUCommandGraphCopyNode,
   GPUCommandGraphEncodeContext,
   GPUCommandGraphEncodeOptions,
+  GPUCommandGraphEncodingStats,
   GPUCommandGraphNode,
+  GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphNodeTiming,
+  GPUCommandGraphNodeType,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphRenderNode,
   GPUCommandGraphStats,
+  GPUCommandGraphTimingReport,
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,

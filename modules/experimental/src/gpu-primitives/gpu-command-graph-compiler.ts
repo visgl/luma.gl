@@ -159,20 +159,46 @@ export function compileGPUCommandGraph<Parameters>(props: {
     throw error;
   }
 
-  const logicalTransientBytes = Array.from(props.buffers.values())
-    .filter(buffer => buffer.transient)
-    .reduce((sum, buffer) => sum + buffer.byteLength, 0);
-  const physicalTransientBytes = bufferPlan.reduce(
-    (sum, allocation) => sum + allocation.byteLength,
-    0
+  const logicalBuffers = Array.from(props.buffers.values());
+  const importedBuffers = logicalBuffers.filter(buffer => !buffer.transient);
+  const logicalTransientBuffers = logicalBuffers.filter(buffer => buffer.transient);
+  const importedBufferBytes = sumSafeByteLengths(
+    importedBuffers.map(buffer => buffer.byteLength),
+    'imported buffer capacities'
+  );
+  const logicalTransientBytes = sumSafeByteLengths(
+    logicalTransientBuffers.map(buffer => buffer.byteLength),
+    'logical transient buffer capacities'
+  );
+  const logicalBufferBytes = addSafeByteLengths(
+    importedBufferBytes,
+    logicalTransientBytes,
+    'logical buffer capacities'
+  );
+  const physicalTransientBytes = sumSafeByteLengths(
+    bufferPlan.map(allocation => allocation.byteLength),
+    'physical transient buffer capacities'
   );
   const reusedTransientBytes = Math.max(0, logicalTransientBytes - physicalTransientBytes);
-  const logicalTransientTextureBytes = Array.from(props.textures.values())
-    .filter(texture => texture.transient)
-    .reduce((sum, texture) => sum + getTextureByteLength(texture), 0);
-  const physicalTransientTextureBytes = texturePlan.reduce(
-    (sum, allocation) => sum + allocation.byteLength,
-    0
+  const logicalTextures = Array.from(props.textures.values());
+  const importedTextures = logicalTextures.filter(texture => !texture.transient);
+  const logicalTransientTextures = logicalTextures.filter(texture => texture.transient);
+  const importedTextureBytes = sumSafeByteLengths(
+    importedTextures.map(getTextureByteLength),
+    'imported texture estimates'
+  );
+  const logicalTransientTextureBytes = sumSafeByteLengths(
+    logicalTransientTextures.map(getTextureByteLength),
+    'logical transient texture estimates'
+  );
+  const logicalTextureBytes = addSafeByteLengths(
+    importedTextureBytes,
+    logicalTransientTextureBytes,
+    'logical texture estimates'
+  );
+  const physicalTransientTextureBytes = sumSafeByteLengths(
+    texturePlan.map(allocation => allocation.byteLength),
+    'physical transient texture estimates'
   );
   const reusedTransientTextureBytes = Math.max(
     0,
@@ -180,18 +206,22 @@ export function compileGPUCommandGraph<Parameters>(props: {
   );
   const stats: GPUCommandGraphStats = {
     nodeOrder: nodeOrder.map(node => node.id),
-    logicalTransientBufferCount: Array.from(props.buffers.values()).filter(
-      buffer => buffer.transient
-    ).length,
+    importedBufferCount: importedBuffers.length,
+    importedBufferBytes,
+    logicalBufferCount: logicalBuffers.length,
+    logicalBufferBytes,
+    logicalTransientBufferCount: logicalTransientBuffers.length,
     physicalTransientBufferCount: bufferPlan.length,
     logicalTransientBytes,
     physicalTransientBytes,
     reusedTransientBytes,
     reusePercentage:
       logicalTransientBytes > 0 ? (reusedTransientBytes / logicalTransientBytes) * 100 : 0,
-    logicalTransientTextureCount: Array.from(props.textures.values()).filter(
-      texture => texture.transient
-    ).length,
+    importedTextureCount: importedTextures.length,
+    importedTextureBytes,
+    logicalTextureCount: logicalTextures.length,
+    logicalTextureBytes,
+    logicalTransientTextureCount: logicalTransientTextures.length,
     physicalTransientTextureCount: texturePlan.length,
     logicalTransientTextureBytes,
     physicalTransientTextureBytes,
@@ -199,7 +229,17 @@ export function compileGPUCommandGraph<Parameters>(props: {
     textureReusePercentage:
       logicalTransientTextureBytes > 0
         ? (reusedTransientTextureBytes / logicalTransientTextureBytes) * 100
-        : 0
+        : 0,
+    logicalResourceBytes: addSafeByteLengths(
+      logicalBufferBytes,
+      logicalTextureBytes,
+      'logical resource estimates'
+    ),
+    physicalTransientResourceBytes: addSafeByteLengths(
+      physicalTransientBytes,
+      physicalTransientTextureBytes,
+      'physical transient resource estimates'
+    )
   };
 
   return {
@@ -582,13 +622,37 @@ function areTextureDescriptorsCompatible(
 function getTextureByteLength(texture: GraphTextureHandle): number {
   let byteLength = 0;
   for (let mipLevel = 0; mipLevel < texture.mipLevels; mipLevel++) {
-    byteLength += textureFormatDecoder.computeMemoryLayout({
-      format: texture.format,
-      width: Math.max(1, texture.width >> mipLevel),
-      height: texture.dimension === '1d' ? 1 : Math.max(1, texture.height >> mipLevel),
-      depth: texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth,
-      byteAlignment: 1
-    }).byteLength;
+    byteLength = addSafeByteLengths(
+      byteLength,
+      textureFormatDecoder.computeMemoryLayout({
+        format: texture.format,
+        width: Math.max(1, texture.width >> mipLevel),
+        height: texture.dimension === '1d' ? 1 : Math.max(1, texture.height >> mipLevel),
+        depth: texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth,
+        byteAlignment: 1
+      }).byteLength,
+      `texture "${texture.id}" mip estimates`
+    );
   }
-  return byteLength * texture.samples;
+  const sampledByteLength = byteLength * texture.samples;
+  if (!Number.isSafeInteger(sampledByteLength)) {
+    throw new Error(
+      `GPUCommandGraph texture "${texture.id}" byte estimate exceeds safe integer range`
+    );
+  }
+  return sampledByteLength;
+}
+
+/** Adds byte lengths without allowing silent precision loss in memory statistics. */
+function addSafeByteLengths(left: number, right: number, label: string): number {
+  const total = left + right;
+  if (!Number.isSafeInteger(total)) {
+    throw new Error(`GPUCommandGraph ${label} exceed safe integer range`);
+  }
+  return total;
+}
+
+/** Sums byte lengths without allowing silent precision loss in memory statistics. */
+function sumSafeByteLengths(values: number[], label: string): number {
+  return values.reduce((total, value) => addSafeByteLengths(total, value, label), 0);
 }

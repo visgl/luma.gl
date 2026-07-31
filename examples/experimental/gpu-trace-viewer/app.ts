@@ -211,9 +211,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
     const pick = this.pendingPick;
     this.writeViewUniforms(width, height, pick);
-    const encodeStart = performance.now();
-    resources.compiled.encode(device.commandEncoder, {parameters: this.view});
-    this.encodeTimeMilliseconds = performance.now() - encodeStart;
+    const encoding = resources.compiled.encode(device.commandEncoder, {parameters: this.view});
+    this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
     if (pick && !this.pickReadPending) {
       this.pendingPick = null;
@@ -1156,6 +1155,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         <span>Visible layout lanes</span><strong>${formatCount(this.getVisibleLaneCount())}</strong>
         <span>Collapsed processes</span><strong>${formatCount(this.processStates.filter(state => state === TRACE_COLLAPSED_STATE).length)}</strong>
         <span>CPU graph encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>
+        <span>Adapter</span><strong>${resources.compiled.capabilities.softwareAdapter ? 'software' : 'hardware'}</strong>
+        <span>Timestamp queries</span><strong>${resources.compiled.capabilities.timestampQueries ? 'available' : 'unavailable'}</strong>
+        <span>Logical resources</span><strong>${formatBytes(stats.logicalResourceBytes)}</strong>
+        <span>Owned transients</span><strong>${formatBytes(stats.physicalTransientResourceBytes)}</strong>
         <span>Logical scratch</span><strong>${formatBytes(stats.logicalTransientBytes)}</strong>
         <span>Physical scratch</span><strong>${formatBytes(stats.physicalTransientBytes)}</strong>
         <span>Transient reuse</span><strong>${stats.reusePercentage.toFixed(0)}%</strong>

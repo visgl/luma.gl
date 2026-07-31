@@ -38,7 +38,8 @@ graph.addComputePass({
 });
 
 const compiled = graph.compile();
-compiled.encode(device.commandEncoder, {parameters: {time}});
+const encoding = compiled.encode(device.commandEncoder, {parameters: {time}});
+console.log(encoding.stats.cpuEncodeTimeMilliseconds);
 ```
 
 ## Lifecycle and ownership
@@ -181,13 +182,43 @@ implementation.
 
 Records every compiled node. `options.parameters` is forwarded to callbacks. `options.buffers` may
 override imported buffers by ID if capacity and usage remain compatible. `options.textures`
-overrides exact-size imported textures.
+overrides exact-size imported textures. It returns a `GPUCommandGraphEncoding` with synchronous
+whole-graph and per-node CPU encoding statistics.
 
 `encode()` never submits, maps, reads, or grows resources.
 
+If the caller's encoder has a timestamp query set, compute and render passes record timestamp pairs
+without changing graph code. `encoding.canReadGPUTimings` reports whether any pairs were captured.
+After submitting the command buffer, `await encoding.readTimings()` explicitly reads per-node and
+total GPU durations. The read is never automatic, and copy nodes remain CPU-timed until the portable
+command-encoder API exposes standalone timestamp writes.
+
+### `capabilities`
+
+Snapshots graph-relevant adapter information: timestamp-query support, software-adapter status,
+maximum buffer and storage-binding sizes, and compute invocation and dispatch limits. Applications
+can report or gate advanced diagnostics without inspecting backend handles.
+
 ### `stats`
 
-Reports node order and separate buffer and texture transient counts, bytes, and reuse percentages.
+Reports node order; imported, logical, and physical buffer and texture counts; declared or estimated
+bytes; combined logical and owned-transient memory; and separate buffer and texture reuse
+percentages. Imported bytes describe borrowed capacity and are never counted as graph-owned memory.
+
+### Benchmarking protocol
+
+Performance comparisons should warm the graph, then record `encoding.stats`, optional
+`readTimings()` results, and `compiled.stats` without adding readback to the normal frame loop. Use
+the same adapter and viewport for each run and include:
+
+- empty, one-row, workgroup-boundary, and immediately-over-boundary inputs;
+- the trace viewer's 250,000, 1,000,000, and 4,000,000 span capacities;
+- sparse and dense dependency neighborhoods;
+- repeated parameter-only updates that do not recompile the graph.
+
+Report adapter capabilities with the measurements so software and hardware results are not mixed.
+CPU encode, GPU execution, logical memory, physical transient memory, and reuse percentage are
+separate values and should not be collapsed into one score.
 
 ### `destroy()`
 

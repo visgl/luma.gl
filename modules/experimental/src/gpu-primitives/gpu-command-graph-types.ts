@@ -464,10 +464,37 @@ export type GPUCommandGraphNode<Parameters> =
   | GPUCommandGraphRenderNode<Parameters>
   | GPUCommandGraphCopyNode<Parameters>;
 
+/** Execution category of one scheduled graph node. */
+export type GPUCommandGraphNodeType = GPUCommandGraphNode<unknown>['type'];
+
+/** Device capabilities and limits that affect command-graph portability. */
+export type GPUCommandGraphCapabilities = {
+  /** Whether the device can collect GPU timestamp queries. */
+  timestampQueries: boolean;
+  /** Whether adapter metadata identifies a CPU or fallback implementation. */
+  softwareAdapter: boolean;
+  /** Maximum size of one GPU buffer allocation. */
+  maxBufferByteLength: number;
+  /** Maximum range visible through one storage-buffer binding. */
+  maxStorageBufferBindingByteLength: number;
+  /** Maximum invocations in one compute workgroup. */
+  maxComputeInvocationsPerWorkgroup: number;
+  /** Maximum dispatched workgroups along one dimension. */
+  maxComputeWorkgroupsPerDimension: number;
+};
+
 /** Resource-allocation and scheduling statistics for one compiled graph. */
 export type GPUCommandGraphStats = {
   /** Stable topological node order used for encoding. */
   nodeOrder: string[];
+  /** Number of imported logical buffer handles. */
+  importedBufferCount: number;
+  /** Sum of declared capacities for imported buffers. */
+  importedBufferBytes: number;
+  /** Total number of imported and transient logical buffer handles. */
+  logicalBufferCount: number;
+  /** Sum of declared capacities for all logical buffers. */
+  logicalBufferBytes: number;
   /** Number of logical transient buffer handles used by nodes. */
   logicalTransientBufferCount: number;
   /** Number of physical transient buffers allocated after lifetime reuse. */
@@ -480,6 +507,14 @@ export type GPUCommandGraphStats = {
   reusedTransientBytes: number;
   /** Percentage of logical buffer bytes avoided through reuse. */
   reusePercentage: number;
+  /** Number of imported logical texture handles. */
+  importedTextureCount: number;
+  /** Estimated bytes across imported logical textures. */
+  importedTextureBytes: number;
+  /** Total number of imported and transient logical texture handles. */
+  logicalTextureCount: number;
+  /** Estimated bytes across all logical textures. */
+  logicalTextureBytes: number;
   /** Number of logical transient texture handles used by nodes. */
   logicalTransientTextureCount: number;
   /** Number of physical transient textures allocated after lifetime reuse. */
@@ -492,6 +527,50 @@ export type GPUCommandGraphStats = {
   reusedTransientTextureBytes: number;
   /** Percentage of estimated logical texture bytes avoided through reuse. */
   textureReusePercentage: number;
+  /** Sum of declared buffer capacities and estimated texture bytes. */
+  logicalResourceBytes: number;
+  /** Estimated bytes owned by physical transient buffer and texture allocations. */
+  physicalTransientResourceBytes: number;
+};
+
+/** CPU encoding statistics captured synchronously for one scheduled node. */
+export type GPUCommandGraphNodeEncodingStats = {
+  /** Stable graph node identifier. */
+  id: string;
+  /** Node execution category. */
+  type: GPUCommandGraphNodeType;
+  /** CPU time spent resolving resources and recording this node. */
+  cpuEncodeTimeMilliseconds: number;
+  /** Whether the pass recorded a GPU timestamp pair. Copy nodes are currently CPU-only. */
+  hasGPUTimestamps: boolean;
+};
+
+/** Synchronous statistics for one complete graph encoding. */
+export type GPUCommandGraphEncodingStats = {
+  /** CPU time spent resolving imports and recording all graph nodes. */
+  cpuEncodeTimeMilliseconds: number;
+  /** Number of nodes encoded. */
+  nodeCount: number;
+  /** Number of compute or render nodes with a GPU timestamp pair. */
+  timestampedNodeCount: number;
+  /** Per-node CPU encoding statistics in scheduled order. */
+  nodes: GPUCommandGraphNodeEncodingStats[];
+};
+
+/** CPU and optional GPU duration for one encoded node. */
+export type GPUCommandGraphNodeTiming = GPUCommandGraphNodeEncodingStats & {
+  /** GPU execution duration, available only after an explicit timing read. */
+  gpuTimeMilliseconds?: number;
+};
+
+/** Explicit timing report for one encoded graph. */
+export type GPUCommandGraphTimingReport = {
+  /** CPU time spent encoding the graph. */
+  cpuEncodeTimeMilliseconds: number;
+  /** Sum of available per-node GPU durations. */
+  gpuTimeMilliseconds?: number;
+  /** Per-node CPU and optional GPU durations in scheduled order. */
+  nodes: GPUCommandGraphNodeTiming[];
 };
 
 /** Options supplied while encoding one compiled graph. */
