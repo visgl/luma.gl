@@ -181,6 +181,11 @@ test('packet-spraying floating-point highlights preserve honest display capabili
     'floating-point',
     'floating-point scene color is distinguished from display HDR'
   );
+  testCase.equal(
+    floatingPointProfile.maximumLuminance,
+    1,
+    'SDR presentation never emits unsupported extended-range values'
+  );
   testCase.ok(
     floatingPointProfile.highlightBoost > 0,
     'floating-point scenes retain bright detail'
@@ -195,8 +200,16 @@ test('packet-spraying floating-point highlights preserve honest display capabili
     'an extended display may use more of the available highlight headroom'
   );
   testCase.ok(
+    extendedProfile.maximumLuminance > 2,
+    'true HDR preserves packet and glass highlights well above SDR white'
+  );
+  testCase.ok(
     extendedProfile.bloomThresholdScale > floatingPointProfile.bloomThresholdScale,
     'selective bloom remains above ordinary scene brightness'
+  );
+  testCase.ok(
+    extendedProfile.illuminationScale > floatingPointProfile.illuminationScale,
+    'HDR displays can show stronger packet-driven glass lighting without washing out SDR'
   );
   testCase.equal(
     makeNetworkDynamicRangeProfile({

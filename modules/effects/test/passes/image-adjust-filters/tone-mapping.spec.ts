@@ -51,10 +51,20 @@ fn fragmentMain() -> @location(0) vec4f {
 
 test('toneMapping#defaults', testCase => {
   const defaultUniforms = getShaderModuleUniforms(toneMapping, {}, {});
-  const overriddenUniforms = getShaderModuleUniforms(toneMapping, {exposure: 2.5}, {});
+  const overriddenUniforms = getShaderModuleUniforms(
+    toneMapping,
+    {exposure: 2.5, maximumLuminance: 1.6},
+    {}
+  );
 
   testCase.equal(defaultUniforms.exposure, 1, 'exposure defaults to one');
+  testCase.equal(defaultUniforms.maximumLuminance, 1, 'standard displays retain existing output');
   testCase.equal(overriddenUniforms.exposure, 2.5, 'exposure accepts caller configuration');
+  testCase.equal(
+    overriddenUniforms.maximumLuminance,
+    1.6,
+    'extended displays can preserve highlights above SDR white'
+  );
   testCase.deepEqual(toneMapping.passes, [{filter: true}], 'runs as one fullscreen filter pass');
   testCase.end();
 });
@@ -64,6 +74,10 @@ test('toneMapping#cross-backend shader sources', testCase => {
     testCase.ok(shaderSource.includes('2.51'), 'includes the ACES numerator coefficient');
     testCase.ok(shaderSource.includes('2.43'), 'includes the ACES denominator coefficient');
     testCase.ok(shaderSource.includes('toneMapping.exposure'), 'applies configurable exposure');
+    testCase.ok(
+      shaderSource.includes('toneMapping.maximumLuminance'),
+      'preserves optional extended-range highlight output'
+    );
     testCase.ok(shaderSource.includes('color.a'), 'preserves input alpha');
   }
   testCase.end();

@@ -58,6 +58,7 @@ export type NetworkDynamicRangeProfile = {
   exposureScale: number;
   highlightBoost: number;
   illuminationScale: number;
+  maximumLuminance: number;
   sceneIsFloatingPoint: boolean;
   specularScale: number;
 };
@@ -396,7 +397,8 @@ export function makeNetworkDynamicRangeProfile(
     emissionScale: 1 + highlightBoost * 0.6,
     exposureScale: 1 - highlightBoost * 0.06,
     highlightBoost,
-    illuminationScale: 1 + highlightBoost * 0.5,
+    illuminationScale: 1 + highlightBoost * (supportsExtendedPresentation ? 0.86 : 0.34),
+    maximumLuminance: supportsExtendedPresentation ? 1 + highlightBoost * 3.2 : 1,
     sceneIsFloatingPoint,
     specularScale: 1 + highlightBoost * 0.32
   };

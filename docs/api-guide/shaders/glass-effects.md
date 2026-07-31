@@ -208,14 +208,17 @@ the preferred display format and reduce the extraction threshold.
 Floating-point scene rendering and HDR display presentation are distinct capabilities. An
 `rgba16float` intermediate attachment retains bright, saturated packet emission and narrow glass
 highlights even when the final canvas is standard dynamic range. Extended HDR presentation also
-requires a compatible WebGPU canvas, display, and extended tone-mapping configuration. Increase
-emission, local illumination, and reflective highlights gradually within available scene headroom;
+requires a compatible WebGPU canvas, display, and extended tone-mapping configuration. Configure
+the canvas with `colorFormat: 'rgba16float'`, `colorSpace: 'display-p3'`, and
+`toneMapping: 'extended'`, then set the filmic pass's `maximumLuminance` above one so its final
+output does not clamp the extended highlight range. Increase emission, local illumination, and
+reflective highlights gradually within available scene headroom;
 raise bloom extraction with them and finish with restrained filmic exposure. Multiplying a packet's
 existing red or green emission preserves its color without introducing pastel white halos.
 
-Interactive path highlighting should remain optically subordinate to the material: use a thin,
-low-opacity rim and bounded local illumination instead of filling the entire switch with bright
-color or increasing its transmission opacity.
+Interactive path highlighting should remain optically subordinate to the material: emphasize the
+actual links and packet motion instead of filling switches with artificial light, changing their
+material color, or increasing transmission opacity.
 
 `glassMaterial_getIlluminatedColor(...)` and `reflectiveMaterial_getIlluminatedColor(...)` combine
 their existing optical response with `opticalPointLights`. Existing `getColor(...)` helpers remain
