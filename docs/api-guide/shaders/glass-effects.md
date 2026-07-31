@@ -205,6 +205,18 @@ Use `bloomShaderPassPipeline` after opaque and translucent composition, followed
 links or the entire glass silhouette. When floating-point scene color is unavailable, fall back to
 the preferred display format and reduce the extraction threshold.
 
+Floating-point scene rendering and HDR display presentation are distinct capabilities. An
+`rgba16float` intermediate attachment retains bright, saturated packet emission and narrow glass
+highlights even when the final canvas is standard dynamic range. Extended HDR presentation also
+requires a compatible WebGPU canvas, display, and extended tone-mapping configuration. Increase
+emission, local illumination, and reflective highlights gradually within available scene headroom;
+raise bloom extraction with them and finish with restrained filmic exposure. Multiplying a packet's
+existing red or green emission preserves its color without introducing pastel white halos.
+
+Interactive path highlighting should remain optically subordinate to the material: use a thin,
+low-opacity rim and bounded local illumination instead of filling the entire switch with bright
+color or increasing its transmission opacity.
+
 `glassMaterial_getIlluminatedColor(...)` and `reflectiveMaterial_getIlluminatedColor(...)` combine
 their existing optical response with `opticalPointLights`. Existing `getColor(...)` helpers remain
 appropriate when no dynamic local lights are needed.
@@ -243,7 +255,9 @@ an individual showcase.
   refraction, packet lighting, motion accents, spectral glass, caustics, and bloom while keeping
   advanced material settings independently adjustable.
 - A duration-weighted, directly navigable chapter timeline ties cinematic camera transitions to
-  congestion, packet loss, rerouting, and probe-confirmed path recovery.
+  congestion, packet loss, rerouting, and probe-confirmed path recovery. Colored event markers
+  choreograph path isolation, compact upstream packet queues, loss scattering, and the complete
+  outbound-probe / returning-confirmation handshake without enlarging the storytelling panel.
 - Exact A-buffer transparency, weighted-blended transparency, and depth-sorted alpha blending
   preserve the strongest supported compositing strategy on each backend.
 

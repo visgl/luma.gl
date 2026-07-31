@@ -65,6 +65,15 @@ export type NetworkLinkPulse = {
   start: Vector3;
 };
 
+/** A short, animated packet queue immediately upstream of a congested switch. */
+export type NetworkQueuedPacket = {
+  color: Color;
+  conversationIndex: number;
+  position: Vector3;
+  strength: number;
+  switchIndex: number;
+};
+
 export type NetworkSwitchTransitionKind = 'failure' | 'recovery';
 
 export type NetworkSwitchTransitionWave = {
@@ -363,6 +372,63 @@ export function makeSwitchArrivals(packets: Packet[]): SwitchArrival[] {
   }
 
   return arrivals;
+}
+
+/** Places alternating packets inside the final incoming link without entering switch glass. */
+export function makeSwitchQueuePackets(
+  packets: readonly Packet[],
+  switchIndex: number,
+  animationTime: number,
+  maximumPackets = 6
+): NetworkQueuedPacket[] {
+  const switchPosition = SWITCH_POSITIONS[switchIndex];
+  if (!switchPosition || maximumPackets <= 0 || !Number.isFinite(animationTime)) {
+    return [];
+  }
+
+  const incomingPackets = CONVERSATIONS.map((_, conversationIndex) =>
+    packets.find(
+      packet =>
+        packet.enabled &&
+        packet.conversationIndex === conversationIndex &&
+        packet.route.points.includes(switchPosition)
+    )
+  ).filter((packet): packet is Packet => Boolean(packet));
+  if (incomingPackets.length === 0) {
+    return [];
+  }
+
+  const queuedPackets: NetworkQueuedPacket[] = [];
+  for (let queueIndex = 0; queueIndex < maximumPackets; queueIndex++) {
+    const packet = incomingPackets[queueIndex % incomingPackets.length];
+    const switchPointIndex = packet.route.points.indexOf(switchPosition);
+    if (switchPointIndex < 1) {
+      continue;
+    }
+
+    const previousPosition = packet.route.points[switchPointIndex - 1];
+    const switchSurface = getNetworkNodeSurfaceInset(switchPosition, previousPosition);
+    const queueSpacing = 0.115;
+    const oscillation = Math.sin(animationTime * 4.6 + queueIndex * 0.58) * 0.025;
+    const queueDistance = switchSurface + 0.065 + queueIndex * queueSpacing + oscillation;
+    const incomingSegmentLength =
+      packet.route.cumulativeLengths[switchPointIndex] -
+      packet.route.cumulativeLengths[switchPointIndex - 1];
+    if (queueDistance >= incomingSegmentLength - 0.06) {
+      break;
+    }
+
+    const distanceFromSource = packet.route.cumulativeLengths[switchPointIndex] - queueDistance;
+    queuedPackets.push({
+      color: packet.color,
+      conversationIndex: packet.conversationIndex,
+      position: getPointAlongRoute(packet.route, distanceFromSource / packet.route.totalLength),
+      strength: 0.65 + Math.sin(animationTime * 5 + queueIndex * 0.84) * 0.18,
+      switchIndex
+    });
+  }
+
+  return queuedPackets;
 }
 
 export function makeSwitchPacketEvents({

@@ -15,6 +15,7 @@ import {
   NETWORK_SWITCH_PLANE_COUNT,
   PACKET_TRAVEL_SPEED,
   SPINE_POSITIONS,
+  SPINE_SWITCH_RADIUS,
   SWITCH_CONFIRMATION_DURATION,
   SWITCH_POSITIONS,
   SWITCH_TRANSITION_WAVE_DURATION,
@@ -36,6 +37,7 @@ import {
   makeSwitchPacketEvents,
   makeSwitchProbeConfirmationEvent,
   makeSwitchProbeEvent,
+  makeSwitchQueuePackets,
   makeSwitchGroups,
   makeSwitchArrivals,
   makeSwitchTransitionWave,
@@ -410,6 +412,42 @@ test('packet-spraying adaptively shifts load away from congested physical planes
     packets.filter(packet => packet.route.points.includes(SPINE_POSITIONS[0])).length,
     12,
     'a shared access bottleneck cannot be bypassed by choosing a different plane'
+  );
+  testCase.end();
+});
+
+test('packet-spraying congestion forms bounded alternating queues before switch glass', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const congestedSwitchIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + 1;
+  const queue = makeSwitchQueuePackets(packets, congestedSwitchIndex, 12, 6);
+
+  testCase.equal(queue.length, 6, 'the optical queue remains bounded to six visible packets');
+  testCase.deepEqual(
+    queue.map(packet => packet.conversationIndex),
+    [0, 1, 0, 1, 0, 1],
+    'the queue preserves alternating red and green packet order'
+  );
+  testCase.ok(
+    queue.every(
+      packet =>
+        getDistance(packet.position, SWITCH_POSITIONS[congestedSwitchIndex]) > SPINE_SWITCH_RADIUS
+    ),
+    'queued packets stay outside the glass switch boundary'
+  );
+  testCase.ok(
+    queue.every(packet => packet.strength > 0 && packet.strength < 1),
+    'queue pressure remains softly bounded'
+  );
+  testCase.deepEqual(
+    makeSwitchQueuePackets(packets, SWITCH_POSITIONS.length, 12),
+    [],
+    'unknown switches never create phantom queue packets'
+  );
+  testCase.deepEqual(
+    makeSwitchQueuePackets(packets, congestedSwitchIndex, Number.NaN),
+    [],
+    'invalid animation times never produce invalid packet positions'
   );
   testCase.end();
 });
