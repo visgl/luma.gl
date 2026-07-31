@@ -20,6 +20,9 @@ import {getCpuHotspotProfiler, getTimestamp} from './helpers/cpu-hotspot-profile
 export class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
   readonly handle: GPUCanvasContext;
+  colorFormat?: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
+  colorSpace?: 'srgb' | 'display-p3';
+  toneMapping?: 'standard' | 'extended';
 
   private colorAttachment: WebGPUTexture | null = null;
   private depthStencilAttachment: WebGPUTexture | null = null;
@@ -72,16 +75,42 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.depthStencilAttachment = null;
     }
 
-    // Reconfigure the canvas size.
-    this.handle.configure({
+    const requestedConfiguration: GPUCanvasConfiguration = {
       device: this.device.handle,
-      format: this.device.preferredColorFormat,
+      format: this.colorFormat || this.device.preferredColorFormat,
       // Can be used to define e.g. -srgb views
       // viewFormats: [...]
-      colorSpace: this.props.colorSpace,
+      colorSpace: this.colorSpace || this.props.colorSpace,
       alphaMode: this.props.alphaMode,
-      toneMapping: {mode: this.props.toneMapping}
-    });
+      toneMapping: {mode: this.toneMapping || this.props.toneMapping}
+    };
+
+    // Reconfigure the canvas size.
+    this.handle.configure(requestedConfiguration);
+
+    let configuredConfiguration = requestedConfiguration;
+    let acceptedConfiguration = this.handle.getConfiguration();
+    if (
+      requestedConfiguration.toneMapping?.mode === 'extended' &&
+      !isHighDynamicRangeCanvasConfiguration(acceptedConfiguration)
+    ) {
+      const standardConfiguration: GPUCanvasConfiguration = {
+        device: this.device.handle,
+        format: navigator.gpu.getPreferredCanvasFormat(),
+        colorSpace: 'srgb',
+        alphaMode: this.props.alphaMode,
+        toneMapping: {mode: 'standard'}
+      };
+      this.handle.configure(standardConfiguration);
+      configuredConfiguration = standardConfiguration;
+      acceptedConfiguration = this.handle.getConfiguration();
+    }
+
+    this.colorFormat = (acceptedConfiguration?.format ||
+      configuredConfiguration.format) as typeof this.colorFormat;
+    this.colorSpace = acceptedConfiguration?.colorSpace || configuredConfiguration.colorSpace;
+    this.toneMapping =
+      acceptedConfiguration?.toneMapping?.mode || configuredConfiguration.toneMapping?.mode;
 
     this._createDepthStencilAttachment(this.device.preferredDepthFormat);
   }
@@ -194,4 +223,10 @@ export class WebGPUCanvasContext extends CanvasContext {
     }
     return this.depthStencilAttachment!;
   }
+}
+
+export function isHighDynamicRangeCanvasConfiguration(
+  configuration: GPUCanvasConfigurationOut | null
+): boolean {
+  return configuration?.format === 'rgba16float' && configuration.toneMapping?.mode === 'extended';
 }

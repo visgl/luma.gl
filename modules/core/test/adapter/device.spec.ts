@@ -48,6 +48,20 @@ test('Device#isTextureFormatCompressed', async t => {
   t.end();
 });
 
+test('WebGPUDevice reports baseline rgba16float capabilities', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const capabilities = device.getTextureFormatCapabilities('rgba16float');
+  t.equal(capabilities.render, true, 'rgba16float is renderable');
+  t.equal(capabilities.filter, true, 'rgba16float is filterable');
+  t.end();
+});
+
 test('Device#getSupportedCompressedTextureFormats', async t => {
   for (const device of await getTestDevices()) {
     const formats = device.getSupportedCompressedTextureFormats();
