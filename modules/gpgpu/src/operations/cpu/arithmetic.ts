@@ -11,7 +11,7 @@ import {
 } from '../arithmetic-operation';
 import {getValueAtRow} from './common';
 
-export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
+export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({
   inputs,
   output,
   target

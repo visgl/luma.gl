@@ -30,6 +30,26 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
 
   await Promise.all(rootEvaluators.map(evaluator => evaluator.evaluate(device)));
 
+  cleanupEvaluators(rootEvaluators);
+  return result;
+}
+
+/** Synchronous counterpart of {@link cleanEvaluate}. */
+export function cleanEvaluateSync<ResultT extends EvaluatorResult>(
+  device: Device,
+  result: ResultT
+): ResultT {
+  const rootEvaluators = collectReferencedEvaluators(result);
+
+  for (const evaluator of rootEvaluators) {
+    evaluator.evaluateSync(device);
+  }
+
+  cleanupEvaluators(rootEvaluators);
+  return result;
+}
+
+function cleanupEvaluators(rootEvaluators: Evaluator[]): void {
   const preservedBuffers = new Set<Buffer>(rootEvaluators.flatMap(getEvaluatorBuffers));
 
   const dependencyEvaluators = new Set<GPUDataEvaluator>();
@@ -43,7 +63,6 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
       evaluator.destroy();
     }
   }
-  return result;
 }
 
 function collectReferencedEvaluators(value: EvaluatorResult): Evaluator[] {

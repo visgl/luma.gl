@@ -127,6 +127,17 @@ the stored scalar component width.
 Materializes one single-chunk `GPUVector` on the provided device. Lazy
 dependencies are evaluated before the operation handler writes the output.
 
+#### `evaluateSync(device: Device, options?): GPUVector`
+
+Materializes one single-chunk `GPUVector` synchronously. This is useful for
+call sites that must stay synchronous, but it is stricter than `evaluate()`:
+
+- backend lookup must already be resolved
+- dependencies are evaluated recursively without awaiting
+- any required CPU value must already be available
+
+If those conditions are not met, `evaluateSync()` throws.
+
 #### `readValue(startRow?: number, endRow?: number): Promise<TypedArray>`
 
 Reads evaluator contents back to the CPU. This is intended for debugging or
@@ -167,6 +178,12 @@ batches.
 Materializes every chunk evaluator and returns one `GPUVector` with preserved
 chunk order and boundaries.
 
+#### `evaluateSync(device: Device, options?): GPUVector`
+
+Synchronously materializes every chunk evaluator and returns one `GPUVector`
+with preserved chunk order and boundaries. This has the same synchronous
+requirements as `GPUDataEvaluator.evaluateSync()`.
+
 #### `destroy(): void`
 
 Releases cached GPU resources owned through child `GPUDataEvaluator` instances.
@@ -180,3 +197,5 @@ Releases cached GPU resources owned through child `GPUDataEvaluator` instances.
   `GPUVector` backing resource.
 - Borrowed `GPUData` chunks are not destroyed by `GPUDataEvaluator.destroy()`.
 - Borrowed `GPUDataView` buffers are not destroyed by `GPUDataEvaluator.destroy()`.
+- Synchronous evaluation is intended for already-prepared graphs where backend
+  registration and any required CPU values are available up front.

@@ -6,7 +6,7 @@ import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {getValueAtRow} from './common';
 
-export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
+export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
   target

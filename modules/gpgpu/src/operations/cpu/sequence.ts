@@ -4,7 +4,7 @@
 
 import {OperationHandler} from '../../operation/operation';
 
-export const sequence: OperationHandler<{start: number; step: number}> = async ({
+export const sequence: OperationHandler<{start: number; step: number}> = ({
   inputs,
   output,
   target

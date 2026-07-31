@@ -17,7 +17,7 @@ void interleave(in TYPE x[X_LEN], in TYPE y[Y_LEN], out TYPE result[RESULT_LEN])
 }
 `;
 
-export const interleave: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = async ({
+export const interleave: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
   target

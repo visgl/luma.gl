@@ -8,7 +8,7 @@ import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './common/dispa
 
 const WORKGROUP_SIZE = 64;
 
-export const sequence: OperationHandler<{start: number; step: number}> = async ({
+export const sequence: OperationHandler<{start: number; step: number}> = ({
   inputs,
   output,
   target

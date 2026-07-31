@@ -53,3 +53,4 @@ export type {BackendModule} from './operation/backend-registry';
 export {Operation} from './operation/operation';
 export type {OperationHandler, OperationHandlerResult} from './operation/operation';
 export {cleanEvaluate} from './utils/clean-evaluate';
+export {cleanEvaluateSync} from './utils/clean-evaluate';

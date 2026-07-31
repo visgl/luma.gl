@@ -13,7 +13,7 @@ import {getInputBufferLayout, getInputModule} from './common/row-transform';
 const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const TRANSFORM_RUNS = 'Transform Runs';
 
-export const extent: OperationHandler<{sourceValues: GPUDataEvaluator}> = async ({
+export const extent: OperationHandler<{sourceValues: GPUDataEvaluator}> = ({
   inputs,
   output,
   target
@@ -129,7 +129,7 @@ void main() {
     });
     device.submit(commandEncoder.finish());
 
-    return await arithmetic({
+    return arithmetic({
       device,
       inputs: {
         expression: {

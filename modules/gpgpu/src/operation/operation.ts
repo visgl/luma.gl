@@ -17,7 +17,7 @@ export type OperationHandler<InputsT extends Record<string, any> = any> = (args:
   output: GPUDataEvaluator;
   /** GPU buffer that receives operation output. */
   target: Buffer;
-}) => Promise<OperationHandlerResult>;
+}) => OperationHandlerResult | Promise<OperationHandlerResult>;
 export type OperationHandlerResult = {
   success: boolean;
   value?: TypedArray;
@@ -52,17 +52,70 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
 
   /** Evaluates dependencies and writes this operation's result into `target`. */
   async execute(device: Device, target: Buffer): Promise<OperationHandlerResult> {
-    // Resolve dependencies
+    await this._resolveDependencies(device);
+    return await this._executeWithHandler(
+      await backendRegistry.get(this._getHandlerRegistry(device), this.name),
+      target
+    );
+  }
+
+  /** Evaluates dependencies synchronously and writes this operation's result into `target`. */
+  executeSync(device: Device, target: Buffer): OperationHandlerResult {
+    this._resolveDependenciesSync(device);
+    const result = this._executeWithHandler(
+      backendRegistry.getSync(this._getHandlerRegistry(device), this.name),
+      target
+    );
+    if (isPromise(result)) {
+      throw new Error(`${this.name} returned a Promise in executeSync()`);
+    }
+    return result;
+  }
+
+  /** Returns `true` when all inputs are CPU-backed constants small enough for CPU execution. */
+  protected shouldExecuteOnCPU() {
+    return this.output.length <= 1 && Array.from(this.dependencies).every(t => Boolean(t.value));
+  }
+
+  private _getHandlerRegistry(device: Device): string {
+    return this.shouldExecuteOnCPU() ? 'cpu' : device.type;
+  }
+
+  private async _resolveDependencies(device: Device): Promise<void> {
     for (const dep of this.dependencies) {
       await dep.evaluate(device);
     }
-    const handlerRegistry = this.shouldExecuteOnCPU() ? 'cpu' : device.type;
+    const handlerRegistry = this._getHandlerRegistry(device);
     if (handlerRegistry === 'cpu' || device.type === 'null') {
       for (const dependency of this.dependencies) {
         await dependency.ensureCPUValue();
       }
     }
-    const handler = await backendRegistry.get(handlerRegistry, this.name);
+  }
+
+  private _resolveDependenciesSync(device: Device): void {
+    for (const dep of this.dependencies) {
+      dep.evaluateSync(device);
+    }
+    const handlerRegistry = this._getHandlerRegistry(device);
+    if (handlerRegistry === 'cpu' || device.type === 'null') {
+      for (const dependency of this.dependencies) {
+        dependency.ensureCPUValueSync();
+      }
+    }
+  }
+
+  private _executeWithHandler(
+    handler:
+      | OperationHandler
+      | ((args: {
+          device: Device;
+          inputs: InputsT;
+          output: GPUDataEvaluator;
+          target: Buffer;
+        }) => OperationHandlerResult),
+    target: Buffer
+  ): OperationHandlerResult | Promise<OperationHandlerResult> {
     return handler({
       device: target.device,
       inputs: this.inputs,
@@ -70,9 +123,8 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
       target
     });
   }
+}
 
-  /** Returns `true` when all inputs are CPU-backed constants small enough for CPU execution. */
-  protected shouldExecuteOnCPU() {
-    return this.output.length <= 1 && Array.from(this.dependencies).every(t => Boolean(t.value));
-  }
+function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
+  return typeof (value as Promise<T>)?.then === 'function';
 }

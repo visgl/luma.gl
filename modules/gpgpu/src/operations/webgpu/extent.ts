@@ -19,7 +19,7 @@ import {
 
 type ExtentInputMode = 'raw' | 'partial';
 
-export const extent: OperationHandler<{sourceValues: GPUDataEvaluator}> = async ({
+export const extent: OperationHandler<{sourceValues: GPUDataEvaluator}> = ({
   inputs,
   output,
   target

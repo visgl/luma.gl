@@ -4,7 +4,13 @@
 
 import {GPUVector} from '@luma.gl/tables';
 import {expect, test} from 'vitest';
-import {add, cleanEvaluate, GPUDataEvaluator, GPUVectorEvaluator} from '@luma.gl/gpgpu';
+import {
+  add,
+  cleanEvaluate,
+  cleanEvaluateSync,
+  GPUDataEvaluator,
+  GPUVectorEvaluator
+} from '@luma.gl/gpgpu';
 import {getTestDevice} from '@luma.gl/test-utils';
 import '../operations/fixtures';
 
@@ -72,4 +78,33 @@ test(`GPGPU#cleanEvaluate preserves GPUVectorEvaluator outputs`, async t => {
   vector.destroy();
   x0.destroy();
   x1.destroy();
+});
+
+test(`GPGPU#cleanEvaluateSync`, async t => {
+  const device = await getTestDevice('cpu');
+  if (!device) {
+    t.annotate(`cpu not available`);
+    return;
+  }
+
+  const x = GPUDataEvaluator.fromArray([1, 2, 3, 4], {type: 'sint32', size: 1});
+  const y = GPUDataEvaluator.fromArray([10, 20, 30, 40], {type: 'sint32', size: 1});
+  const z = GPUDataEvaluator.fromArray([100, 200, 300, 400], {type: 'sint32', size: 1});
+
+  const partial = add(x, y);
+  const sum = add(partial, z);
+
+  cleanEvaluateSync(device, {sum, x});
+
+  expect(sum.gpuVector).toBeTruthy();
+  expect(x.gpuVector).toBeTruthy();
+
+  expect((x as any).evaluated).toBe(true);
+  expect((y as any).evaluated).toBe(false);
+  expect((z as any).evaluated).toBe(false);
+  expect((partial as any).evaluated).toBe(false);
+  expect((sum as any).evaluated).toBe(true);
+
+  x.destroy();
+  sum.destroy();
 });
