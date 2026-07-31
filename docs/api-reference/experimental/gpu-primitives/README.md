@@ -42,11 +42,17 @@ pre-recorded render commands
 ```
 
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
-`GPUCompaction`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
-`DrawCommandBuffer`. The accompanying trace viewer runs filtering and compaction over up to four
-million spans, while the sort and data-analysis examples demonstrate composable buffer-native
-algorithms. The implementation is intentionally experimental: it is concrete enough to
-measure and use, but small enough that its API can still respond to experience.
+`GPUCompaction`, `GPUMask`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
+`GPUAncestorProjection`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
+`DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+process and thread collapse, source and topology filtering, dependency focusing, visible-parent
+projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
+four million spans. The sort and data-analysis examples demonstrate independent composable
+buffer-native algorithms.
+The implementation is intentionally experimental: it is concrete enough to measure and use, but
+small enough that its API can still respond to experience.
+
+![GPU-native trace manipulation pipeline showing canonical trace data, GPU mask filtering, hierarchy and graph operations, and indirect GPU rendering](./gpu-trace-manipulation-infographic.png)
 
 <GPUTraceViewerExample embedded />
 
@@ -159,7 +165,11 @@ pipelines would confuse multi-pass algorithms with `GPUComputePipeline`.
 ### Algorithms
 
 Algorithms provide data semantics across one or more kernels. `GPUScan` promises an exclusive
-prefix sum. `GPUCompaction` promises stable selection. `GPUSort` promises stable paired `uint32`
+prefix sum. `GPUCompaction` promises stable selection. `GPUMask` promises canonical boolean
+composition over source-aligned masks. `GPUGraphTraversal` promises bounded, cycle-safe
+reachability over stable compressed sparse adjacency. `GPUAncestorProjection` promises bounded
+nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
+parent/child row offsets. `GPUSort` promises stable paired `uint32`
 ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones.
 `GPUReduction`, `GPUHistogram`, and `GPUGridBinning` promise aggregate and binning results while
 selecting hierarchical and atomic implementations internally.
@@ -425,6 +435,95 @@ For matching vector input, flags, and output, compaction uses vector-wide scan o
 existing output chunks as one logical sequence. It does not concatenate, repack, or replace caller
 buffers, and the count remains a single total for the complete vector.
 
+## Composable visibility masks
+
+Interactive applications rarely have one visibility predicate. A trace viewer may combine its
+time range, process expansion, thread expansion, duration threshold, selected statuses, runtime
+classification, and dependency-focused neighborhood. Each predicate can write a source-aligned
+packed `uint32` mask; `GPUMask` combines those decisions into one renderer-facing result.
+
+```ts
+new GPUMask({
+  id: 'focused-visible-spans',
+  inputs: [viewportMask, hierarchyMask, focusedSpanMask],
+  output: visibleSpanMask,
+  operation: 'and'
+}).addToGraph(graph);
+```
+
+`'and'`, `'or'`, `'xor'`, `'difference'`, and `'not'` use zero/nonzero semantics and always
+produce canonical zero or one. Matching `GraphVectorView` masks retain their original ordered
+chunks. Composition does not repack source data, submit commands, or read back results.
+
+## Bounded graph traversal
+
+Topology-based selection uses `GPUGraphTraversal`. It accepts forward and optional reverse
+compressed sparse adjacency and publishes one node-aligned reachability mask.
+
+```ts
+new GPUGraphTraversal({
+  id: 'selected-dependency-neighborhood',
+  offsets: outgoingOffsets,
+  neighbors: outgoingNeighbors,
+  reverseOffsets: incomingOffsets,
+  reverseNeighbors: incomingNeighbors,
+  seeds: selectedSpanIds,
+  seedCount: activeSeedCount,
+  output: reachedSpanMask,
+  direction: 'both',
+  maxDepth: 4,
+  activeDepth: requestedDepth
+}).addToGraph(graph);
+```
+
+Frontiers are graph-owned transients. Atomic node claims ensure that cycles, duplicate edges, and
+shared descendants cannot repeatedly publish the same node. GPU-resident seed counts and active
+depth change the focused neighborhood without rebuilding the fixed-capacity graph.
+
+## Hierarchy-aware layout
+
+Expansion changes both visibility and row position. `GPUHierarchyLayout` first converts parent
+and child expansion flags into effective child heights, then composes `GPUScan` to produce stable
+exclusive offsets.
+
+```ts
+new GPUHierarchyLayout({
+  id: 'process-thread-layout',
+  parentStates: processStates,
+  childStates: threadStates,
+  heights: threadHeights,
+  offsets: threadOffsets,
+  childrenPerParent: 4,
+  expandedChildHeight: 4,
+  collapsedChildHeight: 1,
+  collapsedParentHeight: 1
+}).addToGraph(graph);
+```
+
+A collapsed parent contributes one summary row; its remaining children contribute zero. Expanded
+parents retain child-specific full or collapsed heights. A renderer fetches the resulting offsets
+directly from storage, so expand/collapse modifies no source records or render bundle.
+
+## Visible parent projection
+
+Filtering an intermediate parent must not sever the visual dependency between its surviving
+ancestor and descendant. `GPUAncestorProjection` resolves every canonical node to the closest
+currently visible source row without rewriting original edge data.
+
+```ts
+new GPUAncestorProjection({
+  id: 'visible-dependency-endpoints',
+  parents: canonicalParentIds,
+  visibility: visibleSpanMask,
+  output: nearestVisibleAncestors,
+  maxDepth: 32
+}).addToGraph(graph);
+```
+
+Visible nodes project to themselves. Missing parents, cycles, and chains beyond `maxDepth`
+produce a caller-configurable invalid sentinel. Edge shaders can then redirect hidden endpoints
+to visible ancestors while retaining stable original dependency IDs.
+
 ## Indirect drawing and stable draw groups
 
 WebGPU exposes `drawIndirect()` and `drawIndexedIndirect()`. Each call reads one fixed record from a
@@ -459,16 +558,27 @@ graphs.
 
 ## The trace-viewer graph
 
-The example synthesizes spans for compute, network, and storage activity. Each 16-byte span stores
-start time, duration, lane, and group. Source records remain in storage buffers for the lifetime of
-the selected capacity.
+The example synthesizes stable compute, network, and storage span ranges. Each 32-byte canonical
+span stores start time, duration, lane, group, process, thread, source identity, and numeric
+classification flags. Fixed-width dependency records preserve source and destination span IDs.
+Forward and reverse CSR indexes support dependency selection without string parsing or per-frame
+CPU adjacency construction.
 
-For each group, the graph performs:
+At the start of each encoding, process and thread expansion buffers determine thread heights.
+`GPUScan` converts those heights into packed lane offsets. Collapsing a process hides its
+individual spans, recomputes following row positions, and exposes a GPU-binned activity summary.
+Collapsing a thread retains one representative row without changing any source identity.
+
+For each span group, the graph performs:
 
 ```text
-visibility
-  reads: spans, view uniforms
-  writes: flags, source IDs
+hierarchical visibility
+  reads: canonical spans, process state, thread offsets, filters, view uniforms
+  writes: base flags, source IDs, optional picked source ID
+
+focused mask composition
+  reads: base flags, dependency-reachability mask
+  writes: final visible flags
 
 scan block passes
   reads: flags or block sums
@@ -483,19 +593,23 @@ compaction scatter
   writes: visible IDs, indirect instance count
 ```
 
-After all three groups, the render node reads each span/visible-ID pair and consumes the command
-buffer indirectly. A pre-recorded render bundle contains exactly three draws. Disabling a group
-causes its predicate to write zero flags, compaction writes count zero, and the corresponding draw
-becomes inert without changing the command list.
+After all three span groups, dependency visibility tests canonical edge endpoints against the
+final span masks and collapsed-process ownership. A separate stable compaction writes the edge
+instance count directly to a fourth indirect draw. A fifth pre-recorded draw consumes collapsed
+process activity bins.
 
-The render vertex shader uses `instance_index` to read a compacted source ID, fetches the original
-span, and constructs a six-vertex rectangle. Panning, zooming, lane changes, and group toggles only
-update a small uniform buffer. No source buffer or render bundle is rebuilt.
+The span vertex shader uses `instance_index` to fetch its stable compacted source record and
+resolves the current Y position from GPU-scanned thread offsets. Dependency shaders retain
+original edge IDs and route collapsed endpoints to their summary rows.
 
-Auto-scroll changes the visible time window every frame, forcing the GPU dataflow to remain live.
-The inspector periodically performs an explicit diagnostic readback of the three counts. The
-displayed count may lag the rendered frame; this is acceptable because it is telemetry rather than
-an input.
+Canvas picking reuses the visibility dispatch: a pointer request uploads one time and lane, and
+matching visible spans atomically publish a canonical source ID. Only an explicit click reads
+that single result. An ordinary frame does not depend on picking or count readback.
+
+Panning, zooming, group and status filters, duration thresholds, process and thread expansion,
+dependency visibility, selected seeds, and focus depth update small interaction buffers or
+uniforms. The source allocation, compiled graph, and five-command render bundle remain stable.
+The inspector periodically reads indirect counts for telemetry without gating rendering.
 
 ## A frame from construction to presentation
 
@@ -820,13 +934,17 @@ The intended v10 layering is:
 
 ```text
 @luma.gl/engine
-  GPUData, GPUVector, GPUTable
-  GPUCommandGraph and graph data views
-  DrawCommandBuffer
-  compute/render kernel integration
+  table-independent command-graph scheduling core
+  buffer, texture, pass, and generic graph views
+  compute/render kernel integration without a tables dependency
+
+@luma.gl/tables
+  GPUData, GPUVector, GPURecordBatch, GPUTable, GPUSchema, GPUVectorFormat
+  GPU table and vector adapters for graph views
 
 @luma.gl/gpgpu
-  GPUScan, GPUCompaction
+  GPUScan, GPUCompaction, and reusable visibility workflows
+  GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
   GPUReduction, GPUSort, GPUHistogram
   higher-level table algorithms
 
@@ -834,97 +952,170 @@ The intended v10 layering is:
   Arrow upload, conversion, and readback adapters
 ```
 
-Tables and graph infrastructure graduate together into engine. This removes the temporary
-experimental-to-tables dependency without forcing engine to depend upward. Algorithms remain in
-gpgpu because they are optional computation capabilities rather than core resource types.
+Generic GPU table types remain owned by `@luma.gl/tables`; moving them into engine would reverse the
+current package dependency and create a cycle. A graduated command-graph core must therefore use
+only core resource concepts. Table-to-graph adapters stay with tables, while optional algorithms
+and workflow builders move to gpgpu. `DrawCommandBuffer` needs the same audit: an engine-level core
+cannot import `GPUData`, so its final placement or split remains part of graduation rather than a
+predeclared stable contract.
 
-Graduation should happen only after at least two independent consumers use the graph. The trace
-viewer proves two-dimensional filtering and rendering. The frustum-culling field adds a second
-consumer with bounding-sphere visibility, indexed indirect drawing, and a moving three-dimensional
-camera. The data-analysis example adds a third consumer based on Arrow columns, scientific
-reduction, histogram composition, and spatial counts. Additional consumers should still exercise
-different patterns such as text expansion or path tessellation.
+The graph already has three independent consumers. Graduation now requires each candidate stable
+abstraction—not only the graph as a whole—to be exercised by at least two consumers. The trace
+viewer proves two-dimensional filtering and rendering. The frustum-culling field adds
+bounding-sphere visibility, indexed indirect drawing, and a moving three-dimensional camera. The
+data-analysis example adds Arrow columns, scientific reduction, histogram composition, and spatial
+counts. Later consumers should exercise different patterns such as text expansion or path
+tessellation.
 
-## Roadmap status
+## Phased roadmap
 
-The command-graph foundation and the first texture/picking milestone are implemented. The broader
-GPU application platform is not complete yet.
+The command-graph foundation and first hierarchical-trace, analysis, texture, and picking
+milestones are implemented. The remaining work is ordered by dependency so that later APIs build
+on measured, reusable contracts instead of demo-specific behavior.
 
-Completed milestones include:
+Impact estimates how broadly a phase unlocks GPU-driven applications. Complexity/cost estimates
+relative engineering scope, integration risk, and validation effort; it is not a staffing or
+schedule commitment.
 
-- Fixed-capacity buffer and logical-texture scheduling across compute, render, and copy nodes.
-- Buffer and texture hazard inference, imported-resource overrides, graph-owned attachments,
-  transient allocation reuse, ownership validation, and allocation statistics.
-- Exclusive scan, stable compaction, paired sort, scalar reduction, histogram counting, spatial
-  grid binning, and GPU-written indirect draw commands.
-- Single-pixel integer object and batch picking through `GPUIndexPickingTarget`.
-- Independent trace-viewer, frustum-culling/picking, and GPU data-analysis consumers.
+| Phase | Outcome | Status | Impact | Complexity/cost |
+| --- | --- | :---: | :---: | :---: |
+| 0 — Current foundation | Command graph, masks, hierarchy layout, graph traversal, ancestor projection, compaction, indirect drawing, picking, analysis primitives, and three working consumers | Implemented | High | Complete |
+| 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
+| 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Planned | High | Medium |
+| 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted aggregation, richer histograms, and batch-preserving algorithms | Planned | High | Large |
+| 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, swapchain imports, and external-texture contracts | Planned | Medium | Large |
+| 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
+| 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
+| 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
 
-### Implemented data analysis
+### Phase 0 — Current foundation
 
-`GPUReduction` collapses packed scalar rows with explicit empty, overflow, floating-point order,
-and non-finite policies. `GPUHistogram` accepts literal, GPU-resident, or inferred domains and
-produces normal graph output that can feed another reduction. `GPUGridBinning` applies the same
-atomic accumulation strategy to packed positions and row-major cells. Reduction, histogram, and
-grid binning accept fixed-width vectors directly; grid binning clears once before ordered
-per-chunk accumulation. All three keep input, output, submission, and readback ownership with the
-caller.
+**Entry dependencies:** None. This is the implemented baseline.
 
-### Implemented textures and picking
+The baseline includes fixed-capacity buffer and logical-texture scheduling across compute, render,
+and copy nodes; hazard inference; imported-resource overrides; graph-owned attachments; transient
+reuse; ownership validation; and allocation statistics. Implemented algorithms cover exclusive
+scan, stable compaction, chunk-preserving boolean masks, bounded CSR traversal, nearest-visible
+parent projection, paired sort, scalar reduction, histogram counting, spatial grid binning, and
+GPU-written indirect commands.
 
-`GPUCommandGraph` schedules logical texture views across sampled, storage, render-attachment, and
-copy roles. Compatible non-overlapping transient textures reuse physical allocations, while mip,
-layer, and aspect ranges keep hazards precise. `GPUIndexPickingTarget` uses those resources for
-integer object and batch IDs, leaving rendering, submission, staging-buffer selection, and explicit
-readback with the application.
+`GPUIndexPickingTarget` provides single-pixel integer object and batch picking. The hierarchical
+trace viewer adds GPU-scanned process/thread layout, source and topology filtering, dependency
+focus, click picking, collapsed activity, projected edges, and stable indirect span and edge groups.
+The frustum-culling and GPU data-analysis examples provide two additional consumers.
 
-## Remaining roadmap
+**Exit criteria:** Achieved by the current exported primitives, reference documentation, CPU
+oracles, WebGPU tests, and the three independent examples.
 
-The proposed architecture extends beyond the implemented foundation in the following areas.
+### Phase 1 — Hardening and observability
 
-### Reusable visibility workflows
+**Status:** Implemented in the experimental API.
 
-Visibility is proven by the trace viewer and frustum-culling example, but each predicate remains
-application-owned. Reusable workflows can standardize common inputs such as bounding spheres,
-axis-aligned boxes, time ranges, LOD thresholds, and selection masks. Their output should remain
-compacted stable IDs plus counts, not a renderer-specific object. General application-defined
-predicates should wait for a deliberate shader-callback or shader-extension protocol.
+**Entry dependencies:** Phase 0 behavior remains experimental but functionally complete.
 
-### Spatial indexes
+Add capability-gated timestamp allocation per graph node without adding readback to normal
+encoding. Establish repeatable performance and memory baselines for empty inputs, workgroup
+boundaries, maximum example capacities, dense dependency graphs, and repeated parameter-only
+updates. Extend adapter diagnostics, capacity and overflow tests, device-loss handling, and
+resource-lifetime coverage.
 
-WebGPU does not currently expose a native acceleration-structure object comparable to ray-tracing
-APIs. luma.gl should name concrete library-built structures such as `GPUGridIndex` or `GPUBVH`.
-They are storage-buffer data structures with construction and traversal algorithms, not magical
-backend resources.
+`CompiledGPUCommandGraph.capabilities` reports graph-relevant adapter support and limits. Expanded
+`stats` account for imported, logical, and owned transient memory. Every `encode()` returns
+synchronous whole-graph and per-node CPU costs; timestamp-enabled encoders additionally support an
+explicit post-submit `readTimings()` call. The documented benchmark protocol covers boundary and
+maximum example capacities without making readback part of the frame loop.
 
-### GPUScene
+**Exit criteria:** Achieved by capability reporting, encoding and timestamp diagnostics, expanded
+memory statistics, safe-range and adapter-limit validation, device-loss rejection, lifecycle tests,
+and the repeatable benchmark protocol.
 
-A future `GPUScene` should be a flat draw database: stable object IDs, bounds, transforms, group
-membership, geometry references, and command slots. It should not duplicate a game-engine scene
-graph. CPU scene graphs can update a GPU draw database, while table-oriented applications can
-construct the same database directly.
+### Phase 2 — Reusable visibility workflows
 
-### Picking and texture expansion
+**Entry dependencies:** Phase 1 establishes measurement, failure, and lifetime contracts.
 
-The current picking target intentionally handles one device pixel and one integer object/batch
-contract. Region picking, color-encoded fallback, automatic staging-buffer rings, and higher-level
-callback, highlight, and tooltip policies remain future workflow layers. Texture scheduling still
-needs contracts for multisampled resolve targets, swapchain imports, and external textures before
-those resources can participate in the same logical hazard and lifetime model.
+Standardize graph fragments for bounding spheres, axis-aligned boxes, time ranges, LOD thresholds,
+and selection masks. A workflow publishes source-aligned masks, compacted stable IDs, counts, and
+optional indirect-command fields rather than a renderer-specific object. Refactor the trace viewer
+and frustum-culling example to consume the same workflow contract.
 
-### Richer algorithm variants
+General application-defined WGSL predicates remain deferred until fixed-contract workflows reveal
+the necessary shader-extension points.
 
-The first algorithms favor narrow, measurable contracts. Future variants include inclusive,
-segmented, floating-point, and custom associative scans; weighted and floating-point grid
-aggregates; irregular-edge, categorical, sparse, and multidimensional histograms; and batch-aware
-algorithms that preserve multi-chunk table structure without implicit concatenation.
+**Exit criteria:** At least two consumers share one workflow without application-owned scan or
+compaction plumbing; interaction parameters update without graph recompilation; and counts can stay
+GPU-resident through indirect rendering.
 
-### API graduation
+### Phase 3 — Algorithm and table scaling
 
-The graph and algorithms remain in `@luma.gl/experimental`. After their resource, shader-extension,
-and package-dependency contracts stabilize, graph infrastructure and typed views should graduate to
-`@luma.gl/engine`, while optional algorithms should move to `@luma.gl/gpgpu`. Graduation includes an
-API and dependency audit rather than only moving files between packages.
+**Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
+
+Extend multi-chunk support to algorithms that still require one packed view. Add inclusive and
+segmented scans, weighted and floating-point grid aggregates, irregular-edge and categorical
+histograms, and batch-aware operations that preserve table structure. Custom associative scans,
+sparse histograms, and multidimensional histograms should be added only with a concrete consumer
+and an explicit numerical or memory contract.
+
+**Exit criteria:** Each new variant has a deterministic CPU oracle, empty and boundary coverage,
+multi-chunk tests where applicable, explicit overflow and floating-point behavior, and at least one
+application or renderer consumer.
+
+### Phase 4 — Picking and texture coverage
+
+**Entry dependencies:** Phase 1 defines resource-lifetime and asynchronous readback behavior;
+Phase 2 defines stable visible identity.
+
+Expand picking from one pixel to bounded regions and add reusable staging-buffer rings for
+asynchronous results. Add graph contracts for multisampled resolve targets, swapchain imports, and
+external textures so their subresources, hazards, ownership, and frame lifetimes are explicit.
+Callback, highlighting, tooltip, and color-encoded fallback policies remain higher-level workflow
+or application concerns.
+
+**Exit criteria:** Region results preserve stable object and batch identity; repeated picks do not
+serialize rendering on mapped buffers; and resolve, swapchain, and external resources participate
+in graph validation without accidental ownership or cross-frame reuse.
+
+### Phase 5 — Spatial acceleration
+
+**Entry dependencies:** Phase 1 supplies measurement, Phase 2 supplies reusable visibility, and
+Phase 3 supplies the required scan, compaction, and batching behavior.
+
+Implement `GPUGridIndex` before `GPUBVH` to validate build, update, storage, and query interfaces on
+a simpler structure. Add `GPUBVH` only after grid-index consumers establish the shared contract.
+Both are library-built storage-buffer structures, not native WebGPU acceleration resources, and
+must expose their construction and query costs.
+
+**Exit criteria:** Both a two-dimensional and a three-dimensional consumer can build or update an
+index, query it through a graph, feed results into visibility or picking, and compare correctness
+and cost with an unindexed GPU scan.
+
+### Phase 6 — GPUScene
+
+**Entry dependencies:** Phase 2 provides visibility output, Phase 4 provides interaction and
+texture resource contracts, and Phase 5 provides spatial queries.
+
+Define `GPUScene` as a flat draw database containing stable object IDs, bounds, transforms, group
+membership, geometry references, and indirect command slots. CPU scene graphs may update this
+database, and table-oriented applications may construct it directly; `GPUScene` does not introduce
+a second game-engine hierarchy.
+
+**Exit criteria:** Incremental updates preserve stable identity, visibility and spatial-query
+results write draw commands without CPU draw selection, and both scene-graph and table-oriented
+consumers use the same storage contract.
+
+### Phase 7 — API graduation
+
+**Entry dependencies:** Phases 1–6 have stable failure, ownership, extension, and package-boundary
+contracts, and every candidate abstraction has at least two independent consumers.
+
+Move the table-independent scheduling core to `@luma.gl/engine`, keep generic GPU table types and
+graph adapters in `@luma.gl/tables`, and move optional algorithms and reusable workflows to
+`@luma.gl/gpgpu`. Keep Arrow conversion and readback adapters in `@luma.gl/arrow`. Audit
+`DrawCommandBuffer` and split its core from table integration if that is required to avoid an engine
+dependency on tables. Provide compatibility exports and migration notes for experimental users.
+
+**Exit criteria:** The final package graph has no dependency cycle or Arrow leakage into tables or
+gpgpu; compatibility exports cover one deprecation window; public API documentation names ownership
+and submission responsibilities; and all existing consumers build against the graduated packages.
 
 ## What is intentionally not automatic
 
@@ -960,6 +1151,10 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph)
 - [`GPUScan`](/docs/api-reference/experimental/gpu-primitives/gpu-scan)
 - [`GPUCompaction`](/docs/api-reference/experimental/gpu-primitives/gpu-compaction)
+- [`GPUMask`](/docs/api-reference/experimental/gpu-primitives/gpu-mask)
+- [`GPUHierarchyLayout`](/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout)
+- [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal)
+- [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection)
 - [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)

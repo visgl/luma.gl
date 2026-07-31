@@ -51,10 +51,112 @@ test('GPUCommandGraph compiles dependencies and reuses transient buffers', async
     'stable order includes inferred dependency'
   );
   t.equal(compiled.stats.logicalTransientBufferCount, 2, 'tracks two logical buffers');
+  t.equal(compiled.stats.logicalBufferCount, 2, 'reports all logical buffers');
+  t.equal(compiled.stats.importedBufferCount, 0, 'reports no imported buffers');
   t.equal(compiled.stats.physicalTransientBufferCount, 1, 'reuses one physical allocation');
   t.equal(compiled.stats.logicalTransientBytes, 192, 'reports logical bytes');
+  t.equal(compiled.stats.logicalBufferBytes, 192, 'reports total logical buffer bytes');
   t.equal(compiled.stats.physicalTransientBytes, 128, 'reports physical bytes');
+  t.equal(compiled.stats.logicalResourceBytes, 192, 'reports total logical resource bytes');
+  t.equal(
+    compiled.stats.physicalTransientResourceBytes,
+    128,
+    'reports total owned transient bytes'
+  );
   compiled.destroy();
+  t.end();
+});
+
+test('GPUCommandGraph reports adapter capabilities and explicit encoding timings', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const importedBuffer = device.createBuffer({
+    id: 'graph-diagnostics-import',
+    byteLength: 32,
+    usage: Buffer.STORAGE
+  });
+  const graph = new GPUCommandGraph(device, {id: 'graph-diagnostics-test'});
+  const imported = graph.importBuffer(
+    {id: 'imported', byteLength: importedBuffer.byteLength, usage: Buffer.STORAGE},
+    importedBuffer
+  );
+  graph.addComputePass({
+    id: 'observe-import',
+    resources: [{buffer: imported, usage: 'storage-read'}],
+    compile: () => ({encode: () => {}})
+  });
+  graph.addCopyPass({
+    id: 'cpu-only-copy',
+    dependsOn: ['observe-import'],
+    compile: () => ({encode: () => {}})
+  });
+  const compiled = graph.compile();
+
+  t.equal(compiled.stats.importedBufferCount, 1, 'counts imported buffers');
+  t.equal(compiled.stats.importedBufferBytes, 32, 'reports imported buffer capacity');
+  t.equal(compiled.stats.logicalBufferBytes, 32, 'includes imports in logical memory');
+  t.equal(
+    compiled.capabilities.timestampQueries,
+    device.features.has('timestamp-query'),
+    'reports timestamp-query support'
+  );
+  t.equal(
+    compiled.capabilities.maxBufferByteLength,
+    device.limits.maxBufferSize,
+    'reports the device buffer limit'
+  );
+
+  const commandEncoder = device.createCommandEncoder({id: 'graph-diagnostics-encoding'});
+  const encoding = compiled.encode(commandEncoder, {parameters: undefined});
+  t.equal(encoding.stats.nodeCount, 2, 'reports every encoded node');
+  t.equal(encoding.stats.timestampedNodeCount, 0, 'does not invent GPU timestamps');
+  t.notOk(encoding.canReadGPUTimings, 'plain encoders do not expose GPU timing readback');
+  t.ok(encoding.stats.cpuEncodeTimeMilliseconds >= 0, 'reports total CPU encoding time');
+  t.deepEqual(
+    encoding.stats.nodes.map(node => [node.id, node.type, node.hasGPUTimestamps]),
+    [
+      ['observe-import', 'compute', false],
+      ['cpu-only-copy', 'copy', false]
+    ],
+    'reports stable per-node encoding metadata'
+  );
+  commandEncoder.destroy();
+
+  if (device.features.has('timestamp-query')) {
+    const querySet = device.createQuerySet({
+      id: 'graph-diagnostics-timestamps',
+      type: 'timestamp',
+      count: 2
+    });
+    const timestampEncoder = device.createCommandEncoder({
+      id: 'graph-diagnostics-timestamp-encoding',
+      timeProfilingQuerySet: querySet
+    });
+    const timestampEncoding = compiled.encode(timestampEncoder, {parameters: undefined});
+    const commandBuffer = timestampEncoder.finish();
+    device.submit(commandBuffer);
+    const report = await timestampEncoding.readTimings();
+    t.equal(
+      timestampEncoding.stats.timestampedNodeCount,
+      1,
+      'timestamps render and compute passes'
+    );
+    t.ok(timestampEncoding.canReadGPUTimings, 'exposes explicit timing readback capability');
+    t.ok(report.gpuTimeMilliseconds !== undefined, 'reads a total GPU duration after submission');
+    t.ok(report.nodes[0].gpuTimeMilliseconds !== undefined, 'reads the compute node GPU duration');
+    t.equal(report.nodes[1].gpuTimeMilliseconds, undefined, 'copy nodes remain CPU-timed');
+    querySet.destroy();
+  } else {
+    t.comment('Timestamp queries are unavailable on this adapter');
+  }
+
+  compiled.destroy();
+  importedBuffer.destroy();
   t.end();
 });
 
@@ -271,6 +373,38 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
     /exceeds buffer/,
     'views cannot exceed logical capacity'
   );
+  t.throws(
+    () =>
+      validationGraph.createDataView(copyOnly, {
+        format: 'uint32',
+        length: 1,
+        byteOffset: Number.MAX_SAFE_INTEGER
+      }),
+    /safe integer precision/,
+    'view byte ranges cannot overflow safe integer precision'
+  );
+  t.throws(
+    () =>
+      validationGraph.createTransientBuffer({
+        id: 'oversized-buffer',
+        byteLength: device.limits.maxBufferSize + 1,
+        usage: Buffer.STORAGE
+      }),
+    /device buffer limit/,
+    'logical buffers cannot exceed the adapter allocation limit'
+  );
+  t.throws(
+    () =>
+      validationGraph.createTransientTexture({
+        id: 'oversized-texture',
+        format: device.preferredColorFormat,
+        width: device.limits.maxTextureDimension2D + 1,
+        height: 1,
+        usage: Texture.RENDER
+      }),
+    /device dimension limits/,
+    'logical textures cannot exceed adapter dimension limits'
+  );
 
   const overlapGraph = new GPUCommandGraph(device);
   const first = overlapGraph.createTransientBuffer({
@@ -309,6 +443,38 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
   );
   overlapping.destroy();
   wrongDeviceBuffer.destroy();
+  t.end();
+});
+
+test('CompiledGPUCommandGraph rejects encoding after device loss', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const graph = new GPUCommandGraph(device, {id: 'device-loss-test'});
+  graph.addCopyPass({id: 'copy', compile: () => ({encode: () => {}})});
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'lost-device-encoding'});
+  const existingDescriptor = Object.getOwnPropertyDescriptor(device, 'isLost');
+  Object.defineProperty(device, 'isLost', {configurable: true, value: true});
+  try {
+    t.throws(
+      () => compiled.encode(commandEncoder, {parameters: undefined}),
+      /after device loss/,
+      'device loss fails before resource resolution or command recording'
+    );
+  } finally {
+    if (existingDescriptor) {
+      Object.defineProperty(device, 'isLost', existingDescriptor);
+    } else {
+      Reflect.deleteProperty(device, 'isLost');
+    }
+  }
+  commandEncoder.destroy();
+  compiled.destroy();
   t.end();
 });
 

@@ -6,6 +6,10 @@ export type GPUPrimitivesDocsTabId =
   | 'command-graph'
   | 'scan'
   | 'compaction'
+  | 'mask'
+  | 'hierarchy-layout'
+  | 'graph-traversal'
+  | 'ancestor-projection'
   | 'sort'
   | 'reduction'
   | 'histogram'
@@ -33,6 +37,26 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'compaction',
     label: 'Compaction',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-compaction'
+  },
+  {
+    id: 'mask',
+    label: 'Masks',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-mask'
+  },
+  {
+    id: 'hierarchy-layout',
+    label: 'Hierarchy',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout'
+  },
+  {
+    id: 'graph-traversal',
+    label: 'Traversal',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal'
+  },
+  {
+    id: 'ancestor-projection',
+    label: 'Ancestors',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection'
   },
   {
     id: 'sort',

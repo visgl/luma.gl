@@ -1214,7 +1214,7 @@ export const HTMLUIPrismExample: React.FC = props => (
 export const GPUTraceViewerExample: React.FC = props => (
   <LumaExample
     id="gpu-trace-viewer"
-    title="GPU Command Graph Trace Viewer"
+    title="GPU Hierarchical Trace Viewer"
     directory="experimental"
     devices={['webgpu']}
     template={GPUTraceViewerApp}

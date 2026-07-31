@@ -3,7 +3,16 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, Texture} from '@luma.gl/core';
-import type {CommandEncoder, Device, Framebuffer, TextureFormat, TextureView} from '@luma.gl/core';
+import type {
+  CommandEncoder,
+  ComputePass,
+  Device,
+  Framebuffer,
+  QuerySet,
+  RenderPass,
+  TextureFormat,
+  TextureView
+} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
 import {
   GPUData,
@@ -33,14 +42,18 @@ import {
 import type {
   GPUCommandGraphComputeExecutable,
   GPUCommandGraphComputeNode,
+  GPUCommandGraphCapabilities,
   GPUCommandGraphCopyExecutable,
   GPUCommandGraphCopyNode,
   GPUCommandGraphEncodeContext,
   GPUCommandGraphEncodeOptions,
+  GPUCommandGraphEncodingStats,
   GPUCommandGraphNode,
+  GPUCommandGraphNodeEncodingStats,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphRenderNode,
   GPUCommandGraphStats,
+  GPUCommandGraphTimingReport,
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphImportedBuffer,
@@ -62,6 +75,7 @@ export {
 } from './gpu-command-graph-types';
 export type {
   GPUCommandGraphCompileContext,
+  GPUCommandGraphCapabilities,
   GPUCommandGraphComputeExecutable,
   GPUCommandGraphComputeNode,
   GPUCommandGraphCopyExecutable,
@@ -69,9 +83,14 @@ export type {
   GPUCommandGraphEncodeContext,
   GPUCommandGraphEncodeOptions,
   GPUCommandGraphNode,
+  GPUCommandGraphNodeEncodingStats,
+  GPUCommandGraphNodeTiming,
+  GPUCommandGraphNodeType,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphRenderNode,
   GPUCommandGraphStats,
+  GPUCommandGraphEncodingStats,
+  GPUCommandGraphTimingReport,
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,
@@ -99,6 +118,79 @@ type CachedFramebuffer = {
   depthStencilAttachment?: TextureView;
   framebuffer: Framebuffer;
 };
+
+type GPUCommandGraphNodeTimestamp = {
+  querySet: QuerySet;
+  beginIndex: number;
+  endIndex: number;
+};
+
+type EncodedGPUCommandGraphNode = {
+  stats: GPUCommandGraphNodeEncodingStats;
+  timestamp?: GPUCommandGraphNodeTimestamp;
+};
+
+/**
+ * Synchronous encoding statistics plus optional explicit GPU timing readback.
+ *
+ * Creating this result never maps a buffer, submits commands, or waits for the GPU. Call
+ * `readTimings()` only after the caller submits the encoded command buffer.
+ */
+export class GPUCommandGraphEncoding {
+  /** CPU encoding statistics available immediately after `encode()`. */
+  readonly stats: GPUCommandGraphEncodingStats;
+  /** Whether at least one render or compute node recorded a GPU timestamp pair. */
+  readonly canReadGPUTimings: boolean;
+
+  private readonly nodes: EncodedGPUCommandGraphNode[];
+
+  /** @internal */
+  constructor(nodes: EncodedGPUCommandGraphNode[], cpuEncodeTimeMilliseconds: number) {
+    this.nodes = nodes;
+    this.canReadGPUTimings = nodes.some(node => node.timestamp !== undefined);
+    this.stats = {
+      cpuEncodeTimeMilliseconds,
+      nodeCount: nodes.length,
+      timestampedNodeCount: nodes.filter(node => node.timestamp !== undefined).length,
+      nodes: nodes.map(node => node.stats)
+    };
+  }
+
+  /**
+   * Explicitly reads available per-pass GPU timestamp pairs after submission.
+   *
+   * Copy nodes currently report CPU encoding cost only because the portable command-encoder API
+   * does not expose standalone timestamp writes.
+   */
+  async readTimings(): Promise<GPUCommandGraphTimingReport> {
+    const nodes = await Promise.all(
+      this.nodes.map(async ({stats, timestamp}) => ({
+        ...stats,
+        ...(timestamp
+          ? {
+              gpuTimeMilliseconds: await timestamp.querySet.readTimestampDuration(
+                timestamp.beginIndex,
+                timestamp.endIndex
+              )
+            }
+          : {})
+      }))
+    );
+    const timestampedNodes = nodes.filter(node => node.gpuTimeMilliseconds !== undefined);
+    return {
+      cpuEncodeTimeMilliseconds: this.stats.cpuEncodeTimeMilliseconds,
+      ...(timestampedNodes.length > 0
+        ? {
+            gpuTimeMilliseconds: timestampedNodes.reduce(
+              (total, node) => total + (node.gpuTimeMilliseconds ?? 0),
+              0
+            )
+          }
+        : {}),
+      nodes
+    };
+  }
+}
 
 /**
  * Declarative WebGPU command graph with explicit resource access and ownership.
@@ -130,6 +222,7 @@ export class GPUCommandGraph<Parameters = void> {
     if (device.type !== 'webgpu') {
       throw new Error('GPUCommandGraph requires a WebGPU device');
     }
+    assertDeviceAvailable(device, 'construction');
     this.device = device;
     this.id = props.id ?? 'gpu-command-graph';
   }
@@ -146,7 +239,7 @@ export class GPUCommandGraph<Parameters = void> {
     defaultBuffer?: GraphImportedBuffer
   ): GraphBufferHandle {
     this.assertMutable();
-    validateGraphBufferDescriptor(descriptor);
+    validateGraphBufferDescriptor(descriptor, this.device);
     if (defaultBuffer) {
       validateImportedBuffer(defaultBuffer, descriptor, this.device);
     }
@@ -160,7 +253,7 @@ export class GPUCommandGraph<Parameters = void> {
    */
   createTransientBuffer(descriptor: GraphBufferDescriptor): GraphBufferHandle {
     this.assertMutable();
-    validateGraphBufferDescriptor(descriptor);
+    validateGraphBufferDescriptor(descriptor, this.device);
     return this.addBuffer(new GraphBufferHandle(this, descriptor, true));
   }
 
@@ -352,6 +445,7 @@ export class GPUCommandGraph<Parameters = void> {
    */
   compile(): CompiledGPUCommandGraph<Parameters> {
     this.assertMutable();
+    assertDeviceAvailable(this.device, 'compilation');
     this.compiled = true;
     return new CompiledGPUCommandGraph(
       compileGPUCommandGraph({
@@ -497,6 +591,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   readonly id: string;
   /** Scheduling and transient-allocation statistics. */
   readonly stats: GPUCommandGraphStats;
+  /** Adapter capabilities and limits relevant to graph execution. */
+  readonly capabilities: GPUCommandGraphCapabilities;
 
   private readonly buffers: Map<string, GraphBufferHandle>;
   private readonly textures: Map<string, GraphTextureHandle>;
@@ -521,6 +617,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     this.bufferTransientAllocations = props.bufferTransientAllocations;
     this.textureTransientAllocations = props.textureTransientAllocations;
     this.stats = props.stats;
+    this.capabilities = getGPUCommandGraphCapabilities(this.device);
   }
 
   /**
@@ -532,14 +629,19 @@ export class CompiledGPUCommandGraph<Parameters = void> {
    * @param commandEncoder Encoder that receives all graph commands.
    * @param options Per-encoding parameters and optional imported-resource replacements.
    */
-  encode(commandEncoder: CommandEncoder, options: GPUCommandGraphEncodeOptions<Parameters>): void {
+  encode(
+    commandEncoder: CommandEncoder,
+    options: GPUCommandGraphEncodeOptions<Parameters>
+  ): GPUCommandGraphEncoding {
     if (this.destroyed) {
       throw new Error(`CompiledGPUCommandGraph "${this.id}" has been destroyed`);
     }
+    assertDeviceAvailable(this.device, 'encoding');
     if (commandEncoder.device !== this.device) {
       throw new Error('GPUCommandGraph command encoder must belong to the graph device');
     }
 
+    const encodingStartTime = getTimestampMilliseconds();
     const importedBuffers = this.resolveImportedBuffers(options.buffers ?? {});
     const importedTextures = this.resolveImportedTextures(options.textures ?? {});
     const getBuffer = (bufferOrView: GraphBufferHandle | GraphDataView): Buffer => {
@@ -594,10 +696,14 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       getTextureView
     };
 
+    const encodedNodes: EncodedGPUCommandGraphNode[] = [];
     for (const {node, executable} of this.compiledNodes) {
+      const nodeStartTime = getTimestampMilliseconds();
+      let timestamp: GPUCommandGraphNodeTimestamp | undefined;
       switch (node.type) {
         case 'compute': {
           const computePass = commandEncoder.beginComputePass({id: node.id});
+          timestamp = getPassTimestamp(computePass);
           computePass.pushDebugGroup(node.id);
           try {
             (executable as GPUCommandGraphComputeExecutable<Parameters>).encode({
@@ -627,6 +733,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             ...renderPassProps,
             ...(framebuffer ? {framebuffer} : {})
           });
+          timestamp = getPassTimestamp(renderPass);
           renderPass.pushDebugGroup(node.id);
           try {
             renderExecutable.encode({...baseContext, renderPass});
@@ -640,7 +747,20 @@ export class CompiledGPUCommandGraph<Parameters = void> {
           (executable as GPUCommandGraphCopyExecutable<Parameters>).encode(baseContext);
           break;
       }
+      encodedNodes.push({
+        stats: {
+          id: node.id,
+          type: node.type,
+          cpuEncodeTimeMilliseconds: getTimestampMilliseconds() - nodeStartTime,
+          hasGPUTimestamps: timestamp !== undefined
+        },
+        timestamp
+      });
     }
+    return new GPUCommandGraphEncoding(
+      encodedNodes,
+      getTimestampMilliseconds() - encodingStartTime
+    );
   }
 
   /**
@@ -772,13 +892,57 @@ function getCoreTexture(texture: GraphImportedTexture): Texture {
   return texture;
 }
 
+/** Returns a portable timestamp pair recorded by one render or compute pass. */
+function getPassTimestamp(
+  pass: ComputePass | RenderPass
+): GPUCommandGraphNodeTimestamp | undefined {
+  const {timestampQuerySet, beginTimestampIndex, endTimestampIndex} = pass.props;
+  return timestampQuerySet &&
+    Number.isSafeInteger(beginTimestampIndex) &&
+    Number.isSafeInteger(endTimestampIndex) &&
+    beginTimestampIndex >= 0 &&
+    endTimestampIndex > beginTimestampIndex
+    ? {querySet: timestampQuerySet, beginIndex: beginTimestampIndex, endIndex: endTimestampIndex}
+    : undefined;
+}
+
+/** Captures graph-relevant adapter limits without requiring backend-specific handles. */
+function getGPUCommandGraphCapabilities(device: Device): GPUCommandGraphCapabilities {
+  return Object.freeze({
+    timestampQueries: device.features.has('timestamp-query'),
+    softwareAdapter:
+      device.info.gpu === 'software' ||
+      device.info.gpuType === 'cpu' ||
+      Boolean(device.info.fallback),
+    maxBufferByteLength: device.limits.maxBufferSize,
+    maxStorageBufferBindingByteLength: device.limits.maxStorageBufferBindingSize,
+    maxComputeInvocationsPerWorkgroup: device.limits.maxComputeInvocationsPerWorkgroup,
+    maxComputeWorkgroupsPerDimension: device.limits.maxComputeWorkgroupsPerDimension
+  });
+}
+
+/** Rejects graph work after a WebGPU device has been lost. */
+function assertDeviceAvailable(device: Device, operation: string): void {
+  if (device.isLost) {
+    throw new Error(`GPUCommandGraph cannot perform ${operation} after device loss`);
+  }
+}
+
+/** Returns a monotonic timestamp for synchronous CPU encoding diagnostics. */
+function getTimestampMilliseconds(): number {
+  return globalThis.performance?.now() ?? Date.now();
+}
+
 /** Validates graph identity, capacity, and usage fields for a logical buffer. */
-function validateGraphBufferDescriptor(descriptor: GraphBufferDescriptor): void {
+function validateGraphBufferDescriptor(descriptor: GraphBufferDescriptor, device: Device): void {
   if (!descriptor.id) {
     throw new Error('GPUCommandGraph buffer id is required');
   }
   if (!Number.isSafeInteger(descriptor.byteLength) || descriptor.byteLength < 0) {
     throw new Error(`GPUCommandGraph buffer "${descriptor.id}" requires a valid byteLength`);
+  }
+  if (descriptor.byteLength > device.limits.maxBufferSize) {
+    throw new Error(`GPUCommandGraph buffer "${descriptor.id}" exceeds the device buffer limit`);
   }
   if (!Number.isSafeInteger(descriptor.usage) || descriptor.usage <= 0) {
     throw new Error(`GPUCommandGraph buffer "${descriptor.id}" requires buffer usage flags`);
@@ -831,6 +995,23 @@ function normalizeGraphTextureDescriptor<Format extends TextureFormat>(
   }
   if (mipLevels > device.getMipLevelCount(descriptor.width, descriptor.height, depth)) {
     throw new Error(`GPUCommandGraph texture "${descriptor.id}" declares too many mip levels`);
+  }
+  const maximumWidth =
+    dimension === '1d'
+      ? device.limits.maxTextureDimension1D
+      : dimension === '3d'
+        ? device.limits.maxTextureDimension3D
+        : device.limits.maxTextureDimension2D;
+  const maximumHeight =
+    dimension === '3d' ? device.limits.maxTextureDimension3D : device.limits.maxTextureDimension2D;
+  const maximumDepth =
+    dimension === '3d' ? device.limits.maxTextureDimension3D : device.limits.maxTextureArrayLayers;
+  if (
+    descriptor.width > maximumWidth ||
+    descriptor.height > maximumHeight ||
+    depth > maximumDepth
+  ) {
+    throw new Error(`GPUCommandGraph texture "${descriptor.id}" exceeds device dimension limits`);
   }
   return {
     id: descriptor.id,
@@ -912,7 +1093,11 @@ function validateGraphDataView(
   }
   const byteLength =
     props.length === 0 ? 0 : (props.length - 1) * props.byteStride + props.rowByteLength;
-  if (props.byteOffset + byteLength > buffer.byteLength) {
+  const endByteOffset = props.byteOffset + byteLength;
+  if (!Number.isSafeInteger(byteLength) || !Number.isSafeInteger(endByteOffset)) {
+    throw new Error('Graph data view byte range exceeds safe integer precision');
+  }
+  if (endByteOffset > buffer.byteLength) {
     throw new Error(`Graph data view exceeds buffer "${buffer.id}" byte length`);
   }
 }

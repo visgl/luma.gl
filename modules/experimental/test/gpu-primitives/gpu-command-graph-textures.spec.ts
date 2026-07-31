@@ -91,6 +91,16 @@ test('GPUCommandGraph validates texture descriptors, views, and imports', async 
     })
   });
   const compiled = importGraph.compile();
+  t.equal(compiled.stats.importedTextureCount, 1, 'imported texture count is reported');
+  t.equal(compiled.stats.importedTextureBytes, 64, 'imported texture bytes are estimated');
+  t.equal(compiled.stats.logicalTextureCount, 1, 'logical texture count includes imports');
+  t.equal(compiled.stats.logicalTextureBytes, 64, 'logical texture bytes include imports');
+  t.equal(compiled.stats.logicalResourceBytes, 64, 'logical resource bytes include textures');
+  t.equal(
+    compiled.stats.physicalTransientResourceBytes,
+    0,
+    'imported textures are excluded from owned transient memory'
+  );
   compiled.encode(device.createCommandEncoder({id: 'texture-import-first'}), {
     parameters: undefined
   });
@@ -242,6 +252,13 @@ test('GPUCommandGraph tracks texture subresources and reuses compatible transien
   const reused = reuseGraph.compile();
   t.equal(reused.stats.logicalTransientTextureCount, 2, 'two logical textures are tracked');
   t.equal(reused.stats.physicalTransientTextureCount, 1, 'compatible lifetimes share texture');
+  t.equal(reused.stats.logicalTextureCount, 2, 'logical texture count includes both transients');
+  t.equal(reused.stats.logicalTextureBytes, 512, 'logical texture bytes include both transients');
+  t.equal(
+    reused.stats.physicalTransientResourceBytes,
+    256,
+    'owned transient memory reflects physical texture reuse'
+  );
   t.ok(reused.stats.reusedTransientTextureBytes > 0, 'texture reuse reports saved bytes');
   reused.destroy();
   t.end();
