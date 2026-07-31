@@ -591,8 +591,8 @@ const DEFAULT_CONTROLS: GlobeControls = {
   waveSpeed: 1.25,
   normalStrength: 0.52,
   fresnelPower: 6.2,
-  specularIntensity: 2.45,
-  oceanReflectionStrength: 0.65,
+  specularIntensity: 1.8,
+  oceanReflectionStrength: 0.2,
   lightAzimuth: -38,
   lightElevation: 34
 };
@@ -713,7 +713,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     const globeGeometry = new SphereGeometry({radius: 1, nlat: 48, nlong: 72});
-    const oceanGeometry = new SphereGeometry({radius: 1.012, nlat: 48, nlong: 72});
+    const oceanGeometry = new SphereGeometry({radius: 1.002, nlat: 48, nlong: 72});
     const landMaterialFactory = new MaterialFactory<
       {phongMaterial: typeof phongMaterial.props},
       {}
