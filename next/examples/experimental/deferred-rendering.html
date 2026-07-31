@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">luma.gl</title><meta data-rh="true" property="og:title" content="luma.gl"><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/next/examples/experimental/deferred-rendering"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-examples-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-examples-current"><link data-rh="true" rel="icon" href="/next/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/next/examples/experimental/deferred-rendering"><link data-rh="true" rel="alternate" href="https://luma.gl/next/examples/experimental/deferred-rendering" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/next/examples/experimental/deferred-rendering" hreflang="x-default"><link rel="stylesheet" href="/next/assets/css/styles.452bf92d.css">
-<script src="/next/assets/js/runtime~main.a31791e3.js" defer="defer"></script>
-<script src="/next/assets/js/main.a12253fc.js" defer="defer"></script>
+<script src="/next/assets/js/runtime~main.ec301df0.js" defer="defer"></script>
+<script src="/next/assets/js/main.d9569221.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -55,10 +55,14 @@ velocity, and depth channels plus two named material extras:</p>
 screen/log-depth grid. <code>createClusteredDeferredLightingShaderPassPipeline()</code> then reads those
 material targets plus the current pixel&#x27;s bounded cluster list, reconstructs view-space position
 from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back into the normal
-ordered shader-pass chain. <code>createGTAOShaderPassPipeline()</code> then performs a half-resolution
-horizon search over the unchanged depth and view-normal attachments, reprojects the previous AO
-result through the velocity buffer, rejects disocclusions with depth history, and applies a
-depth-aware separable blur before compositing ambient visibility into lit color.
+ordered shader-pass chain. <code>createDeferredAmbientLightingShaderPassPipeline()</code> separately extracts
+the linear ambient contribution from the same material attachments.
+<code>createGTAOShaderPassPipeline({composition: &#x27;ambient-only&#x27;})</code> then analytically integrates
+half-resolution horizon angles over the unchanged depth and view-normal attachments, rotates and
+jitters sampling across animation frames, reprojects the previous AO result through the velocity
+buffer, rejects disocclusions with depth history, and applies a depth-aware separable blur. Its
+final composite attenuates only the isolated ambient contribution, leaving directional and point
+lights plus emissive materials untouched.
 <code>createSSGIShaderPassPipeline()</code> traces cosine-weighted hemisphere rays through that lit scene,
 gathers nearby colored radiance, reprojects indirect-light history, rejects disocclusions in
 linearized view depth, and applies two depth/normal-aware denoising passes before composing the
