@@ -27,9 +27,9 @@ import {
 } from '../../example-panels';
 
 const BLOOM_UNIFORMS = {
-  threshold: 0.55,
-  intensity: 1.8,
-  radius: 8
+  threshold: 0.1,
+  intensity: 5,
+  radius: 24
 } as const;
 
 const BLOOM_BACKGROUND_HTML = `
@@ -208,7 +208,7 @@ export function makeBloomSettingsSchema(): SettingsSchema {
               type: 'number' as const,
               persist: 'none' as const,
               min: bounds.min,
-              max: bounds.max,
+              max: getBloomControlMaximum(propName, bounds.max),
               step: bounds.step
             };
           })
@@ -237,6 +237,17 @@ function getControlBounds(
       : Math.max(Number(((max - min) / 200).toFixed(4)), 0.001);
 
   return {min, max, step};
+}
+
+function getBloomControlMaximum(propName: string, defaultMaximum: number): number {
+  switch (propName) {
+    case 'radius':
+      return 24;
+    case 'intensity':
+      return 8;
+    default:
+      return defaultMaximum;
+  }
 }
 
 function formatControlLabel(propName: string): string {

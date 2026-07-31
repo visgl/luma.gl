@@ -4,7 +4,23 @@
   <style>
     body {
       background: black;
+      color-scheme: dark;
       margin: 0;
+    }
+
+    #example-panel-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1;
+      width: min(360px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      border: 1px solid rgb(255 255 255 / 15%);
+      border-radius: 8px;
+      background: rgb(3 7 18 / 82%);
+      color: white;
+      backdrop-filter: blur(12px);
     }
   </style>
 </head>
@@ -36,4 +52,8 @@
   const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
   animationLoop.start();
 </script>
-<body></body>
+<body>
+  <aside id="example-panel-container">
+    <div id="example-panel-host" data-example-panel-host></div>
+  </aside>
+</body>
