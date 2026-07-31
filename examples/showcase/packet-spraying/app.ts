@@ -342,10 +342,10 @@ fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
   let failureTint = smoothstep(0.44, 0.54, inputs.color.a);
   let viewDirection = normalize(app.cameraPosition - inputs.worldPosition);
   let viewAlignment = abs(dot(normalize(inputs.normal), viewDirection));
-  let focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 2.2);
+  let focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
   let focusStrength = smoothstep(0.9, 1.05, inputs.color.b) * (1.0 - failureTint);
-  let focusColor = vec3<f32>(0.12, 0.38, 0.95) *
-    focusStrength * (0.08 + focusRim * 0.72);
+  let focusColor = vec3<f32>(0.16, 0.48, 1.05) *
+    focusStrength * (0.08 + focusRim * 0.95);
   let color = vec4<f32>(
     glassColor.rgb + inputs.color.rgb * failureTint * 0.46 + focusColor,
     glassColor.a
@@ -488,9 +488,9 @@ void main(void) {
   float failureTint = smoothstep(0.44, 0.54, vColor.a);
   vec3 viewDirection = normalize(app.cameraPosition - vWorldPosition);
   float viewAlignment = abs(dot(normalize(vNormal), viewDirection));
-  float focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 2.2);
+  float focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
   float focusStrength = smoothstep(0.9, 1.05, vColor.b) * (1.0 - failureTint);
-  vec3 focusColor = vec3(0.12, 0.38, 0.95) * focusStrength * (0.08 + focusRim * 0.72);
+  vec3 focusColor = vec3(0.16, 0.48, 1.05) * focusStrength * (0.08 + focusRim * 0.95);
   vec4 color = vec4(
     glassColor.rgb + vColor.rgb * failureTint * 0.46 + focusColor,
     glassColor.a
