@@ -84,6 +84,14 @@ export type NetworkPlaneTelemetry = {
   status: NetworkPlaneStatus;
 };
 
+/** The physical switches, links, and endpoints traversed by one shared backbone path. */
+export type NetworkPathFocus = {
+  hostIndices: Set<number>;
+  linkKeys: Set<string>;
+  pathIndex: number;
+  switchIndices: Set<number>;
+};
+
 export type NetworkEndpointSignalKind = 'source' | 'destination';
 
 export type NetworkEndpointSignal = {
@@ -257,6 +265,47 @@ export function makeConversationRoutes(): ConversationRoute[] {
   }
 
   return conversationRoutes;
+}
+
+/** Collects both conversations' complete source-to-destination routes through one spine. */
+export function makeNetworkPathFocus(
+  conversationRoutes: readonly ConversationRoute[],
+  pathIndex: number
+): NetworkPathFocus | null {
+  if (!Number.isInteger(pathIndex) || pathIndex < 0 || pathIndex >= SPINE_POSITIONS.length) {
+    return null;
+  }
+
+  const spinePosition = SPINE_POSITIONS[pathIndex];
+  const focusedRoutes = conversationRoutes.filter(({route}) =>
+    route.points.includes(spinePosition)
+  );
+  if (focusedRoutes.length === 0) {
+    return null;
+  }
+
+  const hostIndices = new Set<number>();
+  const linkKeys = new Set<string>();
+  const switchIndices = new Set<number>();
+
+  for (const {conversationIndex, route} of focusedRoutes) {
+    const conversation = CONVERSATIONS[conversationIndex];
+    hostIndices.add(conversation.sourceHostIndex);
+    hostIndices.add(conversation.destinationHostIndex);
+
+    for (let pointIndex = 0; pointIndex < route.points.length; pointIndex++) {
+      const point = route.points[pointIndex];
+      const switchIndex = SWITCH_INDICES_BY_POSITION.get(point.join(','));
+      if (switchIndex !== undefined) {
+        switchIndices.add(switchIndex);
+      }
+      if (pointIndex > 0) {
+        linkKeys.add(makeLinkKey(route.points[pointIndex - 1], point));
+      }
+    }
+  }
+
+  return {hostIndices, linkKeys, pathIndex, switchIndices};
 }
 
 export function makePackets(conversationRoutes: ConversationRoute[]): Packet[] {

@@ -237,10 +237,13 @@ an individual showcase.
 - Bounded colored point lights, in-volume scattering, screen-space scene reflections, secondary
   environment bounces, and focused raster caustics connect moving emitters to nearby glass.
 - Linked switch-plane telemetry gradually emphasizes all eight switches across both tiers of each
-  physical plane, distinguishes four independent spine paths, and links to a GPU-optics panel.
+  physical plane, while four independently inspectable backbone paths reveal both conversations'
+  complete server-to-server routes with smoothly isolated switches, links, and packet wakes.
 - A single guided-story visual-style control progressively introduces surface highlights,
   refraction, packet lighting, motion accents, spectral glass, caustics, and bloom while keeping
   advanced material settings independently adjustable.
+- A duration-weighted, directly navigable chapter timeline ties cinematic camera transitions to
+  congestion, packet loss, rerouting, and probe-confirmed path recovery.
 - Exact A-buffer transparency, weighted-blended transparency, and depth-sorted alpha blending
   preserve the strongest supported compositing strategy on each backend.
 
