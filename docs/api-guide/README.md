@@ -12,6 +12,11 @@ luma.gl is divided into different sub-APIs: the core GPU API, the shader API and
 The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`.
 Scenegraphs are included and glTF support is available through the `@luma.gl/gltf` add-on module.
 
+For an experimental retained, renderer-independent scene contract, see
+[Declarative Rendering with ANARI](/docs/api-guide/engine/anari-rendering). It introduces
+`@luma.gl/anari-js`, scene objects, committed parameters, instancing, physically based lighting,
+and HDR presentation.
+
 ## Core API
 
 The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
