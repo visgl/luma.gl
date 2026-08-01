@@ -1,0 +1,28 @@
+{
+  "name": "luma.gl-examples-showcase-anari",
+  "version": "9.4.0-alpha.2",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@loaders.gl/core": "~4.4.2",
+    "@loaders.gl/gltf": "~4.4.2",
+    "@luma.gl/anari": "workspace:*",
+    "@luma.gl/core": "9.4.0-alpha.2",
+    "@luma.gl/effects": "9.4.0-alpha.2",
+    "@luma.gl/engine": "9.4.0-alpha.2",
+    "@luma.gl/shadertools": "9.4.0-alpha.2",
+    "@luma.gl/webgl": "9.4.0-alpha.2",
+    "@luma.gl/webgpu": "9.4.0-alpha.2",
+    "@math.gl/core": "^4.1.0",
+    "jsonc-parser": "3.2.0",
+    "monaco-editor": "^0.53.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

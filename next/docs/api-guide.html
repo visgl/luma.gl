@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">A Tale of Three APIs | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/next/docs/api-guide"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="A Tale of Three APIs | luma.gl"><meta data-rh="true" name="description" content="The luma.gl API enables the creation of portable GPU applications that can run on top of either WebGPU, or WebGL 2."><meta data-rh="true" property="og:description" content="The luma.gl API enables the creation of portable GPU applications that can run on top of either WebGPU, or WebGL 2."><link data-rh="true" rel="icon" href="/next/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/next/docs/api-guide"><link data-rh="true" rel="alternate" href="https://luma.gl/next/docs/api-guide" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/next/docs/api-guide" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"A Tale of Three APIs","item":"https://luma.gl/next/docs/api-guide/"}]}</script><link rel="stylesheet" href="/next/assets/css/styles.452bf92d.css">
-<script src="/next/assets/js/runtime~main.ec301df0.js" defer="defer"></script>
-<script src="/next/assets/js/main.d9569221.js" defer="defer"></script>
+<script src="/next/assets/js/runtime~main.2714a35f.js" defer="defer"></script>
+<script src="/next/assets/js/main.4f4c829a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -18,6 +18,11 @@ luma.gl is divided into different sub-APIs: the core GPU API, the shader API and
 <h2 class="anchor anchorTargetStickyNavbar_tleR" id="engine-api">Engine API<a href="#engine-api" class="hash-link" aria-label="Direct link to Engine API" title="Direct link to Engine API" translate="no">​</a></h2>
 <p>The engine API provides higher-level classes like <code>Model</code>, <code>AnimationLoop</code>, <code>BufferTransform</code>, <code>TextureTransform</code>, and <code>Computation</code>.
 Scenegraphs are included and glTF support is available through the <code>@luma.gl/gltf</code> add-on module.</p>
+<p>For an experimental retained, renderer-independent scene contract, see
+<a class="" href="/next/docs/api-guide/engine/anari-rendering">Declarative Rendering with ANARI</a>. It introduces
+the experimental, private <code>@luma.gl/anari</code> workspace, scene objects, committed parameters,
+instancing, physically based lighting,
+and HDR presentation.</p>
 <h2 class="anchor anchorTargetStickyNavbar_tleR" id="core-api">Core API<a href="#core-api" class="hash-link" aria-label="Direct link to Core API" title="Direct link to Core API" translate="no">​</a></h2>
 <p>The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 It is a portable API, in the sense that the <code>@luma.gl/core</code> module provides an abstract API for writing application code
