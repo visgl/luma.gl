@@ -1011,6 +1011,33 @@ schedule commitment.
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
 | 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
 
+### Remaining tranche map
+
+The remaining phases are intentionally divided into reviewable contracts. A tranche should land
+only when its entry dependency is present and its exit evidence can be produced; the numbering is
+dependency order, not a schedule commitment. Tranches whose dependencies do not overlap may be
+developed independently.
+
+| Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
+| --- | --- | --- | :---: | :---: |
+| 3.2 — Partitioned topology | Explicit global-ID and chunk-base contracts for hierarchy and CSR topology without hidden packing | Implemented Phase 3 data primitives | High | Large |
+| 3.3 — Extension decision gate | Evidence-backed decision on sparse histograms, multidimensional histograms, custom scans, and shader callbacks | Tranche 3.2 plus demonstrated consumers | Medium | Medium |
+| 4.1 — Region picking | Bounded rectangular picks with stable object and batch IDs, capacity, count, and overflow | Phase 2 stable identity | Medium | Medium |
+| 4.2 — Asynchronous readback ring | Reusable staging slots with backpressure, cancellation, and no mapped-buffer reuse hazards | Tranche 4.1 | High | Medium |
+| 4.3 — Render-target graph contracts | Multisample resolve and swapchain imports with explicit subresource and frame ownership | Phase 1 lifetime contracts | Medium | Large |
+| 4.4 — External-texture contracts | One-frame external-texture imports with validated access and device-loss behavior | Tranche 4.3 | Medium | Large |
+| 5.1 — `GPUGridIndex` build/update | Stable cell offsets and object-ID storage with measurable full-build and incremental-update costs | Tranche 3.2 and Phase 1 measurement | High | Large |
+| 5.2 — `GPUGridIndex` query | Bounds, radius, and point queries feeding visibility and region picking in 2D and 3D | Tranche 5.1, Phase 2, and Tranche 4.1 | High | Medium |
+| 5.3 — `GPUBVH` build/refit | Flat BVH storage with explicit rebuild and refit policies | Tranche 5.2 | High | Large |
+| 5.4 — `GPUBVH` query and cost model | Visibility and picking queries with scan/grid/BVH comparison guidance | Tranche 5.3 | High | Medium |
+| 6.1 — Scene storage and updates | Flat stable-ID draw records, bounded update ranges, and explicit CPU/table adapters | Phase 2 and Tranche 5.2 | High | Large |
+| 6.2 — GPU draw generation | Visibility and spatial results writing grouped indirect-command slots without CPU draw selection | Tranche 6.1 | High | Large |
+| 6.3 — Cross-domain scene consumers | One scene-graph and one table-oriented consumer sharing storage, picking, and draw contracts | Tranche 6.2 plus Phases 4–5 | High | Large |
+| 7.1 — Dependency audit and API freeze | Final package graph, naming, ownership, failure, and extension-point decisions | Tranche 6.3 and two consumers per candidate API | High | Medium |
+| 7.2 — Scheduling-core extraction | Table-independent command graph moved to `@luma.gl/engine` with compatibility exports | Tranche 7.1 | High | Large |
+| 7.3 — Adapter and algorithm migration | Table adapters moved to `@luma.gl/tables`; optional algorithms and workflows moved to `@luma.gl/gpgpu` | Tranche 7.2 | High | Large |
+| 7.4 — Compatibility and graduation | Dependency audit, deprecation window, migration guide, and stable public documentation | Tranche 7.3 | High | Medium |
+
 ### Phase 0 — Current foundation
 
 **Entry dependencies:** None. This is the implemented baseline.
@@ -1127,6 +1154,28 @@ one packed view and adds more batch-aware operations only where consumers need p
 semantics. Custom associative scans, sparse histograms, and multidimensional histograms should be
 added only with a concrete consumer and an explicit numerical or memory contract.
 
+#### Tranche 3.2 — Partitioned topology
+
+Define how chunk-local rows map to stable global IDs, including explicit base offsets and the
+ownership of cross-chunk hierarchy or CSR edges. Extend at least one hierarchy primitive and one
+CSR primitive to consume that contract without concatenating chunks behind the caller's back.
+
+**Exit evidence:** CPU-oracle tests cover empty chunks, cross-chunk references, uneven boundaries,
+and incremental replacement of one batch. A hierarchy and graph consumer preserve their source
+partitions while producing the same IDs and results as an explicitly packed input.
+
+#### Tranche 3.3 — Extension decision gate
+
+Evaluate custom associative scans, sparse and multidimensional histograms, and shader predicate
+callbacks against demonstrated consumers after partitioned topology lands. Each candidate must
+state its numerical behavior, memory-growth bounds, composition model, and why existing fixed
+contracts are insufficient. Explicit deferral is a valid outcome; this tranche does not require
+inventing an extension API merely to complete a checklist.
+
+**Exit evidence:** Every candidate has two motivating consumers or remains documented as deferred,
+and any accepted API has a CPU oracle plus explicit capacity, overflow, and shader-compatibility
+contracts.
+
 Irregular histogram edges primarily target heavy-tailed measurements such as trace duration and
 request latency. Explicit microsecond-to-second boundaries preserve resolution across orders of
 magnitude, align results with service-level thresholds, and let applications compare dynamic
@@ -1148,6 +1197,46 @@ external textures so their subresources, hazards, ownership, and frame lifetimes
 Callback, highlighting, tooltip, and color-encoded fallback policies remain higher-level workflow
 or application concerns.
 
+#### Tranche 4.1 — Region picking
+
+Add bounded rectangular picking that publishes object IDs, batch IDs, a result count, and an
+overflow flag into caller-sized GPU storage. Define ordering and duplicate handling explicitly;
+selection semantics such as nearest-only, toggling, or highlighting stay above the primitive.
+
+**Exit evidence:** Tests cover empty regions, overlapping primitives, duplicate IDs, exact capacity,
+and overflow. An example uses stable IDs from `GPUVisibilityWorkflow` without a CPU-side identity
+translation.
+
+#### Tranche 4.2 — Asynchronous readback ring
+
+Add a reusable staging-buffer ring whose tickets make availability, backpressure, cancellation,
+and device loss observable. The ring owns staging allocations but neither submits command buffers
+nor silently waits for a mapped slot.
+
+**Exit evidence:** Repeated region picks can overlap rendering and readback without reusing a
+mapped buffer or serializing every frame. Tests cover ring exhaustion, out-of-order completion,
+cancellation, destruction, and device loss.
+
+#### Tranche 4.3 — Render-target graph contracts
+
+Model multisample resolves and swapchain texture imports with explicit mip, layer, aspect, access,
+and frame validity. The graph validates hazards but never acquires, presents, or destroys a
+swapchain texture on the application's behalf.
+
+**Exit evidence:** Compute, render, copy, and resolve nodes reject conflicting subresource access;
+multisample and swapchain examples encode through the graph; stale-frame and ownership mistakes
+fail before submission.
+
+#### Tranche 4.4 — External-texture contracts
+
+Represent external textures as frame-scoped imports with access constraints that match WebGPU's
+external-image lifetime. Keep media scheduling, frame acquisition, and fallback conversion outside
+the graph.
+
+**Exit evidence:** Validation prevents persistence into incompatible compiled encodings, tests
+cover replacement and device loss, and a consumer imports successive frames without graph-owned
+destruction or accidental cross-frame reuse.
+
 **Exit criteria:** Region results preserve stable object and batch identity; repeated picks do not
 serialize rendering on mapped buffers; and resolve, swapchain, and external resources participate
 in graph validation without accidental ownership or cross-frame reuse.
@@ -1161,6 +1250,44 @@ Implement `GPUGridIndex` before `GPUBVH` to validate build, update, storage, and
 a simpler structure. Add `GPUBVH` only after grid-index consumers establish the shared contract.
 Both are library-built storage-buffer structures, not native WebGPU acceleration resources, and
 must expose their construction and query costs.
+
+#### Tranche 5.1 — `GPUGridIndex` build and update
+
+Build a flat index of cell offsets and stable object IDs from bounded positions or bounds. Expose
+capacity and overflow, distinguish full rebuilds from supported incremental updates, and keep cell
+size and domain policy caller-controlled.
+
+**Exit evidence:** Two-dimensional and three-dimensional builds match CPU oracles across empty,
+clustered, out-of-domain, and capacity-boundary inputs. Benchmarks report allocation, build, and
+update costs separately from query cost.
+
+#### Tranche 5.2 — `GPUGridIndex` query
+
+Add bounds, radius, and point queries whose masks or compacted IDs compose directly with visibility
+and region-picking outputs. Query contracts preserve stable identity and do not require downloading
+candidate lists before filtering or drawing.
+
+**Exit evidence:** A 2D and a 3D consumer feed query results into visibility or picking, validate
+against an unindexed GPU scan, and document where index construction becomes worthwhile.
+
+#### Tranche 5.3 — `GPUBVH` build and refit
+
+Define flat node and leaf storage, stable leaf identity, bounds encoding, and explicit rebuild and
+refit policies. Reuse the grid index's ownership and measurement conventions where possible while
+allowing BVH-specific topology.
+
+**Exit evidence:** CPU-oracle tests cover degenerate, overlapping, and changing bounds; refit and
+rebuild produce equivalent query results; memory and construction costs are separately reported.
+
+#### Tranche 5.4 — `GPUBVH` query and cost model
+
+Connect BVH bounds, point, and ray-like selection queries to the same visibility and picking
+contracts used by grid queries. Publish guidance rather than claiming one index is universally
+best.
+
+**Exit evidence:** Representative consumers compare unindexed scan, grid, and BVH paths with the
+same inputs and correctness oracle, including build amortization, update rate, selectivity, memory,
+and query time.
 
 **Exit criteria:** Both a two-dimensional and a three-dimensional consumer can build or update an
 index, query it through a graph, feed results into visibility or picking, and compare correctness
@@ -1176,6 +1303,35 @@ membership, geometry references, and indirect command slots. CPU scene graphs ma
 database, and table-oriented applications may construct it directly; `GPUScene` does not introduce
 a second game-engine hierarchy.
 
+#### Tranche 6.1 — Scene storage and updates
+
+Specify flat draw records, stable IDs, bounded update ranges, group membership, geometry references,
+and command-slot ownership. Provide explicit adapters for CPU scene graphs and GPU tables without
+making either representation canonical.
+
+**Exit evidence:** Insert, update, removal, and compaction tests preserve identity and references;
+partial updates have measurable upload bounds; no scene hierarchy or table type enters the core
+storage contract.
+
+#### Tranche 6.2 — GPU draw generation
+
+Translate visibility and spatial-query results into capacity-bounded indirect-command slots grouped
+by compatible pipeline and resource bindings. WebGPU binding constraints remain explicit rather
+than being presented as a bindless renderer.
+
+**Exit evidence:** A compiled graph updates counts and commands after parameter-only changes with
+no CPU draw selection. Tests cover empty groups, stable ordering, capacity overflow, and geometry
+or material group changes.
+
+#### Tranche 6.3 — Cross-domain scene consumers
+
+Prove that the storage contract serves both a conventional scene graph and a table-oriented
+application. Both consumers use the same identity, visibility, picking, and indirect-draw path
+while retaining their own update and presentation policies.
+
+**Exit evidence:** Two independent consumers share the public scene primitives without adapter
+casts, hidden packing, or consumer-specific fields in `GPUScene`.
+
 **Exit criteria:** Incremental updates preserve stable identity, visibility and spatial-query
 results write draw commands without CPU draw selection, and both scene-graph and table-oriented
 consumers use the same storage contract.
@@ -1190,6 +1346,44 @@ graph adapters in `@luma.gl/tables`, and move optional algorithms and reusable w
 `@luma.gl/gpgpu`. Keep Arrow conversion and readback adapters in `@luma.gl/arrow`. Audit
 `DrawCommandBuffer` and split its core from table integration if that is required to avoid an engine
 dependency on tables. Provide compatibility exports and migration notes for experimental users.
+
+#### Tranche 7.1 — Dependency audit and API freeze
+
+Freeze ownership, naming, submission, lifetime, failure, capacity, and extension contracts only
+after every graduation candidate has at least two consumers. Produce the target package graph and
+identify compatibility shims before moving code.
+
+**Exit evidence:** The audit demonstrates an acyclic package graph, no Arrow leakage into tables or
+gpgpu, no table dependency in the engine core, and an owner for every public resource and command
+submission boundary.
+
+#### Tranche 7.2 — Scheduling-core extraction
+
+Move the table-independent command-graph core to `@luma.gl/engine`, limited to buffers, textures,
+passes, generic graph views, scheduling, hazards, and allocation. Preserve experimental imports
+through compatibility exports during the migration window.
+
+**Exit evidence:** Engine builds without tables, gpgpu, or Arrow; existing consumers pass unchanged
+through compatibility exports; direct engine consumers need no table-shaped adapter.
+
+#### Tranche 7.3 — Adapter and algorithm migration
+
+Keep generic GPU data and graph adapters in `@luma.gl/tables`, move optional algorithms and reusable
+workflow builders to `@luma.gl/gpgpu`, and retain Arrow conversion, upload, and readback helpers in
+`@luma.gl/arrow`. Split `DrawCommandBuffer` integration if necessary to preserve that direction.
+
+**Exit evidence:** Package-level tests and dependency checks enforce the intended arrows, public
+examples import from their final owners, and compatibility exports preserve one documented
+deprecation window.
+
+#### Tranche 7.4 — Compatibility and graduation
+
+Publish stable reference pages, migration guidance, release notes, and removal criteria for the
+experimental surface. Treat candidate names as provisional until this tranche exits.
+
+**Exit evidence:** All examples and tests use graduated entry points, links and API reports pass,
+compatibility behavior is documented and tested, and future experimental removal has an explicit
+release boundary.
 
 **Exit criteria:** The final package graph has no dependency cycle or Arrow leakage into tables or
 gpgpu; compatibility exports cover one deprecation window; public API documentation names ownership
