@@ -5,11 +5,14 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
+  GPUBatchSort,
   GPUCommandGraph,
+  GraphVectorView,
   GPUSort,
   type GPUSortAlgorithm,
   type GPUSortDirection
 } from '@luma.gl/experimental';
+import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 test('GPUSort bitonic stably sorts paired uint32 values in both directions', async t => {
@@ -81,6 +84,108 @@ test('GPUSort handles empty and single-row inputs', async t => {
   t.deepEqual(single.keys, [42], 'single key is copied');
   t.deepEqual(single.values, [99], 'single value is copied');
   t.deepEqual(single.nodeOrder, ['sort-copy-pair'], 'single row uses one copy pass');
+  t.end();
+});
+
+test('GPUBatchSort stably sorts each vector chunk without changing boundaries', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const keyChunks = [
+    Uint32Array.from([3, 1, 3]),
+    new Uint32Array(0),
+    Uint32Array.from([9]),
+    Uint32Array.from([2, 1, 2, 0])
+  ];
+  const valueChunks = [
+    Uint32Array.from([10, 11, 12]),
+    new Uint32Array(0),
+    Uint32Array.from([20]),
+    Uint32Array.from([30, 31, 32, 33])
+  ];
+
+  for (const direction of ['ascending', 'descending'] as const) {
+    const result = await runBatchSort(device, keyChunks, valueChunks, 'auto', direction);
+    const expected = keyChunks.map((keys, chunkIndex) =>
+      getStableSortedPairs(keys, valueChunks[chunkIndex], direction)
+    );
+    t.deepEqual(
+      result.keyChunks,
+      expected.map(chunk => chunk.keys),
+      `${direction} keys remain in their source chunks`
+    );
+    t.deepEqual(
+      result.valueChunks,
+      expected.map(chunk => chunk.values),
+      `${direction} payloads remain stable within each chunk`
+    );
+    t.deepEqual(
+      result.resolvedAlgorithms,
+      ['bitonic', 'bitonic', 'bitonic', 'bitonic'],
+      'auto selection is reported in chunk order'
+    );
+    t.ok(
+      result.nodeOrder.some(id => id === 'batch-sort-chunk-2-copy-pair'),
+      'single-row chunks retain the copy fast path'
+    );
+    t.notOk(
+      result.nodeOrder.some(id => id.startsWith('batch-sort-chunk-1-')),
+      'empty chunks add no graph nodes'
+    );
+  }
+  t.end();
+});
+
+test('GPUBatchSort resolves algorithms per chunk and validates vector topology', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const graph = new GPUCommandGraph(device, {id: 'batch-sort-validation'});
+  const keys = makeGraphVector(graph, 'keys', [65_536, 65_537]);
+  const values = makeGraphVector(graph, 'values', [65_536, 65_537]);
+  const outputKeys = makeGraphVector(graph, 'output-keys', [65_536, 65_537]);
+  const outputValues = makeGraphVector(graph, 'output-values', [65_536, 65_537]);
+  const sort = new GPUBatchSort({keys, values, outputKeys, outputValues});
+  t.deepEqual(
+    sort.resolvedAlgorithms,
+    ['bitonic', 'radix'],
+    'auto chooses independently from each chunk length'
+  );
+
+  t.throws(
+    () =>
+      new GPUBatchSort({
+        keys,
+        values: makeGraphVector(graph, 'short-values', [65_536, 65_536]),
+        outputKeys,
+        outputValues
+      }),
+    /same chunk topology/,
+    'aligned inputs must preserve every chunk length'
+  );
+  t.throws(
+    () => new GPUBatchSort({keys, values, outputKeys: keys, outputValues}),
+    /separate buffers/,
+    'outputs cannot alias any input chunk'
+  );
+  t.throws(
+    () =>
+      new GPUBatchSort({
+        keys: makeGraphVector(graph, 'empty-keys', []),
+        values: makeGraphVector(graph, 'empty-values', []),
+        outputKeys: makeGraphVector(graph, 'empty-output-keys', []),
+        outputValues: makeGraphVector(graph, 'empty-output-values', []),
+        algorithm: 'merge' as never
+      }),
+    /algorithm must be/,
+    'empty vector sorts still validate options'
+  );
   t.end();
 });
 
@@ -246,6 +351,123 @@ async function runSort(
   outputKeysBuffer.destroy();
   outputValuesBuffer.destroy();
   return result;
+}
+
+type BatchSortResult = {
+  keyChunks: number[][];
+  valueChunks: number[][];
+  resolvedAlgorithms: readonly ('bitonic' | 'radix')[];
+  nodeOrder: string[];
+};
+
+async function runBatchSort(
+  device: Device,
+  keyChunks: Uint32Array[],
+  valueChunks: Uint32Array[],
+  algorithm: GPUSortAlgorithm,
+  direction: GPUSortDirection
+): Promise<BatchSortResult> {
+  const keys = makeGPUVector(device, 'batch-keys', keyChunks, false);
+  const values = makeGPUVector(device, 'batch-values', valueChunks, false);
+  const outputKeys = makeGPUVector(device, 'batch-output-keys', keyChunks, true);
+  const outputValues = makeGPUVector(device, 'batch-output-values', valueChunks, true);
+  const graph = new GPUCommandGraph(device, {id: 'batch-sort-test'});
+  const sort = new GPUBatchSort({
+    id: 'batch-sort',
+    keys: graph.importGPUVector('keys', keys),
+    values: graph.importGPUVector('values', values),
+    outputKeys: graph.importGPUVector('output-keys', outputKeys),
+    outputValues: graph.importGPUVector('output-values', outputValues),
+    algorithm,
+    direction
+  });
+  sort.addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'batch-sort-test-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const [sortedKeyChunks, sortedValueChunks] = await Promise.all([
+    readGPUVector(outputKeys),
+    readGPUVector(outputValues)
+  ]);
+  const result = {
+    keyChunks: sortedKeyChunks,
+    valueChunks: sortedValueChunks,
+    resolvedAlgorithms: sort.resolvedAlgorithms,
+    nodeOrder: compiled.stats.nodeOrder
+  };
+  compiled.destroy();
+  for (const vector of [keys, values, outputKeys, outputValues]) vector.destroy();
+  return result;
+}
+
+function makeGPUVector(
+  device: Device,
+  name: string,
+  chunks: Uint32Array[],
+  output: boolean
+): GPUVector<'uint32'> {
+  return new GPUVector({
+    type: 'data',
+    name,
+    format: 'uint32',
+    data: chunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: device.createBuffer({
+            id: `${name}-${chunkIndex}`,
+            ...(output
+              ? {byteLength: Math.max(chunk.length, 1) * Uint32Array.BYTES_PER_ELEMENT}
+              : {data: chunk.length > 0 ? chunk : new Uint32Array(1)}),
+            usage: Buffer.STORAGE | (output ? Buffer.COPY_SRC : Buffer.COPY_DST)
+          }),
+          format: 'uint32',
+          length: chunk.length,
+          ownsBuffer: true
+        })
+    ),
+    ownsData: true
+  });
+}
+
+async function readGPUVector(vector: GPUVector<'uint32'>): Promise<number[][]> {
+  return Promise.all(
+    vector.data.map(async chunk => {
+      if (chunk.length === 0) return [];
+      const bytes = await chunk.buffer.readAsync(
+        chunk.byteOffset,
+        chunk.length * Uint32Array.BYTES_PER_ELEMENT
+      );
+      return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, chunk.length));
+    })
+  );
+}
+
+function makeGraphVector(
+  graph: GPUCommandGraph,
+  id: string,
+  chunkLengths: number[]
+): GraphVectorView<'uint32'> {
+  const data = chunkLengths.map((length, chunkIndex) => {
+    const buffer = graph.createTransientBuffer({
+      id: `${id}-${chunkIndex}`,
+      byteLength: Math.max(length, 1) * Uint32Array.BYTES_PER_ELEMENT,
+      usage: Buffer.STORAGE
+    });
+    return graph.createDataView(buffer, {format: 'uint32', length});
+  });
+  const length = chunkLengths.reduce((sum, chunkLength) => sum + chunkLength, 0);
+  return new GraphVectorView({
+    id,
+    name: id,
+    format: 'uint32',
+    length,
+    valueLength: length,
+    stride: 1,
+    byteStride: Uint32Array.BYTES_PER_ELEMENT,
+    rowByteLength: Uint32Array.BYTES_PER_ELEMENT,
+    data
+  });
 }
 
 function importView(graph: GPUCommandGraph, id: string, buffer: Buffer, length: number) {
