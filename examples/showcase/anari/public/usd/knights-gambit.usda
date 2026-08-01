@@ -1,0 +1,207 @@
+#usda 1.0
+(
+    defaultPrim = "KnightsGambit"
+    doc = "A richly detailed Open Chess Set knight presented as a dramatic metallic triptych."
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "KnightsGambit"
+{
+    def Scope "Materials"
+    {
+        def Material "RoyalGold"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (1, 0.72, 0.16)
+                float inputs:metallic = 0.98
+                float inputs:roughness = 0.075
+            }
+        }
+
+        def Material "FrozenSilver"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.66, 0.83, 1)
+                float inputs:metallic = 0.92
+                float inputs:roughness = 0.09
+            }
+        }
+
+        def Material "ObsidianPurple"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.34, 0.14, 0.68)
+                float inputs:metallic = 0.81
+                float inputs:roughness = 0.11
+            }
+        }
+
+        def Material "MidnightMetal"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.065, 0.075, 0.13)
+                float inputs:metallic = 0.83
+                float inputs:roughness = 0.14
+            }
+        }
+
+        def Material "AzureBeacon"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.11, 0.49, 1)
+                color3f inputs:emissiveColor = (0.11, 0.49, 1)
+                float inputs:roughness = 0.075
+            }
+        }
+
+        def Material "AmberBeacon"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (1, 0.38, 0.1)
+                color3f inputs:emissiveColor = (1, 0.38, 0.1)
+                float inputs:roughness = 0.075
+            }
+        }
+    }
+
+    def Xform "GoldenKnight" (
+        prepend references = @./chess/Knight_geom.usd@
+    )
+    {
+        double3 xformOp:translate = (0, -0.205, -0.55)
+        double3 xformOp:rotateXYZ = (0, -24, 0)
+        double3 xformOp:scale = (58, 58, 58)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        over "Geom"
+        {
+            over "Render"
+            {
+                rel material:binding = </KnightsGambit/Materials/RoyalGold>
+            }
+        }
+    }
+
+    def Xform "SilverKnight" (
+        prepend references = @./chess/Knight_geom.usd@
+    )
+    {
+        double3 xformOp:translate = (-5.0, -0.328, 1.45)
+        double3 xformOp:rotateXYZ = (0, 25, 0)
+        double3 xformOp:scale = (44, 44, 44)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        over "Geom"
+        {
+            over "Render"
+            {
+                rel material:binding = </KnightsGambit/Materials/FrozenSilver>
+            }
+        }
+    }
+
+    def Xform "VioletKnight" (
+        prepend references = @./chess/Knight_geom.usd@
+    )
+    {
+        double3 xformOp:translate = (5.0, -0.328, 1.45)
+        double3 xformOp:rotateXYZ = (0, -70, 0)
+        double3 xformOp:scale = (44, 44, 44)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        over "Geom"
+        {
+            over "Render"
+            {
+                rel material:binding = </KnightsGambit/Materials/ObsidianPurple>
+            }
+        }
+    }
+
+    def Cylinder "CentralDais"
+    {
+        double radius = 3.2
+        double height = 0.8
+        uniform token axis = "Y"
+        rel material:binding = </KnightsGambit/Materials/MidnightMetal>
+        double3 xformOp:translate = (0, 0.4, -0.55)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "CentralGoldTrim"
+    {
+        double radius = 3.26
+        double height = 0.07
+        uniform token axis = "Y"
+        rel material:binding = </KnightsGambit/Materials/RoyalGold>
+        double3 xformOp:translate = (0, 0.845, -0.55)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "SilverDais"
+    {
+        double radius = 2.05
+        double height = 0.49
+        uniform token axis = "Y"
+        rel material:binding = </KnightsGambit/Materials/MidnightMetal>
+        double3 xformOp:translate = (-5.0, 0.25, 1.45)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "VioletDais"
+    {
+        double radius = 2.05
+        double height = 0.49
+        uniform token axis = "Y"
+        rel material:binding = </KnightsGambit/Materials/MidnightMetal>
+        double3 xformOp:translate = (5.0, 0.25, 1.45)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def PointInstancer "BlueCrown"
+    {
+        point3f[] positions = [(-6.6, 3.1, -4), (-6.05, 4.9, -4), (-4.8, 6.45, -4), (-3.2, 7.55, -4), (-1.62, 8.2, -4), (0, 8.4, -4), (1.62, 8.2, -4), (3.2, 7.55, -4), (4.8, 6.45, -4), (6.05, 4.9, -4), (6.6, 3.1, -4)]
+        int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        rel prototypes = </KnightsGambit/BlueCrown/CrownJewel>
+
+        def Sphere "CrownJewel"
+        {
+            double radius = 0.125
+            rel material:binding = </KnightsGambit/Materials/AzureBeacon>
+        }
+    }
+
+    def PointInstancer "AmberBoard"
+    {
+        point3f[] positions = [(-6.6, 0.12, 4.3), (-5.3, 0.12, 4.3), (-4.0, 0.12, 4.3), (-2.7, 0.12, 4.3), (-1.35, 0.12, 4.3), (0, 0.12, 4.3), (1.35, 0.12, 4.3), (2.7, 0.12, 4.3), (4, 0.12, 4.3), (5.3, 0.12, 4.3), (6.6, 0.12, 4.3)]
+        int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        rel prototypes = </KnightsGambit/AmberBoard/BoardJewel>
+
+        def Sphere "BoardJewel"
+        {
+            double radius = 0.1
+            rel material:binding = </KnightsGambit/Materials/AmberBeacon>
+        }
+    }
+
+    def DistantLight "RoyalKey"
+    {
+        color3f inputs:color = (1, 0.83, 0.69)
+        float inputs:intensity = 680
+        float3 xformOp:rotateXYZ = (-45, 30, 0)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+}

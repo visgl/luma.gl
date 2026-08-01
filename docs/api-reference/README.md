@@ -12,6 +12,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/webgl`][webgl]             | Required \* | `Device` adapter implemented using the WebGPU API. Enables creation of WebGPU resources         |
 | [`@luma.gl/webgpu`][webgpu]           | Required \* | `Device` adapter implemented using the WebGL API. Enables creation of WebGL resources.          |
 | [`@luma.gl/engine`][engine]           | Recommended | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
+| [`@luma.gl/anari`][anari]             | Experimental / Private | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR. |
 | [`@luma.gl/shadertools`][shadertools] | Recommended | System for modularizing and composing shader code, shader module system,, shader modules.       |
 | [`@luma.gl/tables`][tables]           | Optional    | GPU-resident table primitives, batching, table-backed rendering, and table-oriented compute.    |
 | [`@luma.gl/arrow`][arrow]             | Optional    | Apache Arrow adapters for deriving GPU layouts and building GPU table objects from Arrow data.  |
@@ -25,6 +26,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 ## Start Here
 
 - [`@luma.gl/engine`][engine] for `Model`, `AnimationLoop`, scenegraph helpers, and compute-oriented utilities.
+- [`@luma.gl/anari`][anari] for experimental, private ANARI-inspired declarative scenes, retained rendering, and instancing.
 - [`@luma.gl/core`][core] for `Device`, buffers, textures, shaders, render passes, and `RenderPipeline`.
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
 - [`@luma.gl/tables`][tables] for `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`.
@@ -37,6 +39,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 [webgl]: /docs/api-reference/webgl
 [webgpu]: /docs/api-reference/webgpu
 [core]: /docs/api-reference/core
+[anari]: /docs/api-reference/anari
 [shadertools]: /docs/api-reference/shadertools
 [tables]: /docs/api-reference/tables
 [arrow]: /docs/api-reference/arrow

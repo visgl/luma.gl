@@ -1,0 +1,65 @@
+#usda 1.0
+(
+    defaultPrim = "sedanAsset"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "sedanAsset"
+{
+    def "Sedan" (
+        prepend references = @./sedanBodyAsset.usda@</sedan>
+    )
+    {
+    }
+
+    def "wheel1" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelNormal"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit2 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (60, 0, 134, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit2"]
+    }
+
+    def "wheel2" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelNormal"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit2 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (60, 0, -128, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit2"]
+    }
+
+    def "wheel3" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelNormal"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit2 = ( (-1, 0, 1.2246468525851679e-16, 0), (0, 1, 0, 0), (-1.2246468525851679e-16, 0, -1, 0), (-60, 0, -128, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit2"]
+    }
+
+    def "wheel4" (
+        prepend references = @../../../wheels/wheelVariants.usda@</wheelVariant>
+        variants = {
+            string wheels = "wheelNormal"
+        }
+    )
+    {
+        matrix4d xformOp:transform:edit2 = ( (-1, 0, 1.2246468525851679e-16, 0), (0, 1, 0, 0), (-1.2246468525851679e-16, 0, -1, 0), (-60, 0, 134, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:edit2"]
+    }
+}
+
+

@@ -46,7 +46,8 @@
           "api-guide/engine/materials",
           "api-guide/engine/transforms",
           "api-guide/engine/redraw",
-          "api-guide/engine/shader-inputs"
+          "api-guide/engine/shader-inputs",
+          "api-guide/engine/anari-rendering"
         ]
       },
       {
@@ -176,6 +177,20 @@
           "api-reference/engine/compute/computation",
           "api-reference/engine/compute/buffer-transform",
           "api-reference/engine/compute/texture-transform"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/anari (Experimental)",
+        "items": [
+          "api-reference/anari/README",
+          "api-reference/anari/anari-device",
+          "api-reference/anari/anari-geometry",
+          "api-reference/anari/anari-materials-and-lights",
+          "api-reference/anari/anari-scene",
+          "api-reference/anari/anari-rendering",
+          "api-reference/anari/anari-schemas",
+          "api-reference/anari/anari-api-mapping"
         ]
       },
       {
