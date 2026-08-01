@@ -7,8 +7,10 @@ import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
 import {
   decodeGPUIndexPickInfo,
+  decodeGPUIndexPickRegion,
   GPUCommandGraph,
   GPUIndexPickingTarget,
+  GPUReadbackRing,
   INDEX_PICKING_READBACK_BYTE_LENGTH
 } from '@luma.gl/experimental';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -465,6 +467,188 @@ test('GPUIndexPickingTarget renders stable integer IDs and copies dynamic pixels
   defaultReadback.destroy();
   replacementReadback.destroy();
   backgroundReadback.destroy();
+  t.end();
+});
+
+test('GPUIndexPickingTarget reduces regions through a reusable readback ring', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const capacity = 6;
+  const resultByteLength = (2 + capacity * 2) * Uint32Array.BYTES_PER_ELEMENT;
+  const regionBuffer = device.createBuffer({
+    id: 'picking-region',
+    data: new Uint32Array([0, 0, 4, 4]),
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const resultBuffer = device.createBuffer({
+    id: 'picking-region-result',
+    byteLength: resultByteLength,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'index-region-picking'});
+  const regionHandle = graph.importBuffer(
+    {id: 'region', byteLength: regionBuffer.byteLength, usage: Buffer.STORAGE},
+    regionBuffer
+  );
+  const resultHandle = graph.importBuffer(
+    {
+      id: 'region-result',
+      byteLength: resultBuffer.byteLength,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    },
+    resultBuffer
+  );
+  const target = new GPUIndexPickingTarget(graph, {id: 'pick-region', width: 4, height: 4});
+  graph.addRenderPass({
+    id: 'pick-region-render',
+    attachments: target.attachments,
+    compile: ({device: compileDevice}) => {
+      const model = new Model(compileDevice, {
+        id: 'index-region-picking-model',
+        source: `struct FragmentOutputs {
+  @location(0) color: vec4<f32>,
+  @location(1) indices: vec2<i32>,
+};
+@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
+  let positions = array<vec2<f32>, 3>(vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+  return vec4(positions[index], 0.0, 1.0);
+}
+@fragment fn fragmentMain(@builtin(position) position: vec4<f32>) -> FragmentOutputs {
+  if (position.y >= 3.0) { discard; }
+  var output: FragmentOutputs;
+  output.color = vec4(0.0);
+  output.indices = vec2<i32>(select(7, 9, position.x >= 2.0), 3);
+  return output;
+}`,
+        vertexCount: 3,
+        colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
+        depthStencilAttachmentFormat: 'depth24plus'
+      });
+      return {
+        getRenderPassProps: () => target.renderPassProps,
+        encode: ({renderPass}) => model.draw(renderPass),
+        destroy: () => model.destroy()
+      };
+    }
+  });
+  target.addRegionPass({
+    after: 'pick-region-render',
+    region: graph.createDataView(regionHandle, {format: 'uint32', length: 4}),
+    result: graph.createDataView(resultHandle, {
+      format: 'uint32',
+      length: resultByteLength / Uint32Array.BYTES_PER_ELEMENT
+    })
+  });
+  const compiled = graph.compile();
+  const ring = new GPUReadbackRing(device, {
+    id: 'picking-region-readback',
+    byteLength: resultByteLength,
+    slotCount: 2
+  });
+
+  const firstTicket = ring.tryAcquire();
+  const reservedTicket = ring.tryAcquire();
+  t.ok(firstTicket && reservedTicket, 'all configured staging slots can be reserved');
+  t.equal(ring.tryAcquire(), null, 'tryAcquire exposes drop-on-pressure policy');
+  const waitingTicketPromise = ring.acquire();
+  reservedTicket?.cancel();
+  const waitingTicket = await waitingTicketPromise;
+  t.ok(waitingTicket, 'acquire waits for the next released slot');
+  waitingTicket.cancel();
+
+  const firstEncoder = device.createCommandEncoder({id: 'pick-region-first'});
+  compiled.encode(firstEncoder, {parameters: undefined});
+  firstTicket?.copyFrom(firstEncoder, resultBuffer);
+  device.submit(firstEncoder.finish());
+  const firstResult = decodeGPUIndexPickRegion(await firstTicket!.read());
+  t.equal(firstResult.count, 12, 'count includes every non-background covered pixel');
+  t.equal(firstResult.picks.length, capacity, 'stored pairs stop at caller capacity');
+  t.ok(firstResult.overflow, 'overflow reports truncated results');
+  t.ok(
+    firstResult.picks.every(
+      pick => (pick.objectIndex === 7 || pick.objectIndex === 9) && pick.batchIndex === 3
+    ),
+    'stable object and batch IDs survive unordered atomic collection'
+  );
+
+  regionBuffer.write(new Uint32Array([0, 0, 2, 3]));
+  const exactTicket = ring.tryAcquire();
+  const exactEncoder = device.createCommandEncoder({id: 'pick-region-exact-capacity'});
+  compiled.encode(exactEncoder, {parameters: undefined});
+  exactTicket?.copyFrom(exactEncoder, resultBuffer);
+  device.submit(exactEncoder.finish());
+  const exactResult = decodeGPUIndexPickRegion(await exactTicket!.read());
+  t.equal(exactResult.count, capacity, 'exact-capacity selection reports the complete count');
+  t.equal(exactResult.picks.length, capacity, 'exact-capacity selection stores every pair');
+  t.notOk(exactResult.overflow, 'exact capacity does not report overflow');
+
+  regionBuffer.write(new Uint32Array([0, 0, 0, 3]));
+  const emptyTicket = ring.tryAcquire();
+  const emptyEncoder = device.createCommandEncoder({id: 'pick-region-empty'});
+  compiled.encode(emptyEncoder, {parameters: undefined});
+  emptyTicket?.copyFrom(emptyEncoder, resultBuffer);
+  device.submit(emptyEncoder.finish());
+  t.deepEqual(
+    decodeGPUIndexPickRegion(await emptyTicket!.read()),
+    {picks: [], count: 0, overflow: false},
+    'empty rectangles clear prior results'
+  );
+
+  regionBuffer.write(new Uint32Array([0, 0, 1, 1]));
+  const secondTicket = ring.tryAcquire();
+  t.ok(secondTicket, 'mapped slot is reusable after read completion');
+  const secondEncoder = device.createCommandEncoder({id: 'pick-region-second'});
+  compiled.encode(secondEncoder, {parameters: undefined});
+  secondTicket?.copyFrom(secondEncoder, resultBuffer);
+  device.submit(secondEncoder.finish());
+  t.deepEqual(
+    decodeGPUIndexPickRegion(await secondTicket!.read()),
+    {picks: [{objectIndex: 7, batchIndex: 3}], count: 1, overflow: false},
+    'GPU-resident rectangle updates produce exact results without rebuilding the graph'
+  );
+
+  const heldTicket = ring.tryAcquire();
+  const cancelledTicket = ring.tryAcquire();
+  const overlapEncoder = device.createCommandEncoder({id: 'pick-region-overlapping-readbacks'});
+  heldTicket?.copyFrom(overlapEncoder, resultBuffer);
+  cancelledTicket?.copyFrom(overlapEncoder, resultBuffer);
+  device.submit(overlapEncoder.finish());
+  const cancelledRead = cancelledTicket!.read().then(
+    () => '',
+    error => String(error)
+  );
+  cancelledTicket?.cancel();
+  t.match(
+    await cancelledRead,
+    /cancelled/,
+    'in-progress cancellation drains and discards its slot'
+  );
+  t.equal(
+    ring.availableSlotCount,
+    1,
+    'a later ticket can complete while an earlier encoded ticket remains reserved'
+  );
+  await heldTicket?.read();
+  t.equal(ring.availableSlotCount, 2, 'out-of-order completion eventually releases every slot');
+
+  const pendingTicket = ring.tryAcquire();
+  const secondPendingTicket = ring.tryAcquire();
+  const rejectedWaiter = ring.acquire();
+  const rejectionMessage = rejectedWaiter.then(
+    () => '',
+    error => String(error)
+  );
+  ring.destroy();
+  t.match(await rejectionMessage, /destroyed/, 'destroy rejects pending backpressure waiters');
+  pendingTicket?.cancel();
+  secondPendingTicket?.cancel();
+  compiled.destroy();
+  regionBuffer.destroy();
+  resultBuffer.destroy();
   t.end();
 });
 

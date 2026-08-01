@@ -115,13 +115,19 @@ export type {
 
 export {
   decodeGPUIndexPickInfo,
+  decodeGPUIndexPickRegion,
   GPUIndexPickingTarget,
   INDEX_PICKING_READBACK_BYTE_LENGTH
 } from './gpu-index-picking-target';
 export type {
+  GPUIndexPickingRegionProps,
+  GPUIndexPickingRegionResult,
   GPUIndexPickingReadbackProps,
   GPUIndexPickingTargetProps
 } from './gpu-index-picking-target';
+
+export {GPUReadbackRing, GPUReadbackTicket} from './gpu-readback-ring';
+export type {GPUReadbackRingProps} from './gpu-readback-ring';
 
 export {DrawCommandBuffer} from './draw-command-buffer';
 export type {
