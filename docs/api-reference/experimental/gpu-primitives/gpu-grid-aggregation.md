@@ -6,21 +6,28 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 ## Overview
 
-`GPUGridAggregation` adds paired `float32` weights into a row-major two-dimensional grid. It is the
-weighted counterpart to `GPUGridBinning`: binning answers “how many points are in each cell?”,
-while aggregation answers “what is the sum of their values?”.
+`GPUGridAggregation` computes sum, minimum, maximum, or mean statistics for paired `float32`
+weights in a row-major two-dimensional grid. It is the weighted counterpart to `GPUGridBinning`:
+binning answers “how many points are in each cell?”, while aggregation describes their values.
 
 ## Concepts
 
 Every input row contains a position and one weight. The bounds and grid dimensions map the
-position to a cell, then an atomic floating-point addition contributes the weight. Non-finite or
-out-of-bounds positions and non-finite weights are ignored. Exact maximum coordinates enter the
-final column or row.
+position to a cell, then `operation` chooses the statistic. Non-finite or out-of-bounds positions
+and non-finite weights are ignored. Exact maximum coordinates enter the final column or row.
 
-Floating-point addition is not associative, and GPU invocations may reach a cell in different
-orders. Results therefore use ordinary `float32` rounding but are not promised to be bitwise
-deterministic. Empty cells contain positive zero. Finite inputs may still overflow a cell sum to
-infinity or produce NaN after subsequent opposite-sign overflow.
+`'sum'` is the default. Sum and mean use an atomic compare/exchange addition, so ordinary
+`float32` rounding applies but cross-invocation accumulation order is not promised. Finite inputs
+may overflow a sum or mean to infinity, or produce NaN after opposite-sign overflow. Mean owns one
+transient `uint32` count per cell and divides after all aligned chunks have contributed; total
+input length must therefore fit in `uint32`.
+
+Minimum and maximum encode each finite float as a monotonically ordered `uint32` and use native
+integer atomics. This makes their value independent of invocation order and preserves the expected
+signed-zero order: minimum prefers `-0`, maximum prefers `+0`.
+
+Empty sum cells contain positive zero. Empty minimum, maximum, and mean cells contain a canonical
+quiet NaN, making “no accepted rows” distinct from a real zero-valued statistic.
 
 For vectors, positions and weights must have identical ordered chunk lengths. Each encoding clears
 the output once, then accumulates non-empty chunk pairs without concatenating or repacking either
@@ -32,7 +39,8 @@ input. This keeps table batches aligned while producing one grid-wide result.
 new GPUGridAggregation({
   positions,
   weights: temperatures,
-  output: cellTemperatureSums,
+  output: cellTemperatureMeans,
+  operation: 'mean',
   gridSize: [32, 16],
   bounds: [-180, -90, 180, 90]
 }).addToGraph(graph);
@@ -46,6 +54,7 @@ type GPUGridAggregationProps = {
   positions: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
   weights: GraphDataView<'float32'> | GraphVectorView<'float32'>;
   output: GraphDataView<'float32'>;
+  operation?: 'sum' | 'min' | 'max' | 'mean';
   gridSize: readonly [number, number];
   bounds: readonly [number, number, number, number] | GraphDataView<'float32x4'>;
 };
@@ -55,6 +64,6 @@ type GPUGridAggregationProps = {
 separate output storage. The graph owns no persistent result buffer, performs no submission, and
 does not read the sums back.
 
-The current operation is a weighted sum. Counts remain available from [`GPUGridBinning`](./gpu-grid-binning),
-so applications can compose sums and counts to derive means in a later graph pass. Minimum,
-maximum, and higher-dimensional aggregates remain future work.
+Counts remain independently available from [`GPUGridBinning`](./gpu-grid-binning) when an
+application needs both population and value statistics. Irregular spatial bins,
+higher-dimensional aggregates, variance, and custom associative operations remain future work.

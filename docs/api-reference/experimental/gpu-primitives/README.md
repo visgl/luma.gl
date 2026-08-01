@@ -80,7 +80,7 @@ is not specific to trace data or two-dimensional rendering.
 <GPUFrustumCullingExample embedded />
 
 The data-analysis example composes extent reduction, histogram counting, histogram-count
-reduction, grid binning, and weighted grid sums in one reusable graph. It uploads Arrow columns and
+reduction, grid binning, and weighted grid statistics in one reusable graph. It uploads Arrow columns and
 keeps compilation, submission, validation readback, and transient-allocation diagnostics explicit.
 
 <GPUDataAnalysisExample embedded />
@@ -1001,7 +1001,7 @@ schedule commitment.
 | 0 — Current foundation | Command graph, masks, hierarchy layout, graph traversal, ancestor projection, compaction, indirect drawing, picking, analysis primitives, and three working consumers | Implemented | High | Complete |
 | 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
-| 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted aggregation, richer histograms, and batch-preserving algorithms | In progress | High | Large |
+| 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | In progress | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, swapchain imports, and external-texture contracts | Planned | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
@@ -1076,7 +1076,7 @@ flowing directly into indirect rendering.
 ### Phase 3 — Algorithm and table scaling
 
 **Status:** In progress. Inclusive and segmented `uint32` scans plus weighted floating-point grid
-aggregation are implemented.
+statistics are implemented.
 
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
@@ -1086,16 +1086,17 @@ preserve carry-in values when a later row starts a segment, and all arithmetic r
 documented modulo-2^32 behavior. The data-analysis example uses inclusive scan for a histogram CDF
 and a segmented inclusive scan for per-row spatial-grid prefixes.
 
-`GPUGridAggregation` pairs `float32x2` positions with aligned `float32` weights and accumulates one
-row-major floating-point sum per cell. Atomic data views and vectors with identical chunk topology
-share the same clear-once contract. Non-finite positions and weights are ignored; atomic
-compare-exchange addition makes `float32` rounding explicit without promising a deterministic
-cross-invocation accumulation order. The data-analysis example composes weighted sums with counts
-over the same imported Arrow batches.
+`GPUGridAggregation` pairs `float32x2` positions with aligned `float32` weights and computes one
+row-major sum, minimum, maximum, or mean per cell. Atomic data views and vectors with identical
+chunk topology share the same initialize-once contract. Non-finite positions and weights are
+ignored. Sum and mean use compare-exchange addition with explicit nondeterministic `float32`
+accumulation order; minimum and maximum use ordered float encodings with native integer atomics.
+Empty non-sum cells publish NaN. The data-analysis example validates all four operations over the
+same imported Arrow batches.
 
 Remaining work extends multi-chunk support to algorithms that still require one packed view, then
-adds minimum, maximum, and mean grid aggregates, irregular-edge and categorical histograms, and
-batch-aware operations that preserve table structure. Custom associative scans, sparse histograms,
+adds irregular-edge and categorical histograms and batch-aware operations that preserve table
+structure. Custom associative scans, sparse histograms,
 and multidimensional histograms should be added only with a concrete consumer and an explicit
 numerical or memory contract.
 

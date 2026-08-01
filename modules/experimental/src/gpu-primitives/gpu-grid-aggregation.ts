@@ -12,6 +12,7 @@ import {
 } from './gpu-command-graph';
 import type {GPUGridBinningBounds} from './gpu-grid-binning';
 import {
+  createTransientView,
   getViewBinding,
   getViewElementOffset,
   validateMatchingVectorTopology,
@@ -26,6 +27,9 @@ export type GPUGridAggregationPositions = GraphDataView<'float32x2'> | GraphVect
 /** Packed point weights accepted by {@link GPUGridAggregation}. */
 export type GPUGridAggregationWeights = GraphDataView<'float32'> | GraphVectorView<'float32'>;
 
+/** Floating-point statistic accumulated by {@link GPUGridAggregation}. */
+export type GPUGridAggregationOperation = 'sum' | 'min' | 'max' | 'mean';
+
 /** Properties for graph-native weighted two-dimensional grid aggregation. */
 export type GPUGridAggregationProps = {
   /** Prefix for generated graph node IDs. */
@@ -34,8 +38,10 @@ export type GPUGridAggregationProps = {
   positions: GPUGridAggregationPositions;
   /** One finite floating-point contribution per position with identical chunk topology. */
   weights: GPUGridAggregationWeights;
-  /** Caller-owned row-major floating-point cell sums. */
+  /** Caller-owned row-major floating-point cell statistics. */
   output: GraphDataView<'float32'>;
+  /** Cell statistic to compute. Defaults to `'sum'`. */
+  operation?: GPUGridAggregationOperation;
   /** Positive integer `[width, height]` cell dimensions. */
   gridSize: readonly [number, number];
   /** Inclusive literal or GPU-resident spatial bounds. */
@@ -43,12 +49,13 @@ export type GPUGridAggregationProps = {
 };
 
 /**
- * Graph-native weighted sums for packed `float32x2` positions.
+ * Graph-native weighted statistics for packed `float32x2` positions.
  *
  * Each accepted position contributes its paired finite `float32` weight to one row-major cell.
- * Output is cleared on every encoding. Floating-point addition is implemented with an atomic
- * compare-exchange loop, so results follow ordinary `float32` rounding but accumulation order is
- * not defined.
+ * Output is initialized on every encoding. Sum and mean use atomic compare-exchange addition and
+ * therefore follow ordinary `float32` rounding without a defined accumulation order. Minimum and
+ * maximum use monotonically ordered float bits with native integer atomics. Empty sum cells
+ * contain positive zero; other operations use NaN.
  */
 export class GPUGridAggregation {
   /** Prefix for generated graph node IDs. */
@@ -57,8 +64,10 @@ export class GPUGridAggregation {
   readonly positions: GPUGridAggregationPositions;
   /** Packed weights with the same view kind and chunk topology as positions. */
   readonly weights: GPUGridAggregationWeights;
-  /** Caller-owned row-major floating-point cell sums. */
+  /** Caller-owned row-major floating-point cell statistics. */
   readonly output: GraphDataView<'float32'>;
+  /** Cell statistic computed by this aggregation. */
+  readonly operation: GPUGridAggregationOperation;
   /** Positive integer grid dimensions. */
   readonly gridSize: readonly [number, number];
   /** Literal or GPU-resident spatial bounds. */
@@ -75,6 +84,7 @@ export class GPUGridAggregation {
     this.positions = props.positions;
     this.weights = props.weights;
     this.output = props.output;
+    this.operation = props.operation ?? 'sum';
     this.gridSize = props.gridSize;
     this.bounds = props.bounds;
 
@@ -98,6 +108,12 @@ export class GPUGridAggregation {
     }
     if (this.output.length !== width * height) {
       throw new Error(`${this.id} output.length must equal gridSize width * height`);
+    }
+    if (!['sum', 'min', 'max', 'mean'].includes(this.operation)) {
+      throw new Error(`${this.id} operation must be sum, min, max, or mean`);
+    }
+    if (this.operation === 'mean' && this.positions.length > 0xffffffff) {
+      throw new Error(`${this.id} mean input length must fit in uint32 cell counts`);
     }
     if (
       getPositionChunks(this.positions).some(chunk => chunk.buffer === this.output.buffer) ||
@@ -127,7 +143,8 @@ export class GPUGridAggregation {
   }
 
   /**
-   * Adds one output-clear pass and one accumulation pass per non-empty aligned chunk.
+   * Adds initialization, one accumulation pass per non-empty aligned chunk, and finalization when
+   * required by the selected statistic.
    *
    * This method declares work only and does not submit or read back commands.
    */
@@ -145,7 +162,11 @@ export class GPUGridAggregation {
       throw new Error(`${this.id} bounds must belong to the target graph`);
     }
 
-    addClearGridAggregationPass(graph, this.id, this.output);
+    const counts =
+      this.operation === 'mean'
+        ? createTransientView(graph, `${this.id}-counts`, 'uint32', this.output.length)
+        : undefined;
+    addInitializeGridAggregationPass(graph, this.id, this.output, this.operation, counts);
     for (let chunkIndex = 0; chunkIndex < positionChunks.length; chunkIndex++) {
       if (positionChunks[chunkIndex].length > 0) {
         addGridAggregationPass(graph, {
@@ -154,39 +175,60 @@ export class GPUGridAggregation {
           positions: positionChunks[chunkIndex],
           weights: weightChunks[chunkIndex],
           output: this.output,
+          operation: this.operation,
+          counts,
           gridSize: this.gridSize,
           bounds: this.bounds
         });
       }
     }
+    if (this.operation !== 'sum') {
+      addFinalizeGridAggregationPass(graph, this.id, this.output, this.operation, counts);
+    }
   }
 }
 
-/** Clears every output cell to positive zero before the current graph encoding accumulates. */
-function addClearGridAggregationPass<Parameters>(
+/** Initializes every output cell and optional mean count before accumulation. */
+function addInitializeGridAggregationPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
-  output: GraphDataView<'float32'>
+  output: GraphDataView<'float32'>,
+  operation: GPUGridAggregationOperation,
+  counts?: GraphDataView<'uint32'>
 ): void {
+  const initialBits = operation === 'min' ? '0xffffffffu' : '0u';
+  const countBinding = counts
+    ? '@group(0) @binding(1) var<storage, read_write> outputCounts: array<atomic<u32>>;'
+    : '';
+  const countInitialization = counts
+    ? `atomicStore(&outputCounts[${getViewElementOffset(counts)}u + globalId.x], 0u);`
+    : '';
   const source = /* wgsl */ `
 const CELL_COUNT: u32 = ${output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
-@group(0) @binding(0) var<storage, read_write> outputSums: array<atomic<u32>>;
+@group(0) @binding(0) var<storage, read_write> outputValues: array<atomic<u32>>;
+${countBinding}
 @compute @workgroup_size(${GRID_AGGREGATION_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>
 ) {
-  if (globalId.x < CELL_COUNT) { atomicStore(&outputSums[OUTPUT_OFFSET + globalId.x], 0u); }
+  if (globalId.x < CELL_COUNT) {
+    atomicStore(&outputValues[OUTPUT_OFFSET + globalId.x], ${initialBits});
+    ${countInitialization}
+  }
 }`;
   addComputationPass(graph, {
-    id: `${id}-clear`,
+    id: operation === 'sum' ? `${id}-clear` : `${id}-initialize`,
     source,
-    resources: [{buffer: output, usage: 'storage-write'}],
-    bindings: {outputSums: output},
+    resources: [
+      {buffer: output, usage: 'storage-write'},
+      ...(counts ? ([{buffer: counts, usage: 'storage-write'}] as GraphBufferUse[]) : [])
+    ],
+    bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
     dispatchCount: Math.ceil(output.length / GRID_AGGREGATION_WORKGROUP_SIZE)
   });
 }
 
-/** Adds one direct global-atomic weighted accumulation pass. */
+/** Adds one direct global-atomic weighted-statistic accumulation pass. */
 function addGridAggregationPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   aggregation: {
@@ -194,6 +236,8 @@ function addGridAggregationPass<Parameters>(
     positions: GraphDataView<'float32x2'>;
     weights: GraphDataView<'float32'>;
     output: GraphDataView<'float32'>;
+    operation: GPUGridAggregationOperation;
+    counts?: GraphDataView<'uint32'>;
     gridSize: readonly [number, number];
     bounds: GPUGridBinningBounds;
   }
@@ -205,6 +249,9 @@ function addGridAggregationPass<Parameters>(
     ? '@group(0) @binding(2) var<storage, read> boundsValues: array<f32>;'
     : '';
   const outputBinding = gpuBounds ? 3 : 2;
+  const countsBinding = aggregation.counts
+    ? `@group(0) @binding(${outputBinding + 1}) var<storage, read_write> outputCounts: array<atomic<u32>>;`
+    : '';
   const boundsInitialization = gpuBounds
     ? `let minimumX = boundsValues[BOUNDS_OFFSET];
   let minimumY = boundsValues[BOUNDS_OFFSET + 1u];
@@ -225,7 +272,8 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(aggregation.output)}u;
 @group(0) @binding(0) var<storage, read> positions: array<f32>;
 @group(0) @binding(1) var<storage, read> weights: array<f32>;
 ${boundsBinding}
-@group(0) @binding(${outputBinding}) var<storage, read_write> outputSums: array<atomic<u32>>;
+@group(0) @binding(${outputBinding}) var<storage, read_write> outputValues: array<atomic<u32>>;
+${countsBinding}
 
 fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   if (maximum == minimum || value == minimum) { return 0u; }
@@ -233,15 +281,7 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   return min(u32((value - minimum) / (maximum - minimum) * f32(size)), size - 1u);
 }
 
-fn atomicAddFloat(destination: ptr<storage, atomic<u32>, read_write>, value: f32) {
-  var oldBits = atomicLoad(destination);
-  loop {
-    let newBits = bitcast<u32>(bitcast<f32>(oldBits) + value);
-    let result = atomicCompareExchangeWeak(destination, oldBits, newBits);
-    if (result.exchanged) { break; }
-    oldBits = result.old_value;
-  }
-}
+${getAggregationFunction(aggregation.operation)}
 
 @compute @workgroup_size(${GRID_AGGREGATION_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>
@@ -259,7 +299,9 @@ fn atomicAddFloat(destination: ptr<storage, atomic<u32>, read_write>, value: f32
     if (finitePosition && finiteWeight && inX && inY) {
       let column = getCoordinate(x, minimumX, maximumX, WIDTH);
       let row = getCoordinate(y, minimumY, maximumY, HEIGHT);
-      atomicAddFloat(&outputSums[OUTPUT_OFFSET + row * WIDTH + column], weight);
+      let cellIndex = row * WIDTH + column;
+      ${getAggregationCall(aggregation.operation)}
+      ${aggregation.counts ? `atomicAdd(&outputCounts[${getViewElementOffset(aggregation.counts)}u + cellIndex], 1u);` : ''}
     }
   }
 }`;
@@ -269,20 +311,111 @@ fn atomicAddFloat(destination: ptr<storage, atomic<u32>, read_write>, value: f32
     ...(gpuBounds
       ? ([{buffer: aggregation.bounds as GraphDataView, usage: 'storage-read'}] as GraphBufferUse[])
       : []),
-    {buffer: aggregation.output, usage: 'storage-read-write'}
+    {buffer: aggregation.output, usage: 'storage-read-write'},
+    ...(aggregation.counts
+      ? ([{buffer: aggregation.counts, usage: 'storage-read-write'}] as GraphBufferUse[])
+      : [])
   ];
   addComputationPass(graph, {
-    id: `${aggregation.id}-sum`,
+    id: `${aggregation.id}-${aggregation.operation}`,
     source,
     resources,
     bindings: {
       positions: aggregation.positions,
       weights: aggregation.weights,
       ...(gpuBounds ? {boundsValues: aggregation.bounds as GraphDataView} : {}),
-      outputSums: aggregation.output
+      outputValues: aggregation.output,
+      ...(aggregation.counts ? {outputCounts: aggregation.counts} : {})
     },
     dispatchCount: Math.ceil(aggregation.positions.length / GRID_AGGREGATION_WORKGROUP_SIZE)
   });
+}
+
+/** Converts aggregate identities into empty-cell NaNs and divides sums for means. */
+function addFinalizeGridAggregationPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  id: string,
+  output: GraphDataView<'float32'>,
+  operation: Exclude<GPUGridAggregationOperation, 'sum'>,
+  counts?: GraphDataView<'uint32'>
+): void {
+  const countBinding = counts
+    ? '@group(0) @binding(1) var<storage, read> outputCounts: array<u32>;'
+    : '';
+  const finalizeStatement =
+    operation === 'mean'
+      ? `let count = outputCounts[${getViewElementOffset(counts as GraphDataView)}u + index];
+    if (count == 0u) {
+      outputValues[OUTPUT_OFFSET + index] = 0x7fc00000u;
+    } else {
+      let sum = bitcast<f32>(outputValues[OUTPUT_OFFSET + index]);
+      outputValues[OUTPUT_OFFSET + index] = bitcast<u32>(sum / f32(count));
+    }`
+      : `let orderedValue = outputValues[OUTPUT_OFFSET + index];
+    if (orderedValue == ${operation === 'min' ? '0xffffffffu' : '0u'}) {
+      outputValues[OUTPUT_OFFSET + index] = 0x7fc00000u;
+    } else {
+      outputValues[OUTPUT_OFFSET + index] = bitcast<u32>(decodeOrderedFloat(orderedValue));
+    }`;
+  const decodeFunction =
+    operation === 'mean'
+      ? ''
+      : `fn decodeOrderedFloat(value: u32) -> f32 {
+  let bits = select(~value, value ^ 0x80000000u, (value & 0x80000000u) != 0u);
+  return bitcast<f32>(bits);
+}`;
+  const source = /* wgsl */ `
+const CELL_COUNT: u32 = ${output.length}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
+@group(0) @binding(0) var<storage, read_write> outputValues: array<u32>;
+${countBinding}
+${decodeFunction}
+@compute @workgroup_size(${GRID_AGGREGATION_WORKGROUP_SIZE}) fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>
+) {
+  let index = globalId.x;
+  if (index < CELL_COUNT) {
+    ${finalizeStatement}
+  }
+}`;
+  addComputationPass(graph, {
+    id: `${id}-finalize`,
+    source,
+    resources: [
+      {buffer: output, usage: 'storage-read-write'},
+      ...(counts ? ([{buffer: counts, usage: 'storage-read'}] as GraphBufferUse[]) : [])
+    ],
+    bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
+    dispatchCount: Math.ceil(output.length / GRID_AGGREGATION_WORKGROUP_SIZE)
+  });
+}
+
+/** Returns the WGSL helper for one cell operation. */
+function getAggregationFunction(operation: GPUGridAggregationOperation): string {
+  if (operation === 'min' || operation === 'max') {
+    return `fn encodeOrderedFloat(value: f32) -> u32 {
+  let bits = bitcast<u32>(value);
+  return select(bits ^ 0x80000000u, ~bits, (bits & 0x80000000u) != 0u);
+}`;
+  }
+  return `fn atomicAddFloat(destination: ptr<storage, atomic<u32>, read_write>, value: f32) {
+  var oldBits = atomicLoad(destination);
+  loop {
+    let newBits = bitcast<u32>(bitcast<f32>(oldBits) + value);
+    let result = atomicCompareExchangeWeak(destination, oldBits, newBits);
+    if (result.exchanged) { break; }
+    oldBits = result.old_value;
+  }
+}`;
+}
+
+/** Returns the WGSL statement that contributes one accepted weight. */
+function getAggregationCall(operation: GPUGridAggregationOperation): string {
+  if (operation === 'min' || operation === 'max') {
+    const atomicOperation = operation === 'min' ? 'atomicMin' : 'atomicMax';
+    return `${atomicOperation}(&outputValues[OUTPUT_OFFSET + cellIndex], encodeOrderedFloat(weight));`;
+  }
+  return 'atomicAddFloat(&outputValues[OUTPUT_OFFSET + cellIndex], weight);';
 }
 
 /** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */

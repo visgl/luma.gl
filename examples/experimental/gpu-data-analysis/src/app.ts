@@ -139,6 +139,21 @@ class GPUDataAnalysisExample {
         'grid-weight-sums',
         gridWidth * gridWidth
       );
+      const gridWeightMinimumsBuffer = makeOutputBuffer(
+        this.device,
+        'grid-weight-minimums',
+        gridWidth * gridWidth
+      );
+      const gridWeightMaximumsBuffer = makeOutputBuffer(
+        this.device,
+        'grid-weight-maximums',
+        gridWidth * gridWidth
+      );
+      const gridWeightMeansBuffer = makeOutputBuffer(
+        this.device,
+        'grid-weight-means',
+        gridWidth * gridWidth
+      );
       const gridSegmentFlagsBuffer = makeGridSegmentFlagsBuffer(this.device, gridWidth);
       const cumulativeGridBuffer = makeOutputBuffer(
         this.device,
@@ -151,6 +166,9 @@ class GPUDataAnalysisExample {
         cumulativeHistogramBuffer,
         gridBuffer,
         gridWeightSumsBuffer,
+        gridWeightMinimumsBuffer,
+        gridWeightMaximumsBuffer,
+        gridWeightMeansBuffer,
         gridSegmentFlagsBuffer,
         cumulativeGridBuffer
       ];
@@ -171,6 +189,27 @@ class GPUDataAnalysisExample {
         graph,
         gridWeightSumsBuffer,
         'grid-weight-sums',
+        'float32',
+        gridWidth * gridWidth
+      );
+      const gridWeightMinimums = importOutput(
+        graph,
+        gridWeightMinimumsBuffer,
+        'grid-weight-minimums',
+        'float32',
+        gridWidth * gridWidth
+      );
+      const gridWeightMaximums = importOutput(
+        graph,
+        gridWeightMaximumsBuffer,
+        'grid-weight-maximums',
+        'float32',
+        gridWidth * gridWidth
+      );
+      const gridWeightMeans = importOutput(
+        graph,
+        gridWeightMeansBuffer,
+        'grid-weight-means',
         'float32',
         gridWidth * gridWidth
       );
@@ -221,6 +260,33 @@ class GPUDataAnalysisExample {
         gridSize: [gridWidth, gridWidth],
         bounds: [-1, -1, 1, 1]
       }).addToGraph(graph);
+      new GPUGridAggregation({
+        id: 'grid-weight-minimums',
+        positions: positionsImport,
+        weights: valuesImport,
+        output: gridWeightMinimums,
+        operation: 'min',
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
+      new GPUGridAggregation({
+        id: 'grid-weight-maximums',
+        positions: positionsImport,
+        weights: valuesImport,
+        output: gridWeightMaximums,
+        operation: 'max',
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
+      new GPUGridAggregation({
+        id: 'grid-weight-means',
+        positions: positionsImport,
+        weights: valuesImport,
+        output: gridWeightMeans,
+        operation: 'mean',
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
       new GPUScan({
         id: 'cumulative-grid-rows',
         input: grid,
@@ -243,6 +309,9 @@ class GPUDataAnalysisExample {
         cumulativeHistogramBytes,
         gridBytes,
         gridWeightSumsBytes,
+        gridWeightMinimumsBytes,
+        gridWeightMaximumsBytes,
+        gridWeightMeansBytes,
         cumulativeGridBytes
       ] = await Promise.all(
         [
@@ -251,6 +320,9 @@ class GPUDataAnalysisExample {
           cumulativeHistogramBuffer,
           gridBuffer,
           gridWeightSumsBuffer,
+          gridWeightMinimumsBuffer,
+          gridWeightMaximumsBuffer,
+          gridWeightMeansBuffer,
           cumulativeGridBuffer
         ].map(buffer => buffer.readAsync())
       );
@@ -276,6 +348,27 @@ class GPUDataAnalysisExample {
           gridWidth * gridWidth
         )
       );
+      const gpuGridWeightMinimums = Array.from(
+        new Float32Array(
+          gridWeightMinimumsBytes.buffer,
+          gridWeightMinimumsBytes.byteOffset,
+          gridWidth * gridWidth
+        )
+      );
+      const gpuGridWeightMaximums = Array.from(
+        new Float32Array(
+          gridWeightMaximumsBytes.buffer,
+          gridWeightMaximumsBytes.byteOffset,
+          gridWidth * gridWidth
+        )
+      );
+      const gpuGridWeightMeans = Array.from(
+        new Float32Array(
+          gridWeightMeansBytes.buffer,
+          gridWeightMeansBytes.byteOffset,
+          gridWidth * gridWidth
+        )
+      );
       const gpuCumulativeGrid = Array.from(
         new Uint32Array(
           cumulativeGridBytes.buffer,
@@ -298,6 +391,15 @@ class GPUDataAnalysisExample {
         gpuGridWeightSums.every((value, index) =>
           approximatelyEqual(value, reference.gridWeightSums[index])
         ) &&
+        gpuGridWeightMinimums.every((value, index) =>
+          approximatelyEqual(value, reference.gridWeightMinimums[index])
+        ) &&
+        gpuGridWeightMaximums.every((value, index) =>
+          approximatelyEqual(value, reference.gridWeightMaximums[index])
+        ) &&
+        gpuGridWeightMeans.every((value, index) =>
+          approximatelyEqual(value, reference.gridWeightMeans[index])
+        ) &&
         gpuCumulativeGrid.every((value, index) => value === reference.cumulativeGrid[index]) &&
         gpuTotal === length;
       this.releaseResources();
@@ -311,7 +413,16 @@ class GPUDataAnalysisExample {
         : 'GPU/CPU mismatch';
       this.elements.validation.dataset.state = valid ? 'ok' : 'error';
       renderHistogram(this.elements.histogram, gpuHistogram, gpuCumulativeHistogram);
-      renderGrid(this.elements.heatmap, gpuGrid, gpuGridWeightSums, gpuCumulativeGrid, gridWidth);
+      renderGrid(
+        this.elements.heatmap,
+        gpuGrid,
+        gpuGridWeightSums,
+        gpuGridWeightMinimums,
+        gpuGridWeightMaximums,
+        gpuGridWeightMeans,
+        gpuCumulativeGrid,
+        gridWidth
+      );
       this.setStatus(
         `Extent [${gpuExtent.map(value => value.toFixed(3)).join(', ')}] · ${binCount} bins · ${gridWidth}×${gridWidth} cells`
       );
@@ -363,6 +474,9 @@ function analyzeOnCPU(
   cumulativeHistogram: number[];
   grid: number[];
   gridWeightSums: number[];
+  gridWeightMinimums: number[];
+  gridWeightMaximums: number[];
+  gridWeightMeans: number[];
   cumulativeGrid: number[];
 } {
   let minimum = Number.POSITIVE_INFINITY;
@@ -381,6 +495,14 @@ function analyzeOnCPU(
   const cumulativeHistogram = histogram.map(count => (histogramPrefix += count));
   const grid = Array.from({length: gridWidth * gridWidth}, () => 0);
   const gridWeightSums = Array.from({length: gridWidth * gridWidth}, () => 0);
+  const gridWeightMinimums = Array.from(
+    {length: gridWidth * gridWidth},
+    () => Number.POSITIVE_INFINITY
+  );
+  const gridWeightMaximums = Array.from(
+    {length: gridWidth * gridWidth},
+    () => Number.NEGATIVE_INFINITY
+  );
   for (let index = 0; index < values.length; index++) {
     const x = positions[index * 2];
     const y = positions[index * 2 + 1];
@@ -389,6 +511,17 @@ function analyzeOnCPU(
     const cellIndex = row * gridWidth + column;
     grid[cellIndex]++;
     gridWeightSums[cellIndex] = Math.fround(gridWeightSums[cellIndex] + values[index]);
+    gridWeightMinimums[cellIndex] = Math.min(gridWeightMinimums[cellIndex], values[index]);
+    gridWeightMaximums[cellIndex] = Math.max(gridWeightMaximums[cellIndex], values[index]);
+  }
+  const gridWeightMeans = gridWeightSums.map((sum, index) =>
+    grid[index] === 0 ? Number.NaN : Math.fround(sum / grid[index])
+  );
+  for (let index = 0; index < grid.length; index++) {
+    if (grid[index] === 0) {
+      gridWeightMinimums[index] = Number.NaN;
+      gridWeightMaximums[index] = Number.NaN;
+    }
   }
   let gridPrefix = 0;
   const cumulativeGrid = grid.map((count, index) => {
@@ -402,11 +535,18 @@ function analyzeOnCPU(
     cumulativeHistogram,
     grid,
     gridWeightSums,
+    gridWeightMinimums,
+    gridWeightMaximums,
+    gridWeightMeans,
     cumulativeGrid
   };
 }
 
 function approximatelyEqual(value: number, reference: number): boolean {
+  if (Number.isNaN(value) || Number.isNaN(reference)) {
+    return Number.isNaN(value) && Number.isNaN(reference);
+  }
+  if (value === reference) return true;
   return Math.abs(value - reference) <= Math.max(1e-4, Math.abs(reference) * 2e-4);
 }
 
@@ -469,6 +609,9 @@ function renderGrid(
   element: HTMLElement,
   counts: number[],
   weightSums: number[],
+  weightMinimums: number[],
+  weightMaximums: number[],
+  weightMeans: number[],
   cumulativeCounts: number[],
   width: number
 ): void {
@@ -477,9 +620,13 @@ function renderGrid(
   element.innerHTML = counts
     .map(
       (count, index) =>
-        `<i style="opacity:${0.08 + (count / maximum) * 0.92}" title="${count} rows · ${weightSums[index].toFixed(3)} weighted sum · ${cumulativeCounts[index]} row cumulative"></i>`
+        `<i style="opacity:${0.08 + (count / maximum) * 0.92}" title="${count} rows · sum ${formatStatistic(weightSums[index])} · mean ${formatStatistic(weightMeans[index])} · range [${formatStatistic(weightMinimums[index])}, ${formatStatistic(weightMaximums[index])}] · ${cumulativeCounts[index]} row cumulative"></i>`
     )
     .join('');
+}
+
+function formatStatistic(value: number): string {
+  return Number.isNaN(value) ? 'empty' : value.toFixed(3);
 }
 
 function destroyResources(resources: ExampleResources | null): void {
@@ -523,6 +670,6 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with spatial counts, weighted sums, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram bins<select data-bins><option>16</option><option selected>64</option><option>300</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
+const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with spatial counts, sum/min/max/mean statistics, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram bins<select data-bins><option>16</option><option selected>64</option><option>300</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
 
 const STYLES = `.analysis-example{min-height:100%;box-sizing:border-box;padding:30px;color:#172033;background:radial-gradient(circle at 90% 0,#d9f4ea,transparent 35%),#f6f8fb;font-family:Inter,ui-sans-serif,system-ui}.analysis-example *{box-sizing:border-box}.analysis-example>header,.analysis-example>section,.analysis-example>.status{max-width:1120px;margin-left:auto;margin-right:auto}.analysis-example header p{margin:0;color:#08745b;font-size:12px;font-weight:800;letter-spacing:.13em}.analysis-example h1{margin:5px 0;font-size:clamp(30px,5vw,52px);letter-spacing:-.04em}.analysis-example header span{color:#5d687b}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:24px;padding:16px;border:1px solid #ccd6df;border-radius:15px;background:#fff}.controls label{display:grid;gap:5px;color:#596579;font-size:12px;font-weight:700}.controls select,.controls button{height:40px;padding:0 12px;border:1px solid #aebdcc;border-radius:8px;background:#fff;color:#172033}.controls button{background:#08745b;color:#fff;border-color:#08745b;font-weight:700}.status{padding:10px 2px;color:#596579}.status[data-state=error],[data-validation][data-state=error]{color:#b42318}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metrics article,.visuals article{padding:16px;border:1px solid #d5dde6;border-radius:14px;background:#fff;box-shadow:0 10px 30px #25324a0a}.metrics span{display:block;color:#667085;font-size:12px}.metrics strong{display:block;margin-top:7px;font-size:18px}.visuals{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.visuals h2{margin:0 0 12px;font-size:16px}.histogram{height:250px;display:flex;align-items:end;gap:2px;border-bottom:1px solid #b8c3cf}.histogram i{display:block;flex:1;min-width:1px;background:#2da98a;border-radius:2px 2px 0 0}.heatmap{height:250px;aspect-ratio:1;display:grid;gap:1px;margin:auto;background:#e8edf1}.heatmap i{display:block;background:#315cc5}@media(max-width:760px){.analysis-example{padding:18px}.metrics{grid-template-columns:1fr 1fr}.visuals{grid-template-columns:1fr}}`;
