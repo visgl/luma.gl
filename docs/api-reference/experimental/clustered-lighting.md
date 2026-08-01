@@ -8,7 +8,8 @@ import {DeferredRenderingExample} from '@site/src/examples';
 `ClusteredLightGrid` is an experimental WebGPU-only compute stage for many-light deferred
 rendering. It projects view-space point-light spheres into a fixed screen/depth grid, atomically
 marks candidate-light bit masks, compacts one stable bounded light-index list per cluster, and
-lets `clusteredDeferredLighting` evaluate only the list for the current pixel.
+normally lets `clusteredDeferredLighting` evaluate only the list for the current pixel. Saturated
+clusters use the all-active-light correctness fallback described below.
 
 The first implementation intentionally keeps the contract small and composable:
 

@@ -21,7 +21,7 @@ whether its cost scales with scene geometry, visible pixels, light count, or tem
 | Low-cost contact darkening | `createSSAOShaderPassPipeline()` | Switch to GTAO when contact quality and temporal stability matter. | Use SSAO **or** GTAO; stacking both normally double-darkens surfaces. |
 | Higher-quality ambient visibility | `createGTAOShaderPassPipeline()` | Tune radius, history, and denoising for the scene scale. | Requires coherent depth, view normals, velocity, and projection matrices. |
 | A modest number of local lights | `createDeferredLightingShaderPassPipeline()` | Switch to clustered lighting when many lights overlap the scene. | The baseline shader supports at most 64 point lights. |
-| Hundreds of local lights | `ClusteredLightGrid` plus `createClusteredDeferredLightingShaderPassPipeline()` | Tune grid dimensions, light ranges, and per-cluster capacity. | Per-cluster capacity bounds work; candidates beyond the retained list are omitted. |
+| Hundreds of local lights | `ClusteredLightGrid` plus `createClusteredDeferredLightingShaderPassPipeline()` | Tune grid dimensions, light ranges, and per-cluster capacity. | Overflow stays correct but can fall back to a more expensive scan of all active lights. |
 | Inexpensive atmospheric depth | `createVolumetricFogShaderPassPipeline()` | Upgrade to clustered volumetric lighting when visible local lights or shafts matter. | Simple height fog does not evaluate the scene's actual point-light list. |
 | Colored light halos and crepuscular god rays | `createClusteredVolumetricLightingShaderPassPipeline()` | Tune media density, anisotropy, radial shaft quality, and temporal history. | Requires WebGPU point-light/cluster storage plus current and previous camera transforms. |
 | Sun, spot, or point-light visibility | `ShadowMapRenderer` | Add contact shadows for missing near-surface detail. | Light-space shadows need caster geometry; they are not a color-only effect. |
@@ -181,12 +181,15 @@ the normal ordered `previous` chain.
 | Per-pixel light work | Checks every active point light. | Normally checks only the lights assigned to the pixel's screen/depth cluster. |
 | Additional setup | One fixed-capacity point-light storage buffer. | Compute-built cluster count/index buffers plus the same point-light buffer. |
 | Best fit | Smaller scenes, simpler integration, or modest light counts. | Large dynamic light counts with reasonably localized light ranges. |
-| Failure mode | Cost grows with every active light, even when most do not affect the pixel. | Dense or oversized lights can exceed retained cluster capacity; excess candidates are omitted while per-pixel work remains bounded. |
+| Failure mode | Cost grows with every active light, even when most do not affect the pixel. | Dense or oversized lights saturate clusters and trigger a slower correctness fallback that checks all active lights. |
 
 Clustering changes the common-case cost from roughly **visible pixels × all lights** to
 **light binning + visible pixels × nearby lights**. It does not make lighting free: a scene in
 which every light overlaps every cluster still has substantial work. The occupancy debug view
 shows whether cluster dimensions, retained capacity, or light ranges should be adjusted.
+This overflow behavior is specific to clustered deferred surface lighting. Clustered volumetric
+lighting instead keeps ray-marching work bounded to compute-retained candidates, so lights beyond
+the retained list do not contribute to the volume.
 
 ## Shadows: Light-Space Maps Versus Screen-Space Contacts
 

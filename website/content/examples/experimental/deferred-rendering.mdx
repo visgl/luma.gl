@@ -108,10 +108,12 @@ velocity, and depth channels plus two named material extras:
 
 `ClusteredLightGrid` first bins each view-space point-light sphere into a `16 × 9 × 24`
 screen/log-depth grid. `createClusteredDeferredLightingShaderPassPipeline()` then reads those
-material targets plus the current pixel's bounded cluster list, reconstructs view-space position
-from depth, evaluates Cook-Torrance direct lighting, and writes HDR color back into the normal
-ordered shader-pass chain. `createDeferredAmbientLightingShaderPassPipeline()` separately extracts
-the linear ambient contribution from the same material attachments.
+material targets and normally evaluates the current pixel's compact retained cluster list. If a
+cluster overflows, the opaque resolve instead scans all active point lights to preserve direct-light
+correctness. It reconstructs view-space position from depth, evaluates Cook-Torrance lighting, and
+writes HDR color back into the normal ordered shader-pass chain.
+`createDeferredAmbientLightingShaderPassPipeline()` separately extracts the linear ambient
+contribution from the same material attachments.
 `createGTAOShaderPassPipeline({composition: 'ambient-only'})` then analytically integrates
 horizon angles at the configured buffer resolution over the unchanged depth and view-normal
 attachments, rotates and jitters sampling across animation frames, reprojects the previous AO
@@ -129,7 +131,8 @@ applies a roughness-adaptive depth/normal-aware blur, and adds the result back i
 lights and occluded directional light through exponential height fog, applies Beer-Lambert
 extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
 projected scene sun for crepuscular god rays, and ranks a bounded nearby-light set from the
-compute-retained cluster candidates. It stabilizes in-scattering at the configured buffer
+compute-retained cluster candidates. Unlike the opaque resolve's overflow fallback, volumetric
+ray marching never scans all active lights. It stabilizes in-scattering at the configured buffer
 resolution by reprojecting empty space with current/previous camera matrices, applying G-buffer
 velocity to opaque surfaces, and rejecting disocclusions against compact linear-depth history,
 then composites the participating medium over the existing opaque result.

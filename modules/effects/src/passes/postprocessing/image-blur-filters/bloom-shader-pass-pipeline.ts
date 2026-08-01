@@ -22,7 +22,10 @@ type BloomTargetName =
 
 /** Construction options for HDR-capable multiscale bloom. */
 export type BloomShaderPassPipelineOptions = {
-  /** Fractional size multiplier applied to the half, quarter, and eighth-resolution pyramid. */
+  /**
+   * Positive fractional size multiplier applied to the half, quarter, and eighth-resolution
+   * pyramid. The extraction filter adapts its source footprint to the resulting target size.
+   */
   resolutionScale?: number;
   /** Filterable RGBA intermediate format. Defaults to rgba16float for HDR highlight energy. */
   colorFormat?: 'rgba8unorm' | 'rgba16float';
@@ -60,24 +63,33 @@ fn bloomExtract_sampleColor(
 ) -> vec4f {
   let sourceDimensions = vec2i(textureDimensions(sourceTexture));
   let sourceCenter = texCoord * vec2f(sourceDimensions) - vec2f(0.5);
-  let centerTexel = vec2i(floor(sourceCenter));
+  let sourceFootprint = max(
+    (abs(dpdx(texCoord)) + abs(dpdy(texCoord))) * vec2f(sourceDimensions),
+    vec2f(1.0)
+  );
+  let filterRadius = max(sourceFootprint, vec2f(2.0));
+  let minimumCoordinate = vec2i(floor(sourceCenter - filterRadius)) + vec2i(1);
+  let maximumCoordinate = vec2i(ceil(sourceCenter + filterRadius)) - vec2i(1);
   var color = vec4f(0.0);
+  var totalWeight = 0.0;
 
-  // A normalized 4x4 tent covers every source texel while attenuating frequencies that would
-  // alias at half resolution. Thresholding each source sample keeps isolated HDR highlights.
-  for (var offsetY = -1; offsetY <= 2; offsetY += 1) {
-    let weightY = select(3.0, 1.0, offsetY == -1 || offsetY == 2);
-    for (var offsetX = -1; offsetX <= 2; offsetX += 1) {
-      let weightX = select(3.0, 1.0, offsetX == -1 || offsetX == 2);
+  // The tent radius follows the actual source-to-target ratio so reduced-resolution pyramids do
+  // not leave unsampled bands. At the default half resolution this is the original 4x4 tent.
+  for (var sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY += 1) {
+    let weightY = max(1.0 - abs(f32(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (var sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX += 1) {
+      let weightX = max(1.0 - abs(f32(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      let weight = weightX * weightY;
       let sourceColor = bloomExtract_loadColor(
         sourceTexture,
-        centerTexel + vec2i(offsetX, offsetY)
+        vec2i(sourceX, sourceY)
       );
-      color += bloomExtract_applyThreshold(sourceColor) * weightX * weightY;
+      color += bloomExtract_applyThreshold(sourceColor) * weight;
+      totalWeight += weight;
     }
   }
 
-  return color / 64.0;
+  return color / max(totalWeight, 0.00001);
 }
 `,
   fs: /* glsl */ `
@@ -103,23 +115,32 @@ vec4 bloomExtract_loadColor(sampler2D sourceTexture, ivec2 coordinate) {
 vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   ivec2 sourceDimensions = textureSize(sourceTexture, 0);
   vec2 sourceCenter = texCoord * vec2(sourceDimensions) - vec2(0.5);
-  ivec2 centerTexel = ivec2(floor(sourceCenter));
+  vec2 sourceFootprint = max(
+    (abs(dFdx(texCoord)) + abs(dFdy(texCoord))) * vec2(sourceDimensions),
+    vec2(1.0)
+  );
+  vec2 filterRadius = max(sourceFootprint, vec2(2.0));
+  ivec2 minimumCoordinate = ivec2(floor(sourceCenter - filterRadius)) + ivec2(1);
+  ivec2 maximumCoordinate = ivec2(ceil(sourceCenter + filterRadius)) - ivec2(1);
   vec4 color = vec4(0.0);
+  float totalWeight = 0.0;
 
   // Keep this kernel identical to the WGSL path so WebGL and WebGPU conserve the same energy.
-  for (int offsetY = -1; offsetY <= 2; offsetY++) {
-    float weightY = offsetY == -1 || offsetY == 2 ? 1.0 : 3.0;
-    for (int offsetX = -1; offsetX <= 2; offsetX++) {
-      float weightX = offsetX == -1 || offsetX == 2 ? 1.0 : 3.0;
+  for (int sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY++) {
+    float weightY = max(1.0 - abs(float(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (int sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX++) {
+      float weightX = max(1.0 - abs(float(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      float weight = weightX * weightY;
       vec4 sourceColor = bloomExtract_loadColor(
         sourceTexture,
-        centerTexel + ivec2(offsetX, offsetY)
+        ivec2(sourceX, sourceY)
       );
-      color += bloomExtract_applyThreshold(sourceColor) * weightX * weightY;
+      color += bloomExtract_applyThreshold(sourceColor) * weight;
+      totalWeight += weight;
     }
   }
 
-  return color / 64.0;
+  return color / max(totalWeight, 0.00001);
 }
 `,
   uniformTypes: {
@@ -147,21 +168,30 @@ fn bloomDownsample_sampleColor(
 ) -> vec4f {
   let sourceDimensions = vec2i(textureDimensions(sourceTexture));
   let sourceCenter = texCoord * vec2f(sourceDimensions) - vec2f(0.5);
-  let centerTexel = vec2i(floor(sourceCenter));
+  let sourceFootprint = max(
+    (abs(dpdx(texCoord)) + abs(dpdy(texCoord))) * vec2f(sourceDimensions),
+    vec2f(1.0)
+  );
+  let filterRadius = max(sourceFootprint, vec2f(2.0));
+  let minimumCoordinate = vec2i(floor(sourceCenter - filterRadius)) + vec2i(1);
+  let maximumCoordinate = vec2i(ceil(sourceCenter + filterRadius)) - vec2i(1);
   var color = vec4f(0.0);
+  var totalWeight = 0.0;
 
-  for (var offsetY = -1; offsetY <= 2; offsetY += 1) {
-    let weightY = select(3.0, 1.0, offsetY == -1 || offsetY == 2);
-    for (var offsetX = -1; offsetX <= 2; offsetX += 1) {
-      let weightX = select(3.0, 1.0, offsetX == -1 || offsetX == 2);
+  for (var sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY += 1) {
+    let weightY = max(1.0 - abs(f32(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (var sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX += 1) {
+      let weightX = max(1.0 - abs(f32(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      let weight = weightX * weightY;
       color += bloomDownsample_loadColor(
         sourceTexture,
-        centerTexel + vec2i(offsetX, offsetY)
-      ) * weightX * weightY;
+        vec2i(sourceX, sourceY)
+      ) * weight;
+      totalWeight += weight;
     }
   }
 
-  return color / 64.0;
+  return color / max(totalWeight, 0.00001);
 }
 `,
   fs: /* glsl */ `
@@ -173,21 +203,30 @@ vec4 bloomDownsample_loadColor(sampler2D sourceTexture, ivec2 coordinate) {
 vec4 bloomDownsample_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   ivec2 sourceDimensions = textureSize(sourceTexture, 0);
   vec2 sourceCenter = texCoord * vec2(sourceDimensions) - vec2(0.5);
-  ivec2 centerTexel = ivec2(floor(sourceCenter));
+  vec2 sourceFootprint = max(
+    (abs(dFdx(texCoord)) + abs(dFdy(texCoord))) * vec2(sourceDimensions),
+    vec2(1.0)
+  );
+  vec2 filterRadius = max(sourceFootprint, vec2(2.0));
+  ivec2 minimumCoordinate = ivec2(floor(sourceCenter - filterRadius)) + ivec2(1);
+  ivec2 maximumCoordinate = ivec2(ceil(sourceCenter + filterRadius)) - ivec2(1);
   vec4 color = vec4(0.0);
+  float totalWeight = 0.0;
 
-  for (int offsetY = -1; offsetY <= 2; offsetY++) {
-    float weightY = offsetY == -1 || offsetY == 2 ? 1.0 : 3.0;
-    for (int offsetX = -1; offsetX <= 2; offsetX++) {
-      float weightX = offsetX == -1 || offsetX == 2 ? 1.0 : 3.0;
+  for (int sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY++) {
+    float weightY = max(1.0 - abs(float(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (int sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX++) {
+      float weightX = max(1.0 - abs(float(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      float weight = weightX * weightY;
       color += bloomDownsample_loadColor(
         sourceTexture,
-        centerTexel + ivec2(offsetX, offsetY)
-      ) * weightX * weightY;
+        ivec2(sourceX, sourceY)
+      ) * weight;
+      totalWeight += weight;
     }
   }
 
-  return color / 64.0;
+  return color / max(totalWeight, 0.00001);
 }
 `,
   passes: [{sampler: true}]

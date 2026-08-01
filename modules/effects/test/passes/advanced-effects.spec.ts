@@ -208,6 +208,9 @@ test('advanced effects expose composable pipeline shapes', testCase => {
   );
 
   const adaptiveExposure = createHDRAutoExposureShaderPassPipeline();
+  const minimumScaleAdaptiveExposure = createHDRAutoExposureShaderPassPipeline({
+    meteringScale: 0.125
+  });
   testCase.equal(
     adaptiveExposure.steps.length,
     7,
@@ -231,6 +234,11 @@ test('advanced effects expose composable pipeline shapes', testCase => {
   testCase.ok(
     hdrLuminanceExtract.source.includes('weightedLogLuminance, totalWeight'),
     'HDR metering preserves weighted luminance and weight until the final reduction'
+  );
+  testCase.deepEqual(
+    minimumScaleAdaptiveExposure.renderTargets?.hdrLuminanceQuarter.scale,
+    [0.25, 0.25],
+    'HDR metering clamps sub-quarter scales so its 4x4 footprint covers the complete source'
   );
   testCase.ok(
     hdrLuminanceReduce.source.includes('.rg'),

@@ -53,13 +53,23 @@ test('bloomShaderPassPipeline#routing', t => {
   );
   t.match(
     downsamplePass?.source || '',
-    /return color \/ 64\.0/,
-    'WGSL downsampling uses a normalized tent filter'
+    /abs\(dpdx\(texCoord\)\) \+ abs\(dpdy\(texCoord\)\)/,
+    'WGSL downsampling derives its tent footprint from the actual target size'
   );
   t.match(
     downsamplePass?.fs || '',
-    /return color \/ 64\.0/,
-    'GLSL downsampling uses the same normalized tent filter'
+    /abs\(dFdx\(texCoord\)\) \+ abs\(dFdy\(texCoord\)\)/,
+    'GLSL downsampling derives the same scale-aware tent footprint'
+  );
+  t.match(
+    extractionPass?.source || '',
+    /return color \/ max\(totalWeight, 0\.00001\)/,
+    'WGSL extraction normalizes its dynamic footprint'
+  );
+  t.match(
+    extractionPass?.fs || '',
+    /return color \/ max\(totalWeight, 0\.00001\)/,
+    'GLSL extraction normalizes its dynamic footprint'
   );
   for (const target of Object.values(bloomShaderPassPipeline.renderTargets)) {
     t.equal(target.sampler.minFilter, 'linear', 'bloom intermediates use linear minification');
@@ -120,6 +130,101 @@ test('bloomShaderPassPipeline#routing', t => {
     'GLSL does not vertically mirror named bloom targets'
   );
   t.end();
+});
+
+test('HDR bloom covers source texels at quarter pyramid resolution', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU unavailable, skipping reduced-resolution bloom regression');
+    testCase.end();
+    return;
+  }
+
+  const capabilities = device.getTextureFormatCapabilities('rgba16float');
+  if (!capabilities.render || !capabilities.filter) {
+    testCase.comment('Renderable, filterable rgba16float textures are unavailable');
+    testCase.end();
+    return;
+  }
+
+  const width = 64;
+  const height = 64;
+  const highlightX = 8;
+  const highlightY = 32;
+  const sourceRadiance = 16;
+  const sourcePixels = new Uint16Array(width * height * 4);
+  for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
+    sourcePixels[pixelIndex * 4 + 3] = toHalfFloat(1);
+  }
+  sourcePixels.set(
+    [
+      toHalfFloat(sourceRadiance),
+      toHalfFloat(sourceRadiance),
+      toHalfFloat(sourceRadiance),
+      toHalfFloat(1)
+    ],
+    (highlightY * width + highlightX) * 4
+  );
+
+  const sourceTexture = device.createTexture({
+    id: 'reduced-resolution-bloom-source',
+    data: sourcePixels,
+    format: 'rgba16float',
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.COPY_DST
+  });
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [createBloomShaderPassPipeline({resolutionScale: 0.25})],
+    colorFormat: 'rgba16float',
+    flipY: false
+  });
+  renderer.resize([width, height]);
+
+  try {
+    const outputTexture = renderer.renderToTexture({
+      sourceTexture,
+      uniforms: {
+        bloomExtract: {threshold: 0.5},
+        bloomBlur: {radius: 0},
+        bloomComposite: {intensity: 8}
+      }
+    });
+    device.submit();
+
+    testCase.ok(outputTexture, 'reduced-resolution bloom renders');
+    if (outputTexture) {
+      const memoryLayout = outputTexture.computeMemoryLayout({width, height});
+      const readbackBuffer = device.createBuffer({
+        id: 'reduced-resolution-bloom-readback',
+        byteLength: memoryLayout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      try {
+        outputTexture.readBuffer({width, height}, readbackBuffer);
+        const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
+        const pixelView = new DataView(pixels.buffer, pixels.byteOffset, pixels.byteLength);
+        const readRed = (pixelX: number, pixelY: number): number =>
+          fromHalfFloat(pixelView.getUint16(pixelY * memoryLayout.bytesPerRow + pixelX * 8, true));
+
+        testCase.ok(
+          readRed(highlightX, highlightY) > sourceRadiance,
+          'a highlight in a former fixed-kernel sampling gap contributes bloom'
+        );
+        testCase.ok(
+          readRed(highlightX + 2, highlightY) > 0,
+          'the captured highlight contributes glow to neighboring source pixels'
+        );
+      } finally {
+        readbackBuffer.destroy();
+      }
+    }
+  } finally {
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+
+  testCase.end();
 });
 
 test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', async testCase => {

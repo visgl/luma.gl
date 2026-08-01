@@ -7,7 +7,11 @@ import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 
 /** Construction options for GPU-resident HDR luminance metering and adaptation. */
 export type HDRAutoExposureShaderPassPipelineOptions = {
-  /** Initial luminance-metering resolution. Defaults to one quarter of the drawing buffer. */
+  /**
+   * Initial luminance-metering resolution. Defaults to one quarter of the drawing buffer.
+   * Values below 0.25 are clamped to 0.25 so the fixed 4x4 extraction footprint covers the
+   * complete source image.
+   */
   meteringScale?: number;
 };
 
@@ -258,7 +262,7 @@ export function createHDRAutoExposureShaderPassPipeline(
   | 'hdrLuminanceThousandth'
   | 'hdrExposureHistory'
 > {
-  const meteringScale = options.meteringScale ?? 0.25;
+  const meteringScale = Math.max(options.meteringScale ?? 0.25, 0.25);
   const sixteenthScale = meteringScale / 4;
   const sixtyFourthScale = sixteenthScale / 4;
   const twoFiftySixthScale = sixtyFourthScale / 4;
