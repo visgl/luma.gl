@@ -7,6 +7,7 @@ import type {
   CommandEncoder,
   ComputePass,
   Device,
+  ExternalTexture,
   RenderPass,
   RenderPassProps,
   Texture,
@@ -63,6 +64,24 @@ export type GraphImportedTexture = Texture | DynamicTexture;
 export type GraphFrameTextureBinding = {
   /** Caller-acquired texture valid for this encoding only. */
   texture: GraphImportedTexture;
+  /** Strictly increasing application frame identifier for this compiled graph. */
+  frameId: number;
+};
+
+/** Descriptor for one frame-scoped external-image binding. */
+export type GraphExternalTextureDescriptor = {
+  /** Graph-wide resource identifier. */
+  id: string;
+  /** Expected source width in pixels. */
+  width: number;
+  /** Expected source height in pixels. */
+  height: number;
+};
+
+/** One explicitly numbered external-image binding valid for a single encoding. */
+export type GraphExternalTextureBinding = {
+  /** Fresh caller-acquired external texture for this encoding. */
+  texture: ExternalTexture;
   /** Strictly increasing application frame identifier for this compiled graph. */
   frameId: number;
 };
@@ -302,6 +321,31 @@ export class GraphTextureHandle<Format extends TextureFormat = TextureFormat> {
   }
 }
 
+/**
+ * Opaque frame-scoped external-image binding tracked by a `GPUCommandGraph`.
+ *
+ * External textures are sampled-only browser snapshots. They cannot be viewed, copied, stored,
+ * attached, allocated, or destroyed by the graph.
+ */
+export class GraphExternalTextureHandle {
+  /** Graph-wide resource identifier. */
+  readonly id: string;
+  /** Expected source width in pixels. */
+  readonly width: number;
+  /** Expected source height in pixels. */
+  readonly height: number;
+  /** @internal */
+  readonly graph: GPUCommandGraphOwner;
+
+  /** @internal */
+  constructor(graph: GPUCommandGraphOwner, descriptor: GraphExternalTextureDescriptor) {
+    this.graph = graph;
+    this.id = descriptor.id;
+    this.width = descriptor.width;
+    this.height = descriptor.height;
+  }
+}
+
 /** Subresource range selected by `GPUCommandGraph.createTextureView`. */
 export type GraphTextureViewProps = {
   /** View dimension. Defaults to the dimension implied by the texture. */
@@ -378,8 +422,16 @@ export type GraphTextureUse = {
   usage: GraphTextureUsage;
 };
 
+/** One sampled-only external-image use declared by a graph node. */
+export type GraphExternalTextureUse = {
+  /** Frame-scoped external texture sampled by the node. */
+  externalTexture: GraphExternalTextureHandle;
+  /** External textures expose sampled access only. */
+  usage: 'sampled';
+};
+
 /** One resource use declared by a graph node. */
-export type GraphResourceUse = GraphBufferUse | GraphTextureUse;
+export type GraphResourceUse = GraphBufferUse | GraphTextureUse | GraphExternalTextureUse;
 
 /** Graph-owned texture attachments resolved into a framebuffer for a render node. */
 export type GraphRenderPassAttachments = {
@@ -409,6 +461,8 @@ export type GPUCommandGraphEncodeContext<Parameters> = {
   getTexture: (texture: GraphTextureHandle | GraphTextureView) => Texture;
   /** Resolves and caches the concrete texture view for a logical texture or view. */
   getTextureView: (texture: GraphTextureHandle | GraphTextureView) => TextureView;
+  /** Resolves a frame-scoped external-image handle to its concrete sampled binding. */
+  getExternalTexture: (texture: GraphExternalTextureHandle) => ExternalTexture;
 };
 
 /** Compiled compute-pass callback. */
@@ -597,4 +651,6 @@ export type GPUCommandGraphEncodeOptions<Parameters> = {
   textures?: Record<string, GraphImportedTexture>;
   /** Per-encoding frame-scoped texture bindings keyed by graph resource ID. */
   frameTextures?: Record<string, GraphFrameTextureBinding>;
+  /** Per-encoding frame-scoped external-image bindings keyed by graph resource ID. */
+  externalTextures?: Record<string, GraphExternalTextureBinding>;
 };
