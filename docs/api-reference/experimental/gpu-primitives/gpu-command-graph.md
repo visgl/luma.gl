@@ -112,6 +112,7 @@ its documented atomic graph resources; callers must select, adapt, or explicitly
 | `GPUHistogram` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUGridBinning` | Position `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUGridAggregation` | Aligned position and weight views or vectors | ✅ |
+| `GPUGroupAggregation` | Dense group-key view or vector with optional aligned mask | ✅ |
 | `GPUIndexPickingTarget` | Texture and readback resources | ❌ |
 | `DrawCommandBuffer` | Indirect command buffer | ❌ |
 

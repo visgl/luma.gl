@@ -58,7 +58,7 @@ later render pass consume that count without a CPU synchronization point.
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
 `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
 `GPUAncestorProjection`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
-`GPUGridAggregation`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+`GPUGridAggregation`, `GPUGroupAggregation`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
 projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
 four million spans. The sort and data-analysis examples demonstrate independent composable
@@ -79,9 +79,10 @@ is not specific to trace data or two-dimensional rendering.
 
 <GPUFrustumCullingExample embedded />
 
-The data-analysis example composes extent reduction, histogram counting, histogram-count
-reduction, grid binning, and weighted grid statistics in one reusable graph. It uploads Arrow columns and
-keeps compilation, submission, validation readback, and transient-allocation diagnostics explicit.
+The data-analysis example composes extent reduction, histogram counting, filtered categorical
+counts, grid binning, and weighted grid statistics in one reusable graph. It uploads Arrow columns
+and keeps compilation, submission, validation readback, and transient-allocation diagnostics
+explicit.
 
 <GPUDataAnalysisExample embedded />
 
@@ -185,8 +186,9 @@ reachability over stable compressed sparse adjacency. `GPUAncestorProjection` pr
 nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
 parent/child row offsets. `GPUSort` promises stable paired `uint32`
 ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones.
-`GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and `GPUGridAggregation` promise aggregate and
-binning results while selecting hierarchical and atomic implementations internally.
+`GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, and
+`GPUGroupAggregation` promise aggregate and binning results while selecting hierarchical and
+atomic implementations internally.
 
 The first algorithms are deliberately typed and curated. Arbitrary WGSL callbacks for compare,
 combine, and predicate functions are attractive, but they significantly expand validation,
@@ -964,7 +966,7 @@ The intended v10 layering is:
 @luma.gl/gpgpu
   GPUScan, GPUCompaction, and reusable visibility workflows
   GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
-  GPUReduction, GPUSort, GPUHistogram, GPUGridBinning, GPUGridAggregation
+  GPUReduction, GPUSort, GPUHistogram, GPUGridBinning, GPUGridAggregation, GPUGroupAggregation
   higher-level table algorithms
 
 @luma.gl/arrow
@@ -1076,7 +1078,7 @@ flowing directly into indirect rendering.
 ### Phase 3 — Algorithm and table scaling
 
 **Status:** In progress. Inclusive and segmented `uint32` scans, weighted floating-point grid
-statistics, and irregular-edge histograms are implemented.
+statistics, irregular-edge histograms, and filtered categorical counts are implemented.
 
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
@@ -1101,9 +1103,15 @@ can update thresholds between encodings without a CPU readback or graph rebuild.
 produce zero counts. The data-analysis example switches between uniform and GPU-resident threshold
 bins and validates both against a CPU oracle.
 
+`GPUGroupAggregation` maps dense `uint32` identity codes directly to caller-owned count rows. An
+optional source-aligned mask lets visibility or selection workflows update categorical
+distributions without downloading selected IDs. Atomic and vector inputs share one contract;
+vectors preserve aligned source chunks without packing. The data-analysis example groups the same
+Arrow rows by quadrant while a selectable value mask changes the accepted population.
+
 Remaining work extends multi-chunk support to algorithms that still require one packed view, then
-adds categorical histograms and batch-aware operations that preserve table structure. Custom
-associative scans, sparse histograms,
+extends the exercised group contract with sum, minimum, maximum, and mean and adds batch-aware
+operations that preserve table structure. Custom associative scans, sparse histograms,
 and multidimensional histograms should be added only with a concrete consumer and an explicit
 numerical or memory contract.
 
@@ -1219,6 +1227,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
 - [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning)
 - [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation)
+- [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)
 - [GPU commands](/docs/api-guide/gpu/gpu-commands)

@@ -8,6 +8,7 @@ import {
   GPUCommandGraph,
   GPUGridAggregation,
   GPUGridBinning,
+  GPUGroupAggregation,
   GPUHistogram,
   GPUReduction,
   GPUScan,
@@ -21,9 +22,12 @@ const APP_ID = 'gpu-data-analysis-app';
 const STYLE_ID = 'gpu-data-analysis-style';
 const DATASET_LENGTHS = {small: 4096, medium: 65_537, large: 262_144} as const;
 const IRREGULAR_HISTOGRAM_EDGES = [-2.5, -1.5, -0.75, -0.25, 0, 0.25, 0.75, 1.5, 2.5];
+const GROUP_LABELS = ['Northwest', 'Northeast', 'Southwest', 'Southeast'];
 
 type ExampleResources = {
   compiled: CompiledGPUCommandGraph;
+  groupKeys: GPUVector<'uint32'>;
+  selection: GPUVector<'uint32'>;
   values: GPUVector<'float32'>;
   positions: GPUVector<'float32x2'>;
   outputs: Buffer[];
@@ -34,6 +38,8 @@ type ExampleElements = {
   compileTime: HTMLElement;
   dataset: HTMLSelectElement;
   grid: HTMLSelectElement;
+  groupFilter: HTMLSelectElement;
+  groups: HTMLElement;
   heatmap: HTMLElement;
   histogram: HTMLElement;
   nodes: HTMLElement;
@@ -72,7 +78,8 @@ class GPUDataAnalysisExample {
       this.elements.run,
       this.elements.dataset,
       this.elements.bins,
-      this.elements.grid
+      this.elements.grid,
+      this.elements.groupFilter
     ]) {
       element.addEventListener('change', this.handleRun);
     }
@@ -97,7 +104,12 @@ class GPUDataAnalysisExample {
     if (this.destroyed) return;
     this.destroyed = true;
     this.elements.run.removeEventListener('click', this.handleRun);
-    for (const element of [this.elements.dataset, this.elements.bins, this.elements.grid]) {
+    for (const element of [
+      this.elements.dataset,
+      this.elements.bins,
+      this.elements.grid,
+      this.elements.groupFilter
+    ]) {
       element.removeEventListener('change', this.handleRun);
     }
     this.releaseResources();
@@ -115,12 +127,15 @@ class GPUDataAnalysisExample {
       this.elements.bins.value === 'thresholds' ? IRREGULAR_HISTOGRAM_EDGES : undefined;
     const binCount = irregularEdges ? irregularEdges.length - 1 : Number(this.elements.bins.value);
     const gridWidth = Number(this.elements.grid.value);
-    const {values, positions} = makeDataset(length);
+    const {values, positions, groupKeys} = makeDataset(length);
+    const selection = makeSelection(values, this.elements.groupFilter.value);
     let nextResources: ExampleResources | null = null;
 
     try {
       const arrowValues = arrow.makeVector({type: new arrow.Float32(), data: values});
       const arrowPositions = makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions);
+      const arrowGroupKeys = arrow.makeVector({type: new arrow.Uint32(), data: groupKeys});
+      const arrowSelection = arrow.makeVector({type: new arrow.Uint32(), data: selection});
       const gpuValues = makeGPUVectorFromArrow(this.device, arrowValues, {
         name: 'analysis-values',
         format: 'float32'
@@ -128,6 +143,14 @@ class GPUDataAnalysisExample {
       const gpuPositions = makeGPUVectorFromArrow(this.device, arrowPositions, {
         name: 'analysis-positions',
         format: 'float32x2'
+      });
+      const gpuGroupKeys = makeGPUVectorFromArrow(this.device, arrowGroupKeys, {
+        name: 'analysis-group-keys',
+        format: 'uint32'
+      });
+      const gpuSelection = makeGPUVectorFromArrow(this.device, arrowSelection, {
+        name: 'analysis-selection',
+        format: 'uint32'
       });
       const extentBuffer = makeOutputBuffer(this.device, 'extent', 2);
       const histogramBuffer = makeOutputBuffer(this.device, 'histogram', binCount);
@@ -170,6 +193,7 @@ class GPUDataAnalysisExample {
         'cumulative-grid-rows',
         gridWidth * gridWidth
       );
+      const groupCountsBuffer = makeOutputBuffer(this.device, 'group-counts', GROUP_LABELS.length);
       const outputs = [
         extentBuffer,
         ...(histogramEdgesBuffer ? [histogramEdgesBuffer] : []),
@@ -181,11 +205,14 @@ class GPUDataAnalysisExample {
         gridWeightMaximumsBuffer,
         gridWeightMeansBuffer,
         gridSegmentFlagsBuffer,
-        cumulativeGridBuffer
+        cumulativeGridBuffer,
+        groupCountsBuffer
       ];
       const graph = new GPUCommandGraph(this.device, {id: 'gpu-data-analysis-example'});
       const valuesImport = graph.importGPUVector('values', gpuValues);
       const positionsImport = graph.importGPUVector('positions', gpuPositions);
+      const groupKeysImport = graph.importGPUVector('group-keys', gpuGroupKeys);
+      const selectionImport = graph.importGPUVector('selection', gpuSelection);
       const extent = importOutput(graph, extentBuffer, 'extent', 'float32', 2);
       const histogram = importOutput(graph, histogramBuffer, 'histogram', 'uint32', binCount);
       const histogramEdges =
@@ -247,6 +274,13 @@ class GPUDataAnalysisExample {
         'cumulative-grid-rows',
         'uint32',
         gridWidth * gridWidth
+      );
+      const groupCounts = importOutput(
+        graph,
+        groupCountsBuffer,
+        'group-counts',
+        'uint32',
+        GROUP_LABELS.length
       );
       new GPUReduction({
         id: 'extent',
@@ -315,10 +349,23 @@ class GPUDataAnalysisExample {
         mode: 'inclusive',
         segmentFlags: gridSegmentFlags
       }).addToGraph(graph);
+      new GPUGroupAggregation({
+        id: 'group-counts',
+        keys: groupKeysImport,
+        mask: selectionImport,
+        output: groupCounts
+      }).addToGraph(graph);
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;
-      nextResources = {compiled, values: gpuValues, positions: gpuPositions, outputs};
+      nextResources = {
+        compiled,
+        values: gpuValues,
+        positions: gpuPositions,
+        groupKeys: gpuGroupKeys,
+        selection: gpuSelection,
+        outputs
+      };
 
       const commandEncoder = this.device.createCommandEncoder({id: 'gpu-data-analysis-example'});
       compiled.encode(commandEncoder, {parameters: undefined});
@@ -333,7 +380,8 @@ class GPUDataAnalysisExample {
         gridWeightMinimumsBytes,
         gridWeightMaximumsBytes,
         gridWeightMeansBytes,
-        cumulativeGridBytes
+        cumulativeGridBytes,
+        groupCountsBytes
       ] = await Promise.all(
         [
           extentBuffer,
@@ -344,7 +392,8 @@ class GPUDataAnalysisExample {
           gridWeightMinimumsBuffer,
           gridWeightMaximumsBuffer,
           gridWeightMeansBuffer,
-          cumulativeGridBuffer
+          cumulativeGridBuffer,
+          groupCountsBuffer
         ].map(buffer => buffer.readAsync())
       );
       const gpuExtent = Array.from(new Float32Array(extentBytes.buffer, extentBytes.byteOffset, 2));
@@ -397,11 +446,22 @@ class GPUDataAnalysisExample {
           gridWidth * gridWidth
         )
       );
+      const gpuGroupCounts = Array.from(
+        new Uint32Array(groupCountsBytes.buffer, groupCountsBytes.byteOffset, GROUP_LABELS.length)
+      );
       if (this.destroyed || version !== this.runVersion) {
         destroyResources(nextResources);
         return;
       }
-      const reference = analyzeOnCPU(values, positions, binCount, gridWidth, irregularEdges);
+      const reference = analyzeOnCPU(
+        values,
+        positions,
+        groupKeys,
+        selection,
+        binCount,
+        gridWidth,
+        irregularEdges
+      );
       const valid =
         gpuExtent.every((value, index) => Math.abs(value - reference.extent[index]) < 1e-5) &&
         gpuHistogram.every((value, index) => value === reference.histogram[index]) &&
@@ -422,6 +482,7 @@ class GPUDataAnalysisExample {
           approximatelyEqual(value, reference.gridWeightMeans[index])
         ) &&
         gpuCumulativeGrid.every((value, index) => value === reference.cumulativeGrid[index]) &&
+        gpuGroupCounts.every((value, index) => value === reference.groupCounts[index]) &&
         gpuTotal === length;
       this.releaseResources();
       this.resources = nextResources;
@@ -449,8 +510,10 @@ class GPUDataAnalysisExample {
         gpuCumulativeGrid,
         gridWidth
       );
+      renderGroupCounts(this.elements.groups, gpuGroupCounts);
+      const selectedCount = gpuGroupCounts.reduce((sum, count) => sum + count, 0);
       this.setStatus(
-        `Extent [${gpuExtent.map(value => value.toFixed(3)).join(', ')}] · ${irregularEdges ? 'threshold' : 'uniform'} ${binCount}-bin histogram · ${gridWidth}×${gridWidth} cells`
+        `Extent [${gpuExtent.map(value => value.toFixed(3)).join(', ')}] · ${irregularEdges ? 'threshold' : 'uniform'} ${binCount}-bin histogram · ${selectedCount.toLocaleString()} grouped rows · ${gridWidth}×${gridWidth} cells`
       );
     } catch (error) {
       destroyResources(nextResources);
@@ -471,7 +534,11 @@ class GPUDataAnalysisExample {
   }
 }
 
-function makeDataset(length: number): {values: Float32Array; positions: Float32Array} {
+function makeDataset(length: number): {
+  values: Float32Array;
+  positions: Float32Array;
+  groupKeys: Uint32Array;
+} {
   let state = 0x5eed1234;
   const random = (): number => {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
@@ -479,19 +546,31 @@ function makeDataset(length: number): {values: Float32Array; positions: Float32A
   };
   const values = new Float32Array(length);
   const positions = new Float32Array(length * 2);
+  const groupKeys = new Uint32Array(length);
   for (let index = 0; index < length; index++) {
     const x = random() * 2 - 1;
     const y = random() * 2 - 1;
     positions[index * 2] = x;
     positions[index * 2 + 1] = y;
+    groupKeys[index] = (y < 0 ? 2 : 0) + (x >= 0 ? 1 : 0);
     values[index] = Math.fround(Math.sin(x * 4) + Math.cos(y * 6) + (random() - 0.5) * 0.35);
   }
-  return {values, positions};
+  return {values, positions, groupKeys};
+}
+
+function makeSelection(values: Float32Array, filter: string): Uint32Array {
+  return Uint32Array.from(values, value => {
+    if (filter === 'positive') return Number(value >= 0);
+    if (filter === 'negative') return Number(value < 0);
+    return 1;
+  });
 }
 
 function analyzeOnCPU(
   values: Float32Array,
   positions: Float32Array,
+  groupKeys: Uint32Array,
+  selection: Uint32Array,
   binCount: number,
   gridWidth: number,
   histogramEdges?: readonly number[]
@@ -505,6 +584,7 @@ function analyzeOnCPU(
   gridWeightMaximums: number[];
   gridWeightMeans: number[];
   cumulativeGrid: number[];
+  groupCounts: number[];
 } {
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
@@ -568,6 +648,12 @@ function analyzeOnCPU(
     gridPrefix += count;
     return gridPrefix;
   });
+  const groupCounts = Array.from({length: GROUP_LABELS.length}, () => 0);
+  for (let index = 0; index < groupKeys.length; index++) {
+    if (selection[index] !== 0 && groupKeys[index] < groupCounts.length) {
+      groupCounts[groupKeys[index]]++;
+    }
+  }
   return {
     extent: [minimum, maximum],
     histogram,
@@ -577,7 +663,8 @@ function analyzeOnCPU(
     gridWeightMinimums,
     gridWeightMaximums,
     gridWeightMeans,
-    cumulativeGrid
+    cumulativeGrid,
+    groupCounts
   };
 }
 
@@ -671,6 +758,16 @@ function renderGrid(
     .join('');
 }
 
+function renderGroupCounts(element: HTMLElement, counts: number[]): void {
+  const maximum = Math.max(...counts, 1);
+  element.innerHTML = counts
+    .map(
+      (count, index) =>
+        `<div><span>${GROUP_LABELS[index]}</span><i style="width:${(count / maximum) * 100}%"></i><strong>${count.toLocaleString()}</strong></div>`
+    )
+    .join('');
+}
+
 function formatStatistic(value: number): string {
   return Number.isNaN(value) ? 'empty' : value.toFixed(3);
 }
@@ -680,6 +777,8 @@ function destroyResources(resources: ExampleResources | null): void {
   resources.compiled.destroy();
   resources.values.destroy();
   resources.positions.destroy();
+  resources.groupKeys.destroy();
+  resources.selection.destroy();
   for (const output of resources.outputs) output.destroy();
 }
 
@@ -694,6 +793,8 @@ function getElements(root: HTMLElement): ExampleElements {
     compileTime: get('[data-compile-time]'),
     dataset: get('[data-dataset]'),
     grid: get('[data-grid]'),
+    groupFilter: get('[data-group-filter]'),
+    groups: get('[data-groups]'),
     heatmap: get('[data-heatmap]'),
     histogram: get('[data-histogram]'),
     nodes: get('[data-nodes]'),
@@ -716,6 +817,6 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with spatial counts, sum/min/max/mean statistics, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram<select data-bins><option value="16">16 uniform bins</option><option value="64" selected>64 uniform bins</option><option value="300">300 uniform bins</option><option value="thresholds">8 threshold bins</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
+const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with filtered group counts, spatial statistics, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram<select data-bins><option value="16">16 uniform bins</option><option value="64" selected>64 uniform bins</option><option value="300">300 uniform bins</option><option value="thresholds">8 threshold bins</option></select></label><label>Group filter<select data-group-filter><option value="all">All values</option><option value="positive" selected>Positive values</option><option value="negative">Negative values</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Filtered groups</h2><div class="groups" data-groups></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
 
-const STYLES = `.analysis-example{min-height:100%;box-sizing:border-box;padding:30px;color:#172033;background:radial-gradient(circle at 90% 0,#d9f4ea,transparent 35%),#f6f8fb;font-family:Inter,ui-sans-serif,system-ui}.analysis-example *{box-sizing:border-box}.analysis-example>header,.analysis-example>section,.analysis-example>.status{max-width:1120px;margin-left:auto;margin-right:auto}.analysis-example header p{margin:0;color:#08745b;font-size:12px;font-weight:800;letter-spacing:.13em}.analysis-example h1{margin:5px 0;font-size:clamp(30px,5vw,52px);letter-spacing:-.04em}.analysis-example header span{color:#5d687b}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:24px;padding:16px;border:1px solid #ccd6df;border-radius:15px;background:#fff}.controls label{display:grid;gap:5px;color:#596579;font-size:12px;font-weight:700}.controls select,.controls button{height:40px;padding:0 12px;border:1px solid #aebdcc;border-radius:8px;background:#fff;color:#172033}.controls button{background:#08745b;color:#fff;border-color:#08745b;font-weight:700}.status{padding:10px 2px;color:#596579}.status[data-state=error],[data-validation][data-state=error]{color:#b42318}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metrics article,.visuals article{padding:16px;border:1px solid #d5dde6;border-radius:14px;background:#fff;box-shadow:0 10px 30px #25324a0a}.metrics span{display:block;color:#667085;font-size:12px}.metrics strong{display:block;margin-top:7px;font-size:18px}.visuals{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.visuals h2{margin:0 0 12px;font-size:16px}.histogram{height:250px;display:flex;align-items:end;gap:2px;border-bottom:1px solid #b8c3cf}.histogram i{display:block;flex:1;min-width:1px;background:#2da98a;border-radius:2px 2px 0 0}.heatmap{height:250px;aspect-ratio:1;display:grid;gap:1px;margin:auto;background:#e8edf1}.heatmap i{display:block;background:#315cc5}@media(max-width:760px){.analysis-example{padding:18px}.metrics{grid-template-columns:1fr 1fr}.visuals{grid-template-columns:1fr}}`;
+const STYLES = `.analysis-example{min-height:100%;box-sizing:border-box;padding:30px;color:#172033;background:radial-gradient(circle at 90% 0,#d9f4ea,transparent 35%),#f6f8fb;font-family:Inter,ui-sans-serif,system-ui}.analysis-example *{box-sizing:border-box}.analysis-example>header,.analysis-example>section,.analysis-example>.status{max-width:1120px;margin-left:auto;margin-right:auto}.analysis-example header p{margin:0;color:#08745b;font-size:12px;font-weight:800;letter-spacing:.13em}.analysis-example h1{margin:5px 0;font-size:clamp(30px,5vw,52px);letter-spacing:-.04em}.analysis-example header span{color:#5d687b}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:24px;padding:16px;border:1px solid #ccd6df;border-radius:15px;background:#fff}.controls label{display:grid;gap:5px;color:#596579;font-size:12px;font-weight:700}.controls select,.controls button{height:40px;padding:0 12px;border:1px solid #aebdcc;border-radius:8px;background:#fff;color:#172033}.controls button{background:#08745b;color:#fff;border-color:#08745b;font-weight:700}.status{padding:10px 2px;color:#596579}.status[data-state=error],[data-validation][data-state=error]{color:#b42318}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metrics article,.visuals article{padding:16px;border:1px solid #d5dde6;border-radius:14px;background:#fff;box-shadow:0 10px 30px #25324a0a}.metrics span{display:block;color:#667085;font-size:12px}.metrics strong{display:block;margin-top:7px;font-size:18px}.visuals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.visuals h2{margin:0 0 12px;font-size:16px}.histogram{height:250px;display:flex;align-items:end;gap:2px;border-bottom:1px solid #b8c3cf}.histogram i{display:block;flex:1;min-width:1px;background:#2da98a;border-radius:2px 2px 0 0}.groups{height:250px;display:grid;align-content:center;gap:14px}.groups div{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:8px;color:#596579;font-size:12px}.groups i{display:block;height:14px;background:#875bc7;border-radius:2px}.groups strong{min-width:52px;text-align:right;color:#172033}.heatmap{height:250px;aspect-ratio:1;display:grid;gap:1px;margin:auto;background:#e8edf1}.heatmap i{display:block;background:#315cc5}@media(max-width:900px){.visuals{grid-template-columns:1fr 1fr}.visuals article:last-child{grid-column:1/-1}}@media(max-width:760px){.analysis-example{padding:18px}.metrics{grid-template-columns:1fr 1fr}.visuals{grid-template-columns:1fr}.visuals article:last-child{grid-column:auto}}`;

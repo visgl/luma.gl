@@ -98,6 +98,14 @@ export type {
   GPUGridAggregationWeights
 } from './gpu-grid-aggregation';
 
+export {GPUGroupAggregation} from './gpu-group-aggregation';
+export type {
+  GPUGroupAggregationKeys,
+  GPUGroupAggregationMask,
+  GPUGroupAggregationOperation,
+  GPUGroupAggregationProps
+} from './gpu-group-aggregation';
+
 export {
   decodeGPUIndexPickInfo,
   GPUIndexPickingTarget,

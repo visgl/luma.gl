@@ -222,6 +222,8 @@
               "api-reference/experimental/gpu-primitives/gpu-reduction",
               "api-reference/experimental/gpu-primitives/gpu-histogram",
               "api-reference/experimental/gpu-primitives/gpu-grid-binning",
+              "api-reference/experimental/gpu-primitives/gpu-grid-aggregation",
+              "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },
@@ -308,6 +310,8 @@
               "api-reference/experimental/gpu-primitives/gpu-reduction",
               "api-reference/experimental/gpu-primitives/gpu-histogram",
               "api-reference/experimental/gpu-primitives/gpu-grid-binning",
+              "api-reference/experimental/gpu-primitives/gpu-grid-aggregation",
+              "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
           },
