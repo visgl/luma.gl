@@ -387,6 +387,7 @@
     "label": "Developer Guide",
     "items": [
       "developer-guide/README",
+      "developer-guide/working-with-ai",
       "developer-guide/installing",
       "developer-guide/editing",
       "developer-guide/debugging",
