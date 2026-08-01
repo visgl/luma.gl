@@ -4,7 +4,7 @@
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation, Model} from '@luma.gl/engine';
 import {cleanEvaluate, interleave, GPUDataEvaluator, Operation} from '@luma.gl/gpgpu';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {
@@ -32,30 +32,33 @@ test('GPGPU#interleave preserves input array order', () => {
   }
 });
 
-test('GPGPU#interleave ignores the default shader assembler', async t => {
-  const device = await getTestDevice('webgpu');
-  if (!device) {
-    t.skip('webgpu not available');
-    return;
-  }
+for (const deviceType of ['webgl', 'webgpu'] as const) {
+  test(`GPGPU#interleave ignores the default shader assembler:${deviceType}`, async t => {
+    const device = await getTestDevice(deviceType);
+    if (!device) {
+      t.skip(`${deviceType} not available`);
+      return;
+    }
 
-  const defaultShaderAssembler = Computation.defaultProps.shaderAssembler;
-  const contaminatedShaderAssembler = new ShaderAssembler();
-  contaminatedShaderAssembler.addShaderHook('vs:INVALID_GLSL_HOOK(inout vec3 value)');
-  Computation.defaultProps.shaderAssembler = contaminatedShaderAssembler;
+    const defaultProps = deviceType === 'webgpu' ? Computation.defaultProps : Model.defaultProps;
+    const defaultShaderAssembler = defaultProps.shaderAssembler;
+    const contaminatedShaderAssembler = new ShaderAssembler();
+    contaminatedShaderAssembler.addShaderHook('vs:INVALID_GLSL_HOOK(inout invalid_type value)');
+    defaultProps.shaderAssembler = contaminatedShaderAssembler;
 
-  const result = interleave(
-    GPUDataEvaluator.fromArray([1, 2], {}),
-    GPUDataEvaluator.fromArray([3, 4], {})
-  );
-  try {
-    await cleanEvaluate(device, result);
-    expect(await verifyTableValue(result, {value: [1, 3, 2, 4], size: 2})).toBe(null);
-  } finally {
-    result.destroy();
-    Computation.defaultProps.shaderAssembler = defaultShaderAssembler;
-  }
-});
+    const result = interleave(
+      GPUDataEvaluator.fromArray([1, 2], {}),
+      GPUDataEvaluator.fromArray([3, 4], {})
+    );
+    try {
+      await cleanEvaluate(device, result);
+      expect(await verifyTableValue(result, {value: [1, 3, 2, 4], size: 2})).toBe(null);
+    } finally {
+      result.destroy();
+      defaultProps.shaderAssembler = defaultShaderAssembler;
+    }
+  });
+}
 
 for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
   describe(`GPGPU#interleave#execute:${deviceType}`, () => {
