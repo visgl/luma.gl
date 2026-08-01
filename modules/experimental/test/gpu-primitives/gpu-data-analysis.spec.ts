@@ -485,6 +485,59 @@ test('GPUGroupAggregation plans bounded multidimensional dispatches', t => {
   t.end();
 });
 
+test('GPUGroupAggregation computes filtered floating-point group statistics', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keys = Uint32Array.from([0, 0, 1, 2, 2, 3, 1, 9]);
+  const values = Float32Array.from([5, -2, 4, -3, Number.NaN, Number.POSITIVE_INFINITY, 1, 100]);
+  const mask = Uint32Array.from([1, 1, 1, 1, 1, 1, 7, 1]);
+  const run = (operation: Exclude<GPUGroupAggregationOperation, 'count'>) =>
+    runGroupStatistic(device, keys, values, 4, operation, mask);
+  const sum = await run('sum');
+  const minimum = await run('min');
+  const maximum = await run('max');
+  const mean = await run('mean');
+
+  t.deepEqual(sum, [3, 5, -3, 0], 'sum accepts finite selected values with valid keys');
+  t.deepEqual(minimum.slice(0, 3), [-2, 1, -3], 'minimum retains each smallest value');
+  t.ok(Number.isNaN(minimum[3]), 'minimum marks a group with no finite values as NaN');
+  t.deepEqual(maximum.slice(0, 3), [5, 4, -3], 'maximum retains each largest value');
+  t.ok(Number.isNaN(maximum[3]), 'maximum marks a group with no finite values as NaN');
+  t.deepEqual(mean.slice(0, 3), [1.5, 2.5, -3], 'mean divides sums by accepted values');
+  t.ok(Number.isNaN(mean[3]), 'mean marks a group with no finite values as NaN');
+
+  const emptyMean = await runGroupStatistic(
+    device,
+    new Uint32Array(0),
+    new Float32Array(0),
+    3,
+    'mean'
+  );
+  t.ok(emptyMean.every(Number.isNaN), 'empty means finalize every group to NaN');
+  const minimumZero = await runGroupStatistic(
+    device,
+    Uint32Array.from([0, 0]),
+    Float32Array.from([0, -0]),
+    1,
+    'min'
+  );
+  const maximumZero = await runGroupStatistic(
+    device,
+    Uint32Array.from([0, 0]),
+    Float32Array.from([0, -0]),
+    1,
+    'max'
+  );
+  t.ok(Object.is(minimumZero[0], -0), 'minimum preserves the ordered-float signed-zero contract');
+  t.ok(Object.is(maximumZero[0], 0), 'maximum preserves the ordered-float signed-zero contract');
+  t.end();
+});
+
 test('GPUGroupAggregation preserves aligned vector chunks', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -514,6 +567,27 @@ test('GPUGroupAggregation preserves aligned vector chunks', async t => {
     0,
     'group counting does not pack chunks or allocate scratch storage'
   );
+
+  const mean = await runVectorGroupStatistic(
+    device,
+    [Uint32Array.from([0, 1]), new Uint32Array(0), Uint32Array.from([0, 1, 8])],
+    [Float32Array.from([1, 3]), new Float32Array(0), Float32Array.from([5, 7, 100])],
+    [Uint32Array.from([1, 0]), new Uint32Array(0), Uint32Array.from([1, 1, 1])],
+    2,
+    'mean'
+  );
+  t.deepEqual(mean.values, [3, 7], 'weighted groups combine aligned selected chunks');
+  t.deepEqual(
+    mean.nodeOrder,
+    [
+      'gpu-group-aggregation-initialize',
+      'gpu-group-aggregation-chunk-0-mean',
+      'gpu-group-aggregation-chunk-2-mean',
+      'gpu-group-aggregation-finalize'
+    ],
+    'weighted vector aggregation initializes and finalizes once around non-empty chunks'
+  );
+  t.equal(mean.logicalTransientBufferCount, 1, 'mean owns one transient group-count buffer');
   t.end();
 });
 
@@ -818,6 +892,28 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
     /separate buffers/,
     'group output cannot alias its keys'
   );
+  const floatGroupOutput = graph.createDataView(outputHandle, {format: 'float32', length: 2});
+  t.throws(
+    () =>
+      new GPUGroupAggregation({
+        keys: input,
+        values: graph.createDataView(inputHandle, {format: 'float32', length: 3}),
+        output: floatGroupOutput,
+        operation: 'sum'
+      }),
+    /lengths must match/,
+    'group keys and floating-point values require row alignment'
+  );
+  t.throws(
+    () =>
+      new GPUGroupAggregation({
+        keys: input,
+        output: floatGroupOutput,
+        operation: 'mean'
+      } as never),
+    /requires values/,
+    'weighted group statistics require an aligned value input'
+  );
   const positions = graph.createDataView(inputHandle, {format: 'float32x2', length: 4});
   t.throws(
     () => new GPUGridBinning({positions, output: two, gridSize: [2, 2], bounds: [0, 0, 1, 1]}),
@@ -1114,6 +1210,45 @@ async function runGroupAggregation(
   return counts;
 }
 
+async function runGroupStatistic(
+  device: Device,
+  keys: Uint32Array,
+  values: Float32Array,
+  groupCount: number,
+  operation: Exclude<GPUGroupAggregationOperation, 'count'>,
+  mask?: Uint32Array
+): Promise<number[]> {
+  const keysBuffer = createInputBuffer(device, keys);
+  const valuesBuffer = createInputBuffer(device, values);
+  const maskBuffer = mask ? createInputBuffer(device, mask) : undefined;
+  const outputBuffer = createOutputBuffer(device, groupCount);
+  const graph = new GPUCommandGraph(device);
+  const keysView = importView(graph, 'group-keys', keysBuffer, 'uint32', keys.length);
+  const valuesView = importView(graph, 'group-values', valuesBuffer, 'float32', values.length);
+  const maskView = maskBuffer
+    ? importView(graph, 'group-mask', maskBuffer, 'uint32', mask!.length)
+    : undefined;
+  const output = importView(graph, 'group-statistic', outputBuffer, 'float32', groupCount);
+  new GPUGroupAggregation({
+    keys: keysView,
+    values: valuesView,
+    mask: maskView,
+    output,
+    operation
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'group-statistic-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const result = await readFloat32(outputBuffer, groupCount);
+  compiled.destroy();
+  keysBuffer.destroy();
+  valuesBuffer.destroy();
+  maskBuffer?.destroy();
+  outputBuffer.destroy();
+  return result;
+}
+
 async function runVectorGroupAggregation(
   device: Device,
   keyChunks: Uint32Array[],
@@ -1170,6 +1305,84 @@ async function runVectorGroupAggregation(
   for (const buffer of [...keyBuffers, ...maskBuffers]) buffer.destroy();
   outputBuffer.destroy();
   return {counts, nodeOrder, logicalTransientBufferCount};
+}
+
+async function runVectorGroupStatistic(
+  device: Device,
+  keyChunks: Uint32Array[],
+  valueChunks: Float32Array[],
+  maskChunks: Uint32Array[],
+  groupCount: number,
+  operation: Exclude<GPUGroupAggregationOperation, 'count'>
+): Promise<{values: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
+  const keyBuffers = keyChunks.map(chunk => createInputBuffer(device, chunk));
+  const valueBuffers = valueChunks.map(chunk => createInputBuffer(device, chunk));
+  const maskBuffers = maskChunks.map(chunk => createInputBuffer(device, chunk));
+  const keysVector = new GPUVector({
+    type: 'data',
+    name: 'group-keys',
+    format: 'uint32',
+    data: keyChunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: keyBuffers[chunkIndex],
+          format: 'uint32',
+          length: chunk.length,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const valuesVector = new GPUVector({
+    type: 'data',
+    name: 'group-values',
+    format: 'float32',
+    data: valueChunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: valueBuffers[chunkIndex],
+          format: 'float32',
+          length: chunk.length,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const maskVector = new GPUVector({
+    type: 'data',
+    name: 'group-mask',
+    format: 'uint32',
+    data: maskChunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: maskBuffers[chunkIndex],
+          format: 'uint32',
+          length: chunk.length,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const outputBuffer = createOutputBuffer(device, groupCount);
+  const graph = new GPUCommandGraph(device);
+  const keys = graph.importGPUVector('group-keys', keysVector);
+  const values = graph.importGPUVector('group-values', valuesVector);
+  const mask = graph.importGPUVector('group-mask', maskVector);
+  const output = importView(graph, 'group-statistic', outputBuffer, 'float32', groupCount);
+  new GPUGroupAggregation({keys, values, mask, output, operation}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-group-statistic-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const result = await readFloat32(outputBuffer, groupCount);
+  const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
+  compiled.destroy();
+  keysVector.destroy();
+  valuesVector.destroy();
+  maskVector.destroy();
+  for (const buffer of [...keyBuffers, ...valueBuffers, ...maskBuffers]) buffer.destroy();
+  outputBuffer.destroy();
+  return {values: result, nodeOrder, logicalTransientBufferCount};
 }
 
 async function runGrid(
