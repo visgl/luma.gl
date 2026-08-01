@@ -20,6 +20,11 @@ export const TRACE_RUNTIME_SPAN_FLAG = 1 << 8;
 export const TRACE_ERROR_SPAN_FLAG = 1 << 9;
 export const TRACE_OVERLAPPING_CHILD_FLAG = 1 << 10;
 export const TRACE_SIMILAR_DURATION_PARENT_FLAG = 1 << 11;
+/** Active filtering policy bits uploaded independently from immutable source span flags. */
+export const TRACE_FILTER_HIDE_RUNTIME_SPANS = 1 << 0;
+export const TRACE_FILTER_ERRORS_ONLY = 1 << 1;
+export const TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN = 1 << 2;
+export const TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS = 1 << 3;
 export const TRACE_MAXIMUM_OVERLAPPING_CHILD_DURATION = 1;
 export const TRACE_MAXIMUM_RELATIVE_PARENT_DURATION_DELTA = 0.25;
 export const TRACE_COLLAPSED_STATE = 0;

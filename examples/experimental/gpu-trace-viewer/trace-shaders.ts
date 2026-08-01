@@ -5,6 +5,10 @@
 import {
   TRACE_ACTIVITY_BIN_COUNT,
   TRACE_ERROR_SPAN_FLAG,
+  TRACE_FILTER_ERRORS_ONLY,
+  TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
+  TRACE_FILTER_HIDE_RUNTIME_SPANS,
+  TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_LANES_PER_THREAD,
   TRACE_OVERLAPPING_CHILD_FLAG,
   TRACE_RUNTIME_SPAN_FLAG,
@@ -23,6 +27,7 @@ struct TraceSpan {
   processIndex: u32,
   threadIndex: u32,
   sourceIndex: u32,
+  // Immutable classifications assigned when the source span is ingested.
   flags: u32,
 };
 
@@ -40,7 +45,8 @@ struct ViewUniforms {
   laneMax: f32,
   enabledMask: u32,
   statusMask: u32,
-  filterFlags: u32,
+  // Enabled filtering policy applied to the immutable source classifications.
+  activeFilterMask: u32,
   dependencyMask: u32,
   minimumDuration: f32,
   viewportWidth: f32,
@@ -310,13 +316,17 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let processVisible = processStates[span.processIndex] != 0u;
   let statusVisible = (viewUniforms.statusMask & (1u << (span.flags & 3u))) != 0u;
   let runtimeVisible =
-    (viewUniforms.filterFlags & 1u) == 0u || (span.flags & RUNTIME_SPAN_FLAG) == 0u;
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_RUNTIME_SPANS}u) == 0u ||
+    (span.flags & RUNTIME_SPAN_FLAG) == 0u;
   let errorVisible =
-    (viewUniforms.filterFlags & 2u) == 0u || (span.flags & ERROR_SPAN_FLAG) != 0u;
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_ERRORS_ONLY}u) == 0u ||
+    (span.flags & ERROR_SPAN_FLAG) != 0u;
   let overlappingChildVisible =
-    (viewUniforms.filterFlags & 4u) == 0u || (span.flags & OVERLAPPING_CHILD_FLAG) == 0u;
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN}u) == 0u ||
+    (span.flags & OVERLAPPING_CHILD_FLAG) == 0u;
   let similarParentVisible =
-    (viewUniforms.filterFlags & 8u) == 0u || (span.flags & SIMILAR_DURATION_PARENT_FLAG) == 0u;
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS}u) == 0u ||
+    (span.flags & SIMILAR_DURATION_PARENT_FLAG) == 0u;
   let durationVisible = span.duration >= viewUniforms.minimumDuration;
   let visible = timeVisible && laneVisible && groupVisible && processVisible &&
     statusVisible && runtimeVisible && errorVisible && overlappingChildVisible &&
