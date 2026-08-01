@@ -29,6 +29,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'integrations/hello-react',
   'experimental/antialiasing',
   'showcase/dof',
+  'showcase/lightstorm-megacity',
   'showcase/packet-spraying',
   'showcase/persistence',
   'tutorials/hello-instanced-cubes',

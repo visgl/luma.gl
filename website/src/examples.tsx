@@ -74,6 +74,7 @@ import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starf
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
+import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
@@ -559,6 +560,20 @@ export const InstancingExample: React.FC = props => (
     id="instancing"
     directory="showcase"
     template={InstancingApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="lightstorm-megacity"
+    title="Lightstorm Megacity"
+    subtitle="GPU-driven city at data scale"
+    directory="showcase"
+    devices={['webgpu']}
+    template={LightstormMegacityApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}

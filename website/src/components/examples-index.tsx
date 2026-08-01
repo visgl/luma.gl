@@ -343,7 +343,9 @@ function normalizeItem(item: SidebarDocItem, category: string): CatalogItem {
 }
 
 function getDefaultBackends(category: string): ExampleBackend[] {
-  return category.includes('GPU Data') || category.includes('GPU Command Graph')
+  return category === 'WebGPU' ||
+    category.includes('GPU Data') ||
+    category.includes('GPU Command Graph')
     ? ['webgpu']
     : ['webgpu', 'webgl2'];
 }
@@ -352,6 +354,7 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
   if (category === 'Tutorials') return 'beginner';
   if (
     category === 'Experimental' ||
+    category === 'WebGPU' ||
     category.includes('Arrow') ||
     category.includes('GPU Command Graph')
   ) {
@@ -361,7 +364,9 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
 }
 
 function getDefaultMaturity(category: string): ExampleMaturity {
-  return category === 'Experimental' || category.includes('GPU Command Graph')
+  return category === 'Experimental' ||
+    category === 'WebGPU' ||
+    category.includes('GPU Command Graph')
     ? 'experimental'
     : 'stable';
 }
