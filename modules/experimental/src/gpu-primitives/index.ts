@@ -61,10 +61,14 @@ export {GPUMask} from './gpu-mask';
 export type {GPUMaskInput, GPUMaskOperation, GPUMaskProps} from './gpu-mask';
 
 export {GPUHierarchyLayout} from './gpu-hierarchy-layout';
-export type {GPUHierarchyLayoutProps} from './gpu-hierarchy-layout';
+export type {GPUHierarchyLayoutData, GPUHierarchyLayoutProps} from './gpu-hierarchy-layout';
 
 export {GPUGraphTraversal} from './gpu-graph-traversal';
-export type {GPUGraphTraversalDirection, GPUGraphTraversalProps} from './gpu-graph-traversal';
+export type {
+  GPUGraphTraversalData,
+  GPUGraphTraversalDirection,
+  GPUGraphTraversalProps
+} from './gpu-graph-traversal';
 
 export {GPUAncestorProjection} from './gpu-ancestor-projection';
 export type {GPUAncestorProjectionProps} from './gpu-ancestor-projection';

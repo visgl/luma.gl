@@ -121,6 +121,37 @@ test('GPUHierarchyLayout scans live parent and child expansion states', async t 
   t.end();
 });
 
+test('GPUHierarchyLayout preserves uneven parent and child partitions', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runPartitionedHierarchyLayout(device);
+  t.deepEqual(
+    result.heights,
+    [[4, 1, 1], [], [0, 1, 4]],
+    'global parent IDs remain correct when one child chunk crosses parent chunk boundaries'
+  );
+  t.deepEqual(
+    result.offsets,
+    [[0, 4, 5], [], [6, 6, 7]],
+    'the vector-wide scan preserves empty and uneven output chunks'
+  );
+  t.ok(
+    result.nodeOrder.includes('partitioned-hierarchy-heights-child-0-parent-2'),
+    'the crossing child chunk is split against the relevant parent partition'
+  );
+  t.deepEqual(
+    result.updatedOffsets,
+    [[0, 4, 5], [], [6, 6, 10]],
+    'replacing one child batch updates the vector-wide layout without recompiling the graph'
+  );
+  t.end();
+});
+
 test('GPUGraphTraversal expands outgoing, incoming, and bidirectional frontiers', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -189,6 +220,28 @@ test('GPUGraphTraversal reads dynamic seed counts and traversal depth', async t 
     }),
     [0, 0, 0, 0, 0, 0],
     'zero active seeds clear every previously selected node'
+  );
+  t.end();
+});
+
+test('GPUGraphTraversal follows global IDs across local CSR partitions', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runPartitionedTraversal(device);
+  t.deepEqual(
+    result.output,
+    [[1, 1], [], [1, 1], [1, 0]],
+    'cross-partition edges match the packed traversal while preserving output topology'
+  );
+  t.ok(
+    result.nodeOrder.includes('partitioned-traversal-depth-0-outgoing-source-0-target-2') &&
+      result.nodeOrder.includes('partitioned-traversal-depth-1-outgoing-source-2-target-3'),
+    'source-to-target partition pairs make cross-partition routing explicit'
   );
   t.end();
 });
@@ -423,6 +476,51 @@ async function runHierarchyLayout(
   return {heights, offsets};
 }
 
+async function runPartitionedHierarchyLayout(device: Device): Promise<{
+  heights: number[][];
+  offsets: number[][];
+  updatedOffsets: number[][];
+  nodeOrder: string[];
+}> {
+  const parentChunks = [Uint32Array.from([1]), new Uint32Array(0), Uint32Array.from([0, 1])];
+  const childChunks = [
+    Uint32Array.from([1, 0, 1]),
+    new Uint32Array(0),
+    Uint32Array.from([1, 0, 1])
+  ];
+  const parents = createVectorFixture(device, 'parents', parentChunks, false);
+  const children = createVectorFixture(device, 'children', childChunks, false);
+  const heights = createVectorFixture(device, 'heights', childChunks, true);
+  const offsets = createVectorFixture(device, 'offsets', childChunks, true);
+  const graph = new GPUCommandGraph(device, {id: 'partitioned-hierarchy-test'});
+  new GPUHierarchyLayout({
+    id: 'partitioned-hierarchy',
+    parentStates: graph.importGPUVector('parents', parents.vector),
+    childStates: graph.importGPUVector('children', children.vector),
+    heights: graph.importGPUVector('heights', heights.vector),
+    offsets: graph.importGPUVector('offsets', offsets.vector),
+    childrenPerParent: 2,
+    expandedChildHeight: 4
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'partitioned-hierarchy-test');
+  const firstHeights = await readVectorFixture(heights);
+  const firstOffsets = await readVectorFixture(offsets);
+  children.buffers[2].write(Uint32Array.from([1, 1, 1]));
+  submitGraph(device, compiled, 'partitioned-hierarchy-update-test');
+  const result = {
+    heights: firstHeights,
+    offsets: firstOffsets,
+    updatedOffsets: await readVectorFixture(offsets),
+    nodeOrder: compiled.stats.nodeOrder
+  };
+  compiled.destroy();
+  for (const fixture of [parents, children, heights, offsets]) {
+    destroyVectorFixture(fixture);
+  }
+  return result;
+}
+
 async function runAncestorProjection(
   device: Device,
   parents: Uint32Array,
@@ -542,6 +640,52 @@ async function runTraversal(
   return result;
 }
 
+async function runPartitionedTraversal(device: Device): Promise<{
+  output: number[][];
+  nodeOrder: string[];
+}> {
+  const outputChunks = [
+    new Uint32Array(2),
+    new Uint32Array(0),
+    new Uint32Array(2),
+    new Uint32Array(2)
+  ];
+  const offsetChunks = [
+    Uint32Array.from([0, 2, 4]),
+    Uint32Array.from([0]),
+    Uint32Array.from([0, 2, 3]),
+    Uint32Array.from([0, 0, 0])
+  ];
+  const neighborChunks = [
+    Uint32Array.from([1, 2, 2, 3]),
+    new Uint32Array(0),
+    Uint32Array.from([0, 3, 4]),
+    new Uint32Array(0)
+  ];
+  const seedChunks = [Uint32Array.from([0]), new Uint32Array(0), new Uint32Array(0)];
+  const offsets = createVectorFixture(device, 'offsets', offsetChunks, false);
+  const neighbors = createVectorFixture(device, 'neighbors', neighborChunks, false);
+  const seeds = createVectorFixture(device, 'seeds', seedChunks, false);
+  const output = createVectorFixture(device, 'output', outputChunks, true);
+  const graph = new GPUCommandGraph(device, {id: 'partitioned-traversal-test'});
+  new GPUGraphTraversal({
+    id: 'partitioned-traversal',
+    offsets: graph.importGPUVector('offsets', offsets.vector),
+    neighbors: graph.importGPUVector('neighbors', neighbors.vector),
+    seeds: graph.importGPUVector('seeds', seeds.vector),
+    output: graph.importGPUVector('output', output.vector),
+    maxDepth: 3
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'partitioned-traversal-test');
+  const result = {output: await readVectorFixture(output), nodeOrder: compiled.stats.nodeOrder};
+  compiled.destroy();
+  for (const fixture of [offsets, neighbors, seeds, output]) {
+    destroyVectorFixture(fixture);
+  }
+  return result;
+}
+
 type Uint32VectorFixture = {
   vector: GPUVector<'uint32'>;
   buffers: Buffer[];
@@ -581,6 +725,12 @@ function destroyVectorFixture(fixture: Uint32VectorFixture): void {
   for (const buffer of fixture.buffers) {
     buffer.destroy();
   }
+}
+
+async function readVectorFixture(fixture: Uint32VectorFixture): Promise<number[][]> {
+  return Promise.all(
+    fixture.buffers.map((buffer, index) => readUint32(buffer, fixture.vector.data[index].length))
+  );
 }
 
 function createUint32Buffer(device: Device, values: Uint32Array, readable: boolean): Buffer {
