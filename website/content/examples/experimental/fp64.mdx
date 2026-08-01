@@ -13,8 +13,12 @@ import {FP64Example} from '@site/src/examples';
       `@luma.gl/shadertools`.
     </div>
     <div style={{marginBottom: 12}}>
-      Note that fp64 support in shaders relies on some unspecified behavior and is thus GPU dependent. 
-      In particular, Apple GPUs are hard to support.
+      The double-single arithmetic used here depends on intermediate rounding behavior that portable
+      WGSL does not guarantee, so results are GPU-dependent. See the{' '}
+      <a href="/docs/api-guide/shaders/gpu-floating-point-precision">
+        GPU floating-point precision guide
+      </a>{' '}
+      for robust alternatives, including fixed point and integer arithmetic.
     </div>
   </div>
 </ExampleHeader>

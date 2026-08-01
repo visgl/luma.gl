@@ -16,6 +16,7 @@ export type ShaderLevelDocsTabId =
   | 'shader-assembly'
   | 'writing-portable-shaders'
   | 'writing-customizable-shaders'
+  | 'gpu-floating-point-precision'
   | 'shader-passes'
   | 'rendering-techniques'
   | 'transparency'
@@ -37,6 +38,11 @@ const SHADER_LEVEL_DOCS_TABS: ShaderLevelDocsTab[] = [
     id: 'writing-portable-shaders',
     label: 'Portable Shaders',
     href: '/docs/api-guide/shaders/writing-portable-shaders'
+  },
+  {
+    id: 'gpu-floating-point-precision',
+    label: 'GPU Precision',
+    href: '/docs/api-guide/shaders/gpu-floating-point-precision'
   },
   {id: 'shader-passes', label: 'Shader Passes', href: '/docs/api-guide/shaders/shader-passes'},
   {
