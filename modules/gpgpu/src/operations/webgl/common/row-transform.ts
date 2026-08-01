@@ -4,7 +4,7 @@
 
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
-import {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
 import {
@@ -16,6 +16,7 @@ import {
 
 const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const TRANSFORM_RUNS = 'Transform Runs';
+const GPGPU_SHADER_ASSEMBLER = new ShaderAssembler();
 
 export function runRowTransform({
   module,
@@ -101,6 +102,7 @@ set_result(result);
 
   const transform = new BufferTransform(device, {
     vs: vertexShader,
+    shaderAssembler: GPGPU_SHADER_ASSEMBLER,
     // @ts-expect-error defines can only be boolean?
     defines,
     modules,

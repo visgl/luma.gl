@@ -4,7 +4,7 @@
 
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
@@ -12,6 +12,7 @@ import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 const WORKGROUP_SIZE = 64;
 const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const COMPUTATION_RUNS = 'Computation Runs';
+const GPGPU_SHADER_ASSEMBLER = new ShaderAssembler();
 
 export function runRowComputation({
   module,
@@ -79,6 +80,7 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
 
   const computation = new Computation(outputBuffer.device, {
     source,
+    shaderAssembler: GPGPU_SHADER_ASSEMBLER,
     shaderLayout: {
       bindings: [
         ...storageBindings.map(({name}, index) => ({
