@@ -103,7 +103,8 @@ export type {
   GPUGroupAggregationKeys,
   GPUGroupAggregationMask,
   GPUGroupAggregationOperation,
-  GPUGroupAggregationProps
+  GPUGroupAggregationProps,
+  GPUGroupAggregationValues
 } from './gpu-group-aggregation';
 
 export {

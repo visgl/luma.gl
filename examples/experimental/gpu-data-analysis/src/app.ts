@@ -194,6 +194,7 @@ class GPUDataAnalysisExample {
         gridWidth * gridWidth
       );
       const groupCountsBuffer = makeOutputBuffer(this.device, 'group-counts', GROUP_LABELS.length);
+      const groupMeansBuffer = makeOutputBuffer(this.device, 'group-means', GROUP_LABELS.length);
       const outputs = [
         extentBuffer,
         ...(histogramEdgesBuffer ? [histogramEdgesBuffer] : []),
@@ -206,7 +207,8 @@ class GPUDataAnalysisExample {
         gridWeightMeansBuffer,
         gridSegmentFlagsBuffer,
         cumulativeGridBuffer,
-        groupCountsBuffer
+        groupCountsBuffer,
+        groupMeansBuffer
       ];
       const graph = new GPUCommandGraph(this.device, {id: 'gpu-data-analysis-example'});
       const valuesImport = graph.importGPUVector('values', gpuValues);
@@ -282,6 +284,13 @@ class GPUDataAnalysisExample {
         'uint32',
         GROUP_LABELS.length
       );
+      const groupMeans = importOutput(
+        graph,
+        groupMeansBuffer,
+        'group-means',
+        'float32',
+        GROUP_LABELS.length
+      );
       new GPUReduction({
         id: 'extent',
         input: valuesImport,
@@ -355,6 +364,14 @@ class GPUDataAnalysisExample {
         mask: selectionImport,
         output: groupCounts
       }).addToGraph(graph);
+      new GPUGroupAggregation({
+        id: 'group-means',
+        keys: groupKeysImport,
+        values: valuesImport,
+        mask: selectionImport,
+        output: groupMeans,
+        operation: 'mean'
+      }).addToGraph(graph);
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;
@@ -381,7 +398,8 @@ class GPUDataAnalysisExample {
         gridWeightMaximumsBytes,
         gridWeightMeansBytes,
         cumulativeGridBytes,
-        groupCountsBytes
+        groupCountsBytes,
+        groupMeansBytes
       ] = await Promise.all(
         [
           extentBuffer,
@@ -393,7 +411,8 @@ class GPUDataAnalysisExample {
           gridWeightMaximumsBuffer,
           gridWeightMeansBuffer,
           cumulativeGridBuffer,
-          groupCountsBuffer
+          groupCountsBuffer,
+          groupMeansBuffer
         ].map(buffer => buffer.readAsync())
       );
       const gpuExtent = Array.from(new Float32Array(extentBytes.buffer, extentBytes.byteOffset, 2));
@@ -449,6 +468,9 @@ class GPUDataAnalysisExample {
       const gpuGroupCounts = Array.from(
         new Uint32Array(groupCountsBytes.buffer, groupCountsBytes.byteOffset, GROUP_LABELS.length)
       );
+      const gpuGroupMeans = Array.from(
+        new Float32Array(groupMeansBytes.buffer, groupMeansBytes.byteOffset, GROUP_LABELS.length)
+      );
       if (this.destroyed || version !== this.runVersion) {
         destroyResources(nextResources);
         return;
@@ -483,6 +505,9 @@ class GPUDataAnalysisExample {
         ) &&
         gpuCumulativeGrid.every((value, index) => value === reference.cumulativeGrid[index]) &&
         gpuGroupCounts.every((value, index) => value === reference.groupCounts[index]) &&
+        gpuGroupMeans.every((value, index) =>
+          approximatelyEqual(value, reference.groupMeans[index])
+        ) &&
         gpuTotal === length;
       this.releaseResources();
       this.resources = nextResources;
@@ -510,7 +535,7 @@ class GPUDataAnalysisExample {
         gpuCumulativeGrid,
         gridWidth
       );
-      renderGroupCounts(this.elements.groups, gpuGroupCounts);
+      renderGroups(this.elements.groups, gpuGroupCounts, gpuGroupMeans);
       const selectedCount = gpuGroupCounts.reduce((sum, count) => sum + count, 0);
       this.setStatus(
         `Extent [${gpuExtent.map(value => value.toFixed(3)).join(', ')}] · ${irregularEdges ? 'threshold' : 'uniform'} ${binCount}-bin histogram · ${selectedCount.toLocaleString()} grouped rows · ${gridWidth}×${gridWidth} cells`
@@ -585,6 +610,7 @@ function analyzeOnCPU(
   gridWeightMeans: number[];
   cumulativeGrid: number[];
   groupCounts: number[];
+  groupMeans: number[];
 } {
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
@@ -649,11 +675,17 @@ function analyzeOnCPU(
     return gridPrefix;
   });
   const groupCounts = Array.from({length: GROUP_LABELS.length}, () => 0);
+  const groupSums = Array.from({length: GROUP_LABELS.length}, () => 0);
   for (let index = 0; index < groupKeys.length; index++) {
     if (selection[index] !== 0 && groupKeys[index] < groupCounts.length) {
-      groupCounts[groupKeys[index]]++;
+      const groupIndex = groupKeys[index];
+      groupCounts[groupIndex]++;
+      groupSums[groupIndex] = Math.fround(groupSums[groupIndex] + values[index]);
     }
   }
+  const groupMeans = groupSums.map((sum, index) =>
+    groupCounts[index] === 0 ? Number.NaN : Math.fround(sum / groupCounts[index])
+  );
   return {
     extent: [minimum, maximum],
     histogram,
@@ -664,7 +696,8 @@ function analyzeOnCPU(
     gridWeightMaximums,
     gridWeightMeans,
     cumulativeGrid,
-    groupCounts
+    groupCounts,
+    groupMeans
   };
 }
 
@@ -758,12 +791,12 @@ function renderGrid(
     .join('');
 }
 
-function renderGroupCounts(element: HTMLElement, counts: number[]): void {
+function renderGroups(element: HTMLElement, counts: number[], means: number[]): void {
   const maximum = Math.max(...counts, 1);
   element.innerHTML = counts
     .map(
       (count, index) =>
-        `<div><span>${GROUP_LABELS[index]}</span><i style="width:${(count / maximum) * 100}%"></i><strong>${count.toLocaleString()}</strong></div>`
+        `<div title="${count.toLocaleString()} selected rows · mean ${formatStatistic(means[index])}"><span>${GROUP_LABELS[index]}</span><i style="width:${(count / maximum) * 100}%"></i><strong>${count.toLocaleString()} · μ ${formatStatistic(means[index])}</strong></div>`
     )
     .join('');
 }
@@ -817,6 +850,6 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with filtered group counts, spatial statistics, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram<select data-bins><option value="16">16 uniform bins</option><option value="64" selected>64 uniform bins</option><option value="300">300 uniform bins</option><option value="thresholds">8 threshold bins</option></select></label><label>Group filter<select data-group-filter><option value="all">All values</option><option value="positive" selected>Positive values</option><option value="negative">Negative values</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Filtered groups</h2><div class="groups" data-groups></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
+const EXAMPLE_HTML = `<main class="analysis-example"><header><p>EXPERIMENTAL · WEBGPU</p><h1>Command-graph data analysis</h1><span>Extent → histogram → inclusive CDF, composed with filtered group counts and means, spatial statistics, and segmented row prefixes.</span></header><section class="controls"><label>Dataset<select data-dataset><option value="small">4K rows</option><option value="medium" selected>65K rows</option><option value="large">262K rows</option></select></label><label>Histogram<select data-bins><option value="16">16 uniform bins</option><option value="64" selected>64 uniform bins</option><option value="300">300 uniform bins</option><option value="thresholds">8 threshold bins</option></select></label><label>Group filter<select data-group-filter><option value="all">All values</option><option value="positive" selected>Positive values</option><option value="negative">Negative values</option></select></label><label>Grid<select data-grid><option>8</option><option selected>16</option><option>17</option></select></label><button data-run>Run graph</button></section><p class="status" data-status></p><section class="metrics"><article><span>Nodes</span><strong data-nodes>—</strong></article><article><span>Compile</span><strong data-compile-time>—</strong></article><article><span>Transient reuse</span><strong data-reuse>—</strong></article><article><span>Validation</span><strong data-validation>—</strong></article></section><section class="visuals"><article><h2>Histogram</h2><div class="histogram" data-histogram></div></article><article><h2>Filtered groups</h2><div class="groups" data-groups></div></article><article><h2>Grid heatmap</h2><div class="heatmap" data-heatmap></div></article></section></main>`;
 
-const STYLES = `.analysis-example{min-height:100%;box-sizing:border-box;padding:30px;color:#172033;background:radial-gradient(circle at 90% 0,#d9f4ea,transparent 35%),#f6f8fb;font-family:Inter,ui-sans-serif,system-ui}.analysis-example *{box-sizing:border-box}.analysis-example>header,.analysis-example>section,.analysis-example>.status{max-width:1120px;margin-left:auto;margin-right:auto}.analysis-example header p{margin:0;color:#08745b;font-size:12px;font-weight:800;letter-spacing:.13em}.analysis-example h1{margin:5px 0;font-size:clamp(30px,5vw,52px);letter-spacing:-.04em}.analysis-example header span{color:#5d687b}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:24px;padding:16px;border:1px solid #ccd6df;border-radius:15px;background:#fff}.controls label{display:grid;gap:5px;color:#596579;font-size:12px;font-weight:700}.controls select,.controls button{height:40px;padding:0 12px;border:1px solid #aebdcc;border-radius:8px;background:#fff;color:#172033}.controls button{background:#08745b;color:#fff;border-color:#08745b;font-weight:700}.status{padding:10px 2px;color:#596579}.status[data-state=error],[data-validation][data-state=error]{color:#b42318}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metrics article,.visuals article{padding:16px;border:1px solid #d5dde6;border-radius:14px;background:#fff;box-shadow:0 10px 30px #25324a0a}.metrics span{display:block;color:#667085;font-size:12px}.metrics strong{display:block;margin-top:7px;font-size:18px}.visuals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.visuals h2{margin:0 0 12px;font-size:16px}.histogram{height:250px;display:flex;align-items:end;gap:2px;border-bottom:1px solid #b8c3cf}.histogram i{display:block;flex:1;min-width:1px;background:#2da98a;border-radius:2px 2px 0 0}.groups{height:250px;display:grid;align-content:center;gap:14px}.groups div{display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:8px;color:#596579;font-size:12px}.groups i{display:block;height:14px;background:#875bc7;border-radius:2px}.groups strong{min-width:52px;text-align:right;color:#172033}.heatmap{height:250px;aspect-ratio:1;display:grid;gap:1px;margin:auto;background:#e8edf1}.heatmap i{display:block;background:#315cc5}@media(max-width:900px){.visuals{grid-template-columns:1fr 1fr}.visuals article:last-child{grid-column:1/-1}}@media(max-width:760px){.analysis-example{padding:18px}.metrics{grid-template-columns:1fr 1fr}.visuals{grid-template-columns:1fr}.visuals article:last-child{grid-column:auto}}`;
+const STYLES = `.analysis-example{min-height:100%;box-sizing:border-box;padding:30px;color:#172033;background:radial-gradient(circle at 90% 0,#d9f4ea,transparent 35%),#f6f8fb;font-family:Inter,ui-sans-serif,system-ui}.analysis-example *{box-sizing:border-box}.analysis-example>header,.analysis-example>section,.analysis-example>.status{max-width:1120px;margin-left:auto;margin-right:auto}.analysis-example header p{margin:0;color:#08745b;font-size:12px;font-weight:800;letter-spacing:.13em}.analysis-example h1{margin:5px 0;font-size:clamp(30px,5vw,52px);letter-spacing:-.04em}.analysis-example header span{color:#5d687b}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:24px;padding:16px;border:1px solid #ccd6df;border-radius:15px;background:#fff}.controls label{display:grid;gap:5px;color:#596579;font-size:12px;font-weight:700}.controls select,.controls button{height:40px;padding:0 12px;border:1px solid #aebdcc;border-radius:8px;background:#fff;color:#172033}.controls button{background:#08745b;color:#fff;border-color:#08745b;font-weight:700}.status{padding:10px 2px;color:#596579}.status[data-state=error],[data-validation][data-state=error]{color:#b42318}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metrics article,.visuals article{padding:16px;border:1px solid #d5dde6;border-radius:14px;background:#fff;box-shadow:0 10px 30px #25324a0a}.metrics span{display:block;color:#667085;font-size:12px}.metrics strong{display:block;margin-top:7px;font-size:18px}.visuals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.visuals h2{margin:0 0 12px;font-size:16px}.histogram{height:250px;display:flex;align-items:end;gap:2px;border-bottom:1px solid #b8c3cf}.histogram i{display:block;flex:1;min-width:1px;background:#2da98a;border-radius:2px 2px 0 0}.groups{height:250px;display:grid;align-content:center;gap:14px}.groups div{display:grid;grid-template-columns:76px 1fr minmax(110px,auto);align-items:center;gap:8px;color:#596579;font-size:12px}.groups i{display:block;height:14px;background:#875bc7;border-radius:2px}.groups strong{text-align:right;color:#172033}.heatmap{height:250px;aspect-ratio:1;display:grid;gap:1px;margin:auto;background:#e8edf1}.heatmap i{display:block;background:#315cc5}@media(max-width:900px){.visuals{grid-template-columns:1fr 1fr}.visuals article:last-child{grid-column:1/-1}}@media(max-width:760px){.analysis-example{padding:18px}.metrics{grid-template-columns:1fr 1fr}.visuals{grid-template-columns:1fr}.visuals article:last-child{grid-column:auto}}`;

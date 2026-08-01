@@ -80,9 +80,9 @@ is not specific to trace data or two-dimensional rendering.
 <GPUFrustumCullingExample embedded />
 
 The data-analysis example composes extent reduction, histogram counting, filtered categorical
-counts, grid binning, and weighted grid statistics in one reusable graph. It uploads Arrow columns
-and keeps compilation, submission, validation readback, and transient-allocation diagnostics
-explicit.
+counts and means, grid binning, and weighted grid statistics in one reusable graph. It uploads
+Arrow columns and keeps compilation, submission, validation readback, and transient-allocation
+diagnostics explicit.
 
 <GPUDataAnalysisExample embedded />
 
@@ -1077,8 +1077,8 @@ flowing directly into indirect rendering.
 
 ### Phase 3 — Algorithm and table scaling
 
-**Status:** In progress. Inclusive and segmented `uint32` scans, weighted floating-point grid
-statistics, irregular-edge histograms, and filtered categorical counts are implemented.
+**Status:** In progress. Inclusive and segmented `uint32` scans, weighted floating-point grid and
+categorical statistics, irregular-edge histograms, and filtered categorical counts are implemented.
 
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
@@ -1103,17 +1103,19 @@ can update thresholds between encodings without a CPU readback or graph rebuild.
 produce zero counts. The data-analysis example switches between uniform and GPU-resident threshold
 bins and validates both against a CPU oracle.
 
-`GPUGroupAggregation` maps dense `uint32` identity codes directly to caller-owned count rows. An
-optional source-aligned mask lets visibility or selection workflows update categorical
-distributions without downloading selected IDs. Atomic and vector inputs share one contract;
-vectors preserve aligned source chunks without packing. The data-analysis example groups the same
-Arrow rows by quadrant while a selectable value mask changes the accepted population.
+`GPUGroupAggregation` maps dense `uint32` identity codes directly to caller-owned group rows. Count
+uses a `uint32` output; aligned `float32` values add sum, minimum, maximum, and mean outputs with the
+same finite-value and empty-result contracts as grid aggregation. An optional source-aligned mask
+lets visibility or selection workflows update categorical distributions and statistics without
+downloading selected IDs. Atomic and vector inputs share one contract; vectors preserve aligned
+source chunks without packing. Large chunks use bounded three-dimensional dispatches. The
+data-analysis example groups the same Arrow rows by quadrant while a selectable value mask changes
+both the accepted population and its per-group means.
 
 Remaining work extends multi-chunk support to algorithms that still require one packed view, then
-extends the exercised group contract with sum, minimum, maximum, and mean and adds batch-aware
-operations that preserve table structure. Custom associative scans, sparse histograms,
-and multidimensional histograms should be added only with a concrete consumer and an explicit
-numerical or memory contract.
+adds batch-aware operations that preserve table structure. Custom associative scans, sparse
+histograms, and multidimensional histograms should be added only with a concrete consumer and an
+explicit numerical or memory contract.
 
 Irregular histogram edges primarily target heavy-tailed measurements such as trace duration and
 request latency. Explicit microsecond-to-second boundaries preserve resolution across orders of
