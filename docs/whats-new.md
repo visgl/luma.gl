@@ -6,6 +6,12 @@ _This page contains news for recent luma.gl releases. For older releases (throug
 
 Target Release Date: Q3, 2026
 
+**AI-Assisted Development**
+
+- **Official `lumagl` Agent Skill** - luma.gl now ships an installable skill that teaches coding agents the framework architecture, WebGPU/WebGL portability boundaries, GPU debugging order, and contribution workflow.
+- **Agent-ready documentation** - [`llms.txt`](https://luma.gl/llms.txt) and page-level Markdown give agents fresh, linkable access to tutorials, API guides, API references, and developer guides instead of relying on stale training data.
+- **Evidence-driven agent workflows** - Browser-backed verification helps agents prove that generated GPU code actually renders instead of merely typechecking, while a checked-in evaluation corpus supports repeatable comparisons with and without the skill. See [Working with AI Coding Agents](/docs/developer-guide/working-with-ai).
+
 **New Modules**
 
 - **`@luma.gl/tables`** - Generic GPU table/runtime, planning, transform, and compute helpers.
