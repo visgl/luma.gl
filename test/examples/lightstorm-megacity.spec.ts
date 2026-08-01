@@ -30,8 +30,15 @@ describe('Lightstorm Megacity', () => {
       } as AnimationProps & {lightstormCapacity: number});
       const state = viewer as unknown as {
         resources: {
-          compiled: {stats: {nodeOrder: string[]}};
+          compiled: {
+            stats: {
+              nodeOrder: string[];
+              importedTextureCount: number;
+              logicalTransientTextureCount: number;
+            };
+          };
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          sceneColor: {format: string};
         };
       };
       const nodeOrder = state.resources.compiled.stats.nodeOrder;
@@ -39,6 +46,10 @@ describe('Lightstorm Megacity', () => {
       expect(
         nodeOrder.some(identifier => identifier.startsWith('visible-city-records-compact'))
       ).toBe(true);
+      expect(nodeOrder).toContain('render-visible-city');
+      expect(state.resources.compiled.stats.importedTextureCount).toBe(1);
+      expect(state.resources.compiled.stats.logicalTransientTextureCount).toBe(1);
+      expect(['rgba8unorm', 'rgba16float']).toContain(state.resources.sceneColor.format);
 
       viewer.onRender({
         device,

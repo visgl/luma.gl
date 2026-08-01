@@ -2,9 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, type RenderBundle} from '@luma.gl/core';
+import {Buffer, Texture, type Device, type RenderBundle} from '@luma.gl/core';
+import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Computation, CubeGeometry, Model} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  Computation,
+  CubeGeometry,
+  Model,
+  ShaderPassRenderer
+} from '@luma.gl/engine';
 import {
   decodeGPUIndexPickInfo,
   DrawCommandBuffer,
@@ -67,9 +74,12 @@ type LightstormGraphResources = {
   drawCommands: DrawCommandBuffer;
   instances: Buffer;
   visibleIdentifiers: Buffer;
+  sceneColor: Texture;
   perspectiveRenderBundle: RenderBundle;
   overviewRenderBundle: RenderBundle;
 };
+
+type LightstormSceneColorFormat = 'rgba8unorm' | 'rgba16float';
 
 type Viewport = [number, number, number, number];
 
@@ -90,6 +100,8 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
   readonly device: Device;
   readonly model: Model;
   readonly pickingModel: Model;
+  readonly sceneColorFormat: LightstormSceneColorFormat;
+  readonly postprocessingRenderer: ShaderPassRenderer;
   readonly uniformBuffer: Buffer;
   readonly overviewUniformBuffer: Buffer;
   readonly panels: ExamplePanelManager;
@@ -144,6 +156,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       throw new Error('Lightstorm Megacity requires WebGPU');
     }
     this.device = device;
+    this.sceneColorFormat = getSceneColorFormat(device);
     this.uniformBuffer = device.createBuffer({
       id: 'lightstorm-megacity-uniforms',
       byteLength: UNIFORM_BYTE_LENGTH,
@@ -158,7 +171,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       id: 'lightstorm-megacity-model',
       source: LIGHTSTORM_RENDER_SHADER,
       geometry: new CubeGeometry({id: 'lightstorm-megacity-cube', indices: true}),
-      colorAttachmentFormats: [device.preferredColorFormat],
+      colorAttachmentFormats: [this.sceneColorFormat],
       depthStencilAttachmentFormat: 'depth24plus',
       shaderLayout: {
         attributes: [
@@ -199,6 +212,13 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
         depthCompare: 'less-equal',
         depthWriteEnabled: true
       }
+    });
+    this.postprocessingRenderer = new ShaderPassRenderer(device, {
+      shaderPasses: [
+        createBloomShaderPassPipeline({colorFormat: this.sceneColorFormat}),
+        toneMapping
+      ],
+      colorFormat: this.sceneColorFormat
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.rebuild(lightstormCapacity);
@@ -242,6 +262,20 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     this.writeUniforms(viewports, time);
     const encodeStart = performance.now();
     resources.compiled.encode(device.commandEncoder, {parameters: viewports});
+    this.postprocessingRenderer.encodeToScreen(device.commandEncoder, {
+      sourceTexture: resources.sceneColor,
+      uniforms: {
+        bloomExtract: {
+          threshold: this.sceneColorFormat === 'rgba16float' ? 0.8 : 0.55
+        },
+        bloomBlur: {radius: 6},
+        bloomComposite: {intensity: 0.55},
+        toneMapping: {
+          exposure: this.sceneColorFormat === 'rgba16float' ? 0.92 : 1,
+          maximumLuminance: device.preferredColorFormat === 'rgba16float' ? 2.4 : 1
+        }
+      }
+    });
     if (
       !this.guidedCamera &&
       this.pointerDirty &&
@@ -285,6 +319,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     }
     this.panels.finalize();
     this.destroyResources();
+    this.postprocessingRenderer.destroy();
     this.pickingModel.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
@@ -317,6 +352,23 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       type: 'draw-indexed',
       commands: [{indexCount: this.getIndexCount(), instanceCount: 0}]
     });
+    const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
+    const pickingWidth = Math.max(1, deviceSize[0]);
+    const pickingHeight = Math.max(1, deviceSize[1]);
+    const sceneColor = this.device.createTexture({
+      id: 'lightstorm-megacity-scene-color',
+      format: this.sceneColorFormat,
+      width: pickingWidth,
+      height: pickingHeight,
+      usage: Texture.SAMPLE | Texture.RENDER,
+      sampler: {
+        minFilter: 'linear',
+        magFilter: 'linear',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge'
+      }
+    });
+    this.postprocessingRenderer.resize([pickingWidth, pickingHeight]);
     const perspectiveRenderBundle = this.createRenderBundle(
       'lightstorm-megacity-perspective-render-bundle',
       instances,
@@ -337,11 +389,9 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       visibleIdentifiers,
       drawCommands,
       perspectiveRenderBundle,
-      overviewRenderBundle
+      overviewRenderBundle,
+      sceneColor
     );
-    const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
-    const pickingWidth = Math.max(1, deviceSize[0]);
-    const pickingHeight = Math.max(1, deviceSize[1]);
     const picking = this.createPickingGraph(
       pickingWidth,
       pickingHeight,
@@ -358,6 +408,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       drawCommands,
       instances,
       visibleIdentifiers,
+      sceneColor,
       perspectiveRenderBundle,
       overviewRenderBundle
     };
@@ -374,7 +425,8 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     visibleIdentifiersBuffer: Buffer,
     drawCommands: DrawCommandBuffer,
     perspectiveRenderBundle: RenderBundle,
-    overviewRenderBundle: RenderBundle
+    overviewRenderBundle: RenderBundle,
+    sceneColorTexture: Texture
   ): CompiledGPUCommandGraph<LightstormGraphParameters> {
     const graph = new GPUCommandGraph<LightstormGraphParameters>(this.device, {
       id: 'lightstorm-megacity-command-graph'
@@ -411,6 +463,25 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       },
       drawCommands.buffer
     );
+    const sceneColor = graph.importTexture(
+      {
+        id: 'scene-color',
+        format: sceneColorTexture.format,
+        width: sceneColorTexture.width,
+        height: sceneColorTexture.height,
+        usage: sceneColorTexture.props.usage
+      },
+      sceneColorTexture
+    );
+    const sceneDepth = graph.createTransientTexture({
+      id: 'scene-depth',
+      format: 'depth24plus',
+      width: sceneColorTexture.width,
+      height: sceneColorTexture.height,
+      usage: Texture.RENDER
+    });
+    const sceneColorView = graph.createTextureView(sceneColor);
+    const sceneDepthView = graph.createTextureView(sceneDepth);
     const flagsBuffer = graph.createTransientBuffer({
       id: 'visibility-flags',
       byteLength: capacity * UINT32_BYTE_LENGTH,
@@ -469,6 +540,10 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
 
     graph.addRenderPass({
       id: 'render-visible-city',
+      attachments: {
+        colorAttachments: [sceneColorView],
+        depthStencilAttachment: sceneDepthView
+      },
       resources: [
         {buffer: instances, usage: 'storage-read'},
         {buffer: visibleIdentifiers, usage: 'storage-read'},
@@ -587,7 +662,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
   ): RenderBundle {
     const encoder = this.device.createRenderBundleEncoder({
       id: identifier,
-      colorAttachmentFormats: [this.device.preferredColorFormat],
+      colorAttachmentFormats: [this.sceneColorFormat],
       depthStencilAttachmentFormat: 'depth24plus'
     });
     encoder.setPipeline(this.model.pipeline);
@@ -700,8 +775,8 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
         getDataLayerMode(this.dataLayer),
         this.lightstormEnabled ? 1 : 0,
         timeMilliseconds / 1000,
-        this.device.preferredColorFormat === 'rgba16float' ? 1 : 1.35,
-        this.device.preferredColorFormat === 'rgba16float' ? 1 : 0,
+        1,
+        0,
         0
       ],
       32
@@ -765,6 +840,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     this.resources.drawCommands.destroy();
     this.resources.instances.destroy();
     this.resources.visibleIdentifiers.destroy();
+    this.resources.sceneColor.destroy();
     this.resources = null;
   }
 
@@ -776,7 +852,7 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
         makeHtmlCustomPanel({
           id: 'lightstorm-megacity-overview',
           title: '',
-          html: `<p style="margin:0;line-height:1.45"><strong>GPU resident · no per-frame instance upload.</strong> One command graph filters city layers, tests conservative tower bounds, stably compacts source IDs, writes an indexed indirect command, and replays a fixed render bundle. Extended HDR presentation is used when available.</p>`
+          html: `<p style="margin:0;line-height:1.45"><strong>GPU resident · no per-frame instance upload.</strong> One command graph filters city layers, tests conservative tower bounds, stably compacts source IDs, writes an indexed indirect command, and replays a fixed render bundle into an HDR scene target. Multiscale bloom and ACES tone mapping finish the frame on the same command encoder.</p>`
         }),
         makeHtmlCustomPanel({
           id: 'lightstorm-megacity-controls',
@@ -927,12 +1003,13 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
         <span>Submitted triangles</span><strong>${submittedTriangles}</strong>
         <span>Indirect draws</span><strong>${replayCount}</strong>
         <span>Bundle replays</span><strong>${replayCount}</strong>
-        <span>Presentation</span><strong>${this.device.preferredColorFormat === 'rgba16float' ? 'Display P3 extended HDR' : 'tone-mapped SDR'}</strong>
+        <span>Post stack</span><strong>multiscale HDR bloom · ACES</strong>
+        <span>Presentation</span><strong>${this.device.preferredColorFormat === 'rgba16float' ? 'Display P3 extended HDR' : 'filmic SDR'}</strong>
         <span>Frame rate</span><strong>${this.framesPerSecond.toFixed(1)} FPS</strong>
         <span>CPU frame</span><strong>${this.cpuFrameTimeMilliseconds.toFixed(2)} ms</strong>
         <span>GPU frame</span><strong>${formatGpuTime(this.device, this.gpuFrameTimeMilliseconds)}</strong>
         <span>Picked record</span><strong>${this.formatPickedRecord()}</strong>
-        <span>CPU graph encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>
+        <span>CPU command encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>
         <span>Logical scratch</span><strong>${formatBytes(stats.logicalTransientBytes)}</strong>
         <span>Physical scratch</span><strong>${formatBytes(stats.physicalTransientBytes)}</strong>
         <span>Transient reuse</span><strong>${stats.reusePercentage.toFixed(0)}%</strong>
@@ -1052,6 +1129,13 @@ function getDataLayerMode(dataLayer: LightstormDataLayer): number {
   if (dataLayer === 'towers') return 1;
   if (dataLayer === 'transit') return 2;
   return 0;
+}
+
+function getSceneColorFormat(device: Device): LightstormSceneColorFormat {
+  const floatingPointCapabilities = device.getTextureFormatCapabilities('rgba16float');
+  return floatingPointCapabilities.render && floatingPointCapabilities.filter
+    ? 'rgba16float'
+    : 'rgba8unorm';
 }
 
 function getEligibleCount(
