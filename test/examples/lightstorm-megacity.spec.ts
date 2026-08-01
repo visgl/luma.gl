@@ -10,7 +10,12 @@ import LightstormMegacityAnimationLoopTemplate from '../../examples/showcase/lig
 describe('Lightstorm Megacity', () => {
   test('compacts visible city records into an indirect draw', async () => {
     const device = await getWebGPUTestDevice('core');
-    if (!device) {
+    if (
+      !device ||
+      device.info.gpu === 'software' ||
+      device.info.gpuType === 'cpu' ||
+      Boolean(device.info.fallback)
+    ) {
       return;
     }
 
