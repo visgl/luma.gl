@@ -96,6 +96,46 @@ fn opticalPointLights_getColor(
 
   return accumulatedColor * opticalPointLights.intensity;
 }
+
+fn opticalPointLights_getSpecularColor(
+  normal: vec3<f32>,
+  worldPosition: vec3<f32>,
+  cameraPosition: vec3<f32>,
+  roughness: f32
+) -> vec3<f32> {
+  let viewDirection = normalize(cameraPosition - worldPosition);
+  let normalFacingCamera = opticalLighting_faceNormal(normalize(normal), viewDirection);
+  let shininess = mix(118.0, 34.0, clamp(roughness, 0.0, 1.0));
+  let fresnel = opticalLighting_getFresnel(
+    clamp(dot(normalFacingCamera, viewDirection), 0.0, 1.0),
+    0.04,
+    5.0
+  );
+  var accumulatedColor = vec3<f32>(0.0);
+
+  for (var lightIndex = 0; lightIndex < ${MAX_OPTICAL_POINT_LIGHTS}; lightIndex++) {
+    if (lightIndex >= opticalPointLights.lightCount) {
+      break;
+    }
+
+    let light = opticalPointLights.lights[lightIndex];
+    let lightOffset = light.position - worldPosition;
+    let distanceSquared = dot(lightOffset, lightOffset);
+    let radius = max(light.radius, 0.0001);
+    let normalizedDistance = clamp(sqrt(distanceSquared) / radius, 0.0, 1.0);
+    let attenuation = pow(1.0 - normalizedDistance * normalizedDistance, 2.0);
+    let lightDirection = lightOffset * inverseSqrt(max(distanceSquared, 0.00001));
+    let reflectionDirection = reflect(-viewDirection, normalFacingCamera);
+    let reflectionAlignment = max(dot(reflectionDirection, lightDirection), 0.0);
+    let specular = pow(reflectionAlignment, shininess);
+    let softSpecular = pow(reflectionAlignment, max(shininess * 0.34, 10.0)) * 0.045;
+    accumulatedColor += light.color * light.intensity * attenuation *
+      (specular * 1.45 + softSpecular) *
+      (0.35 + fresnel * 1.65);
+  }
+
+  return accumulatedColor * opticalPointLights.intensity;
+}
 `;
 
 const OPTICAL_POINT_LIGHTS_GLSL = /* glsl */ `\
@@ -138,6 +178,46 @@ vec3 opticalPointLights_getColor(
     float specular = pow(max(dot(normalFacingCamera, halfVector), 0.0), 28.0);
     float surfaceResponse = 0.08 + diffuse * 0.52 + specular * 0.4;
     accumulatedColor += light.color * light.intensity * attenuation * surfaceResponse;
+  }
+
+  return accumulatedColor * opticalPointLights.intensity;
+}
+
+vec3 opticalPointLights_getSpecularColor(
+  vec3 normal,
+  vec3 worldPosition,
+  vec3 cameraPosition,
+  float roughness
+) {
+  vec3 viewDirection = normalize(cameraPosition - worldPosition);
+  vec3 normalFacingCamera = opticalLighting_faceNormal(normalize(normal), viewDirection);
+  float shininess = mix(118.0, 34.0, clamp(roughness, 0.0, 1.0));
+  float fresnel = opticalLighting_getFresnel(
+    clamp(dot(normalFacingCamera, viewDirection), 0.0, 1.0),
+    0.04,
+    5.0
+  );
+  vec3 accumulatedColor = vec3(0.0);
+
+  for (int lightIndex = 0; lightIndex < ${MAX_OPTICAL_POINT_LIGHTS}; lightIndex++) {
+    if (lightIndex >= opticalPointLights.lightCount) {
+      break;
+    }
+
+    OpticalPointLightUniform light = opticalPointLights.lights[lightIndex];
+    vec3 lightOffset = light.position - worldPosition;
+    float distanceSquared = dot(lightOffset, lightOffset);
+    float radius = max(light.radius, 0.0001);
+    float normalizedDistance = clamp(sqrt(distanceSquared) / radius, 0.0, 1.0);
+    float attenuation = pow(1.0 - normalizedDistance * normalizedDistance, 2.0);
+    vec3 lightDirection = lightOffset * inversesqrt(max(distanceSquared, 0.00001));
+    vec3 reflectionDirection = reflect(-viewDirection, normalFacingCamera);
+    float reflectionAlignment = max(dot(reflectionDirection, lightDirection), 0.0);
+    float specular = pow(reflectionAlignment, shininess);
+    float softSpecular = pow(reflectionAlignment, max(shininess * 0.34, 10.0)) * 0.045;
+    accumulatedColor += light.color * light.intensity * attenuation *
+      (specular * 1.45 + softSpecular) *
+      (0.35 + fresnel * 1.65);
   }
 
   return accumulatedColor * opticalPointLights.intensity;

@@ -1930,6 +1930,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private readonly recoveryProbeCompletionTimes = new Map<number, number>();
   private readonly recoveryProbeConfirmations = new Map<number, NetworkPacketEvent>();
   private animationTime = 0;
+  private rawAnimationTime = 0;
+  private animationTimeOffset = 0;
+  private animationPausedAt: number | null = null;
+  private rawAnimationPausedAt: number | null = null;
   private droppedPacketCount = 0;
   private trimmedPacketCount = 0;
   private pickingInProgress = false;
@@ -2409,6 +2413,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingVisualBloom = this.opticsProfile.bloom.toFixed(2);
       canvas.dataset.packetSprayingVisualCaustics = this.opticsProfile.caustics.toFixed(2);
       canvas.dataset.packetSprayingVisualRefraction = this.opticsProfile.refraction.toFixed(2);
+      canvas.dataset.packetSprayingAnimationPaused = 'false';
+      canvas.dataset.packetSprayingAnimationTime = this.animationTime.toFixed(3);
       this.updateGuidedStoryControls();
       this.updateNetworkTelemetry();
       this.updateFailureAccessibility();
@@ -2422,7 +2428,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   override onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.resizeSceneFramebuffer(width, height);
     this.updateVisualIntensity(time / 1000);
-    this.animationTime = (time / 1000) * this.speed;
+    this.updateAnimationClock((time / 1000) * this.speed);
     this.updateGuidedStory(this.animationTime);
     this.updateSwitchStoryState(this.animationTime);
     this.updateSwitchPressure(this.animationTime);
@@ -2898,6 +2904,33 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.setHighlightedPath(null);
   };
 
+  private updateAnimationClock(rawAnimationTime: number): void {
+    this.rawAnimationTime = rawAnimationTime;
+    this.animationTime = this.animationPausedAt ?? rawAnimationTime - this.animationTimeOffset;
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingAnimationPaused = String(this.animationPausedAt !== null);
+      this.canvas.dataset.packetSprayingAnimationTime = this.animationTime.toFixed(3);
+    }
+  }
+
+  private setAnimationClockPaused(isPaused: boolean): void {
+    if (isPaused) {
+      if (this.animationPausedAt === null) {
+        this.animationPausedAt = this.animationTime;
+        this.rawAnimationPausedAt = this.rawAnimationTime;
+      }
+      return;
+    }
+
+    if (this.animationPausedAt !== null && this.rawAnimationPausedAt !== null) {
+      this.animationTimeOffset += this.rawAnimationTime - this.rawAnimationPausedAt;
+      this.animationTime = this.rawAnimationTime - this.animationTimeOffset;
+    }
+    this.animationPausedAt = null;
+    this.rawAnimationPausedAt = null;
+  }
+
   private setGuidedStoryPlaying(isPlaying: boolean): void {
     if (isPlaying === this.guidedStoryPlaying) {
       return;
@@ -2905,6 +2938,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
     this.guidedStoryPlaying = isPlaying;
     if (isPlaying) {
+      this.setAnimationClockPaused(false);
       this.orbitControls?.setAutoRotate(false);
       if (this.guidedStoryStarted) {
         this.guidedStoryChapterStartedAt = this.animationTime - this.guidedStoryElapsedAtPause;
@@ -2915,6 +2949,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     } else {
       this.guidedStoryElapsedAtPause = this.animationTime - this.guidedStoryChapterStartedAt;
       this.guidedStoryCameraTransitionEndsAt = this.animationTime;
+      this.setAnimationClockPaused(true);
       this.orbitControls?.setAutoRotate(this.orbit > 0);
     }
 
@@ -4390,8 +4425,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         const light = {
           position: candidate.position,
           color: candidate.color,
-          intensity: 0.22 + arrivalResponse * 0.78,
-          radius: this.packetLightRadius * (0.12 + arrivalResponse * 0.34)
+          intensity: 0.28 + arrivalResponse * 0.72,
+          radius: this.packetLightRadius * (0.32 + arrivalResponse * 0.38)
         };
         if (candidateIndex === 0) {
           lights.push(light);

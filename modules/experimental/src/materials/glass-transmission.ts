@@ -416,7 +416,10 @@ fn glassTransmission_getColor(
   let volumeScattering = baseColor.rgb * (1.0 - exp(-measuredThickness * 1.3)) *
     glassTransmission.volumeScatteringStrength * (0.045 + (1.0 - viewAlignment) * 0.09);
   let reflectionCoordinate = clamp(
-    screenCoordinate + projectedNormal * (0.025 + measuredThickness * 0.018),
+    screenCoordinate + vec2<f32>(
+      dot(reflectionDirection, cameraRight) / viewportAspect,
+      -dot(reflectionDirection, cameraUp)
+    ) * (0.025 + measuredThickness * 0.018),
     vec2<f32>(0.001),
     vec2<f32>(0.999)
   );
@@ -427,9 +430,10 @@ fn glassTransmission_getColor(
     0.0
   ).rgb;
   let reflectedSceneLuminance = dot(reflectedSceneColor, vec3<f32>(0.2126, 0.7152, 0.0722));
-  let reflectedSceneResponse = smoothstep(0.045, 0.9, reflectedSceneLuminance);
+  let reflectedSceneResponse = smoothstep(0.42, 1.4, reflectedSceneLuminance);
+  let grazingReflection = pow(1.0 - viewAlignment, 1.7);
   let dynamicReflection = reflectedSceneColor * reflectedSceneResponse *
-    glassTransmission.dynamicReflectionStrength * (0.045 + fresnel * 0.5);
+    glassTransmission.dynamicReflectionStrength * grazingReflection * (0.12 + fresnel * 0.34);
   let faultFilament = baseColor.rgb * faultStrength *
     glassTransmission.faultDistortionStrength *
     pow(max(sin(dot(worldPosition, vec3<f32>(14.0, 10.0, 17.0)) +
@@ -464,10 +468,16 @@ fn glassTransmission_getIlluminatedColor(
     fragmentPosition
   );
   let pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  let pointLightReflection = opticalPointLights_getSpecularColor(
+    normal,
+    worldPosition,
+    cameraPosition,
+    glassMaterial.roughness
+  );
   let volumeLightScattering = pointLightColor *
-    glassTransmission.volumeScatteringStrength * 0.24;
+    glassTransmission.volumeScatteringStrength * 0.11;
   return vec4<f32>(
-    transmittedColor.rgb + pointLightColor * glassMaterial.reflectionStrength +
+    transmittedColor.rgb + pointLightReflection * glassMaterial.reflectionStrength +
       volumeLightScattering,
     transmittedColor.a
   );
@@ -790,15 +800,19 @@ vec4 glassTransmission_getColor(
   vec3 volumeScattering = baseColor.rgb * (1.0 - exp(-measuredThickness * 1.3)) *
     glassTransmission.volumeScatteringStrength * (0.045 + (1.0 - viewAlignment) * 0.09);
   vec2 reflectionCoordinate = clamp(
-    screenCoordinate + projectedNormal * (0.025 + measuredThickness * 0.018),
+    screenCoordinate + vec2(
+      dot(reflectionDirection, cameraRight) / viewportAspect,
+      dot(reflectionDirection, cameraUp)
+    ) * (0.025 + measuredThickness * 0.018),
     vec2(0.001),
     vec2(0.999)
   );
   vec3 reflectedSceneColor = texture(glassSceneColorTexture, reflectionCoordinate).rgb;
   float reflectedSceneLuminance = dot(reflectedSceneColor, vec3(0.2126, 0.7152, 0.0722));
-  float reflectedSceneResponse = smoothstep(0.045, 0.9, reflectedSceneLuminance);
+  float reflectedSceneResponse = smoothstep(0.42, 1.4, reflectedSceneLuminance);
+  float grazingReflection = pow(1.0 - viewAlignment, 1.7);
   vec3 dynamicReflection = reflectedSceneColor * reflectedSceneResponse *
-    glassTransmission.dynamicReflectionStrength * (0.045 + fresnel * 0.5);
+    glassTransmission.dynamicReflectionStrength * grazingReflection * (0.12 + fresnel * 0.34);
   vec3 faultFilament = baseColor.rgb * faultStrength *
     glassTransmission.faultDistortionStrength *
     pow(max(sin(dot(worldPosition, vec3(14.0, 10.0, 17.0)) +
@@ -833,10 +847,16 @@ vec4 glassTransmission_getIlluminatedColor(
     fragmentPosition
   );
   vec3 pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  vec3 pointLightReflection = opticalPointLights_getSpecularColor(
+    normal,
+    worldPosition,
+    cameraPosition,
+    glassMaterial.roughness
+  );
   vec3 volumeLightScattering = pointLightColor *
-    glassTransmission.volumeScatteringStrength * 0.24;
+    glassTransmission.volumeScatteringStrength * 0.11;
   return vec4(
-    transmittedColor.rgb + pointLightColor * glassMaterial.reflectionStrength +
+    transmittedColor.rgb + pointLightReflection * glassMaterial.reflectionStrength +
       volumeLightScattering,
     transmittedColor.a
   );

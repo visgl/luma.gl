@@ -634,6 +634,11 @@ test('rasterized glass transmission composes thickness, depth, and environment m
     );
     testCase.match(
       shaderSource,
+      /dot\(reflectionDirection,\s*cameraRight\)/,
+      `${language} projects dynamic scene reflections along the reflected view ray`
+    );
+    testCase.match(
+      shaderSource,
       /secondaryDirection/,
       `${language} approximates a second internal environment bounce`
     );
@@ -666,6 +671,11 @@ test('rasterized glass transmission composes thickness, depth, and environment m
       shaderSource,
       /volumeLightScattering/,
       `${language} scatters nearby colored lights inside the glass volume`
+    );
+    testCase.match(
+      shaderSource,
+      /opticalPointLights_getSpecularColor/,
+      `${language} keeps local packet glints as front-surface reflections`
     );
     testCase.match(
       shaderSource,
@@ -750,6 +760,16 @@ test('optical point lights pack and retain a bounded portable uniform array', te
   testCase.ok(
     clearedUniforms.lights.every(light => light.intensity === 0),
     'cleared light slots are reset'
+  );
+  testCase.match(
+    opticalPointLights.source,
+    /softSpecular/,
+    'WGSL retains a broader packet reflection lobe on curved glass'
+  );
+  testCase.match(
+    opticalPointLights.fs,
+    /softSpecular/,
+    'GLSL retains a broader packet reflection lobe on curved glass'
   );
   testCase.end();
 });
