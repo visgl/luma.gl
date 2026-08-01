@@ -18,9 +18,6 @@ const SCAN_WORKGROUP_SIZE = 256;
 /** Packed uint32 graph data accepted by {@link GPUScan}. */
 export type GPUScanInput = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
-/** Whether each output row excludes or includes its corresponding input row. */
-export type GPUScanMode = 'exclusive' | 'inclusive';
-
 /** Properties for one graph-native prefix sum. */
 export type GPUScanProps = {
   /** Prefix for generated graph node and transient resource IDs. */
@@ -30,7 +27,7 @@ export type GPUScanProps = {
   /** Caller-owned destination with matching view kind and sufficient capacity or topology. */
   output: GPUScanInput;
   /** Prefix convention. Defaults to `exclusive`. */
-  mode?: GPUScanMode;
+  mode?: 'exclusive' | 'inclusive';
   /** Optional nonzero flags that start new segments. Row zero is always a segment start. */
   segmentFlags?: GPUScanInput;
 };
@@ -51,7 +48,7 @@ export class GPUScan {
   /** Caller-owned prefix destination with matching view kind. */
   readonly output: GPUScanInput;
   /** Whether output rows exclude or include their corresponding input rows. */
-  readonly mode: GPUScanMode;
+  readonly mode: 'exclusive' | 'inclusive';
   /** Optional nonzero flags that start new segments. */
   readonly segmentFlags?: GPUScanInput;
 
@@ -127,7 +124,7 @@ function addChunkedScan<Parameters>(
     id: string;
     input: GPUScanInput;
     output: GPUScanInput;
-    mode: GPUScanMode;
+    mode: 'exclusive' | 'inclusive';
     segmentFlags?: GPUScanInput;
   }
 ): void {
@@ -183,7 +180,7 @@ function addChunkedScan<Parameters>(
         )
       )
     : undefined;
-  nonEmptyChunks.forEach((chunk, partialIndex) => {
+  for (const [partialIndex, chunk] of nonEmptyChunks.entries()) {
     addScanLevels(graph, {
       id: `${props.id}-chunk-${chunk.chunkIndex}`,
       input: chunk.input,
@@ -196,7 +193,7 @@ function addChunkedScan<Parameters>(
         ? createPackedSubview(graph, chunkSegmentFlags, partialIndex)
         : undefined
     });
-  });
+  }
   addScanLevels(graph, {
     id: `${props.id}-chunk-carries`,
     input: chunkTotals,
@@ -205,7 +202,7 @@ function addChunkedScan<Parameters>(
     segmentFlags: chunkSegmentFlags,
     segmentSummaryInput: Boolean(chunkSegmentFlags)
   });
-  nonEmptyChunks.forEach((chunk, partialIndex) => {
+  for (const [partialIndex, chunk] of nonEmptyChunks.entries()) {
     addOffsetPass(graph, {
       id: `${props.id}-chunk-${chunk.chunkIndex}-add-carry`,
       output: chunk.output,
@@ -214,7 +211,7 @@ function addChunkedScan<Parameters>(
       offsetIndex: partialIndex,
       segmentPrefixes: chunkSegmentPrefixes?.[partialIndex]
     });
-  });
+  }
 }
 
 /** Adds every hierarchical level required to scan one non-empty packed data view. */
@@ -224,7 +221,7 @@ function addScanLevels<Parameters>(
     id: string;
     input: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
-    mode: GPUScanMode;
+    mode: 'exclusive' | 'inclusive';
     segmentFlags?: GraphDataView<'uint32'>;
     outputSegmentPrefixes?: GraphDataView<'uint32'>;
     finalSum?: GraphDataView<'uint32'>;
@@ -272,7 +269,7 @@ function addScanLevels<Parameters>(
     const segmentPrefixes = levelSegmentFlags
       ? levelIndex === 0 && props.outputSegmentPrefixes
         ? props.outputSegmentPrefixes
-        : blockCount > 1
+        : blockCount > 1 || levelIndex > 0
           ? createTransientView(
               graph,
               `${props.id}-level-${levelIndex}-segment-prefixes`,
@@ -319,12 +316,14 @@ function addScanLevels<Parameters>(
 
   for (let index = levels.length - 2; index >= 0; index--) {
     const level = levels[index];
+    const parentLevel = levels[index + 1];
     addOffsetPass(graph, {
       id: `${props.id}-level-${index}-add-offsets`,
       output: level.output,
       offsets: level.blockOffsets!,
       length: level.length,
-      segmentPrefixes: level.segmentPrefixes
+      segmentPrefixes: level.segmentPrefixes,
+      offsetSegmentPrefixes: parentLevel.segmentPrefixes
     });
   }
 }
@@ -374,7 +373,7 @@ function addBlockScanPass<Parameters>(
     id: string;
     input: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
-    mode: GPUScanMode;
+    mode: 'exclusive' | 'inclusive';
     segmentFlags?: GraphDataView<'uint32'>;
     /** Preserve carry into the current summary even when that summary contains a later start. */
     segmentSummaryInput?: boolean;
@@ -574,6 +573,7 @@ function addOffsetPass<Parameters>(
     length: number;
     offsetIndex?: number;
     segmentPrefixes?: GraphDataView<'uint32'>;
+    offsetSegmentPrefixes?: GraphDataView<'uint32'>;
   }
 ): void {
   const offsetIndex =
@@ -583,18 +583,27 @@ const ELEMENT_COUNT: u32 = ${props.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 const OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.offsets)}u;
 ${props.segmentPrefixes ? `const SEGMENT_PREFIXES_OFFSET: u32 = ${getViewElementOffset(props.segmentPrefixes)}u;` : ''}
+${props.offsetSegmentPrefixes ? `const OFFSET_SEGMENT_PREFIXES_OFFSET: u32 = ${getViewElementOffset(props.offsetSegmentPrefixes)}u;` : ''}
 @group(0) @binding(0) var<storage, read_write> outputValues: array<u32>;
 @group(0) @binding(1) var<storage, read> offsets: array<u32>;
-${props.segmentPrefixes ? '@group(0) @binding(2) var<storage, read> segmentPrefixes: array<u32>;' : ''}
+${props.segmentPrefixes ? `@group(0) @binding(2) var<storage, ${props.offsetSegmentPrefixes ? 'read_write' : 'read'}> segmentPrefixes: array<u32>;` : ''}
+${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offsetSegmentPrefixes: array<u32>;' : ''}
 
 @compute @workgroup_size(${SCAN_WORKGROUP_SIZE}) fn main(
   @builtin(global_invocation_id) globalId: vec3<u32>
 ) {
   let index = globalId.x;
   if (index < ELEMENT_COUNT) {
-    ${props.segmentPrefixes ? 'if (segmentPrefixes[SEGMENT_PREFIXES_OFFSET + index] == 0u) {' : ''}
+    ${props.offsetSegmentPrefixes ? `let offsetSegmentPrefix = offsetSegmentPrefixes[OFFSET_SEGMENT_PREFIXES_OFFSET + ${offsetIndex}];` : ''}
+    ${
+      props.segmentPrefixes
+        ? `let segmentPrefix = segmentPrefixes[SEGMENT_PREFIXES_OFFSET + index];
+    if (segmentPrefix == 0u) {`
+        : ''
+    }
       outputValues[OUTPUT_OFFSET + index] = outputValues[OUTPUT_OFFSET + index] + offsets[OFFSETS_OFFSET + ${offsetIndex}];
     ${props.segmentPrefixes ? '}' : ''}
+    ${props.segmentPrefixes && props.offsetSegmentPrefixes ? 'segmentPrefixes[SEGMENT_PREFIXES_OFFSET + index] = segmentPrefix | offsetSegmentPrefix;' : ''}
   }
 }`;
   graph.addComputePass({
@@ -603,7 +612,15 @@ ${props.segmentPrefixes ? '@group(0) @binding(2) var<storage, read> segmentPrefi
       {buffer: props.output, usage: 'storage-read-write'},
       {buffer: props.offsets, usage: 'storage-read'},
       ...(props.segmentPrefixes
-        ? [{buffer: props.segmentPrefixes, usage: 'storage-read'} as const]
+        ? [
+            {
+              buffer: props.segmentPrefixes,
+              usage: props.offsetSegmentPrefixes ? 'storage-read-write' : 'storage-read'
+            } as const
+          ]
+        : []),
+      ...(props.offsetSegmentPrefixes
+        ? [{buffer: props.offsetSegmentPrefixes, usage: 'storage-read'} as const]
         : [])
     ],
     compile: ({device}) => {
@@ -616,6 +633,16 @@ ${props.segmentPrefixes ? '@group(0) @binding(2) var<storage, read> segmentPrefi
             {name: 'offsets', type: 'storage', group: 0, location: 1},
             ...(props.segmentPrefixes
               ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 2}]
+              : []),
+            ...(props.offsetSegmentPrefixes
+              ? [
+                  {
+                    name: 'offsetSegmentPrefixes',
+                    type: 'storage' as const,
+                    group: 0,
+                    location: 3
+                  }
+                ]
               : [])
           ]
         }
@@ -628,6 +655,12 @@ ${props.segmentPrefixes ? '@group(0) @binding(2) var<storage, read> segmentPrefi
           };
           if (props.segmentPrefixes) {
             bindings['segmentPrefixes'] = getViewBinding(props.segmentPrefixes, getBuffer);
+          }
+          if (props.offsetSegmentPrefixes) {
+            bindings['offsetSegmentPrefixes'] = getViewBinding(
+              props.offsetSegmentPrefixes,
+              getBuffer
+            );
           }
           computation.setBindings(bindings);
           computation.dispatch(computePass, Math.ceil(props.length / SCAN_WORKGROUP_SIZE));

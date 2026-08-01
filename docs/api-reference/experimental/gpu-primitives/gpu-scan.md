@@ -7,6 +7,28 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 `GPUScan` adds a hierarchical `uint32` prefix sum to a `GPUCommandGraph`. Scans are exclusive by
 default and may be inclusive, segmented, or both.
 
+## Concepts
+
+A prefix sum turns a sequence into running totals. Whether the current value participates in its
+own total distinguishes the two modes:
+
+| Mode | Input `[3, 1, 4, 2]` produces | Typical uses |
+| --- | --- | --- |
+| Exclusive | `[0, 3, 4, 8]` | Output offsets, stream compaction, variable-size allocation |
+| Inclusive | `[3, 4, 8, 10]` | Cumulative distributions, running counts, cumulative sizes |
+
+A segmented scan restarts that running total within one input. For segment-start flags
+`[1, 0, 1, 0]`, the same input produces exclusive output `[0, 3, 0, 4]` or inclusive output
+`[3, 4, 4, 6]`. This is useful for grouped table rows, per-path geometry, per-level layout, and
+other adjacent records that need independent prefixes without separate dispatches.
+
+“Hierarchical” describes how the implementation scales, not another output mode. Each workgroup
+scans a block, higher levels scan the block summaries, and offset passes propagate those totals
+back down. Callers see one logical result even when the input spans many workgroups or vector
+chunks.
+
+## Usage
+
 ```ts
 new GPUScan({
   id: 'selection-offsets',

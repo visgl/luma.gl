@@ -718,6 +718,21 @@ test('GPUScan preserves segments and carries across GPUVector chunk boundaries',
     [[2, 5], [], [10, 7, 18], [31]],
     'inclusive segments preserve the same chunk topology'
   );
+
+  const longChunkValues = [Uint32Array.from([10]), Uint32Array.from({length: 512}, () => 1)];
+  const longChunkSegmentFlags = [new Uint32Array(1), new Uint32Array(512)];
+  longChunkSegmentFlags[1][100] = 1;
+  const longChunkResult = await runVectorScan(device, longChunkValues, {
+    segmentFlagChunks: longChunkSegmentFlags,
+    mode: 'exclusive'
+  });
+  t.equal(longChunkResult.chunks[1][99], 109, 'carry reaches rows before the segment start');
+  t.equal(longChunkResult.chunks[1][100], 0, 'the segment start discards the preceding carry');
+  t.equal(
+    longChunkResult.chunks[1][256],
+    156,
+    'the discarded carry stays removed in later workgroups'
+  );
   t.end();
 });
 
