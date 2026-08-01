@@ -320,12 +320,10 @@ function addColorState(
   if (!Array.isArray(descriptor.fragment?.targets)) {
     log.warn('parameters: no targets array')();
   }
-  // @ts-expect-error GPU types as iterator
   if (descriptor.fragment?.targets?.length === 0) {
     // @ts-expect-error GPU types as iterator
     descriptor.fragment.targets?.push({});
   }
-  // @ts-expect-error GPU types as iterator
   return descriptor.fragment?.targets?.[0] as GPUColorTargetState;
 }
 

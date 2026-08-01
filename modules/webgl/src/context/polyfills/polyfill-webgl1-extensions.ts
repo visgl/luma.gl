@@ -122,12 +122,11 @@ export function polyfillWebGL1Extensions(gl: WebGL2RenderingContext): void {
   };
 
   // Override gl.getExtension
-  // eslint-disable-next-line @typescript-eslint/unbound-method
-  const originalGetExtension = gl.getExtension;
+  const originalGetExtension = gl.getExtension.bind(gl) as WebGL2RenderingContext['getExtension'];
   gl.getExtension = function (extensionName: string) {
-    const ext = originalGetExtension.call(gl, extensionName);
-    if (ext) {
-      return ext;
+    const extension = originalGetExtension(extensionName);
+    if (extension) {
+      return extension;
     }
 
     // Injected extensions
