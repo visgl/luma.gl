@@ -10,6 +10,7 @@ import {ibl} from '../../../src/modules/lighting/ibl/ibl';
 import {lighting} from '../../../src/modules/lighting/lights/lighting';
 import {dirlight} from '../../../src/modules/lighting/no-material/dirlight';
 import {pbrProjection} from '../../../src/modules/lighting/pbr-material/pbr-projection';
+import {fp64arithmetic} from '../../../src/modules/math/fp64/fp64';
 
 const PLATFORM_INFO: PlatformInfo = {
   type: 'webgpu',
@@ -18,6 +19,9 @@ const PLATFORM_INFO: PlatformInfo = {
   shaderLanguageVersion: 300,
   features: new Set()
 };
+
+const FP64_INTEGER_MARKER = 'fn fp64_two_sum_integer_bits';
+const FP64_CLASSIC_MARKER = 'let splitValue = prevent_fp64_optimization';
 
 const APP_WGSL = /* wgsl */ `\
 struct AppFrameUniforms {
@@ -32,6 +36,54 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec
   return vec4<f32>(x, 0.0, 0.0, 1.0);
 }
 `;
+
+test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
+  const shaderAssembler = new ShaderAssembler();
+
+  const appleSource = shaderAssembler.assembleWGSLShader({
+    platformInfo: {...PLATFORM_INFO, gpu: 'apple'},
+    source: APP_WGSL,
+    modules: [fp64arithmetic]
+  }).source;
+  t.ok(appleSource.includes(FP64_INTEGER_MARKER), 'Apple WebGPU selects integer arithmetic');
+  t.notOk(appleSource.includes(FP64_CLASSIC_MARKER), 'Apple WebGPU omits classic arithmetic');
+
+  const defaultSource = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [fp64arithmetic]
+  }).source;
+  t.ok(
+    defaultSource.includes(FP64_CLASSIC_MARKER),
+    'other WebGPU adapters retain classic arithmetic'
+  );
+  t.notOk(
+    defaultSource.includes(FP64_INTEGER_MARKER),
+    'integer arithmetic is not enabled globally'
+  );
+
+  const forcedSource = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [fp64arithmetic],
+    defines: {LUMA_FP64_INTEGER_ARITHMETIC: true}
+  }).source;
+  t.ok(forcedSource.includes(FP64_INTEGER_MARKER), 'callers can force integer arithmetic');
+
+  const disabledSource = shaderAssembler.assembleWGSLShader({
+    platformInfo: {...PLATFORM_INFO, gpu: 'apple'},
+    source: APP_WGSL,
+    modules: [fp64arithmetic],
+    defines: {LUMA_FP64_INTEGER_ARITHMETIC: false}
+  }).source;
+  t.ok(disabledSource.includes(FP64_CLASSIC_MARKER), 'callers can disable the Apple default');
+  t.notOk(
+    disabledSource.includes(FP64_INTEGER_MARKER),
+    'false override removes integer arithmetic'
+  );
+
+  t.end();
+});
 
 const APP_GROUP_0_AUTO_WGSL = /* wgsl */ `\
 struct AppAutoUniforms {

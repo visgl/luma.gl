@@ -4,8 +4,18 @@ title: FP64
 
 import {ExampleHeader} from '@site/src/react-luma';
 import {FP64Example} from '@site/src/examples';
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
 
-<ExampleHeader id="fp64" directory="experimental" devices={['webgl2', 'webgpu']}>
+<div className="markdown">
+  <ShaderModuleDocsTabs group="precision" active="fp64-example" />
+</div>
+
+<ExampleHeader
+  id="fp64"
+  directory="experimental"
+  devices={['webgl2', 'webgpu']}
+  style={{position: 'relative', padding: '0 0 12px'}}
+>
   <div>
     <div style={{marginBottom: 12}}>
       Two fragment shaders following the same Mandelbrot zoom path. The left canvas uses float32
@@ -13,12 +23,15 @@ import {FP64Example} from '@site/src/examples';
       `@luma.gl/shadertools`.
     </div>
     <div style={{marginBottom: 12}}>
-      The double-single arithmetic used here depends on intermediate rounding behavior that portable
-      WGSL does not guarantee, so results are GPU-dependent. See the{' '}
-      <a href="/docs/api-guide/shaders/gpu-floating-point-precision">
-        GPU floating-point precision guide
-      </a>{' '}
-      for robust alternatives, including fixed point and integer arithmetic.
+      On Apple WebGPU/Metal, `fp64arithmetic` automatically selects an integer-controlled
+      double-single implementation. Other GPUs use the classic floating-point error transforms by
+      default.
+    </div>
+    <div style={{marginBottom: 12}}>
+      The opt-in WebGPU benchmark below the canvases compares automatic selection, both explicit
+      double-single paths, and native float32 for add, multiply, divide, and square-root compute
+      workloads. It reports timing and numerical error together; the results are diagnostic and do
+      not impose performance thresholds.
     </div>
   </div>
 </ExampleHeader>

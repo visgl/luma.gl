@@ -10,8 +10,10 @@ type ShaderModuleDocsTab = {
 /** Built-in shader module documentation tab identifiers. */
 export type ShaderModuleDocsTabId =
   | 'fp32'
+  | 'precision-guide'
   | 'fp64'
   | 'fp64-arithmetic'
+  | 'fp64-example'
   | 'lighting'
   | 'dirlight'
   | 'lambert-material'
@@ -24,12 +26,22 @@ export type ShaderModuleDocsTabGroupId = 'precision' | 'lighting';
 
 const SHADER_MODULE_DOCS_TABS: Record<ShaderModuleDocsTabGroupId, ShaderModuleDocsTab[]> = {
   precision: [
+    {
+      id: 'precision-guide',
+      label: 'Precision Guide',
+      href: '/docs/api-guide/shaders/gpu-floating-point-precision'
+    },
     {id: 'fp32', label: 'fp32', href: '/docs/api-reference/shadertools/shader-modules/fp32'},
     {id: 'fp64', label: 'fp64', href: '/docs/api-reference/shadertools/shader-modules/fp64'},
     {
       id: 'fp64-arithmetic',
       label: 'fp64arithmetic',
       href: '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'
+    },
+    {
+      id: 'fp64-example',
+      label: 'Mandelbrot & Benchmarks',
+      href: '/examples/experimental/fp64'
     }
   ],
   lighting: [
@@ -66,8 +78,13 @@ export function ShaderModuleDocsTabs({
   group: ShaderModuleDocsTabGroupId;
   active: ShaderModuleDocsTabId;
 }): ReactNode {
+  const ariaLabel =
+    group === 'precision'
+      ? 'GPU floating-point precision documentation sections'
+      : 'Built-in shader module documentation sections';
+
   return (
-    <nav className="docs-page-tabs" aria-label="Built-in shader module documentation sections">
+    <nav className="docs-page-tabs" aria-label={ariaLabel}>
       {SHADER_MODULE_DOCS_TABS[group].map(tab => (
         <Link
           key={tab.id}
