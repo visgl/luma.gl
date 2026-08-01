@@ -20,6 +20,7 @@ import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 import {WebGPUQuerySet} from './webgpu-query-set';
 import {WebGPUFramebuffer} from './webgpu-framebuffer';
+import {WebGPUTextureView} from './webgpu-texture-view';
 import {WebGPURenderBundle} from './webgpu-render-bundle';
 import {getCpuHotspotProfiler, getTimestamp} from '../helpers/cpu-hotspot-profiler';
 
@@ -295,6 +296,9 @@ export class WebGPURenderPass extends RenderPass {
           this.props.clearColors?.[index] || this.props.clearColor || RenderPass.defaultClearColor
         ),
         storeOp: this.props.discard ? 'discard' : 'store',
+        resolveTarget: this.props.resolveTargets?.[index]
+          ? (this.props.resolveTargets[index] as WebGPUTextureView).handle
+          : undefined,
         // ...colorAttachment,
         view: colorAttachment.handle
       })

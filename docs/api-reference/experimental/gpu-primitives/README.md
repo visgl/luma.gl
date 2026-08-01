@@ -1007,7 +1007,7 @@ schedule commitment.
 | 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Implemented | High | Large |
-| 4 — Picking and texture coverage | Region picking and asynchronous staging rings implemented; multisample resolves, swapchain imports, and external-texture contracts remain | In progress | Medium | Large |
+| 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, and frame-scoped swapchain imports implemented; external-texture contracts remain | In progress | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
 | 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
@@ -1019,8 +1019,8 @@ only when its entry dependency is present and its exit evidence can be produced;
 dependency order, not a schedule commitment. Tranches whose dependencies do not overlap may be
 developed independently.
 
-Tranches 4.1 and 4.2 are implemented; render-target contracts in Tranche 4.3 are the next active
-boundary.
+Tranches 4.1 through 4.3 are implemented; external-texture contracts in Tranche 4.4 are the next
+active boundary.
 
 | Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
 | --- | --- | --- | :---: | :---: |
@@ -1028,7 +1028,7 @@ boundary.
 | 3.3 — Extension decision gate | Evidence-backed decision on sparse histograms, multidimensional histograms, custom scans, and shader callbacks | Tranche 3.2 plus demonstrated consumers | Medium | Medium |
 | 4.1 — Region picking | Bounded rectangular picks with stable object and batch IDs, capacity, count, and overflow | Implemented | Medium | Medium |
 | 4.2 — Asynchronous readback ring | Reusable staging slots with backpressure, cancellation, and no mapped-buffer reuse hazards | Implemented | High | Medium |
-| 4.3 — Render-target graph contracts | Multisample resolve and swapchain imports with explicit subresource and frame ownership | Phase 1 lifetime contracts | Medium | Large |
+| 4.3 — Render-target graph contracts | Multisample resolve and swapchain imports with explicit subresource and frame ownership | Implemented | Medium | Large |
 | 4.4 — External-texture contracts | One-frame external-texture imports with validated access and device-loss behavior | Tranche 4.3 | Medium | Large |
 | 5.1 — `GPUGridIndex` build/update | Stable cell offsets and object-ID storage with measurable full-build and incremental-update costs | Tranche 3.2 and Phase 1 measurement | High | Large |
 | 5.2 — `GPUGridIndex` query | Bounds, radius, and point queries feeding visibility and region picking in 2D and 3D | Tranche 5.1, Phase 2, and Tranche 4.1 | High | Medium |
@@ -1217,9 +1217,9 @@ application or renderer consumer.
 **Entry dependencies:** Phase 1 defines resource-lifetime and asynchronous readback behavior;
 Phase 2 defines stable visible identity.
 
-Region picking and reusable asynchronous staging-buffer rings are implemented. Next, add graph
-contracts for multisampled resolve targets, swapchain imports, and external textures so their
-subresources, hazards, ownership, and frame lifetimes are explicit.
+Region picking, reusable asynchronous staging-buffer rings, multisample resolves, and frame-scoped
+swapchain imports are implemented. External textures remain next so their access, ownership, and
+frame lifetime become equally explicit.
 Callback, highlighting, tooltip, and color-encoded fallback policies remain higher-level workflow
 or application concerns.
 
@@ -1246,9 +1246,11 @@ cancellation, destruction, and device loss.
 
 #### Tranche 4.3 — Render-target graph contracts
 
-Model multisample resolves and swapchain texture imports with explicit mip, layer, aspect, access,
-and frame validity. The graph validates hazards but never acquires, presents, or destroys a
-swapchain texture on the application's behalf.
+Graph render attachments now model multisample resolve targets with explicit mip, layer, aspect,
+access, format, extent, and sample validation. `importFrameTexture()` requires caller-acquired
+swapchain textures to carry one coherent, strictly increasing frame ID per encoding. The graph
+validates hazards but never acquires, presents, or destroys a swapchain texture on the
+application's behalf.
 
 **Exit evidence:** Compute, render, copy, and resolve nodes reject conflicting subresource access;
 multisample and swapchain examples encode through the graph; stale-frame and ownership mistakes

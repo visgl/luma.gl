@@ -59,6 +59,14 @@ export type GraphImportedBuffer = Buffer | DynamicBuffer;
 /** Caller-owned texture accepted as a fixed or per-encoding graph import. */
 export type GraphImportedTexture = Texture | DynamicTexture;
 
+/** One explicitly numbered frame-scoped texture binding. */
+export type GraphFrameTextureBinding = {
+  /** Caller-acquired texture valid for this encoding only. */
+  texture: GraphImportedTexture;
+  /** Strictly increasing application frame identifier for this compiled graph. */
+  frameId: number;
+};
+
 /** Descriptor for one imported or transient graph buffer. */
 export type GraphBufferDescriptor = {
   /** Graph-wide resource identifier. */
@@ -263,6 +271,8 @@ export class GraphTextureHandle<Format extends TextureFormat = TextureFormat> {
   readonly samples: number;
   /** Whether the graph owns and may alias the physical allocation. */
   readonly transient: boolean;
+  /** Whether every encoding requires a fresh, explicitly numbered frame binding. */
+  readonly frameScoped: boolean;
   /** @internal */
   readonly graph: GPUCommandGraphOwner;
   /** @internal */
@@ -273,7 +283,8 @@ export class GraphTextureHandle<Format extends TextureFormat = TextureFormat> {
     graph: GPUCommandGraphOwner,
     descriptor: NormalizedGraphTextureDescriptor<Format>,
     transient: boolean,
-    defaultTexture?: GraphImportedTexture
+    defaultTexture?: GraphImportedTexture,
+    frameScoped = false
   ) {
     this.graph = graph;
     this.id = descriptor.id;
@@ -286,6 +297,7 @@ export class GraphTextureHandle<Format extends TextureFormat = TextureFormat> {
     this.mipLevels = descriptor.mipLevels;
     this.samples = descriptor.samples;
     this.transient = transient;
+    this.frameScoped = frameScoped;
     this.defaultTexture = defaultTexture;
   }
 }
@@ -373,6 +385,8 @@ export type GraphResourceUse = GraphBufferUse | GraphTextureUse;
 export type GraphRenderPassAttachments = {
   /** Color attachment views in render-target order. */
   colorAttachments: GraphTextureView[];
+  /** Optional single-sample resolve target corresponding to each color attachment. */
+  resolveTargets?: (GraphTextureView | null)[];
   /** Optional depth/stencil attachment view. */
   depthStencilAttachment?: GraphTextureView;
 };
@@ -581,4 +595,6 @@ export type GPUCommandGraphEncodeOptions<Parameters> = {
   buffers?: Record<string, GraphImportedBuffer>;
   /** Per-encoding imported-texture replacements keyed by graph resource ID. */
   textures?: Record<string, GraphImportedTexture>;
+  /** Per-encoding frame-scoped texture bindings keyed by graph resource ID. */
+  frameTextures?: Record<string, GraphFrameTextureBinding>;
 };
