@@ -70,7 +70,7 @@ The native concept “select an ANARI device implementation” therefore maps to
 | `anariNewWorld(device)` | `anariDevice.newWorld({surface, instance, light})` | `new Scene()` | Supported for direct surfaces, instances, and lights. |
 | `anariNewLight(device, subtype)` | `anariDevice.newLight(subtype, parameters)` | THREE.js light subclasses | Supported for `directional`, `point`, and `spot`; JavaScript additionally provides an `ambient` convenience subtype. |
 | `anariNewCamera(device, subtype)` | `anariDevice.newCamera(subtype, parameters)` | `PerspectiveCamera` / `OrthographicCamera` | Supported for `perspective` and `orthographic`. |
-| `anariNewRenderer(device, subtype)` | `anariDevice.newRenderer(subtype, parameters)` | Renderer configuration / debug material | Supported for `default`, `debugNormals`, and `debugDepth`. |
+| `anariNewRenderer(device, subtype)` | `anariDevice.newRenderer(subtype, parameters)` | Renderer configuration / debug material | Supported for `default`, WebGPU-only `deferred`, `debugNormals`, and `debugDepth`. |
 | `anariNewFrame(device)` | `anariDevice.newFrame({world, camera, renderer, size})` | `renderer.render(scene, camera)` / render target | Supported for canvas presentation; arbitrary mapped output channels are not implemented. |
 | `anariNewSampler()` | `anariDevice.newSampler('image2D', {image, transform})` | `Texture`, sampler state, texture-backed material properties | Partial: retained 2D image samplers; no procedural or volume samplers. |
 | `anariNewSpatialField()` | No equivalent | 3D texture / volume field | Not implemented. |

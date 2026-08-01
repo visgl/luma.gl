@@ -52,7 +52,7 @@ type CompiledSurface = {
   textureSignature: string;
 };
 
-type ANARIMaterialBindings = {
+export type ANARIMaterialBindings = {
   anariBaseColorTexture: Texture;
   anariNormalTexture: Texture;
   anariMetallicRoughnessTexture: Texture;
@@ -63,7 +63,7 @@ type ANARIMaterialBindings = {
   anariSheenColorTexture: Texture;
 };
 
-type SurfacePlacement = {
+export type SurfacePlacement = {
   surface: ANARISurface;
   transform: readonly number[];
 };
@@ -73,6 +73,17 @@ type FrameResources = {
   framebuffer: Framebuffer | null;
   colorTexture: Texture | null;
   bloomRenderer: ShaderPassRenderer | null;
+};
+
+export type ANARITransformResources = {
+  transformBuffers: Buffer[];
+  transforms: Float32Array[];
+};
+
+export type ANARIFallbackTextures = {
+  white: Texture;
+  normal: Texture;
+  black: Texture;
 };
 
 const IDENTITY_MATRIX = new Matrix4();
@@ -318,38 +329,11 @@ export class ANARIRenderingRuntime {
   }
 
   private getMaterialBindings(material: ANARIMaterial): ANARIMaterialBindings {
-    const parameters = material.getParameters();
-    return {
-      anariBaseColorTexture: getSamplerTexture(
-        parameters.baseColorTexture,
-        this.fallbackWhiteTexture
-      ),
-      anariNormalTexture: getSamplerTexture(parameters.normalTexture, this.fallbackNormalTexture),
-      anariMetallicRoughnessTexture: getSamplerTexture(
-        parameters.metallicRoughnessTexture,
-        this.fallbackWhiteTexture
-      ),
-      anariEmissiveTexture: getSamplerTexture(
-        parameters.emissiveTexture,
-        this.fallbackBlackTexture
-      ),
-      anariOcclusionTexture: getSamplerTexture(
-        parameters.occlusionTexture,
-        this.fallbackWhiteTexture
-      ),
-      anariClearcoatTexture: getSamplerTexture(
-        parameters.clearcoatTexture,
-        this.fallbackWhiteTexture
-      ),
-      anariTransmissionTexture: getSamplerTexture(
-        parameters.transmissionTexture,
-        this.fallbackWhiteTexture
-      ),
-      anariSheenColorTexture: getSamplerTexture(
-        parameters.sheenColorTexture,
-        this.fallbackWhiteTexture
-      )
-    };
+    return makeMaterialBindings(material, {
+      white: this.fallbackWhiteTexture,
+      normal: this.fallbackNormalTexture,
+      black: this.fallbackBlackTexture
+    });
   }
 
   private getFramebuffer(frame: ANARIFrame, frameResources: FrameResources): Framebuffer {
@@ -390,7 +374,7 @@ export class ANARIRenderingRuntime {
   }
 }
 
-function collectSurfacePlacements(world: ANARIWorld): SurfacePlacement[] {
+export function collectSurfacePlacements(world: ANARIWorld): SurfacePlacement[] {
   const placements: SurfacePlacement[] = [];
   const worldParameters = world.getParameters();
   const directSurfaces = resolveObjectArray(worldParameters.surface, worldParameters.surfaces);
@@ -431,7 +415,7 @@ function getGroupSurfaces(group: ANARIGroup): ANARISurface[] {
   return resolveObjectArray(parameters.surface, parameters.surfaces);
 }
 
-function groupPlacementsBySurface(
+export function groupPlacementsBySurface(
   placements: SurfacePlacement[]
 ): Map<ANARISurface, SurfacePlacement[]> {
   const groups = new Map<ANARISurface, SurfacePlacement[]>();
@@ -460,7 +444,7 @@ function resolveObjectArray<ObjectType extends ANARISurface | ANARIInstance | AN
   return Array.from(value);
 }
 
-function collectLights(world: ANARIWorld, ambientRadiance: number): Light[] {
+export function collectLights(world: ANARIWorld, ambientRadiance: number): Light[] {
   const lights: Light[] = [{type: 'ambient', color: [1, 1, 1], intensity: ambientRadiance}];
   const parameters = world.getParameters();
   const worldLights = resolveObjectArray(parameters.light, parameters.lights);
@@ -537,7 +521,7 @@ function addLight(light: ANARILight, lights: Light[]): void {
   }
 }
 
-function getCameraUniforms(
+export function getCameraUniforms(
   camera: ANARICamera,
   frame: ANARIFrame
 ): Pick<ANARIAppUniforms, 'viewMatrix' | 'projectionMatrix' | 'cameraPosition'> {
@@ -571,7 +555,7 @@ function getCameraUniforms(
   };
 }
 
-function getFrameSize(frame: ANARIFrame, device: Device): [number, number] {
+export function getFrameSize(frame: ANARIFrame, device: Device): [number, number] {
   const size = frame.getParameter('size');
   if (size) {
     return [size[0], size[1]];
@@ -579,7 +563,7 @@ function getFrameSize(frame: ANARIFrame, device: Device): [number, number] {
   return device.getDefaultCanvasContext().getDrawingBufferSize();
 }
 
-function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
+export function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
   const parameters = geometry.getParameters();
   const segments = parameters.segments ?? 32;
   let sourceGeometry: Geometry;
@@ -699,7 +683,10 @@ function makeVertexNormals(positions: Float32Array): Float32Array {
   return normals;
 }
 
-function updateTransforms(compiledSurface: CompiledSurface, placements: SurfacePlacement[]): void {
+export function updateTransforms(
+  compiledSurface: ANARITransformResources,
+  placements: SurfacePlacement[]
+): void {
   for (let placementIndex = 0; placementIndex < placements.length; placementIndex++) {
     const transform = placements[placementIndex].transform;
     for (let columnIndex = 0; columnIndex < 4; columnIndex++) {
@@ -714,7 +701,7 @@ function updateTransforms(compiledSurface: CompiledSurface, placements: SurfaceP
   }
 }
 
-function updateMaterial(
+export function updateMaterial(
   engineMaterial: Material<{anariMaterial: ANARIMaterialUniforms}, ANARIMaterialBindings>,
   material: ANARIMaterial
 ): void {
@@ -770,14 +757,37 @@ function getSamplerTransform(sampler: ANARISampler | undefined): Readonly<Number
   return sampler?.getParameter('transform') || IDENTITY_UV_TRANSFORM;
 }
 
-function getMaterialOpacity(material: ANARIMaterial): number {
+export function makeMaterialBindings(
+  material: ANARIMaterial,
+  fallbackTextures: ANARIFallbackTextures
+): ANARIMaterialBindings {
+  const parameters = material.getParameters();
+  return {
+    anariBaseColorTexture: getSamplerTexture(parameters.baseColorTexture, fallbackTextures.white),
+    anariNormalTexture: getSamplerTexture(parameters.normalTexture, fallbackTextures.normal),
+    anariMetallicRoughnessTexture: getSamplerTexture(
+      parameters.metallicRoughnessTexture,
+      fallbackTextures.white
+    ),
+    anariEmissiveTexture: getSamplerTexture(parameters.emissiveTexture, fallbackTextures.black),
+    anariOcclusionTexture: getSamplerTexture(parameters.occlusionTexture, fallbackTextures.white),
+    anariClearcoatTexture: getSamplerTexture(parameters.clearcoatTexture, fallbackTextures.white),
+    anariTransmissionTexture: getSamplerTexture(
+      parameters.transmissionTexture,
+      fallbackTextures.white
+    ),
+    anariSheenColorTexture: getSamplerTexture(parameters.sheenColorTexture, fallbackTextures.white)
+  };
+}
+
+export function getMaterialOpacity(material: ANARIMaterial): number {
   const parameters = material.getParameters();
   const color = parameters.baseColor || parameters.color;
   const explicitOpacity = parameters.opacity ?? (color && color.length > 3 ? (color[3] ?? 1) : 1);
   return Math.min(explicitOpacity, 1 - (parameters.transmission || 0) * 0.68);
 }
 
-function getMaterialTextureSignature(material: ANARIMaterial): string {
+export function getMaterialTextureSignature(material: ANARIMaterial): string {
   const parameters = material.getParameters();
   return [
     parameters.baseColorTexture,
@@ -793,7 +803,7 @@ function getMaterialTextureSignature(material: ANARIMaterial): string {
     .join(':');
 }
 
-function createFallbackTexture(
+export function createFallbackTexture(
   device: Device,
   identifier: string,
   color: readonly [number, number, number, number]

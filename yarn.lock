@@ -4633,6 +4633,7 @@ __metadata:
     "@luma.gl/core": ~9.4.0-alpha.2
     "@luma.gl/effects": ~9.4.0-alpha.2
     "@luma.gl/engine": ~9.4.0-alpha.2
+    "@luma.gl/experimental": ~9.4.0-alpha.2
     "@luma.gl/shadertools": ~9.4.0-alpha.2
   languageName: unknown
   linkType: soft
@@ -16611,6 +16612,7 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.2"
     "@luma.gl/effects": "npm:9.4.0-alpha.2"
     "@luma.gl/engine": "npm:9.4.0-alpha.2"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.2"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.2"
     "@luma.gl/webgl": "npm:9.4.0-alpha.2"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.2"

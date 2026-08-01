@@ -74,6 +74,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
   private bloomEnabled = true;
   private lastStatisticsUpdate = 0;
   private canvas: HTMLCanvasElement | null = null;
+  private readonly deferredRendererAvailable: boolean;
   private readonly importedScenes = new Map<string, number>();
   private importRequest = 0;
 
@@ -81,8 +82,13 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     super();
 
     this.anari = new ANARIDevice(device);
+    this.deferredRendererAvailable = device.type === 'webgpu';
     this.renderers = {
       default: this.anari.newRenderer('default', DEFAULT_RENDERER_PARAMETERS),
+      deferred: this.anari.newRenderer('deferred', {
+        ...DEFAULT_RENDERER_PARAMETERS,
+        bloomIntensity: 0
+      }),
       debugNormals: this.anari.newRenderer('debugNormals', {
         background: [0.027, 0.033, 0.06, 1]
       }),
@@ -207,13 +213,21 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
     });
 
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-renderer]')) {
+      if (button.dataset['renderer'] === 'deferred' && !this.deferredRendererAvailable) {
+        button.disabled = true;
+        button.title = 'Deferred rendering requires WebGPU.';
+      }
       button.addEventListener('click', () => {
         const rendererName = button.dataset['renderer'];
         if (
           rendererName === 'default' ||
+          rendererName === 'deferred' ||
           rendererName === 'debugNormals' ||
           rendererName === 'debugDepth'
         ) {
+          if (rendererName === 'deferred' && !this.deferredRendererAvailable) {
+            return;
+          }
           this.frame.setParameter('renderer', this.renderers[rendererName]).commitParameters();
           for (const control of document.querySelectorAll('[data-renderer]')) {
             control.classList.toggle('active', control === button);
@@ -247,6 +261,13 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         bloomIntensity: this.bloomEnabled ? rendererParameters.bloomIntensity : 0
       })
       .commitParameters();
+    this.renderers.deferred
+      .setParameters({
+        ...DEFAULT_RENDERER_PARAMETERS,
+        ...rendererParameters,
+        bloomIntensity: 0
+      })
+      .commitParameters();
     this.frame.setParameter('world', scene.world).commitParameters();
     setElementText(
       'scene-number',
@@ -277,7 +298,9 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         return;
       }
 
-      const importedScene = createANARIJSONScene(this.anari, description);
+      const importedScene = createANARIJSONScene(this.anari, description, {
+        rendererSubtype: 'default'
+      });
       const world = importedScene.frame.getParameter('world');
       if (!world) {
         throw new Error('The imported 3D scene did not produce an ANARI world.');
@@ -289,6 +312,7 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
         cameraPosition[0] - target[0],
         cameraPosition[2] - target[2]
       );
+      const rendererParameters = description.renderer || DEFAULT_RENDERER_PARAMETERS;
       const sceneIndex =
         this.scenes.push({
           label: description.name,
@@ -301,14 +325,14 @@ export default class ANARIShowcase extends AnimationLoopTemplate {
           elevation: Math.atan2(cameraPosition[1] - target[1], horizontalDistance),
           azimuth: Math.atan2(cameraPosition[0] - target[0], cameraPosition[2] - target[2]),
           rendererParameters: {
-            background: description.renderer.background,
-            ambientRadiance: description.renderer.ambientRadiance,
-            exposure: description.renderer.exposure,
-            bloomIntensity: description.renderer.bloomIntensity,
-            bloomThreshold: description.renderer.bloomThreshold,
-            bloomRadius: description.renderer.bloomRadius,
-            fogColor: description.renderer.fogColor,
-            fogDensity: description.renderer.fogDensity
+            background: rendererParameters.background,
+            ambientRadiance: rendererParameters.ambientRadiance,
+            exposure: rendererParameters.exposure,
+            bloomIntensity: rendererParameters.bloomIntensity,
+            bloomThreshold: rendererParameters.bloomThreshold,
+            bloomRadius: rendererParameters.bloomRadius,
+            fogColor: rendererParameters.fogColor,
+            fogDensity: rendererParameters.fogDensity
           }
         }) - 1;
       importedScene.frame.destroy();

@@ -1,5 +1,9 @@
 import type {ANARIVector3} from '@luma.gl/anari';
-import type {ANARIJSONScene, JSONInstanceDeclaration} from './playground-scene';
+import type {
+  ANARIJSONScene,
+  JSONInstanceDeclaration,
+  JSONRendererDeclaration
+} from './playground-scene';
 
 export type PlaygroundPreset = {
   label: string;
@@ -558,7 +562,7 @@ function addStarfield(scene: ANARIJSONScene, count: number, radius: number): voi
   ];
 }
 
-function makeRenderer(): ANARIJSONScene['renderer'] {
+function makeRenderer(): JSONRendererDeclaration {
   return {
     '@@type': 'default',
     background: [0.016, 0.019, 0.044, 1],

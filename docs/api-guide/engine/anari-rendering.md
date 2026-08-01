@@ -187,6 +187,19 @@ requestAnimationFrame(render);
 
 The floor is attached directly to the world, so it uses the identity transform. The sphere is attached through a reusable group and transform instance.
 
+## Try the deferred renderer
+
+Use `newRenderer('deferred')` when you want the ANARI scene rendered through the experimental WebGPU G-buffer and deferred lighting path:
+
+```ts
+const renderer = anariDevice.newRenderer('deferred', {
+  ambientRadiance: 0.08,
+  background: [0.006, 0.008, 0.018, 1]
+});
+```
+
+The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
+
 ## Understand staging and commits
 
 Every retained object has **pending** and **committed** parameters. Initial constructor parameters are committed automatically, but later changes are invisible until committed:
@@ -419,6 +432,7 @@ const beauty = anariDevice.newRenderer('default', {
 
 const normals = anariDevice.newRenderer('debugNormals');
 const depth = anariDevice.newRenderer('debugDepth');
+const deferred = anariDevice.newRenderer('deferred');
 ```
 
 Switch renderers by committing the frame:
@@ -427,7 +441,7 @@ Switch renderers by committing the frame:
 frame.setParameter('renderer', normals).commitParameters();
 ```
 
-Debug renderers automatically skip bloom. Switch back to the `default` renderer to restore physically based shading and postprocessing.
+Debug renderers automatically skip bloom. Switch to `deferred` to use the WebGPU G-buffer path, or switch back to `default` to restore the portable forward renderer with bloom.
 
 ## Handle resizing
 
@@ -588,16 +602,17 @@ Each `frame.render()` performs the following work:
 1. Resolve the frame's committed world, camera, and renderer.
 2. Collect directly attached world surfaces and surfaces reached through world instances.
 3. Group placements by retained surface object identity.
-4. Reuse or rebuild one luma.gl `Model` per distinct surface.
-5. Upload four per-instance matrix-column vertex buffers.
-6. Translate ANARI materials into luma.gl material uniforms.
-7. Translate world and group lights into the shared luma.gl lighting shader module.
-8. Configure camera, exposure, fog, debug mode, and HDR uniforms.
-9. Issue one instanced draw per distinct surface.
-10. Optionally run bloom into an intermediate texture and composite the result to the canvas.
-11. Return surface, instance, draw-call, and triangle statistics.
+4. Select the forward or deferred renderer runtime from the committed renderer subtype.
+5. Reuse or rebuild one luma.gl `Model` per distinct surface.
+6. Upload four per-instance matrix-column vertex buffers.
+7. Translate ANARI materials into luma.gl material uniforms and texture bindings.
+8. Translate world and group lights into the renderer's lighting representation.
+9. Configure camera, exposure, fog, debug mode, and HDR uniforms.
+10. Issue one instanced draw per distinct surface.
+11. Optionally run renderer-owned composition such as bloom or deferred lighting.
+12. Return surface, instance, draw-call, and triangle statistics.
 
-WebGPU uses WGSL shaders; WebGL 2 uses equivalent GLSL shaders. Both consume the same retained object graph and the same public API.
+The forward runtime uses WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The deferred runtime is WebGPU-only and resolves the same retained object graph through `GBuffer` plus `deferredLighting`.
 
 ### Cache invalidation
 
@@ -630,14 +645,16 @@ yarn workspace luma.gl-examples-showcase-anari start
 Open `/playground.html` on the reported development-server URL, or select **JSON LAB** in the
 Observatory. The playground provides a Monaco JSON editor with syntax highlighting,
 schema-aware completions, property documentation, red error indicators, animated example scenes,
-WebGPU/WebGL selection, automatic HDR presentation when available, orbit controls, validation
-feedback, and live instance, draw-call, and triangle statistics.
+WebGPU/WebGL selection, a renderer selector for frame presentation, automatic HDR presentation when
+available, orbit controls, validation feedback, and live instance, draw-call, and triangle
+statistics.
 
 Use **GLTF ↓** or **USD ↓** to download the currently valid retained scene. Export bakes procedural
 geometry, starfield distributions, and retained instances into a static snapshot; transfers mesh
 positions, normals, UVs, vertex colors, materials, texture images, camera, and supported lights;
 and emits standalone JSON glTF with embedded buffers/images or ASCII `.usda`. ANARI animation
-declarations, bloom, fog, and renderer-only HDR controls remain ANARI-specific and are not exported.
+declarations, optional renderer presets, bloom, fog, and renderer-only HDR controls remain
+ANARI-specific and are not exported.
 
 :::caution Experimental playground format
 The JSON format and its optional schema exports are experimental. They are not part of the ANARI C
@@ -682,7 +699,9 @@ paths back to precise Monaco error indicators.
 ### Describe a scene with JSON
 
 Use `@@type` to select ANARI object subtypes, registry keys to name shared resources, and `@@id`
-to name individual lights and instances:
+to name individual lights and instances. Renderer data is optional in the playground JSON: the
+ANARI world remains renderer-independent, while the active renderer subtype is selected by the
+playground UI and attached only when constructing the frame.
 
 ```json
 {
@@ -694,12 +713,6 @@ to name individual lights and instances:
     "target": [0, 1, 0],
     "fovy": 0.75,
     "orbit": {"speed": 0.08}
-  },
-  "renderer": {
-    "@@type": "default",
-    "background": [0.015, 0.02, 0.04, 1],
-    "exposure": 1.5,
-    "bloomIntensity": 0.5
   },
   "geometries": {
     "orb": {"@@type": "sphere", "radius": 0.8, "segments": 28},
@@ -767,7 +780,7 @@ for each orb.
 | `version` | JSON schema version; currently `1`. |
 | `name`, `description` | Human-readable preview title and optional scene description. |
 | `camera` | Camera `@@type`, normal ANARI camera parameters, optional `target`, and optional orbit speed. |
-| `renderer` | Renderer `@@type` and normal ANARI exposure, bloom, background, and fog parameters. |
+| `renderer` | Optional renderer preset parameters for exposure, bloom, background, and fog. The playground's renderer selector chooses the active renderer subtype independently of the scene. |
 | `geometries` | Named geometry declarations; triangle meshes accept number arrays or compact `torus`, `crystal`, and beveled `prism` generators. |
 | `materials` | Named `matte` or `physicallyBased` material declarations. |
 | `surfaces` | Named surface declarations referencing geometry and material identifiers. |
@@ -784,8 +797,8 @@ explicit named `group` when multiple surfaces or group-attached lights are requi
 
 Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad`
 geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot`
-lights; `perspective` and `orthographic` cameras; and `default`, `debugNormals`, and `debugDepth`
-renderers.
+lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`,
+`deferred`, `debugNormals`, and `debugDepth`.
 
 ### Generate compact triangle meshes and starfields
 
@@ -988,6 +1001,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - Automatically generated triangle normals assume non-indexed triangle-list positions.
 - Changing an opaque compiled material to transparent does not rebuild its blending pipeline.
 - Group-attached lights are not transformed by their owning instance.
+- The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
 - Visibility, picking, volumes, clipping planes, shadows, and asynchronous frame mapping are not implemented.
 - Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 - Experimental glTF import supports common PBR textures and selected material extensions, but not skinning or animations.

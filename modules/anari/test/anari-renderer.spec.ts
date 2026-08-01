@@ -150,3 +150,61 @@ test('ANARI renderer samples PBR image maps on available GPU backends', async te
   }
   testContext.end();
 });
+
+test('ANARI deferred renderer resolves PBR surfaces on WebGPU', async testContext => {
+  for (const graphicsDevice of await getTestDevices()) {
+    if (graphicsDevice.type !== 'webgpu') {
+      continue;
+    }
+
+    const device = new ANARIDevice(graphicsDevice);
+    const geometry = device.newGeometry('sphere', {radius: 0.7, segments: 8});
+    const material = device.newMaterial('physicallyBased', {
+      baseColor: [0.9, 0.52, 0.18],
+      metallic: 0.8,
+      roughness: 0.22,
+      emissive: [0.3, 0.12, 0.04],
+      emissiveStrength: 2
+    });
+    const surface = device.newSurface({geometry, material});
+    const group = device.newGroup({surface: [surface]});
+    const world = device.newWorld({
+      instance: [
+        device.newInstance({
+          group,
+          transform: new Matrix4().translate([-0.7, 0, 0])
+        }),
+        device.newInstance({
+          group,
+          transform: new Matrix4().translate([0.7, 0, 0]).scale([0.75, 1.2, 0.75])
+        })
+      ],
+      light: [
+        device.newLight('directional', {
+          direction: [-0.4, -1, -0.3],
+          color: [1, 0.94, 0.82],
+          irradiance: 2.4
+        }),
+        device.newLight('point', {
+          position: [0.4, 1.2, 2],
+          color: [1, 0.45, 0.15],
+          intensity: 30
+        })
+      ]
+    });
+    const camera = device.newCamera('perspective', {position: [0, 0, 5]});
+    const renderer = device.newRenderer('deferred', {ambientRadiance: 0.08});
+    const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
+
+    const statistics = frame.render();
+    graphicsDevice.submit();
+
+    testContext.equal(statistics.drawCount, 1, 'WebGPU deferred renderer draws one surface batch');
+    testContext.equal(statistics.instanceCount, 2, 'WebGPU deferred renderer keeps instances');
+    testContext.ok(statistics.triangleCount > 0, 'WebGPU deferred renderer counts geometry');
+
+    frame.destroy();
+    device.destroy();
+  }
+  testContext.end();
+});

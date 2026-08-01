@@ -94,7 +94,7 @@ changed object is committed.
 | Material | `matte`, `physicallyBased` |
 | Light | `ambient`, `directional`, `point`, `spot` |
 | Camera | `perspective`, `orthographic` |
-| Renderer | `default`, `debugNormals`, `debugDepth` |
+| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth` |
 
 The scene hierarchy also supports arrays, surfaces, groups, transform instances, worlds, and
 frames. Reusing one surface across many instances normally produces one instanced draw.
@@ -143,7 +143,8 @@ fallback instead of automatically selecting WebGPU. HDR-capable displays automat
 Open `/playground.html` on the same development-server URL, or select **JSON LAB** from the
 showcase. The private, experimental playground provides a deck.gl-style JSON editor with
 `@@type` subtype declarations, named geometries and materials, retained surface references,
-transform instances, animated lights, renderer controls, and live HDR-capable rendering.
+transform instances, animated lights, renderer-independent scene data, frame renderer controls, and
+live HDR-capable rendering.
 
 Three presets represent the complete **Chromatic Atlas**, **Crystal Cathedral**, and
 **Celestial Engine** showcase scenes entirely in JSON, including procedural torus, crystal, and
@@ -154,8 +155,8 @@ last valid scene when JSON, parameter values, or retained object references are 
 
 The **GLTF ↓** and **USD ↓** actions export the currently valid scene as a static interchange
 snapshot. Procedural meshes, starfields, and retained instances are baked into glTF 2.0 or ASCII
-USD meshes with materials, textures, camera, and supported lights. ANARI animations and
-renderer-specific bloom, fog, and HDR presentation settings stay in the editable ANARI JSON.
+USD meshes with materials, textures, camera, and supported lights. ANARI animations and optional
+renderer preset parameters for bloom, fog, and HDR presentation stay in the editable ANARI JSON.
 
 The optional, experimental `@luma.gl/anari/schemas` entry point exports Zod schemas and the
 generated draft-07 JSON Schema without adding Zod to imports of the core ANARI rendering API:

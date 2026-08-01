@@ -221,6 +221,27 @@
         color: #bdaeff;
       }
 
+      .renderer-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: 5px;
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+
+      .renderer-selector {
+        max-width: 96px;
+        border: 1px solid rgba(191, 203, 247, 0.16);
+        border-radius: 5px;
+        background: rgba(7, 9, 17, 0.82);
+        color: #e5e9ff;
+        font: inherit;
+        font-size: 10px;
+        letter-spacing: 0;
+      }
+
       .apply-button {
         margin-left: 5px;
         padding: 8px 11px;
@@ -476,6 +497,15 @@
               <button id="copy-scene" class="tool-button">COPY</button>
               <button id="export-gltf" class="tool-button">GLTF ↓</button>
               <button id="export-usd" class="tool-button">USD ↓</button>
+              <label class="renderer-control">
+                <span>RENDERER</span>
+                <select id="renderer-selector" class="renderer-selector" aria-label="Renderer">
+                  <option value="default">Default</option>
+                  <option value="deferred">Deferred</option>
+                  <option value="debugNormals">Normals</option>
+                  <option value="debugDepth">Depth</option>
+                </select>
+              </label>
               <button id="apply-scene" class="apply-button">APPLY ↵</button>
             </div>
           </div>

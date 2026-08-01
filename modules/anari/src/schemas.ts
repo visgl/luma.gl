@@ -236,6 +236,7 @@ const rendererProperties = {
 export const ANARIRendererSchema = z
   .discriminatedUnion('@@type', [
     z.strictObject({'@@type': z.literal('default'), ...rendererProperties}),
+    z.strictObject({'@@type': z.literal('deferred'), ...rendererProperties}),
     z.strictObject({'@@type': z.literal('debugNormals'), ...rendererProperties}),
     z.strictObject({'@@type': z.literal('debugDepth'), ...rendererProperties})
   ])
@@ -289,7 +290,7 @@ export const ANARISceneSchema = z
     name: identifierSchema.describe('Human-readable scene title.'),
     description: z.string().optional(),
     camera: ANARICameraSchema,
-    renderer: ANARIRendererSchema,
+    renderer: ANARIRendererSchema.optional(),
     geometries: z.record(identifierSchema, ANARIGeometrySchema),
     textures: z.record(identifierSchema, ANARITextureSchema).optional(),
     materials: z.record(identifierSchema, ANARIMaterialSchema),

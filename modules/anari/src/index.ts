@@ -1,4 +1,5 @@
 export {ANARIDevice} from './anari-device';
+export type {ANARIRendererRuntime} from './anari-renderer-runtime';
 export {
   ANARIArray,
   ANARICamera,

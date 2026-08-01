@@ -121,7 +121,7 @@ test('deferred lighting resolves G-buffer material attachments on WebGPU', async
   });
   const emissiveOcclusionTexture = device.createTexture({
     id: 'deferred-lighting-emissive-occlusion',
-    format: 'rgba8uint',
+    format: 'rgba16float',
     width,
     height,
     usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
@@ -166,7 +166,7 @@ test('deferred lighting resolves G-buffer material attachments on WebGPU', async
         new Float32Array([0.01, 0.01, 0.01, 1]),
         new Float32Array([0.5, 0.5, 1, 0.4]),
         new Float32Array([0.72, 0.12, 0.08, 0.35]),
-        new Float32Array([5, 3, 0, 255])
+        new Float32Array([5, 3, 0, 1])
       ],
       clearDepth: 0.5
     });
@@ -185,6 +185,9 @@ test('deferred lighting resolves G-buffer material attachments on WebGPU', async
         deferredLighting: {
           inverseProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
           ambientColor: [0.04, 0.04, 0.05],
+          exposure: 1,
+          fogColor: [0.025, 0.035, 0.075],
+          fogDensity: 0,
           directionalLightDirectionView: [0.2, 0.7, -0.5],
           directionalLightColor: [1, 0.95, 0.9],
           directionalLightIntensity: 2,

@@ -14,6 +14,8 @@ import {
   ANARIWorld
 } from './anari-objects';
 import {ANARIRenderingRuntime} from './anari-rendering-runtime';
+import {ANARIDeferredRenderingRuntime} from './anari-deferred-rendering-runtime';
+import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import type {
   ANARIArrayParameters,
   ANARICameraParameters,
@@ -47,7 +49,7 @@ const OBJECT_SUBTYPES: Record<ANARIObjectType, readonly string[]> = {
   instance: ['transform'],
   light: ['ambient', 'directional', 'point', 'spot'],
   material: ['matte', 'physicallyBased'],
-  renderer: ['default', 'debugNormals', 'debugDepth'],
+  renderer: ['default', 'deferred', 'debugNormals', 'debugDepth'],
   sampler: ['image2D'],
   surface: ['default'],
   world: ['default']
@@ -74,7 +76,7 @@ export class ANARIDevice {
   readonly device: Device;
   readonly extensions = SUPPORTED_EXTENSIONS;
 
-  private renderingRuntime: ANARIRenderingRuntime | null = null;
+  private readonly renderingRuntimes = new Map<'forward' | 'deferred', ANARIRendererRuntime>();
 
   constructor(device: Device) {
     this.device = device;
@@ -146,16 +148,29 @@ export class ANARIDevice {
   }
 
   renderFrame(frame: ANARIFrame): ANARIFrameStatistics {
-    this.renderingRuntime ||= new ANARIRenderingRuntime(this.device);
-    return this.renderingRuntime.render(frame);
+    const rendererSubtype = frame.getParameter('renderer')?.subtype;
+    const runtimeType = rendererSubtype === 'deferred' ? 'deferred' : 'forward';
+    let renderingRuntime = this.renderingRuntimes.get(runtimeType);
+    if (!renderingRuntime) {
+      renderingRuntime =
+        runtimeType === 'deferred'
+          ? new ANARIDeferredRenderingRuntime(this.device)
+          : new ANARIRenderingRuntime(this.device);
+      this.renderingRuntimes.set(runtimeType, renderingRuntime);
+    }
+    return renderingRuntime.render(frame);
   }
 
   destroyFrame(frame: ANARIFrame): void {
-    this.renderingRuntime?.destroyFrame(frame);
+    for (const renderingRuntime of this.renderingRuntimes.values()) {
+      renderingRuntime.destroyFrame(frame);
+    }
   }
 
   destroy(): void {
-    this.renderingRuntime?.destroy();
-    this.renderingRuntime = null;
+    for (const renderingRuntime of this.renderingRuntimes.values()) {
+      renderingRuntime.destroy();
+    }
+    this.renderingRuntimes.clear();
   }
 }
