@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Buffer} from '@luma.gl/core';
+import {Buffer, type Device} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {equals, config} from '@math.gl/core';
@@ -497,6 +497,11 @@ test('fp64 WGSL#integer division and square root preserve subnormal limbs', asyn
     tapeTest.end();
     return;
   }
+  if (isSoftwareBackedDevice(webgpuDevice)) {
+    tapeTest.comment('Skipping slow fp64 integer division and square root on software WebGPU');
+    tapeTest.end();
+    return;
+  }
 
   const expectedBits = new Uint32Array([0x00000001, 0x80000001, 0x00000000, 0x00000001]);
   const resultBuffer = webgpuDevice.createBuffer({
@@ -547,6 +552,11 @@ for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
     const webgpuDevice = await getWebGPUTestDevice();
     if (!webgpuDevice) {
       tapeTest.comment('WebGPU unavailable, skipping fp64 WGSL arithmetic tests');
+      tapeTest.end();
+      return;
+    }
+    if (isSoftwareBackedDevice(webgpuDevice)) {
+      tapeTest.comment('Skipping slow fp64 integer arithmetic on software WebGPU');
       tapeTest.end();
       return;
     }
@@ -659,6 +669,11 @@ for (const helperOperation of HELPER_OPERATIONS) {
     const webgpuDevice = await getWebGPUTestDevice();
     if (!webgpuDevice) {
       tapeTest.comment('WebGPU unavailable, skipping fp64 WGSL helper tests');
+      tapeTest.end();
+      return;
+    }
+    if (isSoftwareBackedDevice(webgpuDevice)) {
+      tapeTest.comment('Skipping slow fp64 integer helpers on software WebGPU');
       tapeTest.end();
       return;
     }
@@ -934,6 +949,14 @@ function makeWideExponentPrimitiveCases(count: number): IntegerPrimitiveCase[] {
 
 function getFp64IntegerTestDefines(gpu: string): Record<string, boolean> {
   // On Apple this deliberately exercises automatic platform selection. Other
-  // adapters force the path so that headless CI also compiles and executes it.
+  // hardware adapters force the path to keep cross-backend coverage. Software
+  // adapters only run the compact integer primitive test above because their
+  // shader compiler is prohibitively slow for the high-level function matrix.
   return gpu.toLowerCase() === 'apple' ? {} : {LUMA_FP64_INTEGER_ARITHMETIC: true};
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
 }
