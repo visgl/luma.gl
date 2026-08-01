@@ -142,7 +142,7 @@ export type ANARIJSONScene = {
   name: string;
   description?: string;
   camera: JSONCameraDeclaration;
-  renderer: JSONRendererDeclaration;
+  renderer?: JSONRendererDeclaration;
   geometries: Record<string, JSONGeometryDeclaration>;
   textures?: Record<string, JSONTextureDeclaration>;
   materials: Record<string, JSONMaterialDeclaration>;
@@ -179,9 +179,22 @@ const LIGHT_SUBTYPES: readonly ANARILightSubtype[] = ['ambient', 'directional', 
 const CAMERA_SUBTYPES: readonly ANARICameraSubtype[] = ['perspective', 'orthographic'];
 const RENDERER_SUBTYPES: readonly ANARIRendererSubtype[] = [
   'default',
+  'deferred',
   'debugNormals',
   'debugDepth'
 ];
+
+const DEFAULT_RENDERER_DECLARATION: JSONRendererDeclaration = {
+  '@@type': 'default',
+  background: [0.016, 0.019, 0.044, 1],
+  ambientRadiance: 0.1,
+  exposure: 1.5,
+  bloomIntensity: 0.82,
+  bloomThreshold: 0.64,
+  bloomRadius: 8,
+  fogColor: [0.018, 0.025, 0.065],
+  fogDensity: 0.00024
+};
 
 const MATERIAL_TEXTURE_NAMES: readonly JSONMaterialTextureName[] = [
   'baseColorTexture',
@@ -228,7 +241,8 @@ export async function preloadANARIJSONTextures(scene: ANARIJSONScene): Promise<v
 
 export function createANARIJSONScene(
   device: ANARIDevice,
-  scene: ANARIJSONScene
+  scene: ANARIJSONScene,
+  options: {rendererSubtype?: ANARIRendererSubtype} = {}
 ): ANARIJSONSceneHandle {
   if (scene.version !== 1) {
     throw new Error('Scene "version" must be 1.');
@@ -425,7 +439,9 @@ export function createANARIJSONScene(
     direction: cameraParameters.direction || subtractVectors(target, position)
   });
 
-  const {'@@type': rendererSubtype, ...rendererParameters} = scene.renderer;
+  const {'@@type': sceneRendererSubtype, ...rendererParameters} =
+    scene.renderer || DEFAULT_RENDERER_DECLARATION;
+  const rendererSubtype = options.rendererSubtype || sceneRendererSubtype;
   assertSubtype('renderer', rendererSubtype, RENDERER_SUBTYPES);
   const renderer = device.newRenderer(rendererSubtype, rendererParameters);
   const frame = device.newFrame({world, camera, renderer});

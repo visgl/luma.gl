@@ -389,6 +389,7 @@ function configurePresentation(state: USDTranslationState): void {
   ];
   state.scene.camera.near = Math.max(0.01, extent * 0.001);
   state.scene.camera.far = Math.max(200, extent * 18);
+  state.scene.renderer ||= {'@@type': 'default'};
   state.scene.renderer.fogDensity = 0.003 / extent;
 
   const floorIdentifier = makeIdentifier('gallery', 'floor', state);

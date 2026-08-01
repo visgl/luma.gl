@@ -55,12 +55,12 @@ import {
 | `ANARIAnimationSchema` | `orbit`, `bob`, `spin`, `wobble`, `pulse`, and `follow` animations. |
 | `ANARILightSchema` | `ambient`, `directional`, `point`, and `spot` lights. |
 | `ANARICameraSchema` | `perspective` and `orthographic` cameras. |
-| `ANARIRendererSchema` | `default`, `debugNormals`, and `debugDepth` renderer configuration. |
+| `ANARIRendererSchema` | Optional renderer preset configuration for `default`, `deferred`, `debugNormals`, and `debugDepth`. |
 | `ANARISurfaceSchema` | Named geometry/material pairings. |
 | `ANARIGroupSchema` | Reusable retained surfaces and optional lights. |
 | `ANARIInstanceSchema` | Named transform placements and composable animations. |
 | `ANARIStarfieldSchema` | Deterministic retained background-star distributions. |
-| `ANARISceneSchema` | A complete scene and its cross-object semantic references. |
+| `ANARISceneSchema` | A renderer-independent scene and its cross-object semantic references, plus optional renderer presets. |
 | `ANARI_SCENE_JSON_SCHEMA` | Draft-07 JSON Schema generated from `ANARISceneSchema`. |
 | `ANARISceneDescription` | TypeScript scene type inferred from `ANARISceneSchema`. |
 

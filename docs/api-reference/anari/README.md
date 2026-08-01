@@ -91,7 +91,7 @@ The package also exports parameter interfaces, subtype unions, object metadata, 
 | World | `default` |
 | Light | `ambient`, `directional`, `point`, `spot` |
 | Camera | `perspective`, `orthographic` |
-| Renderer | `default`, `debugNormals`, `debugDepth` |
+| Renderer | `default`, `deferred`, `debugNormals`, `debugDepth` |
 | Frame | `default` |
 
 Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead of assuming future implementations expose the same set.
@@ -104,6 +104,7 @@ Query the actual subtype list with `anariDevice.getObjectSubtypes(type)` instead
 | Matte and physically based materials | Supported | Supported |
 | PBR image samplers and UV transforms | Supported | Supported |
 | Ambient, directional, point, and spot lighting | Supported | Supported |
+| Deferred renderer | Supported | WebGPU-only G-buffer plus direct deferred lighting. |
 | Debug normals and depth renderers | Supported | Supported |
 | Bloom and fog | Supported | Supported |
 | Extended-range, Display P3 presentation | Supported on compatible displays and browsers | Not supported; SDR fallback |
@@ -118,7 +119,8 @@ The private package includes a JSON scene playground at
 reported development-server URL. The playground translates deck.gl-inspired `@@type`
 declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism
 meshes, starfield distributions, composable transform animations, lights following named
-instances, cameras, and renderer options into the API documented on these pages. The complete
+instances, cameras, and optional renderer presets into the API documented on these pages. The active
+renderer subtype is selected as frame state outside the renderer-independent scene. The complete
 Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable
 JSON presets.
 

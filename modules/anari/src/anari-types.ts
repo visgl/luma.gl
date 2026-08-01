@@ -33,7 +33,7 @@ export type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 export type ANARISamplerSubtype = 'image2D';
 export type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
 export type ANARICameraSubtype = 'perspective' | 'orthographic';
-export type ANARIRendererSubtype = 'default' | 'debugNormals' | 'debugDepth';
+export type ANARIRendererSubtype = 'default' | 'deferred' | 'debugNormals' | 'debugDepth';
 
 export type ANARIVector3 = readonly [number, number, number];
 export type ANARIVector4 = readonly [number, number, number, number];

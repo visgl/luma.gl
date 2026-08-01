@@ -23,6 +23,9 @@ export type DeferredPointLight = {
 type DeferredLightingUniforms = {
   inverseProjectionMatrix: Readonly<NumberArray16>;
   ambientColor: Readonly<NumberArray3>;
+  exposure: number;
+  fogColor: Readonly<NumberArray3>;
+  fogDensity: number;
   directionalLightDirectionView: Readonly<NumberArray3>;
   directionalLightColor: Readonly<NumberArray3>;
   directionalLightIntensity: number;
@@ -84,6 +87,9 @@ const DEFERRED_LIGHTING_MAX_POINT_LIGHTS: u32 = ${MAX_DEFERRED_POINT_LIGHTS}u;
 struct DeferredLightingUniforms {
   inverseProjectionMatrix: mat4x4f,
   ambientColor: vec3f,
+  exposure: f32,
+  fogColor: vec3f,
+  fogDensity: f32,
   directionalLightDirectionView: vec3f,
   directionalLightColor: vec3f,
   directionalLightIntensity: f32,
@@ -102,7 +108,7 @@ struct DeferredPointLight {
 @group(0) @binding(auto) var normalTextureSampler: sampler;
 @group(0) @binding(auto) var baseColorMetallicTexture: texture_2d<f32>;
 @group(0) @binding(auto) var baseColorMetallicTextureSampler: sampler;
-@group(0) @binding(auto) var emissiveOcclusionTexture: texture_2d<u32>;
+@group(0) @binding(auto) var emissiveOcclusionTexture: texture_2d<f32>;
 @group(0) @binding(auto) var<storage, read> pointLights: array<DeferredPointLight>;
 
 fn deferredLighting_reconstructViewPosition(uv: vec2f, depth: f32) -> vec3f {
@@ -194,9 +200,7 @@ fn deferredLighting_sampleColor(
   let emissiveOcclusionCoordinates = vec2i(
     clamp(sceneCoord * texSize, vec2f(0.0), texSize - vec2f(1.0))
   );
-  let emissiveOcclusion = vec4f(
-    textureLoad(emissiveOcclusionTexture, emissiveOcclusionCoordinates, 0)
-  ) / 255.0;
+  let emissiveOcclusion = textureLoad(emissiveOcclusionTexture, emissiveOcclusionCoordinates, 0);
   let emissive = max(emissiveOcclusion.rgb, vec3f(0.0));
   let occlusion = clamp(emissiveOcclusion.a, 0.0, 1.0);
   let viewPosition = deferredLighting_reconstructViewPosition(sceneCoord, depth);
@@ -240,6 +244,11 @@ fn deferredLighting_sampleColor(
     );
   }
 
+  let cameraDistance = length(viewPosition);
+  let fogAmount = 1.0 - exp(-cameraDistance * cameraDistance * deferredLighting.fogDensity);
+  color = mix(color, deferredLighting.fogColor, clamp(fogAmount, 0.0, 0.93));
+  color *= deferredLighting.exposure;
+
   return vec4f(color, 1.0);
 }`,
   bindingLayout: [
@@ -255,6 +264,9 @@ fn deferredLighting_sampleColor(
   uniformTypes: {
     inverseProjectionMatrix: 'mat4x4<f32>',
     ambientColor: 'vec3<f32>',
+    exposure: 'f32',
+    fogColor: 'vec3<f32>',
+    fogDensity: 'f32',
     directionalLightDirectionView: 'vec3<f32>',
     directionalLightColor: 'vec3<f32>',
     directionalLightIntensity: 'f32',
@@ -263,6 +275,9 @@ fn deferredLighting_sampleColor(
   propTypes: {
     inverseProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
     ambientColor: {value: [0.04, 0.04, 0.05], private: true},
+    exposure: {value: 1, min: 0, softMax: 4},
+    fogColor: {value: [0.025, 0.035, 0.075], private: true},
+    fogDensity: {value: 0, min: 0, softMax: 0.01},
     directionalLightDirectionView: {value: [0.3, 0.75, 0.55], private: true},
     directionalLightColor: {value: [1, 0.95, 0.86], private: true},
     directionalLightIntensity: {value: 2.5, min: 0, softMax: 8},

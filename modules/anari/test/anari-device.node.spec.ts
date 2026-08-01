@@ -29,7 +29,7 @@ test('ANARI device reports object subtypes and implemented extensions', testCont
 
   testContext.deepEqual(
     device.getObjectSubtypes('renderer'),
-    ['default', 'debugNormals', 'debugDepth'],
+    ['default', 'deferred', 'debugNormals', 'debugDepth'],
     'renderer implementations are discoverable'
   );
   testContext.ok(

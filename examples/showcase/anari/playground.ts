@@ -1,4 +1,4 @@
-import {ANARIDevice, type ANARIVector3} from '@luma.gl/anari';
+import {ANARIDevice, type ANARIRendererSubtype, type ANARIVector3} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
 import {PLAYGROUND_PRESETS} from './playground-presets';
@@ -17,6 +17,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   readonly anari: ANARIDevice;
 
   private scene: ANARIJSONSceneHandle | null = null;
+  private readonly deferredRendererAvailable: boolean;
   private activePresetIndex = 0;
   private liveApplyEnabled = true;
   private pendingApply: number | null = null;
@@ -24,6 +25,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private orbitAzimuth = 0;
   private orbitElevation = 0.2;
   private orbitDistance = 20;
+  private rendererSubtype: ANARIRendererSubtype = 'default';
   private lastStatisticsUpdate = 0;
   private readonly editor: ANARISceneEditor;
   private readonly canvas: HTMLCanvasElement;
@@ -33,6 +35,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     super();
 
     this.anari = new ANARIDevice(device);
+    this.deferredRendererAvailable = device.type === 'webgpu';
     this.editor = new ANARISceneEditor(
       getRequiredElement('scene-editor', HTMLTextAreaElement),
       getRequiredElement('scene-monaco-editor', HTMLDivElement)
@@ -169,6 +172,22 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         this.applyEditorScene();
       }
     });
+
+    const rendererSelector = getRequiredElement('renderer-selector', HTMLSelectElement);
+    const deferredOption = rendererSelector.querySelector<HTMLOptionElement>(
+      'option[value="deferred"]'
+    );
+    if (deferredOption && !this.deferredRendererAvailable) {
+      deferredOption.disabled = true;
+      deferredOption.title = 'Deferred rendering requires WebGPU.';
+    }
+    rendererSelector.addEventListener('change', event => {
+      const selector = event.currentTarget;
+      if (selector instanceof HTMLSelectElement) {
+        this.rendererSubtype = selector.value as ANARIRendererSubtype;
+        this.applyEditorScene();
+      }
+    });
   }
 
   private selectPreset(presetIndex: number): void {
@@ -219,7 +238,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       this.editor.clearIssues();
       const sceneDescription: ANARIJSONScene = validatedScene.data;
-      const nextScene = createANARIJSONScene(this.anari, sceneDescription);
+      const nextScene = createANARIJSONScene(this.anari, sceneDescription, {
+        rendererSubtype: this.rendererSubtype
+      });
       const previousScene = this.scene;
       this.scene = nextScene;
       previousScene?.destroy();

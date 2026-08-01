@@ -118,7 +118,7 @@ anariDevice.getObjectSubtypes('geometry');
 // ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
 
 anariDevice.getObjectSubtypes('renderer');
-// ['default', 'debugNormals', 'debugDepth']
+// ['default', 'deferred', 'debugNormals', 'debugDepth']
 ```
 
 The `ANARIObjectType` union is:

@@ -85,7 +85,7 @@ new ANARIRenderer(
 );
 
 newRenderer(
-  subtype?: 'default' | 'debugNormals' | 'debugDepth',
+  subtype?: 'default' | 'deferred' | 'debugNormals' | 'debugDepth',
   parameters?: ANARIRendererParameters
 ): ANARIRenderer;
 ```
@@ -134,6 +134,19 @@ const renderer = anariDevice.newRenderer('default', {
 ```
 
 Bloom renders into a temporary frame-sized texture before composing the result to the canvas. The intermediate texture uses the underlying device's preferred presentation format, preserving HDR values when the canvas uses `rgba16float`.
+
+### Deferred renderer
+
+```ts
+const renderer = anariDevice.newRenderer('deferred', {
+  ambientRadiance: 0.08,
+  background: [0.006, 0.008, 0.018, 1]
+});
+```
+
+`deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Spot lights are mapped onto deferred point lights in this first implementation.
+
+The deferred path is intended as an architecture baseline for richer ANARI renderers. It does not yet include the full Deferred Illumination Lab chain such as clustered light bins, GTAO, SSGI, SSR, velocity history, or bloom.
 
 ### Debug normals
 
@@ -269,7 +282,7 @@ type ANARIGeometrySubtype = 'triangle' | 'sphere' | 'cylinder' | 'cone' | 'quad'
 type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
 type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
 type ANARICameraSubtype = 'perspective' | 'orthographic';
-type ANARIRendererSubtype = 'default' | 'debugNormals' | 'debugDepth';
+type ANARIRendererSubtype = 'default' | 'deferred' | 'debugNormals' | 'debugDepth';
 ```
 
 All parameter interfaces, object classes, subtype aliases, object metadata, and frame statistics are exported from `@luma.gl/anari`.
