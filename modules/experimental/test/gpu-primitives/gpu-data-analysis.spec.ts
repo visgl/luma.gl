@@ -8,9 +8,11 @@ import {
   GPUCommandGraph,
   GPUGridAggregation,
   GPUGridBinning,
+  GPUGroupAggregation,
   GPUHistogram,
   GPUReduction,
   type GPUGridAggregationOperation,
+  type GPUGroupAggregationOperation,
   type GPUReductionOperation
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -418,6 +420,83 @@ test('GPUHistogram clears counts for every graph encoding and composes with redu
   t.end();
 });
 
+test('GPUGroupAggregation counts dense keys with optional dynamic selection', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const keys = Uint32Array.from([0, 1, 3, 4, 0xffffffff, 1, 0]);
+  t.deepEqual(
+    await runGroupAggregation(device, keys, 4),
+    [2, 2, 0, 1],
+    'dense keys count into output rows and out-of-range keys are ignored'
+  );
+  t.deepEqual(
+    await runGroupAggregation(device, keys, 4, Uint32Array.from([7, 0, 1, 1, 1, 1, 0])),
+    [1, 1, 0, 1],
+    'nonzero mask rows contribute to their groups'
+  );
+  t.deepEqual(
+    await runGroupAggregation(
+      device,
+      keys,
+      4,
+      Uint32Array.from([7, 0, 1, 1, 1, 1, 0]),
+      Uint32Array.from({length: keys.length}, () => 1)
+    ),
+    [2, 2, 0, 1],
+    'rewriting the selection changes counts without recompiling the graph'
+  );
+  t.deepEqual(
+    await runGroupAggregation(device, new Uint32Array(0), 3),
+    [0, 0, 0],
+    'empty input still clears every group'
+  );
+
+  const globalKeys = Uint32Array.from({length: 301}, (_, index) => index);
+  t.deepEqual(
+    await runGroupAggregation(device, globalKeys, 300),
+    Array.from({length: 300}, () => 1),
+    'more than 256 groups uses global atomics and ignores key 300'
+  );
+  t.end();
+});
+
+test('GPUGroupAggregation preserves aligned vector chunks', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runVectorGroupAggregation(
+    device,
+    [Uint32Array.from([0, 1]), new Uint32Array(0), Uint32Array.from([1, 3, 9])],
+    [Uint32Array.from([1, 0]), new Uint32Array(0), Uint32Array.from([1, 1, 1])],
+    4
+  );
+  t.deepEqual(result.counts, [1, 1, 0, 1], 'aligned non-empty chunks share dense counts');
+  t.deepEqual(
+    result.nodeOrder,
+    [
+      'gpu-group-aggregation-clear',
+      'gpu-group-aggregation-chunk-0-local',
+      'gpu-group-aggregation-chunk-2-local'
+    ],
+    'one clear precedes ordered per-chunk accumulation'
+  );
+  t.equal(
+    result.logicalTransientBufferCount,
+    0,
+    'group counting does not pack chunks or allocate scratch storage'
+  );
+  t.end();
+});
+
 test('GPUGridBinning handles literal/GPU bounds, boundaries, and both atomic paths', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -681,6 +760,44 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
     /strictly increasing/,
     'literal histogram edges must be strictly increasing'
   );
+  t.throws(
+    () =>
+      new GPUGroupAggregation({
+        keys: input,
+        output: two,
+        operation: 'median' as GPUGroupAggregationOperation
+      }),
+    /operation must be count/,
+    'unsupported group statistics are rejected'
+  );
+  t.throws(
+    () =>
+      new GPUGroupAggregation({
+        keys: input,
+        mask: graph.createDataView(inputHandle, {format: 'uint32', length: 3}),
+        output: two
+      }),
+    /lengths must match/,
+    'group keys and masks require row alignment'
+  );
+  t.throws(
+    () =>
+      new GPUGroupAggregation({
+        keys: input,
+        output: graph.createDataView(outputHandle, {format: 'uint32', length: 0})
+      }),
+    /at least one group/,
+    'group output must define a nonempty key range'
+  );
+  t.throws(
+    () =>
+      new GPUGroupAggregation({
+        keys: input,
+        output: graph.createDataView(inputHandle, {format: 'uint32', length: 2})
+      }),
+    /separate buffers/,
+    'group output cannot alias its keys'
+  );
   const positions = graph.createDataView(inputHandle, {format: 'float32x2', length: 4});
   t.throws(
     () => new GPUGridBinning({positions, output: two, gridSize: [2, 2], bounds: [0, 0, 1, 1]}),
@@ -936,6 +1053,101 @@ async function runIrregularVectorHistogram(
   vector.destroy();
   for (const buffer of inputBuffers) buffer.destroy();
   edgesBuffer.destroy();
+  outputBuffer.destroy();
+  return {counts, nodeOrder, logicalTransientBufferCount};
+}
+
+async function runGroupAggregation(
+  device: Device,
+  keys: Uint32Array,
+  groupCount: number,
+  mask?: Uint32Array,
+  updatedMask?: Uint32Array
+): Promise<number[]> {
+  const keysBuffer = createInputBuffer(device, keys);
+  const maskBuffer = mask ? createInputBuffer(device, mask) : undefined;
+  const outputBuffer = createOutputBuffer(device, groupCount);
+  const graph = new GPUCommandGraph(device);
+  const keysView = importView(graph, 'group-keys', keysBuffer, 'uint32', keys.length);
+  const maskView = maskBuffer
+    ? importView(graph, 'group-mask', maskBuffer, 'uint32', mask!.length)
+    : undefined;
+  const output = importView(graph, 'group-counts', outputBuffer, 'uint32', groupCount);
+  new GPUGroupAggregation({keys: keysView, mask: maskView, output}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'group-aggregation-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  if (updatedMask && maskBuffer) {
+    await readUint32(outputBuffer, groupCount);
+    maskBuffer.write(updatedMask);
+    const updatedCommandEncoder = device.createCommandEncoder({id: 'updated-group-selection'});
+    compiled.encode(updatedCommandEncoder, {parameters: undefined});
+    device.submit(updatedCommandEncoder.finish());
+  }
+  const counts = await readUint32(outputBuffer, groupCount);
+  compiled.destroy();
+  keysBuffer.destroy();
+  maskBuffer?.destroy();
+  outputBuffer.destroy();
+  return counts;
+}
+
+async function runVectorGroupAggregation(
+  device: Device,
+  keyChunks: Uint32Array[],
+  maskChunks: Uint32Array[],
+  groupCount: number
+): Promise<{counts: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
+  const keyBuffers = keyChunks.map(chunk => createInputBuffer(device, chunk));
+  const maskBuffers = maskChunks.map(chunk => createInputBuffer(device, chunk));
+  const keysVector = new GPUVector({
+    type: 'data',
+    name: 'group-keys',
+    format: 'uint32',
+    data: keyChunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: keyBuffers[chunkIndex],
+          format: 'uint32',
+          length: chunk.length,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const maskVector = new GPUVector({
+    type: 'data',
+    name: 'group-mask',
+    format: 'uint32',
+    data: maskChunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: maskBuffers[chunkIndex],
+          format: 'uint32',
+          length: chunk.length,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const outputBuffer = createOutputBuffer(device, groupCount);
+  const graph = new GPUCommandGraph(device);
+  const keys = graph.importGPUVector('group-keys', keysVector);
+  const mask = graph.importGPUVector('group-mask', maskVector);
+  const output = importView(graph, 'group-counts', outputBuffer, 'uint32', groupCount);
+  new GPUGroupAggregation({keys, mask, output}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-group-aggregation-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const counts = await readUint32(outputBuffer, groupCount);
+  const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
+  compiled.destroy();
+  keysVector.destroy();
+  maskVector.destroy();
+  for (const buffer of [...keyBuffers, ...maskBuffers]) buffer.destroy();
   outputBuffer.destroy();
   return {counts, nodeOrder, logicalTransientBufferCount};
 }
