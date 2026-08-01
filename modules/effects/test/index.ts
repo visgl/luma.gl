@@ -15,6 +15,7 @@ import './passes/image-adjust-filters/brightnesscontrast.spec';
 import './passes/image-adjust-filters/denoise.spec';
 import './passes/image-adjust-filters/huesaturation.spec';
 import './passes/image-adjust-filters/noise.spec';
+import './passes/image-adjust-filters/persistence.spec';
 import './passes/image-adjust-filters/sepia.spec';
 import './passes/image-adjust-filters/vibrance.spec';
 import './passes/image-adjust-filters/vignette.spec';

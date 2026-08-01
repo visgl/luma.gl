@@ -48,5 +48,6 @@ export const persistenceEffect = {
   name: 'persistence',
   source,
   fs,
+  bindingLayout: [{name: 'persistenceTexture', group: 0}],
   passes: [{filter: true}]
 } as const satisfies ShaderPass;
