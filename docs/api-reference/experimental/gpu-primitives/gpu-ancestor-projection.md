@@ -4,9 +4,18 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="ancestor-projection" />
 
+## Overview
+
 `GPUAncestorProjection` reconnects filtered graph nodes to their nearest visible canonical
 parents. This lets dependency lines remain meaningful when intermediate spans disappear under
 duration, status, runtime, or topology filters.
+
+## Concepts
+
+Projection is different from traversal: it follows each node's one canonical parent chain until it
+finds a visible source ID. The output remains source-aligned, so renderers can replace a hidden
+endpoint without renumbering the original graph. A depth bound and invalid sentinel make cycles,
+missing parents, and malformed chains deterministic GPU data rather than CPU-side exceptions.
 
 ```ts
 import {GPUAncestorProjection} from '@luma.gl/experimental';

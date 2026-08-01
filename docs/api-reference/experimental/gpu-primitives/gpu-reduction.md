@@ -4,8 +4,17 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="reduction" />
 
+## Overview
+
 `GPUReduction` records a deterministic hierarchical reduction over a packed `uint32`, `sint32`,
 or `float32` graph data view or fixed-width graph vector.
+
+## Concepts
+
+A reduction combines many scalar rows into one summary. `sum`, `min`, and `max` produce one value;
+`extent` produces the pair `[minimum, maximum]`. Workgroups first reduce independent blocks, then
+higher levels reduce those partial results until one row remains. This fixed tree avoids CPU
+readback and makes the floating-point order repeatable for a fixed input topology.
 
 ```ts
 new GPUReduction({input: values, output: extent, operation: 'extent'}).addToGraph(graph);

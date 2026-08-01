@@ -85,6 +85,13 @@ export type {
   GPUGridBinningProps
 } from './gpu-grid-binning';
 
+export {GPUGridAggregation} from './gpu-grid-aggregation';
+export type {
+  GPUGridAggregationPositions,
+  GPUGridAggregationProps,
+  GPUGridAggregationWeights
+} from './gpu-grid-aggregation';
+
 export {
   decodeGPUIndexPickInfo,
   GPUIndexPickingTarget,

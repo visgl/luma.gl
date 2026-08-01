@@ -4,9 +4,18 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="index-picking" />
 
+## Overview
+
 `GPUIndexPickingTarget` declares fixed-size WebGPU attachments for integer object picking and adds
 an explicit single-pixel texture-to-buffer copy. It does not render, submit, map buffers, manage
 highlight state, or own application UI.
+
+## Concepts
+
+GPU picking renders stable object identity into an integer attachment alongside ordinary color and
+depth. Copying one device pixel to a mapped staging buffer reveals the front-most object and batch
+at that coordinate. Keeping identity separate from display color avoids color-space ambiguity and
+lets the same source IDs flow through visibility, rendering, and interaction.
 
 ```ts
 const target = new GPUIndexPickingTarget(graph, {

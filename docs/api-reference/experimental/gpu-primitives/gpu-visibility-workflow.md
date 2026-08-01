@@ -4,10 +4,20 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="visibility-workflow" />
 
+## Overview
+
 `GPUVisibilityWorkflow` is a renderer-independent command-graph fragment that intersects
 source-aligned visibility masks, stably compacts visible source IDs, and publishes the visible
 count. The count can point directly at an indirect draw command, so neither filtering nor drawing
 requires CPU readback.
+
+## Concepts
+
+A predicate answers one visibility question per source row; the workflow combines those answers
+into one canonical mask and materializes the accepted identities. Stable compaction preserves
+source order, and the GPU-resident count defines the valid prefix of the output. Renderers consume
+that fixed contract without knowing whether rows were rejected by time, bounds, LOD, selection, or
+a combination of them.
 
 ```ts
 import {GPUVisibilityWorkflow} from '@luma.gl/experimental';

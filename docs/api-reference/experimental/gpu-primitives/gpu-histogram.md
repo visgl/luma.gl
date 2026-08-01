@@ -4,8 +4,20 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="histogram" />
 
+## Overview
+
 `GPUHistogram` counts packed scalar values into a caller-owned `uint32` output view. The output
 length defines the bin count.
+
+## Concepts
+
+A histogram partitions a numeric domain into equal-width intervals and counts how many values land
+in each interval. The minimum is inclusive, the maximum is included in the final bin, and values
+outside the domain are ignored. A literal domain is fixed at graph construction, a GPU domain can
+be produced by another node, and `'auto'` inserts an extent reduction.
+
+The output is a distribution, not a prefix sum. Compose it with inclusive `GPUScan` to obtain a
+cumulative distribution, or reduce the bins to validate the accepted-row total.
 
 ```ts
 new GPUHistogram({input: values, output: counts, domain: 'auto'}).addToGraph(graph);

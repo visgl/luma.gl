@@ -4,7 +4,16 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="compaction" />
 
+## Overview
+
 `GPUCompaction` stably selects packed `uint32` values using packed `uint32` flags.
+
+## Concepts
+
+Compaction converts a sparse keep/discard decision into a dense output. An exclusive scan assigns
+each selected row its destination index, a scatter copies selected values in source order, and one
+count reports the valid output prefix. For input `[8, 3, 5, 2]` and flags `[1, 0, 1, 0]`, the valid
+output is `[8, 5]` with count `2`; capacity beyond that prefix is unspecified.
 
 ```ts
 new GPUCompaction({

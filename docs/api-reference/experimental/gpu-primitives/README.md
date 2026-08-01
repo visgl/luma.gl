@@ -11,6 +11,8 @@ import {GPUDataAnalysisExample, GPUFrustumCullingExample, GPUTraceViewerExample}
   <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
 </p>
 
+## Overview
+
 This guide proposes a direction for luma.gl 10 and documents the first working proof of that
 direction. The central idea is simple: luma.gl can have more lasting impact by exposing reusable
 GPU building blocks than by accumulating isolated visual effects. A bloom implementation, a
@@ -41,10 +43,22 @@ indirect draw arguments
 pre-recorded render commands
 ```
 
+## Concepts
+
+A **primitive** is a narrow reusable GPU operation with explicit input, output, ownership, and
+encoding contracts. An **algorithm** may compose several compute passes to provide one data
+semantic such as scan, compaction, reduction, or sorting. A **workflow** combines primitives around
+an application-level outcome such as visibility or picking. `GPUCommandGraph` schedules all of
+them by declared resource uses without owning submission or the application's frame loop.
+
+These layers deliberately preserve GPU-resident identity and dataflow. Source rows keep stable IDs,
+variable-size results publish a count alongside fixed-capacity storage, and indirect commands let a
+later render pass consume that count without a CPU synchronization point.
+
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
 `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
-`GPUAncestorProjection`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and
-`DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+`GPUAncestorProjection`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
+`GPUGridAggregation`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
 projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
 four million spans. The sort and data-analysis examples demonstrate independent composable
@@ -66,8 +80,8 @@ is not specific to trace data or two-dimensional rendering.
 <GPUFrustumCullingExample embedded />
 
 The data-analysis example composes extent reduction, histogram counting, histogram-count
-reduction, and grid binning in one reusable graph. It uploads Arrow columns and keeps compilation,
-submission, validation readback, and transient-allocation diagnostics explicit.
+reduction, grid binning, and weighted grid sums in one reusable graph. It uploads Arrow columns and
+keeps compilation, submission, validation readback, and transient-allocation diagnostics explicit.
 
 <GPUDataAnalysisExample embedded />
 
@@ -171,8 +185,8 @@ reachability over stable compressed sparse adjacency. `GPUAncestorProjection` pr
 nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
 parent/child row offsets. `GPUSort` promises stable paired `uint32`
 ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones.
-`GPUReduction`, `GPUHistogram`, and `GPUGridBinning` promise aggregate and binning results while
-selecting hierarchical and atomic implementations internally.
+`GPUReduction`, `GPUHistogram`, `GPUGridBinning`, and `GPUGridAggregation` promise aggregate and
+binning results while selecting hierarchical and atomic implementations internally.
 
 The first algorithms are deliberately typed and curated. Arbitrary WGSL callbacks for compare,
 combine, and predicate functions are attractive, but they significantly expand validation,
@@ -950,7 +964,7 @@ The intended v10 layering is:
 @luma.gl/gpgpu
   GPUScan, GPUCompaction, and reusable visibility workflows
   GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
-  GPUReduction, GPUSort, GPUHistogram
+  GPUReduction, GPUSort, GPUHistogram, GPUGridBinning, GPUGridAggregation
   higher-level table algorithms
 
 @luma.gl/arrow
@@ -1061,7 +1075,8 @@ flowing directly into indirect rendering.
 
 ### Phase 3 — Algorithm and table scaling
 
-**Status:** In progress. Inclusive and segmented `uint32` scans are implemented.
+**Status:** In progress. Inclusive and segmented `uint32` scans plus weighted floating-point grid
+aggregation are implemented.
 
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
@@ -1071,8 +1086,15 @@ preserve carry-in values when a later row starts a segment, and all arithmetic r
 documented modulo-2^32 behavior. The data-analysis example uses inclusive scan for a histogram CDF
 and a segmented inclusive scan for per-row spatial-grid prefixes.
 
+`GPUGridAggregation` pairs `float32x2` positions with aligned `float32` weights and accumulates one
+row-major floating-point sum per cell. Atomic data views and vectors with identical chunk topology
+share the same clear-once contract. Non-finite positions and weights are ignored; atomic
+compare-exchange addition makes `float32` rounding explicit without promising a deterministic
+cross-invocation accumulation order. The data-analysis example composes weighted sums with counts
+over the same imported Arrow batches.
+
 Remaining work extends multi-chunk support to algorithms that still require one packed view, then
-adds weighted and floating-point grid aggregates, irregular-edge and categorical histograms, and
+adds minimum, maximum, and mean grid aggregates, irregular-edge and categorical histograms, and
 batch-aware operations that preserve table structure. Custom associative scans, sparse histograms,
 and multidimensional histograms should be added only with a concrete consumer and an explicit
 numerical or memory contract.
@@ -1182,6 +1204,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
 - [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning)
+- [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)
 - [GPU commands](/docs/api-guide/gpu/gpu-commands)

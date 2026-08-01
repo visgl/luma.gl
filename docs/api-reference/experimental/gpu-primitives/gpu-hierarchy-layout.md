@@ -4,9 +4,19 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="hierarchy-layout" />
 
+## Overview
+
 `GPUHierarchyLayout` converts parent and child expansion flags into effective row heights and
 exclusive GPU-scanned positions. It supports interactive process/thread collapse without
 rebuilding source data or render commands.
+
+## Concepts
+
+A hierarchical list can be laid out as a flat sequence when every child row publishes an effective
+height. Expanded rows keep their configured height; collapsed parents replace their child group
+with one summary height and zero out the remaining children. An exclusive scan turns those heights
+into stable row offsets. Updating expansion flags therefore changes layout entirely on the GPU
+without changing source identity.
 
 ```ts
 import {GPUHierarchyLayout} from '@luma.gl/experimental';

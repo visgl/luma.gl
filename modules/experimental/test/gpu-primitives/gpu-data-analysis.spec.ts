@@ -6,6 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
+  GPUGridAggregation,
   GPUGridBinning,
   GPUHistogram,
   GPUReduction,
@@ -356,6 +357,80 @@ test('GPUGridBinning clears once and accumulates GPUVector chunks in order', asy
   t.end();
 });
 
+test('GPUGridAggregation sums finite weights with float32 atomics', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const positions = Float32Array.from([0, 0, 1, 0, 0, 1, 2, 2, 2, 2, -1, 0, Number.NaN, 1, 1, 1]);
+  const weights = Float32Array.from([1.5, -2, 3, 4, 0.25, 100, 100, Number.POSITIVE_INFINITY]);
+  t.deepEqual(
+    await runGridAggregation(device, positions, weights, [2, 2], [0, 0, 2, 2]),
+    [1.5, -2, 3, 4.25],
+    'finite in-bounds weights contribute to row-major cell sums'
+  );
+  t.deepEqual(
+    await runGridAggregation(device, positions, weights, [2, 2], [0, 0, 2, 2], true),
+    [1.5, -2, 3, 4.25],
+    'GPU-resident bounds preserve weighted sums'
+  );
+  t.deepEqual(
+    await runGridAggregation(
+      device,
+      new Float32Array(0),
+      new Float32Array(0),
+      [2, 2],
+      [0, 0, 1, 1]
+    ),
+    [0, 0, 0, 0],
+    'empty inputs still clear every sum'
+  );
+  t.deepEqual(
+    await runGridAggregation(
+      device,
+      Float32Array.from([0, 0, 0, 0]),
+      Float32Array.from([3.402823466e38, 3.402823466e38]),
+      [1, 1],
+      [0, 0, 0, 0]
+    ),
+    [Number.POSITIVE_INFINITY],
+    'finite contributions may overflow their float32 cell sum'
+  );
+  t.end();
+});
+
+test('GPUGridAggregation preserves paired GPUVector chunk topology', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runVectorGridAggregation(
+    device,
+    [Float32Array.from([0, 0, 1, 0]), new Float32Array(0), Float32Array.from([0, 1, 2, 2])],
+    [Float32Array.from([1.25, 2.5]), new Float32Array(0), Float32Array.from([-3, 4.75])],
+    [2, 2],
+    [0, 0, 2, 2]
+  );
+  t.deepEqual(result.sums, [1.25, 2.5, -3, 4.75], 'aligned chunks accumulate in source order');
+  t.deepEqual(
+    result.nodeOrder,
+    [
+      'gpu-grid-aggregation-clear',
+      'gpu-grid-aggregation-chunk-0-sum',
+      'gpu-grid-aggregation-chunk-2-sum'
+    ],
+    'one clear precedes each non-empty aligned chunk'
+  );
+  t.equal(result.logicalTransientBufferCount, 0, 'paired chunks are not packed or concatenated');
+  t.end();
+});
+
 test('GPU data analysis primitives validate layouts and ownership', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -397,6 +472,20 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
     () => new GPUGridBinning({positions, output: two, gridSize: [2, 2], bounds: [0, 0, 1, 1]}),
     /output.length/,
     'grid output layout is validated'
+  );
+  const weights = graph.createDataView(inputHandle, {format: 'float32', length: 3});
+  const floatOutput = graph.createDataView(outputHandle, {format: 'float32', length: 4});
+  t.throws(
+    () =>
+      new GPUGridAggregation({
+        positions,
+        weights,
+        output: floatOutput,
+        gridSize: [2, 2],
+        bounds: [0, 0, 1, 1]
+      }),
+    /same number of rows/,
+    'weighted grid inputs require row alignment'
   );
   t.end();
 });
@@ -622,6 +711,113 @@ async function runVectorGrid(
   return {counts, nodeOrder, logicalTransientBufferCount};
 }
 
+async function runGridAggregation(
+  device: Device,
+  positionValues: Float32Array,
+  weightValues: Float32Array,
+  gridSize: readonly [number, number],
+  bounds: readonly [number, number, number, number],
+  gpuBounds = false
+): Promise<number[]> {
+  const positionsBuffer = createInputBuffer(device, positionValues);
+  const weightsBuffer = createInputBuffer(device, weightValues);
+  const outputBuffer = createOutputBuffer(device, gridSize[0] * gridSize[1]);
+  const graph = new GPUCommandGraph(device);
+  const positions = importView(
+    graph,
+    'positions',
+    positionsBuffer,
+    'float32x2',
+    positionValues.length / 2
+  );
+  const weights = importView(graph, 'weights', weightsBuffer, 'float32', weightValues.length);
+  const output = importView(graph, 'output', outputBuffer, 'float32', gridSize[0] * gridSize[1]);
+  let aggregationBounds: typeof bounds | ReturnType<typeof importView> = bounds;
+  let boundsBuffer: Buffer | undefined;
+  if (gpuBounds) {
+    boundsBuffer = createInputBuffer(device, Float32Array.from(bounds));
+    aggregationBounds = importView(graph, 'bounds', boundsBuffer, 'float32x4', 1);
+  }
+  new GPUGridAggregation({
+    positions,
+    weights,
+    output,
+    gridSize,
+    bounds: aggregationBounds as never
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'grid-aggregation-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const result = await readFloat32(outputBuffer, output.length);
+  compiled.destroy();
+  positionsBuffer.destroy();
+  weightsBuffer.destroy();
+  outputBuffer.destroy();
+  boundsBuffer?.destroy();
+  return result;
+}
+
+async function runVectorGridAggregation(
+  device: Device,
+  positionChunks: Float32Array[],
+  weightChunks: Float32Array[],
+  gridSize: readonly [number, number],
+  bounds: readonly [number, number, number, number]
+): Promise<{sums: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
+  const positionBuffers = positionChunks.map(chunk => createInputBuffer(device, chunk));
+  const weightBuffers = weightChunks.map(chunk => createInputBuffer(device, chunk));
+  const positionsVector = new GPUVector({
+    type: 'data',
+    name: 'positions',
+    format: 'float32x2',
+    data: positionChunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: positionBuffers[chunkIndex],
+          format: 'float32x2',
+          length: chunk.length / 2,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const weightsVector = new GPUVector({
+    type: 'data',
+    name: 'weights',
+    format: 'float32',
+    data: weightChunks.map(
+      (chunk, chunkIndex) =>
+        new GPUData({
+          buffer: weightBuffers[chunkIndex],
+          format: 'float32',
+          length: chunk.length,
+          ownsBuffer: false
+        })
+    ),
+    ownsData: false
+  });
+  const outputBuffer = createOutputBuffer(device, gridSize[0] * gridSize[1]);
+  const graph = new GPUCommandGraph(device);
+  const positions = graph.importGPUVector('positions', positionsVector);
+  const weights = graph.importGPUVector('weights', weightsVector);
+  const output = importView(graph, 'output', outputBuffer, 'float32', gridSize[0] * gridSize[1]);
+  new GPUGridAggregation({positions, weights, output, gridSize, bounds}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'vector-grid-aggregation-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const sums = await readFloat32(outputBuffer, output.length);
+  const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
+  compiled.destroy();
+  positionsVector.destroy();
+  weightsVector.destroy();
+  for (const buffer of [...positionBuffers, ...weightBuffers]) buffer.destroy();
+  outputBuffer.destroy();
+  return {sums, nodeOrder, logicalTransientBufferCount};
+}
+
 function createInputBuffer(device: Device, values: ScalarArray): Buffer {
   const data = values.length > 0 ? values : new Uint32Array(1);
   return device.createBuffer({data, usage: Buffer.STORAGE | Buffer.COPY_DST});
@@ -651,4 +847,9 @@ function importView<T extends GPUVectorFormat>(
 async function readUint32(buffer: Buffer, length: number): Promise<number[]> {
   const bytes = await buffer.readAsync();
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, length));
+}
+
+async function readFloat32(buffer: Buffer, length: number): Promise<number[]> {
+  const bytes = await buffer.readAsync();
+  return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, length));
 }
