@@ -560,6 +560,7 @@ export const InstancingExample: React.FC = props => (
     directory="showcase"
     template={InstancingApp}
     config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
