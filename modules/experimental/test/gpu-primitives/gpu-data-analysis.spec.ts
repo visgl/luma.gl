@@ -10,6 +10,7 @@ import {
   GPUGridBinning,
   GPUHistogram,
   GPUReduction,
+  type GPUGridAggregationOperation,
   type GPUReductionOperation
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -402,6 +403,65 @@ test('GPUGridAggregation sums finite weights with float32 atomics', async t => {
   t.end();
 });
 
+test('GPUGridAggregation computes minimum, maximum, and mean cell statistics', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const positions = Float32Array.from([0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1]);
+  const weights = Float32Array.from([5, -2, 4, -3, Number.NaN, Number.POSITIVE_INFINITY]);
+  const run = (operation: GPUGridAggregationOperation) =>
+    runGridAggregation(device, positions, weights, [2, 2], [0, 0, 1, 1], false, operation);
+  const mean = await run('mean');
+  const minimum = await run('min');
+  const maximum = await run('max');
+
+  t.deepEqual(minimum.slice(0, 3), [-2, 4, -3], 'minimum retains the smallest finite weight');
+  t.ok(Number.isNaN(minimum[3]), 'minimum marks an empty cell with NaN');
+  t.deepEqual(maximum.slice(0, 3), [5, 4, -3], 'maximum retains the largest finite weight');
+  t.ok(Number.isNaN(maximum[3]), 'maximum marks an empty cell with NaN');
+  t.deepEqual(mean.slice(0, 3), [1.5, 4, -3], 'mean divides the float32 sum by accepted rows');
+  t.ok(Number.isNaN(mean[3]), 'mean marks an empty cell with NaN');
+
+  const emptyMean = await runGridAggregation(
+    device,
+    new Float32Array(0),
+    new Float32Array(0),
+    [2, 2],
+    [0, 0, 1, 1],
+    false,
+    'mean'
+  );
+  t.ok(emptyMean.every(Number.isNaN), 'an empty mean aggregation finalizes every cell to NaN');
+
+  const zeroPositions = Float32Array.from([0, 0, 0, 0]);
+  const zeroWeights = Float32Array.from([0, -0]);
+  const minimumZero = await runGridAggregation(
+    device,
+    zeroPositions,
+    zeroWeights,
+    [1, 1],
+    [0, 0, 0, 0],
+    false,
+    'min'
+  );
+  const maximumZero = await runGridAggregation(
+    device,
+    zeroPositions,
+    zeroWeights,
+    [1, 1],
+    [0, 0, 0, 0],
+    false,
+    'max'
+  );
+  t.ok(Object.is(minimumZero[0], -0), 'minimum uses the ordered-float signed-zero contract');
+  t.ok(Object.is(maximumZero[0], 0), 'maximum uses the ordered-float signed-zero contract');
+  t.end();
+});
+
 test('GPUGridAggregation preserves paired GPUVector chunk topology', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -417,7 +477,7 @@ test('GPUGridAggregation preserves paired GPUVector chunk topology', async t => 
     [2, 2],
     [0, 0, 2, 2]
   );
-  t.deepEqual(result.sums, [1.25, 2.5, -3, 4.75], 'aligned chunks accumulate in source order');
+  t.deepEqual(result.values, [1.25, 2.5, -3, 4.75], 'aligned chunks accumulate in source order');
   t.deepEqual(
     result.nodeOrder,
     [
@@ -428,6 +488,27 @@ test('GPUGridAggregation preserves paired GPUVector chunk topology', async t => 
     'one clear precedes each non-empty aligned chunk'
   );
   t.equal(result.logicalTransientBufferCount, 0, 'paired chunks are not packed or concatenated');
+
+  const mean = await runVectorGridAggregation(
+    device,
+    [Float32Array.from([0, 0, 0, 0]), new Float32Array(0), Float32Array.from([0, 0])],
+    [Float32Array.from([1, 3]), new Float32Array(0), Float32Array.from([5])],
+    [1, 1],
+    [0, 0, 0, 0],
+    'mean'
+  );
+  t.deepEqual(mean.values, [3], 'mean combines sums and counts across aligned chunks');
+  t.deepEqual(
+    mean.nodeOrder,
+    [
+      'gpu-grid-aggregation-initialize',
+      'gpu-grid-aggregation-chunk-0-mean',
+      'gpu-grid-aggregation-chunk-2-mean',
+      'gpu-grid-aggregation-finalize'
+    ],
+    'mean initializes once, accumulates every non-empty chunk, and finalizes once'
+  );
+  t.equal(mean.logicalTransientBufferCount, 1, 'mean owns one transient cell-count buffer');
   t.end();
 });
 
@@ -486,6 +567,19 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
       }),
     /same number of rows/,
     'weighted grid inputs require row alignment'
+  );
+  t.throws(
+    () =>
+      new GPUGridAggregation({
+        positions,
+        weights: graph.createDataView(inputHandle, {format: 'float32', length: 4}),
+        output: floatOutput,
+        operation: 'median' as GPUGridAggregationOperation,
+        gridSize: [2, 2],
+        bounds: [0, 0, 1, 1]
+      }),
+    /operation must be sum, min, max, or mean/,
+    'unsupported grid statistics are rejected'
   );
   t.end();
 });
@@ -717,7 +811,8 @@ async function runGridAggregation(
   weightValues: Float32Array,
   gridSize: readonly [number, number],
   bounds: readonly [number, number, number, number],
-  gpuBounds = false
+  gpuBounds = false,
+  operation: GPUGridAggregationOperation = 'sum'
 ): Promise<number[]> {
   const positionsBuffer = createInputBuffer(device, positionValues);
   const weightsBuffer = createInputBuffer(device, weightValues);
@@ -742,6 +837,7 @@ async function runGridAggregation(
     positions,
     weights,
     output,
+    operation,
     gridSize,
     bounds: aggregationBounds as never
   }).addToGraph(graph);
@@ -764,8 +860,9 @@ async function runVectorGridAggregation(
   positionChunks: Float32Array[],
   weightChunks: Float32Array[],
   gridSize: readonly [number, number],
-  bounds: readonly [number, number, number, number]
-): Promise<{sums: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
+  bounds: readonly [number, number, number, number],
+  operation: GPUGridAggregationOperation = 'sum'
+): Promise<{values: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
   const positionBuffers = positionChunks.map(chunk => createInputBuffer(device, chunk));
   const weightBuffers = weightChunks.map(chunk => createInputBuffer(device, chunk));
   const positionsVector = new GPUVector({
@@ -803,19 +900,21 @@ async function runVectorGridAggregation(
   const positions = graph.importGPUVector('positions', positionsVector);
   const weights = graph.importGPUVector('weights', weightsVector);
   const output = importView(graph, 'output', outputBuffer, 'float32', gridSize[0] * gridSize[1]);
-  new GPUGridAggregation({positions, weights, output, gridSize, bounds}).addToGraph(graph);
+  new GPUGridAggregation({positions, weights, output, operation, gridSize, bounds}).addToGraph(
+    graph
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-grid-aggregation-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
-  const sums = await readFloat32(outputBuffer, output.length);
+  const values = await readFloat32(outputBuffer, output.length);
   const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
   compiled.destroy();
   positionsVector.destroy();
   weightsVector.destroy();
   for (const buffer of [...positionBuffers, ...weightBuffers]) buffer.destroy();
   outputBuffer.destroy();
-  return {sums, nodeOrder, logicalTransientBufferCount};
+  return {values, nodeOrder, logicalTransientBufferCount};
 }
 
 function createInputBuffer(device: Device, values: ScalarArray): Buffer {

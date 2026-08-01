@@ -87,6 +87,7 @@ export type {
 
 export {GPUGridAggregation} from './gpu-grid-aggregation';
 export type {
+  GPUGridAggregationOperation,
   GPUGridAggregationPositions,
   GPUGridAggregationProps,
   GPUGridAggregationWeights
