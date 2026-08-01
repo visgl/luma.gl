@@ -1,0 +1,43 @@
+---
+title: Lightstorm Megacity
+description: Filter, cull, compact, pick, and indirectly render up to one million city records on WebGPU.
+sidebar_custom_props:
+  description: Filter, cull, compact, pick, and indirectly render up to one million city records on WebGPU.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, data]
+---
+
+import {LightstormMegacityExample} from '@site/src/examples';
+
+<LightstormMegacityExample />
+
+Lightstorm Megacity combines a cinematic procedural city with an observable GPU-driven rendering
+pipeline. Choose 50K, 250K, or one million deterministic source records. Every record stays in GPU
+storage while a command graph filters the selected data layer, tests conservative tower bounds
+against the perspective camera, stably compacts the surviving source IDs, writes the result count
+into an indexed indirect command, and replays a fixed render bundle.
+
+The default guided tour is presentation mode. Disable it or drag to enter free exploration, then
+move the pointer over a tower or transit tile to pick its original source record. The optional
+**Tactical visibility proof** replays the same compacted perspective-visible subset from overhead;
+it does not perform a second visibility pass. Switch to **Transit energy grid** to see data-layer
+filtering feed the same compaction and indirect-rendering path.
+
+The live inspector separates source, visible, rejected, nominal, and submitted work. The million
+record setting therefore means one million candidate records, not one million objects rendered in
+every frame. It also reports CPU graph-encoding time, total frame timing, transient-buffer reuse,
+and the command graph's node order. Picking is issued only after pointer movement in exploration
+mode so it does not silently tax the cinematic benchmark.
+
+The city renderer synthesizes facade windows, roof beacons, transit lanes, fog, and a traveling
+light wave in one forward WGSL pass. On a compatible WebGPU display it presents restrained
+extended-luminance highlights through a `rgba16float`, Display P3 canvas; otherwise the shader uses
+an SDR tone-mapping path. Render and picking transforms share the same non-uniform tower records,
+while compute culling uses their conservative bounding spheres.
+
+This first version deliberately demonstrates scalable instance processing rather than virtual
+geometry. It uses one cube mesh and does not claim meshlet LOD, occlusion culling, geometry
+streaming, or a billion triangles rendered per frame. Those are natural next steps; the present
+demo makes the work it actually submits visible today.

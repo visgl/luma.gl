@@ -30,6 +30,44 @@
   },
   {
     "type": "category",
+    "label": "WebGPU",
+    "items": [
+      "showcase/lightstorm-megacity",
+      {
+        "type": "doc",
+        "id": "experimental/advanced-effects",
+        "label": "Effects: Visualization City"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/deferred-rendering",
+        "label": "Deferred Rendering: Illumination Lab"
+      },
+      {
+        "type": "doc",
+        "id": "experimental/shadow-map",
+        "label": "Effects: Shadow Map Quality"
+      },
+      "experimental/gpt-2",
+      {
+        "type": "category",
+        "label": "GPU Data - luma v10",
+        "items": ["v10/gpgpu"]
+      },
+      {
+        "type": "category",
+        "label": "GPU Command Graph - luma v10",
+        "items": [
+          "experimental/gpu-frustum-culling",
+          "experimental/gpu-trace-viewer",
+          "experimental/gpu-sort",
+          "experimental/gpu-data-analysis"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "category",
     "label": "API",
     "items": [
       "api/animation",
@@ -95,26 +133,10 @@
       },
       {
         "type": "doc",
-        "id": "experimental/advanced-effects",
-        "label": "Effects: Visualization City"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/deferred-rendering",
-        "label": "Deferred Rendering: Illumination Lab"
-      },
-      {
-        "type": "doc",
-        "id": "experimental/shadow-map",
-        "label": "Effects: Shadow Map Quality"
-      },
-      {
-        "type": "doc",
         "id": "experimental/bloom",
         "label": "Effects: Bloom"
       },
       "experimental/fp64",
-      "experimental/gpt-2",
       "experimental/text-space-crawl",
       {
         "type": "doc",
@@ -126,21 +148,6 @@
         "id": "experimental/webxr-kaleidoscope",
         "label": "Texture WebXR"
       }
-    ]
-  },
-  {
-    "type": "category",
-    "label": "GPU Data - luma v10",
-    "items": ["v10/gpgpu"]
-  },
-  {
-    "type": "category",
-    "label": "GPU Command Graph - luma v10",
-    "items": [
-      "experimental/gpu-frustum-culling",
-      "experimental/gpu-trace-viewer",
-      "experimental/gpu-sort",
-      "experimental/gpu-data-analysis"
     ]
   },
   {
