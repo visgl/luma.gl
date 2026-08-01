@@ -3,6 +3,13 @@ const {OptionDefaults: typedocOptionDefaults} = require('typedoc');
 const path = require('path');
 
 const websiteBaseUrl = process.env.WEBSITE_BASE_URL || '/';
+const websiteBasePathSegments = websiteBaseUrl.split('/').filter(Boolean);
+const websiteRoutePrefix =
+  websiteBasePathSegments.length === 0 ? '' : `/${websiteBasePathSegments.join('/')}`;
+
+function prefixWebsiteRoute(route) {
+  return `${websiteRoutePrefix}${route}`;
+}
 
 const config = getDocusaurusConfig({
   projectName: 'luma.gl',
@@ -112,7 +119,9 @@ module.exports = {
         siteTitle: 'luma.gl',
         siteDescription:
           'WebGPU and WebGL2 framework documentation for visualization and compute.',
-        depth: 3,
+        // Plugin 1.x builds its route tree from base-prefixed Docusaurus paths.
+        // Preserve the configured three levels after the post-build base-path normalization.
+        depth: Math.min(5, 3 + websiteBasePathSegments.length),
         enableDescriptions: true,
         includeOrder: [
           '/docs/getting-started',
@@ -120,7 +129,7 @@ module.exports = {
           '/docs/api-guide/**',
           '/docs/api-reference/**',
           '/docs/developer-guide/**'
-        ],
+        ].map(prefixWebsiteRoute),
         onRouteError: 'throw',
         content: {
           enableMarkdownFiles: true,
@@ -131,7 +140,8 @@ module.exports = {
           includeDocs: true,
           includeVersionedDocs: false,
           includeGeneratedIndex: true,
-          excludeRoutes: ['/docs/legacy/**', '/examples/**']
+          // Plugin 1.x matches these globs against base-prefixed Docusaurus routes.
+          excludeRoutes: ['/docs/legacy/**', '/examples/**'].map(prefixWebsiteRoute)
         }
       }
     ],

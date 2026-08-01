@@ -6,6 +6,23 @@ const websiteDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url
 const buildDirectory = path.join(websiteDirectory, 'build');
 const llmsTxtPath = path.join(buildDirectory, 'llms.txt');
 const llmsFullTxtPath = path.join(buildDirectory, 'llms-full.txt');
+const websiteOrigin = 'https://luma.gl';
+const websiteBasePath = normalizeWebsiteBasePath(process.env.WEBSITE_BASE_URL || '/');
+const websiteUrl = new URL(websiteBasePath, websiteOrigin);
+const duplicatedWebsiteBaseUrl =
+  websiteBasePath === '/' ? null : new URL(websiteBasePath.slice(1), websiteUrl).href;
+
+function normalizeWebsiteBasePath(basePath) {
+  const pathSegments = basePath.split('/').filter(Boolean);
+  return pathSegments.length === 0 ? '/' : `/${pathSegments.join('/')}/`;
+}
+
+function stripWebsiteBasePath(pathname) {
+  if (websiteBasePath === '/' || !pathname.startsWith(websiteBasePath)) {
+    return pathname;
+  }
+  return `/${pathname.slice(websiteBasePath.length)}`;
+}
 
 function fail(message) {
   throw new Error(`llms.txt output check failed: ${message}`);
@@ -53,7 +70,7 @@ function resolveGeneratedMarkdownLink(sourcePath, link) {
   let pathname;
   try {
     const url = new URL(link);
-    if (url.hostname !== 'luma.gl') {
+    if (url.origin !== websiteUrl.origin) {
       return null;
     }
     pathname = decodeURIComponent(url.pathname);
@@ -72,6 +89,7 @@ function resolveGeneratedMarkdownLink(sourcePath, link) {
   if (!pathname.endsWith('.md')) {
     return null;
   }
+  pathname = stripWebsiteBasePath(pathname);
   if (path.isAbsolute(pathname) && pathname.startsWith(buildDirectory)) {
     return pathname;
   }
@@ -89,6 +107,10 @@ const llmsTxt = readFileSync(llmsTxtPath, 'utf8');
 if (!llmsTxt.startsWith('# luma.gl\n')) {
   fail('llms.txt has an unexpected title');
 }
+const firstSectionHeading = llmsTxt.match(/^## .+$/m)?.[0];
+if (firstSectionHeading !== '## docs') {
+  fail(`llms.txt has an unexpected first section: ${firstSectionHeading || 'none'}`);
+}
 if (llmsTxt.includes('/docs/legacy/')) {
   fail('llms.txt contains a legacy guide');
 }
@@ -97,12 +119,12 @@ if (llmsTxt.includes('/examples/')) {
 }
 
 const requiredIndexLinks = [
-  'https://luma.gl/docs/getting-started.md',
-  'https://luma.gl/docs/tutorials/hello-triangle.md',
-  'https://luma.gl/docs/api-guide.md',
-  'https://luma.gl/docs/api-reference.md',
-  'https://luma.gl/docs/developer-guide/working-with-ai.md'
-];
+  'docs/getting-started.md',
+  'docs/tutorials/hello-triangle.md',
+  'docs/api-guide.md',
+  'docs/api-reference.md',
+  'docs/developer-guide/working-with-ai.md'
+].map((relativePath) => new URL(relativePath, websiteUrl).href);
 for (const link of requiredIndexLinks) {
   if (!llmsTxt.includes(link)) {
     fail(`llms.txt is missing ${link}`);
@@ -111,6 +133,7 @@ for (const link of requiredIndexLinks) {
 
 const gettingStartedPath = requireFile('docs/getting-started.md');
 const workingWithAiPath = requireFile('docs/developer-guide/working-with-ai.md');
+requireFile('docs.md');
 requireFile('docs/api-guide.md');
 requireFile('docs/api-reference.md');
 
@@ -122,7 +145,7 @@ if (typedocMarkdownFiles.length === 0) {
   fail('generated TypeDoc Markdown references are missing');
 }
 
-const markdownFiles = findFiles(path.join(buildDirectory, 'docs'), '.md');
+const markdownFiles = findFiles(buildDirectory, '.md');
 if (markdownFiles.length < 100) {
   fail(`only ${markdownFiles.length} documentation Markdown files were generated`);
 }
@@ -148,8 +171,12 @@ if (workingWithAi.includes('<DeveloperDocsTabs')) {
 const brokenLinks = [];
 for (const markdownPath of [llmsTxtPath, ...markdownFiles]) {
   const markdown = readFileSync(markdownPath, 'utf8');
+  const relativeMarkdownPath = path.relative(buildDirectory, markdownPath);
   if (markdown.trim().length < 40) {
-    fail(`${path.relative(buildDirectory, markdownPath)} has empty extracted content`);
+    fail(`${relativeMarkdownPath} has empty extracted content`);
+  }
+  if (duplicatedWebsiteBaseUrl && markdown.includes(duplicatedWebsiteBaseUrl)) {
+    fail(`${relativeMarkdownPath} contains a duplicated website base path`);
   }
 
   for (const link of extractMarkdownLinks(markdown)) {

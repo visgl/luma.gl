@@ -142,7 +142,8 @@ does not add an AI disclosure requirement or otherwise change the contribution p
 
 luma.gl combines these ideas into four layers: accurate human documentation, raw
 Markdown plus `llms.txt` for knowledge retrieval, one installable skill for procedural
-work, and an offline evaluation corpus for measuring whether agent behavior improves.
-An embedded assistant, MCP server, additional specialized skills, and a monolithic
-`llms-full.txt` are intentionally deferred until evaluation or runtime-observability
-evidence shows they are needed.
+work, and an offline corpus for manually comparing agent behavior. The repository
+documents the [evaluation protocol](https://github.com/visgl/luma.gl/blob/master/test/llm/README.md);
+CI validates the corpus but does not invoke a model. An embedded assistant, MCP server,
+additional specialized skills, and a monolithic `llms-full.txt` are intentionally
+deferred until evaluation or runtime-observability evidence shows they are needed.

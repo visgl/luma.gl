@@ -5,7 +5,7 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "node ./scripts/sync-example-assets.mjs && docusaurus start",
-    "build": "node ./scripts/sync-example-assets.mjs && docusaurus build && node ./scripts/check-llm-output.mjs",
+    "build": "node ./scripts/sync-example-assets.mjs && docusaurus build && node ./scripts/normalize-llm-output.mjs && node ./scripts/check-llm-output.mjs",
     "build-staging": "WEBSITE_BASE_URL=/luma.gl/ yarn build",
     "lint": "npx tsc --noEmit",
     "swizzle": "docusaurus swizzle",
