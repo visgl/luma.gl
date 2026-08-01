@@ -256,6 +256,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       return;
     }
 
+    const canvasContainer = canvasContainerRef.current;
     let isCancelled = false;
     let animationLoop: AnimationLoop | null = null;
     const defaultCanvasContext = effectiveDevice.getDefaultCanvasContext();
@@ -275,7 +276,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       deviceCanvas.style.display = EXAMPLE_CANVAS_STYLE.display;
       deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
       deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
-      canvasContainerRef.current?.replaceChildren(deviceCanvas);
+      canvasContainer.replaceChildren(deviceCanvas);
       setActiveCpuHotspotProfilerDevice(effectiveDevice);
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
@@ -307,6 +308,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     return () => {
       isCancelled = true;
+      // Route transitions must stop displaying the outgoing example immediately, even when its
+      // asynchronous initialization is still ahead of cleanup in the serialized task queue.
+      canvasContainer.replaceChildren();
 
       currentLumaExampleTask = currentLumaExampleTask
         .then(() => {
@@ -319,7 +323,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           }
 
           clearActiveCpuHotspotProfilerDevice(effectiveDevice);
-          canvasContainerRef.current?.replaceChildren();
           getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
