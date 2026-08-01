@@ -33,9 +33,12 @@ reflections, clustered volumetric scattering, and crepuscular god rays. Expand a
 adjust its quality, transport, or temporal-history controls without scrolling through one
 flattened settings list. Dedicated **Adaptive HDR Exposure** and **Cinematic HDR Bloom** sections
 make the camera response and highlight pyramid independently inspectable.
-GTAO, diffuse global illumination, screen-space reflections, and clustered volumetric lighting
-start with full-resolution intermediate buffers. Lower **Buffer Resolution** in the corresponding
-section when reduced GPU cost matters more than edge fidelity.
+The reusable pipelines default to full-resolution intermediate buffers, while Illumination Lab
+starts its GTAO, diffuse global illumination, screen-space reflections, and clustered volumetric
+lighting controls at a performance-balanced half resolution. Raise **Buffer Resolution** to `1`
+when maximum edge fidelity matters more than history memory and shaded pixels. When an effect is
+disabled and is not the selected diagnostic, the renderer drops that effect pipeline and its
+intermediate and history targets instead of merely hiding its final contribution.
 
 ## Why This Is Not Visualization City
 
@@ -84,7 +87,9 @@ reflection effect.
   scattering, directional occlusion, and anisotropic phase response. **Volume History** controls
   atmospheric temporal stability.
 - Expand **Crepuscular God Rays** and adjust **Ray Intensity**, **Ray Reach**, **Ray Persistence**,
-  **Ray Samples**, and **Sun Position** to reveal radial sunlight shafts behind visible occluders.
+  and **Ray Samples** to reveal radial sunlight shafts behind visible occluders. The radial source
+  follows the same world-space sun used by deferred and volumetric lighting as the camera orbits,
+  and disappears when that sun moves behind the camera.
 - Select **HDR Luminance** to inspect the logarithmic scene-luminance heat map. Tune **Middle
   Gray**, adaptation speeds, and exposure limits to watch the virtual camera respond to changing
   lighting.
@@ -123,12 +128,15 @@ applies a roughness-adaptive depth/normal-aware blur, and adds the result back i
 `createClusteredVolumetricLightingShaderPassPipeline()` then integrates real clustered point
 lights and occluded directional light through exponential height fog, applies Beer-Lambert
 extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
-sun for crepuscular god rays, stabilizes in-scattering at the configured buffer resolution with
-velocity/depth history, and composites the participating medium over the existing opaque result.
+projected scene sun for crepuscular god rays, and ranks a bounded nearby-light set from the
+compute-retained cluster candidates. It stabilizes in-scattering at the configured buffer
+resolution by reprojecting empty space with current/previous camera matrices, applying G-buffer
+velocity to opaque surfaces, and rejecting disocclusions against compact linear-depth history,
+then composites the participating medium over the existing opaque result.
 `createHDRAutoExposureShaderPassPipeline()` builds a center-weighted logarithmic luminance
 pyramid, adapts a persistent GPU exposure target without CPU readback, and applies the current
-camera response. `createBloomShaderPassPipeline()` then extracts, blurs, and combines bright
-highlights across three `rgba16float` scales.
+camera response. `createBloomShaderPassPipeline()` thresholds HDR samples, successively low-pass
+filters, blurs, and combines bright highlights across three `rgba16float` scales.
 A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection/
 volume debug view.
 

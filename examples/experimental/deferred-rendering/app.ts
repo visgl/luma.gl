@@ -49,6 +49,7 @@ const NEAR_PLANE = 0.1;
 const FAR_PLANE = 100;
 const GRID_SIZE = 7;
 const MAX_EXAMPLE_POINT_LIGHTS = MAX_CLUSTERED_POINT_LIGHTS;
+const SUN_DIRECTION_WORLD: NumberArray3 = [0.32, 0.05, -0.95];
 const LIGHT_COLORS: readonly NumberArray3[] = [
   [1, 0.18, 0.08],
   [0.18, 0.55, 1],
@@ -132,8 +133,6 @@ type DeferredRenderingSettings = {
   godRayDensity: number;
   godRayDecay: number;
   godRaySampleCount: number;
-  godRayPositionX: number;
-  godRayPositionY: number;
 };
 
 const DEFAULT_SETTINGS: DeferredRenderingSettings = {
@@ -159,7 +158,7 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   ambientOcclusionRadius: 2.2,
   ambientOcclusionIntensity: 3.2,
   ambientOcclusionStrength: 0.68,
-  ambientOcclusionResolution: 1,
+  ambientOcclusionResolution: 0.5,
   globalIlluminationEnabled: true,
   globalIlluminationRadius: 5.2,
   globalIlluminationIntensity: 3.4,
@@ -167,14 +166,14 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   globalIlluminationRayCount: 8,
   globalIlluminationStepCount: 9,
   globalIlluminationHistoryWeight: 0.88,
-  globalIlluminationResolution: 1,
+  globalIlluminationResolution: 0.5,
   reflectionEnabled: true,
   reflectionStrength: 1.15,
   reflectionIntensity: 1.8,
   reflectionMaxDistance: 26,
   reflectionSampleCount: 56,
   reflectionHistoryWeight: 0.84,
-  reflectionResolution: 1,
+  reflectionResolution: 0.5,
   atmosphereEnabled: true,
   atmosphereDensity: 0.055,
   atmosphereHeightFalloff: 0.28,
@@ -185,14 +184,12 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   atmosphereSampleCount: 10,
   atmosphereHistoryWeight: 0.88,
   atmosphereShadowStrength: 0.76,
-  atmosphereResolution: 1,
+  atmosphereResolution: 0.5,
   godRaysEnabled: true,
   godRayIntensity: 1.65,
   godRayDensity: 0.94,
   godRayDecay: 0.96,
-  godRaySampleCount: 18,
-  godRayPositionX: 0.72,
-  godRayPositionY: 0.16
+  godRaySampleCount: 18
 };
 
 const DEFERRED_RENDERING_BACKGROUND_HTML = `
@@ -202,11 +199,11 @@ const DEFERRED_RENDERING_BACKGROUND_HTML = `
 <p><b>Why GTAO belongs after lighting:</b> a configurable-resolution analytic horizon integral reuses the same depth and view normals to estimate ambient visibility around contacts. G-buffer velocity reprojects the previous AO result, depth rejects disocclusions, and a depth-aware blur removes remaining noise before the AO affects only the isolated ambient contribution, preserving direct light and emissive surfaces.</p>
 <p><b>Where colored bounce comes from:</b> cosine-weighted hemisphere rays gather already-lit radiance from nearby visible surfaces. Cyan, magenta, and amber emitter panels transfer their color onto neighboring walls, floors, and matte materials; velocity, linear-depth rejection, and bilateral filtering stabilize the diffuse bounce.</p>
 <p><b>Where the reflections come from:</b> stochastic screen-space rays bounce from the same view normals into already-lit scene color. Rough surfaces widen the reflection cone; velocity and depth history stabilize animated highlights, while depth/normal-aware denoising preserves sharp mirrors and produces soft glossy lobes.</p>
-<p><b>Why light becomes visible in the air:</b> configurable-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Radial camera-depth visibility traces toward the sun to reveal crepuscular god rays behind occluders; velocity and depth history stabilize the colored light volumes.</p>
+<p><b>Why light becomes visible in the air:</b> configurable-resolution view rays integrate exponential height fog, Beer-Lambert extinction, anisotropic directional scattering, and the same compute-clustered point lights used by the opaque resolve. Radial camera-depth visibility follows the projected scene sun to reveal crepuscular god rays behind occluders; camera-aware reprojection, surface velocity, and linear-depth history stabilize the colored light volumes.</p>
 <p><b>Why HDR changes the image:</b> floating-point G-buffer and lighting passes retain radiance above SDR white. On compatible displays, a Display P3, <code>rgba16float</code>, extended-tone-mapping canvas preserves those concentrated specular highlights and emissive panels instead of clipping them.</p>
-<p><b>Why the highlights feel cinematic:</b> a GPU-resident logarithmic luminance pyramid meters the scene without CPU readback, while persistent exposure history adapts at separate brightening and darkening rates. A half/quarter/eighth-resolution HDR bloom pyramid spreads emissive and specular energy before the final ACES-style tone map.</p>
-<p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, fog, outline, temporal, and motion effects without redrawing material geometry.</p>
-<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. If a cluster exceeds its retained list, that pixel falls back to the active light prefix rather than showing tile-shaped truncation; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, <b>Volumetric Lighting</b>, <b>Volume Transmittance</b>, and <b>God Rays</b> reveal where transport work, uncertain screen-space hits, atmospheric extinction, or directional light shafts accumulate.</p>
+<p><b>Why the highlights feel cinematic:</b> a GPU-resident logarithmic luminance pyramid meters the scene without CPU readback, while persistent exposure history adapts at separate brightening and darkening rates. A successively low-pass-filtered half/quarter/eighth-resolution HDR bloom pyramid spreads emissive and specular energy before the final ACES-style tone map.</p>
+<p><b>Work changes shape:</b> the expensive path becomes roughly geometry + visible pixels × lights in the local cluster, instead of objects × every light. The same G-buffer also feeds GTAO, diffuse global illumination, SSR, and clustered volumes without redrawing material geometry.</p>
+<p><b>Correctness at the limit:</b> candidate bits are compacted in stable light-index order. Volumetric integration ranks a bounded set from each retained cluster list instead of falling back to an unbounded all-light scan; <b>Cluster Occupancy</b>, <b>Indirect Lighting</b>, <b>Bounce Confidence</b>, <b>Reflections</b>, <b>Volumetric Lighting</b>, <b>Volume Transmittance</b>, and <b>God Rays</b> reveal where transport work, uncertain screen-space hits, atmospheric extinction, or directional light shafts accumulate.</p>
 `;
 
 type DeferredSurfaceUniforms = {
@@ -607,6 +604,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   settings: DeferredRenderingSettings = {...DEFAULT_SETTINGS};
   framebufferSize: [number, number];
   previousViewProjectionMatrix = new Matrix4();
+  resetVolumetricHistory = true;
   frameIndex = 0;
   previousFrameTick = 0;
 
@@ -692,6 +690,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.sceneGBuffer.resize({width, height});
       this.ambientLightingRenderer.resize([width, height]);
       this.renderer.resize([width, height]);
+      this.resetVolumetricHistory = true;
       this.frameIndex = 0;
     }
 
@@ -712,6 +711,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const viewMatrix = new Matrix4().lookAt({eye, center: [0, 0.9, 0], up: [0, 1, 0]});
     const inverseViewMatrix = new Matrix4(viewMatrix).invert();
     const viewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
+    const inverseViewProjectionMatrix = new Matrix4(viewProjectionMatrix).invert();
     if (this.frameIndex === 0) {
       this.previousViewProjectionMatrix = new Matrix4(viewProjectionMatrix);
     }
@@ -773,22 +773,29 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const baseColorMetallicTexture = this.sceneGBuffer.getExtraColorTexture('baseColorMetallic');
     const emissiveOcclusionTexture = this.sceneGBuffer.getExtraColorTexture('emissiveOcclusion');
     const ambientColor: NumberArray3 = [0.028, 0.034, 0.055];
-    const ambientLightingTexture = this.ambientLightingRenderer.renderToTexture({
-      sourceTexture: this.sceneGBuffer.colorTexture,
-      bindings: {
-        depthTexture: this.sceneGBuffer.depthTexture,
-        baseColorMetallicTexture,
-        emissiveOcclusionTexture
-      },
-      uniforms: {
-        deferredAmbientLighting: {ambientColor}
-      }
-    });
-    if (!ambientLightingTexture) {
+    const ambientOcclusionPipelineRequired = shouldUseAmbientOcclusionPipeline(this.settings);
+    const ambientLightingTexture = ambientOcclusionPipelineRequired
+      ? this.ambientLightingRenderer.renderToTexture({
+          sourceTexture: this.sceneGBuffer.colorTexture,
+          bindings: {
+            depthTexture: this.sceneGBuffer.depthTexture,
+            baseColorMetallicTexture,
+            emissiveOcclusionTexture
+          },
+          uniforms: {
+            deferredAmbientLighting: {ambientColor}
+          }
+        })
+      : null;
+    if (ambientOcclusionPipelineRequired && !ambientLightingTexture) {
       return;
     }
     const directionalLightDirectionView = normalize3(
-      viewMatrix.transformAsVector([0.42, 0.82, 0.38]) as NumberArray3
+      viewMatrix.transformAsVector(SUN_DIRECTION_WORLD) as NumberArray3
+    );
+    const godRayPosition = projectViewDirectionToScreen(
+      projectionMatrix,
+      directionalLightDirectionView
     );
     const clusterUniforms = this.clusteredLightGrid.getShaderPassUniforms(NEAR_PLANE, FAR_PLANE);
     this.renderer.renderToScreen({
@@ -799,7 +806,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         velocityTexture: this.sceneGBuffer.velocityTexture,
         baseColorMetallicTexture,
         emissiveOcclusionTexture,
-        ambientLightingTexture,
+        ...(ambientLightingTexture ? {ambientLightingTexture} : {}),
         pointLights: this.pointLightBuffer,
         ...this.clusteredLightGrid.getShaderPassBindings()
       },
@@ -905,11 +912,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             this.settings.debugView === 'God Rays'
               ? 0
               : this.settings.atmospherePointLightIntensity,
-          godRayPosition: [this.settings.godRayPositionX, this.settings.godRayPositionY],
-          godRayIntensity: this.settings.godRaysEnabled ? this.settings.godRayIntensity : 0,
+          godRayPosition: godRayPosition || [0.5, 0.5],
+          godRayIntensity:
+            this.settings.godRaysEnabled && godRayPosition ? this.settings.godRayIntensity : 0,
           godRayDensity: this.settings.godRayDensity,
           godRayDecay: this.settings.godRayDecay,
           godRaySampleCount: this.settings.godRaySampleCount,
+          godRaysOnly: this.settings.debugView === 'God Rays' ? 1 : 0,
           maxDistance: 27,
           sampleCount: this.settings.atmosphereSampleCount,
           shadowStrength: this.settings.atmosphereShadowStrength,
@@ -917,8 +926,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         },
         clusteredVolumetricTemporal: {
           inverseProjectionMatrix,
-          historyWeight: this.settings.atmosphereHistoryWeight
+          inverseViewProjectionMatrix,
+          previousViewProjectionMatrix: this.previousViewProjectionMatrix,
+          historyWeight: this.resetVolumetricHistory ? 0 : this.settings.atmosphereHistoryWeight
         },
+        clusteredVolumetricDepthHistoryCopy: {inverseProjectionMatrix},
         clusteredVolumetricComposite: {
           strength: this.settings.atmosphereStrength,
           debugMode:
@@ -965,6 +977,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.previousViewProjectionMatrix = new Matrix4(viewProjectionMatrix);
+    this.resetVolumetricHistory = false;
     this.previousFrameTick = tick;
     this.frameIndex++;
   }
@@ -996,7 +1009,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         makeHtmlCustomPanel({
           id: 'deferred-rendering-description',
           title: 'Overview',
-          html: '<p><b>One geometry pass. Hundreds of lights. A cinematic HDR camera.</b></p><p>Compute-clustered deferred lighting, GTAO, colored screen-space global illumination, shared glossy SSR, anisotropic god rays, GPU-driven eye adaptation, and floating-point bloom all consume one coherent G-buffer.</p><p><b>Why this is different:</b> Illumination Lab goes deeper into physically based materials and advanced light transport. <b>Visualization City</b> is the broader shadow/effect showcase, with cascaded, spot, point, and contact shadows plus SSAO, height fog, outlines, TAA, and motion blur.</p><p>Drag to orbit and switch Debug View to isolate diffuse bounce, reflections, volumetric in-scattering, crepuscular god rays, or HDR luminance.</p>'
+          html: '<p><b>One geometry pass. Hundreds of lights. A cinematic HDR camera.</b></p><p>Compute-clustered deferred lighting, GTAO, colored screen-space global illumination, shared glossy SSR, anisotropic participating media and camera-depth god rays, GPU-driven eye adaptation, and floating-point bloom all consume one coherent G-buffer.</p><p><b>Why this is different:</b> Illumination Lab goes deeper into physically based materials and advanced light transport. <b>Visualization City</b> is the broader shadow/effect showcase, with cascaded, spot, point, and contact shadows plus SSAO, height fog, outlines, TAA, and motion blur.</p><p>Drag to orbit and switch Debug View to isolate diffuse bounce, reflections, volumetric in-scattering, crepuscular god rays, or HDR luminance.</p>'
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
@@ -1020,19 +1033,37 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
     this.updateHighlightBoostLabel();
     this.orbitControls?.setAutoRotate(this.settings.autoOrbitCamera);
+    const previousAutoExposurePipelineEnabled =
+      previousSettings.autoExposureEnabled || previousSettings.debugView === 'HDR Luminance';
+    const autoExposurePipelineEnabled =
+      this.settings.autoExposureEnabled || this.settings.debugView === 'HDR Luminance';
+    const changedGodRaysDiagnostic =
+      (previousSettings.debugView === 'God Rays') !== (this.settings.debugView === 'God Rays');
     if (
+      shouldUseAmbientOcclusionPipeline(previousSettings) !==
+        shouldUseAmbientOcclusionPipeline(this.settings) ||
       previousSettings.ambientOcclusionResolution !== this.settings.ambientOcclusionResolution ||
+      shouldUseGlobalIlluminationPipeline(previousSettings) !==
+        shouldUseGlobalIlluminationPipeline(this.settings) ||
       previousSettings.globalIlluminationResolution !==
         this.settings.globalIlluminationResolution ||
+      shouldUseReflectionPipeline(previousSettings) !==
+        shouldUseReflectionPipeline(this.settings) ||
       previousSettings.reflectionResolution !== this.settings.reflectionResolution ||
+      shouldUseVolumetricPipeline(previousSettings) !==
+        shouldUseVolumetricPipeline(this.settings) ||
       previousSettings.atmosphereResolution !== this.settings.atmosphereResolution ||
+      previousAutoExposurePipelineEnabled !== autoExposurePipelineEnabled ||
       previousSettings.bloomResolution !== this.settings.bloomResolution ||
       previousSettings.bloomEnabled !== this.settings.bloomEnabled
     ) {
       this.renderer.destroy();
       this.renderer = createRenderer(this.device, this.settings);
       this.renderer.resize(this.framebufferSize);
+      this.resetVolumetricHistory = true;
       this.frameIndex = 0;
+    } else if (changedGodRaysDiagnostic) {
+      this.resetVolumetricHistory = true;
     }
   };
 
@@ -1071,25 +1102,69 @@ function createAmbientLightingRenderer(device: Device): ShaderPassRenderer {
   });
 }
 
+function shouldUseAmbientOcclusionPipeline(settings: DeferredRenderingSettings): boolean {
+  return settings.ambientOcclusionEnabled || settings.debugView === 'Ambient Occlusion';
+}
+
+function shouldUseGlobalIlluminationPipeline(settings: DeferredRenderingSettings): boolean {
+  return (
+    settings.globalIlluminationEnabled ||
+    settings.debugView === 'Indirect Lighting' ||
+    settings.debugView === 'Bounce Confidence'
+  );
+}
+
+function shouldUseReflectionPipeline(settings: DeferredRenderingSettings): boolean {
+  return (
+    settings.reflectionEnabled ||
+    settings.debugView === 'Reflections' ||
+    settings.debugView === 'Reflection Confidence'
+  );
+}
+
+function shouldUseVolumetricPipeline(settings: DeferredRenderingSettings): boolean {
+  return (
+    settings.atmosphereEnabled ||
+    settings.debugView === 'Volumetric Lighting' ||
+    settings.debugView === 'Volume Transmittance' ||
+    settings.debugView === 'God Rays'
+  );
+}
+
 function createRenderer(device: Device, settings: DeferredRenderingSettings): ShaderPassRenderer {
+  const shaderPasses: (ShaderPass | ShaderPassPipeline)[] = [
+    createClusteredDeferredLightingShaderPassPipeline(),
+    ...(shouldUseAmbientOcclusionPipeline(settings)
+      ? [
+          createGTAOShaderPassPipeline({
+            composition: 'ambient-only',
+            resolutionScale: settings.ambientOcclusionResolution
+          })
+        ]
+      : []),
+    ...(shouldUseGlobalIlluminationPipeline(settings)
+      ? [createSSGIShaderPassPipeline({resolutionScale: settings.globalIlluminationResolution})]
+      : []),
+    ...(shouldUseReflectionPipeline(settings)
+      ? [createSSRShaderPassPipeline({resolutionScale: settings.reflectionResolution})]
+      : []),
+    ...(shouldUseVolumetricPipeline(settings)
+      ? [
+          createClusteredVolumetricLightingShaderPassPipeline({
+            resolutionScale: settings.atmosphereResolution
+          })
+        ]
+      : []),
+    ...(settings.autoExposureEnabled || settings.debugView === 'HDR Luminance'
+      ? [createHDRAutoExposureShaderPassPipeline()]
+      : []),
+    ...(settings.bloomEnabled
+      ? [createBloomShaderPassPipeline({resolutionScale: settings.bloomResolution})]
+      : []),
+    deferredDisplayPipeline
+  ];
   return new ShaderPassRenderer(device, {
-    shaderPasses: [
-      createClusteredDeferredLightingShaderPassPipeline(),
-      createGTAOShaderPassPipeline({
-        composition: 'ambient-only',
-        resolutionScale: settings.ambientOcclusionResolution
-      }),
-      createSSGIShaderPassPipeline({resolutionScale: settings.globalIlluminationResolution}),
-      createSSRShaderPassPipeline({resolutionScale: settings.reflectionResolution}),
-      createClusteredVolumetricLightingShaderPassPipeline({
-        resolutionScale: settings.atmosphereResolution
-      }),
-      createHDRAutoExposureShaderPassPipeline(),
-      ...(settings.bloomEnabled
-        ? [createBloomShaderPassPipeline({resolutionScale: settings.bloomResolution})]
-        : []),
-      deferredDisplayPipeline
-    ],
+    shaderPasses,
     colorFormat: 'rgba16float',
     flipY: true
   });
@@ -1316,6 +1391,34 @@ function getMaterialRowColor(row: number): NumberArray3 {
 function normalize3(vector: NumberArray3): NumberArray3 {
   const length = Math.hypot(vector[0], vector[1], vector[2]);
   return [vector[0] / length, vector[1] / length, vector[2] / length];
+}
+
+function projectViewDirectionToScreen(
+  projectionMatrix: Matrix4,
+  direction: NumberArray3
+): [number, number] | null {
+  const viewX = direction[0] * FAR_PLANE;
+  const viewY = direction[1] * FAR_PLANE;
+  const viewZ = direction[2] * FAR_PLANE;
+  const clipX =
+    projectionMatrix[0] * viewX +
+    projectionMatrix[4] * viewY +
+    projectionMatrix[8] * viewZ +
+    projectionMatrix[12];
+  const clipY =
+    projectionMatrix[1] * viewX +
+    projectionMatrix[5] * viewY +
+    projectionMatrix[9] * viewZ +
+    projectionMatrix[13];
+  const clipW =
+    projectionMatrix[3] * viewX +
+    projectionMatrix[7] * viewY +
+    projectionMatrix[11] * viewZ +
+    projectionMatrix[15];
+  if (clipW <= 0.0001) {
+    return null;
+  }
+  return [clipX / clipW / 2 + 0.5, 0.5 - clipY / clipW / 2];
 }
 
 function getDebugMode(debugView: DebugView): number {
@@ -1839,24 +1942,6 @@ function makeSettingsSchema(): SettingsSchema {
             min: 3,
             max: 32,
             step: 1
-          },
-          {
-            name: 'godRayPositionX',
-            label: 'Sun Position X',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 1,
-            step: 0.02
-          },
-          {
-            name: 'godRayPositionY',
-            label: 'Sun Position Y',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 1,
-            step: 0.02
           }
         ]
       },

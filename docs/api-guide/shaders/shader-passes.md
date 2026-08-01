@@ -235,12 +235,14 @@ screen-edge confidence fades reduce the resulting discontinuities.
 storage buffers used by deferred shading into actual participating-media illumination:
 
 1. March configurable-resolution view rays through exponential world-height density.
-2. Integrate nearby clustered point lights and directional light using an anisotropic phase
-   function; stable global-index light selection prevents cluster-tile seams in the medium.
+2. Integrate a best-scoring bounded set from the compute-retained cluster candidates plus
+   directional light using an anisotropic phase function; work never falls back to scanning every
+   active light per ray step.
 3. Trace radial screen-depth visibility toward a configurable sun position to produce
    recognizable, depth-occluded crepuscular god rays.
-4. Reproject atmospheric history with velocity and reject linear-depth disocclusions.
-5. Capture current depth for the next frame.
+4. Reproject empty-space atmospheric history with current/previous camera transforms, apply
+   G-buffer velocity to opaque surfaces, and reject linear-depth disocclusions.
+5. Capture compact current linear depth for the next frame.
 6. Denoise the radiance/transmittance result with separable depth-aware blur.
 7. Composite Beer-Lambert extinction and in-scattered light, or expose volume/transmittance
    diagnostics.
@@ -253,7 +255,10 @@ Unlike the generic `GBuffer` examples above, clustered volumetric lighting requi
 `gBuffer.getShaderPassBindings()`. Encode a `ClusteredLightGrid` for the current point-light buffer
 each frame, add `pointLights`, `clusteredLightGrid.getShaderPassBindings()`, depth, and velocity to
 the renderer bindings, and merge `clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)`
-into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings. See
+into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings.
+Provide `inverseViewProjectionMatrix` and `previousViewProjectionMatrix` to
+`clusteredVolumetricTemporal`, plus `inverseProjectionMatrix` to both the temporal and linear-depth
+history-copy stages. See
 the [`ClusteredLightGrid` usage guide](/docs/api-reference/experimental/clustered-lighting) for the
 buffer setup and encode sequence.
 
@@ -270,10 +275,11 @@ to explicitly trade edge quality for fewer shaded pixels and smaller history tex
 3. Adapt persistent exposure history with independent brightening and darkening response rates.
 4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
 
-Pair it with `createBloomShaderPassPipeline()`, which extracts and blurs HDR highlights at half,
-quarter, and eighth resolution using `rgba16float` intermediate targets. Its optional
-`resolutionScale` controls the entire pyramid without clamping highlight radiance to 8-bit
-normalized color. Apply both effects before final tone mapping.
+Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at half resolution,
+then successively filters and blurs them at quarter and eighth resolution using `rgba16float`
+intermediate targets. Its optional `resolutionScale` controls the entire pyramid without clamping
+highlight radiance to 8-bit normalized color. Use the exact HDR order: temporal effects, auto
+exposure, bloom, then tone mapping.
 
 ### Recommended ordering
 
@@ -285,7 +291,7 @@ normalized color. Apply both effects before final tone mapping.
 | Participating media | Height fog or clustered volumetric lighting | Composite extinction and in-scattering over completed opaque light transport. |
 | Transparency resolve | WBOIT or A-buffer resolve pipeline | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
 | Temporal effects | TAA, then motion blur | Reproject the composed image before display-space processing. |
-| Display effects | Bloom, color adjustment, vignette, tone mapping | These operate on final color and usually do not need scene attachments. |
+| Display effects | Auto exposure, bloom, color adjustment, vignette, tone mapping | These operate on final color and usually do not need scene attachments. |
 
 This is a default, not a hard rule. A debug view may intentionally bypass earlier color processing
 through `original`, and a stylized stack may place display-space effects earlier.
@@ -311,8 +317,9 @@ pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug view
 
 The [Deferred Illumination Lab](/examples/experimental/deferred-rendering) shows one five-target
 geometry pass feeding clustered directional/point lighting, temporally stabilized GTAO,
-diffuse screen-space global illumination, roughness-aware screen-space reflections, tone mapping,
-and direct G-buffer/AO/bounce/reflection debug views.
+diffuse screen-space global illumination, roughness-aware screen-space reflections, clustered
+volumetric lighting, adaptive exposure, HDR bloom, tone mapping, and direct
+G-buffer/AO/bounce/reflection/volume debug views.
 
 ## When To Use Shader Passes
 

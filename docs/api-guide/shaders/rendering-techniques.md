@@ -21,9 +21,9 @@ whether its cost scales with scene geometry, visible pixels, light count, or tem
 | Low-cost contact darkening | `createSSAOShaderPassPipeline()` | Switch to GTAO when contact quality and temporal stability matter. | Use SSAO **or** GTAO; stacking both normally double-darkens surfaces. |
 | Higher-quality ambient visibility | `createGTAOShaderPassPipeline()` | Tune radius, history, and denoising for the scene scale. | Requires coherent depth, view normals, velocity, and projection matrices. |
 | A modest number of local lights | `createDeferredLightingShaderPassPipeline()` | Switch to clustered lighting when many lights overlap the scene. | The baseline shader supports at most 64 point lights. |
-| Hundreds of local lights | `ClusteredLightGrid` plus `createClusteredDeferredLightingShaderPassPipeline()` | Tune grid dimensions, light ranges, and per-cluster capacity. | Overflow stays correct but can fall back to a more expensive full light scan. |
+| Hundreds of local lights | `ClusteredLightGrid` plus `createClusteredDeferredLightingShaderPassPipeline()` | Tune grid dimensions, light ranges, and per-cluster capacity. | Per-cluster capacity bounds work; candidates beyond the retained list are omitted. |
 | Inexpensive atmospheric depth | `createVolumetricFogShaderPassPipeline()` | Upgrade to clustered volumetric lighting when visible local lights or shafts matter. | Simple height fog does not evaluate the scene's actual point-light list. |
-| Colored light halos and crepuscular god rays | `createClusteredVolumetricLightingShaderPassPipeline()` | Tune media density, anisotropy, radial shaft quality, and temporal history. | Requires WebGPU point-light and compute-built cluster storage buffers. |
+| Colored light halos and crepuscular god rays | `createClusteredVolumetricLightingShaderPassPipeline()` | Tune media density, anisotropy, radial shaft quality, and temporal history. | Requires WebGPU point-light/cluster storage plus current and previous camera transforms. |
 | Sun, spot, or point-light visibility | `ShadowMapRenderer` | Add contact shadows for missing near-surface detail. | Light-space shadows need caster geometry; they are not a color-only effect. |
 | Tiny near-surface shadow detail | `createContactShadowShaderPassPipeline()` | Combine with stable cascaded or local-light shadow maps. | Camera-space contact rays cannot see occluders outside the current depth buffer. |
 | Fast transparent layering | `WBOITRenderer` | Use `ABufferRenderer` when exact fragment ordering is more important. | Weighted blending approximates heavily overlapping transparent layers. |
@@ -66,8 +66,8 @@ questions.
 | Medium | Screen-depth-guided exponential height fog. | View-ray integration through world-height density with Beer-Lambert extinction. |
 | Local colored halos | Not evaluated. | Each ray sample looks up nearby lights through the existing compute-built cluster lists. |
 | Directional shafts | Approximate stylized screen-space glow. | Anisotropic directional scattering plus configurable radial, depth-occluded crepuscular god rays. |
-| Stabilization | Persistent fog-color history. | Velocity reprojection, linear-depth disocclusion rejection, and depth-aware denoising. |
-| Main cost | One lightweight fullscreen integration and copy. | Reduced-resolution pixels × ray steps × nearby cluster lights, plus history and blur. |
+| Stabilization | Persistent fog-color history. | Camera-transform and surface-velocity reprojection, single-channel linear-depth disocclusion rejection, and depth-aware denoising. |
+| Main cost | One lightweight fullscreen integration and copy. | Configured-resolution pixels × ray steps × nearby cluster lights, plus history and blur. |
 
 Use the compact fog pass when atmospheric depth is sufficient and cost matters. Choose clustered
 volumetric lighting when visible light transport through dust, haze, or mist is central to the
@@ -109,10 +109,10 @@ render stacks, not competing copies of the reflection algorithm.
 
 - Visualization City selects approximately 35%, 50%, or 100% tracing resolution from its quality
   preset and combines reflections with light-space shadows, SSAO, fog, and temporal AA.
-- Illumination Lab defaults to full-resolution reflection tracing and uses depth/normal-aware
+- Illumination Lab starts at half-resolution reflection tracing and uses depth/normal-aware
   reconstruction to showcase polished floors, chrome accents, roughness variation,
   reflection-confidence diagnostics, and clustered animated lights. Its SSR **Buffer
-  Resolution** control can explicitly lower tracing cost when desired.
+  Resolution** control can raise or lower tracing quality and cost.
 - `ssrTrace`, `ssrTemporal`, `ssrDepthHistoryCopy`, `ssrSpatial`, and `ssrComposite` are the
   reusable stages of that same pipeline, exposed for applications that need custom composition.
 
@@ -181,7 +181,7 @@ the normal ordered `previous` chain.
 | Per-pixel light work | Checks every active point light. | Normally checks only the lights assigned to the pixel's screen/depth cluster. |
 | Additional setup | One fixed-capacity point-light storage buffer. | Compute-built cluster count/index buffers plus the same point-light buffer. |
 | Best fit | Smaller scenes, simpler integration, or modest light counts. | Large dynamic light counts with reasonably localized light ranges. |
-| Failure mode | Cost grows with every active light, even when most do not affect the pixel. | Dense or oversized lights saturate clusters and trigger a slower correctness fallback. |
+| Failure mode | Cost grows with every active light, even when most do not affect the pixel. | Dense or oversized lights can exceed retained cluster capacity; excess candidates are omitted while per-pixel work remains bounded. |
 
 Clustering changes the common-case cost from roughly **visible pixels × all lights** to
 **light binning + visible pixels × nearby lights**. It does not make lighting free: a scene in
@@ -264,7 +264,8 @@ import {
   createHDRAutoExposureShaderPassPipeline,
   createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
-  createTAAShaderPassPipeline
+  createTAAShaderPassPipeline,
+  toneMapping
 } from '@luma.gl/effects';
 import {createClusteredDeferredLightingShaderPassPipeline} from '@luma.gl/experimental';
 
@@ -276,7 +277,8 @@ const renderer = new ShaderPassRenderer(device, {
     createSSRShaderPassPipeline({resolutionScale: 0.5}),
     createTAAShaderPassPipeline(),
     createHDRAutoExposureShaderPassPipeline(),
-    createBloomShaderPassPipeline()
+    createBloomShaderPassPipeline(),
+    toneMapping
   ],
   colorFormat: 'rgba16float'
 });

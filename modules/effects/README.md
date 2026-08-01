@@ -10,6 +10,9 @@ compact height fog, GPU-resident adaptive HDR exposure, floating-point multiscal
 and reusable depth-aware blur.
 Applications keep ownership of scene rendering and provide matching color, depth,
 normal/roughness, and velocity textures to `ShaderPassRenderer`.
+Clustered volumetric history additionally uses current inverse and previous view-projection
+matrices so empty-space scattering follows camera motion, while opaque surfaces retain their
+G-buffer velocity.
 SSAO, GTAO, SSGI, SSR, and clustered volumetric lighting default their intermediate
 framebuffers to full resolution; pass `resolutionScale` to trade edge fidelity for lower GPU cost.
 GTAO additionally supports `composition: 'ambient-only'` with an explicit

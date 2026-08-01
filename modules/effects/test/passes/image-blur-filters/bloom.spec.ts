@@ -5,7 +5,7 @@
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {bloom, bloomShaderPassPipeline, createBloomShaderPassPipeline} from '@luma.gl/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
+import {fromHalfFloat, getShaderModuleUniforms, toHalfFloat} from '@luma.gl/shadertools';
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -23,15 +23,44 @@ test('bloomShaderPassPipeline#routing', t => {
   const extractionSteps = bloomShaderPassPipeline.steps.filter(
     step => step.shaderPass.name === 'bloomExtract'
   );
+  const downsampleSteps = bloomShaderPassPipeline.steps.filter(
+    step => step.shaderPass.name === 'bloomDownsample'
+  );
 
-  t.equal(extractionSteps.length, 3, 'pipeline extracts three bloom scales');
-  for (const extractionStep of extractionSteps) {
-    t.equal(
-      extractionStep.inputs.sourceTexture,
-      'previous',
-      'bloom extraction consumes the preceding effect output'
-    );
-  }
+  t.equal(extractionSteps.length, 1, 'pipeline thresholds HDR radiance once');
+  t.equal(
+    extractionSteps[0]?.inputs.sourceTexture,
+    'previous',
+    'bloom extraction consumes the preceding effect output'
+  );
+  t.equal(downsampleSteps.length, 2, 'pipeline low-passes the remaining bloom scales');
+  t.deepEqual(
+    downsampleSteps.map(step => step.inputs.sourceTexture),
+    ['extractHalf', 'extractQuarter'],
+    'quarter and eighth levels form a successive low-pass pyramid'
+  );
+  const extractionPass = extractionSteps[0]?.shaderPass;
+  const downsamplePass = downsampleSteps[0]?.shaderPass;
+  t.match(
+    extractionPass?.source || '',
+    /textureLoad\(sourceTexture/,
+    'WGSL extraction explicitly covers source texels'
+  );
+  t.match(
+    extractionPass?.fs || '',
+    /texelFetch\(sourceTexture/,
+    'GLSL extraction explicitly covers source texels'
+  );
+  t.match(
+    downsamplePass?.source || '',
+    /return color \/ 64\.0/,
+    'WGSL downsampling uses a normalized tent filter'
+  );
+  t.match(
+    downsamplePass?.fs || '',
+    /return color \/ 64\.0/,
+    'GLSL downsampling uses the same normalized tent filter'
+  );
   for (const target of Object.values(bloomShaderPassPipeline.renderTargets)) {
     t.equal(target.sampler.minFilter, 'linear', 'bloom intermediates use linear minification');
     t.equal(target.sampler.magFilter, 'linear', 'bloom intermediates use linear magnification');
@@ -93,7 +122,7 @@ test('bloomShaderPassPipeline#routing', t => {
   t.end();
 });
 
-test('HDR bloom attenuates isolated highlights without square ringing', async testCase => {
+test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     testCase.comment('WebGPU unavailable, skipping HDR bloom image regression');
@@ -101,29 +130,46 @@ test('HDR bloom attenuates isolated highlights without square ringing', async te
     return;
   }
 
+  const capabilities = device.getTextureFormatCapabilities('rgba16float');
+  if (!capabilities.render || !capabilities.filter) {
+    testCase.comment('Renderable, filterable rgba16float textures are unavailable');
+    testCase.end();
+    return;
+  }
+
   const width = 64;
   const height = 64;
-  const sourcePixels = new Uint8Array(width * height * 4);
+  const sourcePixels = new Uint16Array(width * height * 4);
+  const sourceRadiance = 16;
   for (let pixelIndex = 0; pixelIndex < width * height; pixelIndex++) {
-    sourcePixels[pixelIndex * 4 + 3] = 255;
+    sourcePixels[pixelIndex * 4 + 3] = toHalfFloat(1);
   }
-  for (let pixelY = 30; pixelY <= 34; pixelY++) {
-    for (let pixelX = 30; pixelX <= 34; pixelX++) {
-      sourcePixels.set([255, 255, 255, 255], (pixelY * width + pixelX) * 4);
+  for (let pixelY = 31; pixelY <= 32; pixelY++) {
+    for (let pixelX = 31; pixelX <= 32; pixelX++) {
+      const pixelOffset = (pixelY * width + pixelX) * 4;
+      sourcePixels.set(
+        [
+          toHalfFloat(sourceRadiance),
+          toHalfFloat(sourceRadiance),
+          toHalfFloat(sourceRadiance),
+          toHalfFloat(1)
+        ],
+        pixelOffset
+      );
     }
   }
 
   const sourceTexture = device.createTexture({
     id: 'hdr-bloom-ringing-source',
     data: sourcePixels,
-    format: 'rgba8unorm',
+    format: 'rgba16float',
     width,
     height,
     usage: Texture.SAMPLE | Texture.COPY_DST
   });
   const renderer = new ShaderPassRenderer(device, {
     shaderPasses: [createBloomShaderPassPipeline()],
-    colorFormat: 'rgba8unorm',
+    colorFormat: 'rgba16float',
     flipY: false
   });
   renderer.resize([width, height]);
@@ -132,7 +178,7 @@ test('HDR bloom attenuates isolated highlights without square ringing', async te
     const outputTexture = renderer.renderToTexture({
       sourceTexture,
       uniforms: {
-        bloomExtract: {threshold: 0.3},
+        bloomExtract: {threshold: 0.5},
         bloomBlur: {radius: 8},
         bloomComposite: {intensity: 1}
       }
@@ -150,19 +196,78 @@ test('HDR bloom attenuates isolated highlights without square ringing', async te
       try {
         outputTexture.readBuffer({width, height}, readbackBuffer);
         const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
-        const centerRowOffset = Math.floor(height / 2) * memoryLayout.bytesPerRow;
-        const nearGlow = pixels[centerRowOffset + 37 * 4]!;
-        const distantGlow = pixels[centerRowOffset + 47 * 4]!;
-        const cornerGlow = pixels[40 * memoryLayout.bytesPerRow + 40 * 4]!;
+        const pixelView = new DataView(pixels.buffer, pixels.byteOffset, pixels.byteLength);
+        const readRed = (pixelX: number, pixelY: number): number =>
+          fromHalfFloat(pixelView.getUint16(pixelY * memoryLayout.bytesPerRow + pixelX * 8, true));
+        const average = (values: number[]): number =>
+          values.reduce((sum, value) => sum + value, 0) / values.length;
+        const readHorizontalPair = (distance: number): [number, number] => [
+          average([readRed(31 - distance, 31), readRed(31 - distance, 32)]),
+          average([readRed(32 + distance, 31), readRed(32 + distance, 32)])
+        ];
+        const readVerticalPair = (distance: number): [number, number] => [
+          average([readRed(31, 31 - distance), readRed(32, 31 - distance)]),
+          average([readRed(31, 32 + distance), readRed(32, 32 + distance)])
+        ];
+        const [leftGlow, rightGlow] = readHorizontalPair(8);
+        const [topGlow, bottomGlow] = readVerticalPair(8);
+        const nearGlow = average([...readHorizontalPair(4), ...readVerticalPair(4)]);
+        const middleGlow = average([leftGlow, rightGlow, topGlow, bottomGlow]);
+        const distantGlow = average([...readHorizontalPair(14), ...readVerticalPair(14)]);
+        const diagonalGlow = average([
+          readRed(23, 23),
+          readRed(40, 23),
+          readRed(23, 40),
+          readRed(40, 40)
+        ]);
+        const centerRadiance = average([
+          readRed(31, 31),
+          readRed(32, 31),
+          readRed(31, 32),
+          readRed(32, 32)
+        ]);
+        const symmetryTolerance = Math.max(middleGlow * 0.06, 0.015);
 
-        testCase.ok(nearGlow > distantGlow, 'glow fades away from the isolated highlight');
         testCase.ok(
-          distantGlow < Math.max(nearGlow * 0.65, 4),
-          'distant bloom does not recover full-strength color through alpha division'
+          centerRadiance > sourceRadiance,
+          'bloom composites onto a true HDR source without clipping it to display range'
+        );
+        testCase.ok(nearGlow > middleGlow, 'glow falls off outside the source highlight');
+        testCase.ok(middleGlow > distantGlow, 'glow continues falling off at wider radii');
+        testCase.ok(
+          Math.abs(leftGlow - rightGlow) <= symmetryTolerance,
+          'horizontal bloom is symmetric around the highlight'
         );
         testCase.ok(
-          cornerGlow < nearGlow,
-          'diagonal support remains smooth instead of forming a square plateau'
+          Math.abs(topGlow - bottomGlow) <= symmetryTolerance,
+          'vertical bloom is symmetric around the highlight'
+        );
+        testCase.ok(
+          Math.abs(average([leftGlow, rightGlow]) - average([topGlow, bottomGlow])) <=
+            symmetryTolerance,
+          'horizontal and vertical falloff have matching energy'
+        );
+        testCase.ok(
+          diagonalGlow < middleGlow,
+          'diagonal support decays instead of forming a square plateau'
+        );
+
+        let addedBloomEnergy = 0;
+        for (let pixelY = 0; pixelY < height; pixelY++) {
+          for (let pixelX = 0; pixelX < width; pixelX++) {
+            const sourceRed =
+              pixelX >= 31 && pixelX <= 32 && pixelY >= 31 && pixelY <= 32 ? sourceRadiance : 0;
+            addedBloomEnergy += Math.max(readRed(pixelX, pixelY) - sourceRed, 0);
+          }
+        }
+        const sourceEnergy = sourceRadiance * 4;
+        testCase.ok(
+          addedBloomEnergy > sourceEnergy * 0.4,
+          'normalized downsampling retains useful HDR highlight energy'
+        );
+        testCase.ok(
+          addedBloomEnergy < sourceEnergy * 1.6,
+          'the multiscale pyramid does not duplicate unbounded highlight energy'
         );
       } finally {
         readbackBuffer.destroy();

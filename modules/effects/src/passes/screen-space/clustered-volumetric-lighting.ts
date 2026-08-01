@@ -31,6 +31,7 @@ type ClusteredVolumetricTraceUniforms = {
   godRayDensity: number;
   godRayDecay: number;
   godRaySampleCount: number;
+  godRaysOnly: number;
   maxDistance: number;
   sampleCount: number;
   shadowStrength: number;
@@ -45,8 +46,14 @@ type ClusteredVolumetricTraceUniforms = {
 
 type ClusteredVolumetricTemporalUniforms = {
   inverseProjectionMatrix: Readonly<NumberArray16>;
+  inverseViewProjectionMatrix: Readonly<NumberArray16>;
+  previousViewProjectionMatrix: Readonly<NumberArray16>;
   historyWeight: number;
   depthThreshold: number;
+};
+
+type ClusteredVolumetricDepthHistoryCopyUniforms = {
+  inverseProjectionMatrix: Readonly<NumberArray16>;
 };
 
 type ClusteredVolumetricCompositeUniforms = {
@@ -97,6 +104,7 @@ struct ClusteredVolumetricTraceUniforms {
   godRayDensity: f32,
   godRayDecay: f32,
   godRaySampleCount: f32,
+  godRaysOnly: f32,
   maxDistance: f32,
   sampleCount: f32,
   shadowStrength: f32,
@@ -239,11 +247,16 @@ fn clusteredVolumetricTrace_pointRadiance(
 ) -> vec3f {
   let clusterIndex = clusteredVolumetricTrace_clusterIndex(texCoord, -viewPosition.z);
   let clusterCount = clusterLightCounts[clusterIndex];
-  let overflowed = clusterCount > clusteredVolumetricTrace.maxLightsPerCluster;
-  let candidateCount = select(
-    clusterCount,
-    min(clusteredVolumetricTrace.pointLightCount, arrayLength(&pointLights)),
-    overflowed
+  let firstCandidateIndex = clusterIndex * clusteredVolumetricTrace.maxLightsPerCluster;
+  let clampedFirstCandidateIndex = min(firstCandidateIndex, arrayLength(&clusterLightIndices));
+  let storedCandidateCapacity = min(
+    clusteredVolumetricTrace.maxLightsPerCluster,
+    arrayLength(&clusterLightIndices) - clampedFirstCandidateIndex
+  );
+  let candidateCount = min(clusterCount, storedCandidateCapacity);
+  let activePointLightCount = min(
+    clusteredVolumetricTrace.pointLightCount,
+    arrayLength(&pointLights)
   );
   var selectedLightIndices: array<u32, CLUSTERED_VOLUMETRIC_MAX_LIGHTS>;
   var selectedLightScores: array<f32, CLUSTERED_VOLUMETRIC_MAX_LIGHTS>;
@@ -255,16 +268,11 @@ fn clusteredVolumetricTrace_pointRadiance(
   var worstSlotIndex = 0u;
   var worstScore = -1.0;
 
-  // Keep the best bounded set after evaluating every relevant candidate. Truncating each tile to
-  // its first candidates instead exposes the cluster grid in fog.
+  // Score every candidate retained by the cluster builder, including its complete overflow-safe
+  // storage capacity, while keeping integration work independent of the global light count.
   for (var candidateIndex: u32 = 0u; candidateIndex < candidateCount; candidateIndex++) {
-    var lightIndex = candidateIndex;
-    if (!overflowed) {
-      lightIndex = clusterLightIndices[
-        clusterIndex * clusteredVolumetricTrace.maxLightsPerCluster + candidateIndex
-      ];
-    }
-    if (lightIndex >= arrayLength(&pointLights)) {
+    let lightIndex = clusterLightIndices[firstCandidateIndex + candidateIndex];
+    if (lightIndex >= activePointLightCount) {
       continue;
     }
     let light = pointLights[lightIndex];
@@ -335,11 +343,15 @@ fn clusteredVolumetricTrace_sampleColor(
     return vec4f(0.0, 0.0, 0.0, 1.0);
   }
   let sceneDepth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
+  let rayOrigin = clusteredVolumetricTrace_reconstructViewPosition(texCoord, 0.0);
   let farPosition = clusteredVolumetricTrace_reconstructViewPosition(texCoord, 0.9999);
-  let viewDirection = normalize(farPosition);
+  let viewDirection = normalize(farPosition - rayOrigin);
   let scenePosition = clusteredVolumetricTrace_reconstructViewPosition(texCoord, sceneDepth);
   let rayDistance = select(
-    min(length(scenePosition), clusteredVolumetricTrace.maxDistance),
+    min(
+      max(dot(scenePosition - rayOrigin, viewDirection), 0.0),
+      clusteredVolumetricTrace.maxDistance
+    ),
     clusteredVolumetricTrace.maxDistance,
     sceneDepth >= 0.99999
   );
@@ -361,7 +373,7 @@ fn clusteredVolumetricTrace_sampleColor(
       break;
     }
     let travel = (f32(stepIndex) + 0.28 + rayJitter * 0.52) * stepDistance;
-    let viewPosition = viewDirection * travel;
+    let viewPosition = rayOrigin + viewDirection * travel;
     let worldPosition =
       (clusteredVolumetricTrace.inverseViewMatrix * vec4f(viewPosition, 1.0)).xyz;
     let localDensity = clusteredVolumetricTrace.density * exp(
@@ -372,16 +384,21 @@ fn clusteredVolumetricTrace_sampleColor(
     opticalDepth += extinction;
     let directionalVisibility = clusteredVolumetricTrace_directionalVisibility(viewPosition);
     let directionalRadiance = clusteredVolumetricTrace.directionalLightColor *
-      clusteredVolumetricTrace.directionalIntensity * directionalPhase *
-      (directionalVisibility +
-        godRayVisibility * clusteredVolumetricTrace.godRayIntensity * 2.4);
+      clusteredVolumetricTrace.directionalIntensity * directionalPhase * directionalVisibility;
+    let godRayRadiance = clusteredVolumetricTrace.directionalLightColor *
+      clusteredVolumetricTrace.directionalIntensity * directionalPhase * godRayVisibility *
+      clusteredVolumetricTrace.godRayIntensity * 2.4;
     let localRadiance = clusteredVolumetricTrace_pointRadiance(
       texCoord,
       viewPosition,
       viewDirection
     );
-    let incomingRadiance = clusteredVolumetricTrace.fogColor * 0.11 +
-      directionalRadiance + localRadiance;
+    let incomingRadiance = select(
+      clusteredVolumetricTrace.fogColor * 0.11 + directionalRadiance + localRadiance +
+        godRayRadiance,
+      godRayRadiance,
+      clusteredVolumetricTrace.godRaysOnly > 0.5
+    );
     scattering += incomingRadiance * extinction * exp(-opticalDepth);
   }
 
@@ -414,6 +431,7 @@ fn clusteredVolumetricTrace_sampleColor(
     godRayDensity: 'f32',
     godRayDecay: 'f32',
     godRaySampleCount: 'f32',
+    godRaysOnly: 'f32',
     maxDistance: 'f32',
     sampleCount: 'f32',
     shadowStrength: 'f32',
@@ -443,6 +461,7 @@ fn clusteredVolumetricTrace_sampleColor(
     godRayDensity: {value: 0.94, min: 0.1, max: 1.2},
     godRayDecay: {value: 0.96, min: 0.7, max: 1},
     godRaySampleCount: {value: 18, min: 3, max: 32},
+    godRaysOnly: {value: 0, min: 0, max: 1, private: true},
     maxDistance: {value: 28, min: 1, softMax: 80},
     sampleCount: {value: 10, min: 3, max: 20},
     shadowStrength: {value: 0.74, min: 0, max: 1},
@@ -467,6 +486,8 @@ export const clusteredVolumetricTemporal = {
   source: /* wgsl */ `\
 struct ClusteredVolumetricTemporalUniforms {
   inverseProjectionMatrix: mat4x4f,
+  inverseViewProjectionMatrix: mat4x4f,
+  previousViewProjectionMatrix: mat4x4f,
   historyWeight: f32,
   depthThreshold: f32,
 };
@@ -480,12 +501,21 @@ struct ClusteredVolumetricTemporalUniforms {
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 @group(0) @binding(auto) var previousDepthTexture: texture_2d<f32>;
-@group(0) @binding(auto) var previousDepthTextureSampler: sampler;
 
 fn clusteredVolumetricTemporal_viewDepth(texCoord: vec2f, depth: f32) -> f32 {
   let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
   let viewPosition = clusteredVolumetricTemporal.inverseProjectionMatrix * clip;
   return abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
+}
+
+fn clusteredVolumetricTemporal_cameraPreviousCoord(texCoord: vec2f, depth: f32) -> vec3f {
+  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
+  let worldPosition = clusteredVolumetricTemporal.inverseViewProjectionMatrix * clip;
+  let world = worldPosition.xyz / max(abs(worldPosition.w), 0.00001);
+  let previousClip = clusteredVolumetricTemporal.previousViewProjectionMatrix * vec4f(world, 1.0);
+  let previousNdc = previousClip.xy / max(abs(previousClip.w), 0.00001);
+  let previousCoord = previousNdc * vec2f(0.5, -0.5) + vec2f(0.5);
+  return vec3f(previousCoord, select(0.0, 1.0, previousClip.w > 0.00001));
 }
 
 fn clusteredVolumetricTemporal_sampleColor(
@@ -497,24 +527,29 @@ fn clusteredVolumetricTemporal_sampleColor(
   let current = textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0);
   let currentDepth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
   let velocity = textureSampleLevel(velocityTexture, velocityTextureSampler, texCoord, 0).xy;
-  let previousCoord = texCoord - velocity;
+  let cameraReprojection = clusteredVolumetricTemporal_cameraPreviousCoord(texCoord, currentDepth);
+  let velocityIsFinite = all(velocity == velocity) && all(abs(velocity) <= vec2f(1.0));
+  let useObjectVelocity = currentDepth < 0.99999 && velocityIsFinite;
+  let previousCoord = select(cameraReprojection.xy, texCoord - velocity, useObjectVelocity);
   let validCoordinate = all(previousCoord >= vec2f(0.0)) &&
-    all(previousCoord <= vec2f(1.0));
+    all(previousCoord <= vec2f(1.0)) &&
+    (useObjectVelocity || cameraReprojection.z > 0.5);
   let clampedPreviousCoord = clamp(previousCoord, vec2f(0.0), vec2f(1.0));
-  let previousDepth = textureSampleLevel(
+  let previousDepthDimensions = textureDimensions(previousDepthTexture);
+  let previousDepthCoordinate = min(
+    vec2u(clampedPreviousCoord * vec2f(previousDepthDimensions)),
+    previousDepthDimensions - vec2u(1u)
+  );
+  let currentViewDepth = clusteredVolumetricTemporal_viewDepth(texCoord, currentDepth);
+  let previousViewDepth = textureLoad(
     previousDepthTexture,
-    previousDepthTextureSampler,
-    clampedPreviousCoord,
+    vec2i(previousDepthCoordinate),
     0
   ).r;
-  let currentViewDepth = clusteredVolumetricTemporal_viewDepth(texCoord, currentDepth);
-  let previousViewDepth = clusteredVolumetricTemporal_viewDepth(
-    clampedPreviousCoord,
-    previousDepth
-  );
   let relativeDepthDifference = abs(previousViewDepth - currentViewDepth) /
     max(currentViewDepth, 0.0001);
-  let validDepth = relativeDepthDifference < clusteredVolumetricTemporal.depthThreshold;
+  let validDepth = previousViewDepth > 0.0 &&
+    relativeDepthDifference < clusteredVolumetricTemporal.depthThreshold;
 
   let texel = 1.0 / vec2f(textureDimensions(sourceTexture));
   var minimumScattering = current;
@@ -560,11 +595,15 @@ fn clusteredVolumetricTemporal_sampleColor(
   bindings: {} as ClusteredVolumetricTemporalBindings,
   uniformTypes: {
     inverseProjectionMatrix: 'mat4x4<f32>',
+    inverseViewProjectionMatrix: 'mat4x4<f32>',
+    previousViewProjectionMatrix: 'mat4x4<f32>',
     historyWeight: 'f32',
     depthThreshold: 'f32'
   },
   propTypes: {
     inverseProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
+    inverseViewProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
+    previousViewProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
     historyWeight: {value: 0.88, min: 0, max: 0.97},
     depthThreshold: {value: 0.035, min: 0.0001, softMax: 0.2}
   },
@@ -579,6 +618,12 @@ fn clusteredVolumetricTemporal_sampleColor(
 export const clusteredVolumetricDepthHistoryCopy = {
   name: 'clusteredVolumetricDepthHistoryCopy',
   source: /* wgsl */ `\
+struct ClusteredVolumetricDepthHistoryCopyUniforms {
+  inverseProjectionMatrix: mat4x4f,
+};
+
+@group(0) @binding(auto) var<uniform> clusteredVolumetricDepthHistoryCopy:
+  ClusteredVolumetricDepthHistoryCopyUniforms;
 @group(0) @binding(auto) var depthTexture: texture_depth_2d;
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 
@@ -589,11 +634,21 @@ fn clusteredVolumetricDepthHistoryCopy_sampleColor(
   texCoord: vec2f
 ) -> vec4f {
   let depth = textureSampleLevel(depthTexture, depthTextureSampler, texCoord, 0);
-  return vec4f(depth, 0.0, 0.0, 1.0);
+  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
+  let viewPosition = clusteredVolumetricDepthHistoryCopy.inverseProjectionMatrix * clip;
+  let linearDepth = abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
+  return vec4f(linearDepth, 0.0, 0.0, 1.0);
 }`,
   bindingLayout: [{name: 'depthTexture', group: 0}],
+  props: {} as Partial<ClusteredVolumetricDepthHistoryCopyUniforms>,
+  uniforms: {} as ClusteredVolumetricDepthHistoryCopyUniforms,
+  uniformTypes: {inverseProjectionMatrix: 'mat4x4<f32>'},
+  propTypes: {inverseProjectionMatrix: {value: IDENTITY_MATRIX, private: true}},
   passes: [{sampler: true}]
-} as const satisfies ShaderPass;
+} as const satisfies ShaderPass<
+  Partial<ClusteredVolumetricDepthHistoryCopyUniforms>,
+  ClusteredVolumetricDepthHistoryCopyUniforms
+>;
 
 /** Applies atmospheric extinction and in-scattering, or exposes direct volume diagnostics. */
 export const clusteredVolumetricComposite = {
@@ -664,9 +719,9 @@ export function createClusteredVolumetricLightingShaderPassPipeline(
       },
       clusteredVolumeDepthHistory: {
         scale: [scale, scale],
-        format: 'rgba16float',
+        format: 'r32float',
         lifetime: 'history',
-        initialize: {clearColor: [1, 0, 0, 1]}
+        initialize: {clearColor: [0, 0, 0, 1]}
       },
       clusteredVolumeScratch: {scale: [scale, scale], format: 'rgba16float'},
       clusteredVolumeScattering: {scale: [scale, scale], format: 'rgba16float'}

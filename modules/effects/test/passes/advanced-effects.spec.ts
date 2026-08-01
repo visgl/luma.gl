@@ -9,6 +9,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   bloomShaderPassPipeline,
   brightnessContrast,
+  clusteredVolumetricDepthHistoryCopy,
   clusteredVolumetricTemporal,
   clusteredVolumetricTrace,
   createBloomShaderPassPipeline,
@@ -173,6 +174,38 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     'mat4x4<f32>',
     'clustered volumetric temporal rejection reconstructs linear view-space depth'
   );
+  testCase.equal(
+    clusteredVolumetricTemporal.uniformTypes.inverseViewProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric temporal reprojection reconstructs current world positions'
+  );
+  testCase.equal(
+    clusteredVolumetricTemporal.uniformTypes.previousViewProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric temporal reprojection projects through the previous camera'
+  );
+  testCase.equal(
+    volumetricLighting.renderTargets?.clusteredVolumeDepthHistory.format,
+    'r32float',
+    'clustered volumetric lighting stores compact high-precision linear depth'
+  );
+  testCase.equal(
+    clusteredVolumetricDepthHistoryCopy.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric depth history linearizes depth when it is captured'
+  );
+  testCase.ok(
+    clusteredVolumetricTemporal.source.includes('cameraPreviousCoord(texCoord, currentDepth)'),
+    'empty-space volume history follows explicit camera reprojection'
+  );
+  testCase.ok(
+    clusteredVolumetricTemporal.source.includes('currentDepth < 0.99999 && velocityIsFinite'),
+    'surface volume history preserves valid object velocity'
+  );
+  testCase.ok(
+    clusteredVolumetricTemporal.source.includes('previousViewDepth = textureLoad'),
+    'temporal rejection compares stored linear depth directly'
+  );
 
   const adaptiveExposure = createHDRAutoExposureShaderPassPipeline();
   testCase.equal(
@@ -254,9 +287,17 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     ),
     'directional anisotropy uses the camera-to-sample propagation direction'
   );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes(
+      'let candidateCount = min(clusterCount, storedCandidateCapacity)'
+    ),
+    'clustered volumetric lighting bounds overflow work to stored tile-local candidates'
+  );
   testCase.notOk(
-    clusteredVolumetricTrace.source.includes('min(clusterCount, CLUSTERED_VOLUMETRIC_MAX_LIGHTS)'),
-    'clustered volumetric lighting never truncates tile-local candidates before selection'
+    clusteredVolumetricTrace.source.includes(
+      'min(clusteredVolumetricTrace.pointLightCount, arrayLength(&pointLights)),\n    overflowed'
+    ),
+    'cluster overflow never falls back to scanning every active light per ray step'
   );
   testCase.equal(
     clusteredVolumetricTrace.uniformTypes.godRayPosition,
@@ -266,6 +307,19 @@ test('advanced effects expose composable pipeline shapes', testCase => {
   testCase.ok(
     clusteredVolumetricTrace.source.includes('clusteredVolumetricTrace_godRayVisibility'),
     'crepuscular god rays trace scene-depth visibility toward the sun'
+  );
+  testCase.equal(
+    clusteredVolumetricTrace.uniformTypes.godRaysOnly,
+    'f32',
+    'crepuscular god rays expose a separable diagnostic mode'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('farPosition - rayOrigin'),
+    'volume tracing derives a projection-independent view ray'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('rayOrigin + viewDirection * travel'),
+    'volume tracing preserves the per-pixel origin required by orthographic projection'
   );
 
   const reconstructedSSAO = createSSAOShaderPassPipeline();
@@ -430,7 +484,7 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
   const width = 8;
   const height = 1;
   const maxLightsPerCluster = 12;
-  const pointLightCount = 11;
+  const pointLightCount = 14;
   const sourceTexture = device.createTexture({
     id: 'volumetric-tile-boundary-source',
     format: 'rgba8unorm',
@@ -454,10 +508,11 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
   });
   const pointLightData = new Float32Array(pointLightCount * 8);
   pointLightData.set([0, 0, 0.5, 0.48, 1, 0, 0, 18], 0);
-  for (let lightIndex = 1; lightIndex < pointLightCount - 1; lightIndex++) {
+  for (let lightIndex = 1; lightIndex < pointLightCount; lightIndex++) {
     pointLightData.set([4, 4, 0.5, 0.1, 1, 0, 0, 1], lightIndex * 8);
   }
-  pointLightData.set([0, 0, 0.5, 0.48, 0, 1, 0, 18], (pointLightCount - 1) * 8);
+  const finalStoredLightIndex = maxLightsPerCluster - 1;
+  pointLightData.set([0, 0, 0.5, 0.48, 0, 1, 0, 18], finalStoredLightIndex * 8);
   const pointLights = device.createBuffer({
     id: 'volumetric-tile-boundary-lights',
     data: pointLightData,
@@ -469,10 +524,10 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const clusterIndexData = new Uint32Array(2 * maxLightsPerCluster);
-  for (let lightIndex = 0; lightIndex < pointLightCount; lightIndex++) {
+  for (let lightIndex = 0; lightIndex < maxLightsPerCluster; lightIndex++) {
     clusterIndexData[lightIndex] = lightIndex;
   }
-  clusterIndexData[maxLightsPerCluster] = pointLightCount - 1;
+  clusterIndexData[maxLightsPerCluster] = finalStoredLightIndex;
   const clusterLightIndices = device.createBuffer({
     id: 'volumetric-tile-boundary-indices',
     data: clusterIndexData,
@@ -544,11 +599,11 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
         const rightGreenScattering = pixelBytes[rightPixelOffset + 1]!;
         testCase.ok(
           leftRedScattering > 20 && leftGreenScattering > 20,
-          'one cluster retains relevant lights whose global indices collide modulo ten'
+          'an overflowing cluster selects its best lights across all stored candidates'
         );
         testCase.ok(
           leftGreenScattering > 20 && rightGreenScattering > 20,
-          'both tiles retain the shared nearby light beyond the old ten-light prefix'
+          'both tiles retain the shared nearby light at the stored candidate boundary'
         );
         testCase.ok(
           Math.abs(leftGreenScattering - rightGreenScattering) < 45,
