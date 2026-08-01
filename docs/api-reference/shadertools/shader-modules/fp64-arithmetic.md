@@ -9,6 +9,10 @@ arithmetic used by [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64)
 Use it directly when you only need the arithmetic primitives and want to avoid
 including the full `fp64` function library.
 
+See [GPU Floating-Point Precision Techniques](/docs/api-guide/shaders/gpu-floating-point-precision)
+for the numerical guarantees and tradeoffs of double-single, raw binary64,
+fixed-point, and integer-assisted approaches.
+
 ## Uniforms
 
 ```ts
