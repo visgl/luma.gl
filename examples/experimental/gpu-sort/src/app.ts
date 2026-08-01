@@ -5,13 +5,14 @@
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, luma, type Device} from '@luma.gl/core';
 import {
+  GPUBatchSort,
   GPUCommandGraph,
   GPUSort,
   type CompiledGPUCommandGraph,
   type GPUSortAlgorithm,
   type GPUSortDirection
 } from '@luma.gl/experimental';
-import type {GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector} from '@luma.gl/tables';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 
@@ -24,8 +25,8 @@ type ExampleResources = {
   compiled: CompiledGPUCommandGraph;
   inputKeys: GPUVector<'uint32'>;
   inputValues: GPUVector<'uint32'>;
-  outputKeys: Buffer;
-  outputValues: Buffer;
+  outputKeys: GPUVector<'uint32'>;
+  outputValues: GPUVector<'uint32'>;
 };
 
 type ExampleElements = {
@@ -34,6 +35,7 @@ type ExampleElements = {
   dataset: HTMLSelectElement;
   direction: HTMLSelectElement;
   inputSample: HTMLElement;
+  layout: HTMLSelectElement;
   nodeCount: HTMLElement;
   outputSample: HTMLElement;
   resolvedAlgorithm: HTMLElement;
@@ -75,6 +77,7 @@ class GPUSortExample {
     this.elements.algorithm.addEventListener('change', this.handleSettingChange);
     this.elements.direction.addEventListener('change', this.handleSettingChange);
     this.elements.dataset.addEventListener('change', this.handleSettingChange);
+    this.elements.layout.addEventListener('change', this.handleSettingChange);
   }
 
   async initialize(): Promise<void> {
@@ -114,6 +117,7 @@ class GPUSortExample {
     this.elements.algorithm.removeEventListener('change', this.handleSettingChange);
     this.elements.direction.removeEventListener('change', this.handleSettingChange);
     this.elements.dataset.removeEventListener('change', this.handleSettingChange);
+    this.elements.layout.removeEventListener('change', this.handleSettingChange);
     this.releaseResources();
     this.device?.destroy();
     this.device = null;
@@ -127,19 +131,20 @@ class GPUSortExample {
     this.elements.run.disabled = true;
     this.setStatus('Building Arrow columns and compiling the command graph...');
     const length = DATASET_LENGTHS[this.elements.dataset.value as keyof typeof DATASET_LENGTHS];
+    const batchLengths = getBatchLengths(length, this.elements.layout.value === 'streamed');
     const algorithm = this.elements.algorithm.value as GPUSortAlgorithm;
     const direction = this.elements.direction.value as GPUSortDirection;
     const {keys, values} = makeDataset(length);
     let nextResources: ExampleResources | null = null;
     let inputKeys: GPUVector<'uint32'> | null = null;
     let inputValues: GPUVector<'uint32'> | null = null;
-    let outputKeys: Buffer | null = null;
-    let outputValues: Buffer | null = null;
+    let outputKeys: GPUVector<'uint32'> | null = null;
+    let outputValues: GPUVector<'uint32'> | null = null;
 
     try {
       const arrowTable = new arrow.Table({
-        key: makeUint32ArrowVector(keys),
-        rowId: makeUint32ArrowVector(values)
+        key: makeUint32ArrowVector(keys, batchLengths),
+        rowId: makeUint32ArrowVector(values, batchLengths)
       });
       const keyColumn = arrowTable.getChild('key');
       const valueColumn = arrowTable.getChild('rowId');
@@ -154,46 +159,31 @@ class GPUSortExample {
         name: 'sort-row-ids',
         format: 'uint32'
       });
-      const byteLength = Math.max(length, 1) * UINT32_BYTE_LENGTH;
-      outputKeys = this.device.createBuffer({
-        id: 'sorted-keys',
-        byteLength,
-        usage: Buffer.STORAGE | Buffer.COPY_SRC
-      });
-      outputValues = this.device.createBuffer({
-        id: 'sorted-row-ids',
-        byteLength,
-        usage: Buffer.STORAGE | Buffer.COPY_SRC
-      });
+      outputKeys = makeOutputGPUVector(this.device, 'sorted-keys', batchLengths);
+      outputValues = makeOutputGPUVector(this.device, 'sorted-row-ids', batchLengths);
       const graph = new GPUCommandGraph(this.device, {id: 'gpu-sort-example'});
       const keysImport = graph.importGPUVector('keys', inputKeys);
       const valuesImport = graph.importGPUVector('values', inputValues);
-      const keyView = keysImport.data[0];
-      const valueView = valuesImport.data[0];
-      if (
-        !keyView ||
-        keysImport.data.length !== 1 ||
-        !valueView ||
-        valuesImport.data.length !== 1
-      ) {
-        throw new Error('GPU sort requires single-chunk input vectors');
-      }
-      const outputKeyHandle = graph.importBuffer(
-        {id: 'output-keys', byteLength, usage: outputKeys.usage},
-        outputKeys
-      );
-      const outputValueHandle = graph.importBuffer(
-        {id: 'output-values', byteLength, usage: outputValues.usage},
-        outputValues
-      );
-      const sort = new GPUSort({
-        keys: keyView,
-        values: valueView,
-        outputKeys: graph.createDataView(outputKeyHandle, {format: 'uint32', length}),
-        outputValues: graph.createDataView(outputValueHandle, {format: 'uint32', length}),
-        algorithm,
-        direction
-      });
+      const outputKeyImport = graph.importGPUVector('output-keys', outputKeys);
+      const outputValueImport = graph.importGPUVector('output-values', outputValues);
+      const sort =
+        batchLengths.length === 1
+          ? new GPUSort({
+              keys: keysImport.data[0],
+              values: valuesImport.data[0],
+              outputKeys: outputKeyImport.data[0],
+              outputValues: outputValueImport.data[0],
+              algorithm,
+              direction
+            })
+          : new GPUBatchSort({
+              keys: keysImport,
+              values: valuesImport,
+              outputKeys: outputKeyImport,
+              outputValues: outputValueImport,
+              algorithm,
+              direction
+            });
       sort.addToGraph(graph);
       const compileStart = performance.now();
       const compiled = graph.compile();
@@ -203,34 +193,33 @@ class GPUSortExample {
       const commandEncoder = this.device.createCommandEncoder({id: 'gpu-sort-example'});
       compiled.encode(commandEncoder, {parameters: undefined});
       this.device.submit(commandEncoder.finish());
-      const [keyBytes, valueBytes] = await Promise.all([
-        outputKeys.readAsync(0, length * UINT32_BYTE_LENGTH),
-        outputValues.readAsync(0, length * UINT32_BYTE_LENGTH)
+      const [sortedKeys, sortedValues] = await Promise.all([
+        readGPUVector(outputKeys),
+        readGPUVector(outputValues)
       ]);
-      const sortedKeys = new Uint32Array(keyBytes.buffer, keyBytes.byteOffset, length).slice();
-      const sortedValues = new Uint32Array(
-        valueBytes.buffer,
-        valueBytes.byteOffset,
-        length
-      ).slice();
       if (this.destroyed || runVersion !== this.runVersion) {
         destroyResources(nextResources);
         return;
       }
-      const valid = validateResult(keys, values, sortedKeys, sortedValues, direction);
+      const valid = validateResult(keys, values, sortedKeys, sortedValues, batchLengths, direction);
       this.releaseResources();
       this.resources = nextResources;
       nextResources = null;
-      this.elements.resolvedAlgorithm.textContent = sort.resolvedAlgorithm;
+      this.elements.resolvedAlgorithm.textContent =
+        sort instanceof GPUBatchSort
+          ? summarizeAlgorithms(sort.resolvedAlgorithms)
+          : sort.resolvedAlgorithm;
       this.elements.nodeCount.textContent = String(compiled.stats.nodeOrder.length);
       this.elements.reuse.textContent = `${compiled.stats.reusePercentage.toFixed(1)}%`;
       this.elements.compileTime.textContent = `${compileTime.toFixed(1)} ms`;
-      this.elements.inputSample.textContent = formatSample(keys, values);
-      this.elements.outputSample.textContent = formatSample(sortedKeys, sortedValues);
-      this.elements.validation.textContent = valid ? 'Stable key/value order verified' : 'Mismatch';
+      this.elements.inputSample.textContent = formatSample(keys, values, batchLengths);
+      this.elements.outputSample.textContent = formatSample(sortedKeys, sortedValues, batchLengths);
+      this.elements.validation.textContent = valid
+        ? `Stable order verified within ${batchLengths.length} ${batchLengths.length === 1 ? 'batch' : 'batches'}`
+        : 'Mismatch';
       this.elements.validation.dataset['state'] = valid ? 'ready' : 'error';
       this.setStatus(
-        `${length.toLocaleString()} rows encoded and submitted with explicit caller ownership.`
+        `${length.toLocaleString()} rows across ${batchLengths.length} Arrow ${batchLengths.length === 1 ? 'batch' : 'batches'} encoded with explicit caller ownership.`
       );
     } catch (error) {
       if (nextResources) {
@@ -271,10 +260,18 @@ function makeDataset(length: number): {keys: Uint32Array; values: Uint32Array} {
   return {keys, values: Uint32Array.from({length}, (_, index) => index)};
 }
 
-function makeUint32ArrowVector(values: Uint32Array): arrow.Vector<arrow.Uint32> {
+function makeUint32ArrowVector(
+  values: Uint32Array,
+  chunkLengths: number[]
+): arrow.Vector<arrow.Uint32> {
   const type = new arrow.Uint32();
-  const data = new arrow.Data(type, 0, values.length, 0, {[arrow.BufferType.DATA]: values});
-  return new arrow.Vector([data]);
+  let rowOffset = 0;
+  const data = chunkLengths.map(length => {
+    const chunk = values.subarray(rowOffset, rowOffset + length);
+    rowOffset += length;
+    return new arrow.Data(type, 0, length, 0, {[arrow.BufferType.DATA]: chunk});
+  });
+  return new arrow.Vector(data);
 }
 
 function validateResult(
@@ -282,22 +279,114 @@ function validateResult(
   values: Uint32Array,
   sortedKeys: Uint32Array,
   sortedValues: Uint32Array,
+  batchLengths: number[],
   direction: GPUSortDirection
 ): boolean {
-  const expected = Array.from(keys, (key, index) => ({key, value: values[index], index}));
-  expected.sort((left, right) => {
-    const keyOrder = direction === 'ascending' ? left.key - right.key : right.key - left.key;
-    return keyOrder || left.index - right.index;
-  });
-  return expected.every(
-    (pair, index) => pair.key === sortedKeys[index] && pair.value === sortedValues[index]
-  );
+  let rowOffset = 0;
+  for (const batchLength of batchLengths) {
+    const expected = Array.from({length: batchLength}, (_, batchIndex) => {
+      const index = rowOffset + batchIndex;
+      return {key: keys[index], value: values[index], index};
+    });
+    expected.sort((left, right) => {
+      const keyOrder = direction === 'ascending' ? left.key - right.key : right.key - left.key;
+      return keyOrder || left.index - right.index;
+    });
+    if (
+      !expected.every(
+        (pair, batchIndex) =>
+          pair.key === sortedKeys[rowOffset + batchIndex] &&
+          pair.value === sortedValues[rowOffset + batchIndex]
+      )
+    ) {
+      return false;
+    }
+    rowOffset += batchLength;
+  }
+  return true;
 }
 
-function formatSample(keys: Uint32Array, values: Uint32Array): string {
-  const count = Math.min(keys.length, 24);
-  const sample = Array.from({length: count}, (_, index) => `${keys[index]}:${values[index]}`);
-  return `${sample.join('  ')}${keys.length > count ? '  …' : ''}`;
+function formatSample(keys: Uint32Array, values: Uint32Array, batchLengths: number[]): string {
+  const batches: string[] = [];
+  let rowOffset = 0;
+  let remaining = 24;
+  for (const batchLength of batchLengths) {
+    const count = Math.min(batchLength, remaining);
+    batches.push(
+      Array.from(
+        {length: count},
+        (_, batchIndex) => `${keys[rowOffset + batchIndex]}:${values[rowOffset + batchIndex]}`
+      ).join('  ')
+    );
+    rowOffset += batchLength;
+    remaining -= count;
+    if (remaining === 0) break;
+  }
+  return `${batches.join('  │  ')}${keys.length > 24 ? '  …' : ''}`;
+}
+
+function getBatchLengths(length: number, streamed: boolean): number[] {
+  if (!streamed) return [length];
+  if (length <= 16) return [5, length - 5];
+  if (length <= 4096) return [1024, length - 1024];
+  return [32_768, 65_537, length - 98_305];
+}
+
+function makeOutputGPUVector(
+  device: Device,
+  name: string,
+  chunkLengths: number[]
+): GPUVector<'uint32'> {
+  return new GPUVector({
+    type: 'data',
+    name,
+    format: 'uint32',
+    data: chunkLengths.map(
+      (length, chunkIndex) =>
+        new GPUData({
+          buffer: device.createBuffer({
+            id: `${name}-${chunkIndex}`,
+            byteLength: Math.max(length, 1) * UINT32_BYTE_LENGTH,
+            usage: Buffer.STORAGE | Buffer.COPY_SRC
+          }),
+          format: 'uint32',
+          length,
+          ownsBuffer: true
+        })
+    ),
+    ownsData: true
+  });
+}
+
+async function readGPUVector(vector: GPUVector<'uint32'>): Promise<Uint32Array> {
+  const chunks = await Promise.all(
+    vector.data.map(async chunk => {
+      if (chunk.length === 0) return new Uint32Array(0);
+      const bytes = await chunk.buffer.readAsync(
+        chunk.byteOffset,
+        chunk.length * UINT32_BYTE_LENGTH
+      );
+      return new Uint32Array(bytes.buffer, bytes.byteOffset, chunk.length).slice();
+    })
+  );
+  const result = new Uint32Array(vector.length);
+  let rowOffset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, rowOffset);
+    rowOffset += chunk.length;
+  }
+  return result;
+}
+
+function summarizeAlgorithms(algorithms: readonly ('bitonic' | 'radix')[]): string {
+  const bitonicCount = algorithms.filter(algorithm => algorithm === 'bitonic').length;
+  const radixCount = algorithms.length - bitonicCount;
+  return [
+    bitonicCount > 0 ? `bitonic × ${bitonicCount}` : '',
+    radixCount > 0 ? `radix × ${radixCount}` : ''
+  ]
+    .filter(Boolean)
+    .join(' + ');
 }
 
 function destroyResources(resources: ExampleResources): void {
@@ -322,6 +411,7 @@ function getElements(root: HTMLElement): ExampleElements {
     dataset: get('[data-dataset]'),
     direction: get('[data-direction]'),
     inputSample: get('[data-input-sample]'),
+    layout: get('[data-layout]'),
     nodeCount: get('[data-node-count]'),
     outputSample: get('[data-output-sample]'),
     resolvedAlgorithm: get('[data-resolved-algorithm]'),
@@ -351,17 +441,18 @@ const EXAMPLE_HTML = `
   <header>
     <p class="eyebrow">@luma.gl/experimental · GPUCommandGraph</p>
     <h1>Graph-native GPU sort</h1>
-    <p>Stable paired uint32 sorting with bitonic and binary LSD radix implementations.</p>
+    <p>Stable paired uint32 sorting for one global domain or independent streaming batches.</p>
   </header>
   <section class="controls">
     <label>Dataset<select data-dataset><option value="small">16 rows</option><option value="medium">4,096 rows</option><option value="large">131,072 rows</option></select></label>
+    <label>Storage<select data-layout><option value="packed">One packed batch</option><option value="streamed" selected>Preserved Arrow batches</option></select></label>
     <label>Algorithm<select data-algorithm><option value="auto">Auto</option><option value="bitonic">Bitonic</option><option value="radix">Radix</option></select></label>
     <label>Direction<select data-direction><option value="ascending">Ascending</option><option value="descending">Descending</option></select></label>
     <button data-run>Compile and run</button>
   </section>
   <p class="status" data-status>Initializing…</p>
   <section class="metrics">
-    <article><span>Resolved algorithm</span><strong data-resolved-algorithm>—</strong></article>
+    <article><span>Resolved per batch</span><strong data-resolved-algorithm>—</strong></article>
     <article><span>Graph nodes</span><strong data-node-count>—</strong></article>
     <article><span>Transient reuse</span><strong data-reuse>—</strong></article>
     <article><span>Compile time</span><strong data-compile-time>—</strong></article>

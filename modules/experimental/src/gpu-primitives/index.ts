@@ -71,6 +71,8 @@ export type {GPUAncestorProjectionProps} from './gpu-ancestor-projection';
 
 export {GPUSort} from './gpu-sort';
 export type {GPUSortAlgorithm, GPUSortDirection, GPUSortProps} from './gpu-sort';
+export {GPUBatchSort} from './gpu-batch-sort';
+export type {GPUBatchSortProps} from './gpu-batch-sort';
 
 export {GPUReduction} from './gpu-reduction';
 export type {GPUReductionInput, GPUReductionOperation, GPUReductionProps} from './gpu-reduction';

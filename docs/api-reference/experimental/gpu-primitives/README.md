@@ -57,7 +57,7 @@ later render pass consume that count without a CPU synchronization point.
 
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
 `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
-`GPUAncestorProjection`, `GPUSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
+`GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
 `GPUGridAggregation`, `GPUGroupAggregation`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
 projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
@@ -184,8 +184,9 @@ inclusive prefix sums, with optional segment starts. `GPUCompaction` promises st
 composition over source-aligned masks. `GPUGraphTraversal` promises bounded, cycle-safe
 reachability over stable compressed sparse adjacency. `GPUAncestorProjection` promises bounded
 nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
-parent/child row offsets. `GPUSort` promises stable paired `uint32`
-ordering while choosing bitonic sort for smaller vectors and radix sort for larger ones.
+parent/child row offsets. `GPUSort` promises stable paired `uint32` ordering for one packed domain,
+while `GPUBatchSort` preserves vector chunks as independent sort domains. Both choose bitonic sort
+for smaller work units and radix sort for larger ones.
 `GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, and
 `GPUGroupAggregation` promise aggregate and binning results while selecting hierarchical and
 atomic implementations internally.
@@ -966,7 +967,8 @@ The intended v10 layering is:
 @luma.gl/gpgpu
   GPUScan, GPUCompaction, and reusable visibility workflows
   GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
-  GPUReduction, GPUSort, GPUHistogram, GPUGridBinning, GPUGridAggregation, GPUGroupAggregation
+  GPUReduction, GPUSort, GPUBatchSort, GPUHistogram, GPUGridBinning, GPUGridAggregation
+  GPUGroupAggregation
   higher-level table algorithms
 
 @luma.gl/arrow
@@ -1078,7 +1080,8 @@ flowing directly into indirect rendering.
 ### Phase 3 — Algorithm and table scaling
 
 **Status:** In progress. Inclusive and segmented `uint32` scans, weighted floating-point grid and
-categorical statistics, irregular-edge histograms, and filtered categorical counts are implemented.
+categorical statistics, irregular-edge histograms, filtered categorical counts, and
+batch-preserving paired sort are implemented.
 
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
@@ -1112,10 +1115,17 @@ source chunks without packing. Large chunks use bounded three-dimensional dispat
 data-analysis example groups the same Arrow rows by quadrant while a selectable value mask changes
 both the accepted population and its per-group means.
 
-Remaining work extends multi-chunk support to algorithms that still require one packed view, then
-adds batch-aware operations that preserve table structure. Custom associative scans, sparse
-histograms, and multidimensional histograms should be added only with a concrete consumer and an
-explicit numerical or memory contract.
+`GPUBatchSort` applies stable paired `uint32` sorting independently to aligned GPU vector chunks.
+It preserves the number, order, and length of source batches, never allocates a hidden packed
+copy, and selects bitonic or radix sorting independently for each chunk. This supports streaming
+record batches, per-tile ordering, and incremental ingestion where partition boundaries are part
+of the storage and lifetime contract. The GPU sort example contrasts that behavior with one
+explicit packed global sort and validates mixed bitonic/radix batches against a CPU oracle.
+
+Remaining work extends meaningful multi-chunk support to topology algorithms that still require
+one packed view and adds more batch-aware operations only where consumers need partition-local
+semantics. Custom associative scans, sparse histograms, and multidimensional histograms should be
+added only with a concrete consumer and an explicit numerical or memory contract.
 
 Irregular histogram edges primarily target heavy-tailed measurements such as trace duration and
 request latency. Explicit microsecond-to-second boundaries preserve resolution across orders of
