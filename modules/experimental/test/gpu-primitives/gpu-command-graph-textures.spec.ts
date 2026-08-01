@@ -342,6 +342,134 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
   t.end();
 });
 
+test('GPUCommandGraph enforces sampled-only external texture frames', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const makeExternalTexture = (id: string) =>
+    device.createExternalTexture({
+      id,
+      handle: {} as GPUExternalTexture,
+      width: 4,
+      height: 4
+    });
+  const firstExternalTexture = makeExternalTexture('external-frame-0');
+  const secondExternalTexture = makeExternalTexture('external-frame-1');
+  const wrongSizeExternalTexture = device.createExternalTexture({
+    id: 'external-wrong-size',
+    handle: {} as GPUExternalTexture,
+    width: 8,
+    height: 4
+  });
+  const frameTexture = device.createTexture({
+    id: 'external-frame-color',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  const graph = new GPUCommandGraph(device, {id: 'external-texture'});
+  t.throws(
+    () => graph.importExternalTexture({id: 'invalid-video', width: 0, height: 4}),
+    /positive safe integer/,
+    'external texture descriptors require positive fixed dimensions'
+  );
+  const externalTexture = graph.importExternalTexture({id: 'video', width: 4, height: 4});
+  graph.importFrameTexture({
+    id: 'color',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  const resolvedExternalTextures: unknown[] = [];
+  t.throws(
+    () =>
+      graph.addComputePass({
+        id: 'invalid-external-compute',
+        resources: [{externalTexture, usage: 'sampled'}],
+        compile: () => ({encode: () => {}})
+      }),
+    /only by render nodes/,
+    'external texture bindings cannot leak into incompatible pass types'
+  );
+  graph.addRenderPass({
+    id: 'sample-video',
+    resources: [{externalTexture, usage: 'sampled'}],
+    compile: () => ({
+      encode: ({getExternalTexture}) =>
+        void resolvedExternalTextures.push(getExternalTexture(externalTexture))
+    })
+  });
+  const compiled = graph.compile();
+  t.throws(
+    () =>
+      compiled.encode(device.createCommandEncoder({id: 'missing-external-frame'}), {
+        parameters: undefined,
+        frameTextures: {color: {texture: frameTexture, frameId: 0}}
+      }),
+    /external texture "video" is required/,
+    'external texture imports have no persistent default'
+  );
+  t.throws(
+    () =>
+      compiled.encode(device.createCommandEncoder({id: 'wrong-size-external-frame'}), {
+        parameters: undefined,
+        frameTextures: {color: {texture: frameTexture, frameId: 0}},
+        externalTextures: {video: {texture: wrongSizeExternalTexture, frameId: 0}}
+      }),
+    /incompatible dimensions/,
+    'external frame dimensions must match the compiled contract'
+  );
+  compiled.encode(device.createCommandEncoder({id: 'external-frame-0'}), {
+    parameters: undefined,
+    frameTextures: {color: {texture: frameTexture, frameId: 0}},
+    externalTextures: {video: {texture: firstExternalTexture, frameId: 0}}
+  });
+  t.equal(resolvedExternalTextures[0], firstExternalTexture, 'first frame resolves its snapshot');
+  t.throws(
+    () =>
+      compiled.encode(device.createCommandEncoder({id: 'reused-external-frame'}), {
+        parameters: undefined,
+        frameTextures: {color: {texture: frameTexture, frameId: 1}},
+        externalTextures: {video: {texture: firstExternalTexture, frameId: 1}}
+      }),
+    /requires a fresh binding/,
+    'the same opaque external binding cannot cross frame boundaries'
+  );
+  t.throws(
+    () =>
+      compiled.encode(device.createCommandEncoder({id: 'mixed-external-frame'}), {
+        parameters: undefined,
+        frameTextures: {color: {texture: frameTexture, frameId: 1}},
+        externalTextures: {video: {texture: secondExternalTexture, frameId: 2}}
+      }),
+    /must share one frameId/,
+    'ordinary and external frame imports share one coherent frame ID'
+  );
+  compiled.encode(device.createCommandEncoder({id: 'external-frame-1'}), {
+    parameters: undefined,
+    frameTextures: {color: {texture: frameTexture, frameId: 1}},
+    externalTextures: {video: {texture: secondExternalTexture, frameId: 1}}
+  });
+  t.equal(
+    resolvedExternalTextures[1],
+    secondExternalTexture,
+    'the next frame resolves a fresh binding'
+  );
+  compiled.destroy();
+  t.notOk(firstExternalTexture.destroyed, 'compiled graph leaves external bindings caller-owned');
+  t.notOk(secondExternalTexture.destroyed, 'replacement external binding remains caller-owned');
+  firstExternalTexture.destroy();
+  secondExternalTexture.destroy();
+  wrongSizeExternalTexture.destroy();
+  frameTexture.destroy();
+  t.end();
+});
+
 test('GPUCommandGraph tracks texture subresources and reuses compatible transients', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {

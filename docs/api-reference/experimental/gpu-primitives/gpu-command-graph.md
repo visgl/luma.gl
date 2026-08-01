@@ -10,7 +10,7 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 `GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
 ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns
 transient resources and node state but borrows every import. Render nodes can resolve multisampled
-attachments and consume explicitly numbered, frame-scoped swapchain textures.
+attachments and consume explicitly numbered, frame-scoped swapchain and external-image bindings.
 
 See [Choosing a GPU Data-Processing API](/docs/api-guide/gpu/gpu-data-processing) for guidance on
 when to use a command graph, portable GPGPU evaluators, or lower-level compute helpers.
@@ -31,6 +31,13 @@ texture can remain valid across many encodings, while a canvas texture belongs t
 frame and may be replaced at presentation. `importFrameTexture()` makes that boundary visible:
 every encoding supplies a fresh binding with a strictly increasing frame ID. This catches stale
 swapchain reuse without making the graph responsible for acquisition or presentation.
+
+External images are even narrower than frame textures. A WebGPU `texture_external` is an opaque,
+short-lived sampling snapshot of a video or camera frame—not ordinary texture storage. It cannot
+be a render attachment, storage binding, copy endpoint, or source of graph-created views.
+`importExternalTexture()` therefore gives it a separate sampled-only handle and requires a newly
+acquired `ExternalTexture` on every numbered encoding. The application still owns playback,
+source acquisition, fallback conversion, and destruction.
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 
@@ -69,9 +76,10 @@ infers a stable node order, plans transient allocation reuse, creates physical t
 each node's `compile` callback once. The returned `CompiledGPUCommandGraph` can then be encoded
 repeatedly with different parameters and compatible imported-resource replacements.
 
-Imported buffers, textures, `GPUData`, and `GPUVector` chunks are borrowed. The compiled graph owns
-only node-created resources, physical transients, and cached texture views/framebuffers. Calling
-`destroy()` releases those owned resources and never destroys an import.
+Imported buffers, textures, external textures, `GPUData`, and `GPUVector` chunks are borrowed. The
+compiled graph owns only node-created resources, physical transients, and cached texture
+views/framebuffers. Calling `destroy()` releases those owned resources and never destroys an
+import.
 
 ## Buffer APIs
 
@@ -143,6 +151,44 @@ resolve resources. The application acquires the textures before encoding and pre
 submission. The graph validates exact descriptor compatibility and ownership, but never acquires,
 presents, treats an earlier frame binding as reusable, or destroys the imported texture.
 
+### `importExternalTexture(descriptor)`
+
+Declares a frame-scoped, sampled-only external image with fixed width and height. Each encoding
+supplies `externalTextures[id] = {texture, frameId}`. The frame ID must be non-negative, strictly
+increase for that handle, and match every `frameTextures` and `externalTextures` binding supplied
+to the same encoding. The concrete `ExternalTexture` wrapper must also be fresh; incrementing the
+frame ID cannot make an earlier opaque browser binding valid again.
+
+Only render nodes may declare `{externalTexture, usage: 'sampled'}`. Executables resolve the current
+snapshot with `getExternalTexture(handle)`. This intentionally rules out views, copies, storage,
+attachments, transient allocation, and implicit conversion. Use a normal `Texture` import when a
+workflow needs those operations.
+
+```ts
+const video = graph.importExternalTexture({id: 'video', width, height});
+
+graph.addRenderPass({
+  id: 'sample-video',
+  resources: [{externalTexture: video, usage: 'sampled'}],
+  compile: () => ({
+    encode: ({renderPass, getExternalTexture}) => {
+      model.setBindings({videoTexture: getExternalTexture(video)});
+      model.draw(renderPass);
+    }
+  })
+});
+
+const externalTexture = device.createExternalTexture({source: videoElement});
+compiled.encode(device.commandEncoder, {
+  parameters,
+  externalTextures: {video: {texture: externalTexture, frameId}}
+});
+```
+
+Acquire the concrete binding immediately before encoding. Media clocks and decoder queues stay
+outside the graph, and a WebGL or reusable-storage path should copy the source into a normal
+texture explicitly.
+
 ### `createTransientTexture(descriptor)`
 
 Declares graph-owned texture storage. Non-overlapping logical textures reuse one physical texture
@@ -193,9 +239,10 @@ Buffer nodes declare storage, uniform, copy, indirect, vertex, and index uses. T
 as read-write resources. `dependsOn` adds explicit ordering where resources do not express the
 dependency.
 
-Executable contexts expose `getBuffer()`, `getTexture()`, and `getTextureView()`. Concrete texture
-views and framebuffers are cached for repeated encodings and rebuilt when an imported texture is
-replaced. Non-default views over frame-scoped imports are refreshed for each frame ID.
+Executable contexts expose `getBuffer()`, `getTexture()`, `getTextureView()`, and
+`getExternalTexture()`. Concrete ordinary texture views and framebuffers are cached for repeated
+encodings and rebuilt when an imported texture is replaced. Non-default views over frame-scoped
+ordinary textures are refreshed for each frame ID; external textures never enter either cache.
 
 ## Hazards and scheduling
 
@@ -246,6 +293,10 @@ whole-graph and per-node CPU encoding statistics.
 
 `encode()` never submits, maps, reads, or grows resources.
 
+`options.frameTextures` and `options.externalTextures` form one coherent frame transaction. The
+graph validates every binding before advancing its remembered frame IDs, so a rejected replacement
+can be corrected and retried without partially consuming a frame.
+
 If the caller's encoder has a timestamp query set, compute and render passes record timestamp pairs
 without changing graph code. `encoding.canReadGPUTimings` reports whether any pairs were captured.
 After submitting the command buffer, `await encoding.readTimings()` explicitly reads per-node and
@@ -282,4 +333,4 @@ separate values and should not be collapsed into one score.
 ### `destroy()`
 
 Destroys compiled node resources, cached views/framebuffers, and physical transients. Imported
-buffers and textures remain caller-owned.
+buffers, textures, and external-image bindings remain caller-owned.

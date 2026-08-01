@@ -14,6 +14,7 @@ import type {
   GraphBufferUsage,
   GraphBufferUse,
   GraphDataView,
+  GraphExternalTextureHandle,
   GraphResourceUse,
   GraphTextureAspect,
   GraphTextureDimension,
@@ -84,6 +85,8 @@ export type GPUCommandGraphCompilation<Parameters> = {
   buffers: Map<string, GraphBufferHandle>;
   /** Snapshot of logical texture resources. */
   textures: Map<string, GraphTextureHandle>;
+  /** Snapshot of logical frame-scoped external-image resources. */
+  externalTextures: Map<string, GraphExternalTextureHandle>;
   /** Nodes and executables in stable topological order. */
   compiledNodes: CompiledNode<Parameters>[];
   /** Logical-to-physical transient buffer mapping. */
@@ -113,6 +116,7 @@ export function compileGPUCommandGraph<Parameters>(props: {
   id: string;
   buffers: Map<string, GraphBufferHandle>;
   textures: Map<string, GraphTextureHandle>;
+  externalTextures: Map<string, GraphExternalTextureHandle>;
   nodes: GPUCommandGraphNode<Parameters>[];
 }): GPUCommandGraphCompilation<Parameters> {
   const nodeOrder = getNodeOrder(props.nodes);
@@ -247,6 +251,7 @@ export function compileGPUCommandGraph<Parameters>(props: {
     id: props.id,
     buffers: new Map(props.buffers),
     textures: new Map(props.textures),
+    externalTextures: new Map(props.externalTextures),
     compiledNodes,
     transientBuffers,
     transientTextures,
@@ -271,6 +276,11 @@ export function getTextureHandle(
 /** Narrows a declared resource use to a buffer use. @internal */
 export function isGraphBufferUse(resource: GraphResourceUse): resource is GraphBufferUse {
   return 'buffer' in resource;
+}
+
+/** Narrows a declared resource use to an ordinary texture use. @internal */
+export function isGraphTextureUse(resource: GraphResourceUse): resource is GraphTextureUse {
+  return 'texture' in resource;
 }
 
 /** Returns whether an access observes existing buffer contents. */
@@ -367,7 +377,7 @@ function getNodeOrder<Parameters>(
           activeBufferReaders.set(handle, new Set());
           lastBufferWriter.set(handle, node.id);
         }
-      } else {
+      } else if (isGraphTextureUse(resource)) {
         const handle = getTextureHandle(resource.texture);
         const history = textureHistory.get(handle) ?? [];
         for (const previous of history) {
@@ -526,7 +536,7 @@ function getTextureTransientAllocationPlan<Parameters>(
   textures: Iterable<GraphTextureHandle>
 ): TextureTransientAllocation[] {
   const lifetimes = getResourceLifetimes(nodes, resource =>
-    isGraphBufferUse(resource) ? null : getTextureHandle(resource.texture)
+    isGraphTextureUse(resource) ? getTextureHandle(resource.texture) : null
   );
   const allocations: TextureTransientAllocation[] = [];
   const transientTextures = Array.from(textures)
