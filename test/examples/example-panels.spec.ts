@@ -211,6 +211,13 @@ describe('ExampleSettingsPanelManager', () => {
       ]);
       expect(sectionButtons[0].getAttribute('aria-expanded')).toBe('true');
       expect(sectionButtons[1].getAttribute('aria-expanded')).toBe('false');
+      const selectButton = document.body.querySelector(
+        '[data-setting-row-for="mode"] button[aria-haspopup="listbox"]'
+      );
+      expect(selectButton).toBeTruthy();
+      expect(selectButton?.matches("button[aria-expanded]:not([aria-haspopup='listbox'])")).toBe(
+        false
+      );
       expect(document.body.querySelector('[data-setting-row-for="reflectionsEnabled"]')).toBeNull();
 
       sectionButtons[1].dispatchEvent(new MouseEvent('click', {bubbles: true}));

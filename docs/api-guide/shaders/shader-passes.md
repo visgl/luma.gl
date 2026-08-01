@@ -78,13 +78,13 @@ surface attachments without owning scene traversal or material shading. Multiple
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   createBloomShaderPassPipeline,
-  createClusteredVolumetricLightingShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
   createHDRAutoExposureShaderPassPipeline,
   createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
-  createTAAShaderPassPipeline
+  createTAAShaderPassPipeline,
+  toneMapping
 } from '@luma.gl/effects';
 import {GBuffer} from '@luma.gl/experimental';
 
@@ -104,15 +104,16 @@ sceneModel.draw(scenePass);
 scenePass.end();
 
 const effects = new ShaderPassRenderer(device, {
+  colorFormat: 'rgba16float',
   shaderPasses: [
     createGTAOShaderPassPipeline(),
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
-    createClusteredVolumetricLightingShaderPassPipeline(),
+    createTAAShaderPassPipeline(),
+    createMotionBlurShaderPassPipeline(),
     createHDRAutoExposureShaderPassPipeline(),
     createBloomShaderPassPipeline(),
-    createTAAShaderPassPipeline(),
-    createMotionBlurShaderPassPipeline()
+    toneMapping
   ]
 });
 
@@ -129,15 +130,16 @@ lighting result into the same ordered color chain:
 
 ```ts
 const renderer = new ShaderPassRenderer(device, {
+  colorFormat: 'rgba16float',
   shaderPasses: [
     createDeferredLightingShaderPassPipeline(),
     createGTAOShaderPassPipeline(),
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
-    createClusteredVolumetricLightingShaderPassPipeline(),
+    createTAAShaderPassPipeline(),
     createHDRAutoExposureShaderPassPipeline(),
     createBloomShaderPassPipeline(),
-    createTAAShaderPassPipeline()
+    toneMapping
   ]
 });
 ```
@@ -212,8 +214,8 @@ the newly bounced illumination.
 normal/roughness, and velocity attachments. Its six explicit stages demonstrate how a complex
 effect remains one composable pipeline:
 
-1. Trace stochastic, roughness-aware reflection rays against the G-buffer depth at half
-   resolution.
+1. Trace stochastic, roughness-aware reflection rays against the G-buffer depth at configurable
+   resolution, defaulting to full resolution.
 2. Reproject persistent reflection history with screen-space velocity and reject depth
    disocclusions.
 3. Save current depth into the reflection history target for the next frame.
@@ -246,6 +248,14 @@ storage buffers used by deferred shading into actual participating-media illumin
 This is the higher-fidelity alternative to `createVolumetricFogShaderPassPipeline()`, whose
 compact height fog does not evaluate the real scene-light storage buffers. Both remain composable
 ordered pipelines; normally choose one atmospheric implementation rather than stacking both.
+
+Unlike the generic `GBuffer` examples above, clustered volumetric lighting requires more than
+`gBuffer.getShaderPassBindings()`. Encode a `ClusteredLightGrid` for the current point-light buffer
+each frame, add `pointLights`, `clusteredLightGrid.getShaderPassBindings()`, depth, and velocity to
+the renderer bindings, and merge `clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)`
+into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings. See
+the [`ClusteredLightGrid` usage guide](/docs/api-reference/experimental/clustered-lighting) for the
+buffer setup and encode sequence.
 
 SSAO, GTAO, screen-space global illumination, reflections, and clustered volumetric lighting
 default to full-resolution intermediate framebuffers. Pass `resolutionScale: 0.5`, for example,

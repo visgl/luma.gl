@@ -251,9 +251,12 @@ fn clusteredVolumetricTrace_pointRadiance(
     selectedLightIndices[slotIndex] = 0xffffffffu;
     selectedLightScores[slotIndex] = 1.0e20;
   }
+  var selectedLightCount = 0u;
+  var worstSlotIndex = 0u;
+  var worstScore = -1.0;
 
-  // Global-index slots keep the selected nearby lights stable across neighboring clusters.
-  // Truncating each tile to its first candidates instead exposes the cluster grid in fog.
+  // Keep the best bounded set after evaluating every relevant candidate. Truncating each tile to
+  // its first candidates instead exposes the cluster grid in fog.
   for (var candidateIndex: u32 = 0u; candidateIndex < candidateCount; candidateIndex++) {
     var lightIndex = candidateIndex;
     if (!overflowed) {
@@ -271,12 +274,29 @@ fn clusteredVolumetricTrace_pointRadiance(
     if (distanceSquared >= rangeSquared || distanceSquared <= 0.0004) {
       continue;
     }
-    let slotIndex = lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS;
     let lightScore = distanceSquared /
       max(rangeSquared * max(light.colorIntensity.a, 0.05), 0.0001);
-    if (lightScore < selectedLightScores[slotIndex]) {
-      selectedLightIndices[slotIndex] = lightIndex;
-      selectedLightScores[slotIndex] = lightScore;
+    if (selectedLightCount < CLUSTERED_VOLUMETRIC_MAX_LIGHTS) {
+      selectedLightIndices[selectedLightCount] = lightIndex;
+      selectedLightScores[selectedLightCount] = lightScore;
+      if (lightScore > worstScore) {
+        worstSlotIndex = selectedLightCount;
+        worstScore = lightScore;
+      }
+      selectedLightCount += 1u;
+      continue;
+    }
+    if (lightScore < worstScore) {
+      selectedLightIndices[worstSlotIndex] = lightIndex;
+      selectedLightScores[worstSlotIndex] = lightScore;
+      worstSlotIndex = 0u;
+      worstScore = selectedLightScores[0];
+      for (var slotIndex = 1u; slotIndex < CLUSTERED_VOLUMETRIC_MAX_LIGHTS; slotIndex++) {
+        if (selectedLightScores[slotIndex] > worstScore) {
+          worstSlotIndex = slotIndex;
+          worstScore = selectedLightScores[slotIndex];
+        }
+      }
     }
   }
 
@@ -296,7 +316,7 @@ fn clusteredVolumetricTrace_pointRadiance(
     let rangeFade = pow(1.0 - distanceToLight / light.positionRange.w, 2.0);
     let attenuation = rangeFade / (1.0 + distanceToLight * distanceToLight * 0.1);
     let phase = clusteredVolumetricTrace_phase(
-      dot(-viewDirection, lightDirection),
+      dot(viewDirection, lightDirection),
       clusteredVolumetricTrace.anisotropy * 0.65
     );
     radiance += light.colorIntensity.rgb * light.colorIntensity.a *
@@ -329,7 +349,7 @@ fn clusteredVolumetricTrace_sampleColor(
   let pixelCoordinate = floor(texCoord * texSize);
   let rayJitter = fract(sin(dot(pixelCoordinate, vec2f(12.9898, 78.233))) * 43758.5453);
   let directionalPhase = clusteredVolumetricTrace_phase(
-    dot(-viewDirection, normalize(clusteredVolumetricTrace.directionalLightDirectionView)),
+    dot(viewDirection, normalize(clusteredVolumetricTrace.directionalLightDirectionView)),
     clusteredVolumetricTrace.anisotropy
   );
   let godRayVisibility = clusteredVolumetricTrace_godRayVisibility(texCoord);

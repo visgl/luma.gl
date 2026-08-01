@@ -27,6 +27,7 @@ type HDRAutoExposureAdaptBindings = {
 
 type HDRAutoExposureApplyUniforms = {
   debugMode: number;
+  enabled: number;
 };
 
 type HDRAutoExposureApplyBindings = {
@@ -60,7 +61,7 @@ fn hdrLuminanceExtract_sampleColor(
     }
   }
 
-  return vec4f(weightedLogLuminance / max(totalWeight, 0.0001), 0.0, 0.0, 1.0);
+  return vec4f(weightedLogLuminance, totalWeight, 0.0, 1.0);
 }`,
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
@@ -76,17 +77,17 @@ fn hdrLuminanceReduce_sampleColor(
   texCoord: vec2f
 ) -> vec4f {
   let sourceTexel = 1.0 / vec2f(textureDimensions(sourceTexture));
-  var logLuminance = 0.0;
+  var meterState = vec2f(0.0);
 
   for (var sampleY: i32 = 0; sampleY < 4; sampleY++) {
     for (var sampleX: i32 = 0; sampleX < 4; sampleX++) {
       let sampleOffset = vec2f(f32(sampleX) - 1.5, f32(sampleY) - 1.5);
       let sampleCoord = clamp(texCoord + sampleOffset * sourceTexel, vec2f(0.0), vec2f(1.0));
-      logLuminance += textureSampleLevel(sourceTexture, sourceTextureSampler, sampleCoord, 0).r;
+      meterState += textureSampleLevel(sourceTexture, sourceTextureSampler, sampleCoord, 0).rg;
     }
   }
 
-  return vec4f(logLuminance / 16.0, 0.0, 0.0, 1.0);
+  return vec4f(meterState / 16.0, 0.0, 1.0);
 }`,
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
@@ -119,16 +120,33 @@ fn hdrAutoExposureAdapt_sampleColor(
     return vec4f(1.0, 0.0, 0.0, 1.0);
   }
 
-  let logLuminance = textureSampleLevel(sourceTexture, sourceTextureSampler, vec2f(0.5), 0).r;
+  let sourceDimensions = textureDimensions(sourceTexture);
+  var meterState = vec2f(0.0);
+  for (var sampleY: u32 = 0u; sampleY < sourceDimensions.y; sampleY++) {
+    for (var sampleX: u32 = 0u; sampleX < sourceDimensions.x; sampleX++) {
+      meterState += textureLoad(sourceTexture, vec2i(i32(sampleX), i32(sampleY)), 0).rg;
+    }
+  }
+
+  let logLuminance = meterState.x / max(meterState.y, 0.0001);
   let averageLuminance = max(exp(logLuminance), 0.0001);
+  let minimumExposure = max(
+    min(hdrAutoExposureAdapt.minimumExposure, hdrAutoExposureAdapt.maximumExposure),
+    0.0001
+  );
+  let maximumExposure = max(
+    max(hdrAutoExposureAdapt.minimumExposure, hdrAutoExposureAdapt.maximumExposure),
+    minimumExposure
+  );
   let targetExposure = clamp(
     hdrAutoExposureAdapt.keyValue / averageLuminance,
-    hdrAutoExposureAdapt.minimumExposure,
-    hdrAutoExposureAdapt.maximumExposure
+    minimumExposure,
+    maximumExposure
   );
-  let previousExposure = max(
+  let previousExposure = clamp(
     textureSampleLevel(historyTexture, historyTextureSampler, vec2f(0.5), 0).r,
-    0.0001
+    minimumExposure,
+    maximumExposure
   );
   let adaptationSpeed = select(
     hdrAutoExposureAdapt.darkenSpeed,
@@ -136,7 +154,11 @@ fn hdrAutoExposureAdapt_sampleColor(
     targetExposure > previousExposure
   );
   let adaptationWeight = 1.0 - exp(-adaptationSpeed * max(hdrAutoExposureAdapt.deltaTime, 0.0));
-  let exposure = mix(previousExposure, targetExposure, adaptationWeight);
+  let exposure = clamp(
+    mix(previousExposure, targetExposure, adaptationWeight),
+    minimumExposure,
+    maximumExposure
+  );
   return vec4f(exposure, averageLuminance, targetExposure, 1.0);
 }`,
   bindingLayout: [{name: 'historyTexture', group: 0}],
@@ -174,6 +196,7 @@ export const hdrAutoExposureApply = {
   source: /* wgsl */ `\
 struct HDRAutoExposureApplyUniforms {
   debugMode: f32,
+  enabled: f32,
 };
 
 @group(0) @binding(auto) var<uniform> hdrAutoExposureApply: HDRAutoExposureApplyUniforms;
@@ -202,14 +225,21 @@ fn hdrAutoExposureApply_sampleColor(
     return vec4f(heatMap, source.a);
   }
 
+  if (hdrAutoExposureApply.enabled < 0.5) {
+    return source;
+  }
+
   return vec4f(source.rgb * exposureState.r, source.a);
 }`,
   bindingLayout: [{name: 'exposureTexture', group: 0}],
   props: {} as Partial<HDRAutoExposureApplyUniforms> & HDRAutoExposureApplyBindings,
   uniforms: {} as HDRAutoExposureApplyUniforms,
   bindings: {} as HDRAutoExposureApplyBindings,
-  uniformTypes: {debugMode: 'f32'},
-  propTypes: {debugMode: {value: 0, min: 0, max: 1, private: true}},
+  uniformTypes: {debugMode: 'f32', enabled: 'f32'},
+  propTypes: {
+    debugMode: {value: 0, min: 0, max: 1, private: true},
+    enabled: {value: 1, min: 0, max: 1}
+  },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
   Partial<HDRAutoExposureApplyUniforms> & HDRAutoExposureApplyBindings,

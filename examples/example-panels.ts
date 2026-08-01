@@ -39,14 +39,14 @@ const EXAMPLE_PANEL_STYLE = `
   font-size: 15px !important;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
-button[aria-expanded] {
+button[aria-expanded]:not([aria-haspopup='listbox']) {
   margin-top: 4px !important;
   padding: 10px 11px !important;
   border-radius: 8px !important;
   background: rgba(70, 104, 159, 0.08) !important;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
-button[aria-expanded] > span:first-child > span:first-child {
+button[aria-expanded]:not([aria-haspopup='listbox']) > span:first-child > span:first-child {
   font-size: 13px !important;
   letter-spacing: 0.01em;
 }

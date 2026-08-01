@@ -36,6 +36,32 @@ test('bloomShaderPassPipeline#routing', t => {
     t.equal(target.sampler.minFilter, 'linear', 'bloom intermediates use linear minification');
     t.equal(target.sampler.magFilter, 'linear', 'bloom intermediates use linear magnification');
   }
+  const configurablePipeline = createBloomShaderPassPipeline({
+    resolutionScale: 0.5,
+    colorFormat: 'rgba8unorm'
+  });
+  const configurableTargets = configurablePipeline.renderTargets;
+  t.ok(configurableTargets, 'configurable bloom declares intermediate targets');
+  if (configurableTargets) {
+    t.deepEqual(
+      configurableTargets.extractHalf.scale,
+      [0.25, 0.25],
+      'configurable bloom scales its pyramid'
+    );
+    for (const target of Object.values(configurableTargets)) {
+      t.equal(target.format, 'rgba8unorm', 'configurable bloom applies the requested format');
+      t.equal(
+        target.sampler?.minFilter,
+        'linear',
+        'configurable bloom preserves linear minification'
+      );
+      t.equal(
+        target.sampler?.magFilter,
+        'linear',
+        'configurable bloom preserves linear magnification'
+      );
+    }
+  }
   const blurPass = bloomShaderPassPipeline.steps.find(
     step => step.shaderPass.name === 'bloomBlur'
   )?.shaderPass;

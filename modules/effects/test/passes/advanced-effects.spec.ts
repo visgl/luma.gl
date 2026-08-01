@@ -28,6 +28,9 @@ import {
   gtaoEvaluate,
   gtaoTemporal,
   hdrAutoExposureAdapt,
+  hdrAutoExposureApply,
+  hdrLuminanceExtract,
+  hdrLuminanceReduce,
   ssgiTemporal,
   ssrTemporal
 } from '../../src';
@@ -192,6 +195,35 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     'f32',
     'HDR auto exposure adapts according to elapsed frame time'
   );
+  testCase.ok(
+    hdrLuminanceExtract.source.includes('weightedLogLuminance, totalWeight'),
+    'HDR metering preserves weighted luminance and weight until the final reduction'
+  );
+  testCase.ok(
+    hdrLuminanceReduce.source.includes('.rg'),
+    'HDR metering reduces weighted luminance and weight together'
+  );
+  testCase.ok(
+    hdrAutoExposureAdapt.source.includes('textureLoad(sourceTexture'),
+    'HDR exposure consumes every texel in the final luminance level'
+  );
+  testCase.ok(
+    hdrAutoExposureAdapt.source.includes(
+      'min(hdrAutoExposureAdapt.minimumExposure, hdrAutoExposureAdapt.maximumExposure)'
+    ),
+    'HDR exposure canonicalizes inverted exposure limits'
+  );
+  testCase.ok(
+    /let exposure = clamp\([\s\S]*mix\(previousExposure, targetExposure, adaptationWeight\)/.test(
+      hdrAutoExposureAdapt.source
+    ),
+    'HDR exposure clamps the temporally adapted result to the configured limits'
+  );
+  testCase.equal(
+    hdrAutoExposureApply.uniformTypes.enabled,
+    'f32',
+    'HDR exposure can bypass application while preserving adaptation history'
+  );
 
   const hdrBloom = createBloomShaderPassPipeline({resolutionScale: 0.75});
   testCase.equal(
@@ -204,9 +236,23 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     [0.375, 0.375],
     'cinematic bloom scales its complete multiresolution pyramid'
   );
-  testCase.ok(
+  testCase.notOk(
     clusteredVolumetricTrace.source.includes('lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS'),
-    'clustered volumetric lighting chooses nearby lights in stable global-index slots'
+    'clustered volumetric lighting does not discard candidates through hash collisions'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('lightScore < worstScore'),
+    'clustered volumetric lighting retains a bounded best-scoring light set'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('dot(viewDirection, lightDirection)'),
+    'point-light anisotropy uses the camera-to-sample propagation direction'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes(
+      'dot(viewDirection, normalize(clusteredVolumetricTrace.directionalLightDirectionView))'
+    ),
+    'directional anisotropy uses the camera-to-sample propagation direction'
   );
   testCase.notOk(
     clusteredVolumetricTrace.source.includes('min(clusterCount, CLUSTERED_VOLUMETRIC_MAX_LIGHTS)'),
@@ -407,7 +453,8 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
     depthStencilAttachment: depthTexture
   });
   const pointLightData = new Float32Array(pointLightCount * 8);
-  for (let lightIndex = 0; lightIndex < pointLightCount - 1; lightIndex++) {
+  pointLightData.set([0, 0, 0.5, 0.48, 1, 0, 0, 18], 0);
+  for (let lightIndex = 1; lightIndex < pointLightCount - 1; lightIndex++) {
     pointLightData.set([4, 4, 0.5, 0.1, 1, 0, 0, 1], lightIndex * 8);
   }
   pointLightData.set([0, 0, 0.5, 0.48, 0, 1, 0, 18], (pointLightCount - 1) * 8);
@@ -490,14 +537,21 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
       try {
         outputTexture.readBuffer({width, height}, readbackBuffer);
         const pixelBytes = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
-        const leftScattering = pixelBytes[(width / 2 - 1) * 4 + 1]!;
-        const rightScattering = pixelBytes[(width / 2) * 4 + 1]!;
+        const leftPixelOffset = (width / 2 - 1) * 4;
+        const rightPixelOffset = (width / 2) * 4;
+        const leftRedScattering = pixelBytes[leftPixelOffset]!;
+        const leftGreenScattering = pixelBytes[leftPixelOffset + 1]!;
+        const rightGreenScattering = pixelBytes[rightPixelOffset + 1]!;
         testCase.ok(
-          leftScattering > 20 && rightScattering > 20,
+          leftRedScattering > 20 && leftGreenScattering > 20,
+          'one cluster retains relevant lights whose global indices collide modulo ten'
+        );
+        testCase.ok(
+          leftGreenScattering > 20 && rightGreenScattering > 20,
           'both tiles retain the shared nearby light beyond the old ten-light prefix'
         );
         testCase.ok(
-          Math.abs(leftScattering - rightScattering) < 45,
+          Math.abs(leftGreenScattering - rightGreenScattering) < 45,
           'adjacent tiles produce comparable fog scattering'
         );
       } finally {

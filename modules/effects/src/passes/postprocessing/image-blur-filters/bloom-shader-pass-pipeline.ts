@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Texture, TextureFormatColor} from '@luma.gl/core';
+import type {Texture} from '@luma.gl/core';
 import type {ShaderPass, ShaderPassPipeline, ShaderPassRenderTarget} from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
 
@@ -24,8 +24,8 @@ type BloomTargetName =
 export type BloomShaderPassPipelineOptions = {
   /** Fractional size multiplier applied to the half, quarter, and eighth-resolution pyramid. */
   resolutionScale?: number;
-  /** Intermediate color format. Defaults to rgba16float to preserve HDR highlight energy. */
-  colorFormat?: TextureFormatColor;
+  /** Filterable RGBA intermediate format. Defaults to rgba16float for HDR highlight energy. */
+  colorFormat?: 'rgba8unorm' | 'rgba16float';
 };
 
 const bloomExtractPass = {
@@ -406,7 +406,8 @@ export function createBloomShaderPassPipeline(
   const colorFormat = options.colorFormat ?? 'rgba16float';
   const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
     scale: [scale * resolutionScale, scale * resolutionScale],
-    format: colorFormat
+    format: colorFormat,
+    sampler: BLOOM_TARGET_SAMPLER
   });
 
   return {

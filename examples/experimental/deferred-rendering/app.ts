@@ -935,15 +935,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           maximumExposure: this.settings.maximumExposure,
           brightenSpeed: this.settings.exposureBrightenSpeed,
           darkenSpeed: this.settings.exposureDarkenSpeed,
-          deltaTime: frameDeltaTime,
-          enabled:
-            this.settings.autoExposureEnabled &&
-            (this.settings.debugView === 'Final' || this.settings.debugView === 'HDR Luminance')
-              ? 1
-              : 0
+          deltaTime:
+            this.settings.debugView === 'Final' || this.settings.debugView === 'HDR Luminance'
+              ? frameDeltaTime
+              : 0,
+          enabled: this.settings.autoExposureEnabled ? 1 : 0
         },
         hdrAutoExposureApply: {
-          debugMode: this.settings.debugView === 'HDR Luminance' ? 1 : 0
+          debugMode: this.settings.debugView === 'HDR Luminance' ? 1 : 0,
+          enabled: this.settings.autoExposureEnabled && this.settings.debugView === 'Final' ? 1 : 0
         },
         bloomExtract: {threshold: this.settings.bloomThreshold},
         bloomBlur: {radius: this.settings.bloomRadius},
