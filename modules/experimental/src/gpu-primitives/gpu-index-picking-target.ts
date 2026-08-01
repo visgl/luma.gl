@@ -283,7 +283,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let pixel = origin + globalId.xy;
   if (any(pixel >= TARGET_SIZE)) { return; }
   let pick = textureLoad(indices, vec2<i32>(pixel), 0).xy;
-  if (pick.x == ${INDEX_PICKING_INVALID_INDEX} || pick.y == ${INDEX_PICKING_INVALID_INDEX}) { return; }
+  if (pick.x == ${INDEX_PICKING_INVALID_INDEX}) { return; }
   let outputIndex = atomicAdd(&result[RESULT_OFFSET], 1u);
   if (outputIndex < RESULT_CAPACITY) {
     let pairOffset = RESULT_OFFSET + 2u + outputIndex * 2u;
@@ -374,9 +374,10 @@ export function decodeGPUIndexPickRegion(
   const picks: PickInfo[] = [];
   for (let index = 0; index < storedCount; index++) {
     const pairByteOffset = (2 + index * 2) * Uint32Array.BYTES_PER_ELEMENT;
+    const batchIndex = view.getInt32(pairByteOffset + Int32Array.BYTES_PER_ELEMENT, true);
     picks.push({
       objectIndex: view.getInt32(pairByteOffset, true),
-      batchIndex: view.getInt32(pairByteOffset + Int32Array.BYTES_PER_ELEMENT, true)
+      batchIndex: batchIndex === INDEX_PICKING_INVALID_INDEX ? null : batchIndex
     });
   }
   return {picks, count, overflow};

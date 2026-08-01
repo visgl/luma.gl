@@ -22,6 +22,20 @@ inside this brush or lasso bound?” on the GPU, without transferring the full p
 This matters when a selection covers thousands of pixels but the application needs only stable
 identities and an honest indication that its chosen result capacity was too small.
 
+### Choosing a picking path
+
+Use single-pixel picking for hover, click, tooltip, and context-menu interactions where only the
+front-most fragment at one device coordinate matters. Use region picking for rectangle selection,
+the bounding box of a lasso, coverage sampling, or other interactions where transferring the full
+attachment would dominate the useful result. A `GPUReadbackRing` keeps either small result from
+serializing later frames.
+
+The region result preserves one entry per covered pixel, not one entry per object. That is useful
+for coverage ranking and lets applications choose their own deduplication policy, but its required
+capacity grows with selected screen area. Use a spatial index or application-specific selection
+kernel when selection semantics are based on world-space bounds, occluded objects, nearest distance,
+or unique object identity rather than rendered fragments.
+
 ```ts
 const target = new GPUIndexPickingTarget(graph, {
   id: 'objects',
@@ -79,7 +93,9 @@ target.addRegionPass({
 });
 ```
 
-The pair capacity is `floor((result.length - 2) / 2)`. Counting continues after capacity is
+The pair capacity is `floor((result.length - 2) / 2)`. A valid object may use batch index `-1` to
+represent no batch; `decodeGPUIndexPickRegion()` maps that sentinel to `null`, matching single-pixel
+picking. Counting continues after capacity is
 reached, so `decodeGPUIndexPickRegion()` reports both the total count and whether the stored prefix
 was truncated. Rectangle coordinates are clipped to the target extent; zero width or height
 produces an empty result.

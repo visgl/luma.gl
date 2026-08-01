@@ -23,6 +23,15 @@ The ring separates three responsibilities:
 2. A ticket records or represents one copy and owns that slot until mapping settles.
 3. The application owns command submission and decides whether pressure means drop or wait.
 
+Use a ring for small answers that the CPU genuinely needs: hover picks, selection summaries,
+timestamps, validation counters, exported analysis values, or occasional screenshots copied through
+a bounded staging path. Interactive results often prefer `tryAcquire()` and dropping stale work;
+exports and diagnostics commonly prefer `acquire()` and waiting for capacity.
+
+Do not read back data merely to feed the next GPU pass—keep that dependency in a command graph
+instead. A ring hides neither transfer latency nor bandwidth: it makes several in-flight transfers
+safe and makes overload policy explicit.
+
 ```ts
 const ring = new GPUReadbackRing(device, {
   byteLength: resultBuffer.byteLength,

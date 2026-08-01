@@ -418,7 +418,10 @@ test('GPUIndexPickingTarget renders stable integer IDs and copies dynamic pixels
   if (position.y >= 3.0) { discard; }
   var output: FragmentOutputs;
   output.color = vec4(0.0);
-  output.indices = vec2<i32>(select(7, 9, position.x >= 2.0), 3);
+  output.indices = vec2<i32>(
+    select(7, 9, position.x >= 2.0),
+    select(-1, 3, position.x >= 2.0)
+  );
   return output;
 }`,
         vertexCount: 3,
@@ -437,8 +440,8 @@ test('GPUIndexPickingTarget renders stable integer IDs and copies dynamic pixels
   await encodePick(device, compiled, [0, 0]);
   t.deepEqual(
     decodeGPUIndexPickInfo(await defaultReadback.readAsync(0, 8)),
-    {objectIndex: 7, batchIndex: 3},
-    'left pixel returns first stable ID'
+    {objectIndex: 7, batchIndex: null},
+    'left pixel preserves a stable object without a batch ID'
   );
   const replacementReadback = makePickingReadbackBuffer(device, 'picking-readback-replacement');
   await encodePick(device, compiled, [3, 0], replacementReadback, target.readback.id);
@@ -521,7 +524,10 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
   if (position.y >= 3.0) { discard; }
   var output: FragmentOutputs;
   output.color = vec4(0.0);
-  output.indices = vec2<i32>(select(7, 9, position.x >= 2.0), 3);
+  output.indices = vec2<i32>(
+    select(7, 9, position.x >= 2.0),
+    select(-1, 3, position.x >= 2.0)
+  );
   return output;
 }`,
         vertexCount: 3,
@@ -570,9 +576,11 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
   t.ok(firstResult.overflow, 'overflow reports truncated results');
   t.ok(
     firstResult.picks.every(
-      pick => (pick.objectIndex === 7 || pick.objectIndex === 9) && pick.batchIndex === 3
+      pick =>
+        (pick.objectIndex === 7 && pick.batchIndex === null) ||
+        (pick.objectIndex === 9 && pick.batchIndex === 3)
     ),
-    'stable object and batch IDs survive unordered atomic collection'
+    'stable object IDs survive collection with optional batch IDs'
   );
 
   regionBuffer.write(new Uint32Array([0, 0, 2, 3]));
@@ -607,7 +615,7 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
   device.submit(secondEncoder.finish());
   t.deepEqual(
     decodeGPUIndexPickRegion(await secondTicket!.read()),
-    {picks: [{objectIndex: 7, batchIndex: 3}], count: 1, overflow: false},
+    {picks: [{objectIndex: 7, batchIndex: null}], count: 1, overflow: false},
     'GPU-resident rectangle updates produce exact results without rebuilding the graph'
   );
 

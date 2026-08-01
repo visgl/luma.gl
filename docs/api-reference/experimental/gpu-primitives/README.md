@@ -58,7 +58,8 @@ later render pass consume that count without a CPU synchronization point.
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
 `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
 `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
-`GPUGridAggregation`, `GPUGroupAggregation`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+`GPUGridAggregation`, `GPUGroupAggregation`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and
+`DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
 projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
 four million spans. The sort and data-analysis examples demonstrate independent composable
