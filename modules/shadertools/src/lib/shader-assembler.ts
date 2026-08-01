@@ -198,6 +198,11 @@ function getPlatformPreprocessorDefines(
   const limits = platformInfo.limits || {};
   return {
     LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS:
-      platformInfo.type === 'webgpu' && (limits['maxStorageBuffersInVertexStage'] || 0) > 0
+      platformInfo.type === 'webgpu' && (limits['maxStorageBuffersInVertexStage'] || 0) > 0,
+    // Metal may reassociate the floating-point transforms used by classic
+    // double-single arithmetic. The integer path makes each rounding point
+    // explicit while preserving the public vec2<f32> representation.
+    LUMA_FP64_INTEGER_ARITHMETIC:
+      platformInfo.type === 'webgpu' && platformInfo.gpu.toLowerCase() === 'apple'
   };
 }

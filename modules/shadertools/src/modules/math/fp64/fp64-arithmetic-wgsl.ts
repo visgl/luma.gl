@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {fp64arithmeticWGSLInteger} from './fp64-arithmetic-wgsl-integer';
+
 /** WGSL source for fp64 arithmetic helpers and raw binary64-to-Float32 subtraction. */
 export const fp64arithmeticWGSL = /* wgsl */ `\
 struct Fp64ArithmeticUniforms {
@@ -295,6 +297,9 @@ fn prevent_fp64_optimization(value: f32) -> f32 {
 #endif
 }
 
+#ifdef LUMA_FP64_INTEGER_ARITHMETIC
+${fp64arithmeticWGSLInteger}
+#else
 fn split(a: f32) -> vec2f {
   let splitValue = prevent_fp64_optimization(fp64arithmetic.SPLIT + fp64_runtime_zero());
   let t = prevent_fp64_optimization(a * splitValue);
@@ -477,4 +482,5 @@ fn sqrt_fp64(a: vec2f) -> vec2f {
   return sum_fp64(vec2f(yn, 0.0), prod);
 #endif
 }
+#endif
 `;

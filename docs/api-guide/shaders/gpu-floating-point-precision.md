@@ -1,8 +1,9 @@
-import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-tabs';
+import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
+import {FP64Example} from '@site/src/examples';
 
 # GPU Floating-Point Precision Techniques
 
-<ShaderLevelDocsTabs active="gpu-floating-point-precision" />
+<ShaderModuleDocsTabs group="precision" active="precision-guide" />
 
 "fp64" is often used to mean "more precision than `f32`," but the available
 techniques do not all implement the same number system. A pair of `f32` values,
@@ -11,10 +12,23 @@ point have different precision, range, rounding, and portability guarantees.
 
 That distinction matters on WebGPU. Classic double-single arithmetic can be
 fast, but its correctness depends on individual `f32` rounding points that WGSL
-does not require a compiler to preserve. If a result must be reliable across
-WebGPU implementations, choose a representation and arithmetic contract that
-do not depend on those rounding points, or reduce the problem to a smaller
-exact operation.
+does not require a compiler to preserve. luma.gl therefore uses an
+integer-controlled double-single path automatically on Apple WebGPU adapters,
+while retaining the classic path where it is known to work.
+
+## Live Mandelbrot And Compute Benchmark
+
+The two Mandelbrot views follow the same deep zoom. The left view uses native
+`f32`; the right uses luma.gl's `fp64arithmetic` double-single representation.
+On WebGPU, use the benchmark below the canvases to compare native `f32`,
+automatic selection, the classic transforms, and the integer-controlled path
+on the active device.
+
+<FP64Example embedded embeddedHeight={900} />
+
+The benchmark is diagnostic rather than a CI performance test. It reports
+numerical error alongside runtime because the fastest implementation is not
+useful if the compiler has optimized away its residual terms.
 
 ## Start With The Required Contract
 
@@ -107,9 +121,9 @@ These exactness statements are conditional. The usual binary proofs assume
 round-to-nearest evaluation, no reassociation or unintended contraction,
 finite intermediates without overflow, and the required handling of tiny
 values. The `4097 * a` split is not safe for every finite `f32`: it can overflow
-even when `a` does not, so a complete implementation must scale large inputs.
-Subnormals or flush-to-zero behavior require similar care. Parentheses alone
-do not establish any of these conditions.
+even when `a` does not, so a complete implementation must handle large inputs.
+Subnormals or flush-to-zero behavior require similar care. Parentheses alone do
+not establish any of these conditions.
 
 Once `TwoSum`, `FastTwoSum`, and `TwoProd` are available, double-single add and
 multiply combine the high components, accumulate their residuals and the low
@@ -120,8 +134,8 @@ an `f32` approximation followed by one or more compensated corrections.
 
 An error-free transform is an algorithm over *rounding events*, not an
 algebraic identity. For example, the low term in `TwoSum` is algebraically zero
-over the real numbers. A compiler that reassociates the expression is therefore
-allowed to erase the information the algorithm was designed to recover.
+over the real numbers. A compiler that reassociates the expression can
+therefore erase the information the algorithm was designed to recover.
 
 The [WGSL floating-point evaluation
 rules](https://www.w3.org/TR/WGSL/#floating-point-evaluation) permit
@@ -142,16 +156,54 @@ As a result, these source-level techniques are not portable precision barriers:
 They may affect a particular compiler version, but they cannot turn an
 optimization-sensitive transform into a WebGPU guarantee. Native APIs or
 toolchains with a strict floating-point mode can make classic double-single a
-valid backend-specific fast path. WebGPU applications still need a portable
-fallback if correctness depends on it.
+valid backend-specific fast path. WebGPU applications still need a fallback
+when correctness depends on it.
+
+## luma.gl's Apple/Metal Path
+
+On Apple WebGPU adapters, `fp64arithmetic` replaces the rounding-sensitive
+transforms with integer-controlled operations. Each `f32` limb is decoded into
+sign, exponent, and significand fields. `TwoSum`, `TwoProd`, and the required
+renormalization use `u32` limbs with explicit round-to-nearest, ties-to-even
+packing back to `f32`. A 24-by-24-bit product needs only 48 exact bits, so this
+is considerably narrower than full software binary64.
+
+The public representation and function names remain `vec2f` double-single, so
+existing `fp64arithmetic` WGSL callers do not need a second API. The shader
+assembler selects this path automatically when the backend is WebGPU and the
+adapter is Apple. Applications can force it for testing on another adapter, or
+explicitly disable it on Apple:
+
+```ts
+const computation = new Computation(device, {
+  // ...
+  modules: [fp64arithmetic],
+  defines: {
+    LUMA_FP64_INTEGER_ARITHMETIC: true // false overrides the Apple default
+  }
+});
+```
+
+This path favors reliable rounding points over throughput. It still represents
+an expansion with essentially the `f32` exponent range, not binary64. While
+both limbs are normal it provides approximately 48 significand bits. For result
+magnitudes between roughly `2^-126` and `2^-102`, the low limb is subnormal, so
+available precision gradually tapers from about 48 bits toward 24 bits as the
+result approaches `f32` underflow.
+
+The portable contract covers finite, normalized double-single inputs and
+finite normal results within that representational range. It does not promise
+full binary64 special-value or subnormal semantics. Division and square root
+use native `f32` estimates followed by integer-controlled double-single
+corrections.
 
 ## The Main Alternatives
 
 | Approach | Typical cost | Portability | Best fit |
 | --- | --- | --- | --- |
 | Native hardware binary64 | Lowest when supported, sometimes low throughput | Not a portable WGSL feature | Native backends with a strict `f64` contract |
-| Classic double-single | Lower than integer emulation; operation-dependent | Depends on preserved rounding points | Controlled compilers and proven fast paths |
-| Integer-assisted double-single | Higher than classic double-single; implementation-dependent | Robust with specified `u32` operations | Portable expansion add/multiply when about 48 bits are enough |
+| Classic double-single | Lower than integer emulation; operation-dependent | Depends on preserved rounding points | Controlled compilers and verified fast paths |
+| Integer-assisted double-single | Higher than classic double-single; implementation-dependent | Robust with specified `u32` operations | Portable expansion arithmetic when about 48 bits are enough |
 | Exact binary64 delta to `f32` | Moderate, fixed integer cost | Robust as result bits; direct `f32` is exact for normal finite results | Large-coordinate origin subtraction |
 | Full software binary64 | High; division, square root, and transcendentals are especially costly | Robust if complete | Binary64 range, special values, or CPU-compatible stepwise semantics |
 | Fixed point | Very low for add; multiply and divide need wide intermediates | Robust | Bounded dynamic range and iterative kernels |
@@ -192,7 +244,7 @@ would require an unwanted copy.
 
 ### Integer-Assisted Double-Single
 
-A middle ground keeps the `high + low` representation while replacing only the
+A middle ground keeps the `high + low` representation while replacing the
 rounding-sensitive transforms with `u32` arithmetic. Decode each `f32` sign,
 exponent, and significand; align or multiply the integer significands; preserve
 guard, round, and sticky information; then emit a normalized high/low pair.
@@ -204,20 +256,17 @@ software binary64 and can provide deterministic building blocks for expansion
 addition and multiplication.
 
 Its scope should remain explicit. It still has essentially binary32 exponent
-range unless separate exponent state is added. Division, square root, NaNs,
-infinities, signed zero, and subnormal behavior require additional design. It
-also does not make arbitrary existing `vec2f` code safe: all
-rounding-sensitive transforms and renormalization steps in the supported
-operation must use the deterministic path. A low component that becomes an
-`f32` subnormal can still be flushed after packing, so a portable contract
-should exclude such terms or keep them encoded as integer bits.
+range unless separate exponent state is added. NaNs, infinities, signed zero,
+and subnormal behavior require additional design. It also does not make
+arbitrary existing `vec2f` code safe: every rounding-sensitive transform and
+renormalization step in a supported operation must use the deterministic path.
 
 ### Full Software Binary64
 
 A complete implementation stores sign, 11-bit exponent, and 52 fraction bits
 in integer words. Each operation aligns significands, computes with extra
-guard/round/sticky bits, normalizes, rounds, and handles zeros, subnormals,
-infinities, and NaNs.
+guard, round, and sticky bits, normalizes, rounds, and handles zeros,
+subnormals, infinities, and NaNs.
 
 This is the direct choice when binary64 range and behavior are requirements,
 not merely additional local precision. It is also the software route to
@@ -247,17 +296,17 @@ automatic exponent, NaN, or infinity behavior.
 ### Native Binary64
 
 Native `f64` is the obvious answer on a backend that supports it with the
-required evaluation controls. It is not currently a portable WGSL/WebGPU
-shader type, and hardware throughput varies widely. Even where native `f64`
-exists, bit-for-bit CPU agreement still requires matching operation order,
-rounding and contraction rules.
+required evaluation controls. It is not a portable WGSL/WebGPU shader type,
+and hardware throughput varies widely. Even where native `f64` exists,
+bit-for-bit CPU agreement still requires matching operation order, rounding,
+and contraction rules.
 
 ## Choosing By Workload
 
 | Workload | Preferred starting point | Reason |
 | --- | --- | --- |
 | World, geospatial, or astronomical coordinates | CPU origin rebasing or exact `fp64u32` delta | Preserves local detail, then returns to fast `f32` |
-| Deep iterative calculation over a bounded interval | Fixed point | Deterministic precision and predictable cost |
+| Deep iterative calculation over a bounded interval | Fixed point or integer-assisted double-single | Deterministic precision and a cost below full binary64 |
 | General arithmetic needing roughly 14 decimal digits | Integer-assisted double-single | More precision without implementing binary64's full range |
 | Binary64 storage or data interchange without arithmetic | Raw `fp64u32` words | Preserves every source bit without paying for software arithmetic |
 | Arithmetic requiring binary64 range and special values | Full software binary64 | The arithmetic semantics, not just the representation, are the requirement |
@@ -271,13 +320,18 @@ the only value that must reach the shader.
 
 ## luma.gl Precision Paths
 
-The [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64) module and its
-low-level
+The [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64) module exposes
+the full established `fp64f32` function library in GLSL only. It has no WGSL
+source, so its exponential, logarithmic, and trigonometric functions are not
+available to WebGPU shaders.
+
+Its lower-level
 [`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic)
-dependency expose the established `fp64f32` expansion path. This path remains
-useful for GLSL and for backends on which its error-free transforms have been
-verified, but its classic floating-point implementation is not a portable
-strict-arithmetic guarantee under WGSL.
+dependency provides the add, subtract, multiply, divide, and square-root
+helpers in both GLSL and WGSL. Non-Apple WGSL uses the classic floating-point
+transforms by default. Apple WebGPU uses the integer-controlled implementation
+automatically, and callers can use `LUMA_FP64_INTEGER_ARITHMETIC` to test or
+override that choice.
 
 WGSL also provides these targeted helpers for `fp64u32` values:
 
@@ -293,11 +347,8 @@ ties-to-even conversion to a binary32 encoding. The `_bits` helper returns that
 encoding as `u32`, including the module's defined handling of zeros,
 subnormals, infinities, and NaNs. WGSL's relaxed rules for those values mean
 that the direct `f32` helper has a portable exact-value guarantee only for
-normal finite results. Neither helper provides general `fp64u32` addition or
-multiplication.
-
-luma.gl currently does not expose general integer-assisted double-single or
-full software binary64 arithmetic.
+normal finite results. These helpers are deliberately narrower than the
+general `fp64f32` arithmetic API.
 
 ## Validation Is Part Of The Technique
 

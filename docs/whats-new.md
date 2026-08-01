@@ -123,7 +123,8 @@ Target Release Date: TBD
 
 - **[`colors`, `floatColors`, and `storageColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - Semantic color normalization now has a `colors` helper namespace, the legacy `floatColors` alias remains available, and WebGPU shaders can read packed RGBA storage rows through `storageColors`.
 - **[`dggs`](/docs/api-reference/shadertools/shader-modules/dggs)** - New WGSL helpers decode compact Uint64 DGGS cell keys for storage-buffer and boundary-extraction workflows.
-- **WGSL double-precision arithmetic** - The `fp64` shader module can subtract packed IEEE 754 double-precision values directly in WGSL and convert the result to `f32`.
+- **Apple/Metal-safe fp64 arithmetic** - WGSL double-single arithmetic automatically uses integer-controlled `twoSum`, `twoProd`, and renormalization on Apple WebGPU adapters, avoiding Metal compiler reassociation while retaining the existing `vec2f` API. The `LUMA_FP64_INTEGER_ARITHMETIC` shader define can force or disable the mode.
+- **WGSL double-precision arithmetic** - The `fp64arithmetic` shader module can subtract packed IEEE 754 double-precision values directly in WGSL and convert the result to `f32`.
 - **[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin)** - Reusable shader assembly plugins group modules, defines, named injections, caller-owned vertex inputs, and generated cross-stage varyings.
 - **WGSL hooks and injections** - `ShaderAssembler` now applies registered hook functions and standard named injections such as `vs:#main-start` and `fs:#main-end` while assembling unified WGSL shaders.
 - **WGSL shader conditionals** - Shadertools preprocessing accepts simple boolean and numeric `#if` expressions, and assembled WGSL exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS` so inactive resource branches are removed before `@binding(auto)` assignment.
