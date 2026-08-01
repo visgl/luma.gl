@@ -19,6 +19,15 @@ ignored.
 
 ## Concepts
 
+Use grouped aggregation for stable categorical summaries: counts by status, mean latency by
+service, total bytes by protocol, or extrema by rendered material. The group rows remain stable
+while an optional GPU mask changes the participating population, which is especially useful for
+linked charts and legends that must track the same interactive selection as a renderer.
+
+It assumes dense integer category IDs and returns one aggregate per category. Use a histogram for
+numeric intervals, grid aggregation for spatial cells, or sorting when the application needs the
+contributing rows rather than a summary.
+
 ### Categories are identities, not numeric ranges
 
 A numeric histogram partitions an ordered domain into intervals. Category codes instead identify

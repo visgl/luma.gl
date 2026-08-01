@@ -15,6 +15,18 @@ indices. A compute pass can update those fields, and a later render pass can iss
 waiting for the CPU to inspect the result. `DrawCommandBuffer` supplies the exact WebGPU layouts,
 byte offsets, and ownership rules; it does not decide what is visible or record a render pass.
 
+### When to use it
+
+Use an indirect command when the GPU already knows how much work should be drawn. Common examples
+include a visibility workflow that writes the number of accepted instances, a particle simulation
+that creates or removes particles, and a tiled renderer that maintains one command per material or
+draw group. Keeping the count in GPU memory avoids a readback stall between compute and rendering.
+
+Use a normal `draw()` call when the CPU already has the authoritative count and it changes cheaply.
+`DrawCommandBuffer` is deliberately not a scene or batching system: applications still choose the
+geometry, pipelines, resource bindings, command grouping, and the compute operation that updates
+each record.
+
 ```ts
 const commands = new DrawCommandBuffer(device, {
   type: 'draw',
