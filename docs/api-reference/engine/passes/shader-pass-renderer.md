@@ -239,11 +239,45 @@ renderToTexture(options: {
 }): Texture | null
 ```
 
+### `encodeToScreen(commandEncoder, options): boolean`
+
+Records the pass chain and final presentation into a caller-owned command encoder.
+
+```ts
+encodeToScreen(
+  commandEncoder: CommandEncoder,
+  options: ShaderPassRendererRenderOptions
+): boolean
+```
+
+This method only records commands. The caller remains responsible for finishing and submitting the
+encoder. The encoder must belong to the renderer's device, and no render or compute pass may be
+active when this method is called. Returns `false` when the source texture is not ready yet.
+
+### `encodeToTexture(commandEncoder, options): Texture | null`
+
+Records the pass chain into a caller-owned command encoder and returns the renderer-owned output
+texture.
+
+```ts
+encodeToTexture(
+  commandEncoder: CommandEncoder,
+  options: ShaderPassRendererRenderOptions
+): Texture | null
+```
+
+This method does not finish or submit the encoder. The encoder must belong to the renderer's device,
+and no render or compute pass may be active. The returned texture is valid after the recorded command
+buffer has been submitted.
+
 ## Remarks
 
 - `sourceTexture` may be a `DynamicTexture` or a ready `Texture`.
 - `uniforms` may supply per-draw shader module uniforms keyed by shader pass name.
 - `bindings` may supply per-draw texture bindings or texture binding sources keyed by shader binding name.
+- `renderToScreen()` and `renderToTexture()` are convenience wrappers that record onto
+  `device.commandEncoder`; use the `encodeTo*()` variants when composing with a command graph or
+  another caller-owned encoder.
 - Two internal framebuffers are used for ping-pong rendering through the shared `previous` sequence.
 - Named render targets are declared only on `ShaderPassPipeline`, not on `ShaderPass`.
 - Target names `original` and `previous` are reserved and may not be used as pipeline target names.

@@ -117,10 +117,6 @@ fn hashWindow(value: vec2<f32>) -> f32 {
   color = mix(color, fogColor, clamp(fogAmount, 0.0, 0.96));
   color += vec3<f32>(0.12, 0.2, 0.48) * skyPulse * (1.0 - fogAmount * 0.5);
   color *= uniforms.scene.y;
-
-  if (uniforms.scene.z < 0.5) {
-    color = color / (color + vec3<f32>(1.0));
-  }
   return vec4<f32>(color, 1.0);
 }`;
 

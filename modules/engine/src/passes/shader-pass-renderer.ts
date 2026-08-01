@@ -146,7 +146,19 @@ export class ShaderPassRenderer {
   }
 
   renderToScreen(options: ShaderPassRendererRenderOptions): boolean {
-    const outputTexture = this.renderToTexture(options);
+    return this.encodeToScreen(this.device.commandEncoder, options);
+  }
+
+  /**
+   * Records the shader-pass chain and presentation into a caller-owned command encoder.
+   * The encoder must belong to this renderer's device and have no active pass. This method does
+   * not finish or submit the encoder.
+   */
+  encodeToScreen(
+    commandEncoder: CommandEncoder,
+    options: ShaderPassRendererRenderOptions
+  ): boolean {
+    const outputTexture = this.encodeToTexture(commandEncoder, options);
     if (!outputTexture) {
       return false;
     }
@@ -157,8 +169,8 @@ export class ShaderPassRenderer {
     // Prepare fullscreen presentation bindings before opening the render pass so WebGPU
     // uploads stay on the parent command encoder rather than the active render pass encoder.
     this.textureModel.setProps({backgroundTexture: outputTexture});
-    this.textureModel.predraw(this.device.commandEncoder);
-    const renderPass = this.device.beginRenderPass({
+    this.textureModel.predraw(commandEncoder);
+    const renderPass = commandEncoder.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
       clearDepth: false
@@ -172,6 +184,21 @@ export class ShaderPassRenderer {
    * @returns null if the the sourceTexture has not yet been loaded
    */
   renderToTexture(options: ShaderPassRendererRenderOptions): Texture | null {
+    return this.encodeToTexture(this.device.commandEncoder, options);
+  }
+
+  /**
+   * Records the shader-pass chain into a caller-owned command encoder.
+   * The encoder must belong to this renderer's device and have no active pass. This method does
+   * not finish or submit the encoder.
+   */
+  encodeToTexture(
+    commandEncoder: CommandEncoder,
+    options: ShaderPassRendererRenderOptions
+  ): Texture | null {
+    if (commandEncoder.device !== this.device) {
+      throw new Error('ShaderPassRenderer command encoder must belong to the renderer device');
+    }
     const {sourceTexture} = options;
     if (sourceTexture instanceof DynamicTexture && !sourceTexture.isReady) {
       return null;
@@ -192,10 +219,10 @@ export class ShaderPassRenderer {
     this.textureModel.setProps({backgroundTexture: originalTexture});
     // The seed draw updates fullscreen bind groups, so it must be prepared before the
     // render pass begins to avoid command-encoder locking errors on WebGPU.
-    this.textureModel.predraw(this.device.commandEncoder);
+    this.textureModel.predraw(commandEncoder);
 
     const sourceFramebuffer = getSeedFramebuffer(this.swapFramebuffers, originalTexture);
-    const seedRenderPass = this.device.beginRenderPass({
+    const seedRenderPass = commandEncoder.beginRenderPass({
       id: 'shader-pass-renderer-seed-source',
       framebuffer: sourceFramebuffer,
       clearColor: [0, 0, 0, 1],
@@ -209,7 +236,7 @@ export class ShaderPassRenderer {
     let frameSucceeded = false;
     try {
       for (const passRenderer of this.passRenderers) {
-        passRenderer.initializeHistoryTargets(originalTexture, this.textureModel);
+        passRenderer.initializeHistoryTargets(originalTexture, this.textureModel, commandEncoder);
         for (const execution of passRenderer.subPassExecutions) {
           const outputName = execution.output || 'previous';
           const outputFramebuffer: Framebuffer =
@@ -235,7 +262,7 @@ export class ShaderPassRenderer {
           );
 
           execution.subPassRenderer.prepare({
-            commandEncoder: this.device.commandEncoder,
+            commandEncoder,
             bindings: resolvedBindings,
             textureScale: calculateTextureScale(
               (resolvedBindings['sourceTexture'] as Texture) || previousTexture,
@@ -243,7 +270,7 @@ export class ShaderPassRenderer {
             ),
             uniforms: resolvedUniforms
           });
-          const renderPass = this.device.beginRenderPass({
+          const renderPass = commandEncoder.beginRenderPass({
             id: 'shader-pass-renderer-run-pass',
             framebuffer: outputFramebuffer,
             clearColor: [0, 0, 0, 1],
@@ -324,7 +351,11 @@ class PassRenderer {
     }
   }
 
-  initializeHistoryTargets(originalTexture: Texture, textureModel: BackgroundTextureModel): void {
+  initializeHistoryTargets(
+    originalTexture: Texture,
+    textureModel: BackgroundTextureModel,
+    commandEncoder: CommandEncoder
+  ): void {
     for (const renderTarget of Object.values(this.renderTargets)) {
       if (renderTarget.spec.lifetime !== 'history' || renderTarget.historyInitialized) {
         continue;
@@ -335,8 +366,8 @@ class PassRenderer {
       };
       if (initialize === 'original') {
         textureModel.setProps({backgroundTexture: originalTexture});
-        textureModel.predraw(this.device.commandEncoder);
-        const renderPass = this.device.beginRenderPass({
+        textureModel.predraw(commandEncoder);
+        const renderPass = commandEncoder.beginRenderPass({
           id: `${renderTarget.name}-initialize-history`,
           framebuffer: historyFramebuffer,
           clearColor: [0, 0, 0, 0],
@@ -345,7 +376,7 @@ class PassRenderer {
         textureModel.draw(renderPass);
         renderPass.end();
       } else {
-        const renderPass = this.device.beginRenderPass({
+        const renderPass = commandEncoder.beginRenderPass({
           id: `${renderTarget.name}-clear-history`,
           framebuffer: historyFramebuffer,
           clearColor: initialize.clearColor,

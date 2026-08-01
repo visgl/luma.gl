@@ -778,6 +778,113 @@ test('ShaderPassRenderer calls BackgroundTextureModel.predraw before drawing', a
   t.end();
 });
 
+test('ShaderPassRenderer encodes into a caller-owned command encoder', async t => {
+  const devices = await getTestDevices();
+  const device = devices.find(candidate => candidate.type !== 'webgpu');
+  t.ok(device, 'has a test device');
+
+  if (!device) {
+    t.end();
+    return;
+  }
+
+  const sourceTexture = new DynamicTexture(device, {
+    id: 'explicit-encoder-source-texture',
+    usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+    dimension: '2d',
+    data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+  });
+  await sourceTexture.ready;
+
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [copyPass],
+    shaderInputs: new ShaderInputs({copy: copyPass})
+  });
+  const foreignDevice = devices.find(candidate => candidate !== device);
+  if (foreignDevice) {
+    const foreignCommandEncoder = foreignDevice.createCommandEncoder({
+      id: 'shader-pass-foreign-encoder'
+    });
+    t.throws(
+      () => renderer.encodeToTexture(foreignCommandEncoder, {sourceTexture}),
+      /must belong to the renderer device/,
+      'rejects a command encoder from another device'
+    );
+    foreignCommandEncoder.destroy();
+  }
+  const commandEncoder = device.createCommandEncoder({id: 'shader-pass-explicit-encoder'});
+  let renderPassCount = 0;
+  const originalBeginRenderPass = commandEncoder.beginRenderPass.bind(commandEncoder);
+  commandEncoder.beginRenderPass = props => {
+    renderPassCount++;
+    return originalBeginRenderPass(props);
+  };
+  const observedEncoders: CommandEncoder[] = [];
+  const originalPredraw = renderer.textureModel.predraw.bind(renderer.textureModel);
+  renderer.textureModel.predraw = observedCommandEncoder => {
+    observedEncoders.push(observedCommandEncoder);
+    originalPredraw(observedCommandEncoder);
+  };
+
+  const rendered = renderer.encodeToScreen(commandEncoder, {sourceTexture});
+
+  t.ok(rendered, 'encodes the pass chain and presentation');
+  t.equal(
+    renderPassCount,
+    3,
+    'opens seed, shader, and presentation passes on the supplied encoder'
+  );
+  t.equal(
+    observedEncoders.filter(observedCommandEncoder => observedCommandEncoder === commandEncoder)
+      .length,
+    2,
+    'prepares source seeding and presentation on the supplied encoder'
+  );
+
+  commandEncoder.destroy();
+  renderer.destroy();
+  sourceTexture.destroy();
+  t.end();
+});
+
+test('ShaderPassRenderer submits caller-owned WebGPU command encoders', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const sourceTexture = new DynamicTexture(device, {
+    id: 'webgpu-explicit-encoder-source-texture',
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+    dimension: '2d',
+    data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+  });
+  await sourceTexture.ready;
+
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [invertPass],
+    shaderInputs: new ShaderInputs({invert: invertPass}),
+    colorFormat: 'rgba8unorm'
+  });
+  const commandEncoder = device.createCommandEncoder({id: 'shader-pass-webgpu-explicit-encoder'});
+  const outputTexture = renderer.encodeToTexture(commandEncoder, {sourceTexture});
+  const commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
+
+  t.ok(outputTexture, 'encodes an output texture');
+  t.deepEqual(
+    Array.from(await readPixels(outputTexture!)),
+    [0, 255, 255, 255],
+    'submitted custom encoder produces the expected pixels'
+  );
+
+  renderer.destroy();
+  sourceTexture.destroy();
+  t.end();
+});
+
 test('ShaderPassRenderer prepares each subpass before drawing', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {

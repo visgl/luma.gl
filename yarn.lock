@@ -16882,6 +16882,7 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:9.4.0-alpha.2"
+    "@luma.gl/effects": "npm:9.4.0-alpha.2"
     "@luma.gl/engine": "npm:9.4.0-alpha.2"
     "@luma.gl/experimental": "npm:9.4.0-alpha.2"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.2"
