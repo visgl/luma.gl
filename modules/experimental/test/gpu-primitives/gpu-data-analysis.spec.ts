@@ -17,6 +17,7 @@ import {
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
+import {getGPUGroupAggregationDispatchLayout} from '../../src/gpu-primitives/gpu-group-aggregation';
 
 test('GPUReduction handles operations, formats, hierarchy, and invalid floats', async t => {
   const device = await getWebGPUTestDevice();
@@ -461,6 +462,25 @@ test('GPUGroupAggregation counts dense keys with optional dynamic selection', as
     await runGroupAggregation(device, globalKeys, 300),
     Array.from({length: 300}, () => 1),
     'more than 256 groups uses global atomics and ignores key 300'
+  );
+  t.end();
+});
+
+test('GPUGroupAggregation plans bounded multidimensional dispatches', t => {
+  t.deepEqual(
+    getGPUGroupAggregationDispatchLayout(5 * 256, 4),
+    {x: 4, y: 2, z: 1},
+    'workgroups spill from x into y at the device limit'
+  );
+  t.deepEqual(
+    getGPUGroupAggregationDispatchLayout(20 * 256, 4),
+    {x: 4, y: 4, z: 2},
+    'larger chunks spill into the third dimension'
+  );
+  t.throws(
+    () => getGPUGroupAggregationDispatchLayout((4 * 4 * 4 + 1) * 256, 4),
+    /exceeding the 3D dispatch limit/,
+    'chunks beyond the full 3D device limit are rejected before encoding'
   );
   t.end();
 });

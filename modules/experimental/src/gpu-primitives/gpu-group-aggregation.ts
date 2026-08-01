@@ -20,6 +20,8 @@ import {
 const GROUP_AGGREGATION_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_GROUP_COUNT = 256;
 
+type GPUGroupAggregationDispatchLayout = {x: number; y: number; z: number};
+
 /** One packed group-key chunk or an ordered vector of packed group-key chunks. */
 export type GPUGroupAggregationKeys = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
@@ -130,7 +132,11 @@ export class GPUGroupAggregation {
             : `${this.id}-${accumulationPath}`,
         keys,
         output: this.output,
-        mask: maskChunks?.[chunkIndex]
+        mask: maskChunks?.[chunkIndex],
+        dispatchLayout: getGPUGroupAggregationDispatchLayout(
+          keys.length,
+          graph.device.limits.maxComputeWorkgroupsPerDimension
+        )
       });
     }
   }
@@ -177,6 +183,7 @@ function addGroupCountPass<Parameters>(
     keys: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
     mask?: GraphDataView<'uint32'>;
+    dispatchLayout: GPUGroupAggregationDispatchLayout;
   }
 ): void {
   const local = props.output.length <= MAXIMUM_LOCAL_GROUP_COUNT;
@@ -205,10 +212,11 @@ ${maskBinding}
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
 
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
   @builtin(local_invocation_id) localId: vec3<u32>
 ) {
-  let index = globalId.x;
+  let workgroupIndex = (workgroupId.z * ${props.dispatchLayout.y}u + workgroupId.y) * ${props.dispatchLayout.x}u + workgroupId.x;
+  let index = workgroupIndex * ${GROUP_AGGREGATION_WORKGROUP_SIZE}u + localId.x;
   let lane = localId.x;
   ${local ? 'if (lane < GROUP_COUNT) { atomicStore(&localCounts[lane], 0u); }\n  workgroupBarrier();' : ''}
   var accepted = false;
@@ -233,8 +241,26 @@ ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}
       ...(props.mask ? {selectionMask: props.mask} : {}),
       outputCounts: props.output
     },
-    dispatchCount: Math.ceil(props.keys.length / GROUP_AGGREGATION_WORKGROUP_SIZE)
+    dispatchSize: props.dispatchLayout
   });
+}
+
+/** Plans a bounded 3D dispatch for one packed group-key chunk. @internal */
+export function getGPUGroupAggregationDispatchLayout(
+  elementCount: number,
+  maxComputeWorkgroupsPerDimension: number
+): GPUGroupAggregationDispatchLayout {
+  const maximum = Math.floor(maxComputeWorkgroupsPerDimension);
+  const workgroupCount = Math.max(1, Math.ceil(elementCount / GROUP_AGGREGATION_WORKGROUP_SIZE));
+  const x = Math.min(workgroupCount, maximum);
+  const y = Math.min(Math.ceil(workgroupCount / x), maximum);
+  const z = Math.ceil(workgroupCount / x / y);
+  if (z > maximum) {
+    throw new Error(
+      `GPUGroupAggregation requires ${workgroupCount} workgroups, exceeding the 3D dispatch limit of ${maximum} per dimension`
+    );
+  }
+  return {x, y, z};
 }
 
 /** Wraps generated WGSL in one graph compute node with deferred physical buffer resolution. */
@@ -245,7 +271,8 @@ function addComputationPass<Parameters>(
     source: string;
     resources: GraphBufferUse[];
     bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
+    dispatchCount?: number;
+    dispatchSize?: GPUGroupAggregationDispatchLayout;
   }
 ): void {
   graph.addComputePass({
@@ -271,7 +298,16 @@ function addComputationPass<Parameters>(
             bindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
+          if (props.dispatchSize) {
+            computation.dispatch(
+              computePass,
+              props.dispatchSize.x,
+              props.dispatchSize.y,
+              props.dispatchSize.z
+            );
+          } else {
+            computation.dispatch(computePass, props.dispatchCount!);
+          }
         },
         destroy: () => computation.destroy()
       };
