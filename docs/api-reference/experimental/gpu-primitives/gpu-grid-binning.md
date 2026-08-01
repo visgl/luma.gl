@@ -18,6 +18,18 @@ Counts answer density questions and can feed heatmaps, occupancy tests, or later
 [`GPUGridAggregation`](./gpu-grid-aggregation) when each point should contribute a floating-point
 weight instead of the constant count `1`.
 
+### When to use it
+
+Typical uses include point-density heatmaps, screen-tile occupancy, coarse particle density, and
+finding overloaded spatial cells before a more expensive pass. Because the output size depends on
+the grid rather than the input population, millions of points can become a small summary that is
+cheap to render or read back.
+
+Grid binning intentionally loses object identity. It is the wrong result for “which objects are in
+this cell?”, exact nearest-neighbor queries, or non-rectilinear regions; those require picking or a
+spatial index. Grid resolution is also an application tradeoff: finer grids preserve locality but
+increase clearing, contention, and result storage.
+
 ```ts
 new GPUGridBinning({
   positions,

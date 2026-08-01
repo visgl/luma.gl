@@ -26,6 +26,18 @@ Resource-use declarations are both contracts and dependency edges. A storage wri
 read creates a hazard the compiler orders automatically. Imports stay caller-owned, while graph
 transients and node-created pipelines belong to the compiled graph.
 
+### When to use a command graph
+
+A command graph fits repeated, multi-pass work whose capacities and resource shapes are known even
+when frame data changes. Visibility followed by compaction and indirect drawing, simulation followed
+by rendering, picking followed by a bounded copy, and analysis pipelines that share intermediate
+results all benefit from compiling hazards and transient lifetimes once and encoding many times.
+
+Use direct command encoding for a one-off pass or when the complete sequence is already simple and
+local. A graph does not own the frame loop, submission, presentation, application parameters, or
+unbounded allocation. Its value comes from making a reusable dataflow inspectable and validating
+the resource contracts between independently authored nodes.
+
 Render targets need a stricter lifetime distinction than ordinary data textures. An offscreen
 texture can remain valid across many encodings, while a canvas texture belongs to one acquired
 frame and may be replaced at presentation. `importFrameTexture()` makes that boundary visible:
@@ -38,6 +50,22 @@ be a render attachment, storage binding, copy endpoint, or source of graph-creat
 `importExternalTexture()` therefore gives it a separate sampled-only handle and requires a newly
 acquired `ExternalTexture` on every numbered encoding. The application still owns playback,
 source acquisition, fallback conversion, and destruction.
+
+### Choosing a texture lifetime
+
+The import kind communicates why a texture may be reused, replaced, or restricted:
+
+| Texture kind | Best fit | Example |
+| --- | --- | --- |
+| Imported texture | Persistent caller-owned storage | An atlas, uploaded image, history buffer, or offscreen target |
+| Frame texture | Newly acquired renderable storage for one numbered frame | A canvas swapchain color target or matching frame-local depth target |
+| External texture | Newly acquired sampled-only media snapshot | The current video, webcam, or decoded browser media frame |
+| Transient texture | Graph-owned scratch with a compile-time lifetime | An intermediate blur target or multisampled color attachment |
+
+Use a normal imported texture when later passes need copies, storage access, mip generation, or
+reuse across frames. External textures avoid an explicit media-to-texture copy but accept a narrow
+sampling-only lifetime. Frame textures model presentation resources, while transients let the graph
+reuse internal allocations whose logical lifetimes do not overlap.
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 

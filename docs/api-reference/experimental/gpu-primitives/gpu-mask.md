@@ -16,6 +16,18 @@ output is canonicalized to `0` or `1`. Boolean composition keeps independent pro
 a viewport test, hierarchy state, and user selection can each own one mask, while downstream scan
 and compaction consume their combined decision without CPU readback.
 
+### When to use it
+
+Masks are the common currency between independent GPU decisions. A renderer can intersect time,
+viewport, hierarchy, and level-of-detail masks; a linked chart can union several selections; and an
+application can subtract muted or invalid rows. Producers remain reusable because none needs to
+know which other filters are active.
+
+Use a mask when downstream work benefits from source-aligned membership. Add
+[`GPUCompaction`](./gpu-compaction) or [`GPUVisibilityWorkflow`](./gpu-visibility-workflow) when the
+consumer instead needs a dense list and count. `GPUMask` only combines existing decisions—it does
+not evaluate geometric, temporal, or application-specific predicates itself.
+
 ```ts
 import {GPUMask} from '@luma.gl/experimental';
 
