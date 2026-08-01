@@ -4,9 +4,15 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
+import {
+  GPUCommandGraph,
+  GraphVectorView,
+  type GraphBufferUse,
+  type GraphDataView
+} from './gpu-command-graph';
 import {
   createTransientView,
+  createTransientVectorView,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
@@ -18,24 +24,27 @@ const MAXIMUM_GRAPH_TRAVERSAL_DEPTH = 1024;
 /** Direction in which a compressed sparse graph is traversed. */
 export type GPUGraphTraversalDirection = 'outgoing' | 'incoming' | 'both';
 
+/** Packed traversal data stored in one allocation or ordered partitions. */
+export type GPUGraphTraversalData = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+
 /** Properties for bounded, GPU-resident breadth-first graph traversal. */
 export type GPUGraphTraversalProps = {
   /** Prefix for graph nodes and graph-owned frontier buffers. */
   id?: string;
-  /** Forward CSR offsets; contains one more entry than the number of nodes. */
-  offsets: GraphDataView<'uint32'>;
-  /** Forward CSR destinations using stable node indices. */
-  neighbors: GraphDataView<'uint32'>;
-  /** Reverse CSR offsets used for incoming or bidirectional traversal. */
-  reverseOffsets?: GraphDataView<'uint32'>;
-  /** Reverse CSR destinations used for incoming or bidirectional traversal. */
-  reverseNeighbors?: GraphDataView<'uint32'>;
+  /** Forward CSR offsets; packed globally or one local nodeCount + 1 chunk per partition. */
+  offsets: GPUGraphTraversalData;
+  /** Forward CSR destinations using stable global node indices. */
+  neighbors: GPUGraphTraversalData;
+  /** Reverse CSR offsets, using the same partition contract as forward offsets. */
+  reverseOffsets?: GPUGraphTraversalData;
+  /** Reverse CSR destinations using stable global node indices. */
+  reverseNeighbors?: GPUGraphTraversalData;
   /** Caller-owned stable starting node indices. */
-  seeds: GraphDataView<'uint32'>;
+  seeds: GPUGraphTraversalData;
   /** Optional GPU-resident number of active seed rows. */
   seedCount?: GraphDataView<'uint32'>;
   /** Caller-owned, node-aligned zero/one reachability mask. */
-  output: GraphDataView<'uint32'>;
+  output: GPUGraphTraversalData;
   /** Maximum number of compiled graph hops. Defaults to one. */
   maxDepth?: number;
   /** Optional dynamic hop count, clamped by the compiled maximum. */
@@ -63,19 +72,19 @@ export class GPUGraphTraversal {
   /** Prefix for graph nodes and frontier storage. */
   readonly id: string;
   /** Forward CSR offsets. */
-  readonly offsets: GraphDataView<'uint32'>;
+  readonly offsets: GPUGraphTraversalData;
   /** Forward CSR destinations. */
-  readonly neighbors: GraphDataView<'uint32'>;
+  readonly neighbors: GPUGraphTraversalData;
   /** Optional reverse CSR offsets. */
-  readonly reverseOffsets?: GraphDataView<'uint32'>;
+  readonly reverseOffsets?: GPUGraphTraversalData;
   /** Optional reverse CSR destinations. */
-  readonly reverseNeighbors?: GraphDataView<'uint32'>;
+  readonly reverseNeighbors?: GPUGraphTraversalData;
   /** Stable starting node indices. */
-  readonly seeds: GraphDataView<'uint32'>;
+  readonly seeds: GPUGraphTraversalData;
   /** Optional active seed count. */
   readonly seedCount?: GraphDataView<'uint32'>;
   /** Caller-owned reachability mask. */
-  readonly output: GraphDataView<'uint32'>;
+  readonly output: GPUGraphTraversalData;
   /** Number of compiled breadth-first expansion stages. */
   readonly maxDepth: number;
   /** Optional dynamically selected number of active expansion stages. */
@@ -96,9 +105,9 @@ export class GPUGraphTraversal {
     this.activeDepth = props.activeDepth;
     this.direction = props.direction ?? 'outgoing';
 
-    const namedViews = this.getNamedViews();
-    for (const [name, view] of namedViews) {
-      validatePackedUint32View(view, `${this.id} ${name}`);
+    const namedData = this.getNamedData();
+    for (const [name, data] of namedData) {
+      validateTraversalData(data, `${this.id} ${name}`);
     }
     if (!Number.isSafeInteger(this.maxDepth) || this.maxDepth < 0) {
       throw new Error(`${this.id} maxDepth must be a nonnegative safe integer`);
@@ -106,9 +115,7 @@ export class GPUGraphTraversal {
     if (this.maxDepth > MAXIMUM_GRAPH_TRAVERSAL_DEPTH) {
       throw new Error(`${this.id} maxDepth must be at most ${MAXIMUM_GRAPH_TRAVERSAL_DEPTH}`);
     }
-    if (this.offsets.length !== this.output.length + 1) {
-      throw new Error(`${this.id} offsets must contain one more row than the output`);
-    }
+    validateAdjacencyTopology(this.id, this.offsets, this.neighbors, this.output, 'forward');
     if (this.seedCount && this.seedCount.length !== 1) {
       throw new Error(`${this.id} seedCount must contain exactly one row`);
     }
@@ -121,11 +128,21 @@ export class GPUGraphTraversal {
     if (this.direction !== 'outgoing' && !this.reverseOffsets) {
       throw new Error(`${this.id} ${this.direction} traversal requires reverse adjacency`);
     }
-    if (this.reverseOffsets && this.reverseOffsets.length !== this.output.length + 1) {
-      throw new Error(`${this.id} reverse offsets must contain one more row than the output`);
+    if (this.reverseOffsets && this.reverseNeighbors) {
+      validateAdjacencyTopology(
+        this.id,
+        this.reverseOffsets,
+        this.reverseNeighbors,
+        this.output,
+        'reverse'
+      );
     }
+    const outputBuffers = new Set(getTraversalChunks(this.output).map(view => view.buffer));
     if (
-      namedViews.some(([name, view]) => name !== 'output' && view.buffer === this.output.buffer)
+      namedData.some(
+        ([name, data]) =>
+          name !== 'output' && getTraversalChunks(data).some(view => outputBuffers.has(view.buffer))
+      )
     ) {
       throw new Error(`${this.id} output must use a separate buffer from traversal inputs`);
     }
@@ -138,36 +155,61 @@ export class GPUGraphTraversal {
    * edges from rediscovering a previously reached node.
    */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    for (const [, view] of this.getNamedViews()) {
-      if (view.buffer.graph !== graph) {
-        throw new Error(`${this.id} views must belong to the target graph`);
+    for (const [, data] of this.getNamedData()) {
+      for (const view of getTraversalChunks(data)) {
+        if (view.buffer.graph !== graph) {
+          throw new Error(`${this.id} views must belong to the target graph`);
+        }
       }
     }
     if (this.output.length === 0) {
       return;
     }
 
+    if (this.output instanceof GraphVectorView) {
+      this.addPartitionedToGraph(graph);
+      return;
+    }
+    this.addPackedToGraph(graph);
+  }
+
+  /** Adds the original one-allocation traversal path. */
+  private addPackedToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+    const output = this.output as GraphDataView<'uint32'>;
+    const offsets = this.offsets as GraphDataView<'uint32'>;
+    const neighbors = this.neighbors as GraphDataView<'uint32'>;
+    const reverseOffsets = this.reverseOffsets as GraphDataView<'uint32'> | undefined;
+    const reverseNeighbors = this.reverseNeighbors as GraphDataView<'uint32'> | undefined;
     let currentFrontier = createTransientView(
       graph,
       `${this.id}-frontier-current`,
       'uint32',
-      this.output.length
+      output.length
     );
     let nextFrontier = createTransientView(
       graph,
       `${this.id}-frontier-next`,
       'uint32',
-      this.output.length
+      output.length
     );
-    addInitializationPass(graph, this.id, this.output, currentFrontier);
+    addInitializationPass(graph, this.id, output, currentFrontier);
     if (this.seeds.length > 0) {
-      addSeedPass(graph, {
-        id: `${this.id}-seed`,
-        seeds: this.seeds,
-        seedCount: this.seedCount,
-        frontier: currentFrontier,
-        output: this.output
-      });
+      for (const seedChunk of getTraversalChunkRanges(this.seeds)) {
+        if (seedChunk.view.length > 0) {
+          addSeedPass(graph, {
+            id:
+              this.seeds instanceof GraphVectorView
+                ? `${this.id}-seed-${seedChunk.index}`
+                : `${this.id}-seed`,
+            seeds: seedChunk.view,
+            seedBase: seedChunk.base,
+            seedCount: this.seedCount,
+            targetBase: 0,
+            frontier: currentFrontier,
+            output
+          });
+        }
+      }
     }
 
     for (let depth = 0; depth < this.maxDepth; depth++) {
@@ -175,11 +217,12 @@ export class GPUGraphTraversal {
       if (this.direction !== 'incoming') {
         addExpansionPass(graph, {
           id: `${this.id}-depth-${depth}-outgoing`,
-          offsets: this.offsets,
-          neighbors: this.neighbors,
+          offsets,
+          neighbors,
           frontier: currentFrontier,
           nextFrontier,
-          output: this.output,
+          output,
+          targetBase: 0,
           activeDepth: this.activeDepth,
           depth
         });
@@ -187,11 +230,91 @@ export class GPUGraphTraversal {
       if (this.direction !== 'outgoing') {
         addExpansionPass(graph, {
           id: `${this.id}-depth-${depth}-incoming`,
-          offsets: this.reverseOffsets!,
-          neighbors: this.reverseNeighbors!,
+          offsets: reverseOffsets!,
+          neighbors: reverseNeighbors!,
           frontier: currentFrontier,
           nextFrontier,
-          output: this.output,
+          output,
+          targetBase: 0,
+          activeDepth: this.activeDepth,
+          depth
+        });
+      }
+      [currentFrontier, nextFrontier] = [nextFrontier, currentFrontier];
+    }
+  }
+
+  /** Adds partition-preserving traversal over local CSR rows and global stable neighbor IDs. */
+  private addPartitionedToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+    const output = this.output as GraphVectorView<'uint32'>;
+    const offsets = this.offsets as GraphVectorView<'uint32'>;
+    const neighbors = this.neighbors as GraphVectorView<'uint32'>;
+    const reverseOffsets = this.reverseOffsets as GraphVectorView<'uint32'> | undefined;
+    const reverseNeighbors = this.reverseNeighbors as GraphVectorView<'uint32'> | undefined;
+    let currentFrontier = createTransientVectorView(graph, `${this.id}-frontier-current`, output);
+    let nextFrontier = createTransientVectorView(graph, `${this.id}-frontier-next`, output);
+    const outputRanges = getTraversalChunkRanges(output);
+    const seedRanges = getTraversalChunkRanges(this.seeds);
+
+    for (const outputRange of outputRanges) {
+      if (outputRange.view.length > 0) {
+        addInitializationPass(
+          graph,
+          `${this.id}-partition-${outputRange.index}`,
+          outputRange.view,
+          currentFrontier.data[outputRange.index]
+        );
+      }
+    }
+    for (const seedRange of seedRanges) {
+      if (seedRange.view.length === 0) {
+        continue;
+      }
+      for (const targetRange of outputRanges) {
+        if (targetRange.view.length > 0) {
+          addSeedPass(graph, {
+            id: `${this.id}-seed-${seedRange.index}-target-${targetRange.index}`,
+            seeds: seedRange.view,
+            seedBase: seedRange.base,
+            seedCount: this.seedCount,
+            targetBase: targetRange.base,
+            frontier: currentFrontier.data[targetRange.index],
+            output: targetRange.view
+          });
+        }
+      }
+    }
+
+    for (let depth = 0; depth < this.maxDepth; depth++) {
+      for (const targetRange of outputRanges) {
+        if (targetRange.view.length > 0) {
+          addClearFrontierPass(
+            graph,
+            `${this.id}-depth-${depth}-clear-${targetRange.index}`,
+            nextFrontier.data[targetRange.index]
+          );
+        }
+      }
+      if (this.direction !== 'incoming') {
+        addPartitionedExpansionPasses(graph, {
+          id: `${this.id}-depth-${depth}-outgoing`,
+          offsets,
+          neighbors,
+          currentFrontier,
+          nextFrontier,
+          output,
+          activeDepth: this.activeDepth,
+          depth
+        });
+      }
+      if (this.direction !== 'outgoing') {
+        addPartitionedExpansionPasses(graph, {
+          id: `${this.id}-depth-${depth}-incoming`,
+          offsets: reverseOffsets!,
+          neighbors: reverseNeighbors!,
+          currentFrontier,
+          nextFrontier,
+          output,
           activeDepth: this.activeDepth,
           depth
         });
@@ -201,26 +324,26 @@ export class GPUGraphTraversal {
   }
 
   /** Returns caller-owned graph views in stable validation order. */
-  private getNamedViews(): Array<[string, GraphDataView<'uint32'>]> {
-    const views: Array<[string, GraphDataView<'uint32'>]> = [
+  private getNamedData(): Array<[string, GPUGraphTraversalData]> {
+    const data: Array<[string, GPUGraphTraversalData]> = [
       ['offsets', this.offsets],
       ['neighbors', this.neighbors]
     ];
     if (this.reverseOffsets) {
-      views.push(['reverseOffsets', this.reverseOffsets]);
+      data.push(['reverseOffsets', this.reverseOffsets]);
     }
     if (this.reverseNeighbors) {
-      views.push(['reverseNeighbors', this.reverseNeighbors]);
+      data.push(['reverseNeighbors', this.reverseNeighbors]);
     }
-    views.push(['seeds', this.seeds]);
+    data.push(['seeds', this.seeds]);
     if (this.seedCount) {
-      views.push(['seedCount', this.seedCount]);
+      data.push(['seedCount', this.seedCount]);
     }
     if (this.activeDepth) {
-      views.push(['activeDepth', this.activeDepth]);
+      data.push(['activeDepth', this.activeDepth]);
     }
-    views.push(['output', this.output]);
-    return views;
+    data.push(['output', this.output]);
+    return data;
   }
 }
 
@@ -264,7 +387,9 @@ function addSeedPass<Parameters>(
   props: {
     id: string;
     seeds: GraphDataView<'uint32'>;
+    seedBase: number;
     seedCount?: GraphDataView<'uint32'>;
+    targetBase: number;
     frontier: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
   }
@@ -274,11 +399,13 @@ function addSeedPass<Parameters>(
 @group(0) @binding(3) var<storage, read> activeSeedCount: array<u32>;`
     : '';
   const effectiveCount = props.seedCount
-    ? 'min(activeSeedCount[SEED_COUNT_OFFSET], SEED_CAPACITY)'
-    : 'SEED_CAPACITY';
+    ? 'activeSeedCount[SEED_COUNT_OFFSET]'
+    : `${props.seedBase + props.seeds.length}u`;
   const source = /* wgsl */ `
-const NODE_COUNT: u32 = ${props.output.length}u;
 const SEED_CAPACITY: u32 = ${props.seeds.length}u;
+const SEED_BASE: u32 = ${props.seedBase}u;
+const TARGET_BASE: u32 = ${props.targetBase}u;
+const TARGET_COUNT: u32 = ${props.output.length}u;
 const SEEDS_OFFSET: u32 = ${getViewElementOffset(props.seeds)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 const FRONTIER_OFFSET: u32 = ${getViewElementOffset(props.frontier)}u;
@@ -290,13 +417,14 @@ ${countDeclaration}
 @compute @workgroup_size(${GRAPH_TRAVERSAL_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let seedIndex = globalId.x;
-  if (seedIndex >= ${effectiveCount}) {
+  if (seedIndex >= SEED_CAPACITY || SEED_BASE + seedIndex >= ${effectiveCount}) {
     return;
   }
   let nodeIndex = seeds[SEEDS_OFFSET + seedIndex];
-  if (nodeIndex < NODE_COUNT) {
-    atomicStore(&reached[OUTPUT_OFFSET + nodeIndex], 1u);
-    atomicStore(&frontier[FRONTIER_OFFSET + nodeIndex], 1u);
+  if (nodeIndex >= TARGET_BASE && nodeIndex - TARGET_BASE < TARGET_COUNT) {
+    let targetIndex = nodeIndex - TARGET_BASE;
+    atomicStore(&reached[OUTPUT_OFFSET + targetIndex], 1u);
+    atomicStore(&frontier[FRONTIER_OFFSET + targetIndex], 1u);
   }
 }`;
   const bindings: Record<string, GraphDataView<'uint32'>> = {
@@ -358,6 +486,7 @@ function addExpansionPass<Parameters>(
     frontier: GraphDataView<'uint32'>;
     nextFrontier: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
+    targetBase: number;
     activeDepth?: GraphDataView<'uint32'>;
     depth: number;
   }
@@ -372,7 +501,9 @@ function addExpansionPass<Parameters>(
   }`
     : '';
   const source = /* wgsl */ `
-const NODE_COUNT: u32 = ${props.output.length}u;
+const SOURCE_COUNT: u32 = ${props.frontier.length}u;
+const TARGET_COUNT: u32 = ${props.output.length}u;
+const TARGET_BASE: u32 = ${props.targetBase}u;
 const NEIGHBOR_COUNT: u32 = ${props.neighbors.length}u;
 const OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.offsets)}u;
 const NEIGHBORS_OFFSET: u32 = ${getViewElementOffset(props.neighbors)}u;
@@ -389,7 +520,7 @@ ${activeDepthDeclaration}
 @compute @workgroup_size(${GRAPH_TRAVERSAL_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let nodeIndex = globalId.x;
-  if (nodeIndex >= NODE_COUNT || frontier[FRONTIER_OFFSET + nodeIndex] == 0u) {
+  if (nodeIndex >= SOURCE_COUNT || frontier[FRONTIER_OFFSET + nodeIndex] == 0u) {
     return;
   }
   ${activeDepthGuard}
@@ -397,9 +528,11 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let lastNeighbor = min(offsets[OFFSETS_OFFSET + nodeIndex + 1u], NEIGHBOR_COUNT);
   for (var neighborIndex = firstNeighbor; neighborIndex < lastNeighbor; neighborIndex++) {
     let neighbor = neighbors[NEIGHBORS_OFFSET + neighborIndex];
-    if (neighbor < NODE_COUNT &&
-      atomicExchange(&reached[OUTPUT_OFFSET + neighbor], 1u) == 0u) {
-      atomicStore(&nextFrontier[NEXT_FRONTIER_OFFSET + neighbor], 1u);
+    if (neighbor >= TARGET_BASE && neighbor - TARGET_BASE < TARGET_COUNT) {
+      let targetIndex = neighbor - TARGET_BASE;
+      if (atomicExchange(&reached[OUTPUT_OFFSET + targetIndex], 1u) == 0u) {
+        atomicStore(&nextFrontier[NEXT_FRONTIER_OFFSET + targetIndex], 1u);
+      }
     }
   }
 }`;
@@ -426,8 +559,113 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     source,
     resources,
     bindings,
-    dispatchCount: Math.ceil(props.output.length / GRAPH_TRAVERSAL_WORKGROUP_SIZE)
+    dispatchCount: Math.ceil(props.frontier.length / GRAPH_TRAVERSAL_WORKGROUP_SIZE)
   });
+}
+
+/** Adds every source-to-target partition pair required for arbitrary cross-partition edges. */
+function addPartitionedExpansionPasses<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  props: {
+    id: string;
+    offsets: GraphVectorView<'uint32'>;
+    neighbors: GraphVectorView<'uint32'>;
+    currentFrontier: GraphVectorView<'uint32'>;
+    nextFrontier: GraphVectorView<'uint32'>;
+    output: GraphVectorView<'uint32'>;
+    activeDepth?: GraphDataView<'uint32'>;
+    depth: number;
+  }
+): void {
+  const sourceRanges = getTraversalChunkRanges(props.output);
+  for (const sourceRange of sourceRanges) {
+    if (sourceRange.view.length === 0) {
+      continue;
+    }
+    for (const targetRange of sourceRanges) {
+      if (targetRange.view.length === 0) {
+        continue;
+      }
+      addExpansionPass(graph, {
+        id: `${props.id}-source-${sourceRange.index}-target-${targetRange.index}`,
+        offsets: props.offsets.data[sourceRange.index],
+        neighbors: props.neighbors.data[sourceRange.index],
+        frontier: props.currentFrontier.data[sourceRange.index],
+        nextFrontier: props.nextFrontier.data[targetRange.index],
+        output: targetRange.view,
+        targetBase: targetRange.base,
+        activeDepth: props.activeDepth,
+        depth: props.depth
+      });
+    }
+  }
+}
+
+/** Validates atomic adjacency or one local CSR allocation per output partition. */
+function validateAdjacencyTopology(
+  id: string,
+  offsets: GPUGraphTraversalData,
+  neighbors: GPUGraphTraversalData,
+  output: GPUGraphTraversalData,
+  direction: 'forward' | 'reverse'
+): void {
+  const partitioned = output instanceof GraphVectorView;
+  if (
+    offsets instanceof GraphVectorView !== partitioned ||
+    neighbors instanceof GraphVectorView !== partitioned
+  ) {
+    throw new Error(`${id} ${direction} adjacency must use the same partition kind as output`);
+  }
+  if (!partitioned) {
+    if (offsets.length !== output.length + 1) {
+      const prefix = direction === 'reverse' ? 'reverse ' : '';
+      throw new Error(`${id} ${prefix}offsets must contain one more row than the output`);
+    }
+    return;
+  }
+  const offsetVector = offsets as GraphVectorView<'uint32'>;
+  const neighborVector = neighbors as GraphVectorView<'uint32'>;
+  const outputVector = output as GraphVectorView<'uint32'>;
+  if (
+    offsetVector.data.length !== outputVector.data.length ||
+    neighborVector.data.length !== outputVector.data.length
+  ) {
+    throw new Error(`${id} ${direction} adjacency must contain one CSR chunk per output chunk`);
+  }
+  for (const [chunkIndex, outputChunk] of outputVector.data.entries()) {
+    if (offsetVector.data[chunkIndex].length !== outputChunk.length + 1) {
+      throw new Error(
+        `${id} ${direction} offsets chunk ${chunkIndex} must contain one more row than its output chunk`
+      );
+    }
+  }
+}
+
+/** Normalizes traversal data into ordered physical chunks. */
+function getTraversalChunks(data: GPUGraphTraversalData): readonly GraphDataView<'uint32'>[] {
+  return data instanceof GraphVectorView ? data.data : [data];
+}
+
+/** Adds stable global row bases to ordered traversal chunks. */
+function getTraversalChunkRanges(data: GPUGraphTraversalData): Array<{
+  index: number;
+  base: number;
+  view: GraphDataView<'uint32'>;
+}> {
+  let base = 0;
+  return getTraversalChunks(data).map((view, index) => {
+    const range = {index, base, view};
+    base += view.length;
+    return range;
+  });
+}
+
+/** Validates every traversal partition as packed unsigned scalar data. */
+function validateTraversalData(data: GPUGraphTraversalData, name: string): void {
+  for (const [chunkIndex, view] of getTraversalChunks(data).entries()) {
+    const chunkName = data instanceof GraphVectorView ? `${name} chunk ${chunkIndex}` : name;
+    validatePackedUint32View(view, chunkName);
+  }
 }
 
 /** Wraps generated WGSL in one graph-owned, lazily bound computation. */

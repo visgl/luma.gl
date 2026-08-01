@@ -1005,7 +1005,7 @@ schedule commitment.
 | 0 — Current foundation | Command graph, masks, hierarchy layout, graph traversal, ancestor projection, compaction, indirect drawing, picking, analysis primitives, and three working consumers | Implemented | High | Complete |
 | 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
-| 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | In progress | High | Large |
+| 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Implemented | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, swapchain imports, and external-texture contracts | Planned | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
@@ -1017,6 +1017,8 @@ The remaining phases are intentionally divided into reviewable contracts. A tran
 only when its entry dependency is present and its exit evidence can be produced; the numbering is
 dependency order, not a schedule commitment. Tranches whose dependencies do not overlap may be
 developed independently.
+
+Tranches 3.2 and 3.3 are implemented; Phase 4 is the next active boundary.
 
 | Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
 | --- | --- | --- | :---: | :---: |
@@ -1106,9 +1108,9 @@ flowing directly into indirect rendering.
 
 ### Phase 3 — Algorithm and table scaling
 
-**Status:** In progress. Inclusive and segmented `uint32` scans, weighted floating-point grid and
-categorical statistics, irregular-edge histograms, filtered categorical counts, and
-batch-preserving paired sort are implemented.
+**Status:** Implemented. Inclusive and segmented `uint32` scans, weighted floating-point grid and
+categorical statistics, irregular-edge histograms, filtered categorical counts, batch-preserving
+paired sort, and partitioned hierarchy and CSR topology are implemented.
 
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
@@ -1149,16 +1151,24 @@ record batches, per-tile ordering, and incremental ingestion where partition bou
 of the storage and lifetime contract. The GPU sort example contrasts that behavior with one
 explicit packed global sort and validates mixed bitonic/radix batches against a CPU oracle.
 
-Remaining work extends meaningful multi-chunk support to topology algorithms that still require
-one packed view and adds more batch-aware operations only where consumers need partition-local
-semantics. Custom associative scans, sparse histograms, and multidimensional histograms should be
-added only with a concrete consumer and an explicit numerical or memory contract.
+More batch-aware operations remain consumer-driven rather than being required to complete this
+phase. Custom associative scans, sparse histograms, and multidimensional histograms should be added
+only with a concrete consumer and an explicit numerical or memory contract.
 
 #### Tranche 3.2 — Partitioned topology
+
+**Status:** Implemented.
 
 Define how chunk-local rows map to stable global IDs, including explicit base offsets and the
 ownership of cross-chunk hierarchy or CSR edges. Extend at least one hierarchy primitive and one
 CSR primitive to consume that contract without concatenating chunks behind the caller's back.
+
+`GPUHierarchyLayout` now derives stable cumulative bases independently for parent and child
+vectors, splits only the intersecting work when their boundaries differ, and scans offsets across
+the preserved child topology. `GPUGraphTraversal` accepts one local CSR allocation per output
+partition with global neighbor IDs and routes arbitrary cross-partition edges through explicit
+source-to-target passes. The trace viewer exercises both contracts using two logical partitions
+backed by its existing allocations.
 
 **Exit evidence:** CPU-oracle tests cover empty chunks, cross-chunk references, uneven boundaries,
 and incremental replacement of one batch. A hierarchy and graph consumer preserve their source
@@ -1166,11 +1176,24 @@ partitions while producing the same IDs and results as an explicitly packed inpu
 
 #### Tranche 3.3 — Extension decision gate
 
+**Status:** Implemented as an explicit deferral decision.
+
 Evaluate custom associative scans, sparse and multidimensional histograms, and shader predicate
 callbacks against demonstrated consumers after partitioned topology lands. Each candidate must
 state its numerical behavior, memory-growth bounds, composition model, and why existing fixed
 contracts are insufficient. Explicit deferral is a valid outcome; this tranche does not require
 inventing an extension API merely to complete a checklist.
+
+| Candidate | Decision | Evidence required to reopen |
+| --- | --- | --- |
+| Custom associative scans | Defer | Two consumers sharing an associative operation, identity value, overflow behavior, and shader value layout that the fixed `uint32` scan cannot express |
+| Sparse histograms | Defer | A high-cardinality consumer where dense output is demonstrably the dominant memory cost, plus bounded key storage and overflow semantics |
+| Multidimensional histograms | Defer | Two consumers requiring joint distributions that cannot compose `GPUGridBinning`, `GPUGridAggregation`, or dense group IDs without materializing an avoidable column |
+| Application WGSL predicate callbacks | Defer | Two visibility consumers sharing binding, validation, cache-key, diagnostic, and composition requirements beyond the fixed workflow masks |
+
+This decision keeps numerical behavior and shader interfaces inspectable. A future proposal should
+name the missing fixed-contract capability and its capacity bound rather than exposing an
+unconstrained callback as a shortcut.
 
 **Exit evidence:** Every candidate has two motivating consumers or remains documented as deferred,
 and any accepted API has a CPU oracle plus explicit capacity, overflow, and shader-compatibility

@@ -36,7 +36,8 @@ new GPUGraphTraversal({
 }).addToGraph(graph);
 ```
 
-All inputs are packed `GraphDataView<'uint32'>` values:
+Inputs may use one packed `GraphDataView<'uint32'>` adjacency or partitioned
+`GraphVectorView<'uint32'>` adjacency:
 
 - `offsets` has `nodeCount + 1` entries; `neighbors` stores the forward CSR destinations.
 - `reverseOffsets` and `reverseNeighbors` provide reverse CSR for `'incoming'` or `'both'`.
@@ -46,10 +47,29 @@ All inputs are packed `GraphDataView<'uint32'>` values:
 - `maxDepth` defines the number of compiled frontier-expansion stages and must not exceed 1024.
 - Optional `activeDepth` changes the number of effective stages without recompiling the graph.
 
+### Partitioned CSR identity
+
+Partitioned traversal keeps one local CSR allocation per output partition. Each `offsets` chunk
+has `outputChunk.length + 1` entries beginning at zero, and the corresponding `neighbors` chunk
+contains that source partition's edges. Neighbor values remain stable global node IDs. Forward
+and reverse adjacency must each contain one offset and neighbor chunk per output chunk; seeds may
+use any chunk topology.
+
+Arbitrary edges can cross partitions. For each hop, traversal therefore emits explicit
+source-to-target partition passes: source offsets and frontiers use local indices, while global
+neighbor IDs select the target output and next-frontier chunk. Empty partitions remain present but
+add no dispatch. No adjacency, frontier, or output chunk is concatenated or repacked.
+
+The general cross-partition path has an O(partition²) dispatch envelope per hop. Coarse partitions
+are appropriate when boundaries represent streaming batches or independently replaced storage;
+each source partition's active adjacency is rescanned for every possible target partition.
+Applications with many fine partitions should pack explicitly or wait for a spatial/topological
+index that can route candidate targets without changing the global-ID contract.
+
 The seed nodes are included at depth zero. Out-of-range seed and neighbor IDs are ignored. Atomic
 node claims make cycles, duplicate dependencies, shared descendants, and overlapping frontiers
 safe.
 
-Frontier scratch is created as graph-owned transient buffers. The output buffer must not alias
+Frontier scratch is created as graph-owned transient buffers. Output buffers must not alias
 adjacency, seeds, or other traversal inputs. The operation neither submits commands nor reads
 results back; its output can be composed with `GPUMask` and passed directly to `GPUCompaction`.

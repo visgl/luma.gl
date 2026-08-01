@@ -34,8 +34,8 @@ new GPUHierarchyLayout({
 }).addToGraph(graph);
 ```
 
-All input and output views are packed `GraphDataView<'uint32'>` values. A nonzero state is
-expanded; a zero state is collapsed.
+Inputs and outputs may be packed `GraphDataView<'uint32'>` values or ordered
+`GraphVectorView<'uint32'>` partitions. A nonzero state is expanded; a zero state is collapsed.
 
 - Expanded parents publish one height for each child.
 - Expanded children use `expandedChildHeight`.
@@ -45,8 +45,22 @@ expanded; a zero state is collapsed.
 - `GPUScan` converts the effective child heights into stable exclusive row offsets.
 
 `childStates.length` must equal `parentStates.length * childrenPerParent`. Both output lengths
-must equal the child count. Heights and offsets are caller-owned and cannot alias each other or
-their input buffers.
+must equal the child count. Vector heights and offsets preserve the exact child-state chunk
+topology; parent partitions may use different boundaries.
+
+### Partitioned hierarchy identity
+
+Partition boundaries are storage and update boundaries, not hierarchy boundaries. Cumulative row
+counts assign every parent and child one stable global ID. When a child chunk crosses a parent
+chunk boundary, `GPUHierarchyLayout` emits an explicit pass for each intersecting range and uses
+the global child ID to select its parent. It never concatenates or repacks either vector.
+
+This matters for streamed or incrementally replaced batches: an application can replace one
+parent or child allocation while preserving source identity and output partitions. Empty chunks
+retain their position. The exclusive scan carries layout offsets across child chunks, so the
+result is identical to laying out one explicitly packed sequence.
+
+Heights and offsets are caller-owned and cannot alias each other or their input buffers.
 
 Expansion states can be updated between graph encodings. The operation allocates only graph-owned
 scan scratch and does not submit, repack, or read back data.

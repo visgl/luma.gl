@@ -16,6 +16,7 @@ import {
   type GraphBufferHandle,
   type GraphBufferUse
 } from '@luma.gl/experimental';
+import {GPUData, GPUVector} from '@luma.gl/tables';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -350,6 +351,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const spanMaskByteLength = Math.max(dataset.spanCount, 1) * UINT32_BYTE_LENGTH;
     const dependencyMaskByteLength = Math.max(dataset.dependencyCount, 1) * UINT32_BYTE_LENGTH;
     const activityBinCount = TRACE_PROCESS_COUNT * TRACE_ACTIVITY_BIN_COUNT;
+    const topologyChunkLengths = getTopologyChunkLengths(dataset.spanCount);
+    const outgoingOffsets = makePartitionedOffsets(dataset.outgoing.offsets, topologyChunkLengths);
+    const incomingOffsets = makePartitionedOffsets(dataset.incoming.offsets, topologyChunkLengths);
     const drawCommands = new DrawCommandBuffer(this.device, {
       id: 'gpu-trace-draw-commands',
       type: 'draw',
@@ -367,18 +371,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       spans: this.createDataBuffer('gpu-trace-spans', dataset.spans),
       dependencies: this.createDataBuffer('gpu-trace-dependencies', dataset.dependencies),
       parentSpans: this.createDataBuffer('gpu-trace-parent-spans', dataset.parentSpans),
-      outgoingOffsets: this.createDataBuffer(
-        'gpu-trace-outgoing-offsets',
-        dataset.outgoing.offsets
-      ),
+      outgoingOffsets: this.createDataBuffer('gpu-trace-outgoing-offsets', outgoingOffsets),
       outgoingNeighbors: this.createDataBuffer(
         'gpu-trace-outgoing-neighbors',
         dataset.outgoing.neighbors
       ),
-      incomingOffsets: this.createDataBuffer(
-        'gpu-trace-incoming-offsets',
-        dataset.incoming.offsets
-      ),
+      incomingOffsets: this.createDataBuffer('gpu-trace-incoming-offsets', incomingOffsets),
       incomingNeighbors: this.createDataBuffer(
         'gpu-trace-incoming-neighbors',
         dataset.incoming.neighbors
@@ -497,25 +495,39 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       pickResult: importTraceBuffer(graph, 'pick-result', resources.pickResult),
       drawCommands: importTraceBuffer(graph, 'draw-commands', resources.drawCommands.buffer)
     };
+    const processChunkLengths = [1, TRACE_PROCESS_COUNT - 1];
+    const threadChunkLengths = [
+      TRACE_THREADS_PER_PROCESS + 1,
+      TRACE_THREAD_COUNT - TRACE_THREADS_PER_PROCESS - 1
+    ];
+    const topologyChunkLengths = getTopologyChunkLengths(resources.spanCount);
+    const outgoingNeighborChunkLengths = getNeighborChunkLengths(
+      dataset.outgoing.offsets,
+      topologyChunkLengths
+    );
+    const incomingNeighborChunkLengths = getNeighborChunkLengths(
+      dataset.incoming.offsets,
+      topologyChunkLengths
+    );
 
     new GPUHierarchyLayout({
       id: 'trace-process-thread-layout',
-      parentStates: graph.createDataView(handles.processStates, {
-        format: 'uint32',
-        length: TRACE_PROCESS_COUNT
-      }),
-      childStates: graph.createDataView(handles.threadStates, {
-        format: 'uint32',
-        length: TRACE_THREAD_COUNT
-      }),
-      heights: graph.createDataView(handles.threadHeights, {
-        format: 'uint32',
-        length: TRACE_THREAD_COUNT
-      }),
-      offsets: graph.createDataView(handles.threadOffsets, {
-        format: 'uint32',
-        length: TRACE_THREAD_COUNT
-      }),
+      parentStates: graph.importGPUVector(
+        'process-state-partitions',
+        makeUint32Vector('process states', resources.processStates, processChunkLengths)
+      ),
+      childStates: graph.importGPUVector(
+        'thread-state-partitions',
+        makeUint32Vector('thread states', resources.threadStates, threadChunkLengths)
+      ),
+      heights: graph.importGPUVector(
+        'thread-height-partitions',
+        makeUint32Vector('thread heights', resources.threadHeights, threadChunkLengths)
+      ),
+      offsets: graph.importGPUVector(
+        'thread-offset-partitions',
+        makeUint32Vector('thread offsets', resources.threadOffsets, threadChunkLengths)
+      ),
       childrenPerParent: TRACE_THREADS_PER_PROCESS,
       expandedChildHeight: TRACE_LANES_PER_THREAD,
       collapsedChildHeight: 1,
@@ -524,29 +536,45 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
 
     new GPUGraphTraversal({
       id: 'trace-selected-dependencies',
-      offsets: graph.createDataView(handles.outgoingOffsets, {
-        format: 'uint32',
-        length: dataset.outgoing.offsets.length
-      }),
-      neighbors: graph.createDataView(handles.outgoingNeighbors, {
-        format: 'uint32',
-        length: dataset.outgoing.neighbors.length
-      }),
-      reverseOffsets: graph.createDataView(handles.incomingOffsets, {
-        format: 'uint32',
-        length: dataset.incoming.offsets.length
-      }),
-      reverseNeighbors: graph.createDataView(handles.incomingNeighbors, {
-        format: 'uint32',
-        length: dataset.incoming.neighbors.length
-      }),
+      offsets: graph.importGPUVector(
+        'outgoing-offset-partitions',
+        makeUint32Vector(
+          'outgoing offsets',
+          resources.outgoingOffsets,
+          topologyChunkLengths.map(length => length + 1)
+        )
+      ),
+      neighbors: graph.importGPUVector(
+        'outgoing-neighbor-partitions',
+        makeUint32Vector(
+          'outgoing neighbors',
+          resources.outgoingNeighbors,
+          outgoingNeighborChunkLengths
+        )
+      ),
+      reverseOffsets: graph.importGPUVector(
+        'incoming-offset-partitions',
+        makeUint32Vector(
+          'incoming offsets',
+          resources.incomingOffsets,
+          topologyChunkLengths.map(length => length + 1)
+        )
+      ),
+      reverseNeighbors: graph.importGPUVector(
+        'incoming-neighbor-partitions',
+        makeUint32Vector(
+          'incoming neighbors',
+          resources.incomingNeighbors,
+          incomingNeighborChunkLengths
+        )
+      ),
       seeds: graph.createDataView(handles.selectedSeeds, {format: 'uint32', length: 1}),
       seedCount: graph.createDataView(handles.selectedSeedCount, {format: 'uint32', length: 1}),
       activeDepth: graph.createDataView(handles.traversalDepth, {format: 'uint32', length: 1}),
-      output: graph.createDataView(handles.reachedSpans, {
-        format: 'uint32',
-        length: resources.spanCount
-      }),
+      output: graph.importGPUVector(
+        'reached-span-partitions',
+        makeUint32Vector('reached spans', resources.reachedSpans, topologyChunkLengths)
+      ),
       direction: 'both',
       maxDepth: MAXIMUM_FOCUS_DEPTH
     }).addToGraph(graph);
@@ -1284,6 +1312,66 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.view.timeMin = anchor - nextRange * fraction;
     this.view.timeMax = this.view.timeMin + nextRange;
   };
+}
+
+/** Splits source-aligned topology into two stable global-ID partitions. */
+function getTopologyChunkLengths(length: number): number[] {
+  if (length < 2) {
+    return [length];
+  }
+  const firstLength = Math.floor(length / 2);
+  return [firstLength, length - firstLength];
+}
+
+/** Returns the edge allocation length owned by each consecutive node partition. */
+function getNeighborChunkLengths(
+  offsets: Uint32Array,
+  nodeChunkLengths: readonly number[]
+): number[] {
+  let nodeBase = 0;
+  return nodeChunkLengths.map(nodeCount => {
+    const neighborCount = offsets[nodeBase + nodeCount] - offsets[nodeBase];
+    nodeBase += nodeCount;
+    return neighborCount;
+  });
+}
+
+/** Rewrites global CSR offsets as consecutive partition-local offset arrays. */
+function makePartitionedOffsets(
+  offsets: Uint32Array,
+  nodeChunkLengths: readonly number[]
+): Uint32Array {
+  const partitionedOffsets: number[] = [];
+  let nodeBase = 0;
+  for (const nodeCount of nodeChunkLengths) {
+    const neighborBase = offsets[nodeBase];
+    for (let localNodeIndex = 0; localNodeIndex <= nodeCount; localNodeIndex++) {
+      partitionedOffsets.push(offsets[nodeBase + localNodeIndex] - neighborBase);
+    }
+    nodeBase += nodeCount;
+  }
+  return Uint32Array.from(partitionedOffsets);
+}
+
+/** Adapts consecutive subranges of one caller-owned allocation as a chunk-preserving vector. */
+function makeUint32Vector(
+  name: string,
+  buffer: Buffer,
+  chunkLengths: readonly number[]
+): GPUVector<'uint32'> {
+  let byteOffset = 0;
+  const data = chunkLengths.map(length => {
+    const chunk = new GPUData({
+      buffer,
+      format: 'uint32',
+      length,
+      byteOffset,
+      ownsBuffer: false
+    });
+    byteOffset += length * UINT32_BYTE_LENGTH;
+    return chunk;
+  });
+  return new GPUVector({type: 'data', name, format: 'uint32', data, ownsData: false});
 }
 
 /** Preserves caller-owned imports and the original GPU command-graph ownership contract. */
