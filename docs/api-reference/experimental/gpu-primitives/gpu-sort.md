@@ -5,8 +5,17 @@ import {GPUSortExample} from '@site/src/examples';
 
 <GPUPrimitivesDocsTabs active="sort" />
 
+## Overview
+
 `GPUSort` adds a stable, out-of-place key/value sort to a `GPUCommandGraph`. It sorts paired
 packed `uint32` graph views without submitting commands or reading results back to the CPU.
+
+## Concepts
+
+Paired sorting moves each value with its key, so values commonly hold stable source-row IDs. A
+stable sort preserves the original order of equal keys, and out-of-place output leaves the source
+buffers unchanged. Bitonic sort favors smaller fixed networks; radix sort scales larger inputs by
+partitioning key bits while preserving stability.
 
 The live example exposes dataset size, algorithm selection, sort direction, graph statistics, and result validation:
 

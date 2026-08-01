@@ -5,12 +5,25 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 
 <GPUPrimitivesDocsTabs active="command-graph" />
 
+## Overview
+
 `GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
 ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns
 transient resources and node state but borrows every import.
 
 See [Choosing a GPU Data-Processing API](/docs/api-guide/gpu/gpu-data-processing) for guidance on
 when to use a command graph, portable GPGPU evaluators, or lower-level compute helpers.
+
+## Concepts
+
+A graph definition describes resources, node uses, and explicit ordering constraints. Compilation
+turns that declaration into a stable execution order, validates capacities and usages, allocates
+reusable transient storage, and creates node state. Encoding records the compiled work into a
+caller-owned command encoder; submission and readback remain explicit application decisions.
+
+Resource-use declarations are both contracts and dependency edges. A storage write followed by a
+read creates a hazard the compiler orders automatically. Imports stay caller-owned, while graph
+transients and node-created pipelines belong to the compiled graph.
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 
@@ -98,6 +111,7 @@ its documented atomic graph resources; callers must select, adapt, or explicitly
 | `GPUReduction` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUHistogram` | Scalar `GraphDataView` or `GraphVectorView` | ✅ |
 | `GPUGridBinning` | Position `GraphDataView` or `GraphVectorView` | ✅ |
+| `GPUGridAggregation` | Aligned position and weight views or vectors | ✅ |
 | `GPUIndexPickingTarget` | Texture and readback resources | ❌ |
 | `DrawCommandBuffer` | Indirect command buffer | ❌ |
 

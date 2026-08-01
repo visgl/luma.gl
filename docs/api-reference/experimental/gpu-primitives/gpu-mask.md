@@ -4,8 +4,17 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="mask" />
 
+## Overview
+
 `GPUMask` composes GPU-resident visibility, hierarchy, selection, and application-filter masks as
 ordinary `GPUCommandGraph` nodes.
+
+## Concepts
+
+A mask is one truth value per source row. Inputs may contain any zero or nonzero values, but the
+output is canonicalized to `0` or `1`. Boolean composition keeps independent producers decoupled:
+a viewport test, hierarchy state, and user selection can each own one mask, while downstream scan
+and compaction consume their combined decision without CPU readback.
 
 ```ts
 import {GPUMask} from '@luma.gl/experimental';

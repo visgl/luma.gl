@@ -4,9 +4,19 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="graph-traversal" />
 
+## Overview
+
 `GPUGraphTraversal` performs bounded, GPU-resident breadth-first selection over compressed sparse
 graph adjacency. It supports direct dependencies, incoming and outgoing neighborhoods, and
 multi-hop focused subgraphs without synchronizing the CPU.
+
+## Concepts
+
+Compressed sparse row (CSR) adjacency stores each node's neighbor range in `offsets` and all
+neighbor IDs in one packed array. Traversal starts from a seed frontier, atomically claims unseen
+nodes, and expands one frontier per depth. Forward CSR follows outgoing edges; reverse CSR follows
+incoming edges. The result is a source-aligned `0`/`1` reachability mask rather than a reordered
+list, so it composes directly with masks and compaction.
 
 ```ts
 import {GPUGraphTraversal} from '@luma.gl/experimental';

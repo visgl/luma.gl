@@ -4,7 +4,16 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="draw-command-buffer" />
 
+## Overview
+
 `DrawCommandBuffer` owns or borrows a buffer containing WebGPU indirect draw records.
+
+## Concepts
+
+An indirect draw record is a small GPU-readable argument block containing counts and starting
+indices. A compute pass can update those fields, and a later render pass can issue the draw without
+waiting for the CPU to inspect the result. `DrawCommandBuffer` supplies the exact WebGPU layouts,
+byte offsets, and ownership rules; it does not decide what is visible or record a render pass.
 
 ```ts
 const commands = new DrawCommandBuffer(device, {

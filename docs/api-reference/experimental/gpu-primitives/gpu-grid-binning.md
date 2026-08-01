@@ -4,7 +4,19 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="grid-binning" />
 
+## Overview
+
 `GPUGridBinning` counts packed `float32x2` positions into a row-major two-dimensional grid.
+
+## Concepts
+
+Grid binning maps a continuous two-dimensional domain to discrete cells. `gridSize: [width,
+height]` defines the columns and rows, while bounds define the inclusive spatial domain. Every
+accepted point increments exactly one cell; no source IDs or per-point assignments are returned.
+
+Counts answer density questions and can feed heatmaps, occupancy tests, or later prefix sums. Use
+[`GPUGridAggregation`](./gpu-grid-aggregation) when each point should contribute a floating-point
+weight instead of the constant count `1`.
 
 ```ts
 new GPUGridBinning({
@@ -35,4 +47,6 @@ For a `GraphVectorView`, each encoding clears the grid once and then accumulates
 position chunk in source order. Chunk boundaries and backing buffers are preserved; the primitive
 does not concatenate or pack positions.
 
-This first API accumulates counts only. Weighted and floating-point cell aggregates are deferred.
+This API accumulates counts only. Weighted floating-point sums are provided separately by
+`GPUGridAggregation`, keeping integer count overflow and floating-point rounding contracts
+explicit.

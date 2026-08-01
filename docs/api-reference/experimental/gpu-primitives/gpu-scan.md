@@ -4,6 +4,8 @@ import {GPUPrimitivesDocsTabs} from '@site/src/components/docs/gpu-primitives-do
 
 <GPUPrimitivesDocsTabs active="scan" />
 
+## Overview
+
 `GPUScan` adds a hierarchical `uint32` prefix sum to a `GPUCommandGraph`. Scans are exclusive by
 default and may be inclusive, segmented, or both.
 
