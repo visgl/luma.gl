@@ -45,6 +45,8 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 
 const SHARED_COMPILER_OPTIONS = {
   noEmit: true,
+  typeRoots: [join(repoRoot, 'node_modules'), join(repoRoot, 'node_modules/@types')],
+  types: ['@webgpu/types', 'node'],
   strict: false,
   noImplicitAny: false,
   noImplicitThis: false,
@@ -61,16 +63,16 @@ const SHARED_COMPILER_OPTIONS = {
   moduleResolution: 'bundler',
   jsx: 'react-jsx',
   paths: {
-    '@luma.gl/arrow': ['modules/arrow/src/index.ts'],
-    '@luma.gl/arrow/*': ['modules/arrow/src/*'],
-    '@deck.gl-community/arrow-layers': ['modules/arrow-layers/src/index.ts'],
-    '@deck.gl-community/arrow-layers/*': ['modules/arrow-layers/src/*'],
-    '@math.gl/geoarrow': ['modules/geoarrow/src/index.ts'],
-    '@math.gl/geoarrow/*': ['modules/geoarrow/src/*'],
-    '@luma.gl/experimental': ['modules/experimental/src/index.ts'],
-    '@luma.gl/experimental/*': ['modules/experimental/src/*'],
-    '@luma.gl/tables': ['modules/tables/src/index.ts'],
-    '@luma.gl/tables/*': ['modules/tables/src/*']
+    '@luma.gl/arrow': [join(repoRoot, 'modules/arrow/src/index.ts')],
+    '@luma.gl/arrow/*': [join(repoRoot, 'modules/arrow/src/*')],
+    '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/arrow-layers/src/index.ts')],
+    '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/arrow-layers/src/*')],
+    '@math.gl/geoarrow': [join(repoRoot, 'modules/geoarrow/src/index.ts')],
+    '@math.gl/geoarrow/*': [join(repoRoot, 'modules/geoarrow/src/*')],
+    '@luma.gl/experimental': [join(repoRoot, 'modules/experimental/src/index.ts')],
+    '@luma.gl/experimental/*': [join(repoRoot, 'modules/experimental/src/*')],
+    '@luma.gl/tables': [join(repoRoot, 'modules/tables/src/index.ts')],
+    '@luma.gl/tables/*': [join(repoRoot, 'modules/tables/src/*')]
   }
 };
 

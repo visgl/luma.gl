@@ -6,6 +6,10 @@ _This page contains news for recent luma.gl releases. For older releases (throug
 
 Target Release Date: Q3, 2026
 
+**General**
+
+- **TypeScript 6.0** - luma.gl package builds, website tooling, and supported example typechecks now use TypeScript 6.0.
+
 **AI-Assisted Development**
 
 - **Official `lumagl` Agent Skill** - luma.gl now ships an installable skill that teaches coding agents the framework architecture, WebGPU/WebGL portability boundaries, GPU debugging order, and contribution workflow.
