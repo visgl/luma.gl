@@ -164,8 +164,8 @@ pipelines would confuse multi-pass algorithms with `GPUComputePipeline`.
 
 ### Algorithms
 
-Algorithms provide data semantics across one or more kernels. `GPUScan` promises an exclusive
-prefix sum. `GPUCompaction` promises stable selection. `GPUMask` promises canonical boolean
+Algorithms provide data semantics across one or more kernels. `GPUScan` promises exclusive or
+inclusive prefix sums, with optional segment starts. `GPUCompaction` promises stable selection. `GPUMask` promises canonical boolean
 composition over source-aligned masks. `GPUGraphTraversal` promises bounded, cycle-safe
 reachability over stable compressed sparse adjacency. `GPUAncestorProjection` promises bounded
 nearest-visible canonical parent resolution. `GPUHierarchyLayout` promises stable scan-based
@@ -366,16 +366,17 @@ resources whose contents are never simultaneously live.
 The trace viewer displays these values. They turn an otherwise invisible compiler behavior into a
 property developers can inspect and debate.
 
-## Exclusive scan
+## Prefix scan
 
 Prefix sum, commonly called scan, is the central primitive for converting per-record decisions into
 addresses. Given values `[1, 0, 1, 1]`, an exclusive sum produces `[0, 1, 1, 2]`. Each selected
 record can use its scanned value as a unique output offset.
 
-`GPUScan` implements a hierarchical exclusive sum over packed `uint32` data. Each workgroup scans
-256 values in workgroup memory using an up-sweep and down-sweep. The last aggregate from each block
-is written to a block-sum buffer. If there is more than one block, the algorithm recursively scans
-those sums. Offset passes then propagate scanned block totals back down the hierarchy.
+`GPUScan` implements hierarchical exclusive and inclusive sums over packed `uint32` data. Optional
+nonzero segment flags restart either prefix convention. Each workgroup scans 256 values in
+workgroup memory. The last aggregate from each block is written to a block-summary buffer. If there
+is more than one block, the algorithm recursively scans those summaries. Offset passes then
+propagate scanned block totals back down the hierarchy.
 
 The algorithm accepts arbitrary lengths. Partial final workgroups load zero for out-of-range lanes
 and avoid out-of-range output writes. Non-power-of-two input lengths therefore do not need caller
@@ -389,6 +390,11 @@ new GPUScan({
 }).addToGraph(graph);
 ```
 
+An inclusive segmented scan adds `mode: 'inclusive'` and a `segmentFlags` view. Segment flags use
+the same atomic or vector topology as the input. The first logical row begins a segment; every
+later nonzero flag starts another. A segment may cross vector chunk boundaries, so chunking remains
+storage metadata rather than changing data semantics.
+
 Scratch block sums and offsets are graph transients. They participate in lifetime analysis and are
 released with the compiled graph. `GPUScan` does not allocate during encoding.
 
@@ -396,10 +402,9 @@ For matching `GraphVectorView` input and output, scan treats all chunks as one l
 while keeping every caller-visible buffer and chunk boundary intact. It scans chunks locally,
 scans their totals, and explicitly propagates the resulting carries across chunk boundaries.
 
-The first implementation intentionally supports only exclusive `uint32` addition. Inclusive scan,
-signed or floating-point sums, segmented scans, minimum/maximum operators, and user-defined
-associative operators are plausible extensions. They need explicit numerical and determinism
-contracts before becoming public.
+All variants wrap modulo 2^32. Signed or floating-point sums, minimum/maximum operators, and
+user-defined associative operators remain deferred until they have explicit numerical and
+determinism contracts.
 
 ## Stable compaction
 
@@ -982,7 +987,7 @@ schedule commitment.
 | 0 — Current foundation | Command graph, masks, hierarchy layout, graph traversal, ancestor projection, compaction, indirect drawing, picking, analysis primitives, and three working consumers | Implemented | High | Complete |
 | 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
-| 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted aggregation, richer histograms, and batch-preserving algorithms | Planned | High | Large |
+| 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted aggregation, richer histograms, and batch-preserving algorithms | In progress | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, swapchain imports, and external-texture contracts | Planned | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
@@ -994,10 +999,10 @@ schedule commitment.
 
 The baseline includes fixed-capacity buffer and logical-texture scheduling across compute, render,
 and copy nodes; hazard inference; imported-resource overrides; graph-owned attachments; transient
-reuse; ownership validation; and allocation statistics. Implemented algorithms cover exclusive
-scan, stable compaction, chunk-preserving boolean masks, bounded CSR traversal, nearest-visible
-parent projection, paired sort, scalar reduction, histogram counting, spatial grid binning, and
-GPU-written indirect commands.
+reuse; ownership validation; and allocation statistics. Implemented algorithms cover exclusive,
+inclusive, and segmented scans; stable compaction; chunk-preserving boolean masks; bounded CSR
+traversal; nearest-visible parent projection; paired sort; scalar reduction; histogram counting;
+spatial grid binning; and GPU-written indirect commands.
 
 `GPUIndexPickingTarget` provides single-pixel integer object and batch picking. The hierarchical
 trace viewer adds GPU-scanned process/thread layout, source and topology filtering, dependency
@@ -1056,13 +1061,21 @@ flowing directly into indirect rendering.
 
 ### Phase 3 — Algorithm and table scaling
 
+**Status:** In progress. Inclusive and segmented `uint32` scans are implemented.
+
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
-Extend multi-chunk support to algorithms that still require one packed view. Add inclusive and
-segmented scans, weighted and floating-point grid aggregates, irregular-edge and categorical
-histograms, and batch-aware operations that preserve table structure. Custom associative scans,
-sparse histograms, and multidimensional histograms should be added only with a concrete consumer
-and an explicit numerical or memory contract.
+`GPUScan` now supports inclusive output and nonzero segment-start flags for both atomic data views
+and chunk-preserving vectors. Segments continue across chunk boundaries, hierarchical summaries
+preserve carry-in values when a later row starts a segment, and all arithmetic retains the
+documented modulo-2^32 behavior. The data-analysis example uses inclusive scan for a histogram CDF
+and a segmented inclusive scan for per-row spatial-grid prefixes.
+
+Remaining work extends multi-chunk support to algorithms that still require one packed view, then
+adds weighted and floating-point grid aggregates, irregular-edge and categorical histograms, and
+batch-aware operations that preserve table structure. Custom associative scans, sparse histograms,
+and multidimensional histograms should be added only with a concrete consumer and an explicit
+numerical or memory contract.
 
 **Exit criteria:** Each new variant has a deterministic CPU oracle, empty and boundary coverage,
 multi-chunk tests where applicable, explicit overflow and floating-point behavior, and at least one

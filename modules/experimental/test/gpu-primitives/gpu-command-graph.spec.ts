@@ -635,6 +635,107 @@ test('GPUScan propagates carries across GPUVector chunks without changing topolo
   t.end();
 });
 
+test('GPUScan computes inclusive and segmented uint32 prefixes across block boundaries', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const length = 65_537;
+  const values = Uint32Array.from({length}, (_, index) =>
+    index === 0 ? 0xffffffff : (index % 7) + 1
+  );
+  const segmentFlags = new Uint32Array(length);
+  for (const index of [0, 17, 255, 256, 257, 1025, 65_535, 65_536]) {
+    segmentFlags[index] = index % 2 === 0 ? 7 : 1;
+  }
+
+  for (const mode of ['exclusive', 'inclusive'] as const) {
+    const result = await runScan(device, values, {mode, segmentFlags});
+    t.deepEqual(
+      result,
+      getExpectedScan(values, mode, segmentFlags),
+      `${mode} segmented scan matches the CPU oracle`
+    );
+  }
+
+  const inclusive = await runScan(device, values, {mode: 'inclusive'});
+  t.deepEqual(
+    inclusive,
+    getExpectedScan(values, 'inclusive'),
+    'inclusive unsegmented scan matches the CPU oracle and wraps modulo 2^32'
+  );
+  t.deepEqual(
+    await runScan(device, new Uint32Array(0), {
+      mode: 'inclusive',
+      segmentFlags: new Uint32Array(0)
+    }),
+    [],
+    'empty segmented scans add no work'
+  );
+  t.end();
+});
+
+test('GPUScan preserves segments and carries across GPUVector chunk boundaries', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const valueChunks = [
+    Uint32Array.from([2, 3]),
+    new Uint32Array(0),
+    Uint32Array.from([5, 7, 11]),
+    Uint32Array.from([13])
+  ];
+  const segmentFlagChunks = [
+    Uint32Array.from([1, 0]),
+    new Uint32Array(0),
+    Uint32Array.from([0, 1, 0]),
+    Uint32Array.from([0])
+  ];
+
+  const exclusive = await runVectorScan(device, valueChunks, {
+    segmentFlagChunks,
+    mode: 'exclusive'
+  });
+  t.deepEqual(
+    exclusive.chunks,
+    [[0, 2], [], [5, 0, 7], [18]],
+    'exclusive segments continue across chunks and reset at flagged rows'
+  );
+
+  const inclusive = await runVectorScan(device, valueChunks, {
+    segmentFlagChunks,
+    mode: 'inclusive'
+  });
+  t.deepEqual(
+    inclusive.chunks,
+    [[2, 5], [], [10, 7, 18], [31]],
+    'inclusive segments preserve the same chunk topology'
+  );
+
+  const longChunkValues = [Uint32Array.from([10]), Uint32Array.from({length: 512}, () => 1)];
+  const longChunkSegmentFlags = [new Uint32Array(1), new Uint32Array(512)];
+  longChunkSegmentFlags[1][100] = 1;
+  const longChunkResult = await runVectorScan(device, longChunkValues, {
+    segmentFlagChunks: longChunkSegmentFlags,
+    mode: 'exclusive'
+  });
+  t.equal(longChunkResult.chunks[1][99], 109, 'carry reaches rows before the segment start');
+  t.equal(longChunkResult.chunks[1][100], 0, 'the segment start discards the preceding carry');
+  t.equal(
+    longChunkResult.chunks[1][256],
+    156,
+    'the discarded carry stays removed in later workgroups'
+  );
+  t.end();
+});
+
 test('GPUCompaction preserves selected order and writes indirect instance count', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -882,14 +983,24 @@ async function readPixels(texture: Texture, width: number, height: number): Prom
 
 async function runVectorScan(
   device: Device,
-  chunks: Uint32Array[]
+  chunks: Uint32Array[],
+  options: {
+    mode?: 'exclusive' | 'inclusive';
+    segmentFlagChunks?: Uint32Array[];
+  } = {}
 ): Promise<{chunks: number[][]; nodeOrder: string[]}> {
   const inputFixture = createUint32VectorFixture(device, 'input', chunks);
   const outputFixture = createUint32VectorFixture(device, 'output', chunks, 0);
+  const segmentFlagsFixture = options.segmentFlagChunks
+    ? createUint32VectorFixture(device, 'segment-flags', options.segmentFlagChunks)
+    : null;
   const graph = new GPUCommandGraph(device, {id: 'vector-scan'});
   const input = graph.importGPUVector('input', inputFixture.vector);
   const output = graph.importGPUVector('output', outputFixture.vector);
-  new GPUScan({input, output}).addToGraph(graph);
+  const segmentFlags = segmentFlagsFixture
+    ? graph.importGPUVector('segment-flags', segmentFlagsFixture.vector)
+    : undefined;
+  new GPUScan({input, output, mode: options.mode, segmentFlags}).addToGraph(graph);
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-scan-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -901,7 +1012,84 @@ async function runVectorScan(
   compiled.destroy();
   destroyUint32VectorFixture(inputFixture);
   destroyUint32VectorFixture(outputFixture);
+  if (segmentFlagsFixture) destroyUint32VectorFixture(segmentFlagsFixture);
   return result;
+}
+
+async function runScan(
+  device: Device,
+  values: Uint32Array,
+  options: {
+    mode?: 'exclusive' | 'inclusive';
+    segmentFlags?: Uint32Array;
+  } = {}
+): Promise<number[]> {
+  const inputBuffer = device.createBuffer({
+    data: values.length > 0 ? values : new Uint32Array(1),
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const outputBuffer = device.createBuffer({
+    byteLength: Math.max(values.length, 1) * Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const segmentFlagsBuffer = options.segmentFlags
+    ? device.createBuffer({
+        data: options.segmentFlags.length > 0 ? options.segmentFlags : new Uint32Array(1),
+        usage: Buffer.STORAGE | Buffer.COPY_DST
+      })
+    : null;
+  const graph = new GPUCommandGraph(device, {id: 'scan-variant'});
+  const inputHandle = graph.importBuffer(
+    {id: 'input', byteLength: inputBuffer.byteLength, usage: inputBuffer.usage},
+    inputBuffer
+  );
+  const outputHandle = graph.importBuffer(
+    {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
+    outputBuffer
+  );
+  const input = graph.createDataView(inputHandle, {format: 'uint32', length: values.length});
+  const output = graph.createDataView(outputHandle, {format: 'uint32', length: values.length});
+  const segmentFlagsHandle = segmentFlagsBuffer
+    ? graph.importBuffer(
+        {
+          id: 'segment-flags',
+          byteLength: segmentFlagsBuffer.byteLength,
+          usage: segmentFlagsBuffer.usage
+        },
+        segmentFlagsBuffer
+      )
+    : null;
+  const segmentFlags = segmentFlagsHandle
+    ? graph.createDataView(segmentFlagsHandle, {format: 'uint32', length: values.length})
+    : undefined;
+  new GPUScan({input, output, mode: options.mode, segmentFlags}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'scan-variant-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const outputBytes = await outputBuffer.readAsync();
+  const result = Array.from(
+    new Uint32Array(outputBytes.buffer, outputBytes.byteOffset, values.length)
+  );
+  compiled.destroy();
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+  segmentFlagsBuffer?.destroy();
+  return result;
+}
+
+function getExpectedScan(
+  values: Uint32Array,
+  mode: 'exclusive' | 'inclusive',
+  segmentFlags?: Uint32Array
+): number[] {
+  let prefix = 0;
+  return Array.from(values, (value, index) => {
+    if (index === 0 || segmentFlags?.[index]) prefix = 0;
+    const exclusive = prefix;
+    prefix = (prefix + value) >>> 0;
+    return mode === 'inclusive' ? prefix : exclusive;
+  });
 }
 
 async function runVectorCompaction(
