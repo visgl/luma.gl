@@ -8,6 +8,8 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import GPUTraceViewerAnimationLoopTemplate from '../../examples/experimental/gpu-trace-viewer/app';
 import {
   TRACE_COLLAPSED_STATE,
+  TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
+  TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_PROCESS_COUNT,
   TRACE_THREAD_COUNT
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
@@ -50,7 +52,7 @@ describe('GPU hierarchical trace viewer', () => {
         selectedSpanIndex: number;
         focusDepth: number;
         focusOnly: boolean;
-        filterFlags: number;
+        activeFilterMask: number;
       };
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
@@ -96,7 +98,9 @@ describe('GPU hierarchical trace viewer', () => {
       expect(hideOverlapping).not.toBeNull();
       hideOverlapping!.checked = true;
       hideOverlapping!.dispatchEvent(new Event('change', {bubbles: true}));
-      expect(state.filterFlags & 4).toBe(4);
+      expect(state.activeFilterMask & TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN).toBe(
+        TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN
+      );
 
       const hideSimilarParents = host.querySelector<HTMLInputElement>(
         '[data-hide-similar-parents]'
@@ -104,7 +108,9 @@ describe('GPU hierarchical trace viewer', () => {
       expect(hideSimilarParents).not.toBeNull();
       hideSimilarParents!.checked = true;
       hideSimilarParents!.dispatchEvent(new Event('change', {bubbles: true}));
-      expect(state.filterFlags & 8).toBe(8);
+      expect(state.activeFilterMask & TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS).toBe(
+        TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS
+      );
 
       const focusDepth = host.querySelector<HTMLInputElement>('[data-focus-depth]');
       expect(focusDepth).not.toBeNull();

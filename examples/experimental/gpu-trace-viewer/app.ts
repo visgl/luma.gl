@@ -28,6 +28,10 @@ import {
   TRACE_COLLAPSED_STATE,
   TRACE_DURATION,
   TRACE_EXPANDED_STATE,
+  TRACE_FILTER_ERRORS_ONLY,
+  TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
+  TRACE_FILTER_HIDE_RUNTIME_SPANS,
+  TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_GROUPS,
   TRACE_INVALID_SPAN_INDEX,
   TRACE_LANE_COUNT,
@@ -137,7 +141,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private enabledMask = 0b111;
   private statusMask = (1 << TRACE_STATUS_COUNT) - 1;
   private dependencyMask = 0b11;
-  private filterFlags = 0;
+  /** Enabled filtering policy; immutable source classifications remain in each span record. */
+  private activeFilterMask = 0;
   private minimumDuration = 0;
   private selectedSpanIndex = INVALID_SPAN_INDEX;
   private focusOnly = false;
@@ -780,7 +785,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     floats[3] = this.view.laneMax;
     unsigned[4] = this.enabledMask;
     unsigned[5] = this.statusMask;
-    unsigned[6] = this.filterFlags;
+    unsigned[6] = this.activeFilterMask;
     unsigned[7] = this.dependencyMask;
     floats[8] = this.minimumDuration;
     floats[9] = width;
@@ -1006,16 +1011,32 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           label.textContent = `${this.minimumDuration.toFixed(2)} ms`;
         }
       } else if (target instanceof HTMLInputElement && target.matches('[data-hide-runtime]')) {
-        this.filterFlags = setBit(this.filterFlags, 0, target.checked);
+        this.activeFilterMask = setMaskFlag(
+          this.activeFilterMask,
+          TRACE_FILTER_HIDE_RUNTIME_SPANS,
+          target.checked
+        );
       } else if (target instanceof HTMLInputElement && target.matches('[data-errors-only]')) {
-        this.filterFlags = setBit(this.filterFlags, 1, target.checked);
+        this.activeFilterMask = setMaskFlag(
+          this.activeFilterMask,
+          TRACE_FILTER_ERRORS_ONLY,
+          target.checked
+        );
       } else if (target instanceof HTMLInputElement && target.matches('[data-hide-overlapping]')) {
-        this.filterFlags = setBit(this.filterFlags, 2, target.checked);
+        this.activeFilterMask = setMaskFlag(
+          this.activeFilterMask,
+          TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
+          target.checked
+        );
       } else if (
         target instanceof HTMLInputElement &&
         target.matches('[data-hide-similar-parents]')
       ) {
-        this.filterFlags = setBit(this.filterFlags, 3, target.checked);
+        this.activeFilterMask = setMaskFlag(
+          this.activeFilterMask,
+          TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
+          target.checked
+        );
       } else if (target instanceof HTMLInputElement && target.matches('[data-same-dependencies]')) {
         this.dependencyMask = setBit(this.dependencyMask, 0, target.checked);
       } else if (
@@ -1347,6 +1368,10 @@ function makeTraceBlendParameters() {
 
 function setBit(mask: number, bitIndex: number, enabled: boolean): number {
   return enabled ? mask | (1 << bitIndex) : mask & ~(1 << bitIndex);
+}
+
+function setMaskFlag(mask: number, flag: number, enabled: boolean): number {
+  return enabled ? mask | flag : mask & ~flag;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
