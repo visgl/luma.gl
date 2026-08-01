@@ -205,6 +205,96 @@ test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
   t.end();
 });
 
+test('GPUHistogram supports irregular literal and GPU-resident edges', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  t.deepEqual(
+    await runIrregularHistogram(
+      device,
+      Float32Array.from([
+        -1,
+        0,
+        0.5,
+        1,
+        9.5,
+        10,
+        99,
+        100,
+        101,
+        Number.NaN,
+        Number.POSITIVE_INFINITY
+      ]),
+      'float32',
+      [0, 1, 10, 100]
+    ),
+    [2, 2, 3],
+    'literal edges use half-open intervals and include the final edge'
+  );
+  t.deepEqual(
+    await runIrregularHistogram(
+      device,
+      Uint32Array.from([0, 1, 9, 10, 99, 100]),
+      'uint32',
+      [0, 10, 100]
+    ),
+    [3, 3],
+    'integer edge comparisons remain exact'
+  );
+  t.deepEqual(
+    await runIrregularHistogram(
+      device,
+      Int32Array.from([-10, -1, 0, 9, 10]),
+      'sint32',
+      [-10, 0, 10],
+      true
+    ),
+    [2, 3],
+    'GPU-resident signed edges are accepted'
+  );
+  t.deepEqual(
+    await runIrregularHistogram(
+      device,
+      Uint32Array.from([0, 1, 5, 10, 100]),
+      'uint32',
+      [0, 10, 5, 100],
+      true
+    ),
+    [0, 0, 0],
+    'unordered GPU-resident edges suppress accumulation without a readback'
+  );
+  t.deepEqual(
+    await runIrregularHistogram(
+      device,
+      Uint32Array.from([1, 3, 4, 7]),
+      'uint32',
+      [0, 5, 10],
+      true,
+      [0, 2, 10]
+    ),
+    [1, 3],
+    'rewriting GPU edges changes bins without recompiling the graph'
+  );
+  t.deepEqual(
+    await runIrregularHistogram(device, new Float32Array(0), 'float32', [0, 1, 10]),
+    [0, 0],
+    'an empty irregular histogram is cleared'
+  );
+
+  const globalEdges = Uint32Array.from({length: 301}, (_, index) => index);
+  const globalValues = Uint32Array.from({length: 301}, (_, index) => index);
+  t.deepEqual(
+    await runIrregularHistogram(device, globalValues, 'uint32', globalEdges, true),
+    [...Array.from({length: 299}, () => 1), 2],
+    'GPU edges support more than 256 bins through the global atomic path'
+  );
+  t.end();
+});
+
 test('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -258,6 +348,39 @@ test('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', as
     global.counts,
     Array.from({length: 300}, () => 1),
     'the global atomic path accumulates every chunk'
+  );
+  t.end();
+});
+
+test('GPUHistogram preserves vector chunks with irregular edges', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runIrregularVectorHistogram(
+    device,
+    [Float32Array.from([0, 0.5]), new Float32Array(0), Float32Array.from([1, 9.5, 10, 100])],
+    'float32',
+    [0, 1, 10, 100]
+  );
+  t.deepEqual(result.counts, [2, 2, 2], 'every non-empty source chunk contributes counts');
+  t.deepEqual(
+    result.nodeOrder,
+    [
+      'gpu-histogram-validate-edges',
+      'gpu-histogram-clear',
+      'gpu-histogram-chunk-0-edges-local',
+      'gpu-histogram-chunk-2-edges-local'
+    ],
+    'edge validation and one clear precede ordered per-chunk accumulation'
+  );
+  t.equal(
+    result.logicalTransientBufferCount,
+    1,
+    'GPU edges use only one graph-owned ordering flag'
   );
   t.end();
 });
@@ -548,6 +671,16 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
     /finite \[min, max\]/,
     'inverted literal histogram domain is rejected'
   );
+  t.throws(
+    () => new GPUHistogram({input, output: two, edges: [0, 1]}),
+    /output.length \+ 1/,
+    'literal histogram edges must match the output size'
+  );
+  t.throws(
+    () => new GPUHistogram({input, output: two, edges: [0, 1, 1]}),
+    /strictly increasing/,
+    'literal histogram edges must be strictly increasing'
+  );
   const positions = graph.createDataView(inputHandle, {format: 'float32x2', length: 4});
   t.throws(
     () => new GPUGridBinning({positions, output: two, gridSize: [2, 2], bounds: [0, 0, 1, 1]}),
@@ -686,6 +819,51 @@ async function runHistogram(
   return result;
 }
 
+async function runIrregularHistogram(
+  device: Device,
+  values: ScalarArray,
+  format: ScalarFormat,
+  edges: readonly number[] | ScalarArray,
+  gpuEdges = false,
+  updatedEdges?: readonly number[]
+): Promise<number[]> {
+  const binCount = edges.length - 1;
+  const inputBuffer = createInputBuffer(device, values);
+  const outputBuffer = createOutputBuffer(device, binCount);
+  const graph = new GPUCommandGraph(device);
+  const input = importView(graph, 'input', inputBuffer, format, values.length);
+  const output = importView(graph, 'output', outputBuffer, 'uint32', binCount);
+  let histogramEdges: readonly number[] | ReturnType<typeof importView> = Array.from(edges);
+  let edgesBuffer: Buffer | undefined;
+  if (gpuEdges) {
+    const EdgeArray =
+      format === 'uint32' ? Uint32Array : format === 'sint32' ? Int32Array : Float32Array;
+    edgesBuffer = createInputBuffer(device, EdgeArray.from(edges));
+    histogramEdges = importView(graph, 'edges', edgesBuffer, format, edges.length);
+  }
+  new GPUHistogram({input, output, edges: histogramEdges as never}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'irregular-histogram-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  if (updatedEdges && edgesBuffer) {
+    await readUint32(outputBuffer, binCount);
+    const EdgeArray =
+      format === 'uint32' ? Uint32Array : format === 'sint32' ? Int32Array : Float32Array;
+    edgesBuffer.write(EdgeArray.from(updatedEdges));
+    const updatedCommandEncoder = device.createCommandEncoder({id: 'updated-irregular-edges'});
+    compiled.encode(updatedCommandEncoder, {parameters: undefined});
+    device.submit(updatedCommandEncoder.finish());
+  }
+  const result = await readUint32(outputBuffer, binCount);
+  compiled.destroy();
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+  edgesBuffer?.destroy();
+  return result;
+}
+
 async function runVectorHistogram(
   device: Device,
   chunks: ScalarArray[],
@@ -718,6 +896,46 @@ async function runVectorHistogram(
   compiled.destroy();
   vector.destroy();
   for (const buffer of inputBuffers) buffer.destroy();
+  outputBuffer.destroy();
+  return {counts, nodeOrder, logicalTransientBufferCount};
+}
+
+async function runIrregularVectorHistogram(
+  device: Device,
+  chunks: ScalarArray[],
+  format: ScalarFormat,
+  edges: readonly number[]
+): Promise<{counts: number[]; nodeOrder: string[]; logicalTransientBufferCount: number}> {
+  const inputBuffers = chunks.map(chunk => createInputBuffer(device, chunk));
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'input',
+    format,
+    data: chunks.map(
+      (chunk, index) =>
+        new GPUData({buffer: inputBuffers[index], format, length: chunk.length, ownsBuffer: false})
+    ),
+    ownsData: false
+  });
+  const EdgeArray =
+    format === 'uint32' ? Uint32Array : format === 'sint32' ? Int32Array : Float32Array;
+  const edgesBuffer = createInputBuffer(device, EdgeArray.from(edges));
+  const outputBuffer = createOutputBuffer(device, edges.length - 1);
+  const graph = new GPUCommandGraph(device);
+  const input = graph.importGPUVector('input', vector);
+  const edgeView = importView(graph, 'edges', edgesBuffer, format, edges.length);
+  const output = importView(graph, 'output', outputBuffer, 'uint32', edges.length - 1);
+  new GPUHistogram({input, output, edges: edgeView as never}).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'irregular-vector-histogram-test'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const counts = await readUint32(outputBuffer, output.length);
+  const {nodeOrder, logicalTransientBufferCount} = compiled.stats;
+  compiled.destroy();
+  vector.destroy();
+  for (const buffer of inputBuffers) buffer.destroy();
+  edgesBuffer.destroy();
   outputBuffer.destroy();
   return {counts, nodeOrder, logicalTransientBufferCount};
 }

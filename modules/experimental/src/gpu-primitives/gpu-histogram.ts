@@ -22,6 +22,7 @@ import {GPUReduction} from './gpu-reduction';
 
 const HISTOGRAM_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_BIN_COUNT = 256;
+const MAXIMUM_LITERAL_EDGE_COUNT = 257;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
 
 /**
@@ -38,24 +39,45 @@ export type GPUHistogramInput<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | GraphVectorView<T>;
 
+/** Ordered bin boundaries accepted by {@link GPUHistogram}. */
+export type GPUHistogramEdges<T extends GPUScalarFormat = GPUScalarFormat> =
+  | readonly number[]
+  | GraphDataView<T>;
+
 /** Properties for graph-native scalar histogram counting. */
-export type GPUHistogramProps<T extends GPUScalarFormat = GPUScalarFormat> = {
+type GPUHistogramBaseProps<T extends GPUScalarFormat> = {
   /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
   /** Packed scalar chunk or ordered vector of packed scalar chunks. */
   input: GPUHistogramInput<T>;
   /** Caller-owned `uint32` counts; its length defines the bin count. */
   output: GraphDataView<'uint32'>;
-  /** Inclusive input domain or `'auto'` for a graph-native extent reduction. */
-  domain: GPUHistogramDomain<T>;
 };
 
+/** Properties for graph-native scalar histogram counting. */
+export type GPUHistogramProps<T extends GPUScalarFormat = GPUScalarFormat> =
+  GPUHistogramBaseProps<T> &
+    (
+      | {
+          /** Inclusive input domain or `'auto'` for a graph-native extent reduction. */
+          domain: GPUHistogramDomain<T>;
+          /** Equal-width histograms do not accept explicit edges. */
+          edges?: never;
+        }
+      | {
+          /** Strictly increasing boundaries; length must equal `output.length + 1`. */
+          edges: GPUHistogramEdges<T>;
+          /** Irregular-edge histograms do not infer an equal-width domain. */
+          domain?: never;
+        }
+    );
+
 /**
- * Graph-native histogram counting for packed 32-bit scalar values.
+ * Graph-native equal-width or irregular-edge histogram counting for packed 32-bit scalar values.
  *
  * Output is cleared on every encoding. Up to 256 bins use workgroup-local atomics before merging;
- * larger outputs accumulate directly with global atomics. Values outside the inclusive domain and
- * non-finite floating-point values are ignored.
+ * larger outputs accumulate directly with global atomics. Values outside the inclusive domain or
+ * edge range and non-finite floating-point values are ignored.
  */
 export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
   /** Prefix for generated graph node and transient resource IDs. */
@@ -65,19 +87,22 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
   /** Caller-owned bin counts. */
   readonly output: GraphDataView<'uint32'>;
   /** Literal, GPU-resident, or automatically inferred domain. */
-  readonly domain: GPUHistogramDomain<T>;
+  readonly domain?: GPUHistogramDomain<T>;
+  /** Literal or GPU-resident irregular bin boundaries. */
+  readonly edges?: GPUHistogramEdges<T>;
 
   /**
    * Creates and validates a scalar histogram description.
    *
    * @throws If views are not packed supported formats, output is empty, formats mismatch, buffers
-   * alias unsafely, or a literal/GPU domain is invalid.
+   * alias unsafely, or a literal/GPU domain or edge description is invalid.
    */
   constructor(props: GPUHistogramProps<T>) {
     this.id = props.id ?? 'gpu-histogram';
     this.input = props.input;
     this.output = props.output;
     this.domain = props.domain;
+    this.edges = props.edges;
     for (const [chunkIndex, input] of getHistogramInputs(this.input).entries()) {
       const name = this.input instanceof GraphVectorView ? ` input chunk ${chunkIndex}` : ' input';
       validatePackedView(input, SCALAR_FORMATS, `${this.id}${name}`);
@@ -92,7 +117,9 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
     if (getHistogramInputs(this.input).some(input => input.buffer === this.output.buffer)) {
       throw new Error(`${this.id} input and output must use separate buffers`);
     }
-    if (isGPUHistogramDomainView(this.domain)) {
+    if (this.edges !== undefined) {
+      validateHistogramEdges(this.edges, this.input.format, this.output, this.id);
+    } else if (isGPUHistogramDomainView(this.domain)) {
       validatePackedView(this.domain, SCALAR_FORMATS, `${this.id} domain`);
       if (this.domain.format !== this.input.format || this.domain.length !== 2) {
         throw new Error(`${this.id} GPU domain must contain two ${this.input.format} rows`);
@@ -118,6 +145,34 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     let domain = this.domain;
+    const edges = this.edges;
+    if (isGPUHistogramEdgesView(edges) && edges.buffer.graph !== graph) {
+      throw new Error(`${this.id} edges must belong to the target graph`);
+    }
+    if (edges !== undefined) {
+      const edgeValidity = isGPUHistogramEdgesView(edges)
+        ? createTransientView(graph, `${this.id}-edge-validity`, 'uint32', 1)
+        : undefined;
+      if (isGPUHistogramEdgesView(edges) && edgeValidity) {
+        addValidateHistogramEdgesPass(graph, this.id, edges, edgeValidity);
+      }
+      addClearHistogramPass(graph, this.id, this.output);
+      const accumulationPath = this.output.length <= MAXIMUM_LOCAL_BIN_COUNT ? 'local' : 'global';
+      inputs.forEach((input, chunkIndex) => {
+        if (input.length === 0) return;
+        addIrregularHistogramPass(graph, {
+          id:
+            this.input instanceof GraphVectorView
+              ? `${this.id}-chunk-${chunkIndex}-edges-${accumulationPath}`
+              : `${this.id}-edges-${accumulationPath}`,
+          input,
+          output: this.output,
+          edges,
+          edgeValidity
+        });
+      });
+      return;
+    }
     if (isGPUHistogramDomainView(domain) && domain.buffer.graph !== graph) {
       throw new Error(`${this.id} domain must belong to the target graph`);
     }
@@ -135,6 +190,9 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
         operation: 'extent'
       }).addToGraph(graph);
       domain = inferredDomain;
+    }
+    if (domain === undefined) {
+      throw new Error(`${this.id} requires either domain or edges`);
     }
     addClearHistogramPass(graph, this.id, this.output);
     const accumulationPath = this.output.length <= MAXIMUM_LOCAL_BIN_COUNT ? 'local' : 'global';
@@ -184,6 +242,163 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
     resources: [{buffer: output, usage: 'storage-write'}],
     bindings: {outputCounts: output},
     dispatchCount: Math.ceil(output.length / HISTOGRAM_WORKGROUP_SIZE)
+  });
+}
+
+/** Validates GPU-resident edge ordering into one graph-owned flag without readback. */
+function addValidateHistogramEdgesPass<Parameters, T extends GPUScalarFormat>(
+  graph: GPUCommandGraph<Parameters>,
+  id: string,
+  edges: GraphDataView<T>,
+  validity: GraphDataView<'uint32'>
+): void {
+  const shaderType = getShaderType(edges.format);
+  const finiteCondition =
+    edges.format === 'float32'
+      ? 'left == left && right == right && abs(left) <= 3.402823466e+38 && abs(right) <= 3.402823466e+38'
+      : 'true';
+  const source = /* wgsl */ `
+const EDGE_COUNT: u32 = ${edges.length}u;
+const EDGE_OFFSET: u32 = ${getViewElementOffset(edges)}u;
+const VALIDITY_OFFSET: u32 = ${getViewElementOffset(validity)}u;
+@group(0) @binding(0) var<storage, read> edgeValues: array<${shaderType}>;
+@group(0) @binding(1) var<storage, read_write> edgeValidity: array<atomic<u32>>;
+@compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>
+) {
+  let lane = localId.x;
+  if (lane == 0u) { atomicStore(&edgeValidity[VALIDITY_OFFSET], 1u); }
+  storageBarrier();
+  var edgeIndex = lane;
+  loop {
+    if (edgeIndex + 1u >= EDGE_COUNT) { break; }
+    let left = edgeValues[EDGE_OFFSET + edgeIndex];
+    let right = edgeValues[EDGE_OFFSET + edgeIndex + 1u];
+    if (!(${finiteCondition}) || left >= right) {
+      atomicStore(&edgeValidity[VALIDITY_OFFSET], 0u);
+    }
+    edgeIndex = edgeIndex + ${HISTOGRAM_WORKGROUP_SIZE}u;
+  }
+}`;
+  addComputationPass(graph, {
+    id: `${id}-validate-edges`,
+    source,
+    resources: [
+      {buffer: edges, usage: 'storage-read'},
+      {buffer: validity, usage: 'storage-write'}
+    ],
+    bindings: {edgeValues: edges, edgeValidity: validity},
+    dispatchCount: 1
+  });
+}
+
+/** Adds one binary-search irregular-edge accumulation pass. */
+function addIrregularHistogramPass<Parameters, T extends GPUScalarFormat>(
+  graph: GPUCommandGraph<Parameters>,
+  props: {
+    id: string;
+    input: GraphDataView<T>;
+    output: GraphDataView<'uint32'>;
+    edges: GPUHistogramEdges<T>;
+    edgeValidity?: GraphDataView<'uint32'>;
+  }
+): void {
+  const local = props.output.length <= MAXIMUM_LOCAL_BIN_COUNT;
+  const shaderType = getShaderType(props.input.format);
+  const gpuEdges = isGPUHistogramEdgesView(props.edges);
+  const edgeBinding = gpuEdges
+    ? `@group(0) @binding(1) var<storage, read> edgeValues: array<${shaderType}>;`
+    : '';
+  const validityBinding = props.edgeValidity
+    ? '@group(0) @binding(2) var<storage, read> edgeValidity: array<u32>;'
+    : '';
+  const outputBinding = gpuEdges ? 3 : 1;
+  const literalEdges = props.edges as readonly number[];
+  const edgeAccessor = gpuEdges
+    ? `fn getEdge(index: u32) -> ${shaderType} {
+  return edgeValues[EDGE_OFFSET + index];
+}`
+    : `const EDGES: array<${shaderType}, ${literalEdges.length}> = array<${shaderType}, ${literalEdges.length}>(
+  ${literalEdges.map(value => getLiteral(value, props.input.format)).join(', ')}
+);
+fn getEdge(index: u32) -> ${shaderType} { return EDGES[index]; }`;
+  const validityCondition = props.edgeValidity
+    ? `edgeValidity[${getViewElementOffset(props.edgeValidity)}u] != 0u`
+    : 'true';
+  const finiteCondition =
+    props.input.format === 'float32' ? 'value == value && abs(value) <= 3.402823466e+38' : 'true';
+  const accumulation = local
+    ? `if (accepted) { atomicAdd(&localCounts[binIndex], 1u); }
+  workgroupBarrier();
+  if (lane < BIN_COUNT) {
+    atomicAdd(&outputCounts[OUTPUT_OFFSET + lane], atomicLoad(&localCounts[lane]));
+  }`
+    : 'if (accepted) { atomicAdd(&outputCounts[OUTPUT_OFFSET + binIndex], 1u); }';
+  const source = /* wgsl */ `
+const ELEMENT_COUNT: u32 = ${props.input.length}u;
+const BIN_COUNT: u32 = ${props.output.length}u;
+const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
+${gpuEdges ? `const EDGE_OFFSET: u32 = ${getViewElementOffset(props.edges as GraphDataView)}u;` : ''}
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
+@group(0) @binding(0) var<storage, read> inputValues: array<${shaderType}>;
+${edgeBinding}
+${validityBinding}
+@group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
+${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
+${edgeAccessor}
+
+@compute @workgroup_size(${HISTOGRAM_WORKGROUP_SIZE}) fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(local_invocation_id) localId: vec3<u32>
+) {
+  let index = globalId.x;
+  let lane = localId.x;
+  ${local ? 'if (lane < BIN_COUNT) { atomicStore(&localCounts[lane], 0u); }\n  workgroupBarrier();' : ''}
+  var accepted = false;
+  var binIndex = 0u;
+  if (index < ELEMENT_COUNT && ${validityCondition}) {
+    let value = inputValues[INPUT_OFFSET + index];
+    let minimum = getEdge(0u);
+    let maximum = getEdge(BIN_COUNT);
+    if (${finiteCondition} && value >= minimum && value <= maximum) {
+      accepted = true;
+      var lower = 0u;
+      var upper = BIN_COUNT;
+      loop {
+        if (lower >= upper) { break; }
+        let middle = lower + (upper - lower) / 2u;
+        if (value < getEdge(middle + 1u)) {
+          upper = middle;
+        } else {
+          lower = middle + 1u;
+        }
+      }
+      binIndex = min(lower, BIN_COUNT - 1u);
+    }
+  }
+  ${accumulation}
+}`;
+  const resources: GraphBufferUse[] = [
+    {buffer: props.input, usage: 'storage-read'},
+    ...(gpuEdges
+      ? ([{buffer: props.edges as GraphDataView, usage: 'storage-read'}] as GraphBufferUse[])
+      : []),
+    ...(props.edgeValidity
+      ? ([{buffer: props.edgeValidity, usage: 'storage-read'}] as GraphBufferUse[])
+      : []),
+    {buffer: props.output, usage: 'storage-read-write'}
+  ];
+  addComputationPass(graph, {
+    id: props.id,
+    source,
+    resources,
+    bindings: {
+      inputValues: props.input,
+      ...(gpuEdges ? {edgeValues: props.edges as GraphDataView} : {}),
+      ...(props.edgeValidity ? {edgeValidity: props.edgeValidity} : {}),
+      outputCounts: props.output
+    },
+    dispatchCount: Math.ceil(props.input.length / HISTOGRAM_WORKGROUP_SIZE)
   });
 }
 
@@ -366,6 +581,40 @@ function addComputationPass<Parameters>(
   });
 }
 
+/** Validates literal or GPU-resident irregular histogram boundaries. */
+function validateHistogramEdges<T extends GPUScalarFormat>(
+  edges: GPUHistogramEdges<T>,
+  format: T,
+  output: GraphDataView<'uint32'>,
+  id: string
+): void {
+  if (isGPUHistogramEdgesView(edges)) {
+    validatePackedView(edges, SCALAR_FORMATS, `${id} edges`);
+    if (edges.format !== format || edges.length !== output.length + 1) {
+      throw new Error(`${id} GPU edges must contain output.length + 1 ${format} rows`);
+    }
+    if (edges.buffer === output.buffer) {
+      throw new Error(`${id} edges and output must use separate buffers`);
+    }
+    return;
+  }
+  if (edges.length !== output.length + 1) {
+    throw new Error(`${id} literal edges must contain output.length + 1 values`);
+  }
+  if (edges.length > MAXIMUM_LITERAL_EDGE_COUNT) {
+    throw new Error(`${id} literal edges support at most ${MAXIMUM_LITERAL_EDGE_COUNT} values`);
+  }
+  const minimum = format === 'uint32' ? 0 : -0x80000000;
+  const maximum = format === 'uint32' ? 0xffffffff : 0x7fffffff;
+  const invalidValue =
+    format === 'float32'
+      ? edges.some(value => !Number.isFinite(value) || Math.abs(value) > 3.402823466e38)
+      : edges.some(value => !Number.isInteger(value) || value < minimum || value > maximum);
+  if (invalidValue || edges.some((value, index) => index > 0 && value <= edges[index - 1])) {
+    throw new Error(`${id} literal edges must be finite, representable, and strictly increasing`);
+  }
+}
+
 /** Validates a finite ordered literal domain and the selected scalar format's numeric range. */
 function validateLiteralDomain(
   domain: readonly number[],
@@ -386,9 +635,16 @@ function validateLiteralDomain(
 
 /** Narrows a histogram domain to its GPU-resident two-row view form. */
 function isGPUHistogramDomainView<T extends GPUScalarFormat>(
-  domain: GPUHistogramDomain<T>
+  domain: GPUHistogramDomain<T> | undefined
 ): domain is GraphDataView<T> {
-  return domain !== 'auto' && !Array.isArray(domain);
+  return domain !== undefined && domain !== 'auto' && !Array.isArray(domain);
+}
+
+/** Narrows irregular edges to their GPU-resident view form. */
+function isGPUHistogramEdgesView<T extends GPUScalarFormat>(
+  edges: GPUHistogramEdges<T> | undefined
+): edges is GraphDataView<T> {
+  return edges !== undefined && !Array.isArray(edges);
 }
 
 /** Returns the WGSL scalar type corresponding to a supported GPU storage format. */
