@@ -1100,6 +1100,12 @@ structure. Custom associative scans, sparse histograms,
 and multidimensional histograms should be added only with a concrete consumer and an explicit
 numerical or memory contract.
 
+Irregular histogram edges primarily target heavy-tailed measurements such as trace duration and
+request latency. Explicit microsecond-to-second boundaries preserve resolution across orders of
+magnitude, align results with service-level thresholds, and let applications compare dynamic
+filtered subsets without first generating a log-transformed column. The histogram reference
+documents the intended use case while keeping the API clearly marked as planned.
+
 **Exit criteria:** Each new variant has a deterministic CPU oracle, empty and boundary coverage,
 multi-chunk tests where applicable, explicit overflow and floating-point behavior, and at least one
 application or renderer consumer.

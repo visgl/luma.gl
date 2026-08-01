@@ -16,6 +16,24 @@ in each interval. The minimum is inclusive, the maximum is included in the final
 outside the domain are ignored. A literal domain is fixed at graph construction, a GPU domain can
 be produced by another node, and `'auto'` inserts an extent reduction.
 
+### Why irregular edges are planned
+
+The current equal-width bins work well for compact numeric domains. They are less useful for
+heavy-tailed measurements such as trace durations and request latency, where values may range from
+microseconds to seconds. A linear histogram can collapse most observations into one short-duration
+bin while leaving much of the long tail almost empty.
+
+Planned irregular edges will let applications preserve useful resolution across orders of
+magnitude and align bins with meaningful thresholds. A latency histogram could use boundaries such
+as `10 µs`, `100 µs`, `1 ms`, `10 ms`, `100 ms`, `1 s`, and `10 s`. The same bins can then compare
+processes, releases, or dynamically filtered subsets while remaining in the original unit and
+without first materializing a log-transformed GPU column. Exact service-level or alert boundaries
+can also become bin edges instead of falling somewhere inside a uniform interval.
+
+This capability is planned rather than part of the current constructor. Its contract still needs
+to define edge ordering and validation, inclusive boundaries, GPU-resident edge updates, and
+behavior for values outside the edge range.
+
 The output is a distribution, not a prefix sum. Compose it with inclusive `GPUScan` to obtain a
 cumulative distribution, or reduce the bins to validate the accepted-row total.
 
