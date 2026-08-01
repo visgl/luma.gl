@@ -958,12 +958,12 @@ class NetworkOpticsPanel {
     this.rootElement.setAttribute('role', 'region');
     this.rootElement.setAttribute('aria-label', 'GPU optics rendering techniques');
     Object.assign(this.rootElement.style, {
-      position: 'fixed',
+      position: 'absolute',
       top: '18px',
       right: '18px',
       zIndex: '16',
-      width: 'min(380px, calc(100vw - 36px))',
-      maxHeight: 'min(56vh, 460px)',
+      width: 'min(380px, calc(100% - 36px))',
+      maxHeight: 'min(56vh, calc(100% - 36px), 460px)',
       padding: '15px 17px',
       boxSizing: 'border-box',
       overflowY: 'auto',
@@ -1106,11 +1106,11 @@ class NetworkStoryControls {
     this.rootElement.setAttribute('role', 'region');
     this.rootElement.setAttribute('aria-label', 'Network packet spraying guided tour');
     Object.assign(this.rootElement.style, {
-      position: 'fixed',
+      position: 'absolute',
       left: '12px',
       bottom: '12px',
       zIndex: '15',
-      width: 'min(320px, calc(100vw - 24px))',
+      width: 'min(320px, calc(100% - 24px))',
       padding: '9px 11px',
       boxSizing: 'border-box',
       border: '1px solid rgba(126, 157, 205, 0.26)',
