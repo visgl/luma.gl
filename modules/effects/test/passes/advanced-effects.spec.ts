@@ -9,8 +9,14 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   bloomShaderPassPipeline,
   brightnessContrast,
+  clusteredVolumetricDepthHistoryCopy,
+  clusteredVolumetricTemporal,
+  clusteredVolumetricTrace,
+  createBloomShaderPassPipeline,
+  createClusteredVolumetricLightingShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
   createOutlineShaderPassPipeline,
   createSSAOShaderPassPipeline,
   createSSGIShaderPassPipeline,
@@ -22,11 +28,41 @@ import {
   gtaoAmbientComposite,
   gtaoEvaluate,
   gtaoTemporal,
+  hdrAutoExposureAdapt,
+  hdrAutoExposureApply,
+  hdrLuminanceExtract,
+  hdrLuminanceReduce,
   ssgiTemporal,
   ssrTemporal
 } from '../../src';
 
 test('advanced effects expose composable pipeline shapes', testCase => {
+  testCase.deepEqual(
+    createSSAOShaderPassPipeline().renderTargets?.ssaoRaw.scale,
+    [1, 1],
+    'SSAO defaults to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createGTAOShaderPassPipeline().renderTargets?.gtaoRaw.scale,
+    [1, 1],
+    'GTAO defaults to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createSSGIShaderPassPipeline().renderTargets?.ssgiRaw.scale,
+    [1, 1],
+    'diffuse global illumination defaults to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createSSRShaderPassPipeline().renderTargets?.ssrRaw.scale,
+    [1, 1],
+    'screen-space reflections default to full-resolution intermediate framebuffers'
+  );
+  testCase.deepEqual(
+    createClusteredVolumetricLightingShaderPassPipeline().renderTargets?.clusteredVolumeRaw.scale,
+    [1, 1],
+    'clustered volumetric lighting defaults to full-resolution intermediate framebuffers'
+  );
+
   const ssao = createSSAOShaderPassPipeline({
     normalSource: 'normal-texture',
     resolutionScale: 0.5
@@ -108,6 +144,190 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     ssgiTemporal.uniformTypes.inverseProjectionMatrix,
     'mat4x4<f32>',
     'SSGI temporal rejection reconstructs linear view-space depth'
+  );
+
+  const volumetricLighting = createClusteredVolumetricLightingShaderPassPipeline({
+    resolutionScale: 0.4
+  });
+  testCase.equal(
+    volumetricLighting.steps.length,
+    6,
+    'clustered volumetric lighting integrates, stabilizes, denoises, and composites'
+  );
+  testCase.deepEqual(
+    volumetricLighting.renderTargets?.clusteredVolumeRaw.scale,
+    [0.4, 0.4],
+    'clustered volumetric lighting honors low-resolution integration'
+  );
+  testCase.equal(
+    volumetricLighting.renderTargets?.clusteredVolumeHistory.lifetime,
+    'history',
+    'clustered volumetric lighting retains scattering history'
+  );
+  testCase.equal(
+    volumetricLighting.renderTargets?.clusteredVolumeDepthHistory.lifetime,
+    'history',
+    'clustered volumetric lighting retains depth history'
+  );
+  testCase.equal(
+    clusteredVolumetricTemporal.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric temporal rejection reconstructs linear view-space depth'
+  );
+  testCase.equal(
+    clusteredVolumetricTemporal.uniformTypes.inverseViewProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric temporal reprojection reconstructs current world positions'
+  );
+  testCase.equal(
+    clusteredVolumetricTemporal.uniformTypes.previousViewProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric temporal reprojection projects through the previous camera'
+  );
+  testCase.equal(
+    volumetricLighting.renderTargets?.clusteredVolumeDepthHistory.format,
+    'r32float',
+    'clustered volumetric lighting stores compact high-precision linear depth'
+  );
+  testCase.equal(
+    clusteredVolumetricDepthHistoryCopy.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'clustered volumetric depth history linearizes depth when it is captured'
+  );
+  testCase.ok(
+    clusteredVolumetricTemporal.source.includes('cameraPreviousCoord(texCoord, currentDepth)'),
+    'empty-space volume history follows explicit camera reprojection'
+  );
+  testCase.ok(
+    clusteredVolumetricTemporal.source.includes('currentDepth < 0.99999 && velocityIsFinite'),
+    'surface volume history preserves valid object velocity'
+  );
+  testCase.ok(
+    clusteredVolumetricTemporal.source.includes('previousViewDepth = textureLoad'),
+    'temporal rejection compares stored linear depth directly'
+  );
+
+  const adaptiveExposure = createHDRAutoExposureShaderPassPipeline();
+  const minimumScaleAdaptiveExposure = createHDRAutoExposureShaderPassPipeline({
+    meteringScale: 0.125
+  });
+  testCase.equal(
+    adaptiveExposure.steps.length,
+    7,
+    'HDR auto exposure extracts, reduces, adapts persistent history, and applies exposure'
+  );
+  testCase.equal(
+    adaptiveExposure.renderTargets?.hdrExposureHistory.lifetime,
+    'history',
+    'HDR auto exposure keeps its adapted state on the GPU between frames'
+  );
+  testCase.equal(
+    adaptiveExposure.steps[5].inputs?.historyTexture,
+    adaptiveExposure.steps[5].output,
+    'HDR auto exposure reprojects one logical exposure-history target'
+  );
+  testCase.equal(
+    hdrAutoExposureAdapt.uniformTypes.deltaTime,
+    'f32',
+    'HDR auto exposure adapts according to elapsed frame time'
+  );
+  testCase.ok(
+    hdrLuminanceExtract.source.includes('weightedLogLuminance, totalWeight'),
+    'HDR metering preserves weighted luminance and weight until the final reduction'
+  );
+  testCase.deepEqual(
+    minimumScaleAdaptiveExposure.renderTargets?.hdrLuminanceQuarter.scale,
+    [0.25, 0.25],
+    'HDR metering clamps sub-quarter scales so its 4x4 footprint covers the complete source'
+  );
+  testCase.ok(
+    hdrLuminanceReduce.source.includes('.rg'),
+    'HDR metering reduces weighted luminance and weight together'
+  );
+  testCase.ok(
+    hdrAutoExposureAdapt.source.includes('textureLoad(sourceTexture'),
+    'HDR exposure consumes every texel in the final luminance level'
+  );
+  testCase.ok(
+    hdrAutoExposureAdapt.source.includes(
+      'min(hdrAutoExposureAdapt.minimumExposure, hdrAutoExposureAdapt.maximumExposure)'
+    ),
+    'HDR exposure canonicalizes inverted exposure limits'
+  );
+  testCase.ok(
+    /let exposure = clamp\([\s\S]*mix\(previousExposure, targetExposure, adaptationWeight\)/.test(
+      hdrAutoExposureAdapt.source
+    ),
+    'HDR exposure clamps the temporally adapted result to the configured limits'
+  );
+  testCase.equal(
+    hdrAutoExposureApply.uniformTypes.enabled,
+    'f32',
+    'HDR exposure can bypass application while preserving adaptation history'
+  );
+
+  const hdrBloom = createBloomShaderPassPipeline({resolutionScale: 0.75});
+  testCase.equal(
+    hdrBloom.renderTargets?.blurHalf.format,
+    'rgba16float',
+    'cinematic bloom preserves HDR highlight energy in floating-point intermediates'
+  );
+  testCase.deepEqual(
+    hdrBloom.renderTargets?.blurHalf.scale,
+    [0.375, 0.375],
+    'cinematic bloom scales its complete multiresolution pyramid'
+  );
+  testCase.notOk(
+    clusteredVolumetricTrace.source.includes('lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS'),
+    'clustered volumetric lighting does not discard candidates through hash collisions'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('lightScore < worstScore'),
+    'clustered volumetric lighting retains a bounded best-scoring light set'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('dot(viewDirection, lightDirection)'),
+    'point-light anisotropy uses the camera-to-sample propagation direction'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes(
+      'dot(viewDirection, normalize(clusteredVolumetricTrace.directionalLightDirectionView))'
+    ),
+    'directional anisotropy uses the camera-to-sample propagation direction'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes(
+      'let candidateCount = min(clusterCount, storedCandidateCapacity)'
+    ),
+    'clustered volumetric lighting bounds overflow work to stored tile-local candidates'
+  );
+  testCase.notOk(
+    clusteredVolumetricTrace.source.includes(
+      'min(clusteredVolumetricTrace.pointLightCount, arrayLength(&pointLights)),\n    overflowed'
+    ),
+    'cluster overflow never falls back to scanning every active light per ray step'
+  );
+  testCase.equal(
+    clusteredVolumetricTrace.uniformTypes.godRayPosition,
+    'vec2<f32>',
+    'crepuscular god rays expose a configurable screen-space sun position'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('clusteredVolumetricTrace_godRayVisibility'),
+    'crepuscular god rays trace scene-depth visibility toward the sun'
+  );
+  testCase.equal(
+    clusteredVolumetricTrace.uniformTypes.godRaysOnly,
+    'f32',
+    'crepuscular god rays expose a separable diagnostic mode'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('farPosition - rayOrigin'),
+    'volume tracing derives a projection-independent view ray'
+  );
+  testCase.ok(
+    clusteredVolumetricTrace.source.includes('rayOrigin + viewDirection * travel'),
+    'volume tracing preserves the per-pixel origin required by orthographic projection'
   );
 
   const reconstructedSSAO = createSSAOShaderPassPipeline();
@@ -261,6 +481,159 @@ test('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async t
   testCase.end();
 });
 
+test('clustered volumetric lighting stays continuous across screen-tile boundaries', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU unavailable, skipping volumetric tile-boundary regression');
+    testCase.end();
+    return;
+  }
+
+  const width = 8;
+  const height = 1;
+  const maxLightsPerCluster = 12;
+  const pointLightCount = 14;
+  const sourceTexture = device.createTexture({
+    id: 'volumetric-tile-boundary-source',
+    format: 'rgba8unorm',
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
+  });
+  const depthTexture = device.createTexture({
+    id: 'volumetric-tile-boundary-depth',
+    format: 'depth24plus',
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
+  });
+  const sceneFramebuffer = device.createFramebuffer({
+    id: 'volumetric-tile-boundary-scene',
+    width,
+    height,
+    colorAttachments: [sourceTexture],
+    depthStencilAttachment: depthTexture
+  });
+  const pointLightData = new Float32Array(pointLightCount * 8);
+  pointLightData.set([0, 0, 0.5, 0.48, 1, 0, 0, 18], 0);
+  for (let lightIndex = 1; lightIndex < pointLightCount; lightIndex++) {
+    pointLightData.set([4, 4, 0.5, 0.1, 1, 0, 0, 1], lightIndex * 8);
+  }
+  const finalStoredLightIndex = maxLightsPerCluster - 1;
+  pointLightData.set([0, 0, 0.5, 0.48, 0, 1, 0, 18], finalStoredLightIndex * 8);
+  const pointLights = device.createBuffer({
+    id: 'volumetric-tile-boundary-lights',
+    data: pointLightData,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterLightCounts = device.createBuffer({
+    id: 'volumetric-tile-boundary-counts',
+    data: new Uint32Array([pointLightCount, 1]),
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterIndexData = new Uint32Array(2 * maxLightsPerCluster);
+  for (let lightIndex = 0; lightIndex < maxLightsPerCluster; lightIndex++) {
+    clusterIndexData[lightIndex] = lightIndex;
+  }
+  clusterIndexData[maxLightsPerCluster] = finalStoredLightIndex;
+  const clusterLightIndices = device.createBuffer({
+    id: 'volumetric-tile-boundary-indices',
+    data: clusterIndexData,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [clusteredVolumetricTrace],
+    colorFormat: 'rgba8unorm',
+    flipY: false
+  });
+  renderer.resize([width, height]);
+  const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
+
+  try {
+    const sceneRenderPass = device.beginRenderPass({
+      framebuffer: sceneFramebuffer,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    });
+    sceneRenderPass.end();
+
+    const outputTexture = renderer.renderToTexture({
+      sourceTexture,
+      bindings: {depthTexture, pointLights, clusterLightCounts, clusterLightIndices},
+      uniforms: {
+        clusteredVolumetricTrace: {
+          projectionMatrix: identityMatrix,
+          inverseProjectionMatrix: identityMatrix,
+          inverseViewMatrix: identityMatrix,
+          directionalLightDirectionView: [0, 0, 1],
+          directionalLightColor: [0, 0, 0],
+          fogColor: [0, 0, 0],
+          density: 0.35,
+          heightFalloff: 0,
+          fogHeight: 0,
+          anisotropy: 0,
+          directionalIntensity: 0,
+          pointLightIntensity: 4,
+          maxDistance: 1,
+          sampleCount: 8,
+          shadowStrength: 0,
+          clusterCountX: 2,
+          clusterCountY: 1,
+          clusterCountZ: 1,
+          maxLightsPerCluster,
+          pointLightCount,
+          clusterNearPlane: 0.1,
+          clusterFarPlane: 10
+        }
+      }
+    });
+    device.submit();
+
+    testCase.ok(outputTexture, 'clustered volumetric regression scene renders');
+    if (outputTexture) {
+      const memoryLayout = outputTexture.computeMemoryLayout({width, height});
+      const readbackBuffer = device.createBuffer({
+        id: 'volumetric-tile-boundary-readback',
+        byteLength: memoryLayout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      try {
+        outputTexture.readBuffer({width, height}, readbackBuffer);
+        const pixelBytes = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
+        const leftPixelOffset = (width / 2 - 1) * 4;
+        const rightPixelOffset = (width / 2) * 4;
+        const leftRedScattering = pixelBytes[leftPixelOffset]!;
+        const leftGreenScattering = pixelBytes[leftPixelOffset + 1]!;
+        const rightGreenScattering = pixelBytes[rightPixelOffset + 1]!;
+        testCase.ok(
+          leftRedScattering > 20 && leftGreenScattering > 20,
+          'an overflowing cluster selects its best lights across all stored candidates'
+        );
+        testCase.ok(
+          leftGreenScattering > 20 && rightGreenScattering > 20,
+          'both tiles retain the shared nearby light at the stored candidate boundary'
+        );
+        testCase.ok(
+          Math.abs(leftGreenScattering - rightGreenScattering) < 45,
+          'adjacent tiles produce comparable fog scattering'
+        );
+      } finally {
+        readbackBuffer.destroy();
+      }
+    }
+  } finally {
+    renderer.destroy();
+    clusterLightIndices.destroy();
+    clusterLightCounts.destroy();
+    pointLights.destroy();
+    sceneFramebuffer.destroy();
+    depthTexture.destroy();
+    sourceTexture.destroy();
+  }
+
+  testCase.end();
+});
+
 test('advanced effects compose in order with existing effects', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -299,6 +672,21 @@ test('advanced effects compose in order with existing effects', async testCase =
     height,
     usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST
   });
+  const pointLights = device.createBuffer({
+    id: 'mixed-effects-point-lights',
+    byteLength: 32,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterLightCounts = device.createBuffer({
+    id: 'mixed-effects-cluster-counts',
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+  const clusterLightIndices = device.createBuffer({
+    id: 'mixed-effects-cluster-indices',
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
   const sceneFramebuffer = device.createFramebuffer({
     id: 'mixed-effects-scene',
     width,
@@ -312,6 +700,8 @@ test('advanced effects compose in order with existing effects', async testCase =
     createGTAOShaderPassPipeline(),
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
+    createClusteredVolumetricLightingShaderPassPipeline(),
+    createHDRAutoExposureShaderPassPipeline(),
     bloomShaderPassPipeline,
     dofShaderPassPipeline,
     createTAAShaderPassPipeline(),
@@ -352,7 +742,14 @@ test('advanced effects compose in order with existing effects', async testCase =
 
     const outputTexture = renderer.renderToTexture({
       sourceTexture,
-      bindings: {depthTexture, normalTexture, velocityTexture}
+      bindings: {
+        depthTexture,
+        normalTexture,
+        velocityTexture,
+        pointLights,
+        clusterLightCounts,
+        clusterLightIndices
+      }
     });
     device.submit();
 
@@ -394,6 +791,30 @@ test('advanced effects compose in order with existing effects', async testCase =
       hasBinding('ssrComposite', 'normalTexture'),
       'SSR upsampling preserves surface-normal edges'
     );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTrace', 'pointLights'),
+      'volumetric integration receives the shared point-light storage buffer'
+    );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTrace', 'clusterLightCounts'),
+      'volumetric integration receives compute-built cluster occupancy'
+    );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTrace', 'clusterLightIndices'),
+      'volumetric integration receives compute-built local light lists'
+    );
+    testCase.ok(
+      hasBinding('clusteredVolumetricTemporal', 'velocityTexture'),
+      'volumetric history receives scene velocity'
+    );
+    testCase.ok(
+      hasBinding('hdrAutoExposureAdapt', 'historyTexture'),
+      'GPU-driven HDR metering retains adapted exposure history'
+    );
+    testCase.ok(
+      hasBinding('hdrAutoExposureApply', 'exposureTexture'),
+      'HDR exposure resolve receives the adapted luminance state'
+    );
     testCase.notOk(
       hasBinding('bloomExtract', 'velocityTexture'),
       'bloom does not receive scene velocity'
@@ -412,6 +833,9 @@ test('advanced effects compose in order with existing effects', async testCase =
     normalTexture.destroy();
     velocityTexture.destroy();
     depthTexture.destroy();
+    pointLights.destroy();
+    clusterLightCounts.destroy();
+    clusterLightIndices.destroy();
   }
 
   testCase.end();

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, ShaderPassPipeline, ShaderPassRenderTarget} from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
 
 const MAX_BLOOM_BLUR_RADIUS = 24;
@@ -20,6 +20,17 @@ type BloomTargetName =
   | 'blurEighthScratch'
   | 'blurEighth';
 
+/** Construction options for HDR-capable multiscale bloom. */
+export type BloomShaderPassPipelineOptions = {
+  /**
+   * Positive fractional size multiplier applied to the half, quarter, and eighth-resolution
+   * pyramid. The extraction filter adapts its source footprint to the resulting target size.
+   */
+  resolutionScale?: number;
+  /** Filterable RGBA intermediate format. Defaults to rgba16float for HDR highlight energy. */
+  colorFormat?: 'rgba8unorm' | 'rgba16float';
+};
+
 const bloomExtractPass = {
   name: 'bloomExtract',
   source: /* wgsl */ `
@@ -29,13 +40,7 @@ struct bloomExtractUniforms {
 
 @group(0) @binding(auto) var<uniform> bloomExtract: bloomExtractUniforms;
 
-fn bloomExtract_sampleColor(
-  sourceTexture: texture_2d<f32>,
-  sourceTextureSampler: sampler,
-  texSize: vec2f,
-  texCoord: vec2f
-) -> vec4f {
-  let sourceColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+fn bloomExtract_applyThreshold(sourceColor: vec4f) -> vec4f {
   let luminance = dot(sourceColor.rgb, vec3f(0.2126, 0.7152, 0.0722));
   let knee = max(bloomExtract.threshold * 0.5, 0.00001);
   let soft = clamp((luminance - bloomExtract.threshold + knee) / (2.0 * knee), 0.0, 1.0);
@@ -44,14 +49,55 @@ fn bloomExtract_sampleColor(
   let bloomContribution = max(hardContribution, softContribution) / max(luminance, 0.00001);
   return vec4f(sourceColor.rgb * bloomContribution, sourceColor.a * bloomContribution);
 }
+
+fn bloomExtract_loadColor(sourceTexture: texture_2d<f32>, coordinate: vec2i) -> vec4f {
+  let maximumCoordinate = vec2i(textureDimensions(sourceTexture)) - vec2i(1);
+  return textureLoad(sourceTexture, clamp(coordinate, vec2i(0), maximumCoordinate), 0);
+}
+
+fn bloomExtract_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let sourceDimensions = vec2i(textureDimensions(sourceTexture));
+  let sourceCenter = texCoord * vec2f(sourceDimensions) - vec2f(0.5);
+  let sourceFootprint = max(
+    (abs(dpdx(texCoord)) + abs(dpdy(texCoord))) * vec2f(sourceDimensions),
+    vec2f(1.0)
+  );
+  let filterRadius = max(sourceFootprint, vec2f(2.0));
+  let minimumCoordinate = vec2i(floor(sourceCenter - filterRadius)) + vec2i(1);
+  let maximumCoordinate = vec2i(ceil(sourceCenter + filterRadius)) - vec2i(1);
+  var color = vec4f(0.0);
+  var totalWeight = 0.0;
+
+  // The tent radius follows the actual source-to-target ratio so reduced-resolution pyramids do
+  // not leave unsampled bands. At the default half resolution this is the original 4x4 tent.
+  for (var sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY += 1) {
+    let weightY = max(1.0 - abs(f32(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (var sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX += 1) {
+      let weightX = max(1.0 - abs(f32(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      let weight = weightX * weightY;
+      let sourceColor = bloomExtract_loadColor(
+        sourceTexture,
+        vec2i(sourceX, sourceY)
+      );
+      color += bloomExtract_applyThreshold(sourceColor) * weight;
+      totalWeight += weight;
+    }
+  }
+
+  return color / max(totalWeight, 0.00001);
+}
 `,
   fs: /* glsl */ `
 layout(std140) uniform bloomExtractUniforms {
   float threshold;
 } bloomExtract;
 
-vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
-  vec4 sourceColor = texture(sourceTexture, texCoord);
+vec4 bloomExtract_applyThreshold(vec4 sourceColor) {
   float luminance = dot(sourceColor.rgb, vec3(0.2126, 0.7152, 0.0722));
   float knee = max(bloomExtract.threshold * 0.5, 0.00001);
   float soft = clamp((luminance - bloomExtract.threshold + knee) / (2.0 * knee), 0.0, 1.0);
@@ -59,6 +105,42 @@ vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   float hardContribution = max(luminance - bloomExtract.threshold, 0.0);
   float bloomContribution = max(hardContribution, softContribution) / max(luminance, 0.00001);
   return vec4(sourceColor.rgb * bloomContribution, sourceColor.a * bloomContribution);
+}
+
+vec4 bloomExtract_loadColor(sampler2D sourceTexture, ivec2 coordinate) {
+  ivec2 maximumCoordinate = textureSize(sourceTexture, 0) - ivec2(1);
+  return texelFetch(sourceTexture, clamp(coordinate, ivec2(0), maximumCoordinate), 0);
+}
+
+vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
+  ivec2 sourceDimensions = textureSize(sourceTexture, 0);
+  vec2 sourceCenter = texCoord * vec2(sourceDimensions) - vec2(0.5);
+  vec2 sourceFootprint = max(
+    (abs(dFdx(texCoord)) + abs(dFdy(texCoord))) * vec2(sourceDimensions),
+    vec2(1.0)
+  );
+  vec2 filterRadius = max(sourceFootprint, vec2(2.0));
+  ivec2 minimumCoordinate = ivec2(floor(sourceCenter - filterRadius)) + ivec2(1);
+  ivec2 maximumCoordinate = ivec2(ceil(sourceCenter + filterRadius)) - ivec2(1);
+  vec4 color = vec4(0.0);
+  float totalWeight = 0.0;
+
+  // Keep this kernel identical to the WGSL path so WebGL and WebGPU conserve the same energy.
+  for (int sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY++) {
+    float weightY = max(1.0 - abs(float(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (int sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX++) {
+      float weightX = max(1.0 - abs(float(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      float weight = weightX * weightY;
+      vec4 sourceColor = bloomExtract_loadColor(
+        sourceTexture,
+        ivec2(sourceX, sourceY)
+      );
+      color += bloomExtract_applyThreshold(sourceColor) * weight;
+      totalWeight += weight;
+    }
+  }
+
+  return color / max(totalWeight, 0.00001);
 }
 `,
   uniformTypes: {
@@ -69,6 +151,86 @@ vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<Pick<BloomProps, 'threshold'>, Pick<BloomUniforms, 'threshold'>>;
+
+const bloomDownsamplePass = {
+  name: 'bloomDownsample',
+  source: /* wgsl */ `
+fn bloomDownsample_loadColor(sourceTexture: texture_2d<f32>, coordinate: vec2i) -> vec4f {
+  let maximumCoordinate = vec2i(textureDimensions(sourceTexture)) - vec2i(1);
+  return textureLoad(sourceTexture, clamp(coordinate, vec2i(0), maximumCoordinate), 0);
+}
+
+fn bloomDownsample_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let sourceDimensions = vec2i(textureDimensions(sourceTexture));
+  let sourceCenter = texCoord * vec2f(sourceDimensions) - vec2f(0.5);
+  let sourceFootprint = max(
+    (abs(dpdx(texCoord)) + abs(dpdy(texCoord))) * vec2f(sourceDimensions),
+    vec2f(1.0)
+  );
+  let filterRadius = max(sourceFootprint, vec2f(2.0));
+  let minimumCoordinate = vec2i(floor(sourceCenter - filterRadius)) + vec2i(1);
+  let maximumCoordinate = vec2i(ceil(sourceCenter + filterRadius)) - vec2i(1);
+  var color = vec4f(0.0);
+  var totalWeight = 0.0;
+
+  for (var sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY += 1) {
+    let weightY = max(1.0 - abs(f32(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (var sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX += 1) {
+      let weightX = max(1.0 - abs(f32(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      let weight = weightX * weightY;
+      color += bloomDownsample_loadColor(
+        sourceTexture,
+        vec2i(sourceX, sourceY)
+      ) * weight;
+      totalWeight += weight;
+    }
+  }
+
+  return color / max(totalWeight, 0.00001);
+}
+`,
+  fs: /* glsl */ `
+vec4 bloomDownsample_loadColor(sampler2D sourceTexture, ivec2 coordinate) {
+  ivec2 maximumCoordinate = textureSize(sourceTexture, 0) - ivec2(1);
+  return texelFetch(sourceTexture, clamp(coordinate, ivec2(0), maximumCoordinate), 0);
+}
+
+vec4 bloomDownsample_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
+  ivec2 sourceDimensions = textureSize(sourceTexture, 0);
+  vec2 sourceCenter = texCoord * vec2(sourceDimensions) - vec2(0.5);
+  vec2 sourceFootprint = max(
+    (abs(dFdx(texCoord)) + abs(dFdy(texCoord))) * vec2(sourceDimensions),
+    vec2(1.0)
+  );
+  vec2 filterRadius = max(sourceFootprint, vec2(2.0));
+  ivec2 minimumCoordinate = ivec2(floor(sourceCenter - filterRadius)) + ivec2(1);
+  ivec2 maximumCoordinate = ivec2(ceil(sourceCenter + filterRadius)) - ivec2(1);
+  vec4 color = vec4(0.0);
+  float totalWeight = 0.0;
+
+  for (int sourceY = minimumCoordinate.y; sourceY <= maximumCoordinate.y; sourceY++) {
+    float weightY = max(1.0 - abs(float(sourceY) - sourceCenter.y) / filterRadius.y, 0.0);
+    for (int sourceX = minimumCoordinate.x; sourceX <= maximumCoordinate.x; sourceX++) {
+      float weightX = max(1.0 - abs(float(sourceX) - sourceCenter.x) / filterRadius.x, 0.0);
+      float weight = weightX * weightY;
+      color += bloomDownsample_loadColor(
+        sourceTexture,
+        ivec2(sourceX, sourceY)
+      ) * weight;
+      totalWeight += weight;
+    }
+  }
+
+  return color / max(totalWeight, 0.00001);
+}
+`,
+  passes: [{sampler: true}]
+} as const satisfies ShaderPass;
 
 const bloomBlurPass = {
   name: 'bloomBlur',
@@ -305,8 +467,8 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
 
 /**
  * BloomShaderPassPipeline
- * Extracts bright pixels at multiple scales, blurs them, and composites the glow over the
- * preceding effect output.
+ * Extracts bright pixels at half resolution, successively downsamples and blurs them, and
+ * composites the multiscale glow over the preceding effect output.
  */
 export const bloomShaderPassPipeline = {
   name: 'bloomShaderPassPipeline',
@@ -341,10 +503,9 @@ export const bloomShaderPassPipeline = {
       uniforms: {radius: 8, delta: [0, 1]}
     },
     {
-      shaderPass: bloomExtractPass,
-      inputs: {sourceTexture: 'previous'},
-      output: 'extractQuarter',
-      uniforms: {threshold: 0.8}
+      shaderPass: bloomDownsamplePass,
+      inputs: {sourceTexture: 'extractHalf'},
+      output: 'extractQuarter'
     },
     {
       shaderPass: bloomBlurPass,
@@ -359,10 +520,9 @@ export const bloomShaderPassPipeline = {
       uniforms: {radius: 8, delta: [0, 1]}
     },
     {
-      shaderPass: bloomExtractPass,
-      inputs: {sourceTexture: 'previous'},
-      output: 'extractEighth',
-      uniforms: {threshold: 0.8}
+      shaderPass: bloomDownsamplePass,
+      inputs: {sourceTexture: 'extractQuarter'},
+      output: 'extractEighth'
     },
     {
       shaderPass: bloomBlurPass,
@@ -389,3 +549,31 @@ export const bloomShaderPassPipeline = {
     }
   ]
 } as const satisfies ShaderPassPipeline<BloomTargetName>;
+
+/** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
+export function createBloomShaderPassPipeline(
+  options: BloomShaderPassPipelineOptions = {}
+): ShaderPassPipeline<BloomTargetName> {
+  const resolutionScale = options.resolutionScale ?? 1;
+  const colorFormat = options.colorFormat ?? 'rgba16float';
+  const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
+    scale: [scale * resolutionScale, scale * resolutionScale],
+    format: colorFormat,
+    sampler: BLOOM_TARGET_SAMPLER
+  });
+
+  return {
+    ...bloomShaderPassPipeline,
+    renderTargets: {
+      extractHalf: makeRenderTarget(0.5),
+      blurHalfScratch: makeRenderTarget(0.5),
+      blurHalf: makeRenderTarget(0.5),
+      extractQuarter: makeRenderTarget(0.25),
+      blurQuarterScratch: makeRenderTarget(0.25),
+      blurQuarter: makeRenderTarget(0.25),
+      extractEighth: makeRenderTarget(0.125),
+      blurEighthScratch: makeRenderTarget(0.125),
+      blurEighth: makeRenderTarget(0.125)
+    }
+  };
+}

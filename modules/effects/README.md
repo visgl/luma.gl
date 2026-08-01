@@ -4,20 +4,38 @@ A set of ShaderPasses implementing post processing effects for luma.gl
 
 Advanced WebGPU-first scene-aware pipelines include SSAO, temporally stabilized GTAO,
 cosine-weighted screen-space diffuse global illumination, roughness-aware screen-space
-reflections with temporal reprojection and bilateral denoising, scene outlines, temporal AA,
-motion blur, volumetric fog, and reusable depth-aware blur.
+reflections with temporal reprojection and bilateral denoising, real clustered volumetric
+lighting with depth-occluded crepuscular god rays, scene outlines, temporal AA, motion blur,
+compact height fog, GPU-resident adaptive HDR exposure, floating-point multiscale bloom,
+and reusable depth-aware blur.
 Applications keep ownership of scene rendering and provide matching color, depth,
 normal/roughness, and velocity textures to `ShaderPassRenderer`.
+Clustered volumetric history additionally uses current inverse and previous view-projection
+matrices so empty-space scattering follows camera motion, while opaque surfaces retain their
+G-buffer velocity.
+SSAO, GTAO, SSGI, SSR, and clustered volumetric lighting default their intermediate
+framebuffers to full resolution; pass `resolutionScale` to trade edge fidelity for lower GPU cost.
 GTAO additionally supports `composition: 'ambient-only'` with an explicit
 `ambientLightingTexture`, preserving direct lighting and emissive scene contributions.
 
 Notable exports include:
 
-- `bloom` and `bloomShaderPassPipeline`
+- `bloom`, `bloomShaderPassPipeline`, and `createBloomShaderPassPipeline`
 - `toneMapping`, `ToneMappingProps`, and `ToneMappingUniforms`
 - `dof` and `dofShaderPassPipeline`
 - `createGTAOShaderPassPipeline`, `createSSGIShaderPassPipeline`, and
   `createSSRShaderPassPipeline`
+- `createClusteredVolumetricLightingShaderPassPipeline` for light-driven participating media;
+  `createVolumetricFogShaderPassPipeline` remains the simpler, lower-cost height-fog option.
+- `createHDRAutoExposureShaderPassPipeline` for center-weighted GPU luminance metering and
+  temporally adapted exposure.
+
+The [Visualization City](https://luma.gl/examples/experimental/advanced-effects) example
+emphasizes geometric shadows and the breadth of composable effects. The
+[Illumination Lab](https://luma.gl/examples/experimental/deferred-rendering) emphasizes clustered
+deferred lighting, higher-quality ambient visibility, diffuse bounce, specular reflections, and
+participating-media scattering. Shared effects such as SSR use the same exported implementation
+in both scenes.
 
 `toneMapping` applies an ACES filmic curve after exposure and preserves the source alpha channel.
 Place it after bloom or other HDR effects so bright highlights roll off before presentation:

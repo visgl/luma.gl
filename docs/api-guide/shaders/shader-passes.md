@@ -69,19 +69,22 @@ surface attachments without owning scene traversal or material shading. Multiple
 | Render-stack value | Producer | Consumers |
 | --- | --- | --- |
 | `sourceTexture` | `GBuffer.colorTexture` | Every shader pass through `previous` or `original`. |
-| `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, GTAO, SSGI, SSR, outlines, contact shadows, TAA, motion blur, fog. |
+| `depthTexture` | `GBuffer.depthTexture` | DOF, depth-aware blur, SSAO, GTAO, SSGI, SSR, outlines, contact shadows, TAA, motion blur, fog, clustered volumetric lighting. |
 | `normalTexture` | `GBuffer.normalRoughnessTexture` | SSAO, GTAO, SSGI, SSR, normal-aware outlines, contact-shadow filtering. |
-| `velocityTexture` | `GBuffer.velocityTexture` | GTAO/SSGI/SSR temporal reprojection, TAA, and motion blur. |
+| `velocityTexture` | `GBuffer.velocityTexture` | GTAO/SSGI/SSR/volumetric temporal reprojection, TAA, and motion blur. |
 | named extras | `GBuffer.getExtraColorTexture(name)` | Application-specific material, debug, lighting, or resolve passes. |
 
 ```ts
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
+  createBloomShaderPassPipeline,
   createMotionBlurShaderPassPipeline,
   createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
   createSSGIShaderPassPipeline,
   createSSRShaderPassPipeline,
-  createTAAShaderPassPipeline
+  createTAAShaderPassPipeline,
+  toneMapping
 } from '@luma.gl/effects';
 import {GBuffer} from '@luma.gl/experimental';
 
@@ -101,12 +104,16 @@ sceneModel.draw(scenePass);
 scenePass.end();
 
 const effects = new ShaderPassRenderer(device, {
+  colorFormat: 'rgba16float',
   shaderPasses: [
     createGTAOShaderPassPipeline(),
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
     createTAAShaderPassPipeline(),
-    createMotionBlurShaderPassPipeline()
+    createMotionBlurShaderPassPipeline(),
+    createHDRAutoExposureShaderPassPipeline(),
+    createBloomShaderPassPipeline(),
+    toneMapping
   ]
 });
 
@@ -123,12 +130,16 @@ lighting result into the same ordered color chain:
 
 ```ts
 const renderer = new ShaderPassRenderer(device, {
+  colorFormat: 'rgba16float',
   shaderPasses: [
     createDeferredLightingShaderPassPipeline(),
     createGTAOShaderPassPipeline(),
     createSSGIShaderPassPipeline(),
     createSSRShaderPassPipeline(),
-    createTAAShaderPassPipeline()
+    createTAAShaderPassPipeline(),
+    createHDRAutoExposureShaderPassPipeline(),
+    createBloomShaderPassPipeline(),
+    toneMapping
   ]
 });
 ```
@@ -203,8 +214,8 @@ the newly bounced illumination.
 normal/roughness, and velocity attachments. Its six explicit stages demonstrate how a complex
 effect remains one composable pipeline:
 
-1. Trace stochastic, roughness-aware reflection rays against the G-buffer depth at half
-   resolution.
+1. Trace stochastic, roughness-aware reflection rays against the G-buffer depth at configurable
+   resolution, defaulting to full resolution.
 2. Reproject persistent reflection history with screen-space velocity and reject depth
    disocclusions.
 3. Save current depth into the reflection history target for the next frame.
@@ -218,16 +229,69 @@ lobes. Because tracing samples existing scene color, its cost depends on visible
 steps instead of drawing every reflected object again. Off-screen geometry cannot contribute;
 screen-edge confidence fades reduce the resulting discontinuities.
 
+### Clustered volumetric lighting
+
+`createClusteredVolumetricLightingShaderPassPipeline()` turns the same clustered point-light
+storage buffers used by deferred shading into actual participating-media illumination:
+
+1. March configurable-resolution view rays through exponential world-height density.
+2. Integrate a best-scoring bounded set from the compute-retained cluster candidates plus
+   directional light using an anisotropic phase function; work never falls back to scanning every
+   active light per ray step.
+3. Trace radial screen-depth visibility toward a configurable sun position to produce
+   recognizable, depth-occluded crepuscular god rays.
+4. Reproject empty-space atmospheric history with current/previous camera transforms, apply
+   G-buffer velocity to opaque surfaces, and reject linear-depth disocclusions.
+5. Capture compact current linear depth for the next frame.
+6. Denoise the radiance/transmittance result with separable depth-aware blur.
+7. Composite Beer-Lambert extinction and in-scattered light, or expose volume/transmittance
+   diagnostics.
+
+This is the higher-fidelity alternative to `createVolumetricFogShaderPassPipeline()`, whose
+compact height fog does not evaluate the real scene-light storage buffers. Both remain composable
+ordered pipelines; normally choose one atmospheric implementation rather than stacking both.
+
+Unlike the generic `GBuffer` examples above, clustered volumetric lighting requires more than
+`gBuffer.getShaderPassBindings()`. Encode a `ClusteredLightGrid` for the current point-light buffer
+each frame, add `pointLights`, `clusteredLightGrid.getShaderPassBindings()`, depth, and velocity to
+the renderer bindings, and merge `clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)`
+into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings.
+Provide `inverseViewProjectionMatrix` and `previousViewProjectionMatrix` to
+`clusteredVolumetricTemporal`, plus `inverseProjectionMatrix` to both the temporal and linear-depth
+history-copy stages. See
+the [`ClusteredLightGrid` usage guide](/docs/api-reference/experimental/clustered-lighting) for the
+buffer setup and encode sequence.
+
+SSAO, GTAO, screen-space global illumination, reflections, and clustered volumetric lighting
+default to full-resolution intermediate framebuffers. Pass `resolutionScale: 0.5`, for example,
+to explicitly trade edge quality for fewer shaded pixels and smaller history textures.
+
+### Adaptive HDR exposure and cinematic bloom
+
+`createHDRAutoExposureShaderPassPipeline()` meters and adapts scene brightness entirely on the GPU:
+
+1. Extract center-weighted logarithmic luminance from floating-point scene color.
+2. Reduce four successively smaller luminance-pyramid levels into a near-global geometric mean.
+3. Adapt persistent exposure history with independent brightening and darkening response rates.
+4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
+
+Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at half resolution,
+then successively filters and blurs them at quarter and eighth resolution using `rgba16float`
+intermediate targets. Its optional `resolutionScale` controls the entire pyramid without clamping
+highlight radiance to 8-bit normalized color. Use the exact HDR order: temporal effects, auto
+exposure, bloom, then tone mapping.
+
 ### Recommended ordering
 
 | Phase | Typical work | Why |
 | --- | --- | --- |
 | Geometry and opaque surface capture | MRT scene color, normal-roughness, velocity, depth, material extras | Establish one coherent surface snapshot. |
 | Opaque lighting resolve | Deferred PBR lighting, contact shadows, other direct-light corrections | These still need unwarped depth, normals, and material terms. |
-| Surface effects | SSAO/GTAO, SSGI, SSR, fog, outlines, depth-aware blur | These consume the original semantic attachments. |
+| Surface effects | SSAO/GTAO, SSGI, SSR, outlines, depth-aware blur | These consume the original semantic attachments. |
+| Participating media | Height fog or clustered volumetric lighting | Composite extinction and in-scattering over completed opaque light transport. |
 | Transparency resolve | WBOIT or A-buffer resolve pipeline | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
 | Temporal effects | TAA, then motion blur | Reproject the composed image before display-space processing. |
-| Display effects | Bloom, color adjustment, vignette, tone mapping | These operate on final color and usually do not need scene attachments. |
+| Display effects | Auto exposure, bloom, color adjustment, vignette, tone mapping | These operate on final color and usually do not need scene attachments. |
 
 This is a default, not a hard rule. A debug view may intentionally bypass earlier color processing
 through `original`, and a stylized stack may place display-space effects earlier.
@@ -253,8 +317,9 @@ pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug view
 
 The [Deferred Illumination Lab](/examples/experimental/deferred-rendering) shows one five-target
 geometry pass feeding clustered directional/point lighting, temporally stabilized GTAO,
-diffuse screen-space global illumination, roughness-aware screen-space reflections, tone mapping,
-and direct G-buffer/AO/bounce/reflection debug views.
+diffuse screen-space global illumination, roughness-aware screen-space reflections, clustered
+volumetric lighting, adaptive exposure, HDR bloom, tone mapping, and direct
+G-buffer/AO/bounce/reflection/volume debug views.
 
 ## When To Use Shader Passes
 

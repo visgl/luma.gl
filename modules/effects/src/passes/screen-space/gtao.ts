@@ -9,7 +9,7 @@ import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for the horizon-based GTAO pipeline. */
 export type GTAOShaderPassPipelineOptions = {
-  /** Fractional AO evaluation resolution. Defaults to half resolution. */
+  /** Fractional AO evaluation, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
   /** Apply visibility to the full image or only to a separately supplied ambient-light texture. */
   composition?: 'color' | 'ambient-only';
@@ -51,7 +51,7 @@ type GTAOTemporalBindings = {
   previousDepthTexture?: Texture;
 };
 
-/** Half-resolution horizon search over G-buffer depth and view normals. */
+/** Configurable-resolution horizon search over G-buffer depth and view normals. */
 export const gtaoEvaluate = {
   name: 'gtaoEvaluate',
   source: /* wgsl */ `\
@@ -512,7 +512,7 @@ export function createGTAOShaderPassPipeline(
 ): ShaderPassPipeline<
   'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
 > {
-  const scale = options.resolutionScale || 0.5;
+  const scale = options.resolutionScale ?? 1;
   const composite = options.composition === 'ambient-only' ? gtaoAmbientComposite : gtaoComposite;
   return {
     name: 'gtaoShaderPassPipeline',

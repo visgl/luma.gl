@@ -40,8 +40,9 @@ light plus a fixed-capacity storage buffer of point lights from two named materi
 
 [`ClusteredLightGrid`](/docs/api-reference/experimental/clustered-lighting) scales the same
 material contract to hundreds of local lights. A WebGPU compute pass bins view-space light spheres
-into screen/depth clusters, and `clusteredDeferredLighting` evaluates only the current pixel's
-bounded light list.
+into screen/depth clusters, and `clusteredDeferredLighting` normally evaluates the current pixel's
+compact retained list. Saturated clusters fall back to checking all active lights so opaque direct
+lighting remains complete.
 
 The [Shader Passes guide](/docs/api-guide/shaders/shader-passes) explains how a scene render,
 `GBuffer` bindings, deferred lighting, ordered `ShaderPassPipeline` effects, temporal history, and
