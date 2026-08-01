@@ -1075,8 +1075,8 @@ flowing directly into indirect rendering.
 
 ### Phase 3 — Algorithm and table scaling
 
-**Status:** In progress. Inclusive and segmented `uint32` scans plus weighted floating-point grid
-statistics are implemented.
+**Status:** In progress. Inclusive and segmented `uint32` scans, weighted floating-point grid
+statistics, and irregular-edge histograms are implemented.
 
 **Entry dependencies:** Phase 2 provides real workflow demand for each added variant.
 
@@ -1094,9 +1094,16 @@ accumulation order; minimum and maximum use ordered float encodings with native 
 Empty non-sum cells publish NaN. The data-analysis example validates all four operations over the
 same imported Arrow batches.
 
+`GPUHistogram` now supports literal and GPU-resident irregular edges in addition to equal-width
+domains. It uses binary search with `[edge[i], edge[i + 1])` intervals and includes the final upper
+edge. GPU edges are validated for finite, strictly increasing order by a graph pass, so applications
+can update thresholds between encodings without a CPU readback or graph rebuild. Invalid GPU edges
+produce zero counts. The data-analysis example switches between uniform and GPU-resident threshold
+bins and validates both against a CPU oracle.
+
 Remaining work extends multi-chunk support to algorithms that still require one packed view, then
-adds irregular-edge and categorical histograms and batch-aware operations that preserve table
-structure. Custom associative scans, sparse histograms,
+adds categorical histograms and batch-aware operations that preserve table structure. Custom
+associative scans, sparse histograms,
 and multidimensional histograms should be added only with a concrete consumer and an explicit
 numerical or memory contract.
 
@@ -1104,7 +1111,7 @@ Irregular histogram edges primarily target heavy-tailed measurements such as tra
 request latency. Explicit microsecond-to-second boundaries preserve resolution across orders of
 magnitude, align results with service-level thresholds, and let applications compare dynamic
 filtered subsets without first generating a log-transformed column. The histogram reference
-documents the intended use case while keeping the API clearly marked as planned.
+documents the use case, interval semantics, and update contract.
 
 **Exit criteria:** Each new variant has a deterministic CPU oracle, empty and boundary coverage,
 multi-chunk tests where applicable, explicit overflow and floating-point behavior, and at least one
