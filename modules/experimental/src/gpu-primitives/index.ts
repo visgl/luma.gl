@@ -135,3 +135,9 @@ export type {
   DrawCommandBufferProps,
   DrawIndexedCommand
 } from './draw-command-buffer';
+
+export {DispatchCommandBuffer} from './dispatch-command-buffer';
+export type {
+  DispatchCommand,
+  DispatchCommandBufferProps
+} from './dispatch-command-buffer';

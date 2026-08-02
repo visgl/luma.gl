@@ -243,6 +243,23 @@ export class Computation {
     }
   }
 
+  /** Dispatches a GPU-written workgroup count from an indirect buffer. */
+  dispatchIndirect(computePass: ComputePass, indirectBuffer: Buffer, indirectOffset = 0): void {
+    try {
+      this._logDrawCallStart();
+
+      this.pipeline = this._updatePipeline();
+      this.pipeline.setBindings(this.bindings);
+      computePass.setPipeline(this.pipeline);
+      // @ts-expect-error ComputePass implementations expose binding application internally.
+      computePass.setBindings({});
+
+      computePass.dispatchIndirect(indirectBuffer, indirectOffset);
+    } finally {
+      this._logDrawCallEnd();
+    }
+  }
+
   // Update fixed fields (can trigger pipeline rebuild)
 
   // Update dynamic fields
