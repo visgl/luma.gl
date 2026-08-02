@@ -18,6 +18,7 @@ export type GPUPrimitivesDocsTabId =
   | 'grid-aggregation'
   | 'grid-index'
   | 'grid-index-query'
+  | 'point-spatial-filter'
   | 'group-aggregation'
   | 'index-picking'
   | 'readback-ring'
@@ -103,6 +104,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'grid-index-query',
     label: 'Grid Query',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query'
+  },
+  {
+    id: 'point-spatial-filter',
+    label: 'Point Filter',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter'
   },
   {
     id: 'group-aggregation',
