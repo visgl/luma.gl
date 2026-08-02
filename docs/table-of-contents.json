@@ -203,6 +203,7 @@
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
           "api-reference/experimental/mls-mpm-fluid-simulation",
+          "api-reference/experimental/spectral-ocean-simulation",
           "api-reference/experimental/shadow-map-renderer",
           "api-reference/experimental/glass-material",
           "api-reference/experimental/reflective-material",
@@ -301,6 +302,7 @@
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
           "api-reference/experimental/mls-mpm-fluid-simulation",
+          "api-reference/experimental/spectral-ocean-simulation",
           "api-reference/experimental/shadow-map-renderer",
           {
             "type": "category",

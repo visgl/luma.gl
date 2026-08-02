@@ -7,7 +7,7 @@ These are experimental features that may change or be removed at any time. Use a
 :::
 
 The package currently includes experimental GPU command graphs and data-parallel primitives such
-as scan, compaction, and stable key/value sort,
+as scan, compaction, stable key/value sort, two-dimensional FFT, and spectral ocean simulation,
 order-independent transparency renderers, composable cross-backend glass and reflective-material
 shader modules, packed pixel-format helpers, and v10 work-in-progress WebGL-only WebXR session,
 frame, and raw camera helpers. See the
