@@ -33,6 +33,7 @@
     "label": "WebGPU",
     "items": [
       "showcase/lightstorm-megacity",
+      "experimental/volumetric-fire-forge",
       {
         "type": "doc",
         "id": "experimental/spectral-caustics",

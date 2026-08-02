@@ -26,6 +26,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/gpu-trace-viewer',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
+  'experimental/volumetric-fire-forge',
   'api/video-texture',
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
