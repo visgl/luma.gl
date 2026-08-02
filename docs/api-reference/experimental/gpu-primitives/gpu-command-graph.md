@@ -9,7 +9,8 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 
 `GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
 ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns
-transient resources and node state but borrows every import.
+transient resources and node state but borrows every import. Render nodes can resolve multisampled
+attachments and consume explicitly numbered, frame-scoped swapchain textures.
 
 See [Choosing a GPU Data-Processing API](/docs/api-guide/gpu/gpu-data-processing) for guidance on
 when to use a command graph, portable GPGPU evaluators, or lower-level compute helpers.
@@ -24,6 +25,12 @@ caller-owned command encoder; submission and readback remain explicit applicatio
 Resource-use declarations are both contracts and dependency edges. A storage write followed by a
 read creates a hazard the compiler orders automatically. Imports stay caller-owned, while graph
 transients and node-created pipelines belong to the compiled graph.
+
+Render targets need a stricter lifetime distinction than ordinary data textures. An offscreen
+texture can remain valid across many encodings, while a canvas texture belongs to one acquired
+frame and may be replaced at presentation. `importFrameTexture()` makes that boundary visible:
+every encoding supplies a fresh binding with a strictly increasing frame ID. This catches stale
+swapchain reuse without making the graph responsible for acquisition or presentation.
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 
@@ -125,6 +132,17 @@ than capacity-based: format, dimension, extent, mip count, and sample count must
 encoding, while concrete usage must contain every declared flag. Recompile canvas-sized graphs
 after a device-pixel resize.
 
+### `importFrameTexture(descriptor)`
+
+Declares a borrowed texture with no persistent default. Each encoding supplies
+`frameTextures[id] = {texture, frameId}`. All frame textures in one encoding must use the same
+non-negative frame ID, and that ID must increase on every later encoding of the compiled graph.
+
+This contract is intended for swapchain color attachments and any matching frame-local depth or
+resolve resources. The application acquires the textures before encoding and presents them after
+submission. The graph validates exact descriptor compatibility and ownership, but never acquires,
+presents, treats an earlier frame binding as reusable, or destroys the imported texture.
+
 ### `createTransientTexture(descriptor)`
 
 Declares graph-owned texture storage. Non-overlapping logical textures reuse one physical texture
@@ -136,6 +154,32 @@ their usage flags.
 Creates a `GraphTextureView` with normalized aspect, mip, and array-layer ranges. Texture hazards
 are inferred only between overlapping ranges. Handle-level uses conservatively cover the complete
 texture.
+
+## Render attachments and resolves
+
+`addRenderPass()` accepts graph-managed color and depth/stencil views. A multisampled color view
+can provide a corresponding single-sample entry in `resolveTargets`:
+
+```ts
+graph.addRenderPass({
+  id: 'render-msaa',
+  attachments: {
+    colorAttachments: [multisampledColor],
+    resolveTargets: [frameColor],
+    depthStencilAttachment: multisampledDepth
+  },
+  compile: () => renderExecutable
+});
+```
+
+Resolve arrays have one entry per color attachment; `null` skips a slot. Every non-null target
+must match its source format, extent, mip, layer, and aspect, use one sample, and resolve a source
+with more than one sample. Source, depth, and other render attachments retain matching sample
+counts. Resolve targets participate in ordinary graph hazards, so later sampling or copying is
+ordered after the render pass.
+
+Multisample resolve is currently a WebGPU contract. Render-pass callbacks cannot also supply their
+own framebuffer or resolve targets when graph attachments are present.
 
 ## Node APIs
 
@@ -151,7 +195,7 @@ dependency.
 
 Executable contexts expose `getBuffer()`, `getTexture()`, and `getTextureView()`. Concrete texture
 views and framebuffers are cached for repeated encodings and rebuilt when an imported texture is
-replaced.
+replaced. Non-default views over frame-scoped imports are refreshed for each frame ID.
 
 ## Hazards and scheduling
 

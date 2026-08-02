@@ -15,6 +15,7 @@ import type {RenderBundle} from './render-bundle';
 import type {RenderPipeline} from './render-pipeline';
 import type {TransformFeedback} from './transform-feedback';
 import type {VertexArray} from './vertex-array';
+import type {TextureView} from './texture-view';
 
 /** Draw arguments consumed by the active state on a {@link RenderPass}. */
 export type RenderPassDrawOptions = {
@@ -56,6 +57,8 @@ export type RenderPassBindingOptions = {
 export type RenderPassProps = ResourceProps & {
   /** Framebuffer specifies which textures to render into. Default gets framebuffer from canvas context. */
   framebuffer?: Framebuffer | null;
+  /** Optional single-sample targets receiving resolved multisampled color attachments. WebGPU only. */
+  resolveTargets?: (TextureView | null)[];
   /** Control viewport, scissor rect, blend constant and stencil ref */
   parameters?: RenderPassParameters;
 
@@ -174,6 +177,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   static override defaultProps: Required<RenderPassProps> = {
     ...Resource.defaultProps,
     framebuffer: null,
+    resolveTargets: undefined!,
     parameters: undefined!,
     clearColor: RenderPass.defaultClearColor,
     clearColors: undefined!,

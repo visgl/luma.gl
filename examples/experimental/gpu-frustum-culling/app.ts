@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, type RenderBundle} from '@luma.gl/core';
+import {Buffer, Texture, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Computation, CubeGeometry, Model} from '@luma.gl/engine';
 import {
@@ -47,6 +47,8 @@ type CullingGraphResources = {
   compiled: CompiledGPUCommandGraph<CullingGraphParameters>;
   pickingCompiled: CompiledGPUCommandGraph<PickingGraphParameters>;
   pickingReadbackId: string;
+  frameColorId: string;
+  frameDepthId: string;
   pickingWidth: number;
   pickingHeight: number;
   drawCommands: DrawCommandBuffer;
@@ -218,7 +220,22 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     const viewports = getViewports(width, height, this.comparisonView);
     this.writeUniforms(viewports);
     const encodeStart = performance.now();
-    resources.compiled.encode(device.commandEncoder, {parameters: viewports});
+    const frame = device
+      .getDefaultCanvasContext()
+      .getCurrentFramebuffer({depthStencilFormat: 'depth24plus'});
+    resources.compiled.encode(device.commandEncoder, {
+      parameters: viewports,
+      frameTextures: {
+        [resources.frameColorId]: {
+          texture: frame.colorAttachments[0].texture,
+          frameId: this.frameIndex
+        },
+        [resources.frameDepthId]: {
+          texture: frame.depthStencilAttachment!.texture,
+          frameId: this.frameIndex
+        }
+      }
+    });
     if (_mousePosition && this.frameIndex % 4 === 0) {
       const readbackTicket = this.pickingReadbackRing.tryAcquire();
       if (readbackTicket) {
@@ -294,17 +311,19 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       drawCommands,
       this.overviewUniformBuffer
     );
-    const compiled = this.createGraph(
+    const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
+    const pickingWidth = Math.max(1, deviceSize[0]);
+    const pickingHeight = Math.max(1, deviceSize[1]);
+    const renderGraph = this.createGraph(
       capacity,
+      pickingWidth,
+      pickingHeight,
       instances,
       visibleIds,
       drawCommands,
       perspectiveRenderBundle,
       overviewRenderBundle
     );
-    const deviceSize = this.device.getDefaultCanvasContext().getDevicePixelSize();
-    const pickingWidth = Math.max(1, deviceSize[0]);
-    const pickingHeight = Math.max(1, deviceSize[1]);
     const picking = this.createPickingGraph(
       pickingWidth,
       pickingHeight,
@@ -313,7 +332,9 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       drawCommands
     );
     this.resources = {
-      compiled,
+      compiled: renderGraph.compiled,
+      frameColorId: renderGraph.frameColorId,
+      frameDepthId: renderGraph.frameDepthId,
       pickingCompiled: picking.compiled,
       pickingReadbackId: picking.readbackId,
       pickingWidth,
@@ -332,12 +353,18 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
 
   private createGraph(
     capacity: number,
+    width: number,
+    height: number,
     instancesBuffer: Buffer,
     visibleIdsBuffer: Buffer,
     drawCommands: DrawCommandBuffer,
     perspectiveRenderBundle: RenderBundle,
     overviewRenderBundle: RenderBundle
-  ): CompiledGPUCommandGraph<CullingGraphParameters> {
+  ): {
+    compiled: CompiledGPUCommandGraph<CullingGraphParameters>;
+    frameColorId: string;
+    frameDepthId: string;
+  } {
     const graph = new GPUCommandGraph<CullingGraphParameters>(this.device, {
       id: 'gpu-frustum-culling-command-graph'
     });
@@ -369,6 +396,20 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       },
       drawCommands.buffer
     );
+    const frameColor = graph.importFrameTexture({
+      id: 'frame-color',
+      format: this.device.preferredColorFormat,
+      width,
+      height,
+      usage: Texture.RENDER
+    });
+    const frameDepth = graph.importFrameTexture({
+      id: 'frame-depth',
+      format: 'depth24plus',
+      width,
+      height,
+      usage: Texture.RENDER
+    });
     const flagsBuffer = graph.createTransientBuffer({
       id: 'visibility-flags',
       byteLength: capacity * UINT32_BYTE_LENGTH,
@@ -427,6 +468,10 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
 
     graph.addRenderPass({
       id: 'render-visible-instances',
+      attachments: {
+        colorAttachments: [graph.createTextureView(frameColor)],
+        depthStencilAttachment: graph.createTextureView(frameDepth)
+      },
       resources: [
         {buffer: instances, usage: 'storage-read'},
         {buffer: visibleIds, usage: 'storage-read'},
@@ -452,7 +497,11 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       })
     });
 
-    return graph.compile();
+    return {
+      compiled: graph.compile(),
+      frameColorId: frameColor.id,
+      frameDepthId: frameDepth.id
+    };
   }
 
   private createPickingGraph(

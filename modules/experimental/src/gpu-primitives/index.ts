@@ -33,6 +33,7 @@ export type {
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,
+  GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
   GraphRenderPassAttachments,

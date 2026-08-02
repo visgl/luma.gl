@@ -56,6 +56,7 @@ import type {
   GPUCommandGraphTimingReport,
   GraphBufferDescriptor,
   GraphBufferUsage,
+  GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
   GraphRenderPassAttachments,
@@ -94,6 +95,7 @@ export type {
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,
+  GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
   GraphRenderPassAttachments,
@@ -110,6 +112,7 @@ type CachedTextureView = {
   logicalView: GraphTextureView;
   texture: Texture;
   view: TextureView;
+  frameId?: number;
 };
 
 type CachedFramebuffer = {
@@ -358,6 +361,22 @@ export class GPUCommandGraph<Parameters = void> {
   }
 
   /**
+   * Declares a caller-acquired texture that is valid for exactly one numbered encoding frame.
+   *
+   * Frame textures have no default and must be supplied through `encode({frameTextures})` with a
+   * strictly increasing frame ID. The graph borrows but never acquires, presents, or destroys them.
+   */
+  importFrameTexture<Format extends TextureFormat>(
+    descriptor: GraphTextureDescriptor<Format>
+  ): GraphTextureHandle<Format> {
+    this.assertMutable();
+    const normalizedDescriptor = normalizeGraphTextureDescriptor(descriptor, this.device);
+    return this.addTexture(
+      new GraphTextureHandle(this, normalizedDescriptor, false, undefined, true)
+    );
+  }
+
+  /**
    * Declares one graph-owned fixed-size transient texture.
    *
    * Descriptor-compatible textures with disjoint compiled lifetimes may share an allocation.
@@ -410,6 +429,9 @@ export class GPUCommandGraph<Parameters = void> {
             texture,
             usage: 'render-attachment' as const
           })),
+          ...(node.attachments.resolveTargets ?? [])
+            .filter((texture): texture is GraphTextureView => texture !== null)
+            .map(texture => ({texture, usage: 'render-attachment' as const})),
           ...(node.attachments.depthStencilAttachment
             ? [
                 {
@@ -575,6 +597,51 @@ export class GPUCommandGraph<Parameters = void> {
         );
       }
     }
+    this.validateResolveTargets(id, attachments);
+  }
+
+  private validateResolveTargets(id: string, attachments: GraphRenderPassAttachments): void {
+    const resolveTargets = attachments.resolveTargets;
+    if (!resolveTargets) {
+      return;
+    }
+    if (this.device.type !== 'webgpu') {
+      throw new Error(`GPUCommandGraph render node "${id}" resolve targets require WebGPU`);
+    }
+    if (resolveTargets.length !== attachments.colorAttachments.length) {
+      throw new Error(
+        `GPUCommandGraph render node "${id}" requires one resolve entry per color attachment`
+      );
+    }
+    for (let index = 0; index < resolveTargets.length; index++) {
+      const target = resolveTargets[index];
+      if (!target) {
+        continue;
+      }
+      const source = attachments.colorAttachments[index];
+      this.assertTexture(target.texture);
+      if (
+        source.texture.samples <= 1 ||
+        target.texture.samples !== 1 ||
+        source.format !== target.format ||
+        source.width !== target.width ||
+        source.height !== target.height
+      ) {
+        throw new Error(
+          `GPUCommandGraph render node "${id}" resolve target ${index} must match a multisampled source and be single-sampled`
+        );
+      }
+      if (
+        target.dimension !== '2d' ||
+        target.aspect !== 'all' ||
+        target.mipLevelCount !== 1 ||
+        target.arrayLayerCount !== 1
+      ) {
+        throw new Error(
+          `GPUCommandGraph render node "${id}" resolve targets must be single-mip, single-layer 2d color views`
+        );
+      }
+    }
   }
 }
 
@@ -603,6 +670,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private readonly textureTransientAllocations: TextureTransientAllocation[];
   private readonly cachedTextureViews: CachedTextureView[] = [];
   private readonly cachedFramebuffers: CachedFramebuffer[] = [];
+  private readonly lastFrameIds = new Map<GraphTextureHandle, number>();
   private destroyed = false;
 
   /** @internal */
@@ -643,7 +711,10 @@ export class CompiledGPUCommandGraph<Parameters = void> {
 
     const encodingStartTime = getTimestampMilliseconds();
     const importedBuffers = this.resolveImportedBuffers(options.buffers ?? {});
-    const importedTextures = this.resolveImportedTextures(options.textures ?? {});
+    const importedTextures = this.resolveImportedTextures(
+      options.textures ?? {},
+      options.frameTextures ?? {}
+    );
     const getBuffer = (bufferOrView: GraphBufferHandle | GraphDataView): Buffer => {
       const handle = getBufferHandle(bufferOrView);
       const buffer = handle.transient
@@ -669,8 +740,26 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       if (textureOrView instanceof GraphTextureHandle || isDefaultGraphTextureView(textureOrView)) {
         return texture.view;
       }
+      if (textureOrView.texture.frameScoped) {
+        const frameId = this.lastFrameIds.get(textureOrView.texture);
+        for (let index = this.cachedTextureViews.length - 1; index >= 0; index--) {
+          const entry = this.cachedTextureViews[index];
+          if (
+            entry.logicalView === textureOrView &&
+            entry.texture === texture &&
+            entry.frameId !== frameId
+          ) {
+            entry.view.destroy();
+            this.cachedTextureViews.splice(index, 1);
+          }
+        }
+      }
       const cached = this.cachedTextureViews.find(
-        entry => entry.logicalView === textureOrView && entry.texture === texture
+        entry =>
+          entry.logicalView === textureOrView &&
+          entry.texture === texture &&
+          (!textureOrView.texture.frameScoped ||
+            entry.frameId === this.lastFrameIds.get(textureOrView.texture))
       );
       if (cached) {
         return cached.view;
@@ -684,7 +773,14 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         baseArrayLayer: textureOrView.baseArrayLayer,
         arrayLayerCount: textureOrView.arrayLayerCount
       });
-      this.cachedTextureViews.push({logicalView: textureOrView, texture, view});
+      this.cachedTextureViews.push({
+        logicalView: textureOrView,
+        texture,
+        view,
+        ...(textureOrView.texture.frameScoped
+          ? {frameId: this.lastFrameIds.get(textureOrView.texture)}
+          : {})
+      });
       return view;
     };
 
@@ -726,12 +822,21 @@ export class CompiledGPUCommandGraph<Parameters = void> {
               `GPUCommandGraph render node "${node.id}" cannot supply framebuffer with graph attachments`
             );
           }
+          if (node.attachments?.resolveTargets && renderPassProps.resolveTargets !== undefined) {
+            throw new Error(
+              `GPUCommandGraph render node "${node.id}" cannot supply resolveTargets with graph attachments`
+            );
+          }
           const framebuffer = node.attachments
             ? this.getFramebuffer(node.id, node.attachments, getTextureView)
             : undefined;
+          const resolveTargets = node.attachments?.resolveTargets?.map(target =>
+            target ? getTextureView(target) : null
+          );
           const renderPass = commandEncoder.beginRenderPass({
             ...renderPassProps,
-            ...(framebuffer ? {framebuffer} : {})
+            ...(framebuffer ? {framebuffer} : {}),
+            ...(resolveTargets ? {resolveTargets} : {})
           });
           timestamp = getPassTimestamp(renderPass);
           renderPass.pushDebugGroup(node.id);
@@ -815,11 +920,37 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   }
 
   private resolveImportedTextures(
-    overrides: Record<string, GraphImportedTexture>
+    overrides: Record<string, GraphImportedTexture>,
+    frameBindings: Record<string, GraphFrameTextureBinding>
   ): Map<GraphTextureHandle, Texture> {
     const resolved = new Map<GraphTextureHandle, Texture>();
+    const nextFrameIds = new Map<GraphTextureHandle, number>();
+    let encodingFrameId: number | undefined;
     for (const [id, handle] of this.textures) {
       if (handle.transient) {
+        continue;
+      }
+      if (handle.frameScoped) {
+        const binding = frameBindings[id];
+        if (!binding) {
+          throw new Error(`GPUCommandGraph frame texture "${id}" is required`);
+        }
+        if (!Number.isSafeInteger(binding.frameId) || binding.frameId < 0) {
+          throw new Error(`GPUCommandGraph frame texture "${id}" requires a valid frameId`);
+        }
+        if (encodingFrameId !== undefined && binding.frameId !== encodingFrameId) {
+          throw new Error('GPUCommandGraph frame textures must share one frameId per encoding');
+        }
+        encodingFrameId = binding.frameId;
+        const lastFrameId = this.lastFrameIds.get(handle);
+        if (lastFrameId !== undefined && binding.frameId <= lastFrameId) {
+          throw new Error(
+            `GPUCommandGraph frame texture "${id}" frameId ${binding.frameId} is stale; expected greater than ${lastFrameId}`
+          );
+        }
+        validateImportedTexture(binding.texture, handle, this.device);
+        resolved.set(handle, getCoreTexture(binding.texture));
+        nextFrameIds.set(handle, binding.frameId);
         continue;
       }
       const importedTexture = overrides[id] ?? handle.defaultTexture;
@@ -831,9 +962,18 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     }
     for (const id of Object.keys(overrides)) {
       const handle = this.textures.get(id);
-      if (!handle || handle.transient) {
+      if (!handle || handle.transient || handle.frameScoped) {
         throw new Error(`GPUCommandGraph has no imported texture named "${id}"`);
       }
+    }
+    for (const id of Object.keys(frameBindings)) {
+      const handle = this.textures.get(id);
+      if (!handle?.frameScoped) {
+        throw new Error(`GPUCommandGraph has no frame texture named "${id}"`);
+      }
+    }
+    for (const [handle, frameId] of nextFrameIds) {
+      this.lastFrameIds.set(handle, frameId);
     }
     return resolved;
   }

@@ -146,6 +146,202 @@ test('GPUCommandGraph validates texture descriptors, views, and imports', async 
   t.end();
 });
 
+test('GPUCommandGraph resolves multisampled color attachments', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const resolvedTexture = device.createTexture({
+    id: 'resolved-color',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'multisample-resolve'});
+  const multisampled = graph.createTransientTexture({
+    id: 'multisampled-color',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    samples: 4,
+    usage: Texture.RENDER
+  });
+  const resolved = graph.importTexture(
+    {
+      id: 'resolved-color',
+      format: 'rgba8unorm',
+      width: 4,
+      height: 4,
+      usage: Texture.RENDER | Texture.COPY_SRC
+    },
+    resolvedTexture
+  );
+  graph.addRenderPass({
+    id: 'resolve-red',
+    attachments: {
+      colorAttachments: [graph.createTextureView(multisampled)],
+      resolveTargets: [graph.createTextureView(resolved)]
+    },
+    compile: () => ({
+      getRenderPassProps: () => ({clearColor: [1, 0, 0, 1]}),
+      encode: () => {}
+    })
+  });
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'multisample-resolve'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const pixels = await readPixels(resolvedTexture, 4, 4);
+  t.ok(
+    pixels[0] > 240 && pixels[1] < 10 && pixels[2] < 10,
+    'multisampled clear resolves into the declared single-sample target'
+  );
+  compiled.destroy();
+  t.notOk(resolvedTexture.destroyed, 'resolve target remains caller-owned');
+  resolvedTexture.destroy();
+
+  const invalidGraph = new GPUCommandGraph(device, {id: 'invalid-resolve'});
+  const singleSample = invalidGraph.createTransientTexture({
+    id: 'single-source',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  const invalidTarget = invalidGraph.createTransientTexture({
+    id: 'single-target',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  t.throws(
+    () =>
+      invalidGraph.addRenderPass({
+        id: 'invalid-resolve-pass',
+        attachments: {
+          colorAttachments: [invalidGraph.createTextureView(singleSample)],
+          resolveTargets: [invalidGraph.createTextureView(invalidTarget)]
+        },
+        compile: () => ({encode: () => {}})
+      }),
+    /match a multisampled source and be single-sampled/,
+    'single-sample sources cannot declare resolve targets'
+  );
+  t.end();
+});
+
+test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const firstTexture = device.createTexture({
+    id: 'frame-color-0',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  const secondTexture = device.createTexture({
+    id: 'frame-color-1',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  const auxiliaryTexture = device.createTexture({
+    id: 'frame-auxiliary',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  const graph = new GPUCommandGraph(device, {id: 'frame-texture'});
+  const frameColor = graph.importFrameTexture({
+    id: 'frame-color',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  graph.importFrameTexture({
+    id: 'frame-auxiliary',
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4,
+    usage: Texture.RENDER
+  });
+  graph.addRenderPass({
+    id: 'render-frame',
+    attachments: {colorAttachments: [graph.createTextureView(frameColor)]},
+    compile: () => ({encode: () => {}})
+  });
+  const compiled = graph.compile();
+  t.throws(
+    () =>
+      compiled.encode(device.createCommandEncoder({id: 'missing-frame'}), {
+        parameters: undefined
+      }),
+    /frame texture "frame-color" is required/,
+    'frame-scoped imports have no persistent default'
+  );
+  const firstEncoder = device.createCommandEncoder({id: 'frame-0'});
+  compiled.encode(firstEncoder, {
+    parameters: undefined,
+    frameTextures: {
+      ['frame-color']: {texture: firstTexture, frameId: 0},
+      ['frame-auxiliary']: {texture: auxiliaryTexture, frameId: 0}
+    }
+  });
+  device.submit(firstEncoder.finish());
+  t.throws(
+    () =>
+      compiled.encode(device.createCommandEncoder({id: 'stale-frame'}), {
+        parameters: undefined,
+        frameTextures: {
+          ['frame-color']: {texture: firstTexture, frameId: 0},
+          ['frame-auxiliary']: {texture: auxiliaryTexture, frameId: 0}
+        }
+      }),
+    /frameId 0 is stale/,
+    'a consumed frame ID cannot be reused'
+  );
+  t.throws(
+    () =>
+      compiled.encode(device.createCommandEncoder({id: 'mixed-frame'}), {
+        parameters: undefined,
+        frameTextures: {
+          ['frame-color']: {texture: secondTexture, frameId: 1},
+          ['frame-auxiliary']: {texture: auxiliaryTexture, frameId: 2}
+        }
+      }),
+    /must share one frameId/,
+    'all frame-scoped imports in one encoding share a coherent frame ID'
+  );
+  const secondEncoder = device.createCommandEncoder({id: 'frame-1'});
+  compiled.encode(secondEncoder, {
+    parameters: undefined,
+    frameTextures: {
+      ['frame-color']: {texture: secondTexture, frameId: 1},
+      ['frame-auxiliary']: {texture: auxiliaryTexture, frameId: 1}
+    }
+  });
+  device.submit(secondEncoder.finish());
+  compiled.destroy();
+  t.notOk(firstTexture.destroyed, 'first frame texture remains caller-owned');
+  t.notOk(secondTexture.destroyed, 'replacement frame texture remains caller-owned');
+  firstTexture.destroy();
+  secondTexture.destroy();
+  auxiliaryTexture.destroy();
+  t.end();
+});
+
 test('GPUCommandGraph tracks texture subresources and reuses compatible transients', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
