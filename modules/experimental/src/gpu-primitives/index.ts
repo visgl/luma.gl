@@ -124,6 +124,9 @@ export type {
   GPUPointSpatialFilterProps
 } from './gpu-point-spatial-filter';
 
+export {GPUBVH} from './gpu-bvh';
+export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats} from './gpu-bvh';
+
 export {GPUGridAggregation} from './gpu-grid-aggregation';
 export type {
   GPUGridAggregationOperation,
