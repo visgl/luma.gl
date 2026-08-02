@@ -109,6 +109,40 @@ compiled graph owns only node-created resources, physical transients, and cached
 views/framebuffers. Calling `destroy()` releases those owned resources and never destroys an
 import.
 
+## Extension libraries
+
+Small algorithm libraries can implement the structural `GPUCommandGraphContributor` interface:
+
+```ts
+class GPUAlgorithm implements GPUCommandGraphContributor {
+  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+    const output = createTransientView(
+      graph,
+      'algorithm-output',
+      'uint32',
+      outputCapacity,
+      Buffer.STORAGE | Buffer.INDIRECT
+    );
+    // Declare compute, render, or copy nodes that use output.
+  }
+}
+
+new GPUAlgorithm().addToGraph(graph);
+```
+
+A contributor only declares resources and nodes. It does not compile the graph, encode commands,
+submit work, or read results back. This keeps ownership and scheduling with the application and
+allows independently authored contributors to compose without a runtime registry.
+
+The exported `createTransientView()` helper creates packed, graph-owned typed storage. Its optional
+usage argument replaces the default `Buffer.STORAGE` value and must retain `Buffer.STORAGE` while
+adding flags such as `Buffer.INDIRECT`. Lengths must be non-negative safe integers.
+
+`getViewBinding()` returns the 256-byte-aligned buffer range containing a logical
+`GraphDataView`. `getViewElementOffset()` returns the corresponding offset in 32-bit shader
+elements. Bindable views must occupy at least one complete row inside the logical buffer and their
+byte offsets must be divisible by four.
+
 ## Buffer APIs
 
 ### `importBuffer(descriptor, defaultBuffer?)`
