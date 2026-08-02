@@ -50,6 +50,19 @@ export function getTraceCapacityOptions(
   return TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumSpanCapacity);
 }
 
+/** Returns useful dependency limits that fit in one dependency storage-buffer binding. */
+export function getTraceDependencyCapacityOptions(
+  maxStorageBufferBindingSize: number,
+  maxBufferSize: number
+): number[] {
+  const dependencyRecordByteLength =
+    TRACE_DEPENDENCY_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
+  const maximumDependencyCapacity = Math.floor(
+    Math.min(maxStorageBufferBindingSize, maxBufferSize) / dependencyRecordByteLength
+  );
+  return TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumDependencyCapacity);
+}
+
 /** Matches the GPU's adaptive exact-span versus density-rendering decision. */
 export function isTraceDensityMode(
   timeMin: number,
@@ -124,9 +137,19 @@ export type TraceDatasetData = {
  * Source identity is the canonical span row index. Groups borrow contiguous views of that same
  * source allocation rather than creating independently numbered records.
  */
-export function makeTraceDataset(totalSpanCount: number): TraceDatasetData {
+export function makeTraceDataset(
+  totalSpanCount: number,
+  maximumDependencyCount = 0xffffffff
+): TraceDatasetData {
   if (!Number.isSafeInteger(totalSpanCount) || totalSpanCount < 0 || totalSpanCount > 0xffffffff) {
     throw new RangeError('Trace span count must be a nonnegative uint32');
+  }
+  if (
+    !Number.isSafeInteger(maximumDependencyCount) ||
+    maximumDependencyCount < 0 ||
+    maximumDependencyCount > 0xffffffff
+  ) {
+    throw new RangeError('Trace dependency count must be a nonnegative uint32');
   }
 
   const spans = new Uint32Array(totalSpanCount * TRACE_SPAN_RECORD_WORD_LENGTH);
@@ -161,7 +184,7 @@ export function makeTraceDataset(totalSpanCount: number): TraceDatasetData {
     remainingSpanCount -= count;
   }
 
-  const topology = makeTraceDependencies(spans, totalSpanCount);
+  const topology = makeTraceDependencies(spans, totalSpanCount, maximumDependencyCount);
   const dependencyCount = topology.dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
   const {spanBatches, spanBatchIndex} = makeTraceSpanBatches(spans, groups);
   return {
@@ -293,9 +316,14 @@ function fillTraceGroup(params: {
 /** Generates sparse same-thread parent chains and cross-process dependency edges. */
 function makeTraceDependencies(
   spans: Uint32Array,
-  spanCount: number
+  spanCount: number,
+  requestedMaximumDependencyCount: number
 ): {dependencies: Uint32Array; parentSpans: Uint32Array} {
-  const maximumDependencyCount = Math.ceil(spanCount / 5) + Math.ceil(spanCount / 29) + 1;
+  const generatedMaximumDependencyCount = Math.ceil(spanCount / 5) + Math.ceil(spanCount / 29) + 1;
+  const maximumDependencyCount = Math.min(
+    requestedMaximumDependencyCount,
+    generatedMaximumDependencyCount
+  );
   const data = new Uint32Array(maximumDependencyCount * TRACE_DEPENDENCY_RECORD_WORD_LENGTH);
   const spanFloats = new Float32Array(spans.buffer, spans.byteOffset, spans.length);
   const previousSpanByThread = new Uint32Array(TRACE_THREAD_COUNT);
@@ -308,7 +336,11 @@ function makeTraceDependencies(
     const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
     const threadIndex = spans[wordOffset + 5];
     const previousSpan = previousSpanByThread[threadIndex];
-    if (spanIndex % 5 === 0 && previousSpan !== TRACE_INVALID_SPAN_INDEX) {
+    if (
+      dependencyCount < maximumDependencyCount &&
+      spanIndex % 5 === 0 &&
+      previousSpan !== TRACE_INVALID_SPAN_INDEX
+    ) {
       writeTraceDependency(
         data,
         dependencyCount++,
@@ -319,7 +351,7 @@ function makeTraceDependencies(
       parentSpans[spanIndex] = previousSpan;
       annotateTraceParentTopology(spans, spanFloats, previousSpan, spanIndex);
     }
-    if (spanIndex > 7 && spanIndex % 29 === 0) {
+    if (dependencyCount < maximumDependencyCount && spanIndex > 7 && spanIndex % 29 === 0) {
       const processIndex = spans[wordOffset + 4];
       let sourceIndex = spanIndex - 7;
       while (
