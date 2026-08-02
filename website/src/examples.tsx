@@ -63,6 +63,7 @@ import AdvancedEffectsApp from '../../examples/experimental/advanced-effects/app
 import DeferredRenderingApp from '../../examples/experimental/deferred-rendering/app';
 import FluidFoundryApp from '../../examples/experimental/fluid-foundry/app';
 import SpectralCausticsApp from '../../examples/experimental/spectral-caustics/app';
+import VolumetricFireForgeApp from '../../examples/experimental/volumetric-fire-forge/app';
 import ShadowMapApp from '../../examples/experimental/shadow-map/app';
 import ABufferApp from '../../examples/experimental/a-buffer/app';
 
@@ -77,6 +78,7 @@ import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
+import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
@@ -582,6 +584,20 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
   />
 );
 
+export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="tempest-ocean"
+    title="Tempest Ocean: Spectral Stormfront"
+    subtitle="GPUFFT2D displacement · HDR whitecaps"
+    directory="showcase"
+    devices={['webgpu']}
+    template={TempestOceanApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
 export const ArrowInstancingExample: React.FC = props => (
   <LumaExample
     id="arrow-instancing"
@@ -1024,6 +1040,20 @@ export const SpectralCausticsExample: React.FC<WebsiteExampleProps> = props => (
     title="Spectral Caustics: Prism Cathedral"
     directory="experimental"
     template={SpectralCausticsApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="volumetric-fire-forge"
+    title="Volumetric Fire Forge"
+    subtitle="Reactive HDR fire on the GPU"
+    directory="experimental"
+    template={VolumetricFireForgeApp}
     config={exampleConfig}
     devices={['webgpu']}
     canvasContextProfile="high-dynamic-range"

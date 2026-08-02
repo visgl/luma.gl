@@ -33,6 +33,12 @@
     "label": "WebGPU",
     "items": [
       "showcase/lightstorm-megacity",
+      "experimental/volumetric-fire-forge",
+      {
+        "type": "doc",
+        "id": "showcase/tempest-ocean",
+        "label": "Tempest Ocean: Spectral Stormfront"
+      },
       {
         "type": "doc",
         "id": "experimental/spectral-caustics",
