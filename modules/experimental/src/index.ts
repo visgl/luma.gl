@@ -194,3 +194,5 @@ export {OrbitControls} from './controls/orbit-controls';
 export * from './webxr/index';
 
 export * from './gpu-primitives/index';
+
+export * from './simulation/index';

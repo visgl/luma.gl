@@ -72,6 +72,10 @@ ordered compute work into a caller-owned command encoder, exposes the current pa
 buffer for application rendering, and provides deterministic particle seeding and reset without
 hidden submission or readback.
 
+[`SpectralOceanSimulation`](/docs/api-reference/experimental/spectral-ocean-simulation) evolves a
+deterministic Phillips spectrum, composes three inverse `GPUFFT2D` transforms, and exposes
+render-ready displacement and normal/foam buffers without taking command-submission ownership.
+
 ## Order-independent Transparency
 
 OIT keeps scene-level geometry capture in its renderers and exposes fullscreen resolve as standard

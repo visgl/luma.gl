@@ -20,3 +20,4 @@ import './gpu-primitives/gpu-trace-manipulation.spec';
 import './gpu-primitives/gpu-sort.spec';
 import './gpu-primitives/gpu-data-analysis.spec';
 import './gpu-primitives/gpu-fft2d.spec';
+import './simulation/spectral-ocean-simulation.spec';

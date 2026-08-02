@@ -10,6 +10,7 @@ export type ExperimentalDocsTabId =
   | 'deferred-lighting'
   | 'clustered-lighting'
   | 'mls-mpm-fluid-simulation'
+  | 'spectral-ocean-simulation'
   | 'shadow-map-renderer'
   | 'spectral-caustics-renderer'
   | 'glass-material'
@@ -34,6 +35,11 @@ const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
     id: 'mls-mpm-fluid-simulation',
     label: 'MLS-MPM Fluid',
     href: '/docs/api-reference/experimental/mls-mpm-fluid-simulation'
+  },
+  {
+    id: 'spectral-ocean-simulation',
+    label: 'Spectral Ocean',
+    href: '/docs/api-reference/experimental/spectral-ocean-simulation'
   },
   {
     id: 'shadow-map-renderer',
