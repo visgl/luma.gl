@@ -1020,8 +1020,8 @@ dependency order, not a schedule commitment. Tranches whose dependencies do not 
 developed independently.
 
 Phase 4 is implemented through Tranche 4.4. Compact `GPUGridIndex` construction, conservative
-queries, and exact 2D/3D point refinement feeding visibility are implemented; incremental
-maintenance and measured cost comparisons remain separate active boundaries.
+queries, exact 2D/3D point refinement, and the first flat `GPUBVH` storage/refit contract are
+implemented; optimized topology and measured cost comparisons remain active boundaries.
 
 | Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
 | --- | --- | --- | :---: | :---: |
@@ -1036,8 +1036,10 @@ maintenance and measured cost comparisons remain separate active boundaries.
 | 5.2a — `GPUGridIndex` query | Point, bounds, and radius cell candidates with bounded IDs, masks, count, and overflow | Implemented | High | Medium |
 | 5.2b — Exact query consumers | 2D and 3D candidate refinement feeding the same visibility contract as an unindexed scan | Implemented | High | Medium |
 | 5.2c — Query cost crossover | Representative scan/grid comparisons with build amortization and selectivity guidance | Tranche 5.2b plus GPU timestamps | High | Medium |
-| 5.3 — `GPUBVH` build/refit | Flat BVH storage with explicit rebuild and refit policies | Tranche 5.2 | High | Large |
-| 5.4 — `GPUBVH` query and cost model | Visibility and picking queries with scan/grid/BVH comparison guidance | Tranche 5.3 | High | Medium |
+| 5.3a — `GPUBVH` storage and refit | Complete-binary flat nodes, stable leaf slots, explicit capacity, and bottom-up refit | Implemented | High | Medium |
+| 5.3b — Spatial topology rebuild | Measured Morton or alternative topology construction without changing public storage | Tranche 5.3a plus representative query evidence | High | Large |
+| 5.4a — `GPUBVH` query | Bounds, point, and ray-like candidates feeding the established refinement contract | Tranche 5.3a | High | Medium |
+| 5.4b — Spatial cost model | Scan/grid/BVH comparison across rebuilds, refits, selectivity, update rate, and memory | Tranches 5.2c, 5.3b, and 5.4a | High | Medium |
 | 6.1 — Scene storage and updates | Flat stable-ID draw records, bounded update ranges, and explicit CPU/table adapters | Phase 2 and Tranche 5.2 | High | Large |
 | 6.2 — GPU draw generation | Visibility and spatial results writing grouped indirect-command slots without CPU draw selection | Tranche 6.1 | High | Large |
 | 6.3 — Cross-domain scene consumers | One scene-graph and one table-oriented consumer sharing storage, picking, and draw contracts | Tranche 6.2 plus Phases 4–5 | High | Large |
@@ -1346,12 +1348,27 @@ and reuse counts, then document where index construction becomes worthwhile.
 
 #### Tranche 5.3 — `GPUBVH` build and refit
 
+**Status:** Flat complete-binary storage and deterministic GPU refit are implemented; spatial
+topology rebuild remains planned.
+
 Define flat node and leaf storage, stable leaf identity, bounds encoding, and explicit rebuild and
 refit policies. Reuse the grid index's ownership and measurement conventions where possible while
 allowing BVH-specific topology.
 
-**Exit evidence:** CPU-oracle tests cover degenerate, overlapping, and changing bounds; refit and
-rebuild produce equivalent query results; memory and construction costs are separately reported.
+`GPUBVH` reserves a power-of-two leaf capacity and publishes `2 * leafCapacity - 1` row-major node
+bounds and child pairs plus stable leaf IDs. Source order defines leaf slots. Each encoding reloads
+the bounded source prefix and reduces parent bounds in explicit bottom-up level passes, so changing
+bounds refits without graph recompilation or identity changes. Count, overflow, topology, update
+policy, level count, and caller-owned output bytes are explicit.
+
+The complete source-order topology is a correctness and refit baseline, not a promised spatial
+quality heuristic. Tiled, Morton-ordered, or producer-sorted inputs may already have locality;
+arbitrary order may create overlapping parents and poor traversal. Spatial sorting and topology
+rebuild therefore remain a separate measured tranche rather than a hidden side effect of refit.
+
+**Remaining exit evidence:** CPU-oracle query tests cover degenerate and overlapping bounds;
+spatial rebuild and refit produce equivalent query results; topology quality, memory, construction,
+and refit costs are reported separately.
 
 #### Tranche 5.4 — `GPUBVH` query and cost model
 
