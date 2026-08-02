@@ -21,6 +21,9 @@ export type GPUPrimitivesDocsTabId =
   | 'grid-index-query'
   | 'point-spatial-filter'
   | 'bvh'
+  | 'bvh-query'
+  | 'spatial-benchmark'
+  | 'scene'
   | 'group-aggregation'
   | 'index-picking'
   | 'readback-ring'
@@ -131,6 +134,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'spatial-benchmark',
     label: 'Spatial Benchmark',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark'
+  },
+  {
+    id: 'scene',
+    label: 'Scene',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-scene'
   },
   {
     id: 'group-aggregation',

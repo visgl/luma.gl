@@ -1009,8 +1009,8 @@ schedule commitment.
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Core implemented; topology extensions deferred | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts | Implemented | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` and `GPUBVH` with explicit build, update, query, correctness, and cost-comparison contracts | V1 implemented; conditional extensions deferred | High | Large |
-| 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
-| 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
+| 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Record contract implemented; updates and draw generation planned | High | Large |
+| 7 — API graduation | Stable package contracts and a dependency-safe direct move out of experimental packages | Planned | High | Large |
 
 ### Spatial v1 milestones
 
@@ -1045,7 +1045,6 @@ consumers.
 | --- | --- | --- | --- | :---: | :---: |
 | 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
 | 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
-| 6.1a — Scene record contract | Flat stable-ID records for bounds, transforms, groups, geometry references, and command slots | Phase 2 and Tranche 5.4a | Layout and ownership tests; no CPU hierarchy or table type in the core | High | Medium |
 | 6.1b — Scene updates and compaction | Insert, remove, patch, and compact records with bounded work | Tranche 6.1a | Identity/reference preservation under holes, moves, overflow, and compaction | High | Large |
 | 6.1c — Scene adapters | Explicit CPU-scene and GPU-table adapters without a canonical source model | Tranche 6.1b and partitioned-topology decisions | Both adapters build the same records without casts or hidden packing | High | Medium |
 | 6.2a — Draw-command generation | Visibility and spatial results write capacity-bounded indirect slots | Tranches 6.1b and 5.4a | Parameter-only graph encodings update counts and commands without CPU draw selection | High | Large |
@@ -1053,14 +1052,14 @@ consumers.
 | 6.3a — Conventional scene consumer | A CPU scene graph uses shared storage, visibility, picking, and draw generation | Tranche 6.2b and Phase 4 | No consumer-specific fields or CPU draw filtering | High | Medium |
 | 6.3b — Table-oriented scene consumer | A preserved-batch table application uses the same runtime contracts | Tranches 6.1c, 6.2b, and 3.2 | Shares public primitives with 6.3a without repacking or adapter casts | High | Medium |
 | 7.1 — Dependency audit and API freeze | Freeze names, ownership, failures, capacities, submission, and package graph | Phase 6 exits and two consumers per graduation candidate | Acyclic dependency report and owner for every public resource boundary | High | Medium |
-| 7.2 — Scheduling-core extraction | Move table-independent graph scheduling to `@luma.gl/engine` with compatibility exports | Tranche 7.1 | Engine builds without tables, gpgpu, or Arrow; existing imports still pass | High | Large |
+| 7.2 — Scheduling-core extraction | Move table-independent graph scheduling directly to `@luma.gl/engine` | Tranche 7.1 | Engine builds without tables, gpgpu, or Arrow; all repository imports use the final owner | High | Large |
 | 7.3 — Adapter and algorithm migration | Keep table adapters in `@luma.gl/tables`; move optional workflows to `@luma.gl/gpgpu` | Tranche 7.2 | Package tests enforce dependency direction and examples use final owners | High | Large |
-| 7.4 — Compatibility and graduation | Stable docs, migration guide, release notes, and experimental-removal criteria | Tranche 7.3 | API reports and links pass; one documented compatibility window exists | High | Medium |
+| 7.4 — Documentation and graduation | Stable docs, release notes, and experimental-removal criteria | Tranche 7.3 | API reports and links pass; obsolete experimental exports are absent | High | Medium |
 
 ### Recommended execution order
 
-1. Start `GPUScene` storage (6.1a) after the bounds/point query contract is stable; draw generation
-   waits for update and grouping ownership to be explicit.
+1. Extend the implemented `GPUScene` record contract with mutation and compaction (6.1b); draw
+   generation waits for update and grouping ownership to be explicit.
 2. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the
    cross-chunk identity contract.
 3. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
@@ -1453,9 +1452,11 @@ Specify flat draw records, stable IDs, bounded update ranges, group membership, 
 and command-slot ownership. Provide explicit adapters for CPU scene graphs and GPU tables without
 making either representation canonical.
 
-Delivery is split into the table-independent record contract (6.1a), mutation and compaction
-semantics (6.1b), and explicit CPU-scene and GPU-table adapters (6.1c). This keeps adapter
-convenience from silently defining core storage or update ownership.
+The table-independent record contract (6.1a) is implemented as a fixed 128-byte interleaved record
+with explicit stable identity, references, bounds, transforms, state, capacity, ownership, and
+typed graph views. Delivery continues with mutation and compaction semantics (6.1b), then explicit
+CPU-scene and GPU-table adapters (6.1c). This keeps adapter convenience from silently defining core
+storage or update ownership.
 
 **Exit evidence:** Insert, update, removal, and compaction tests preserve identity and references;
 partial updates have measurable upload bounds; no scene hierarchy or table type enters the core
@@ -1501,13 +1502,15 @@ Move the table-independent scheduling core to `@luma.gl/engine`, keep generic GP
 graph adapters in `@luma.gl/tables`, and move optional algorithms and reusable workflows to
 `@luma.gl/gpgpu`. Keep Arrow conversion and readback adapters in `@luma.gl/arrow`. Audit
 `DrawCommandBuffer` and split its core from table integration if that is required to avoid an engine
-dependency on tables. Provide compatibility exports and migration notes for experimental users.
+dependency on tables. These APIs are new and experimental, so graduation is a direct move: update
+repository consumers atomically and do not retain compatibility exports, duplicate public paths,
+or a deprecation window.
 
 #### Tranche 7.1 — Dependency audit and API freeze
 
 Freeze ownership, naming, submission, lifetime, failure, capacity, and extension contracts only
 after every graduation candidate has at least two consumers. Produce the target package graph and
-identify compatibility shims before moving code.
+identify every repository import that must move atomically with the implementation.
 
 **Exit evidence:** The audit demonstrates an acyclic package graph, no Arrow leakage into tables or
 gpgpu, no table dependency in the engine core, and an owner for every public resource and command
@@ -1516,11 +1519,12 @@ submission boundary.
 #### Tranche 7.2 — Scheduling-core extraction
 
 Move the table-independent command-graph core to `@luma.gl/engine`, limited to buffers, textures,
-passes, generic graph views, scheduling, hazards, and allocation. Preserve experimental imports
-through compatibility exports during the migration window.
+passes, generic graph views, scheduling, hazards, and allocation. Remove its experimental exports
+in the same change so there is exactly one public owner.
 
-**Exit evidence:** Engine builds without tables, gpgpu, or Arrow; existing consumers pass unchanged
-through compatibility exports; direct engine consumers need no table-shaped adapter.
+**Exit evidence:** Engine builds without tables, gpgpu, or Arrow; all repository consumers import
+the final engine owner; direct engine consumers need no table-shaped adapter; no compatibility
+export preserves the former path.
 
 #### Tranche 7.3 — Adapter and algorithm migration
 
@@ -1529,21 +1533,23 @@ workflow builders to `@luma.gl/gpgpu`, and retain Arrow conversion, upload, and 
 `@luma.gl/arrow`. Split `DrawCommandBuffer` integration if necessary to preserve that direction.
 
 **Exit evidence:** Package-level tests and dependency checks enforce the intended arrows, public
-examples import from their final owners, and compatibility exports preserve one documented
-deprecation window.
+examples import from their final owners, and no algorithm or adapter remains exported by both its
+old and final packages.
 
-#### Tranche 7.4 — Compatibility and graduation
+#### Tranche 7.4 — Documentation and graduation
 
-Publish stable reference pages, migration guidance, release notes, and removal criteria for the
-experimental surface. Treat candidate names as provisional until this tranche exits.
+Publish stable reference pages, release notes, and removal criteria for the experimental surface.
+Treat candidate names as provisional until this tranche exits. Because this is a new experimental
+surface, describe final package ownership without promising compatibility aliases.
 
 **Exit evidence:** All examples and tests use graduated entry points, links and API reports pass,
-compatibility behavior is documented and tested, and future experimental removal has an explicit
-release boundary.
+the former experimental entry points are absent, and experimental removal has an explicit release
+boundary.
 
 **Exit criteria:** The final package graph has no dependency cycle or Arrow leakage into tables or
-gpgpu; compatibility exports cover one deprecation window; public API documentation names ownership
-and submission responsibilities; and all existing consumers build against the graduated packages.
+gpgpu; each API has one public package owner and no compatibility export; public API documentation
+names ownership and submission responsibilities; and all existing consumers build against the
+graduated packages.
 
 ## What is intentionally not automatic
 
@@ -1596,6 +1602,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh)
 - [`GPUBVHQuery`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query)
 - [GPU spatial query benchmark](/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark)
+- [`GPUScene`](/docs/api-reference/experimental/gpu-primitives/gpu-scene)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring)

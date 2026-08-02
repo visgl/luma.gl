@@ -146,6 +146,23 @@ export {GPUBVHQuery} from './gpu-bvh-query';
 export type {GPUBVHQueryKind, GPUBVHQueryProps, GPUBVHView} from './gpu-bvh-query';
 
 export {
+  GPUScene,
+  GPU_SCENE_ACTIVE_FLAG,
+  GPU_SCENE_INVALID_REFERENCE,
+  GPU_SCENE_RECORD_BYTE_LENGTH,
+  GPU_SCENE_STATE_BYTE_LENGTH
+} from './gpu-scene';
+export type {
+  GPUSceneBounds,
+  GPUSceneBuffers,
+  GPUScenePosition,
+  GPUSceneProps,
+  GPUSceneRecord,
+  GPUSceneStats,
+  GPUSceneView
+} from './gpu-scene';
+
+export {
   runGPUSpatialQueryBenchmark,
   summarizeGPUSpatialBenchmarkSamples
 } from './gpu-spatial-query-benchmark';
