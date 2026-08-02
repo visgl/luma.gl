@@ -95,6 +95,39 @@ test('GPUPointSpatialFilter composes 3D bounds candidates with selection visibil
   t.end();
 });
 
+test('GPUPointSpatialFilter compares large radii without squared-distance overflow', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const fixture = createFixture(device, {
+    positions: Float32Array.from([3e20, 0]),
+    dimension: 2,
+    gridSize: [1, 1],
+    bounds: [0, -1, 4e20, 1],
+    kind: 'radius',
+    query: Float32Array.from([0, 0, 2e20])
+  });
+  encode(device, fixture.compiled);
+
+  t.deepEqual(
+    await readVisible(fixture.indexed),
+    [],
+    'indexed refinement rejects the distant point'
+  );
+  t.deepEqual(
+    await readVisible(fixture.unindexed),
+    [],
+    'the exact full scan rejects inf-squared false positives'
+  );
+
+  destroyFixture(fixture);
+  t.end();
+});
+
 type ResultBuffers = {
   ids: Buffer;
   count: Buffer;

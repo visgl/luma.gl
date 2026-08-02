@@ -117,6 +117,16 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-bvh'
   },
   {
+    id: 'bvh-query',
+    label: 'BVH Query',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query'
+  },
+  {
+    id: 'spatial-benchmark',
+    label: 'Spatial Benchmark',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark'
+  },
+  {
     id: 'group-aggregation',
     label: 'Group Aggregation',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation'

@@ -127,6 +127,25 @@ export type {
 export {GPUBVH} from './gpu-bvh';
 export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats} from './gpu-bvh';
 
+export {GPUBVHQuery} from './gpu-bvh-query';
+export type {GPUBVHQueryKind, GPUBVHQueryProps, GPUBVHView} from './gpu-bvh-query';
+
+export {
+  runGPUSpatialQueryBenchmark,
+  summarizeGPUSpatialBenchmarkSamples
+} from './gpu-spatial-query-benchmark';
+export type {
+  GPUSpatialBenchmarkAmortizedCost,
+  GPUSpatialBenchmarkDistribution,
+  GPUSpatialBenchmarkPath,
+  GPUSpatialBenchmarkPathReport,
+  GPUSpatialBenchmarkPhase,
+  GPUSpatialBenchmarkResult,
+  GPUSpatialBenchmarkStrategy,
+  GPUSpatialQueryBenchmarkProps,
+  GPUSpatialQueryBenchmarkReport
+} from './gpu-spatial-query-benchmark';
+
 export {GPUGridAggregation} from './gpu-grid-aggregation';
 export type {
   GPUGridAggregationOperation,

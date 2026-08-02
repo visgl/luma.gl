@@ -7,6 +7,7 @@ import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import type {GPUGridIndexBounds, GPUGridIndexSize} from './gpu-grid-index';
 import {
+  doGraphDataViewsOverlap,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
@@ -95,6 +96,12 @@ export class GPUGridIndexQuery {
     if (this.query.length !== expectedQueryLength) {
       throw new Error(`${this.id} ${this.kind} query must contain ${expectedQueryLength} floats`);
     }
+    validateDisjointQueryViews(this.id, this.index, this.query, [
+      this.output,
+      this.count,
+      this.overflow,
+      ...(this.outputMask ? [this.outputMask] : [])
+    ]);
   }
 
   /** Adds output initialization and candidate collection without submitting or reading back work. */
@@ -229,6 +236,16 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   if (!finite(value)) { return 0u; }
   if (maximum == minimum || value == minimum) { return 0u; }
   if (value == maximum) { return size - 1u; }
+  if (minimum < 0.0 && maximum > 0.0) {
+    let scale = max(abs(minimum), abs(maximum));
+    let scaledValue = value / scale;
+    let scaledMinimum = minimum / scale;
+    let scaledMaximum = maximum / scale;
+    return min(
+      u32((scaledValue - scaledMinimum) / (scaledMaximum - scaledMinimum) * f32(size)),
+      size - 1u
+    );
+  }
   return min(u32((value - minimum) / (maximum - minimum) * f32(size)), size - 1u);
 }
 
@@ -248,12 +265,14 @@ fn findCellIndex(objectIndex: u32) -> u32 {
 }
 
 fn cellMinimum(coordinate: u32, size: u32, minimum: f32, maximum: f32) -> f32 {
-  return minimum + (maximum - minimum) * f32(coordinate) / f32(size);
+  let ratio = f32(coordinate) / f32(size);
+  return minimum * (1.0 - ratio) + maximum * ratio;
 }
 
 fn cellMaximum(coordinate: u32, size: u32, minimum: f32, maximum: f32) -> f32 {
   if (coordinate + 1u == size) { return maximum; }
-  return minimum + (maximum - minimum) * f32(coordinate + 1u) / f32(size);
+  let ratio = f32(coordinate + 1u) / f32(size);
+  return minimum * (1.0 - ratio) + maximum * ratio;
 }
 
 @compute @workgroup_size(${GRID_QUERY_WORKGROUP_SIZE}) fn main(
@@ -406,21 +425,66 @@ function makeCellSelection(query: GPUGridIndexQuery): string {
     )
     .join('\n  ');
   const validCenter = axes.map(axis => `finite(query${axis.name.toUpperCase()})`).join(' && ');
-  const distances = axes
+  const closestPoints = axes
     .map(
       axis =>
-        `let closest${axis.name.toUpperCase()} = clamp(query${axis.name.toUpperCase()}, cellMin${axis.name.toUpperCase()}, cellMax${axis.name.toUpperCase()});
-  let distance${axis.name.toUpperCase()} = query${axis.name.toUpperCase()} - closest${axis.name.toUpperCase()};`
+        `let closest${axis.name.toUpperCase()} = clamp(query${axis.name.toUpperCase()}, cellMin${axis.name.toUpperCase()}, cellMax${axis.name.toUpperCase()});`
     )
     .join('\n  ');
+  const scale = makeNestedMaximum([
+    'radius',
+    ...axes.flatMap(axis => [
+      `abs(query${axis.name.toUpperCase()})`,
+      `abs(closest${axis.name.toUpperCase()})`
+    ])
+  ]);
   const squaredDistance = axes
-    .map(axis => `distance${axis.name.toUpperCase()} * distance${axis.name.toUpperCase()}`)
+    .map(
+      axis =>
+        `(query${axis.name.toUpperCase()} / scale - closest${axis.name.toUpperCase()} / scale) * (query${axis.name.toUpperCase()} / scale - closest${axis.name.toUpperCase()} / scale)`
+    )
     .join(' + ');
   return `${cellDeclarations}
   ${values}
   let radius = queryValues[QUERY_OFFSET + ${dimension}u];
-  ${distances}
-  let selected = ${validCenter} && finite(radius) && radius >= 0.0 && ${squaredDistance} <= radius * radius;`;
+  ${closestPoints}
+  let scale = ${scale};
+  let selected = ${validCenter} && finite(radius) && radius >= 0.0 && (scale == 0.0 || ${squaredDistance} <= (radius / scale) * (radius / scale));`;
+}
+
+function makeNestedMaximum(values: string[]): string {
+  return values.slice(1).reduce((maximum, value) => `max(${maximum}, ${value})`, values[0]);
+}
+
+function validateDisjointQueryViews(
+  id: string,
+  index: GPUGridIndexView,
+  query: GraphDataView<'float32'>,
+  outputs: GraphDataView<'uint32'>[]
+): void {
+  const inputs: [string, GraphDataView][] = [
+    ['index cellOffsets', index.cellOffsets],
+    ['index objectIds', index.objectIds],
+    ['index count', index.count],
+    ['index overflow', index.overflow],
+    ['query', query]
+  ];
+  const outputNames = ['output', 'count', 'overflow', 'outputMask'];
+  for (let outputIndex = 0; outputIndex < outputs.length; outputIndex++) {
+    const output = outputs[outputIndex];
+    for (const [inputName, input] of inputs) {
+      if (doGraphDataViewsOverlap(output, input)) {
+        throw new Error(`${id} ${outputNames[outputIndex]} and ${inputName} must not overlap`);
+      }
+    }
+    for (let previousIndex = 0; previousIndex < outputIndex; previousIndex++) {
+      if (doGraphDataViewsOverlap(output, outputs[previousIndex])) {
+        throw new Error(
+          `${id} ${outputNames[outputIndex]} and ${outputNames[previousIndex]} must not overlap`
+        );
+      }
+    }
+  }
 }
 
 function validateIndexView(id: string, index: GPUGridIndexView, dimension: 2 | 3): void {
@@ -497,5 +561,6 @@ function addComputationPass<Parameters>(
 }
 
 function getFloatLiteral(value: number): string {
-  return Number.isInteger(value) ? `${value}.0` : `${value}`;
+  const literal = `${Math.fround(value)}`;
+  return literal.includes('.') || literal.includes('e') ? literal : `${literal}.0`;
 }

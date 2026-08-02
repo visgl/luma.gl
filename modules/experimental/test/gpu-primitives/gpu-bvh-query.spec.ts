@@ -6,23 +6,14 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUBVH,
+  GPUBVHQuery,
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GraphDataView
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {getGPUBVHDispatchLayout} from '../../src/gpu-primitives/gpu-bvh';
 
-test('GPUBVH plans multidimensional leaf-loading dispatches', t => {
-  t.deepEqual(
-    getGPUBVHDispatchLayout(2 ** 24 - 1, 65535),
-    {x: 65535, y: 2, z: 1},
-    'the largest standard-binding 2D tree does not exceed the per-dimension limit'
-  );
-  t.end();
-});
-
-test('GPUBVH builds deterministic 2D topology and bounds', async t => {
+test('GPUBVHQuery traverses 2D bounds and clears reusable result masks', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -32,40 +23,31 @@ test('GPUBVH builds deterministic 2D topology and bounds', async t => {
 
   const fixture = createFixture(device, {
     dimension: 2,
-    minima: Float32Array.from([0, 0, 3, 1, -2, 4]),
-    maxima: Float32Array.from([1, 2, 5, 3, -1, 6]),
-    leafCapacity: 4
+    minima: Float32Array.from([0, 0, 2, 0, 10, 10, 12, 10]),
+    maxima: Float32Array.from([1, 1, 3, 1, 11, 11, 13, 11]),
+    query: Float32Array.from([-0.5, -0.5, 3.5, 1.5]),
+    kind: 'bounds',
+    leafCapacity: 4,
+    outputCapacity: 4,
+    maskLength: 4
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(
-    await readUint32(fixture.children, 14),
-    [
-      1, 2, 3, 4, 5, 6, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-      0xffffffff, 0xffffffff
-    ]
-  );
-  t.deepEqual(await readUint32(fixture.leafIds, 4), [0, 1, 2, 0xffffffff]);
-  t.deepEqual(await readFloat32(fixture.nodeMinima, 2), [-2, 0], 'root contains every valid leaf');
-  t.deepEqual(await readFloat32(fixture.nodeMaxima, 2), [5, 6]);
-  t.deepEqual(await readUint32(fixture.count, 1), [3]);
+  t.deepEqual(await readSortedOutput(fixture), [0, 1], 'bounds query matches the CPU oracle');
+  t.deepEqual(await readUint32(fixture.outputMask, 4), [1, 1, 0, 0]);
   t.deepEqual(await readUint32(fixture.overflow, 1), [0]);
-  t.equal(fixture.bvh.topology, 'complete-binary');
-  t.equal(fixture.bvh.updatePolicy, 'refit');
-  t.deepEqual(fixture.bvh.stats, {
-    dimension: 2,
-    leafCapacity: 4,
-    internalNodeCount: 3,
-    nodeCount: 7,
-    levelCount: 3,
-    outputByteLength: 192
-  });
+  t.deepEqual(await readUint32(fixture.visitedCount, 1), [5], 'the disjoint subtree is pruned');
+
+  fixture.query.write(Float32Array.from([11.5, 9.5, 13.5, 11.5]));
+  encode(device, fixture.compiled);
+  t.deepEqual(await readSortedOutput(fixture), [3], 'the same graph accepts a new query');
+  t.deepEqual(await readUint32(fixture.outputMask, 4), [0, 0, 0, 1], 'old mask bits clear');
 
   destroyFixture(fixture);
   t.end();
 });
 
-test('GPUBVH refits 3D bounds while preserving stable IDs and reports capacity overflow', async t => {
+test('GPUBVHQuery traverses 3D points and reports bounded-output overflow', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -75,45 +57,50 @@ test('GPUBVH refits 3D bounds while preserving stable IDs and reports capacity o
 
   const fixture = createFixture(device, {
     dimension: 3,
-    minima: Float32Array.from([0, 0, 0, 2, 2, 2, -1, 3, 1, 4, -2, 0, 100, 100, 100]),
-    maxima: Float32Array.from([1, 1, 1, 3, 4, 5, 0, 5, 2, 6, 0, 7, 101, 101, 101]),
-    sourceIds: Uint32Array.from([10, 20, 30, 40, 50]),
-    leafCapacity: 4
+    minima: Float32Array.from([0, 0, 0, 1, 1, 1, -2, -2, -2, 10, 10, 10, 100, 100, 100]),
+    maxima: Float32Array.from([2, 2, 2, 3, 3, 3, -1, -1, -1, 11, 11, 11, 101, 101, 101]),
+    query: Float32Array.from([1.5, 1.5, 1.5]),
+    kind: 'point',
+    leafCapacity: 4,
+    outputCapacity: 1,
+    maskLength: 4
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(await readFloat32(fixture.nodeMinima, 3), [-1, -2, 0]);
-  t.deepEqual(await readFloat32(fixture.nodeMaxima, 3), [6, 5, 7]);
-  t.deepEqual(await readUint32(fixture.leafIds, 4), [10, 20, 30, 40]);
-  t.deepEqual(await readUint32(fixture.count, 1), [5], 'count reports required leaf capacity');
-  t.deepEqual(await readUint32(fixture.overflow, 1), [1], 'the fifth leaf is not written');
-
-  fixture.minima.write(Float32Array.from([8, 8, 8, 2, 2, 2, -1, 3, 1, 4, -2, 0, 100, 100, 100]));
-  fixture.maxima.write(Float32Array.from([9, 9, 9, 3, 4, 5, 0, 5, 2, 6, 0, 7, 101, 101, 101]));
-  encode(device, fixture.compiled);
-  t.deepEqual(await readFloat32(fixture.nodeMinima, 3), [-1, -2, 0]);
-  t.deepEqual(await readFloat32(fixture.nodeMaxima, 3), [9, 9, 9], 'root refits updated leaves');
-  t.deepEqual(await readUint32(fixture.leafIds, 4), [10, 20, 30, 40], 'identity is stable');
-  t.ok(
-    fixture.compiled.stats.nodeOrder.some(id => id === 'test-bvh-refit-depth-0'),
-    'the graph exposes explicit bottom-up refit levels'
+  t.deepEqual(await readUint32(fixture.count, 1), [2], 'count is the complete CPU-oracle result');
+  t.deepEqual(
+    await readUint32(fixture.overflow, 1),
+    [1],
+    'source or output truncation is explicit'
   );
+  const storedOutput = await readUint32(fixture.output, 1);
+  t.ok(storedOutput[0] === 0 || storedOutput[0] === 1, 'one matching stable ID is stored');
+  const outputMask = await readUint32(fixture.outputMask, 4);
+  t.equal(
+    outputMask.reduce((sum, value) => sum + value, 0),
+    1,
+    'mask describes stored output'
+  );
+  t.equal(outputMask[storedOutput[0]], 1);
+
+  fixture.query.write(Float32Array.from([Number.NaN, 0, 0]));
+  encode(device, fixture.compiled);
+  t.deepEqual(await readUint32(fixture.count, 1), [0], 'non-finite queries match nothing');
+  t.deepEqual(await readUint32(fixture.overflow, 1), [1], 'source BVH overflow is propagated');
+  t.deepEqual(await readUint32(fixture.outputMask, 4), [0, 0, 0, 0]);
 
   destroyFixture(fixture);
   t.end();
 });
 
 type Fixture = {
-  bvh: GPUBVH;
   compiled: CompiledGPUCommandGraph<void>;
-  minima: Buffer;
-  maxima: Buffer;
-  nodeMinima: Buffer;
-  nodeMaxima: Buffer;
-  children: Buffer;
-  leafIds: Buffer;
+  query: Buffer;
+  output: Buffer;
   count: Buffer;
   overflow: Buffer;
+  outputMask: Buffer;
+  visitedCount: Buffer;
   buffers: Buffer[];
 };
 
@@ -123,8 +110,11 @@ function createFixture(
     dimension: 2 | 3;
     minima: Float32Array;
     maxima: Float32Array;
-    sourceIds?: Uint32Array;
+    query: Float32Array;
+    kind: 'point' | 'bounds';
     leafCapacity: number;
+    outputCapacity: number;
+    maskLength: number;
   }
 ): Fixture {
   const format = props.dimension === 2 ? 'float32x2' : 'float32x3';
@@ -132,51 +122,67 @@ function createFixture(
   const nodeCount = props.leafCapacity * 2 - 1;
   const minima = createInputBuffer(device, props.minima);
   const maxima = createInputBuffer(device, props.maxima);
-  const sourceIds = props.sourceIds ? createInputBuffer(device, props.sourceIds) : undefined;
+  const query = createInputBuffer(device, props.query);
   const nodeMinima = createFloatOutputBuffer(device, nodeCount * props.dimension);
   const nodeMaxima = createFloatOutputBuffer(device, nodeCount * props.dimension);
   const children = createUintOutputBuffer(device, nodeCount * 2);
   const leafIds = createUintOutputBuffer(device, props.leafCapacity);
+  const bvhCount = createUintOutputBuffer(device, 1);
+  const bvhOverflow = createUintOutputBuffer(device, 1);
+  const output = createUintOutputBuffer(device, props.outputCapacity);
   const count = createUintOutputBuffer(device, 1);
   const overflow = createUintOutputBuffer(device, 1);
-  const graph = new GPUCommandGraph(device, {id: 'bvh-test'});
+  const outputMask = createUintOutputBuffer(device, props.maskLength);
+  const visitedCount = createUintOutputBuffer(device, 1);
+  const graph = new GPUCommandGraph(device, {id: 'bvh-query-test'});
   const bvh = new GPUBVH({
     id: 'test-bvh',
     minima: importView(graph, 'source-minima', minima, format, sourceLength),
     maxima: importView(graph, 'source-maxima', maxima, format, sourceLength),
-    sourceIds: sourceIds
-      ? importView(graph, 'source-ids', sourceIds, 'uint32', sourceLength)
-      : undefined,
     leafCapacity: props.leafCapacity,
     nodeMinima: importView(graph, 'node-minima', nodeMinima, format, nodeCount),
     nodeMaxima: importView(graph, 'node-maxima', nodeMaxima, format, nodeCount),
     nodeChildren: importView(graph, 'node-children', children, 'uint32x2', nodeCount),
     leafIds: importView(graph, 'leaf-ids', leafIds, 'uint32', props.leafCapacity),
-    count: importView(graph, 'count', count, 'uint32', 1),
-    overflow: importView(graph, 'overflow', overflow, 'uint32', 1)
+    count: importView(graph, 'bvh-count', bvhCount, 'uint32', 1),
+    overflow: importView(graph, 'bvh-overflow', bvhOverflow, 'uint32', 1)
   });
   bvh.addToGraph(graph);
-  return {
+  const bvhQuery = new GPUBVHQuery({
+    id: 'test-bvh-query',
     bvh,
+    kind: props.kind,
+    query: importView(graph, 'query', query, 'float32', props.query.length),
+    output: importView(graph, 'output', output, 'uint32', props.outputCapacity),
+    count: importView(graph, 'query-count', count, 'uint32', 1),
+    overflow: importView(graph, 'query-overflow', overflow, 'uint32', 1),
+    outputMask: importView(graph, 'output-mask', outputMask, 'uint32', props.maskLength),
+    visitedCount: importView(graph, 'visited-count', visitedCount, 'uint32', 1)
+  });
+  bvhQuery.addToGraph(graph);
+  return {
     compiled: graph.compile(),
-    minima,
-    maxima,
-    nodeMinima,
-    nodeMaxima,
-    children,
-    leafIds,
+    query,
+    output,
     count,
     overflow,
+    outputMask,
+    visitedCount,
     buffers: [
       minima,
       maxima,
-      ...(sourceIds ? [sourceIds] : []),
+      query,
       nodeMinima,
       nodeMaxima,
       children,
       leafIds,
+      bvhCount,
+      bvhOverflow,
+      output,
       count,
-      overflow
+      overflow,
+      outputMask,
+      visitedCount
     ]
   };
 }
@@ -199,7 +205,7 @@ function createUintOutputBuffer(device: Device, length: number): Buffer {
   });
 }
 
-function importView<T extends 'float32x2' | 'float32x3' | 'uint32x2' | 'uint32'>(
+function importView<T extends 'float32' | 'float32x2' | 'float32x3' | 'uint32x2' | 'uint32'>(
   graph: GPUCommandGraph,
   id: string,
   buffer: Buffer,
@@ -213,9 +219,9 @@ function importView<T extends 'float32x2' | 'float32x3' | 'uint32x2' | 'uint32'>
   return graph.createDataView(handle, {format, length});
 }
 
-async function readFloat32(buffer: Buffer, length: number): Promise<number[]> {
-  const bytes = await buffer.readAsync();
-  return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, length));
+async function readSortedOutput(fixture: Fixture): Promise<number[]> {
+  const [count] = await readUint32(fixture.count, 1);
+  return (await readUint32(fixture.output, count)).sort((left, right) => left - right);
 }
 
 async function readUint32(buffer: Buffer, length: number): Promise<number[]> {
@@ -224,7 +230,7 @@ async function readUint32(buffer: Buffer, length: number): Promise<number[]> {
 }
 
 function encode(device: Device, compiled: CompiledGPUCommandGraph<void>): void {
-  const commandEncoder = device.createCommandEncoder({id: 'bvh-test'});
+  const commandEncoder = device.createCommandEncoder({id: 'bvh-query-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
 }
