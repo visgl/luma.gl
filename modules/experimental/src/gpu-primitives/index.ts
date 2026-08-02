@@ -110,6 +110,13 @@ export type {
   GPUGridIndexSourceIds
 } from './gpu-grid-index';
 
+export {GPUGridIndexQuery} from './gpu-grid-index-query';
+export type {
+  GPUGridIndexQueryKind,
+  GPUGridIndexQueryProps,
+  GPUGridIndexView
+} from './gpu-grid-index-query';
+
 export {GPUGridAggregation} from './gpu-grid-aggregation';
 export type {
   GPUGridAggregationOperation,

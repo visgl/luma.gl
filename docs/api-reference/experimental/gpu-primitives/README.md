@@ -1019,8 +1019,9 @@ only when its entry dependency is present and its exit evidence can be produced;
 dependency order, not a schedule commitment. Tranches whose dependencies do not overlap may be
 developed independently.
 
-Phase 4 is implemented through Tranche 4.4. Compact `GPUGridIndex` construction in Tranche 5.1a is
-implemented; incremental maintenance and query composition remain separate active boundaries.
+Phase 4 is implemented through Tranche 4.4. Compact `GPUGridIndex` construction and conservative
+query primitives are implemented; incremental maintenance and consumer cost comparisons remain
+separate active boundaries.
 
 | Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
 | --- | --- | --- | :---: | :---: |
@@ -1032,7 +1033,8 @@ implemented; incremental maintenance and query composition remain separate activ
 | 4.4 — External-texture contracts | One-frame external-texture imports with validated access and device-loss behavior | Implemented | Medium | Large |
 | 5.1a — `GPUGridIndex` build | Compact stable cell offsets and capacity-bounded object-ID storage for 2D and 3D points | Implemented | High | Medium |
 | 5.1b — `GPUGridIndex` incremental maintenance | Bounded relocation or reserved-cell updates with measured memory and update costs | Tranche 5.1a plus a changing-data consumer | High | Large |
-| 5.2 — `GPUGridIndex` query | Bounds, radius, and point queries feeding visibility and region picking in 2D and 3D | Tranche 5.1a, Phase 2, and Tranche 4.1 | High | Medium |
+| 5.2a — `GPUGridIndex` query | Point, bounds, and radius cell candidates with bounded IDs, masks, count, and overflow | Implemented | High | Medium |
+| 5.2b — Query consumers and cost crossover | 2D and 3D visibility or picking consumers compared with an unindexed scan | Tranche 5.2a plus representative consumers | High | Medium |
 | 5.3 — `GPUBVH` build/refit | Flat BVH storage with explicit rebuild and refit policies | Tranche 5.2 | High | Large |
 | 5.4 — `GPUBVH` query and cost model | Visibility and picking queries with scan/grid/BVH comparison guidance | Tranche 5.3 | High | Medium |
 | 6.1 — Scene storage and updates | Flat stable-ID draw records, bounded update ranges, and explicit CPU/table adapters | Phase 2 and Tranche 5.2 | High | Large |
@@ -1316,9 +1318,19 @@ update costs separately from query cost.
 
 #### Tranche 5.2 — `GPUGridIndex` query
 
+**Status:** Conservative query primitives are implemented; cross-domain consumers and cost
+comparison remain planned.
+
 Add bounds, radius, and point queries whose masks or compacted IDs compose directly with visibility
 and region-picking outputs. Query contracts preserve stable identity and do not require downloading
 candidate lists before filtering or drawing.
+
+`GPUGridIndexQuery` consumes the flat grid storage and a mutable GPU-resident point, bounds, or
+radius query. It publishes capacity-bounded stable candidate IDs, the stored-prefix candidate count,
+propagated index or output overflow, and an optional source-ID-addressed mask. Point queries select
+one cell; bounds and radius queries conservatively select intersecting cells. Exact object tests are
+deliberately a following application or visibility predicate, so the index does not embed one object
+shape or confuse cell overlap with an exact hit.
 
 **Exit evidence:** A 2D and a 3D consumer feed query results into visibility or picking, validate
 against an unindexed GPU scan, and document where index construction becomes worthwhile.
