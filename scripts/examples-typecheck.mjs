@@ -21,6 +21,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-particles',
   'arrow/arrow-points',
   'arrow/arrow-polygons',
+  'experimental/fluid-foundry',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
   'experimental/gpu-sort',
