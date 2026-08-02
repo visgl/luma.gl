@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  TRACE_ACTIVITY_BIN_COUNT,
+  TRACE_DENSITY_BIN_COUNT,
+  TRACE_DENSITY_TIME_PER_PIXEL,
   TRACE_ERROR_SPAN_FLAG,
   TRACE_FILTER_ERRORS_ONLY,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
@@ -60,6 +61,12 @@ struct ViewUniforms {
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
 const THREADS_PER_PROCESS: u32 = ${TRACE_THREADS_PER_PROCESS}u;
+const DENSITY_TIME_PER_PIXEL: f32 = ${TRACE_DENSITY_TIME_PER_PIXEL};
+
+fn isDensityMode() -> bool {
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  return timeRange / max(viewUniforms.viewportWidth, 1.0) >= DENSITY_TIME_PER_PIXEL;
+}
 
 fn getGroupColor(group: u32) -> vec3<f32> {
   let colors = array<vec3<f32>, 3>(
@@ -206,17 +213,15 @@ fn getResolvedEndpoint(sourceIndex: u32) -> TraceSpan {
   return input.color;
 }`;
 
-/** Renders one compact histogram strip for each currently collapsed process. */
-export const TRACE_ACTIVITY_RENDER_SHADER = /* wgsl */ `
+/** Renders GPU-aggregated density bins for the current visible lane layout. */
+export const TRACE_DENSITY_RENDER_SHADER = /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
 
-const ACTIVITY_BIN_COUNT: u32 = ${TRACE_ACTIVITY_BIN_COUNT}u;
-@group(0) @binding(0) var<storage, read> activityBins: array<u32>;
-@group(0) @binding(1) var<storage, read> processStates: array<u32>;
-@group(0) @binding(2) var<storage, read> threadOffsets: array<u32>;
-@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+const DENSITY_BIN_COUNT: u32 = ${TRACE_DENSITY_BIN_COUNT}u;
+@group(0) @binding(0) var<storage, read> densityBins: array<u32>;
+@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
 
-struct ActivityVertexOutput {
+struct DensityVertexOutput {
   @builtin(position) position: vec4<f32>,
   @location(0) color: vec4<f32>,
 };
@@ -224,22 +229,22 @@ struct ActivityVertexOutput {
 @vertex fn vertexMain(
   @builtin(vertex_index) vertexIndex: u32,
   @builtin(instance_index) instanceIndex: u32
-) -> ActivityVertexOutput {
-  let processIndex = instanceIndex / ACTIVITY_BIN_COUNT;
-  let binIndex = instanceIndex % ACTIVITY_BIN_COUNT;
-  let count = activityBins[instanceIndex];
+) -> DensityVertexOutput {
+  let lane = instanceIndex / DENSITY_BIN_COUNT;
+  let binIndex = instanceIndex % DENSITY_BIN_COUNT;
+  let count = densityBins[instanceIndex];
   let corner = getCorner(vertexIndex);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
-  let lane = f32(threadOffsets[processIndex * THREADS_PER_PROCESS]);
   let laneHeight = 2.0 / laneRange;
-  let startX = (f32(binIndex) / f32(ACTIVITY_BIN_COUNT)) * 2.0 - 1.0;
-  let endX = (f32(binIndex + 1u) / f32(ACTIVITY_BIN_COUNT)) * 2.0 - 1.0;
+  let startX = (f32(binIndex) / f32(DENSITY_BIN_COUNT)) * 2.0 - 1.0;
+  let endX = (f32(binIndex + 1u) / f32(DENSITY_BIN_COUNT)) * 2.0 - 1.0;
   let intensity = clamp(log2(f32(count) + 1.0) * viewUniforms.activityScale, 0.12, 1.0);
-  let visible = processStates[processIndex] == 0u && count > 0u;
-  var output: ActivityVertexOutput;
+  let visible = count > 0u && f32(lane) >= viewUniforms.laneMin &&
+    f32(lane) < viewUniforms.laneMax;
+  var output: DensityVertexOutput;
   output.position = vec4<f32>(
     mix(startX, endX, corner.x),
-    1.0 - ((lane - viewUniforms.laneMin) / laneRange) * 2.0 -
+    1.0 - ((f32(lane) - viewUniforms.laneMin) / laneRange) * 2.0 -
       corner.y * laneHeight * 0.78 * intensity,
     0.0,
     1.0
@@ -251,7 +256,7 @@ struct ActivityVertexOutput {
   return output;
 }
 
-@fragment fn fragmentMain(input: ActivityVertexOutput) -> @location(0) vec4<f32> {
+@fragment fn fragmentMain(input: DensityVertexOutput) -> @location(0) vec4<f32> {
   return input.color;
 }`;
 
@@ -273,6 +278,39 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   }
   let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
   focusMask[index] = select(1u, select(0u, 1u, reachedSpans[index] != 0u), focusEnabled);
+}`;
+}
+
+/** Coarsely rejects immutable span batches that cannot contribute to the active view. */
+export function getBatchVisibilityShader(batchCount: number): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+const BATCH_COUNT: u32 = ${batchCount}u;
+@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(2) var<storage, read_write> candidateFlags: array<u32>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let batchIndex = globalId.x;
+  if (batchIndex >= BATCH_COUNT) {
+    return;
+  }
+  let batch = spanBatches[batchIndex];
+  let timeVisible = batch.timeMax >= viewUniforms.timeMin &&
+    batch.timeMin <= viewUniforms.timeMax;
+  let groupVisible = (viewUniforms.enabledMask & (1u << batch.groupIndex)) != 0u;
+  candidateFlags[batchIndex] = select(0u, 1u, timeVisible && groupVisible);
 }`;
 }
 
@@ -298,6 +336,7 @@ const SIMILAR_DURATION_PARENT_FLAG: u32 = ${TRACE_SIMILAR_DURATION_PARENT_FLAG}u
 @group(0) @binding(4) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(5) var<storage, read_write> visibilityFlags: array<u32>;
 @group(0) @binding(6) var<storage, read_write> pickResult: array<atomic<u32>>;
+@group(0) @binding(7) var<storage, read_write> densityKeys: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -308,12 +347,14 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let sourceIndex = FIRST_SPAN_INDEX + groupRowIndex;
   let span = spans[sourceIndex];
   let end = span.start + span.duration;
+  let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  let lane = f32(threadOffsets[span.threadIndex] + localLane);
+  let expandedLane = threadOffsets[span.threadIndex] + localLane;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let timeVisible = end >= viewUniforms.timeMin && span.start <= viewUniforms.timeMax;
   let laneVisible = lane >= viewUniforms.laneMin && lane < viewUniforms.laneMax;
   let groupVisible = (viewUniforms.enabledMask & GROUP_BIT) != 0u;
-  let processVisible = processStates[span.processIndex] != 0u;
   let statusVisible = (viewUniforms.statusMask & (1u << (span.flags & 3u))) != 0u;
   let runtimeVisible =
     (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_RUNTIME_SPANS}u) == 0u ||
@@ -328,15 +369,23 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS}u) == 0u ||
     (span.flags & SIMILAR_DURATION_PARENT_FLAG) == 0u;
   let durationVisible = span.duration >= viewUniforms.minimumDuration;
-  let visible = timeVisible && laneVisible && groupVisible && processVisible &&
+  let sourceVisible = timeVisible && laneVisible && groupVisible &&
     statusVisible && runtimeVisible && errorVisible && overlappingChildVisible &&
     similarParentVisible && durationVisible;
-  visibilityFlags[sourceIndex] = select(0u, 1u, visible);
+  let densityMode = isDensityMode();
+  let exactVisible = sourceVisible && processExpanded && !densityMode;
+  visibilityFlags[sourceIndex] = select(0u, 1u, exactVisible);
+  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
+  let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
+  let bin = min(u32(fraction * f32(${TRACE_DENSITY_BIN_COUNT}u)), ${TRACE_DENSITY_BIN_COUNT - 1}u);
+  let densityKey = u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin;
+  let densityVisible = sourceVisible && (densityMode || !processExpanded);
+  densityKeys[sourceIndex] = select(0xffffffffu, densityKey, densityVisible);
   let pickRequested = viewUniforms.pickLane >= 0.0;
   let timePicked = viewUniforms.pickTime >= span.start &&
     viewUniforms.pickTime <= span.start + span.duration;
   let lanePicked = viewUniforms.pickLane >= lane && viewUniforms.pickLane < lane + 1.0;
-  if (visible && pickRequested && timePicked && lanePicked) {
+  if (sourceVisible && pickRequested && timePicked && lanePicked) {
     atomicMin(&pickResult[0], sourceIndex);
   }
 }`;
@@ -396,53 +445,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   dependencyFlags[index] = select(
     0u,
     1u,
-    familyVisible && sourceVisible && destinationVisible && distinctEndpoints
+    familyVisible && sourceVisible && destinationVisible && distinctEndpoints && !isDensityMode()
   );
-}`;
-}
-
-/** Clears every collapsed-process histogram bin on the GPU before accumulation. */
-export function getActivityClearShader(binCount: number): string {
-  return /* wgsl */ `
-const BIN_COUNT: u32 = ${binCount}u;
-@group(0) @binding(0) var<storage, read_write> activityBins: array<atomic<u32>>;
-
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x < BIN_COUNT) {
-    atomicStore(&activityBins[globalId.x], 0u);
-  }
-}`;
-}
-
-/** Bins visible-time source spans into GPU-resident collapsed-process activity histograms. */
-export function getActivityAccumulationShader(spanCount: number): string {
-  return /* wgsl */ `
-${TRACE_SHADER_DECLARATIONS}
-const SPAN_COUNT: u32 = ${spanCount}u;
-const ACTIVITY_BIN_COUNT: u32 = ${TRACE_ACTIVITY_BIN_COUNT}u;
-@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
-@group(0) @binding(1) var<storage, read> processStates: array<u32>;
-@group(0) @binding(2) var<uniform> viewUniforms: ViewUniforms;
-@group(0) @binding(3) var<storage, read_write> activityBins: array<atomic<u32>>;
-
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
-  if (index >= SPAN_COUNT) {
-    return;
-  }
-  let span = spans[index];
-  if (processStates[span.processIndex] != 0u) {
-    return;
-  }
-  let end = span.start + span.duration;
-  if (end < viewUniforms.timeMin || span.start > viewUniforms.timeMax) {
-    return;
-  }
-  let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
-  let fraction = clamp((span.start - viewUniforms.timeMin) / timeRange, 0.0, 0.999999);
-  let bin = min(u32(fraction * f32(ACTIVITY_BIN_COUNT)), ACTIVITY_BIN_COUNT - 1u);
-  atomicAdd(&activityBins[span.processIndex * ACTIVITY_BIN_COUNT + bin], 1u);
 }`;
 }

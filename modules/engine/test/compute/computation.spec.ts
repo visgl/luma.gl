@@ -73,6 +73,46 @@ test('Computation#compute', async t => {
   t.end();
 });
 
+test('Computation#dispatchIndirect', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (webgpuDevice) {
+    if (isSoftwareBackedDevice(webgpuDevice)) {
+      t.comment('Skipping WebGPU indirect compute test on a software-backed adapter');
+      t.end();
+      return;
+    }
+
+    const computation = new Computation(webgpuDevice, {
+      source,
+      shaderLayout: {
+        bindings: [{name: 'data', type: 'storage', group: 0, location: 0}]
+      }
+    });
+    const workBuffer = webgpuDevice.createBuffer({
+      data: new Int32Array([1, 2, 3, 4]),
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    const dispatchBuffer = webgpuDevice.createBuffer({
+      data: new Uint32Array([4, 1, 1]),
+      usage: Buffer.INDIRECT
+    });
+    computation.setBindings({data: workBuffer});
+
+    const computePass = webgpuDevice.beginComputePass({});
+    computation.dispatchIndirect(computePass, dispatchBuffer);
+    computePass.end();
+    webgpuDevice.submit();
+
+    const computedData = new Int32Array(await workBuffer.readAsync());
+    t.deepEqual(Array.from(computedData), [2, 4, 6, 8], 'GPU-written dimensions drive dispatch');
+
+    computation.destroy();
+    workBuffer.destroy();
+    dispatchBuffer.destroy();
+  }
+  t.end();
+});
+
 test('Computation#plugins assemble WGSL contributions', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {

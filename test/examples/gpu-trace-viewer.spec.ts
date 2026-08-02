@@ -8,6 +8,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import GPUTraceViewerAnimationLoopTemplate from '../../examples/experimental/gpu-trace-viewer/app';
 import {
   TRACE_COLLAPSED_STATE,
+  TRACE_DENSITY_BIN_COUNT,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_PROCESS_COUNT,
@@ -39,13 +40,15 @@ describe('GPU hierarchical trace viewer', () => {
       } as AnimationProps & {traceCapacity: number});
       const state = viewer as unknown as {
         resources: {
+          candidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
-          activityBins: {readAsync: () => Promise<Uint8Array>};
+          densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
           };
           dependencyCount: number;
           spanCount: number;
+          spanBatchCount: number;
         };
         processStates: Uint32Array;
         threadStates: Uint32Array;
@@ -55,11 +58,12 @@ describe('GPU hierarchical trace viewer', () => {
         activeFilterMask: number;
       };
       expect(state.resources.spanCount).toBe(4096);
+      expect(state.resources.spanBatchCount).toBeGreaterThan(0);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
 
-      viewer.onRender({device, time: 6000, width: 1, height: 1} as AnimationProps);
+      viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
       device.submit();
       const firstFrame = await state.resources.drawCommands.buffer.readAsync();
       const firstCounts = new Uint32Array(
@@ -69,6 +73,28 @@ describe('GPU hierarchical trace viewer', () => {
       );
       expect(firstCounts[1] + firstCounts[5] + firstCounts[9]).toBeGreaterThan(0);
       expect(firstCounts[13]).toBeGreaterThan(0);
+      const candidateBytes = await state.resources.candidateDispatchCommands.buffer.readAsync();
+      const candidateCount = new Uint32Array(
+        candidateBytes.buffer,
+        candidateBytes.byteOffset,
+        1
+      )[0];
+      expect(candidateCount).toBeGreaterThan(0);
+      expect(candidateCount).toBeLessThanOrEqual(state.resources.spanBatchCount);
+
+      const firstGroup = host.querySelector<HTMLInputElement>('[data-group="0"]');
+      expect(firstGroup).not.toBeNull();
+      firstGroup!.checked = false;
+      firstGroup!.dispatchEvent(new Event('change', {bubbles: true}));
+      viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
+      device.submit();
+      const filteredCandidateBytes =
+        await state.resources.candidateDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(filteredCandidateBytes.buffer, filteredCandidateBytes.byteOffset, 1)[0]
+      ).toBeLessThan(candidateCount);
+      firstGroup!.checked = true;
+      firstGroup!.dispatchEvent(new Event('change', {bubbles: true}));
 
       const firstProcess = host.querySelector<HTMLInputElement>('[data-process="0"]');
       expect(firstProcess).not.toBeNull();
@@ -118,7 +144,7 @@ describe('GPU hierarchical trace viewer', () => {
       focusDepth!.dispatchEvent(new Event('input', {bubbles: true}));
       expect(state.focusDepth).toBe(3);
 
-      viewer.onRender({device, time: 6000, width: 1, height: 1} as AnimationProps);
+      viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
       device.submit();
       const focusedFrame = await state.resources.drawCommands.buffer.readAsync();
       const focusedCounts = new Uint32Array(
@@ -134,13 +160,27 @@ describe('GPU hierarchical trace viewer', () => {
         Uint32Array.BYTES_PER_ELEMENT
       );
       expect(new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0]).toBe(1);
-      const activityBytes = await state.resources.activityBins.readAsync();
-      const activity = new Uint32Array(
-        activityBytes.buffer,
-        activityBytes.byteOffset,
-        activityBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      focusOnly!.checked = false;
+      focusOnly!.dispatchEvent(new Event('change', {bubbles: true}));
+      expect(state.focusOnly).toBe(false);
+      viewer.onRender({device, time: 6000, width: 1, height: 1} as AnimationProps);
+      device.submit();
+      const densityFrame = await state.resources.drawCommands.buffer.readAsync();
+      const densityCounts = new Uint32Array(
+        densityFrame.buffer,
+        densityFrame.byteOffset,
+        densityFrame.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
-      expect(activity.some(value => value > 0)).toBe(true);
+      expect(densityCounts[1] + densityCounts[5] + densityCounts[9]).toBe(0);
+      expect(densityCounts[13]).toBe(0);
+      const adaptiveDensityBytes = await state.resources.densityBins.readAsync();
+      const adaptiveDensity = new Uint32Array(
+        adaptiveDensityBytes.buffer,
+        adaptiveDensityBytes.byteOffset,
+        adaptiveDensityBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      );
+      expect(adaptiveDensity.some(value => value > 0)).toBe(true);
+      expect(adaptiveDensity.slice(0, TRACE_DENSITY_BIN_COUNT).some(value => value > 0)).toBe(true);
 
       host.querySelector<HTMLButtonElement>('[data-clear-selection]')!.click();
       expect(state.selectedSpanIndex).toBe(0xffffffff);

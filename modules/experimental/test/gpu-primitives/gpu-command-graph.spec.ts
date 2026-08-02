@@ -5,7 +5,13 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
-import {DrawCommandBuffer, GPUCommandGraph, GPUCompaction, GPUScan} from '@luma.gl/experimental';
+import {
+  DispatchCommandBuffer,
+  DrawCommandBuffer,
+  GPUCommandGraph,
+  GPUCompaction,
+  GPUScan
+} from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -952,6 +958,40 @@ test('DrawCommandBuffer replays an indirect draw through a render bundle', async
   model.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
+  t.end();
+});
+
+test('DispatchCommandBuffer stores typed GPU-writable dispatch records', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const dispatchCommands = new DispatchCommandBuffer(device, {
+    capacity: 3,
+    commands: [{x: 2}, {x: 3, y: 4, z: 5}]
+  });
+  const bytes = await dispatchCommands.buffer.readAsync();
+  const values = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+  t.deepEqual(
+    Array.from(values),
+    [2, 1, 1, 3, 4, 5, 0, 0, 0],
+    'records preserve WebGPU x/y/z layout and zero-fill capacity'
+  );
+  const secondCommand = dispatchCommands.getCommandData(1);
+  t.equal(secondCommand.length, 3, 'borrowed command data contains three uint32 rows');
+  t.equal(
+    secondCommand.byteOffset,
+    DispatchCommandBuffer.recordByteLength,
+    'borrowed command data points at the selected record'
+  );
+  t.throws(
+    () => dispatchCommands.getCommandByteOffset(3),
+    /out of range/,
+    'command index is bounded by capacity'
+  );
+  dispatchCommands.destroy();
   t.end();
 });
 
