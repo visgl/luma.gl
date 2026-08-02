@@ -1016,8 +1016,9 @@ schedule commitment.
 
 Phase 4 is implemented through Tranche 4.4. The spatial stack now includes compact 2D/3D
 `GPUGridIndex` construction, conservative queries, exact point refinement with an unindexed GPU
-oracle, and deterministic complete-binary `GPUBVH` storage and refit. These are foundations, not a
-claim that incremental grid updates or source-order BVH topology are always profitable.
+oracle, deterministic complete-binary `GPUBVH` storage and refit, and exact BVH bounds/point
+traversal. These are foundations, not a claim that incremental grid updates or source-order BVH
+topology are always profitable.
 
 | Milestone | Implemented outcome |
 | --- | --- |
@@ -1025,6 +1026,7 @@ claim that incremental grid updates or source-order BVH topology are always prof
 | 5.2a — `GPUGridIndex` query | Point, bounds, and radius cell candidates with masks, counts, and overflow |
 | 5.2b — Exact query consumers | Indexed and unindexed 2D/3D point predicates feeding one visibility contract |
 | 5.3a — `GPUBVH` storage and refit | Flat complete-binary nodes, stable leaf slots, explicit capacity, and bottom-up refit |
+| 5.4a — `GPUBVH` bounds and point query | Exact 2D/3D traversal with stable IDs, masks, count, overflow, and visited-node metrics |
 
 ### Remaining tranche map
 
@@ -1039,7 +1041,6 @@ consumers.
 | --- | --- | --- | --- | :---: | :---: |
 | 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
 | 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
-| 5.4a — BVH bounds and point query | Capacity-bounded candidates and masks using the grid refinement/overflow contract | Tranche 5.3a | 2D/3D CPU-oracle parity for empty, overlapping, invalid, and overflowed trees | High | Medium |
 | 5.2c — Spatial benchmark harness | Repeatable scan/grid/BVH measurements with shared data, queries, and correctness oracle | GPU timestamps, Tranche 5.2b, and Tranche 5.4a for BVH columns | Reports build, refit, query, refinement, memory, selectivity, and reuse distributions | High | Medium |
 | 5.1b — Grid update decision gate | Compare full rebuild with bounded relocation and reserved-cell designs | Tranche 5.2c plus a moving-data consumer | Decision records crossover, memory overhead, fragmentation, and overflow behavior | Medium | Medium |
 | 5.1c — Incremental grid maintenance | Implement only the update design selected by Tranche 5.1b | Positive Tranche 5.1b decision | Matches full rebuild after adversarial moves and demonstrates an update-rate win | High | Large |
@@ -1061,17 +1062,15 @@ consumers.
 
 ### Recommended execution order
 
-1. Implement BVH bounds/point traversal (5.4a), because it unlocks correctness and topology-quality
-   measurements without committing to a spatial builder.
-2. Build the shared spatial benchmark harness (5.2c) and topology-quality evidence (5.3b). These can
+1. Build the shared spatial benchmark harness (5.2c) and topology-quality evidence (5.3b). These can
    progress together once BVH query output exists.
-3. Run the grid-update and BVH-rebuild decision gates (5.1b and 5.3b). Implement 5.1c or 5.3c only
+2. Run the grid-update and BVH-rebuild decision gates (5.1b and 5.3b). Implement 5.1c or 5.3c only
    where the measured consumer crossover is positive.
-4. Add ray-like BVH traversal (5.4b) when a picking or simulation consumer fixes the required query
+3. Add ray-like BVH traversal (5.4b) when a picking or simulation consumer fixes the required query
    semantics, then publish the Phase 5 cost model (5.4c).
-5. Start `GPUScene` storage (6.1a) after the bounds/point query contract is stable; draw generation
+4. Start `GPUScene` storage (6.1a) after the bounds/point query contract is stable; draw generation
    waits for update and grouping ownership to be explicit.
-6. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
+5. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
 
 ### Phase 0 — Current foundation
 
@@ -1401,15 +1400,20 @@ arbitrary order may create overlapping parents and poor traversal. Tranche 5.3b 
 nodes, overlap, candidate ratios, and build/refit cost for source, producer, and Morton order.
 Tranche 5.3c adds a spatial builder only after that comparison demonstrates a material benefit.
 
-**Remaining exit evidence:** CPU-oracle query tests cover degenerate and overlapping bounds;
-topology-quality metrics are reported separately from storage and refit cost; and any implemented
-spatial rebuild produces query results equivalent to refit.
+**Implemented query evidence:** `GPUBVHQuery` traverses complete-binary 2D/3D hierarchies for exact
+point containment and bounds intersection. CPU-oracle tests cover selective pruning, overlap,
+invalid queries, output overflow, mutable queries, and source-ID-addressed masks. `visitedCount`
+reports topology work independently from matches.
+
+**Remaining exit evidence:** Topology-quality metrics are reported separately from storage and
+refit cost; and any implemented spatial rebuild produces query results equivalent to refit.
 
 #### Tranche 5.4 — `GPUBVH` query and cost model
 
-Tranche 5.4a connects bounds and point traversal to the same bounded candidate, mask, count,
-overflow, and exact-refinement contracts used by grid queries. It intentionally precedes topology
-optimization: a query is required to measure whether a new topology improves useful work.
+Tranche 5.4a is implemented. `GPUBVHQuery` connects exact bounds and point traversal to the same
+bounded candidate, mask, count, and overflow contracts used by grid queries. It intentionally
+precedes topology optimization: `visitedCount` measures whether a new topology improves useful
+work.
 
 Tranche 5.4b adds ray-like or segment candidates only after a picking or simulation consumer fixes
 the semantics. Traversal stack or work-queue capacity must be explicit and overflow must never look
@@ -1582,6 +1586,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUGridIndexQuery`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query)
 - [`GPUPointSpatialFilter`](/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter)
 - [`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh)
+- [`GPUBVHQuery`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring)
