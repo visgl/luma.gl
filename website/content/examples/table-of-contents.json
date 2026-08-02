@@ -35,6 +35,11 @@
       "showcase/lightstorm-megacity",
       {
         "type": "doc",
+        "id": "experimental/fluid-foundry",
+        "label": "Fluid Foundry: Liquid Metal Press"
+      },
+      {
+        "type": "doc",
         "id": "experimental/advanced-effects",
         "label": "Effects: Visualization City"
       },

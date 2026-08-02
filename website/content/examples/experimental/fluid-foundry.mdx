@@ -1,0 +1,56 @@
+---
+title: 'Fluid Foundry: Liquid Metal Press'
+description: Drive a GPU-resident MLS-MPM liquid through an HDR industrial vessel on WebGPU.
+sidebar_custom_props:
+  description: Drive a GPU-resident MLS-MPM liquid through an HDR industrial vessel on WebGPU.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, simulation]
+---
+
+import {FluidFoundryExample} from '@site/src/examples';
+
+<FluidFoundryExample />
+
+Fluid Foundry turns a two-dimensional MLS-MPM simulation into an interactive liquid-metal press.
+A shallow charge begins inside the vessel while two tapered inlet streams descend from above. Their
+particles exchange mass and momentum through a shared nodal grid, collide with the charge, and
+deform under gravity and a moving induction force. Click inside the vessel to fire a localized
+splash, click rapidly to accumulate a stronger surge, or drag to steer the force continuously.
+Press **R** to restore the deterministic starting state.
+
+The simulation is built on
+[`MLSMPMFluidSimulation`](/docs/api-reference/experimental/mls-mpm-fluid-simulation). Each display
+frame is divided into conservative CFL-limited substeps, and every substep records grid clearing,
+particle-to-grid transfer, grid forces, and grid-to-particle advection onto the animation loop's
+caller-owned command encoder. Particle state remains double buffered in GPU storage. There is no
+per-frame particle readback or hidden queue submission between simulation and rendering.
+
+The renderer consumes the current particle buffer directly as an instanced storage binding. Soft
+particle splats accumulate density, motion, and deformation into a floating-point texture; a
+fullscreen material pass derives the liquid silhouette, surface normal, metallic response, and
+induction color from that texture. Procedural brick, furnace glow, vessel glass, and clamps place the
+simulation in an industrial scene without changing the solver boundary.
+
+The scene stays linear in `rgba16float` through multiscale bloom and tone mapping. Bright liquid
+highlights can therefore exceed SDR white before display mapping, while the surrounding foundry
+remains dark enough to preserve their contrast. On compatible hardware the example requests an
+extended-range WebGPU canvas; other displays receive the same floating-point render through the
+standard tone-mapped fallback.
+
+## What to inspect
+
+- Watch the narrow overhead streams strike and merge with the shallow pre-filled charge instead of
+  moving as a pre-authored mesh.
+- Click once for a localized splash, click rapidly for an accumulated surge, or drag inside the
+  vessel to steer the force continuously.
+- Press **R** to verify that the same GPU-resident seed produces the same starting configuration.
+- Look for specular highlights, cyan edge energy, and warm deformation accents in the fluid. These
+  are derived from the live density and particle state rather than a baked liquid texture.
+- Compare the sharp vessel frame against the soft accumulated density to distinguish scene geometry
+  from the simulation's screen-space surface reconstruction.
+
+This example demonstrates a composable real-time simulation and render path, not ray tracing. The
+MLS-MPM solver evolves particles and a background grid; the example then shades their accumulated
+screen-space density with ordinary raster passes.
