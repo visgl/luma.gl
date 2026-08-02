@@ -9,6 +9,7 @@ export type ExperimentalDocsTabId =
   | 'g-buffer'
   | 'deferred-lighting'
   | 'clustered-lighting'
+  | 'mls-mpm-fluid-simulation'
   | 'shadow-map-renderer'
   | 'spectral-caustics-renderer'
   | 'glass-material'
@@ -28,6 +29,11 @@ const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
     id: 'clustered-lighting',
     label: 'Clustered Lighting',
     href: '/docs/api-reference/experimental/clustered-lighting'
+  },
+  {
+    id: 'mls-mpm-fluid-simulation',
+    label: 'MLS-MPM Fluid',
+    href: '/docs/api-reference/experimental/mls-mpm-fluid-simulation'
   },
   {
     id: 'shadow-map-renderer',
