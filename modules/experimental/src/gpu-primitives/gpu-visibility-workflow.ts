@@ -139,10 +139,7 @@ export class GPUVisibilityWorkflow {
     }
 
     const finalMask =
-      this.outputMask ??
-      (this.predicates.length === 1
-        ? template
-        : createTransientVisibilityInput(graph, `${this.id}-mask`, template));
+      this.outputMask ?? createTransientVisibilityInput(graph, `${this.id}-mask`, template);
     if (finalMask !== template || this.predicates.length > 1) {
       new GPUMask({
         id: `${this.id}-compose`,

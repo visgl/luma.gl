@@ -16,6 +16,10 @@ export type GPUPrimitivesDocsTabId =
   | 'histogram'
   | 'grid-binning'
   | 'grid-aggregation'
+  | 'grid-index'
+  | 'grid-index-query'
+  | 'point-spatial-filter'
+  | 'bvh'
   | 'group-aggregation'
   | 'index-picking'
   | 'readback-ring'
@@ -91,6 +95,26 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'grid-aggregation',
     label: 'Grid Aggregation',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation'
+  },
+  {
+    id: 'grid-index',
+    label: 'Grid Index',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-grid-index'
+  },
+  {
+    id: 'grid-index-query',
+    label: 'Grid Query',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query'
+  },
+  {
+    id: 'point-spatial-filter',
+    label: 'Point Filter',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter'
+  },
+  {
+    id: 'bvh',
+    label: 'BVH',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-bvh'
   },
   {
     id: 'group-aggregation',

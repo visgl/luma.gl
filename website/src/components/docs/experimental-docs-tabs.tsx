@@ -10,6 +10,7 @@ export type ExperimentalDocsTabId =
   | 'deferred-lighting'
   | 'clustered-lighting'
   | 'shadow-map-renderer'
+  | 'spectral-caustics-renderer'
   | 'glass-material'
   | 'reflective-material'
   | 'a-buffer-renderer'
@@ -32,6 +33,11 @@ const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
     id: 'shadow-map-renderer',
     label: 'ShadowMapRenderer',
     href: '/docs/api-reference/experimental/shadow-map-renderer'
+  },
+  {
+    id: 'spectral-caustics-renderer',
+    label: 'Spectral Caustics',
+    href: '/docs/api-reference/experimental/spectral-caustics-renderer'
   },
   {
     id: 'glass-material',

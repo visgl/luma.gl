@@ -7,6 +7,7 @@ import type {
   CommandEncoder,
   ComputePass,
   Device,
+  ExternalTexture,
   Framebuffer,
   QuerySet,
   RenderPass,
@@ -27,6 +28,7 @@ import {
   getBufferHandle,
   getTextureHandle,
   isGraphBufferUse,
+  isGraphTextureUse,
   type BufferTransientAllocation,
   type CompiledNode,
   type GPUCommandGraphCompilation,
@@ -35,6 +37,7 @@ import {
 import {
   GraphBufferHandle,
   GraphDataView,
+  GraphExternalTextureHandle,
   GraphTextureHandle,
   GraphTextureView,
   GraphVectorView
@@ -56,6 +59,8 @@ import type {
   GPUCommandGraphTimingReport,
   GraphBufferDescriptor,
   GraphBufferUsage,
+  GraphExternalTextureBinding,
+  GraphExternalTextureDescriptor,
   GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
@@ -70,6 +75,7 @@ import type {
 export {
   GraphBufferHandle,
   GraphDataView,
+  GraphExternalTextureHandle,
   GraphTextureHandle,
   GraphTextureView,
   GraphVectorView
@@ -95,6 +101,9 @@ export type {
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,
+  GraphExternalTextureBinding,
+  GraphExternalTextureDescriptor,
+  GraphExternalTextureUse,
   GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
@@ -209,6 +218,7 @@ export class GPUCommandGraph<Parameters = void> {
 
   private readonly buffers = new Map<string, GraphBufferHandle>();
   private readonly textures = new Map<string, GraphTextureHandle>();
+  private readonly externalTextures = new Map<string, GraphExternalTextureHandle>();
   private readonly tableBufferHandles = new Map<Buffer, GraphBufferHandle>();
   private readonly nodes: GPUCommandGraphNode<Parameters>[] = [];
   private readonly nodeIds = new Set<string>();
@@ -377,6 +387,18 @@ export class GPUCommandGraph<Parameters = void> {
   }
 
   /**
+   * Declares a sampled external image that must be replaced for every numbered encoding frame.
+   *
+   * Media scheduling and acquisition remain caller-owned. The graph borrows each fresh binding
+   * for one encoding and never destroys it.
+   */
+  importExternalTexture(descriptor: GraphExternalTextureDescriptor): GraphExternalTextureHandle {
+    this.assertMutable();
+    validateGraphExternalTextureDescriptor(descriptor, this.device);
+    return this.addExternalTexture(new GraphExternalTextureHandle(this, descriptor));
+  }
+
+  /**
    * Declares one graph-owned fixed-size transient texture.
    *
    * Descriptor-compatible textures with disjoint compiled lifetimes may share an allocation.
@@ -475,6 +497,7 @@ export class GPUCommandGraph<Parameters = void> {
         id: this.id,
         buffers: this.buffers,
         textures: this.textures,
+        externalTextures: this.externalTextures,
         nodes: this.nodes
       })
     );
@@ -493,11 +516,19 @@ export class GPUCommandGraph<Parameters = void> {
         const buffer = getBufferHandle(resource.buffer);
         this.assertBuffer(buffer);
         validateBufferUseAgainstDescriptor(buffer, resource.usage);
-      } else {
+      } else if (isGraphTextureUse(resource)) {
         const texture = getTextureHandle(resource.texture);
         this.assertTexture(texture);
         validateTextureUseAgainstDescriptor(texture, resource.usage);
         validateTextureViewForUsage(resource.texture, resource.usage);
+      } else {
+        this.assertExternalTexture(resource.externalTexture);
+        if (resource.usage !== 'sampled') {
+          throw new Error('GPUCommandGraph external textures support sampled access only');
+        }
+        if (node.type !== 'render') {
+          throw new Error('GPUCommandGraph external textures can be sampled only by render nodes');
+        }
       }
     }
     this.nodeIds.add(node.id);
@@ -505,7 +536,11 @@ export class GPUCommandGraph<Parameters = void> {
   }
 
   private addBuffer(buffer: GraphBufferHandle): GraphBufferHandle {
-    if (this.buffers.has(buffer.id) || this.textures.has(buffer.id)) {
+    if (
+      this.buffers.has(buffer.id) ||
+      this.textures.has(buffer.id) ||
+      this.externalTextures.has(buffer.id)
+    ) {
       throw new Error(`GPUCommandGraph resource id "${buffer.id}" is already in use`);
     }
     this.buffers.set(buffer.id, buffer);
@@ -515,10 +550,26 @@ export class GPUCommandGraph<Parameters = void> {
   private addTexture<Format extends TextureFormat>(
     texture: GraphTextureHandle<Format>
   ): GraphTextureHandle<Format> {
-    if (this.buffers.has(texture.id) || this.textures.has(texture.id)) {
+    if (
+      this.buffers.has(texture.id) ||
+      this.textures.has(texture.id) ||
+      this.externalTextures.has(texture.id)
+    ) {
       throw new Error(`GPUCommandGraph resource id "${texture.id}" is already in use`);
     }
     this.textures.set(texture.id, texture);
+    return texture;
+  }
+
+  private addExternalTexture(texture: GraphExternalTextureHandle): GraphExternalTextureHandle {
+    if (
+      this.buffers.has(texture.id) ||
+      this.textures.has(texture.id) ||
+      this.externalTextures.has(texture.id)
+    ) {
+      throw new Error(`GPUCommandGraph resource id "${texture.id}" is already in use`);
+    }
+    this.externalTextures.set(texture.id, texture);
     return texture;
   }
 
@@ -556,6 +607,12 @@ export class GPUCommandGraph<Parameters = void> {
   private assertTexture(texture: GraphTextureHandle): void {
     if (texture.graph !== this || this.textures.get(texture.id) !== texture) {
       throw new Error(`Graph texture "${texture.id}" does not belong to ${this.id}`);
+    }
+  }
+
+  private assertExternalTexture(texture: GraphExternalTextureHandle): void {
+    if (texture.graph !== this || this.externalTextures.get(texture.id) !== texture) {
+      throw new Error(`Graph external texture "${texture.id}" does not belong to ${this.id}`);
     }
   }
 
@@ -663,6 +720,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
 
   private readonly buffers: Map<string, GraphBufferHandle>;
   private readonly textures: Map<string, GraphTextureHandle>;
+  private readonly externalTextures: Map<string, GraphExternalTextureHandle>;
   private readonly compiledNodes: CompiledNode<Parameters>[];
   private readonly transientBuffers: Map<GraphBufferHandle, Buffer>;
   private readonly transientTextures: Map<GraphTextureHandle, Texture>;
@@ -671,6 +729,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private readonly cachedTextureViews: CachedTextureView[] = [];
   private readonly cachedFramebuffers: CachedFramebuffer[] = [];
   private readonly lastFrameIds = new Map<GraphTextureHandle, number>();
+  private readonly lastExternalTextureFrameIds = new Map<GraphExternalTextureHandle, number>();
+  private readonly consumedExternalTextures = new WeakSet<ExternalTexture>();
   private destroyed = false;
 
   /** @internal */
@@ -679,6 +739,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     this.id = props.id;
     this.buffers = props.buffers;
     this.textures = props.textures;
+    this.externalTextures = props.externalTextures;
     this.compiledNodes = props.compiledNodes;
     this.transientBuffers = props.transientBuffers;
     this.transientTextures = props.transientTextures;
@@ -711,10 +772,22 @@ export class CompiledGPUCommandGraph<Parameters = void> {
 
     const encodingStartTime = getTimestampMilliseconds();
     const importedBuffers = this.resolveImportedBuffers(options.buffers ?? {});
-    const importedTextures = this.resolveImportedTextures(
+    validateEncodingFrameId(options.frameTextures ?? {}, options.externalTextures ?? {});
+    const importedTextureResult = this.resolveImportedTextures(
       options.textures ?? {},
       options.frameTextures ?? {}
     );
+    const externalTextureResult = this.resolveExternalTextures(options.externalTextures ?? {});
+    for (const [handle, nextFrameId] of importedTextureResult.frameIds) {
+      this.lastFrameIds.set(handle, nextFrameId);
+    }
+    for (const [handle, nextFrameId] of externalTextureResult.frameIds) {
+      this.lastExternalTextureFrameIds.set(handle, nextFrameId);
+    }
+    for (const texture of externalTextureResult.textures.values()) {
+      this.consumedExternalTextures.add(texture);
+    }
+    const importedTextures = importedTextureResult.textures;
     const getBuffer = (bufferOrView: GraphBufferHandle | GraphDataView): Buffer => {
       const handle = getBufferHandle(bufferOrView);
       const buffer = handle.transient
@@ -744,11 +817,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         const frameId = this.lastFrameIds.get(textureOrView.texture);
         for (let index = this.cachedTextureViews.length - 1; index >= 0; index--) {
           const entry = this.cachedTextureViews[index];
-          if (
-            entry.logicalView === textureOrView &&
-            entry.texture === texture &&
-            entry.frameId !== frameId
-          ) {
+          if (entry.logicalView === textureOrView && entry.frameId !== frameId) {
+            this.destroyFramebuffersUsingView(entry.view);
             entry.view.destroy();
             this.cachedTextureViews.splice(index, 1);
           }
@@ -783,13 +853,21 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       });
       return view;
     };
+    const getExternalTexture = (handle: GraphExternalTextureHandle): ExternalTexture => {
+      const texture = externalTextureResult.textures.get(handle);
+      if (!texture) {
+        throw new Error(`GPUCommandGraph external texture "${handle.id}" is not bound`);
+      }
+      return texture;
+    };
 
     const baseContext: GPUCommandGraphEncodeContext<Parameters> = {
       commandEncoder,
       parameters: options.parameters,
       getBuffer,
       getTexture,
-      getTextureView
+      getTextureView,
+      getExternalTexture
     };
 
     const encodedNodes: EncodedGPUCommandGraphNode[] = [];
@@ -922,10 +1000,12 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private resolveImportedTextures(
     overrides: Record<string, GraphImportedTexture>,
     frameBindings: Record<string, GraphFrameTextureBinding>
-  ): Map<GraphTextureHandle, Texture> {
+  ): {
+    textures: Map<GraphTextureHandle, Texture>;
+    frameIds: Map<GraphTextureHandle, number>;
+  } {
     const resolved = new Map<GraphTextureHandle, Texture>();
     const nextFrameIds = new Map<GraphTextureHandle, number>();
-    let encodingFrameId: number | undefined;
     for (const [id, handle] of this.textures) {
       if (handle.transient) {
         continue;
@@ -935,13 +1015,6 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         if (!binding) {
           throw new Error(`GPUCommandGraph frame texture "${id}" is required`);
         }
-        if (!Number.isSafeInteger(binding.frameId) || binding.frameId < 0) {
-          throw new Error(`GPUCommandGraph frame texture "${id}" requires a valid frameId`);
-        }
-        if (encodingFrameId !== undefined && binding.frameId !== encodingFrameId) {
-          throw new Error('GPUCommandGraph frame textures must share one frameId per encoding');
-        }
-        encodingFrameId = binding.frameId;
         const lastFrameId = this.lastFrameIds.get(handle);
         if (lastFrameId !== undefined && binding.frameId <= lastFrameId) {
           throw new Error(
@@ -972,10 +1045,41 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         throw new Error(`GPUCommandGraph has no frame texture named "${id}"`);
       }
     }
-    for (const [handle, frameId] of nextFrameIds) {
-      this.lastFrameIds.set(handle, frameId);
+    return {textures: resolved, frameIds: nextFrameIds};
+  }
+
+  private resolveExternalTextures(bindings: Record<string, GraphExternalTextureBinding>): {
+    textures: Map<GraphExternalTextureHandle, ExternalTexture>;
+    frameIds: Map<GraphExternalTextureHandle, number>;
+  } {
+    const textures = new Map<GraphExternalTextureHandle, ExternalTexture>();
+    const frameIds = new Map<GraphExternalTextureHandle, number>();
+    for (const [id, handle] of this.externalTextures) {
+      const binding = bindings[id];
+      if (!binding) {
+        throw new Error(`GPUCommandGraph external texture "${id}" is required`);
+      }
+      const lastFrameId = this.lastExternalTextureFrameIds.get(handle);
+      if (lastFrameId !== undefined && binding.frameId <= lastFrameId) {
+        throw new Error(
+          `GPUCommandGraph external texture "${id}" frameId ${binding.frameId} is stale; expected greater than ${lastFrameId}`
+        );
+      }
+      if (this.consumedExternalTextures.has(binding.texture)) {
+        throw new Error(
+          `GPUCommandGraph external texture "${id}" requires a fresh binding for each frame`
+        );
+      }
+      validateImportedExternalTexture(binding.texture, handle, this.device);
+      textures.set(handle, binding.texture);
+      frameIds.set(handle, binding.frameId);
     }
-    return resolved;
+    for (const id of Object.keys(bindings)) {
+      if (!this.externalTextures.has(id)) {
+        throw new Error(`GPUCommandGraph has no external texture named "${id}"`);
+      }
+    }
+    return {textures, frameIds};
   }
 
   private getFramebuffer(
@@ -1014,6 +1118,19 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     });
     return framebuffer;
   }
+
+  private destroyFramebuffersUsingView(view: TextureView): void {
+    for (let index = this.cachedFramebuffers.length - 1; index >= 0; index--) {
+      const cached = this.cachedFramebuffers[index];
+      if (
+        cached.depthStencilAttachment === view ||
+        cached.colorAttachments.some(attachment => attachment === view)
+      ) {
+        cached.framebuffer.destroy();
+        this.cachedFramebuffers.splice(index, 1);
+      }
+    }
+  }
 }
 
 /** Unwraps a dynamic import to the concrete buffer used for validation and encoding. */
@@ -1030,6 +1147,26 @@ function getCoreTexture(texture: GraphImportedTexture): Texture {
     return texture.texture;
   }
   return texture;
+}
+
+/** Ensures all ephemeral image imports belong to one explicit application frame. */
+function validateEncodingFrameId(
+  frameTextures: Record<string, GraphFrameTextureBinding>,
+  externalTextures: Record<string, GraphExternalTextureBinding>
+): void {
+  let encodingFrameId: number | undefined;
+  for (const [id, binding] of [
+    ...Object.entries(frameTextures),
+    ...Object.entries(externalTextures)
+  ]) {
+    if (!Number.isSafeInteger(binding.frameId) || binding.frameId < 0) {
+      throw new Error(`GPUCommandGraph frame resource "${id}" requires a valid frameId`);
+    }
+    if (encodingFrameId !== undefined && binding.frameId !== encodingFrameId) {
+      throw new Error('GPUCommandGraph frame resources must share one frameId per encoding');
+    }
+    encodingFrameId = binding.frameId;
+  }
 }
 
 /** Returns a portable timestamp pair recorded by one render or compute pass. */
@@ -1086,6 +1223,34 @@ function validateGraphBufferDescriptor(descriptor: GraphBufferDescriptor, device
   }
   if (!Number.isSafeInteger(descriptor.usage) || descriptor.usage <= 0) {
     throw new Error(`GPUCommandGraph buffer "${descriptor.id}" requires buffer usage flags`);
+  }
+}
+
+/** Validates the stable metadata used to check successive external-image snapshots. */
+function validateGraphExternalTextureDescriptor(
+  descriptor: GraphExternalTextureDescriptor,
+  device: Device
+): void {
+  if (!descriptor.id) {
+    throw new Error('GPUCommandGraph external texture id is required');
+  }
+  for (const [name, value] of Object.entries({
+    width: descriptor.width,
+    height: descriptor.height
+  })) {
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new Error(
+        `GPUCommandGraph external texture "${descriptor.id}" ${name} must be a positive safe integer`
+      );
+    }
+  }
+  if (
+    descriptor.width > device.limits.maxTextureDimension2D ||
+    descriptor.height > device.limits.maxTextureDimension2D
+  ) {
+    throw new Error(
+      `GPUCommandGraph external texture "${descriptor.id}" exceeds device dimension limits`
+    );
   }
 }
 
@@ -1287,6 +1452,27 @@ function validateImportedTexture(
   }
   if ((texture.props.usage & descriptor.usage) !== descriptor.usage) {
     throw new Error(`GPUCommandGraph texture "${descriptor.id}" has incompatible usage flags`);
+  }
+}
+
+/** Validates one opaque, sampled-only external-image snapshot. */
+function validateImportedExternalTexture(
+  texture: ExternalTexture,
+  descriptor: GraphExternalTextureHandle,
+  device: Device
+): void {
+  if (texture.device !== device) {
+    throw new Error(
+      `GPUCommandGraph external texture "${descriptor.id}" belongs to another device`
+    );
+  }
+  if (texture.destroyed) {
+    throw new Error(`GPUCommandGraph external texture "${descriptor.id}" has been destroyed`);
+  }
+  if (texture.width !== descriptor.width || texture.height !== descriptor.height) {
+    throw new Error(
+      `GPUCommandGraph external texture "${descriptor.id}" has incompatible dimensions (${texture.width}x${texture.height} !== ${descriptor.width}x${descriptor.height})`
+    );
   }
 }
 

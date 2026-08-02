@@ -16,6 +16,17 @@ A reduction combines many scalar rows into one summary. `sum`, `min`, and `max` 
 higher levels reduce those partial results until one row remains. This fixed tree avoids CPU
 readback and makes the floating-point order repeatable for a fixed input topology.
 
+### When to use it
+
+Reductions answer whole-input questions that should remain on the GPU: compute an automatic chart
+domain, total selected bytes or work, find the largest simulated value, or verify a generated count.
+The one- or two-row result can feed uniforms, histogram domains, allocation decisions with fixed
+capacity, or a small asynchronous readback.
+
+Use grouped, grid, or histogram aggregation when the result must retain categories, spatial cells,
+or a distribution. A reduction deliberately discards row identity and intermediate structure; it
+does not report which row produced a minimum or maximum.
+
 ```ts
 new GPUReduction({input: values, output: extent, operation: 'extent'}).addToGraph(graph);
 ```

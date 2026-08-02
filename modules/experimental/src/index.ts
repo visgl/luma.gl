@@ -157,6 +157,27 @@ export {
   MAX_VOLUMETRIC_FIRE_EMITTERS,
   VolumetricFireSimulation
 } from './rendering/volumetric-fire-simulation';
+  SpectralCausticsBindings,
+  SpectralCausticsProps,
+  SpectralCausticsUniforms
+} from './rendering/spectral-caustics';
+export {
+  convertD65XYZToLinearSRGB,
+  D65_XYZ_TO_LINEAR_SRGB_MATRIX,
+  spectralCaustics
+} from './rendering/spectral-caustics';
+export type {
+  SpectralCausticsCaptureFace,
+  SpectralCausticsDrawContext,
+  SpectralCausticsPrepareContext,
+  SpectralCausticsRendererEncodeOptions,
+  SpectralCausticsRendererProps,
+  SpectralCausticsSupport
+} from './rendering/spectral-caustics-renderer';
+export {
+  getSpectralCausticsSupport,
+  SpectralCausticsRenderer
+} from './rendering/spectral-caustics-renderer';
 
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';

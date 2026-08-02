@@ -18,6 +18,14 @@ or `'auto'`, which inserts an extent reduction. Irregular histograms accept expl
 GPU-resident edges. In both forms, the minimum is inclusive, the maximum is included in the final
 bin, and values outside the domain are ignored.
 
+Use histograms to inspect distribution shape without downloading every value: latency tails,
+duration profiles, sensor-value ranges, particle speeds, or selected-value summaries in a linked
+chart. Equal-width bins are convenient for exploratory views over compact domains; irregular edges
+are better when meaningful thresholds or several orders of magnitude must remain visible.
+
+A histogram discards source identity and order. Use group aggregation for named categories, sorting
+for ordered rows, or compaction when the application needs the selected IDs rather than counts.
+
 ### Why irregular edges matter
 
 Equal-width bins work well for compact numeric domains. They are less useful for heavy-tailed

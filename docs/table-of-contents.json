@@ -224,6 +224,10 @@
               "api-reference/experimental/gpu-primitives/gpu-histogram",
               "api-reference/experimental/gpu-primitives/gpu-grid-binning",
               "api-reference/experimental/gpu-primitives/gpu-grid-aggregation",
+              "api-reference/experimental/gpu-primitives/gpu-grid-index",
+              "api-reference/experimental/gpu-primitives/gpu-grid-index-query",
+              "api-reference/experimental/gpu-primitives/gpu-point-spatial-filter",
+              "api-reference/experimental/gpu-primitives/gpu-bvh",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]
@@ -313,6 +317,10 @@
               "api-reference/experimental/gpu-primitives/gpu-histogram",
               "api-reference/experimental/gpu-primitives/gpu-grid-binning",
               "api-reference/experimental/gpu-primitives/gpu-grid-aggregation",
+              "api-reference/experimental/gpu-primitives/gpu-grid-index",
+              "api-reference/experimental/gpu-primitives/gpu-grid-index-query",
+              "api-reference/experimental/gpu-primitives/gpu-point-spatial-filter",
+              "api-reference/experimental/gpu-primitives/gpu-bvh",
               "api-reference/experimental/gpu-primitives/gpu-group-aggregation",
               "api-reference/experimental/gpu-primitives/draw-command-buffer"
             ]

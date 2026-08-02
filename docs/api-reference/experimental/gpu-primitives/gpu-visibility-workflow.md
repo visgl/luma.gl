@@ -19,6 +19,16 @@ source order, and the GPU-resident count defines the valid prefix of the output.
 that fixed contract without knowing whether rows were rejected by time, bounds, LOD, selection, or
 a combination of them.
 
+Use the workflow when several renderers or examples should share the same fixed visibility
+plumbing. Time-window filtering in a timeline, frustum culling in a 3D view, LOD selection for map
+tiles, and linked-selection filtering can all produce masks independently and receive the same
+stable IDs plus indirect count. This keeps renderer-specific shaders focused on producing predicates
+and consuming identities.
+
+Use `GPUMask` and `GPUCompaction` directly when an application needs different boolean semantics,
+custom outputs, or only one of those stages. The workflow intentionally does not accept arbitrary
+WGSL callbacks: fixed predicate-mask contracts remain easier to compose, validate, and reuse.
+
 ```ts
 import {GPUVisibilityWorkflow} from '@luma.gl/experimental';
 

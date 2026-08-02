@@ -8,6 +8,7 @@ export {
   GPUCommandGraphEncoding,
   GraphBufferHandle,
   GraphDataView,
+  GraphExternalTextureHandle,
   GraphTextureHandle,
   GraphTextureView,
   GraphVectorView
@@ -33,6 +34,9 @@ export type {
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,
+  GraphExternalTextureBinding,
+  GraphExternalTextureDescriptor,
+  GraphExternalTextureUse,
   GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,
@@ -96,6 +100,32 @@ export type {
   GPUGridBinningPositions,
   GPUGridBinningProps
 } from './gpu-grid-binning';
+
+export {GPUGridIndex} from './gpu-grid-index';
+export type {
+  GPUGridIndexBounds,
+  GPUGridIndexPositions,
+  GPUGridIndexProps,
+  GPUGridIndexSize,
+  GPUGridIndexSourceIds
+} from './gpu-grid-index';
+
+export {GPUGridIndexQuery} from './gpu-grid-index-query';
+export type {
+  GPUGridIndexQueryKind,
+  GPUGridIndexQueryProps,
+  GPUGridIndexView
+} from './gpu-grid-index-query';
+
+export {GPUPointSpatialFilter} from './gpu-point-spatial-filter';
+export type {
+  GPUPointSpatialFilterCandidates,
+  GPUPointSpatialFilterKind,
+  GPUPointSpatialFilterProps
+} from './gpu-point-spatial-filter';
+
+export {GPUBVH} from './gpu-bvh';
+export type {GPUBVHBoundsView, GPUBVHProps, GPUBVHStorageStats} from './gpu-bvh';
 
 export {GPUGridAggregation} from './gpu-grid-aggregation';
 export type {

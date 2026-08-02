@@ -15,6 +15,17 @@ each selected row its destination index, a scatter copies selected values in sou
 count reports the valid output prefix. For input `[8, 3, 5, 2]` and flags `[1, 0, 1, 0]`, the valid
 output is `[8, 5]` with count `2`; capacity beyond that prefix is unspecified.
 
+### When to use it
+
+Use compaction when a later stage needs a dense work list rather than one flag per source row. It
+can turn a frustum mask into visible object IDs, a brush mask into selected record IDs, or a validity
+mask into jobs for a follow-up compute pass. Writing `count` into a `DrawCommandBuffer` also turns
+the same result directly into an indirect instance list.
+
+Keep the mask un-compacted when downstream shaders already visit every source row or need random
+source-aligned membership tests. Compaction adds scan and scatter work, and only the prefix selected
+by `count` is meaningful; it does not shrink the caller-owned output allocation.
+
 ```ts
 new GPUCompaction({
   id: 'visible-ids',

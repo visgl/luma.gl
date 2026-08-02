@@ -16,6 +16,18 @@ Every input row contains a position and one weight. The bounds and grid dimensio
 position to a cell, then `operation` chooses the statistic. Non-finite or out-of-bounds positions
 and non-finite weights are ignored. Exact maximum coordinates enter the final column or row.
 
+### When to use it
+
+Grid aggregation answers spatial questions where every point carries a measurement. Examples
+include mean temperature per map cell, total bytes transferred per screen tile, maximum particle
+speed in a simulation region, and minimum elevation in a terrain overview. The fixed grid produces
+a compact texture-like summary that can drive heatmaps, labels, or a later compute decision.
+
+Use [`GPUGridBinning`](./gpu-grid-binning) for population or occupancy alone. Use
+[`GPUGroupAggregation`](./gpu-group-aggregation) when rows already carry categorical IDs rather
+than continuous positions, and use a spatial index when the application needs the individual
+objects in a queried region instead of one statistic per cell.
+
 `'sum'` is the default. Sum and mean use an atomic compare/exchange addition, so ordinary
 `float32` rounding applies but cross-invocation accumulation order is not promised. Finite inputs
 may overflow a sum or mean to infinity, or produce NaN after opposite-sign overflow. Mean owns one

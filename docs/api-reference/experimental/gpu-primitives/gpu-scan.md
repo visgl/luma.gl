@@ -24,6 +24,12 @@ A segmented scan restarts that running total within one input. For segment-start
 `[3, 4, 4, 6]`. This is useful for grouped table rows, per-path geometry, per-level layout, and
 other adjacent records that need independent prefixes without separate dispatches.
 
+Choose a scan when each row needs the total contributed by preceding rows. Besides compaction,
+this supports vertex offsets for variable-size geometry, text or path expansion, cumulative
+distributions, grouped layout offsets, and allocation positions in fixed-capacity output. Use a
+reduction when only the final total matters; use compaction when the desired result is already a
+dense list rather than the offsets used to build one.
+
 “Hierarchical” describes how the implementation scales, not another output mode. Each workgroup
 scans a block, higher levels scan the block summaries, and offset passes propagate those totals
 back down. Callers see one logical result even when the input spans many workgroups or vector

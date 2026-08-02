@@ -101,7 +101,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   fs?: string | null;
 
   /** Shadertools shader modules added to shader code. */
-  modules?: ShaderModule[];
+  modules?: ShaderModule<any, any, any>[];
   /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
   defines?: Record<string, boolean | number>;
   /** Reusable shader assembly plugins resolved for the active GLSL or WGSL backend. */

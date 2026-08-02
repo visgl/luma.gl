@@ -16007,6 +16007,7 @@ __metadata:
   dependencies:
     "@luma.gl/core": "npm:9.4.0-alpha.2"
     "@luma.gl/engine": "npm:9.4.0-alpha.2"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.2"
     "@luma.gl/webgl": "npm:9.4.0-alpha.2"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.2"
     "@math.gl/core": "npm:^4.1.0"

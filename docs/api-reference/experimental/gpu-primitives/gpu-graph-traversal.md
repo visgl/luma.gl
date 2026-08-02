@@ -18,6 +18,18 @@ nodes, and expands one frontier per depth. Forward CSR follows outgoing edges; r
 incoming edges. The result is a source-aligned `0`/`1` reachability mask rather than a reordered
 list, so it composes directly with masks and compaction.
 
+### When to use it
+
+Traversal supports focus interactions over an existing graph: show the callers and callees of a
+selected operation, retain every dependency within three hops of an incident, reveal an object's
+incoming references, or propagate a selection through a network. `activeDepth` lets an interaction
+change the visible radius without rebuilding the compiled command graph.
+
+It is not a general shortest-path or ordering API. Use ancestor projection for one canonical parent
+chain, and use a purpose-built graph algorithm when results require distances, weights, or a
+deterministic visit order. The bounded breadth-first contract is designed to produce a membership
+mask for later filtering.
+
 ```ts
 import {GPUGraphTraversal} from '@luma.gl/experimental';
 

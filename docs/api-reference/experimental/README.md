@@ -98,6 +98,11 @@ The [Transparency](/docs/api-guide/shaders/transparency) and
 [Glass Effects](/docs/api-guide/shaders/glass-effects) guides describe render ordering, backend
 constraints, local lighting, and physically based limitations.
 
+[`SpectralCausticsRenderer`](/docs/api-reference/experimental/spectral-caustics-renderer) provides
+a WebGPU-only geometry-derived alternative to the analytic `opticalCaustics` helper. It captures
+one convex refractor from a light view, traces six wavelength bands on the GPU, accumulates an HDR
+XYZ map, and exposes the `spectralCaustics` receiver module for additive planar lighting.
+
 ## Hybrid Shadows
 
 [`ShadowMapRenderer`](/docs/api-reference/experimental/shadow-map-renderer) provides WebGPU-only
