@@ -993,9 +993,9 @@ tessellation.
 
 ## Phased roadmap
 
-The command-graph foundation and first hierarchical-trace, analysis, texture, and picking
-milestones are implemented. The remaining work is ordered by dependency so that later APIs build
-on measured, reusable contracts instead of demo-specific behavior.
+The command-graph foundation and hierarchical-trace, analysis, texture, picking, and spatial
+filtering v1 milestones are implemented. The remaining work is ordered by dependency so that later
+APIs build on measured, reusable contracts instead of demo-specific behavior.
 
 Impact estimates how broadly a phase unlocks GPU-driven applications. Complexity/cost estimates
 relative engineering scope, integration risk, and validation effort; it is not a staffing or
@@ -1008,17 +1008,19 @@ schedule commitment.
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Core implemented; topology extensions deferred | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts | Implemented | Medium | Large |
-| 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | In progress | High | Large |
+| 5 — Spatial acceleration | `GPUGridIndex` and `GPUBVH` with explicit build, update, query, correctness, and cost-comparison contracts | V1 implemented; conditional extensions deferred | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
 | 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
 
-### Implemented spatial milestones
+### Spatial v1 milestones
 
 Phase 4 is implemented through Tranche 4.4. The spatial stack now includes compact 2D/3D
 `GPUGridIndex` construction, conservative queries, exact point refinement with an unindexed GPU
 oracle, deterministic complete-binary `GPUBVH` storage and refit, and exact BVH bounds/point
 traversal. These are foundations, not a claim that incremental grid updates or source-order BVH
-topology are always profitable.
+topology are always profitable. A shared benchmark harness now rejects incomplete or incorrect
+paths before reporting timings and records why optional update, topology, and ray extensions remain
+deferred.
 
 | Milestone | Implemented outcome |
 | --- | --- |
@@ -1027,6 +1029,8 @@ topology are always profitable.
 | 5.2b — Exact query consumers | Indexed and unindexed 2D/3D point predicates feeding one visibility contract |
 | 5.3a — `GPUBVH` storage and refit | Flat complete-binary nodes, stable leaf slots, explicit capacity, and bottom-up refit |
 | 5.4a — `GPUBVH` bounds and point query | Exact 2D/3D traversal with stable IDs, masks, count, overflow, and visited-node metrics |
+| 5.2c / 5.4c — Benchmark and cost model | Correctness-gated scan/grid/BVH timings, phase distributions, memory, work counters, and reuse amortization |
+| 5.1b / 5.3b / 5.4b — Decision gates | Incremental grid updates, topology rebuild, and ray traversal deferred pending consumer semantics and positive evidence |
 
 ### Remaining tranche map
 
@@ -1041,13 +1045,6 @@ consumers.
 | --- | --- | --- | --- | :---: | :---: |
 | 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
 | 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
-| 5.2c — Spatial benchmark harness | Repeatable scan/grid/BVH measurements with shared data, queries, and correctness oracle | GPU timestamps, Tranche 5.2b, and Tranche 5.4a for BVH columns | Reports build, refit, query, refinement, memory, selectivity, and reuse distributions | High | Medium |
-| 5.1b — Grid update decision gate | Compare full rebuild with bounded relocation and reserved-cell designs | Tranche 5.2c plus a moving-data consumer | Decision records crossover, memory overhead, fragmentation, and overflow behavior | Medium | Medium |
-| 5.1c — Incremental grid maintenance | Implement only the update design selected by Tranche 5.1b | Positive Tranche 5.1b decision | Matches full rebuild after adversarial moves and demonstrates an update-rate win | High | Large |
-| 5.3b — BVH topology-quality evidence | Measure source order, producer order, and Morton order without changing storage | Tranches 5.3a, 5.4a, and GPU timestamps | Reports visited nodes, candidate ratios, build/refit cost, and overlap quality | High | Medium |
-| 5.3c — Spatial topology rebuild | Add Morton or another builder only if Tranche 5.3b demonstrates a material win | Positive Tranche 5.3b decision | Rebuild/refit query equivalence and separately measured sorting/topology costs | High | Large |
-| 5.4b — BVH ray-like query | Point-to-ray and segment candidates with bounded traversal work | Tranche 5.4a and a picking or simulation consumer | CPU-oracle parity plus explicit stack/work-queue capacity and overflow | Medium | Large |
-| 5.4c — Phase 5 cost model | Publish scan/grid/BVH selection guidance without universal-winner claims | Tranches 5.2c, 5.3b, and 5.4b; include 5.1c/5.3c only if built | Guidance covers size, update rate, selectivity, reuse, memory, and topology quality | High | Medium |
 | 6.1a — Scene record contract | Flat stable-ID records for bounds, transforms, groups, geometry references, and command slots | Phase 2 and Tranche 5.4a | Layout and ownership tests; no CPU hierarchy or table type in the core | High | Medium |
 | 6.1b — Scene updates and compaction | Insert, remove, patch, and compact records with bounded work | Tranche 6.1a | Identity/reference preservation under holes, moves, overflow, and compaction | High | Large |
 | 6.1c — Scene adapters | Explicit CPU-scene and GPU-table adapters without a canonical source model | Tranche 6.1b and partitioned-topology decisions | Both adapters build the same records without casts or hidden packing | High | Medium |
@@ -1062,15 +1059,13 @@ consumers.
 
 ### Recommended execution order
 
-1. Build the shared spatial benchmark harness (5.2c) and topology-quality evidence (5.3b). These can
-   progress together once BVH query output exists.
-2. Run the grid-update and BVH-rebuild decision gates (5.1b and 5.3b). Implement 5.1c or 5.3c only
-   where the measured consumer crossover is positive.
-3. Add ray-like BVH traversal (5.4b) when a picking or simulation consumer fixes the required query
-   semantics, then publish the Phase 5 cost model (5.4c).
-4. Start `GPUScene` storage (6.1a) after the bounds/point query contract is stable; draw generation
+1. Start `GPUScene` storage (6.1a) after the bounds/point query contract is stable; draw generation
    waits for update and grouping ownership to be explicit.
-5. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
+2. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the
+   cross-chunk identity contract.
+3. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
+   documented decision gate gains a requesting consumer and positive evidence.
+4. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
 
 ### Phase 0 — Current foundation
 
@@ -1315,15 +1310,16 @@ in graph validation without accidental ownership or cross-frame reuse.
 **Entry dependencies:** Phase 1 supplies measurement, Phase 2 supplies reusable visibility, and
 Phase 3 supplies the required scan, compaction, and batching behavior.
 
-Implement `GPUGridIndex` before `GPUBVH` to validate build, update, storage, and query interfaces on
-a simpler structure. Add `GPUBVH` only after grid-index consumers establish the shared contract.
-Both are library-built storage-buffer structures, not native WebGPU acceleration resources, and
-must expose their construction and query costs.
+`GPUGridIndex` was implemented before `GPUBVH` to validate build, update, storage, and query
+interfaces on a simpler structure. Grid-index consumers established the shared identity, capacity,
+overflow, and measurement contracts reused by BVH traversal. Both are library-built storage-buffer
+structures, not native WebGPU acceleration resources, and expose their construction and query
+costs.
 
 #### Tranche 5.1 — `GPUGridIndex` build and update
 
-**Status:** Compact full-build storage is implemented. Incremental maintenance is conditional on a
-measured update-policy decision gate.
+**Status:** Compact full-build storage is implemented. Incremental maintenance is deferred pending
+a moving-data consumer and a positive measured update-policy decision.
 
 Build a flat index of cell offsets and stable object IDs from bounded positions or bounds. Expose
 capacity and overflow, distinguish full rebuilds from supported incremental updates, and keep cell
@@ -1337,21 +1333,23 @@ and out-of-domain rows are ignored.
 
 The current update policy is explicitly `'rebuild'`: callers may upload a bounded input range or
 replace one vector chunk, but the next encoding clears, scans, and scatters the complete compact
-index. Tranche 5.1b compares that baseline with bounded relocation and reserved-cell designs using a
-moving-data consumer. It records memory overhead, fragmentation, adversarial movement, and the
-update-rate crossover. Tranche 5.1c is entered only if that evidence justifies an incremental design;
-`'rebuild'` remains a valid final policy otherwise.
+index. The 5.1b decision gate deferred bounded relocation and reserved-cell designs because no
+moving-data consumer yet demonstrates a positive crossover after memory overhead, fragmentation,
+adversarial movement, and overflow behavior. Tranche 5.1c reopens only if that evidence justifies an
+incremental design; `'rebuild'` is the complete v1 policy.
 
 **Implemented evidence:** Two-dimensional and three-dimensional builds match CPU oracles across
 empty, clustered, out-of-domain, and capacity-boundary inputs.
 
-**Remaining evidence:** Benchmarks report allocation, full-build, and candidate incremental-update
-costs separately from query cost, followed by an explicit implement-or-defer decision.
+**Decision:** Full rebuild is the supported v1 update contract. The benchmark reports its build cost
+separately from query cost. Bounded relocation or reserved-cell maintenance reopens only when a
+moving-data consumer demonstrates a crossover that repays added memory, fragmentation, and
+overflow complexity.
 
 #### Tranche 5.2 — `GPUGridIndex` query
 
-**Status:** Conservative queries and exact 2D/3D point-refinement consumers are implemented;
-representative cost comparison remains planned.
+**Status:** Conservative queries, exact 2D/3D point-refinement consumers, and the shared benchmark
+contract are implemented.
 
 Add bounds, radius, and point queries whose masks or compacted IDs compose directly with visibility
 and region-picking outputs. Query contracts preserve stable identity and do not require downloading
@@ -1372,17 +1370,19 @@ query changes. Candidate overflow remains visible because a refined result canno
 its broad phase was truncated.
 
 Tranche 5.2c turns the indexed and unindexed paths into one repeatable benchmark harness. The harness
-uses identical data and queries, validates exact result parity, and reports distributions rather
-than a single favorable sample.
+uses identical data and queries, validates exact result parity, rejects overflow, and reports
+distributions rather than a single favorable sample.
 
-**Remaining exit evidence:** Representative consumers use GPU timestamps to compare allocation,
-build, query, and exact-predicate costs across update rates, selectivity, data distributions, and
-reuse counts, then document where index construction becomes worthwhile.
+**Implemented evidence:** `runGPUSpatialQueryBenchmark` reports build, query, exact-predicate, memory,
+candidate, and reuse-amortization metrics with optional GPU timestamps. Representative consumers
+still choose and publish their own crossover; the library does not encode one adapter-specific
+threshold as policy.
 
 #### Tranche 5.3 — `GPUBVH` build and refit
 
-**Status:** Flat complete-binary storage and deterministic GPU refit are implemented; spatial
-topology rebuild remains planned.
+**Status:** Flat complete-binary storage, deterministic GPU refit, exact traversal, and
+topology-quality measurement are implemented. Spatial topology rebuild is deferred pending positive
+consumer evidence.
 
 Define flat node and leaf storage, stable leaf identity, bounds encoding, and explicit rebuild and
 refit policies. Reuse the grid index's ownership and measurement conventions where possible while
@@ -1396,39 +1396,46 @@ policy, level count, and caller-owned output bytes are explicit.
 
 The complete source-order topology is a correctness and refit baseline, not a promised spatial
 quality heuristic. Tiled, Morton-ordered, or producer-sorted inputs may already have locality;
-arbitrary order may create overlapping parents and poor traversal. Tranche 5.3b measures visited
-nodes, overlap, candidate ratios, and build/refit cost for source, producer, and Morton order.
-Tranche 5.3c adds a spatial builder only after that comparison demonstrates a material benefit.
+arbitrary order may create overlapping parents and poor traversal. The 5.3b decision gate uses
+visited nodes, candidate ratios, and build/refit phases to compare source, producer, and externally
+preordered input. Tranche 5.3c reopens only after representative measurements demonstrate that a
+library spatial builder repays its sorting and topology cost.
 
 **Implemented query evidence:** `GPUBVHQuery` traverses complete-binary 2D/3D hierarchies for exact
 point containment and bounds intersection. CPU-oracle tests cover selective pruning, overlap,
 invalid queries, output overflow, mutable queries, and source-ID-addressed masks. `visitedCount`
 reports topology work independently from matches.
 
-**Remaining exit evidence:** Topology-quality metrics are reported separately from storage and
-refit cost; and any implemented spatial rebuild produces query results equivalent to refit.
+**Decision:** `visitedCount` and phase timings report topology quality separately from storage and
+refit cost. A Morton or other topology builder reopens only when representative source, producer,
+and preordered inputs demonstrate a material end-to-end win after sorting/build cost. Any future
+builder must preserve query equivalence with refit.
 
 #### Tranche 5.4 — `GPUBVH` query and cost model
+
+**Status:** Bounds/point query and the Phase 5 selection cost model are implemented. Ray-like
+traversal is deferred as a separate consumer-defined extension.
 
 Tranche 5.4a is implemented. `GPUBVHQuery` connects exact bounds and point traversal to the same
 bounded candidate, mask, count, and overflow contracts used by grid queries. It intentionally
 precedes topology optimization: `visitedCount` measures whether a new topology improves useful
 work.
 
-Tranche 5.4b adds ray-like or segment candidates only after a picking or simulation consumer fixes
-the semantics. Traversal stack or work-queue capacity must be explicit and overflow must never look
-like an empty hit set.
+Tranche 5.4b remains deferred until a picking or simulation consumer fixes ray/segment intersection,
+nearest-hit behavior, and bounded traversal semantics. Traversal stack or work-queue capacity must
+be explicit and overflow must never look like an empty hit set.
 
 Tranche 5.4c publishes selection guidance rather than claiming one index is universally best. It
-includes conditional incremental-grid or spatial-BVH builders only if their decision gates passed.
+includes conditional incremental-grid or spatial-BVH builders only if their decision gates pass.
 
-**Exit evidence:** Representative consumers compare unindexed scan, grid, and BVH paths with the
-same inputs and correctness oracle, including build amortization, update rate, selectivity, memory,
-topology quality, visited nodes, and query time.
+**Exit evidence:** The shared harness compares unindexed scan, grid, and BVH paths with the same
+inputs and correctness oracle, including build amortization, selectivity, memory, candidates,
+topology quality, visited nodes, and query time. Update rates remain consumer inputs rather than a
+hard-coded library threshold.
 
-**Exit criteria:** Both a two-dimensional and a three-dimensional consumer can build or update an
-index, query it through a graph, feed results into visibility or picking, and compare correctness
-and cost with an unindexed GPU scan.
+**Exit criteria:** Achieved by 2D/3D grid and BVH build/query tests, exact point-filter integration,
+visibility composition, stable output contracts, and the correctness-gated cost model. Picking can
+consume the same stable-ID masks; ray traversal is not required for spatial filtering v1.
 
 ### Phase 6 — GPUScene
 
@@ -1587,6 +1594,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUPointSpatialFilter`](/docs/api-reference/experimental/gpu-primitives/gpu-point-spatial-filter)
 - [`GPUBVH`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh)
 - [`GPUBVHQuery`](/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query)
+- [GPU spatial query benchmark](/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring)
