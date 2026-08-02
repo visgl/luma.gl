@@ -304,8 +304,10 @@ renderer.renderToScreen({
     gtaoTemporal: {inverseProjectionMatrix},
     ssgiTrace: {projectionMatrix, inverseProjectionMatrix},
     ssgiTemporal: {inverseProjectionMatrix},
-    ssrTrace: {projectionMatrix, inverseProjectionMatrix},
-    ssrTemporal: {inverseProjectionMatrix}
+    ssrTrace: {projectionMatrix, inverseProjectionMatrix, frameIndex},
+    ssrTemporal: {inverseProjectionMatrix},
+    ssrSpatial: {inverseProjectionMatrix},
+    ssrComposite: {inverseProjectionMatrix}
   }
 });
 ```

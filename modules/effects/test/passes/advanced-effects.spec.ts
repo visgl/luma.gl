@@ -33,6 +33,9 @@ import {
   hdrLuminanceExtract,
   hdrLuminanceReduce,
   ssgiTemporal,
+  ssrComposite,
+  ssrSpatial,
+  ssrTrace,
   ssrTemporal
 } from '../../src';
 
@@ -388,6 +391,32 @@ test('advanced effects expose composable pipeline shapes', testCase => {
     ssrTemporal.uniformTypes.inverseProjectionMatrix,
     'mat4x4<f32>',
     'SSR temporal rejection reconstructs linear view-space depth'
+  );
+  testCase.ok(
+    ssrTrace.source.includes('ssrTrace_hash(pixelCoordinate, ssrTrace.frameIndex)'),
+    'SSR rotates its stochastic trace sample every frame'
+  );
+  testCase.equal(
+    ssrSpatial.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'SSR denoising compares linear view-space depth'
+  );
+  testCase.ok(
+    ssrSpatial.source.includes('relativeDepthDelta'),
+    'SSR denoising rejects relative view-depth discontinuities'
+  );
+  testCase.equal(
+    ssrComposite.uniformTypes.inverseProjectionMatrix,
+    'mat4x4<f32>',
+    'SSR upsampling compares linear view-space depth'
+  );
+  testCase.ok(
+    ssrTemporal.source.includes('let hasCurrentSupport = maximumReflection.a > 0.001'),
+    'SSR temporal accumulation detects frame-local hit support'
+  );
+  testCase.ok(
+    ssrTemporal.source.includes('historyReflection.a * ssrTemporal.historyWeight'),
+    'SSR temporal accumulation decays valid history across stochastic misses'
   );
   testCase.end();
 });

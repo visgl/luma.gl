@@ -880,7 +880,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           inverseProjectionMatrix,
           historyWeight: this.settings.reflectionHistoryWeight
         },
+        ssrSpatial: {inverseProjectionMatrix},
         ssrComposite: {
+          inverseProjectionMatrix,
           strength: this.settings.reflectionStrength,
           debugMode:
             this.settings.debugView === 'Reflections'
