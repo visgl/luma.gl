@@ -296,18 +296,28 @@ function makePredicate(filter: GPUPointSpatialFilter): string {
   }
 
   const centerValues = axes
-    .map(
-      (axis, axisIndex) =>
-        `let query${axis} = queryValues[QUERY_OFFSET + ${axisIndex}u];
-  let distance${axis} = position${axis} - query${axis};`
-    )
+    .map((axis, axisIndex) => `let query${axis} = queryValues[QUERY_OFFSET + ${axisIndex}u];`)
     .join('\n  ');
   const finiteCenter = axes.map(axis => `finite(query${axis})`).join(' && ');
-  const squaredDistance = axes.map(axis => `distance${axis} * distance${axis}`).join(' + ');
+  const scale = makeNestedMaximum([
+    'radius',
+    ...axes.flatMap(axis => [`abs(position${axis})`, `abs(query${axis})`])
+  ]);
+  const squaredDistance = axes
+    .map(
+      axis =>
+        `(position${axis} / scale - query${axis} / scale) * (position${axis} / scale - query${axis} / scale)`
+    )
+    .join(' + ');
   return `${positionValues}
   ${centerValues}
   let radius = queryValues[QUERY_OFFSET + ${filter.dimension}u];
-  let selected = ${finitePosition} && ${finiteCenter} && finite(radius) && radius >= 0.0 && ${squaredDistance} <= radius * radius;`;
+  let scale = ${scale};
+  let selected = ${finitePosition} && ${finiteCenter} && finite(radius) && radius >= 0.0 && (scale == 0.0 || ${squaredDistance} <= (radius / scale) * (radius / scale));`;
+}
+
+function makeNestedMaximum(values: string[]): string {
+  return values.slice(1).reduce((maximum, value) => `max(${maximum}, ${value})`, values[0]);
 }
 
 function addComputationPass<Parameters>(

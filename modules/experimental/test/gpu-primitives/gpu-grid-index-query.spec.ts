@@ -167,6 +167,108 @@ test('GPUGridIndexQuery selects 3D point cells', async t => {
   t.end();
 });
 
+test('GPUGridIndexQuery handles extreme domains and exponential WGSL literals', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const pointFixture = createQueryFixture(device, {
+    positions: Float32Array.from([0, 0.5]),
+    format: 'float32x2',
+    gridSize: [2, 1],
+    bounds: [-3e38, 0, 3e38, 1],
+    kind: 'point',
+    query: Float32Array.from([0, 0.5]),
+    outputCapacity: 1
+  });
+  encode(device, pointFixture.compiled);
+  t.deepEqual(
+    await readQueryResult(pointFixture),
+    {ids: [0], count: 1, overflow: 0},
+    'cross-zero normalization agrees with index construction'
+  );
+  destroyFixture(pointFixture);
+
+  const radiusFixture = createQueryFixture(device, {
+    positions: Float32Array.from([-2e38, 0.5, 2e38, 0.5]),
+    format: 'float32x2',
+    gridSize: [2, 1],
+    bounds: [-3e38, 0, 3e38, 1],
+    kind: 'radius',
+    query: Float32Array.from([0, 0.5, 1e20]),
+    outputCapacity: 2
+  });
+  encode(device, radiusFixture.compiled);
+  t.deepEqual(
+    (await readQueryResult(radiusFixture)).ids.sort(sortNumbers),
+    [0, 1],
+    'overflow-safe cell boundaries preserve both cells touching the query radius'
+  );
+  destroyFixture(radiusFixture);
+  t.end();
+});
+
+test('GPUGridIndexQuery rejects overlapping inputs and writable results', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const buffer = device.createBuffer({byteLength: 256, usage: Buffer.STORAGE});
+  const graph = new GPUCommandGraph(device);
+  const handle = graph.importBuffer(
+    {id: 'shared', byteLength: buffer.byteLength, usage: buffer.usage},
+    buffer
+  );
+  const view = <T extends 'float32' | 'uint32'>(format: T, length: number, byteOffset: number) =>
+    graph.createDataView(handle, {format, length, byteOffset});
+  const index = {
+    gridSize: [1, 1] as const,
+    bounds: [0, 0, 1, 1] as const,
+    cellOffsets: view('uint32', 2, 0),
+    objectIds: view('uint32', 2, 16),
+    count: view('uint32', 1, 32),
+    overflow: view('uint32', 1, 36)
+  };
+  const query = view('float32', 2, 40);
+  const overflow = view('uint32', 1, 60);
+
+  t.throws(
+    () =>
+      new GPUGridIndexQuery({
+        index,
+        kind: 'point',
+        query,
+        output: view('uint32', 2, 20),
+        count: view('uint32', 1, 56),
+        overflow
+      }),
+    /output and index objectIds must not overlap/,
+    'query writes cannot alias live index reads'
+  );
+  t.throws(
+    () =>
+      new GPUGridIndexQuery({
+        index,
+        kind: 'point',
+        query,
+        output: view('uint32', 2, 64),
+        count: view('uint32', 1, 68),
+        overflow
+      }),
+    /count and output must not overlap/,
+    'writable result views cannot race each other'
+  );
+
+  buffer.destroy();
+  t.end();
+});
+
 type QueryFixture = {
   compiled: ReturnType<GPUCommandGraph['compile']>;
   query: Buffer;

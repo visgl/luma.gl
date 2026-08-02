@@ -13,6 +13,7 @@ import {
 import {GPUScan} from './gpu-scan';
 import {
   createTransientView,
+  doGraphDataViewsOverlap,
   getViewBinding,
   getViewElementOffset,
   validateMatchingVectorTopology,
@@ -470,9 +471,10 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   if (maximum == minimum || value == minimum) { return 0u; }
   if (value == maximum) { return size - 1u; }
   if (minimum < 0.0 && maximum > 0.0) {
-    let scaledValue = value * 0.5;
-    let scaledMinimum = minimum * 0.5;
-    let scaledMaximum = maximum * 0.5;
+    let scale = max(abs(minimum), abs(maximum));
+    let scaledValue = value / scale;
+    let scaledMinimum = minimum / scale;
+    let scaledMaximum = maximum / scale;
     return min(
       u32((scaledValue - scaledMinimum) / (scaledMaximum - scaledMinimum) * f32(size)),
       size - 1u
@@ -575,25 +577,15 @@ function validateDisjointGridInputs(
   objectIds: GraphDataView<'uint32'>
 ): void {
   for (const positionChunk of getPositionChunks(positions)) {
-    if (doViewsOverlap(positionChunk, objectIds)) {
+    if (doGraphDataViewsOverlap(positionChunk, objectIds)) {
       throw new Error(`${id} positions and objectIds must not overlap`);
     }
   }
   for (const sourceIdChunk of getSourceIdChunks(sourceIds)) {
-    if (doViewsOverlap(sourceIdChunk, objectIds)) {
+    if (doGraphDataViewsOverlap(sourceIdChunk, objectIds)) {
       throw new Error(`${id} sourceIds and objectIds must not overlap`);
     }
   }
-}
-
-function doViewsOverlap(first: GraphDataView, second: GraphDataView): boolean {
-  if (first.buffer !== second.buffer || first.length === 0 || second.length === 0) {
-    return false;
-  }
-  const firstEnd = first.byteOffset + (first.length - 1) * first.byteStride + first.rowByteLength;
-  const secondEnd =
-    second.byteOffset + (second.length - 1) * second.byteStride + second.rowByteLength;
-  return first.byteOffset < secondEnd && second.byteOffset < firstEnd;
 }
 
 function getPositionChunks(

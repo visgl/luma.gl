@@ -11,6 +11,16 @@ import {
   type GraphDataView
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getGPUBVHDispatchLayout} from '../../src/gpu-primitives/gpu-bvh';
+
+test('GPUBVH plans multidimensional leaf-loading dispatches', t => {
+  t.deepEqual(
+    getGPUBVHDispatchLayout(2 ** 24 - 1, 65535),
+    {x: 65535, y: 2, z: 1},
+    'the largest standard-binding 2D tree does not exceed the per-dimension limit'
+  );
+  t.end();
+});
 
 test('GPUBVH builds deterministic 2D topology and bounds', async t => {
   const device = await getWebGPUTestDevice();

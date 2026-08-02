@@ -72,6 +72,17 @@ export function getViewElementOffset(view: GraphDataView): number {
   return (view.byteOffset % STORAGE_BINDING_ALIGNMENT) / UINT32_BYTE_LENGTH;
 }
 
+/** Returns whether two logical views touch any of the same bytes. @internal */
+export function doGraphDataViewsOverlap(first: GraphDataView, second: GraphDataView): boolean {
+  if (first.buffer !== second.buffer || first.length === 0 || second.length === 0) {
+    return false;
+  }
+  const firstEnd = first.byteOffset + (first.length - 1) * first.byteStride + first.rowByteLength;
+  const secondEnd =
+    second.byteOffset + (second.length - 1) * second.byteStride + second.rowByteLength;
+  return first.byteOffset < secondEnd && second.byteOffset < firstEnd;
+}
+
 /** Creates a packed graph-owned transient buffer and a typed view spanning it. @internal */
 export function createTransientView<T extends GPUVectorFormat, Parameters>(
   graph: GPUCommandGraph<Parameters>,

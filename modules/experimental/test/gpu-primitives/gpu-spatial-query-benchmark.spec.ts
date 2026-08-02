@@ -102,7 +102,9 @@ test('runGPUSpatialQueryBenchmark applies one oracle to scan, grid, and BVH path
             }
             return paths[0].encode(commandEncoder);
           }
-        }
+        },
+        paths[1],
+        paths[2]
       ],
       expectedIds: [2, 9],
       warmupIterations: 1,
