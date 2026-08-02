@@ -61,6 +61,7 @@ import {getErrorMessage, logError} from './react-luma/utils/error-utils';
 import DOFApp from '../../examples/showcase/dof/app';
 import AdvancedEffectsApp from '../../examples/experimental/advanced-effects/app';
 import DeferredRenderingApp from '../../examples/experimental/deferred-rendering/app';
+import FluidFoundryApp from '../../examples/experimental/fluid-foundry/app';
 import ShadowMapApp from '../../examples/experimental/shadow-map/app';
 import ABufferApp from '../../examples/experimental/a-buffer/app';
 
@@ -998,6 +999,20 @@ export const DeferredRenderingExample: React.FC = props => (
     template={DeferredRenderingApp}
     config={exampleConfig}
     devices={['webgpu']}
+    {...props}
+  />
+);
+
+export const FluidFoundryExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="fluid-foundry"
+    title="Fluid Foundry: Liquid Metal Press"
+    subtitle="GPU-resident MLS-MPM fluid"
+    directory="experimental"
+    template={FluidFoundryApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
