@@ -4,6 +4,7 @@
 
 import type {Texture} from '../../core/src/index';
 import type {ShaderModule} from '../../shadertools/src/index';
+import type {ModelProps} from '../src/model/model';
 import {ShaderInputs} from '../src/shader-inputs';
 
 type CompositeUniforms = {
@@ -62,6 +63,20 @@ const compositeModule = {
   },
   getUniforms: props => props as Partial<CompositeUniforms & CompositeBindings>
 } as const satisfies ShaderModule<CompositeProps, CompositeUniforms, CompositeBindings>;
+
+const previousAwareModule = {
+  name: 'previous-aware-types',
+  uniformTypes: {value: 'f32'},
+  getUniforms(
+    props: Partial<{value: number}>,
+    previousUniforms?: {value: number}
+  ): Partial<{value: number}> {
+    return {value: props.value ?? previousUniforms?.value ?? 0};
+  }
+} as const satisfies ShaderModule<{value: number}, {value: number}, {}>;
+
+const typedModelProps: Pick<ModelProps, 'modules'> = {modules: [previousAwareModule]};
+void typedModelProps;
 
 export function verifyCompositeShaderInputTypes(): void {
   const shaderInputs = new ShaderInputs<{

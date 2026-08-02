@@ -144,6 +144,28 @@ export {
   DEFAULT_MAX_LIGHTS_PER_CLUSTER,
   MAX_CLUSTERED_POINT_LIGHTS
 } from './rendering/clustered-lighting';
+export type {
+  SpectralCausticsBindings,
+  SpectralCausticsProps,
+  SpectralCausticsUniforms
+} from './rendering/spectral-caustics';
+export {
+  convertD65XYZToLinearSRGB,
+  D65_XYZ_TO_LINEAR_SRGB_MATRIX,
+  spectralCaustics
+} from './rendering/spectral-caustics';
+export type {
+  SpectralCausticsCaptureFace,
+  SpectralCausticsDrawContext,
+  SpectralCausticsPrepareContext,
+  SpectralCausticsRendererEncodeOptions,
+  SpectralCausticsRendererProps,
+  SpectralCausticsSupport
+} from './rendering/spectral-caustics-renderer';
+export {
+  getSpectralCausticsSupport,
+  SpectralCausticsRenderer
+} from './rendering/spectral-caustics-renderer';
 
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
