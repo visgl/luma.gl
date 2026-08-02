@@ -57,7 +57,8 @@ OIT resolve pipelines compose into one render stack.
 
 The [GPU Primitives and Command Graphs guide](/docs/api-reference/experimental/gpu-primitives)
 introduces explicit command scheduling, typed table-backed graph views, hierarchical scan, stable
-compaction, stable key/value sorting, and GPU-written indirect draw commands.
+compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written
+indirect draw commands.
 
 ## Order-independent Transparency
 

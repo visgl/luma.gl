@@ -86,6 +86,21 @@ export type {GPUBatchSortProps} from './gpu-batch-sort';
 export {GPUReduction} from './gpu-reduction';
 export type {GPUReductionInput, GPUReductionOperation, GPUReductionProps} from './gpu-reduction';
 
+export {
+  getGPUFFT2DSupport,
+  GPUFFT2D,
+  GPU_FFT2D_MAX_DIMENSION,
+  GPU_FFT2D_MIN_DIMENSION,
+  makeGPUFFT2DStats
+} from './gpu-fft2d';
+export type {
+  GPUFFT2DDirection,
+  GPUFFT2DEncodeOptions,
+  GPUFFT2DProps,
+  GPUFFT2DStats,
+  GPUFFT2DSupport
+} from './gpu-fft2d';
+
 export {GPUHistogram} from './gpu-histogram';
 export type {
   GPUHistogramDomain,
