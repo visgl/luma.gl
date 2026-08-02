@@ -58,8 +58,8 @@ later render pass consume that count without a CPU synchronization point.
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
 `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
 `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
-`GPUGridAggregation`, `GPUGroupAggregation`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and
-`DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+`GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT2D`, `GPUIndexPickingTarget`,
+`GPUReadbackRing`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
 projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
 four million spans. The sort and data-analysis examples demonstrate independent composable
@@ -1585,6 +1585,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-primitives/gpu-graph-traversal)
 - [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection)
 - [`GPUSort`](/docs/api-reference/experimental/gpu-primitives/gpu-sort)
+- [`GPUFFT2D`](/docs/api-reference/experimental/gpu-primitives/gpu-fft2d)
 - [`GPUReduction`](/docs/api-reference/experimental/gpu-primitives/gpu-reduction)
 - [`GPUHistogram`](/docs/api-reference/experimental/gpu-primitives/gpu-histogram)
 - [`GPUGridBinning`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-binning)

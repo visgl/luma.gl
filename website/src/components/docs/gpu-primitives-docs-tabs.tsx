@@ -12,6 +12,7 @@ export type GPUPrimitivesDocsTabId =
   | 'graph-traversal'
   | 'ancestor-projection'
   | 'sort'
+  | 'fft2d'
   | 'reduction'
   | 'histogram'
   | 'grid-binning'
@@ -75,6 +76,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'sort',
     label: 'Sort',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-sort'
+  },
+  {
+    id: 'fft2d',
+    label: 'FFT 2D',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-fft2d'
   },
   {
     id: 'reduction',
