@@ -6,6 +6,7 @@ import {Buffer, type Binding, type Device, type RenderBundle} from '@luma.gl/cor
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Computation, Model} from '@luma.gl/engine';
 import {
+  DispatchCommandBuffer,
   DrawCommandBuffer,
   GPUAncestorProjection,
   GPUCommandGraph,
@@ -50,6 +51,7 @@ import {
   type TraceGroupName
 } from './trace-data';
 import {
+  getBatchVisibilityShader,
   getDependencyVisibilityShader,
   getFocusMaskShader,
   getPickClearShader,
@@ -94,11 +96,13 @@ type PickPosition = {
 type TraceGraphResources = {
   compiled: CompiledGPUCommandGraph<TraceViewParameters>;
   drawCommands: DrawCommandBuffer;
+  candidateDispatchCommands: DispatchCommandBuffer;
   readbackRing: GPUReadbackRing;
   renderBundle: RenderBundle;
   groups: TraceGroupResources[];
   spans: Buffer;
   spanBatchIndex: Buffer;
+  candidateBatchIds: Buffer;
   dependencies: Buffer;
   parentSpans: Buffer;
   outgoingOffsets: Buffer;
@@ -170,6 +174,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private compileTimeMilliseconds = 0;
   private sampledVisibleCounts = [0, 0, 0];
   private sampledDependencyCount = 0;
+  private sampledCandidateBatchCount = 0;
   private droppedTelemetrySampleCount = 0;
   private deferredPickFrameCount = 0;
   private frameIndex = 0;
@@ -254,6 +259,19 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         readbackTicket.copyFrom(device.commandEncoder, resources.drawCommands.buffer);
         queueMicrotask(() => {
           void this.sampleVisibleCounts(resources, readbackTicket);
+        });
+      } else {
+        this.droppedTelemetrySampleCount++;
+      }
+      const candidateReadbackTicket = resources.readbackRing.tryAcquire();
+      if (candidateReadbackTicket) {
+        candidateReadbackTicket.copyFrom(
+          device.commandEncoder,
+          resources.candidateDispatchCommands.buffer,
+          {byteLength: UINT32_BYTE_LENGTH}
+        );
+        queueMicrotask(() => {
+          void this.sampleCandidateBatchCount(resources, candidateReadbackTicket);
         });
       } else {
         this.droppedTelemetrySampleCount++;
@@ -391,19 +409,29 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         {vertexCount: 6, instanceCount: densityBinCount}
       ]
     });
+    const candidateDispatchCommands = new DispatchCommandBuffer(this.device, {
+      id: 'gpu-trace-candidate-dispatch-commands',
+      commands: [{x: 0, y: 1, z: 1}]
+    });
     const readbackRing = new GPUReadbackRing(this.device, {
       id: 'gpu-trace-readback',
       byteLength: drawCommands.buffer.byteLength,
-      slotCount: 3
+      slotCount: 4
     });
     return {
       compiled: undefined!,
       renderBundle: undefined!,
       drawCommands,
+      candidateDispatchCommands,
       readbackRing,
       groups,
       spans: this.createDataBuffer('gpu-trace-spans', dataset.spans),
       spanBatchIndex: this.createDataBuffer('gpu-trace-span-batch-index', dataset.spanBatchIndex),
+      candidateBatchIds: this.createStorageBuffer(
+        'gpu-trace-candidate-batch-ids',
+        dataset.spanBatches.length * UINT32_BYTE_LENGTH,
+        Buffer.COPY_SRC
+      ),
       dependencies: this.createDataBuffer('gpu-trace-dependencies', dataset.dependencies),
       parentSpans: this.createDataBuffer('gpu-trace-parent-spans', dataset.parentSpans),
       outgoingOffsets: this.createDataBuffer('gpu-trace-outgoing-offsets', outgoingOffsets),
@@ -493,6 +521,17 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const handles = {
       uniforms: importTraceBuffer(graph, 'view-uniforms', this.viewUniformBuffer),
       spans: importTraceBuffer(graph, 'spans', resources.spans),
+      spanBatchIndex: importTraceBuffer(graph, 'span-batch-index', resources.spanBatchIndex),
+      candidateBatchIds: importTraceBuffer(
+        graph,
+        'candidate-batch-ids',
+        resources.candidateBatchIds
+      ),
+      candidateDispatchCommands: importTraceBuffer(
+        graph,
+        'candidate-dispatch-commands',
+        resources.candidateDispatchCommands.buffer
+      ),
       dependencies: importTraceBuffer(graph, 'dependencies', resources.dependencies),
       parentSpans: importTraceBuffer(graph, 'parent-spans', resources.parentSpans),
       outgoingOffsets: importTraceBuffer(graph, 'outgoing-offsets', resources.outgoingOffsets),
@@ -547,6 +586,42 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       dataset.incoming.offsets,
       topologyChunkLengths
     );
+
+    const candidateBatchFlags = graph.createTransientBuffer({
+      id: 'trace-candidate-batch-flags',
+      byteLength: Math.max(resources.spanBatchCount, 1) * UINT32_BYTE_LENGTH,
+      usage: Buffer.STORAGE
+    });
+    addTraceComputePass(graph, {
+      id: 'trace-batch-visibility',
+      source: getBatchVisibilityShader(resources.spanBatchCount),
+      bindings: [
+        storageRead('spanBatches', handles.spanBatchIndex),
+        uniformBinding('viewUniforms', handles.uniforms),
+        storageWrite('candidateFlags', candidateBatchFlags)
+      ],
+      length: resources.spanBatchCount
+    });
+    new GPUVisibilityWorkflow({
+      id: 'trace-candidate-batches',
+      predicates: [
+        {
+          kind: ['time-range', 'bounds'],
+          mask: graph.createDataView(candidateBatchFlags, {
+            format: 'uint32',
+            length: resources.spanBatchCount
+          })
+        }
+      ],
+      output: graph.createDataView(handles.candidateBatchIds, {
+        format: 'uint32',
+        length: resources.spanBatchCount
+      }),
+      count: graph.createDataView(handles.candidateDispatchCommands, {
+        format: 'uint32',
+        length: 1
+      })
+    }).addToGraph(graph);
 
     new GPUHierarchyLayout({
       id: 'trace-process-thread-layout',
@@ -892,6 +967,22 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
+  private async sampleCandidateBatchCount(
+    resources: TraceGraphResources,
+    readbackTicket: GPUReadbackTicket
+  ): Promise<void> {
+    try {
+      const bytes = await readbackTicket.read();
+      if (resources !== this.resources) {
+        return;
+      }
+      this.sampledCandidateBatchCount = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
+      this.updateInspector();
+    } catch {
+      // Device loss and cancellation release the ring slot without affecting rendering.
+    }
+  }
+
   /** Reads a single explicitly requested GPU-picked source row after the frame is submitted. */
   private async samplePickedSpan(
     resources: TraceGraphResources,
@@ -937,6 +1028,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     resources.compiled.destroy();
     resources.renderBundle.destroy();
     resources.drawCommands.destroy();
+    resources.candidateDispatchCommands.destroy();
     resources.readbackRing.destroy();
     for (const group of resources.groups) {
       group.visibleIds.destroy();
@@ -944,6 +1036,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     for (const buffer of [
       resources.spans,
       resources.spanBatchIndex,
+      resources.candidateBatchIds,
       resources.dependencies,
       resources.parentSpans,
       resources.outgoingOffsets,
@@ -1241,6 +1334,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       this.statsElement.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:8px">
         <span>Sampled exact spans</span><strong>${formatCount(visible)}</strong>
         <span>Sampled visible edges</span><strong>${formatCount(this.sampledDependencyCount)}</strong>
+        <span>Candidate batches</span><strong>${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}</strong>
         <span>Visible layout lanes</span><strong>${formatCount(this.getVisibleLaneCount())}</strong>
         <span>Collapsed processes</span><strong>${formatCount(this.processStates.filter(state => state === TRACE_COLLAPSED_STATE).length)}</strong>
         <span>CPU graph encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>

@@ -24,6 +24,7 @@ import {
   TRACE_THREADS_PER_PROCESS
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
 import {
+  getBatchVisibilityShader,
   getDependencyVisibilityShader,
   getFocusMaskShader,
   getPickClearShader,
@@ -42,12 +43,12 @@ test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t =>
   t.deepEqual(
     getTraceCapacityOptions(256 * 1024 * 1024, 1024 * 1024 * 1024),
     [250_000, 1_000_000, 4_000_000],
-    'larger limits retain the interactive demonstration ceiling'
+    'a 256 MiB storage binding remains below the ten-million-span requirement'
   );
   t.deepEqual(
     getTraceCapacityOptions(1024 * 1024 * 1024, 1024 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000],
-    'maximum adapters retain the interactive demonstration ceiling'
+    [250_000, 1_000_000, 4_000_000, 10_000_000],
+    'maximum adapters expose the ten-million-span demonstration'
   );
   t.end();
 });
@@ -65,6 +66,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     TRACE_DEPENDENCY_RENDER_SHADER,
     TRACE_DENSITY_RENDER_SHADER,
     getFocusMaskShader(17),
+    getBatchVisibilityShader(3),
     getPickClearShader(),
     getVisibilityShader(17, 1, 5),
     getDependencyVisibilityShader(11)

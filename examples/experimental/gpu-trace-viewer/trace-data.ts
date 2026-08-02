@@ -13,8 +13,7 @@ export const TRACE_SPAN_RECORD_WORD_LENGTH = 8;
 export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = 4;
 export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 8;
 export const TRACE_SPAN_BATCH_CAPACITY = 1_000_000;
-const TRACE_CAPACITY_INCREMENT = 250_000;
-const TRACE_DEMONSTRATION_CAPACITY_CEILING = 4_000_000;
+const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000];
 // Keep density scrolling visually continuous at common viewport widths while retaining a fixed,
 // allocation-stable aggregation target for the compiled GPU command graph.
 export const TRACE_DENSITY_BIN_COUNT = 512;
@@ -48,14 +47,7 @@ export function getTraceCapacityOptions(
   const maximumSpanCapacity = Math.floor(
     Math.min(maxStorageBufferBindingSize, maxBufferSize) / spanRecordByteLength
   );
-  const maximumDemonstrationCapacity =
-    Math.floor(
-      Math.min(maximumSpanCapacity, TRACE_DEMONSTRATION_CAPACITY_CEILING) / TRACE_CAPACITY_INCREMENT
-    ) * TRACE_CAPACITY_INCREMENT;
-  const capacities = [250_000, 1_000_000, 4_000_000, maximumDemonstrationCapacity].filter(
-    capacity => capacity > 0 && capacity <= maximumSpanCapacity
-  );
-  return [...new Set(capacities)];
+  return TRACE_DEMONSTRATION_CAPACITIES.filter(capacity => capacity <= maximumSpanCapacity);
 }
 
 /** Matches the GPU's adaptive exact-span versus density-rendering decision. */

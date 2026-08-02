@@ -40,6 +40,7 @@ describe('GPU hierarchical trace viewer', () => {
       } as AnimationProps & {traceCapacity: number});
       const state = viewer as unknown as {
         resources: {
+          candidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
@@ -47,6 +48,7 @@ describe('GPU hierarchical trace viewer', () => {
           };
           dependencyCount: number;
           spanCount: number;
+          spanBatchCount: number;
         };
         processStates: Uint32Array;
         threadStates: Uint32Array;
@@ -56,6 +58,7 @@ describe('GPU hierarchical trace viewer', () => {
         activeFilterMask: number;
       };
       expect(state.resources.spanCount).toBe(4096);
+      expect(state.resources.spanBatchCount).toBeGreaterThan(0);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
@@ -70,6 +73,28 @@ describe('GPU hierarchical trace viewer', () => {
       );
       expect(firstCounts[1] + firstCounts[5] + firstCounts[9]).toBeGreaterThan(0);
       expect(firstCounts[13]).toBeGreaterThan(0);
+      const candidateBytes = await state.resources.candidateDispatchCommands.buffer.readAsync();
+      const candidateCount = new Uint32Array(
+        candidateBytes.buffer,
+        candidateBytes.byteOffset,
+        1
+      )[0];
+      expect(candidateCount).toBeGreaterThan(0);
+      expect(candidateCount).toBeLessThanOrEqual(state.resources.spanBatchCount);
+
+      const firstGroup = host.querySelector<HTMLInputElement>('[data-group="0"]');
+      expect(firstGroup).not.toBeNull();
+      firstGroup!.checked = false;
+      firstGroup!.dispatchEvent(new Event('change', {bubbles: true}));
+      viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
+      device.submit();
+      const filteredCandidateBytes =
+        await state.resources.candidateDispatchCommands.buffer.readAsync();
+      expect(
+        new Uint32Array(filteredCandidateBytes.buffer, filteredCandidateBytes.byteOffset, 1)[0]
+      ).toBeLessThan(candidateCount);
+      firstGroup!.checked = true;
+      firstGroup!.dispatchEvent(new Event('change', {bubbles: true}));
 
       const firstProcess = host.querySelector<HTMLInputElement>('[data-process="0"]');
       expect(firstProcess).not.toBeNull();

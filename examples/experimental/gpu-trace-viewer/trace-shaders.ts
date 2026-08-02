@@ -281,6 +281,39 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
+/** Coarsely rejects immutable span batches that cannot contribute to the active view. */
+export function getBatchVisibilityShader(batchCount: number): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+const BATCH_COUNT: u32 = ${batchCount}u;
+@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(2) var<storage, read_write> candidateFlags: array<u32>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let batchIndex = globalId.x;
+  if (batchIndex >= BATCH_COUNT) {
+    return;
+  }
+  let batch = spanBatches[batchIndex];
+  let timeVisible = batch.timeMax >= viewUniforms.timeMin &&
+    batch.timeMin <= viewUniforms.timeMax;
+  let groupVisible = (viewUniforms.enabledMask & (1u << batch.groupIndex)) != 0u;
+  candidateFlags[batchIndex] = select(0u, 1u, timeVisible && groupVisible);
+}`;
+}
+
 /** Tests view, process, thread, status, duration, and source filters for one stable draw group. */
 export function getVisibilityShader(
   spanCount: number,
