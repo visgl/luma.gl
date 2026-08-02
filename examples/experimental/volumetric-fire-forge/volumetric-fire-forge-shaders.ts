@@ -10,6 +10,7 @@ export type ForgeSceneUniforms = {
   viewProjectionMatrix: Matrix4;
   cameraPosition: Readonly<NumberArray3>;
   emitterPosition: Readonly<NumberArray3>;
+  burnerFlareIntensities: readonly [number, number, number, number];
   time: number;
 };
 
@@ -19,6 +20,7 @@ export const forgeSceneUniforms = {
     viewProjectionMatrix: 'mat4x4<f32>',
     cameraPosition: 'vec3<f32>',
     emitterPosition: 'vec3<f32>',
+    burnerFlareIntensities: 'vec4<f32>',
     time: 'f32'
   }
 } as const satisfies ShaderModule<ForgeSceneUniforms>;
@@ -29,6 +31,7 @@ struct ForgeSceneUniforms {
   viewProjectionMatrix: mat4x4f,
   cameraPosition: vec3f,
   emitterPosition: vec3f,
+  burnerFlareIntensities: vec4f,
   time: f32,
 };
 
@@ -151,14 +154,16 @@ fn forgeScene_getBurnerLight(
   roughness: f32,
   metallic: f32,
   firePosition: vec3f,
-  phase: f32
+  phase: f32,
+  flareIntensity: f32
 ) -> vec3f {
   let toFire = firePosition - worldPosition;
   let fireDistance = max(length(toFire), 0.08);
   let fireDirection = toFire / fireDistance;
   let fireFlicker = 0.9 + 0.1 * sin(forgeScene.time * 7.1 + phase) *
     sin(forgeScene.time * 3.7 + 1.4 + phase * 0.63);
-  let fireAttenuation = fireFlicker * 28.0 /
+  let flareRadiance = 1.0 + 4.8 * pow(max(flareIntensity, 0.0), 1.15);
+  let fireAttenuation = fireFlicker * flareRadiance * 28.0 /
     (1.0 + fireDistance * fireDistance * 1.6);
   let fireDiffuse = max(dot(normal, fireDirection), 0.0);
   let fireHalfDirection = normalize(fireDirection + viewDirection);
@@ -174,7 +179,7 @@ fn forgeScene_getBurnerLight(
   let fireLighting = baseColor * (1.0 - metallic) * fireDiffuse * fireColor;
   let fireHighlight = fireFresnel * fireSpecular * fireColor * mix(0.18, 1.0, metallic);
   let contactFade = 1.0 - smoothstep(3.2, 5.0, fireDistance);
-  let contactBounce = vec3f(1.45, 0.48, 0.095) * fireFlicker *
+  let contactBounce = vec3f(1.45, 0.48, 0.095) * fireFlicker * flareRadiance *
     (0.16 + fireDiffuse * 0.84) * contactFade /
     (1.0 + fireDistance * fireDistance * 1.15);
   return fireLighting + fireHighlight + contactBounce;
@@ -202,19 +207,19 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   let fireLighting =
     forgeScene_getBurnerLight(
       inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
-      roughness, metallic, frontLeftFire, 0.0
+      roughness, metallic, frontLeftFire, 0.0, forgeScene.burnerFlareIntensities.x
     ) +
     forgeScene_getBurnerLight(
       inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
-      roughness, metallic, frontRightFire, 1.7
+      roughness, metallic, frontRightFire, 1.7, forgeScene.burnerFlareIntensities.y
     ) +
     forgeScene_getBurnerLight(
       inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
-      roughness, metallic, rearLeftFire, 3.1
+      roughness, metallic, rearLeftFire, 3.1, forgeScene.burnerFlareIntensities.z
     ) +
     forgeScene_getBurnerLight(
       inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
-      roughness, metallic, rearRightFire, 4.6
+      roughness, metallic, rearRightFire, 4.6, forgeScene.burnerFlareIntensities.w
     );
 
   let fillDirection = normalize(vec3f(-0.38, 0.82, 0.42));

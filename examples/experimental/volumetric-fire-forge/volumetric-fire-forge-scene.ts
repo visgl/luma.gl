@@ -174,6 +174,17 @@ export const VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS = [
   }
 ] as const satisfies readonly VolumetricFireEmitter[];
 
+/** Visible flame centers used by click picking and distance-aware flare audio. */
+export const VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS =
+  VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS.map(emitter => {
+    const {minimum, maximum} = VOLUMETRIC_FIRE_FORGE_VOLUME_BOUNDS;
+    return [
+      minimum[0] + emitter.position[0] * (maximum[0] - minimum[0]),
+      minimum[1] + emitter.position[1] * (maximum[1] - minimum[1]) + 0.55,
+      minimum[2] + emitter.position[2] * (maximum[2] - minimum[2])
+    ] as const;
+  });
+
 type VolumetricFireForgeSimulationSettings = Omit<
   VolumetricFireSimulationStepOptions,
   'deltaTime' | 'time' | 'emitters' | 'reset'

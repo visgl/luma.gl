@@ -40,6 +40,7 @@ describe('Volumetric Fire Forge', () => {
         pressureIterations: number;
       });
       viewer.settings.sampleCount = 16;
+      const initialAutomaticFlare = viewer.nextAutomaticFlare;
       await viewer.onInitialize({
         ...makeAnimationProps(device, 1000),
         canvas
@@ -98,6 +99,13 @@ describe('Volumetric Fire Forge', () => {
       expect(viewer.stepsThisFrame).toBe(1);
       expect(viewer.frameIndex).toBe(26);
 
+      expect(viewer.triggerBurnerFlare(-1)).toBe(false);
+      expect(viewer.triggerBurnerFlare(0)).toBe(true);
+      viewer.onRender(makeAnimationProps(device, 1153));
+      device.submit();
+      expect(viewer.burnerFlareIntensities[0]).toBeGreaterThan(0);
+      expect(viewer.burnerFlareIntensities.slice(1)).toEqual([0, 0, 0]);
+
       const combustion = await readRgba16FloatVolume(
         viewer.simulation.combustionTexture,
         simulationDimensions
@@ -128,6 +136,8 @@ describe('Volumetric Fire Forge', () => {
 
       viewer.settings.paused = true;
       viewer.requestReset();
+      expect(viewer.burnerFlareIntensities).toEqual([0, 0, 0, 0]);
+      expect(viewer.nextAutomaticFlare).toEqual(initialAutomaticFlare);
       viewer.onRender(makeAnimationProps(device, 1204));
       device.submit();
       expect(viewer.stepsThisFrame).toBe(1);

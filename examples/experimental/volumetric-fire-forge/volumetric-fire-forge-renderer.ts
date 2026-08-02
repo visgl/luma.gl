@@ -47,6 +47,7 @@ export type VolumetricFireForgeRenderOptions = {
   cameraPosition: Readonly<NumberArray3>;
   time: number;
   frameIndex: number;
+  burnerFlareIntensities: readonly [number, number, number, number];
   settings: VolumetricFireForgeRenderSettings;
 };
 
@@ -215,6 +216,7 @@ export class VolumetricFireForgeRenderer {
         viewProjectionMatrix: options.viewProjectionMatrix,
         cameraPosition: options.cameraPosition,
         emitterPosition: [0, 1.5, 0.25],
+        burnerFlareIntensities: options.burnerFlareIntensities,
         time: options.time
       }
     });

@@ -15,9 +15,19 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {VolumetricFireForgeAudio} from './volumetric-fire-forge-audio';
+import {
+  advanceVolumetricFireForgeFlareSchedule,
+  getVolumetricFireForgeFlareEnvelope,
+  makeVolumetricFireForgeFlaredEmitters,
+  makeVolumetricFireForgeFlareSchedule,
+  selectNearestVolumetricFireForgeBurner,
+  type VolumetricFireForgeFlareSchedule
+} from './volumetric-fire-forge-flares';
 import {
   advanceVolumetricFireForgeFixedStep,
   makeObstacleVolumeData,
+  VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS,
   VOLUMETRIC_FIRE_FORGE_FIXED_TIME_STEP_SECONDS,
   VOLUMETRIC_FIRE_FORGE_MAX_STEPS_PER_FRAME,
   VOLUMETRIC_FIRE_FORGE_PRESETS,
@@ -40,6 +50,9 @@ const CAMERA_MINIMUM_YAW = Math.PI - 0.62;
 const CAMERA_MAXIMUM_YAW = Math.PI + 0.62;
 const CAMERA_AUTO_ORBIT_SPEED = 0.075;
 const INITIAL_WARMUP_STEP_COUNT = 24;
+const CLICK_MOVEMENT_THRESHOLD_PIXELS = 7;
+const CLICK_BURNER_RADIUS_PIXELS = 72;
+const CLICKED_FLARE_INTENSITY = 1.28;
 
 type VolumetricFireQuality = 'Interactive' | 'High' | 'Cinematic';
 
@@ -89,6 +102,17 @@ type VolumetricFireForgeConstructorProps = AnimationProps & {
   pressureIterations?: number;
 };
 
+type ActiveBurnerFlare = {
+  startTimeSeconds: number;
+  intensity: number;
+};
+
+type PointerStart = {
+  pointerId: number;
+  clientX: number;
+  clientY: number;
+};
+
 /** WebGPU fire laboratory with a fixed-step compute solver and HDR volume rendering. */
 export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
@@ -97,6 +121,7 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
   readonly renderer: VolumetricFireForgeRenderer;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
+  readonly flareAudio = new VolumetricFireForgeAudio();
 
   simulation!: VolumetricFireSimulation;
   obstacleTexture!: Texture;
@@ -106,6 +131,7 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
   droppedSimulationSeconds = 0;
   frameIndex = 0;
   lastVolumeTexture: Texture | null = null;
+  burnerFlareIntensities: [number, number, number, number] = [0, 0, 0, 0];
 
   private readonly simulationDimensionsOverride?: readonly [number, number, number];
   private readonly pressureIterations: number;
@@ -117,6 +143,15 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
   private resetRequested = true;
   private singleStepRequested = false;
   private warmupStepsRemaining = INITIAL_WARMUP_STEP_COUNT;
+  private flareSchedule = makeVolumetricFireForgeFlareSchedule(
+    VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS.length
+  );
+  private readonly activeBurnerFlares: (ActiveBurnerFlare | null)[] =
+    VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS.map(() => null);
+  private canvas: HTMLCanvasElement | null = null;
+  private pointerStart: PointerStart | null = null;
+  private lastViewProjectionMatrix: Matrix4 | null = null;
+  private lastCameraPosition: NumberArray3 = [6.2, 5.5, -13.5];
 
   constructor({
     device,
@@ -162,6 +197,7 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
+      this.canvas = canvas;
       this.orbitControls = new OrbitControls(canvas, {
         target: CAMERA_TARGET,
         distance: 15.5,
@@ -173,7 +209,11 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
         maxPitch: 1.25,
         autoRotate: false
       });
+      canvas.addEventListener('pointerdown', this.handleCanvasPointerDown);
+      canvas.addEventListener('pointerup', this.handleCanvasPointerUp);
+      canvas.addEventListener('pointercancel', this.handleCanvasPointerCancel);
     }
+    document.addEventListener('keydown', this.handleKeyDown);
     document.getElementById('volumetric-fire-reset')?.addEventListener('click', this.handleReset);
     document
       .getElementById('volumetric-fire-single-step')
@@ -181,6 +221,10 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     document
       .getElementById('volumetric-fire-reset-camera')
       ?.addEventListener('click', this.handleResetCamera);
+    document
+      .getElementById('volumetric-fire-toggle-sound')
+      ?.addEventListener('click', this.handleToggleSound);
+    this.updateSoundButton();
   }
 
   onRender({device, width, height, aspect, time}: AnimationProps): void {
@@ -200,8 +244,11 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     });
     const viewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
     const inverseViewProjectionMatrix = new Matrix4(viewProjectionMatrix).invert();
+    this.lastViewProjectionMatrix = viewProjectionMatrix;
+    this.lastCameraPosition = [cameraPosition[0], cameraPosition[1], cameraPosition[2]];
 
     this.encodeSimulationSteps(device, time);
+    this.updateBurnerFlareIntensities();
     this.lastVolumeTexture = this.renderer.render({
       commandEncoder: device.commandEncoder,
       simulation: this.simulation,
@@ -210,6 +257,7 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
       cameraPosition,
       time: this.simulationTimeSeconds,
       frameIndex: this.frameIndex,
+      burnerFlareIntensities: this.burnerFlareIntensities,
       settings: this.settings
     });
     this.updateTelemetry();
@@ -217,6 +265,11 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
   }
 
   onFinalize(): void {
+    this.canvas?.removeEventListener('pointerdown', this.handleCanvasPointerDown);
+    this.canvas?.removeEventListener('pointerup', this.handleCanvasPointerUp);
+    this.canvas?.removeEventListener('pointercancel', this.handleCanvasPointerCancel);
+    this.canvas = null;
+    document.removeEventListener('keydown', this.handleKeyDown);
     document
       .getElementById('volumetric-fire-reset')
       ?.removeEventListener('click', this.handleReset);
@@ -226,6 +279,10 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     document
       .getElementById('volumetric-fire-reset-camera')
       ?.removeEventListener('click', this.handleResetCamera);
+    document
+      .getElementById('volumetric-fire-toggle-sound')
+      ?.removeEventListener('click', this.handleToggleSound);
+    this.flareAudio.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.orbitControls?.destroy();
@@ -239,10 +296,20 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     this.accumulatorSeconds = 0;
     this.simulationTimeSeconds = 0;
     this.warmupStepsRemaining = INITIAL_WARMUP_STEP_COUNT;
+    this.resetFlareState();
   }
 
   requestSingleStep(): void {
     this.singleStepRequested = true;
+  }
+
+  /** Testable/programmatic equivalent of clicking one visible burner. */
+  triggerBurnerFlare(burnerIndex: number, intensity = CLICKED_FLARE_INTENSITY): boolean {
+    return this.startBurnerFlare(burnerIndex, intensity, 'programmatic');
+  }
+
+  get nextAutomaticFlare(): VolumetricFireForgeFlareSchedule {
+    return {...this.flareSchedule};
   }
 
   private updateCamera(timeMilliseconds: number): void {
@@ -313,11 +380,16 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     const preset = this.getPreset();
     for (let stepIndex = 0; stepIndex < stepCount; stepIndex++) {
       this.simulationTimeSeconds += VOLUMETRIC_FIRE_FORGE_FIXED_TIME_STEP_SECONDS;
+      this.triggerDueAutomaticFlares();
+      this.updateBurnerFlareIntensities();
       this.simulation.encode(device.commandEncoder, {
         ...preset.simulation,
         deltaTime: VOLUMETRIC_FIRE_FORGE_FIXED_TIME_STEP_SECONDS,
         time: this.simulationTimeSeconds,
-        emitters: preset.emitters,
+        emitters: makeVolumetricFireForgeFlaredEmitters(
+          preset.emitters,
+          this.burnerFlareIntensities
+        ),
         buoyancy: (preset.simulation.buoyancy || 0) * this.settings.buoyancyScale,
         turbulence: (preset.simulation.turbulence || 0) * this.settings.turbulenceScale,
         reactionRate: (preset.simulation.reactionRate || 0) * this.settings.reactionScale,
@@ -369,6 +441,111 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     );
   }
 
+  private resetFlareState(): void {
+    this.flareSchedule = makeVolumetricFireForgeFlareSchedule(
+      VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS.length
+    );
+    this.activeBurnerFlares.fill(null);
+    this.burnerFlareIntensities = [0, 0, 0, 0];
+  }
+
+  private triggerDueAutomaticFlares(): void {
+    let remainingEvents = VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS.length;
+    while (
+      this.simulationTimeSeconds >= this.flareSchedule.nextFlareTimeSeconds &&
+      remainingEvents > 0
+    ) {
+      this.startBurnerFlare(
+        this.flareSchedule.nextBurnerIndex,
+        this.flareSchedule.nextIntensity,
+        'automatic',
+        this.flareSchedule.nextFlareTimeSeconds
+      );
+      this.flareSchedule = advanceVolumetricFireForgeFlareSchedule(
+        this.flareSchedule,
+        VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS.length
+      );
+      remainingEvents--;
+    }
+  }
+
+  private startBurnerFlare(
+    burnerIndex: number,
+    intensity: number,
+    source: 'automatic' | 'clicked' | 'programmatic',
+    startTimeSeconds = this.simulationTimeSeconds,
+    panOverride?: number
+  ): boolean {
+    if (
+      !Number.isInteger(burnerIndex) ||
+      burnerIndex < 0 ||
+      burnerIndex >= this.activeBurnerFlares.length ||
+      !Number.isFinite(intensity) ||
+      intensity <= 0
+    ) {
+      return false;
+    }
+    this.activeBurnerFlares[burnerIndex] = {startTimeSeconds, intensity};
+    this.updateBurnerFlareIntensities();
+
+    if (source !== 'programmatic') {
+      const burnerPosition = VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS[burnerIndex];
+      const distance = Math.hypot(
+        burnerPosition[0] - this.lastCameraPosition[0],
+        burnerPosition[1] - this.lastCameraPosition[1],
+        burnerPosition[2] - this.lastCameraPosition[2]
+      );
+      const soundOptions = {
+        intensity,
+        distance,
+        pan: panOverride ?? this.getBurnerPan(burnerPosition)
+      };
+      if (source === 'clicked') {
+        this.flareAudio.playClickedFlare(soundOptions);
+      } else {
+        this.flareAudio.playAutomaticFlare(soundOptions);
+      }
+    }
+    return true;
+  }
+
+  private updateBurnerFlareIntensities(): void {
+    const intensities = this.activeBurnerFlares.map(activeFlare => {
+      if (!activeFlare) {
+        return 0;
+      }
+      return (
+        activeFlare.intensity *
+        getVolumetricFireForgeFlareEnvelope(
+          this.simulationTimeSeconds - activeFlare.startTimeSeconds
+        )
+      );
+    });
+    this.burnerFlareIntensities = [
+      intensities[0] || 0,
+      intensities[1] || 0,
+      intensities[2] || 0,
+      intensities[3] || 0
+    ];
+  }
+
+  private getBurnerPan(position: readonly [number, number, number]): number {
+    if (!this.lastViewProjectionMatrix) {
+      return 0;
+    }
+    return (
+      selectNearestVolumetricFireForgeBurner({
+        pointerX: 0.5,
+        pointerY: 0.5,
+        viewportWidth: 1,
+        viewportHeight: 1,
+        viewProjectionMatrix: this.lastViewProjectionMatrix,
+        burnerWorldPositions: [position],
+        maximumDistancePixels: 2
+      })?.normalizedDeviceX ?? 0
+    );
+  }
+
   private makePanel(): Panel {
     return makeExampleTabbedPanel({
       id: 'volumetric-fire-forge-tabs',
@@ -379,8 +556,8 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
           title: 'Overview',
           html: `
             <p><b>Reactive fire, not a flipbook.</b> WebGPU evolves velocity, pressure, fuel, heat, and smoke in a solid-aware 3D volume. A depth-clipped ray marcher turns the live fields into heat-shaped HDR emission, Beer-Lambert extinction, self-shadowed smoke, and bloom.</p>
-            <p>Drag to orbit. Inspect density, temperature, fuel, age, velocity, obstacles, and transmittance without a GPU readback.</p>
-            <p><button id="volumetric-fire-reset">Reset fire</button> <button id="volumetric-fire-single-step">Single step</button> <button id="volumetric-fire-reset-camera">Reset camera</button></p>
+            <p>Click a flame for an individual HDR flare and low combustion whoomph; drag to orbit. Automatic flares follow a repeatable irregular schedule. Inspect density, temperature, fuel, age, velocity, obstacles, and transmittance without a GPU readback.</p>
+            <p><button id="volumetric-fire-reset">Reset fire</button> <button id="volumetric-fire-single-step">Single step</button> <button id="volumetric-fire-reset-camera">Reset camera</button> <button id="volumetric-fire-toggle-sound" aria-pressed="false">Mute sound</button></p>
             <p id="volumetric-fire-telemetry"></p>
           `
         }),
@@ -416,6 +593,82 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     this.cameraOrbitDirection = 1;
   };
 
+  private readonly handleCanvasPointerDown = (event: PointerEvent): void => {
+    if (event.button !== 0 || !event.isPrimary) {
+      return;
+    }
+    void this.flareAudio.arm();
+    this.pointerStart = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY
+    };
+  };
+
+  private readonly handleCanvasPointerUp = (event: PointerEvent): void => {
+    const pointerStart = this.pointerStart;
+    this.pointerStart = null;
+    if (
+      !pointerStart ||
+      pointerStart.pointerId !== event.pointerId ||
+      !this.canvas ||
+      !this.lastViewProjectionMatrix
+    ) {
+      return;
+    }
+    const movement = Math.hypot(
+      event.clientX - pointerStart.clientX,
+      event.clientY - pointerStart.clientY
+    );
+    if (movement > CLICK_MOVEMENT_THRESHOLD_PIXELS) {
+      return;
+    }
+    const canvasBounds = this.canvas.getBoundingClientRect();
+    const projection = selectNearestVolumetricFireForgeBurner({
+      pointerX: event.clientX - canvasBounds.left,
+      pointerY: event.clientY - canvasBounds.top,
+      viewportWidth: canvasBounds.width,
+      viewportHeight: canvasBounds.height,
+      viewProjectionMatrix: this.lastViewProjectionMatrix,
+      burnerWorldPositions: VOLUMETRIC_FIRE_FORGE_BURNER_WORLD_POSITIONS,
+      maximumDistancePixels: CLICK_BURNER_RADIUS_PIXELS
+    });
+    if (projection) {
+      this.startBurnerFlare(
+        projection.burnerIndex,
+        CLICKED_FLARE_INTENSITY,
+        'clicked',
+        this.simulationTimeSeconds,
+        projection.normalizedDeviceX
+      );
+    }
+  };
+
+  private readonly handleCanvasPointerCancel = (): void => {
+    this.pointerStart = null;
+  };
+
+  private readonly handleKeyDown = (): void => {
+    void this.flareAudio.arm();
+  };
+
+  private readonly handleToggleSound = (): void => {
+    this.flareAudio.setMuted(!this.flareAudio.muted);
+    if (!this.flareAudio.muted) {
+      void this.flareAudio.arm();
+    }
+    this.updateSoundButton();
+  };
+
+  private updateSoundButton(): void {
+    const soundButton = document.getElementById('volumetric-fire-toggle-sound');
+    if (!soundButton) {
+      return;
+    }
+    soundButton.textContent = this.flareAudio.muted ? 'Unmute sound' : 'Mute sound';
+    soundButton.setAttribute('aria-pressed', String(this.flareAudio.muted));
+  }
+
   private updateTelemetry(): void {
     const telemetryElement = document.getElementById('volumetric-fire-telemetry');
     if (!telemetryElement) {
@@ -428,7 +681,11 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     telemetryElement.textContent =
       `${this.simulation.dimensions.join(' × ')} · ${voxelCount.toLocaleString()} voxels · ` +
       `${this.stepsThisFrame} solver step${this.stepsThisFrame === 1 ? '' : 's'} · ` +
-      `${this.simulation.stats.nodeOrder.length} GPU nodes · ${this.renderer.sceneColorFormat}`;
+      `${this.simulation.stats.nodeOrder.length} GPU nodes · ${this.renderer.sceneColorFormat} · ` +
+      `next flare ${Math.max(
+        this.flareSchedule.nextFlareTimeSeconds - this.simulationTimeSeconds,
+        0
+      ).toFixed(1)} s`;
   }
 }
 

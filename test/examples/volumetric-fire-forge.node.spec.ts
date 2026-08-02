@@ -4,6 +4,19 @@
 
 import {describe, expect, test} from 'vitest';
 import {
+  getVolumetricFireForgeSoundEnvelope,
+  makeVolumetricFireForgeSoundProfile
+} from '../../examples/experimental/volumetric-fire-forge/volumetric-fire-forge-audio';
+import {
+  advanceVolumetricFireForgeFlareSchedule,
+  getVolumetricFireForgeFlareEnvelope,
+  makeVolumetricFireForgeFlaredEmitters,
+  makeVolumetricFireForgeFlareSchedule,
+  selectNearestVolumetricFireForgeBurner,
+  VOLUMETRIC_FIRE_FORGE_FLARE_ATTACK_SECONDS,
+  VOLUMETRIC_FIRE_FORGE_FLARE_DECAY_SECONDS
+} from '../../examples/experimental/volumetric-fire-forge/volumetric-fire-forge-flares';
+import {
   advanceVolumetricFireForgeFixedStep,
   makeObstacleVolumeData,
   VOLUMETRIC_FIRE_FORGE_BOXES,
@@ -163,5 +176,149 @@ describe('Volumetric Fire Forge scene data', () => {
       accumulatorSeconds: 0,
       droppedSeconds: 0
     });
+  });
+});
+
+describe('Volumetric Fire Forge flares', () => {
+  test('schedules repeatable irregular single-burner flares without immediate repeats', () => {
+    const firstSchedule = makeVolumetricFireForgeFlareSchedule(4);
+    const repeatedSchedule = makeVolumetricFireForgeFlareSchedule(4);
+    expect(firstSchedule).toEqual(repeatedSchedule);
+
+    const intervals: number[] = [firstSchedule.nextFlareTimeSeconds];
+    let schedule = firstSchedule;
+    for (let sequence = 0; sequence < 16; sequence++) {
+      const previousBurnerIndex = schedule.nextBurnerIndex;
+      const previousTimeSeconds = schedule.nextFlareTimeSeconds;
+      schedule = advanceVolumetricFireForgeFlareSchedule(schedule, 4);
+      intervals.push(schedule.nextFlareTimeSeconds - previousTimeSeconds);
+      expect(schedule.nextBurnerIndex).not.toBe(previousBurnerIndex);
+      expect(schedule.nextIntensity).toBeGreaterThanOrEqual(0.82);
+      expect(schedule.nextIntensity).toBeLessThanOrEqual(1.16);
+    }
+    expect(new Set(intervals.map(interval => interval.toFixed(3))).size).toBeGreaterThan(10);
+    expect(() => makeVolumetricFireForgeFlareSchedule(0)).toThrow(/at least one burner/);
+  });
+
+  test('uses a fast attack, a longer natural decay, and then reaches zero', () => {
+    expect(getVolumetricFireForgeFlareEnvelope(-1)).toBe(0);
+    expect(getVolumetricFireForgeFlareEnvelope(0)).toBe(0);
+    expect(
+      getVolumetricFireForgeFlareEnvelope(VOLUMETRIC_FIRE_FORGE_FLARE_ATTACK_SECONDS / 2)
+    ).toBeCloseTo(0.5);
+    expect(
+      getVolumetricFireForgeFlareEnvelope(VOLUMETRIC_FIRE_FORGE_FLARE_ATTACK_SECONDS)
+    ).toBeCloseTo(1);
+    expect(
+      getVolumetricFireForgeFlareEnvelope(
+        VOLUMETRIC_FIRE_FORGE_FLARE_ATTACK_SECONDS + VOLUMETRIC_FIRE_FORGE_FLARE_DECAY_SECONDS * 0.5
+      )
+    ).toBeGreaterThan(0.1);
+    expect(
+      getVolumetricFireForgeFlareEnvelope(
+        VOLUMETRIC_FIRE_FORGE_FLARE_ATTACK_SECONDS + VOLUMETRIC_FIRE_FORGE_FLARE_DECAY_SECONDS
+      )
+    ).toBe(0);
+  });
+
+  test('boosts only the selected solver source', () => {
+    const flaredEmitters = makeVolumetricFireForgeFlaredEmitters(
+      VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS,
+      [0, 1.2, 0, 0]
+    );
+    expect(flaredEmitters[0]).toBe(VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS[0]);
+    expect(flaredEmitters[2]).toBe(VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS[2]);
+    expect(flaredEmitters[1].fuel).toBeGreaterThan(VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS[1].fuel);
+    expect(flaredEmitters[1].temperature).toBeGreaterThan(
+      VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS[1].temperature
+    );
+    expect(flaredEmitters[1].velocity?.[1]).toBeGreaterThan(
+      VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS[1].velocity[1]
+    );
+  });
+
+  test('selects the nearest visible projected burner and rejects empty space', () => {
+    const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    const burnerWorldPositions = [
+      [-0.5, 0, 0] as const,
+      [0.5, 0, 0] as const,
+      [0, 0, 2] as const,
+      [0, 0, -0.2] as const
+    ];
+    expect(
+      selectNearestVolumetricFireForgeBurner({
+        pointerX: 51,
+        pointerY: 50,
+        viewportWidth: 200,
+        viewportHeight: 100,
+        viewProjectionMatrix: identityMatrix,
+        burnerWorldPositions,
+        maximumDistancePixels: 20
+      })?.burnerIndex
+    ).toBe(0);
+    expect(
+      selectNearestVolumetricFireForgeBurner({
+        pointerX: 149,
+        pointerY: 50,
+        viewportWidth: 200,
+        viewportHeight: 100,
+        viewProjectionMatrix: identityMatrix,
+        burnerWorldPositions,
+        maximumDistancePixels: 20
+      })?.burnerIndex
+    ).toBe(1);
+    expect(
+      selectNearestVolumetricFireForgeBurner({
+        pointerX: 100,
+        pointerY: 90,
+        viewportWidth: 200,
+        viewportHeight: 100,
+        viewProjectionMatrix: identityMatrix,
+        burnerWorldPositions,
+        maximumDistancePixels: 20
+      })
+    ).toBeNull();
+    expect(
+      selectNearestVolumetricFireForgeBurner({
+        pointerX: 100,
+        pointerY: 50,
+        viewportWidth: 200,
+        viewportHeight: 100,
+        viewProjectionMatrix: identityMatrix,
+        burnerWorldPositions,
+        maximumDistancePixels: 20
+      })
+    ).toBeNull();
+  });
+});
+
+describe('Volumetric Fire Forge sound', () => {
+  test('keeps the whoomph low, modest, spatial, and distance attenuated', () => {
+    const nearProfile = makeVolumetricFireForgeSoundProfile({
+      intensity: 1.2,
+      distance: 3,
+      pan: 2
+    });
+    const farProfile = makeVolumetricFireForgeSoundProfile({
+      intensity: 1.2,
+      distance: 24,
+      pan: -2
+    });
+    expect(nearProfile.peakGain).toBeGreaterThan(farProfile.peakGain);
+    expect(nearProfile.peakGain).toBeLessThan(0.25);
+    expect(nearProfile.lowPassFrequencyHertz).toBeLessThan(220);
+    expect(nearProfile.subFrequencyHertz).toBeLessThan(55);
+    expect(nearProfile.tailSeconds).toBeGreaterThan(2);
+    expect(nearProfile.pan).toBe(1);
+    expect(farProfile.pan).toBe(-1);
+  });
+
+  test('uses a soft sound attack and rolling two-second tail', () => {
+    const tailSeconds = 2.1;
+    expect(getVolumetricFireForgeSoundEnvelope(0, tailSeconds)).toBe(0);
+    expect(getVolumetricFireForgeSoundEnvelope(0.0275, tailSeconds)).toBeCloseTo(0.5);
+    expect(getVolumetricFireForgeSoundEnvelope(0.055, tailSeconds)).toBeCloseTo(1);
+    expect(getVolumetricFireForgeSoundEnvelope(0.8, tailSeconds)).toBeGreaterThan(0.05);
+    expect(getVolumetricFireForgeSoundEnvelope(tailSeconds, tailSeconds)).toBe(0);
   });
 });
