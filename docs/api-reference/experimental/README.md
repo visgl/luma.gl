@@ -59,6 +59,18 @@ The [GPU Primitives and Command Graphs guide](/docs/api-reference/experimental/g
 introduces explicit command scheduling, typed table-backed graph views, hierarchical scan, stable
 compaction, stable key/value sorting, and GPU-written indirect draw commands.
 
+## GPU Simulations
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`MLSMPMFluidSimulation`](/docs/api-reference/experimental/mls-mpm-fluid-simulation) evolves a
+fixed-capacity two-dimensional weakly compressible fluid with MLS-MPM/APIC transfers. It records
+ordered compute work into a caller-owned command encoder, exposes the current particle storage
+buffer for application rendering, and provides deterministic particle seeding and reset without
+hidden submission or readback.
+
 ## Order-independent Transparency
 
 OIT keeps scene-level geometry capture in its renderers and exposes fullscreen resolve as standard

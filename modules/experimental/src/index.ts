@@ -166,6 +166,27 @@ export {
   getSpectralCausticsSupport,
   SpectralCausticsRenderer
 } from './rendering/spectral-caustics-renderer';
+export type {
+  MLSMPMFluidFixedPointBounds,
+  MLSMPMFluidForce,
+  MLSMPMFluidSimulationProps,
+  MLSMPMFluidSimulationStats,
+  MLSMPMFluidSimulationStepOptions,
+  MLSMPMFluidSimulationSupport,
+  MLSMPMFluidStabilityOptions,
+  MLSMPMParticle
+} from './rendering/mls-mpm-fluid-simulation';
+export {
+  DEFAULT_MLS_MPM_FLUID_GRID_SIZE,
+  DEFAULT_MLS_MPM_FLUID_PARTICLE_COUNT,
+  getMLSMPMFluidFixedPointBounds,
+  getMLSMPMFluidStableDeltaTime,
+  getMLSMPMFluidSimulationSupport,
+  MAX_MLS_MPM_FLUID_PARTICLE_COUNT,
+  MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE,
+  MLS_MPM_FLUID_STAGE_ORDER,
+  MLSMPMFluidSimulation
+} from './rendering/mls-mpm-fluid-simulation';
 
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
