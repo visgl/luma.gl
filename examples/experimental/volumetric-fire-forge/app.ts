@@ -72,13 +72,13 @@ export const DEFAULT_VOLUMETRIC_FIRE_FORGE_SETTINGS: VolumetricFireForgeSettings
   debugView: 'Final',
   sampleCount: 88,
   densityAbsorption: 2.8,
-  emissionStrength: 1.15,
+  emissionStrength: 3.2,
   smokeScattering: 0.9,
   shadowStrength: 0.74,
-  exposure: 0.8,
-  bloomThreshold: 1.05,
-  bloomIntensity: 0.42,
-  bloomRadius: 10
+  exposure: 0.88,
+  bloomThreshold: 0.7,
+  bloomIntensity: 0.76,
+  bloomRadius: 12
 };
 
 type VolumetricFireForgeConstructorProps = AnimationProps & {

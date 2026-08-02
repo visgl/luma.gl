@@ -41,6 +41,10 @@ describe('Volumetric Fire Forge scene data', () => {
         );
       }
     }
+
+    const highDynamicRangeBurners = VOLUMETRIC_FIRE_FORGE_BOXES.filter(box => box.emissiveTopOnly);
+    expect(highDynamicRangeBurners).toHaveLength(4);
+    expect(highDynamicRangeBurners.every(box => Math.max(...box.emissiveColor) > 1)).toBe(true);
   });
 
   test('voxelizes forge boxes deterministically in x-major texture order', () => {

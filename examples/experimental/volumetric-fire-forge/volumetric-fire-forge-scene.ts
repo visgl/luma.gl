@@ -21,6 +21,7 @@ export type VolumetricFireForgeBox = {
   halfSize: readonly [number, number, number];
   color: readonly [number, number, number];
   emissiveColor: readonly [number, number, number];
+  emissiveTopOnly?: boolean;
   metallic: number;
   roughness: number;
 };
@@ -29,13 +30,13 @@ export type VolumetricFireForgeBox = {
  * Authored solid forge pieces. The renderer and obstacle-volume upload both consume this array so
  * visible geometry cannot drift away from the simulation collision mask.
  */
-export const VOLUMETRIC_FIRE_FORGE_BOXES = [
+export const VOLUMETRIC_FIRE_FORGE_BOXES: readonly VolumetricFireForgeBox[] = [
   {
     id: 'hearth-floor',
     center: [0, 0.1, 0],
     halfSize: [5.8, 0.1, 4.8],
-    color: [0.055, 0.045, 0.04],
-    emissiveColor: [0.018, 0.004, 0.001],
+    color: [0.042, 0.046, 0.054],
+    emissiveColor: [0.0025, 0.001, 0.0004],
     metallic: 0.05,
     roughness: 0.94
   },
@@ -43,8 +44,8 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'rear-refractory-wall',
     center: [0, 1.65, 4.55],
     halfSize: [5.8, 1.65, 0.25],
-    color: [0.075, 0.052, 0.04],
-    emissiveColor: [0.025, 0.006, 0.001],
+    color: [0.052, 0.05, 0.048],
+    emissiveColor: [0.003, 0.0012, 0.0005],
     metallic: 0.08,
     roughness: 0.9
   },
@@ -52,8 +53,8 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'left-forge-cheek',
     center: [-5.55, 1.6, 1.3],
     halfSize: [0.25, 1.6, 3.25],
-    color: [0.07, 0.06, 0.055],
-    emissiveColor: [0.012, 0.003, 0.001],
+    color: [0.046, 0.05, 0.056],
+    emissiveColor: [0.0015, 0.0008, 0.0005],
     metallic: 0.72,
     roughness: 0.48
   },
@@ -61,8 +62,8 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'right-forge-cheek',
     center: [5.55, 1.6, 1.3],
     halfSize: [0.25, 1.6, 3.25],
-    color: [0.07, 0.06, 0.055],
-    emissiveColor: [0.012, 0.003, 0.001],
+    color: [0.046, 0.05, 0.056],
+    emissiveColor: [0.0015, 0.0008, 0.0005],
     metallic: 0.72,
     roughness: 0.48
   },
@@ -70,8 +71,8 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'front-left-lip',
     center: [-4.15, 0.7, -4.5],
     halfSize: [1.65, 0.7, 0.3],
-    color: [0.09, 0.065, 0.045],
-    emissiveColor: [0.035, 0.009, 0.001],
+    color: [0.058, 0.053, 0.05],
+    emissiveColor: [0.004, 0.0015, 0.0005],
     metallic: 0.38,
     roughness: 0.64
   },
@@ -79,8 +80,8 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'front-right-lip',
     center: [4.15, 0.7, -4.5],
     halfSize: [1.65, 0.7, 0.3],
-    color: [0.09, 0.065, 0.045],
-    emissiveColor: [0.035, 0.009, 0.001],
+    color: [0.058, 0.053, 0.05],
+    emissiveColor: [0.004, 0.0015, 0.0005],
     metallic: 0.38,
     roughness: 0.64
   },
@@ -88,8 +89,9 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'left-front-burner',
     center: [-1.7, 0.55, -0.9],
     halfSize: [0.55, 0.45, 0.55],
-    color: [0.07, 0.055, 0.045],
-    emissiveColor: [0.16, 0.025, 0.002],
+    color: [0.042, 0.046, 0.052],
+    emissiveColor: [1.6, 0.65, 0.14],
+    emissiveTopOnly: true,
     metallic: 0.8,
     roughness: 0.38
   },
@@ -97,8 +99,9 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'right-front-burner',
     center: [1.7, 0.55, -0.9],
     halfSize: [0.55, 0.45, 0.55],
-    color: [0.07, 0.055, 0.045],
-    emissiveColor: [0.16, 0.025, 0.002],
+    color: [0.042, 0.046, 0.052],
+    emissiveColor: [1.6, 0.65, 0.14],
+    emissiveTopOnly: true,
     metallic: 0.8,
     roughness: 0.38
   },
@@ -106,8 +109,9 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'left-rear-burner',
     center: [-1.3, 0.55, 1.1],
     halfSize: [0.55, 0.45, 0.55],
-    color: [0.07, 0.055, 0.045],
-    emissiveColor: [0.16, 0.025, 0.002],
+    color: [0.042, 0.046, 0.052],
+    emissiveColor: [1.6, 0.65, 0.14],
+    emissiveTopOnly: true,
     metallic: 0.8,
     roughness: 0.38
   },
@@ -115,12 +119,13 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES = [
     id: 'right-rear-burner',
     center: [1.3, 0.55, 1.1],
     halfSize: [0.55, 0.45, 0.55],
-    color: [0.07, 0.055, 0.045],
-    emissiveColor: [0.16, 0.025, 0.002],
+    color: [0.042, 0.046, 0.052],
+    emissiveColor: [1.6, 0.65, 0.14],
+    emissiveTopOnly: true,
     metallic: 0.8,
     roughness: 0.38
   }
-] as const satisfies readonly VolumetricFireForgeBox[];
+] as const;
 
 export const VOLUMETRIC_FIRE_FORGE_BURNER_EMITTERS = [
   {

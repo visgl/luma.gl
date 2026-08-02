@@ -72,6 +72,44 @@ fn forgeScene_fresnelSchlick(cosine: f32, baseReflectance: vec3f) -> vec3f {
   return baseReflectance + (vec3f(1.0) - baseReflectance) * pow(1.0 - cosine, 5.0);
 }
 
+fn forgeScene_getBurnerLight(
+  worldPosition: vec3f,
+  normal: vec3f,
+  viewDirection: vec3f,
+  baseColor: vec3f,
+  baseReflectance: vec3f,
+  roughness: f32,
+  metallic: f32,
+  firePosition: vec3f,
+  phase: f32
+) -> vec3f {
+  let toFire = firePosition - worldPosition;
+  let fireDistance = max(length(toFire), 0.08);
+  let fireDirection = toFire / fireDistance;
+  let fireFlicker = 0.9 + 0.1 * sin(forgeScene.time * 7.1 + phase) *
+    sin(forgeScene.time * 3.7 + 1.4 + phase * 0.63);
+  let fireAttenuation = fireFlicker * 28.0 /
+    (1.0 + fireDistance * fireDistance * 1.6);
+  let fireDiffuse = max(dot(normal, fireDirection), 0.0);
+  let fireHalfDirection = normalize(fireDirection + viewDirection);
+  let fireSpecular = pow(
+    max(dot(normal, fireHalfDirection), 0.0),
+    mix(5.0, 96.0, 1.0 - roughness)
+  );
+  let fireFresnel = forgeScene_fresnelSchlick(
+    max(dot(fireHalfDirection, viewDirection), 0.0),
+    baseReflectance
+  );
+  let fireColor = vec3f(1.0, 0.56, 0.2) * fireAttenuation;
+  let fireLighting = baseColor * (1.0 - metallic) * fireDiffuse * fireColor;
+  let fireHighlight = fireFresnel * fireSpecular * fireColor * mix(0.18, 1.0, metallic);
+  let contactFade = 1.0 - smoothstep(3.2, 5.0, fireDistance);
+  let contactBounce = vec3f(1.45, 0.48, 0.095) * fireFlicker *
+    (0.16 + fireDiffuse * 0.84) * contactFade /
+    (1.0 + fireDistance * fireDistance * 1.15);
+  return fireLighting + fireHighlight + contactBounce;
+}
+
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   let normal = normalize(inputs.worldNormal);
@@ -80,32 +118,36 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   let metallic = clamp(inputs.material.y, 0.0, 1.0);
   let baseReflectance = mix(vec3f(0.035), inputs.baseColor, metallic);
 
-  let toFire = forgeScene.emitterPosition - inputs.worldPosition;
-  let fireDistance = max(length(toFire), 0.08);
-  let fireDirection = toFire / fireDistance;
-  let fireFlicker = 0.88 + 0.12 * sin(forgeScene.time * 7.1) * sin(forgeScene.time * 3.7 + 1.4);
-  let fireAttenuation = fireFlicker * 30.0 / (1.0 + fireDistance * fireDistance * 1.25);
-  let fireDiffuse = max(dot(normal, fireDirection), 0.0);
-  let fireHalfDirection = normalize(fireDirection + viewDirection);
-  let fireSpecular = pow(max(dot(normal, fireHalfDirection), 0.0), mix(5.0, 96.0, 1.0 - roughness));
-  let fireFresnel = forgeScene_fresnelSchlick(
-    max(dot(fireHalfDirection, viewDirection), 0.0),
-    baseReflectance
-  );
-  let fireColor = vec3f(1.0, 0.27, 0.045) * fireAttenuation;
-  let furnaceBounce = vec3f(0.68, 0.12, 0.014) * fireFlicker /
-    (1.0 + fireDistance * fireDistance * 0.065);
+  let frontLeftFire = forgeScene.emitterPosition + vec3f(-1.7, 0.0, -1.15);
+  let frontRightFire = forgeScene.emitterPosition + vec3f(1.7, 0.0, -1.15);
+  let rearLeftFire = forgeScene.emitterPosition + vec3f(-1.3, 0.0, 0.85);
+  let rearRightFire = forgeScene.emitterPosition + vec3f(1.3, 0.0, 0.85);
+  let fireLighting =
+    forgeScene_getBurnerLight(
+      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      roughness, metallic, frontLeftFire, 0.0
+    ) +
+    forgeScene_getBurnerLight(
+      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      roughness, metallic, frontRightFire, 1.7
+    ) +
+    forgeScene_getBurnerLight(
+      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      roughness, metallic, rearLeftFire, 3.1
+    ) +
+    forgeScene_getBurnerLight(
+      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      roughness, metallic, rearRightFire, 4.6
+    );
 
   let fillDirection = normalize(vec3f(-0.38, 0.82, 0.42));
   let fillDiffuse = max(dot(normal, fillDirection), 0.0);
-  let fillColor = vec3f(0.12, 0.2, 0.34) * (0.18 + fillDiffuse * 0.62);
-  let ambient = inputs.baseColor * (0.025 + max(normal.y, 0.0) * 0.018);
-  let fireLighting = inputs.baseColor * (1.0 - metallic) * fireDiffuse * fireColor;
-  let fireHighlight = fireFresnel * fireSpecular * fireColor * mix(0.18, 1.0, metallic);
-  let emissive = inputs.emissiveColor *
+  let fillColor = vec3f(0.18, 0.26, 0.4) * (0.32 + fillDiffuse * 0.6);
+  let ambient = inputs.baseColor * (0.12 + max(normal.y, 0.0) * 0.05);
+  let emissiveTopMask = mix(1.0, smoothstep(0.45, 0.82, normal.y), inputs.material.z);
+  let emissive = inputs.emissiveColor * emissiveTopMask *
     (0.9 + 0.1 * sin(forgeScene.time * 5.3 + inputs.worldPosition.x * 2.1));
-  let color = ambient + inputs.baseColor * fillColor + fireLighting + fireHighlight +
-    furnaceBounce + emissive;
+  let color = ambient + inputs.baseColor * fillColor + fireLighting + emissive;
   return vec4f(max(color, vec3f(0.0)), 1.0);
 }
 `;
@@ -254,13 +296,13 @@ fn volumetricFireComposite_getFlameEmission(
   let ember = vec3f(1.0, 0.012, 0.0005);
   let orange = vec3f(1.0, 0.115, 0.004);
   let gold = vec3f(1.0, 0.34, 0.018);
-  let paleGold = vec3f(1.0, 0.58, 0.09);
+  let paleGold = vec3f(1.0, 0.72, 0.24);
   let warmColor = mix(ember, orange, smoothstep(0.02, 0.35, visualHeat));
   let hotColor = mix(gold, paleGold, smoothstep(0.82, 0.98, visualHeat));
   let flameColor = mix(warmColor, hotColor, smoothstep(0.38, 0.82, visualHeat));
   // The bounded envelope still exceeds one after the authored emission scale, preserving HDR
   // energy while keeping the cooler channels below the red core's peak luminance.
-  let emissionIntensity = 0.2 + 1.8 * visualHeat * visualHeat;
+  let emissionIntensity = 0.35 + 3.65 * visualHeat * visualHeat;
   return flameColor * emissionIntensity * visualDensity;
 }
 
@@ -426,7 +468,7 @@ fn volumetricFireComposite_sampleColor(
     }
     let emission = volumetricFireComposite_getFlameEmission(reactiveHeat, density) *
       volumetricFireComposite.emissionStrength;
-    let smokeLight = mix(vec3f(0.035, 0.055, 0.09), vec3f(0.58, 0.18, 0.035), shadowTransmittance) *
+    let smokeLight = mix(vec3f(0.016, 0.024, 0.04), vec3f(0.14, 0.085, 0.04), shadowTransmittance) *
       density * volumetricFireComposite.smokeScattering;
     integratedRadiance += transmittance * (emission * segmentIntegral + smokeLight * sampleOpacity);
     transmittance *= segmentTransmittance;

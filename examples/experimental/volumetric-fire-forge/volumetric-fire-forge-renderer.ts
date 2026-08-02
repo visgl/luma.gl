@@ -268,7 +268,7 @@ export class VolumetricFireForgeRenderer {
         },
         toneMapping: {
           exposure: settings.exposure,
-          maximumLuminance: this.device.preferredColorFormat === 'rgba16float' ? 2.6 : 1
+          maximumLuminance: this.device.preferredColorFormat === 'rgba16float' ? 3.5 : 1
         }
       }
     });
@@ -359,7 +359,11 @@ function makeForgeInstanceData(): {
     halfSizes: new Float32Array(VOLUMETRIC_FIRE_FORGE_BOXES.flatMap(box => box.halfSize)),
     baseColors: new Float32Array(VOLUMETRIC_FIRE_FORGE_BOXES.flatMap(box => box.color)),
     materials: new Float32Array(
-      VOLUMETRIC_FIRE_FORGE_BOXES.flatMap(box => [box.roughness, box.metallic, 0])
+      VOLUMETRIC_FIRE_FORGE_BOXES.flatMap(box => [
+        box.roughness,
+        box.metallic,
+        box.emissiveTopOnly ? 1 : 0
+      ])
     ),
     emissiveColors: new Float32Array(VOLUMETRIC_FIRE_FORGE_BOXES.flatMap(box => box.emissiveColor))
   };
