@@ -101,6 +101,15 @@ export type {
   GPUGridBinningProps
 } from './gpu-grid-binning';
 
+export {GPUGridIndex} from './gpu-grid-index';
+export type {
+  GPUGridIndexBounds,
+  GPUGridIndexPositions,
+  GPUGridIndexProps,
+  GPUGridIndexSize,
+  GPUGridIndexSourceIds
+} from './gpu-grid-index';
+
 export {GPUGridAggregation} from './gpu-grid-aggregation';
 export type {
   GPUGridAggregationOperation,
