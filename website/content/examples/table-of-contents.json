@@ -35,6 +35,11 @@
       "showcase/lightstorm-megacity",
       {
         "type": "doc",
+        "id": "experimental/spectral-caustics",
+        "label": "Spectral Caustics: Prism Cathedral"
+      },
+      {
+        "type": "doc",
         "id": "experimental/fluid-foundry",
         "label": "Fluid Foundry: Liquid Metal Press"
       },
