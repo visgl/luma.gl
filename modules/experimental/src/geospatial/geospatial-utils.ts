@@ -155,6 +155,50 @@ fn rawPointToF32(point: RawPoint) -> vec2f {
 }
 `;
 
+/** Overflow-safe helpers shared by raw-binary64 planar distance kernels. @internal */
+export const PRECISE_DISTANCE_WGSL = /* wgsl */ `
+fn geospatial_nan_fp64(seed: f32) -> vec2f {
+  return vec2f(fp64_nan(seed), 0.0);
+}
+
+fn geospatial_max_abs_fp64(first: vec2f, second: vec2f) -> f32 {
+  let normalizedFirst = normalize_fp64(first);
+  let normalizedSecond = normalize_fp64(second);
+  return max(abs(normalizedFirst.x), abs(normalizedSecond.x));
+}
+
+fn geospatial_div_fp64_f32(value: vec2f, divisor: f32) -> vec2f {
+  return normalize_fp64(vec2f(value.x / divisor, value.y / divisor));
+}
+
+fn geospatial_mul_fp64_f32(value: vec2f, multiplier: f32) -> vec2f {
+  return normalize_fp64(vec2f(value.x * multiplier, value.y * multiplier));
+}
+
+fn geospatial_abs_fp64(value: vec2f) -> vec2f {
+  let normalized = normalize_fp64(value);
+  return select(sub_fp64(vec2f(0.0, 0.0), normalized), normalized, sign_fp64(normalized) >= 0);
+}
+
+fn geospatial_hypot_fp64(x: vec2f, y: vec2f) -> vec2f {
+  let normalizedX = normalize_fp64(x);
+  let normalizedY = normalize_fp64(y);
+  if (!is_finite_fp64(normalizedX) || !is_finite_fp64(normalizedY)) {
+    return geospatial_nan_fp64(normalizedX.x + normalizedY.x);
+  }
+  let scaleValue = geospatial_max_abs_fp64(normalizedX, normalizedY);
+  if (scaleValue == 0.0) {
+    return vec2f(0.0, 0.0);
+  }
+  let scaledX = geospatial_div_fp64_f32(normalizedX, scaleValue);
+  let scaledY = geospatial_div_fp64_f32(normalizedY, scaleValue);
+  let scaledLength = sqrt_fp64(
+    sum_fp64(mul_fp64(scaledX, scaledX), mul_fp64(scaledY, scaledY))
+  );
+  return geospatial_mul_fp64_f32(scaledLength, scaleValue);
+}
+`;
+
 /** Plans a bounded three-dimensional dispatch for one packed row chunk. @internal */
 export function getGeospatialDispatchLayout(
   elementCount: number,

@@ -15,6 +15,7 @@ import type {
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
   POSITION_FORMATS,
+  PRECISE_DISTANCE_WGSL,
   RAW_POINT_WGSL,
   addGeospatialPass,
   assertGraphOwnership,
@@ -110,7 +111,7 @@ export class GPUPairwisePointSegmentDistance implements GPUCommandGraphContribut
         ? getPreciseDistanceExpression(pointSource, startSource, endSource)
         : getFloat32DistanceExpression(pointSource, startSource, endSource);
       const source = /* wgsl */ `
-${precise ? RAW_POINT_WGSL : ''}
+${precise ? `${RAW_POINT_WGSL}\n${PRECISE_DISTANCE_WGSL}` : ''}
 const ELEMENT_COUNT: u32 = ${points.length}u;
 const OUTPUT_OFFSET: u32 = ${outputOffset}u;
 ${pointSource.declaration}
@@ -179,17 +180,62 @@ function getPreciseDistanceExpression(
   let segmentY = sub_fp64u32_to_fp64(end.y, start.y);
   let pointX = sub_fp64u32_to_fp64(point.x, start.x);
   let pointY = sub_fp64u32_to_fp64(point.y, start.y);
-  let denominator = sum_fp64(mul_fp64(segmentX, segmentX), mul_fp64(segmentY, segmentY));
-  let numerator = sum_fp64(mul_fp64(pointX, segmentX), mul_fp64(pointY, segmentY));
-  var fraction = vec2f(0.0, 0.0);
-  if (sign_fp64(denominator) > 0) {
-    fraction = div_fp64(numerator, denominator);
-    if (sign_fp64(fraction) < 0) { fraction = vec2f(0.0, 0.0); }
-    if (compare_fp64(fraction, vec2f(1.0, 0.0)) > 0) { fraction = vec2f(1.0, 0.0); }
+  let pointFromEndX = sub_fp64u32_to_fp64(point.x, end.x);
+  let pointFromEndY = sub_fp64u32_to_fp64(point.y, end.y);
+  var distance = geospatial_nan_fp64(pointX.x);
+  if (
+    is_finite_fp64(segmentX) && is_finite_fp64(segmentY) &&
+    is_finite_fp64(pointX) && is_finite_fp64(pointY) &&
+    is_finite_fp64(pointFromEndX) && is_finite_fp64(pointFromEndY)
+  ) {
+    let segmentScale = geospatial_max_abs_fp64(segmentX, segmentY);
+    let pointScale = geospatial_max_abs_fp64(pointX, pointY);
+    let pointFromEndScale = geospatial_max_abs_fp64(pointFromEndX, pointFromEndY);
+    if (segmentScale == 0.0) {
+      distance = geospatial_hypot_fp64(pointX, pointY);
+    } else if (pointScale == 0.0 || pointFromEndScale == 0.0) {
+      distance = vec2f(0.0, 0.0);
+    } else {
+      let normalizedSegmentX = geospatial_div_fp64_f32(segmentX, segmentScale);
+      let normalizedSegmentY = geospatial_div_fp64_f32(segmentY, segmentScale);
+      let normalizedPointX = geospatial_div_fp64_f32(pointX, pointScale);
+      let normalizedPointY = geospatial_div_fp64_f32(pointY, pointScale);
+      let normalizedPointFromEndX = geospatial_div_fp64_f32(
+        pointFromEndX, pointFromEndScale
+      );
+      let normalizedPointFromEndY = geospatial_div_fp64_f32(
+        pointFromEndY, pointFromEndScale
+      );
+      let startProjection = sum_fp64(
+        mul_fp64(normalizedPointX, normalizedSegmentX),
+        mul_fp64(normalizedPointY, normalizedSegmentY)
+      );
+      let endProjection = sum_fp64(
+        mul_fp64(normalizedPointFromEndX, normalizedSegmentX),
+        mul_fp64(normalizedPointFromEndY, normalizedSegmentY)
+      );
+      if (sign_fp64(startProjection) <= 0) {
+        distance = geospatial_hypot_fp64(pointX, pointY);
+      } else if (sign_fp64(endProjection) >= 0) {
+        distance = geospatial_hypot_fp64(pointFromEndX, pointFromEndY);
+      } else {
+        let normalizedCrossProduct = sub_fp64(
+          mul_fp64(normalizedSegmentX, normalizedPointY),
+          mul_fp64(normalizedSegmentY, normalizedPointX)
+        );
+        let normalizedSegmentLength = sqrt_fp64(
+          sum_fp64(
+            mul_fp64(normalizedSegmentX, normalizedSegmentX),
+            mul_fp64(normalizedSegmentY, normalizedSegmentY)
+          )
+        );
+        let normalizedDistance = div_fp64(
+          geospatial_abs_fp64(normalizedCrossProduct),
+          normalizedSegmentLength
+        );
+        distance = geospatial_mul_fp64_f32(normalizedDistance, pointScale);
+      }
+    }
   }
-  let deltaX = sub_fp64(pointX, mul_fp64(fraction, segmentX));
-  let deltaY = sub_fp64(pointY, mul_fp64(fraction, segmentY));
-  outputDistances[OUTPUT_OFFSET + index] = sqrt_fp64(
-    sum_fp64(mul_fp64(deltaX, deltaX), mul_fp64(deltaY, deltaY))
-  );`;
+  outputDistances[OUTPUT_OFFSET + index] = distance;`;
 }

@@ -15,6 +15,7 @@ import type {
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
   POSITION_FORMATS,
+  PRECISE_DISTANCE_WGSL,
   RAW_POINT_WGSL,
   addGeospatialPass,
   assertGraphOwnership,
@@ -83,13 +84,11 @@ export class GPUPairwisePointDistance implements GPUCommandGraphContributor {
   let rightPoint = ${rightSource.read('index')};
   let deltaX = sub_fp64u32_to_fp64(leftPoint.x, rightPoint.x);
   let deltaY = sub_fp64u32_to_fp64(leftPoint.y, rightPoint.y);
-  outputDistances[OUTPUT_OFFSET + index] = sqrt_fp64(
-    sum_fp64(mul_fp64(deltaX, deltaX), mul_fp64(deltaY, deltaY))
-  );`
+  outputDistances[OUTPUT_OFFSET + index] = geospatial_hypot_fp64(deltaX, deltaY);`
         : `let delta = ${leftSource.read('index')} - ${rightSource.read('index')};
   outputDistances[OUTPUT_OFFSET + index] = length(delta);`;
       const source = /* wgsl */ `
-${precise ? RAW_POINT_WGSL : ''}
+${precise ? `${RAW_POINT_WGSL}\n${PRECISE_DISTANCE_WGSL}` : ''}
 const ELEMENT_COUNT: u32 = ${left.length}u;
 const OUTPUT_OFFSET: u32 = ${outputOffset}u;
 ${leftSource.declaration}

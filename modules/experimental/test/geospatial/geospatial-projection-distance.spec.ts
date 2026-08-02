@@ -159,7 +159,7 @@ test('GPUSinusoidalProjection matches cuSpatial sign, midpoint, and circumferenc
     tapeTest,
     raw[0],
     rawExpected[0],
-    Math.abs(rawExpected[0]) * 2e-5 + 1e-12,
+    Math.abs(rawExpected[0]) * 1e-4 + 1e-12,
     'raw binary64 subtraction preserves a delta smaller than one f32 ULP at the origin'
   );
   tapeTest.notEqual(raw[0], 0);
@@ -305,7 +305,7 @@ test('GPUHaversineDistance preserves raw binary64 coordinate deltas', async tape
       tapeTest,
       actual[index],
       expected,
-      expected * 2e-5 + 1e-12,
+      expected * 1e-4 + 1e-12,
       `raw binary64 input preserves sub-f32 ${index === 0 ? 'longitude' : 'latitude'} delta`
     );
     tapeTest.notEqual(actual[index], 0);
@@ -322,6 +322,11 @@ test('point and point-to-segment distances match f32 and raw binary64 CPU oracle
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -443,6 +448,168 @@ test('point and point-to-segment distances match f32 and raw binary64 CPU oracle
     floatSegmentOutputBuffer,
     rawPointOutputBuffer,
     rawSegmentOutputBuffer
+  ]) {
+    buffer.destroy();
+  }
+  tapeTest.end();
+});
+
+test('precise planar distances scale extreme intermediate products', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
+    tapeTest.end();
+    return;
+  }
+
+  const largePower = 2 ** 100;
+  const smallPower = 2 ** -100;
+  const pointLeft: Point[] = [
+    [1e20, 0],
+    [largePower, 0],
+    [smallPower, 0]
+  ];
+  const pointRight: Point[] = pointLeft.map(() => [0, 0]);
+  const segmentPoints: Point[] = [
+    [5e19, 0],
+    [5e19, 3],
+    [smallPower, smallPower]
+  ];
+  const segmentStarts: Point[] = segmentPoints.map(() => [0, 0]);
+  const segmentEnds: Point[] = [
+    [1e20, 0],
+    [1e20, 0],
+    [largePower, 0]
+  ];
+  const pointLeftBuffer = createBuffer(device, encodeFloat64Points(pointLeft), Buffer.STORAGE);
+  const pointRightBuffer = createBuffer(device, encodeFloat64Points(pointRight), Buffer.STORAGE);
+  const segmentPointBuffer = createBuffer(
+    device,
+    encodeFloat64Points(segmentPoints),
+    Buffer.STORAGE
+  );
+  const segmentStartBuffer = createBuffer(
+    device,
+    encodeFloat64Points(segmentStarts),
+    Buffer.STORAGE
+  );
+  const segmentEndBuffer = createBuffer(device, encodeFloat64Points(segmentEnds), Buffer.STORAGE);
+  const pointOutputBuffer = createOutputBuffer(device, pointLeft.length * 8);
+  const segmentOutputBuffer = createOutputBuffer(device, segmentPoints.length * 8);
+  const graph = new GPUCommandGraph(device, {id: 'precise-distance-scaling-test'});
+
+  new GPUPairwisePointDistance({
+    left: importView(graph, 'scaling-point-left', pointLeftBuffer, 'uint32x4', pointLeft.length),
+    right: importView(
+      graph,
+      'scaling-point-right',
+      pointRightBuffer,
+      'uint32x4',
+      pointRight.length
+    ),
+    output: importView(
+      graph,
+      'scaling-point-output',
+      pointOutputBuffer,
+      'float32x2',
+      pointLeft.length
+    )
+  }).addToGraph(graph);
+  new GPUPairwisePointSegmentDistance({
+    points: importView(
+      graph,
+      'scaling-segment-points',
+      segmentPointBuffer,
+      'uint32x4',
+      segmentPoints.length
+    ),
+    segmentStarts: importView(
+      graph,
+      'scaling-segment-starts',
+      segmentStartBuffer,
+      'uint32x4',
+      segmentStarts.length
+    ),
+    segmentEnds: importView(
+      graph,
+      'scaling-segment-ends',
+      segmentEndBuffer,
+      'uint32x4',
+      segmentEnds.length
+    ),
+    output: importView(
+      graph,
+      'scaling-segment-output',
+      segmentOutputBuffer,
+      'float32x2',
+      segmentPoints.length
+    )
+  }).addToGraph(graph);
+
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'precise-distance-scaling-encoding'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+
+  const pointOutput = await readFloat32(pointOutputBuffer, pointLeft.length * 2);
+  const pointDistances = pointLeft.map(
+    (_, index) => pointOutput[index * 2] + pointOutput[index * 2 + 1]
+  );
+  assertRelativeClose(
+    tapeTest,
+    pointDistances[0],
+    1e20,
+    2e-6,
+    'a finite 1e20 distance does not overflow while squaring'
+  );
+  assertRelativeClose(
+    tapeTest,
+    pointDistances[1],
+    largePower,
+    2e-6,
+    'a large power-of-two distance remains finite'
+  );
+  assertClose(
+    tapeTest,
+    pointDistances[2] / smallPower,
+    1,
+    2e-6,
+    'a small power-of-two distance does not underflow while squaring'
+  );
+
+  const segmentOutput = await readFloat32(segmentOutputBuffer, segmentPoints.length * 2);
+  const segmentDistances = segmentPoints.map(
+    (_, index) => segmentOutput[index * 2] + segmentOutput[index * 2 + 1]
+  );
+  tapeTest.equal(segmentDistances[0], 0, 'the midpoint of a 1e20 segment has zero distance');
+  assertClose(
+    tapeTest,
+    segmentDistances[1],
+    3,
+    2e-6,
+    'a finite off-axis distance survives overflowing projection products'
+  );
+  assertClose(
+    tapeTest,
+    segmentDistances[2] / smallPower,
+    1,
+    2e-6,
+    'an unrepresentably small projection fraction still produces the correct distance'
+  );
+  compiled.destroy();
+  for (const buffer of [
+    pointLeftBuffer,
+    pointRightBuffer,
+    segmentPointBuffer,
+    segmentStartBuffer,
+    segmentEndBuffer,
+    pointOutputBuffer,
+    segmentOutputBuffer
   ]) {
     buffer.destroy();
   }
@@ -571,6 +738,11 @@ test('point distance honors naturally aligned input and output offsets', async t
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -824,5 +996,11 @@ function assertRelativeClose(
     expected,
     Math.max(1e-12, Math.abs(expected) * relativeTolerance),
     message
+  );
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
   );
 }

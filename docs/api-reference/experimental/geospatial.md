@@ -87,13 +87,14 @@ remaining arithmetic are f32. This kernel does not claim f64-transcendental accu
 The configurable positive `radius` defaults to `6371` km and must be finite and representable as a
 finite f32 value.
 
-The implementation uses the standard clamped `asin(sqrt(h))` haversine form through a central
-angle of π/2. Longer paths use independent spherical cross and dot products with `atan2`, avoiding
-the sensitivity of a rounded haversine near antipodes. The acceptance suite requires at most 2 km
-absolute error against a double-precision CPU oracle for difficult finite paths, including
-antimeridian, near-polar, and nearly antipodal cases. This is a practical V1 error envelope rather
-than a cross-adapter mathematical bound; applications needing tighter geodesic guarantees should
-verify their target devices and coordinate domain.
+For angular deltas below `1e-4` radians, the implementation uses the local equirectangular limit so
+that adapters do not collapse tiny f32 trigonometric inputs to zero. Intermediate paths use the
+standard clamped `asin(sqrt(h))` haversine form. Paths beyond a central angle of π/2 use independent
+spherical cross and dot products with `atan2`, avoiding the sensitivity of a rounded haversine near
+antipodes. The acceptance suite requires at most 2 km absolute error against a double-precision CPU
+oracle for difficult finite paths, including antimeridian, near-polar, and nearly antipodal cases.
+This is a practical V1 error envelope rather than a cross-adapter mathematical bound; applications
+needing tighter geodesic guarantees should verify their target devices and coordinate domain.
 
 Raw binary64 inputs avoid premature CPU conversion and preserve small longitude/latitude deltas
 through subtraction, but the transcendental inputs and final scalar result remain f32.

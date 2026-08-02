@@ -90,20 +90,22 @@ export class GPUHaversineDistance implements GPUCommandGraphContributor {
       const pointSetup = precise
         ? `let leftRawPoint = ${leftSource.read('index')};
   let rightRawPoint = ${rightSource.read('index')};
-  let leftPoint = rawPointToF32(leftRawPoint) * DEGREES_TO_RADIANS;
-  let rightPoint = rawPointToF32(rightRawPoint) * DEGREES_TO_RADIANS;
-  let delta = vec2f(
+  let deltaDegrees = vec2f(
     sub_fp64u32_to_f32(rightRawPoint.x, leftRawPoint.x),
     sub_fp64u32_to_f32(rightRawPoint.y, leftRawPoint.y)
-  ) * DEGREES_TO_RADIANS;
+  );
+  let delta = deltaDegrees * DEGREES_TO_RADIANS;
+  let leftPoint = rawPointToF32(leftRawPoint) * DEGREES_TO_RADIANS;
+  let rightPoint = rawPointToF32(rightRawPoint) * DEGREES_TO_RADIANS;
   let nonFinite = rawScalarNonFinite(leftRawPoint.x) | rawScalarNonFinite(leftRawPoint.y) |
     rawScalarNonFinite(rightRawPoint.x) | rawScalarNonFinite(rightRawPoint.y) |
     pointNonFinite(leftPoint) | pointNonFinite(rightPoint) | pointNonFinite(delta);`
         : `let leftDegrees = ${leftSource.read('index')};
   let rightDegrees = ${rightSource.read('index')};
+  let deltaDegrees = rightDegrees - leftDegrees;
+  let delta = deltaDegrees * DEGREES_TO_RADIANS;
   let leftPoint = leftDegrees * DEGREES_TO_RADIANS;
   let rightPoint = rightDegrees * DEGREES_TO_RADIANS;
-  let delta = (rightDegrees - leftDegrees) * DEGREES_TO_RADIANS;
   let nonFinite = pointNonFinite(leftPoint) | pointNonFinite(rightPoint) |
     pointNonFinite(delta);`;
       const outputOffset = (output.byteOffset % 256) / 4;
@@ -113,6 +115,7 @@ const ELEMENT_COUNT: u32 = ${left.length}u;
 const OUTPUT_OFFSET: u32 = ${outputOffset}u;
 const DEGREES_TO_RADIANS: f32 = ${getFloat32Literal(Math.PI / 180)};
 const RADIUS: f32 = ${getFloat32Literal(this.radius)};
+const SMALL_ANGLE_THRESHOLD: f32 = 0.0001;
 ${leftSource.declaration}
 ${rightSource.declaration}
 @group(0) @binding(auto) var<storage, read_write> outputDistances: array<f32>;
@@ -139,24 +142,30 @@ fn main(
   ${getGeospatialInvocationIndexSource(dispatchLayout)}
   if (index >= ELEMENT_COUNT) { return; }
   ${pointSetup}
-  let halfDeltaSines = sin(delta * 0.5);
-  let haversine = halfDeltaSines.y * halfDeltaSines.y +
-    cos(leftPoint.y) * cos(rightPoint.y) * halfDeltaSines.x * halfDeltaSines.x;
-  let clampedHaversine = clamp(haversine, 0.0, 1.0);
-  let nearAngle = 2.0 * asin(sqrt(clampedHaversine));
-  let sinDeltaLongitude = sin(delta.x);
-  let cosDeltaLongitude = cos(delta.x);
-  let sinLeftLatitude = sin(leftPoint.y);
-  let cosLeftLatitude = cos(leftPoint.y);
-  let sinRightLatitude = sin(rightPoint.y);
-  let cosRightLatitude = cos(rightPoint.y);
-  let crossX = cosRightLatitude * sinDeltaLongitude;
-  let crossY = cosLeftLatitude * sinRightLatitude -
-    sinLeftLatitude * cosRightLatitude * cosDeltaLongitude;
-  let sphericalDot = sinLeftLatitude * sinRightLatitude +
-    cosLeftLatitude * cosRightLatitude * cosDeltaLongitude;
-  let farAngle = atan2(length(vec2f(crossX, crossY)), sphericalDot);
-  let centralAngle = select(nearAngle, farAngle, clampedHaversine > 0.5);
+  var centralAngle: f32;
+  if (max(abs(delta.x), abs(delta.y)) < SMALL_ANGLE_THRESHOLD) {
+    let midpointLatitude = (leftPoint.y + rightPoint.y) * 0.5;
+    centralAngle = length(vec2f(delta.x * cos(midpointLatitude), delta.y));
+  } else {
+    let halfDeltaSines = sin(delta * 0.5);
+    let haversine = halfDeltaSines.y * halfDeltaSines.y +
+      cos(leftPoint.y) * cos(rightPoint.y) * halfDeltaSines.x * halfDeltaSines.x;
+    let clampedHaversine = clamp(haversine, 0.0, 1.0);
+    let nearAngle = 2.0 * asin(sqrt(clampedHaversine));
+    let sinDeltaLongitude = sin(delta.x);
+    let cosDeltaLongitude = cos(delta.x);
+    let sinLeftLatitude = sin(leftPoint.y);
+    let cosLeftLatitude = cos(leftPoint.y);
+    let sinRightLatitude = sin(rightPoint.y);
+    let cosRightLatitude = cos(rightPoint.y);
+    let crossX = cosRightLatitude * sinDeltaLongitude;
+    let crossY = cosLeftLatitude * sinRightLatitude -
+      sinLeftLatitude * cosRightLatitude * cosDeltaLongitude;
+    let sphericalDot = sinLeftLatitude * sinRightLatitude +
+      cosLeftLatitude * cosRightLatitude * cosDeltaLongitude;
+    let farAngle = atan2(length(vec2f(crossX, crossY)), sphericalDot);
+    centralAngle = select(nearAngle, farAngle, clampedHaversine > 0.5);
+  }
   let distance = RADIUS * centralAngle;
   let nonFiniteMask = 0u - nonFinite;
   let distanceBits = bitcast<u32>(distance);
