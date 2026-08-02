@@ -338,17 +338,36 @@ WGSL also provides these targeted helpers for `fp64u32` values:
 ```wgsl
 fn sub_fp64u32_to_f32_bits(aBits: vec2u, bBits: vec2u) -> u32
 fn sub_fp64u32_to_f32(aBits: vec2u, bBits: vec2u) -> f32
+fn sub_fp64u32_to_fp64_bits(aBits: vec2u, bBits: vec2u) -> vec2u
+fn sub_fp64u32_to_fp64(aBits: vec2u, bBits: vec2u) -> vec2f
 ```
 
 The words are in canonical order: `.x` contains the sign, exponent, and high
-fraction bits, and `.y` contains the low fraction bits. The helpers implement
-the exact-delta contract described above, including a single round-to-nearest,
-ties-to-even conversion to a binary32 encoding. The `_bits` helper returns that
-encoding as `u32`, including the module's defined handling of zeros,
-subnormals, infinities, and NaNs. WGSL's relaxed rules for those values mean
-that the direct `f32` helper has a portable exact-value guarantee only for
-normal finite results. These helpers are deliberately narrower than the
-general `fp64f32` arithmetic API.
+fraction bits, and `.y` contains the low fraction bits. The `to_f32` helpers
+implement the exact-delta contract described above, including a single
+round-to-nearest, ties-to-even conversion to a binary32 encoding. The
+`to_f32_bits` helper returns that encoding as `u32`, including the module's
+defined handling of zeros, subnormals, infinities, and NaNs. WGSL's relaxed
+rules for those values mean that the direct `f32` helper has a portable
+exact-value guarantee only for normal finite results. These helpers are
+deliberately narrower than the general `fp64f32` arithmetic API.
+
+The `to_fp64` variants implement the other rounding contract: they round the
+exact subtraction once to binary64 and then split that binary64 result into a
+normalized double-single pair. They preserve useful coordinate deltas that do
+not fit in one `f32`, but they do not extend the exponent range. The result has
+up to roughly 48 significand bits with an `f32` exponent range. Finite results
+above that range map to infinity and results below the `f32` subnormal range
+map to canonical zero. This makes the helpers a practical fit for terrestrial
+GIS coordinates and local metric deltas, not for arbitrary binary64-scale
+scientific values.
+
+`normalize_fp64`, `sign_fp64`, and `compare_fp64` use integer-controlled
+normalization regardless of the selected arithmetic mode. Normalization
+handles stored subnormal limb bits and canonicalizes signed zero. NaN remains
+unordered: `sign_fp64` and `compare_fp64` return `0` for NaN, so callers must
+use `is_nan_fp64` or `is_finite_fp64` before interpreting `0` as finite zero or
+equality.
 
 ## Validation Is Part Of The Technique
 

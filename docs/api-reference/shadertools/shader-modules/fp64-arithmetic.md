@@ -78,13 +78,29 @@ WGSL also exposes:
 ```wgsl
 fn sub_fp64u32_to_f32_bits(aBits: vec2u, bBits: vec2u) -> u32
 fn sub_fp64u32_to_f32(aBits: vec2u, bBits: vec2u) -> f32
+fn sub_fp64u32_to_fp64_bits(aBits: vec2u, bBits: vec2u) -> vec2u
+fn sub_fp64u32_to_fp64(aBits: vec2u, bBits: vec2u) -> vec2f
 ```
 
 These helpers subtract two `fp64u32` values, i.e. raw IEEE-754 binary64 values
-stored in `vec2u`, using integer arithmetic and round the exact result once to
-`f32`. They are intended for WebGPU paths that need `f32(a64 - b64)`, rather
-than `f32(a64) - f32(b64)`, without relying on emulated fp64 floating-point
-arithmetic.
+stored in `vec2u`, using integer arithmetic. The `to_f32` variants round the
+exact mathematical difference directly and once to `f32`. They are intended
+for WebGPU paths that need `f32(a64 - b64)`, rather than `f32(a64) - f32(b64)`,
+without relying on emulated fp64 floating-point arithmetic.
+
+The `to_fp64` variants first round the exact difference to binary64, matching a
+binary64 subtraction, and then split that value into normalized `f32` high and
+low limbs. This sequencing is intentional: direct exact-to-`f32` rounding and
+binary64-then-`f32` rounding can differ at double-rounding boundaries.
+
+The returned double-single value provides up to approximately 48 significand
+bits, but retains the `f32` exponent range. A finite binary64 result whose
+magnitude is above that range maps to an infinity high limb and zero low limb;
+a result below the `f32` subnormal range maps to canonical positive zero limbs.
+Callers that require a finite result must establish that the expected delta is
+representable in the `f32` exponent range. Terrestrial longitude/latitude,
+projected metre coordinates, and their local deltas are comfortably inside
+that range; this helper is not a general replacement for binary64 arithmetic.
 
 A full bitwise drop-in implementation of `fp64f32` arithmetic is intentionally
 not exposed. That approach is too expensive for iterative fragment shaders and
@@ -100,6 +116,22 @@ the `fp64f32` representation.
 
 If the source data comes from a JavaScript `Float64Array` reinterpreted as
 `Uint32Array`, convert from host word order before calling these helpers.
+
+WGSL additionally exposes normalized comparison helpers:
+
+```wgsl
+fn normalize_fp64(value: vec2f) -> vec2f
+fn is_nan_fp64(value: vec2f) -> bool
+fn is_finite_fp64(value: vec2f) -> bool
+fn sign_fp64(value: vec2f) -> i32
+fn compare_fp64(a: vec2f, b: vec2f) -> i32
+```
+
+`normalize_fp64` uses integer accumulation in both arithmetic modes, including
+for `f32` subnormal limbs, and canonicalizes every signed-zero pair to
+`vec2f(+0.0, +0.0)`. `sign_fp64` and `compare_fp64` return `0` for an unordered
+NaN input. Code where `0` must mean finite zero or equality must first call
+`is_nan_fp64` or `is_finite_fp64`; NaN is never implied to be equal.
 
 ## Remarks
 
