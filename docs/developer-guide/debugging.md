@@ -105,7 +105,7 @@ shader is involved when debugging shader parsing errors occur.
 
 ## Buffer data inspection
 
-`Buffer` objects contain a CPU side copy of the first few bytes of data in the `buffer.debugData` field. This field is refreshed whenever data is written or read from the CPU side, using `buffer.write()`, `buffer.readAsync()` etc and can be inspected in the debugger to inspect the contents of the buffer.
+On backends that support it, creating the device with `debug: true` enables a CPU side copy of the first few bytes of each `Buffer` in the `buffer.debugData` field. This field is refreshed whenever data is written or read from the CPU side, using `buffer.write()`, `buffer.readAsync()` etc and can be inspected in the debugger to inspect the contents of the buffer. When device debugging is disabled, `buffer.debugData` remains empty to avoid adding CPU allocations and copies to buffer updates.
 
 Note that this CPU side data copy can become invalid when buffers are updated on the GPU by compute shaders or transform feedback operations, in which case reading from the buffer would be necessary to refresh the CPU side data.
 

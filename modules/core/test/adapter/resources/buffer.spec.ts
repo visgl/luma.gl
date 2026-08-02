@@ -9,6 +9,7 @@ import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/
 
 import {TypedArray} from '@math.gl/types';
 import {Buffer, Device} from '@luma.gl/core';
+import {webgl2Adapter} from '@luma.gl/webgl';
 import {GL} from '@luma.gl/webgl/constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
@@ -678,6 +679,35 @@ test('Buffer#debugData', async t => {
     buffer.destroy();
   }
 
+  t.end();
+});
+
+test('WEBGLBuffer#debugData is disabled when device debugging is disabled', async t => {
+  const device = await webgl2Adapter.create({
+    createCanvasContext: {width: 1, height: 1},
+    debug: false
+  });
+  const buffer = device.createBuffer({
+    usage: Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST,
+    data: new Float32Array([1, 2, 3])
+  });
+  const emptyDebugData = buffer.debugData;
+
+  t.equal(buffer.debugData.byteLength, 0, 'Buffer.debugData is empty after construction');
+
+  buffer.write(new Float32Array([4, 5, 6]));
+  t.equal(buffer.debugData, emptyDebugData, 'Buffer.write() does not replace Buffer.debugData');
+
+  const data = await buffer.readAsync();
+  t.deepEqual(
+    new Float32Array(data.buffer),
+    new Float32Array([4, 5, 6]),
+    'Buffer contents are unaffected'
+  );
+  t.equal(buffer.debugData, emptyDebugData, 'Buffer.readAsync() does not replace Buffer.debugData');
+
+  buffer.destroy();
+  device.destroy();
   t.end();
 });
 
