@@ -1,0 +1,67 @@
+---
+title: 'Tempest Ocean: Spectral Stormfront'
+description: Fly above a physically displaced spectral ocean with GPU-derived normals, whitecaps, and HDR storm lighting.
+sidebar_custom_props:
+  description: Fly above a physically displaced spectral ocean with GPU-derived normals, whitecaps, and HDR storm lighting.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, simulation]
+---
+
+import {TempestOceanExample} from '@site/src/examples';
+
+<TempestOceanExample />
+
+Tempest Ocean turns the reusable
+[`SpectralOceanSimulation`](/docs/api-reference/experimental/spectral-ocean-simulation) into a
+cinematic stormfront without moving its scene policy into the simulation primitive. A seeded
+Phillips spectrum evolves height and horizontal displacement in frequency space, three normalized
+inverse `GPUFFT2D` transforms produce periodic spatial fields, and one assembly pass derives surface
+normals and temporally retained Jacobian whitecaps.
+
+The example binds the simulation's two stable storage buffers directly to its ocean `Model`. The
+first buffer contains row-major `(dx, height, dz, 0)` records; the second contains unit
+`(normal.xyz, foam)` records. The vertex shader bilinearly samples those records to physically
+displace a tiled raster grid, while the fragment shader consumes the same normals and foam for
+Fresnel reflection, low-angle sunlight, crest color, and readable whitecaps. No wave-evolution
+shader is duplicated in the example, and no CPU readback sits between simulation and rendering.
+
+The simulation and render tessellation are deliberately independent. The default frequency field
+is `128 × 128`, while each displayed patch uses a `145 × 145` vertex grid. Renderers can therefore
+trade geometric smoothness against raster cost without reallocating the FFT field, and simulation
+quality can change without dictating the consumer's mesh topology. A centered three-by-three tile
+draw repeats the periodic patch; distance fog merges the outer tiles into the procedural horizon
+before their boundary can become visible.
+
+Every frame records the simulation before the sky and ocean draws on the animation loop's
+caller-owned command encoder. Submission still happens once after the complete frame. The
+simulation owns its spectra, FFT scratch, spatial fields, and output buffers; the example owns the
+grid model, camera, floating-point scene target, depth attachment, bloom, and tone mapping. This is
+the same ownership split an application can use to mix the ocean into a larger scene.
+
+The beauty target remains linear `rgba16float`. A procedural storm ceiling frames a low HDR
+sunbreak, the water reflects that sky, and narrow sun glints plus foam crests exceed SDR white before
+bloom and filmic mapping. Compatible displays request an extended-range Display P3 WebGPU canvas;
+standard displays receive the same floating-point scene through tone mapping.
+
+## Navigation and deterministic playback
+
+- Drag to orbit and use the wheel or trackpad to zoom. Pitch and distance clamps keep the eye above
+  the largest authored crests and inside the fogged tile field.
+- Press **C** to toggle the slow cinematic orbit without changing wave state.
+- Press **P** or **Space** to pause or resume the absolute simulation clock. Paused frames continue
+  to encode the same time with zero foam-decay delta, so the GPU output is stable.
+- Press **R** to restore camera, absolute wave time, playback state, and foam history. The seeded
+  initial spectrum makes the reset deterministic.
+
+## What to inspect
+
+- Track individual large swells: their vertices move in X, Y, and Z rather than only perturbing a
+  flat normal map.
+- Look across the low sun for narrow HDR glints and moving whitecaps that follow compressed wave
+  regions instead of a scrolling foam texture.
+- Orbit toward the darker storm side and confirm that the same water material responds to a very
+  different section of the procedural sky.
+- Zoom toward the surface and verify that the bilinearly sampled render grid remains smooth even
+  though its resolution differs from the FFT field.

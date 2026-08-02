@@ -78,6 +78,7 @@ import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
+import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
 import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
@@ -577,6 +578,20 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
     directory="showcase"
     devices={['webgpu']}
     template={LightstormMegacityApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="tempest-ocean"
+    title="Tempest Ocean: Spectral Stormfront"
+    subtitle="GPUFFT2D displacement · HDR whitecaps"
+    directory="showcase"
+    devices={['webgpu']}
+    template={TempestOceanApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}
