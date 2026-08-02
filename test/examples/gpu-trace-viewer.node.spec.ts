@@ -3,7 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {WgslReflect} from 'wgsl_reflect';
 import {
+  isTraceDensityMode,
   makeTraceDataset,
   makeTraceGroups,
   TRACE_CROSS_PROCESS_DEPENDENCY,
@@ -18,6 +20,38 @@ import {
   TRACE_THREAD_COUNT,
   TRACE_THREADS_PER_PROCESS
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
+import {
+  getDependencyVisibilityShader,
+  getFocusMaskShader,
+  getPickClearShader,
+  getVisibilityShader,
+  TRACE_DENSITY_RENDER_SHADER,
+  TRACE_DEPENDENCY_RENDER_SHADER,
+  TRACE_RENDER_SHADER
+} from '../../examples/experimental/gpu-trace-viewer/trace-shaders';
+
+test('GPU trace LOD switches at a stable trace-time-per-pixel threshold', t => {
+  t.equal(isTraceDensityMode(0, 150, 2048), false, 'wide viewport keeps exact spans');
+  t.equal(isTraceDensityMode(0, 150, 1), true, 'zoomed-out viewport uses density bins');
+  t.equal(isTraceDensityMode(10, 10.01, 0), false, 'zero-width viewport remains bounded');
+  t.end();
+});
+
+test('GPU trace adaptive LOD shaders parse as WGSL', t => {
+  const shaders = [
+    TRACE_RENDER_SHADER,
+    TRACE_DEPENDENCY_RENDER_SHADER,
+    TRACE_DENSITY_RENDER_SHADER,
+    getFocusMaskShader(17),
+    getPickClearShader(),
+    getVisibilityShader(17, 1, 5),
+    getDependencyVisibilityShader(11)
+  ];
+  for (const shader of shaders) {
+    t.ok(new WgslReflect(shader), 'shader parses');
+  }
+  t.end();
+});
 
 test('GPU trace data preserves deterministic canonical group and hierarchy identities', t => {
   const dataset = makeTraceDataset(257);

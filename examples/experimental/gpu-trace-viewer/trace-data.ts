@@ -11,7 +11,9 @@ export const TRACE_THREAD_COUNT = TRACE_PROCESS_COUNT * TRACE_THREADS_PER_PROCES
 export const TRACE_LANE_COUNT = TRACE_THREAD_COUNT * TRACE_LANES_PER_THREAD;
 export const TRACE_SPAN_RECORD_WORD_LENGTH = 8;
 export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = 4;
-export const TRACE_ACTIVITY_BIN_COUNT = 96;
+export const TRACE_DENSITY_BIN_COUNT = 96;
+/** Switch to density rendering when one horizontal pixel covers at least this much trace time. */
+export const TRACE_DENSITY_TIME_PER_PIXEL = 0.08;
 export const TRACE_STATUS_COUNT = 4;
 export const TRACE_SAME_PROCESS_DEPENDENCY = 0;
 export const TRACE_CROSS_PROCESS_DEPENDENCY = 1;
@@ -30,6 +32,15 @@ export const TRACE_MAXIMUM_RELATIVE_PARENT_DURATION_DELTA = 0.25;
 export const TRACE_COLLAPSED_STATE = 0;
 export const TRACE_EXPANDED_STATE = 1;
 export const TRACE_INVALID_SPAN_INDEX = 0xffffffff;
+
+/** Matches the GPU's adaptive exact-span versus density-rendering decision. */
+export function isTraceDensityMode(
+  timeMin: number,
+  timeMax: number,
+  viewportWidth: number
+): boolean {
+  return (timeMax - timeMin) / Math.max(viewportWidth, 1) >= TRACE_DENSITY_TIME_PER_PIXEL;
+}
 
 export type TraceGroupName = (typeof TRACE_GROUPS)[number];
 
