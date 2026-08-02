@@ -206,6 +206,7 @@
           "api-reference/experimental/spectral-ocean-simulation",
           "api-reference/experimental/volumetric-fire-simulation",
           "api-reference/experimental/shadow-map-renderer",
+          "api-reference/experimental/spectral-caustics-renderer",
           "api-reference/experimental/glass-material",
           "api-reference/experimental/reflective-material",
           {
@@ -218,6 +219,7 @@
               "api-reference/experimental/gpu-primitives/gpu-compaction",
               "api-reference/experimental/gpu-primitives/gpu-mask",
               "api-reference/experimental/gpu-primitives/gpu-visibility-workflow",
+              "api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection",
               "api-reference/experimental/gpu-primitives/gpu-hierarchy-layout",
               "api-reference/experimental/gpu-primitives/gpu-graph-traversal",
               "api-reference/experimental/gpu-primitives/gpu-ancestor-projection",
@@ -307,6 +309,7 @@
           "api-reference/experimental/spectral-ocean-simulation",
           "api-reference/experimental/volumetric-fire-simulation",
           "api-reference/experimental/shadow-map-renderer",
+          "api-reference/experimental/spectral-caustics-renderer",
           {
             "type": "category",
             "label": "GPU Primitives",
@@ -317,6 +320,7 @@
               "api-reference/experimental/gpu-primitives/gpu-compaction",
               "api-reference/experimental/gpu-primitives/gpu-mask",
               "api-reference/experimental/gpu-primitives/gpu-visibility-workflow",
+              "api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection",
               "api-reference/experimental/gpu-primitives/gpu-hierarchy-layout",
               "api-reference/experimental/gpu-primitives/gpu-graph-traversal",
               "api-reference/experimental/gpu-primitives/gpu-ancestor-projection",
