@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Texture} from '@luma.gl/core';
+import {Buffer, luma, type Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {fromHalfFloat} from '@luma.gl/shadertools';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 import {describe, expect, test, vi} from 'vitest';
 import TempestOceanAnimationLoopTemplate from '../../examples/showcase/tempest-ocean/app';
 
 describe('Tempest Ocean: Spectral Stormfront', () => {
   test('encodes simulation before draw and renders finite HDR ocean radiance', async () => {
-    const device = await getWebGPUTestDevice('core');
+    const device = await makeTempestOceanTestDevice();
     if (!device) {
       return;
     }
@@ -88,11 +88,27 @@ describe('Tempest Ocean: Spectral Stormfront', () => {
       expect(viewer.oceanTimeSeconds).toBe(0);
     } finally {
       viewer?.onFinalize();
+      device.destroy();
       canvas.remove();
       vi.restoreAllMocks();
     }
   }, 30_000);
 });
+
+async function makeTempestOceanTestDevice(): Promise<WebGPUDevice | null> {
+  try {
+    return (await luma.createDevice({
+      id: 'tempest-ocean-test-device',
+      type: 'webgpu',
+      featureLevel: 'core',
+      adapters: [webgpuAdapter],
+      createCanvasContext: {width: 1, height: 1},
+      debug: true
+    })) as WebGPUDevice;
+  } catch {
+    return null;
+  }
+}
 
 function makeAnimationProps(
   device: AnimationProps['device'],
