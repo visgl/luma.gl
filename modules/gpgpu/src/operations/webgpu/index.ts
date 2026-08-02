@@ -1,4 +1,5 @@
 import {arithmetic} from './arithmetic';
+import {convertColors} from './convert-colors';
 import {dot} from './dot';
 import {equalAll} from './equal-all';
 import {extent} from './extent';
@@ -14,6 +15,7 @@ import {swizzle} from './swizzle';
 /** WebGPU backend handlers. */
 export {
   arithmetic,
+  convertColors,
   dot,
   equalAll,
   extent,
