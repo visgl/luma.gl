@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {expectTypeOf, test} from 'vitest';
 import type {GraphDataView} from '../../src/gpu-primitives/gpu-command-graph';
 import type {GPUHaversineDistanceProps} from '../../src/geospatial/gpu-haversine-distance';
 import type {GPUPairwisePointDistanceProps} from '../../src/geospatial/gpu-pairwise-point-distance';
@@ -105,3 +106,7 @@ export function checkGeospatialDistanceTypes(
     invalidMixedSegmentInputs
   ];
 }
+
+test('geospatial distance props preserve their coordinate/output format correlations', () => {
+  expectTypeOf(checkGeospatialDistanceTypes).toBeFunction();
+});
