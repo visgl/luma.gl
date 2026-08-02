@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray, VariableShaderType} from '@luma.gl/core';
-import {UniformStore} from '@luma.gl/core';
+import type {ExternalTexture, NumberArray, VariableShaderType} from '@luma.gl/core';
+import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CylinderGeometry, Model, VideoTexture} from '@luma.gl/engine';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 import {Input, ALL_FORMATS, BlobSource, VideoSampleSink} from 'mediabunny';
 
@@ -164,6 +165,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   videoSource: LiveVideoSource | null;
   readonly videoTexture: VideoTexture;
   readonly model: Model;
+  private _compiledGraph: CompiledGPUCommandGraph | null = null;
+  private _externalTextureWidth = 0;
+  private _externalTextureHeight = 0;
+  private _frameId = 0;
   private _isFinalized = false;
   private _videoFlipX = 0;
   private _mediabunnySource: MediabunnySource | null = null;
@@ -215,6 +220,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       AppAnimationLoopTemplate.current = null;
     }
     this.model.destroy();
+    this._compiledGraph?.destroy();
     this.videoTexture.destroy();
     this._teardownMediabunny();
     this.videoSource?.destroy();
@@ -243,12 +249,62 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.015, 0.02, 0.05, 1],
-      clearDepth: 1
+    if (device.type === 'webgpu') {
+      const externalTexture = this.videoTexture.resolveTextureBinding({
+        type: 'external-texture',
+        name: 'videoTexture',
+        group: 0,
+        location: 1
+      });
+      if (externalTexture && !(externalTexture instanceof Texture)) {
+        this._ensureExternalTextureGraph(externalTexture);
+        this._compiledGraph!.encode(device.commandEncoder, {
+          parameters: undefined,
+          externalTextures: {
+            video: {texture: externalTexture, frameId: this._frameId++}
+          }
+        });
+      }
+    } else {
+      const renderPass = device.beginRenderPass({
+        clearColor: [0.015, 0.02, 0.05, 1],
+        clearDepth: 1
+      });
+      this.model.draw(renderPass);
+      renderPass.end();
+    }
+  }
+
+  private _ensureExternalTextureGraph(externalTexture: ExternalTexture): void {
+    if (
+      this._compiledGraph &&
+      externalTexture.width === this._externalTextureWidth &&
+      externalTexture.height === this._externalTextureHeight
+    ) {
+      return;
+    }
+    this._compiledGraph?.destroy();
+    const graph = new GPUCommandGraph(this.model.device, {id: 'video-texture-frame'});
+    const externalTextureHandle = graph.importExternalTexture({
+      id: 'video',
+      width: externalTexture.width,
+      height: externalTexture.height
     });
-    this.model.draw(renderPass);
-    renderPass.end();
+    graph.addRenderPass({
+      id: 'render-video-frame',
+      resources: [{externalTexture: externalTextureHandle, usage: 'sampled'}],
+      compile: () => ({
+        getRenderPassProps: () => ({clearColor: [0.015, 0.02, 0.05, 1], clearDepth: 1}),
+        encode: ({renderPass, getExternalTexture}) => {
+          this.model.setBindings({videoTexture: getExternalTexture(externalTextureHandle)});
+          this.model.draw(renderPass);
+        }
+      })
+    });
+    this._compiledGraph = graph.compile();
+    this._externalTextureWidth = externalTexture.width;
+    this._externalTextureHeight = externalTexture.height;
+    this._frameId = 0;
   }
 
   async useCamera(): Promise<void> {

@@ -1007,7 +1007,7 @@ schedule commitment.
 | 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Implemented | High | Large |
-| 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, and frame-scoped swapchain imports implemented; external-texture contracts remain | In progress | Medium | Large |
+| 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts | Implemented | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
 | 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
@@ -1019,7 +1019,7 @@ only when its entry dependency is present and its exit evidence can be produced;
 dependency order, not a schedule commitment. Tranches whose dependencies do not overlap may be
 developed independently.
 
-Tranches 4.1 through 4.3 are implemented; external-texture contracts in Tranche 4.4 are the next
+Phase 4 is implemented through Tranche 4.4. Spatial index construction in Tranche 5.1 is the next
 active boundary.
 
 | Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
@@ -1029,7 +1029,7 @@ active boundary.
 | 4.1 — Region picking | Bounded rectangular picks with stable object and batch IDs, capacity, count, and overflow | Implemented | Medium | Medium |
 | 4.2 — Asynchronous readback ring | Reusable staging slots with backpressure, cancellation, and no mapped-buffer reuse hazards | Implemented | High | Medium |
 | 4.3 — Render-target graph contracts | Multisample resolve and swapchain imports with explicit subresource and frame ownership | Implemented | Medium | Large |
-| 4.4 — External-texture contracts | One-frame external-texture imports with validated access and device-loss behavior | Tranche 4.3 | Medium | Large |
+| 4.4 — External-texture contracts | One-frame external-texture imports with validated access and device-loss behavior | Implemented | Medium | Large |
 | 5.1 — `GPUGridIndex` build/update | Stable cell offsets and object-ID storage with measurable full-build and incremental-update costs | Tranche 3.2 and Phase 1 measurement | High | Large |
 | 5.2 — `GPUGridIndex` query | Bounds, radius, and point queries feeding visibility and region picking in 2D and 3D | Tranche 5.1, Phase 2, and Tranche 4.1 | High | Medium |
 | 5.3 — `GPUBVH` build/refit | Flat BVH storage with explicit rebuild and refit policies | Tranche 5.2 | High | Large |
@@ -1217,9 +1217,9 @@ application or renderer consumer.
 **Entry dependencies:** Phase 1 defines resource-lifetime and asynchronous readback behavior;
 Phase 2 defines stable visible identity.
 
-Region picking, reusable asynchronous staging-buffer rings, multisample resolves, and frame-scoped
-swapchain imports are implemented. External textures remain next so their access, ownership, and
-frame lifetime become equally explicit.
+Region picking, reusable asynchronous staging-buffer rings, multisample resolves, frame-scoped
+swapchain imports, and sampled-only external-image imports are implemented. Their access,
+ownership, and asynchronous or frame lifetime are explicit.
 Callback, highlighting, tooltip, and color-encoded fallback policies remain higher-level workflow
 or application concerns.
 
@@ -1258,13 +1258,23 @@ fail before submission.
 
 #### Tranche 4.4 — External-texture contracts
 
-Represent external textures as frame-scoped imports with access constraints that match WebGPU's
-external-image lifetime. Keep media scheduling, frame acquisition, and fallback conversion outside
-the graph.
+`importExternalTexture()` represents external images as a distinct sampled-only resource rather
+than pretending they are ordinary texture storage. Each encoding requires a fresh concrete
+binding and a strictly increasing frame ID coherent with every other frame resource. Render nodes
+resolve the current snapshot through `getExternalTexture()`; views, storage, copies, attachments,
+and graph ownership are deliberately unavailable. Media scheduling, frame acquisition, and
+fallback conversion stay outside the graph.
 
-**Exit evidence:** Validation prevents persistence into incompatible compiled encodings, tests
-cover replacement and device loss, and a consumer imports successive frames without graph-owned
-destruction or accidental cross-frame reuse.
+This boundary matters for video, camera, and browser-compositor sources. Their native WebGPU path
+can avoid a per-frame copy, but the resulting `texture_external` binding is opaque and short-lived.
+Making that lifetime explicit prevents an application from caching yesterday's browser binding or
+accidentally routing it through APIs that require reusable texture memory. The video-texture
+example demonstrates successive native bindings while retaining an explicit copied WebGL fallback.
+
+**Exit evidence:** Validation prevents persistence into incompatible compiled encodings; common
+device-loss checks cover encoding; replacement, cross-resource frame coherence, stale IDs, fresh
+binding identity, and borrowed destruction are tested; and the video-texture consumer imports
+successive native frames without graph-owned destruction or accidental cross-frame reuse.
 
 **Exit criteria:** Region results preserve stable object and batch identity; repeated picks do not
 serialize rendering on mapped buffers; and resolve, swapchain, and external resources participate

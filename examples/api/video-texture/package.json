@@ -10,6 +10,7 @@
   "dependencies": {
     "@luma.gl/core": "9.4.0-alpha.2",
     "@luma.gl/engine": "9.4.0-alpha.2",
+    "@luma.gl/experimental": "9.4.0-alpha.2",
     "@luma.gl/webgl": "9.4.0-alpha.2",
     "@luma.gl/webgpu": "9.4.0-alpha.2",
     "@math.gl/core": "^4.1.0",

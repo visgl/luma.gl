@@ -18,6 +18,18 @@ with one summary height and zero out the remaining children. An exclusive scan t
 into stable row offsets. Updating expansion flags therefore changes layout entirely on the GPU
 without changing source identity.
 
+### When to use it
+
+This layout fits large, regularly grouped views whose expansion state changes more often than their
+source data: process/thread lanes, grouped timelines, layer panels, and batched diagnostic rows.
+The resulting heights and offsets can drive rendering and picking in the same frame without asking
+the CPU to rebuild a visible-row array after every expand or collapse interaction.
+
+The current contract assumes a fixed `childrenPerParent` and one parent level. Use a CPU layout or a
+more general hierarchy algorithm for arbitrary-depth trees, variable child ranges, text measurement,
+or constraints that depend on sibling content. The primitive computes scalar row placement; it does
+not choose styling or animation.
+
 ```ts
 import {GPUHierarchyLayout} from '@luma.gl/experimental';
 

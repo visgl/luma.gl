@@ -8,6 +8,7 @@ export {
   GPUCommandGraphEncoding,
   GraphBufferHandle,
   GraphDataView,
+  GraphExternalTextureHandle,
   GraphTextureHandle,
   GraphTextureView,
   GraphVectorView
@@ -33,6 +34,9 @@ export type {
   GraphBufferDescriptor,
   GraphBufferUsage,
   GraphBufferUse,
+  GraphExternalTextureBinding,
+  GraphExternalTextureDescriptor,
+  GraphExternalTextureUse,
   GraphFrameTextureBinding,
   GraphImportedBuffer,
   GraphImportedTexture,

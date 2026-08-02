@@ -17,6 +17,18 @@ finds a visible source ID. The output remains source-aligned, so renderers can r
 endpoint without renumbering the original graph. A depth bound and invalid sentinel make cycles,
 missing parents, and malformed chains deterministic GPU data rather than CPU-side exceptions.
 
+### When to use it
+
+Ancestor projection is useful whenever filtering can hide structural intermediates but relationships
+should remain legible. A dependency viewer can reconnect an edge from a hidden operation to its
+visible service or process; an outline can attach annotations to the nearest expanded row; and a
+scene hierarchy can redirect a hidden object's relationship to its visible group. Because IDs stay
+source-aligned, picking and inspection can still recover the original endpoint.
+
+Use [`GPUGraphTraversal`](./gpu-graph-traversal) instead when the question is which nodes are
+reachable through arbitrary edges. Projection follows exactly one parent chain per row and finds a
+representative; it does not select a neighborhood or rewrite the graph.
+
 ```ts
 import {GPUAncestorProjection} from '@luma.gl/experimental';
 
