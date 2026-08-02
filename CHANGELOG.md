@@ -2,6 +2,37 @@
 
 ## v9.4
 
+### v9.4.0-alpha.3
+
+- feat(experimental): add spectral caustics renderer (#2825)
+- feat(experimental): add GPU BVH refit storage (#2815)
+- feat(experimental): refine GPU grid candidates (#2814)
+- feat(experimental): add GPU grid index queries (#2813)
+- feat(experimental): add GPU grid index construction (#2812)
+- feat(experimental): add external texture graph contracts (#2810)
+- feat(showcase): finish Lightstorm HDR showcase (#2820)
+- fix(showcase): tune packet glass reflections (#2799)
+- feat(experimental): add GPU render target contracts (#2809)
+- feat(experimental): add GPU region picking and readback ring (#2808)
+- feat(experimental): add partitioned GPU topology (#2806)
+- chore: Upgrade TypeScript to 6.0.3 (#2811)
+- feat: add cinematic Lightstorm postprocessing (#2807)
+- fix(gpgpu): Use fresh ShaderAssembler for gpgpu shaders (#2805)
+- feat(experimental): add batch-preserving GPU sort (#2803)
+- fix(shadertools): make fp64 reliable on Apple WebGPU (#2800)
+- feat(effects): Add clustered volumetrics, adaptive HDR exposure, and cinematic bloom (#2755)
+- feat(experimental): add GPU group statistics (#2801)
+- feat(experimental): add filtered GPU group counts (#2798)
+- Add LLM-friendly developer support (#2764)
+- feat(experimental): add irregular GPU histograms (#2794)
+- Add ANARI deferred renderer (#2791)
+- feat(experimental): add GPU grid statistics (#2792)
+- feat(experimental): add weighted GPU grid aggregation (#2789)
+- feat(experimental): add GPU scan variants (#2787)
+- feat: private experimental ANARI renderer, HDR showcase, and JSON playground (#2774)
+- feat(experimental): add reusable GPU visibility workflows (#2786)
+- feat(experimental): add GPU-native hierarchical trace manipulation (#2762)
+
 ### v9.4.0-alpha.2
 
 - feat(gpgpu) More efficient interleave operation (#2783)

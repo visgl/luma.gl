@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-v10-gpgpu",
-  "version": "9.4.0-alpha.2",
+  "version": "9.4.0-alpha.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,13 +9,13 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/arrow": "9.4.0-alpha.2",
-    "@luma.gl/core": "9.4.0-alpha.2",
-    "@luma.gl/engine": "9.4.0-alpha.2",
-    "@luma.gl/gpgpu": "9.4.0-alpha.2",
-    "@luma.gl/shadertools": "9.4.0-alpha.2",
-    "@luma.gl/webgl": "9.4.0-alpha.2",
-    "@luma.gl/webgpu": "9.4.0-alpha.2",
+    "@luma.gl/arrow": "9.4.0-alpha.3",
+    "@luma.gl/core": "9.4.0-alpha.3",
+    "@luma.gl/engine": "9.4.0-alpha.3",
+    "@luma.gl/gpgpu": "9.4.0-alpha.3",
+    "@luma.gl/shadertools": "9.4.0-alpha.3",
+    "@luma.gl/webgl": "9.4.0-alpha.3",
+    "@luma.gl/webgpu": "9.4.0-alpha.3",
     "@tanstack/virtual-core": "^3.16.0",
     "acorn": "^8.16.0",
     "apache-arrow": "^17.0.0"

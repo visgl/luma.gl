@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/anari",
-  "version": "9.4.0-alpha.2",
+  "version": "9.4.0-alpha.3",
   "private": true,
   "description": "ANARI-inspired declarative rendering for luma.gl",
   "type": "module",
