@@ -13,12 +13,12 @@ import {
   GPUHierarchyLayout,
   GPUReadbackRing,
   GPUVisibilityWorkflow,
+  GraphVectorView,
   type CompiledGPUCommandGraph,
   type GraphBufferHandle,
   type GraphBufferUse,
   type GPUReadbackTicket
 } from '@luma.gl/experimental';
-import {GPUData, GPUVector} from '@luma.gl/tables';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -88,7 +88,7 @@ type TraceGroupResources = {
 type PickPosition = {
   time: number;
   lane: number;
-  requestId: number;
+  requestIdentifier: number;
 };
 
 type TraceGraphResources = {
@@ -160,7 +160,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private pointerMoved = false;
   private lastPointer: [number, number] = [0, 0];
   private pendingPick: PickPosition | null = null;
-  private latestPickRequestId = 0;
+  private latestPickRequestIdentifier = 0;
   private encodeTimeMilliseconds = 0;
   private compileCount = 0;
   private compileTimeMilliseconds = 0;
@@ -232,7 +232,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           byteLength: UINT32_BYTE_LENGTH
         });
         queueMicrotask(() => {
-          void this.samplePickedSpan(resources, readbackTicket, pick.requestId);
+          void this.samplePickedSpan(resources, readbackTicket, pick.requestIdentifier);
         });
       } else {
         this.deferredPickFrameCount++;
@@ -538,21 +538,33 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
 
     new GPUHierarchyLayout({
       id: 'trace-process-thread-layout',
-      parentStates: graph.importGPUVector(
+      parentStates: makeUint32GraphVector(
+        graph,
         'process-state-partitions',
-        makeUint32Vector('process states', resources.processStates, processChunkLengths)
+        'process states',
+        handles.processStates,
+        processChunkLengths
       ),
-      childStates: graph.importGPUVector(
+      childStates: makeUint32GraphVector(
+        graph,
         'thread-state-partitions',
-        makeUint32Vector('thread states', resources.threadStates, threadChunkLengths)
+        'thread states',
+        handles.threadStates,
+        threadChunkLengths
       ),
-      heights: graph.importGPUVector(
+      heights: makeUint32GraphVector(
+        graph,
         'thread-height-partitions',
-        makeUint32Vector('thread heights', resources.threadHeights, threadChunkLengths)
+        'thread heights',
+        handles.threadHeights,
+        threadChunkLengths
       ),
-      offsets: graph.importGPUVector(
+      offsets: makeUint32GraphVector(
+        graph,
         'thread-offset-partitions',
-        makeUint32Vector('thread offsets', resources.threadOffsets, threadChunkLengths)
+        'thread offsets',
+        handles.threadOffsets,
+        threadChunkLengths
       ),
       childrenPerParent: TRACE_THREADS_PER_PROCESS,
       expandedChildHeight: TRACE_LANES_PER_THREAD,
@@ -562,44 +574,43 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
 
     new GPUGraphTraversal({
       id: 'trace-selected-dependencies',
-      offsets: graph.importGPUVector(
+      offsets: makeUint32GraphVector(
+        graph,
         'outgoing-offset-partitions',
-        makeUint32Vector(
-          'outgoing offsets',
-          resources.outgoingOffsets,
-          topologyChunkLengths.map(length => length + 1)
-        )
+        'outgoing offsets',
+        handles.outgoingOffsets,
+        topologyChunkLengths.map(length => length + 1)
       ),
-      neighbors: graph.importGPUVector(
+      neighbors: makeUint32GraphVector(
+        graph,
         'outgoing-neighbor-partitions',
-        makeUint32Vector(
-          'outgoing neighbors',
-          resources.outgoingNeighbors,
-          outgoingNeighborChunkLengths
-        )
+        'outgoing neighbors',
+        handles.outgoingNeighbors,
+        outgoingNeighborChunkLengths
       ),
-      reverseOffsets: graph.importGPUVector(
+      reverseOffsets: makeUint32GraphVector(
+        graph,
         'incoming-offset-partitions',
-        makeUint32Vector(
-          'incoming offsets',
-          resources.incomingOffsets,
-          topologyChunkLengths.map(length => length + 1)
-        )
+        'incoming offsets',
+        handles.incomingOffsets,
+        topologyChunkLengths.map(length => length + 1)
       ),
-      reverseNeighbors: graph.importGPUVector(
+      reverseNeighbors: makeUint32GraphVector(
+        graph,
         'incoming-neighbor-partitions',
-        makeUint32Vector(
-          'incoming neighbors',
-          resources.incomingNeighbors,
-          incomingNeighborChunkLengths
-        )
+        'incoming neighbors',
+        handles.incomingNeighbors,
+        incomingNeighborChunkLengths
       ),
       seeds: graph.createDataView(handles.selectedSeeds, {format: 'uint32', length: 1}),
       seedCount: graph.createDataView(handles.selectedSeedCount, {format: 'uint32', length: 1}),
       activeDepth: graph.createDataView(handles.traversalDepth, {format: 'uint32', length: 1}),
-      output: graph.importGPUVector(
+      output: makeUint32GraphVector(
+        graph,
         'reached-span-partitions',
-        makeUint32Vector('reached spans', resources.reachedSpans, topologyChunkLengths)
+        'reached spans',
+        handles.reachedSpans,
+        topologyChunkLengths
       ),
       direction: 'both',
       maxDepth: MAXIMUM_FOCUS_DEPTH
@@ -876,11 +887,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private async samplePickedSpan(
     resources: TraceGraphResources,
     readbackTicket: GPUReadbackTicket,
-    requestId: number
+    requestIdentifier: number
   ): Promise<void> {
     try {
       const bytes = await readbackTicket.read();
-      if (resources !== this.resources || requestId !== this.latestPickRequestId) {
+      if (resources !== this.resources || requestIdentifier !== this.latestPickRequestIdentifier) {
         return;
       }
       const pickedSpanIndex = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
@@ -1304,11 +1315,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       const rectangle = this.canvas.getBoundingClientRect();
       const horizontalFraction = clamp((event.clientX - rectangle.left) / rectangle.width, 0, 1);
       const verticalFraction = clamp((event.clientY - rectangle.top) / rectangle.height, 0, 1);
-      this.latestPickRequestId++;
+      this.latestPickRequestIdentifier++;
       this.pendingPick = {
         time: this.view.timeMin + horizontalFraction * (this.view.timeMax - this.view.timeMin),
         lane: this.view.laneMin + verticalFraction * (this.view.laneMax - this.view.laneMin),
-        requestId: this.latestPickRequestId
+        requestIdentifier: this.latestPickRequestIdentifier
       };
     }
     this.finishPointerInteraction(event);
@@ -1388,24 +1399,35 @@ function makePartitionedOffsets(
 }
 
 /** Adapts consecutive subranges of one caller-owned allocation as a chunk-preserving vector. */
-function makeUint32Vector(
+function makeUint32GraphVector<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  id: string,
   name: string,
-  buffer: Buffer,
+  buffer: GraphBufferHandle,
   chunkLengths: readonly number[]
-): GPUVector<'uint32'> {
+): GraphVectorView<'uint32'> {
   let byteOffset = 0;
   const data = chunkLengths.map(length => {
-    const chunk = new GPUData({
-      buffer,
+    const chunk = graph.createDataView(buffer, {
       format: 'uint32',
       length,
-      byteOffset,
-      ownsBuffer: false
+      byteOffset
     });
     byteOffset += length * UINT32_BYTE_LENGTH;
     return chunk;
   });
-  return new GPUVector({type: 'data', name, format: 'uint32', data, ownsData: false});
+  const length = chunkLengths.reduce((sum, chunkLength) => sum + chunkLength, 0);
+  return new GraphVectorView({
+    id,
+    name,
+    format: 'uint32',
+    length,
+    valueLength: length,
+    stride: 1,
+    byteStride: UINT32_BYTE_LENGTH,
+    rowByteLength: UINT32_BYTE_LENGTH,
+    data
+  });
 }
 
 /** Preserves caller-owned imports and the original GPU command-graph ownership contract. */

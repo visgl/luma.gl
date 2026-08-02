@@ -86,6 +86,8 @@ export class GPUBatchSort {
       this.outputValues,
       `${this.id} keys and output values`
     );
+    validateDisjointOutputChunks(this.outputKeys, `${this.id} output keys`);
+    validateDisjointOutputChunks(this.outputValues, `${this.id} output values`);
     validateSeparateVectorBuffers(this);
 
     this.chunkSorts = this.keys.data.map(
@@ -112,6 +114,24 @@ export class GPUBatchSort {
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     for (const sort of this.chunkSorts) {
       sort.addToGraph(graph);
+    }
+  }
+}
+
+/** Rejects overlapping writable chunks while allowing disjoint slices of one logical buffer. */
+function validateDisjointOutputChunks(vector: GraphVectorView<'uint32'>, name: string): void {
+  for (let firstIndex = 0; firstIndex < vector.data.length; firstIndex++) {
+    const first = vector.data[firstIndex];
+    if (first.length === 0) continue;
+    const firstEnd = first.byteOffset + (first.length - 1) * first.byteStride + first.rowByteLength;
+    for (let secondIndex = firstIndex + 1; secondIndex < vector.data.length; secondIndex++) {
+      const second = vector.data[secondIndex];
+      if (first.buffer !== second.buffer || second.length === 0) continue;
+      const secondEnd =
+        second.byteOffset + (second.length - 1) * second.byteStride + second.rowByteLength;
+      if (first.byteOffset < secondEnd && second.byteOffset < firstEnd) {
+        throw new Error(`${name} chunks must not overlap`);
+      }
     }
   }
 }

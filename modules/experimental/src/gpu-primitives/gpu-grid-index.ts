@@ -148,6 +148,7 @@ export class GPUGridIndex {
       throw new Error(`${this.id} sourceIds and firstSourceIndex are mutually exclusive`);
     }
     validateSourceIds(this.id, this.positions, this.sourceIds);
+    validateDisjointGridInputs(this.id, this.positions, this.sourceIds, this.objectIds);
   }
 
   /** Adds a complete index rebuild to the target graph without submitting or reading back work. */
@@ -468,6 +469,15 @@ ${bindings}
 fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   if (maximum == minimum || value == minimum) { return 0u; }
   if (value == maximum) { return size - 1u; }
+  if (minimum < 0.0 && maximum > 0.0) {
+    let scaledValue = value * 0.5;
+    let scaledMinimum = minimum * 0.5;
+    let scaledMaximum = maximum * 0.5;
+    return min(
+      u32((scaledValue - scaledMinimum) / (scaledMaximum - scaledMinimum) * f32(size)),
+      size - 1u
+    );
+  }
   return min(u32((value - minimum) / (maximum - minimum) * f32(size)), size - 1u);
 }
 
@@ -558,6 +568,34 @@ function validateSourceIds(
   }
 }
 
+function validateDisjointGridInputs(
+  id: string,
+  positions: GPUGridIndexPositions,
+  sourceIds: GPUGridIndexSourceIds | undefined,
+  objectIds: GraphDataView<'uint32'>
+): void {
+  for (const positionChunk of getPositionChunks(positions)) {
+    if (doViewsOverlap(positionChunk, objectIds)) {
+      throw new Error(`${id} positions and objectIds must not overlap`);
+    }
+  }
+  for (const sourceIdChunk of getSourceIdChunks(sourceIds)) {
+    if (doViewsOverlap(sourceIdChunk, objectIds)) {
+      throw new Error(`${id} sourceIds and objectIds must not overlap`);
+    }
+  }
+}
+
+function doViewsOverlap(first: GraphDataView, second: GraphDataView): boolean {
+  if (first.buffer !== second.buffer || first.length === 0 || second.length === 0) {
+    return false;
+  }
+  const firstEnd = first.byteOffset + (first.length - 1) * first.byteStride + first.rowByteLength;
+  const secondEnd =
+    second.byteOffset + (second.length - 1) * second.byteStride + second.rowByteLength;
+  return first.byteOffset < secondEnd && second.byteOffset < firstEnd;
+}
+
 function getPositionChunks(
   positions: GPUGridIndexPositions
 ): readonly (GraphDataView<'float32x2'> | GraphDataView<'float32x3'>)[] {
@@ -570,5 +608,6 @@ function getSourceIdChunks(sourceIds?: GPUGridIndexSourceIds): readonly GraphDat
 }
 
 function getFloatLiteral(value: number): string {
-  return Number.isInteger(value) ? `${value}.0` : `${value}`;
+  const literal = `${Math.fround(value)}`;
+  return literal.includes('.') || literal.includes('e') ? literal : `${literal}.0`;
 }

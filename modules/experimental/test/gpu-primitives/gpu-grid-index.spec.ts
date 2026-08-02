@@ -39,6 +39,99 @@ test('GPUGridIndex builds bounded 2D cells with stable logical IDs', async t => 
   t.end();
 });
 
+test('GPUGridIndex normalizes bounds whose full span exceeds float32', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const result = await runGridIndex(
+    device,
+    Float32Array.from([0, 0]),
+    'float32x2',
+    [3, 1],
+    [-3e38, 0, 3e38, 1],
+    1
+  );
+  t.deepEqual(result.cellOffsets, [0, 0, 1, 1], 'zero maps to the middle of extreme bounds');
+  t.deepEqual(result.objectIds, [0], 'the accepted point keeps its logical ID');
+  t.end();
+});
+
+test('GPUGridIndex rejects overlapping scatter inputs and output', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const graph = new GPUCommandGraph(device);
+  const sharedBuffer = device.createBuffer({
+    byteLength: 32,
+    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const sharedHandle = graph.importBuffer(
+    {id: 'shared-grid-data', byteLength: sharedBuffer.byteLength, usage: sharedBuffer.usage},
+    sharedBuffer
+  );
+  const positions = graph.createDataView(sharedHandle, {format: 'float32x2', length: 2});
+  const overlappingObjectIds = graph.createDataView(sharedHandle, {
+    format: 'uint32',
+    length: 2,
+    byteOffset: 8
+  });
+  const outputs = createIndexOutputs(device, 1, 2);
+  const importedOutputs = importIndexOutputs(graph, outputs, 1, 2);
+
+  t.throws(
+    () =>
+      new GPUGridIndex({
+        positions,
+        gridSize: [1, 1],
+        bounds: [0, 0, 1, 1],
+        ...importedOutputs,
+        objectIds: overlappingObjectIds
+      }),
+    /positions and objectIds must not overlap/,
+    'position reads cannot alias object ID writes'
+  );
+
+  const separatePositionsBuffer = createInputBuffer(device, Float32Array.from([0, 0, 1, 1]));
+  const separatePositions = importView(
+    graph,
+    'separate-positions',
+    separatePositionsBuffer,
+    'float32x2',
+    2
+  );
+  const sourceIds = graph.createDataView(sharedHandle, {
+    format: 'uint32',
+    length: 2,
+    byteOffset: 4
+  });
+  t.throws(
+    () =>
+      new GPUGridIndex({
+        positions: separatePositions,
+        sourceIds,
+        gridSize: [1, 1],
+        bounds: [0, 0, 1, 1],
+        ...importedOutputs,
+        objectIds: overlappingObjectIds
+      }),
+    /sourceIds and objectIds must not overlap/,
+    'source ID reads cannot alias object ID writes'
+  );
+
+  sharedBuffer.destroy();
+  separatePositionsBuffer.destroy();
+  for (const buffer of Object.values(outputs)) buffer.destroy();
+  t.end();
+});
+
 test('GPUGridIndex reports capacity overflow without corrupting offsets', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {

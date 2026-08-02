@@ -606,11 +606,15 @@ function validateHistogramEdges<T extends GPUScalarFormat>(
   }
   const minimum = format === 'uint32' ? 0 : -0x80000000;
   const maximum = format === 'uint32' ? 0xffffffff : 0x7fffffff;
+  const representableEdges = format === 'float32' ? edges.map(Math.fround) : edges;
   const invalidValue =
     format === 'float32'
-      ? edges.some(value => !Number.isFinite(value) || Math.abs(value) > 3.402823466e38)
+      ? representableEdges.some(value => !Number.isFinite(value))
       : edges.some(value => !Number.isInteger(value) || value < minimum || value > maximum);
-  if (invalidValue || edges.some((value, index) => index > 0 && value <= edges[index - 1])) {
+  if (
+    invalidValue ||
+    representableEdges.some((value, index) => index > 0 && value <= representableEdges[index - 1])
+  ) {
     throw new Error(`${id} literal edges must be finite, representable, and strictly increasing`);
   }
 }
@@ -656,5 +660,6 @@ function getShaderType(format: GPUScalarFormat): 'u32' | 'i32' | 'f32' {
 function getLiteral(value: number, format: GPUScalarFormat): string {
   if (format === 'uint32') return `${value}u`;
   if (format === 'sint32') return `${value}`;
-  return Number.isInteger(value) ? `${value}.0` : `${value}`;
+  const literal = `${Math.fround(value)}`;
+  return literal.includes('.') || literal.includes('e') ? literal : `${literal}.0`;
 }
