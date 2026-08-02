@@ -45,6 +45,20 @@ describe('Volumetric Fire Forge scene data', () => {
     const highDynamicRangeBurners = VOLUMETRIC_FIRE_FORGE_BOXES.filter(box => box.emissiveTopOnly);
     expect(highDynamicRangeBurners).toHaveLength(4);
     expect(highDynamicRangeBurners.every(box => Math.max(...box.emissiveColor) > 1)).toBe(true);
+
+    const masonryBoxes = VOLUMETRIC_FIRE_FORGE_BOXES.filter(
+      box => box.surfaceTreatment === 'refractory-masonry'
+    );
+    expect(masonryBoxes.map(box => box.id)).toEqual([
+      'rear-refractory-wall',
+      'left-forge-cheek',
+      'right-forge-cheek'
+    ]);
+    expect(
+      VOLUMETRIC_FIRE_FORGE_BOXES.filter(
+        box => box.id === 'hearth-floor' || box.id.includes('burner')
+      ).every(box => box.surfaceTreatment === undefined)
+    ).toBe(true);
   });
 
   test('voxelizes forge boxes deterministically in x-major texture order', () => {

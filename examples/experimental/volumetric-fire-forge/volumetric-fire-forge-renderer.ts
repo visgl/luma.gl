@@ -117,7 +117,7 @@ export class VolumetricFireForgeRenderer {
           {name: 'instancePositions', format: 'float32x3'},
           {name: 'instanceHalfSizes', format: 'float32x3'},
           {name: 'instanceBaseColors', format: 'float32x3'},
-          {name: 'instanceMaterials', format: 'float32x3'},
+          {name: 'instanceMaterials', format: 'float32x4'},
           {name: 'instanceEmissiveColors', format: 'float32x3'}
         ],
         attributes: {
@@ -362,7 +362,8 @@ function makeForgeInstanceData(): {
       VOLUMETRIC_FIRE_FORGE_BOXES.flatMap(box => [
         box.roughness,
         box.metallic,
-        box.emissiveTopOnly ? 1 : 0
+        box.emissiveTopOnly ? 1 : 0,
+        box.surfaceTreatment === 'refractory-masonry' ? 1 : 0
       ])
     ),
     emissiveColors: new Float32Array(VOLUMETRIC_FIRE_FORGE_BOXES.flatMap(box => box.emissiveColor))

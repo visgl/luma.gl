@@ -36,6 +36,9 @@ export const description =
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 80;
 const CAMERA_TARGET: [number, number, number] = [0, 3.05, 0.4];
+const CAMERA_MINIMUM_YAW = Math.PI - 0.62;
+const CAMERA_MAXIMUM_YAW = Math.PI + 0.62;
+const CAMERA_AUTO_ORBIT_SPEED = 0.075;
 const INITIAL_WARMUP_STEP_COUNT = 24;
 
 type VolumetricFireQuality = 'Interactive' | 'High' | 'Cinematic';
@@ -109,6 +112,8 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
   private accumulatorSeconds = 0;
   private simulationTimeSeconds = 0;
   private previousTimeMilliseconds: number | null = null;
+  private previousCameraTimeMilliseconds: number | null = null;
+  private cameraOrbitDirection = 1;
   private resetRequested = true;
   private singleStepRequested = false;
   private warmupStepsRemaining = INITIAL_WARMUP_STEP_COUNT;
@@ -166,8 +171,7 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
         maxDistance: 34,
         minPitch: -0.04,
         maxPitch: 1.25,
-        autoRotate: this.settings.autoOrbitCamera,
-        autoRotateSpeed: 0.075
+        autoRotate: false
       });
     }
     document.getElementById('volumetric-fire-reset')?.addEventListener('click', this.handleReset);
@@ -181,8 +185,7 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
 
   onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.renderer.resize(width, height);
-    this.orbitControls?.setAutoRotate(this.settings.autoOrbitCamera);
-    this.orbitControls?.update(time);
+    this.updateCamera(time);
     const cameraPosition: NumberArray3 = this.orbitControls?.getEyePosition() || [6.2, 5.5, -13.5];
     const viewMatrix = new Matrix4().lookAt({
       eye: cameraPosition,
@@ -240,6 +243,39 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
 
   requestSingleStep(): void {
     this.singleStepRequested = true;
+  }
+
+  private updateCamera(timeMilliseconds: number): void {
+    if (!this.orbitControls) {
+      return;
+    }
+
+    const deltaSeconds =
+      this.previousCameraTimeMilliseconds === null
+        ? 0
+        : Math.min(
+            Math.max((timeMilliseconds - this.previousCameraTimeMilliseconds) / 1000, 0),
+            0.1
+          );
+    this.previousCameraTimeMilliseconds = timeMilliseconds;
+    this.orbitControls.update(timeMilliseconds);
+
+    if (this.orbitControls.yaw <= CAMERA_MINIMUM_YAW) {
+      this.orbitControls.yaw = CAMERA_MINIMUM_YAW;
+      this.cameraOrbitDirection = 1;
+    } else if (this.orbitControls.yaw >= CAMERA_MAXIMUM_YAW) {
+      this.orbitControls.yaw = CAMERA_MAXIMUM_YAW;
+      this.cameraOrbitDirection = -1;
+    } else if (this.settings.autoOrbitCamera) {
+      this.orbitControls.yaw += this.cameraOrbitDirection * CAMERA_AUTO_ORBIT_SPEED * deltaSeconds;
+      if (this.orbitControls.yaw >= CAMERA_MAXIMUM_YAW) {
+        this.orbitControls.yaw = CAMERA_MAXIMUM_YAW;
+        this.cameraOrbitDirection = -1;
+      } else if (this.orbitControls.yaw <= CAMERA_MINIMUM_YAW) {
+        this.orbitControls.yaw = CAMERA_MINIMUM_YAW;
+        this.cameraOrbitDirection = 1;
+      }
+    }
   }
 
   private encodeSimulationSteps(device: Device, timeMilliseconds: number): void {
@@ -370,12 +406,15 @@ export default class VolumetricFireForgeAnimationLoopTemplate extends AnimationL
     if (previousSettings.preset !== this.settings.preset) {
       this.requestReset();
     }
-    this.orbitControls?.setAutoRotate(this.settings.autoOrbitCamera);
   };
 
   private readonly handleReset = (): void => this.requestReset();
   private readonly handleSingleStep = (): void => this.requestSingleStep();
-  private readonly handleResetCamera = (): void => this.orbitControls?.reset();
+  private readonly handleResetCamera = (): void => {
+    this.orbitControls?.reset();
+    this.previousCameraTimeMilliseconds = null;
+    this.cameraOrbitDirection = 1;
+  };
 
   private updateTelemetry(): void {
     const telemetryElement = document.getElementById('volumetric-fire-telemetry');
