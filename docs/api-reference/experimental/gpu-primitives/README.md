@@ -56,10 +56,10 @@ variable-size results publish a count alongside fixed-capacity storage, and indi
 later render pass consume that count without a CPU synchronization point.
 
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
-`GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
-`GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
-`GPUGridAggregation`, `GPUGroupAggregation`, `GPUFFT2D`, `GPUIndexPickingTarget`,
-`GPUReadbackRing`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+`GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUVirtualGeometrySelection`,
+`GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`,
+`GPUReduction`, `GPUHistogram`, `GPUGridBinning`, `GPUGridAggregation`, `GPUGroupAggregation`,
+`GPUFFT2D`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
 projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
 four million spans. The sort and data-analysis examples demonstrate independent composable
@@ -1009,7 +1009,7 @@ schedule commitment.
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Core implemented; topology extensions deferred | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts | Implemented | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` and `GPUBVH` with explicit build, update, query, correctness, and cost-comparison contracts | V1 implemented; conditional extensions deferred | High | Large |
-| 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Record contract implemented; updates and draw generation planned | High | Large |
+| 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Storage and mutation implemented; adapters and draw generation planned | High | Large |
 | 7 — API graduation | Stable package contracts and a dependency-safe direct move out of experimental packages | Planned | High | Large |
 
 ### Spatial v1 milestones
@@ -1045,7 +1045,6 @@ consumers.
 | --- | --- | --- | --- | :---: | :---: |
 | 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
 | 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
-| 6.1b — Scene updates and compaction | Insert, remove, patch, and compact records with bounded work | Tranche 6.1a | Identity/reference preservation under holes, moves, overflow, and compaction | High | Large |
 | 6.1c — Scene adapters | Explicit CPU-scene and GPU-table adapters without a canonical source model | Tranche 6.1b and partitioned-topology decisions | Both adapters build the same records without casts or hidden packing | High | Medium |
 | 6.2a — Draw-command generation | Visibility and spatial results write capacity-bounded indirect slots | Tranches 6.1b and 5.4a | Parameter-only graph encodings update counts and commands without CPU draw selection | High | Large |
 | 6.2b — Pipeline/resource grouping | Stable command groups under geometry or material changes within WebGPU binding limits | Tranche 6.2a | Empty groups, regrouping, ordering, and overflow pass deterministic tests | High | Large |
@@ -1058,8 +1057,8 @@ consumers.
 
 ### Recommended execution order
 
-1. Extend the implemented `GPUScene` record contract with mutation and compaction (6.1b); draw
-   generation waits for update and grouping ownership to be explicit.
+1. Add explicit CPU-scene and GPU-table adapters (6.1c), then draw-command generation (6.2a), now
+   that storage, mutation, compaction, and grouping ownership are explicit.
 2. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the
    cross-chunk identity contract.
 3. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
@@ -1454,9 +1453,10 @@ making either representation canonical.
 
 The table-independent record contract (6.1a) is implemented as a fixed 128-byte interleaved record
 with explicit stable identity, references, bounds, transforms, state, capacity, ownership, and
-typed graph views. Delivery continues with mutation and compaction semantics (6.1b), then explicit
-CPU-scene and GPU-table adapters (6.1c). This keeps adapter convenience from silently defining core
-storage or update ownership.
+typed graph views. Transactional CPU-authored insert, patch, removal, stable compaction, overflow,
+and exact upload-cost reporting complete 6.1b. Delivery continues with explicit CPU-scene and
+GPU-table adapters (6.1c). This keeps adapter convenience from silently defining core storage or
+update ownership.
 
 **Exit evidence:** Insert, update, removal, and compaction tests preserve identity and references;
 partial updates have measurable upload bounds; no scene hierarchy or table type enters the core

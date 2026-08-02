@@ -65,6 +65,18 @@ export type {
   GPUVisibilityWorkflowProps
 } from './gpu-visibility-workflow';
 
+export {
+  GPUVirtualGeometrySelection,
+  GPU_VIRTUAL_GEOMETRY_FRUSTUM_PLANE_COUNT,
+  makeGPUVirtualGeometrySelectionPlan
+} from './gpu-virtual-geometry-selection';
+export type {
+  GPUVirtualGeometryHierarchy,
+  GPUVirtualGeometrySelectionPlan,
+  GPUVirtualGeometrySelectionProps,
+  GPUVirtualGeometryView
+} from './gpu-virtual-geometry-selection';
+
 export {GPUMask} from './gpu-mask';
 export type {GPUMaskInput, GPUMaskOperation, GPUMaskProps} from './gpu-mask';
 
@@ -158,9 +170,13 @@ export {
 export type {
   GPUSceneBounds,
   GPUSceneBuffers,
+  GPUSceneMove,
+  GPUSceneMutation,
+  GPUSceneMutationResult,
   GPUScenePosition,
   GPUSceneProps,
   GPUSceneRecord,
+  GPUSceneRecordPatch,
   GPUSceneStats,
   GPUSceneView
 } from './gpu-scene';

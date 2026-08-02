@@ -16,6 +16,14 @@ spectral oceans, frequency-domain filters, convolution, and procedural fields. I
 does not own textures, convert real-valued inputs, select padding dimensions, or hide command
 submission.
 
+### FFT in a complete system
+
+[`SpectralOceanSimulation`](../spectral-ocean-simulation) is the concrete composition example. It
+evolves a Phillips wave spectrum, records three inverse `GPUFFT2D` transforms in one application-
+owned command encoder, and turns their spatial fields into displacement, normal, and foam buffers.
+The separation is intentional: the FFT owns transform mechanics, while the ocean owns spectrum,
+time evolution, physical interpretation, and render-ready assembly.
+
 ## Usage
 
 Each complex value occupies two consecutive `float32` components: real followed by imaginary.

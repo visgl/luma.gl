@@ -1,4 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+import {FluidFoundryExample} from '@site/src/examples';
 
 # MLSMPMFluidSimulation
 
@@ -12,6 +13,8 @@ The class owns its compute pipelines, atomic grid, uniforms, and double-buffered
 It records work into the application's `CommandEncoder` and never submits commands or reads data
 back. Applications can therefore encode simulation and storage-backed particle rendering in one
 frame command buffer.
+
+<FluidFoundryExample embedded showStats={false} />
 
 ## Usage
 
