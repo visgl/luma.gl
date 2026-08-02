@@ -16598,6 +16598,7 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.3"
     "@luma.gl/engine": "npm:9.4.0-alpha.3"
     "@luma.gl/experimental": "npm:9.4.0-alpha.3"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.3"
     "@luma.gl/tables": "npm:9.4.0-alpha.3"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.3"
     "@math.gl/core": "npm:^4.1.0"
