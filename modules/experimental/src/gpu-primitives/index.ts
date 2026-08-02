@@ -49,6 +49,9 @@ export type {
   GraphTextureUse,
   GraphTextureViewProps
 } from './gpu-command-graph';
+export type {GPUCommandGraphContributor} from './gpu-command-graph';
+export {createTransientView, getViewBinding, getViewElementOffset} from './graph-data-view-utils';
+export type {GraphDataViewBinding} from './graph-data-view-utils';
 
 export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';

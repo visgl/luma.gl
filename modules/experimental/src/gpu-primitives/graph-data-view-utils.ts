@@ -2,12 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Binding} from '@luma.gl/core';
-import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/tables';
+import {Buffer, type VertexFormat} from '@luma.gl/core';
+import {
+  getGPUVectorFormatInfo,
+  isValueListGPUVectorFormat,
+  isVertexListGPUVectorFormat,
+  type GPUVectorFormat
+} from '@luma.gl/tables';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const STORAGE_BINDING_ALIGNMENT = 256;
+
+/** Aligned buffer range that can be bound for a logical graph data view. */
+export type GraphDataViewBinding = {buffer: Buffer; offset: number; size: number};
 
 /** Packed 32-bit scalar formats supported by graph-native analysis primitives. @internal */
 export type GPUScalarFormat = 'uint32' | 'sint32' | 'float32';
@@ -46,13 +54,11 @@ export function validatePackedUint32View(view: GraphDataView, name: string): voi
  *
  * WebGPU storage bindings begin at 256-byte-aligned offsets. Generated shaders add the component
  * offset from {@link getViewElementOffset} to reach the view's actual first row.
- *
- * @internal
  */
 export function getViewBinding(
   view: GraphDataView,
   getBuffer: (view: GraphDataView) => Buffer
-): Binding {
+): GraphDataViewBinding {
   const alignedByteOffset =
     Math.floor(view.byteOffset / STORAGE_BINDING_ALIGNMENT) * STORAGE_BINDING_ALIGNMENT;
   const prefixByteLength = view.byteOffset - alignedByteOffset;
@@ -60,15 +66,22 @@ export function getViewBinding(
     view.length === 0
       ? view.rowByteLength
       : (view.length - 1) * view.byteStride + view.rowByteLength;
-  return {
+  const binding = {
     buffer: getBuffer(view),
     offset: alignedByteOffset,
     size: prefixByteLength + Math.max(viewByteLength, view.rowByteLength)
   };
+  if (binding.offset + binding.size > view.buffer.byteLength) {
+    throw new Error('GraphDataView storage binding exceeds its logical buffer');
+  }
+  return binding;
 }
 
-/** Returns the view offset in 32-bit components from its aligned storage binding. @internal */
+/** Returns the view offset in 32-bit components from its aligned storage binding. */
 export function getViewElementOffset(view: GraphDataView): number {
+  if (view.byteOffset % UINT32_BYTE_LENGTH !== 0) {
+    throw new Error('GraphDataView storage binding must be uint32-aligned');
+  }
   return (view.byteOffset % STORAGE_BINDING_ALIGNMENT) / UINT32_BYTE_LENGTH;
 }
 
@@ -83,24 +96,34 @@ export function doGraphDataViewsOverlap(first: GraphDataView, second: GraphDataV
   return first.byteOffset < secondEnd && second.byteOffset < firstEnd;
 }
 
-/** Creates a packed graph-owned transient buffer and a typed view spanning it. @internal */
-export function createTransientView<T extends GPUVectorFormat, Parameters>(
+/** Creates a packed, fixed-width graph-owned transient buffer and a typed view spanning it. */
+export function createTransientView<T extends VertexFormat, Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   format: T,
-  length: number
+  length: number,
+  usage: number = Buffer.STORAGE
 ): GraphDataView<T> {
+  if (!Number.isSafeInteger(length) || length < 0) {
+    throw new Error('Transient GraphDataView length must be a non-negative safe integer');
+  }
+  if ((usage & Buffer.STORAGE) === 0) {
+    throw new Error('Transient GraphDataView usage must include Buffer.STORAGE');
+  }
+  if (isVertexListGPUVectorFormat(format) || isValueListGPUVectorFormat(format)) {
+    throw new Error('Transient GraphDataView requires a fixed-width GPUVector format');
+  }
   const formatInfo = getGPUVectorFormatInfo(format);
   const buffer = graph.createTransientBuffer({
     id,
     byteLength: Math.max(length, 1) * formatInfo.byteLength,
-    usage: Buffer.STORAGE
+    usage
   });
   return graph.createDataView(buffer, {format, length});
 }
 
 /** Creates graph-owned scratch storage with the same chunk topology as a vector. @internal */
-export function createTransientVectorView<T extends GPUVectorFormat, Parameters>(
+export function createTransientVectorView<T extends VertexFormat, Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   template: GraphVectorView<T>

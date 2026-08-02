@@ -117,6 +117,11 @@ export type {
   GraphTextureViewProps
 } from './gpu-command-graph-types';
 
+/** A reusable algorithm or workflow that contributes nodes to a command graph. */
+export interface GPUCommandGraphContributor {
+  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void;
+}
+
 type CachedTextureView = {
   logicalView: GraphTextureView;
   texture: Texture;

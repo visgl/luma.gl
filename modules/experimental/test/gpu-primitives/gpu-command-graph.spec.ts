@@ -6,11 +6,15 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {
+  createTransientView,
   DispatchCommandBuffer,
   DrawCommandBuffer,
+  getViewBinding,
+  getViewElementOffset,
   GPUCommandGraph,
   GPUCompaction,
-  GPUScan
+  GPUScan,
+  type GPUCommandGraphContributor
 } from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -319,6 +323,104 @@ test('GPUCommandGraph rejects interleaved and variable-length GPUVector imports'
 
   interleaved.destroy();
   variableLength.destroy();
+  t.end();
+});
+
+test('GPUCommandGraph exposes safe extension-library helpers', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const graph = new GPUCommandGraph(device);
+  let contributorOutputUsage = 0;
+  const contributor: GPUCommandGraphContributor = {
+    addToGraph: targetGraph => {
+      const output = createTransientView(
+        targetGraph,
+        'contributor-output',
+        'uint32',
+        3,
+        Buffer.STORAGE | Buffer.INDIRECT
+      );
+      contributorOutputUsage = output.buffer.usage;
+    }
+  };
+  contributor.addToGraph(graph);
+  t.equal(
+    contributorOutputUsage,
+    Buffer.STORAGE | Buffer.INDIRECT,
+    'contributors can request additional transient usage flags'
+  );
+
+  t.throws(
+    () => createTransientView(graph, 'invalid-length', 'uint32', -1),
+    /non-negative safe integer/,
+    'negative transient lengths are rejected before graph allocation'
+  );
+  t.doesNotThrow(
+    () => createTransientView(graph, 'invalid-length', 'uint32', 0),
+    'a rejected transient does not reserve its graph resource id'
+  );
+  t.throws(
+    () => createTransientView(graph, 'missing-storage', 'uint32', 1, Buffer.INDIRECT),
+    /must include Buffer.STORAGE/,
+    'typed transient views retain storage binding usage'
+  );
+  for (const [format, id] of [
+    ['vertex-list<float32x3>', 'vertex-list-transient'],
+    ['value-list<uint32>', 'value-list-transient']
+  ] as const) {
+    t.throws(
+      () => Reflect.apply(createTransientView, undefined, [graph, id, format, 2]),
+      /requires a fixed-width GPUVector format/,
+      `${format} requires an explicit variable-length adapter`
+    );
+    t.doesNotThrow(
+      () => createTransientView(graph, id, 'float32x3', 2),
+      `${format} is rejected before reserving its graph resource id`
+    );
+  }
+
+  const bindingBuffer = device.createBuffer({byteLength: 512, usage: Buffer.STORAGE});
+  const bindingHandle = graph.importBuffer(
+    {id: 'binding-buffer', byteLength: 512, usage: Buffer.STORAGE},
+    bindingBuffer
+  );
+  const bindingView = graph.createDataView(bindingHandle, {
+    format: 'uint32',
+    length: 1,
+    byteOffset: 260
+  });
+  const binding = getViewBinding(bindingView, () => bindingBuffer);
+  t.equal(binding.offset, 256, 'storage binding starts at an aligned byte offset');
+  t.equal(binding.size, 8, 'storage binding includes the view prefix and row');
+  t.equal(getViewElementOffset(bindingView), 1, 'shader element offset addresses the view row');
+
+  const misalignedView = graph.createDataView(bindingHandle, {
+    format: 'uint32',
+    length: 1,
+    byteOffset: 261
+  });
+  t.throws(
+    () => getViewElementOffset(misalignedView),
+    /must be uint32-aligned/,
+    'fractional shader element offsets are rejected'
+  );
+  const emptyEndView = graph.createDataView(bindingHandle, {
+    format: 'uint32',
+    length: 0,
+    byteOffset: bindingHandle.byteLength
+  });
+  t.throws(
+    () => getViewBinding(emptyEndView, () => bindingBuffer),
+    /exceeds its logical buffer/,
+    'empty views still require one bindable row inside the logical buffer'
+  );
+
+  bindingBuffer.destroy();
   t.end();
 });
 
