@@ -106,8 +106,8 @@ export type GPUCommandGraphCompilation<Parameters> = {
  *
  * Compilation proceeds in four phases: infer a stable topological node order, plan allocation
  * reuse from transient lifetimes, create physical resources, then invoke node compile callbacks.
- * If a callback fails, every executable and physical resource created so far is destroyed before
- * the error is rethrown.
+ * If allocation or a callback fails, every executable and physical resource created so far is
+ * destroyed before the error is rethrown.
  *
  * @internal
  */
@@ -125,28 +125,28 @@ export function compileGPUCommandGraph<Parameters>(props: {
   const transientBuffers = new Map<GraphBufferHandle, Buffer>();
   const transientTextures = new Map<GraphTextureHandle, Texture>();
 
-  for (const allocation of bufferPlan) {
-    allocation.buffer = props.device.createBuffer({
-      id: `${props.id}-transient-buffer-${bufferPlan.indexOf(allocation)}`,
-      byteLength: allocation.byteLength,
-      usage: allocation.usage
-    });
-    for (const handle of allocation.handles) {
-      transientBuffers.set(handle, allocation.buffer);
-    }
-  }
-  for (const allocation of texturePlan) {
-    allocation.texture = props.device.createTexture({
-      ...allocation.descriptor,
-      id: `${props.id}-transient-texture-${texturePlan.indexOf(allocation)}`
-    });
-    for (const handle of allocation.handles) {
-      transientTextures.set(handle, allocation.texture);
-    }
-  }
-
   const compiledNodes: CompiledNode<Parameters>[] = [];
   try {
+    for (const allocation of bufferPlan) {
+      allocation.buffer = props.device.createBuffer({
+        id: `${props.id}-transient-buffer-${bufferPlan.indexOf(allocation)}`,
+        byteLength: allocation.byteLength,
+        usage: allocation.usage
+      });
+      for (const handle of allocation.handles) {
+        transientBuffers.set(handle, allocation.buffer);
+      }
+    }
+    for (const allocation of texturePlan) {
+      allocation.texture = props.device.createTexture({
+        ...allocation.descriptor,
+        id: `${props.id}-transient-texture-${texturePlan.indexOf(allocation)}`
+      });
+      for (const handle of allocation.handles) {
+        transientTextures.set(handle, allocation.texture);
+      }
+    }
+
     for (const node of nodeOrder) {
       compiledNodes.push({node, executable: node.compile({device: props.device})});
     }
