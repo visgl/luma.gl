@@ -8,6 +8,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import GPUTraceViewerAnimationLoopTemplate from '../../examples/experimental/gpu-trace-viewer/app';
 import {
   TRACE_COLLAPSED_STATE,
+  TRACE_DENSITY_BIN_COUNT,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
   TRACE_PROCESS_COUNT,
@@ -154,6 +155,7 @@ describe('GPU hierarchical trace viewer', () => {
         adaptiveDensityBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
       expect(adaptiveDensity.some(value => value > 0)).toBe(true);
+      expect(adaptiveDensity.slice(0, TRACE_DENSITY_BIN_COUNT).some(value => value > 0)).toBe(true);
 
       host.querySelector<HTMLButtonElement>('[data-clear-selection]')!.click();
       expect(state.selectedSpanIndex).toBe(0xffffffff);

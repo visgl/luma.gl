@@ -314,12 +314,14 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let sourceIndex = FIRST_SPAN_INDEX + groupRowIndex;
   let span = spans[sourceIndex];
   let end = span.start + span.duration;
+  let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
-  let lane = f32(threadOffsets[span.threadIndex] + localLane);
+  let expandedLane = threadOffsets[span.threadIndex] + localLane;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let lane = f32(select(collapsedLane, expandedLane, processExpanded));
   let timeVisible = end >= viewUniforms.timeMin && span.start <= viewUniforms.timeMax;
   let laneVisible = lane >= viewUniforms.laneMin && lane < viewUniforms.laneMax;
   let groupVisible = (viewUniforms.enabledMask & GROUP_BIT) != 0u;
-  let processExpanded = processStates[span.processIndex] != 0u;
   let statusVisible = (viewUniforms.statusMask & (1u << (span.flags & 3u))) != 0u;
   let runtimeVisible =
     (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_RUNTIME_SPANS}u) == 0u ||
