@@ -691,6 +691,18 @@ test('CanvasContext#new drawing buffer sizing props override and validate legacy
     'legacy autoResize false normalizes to no tracking'
   );
 
+  legacyNumericCanvasContext.setProps({useDevicePixels: 0});
+  t.equal(
+    legacyNumericCanvasContext.props.useDevicePixels,
+    false,
+    'legacy setProps preserves falsy numeric normalization'
+  );
+  t.equal(
+    legacyNumericCanvasContext.props.pixelRatio,
+    1,
+    'legacy setProps treats a falsy numeric ratio as non-device-pixel sizing'
+  );
+
   const newCanvasContext = new TestCanvasContext(
     {
       drawingBufferSizeTracking: 'canvas',

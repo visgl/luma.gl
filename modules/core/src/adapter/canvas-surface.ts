@@ -303,7 +303,8 @@ export abstract class CanvasSurface {
         pixelRatio === undefined ? 'exact' : 'css-dpr'
       );
     } else if ('useDevicePixels' in props && this._usesLegacyDrawingBufferSizing) {
-      this.props.useDevicePixels = props.useDevicePixels ?? false;
+      // Preserve the legacy setter's falsy-value normalization (notably numeric `0`).
+      this.props.useDevicePixels = props.useDevicePixels || false;
       const drawingBufferSizeProps = normalizeLegacyDrawingBufferSizeProps(this.props);
       this._setDrawingBufferSizeProps(
         drawingBufferSizeProps.drawingBufferSizeTracking,
