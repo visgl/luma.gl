@@ -106,6 +106,12 @@ The application must:
 }
 ```
 
+The supplied light projection must use WebGPU's normalized clip-depth range of `0..1`. Projection
+helpers that produce the OpenGL `-1..1` depth convention need a depth-range conversion before they
+are multiplied by the light view matrix; otherwise the surface capture may be clipped or reconstruct
+incorrect world positions. Pass the exact inverse of that converted view-projection matrix as
+`inverseLightViewProjectionMatrix`.
+
 Both callbacks receive `face`, `captureSize`, `lightViewProjectionMatrix`, and
 `captureParameters`. `prepareRefractor` additionally receives the command encoder;
 `drawRefractor` receives the active render pass.
@@ -149,7 +155,7 @@ six 32-byte photon records per capture texel, in addition to the capture texture
 
 | Option | Default | Meaning |
 | --- | ---: | --- |
-| `lightViewProjectionMatrix` | required | Light clip-from-world transform used for both captures. |
+| `lightViewProjectionMatrix` | required | Light clip-from-world transform using WebGPU's `0..1` clip-depth range. |
 | `inverseLightViewProjectionMatrix` | required | Exact inverse used to reconstruct light rays and captured positions. |
 | `receiverOrigin` | required | World-space center of the planar map. |
 | `receiverTangent`, `receiverBitangent` | required | Orthogonal unit axes mapped to texture U and V. |

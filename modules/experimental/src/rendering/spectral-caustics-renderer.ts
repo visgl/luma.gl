@@ -69,9 +69,9 @@ export type SpectralCausticsDrawContext = Omit<SpectralCausticsPrepareContext, '
 
 /** Per-frame geometry, receiver, and optical inputs consumed by `encode()`. */
 export type SpectralCausticsRendererEncodeOptions = {
-  /** Light clip-from-world transform used for both surface captures. */
+  /** Light clip-from-world transform using WebGPU's zero-to-one clip-depth range. */
   lightViewProjectionMatrix: Readonly<Matrix4Like>;
-  /** World-from-light-clip inverse of `lightViewProjectionMatrix`. */
+  /** Exact world-from-light-clip inverse of `lightViewProjectionMatrix`. */
   inverseLightViewProjectionMatrix: Readonly<Matrix4Like>;
   /** World-space center of the planar receiver. */
   receiverOrigin: Readonly<NumberArray3>;
