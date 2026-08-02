@@ -64,6 +64,7 @@ import DeferredRenderingApp from '../../examples/experimental/deferred-rendering
 import FluidFoundryApp from '../../examples/experimental/fluid-foundry/app';
 import SpectralCausticsApp from '../../examples/experimental/spectral-caustics/app';
 import VolumetricFireForgeApp from '../../examples/experimental/volumetric-fire-forge/app';
+import VirtualGeometryCanyonApp from '../../examples/experimental/virtual-geometry-canyon/app';
 import ShadowMapApp from '../../examples/experimental/shadow-map/app';
 import ABufferApp from '../../examples/experimental/a-buffer/app';
 
@@ -1057,6 +1058,19 @@ export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props =
     config={exampleConfig}
     devices={['webgpu']}
     canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const VirtualGeometryCanyonExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="virtual-geometry-canyon"
+    title="Virtual Geometry Canyon"
+    subtitle="GPU-driven hierarchical terrain LOD"
+    directory="experimental"
+    template={VirtualGeometryCanyonApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     {...props}
   />
 );

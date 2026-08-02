@@ -1,0 +1,53 @@
+---
+title: Virtual Geometry Canyon
+description: Explore a procedural canyon whose GPU-selected LOD frontier represents more than 41 million potential leaf triangles.
+sidebar_custom_props:
+  description: Explore a procedural canyon whose GPU-selected LOD frontier represents more than 41 million potential leaf triangles.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [rendering, compute, performance]
+---
+
+import {VirtualGeometryCanyonExample} from '@site/src/examples';
+
+<VirtualGeometryCanyonExample />
+
+Virtual Geometry Canyon is a GPU-driven terrain showcase built around
+[`GPUVirtualGeometrySelection`](/docs/api-reference/experimental/gpu-primitives/gpu-virtual-geometry-selection).
+A 4×4 forest expands through six quadtree refinements into 87,376 hierarchy nodes and 65,536
+finest-level clusters. Each cluster represents a shared 640-triangle indexed grid, so the finest
+possible surface contains 41,943,040 triangles without storing a 42-million-triangle mesh.
+
+Every frame, one command graph tests conservative hierarchy bounds against the camera frustum,
+evaluates projected geometric error, and stably compacts the selected cluster IDs. The selector
+writes its retained count directly into a `DrawCommandBuffer`; the following render pass consumes
+that record with one indexed indirect draw on the same caller-owned command encoder. Camera data is
+uploaded, but cluster traversal, frontier publication, and draw-count generation stay on the GPU.
+There is no render-loop readback and no CPU loop over visible terrain patches.
+
+The vertex shader reconstructs each selected patch from a continuous canyon height function.
+Children enter at the exact triangle surface of the parent grid and morph toward their full detail
+as projected error grows. Four skirts around the shared grid hide mixed-LOD T-junctions while that
+transition is in progress. Procedural strata, sun, valley occlusion, and distance haze make the
+virtualized geometry legible without a terrain asset or texture download.
+
+## What to inspect
+
+- Let the guided camera follow the canyon floor, pass through the narrows, climb the rim, and reveal
+  the complete 4,096×4,096 world.
+- Lower **Maximum screen error** to ask the GPU for a denser frontier; raise it to favor coarse
+  clusters. The draw remains one indirect command either way.
+- Enable **LOD levels + shared cluster grid** to color hierarchy levels and expose the reused 17×17
+  top grid. Yellow tint marks vertices still morphing from their parent surface.
+- Drag to enter constrained manual look, use the wheel or **W/S** to move along the authored route,
+  and use the arrow keys to look around. The controls cannot move the camera behind or beneath the
+  terrain.
+- The inspector deliberately reports the fixed hierarchy, capacity, graph, and frame metrics while
+  describing the selected frontier as GPU-resident. It does not stall the frame to invent a live
+  CPU-visible cluster count.
+
+This is a compact demonstration of the core mechanism commonly associated with Nanite-style
+rendering—hierarchical screen-error selection and GPU-generated draws—not a claim of feature parity
+with a production virtualized-geometry system. It does not implement asset streaming, compressed
+mesh clusters, software rasterization, or occlusion hierarchies.
