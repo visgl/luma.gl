@@ -257,7 +257,12 @@ fn glassMaterial_getIlluminatedColor(
     cameraPosition,
     fragmentPosition
   );
-  let pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  let pointLightColor = opticalPointLights_getSpecularColor(
+    normal,
+    worldPosition,
+    cameraPosition,
+    glassMaterial.roughness
+  );
   return vec4<f32>(
     glassColor.rgb + pointLightColor * glassMaterial.reflectionStrength,
     glassColor.a
@@ -437,6 +442,12 @@ vec4 glassMaterial_getColor(
 
 #ifdef LUMA_OPTICAL_POINT_LIGHTS
 vec3 opticalPointLights_getColor(vec3 normal, vec3 worldPosition, vec3 cameraPosition);
+vec3 opticalPointLights_getSpecularColor(
+  vec3 normal,
+  vec3 worldPosition,
+  vec3 cameraPosition,
+  float roughness
+);
 
 vec4 glassMaterial_getIlluminatedColor(
   vec3 normal,
@@ -452,7 +463,12 @@ vec4 glassMaterial_getIlluminatedColor(
     cameraPosition,
     fragmentPosition
   );
-  vec3 pointLightColor = opticalPointLights_getColor(normal, worldPosition, cameraPosition);
+  vec3 pointLightColor = opticalPointLights_getSpecularColor(
+    normal,
+    worldPosition,
+    cameraPosition,
+    glassMaterial.roughness
+  );
   return vec4(
     glassColor.rgb + pointLightColor * glassMaterial.reflectionStrength,
     glassColor.a
