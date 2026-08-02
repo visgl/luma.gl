@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer} from '@luma.gl/core';
-import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/tables';
+import {Buffer, type VertexFormat} from '@luma.gl/core';
+import {
+  getGPUVectorFormatInfo,
+  isValueListGPUVectorFormat,
+  isVertexListGPUVectorFormat,
+  type GPUVectorFormat
+} from '@luma.gl/tables';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
@@ -91,8 +96,8 @@ export function doGraphDataViewsOverlap(first: GraphDataView, second: GraphDataV
   return first.byteOffset < secondEnd && second.byteOffset < firstEnd;
 }
 
-/** Creates a packed graph-owned transient buffer and a typed view spanning it. */
-export function createTransientView<T extends GPUVectorFormat, Parameters>(
+/** Creates a packed, fixed-width graph-owned transient buffer and a typed view spanning it. */
+export function createTransientView<T extends VertexFormat, Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   format: T,
@@ -105,6 +110,9 @@ export function createTransientView<T extends GPUVectorFormat, Parameters>(
   if ((usage & Buffer.STORAGE) === 0) {
     throw new Error('Transient GraphDataView usage must include Buffer.STORAGE');
   }
+  if (isVertexListGPUVectorFormat(format) || isValueListGPUVectorFormat(format)) {
+    throw new Error('Transient GraphDataView requires a fixed-width GPUVector format');
+  }
   const formatInfo = getGPUVectorFormatInfo(format);
   const buffer = graph.createTransientBuffer({
     id,
@@ -115,7 +123,7 @@ export function createTransientView<T extends GPUVectorFormat, Parameters>(
 }
 
 /** Creates graph-owned scratch storage with the same chunk topology as a vector. @internal */
-export function createTransientVectorView<T extends GPUVectorFormat, Parameters>(
+export function createTransientVectorView<T extends VertexFormat, Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   template: GraphVectorView<T>

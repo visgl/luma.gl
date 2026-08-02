@@ -134,9 +134,12 @@ A contributor only declares resources and nodes. It does not compile the graph, 
 submit work, or read results back. This keeps ownership and scheduling with the application and
 allows independently authored contributors to compose without a runtime registry.
 
-The exported `createTransientView()` helper creates packed, graph-owned typed storage. Its optional
-usage argument replaces the default `Buffer.STORAGE` value and must retain `Buffer.STORAGE` while
-adding flags such as `Buffer.INDIRECT`. Lengths must be non-negative safe integers.
+The exported `createTransientView()` helper creates packed, graph-owned typed storage for
+fixed-width `VertexFormat` values. Variable-length `vertex-list<...>` and `value-list<...>` formats
+require an explicit adapter that owns their offsets and value counts; the helper rejects them before
+declaring a graph resource. Its optional usage argument replaces the default `Buffer.STORAGE` value
+and must retain `Buffer.STORAGE` while adding flags such as `Buffer.INDIRECT`. Lengths must be
+non-negative safe integers.
 
 `getViewBinding()` returns the 256-byte-aligned buffer range containing a logical
 `GraphDataView`. `getViewElementOffset()` returns the corresponding offset in 32-bit shader

@@ -369,6 +369,20 @@ test('GPUCommandGraph exposes safe extension-library helpers', async t => {
     /must include Buffer.STORAGE/,
     'typed transient views retain storage binding usage'
   );
+  for (const [format, id] of [
+    ['vertex-list<float32x3>', 'vertex-list-transient'],
+    ['value-list<uint32>', 'value-list-transient']
+  ] as const) {
+    t.throws(
+      () => Reflect.apply(createTransientView, undefined, [graph, id, format, 2]),
+      /requires a fixed-width GPUVector format/,
+      `${format} requires an explicit variable-length adapter`
+    );
+    t.doesNotThrow(
+      () => createTransientView(graph, id, 'float32x3', 2),
+      `${format} is rejected before reserving its graph resource id`
+    );
+  }
 
   const bindingBuffer = device.createBuffer({byteLength: 512, usage: Buffer.STORAGE});
   const bindingHandle = graph.importBuffer(
