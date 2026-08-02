@@ -85,6 +85,39 @@ test('runGPUSpatialQueryBenchmark applies one oracle to scan, grid, and BVH path
   }
   t.match(String(mismatchError), /shared CPU oracle/, 'incorrect paths cannot report timings');
 
+  const resourceCounts = device.statsManager.getStats('Resource Counts');
+  const activeCommandEncodersBeforeFailure = resourceCounts.get('CommandEncoders Active').count;
+  let encodeCount = 0;
+  let encodingError: unknown;
+  try {
+    await runGPUSpatialQueryBenchmark(device, {
+      paths: [
+        {
+          ...paths[0],
+          id: 'failing-path',
+          encode: commandEncoder => {
+            encodeCount++;
+            if (encodeCount === 2) {
+              throw new Error('intentional measured encoding failure');
+            }
+            return paths[0].encode(commandEncoder);
+          }
+        }
+      ],
+      expectedIds: [2, 9],
+      warmupIterations: 1,
+      measuredIterations: 1
+    });
+  } catch (error) {
+    encodingError = error;
+  }
+  t.match(String(encodingError), /intentional measured encoding failure/);
+  t.equal(
+    resourceCounts.get('CommandEncoders Active').count,
+    activeCommandEncodersBeforeFailure,
+    'a failed measured encoding releases its command encoder'
+  );
+
   for (const compiled of compiledGraphs) compiled.destroy();
   t.end();
 });

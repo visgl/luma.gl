@@ -138,6 +138,9 @@ export async function runGPUSpatialQueryBenchmark(
         const encoding = path.encode(commandEncoder);
         device.submit(commandEncoder.finish());
         timingReports.push(await encoding.readTimings());
+      } catch (error) {
+        commandEncoder.destroy();
+        throw error;
       } finally {
         querySet?.destroy();
       }
