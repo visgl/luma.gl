@@ -157,6 +157,7 @@ export {
   MAX_VOLUMETRIC_FIRE_EMITTERS,
   VolumetricFireSimulation
 } from './rendering/volumetric-fire-simulation';
+export type {
   SpectralCausticsBindings,
   SpectralCausticsProps,
   SpectralCausticsUniforms
