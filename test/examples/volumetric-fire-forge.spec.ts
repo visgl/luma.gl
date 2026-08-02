@@ -12,7 +12,12 @@ import VolumetricFireForgeAnimationLoopTemplate from '../../examples/experimenta
 describe('Volumetric Fire Forge', () => {
   test('advances the simulation and renders the HDR volume pipeline on WebGPU', async () => {
     const device = await getWebGPUTestDevice('core');
-    if (!device) {
+    if (
+      !device ||
+      device.info.gpu === 'software' ||
+      device.info.gpuType === 'cpu' ||
+      Boolean(device.info.fallback)
+    ) {
       return;
     }
 
