@@ -93,7 +93,7 @@ test('Computation#dispatchIndirect', async t => {
       usage: Buffer.STORAGE | Buffer.COPY_SRC
     });
     const dispatchBuffer = webgpuDevice.createBuffer({
-      data: new Uint32Array([4, 1, 1]),
+      data: new Uint32Array([4, 1, 1, 1, 1, 1]),
       usage: Buffer.INDIRECT
     });
     computation.setBindings({data: workBuffer});
@@ -103,11 +103,43 @@ test('Computation#dispatchIndirect', async t => {
     computePass.end();
     webgpuDevice.submit();
 
-    const computedData = new Int32Array(await workBuffer.readAsync());
+    const computedBytes = await workBuffer.readAsync();
+    const computedData = new Int32Array(
+      computedBytes.buffer,
+      computedBytes.byteOffset,
+      computedBytes.byteLength / Int32Array.BYTES_PER_ELEMENT
+    );
     t.deepEqual(Array.from(computedData), [2, 4, 6, 8], 'GPU-written dimensions drive dispatch');
+
+    const offsetWorkBuffer = webgpuDevice.createBuffer({
+      data: new Int32Array([1, 2, 3, 4]),
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    computation.setBindings({data: offsetWorkBuffer});
+    const offsetComputePass = webgpuDevice.beginComputePass({});
+    computation.dispatchIndirect(
+      offsetComputePass,
+      dispatchBuffer,
+      3 * Uint32Array.BYTES_PER_ELEMENT
+    );
+    offsetComputePass.end();
+    webgpuDevice.submit();
+
+    const offsetComputedBytes = await offsetWorkBuffer.readAsync();
+    const offsetComputedData = new Int32Array(
+      offsetComputedBytes.buffer,
+      offsetComputedBytes.byteOffset,
+      offsetComputedBytes.byteLength / Int32Array.BYTES_PER_ELEMENT
+    );
+    t.deepEqual(
+      Array.from(offsetComputedData),
+      [2, 2, 3, 4],
+      'nonzero byte offset selects the requested dispatch record'
+    );
 
     computation.destroy();
     workBuffer.destroy();
+    offsetWorkBuffer.destroy();
     dispatchBuffer.destroy();
   }
   t.end();
