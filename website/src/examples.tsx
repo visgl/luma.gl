@@ -61,6 +61,7 @@ import {getErrorMessage, logError} from './react-luma/utils/error-utils';
 import DOFApp from '../../examples/showcase/dof/app';
 import AdvancedEffectsApp from '../../examples/experimental/advanced-effects/app';
 import DeferredRenderingApp from '../../examples/experimental/deferred-rendering/app';
+import VolumetricFireForgeApp from '../../examples/experimental/volumetric-fire-forge/app';
 import ShadowMapApp from '../../examples/experimental/shadow-map/app';
 import ABufferApp from '../../examples/experimental/a-buffer/app';
 
@@ -998,6 +999,20 @@ export const DeferredRenderingExample: React.FC = props => (
     template={DeferredRenderingApp}
     config={exampleConfig}
     devices={['webgpu']}
+    {...props}
+  />
+);
+
+export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="volumetric-fire-forge"
+    title="Volumetric Fire Forge"
+    subtitle="Reactive HDR fire on the GPU"
+    directory="experimental"
+    template={VolumetricFireForgeApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );

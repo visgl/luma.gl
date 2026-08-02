@@ -1,0 +1,52 @@
+---
+title: Volumetric Fire Forge
+description: Simulate reactive obstacle-aware fire and render the live volume with depth-correct HDR emission and smoke on WebGPU.
+sidebar_custom_props:
+  description: Simulate reactive obstacle-aware fire and render the live volume with depth-correct HDR emission and smoke on WebGPU.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, effects]
+---
+
+import {VolumetricFireForgeExample} from '@site/src/examples';
+
+<VolumetricFireForgeExample />
+
+Volumetric Fire Forge is a WebGPU-only reactive-fire laboratory built on
+[`VolumetricFireSimulation`](/docs/api-reference/experimental/volumetric-fire-simulation). The
+simulation advances velocity, pressure, fuel, heat, and smoke in fixed 1/60-second increments for
+stable numerical behavior across ordinary frame-rate variation. A bounded accumulator limits
+catch-up work after a slow frame, while pause, single-step, reset, and time-scale controls make the
+solver's evolution directly inspectable.
+
+The visible hearth, walls, lips, and burners come from the same authored box list used to voxelize
+the simulation's obstacle texture. That shared geometry keeps the collision mask aligned with the
+forge surfaces instead of relying on two independently maintained scene descriptions. The solver
+and renderer record their work in order on the frame's caller-owned command encoder, without CPU
+readback or a hidden submission between simulation and display.
+
+The volume compositor reconstructs opaque scene depth, intersects each camera ray with the fire
+bounds, and stops integration at the first forge surface. Front-to-back Beer-Lambert extinction
+combines smoke absorption with self-shadowed scattering, while the combustion texture drives
+heat-shaped HDR emission with a bounded ember-to-gold palette. The result remains linear in a
+floating-point HDR target through multiscale bloom and the final tone map.
+
+Fire is intentionally presented with **Fixed Exposure**. Fast changes in flame area therefore do
+not pump the brightness of the entire forge, and the bloom threshold, intensity, and radius expose
+highlight shaping independently from the simulation. On compatible displays, the example requests
+an extended-range canvas; other displays receive the same fixed-exposure filmic composition in SDR.
+
+## What to inspect
+
+- Drag to orbit, use the wheel or trackpad to zoom, toggle **Auto Orbit**, or reset the camera.
+- Compare the **Foundry**, **Blast Furnace**, and **Smolder** presets, then adjust buoyancy,
+  turbulence, reaction rate, time scale, and voxel quality.
+- Pause and use **Single step** to inspect one fixed simulation update at a time, or reset the fire
+  after changing its preset or dynamics.
+- Tune ray samples, smoke absorption, HDR emission, smoke lighting, and self-shadow strength to
+  separate transport behavior from volume-rendering choices.
+- Switch from **Final** to density, temperature, fuel, age, velocity, obstacle, or transmittance views.
+  These diagnostics sample the live GPU textures; they do not stage the volume through the CPU.
+- Watch the inspector for volume dimensions, voxel count, solver steps, GPU graph-node count, and
+  the active scene color format.
