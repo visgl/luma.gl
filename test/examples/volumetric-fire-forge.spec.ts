@@ -24,6 +24,8 @@ describe('Volumetric Fire Forge', () => {
     const host = document.createElement('div');
     host.id = 'example-panel-host';
     document.body.append(host);
+    const canvas = document.createElement('canvas');
+    host.append(canvas);
     let viewer: VolumetricFireForgeAnimationLoopTemplate | null = null;
     const simulationDimensions = [16, 24, 16] as const;
     try {
@@ -38,6 +40,12 @@ describe('Volumetric Fire Forge', () => {
         pressureIterations: number;
       });
       viewer.settings.sampleCount = 16;
+      await viewer.onInitialize({
+        ...makeAnimationProps(device, 1000),
+        canvas
+      } as AnimationProps);
+      expect(viewer.orbitControls).not.toBeNull();
+      viewer.orbitControls!.yaw = 0;
       const initialSceneColorTexture = viewer.renderer.sceneColorTexture;
       const initialSceneDepthTexture = viewer.renderer.sceneDepthTexture;
 
@@ -67,6 +75,8 @@ describe('Volumetric Fire Forge', () => {
 
       viewer.onRender(makeAnimationProps(device, 1000));
       device.submit();
+      expect(viewer.orbitControls!.yaw).toBeGreaterThan(Math.PI / 2);
+      expect(viewer.orbitControls!.yaw).toBeLessThan((Math.PI * 3) / 2);
       expect(viewer.stepsThisFrame).toBeGreaterThan(0);
       expect(viewer.renderer.framebufferSize).toEqual([96, 72]);
       expect(viewer.renderer.sceneColorTexture).not.toBe(initialSceneColorTexture);

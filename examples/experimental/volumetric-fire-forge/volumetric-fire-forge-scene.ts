@@ -22,6 +22,7 @@ export type VolumetricFireForgeBox = {
   color: readonly [number, number, number];
   emissiveColor: readonly [number, number, number];
   emissiveTopOnly?: boolean;
+  surfaceTreatment?: 'refractory-masonry';
   metallic: number;
   roughness: number;
 };
@@ -44,28 +45,31 @@ export const VOLUMETRIC_FIRE_FORGE_BOXES: readonly VolumetricFireForgeBox[] = [
     id: 'rear-refractory-wall',
     center: [0, 1.65, 4.55],
     halfSize: [5.8, 1.65, 0.25],
-    color: [0.052, 0.05, 0.048],
-    emissiveColor: [0.003, 0.0012, 0.0005],
-    metallic: 0.08,
-    roughness: 0.9
+    color: [0.082, 0.05, 0.034],
+    emissiveColor: [0.004, 0.0015, 0.00045],
+    surfaceTreatment: 'refractory-masonry',
+    metallic: 0.03,
+    roughness: 0.92
   },
   {
     id: 'left-forge-cheek',
     center: [-5.55, 1.6, 1.3],
     halfSize: [0.25, 1.6, 3.25],
-    color: [0.046, 0.05, 0.056],
-    emissiveColor: [0.0015, 0.0008, 0.0005],
-    metallic: 0.72,
-    roughness: 0.48
+    color: [0.071, 0.044, 0.032],
+    emissiveColor: [0.0025, 0.001, 0.0004],
+    surfaceTreatment: 'refractory-masonry',
+    metallic: 0.04,
+    roughness: 0.9
   },
   {
     id: 'right-forge-cheek',
     center: [5.55, 1.6, 1.3],
     halfSize: [0.25, 1.6, 3.25],
-    color: [0.046, 0.05, 0.056],
-    emissiveColor: [0.0015, 0.0008, 0.0005],
-    metallic: 0.72,
-    roughness: 0.48
+    color: [0.071, 0.044, 0.032],
+    emissiveColor: [0.0025, 0.001, 0.0004],
+    surfaceTreatment: 'refractory-masonry',
+    metallic: 0.04,
+    roughness: 0.9
   },
   {
     id: 'front-left-lip',

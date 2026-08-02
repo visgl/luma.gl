@@ -40,7 +40,7 @@ struct VertexInputs {
   @location(2) instancePositions: vec3f,
   @location(3) instanceHalfSizes: vec3f,
   @location(4) instanceBaseColors: vec3f,
-  @location(5) instanceMaterials: vec3f,
+  @location(5) instanceMaterials: vec4f,
   @location(6) instanceEmissiveColors: vec3f,
 };
 
@@ -49,7 +49,7 @@ struct FragmentInputs {
   @location(0) worldPosition: vec3f,
   @location(1) worldNormal: vec3f,
   @location(2) baseColor: vec3f,
-  @location(3) material: vec3f,
+  @location(3) material: vec4f,
   @location(4) emissiveColor: vec3f,
 };
 
@@ -66,6 +66,76 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   outputs.material = inputs.instanceMaterials;
   outputs.emissiveColor = inputs.instanceEmissiveColors;
   return outputs;
+}
+
+fn forgeScene_getMasonryCoordinates(worldPosition: vec3f, normal: vec3f) -> vec2f {
+  let absoluteNormal = abs(normal);
+  var masonryCoordinates = worldPosition.xy;
+  if (absoluteNormal.x > max(absoluteNormal.y, absoluteNormal.z)) {
+    masonryCoordinates = vec2f(worldPosition.z, worldPosition.y);
+  } else if (absoluteNormal.y > absoluteNormal.z) {
+    masonryCoordinates = vec2f(worldPosition.x, worldPosition.z);
+  }
+  return masonryCoordinates;
+}
+
+fn forgeScene_hash21(value: vec2f) -> f32 {
+  return fract(sin(dot(value, vec2f(127.1, 311.7))) * 43758.5453);
+}
+
+fn forgeScene_getMasonrySurface(
+  worldPosition: vec3f,
+  normal: vec3f,
+  baseColor: vec3f
+) -> vec4f {
+  let masonryCoordinates = forgeScene_getMasonryCoordinates(worldPosition, normal);
+  let brickSize = vec2f(1.22, 0.52);
+  let courseIndex = floor(masonryCoordinates.y / brickSize.y);
+  let courseOffset = fract(courseIndex * 0.5);
+  let brickGrid = vec2f(
+    masonryCoordinates.x / brickSize.x + courseOffset,
+    masonryCoordinates.y / brickSize.y
+  );
+  let brickIndex = floor(brickGrid);
+  let brickCoordinates = fract(brickGrid);
+  let verticalJointDistance = min(brickCoordinates.x, 1.0 - brickCoordinates.x) * brickSize.x;
+  let horizontalJointDistance = min(brickCoordinates.y, 1.0 - brickCoordinates.y) * brickSize.y;
+  let mortarDistance = min(verticalJointDistance, horizontalJointDistance);
+  let mortarHalfWidth = 0.035;
+  let mortarFilterWidth = max(fwidth(mortarDistance), 0.0015);
+  let brickMask = smoothstep(
+    mortarHalfWidth - mortarFilterWidth,
+    mortarHalfWidth + mortarFilterWidth,
+    mortarDistance
+  );
+
+  let brickVariation = forgeScene_hash21(brickIndex);
+  let mineralVariation = forgeScene_hash21(brickIndex * 1.73 + vec2f(19.1, 7.7));
+  let sootVariation = forgeScene_hash21(
+    floor(masonryCoordinates * vec2f(0.72, 1.45)) + vec2f(43.0, 17.0)
+  );
+  let upperSoot = smoothstep(1.45, 3.35, worldPosition.y);
+  let soot = clamp(0.025 + upperSoot * (0.12 + sootVariation * 0.12), 0.0, 0.28);
+  let heatCoordinates = (worldPosition.xz - vec2f(0.0, 0.25)) * vec2f(0.16, 0.22);
+  let heatWash = exp(-dot(heatCoordinates, heatCoordinates)) *
+    (1.0 - smoothstep(1.1, 3.5, worldPosition.y));
+
+  let refractoryColor = mix(
+    baseColor * vec3f(1.08, 0.98, 0.9),
+    vec3f(0.135, 0.053, 0.023),
+    0.42
+  );
+  var brickColor = mix(refractoryColor, vec3f(0.18, 0.06, 0.015), heatWash * 0.28);
+  brickColor *= mix(0.8, 1.13, brickVariation) * mix(0.96, 1.04, mineralVariation);
+  brickColor = mix(brickColor, vec3f(0.012, 0.014, 0.016), soot);
+  let bevel = smoothstep(mortarHalfWidth, mortarHalfWidth + 0.065, mortarDistance);
+  brickColor *= mix(0.86, 1.0, bevel);
+
+  let mortarBase = vec3f(0.044, 0.04, 0.035) * mix(0.9, 1.08, mineralVariation);
+  let mortarColor = mix(mortarBase, vec3f(0.012, 0.014, 0.016), soot * 0.72);
+  let surfaceColor = mix(mortarColor, brickColor, brickMask);
+  let surfaceRoughness = mix(0.99, mix(0.84, 0.93, mineralVariation), brickMask);
+  return vec4f(surfaceColor, surfaceRoughness);
 }
 
 fn forgeScene_fresnelSchlick(cosine: f32, baseReflectance: vec3f) -> vec3f {
@@ -114,9 +184,16 @@ fn forgeScene_getBurnerLight(
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   let normal = normalize(inputs.worldNormal);
   let viewDirection = normalize(forgeScene.cameraPosition - inputs.worldPosition);
-  let roughness = clamp(inputs.material.x, 0.06, 1.0);
-  let metallic = clamp(inputs.material.y, 0.0, 1.0);
-  let baseReflectance = mix(vec3f(0.035), inputs.baseColor, metallic);
+  let masonrySurface = forgeScene_getMasonrySurface(
+    inputs.worldPosition,
+    normal,
+    inputs.baseColor
+  );
+  let masonryMask = clamp(inputs.material.w, 0.0, 1.0);
+  let surfaceColor = mix(inputs.baseColor, masonrySurface.rgb, masonryMask);
+  let roughness = mix(clamp(inputs.material.x, 0.06, 1.0), masonrySurface.a, masonryMask);
+  let metallic = mix(clamp(inputs.material.y, 0.0, 1.0), 0.025, masonryMask);
+  let baseReflectance = mix(vec3f(0.035), surfaceColor, metallic);
 
   let frontLeftFire = forgeScene.emitterPosition + vec3f(-1.7, 0.0, -1.15);
   let frontRightFire = forgeScene.emitterPosition + vec3f(1.7, 0.0, -1.15);
@@ -124,30 +201,30 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   let rearRightFire = forgeScene.emitterPosition + vec3f(1.3, 0.0, 0.85);
   let fireLighting =
     forgeScene_getBurnerLight(
-      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
       roughness, metallic, frontLeftFire, 0.0
     ) +
     forgeScene_getBurnerLight(
-      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
       roughness, metallic, frontRightFire, 1.7
     ) +
     forgeScene_getBurnerLight(
-      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
       roughness, metallic, rearLeftFire, 3.1
     ) +
     forgeScene_getBurnerLight(
-      inputs.worldPosition, normal, viewDirection, inputs.baseColor, baseReflectance,
+      inputs.worldPosition, normal, viewDirection, surfaceColor, baseReflectance,
       roughness, metallic, rearRightFire, 4.6
     );
 
   let fillDirection = normalize(vec3f(-0.38, 0.82, 0.42));
   let fillDiffuse = max(dot(normal, fillDirection), 0.0);
   let fillColor = vec3f(0.18, 0.26, 0.4) * (0.32 + fillDiffuse * 0.6);
-  let ambient = inputs.baseColor * (0.12 + max(normal.y, 0.0) * 0.05);
+  let ambient = surfaceColor * (0.12 + max(normal.y, 0.0) * 0.05);
   let emissiveTopMask = mix(1.0, smoothstep(0.45, 0.82, normal.y), inputs.material.z);
   let emissive = inputs.emissiveColor * emissiveTopMask *
     (0.9 + 0.1 * sin(forgeScene.time * 5.3 + inputs.worldPosition.x * 2.1));
-  let color = ambient + inputs.baseColor * fillColor + fireLighting + emissive;
+  let color = ambient + surfaceColor * fillColor + fireLighting + emissive;
   return vec4f(max(color, vec3f(0.0)), 1.0);
 }
 `;
