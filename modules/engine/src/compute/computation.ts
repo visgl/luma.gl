@@ -225,18 +225,7 @@ export class Computation {
   dispatch(computePass: ComputePass, x: number, y?: number, z?: number): void {
     try {
       this._logDrawCallStart();
-
-      // Check if the pipeline is invalidated
-      // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
-      this.pipeline = this._updatePipeline();
-
-      // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
-      // Any caching needs to be done inside the pipeline functions
-      this.pipeline.setBindings(this.bindings);
-      computePass.setPipeline(this.pipeline);
-      // @ts-expect-error
-      computePass.setBindings({});
-
+      this._setPipeline(computePass);
       computePass.dispatch(x, y, z);
     } finally {
       this._logDrawCallEnd();
@@ -247,17 +236,24 @@ export class Computation {
   dispatchIndirect(computePass: ComputePass, indirectBuffer: Buffer, indirectOffset = 0): void {
     try {
       this._logDrawCallStart();
-
-      this.pipeline = this._updatePipeline();
-      this.pipeline.setBindings(this.bindings);
-      computePass.setPipeline(this.pipeline);
-      // @ts-expect-error ComputePass implementations expose binding application internally.
-      computePass.setBindings({});
-
+      this._setPipeline(computePass);
       computePass.dispatchIndirect(indirectBuffer, indirectOffset);
     } finally {
       this._logDrawCallEnd();
     }
+  }
+
+  private _setPipeline(computePass: ComputePass): void {
+    // Check if the pipeline is invalidated
+    // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
+    this.pipeline = this._updatePipeline();
+
+    // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
+    // Any caching needs to be done inside the pipeline functions
+    this.pipeline.setBindings(this.bindings);
+    computePass.setPipeline(this.pipeline);
+    // @ts-expect-error ComputePass implementations expose binding application internally.
+    computePass.setBindings({});
   }
 
   // Update fixed fields (can trigger pipeline rebuild)
