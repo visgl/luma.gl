@@ -241,6 +241,16 @@ test('GPUHistogram supports irregular literal and GPU-resident edges', async t =
   t.deepEqual(
     await runIrregularHistogram(
       device,
+      Float32Array.from([0, 1e21, 2e21]),
+      'float32',
+      [0, 1e21, 2e21]
+    ),
+    [1, 2],
+    'exponential float edges generate valid WGSL literals'
+  );
+  t.deepEqual(
+    await runIrregularHistogram(
+      device,
       Uint32Array.from([0, 1, 9, 10, 99, 100]),
       'uint32',
       [0, 10, 100]
@@ -853,6 +863,17 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
     () => new GPUHistogram({input, output: two, edges: [0, 1, 1]}),
     /strictly increasing/,
     'literal histogram edges must be strictly increasing'
+  );
+  const floatInput = graph.createDataView(inputHandle, {format: 'float32', length: 4});
+  t.throws(
+    () =>
+      new GPUHistogram({
+        input: floatInput,
+        output: two,
+        edges: [16_777_216, 16_777_217, 16_777_218]
+      }),
+    /strictly increasing/,
+    'literal histogram edges must remain ordered after float32 conversion'
   );
   t.throws(
     () =>

@@ -147,9 +147,9 @@ test('GPUVisibilityWorkflow preserves chunk topology while generating global IDs
   }
 
   const maskFixture = createVectorFixture(device, 'mask', [
-    Uint32Array.from([1, 0, 1]),
+    Uint32Array.from([2, 0, 3]),
     new Uint32Array(0),
-    Uint32Array.from([1, 1])
+    Uint32Array.from([4, 1])
   ]);
   const outputFixture = createVectorFixture(
     device,
@@ -182,6 +182,11 @@ test('GPUVisibilityWorkflow preserves chunk topology while generating global IDs
     'identity generation and compaction preserve global order across chunks'
   );
   t.deepEqual(await readUint32(countBuffer, 1), [4], 'one count spans the complete vector');
+  t.deepEqual(
+    compiled.stats.nodeOrder.filter(id => id.includes('compose')),
+    ['gpu-visibility-compose-chunk-0', 'gpu-visibility-compose-chunk-2'],
+    'one noncanonical predicate is normalized before compaction'
+  );
   t.deepEqual(
     compiled.stats.nodeOrder.filter(id => id.includes('identity')),
     ['gpu-visibility-identity-chunk-0', 'gpu-visibility-identity-chunk-2'],

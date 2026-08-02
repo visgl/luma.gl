@@ -174,6 +174,54 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
     /separate buffers/,
     'outputs cannot alias any input chunk'
   );
+  const sharedOutputBuffer = graph.createTransientBuffer({
+    id: 'shared-output-keys',
+    byteLength: 16,
+    usage: Buffer.STORAGE
+  });
+  const makeSharedOutputKeys = (secondByteOffset: number) =>
+    new GraphVectorView({
+      id: `shared-output-keys-${secondByteOffset}`,
+      name: 'shared output keys',
+      format: 'uint32',
+      length: 4,
+      valueLength: 4,
+      stride: 1,
+      byteStride: 4,
+      rowByteLength: 4,
+      data: [
+        graph.createDataView(sharedOutputBuffer, {format: 'uint32', length: 2}),
+        graph.createDataView(sharedOutputBuffer, {
+          format: 'uint32',
+          length: 2,
+          byteOffset: secondByteOffset
+        })
+      ]
+    });
+  const twoChunkKeys = makeGraphVector(graph, 'two-chunk-keys', [2, 2]);
+  const twoChunkValues = makeGraphVector(graph, 'two-chunk-values', [2, 2]);
+  const twoChunkOutputValues = makeGraphVector(graph, 'two-chunk-output-values', [2, 2]);
+  t.throws(
+    () =>
+      new GPUBatchSort({
+        keys: twoChunkKeys,
+        values: twoChunkValues,
+        outputKeys: makeSharedOutputKeys(4),
+        outputValues: twoChunkOutputValues
+      }),
+    /output keys chunks must not overlap/,
+    'writable chunks cannot overlap within one output vector'
+  );
+  t.doesNotThrow(
+    () =>
+      new GPUBatchSort({
+        keys: twoChunkKeys,
+        values: twoChunkValues,
+        outputKeys: makeSharedOutputKeys(8),
+        outputValues: twoChunkOutputValues
+      }),
+    'disjoint output chunks may share one logical buffer'
+  );
   t.throws(
     () =>
       new GPUBatchSort({

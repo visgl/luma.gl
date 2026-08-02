@@ -822,6 +822,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
             entry.texture === texture &&
             entry.frameId !== frameId
           ) {
+            this.destroyFramebuffersUsingView(entry.view);
             entry.view.destroy();
             this.cachedTextureViews.splice(index, 1);
           }
@@ -1120,6 +1121,19 @@ export class CompiledGPUCommandGraph<Parameters = void> {
       framebuffer
     });
     return framebuffer;
+  }
+
+  private destroyFramebuffersUsingView(view: TextureView): void {
+    for (let index = this.cachedFramebuffers.length - 1; index >= 0; index--) {
+      const cached = this.cachedFramebuffers[index];
+      if (
+        cached.depthStencilAttachment === view ||
+        cached.colorAttachments.some(attachment => attachment === view)
+      ) {
+        cached.framebuffer.destroy();
+        this.cachedFramebuffers.splice(index, 1);
+      }
+    }
   }
 }
 

@@ -1255,9 +1255,9 @@ swapchain textures to carry one coherent, strictly increasing frame ID per encod
 validates hazards but never acquires, presents, or destroys a swapchain texture on the
 application's behalf.
 
-**Exit evidence:** Compute, render, copy, and resolve nodes reject conflicting subresource access;
-multisample and swapchain examples encode through the graph; stale-frame and ownership mistakes
-fail before submission.
+**Exit evidence:** Compute, render, copy, and resolve nodes order conflicting subresource access;
+multisample and swapchain examples encode through the graph; invalid same-pass access,
+stale-frame, and ownership mistakes fail before submission.
 
 #### Tranche 4.4 — External-texture contracts
 

@@ -271,6 +271,7 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
     format: 'rgba8unorm',
     width: 4,
     height: 4,
+    depth: 2,
     usage: Texture.RENDER
   });
   const secondTexture = device.createTexture({
@@ -278,6 +279,7 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
     format: 'rgba8unorm',
     width: 4,
     height: 4,
+    depth: 2,
     usage: Texture.RENDER
   });
   const auxiliaryTexture = device.createTexture({
@@ -293,6 +295,7 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
     format: 'rgba8unorm',
     width: 4,
     height: 4,
+    depth: 2,
     usage: Texture.RENDER
   });
   graph.importFrameTexture({
@@ -304,10 +307,21 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
   });
   graph.addRenderPass({
     id: 'render-frame',
-    attachments: {colorAttachments: [graph.createTextureView(frameColor)]},
+    attachments: {
+      colorAttachments: [
+        graph.createTextureView(frameColor, {
+          dimension: '2d',
+          baseArrayLayer: 1,
+          arrayLayerCount: 1
+        })
+      ]
+    },
     compile: () => ({encode: () => {}})
   });
   const compiled = graph.compile();
+  const resourceStats = device.statsManager.getStats('Resource Counts');
+  const baselineFramebufferCount = resourceStats.get('Framebuffers Active').count;
+  const baselineTextureViewCount = resourceStats.get('TextureViews Active').count;
   t.throws(
     () =>
       compiled.encode(device.createCommandEncoder({id: 'missing-frame'}), {
@@ -325,6 +339,16 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
     }
   });
   device.submit(firstEncoder.finish());
+  t.equal(
+    resourceStats.get('Framebuffers Active').count,
+    baselineFramebufferCount + 1,
+    'the first frame owns one cached framebuffer'
+  );
+  t.equal(
+    resourceStats.get('TextureViews Active').count,
+    baselineTextureViewCount + 1,
+    'the first frame owns one non-default attachment view'
+  );
   t.throws(
     () =>
       compiled.encode(device.createCommandEncoder({id: 'stale-frame'}), {
@@ -358,7 +382,22 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
     }
   });
   device.submit(secondEncoder.finish());
+  t.equal(
+    resourceStats.get('Framebuffers Active').count,
+    baselineFramebufferCount + 1,
+    'refreshing a frame view retires its stale framebuffer'
+  );
+  t.equal(
+    resourceStats.get('TextureViews Active').count,
+    baselineTextureViewCount + 1,
+    'refreshing a frame view retires its stale texture view'
+  );
   compiled.destroy();
+  t.equal(
+    resourceStats.get('Framebuffers Active').count,
+    baselineFramebufferCount,
+    'destroy releases the final cached framebuffer'
+  );
   t.notOk(firstTexture.destroyed, 'first frame texture remains caller-owned');
   t.notOk(secondTexture.destroyed, 'replacement frame texture remains caller-owned');
   firstTexture.destroy();
