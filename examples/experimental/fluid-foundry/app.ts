@@ -2,9 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type Device, type Framebuffer, type Sampler, Texture} from '@luma.gl/core';
+import {
+  Buffer,
+  type CommandEncoder,
+  type Device,
+  type Framebuffer,
+  type Sampler,
+  Texture
+} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
+  Computation,
   Model,
   ShaderInputs,
   ShaderPassRenderer,
@@ -18,6 +26,12 @@ const PARTICLE_COUNT = 12_288;
 const GRID_SIZE: readonly [number, number] = [96, 64];
 const DENSITY_MAP_SIZE = 640;
 const MAXIMUM_FRAME_DELTA_SECONDS = 1 / 60;
+const NOZZLE_WORKGROUP_SIZE = 64;
+const NOZZLE_CYCLE_SECONDS = 7.6;
+const NOZZLE_CHARGE_SECONDS = 0.65;
+const NOZZLE_BURST_SECONDS = 0.9;
+const NOZZLE_COOLDOWN_SECONDS = 0.55;
+const NOZZLE_FIRST_CHARGE_SECONDS = [3.1, 6.7] as const;
 
 /** Optional lower-cost overrides used by focused WebGPU tests. */
 export type FluidFoundryExampleProps = Pick<AnimationProps, 'device' | 'width' | 'height'> & {
@@ -43,6 +57,7 @@ type FluidFoundrySceneUniforms = {
   aspect: number;
   densityScale: number;
   interaction: number;
+  nozzleActivity: [number, number];
 };
 
 const fluidFoundrySceneUniforms: ShaderModule<FluidFoundrySceneUniforms> = {
@@ -51,9 +66,75 @@ const fluidFoundrySceneUniforms: ShaderModule<FluidFoundrySceneUniforms> = {
     time: 'f32',
     aspect: 'f32',
     densityScale: 'f32',
-    interaction: 'f32'
+    interaction: 'f32',
+    nozzleActivity: 'vec2<f32>'
   }
 };
+
+export type FoundryNozzleCycleState = {
+  activity: number;
+  emissionProgress: number;
+  firing: boolean;
+  cycleIndex: number;
+};
+
+const NOZZLE_EMITTER_SHADER = /* wgsl */ `\
+struct MLSMPMParticleState {
+  position: vec2f,
+  velocity: vec2f,
+  affineColumn0: vec2f,
+  affineColumn1: vec2f,
+  deformationPadding: vec4f,
+};
+
+struct FoundryNozzleEmitterUniforms {
+  particleRange: vec4f,
+  nozzle: vec4f,
+};
+
+@group(0) @binding(0) var<storage, read_write> particles: array<MLSMPMParticleState>;
+@group(0) @binding(1) var<uniform> uniforms: FoundryNozzleEmitterUniforms;
+
+fn random01(value: u32) -> f32 {
+  var state = value * 747796405u + 2891336453u;
+  state = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  state = (state >> 22u) ^ state;
+  return f32(state) / 4294967296.0;
+}
+
+@compute @workgroup_size(${NOZZLE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
+  let emittedParticleIndex = globalInvocationId.x;
+  let emitCount = u32(uniforms.particleRange.y);
+  if (emittedParticleIndex >= emitCount) {
+    return;
+  }
+
+  let particleIndex = u32(uniforms.particleRange.x) + emittedParticleIndex;
+  let sequenceIndex = u32(uniforms.particleRange.z) + emittedParticleIndex;
+  let nozzleIndex = u32(uniforms.particleRange.w);
+  let randomX = random01(sequenceIndex * 2u + nozzleIndex * 104729u);
+  let randomY = random01(sequenceIndex * 2u + 1u + nozzleIndex * 130363u);
+  let centerX = uniforms.nozzle.x;
+  let streamHalfWidth = uniforms.nozzle.y;
+  let downwardSpeed = uniforms.nozzle.z;
+  let lateralSpeed = uniforms.nozzle.w;
+
+  var particle: MLSMPMParticleState;
+  particle.position = vec2f(
+    centerX + (randomX * 2.0 - 1.0) * streamHalfWidth,
+    0.955 - randomY * 0.028
+  );
+  particle.velocity = vec2f(
+    lateralSpeed * (0.55 + randomY * 0.45) + (randomX - 0.5) * 0.035,
+    -downwardSpeed * (0.9 + randomY * 0.2)
+  );
+  particle.affineColumn0 = vec2f(0.0);
+  particle.affineColumn1 = vec2f(0.0);
+  particle.deformationPadding = vec4f(1.0, 0.0, 0.0, 0.0);
+  particles[particleIndex] = particle;
+}
+`;
 
 const PARTICLE_SPLAT_SHADER = /* wgsl */ `\
 struct MLSMPMParticleState {
@@ -111,6 +192,7 @@ struct FluidFoundrySceneUniforms {
   aspect: f32,
   densityScale: f32,
   interaction: f32,
+  nozzleActivity: vec2f,
 };
 @group(0) @binding(auto) var<uniform> fluidFoundryScene: FluidFoundrySceneUniforms;
 @group(0) @binding(0) var fluidDensityTexture: texture_2d<f32>;
@@ -172,11 +254,15 @@ fn sampleFluid(uv: vec2f) -> vec4f {
   let secondaryNozzleDistance = roundedBoxDistance(
     centered - vec2f(0.13, 0.84), vec2f(0.032, 0.22), 0.01
   );
-  let nozzleDistance = min(primaryNozzleDistance, secondaryNozzleDistance);
-  let nozzleBody = 1.0 - smoothstep(-0.004, 0.004, nozzleDistance);
-  let nozzleEdge = 1.0 - smoothstep(0.004, 0.014, abs(nozzleDistance));
-  color = mix(color, vec3f(0.16, 0.21, 0.24), nozzleBody);
-  color += vec3f(0.24, 0.62, 0.8) * nozzleEdge * 0.85;
+  let primaryNozzleBody = 1.0 - smoothstep(-0.004, 0.004, primaryNozzleDistance);
+  let secondaryNozzleBody = 1.0 - smoothstep(-0.004, 0.004, secondaryNozzleDistance);
+  let primaryNozzleEdge = 1.0 - smoothstep(0.004, 0.014, abs(primaryNozzleDistance));
+  let secondaryNozzleEdge = 1.0 - smoothstep(0.004, 0.014, abs(secondaryNozzleDistance));
+  color = mix(color, vec3f(0.16, 0.21, 0.24), max(primaryNozzleBody, secondaryNozzleBody));
+  color += vec3f(0.2, 0.5, 0.66) * (primaryNozzleEdge + secondaryNozzleEdge) * 0.26;
+  color += vec3f(0.42, 1.15, 2.6) *
+    (primaryNozzleEdge * fluidFoundryScene.nozzleActivity.x +
+      secondaryNozzleEdge * fluidFoundryScene.nozzleActivity.y);
   let primaryLip = 1.0 - smoothstep(
     -0.002, 0.006,
     roundedBoxDistance(centered - vec2f(-0.14, 0.62), vec2f(0.052, 0.018), 0.007)
@@ -185,7 +271,10 @@ fn sampleFluid(uv: vec2f) -> vec4f {
     -0.002, 0.006,
     roundedBoxDistance(centered - vec2f(0.13, 0.62), vec2f(0.043, 0.018), 0.007)
   );
-  color += vec3f(0.2, 0.46, 0.58) * max(primaryLip, secondaryLip);
+  color += vec3f(0.16, 0.36, 0.46) * max(primaryLip, secondaryLip) * 0.65;
+  color += vec3f(0.5, 1.35, 3.2) *
+    (primaryLip * fluidFoundryScene.nozzleActivity.x +
+      secondaryLip * fluidFoundryScene.nozzleActivity.y);
 
   let vesselPosition = vec2f(centered.x * fluidFoundryScene.aspect / 0.82, centered.y / 0.88);
   let vesselDistance = roundedBoxDistance(vesselPosition, vec2f(0.66, 0.86), 0.08);
@@ -267,8 +356,8 @@ const INFO_HTML = `
 </style>
 <section class="fluid-foundry-info">
   <h1>Fluid Foundry: Liquid Metal Press</h1>
-  <p><strong>12,288 particles</strong> exchange mass and momentum through a WebGPU MLS-MPM grid, then become a shaded HDR liquid surface without CPU readback. Click to splash, click repeatedly to build a surge, drag to steer, or press <strong>R</strong> to reset.</p>
-  <div class="fluid-foundry-badges"><span class="fluid-foundry-badge">WebGPU compute</span><span class="fluid-foundry-badge">APIC transfer</span><span class="fluid-foundry-badge">HDR liquid metal</span></div>
+  <p><strong>12,288 particles</strong> exchange mass and momentum through a WebGPU MLS-MPM grid, then become a shaded HDR liquid surface without CPU readback. Watch the pressure-charged recirculation spouts, click repeatedly to build a surge, drag to steer, or press <strong>R</strong> to reset.</p>
+  <div class="fluid-foundry-badges"><span class="fluid-foundry-badge">WebGPU compute</span><span class="fluid-foundry-badge">Cyclic spouts</span><span class="fluid-foundry-badge">HDR liquid metal</span></div>
 </section>`;
 
 /** WebGPU MLS-MPM simulation staged as an interactive HDR liquid-metal press. */
@@ -277,6 +366,8 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
 
   readonly device: Device;
   readonly simulation: MLSMPMFluidSimulation;
+  readonly nozzleEmitterComputation: Computation;
+  readonly nozzleEmitterUniformBuffer: Buffer;
   readonly densityModel: Model;
   readonly compositeModel: Model;
   readonly postprocessingRenderer: ShaderPassRenderer;
@@ -295,6 +386,11 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
   private interactionEnergy = 0;
   private simulationAgeSeconds = 0;
   private resetRequested = false;
+  private readonly nozzleParticleStartIndices: readonly [number, number];
+  private readonly nozzleParticleCapacities: readonly [number, number];
+  private nozzleEmissionCursors: [number, number] = [0, 0];
+  private nozzleCycleIndices: [number, number] = [-1, -1];
+  private emittedNozzleParticleCount = 0;
 
   constructor({
     device,
@@ -313,6 +409,14 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
     this.gridSize = gridSize;
     this.densityMapSize = densityMapSize;
     this.densityScale = PARTICLE_COUNT / particleCount;
+    const recycledParticleCount = Math.max(1, Math.floor(particleCount * 0.18));
+    const primaryNozzleParticleCount = Math.ceil(recycledParticleCount * 0.6);
+    const secondaryNozzleParticleCount = recycledParticleCount - primaryNozzleParticleCount;
+    this.nozzleParticleStartIndices = [
+      particleCount - recycledParticleCount,
+      particleCount - secondaryNozzleParticleCount
+    ];
+    this.nozzleParticleCapacities = [primaryNozzleParticleCount, secondaryNozzleParticleCount];
     this.simulation = new MLSMPMFluidSimulation(device, {
       id: 'fluid-foundry-simulation',
       gridSize,
@@ -323,6 +427,21 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
       stiffness: 5.5,
       velocityDamping: 0.055,
       maxVelocity: 2.8
+    });
+    this.nozzleEmitterUniformBuffer = device.createBuffer({
+      id: 'fluid-foundry-nozzle-emitter-uniforms',
+      byteLength: 8 * Float32Array.BYTES_PER_ELEMENT,
+      usage: Buffer.UNIFORM | Buffer.COPY_DST
+    });
+    this.nozzleEmitterComputation = new Computation(device, {
+      id: 'fluid-foundry-nozzle-emitter',
+      source: NOZZLE_EMITTER_SHADER,
+      shaderLayout: {
+        bindings: [
+          {name: 'particles', type: 'storage', group: 0, location: 0},
+          {name: 'uniforms', type: 'uniform', group: 0, location: 1}
+        ]
+      }
     });
     this.densityTarget = createDensityTarget(device, densityMapSize);
     this.sceneTarget = createSceneTarget(device, width, height);
@@ -375,6 +494,11 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
     return this.sceneTarget.texture;
   }
 
+  /** Number of particles physically recirculated through the automatic nozzles. */
+  get nozzleEmissionCount(): number {
+    return this.emittedNozzleParticleCount;
+  }
+
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
@@ -409,9 +533,17 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
       this.simulation.reset(device.commandEncoder);
       this.interactionEnergy = 0;
       this.simulationAgeSeconds = 0;
+      this.nozzleEmissionCursors = [0, 0];
+      this.nozzleCycleIndices = [-1, -1];
+      this.emittedNozzleParticleCount = 0;
       this.resetRequested = false;
     }
     this.simulationAgeSeconds += deltaTime;
+
+    const primaryNozzleState = getFoundryNozzleCycleState(this.simulationAgeSeconds, 0);
+    const secondaryNozzleState = getFoundryNozzleCycleState(this.simulationAgeSeconds, 1);
+    this.emitNozzleParticles(device.commandEncoder, 0, primaryNozzleState);
+    this.emitNozzleParticles(device.commandEncoder, 1, secondaryNozzleState);
 
     const minimumInteractionEnergy = this.pointerActive ? 0.08 : 0;
     const interactionDecayPerSecond = this.pointerActive ? 0.18 : 0.4;
@@ -465,7 +597,8 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
         time: timeSeconds,
         aspect,
         densityScale: this.densityScale,
-        interaction: this.interactionEnergy
+        interaction: this.interactionEnergy,
+        nozzleActivity: [primaryNozzleState.activity, secondaryNozzleState.activity]
       }
     });
     this.compositeModel.predraw(device.commandEncoder);
@@ -505,12 +638,73 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
     this.postprocessingRenderer.destroy();
     this.compositeModel.destroy();
     this.densityModel.destroy();
+    this.nozzleEmitterComputation.destroy();
+    this.nozzleEmitterUniformBuffer.destroy();
     this.densitySampler.destroy();
     this.sceneTarget.framebuffer.destroy();
     this.sceneTarget.texture.destroy();
     this.densityTarget.framebuffer.destroy();
     this.densityTarget.texture.destroy();
     this.simulation.destroy();
+  }
+
+  private emitNozzleParticles(
+    commandEncoder: CommandEncoder,
+    nozzleIndex: 0 | 1,
+    state: FoundryNozzleCycleState
+  ): void {
+    const capacity = this.nozzleParticleCapacities[nozzleIndex];
+    if (capacity === 0 || state.cycleIndex < 0) {
+      return;
+    }
+    if (this.nozzleCycleIndices[nozzleIndex] !== state.cycleIndex) {
+      this.nozzleCycleIndices[nozzleIndex] = state.cycleIndex;
+      this.nozzleEmissionCursors[nozzleIndex] = 0;
+    }
+
+    const emissionCursor = this.nozzleEmissionCursors[nozzleIndex];
+    const targetEmissionCount = Math.min(capacity, Math.floor(capacity * state.emissionProgress));
+    const emitCount = targetEmissionCount - emissionCursor;
+    if (emitCount <= 0) {
+      return;
+    }
+
+    const startIndex = this.nozzleParticleStartIndices[nozzleIndex] + emissionCursor;
+    const sequenceIndex = state.cycleIndex * capacity + emissionCursor;
+    const nozzle =
+      nozzleIndex === 0
+        ? ([0.35, 0.017, 1.2, -0.1] as const)
+        : ([0.7, 0.0125, 1.05, 0.08] as const);
+    const uniformData = new Float32Array([
+      startIndex,
+      emitCount,
+      sequenceIndex,
+      nozzleIndex,
+      nozzle[0],
+      nozzle[1],
+      nozzle[2],
+      nozzle[3]
+    ]);
+    this.device.writeBufferViaCommandEncoder(
+      commandEncoder,
+      this.nozzleEmitterUniformBuffer,
+      uniformData
+    );
+    this.nozzleEmitterComputation.setBindings({
+      particles: this.simulation.particleBuffer,
+      uniforms: this.nozzleEmitterUniformBuffer
+    });
+    this.nozzleEmitterComputation.predraw(commandEncoder);
+    const computePass = commandEncoder.beginComputePass({
+      id: `fluid-foundry-nozzle-${nozzleIndex}-burst`
+    });
+    this.nozzleEmitterComputation.dispatch(
+      computePass,
+      Math.ceil(emitCount / NOZZLE_WORKGROUP_SIZE)
+    );
+    computePass.end();
+    this.nozzleEmissionCursors[nozzleIndex] = targetEmissionCount;
+    this.emittedNozzleParticleCount += emitCount;
   }
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
@@ -549,6 +743,49 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
       this.resetRequested = true;
     }
   };
+}
+
+/** Returns the deterministic charge, burst, and cooldown state for one foundry nozzle. */
+export function getFoundryNozzleCycleState(
+  simulationAgeSeconds: number,
+  nozzleIndex: 0 | 1
+): FoundryNozzleCycleState {
+  const elapsedSeconds = simulationAgeSeconds - NOZZLE_FIRST_CHARGE_SECONDS[nozzleIndex];
+  if (elapsedSeconds < 0) {
+    return {activity: 0, emissionProgress: 0, firing: false, cycleIndex: -1};
+  }
+
+  const cycleIndex = Math.floor(elapsedSeconds / NOZZLE_CYCLE_SECONDS);
+  const cycleSeconds = elapsedSeconds - cycleIndex * NOZZLE_CYCLE_SECONDS;
+  if (cycleSeconds < NOZZLE_CHARGE_SECONDS) {
+    const chargeProgress = smoothStep(cycleSeconds / NOZZLE_CHARGE_SECONDS);
+    return {activity: chargeProgress, emissionProgress: 0, firing: false, cycleIndex};
+  }
+
+  const burstSeconds = cycleSeconds - NOZZLE_CHARGE_SECONDS;
+  if (burstSeconds < NOZZLE_BURST_SECONDS) {
+    const emissionProgress = burstSeconds / NOZZLE_BURST_SECONDS;
+    return {
+      activity: 1 + Math.sin(emissionProgress * Math.PI) * 0.55,
+      emissionProgress,
+      firing: true,
+      cycleIndex
+    };
+  }
+
+  const cooldownSeconds = burstSeconds - NOZZLE_BURST_SECONDS;
+  const cooldownProgress = Math.min(cooldownSeconds / NOZZLE_COOLDOWN_SECONDS, 1);
+  return {
+    activity: (1 - smoothStep(cooldownProgress)) * 0.82,
+    emissionProgress: 1,
+    firing: false,
+    cycleIndex
+  };
+}
+
+function smoothStep(value: number): number {
+  const clampedValue = Math.min(Math.max(value, 0), 1);
+  return clampedValue * clampedValue * (3 - 2 * clampedValue);
 }
 
 function makeFoundryPourParticles(particleCount: number): MLSMPMParticle[] {
