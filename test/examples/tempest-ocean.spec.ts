@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, luma, type Texture} from '@luma.gl/core';
+import {Buffer, type Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {fromHalfFloat} from '@luma.gl/shadertools';
-import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import TempestOceanAnimationLoopTemplate from '../../examples/showcase/tempest-ocean/app';
 
 describe('Tempest Ocean: Spectral Stormfront', () => {
   test('encodes simulation before draw and renders finite HDR ocean radiance', async () => {
-    const device = await makeTempestOceanTestDevice();
+    const device = await getWebGPUTestDevice('core');
     if (!device) {
       return;
     }
@@ -62,10 +62,21 @@ describe('Tempest Ocean: Spectral Stormfront', () => {
         frameStages.push('ocean-draw');
         return drawOcean(renderPass);
       });
+      // This test targets the simulation, offscreen ocean draw, and HDR readback. The shared test
+      // canvas can outlive Dawn's external presentation instance as the complete SwiftShader suite
+      // advances through independent files, so verify the presentation handoff without acquiring a
+      // swap-chain texture from that unrelated browser-owned instance.
+      const presentToScreen = vi
+        .spyOn(viewer.postprocessingRenderer, 'renderToScreen')
+        .mockImplementation(() => {});
 
       viewer.onRender(makeAnimationProps(device, width, height, 1000));
       device.submit();
       expect(frameStages).toEqual(['simulation', 'ocean-draw']);
+      expect(presentToScreen).toHaveBeenCalledTimes(1);
+      expect(presentToScreen).toHaveBeenLastCalledWith(
+        expect.objectContaining({sourceTexture: viewer.sceneColorTexture})
+      );
       expect(viewer.oceanTimeSeconds).toBe(0);
 
       const sceneColor = await readRgba16FloatTexture(viewer.sceneColorTexture, width, height);
@@ -88,27 +99,11 @@ describe('Tempest Ocean: Spectral Stormfront', () => {
       expect(viewer.oceanTimeSeconds).toBe(0);
     } finally {
       viewer?.onFinalize();
-      device.destroy();
       canvas.remove();
       vi.restoreAllMocks();
     }
   }, 30_000);
 });
-
-async function makeTempestOceanTestDevice(): Promise<WebGPUDevice | null> {
-  try {
-    return (await luma.createDevice({
-      id: 'tempest-ocean-test-device',
-      type: 'webgpu',
-      featureLevel: 'core',
-      adapters: [webgpuAdapter],
-      createCanvasContext: {width: 1, height: 1},
-      debug: true
-    })) as WebGPUDevice;
-  } catch {
-    return null;
-  }
-}
 
 function makeAnimationProps(
   device: AnimationProps['device'],
