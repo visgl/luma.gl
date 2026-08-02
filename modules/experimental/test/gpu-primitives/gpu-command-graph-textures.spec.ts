@@ -3,7 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Buffer, Texture, type Device} from '@luma.gl/core';
+import {
+  Buffer,
+  ExternalTexture,
+  Sampler,
+  Texture,
+  type Device,
+  type SamplerProps
+} from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
 import {
   decodeGPUIndexPickInfo,
@@ -14,6 +21,24 @@ import {
   INDEX_PICKING_READBACK_BYTE_LENGTH
 } from '@luma.gl/experimental';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+
+/** Metadata-only external texture used to test graph contracts without importing browser video. */
+class TestExternalTexture extends ExternalTexture {
+  readonly device: Device;
+  readonly handle = null;
+  sampler: Sampler;
+
+  constructor(device: Device, sampler: Sampler, id: string, width: number, height: number) {
+    super(device, {id, width, height});
+    this.device = device;
+    this.sampler = sampler;
+  }
+
+  setSampler(sampler: Sampler | SamplerProps): this {
+    this.sampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
+    return this;
+  }
+}
 
 test('GPUCommandGraph validates texture descriptors, views, and imports', async t => {
   const device = await getWebGPUTestDevice();
@@ -349,21 +374,13 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     t.end();
     return;
   }
-  const makeExternalTexture = (id: string) =>
-    device.createExternalTexture({
-      id,
-      handle: {} as GPUExternalTexture,
-      width: 4,
-      height: 4
-    });
+  const externalTextureSampler = device.createSampler({id: 'external-texture-test-sampler'});
+  const makeExternalTexture = (id: string, width = 4, height = 4) => {
+    return new TestExternalTexture(device, externalTextureSampler, id, width, height);
+  };
   const firstExternalTexture = makeExternalTexture('external-frame-0');
   const secondExternalTexture = makeExternalTexture('external-frame-1');
-  const wrongSizeExternalTexture = device.createExternalTexture({
-    id: 'external-wrong-size',
-    handle: {} as GPUExternalTexture,
-    width: 8,
-    height: 4
-  });
+  const wrongSizeExternalTexture = makeExternalTexture('external-wrong-size', 8, 4);
   const frameTexture = device.createTexture({
     id: 'external-frame-color',
     format: 'rgba8unorm',
@@ -378,13 +395,14 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     'external texture descriptors require positive fixed dimensions'
   );
   const externalTexture = graph.importExternalTexture({id: 'video', width: 4, height: 4});
-  graph.importFrameTexture({
+  const frameTextureHandle = graph.importFrameTexture({
     id: 'color',
     format: 'rgba8unorm',
     width: 4,
     height: 4,
     usage: Texture.RENDER
   });
+  const frameTextureView = graph.createTextureView(frameTextureHandle);
   const resolvedExternalTextures: unknown[] = [];
   t.throws(
     () =>
@@ -398,6 +416,7 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
   );
   graph.addRenderPass({
     id: 'sample-video',
+    attachments: {colorAttachments: [frameTextureView]},
     resources: [{externalTexture, usage: 'sampled'}],
     compile: () => ({
       encode: ({getExternalTexture}) =>
@@ -405,18 +424,21 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     })
   });
   const compiled = graph.compile();
+  const missingFrameEncoder = device.createCommandEncoder({id: 'missing-external-frame'});
   t.throws(
     () =>
-      compiled.encode(device.createCommandEncoder({id: 'missing-external-frame'}), {
+      compiled.encode(missingFrameEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 0}}
       }),
     /external texture "video" is required/,
     'external texture imports have no persistent default'
   );
+  missingFrameEncoder.destroy();
+  const wrongSizeEncoder = device.createCommandEncoder({id: 'wrong-size-external-frame'});
   t.throws(
     () =>
-      compiled.encode(device.createCommandEncoder({id: 'wrong-size-external-frame'}), {
+      compiled.encode(wrongSizeEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 0}},
         externalTextures: {video: {texture: wrongSizeExternalTexture, frameId: 0}}
@@ -424,15 +446,19 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     /incompatible dimensions/,
     'external frame dimensions must match the compiled contract'
   );
-  compiled.encode(device.createCommandEncoder({id: 'external-frame-0'}), {
+  wrongSizeEncoder.destroy();
+  const firstFrameEncoder = device.createCommandEncoder({id: 'external-frame-0'});
+  compiled.encode(firstFrameEncoder, {
     parameters: undefined,
     frameTextures: {color: {texture: frameTexture, frameId: 0}},
     externalTextures: {video: {texture: firstExternalTexture, frameId: 0}}
   });
+  firstFrameEncoder.destroy();
   t.equal(resolvedExternalTextures[0], firstExternalTexture, 'first frame resolves its snapshot');
+  const reusedFrameEncoder = device.createCommandEncoder({id: 'reused-external-frame'});
   t.throws(
     () =>
-      compiled.encode(device.createCommandEncoder({id: 'reused-external-frame'}), {
+      compiled.encode(reusedFrameEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 1}},
         externalTextures: {video: {texture: firstExternalTexture, frameId: 1}}
@@ -440,9 +466,11 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     /requires a fresh binding/,
     'the same opaque external binding cannot cross frame boundaries'
   );
+  reusedFrameEncoder.destroy();
+  const mixedFrameEncoder = device.createCommandEncoder({id: 'mixed-external-frame'});
   t.throws(
     () =>
-      compiled.encode(device.createCommandEncoder({id: 'mixed-external-frame'}), {
+      compiled.encode(mixedFrameEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 1}},
         externalTextures: {video: {texture: secondExternalTexture, frameId: 2}}
@@ -450,11 +478,14 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     /must share one frameId/,
     'ordinary and external frame imports share one coherent frame ID'
   );
-  compiled.encode(device.createCommandEncoder({id: 'external-frame-1'}), {
+  mixedFrameEncoder.destroy();
+  const secondFrameEncoder = device.createCommandEncoder({id: 'external-frame-1'});
+  compiled.encode(secondFrameEncoder, {
     parameters: undefined,
     frameTextures: {color: {texture: frameTexture, frameId: 1}},
     externalTextures: {video: {texture: secondExternalTexture, frameId: 1}}
   });
+  secondFrameEncoder.destroy();
   t.equal(
     resolvedExternalTextures[1],
     secondExternalTexture,
@@ -467,6 +498,7 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
   secondExternalTexture.destroy();
   wrongSizeExternalTexture.destroy();
   frameTexture.destroy();
+  externalTextureSampler.destroy();
   t.end();
 });
 
