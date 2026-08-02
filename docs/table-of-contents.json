@@ -199,6 +199,7 @@
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          "api-reference/experimental/geospatial",
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
@@ -299,6 +300,7 @@
         "label": "@luma.gl/experimental",
         "items": [
           "api-reference/experimental/README",
+          "api-reference/experimental/geospatial",
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",

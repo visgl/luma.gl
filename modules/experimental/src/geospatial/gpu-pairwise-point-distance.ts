@@ -1,0 +1,122 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {
+  type GPUCommandGraph,
+  type GPUCommandGraphContributor
+} from '../gpu-primitives/gpu-command-graph';
+import type {
+  GPUFloat32Positions,
+  GPUFloat64Positions,
+  GPUPreciseScalarRows,
+  GPUScalarRows
+} from './types';
+import {
+  GEOSPATIAL_WORKGROUP_SIZE,
+  POSITION_FORMATS,
+  RAW_POINT_WGSL,
+  addGeospatialPass,
+  assertGraphOwnership,
+  getGeospatialDispatchLayout,
+  getGeospatialInvocationIndexSource,
+  getPositionReadSource,
+  getRowChunks,
+  isGraphVectorView,
+  validateMatchingRows,
+  validateRowView,
+  validateSeparateBuffers
+} from './geospatial-utils';
+
+type GPUPairwisePointDistanceBaseProps = {id?: string};
+
+export type GPUPairwisePointDistanceProps = GPUPairwisePointDistanceBaseProps &
+  (
+    | {left: GPUFloat32Positions; right: GPUFloat32Positions; output: GPUScalarRows}
+    | {left: GPUFloat64Positions; right: GPUFloat64Positions; output: GPUPreciseScalarRows}
+  );
+
+/** Computes pairwise Euclidean point distance without first subtracting on the CPU. */
+export class GPUPairwisePointDistance implements GPUCommandGraphContributor {
+  readonly id: string;
+  readonly left: GPUFloat32Positions | GPUFloat64Positions;
+  readonly right: GPUFloat32Positions | GPUFloat64Positions;
+  readonly output: GPUScalarRows | GPUPreciseScalarRows;
+
+  constructor(props: GPUPairwisePointDistanceProps) {
+    this.id = props.id ?? 'gpu-pairwise-point-distance';
+    this.left = props.left;
+    this.right = props.right;
+    this.output = props.output;
+    validateRowView(this.left, POSITION_FORMATS, `${this.id} left`);
+    validateRowView(this.right, POSITION_FORMATS, `${this.id} right`);
+    const outputFormat = this.left.format === 'uint32x4' ? 'float32x2' : 'float32';
+    validateRowView(this.output, [outputFormat], `${this.id} output`);
+    if (this.left.format !== this.right.format) {
+      throw new Error(`${this.id} position formats must match`);
+    }
+    validateMatchingRows(this.left, this.right, `${this.id} position inputs`);
+    validateMatchingRows(this.left, this.output, `${this.id} input and output`);
+    validateSeparateBuffers(this.output, [this.left, this.right], this.id);
+  }
+
+  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+    assertGraphOwnership(graph, [this.left, this.right, this.output], this.id);
+    const leftChunks = getRowChunks(this.left);
+    const rightChunks = getRowChunks(this.right);
+    const outputChunks = getRowChunks(this.output);
+    for (let chunkIndex = 0; chunkIndex < leftChunks.length; chunkIndex++) {
+      const left = leftChunks[chunkIndex];
+      const right = rightChunks[chunkIndex];
+      const output = outputChunks[chunkIndex];
+      if (left.length === 0) continue;
+      const leftSource = getPositionReadSource('leftPositions', left);
+      const rightSource = getPositionReadSource('rightPositions', right);
+      const precise = leftSource.precise;
+      const dispatchLayout = getGeospatialDispatchLayout(
+        left.length,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      );
+      const outputOffset = (output.byteOffset % 256) / 4 / (precise ? 2 : 1);
+      const distanceExpression = precise
+        ? `let leftPoint = ${leftSource.read('index')};
+  let rightPoint = ${rightSource.read('index')};
+  let deltaX = sub_fp64u32_to_fp64(leftPoint.x, rightPoint.x);
+  let deltaY = sub_fp64u32_to_fp64(leftPoint.y, rightPoint.y);
+  outputDistances[OUTPUT_OFFSET + index] = sqrt_fp64(
+    sum_fp64(mul_fp64(deltaX, deltaX), mul_fp64(deltaY, deltaY))
+  );`
+        : `let delta = ${leftSource.read('index')} - ${rightSource.read('index')};
+  outputDistances[OUTPUT_OFFSET + index] = length(delta);`;
+      const source = /* wgsl */ `
+${precise ? RAW_POINT_WGSL : ''}
+const ELEMENT_COUNT: u32 = ${left.length}u;
+const OUTPUT_OFFSET: u32 = ${outputOffset}u;
+${leftSource.declaration}
+${rightSource.declaration}
+@group(0) @binding(auto) var<storage, read_write> outputDistances: array<${precise ? 'vec2f' : 'f32'}>;
+
+@compute @workgroup_size(${GEOSPATIAL_WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_id) localId: vec3<u32>
+) {
+  ${getGeospatialInvocationIndexSource(dispatchLayout)}
+  if (index >= ELEMENT_COUNT) { return; }
+  ${distanceExpression}
+}`;
+      addGeospatialPass(graph, {
+        id: isGraphVectorView(this.left) ? `${this.id}-chunk-${chunkIndex}` : this.id,
+        source,
+        resources: [
+          {buffer: left, usage: 'storage-read'},
+          {buffer: right, usage: 'storage-read'},
+          {buffer: output, usage: 'storage-write'}
+        ],
+        bindings: {leftPositions: left, rightPositions: right, outputDistances: output},
+        dispatchLayout,
+        precise
+      });
+    }
+  }
+}
