@@ -4,7 +4,7 @@
 
 import type {AnimationProps} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import VirtualGeometryCanyonAnimationLoopTemplate, {
   type VirtualGeometryCanyonExampleProps
 } from '../../examples/experimental/virtual-geometry-canyon/app';
@@ -22,6 +22,23 @@ describe('Virtual Geometry Canyon', () => {
     host.id = 'example-panel-host';
     const canvas = document.createElement('canvas');
     document.body.append(host, canvas);
+    const framebuffer = device.createFramebuffer({
+      id: 'virtual-geometry-canyon-test-framebuffer',
+      width,
+      height,
+      colorAttachments: [device.preferredColorFormat],
+      depthStencilAttachment: 'depth24plus'
+    });
+    const canvasContext = device.getDefaultCanvasContext();
+    const devicePixelSize = vi
+      .spyOn(canvasContext, 'getDevicePixelSize')
+      .mockReturnValue([width, height]);
+    // The complete SwiftShader suite can outlive Dawn's external presentation instance. Keep the
+    // real graph, selection, render bundle, indexed indirect draw, submit, and GPU readback while
+    // routing this focused test through a test-owned offscreen framebuffer.
+    const currentFramebuffer = vi
+      .spyOn(canvasContext, 'getCurrentFramebuffer')
+      .mockReturnValue(framebuffer);
     let viewer: VirtualGeometryCanyonAnimationLoopTemplate | null = null;
     try {
       viewer = new VirtualGeometryCanyonAnimationLoopTemplate({
@@ -49,6 +66,9 @@ describe('Virtual Geometry Canyon', () => {
       expect(command[1]).toBeLessThanOrEqual(16);
     } finally {
       viewer?.onFinalize();
+      currentFramebuffer.mockRestore();
+      devicePixelSize.mockRestore();
+      framebuffer.destroy();
       canvas.remove();
       host.remove();
     }
