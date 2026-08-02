@@ -117,6 +117,13 @@ export type {
   GPUGridIndexView
 } from './gpu-grid-index-query';
 
+export {GPUPointSpatialFilter} from './gpu-point-spatial-filter';
+export type {
+  GPUPointSpatialFilterCandidates,
+  GPUPointSpatialFilterKind,
+  GPUPointSpatialFilterProps
+} from './gpu-point-spatial-filter';
+
 export {GPUGridAggregation} from './gpu-grid-aggregation';
 export type {
   GPUGridAggregationOperation,
