@@ -32,6 +32,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/antialiasing',
   'showcase/dof',
   'showcase/lightstorm-megacity',
+  'showcase/tempest-ocean',
   'showcase/packet-spraying',
   'showcase/persistence',
   'tutorials/hello-instanced-cubes',
