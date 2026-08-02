@@ -88,7 +88,7 @@ type TraceGroupResources = {
 type PickPosition = {
   time: number;
   lane: number;
-  requestId: number;
+  requestIdentifier: number;
 };
 
 type TraceGraphResources = {
@@ -160,7 +160,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private pointerMoved = false;
   private lastPointer: [number, number] = [0, 0];
   private pendingPick: PickPosition | null = null;
-  private latestPickRequestId = 0;
+  private latestPickRequestIdentifier = 0;
   private encodeTimeMilliseconds = 0;
   private compileCount = 0;
   private compileTimeMilliseconds = 0;
@@ -232,7 +232,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           byteLength: UINT32_BYTE_LENGTH
         });
         queueMicrotask(() => {
-          void this.samplePickedSpan(resources, readbackTicket, pick.requestId);
+          void this.samplePickedSpan(resources, readbackTicket, pick.requestIdentifier);
         });
       } else {
         this.deferredPickFrameCount++;
@@ -876,11 +876,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private async samplePickedSpan(
     resources: TraceGraphResources,
     readbackTicket: GPUReadbackTicket,
-    requestId: number
+    requestIdentifier: number
   ): Promise<void> {
     try {
       const bytes = await readbackTicket.read();
-      if (resources !== this.resources || requestId !== this.latestPickRequestId) {
+      if (resources !== this.resources || requestIdentifier !== this.latestPickRequestIdentifier) {
         return;
       }
       const pickedSpanIndex = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
@@ -1304,11 +1304,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       const rectangle = this.canvas.getBoundingClientRect();
       const horizontalFraction = clamp((event.clientX - rectangle.left) / rectangle.width, 0, 1);
       const verticalFraction = clamp((event.clientY - rectangle.top) / rectangle.height, 0, 1);
-      this.latestPickRequestId++;
+      this.latestPickRequestIdentifier++;
       this.pendingPick = {
         time: this.view.timeMin + horizontalFraction * (this.view.timeMax - this.view.timeMin),
         lane: this.view.laneMin + verticalFraction * (this.view.laneMax - this.view.laneMin),
-        requestId: this.latestPickRequestId
+        requestIdentifier: this.latestPickRequestIdentifier
       };
     }
     this.finishPointerInteraction(event);
