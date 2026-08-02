@@ -11,10 +11,12 @@ import {
   GPUCommandGraph,
   GPUGraphTraversal,
   GPUHierarchyLayout,
+  GPUReadbackRing,
   GPUVisibilityWorkflow,
   type CompiledGPUCommandGraph,
   type GraphBufferHandle,
-  type GraphBufferUse
+  type GraphBufferUse,
+  type GPUReadbackTicket
 } from '@luma.gl/experimental';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
@@ -86,11 +88,13 @@ type TraceGroupResources = {
 type PickPosition = {
   time: number;
   lane: number;
+  requestId: number;
 };
 
 type TraceGraphResources = {
   compiled: CompiledGPUCommandGraph<TraceViewParameters>;
   drawCommands: DrawCommandBuffer;
+  readbackRing: GPUReadbackRing;
   renderBundle: RenderBundle;
   groups: TraceGroupResources[];
   spans: Buffer;
@@ -156,13 +160,14 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private pointerMoved = false;
   private lastPointer: [number, number] = [0, 0];
   private pendingPick: PickPosition | null = null;
-  private pickReadPending = false;
+  private latestPickRequestId = 0;
   private encodeTimeMilliseconds = 0;
   private compileCount = 0;
   private compileTimeMilliseconds = 0;
   private sampledVisibleCounts = [0, 0, 0];
   private sampledDependencyCount = 0;
-  private countReadPending = false;
+  private droppedTelemetrySampleCount = 0;
+  private deferredPickFrameCount = 0;
   private frameIndex = 0;
   private canvas: HTMLCanvasElement | null = null;
   private statsElement: HTMLElement | null = null;
@@ -219,15 +224,30 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const encoding = resources.compiled.encode(device.commandEncoder, {parameters: this.view});
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
-    if (pick && !this.pickReadPending) {
-      this.pendingPick = null;
-      this.pickReadPending = true;
-      queueMicrotask(() => {
-        void this.samplePickedSpan(resources);
-      });
+    if (pick) {
+      const readbackTicket = resources.readbackRing.tryAcquire();
+      if (readbackTicket) {
+        this.pendingPick = null;
+        readbackTicket.copyFrom(device.commandEncoder, resources.pickResult, {
+          byteLength: UINT32_BYTE_LENGTH
+        });
+        queueMicrotask(() => {
+          void this.samplePickedSpan(resources, readbackTicket, pick.requestId);
+        });
+      } else {
+        this.deferredPickFrameCount++;
+      }
     }
     if (this.frameIndex % 60 === 0) {
-      void this.sampleVisibleCounts();
+      const readbackTicket = resources.readbackRing.tryAcquire();
+      if (readbackTicket) {
+        readbackTicket.copyFrom(device.commandEncoder, resources.drawCommands.buffer);
+        queueMicrotask(() => {
+          void this.sampleVisibleCounts(resources, readbackTicket);
+        });
+      } else {
+        this.droppedTelemetrySampleCount++;
+      }
     }
     if (this.frameIndex % 10 === 0) {
       this.updateInspector();
@@ -363,10 +383,16 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         {vertexCount: 6, instanceCount: activityBinCount}
       ]
     });
+    const readbackRing = new GPUReadbackRing(this.device, {
+      id: 'gpu-trace-readback',
+      byteLength: drawCommands.buffer.byteLength,
+      slotCount: 3
+    });
     return {
       compiled: undefined!,
       renderBundle: undefined!,
       drawCommands,
+      readbackRing,
       groups,
       spans: this.createDataBuffer('gpu-trace-spans', dataset.spans),
       dependencies: this.createDataBuffer('gpu-trace-dependencies', dataset.dependencies),
@@ -826,14 +852,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.viewUniformBuffer.write(data);
   }
 
-  private async sampleVisibleCounts(): Promise<void> {
-    const resources = this.resources;
-    if (!resources || this.countReadPending) {
-      return;
-    }
-    this.countReadPending = true;
+  private async sampleVisibleCounts(
+    resources: TraceGraphResources,
+    readbackTicket: GPUReadbackTicket
+  ): Promise<void> {
     try {
-      const bytes = await resources.drawCommands.buffer.readAsync();
+      const bytes = await readbackTicket.read();
       if (resources !== this.resources) {
         return;
       }
@@ -843,24 +867,28 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       );
       this.sampledDependencyCount = values[resources.groups.length * 4 + 1] ?? 0;
       this.updateInspector();
-    } finally {
-      this.countReadPending = false;
+    } catch {
+      // Device loss and cancellation release the ring slot without affecting rendering.
     }
   }
 
   /** Reads a single explicitly requested GPU-picked source row after the frame is submitted. */
-  private async samplePickedSpan(resources: TraceGraphResources): Promise<void> {
+  private async samplePickedSpan(
+    resources: TraceGraphResources,
+    readbackTicket: GPUReadbackTicket,
+    requestId: number
+  ): Promise<void> {
     try {
-      const bytes = await resources.pickResult.readAsync();
-      if (resources !== this.resources) {
+      const bytes = await readbackTicket.read();
+      if (resources !== this.resources || requestId !== this.latestPickRequestId) {
         return;
       }
       const pickedSpanIndex = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
       if (pickedSpanIndex !== INVALID_SPAN_INDEX) {
         this.setSelectedSpan(pickedSpanIndex);
       }
-    } finally {
-      this.pickReadPending = false;
+    } catch {
+      // Device loss and cancellation release the ring slot without changing the selection.
     }
   }
 
@@ -889,6 +917,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     resources.compiled.destroy();
     resources.renderBundle.destroy();
     resources.drawCommands.destroy();
+    resources.readbackRing.destroy();
     for (const group of resources.groups) {
       group.visibleIds.destroy();
     }
@@ -1191,6 +1220,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         <span>Visible layout lanes</span><strong>${formatCount(this.getVisibleLaneCount())}</strong>
         <span>Collapsed processes</span><strong>${formatCount(this.processStates.filter(state => state === TRACE_COLLAPSED_STATE).length)}</strong>
         <span>CPU graph encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>
+        <span>Readback slots</span><strong>${resources.readbackRing.availableSlotCount}/${resources.readbackRing.slotCount}</strong>
+        <span>Dropped telemetry samples</span><strong>${formatCount(this.droppedTelemetrySampleCount)}</strong>
+        <span>Deferred pick frames</span><strong>${formatCount(this.deferredPickFrameCount)}</strong>
         <span>Adapter</span><strong>${resources.compiled.capabilities.softwareAdapter ? 'software' : 'hardware'}</strong>
         <span>Timestamp queries</span><strong>${resources.compiled.capabilities.timestampQueries ? 'available' : 'unavailable'}</strong>
         <span>Logical resources</span><strong>${formatBytes(stats.logicalResourceBytes)}</strong>
@@ -1272,9 +1304,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       const rectangle = this.canvas.getBoundingClientRect();
       const horizontalFraction = clamp((event.clientX - rectangle.left) / rectangle.width, 0, 1);
       const verticalFraction = clamp((event.clientY - rectangle.top) / rectangle.height, 0, 1);
+      this.latestPickRequestId++;
       this.pendingPick = {
         time: this.view.timeMin + horizontalFraction * (this.view.timeMax - this.view.timeMin),
-        lane: this.view.laneMin + verticalFraction * (this.view.laneMax - this.view.laneMin)
+        lane: this.view.laneMin + verticalFraction * (this.view.laneMax - this.view.laneMin),
+        requestId: this.latestPickRequestId
       };
     }
     this.finishPointerInteraction(event);
