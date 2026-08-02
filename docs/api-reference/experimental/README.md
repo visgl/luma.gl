@@ -60,6 +60,18 @@ introduces explicit command scheduling, typed table-backed graph views, hierarch
 compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written
 indirect draw commands.
 
+## WebGPU Geospatial Kernels
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+The [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial) entry point contributes
+chunk-preserving sinusoidal projection, haversine distance, Euclidean point distance, and
+point-to-segment distance nodes to a `GPUCommandGraph`. It accepts either local f32 coordinates or
+raw binary64 coordinate words and makes the f32-transcendental versus precise planar arithmetic
+boundary explicit.
+
 ## GPU Simulations
 
 <p class="badges">

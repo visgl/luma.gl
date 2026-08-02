@@ -23,3 +23,4 @@ import './gpu-primitives/gpu-sort.spec';
 import './gpu-primitives/gpu-data-analysis.spec';
 import './gpu-primitives/gpu-fft2d.spec';
 import './simulation/spectral-ocean-simulation.spec';
+import './geospatial/geospatial-projection-distance.spec';

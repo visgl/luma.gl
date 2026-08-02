@@ -26,6 +26,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./geospatial": {
+      "import": "./dist/geospatial/index.js",
+      "require": "./dist/geospatial/index.cjs",
+      "types": "./dist/geospatial/index.d.ts"
     }
   },
   "files": [
