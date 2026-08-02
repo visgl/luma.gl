@@ -144,6 +144,19 @@ export {
   DEFAULT_MAX_LIGHTS_PER_CLUSTER,
   MAX_CLUSTERED_POINT_LIGHTS
 } from './rendering/clustered-lighting';
+export type {
+  VolumetricFireEmitter,
+  VolumetricFireSimulationBindings,
+  VolumetricFireSimulationProps,
+  VolumetricFireSimulationStepOptions
+} from './rendering/volumetric-fire-simulation';
+export {
+  DEFAULT_VOLUMETRIC_FIRE_DIMENSIONS,
+  DEFAULT_VOLUMETRIC_FIRE_PRESSURE_ITERATIONS,
+  makeVolumetricFireSimulationUniformData,
+  MAX_VOLUMETRIC_FIRE_EMITTERS,
+  VolumetricFireSimulation
+} from './rendering/volumetric-fire-simulation';
 
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';

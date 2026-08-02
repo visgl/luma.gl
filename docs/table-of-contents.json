@@ -202,6 +202,7 @@
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
+          "api-reference/experimental/volumetric-fire-simulation",
           "api-reference/experimental/shadow-map-renderer",
           "api-reference/experimental/glass-material",
           "api-reference/experimental/reflective-material",
@@ -292,6 +293,7 @@
           "api-reference/experimental/g-buffer",
           "api-reference/experimental/deferred-lighting",
           "api-reference/experimental/clustered-lighting",
+          "api-reference/experimental/volumetric-fire-simulation",
           "api-reference/experimental/shadow-map-renderer",
           {
             "type": "category",
