@@ -17,6 +17,7 @@ export type GPUPrimitivesDocsTabId =
   | 'grid-binning'
   | 'grid-aggregation'
   | 'grid-index'
+  | 'grid-index-query'
   | 'group-aggregation'
   | 'index-picking'
   | 'readback-ring'
@@ -97,6 +98,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'grid-index',
     label: 'Grid Index',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-grid-index'
+  },
+  {
+    id: 'grid-index-query',
+    label: 'Grid Query',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query'
   },
   {
     id: 'group-aggregation',
