@@ -30,14 +30,17 @@ type SSRTemporalUniforms = {
 };
 
 type SSRSpatialUniforms = {
+  inverseProjectionMatrix: Readonly<NumberArray16>;
   direction: [number, number];
   maxRadius: number;
   depthSigma: number;
 };
 
 type SSRCompositeUniforms = {
+  inverseProjectionMatrix: Readonly<NumberArray16>;
   strength: number;
   debugMode: number;
+  depthSigma: number;
 };
 
 type SSRTraceBindings = {
@@ -103,8 +106,9 @@ fn ssrTrace_projectViewPosition(position: vec3f) -> vec2f {
   );
 }
 
-fn ssrTrace_hash(value: vec2f) -> f32 {
-  return fract(sin(dot(value, vec2f(12.9898, 78.233))) * 43758.5453);
+fn ssrTrace_hash(value: vec2f, frameIndex: f32) -> f32 {
+  let temporalPhase = fract(frameIndex * 0.61803398875) * SSR_TWO_PI;
+  return fract(sin(dot(value, vec2f(12.9898, 78.233)) + temporalPhase) * 43758.5453);
 }
 
 fn ssrTrace_sampleColor(
@@ -127,7 +131,7 @@ fn ssrTrace_sampleColor(
   let incidentDirection = normalize(viewPosition);
   let mirrorDirection = normalize(reflect(incidentDirection, normal));
   let pixelCoordinate = floor(sceneCoord * vec2f(textureDimensions(depthTexture)));
-  let noise = ssrTrace_hash(pixelCoordinate);
+  let noise = ssrTrace_hash(pixelCoordinate, ssrTrace.frameIndex);
   let noiseAngle = noise * SSR_TWO_PI;
   let referenceAxis = select(
     vec3f(0.0, 1.0, 0.0),
@@ -332,15 +336,27 @@ fn ssrTemporal_sampleColor(
     }
   }
 
-  let historyReflection = clamp(
-    textureSampleLevel(historyTexture, historyTextureSampler, clampedPreviousCoord, 0),
-    minimumReflection,
-    maximumReflection
+  let historyReflection = textureSampleLevel(
+    historyTexture,
+    historyTextureSampler,
+    clampedPreviousCoord,
+    0
   );
-  let validHistory = validCoordinate && validDepth && current.a > 0.001 &&
-    historyReflection.a > 0.001;
-  let historyWeight = select(0.0, ssrTemporal.historyWeight, validHistory);
-  return mix(current, historyReflection, historyWeight);
+  let validHistory = validCoordinate && validDepth && historyReflection.a > 0.001;
+  if (!validHistory) {
+    return current;
+  }
+
+  let hasCurrentSupport = maximumReflection.a > 0.001;
+  if (!hasCurrentSupport) {
+    return vec4f(
+      historyReflection.rgb,
+      historyReflection.a * ssrTemporal.historyWeight
+    );
+  }
+
+  let clampedHistory = clamp(historyReflection, minimumReflection, maximumReflection);
+  return mix(current, clampedHistory, ssrTemporal.historyWeight);
 }`,
   bindingLayout: [
     {name: 'historyTexture', group: 0},
@@ -393,6 +409,7 @@ export const ssrSpatial = {
   name: 'ssrSpatial',
   source: /* wgsl */ `\
 struct SSRSpatialUniforms {
+  inverseProjectionMatrix: mat4x4f,
   direction: vec2f,
   maxRadius: f32,
   depthSigma: f32,
@@ -403,6 +420,12 @@ struct SSRSpatialUniforms {
 @group(0) @binding(auto) var depthTextureSampler: sampler;
 @group(0) @binding(auto) var normalTexture: texture_2d<f32>;
 @group(0) @binding(auto) var normalTextureSampler: sampler;
+
+fn ssrSpatial_reconstructViewDepth(texCoord: vec2f, depth: f32) -> f32 {
+  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
+  let viewPosition = ssrSpatial.inverseProjectionMatrix * clip;
+  return abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
+}
 
 fn ssrSpatial_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -417,6 +440,7 @@ fn ssrSpatial_sampleColor(
   if (centerDepth >= 0.99999) {
     return vec4f(0.0);
   }
+  let centerViewDepth = ssrSpatial_reconstructViewDepth(texCoord, centerDepth);
   let hasCenterReflection = centerReflection.a > 0.001;
   if (!hasCenterReflection && roughness >= 0.28) {
     return centerReflection;
@@ -448,9 +472,11 @@ fn ssrSpatial_sampleColor(
       let sampleNormal = normalize(
         textureSampleLevel(normalTexture, normalTextureSampler, sampleCoord, 0).rgb * 2.0 - 1.0
       );
-      let depthDelta = abs(sampleDepth - centerDepth);
+      let sampleViewDepth = ssrSpatial_reconstructViewDepth(sampleCoord, sampleDepth);
+      let relativeDepthDelta = abs(sampleViewDepth - centerViewDepth) /
+        max(centerViewDepth, 0.0001);
       let depthWeight = exp(
-        -(depthDelta * depthDelta) /
+        -(relativeDepthDelta * relativeDepthDelta) /
           max(2.0 * ssrSpatial.depthSigma * ssrSpatial.depthSigma, 0.000001)
       );
       let normalWeight = pow(max(dot(centerNormal, sampleNormal), 0.0), 16.0);
@@ -483,14 +509,16 @@ fn ssrSpatial_sampleColor(
   uniforms: {} as SSRSpatialUniforms,
   bindings: {} as SSRSpatialBindings,
   uniformTypes: {
+    inverseProjectionMatrix: 'mat4x4<f32>',
     direction: 'vec2<f32>',
     maxRadius: 'f32',
     depthSigma: 'f32'
   },
   propTypes: {
+    inverseProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
     direction: {value: [1, 0]},
     maxRadius: {value: 5, min: 0, max: 8},
-    depthSigma: {value: 0.012, min: 0.0001, softMax: 0.1}
+    depthSigma: {value: 0.035, min: 0.0001, softMax: 0.2}
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
@@ -504,8 +532,10 @@ export const ssrComposite = {
   name: 'ssrComposite',
   source: /* wgsl */ `\
 struct SSRCompositeUniforms {
+  inverseProjectionMatrix: mat4x4f,
   strength: f32,
   debugMode: f32,
+  depthSigma: f32,
 };
 
 @group(0) @binding(auto) var<uniform> ssrComposite: SSRCompositeUniforms;
@@ -516,6 +546,12 @@ struct SSRCompositeUniforms {
 @group(0) @binding(auto) var normalTexture: texture_2d<f32>;
 @group(0) @binding(auto) var normalTextureSampler: sampler;
 
+fn ssrComposite_reconstructViewDepth(texCoord: vec2f, depth: f32) -> f32 {
+  let clip = vec4f(texCoord.x * 2.0 - 1.0, 1.0 - texCoord.y * 2.0, depth, 1.0);
+  let viewPosition = ssrComposite.inverseProjectionMatrix * clip;
+  return abs(viewPosition.z / max(abs(viewPosition.w), 0.00001));
+}
+
 fn ssrComposite_upsampleReflection(texCoord: vec2f) -> vec4f {
   let reflectionSize = vec2f(textureDimensions(reflectionTexture));
   let reflectionPosition = texCoord * reflectionSize - vec2f(0.5);
@@ -525,6 +561,7 @@ fn ssrComposite_upsampleReflection(texCoord: vec2f) -> vec4f {
   if (centerDepth >= 0.99999) {
     return textureSampleLevel(reflectionTexture, reflectionTextureSampler, texCoord, 0);
   }
+  let centerViewDepth = ssrComposite_reconstructViewDepth(texCoord, centerDepth);
   let centerNormal = normalize(
     textureSampleLevel(normalTexture, normalTextureSampler, texCoord, 0).rgb * 2.0 - 1.0
   );
@@ -553,7 +590,13 @@ fn ssrComposite_upsampleReflection(texCoord: vec2f) -> vec4f {
         reflectionFraction.y,
         sampleY == 1
       );
-      let depthWeight = exp(-abs(sampleDepth - centerDepth) * 140.0);
+      let sampleViewDepth = ssrComposite_reconstructViewDepth(sampleCoord, sampleDepth);
+      let relativeDepthDelta = abs(sampleViewDepth - centerViewDepth) /
+        max(centerViewDepth, 0.0001);
+      let depthWeight = exp(
+        -(relativeDepthDelta * relativeDepthDelta) /
+          max(2.0 * ssrComposite.depthSigma * ssrComposite.depthSigma, 0.000001)
+      );
       let normalWeight = pow(max(dot(centerNormal, sampleNormal), 0.0), 12.0);
       let weight = horizontalWeight * verticalWeight * depthWeight * normalWeight;
       reflection += textureLoad(reflectionTexture, reflectionPixel, 0) * weight;
@@ -591,10 +634,17 @@ fn ssrComposite_sampleColor(
   props: {} as Partial<SSRCompositeUniforms> & SSRCompositeBindings,
   uniforms: {} as SSRCompositeUniforms,
   bindings: {} as SSRCompositeBindings,
-  uniformTypes: {strength: 'f32', debugMode: 'f32'},
+  uniformTypes: {
+    inverseProjectionMatrix: 'mat4x4<f32>',
+    strength: 'f32',
+    debugMode: 'f32',
+    depthSigma: 'f32'
+  },
   propTypes: {
+    inverseProjectionMatrix: {value: IDENTITY_MATRIX, private: true},
     strength: {value: 1, min: 0, softMax: 2},
-    debugMode: {value: 0, min: 0, max: 2, private: true}
+    debugMode: {value: 0, min: 0, max: 2, private: true},
+    depthSigma: {value: 0.04, min: 0.0001, softMax: 0.2}
   },
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<

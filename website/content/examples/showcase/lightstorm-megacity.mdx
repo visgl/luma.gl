@@ -1,8 +1,8 @@
 ---
 title: Lightstorm Megacity
-description: Filter, cull, compact, pick, and indirectly render up to one million city records on WebGPU.
+description: Cluster, light, cull, compact, pick, and indirectly render up to one million city records on WebGPU.
 sidebar_custom_props:
-  description: Filter, cull, compact, pick, and indirectly render up to one million city records on WebGPU.
+  description: Cluster, light, cull, compact, pick, and indirectly render up to one million city records on WebGPU.
   backends: [webgpu]
   difficulty: advanced
   maturity: experimental
@@ -17,14 +17,20 @@ Lightstorm Megacity combines a cinematic procedural city with an observable GPU-
 pipeline. Choose 50K, 250K, or one million deterministic source records. Every record stays in GPU
 storage while a command graph filters the selected data layer, tests conservative tower bounds
 against the perspective camera, stably compacts the surviving source IDs, writes the result count
-into an indexed indirect command, and replays a fixed render bundle into a graph-declared HDR
-scene target.
+into an indexed indirect command, and replays a fixed render bundle into a graph-declared,
+five-color G-buffer plus depth.
 
-The default guided tour is presentation mode. Disable it or drag to enter free exploration, then
-move the pointer over a tower or transit tile to pick its original source record. The optional
-**Tactical visibility proof** replays the same compacted perspective-visible subset from overhead;
-it does not perform a second visibility pass. Switch to **Transit energy grid** to see data-layer
-filtering feed the same compaction and indirect-rendering path.
+The default guided tour is presentation mode. Its 29-second, capacity-aware route follows connected
+avenue centerlines from a 16-meter eye height, turns through their intersections, and then rises
+beside a deterministically selected skyscraper before clearing the roof. Explicit eye and target
+interpolation keeps the avenue shots in the road corridor instead of bowing through a city block.
+Disable the tour or drag to enter free exploration, then move the pointer over a tower or transit
+tile to pick its original source record.
+The optional **Tactical visibility proof** replays the same compacted perspective-visible subset
+from overhead; it does not perform a second visibility pass. Tactical mode intentionally presents
+the shader's forward color instead of applying perspective-only depth reconstruction across the
+orthographic view. Switch to **Transit energy grid** to see data-layer filtering feed the same
+compaction and indirect-rendering path.
 
 The live inspector separates source, visible, rejected, nominal, and submitted work. The million
 record setting therefore means one million candidate records, not one million objects rendered in
@@ -32,14 +38,49 @@ every frame. It also reports CPU command-encoding time, total frame timing, tran
 and the command graph's node order. Picking is issued only after pointer movement in exploration
 mode so it does not silently tax the cinematic benchmark.
 
-The city renderer synthesizes facade windows, roof beacons, transit lanes, fog, and a traveling
-light wave in one forward WGSL pass. That pass preserves linear scene radiance in a filterable
-`rgba16float` target when supported. A reusable `ShaderPassRenderer` then records a half-, quarter-,
-and eighth-resolution bloom pyramid plus ACES filmic tone mapping onto the same caller-owned command
-encoder before the frame is submitted. On a compatible WebGPU display the final pass preserves
-restrained extended-luminance highlights through a Display P3 canvas; other displays receive filmic
-SDR. Render and picking transforms share the same non-uniform tower records, while compute culling
-uses their conservative bounding spheres.
+The city shader synthesizes facade windows, roof beacons, transit lanes, fog, and a traveling light
+wave while writing forward radiance, view normals and roughness, velocity, base color and metallic,
+and packed emissive and occlusion in one geometry pass. In cinematic mode, 128 deterministic city
+lights are transformed into view space, binned into a three-dimensional cluster grid on the GPU,
+and resolved with directional and Cook-Torrance point lighting. A final Lightstorm-specific
+composition keeps the authored HDR fog and emissive radiance as a floor under that physically based
+lighting, so deferred shading does not flatten the traveling wave or the city's atmospheric depth.
+Each source is placed along the outer edge of its two-cell road band and also drives a small
+emissive curb beacon: a dim mast reaches from grade to a white-hot HDR head at the exact
+clustered-light position. The avenue keeps its wet metallic response while concentrating animated
+neon in thin lane lines; the surrounding pavement stays dark enough for the beacon heads to retain
+the street-level lighting hierarchy. The 128 beacons use one static 6 KiB world-space buffer and one
+direct instanced draw inside the existing render bundle. The per-frame 4 KiB view-space light-state
+update remains separate from the million instance records, which stay GPU resident.
+
+Three deterministic lightning bolts add sparse HDR punctuation at camera-authored beats: one at the
+end of the elevated urban canyon, one over the avenue turn, and a screen-spanning hero strike during
+the open-sky skyscraper reveal. Their connected trunks and first-order branches are packed into one
+static 5.6 KiB buffer and drawn as 89 thin world-space cuboids in the existing render bundle. The
+hero bolt is roughly twice the authored scale and reaches the scene's HDR output ceiling. Per-bolt
+phase metadata drives brief double strokes and role-scaled sky pulses on the same 29-second clock;
+the hero sends the strongest pair through sky fog and ambient light while dark intervals discard the
+geometry. Optional procedural thunder synthesizes one high-frequency crack, an immediate bass body,
+and overlapping filtered low-frequency rolls for each primary stroke; the hero strike layers five
+rolls for a longer decay. It uses no audio asset or network request and arms after the first pointer
+or keyboard gesture to respect browser autoplay policy.
+
+When filterable `rgba16float` rendering is supported, the lit G-buffer also drives half-resolution,
+roughness-aware screen-space reflections. Reflection rays sample the HDR-lit scene, reject
+disocclusions with velocity and previous-depth history, and receive a separable depth/normal-aware
+denoise before composition. This makes the neon transit grid and beacon heads read back from
+smoother street and facade surfaces without redrawing the city. Tactical mode disables the
+perspective-only reflection contribution and resets temporal history when switching views or camera
+modes.
+
+The clustered resolve, temporal reflection stack, half-, quarter-, and eighth-resolution bloom
+pyramid, and ACES filmic tone mapping are all recorded onto the command graph's caller-owned encoder
+before one frame submission. The scene uses a filterable `rgba16float` target when supported. On a
+compatible WebGPU display the final pass preserves restrained extended-luminance highlights through
+a Display P3 canvas; other displays receive filmic SDR. The synchronized sky pulses affect distance
+fog and modest ambient light, while lightning remains localized geometry that reaches the HDR output
+ceiling. This avoids a periodic full-frame bloom washout. Render and picking transforms share
+the same non-uniform tower records, while compute culling uses their conservative bounding spheres.
 
 This first version deliberately demonstrates scalable instance processing rather than virtual
 geometry. It uses one cube mesh and does not claim meshlet LOD, occlusion culling, geometry
