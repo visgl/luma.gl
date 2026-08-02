@@ -735,11 +735,11 @@ function makeCameraBasis(
   target: CanyonVector3
 ): {forward: CanyonVector3; right: CanyonVector3; up: CanyonVector3} {
   const forward = normalize([target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]]);
-  const right = normalize([forward[2], 0, -forward[0]]);
+  const right = normalize([-forward[2], 0, forward[0]]);
   const up = normalize([
-    forward[1] * right[2] - forward[2] * right[1],
-    forward[2] * right[0] - forward[0] * right[2],
-    forward[0] * right[1] - forward[1] * right[0]
+    right[1] * forward[2] - right[2] * forward[1],
+    right[2] * forward[0] - right[0] * forward[2],
+    right[0] * forward[1] - right[1] * forward[0]
   ]);
   return {forward, right, up};
 }
