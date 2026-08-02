@@ -13,7 +13,10 @@ import SpectralCausticsAnimationLoopTemplate, {
 
 describe('Spectral Caustics: Prism Cathedral', () => {
   test('traces finite HDR caustics and renders them into the floating-point beauty target', async () => {
-    const device = await getWebGPUTestDevice('core');
+    // Reuse the max-feature device exercised by the renderer integration tests. Under the full
+    // SwiftShader coverage suite, the separately cached core device can outlive Dawn's external
+    // instance even though the device has not yet reported itself lost.
+    const device = await getWebGPUTestDevice('max');
     if (!device) {
       return;
     }
