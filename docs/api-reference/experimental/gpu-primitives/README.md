@@ -58,7 +58,8 @@ later render pass consume that count without a CPU synchronization point.
 The implementation consists of `GPUCommandGraph`, typed graph data views, `GPUScan`,
 `GPUCompaction`, `GPUMask`, `GPUVisibilityWorkflow`, `GPUHierarchyLayout`, `GPUGraphTraversal`,
 `GPUAncestorProjection`, `GPUSort`, `GPUBatchSort`, `GPUReduction`, `GPUHistogram`, `GPUGridBinning`,
-`GPUGridAggregation`, `GPUGroupAggregation`, and `DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
+`GPUGridAggregation`, `GPUGroupAggregation`, `GPUIndexPickingTarget`, `GPUReadbackRing`, and
+`DrawCommandBuffer`. The accompanying hierarchical trace viewer applies these primitives to
 process and thread collapse, source and topology filtering, dependency focusing, visible-parent
 projection, GPU picking, activity histograms, and indirect span and edge rendering over up to
 four million spans. The sort and data-analysis examples demonstrate independent composable
@@ -1006,7 +1007,7 @@ schedule commitment.
 | 1 — Hardening and observability | GPU timestamps, performance baselines, adapter capability reporting, boundary and overflow validation, memory statistics, and device-loss and resource-lifetime coverage | Implemented | High | Medium |
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Implemented | High | Large |
-| 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, swapchain imports, and external-texture contracts | Planned | Medium | Large |
+| 4 — Picking and texture coverage | Region picking and asynchronous staging rings implemented; multisample resolves, swapchain imports, and external-texture contracts remain | In progress | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
 | 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
@@ -1018,14 +1019,15 @@ only when its entry dependency is present and its exit evidence can be produced;
 dependency order, not a schedule commitment. Tranches whose dependencies do not overlap may be
 developed independently.
 
-Tranches 3.2 and 3.3 are implemented; Phase 4 is the next active boundary.
+Tranches 4.1 and 4.2 are implemented; render-target contracts in Tranche 4.3 are the next active
+boundary.
 
 | Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
 | --- | --- | --- | :---: | :---: |
 | 3.2 — Partitioned topology | Explicit global-ID and chunk-base contracts for hierarchy and CSR topology without hidden packing | Implemented Phase 3 data primitives | High | Large |
 | 3.3 — Extension decision gate | Evidence-backed decision on sparse histograms, multidimensional histograms, custom scans, and shader callbacks | Tranche 3.2 plus demonstrated consumers | Medium | Medium |
-| 4.1 — Region picking | Bounded rectangular picks with stable object and batch IDs, capacity, count, and overflow | Phase 2 stable identity | Medium | Medium |
-| 4.2 — Asynchronous readback ring | Reusable staging slots with backpressure, cancellation, and no mapped-buffer reuse hazards | Tranche 4.1 | High | Medium |
+| 4.1 — Region picking | Bounded rectangular picks with stable object and batch IDs, capacity, count, and overflow | Implemented | Medium | Medium |
+| 4.2 — Asynchronous readback ring | Reusable staging slots with backpressure, cancellation, and no mapped-buffer reuse hazards | Implemented | High | Medium |
 | 4.3 — Render-target graph contracts | Multisample resolve and swapchain imports with explicit subresource and frame ownership | Phase 1 lifetime contracts | Medium | Large |
 | 4.4 — External-texture contracts | One-frame external-texture imports with validated access and device-loss behavior | Tranche 4.3 | Medium | Large |
 | 5.1 — `GPUGridIndex` build/update | Stable cell offsets and object-ID storage with measurable full-build and incremental-update costs | Tranche 3.2 and Phase 1 measurement | High | Large |
@@ -1051,7 +1053,8 @@ inclusive, and segmented scans; stable compaction; chunk-preserving boolean mask
 traversal; nearest-visible parent projection; paired sort; scalar reduction; histogram counting;
 spatial grid binning; and GPU-written indirect commands.
 
-`GPUIndexPickingTarget` provides single-pixel integer object and batch picking. The hierarchical
+`GPUIndexPickingTarget` provides single-pixel and bounded-region integer object and batch picking;
+`GPUReadbackRing` overlaps reusable staging slots without mapped-buffer reuse. The hierarchical
 trace viewer adds GPU-scanned process/thread layout, source and topology filtering, dependency
 focus, click picking, collapsed activity, projected edges, and stable indirect span and edge groups.
 The frustum-culling and GPU data-analysis examples provide two additional consumers.
@@ -1214,17 +1217,18 @@ application or renderer consumer.
 **Entry dependencies:** Phase 1 defines resource-lifetime and asynchronous readback behavior;
 Phase 2 defines stable visible identity.
 
-Expand picking from one pixel to bounded regions and add reusable staging-buffer rings for
-asynchronous results. Add graph contracts for multisampled resolve targets, swapchain imports, and
-external textures so their subresources, hazards, ownership, and frame lifetimes are explicit.
+Region picking and reusable asynchronous staging-buffer rings are implemented. Next, add graph
+contracts for multisampled resolve targets, swapchain imports, and external textures so their
+subresources, hazards, ownership, and frame lifetimes are explicit.
 Callback, highlighting, tooltip, and color-encoded fallback policies remain higher-level workflow
 or application concerns.
 
 #### Tranche 4.1 — Region picking
 
-Add bounded rectangular picking that publishes object IDs, batch IDs, a result count, and an
-overflow flag into caller-sized GPU storage. Define ordering and duplicate handling explicitly;
-selection semantics such as nearest-only, toggling, or highlighting stay above the primitive.
+`GPUIndexPickingTarget.addRegionPass()` publishes object IDs, batch IDs, a total result count, and
+an overflow flag into caller-sized GPU storage. One covered pixel produces one pair, duplicates are
+preserved, and atomic append order is unspecified. Selection semantics such as nearest-only,
+toggling, deduplication, or highlighting stay above the primitive.
 
 **Exit evidence:** Tests cover empty regions, overlapping primitives, duplicate IDs, exact capacity,
 and overflow. An example uses stable IDs from `GPUVisibilityWorkflow` without a CPU-side identity
@@ -1232,9 +1236,9 @@ translation.
 
 #### Tranche 4.2 — Asynchronous readback ring
 
-Add a reusable staging-buffer ring whose tickets make availability, backpressure, cancellation,
-and device loss observable. The ring owns staging allocations but neither submits command buffers
-nor silently waits for a mapped slot.
+`GPUReadbackRing` provides reusable staging tickets with immediate and waiting acquisition paths,
+explicit cancellation, safe mapped-buffer reuse, destruction, and device-loss propagation. It owns
+staging allocations but neither submits command buffers nor silently waits for a mapped slot.
 
 **Exit evidence:** Repeated region picks can overlap rendering and readback without reusing a
 mapped buffer or serializing every frame. Tests cover ring exhaustion, out-of-order completion,
@@ -1458,6 +1462,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-grid-aggregation)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
+- [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)
 - [GPU commands](/docs/api-guide/gpu/gpu-commands)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)

@@ -18,6 +18,7 @@ export type GPUPrimitivesDocsTabId =
   | 'grid-aggregation'
   | 'group-aggregation'
   | 'index-picking'
+  | 'readback-ring'
   | 'draw-command-buffer';
 
 const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
@@ -100,6 +101,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'index-picking',
     label: 'Picking',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target'
+  },
+  {
+    id: 'readback-ring',
+    label: 'Readback Ring',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring'
   },
   {
     id: 'draw-command-buffer',

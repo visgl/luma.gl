@@ -10,9 +10,11 @@ import {
   DrawCommandBuffer,
   GPUCommandGraph,
   GPUIndexPickingTarget,
+  GPUReadbackRing,
   GPUVisibilityWorkflow,
   INDEX_PICKING_READBACK_BYTE_LENGTH,
-  type CompiledGPUCommandGraph
+  type CompiledGPUCommandGraph,
+  type GPUReadbackTicket
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
@@ -75,6 +77,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   readonly pickingModel: Model;
   readonly uniformBuffer: Buffer;
   readonly overviewUniformBuffer: Buffer;
+  readonly pickingReadbackRing: GPUReadbackRing;
   readonly panels: ExamplePanelManager;
 
   private resources: CullingGraphResources | null = null;
@@ -90,7 +93,6 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   private sampledVisibleCount = 0;
   private countReadPending = false;
   private pickedObjectIndex: number | null = null;
-  private pickReadPendingCount = 0;
   private frameIndex = 0;
   private encodeTimeMilliseconds = 0;
   private compileTimeMilliseconds = 0;
@@ -121,6 +123,11 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       id: 'gpu-frustum-culling-overview-uniforms',
       byteLength: UNIFORM_BYTE_LENGTH,
       usage: Buffer.UNIFORM | Buffer.COPY_DST
+    });
+    this.pickingReadbackRing = new GPUReadbackRing(device, {
+      id: 'gpu-frustum-culling-pick-readback',
+      byteLength: INDEX_PICKING_READBACK_BYTE_LENGTH,
+      slotCount: 2
     });
     this.model = new Model(device, {
       id: 'gpu-frustum-culling-model',
@@ -212,19 +219,17 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     this.writeUniforms(viewports);
     const encodeStart = performance.now();
     resources.compiled.encode(device.commandEncoder, {parameters: viewports});
-    if (_mousePosition && this.frameIndex % 4 === 0 && this.pickReadPendingCount < 2) {
-      const pixel = this.getPickingPixel(_mousePosition as [number, number], resources);
-      const readbackBuffer = device.createBuffer({
-        id: `gpu-frustum-culling-pick-${this.frameIndex}`,
-        byteLength: INDEX_PICKING_READBACK_BYTE_LENGTH,
-        usage: Buffer.COPY_DST | Buffer.MAP_READ
-      });
-      resources.pickingCompiled.encode(device.commandEncoder, {
-        parameters: {perspectiveViewport: viewports.perspectiveViewport, pixel},
-        buffers: {[resources.pickingReadbackId]: readbackBuffer}
-      });
-      this.pickReadPendingCount++;
-      queueMicrotask(() => void this.readPickingResult(readbackBuffer));
+    if (_mousePosition && this.frameIndex % 4 === 0) {
+      const readbackTicket = this.pickingReadbackRing.tryAcquire();
+      if (readbackTicket) {
+        const pixel = this.getPickingPixel(_mousePosition as [number, number], resources);
+        resources.pickingCompiled.encode(device.commandEncoder, {
+          parameters: {perspectiveViewport: viewports.perspectiveViewport, pixel},
+          buffers: {[resources.pickingReadbackId]: readbackTicket.buffer}
+        });
+        readbackTicket.markEncoded({byteLength: 8});
+        queueMicrotask(() => void this.readPickingResult(readbackTicket));
+      }
     }
     this.encodeTimeMilliseconds = performance.now() - encodeStart;
     this.framesPerSecond = animationLoop.frameRate.getSampleHz();
@@ -249,6 +254,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     }
     this.panels.finalize();
     this.destroyResources();
+    this.pickingReadbackRing.destroy();
     this.pickingModel.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
@@ -668,14 +674,13 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     ];
   }
 
-  private async readPickingResult(readbackBuffer: Buffer): Promise<void> {
+  private async readPickingResult(readbackTicket: GPUReadbackTicket): Promise<void> {
     try {
-      const bytes = await readbackBuffer.readAsync(0, 8);
+      const bytes = await readbackTicket.read();
       this.pickedObjectIndex = decodeGPUIndexPickInfo(bytes).objectIndex;
       this.updateInspector();
-    } finally {
-      readbackBuffer.destroy();
-      this.pickReadPendingCount--;
+    } catch {
+      // Device loss and cancellation release the ring slot without updating interaction state.
     }
   }
 
