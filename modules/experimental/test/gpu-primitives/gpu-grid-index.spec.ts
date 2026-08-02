@@ -107,7 +107,11 @@ test('GPUGridIndex rejects overlapping scatter inputs and output', async t => {
     'float32x2',
     2
   );
-  const sourceIds = graph.createDataView(sharedHandle, {format: 'uint32', length: 2});
+  const sourceIds = graph.createDataView(sharedHandle, {
+    format: 'uint32',
+    length: 2,
+    byteOffset: 4
+  });
   t.throws(
     () =>
       new GPUGridIndex({
