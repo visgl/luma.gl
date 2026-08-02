@@ -58,6 +58,7 @@ describe('GPU hierarchical trace viewer', () => {
         activeFilterMask: number;
         spanCapacity: number;
         dependencyCapacity: number;
+        compileCount: number;
       };
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
@@ -68,6 +69,15 @@ describe('GPU hierarchical trace viewer', () => {
       expect(host.querySelectorAll('[data-dependency-capacity]')).toHaveLength(1);
       expect(state.spanCapacity).toBe(4096);
       expect(state.dependencyCapacity).toBe(250_000);
+      const dependencyCapacity = host.querySelector<HTMLSelectElement>(
+        '[data-dependency-capacity]'
+      );
+      expect(dependencyCapacity).not.toBeNull();
+      const initialCompileCount = state.compileCount;
+      dependencyCapacity!.dispatchEvent(new Event('input', {bubbles: true}));
+      expect(state.compileCount).toBe(initialCompileCount);
+      dependencyCapacity!.dispatchEvent(new Event('change', {bubbles: true}));
+      expect(state.compileCount).toBe(initialCompileCount + 1);
 
       viewer.onRender({device, time: 6000, width: 2048, height: 1} as AnimationProps);
       device.submit();

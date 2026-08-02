@@ -1187,6 +1187,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
         return;
       }
+      if (target instanceof HTMLSelectElement && event.type !== 'change') {
+        return;
+      }
       if (target.matches('[data-span-capacity]')) {
         this.rebuild(Number(target.value), this.dependencyCapacity);
       } else if (target.matches('[data-dependency-capacity]')) {
