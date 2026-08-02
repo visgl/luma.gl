@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import {Buffer, type Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {fromHalfFloat} from '@luma.gl/shadertools';
@@ -13,9 +13,6 @@ import SpectralCausticsAnimationLoopTemplate, {
 
 describe('Spectral Caustics: Prism Cathedral', () => {
   test('traces finite HDR caustics and renders them into the floating-point beauty target', async () => {
-    // Reuse the max-feature device exercised by the renderer integration tests. Under the full
-    // SwiftShader coverage suite, the separately cached core device can outlive Dawn's external
-    // instance even though the device has not yet reported itself lost.
     const device = await getWebGPUTestDevice('max');
     if (!device) {
       return;
@@ -40,7 +37,17 @@ describe('Spectral Caustics: Prism Cathedral', () => {
       expect(viewer.sceneColorTexture.format).toBe('rgba16float');
       expect(viewer.spectralCausticMap.format).toBe('rgba16float');
 
-      viewer.onRender(makeAnimationProps(device, width, height));
+      // This assertion targets the two offscreen HDR outputs. The shared test canvas can outlive
+      // Dawn's external presentation instance as the complete SwiftShader suite advances through
+      // independent files, so do not present the already-verified beauty target in this test.
+      const presentationSpy = vi
+        .spyOn(viewer.postprocessingRenderer, 'renderToScreen')
+        .mockImplementation(() => {});
+      try {
+        viewer.onRender(makeAnimationProps(device, width, height));
+      } finally {
+        presentationSpy.mockRestore();
+      }
       device.submit();
 
       const causticXyz = await readRgba16FloatTexture(viewer.spectralCausticMap, mapSize, mapSize);
