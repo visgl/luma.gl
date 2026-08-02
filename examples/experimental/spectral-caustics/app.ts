@@ -15,6 +15,7 @@ import {
 } from '@luma.gl/engine';
 import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import {
+  OrbitControls,
   spectralCaustics,
   SpectralCausticsRenderer,
   type SpectralCausticsProps
@@ -33,6 +34,16 @@ const RECEIVER_BITANGENT: NumberArray3 = [0, 0, 1];
 const RECEIVER_NORMAL: NumberArray3 = [0, 1, 0];
 const RECEIVER_WIDTH = 20;
 const RECEIVER_HEIGHT = 28;
+const CAMERA_TARGET: NumberArray3 = [0, 2.15, -0.85];
+const CAMERA_MINIMUM_YAW = -0.38;
+const CAMERA_MAXIMUM_YAW = 0.38;
+const CAMERA_MINIMUM_PITCH = 0.06;
+const CAMERA_MAXIMUM_PITCH = 0.42;
+const CAMERA_MINIMUM_DISTANCE = 10.5;
+const CAMERA_MAXIMUM_DISTANCE = 18;
+const CAMERA_CINEMATIC_YAW_CENTER = (CAMERA_MINIMUM_YAW + CAMERA_MAXIMUM_YAW) * 0.5;
+const CAMERA_CINEMATIC_YAW_AMPLITUDE = (CAMERA_MAXIMUM_YAW - CAMERA_MINIMUM_YAW) * 0.5;
+const CAMERA_CINEMATIC_PHASE_SPEED = 0.3;
 
 type SceneUniforms = {
   viewProjectionMatrix: Matrix4;
@@ -351,6 +362,7 @@ const INFO_HTML = `
   }
   .prism-cathedral-info h1 { margin: 0 0 7px; font: 600 17px/1.2 system-ui, sans-serif; letter-spacing: .02em; }
   .prism-cathedral-info p { margin: 0; color: #b8cae5; }
+  .prism-cathedral-info .prism-cathedral-controls { margin-top: 9px; color: #d8e8ff; }
   .prism-cathedral-info strong { color: #fff3c4; font-weight: 600; }
   .prism-cathedral-badges { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
   .prism-cathedral-badge { padding: 4px 7px; border: 1px solid rgb(120 186 255 / 24%); border-radius: 99px; color: #dcecff; background: rgb(30 72 120 / 18%); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
@@ -358,6 +370,7 @@ const INFO_HTML = `
 <section class="prism-cathedral-info">
   <h1>Spectral Caustics: Prism Cathedral</h1>
   <p>A rotating convex crystal is captured from the light, then <strong>six CIE/D65 wavelength bands</strong> refract through its real front and back surfaces into an HDR XYZ caustic map.</p>
+  <p class="prism-cathedral-controls"><strong>Drag</strong> to orbit · <strong>Wheel</strong> to zoom · <strong>Space</strong> for cinematic orbit · <strong>R</strong> to reset</p>
   <div class="prism-cathedral-badges"><span class="prism-cathedral-badge">WebGPU compute</span><span class="prism-cathedral-badge">Geometry traced</span><span class="prism-cathedral-badge">HDR bloom</span></div>
 </section>`;
 
@@ -421,13 +434,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly architecture: ArchitectureModel;
   readonly lightBeamModel: Model;
   readonly postprocessingRenderer: ShaderPassRenderer;
+  orbitControls: OrbitControls | null = null;
   sceneTarget: SceneTarget;
+
+  private canvas: HTMLCanvasElement | null = null;
+  private cinematicCamera = true;
+  private cinematicYawPhase = Math.asin(
+    (0.11 - CAMERA_CINEMATIC_YAW_CENTER) / CAMERA_CINEMATIC_YAW_AMPLITUDE
+  );
+  private previousCameraTimeMilliseconds: number | null = null;
 
   constructor({
     device,
     width,
     height,
-    captureSize = 128,
+    captureSize = 192,
     mapSize = 512
   }: SpectralCausticsExampleProps) {
     super();
@@ -436,7 +457,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'prism-cathedral-spectral-caustics',
       captureSize,
       mapSize,
-      splatRadius: 5.8
+      splatRadius: 8.5
     });
     const crystalGeometry = new IcoSphereGeometry({radius: 1, iterations: 1});
     this.captureModel = new Model(device, {
@@ -529,7 +550,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return this.spectralRenderer.causticMap;
   }
 
+  override async onInitialize({canvas}: AnimationProps): Promise<void> {
+    if (canvas instanceof HTMLCanvasElement) {
+      this.canvas = canvas;
+      this.orbitControls = new OrbitControls(canvas, {
+        target: CAMERA_TARGET,
+        distance: 15.8,
+        yaw: 0.11,
+        pitch: 0.15,
+        minDistance: CAMERA_MINIMUM_DISTANCE,
+        maxDistance: CAMERA_MAXIMUM_DISTANCE,
+        minPitch: CAMERA_MINIMUM_PITCH,
+        maxPitch: CAMERA_MAXIMUM_PITCH,
+        rotateSpeed: 0.005,
+        zoomSpeed: 0.0012,
+        autoRotate: false
+      });
+      canvas.addEventListener('pointerdown', this.handleManualNavigation);
+      globalThis.addEventListener('keydown', this.handleCameraKeyDown);
+    }
+  }
+
   onFinalize(): void {
+    this.canvas?.removeEventListener('pointerdown', this.handleManualNavigation);
+    globalThis.removeEventListener('keydown', this.handleCameraKeyDown);
+    this.orbitControls?.destroy();
     this.spectralRenderer.destroy();
     this.captureModel.destroy();
     this.crystalModel.destroy();
@@ -540,18 +585,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     destroySceneTarget(this.sceneTarget);
   }
 
-  onRender({device, width, height, aspect, tick}: AnimationProps): void {
+  onRender({device, width, height, aspect, time: timeMilliseconds}: AnimationProps): void {
     if (width !== this.sceneTarget.width || height !== this.sceneTarget.height) {
       destroySceneTarget(this.sceneTarget);
       this.sceneTarget = createSceneTarget(device, width, height);
       this.postprocessingRenderer.resize([width, height]);
     }
 
-    const time = tick / 1000;
+    const timeSeconds = timeMilliseconds / 1000;
     const crystalRotation = new Matrix4()
-      .rotateY(time * 0.27)
-      .rotateZ(Math.sin(time * 0.38) * 0.16)
-      .rotateX(-0.16 + Math.cos(time * 0.24) * 0.08);
+      .rotateY(timeSeconds * 0.34)
+      .rotateZ(Math.sin(timeSeconds * 0.52) * 0.16)
+      .rotateX(-0.16 + Math.cos(timeSeconds * 0.38) * 0.08);
     const crystalProps: CrystalUniforms = {
       rotationMatrix: crystalRotation,
       center: CRYSTAL_CENTER,
@@ -592,15 +637,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       drawRefractor: ({renderPass}) => this.captureModel.draw(renderPass)
     });
 
-    const orbit = time * 0.045;
-    const cameraPosition: NumberArray3 = [
-      1.75 + Math.sin(orbit) * 0.65,
-      4.45 + Math.sin(time * 0.09) * 0.2,
-      14.0 + Math.cos(orbit) * 0.7
-    ];
+    this.updateCamera(timeMilliseconds);
+    const cameraPosition: NumberArray3 = this.orbitControls?.getEyePosition() || [1.75, 4.45, 14];
     const viewMatrix = new Matrix4().lookAt({
       eye: cameraPosition,
-      center: [0, 2.15, -0.85],
+      center: CAMERA_TARGET,
       up: [0, 1, 0]
     });
     const projectionMatrix = new Matrix4().perspective({
@@ -613,7 +654,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       viewProjectionMatrix: new Matrix4(projectionMatrix).multiplyRight(viewMatrix),
       cameraPosition,
       lightPosition: LIGHT_POSITION,
-      time
+      time: timeSeconds
     };
     this.setSceneUniforms(sceneProps, crystalProps, spectralProps);
     this.prepareSceneModels(device);
@@ -667,6 +708,70 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.lightBeamModel.predraw(device.commandEncoder);
     this.crystalModel.predraw(device.commandEncoder);
   }
+
+  private updateCamera(timeMilliseconds: number): void {
+    const orbitControls = this.orbitControls;
+    if (!orbitControls) {
+      return;
+    }
+    orbitControls.update(timeMilliseconds);
+    const deltaSeconds =
+      this.previousCameraTimeMilliseconds === null
+        ? 0
+        : Math.min(Math.max(timeMilliseconds - this.previousCameraTimeMilliseconds, 0) / 1000, 0.1);
+    this.previousCameraTimeMilliseconds = timeMilliseconds;
+    if (this.cinematicCamera) {
+      this.cinematicYawPhase += deltaSeconds * CAMERA_CINEMATIC_PHASE_SPEED;
+      orbitControls.yaw =
+        CAMERA_CINEMATIC_YAW_CENTER +
+        Math.sin(this.cinematicYawPhase) * CAMERA_CINEMATIC_YAW_AMPLITUDE;
+    }
+    orbitControls.yaw = clampNumber(orbitControls.yaw, CAMERA_MINIMUM_YAW, CAMERA_MAXIMUM_YAW);
+    orbitControls.pitch = clampNumber(
+      orbitControls.pitch,
+      CAMERA_MINIMUM_PITCH,
+      CAMERA_MAXIMUM_PITCH
+    );
+    orbitControls.distance = clampNumber(
+      orbitControls.distance,
+      CAMERA_MINIMUM_DISTANCE,
+      CAMERA_MAXIMUM_DISTANCE
+    );
+  }
+
+  private synchronizeCinematicPhase(): void {
+    const orbitControls = this.orbitControls;
+    if (!orbitControls) {
+      return;
+    }
+    const normalizedYaw = clampNumber(
+      (orbitControls.yaw - CAMERA_CINEMATIC_YAW_CENTER) / CAMERA_CINEMATIC_YAW_AMPLITUDE,
+      -1,
+      1
+    );
+    const ascendingPhase = Math.asin(normalizedYaw);
+    this.cinematicYawPhase =
+      Math.cos(this.cinematicYawPhase) >= 0 ? ascendingPhase : Math.PI - ascendingPhase;
+  }
+
+  private readonly handleManualNavigation = (): void => {
+    this.cinematicCamera = false;
+  };
+
+  private readonly handleCameraKeyDown = (event: KeyboardEvent): void => {
+    if (event.code === 'Space') {
+      event.preventDefault();
+      this.cinematicCamera = !this.cinematicCamera;
+      if (this.cinematicCamera) {
+        this.synchronizeCinematicPhase();
+      }
+    } else if (event.key.toLowerCase() === 'r') {
+      this.orbitControls?.reset();
+      this.cinematicYawPhase = Math.asin(
+        (0.11 - CAMERA_CINEMATIC_YAW_CENTER) / CAMERA_CINEMATIC_YAW_AMPLITUDE
+      );
+    }
+  };
 }
 
 function makeArchitectureInstances(): {
@@ -680,7 +785,7 @@ function makeArchitectureInstances(): {
   const scales: number[] = [];
   const baseColors: number[] = [];
   const emissiveColors: number[] = [];
-  const add = (
+  const addArchitectureInstance = (
     position: NumberArray3,
     scale: NumberArray3,
     baseColor: NumberArray3,
@@ -695,19 +800,29 @@ function makeArchitectureInstances(): {
   const darkStone: NumberArray3 = [0.12, 0.15, 0.22];
   const blueStone: NumberArray3 = [0.08, 0.12, 0.2];
   for (const zPosition of [-10, -5, 0, 5, 10]) {
-    add([-6.7, 4.5, zPosition], [0.58, 4.5, 0.58], darkStone);
-    add([6.7, 4.5, zPosition], [0.58, 4.5, 0.58], darkStone);
-    add([0, 9.25, zPosition], [6.8, 0.16, 0.22], blueStone, [0.015, 0.035, 0.075]);
+    addArchitectureInstance([-6.7, 4.5, zPosition], [0.58, 4.5, 0.58], darkStone);
+    addArchitectureInstance([6.7, 4.5, zPosition], [0.58, 4.5, 0.58], darkStone);
+    addArchitectureInstance(
+      [0, 9.25, zPosition],
+      [6.8, 0.16, 0.22],
+      blueStone,
+      [0.015, 0.035, 0.075]
+    );
   }
-  add([0, 4.6, -13.6], [7.6, 4.6, 0.35], darkStone);
-  add([-8.8, 5.1, 0], [0.18, 5.1, 14], blueStone);
-  add([8.8, 5.1, 0], [0.18, 5.1, 14], blueStone);
-  add([0, 10.25, -4], [2.15, 0.1, 2.15], [0.7, 0.57, 0.34], [11, 7.4, 3.8]);
-  add([0, 9.75, -4], [0.12, 0.5, 0.12], [0.35, 0.29, 0.2], [1.4, 0.85, 0.32]);
+  addArchitectureInstance([0, 4.6, -13.6], [7.6, 4.6, 0.35], darkStone);
+  addArchitectureInstance([-8.8, 5.1, 0], [0.18, 5.1, 14], blueStone);
+  addArchitectureInstance([8.8, 5.1, 0], [0.18, 5.1, 14], blueStone);
+  addArchitectureInstance([0, 10.25, -4], [2.15, 0.1, 2.15], [0.7, 0.57, 0.34], [11, 7.4, 3.8]);
+  addArchitectureInstance([0, 9.75, -4], [0.12, 0.5, 0.12], [0.35, 0.29, 0.2], [1.4, 0.85, 0.32]);
   for (const side of [-1, 1]) {
     for (const zPosition of [-8, -3, 3, 8]) {
-      add([side * 4.1, 0.26, zPosition], [1.55, 0.26, 0.46], [0.09, 0.1, 0.14]);
-      add([side * 5.75, 1.4, zPosition], [0.12, 1.4, 0.12], [0.18, 0.18, 0.16], [0.36, 0.18, 0.06]);
+      addStoneSarcophagus(addArchitectureInstance, side * 4.1, zPosition, side);
+      addArchitectureInstance(
+        [side * 5.75, 1.4, zPosition],
+        [0.12, 1.4, 0.12],
+        [0.18, 0.18, 0.16],
+        [0.36, 0.18, 0.06]
+      );
     }
   }
 
@@ -718,6 +833,75 @@ function makeArchitectureInstances(): {
     emissiveColors: new Float32Array(emissiveColors),
     instanceCount: positions.length / 3
   };
+}
+
+type ArchitectureInstanceAdder = (
+  position: NumberArray3,
+  scale: NumberArray3,
+  baseColor: NumberArray3,
+  emissiveColor?: NumberArray3
+) => void;
+
+function addStoneSarcophagus(
+  addArchitectureInstance: ArchitectureInstanceAdder,
+  xPosition: number,
+  zPosition: number,
+  side: number
+): void {
+  const plinthStone: NumberArray3 = [0.1, 0.105, 0.135];
+  const coffinStone: NumberArray3 = [0.16, 0.145, 0.17];
+  const lidStone: NumberArray3 = [0.22, 0.19, 0.2];
+  const effigyStone: NumberArray3 = [0.27, 0.225, 0.18];
+  const gold: NumberArray3 = [0.62, 0.4, 0.12];
+  const goldEmission: NumberArray3 = [0.24, 0.105, 0.018];
+
+  // A broad two-step plinth gives the tomb enough weight to read against the tiled floor.
+  addArchitectureInstance([xPosition, 0.12, zPosition], [0.88, 0.12, 1.8], plinthStone);
+  addArchitectureInstance([xPosition, 0.31, zPosition], [0.78, 0.08, 1.68], coffinStone);
+
+  // Overlapping head and foot sections narrow toward the aisle, forming a stepped stone taper.
+  addArchitectureInstance([xPosition, 0.56, zPosition - 0.48], [0.67, 0.22, 1.05], coffinStone);
+  addArchitectureInstance([xPosition, 0.56, zPosition + 0.74], [0.54, 0.22, 0.68], coffinStone);
+  addArchitectureInstance([xPosition, 0.83, zPosition - 0.45], [0.7, 0.08, 1.08], lidStone);
+  addArchitectureInstance([xPosition, 0.82, zPosition + 0.76], [0.57, 0.08, 0.66], lidStone);
+
+  // Thin warm inlay follows the lid centerline and shoulder band without becoming another lamp.
+  addArchitectureInstance(
+    [xPosition, 0.93, zPosition + 0.08],
+    [0.025, 0.025, 1.3],
+    gold,
+    goldEmission
+  );
+  addArchitectureInstance(
+    [xPosition, 0.93, zPosition - 0.72],
+    [0.52, 0.026, 0.035],
+    gold,
+    goldEmission
+  );
+
+  // A reclining effigy is assembled from a head, torso, folded hands, and separated legs.
+  addArchitectureInstance([xPosition, 1.09, zPosition - 1.03], [0.19, 0.16, 0.2], effigyStone);
+  addArchitectureInstance([xPosition, 1.02, zPosition - 0.42], [0.29, 0.1, 0.48], effigyStone);
+  addArchitectureInstance(
+    [xPosition, 1.13, zPosition - 0.46],
+    [0.24, 0.055, 0.075],
+    gold,
+    goldEmission
+  );
+  addArchitectureInstance(
+    [xPosition + side * 0.13, 0.99, zPosition + 0.55],
+    [0.105, 0.075, 0.58],
+    effigyStone
+  );
+  addArchitectureInstance(
+    [xPosition - side * 0.13, 0.99, zPosition + 0.55],
+    [0.105, 0.075, 0.58],
+    effigyStone
+  );
+}
+
+function clampNumber(value: number, minimum: number, maximum: number): number {
+  return Math.min(Math.max(value, minimum), maximum);
 }
 
 /** Converts math.gl's OpenGL-style orthographic depth range to WebGPU's zero-to-one range. */
