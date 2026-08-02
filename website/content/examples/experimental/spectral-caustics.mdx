@@ -1,0 +1,46 @@
+---
+title: 'Spectral Caustics: Prism Cathedral'
+description: Trace a faceted refractor into a six-band, geometry-derived HDR caustic on WebGPU.
+sidebar_custom_props:
+  description: Trace a faceted refractor into a six-band, geometry-derived HDR caustic on WebGPU.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, effects]
+---
+
+import {SpectralCausticsExample} from '@site/src/examples';
+
+<SpectralCausticsExample />
+
+Prism Cathedral is a cinematic light installation: a slowly rotating faceted crystal hangs in a
+dark cathedral colonnade beneath an emissive aperture and overhead beam. Its geometry-derived
+rainbow caustic travels across the tiled floor while HDR crystal glints and bloom punctuate the
+otherwise restrained architecture. There are no scene controls to tune; the changing crystal
+orientation reveals how the transport responds to the actual refractor geometry.
+
+Each frame captures the crystal's nearest and farthest surfaces from the light, then sends six
+CIE/D65-weighted visible-wavelength bands through both interfaces. The converging result lands on
+the planar receiver as additive Gaussian photon splats rather than an authored rainbow texture or
+analytic decal.
+
+The example is built around the experimental `SpectralCausticsRenderer`. Its two light-space
+surface captures feed a WebGPU compute pass that applies Snell refraction, Cauchy-style dispersion,
+and Beer-Lambert absorption. The GPU-generated photons accumulate in a filterable `rgba16float`
+D65 XYZ map. Receiver shading converts that map to linear sRGB only once, at the point where it is
+combined with the scene's ordinary lighting.
+
+The entire contribution remains linear and unclipped through the HDR scene target. Values above
+SDR white therefore survive into bloom and tone mapping, while overlapping wavelengths reconstruct
+bright white light and separated paths produce saturated spectral fringes. On a compatible display,
+the example requests luma.gl's high-dynamic-range canvas profile; other displays receive the same
+floating-point scene through the normal tone-mapped fallback.
+
+This is a focused convex-refractor demonstration, not general ray tracing. One light-space view
+traces one closed convex object onto one planar receiver. The bounded screen-space exit search keeps
+the pass compact and composable, but concave, nested, open, or strongly self-occluding glass needs a
+different transport method. The renderer only contributes caustic lighting: the application still
+owns its crystal, receiver, camera, direct lighting, bloom, tone mapping, and command submission.
+
+For the reusable API, capture contract, and receiver shader integration, see
+[`SpectralCausticsRenderer`](/docs/api-reference/experimental/spectral-caustics-renderer).

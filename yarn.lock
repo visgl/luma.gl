@@ -16555,6 +16555,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-spectral-caustics@workspace:examples/experimental/spectral-caustics":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-spectral-caustics@workspace:examples/experimental/spectral-caustics"
+  dependencies:
+    "@luma.gl/core": "npm:9.4.0-alpha.3"
+    "@luma.gl/effects": "npm:9.4.0-alpha.3"
+    "@luma.gl/engine": "npm:9.4.0-alpha.3"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.3"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.3"
+    "@luma.gl/tables": "npm:9.4.0-alpha.3"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.3"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-webxr-kaleidoscope@workspace:examples/experimental/webxr-kaleidoscope":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-webxr-kaleidoscope@workspace:examples/experimental/webxr-kaleidoscope"

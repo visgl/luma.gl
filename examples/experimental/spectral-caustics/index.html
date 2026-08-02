@@ -1,0 +1,37 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spectral Caustics: Prism Cathedral</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #02040a;
+      color-scheme: dark;
+    }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const supportsHighDynamicRange =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(dynamic-range: high)').matches;
+  const device = luma.createDevice({
+    id: 'spectral-caustics-prism-cathedral',
+    adapters: [webgpuAdapter],
+    createCanvasContext: supportsHighDynamicRange
+      ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+      : true
+  });
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+  animationLoop.start();
+</script>
+<body></body>
