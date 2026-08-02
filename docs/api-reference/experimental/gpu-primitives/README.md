@@ -1008,7 +1008,7 @@ schedule commitment.
 | 2 — Reusable visibility workflows | Renderer-independent time-range, bounds, LOD, and selection workflows that publish stable IDs, counts, and indirect commands | Implemented | High | Medium |
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Implemented | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts | Implemented | Medium | Large |
-| 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | Planned | High | Large |
+| 5 — Spatial acceleration | `GPUGridIndex` followed by `GPUBVH`, with explicit build, update, and query costs | In progress | High | Large |
 | 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Planned | High | Large |
 | 7 — API graduation | Stable package contracts, compatibility exports, and a dependency-safe move out of experimental packages | Planned | High | Large |
 
@@ -1019,8 +1019,8 @@ only when its entry dependency is present and its exit evidence can be produced;
 dependency order, not a schedule commitment. Tranches whose dependencies do not overlap may be
 developed independently.
 
-Phase 4 is implemented through Tranche 4.4. Spatial index construction in Tranche 5.1 is the next
-active boundary.
+Phase 4 is implemented through Tranche 4.4. Compact `GPUGridIndex` construction in Tranche 5.1a is
+implemented; incremental maintenance and query composition remain separate active boundaries.
 
 | Tranche | Outcome | Entry dependency | Impact | Complexity/cost |
 | --- | --- | --- | :---: | :---: |
@@ -1030,8 +1030,9 @@ active boundary.
 | 4.2 — Asynchronous readback ring | Reusable staging slots with backpressure, cancellation, and no mapped-buffer reuse hazards | Implemented | High | Medium |
 | 4.3 — Render-target graph contracts | Multisample resolve and swapchain imports with explicit subresource and frame ownership | Implemented | Medium | Large |
 | 4.4 — External-texture contracts | One-frame external-texture imports with validated access and device-loss behavior | Implemented | Medium | Large |
-| 5.1 — `GPUGridIndex` build/update | Stable cell offsets and object-ID storage with measurable full-build and incremental-update costs | Tranche 3.2 and Phase 1 measurement | High | Large |
-| 5.2 — `GPUGridIndex` query | Bounds, radius, and point queries feeding visibility and region picking in 2D and 3D | Tranche 5.1, Phase 2, and Tranche 4.1 | High | Medium |
+| 5.1a — `GPUGridIndex` build | Compact stable cell offsets and capacity-bounded object-ID storage for 2D and 3D points | Implemented | High | Medium |
+| 5.1b — `GPUGridIndex` incremental maintenance | Bounded relocation or reserved-cell updates with measured memory and update costs | Tranche 5.1a plus a changing-data consumer | High | Large |
+| 5.2 — `GPUGridIndex` query | Bounds, radius, and point queries feeding visibility and region picking in 2D and 3D | Tranche 5.1a, Phase 2, and Tranche 4.1 | High | Medium |
 | 5.3 — `GPUBVH` build/refit | Flat BVH storage with explicit rebuild and refit policies | Tranche 5.2 | High | Large |
 | 5.4 — `GPUBVH` query and cost model | Visibility and picking queries with scan/grid/BVH comparison guidance | Tranche 5.3 | High | Medium |
 | 6.1 — Scene storage and updates | Flat stable-ID draw records, bounded update ranges, and explicit CPU/table adapters | Phase 2 and Tranche 5.2 | High | Large |
@@ -1292,9 +1293,22 @@ must expose their construction and query costs.
 
 #### Tranche 5.1 — `GPUGridIndex` build and update
 
+**Status:** Compact full-build storage is implemented; incremental maintenance remains planned.
+
 Build a flat index of cell offsets and stable object IDs from bounded positions or bounds. Expose
 capacity and overflow, distinguish full rebuilds from supported incremental updates, and keep cell
 size and domain policy caller-controlled.
+
+`GPUGridIndex` builds 2D `float32x2` or 3D `float32x3` point inputs into exclusive row-major cell
+offsets and capacity-bounded stable IDs. It accepts one packed view or preserved vector chunks,
+generates logical IDs or consumes aligned explicit IDs, and reports the full accepted count plus
+overflow without writing past capacity. Exact maximum coordinates enter the final cell; non-finite
+and out-of-domain rows are ignored.
+
+The current update policy is explicitly `'rebuild'`: callers may upload a bounded input range or
+replace one vector chunk, but the next encoding clears, scans, and scatters the complete compact
+index. Tranche 5.1b will only add incremental maintenance after a changing-data consumer establishes
+whether bounded relocation or reserved per-cell capacity justifies its memory and complexity.
 
 **Exit evidence:** Two-dimensional and three-dimensional builds match CPU oracles across empty,
 clustered, out-of-domain, and capacity-boundary inputs. Benchmarks report allocation, build, and
