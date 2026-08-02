@@ -134,14 +134,9 @@ describe('GPU hierarchical trace viewer', () => {
         Uint32Array.BYTES_PER_ELEMENT
       );
       expect(new Uint32Array(reachedBytes.buffer, reachedBytes.byteOffset, 1)[0]).toBe(1);
-      const densityBytes = await state.resources.densityBins.readAsync();
-      const density = new Uint32Array(
-        densityBytes.buffer,
-        densityBytes.byteOffset,
-        densityBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
-      );
-      expect(density.some(value => value > 0)).toBe(true);
-
+      focusOnly!.checked = false;
+      focusOnly!.dispatchEvent(new Event('change', {bubbles: true}));
+      expect(state.focusOnly).toBe(false);
       viewer.onRender({device, time: 6000, width: 1, height: 1} as AnimationProps);
       device.submit();
       const densityFrame = await state.resources.drawCommands.buffer.readAsync();

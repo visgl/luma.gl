@@ -11,7 +11,13 @@ export const TRACE_THREAD_COUNT = TRACE_PROCESS_COUNT * TRACE_THREADS_PER_PROCES
 export const TRACE_LANE_COUNT = TRACE_THREAD_COUNT * TRACE_LANES_PER_THREAD;
 export const TRACE_SPAN_RECORD_WORD_LENGTH = 8;
 export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = 4;
-export const TRACE_DENSITY_BIN_COUNT = 96;
+export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 8;
+export const TRACE_SPAN_BATCH_CAPACITY = 1_000_000;
+const TRACE_CAPACITY_INCREMENT = 250_000;
+const TRACE_DEMONSTRATION_CAPACITY_CEILING = 4_000_000;
+// Keep density scrolling visually continuous at common viewport widths while retaining a fixed,
+// allocation-stable aggregation target for the compiled GPU command graph.
+export const TRACE_DENSITY_BIN_COUNT = 512;
 /** Switch to density rendering when one horizontal pixel covers at least this much trace time. */
 export const TRACE_DENSITY_TIME_PER_PIXEL = 0.08;
 export const TRACE_STATUS_COUNT = 4;
@@ -32,6 +38,25 @@ export const TRACE_MAXIMUM_RELATIVE_PARENT_DURATION_DELTA = 0.25;
 export const TRACE_COLLAPSED_STATE = 0;
 export const TRACE_EXPANDED_STATE = 1;
 export const TRACE_INVALID_SPAN_INDEX = 0xffffffff;
+
+/** Returns useful demonstration sizes that fit in one span storage-buffer binding. */
+export function getTraceCapacityOptions(
+  maxStorageBufferBindingSize: number,
+  maxBufferSize: number
+): number[] {
+  const spanRecordByteLength = TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT;
+  const maximumSpanCapacity = Math.floor(
+    Math.min(maxStorageBufferBindingSize, maxBufferSize) / spanRecordByteLength
+  );
+  const maximumDemonstrationCapacity =
+    Math.floor(
+      Math.min(maximumSpanCapacity, TRACE_DEMONSTRATION_CAPACITY_CEILING) / TRACE_CAPACITY_INCREMENT
+    ) * TRACE_CAPACITY_INCREMENT;
+  const capacities = [250_000, 1_000_000, 4_000_000, maximumDemonstrationCapacity].filter(
+    capacity => capacity > 0 && capacity <= maximumSpanCapacity
+  );
+  return [...new Set(capacities)];
+}
 
 /** Matches the GPU's adaptive exact-span versus density-rendering decision. */
 export function isTraceDensityMode(
@@ -54,6 +79,21 @@ export type TraceGroupData = {
   data: Uint32Array;
 };
 
+/** Stable source partition and coarse bounds used for GPU candidate-batch selection. */
+export type TraceSpanBatchData = {
+  batchIndex: number;
+  groupIndex: number;
+  name: TraceGroupName;
+  count: number;
+  firstSpanIndex: number;
+  timeMin: number;
+  timeMax: number;
+  laneMin: number;
+  laneMax: number;
+  /** Borrowed source-aligned view into the canonical span allocation. */
+  data: Uint32Array;
+};
+
 /** Compact forward or reverse compressed sparse dependency adjacency. */
 export type TraceAdjacencyData = {
   /** One stable offset per source node plus the final edge count. */
@@ -68,6 +108,10 @@ export type TraceDatasetData = {
   spans: Uint32Array;
   /** Original stable group ranges into the canonical span allocation. */
   groups: TraceGroupData[];
+  /** Group-aligned source partitions small enough for independent GPU processing. */
+  spanBatches: TraceSpanBatchData[];
+  /** Packed batch first/count, temporal bounds, lane bounds, group, and stable batch ID records. */
+  spanBatchIndex: Uint32Array;
   /** Packed 16-byte dependency source, destination, family, and keyword records. */
   dependencies: Uint32Array;
   /** One cross-process-prioritized canonical parent or invalid sentinel per span. */
@@ -127,9 +171,12 @@ export function makeTraceDataset(totalSpanCount: number): TraceDatasetData {
 
   const topology = makeTraceDependencies(spans, totalSpanCount);
   const dependencyCount = topology.dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
+  const {spanBatches, spanBatchIndex} = makeTraceSpanBatches(spans, groups);
   return {
     spans,
     groups,
+    spanBatches,
+    spanBatchIndex,
     dependencies: topology.dependencies,
     parentSpans: topology.parentSpans,
     outgoing: buildTraceAdjacency(totalSpanCount, topology.dependencies, 'outgoing'),
@@ -139,6 +186,70 @@ export function makeTraceDataset(totalSpanCount: number): TraceDatasetData {
     processCount: TRACE_PROCESS_COUNT,
     threadCount: TRACE_THREAD_COUNT
   };
+}
+
+/** Partitions canonical group ranges and builds coarse GPU-readable batch bounds. */
+export function makeTraceSpanBatches(
+  spans: Uint32Array,
+  groups: readonly TraceGroupData[],
+  batchCapacity = TRACE_SPAN_BATCH_CAPACITY
+): {spanBatches: TraceSpanBatchData[]; spanBatchIndex: Uint32Array} {
+  if (!Number.isSafeInteger(batchCapacity) || batchCapacity < 1) {
+    throw new RangeError('Trace span batch capacity must be a positive safe integer');
+  }
+  const spanFloats = new Float32Array(spans.buffer, spans.byteOffset, spans.length);
+  const spanBatches: TraceSpanBatchData[] = [];
+
+  for (const group of groups) {
+    for (let groupOffset = 0; groupOffset < group.count; groupOffset += batchCapacity) {
+      const count = Math.min(batchCapacity, group.count - groupOffset);
+      const firstSpanIndex = group.firstSpanIndex + groupOffset;
+      let timeMin = Number.POSITIVE_INFINITY;
+      let timeMax = Number.NEGATIVE_INFINITY;
+      let laneMin = TRACE_LANE_COUNT;
+      let laneMax = 0;
+      for (let rowIndex = 0; rowIndex < count; rowIndex++) {
+        const wordOffset = (firstSpanIndex + rowIndex) * TRACE_SPAN_RECORD_WORD_LENGTH;
+        const start = spanFloats[wordOffset];
+        const end = start + spanFloats[wordOffset + 1];
+        const lane = spans[wordOffset + 2];
+        timeMin = Math.min(timeMin, start);
+        timeMax = Math.max(timeMax, end);
+        laneMin = Math.min(laneMin, lane);
+        laneMax = Math.max(laneMax, lane + 1);
+      }
+      spanBatches.push({
+        batchIndex: spanBatches.length,
+        groupIndex: group.groupIndex,
+        name: group.name,
+        count,
+        firstSpanIndex,
+        timeMin,
+        timeMax,
+        laneMin,
+        laneMax,
+        data: spans.subarray(
+          firstSpanIndex * TRACE_SPAN_RECORD_WORD_LENGTH,
+          (firstSpanIndex + count) * TRACE_SPAN_RECORD_WORD_LENGTH
+        )
+      });
+    }
+  }
+
+  const spanBatchIndex = new Uint32Array(spanBatches.length * TRACE_SPAN_BATCH_RECORD_WORD_LENGTH);
+  const spanBatchIndexFloats = new Float32Array(spanBatchIndex.buffer);
+  for (const batch of spanBatches) {
+    const wordOffset = batch.batchIndex * TRACE_SPAN_BATCH_RECORD_WORD_LENGTH;
+    spanBatchIndex[wordOffset] = batch.firstSpanIndex;
+    spanBatchIndex[wordOffset + 1] = batch.count;
+    spanBatchIndexFloats[wordOffset + 2] = batch.timeMin;
+    spanBatchIndexFloats[wordOffset + 3] = batch.timeMax;
+    spanBatchIndex[wordOffset + 4] = batch.laneMin;
+    spanBatchIndex[wordOffset + 5] = batch.laneMax;
+    spanBatchIndex[wordOffset + 6] = batch.groupIndex;
+    spanBatchIndex[wordOffset + 7] = batch.batchIndex;
+  }
+  return {spanBatches, spanBatchIndex};
 }
 
 /** Maintains the original example API while retaining canonical source references. */
@@ -168,7 +279,8 @@ function fillTraceGroup(params: {
     const laneIndex = Math.floor(random() * TRACE_LANE_COUNT);
     const threadIndex = Math.floor(laneIndex / TRACE_LANES_PER_THREAD);
     const processIndex = Math.floor(threadIndex / TRACE_THREADS_PER_PROCESS);
-    const cluster = Math.floor(random() * 20) * (TRACE_DURATION / 20);
+    const temporalFraction = groupRowIndex / Math.max(params.spanCount, 1);
+    const cluster = Math.floor(temporalFraction * 20) * (TRACE_DURATION / 20);
     const start = Math.min(TRACE_DURATION - 0.05, cluster + random() * 55);
     const durationScale = params.groupIndex === 0 ? 5 : params.groupIndex === 1 ? 14 : 28;
     const duration = Math.max(0.08, Math.pow(random(), 2.6) * durationScale);

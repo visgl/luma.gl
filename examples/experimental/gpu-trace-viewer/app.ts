@@ -27,6 +27,7 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {
+  getTraceCapacityOptions,
   makeTraceDataset,
   isTraceDensityMode,
   TRACE_COLLAPSED_STATE,
@@ -62,7 +63,6 @@ export const title = 'GPU Hierarchical Trace Viewer';
 export const description =
   'GPU-resident hierarchical traces with live filtering, adaptive density LOD, dependency traversal, picking, and indirect rendering.';
 
-const CAPACITY_OPTIONS = [250_000, 1_000_000, 4_000_000] as const;
 const DEFAULT_CAPACITY = 250_000;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const TRACE_WORKGROUP_SIZE = 256;
@@ -98,6 +98,7 @@ type TraceGraphResources = {
   renderBundle: RenderBundle;
   groups: TraceGroupResources[];
   spans: Buffer;
+  spanBatchIndex: Buffer;
   dependencies: Buffer;
   parentSpans: Buffer;
   outgoingOffsets: Buffer;
@@ -121,6 +122,7 @@ type TraceGraphResources = {
   densityBins: Buffer;
   pickResult: Buffer;
   spanCount: number;
+  spanBatchCount: number;
   dependencyCount: number;
 };
 
@@ -141,6 +143,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   readonly densityModel: Model;
   readonly viewUniformBuffer: Buffer;
   readonly panels: ExamplePanelManager;
+  readonly capacityOptions: number[];
 
   private resources: TraceGraphResources | null = null;
   private capacity = DEFAULT_CAPACITY;
@@ -186,6 +189,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       throw new Error('GPU Hierarchical Trace Viewer requires WebGPU');
     }
     this.device = device;
+    this.capacityOptions = getTraceCapacityOptions(
+      device.limits.maxStorageBufferBindingSize,
+      device.limits.maxBufferSize
+    );
     this.viewUniformBuffer = device.createBuffer({
       id: 'gpu-trace-view-uniforms',
       byteLength: VIEW_UNIFORM_BYTE_LENGTH,
@@ -396,6 +403,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       readbackRing,
       groups,
       spans: this.createDataBuffer('gpu-trace-spans', dataset.spans),
+      spanBatchIndex: this.createDataBuffer('gpu-trace-span-batch-index', dataset.spanBatchIndex),
       dependencies: this.createDataBuffer('gpu-trace-dependencies', dataset.dependencies),
       parentSpans: this.createDataBuffer('gpu-trace-parent-spans', dataset.parentSpans),
       outgoingOffsets: this.createDataBuffer('gpu-trace-outgoing-offsets', outgoingOffsets),
@@ -453,6 +461,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         Buffer.COPY_SRC
       ),
       spanCount: dataset.spanCount,
+      spanBatchCount: dataset.spanBatches.length,
       dependencyCount: dataset.dependencyCount
     };
   }
@@ -934,6 +943,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     }
     for (const buffer of [
       resources.spans,
+      resources.spanBatchIndex,
       resources.dependencies,
       resources.parentSpans,
       resources.outgoingOffsets,
@@ -1016,10 +1026,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         `<label><input type="checkbox" data-status="${index}" checked> ${name}</label>`
     ).join('');
     return `<div style="display:grid;gap:10px">
-      <label>Capacity <select data-capacity-select>${CAPACITY_OPTIONS.map(
-        value =>
-          `<option value="${value}"${value === this.capacity ? ' selected' : ''}>${formatCount(value)}</option>`
-      ).join('')}</select></label>
+      <label>Capacity <select data-capacity-select>${this.capacityOptions
+        .map(
+          value =>
+            `<option value="${value}"${value === this.capacity ? ' selected' : ''}>${formatCount(value)}</option>`
+        )
+        .join('')}</select></label>
       <fieldset style="display:grid;gap:4px"><legend>Span groups</legend>${groupControls}</fieldset>
       <fieldset style="display:grid;gap:4px"><legend>Status</legend>${statusControls}</fieldset>
       <label>Minimum duration <input type="range" min="0" max="20" step="0.25" value="0" data-duration> <span data-duration-value>0.00 ms</span></label>
@@ -1035,7 +1047,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       </fieldset>
       <label>Source span <input type="number" min="0" value="0" data-source-span style="width:100px"></label>
       <div style="display:flex;gap:6px"><button type="button" data-select-span>Focus span</button><button type="button" data-clear-selection>Clear selection</button></div>
-      <label><input type="checkbox" data-auto-scroll checked> Auto-scroll</label>
+      <label><input type="checkbox" data-auto-scroll${this.autoScroll ? ' checked' : ''}> Auto-scroll</label>
       <button type="button" data-reset>Reset view</button>
       <small>Click a span to pick it on the GPU. Drag to pan; use the wheel to zoom.</small>
     </div>`;
@@ -1216,7 +1228,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
     if (this.capacityElement) {
-      this.capacityElement.innerHTML = `<strong>${formatCount(this.capacity)}</strong> spans · <strong>${formatCount(resources.dependencyCount)}</strong> dependencies · graph compile #${this.compileCount} (${this.compileTimeMilliseconds.toFixed(1)} ms)`;
+      this.capacityElement.innerHTML = `<strong>${formatCount(this.capacity)}</strong> spans · <strong>${formatCount(resources.spanBatchCount)}</strong> batches · <strong>${formatCount(resources.dependencyCount)}</strong> dependencies · graph compile #${this.compileCount} (${this.compileTimeMilliseconds.toFixed(1)} ms)`;
     }
     if (this.selectionElement) {
       this.selectionElement.textContent =
@@ -1237,6 +1249,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         <span>Dropped telemetry samples</span><strong>${formatCount(this.droppedTelemetrySampleCount)}</strong>
         <span>Deferred pick frames</span><strong>${formatCount(this.deferredPickFrameCount)}</strong>
         <span>Adapter</span><strong>${resources.compiled.capabilities.softwareAdapter ? 'software' : 'hardware'}</strong>
+        <span>Maximum storage binding</span><strong>${formatBytes(this.device.limits.maxStorageBufferBindingSize)}</strong>
+        <span>Maximum buffer</span><strong>${formatBytes(this.device.limits.maxBufferSize)}</strong>
         <span>Timestamp queries</span><strong>${resources.compiled.capabilities.timestampQueries ? 'available' : 'unavailable'}</strong>
         <span>Logical resources</span><strong>${formatBytes(stats.logicalResourceBytes)}</strong>
         <span>Owned transients</span><strong>${formatBytes(stats.physicalTransientResourceBytes)}</strong>
