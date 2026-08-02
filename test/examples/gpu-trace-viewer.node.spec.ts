@@ -6,6 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
   getTraceCapacityOptions,
+  getTraceDependencyCapacityOptions,
   isTraceDensityMode,
   makeTraceDataset,
   makeTraceGroups,
@@ -39,6 +40,11 @@ test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t =>
     getTraceCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
     [250_000, 1_000_000, 4_000_000],
     'portable limits retain the four-million-span ceiling'
+  );
+  t.deepEqual(
+    getTraceDependencyCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
+    [250_000, 1_000_000, 4_000_000],
+    'dependency options use their smaller fixed-width record size'
   );
   t.deepEqual(
     getTraceCapacityOptions(256 * 1024 * 1024, 1024 * 1024 * 1024),
@@ -122,6 +128,14 @@ test('GPU trace data preserves deterministic canonical group and hierarchy ident
     [2, 2, 3],
     'the original trace-group helper remains compatible'
   );
+  t.end();
+});
+
+test('GPU trace dependency generation respects its independent capacity', t => {
+  const dataset = makeTraceDataset(10_000, 250);
+  t.equal(dataset.spanCount, 10_000, 'span capacity remains independent');
+  t.equal(dataset.dependencyCount, 250, 'dependency generation stops at its requested capacity');
+  t.equal(makeTraceDataset(10_000, 0).dependencyCount, 0, 'zero dependencies are supported');
   t.end();
 });
 
@@ -276,5 +290,10 @@ test('GPU trace data handles empty inputs and rejects invalid capacities', t => 
   t.deepEqual(Array.from(dataset.incoming.offsets), [0], 'empty reverse CSR has a sentinel');
   t.throws(() => makeTraceDataset(-1), /nonnegative uint32/, 'negative capacity is rejected');
   t.throws(() => makeTraceDataset(1.5), /nonnegative uint32/, 'fractional capacity is rejected');
+  t.throws(
+    () => makeTraceDataset(1, -1),
+    /dependency count must be a nonnegative uint32/,
+    'negative dependency capacity is rejected'
+  );
   t.end();
 });

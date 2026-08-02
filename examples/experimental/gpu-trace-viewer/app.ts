@@ -29,6 +29,7 @@ import {
 } from '../../example-panels';
 import {
   getTraceCapacityOptions,
+  getTraceDependencyCapacityOptions,
   makeTraceDataset,
   isTraceDensityMode,
   TRACE_COLLAPSED_STATE,
@@ -66,6 +67,7 @@ export const description =
   'GPU-resident hierarchical traces with live filtering, adaptive density LOD, dependency traversal, picking, and indirect rendering.';
 
 const DEFAULT_CAPACITY = 250_000;
+const DEFAULT_DEPENDENCY_CAPACITY = 250_000;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const TRACE_WORKGROUP_SIZE = 256;
 const VIEW_UNIFORM_BYTE_LENGTH = 64;
@@ -148,9 +150,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   readonly viewUniformBuffer: Buffer;
   readonly panels: ExamplePanelManager;
   readonly capacityOptions: number[];
+  readonly dependencyCapacityOptions: number[];
 
   private resources: TraceGraphResources | null = null;
-  private capacity = DEFAULT_CAPACITY;
+  private spanCapacity = DEFAULT_CAPACITY;
+  private dependencyCapacity = DEFAULT_DEPENDENCY_CAPACITY;
   private enabledMask = 0b111;
   private statusMask = (1 << TRACE_STATUS_COUNT) - 1;
   private dependencyMask = 0b11;
@@ -187,14 +191,19 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
 
   constructor({
     device,
-    traceCapacity = DEFAULT_CAPACITY
-  }: AnimationProps & {traceCapacity?: number}) {
+    traceCapacity = DEFAULT_CAPACITY,
+    dependencyCapacity = DEFAULT_DEPENDENCY_CAPACITY
+  }: AnimationProps & {traceCapacity?: number; dependencyCapacity?: number}) {
     super();
     if (device.type !== 'webgpu') {
       throw new Error('GPU Hierarchical Trace Viewer requires WebGPU');
     }
     this.device = device;
     this.capacityOptions = getTraceCapacityOptions(
+      device.limits.maxStorageBufferBindingSize,
+      device.limits.maxBufferSize
+    );
+    this.dependencyCapacityOptions = getTraceDependencyCapacityOptions(
       device.limits.maxStorageBufferBindingSize,
       device.limits.maxBufferSize
     );
@@ -207,7 +216,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.dependencyModel = this.createDependencyModel();
     this.densityModel = this.createDensityModel();
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
-    this.rebuild(traceCapacity);
+    this.rebuild(traceCapacity, dependencyCapacity);
     this.panels.mount();
   }
 
@@ -365,12 +374,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     });
   }
 
-  private rebuild(capacity: number): void {
+  private rebuild(spanCapacity: number, dependencyCapacity: number): void {
     const started = performance.now();
     this.destroyResources();
-    this.capacity = capacity;
+    this.spanCapacity = spanCapacity;
+    this.dependencyCapacity = dependencyCapacity;
     this.selectedSpanIndex = INVALID_SPAN_INDEX;
-    const dataset = makeTraceDataset(capacity);
+    const dataset = makeTraceDataset(spanCapacity, dependencyCapacity);
     const resources = this.createResources(dataset);
     resources.renderBundle = this.createRenderBundle(resources);
     resources.compiled = this.createGraph(resources, dataset);
@@ -1119,10 +1129,16 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         `<label><input type="checkbox" data-status="${index}" checked> ${name}</label>`
     ).join('');
     return `<div style="display:grid;gap:10px">
-      <label>Capacity <select data-capacity-select>${this.capacityOptions
+      <label>Spans <select data-span-capacity>${this.capacityOptions
         .map(
           value =>
-            `<option value="${value}"${value === this.capacity ? ' selected' : ''}>${formatCount(value)}</option>`
+            `<option value="${value}"${value === this.spanCapacity ? ' selected' : ''}>${formatCount(value)}</option>`
+        )
+        .join('')}</select></label>
+      <label>Dependencies <select data-dependency-capacity>${this.dependencyCapacityOptions
+        .map(
+          value =>
+            `<option value="${value}"${value === this.dependencyCapacity ? ' selected' : ''}>${formatCount(value)}</option>`
         )
         .join('')}</select></label>
       <fieldset style="display:grid;gap:4px"><legend>Span groups</legend>${groupControls}</fieldset>
@@ -1171,8 +1187,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
         return;
       }
-      if (target.matches('[data-capacity-select]')) {
-        this.rebuild(Number(target.value));
+      if (target instanceof HTMLSelectElement && event.type !== 'change') {
+        return;
+      }
+      if (target.matches('[data-span-capacity]')) {
+        this.rebuild(Number(target.value), this.dependencyCapacity);
+      } else if (target.matches('[data-dependency-capacity]')) {
+        this.rebuild(this.spanCapacity, Number(target.value));
       } else if (target instanceof HTMLInputElement && target.dataset.group !== undefined) {
         const group = Number(target.dataset.group);
         this.enabledMask = setBit(this.enabledMask, group, target.checked);
@@ -1321,7 +1342,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
     if (this.capacityElement) {
-      this.capacityElement.innerHTML = `<strong>${formatCount(this.capacity)}</strong> spans · <strong>${formatCount(resources.spanBatchCount)}</strong> batches · <strong>${formatCount(resources.dependencyCount)}</strong> dependencies · graph compile #${this.compileCount} (${this.compileTimeMilliseconds.toFixed(1)} ms)`;
+      this.capacityElement.innerHTML = `<strong>${formatCount(this.spanCapacity)}</strong> spans · <strong>${formatCount(resources.spanBatchCount)}</strong> batches · <strong>${formatCount(resources.dependencyCount)}/${formatCount(this.dependencyCapacity)}</strong> dependencies · graph compile #${this.compileCount} (${this.compileTimeMilliseconds.toFixed(1)} ms)`;
     }
     if (this.selectionElement) {
       this.selectionElement.textContent =
