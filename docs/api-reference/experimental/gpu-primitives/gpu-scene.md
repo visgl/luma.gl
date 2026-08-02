@@ -27,9 +27,32 @@ physical location changes. `0xffffffff` is reserved as the invalid reference and
 object ID.
 
 Initial records occupy a dense active prefix. `flags` marks those records active, while the state
-buffer publishes `count`, `activeCount`, and `overflow` as separate `uint32` graph views. Mutation,
-holes, and compaction are intentionally deferred to the next scene tranche so their identity rules
-can be reviewed independently of this physical layout.
+buffer publishes `count`, `activeCount`, and `overflow` as separate `uint32` graph views. After a
+removal, `count` is the physical high-water mark and may include holes; `activeCount` is the exact
+number of live records. Consumers therefore combine the prefix with `flags` until compaction makes
+the two counts equal again.
+
+### Mutation is transactional and measurable
+
+`mutate()` accepts removals, patches, insertions, and optional compaction as one transaction. The
+complete transaction is validated before CPU metadata or GPU buffers change. Removals run first,
+patches retain the same stable IDs, and insertions reuse the lowest available slots. IDs may appear
+in only one operation within a transaction, which keeps replacement and ordering semantics
+unambiguous.
+
+Fixed capacity is a normal result, not an implicit reallocation. Insertions fill the available
+slots in input order, `overflowCount` reports the uninserted suffix, and the state buffer's
+`overflow` value becomes one. Every result also reports `writeCount` and `uploadedByteLength`, so an
+application can decide when fragmented small writes cost more than compaction.
+
+`compact()` and `mutate({compact: true})` retain active records in prior slot order and return every
+`{id, from, to}` move. Stable IDs and group, geometry, and command references remain unchanged.
+Compaction uploads at most the former active prefix and clears its unused suffix; a dense no-op
+compaction uploads no record bytes.
+
+These operations use explicit WebGPU queue writes. They do not submit command buffers or read GPU
+data back. This is the CPU-authored update path for scene graphs and streaming producers; later
+GPU-authored draw selection consumes the same resident records without requiring CPU filtering.
 
 ### One fixed record connects several workflows
 
@@ -74,6 +97,11 @@ This first contract never grows storage implicitly. A caller can size for a know
 a replacement scene deliberately when capacity changes, keeping allocation and lifetime costs
 visible.
 
+CPU-authored mutation requires known initial records. A scene created from opaque, pre-populated
+borrowed buffers exposes `mutable === false`: its storage and graph views remain usable, but
+`mutate()` and `compact()` reject because the class cannot safely infer stable IDs or holes without
+readback. Supplying matching `records` when adopting buffers keeps mutation available.
+
 ### Graph integration remains submission-neutral
 
 `importToGraph()` imports the record and state buffers and returns typed field views. It does not
@@ -99,6 +127,15 @@ const scene = new GPUScene(device, {
 const graph = new GPUCommandGraph(device);
 const sceneView = scene.importToGraph(graph);
 
+const mutation = scene.mutate({
+  update: [{id: 42, geometryId: 8}],
+  insert: [{id: 43, bounds: {minimum: [2, -1, -1], maximum: [4, 1, 1]}}]
+});
+
+if (mutation.overflowCount > 0) {
+  // Create a deliberately larger replacement scene at an application-defined boundary.
+}
+
 // Compose sceneView.boundsMinimum, sceneView.boundsMaximum, and
 // sceneView.objectIds with visibility, spatial, picking, or draw workflows.
 ```
@@ -123,13 +160,26 @@ Returns record/state buffer handles plus typed graph views for every public fiel
 
 Returns the byte offset of a validated capacity slot.
 
+### `getRecordIndex(id)`
+
+Returns the current physical slot for a stable ID when CPU record metadata is known.
+
+### `mutate(mutation)`
+
+Atomically validates and applies `insert`, `update`, `remove`, and optional `compact` operations.
+The result identifies affected IDs and moves and reports overflow and exact queue-write cost.
+
+### `compact()`
+
+Stable-compacts active records and returns the same mutation result shape.
+
 ### `destroy()`
 
 Destroys owned buffers and leaves borrowed buffers untouched. Calling it repeatedly is safe.
 
 ## Current scope
 
-`GPUScene` currently establishes the Phase 6.1a storage contract. It does not yet provide record
-insertion/removal, sparse updates, compaction, CPU-scene or table adapters, visibility policy,
+`GPUScene` now implements the Phase 6.1a storage and 6.1b CPU-authored mutation contracts. It does
+not yet provide CPU-scene or table adapters, GPU-authored record mutation, visibility policy,
 resource grouping, or indirect-command generation. Those policies build on this record layout in
 later tranches rather than being hidden inside the storage owner.

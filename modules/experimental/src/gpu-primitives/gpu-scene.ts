@@ -34,6 +34,12 @@ const FIELD_OFFSETS = {
 
 const IDENTITY_TRANSFORM = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
+type GPUSceneBufferWrite = {
+  target: 'records' | 'state';
+  data: ArrayBufferView;
+  byteOffset: number;
+};
+
 /** Three-dimensional scene coordinate. */
 export type GPUScenePosition = readonly [number, number, number];
 
@@ -57,6 +63,45 @@ export type GPUSceneRecord = {
   geometryId?: number;
   /** Indirect-command slot reference. Defaults to `0xffffffff`. */
   commandSlot?: number;
+};
+
+/** Mutable fields for one existing stable object ID. */
+export type GPUSceneRecordPatch = {
+  id: number;
+  bounds?: GPUSceneBounds;
+  transform?: readonly number[];
+  groupId?: number;
+  geometryId?: number;
+  commandSlot?: number;
+};
+
+/** One validated CPU-authored scene mutation transaction. */
+export type GPUSceneMutation = {
+  insert?: readonly GPUSceneRecord[];
+  update?: readonly GPUSceneRecordPatch[];
+  remove?: readonly number[];
+  /** Densely repack active records in prior slot order after applying the transaction. */
+  compact?: boolean;
+};
+
+/** One stable object's physical move during compaction. */
+export type GPUSceneMove = {
+  id: number;
+  from: number;
+  to: number;
+};
+
+/** Observable cost and identity effects of one mutation transaction. */
+export type GPUSceneMutationResult = {
+  insertedIds: readonly number[];
+  updatedIds: readonly number[];
+  removedIds: readonly number[];
+  moves: readonly GPUSceneMove[];
+  overflowCount: number;
+  writeCount: number;
+  uploadedByteLength: number;
+  recordCount: number;
+  activeCount: number;
 };
 
 /** Physical storage adopted by a {@link GPUScene}. */
@@ -108,6 +153,7 @@ export type GPUSceneView = {
 export type GPUSceneStats = {
   capacity: number;
   recordCount: number;
+  activeCount: number;
   recordByteLength: number;
   recordBufferByteLength: number;
   stateBufferByteLength: number;
@@ -124,12 +170,16 @@ export class GPUScene {
   readonly device: Device;
   readonly id: string;
   readonly capacity: number;
-  readonly recordCount: number;
   readonly recordBuffer: Buffer;
   readonly stateBuffer: Buffer;
-  readonly stats: GPUSceneStats;
+  /** Whether stable IDs and slots are known well enough for CPU-authored mutation. */
+  readonly mutable: boolean;
   private ownsBuffers: boolean;
   private destroyed = false;
+  private highWaterMark: number;
+  private activeRecordCount: number;
+  private readonly recordsBySlot: Array<GPUSceneRecord | undefined>;
+  private readonly slotsById = new Map<number, number>();
 
   constructor(device: Device, props: GPUSceneProps) {
     if (device.type !== 'webgpu') {
@@ -160,7 +210,15 @@ export class GPUScene {
     this.device = device;
     this.id = props.id ?? 'gpu-scene';
     this.capacity = capacity;
-    this.recordCount = recordCount;
+    this.highWaterMark = recordCount;
+    this.activeRecordCount = recordCount;
+    this.mutable = records.length === recordCount;
+    this.recordsBySlot = new Array(capacity);
+    records.forEach((record, recordIndex) => {
+      const normalizedRecord = normalizeRecord(record);
+      this.recordsBySlot[recordIndex] = normalizedRecord;
+      this.slotsById.set(normalizedRecord.id, recordIndex);
+    });
     const recordBufferByteLength = capacity * GPU_SCENE_RECORD_BYTE_LENGTH;
     if (!Number.isSafeInteger(recordBufferByteLength)) {
       throw new Error('GPUScene record storage exceeds safe integer range');
@@ -191,15 +249,124 @@ export class GPUScene {
       });
       this.ownsBuffers = true;
     }
+  }
 
-    this.stats = {
-      capacity,
-      recordCount,
+  /** Current physical prefix length, including inactive holes. */
+  get recordCount(): number {
+    return this.highWaterMark;
+  }
+
+  /** Current number of active records. */
+  get activeCount(): number {
+    return this.activeRecordCount;
+  }
+
+  /** Current allocation and logical-count facts available without readback. */
+  get stats(): GPUSceneStats {
+    return {
+      capacity: this.capacity,
+      recordCount: this.highWaterMark,
+      activeCount: this.activeRecordCount,
       recordByteLength: GPU_SCENE_RECORD_BYTE_LENGTH,
-      recordBufferByteLength,
+      recordBufferByteLength: this.capacity * GPU_SCENE_RECORD_BYTE_LENGTH,
       stateBufferByteLength: GPU_SCENE_STATE_BYTE_LENGTH,
-      outputByteLength: recordBufferByteLength + GPU_SCENE_STATE_BYTE_LENGTH
+      outputByteLength: this.capacity * GPU_SCENE_RECORD_BYTE_LENGTH + GPU_SCENE_STATE_BYTE_LENGTH
     };
+  }
+
+  /** Returns the current physical slot for a stable object ID, if CPU metadata is available. */
+  getRecordIndex(id: number): number | undefined {
+    return this.slotsById.get(id);
+  }
+
+  /** Applies one validated mutation transaction and reports its bounded queue-write cost. */
+  mutate(mutation: GPUSceneMutation): GPUSceneMutationResult {
+    this.assertMutable();
+    const insert = mutation.insert ?? [];
+    const update = mutation.update ?? [];
+    const remove = mutation.remove ?? [];
+    validateMutation(this.slotsById, this.recordsBySlot, insert, update, remove);
+
+    const writes: GPUSceneBufferWrite[] = [];
+    const removedIds = [...remove];
+    for (const id of remove) {
+      const slot = this.slotsById.get(id)!;
+      this.recordsBySlot[slot] = undefined;
+      this.slotsById.delete(id);
+      this.activeRecordCount--;
+      if (!mutation.compact) {
+        writes.push({
+          target: 'records',
+          data: Uint32Array.of(0),
+          byteOffset: this.getRecordByteOffset(slot) + FIELD_OFFSETS.flags
+        });
+      }
+    }
+
+    const updatedIds: number[] = [];
+    for (const patch of update) {
+      const slot = this.slotsById.get(patch.id)!;
+      const record = applyRecordPatch(this.recordsBySlot[slot]!, patch);
+      this.recordsBySlot[slot] = record;
+      updatedIds.push(record.id);
+      if (!mutation.compact) {
+        writes.push({
+          target: 'records',
+          data: makeRecordData([record]),
+          byteOffset: this.getRecordByteOffset(slot)
+        });
+      }
+    }
+
+    const freeSlots: number[] = [];
+    for (let slot = 0; slot < this.capacity; slot++) {
+      if (!this.recordsBySlot[slot]) freeSlots.push(slot);
+    }
+    const insertedIds: number[] = [];
+    const insertedCount = Math.min(insert.length, freeSlots.length);
+    for (let insertIndex = 0; insertIndex < insertedCount; insertIndex++) {
+      const record = normalizeRecord(insert[insertIndex]!);
+      const slot = freeSlots[insertIndex]!;
+      this.recordsBySlot[slot] = record;
+      this.slotsById.set(record.id, slot);
+      this.activeRecordCount++;
+      this.highWaterMark = Math.max(this.highWaterMark, slot + 1);
+      insertedIds.push(record.id);
+      if (!mutation.compact) {
+        writes.push({
+          target: 'records',
+          data: makeRecordData([record]),
+          byteOffset: this.getRecordByteOffset(slot)
+        });
+      }
+    }
+
+    const overflowCount = insert.length - insertedCount;
+    const moves = mutation.compact ? this.compactRecords(this.highWaterMark, writes) : [];
+    if (!mutation.compact) this.trimHighWaterMark();
+    writes.push({
+      target: 'state',
+      data: makeStateData(this.highWaterMark, this.activeRecordCount, overflowCount > 0),
+      byteOffset: 0
+    });
+    for (const write of writes) this.writeBuffer(write);
+
+    return Object.freeze({
+      insertedIds: Object.freeze(insertedIds),
+      updatedIds: Object.freeze(updatedIds),
+      removedIds: Object.freeze(removedIds),
+      moves: Object.freeze(moves),
+      overflowCount,
+      writeCount: writes.length,
+      uploadedByteLength: writes.reduce((sum, write) => sum + write.data.byteLength, 0),
+      recordCount: this.highWaterMark,
+      activeCount: this.activeRecordCount
+    });
+  }
+
+  /** Densely repacks active records in stable prior-slot order. */
+  compact(): GPUSceneMutationResult {
+    return this.mutate({compact: true});
   }
 
   /** Returns the byte offset of one validated record. */
@@ -290,6 +457,51 @@ export class GPUScene {
     }
     this.destroyed = true;
   }
+
+  private compactRecords(
+    previousHighWaterMark: number,
+    writes: GPUSceneBufferWrite[]
+  ): GPUSceneMove[] {
+    const compacted = this.recordsBySlot.filter(
+      (record): record is GPUSceneRecord => record !== undefined
+    );
+    const moves: GPUSceneMove[] = [];
+    compacted.forEach((record, to) => {
+      const from = this.slotsById.get(record.id)!;
+      if (from !== to) moves.push(Object.freeze({id: record.id, from, to}));
+    });
+    this.recordsBySlot.fill(undefined);
+    this.slotsById.clear();
+    compacted.forEach((record, slot) => {
+      this.recordsBySlot[slot] = record;
+      this.slotsById.set(record.id, slot);
+    });
+    this.highWaterMark = compacted.length;
+    if (moves.length > 0 || previousHighWaterMark > compacted.length) {
+      const upload = new Uint8Array(previousHighWaterMark * GPU_SCENE_RECORD_BYTE_LENGTH);
+      upload.set(makeRecordData(compacted));
+      writes.push({target: 'records', data: upload, byteOffset: 0});
+    }
+    return moves;
+  }
+
+  private trimHighWaterMark(): void {
+    while (this.highWaterMark > 0 && !this.recordsBySlot[this.highWaterMark - 1]) {
+      this.highWaterMark--;
+    }
+  }
+
+  private writeBuffer(write: GPUSceneBufferWrite): void {
+    const buffer = write.target === 'state' ? this.stateBuffer : this.recordBuffer;
+    buffer.write(write.data, write.byteOffset);
+  }
+
+  private assertMutable(): void {
+    if (this.destroyed) throw new Error('GPUScene has been destroyed');
+    if (!this.mutable) {
+      throw new Error('GPUScene mutation requires CPU-known initial records');
+    }
+  }
 }
 
 function validateBuffers(device: Device, buffers: GPUSceneBuffers, recordByteLength: number): void {
@@ -379,8 +591,71 @@ function makeRecordData(records: readonly GPUSceneRecord[]): Uint8Array {
   return new Uint8Array(data);
 }
 
-function makeStateData(recordCount: number): Uint32Array {
-  return Uint32Array.from([recordCount, recordCount, 0, 0]);
+function makeStateData(
+  recordCount: number,
+  activeCount = recordCount,
+  overflow = false
+): Uint32Array {
+  return Uint32Array.from([recordCount, activeCount, overflow ? 1 : 0, 0]);
+}
+
+function normalizeRecord(record: GPUSceneRecord): GPUSceneRecord {
+  return Object.freeze({
+    id: record.id,
+    bounds: Object.freeze({
+      minimum: Object.freeze([...record.bounds.minimum]) as GPUScenePosition,
+      maximum: Object.freeze([...record.bounds.maximum]) as GPUScenePosition
+    }),
+    transform: record.transform ? Object.freeze([...record.transform]) : undefined,
+    groupId: record.groupId,
+    geometryId: record.geometryId,
+    commandSlot: record.commandSlot
+  });
+}
+
+function applyRecordPatch(record: GPUSceneRecord, patch: GPUSceneRecordPatch): GPUSceneRecord {
+  const updated = normalizeRecord({
+    ...record,
+    bounds: patch.bounds ?? record.bounds,
+    transform: patch.transform ?? record.transform,
+    groupId: patch.groupId ?? record.groupId,
+    geometryId: patch.geometryId ?? record.geometryId,
+    commandSlot: patch.commandSlot ?? record.commandSlot
+  });
+  validateRecords([updated]);
+  return updated;
+}
+
+function validateMutation(
+  slotsById: ReadonlyMap<number, number>,
+  recordsBySlot: readonly (GPUSceneRecord | undefined)[],
+  insert: readonly GPUSceneRecord[],
+  update: readonly GPUSceneRecordPatch[],
+  remove: readonly number[]
+): void {
+  validateRecords(insert);
+  const touched = new Set<number>();
+  for (const id of remove) {
+    validateUint32(id, 'remove id', false);
+    if (!slotsById.has(id)) throw new Error(`GPUScene record id ${id} does not exist`);
+    if (touched.has(id)) throw new Error(`GPUScene record id ${id} appears more than once`);
+    touched.add(id);
+  }
+  for (const patch of update) {
+    validateUint32(patch.id, 'patch id', false);
+    if (!slotsById.has(patch.id)) throw new Error(`GPUScene record id ${patch.id} does not exist`);
+    if (touched.has(patch.id))
+      throw new Error(`GPUScene record id ${patch.id} appears more than once`);
+    const slot = slotsById.get(patch.id)!;
+    applyRecordPatch(recordsBySlot[slot]!, patch);
+    touched.add(patch.id);
+  }
+  for (const record of insert) {
+    if (slotsById.has(record.id) || touched.has(record.id)) {
+      throw new Error(`GPUScene record id ${record.id} already exists`);
+    }
+    touched.add(record.id);
+  }
 }
 
 function writeVector4(view: DataView, byteOffset: number, values: readonly number[]): void {

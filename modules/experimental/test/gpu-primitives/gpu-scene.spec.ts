@@ -73,6 +73,7 @@ test('GPUScene stores fixed-layout records and publishes graph views', async t =
   t.deepEqual(scene.stats, {
     capacity: 3,
     recordCount: 2,
+    activeCount: 2,
     recordByteLength: 128,
     recordBufferByteLength: 384,
     stateBufferByteLength: 16,
@@ -158,3 +159,126 @@ test('GPUScene validates identity, layout, and borrowed ownership', async t => {
   stateBuffer.destroy();
   t.end();
 });
+
+test('GPUScene mutates holes, reports overflow, and compacts in stable slot order', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const bounds = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;
+  const scene = new GPUScene(device, {
+    capacity: 4,
+    records: [
+      {id: 10, bounds},
+      {id: 20, bounds},
+      {id: 30, bounds}
+    ]
+  });
+  const mutation = scene.mutate({
+    remove: [20],
+    update: [{id: 30, geometryId: 9}],
+    insert: [
+      {id: 40, bounds},
+      {id: 50, bounds},
+      {id: 60, bounds}
+    ]
+  });
+  t.deepEqual(mutation, {
+    insertedIds: [40, 50],
+    updatedIds: [30],
+    removedIds: [20],
+    moves: [],
+    overflowCount: 1,
+    writeCount: 5,
+    uploadedByteLength: 404,
+    recordCount: 4,
+    activeCount: 4
+  });
+  t.deepEqual(await readSceneIds(scene, 4), [10, 40, 30, 50], 'the lowest hole is reused first');
+  t.deepEqual(await readSceneState(scene), [4, 4, 1, 0], 'overflow is published to graph state');
+  t.equal(scene.getRecordIndex(40), 1);
+
+  const compacted = scene.mutate({remove: [10, 40], compact: true});
+  t.deepEqual(compacted.moves, [
+    {id: 30, from: 2, to: 0},
+    {id: 50, from: 3, to: 1}
+  ]);
+  t.equal(compacted.uploadedByteLength, 528, 'compaction reports its bounded prefix upload');
+  t.equal(compacted.writeCount, 2, 'one record-prefix write and one state write are issued');
+  t.deepEqual(await readSceneIds(scene, 4), [30, 50, 0, 0]);
+  t.deepEqual(await readSceneState(scene), [2, 2, 0, 0]);
+  t.equal(scene.getRecordIndex(30), 0);
+  t.equal(scene.getRecordIndex(50), 1);
+  t.deepEqual(scene.stats, {
+    capacity: 4,
+    recordCount: 2,
+    activeCount: 2,
+    recordByteLength: 128,
+    recordBufferByteLength: 512,
+    stateBufferByteLength: 16,
+    outputByteLength: 528
+  });
+
+  scene.destroy();
+  t.end();
+});
+
+test('GPUScene validates complete transactions before changing CPU metadata', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const bounds = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;
+  const scene = new GPUScene(device, {
+    capacity: 2,
+    records: [
+      {id: 1, bounds},
+      {id: 2, bounds}
+    ]
+  });
+  t.throws(
+    () =>
+      scene.mutate({
+        remove: [1],
+        update: [{id: 2, bounds: {minimum: [2, 0, 0], maximum: [1, 1, 1]}}]
+      }),
+    /ordered minima/
+  );
+  t.equal(scene.activeCount, 2, 'a rejected transaction removes nothing');
+  t.equal(scene.getRecordIndex(1), 0, 'stable ID metadata remains unchanged');
+
+  const recordBuffer = device.createBuffer({byteLength: 128, usage: REQUIRED_USAGE});
+  const stateBuffer = device.createBuffer({byteLength: 16, usage: REQUIRED_USAGE});
+  const opaqueScene = new GPUScene(device, {
+    capacity: 1,
+    recordCount: 1,
+    buffers: {records: recordBuffer, state: stateBuffer}
+  });
+  t.notOk(opaqueScene.mutable, 'opaque borrowed storage does not claim CPU-known IDs');
+  t.throws(() => opaqueScene.compact(), /CPU-known initial records/);
+
+  scene.destroy();
+  opaqueScene.destroy();
+  recordBuffer.destroy();
+  stateBuffer.destroy();
+  t.end();
+});
+
+async function readSceneIds(scene: GPUScene, count: number): Promise<number[]> {
+  const bytes = await scene.recordBuffer.readAsync();
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return Array.from({length: count}, (_, index) =>
+    view.getUint32(index * GPU_SCENE_RECORD_BYTE_LENGTH, true)
+  );
+}
+
+async function readSceneState(scene: GPUScene): Promise<number[]> {
+  const bytes = await scene.stateBuffer.readAsync();
+  return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, 4));
+}
