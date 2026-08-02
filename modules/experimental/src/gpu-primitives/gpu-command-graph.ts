@@ -817,11 +817,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
         const frameId = this.lastFrameIds.get(textureOrView.texture);
         for (let index = this.cachedTextureViews.length - 1; index >= 0; index--) {
           const entry = this.cachedTextureViews[index];
-          if (
-            entry.logicalView === textureOrView &&
-            entry.texture === texture &&
-            entry.frameId !== frameId
-          ) {
+          if (entry.logicalView === textureOrView && entry.frameId !== frameId) {
             this.destroyFramebuffersUsingView(entry.view);
             entry.view.destroy();
             this.cachedTextureViews.splice(index, 1);

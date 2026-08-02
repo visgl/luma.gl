@@ -608,5 +608,6 @@ function getSourceIdChunks(sourceIds?: GPUGridIndexSourceIds): readonly GraphDat
 }
 
 function getFloatLiteral(value: number): string {
-  return Number.isInteger(value) ? `${value}.0` : `${value}`;
+  const literal = `${Math.fround(value)}`;
+  return literal.includes('.') || literal.includes('e') ? literal : `${literal}.0`;
 }
