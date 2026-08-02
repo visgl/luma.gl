@@ -491,6 +491,20 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     secondExternalTexture,
     'the next frame resolves a fresh binding'
   );
+  const nonconsecutiveReuseEncoder = device.createCommandEncoder({
+    id: 'nonconsecutive-reused-external-frame'
+  });
+  t.throws(
+    () =>
+      compiled.encode(nonconsecutiveReuseEncoder, {
+        parameters: undefined,
+        frameTextures: {color: {texture: frameTexture, frameId: 2}},
+        externalTextures: {video: {texture: firstExternalTexture, frameId: 2}}
+      }),
+    /requires a fresh binding/,
+    'an expired binding cannot be reused after an intervening frame'
+  );
+  nonconsecutiveReuseEncoder.destroy();
   compiled.destroy();
   t.notOk(firstExternalTexture.destroyed, 'compiled graph leaves external bindings caller-owned');
   t.notOk(secondExternalTexture.destroyed, 'replacement external binding remains caller-owned');

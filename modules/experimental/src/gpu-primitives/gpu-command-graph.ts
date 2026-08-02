@@ -730,7 +730,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
   private readonly cachedFramebuffers: CachedFramebuffer[] = [];
   private readonly lastFrameIds = new Map<GraphTextureHandle, number>();
   private readonly lastExternalTextureFrameIds = new Map<GraphExternalTextureHandle, number>();
-  private readonly lastExternalTextures = new Map<GraphExternalTextureHandle, ExternalTexture>();
+  private readonly consumedExternalTextures = new WeakSet<ExternalTexture>();
   private destroyed = false;
 
   /** @internal */
@@ -784,8 +784,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
     for (const [handle, nextFrameId] of externalTextureResult.frameIds) {
       this.lastExternalTextureFrameIds.set(handle, nextFrameId);
     }
-    for (const [handle, texture] of externalTextureResult.textures) {
-      this.lastExternalTextures.set(handle, texture);
+    for (const texture of externalTextureResult.textures.values()) {
+      this.consumedExternalTextures.add(texture);
     }
     const importedTextures = importedTextureResult.textures;
     const getBuffer = (bufferOrView: GraphBufferHandle | GraphDataView): Buffer => {
@@ -1068,7 +1068,7 @@ export class CompiledGPUCommandGraph<Parameters = void> {
           `GPUCommandGraph external texture "${id}" frameId ${binding.frameId} is stale; expected greater than ${lastFrameId}`
         );
       }
-      if (this.lastExternalTextures.get(handle) === binding.texture) {
+      if (this.consumedExternalTextures.has(binding.texture)) {
         throw new Error(
           `GPUCommandGraph external texture "${id}" requires a fresh binding for each frame`
         );
