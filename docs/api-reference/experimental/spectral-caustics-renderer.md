@@ -1,4 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+import {SpectralCausticsExample} from '@site/src/examples';
 
 # SpectralCausticsRenderer
 
@@ -13,6 +14,8 @@ receiver and converts XYZ to linear sRGB at the receiver shading boundary.
 The result is a reusable receiver-lighting contribution, not a replacement scene renderer. Add
 it to the receiver's ordinary direct, indirect, and emissive lighting, then keep the combined
 scene in an HDR target until bloom and tone mapping.
+
+<SpectralCausticsExample embedded showStats={false} />
 
 ## Usage
 

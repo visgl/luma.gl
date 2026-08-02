@@ -155,9 +155,13 @@ export {
 export type {
   GPUSceneBounds,
   GPUSceneBuffers,
+  GPUSceneMove,
+  GPUSceneMutation,
+  GPUSceneMutationResult,
   GPUScenePosition,
   GPUSceneProps,
   GPUSceneRecord,
+  GPUSceneRecordPatch,
   GPUSceneStats,
   GPUSceneView
 } from './gpu-scene';
