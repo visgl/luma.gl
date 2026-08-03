@@ -43,14 +43,14 @@ import type {
   ShaderBindingDebugRow,
   ShaderModule,
   ShaderPlugin,
-  PlatformInfo
+  PlatformInfo,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 import {
   mergeShaderPluginModules,
   resolveShaderPlugins,
-  ShaderAssembler,
-  GLSLShaderAssembler,
-  WGSLShaderAssembler
+  ShaderAssembler
 } from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
@@ -325,7 +325,7 @@ export class Model {
       ...props,
       shaderAssembler:
         props.shaderAssembler ??
-        (defaultShaderAssembler.shaderLanguage === device.info.shadingLanguage
+        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
           ? defaultShaderAssembler
           : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
     };
@@ -372,7 +372,7 @@ export class Model {
       // WGSL
       const shaderAssembler = this.props.shaderAssembler;
       // WGSL sources require an assembler with WGSL-specific hooks and binding state.
-      assert(shaderAssembler instanceof WGSLShaderAssembler);
+      assert(isShaderAssemblerForLanguage(shaderAssembler, 'wgsl'));
       const {source, getUniforms, bindingTable} = shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
@@ -405,7 +405,7 @@ export class Model {
       // GLSL
       const shaderAssembler = this.props.shaderAssembler;
       // GLSL shader pairs require an assembler with GLSL-specific hooks.
-      assert(shaderAssembler instanceof GLSLShaderAssembler);
+      assert(isShaderAssemblerForLanguage(shaderAssembler, 'glsl'));
       const {vs, fs, getUniforms} = shaderAssembler.assembleGLSLShaderPair({
         platformInfo,
         ...this.props,
@@ -1315,6 +1315,36 @@ export class Model {
 }
 
 // HELPERS
+
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'glsl'
+): shaderAssembler is GLSLShaderAssembler;
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'wgsl'
+): shaderAssembler is WGSLShaderAssembler;
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'glsl' | 'wgsl'
+): shaderAssembler is GLSLShaderAssembler | WGSLShaderAssembler;
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'glsl' | 'wgsl'
+): boolean {
+  if (
+    shaderAssembler.shaderLanguage !== undefined &&
+    shaderAssembler.shaderLanguage !== shaderLanguage
+  ) {
+    return false;
+  }
+
+  return shaderLanguage === 'glsl'
+    ? 'assembleGLSLShaderPair' in shaderAssembler &&
+        typeof shaderAssembler.assembleGLSLShaderPair === 'function'
+    : 'assembleWGSLShader' in shaderAssembler &&
+        typeof shaderAssembler.assembleWGSLShader === 'function';
+}
 
 function normalizeShaderPluginAttributeNames(
   shaderLayout: ShaderLayout | null | undefined,
