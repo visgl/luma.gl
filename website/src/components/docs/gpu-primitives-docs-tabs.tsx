@@ -26,6 +26,7 @@ export type GPUPrimitivesDocsTabId =
   | 'spatial-benchmark'
   | 'scene'
   | 'group-aggregation'
+  | 'hash-index'
   | 'index-picking'
   | 'readback-ring'
   | 'draw-command-buffer';
@@ -150,6 +151,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'group-aggregation',
     label: 'Group Aggregation',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation'
+  },
+  {
+    id: 'hash-index',
+    label: 'Hash Index',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-hash-index'
   },
   {
     id: 'index-picking',
