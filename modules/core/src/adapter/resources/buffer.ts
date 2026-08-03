@@ -130,6 +130,10 @@ export abstract class Buffer extends Resource<BufferProps> {
     _byteOffset: number,
     byteLength: number
   ): void {
+    if (!this.device.props.debug) {
+      return;
+    }
+
     let arrayBufferView: ArrayBufferView | null = null;
     let arrayBuffer: ArrayBufferLike | null;
     if (ArrayBuffer.isView(data)) {
