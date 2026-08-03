@@ -40,7 +40,6 @@
     "@luma.gl/core": "~9.4.0-alpha.1"
   },
   "dependencies": {
-    "@probe.gl/env": "^4.1.1",
     "@webgpu/types": "^0.1.69",
     "wgsl_reflect": "^1.2.3"
   },

@@ -4,7 +4,6 @@
 
 import type {Device, Buffer, VertexArrayProps, RenderPass} from '@luma.gl/core';
 import {VertexArray, log} from '@luma.gl/core';
-import {getBrowser} from '@probe.gl/env';
 
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from '../resources/webgpu-buffer';
@@ -141,6 +140,12 @@ export class WebGPUVertexArray extends VertexArray {
    * Attribute 0 can not be disable on most desktop OpenGL based browsers
    */
   static isConstantAttributeZeroSupported(device: Device): boolean {
-    return getBrowser() === 'Chrome';
+    return isChromiumBrowser();
   }
+}
+
+function isChromiumBrowser(): boolean {
+  const chrome = (globalThis as typeof globalThis & {chrome?: unknown}).chrome;
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  return Boolean(chrome) && !userAgent.includes('Electron');
 }
