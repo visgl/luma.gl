@@ -4,6 +4,7 @@
 
 import {describe, expect, test} from 'vitest';
 import {Matrix4, radians} from '@math.gl/core';
+import {toHalfFloat} from '@luma.gl/shadertools';
 import {
   getTempestOceanMinimumCameraHeight,
   getTempestOceanSunDirection,
@@ -18,6 +19,10 @@ import {
   TEMPEST_OCEAN_SKY_SHADER,
   TEMPEST_OCEAN_SURFACE_SHADER
 } from '../../examples/showcase/tempest-ocean/tempest-ocean-shaders';
+import {
+  convertLinearDisplayP3ToSrgbBytes,
+  packTempestOceanFloatRows
+} from '../../examples/showcase/tempest-ocean/tempest-ocean-capture';
 
 describe('Tempest Ocean draw plan', () => {
   test('keeps raster tessellation independent from the FFT field', () => {
@@ -90,6 +95,41 @@ describe('Tempest Ocean presentation contract', () => {
     expect(TEMPEST_OCEAN_SURFACE_SHADER).toContain('sampleOceanSurface');
     expect(TEMPEST_OCEAN_SURFACE_SHADER).toContain('mix(normalFoamBottom, normalFoamTop');
     expect(TEMPEST_OCEAN_SKY_SHADER).toContain('getTempestSkyColor');
+  });
+});
+
+describe('Tempest Ocean HDR screenshot packing', () => {
+  test('removes WebGPU padding without changing top-down row order', () => {
+    const sourceData = new Uint8Array(40);
+    sourceData.set(
+      Array.from({length: 16}, (_, index) => index + 1),
+      0
+    );
+    sourceData.set(
+      Array.from({length: 16}, (_, index) => index + 17),
+      20
+    );
+
+    expect(packTempestOceanFloatRows(sourceData, 2, 2, 20)).toEqual(
+      new Uint8Array(Array.from({length: 32}, (_, index) => index + 1))
+    );
+  });
+
+  test('applies the sRGB transfer curve to Display-P3 color while keeping alpha linear', () => {
+    const linearData = new Uint8Array(8);
+    const linearDataView = new DataView(linearData.buffer);
+    const values = [0, 1, 0.5, 0.5];
+    for (let channelIndex = 0; channelIndex < values.length; channelIndex++) {
+      linearDataView.setUint16(
+        channelIndex * Uint16Array.BYTES_PER_ELEMENT,
+        toHalfFloat(values[channelIndex]),
+        true
+      );
+    }
+
+    expect(convertLinearDisplayP3ToSrgbBytes(linearData)).toEqual(
+      new Uint8Array([0, 255, 188, 128])
+    );
   });
 });
 

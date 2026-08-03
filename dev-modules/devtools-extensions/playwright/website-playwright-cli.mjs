@@ -25,6 +25,17 @@ export async function runWebsitePlaywrightCli(argv = process.argv.slice(2)) {
   console.log(`[playwright] Opened ${result.targetUrl}`);
   console.log(`[playwright] Browser mode: ${result.browserMode}`);
   console.log(`[playwright] Screenshot saved to ${result.screenshotPath}`);
+  if (result.highDynamicRangeArtifacts) {
+    console.log(
+      `[playwright] HDR raw capture saved to ${result.highDynamicRangeArtifacts.hdrRawPath}`
+    );
+    console.log(
+      `[playwright] SDR raw capture saved to ${result.highDynamicRangeArtifacts.sdrRawPath}`
+    );
+    console.log(
+      `[playwright] HDR capture manifest saved to ${result.highDynamicRangeArtifacts.manifestPath}`
+    );
+  }
   console.log(
     result.usingExistingServer
       ? '[playwright] Reused existing website server'
@@ -49,7 +60,7 @@ export async function runWebsitePlaywrightCli(argv = process.argv.slice(2)) {
   }
 }
 
-function parseArguments(argv) {
+export function parseArguments(argv) {
   const parsed = {
     attach: undefined,
     backend: undefined,
@@ -59,9 +70,12 @@ function parseArguments(argv) {
     example: undefined,
     headless: false,
     help: false,
+    highDynamicRangeCapture: false,
     keepOpen: true,
     softwareGpu: false,
     targetTab: undefined,
+    viewportHeight: undefined,
+    viewportWidth: undefined,
     watch: false,
     watchInterval: undefined
   };
@@ -77,6 +91,11 @@ function parseArguments(argv) {
     if (argument === '--headless') {
       parsed.headless = true;
       parsed.keepOpen = false;
+      continue;
+    }
+
+    if (argument === '--hdr-capture') {
+      parsed.highDynamicRangeCapture = true;
       continue;
     }
 
@@ -161,6 +180,32 @@ function parseArguments(argv) {
       continue;
     }
 
+    if (argument.startsWith('--viewport-width=')) {
+      parsed.viewportWidth = parsePositiveInteger(
+        argument.split('=').slice(1).join('='),
+        '--viewport-width'
+      );
+      continue;
+    }
+
+    if (argument === '--viewport-width') {
+      parsed.viewportWidth = parsePositiveInteger(argv[++index], '--viewport-width');
+      continue;
+    }
+
+    if (argument.startsWith('--viewport-height=')) {
+      parsed.viewportHeight = parsePositiveInteger(
+        argument.split('=').slice(1).join('='),
+        '--viewport-height'
+      );
+      continue;
+    }
+
+    if (argument === '--viewport-height') {
+      parsed.viewportHeight = parsePositiveInteger(argv[++index], '--viewport-height');
+      continue;
+    }
+
     if (argument.startsWith('--debug-port=')) {
       parsed.debugPort = Number(argument.split('=').slice(1).join('='));
       continue;
@@ -187,10 +232,19 @@ function parseArguments(argv) {
   return parsed;
 }
 
+function parsePositiveInteger(value, optionName) {
+  const parsedValue = Number(value);
+  if (!Number.isSafeInteger(parsedValue) || parsedValue <= 0) {
+    throw new Error(`${optionName} must be a positive integer.`);
+  }
+  return parsedValue;
+}
+
 function printHelp() {
   console.log(`
 Usage:
   yarn website-debug --example showcase/persistence
+  yarn website-debug --example showcase/tempest-ocean --backend webgpu-core --hdr-capture
   yarn website-debug --example persistence --backend webgl2
   yarn website-debug --example api/animation --backend webgpu-core
   yarn website-debug --example api/animation --backend webgpu-max
@@ -205,10 +259,13 @@ Options:
   --channel <value>         Browser channel to launch
   --debug-port <number>     Remote debugging port for launched browsers
   --base-url <url>          Website base URL
+  --hdr-capture             Save raw HDR and SDR planes plus a capture manifest
   --headless                Launch headless and close after capture
   --keep-open               Keep the browser open after capture
   --no-keep-open            Close the browser after capture
   --software-gpu            Force software GPU flags
+  --viewport-width <px>     Set the browser viewport width before capture
+  --viewport-height <px>    Set the browser viewport height before capture
   --watch                   Keep capturing screenshots repeatedly
   --watch-interval <ms>     Interval between watched screenshots
   --help                    Show this help message

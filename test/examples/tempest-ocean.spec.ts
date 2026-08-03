@@ -70,8 +70,19 @@ describe('Tempest Ocean: Spectral Stormfront', () => {
         .spyOn(viewer.postprocessingRenderer, 'renderToScreen')
         .mockImplementation(() => {});
 
+      viewer.onRender(makeAnimationProps(device, width, height, 900));
+      device.submit();
+      viewer.onRender(makeAnimationProps(device, width, height, 950));
+      device.submit();
+      expect(viewer.oceanTimeSeconds).toBeGreaterThan(0);
+      frameStages.length = 0;
+      presentToScreen.mockClear();
+
+      const capturePromise = viewer.captureHDRScreenshot();
+      expect(viewer.captureHDRScreenshot()).toBe(capturePromise);
       viewer.onRender(makeAnimationProps(device, width, height, 1000));
       device.submit();
+      const capture = await capturePromise;
       expect(frameStages).toEqual(['simulation', 'ocean-draw']);
       expect(presentToScreen).toHaveBeenCalledTimes(1);
       expect(presentToScreen).toHaveBeenLastCalledWith(
@@ -79,12 +90,40 @@ describe('Tempest Ocean: Spectral Stormfront', () => {
       );
       expect(viewer.oceanTimeSeconds).toBe(0);
 
+      expect(capture).toMatchObject({
+        width,
+        height,
+        hdr: {
+          format: 'rgba16float',
+          colorSpace: 'display-p3',
+          transfer: 'linear',
+          bytesPerRow: width * 8
+        },
+        sdr: {
+          format: 'rgba8unorm-srgb',
+          colorSpace: 'display-p3',
+          transfer: 'srgb',
+          bytesPerRow: width * 4
+        }
+      });
+      expect(capture.hdr.data).toHaveLength(width * height * 8);
+      expect(capture.sdr.data).toHaveLength(width * height * 4);
+      const capturedHighDynamicRangeColor = decodeRgba16FloatData(capture.hdr.data);
+      expect(capturedHighDynamicRangeColor.every(Number.isFinite)).toBe(true);
+      expect(getMaximumRgb(capturedHighDynamicRangeColor)).toBeGreaterThan(1);
+      expect(getRgbRange(capturedHighDynamicRangeColor)).toBeGreaterThan(0.05);
+      expect(getByteRange(capture.sdr.data)).toBeGreaterThan(12);
+
       const sceneColor = await readRgba16FloatTexture(viewer.sceneColorTexture, width, height);
       expect(sceneColor.every(Number.isFinite)).toBe(true);
       expect(getMaximumRgb(sceneColor)).toBeGreaterThan(1);
       expect(getRgbRange(sceneColor)).toBeGreaterThan(0.05);
 
       viewer.onRender(makeAnimationProps(device, width, height, 1033));
+      device.submit();
+      expect(viewer.oceanTimeSeconds).toBe(0);
+      globalThis.dispatchEvent(new KeyboardEvent('keydown', {key: 'p'}));
+      viewer.onRender(makeAnimationProps(device, width, height, 1066));
       device.submit();
       expect(viewer.oceanTimeSeconds).toBeGreaterThan(0);
       const timeBeforePause = viewer.oceanTimeSeconds;
@@ -119,6 +158,17 @@ function makeAnimationProps(
     height,
     aspect: width / height
   } as AnimationProps;
+}
+
+function decodeRgba16FloatData(data: Uint8Array): Float32Array {
+  const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const values = new Float32Array(data.byteLength / Uint16Array.BYTES_PER_ELEMENT);
+  for (let valueIndex = 0; valueIndex < values.length; valueIndex++) {
+    values[valueIndex] = fromHalfFloat(
+      dataView.getUint16(valueIndex * Uint16Array.BYTES_PER_ELEMENT, true)
+    );
+  }
+  return values;
 }
 
 async function readRgba16FloatTexture(
@@ -177,6 +227,16 @@ function getRgbRange(values: Float32Array): number {
       minimum = Math.min(minimum, values[valueOffset + channel]);
       maximum = Math.max(maximum, values[valueOffset + channel]);
     }
+  }
+  return maximum - minimum;
+}
+
+function getByteRange(values: Uint8Array): number {
+  let minimum = 255;
+  let maximum = 0;
+  for (const value of values) {
+    minimum = Math.min(minimum, value);
+    maximum = Math.max(maximum, value);
   }
   return maximum - minimum;
 }

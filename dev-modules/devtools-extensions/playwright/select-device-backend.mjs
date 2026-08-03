@@ -8,7 +8,7 @@ const DEVICE_TAB_LABELS = {
 };
 const SELECTED_DEVICE_TAB_ATTRIBUTE = 'data-luma-device-tab-selected';
 
-function normalizeBackend(backend) {
+export function normalizeBackend(backend) {
   if (!backend) {
     return null;
   }
