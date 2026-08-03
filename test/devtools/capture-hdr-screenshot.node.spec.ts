@@ -28,7 +28,9 @@ describe('writeHDRScreenshotArtifacts', () => {
     expect(await readFile(artifacts.sdrRawPath)).toEqual(Buffer.alloc(16, 0x80));
     expect(artifacts.manifest).toMatchObject({
       schema: 'luma.gl/hdr-screenshot-capture',
-      version: 1,
+      version: 2,
+      exampleId: 'showcase/tempest-ocean',
+      targetPeakNits: 1117,
       width: 2,
       height: 2,
       orientation: 'top-down',
@@ -52,6 +54,32 @@ describe('writeHDRScreenshotArtifacts', () => {
 
     const savedManifest = JSON.parse(await readFile(artifacts.manifestPath, 'utf8'));
     expect(savedManifest).toEqual(artifacts.manifest);
+  });
+
+  test('requires example identity and an integer target peak for manifest v2', async () => {
+    const artifactDirectory = await makeTemporaryDirectory();
+
+    await expect(
+      writeHDRScreenshotArtifacts({...makeSerializedCapture(), exampleId: ''}, artifactDirectory)
+    ).rejects.toThrow('HDR screenshot exampleId must be a non-empty string');
+    await expect(
+      writeHDRScreenshotArtifacts(
+        {...makeSerializedCapture(), targetPeakNits: undefined},
+        artifactDirectory
+      )
+    ).rejects.toThrow('HDR screenshot targetPeakNits must be an integer in [203, 10000]');
+    await expect(
+      writeHDRScreenshotArtifacts(
+        {...makeSerializedCapture(), targetPeakNits: 1117.5},
+        artifactDirectory
+      )
+    ).rejects.toThrow('HDR screenshot targetPeakNits must be an integer in [203, 10000]');
+    await expect(
+      writeHDRScreenshotArtifacts(
+        {...makeSerializedCapture(), targetPeakNits: 10001},
+        artifactDirectory
+      )
+    ).rejects.toThrow('HDR screenshot targetPeakNits must be an integer in [203, 10000]');
   });
 
   test('rejects padded rows before writing ambiguous raw data', async () => {
@@ -106,7 +134,13 @@ describe('writeHDRScreenshotArtifacts', () => {
         captureTimeoutMilliseconds: 1000,
         expectedDeviceType: 'webgpu-core'
       });
-      expect(artifacts.manifest).toMatchObject({width: 2, height: 2});
+      expect(artifacts.manifest).toMatchObject({
+        version: 2,
+        exampleId: 'showcase/tempest-ocean',
+        targetPeakNits: 1117,
+        width: 2,
+        height: 2
+      });
     } finally {
       if (previousCaptureFunction) {
         globalScope.lumaCaptureHDRScreenshot = previousCaptureFunction;
@@ -157,6 +191,8 @@ describe('applyViewportSize', () => {
 
 function makeSerializedCapture() {
   return {
+    exampleId: 'showcase/tempest-ocean',
+    targetPeakNits: 1117,
     width: 2,
     height: 2,
     hdr: {
@@ -178,6 +214,8 @@ function makeSerializedCapture() {
 
 function makeBrowserCapture() {
   return {
+    exampleId: 'showcase/tempest-ocean',
+    targetPeakNits: 1117,
     width: 2,
     height: 2,
     hdr: {

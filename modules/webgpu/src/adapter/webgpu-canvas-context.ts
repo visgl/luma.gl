@@ -75,14 +75,19 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.depthStencilAttachment = null;
     }
 
+    const requestedColorFormat = this.colorFormat || this.device.preferredColorFormat;
     const requestedConfiguration: GPUCanvasConfiguration = {
       device: this.device.handle,
-      format: this.colorFormat || this.device.preferredColorFormat,
+      format: requestedColorFormat,
       // Can be used to define e.g. -srgb views
       // viewFormats: [...]
       colorSpace: this.colorSpace || this.props.colorSpace,
       alphaMode: this.props.alphaMode,
-      toneMapping: {mode: this.toneMapping || this.props.toneMapping}
+      toneMapping: {mode: this.toneMapping || this.props.toneMapping},
+      usage:
+        requestedColorFormat === 'rgba16float'
+          ? Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+          : Texture.RENDER_ATTACHMENT
     };
 
     // Reconfigure the canvas size.
@@ -99,7 +104,8 @@ export class WebGPUCanvasContext extends CanvasContext {
         format: navigator.gpu.getPreferredCanvasFormat(),
         colorSpace: 'srgb',
         alphaMode: this.props.alphaMode,
-        toneMapping: {mode: 'standard'}
+        toneMapping: {mode: 'standard'},
+        usage: Texture.RENDER_ATTACHMENT
       };
       this.handle.configure(standardConfiguration);
       configuredConfiguration = standardConfiguration;
@@ -188,7 +194,7 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.colorAttachment = this.device.createTexture({
         id: `${this.id}#color-texture`,
         handle,
-        format: this.device.preferredColorFormat,
+        format: this.colorFormat || this.device.preferredColorFormat,
         width: handle.width,
         height: handle.height
       });
@@ -197,7 +203,7 @@ export class WebGPUCanvasContext extends CanvasContext {
 
     this.colorAttachment._reinitialize(handle, {
       handle,
-      format: this.device.preferredColorFormat,
+      format: this.colorFormat || this.device.preferredColorFormat,
       width: handle.width,
       height: handle.height
     });

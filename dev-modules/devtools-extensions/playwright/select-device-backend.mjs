@@ -7,6 +7,7 @@ const DEVICE_TAB_LABELS = {
   webgpu: 'WebGPU'
 };
 const SELECTED_DEVICE_TAB_ATTRIBUTE = 'data-luma-device-tab-selected';
+const DEVICE_TAB_READY_TIMEOUT_MILLISECONDS = 15_000;
 
 export function normalizeBackend(backend) {
   if (!backend) {
@@ -43,12 +44,32 @@ export async function selectDeviceBackend(page, backend) {
     throw new Error(`Unsupported backend "${backend}"`);
   }
 
-  const tab = page.locator(`[data-luma-device-tab="${normalizedBackend}"]`);
+  const tabSelector = `[data-luma-device-tab="${normalizedBackend}"]`;
+  if (typeof page.waitForSelector === 'function') {
+    await page
+      .waitForSelector(tabSelector, {
+        state: 'attached',
+        timeout: DEVICE_TAB_READY_TIMEOUT_MILLISECONDS
+      })
+      .catch(() => {});
+    await page
+      .waitForFunction(
+        selector =>
+          document.querySelector(selector)?.getAttribute('aria-disabled') !== 'true',
+        tabSelector,
+        {timeout: DEVICE_TAB_READY_TIMEOUT_MILLISECONDS}
+      )
+      .catch(() => {});
+  }
+
+  const tab = page.locator(tabSelector);
   if ((await tab.count()) === 0) {
     return false;
   }
 
-  const deviceTab = tab.first();
+  // Some MDX pages render a standalone ExampleHeader before LumaExample's own header. The later
+  // tab is the topmost interactive copy; clicking the first one is intercepted by that overlay.
+  const deviceTab = tab.last();
   if (await isDisabledDeviceTab(deviceTab)) {
     return false;
   }

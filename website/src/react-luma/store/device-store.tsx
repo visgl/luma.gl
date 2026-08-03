@@ -61,6 +61,9 @@ export async function createDevice(
       createCanvasContext: {
         container: getCanvasContainer(),
         alphaMode: 'opaque',
+        ...(isHighDynamicRangeCaptureRequested()
+          ? {pixelSizeSource: 'css-dpr' as const}
+          : {}),
         ...(resolvedCanvasContextProfile === 'high-dynamic-range'
           ? {
               colorFormat: 'rgba16float' as const,
@@ -261,15 +264,23 @@ function resolveCanvasContextProfile(
   type: DeviceType,
   canvasContextProfile: CanvasContextProfile
 ): CanvasContextProfile {
+  const captureRequestsHighDynamicRange = isHighDynamicRangeCaptureRequested();
   const supportsHighDynamicRange =
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(dynamic-range: high)').matches;
   return canvasContextProfile === 'high-dynamic-range' &&
     isWebGPUDeviceType(type) &&
-    supportsHighDynamicRange
+    (supportsHighDynamicRange || captureRequestsHighDynamicRange)
     ? 'high-dynamic-range'
     : 'default';
+}
+
+function isHighDynamicRangeCaptureRequested(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('luma-hdr-capture') === '1'
+  );
 }
 
 function validateCreatedDeviceType(type: DeviceType, device: Device): void {

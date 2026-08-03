@@ -15,6 +15,7 @@ const XMP_PACKET_NAMESPACE = 'http://ns.adobe.com/xap/1.0/';
 const XMP_GAIN_MAP_NAMESPACE = 'http://ns.adobe.com/hdr-gain-map/1.0/';
 const BYTES_PER_RGBA16_FLOAT_PIXEL = 8n;
 const BYTES_PER_RGBA8_PIXEL = 4n;
+const DEFAULT_TARGET_PEAK_NITS = 1000;
 const MINIMUM_TARGET_PEAK_NITS = 203;
 const MAXIMUM_TARGET_PEAK_NITS = 10000;
 const MINIMUM_GAIN_MAP_SCALE = 1;
@@ -50,7 +51,7 @@ Usage:
 
 Required inputs:
   --manifest <path>            Playwright HDR capture manifest. Supplies both raw paths,
-                               dimensions, formats, and Display P3 color metadata.
+                               dimensions, formats, Display P3 metadata, and v2 target peak.
   --hdr <path>                 Tight, little-endian, linear RGBA16F pixels.
   --sdr-raw <path>             Tight, sRGB-transfer RGBA8888 pixels (preferred).
   --sdr-jpeg <path>            Authored SDR JPEG alternative; passed through unchanged.
@@ -65,7 +66,8 @@ Encoder setup:
 Color and quality options:
   --hdr-gamut <name>           bt709, display-p3 (default), or bt2100.
   --sdr-gamut <name>           bt709, display-p3 (default), or bt2100.
-  --target-peak-nits <number>  HDR target peak in [203, 10000] (default: 1000).
+  --target-peak-nits <number>  HDR target peak in [203, 10000]. Overrides a v2 manifest;
+                               otherwise defaults to 1000.
   --base-quality <integer>     Base JPEG quality in [0, 100] for --sdr-raw (default: 95).
   --gainmap-quality <integer>  Gain-map JPEG quality in [0, 100] (default: 95).
   --gainmap-scale <integer>    Dimension downsample factor in [1, 128] (default: 4).
@@ -85,7 +87,8 @@ export function parseCliArguments(commandLineArguments, environment = process.en
     ultrahdrAppPath: environment.ULTRAHDR_APP,
     highDynamicRangeGamut: 'display-p3',
     standardDynamicRangeGamut: 'display-p3',
-    targetPeakNits: 1000,
+    targetPeakNits: DEFAULT_TARGET_PEAK_NITS,
+    targetPeakNitsWasExplicitlySpecified: false,
     baseQuality: 95,
     gainMapQuality: 95,
     gainMapScale: 4,
@@ -145,6 +148,9 @@ export function parseCliArguments(commandLineArguments, environment = process.en
       throw new Error(`Option ${optionName} requires a value.`);
     }
     options[propertyName] = parseOptionValue(optionName, optionValue);
+    if (optionName === '--target-peak-nits') {
+      options.targetPeakNitsWasExplicitlySpecified = true;
+    }
   }
 
   return options;
@@ -162,11 +168,7 @@ export async function resolveUltrahdrAppPath(configuredPath, environment = proce
   const cacheRoot = environment.HDR_CAPTURE_CACHE_DIR
     ? path.resolve(environment.HDR_CAPTURE_CACHE_DIR)
     : path.join(REPOSITORY_ROOT, '.cache', 'hdr-capture');
-  const buildDirectory = path.join(
-    cacheRoot,
-    `libultrahdr-${LIBULTRAHDR_VERSION}`,
-    'build'
-  );
+  const buildDirectory = path.join(cacheRoot, `libultrahdr-${LIBULTRAHDR_VERSION}`, 'build');
   const candidates =
     process.platform === 'win32'
       ? [
@@ -317,7 +319,11 @@ export async function loadCaptureManifestOptions(captureManifestPath) {
     throw new Error('HDR capture manifest must contain a JSON object.');
   }
   assertManifestProperty(manifest, 'schema', 'luma.gl/hdr-screenshot-capture');
-  assertManifestProperty(manifest, 'version', 1);
+  if (manifest.version !== 1 && manifest.version !== 2) {
+    throw new Error(
+      `HDR capture manifest version must be 1 or 2; received ${JSON.stringify(manifest.version)}.`
+    );
+  }
   assertManifestProperty(manifest, 'orientation', 'top-down');
   assertIntegerInRange(manifest.width, 'manifest width', 1, Number.MAX_SAFE_INTEGER);
   assertIntegerInRange(manifest.height, 'manifest height', 1, Number.MAX_SAFE_INTEGER);
@@ -341,9 +347,25 @@ export async function loadCaptureManifestOptions(captureManifestPath) {
     height: manifest.height
   });
 
+  let exampleId;
+  let targetPeakNits = DEFAULT_TARGET_PEAK_NITS;
+  if (manifest.version === 2) {
+    assertManifestNonEmptyString(manifest.exampleId, 'exampleId');
+    assertIntegerInRange(
+      manifest.targetPeakNits,
+      'manifest targetPeakNits',
+      MINIMUM_TARGET_PEAK_NITS,
+      MAXIMUM_TARGET_PEAK_NITS
+    );
+    exampleId = manifest.exampleId;
+    targetPeakNits = manifest.targetPeakNits;
+  }
+
   const manifestDirectory = path.dirname(resolvedManifestPath);
   return {
     captureManifestPath: resolvedManifestPath,
+    captureManifestVersion: manifest.version,
+    exampleId,
     highDynamicRangePath: resolveManifestFilePath(manifestDirectory, manifest.hdr.file, 'HDR'),
     standardDynamicRangeRawPath: resolveManifestFilePath(
       manifestDirectory,
@@ -354,7 +376,8 @@ export async function loadCaptureManifestOptions(captureManifestPath) {
     width: manifest.width,
     height: manifest.height,
     highDynamicRangeGamut: 'display-p3',
-    standardDynamicRangeGamut: 'display-p3'
+    standardDynamicRangeGamut: 'display-p3',
+    targetPeakNits
   };
 }
 
@@ -387,7 +410,10 @@ export async function applyCaptureManifestOptions(options) {
   }
 
   const manifestOptions = await loadCaptureManifestOptions(options.captureManifestPath);
-  return {...options, ...manifestOptions};
+  const targetPeakNits = options.targetPeakNitsWasExplicitlySpecified
+    ? options.targetPeakNits
+    : manifestOptions.targetPeakNits;
+  return {...options, ...manifestOptions, targetPeakNits};
 }
 
 /** Execute encoding, verify both metadata representations, and publish the output. */
@@ -580,6 +606,14 @@ function assertManifestProperty(object, propertyName, expectedValue, objectName 
     throw new Error(
       `HDR capture ${objectName} ${propertyName} must be ${JSON.stringify(expectedValue)}; ` +
         `received ${JSON.stringify(object[propertyName])}.`
+    );
+  }
+}
+
+function assertManifestNonEmptyString(value, propertyName) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(
+      `HDR capture manifest ${propertyName} must be a non-empty string; received ${JSON.stringify(value)}.`
     );
   }
 }
