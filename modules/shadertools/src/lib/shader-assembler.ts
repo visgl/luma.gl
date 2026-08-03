@@ -15,6 +15,8 @@ import {
   type ShaderBindingDebugRow
 } from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
+import {scanWGSLInterface} from './shader-assembly/wgsl-interface-scan';
+import type {ShaderLayout} from '@luma.gl/core';
 
 /**
  * A stateful version of `assembleShaders` that can be used to assemble shaders.
@@ -86,6 +88,7 @@ export class ShaderAssembler {
     modules: ShaderModule[];
     bindingAssignments: {moduleName: string; name: string; group: number; location: number}[];
     bindingTable: ShaderBindingDebugRow[];
+    shaderLayout: ShaderLayout | null;
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
@@ -117,7 +120,10 @@ export class ShaderAssembler {
       getUniforms,
       modules,
       bindingAssignments,
-      bindingTable: getShaderBindingDebugRowsFromWGSL(preprocessedSource, bindingAssignments)
+      bindingTable: getShaderBindingDebugRowsFromWGSL(preprocessedSource, bindingAssignments),
+      shaderLayout: scanWGSLInterface(preprocessedSource, {
+        vertexEntryPoint: props.vertexEntryPoint
+      })
     };
   }
 

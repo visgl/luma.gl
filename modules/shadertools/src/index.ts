@@ -10,6 +10,10 @@
  */
 export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-debug';
+export {
+  scanWGSLInterface,
+  type ScanWGSLInterfaceOptions
+} from './lib/shader-assembly/wgsl-interface-scan';
 
 // ShaderModules
 
