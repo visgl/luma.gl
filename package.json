@@ -73,6 +73,7 @@
     "pre-commit": "^1.2.2",
     "vite": "^8.0.0",
     "vitest": "^4.0.18",
+    "wgsl_reflect": "1.2.3",
     "yaml": "^2.8.1"
   },
   "resolutions": {
@@ -87,8 +88,7 @@
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
-    "@luma.gl/webgl": "workspace:*",
-    "wgsl_reflect": "1.2.3"
+    "@luma.gl/webgl": "workspace:*"
   },
   "packageExtensions": {
     "@loaders.gl/gltf@*": {

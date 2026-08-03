@@ -8,6 +8,7 @@ import {
   Bindings,
   BindingsByGroup,
   _getDefaultBindGroupFactory,
+  assert,
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
@@ -31,6 +32,13 @@ export class WebGPUComputePipeline extends ComputePipeline {
 
     const webgpuShader = this.props.shader as WebGPUShader;
     const suppliedHandle = this.props.handle as GPUComputePipeline | undefined;
+
+    if (!this.shaderLayout) {
+      const inferredShaderLayout = this.device.getShaderLayout(webgpuShader.source);
+      // Raw pipelines with WGSL outside the lightweight scanner's safe subset require shaderLayout.
+      assert(inferredShaderLayout);
+      this.shaderLayout = {bindings: inferredShaderLayout.bindings};
+    }
 
     this.handle =
       suppliedHandle ||

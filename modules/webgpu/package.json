@@ -37,12 +37,12 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "~9.4.0-alpha.1"
+    "@luma.gl/core": "~9.4.0-alpha.1",
+    "@luma.gl/shadertools": "~9.4.0-alpha.1"
   },
   "dependencies": {
     "@probe.gl/env": "^4.1.1",
-    "@webgpu/types": "^0.1.69",
-    "wgsl_reflect": "^1.2.3"
+    "@webgpu/types": "^0.1.69"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

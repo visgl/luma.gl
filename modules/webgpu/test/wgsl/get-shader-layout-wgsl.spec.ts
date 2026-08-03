@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {ShaderLayout} from '@luma.gl/core';
+import type {ShaderLayout} from '@luma.gl/core';
 import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu';
 
 const SHADER = /* WGSL */ `\
@@ -32,7 +32,7 @@ fn main(
 }
 
 @fragment
-fn main(
+fn fragmentMain(
   @location(0) fragUV: vec2<f32>,
   @location(1) fragPosition: vec4<f32>
 ) -> @location(0) vec4<f32> {
@@ -66,14 +66,7 @@ const TEST_CASES: {title?: string; wgsl: string; shaderLayout: ShaderLayout}[] =
           type: 'uniform',
           name: 'uniforms',
           group: 0,
-          location: 0,
-          // @ts-expect-error
-          members: [
-            {
-              name: 'modelViewProjectionMatrix',
-              type: 'mat4x4<f32>'
-            }
-          ]
+          location: 0
         }
       ]
     }
@@ -116,6 +109,12 @@ TEST_CASES.push({
         multisampled: false
       },
       {
+        type: 'sampler',
+        name: 'mySampler',
+        group: 0,
+        location: 2
+      },
+      {
         type: 'texture',
         name: 'myDepthTexture',
         group: 0,
@@ -134,23 +133,17 @@ TEST_CASES.push({
         multisampled: true
       },
       {
-        type: 'external-texture',
-        name: 'myExternalTexture',
-        group: 0,
-        location: 6
-      },
-      {
-        type: 'sampler',
-        name: 'mySampler',
-        group: 0,
-        location: 2
-      },
-      {
         type: 'sampler',
         name: 'myDepthTextureSampler',
         group: 0,
         location: 5,
         samplerType: 'non-filtering'
+      },
+      {
+        type: 'external-texture',
+        name: 'myExternalTexture',
+        group: 0,
+        location: 6
       },
       {
         type: 'sampler',
@@ -225,17 +218,13 @@ TEST_CASES.push({
         type: 'uniform',
         name: 'scene',
         group: 2,
-        location: 0,
-        // @ts-expect-error
-        members: [{name: 'exposure', type: 'f32'}]
+        location: 0
       },
       {
         type: 'uniform',
         name: 'material',
         group: 3,
-        location: 0,
-        // @ts-expect-error
-        members: [{name: 'baseColor', type: 'vec4<f32>'}]
+        location: 0
       },
       {
         type: 'texture',
