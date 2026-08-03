@@ -12,3 +12,9 @@ order-independent transparency renderers, composable cross-backend glass and ref
 shader modules, packed pixel-format helpers, and v10 work-in-progress WebGL-only WebXR session,
 frame, and raw camera helpers. See the
 [luma.gl API reference](https://luma.gl/docs/api-reference/experimental) for documentation.
+
+Optional algorithm entry points keep specialized workflows out of the default experimental bundle:
+
+- `@luma.gl/experimental/geospatial` provides graph-native spatial operations and distance kernels.
+- `@luma.gl/experimental/luproj` compiles arbitrary CPU coordinate transformations into
+  precision-preserving, GPU-evaluated local projection patches.
