@@ -176,12 +176,13 @@ jobs:
           fs.writeFileSync(coveragePath, `${records.join('\n')}\n`);
           NODE
 
-      - name: Upload coverage to Coveralls
-        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+      - name: Upload browser coverage artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          flag-name: browser-${{ matrix.shard }}
-          parallel: true
+          name: browser-coverage-lcov-${{ matrix.shard }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 1
 
   test:
     needs: browser_coverage
@@ -189,11 +190,32 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
-      - name: Finalize parallel coverage in Coveralls
+      - name: Checkout code for coverage reporting
+        if: ${{ needs.browser_coverage.result == 'success' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download browser coverage artifacts
+        if: ${{ needs.browser_coverage.result == 'success' }}
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          pattern: browser-coverage-lcov-*
+          path: coverage/shards
+
+      - name: Merge browser coverage reports
+        if: ${{ needs.browser_coverage.result == 'success' }}
+        run: |
+          cat \
+            coverage/shards/browser-coverage-lcov-1/lcov.info \
+            coverage/shards/browser-coverage-lcov-2/lcov.info \
+            coverage/shards/browser-coverage-lcov-3/lcov.info \
+            > coverage/lcov.info
+
+      - name: Upload combined coverage to Coveralls
+        if: ${{ needs.browser_coverage.result == 'success' }}
         uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
+          file: coverage/lcov.info
 
       - name: Verify all browser coverage shards passed
         if: always()
