@@ -18,6 +18,7 @@ stats.json
 .cache
 .yarn
 .playwright-artifacts/
+.bundle-size/
 jscpd-report.md
 
 tsconfig.tsbuildinfo
