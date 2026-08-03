@@ -6,9 +6,9 @@ import {afterEach, describe, expect, test} from 'vitest';
 import {
   captureHDRScreenshotArtifacts,
   writeHDRScreenshotArtifacts
-} from '../../dev-modules/devtools-extensions/playwright/capture-hdr-screenshot.mjs';
-import {applyViewportSize} from '../../dev-modules/devtools-extensions/playwright/run-website-example.mjs';
-import {parseArguments} from '../../dev-modules/devtools-extensions/playwright/website-playwright-cli.mjs';
+} from '../../scripts/playwright/capture-hdr-screenshot.mjs';
+import {applyViewportSize} from '../../scripts/playwright/run-website-example.mjs';
+import {parseArguments} from '../../scripts/playwright/website-playwright-cli.mjs';
 
 const temporaryDirectories: string[] = [];
 

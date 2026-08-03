@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {Buffer, type RenderPassProps} from '@luma.gl/core';
 import {WebGPURenderBundleEncoder} from '../../../src/adapter/resources/webgpu-render-bundle';
 import {WebGPURenderPass} from '../../../src/adapter/resources/webgpu-render-pass';

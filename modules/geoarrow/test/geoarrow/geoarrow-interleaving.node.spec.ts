@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {
   convertGeoArrowTableToInterleaved,
   convertGeoArrowVectorToInterleaved

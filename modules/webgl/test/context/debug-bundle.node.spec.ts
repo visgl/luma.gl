@@ -4,7 +4,7 @@
 
 import {resolve} from 'node:path';
 import esbuild from 'esbuild';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 test('WebGL debug tools stay outside the normal adapter bundle', async t => {
   const sourceAliases = {

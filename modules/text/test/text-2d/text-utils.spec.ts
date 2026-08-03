@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {buildMapping, nextPowOfTwo} from '../../src/index';
 
 test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {

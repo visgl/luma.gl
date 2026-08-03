@@ -1,6 +1,6 @@
 # Playwright support
 
-The Playwright support in `devtools` is split into reusable modules plus a thin repo CLI wrapper.
+Playwright support uses shared configuration from `@vis.gl/dev-tools` plus a thin repo CLI wrapper under `scripts/playwright/`.
 
 Supported capabilities:
 - launch a Chromium-family browser with repo-configured options

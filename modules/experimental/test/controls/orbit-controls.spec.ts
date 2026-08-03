@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {OrbitControls} from '../../src/controls/orbit-controls';
 
 test('OrbitControls advances auto-rotation from elapsed milliseconds', t => {

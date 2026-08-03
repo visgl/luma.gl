@@ -1,4 +1,4 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {ANARIDevice, ANARIGroup} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
 import {PLAYGROUND_PRESETS} from '../../examples/showcase/anari/playground-presets';

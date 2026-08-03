@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import type {GPUVector} from '@luma.gl/tables';
 import {GPUTableComputation} from '@luma.gl/tables';

@@ -1,6 +1,6 @@
 import babel from '@babel/core';
 import plugin from '../../dev-modules/babel-plugin-remove-glsl-comments/index.js';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 const ES6_ENV = {
   targets: {chrome: '60'},

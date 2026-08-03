@@ -82,7 +82,7 @@
       "canonicalSources": [
         "docs/developer-guide/debugging.md",
         "docs/api-guide/gpu/gpu-rendering.md",
-        "dev-modules/devtools-extensions/docs/playwright.md",
+        "docs/developer/dev-tools/playwright.md",
         "skills/lumagl/references/debugging.md"
       ]
     },
@@ -165,7 +165,7 @@
       ],
       "canonicalSources": [
         "AGENTS.md",
-        "dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md",
+        "docs/developer/dev-tools/llm-friendly-test-setup.md",
         "docs/developer-guide/testing.md",
         "skills/lumagl/references/contributing.md"
       ]
@@ -186,8 +186,8 @@
       ],
       "canonicalSources": [
         "AGENTS.md",
-        "dev-modules/devtools-extensions/docs/playwright.md",
-        "dev-modules/devtools-extensions/docs/browser-debug.md",
+        "docs/developer/dev-tools/playwright.md",
+        "docs/developer/dev-tools/browser-debug.md",
         "skills/lumagl/references/contributing.md"
       ]
     }

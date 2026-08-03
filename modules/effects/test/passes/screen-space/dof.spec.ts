@@ -4,7 +4,7 @@
 
 import {dof, dofShaderPassPipeline} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 test('dof#build/uniform', t => {
   const uniforms = getShaderModuleUniforms(dof, {}, {});

@@ -1,6 +1,6 @@
 import {chromium} from 'playwright';
 
-import {getPlaywrightLaunchOptions} from '../get-playwright-launch-options.mjs';
+import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 
 const DEFAULT_DEBUG_PORT = 9222;
 

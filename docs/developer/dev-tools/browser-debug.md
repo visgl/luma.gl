@@ -1,6 +1,6 @@
 # Browser debug support
 
-`devtools` now supports two browser-debug workflows.
+The repository supports two browser-debug workflows.
 
 ## Launch mode
 

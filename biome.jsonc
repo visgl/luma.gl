@@ -1,6 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
-  "extends": ["./dev-modules/devtools-extensions/biome/base.jsonc"],
+  "extends": ["@vis.gl/dev-tools/biome.jsonc"],
   "files": {
     "includes": [
       "!**/*.min.js",

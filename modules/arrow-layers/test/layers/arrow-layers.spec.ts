@@ -5,7 +5,7 @@
 import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/core';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';

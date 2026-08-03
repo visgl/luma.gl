@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {persistenceEffect} from '@luma.gl/effects';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 test('persistenceEffect#bindings', t => {
   t.deepEqual(
