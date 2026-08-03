@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Stat, Stats} from '@probe.gl/stats';
-import type {Device} from '../device';
-import type {ResourceInstrumentation} from './resource-instrumentation';
+import type {Device} from '../adapter/device';
+import type {ResourceInstrumentation} from '../adapter/resources/resource-instrumentation';
 
 const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
 const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
@@ -77,8 +77,8 @@ type CpuHotspotProfiler = {
   transientCanvasFramebufferCreates?: number;
 };
 
-/** Default compatibility instrumentation that mirrors resource events into luma stats. */
-export const defaultResourceInstrumentation: ResourceInstrumentation = {
+/** Optional compatibility instrumentation that mirrors resource events into luma stats. */
+export const resourceStatsInstrumentation: ResourceInstrumentation = {
   recordResourceCreated(device, _resource, resourceType) {
     const profiler = getCpuHotspotProfiler(device);
     const startTime = profiler ? getTimestamp() : 0;

@@ -107,7 +107,7 @@ Target Release Date: TBD
 
 **@luma.gl/core**
 
-- **Resource instrumentation hook** - `DeviceProps.resourceInstrumentation` can observe resource lifecycle and allocation events, or disable the default stats instrumentation with `null`. Resource classes no longer own rich stats bookkeeping directly.
+- **Optional resource diagnostics** - `DeviceProps.resourceInstrumentation` can observe resource lifecycle and allocation events. Rich resource-count ordering, legacy stat mirroring, memory bookkeeping, and CPU-hotspot profiling are available explicitly from `@luma.gl/core/diagnostics` and are no longer part of the default runtime.
 - **[WebGPU render bundles](/examples/api/render-bundles)** - Record reusable draw commands with `RenderBundleEncoder` and replay them from a `RenderPass`, reducing CPU command-recording time for repeated scenes.
 - **Render-pass draw commands** - `RenderPass` now owns pipeline, binding, vertex-array, direct-draw, indirect-draw, and render-bundle commands. The former `RenderPipeline` draw and binding APIs remain as deprecated compatibility paths.
 - **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.

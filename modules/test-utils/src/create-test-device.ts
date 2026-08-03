@@ -4,6 +4,7 @@
 
 import type {Device, CanvasContextProps, DeviceProps} from '@luma.gl/core';
 import {luma, log} from '@luma.gl/core';
+import {resourceStatsInstrumentation} from '@luma.gl/core/diagnostics';
 import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
 import {nullAdapter} from './null-device/null-adapter';
@@ -159,6 +160,7 @@ async function makeWebGPUTestDevice(
       type: 'webgpu',
       featureLevel,
       adapters: [webgpuAdapter],
+      resourceInstrumentation: resourceStatsInstrumentation,
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as WebGPUDevice;
@@ -184,6 +186,7 @@ async function makeWebGLTestDevice(): Promise<WebGLDevice> {
       id: 'webgl-test-device',
       type: 'webgl',
       adapters: [webgl2Adapter],
+      resourceInstrumentation: resourceStatsInstrumentation,
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as WebGLDevice;
@@ -212,6 +215,7 @@ async function makePresentationWebGLTestDevice(): Promise<WebGLDevice | null> {
       id: 'webgl-presentation-context-test-device',
       type: 'webgl',
       adapters: [webgl2Adapter],
+      resourceInstrumentation: resourceStatsInstrumentation,
       createCanvasContext: {canvas: new OffscreenCanvas(4, 4)},
       debug: true
     })) as unknown as WebGLDevice;
@@ -238,6 +242,7 @@ async function makeNullTestDevice(): Promise<NullDevice> {
       id: 'null-test-device',
       type: 'null',
       adapters: [nullAdapter],
+      resourceInstrumentation: resourceStatsInstrumentation,
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as NullDevice;

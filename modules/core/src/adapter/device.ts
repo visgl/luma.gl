@@ -15,7 +15,6 @@ import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {PresentationContext, PresentationContextProps} from './presentation-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
-import {defaultResourceInstrumentation} from './resources/default-resource-instrumentation';
 import type {ResourceInstrumentation} from './resources/resource-instrumentation';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
 import type {SharedRenderPipeline} from './resources/shared-render-pipeline';
@@ -516,7 +515,7 @@ export abstract class Device {
       log.log(1, `${context} Visibility changed ${context.isVisible}`)(),
     onDevicePixelRatioChange: (context: CanvasContext, info: {oldRatio: number}) =>
       log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
-    resourceInstrumentation: defaultResourceInstrumentation,
+    resourceInstrumentation: null,
 
     // Debug flags
     debug: getDefaultDebugValue(),

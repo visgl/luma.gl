@@ -12,6 +12,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+- Resource statistics are no longer collected by default. Import `resourceStatsInstrumentation`
+  from `@luma.gl/core/diagnostics` and pass it as `DeviceProps.resourceInstrumentation` when an
+  application uses the legacy resource-count or memory buckets exposed through `luma.stats`.
+
 **@luma.gl/experimental**
 
 - `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque

@@ -36,3 +36,11 @@ test('ResourceInstrumentation observes resource lifecycle and allocation events'
   ]);
   t.end();
 });
+
+test('ResourceInstrumentation is disabled by default', t => {
+  const device = new NullDevice({});
+
+  t.equal(device.resourceInstrumentation, null, 'devices do not install diagnostics implicitly');
+  device.destroy();
+  t.end();
+});
