@@ -270,6 +270,10 @@ function addJoinScatterPass<Parameters>(
   found: GraphDataView<'uint32'>,
   offsets: GraphDataView<'uint32'>
 ): void {
+  if (join.outputLeftRows.length === 0) {
+    addJoinCountOnlyPass(graph, join, found, offsets);
+    return;
+  }
   const layout = getDispatchLayout(
     join.keys.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -348,6 +352,43 @@ ${leftRowsBinding}
       overflow: join.overflow
     },
     dispatchSize: layout
+  });
+}
+
+function addJoinCountOnlyPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  join: GPUHashJoin,
+  found: GraphDataView<'uint32'>,
+  offsets: GraphDataView<'uint32'>
+): void {
+  const source = /* wgsl */ `
+const LAST_INDEX: u32 = ${join.keys.length - 1}u;
+const FOUND_OFFSET: u32 = ${getViewElementOffset(found)}u;
+const OFFSETS_OFFSET: u32 = ${getViewElementOffset(offsets)}u;
+const COUNT_OFFSET: u32 = ${getViewElementOffset(join.count)}u;
+const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
+@group(0) @binding(0) var<storage, read> found: array<u32>;
+@group(0) @binding(1) var<storage, read> offsets: array<u32>;
+@group(0) @binding(2) var<storage, read_write> count: array<u32>;
+@group(0) @binding(3) var<storage, read_write> overflow: array<u32>;
+
+@compute @workgroup_size(1) fn main() {
+  let requiredCount = offsets[OFFSETS_OFFSET + LAST_INDEX] +
+    min(found[FOUND_OFFSET + LAST_INDEX], 1u);
+  count[COUNT_OFFSET] = requiredCount;
+  overflow[OVERFLOW_OFFSET] = min(requiredCount, 1u);
+}`;
+  addComputationPass(graph, {
+    id: `${join.id}-count-only`,
+    source,
+    resources: [
+      {buffer: found, usage: 'storage-read'},
+      {buffer: offsets, usage: 'storage-read'},
+      {buffer: join.count, usage: 'storage-write'},
+      {buffer: join.overflow, usage: 'storage-write'}
+    ],
+    bindings: {found, offsets, count: join.count, overflow: join.overflow},
+    dispatchSize: {x: 1, y: 1, z: 1}
   });
 }
 

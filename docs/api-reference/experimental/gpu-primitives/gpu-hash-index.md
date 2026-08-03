@@ -64,6 +64,10 @@ therefore produces the same key-to-value mapping even when workgroups execute in
 order. When no value input is supplied, the retained value is `firstValue + sourceRow`, making the
 primitive directly useful as a key-to-row index.
 
+An empty explicit values view is also valid, including a zero-length view positioned at the end of
+its backing buffer. Empty rebuilds clear the table and statistics without binding unavailable input
+rows.
+
 ### Statistics expose the cost model
 
 Build statistics contain:
