@@ -1,0 +1,171 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {readFileSync} from 'node:fs';
+import path from 'node:path';
+import {describe, expect, test} from 'vitest';
+import {parse} from 'yaml';
+
+type ExampleSidebarEntry =
+  | string
+  | {type: 'doc'; id: string; label?: string}
+  | {type: 'category'; label: string; items: ExampleSidebarEntry[]};
+
+type ExampleCatalogMetadata = {
+  backends?: string[];
+  difficulty?: string;
+  display?: string;
+  maturity?: string;
+  topics?: string[];
+};
+
+type LiveExample = {
+  id: string;
+  categories: string[];
+  metadata?: ExampleCatalogMetadata;
+};
+
+const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
+const WEBGPU_ONLY_EXAMPLES = new Set([
+  'api/render-bundles',
+  'arrow/arrow-columns',
+  'arrow/arrow-dggs-polygons',
+  'deck/gpu-culled-trace'
+]);
+const WEBGL_ONLY_EXAMPLES = new Set([
+  'integrations/external-context',
+  'integrations/react-strict-mode',
+  'tutorials/transform-feedback',
+  'tutorials/transform',
+  'experimental/webxr-kaleidoscope'
+]);
+const LIVE_EXAMPLES = readLiveExamples();
+
+describe('live example catalog metadata', () => {
+  test('provides complete, curated filters for every sidebar example', () => {
+    expect(LIVE_EXAMPLES.length).toBeGreaterThan(0);
+
+    for (const {id, metadata} of LIVE_EXAMPLES) {
+      expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
+      expect(metadata?.backends, `${id} requires at least one supported backend`).not.toHaveLength(
+        0
+      );
+      expect(
+        metadata?.backends?.every(backend => backend === 'webgpu' || backend === 'webgl2'),
+        `${id} has an unsupported backend`
+      ).toBe(true);
+      expect(
+        ['tutorial', 'intermediate', 'advanced'].includes(metadata?.difficulty || ''),
+        `${id} has an invalid difficulty`
+      ).toBe(true);
+      expect(
+        ['stable', 'experimental'].includes(metadata?.maturity || ''),
+        `${id} has an invalid maturity`
+      ).toBe(true);
+      expect(metadata?.topics?.length, `${id} requires at least two topics`).toBeGreaterThanOrEqual(
+        2
+      );
+      expect(metadata?.topics?.length, `${id} allows at most five topics`).toBeLessThanOrEqual(5);
+      expect(new Set(metadata?.topics).size, `${id} has duplicate topics`).toBe(
+        metadata?.topics?.length
+      );
+    }
+  });
+
+  test('matches WebGPU-only and WebGL2-only examples to their website device wrappers', () => {
+    for (const {id, categories, metadata} of LIVE_EXAMPLES) {
+      const expectedBackends = WEBGL_ONLY_EXAMPLES.has(id)
+        ? ['webgl2']
+        : categories[0] === 'WebGPU' || WEBGPU_ONLY_EXAMPLES.has(id)
+          ? ['webgpu']
+          : ['webgpu', 'webgl2'];
+
+      expect(metadata?.backends, `${id} has inaccurate backend metadata`).toEqual(expectedBackends);
+    }
+  });
+
+  test('labels tutorials and prerelease GPU-data tracks consistently', () => {
+    for (const {id, categories, metadata} of LIVE_EXAMPLES) {
+      if (categories[0] === 'Tutorials') {
+        expect(metadata?.difficulty, `${id} must use the tutorial difficulty`).toBe('tutorial');
+      }
+
+      if (categories.some(category => category.includes('v10'))) {
+        expect(metadata?.difficulty, `${id} is an advanced GPU-data example`).toBe('advanced');
+        expect(metadata?.maturity, `${id} demonstrates prerelease v10 APIs`).toBe('experimental');
+      }
+    }
+  });
+
+  test('marks every high-dynamic-range website canvas as HDR capable', () => {
+    const websiteExamples = readFileSync(
+      path.join(process.cwd(), 'website/src/examples.tsx'),
+      'utf8'
+    );
+    const catalogById = new Map(LIVE_EXAMPLES.map(example => [example.id, example]));
+    const highDynamicRangeExampleIds: string[] = [];
+
+    for (const match of websiteExamples.matchAll(/<LumaExample\b([\s\S]*?)(?:\/>|>)/g)) {
+      const attributes = match[1];
+      if (!attributes.includes('canvasContextProfile="high-dynamic-range"')) {
+        continue;
+      }
+
+      const exampleId = attributes.match(/\bid="([^"]+)"/)?.[1];
+      const exampleDirectory = attributes.match(/\bdirectory="([^"]+)"/)?.[1];
+      expect(exampleId, 'HDR examples require a stable example ID').toBeDefined();
+      expect(exampleDirectory, 'HDR examples require a stable example directory').toBeDefined();
+      highDynamicRangeExampleIds.push(`${exampleDirectory}/${exampleId}`);
+    }
+
+    const highDynamicRangeCanvasCount = [
+      ...websiteExamples.matchAll(/canvasContextProfile="high-dynamic-range"/g)
+    ].length;
+    expect(highDynamicRangeExampleIds).toHaveLength(highDynamicRangeCanvasCount);
+    expect(highDynamicRangeExampleIds).toContain('showcase/billion-point-spatial-atlas');
+    for (const exampleId of highDynamicRangeExampleIds) {
+      expect(
+        catalogById.get(exampleId),
+        `${exampleId} is missing from the live sidebar`
+      ).toBeDefined();
+      expect(
+        catalogById.get(exampleId)?.metadata?.display,
+        `${exampleId} requires an HDR catalog tag`
+      ).toBe('hdr-capable');
+    }
+  });
+});
+
+function readLiveExamples(): LiveExample[] {
+  const tableOfContents = JSON.parse(
+    readFileSync(path.join(EXAMPLES_DIRECTORY, 'table-of-contents.json'), 'utf8')
+  ) as ExampleSidebarEntry[];
+  const liveExamples: LiveExample[] = [];
+
+  const visit = (entries: ExampleSidebarEntry[], categories: string[]): void => {
+    for (const entry of entries) {
+      if (typeof entry === 'string') {
+        liveExamples.push(readLiveExample(entry, categories));
+      } else if (entry.type === 'category') {
+        visit(entry.items, [...categories, entry.label]);
+      } else if (entry.id !== 'index') {
+        liveExamples.push(readLiveExample(entry.id, categories));
+      }
+    }
+  };
+
+  visit(tableOfContents, []);
+  return liveExamples;
+}
+
+function readLiveExample(id: string, categories: string[]): LiveExample {
+  const exampleSource = readFileSync(path.join(EXAMPLES_DIRECTORY, `${id}.mdx`), 'utf8');
+  const frontmatter = exampleSource.match(/^---\n([\s\S]*?)\n---/);
+  if (!frontmatter) {
+    throw new Error(`Example ${id} must declare YAML frontmatter`);
+  }
+
+  const metadata = parse(frontmatter[1]) as {sidebar_custom_props?: ExampleCatalogMetadata};
+  return {id, categories, metadata: metadata.sidebar_custom_props};
+}
