@@ -8,13 +8,17 @@ projection and distance kernels plus a flat grid index and point-query workflow:
 - `GPUHaversineDistance`
 - `GPUPairwisePointDistance`
 - `GPUPairwisePointSegmentDistance`
+- `GPUPairwisePointInPolygon`
+- `GPUPairwisePointLinestringNearest`
 - `GPUGridIndex`
 - `GPUPointSpatialQuery`
 
 These classes structurally implement `GPUCommandGraphContributor`. Calling `addToGraph()` declares
 work, but does not compile the graph, submit commands, allocate caller-visible outputs, or read
-results back. The fixed-output kernels accept caller-allocated `GraphDataView` objects or matching
-`GraphVectorView` objects; the grid query consumes fixed-width `GraphDataView` objects.
+results back. Projection and simple pairwise distance kernels accept caller-allocated
+`GraphDataView` objects or matching `GraphVectorView` objects. The nested-offset point-in-polygon
+and nearest-linestring APIs, grid index, and point query consume fixed-width flat `GraphDataView`
+objects in V1.
 
 ```ts
 import {GPUCommandGraph} from '@luma.gl/experimental';
@@ -58,10 +62,11 @@ planar calculation, preventing nearby large coordinates from first collapsing to
 value. Double-single results provide approximately 48 significand bits over the f32 exponent
 range; they are not general IEEE binary64 values.
 
-All paired inputs and outputs must have the same row count and view kind. Vector inputs must also
-have identical chunk topology. Empty chunks are retained without dispatching work. Each output
-must use storage separate from its inputs, and view byte offsets must be naturally aligned to the
-row format.
+Projection and simple pairwise distance inputs and outputs must have the same row count and view
+kind. Vector inputs must also have identical chunk topology. Empty chunks are retained without
+dispatching work. Nested geometry offsets cannot safely span independently chunked vectors, so the
+two pairwise geometry APIs intentionally accept flat data views only. Each output must use storage
+separate from its inputs, and view byte offsets must be naturally aligned to the row format.
 
 ## `GPUSinusoidalProjection`
 
@@ -114,6 +119,65 @@ f32 inputs write one f32 distance per row. Raw binary64 inputs write a double-si
 closed segment. Projections before the start or after the end are clamped to the corresponding
 endpoint. A degenerate segment returns the point-to-endpoint distance. Its f32 and raw binary64
 input/output pairings are the same as `GPUPairwisePointDistance`.
+
+## `GPUPairwisePointInPolygon`
+
+`GPUPairwisePointInPolygon` classifies one point against one polygon or multipolygon per row. It
+accepts flat point and vertex views plus three caller-owned `uint32` offset views:
+
+- `geometryOffsets` maps each point row to a range of polygons;
+- `polygonOffsets` maps each polygon to a range of rings; and
+- `ringOffsets` maps each ring to a range of flattened polygon positions.
+
+Each offsets view starts at zero and ends at the next hierarchy level's row count. Offsets must be
+nondecreasing. Rings close implicitly, use even/odd fill semantics, and may repeat their first
+vertex explicitly. Polygon components within a multipolygon are unioned. Empty geometries are
+outside, while malformed reachable spans and rings with fewer than three effective vertices are
+uncertain. Rings whose effective vertices do not contain a provably non-collinear triple are also
+uncertain, including rings with three or more distinct vertices on one line.
+
+The caller-owned `uint32` output uses these values:
+
+| Value | Classification |
+| ---: | --- |
+| `0` | `outside` |
+| `1` | `inside` |
+| `2` | `boundary` |
+| `3` | `uncertain` |
+
+Applications must handle `uncertain` explicitly. Non-finite coordinates and predicates too close
+to the double-single arithmetic error envelope are never silently forced to inside or outside.
+For both f32 and raw binary64 positions, exact endpoints and axis-aligned boundaries can be proven
+as boundary; an exactly zero non-axis-aligned determinant remains uncertain without an adaptive
+exact predicate. A cuSpatial-compatible boolean projection is
+`classification === GPU_POINT_IN_POLYGON_CLASSIFICATION.inside`, so boundary remains false.
+
+## `GPUPairwisePointLinestringNearest`
+
+`GPUPairwisePointLinestringNearest` finds the nearest point on one paired multipart linestring for
+each input point. `geometryOffsets` maps each point row to linestring parts, and
+`linestringOffsets` maps each part to flattened positions. Parts are never joined or closed
+implicitly. Empty and singleton parts contain no segment; repeated-vertex segments remain valid
+distance candidates. Equal-distance ties preserve the first part and segment.
+
+Both offset views start at zero, are nondecreasing, and end at the next level's row count.
+Malformed reachable spans invalidate the complete paired row rather than being clamped into a
+different geometry.
+
+The required `output` follows the planar distance format pairing: f32 inputs write `float32`, while
+raw binary64 inputs write double-single `float32x2`. Optional outputs include the nearest point,
+the local linestring-part index, and the local segment index. F32 nearest points use `float32x2`;
+raw binary64 nearest points use absolute `[xHigh, xLow, yHigh, yLow]` `float32x4` rows. When no
+finite segment remains, numeric outputs are NaN and indices are `0xffffffff`.
+
+Every output view must have a disjoint aligned storage-binding footprint from every input and from
+the other optional outputs. This also applies when distinct graph handles refer to the same
+physical buffer.
+
+Both pairwise geometry kernels currently assign one GPU invocation to each row and scan that row's
+rings or segments serially. This keeps the first API and storage contract small and works well for
+bounded per-row geometries. Very large individual geometries should use a future flattened-segment
+and segmented-reduction path.
 
 ## `GPUGridIndex`
 
@@ -190,8 +254,9 @@ rendering or consuming fixed-output results.
 
 Fixed-output kernels linearize bounded multidimensional WebGPU workgroup dispatches. This avoids
 the usual 65,535-workgroup single-dimension ceiling (16,776,960 rows at a workgroup size of 256)
-without allocating or packing a source-sized intermediate. Each chunk remains an independent graph
-node, so large streamed vectors retain their original topology. Indexed point queries instead
+without allocating or packing a source-sized intermediate. For vector-capable kernels, each chunk
+remains an independent graph node, so large streamed vectors retain their original topology.
+Nested-geometry kernels dispatch their flat paired rows directly. Indexed point queries instead
 generate their candidate dispatch dimensions on the GPU.
 
 ## See also

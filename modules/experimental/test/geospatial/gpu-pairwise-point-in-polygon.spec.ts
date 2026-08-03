@@ -1,0 +1,444 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {Buffer, type Device} from '@luma.gl/core';
+import {GPUCommandGraph, type GraphDataView} from '@luma.gl/experimental';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import type {GPUVectorFormat} from '@luma.gl/tables';
+import {
+  GPUPairwisePointInPolygon,
+  GPU_POINT_IN_POLYGON_CLASSIFICATION
+} from '../../src/geospatial/gpu-pairwise-point-in-polygon';
+
+const {outside, inside, boundary, uncertain} = GPU_POINT_IN_POLYGON_CLASSIFICATION;
+
+test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const square = makeSquare(0, 0, 10, 10, true);
+  const geometries: Geometry[] = [
+    [[square]],
+    [[square]],
+    [[square]],
+    [[square, makeSquare(3, 3, 7, 7)]],
+    [[makeSquare(-10, -10, -8, -8)], [makeSquare(20, 20, 30, 30)]],
+    [[square]],
+    [
+      [
+        [
+          [0, 0],
+          [10, 0],
+          [Number.NaN, 10],
+          [0, 10]
+        ]
+      ]
+    ],
+    [
+      [
+        [
+          [0, 0],
+          [1, 0],
+          [0, 0],
+          [0, 0]
+        ]
+      ]
+    ],
+    [],
+    [[]],
+    [
+      [
+        [
+          [0, 0],
+          [2, 2],
+          [0, 2]
+        ]
+      ]
+    ],
+    [
+      [
+        [
+          [0, 0],
+          [1, 1],
+          [0, 1]
+        ]
+      ]
+    ],
+    [
+      [
+        [
+          [0, 0],
+          [1, 1],
+          [2, 2],
+          [3, 3]
+        ]
+      ]
+    ],
+    [
+      [
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0]
+        ]
+      ]
+    ]
+  ];
+  const points: Point[] = [
+    [5, 5],
+    [15, 5],
+    [0, 4],
+    [5, 5],
+    [25, 25],
+    [Number.NaN, 5],
+    [5, 5],
+    [0.5, 0.25],
+    [0, 0],
+    [0, 0],
+    [1, 1],
+    [0.5, Math.fround(0.5 + 2 ** -24)],
+    [0, 1],
+    [1, 0]
+  ];
+  const hierarchy = flattenGeometries(geometries);
+  const buffers = {
+    points: createBuffer(device, encodeFloat32Points(points), Buffer.STORAGE),
+    positions: createBuffer(device, encodeFloat32Points(hierarchy.positions), Buffer.STORAGE),
+    geometryOffsets: createBuffer(device, hierarchy.geometryOffsets, Buffer.STORAGE),
+    polygonOffsets: createBuffer(device, hierarchy.polygonOffsets, Buffer.STORAGE),
+    ringOffsets: createBuffer(device, hierarchy.ringOffsets, Buffer.STORAGE),
+    output: createOutputBuffer(device, points.length * Uint32Array.BYTES_PER_ELEMENT)
+  };
+  const graph = new GPUCommandGraph(device, {id: 'pairwise-point-in-polygon-f32-test'});
+  const pointView = importView(graph, 'points', buffers.points, 'float32x2', points.length);
+  const positionView = importView(
+    graph,
+    'polygon-positions',
+    buffers.positions,
+    'float32x2',
+    hierarchy.positions.length
+  );
+  const geometryOffsetView = importView(
+    graph,
+    'geometry-offsets',
+    buffers.geometryOffsets,
+    'uint32',
+    hierarchy.geometryOffsets.length
+  );
+  const polygonOffsetView = importView(
+    graph,
+    'polygon-offsets',
+    buffers.polygonOffsets,
+    'uint32',
+    hierarchy.polygonOffsets.length
+  );
+  const ringOffsetView = importView(
+    graph,
+    'ring-offsets',
+    buffers.ringOffsets,
+    'uint32',
+    hierarchy.ringOffsets.length
+  );
+  const outputView = importView(graph, 'output', buffers.output, 'uint32', points.length);
+
+  new GPUPairwisePointInPolygon({
+    points: pointView,
+    polygonPositions: positionView,
+    geometryOffsets: geometryOffsetView,
+    polygonOffsets: polygonOffsetView,
+    ringOffsets: ringOffsetView,
+    output: outputView
+  }).addToGraph(graph);
+
+  tapeTest.throws(
+    () =>
+      new GPUPairwisePointInPolygon({
+        points: pointView,
+        polygonPositions: positionView,
+        geometryOffsets: geometryOffsetView,
+        polygonOffsets: polygonOffsetView,
+        ringOffsets: ringOffsetView,
+        output: importView(graph, 'short-output', buffers.output, 'uint32', points.length - 1)
+      }),
+    /output.length must equal points.length/
+  );
+  tapeTest.throws(
+    () =>
+      new GPUPairwisePointInPolygon({
+        points: pointView,
+        polygonPositions: positionView,
+        geometryOffsets: importView(
+          graph,
+          'short-geometry-offsets',
+          buffers.geometryOffsets,
+          'uint32',
+          points.length
+        ),
+        polygonOffsets: polygonOffsetView,
+        ringOffsets: ringOffsetView,
+        output: outputView
+      }),
+    /geometryOffsets.length must equal points.length \+ 1/
+  );
+  tapeTest.throws(
+    () =>
+      new GPUPairwisePointInPolygon({
+        points: pointView,
+        polygonPositions: positionView,
+        geometryOffsets: geometryOffsetView,
+        polygonOffsets: polygonOffsetView,
+        ringOffsets: ringOffsetView,
+        output: importView(graph, 'aliased-output', buffers.points, 'uint32', points.length)
+      }),
+    /output and points must not overlap/
+  );
+
+  const compiled = graph.compile();
+  encode(device, compiled);
+  const classifications = await readUint32(buffers.output, points.length);
+  tapeTest.deepEqual(classifications, [
+    inside,
+    outside,
+    boundary,
+    outside,
+    inside,
+    uncertain,
+    uncertain,
+    uncertain,
+    outside,
+    uncertain,
+    uncertain,
+    uncertain,
+    uncertain,
+    uncertain
+  ]);
+  tapeTest.equal(
+    classifications[10],
+    uncertain,
+    'diagonal product cancellation is not promoted to a proven boundary'
+  );
+  tapeTest.equal(
+    classifications[12],
+    uncertain,
+    'an all-collinear diagonal ring has no provable area'
+  );
+  tapeTest.equal(
+    classifications[13],
+    uncertain,
+    'an all-collinear axis-aligned ring remains uncertain instead of boundary'
+  );
+
+  compiled.destroy();
+  for (const buffer of Object.values(buffers)) buffer.destroy();
+  tapeTest.end();
+});
+
+test('GPUPairwisePointInPolygon preserves raw binary64 deltas and explicit ambiguity', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const largeOrigin = 1_000_000_000_000;
+  const smallOrigin = 20_000_000;
+  const smallDelta = 2 ** -20;
+  const geometries: Geometry[] = [
+    [[makeSquare(largeOrigin, largeOrigin, largeOrigin + 1, largeOrigin + 1)]],
+    [[makeSquare(largeOrigin, largeOrigin, largeOrigin + 1, largeOrigin + 1)]],
+    [[makeSquare(largeOrigin, largeOrigin, largeOrigin + 1, largeOrigin + 1)]],
+    [
+      [
+        [
+          [largeOrigin, largeOrigin],
+          [largeOrigin + 1, largeOrigin + 1],
+          [largeOrigin, largeOrigin + 1]
+        ]
+      ]
+    ],
+    [
+      [
+        [
+          [smallOrigin, smallOrigin],
+          [smallOrigin + smallDelta * 4, smallOrigin],
+          [smallOrigin + smallDelta * 4, smallOrigin + smallDelta * 4],
+          [smallOrigin, smallOrigin + smallDelta * 4]
+        ]
+      ]
+    ]
+  ];
+  const points: Point[] = [
+    [largeOrigin + 0.5, largeOrigin + 0.5],
+    [largeOrigin + 2, largeOrigin + 0.5],
+    [largeOrigin, largeOrigin + 0.5],
+    [largeOrigin + 0.5, largeOrigin + 0.5],
+    [smallOrigin + smallDelta * 2, smallOrigin + smallDelta * 2]
+  ];
+  const hierarchy = flattenGeometries(geometries);
+  const buffers = {
+    points: createBuffer(device, encodeFloat64Points(points), Buffer.STORAGE),
+    positions: createBuffer(device, encodeFloat64Points(hierarchy.positions), Buffer.STORAGE),
+    geometryOffsets: createBuffer(device, hierarchy.geometryOffsets, Buffer.STORAGE),
+    polygonOffsets: createBuffer(device, hierarchy.polygonOffsets, Buffer.STORAGE),
+    ringOffsets: createBuffer(device, hierarchy.ringOffsets, Buffer.STORAGE),
+    output: createOutputBuffer(device, points.length * Uint32Array.BYTES_PER_ELEMENT)
+  };
+  const graph = new GPUCommandGraph(device, {id: 'pairwise-point-in-polygon-raw-test'});
+
+  new GPUPairwisePointInPolygon({
+    points: importView(graph, 'points', buffers.points, 'uint32x4', points.length),
+    polygonPositions: importView(
+      graph,
+      'polygon-positions',
+      buffers.positions,
+      'uint32x4',
+      hierarchy.positions.length
+    ),
+    geometryOffsets: importView(
+      graph,
+      'geometry-offsets',
+      buffers.geometryOffsets,
+      'uint32',
+      hierarchy.geometryOffsets.length
+    ),
+    polygonOffsets: importView(
+      graph,
+      'polygon-offsets',
+      buffers.polygonOffsets,
+      'uint32',
+      hierarchy.polygonOffsets.length
+    ),
+    ringOffsets: importView(
+      graph,
+      'ring-offsets',
+      buffers.ringOffsets,
+      'uint32',
+      hierarchy.ringOffsets.length
+    ),
+    output: importView(graph, 'output', buffers.output, 'uint32', points.length)
+  }).addToGraph(graph);
+
+  const compiled = graph.compile();
+  encode(device, compiled);
+  tapeTest.deepEqual(await readUint32(buffers.output, points.length), [
+    inside,
+    outside,
+    boundary,
+    uncertain,
+    inside
+  ]);
+
+  compiled.destroy();
+  for (const buffer of Object.values(buffers)) buffer.destroy();
+  tapeTest.end();
+});
+
+type Point = readonly [number, number];
+type Ring = readonly Point[];
+type Polygon = readonly Ring[];
+type Geometry = readonly Polygon[];
+
+function makeSquare(
+  minimumX: number,
+  minimumY: number,
+  maximumX: number,
+  maximumY: number,
+  explicitlyClosed: boolean = false
+): Ring {
+  const ring: Point[] = [
+    [minimumX, minimumY],
+    [maximumX, minimumY],
+    [maximumX, maximumY],
+    [minimumX, maximumY]
+  ];
+  if (explicitlyClosed) ring.push(ring[0]);
+  return ring;
+}
+
+function flattenGeometries(geometries: readonly Geometry[]): {
+  positions: Point[];
+  geometryOffsets: Uint32Array;
+  polygonOffsets: Uint32Array;
+  ringOffsets: Uint32Array;
+} {
+  const positions: Point[] = [];
+  const geometryOffsets = [0];
+  const polygonOffsets = [0];
+  const ringOffsets = [0];
+  let polygonCount = 0;
+  let ringCount = 0;
+  for (const geometry of geometries) {
+    for (const polygon of geometry) {
+      for (const ring of polygon) {
+        positions.push(...ring);
+        ringCount++;
+        ringOffsets.push(positions.length);
+      }
+      polygonCount++;
+      polygonOffsets.push(ringCount);
+    }
+    geometryOffsets.push(polygonCount);
+  }
+  return {
+    positions,
+    geometryOffsets: Uint32Array.from(geometryOffsets),
+    polygonOffsets: Uint32Array.from(polygonOffsets),
+    ringOffsets: Uint32Array.from(ringOffsets)
+  };
+}
+
+function encodeFloat32Points(points: readonly Point[]): Float32Array {
+  return Float32Array.from(points.flatMap(point => point));
+}
+
+function encodeFloat64Points(points: readonly Point[]): Uint32Array {
+  const values = new Float64Array(points.length * 2);
+  for (let index = 0; index < points.length; index++) {
+    values[index * 2] = points[index][0];
+    values[index * 2 + 1] = points[index][1];
+  }
+  return new Uint32Array(values.buffer);
+}
+
+function createBuffer(device: Device, data: Float32Array | Uint32Array, usage: number): Buffer {
+  return device.createBuffer({data, usage: usage | Buffer.COPY_DST});
+}
+
+function createOutputBuffer(device: Device, byteLength: number): Buffer {
+  return device.createBuffer({
+    byteLength: Math.max(byteLength, Uint32Array.BYTES_PER_ELEMENT),
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+}
+
+function importView<T extends GPUVectorFormat>(
+  graph: GPUCommandGraph,
+  id: string,
+  buffer: Buffer,
+  format: T,
+  length: number
+): GraphDataView<T> {
+  const handle = graph.importBuffer(
+    {id, byteLength: buffer.byteLength, usage: buffer.usage},
+    buffer
+  );
+  return graph.createDataView(handle, {format, length});
+}
+
+async function readUint32(buffer: Buffer, length: number): Promise<number[]> {
+  const bytes = await buffer.readAsync();
+  return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, length));
+}
+
+function encode(device: Device, compiled: ReturnType<GPUCommandGraph<void>['compile']>): void {
+  const commandEncoder = device.createCommandEncoder({id: 'point-in-polygon-test-encoding'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+}

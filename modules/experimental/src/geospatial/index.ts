@@ -18,6 +18,20 @@ export {GPUPairwisePointDistance} from './gpu-pairwise-point-distance';
 export type {GPUPairwisePointDistanceProps} from './gpu-pairwise-point-distance';
 export {GPUPairwisePointSegmentDistance} from './gpu-pairwise-point-segment-distance';
 export type {GPUPairwisePointSegmentDistanceProps} from './gpu-pairwise-point-segment-distance';
+export {
+  GPUPairwisePointInPolygon,
+  GPU_POINT_IN_POLYGON_CLASSIFICATION
+} from './gpu-pairwise-point-in-polygon';
+export type {
+  GPUPairwisePointInPolygonProps,
+  GPUPointInPolygonClassification
+} from './gpu-pairwise-point-in-polygon';
+export {GPUPairwisePointLinestringNearest} from './gpu-pairwise-point-linestring-nearest';
+export type {
+  GPUFloat32PairwisePointLinestringNearestProps,
+  GPUFloat64PairwisePointLinestringNearestProps,
+  GPUPairwisePointLinestringNearestProps
+} from './gpu-pairwise-point-linestring-nearest';
 export {GPUGridIndex} from '../gpu-primitives/gpu-grid-index';
 export type {
   GPUGridIndexBounds,
