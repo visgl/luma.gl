@@ -6,7 +6,6 @@ import type {TypedArray, NumericArray} from '@math.gl/types';
 import type {AttributeInfo, Device, Buffer, VertexArrayProps} from '@luma.gl/core';
 import {VertexArray, getAttributeInfosFromLayouts, getScratchArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
-import {getBrowser} from '@probe.gl/env';
 
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
@@ -35,7 +34,7 @@ export class WEBGLVertexArray extends VertexArray {
    * @returns `true` when constant attribute 0 is supported on the current browser.
    */
   static isConstantAttributeZeroSupported(device: Device): boolean {
-    return getBrowser() === 'Chrome';
+    return isChromiumBrowser();
   }
 
   /**
@@ -287,6 +286,12 @@ function normalizeConstantArrayValue(arrayValue: NumericArray) {
     return new Float32Array(arrayValue);
   }
   return arrayValue;
+}
+
+function isChromiumBrowser(): boolean {
+  const chrome = (globalThis as typeof globalThis & {chrome?: unknown}).chrome;
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  return Boolean(chrome) && !userAgent.includes('Electron');
 }
 
 /**
