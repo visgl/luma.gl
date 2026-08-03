@@ -232,6 +232,8 @@ export type {
 
 export {GPUHashJoin} from './gpu-hash-join';
 export type {GPUHashJoinProps, GPUHashJoinStats} from './gpu-hash-join';
+export {GPUBatchHashJoin} from './gpu-batch-hash-join';
+export type {GPUBatchHashJoinProps, GPUBatchHashJoinStats} from './gpu-batch-hash-join';
 
 export {
   decodeGPUIndexPickInfo,
