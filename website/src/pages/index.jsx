@@ -1,53 +1,47 @@
 import React from 'react';
 import Layout from '@theme/Layout';
-import {Home} from '@vis.gl/docusaurus-website/components';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {InstancingExample} from '../examples';
-import styled from 'styled-components';
+import styles from './index.module.css';
 
 if (typeof window !== 'undefined') {
   window.website = true;
 }
 
-const Bullet = styled.li`
-  background: url(img/icon-high-precision.svg) no-repeat left top;
-  list-style: none;
-  max-width: 540px;
-  margin-top: 8px;
-  padding: 0 0 12px 56px;
-  font: 16px;
-`;
+export default function IndexPage() {
+  const {siteConfig} = useDocusaurusContext();
 
-const ContentContainer = styled.div`
-  padding: 64px;
-
-  @media screen and (max-width: 768px) {
-    padding: 48px;
-  }
-`;
-
-const HeroExample = () => <InstancingExample panel={false} />
-
-export default class IndexPage extends React.Component {
-  render() {
-    return <Layout title="Home" description="luma.gl">
+  return (
+    <Layout title="Home" description="luma.gl">
       <main>
-        <Home HeroExample={HeroExample} getStartedLink="./docs/developer-guide/installing" theme="dark" />
-        <ContentContainer>
+        <section className={styles.banner}>
+          <div className={styles.heroExampleContainer}>
+            <InstancingExample panel={false} />
+          </div>
+          <div className={styles.bannerContainer}>
+            <h1 className={styles.projectName}>{siteConfig.title}</h1>
+            <p>{siteConfig.tagline}</p>
+            <a className={styles.getStartedLink} href="./docs/developer-guide/installing">
+              GET STARTED
+            </a>
+          </div>
+        </section>
+        <div className={styles.contentContainer}>
           <h2>High-performance toolkit for GPU-based data visualization.</h2>
           <ul>
-            <Bullet>
-            Focused on high-performance data processing, e.g. instanced rendering and GPU compute.
-            </Bullet>
-            <Bullet>
-            The core 3D rendering technology behind tools such as
-            deck.gl, kepler.gl, and avs.auto.
-            </Bullet>
-            <Bullet>
-            A clean TypeScript and WebGPU friendly GPU API that works across WebGPU and WebGL 2.
-            </Bullet>
+            <li className={styles.bullet}>
+              Focused on high-performance data processing, e.g. instanced rendering and GPU compute.
+            </li>
+            <li className={styles.bullet}>
+              The core 3D rendering technology behind tools such as deck.gl, kepler.gl, and
+              avs.auto.
+            </li>
+            <li className={styles.bullet}>
+              A clean TypeScript and WebGPU friendly GPU API that works across WebGPU and WebGL 2.
+            </li>
           </ul>
-        </ContentContainer>
+        </div>
       </main>
-    </Layout>;
-  }
+    </Layout>
+  );
 }

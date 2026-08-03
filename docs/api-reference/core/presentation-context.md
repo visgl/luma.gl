@@ -11,7 +11,7 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 `PresentationContext` is intended for multi-canvas presentation workflows that are portable across both WebGPU and WebGL.
 
-:::caution Experimental
+:::caution[Experimental]
 `PresentationContext` and `device.createPresentationContext()` are experimental APIs and may change in a future release.
 :::
 
@@ -105,7 +105,7 @@ Becomes `true` once the initial size is known.
 
 Creates a presentation context associated with the device.
 
-:::caution Experimental
+:::caution[Experimental]
 This method is experimental and may change in a future release.
 :::
 

@@ -74,9 +74,10 @@
     "yaml": "^2.8.1"
   },
   "resolutions": {
-    "@docusaurus/plugin-client-redirects": "^3.9.2",
-    "@docusaurus/plugin-content-docs": "^3.9.2",
-    "@docusaurus/preset-classic": "^3.9.2",
+    "@cmfcmf/docusaurus-search-local": "^2.0.1",
+    "@docusaurus/plugin-client-redirects": "^3.10.2",
+    "@docusaurus/plugin-content-docs": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
     "cheerio": "1.0.0-rc.9",
     "typescript": "6.0.3",
     "tsconfig-paths": "^3.9.0",

@@ -52,7 +52,10 @@ jobs:
   deploy:
     runs-on: ubuntu-22.04
     needs: check_branch
-    
+
+    env:
+      WEBSITE_BASE_URL: ${{ needs.check_branch.outputs.website_base_url }}
+
     permissions:
       contents: write
 
@@ -82,15 +85,24 @@ jobs:
             .yarn/install-state.gz
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
-      - name: Install dependencies and build website
+      - name: Install website dependencies
+        run: yarn install --immutable
+
+      - name: Synchronize website example assets
+        run: node website/scripts/sync-example-assets.mjs
+
+      - name: Build Docusaurus website
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-          WEBSITE_BASE_URL: ${{ needs.check_branch.outputs.website_base_url }}
-        run: |
-          yarn install --immutable
-          yarn website:build
+        run: yarn workspace website-docusaurus docusaurus build
 
-      - name: Deploy
+      - name: Normalize LLM documentation output
+        run: node website/scripts/normalize-llm-output.mjs
+
+      - name: Validate LLM documentation output
+        run: node website/scripts/check-llm-output.mjs
+
+      - name: Deploy website to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # 4.8.0
         with:
           token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}

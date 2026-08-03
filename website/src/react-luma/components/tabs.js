@@ -1,49 +1,6 @@
 import React, {Children, useState} from 'react';
-import styled from 'styled-components';
-
-const Header = styled.div`
-  display: inline-flex;
-  flex-direction: row;
-  align-items: stretch;
-  overflow: hidden;
-  min-height: 48px;
-  background-color: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
-  border-radius: 12px;
-`;
-
-const HeaderItem = styled.div(
-  props => `
-  cursor: ${props.disabled ? 'not-allowed' : 'pointer'};
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 4px 20px;
-  font-weight: bold;
-  font-size: 18px;
-  opacity: ${props.disabled ? 0.46 : 1};
-  border-bottom: 4px solid transparent;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
-  &:hover {
-    background-color: ${props.disabled ? 'transparent' : 'rgba(238, 239, 239, 0.9)'};
-  }
-  ${
-    props.isSelected
-      ? `
-    color: #276EF1;
-    border-bottom: 4px solid #276EF1;
-    background-color: rgba(39, 110, 241, 0.06);
-  `
-      : `
-    color: #111;
-  `
-  }
-`
-);
-
-const Body = styled.div`
-  margin-top: 0;
-`;
+import clsx from 'clsx';
+import styles from './tabs.module.css';
 
 export const Tabs = props => {
   const {children} = props;
@@ -57,17 +14,19 @@ export const Tabs = props => {
   }
   return (
     <>
-      <Header>
+      <div className={styles.header}>
         {tabs.map(tab => (
-          <HeaderItem
+          <div
+            className={clsx(styles.headerItem, {
+              [styles.disabled]: tab.props.disabled,
+              [styles.selected]: (tab.props.tag || tab.props.title) === selected
+            })}
             key={tab.props.tag || tab.props.title}
             data-luma-device-tab={tab.props.tag || tab.props.title}
             data-luma-device-tab-selected={
               (tab.props.tag || tab.props.title) === selected ? 'true' : undefined
             }
             aria-disabled={tab.props.disabled || undefined}
-            disabled={tab.props.disabled}
-            isSelected={(tab.props.tag || tab.props.title) === selected}
             onClick={() => {
               if (!tab.props.disabled) {
                 setSelected(tab.props.tag || tab.props.title);
@@ -113,10 +72,12 @@ export const Tabs = props => {
                 {tab.props.badge}
               </span>
             ) : null}
-          </HeaderItem>
+          </div>
         ))}
-      </Header>
-      <Body>{tabs.find(tab => (tab.props.tag || tab.props.title) === selected)}</Body>
+      </div>
+      <div className={styles.body}>
+        {tabs.find(tab => (tab.props.tag || tab.props.title) === selected)}
+      </div>
     </>
   );
 };

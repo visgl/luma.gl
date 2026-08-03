@@ -1,0 +1,136 @@
+.mainExamples {
+  padding: 1rem 0 2rem;
+}
+
+.catalogControls {
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(14rem, 2fr) repeat(4, minmax(8rem, 1fr));
+  margin: 0 1rem 1.5rem;
+  padding: 1rem;
+}
+
+.catalogControls input,
+.catalogControls select {
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  color: var(--ifm-font-color-base);
+  font: inherit;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.resultsSummary {
+  color: var(--ifm-color-emphasis-700);
+  margin: 0 1rem 1rem;
+}
+
+.exampleSection {
+  margin: 0 1rem 2rem;
+}
+
+.exampleHeader {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  margin: 0 0 1rem;
+  padding-bottom: 0.45rem;
+}
+
+.examplesGroup {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.exampleCard {
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 10px;
+  color: var(--ifm-font-color-base);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  text-decoration: none;
+  transition:
+    border-color var(--ifm-transition-fast),
+    box-shadow var(--ifm-transition-fast),
+    transform var(--ifm-transition-fast);
+}
+
+.exampleCard:hover,
+.exampleCard:focus-visible {
+  border-color: var(--ifm-color-primary);
+  box-shadow: var(--ifm-global-shadow-md);
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.exampleCard img {
+  aspect-ratio: 16 / 9;
+  background: var(--ifm-color-emphasis-100);
+  object-fit: cover;
+  width: 100%;
+}
+
+.cardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.9rem;
+}
+
+.cardBody h3 {
+  font-size: 1.08rem;
+  margin: 0;
+}
+
+.cardBody p {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: auto;
+}
+
+.badge {
+  background: var(--ifm-color-emphasis-100);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 999px;
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.18rem 0.45rem;
+}
+
+@media screen and (max-width: 996px) {
+  .catalogControls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalogControls input {
+    grid-column: 1 / -1;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  .catalogControls {
+    grid-template-columns: 1fr;
+  }
+
+  .catalogControls input {
+    grid-column: auto;
+  }
+}

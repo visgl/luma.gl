@@ -8,7 +8,7 @@
 
 `@luma.gl/anari` provides a private, experimental, ANARI-inspired retained rendering API on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
 
-:::caution Experimental proof of concept
+:::caution[Experimental proof of concept]
 This package follows concepts from the ANARI object model, but it is not an ANARI C binding, does not implement the full ANARI specification, and does not claim Khronos conformance. Its TypeScript API and supported feature set can change.
 :::
 

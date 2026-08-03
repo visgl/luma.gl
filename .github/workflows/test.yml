@@ -177,9 +177,19 @@ jobs:
             .yarn/install-state.gz
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
-      - name: Install dependencies and build website
+      - name: Install website dependencies
+        run: yarn install --immutable
+
+      - name: Synchronize website example assets
+        run: node website/scripts/sync-example-assets.mjs
+
+      - name: Build Docusaurus website
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-        run: |
-          yarn install --immutable
-          yarn website:build
+        run: yarn workspace website-docusaurus docusaurus build
+
+      - name: Normalize LLM documentation output
+        run: node website/scripts/normalize-llm-output.mjs
+
+      - name: Validate LLM documentation output
+        run: node website/scripts/check-llm-output.mjs
