@@ -11,6 +11,15 @@ export {
   type MakeGPUTextDataFromArrowProps
 } from './arrow/renderers/text/conversion/make-gpu-text-data-from-arrow';
 export {
+  ArrowTimeline,
+  getArrowTimelineDataTypeMismatch,
+  getArrowTimelineUnitsPerSecond,
+  type ArrowTimelineDataType,
+  type ArrowTimelineProps,
+  type ArrowTimelineTime,
+  type ArrowTimelineUpdate
+} from './arrow/animation/arrow-timeline';
+export {
   getArrowListNestingLevel,
   isNumericArrowType
   // isInstanceArrowType,

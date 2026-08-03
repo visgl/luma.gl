@@ -14,6 +14,8 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowPathRenderer,
+  type ArrowTimeline,
+  type ArrowTimelineTime,
   getArrowRecordBatchAsyncIterator,
   readArrowGPUVectorAsync,
   resolveArrowPathSourceVectors,
@@ -29,7 +31,7 @@ import {
   type ShaderLayout,
   type TypedArray
 } from '@luma.gl/core';
-import type {Model} from '@luma.gl/engine';
+import type {Model, Timeline} from '@luma.gl/engine';
 import {
   GPUConstant,
   GPUVector,
@@ -259,7 +261,8 @@ fn vertexMain(inputs: PathVertexInputs, @builtin(vertex_index) vertexIndex: u32)
     0.0,
     1.0,
     inputs.temporalEnabled < 0.5 ||
-      (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
+      (endMeasure >= inputs.currentTime - inputs.trailLength &&
+        startMeasure <= inputs.currentTime)
   );
   return outputs;
 }
@@ -404,7 +407,8 @@ fn vertexMain(
     0.0,
     1.0,
     inputs.temporalEnabled < 0.5 ||
-      (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
+      (endMeasure >= inputs.currentTime - inputs.trailLength &&
+        startMeasure <= inputs.currentTime)
   );
   return outputs;
 }
@@ -439,6 +443,12 @@ export type ArrowPathLayerProps = Omit<LayerProps, 'data'> &
     width?: ArrowPathWidthInput;
     /** Current path measure used by temporal trail filtering. */
     currentTime?: number;
+    /** Unit-aware playback and mapping driven by Deck's existing timeline clock. */
+    timeline?: ArrowTimeline;
+    /** Absolute timeline value corresponding to path measure zero. Defaults to zero. */
+    timelineOrigin?: ArrowTimelineTime;
+    /** Path measure units represented by one timeline unit. Defaults to one. */
+    timelineScale?: number;
     /** Visible temporal trail length in path measure units. */
     trailLength?: number;
     /** Enables temporal filtering against the fourth coordinate component. */
@@ -460,6 +470,8 @@ type ArrowPathLayerState = {
   loadVersion: number;
   sourceInitialized: boolean;
   gpuVectorSourceCache: Map<GPUVector, Promise<Vector>>;
+  timeline: ArrowTimeline | null;
+  detachTimeline: (() => void) | null;
 };
 
 /** deck.gl layer that converts and appends Arrow path batches without materializing the stream. */
@@ -487,12 +499,18 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       batches: [],
       loadVersion: 0,
       sourceInitialized: false,
-      gpuVectorSourceCache: new Map()
+      gpuVectorSourceCache: new Map(),
+      timeline: null,
+      detachTimeline: null
     } satisfies ArrowPathLayerState);
+    this.attachTimeline(this.props.timeline);
   }
 
   override updateState({props, oldProps, changeFlags}: UpdateParameters<this>): void {
     const state = this.getLayerState();
+    if (props.timeline !== oldProps.timeline) {
+      this.attachTimeline(props.timeline);
+    }
     const sourceChanged =
       !state.sourceInitialized ||
       changeFlags.dataChanged ||
@@ -507,11 +525,14 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     }
     if (
       props.currentTime !== oldProps.currentTime ||
+      props.timeline !== oldProps.timeline ||
+      props.timelineOrigin !== oldProps.timelineOrigin ||
+      props.timelineScale !== oldProps.timelineScale ||
       props.trailLength !== oldProps.trailLength ||
       props.temporalEnabled !== oldProps.temporalEnabled
     ) {
       for (const batch of state.batches) {
-        updateDeckPathTemporalStyle(batch, props);
+        updateDeckPathTemporalStyle(batch, props, this.context.timeline);
       }
       this.setNeedsRedraw();
     }
@@ -548,13 +569,16 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
 
   override finalizeState(context: LayerContext): void {
     const state = this.getLayerState();
+    state.detachTimeline?.();
     state.loadVersion++;
     destroyPathBatches(state.batches);
     this.setState({
       batches: [],
       loadVersion: state.loadVersion,
       sourceInitialized: true,
-      gpuVectorSourceCache: new Map()
+      gpuVectorSourceCache: new Map(),
+      timeline: null,
+      detachTimeline: null
     } satisfies ArrowPathLayerState);
     super.finalizeState(context);
   }
@@ -703,9 +727,9 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       hasWidths: model === 'storage' || Boolean(sourceVectors.widths),
       color: colorNullValue,
       width: widthNullValue,
-      currentTime: props.currentTime ?? 0,
+      currentTime: getDeckPathCurrentTime(props, this.context.timeline),
       trailLength: props.trailLength ?? 0,
-      temporalEnabled: props.temporalEnabled ?? false
+      temporalEnabled: props.temporalEnabled ?? Boolean(props.timeline)
     });
     let renderModel: Model;
     try {
@@ -831,6 +855,20 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       `${this.id}: ArrowPathLayer ${inputName} column "${source}" is missing; using ${inputName} default ${JSON.stringify(defaultValue)}`
     )();
     return undefined;
+  }
+
+  private attachTimeline(timeline: ArrowTimeline | undefined): void {
+    const state = this.getLayerState();
+    state.detachTimeline?.();
+    state.timeline = timeline ?? null;
+    state.detachTimeline = timeline
+      ? timeline.attach(this.context.timeline, () => {
+          for (const batch of this.getLayerState().batches) {
+            updateDeckPathTemporalStyle(batch, this.props, this.context.timeline);
+          }
+          this.setNeedsRedraw();
+        })
+      : null;
   }
 
   private getLayerState(): ArrowPathLayerState {
@@ -1002,7 +1040,11 @@ function createDeckPathConstantStyle(
     }
   }
 
-  const temporalValues = makeDeckPathTemporalValues({currentTime, trailLength, temporalEnabled});
+  const temporalValues = makeDeckPathTemporalValues({
+    currentTime,
+    trailLength,
+    temporalEnabled
+  });
   bufferLayout.push({
     name: CONSTANT_PATH_TEMPORAL_BUFFER,
     byteStride: 0,
@@ -1026,11 +1068,15 @@ function createDeckPathConstantStyle(
   return {bufferLayout, attributes, constantAttributes, buffers, temporalBuffer};
 }
 
-function updateDeckPathTemporalStyle(batch: ArrowPathLayerBatch, props: ArrowPathLayerProps): void {
+function updateDeckPathTemporalStyle(
+  batch: ArrowPathLayerBatch,
+  props: ArrowPathLayerProps,
+  deckTimeline: Timeline
+): void {
   const temporalValues = makeDeckPathTemporalValues({
-    currentTime: props.currentTime ?? 0,
+    currentTime: getDeckPathCurrentTime(props, deckTimeline),
     trailLength: props.trailLength ?? 0,
-    temporalEnabled: props.temporalEnabled ?? false
+    temporalEnabled: props.temporalEnabled ?? Boolean(props.timeline)
   });
   if (batch.model.device.type === 'webgl') {
     batch.model.setConstantAttributes({
@@ -1053,6 +1099,15 @@ function makeDeckPathTemporalValues({
   temporalEnabled: boolean;
 }): Float32Array {
   return new Float32Array([currentTime, trailLength, temporalEnabled ? 1 : 0]);
+}
+
+function getDeckPathCurrentTime(props: ArrowPathLayerProps, deckTimeline: Timeline): number {
+  if (!props.timeline) return props.currentTime ?? 0;
+  const timelineScale = props.timelineScale ?? 1;
+  if (!Number.isFinite(timelineScale)) {
+    throw new Error('ArrowPathLayer timelineScale must be finite');
+  }
+  return props.timeline.getRelativeTime(props.timelineOrigin ?? 0, deckTimeline) * timelineScale;
 }
 
 function resolveDeckPathModel(
