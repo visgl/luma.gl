@@ -139,15 +139,18 @@
 }
 
 .primaryAction {
-  background: #7dd3fc;
-  color: #082033;
+  border-color: #fff;
+  background: #f8fafc;
+  box-shadow: 0 8px 26px rgba(56, 189, 248, 0.22);
+  color: #071625;
+  font-weight: 750;
 }
 
 .primaryAction:hover,
 .primaryAction:focus-visible {
-  background: #a5f3fc;
-  box-shadow: 0 0 24px rgba(103, 232, 249, 0.27);
-  color: #082033;
+  background: #cffafe;
+  box-shadow: 0 0 28px rgba(103, 232, 249, 0.4);
+  color: #071625;
   text-decoration: none;
   transform: translateY(-2px);
 }

@@ -144,7 +144,7 @@ if (typeof window !== 'undefined') {
 export default function IndexPage() {
   const {siteConfig} = useDocusaurusContext();
   const baseUrl = useBaseUrl('/');
-  const gettingStartedUrl = `${baseUrl}docs/developer-guide/installing`;
+  const gettingStartedUrl = useBaseUrl('/docs/getting-started');
   const examplesUrl = `${baseUrl}examples`;
 
   return (
