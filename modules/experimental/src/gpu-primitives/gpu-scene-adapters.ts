@@ -55,7 +55,7 @@ export type GPUSceneTableAdapterProps = {
   /** Optional table-column renaming. Unspecified roles use their canonical names. */
   columns?: Partial<GPUSceneTableColumnNames>;
   /** Exact producer-known active counts, including one zero for every empty batch. */
-  activeCounts?: readonly number[];
+  activeCounts: readonly number[];
 };
 
 /** One preserved table batch and its optional nonempty zero-copy scene. */
@@ -180,7 +180,7 @@ export function makeGPUSceneFromCPUScene<Node>(
 export function makeGPUScenePartitionsFromGPUTable(
   device: Device,
   table: GPUTable,
-  props: GPUSceneTableAdapterProps = {}
+  props: GPUSceneTableAdapterProps
 ): GPUSceneTableAdapterResult {
   if (device.type !== 'webgpu') {
     throw new Error('GPU scene table adapter requires a WebGPU device');

@@ -156,14 +156,15 @@ test('GPU scene adapters reject ambiguous CPU and table storage contracts', asyn
   const invalidBatch = makeSceneBatch(source, 1, {objectId: 4});
   const invalidTable = new GPUTable({batches: [invalidBatch]});
   t.throws(
-    () => makeGPUScenePartitionsFromGPUTable(device, invalidTable),
+    () => makeGPUScenePartitionsFromGPUTable(device, invalidTable, {activeCounts: [1]}),
     /canonical scene record layout/,
     'columnar or shifted layouts are not silently packed'
   );
   t.throws(
     () =>
       makeGPUScenePartitionsFromGPUTable(device, invalidTable, {
-        columns: {objectId: 'flags'}
+        columns: {objectId: 'flags'},
+        activeCounts: [1]
       }),
     /column names must be unique/,
     'one physical column cannot fill multiple scene roles'
@@ -171,7 +172,7 @@ test('GPU scene adapters reject ambiguous CPU and table storage contracts', asyn
 
   const validTable = new GPUTable({batches: [makeSceneBatch(source, 1)]});
   t.throws(
-    () => makeGPUScenePartitionsFromGPUTable(device, validTable),
+    () => makeGPUScenePartitionsFromGPUTable(device, validTable, {activeCounts: []}),
     /exact active count per batch/,
     'opaque table records require producer-known active-count metadata'
   );
