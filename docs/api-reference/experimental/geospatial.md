@@ -1,17 +1,20 @@
 # WebGPU Geospatial Kernels
 
 The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-free WebGPU
-algorithms that add compute nodes to a `GPUCommandGraph`. The first set covers longitude/latitude
-projection and distance calculations:
+algorithms that add compute nodes to a `GPUCommandGraph`. This first set includes fixed-output
+projection and distance kernels plus a flat grid index and point-query workflow:
 
 - `GPUSinusoidalProjection`
 - `GPUHaversineDistance`
 - `GPUPairwisePointDistance`
 - `GPUPairwisePointSegmentDistance`
+- `GPUGridIndex`
+- `GPUPointSpatialQuery`
 
-These classes implement `GPUCommandGraphContributor`. Calling `addToGraph()` declares work, but
-does not compile the graph, submit commands, allocate caller-visible outputs, or read results back.
-Inputs and outputs are caller-allocated `GraphDataView`s or matching `GraphVectorView`s.
+These classes structurally implement `GPUCommandGraphContributor`. Calling `addToGraph()` declares
+work, but does not compile the graph, submit commands, allocate caller-visible outputs, or read
+results back. The fixed-output kernels accept caller-allocated `GraphDataView` objects or matching
+`GraphVectorView` objects; the grid query consumes fixed-width `GraphDataView` objects.
 
 ```ts
 import {GPUCommandGraph} from '@luma.gl/experimental';
@@ -29,7 +32,7 @@ const compiled = graph.compile();
 ```
 
 The geospatial entry point is intentionally separate from the experimental root and standalone
-bundle. Importing it is the explicit opt-in.
+bundle. Importing the subpath is the explicit opt-in.
 
 ## Coordinate and result formats
 
@@ -41,7 +44,7 @@ Two packed position formats are accepted:
 | `uint32x4` | Raw browser `Float64Array` words: `[xLow, xHigh, yLow, yHigh]` | Preserve small deltas between large coordinates |
 
 Projection and haversine outputs are `float32x2` and `float32`, respectively. Their trigonometric
-steps are f32 because WGSL does not provide portable f64 trigonometry.
+steps are f32 because portable WGSL does not provide f64 trigonometry.
 
 Planar distance kernels pair their input and output formats:
 
@@ -112,22 +115,77 @@ closed segment. Projections before the start or after the end are clamped to the
 endpoint. A degenerate segment returns the point-to-endpoint distance. Its f32 and raw binary64
 input/output pairings are the same as `GPUPairwisePointDistance`.
 
+## `GPUGridIndex`
+
+`GPUGridIndex` rebuilds a flat, row-major uniform grid for packed `float32x2` or `float32x3`
+points each time the compiled build graph is encoded. Its caller-owned outputs are:
+
+- `cellOffsets`: `cellCount + 1` exclusive offsets;
+- `objectIds`: capacity-bounded source IDs grouped by cell;
+- `count`: the number of finite, in-domain positions accepted by the build; and
+- `overflow`: `1` when `count` exceeds `objectIds.length`, otherwise `0`.
+
+The `bounds` array stores every minimum followed by every maximum: `[minX, minY, maxX, maxY]` in
+2D or `[minX, minY, minZ, maxX, maxY, maxZ]` in 3D. Positions outside these inclusive bounds and
+positions with non-finite components are ignored. Supply `sourceIds` to retain application IDs, or
+use `firstSourceIndex` to generate consecutive IDs. IDs within a cell have unspecified order.
+
+Index construction is intended for a separate graph that runs when a dataset or tile changes. The
+compact cell offsets require a complete rebuild after point positions or membership change.
+
+## `GPUPointSpatialQuery`
+
+`GPUPointSpatialQuery` selects rows from packed `float32x2` or `float32x3` positions. It accepts a
+mutable f32 `query` view with one of these layouts:
+
+| Kind | 2D layout | 3D layout |
+| --- | --- | --- |
+| `bounds` | `[minX, minY, maxX, maxY]` | `[minX, minY, minZ, maxX, maxY, maxZ]` |
+| `radius` | `[centerX, centerY, radius]` | `[centerX, centerY, centerZ, radius]` |
+| `polygon` | Polygon bounds: `[minX, minY, maxX, maxY]` | Not supported |
+
+An optional `GPUGridIndex` view restricts refinement to cells intersecting the query envelope. The
+query prepares an indirect dispatch on the GPU and refines only those candidates. Without an index,
+it scans every position. Indexed `objectIds` must address rows in the supplied `positions` view.
+
+Polygon positions use packed `float32x2` rows. `ringOffsets` contains a start offset for each ring
+plus one terminal offset; rings close implicitly and use even/odd fill semantics. Boundary points
+are selected. This V1 API returns matching IDs rather than robust-topology classifications, so it
+does not distinguish `inside`, `boundary`, or an ambiguous result.
+
+All query outputs are caller-owned:
+
+```ts
+type GPUSpatialQueryOutput = {
+  ids: GraphDataView<'uint32'>;
+  count: GraphDataView<'uint32'>;
+  overflow: GraphDataView<'uint32'>;
+  totalCount?: GraphDataView<'uint32'>;
+};
+```
+
+`count` is clamped to `ids.length` and can alias an indirect draw count. `totalCount`, when
+provided, receives the unclamped match count. `overflow` is set when either the index or result
+capacity overflows. Result order is unspecified; no CPU readback is required for rendering.
+
 ## Non-finite data
 
 The fixed-output distance and projection kernels do not silently replace non-finite arithmetic
-with finite coordinates or distances. Applications should filter or classify non-finite rows
-before rendering or consuming results. Robust topology predicates use a stricter explicit
-classification contract and are outside this initial projection-and-distance entry point.
+with finite coordinates or distances. Grid construction ignores non-finite positions, and point
+queries do not select them. Applications should still filter or classify non-finite rows before
+rendering or consuming fixed-output results.
 
 ## Scale and dispatch
 
-Kernels linearize bounded multidimensional WebGPU workgroup dispatches. This avoids the usual
-65,535-workgroup single-dimension ceiling (16,776,960 rows at a workgroup size of 256) without
-allocating or packing a source-sized intermediate. Each chunk remains an independent graph node,
-so large streamed vectors retain their original topology.
+Fixed-output kernels linearize bounded multidimensional WebGPU workgroup dispatches. This avoids
+the usual 65,535-workgroup single-dimension ceiling (16,776,960 rows at a workgroup size of 256)
+without allocating or packing a source-sized intermediate. Each chunk remains an independent graph
+node, so large streamed vectors retain their original topology. Indexed point queries instead
+generate their candidate dispatch dimensions on the GPU.
 
 ## See also
 
 - [GPUCommandGraph](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph)
+- [GPUGridIndex](/docs/api-reference/experimental/gpu-primitives/gpu-grid-index)
 - [GPU floating-point precision](/docs/api-guide/shaders/gpu-floating-point-precision)
 - [`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic)
