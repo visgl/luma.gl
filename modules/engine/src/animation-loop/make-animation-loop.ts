@@ -16,6 +16,12 @@ export type MakeAnimationLoopProps = Omit<
   adapters?: Adapter[];
 };
 
+/** Animation loop created from a template, with access to the active template instance. */
+export type TemplateAnimationLoop = AnimationLoop & {
+  /** Returns the template after initialization, or null before initialization and after failure. */
+  getAnimationLoopTemplate(): AnimationLoopTemplate | null;
+};
+
 /**
  * Instantiates an animation loop and initializes it with the template.
  * @note The application needs to call `start()` on the returned animation loop to start the rendering loop.
@@ -23,7 +29,7 @@ export type MakeAnimationLoopProps = Omit<
 export function makeAnimationLoop(
   AnimationLoopTemplateCtor: typeof AnimationLoopTemplate,
   props?: MakeAnimationLoopProps
-): AnimationLoop {
+): TemplateAnimationLoop {
   let renderLoop: AnimationLoopTemplate | null = null;
 
   const device =
@@ -55,8 +61,17 @@ export function makeAnimationLoop(
 
     onRender: (animationProps: AnimationProps) => renderLoop?.onRender(animationProps),
 
-    onFinalize: (animationProps: AnimationProps) => renderLoop?.onFinalize(animationProps)
+    onFinalize(animationProps: AnimationProps): void {
+      try {
+        renderLoop?.onFinalize(animationProps);
+      } finally {
+        renderLoop = null;
+      }
+    }
   });
+
+  const templateAnimationLoop = animationLoop as TemplateAnimationLoop;
+  templateAnimationLoop.getAnimationLoopTemplate = () => renderLoop;
 
   // @ts-expect-error Hack: adds info for the website to find
   animationLoop.getInfo = () => {
@@ -65,7 +80,7 @@ export function makeAnimationLoop(
     return this.AnimationLoopTemplateCtor.info;
   };
 
-  return animationLoop;
+  return templateAnimationLoop;
 }
 
 function setError(device: Device | null, error: Error): void {

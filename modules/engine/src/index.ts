@@ -21,6 +21,7 @@ export type {
 export {AnimationLoop} from './animation-loop/animation-loop';
 
 export type {MakeAnimationLoopProps} from './animation-loop/make-animation-loop';
+export type {TemplateAnimationLoop} from './animation-loop/make-animation-loop';
 export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 
 export type {ModelProps} from './model/model';

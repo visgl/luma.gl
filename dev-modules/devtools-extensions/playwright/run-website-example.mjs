@@ -6,10 +6,15 @@ import process from 'node:process';
 import {setTimeout as delay} from 'node:timers/promises';
 
 import {attachDebugBrowser, launchDebugBrowser} from './browser-debug.mjs';
+import {captureHDRScreenshotArtifacts} from './capture-hdr-screenshot.mjs';
 import {collectPageDiagnostics, probeWebGPU} from './collect-page-diagnostics.mjs';
 import {findTargetPage} from './find-target-page.mjs';
 import {resolveExampleUrl} from './resolve-example-url.mjs';
-import {selectDeviceBackend, selectPreferredDeviceBackend} from './select-device-backend.mjs';
+import {
+  normalizeBackend,
+  selectDeviceBackend,
+  selectPreferredDeviceBackend
+} from './select-device-backend.mjs';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
 const DEFAULT_ARTIFACT_DIR = '.playwright-artifacts';
@@ -73,10 +78,15 @@ export async function runWebsiteExample(options = {}) {
       await page.goto(targetUrl, {waitUntil: 'networkidle'});
     }
 
+    await applyViewportSize(page, options.viewportWidth, options.viewportHeight);
+
     const {diagnostics, dispose} = collectPageDiagnostics(page, options.logger || console);
 
     try {
-      await applyBackendSelection(page, options.backend);
+      const selectedDeviceType = await applyBackendSelection(page, options.backend);
+      if (options.highDynamicRangeCapture && !selectedDeviceType) {
+        throw new Error('[playwright] HDR capture requires an available selected device backend.');
+      }
       const webgpuProbe = await probeWebGPU(page);
 
       await writeJsonArtifact(artifactDir, 'webgpu-probe.json', webgpuProbe);
@@ -86,6 +96,13 @@ export async function runWebsiteExample(options = {}) {
         path: path.join(artifactDir, DEFAULT_SCREENSHOT_NAME),
         fullPage: true
       });
+
+      const highDynamicRangeArtifacts = options.highDynamicRangeCapture
+        ? await captureHDRScreenshotArtifacts(page, artifactDir, {
+            captureTimeoutMilliseconds: options.highDynamicRangeCaptureTimeout,
+            expectedDeviceType: selectedDeviceType
+          })
+        : null;
 
       if (options.watch) {
         await watchScreenshots(page, artifactDir, options.watchInterval);
@@ -97,6 +114,7 @@ export async function runWebsiteExample(options = {}) {
         browserMode: browserHandle.mode,
         diagnostics,
         endpointURL: browserHandle.endpointURL,
+        highDynamicRangeArtifacts,
         screenshotPath: path.join(artifactDir, DEFAULT_SCREENSHOT_NAME),
         targetUrl,
         usingExistingServer
@@ -117,15 +135,17 @@ export async function runWebsiteExample(options = {}) {
 
 async function applyBackendSelection(page, backend) {
   if (backend) {
-    await selectDeviceBackend(page, backend);
-    return;
+    return (await selectDeviceBackend(page, backend)) ? normalizeBackend(backend) : null;
   }
 
-  await selectPreferredDeviceBackend(page, 'webgpu');
+  let selectedDeviceType = await selectPreferredDeviceBackend(page, 'webgpu');
   const webgpuProbe = await probeWebGPU(page);
   if (!webgpuProbe.adapter) {
-    await selectDeviceBackend(page, 'webgl2');
+    selectedDeviceType = (await selectDeviceBackend(page, 'webgl2'))
+      ? normalizeBackend('webgl2')
+      : null;
   }
+  return selectedDeviceType;
 }
 
 async function createPage(browser, targetUrl) {
@@ -134,6 +154,22 @@ async function createPage(browser, targetUrl) {
   const page = await context.newPage();
   await page.goto(targetUrl, {waitUntil: 'networkidle'});
   return page;
+}
+
+export async function applyViewportSize(page, viewportWidth, viewportHeight) {
+  if (viewportWidth === undefined && viewportHeight === undefined) {
+    return;
+  }
+
+  const currentViewportSize = page.viewportSize();
+  if (!currentViewportSize && (viewportWidth === undefined || viewportHeight === undefined)) {
+    throw new Error('Both viewport dimensions are required when the page has no viewport.');
+  }
+
+  await page.setViewportSize({
+    width: viewportWidth ?? currentViewportSize.width,
+    height: viewportHeight ?? currentViewportSize.height
+  });
 }
 
 function startWebsiteServer(websiteDir, endpoint) {

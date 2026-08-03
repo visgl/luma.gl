@@ -1,7 +1,12 @@
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {Device, luma} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  makeAnimationLoop,
+  setPathPrefix,
+  type TemplateAnimationLoop
+} from '@luma.gl/engine';
 import {DeviceTabs, type DeviceTabSelection} from './device-tabs';
 import {ExampleStats} from './example-stats';
 import {InfoBox, type ExampleInfoProps} from './info-box';
@@ -23,6 +28,39 @@ import {
 } from '../store/device-store';
 
 let currentLumaExampleTask: Promise<void> = Promise.resolve();
+
+export type HDRScreenshotCapture = {
+  width: number;
+  height: number;
+  hdr: {
+    format: 'rgba16float';
+    colorSpace: 'display-p3';
+    transfer: 'linear';
+    bytesPerRow: number;
+    data: Uint8Array;
+  };
+  sdr: {
+    format: 'rgba8unorm-srgb';
+    colorSpace: 'display-p3';
+    transfer: 'srgb';
+    bytesPerRow: number;
+    data: Uint8Array;
+  };
+};
+
+type HDRScreenshotCapturable = AnimationLoopTemplate & {
+  captureHDRScreenshot: () => Promise<HDRScreenshotCapture>;
+};
+
+export type HDRScreenshotCaptureFunction = (() => Promise<HDRScreenshotCapture>) & {
+  deviceType: DeviceType;
+};
+
+declare global {
+  interface Window {
+    lumaCaptureHDRScreenshot?: HDRScreenshotCaptureFunction;
+  }
+}
 
 // WORKAROUND FOR luma.gl VRDisplay
 // if (!globalThis.navigator) {// eslint-disable-line
@@ -258,9 +296,18 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     const canvasContainer = canvasContainerRef.current;
     let isCancelled = false;
-    let animationLoop: AnimationLoop | null = null;
+    let animationLoop: TemplateAnimationLoop | null = null;
+    let browserCaptureFunction: Window['lumaCaptureHDRScreenshot'];
     const defaultCanvasContext = effectiveDevice.getDefaultCanvasContext();
     const deviceCanvas = defaultCanvasContext.canvas;
+
+    const removeBrowserCaptureFunction = () => {
+      if (window.lumaCaptureHDRScreenshot === browserCaptureFunction) {
+        delete window.lumaCaptureHDRScreenshot;
+      }
+      browserCaptureFunction = undefined;
+    };
+
     const asyncCreateLoop = async () => {
       // Ensure the example can find its locally served assets before example construction starts.
       if (props.directory) {
@@ -290,6 +337,16 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       if (animationLoop) {
         await animationLoop.start();
       }
+
+      const animationLoopTemplate = animationLoop?.getAnimationLoopTemplate() || null;
+      if (!isCancelled && isHDRScreenshotCapturable(animationLoopTemplate)) {
+        const capturableTemplate = animationLoopTemplate;
+        browserCaptureFunction = Object.assign(
+          () => capturableTemplate.captureHDRScreenshot(),
+          {deviceType: effectiveDeviceType}
+        );
+        window.lumaCaptureHDRScreenshot = browserCaptureFunction;
+      }
     };
 
     currentLumaExampleTask = currentLumaExampleTask
@@ -308,6 +365,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     return () => {
       isCancelled = true;
+      removeBrowserCaptureFunction();
       // Route transitions must stop displaying the outgoing example immediately, even when its
       // asynchronous initialization is still ahead of cleanup in the serialized task queue.
       canvasContainer.replaceChildren();
@@ -392,6 +450,16 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     </ExamplePage>
   );
 };
+
+function isHDRScreenshotCapturable(
+  animationLoopTemplate: AnimationLoopTemplate | null
+): animationLoopTemplate is HDRScreenshotCapturable {
+  return (
+    animationLoopTemplate !== null &&
+    'captureHDRScreenshot' in animationLoopTemplate &&
+    typeof animationLoopTemplate.captureHDRScreenshot === 'function'
+  );
+}
 
 function getRequestedDeviceTypes(
   devices?: DeviceTabSelection[]

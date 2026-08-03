@@ -237,6 +237,26 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
   t.end();
 });
 
+test('engine#makeAnimationLoop exposes the active template instance', async t => {
+  const device = await getWebGLTestDevice();
+
+  class InspectableAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const animationLoop = makeAnimationLoop(InspectableAnimationLoopTemplate, {device});
+  t.is(animationLoop.getAnimationLoopTemplate(), null, 'template is absent before initialization');
+  await animationLoop.start();
+  t.ok(
+    animationLoop.getAnimationLoopTemplate() instanceof InspectableAnimationLoopTemplate,
+    'initialized template is exposed'
+  );
+  animationLoop.destroy();
+  t.is(animationLoop.getAnimationLoopTemplate(), null, 'finalized template is no longer exposed');
+  t.end();
+});
+
 test('engine#AnimationLoop a start/stop/start should not call initialize again', async t => {
   const device = await getWebGLTestDevice();
 

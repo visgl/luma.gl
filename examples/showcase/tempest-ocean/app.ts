@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type Device, type Framebuffer, Texture} from '@luma.gl/core';
+import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   Model,
   ShaderInputs,
   ShaderPassRenderer,
-  type AnimationProps
+  type AnimationProps,
+  type ShaderPassRendererRenderOptions
 } from '@luma.gl/engine';
 import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
 import {SpectralOceanSimulation} from '@luma.gl/experimental';
@@ -22,6 +23,10 @@ import {
 } from './tempest-ocean-camera';
 import {makeTempestOceanGridPlan, type TempestOceanGridPlan} from './tempest-ocean-grid';
 import {TEMPEST_OCEAN_SKY_SHADER, TEMPEST_OCEAN_SURFACE_SHADER} from './tempest-ocean-shaders';
+import {
+  makeTempestOceanHDRScreenshot,
+  type TempestOceanHDRScreenshot
+} from './tempest-ocean-capture';
 
 const DEFAULT_SIMULATION_RESOLUTION = 128;
 const DEFAULT_GRID_RESOLUTION = 145;
@@ -29,6 +34,8 @@ const DEFAULT_TILE_COUNT = 3;
 const DEFAULT_PATCH_SIZE = 360;
 const DEFAULT_STORM_INTENSITY = 0.82;
 const MAXIMUM_DELTA_TIME_SECONDS = 1 / 30;
+const HIGH_DYNAMIC_RANGE_MAXIMUM_LUMINANCE = 5.5;
+const STANDARD_DYNAMIC_RANGE_MAXIMUM_LUMINANCE = 1;
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 1_400;
 
@@ -56,6 +63,19 @@ type TempestOceanSceneTarget = {
   readonly height: number;
   readonly texture: Texture;
   readonly framebuffer: Framebuffer;
+};
+
+type TempestOceanCaptureRequest = {
+  promise: Promise<TempestOceanHDRScreenshot>;
+  resolve: (capture: TempestOceanHDRScreenshot) => void;
+  reject: (reason?: unknown) => void;
+  encoded: boolean;
+};
+
+type TempestOceanCaptureReadback = {
+  buffer: Buffer;
+  byteLength: number;
+  bytesPerRow: number;
 };
 
 /** Optional lower-cost dimensions used by focused WebGPU tests and embedders. */
@@ -124,6 +144,8 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
   private paused = false;
   private cinematicCamera = true;
   private resetRequested = true;
+  private captureRequest: TempestOceanCaptureRequest | null = null;
+  private finalized = false;
 
   constructor({
     device,
@@ -193,6 +215,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
       ],
       colorFormat: 'rgba16float'
     });
+    this.postprocessingRenderer.resize([this.sceneTarget.width, this.sceneTarget.height]);
   }
 
   /** Floating-point beauty target exposed for focused WebGPU verification. */
@@ -203,6 +226,38 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
   /** Absolute deterministic wave time, unchanged while paused. */
   get oceanTimeSeconds(): number {
     return this.simulationTimeSeconds;
+  }
+
+  /** Captures matched HDR and SDR planes from the next rendered frame. */
+  captureHDRScreenshot(): Promise<TempestOceanHDRScreenshot> {
+    if (this.captureRequest) {
+      return this.captureRequest.promise;
+    }
+    if (this.finalized) {
+      return Promise.reject(new Error('Tempest Ocean has been finalized.'));
+    }
+
+    // Artifact capture always starts from the authored seed so runner timing cannot change pixels.
+    this.paused = true;
+    this.cinematicCamera = true;
+    this.orbitController?.setAutoRotate(true);
+    this.resetRequested = true;
+    this.previousTimeMilliseconds = null;
+    this.updateControlStatus();
+
+    let resolveCapture!: (capture: TempestOceanHDRScreenshot) => void;
+    let rejectCapture!: (reason?: unknown) => void;
+    const promise = new Promise<TempestOceanHDRScreenshot>((resolve, reject) => {
+      resolveCapture = resolve;
+      rejectCapture = reject;
+    });
+    this.captureRequest = {
+      promise,
+      resolve: resolveCapture,
+      reject: rejectCapture,
+      encoded: false
+    };
+    return promise;
   }
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
@@ -294,21 +349,19 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     this.oceanModel.draw(scenePass);
     scenePass.end();
 
-    this.postprocessingRenderer.renderToScreen({
-      sourceTexture: this.sceneTarget.texture,
-      uniforms: {
-        bloomExtract: {threshold: 1.7},
-        bloomBlur: {radius: 6},
-        bloomComposite: {intensity: 0.22},
-        toneMapping: {
-          exposure: 0.76,
-          maximumLuminance: device.preferredColorFormat === 'rgba16float' ? 5.5 : 1
-        }
-      }
-    });
+    this.postprocessingRenderer.renderToScreen(
+      this.getPostprocessingOptions(
+        device.preferredColorFormat === 'rgba16float'
+          ? HIGH_DYNAMIC_RANGE_MAXIMUM_LUMINANCE
+          : STANDARD_DYNAMIC_RANGE_MAXIMUM_LUMINANCE
+      )
+    );
+    this.encodePendingHDRScreenshot();
   }
 
   onFinalize(): void {
+    this.finalized = true;
+    this.rejectCaptureRequest(this.captureRequest, new Error('Tempest Ocean was finalized.'));
     globalThis.removeEventListener('keydown', this.handleKeyDown);
     this.orbitController?.destroy();
     this.orbitController = null;
@@ -320,6 +373,123 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     this.oceanShaderInputs.destroy();
     destroyTempestOceanSceneTarget(this.sceneTarget);
     this.simulation.destroy();
+  }
+
+  private getPostprocessingOptions(maximumLuminance: number): ShaderPassRendererRenderOptions {
+    return {
+      sourceTexture: this.sceneTarget.texture,
+      uniforms: {
+        bloomExtract: {threshold: 1.7},
+        bloomBlur: {radius: 6},
+        bloomComposite: {intensity: 0.22},
+        toneMapping: {
+          exposure: 0.76,
+          maximumLuminance
+        }
+      }
+    };
+  }
+
+  private encodePendingHDRScreenshot(): void {
+    const captureRequest = this.captureRequest;
+    if (!captureRequest || captureRequest.encoded) {
+      return;
+    }
+    captureRequest.encoded = true;
+
+    let highDynamicRangeReadback: TempestOceanCaptureReadback | null = null;
+    let standardDynamicRangeReadback: TempestOceanCaptureReadback | null = null;
+    try {
+      const highDynamicRangeTexture = this.postprocessingRenderer.encodeToTexture(
+        this.device.commandEncoder,
+        this.getPostprocessingOptions(HIGH_DYNAMIC_RANGE_MAXIMUM_LUMINANCE)
+      );
+      if (!highDynamicRangeTexture) {
+        throw new Error('Tempest Ocean HDR capture output is unavailable.');
+      }
+      highDynamicRangeReadback = encodeTempestOceanCaptureReadback(
+        this.device,
+        highDynamicRangeTexture,
+        this.sceneTarget.width,
+        this.sceneTarget.height,
+        'tempest-ocean-hdr-readback'
+      );
+
+      const standardDynamicRangeTexture = this.postprocessingRenderer.encodeToTexture(
+        this.device.commandEncoder,
+        this.getPostprocessingOptions(STANDARD_DYNAMIC_RANGE_MAXIMUM_LUMINANCE)
+      );
+      if (!standardDynamicRangeTexture) {
+        throw new Error('Tempest Ocean SDR capture output is unavailable.');
+      }
+      standardDynamicRangeReadback = encodeTempestOceanCaptureReadback(
+        this.device,
+        standardDynamicRangeTexture,
+        this.sceneTarget.width,
+        this.sceneTarget.height,
+        'tempest-ocean-sdr-readback'
+      );
+
+      const width = this.sceneTarget.width;
+      const height = this.sceneTarget.height;
+      const capturedHighDynamicRangeReadback = highDynamicRangeReadback;
+      const capturedStandardDynamicRangeReadback = standardDynamicRangeReadback;
+      queueMicrotask(() => {
+        void this.readHDRScreenshot(
+          captureRequest,
+          width,
+          height,
+          capturedHighDynamicRangeReadback,
+          capturedStandardDynamicRangeReadback
+        );
+      });
+    } catch (error) {
+      highDynamicRangeReadback?.buffer.destroy();
+      standardDynamicRangeReadback?.buffer.destroy();
+      this.rejectCaptureRequest(captureRequest, error);
+    }
+  }
+
+  private async readHDRScreenshot(
+    captureRequest: TempestOceanCaptureRequest,
+    width: number,
+    height: number,
+    highDynamicRangeReadback: TempestOceanCaptureReadback,
+    standardDynamicRangeReadback: TempestOceanCaptureReadback
+  ): Promise<void> {
+    try {
+      const [highDynamicRangeSourceData, standardDynamicRangeSourceData] = await Promise.all([
+        highDynamicRangeReadback.buffer.readAsync(0, highDynamicRangeReadback.byteLength),
+        standardDynamicRangeReadback.buffer.readAsync(0, standardDynamicRangeReadback.byteLength)
+      ]);
+      const capture = makeTempestOceanHDRScreenshot({
+        width,
+        height,
+        highDynamicRangeSourceData,
+        highDynamicRangeSourceBytesPerRow: highDynamicRangeReadback.bytesPerRow,
+        standardDynamicRangeSourceData,
+        standardDynamicRangeSourceBytesPerRow: standardDynamicRangeReadback.bytesPerRow
+      });
+      if (this.captureRequest === captureRequest) {
+        this.captureRequest = null;
+        captureRequest.resolve(capture);
+      }
+    } catch (error) {
+      this.rejectCaptureRequest(captureRequest, error);
+    } finally {
+      highDynamicRangeReadback.buffer.destroy();
+      standardDynamicRangeReadback.buffer.destroy();
+    }
+  }
+
+  private rejectCaptureRequest(
+    captureRequest: TempestOceanCaptureRequest | null,
+    reason: unknown
+  ): void {
+    if (captureRequest && this.captureRequest === captureRequest) {
+      this.captureRequest = null;
+      captureRequest.reject(reason);
+    }
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
@@ -346,6 +516,31 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
       status.textContent = `${this.cinematicCamera ? 'cinematic' : 'manual'} · ${this.paused ? 'paused' : 'running'}`;
     }
   }
+}
+
+function encodeTempestOceanCaptureReadback(
+  device: Device,
+  texture: Texture,
+  width: number,
+  height: number,
+  id: string
+): TempestOceanCaptureReadback {
+  const layout = texture.computeMemoryLayout({width, height});
+  const buffer = device.createBuffer({
+    id,
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  device.commandEncoder.copyTextureToBuffer({
+    sourceTexture: texture,
+    destinationBuffer: buffer,
+    width,
+    height,
+    depthOrArrayLayers: 1,
+    bytesPerRow: layout.bytesPerRow,
+    rowsPerImage: layout.rowsPerImage
+  });
+  return {buffer, byteLength: layout.byteLength, bytesPerRow: layout.bytesPerRow};
 }
 
 function createTempestOceanSceneTarget(
