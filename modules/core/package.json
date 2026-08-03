@@ -31,6 +31,11 @@
       "import": "./dist/device.js",
       "require": "./dist/device.cjs"
     },
+    "./canvas": {
+      "types": "./dist/canvas.d.ts",
+      "import": "./dist/canvas.js",
+      "require": "./dist/canvas.cjs"
+    },
     "./resources": {
       "types": "./dist/resources.d.ts",
       "import": "./dist/resources.js",

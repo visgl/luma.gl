@@ -35,7 +35,8 @@ const webgpuDevice = luma.createDevice({type: 'best-available', adapters: [webgp
 
 Libraries that need only one part of the portable API can avoid loading the full package root:
 
-- `@luma.gl/core/device` exports adapter, device, and canvas interfaces.
+- `@luma.gl/core/device` exports adapter and device interfaces without browser canvas code.
+- `@luma.gl/core/canvas` exports canvas and presentation interfaces.
 - `@luma.gl/core/resources` exports portable GPU resource classes.
 - `@luma.gl/core/uniforms` exports uniform layout, block, writer, and store utilities.
 - `@luma.gl/core/diagnostics` exports logging and statistics utilities.
