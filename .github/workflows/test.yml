@@ -58,6 +58,7 @@ jobs:
           name: bundle-size-report
           path: .bundle-size
           if-no-files-found: error
+          include-hidden-files: true
 
   test:
     runs-on: ubuntu-22.04
