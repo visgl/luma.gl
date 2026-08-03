@@ -199,6 +199,13 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
     /output and points must not overlap/
   );
 
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 point-in-polygon shader on software WebGPU');
+    for (const buffer of Object.values(buffers)) buffer.destroy();
+    tapeTest.end();
+    return;
+  }
+
   const compiled = graph.compile();
   encode(device, compiled);
   const classifications = await readUint32(buffers.output, points.length);
@@ -243,6 +250,11 @@ test('GPUPairwisePointInPolygon preserves raw binary64 deltas and explicit ambig
   const device = await getWebGPUTestDevice();
   if (!device) {
     tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    tapeTest.comment('Skipping slow integer fp64 point-in-polygon shader on software WebGPU');
     tapeTest.end();
     return;
   }
@@ -441,4 +453,10 @@ function encode(device: Device, compiled: ReturnType<GPUCommandGraph<void>['comp
   const commandEncoder = device.createCommandEncoder({id: 'point-in-polygon-test-encoding'});
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
 }
