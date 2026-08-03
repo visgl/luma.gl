@@ -5,6 +5,7 @@
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",
+    "build:website": "vite build --emptyOutDir --outDir ../../../website/.generated/example-assets/standalone-examples/anari",
     "serve": "vite preview"
   },
   "dependencies": {
@@ -15,6 +16,7 @@
     "@luma.gl/effects": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",
     "@luma.gl/experimental": "9.4.0-alpha.4",
+    "@luma.gl/gltf": "9.4.0-alpha.4",
     "@luma.gl/shadertools": "9.4.0-alpha.4",
     "@luma.gl/webgl": "9.4.0-alpha.4",
     "@luma.gl/webgpu": "9.4.0-alpha.4",

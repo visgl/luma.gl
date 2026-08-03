@@ -1,26 +1,19 @@
 ---
 title: 'Effects: Visualization City'
+description: Inspect a procedural city through cascaded and local shadows, SSAO, SSR, fog, outlines, TAA, and motion blur.
 sidebar_custom_props:
   backends: [webgpu]
 ---
 
-import {ExampleHeader} from '@site/src/react-luma';
 import {AdvancedEffectsExample} from '@site/src/examples';
 
-<ExampleHeader
-  id="advanced-effects"
-  title="Effects: Visualization City"
-  directory="experimental"
-  devices={['webgpu']}
->
+<AdvancedEffectsExample>
   <div>
     A procedural city lit by cascaded sun, moving spot, local point, and contact shadows, then
     composed through SSAO, screen-space reflections, volumetric fog, outlines, temporal AA, and
     motion blur. Use the split and debug controls to inspect every shadow source.
   </div>
-</ExampleHeader>
-
-<AdvancedEffectsExample />
+</AdvancedEffectsExample>
 
 Open **Visualization Effects** to browse an accordion for each technique: cascaded and local
 shadow maps, contact shadows, SSAO, the shared SSR pipeline, height fog, outlines, temporal AA,

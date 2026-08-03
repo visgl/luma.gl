@@ -26,6 +26,16 @@ const DEFAULT_DEPTH_SAMPLER = {
 } as const satisfies SamplerProps;
 
 const RESERVED_ATTACHMENT_NAMES = new Set(['color', 'normalRoughness', 'velocity', 'depth']);
+const EIGHT_BYTE_COLOR_ATTACHMENT_FORMATS = new Set<TextureFormatColor>([
+  'rgba8unorm',
+  'rgba8unorm-srgb',
+  'rgba8snorm',
+  'bgra8unorm',
+  'bgra8unorm-srgb',
+  'rgb10a2uint',
+  'rgb10a2unorm',
+  'rg11b10ufloat'
+]);
 let nextGBufferId = 0;
 
 /** One caller-defined MRT channel appended after the standard G-buffer channels. */
@@ -202,7 +212,13 @@ function resolveGBufferProps(id: string, props: GBufferProps): ResolvedGBufferPr
 
 function validateGBufferProps(device: Device, props: ResolvedGBufferProps): void {
   validateGBufferSize(props.width, props.height);
-  const colorAttachmentCount = 3 + props.extraColorAttachments.length;
+  const colorAttachmentFormats = [
+    props.colorFormat,
+    props.normalRoughnessFormat,
+    props.velocityFormat,
+    ...props.extraColorAttachments.map(attachment => attachment.format)
+  ];
+  const colorAttachmentCount = colorAttachmentFormats.length;
   if (colorAttachmentCount > device.limits.maxColorAttachments) {
     throw new Error(
       'GBuffer requires ' +
@@ -234,6 +250,52 @@ function validateGBufferProps(device: Device, props: ResolvedGBufferProps): void
     names.add(attachment.name);
     validateRenderableFormat(device, attachment.format, attachment.name);
   }
+
+  const colorAttachmentBytesPerSample = calculateColorAttachmentBytesPerSample(
+    device,
+    colorAttachmentFormats
+  );
+  if (colorAttachmentBytesPerSample > device.limits.maxColorAttachmentBytesPerSample) {
+    throw new Error(
+      'GBuffer color attachments require ' +
+        colorAttachmentBytesPerSample +
+        ' bytes per sample, but the device supports ' +
+        device.limits.maxColorAttachmentBytesPerSample +
+        '.'
+    );
+  }
+}
+
+/** Mirrors WebGPU's render-target byte-cost and component-alignment calculation. */
+function calculateColorAttachmentBytesPerSample(
+  device: Device,
+  formats: readonly TextureFormatColor[]
+): number {
+  let totalBytes = 0;
+  for (const format of formats) {
+    const componentAlignment = getColorAttachmentComponentAlignment(format);
+    totalBytes = Math.ceil(totalBytes / componentAlignment) * componentAlignment;
+    const texelBytes = device.getTextureFormatInfo(format).bytesPerPixel;
+    // WebGPU assigns an eight-byte render-target cost to normalized four-channel 8-bit formats
+    // and the packed 32-bit formats above. Other formats use their texel copy footprint.
+    totalBytes += EIGHT_BYTE_COLOR_ATTACHMENT_FORMATS.has(format) ? 8 : texelBytes;
+  }
+  return totalBytes;
+}
+
+function getColorAttachmentComponentAlignment(format: TextureFormatColor): 1 | 2 | 4 {
+  if (
+    format.startsWith('r8') ||
+    format.startsWith('rg8') ||
+    format.startsWith('rgba8') ||
+    format.startsWith('bgra8')
+  ) {
+    return 1;
+  }
+  if (format.startsWith('r16') || format.startsWith('rg16') || format.startsWith('rgba16')) {
+    return 2;
+  }
+  return 4;
 }
 
 function validateGBufferSize(width: number, height: number): void {

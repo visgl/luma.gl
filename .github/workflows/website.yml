@@ -91,6 +91,9 @@ jobs:
       - name: Synchronize website example assets
         run: node website/scripts/sync-example-assets.mjs
 
+      - name: Build standalone website examples
+        run: yarn workspace website-docusaurus build:standalone-examples
+
       - name: Build Docusaurus website
         env:
           NODE_OPTIONS: --max-old-space-size=6144

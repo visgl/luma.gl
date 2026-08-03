@@ -2,6 +2,7 @@ import {describe, expect, test, vi} from 'vitest';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
 import {
+  configurePanelHostElement,
   ExamplePanelManager,
   ExampleSettingsPanelManager,
   getSettingDefinitions,
@@ -20,8 +21,11 @@ import {
 import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
 import {
   flattenEffectSettings,
+  getEffectResolutionScale,
   makePostprocessingUniforms,
+  reorderEffectPassNames,
   unflattenEffectSettings,
+  updateEffectPassNames,
   type EffectState
 } from '../../examples/showcase/postprocessing/app';
 
@@ -73,6 +77,25 @@ const MULTI_SELECT_SETTINGS_SCHEMA: SettingsSchema = {
 };
 
 describe('ExampleSettingsPanelManager', () => {
+  test('configures the shared cinematic card appearance for panel content', () => {
+    const hostElement = document.createElement('div');
+
+    configurePanelHostElement(hostElement, 'cinematic');
+
+    expect(hostElement.dataset.examplePanelHost).toBe('');
+    expect(hostElement.dataset.examplePanelAppearance).toBe('cinematic');
+    expect(hostElement.style.getPropertyValue('--menu-background')).toBe('rgb(8, 15, 27)');
+    expect(hostElement.style.getPropertyValue('--menu-shadow')).toBe('none');
+
+    const cardElement = document.createElement('section');
+    const inheritedHostElement = document.createElement('div');
+    cardElement.dataset.infoBoxAppearance = 'cinematic';
+    cardElement.appendChild(inheritedHostElement);
+    configurePanelHostElement(inheritedHostElement);
+
+    expect(inheritedHostElement.dataset.examplePanelAppearance).toBe('cinematic');
+  });
+
   test('registers descriptors and forwards structured changes', () => {
     const changes: SettingsChangeDescriptor[][] = [];
     const settingsPanel = new ExampleSettingsPanelManager({
@@ -403,6 +426,86 @@ describe('text 3D crawl color compatibility', () => {
 });
 
 describe('postprocessing effect settings', () => {
+  test('renders empty and inexpensive effect stacks at native resolution', () => {
+    expect(getEffectResolutionScale([])).toBe(1);
+    expect(getEffectResolutionScale(['bloom', 'vignette'])).toBe(1);
+  });
+
+  test('restores native resolution when expensive preset effects are removed', () => {
+    const dreamZoomPassNames = ['zoomBlur', 'vignette'];
+    const graphicInkPassNames = ['brightnessContrast', 'ink'];
+
+    expect(getEffectResolutionScale(dreamZoomPassNames)).toBe(0.65);
+    expect(
+      getEffectResolutionScale(updateEffectPassNames(dreamZoomPassNames, 'zoomBlur', false))
+    ).toBe(1);
+    expect(getEffectResolutionScale(graphicInkPassNames)).toBe(0.75);
+    expect(getEffectResolutionScale(updateEffectPassNames(graphicInkPassNames, 'ink', false))).toBe(
+      1
+    );
+  });
+
+  test('adapts resolution as expensive effects are added and removed', () => {
+    const inexpensivePassNames = ['vignette'];
+    const inkPassNames = updateEffectPassNames(inexpensivePassNames, 'ink', true);
+    const zoomPassNames = updateEffectPassNames(inkPassNames, 'zoomBlur', true);
+
+    expect(getEffectResolutionScale(inkPassNames)).toBe(0.75);
+    expect(getEffectResolutionScale(zoomPassNames)).toBe(0.65);
+    expect(getEffectResolutionScale(updateEffectPassNames(zoomPassNames, 'zoomBlur', false))).toBe(
+      0.75
+    );
+    expect(getEffectResolutionScale(updateEffectPassNames(['ink'], 'ink', false))).toBe(1);
+  });
+
+  test('adds effects to the stack only once', () => {
+    const activePassNames = ['bloom', 'vignette'];
+
+    expect(updateEffectPassNames(activePassNames, 'sepia', true)).toEqual([
+      'bloom',
+      'vignette',
+      'sepia'
+    ]);
+    expect(updateEffectPassNames(activePassNames, 'bloom', true)).toEqual(['bloom', 'vignette']);
+    expect(activePassNames).toEqual(['bloom', 'vignette']);
+  });
+
+  test('removes effects without changing the remaining stack order', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(updateEffectPassNames(activePassNames, 'vignette', false)).toEqual(['bloom', 'sepia']);
+    expect(updateEffectPassNames(activePassNames, 'noise', false)).toEqual([
+      'bloom',
+      'vignette',
+      'sepia'
+    ]);
+    expect(activePassNames).toEqual(['bloom', 'vignette', 'sepia']);
+  });
+
+  test('moves active effects earlier and later in the stack', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(reorderEffectPassNames(activePassNames, 'vignette', -1)).toEqual([
+      'vignette',
+      'bloom',
+      'sepia'
+    ]);
+    expect(reorderEffectPassNames(activePassNames, 'vignette', 1)).toEqual([
+      'bloom',
+      'sepia',
+      'vignette'
+    ]);
+    expect(activePassNames).toEqual(['bloom', 'vignette', 'sepia']);
+  });
+
+  test('keeps effects within the stack bounds when reordering', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(reorderEffectPassNames(activePassNames, 'bloom', -1)).toEqual(activePassNames);
+    expect(reorderEffectPassNames(activePassNames, 'sepia', 1)).toEqual(activePassNames);
+    expect(reorderEffectPassNames(activePassNames, 'noise', -1)).toEqual(activePassNames);
+  });
+
   test('flattens and restores vector settings as scalar panel settings', () => {
     const effectState: EffectState = {
       amount: 0.5,

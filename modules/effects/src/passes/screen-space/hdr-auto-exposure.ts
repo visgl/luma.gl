@@ -13,6 +13,11 @@ export type HDRAutoExposureShaderPassPipelineOptions = {
    * complete source image.
    */
   meteringScale?: number;
+  /**
+   * Exposure used to seed persistent history on startup and after target recreation.
+   * Defaults to 1. Values below 0.0001 are clamped.
+   */
+  initialExposure?: number;
 };
 
 type HDRAutoExposureAdaptUniforms = {
@@ -263,6 +268,7 @@ export function createHDRAutoExposureShaderPassPipeline(
   | 'hdrExposureHistory'
 > {
   const meteringScale = Math.max(options.meteringScale ?? 0.25, 0.25);
+  const initialExposure = Math.max(options.initialExposure ?? 1, 0.0001);
   const sixteenthScale = meteringScale / 4;
   const sixtyFourthScale = sixteenthScale / 4;
   const twoFiftySixthScale = sixtyFourthScale / 4;
@@ -295,7 +301,7 @@ export function createHDRAutoExposureShaderPassPipeline(
         scale: [thousandthScale, thousandthScale],
         format: 'rgba16float',
         lifetime: 'history',
-        initialize: {clearColor: [1, 1, 1, 1]}
+        initialize: {clearColor: [initialExposure, 1, 1, 1]}
       }
     },
     steps: [

@@ -1,8 +1,9 @@
 ---
 title: FP64
+description: Compare float32 and emulated float64 shader arithmetic along the same deep Mandelbrot zoom.
 ---
 
-import {ExampleHeader} from '@site/src/react-luma';
+import {ExampleHeader, ExampleStage} from '@site/src/react-luma';
 import {FP64Example} from '@site/src/examples';
 import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
 
@@ -10,30 +11,32 @@ import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs
   <ShaderModuleDocsTabs group="precision" active="fp64-example" />
 </div>
 
-<ExampleHeader
-  id="fp64"
-  directory="experimental"
-  devices={['webgl2', 'webgpu']}
-  style={{position: 'relative', padding: '0 0 12px'}}
->
-  <div>
-    <div style={{marginBottom: 12}}>
-      Two fragment shaders following the same Mandelbrot zoom path. The left canvas uses float32
-      arithmetic, while the right canvas uses the `fp64arithmetic` shader module from
-      `@luma.gl/shadertools`.
+<ExampleStage>
+  <ExampleHeader
+    id="fp64"
+    directory="experimental"
+    devices={['webgl2', 'webgpu']}
+    style={{position: 'relative', padding: '0 0 12px'}}
+  >
+    <div>
+      <div style={{marginBottom: 12}}>
+        Two fragment shaders following the same Mandelbrot zoom path. The left canvas uses float32
+        arithmetic, while the right canvas uses the `fp64arithmetic` shader module from
+        `@luma.gl/shadertools`.
+      </div>
+      <div style={{marginBottom: 12}}>
+        On Apple WebGPU/Metal, `fp64arithmetic` automatically selects an integer-controlled
+        double-single implementation. Other GPUs use the classic floating-point error transforms by
+        default.
+      </div>
+      <div style={{marginBottom: 12}}>
+        The opt-in WebGPU benchmark below the canvases compares automatic selection, both explicit
+        double-single paths, and native float32 for add, multiply, divide, and square-root compute
+        workloads. It reports timing and numerical error together; the results are diagnostic and do
+        not impose performance thresholds.
+      </div>
     </div>
-    <div style={{marginBottom: 12}}>
-      On Apple WebGPU/Metal, `fp64arithmetic` automatically selects an integer-controlled
-      double-single implementation. Other GPUs use the classic floating-point error transforms by
-      default.
-    </div>
-    <div style={{marginBottom: 12}}>
-      The opt-in WebGPU benchmark below the canvases compares automatic selection, both explicit
-      double-single paths, and native float32 for add, multiply, divide, and square-root compute
-      workloads. It reports timing and numerical error together; the results are diagnostic and do
-      not impose performance thresholds.
-    </div>
-  </div>
-</ExampleHeader>
+  </ExampleHeader>
 
-<FP64Example />
+  <FP64Example />
+</ExampleStage>

@@ -1,16 +1,17 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {useDocsSidebar} from '@docusaurus/plugin-content-docs/client';
+import {useDocsSidebar, useDocsVersion} from '@docusaurus/plugin-content-docs/client';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './examples-index.module.css';
 
 type ExampleBackend = 'webgpu' | 'webgl2';
-type ExampleDifficulty = 'beginner' | 'intermediate' | 'advanced';
+type ExampleDifficulty = 'tutorial' | 'intermediate' | 'advanced';
+type ExampleDisplay = 'hdr-capable' | 'standard';
 type ExampleMaturity = 'stable' | 'experimental';
 
 type ExampleCustomProps = {
   backends?: ExampleBackend[];
-  description?: string;
   difficulty?: ExampleDifficulty;
+  display?: ExampleDisplay;
   maturity?: ExampleMaturity;
   topics?: string[];
 };
@@ -39,8 +40,13 @@ type CatalogItem = SidebarDocItem & {
   category: string;
   description: string;
   difficulty: ExampleDifficulty;
+  display: ExampleDisplay;
   maturity: ExampleMaturity;
   topics: string[];
+};
+
+type CatalogDocument = {
+  description?: string;
 };
 
 type ExamplesIndexProps = {
@@ -49,8 +55,9 @@ type ExamplesIndexProps = {
 
 export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const sidebar = useDocsSidebar() as SidebarRoot;
+  const {docs} = useDocsVersion();
   const baseUrl = useBaseUrl('/');
-  const catalog = useMemo(() => buildCatalog(sidebar), [sidebar]);
+  const catalog = useMemo(() => buildCatalog(sidebar, docs), [docs, sidebar]);
   const topics = useMemo(
     () => [...new Set(catalog.flatMap(item => item.topics))].sort(),
     [catalog]
@@ -58,6 +65,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const [query, setQuery] = useState('');
   const [backend, setBackend] = useState('all');
   const [difficulty, setDifficulty] = useState('all');
+  const [displayMode, setDisplayMode] = useState('all');
   const [maturity, setMaturity] = useState('all');
   const [topic, setTopic] = useState('all');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -67,6 +75,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
     setQuery(parameters.get('q') || '');
     setBackend(parameters.get('backend') || 'all');
     setDifficulty(parameters.get('difficulty') || 'all');
+    setDisplayMode(parameters.get('display') || 'all');
     setMaturity(parameters.get('maturity') || 'all');
     setTopic(parameters.get('topic') || 'all');
     setIsInitialized(true);
@@ -80,25 +89,30 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
     if (query) parameters.set('q', query);
     if (backend !== 'all') parameters.set('backend', backend);
     if (difficulty !== 'all') parameters.set('difficulty', difficulty);
+    if (displayMode !== 'all') parameters.set('display', displayMode);
     if (maturity !== 'all') parameters.set('maturity', maturity);
     if (topic !== 'all') parameters.set('topic', topic);
     const search = parameters.toString();
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${search ? `?${search}` : ''}`
-    );
-  }, [backend, difficulty, isInitialized, maturity, query, topic]);
+    const currentSearch = window.location.search.replace(/^\?/, '');
+    if (search !== currentSearch) {
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`
+      );
+    }
+  }, [backend, difficulty, displayMode, isInitialized, maturity, query, topic]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredCatalog = catalog.filter(item => {
-    const searchableText = [item.label, item.description, item.category, ...item.topics]
+    const searchableText = [item.label, item.description, item.category, item.display, ...item.topics]
       .join(' ')
       .toLowerCase();
     return (
       (!normalizedQuery || searchableText.includes(normalizedQuery)) &&
       (backend === 'all' || item.backends.includes(backend as ExampleBackend)) &&
       (difficulty === 'all' || item.difficulty === difficulty) &&
+      (displayMode === 'all' || item.display === displayMode) &&
       (maturity === 'all' || item.maturity === maturity) &&
       (topic === 'all' || item.topics.includes(topic))
     );
@@ -106,7 +120,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const categories = groupByCategory(filteredCatalog);
 
   return (
-    <main className={styles.mainExamples}>
+    <div className={styles.mainExamples}>
       <div className={styles.catalogControls} aria-label="Filter examples">
         <input
           type="search"
@@ -125,7 +139,13 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
           label="Difficulty"
           value={difficulty}
           onChange={setDifficulty}
-          options={['beginner', 'intermediate', 'advanced']}
+          options={['tutorial', 'intermediate', 'advanced']}
+        />
+        <FilterSelect
+          label="Display"
+          value={displayMode}
+          onChange={setDisplayMode}
+          options={['hdr-capable', 'standard']}
         />
         <FilterSelect
           label="Maturity"
@@ -161,6 +181,9 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
                           {value}
                         </span>
                       ))}
+                      {item.display === 'hdr-capable' ? (
+                        <span className={styles.badge}>HDR</span>
+                      ) : null}
                       <span className={styles.badge}>{item.difficulty}</span>
                       {item.maturity === 'experimental' ? (
                         <span className={styles.badge}>experimental</span>
@@ -176,7 +199,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
       {filteredCatalog.length === 0 ? (
         <p className={styles.resultsSummary}>No examples match the selected filters.</p>
       ) : null}
-    </main>
+    </div>
   );
 }
 
@@ -203,7 +226,10 @@ function FilterSelect({
   );
 }
 
-function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
+function buildCatalog(
+  sidebar: SidebarRoot,
+  documents: Record<string, CatalogDocument>
+): CatalogItem[] {
   const catalog: CatalogItem[] = [];
 
   const visit = (items: Array<SidebarDocItem | SidebarCategoryItem>, category = 'Examples') => {
@@ -211,7 +237,8 @@ function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
       if (item.type === 'category') {
         visit(item.items, item.label);
       } else if (item.docId !== 'index') {
-        catalog.push(normalizeItem(item, category));
+        const documentDescription = item.docId ? documents[item.docId]?.description : undefined;
+        catalog.push(normalizeItem(item, category, documentDescription));
       }
     }
   };
@@ -220,15 +247,20 @@ function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
   return catalog;
 }
 
-function normalizeItem(item: SidebarDocItem, category: string): CatalogItem {
+function normalizeItem(
+  item: SidebarDocItem,
+  category: string,
+  documentDescription?: string
+): CatalogItem {
   const customProps = item.customProps || {};
   const topic = getDefaultTopic(category);
   return {
     ...item,
     backends: customProps.backends || getDefaultBackends(category),
     category,
-    description: customProps.description || `${item.label} — ${category.toLowerCase()} example.`,
+    description: documentDescription || `${item.label} — ${category.toLowerCase()} example.`,
     difficulty: customProps.difficulty || getDefaultDifficulty(category),
+    display: customProps.display || 'standard',
     maturity: customProps.maturity || getDefaultMaturity(category),
     topics: customProps.topics || [topic]
   };
@@ -243,7 +275,7 @@ function getDefaultBackends(category: string): ExampleBackend[] {
 }
 
 function getDefaultDifficulty(category: string): ExampleDifficulty {
-  if (category === 'Tutorials') return 'beginner';
+  if (category === 'Tutorials') return 'tutorial';
   if (
     category === 'Experimental' ||
     category === 'WebGPU' ||
@@ -287,13 +319,16 @@ function formatLabel(value: string): string {
     ? 'WebGPU'
     : value === 'webgl2'
       ? 'WebGL2'
-      : `${value[0].toUpperCase()}${value.slice(1)}`;
+      : value === 'hdr-capable'
+        ? 'HDR capable'
+        : `${value[0].toUpperCase()}${value.slice(1)}`;
 }
 
 function getAllOptionsLabel(label: string): string {
   const labels: Record<string, string> = {
     Backend: 'All backends',
     Difficulty: 'All difficulties',
+    Display: 'All displays',
     Maturity: 'All maturity levels',
     Topic: 'All topics'
   };

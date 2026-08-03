@@ -1,20 +1,13 @@
 ---
 title: 'Effects: Depth of Field'
+description: Focus a layered 3D scene with a reusable depth-aware bokeh and depth-of-field pipeline.
 ---
 
-import {ExampleHeader} from '@site/src/react-luma';
 import {DOFExample} from '@site/src/examples';
 
-<ExampleHeader
-  id="dof"
-  title="Depth of Field"
-  directory="showcase"
-  devices={['webgl2', 'webgpu']}
->
+<DOFExample>
   <div>
     Several instanced cubes rendered to an offscreen framebuffer and composited with the reusable
     `@luma.gl/effects` DOF pipeline.
   </div>
-</ExampleHeader>
-
-<DOFExample />
+</DOFExample>

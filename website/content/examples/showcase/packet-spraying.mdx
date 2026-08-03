@@ -1,17 +1,13 @@
 ---
 title: 'Effects: Glass'
+description: Follow emissive multipath packets through glass switches with reflections, transparency, bloom, and HDR tone mapping.
+sidebar_custom_props:
+  display: hdr-capable
 ---
 
-import {ExampleHeader} from '@site/src/react-luma';
 import {PacketSprayingExample} from '@site/src/examples';
 
-<ExampleHeader
-  id="packet-spraying"
-  title="Effects: Glass"
-  subtitle="Network Packet Spraying"
-  directory="showcase"
-  devices={['webgl2', 'webgpu']}
->
+<PacketSprayingExample>
   <div>
     Two servers send red and green transfers to two destination servers. Their packets interleave
     on shared links, spread across independent network planes, and separate again at their
@@ -20,6 +16,4 @@ import {PacketSprayingExample} from '@site/src/examples';
     throughput and resilience advantages of Multipath Reliable Connection (MRC), alongside reusable
     optical materials and order-independent transparency.
   </div>
-</ExampleHeader>
-
-<PacketSprayingExample />
+</PacketSprayingExample>

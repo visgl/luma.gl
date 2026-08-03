@@ -719,7 +719,10 @@ export function createClusteredVolumetricLightingShaderPassPipeline(
       },
       clusteredVolumeDepthHistory: {
         scale: [scale, scale],
-        format: 'r32float',
+        // Keep the same four-byte footprint as r32float while remaining filterable on core WebGPU.
+        // The temporal shader uses textureLoad(), but the inferred texture_2d<f32> binding still
+        // requires a filterable sample type when the surrounding pass layout is assembled.
+        format: 'rg16float',
         lifetime: 'history',
         initialize: {clearColor: [0, 0, 0, 1]}
       },

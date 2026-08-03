@@ -18,6 +18,7 @@ import {
   type ArrowPolygonRendererDataBatchUpdate,
   type ArrowPolygonRendererProps
 } from '@luma.gl/arrow';
+import type {ShaderLayout} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {
   deckArrowViewport,
@@ -57,6 +58,24 @@ type ArrowPolygonResolvedColorSource = {
 export type ArrowPolygonColorInput = ArrowLayerInput<ArrowPolygonColor, ArrowPolygonColorSource>;
 
 const DEFAULT_POLYGON_COLOR: ArrowPolygonColor = [0, 96, 255, 255];
+
+const DECK_POLYGON_RENDERER_VIEWPORT_WGSL = /* wgsl */ `
+struct PolygonViewportUniforms {
+  center: vec2<f32>,
+  scale: f32,
+  aspect: f32,
+};
+
+@group(0) @binding(auto) var<uniform> polygonViewport: PolygonViewportUniforms;
+`;
+
+const DECK_POLYGON_STORAGE_SHADER_LAYOUT = {
+  attributes: POLYGON_STORAGE_SHADER_LAYOUT.attributes,
+  bindings: [
+    ...POLYGON_STORAGE_SHADER_LAYOUT.bindings,
+    {name: 'polygonViewport', type: 'uniform', group: 0, location: 3}
+  ]
+} satisfies ShaderLayout;
 
 const DECK_POLYGON_VS = `#version 300 es
 precision highp float;
@@ -107,6 +126,7 @@ void main(void) {
 
 const DECK_POLYGON_WGSL = /* wgsl */ `
 ${DECK_ARROW_WGSL_COLOR_UTILS}
+${DECK_POLYGON_RENDERER_VIEWPORT_WGSL}
 
 struct PolygonVertexInputs {
   @location(0) positions: vec4<f32>,
@@ -141,6 +161,7 @@ ${DECK_ARROW_WGSL_COLOR_UTILS}
 @group(0) @binding(auto) var<storage, read> polygonPositions: array<vec4<f32>>;
 @group(0) @binding(auto) var<storage, read> polygonColors: array<u32>;
 @group(0) @binding(auto) var<storage, read> polygonRowIndices: array<u32>;
+${DECK_POLYGON_RENDERER_VIEWPORT_WGSL}
 
 struct PolygonStorageVertexOutputs {
   @builtin(position) position: vec4<f32>,
@@ -432,7 +453,7 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
             ? {
                 modules: [deckArrowViewport, picking],
                 source: DECK_POLYGON_STORAGE_WGSL,
-                shaderLayout: POLYGON_STORAGE_SHADER_LAYOUT
+                shaderLayout: DECK_POLYGON_STORAGE_SHADER_LAYOUT
               }
             : {
                 modules: [deckArrowViewport, picking],

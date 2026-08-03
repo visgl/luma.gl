@@ -462,6 +462,7 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     sizes: textSource.sizes?.slice(190, 210),
     pixelOffsets: null,
     model: 'storage',
+    fontAtlas: TEXT_FONT_ATLAS,
     characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
     onDataError: error => {
       textDataError = error;
@@ -486,6 +487,7 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     angle: 4,
     size: 36,
     model: 'storage',
+    fontAtlas: TEXT_FONT_ATLAS,
     characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-',
     onDataError: error => {
       dictionaryTextDataError = error;
@@ -524,7 +526,8 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
         const model = await waitForLayerModel(layer, getError);
         await waitForPipeline(model);
         t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`);
-        t.ok(model.instanceCount > 0, `${layer.id} has drawable storage-backed instances`);
+        const drawCount = model.isInstanced === true ? model.instanceCount : model.vertexCount;
+        t.ok(drawCount > 0, `${layer.id} has a drawable storage-backed draw count`);
       } finally {
         deck.setProps({layers: []});
       }

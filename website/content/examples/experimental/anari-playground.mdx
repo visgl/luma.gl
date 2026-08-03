@@ -1,9 +1,10 @@
 ---
 title: ANARI Playground
 sidebar_label: ANARI Playground
+description: Declarative ANARI-style scene editing, OpenUSD/glTF import, HDR rendering, and glTF/USD export.
 sidebar_custom_props:
   backends: [webgpu, webgl2]
-  description: Declarative ANARI-style scene editing, OpenUSD/glTF import, HDR rendering, and glTF/USD export.
+  display: hdr-capable
   difficulty: advanced
   maturity: experimental
   topics: [scenegraph, gltf, usd, hdr, json]
@@ -11,25 +12,28 @@ sidebar_custom_props:
 
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
-  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
-# ANARI Playground
+import {ANARIPlaygroundExample} from '@site/src/examples';
 
-The ANARI Playground is a private v10 proof of concept for declarative retained rendering. It
-provides a Monaco-backed JSON scene editor, WebGPU/WebGL rendering, HDR presentation, retained
-geometry/material/light references, OpenUSD and glTF import, and static glTF/USDA export.
+<ANARIPlaygroundExample />
 
-The playground is a standalone full-page Vite app rather than a canvas-only website embed. Run it
-from the repository root:
+The ANARI Playground is a v10 proof of concept for declarative retained rendering. Its Monaco-backed
+JSON scene editor drives WebGPU or WebGL rendering, HDR presentation, retained geometry, material,
+and light references, OpenUSD and glTF import, and static glTF or USDA export.
+
+Choose a preset or edit the scene JSON directly. The preview updates after valid edits, and the
+import control accepts local USD, USDA, USDZ, glTF, and GLB scenes. Use the backend selector in the
+URL (`?backend=webgl`) to force the WebGL 2 path.
+
+For local development, run:
 
 ```bash
 yarn workspace luma.gl-examples-showcase-anari start
 ```
 
-Then open `/playground.html` on the reported development-server URL. Use `?backend=webgl` to force
-the WebGL 2 path.
+Then open `/playground.html` on the reported development-server URL.
 
 For the full API, JSON format, importer, exporter, and HDR notes, see the
 [ANARI developer guide](/docs/api-guide/engine/anari-rendering).
