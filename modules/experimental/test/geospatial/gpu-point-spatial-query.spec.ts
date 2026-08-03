@@ -56,6 +56,38 @@ test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', asy
       expectedIds: [0, 1, 3]
     },
     {
+      id: 'unindexed-2d-radius-one-ulp',
+      positions: Float32Array.from([1, 0, Math.fround(1 + 2 ** -23), 0, -1, 0, 0, 0]),
+      dimension: 2,
+      kind: 'radius',
+      query: Float32Array.from([0, 0, 1]),
+      expectedIds: [0, 2, 3]
+    },
+    {
+      id: 'unindexed-2d-radius-multiaxis-outside',
+      positions: Float32Array.from([1344, 2089, 0, 2484]),
+      dimension: 2,
+      kind: 'radius',
+      query: Float32Array.from([0, 0, 2484]),
+      expectedIds: [1]
+    },
+    {
+      id: 'unindexed-2d-radius-pythagorean-boundary',
+      positions: Float32Array.from([96, 247, 0, 265]),
+      dimension: 2,
+      kind: 'radius',
+      query: Float32Array.from([0, 0, 265]),
+      expectedIds: [0, 1]
+    },
+    {
+      id: 'unindexed-2d-radius-subnormal-boundary',
+      positions: Float32Array.from([2 ** -149, 0, 2 ** -148, 0, 0, 0]),
+      dimension: 2,
+      kind: 'radius',
+      query: Float32Array.from([0, 0, 2 ** -149]),
+      expectedIds: [0, 2]
+    },
+    {
       id: 'unindexed-3d-bounds',
       positions: Float32Array.from([
         0,
@@ -314,6 +346,40 @@ test('GPUPointSpatialQuery applies even-odd polygon holes and includes ring boun
     'shell points and outer/hole boundaries match while hole interiors and outside points do not'
   );
   tapeTest.equal(result.overflow, 0);
+
+  destroyFixture(fixture);
+  tapeTest.end();
+});
+
+test('GPUPointSpatialQuery remaps source IDs after indexed polygon refinement', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const fixture = createQueryFixture(device, {
+    id: 'indexed-polygon-source-ids',
+    positions: Float32Array.from([1, 1, 3, 3, 7, 7]),
+    sourceIds: Uint32Array.from([101, 202, 303]),
+    dimension: 2,
+    kind: 'polygon',
+    query: Float32Array.from([0, 0, 6, 6]),
+    polygonPositions: Float32Array.from([0, 0, 6, 0, 6, 6, 0, 6]),
+    ringOffsets: Uint32Array.from([0, 4]),
+    indexed: true,
+    gridSize: [2, 2],
+    indexBounds: [0, 0, 8, 8],
+    expectedIds: [101, 202]
+  });
+
+  encode(device, fixture.compiled);
+  tapeTest.deepEqual(
+    (await readResult(fixture)).ids.sort(sortNumbers),
+    [101, 202],
+    'the eight-binding refinement writes row indices before a separate source-ID remap'
+  );
 
   destroyFixture(fixture);
   tapeTest.end();

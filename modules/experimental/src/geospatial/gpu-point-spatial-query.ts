@@ -19,6 +19,12 @@ import {
   validatePackedView
 } from '../gpu-primitives/graph-data-view-utils';
 import type {GPUGridIndexBounds, GPUGridIndexSize} from '../gpu-primitives/gpu-grid-index';
+import {
+  GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
+  getGeospatialDispatchLayout,
+  getGeospatialInvocationIndexSource,
+  type GeospatialDispatchLayout
+} from './geospatial-utils';
 import type {GPUSpatialQueryOutput} from './gpu-spatial-query-types';
 
 const POINT_QUERY_WORKGROUP_SIZE = 256;
@@ -178,6 +184,7 @@ export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
     const resultState = createTransientView(graph, `${this.id}-result-state`, 'uint32', 2);
     addPreparePass(graph, this, queryState, resultState);
     addRefinementPass(graph, this, queryState, resultState);
+    addSourceIdRemapPass(graph, this, resultState);
     addFinalizePass(graph, this, resultState);
   }
 }
@@ -323,7 +330,6 @@ function addRefinementPass<Parameters>(
 ): void {
   const index = query.index;
   let nextBinding = 1;
-  const sourceIdsBinding = query.sourceIds ? nextBinding++ : undefined;
   const queryValuesBinding = query.kind === 'polygon' ? undefined : nextBinding++;
   const queryStateBinding = nextBinding++;
   const cellOffsetsBinding = index ? nextBinding++ : undefined;
@@ -342,13 +348,6 @@ const CELL_COUNT: u32 = ${index.cellOffsets.length - 1}u;
 const WIDTH: u32 = ${index.gridSize[0]}u;
 const HEIGHT: u32 = ${index.gridSize[1]}u;`
     : '';
-  const sourceIdsDeclaration = query.sourceIds
-    ? `const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(query.sourceIds)}u;
-@group(0) @binding(${sourceIdsBinding}) var<storage, read> sourceIds: array<u32>;`
-    : '';
-  const outputSourceId = query.sourceIds
-    ? 'let sourceId = sourceIds[SOURCE_IDS_OFFSET + rowIndex];'
-    : 'let sourceId = rowIndex;';
   const polygonBindings = query.polygon
     ? `@group(0) @binding(${outputIdsBinding + 1}) var<storage, read> polygonPositions: array<f32>;
 @group(0) @binding(${outputIdsBinding + 2}) var<storage, read> ringOffsets: array<u32>;`
@@ -411,7 +410,6 @@ const OUTPUT_CAPACITY: u32 = ${query.output.ids.length}u;
 ${indexedConstants}
 ${polygonConstants}
 @group(0) @binding(0) var<storage, read> positions: array<f32>;
-${sourceIdsDeclaration}
 ${queryValuesBinding === undefined ? '' : `@group(0) @binding(${queryValuesBinding}) var<storage, read> queryValues: array<f32>;`}
 @group(0) @binding(${queryStateBinding}) var<storage, read> queryState: array<u32>;
 ${indexedBindings}
@@ -428,8 +426,7 @@ ${makePolygonHelpers(query)}
 fn appendRow(rowIndex: u32) {
   let outputIndex = atomicAdd(&resultState[RESULT_OFFSET], 1u);
   if (outputIndex < OUTPUT_CAPACITY) {
-    ${outputSourceId}
-    outputIds[OUTPUT_OFFSET + outputIndex] = sourceId;
+    outputIds[OUTPUT_OFFSET + outputIndex] = rowIndex;
   } else {
     atomicStore(&resultState[RESULT_OFFSET + 1u], 1u);
   }
@@ -449,7 +446,6 @@ fn testRow(rowIndex: u32) {
 }`;
   const bindings: Record<string, GraphDataView> = {
     positions: query.positions,
-    ...(query.sourceIds ? {sourceIds: query.sourceIds} : {}),
     ...(queryValuesBinding === undefined ? {} : {queryValues: query.query}),
     queryState,
     ...(index
@@ -471,9 +467,6 @@ fn testRow(rowIndex: u32) {
     id: `${query.id}-refine`,
     resources: [
       {buffer: query.positions, usage: 'storage-read'},
-      ...(query.sourceIds
-        ? ([{buffer: query.sourceIds, usage: 'storage-read'}] as GraphBufferUse[])
-        : []),
       ...(queryValuesBinding === undefined
         ? []
         : ([{buffer: query.query, usage: 'storage-read'}] as GraphBufferUse[])),
@@ -498,6 +491,8 @@ fn testRow(rowIndex: u32) {
       const computation = new Computation(device, {
         id: `${query.id}-refine`,
         source,
+        modules: query.kind === 'radius' ? [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE] : [],
+        defines: query.kind === 'radius' ? {LUMA_FP64_INTEGER_ARITHMETIC: true} : {},
         shaderLayout: {
           bindings: Object.keys(bindings).map((name, location) => ({
             name,
@@ -519,6 +514,56 @@ fn testRow(rowIndex: u32) {
         destroy: () => computation.destroy()
       };
     }
+  });
+}
+
+function addSourceIdRemapPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  query: GPUPointSpatialQuery,
+  resultState: GraphDataView<'uint32'>
+): void {
+  if (!query.sourceIds) return;
+
+  const dispatchLayout = getGeospatialDispatchLayout(
+    query.output.ids.length,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
+  const source = /* wgsl */ `
+const POSITION_COUNT: u32 = ${query.positions.length}u;
+const OUTPUT_CAPACITY: u32 = ${query.output.ids.length}u;
+const RESULT_OFFSET: u32 = ${getViewElementOffset(resultState)}u;
+const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(query.sourceIds)}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(query.output.ids)}u;
+@group(0) @binding(0) var<storage, read> resultState: array<u32>;
+@group(0) @binding(1) var<storage, read> sourceIds: array<u32>;
+@group(0) @binding(2) var<storage, read_write> outputIds: array<u32>;
+
+@compute @workgroup_size(${POINT_QUERY_WORKGROUP_SIZE}) fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_id) localId: vec3<u32>
+) {
+  ${getGeospatialInvocationIndexSource(dispatchLayout)}
+  let storedCount = min(resultState[RESULT_OFFSET], OUTPUT_CAPACITY);
+  if (index >= storedCount) { return; }
+  let rowIndex = outputIds[OUTPUT_OFFSET + index];
+  if (rowIndex < POSITION_COUNT) {
+    outputIds[OUTPUT_OFFSET + index] = sourceIds[SOURCE_IDS_OFFSET + rowIndex];
+  }
+}`;
+  addComputationPass(graph, {
+    id: `${query.id}-remap-source-ids`,
+    source,
+    resources: [
+      {buffer: resultState, usage: 'storage-read'},
+      {buffer: query.sourceIds, usage: 'storage-read'},
+      {buffer: query.output.ids, usage: 'storage-read-write'}
+    ],
+    bindings: {
+      resultState,
+      sourceIds: query.sourceIds,
+      outputIds: query.output.ids
+    },
+    dispatchCount: dispatchLayout
   });
 }
 
@@ -627,25 +672,36 @@ function makeExactPredicate(query: GPUPointSpatialQuery): string {
       .join('\n  ');
     const finiteCenter = axes.map(axis => `finite(center${axis})`).join(' && ');
     const deltas = axes
-      .map(axis => `let delta${axis} = position${axis} - center${axis};`)
+      .map(
+        axis =>
+          `let delta${axis} = sub_fp64(vec2f(position${axis}, 0.0), vec2f(center${axis}, 0.0));`
+      )
       .join('\n  ');
-    const finiteDeltas = axes.map(axis => `finite(delta${axis})`).join(' && ');
-    const scale = makeNestedMaximum(['radius', ...axes.map(axis => `abs(delta${axis})`)]);
-    const squaredDistance = axes
-      .map(axis => `(delta${axis} / scale) * (delta${axis} / scale)`)
-      .join(' + ');
+    const finiteDeltas = axes.map(axis => `is_finite_fp64(delta${axis})`).join(' && ');
+    const maximumMagnitude = makeNestedMaximum([
+      'abs(radius)',
+      ...axes.map(axis => `abs(delta${axis}.x)`)
+    ]);
+    const scaledDeltas = axes
+      .map(axis => `let scaledDelta${axis} = fp64_scale_fp64_integer(delta${axis}, scaleExponent);`)
+      .join('\n  ');
+    const squaredTerms = axes.map(axis => `mul_fp64(scaledDelta${axis}, scaledDelta${axis})`);
+    const squaredDistance = squaredTerms
+      .slice(1)
+      .reduce((sum, term) => `sum_fp64(${sum}, ${term})`, squaredTerms[0]);
     return `${positions}
   ${centers}
   ${deltas}
   let radius = queryValues[QUERY_OFFSET + ${query.dimension}u];
-  let scale = ${scale};
+  let maximumMagnitude = ${maximumMagnitude};
+  let exponentBits = bitcast<u32>(maximumMagnitude) & 0x7f800000u;
+  // A common integer-controlled power-of-two scale prevents overflow and preserves subnormals.
+  let scaleExponent = select(126, 127 - i32(exponentBits >> 23u), exponentBits != 0u);
+  ${scaledDeltas}
+  let scaledRadius = fp64_scale_fp64_integer(vec2f(radius, 0.0), scaleExponent);
   let squaredDistance = ${squaredDistance};
-  let squaredRadius = (radius / scale) * (radius / scale);
-  // The operands are delta-scale-normalized; eight f32 epsilons cover subtraction,
-  // multiplication, and accumulation rounding at an inclusive boundary.
-  let comparisonTolerance =
-    (abs(squaredDistance) + abs(squaredRadius)) * 9.5367431640625e-7;
-  let selected = ${finitePosition} && ${finiteCenter} && ${finiteDeltas} && finite(radius) && radius >= 0.0 && (scale == 0.0 || squaredDistance <= squaredRadius + comparisonTolerance);`;
+  let squaredRadius = mul_fp64(scaledRadius, scaledRadius);
+  let selected = ${finitePosition} && ${finiteCenter} && ${finiteDeltas} && finite(radius) && radius >= 0.0 && compare_fp64(squaredDistance, squaredRadius) <= 0;`;
   }
   if (query.kind === 'polygon') {
     return `${positions}
@@ -840,7 +896,7 @@ function addComputationPass<Parameters>(
     source: string;
     resources: GraphBufferUse[];
     bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
+    dispatchCount: number | GeospatialDispatchLayout;
   }
 ): void {
   graph.addComputePass({
@@ -866,7 +922,16 @@ function addComputationPass<Parameters>(
             bindings[name] = getViewBinding(view, getBuffer);
           }
           computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
+          if (typeof props.dispatchCount === 'number') {
+            computation.dispatch(computePass, props.dispatchCount);
+          } else {
+            computation.dispatch(
+              computePass,
+              props.dispatchCount.x,
+              props.dispatchCount.y,
+              props.dispatchCount.z
+            );
+          }
         },
         destroy: () => computation.destroy()
       };
