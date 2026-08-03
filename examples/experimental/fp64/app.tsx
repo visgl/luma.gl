@@ -249,10 +249,13 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     return (
       <div
         style={{
+          boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
           gap: 20,
-          padding: 20
+          minWidth: 0,
+          padding: 20,
+          width: '100%'
         }}
       >
         {initializationError ? (
@@ -262,26 +265,28 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gridTemplateRows: 'auto auto',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: 20,
-            alignItems: 'start'
+            alignItems: 'start',
+            minWidth: 0
           }}
         >
-          {visualizationSpecs.map(visualization => (
-            <ExamplePaneCopy
-              description={visualization.description}
-              key={`${visualization.kind}-copy`}
-              title={visualization.title}
-            />
-          ))}
-          {this.canvasRefs.map((canvasRef, index) => (
-            <ExamplePaneCanvas
-              canvasRef={canvasRef}
-              isReady={isReady}
-              key={`${visualizationSpecs[index].kind}-canvas`}
-              overlayLines={overlayLines}
-            />
+          {visualizationSpecs.map((visualization, index) => (
+            <div
+              data-fp64-visualization={visualization.kind}
+              key={visualization.kind}
+              style={{display: 'grid', gap: 12, minWidth: 0}}
+            >
+              <ExamplePaneCopy
+                description={visualization.description}
+                title={visualization.title}
+              />
+              <ExamplePaneCanvas
+                canvasRef={this.canvasRefs[index]}
+                isReady={isReady}
+                overlayLines={overlayLines}
+              />
+            </div>
           ))}
         </div>
         <FP64BenchmarkPanel
@@ -690,6 +695,8 @@ function ExamplePaneCanvas(props: {
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
         style={{
+          boxSizing: 'border-box',
+          display: 'block',
           width: '100%',
           height: 'auto',
           aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
@@ -702,7 +709,10 @@ function ExamplePaneCanvas(props: {
         style={{
           position: 'absolute',
           left: 12,
+          right: 12,
           bottom: 12,
+          boxSizing: 'border-box',
+          maxWidth: 'calc(100% - 24px)',
           padding: '8px 10px',
           background: 'rgba(0, 0, 0, 0.68)',
           color: '#fff',
@@ -710,6 +720,7 @@ function ExamplePaneCanvas(props: {
           fontSize: 12,
           lineHeight: 1.45,
           borderRadius: 8,
+          overflowWrap: 'anywhere',
           pointerEvents: 'none'
         }}
       >
@@ -769,7 +780,14 @@ function FP64BenchmarkPanel(props: {
           {isRunning ? 'Running benchmark…' : 'Run WebGPU benchmark'}
         </button>
       </div>
-      <p style={{margin: '12px 0 0', fontFamily: 'monospace', fontSize: 12}}>
+      <p
+        style={{
+          margin: '12px 0 0',
+          fontFamily: 'monospace',
+          fontSize: 12,
+          overflowWrap: 'anywhere'
+        }}
+      >
         {device
           ? `device = ${getBenchmarkDeviceLabel(device)} · automatic = ${automaticSelection}`
           : 'device = initializing'}
