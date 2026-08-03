@@ -8,6 +8,7 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Optional Probe logging** - Rich Probe logging is available through `@luma.gl/core/diagnostics` and no longer increases normal application bundles.
 - **TypeScript 6.0** - luma.gl package builds, website tooling, and supported example typechecks now use TypeScript 6.0.
 - **Precise raw binary64 coordinate deltas** - The WGSL `fp64arithmetic` module can split a binary64-rounded subtraction into normalized double-single limbs, normalize and compare those limbs with integer-controlled behavior in either arithmetic mode, and explicitly classify non-finite values. The existing direct-to-`f32` helper retains its single-round exact-delta contract.
 

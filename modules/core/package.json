@@ -38,7 +38,13 @@
     "dist.min.js",
     "README.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/diagnostics.ts",
+    "./src/diagnostics/probe-log.ts",
+    "./dist/diagnostics.js",
+    "./dist/diagnostics.cjs",
+    "./dist/diagnostics/probe-log.js"
+  ],
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
     "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",

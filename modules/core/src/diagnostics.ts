@@ -5,5 +5,6 @@
 /** Explicit entry point for logging, statistics, and resource diagnostics. */
 
 export {log} from './utils/log';
+export {probeLog} from './diagnostics/probe-log';
 export {StatsManager, lumaStats} from './utils/stats-manager';
 export {resourceStatsInstrumentation} from './diagnostics/resource-stats-instrumentation';
