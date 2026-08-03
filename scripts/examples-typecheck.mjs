@@ -135,10 +135,20 @@ function getExampleWorkspaces() {
   return workspaces;
 }
 
-function createTempTypecheckConfig(workspacePath) {
+function createTempTypecheckConfig(workspaces) {
   const tempDirectory = mkdtempSync(join(tmpdir(), 'luma-examples-typecheck-'));
   const ambientTypesPath = join(tempDirectory, 'ambient.d.ts');
   const tsconfigPath = join(tempDirectory, 'tsconfig.json');
+  const includedFiles = workspaces.flatMap(({workspacePath}) => [
+    `${workspacePath}/**/*.ts`,
+    `${workspacePath}/**/*.tsx`,
+    `${workspacePath}/**/*.d.ts`
+  ]);
+  const excludedFiles = workspaces.flatMap(({workspacePath}) => [
+    `${workspacePath}/node_modules`,
+    `${workspacePath}/dist`,
+    `${workspacePath}/vite.config.ts`
+  ]);
 
   writeFileSync(ambientTypesPath, AMBIENT_MODULE_DECLARATIONS);
   writeFileSync(
@@ -147,17 +157,8 @@ function createTempTypecheckConfig(workspacePath) {
       {
         extends: join(repoRoot, 'tsconfig.json'),
         compilerOptions: SHARED_COMPILER_OPTIONS,
-        include: [
-          `${workspacePath}/**/*.ts`,
-          `${workspacePath}/**/*.tsx`,
-          `${workspacePath}/**/*.d.ts`,
-          ambientTypesPath
-        ],
-        exclude: [
-          `${workspacePath}/node_modules`,
-          `${workspacePath}/dist`,
-          `${workspacePath}/vite.config.ts`
-        ]
+        include: [...includedFiles, ambientTypesPath],
+        exclude: excludedFiles
       },
       null,
       2
@@ -167,35 +168,38 @@ function createTempTypecheckConfig(workspacePath) {
   return {tempDirectory, tsconfigPath};
 }
 
-function typecheckWorkspace({name, workspaceId, workspacePath}) {
-  const {tempDirectory, tsconfigPath} = NATIVE_TYPESCRIPT_CONFIG_WORKSPACES.has(workspaceId)
-    ? {tempDirectory: null, tsconfigPath: join(workspacePath, 'tsconfig.json')}
-    : createTempTypecheckConfig(workspacePath);
+function runTypecheck(tsconfigPath, description) {
+  console.log(`Typechecking ${description}`);
+  const result = spawnSync(tscPath, ['-p', tsconfigPath, '--noEmit'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: 'pipe'
+  });
+
+  if (result.status !== 0) {
+    process.stderr.write(result.stdout || '');
+    process.stderr.write(result.stderr || '');
+    return false;
+  }
+
+  return true;
+}
+
+function typecheckWorkspaces(workspaces) {
+  if (workspaces.length === 0) {
+    return true;
+  }
+
+  const {tempDirectory, tsconfigPath} = createTempTypecheckConfig(workspaces);
 
   try {
-    console.log(`Typechecking ${name}`);
-    const result = spawnSync(tscPath, ['-p', tsconfigPath, '--noEmit'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      stdio: 'pipe'
-    });
-
-    if (result.status !== 0) {
-      process.stderr.write(result.stdout || '');
-      process.stderr.write(result.stderr || '');
-      return false;
-    }
-
-    return true;
+    return runTypecheck(tsconfigPath, `${workspaces.length} example workspaces together`);
   } finally {
-    if (tempDirectory) {
-      rmSync(tempDirectory, {recursive: true, force: true});
-    }
+    rmSync(tempDirectory, {recursive: true, force: true});
   }
 }
 
 const workspaces = getExampleWorkspaces();
-let allPassed = true;
 
 console.log(
   `Typechecking ${workspaces.length} example workspace${workspaces.length === 1 ? '' : 's'}: ${workspaces
@@ -203,8 +207,16 @@ console.log(
     .join(', ')}`
 );
 
-for (const workspace of workspaces) {
-  allPassed = typecheckWorkspace(workspace) && allPassed;
+const sharedConfigurationWorkspaces = workspaces.filter(
+  ({workspaceId}) => !NATIVE_TYPESCRIPT_CONFIG_WORKSPACES.has(workspaceId)
+);
+const nativeConfigurationWorkspaces = workspaces.filter(({workspaceId}) =>
+  NATIVE_TYPESCRIPT_CONFIG_WORKSPACES.has(workspaceId)
+);
+let allPassed = typecheckWorkspaces(sharedConfigurationWorkspaces);
+
+for (const {name, workspacePath} of nativeConfigurationWorkspaces) {
+  allPassed = runTypecheck(join(workspacePath, 'tsconfig.json'), name) && allPassed;
 }
 
 if (!allPassed) {
