@@ -12,8 +12,11 @@ export const TRACE_LANE_COUNT = TRACE_THREAD_COUNT * TRACE_LANES_PER_THREAD;
 export const TRACE_SPAN_RECORD_WORD_LENGTH = 8;
 export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = 4;
 export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 8;
+export const TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH = 6;
 // One span batch maps to one portable WebGPU workgroup for candidate-driven local compaction.
 export const TRACE_SPAN_BATCH_CAPACITY = 256;
+// One dependency batch maps to one portable WebGPU workgroup for candidate-driven compaction.
+export const TRACE_DEPENDENCY_BATCH_CAPACITY = 128;
 const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000];
 // Keep density scrolling visually continuous at common viewport widths while retaining a fixed,
 // allocation-stable aggregation target for the compiled GPU command graph.
@@ -24,6 +27,9 @@ export const TRACE_STATUS_COUNT = 4;
 export const TRACE_SAME_PROCESS_DEPENDENCY = 0;
 export const TRACE_CROSS_PROCESS_DEPENDENCY = 1;
 export const TRACE_PARENT_DEPENDENCY_FLAG = 1;
+export const TRACE_DEPENDENCY_PROCESS_MASK = 0xff;
+export const TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT = 8;
+export const TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT = 16;
 export const TRACE_RUNTIME_SPAN_FLAG = 1 << 8;
 export const TRACE_ERROR_SPAN_FLAG = 1 << 9;
 export const TRACE_OVERLAPPING_CHILD_FLAG = 1 << 10;
@@ -100,6 +106,16 @@ export type TraceSpanBatchData = {
   data: Uint32Array;
 };
 
+/** Stable dependency range with a conservative endpoint and ancestor time envelope. */
+export type TraceDependencyBatchData = {
+  batchIndex: number;
+  count: number;
+  firstDependencyIndex: number;
+  timeMin: number;
+  timeMax: number;
+  familyMask: number;
+};
+
 /** Compact forward or reverse compressed sparse dependency adjacency. */
 export type TraceAdjacencyData = {
   /** One stable offset per source node plus the final edge count. */
@@ -118,8 +134,12 @@ export type TraceDatasetData = {
   spanBatches: TraceSpanBatchData[];
   /** Packed batch first/count, temporal bounds, lane bounds, group, and stable batch ID records. */
   spanBatchIndex: Uint32Array;
-  /** Packed 16-byte dependency source, destination, family, and keyword records. */
+  /** Packed 16-byte dependency source, destination, family, and endpoint metadata records. */
   dependencies: Uint32Array;
+  /** Stable dependency partitions small enough for one GPU workgroup. */
+  dependencyBatches: TraceDependencyBatchData[];
+  /** Packed dependency first/count, conservative time bounds, family mask, and batch ID. */
+  dependencyBatchIndex: Uint32Array;
   /** One cross-process-prioritized canonical parent or invalid sentinel per span. */
   parentSpans: Uint32Array;
   /** Forward source-to-destination CSR adjacency. */
@@ -188,12 +208,19 @@ export function makeTraceDataset(
   const topology = makeTraceDependencies(spans, totalSpanCount, maximumDependencyCount);
   const dependencyCount = topology.dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
   const {spanBatches, spanBatchIndex} = makeTraceSpanBatches(spans, groups);
+  const {dependencyBatches, dependencyBatchIndex} = makeTraceDependencyBatches(
+    spans,
+    topology.dependencies,
+    topology.parentSpans
+  );
   return {
     spans,
     groups,
     spanBatches,
     spanBatchIndex,
     dependencies: topology.dependencies,
+    dependencyBatches,
+    dependencyBatchIndex,
     parentSpans: topology.parentSpans,
     outgoing: buildTraceAdjacency(totalSpanCount, topology.dependencies, 'outgoing'),
     incoming: buildTraceAdjacency(totalSpanCount, topology.dependencies, 'incoming'),
@@ -202,6 +229,96 @@ export function makeTraceDataset(
     processCount: TRACE_PROCESS_COUNT,
     threadCount: TRACE_THREAD_COUNT
   };
+}
+
+/**
+ * Partitions canonical dependencies and publishes conservative time bounds for GPU selection.
+ *
+ * Each endpoint contributes its full ancestor envelope. This keeps selection conservative when a
+ * filtered endpoint is projected to a visible ancestor or a collapsed process uses the source row.
+ */
+export function makeTraceDependencyBatches(
+  spans: Uint32Array,
+  dependencies: Uint32Array,
+  parentSpans: Uint32Array,
+  batchCapacity = TRACE_DEPENDENCY_BATCH_CAPACITY
+): {
+  dependencyBatches: TraceDependencyBatchData[];
+  dependencyBatchIndex: Uint32Array;
+} {
+  if (!Number.isSafeInteger(batchCapacity) || batchCapacity < 1) {
+    throw new RangeError('Trace dependency batch capacity must be a positive safe integer');
+  }
+  const spanCount = spans.length / TRACE_SPAN_RECORD_WORD_LENGTH;
+  const dependencyCount = dependencies.length / TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
+  const spanFloats = new Float32Array(spans.buffer, spans.byteOffset, spans.length);
+  const envelopeTimeMin = new Float32Array(spanCount);
+  const envelopeTimeMax = new Float32Array(spanCount);
+  for (let spanIndex = 0; spanIndex < spanCount; spanIndex++) {
+    const wordOffset = spanIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
+    const start = spanFloats[wordOffset];
+    const end = start + spanFloats[wordOffset + 1];
+    const parentSpanIndex = parentSpans[spanIndex];
+    envelopeTimeMin[spanIndex] =
+      parentSpanIndex === TRACE_INVALID_SPAN_INDEX
+        ? start
+        : Math.min(start, envelopeTimeMin[parentSpanIndex]);
+    envelopeTimeMax[spanIndex] =
+      parentSpanIndex === TRACE_INVALID_SPAN_INDEX
+        ? end
+        : Math.max(end, envelopeTimeMax[parentSpanIndex]);
+  }
+
+  const dependencyBatches: TraceDependencyBatchData[] = [];
+  for (
+    let firstDependencyIndex = 0;
+    firstDependencyIndex < dependencyCount;
+    firstDependencyIndex += batchCapacity
+  ) {
+    const count = Math.min(batchCapacity, dependencyCount - firstDependencyIndex);
+    let timeMin = Number.POSITIVE_INFINITY;
+    let timeMax = Number.NEGATIVE_INFINITY;
+    let familyMask = 0;
+    for (let rowIndex = 0; rowIndex < count; rowIndex++) {
+      const wordOffset = (firstDependencyIndex + rowIndex) * TRACE_DEPENDENCY_RECORD_WORD_LENGTH;
+      const sourceSpanIndex = dependencies[wordOffset];
+      const destinationSpanIndex = dependencies[wordOffset + 1];
+      timeMin = Math.min(
+        timeMin,
+        envelopeTimeMin[sourceSpanIndex],
+        envelopeTimeMin[destinationSpanIndex]
+      );
+      timeMax = Math.max(
+        timeMax,
+        envelopeTimeMax[sourceSpanIndex],
+        envelopeTimeMax[destinationSpanIndex]
+      );
+      familyMask |= 1 << dependencies[wordOffset + 2];
+    }
+    dependencyBatches.push({
+      batchIndex: dependencyBatches.length,
+      count,
+      firstDependencyIndex,
+      timeMin,
+      timeMax,
+      familyMask
+    });
+  }
+
+  const dependencyBatchIndex = new Uint32Array(
+    dependencyBatches.length * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH
+  );
+  const dependencyBatchIndexFloats = new Float32Array(dependencyBatchIndex.buffer);
+  for (const batch of dependencyBatches) {
+    const wordOffset = batch.batchIndex * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH;
+    dependencyBatchIndex[wordOffset] = batch.firstDependencyIndex;
+    dependencyBatchIndex[wordOffset + 1] = batch.count;
+    dependencyBatchIndexFloats[wordOffset + 2] = batch.timeMin;
+    dependencyBatchIndexFloats[wordOffset + 3] = batch.timeMax;
+    dependencyBatchIndex[wordOffset + 4] = batch.familyMask;
+    dependencyBatchIndex[wordOffset + 5] = batch.batchIndex;
+  }
+  return {dependencyBatches, dependencyBatchIndex};
 }
 
 /** Partitions canonical group ranges and builds coarse GPU-readable batch bounds. */
@@ -344,6 +461,7 @@ function makeTraceDependencies(
     ) {
       writeTraceDependency(
         data,
+        spans,
         dependencyCount++,
         previousSpan,
         spanIndex,
@@ -364,6 +482,7 @@ function makeTraceDependencies(
       if (spans[sourceIndex * TRACE_SPAN_RECORD_WORD_LENGTH + 4] !== processIndex) {
         writeTraceDependency(
           data,
+          spans,
           dependencyCount++,
           sourceIndex,
           spanIndex,
@@ -412,6 +531,7 @@ function annotateTraceParentTopology(
 /** Writes one fixed-width dependency without allocating intermediate edge objects. */
 function writeTraceDependency(
   dependencies: Uint32Array,
+  spans: Uint32Array,
   dependencyIndex: number,
   sourceSpanIndex: number,
   destinationSpanIndex: number,
@@ -421,7 +541,12 @@ function writeTraceDependency(
   dependencies[wordOffset] = sourceSpanIndex;
   dependencies[wordOffset + 1] = destinationSpanIndex;
   dependencies[wordOffset + 2] = family;
-  dependencies[wordOffset + 3] = TRACE_PARENT_DEPENDENCY_FLAG;
+  const sourceProcessIndex = spans[sourceSpanIndex * TRACE_SPAN_RECORD_WORD_LENGTH + 4];
+  const destinationProcessIndex = spans[destinationSpanIndex * TRACE_SPAN_RECORD_WORD_LENGTH + 4];
+  dependencies[wordOffset + 3] =
+    TRACE_PARENT_DEPENDENCY_FLAG |
+    (sourceProcessIndex << TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT) |
+    (destinationProcessIndex << TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT);
 }
 
 /** Builds stable compressed sparse rows without materializing per-node edge arrays. */

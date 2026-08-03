@@ -5,6 +5,10 @@
 import {
   TRACE_DENSITY_BIN_COUNT,
   TRACE_DENSITY_TIME_PER_PIXEL,
+  TRACE_DEPENDENCY_BATCH_CAPACITY,
+  TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT,
+  TRACE_DEPENDENCY_PROCESS_MASK,
+  TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT,
   TRACE_ERROR_SPAN_FLAG,
   TRACE_FILTER_ERRORS_ONLY,
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
@@ -58,6 +62,7 @@ struct ViewUniforms {
   activityScale: f32,
   pickTime: f32,
   pickLane: f32,
+  visibilityGeneration: u32,
 };
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
@@ -323,6 +328,41 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
+/** Conservatively selects dependency batches whose endpoint envelopes intersect the viewport. */
+export function getDependencyBatchVisibilityShader(batchCount: number): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+struct DependencyBatch {
+  firstIndex: u32,
+  count: u32,
+  timeMin: f32,
+  timeMax: f32,
+  familyMask: u32,
+  batchIndex: u32,
+};
+const BATCH_COUNT: u32 = ${batchCount}u;
+@group(0) @binding(0) var<storage, read> dependencyBatches: array<DependencyBatch>;
+@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(2) var<storage, read_write> candidateFlags: array<u32>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let batchIndex = globalId.x;
+  if (batchIndex >= BATCH_COUNT) {
+    return;
+  }
+  let batch = dependencyBatches[batchIndex];
+  let timeVisible = batch.timeMin <= viewUniforms.timeMax &&
+    batch.timeMax >= viewUniforms.timeMin;
+  let familyVisible = (batch.familyMask & viewUniforms.dependencyMask) != 0u;
+  candidateFlags[batchIndex] = select(
+    0u,
+    1u,
+    timeVisible && familyVisible && !isDensityMode()
+  );
+}`;
+}
+
 /** Applies focus policy and publishes generation-tagged exact visibility for candidate spans. */
 export function getCandidateFocusShader(): string {
   return /* wgsl */ `
@@ -568,39 +608,54 @@ fn main() {
 }`;
 }
 
-/** Filters canonical dependency rows against visible or collapsed endpoint ownership. */
-export function getDependencyVisibilityShader(dependencyCount: number): string {
+/** Filters dependency rows inside GPU-selected candidate batches. */
+export function getCandidateDependencyVisibilityShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
-const DEPENDENCY_COUNT: u32 = ${dependencyCount}u;
+struct DependencyBatch {
+  firstIndex: u32,
+  count: u32,
+  timeMin: f32,
+  timeMax: f32,
+  familyMask: u32,
+  batchIndex: u32,
+};
 @group(0) @binding(0) var<storage, read> dependencies: array<TraceDependency>;
-@group(0) @binding(1) var<storage, read> spans: array<TraceSpan>;
-@group(0) @binding(2) var<storage, read> spanVisibility: array<u32>;
-@group(0) @binding(3) var<storage, read> processStates: array<u32>;
-@group(0) @binding(4) var<storage, read> visibleAncestors: array<u32>;
-@group(0) @binding(5) var<storage, read> visibilityGeneration: array<u32>;
+@group(0) @binding(1) var<storage, read> dependencyBatches: array<DependencyBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<storage, read> spanVisibility: array<u32>;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> visibleAncestors: array<u32>;
 @group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
 @group(0) @binding(7) var<storage, read_write> dependencyFlags: array<u32>;
 
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
-  if (index >= DEPENDENCY_COUNT) {
+@compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let batch = dependencyBatches[candidateBatchIds[workgroupId.y]];
+  if (localId.x >= batch.count) {
     return;
   }
+  let index = batch.firstIndex + localId.x;
   let dependency = dependencies[index];
-  let source = spans[dependency.sourceIndex];
-  let destination = spans[dependency.destinationIndex];
   let projectedSource = visibleAncestors[dependency.sourceIndex];
   let projectedDestination = visibleAncestors[dependency.destinationIndex];
-  let sourceCollapsed = processStates[source.processIndex] == 0u;
-  let destinationCollapsed = processStates[destination.processIndex] == 0u;
+  let sourceProcessIndex =
+    (dependency.flags >> ${TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT}u) &
+    ${TRACE_DEPENDENCY_PROCESS_MASK}u;
+  let destinationProcessIndex =
+    (dependency.flags >> ${TRACE_DEPENDENCY_DESTINATION_PROCESS_SHIFT}u) &
+    ${TRACE_DEPENDENCY_PROCESS_MASK}u;
+  let sourceCollapsed = processStates[sourceProcessIndex] == 0u;
+  let destinationCollapsed = processStates[destinationProcessIndex] == 0u;
   let familyVisible = (viewUniforms.dependencyMask & (1u << dependency.family)) != 0u;
   let sourceVisible =
-    spanVisibility[dependency.sourceIndex] == visibilityGeneration[0] || sourceCollapsed ||
+    spanVisibility[dependency.sourceIndex] == viewUniforms.visibilityGeneration || sourceCollapsed ||
     projectedSource != 0xffffffffu;
   let destinationVisible =
-    spanVisibility[dependency.destinationIndex] == visibilityGeneration[0] ||
+    spanVisibility[dependency.destinationIndex] == viewUniforms.visibilityGeneration ||
     destinationCollapsed || projectedDestination != 0xffffffffu;
   let effectiveSource = select(projectedSource, dependency.sourceIndex, sourceCollapsed);
   let effectiveDestination = select(

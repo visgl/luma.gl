@@ -41,8 +41,12 @@ describe('GPU hierarchical trace viewer', () => {
       const state = viewer as unknown as {
         resources: {
           candidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          candidateDependencyDispatchCommands: {
+            buffer: {readAsync: () => Promise<Uint8Array>};
+          };
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           visibleSpanIds: {readAsync: () => Promise<Uint8Array>};
+          visibleDependencyIds: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
@@ -50,6 +54,7 @@ describe('GPU hierarchical trace viewer', () => {
           dependencyCount: number;
           spanCount: number;
           spanBatchCount: number;
+          dependencyBatchCount: number;
         };
         processStates: Uint32Array;
         threadStates: Uint32Array;
@@ -64,6 +69,7 @@ describe('GPU hierarchical trace viewer', () => {
       expect(state.resources.spanCount).toBe(4096);
       expect(state.resources.spanBatchCount).toBeGreaterThan(0);
       expect(state.resources.dependencyCount).toBeGreaterThan(0);
+      expect(state.resources.dependencyBatchCount).toBeGreaterThan(0);
       expect(host.querySelectorAll('[data-process]')).toHaveLength(TRACE_PROCESS_COUNT);
       expect(host.querySelectorAll('[data-thread]')).toHaveLength(TRACE_THREAD_COUNT);
       expect(host.querySelectorAll('[data-span-capacity]')).toHaveLength(1);
@@ -104,6 +110,15 @@ describe('GPU hierarchical trace viewer', () => {
         );
         expect(groupIds).toEqual([...groupIds].sort((left, right) => left - right));
       }
+      const visibleDependencyBytes = await state.resources.visibleDependencyIds.readAsync();
+      const visibleDependencyIds = new Uint32Array(
+        visibleDependencyBytes.buffer,
+        visibleDependencyBytes.byteOffset,
+        firstCounts[13]
+      );
+      expect(Array.from(visibleDependencyIds)).toEqual(
+        Array.from(visibleDependencyIds).sort((left, right) => left - right)
+      );
       const candidateBytes = await state.resources.candidateDispatchCommands.buffer.readAsync();
       const candidateDispatch = new Uint32Array(
         candidateBytes.buffer,
@@ -114,6 +129,15 @@ describe('GPU hierarchical trace viewer', () => {
       const candidateCount = candidateDispatch[1];
       expect(candidateCount).toBeGreaterThan(0);
       expect(candidateCount).toBeLessThanOrEqual(state.resources.spanBatchCount);
+      const dependencyCandidateBytes =
+        await state.resources.candidateDependencyDispatchCommands.buffer.readAsync();
+      const dependencyCandidateCount = new Uint32Array(
+        dependencyCandidateBytes.buffer,
+        dependencyCandidateBytes.byteOffset,
+        3
+      )[1];
+      expect(dependencyCandidateCount).toBeGreaterThan(0);
+      expect(dependencyCandidateCount).toBeLessThan(state.resources.dependencyBatchCount);
 
       const firstGroup = host.querySelector<HTMLInputElement>('[data-group="0"]');
       expect(firstGroup).not.toBeNull();

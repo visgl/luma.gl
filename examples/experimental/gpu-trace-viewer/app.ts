@@ -33,6 +33,8 @@ import {
   makeTraceDataset,
   isTraceDensityMode,
   TRACE_COLLAPSED_STATE,
+  TRACE_DEPENDENCY_BATCH_CAPACITY,
+  TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
   TRACE_DENSITY_BIN_COUNT,
   TRACE_DURATION,
   TRACE_EXPANDED_STATE,
@@ -58,8 +60,9 @@ import {
   getCandidateFocusShader,
   getCandidatePickShader,
   getCandidateVisibilityShader,
+  getCandidateDependencyVisibilityShader,
   getDensityClearShader,
-  getDependencyVisibilityShader,
+  getDependencyBatchVisibilityShader,
   getPickClearShader,
   getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
@@ -78,7 +81,7 @@ const TRACE_WORKGROUP_SIZE = 256;
 const TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT = Math.ceil(
   TRACE_SPAN_BATCH_CAPACITY / TRACE_WORKGROUP_SIZE
 );
-const VIEW_UNIFORM_BYTE_LENGTH = 64;
+const VIEW_UNIFORM_BYTE_LENGTH = 80;
 const MAXIMUM_FOCUS_DEPTH = 4;
 const INVALID_SPAN_INDEX = TRACE_INVALID_SPAN_INDEX;
 const STATUS_NAMES = ['ok', 'waiting', 'active', 'error'] as const;
@@ -106,6 +109,7 @@ type TraceGraphResources = {
   compiled: CompiledGPUCommandGraph<TraceViewParameters>;
   drawCommands: DrawCommandBuffer;
   candidateDispatchCommands: DispatchCommandBuffer;
+  candidateDependencyDispatchCommands: DispatchCommandBuffer;
   readbackRing: GPUReadbackRing;
   renderBundle: RenderBundle;
   groups: TraceGroupResources[];
@@ -114,6 +118,8 @@ type TraceGraphResources = {
   candidateBatchIds: Buffer;
   visibleSpanIds: Buffer;
   dependencies: Buffer;
+  dependencyBatchIndex: Buffer;
+  candidateDependencyBatchIds: Buffer;
   parentSpans: Buffer;
   outgoingOffsets: Buffer;
   outgoingNeighbors: Buffer;
@@ -137,6 +143,7 @@ type TraceGraphResources = {
   pickResult: Buffer;
   spanCount: number;
   spanBatchCount: number;
+  dependencyBatchCount: number;
   dependencyCount: number;
 };
 
@@ -187,6 +194,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   private sampledVisibleCounts = [0, 0, 0];
   private sampledDependencyCount = 0;
   private sampledCandidateBatchCount = 0;
+  private sampledCandidateDependencyBatchCount = 0;
   private droppedTelemetrySampleCount = 0;
   private deferredPickFrameCount = 0;
   private frameIndex = 0;
@@ -254,7 +262,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const pick = this.pendingPick;
     const visibilityGeneration = (this.frameIndex % 0xfffffffe) + 1;
     resources.visibilityGeneration.write(Uint32Array.of(visibilityGeneration));
-    this.writeViewUniforms(width, height, pick);
+    this.writeViewUniforms(width, height, pick, visibilityGeneration);
     const encoding = resources.compiled.encode(device.commandEncoder, {parameters: this.view});
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
@@ -278,6 +286,22 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         readbackTicket.copyFrom(device.commandEncoder, resources.drawCommands.buffer);
         queueMicrotask(() => {
           void this.sampleVisibleCounts(resources, readbackTicket);
+        });
+      } else {
+        this.droppedTelemetrySampleCount++;
+      }
+      const dependencyCandidateReadbackTicket = resources.readbackRing.tryAcquire();
+      if (dependencyCandidateReadbackTicket) {
+        dependencyCandidateReadbackTicket.copyFrom(
+          device.commandEncoder,
+          resources.candidateDependencyDispatchCommands.buffer,
+          {sourceOffset: UINT32_BYTE_LENGTH, byteLength: UINT32_BYTE_LENGTH}
+        );
+        queueMicrotask(() => {
+          void this.sampleCandidateDependencyBatchCount(
+            resources,
+            dependencyCandidateReadbackTicket
+          );
         });
       } else {
         this.droppedTelemetrySampleCount++;
@@ -399,6 +423,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     this.compileTimeMilliseconds = performance.now() - started;
     this.sampledVisibleCounts = TRACE_GROUPS.map(() => 0);
     this.sampledDependencyCount = 0;
+    this.sampledCandidateBatchCount = 0;
+    this.sampledCandidateDependencyBatchCount = 0;
     this.updateInspector();
   }
 
@@ -428,6 +454,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       id: 'gpu-trace-candidate-dispatch-commands',
       commands: [{x: TRACE_CANDIDATE_BATCH_WORKGROUP_COUNT, y: 0, z: 1}]
     });
+    const candidateDependencyDispatchCommands = new DispatchCommandBuffer(this.device, {
+      id: 'gpu-trace-candidate-dependency-dispatch-commands',
+      commands: [{x: 1, y: 0, z: 1}]
+    });
     const readbackRing = new GPUReadbackRing(this.device, {
       id: 'gpu-trace-readback',
       byteLength: drawCommands.buffer.byteLength,
@@ -438,6 +468,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       renderBundle: undefined!,
       drawCommands,
       candidateDispatchCommands,
+      candidateDependencyDispatchCommands,
       readbackRing,
       groups,
       spans: this.createDataBuffer('gpu-trace-spans', dataset.spans),
@@ -453,6 +484,15 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         Buffer.COPY_SRC
       ),
       dependencies: this.createDataBuffer('gpu-trace-dependencies', dataset.dependencies),
+      dependencyBatchIndex: this.createDataBuffer(
+        'gpu-trace-dependency-batch-index',
+        dataset.dependencyBatchIndex
+      ),
+      candidateDependencyBatchIds: this.createStorageBuffer(
+        'gpu-trace-candidate-dependency-batch-ids',
+        dataset.dependencyBatches.length * UINT32_BYTE_LENGTH,
+        Buffer.COPY_SRC
+      ),
       parentSpans: this.createDataBuffer('gpu-trace-parent-spans', dataset.parentSpans),
       outgoingOffsets: this.createDataBuffer('gpu-trace-outgoing-offsets', outgoingOffsets),
       outgoingNeighbors: this.createDataBuffer(
@@ -498,7 +538,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       spanVisibility: this.createStorageBuffer('gpu-trace-span-visibility', spanMaskByteLength),
       visibleDependencyIds: this.createStorageBuffer(
         'gpu-trace-visible-dependencies',
-        dependencyMaskByteLength
+        dependencyMaskByteLength,
+        Buffer.COPY_SRC
       ),
       densityKeys: this.createStorageBuffer('gpu-trace-density-keys', spanMaskByteLength),
       densityBins: this.createStorageBuffer(
@@ -513,6 +554,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ),
       spanCount: dataset.spanCount,
       spanBatchCount: dataset.spanBatches.length,
+      dependencyBatchCount: dataset.dependencyBatches.length,
       dependencyCount: dataset.dependencyCount
     };
   }
@@ -557,6 +599,21 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ),
       visibleSpanIds: importTraceBuffer(graph, 'visible-span-ids', resources.visibleSpanIds),
       dependencies: importTraceBuffer(graph, 'dependencies', resources.dependencies),
+      dependencyBatchIndex: importTraceBuffer(
+        graph,
+        'dependency-batch-index',
+        resources.dependencyBatchIndex
+      ),
+      candidateDependencyBatchIds: importTraceBuffer(
+        graph,
+        'candidate-dependency-batch-ids',
+        resources.candidateDependencyBatchIds
+      ),
+      candidateDependencyDispatchCommands: importTraceBuffer(
+        graph,
+        'candidate-dependency-dispatch-commands',
+        resources.candidateDependencyDispatchCommands.buffer
+      ),
       parentSpans: importTraceBuffer(graph, 'parent-spans', resources.parentSpans),
       outgoingOffsets: importTraceBuffer(graph, 'outgoing-offsets', resources.outgoingOffsets),
       outgoingNeighbors: importTraceBuffer(
@@ -887,49 +944,92 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       })
     }).addToGraph(graph);
 
-    const dependencyFlags = graph.createTransientBuffer({
-      id: 'trace-dependency-flags',
-      byteLength: Math.max(resources.dependencyCount, 1) * UINT32_BYTE_LENGTH,
-      usage: Buffer.STORAGE
-    });
     if (resources.dependencyCount > 0) {
+      const candidateDependencyBatchFlags = graph.createTransientBuffer({
+        id: 'trace-candidate-dependency-batch-flags',
+        byteLength: resources.dependencyBatchCount * UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE
+      });
       addTraceComputePass(graph, {
-        id: 'trace-dependency-visibility',
-        source: getDependencyVisibilityShader(resources.dependencyCount),
+        id: 'trace-dependency-batch-visibility',
+        source: getDependencyBatchVisibilityShader(resources.dependencyBatchCount),
+        bindings: [
+          storageRead('dependencyBatches', handles.dependencyBatchIndex),
+          uniformBinding('viewUniforms', handles.uniforms),
+          storageWrite('candidateFlags', candidateDependencyBatchFlags)
+        ],
+        length: resources.dependencyBatchCount
+      });
+      new GPUVisibilityWorkflow({
+        id: 'trace-candidate-dependency-batches',
+        predicates: [
+          {
+            kind: ['time-range', 'selection'],
+            mask: graph.createDataView(candidateDependencyBatchFlags, {
+              format: 'uint32',
+              length: resources.dependencyBatchCount
+            })
+          }
+        ],
+        output: graph.createDataView(handles.candidateDependencyBatchIds, {
+          format: 'uint32',
+          length: resources.dependencyBatchCount
+        }),
+        count: graph.createDataView(handles.candidateDependencyDispatchCommands, {
+          format: 'uint32',
+          length: 1,
+          byteOffset: UINT32_BYTE_LENGTH
+        })
+      }).addToGraph(graph);
+      const dependencyFlags = graph.createTransientBuffer({
+        id: 'trace-dependency-flags',
+        byteLength: resources.dependencyCount * UINT32_BYTE_LENGTH,
+        usage: Buffer.STORAGE
+      });
+      addTraceIndirectComputePass(graph, {
+        id: 'trace-candidate-dependency-visibility',
+        source: getCandidateDependencyVisibilityShader(),
         bindings: [
           storageRead('dependencies', handles.dependencies),
-          storageRead('spans', handles.spans),
+          storageRead('dependencyBatches', handles.dependencyBatchIndex),
+          storageRead('candidateBatchIds', handles.candidateDependencyBatchIds),
           storageRead('spanVisibility', handles.spanVisibility),
           storageRead('processStates', handles.processStates),
           storageRead('visibleAncestors', handles.visibleAncestors),
-          storageRead('visibilityGeneration', handles.visibilityGeneration),
           uniformBinding('viewUniforms', handles.uniforms),
           storageWrite('dependencyFlags', dependencyFlags)
         ],
-        length: resources.dependencyCount
+        dispatchBuffer: handles.candidateDependencyDispatchCommands
       });
+      new GPUIndexedRangeCompaction({
+        id: 'trace-visible-dependencies',
+        flags: graph.createDataView(dependencyFlags, {
+          format: 'uint32',
+          length: resources.dependencyCount
+        }),
+        ranges: graph.createDataView(handles.dependencyBatchIndex, {
+          format: 'uint32',
+          length: resources.dependencyBatchCount * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH
+        }),
+        rangeCount: resources.dependencyBatchCount,
+        rangeLayout: {wordStride: 6, firstIndexWordOffset: 0, countWordOffset: 1},
+        activeRangeIds: graph.createDataView(handles.candidateDependencyBatchIds, {
+          format: 'uint32',
+          length: resources.dependencyBatchCount
+        }),
+        activeRangeDispatch: handles.candidateDependencyDispatchCommands,
+        maximumRangeLength: TRACE_DEPENDENCY_BATCH_CAPACITY,
+        output: graph.createDataView(handles.visibleDependencyIds, {
+          format: 'uint32',
+          length: resources.dependencyCount
+        }),
+        count: graph.createDataView(handles.drawCommands, {
+          format: 'uint32',
+          length: 1,
+          byteOffset: resources.drawCommands.getInstanceCountByteOffset(resources.groups.length)
+        })
+      }).addToGraph(graph);
     }
-    new GPUVisibilityWorkflow({
-      id: 'trace-dependency-visibility',
-      predicates: [
-        {
-          kind: 'selection',
-          mask: graph.createDataView(dependencyFlags, {
-            format: 'uint32',
-            length: resources.dependencyCount
-          })
-        }
-      ],
-      output: graph.createDataView(handles.visibleDependencyIds, {
-        format: 'uint32',
-        length: resources.dependencyCount
-      }),
-      count: graph.createDataView(handles.drawCommands, {
-        format: 'uint32',
-        length: 1,
-        byteOffset: resources.drawCommands.getInstanceCountByteOffset(resources.groups.length)
-      })
-    }).addToGraph(graph);
     renderResources.push({buffer: handles.visibleDependencyIds, usage: 'storage-read'});
 
     graph.addRenderPass({
@@ -993,7 +1093,12 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     return encoder.finish();
   }
 
-  private writeViewUniforms(width: number, height: number, pick: PickPosition | null): void {
+  private writeViewUniforms(
+    width: number,
+    height: number,
+    pick: PickPosition | null,
+    visibilityGeneration: number
+  ): void {
     const data = new ArrayBuffer(VIEW_UNIFORM_BYTE_LENGTH);
     const floats = new Float32Array(data);
     const unsigned = new Uint32Array(data);
@@ -1013,6 +1118,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     floats[13] = 0.16;
     floats[14] = pick?.time ?? -1;
     floats[15] = pick?.lane ?? -1;
+    unsigned[16] = visibilityGeneration;
     this.viewUniformBuffer.write(data);
   }
 
@@ -1046,6 +1152,26 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         return;
       }
       this.sampledCandidateBatchCount = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
+      this.updateInspector();
+    } catch {
+      // Device loss and cancellation release the ring slot without affecting rendering.
+    }
+  }
+
+  private async sampleCandidateDependencyBatchCount(
+    resources: TraceGraphResources,
+    readbackTicket: GPUReadbackTicket
+  ): Promise<void> {
+    try {
+      const bytes = await readbackTicket.read();
+      if (resources !== this.resources) {
+        return;
+      }
+      this.sampledCandidateDependencyBatchCount = new Uint32Array(
+        bytes.buffer,
+        bytes.byteOffset,
+        1
+      )[0];
       this.updateInspector();
     } catch {
       // Device loss and cancellation release the ring slot without affecting rendering.
@@ -1098,6 +1224,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     resources.renderBundle.destroy();
     resources.drawCommands.destroy();
     resources.candidateDispatchCommands.destroy();
+    resources.candidateDependencyDispatchCommands.destroy();
     resources.readbackRing.destroy();
     for (const buffer of [
       resources.spans,
@@ -1105,6 +1232,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.candidateBatchIds,
       resources.visibleSpanIds,
       resources.dependencies,
+      resources.dependencyBatchIndex,
+      resources.candidateDependencyBatchIds,
       resources.parentSpans,
       resources.outgoingOffsets,
       resources.outgoingNeighbors,
@@ -1412,7 +1541,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       this.statsElement.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:8px">
         <span>Sampled exact spans</span><strong>${formatCount(visible)}</strong>
         <span>Sampled visible edges</span><strong>${formatCount(this.sampledDependencyCount)}</strong>
-        <span>Candidate batches</span><strong>${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}</strong>
+        <span>Candidate span batches</span><strong>${formatCount(this.sampledCandidateBatchCount)}/${formatCount(resources.spanBatchCount)}</strong>
+        <span>Candidate dependency batches</span><strong>${formatCount(this.sampledCandidateDependencyBatchCount)}/${formatCount(resources.dependencyBatchCount)}</strong>
         <span>Visible layout lanes</span><strong>${formatCount(this.getVisibleLaneCount())}</strong>
         <span>Collapsed processes</span><strong>${formatCount(this.processStates.filter(state => state === TRACE_COLLAPSED_STATE).length)}</strong>
         <span>CPU graph encode</span><strong>${this.encodeTimeMilliseconds.toFixed(2)} ms</strong>
