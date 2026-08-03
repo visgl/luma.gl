@@ -301,7 +301,7 @@ type AtlasResources = {
   polygonPositions: Buffer;
   polygonRingOffsets: Buffer;
   cellOffsets: Buffer;
-  indexObjectIds: Buffer;
+  indexRowIndices: Buffer;
   indexCount: Buffer;
   indexOverflow: Buffer;
   queryTotalCount: Buffer;
@@ -671,8 +671,8 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       byteLength: (cellCount + 1) * UINT32_BYTE_LENGTH,
       usage: Buffer.STORAGE | Buffer.COPY_SRC
     });
-    const indexObjectIds = this.device.createBuffer({
-      id: 'spatial-atlas-index-object-ids',
+    const indexRowIndices = this.device.createBuffer({
+      id: 'spatial-atlas-index-row-indices',
       byteLength: Math.max(UINT32_BYTE_LENGTH, pointCount * UINT32_BYTE_LENGTH),
       usage: Buffer.STORAGE | Buffer.COPY_SRC
     });
@@ -741,7 +741,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       polygonPositions,
       polygonRingOffsets,
       cellOffsets,
-      indexObjectIds,
+      indexRowIndices,
       indexCount,
       indexOverflow,
       queryTotalCount,
@@ -793,7 +793,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       | 'gridSize'
       | 'queryPositions'
       | 'cellOffsets'
-      | 'indexObjectIds'
+      | 'indexRowIndices'
       | 'indexCount'
       | 'indexOverflow'
     >
@@ -801,7 +801,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     const graph = new GPUCommandGraph<void>(this.device, {id: 'spatial-atlas-index-build-graph'});
     const positionsBuffer = importBuffer(graph, 'build-positions', resources.queryPositions);
     const cellOffsetsBuffer = importBuffer(graph, 'build-cell-offsets', resources.cellOffsets);
-    const objectIdsBuffer = importBuffer(graph, 'build-object-ids', resources.indexObjectIds);
+    const rowIndicesBuffer = importBuffer(graph, 'build-row-indices', resources.indexRowIndices);
     const countBuffer = importBuffer(graph, 'build-count', resources.indexCount);
     const overflowBuffer = importBuffer(graph, 'build-overflow', resources.indexOverflow);
     const positions =
@@ -818,7 +818,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       format: 'uint32',
       length: resources.gridSize.reduce((product, value) => product * value, 1) + 1
     });
-    const objectIds = graph.createDataView(objectIdsBuffer, {
+    const rowIndices = graph.createDataView(rowIndicesBuffer, {
       format: 'uint32',
       length: resources.pointCount
     });
@@ -830,7 +830,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       gridSize: resources.gridSize,
       bounds: resources.domain,
       cellOffsets,
-      objectIds,
+      objectIds: rowIndices,
       count,
       overflow
     }).addToGraph(graph);
@@ -852,7 +852,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       | 'polygonPositions'
       | 'polygonRingOffsets'
       | 'cellOffsets'
-      | 'indexObjectIds'
+      | 'indexRowIndices'
       | 'indexCount'
       | 'indexOverflow'
       | 'queryTotalCount'
@@ -888,7 +888,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       | 'polygonPositions'
       | 'polygonRingOffsets'
       | 'cellOffsets'
-      | 'indexObjectIds'
+      | 'indexRowIndices'
       | 'indexCount'
       | 'indexOverflow'
       | 'queryTotalCount'
@@ -927,7 +927,11 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       resources.polygonRingOffsets
     );
     const cellOffsetsBuffer = importBuffer(graph, 'cell-offsets', resources.cellOffsets);
-    const indexObjectIdsBuffer = importBuffer(graph, 'index-object-ids', resources.indexObjectIds);
+    const indexRowIndicesBuffer = importBuffer(
+      graph,
+      'index-row-indices',
+      resources.indexRowIndices
+    );
     const indexCountBuffer = importBuffer(graph, 'index-count', resources.indexCount);
     const indexOverflowBuffer = importBuffer(graph, 'index-overflow', resources.indexOverflow);
     const totalCountBuffer = importBuffer(graph, 'query-total-count', resources.queryTotalCount);
@@ -972,7 +976,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
       format: 'uint32',
       length: resources.gridSize.reduce((product, value) => product * value, 1) + 1
     });
-    const indexObjectIds = graph.createDataView(indexObjectIdsBuffer, {
+    const indexRowIndices = graph.createDataView(indexRowIndicesBuffer, {
       format: 'uint32',
       length: resources.pointCount
     });
@@ -997,7 +1001,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
               gridSize: resources.gridSize,
               bounds: resources.domain,
               cellOffsets,
-              objectIds: indexObjectIds,
+              rowIndices: indexRowIndices,
               count: indexCount,
               overflow: indexOverflow
             }
@@ -1525,7 +1529,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     resources.polygonPositions.destroy();
     resources.polygonRingOffsets.destroy();
     resources.cellOffsets.destroy();
-    resources.indexObjectIds.destroy();
+    resources.indexRowIndices.destroy();
     resources.indexCount.destroy();
     resources.indexOverflow.destroy();
     resources.queryTotalCount.destroy();

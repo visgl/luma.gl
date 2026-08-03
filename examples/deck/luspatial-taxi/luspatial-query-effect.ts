@@ -62,7 +62,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
   private readonly data: LuSpatialTaxiData;
   private readonly projectedPositions: Buffer;
   private readonly cellOffsets: Buffer;
-  private readonly indexObjectIds: Buffer;
+  private readonly indexRowIndices: Buffer;
   private readonly indexCount: Buffer;
   private readonly indexOverflow: Buffer;
   private readonly viewportQuery: Buffer;
@@ -116,8 +116,8 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       byteLength: (cellCount + 1) * UINT32_BYTE_LENGTH,
       usage: Buffer.STORAGE | Buffer.COPY_SRC
     });
-    this.indexObjectIds = device.createBuffer({
-      id: 'luspatial-taxi-index-object-ids',
+    this.indexRowIndices = device.createBuffer({
+      id: 'luspatial-taxi-index-row-indices',
       byteLength: data.pointCount * UINT32_BYTE_LENGTH,
       usage: Buffer.STORAGE | Buffer.COPY_SRC
     });
@@ -251,7 +251,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     this.longitudeLatitudes.destroy();
     this.projectedPositions.destroy();
     this.cellOffsets.destroy();
-    this.indexObjectIds.destroy();
+    this.indexRowIndices.destroy();
     this.indexCount.destroy();
     this.indexOverflow.destroy();
     this.viewportIds.destroy();
@@ -269,7 +269,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     const sourceBuffer = importBuffer(graph, 'longitude-latitudes', this.longitudeLatitudes);
     const projectedBuffer = importBuffer(graph, 'projected-positions', this.projectedPositions);
     const cellOffsetsBuffer = importBuffer(graph, 'cell-offsets', this.cellOffsets);
-    const objectIdsBuffer = importBuffer(graph, 'index-object-ids', this.indexObjectIds);
+    const rowIndicesBuffer = importBuffer(graph, 'index-row-indices', this.indexRowIndices);
     const countBuffer = importBuffer(graph, 'index-count', this.indexCount);
     const overflowBuffer = importBuffer(graph, 'index-overflow', this.indexOverflow);
     const source = graph.createDataView(sourceBuffer, {
@@ -284,7 +284,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       format: 'uint32',
       length: TAXI_GRID_SIZE[0] * TAXI_GRID_SIZE[1] + 1
     });
-    const objectIds = graph.createDataView(objectIdsBuffer, {
+    const rowIndices = graph.createDataView(rowIndicesBuffer, {
       format: 'uint32',
       length: this.data.pointCount
     });
@@ -303,7 +303,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       gridSize: TAXI_GRID_SIZE,
       bounds: this.data.projectedBounds,
       cellOffsets,
-      objectIds,
+      objectIds: rowIndices,
       count,
       overflow
     }).addToGraph(graph);
@@ -314,7 +314,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
     const graph = new GPUCommandGraph<void>(this.device, {id: 'luspatial-taxi-query-graph'});
     const projectedBuffer = importBuffer(graph, 'projected-positions', this.projectedPositions);
     const cellOffsetsBuffer = importBuffer(graph, 'cell-offsets', this.cellOffsets);
-    const objectIdsBuffer = importBuffer(graph, 'index-object-ids', this.indexObjectIds);
+    const rowIndicesBuffer = importBuffer(graph, 'index-row-indices', this.indexRowIndices);
     const indexCountBuffer = importBuffer(graph, 'index-count', this.indexCount);
     const indexOverflowBuffer = importBuffer(graph, 'index-overflow', this.indexOverflow);
     const viewportIdsBuffer = importBuffer(graph, 'viewport-ids', this.viewportIds);
@@ -347,7 +347,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       format: 'uint32',
       length: TAXI_GRID_SIZE[0] * TAXI_GRID_SIZE[1] + 1
     });
-    const objectIds = graph.createDataView(objectIdsBuffer, {
+    const rowIndices = graph.createDataView(rowIndicesBuffer, {
       format: 'uint32',
       length: this.data.pointCount
     });
@@ -355,7 +355,7 @@ export class LuSpatialTaxiQueryEffect implements Effect {
       gridSize: TAXI_GRID_SIZE,
       bounds: this.data.projectedBounds,
       cellOffsets,
-      objectIds,
+      rowIndices,
       count: graph.createDataView(indexCountBuffer, {format: 'uint32', length: 1}),
       overflow: graph.createDataView(indexOverflowBuffer, {format: 'uint32', length: 1})
     };

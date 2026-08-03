@@ -151,7 +151,10 @@ byte offsets must be divisible by four.
 ### `importBuffer(descriptor, defaultBuffer?)`
 
 Declares caller-owned storage. A default `Buffer` or `DynamicBuffer` may be supplied during graph
-construction, or the caller may provide a compatible override to each encoding.
+construction, or the caller may provide a compatible override to each encoding. Represent each
+physical buffer with one logical handle and create multiple views from that handle. Distinct imported
+handles, including their per-encoding overrides, must not resolve to the same physical buffer because
+hazards are tracked by handle identity.
 
 ### `createTransientBuffer(descriptor)`
 

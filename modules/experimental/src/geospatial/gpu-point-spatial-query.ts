@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   type GraphBufferUse,
@@ -13,6 +13,7 @@ import {
 import {
   createTransientView,
   getViewBinding,
+  getViewBindingRange,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
@@ -31,11 +32,11 @@ export type GPUGridIndexView = {
   bounds: GPUGridIndexBounds;
   /** Exclusive cell offsets with `cellCount + 1` rows. */
   cellOffsets: GraphDataView<'uint32'>;
-  /** Source row IDs grouped by cell. */
-  objectIds: GraphDataView<'uint32'>;
-  /** Scalar containing the accepted source-row count. */
+  /** Position-row indices grouped by cell. Each value must address a row in `positions`. */
+  rowIndices: GraphDataView<'uint32'>;
+  /** Scalar containing the accepted position-row count. */
   count: GraphDataView<'uint32'>;
-  /** Scalar set when the index exceeded `objectIds` capacity. */
+  /** Scalar set when the index exceeded `rowIndices` capacity. */
   overflow: GraphDataView<'uint32'>;
 };
 
@@ -54,8 +55,14 @@ export type GPUPointSpatialQueryPolygon = {
 export type GPUPointSpatialQueryProps = {
   /** Prefix for generated graph-node and transient-resource IDs. */
   id?: string;
-  /** Packed source points. Indexed object IDs must address rows in this view. */
+  /** Packed source points addressed by zero-based row index. */
   positions: GraphDataView<'float32x2'> | GraphDataView<'float32x3'>;
+  /**
+   * Optional application IDs aligned one-to-one with `positions`.
+   *
+   * Outputs use zero-based position-row indices when this view is absent.
+   */
+  sourceIds?: GraphDataView<'uint32'>;
   /** Optional grid index. Without it the narrow-phase predicate scans all positions. */
   index?: GPUGridIndexView;
   /** Predicate applied during the narrow phase. */
@@ -79,13 +86,18 @@ export type GPUPointSpatialQueryProps = {
  * An indexed query first maps its query envelope to a compact rectangular cell range. A GPU-written
  * indirect dispatch launches one workgroup per intersecting cell, so work scales with intersected
  * cells plus candidates instead of the complete index. The result count is safe to consume as an
- * indirect draw count: it is always clamped to `output.ids.length`; `totalCount` remains unclamped.
+ * indirect draw count: it is always clamped to `output.ids.length`; `totalCount` remains unclamped
+ * over the candidates that refinement examined. An overflowing index makes that candidate set, and
+ * therefore `totalCount`, incomplete relative to the original positions.
+ * Results contain `sourceIds[rowIndex]` when aligned source IDs are supplied, or row indices by
+ * default. Query-facing index entries are always row indices, independent of result identity.
  * Polygon tests use f32 even/odd fill semantics and include points on a ring boundary; they do not
  * provide a robust-topology or four-state classification result.
  */
 export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
   readonly id: string;
   readonly positions: GraphDataView<'float32x2'> | GraphDataView<'float32x3'>;
+  readonly sourceIds?: GraphDataView<'uint32'>;
   readonly index?: GPUGridIndexView;
   readonly kind: GPUPointSpatialQueryKind;
   readonly query: GraphDataView<'float32'>;
@@ -97,6 +109,7 @@ export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
   constructor(props: GPUPointSpatialQueryProps) {
     this.id = props.id ?? 'gpu-point-spatial-query';
     this.positions = props.positions;
+    this.sourceIds = props.sourceIds;
     this.index = props.index;
     this.kind = props.kind;
     this.query = props.query;
@@ -105,6 +118,12 @@ export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
     this.dimension = this.positions.format === 'float32x2' ? 2 : 3;
 
     validatePackedView(this.positions, ['float32x2', 'float32x3'], `${this.id} positions`);
+    if (this.sourceIds) {
+      validatePackedUint32View(this.sourceIds, `${this.id} sourceIds`);
+      if (this.sourceIds.length !== this.positions.length) {
+        throw new Error(`${this.id} sourceIds.length must equal positions.length`);
+      }
+    }
     validatePackedView(this.query, ['float32'], `${this.id} query`);
     validateQueryOutput(this.id, this.output);
     if (this.index) validateIndexView(this.id, this.index, this.dimension);
@@ -125,19 +144,21 @@ export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
     } else if (this.polygon) {
       throw new Error(`${this.id} polygon data is only valid for polygon queries`);
     }
+    validateDisjointQueryViews(this.id, this);
   }
 
   /** Adds query preparation, indirect refinement, and count finalization to the target graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const views = [
       this.positions,
+      ...(this.sourceIds ? [this.sourceIds] : []),
       this.query,
       this.output.ids,
       this.output.count,
       this.output.overflow,
       ...(this.output.totalCount ? [this.output.totalCount] : []),
       ...(this.index
-        ? [this.index.cellOffsets, this.index.objectIds, this.index.count, this.index.overflow]
+        ? [this.index.cellOffsets, this.index.rowIndices, this.index.count, this.index.overflow]
         : []),
       ...(this.polygon ? [this.polygon.positions, this.polygon.ringOffsets] : [])
     ];
@@ -302,24 +323,32 @@ function addRefinementPass<Parameters>(
 ): void {
   const index = query.index;
   let nextBinding = 1;
+  const sourceIdsBinding = query.sourceIds ? nextBinding++ : undefined;
   const queryValuesBinding = query.kind === 'polygon' ? undefined : nextBinding++;
   const queryStateBinding = nextBinding++;
   const cellOffsetsBinding = index ? nextBinding++ : undefined;
-  const objectIdsBinding = index ? nextBinding++ : undefined;
+  const rowIndicesBinding = index ? nextBinding++ : undefined;
   const resultStateBinding = nextBinding++;
-  const outputIdsBinding = nextBinding;
+  const outputIdsBinding = nextBinding++;
   const indexedBindings = index
     ? `@group(0) @binding(${cellOffsetsBinding}) var<storage, read> cellOffsets: array<u32>;
-@group(0) @binding(${objectIdsBinding}) var<storage, read> objectIds: array<u32>;`
+@group(0) @binding(${rowIndicesBinding}) var<storage, read> rowIndices: array<u32>;`
     : '';
   const indexedConstants = index
     ? `const CELL_OFFSETS_OFFSET: u32 = ${getViewElementOffset(index.cellOffsets)}u;
-const OBJECT_IDS_OFFSET: u32 = ${getViewElementOffset(index.objectIds)}u;
-const INDEX_CAPACITY: u32 = ${index.objectIds.length}u;
+const ROW_INDICES_OFFSET: u32 = ${getViewElementOffset(index.rowIndices)}u;
+const INDEX_CAPACITY: u32 = ${index.rowIndices.length}u;
 const CELL_COUNT: u32 = ${index.cellOffsets.length - 1}u;
 const WIDTH: u32 = ${index.gridSize[0]}u;
 const HEIGHT: u32 = ${index.gridSize[1]}u;`
     : '';
+  const sourceIdsDeclaration = query.sourceIds
+    ? `const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(query.sourceIds)}u;
+@group(0) @binding(${sourceIdsBinding}) var<storage, read> sourceIds: array<u32>;`
+    : '';
+  const outputSourceId = query.sourceIds
+    ? 'let sourceId = sourceIds[SOURCE_IDS_OFFSET + rowIndex];'
+    : 'let sourceId = rowIndex;';
   const polygonBindings = query.polygon
     ? `@group(0) @binding(${outputIdsBinding + 1}) var<storage, read> polygonPositions: array<f32>;
 @group(0) @binding(${outputIdsBinding + 2}) var<storage, read> ringOffsets: array<u32>;`
@@ -330,7 +359,7 @@ const POLYGON_POSITION_COUNT: u32 = ${query.polygon.positions.length}u;
 const RING_OFFSETS_OFFSET: u32 = ${getViewElementOffset(query.polygon.ringOffsets)}u;
 const RING_COUNT: u32 = ${query.polygon.ringOffsets.length - 1}u;`
     : '';
-  const sourceRowSelection = index
+  const rowSelection = index
     ? `let dispatchWidth = queryState[STATE_OFFSET + 10u];
   let workgroupCount = queryState[STATE_OFFSET + 9u];
   let dispatchRow = workgroupId.z * queryState[STATE_OFFSET + 11u] + workgroupId.y;
@@ -355,8 +384,8 @@ const RING_COUNT: u32 = ${query.polygon.ringOffsets.length - 1}u;`
   var candidateIndex = cellStart + localId.x;
   loop {
     if (candidateIndex >= cellEnd) { break; }
-    let sourceRow = objectIds[OBJECT_IDS_OFFSET + candidateIndex];
-    testSourceRow(sourceRow);
+    let rowIndex = rowIndices[ROW_INDICES_OFFSET + candidateIndex];
+    testRow(rowIndex);
     candidateIndex += ${POINT_QUERY_WORKGROUP_SIZE}u;
   }`
     : `let dispatchWidth = queryState[STATE_OFFSET + 10u];
@@ -368,8 +397,8 @@ const RING_COUNT: u32 = ${query.polygon.ringOffsets.length - 1}u;`
       (dispatchRow == fullDispatchRows &&
        (finalDispatchRowWidth == 0u || workgroupId.x >= finalDispatchRowWidth))) { return; }
   let workgroupOrdinal = dispatchRow * dispatchWidth + workgroupId.x;
-  let sourceRow = workgroupOrdinal * ${POINT_QUERY_WORKGROUP_SIZE}u + localId.x;
-  if (sourceRow < POSITION_COUNT) { testSourceRow(sourceRow); }`;
+  let rowIndex = workgroupOrdinal * ${POINT_QUERY_WORKGROUP_SIZE}u + localId.x;
+  if (rowIndex < POSITION_COUNT) { testRow(rowIndex); }`;
   const predicate = makeExactPredicate(query);
   const source = /* wgsl */ `
 const POSITION_COUNT: u32 = ${query.positions.length}u;
@@ -382,6 +411,7 @@ const OUTPUT_CAPACITY: u32 = ${query.output.ids.length}u;
 ${indexedConstants}
 ${polygonConstants}
 @group(0) @binding(0) var<storage, read> positions: array<f32>;
+${sourceIdsDeclaration}
 ${queryValuesBinding === undefined ? '' : `@group(0) @binding(${queryValuesBinding}) var<storage, read> queryValues: array<f32>;`}
 @group(0) @binding(${queryStateBinding}) var<storage, read> queryState: array<u32>;
 ${indexedBindings}
@@ -395,35 +425,37 @@ fn finite(value: f32) -> bool {
 
 ${makePolygonHelpers(query)}
 
-fn appendSourceRow(sourceRow: u32) {
+fn appendRow(rowIndex: u32) {
   let outputIndex = atomicAdd(&resultState[RESULT_OFFSET], 1u);
   if (outputIndex < OUTPUT_CAPACITY) {
-    outputIds[OUTPUT_OFFSET + outputIndex] = sourceRow;
+    ${outputSourceId}
+    outputIds[OUTPUT_OFFSET + outputIndex] = sourceId;
   } else {
     atomicStore(&resultState[RESULT_OFFSET + 1u], 1u);
   }
 }
 
-fn testSourceRow(sourceRow: u32) {
-  if (sourceRow >= POSITION_COUNT) { return; }
+fn testRow(rowIndex: u32) {
+  if (rowIndex >= POSITION_COUNT) { return; }
   ${predicate}
-  if (selected) { appendSourceRow(sourceRow); }
+  if (selected) { appendRow(rowIndex); }
 }
 
 @compute @workgroup_size(${POINT_QUERY_WORKGROUP_SIZE}) fn main(
   @builtin(workgroup_id) workgroupId: vec3<u32>,
   @builtin(local_invocation_id) localId: vec3<u32>
 ) {
-  ${sourceRowSelection}
+  ${rowSelection}
 }`;
   const bindings: Record<string, GraphDataView> = {
     positions: query.positions,
+    ...(query.sourceIds ? {sourceIds: query.sourceIds} : {}),
     ...(queryValuesBinding === undefined ? {} : {queryValues: query.query}),
     queryState,
     ...(index
       ? {
           cellOffsets: index.cellOffsets,
-          objectIds: index.objectIds
+          rowIndices: index.rowIndices
         }
       : {}),
     resultState,
@@ -439,6 +471,9 @@ fn testSourceRow(sourceRow: u32) {
     id: `${query.id}-refine`,
     resources: [
       {buffer: query.positions, usage: 'storage-read'},
+      ...(query.sourceIds
+        ? ([{buffer: query.sourceIds, usage: 'storage-read'}] as GraphBufferUse[])
+        : []),
       ...(queryValuesBinding === undefined
         ? []
         : ([{buffer: query.query, usage: 'storage-read'}] as GraphBufferUse[])),
@@ -447,7 +482,7 @@ fn testSourceRow(sourceRow: u32) {
       ...(index
         ? ([
             {buffer: index.cellOffsets, usage: 'storage-read'},
-            {buffer: index.objectIds, usage: 'storage-read'}
+            {buffer: index.rowIndices, usage: 'storage-read'}
           ] as GraphBufferUse[])
         : []),
       {buffer: resultState, usage: 'storage-read-write'},
@@ -582,7 +617,7 @@ function makeExactPredicate(query: GPUPointSpatialQuery): string {
   const positions = axes
     .map(
       (axis, axisIndex) =>
-        `let position${axis} = positions[POSITIONS_OFFSET + sourceRow * ${query.dimension}u + ${axisIndex}u];`
+        `let position${axis} = positions[POSITIONS_OFFSET + rowIndex * ${query.dimension}u + ${axisIndex}u];`
     )
     .join('\n  ');
   const finitePosition = axes.map(axis => `finite(position${axis})`).join(' && ');
@@ -591,21 +626,26 @@ function makeExactPredicate(query: GPUPointSpatialQuery): string {
       .map((axis, axisIndex) => `let center${axis} = queryValues[QUERY_OFFSET + ${axisIndex}u];`)
       .join('\n  ');
     const finiteCenter = axes.map(axis => `finite(center${axis})`).join(' && ');
-    const scale = makeNestedMaximum([
-      'radius',
-      ...axes.flatMap(axis => [`abs(position${axis})`, `abs(center${axis})`])
-    ]);
+    const deltas = axes
+      .map(axis => `let delta${axis} = position${axis} - center${axis};`)
+      .join('\n  ');
+    const finiteDeltas = axes.map(axis => `finite(delta${axis})`).join(' && ');
+    const scale = makeNestedMaximum(['radius', ...axes.map(axis => `abs(delta${axis})`)]);
     const squaredDistance = axes
-      .map(
-        axis =>
-          `(position${axis} / scale - center${axis} / scale) * (position${axis} / scale - center${axis} / scale)`
-      )
+      .map(axis => `(delta${axis} / scale) * (delta${axis} / scale)`)
       .join(' + ');
     return `${positions}
   ${centers}
+  ${deltas}
   let radius = queryValues[QUERY_OFFSET + ${query.dimension}u];
   let scale = ${scale};
-  let selected = ${finitePosition} && ${finiteCenter} && finite(radius) && radius >= 0.0 && (scale == 0.0 || ${squaredDistance} <= (radius / scale) * (radius / scale));`;
+  let squaredDistance = ${squaredDistance};
+  let squaredRadius = (radius / scale) * (radius / scale);
+  // The operands are delta-scale-normalized; eight f32 epsilons cover subtraction,
+  // multiplication, and accumulation rounding at an inclusive boundary.
+  let comparisonTolerance =
+    (abs(squaredDistance) + abs(squaredRadius)) * 9.5367431640625e-7;
+  let selected = ${finitePosition} && ${finiteCenter} && ${finiteDeltas} && finite(radius) && radius >= 0.0 && (scale == 0.0 || squaredDistance <= squaredRadius + comparisonTolerance);`;
   }
   if (query.kind === 'polygon') {
     return `${positions}
@@ -688,6 +728,79 @@ function validateQueryOutput(id: string, output: GPUSpatialQueryOutput): void {
   }
 }
 
+function validateDisjointQueryViews(id: string, query: GPUPointSpatialQuery): void {
+  const inputs: [string, GraphDataView][] = [
+    ['positions', query.positions],
+    ...(query.sourceIds ? ([['sourceIds', query.sourceIds]] as [string, GraphDataView][]) : []),
+    ['query', query.query],
+    ...(query.index
+      ? ([
+          ['index cellOffsets', query.index.cellOffsets],
+          ['index rowIndices', query.index.rowIndices],
+          ['index count', query.index.count],
+          ['index overflow', query.index.overflow]
+        ] as [string, GraphDataView][])
+      : []),
+    ...(query.polygon
+      ? ([
+          ['polygon positions', query.polygon.positions],
+          ['polygon ringOffsets', query.polygon.ringOffsets]
+        ] as [string, GraphDataView][])
+      : [])
+  ];
+  const outputs = [
+    ['ids', query.output.ids],
+    ['count', query.output.count],
+    ['overflow', query.output.overflow],
+    ...(query.output.totalCount
+      ? ([['totalCount', query.output.totalCount]] as [string, GraphDataView][])
+      : [])
+  ] as [string, GraphDataView][];
+  for (let outputIndex = 0; outputIndex < outputs.length; outputIndex++) {
+    const [outputName, output] = outputs[outputIndex];
+    for (const [inputName, input] of inputs) {
+      if (doQueryBindingFootprintsOverlap(output, input)) {
+        throw new Error(`${id} output ${outputName} and ${inputName} must not overlap`);
+      }
+    }
+    for (let previousIndex = 0; previousIndex < outputIndex; previousIndex++) {
+      if (doQueryBindingFootprintsOverlap(output, outputs[previousIndex][1])) {
+        throw new Error(
+          `${id} output ${outputName} and output ${outputs[previousIndex][0]} must not overlap`
+        );
+      }
+    }
+  }
+}
+
+/** Returns whether two query views occupy any of the bytes made available to their bindings. */
+function doQueryBindingFootprintsOverlap(first: GraphDataView, second: GraphDataView): boolean {
+  const firstDefaultBuffer = getDefaultCoreBuffer(first);
+  const secondDefaultBuffer = getDefaultCoreBuffer(second);
+  if (
+    first.buffer !== second.buffer &&
+    firstDefaultBuffer !== undefined &&
+    firstDefaultBuffer === secondDefaultBuffer
+  ) {
+    // Separate logical handles cannot safely describe hazards on one physical allocation.
+    return true;
+  }
+  if (first.buffer !== second.buffer) {
+    return false;
+  }
+
+  const firstRange = getViewBindingRange(first);
+  const secondRange = getViewBindingRange(second);
+  const firstEnd = firstRange.offset + firstRange.size;
+  const secondEnd = secondRange.offset + secondRange.size;
+  return firstRange.offset < secondEnd && secondRange.offset < firstEnd;
+}
+
+function getDefaultCoreBuffer(view: GraphDataView): Buffer | undefined {
+  const defaultBuffer = view.buffer.defaultBuffer;
+  return defaultBuffer instanceof DynamicBuffer ? defaultBuffer.buffer : defaultBuffer;
+}
+
 function validateIndexView(id: string, index: GPUGridIndexView, dimension: 2 | 3): void {
   if (index.gridSize.length !== dimension || index.bounds.length !== dimension * 2) {
     throw new Error(`${id} positions, index gridSize, and bounds must have matching dimensions`);
@@ -706,7 +819,7 @@ function validateIndexView(id: string, index: GPUGridIndexView, dimension: 2 | 3
   const cellCount = index.gridSize.reduce((product, size) => product * size, 1);
   for (const [name, view] of [
     ['cellOffsets', index.cellOffsets],
-    ['objectIds', index.objectIds],
+    ['rowIndices', index.rowIndices],
     ['count', index.count],
     ['overflow', index.overflow]
   ] as const) {

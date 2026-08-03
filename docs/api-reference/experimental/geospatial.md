@@ -146,7 +146,13 @@ mutable f32 `query` view with one of these layouts:
 
 An optional `GPUGridIndex` view restricts refinement to cells intersecting the query envelope. The
 query prepares an indirect dispatch on the GPU and refines only those candidates. Without an index,
-it scans every position. Indexed `objectIds` must address rows in the supplied `positions` view.
+it scans every position. The query-facing index view exposes `rowIndices`, and every stored value
+must address a row in the supplied `positions` view. A `GPUGridIndex` can produce this buffer by
+using its default zero-based generated IDs and passing its `objectIds` output as query
+`rowIndices`. Keep application IDs out of that index build; instead, provide them through the
+query's optional packed `sourceIds` view, aligned one-to-one with `positions`. Matching outputs use
+`sourceIds[rowIndex]` when supplied and the zero-based row index otherwise. `GPUGridIndex` itself
+remains a generic index and can still store arbitrary IDs for other consumers.
 
 Polygon positions use packed `float32x2` rows. `ringOffsets` contains a start offset for each ring
 plus one terminal offset; rings close implicitly and use even/odd fill semantics. Boundary points
@@ -165,8 +171,13 @@ type GPUSpatialQueryOutput = {
 ```
 
 `count` is clamped to `ids.length` and can alias an indirect draw count. `totalCount`, when
-provided, receives the unclamped match count. `overflow` is set when either the index or result
-capacity overflows. Result order is unspecified; no CPU readback is required for rendering.
+provided, receives the unclamped number of matches among candidates actually examined by
+refinement. If the index overflowed, its stored candidates are only a subset of the accepted source
+rows, so `totalCount` is incomplete relative to the original positions. `overflow` is set when
+either the index or result capacity overflows. The four writable output views must have mutually
+disjoint aligned storage-binding ranges and must not overlap positions, source IDs, query values,
+index storage, or polygon storage. This includes the one-row binding footprint of a zero-capacity
+`ids` view. Result order is unspecified; no CPU readback is required for rendering.
 
 ## Non-finite data
 

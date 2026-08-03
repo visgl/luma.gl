@@ -248,6 +248,10 @@ export class GPUCommandGraph<Parameters = void> {
   /**
    * Declares a caller-owned buffer that can be supplied now or for each encoding.
    *
+   * Represent one physical buffer with one logical handle. Reuse that handle for multiple views;
+   * distinct imported handles and their per-encoding overrides must resolve to distinct physical
+   * buffers because graph hazards are tracked by handle identity.
+   *
    * @param descriptor Required capacity and usage.
    * @param defaultBuffer Optional default binding used when an encoding supplies no override.
    * @returns An opaque logical handle used by graph nodes and data views.
@@ -758,7 +762,8 @@ export class CompiledGPUCommandGraph<Parameters = void> {
    * Records every graph node into a caller-owned command encoder.
    *
    * Imported resources are resolved from per-encoding overrides first, then from defaults supplied
-   * at graph construction. This method records only; it does not finish or submit the encoder.
+   * at graph construction. Buffer overrides for distinct handles must not alias the same physical
+   * buffer. This method records only; it does not finish or submit the encoder.
    *
    * @param commandEncoder Encoder that receives all graph commands.
    * @param options Per-encoding parameters and optional imported-resource replacements.
