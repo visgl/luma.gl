@@ -4,6 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {WgslReflect} from 'wgsl_reflect';
+import {getTraceRow, makeDeckTraceData} from '../../examples/deck/gpu-culled-trace/trace-data';
 import {
   getTraceCapacityOptions,
   getTraceDependencyCapacityOptions,
@@ -34,6 +35,38 @@ import {
   TRACE_DEPENDENCY_RENDER_SHADER,
   TRACE_RENDER_SHADER
 } from '../../examples/experimental/gpu-trace-viewer/trace-shaders';
+
+test('deck GPU trace copies complete canonical span records', t => {
+  const count = 7;
+  const deckData = makeDeckTraceData(count);
+  const groups = makeTraceGroups(count);
+  let rowIndex = 0;
+
+  for (const group of groups) {
+    const sourceFloats = new Float32Array(
+      group.data.buffer,
+      group.data.byteOffset,
+      group.data.length
+    );
+    for (let groupRowIndex = 0; groupRowIndex < group.count; groupRowIndex++, rowIndex++) {
+      const sourceWordOffset = groupRowIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
+      t.deepEqual(
+        getTraceRow(deckData, rowIndex),
+        {
+          name: deckData.names[rowIndex],
+          group: group.name,
+          start: sourceFloats[sourceWordOffset],
+          duration: sourceFloats[sourceWordOffset + 1],
+          lane: group.data[sourceWordOffset + 2]
+        },
+        `deck row ${rowIndex} preserves canonical span geometry and group identity`
+      );
+    }
+  }
+
+  t.equal(rowIndex, count, 'all canonical span rows are copied');
+  t.end();
+});
 
 test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t => {
   t.deepEqual(

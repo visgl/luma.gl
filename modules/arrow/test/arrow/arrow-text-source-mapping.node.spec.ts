@@ -108,9 +108,9 @@ function makeArrowTextSourceVectors() {
     textAnchors: arrow.vectorFromArray([0, 1], new arrow.Uint8()),
     alignmentBaselines: arrow.vectorFromArray([0, 2], new arrow.Uint8()),
     clipRects: makeArrowFixedSizeListVector(
-      new arrow.Int16(),
+      new arrow.Float32(),
       4,
-      new Int16Array([0, 0, 8, 8, 0, 0, 8, 8])
+      new Float32Array([0, 0, 8, 8, 0, 0, 8, 8])
     )
   };
 }

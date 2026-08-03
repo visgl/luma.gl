@@ -98,7 +98,7 @@ export function makeArrowTextSource(
   const centerRow = (labelRowCount - 1) / 2;
   const positions = new Float32Array(dataset.labelCount * 2);
   const clipRects = resolvedStyleColumns.clipRects
-    ? new Int16Array(dataset.labelCount * 4)
+    ? new Float32Array(dataset.labelCount * 4)
     : undefined;
   const angles = resolvedStyleColumns.angles ? new Float32Array(dataset.labelCount) : undefined;
   const sizes = resolvedStyleColumns.sizes ? new Float32Array(dataset.labelCount) : undefined;
@@ -135,8 +135,8 @@ export function makeArrowTextSource(
   const texts = makeArrowTextVector(dataset, dataset.labelCount, labelIndex => labelIndex);
   const clipRectVector = clipRects
     ? splitArrowVectorByRows(
-        makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects) as arrow.Vector<
-          arrow.FixedSizeList<arrow.Int16>
+        makeArrowFixedSizeListVector(new arrow.Float32(), 4, clipRects) as arrow.Vector<
+          arrow.FixedSizeList<arrow.Float32>
         >,
         rowChunkSize
       )
@@ -208,7 +208,7 @@ function makeStreamingArrowTextSource(
     const batchLabelCount = batchRowIndices.length * LABEL_COLUMN_COUNT;
     const positions = new Float32Array(batchLabelCount * 2);
     const clipRects = resolvedStyleColumns.clipRects
-      ? new Int16Array(batchLabelCount * 4)
+      ? new Float32Array(batchLabelCount * 4)
       : undefined;
     const colors =
       textColorKind === 'string-colors' ? new Uint8Array(batchLabelCount * 4) : undefined;
@@ -264,7 +264,7 @@ function makeStreamingArrowTextSource(
         return batchRowIndices[localRowIndex] * LABEL_COLUMN_COUNT + columnIndex;
       }),
       ...(clipRects
-        ? {clipRects: makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects)}
+        ? {clipRects: makeArrowFixedSizeListVector(new arrow.Float32(), 4, clipRects)}
         : {}),
       ...(colorVector ? {colors: colorVector} : {}),
       ...(angles ? {angles: makeFloat32ArrowVector(angles)} : {}),
