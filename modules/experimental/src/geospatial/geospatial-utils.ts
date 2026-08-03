@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {type Binding, type Buffer} from '@luma.gl/core';
+import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import type {GPUVectorFormat} from '@luma.gl/tables';
 import {
@@ -13,7 +13,9 @@ import {
   type GraphDataView
 } from '../gpu-primitives/gpu-command-graph';
 import {
+  doGraphDataViewsOverlap,
   getViewBinding,
+  getViewBindingRange,
   getViewElementOffset,
   validateMatchingVectorTopology,
   validatePackedView
@@ -94,6 +96,81 @@ export function validateSeparateBuffers(
       throw new Error(`${name} output must use separate buffers from its inputs`);
     }
   }
+}
+
+type NamedGeospatialView = readonly [name: string, view: GPURowView<GPUVectorFormat>];
+
+/**
+ * Validates that writable geospatial views cannot alias live inputs or earlier outputs.
+ *
+ * Storage bindings expose the 256-byte-aligned prefix before a logical view, including one row
+ * for a zero-length view. Distinct graph handles that have the same known physical default are
+ * also rejected because the command graph cannot infer hazards between those handles.
+ *
+ * @internal
+ */
+export function validateDisjointGeospatialViews(
+  id: string,
+  inputs: readonly NamedGeospatialView[],
+  outputs: readonly NamedGeospatialView[]
+): void {
+  const inputChunks = inputs.flatMap(([name, view]) =>
+    getRowChunks(view).map(chunk => [name, chunk] as const)
+  );
+  const previousOutputChunks: (readonly [name: string, view: GraphDataView])[] = [];
+
+  for (const [outputName, output] of outputs) {
+    const outputChunks = getRowChunks(output);
+    for (const outputChunk of outputChunks) {
+      for (const [inputName, inputChunk] of inputChunks) {
+        if (doGeospatialBindingFootprintsOverlap(outputChunk, inputChunk)) {
+          throw new Error(`${id} output ${outputName} and ${inputName} must not overlap`);
+        }
+      }
+      for (const [previousOutputName, previousOutputChunk] of previousOutputChunks) {
+        if (doGeospatialBindingFootprintsOverlap(outputChunk, previousOutputChunk)) {
+          throw new Error(
+            `${id} output ${outputName} and output ${previousOutputName} must not overlap`
+          );
+        }
+      }
+    }
+    previousOutputChunks.push(...outputChunks.map(chunk => [outputName, chunk] as const));
+  }
+}
+
+function doGeospatialBindingFootprintsOverlap(
+  first: GraphDataView,
+  second: GraphDataView
+): boolean {
+  if (doGraphDataViewsOverlap(first, second)) {
+    return true;
+  }
+
+  const firstDefaultBuffer = getDefaultCoreBuffer(first);
+  const secondDefaultBuffer = getDefaultCoreBuffer(second);
+  if (
+    first.buffer !== second.buffer &&
+    firstDefaultBuffer !== undefined &&
+    firstDefaultBuffer === secondDefaultBuffer
+  ) {
+    // Separate logical handles cannot safely describe hazards on one physical allocation.
+    return true;
+  }
+  if (first.buffer !== second.buffer) {
+    return false;
+  }
+
+  const firstRange = getViewBindingRange(first);
+  const secondRange = getViewBindingRange(second);
+  const firstEnd = firstRange.offset + firstRange.size;
+  const secondEnd = secondRange.offset + secondRange.size;
+  return firstRange.offset < secondEnd && secondRange.offset < firstEnd;
+}
+
+function getDefaultCoreBuffer(view: GraphDataView): Buffer | undefined {
+  const defaultBuffer = view.buffer.defaultBuffer;
+  return defaultBuffer instanceof DynamicBuffer ? defaultBuffer.buffer : defaultBuffer;
 }
 
 export function assertGraphOwnership<Parameters>(

@@ -67,10 +67,10 @@ indirect draw commands.
 </p>
 
 The [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial) entry point contributes
-chunk-preserving sinusoidal projection, haversine distance, Euclidean point distance, and
-point-to-segment distance nodes to a `GPUCommandGraph`. It accepts either local f32 coordinates or
-raw binary64 coordinate words and makes the f32-transcendental versus precise planar arithmetic
-boundary explicit.
+projection, distance, point-in-polygon, nearest-linestring, uniform-grid indexing, and spatial-query
+work to a `GPUCommandGraph`. It accepts either local f32 coordinates or raw binary64 coordinate
+words where supported and makes the f32-transcendental versus precise planar arithmetic boundary
+explicit.
 
 ## GPU Simulations
 

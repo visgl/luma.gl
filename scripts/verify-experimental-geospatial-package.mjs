@@ -16,9 +16,16 @@ const packageJson = require('../modules/experimental/package.json');
 const runtimeExportNames = [
   'GPUHaversineDistance',
   'GPUPairwisePointDistance',
+  'GPUPairwisePointInPolygon',
+  'GPUPairwisePointLinestringNearest',
   'GPUPairwisePointSegmentDistance',
+  'GPUGridIndex',
+  'GPUPointSpatialQuery',
   'GPUSinusoidalProjection'
 ];
+const runtimeValueExportNames = ['GPU_POINT_IN_POLYGON_CLASSIFICATION'];
+// GPUGridIndex predates the geospatial subpath as a generic GPU primitive.
+const preexistingRootExportNames = new Set(['GPUGridIndex']);
 
 assert.deepEqual(packageJson.exports?.['./geospatial'], {
   import: './dist/geospatial/index.js',
@@ -34,6 +41,12 @@ const commonJsRootModule = require('@luma.gl/experimental');
 for (const exportName of runtimeExportNames) {
   assert.equal(typeof ecmaScriptGeospatialModule[exportName], 'function');
   assert.equal(typeof commonJsGeospatialModule[exportName], 'function');
+  assert.equal(exportName in ecmaScriptRootModule, preexistingRootExportNames.has(exportName));
+  assert.equal(exportName in commonJsRootModule, preexistingRootExportNames.has(exportName));
+}
+for (const exportName of runtimeValueExportNames) {
+  assert.equal(typeof ecmaScriptGeospatialModule[exportName], 'object');
+  assert.equal(typeof commonJsGeospatialModule[exportName], 'object');
   assert.equal(exportName in ecmaScriptRootModule, false);
   assert.equal(exportName in commonJsRootModule, false);
 }
@@ -79,28 +92,60 @@ try {
     typeTestPath,
     `import {
   GPUHaversineDistance,
+  GPUGridIndex,
   GPUPairwisePointDistance,
+  GPUPairwisePointInPolygon,
+  GPUPairwisePointLinestringNearest,
   GPUPairwisePointSegmentDistance,
+  GPUPointSpatialQuery,
   GPUSinusoidalProjection,
-  type GPUFloat64Positions
+  GPU_POINT_IN_POLYGON_CLASSIFICATION,
+  type GPUFloat64Positions,
+  type GPUGridIndexProps,
+  type GPUPairwisePointInPolygonProps,
+  type GPUPairwisePointLinestringNearestProps,
+  type GPUPointInPolygonClassification,
+  type GPUPointSpatialQueryProps,
+  type GPUSpatialQueryOutput
 } from '@luma.gl/experimental/geospatial';
 import type {GPUCommandGraphContributor} from '@luma.gl/experimental';
 
 const constructors = [
   GPUHaversineDistance,
+  GPUGridIndex,
   GPUPairwisePointDistance,
+  GPUPairwisePointInPolygon,
+  GPUPairwisePointLinestringNearest,
   GPUPairwisePointSegmentDistance,
+  GPUPointSpatialQuery,
   GPUSinusoidalProjection
 ];
 declare const contributor: GPUCommandGraphContributor;
 declare const positions: GPUFloat64Positions;
+declare const gridProps: GPUGridIndexProps;
+declare const polygonProps: GPUPairwisePointInPolygonProps;
+declare const nearestProps: GPUPairwisePointLinestringNearestProps;
+declare const classification: GPUPointInPolygonClassification;
+declare const queryProps: GPUPointSpatialQueryProps;
+declare const queryOutput: GPUSpatialQueryOutput;
 void constructors;
 void contributor;
 void positions;
+void gridProps;
+void polygonProps;
+void nearestProps;
+void classification;
+void queryProps;
+void queryOutput;
+void GPU_POINT_IN_POLYGON_CLASSIFICATION;
 
 // @ts-expect-error Geospatial algorithms stay isolated from the experimental root.
 import {GPUHaversineDistance as RootGPUHaversineDistance} from '@luma.gl/experimental';
 void RootGPUHaversineDistance;
+
+// @ts-expect-error The classification constant stays isolated from the experimental root.
+import {GPU_POINT_IN_POLYGON_CLASSIFICATION as RootClassification} from '@luma.gl/experimental';
+void RootClassification;
 `
   );
 
