@@ -123,7 +123,7 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
       {firstBatchIndex: 2, batchCount: 1}
     ]),
     getDependencyBatchVisibilityShader(3),
-    getCandidateDependencyVisibilityShader()
+    getCandidateDependencyVisibilityShader(11)
   ];
   for (const shader of shaders) {
     t.ok(new WgslReflect(shader), 'shader parses');

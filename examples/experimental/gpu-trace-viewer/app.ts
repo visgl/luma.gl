@@ -8,7 +8,6 @@ import {AnimationLoopTemplate, Computation, Model} from '@luma.gl/engine';
 import {
   DispatchCommandBuffer,
   DrawCommandBuffer,
-  GPUAncestorProjection,
   GPUCommandGraph,
   GPUGraphTraversal,
   GPUHierarchyLayout,
@@ -133,7 +132,7 @@ type TraceGraphResources = {
   selectedSeedCount: Buffer;
   traversalDepth: Buffer;
   reachedSpans: Buffer;
-  visibleAncestors: Buffer;
+  dependencyResults: Buffer;
   visibilityGeneration: Buffer;
   baseVisibility: Buffer;
   spanVisibility: Buffer;
@@ -262,7 +261,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     const pick = this.pendingPick;
     const visibilityGeneration = (this.frameIndex % 0xfffffffe) + 1;
     resources.visibilityGeneration.write(Uint32Array.of(visibilityGeneration));
-    this.writeViewUniforms(width, height, pick, visibilityGeneration);
+    this.writeViewUniforms(width, height, pick, visibilityGeneration, resources.dependencyCount);
     const encoding = resources.compiled.encode(device.commandEncoder, {parameters: this.view});
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
@@ -381,7 +380,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           {name: 'processStates', type: 'read-only-storage', group: 0, location: 3},
           {name: 'threadStates', type: 'read-only-storage', group: 0, location: 4},
           {name: 'threadOffsets', type: 'read-only-storage', group: 0, location: 5},
-          {name: 'visibleAncestors', type: 'read-only-storage', group: 0, location: 6},
+          {name: 'dependencyResults', type: 'read-only-storage', group: 0, location: 6},
           {name: 'viewUniforms', type: 'uniform', group: 0, location: 7}
         ]
       },
@@ -525,9 +524,9 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         spanMaskByteLength,
         Buffer.COPY_SRC
       ),
-      visibleAncestors: this.createStorageBuffer(
-        'gpu-trace-visible-ancestors',
-        spanMaskByteLength,
+      dependencyResults: this.createStorageBuffer(
+        'gpu-trace-dependency-results',
+        Math.max(dataset.dependencyCount * 3, 1) * UINT32_BYTE_LENGTH,
         Buffer.COPY_SRC
       ),
       visibilityGeneration: this.createDataBuffer(
@@ -639,7 +638,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       ),
       traversalDepth: importTraceBuffer(graph, 'traversal-depth', resources.traversalDepth),
       reachedSpans: importTraceBuffer(graph, 'reached-spans', resources.reachedSpans),
-      visibleAncestors: importTraceBuffer(graph, 'visible-ancestors', resources.visibleAncestors),
+      dependencyResults: importTraceBuffer(
+        graph,
+        'dependency-results',
+        resources.dependencyResults
+      ),
       visibilityGeneration: importTraceBuffer(
         graph,
         'visibility-generation',
@@ -918,31 +921,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       {buffer: handles.threadStates, usage: 'storage-read'},
       {buffer: handles.threadOffsets, usage: 'storage-read'},
       {buffer: handles.reachedSpans, usage: 'storage-read'},
-      {buffer: handles.visibleAncestors, usage: 'storage-read'},
+      {buffer: handles.dependencyResults, usage: 'storage-read'},
       {buffer: handles.densityBins, usage: 'storage-read'},
       {buffer: handles.uniforms, usage: 'uniform'},
       {buffer: handles.drawCommands, usage: 'indirect'}
     ];
-
-    new GPUAncestorProjection({
-      id: 'trace-visible-ancestor-projection',
-      parents: graph.createDataView(handles.parentSpans, {
-        format: 'uint32',
-        length: resources.spanCount
-      }),
-      visibility: graph.createDataView(handles.spanVisibility, {
-        format: 'uint32',
-        length: resources.spanCount
-      }),
-      visibilityValue: graph.createDataView(handles.visibilityGeneration, {
-        format: 'uint32',
-        length: 1
-      }),
-      output: graph.createDataView(handles.visibleAncestors, {
-        format: 'uint32',
-        length: resources.spanCount
-      })
-    }).addToGraph(graph);
 
     if (resources.dependencyCount > 0) {
       const candidateDependencyBatchFlags = graph.createTransientBuffer({
@@ -981,29 +964,24 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
           byteOffset: UINT32_BYTE_LENGTH
         })
       }).addToGraph(graph);
-      const dependencyFlags = graph.createTransientBuffer({
-        id: 'trace-dependency-flags',
-        byteLength: resources.dependencyCount * UINT32_BYTE_LENGTH,
-        usage: Buffer.STORAGE
-      });
       addTraceIndirectComputePass(graph, {
         id: 'trace-candidate-dependency-visibility',
-        source: getCandidateDependencyVisibilityShader(),
+        source: getCandidateDependencyVisibilityShader(resources.spanCount),
         bindings: [
           storageRead('dependencies', handles.dependencies),
           storageRead('dependencyBatches', handles.dependencyBatchIndex),
           storageRead('candidateBatchIds', handles.candidateDependencyBatchIds),
           storageRead('spanVisibility', handles.spanVisibility),
           storageRead('processStates', handles.processStates),
-          storageRead('visibleAncestors', handles.visibleAncestors),
+          storageRead('parentSpans', handles.parentSpans),
           uniformBinding('viewUniforms', handles.uniforms),
-          storageWrite('dependencyFlags', dependencyFlags)
+          storageWrite('dependencyResults', handles.dependencyResults)
         ],
         dispatchBuffer: handles.candidateDependencyDispatchCommands
       });
       new GPUIndexedRangeCompaction({
         id: 'trace-visible-dependencies',
-        flags: graph.createDataView(dependencyFlags, {
+        flags: graph.createDataView(handles.dependencyResults, {
           format: 'uint32',
           length: resources.dependencyCount
         }),
@@ -1078,7 +1056,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       processStates: resources.processStates,
       threadStates: resources.threadStates,
       threadOffsets: resources.threadOffsets,
-      visibleAncestors: resources.visibleAncestors,
+      dependencyResults: resources.dependencyResults,
       viewUniforms: this.viewUniformBuffer
     });
     resources.drawCommands.draw(encoder, resources.groups.length);
@@ -1097,7 +1075,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     width: number,
     height: number,
     pick: PickPosition | null,
-    visibilityGeneration: number
+    visibilityGeneration: number,
+    dependencyEndpointOffset: number
   ): void {
     const data = new ArrayBuffer(VIEW_UNIFORM_BYTE_LENGTH);
     const floats = new Float32Array(data);
@@ -1119,6 +1098,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     floats[14] = pick?.time ?? -1;
     floats[15] = pick?.lane ?? -1;
     unsigned[16] = visibilityGeneration;
+    unsigned[17] = dependencyEndpointOffset;
     this.viewUniformBuffer.write(data);
   }
 
@@ -1247,7 +1227,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       resources.selectedSeedCount,
       resources.traversalDepth,
       resources.reachedSpans,
-      resources.visibleAncestors,
+      resources.dependencyResults,
       resources.visibilityGeneration,
       resources.baseVisibility,
       resources.spanVisibility,

@@ -63,6 +63,7 @@ struct ViewUniforms {
   pickTime: f32,
   pickLane: f32,
   visibilityGeneration: u32,
+  dependencyEndpointOffset: u32,
 };
 
 const LANES_PER_THREAD: u32 = ${TRACE_LANES_PER_THREAD}u;
@@ -192,7 +193,7 @@ ${TRACE_SHADER_DECLARATIONS}
 @group(0) @binding(3) var<storage, read> processStates: array<u32>;
 @group(0) @binding(4) var<storage, read> threadStates: array<u32>;
 @group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
-@group(0) @binding(6) var<storage, read> visibleAncestors: array<u32>;
+@group(0) @binding(6) var<storage, read> dependencyResults: array<u32>;
 @group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
 
 struct DependencyVertexOutput {
@@ -208,13 +209,8 @@ fn getEndpointLane(span: TraceSpan) -> u32 {
   return threadOffsets[span.threadIndex] + localLane;
 }
 
-fn getResolvedEndpoint(sourceIndex: u32) -> TraceSpan {
-  let sourceSpan = spans[sourceIndex];
-  if (processStates[sourceSpan.processIndex] == 0u) {
-    return sourceSpan;
-  }
-  let visibleAncestor = visibleAncestors[sourceIndex];
-  return spans[select(sourceIndex, visibleAncestor, visibleAncestor != 0xffffffffu)];
+fn getResolvedEndpoint(endpointResultIndex: u32) -> TraceSpan {
+  return spans[dependencyResults[viewUniforms.dependencyEndpointOffset + endpointResultIndex]];
 }
 
 @vertex fn vertexMain(
@@ -222,8 +218,9 @@ fn getResolvedEndpoint(sourceIndex: u32) -> TraceSpan {
   @builtin(instance_index) instanceIndex: u32
 ) -> DependencyVertexOutput {
   let dependency = dependencies[visibleDependencyIds[instanceIndex]];
-  let spanIndex = select(dependency.sourceIndex, dependency.destinationIndex, vertexIndex == 1u);
-  let span = getResolvedEndpoint(spanIndex);
+  let dependencyIndex = visibleDependencyIds[instanceIndex];
+  let endpointResultIndex = dependencyIndex * 2u + select(0u, 1u, vertexIndex == 1u);
+  let span = getResolvedEndpoint(endpointResultIndex);
   let timeRange = max(viewUniforms.timeMax - viewUniforms.timeMin, 0.0001);
   let laneRange = max(viewUniforms.laneMax - viewUniforms.laneMin, 1.0);
   let endpointTime = select(span.start + span.duration, span.start, vertexIndex == 1u);
@@ -609,7 +606,7 @@ fn main() {
 }
 
 /** Filters dependency rows inside GPU-selected candidate batches. */
-export function getCandidateDependencyVisibilityShader(): string {
+export function getCandidateDependencyVisibilityShader(spanCount: number): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
 struct DependencyBatch {
@@ -620,14 +617,31 @@ struct DependencyBatch {
   familyMask: u32,
   batchIndex: u32,
 };
+const SPAN_COUNT: u32 = ${spanCount}u;
+const MAXIMUM_ANCESTOR_DEPTH: u32 = 32u;
 @group(0) @binding(0) var<storage, read> dependencies: array<TraceDependency>;
 @group(0) @binding(1) var<storage, read> dependencyBatches: array<DependencyBatch>;
 @group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
 @group(0) @binding(3) var<storage, read> spanVisibility: array<u32>;
 @group(0) @binding(4) var<storage, read> processStates: array<u32>;
-@group(0) @binding(5) var<storage, read> visibleAncestors: array<u32>;
+@group(0) @binding(5) var<storage, read> parentSpans: array<u32>;
 @group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
-@group(0) @binding(7) var<storage, read_write> dependencyFlags: array<u32>;
+@group(0) @binding(7) var<storage, read_write> dependencyResults: array<u32>;
+
+fn resolveVisibleAncestor(sourceIndex: u32) -> u32 {
+  var currentIndex = sourceIndex;
+  var depth = 0u;
+  loop {
+    if (currentIndex >= SPAN_COUNT || depth > MAXIMUM_ANCESTOR_DEPTH) {
+      return 0xffffffffu;
+    }
+    if (spanVisibility[currentIndex] == viewUniforms.visibilityGeneration) {
+      return currentIndex;
+    }
+    currentIndex = parentSpans[currentIndex];
+    depth++;
+  }
+}
 
 @compute @workgroup_size(${TRACE_DEPENDENCY_BATCH_CAPACITY})
 fn main(
@@ -640,8 +654,8 @@ fn main(
   }
   let index = batch.firstIndex + localId.x;
   let dependency = dependencies[index];
-  let projectedSource = visibleAncestors[dependency.sourceIndex];
-  let projectedDestination = visibleAncestors[dependency.destinationIndex];
+  let projectedSource = resolveVisibleAncestor(dependency.sourceIndex);
+  let projectedDestination = resolveVisibleAncestor(dependency.destinationIndex);
   let sourceProcessIndex =
     (dependency.flags >> ${TRACE_DEPENDENCY_SOURCE_PROCESS_SHIFT}u) &
     ${TRACE_DEPENDENCY_PROCESS_MASK}u;
@@ -664,10 +678,13 @@ fn main(
     destinationCollapsed
   );
   let distinctEndpoints = effectiveSource != effectiveDestination;
-  dependencyFlags[index] = select(
+  dependencyResults[index] = select(
     0u,
     1u,
     familyVisible && sourceVisible && destinationVisible && distinctEndpoints && !isDensityMode()
   );
+  let endpointResultOffset = viewUniforms.dependencyEndpointOffset + index * 2u;
+  dependencyResults[endpointResultOffset] = effectiveSource;
+  dependencyResults[endpointResultOffset + 1u] = effectiveDestination;
 }`;
 }

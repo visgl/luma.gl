@@ -47,6 +47,7 @@ describe('GPU hierarchical trace viewer', () => {
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           visibleSpanIds: {readAsync: () => Promise<Uint8Array>};
           visibleDependencyIds: {readAsync: () => Promise<Uint8Array>};
+          dependencyResults: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
@@ -119,6 +120,20 @@ describe('GPU hierarchical trace viewer', () => {
       expect(Array.from(visibleDependencyIds)).toEqual(
         Array.from(visibleDependencyIds).sort((left, right) => left - right)
       );
+      const dependencyResultBytes = await state.resources.dependencyResults.readAsync();
+      const dependencyResults = new Uint32Array(
+        dependencyResultBytes.buffer,
+        dependencyResultBytes.byteOffset,
+        dependencyResultBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      );
+      for (const dependencyIndex of visibleDependencyIds) {
+        const endpointOffset = state.resources.dependencyCount + dependencyIndex * 2;
+        const sourceSpanIndex = dependencyResults[endpointOffset];
+        const destinationSpanIndex = dependencyResults[endpointOffset + 1];
+        expect(sourceSpanIndex).toBeLessThan(state.resources.spanCount);
+        expect(destinationSpanIndex).toBeLessThan(state.resources.spanCount);
+        expect(sourceSpanIndex).not.toBe(destinationSpanIndex);
+      }
       const candidateBytes = await state.resources.candidateDispatchCommands.buffer.readAsync();
       const candidateDispatch = new Uint32Array(
         candidateBytes.buffer,
