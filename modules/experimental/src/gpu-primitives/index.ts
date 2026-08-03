@@ -141,6 +141,7 @@ export type {
   GPUHistogramDomain,
   GPUHistogramEdges,
   GPUHistogramInput,
+  GPUHistogramMask,
   GPUHistogramProps
 } from './gpu-histogram';
 

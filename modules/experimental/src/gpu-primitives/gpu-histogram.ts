@@ -15,6 +15,7 @@ import {
   getViewBinding,
   getViewElementOffset,
   type GPUScalarFormat,
+  validateMatchingVectorTopology,
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
@@ -39,6 +40,9 @@ export type GPUHistogramInput<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | GraphVectorView<T>;
 
+/** Optional nonzero/zero row selection with the same topology as histogram input. */
+export type GPUHistogramMask = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+
 /** Ordered bin boundaries accepted by {@link GPUHistogram}. */
 export type GPUHistogramEdges<T extends GPUScalarFormat = GPUScalarFormat> =
   | readonly number[]
@@ -52,6 +56,8 @@ type GPUHistogramBaseProps<T extends GPUScalarFormat> = {
   input: GPUHistogramInput<T>;
   /** Caller-owned `uint32` counts; its length defines the bin count. */
   output: GraphDataView<'uint32'>;
+  /** Optional nonzero/zero selection with the same view kind and chunk topology as `input`. */
+  mask?: GPUHistogramMask;
 };
 
 /** Properties for graph-native scalar histogram counting. */
@@ -76,8 +82,9 @@ export type GPUHistogramProps<T extends GPUScalarFormat = GPUScalarFormat> =
  * Graph-native equal-width or irregular-edge histogram counting for packed 32-bit scalar values.
  *
  * Output is cleared on every encoding. Up to 256 bins use workgroup-local atomics before merging;
- * larger outputs accumulate directly with global atomics. Values outside the inclusive domain or
- * edge range and non-finite floating-point values are ignored.
+ * larger outputs accumulate directly with global atomics. Values rejected by an optional
+ * source-aligned GPU mask, outside the inclusive domain or edge range, and non-finite
+ * floating-point values are ignored. Automatic domains are inferred from the complete input.
  */
 export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
   /** Prefix for generated graph node and transient resource IDs. */
@@ -86,6 +93,8 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly input: GPUHistogramInput<T>;
   /** Caller-owned bin counts. */
   readonly output: GraphDataView<'uint32'>;
+  /** Optional source-aligned row selection. */
+  readonly mask?: GPUHistogramMask;
   /** Literal, GPU-resident, or automatically inferred domain. */
   readonly domain?: GPUHistogramDomain<T>;
   /** Literal or GPU-resident irregular bin boundaries. */
@@ -101,6 +110,7 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
     this.id = props.id ?? 'gpu-histogram';
     this.input = props.input;
     this.output = props.output;
+    this.mask = props.mask;
     this.domain = props.domain;
     this.edges = props.edges;
     for (const [chunkIndex, input] of getHistogramInputs(this.input).entries()) {
@@ -116,6 +126,22 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
     }
     if (getHistogramInputs(this.input).some(input => input.buffer === this.output.buffer)) {
       throw new Error(`${this.id} input and output must use separate buffers`);
+    }
+    if (this.mask) {
+      if (this.input instanceof GraphVectorView !== this.mask instanceof GraphVectorView) {
+        throw new Error(`${this.id} input and mask must use the same view kind`);
+      }
+      for (const [chunkIndex, mask] of getHistogramMasks(this.mask).entries()) {
+        validatePackedUint32View(mask, `${this.id} mask chunk ${chunkIndex}`);
+        if (mask.buffer === this.output.buffer) {
+          throw new Error(`${this.id} mask and output must use separate buffers`);
+        }
+      }
+      if (this.input instanceof GraphVectorView && this.mask instanceof GraphVectorView) {
+        validateMatchingVectorTopology(this.input, this.mask, `${this.id} input and mask`);
+      } else if (this.input.length !== this.mask.length) {
+        throw new Error(`${this.id} input and mask lengths must match`);
+      }
     }
     if (this.edges !== undefined) {
       validateHistogramEdges(this.edges, this.input.format, this.output, this.id);
@@ -141,7 +167,12 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
    */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const inputs = getHistogramInputs(this.input);
-    if (inputs.some(input => input.buffer.graph !== graph) || this.output.buffer.graph !== graph) {
+    const masks = this.mask ? getHistogramMasks(this.mask) : undefined;
+    if (
+      inputs.some(input => input.buffer.graph !== graph) ||
+      masks?.some(mask => mask.buffer.graph !== graph) ||
+      this.output.buffer.graph !== graph
+    ) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     let domain = this.domain;
@@ -167,6 +198,7 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
               : `${this.id}-edges-${accumulationPath}`,
           input,
           output: this.output,
+          mask: masks?.[chunkIndex],
           edges,
           edgeValidity
         });
@@ -207,6 +239,7 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
             : `${this.id}-${accumulationPath}`,
         input,
         output: this.output,
+        mask: masks?.[chunkIndex],
         domain
       });
     });
@@ -218,6 +251,11 @@ function getHistogramInputs<T extends GPUScalarFormat>(
   input: GPUHistogramInput<T>
 ): readonly GraphDataView<T>[] {
   return input instanceof GraphVectorView ? input.data : [input];
+}
+
+/** Normalizes a source-aligned selection into its original ordered chunk list. */
+function getHistogramMasks(mask: GPUHistogramMask): readonly GraphDataView<'uint32'>[] {
+  return mask instanceof GraphVectorView ? mask.data : [mask];
 }
 
 /** Clears every output bin before accumulation for the current graph encoding. */
@@ -299,6 +337,7 @@ function addIrregularHistogramPass<Parameters, T extends GPUScalarFormat>(
     id: string;
     input: GraphDataView<T>;
     output: GraphDataView<'uint32'>;
+    mask?: GraphDataView<'uint32'>;
     edges: GPUHistogramEdges<T>;
     edgeValidity?: GraphDataView<'uint32'>;
   }
@@ -312,7 +351,11 @@ function addIrregularHistogramPass<Parameters, T extends GPUScalarFormat>(
   const validityBinding = props.edgeValidity
     ? '@group(0) @binding(2) var<storage, read> edgeValidity: array<u32>;'
     : '';
-  const outputBinding = gpuEdges ? 3 : 1;
+  const maskBindingIndex = gpuEdges ? 3 : 1;
+  const maskBinding = props.mask
+    ? `@group(0) @binding(${maskBindingIndex}) var<storage, read> selectionMask: array<u32>;`
+    : '';
+  const outputBinding = maskBindingIndex + Number(Boolean(props.mask));
   const literalEdges = props.edges as readonly number[];
   const edgeAccessor = gpuEdges
     ? `fn getEdge(index: u32) -> ${shaderType} {
@@ -339,10 +382,12 @@ const ELEMENT_COUNT: u32 = ${props.input.length}u;
 const BIN_COUNT: u32 = ${props.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
 ${gpuEdges ? `const EDGE_OFFSET: u32 = ${getViewElementOffset(props.edges as GraphDataView)}u;` : ''}
+${props.mask ? `const MASK_OFFSET: u32 = ${getViewElementOffset(props.mask)}u;` : ''}
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 @group(0) @binding(0) var<storage, read> inputValues: array<${shaderType}>;
 ${edgeBinding}
 ${validityBinding}
+${maskBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
 ${edgeAccessor}
@@ -356,7 +401,9 @@ ${edgeAccessor}
   ${local ? 'if (lane < BIN_COUNT) { atomicStore(&localCounts[lane], 0u); }\n  workgroupBarrier();' : ''}
   var accepted = false;
   var binIndex = 0u;
-  if (index < ELEMENT_COUNT && ${validityCondition}) {
+  if (index < ELEMENT_COUNT && ${validityCondition}${
+    props.mask ? ' && selectionMask[MASK_OFFSET + index] != 0u' : ''
+  }) {
     let value = inputValues[INPUT_OFFSET + index];
     let minimum = getEdge(0u);
     let maximum = getEdge(BIN_COUNT);
@@ -386,6 +433,7 @@ ${edgeAccessor}
     ...(props.edgeValidity
       ? ([{buffer: props.edgeValidity, usage: 'storage-read'}] as GraphBufferUse[])
       : []),
+    ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
   addComputationPass(graph, {
@@ -396,6 +444,7 @@ ${edgeAccessor}
       inputValues: props.input,
       ...(gpuEdges ? {edgeValues: props.edges as GraphDataView} : {}),
       ...(props.edgeValidity ? {edgeValidity: props.edgeValidity} : {}),
+      ...(props.mask ? {selectionMask: props.mask} : {}),
       outputCounts: props.output
     },
     dispatchCount: Math.ceil(props.input.length / HISTOGRAM_WORKGROUP_SIZE)
@@ -409,6 +458,7 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
     id: string;
     input: GraphDataView<T>;
     output: GraphDataView<'uint32'>;
+    mask?: GraphDataView<'uint32'>;
     domain: readonly [number, number] | GraphDataView<T>;
   }
 ): void {
@@ -419,7 +469,11 @@ function addHistogramPass<Parameters, T extends GPUScalarFormat>(
   const domainBinding = gpuDomain
     ? '@group(0) @binding(1) var<storage, read> domainValues: array<' + shaderType + '>;'
     : '';
-  const outputBinding = gpuDomain ? 2 : 1;
+  const maskBindingIndex = gpuDomain ? 2 : 1;
+  const maskBinding = props.mask
+    ? `@group(0) @binding(${maskBindingIndex}) var<storage, read> selectionMask: array<u32>;`
+    : '';
+  const outputBinding = maskBindingIndex + Number(Boolean(props.mask));
   const domainInitialization = gpuDomain
     ? `let minimum: ${shaderType} = domainValues[DOMAIN_OFFSET];
   let maximum: ${shaderType} = domainValues[DOMAIN_OFFSET + 1u];`
@@ -485,9 +539,11 @@ const ELEMENT_COUNT: u32 = ${props.input.length}u;
 const BIN_COUNT: u32 = ${props.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(props.input)}u;
 ${gpuDomain ? `const DOMAIN_OFFSET: u32 = ${getViewElementOffset(props.domain as GraphDataView)}u;` : ''}
+${props.mask ? `const MASK_OFFSET: u32 = ${getViewElementOffset(props.mask)}u;` : ''}
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 @group(0) @binding(0) var<storage, read> inputValues: array<${shaderType}>;
 ${domainBinding}
+${maskBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputCounts: array<atomic<u32>>;
 ${local ? `var<workgroup> localCounts: array<atomic<u32>, ${props.output.length}>;` : ''}
 ${integerBinningFunction}
@@ -502,7 +558,9 @@ ${integerBinningFunction}
   ${local ? 'if (lane < BIN_COUNT) { atomicStore(&localCounts[lane], 0u); }\n  workgroupBarrier();' : ''}
   var accepted = false;
   var binIndex = 0u;
-  if (index < ELEMENT_COUNT && maximum >= minimum) {
+  if (index < ELEMENT_COUNT && maximum >= minimum${
+    props.mask ? ' && selectionMask[MASK_OFFSET + index] != 0u' : ''
+  }) {
     let value = inputValues[INPUT_OFFSET + index];
     if (${finiteCondition} && value >= minimum && value <= maximum) {
       if (maximum == minimum) {
@@ -524,6 +582,7 @@ ${integerBinningFunction}
     ...(gpuDomain
       ? ([{buffer: props.domain as GraphDataView, usage: 'storage-read'}] as GraphBufferUse[])
       : []),
+    ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
     {buffer: props.output, usage: 'storage-read-write'}
   ];
   addComputationPass(graph, {
@@ -533,6 +592,7 @@ ${integerBinningFunction}
     bindings: {
       inputValues: props.input,
       ...(gpuDomain ? {domainValues: props.domain as GraphDataView} : {}),
+      ...(props.mask ? {selectionMask: props.mask} : {}),
       outputCounts: props.output
     },
     dispatchCount: Math.ceil(props.input.length / HISTOGRAM_WORKGROUP_SIZE)
