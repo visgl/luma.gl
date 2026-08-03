@@ -31,6 +31,8 @@ Children enter at the exact triangle surface of the parent grid and morph toward
 as projected error grows. Four skirts around the shared grid hide mixed-LOD T-junctions while that
 transition is in progress. Procedural strata, sun, valley occlusion, and distance haze make the
 virtualized geometry legible without a terrain asset or texture download.
+After the first pointer or keyboard gesture, a procedural low wind bed and sparse descending
+whistles add desert atmosphere without fetching an audio asset.
 
 ## What to inspect
 
@@ -40,6 +42,9 @@ virtualized geometry legible without a terrain asset or texture download.
   clusters. The draw remains one indirect command either way.
 - Enable **LOD levels + shared cluster grid** to color hierarchy levels and expose the reused 17×17
   top grid. Yellow tint marks vertices still morphing from their parent surface.
+- Enable **Triangle wireframe overlay** (or press **F**) to trace the actual indexed cell edges and
+  diagonals in one shader pass. Cyan lines mark selected-cluster borders; changing screen error makes
+  the triangle density and hierarchy transitions immediately visible.
 - Drag to enter constrained manual look, use the wheel or **W/S** to move along the authored route,
   and use the arrow keys to look around. The controls cannot move the camera behind or beneath the
   terrain.

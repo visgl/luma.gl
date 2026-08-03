@@ -116,6 +116,23 @@ fn parentTriangleHeight(worldPosition: vec2f, childHalfSize: f32) -> f32 {
 }
 `;
 
+export type CanyonVisualizationOptions = {
+  timeSeconds: number;
+  debugLOD: boolean;
+  wireframe: boolean;
+  terrainHalfExtent: number;
+};
+
+/** Packs the CPU visualization state into the shader's `options` uniform. */
+export function makeCanyonVisualizationOptions({
+  timeSeconds,
+  debugLOD,
+  wireframe,
+  terrainHalfExtent
+}: CanyonVisualizationOptions): [number, number, number, number] {
+  return [timeSeconds, debugLOD ? 1 : 0, wireframe ? 1 : 0, terrainHalfExtent];
+}
+
 export const CANYON_RENDER_SHADER = /* wgsl */ `
 ${CANYON_UNIFORMS}
 ${CANYON_TERRAIN_FUNCTIONS}
@@ -134,8 +151,9 @@ struct FragmentInputs {
   @location(1) worldNormal: vec3f,
   @location(2) localPosition: vec2f,
   @location(3) @interpolate(flat) level: f32,
-  @location(4) @interpolate(flat) skirt: f32,
+  @location(4) skirt: f32,
   @location(5) @interpolate(flat) morphAmount: f32,
+  @location(6) @interpolate(flat) edgeCode: f32,
 };
 
 fn getMorphAmount(metadata: vec4f, bounds: vec4f) -> f32 {
@@ -191,6 +209,7 @@ fn getMorphAmount(metadata: vec4f, bounds: vec4f) -> f32 {
   output.level = metadata.w;
   output.skirt = skirt;
   output.morphAmount = morphAmount;
+  output.edgeCode = edgeCode;
   return output;
 }
 
@@ -202,6 +221,84 @@ fn levelColor(level: f32) -> vec3f {
 fn acesToneMap(color: vec3f) -> vec3f {
   let mapped = (color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14);
   return clamp(mapped, vec3f(0.0), vec3f(1.0));
+}
+
+fn antialiasedLineCoverage(distanceToLine: f32, coordinateWidth: f32) -> f32 {
+  let width = max(coordinateWidth, 0.0001);
+  return 1.0 - smoothstep(width * 0.18, width * 0.72, distanceToLine);
+}
+
+fn cellWireframeCoverage(cellPosition: vec2f, coordinateWidth: vec2f) -> f32 {
+  let cellEdgeDistance = min(cellPosition, vec2f(1.0) - cellPosition);
+  let cellEdgeCoverage = max(
+    antialiasedLineCoverage(cellEdgeDistance.x, coordinateWidth.x),
+    antialiasedLineCoverage(cellEdgeDistance.y, coordinateWidth.y)
+  );
+  // The indexed grid splits every cell from bottom-right to top-left.
+  let diagonalDistance = abs(cellPosition.x + cellPosition.y - 1.0);
+  let diagonalCoverage = antialiasedLineCoverage(
+    diagonalDistance,
+    max(coordinateWidth.x + coordinateWidth.y, 0.0001)
+  );
+  return max(cellEdgeCoverage, diagonalCoverage);
+}
+
+fn triangleWireframeCoverage(inputs: FragmentInputs) -> vec2f {
+  let gridPosition =
+    (inputs.localPosition * 0.5 + vec2f(0.5)) * ${CANYON_CLUSTER_GRID_SEGMENTS.toFixed(1)};
+  let gridCoordinateWidth = fwidth(gridPosition);
+  let localCoordinateWidth = fwidth(inputs.localPosition);
+  var edgeProgress = select(
+    inputs.localPosition.x * 0.5 + 0.5,
+    inputs.localPosition.y * 0.5 + 0.5,
+    abs(inputs.edgeCode) < 1.5
+  );
+  // Right and bottom skirts were authored in descending local-coordinate order.
+  if (inputs.edgeCode == 1.0 || inputs.edgeCode == -2.0) {
+    edgeProgress = 1.0 - edgeProgress;
+  }
+  let skirtGridPosition = vec2f(
+    edgeProgress * ${CANYON_CLUSTER_GRID_SEGMENTS.toFixed(1)},
+    inputs.skirt
+  );
+  let skirtCoordinateWidth = fwidth(skirtGridPosition);
+
+  if (abs(inputs.edgeCode) < 0.5) {
+    let triangleCoverage = cellWireframeCoverage(fract(gridPosition), gridCoordinateWidth);
+    let triangleVisibility = 1.0 - smoothstep(
+      0.25,
+      0.8,
+      max(gridCoordinateWidth.x, gridCoordinateWidth.y)
+    );
+    let clusterEdgeDistance = min(
+      1.0 - abs(inputs.localPosition.x),
+      1.0 - abs(inputs.localPosition.y)
+    );
+    let clusterCoverage = antialiasedLineCoverage(
+      max(clusterEdgeDistance, 0.0),
+      max(localCoordinateWidth.x, localCoordinateWidth.y) * 1.35
+    );
+    let clusterVisibility = 1.0 - smoothstep(
+      0.08,
+      0.38,
+      max(localCoordinateWidth.x, localCoordinateWidth.y)
+    );
+    return vec2f(
+      triangleCoverage * triangleVisibility,
+      clusterCoverage * clusterVisibility
+    );
+  }
+
+  let skirtCellPosition = vec2f(fract(skirtGridPosition.x), clamp(inputs.skirt, 0.0, 1.0));
+  let skirtTriangleVisibility = 1.0 - smoothstep(
+    0.25,
+    0.8,
+    max(skirtCoordinateWidth.x, skirtCoordinateWidth.y)
+  );
+  return vec2f(
+    cellWireframeCoverage(skirtCellPosition, skirtCoordinateWidth) * skirtTriangleVisibility,
+    0.0
+  );
 }
 
 @fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
@@ -251,6 +348,15 @@ fn acesToneMap(color: vec3f) -> vec3f {
     let debugColor = levelColor(inputs.level);
     color = mix(debugColor * (0.42 + directLight * 0.75), vec3f(0.02), gridLine * 0.8);
     color = mix(color, vec3f(1.0, 0.96, 0.28), (1.0 - inputs.morphAmount) * 0.22);
+  }
+
+  if (uniforms.options.z > 0.5) {
+    let wireframeCoverage = triangleWireframeCoverage(inputs);
+    let triangleColor = vec3f(0.34, 0.055, 0.012);
+    let clusterColor = vec3f(0.02, 0.36, 0.55);
+    let wireColor = mix(triangleColor, clusterColor, wireframeCoverage.y);
+    color *= 0.08;
+    color = mix(color, wireColor, max(wireframeCoverage.x * 0.92, wireframeCoverage.y));
   }
 
   let viewDistance = distance(cameraPosition, inputs.worldPosition);

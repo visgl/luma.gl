@@ -37,7 +37,12 @@ import {
   type CanyonCameraSample,
   type CanyonVector3
 } from './canyon-camera';
-import {CANYON_RENDER_SHADER, CANYON_SKY_SHADER} from './canyon-shaders';
+import {
+  CANYON_RENDER_SHADER,
+  CANYON_SKY_SHADER,
+  makeCanyonVisualizationOptions
+} from './canyon-shaders';
+import {CanyonWindAudio} from './canyon-wind';
 
 export const title = 'Virtual Geometry Canyon';
 export const description =
@@ -92,6 +97,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
   readonly panels: ExamplePanelManager;
 
   private graphResources: CanyonGraphResources | null = null;
+  private readonly windAudio = new CanyonWindAudio();
   private canvas: HTMLCanvasElement | null = null;
   private frameIndex = 0;
   private lastFrameTimeMilliseconds: number | null = null;
@@ -102,6 +108,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
   private manualMode = false;
   private paused = false;
   private debugLOD = false;
+  private wireframe = false;
   private maximumScreenSpaceError = DEFAULT_MAXIMUM_SCREEN_SPACE_ERROR;
   private dragging = false;
   private lastPointer: [number, number] = [0, 0];
@@ -112,6 +119,10 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
   private graphEncodeTimeMilliseconds = 0;
   private statsElement: HTMLElement | null = null;
   private statusElement: HTMLElement | null = null;
+  private windStatusElement: HTMLElement | null = null;
+  private windActivationButton: HTMLButtonElement | null = null;
+  private debugLODInputElement: HTMLInputElement | null = null;
+  private wireframeInputElement: HTMLInputElement | null = null;
 
   constructor({device, hierarchyOptions}: VirtualGeometryCanyonExampleProps) {
     super();
@@ -191,6 +202,9 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     canvas.addEventListener('pointercancel', this.handlePointerUp);
     canvas.addEventListener('wheel', this.handleWheel, {passive: false});
     window.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    this.windAudio.setPageVisible(!document.hidden);
+    this.mountWindActivationButton();
   }
 
   override onRender({animationLoop, device, time}: AnimationProps): void {
@@ -253,7 +267,10 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
       this.canvas.removeEventListener('wheel', this.handleWheel);
       window.removeEventListener('keydown', this.handleKeyDown);
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
+    this.unmountWindActivationButton();
+    this.windAudio.destroy();
     this.destroyGraph();
     this.panels.finalize();
     this.skyModel.destroy();
@@ -499,7 +516,15 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     values.set([...forward, aspect], 20);
     values.set([...right, Math.tan(CANYON_CAMERA_FIELD_OF_VIEW / 2)], 24);
     values.set([...up, this.maximumScreenSpaceError], 28);
-    values.set([timeSeconds, this.debugLOD ? 1 : 0, this.hierarchy.terrainHalfExtent, 0], 32);
+    values.set(
+      makeCanyonVisualizationOptions({
+        timeSeconds,
+        debugLOD: this.debugLOD,
+        wireframe: this.wireframe,
+        terrainHalfExtent: this.hierarchy.terrainHalfExtent
+      }),
+      32
+    );
     this.buffers.uniforms.write(values);
     this.buffers.frustumPlanes.write(getCanyonFrustumPlanes(sample.eye, sample.target, aspect));
     this.buffers.cameraPosition.write(new Float32Array(sample.eye));
@@ -546,8 +571,11 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       <label><input type="checkbox" data-cinematic checked> Guided canyon-to-rim flight</label>
       <label>Maximum screen error <input data-screen-error type="range" min="1" max="9" step="0.25" value="${this.maximumScreenSpaceError}"> <strong data-screen-error-value>${this.maximumScreenSpaceError.toFixed(2)} px</strong></label>
       <label><input type="checkbox" data-debug-lod> LOD levels + shared cluster grid</label>
+      <label><input type="checkbox" data-wireframe> Triangle wireframe overlay</label>
+      <label><input type="checkbox" data-wind-audio checked> Procedural desert wind</label>
+      <small data-wind-status aria-live="polite"></small>
       <div style="display:flex;gap:7px"><button type="button" data-pause>Pause</button><button type="button" data-reset>Reset flight</button></div>
-      <small>Drag to look without leaving the authored flight path; use the wheel or W/S to move along it. Arrow keys look around. C returns to the cinematic, L toggles LOD, Space pauses, and R resets.</small>
+      <small>Drag to look without leaving the authored flight path; use the wheel or W/S to move along it. Arrow keys look around. C returns to the cinematic, L toggles LOD colors, F toggles triangle wireframe, Space pauses, and R resets.</small>
     </div>`;
   }
 
@@ -556,8 +584,18 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     const screenError = root.querySelector('[data-screen-error]') as HTMLInputElement;
     const screenErrorValue = root.querySelector('[data-screen-error-value]') as HTMLElement;
     const debugLOD = root.querySelector('[data-debug-lod]') as HTMLInputElement;
+    const wireframe = root.querySelector('[data-wireframe]') as HTMLInputElement;
+    const windAudio = root.querySelector('[data-wind-audio]') as HTMLInputElement;
+    const windStatus = root.querySelector('[data-wind-status]') as HTMLElement;
     const pause = root.querySelector('[data-pause]') as HTMLButtonElement;
     const reset = root.querySelector('[data-reset]') as HTMLButtonElement;
+    this.windStatusElement = windStatus;
+    this.debugLODInputElement = debugLOD;
+    this.wireframeInputElement = wireframe;
+    debugLOD.checked = this.debugLOD;
+    wireframe.checked = this.wireframe;
+    windAudio.checked = this.windAudio.enabled;
+    this.updateWindStatus();
     const onCinematic = (): void => {
       if (cinematic.checked) {
         this.manualMode = false;
@@ -576,6 +614,17 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       this.debugLOD = debugLOD.checked;
       this.updateInspector();
     };
+    const onWireframe = (): void => {
+      this.wireframe = wireframe.checked;
+      this.updateInspector();
+    };
+    const onWindAudio = (): void => {
+      this.windAudio.setEnabled(windAudio.checked);
+      if (windAudio.checked) {
+        this.activateWindAudio();
+      }
+      this.updateWindStatus();
+    };
     const onPause = (): void => {
       this.paused = !this.paused;
       pause.textContent = this.paused ? 'Resume' : 'Pause';
@@ -585,19 +634,27 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       this.resetFlight();
       cinematic.checked = true;
       debugLOD.checked = false;
+      wireframe.checked = false;
       pause.textContent = 'Pause';
     };
     cinematic.addEventListener('change', onCinematic);
     screenError.addEventListener('input', onScreenError);
     debugLOD.addEventListener('change', onDebugLOD);
+    wireframe.addEventListener('change', onWireframe);
+    windAudio.addEventListener('change', onWindAudio);
     pause.addEventListener('click', onPause);
     reset.addEventListener('click', onReset);
     return () => {
       cinematic.removeEventListener('change', onCinematic);
       screenError.removeEventListener('input', onScreenError);
       debugLOD.removeEventListener('change', onDebugLOD);
+      wireframe.removeEventListener('change', onWireframe);
+      windAudio.removeEventListener('change', onWindAudio);
       pause.removeEventListener('click', onPause);
       reset.removeEventListener('click', onReset);
+      this.windStatusElement = null;
+      this.debugLODInputElement = null;
+      this.wireframeInputElement = null;
     };
   }
 
@@ -618,6 +675,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       <span>Submission</span><strong>1 indexed indirect draw</strong>
       <span>Maximum screen error</span><strong>${this.maximumScreenSpaceError.toFixed(2)} px</strong>
       <span>LOD visualization</span><strong>${this.debugLOD ? 'levels + grid' : 'cinematic material'}</strong>
+      <span>Triangle topology</span><strong>${this.wireframe ? 'wireframe + cluster borders' : 'shaded surface'}</strong>
       <span>Frame rate</span><strong>${this.framesPerSecond.toFixed(1)} FPS</strong>
       <span>CPU / GPU frame</span><strong>${this.cpuFrameTimeMilliseconds.toFixed(2)} / ${formatGpuTime(this.device, this.gpuFrameTimeMilliseconds)}</strong>
       <span>Graph CPU encode</span><strong>${this.graphEncodeTimeMilliseconds.toFixed(2)} ms</strong>
@@ -633,6 +691,52 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     }
   }
 
+  private activateWindAudio(): void {
+    void this.windAudio.activate().then(
+      () => this.updateWindStatus(),
+      () => this.updateWindStatus()
+    );
+  }
+
+  private updateWindStatus(): void {
+    const windStatus = this.windAudio.status;
+    if (this.windActivationButton) {
+      this.windActivationButton.hidden = windStatus !== 'waiting';
+    }
+    if (!this.windStatusElement) {
+      return;
+    }
+    const statusLabels = {
+      waiting: 'Wind: click or press a key to enable.',
+      ready: 'Wind: low desert bed · sparse whistles.',
+      muted: 'Wind: muted.',
+      unavailable: 'Wind: Web Audio is unavailable in this browser.'
+    } as const;
+    this.windStatusElement.textContent = statusLabels[windStatus];
+  }
+
+  private mountWindActivationButton(): void {
+    if (this.windActivationButton || typeof document === 'undefined') {
+      return;
+    }
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Enable desert wind';
+    button.setAttribute('aria-label', 'Enable procedural desert wind audio');
+    button.style.cssText =
+      'position:fixed;left:50%;bottom:24px;z-index:2147483647;transform:translateX(-50%);padding:10px 16px;border:1px solid rgba(255,196,116,.72);border-radius:999px;background:rgba(31,17,8,.88);color:#fff1d2;font:600 13px/1.2 system-ui,sans-serif;letter-spacing:.02em;box-shadow:0 0 24px rgba(226,126,55,.3);cursor:pointer;backdrop-filter:blur(8px)';
+    button.addEventListener('click', this.handleWindActivationButton);
+    document.body.appendChild(button);
+    this.windActivationButton = button;
+    this.updateWindStatus();
+  }
+
+  private unmountWindActivationButton(): void {
+    this.windActivationButton?.removeEventListener('click', this.handleWindActivationButton);
+    this.windActivationButton?.remove();
+    this.windActivationButton = null;
+  }
+
   private resetFlight(): void {
     this.routeTimeSeconds = 0;
     this.manualProgress = 0;
@@ -641,6 +745,13 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     this.manualMode = false;
     this.paused = false;
     this.debugLOD = false;
+    this.wireframe = false;
+    if (this.debugLODInputElement) {
+      this.debugLODInputElement.checked = false;
+    }
+    if (this.wireframeInputElement) {
+      this.wireframeInputElement.checked = false;
+    }
     this.updateInspector();
   }
 
@@ -648,6 +759,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     if (event.button !== 0 || !this.canvas) {
       return;
     }
+    this.activateWindAudio();
     this.enterManualMode();
     this.dragging = true;
     this.lastPointer = [event.clientX, event.clientY];
@@ -688,15 +800,36 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
   };
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
+    const target = event.target;
+    if (
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.shiftKey ||
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLSelectElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLButtonElement ||
+      target instanceof HTMLAnchorElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+    ) {
       return;
     }
+    this.activateWindAudio();
     const key = event.key.toLowerCase();
     if (key === 'c') {
       this.manualMode = false;
       this.routeTimeSeconds = this.manualProgress * this.route.duration;
     } else if (key === 'l') {
       this.debugLOD = !this.debugLOD;
+      if (this.debugLODInputElement) {
+        this.debugLODInputElement.checked = this.debugLOD;
+      }
+    } else if (key === 'f') {
+      this.wireframe = !this.wireframe;
+      if (this.wireframeInputElement) {
+        this.wireframeInputElement.checked = this.wireframe;
+      }
     } else if (key === 'r') {
       this.resetFlight();
     } else if (key === ' ') {
@@ -727,6 +860,15 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       );
     }
     this.updateInspector();
+  };
+
+  private readonly handleVisibilityChange = (): void => {
+    this.windAudio.setPageVisible(!document.hidden);
+    this.updateWindStatus();
+  };
+
+  private readonly handleWindActivationButton = (): void => {
+    this.activateWindAudio();
   };
 }
 

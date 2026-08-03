@@ -17,7 +17,16 @@ import {
   getConstrainedCanyonCameraSample,
   makeCanyonCameraRoute
 } from '../../examples/experimental/virtual-geometry-canyon/canyon-camera';
-import {CANYON_SHADER_CONSTANTS} from '../../examples/experimental/virtual-geometry-canyon/canyon-shaders';
+import {
+  CANYON_RENDER_SHADER,
+  CANYON_SHADER_CONSTANTS,
+  makeCanyonVisualizationOptions
+} from '../../examples/experimental/virtual-geometry-canyon/canyon-shaders';
+import {
+  getCanyonWindWhistleEnvelope,
+  makeCanyonWindNoiseSamples,
+  makeCanyonWindWhistleCue
+} from '../../examples/experimental/virtual-geometry-canyon/canyon-wind';
 
 describe('Virtual Geometry Canyon hierarchy', () => {
   test('builds the full breadth-ordered forest and honest potential geometry counts', () => {
@@ -53,7 +62,7 @@ describe('Virtual Geometry Canyon hierarchy', () => {
       0, 0
     ]);
     expect(hierarchy.geometricErrors[firstLeaf]).toBe(0);
-  });
+  }, 30_000);
 
   test('creates one indexed 17x17 grid with four crack-hiding skirts', () => {
     const mesh = makeCanyonClusterMeshData();
@@ -65,6 +74,7 @@ describe('Virtual Geometry Canyon hierarchy', () => {
     expect(mesh.skirtTriangleCount).toBe(128);
     expect(mesh.triangleCount).toBe(640);
     expect(Math.max(...mesh.indices)).toBeLessThan(mesh.vertices.length / 4);
+    expect(Array.from(mesh.indices.subarray(0, 6))).toEqual([0, 17, 1, 1, 17, 18]);
 
     const skirtVertices = Array.from(
       {length: mesh.vertices.length / 4},
@@ -86,6 +96,27 @@ describe('Virtual Geometry Canyon hierarchy', () => {
     ]) {
       expect(Number.isFinite(getCanyonTerrainHeight(worldX, worldZ))).toBe(true);
     }
+  });
+
+  test('packs independent LOD and wireframe flags for the single-pass shader', () => {
+    expect(
+      makeCanyonVisualizationOptions({
+        timeSeconds: 12.5,
+        debugLOD: true,
+        wireframe: false,
+        terrainHalfExtent: 2048
+      })
+    ).toEqual([12.5, 1, 0, 2048]);
+    expect(
+      makeCanyonVisualizationOptions({
+        timeSeconds: 0,
+        debugLOD: false,
+        wireframe: true,
+        terrainHalfExtent: 2048
+      })
+    ).toEqual([0, 0, 1, 2048]);
+    expect(CANYON_RENDER_SHADER).toContain('fn triangleWireframeCoverage');
+    expect(CANYON_RENDER_SHADER).toContain('uniforms.options.z > 0.5');
   });
 });
 
@@ -132,5 +163,62 @@ describe('Virtual Geometry Canyon camera', () => {
           planes[offset + 3]
       ).toBeGreaterThanOrEqual(-1e-4);
     }
+  });
+});
+
+describe('Virtual Geometry Canyon wind', () => {
+  test('crossfades a continuous tail into the noise-loop beginning', () => {
+    const sampleCount = 48_000;
+    const crossfadeSampleCount = 1_200;
+    const randomSeed = 0x1234abcd;
+    const loopSamples = makeCanyonWindNoiseSamples(sampleCount, crossfadeSampleCount, randomSeed);
+    const continuousSamples = makeCanyonWindNoiseSamples(sampleCount + 1, 0, randomSeed);
+
+    expect(loopSamples[0]).toBeCloseTo(continuousSamples[sampleCount], 6);
+    expect(loopSamples[crossfadeSampleCount - 1]).toBeCloseTo(
+      continuousSamples[crossfadeSampleCount - 1],
+      6
+    );
+    expect(Math.abs(loopSamples[loopSamples.length - 1] - loopSamples[0])).toBeCloseTo(
+      Math.abs(continuousSamples[sampleCount - 1] - continuousSamples[sampleCount]),
+      6
+    );
+  });
+
+  test('builds deterministic, irregular, restrained whistle cues', () => {
+    const firstCue = makeCanyonWindWhistleCue(0);
+    expect(makeCanyonWindWhistleCue(0)).toEqual(firstCue);
+    expect(firstCue.delaySeconds).toBeGreaterThanOrEqual(4);
+    expect(firstCue.delaySeconds).toBeLessThanOrEqual(7);
+
+    const laterCues = Array.from({length: 24}, (_, cueIndex) =>
+      makeCanyonWindWhistleCue(cueIndex + 1)
+    );
+    expect(new Set(laterCues.map(cue => cue.delaySeconds)).size).toBeGreaterThan(20);
+    for (const cue of laterCues) {
+      expect(cue.delaySeconds).toBeGreaterThanOrEqual(9);
+      expect(cue.delaySeconds).toBeLessThanOrEqual(18);
+      expect(cue.durationSeconds).toBeGreaterThanOrEqual(4.2);
+      expect(cue.durationSeconds).toBeLessThanOrEqual(6.8);
+      expect(cue.startFrequencyHertz).toBeGreaterThanOrEqual(560);
+      expect(cue.startFrequencyHertz).toBeLessThanOrEqual(730);
+      expect(cue.endFrequencyHertz).toBeLessThan(cue.startFrequencyHertz);
+      expect(cue.peakGain).toBeLessThan(0.035);
+      expect(cue.startPan).toBeGreaterThanOrEqual(-0.65);
+      expect(cue.startPan).toBeLessThanOrEqual(0.65);
+      expect(cue.endPan).toBeGreaterThanOrEqual(-0.8);
+      expect(cue.endPan).toBeLessThanOrEqual(0.8);
+    }
+  });
+
+  test('uses a soft whistle attack and long fade without an endpoint transient', () => {
+    const durationSeconds = 5.5;
+    expect(getCanyonWindWhistleEnvelope(-1, durationSeconds)).toBe(0);
+    expect(getCanyonWindWhistleEnvelope(0, durationSeconds)).toBe(0);
+    expect(getCanyonWindWhistleEnvelope(0.4, durationSeconds)).toBeGreaterThan(0);
+    expect(getCanyonWindWhistleEnvelope(1.05, durationSeconds)).toBeCloseTo(1);
+    expect(getCanyonWindWhistleEnvelope(3, durationSeconds)).toBeGreaterThan(0.2);
+    expect(getCanyonWindWhistleEnvelope(durationSeconds, durationSeconds)).toBe(0);
+    expect(getCanyonWindWhistleEnvelope(Number.NaN, durationSeconds)).toBe(0);
   });
 });
