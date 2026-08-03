@@ -46,8 +46,10 @@ import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
 import {WebGLPresentationContext} from './webgl-presentation-context';
 import type {Spector} from '../context/debug/spector-types';
-import {initializeSpectorJS} from '../context/debug/spector';
-import {makeDebugContext} from '../context/debug/webgl-developer-tools';
+import {
+  initializeRegisteredSpectorJS,
+  makeRegisteredDebugContext
+} from '../context/debug/debug-hooks';
 import {getTextureFormatCapabilitiesWebGL} from './converters/webgl-texture-table';
 import {uid} from '../utils/uid';
 
@@ -229,7 +231,7 @@ export class WebGLDevice extends Device {
     // Add spector debug instrumentation to context
     // We need to trust spector integration to decide if spector should be initialized
     // We also run spector instrumentation first, otherwise spector can clobber luma instrumentation.
-    this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
+    this.spectorJS = initializeRegisteredSpectorJS({...this.props, gl: this.handle});
 
     // Instrument context
     const contextData = getWebGLContextData(this.handle);
@@ -257,7 +259,10 @@ export class WebGLDevice extends Device {
     // props.debug - instrument the WebGL context with Khronos debug tools
     // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
     if (props.debug || props.debugWebGL) {
-      this.gl = makeDebugContext(this.gl, {debugWebGL: true, traceWebGL: props.debugWebGL});
+      this.gl = makeRegisteredDebugContext(this.gl, {
+        debugWebGL: true,
+        traceWebGL: props.debugWebGL
+      });
       log.warn('WebGL debug mode activated. Performance reduced.')();
     }
     if (props.debugWebGL) {

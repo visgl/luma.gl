@@ -54,6 +54,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 - `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 - `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
 
+**@luma.gl/webgl**
+
+- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+
 **@luma.gl/arrow**
 
 - Arrow 2D text clip rectangles now require `FixedSizeList<Float32>[4]` columns, and GPU-backed

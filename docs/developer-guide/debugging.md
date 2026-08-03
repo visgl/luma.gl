@@ -129,7 +129,13 @@ luma.gl is pre-integrated with the Khronos group's WebGL developer tools (the [W
 
 The most flexible way to enable WebGL API tracing is by typing the following command into the browser developer tools console:
 
-Note that the developer tools module is loaded dynamically when a device is created with the debug flag set, so the developer tools can be activated in production code by opening the browser console and typing:
+Applications that want browser-console activation must include the optional debug registration entry:
+
+```ts
+import '@luma.gl/webgl/debug';
+```
+
+The developer tools script is then loaded dynamically when a device is created with the debug flag set, so the tools can be activated by opening the browser console and typing:
 
 ```ts
 luma.set('debug-webgl', true)
@@ -137,11 +143,13 @@ luma.set('debug-webgl', true)
 
 then reload your browser tab.
 
-While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/core/luma#lumacreatedevice) with `debugWebGL: true` to create a WebGL context instrumented with the WebGL developer tools:
+While usually not recommended, it is also possible to activate the developer tools directly. Import the optional registration entry, then call [`luma.createDevice`](/docs/api-reference/core/luma#lumacreatedevice) with `debugWebGL: true`:
 
 ```ts
 import {luma} from '@luma.gl/core';
-const device = luma.createDevice({type: 'webgl', {debugWebGL: true});
+import '@luma.gl/webgl/debug';
+
+const device = await luma.createDevice({type: 'webgl', debugWebGL: true});
 ```
 
 > Warning: WebGL debug contexts impose a significant performance penalty (luma waits for the GPU after each WebGL call to check error codes) and should not be activated in production code.
@@ -159,7 +167,7 @@ luma.log.set('debug-spectorjs', true);
 And then restarting the application (e.g. via Command-R on MacOS),
 
 
-You can also enable spector when creating a device  by adding the `debugSpectorJS: true` option.
+You can also enable Spector when creating a device by importing `@luma.gl/webgl/debug` and adding the `debugSpectorJS: true` option.
 
 To display Spector.js stats when loaded.
 
@@ -168,5 +176,5 @@ luma.spector.displayUI()
 ```
 
 :::info
-Spector.js is dynamically loaded into your application, so there is no bundle size penalty.
+Spector.js itself is loaded from a CDN. The optional `@luma.gl/webgl/debug` registration entry keeps the integration code out of normal WebGL application bundles.
 :::

@@ -26,6 +26,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./debug": {
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.js",
+      "require": "./dist/debug.cjs"
+    },
     "./constants": {
       "types": "./dist/constants/index.d.ts",
       "import": "./dist/constants/index.js",
