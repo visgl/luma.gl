@@ -411,9 +411,12 @@ function getFloat32NearestExpression(
           max(abs(end.x), abs(end.y))
         )
       );
-      let normalizedPoint = point / coordinateScale;
-      let normalizedStart = start / coordinateScale;
-      let normalizedEnd = end / coordinateScale;
+      // A reciprocal of an extreme finite coordinate can be subnormal and flush to zero. Scaling
+      // by the coordinate exponent keeps both normalization and reconstruction in the normal path.
+      let coordinateExponent = frexp(coordinateScale).exp;
+      let normalizedPoint = ldexp(point, vec2i(-coordinateExponent));
+      let normalizedStart = ldexp(start, vec2i(-coordinateExponent));
+      let normalizedEnd = ldexp(end, vec2i(-coordinateExponent));
       let normalizedSegment = normalizedEnd - normalizedStart;
       let denominator = dot(normalizedSegment, normalizedSegment);
       var fraction = 0.0;
@@ -425,14 +428,14 @@ function getFloat32NearestExpression(
         );
       }
       let normalizedCandidatePoint = normalizedStart + fraction * normalizedSegment;
-      let candidatePoint = normalizedCandidatePoint * coordinateScale;
+      let candidatePoint = ldexp(normalizedCandidatePoint, vec2i(coordinateExponent));
       let normalizedDelta = normalizedPoint - normalizedCandidatePoint;
       let deltaScale = max(abs(normalizedDelta.x), abs(normalizedDelta.y));
       var normalizedDistance = 0.0;
       if (deltaScale > 0.0) {
         normalizedDistance = deltaScale * length(normalizedDelta / deltaScale);
       }
-      let candidateDistance = coordinateScale * normalizedDistance;
+      let candidateDistance = ldexp(normalizedDistance, coordinateExponent);
       if (
         !geospatial_is_finite_vec2_f32(candidatePoint) ||
         !geospatial_is_finite_f32(candidateDistance)
