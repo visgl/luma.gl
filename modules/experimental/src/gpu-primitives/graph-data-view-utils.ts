@@ -17,6 +17,9 @@ const STORAGE_BINDING_ALIGNMENT = 256;
 /** Aligned buffer range that can be bound for a logical graph data view. */
 export type GraphDataViewBinding = {buffer: Buffer; offset: number; size: number};
 
+/** Aligned byte range occupied by a logical graph data view's storage binding. @internal */
+export type GraphDataViewBindingRange = {offset: number; size: number};
+
 /** Packed 32-bit scalar formats supported by graph-native analysis primitives. @internal */
 export type GPUScalarFormat = 'uint32' | 'sint32' | 'float32';
 
@@ -59,6 +62,19 @@ export function getViewBinding(
   view: GraphDataView,
   getBuffer: (view: GraphDataView) => Buffer
 ): GraphDataViewBinding {
+  const range = getViewBindingRange(view);
+  const binding = {
+    buffer: getBuffer(view),
+    ...range
+  };
+  if (binding.offset + binding.size > view.buffer.byteLength) {
+    throw new Error('GraphDataView storage binding exceeds its logical buffer');
+  }
+  return binding;
+}
+
+/** Returns the aligned byte range made available to a logical data view binding. @internal */
+export function getViewBindingRange(view: GraphDataView): GraphDataViewBindingRange {
   const alignedByteOffset =
     Math.floor(view.byteOffset / STORAGE_BINDING_ALIGNMENT) * STORAGE_BINDING_ALIGNMENT;
   const prefixByteLength = view.byteOffset - alignedByteOffset;
@@ -66,15 +82,10 @@ export function getViewBinding(
     view.length === 0
       ? view.rowByteLength
       : (view.length - 1) * view.byteStride + view.rowByteLength;
-  const binding = {
-    buffer: getBuffer(view),
+  return {
     offset: alignedByteOffset,
     size: prefixByteLength + Math.max(viewByteLength, view.rowByteLength)
   };
-  if (binding.offset + binding.size > view.buffer.byteLength) {
-    throw new Error('GraphDataView storage binding exceeds its logical buffer');
-  }
-  return binding;
 }
 
 /** Returns the view offset in 32-bit components from its aligned storage binding. */

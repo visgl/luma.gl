@@ -24,7 +24,8 @@ export const POSITION_FORMATS = ['float32x2', 'uint32x4'] as const;
 
 const MAXIMUM_UINT32 = 0xffffffff;
 const MAXIMUM_LINEAR_WORKGROUP_COUNT = Math.floor(MAXIMUM_UINT32 / GEOSPATIAL_WORKGROUP_SIZE) + 1;
-const INTEGER_FP64_ARITHMETIC_MODULE: ShaderModule = {
+/** Integer-controlled fp64 module configuration for geospatial kernels. @internal */
+export const GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE: ShaderModule = {
   // Precise kernels use only the integer-controlled functions, so omit the classic-path uniforms.
   name: fp64arithmetic.name,
   source: fp64arithmetic.source
@@ -246,7 +247,9 @@ export function addGeospatialPass<Parameters>(
     id: props.id,
     resources: props.resources,
     compile: ({device}) => {
-      const modules: ShaderModule[] = props.precise ? [INTEGER_FP64_ARITHMETIC_MODULE] : [];
+      const modules: ShaderModule[] = props.precise
+        ? [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE]
+        : [];
       const defines: Record<string, boolean | number> = props.precise
         ? {LUMA_FP64_INTEGER_ARITHMETIC: true}
         : {};

@@ -17,11 +17,12 @@ This focused integration keeps spatial compute and map rendering in their natura
 deck.gl `MapView` owns pan, zoom, picking, and the camera; MapLibre supplies a synchronized dark
 basemap; and `@luma.gl/experimental/geospatial` projects, indexes, and queries the resident points.
 
-Both the viewport and radius queries write source row IDs to GPU buffers. Their clamped counts
-alias `DrawCommandBuffer.instanceCount`, so the custom deck.gl layer consumes each result with an
-indirect draw and no CPU count synchronization in the render path. Click the map to move the radius
-query, choose a taxi-zone preset to recenter, and hover a point to inspect its source row and
-coordinates.
+The uniform grid stores position-row indices, keeping candidate addressing distinct from optional
+application IDs. Both the viewport and radius queries use the default row-index output and write it
+to GPU buffers. Their clamped counts alias `DrawCommandBuffer.instanceCount`, so the custom deck.gl
+layer consumes each result with an indirect draw and no CPU count synchronization in the render
+path. Click the map to move the radius query, choose a taxi-zone preset to recenter, and hover a
+point to inspect its source row and coordinates.
 
 The one-million-point browser fixture is a deterministic expansion of the same public sample used
 by the Billion-Point Spatial Atlas. The corpus counter preserves the 168,898,952-row target while
