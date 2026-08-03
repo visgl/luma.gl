@@ -31,6 +31,16 @@ const TEST_CASES: {format: AttributeShaderType | string, result: AttributeShader
   // {format: 'bool-webgl', result: {primitiveType: 'bool-webgl', components: 1, byteLength: 1 * 4, integer: true, signed: false}}
 ];
 
+const PRIMITIVE_TYPES = ['f16', 'f32', 'i32', 'u32'] as const;
+const VECTOR_SIZES = [2, 3, 4] as const;
+const MATRIX_DIMENSIONS = [2, 3, 4] as const;
+const TYPE_ALIAS_SUFFIXES = {
+  h: 'f16',
+  f: 'f32',
+  i: 'i32',
+  u: 'u32'
+} as const;
+
 test('shadertypes#shaderTypeDecoder.getAttributeShaderTypeInfo', t => {
   for (const tc of TEST_CASES) {
     const decoded = shaderTypeDecoder.getAttributeShaderTypeInfo(tc.format);
@@ -38,6 +48,91 @@ test('shadertypes#shaderTypeDecoder.getAttributeShaderTypeInfo', t => {
       decoded,
       tc.result,
       `shaderTypeDecoder.getAttributeShaderTypeInfo('${tc.format}') => ${JSON.stringify(decoded.dataType)}`
+    );
+  }
+
+  for (const [suffix, primitiveType] of Object.entries(TYPE_ALIAS_SUFFIXES)) {
+    for (const components of VECTOR_SIZES) {
+      const alias = `vec${components}${suffix}` as any;
+      const expandedType = `vec${components}<${primitiveType}>` as AttributeShaderType;
+      t.equal(
+        shaderTypeDecoder.resolveAttributeShaderTypeAlias(alias),
+        expandedType,
+        `${alias} resolves to ${expandedType}`
+      );
+      t.deepEqual(
+        shaderTypeDecoder.getAttributeShaderTypeInfo(alias),
+        shaderTypeDecoder.getAttributeShaderTypeInfo(expandedType),
+        `${alias} has the same metadata as ${expandedType}`
+      );
+    }
+  }
+
+  t.throws(
+    () => shaderTypeDecoder.getAttributeShaderTypeInfo('mat2x2<f32>' as any),
+    /Unsupported attribute shader type/,
+    'matrix types are rejected as attributes'
+  );
+  t.end();
+});
+
+test('shadertypes#shaderTypeDecoder parses every variable shader type', t => {
+  for (const primitiveType of PRIMITIVE_TYPES) {
+    t.deepEqual(
+      shaderTypeDecoder.getVariableShaderTypeInfo(primitiveType),
+      {type: primitiveType, components: 1},
+      `${primitiveType} metadata matches`
+    );
+
+    for (const components of VECTOR_SIZES) {
+      const vectorType = `vec${components}<${primitiveType}>` as any;
+      t.deepEqual(
+        shaderTypeDecoder.getVariableShaderTypeInfo(vectorType),
+        {type: primitiveType, components},
+        `${vectorType} metadata matches`
+      );
+    }
+
+    for (const columns of MATRIX_DIMENSIONS) {
+      for (const rows of MATRIX_DIMENSIONS) {
+        const matrixType = `mat${columns}x${rows}<${primitiveType}>` as any;
+        t.deepEqual(
+          shaderTypeDecoder.getVariableShaderTypeInfo(matrixType),
+          {type: primitiveType, components: columns * rows},
+          `${matrixType} metadata matches`
+        );
+      }
+    }
+  }
+
+  for (const [suffix, primitiveType] of Object.entries(TYPE_ALIAS_SUFFIXES)) {
+    for (const components of VECTOR_SIZES) {
+      const alias = `vec${components}${suffix}` as any;
+      const expandedType = `vec${components}<${primitiveType}>`;
+      t.equal(
+        shaderTypeDecoder.resolveVariableShaderTypeAlias(alias),
+        expandedType,
+        `${alias} resolves to ${expandedType}`
+      );
+    }
+    for (const columns of MATRIX_DIMENSIONS) {
+      for (const rows of MATRIX_DIMENSIONS) {
+        const alias = `mat${columns}x${rows}${suffix}` as any;
+        const expandedType = `mat${columns}x${rows}<${primitiveType}>`;
+        t.equal(
+          shaderTypeDecoder.resolveVariableShaderTypeAlias(alias),
+          expandedType,
+          `${alias} resolves to ${expandedType}`
+        );
+      }
+    }
+  }
+
+  for (const invalidType of ['vec5<f32>', 'mat2x5<f32>', 'vec2<f64>', ' vec2<f32>']) {
+    t.throws(
+      () => shaderTypeDecoder.getVariableShaderTypeInfo(invalidType as any),
+      /Unsupported variable shader type/,
+      `${invalidType} is rejected`
     );
   }
   t.end();

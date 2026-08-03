@@ -107,6 +107,7 @@ Target Release Date: TBD
 
 **@luma.gl/core**
 
+- **Compact shader type decoding** - Shader variable and attribute metadata is parsed and cached from WGSL-style type names instead of shipping exhaustive runtime lookup tables.
 - **[WebGPU render bundles](/examples/api/render-bundles)** - Record reusable draw commands with `RenderBundleEncoder` and replay them from a `RenderPass`, reducing CPU command-recording time for repeated scenes.
 - **Render-pass draw commands** - `RenderPass` now owns pipeline, binding, vertex-array, direct-draw, indirect-draw, and render-bundle commands. The former `RenderPipeline` draw and binding APIs remain as deprecated compatibility paths.
 - **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.
