@@ -30,6 +30,7 @@ import './gpu-primitives/gpu-scene-adapters.spec';
 import './gpu-primitives/gpu-scene-draw-generation.spec';
 import './gpu-primitives/gpu-scene-resource-groups.spec';
 import './gpu-primitives/gpu-trace-scene.spec';
+import './gpu-primitives/gpu-trace-interaction.spec';
 import './simulation/spectral-ocean-simulation.spec';
 import './geospatial/geospatial-projection-distance.spec';
 import './luxfilter';

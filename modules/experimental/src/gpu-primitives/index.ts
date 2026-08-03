@@ -236,6 +236,13 @@ export type {
   GPUTraceSceneStats,
   GPUTraceSceneView
 } from './gpu-trace-scene';
+
+export {GPUTraceInteraction} from './gpu-trace-interaction';
+export type {
+  GPUTraceInteractionDraw,
+  GPUTraceInteractionProps,
+  GPUTraceInteractionStats
+} from './gpu-trace-interaction';
 export type {
   GPUSceneCPUAdapterContext,
   GPUSceneCPUAdapterProps,
