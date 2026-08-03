@@ -127,7 +127,7 @@ export class GPUSceneResourceGroups {
       length: this.scene.groupIds.buffer.byteLength / UINT32_BYTE_LENGTH
     });
     addInitializePass(graph, this);
-    if (this.scene.recordCount > 0) addClassifyPass(graph, this, records);
+    addClassifyPass(graph, this, records);
   }
 }
 
@@ -174,7 +174,7 @@ function addClassifyPass<Parameters>(
   const values = (project: (group: Readonly<GPUSceneResourceGroup>) => number): string =>
     groups.groups.map(group => `${project(group)}u`).join(', ');
   const source = /* wgsl */ `
-const RECORD_COUNT: u32 = ${groups.scene.recordCount}u;
+const RECORD_COUNT: u32 = ${groups.scene.groupIds.length}u;
 const COMMAND_CAPACITY: u32 = ${groups.commands.capacity}u;
 const RECORD_WORDS: u32 = ${recordWords}u;
 const GROUP_COUNT: u32 = ${groups.groups.length}u;
@@ -302,6 +302,7 @@ function validateScene(groups: GPUSceneResourceGroups): void {
     scene.recordCount < 0 ||
     scene.recordCount > scene.groupIds.length ||
     scene.recordCount > scene.geometryIds.length ||
+    scene.groupIds.length !== scene.geometryIds.length ||
     scene.groupIds.format !== 'uint32' ||
     scene.geometryIds.format !== 'uint32' ||
     scene.groupIds.buffer !== scene.geometryIds.buffer ||

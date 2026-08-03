@@ -76,6 +76,11 @@ Every encoding clears counts and overflow before classifying active commands. Up
 scene group membership, geometry identity, or command-slot assignment therefore refreshes the
 same compiled graph without CPU draw selection, hidden allocation, or readback.
 
+Classification validates command references against the full reserved scene capacity rather than
+the record-count snapshot taken at graph import. A scene can therefore start empty, accept new
+records through `scene.mutate()`, and immediately classify their generated draws using the same
+compiled graph and stable renderer-owned resource windows.
+
 ### WebGPU limits remain explicit
 
 The workflow groups existing renderer-owned indirect calls. It does not provide bindless material

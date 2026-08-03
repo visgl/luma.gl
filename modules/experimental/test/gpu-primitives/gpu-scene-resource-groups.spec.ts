@@ -223,6 +223,69 @@ test('GPUSceneResourceGroups rejects ambiguous windows and aliased diagnostics',
   t.end();
 });
 
+test('GPUSceneResourceGroups classifies records inserted after graph compilation', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const scene = new GPUScene(device, {capacity: 2});
+  const commands = new DrawCommandBuffer(device, {
+    type: 'draw',
+    commands: [{vertexCount: 3}, {vertexCount: 6}]
+  });
+  const graph = new GPUCommandGraph(device, {id: 'growing-scene-resource-groups-test'});
+  const sceneView = scene.importToGraph(graph);
+  const commandView = commands.importToGraph(graph);
+  const required = makeOutput(device, graph, 'growing-required', 1);
+  const published = makeOutput(device, graph, 'growing-published', 1);
+  const drawOverflow = makeOutput(device, graph, 'growing-draw-overflow', 1);
+  new GPUSceneDrawGeneration({
+    scene: sceneView,
+    commands: commandView,
+    requiredCount: required.view,
+    publishedCount: published.view,
+    overflow: drawOverflow.view
+  }).addToGraph(graph);
+
+  const counts = makeOutput(device, graph, 'growing-group-counts', 1);
+  const overflows = makeOutput(device, graph, 'growing-group-overflows', 1);
+  const overflow = makeOutput(device, graph, 'growing-group-overflow', 1);
+  new GPUSceneResourceGroups({
+    scene: sceneView,
+    commands: commandView,
+    groups: [{id: 7, firstCommand: 0, commandCount: 2, geometryId: 11}],
+    counts: counts.view,
+    overflows: overflows.view,
+    overflow: overflow.view
+  }).addToGraph(graph);
+
+  const compiled = graph.compile();
+  encode(device, compiled);
+  t.deepEqual(await readUint32(counts.buffer, 1), [0]);
+
+  scene.mutate({
+    insert: [
+      {id: 50, bounds: BOUNDS, groupId: 7, geometryId: 11, commandSlot: 0},
+      {id: 51, bounds: BOUNDS, groupId: 7, geometryId: 11, commandSlot: 1}
+    ]
+  });
+  encode(device, compiled);
+  t.deepEqual(await readUint32(counts.buffer, 1), [2]);
+  t.deepEqual(await readUint32(overflows.buffer, 1), [0]);
+  t.deepEqual(await readUint32(overflow.buffer, 1), [0]);
+
+  compiled.destroy();
+  scene.destroy();
+  commands.destroy();
+  for (const output of [required, published, drawOverflow, counts, overflows, overflow]) {
+    output.buffer.destroy();
+  }
+  t.end();
+});
+
 function makeOutput(
   device: Device,
   graph: GPUCommandGraph,
