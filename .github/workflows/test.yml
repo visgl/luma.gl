@@ -108,10 +108,6 @@ jobs:
             .yarn/install-state.gz
           key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
 
-      - name: Resolve installed Playwright version
-        id: playwright-version
-        run: yarn workspace @luma.gl/devtools-extensions node -p "'version=' + require('playwright/package.json').version" >> "$GITHUB_OUTPUT"
-
       - name: Cache Playwright Chromium
         id: playwright-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
