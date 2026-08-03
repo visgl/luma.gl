@@ -124,6 +124,9 @@ new GPUProjection({
 }).addToGraph(graph);
 ```
 
+Supplying `patchIds` also avoids scanning every projection patch for each input
+row, which is important for large plans and raw Float64 coordinate streams.
+
 `findProjectionPatch` returns `-1` outside the compiled bounds. For CPU-side
 verification or picking, `evaluateProjectionPlan(plan, coordinate, patchId?)`
 returns an absolute destination coordinate rather than a GPU-local offset.

@@ -23,9 +23,9 @@ import {
   getPositionReadSource,
   getRowChunks,
   isGraphVectorView,
+  validateDisjointGeospatialViews,
   validateMatchingRows,
-  validateRowView,
-  validateSeparateBuffers
+  validateRowView
 } from '../geospatial/geospatial-utils';
 import type {GPUFloat32Positions, GPUGeospatialPositions} from '../geospatial/types';
 import {packProjectionPlan, PROJECTION_PATCH_WORD_LENGTH} from './projection-plan';
@@ -93,23 +93,23 @@ export class GPUProjection implements GPUCommandGraphContributor {
     validateRowView(this.output, ['float32x2'], `${this.id} output`);
     validateMatchingRows(this.positions, this.output, `${this.id} positions and output`);
 
-    const inputs: Array<GPUGeospatialPositions | GPUProjectionPatchIds> = [this.positions];
+    const inputs: Array<readonly [string, GPUGeospatialPositions | GPUProjectionPatchIds]> = [
+      ['positions', this.positions]
+    ];
     if (this.patchIds) {
       validateRowView(this.patchIds, ['uint32'], `${this.id} patch IDs`);
       validateMatchingRows(this.positions, this.patchIds, `${this.id} positions and patch IDs`);
-      inputs.push(this.patchIds);
+      inputs.push(['patch IDs', this.patchIds]);
     }
-    validateSeparateBuffers(this.output, inputs, this.id);
 
     if (this.planBuffer) {
       validatePackedView(this.planBuffer, ['uint32'], `${this.id} plan buffer`);
       if (this.planBuffer.length < props.plan.patches.length * PROJECTION_PATCH_WORD_LENGTH) {
         throw new Error(`${this.id} plan buffer is smaller than its packed projection plan`);
       }
-      if (getRowChunks(this.output).some(chunk => chunk.buffer === this.planBuffer?.buffer)) {
-        throw new Error(`${this.id} plan and output buffers must be separate`);
-      }
+      inputs.push(['plan buffer', this.planBuffer]);
     }
+    validateDisjointGeospatialViews(this.id, inputs, [['output', this.output]]);
   }
 
   /** Current plan; GPU output rows are relative to its binary64 destination origin. */
@@ -137,6 +137,9 @@ export class GPUProjection implements GPUCommandGraphContributor {
       const externalBuffer = this.planBuffer.buffer.defaultBuffer;
       if (!externalBuffer) {
         throw new Error(`${this.id} caller-owned projection plan must be updated by its owner`);
+      }
+      if ((this.planBuffer.buffer.usage & Buffer.COPY_DST) === 0) {
+        throw new Error(`${this.id} caller-owned projection plan updates require COPY_DST usage`);
       }
       externalBuffer.write(packedPlan, this.planBuffer.byteOffset);
     }
@@ -281,7 +284,8 @@ function validateProjectionPlan(plan: ProjectionPlan, id: string): void {
         !patch.sourceOrigin.every(Number.isFinite) ||
         !patch.destinationOrigin.every(Number.isFinite) ||
         !patch.sourceScale.every(
-          (scale: number) => scale > 0 && Number.isFinite(Math.fround(scale))
+          (scale: number) =>
+            scale > 0 && Number.isFinite(Math.fround(scale)) && Math.fround(scale) > 0
         )
     )
   ) {

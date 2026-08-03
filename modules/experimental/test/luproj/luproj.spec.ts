@@ -554,6 +554,128 @@ test('GPUProjection writes deterministic zero rows for invalid coordinates and p
   tapeTest.end();
 });
 
+test('GPUProjection rejects source and output handles sharing physical storage', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const plan = compileProjectionPlan({
+    projection: (coordinates: number[]): number[] => [...coordinates],
+    bounds: [0, 0, 1, 1],
+    degree: 1,
+    tolerance: 1e-5
+  });
+  const sharedBuffer = device.createBuffer({
+    byteLength: 512,
+    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'luproj-physically-aliased-source'});
+  const positions = importView(graph, 'position-handle', sharedBuffer, 'float32x2', 1);
+  const output = importView(graph, 'output-handle', sharedBuffer, 'float32x2', 1, 256);
+
+  tapeTest.notEqual(
+    positions.buffer,
+    output.buffer,
+    'source and output use distinct graph handles'
+  );
+  tapeTest.throws(
+    () => new GPUProjection({positions, output, plan}),
+    /output.*positions.*overlap/,
+    'source and output cannot share a physical buffer behind distinct graph handles'
+  );
+
+  sharedBuffer.destroy();
+  tapeTest.end();
+});
+
+test('GPUProjection rejects caller-owned plan and output handles sharing physical storage', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const plan = compileProjectionPlan({
+    projection: (coordinates: number[]): number[] => [...coordinates],
+    bounds: [0, 0, 1, 1],
+    degree: 1,
+    tolerance: 1e-5
+  });
+  const packedPlan = packProjectionPlan(plan);
+  const sharedBuffer = device.createBuffer({
+    byteLength: 512,
+    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  sharedBuffer.write(packedPlan);
+  const positionBuffer = createBuffer(device, Float32Array.from([0.5, 0.5]));
+  const graph = new GPUCommandGraph(device, {id: 'luproj-physically-aliased-plan'});
+  const positions = importView(graph, 'positions', positionBuffer, 'float32x2', 1);
+  const planBuffer = importView(graph, 'plan-handle', sharedBuffer, 'uint32', packedPlan.length);
+  const output = importView(graph, 'output-handle', sharedBuffer, 'float32x2', 1, 256);
+
+  tapeTest.notEqual(planBuffer.buffer, output.buffer, 'plan and output use distinct graph handles');
+  tapeTest.throws(
+    () => new GPUProjection({positions, output, plan, planBuffer}),
+    /output.*plan.*overlap/,
+    'caller-owned plan and output cannot share a physical buffer behind distinct graph handles'
+  );
+
+  positionBuffer.destroy();
+  sharedBuffer.destroy();
+  tapeTest.end();
+});
+
+test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const bounds = [0, 0, 1, 1] as const;
+  const initialPlan = compileProjectionPlan({
+    projection: (coordinates: number[]): number[] => [...coordinates],
+    bounds,
+    degree: 1,
+    tolerance: 1e-5
+  });
+  const updatedPlan = compileProjectionPlan({
+    projection: (coordinates: number[]): number[] => [coordinates[0] * 2, coordinates[1] * 2],
+    bounds,
+    degree: 1,
+    tolerance: 1e-5
+  });
+  const packedPlan = packProjectionPlan(initialPlan);
+  const readOnlyPlanBuffer = device.createBuffer({data: packedPlan, usage: Buffer.STORAGE});
+  const positionBuffer = createBuffer(device, Float32Array.from([0.5, 0.5]));
+  const outputBuffer = createOutputBuffer(device, 2);
+  const graph = new GPUCommandGraph(device, {id: 'luproj-read-only-plan-update'});
+  const contributor = new GPUProjection({
+    positions: importView(graph, 'positions', positionBuffer, 'float32x2', 1),
+    output: importView(graph, 'output', outputBuffer, 'float32x2', 1),
+    plan: initialPlan,
+    planBuffer: importView(graph, 'read-only-plan', readOnlyPlanBuffer, 'uint32', packedPlan.length)
+  });
+
+  tapeTest.throws(
+    () => contributor.updatePlan(updatedPlan),
+    /COPY_DST/,
+    'caller-owned plan updates require writable GPU storage'
+  );
+  tapeTest.equal(contributor.plan, initialPlan, 'a rejected update preserves the current CPU plan');
+
+  contributor.destroy();
+  readOnlyPlanBuffer.destroy();
+  positionBuffer.destroy();
+  outputBuffer.destroy();
+  tapeTest.end();
+});
+
 test('GPUProjection updates caller-owned packed plans without rebuilding its graph', async tapeTest => {
   const device = await getWebGPUTestDevice();
   if (!device) {
