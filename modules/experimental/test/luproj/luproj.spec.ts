@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/experimental';
 import {
   compileProjectionPlan,
