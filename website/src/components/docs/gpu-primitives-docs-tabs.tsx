@@ -25,6 +25,7 @@ export type GPUPrimitivesDocsTabId =
   | 'bvh-query'
   | 'spatial-benchmark'
   | 'scene'
+  | 'scene-adapters'
   | 'group-aggregation'
   | 'hash-index'
   | 'hash-join'
@@ -148,6 +149,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'scene',
     label: 'Scene',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-scene'
+  },
+  {
+    id: 'scene-adapters',
+    label: 'Scene Adapters',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters'
   },
   {
     id: 'group-aggregation',
