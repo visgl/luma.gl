@@ -17,68 +17,78 @@ const WHEEL_VARIANT_OPTIONS: USDLoaderOptions = {
   usd: {variantSelections: {wheels: 'wheelNormal'}}
 };
 
+function resolveSceneAssetUrl(relativePath: string): string {
+  return new URL(relativePath, document.baseURI).href;
+}
+
 export const SCENE_SAMPLES: readonly SceneSample[] = [
   {
     identifier: 'gltf-antique-camera',
     label: 'glTF · Antique Camera',
-    url: '/gltf/AntiqueCamera.glb',
+    url: resolveSceneAssetUrl('./gltf/AntiqueCamera.glb'),
     format: 'gltf'
   },
   {
     identifier: 'gltf-lantern',
     label: 'glTF · Brass Lantern',
-    url: '/gltf/Lantern.glb',
+    url: resolveSceneAssetUrl('./gltf/Lantern.glb'),
     format: 'gltf'
   },
   {
     identifier: 'gltf-toy-car',
     label: 'glTF · Vintage Toy Car',
-    url: '/gltf/ToyCar.glb',
+    url: resolveSceneAssetUrl('./gltf/ToyCar.glb'),
     format: 'gltf'
   },
   {
     identifier: 'porcelain-atelier',
     label: 'OpenUSD · Porcelain Atelier',
-    url: '/usd/porcelain-atelier.usda',
+    url: resolveSceneAssetUrl('./usd/porcelain-atelier.usda'),
     format: 'usd'
   },
   {
     identifier: 'knights-gambit',
     label: 'OpenUSD · Knight’s Gambit',
-    url: '/usd/knights-gambit.usda',
+    url: resolveSceneAssetUrl('./usd/knights-gambit.usda'),
     format: 'usd'
   },
   {
     identifier: 'vehicle-gallery',
     label: 'OpenUSD · Vehicle Gallery',
-    url: '/usd/vehicle-gallery.usda',
+    url: resolveSceneAssetUrl('./usd/vehicle-gallery.usda'),
     format: 'usd',
     options: WHEEL_VARIANT_OPTIONS
   },
   {
     identifier: 'material-laboratory',
     label: 'OpenUSD · Prismatic Materials',
-    url: '/usd/material-laboratory.usda',
+    url: resolveSceneAssetUrl('./usd/material-laboratory.usda'),
     format: 'usd'
   },
   {
     identifier: 'formula-racer',
     label: 'OpenUSD · Formula Racer',
-    url: '/usd/mini-vehicles/assets/vehicles/formula/asset/formulaFullAsset.usda',
+    url: resolveSceneAssetUrl(
+      './usd/mini-vehicles/assets/vehicles/formula/asset/formulaFullAsset.usda'
+    ),
     format: 'usd',
     options: WHEEL_VARIANT_OPTIONS
   },
   {
     identifier: 'crimson-sedan',
     label: 'OpenUSD · Crimson Sedan',
-    url: '/usd/mini-vehicles/assets/vehicles/sedan/asset/sedanFullAsset.usda',
+    url: resolveSceneAssetUrl(
+      './usd/mini-vehicles/assets/vehicles/sedan/asset/sedanFullAsset.usda'
+    ),
     format: 'usd',
     options: WHEEL_VARIANT_OPTIONS
   },
   {
     identifier: 'precision-wheel',
     label: 'OpenUSD · Precision Wheel',
-    url: '/usd/mini-vehicles/assets/wheels/wheelNormal/asset/wheelNormalAsset.usda',
+    url: resolveSceneAssetUrl(
+      './usd/mini-vehicles/assets/wheels/wheelNormal/asset/wheelNormalAsset.usda'
+    ),
     format: 'usd'
   }
 ];

@@ -1,6 +1,7 @@
 //
 
 import React, {useEffect, useMemo, useRef, useState} from 'react';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   DeviceTabs,
   ExampleHeader,
@@ -590,6 +591,21 @@ const GPGPU_EXAMPLE_STYLE = `
 
 // Showcase Examples
 
+export const ANARIPlaygroundExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/anari/playground.html');
+
+  return (
+    <ExamplePage style={{background: '#070913', minHeight: '720px'}}>
+      <iframe
+        title="ANARI Scene Lab"
+        src={source}
+        allow="clipboard-write"
+        style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}}
+      />
+    </ExamplePage>
+  );
+};
+
 export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="gltf"
@@ -1000,6 +1016,7 @@ export const PersistenceExample: React.FC = props => (
 export const PostprocessingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="postprocessing"
+    title="Effects: Image Processing"
     directory="showcase"
     template={PostprocessingApp}
     config={exampleConfig}

@@ -37,7 +37,7 @@ const ASSET_EXTENSIONS = new Set([
 
 const SKIPPED_DIRECTORY_NAMES = new Set(['dist', 'node_modules']);
 const SKIPPED_EXAMPLE_DIRECTORIES = new Set([
-  // ANARI runs as a standalone Vite app and is not embedded in the website.
+  // ANARI is built separately as a standalone Vite app.
   path.join('showcase', 'anari')
 ]);
 const EXAMPLE_SOURCE_FILE_NAMES = new Set(['app.ts', 'app.tsx', 'index.html', 'package.json']);

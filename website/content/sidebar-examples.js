@@ -10,8 +10,9 @@ const sidebars = {
       label: 'Showcase',
       items: [
         'showcase/gltf',
+        'showcase/instancing',
+        {type: 'doc', id: 'experimental/anari-playground', label: 'ANARI Playground'},
         'showcase/globe',
-        {type: 'doc', id: 'showcase/postprocessing', label: 'Effects: Postprocessing'},
         {type: 'doc', id: 'showcase/dof', label: 'Effects: Depth of Field'},
         {type: 'doc', id: 'showcase/persistence', label: 'Effects: Persistence'}
       ]
@@ -21,6 +22,7 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
+        {type: 'doc', id: 'showcase/postprocessing', label: 'Effects: Image Processing'},
         'api/multi-canvas',
         'api/cubemap',
         'api/texture-3d',
@@ -55,7 +57,6 @@ const sidebars = {
       type: 'category',
       label: 'Experimental',
       items: [
-        {type: 'doc', id: 'experimental/anari-playground', label: 'ANARI Playground'},
         'experimental/a-buffer',
         {type: 'doc', id: 'experimental/antialiasing', label: 'Antialiasing Techniques'},
         {type: 'doc', id: 'experimental/advanced-effects', label: 'Effects: Visualization City'},

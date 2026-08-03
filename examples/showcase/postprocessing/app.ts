@@ -405,7 +405,7 @@ function makePostprocessingStatusHtml(
         : 'This effect does not expose configurable parameters.'
       : 'Vector settings are exposed as scalar X/Y/Z/W settings.';
   return `\
-  <p>This example demonstrates luma.gl's reusable postprocessing shader passes on a fixed source image.</p>
+  <p>This example demonstrates luma.gl's reusable image-processing shader passes on a fixed source image.</p>
   <p>Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/">glfx.js / WebGL Filter</a> application.</p>
   <p>${statusMessage}</p>
   `;

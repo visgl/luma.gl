@@ -9,13 +9,14 @@
     "label": "Showcase",
     "items": [
       "showcase/gltf",
-      "showcase/globe",
-      "showcase/packet-spraying",
+      "showcase/instancing",
       {
         "type": "doc",
-        "id": "showcase/postprocessing",
-        "label": "Effects: Postprocessing"
+        "id": "experimental/anari-playground",
+        "label": "ANARI Playground"
       },
+      "showcase/globe",
+      "showcase/packet-spraying",
       {
         "type": "doc",
         "id": "showcase/dof",
@@ -100,6 +101,11 @@
       "api/animation",
       {
         "type": "doc",
+        "id": "showcase/postprocessing",
+        "label": "Effects: Image Processing"
+      },
+      {
+        "type": "doc",
         "id": "api/blending",
         "label": "Blending"
       },
@@ -147,11 +153,6 @@
     "type": "category",
     "label": "Experimental",
     "items": [
-      {
-        "type": "doc",
-        "id": "experimental/anari-playground",
-        "label": "ANARI Playground"
-      },
       "experimental/a-buffer",
       {
         "type": "doc",
