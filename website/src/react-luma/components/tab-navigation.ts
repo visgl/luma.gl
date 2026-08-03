@@ -1,3 +1,23 @@
+/** Applies standard tab navigation without reactivating the currently selected backend. */
+export function handleKeyboardTabNavigation(event: {
+  currentTarget: HTMLButtonElement;
+  key: string;
+  preventDefault: () => void;
+}): void {
+  const nextTab = getNextKeyboardTab(event.currentTarget, event.key);
+  if (!nextTab) {
+    return;
+  }
+
+  event.preventDefault();
+  if (nextTab === event.currentTarget) {
+    return;
+  }
+
+  nextTab.focus();
+  nextTab.click();
+}
+
 /** Returns the enabled tab selected by standard horizontal-tab keyboard navigation. */
 export function getNextKeyboardTab(
   currentTab: HTMLButtonElement,
