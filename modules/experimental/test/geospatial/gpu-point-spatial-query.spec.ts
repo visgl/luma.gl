@@ -56,38 +56,6 @@ test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', asy
       expectedIds: [0, 1, 3]
     },
     {
-      id: 'unindexed-2d-radius-one-ulp',
-      positions: Float32Array.from([1, 0, Math.fround(1 + 2 ** -23), 0, -1, 0, 0, 0]),
-      dimension: 2,
-      kind: 'radius',
-      query: Float32Array.from([0, 0, 1]),
-      expectedIds: [0, 2, 3]
-    },
-    {
-      id: 'unindexed-2d-radius-multiaxis-outside',
-      positions: Float32Array.from([1344, 2089, 0, 2484]),
-      dimension: 2,
-      kind: 'radius',
-      query: Float32Array.from([0, 0, 2484]),
-      expectedIds: [1]
-    },
-    {
-      id: 'unindexed-2d-radius-pythagorean-boundary',
-      positions: Float32Array.from([96, 247, 0, 265]),
-      dimension: 2,
-      kind: 'radius',
-      query: Float32Array.from([0, 0, 265]),
-      expectedIds: [0, 1]
-    },
-    {
-      id: 'unindexed-2d-radius-subnormal-boundary',
-      positions: Float32Array.from([2 ** -149, 0, 2 ** -148, 0, 0, 0]),
-      dimension: 2,
-      kind: 'radius',
-      query: Float32Array.from([0, 0, 2 ** -149]),
-      expectedIds: [0, 2]
-    },
-    {
       id: 'unindexed-3d-bounds',
       positions: Float32Array.from([
         0,
@@ -151,6 +119,64 @@ test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', asy
     destroyFixture(fixture);
   }
 
+  tapeTest.end();
+});
+
+test('GPUPointSpatialQuery preserves exact radius boundaries and subnormals', async tapeTest => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    tapeTest.comment('WebGPU is not available');
+    tapeTest.end();
+    return;
+  }
+
+  const minimumSubnormal = 2 ** -149;
+  const fixture = createQueryFixture(device, {
+    id: 'unindexed-2d-radius-adversarial',
+    positions: Float32Array.from([
+      265,
+      0,
+      Math.fround(265 + 2 ** -15),
+      0,
+      -265,
+      0,
+      0,
+      0,
+      85,
+      251,
+      96,
+      247,
+      0,
+      265,
+      minimumSubnormal,
+      0,
+      2 * minimumSubnormal,
+      0,
+      265,
+      minimumSubnormal
+    ]),
+    dimension: 2,
+    kind: 'radius',
+    query: Float32Array.from([0, 0, 265]),
+    expectedIds: [0, 2, 3, 5, 6, 7, 8]
+  });
+
+  encode(device, fixture.compiled);
+  tapeTest.deepEqual(
+    (await readResult(fixture)).ids.sort(sortNumbers),
+    [0, 2, 3, 5, 6, 7, 8],
+    'one-ULP and multi-axis outside rows are rejected while exact boundaries remain inclusive'
+  );
+
+  fixture.query.write(Float32Array.from([0, 0, minimumSubnormal]));
+  encode(device, fixture.compiled);
+  tapeTest.deepEqual(
+    (await readResult(fixture)).ids.sort(sortNumbers),
+    [3, 7],
+    'the same compiled graph preserves the minimum-subnormal inclusive boundary'
+  );
+
+  destroyFixture(fixture);
   tapeTest.end();
 });
 

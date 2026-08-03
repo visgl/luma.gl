@@ -685,10 +685,19 @@ function makeExactPredicate(query: GPUPointSpatialQuery): string {
     const scaledDeltas = axes
       .map(axis => `let scaledDelta${axis} = fp64_scale_fp64_integer(delta${axis}, scaleExponent);`)
       .join('\n  ');
-    const squaredTerms = axes.map(axis => `mul_fp64(scaledDelta${axis}, scaledDelta${axis})`);
+    const squaredDeltaDeclarations = axes
+      .map(axis => `let squaredDelta${axis} = mul_fp64(scaledDelta${axis}, scaledDelta${axis});`)
+      .join('\n  ');
+    const squaredTerms = axes.map(axis => `squaredDelta${axis}`);
     const squaredDistance = squaredTerms
       .slice(1)
       .reduce((sum, term) => `sum_fp64(${sum}, ${term})`, squaredTerms[0]);
+    const lostPositiveTerm = axes
+      .map(
+        axis =>
+          `(compare_fp64(delta${axis}, vec2f(0.0)) != 0 && compare_fp64(squaredDelta${axis}, vec2f(0.0)) == 0)`
+      )
+      .join(' || ');
     return `${positions}
   ${centers}
   ${deltas}
@@ -698,10 +707,14 @@ function makeExactPredicate(query: GPUPointSpatialQuery): string {
   // A common integer-controlled power-of-two scale prevents overflow and preserves subnormals.
   let scaleExponent = select(126, 127 - i32(exponentBits >> 23u), exponentBits != 0u);
   ${scaledDeltas}
+  ${squaredDeltaDeclarations}
   let scaledRadius = fp64_scale_fp64_integer(vec2f(radius, 0.0), scaleExponent);
   let squaredDistance = ${squaredDistance};
   let squaredRadius = mul_fp64(scaledRadius, scaledRadius);
-  let selected = ${finitePosition} && ${finiteCenter} && ${finiteDeltas} && finite(radius) && radius >= 0.0 && compare_fp64(squaredDistance, squaredRadius) <= 0;`;
+  let radiusComparison = compare_fp64(squaredDistance, squaredRadius);
+  // Equality is exact only when every nonzero delta contributes a nonzero squared term.
+  let lostPositiveTerm = ${lostPositiveTerm};
+  let selected = ${finitePosition} && ${finiteCenter} && ${finiteDeltas} && finite(radius) && radius >= 0.0 && (radiusComparison < 0 || (radiusComparison == 0 && !lostPositiveTerm));`;
   }
   if (query.kind === 'polygon') {
     return `${positions}
