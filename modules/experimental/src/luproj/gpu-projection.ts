@@ -76,6 +76,7 @@ export class GPUProjection implements GPUCommandGraphContributor {
 
   private projectionPlan: ProjectionPlan;
   private ownedPlanBuffer?: Buffer;
+  private ownedBoundsBuffer?: Buffer;
   private hasRegisteredGraph = false;
   private destroyed = false;
 
@@ -143,6 +144,7 @@ export class GPUProjection implements GPUCommandGraphContributor {
       }
       externalBuffer.write(packedPlan, this.planBuffer.byteOffset);
     }
+    this.ownedBoundsBuffer?.write(packProjectionBounds(plan));
     this.projectionPlan = plan;
   }
 
@@ -165,6 +167,7 @@ export class GPUProjection implements GPUCommandGraphContributor {
     }
 
     const planView = this.planBuffer ?? this.createOwnedPlanView(graph);
+    const boundsView = this.createOwnedBoundsView(graph);
     const inputChunks = getRowChunks(this.positions);
     const outputChunks = getRowChunks(this.output);
     const patchIdChunks = this.patchIds ? getRowChunks(this.patchIds) : undefined;
@@ -179,18 +182,21 @@ export class GPUProjection implements GPUCommandGraphContributor {
         input,
         output: outputChunks[chunkIndex],
         patchIds: patchIdChunks?.[chunkIndex],
-        plan: planView
+        plan: planView,
+        bounds: boundsView
       });
     }
 
     this.hasRegisteredGraph = true;
   }
 
-  /** Releases privately allocated plan storage; caller-owned input, output, and plan remain intact. */
+  /** Releases privately allocated plan and bounds storage; caller-owned resources remain intact. */
   destroy(): void {
     if (!this.destroyed) {
       this.ownedPlanBuffer?.destroy();
       this.ownedPlanBuffer = undefined;
+      this.ownedBoundsBuffer?.destroy();
+      this.ownedBoundsBuffer = undefined;
       this.destroyed = true;
     }
   }
@@ -213,6 +219,24 @@ export class GPUProjection implements GPUCommandGraphContributor {
     return graph.createDataView(handle, {format: 'uint32', length: words.length});
   }
 
+  private createOwnedBoundsView<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): GraphDataView<'uint32'> {
+    const words = packProjectionBounds(this.projectionPlan);
+    const id = `${this.id}-projection-bounds`;
+    const buffer = graph.device.createBuffer({
+      id,
+      data: words,
+      usage: Buffer.STORAGE | Buffer.COPY_DST
+    });
+    this.ownedBoundsBuffer = buffer;
+    const handle = graph.importBuffer(
+      {id, byteLength: words.byteLength, usage: buffer.usage},
+      buffer
+    );
+    return graph.createDataView(handle, {format: 'uint32', length: words.length});
+  }
+
   private addProjectionPass<Parameters>(
     graph: GPUCommandGraph<Parameters>,
     options: {
@@ -221,9 +245,10 @@ export class GPUProjection implements GPUCommandGraphContributor {
       output: GraphDataView<'float32x2'>;
       patchIds?: GraphDataView<'uint32'>;
       plan: GraphDataView<'uint32'>;
+      bounds: GraphDataView<'uint32'>;
     }
   ): void {
-    const {chunkIndex, input, output, patchIds, plan} = options;
+    const {chunkIndex, input, output, patchIds, plan, bounds} = options;
     const inputSource = getPositionReadSource('positions', input);
     const dispatchLayout = getGeospatialDispatchLayout(
       input.length,
@@ -232,11 +257,13 @@ export class GPUProjection implements GPUCommandGraphContributor {
     const resources: GraphBufferUse[] = [
       {buffer: input, usage: 'storage-read'},
       {buffer: plan, usage: 'storage-read'},
+      {buffer: bounds, usage: 'storage-read'},
       {buffer: output, usage: 'storage-write'}
     ];
     const bindings: Record<string, GraphDataView> = {
       positions: input,
       projectionPlans: plan,
+      projectionBounds: bounds,
       outputPositions: output
     };
     if (patchIds) {
@@ -273,9 +300,31 @@ export class GPUProjection implements GPUCommandGraphContributor {
   }
 }
 
+function packProjectionBounds(plan: ProjectionPlan): Uint32Array {
+  const words = new Uint32Array(8);
+  const dataView = new DataView(words.buffer);
+  for (let coordinateIndex = 0; coordinateIndex < plan.bounds.length; coordinateIndex++) {
+    dataView.setFloat64(
+      coordinateIndex * Float64Array.BYTES_PER_ELEMENT,
+      plan.bounds[coordinateIndex],
+      true
+    );
+  }
+  return words;
+}
+
 function validateProjectionPlan(plan: ProjectionPlan, id: string): void {
   if (!plan || !Array.isArray(plan.patches) || plan.patches.length === 0) {
     throw new Error(`${id} projection plan must contain at least one patch`);
+  }
+  if (
+    !Array.isArray(plan.bounds) ||
+    plan.bounds.length !== 4 ||
+    !plan.bounds.every(Number.isFinite) ||
+    plan.bounds[0] >= plan.bounds[2] ||
+    plan.bounds[1] >= plan.bounds[3]
+  ) {
+    throw new Error(`${id} projection plan must contain finite, increasing source bounds`);
   }
   if (
     plan.patches.some(
@@ -343,6 +392,35 @@ function getProjectionShaderSource(options: {
   const finitePosition = precise
     ? 'rawPointIsFinite(position)'
     : `all((bitcast<vec2u>(position) & vec2u(0x7f800000u)) != vec2u(0x7f800000u))`;
+  const rawBoundsCoordinates = precise
+    ? `let coordinateX = position.x;
+  let coordinateY = position.y;`
+    : `let coordinateX = projectionFloat32ToRaw(position.x);
+  let coordinateY = projectionFloat32ToRaw(position.y);`;
+  const float32Conversion = precise
+    ? ''
+    : `fn projectionFloat32ToRaw(value: f32) -> vec2u {
+  let bits = bitcast<u32>(value);
+  let sign = bits & 0x80000000u;
+  let exponent = (bits >> 23u) & 0xffu;
+  let fraction = bits & 0x007fffffu;
+
+  if (exponent == 0u) {
+    if (fraction == 0u) {
+      return vec2u(sign, 0u);
+    }
+    let leading = 31u - countLeadingZeros(fraction);
+    let normalizedFraction = (fraction << (23u - leading)) & 0x007fffffu;
+    let binary64Exponent = leading + 874u;
+    return vec2u(
+      sign | (binary64Exponent << 20u) | (normalizedFraction >> 3u),
+      normalizedFraction << 29u
+    );
+  }
+
+  let binary64Exponent = exponent + 896u;
+  return vec2u(sign | (binary64Exponent << 20u) | (fraction >> 3u), fraction << 29u);
+}`;
   const patchIdDeclaration =
     patchIdOffset === undefined
       ? ''
@@ -364,8 +442,48 @@ const INVALID_PATCH: u32 = 0xffffffffu;
 
 ${inputDeclaration}
 @group(0) @binding(auto) var<storage, read> projectionPlans: array<u32>;
+@group(0) @binding(auto) var<storage, read> projectionBounds: array<u32>;
 @group(0) @binding(auto) var<storage, read_write> outputPositions: array<vec2f>;
 ${patchIdDeclaration}
+
+${float32Conversion}
+
+fn projectionRawLess(first: vec2u, second: vec2u) -> bool {
+  let firstMagnitude = first.x & 0x7fffffffu;
+  let secondMagnitude = second.x & 0x7fffffffu;
+  if ((firstMagnitude | first.y | secondMagnitude | second.y) == 0u) {
+    return false;
+  }
+
+  let firstNegative = (first.x & 0x80000000u) != 0u;
+  let secondNegative = (second.x & 0x80000000u) != 0u;
+  if (firstNegative != secondNegative) {
+    return firstNegative;
+  }
+  // Boolean-valued select expressions crash Chromium's Metal compiler; branch explicitly.
+  if (first.x != second.x) {
+    if (firstNegative) {
+      return first.x > second.x;
+    }
+    return first.x < second.x;
+  }
+  if (firstNegative) {
+    return first.y > second.y;
+  }
+  return first.y < second.y;
+}
+
+fn projectionBoundsContains(position: ${positionType}) -> bool {
+  ${rawBoundsCoordinates}
+  let minimumX = vec2u(projectionBounds[1u], projectionBounds[0u]);
+  let minimumY = vec2u(projectionBounds[3u], projectionBounds[2u]);
+  let maximumX = vec2u(projectionBounds[5u], projectionBounds[4u]);
+  let maximumY = vec2u(projectionBounds[7u], projectionBounds[6u]);
+  return !projectionRawLess(coordinateX, minimumX) &&
+    !projectionRawLess(maximumX, coordinateX) &&
+    !projectionRawLess(coordinateY, minimumY) &&
+    !projectionRawLess(maximumY, coordinateY);
+}
 
 fn projectionPlanWord(patchIndex: u32, wordIndex: u32) -> u32 {
   return projectionPlans[PLAN_OFFSET + patchIndex * PATCH_WORD_LENGTH + wordIndex];
@@ -443,7 +561,7 @@ fn main(
   ${invocationIndexSource}
   if (index >= ELEMENT_COUNT) { return; }
   let position = ${readPosition};
-  if (!(${finitePosition})) {
+  if (!(${finitePosition}) || !projectionBoundsContains(position)) {
     outputPositions[OUTPUT_OFFSET + index] = vec2f(0.0);
     return;
   }

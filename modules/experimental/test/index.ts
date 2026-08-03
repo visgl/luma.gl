@@ -35,3 +35,4 @@ import './simulation/spectral-ocean-simulation.spec';
 import './geospatial/geospatial-projection-distance.spec';
 import './luxfilter';
 import './luproj/luproj.spec';
+import './luproj/projection-benchmark.spec';
