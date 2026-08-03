@@ -78,8 +78,10 @@ indirect draw for each renderer-owned command slot. Slots with `instanceCount ==
 work.
 
 WebGPU does not provide a portable bindless multi-draw contract that would let this primitive
-choose arbitrary pipelines and bindings. Pipeline/resource grouping is therefore a separate
-roadmap tranche rather than an implicit promise in this API.
+choose arbitrary pipelines and bindings.
+[`GPUSceneResourceGroups`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups)
+therefore adds explicit renderer-owned binding windows as a separate workflow rather than hiding
+pipeline policy inside draw generation.
 
 ## Usage
 
@@ -124,9 +126,8 @@ size, transient ownership storage, and total output bytes without GPU readback.
 ## Current scope
 
 This implements roadmap Tranche 6.2a: deterministic explicit-slot publication and overflow. It
-does not allocate slots, group commands by pipeline or resources, issue render calls, or mutate
-scene records. Those policies remain renderer-owned until the grouping tranche demonstrates a
-portable shared contract.
+does not allocate slots, issue render calls, or mutate scene records. Resource grouping remains a
+separate renderer-owned contract implemented by `GPUSceneResourceGroups`.
 
 See also [`GPUScene`](/docs/api-reference/experimental/gpu-primitives/gpu-scene),
 [`GPUVisibilityWorkflow`](/docs/api-reference/experimental/gpu-primitives/gpu-visibility-workflow),
