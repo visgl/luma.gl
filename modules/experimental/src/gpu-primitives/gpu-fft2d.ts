@@ -144,7 +144,10 @@ export class GPUFFT2D {
     }
     validateGPUFFT2DBuffer(this.device, options.inputBuffer, this.stats, 'input');
     validateGPUFFT2DBuffer(this.device, options.outputBuffer, this.stats, 'output');
-    if (options.inputBuffer === options.outputBuffer) {
+    if (
+      options.inputBuffer === options.outputBuffer ||
+      options.inputBuffer.handle === options.outputBuffer.handle
+    ) {
       throw new Error('GPUFFT2D input and output buffers must be separate.');
     }
 

@@ -75,7 +75,10 @@ test('GPU scene adapters preserve CPU identity and table batch topology without 
       makeSceneBatch(secondSource, 1)
     ]
   });
-  const adapted = makeGPUScenePartitionsFromGPUTable(device, table, {id: 'table-scene'});
+  const adapted = makeGPUScenePartitionsFromGPUTable(device, table, {
+    id: 'table-scene',
+    activeCounts: [1, 0, 1]
+  });
 
   t.deepEqual(
     adapted.partitions.map(partition => ({
@@ -114,6 +117,7 @@ test('GPU scene adapters preserve CPU identity and table batch topology without 
     [20],
     'later table partitions preserve their source records'
   );
+  t.equal(adapted.partitions[0]!.scene!.activeCount, 1, 'producer-known active counts are exact');
 
   const firstStateBuffer = adapted.partitions[0]!.scene!.stateBuffer;
   adapted.destroy();
@@ -152,20 +156,69 @@ test('GPU scene adapters reject ambiguous CPU and table storage contracts', asyn
   const invalidBatch = makeSceneBatch(source, 1, {objectId: 4});
   const invalidTable = new GPUTable({batches: [invalidBatch]});
   t.throws(
-    () => makeGPUScenePartitionsFromGPUTable(device, invalidTable),
+    () => makeGPUScenePartitionsFromGPUTable(device, invalidTable, {activeCounts: [1]}),
     /canonical scene record layout/,
     'columnar or shifted layouts are not silently packed'
   );
   t.throws(
     () =>
       makeGPUScenePartitionsFromGPUTable(device, invalidTable, {
-        columns: {objectId: 'flags'}
+        columns: {objectId: 'flags'},
+        activeCounts: [1]
       }),
     /column names must be unique/,
     'one physical column cannot fill multiple scene roles'
   );
 
+  const validTable = new GPUTable({batches: [makeSceneBatch(source, 1)]});
+  t.throws(
+    () => makeGPUScenePartitionsFromGPUTable(device, validTable, {activeCounts: []}),
+    /exact active count per batch/,
+    'opaque table records require producer-known active-count metadata'
+  );
+  t.throws(
+    () => makeGPUScenePartitionsFromGPUTable(device, validTable, {activeCounts: [2]}),
+    /exact active count per batch/,
+    'active counts cannot exceed their physical batch size'
+  );
+
+  validTable.destroy();
   invalidTable.destroy();
+  source.destroy();
+  t.end();
+});
+
+test('GPU scene table adapters preserve exact active counts for batches with holes', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const bounds = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;
+  const source = new GPUScene(device, {
+    records: [
+      {id: 1, bounds},
+      {id: 2, bounds}
+    ]
+  });
+  source.mutate({remove: [1]});
+  const table = new GPUTable({batches: [makeSceneBatch(source, 2)]});
+  const adapted = makeGPUScenePartitionsFromGPUTable(device, table, {activeCounts: [1]});
+  const scene = adapted.partitions[0]!.scene!;
+
+  t.equal(scene.recordCount, 2, 'the physical prefix retains its inactive hole');
+  t.equal(scene.activeCount, 1, 'only the producer-known live row contributes to activeCount');
+  const stateBytes = await scene.stateBuffer.readAsync();
+  t.deepEqual(
+    Array.from(new Uint32Array(stateBytes.buffer, stateBytes.byteOffset, 4)),
+    [2, 1, 0, 0],
+    'GPU state distinguishes physical prefix length from exact live count'
+  );
+
+  adapted.destroy();
+  table.destroy();
   source.destroy();
   t.end();
 });

@@ -93,8 +93,64 @@ test('GPUBVHQuery traverses 3D points and reports bounded-output overflow', asyn
   t.end();
 });
 
+test('GPUBVHQuery preserves maximum stable IDs and rejects overlapping views', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const fixture = createFixture(device, {
+    dimension: 2,
+    minima: Float32Array.from([0, 0]),
+    maxima: Float32Array.from([1, 1]),
+    sourceIds: Uint32Array.of(0xffffffff),
+    query: Float32Array.from([0.5, 0.5]),
+    kind: 'point',
+    leafCapacity: 2,
+    outputCapacity: 2,
+    maskLength: 2
+  });
+  encode(device, fixture.compiled);
+  t.deepEqual(await readSortedOutput(fixture), [0xffffffff], 'the full uint32 ID range survives');
+  t.deepEqual(await readUint32(fixture.count, 1), [1], 'invalid empty leaves remain excluded');
+
+  const query = fixture.workflow;
+  t.throws(
+    () =>
+      new GPUBVHQuery({
+        bvh: query.bvh,
+        kind: query.kind,
+        query: query.query,
+        output: query.bvh.leafIds,
+        count: query.count,
+        overflow: query.overflow
+      }),
+    /must not overlap query or BVH inputs/,
+    'stable leaf IDs cannot alias writable output'
+  );
+  t.throws(
+    () =>
+      new GPUBVHQuery({
+        bvh: query.bvh,
+        kind: query.kind,
+        query: query.query,
+        output: query.output,
+        count: query.count,
+        overflow: query.count
+      }),
+    /must not overlap one another/,
+    'count and overflow require independent writable storage'
+  );
+
+  destroyFixture(fixture);
+  t.end();
+});
+
 type Fixture = {
   compiled: CompiledGPUCommandGraph<void>;
+  workflow: GPUBVHQuery;
   query: Buffer;
   output: Buffer;
   count: Buffer;
@@ -110,6 +166,7 @@ function createFixture(
     dimension: 2 | 3;
     minima: Float32Array;
     maxima: Float32Array;
+    sourceIds?: Uint32Array;
     query: Float32Array;
     kind: 'point' | 'bounds';
     leafCapacity: number;
@@ -122,6 +179,7 @@ function createFixture(
   const nodeCount = props.leafCapacity * 2 - 1;
   const minima = createInputBuffer(device, props.minima);
   const maxima = createInputBuffer(device, props.maxima);
+  const sourceIds = props.sourceIds ? createInputBuffer(device, props.sourceIds) : undefined;
   const query = createInputBuffer(device, props.query);
   const nodeMinima = createFloatOutputBuffer(device, nodeCount * props.dimension);
   const nodeMaxima = createFloatOutputBuffer(device, nodeCount * props.dimension);
@@ -139,6 +197,9 @@ function createFixture(
     id: 'test-bvh',
     minima: importView(graph, 'source-minima', minima, format, sourceLength),
     maxima: importView(graph, 'source-maxima', maxima, format, sourceLength),
+    ...(sourceIds
+      ? {sourceIds: importView(graph, 'source-ids', sourceIds, 'uint32', sourceLength)}
+      : {}),
     leafCapacity: props.leafCapacity,
     nodeMinima: importView(graph, 'node-minima', nodeMinima, format, nodeCount),
     nodeMaxima: importView(graph, 'node-maxima', nodeMaxima, format, nodeCount),
@@ -162,6 +223,7 @@ function createFixture(
   bvhQuery.addToGraph(graph);
   return {
     compiled: graph.compile(),
+    workflow: bvhQuery,
     query,
     output,
     count,
@@ -171,6 +233,7 @@ function createFixture(
     buffers: [
       minima,
       maxima,
+      ...(sourceIds ? [sourceIds] : []),
       query,
       nodeMinima,
       nodeMaxima,

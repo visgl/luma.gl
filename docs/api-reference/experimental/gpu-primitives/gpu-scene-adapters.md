@@ -86,6 +86,11 @@ producer is responsible for writing valid scene records, including `GPU_SCENE_AC
 active rows. GPU-authored validation can be composed explicitly when untrusted producers require
 it.
 
+The producer must also provide one exact `activeCounts` entry per preserved batch. This metadata
+distinguishes the physical high-water mark from live records when a batch contains inactive holes;
+empty batches have an active count of zero. The adapter never guesses activity by reading or
+scanning the borrowed GPU records.
+
 Because the adapter has no CPU copy of IDs or holes, table scenes expose `mutable === false`.
 CPU-authored `mutate()` and `compact()` reject; GPU workflows may still read their typed graph
 views. Replacing a table batch means creating a new adaptation for that allocation rather than
@@ -125,6 +130,7 @@ const scene = makeGPUSceneFromCPUScene(device, {
 
 ```ts
 const adapted = makeGPUScenePartitionsFromGPUTable(device, table, {
+  activeCounts: producerActiveCounts,
   columns: {
     objectId: 'featureId',
     geometryId: 'meshId'

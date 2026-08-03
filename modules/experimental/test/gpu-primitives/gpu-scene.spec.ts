@@ -145,6 +145,27 @@ test('GPUScene validates identity, layout, and borrowed ownership', async t => {
     'transforms have a fixed layout'
   );
   t.throws(
+    () => new GPUScene(device, {capacity: 1, recordCount: 1}),
+    /requires records or pre-populated buffers/,
+    'an active prefix cannot be declared over newly allocated empty storage'
+  );
+  t.throws(
+    () =>
+      new GPUScene(device, {
+        records: [{id: 1, bounds: {minimum: [0, 0, 0], maximum: [1e100, 1, 1]}}]
+      }),
+    /finite ordered minima/,
+    'finite JavaScript bounds that overflow float32 are rejected'
+  );
+  t.throws(
+    () =>
+      new GPUScene(device, {
+        records: [{id: 1, bounds, transform: Array.from({length: 16}, () => 1e100)}]
+      }),
+    /16 finite values/,
+    'finite JavaScript transforms that overflow float32 are rejected'
+  );
+  t.throws(
     () =>
       new GPUScene(device, {
         capacity: 3,
@@ -221,6 +242,20 @@ test('GPUScene mutates holes, reports overflow, and compacts in stable slot orde
     stateBufferByteLength: 16,
     outputByteLength: 528
   });
+
+  const denseUpdate = scene.mutate({update: [{id: 30, geometryId: 17}], compact: true});
+  t.equal(denseUpdate.writeCount, 2, 'dense compacting updates upload their changed records');
+  t.equal(denseUpdate.uploadedByteLength, 272);
+  const updatedBytes = await scene.recordBuffer.readAsync();
+  t.equal(
+    new DataView(updatedBytes.buffer, updatedBytes.byteOffset).getUint32(12, true),
+    17,
+    'the GPU record reflects the dense compacting update'
+  );
+
+  const denseInsertion = scene.mutate({insert: [{id: 60, bounds}], compact: true});
+  t.equal(denseInsertion.writeCount, 2, 'dense compacting insertions upload their new tail');
+  t.deepEqual(await readSceneIds(scene, 3), [30, 50, 60]);
 
   scene.destroy();
   t.end();

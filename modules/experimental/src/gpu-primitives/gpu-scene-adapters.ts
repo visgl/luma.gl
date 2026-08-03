@@ -54,6 +54,8 @@ export type GPUSceneTableAdapterProps = {
   id?: string;
   /** Optional table-column renaming. Unspecified roles use their canonical names. */
   columns?: Partial<GPUSceneTableColumnNames>;
+  /** Exact producer-known active counts, including one zero for every empty batch. */
+  activeCounts: readonly number[];
 };
 
 /** One preserved table batch and its optional nonempty zero-copy scene. */
@@ -178,7 +180,7 @@ export function makeGPUSceneFromCPUScene<Node>(
 export function makeGPUScenePartitionsFromGPUTable(
   device: Device,
   table: GPUTable,
-  props: GPUSceneTableAdapterProps = {}
+  props: GPUSceneTableAdapterProps
 ): GPUSceneTableAdapterResult {
   if (device.type !== 'webgpu') {
     throw new Error('GPU scene table adapter requires a WebGPU device');
@@ -196,6 +198,18 @@ export function makeGPUScenePartitionsFromGPUTable(
     }
     return recordBuffer;
   });
+  if (
+    !props.activeCounts ||
+    props.activeCounts.length !== table.batches.length ||
+    props.activeCounts.some(
+      (activeCount, batchIndex) =>
+        !Number.isSafeInteger(activeCount) ||
+        activeCount < 0 ||
+        activeCount > table.batches[batchIndex]!.numRows
+    )
+  ) {
+    throw new Error('GPU scene table adapter requires one exact active count per batch');
+  }
 
   const partitions: GPUSceneTablePartition[] = [];
   let firstRecord = 0;
@@ -206,6 +220,7 @@ export function makeGPUScenePartitionsFromGPUTable(
     for (let batchIndex = 0; batchIndex < table.batches.length; batchIndex++) {
       const batch = table.batches[batchIndex]!;
       const recordCount = batch.numRows;
+      const activeCount = props.activeCounts[batchIndex]!;
       const recordBuffer = recordBuffers[batchIndex];
       if (!recordBuffer) {
         partitions.push(Object.freeze({batchIndex, firstRecord, recordCount, scene: null}));
@@ -214,7 +229,7 @@ export function makeGPUScenePartitionsFromGPUTable(
 
       const stateBuffer = device.createBuffer({
         id: `${props.id ?? 'gpu-scene-table'}-batch-${batchIndex}-state`,
-        data: new Uint32Array([recordCount, recordCount, 0, 0]),
+        data: new Uint32Array([recordCount, activeCount, 0, 0]),
         usage: REQUIRED_BUFFER_USAGE
       });
       let scene: GPUScene;
@@ -223,6 +238,7 @@ export function makeGPUScenePartitionsFromGPUTable(
           id: `${props.id ?? 'gpu-scene-table'}-batch-${batchIndex}`,
           capacity: recordCount,
           recordCount,
+          activeCount,
           buffers: {records: recordBuffer, state: stateBuffer},
           ownsBuffers: {records: false, state: true}
         });

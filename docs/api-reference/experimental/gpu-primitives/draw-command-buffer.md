@@ -48,7 +48,10 @@ Borrowed buffers must already provide those usages and sufficient capacity.
 
 `getCommandByteOffset(index)` returns the record offset. `getInstanceCountByteOffset(index)` returns
 the writable count field. `getInstanceCountData(index)` returns a borrowed `GPUData<'uint32'>` over
-that field. `draw(renderPass, index)` chooses `drawIndirect` or `drawIndexedIndirect` from the
-configured type.
+that field. `importToGraph(graph)` returns the imported buffer handle plus packed command words and
+strided `instanceCounts` and `firstInstances` views, allowing graph workflows such as
+[`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation)
+to preserve geometry arguments while publishing draw selection. `draw(renderPass, index)` chooses
+`drawIndirect` or `drawIndexedIndirect` from the configured type.
 
 `destroy()` releases only owned backing storage and is idempotent.

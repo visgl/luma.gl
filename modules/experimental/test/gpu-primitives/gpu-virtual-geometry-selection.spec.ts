@@ -118,9 +118,17 @@ test('GPUVirtualGeometrySelection culls roots and deduplicates convergent activa
   );
   testCase.deepEqual(await readUint32(fixture.overflow, 1), [0]);
 
+  fixture.maximumScreenSpaceError.write(Float32Array.of(50));
+  encode(device, fixture.compiled);
+  testCase.deepEqual(
+    await readSelectedIds(fixture),
+    [101],
+    'a coarse shared parent suppresses children requested by another refining parent'
+  );
+
   testCase.equal(
     await destroyFixture(fixture),
-    2,
+    1,
     'destroying selector-owned storage does not destroy the draw command'
   );
   testCase.end();

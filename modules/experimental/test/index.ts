@@ -26,5 +26,6 @@ import './gpu-primitives/gpu-hash-index.spec';
 import './gpu-primitives/gpu-hash-join.spec';
 import './gpu-primitives/gpu-batch-hash-join.spec';
 import './gpu-primitives/gpu-scene-adapters.spec';
+import './gpu-primitives/gpu-scene-draw-generation.spec';
 import './simulation/spectral-ocean-simulation.spec';
 import './geospatial/geospatial-projection-distance.spec';

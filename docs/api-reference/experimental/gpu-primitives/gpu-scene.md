@@ -32,6 +32,10 @@ removal, `count` is the physical high-water mark and may include holes; `activeC
 number of live records. Consumers therefore combine the prefix with `flags` until compaction makes
 the two counts equal again.
 
+Pre-populated borrowed records may declare an explicit `activeCount` below their physical
+`recordCount`. Newly allocated empty storage cannot claim a positive record count, and bounds or
+transform values must remain finite after conversion to the stored `float32` representation.
+
 ### Mutation is transactional and measurable
 
 `mutate()` accepts removals, patches, insertions, and optional compaction as one transaction. The
@@ -184,5 +188,7 @@ Destroys owned buffers and leaves borrowed buffers untouched. Calling it repeate
 `GPUScene` now implements the Phase 6.1a storage and 6.1b CPU-authored mutation contracts. The
 [scene adapters](/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters) add explicit
 CPU-hierarchy and zero-copy preserved-table boundaries without changing this core storage model.
-GPU-authored record mutation, visibility policy, resource grouping, and indirect-command
-generation remain later graph workflows rather than hidden behavior inside the storage owner.
+[`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation)
+publishes active, visible rows into deterministic indirect-command slots. GPU-authored record
+mutation, visibility policy, and pipeline/resource grouping remain later graph workflows rather
+than hidden behavior inside the storage owner.

@@ -148,6 +148,60 @@ test('GPUHashIndex validates capacity, probe bounds, and aliasing', async t => {
   t.end();
 });
 
+test('GPUHashIndex accepts empty explicit-value views at the end of their buffers', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const graph = new GPUCommandGraph(device);
+  const keysBuffer = createBuffer(device, Uint32Array.of(7), Buffer.STORAGE | Buffer.COPY_DST);
+  const valuesBuffer = createBuffer(device, Uint32Array.of(70), Buffer.STORAGE | Buffer.COPY_DST);
+  const tableKeysBuffer = createOutputBuffer(device, 4);
+  const tableValuesBuffer = createOutputBuffer(device, 4);
+  const statisticsBuffer = createOutputBuffer(device, 6);
+  const keyHandle = graph.importBuffer(
+    {id: 'empty-keys', byteLength: keysBuffer.byteLength, usage: keysBuffer.usage},
+    keysBuffer
+  );
+  const valueHandle = graph.importBuffer(
+    {id: 'empty-values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
+    valuesBuffer
+  );
+  new GPUHashIndex({
+    keys: graph.createDataView(keyHandle, {format: 'uint32', length: 0, byteOffset: 4}),
+    values: graph.createDataView(valueHandle, {format: 'uint32', length: 0, byteOffset: 4}),
+    tableKeys: importView(graph, 'empty-table-keys', tableKeysBuffer, 4),
+    tableValues: importView(graph, 'empty-table-values', tableValuesBuffer, 4),
+    statistics: importView(graph, 'empty-statistics', statisticsBuffer, 6)
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder();
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+
+  const tableBytes = await tableKeysBuffer.readAsync();
+  t.deepEqual(
+    Array.from(new Uint32Array(tableBytes.buffer, tableBytes.byteOffset, 4)),
+    Array.from({length: 4}, () => GPU_HASH_INDEX_EMPTY_KEY),
+    'an empty rebuild clears every table slot without binding empty source values'
+  );
+
+  compiled.destroy();
+  for (const buffer of [
+    keysBuffer,
+    valuesBuffer,
+    tableKeysBuffer,
+    tableValuesBuffer,
+    statisticsBuffer
+  ]) {
+    buffer.destroy();
+  }
+  t.end();
+});
+
 async function runHashIndex(
   device: Device,
   inputKeys: Uint32Array,

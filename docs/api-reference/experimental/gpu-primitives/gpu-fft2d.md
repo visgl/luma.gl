@@ -103,7 +103,9 @@ type GPUFFT2DEncodeOptions = {
 
 Both buffers must belong to the transform's device, declare `Buffer.STORAGE`, and contain at least
 `stats.complexBufferByteLength` bytes. They must be separate allocations; the source is never
-modified. `encode()` returns `outputBuffer` for convenient downstream binding.
+modified. Separate wrapper objects around the same underlying `GPUBuffer` are also rejected,
+because the physical allocation would still alias across parallel butterfly invocations.
+`encode()` returns `outputBuffer` for convenient downstream binding.
 
 The normalization convention is:
 

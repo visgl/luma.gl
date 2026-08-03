@@ -200,6 +200,13 @@ export {
   makeGPUSceneFromCPUScene,
   makeGPUScenePartitionsFromGPUTable
 } from './gpu-scene-adapters';
+
+export {GPUSceneDrawGeneration} from './gpu-scene-draw-generation';
+export type {
+  GPUSceneDrawGenerationProps,
+  GPUSceneDrawGenerationStats,
+  GPUSceneDrawSource
+} from './gpu-scene-draw-generation';
 export type {
   GPUSceneCPUAdapterContext,
   GPUSceneCPUAdapterProps,
@@ -282,6 +289,7 @@ export {DrawCommandBuffer} from './draw-command-buffer';
 export type {
   DrawCommand,
   DrawCommandBufferProps,
+  DrawCommandBufferView,
   DrawIndexedCommand
 } from './draw-command-buffer';
 

@@ -49,6 +49,10 @@ Each `outputLeftRows` chunk defines the pair capacity for the corresponding inpu
 aligned `outputRightRows` chunk must have the same capacity. A dense batch may overflow while a
 neighboring sparse batch leaves unused storage; spare capacity is not borrowed across the boundary.
 
+A nonempty input batch may deliberately have zero pair capacity. Lookup and scan still publish its
+exact required count, source-aligned diagnostics, and overflow, while pair-output buffers are never
+bound. This supports count-only planning and zero-length views at the end of an allocation.
+
 This is deliberate. Cross-batch spill would turn an ordered vector into a packed global output and
 make independent replacement, accounting, and partial consumption unsafe. Applications that want
 one shared capacity should use `GPUHashJoin` on a deliberately packed input instead.

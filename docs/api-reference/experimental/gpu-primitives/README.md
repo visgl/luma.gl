@@ -1010,7 +1010,7 @@ schedule commitment.
 | 3 — Algorithm and table scaling | Multi-chunk coverage, segmented and inclusive scans, weighted statistics, richer histograms, and batch-preserving algorithms | Core implemented; topology extensions deferred | High | Large |
 | 4 — Picking and texture coverage | Region picking, asynchronous staging rings, multisample resolves, frame-scoped swapchain imports, and sampled-only external-image contracts | Implemented | Medium | Large |
 | 5 — Spatial acceleration | `GPUGridIndex` and `GPUBVH` with explicit build, update, query, correctness, and cost-comparison contracts | V1 implemented; conditional extensions deferred | High | Large |
-| 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Storage, mutation, and source adapters implemented; draw generation planned | High | Large |
+| 6 — GPUScene | A flat GPU draw database with stable identity, bounds, transforms, grouping, geometry references, and indirect command slots | Storage, mutation, source adapters, and explicit-slot draw generation implemented; grouping and consumers planned | High | Large |
 | 7 — API graduation | Stable package contracts and a dependency-safe direct move out of experimental packages | Planned | High | Large |
 
 ### Spatial v1 milestones
@@ -1063,7 +1063,6 @@ consumers.
 | 8.5 — Field and solver composition | Reusable graph-native stencil, advection, and solver building blocks behind live simulations | Two existing simulation consumers agree on field and boundary contracts | Shared primitives replace consumer-local kernels without hidden submission | High | Large |
 | 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
 | 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
-| 6.2a — Draw-command generation | Visibility and spatial results write capacity-bounded indirect slots | Tranches 6.1b and 5.4a | Parameter-only graph encodings update counts and commands without CPU draw selection | High | Large |
 | 6.2b — Pipeline/resource grouping | Stable command groups under geometry or material changes within WebGPU binding limits | Tranche 6.2a | Empty groups, regrouping, ordering, and overflow pass deterministic tests | High | Large |
 | 6.3a — Conventional scene consumer | A CPU scene graph uses shared storage, visibility, picking, and draw generation | Tranche 6.2b and Phase 4 | No consumer-specific fields or CPU draw filtering | High | Medium |
 | 6.3b — Table-oriented scene consumer | A preserved-batch table application uses the same runtime contracts | Tranches 6.1c, 6.2b, and 3.2 | Shares public primitives with 6.3a without repacking or adapter casts | High | Medium |
@@ -1074,8 +1073,8 @@ consumers.
 
 ### Recommended execution order
 
-1. Add draw-command generation (6.2a), now that storage, mutation, compaction, source adapters, and
-   grouping ownership are explicit.
+1. Add pipeline/resource grouping (6.2b) on the implemented explicit-slot draw-generation
+   contract, keeping WebGPU binding limits and regrouping costs observable.
 2. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the
    cross-chunk identity contract.
 3. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
@@ -1493,9 +1492,14 @@ Translate visibility and spatial-query results into capacity-bounded indirect-co
 by compatible pipeline and resource bindings. WebGPU binding constraints remain explicit rather
 than being presented as a bindless renderer.
 
-Tranche 6.2a establishes command-slot generation and overflow. Tranche 6.2b adds stable pipeline and
-resource grouping, including regrouping after geometry or material changes. Separating them keeps
-basic GPU draw selection reviewable before taking on renderer grouping policy.
+Tranche 6.2a is implemented by `GPUSceneDrawGeneration`. Active, optionally visible scene rows
+claim explicit fixed-capacity indirect-command slots; the lowest scene row deterministically wins a
+collision. The graph clears and publishes only instance count and first instance, preserving
+renderer-authored geometry arguments. Required and published counts plus overflow distinguish
+complete, colliding, and out-of-range results without CPU draw selection, hidden allocation,
+submission, or readback. Tranche 6.2b adds stable pipeline and resource grouping, including
+regrouping after geometry or material changes. Separating them keeps basic GPU draw selection
+reviewable before taking on renderer grouping policy.
 
 **Exit evidence:** A compiled graph updates counts and commands after parameter-only changes with
 no CPU draw selection. Tests cover empty groups, stable ordering, capacity overflow, and geometry
@@ -1629,6 +1633,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [GPU spatial query benchmark](/docs/api-reference/experimental/gpu-primitives/gpu-spatial-query-benchmark)
 - [`GPUScene`](/docs/api-reference/experimental/gpu-primitives/gpu-scene)
 - [GPUScene adapters](/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters)
+- [`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-index)
 - [`GPUHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-join)

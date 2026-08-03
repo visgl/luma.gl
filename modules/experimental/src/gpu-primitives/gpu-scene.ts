@@ -125,6 +125,8 @@ export type GPUSceneProps = {
   records?: readonly GPUSceneRecord[];
   /** Logical active-prefix length for pre-populated borrowed storage. */
   recordCount?: number;
+  /** Exact number of active rows in pre-populated borrowed storage. Defaults to recordCount. */
+  activeCount?: number;
   /** Optional compatible caller-owned record and state buffers. */
   buffers?: GPUSceneBuffers;
   /** Whether `destroy()` owns supplied buffers. Each adopted buffer may be selected independently. */
@@ -194,6 +196,7 @@ export class GPUScene {
     }
     const records = props.records ?? [];
     const recordCount = props.recordCount ?? records.length;
+    const activeCount = props.activeCount ?? recordCount;
     const capacity = props.capacity ?? records.length;
     if (!Number.isSafeInteger(capacity) || capacity < 1) {
       throw new Error('GPUScene capacity must be a positive safe integer');
@@ -202,12 +205,21 @@ export class GPUScene {
       !Number.isSafeInteger(recordCount) ||
       recordCount < 0 ||
       recordCount > capacity ||
-      records.length > capacity
+      records.length > capacity ||
+      !Number.isSafeInteger(activeCount) ||
+      activeCount < 0 ||
+      activeCount > recordCount
     ) {
       throw new Error('GPUScene record count must fit capacity');
     }
     if (records.length > 0 && recordCount !== records.length) {
       throw new Error('GPUScene recordCount must equal records.length when records are supplied');
+    }
+    if (records.length > 0 && activeCount !== records.length) {
+      throw new Error('GPUScene activeCount must equal records.length when records are supplied');
+    }
+    if (recordCount > 0 && records.length === 0 && !props.buffers) {
+      throw new Error('GPUScene positive recordCount requires records or pre-populated buffers');
     }
     if (props.buffers && records.length === 0 && props.recordCount === undefined) {
       throw new Error('GPUScene borrowed storage requires recordCount or initial records');
@@ -218,7 +230,7 @@ export class GPUScene {
     this.id = props.id ?? 'gpu-scene';
     this.capacity = capacity;
     this.highWaterMark = recordCount;
-    this.activeRecordCount = recordCount;
+    this.activeRecordCount = activeCount;
     this.mutable = records.length === recordCount;
     this.recordsBySlot = new Array(capacity);
     records.forEach((record, recordIndex) => {
@@ -352,7 +364,13 @@ export class GPUScene {
     }
 
     const overflowCount = insert.length - insertedCount;
-    const moves = mutation.compact ? this.compactRecords(this.highWaterMark, writes) : [];
+    const moves = mutation.compact
+      ? this.compactRecords(
+          this.highWaterMark,
+          writes,
+          updatedIds.length > 0 || insertedIds.length > 0
+        )
+      : [];
     if (!mutation.compact) this.trimHighWaterMark();
     writes.push({
       target: 'state',
@@ -469,7 +487,8 @@ export class GPUScene {
 
   private compactRecords(
     previousHighWaterMark: number,
-    writes: GPUSceneBufferWrite[]
+    writes: GPUSceneBufferWrite[],
+    recordsChanged: boolean
   ): GPUSceneMove[] {
     const compacted = this.recordsBySlot.filter(
       (record): record is GPUSceneRecord => record !== undefined
@@ -486,7 +505,7 @@ export class GPUScene {
       this.slotsById.set(record.id, slot);
     });
     this.highWaterMark = compacted.length;
-    if (moves.length > 0 || previousHighWaterMark > compacted.length) {
+    if (moves.length > 0 || previousHighWaterMark > compacted.length || recordsChanged) {
       const upload = new Uint8Array(previousHighWaterMark * GPU_SCENE_RECORD_BYTE_LENGTH);
       upload.set(makeRecordData(compacted));
       writes.push({target: 'records', data: upload, byteOffset: 0});
@@ -554,13 +573,18 @@ function validateRecords(records: readonly GPUSceneRecord[]): void {
     for (let axis = 0; axis < 3; axis++) {
       const minimum = record.bounds.minimum[axis];
       const maximum = record.bounds.maximum[axis];
-      if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum > maximum) {
+      if (
+        !Number.isFinite(Math.fround(minimum)) ||
+        !Number.isFinite(Math.fround(maximum)) ||
+        minimum > maximum
+      ) {
         throw new Error('GPUScene bounds must contain finite ordered minima and maxima');
       }
     }
     if (
       record.transform &&
-      (record.transform.length !== 16 || !record.transform.every(Number.isFinite))
+      (record.transform.length !== 16 ||
+        !record.transform.every(value => Number.isFinite(Math.fround(value))))
     ) {
       throw new Error('GPUScene transform must contain 16 finite values');
     }
