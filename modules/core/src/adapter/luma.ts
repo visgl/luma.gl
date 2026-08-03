@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Log} from '@probe.gl/log';
-import type {DeviceProps} from './device';
-import {Device} from './device';
+import type {Device, DeviceProps} from './device';
+import {DEVICE_DEFAULT_PROPS} from './device-defaults';
 import {Adapter} from './adapter';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
@@ -45,7 +45,7 @@ export type AttachDeviceProps = {
  */
 export class Luma {
   static defaultProps: Required<CreateDeviceProps> = {
-    ...Device.defaultProps,
+    ...DEVICE_DEFAULT_PROPS,
     type: 'best-available',
     adapters: undefined!,
     waitForPageLoad: true
