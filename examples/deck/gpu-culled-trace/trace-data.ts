@@ -7,6 +7,7 @@ import * as arrow from 'apache-arrow';
 import {
   makeTraceGroups,
   TRACE_GROUPS,
+  TRACE_SPAN_RECORD_WORD_LENGTH,
   type TraceGroupName
 } from '../../experimental/gpu-trace-viewer/trace-data';
 
@@ -34,7 +35,7 @@ export function makeDeckTraceData(count: number): DeckTraceData {
       group.data.length
     );
     for (let groupRowIndex = 0; groupRowIndex < group.count; groupRowIndex++, rowIndex++) {
-      const sourceWordOffset = groupRowIndex * 4;
+      const sourceWordOffset = groupRowIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
       const destinationWordOffset = rowIndex * 4;
       const start = groupFloats[sourceWordOffset]!;
       const duration = groupFloats[sourceWordOffset + 1]!;
