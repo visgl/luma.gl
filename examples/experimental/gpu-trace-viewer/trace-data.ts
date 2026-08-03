@@ -12,7 +12,8 @@ export const TRACE_LANE_COUNT = TRACE_THREAD_COUNT * TRACE_LANES_PER_THREAD;
 export const TRACE_SPAN_RECORD_WORD_LENGTH = 8;
 export const TRACE_DEPENDENCY_RECORD_WORD_LENGTH = 4;
 export const TRACE_SPAN_BATCH_RECORD_WORD_LENGTH = 8;
-export const TRACE_SPAN_BATCH_CAPACITY = 1_000_000;
+// One span batch maps to one portable WebGPU workgroup for candidate-driven local compaction.
+export const TRACE_SPAN_BATCH_CAPACITY = 256;
 const TRACE_DEMONSTRATION_CAPACITIES = [250_000, 1_000_000, 4_000_000, 10_000_000];
 // Keep density scrolling visually continuous at common viewport widths while retaining a fixed,
 // allocation-stable aggregation target for the compiled GPU command graph.

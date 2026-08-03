@@ -27,10 +27,14 @@ import {
 } from '../../examples/experimental/gpu-trace-viewer/trace-data';
 import {
   getBatchVisibilityShader,
+  getCandidateDensityShader,
+  getCandidateFocusShader,
+  getCandidatePickShader,
+  getCandidateVisibilityShader,
+  getDensityClearShader,
   getDependencyVisibilityShader,
-  getFocusMaskShader,
   getPickClearShader,
-  getVisibilityShader,
+  getTraceDrawCommandsShader,
   TRACE_DENSITY_RENDER_SHADER,
   TRACE_DEPENDENCY_RENDER_SHADER,
   TRACE_RENDER_SHADER
@@ -104,10 +108,17 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
     TRACE_RENDER_SHADER,
     TRACE_DEPENDENCY_RENDER_SHADER,
     TRACE_DENSITY_RENDER_SHADER,
-    getFocusMaskShader(17),
     getBatchVisibilityShader(3),
     getPickClearShader(),
-    getVisibilityShader(17, 1, 5),
+    getCandidateVisibilityShader(),
+    getCandidateFocusShader(),
+    getDensityClearShader(),
+    getCandidateDensityShader(),
+    getCandidatePickShader(),
+    getTraceDrawCommandsShader([
+      {firstBatchIndex: 0, batchCount: 2},
+      {firstBatchIndex: 2, batchCount: 1}
+    ]),
     getDependencyVisibilityShader(11)
   ];
   for (const shader of shaders) {
