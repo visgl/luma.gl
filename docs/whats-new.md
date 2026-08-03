@@ -137,8 +137,8 @@ Target Release Date: TBD
 
 **@luma.gl/webgpu**
 
-- **WGSL depth sampler reflection** - `getShaderLayoutFromWGSL()` now recognizes comparison samplers and named depth texture samplers when building sampler layouts from reflected WGSL.
-- **WGSL external textures** - Reflected `texture_external` declarations now produce external-texture bindings for native video sampling.
+- **Lightweight WGSL interface scanning** - `getShaderLayoutFromWGSL()` recognizes vertex inputs, buffer bindings, comparison and named depth samplers, storage textures, and external textures without shipping the full `wgsl_reflect` parser in the default WebGPU bundle.
+- **WGSL external textures** - Scanned `texture_external` declarations produce external-texture bindings for native video sampling.
 - **Texture default views** - WebGPU texture default views now preserve explicit `TextureProps.view` mip and array-layer ranges.
 - **Mapped buffer initialization** - WebGPU buffers can be initialized through mapped ranges without losing byte offsets or debug data.
 

@@ -71,6 +71,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 - WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
 
+**@luma.gl/webgpu**
+
+- `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
+
 **@luma.gl/arrow**
 
 - Arrow 2D text clip rectangles now require `FixedSizeList<Float32>[4]` columns, and GPU-backed

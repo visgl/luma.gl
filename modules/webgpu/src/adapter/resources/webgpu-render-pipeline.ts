@@ -1,7 +1,13 @@
 // luma.gl MIT license
 
 import type {Bindings, BindingsByGroup, RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, RenderPipelineProps, log, normalizeBindingsByGroup} from '@luma.gl/core';
+import {
+  RenderPipeline,
+  RenderPipelineProps,
+  assert,
+  log,
+  normalizeBindingsByGroup
+} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
@@ -32,10 +38,14 @@ export class WebGPURenderPipeline extends RenderPipeline {
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
-    this.shaderLayout ||= this.device.getShaderLayout((props.vs as WebGPUShader).source) || {
-      attributes: [],
-      bindings: []
-    };
+    if (!this.shaderLayout) {
+      const inferredShaderLayout = this.device.getShaderLayout((props.vs as WebGPUShader).source, {
+        vertexEntryPoint: this.props.vertexEntryPoint
+      });
+      // Raw pipelines with WGSL outside the lightweight scanner's safe subset require shaderLayout.
+      assert(inferredShaderLayout);
+      this.shaderLayout = inferredShaderLayout;
+    }
     this.handle = this.props.handle as GPURenderPipeline;
     let descriptor: GPURenderPipelineDescriptor | null = null;
     let validationPromise: Promise<void> | null = null;

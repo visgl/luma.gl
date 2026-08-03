@@ -178,20 +178,29 @@ export class Computation {
     const shaderAssembler = this.props.shaderAssembler;
     // Compute shaders require an assembler with WGSL-specific hooks and binding state.
     assert(shaderAssembler instanceof WGSLShaderAssembler);
-    const {source, getUniforms} = shaderAssembler.assembleWGSLShader({
+    const {
+      source,
+      getUniforms,
+      shaderLayout: assembledShaderLayout
+    } = shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
       modules,
       defines,
+      scanVertexAttributes: false,
       pluginInjections: resolvedPlugins.injections
     });
 
     this.source = source;
     // @ts-ignore
     this._getModuleUniforms = getUniforms;
-    const inferredShaderLayout = (
-      device as Device & {getShaderLayout?: (source: string) => any}
-    ).getShaderLayout?.(this.source);
+    const inferredShaderLayout =
+      assembledShaderLayout ??
+      (
+        device as Device & {
+          getShaderLayout?: (source: string, options?: {scanVertexAttributes?: boolean}) => any;
+        }
+      ).getShaderLayout?.(this.source, {scanVertexAttributes: false});
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(
         this.props.shaderLayout || inferredShaderLayout || null,

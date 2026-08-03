@@ -87,6 +87,8 @@ export type AssembleShaderOptions = {
   pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
   /** WGSL vertex entry point selected by the render pipeline. */
   vertexEntryPoint?: string;
+  /** Whether WGSL interface scanning should include vertex attributes. */
+  scanVertexAttributes?: boolean;
   /** WGSL fragment entry point selected by the render pipeline. */
   fragmentEntryPoint?: string;
   /** Whether to inject prologue */
@@ -166,7 +168,10 @@ export function assembleWGSLShader(
     getUniforms: assembleGetUniforms(modules),
     bindingAssignments,
     bindingTable: getShaderBindingDebugRowsFromWGSL(source, bindingAssignments),
-    shaderLayout: scanWGSLInterface(source, {vertexEntryPoint: options.vertexEntryPoint})
+    shaderLayout: scanWGSLInterface(source, {
+      vertexEntryPoint: options.vertexEntryPoint,
+      scanVertexAttributes: options.scanVertexAttributes
+    })
   };
 }
 

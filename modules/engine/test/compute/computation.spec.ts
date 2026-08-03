@@ -18,11 +18,43 @@ const source = /* WGSL*/ `\
 }
 `;
 
+const sharedSource = /* WGSL */ `\
+${source}
+
+@vertex
+fn firstVertex(@location(0) firstPosition: vec2f) -> @builtin(position) vec4f {
+  return vec4f(firstPosition, 0.0, 1.0);
+}
+
+@vertex
+fn secondVertex(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f {
+  return vec4f(secondPosition, 1.0);
+}
+`;
+
 test('Computation#construct/delete', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
-    const computation = new Computation(webgpuDevice, {source});
+    let reflectionCount = 0;
+    const originalGetShaderLayout = webgpuDevice.getShaderLayout;
+    webgpuDevice.getShaderLayout = shaderSource => {
+      reflectionCount++;
+      return originalGetShaderLayout.call(webgpuDevice, shaderSource);
+    };
+
+    let computation: Computation;
+    try {
+      computation = new Computation(webgpuDevice, {source: sharedSource});
+    } finally {
+      webgpuDevice.getShaderLayout = originalGetShaderLayout;
+    }
+
     t.ok(computation instanceof Computation, 'ComputePipeline construction successful');
+    t.equal(
+      reflectionCount,
+      0,
+      'computation scans bindings without resolving unrelated vertex entry points'
+    );
     computation.destroy();
     t.ok(computation instanceof Computation, 'ComputePipeline delete successful');
     computation.destroy();
