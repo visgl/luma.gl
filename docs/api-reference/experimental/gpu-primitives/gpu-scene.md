@@ -184,5 +184,7 @@ Destroys owned buffers and leaves borrowed buffers untouched. Calling it repeate
 `GPUScene` now implements the Phase 6.1a storage and 6.1b CPU-authored mutation contracts. The
 [scene adapters](/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters) add explicit
 CPU-hierarchy and zero-copy preserved-table boundaries without changing this core storage model.
-GPU-authored record mutation, visibility policy, resource grouping, and indirect-command
-generation remain later graph workflows rather than hidden behavior inside the storage owner.
+[`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation)
+publishes active, visible rows into deterministic indirect-command slots. GPU-authored record
+mutation, visibility policy, and pipeline/resource grouping remain later graph workflows rather
+than hidden behavior inside the storage owner.

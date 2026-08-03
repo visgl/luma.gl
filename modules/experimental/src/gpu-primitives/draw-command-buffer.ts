@@ -4,6 +4,7 @@
 
 import {Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import {GPUData} from '@luma.gl/tables';
+import {GPUCommandGraph, type GraphBufferHandle, type GraphDataView} from './gpu-command-graph';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const DRAW_RECORD_WORDS = 4;
@@ -49,6 +50,20 @@ export type DrawCommandBufferProps = {
   buffer?: Buffer;
   /** Whether `destroy()` should destroy a supplied buffer. Defaults to `false`. */
   ownsBuffer?: boolean;
+};
+
+/** Typed command-graph views over one indirect-command buffer. */
+export type DrawCommandBufferView = {
+  type: 'draw' | 'draw-indexed';
+  capacity: number;
+  recordByteLength: number;
+  buffer: GraphBufferHandle;
+  /** Packed uint32 words covering every indirect record. */
+  words: GraphDataView<'uint32'>;
+  /** Strided GPU-writable instance-count fields. */
+  instanceCounts: GraphDataView<'uint32'>;
+  /** Strided GPU-writable first-instance fields. */
+  firstInstances: GraphDataView<'uint32'>;
 };
 
 /**
@@ -150,6 +165,43 @@ export class DrawCommandBuffer {
       rowByteLength: UINT32_BYTE_LENGTH,
       ownsBuffer: false
     });
+  }
+
+  /** Imports this command buffer once and exposes its writable fields to a command graph. */
+  importToGraph<Parameters>(
+    graph: GPUCommandGraph<Parameters>,
+    id: string = this.id
+  ): DrawCommandBufferView {
+    if (graph.device !== this.device) {
+      throw new Error('DrawCommandBuffer graph must use the command buffer device');
+    }
+    const buffer = graph.importBuffer(
+      {id, byteLength: this.buffer.byteLength, usage: this.buffer.usage},
+      this.buffer
+    );
+    const recordWords = this.recordByteLength / UINT32_BYTE_LENGTH;
+    return {
+      type: this.type,
+      capacity: this.capacity,
+      recordByteLength: this.recordByteLength,
+      buffer,
+      words: graph.createDataView(buffer, {
+        format: 'uint32',
+        length: this.capacity * recordWords
+      }),
+      instanceCounts: graph.createDataView(buffer, {
+        format: 'uint32',
+        length: this.capacity,
+        byteOffset: UINT32_BYTE_LENGTH,
+        byteStride: this.recordByteLength
+      }),
+      firstInstances: graph.createDataView(buffer, {
+        format: 'uint32',
+        length: this.capacity,
+        byteOffset: this.recordByteLength - UINT32_BYTE_LENGTH,
+        byteStride: this.recordByteLength
+      })
+    };
   }
 
   /** Records one indirect draw from this buffer. */
