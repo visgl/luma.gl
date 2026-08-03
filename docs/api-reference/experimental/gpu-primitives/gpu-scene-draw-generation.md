@@ -52,12 +52,20 @@ every encoding first clears all command instance counts and first-instance field
 
 The winner's scene-record index becomes `firstInstance`. Shaders can use that index to fetch the
 record's transform, bounds, stable object ID, or renderer-owned references from the scene buffer.
+Because scene rows beyond zero produce nonzero `firstInstance` values, the device must expose the
+optional WebGPU `indirect-first-instance` feature. `addToGraph()` rejects unsupported devices
+before adding passes; applications should request the feature when creating their device.
 
 ### Visibility is optional and parameter-only
 
 Without a visibility view, every active row participates. With one, each packed `uint32` row is a
-source-aligned flag and nonzero means visible. The visibility contents may change between graph
+source-aligned flag and nonzero means visible. The view must cover the scene's entire reserved
+capacity, including currently inactive rows. The visibility contents may change between graph
 encodings; the graph does not need to be rebuilt or recompiled.
+
+Dispatch also covers the full reserved capacity rather than just the active prefix captured when
+the scene was imported. Records inserted later with `scene.mutate()` therefore participate in the
+same compiled graph immediately, while inactive spare slots remain suppressed by their scene flags.
 
 The scene and command capacities remain compile-time topology. Changing either requires building a
 new workflow so allocation, dispatch, and overflow behavior remain inspectable.
@@ -110,8 +118,8 @@ to that graph.
 
 ## Properties
 
-`stats` reports scene rows, command capacity, record size, transient ownership storage, and total
-output bytes without GPU readback.
+`stats` reports the imported scene row count, reserved scene capacity, command capacity, record
+size, transient ownership storage, and total output bytes without GPU readback.
 
 ## Current scope
 

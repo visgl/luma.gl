@@ -67,6 +67,7 @@ test('GPUSceneDrawGeneration publishes deterministic bounded commands and re-enc
   generation.addToGraph(graph);
   t.deepEqual(generation.stats, {
     recordCount: 6,
+    recordCapacity: 6,
     commandCapacity: 4,
     commandRecordByteLength: 16,
     transientByteLength: 40,
@@ -167,6 +168,101 @@ test('GPUSceneDrawGeneration supports indexed commands, inactive rows, and valid
   );
 
   compiled.destroy();
+  scene.destroy();
+  commands.destroy();
+  required.buffer.destroy();
+  published.buffer.destroy();
+  overflow.buffer.destroy();
+  t.end();
+});
+
+test('GPUSceneDrawGeneration discovers inserted records across the full scene capacity', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const scene = new GPUScene(device, {capacity: 2});
+  const commands = new DrawCommandBuffer(device, {
+    type: 'draw',
+    commands: [3, 4].map(vertexCount => ({
+      vertexCount,
+      instanceCount: 0,
+      firstVertex: 0,
+      firstInstance: 0
+    }))
+  });
+  const graph = new GPUCommandGraph(device, {id: 'growing-scene-draw-generation-test'});
+  const required = makeScalar(device, graph, 'growing-required');
+  const published = makeScalar(device, graph, 'growing-published');
+  const overflow = makeScalar(device, graph, 'growing-overflow');
+  const generation = new GPUSceneDrawGeneration({
+    scene: scene.importToGraph(graph),
+    commands: commands.importToGraph(graph),
+    requiredCount: required.view,
+    publishedCount: published.view,
+    overflow: overflow.view
+  });
+  generation.addToGraph(graph);
+  t.equal(generation.stats.recordCount, 0, 'the imported active prefix starts empty');
+  t.equal(generation.stats.recordCapacity, 2, 'dispatch spans the reserved record capacity');
+
+  const compiled = graph.compile();
+  await encodeAndSubmit(device, compiled);
+  t.deepEqual(await readDiagnostics(required.buffer, published.buffer, overflow.buffer), [0, 0, 0]);
+
+  scene.mutate({
+    insert: [
+      {id: 30, bounds: BOUNDS, commandSlot: 0},
+      {id: 31, bounds: BOUNDS, commandSlot: 1}
+    ]
+  });
+  await encodeAndSubmit(device, compiled);
+  t.deepEqual(await readDrawWords(commands), [3, 1, 0, 0, 4, 1, 0, 1]);
+  t.deepEqual(await readDiagnostics(required.buffer, published.buffer, overflow.buffer), [2, 2, 0]);
+
+  compiled.destroy();
+  scene.destroy();
+  commands.destroy();
+  required.buffer.destroy();
+  published.buffer.destroy();
+  overflow.buffer.destroy();
+  t.end();
+});
+
+test('GPUSceneDrawGeneration rejects devices without indirect-first-instance', async t => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device || device.features.has('indirect-first-instance')) {
+    t.comment('A WebGPU device without indirect-first-instance is not available');
+    t.end();
+    return;
+  }
+
+  const scene = new GPUScene(device, {capacity: 1});
+  const commands = new DrawCommandBuffer(device, {
+    type: 'draw',
+    commands: [{vertexCount: 3, instanceCount: 0, firstVertex: 0, firstInstance: 0}]
+  });
+  const graph = new GPUCommandGraph(device, {id: 'unsupported-scene-draw-generation-test'});
+  const required = makeScalar(device, graph, 'unsupported-required');
+  const published = makeScalar(device, graph, 'unsupported-published');
+  const overflow = makeScalar(device, graph, 'unsupported-overflow');
+  const generation = new GPUSceneDrawGeneration({
+    scene: scene.importToGraph(graph),
+    commands: commands.importToGraph(graph),
+    requiredCount: required.view,
+    publishedCount: published.view,
+    overflow: overflow.view
+  });
+
+  t.throws(
+    () => generation.addToGraph(graph),
+    /indirect-first-instance/,
+    'nonzero first-instance publication requires the optional WebGPU feature'
+  );
+
   scene.destroy();
   commands.destroy();
   required.buffer.destroy();

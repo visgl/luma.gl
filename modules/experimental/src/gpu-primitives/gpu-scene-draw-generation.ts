@@ -43,6 +43,7 @@ export type GPUSceneDrawGenerationProps = {
 /** CPU-visible storage and dispatch facts for {@link GPUSceneDrawGeneration}. */
 export type GPUSceneDrawGenerationStats = {
   recordCount: number;
+  recordCapacity: number;
   commandCapacity: number;
   commandRecordByteLength: number;
   transientByteLength: number;
@@ -89,9 +90,10 @@ export class GPUSceneDrawGeneration {
 
     this.stats = Object.freeze({
       recordCount: this.scene.recordCount,
+      recordCapacity: this.scene.flags.length,
       commandCapacity: this.commands.capacity,
       commandRecordByteLength: this.commands.recordByteLength,
-      transientByteLength: (this.commands.capacity + this.scene.recordCount) * UINT32_BYTE_LENGTH,
+      transientByteLength: (this.commands.capacity + this.scene.flags.length) * UINT32_BYTE_LENGTH,
       outputByteLength:
         this.commands.capacity * this.commands.recordByteLength + 3 * UINT32_BYTE_LENGTH
     });
@@ -99,6 +101,9 @@ export class GPUSceneDrawGeneration {
 
   /** Adds deterministic initialize, eligibility, claim, and publish passes to the target graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+    if (!graph.device.features.has('indirect-first-instance')) {
+      throw new Error(`${this.id} requires the indirect-first-instance device feature`);
+    }
     const views = [
       this.scene.flags,
       this.scene.commandSlots,
@@ -124,14 +129,13 @@ export class GPUSceneDrawGeneration {
       graph,
       `${this.id}-eligibility`,
       'uint32',
-      this.scene.recordCount
+      this.scene.flags.length
     );
     const sceneRecords = graph.createDataView(this.scene.flags.buffer, {
       format: 'uint32',
       length: this.scene.flags.buffer.byteLength / UINT32_BYTE_LENGTH
     });
     addInitializePass(graph, this, owners);
-    if (this.scene.recordCount === 0) return;
     addEligibilityPass(graph, this, sceneRecords, eligibility);
     addClaimPass(graph, this, eligibility, owners);
     addPublishPass(graph, this, eligibility, owners);
@@ -145,7 +149,7 @@ function addEligibilityPass<Parameters>(
   eligibility: GraphDataView<'uint32'>
 ): void {
   const dispatch = getDispatchLayout(
-    generation.scene.recordCount,
+    generation.scene.flags.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const visibilityDeclaration = generation.visibility
@@ -160,7 +164,7 @@ function addEligibilityPass<Parameters>(
   addComputationPass(graph, {
     id: `${generation.id}-eligibility`,
     source: `${makeDispatchConstants(dispatch)}
-const RECORD_COUNT: u32 = ${generation.scene.recordCount}u;
+const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const FLAGS_VECTOR_OFFSET: u32 = ${Math.floor(generation.scene.flags.byteOffset / 16)}u;
 const FLAGS_VECTOR_STRIDE: u32 = ${generation.scene.flags.byteStride / 16}u;
 const FLAGS_COMPONENT: u32 = ${(generation.scene.flags.byteOffset % 16) / UINT32_BYTE_LENGTH}u;
@@ -262,13 +266,13 @@ function addClaimPass<Parameters>(
   owners: GraphDataView<'uint32'>
 ): void {
   const dispatch = getDispatchLayout(
-    generation.scene.recordCount,
+    generation.scene.flags.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   addComputationPass(graph, {
     id: `${generation.id}-claim`,
     source: `${makeDispatchConstants(dispatch)}
-const RECORD_COUNT: u32 = ${generation.scene.recordCount}u;
+const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
 const SLOTS_OFFSET: u32 = ${getViewElementOffset(generation.scene.commandSlots)}u;
 const SLOTS_STRIDE: u32 = ${generation.scene.commandSlots.byteStride / UINT32_BYTE_LENGTH}u;
@@ -324,13 +328,13 @@ function addPublishPass<Parameters>(
   const recordWords = generation.commands.recordByteLength / UINT32_BYTE_LENGTH;
   const firstInstanceWord = recordWords - 1;
   const dispatch = getDispatchLayout(
-    generation.scene.recordCount,
+    generation.scene.flags.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   addComputationPass(graph, {
     id: `${generation.id}-publish`,
     source: `${makeDispatchConstants(dispatch)}
-const RECORD_COUNT: u32 = ${generation.scene.recordCount}u;
+const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
 const RECORD_WORDS: u32 = ${recordWords}u;
 const FIRST_INSTANCE_WORD: u32 = ${firstInstanceWord}u;
@@ -439,7 +443,8 @@ function validateSceneSource(
     !Number.isSafeInteger(scene.recordCount) ||
     scene.recordCount < 0 ||
     scene.recordCount > scene.flags.length ||
-    scene.recordCount > scene.commandSlots.length
+    scene.recordCount > scene.commandSlots.length ||
+    scene.flags.length !== scene.commandSlots.length
   ) {
     throw new Error(`${id} scene recordCount must fit its field views`);
   }
@@ -453,8 +458,8 @@ function validateSceneSource(
   }
   if (visibility) {
     validatePackedUint32View(visibility, `${id} visibility`);
-    if (visibility.length < scene.recordCount) {
-      throw new Error(`${id} visibility must contain one row per scene record`);
+    if (visibility.length < scene.flags.length) {
+      throw new Error(`${id} visibility must contain one row per scene capacity`);
     }
   }
 }
