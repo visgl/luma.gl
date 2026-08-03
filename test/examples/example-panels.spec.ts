@@ -10,6 +10,7 @@ import {
   makeHtmlCustomPanel,
   makeInlineSettingsSchema
 } from '../../examples/example-panels';
+import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../examples/example-theme';
 import {
   ArrowExamplePanelManager,
   makeArrowExamplePanelHostHtml
@@ -77,6 +78,75 @@ const MULTI_SELECT_SETTINGS_SCHEMA: SettingsSchema = {
 };
 
 describe('ExampleSettingsPanelManager', () => {
+  test('applies the shared cinematic semantic visual tokens', () => {
+    const hostElement = document.createElement('div');
+
+    applyExampleTheme(hostElement, 'cinematic');
+
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-surface-raised')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surfaceRaised
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-border')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.border
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.text
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text-muted')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.textMuted
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.accent
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-radius')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.radius
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-shadow')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.shadow
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-backdrop')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.backdrop
+    );
+  });
+
+  test('replaces cinematic visual tokens with the light appearance', () => {
+    const hostElement = document.createElement('div');
+
+    applyExampleTheme(hostElement, 'cinematic');
+    applyExampleTheme(hostElement, 'light');
+
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.light.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-surface-raised')).toBe(
+      EXAMPLE_THEME_TOKENS.light.surfaceRaised
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-border')).toBe(
+      EXAMPLE_THEME_TOKENS.light.border
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text')).toBe(
+      EXAMPLE_THEME_TOKENS.light.text
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text-muted')).toBe(
+      EXAMPLE_THEME_TOKENS.light.textMuted
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe(
+      EXAMPLE_THEME_TOKENS.light.accent
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-radius')).toBe(
+      EXAMPLE_THEME_TOKENS.light.radius
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-shadow')).toBe(
+      EXAMPLE_THEME_TOKENS.light.shadow
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-backdrop')).toBe(
+      EXAMPLE_THEME_TOKENS.light.backdrop
+    );
+  });
+
   test('configures the shared cinematic card appearance for panel content', () => {
     const hostElement = document.createElement('div');
 
@@ -86,6 +156,12 @@ describe('ExampleSettingsPanelManager', () => {
     expect(hostElement.dataset.examplePanelAppearance).toBe('cinematic');
     expect(hostElement.style.getPropertyValue('--menu-background')).toBe('rgb(8, 15, 27)');
     expect(hostElement.style.getPropertyValue('--menu-shadow')).toBe('none');
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.accent
+    );
 
     const cardElement = document.createElement('section');
     const inheritedHostElement = document.createElement('div');
@@ -94,6 +170,41 @@ describe('ExampleSettingsPanelManager', () => {
     configurePanelHostElement(inheritedHostElement);
 
     expect(inheritedHostElement.dataset.examplePanelAppearance).toBe('cinematic');
+    expect(inheritedHostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surface
+    );
+    expect(inheritedHostElement.style.getPropertyValue('--luma-example-backdrop')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.backdrop
+    );
+  });
+
+  test('inherits the light appearance and preserves the panel framework background', () => {
+    const cardElement = document.createElement('section');
+    const hostElement = document.createElement('div');
+    cardElement.dataset.infoBoxAppearance = 'light';
+    cardElement.appendChild(hostElement);
+
+    configurePanelHostElement(hostElement);
+
+    expect(hostElement.dataset.examplePanelAppearance).toBe('light');
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.light.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text')).toBe(
+      EXAMPLE_THEME_TOKENS.light.text
+    );
+    expect(hostElement.style.getPropertyValue('--menu-background')).toBe('rgb(255, 255, 255)');
+  });
+
+  test('leaves unthemed hosts available for inherited semantic visual tokens', () => {
+    const hostElement = document.createElement('div');
+
+    configurePanelHostElement(hostElement);
+
+    expect(hostElement.dataset.examplePanelAppearance).toBe('inherit');
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe('');
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe('');
+    expect(hostElement.style.getPropertyValue('--menu-background')).toBe('transparent');
   });
 
   test('registers descriptors and forwards structured changes', () => {

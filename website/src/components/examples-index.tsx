@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {useDocsSidebar, useDocsVersion} from '@docusaurus/plugin-content-docs/client';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import {ExampleCard} from './example-card';
 import styles from './examples-index.module.css';
 
 type ExampleBackend = 'webgpu' | 'webgl2';
@@ -105,7 +106,13 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredCatalog = catalog.filter(item => {
-    const searchableText = [item.label, item.description, item.category, item.display, ...item.topics]
+    const searchableText = [
+      item.label,
+      item.description,
+      item.category,
+      item.display,
+      ...item.topics
+    ]
       .join(' ')
       .toLowerCase();
     return (
@@ -118,86 +125,127 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
     );
   });
   const categories = groupByCategory(filteredCatalog);
+  const activeFilterCount =
+    [backend, difficulty, displayMode, maturity, topic].filter(value => value !== 'all').length +
+    Number(Boolean(query));
+
+  const clearFilters = () => {
+    setQuery('');
+    setBackend('all');
+    setDifficulty('all');
+    setDisplayMode('all');
+    setMaturity('all');
+    setTopic('all');
+  };
 
   return (
     <div className={styles.mainExamples}>
       <div className={styles.catalogControls} aria-label="Filter examples">
-        <input
-          type="search"
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder="Search examples, APIs, and topics…"
-          aria-label="Search examples"
-        />
-        <FilterSelect
-          label="Backend"
-          value={backend}
-          onChange={setBackend}
-          options={['webgpu', 'webgl2']}
-        />
-        <FilterSelect
-          label="Difficulty"
-          value={difficulty}
-          onChange={setDifficulty}
-          options={['tutorial', 'intermediate', 'advanced']}
-        />
-        <FilterSelect
-          label="Display"
-          value={displayMode}
-          onChange={setDisplayMode}
-          options={['hdr-capable', 'standard']}
-        />
-        <FilterSelect
-          label="Maturity"
-          value={maturity}
-          onChange={setMaturity}
-          options={['stable', 'experimental']}
-        />
-        <FilterSelect label="Topic" value={topic} onChange={setTopic} options={topics} />
+        <div className={styles.controlsHeading}>
+          <div>
+            <p className={styles.controlsEyebrow}>Realtime GPU experiments</p>
+            <p className={styles.controlsIntroduction}>
+              Explore rendering techniques, visual simulations, and interactive data.
+            </p>
+          </div>
+          <span className={styles.catalogCount}>{catalog.length} demos</span>
+        </div>
+
+        <div className={styles.searchField}>
+          <svg className={styles.searchIcon} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="5.25" />
+            <path d="m12.5 12.5 4.25 4.25" />
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search examples, APIs, and techniques…"
+            aria-label="Search examples"
+          />
+        </div>
+
+        <div className={styles.filterGrid}>
+          <FilterSelect
+            label="Backend"
+            value={backend}
+            onChange={setBackend}
+            options={['webgpu', 'webgl2']}
+          />
+          <FilterSelect
+            label="Difficulty"
+            value={difficulty}
+            onChange={setDifficulty}
+            options={['tutorial', 'intermediate', 'advanced']}
+          />
+          <FilterSelect
+            label="Display"
+            value={displayMode}
+            onChange={setDisplayMode}
+            options={['hdr-capable', 'standard']}
+          />
+          <FilterSelect
+            label="Maturity"
+            value={maturity}
+            onChange={setMaturity}
+            options={['stable', 'experimental']}
+          />
+          <FilterSelect label="Topic" value={topic} onChange={setTopic} options={topics} />
+        </div>
       </div>
-      <p className={styles.resultsSummary} aria-live="polite">
-        Showing {filteredCatalog.length} of {catalog.length} examples
-      </p>
+
+      <div className={styles.resultsBar}>
+        <p className={styles.resultsSummary} aria-live="polite">
+          Showing {filteredCatalog.length} of {catalog.length} examples
+        </p>
+        {activeFilterCount > 0 ? (
+          <button className={styles.clearFilters} type="button" onClick={clearFilters}>
+            Clear {activeFilterCount === 1 ? 'filter' : `${activeFilterCount} filters`}
+          </button>
+        ) : null}
+      </div>
+
       {categories.map(([category, items]) => (
         <section className={styles.exampleSection} key={category}>
-          <h2 className={styles.exampleHeader}>{category}</h2>
+          <div className={styles.sectionHeading}>
+            <div>
+              <p className={styles.sectionEyebrow}>{getCategoryEyebrow(category)}</p>
+              <h2 className={styles.exampleHeader}>{category}</h2>
+            </div>
+            <span className={styles.sectionCount} aria-label={`${items.length} examples`}>
+              {String(items.length).padStart(2, '0')}
+            </span>
+          </div>
           <div className={styles.examplesGroup}>
             {items.map(item => {
               const thumbnail = getThumbnail(item);
               const imageUrl = `${baseUrl}${thumbnail.replace(/^\//, '')}`;
               return (
-                <a
-                  className={styles.exampleCard}
+                <ExampleCard
                   key={item.href || item.docId || item.label}
                   href={item.href}
-                >
-                  <img src={imageUrl} alt="" />
-                  <div className={styles.cardBody}>
-                    <h3>{item.label}</h3>
-                    <p>{item.description}</p>
-                    <div className={styles.badges}>
-                      {item.backends.map(value => (
-                        <span className={styles.badge} key={value}>
-                          {value}
-                        </span>
-                      ))}
-                      {item.display === 'hdr-capable' ? (
-                        <span className={styles.badge}>HDR</span>
-                      ) : null}
-                      <span className={styles.badge}>{item.difficulty}</span>
-                      {item.maturity === 'experimental' ? (
-                        <span className={styles.badge}>experimental</span>
-                      ) : null}
-                    </div>
-                  </div>
-                </a>
+                  imageUrl={imageUrl}
+                  title={item.label}
+                  description={item.description}
+                  category={item.category}
+                  backends={item.backends}
+                  highDynamicRange={item.display === 'hdr-capable'}
+                  difficulty={item.difficulty}
+                  maturity={item.maturity}
+                  topics={item.topics}
+                />
               );
             })}
           </div>
         </section>
       ))}
       {filteredCatalog.length === 0 ? (
-        <p className={styles.resultsSummary}>No examples match the selected filters.</p>
+        <div className={styles.emptyState}>
+          <p>No examples match the selected filters.</p>
+          <button className={styles.clearFilters} type="button" onClick={clearFilters}>
+            Clear all filters
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -312,6 +360,17 @@ function groupByCategory(items: CatalogItem[]): Array<[string, CatalogItem[]]> {
     groups.set(item.category, group);
   }
   return [...groups.entries()];
+}
+
+function getCategoryEyebrow(category: string): string {
+  if (category === 'WebGPU') return 'Next-generation graphics';
+  if (category === 'Showcase') return 'Featured experiences';
+  if (category === 'Tutorials') return 'Learn by building';
+  if (category === 'Experimental') return 'Emerging techniques';
+  if (category === 'Integrations') return 'Works with your stack';
+  if (category.includes('Arrow') || category.includes('Data')) return 'GPU-native data';
+  if (category.includes('Command Graph')) return 'Compute pipelines';
+  return 'Core capabilities';
 }
 
 function formatLabel(value: string): string {

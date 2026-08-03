@@ -1,0 +1,293 @@
+.card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--luma-example-border, rgba(148, 163, 184, 0.2));
+  border-radius: var(--luma-example-radius, 16px);
+  background: var(--luma-example-surface, rgba(10, 17, 29, 0.96));
+  box-shadow: var(--luma-example-shadow, 0 18px 42px rgba(2, 6, 23, 0.2));
+  color: var(--luma-example-text, #f1f5f9);
+  text-decoration: none;
+  isolation: isolate;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.card::after {
+  position: absolute;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: inherit;
+  content: '';
+  inset: 0;
+  pointer-events: none;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--luma-example-card-accent, var(--luma-example-accent, #67e8f9));
+  box-shadow:
+    0 24px 56px rgba(2, 6, 23, 0.3),
+    0 0 0 1px color-mix(in srgb, var(--luma-example-card-accent, #67e8f9) 35%, transparent);
+  color: var(--luma-example-text, #f1f5f9);
+  text-decoration: none;
+  transform: translateY(-4px);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--luma-example-card-accent, var(--luma-example-accent, #67e8f9));
+  outline-offset: 4px;
+}
+
+.poster {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: var(--luma-example-surface-raised, #111c2c);
+}
+
+.poster::after {
+  position: absolute;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.48), transparent 38%),
+    linear-gradient(0deg, rgba(2, 6, 23, 0.3), transparent 42%);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+}
+
+.posterImage {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    opacity 180ms ease,
+    transform 420ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.posterBackdrop {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  filter: blur(18px) saturate(0.8);
+  inset: 0;
+  object-fit: cover;
+  opacity: 0.68;
+  transform: scale(1.12);
+}
+
+.posterPreserved {
+  object-fit: contain;
+}
+
+.card:hover .posterImage,
+.card:focus-visible .posterImage {
+  transform: scale(1.035);
+}
+
+.posterFallback {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse at 70% 18%,
+      color-mix(in srgb, var(--luma-example-card-accent, #67e8f9) 24%, transparent),
+      transparent 48%
+    ),
+    radial-gradient(ellipse at 18% 88%, rgba(99, 102, 241, 0.21), transparent 52%),
+    linear-gradient(145deg, #111c2c, #070d18);
+  inset: 0;
+}
+
+.fallbackMark {
+  width: 76px;
+  color: var(--luma-example-card-accent, var(--luma-example-accent, #67e8f9));
+  filter: drop-shadow(0 0 16px currentColor);
+  opacity: 0.68;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.35;
+}
+
+.fallbackLabel {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  left: 18px;
+  overflow: hidden;
+  color: rgba(226, 232, 240, 0.8);
+  font-size: 0.69rem;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.capabilities {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  left: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.capability {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  background: rgba(6, 12, 23, 0.82);
+  backdrop-filter: blur(12px);
+  color: #e2e8f0;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  padding: 6px 8px;
+}
+
+.webgpu {
+  border-color: rgba(103, 232, 249, 0.3);
+  color: #a5f3fc;
+}
+
+.webgl {
+  border-color: rgba(134, 239, 172, 0.25);
+  color: #bbf7d0;
+}
+
+.hdr {
+  border-color: rgba(252, 211, 77, 0.34);
+  background: rgba(59, 36, 6, 0.76);
+  color: #fde68a;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  min-height: 188px;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding: 17px 17px 16px;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.category {
+  overflow: hidden;
+  color: var(--luma-example-card-accent, var(--luma-example-accent, #67e8f9));
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.085em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.actionIcon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: var(--luma-example-text-muted, #94a3b8);
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.card:hover .actionIcon,
+.card:focus-visible .actionIcon {
+  color: var(--luma-example-card-accent, var(--luma-example-accent, #67e8f9));
+  transform: translate(2px, -2px);
+}
+
+.title {
+  margin: 0;
+  color: var(--luma-example-text, #f1f5f9);
+  font-size: 1.065rem;
+  font-weight: 720;
+  letter-spacing: -0.024em;
+  line-height: 1.3;
+}
+
+.description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 7px 0 15px;
+  color: var(--luma-example-text-muted, #94a3b8);
+  font-size: 0.805rem;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.metadataBadge {
+  border: 1px solid var(--luma-example-border, rgba(148, 163, 184, 0.2));
+  border-radius: 999px;
+  background: var(--luma-example-surface-raised, rgba(30, 41, 59, 0.64));
+  color: var(--luma-example-text-muted, #a9b6c9);
+  font-size: 0.66rem;
+  font-weight: 590;
+  line-height: 1.15;
+  padding: 4px 7px;
+}
+
+.experimental {
+  border-color: rgba(196, 181, 253, 0.25);
+  color: #ddd6fe;
+}
+
+@media screen and (max-width: 540px) {
+  .content {
+    min-height: 168px;
+    padding: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .posterImage,
+  .actionIcon {
+    transition: none;
+  }
+
+  .card:hover,
+  .card:focus-visible,
+  .card:hover .posterImage,
+  .card:focus-visible .posterImage,
+  .card:hover .actionIcon,
+  .card:focus-visible .actionIcon {
+    transform: none;
+  }
+}
