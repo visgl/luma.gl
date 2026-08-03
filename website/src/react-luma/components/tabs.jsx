@@ -1,6 +1,6 @@
 import React, {Children, useState} from 'react';
 import clsx from 'clsx';
-import {getNextKeyboardTab} from './tab-navigation';
+import {handleKeyboardTabNavigation} from './tab-navigation';
 import styles from './tabs.module.css';
 
 export const Tabs = props => {
@@ -13,16 +13,6 @@ export const Tabs = props => {
   if (!tabs.some(e => (e.props.tag || e.props.title) === selected)) {
     selected = selectedItem;
   }
-
-  const handleKeyboardNavigation = event => {
-    const nextTab = getNextKeyboardTab(event.currentTarget, event.key);
-    if (!nextTab) {
-      return;
-    }
-    nextTab.focus();
-    nextTab.click();
-    event.preventDefault();
-  };
 
   return (
     <>
@@ -45,12 +35,13 @@ export const Tabs = props => {
               aria-selected={isSelected}
               aria-disabled={tab.props.disabled || undefined}
               disabled={tab.props.disabled}
+              tabIndex={isSelected && !tab.props.disabled ? 0 : -1}
               onClick={() => {
                 if (!tab.props.disabled) {
                   setSelected(tabIdentifier);
                 }
               }}
-              onKeyDown={handleKeyboardNavigation}
+              onKeyDown={handleKeyboardTabNavigation}
             >
               <span className={styles.backendIndicator} aria-hidden="true" />
               <span className={styles.label}>{tab.props.label || tab.props.title}</span>
