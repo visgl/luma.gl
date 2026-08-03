@@ -221,6 +221,20 @@ export type {
   GPUSceneResourceGroupsProps,
   GPUSceneResourceGroupsStats
 } from './gpu-scene-resource-groups';
+
+export {
+  GPUTraceScene,
+  GPU_TRACE_LINK_RECORD_WORD_LENGTH,
+  GPU_TRACE_SPAN_RECORD_WORD_LENGTH
+} from './gpu-trace-scene';
+export type {
+  GPUTraceSceneAdjacency,
+  GPUTraceSceneBuffers,
+  GPUTraceScenePartition,
+  GPUTraceSceneProps,
+  GPUTraceSceneStats,
+  GPUTraceSceneView
+} from './gpu-trace-scene';
 export type {
   GPUSceneCPUAdapterContext,
   GPUSceneCPUAdapterProps,

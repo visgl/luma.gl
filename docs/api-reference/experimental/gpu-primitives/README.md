@@ -1065,6 +1065,9 @@ consumers.
 | 3.3 — Extension decision gate | Decide sparse or multidimensional histograms, custom scans, and shader extension points separately | Tranche 3.2 plus at least two requesting consumers | Each proposal is accepted with a fixed contract or explicitly deferred with evidence | Medium | Small |
 | 6.3a — Conventional scene consumer | A CPU scene graph uses shared storage, visibility, picking, and draw generation | Tranche 6.2b and Phase 4 | No consumer-specific fields or CPU draw filtering | High | Medium |
 | 6.3b — Table-oriented scene consumer | A preserved-batch table application uses the same runtime contracts | Tranches 6.1c, 6.2b, and 3.2 | Shares public primitives with 6.3a without repacking or adapter casts | High | Medium |
+| T.1 — Canonical GPU trace scene | Stable spans, process/thread ownership, preserved source partitions, parents, dependency CSR, and generic scene projection | Implemented `GPUScene`, draw generation, and renderer-owned resource groups | Source identity, empty/uneven batches, bidirectional links, ownership, and scene draw/group integration pass GPU tests | High | Medium |
+| T.2 — Interactive GPU trace policies | Time windows, process/thread expansion, linked-span focus, ancestor retention, and stable indirect draws | Tranche T.1 plus hierarchy, mask, traversal, and visibility workflows | Policy-only updates reuse one graph with CPU-oracle parity and no readback | High | Large |
+| T.3 — Scene-backed trace showcase | A live trace explorer combines canonical trace scenes, GPU interactions, picking, resource groups, and timing | Tranche T.2 plus existing picking and graph-inspection contracts | Representative traces pan, filter, collapse, focus, and pick without CPU draw selection | High | Large |
 | 7.1 — Dependency audit and API freeze | Freeze names, ownership, failures, capacities, submission, and package graph | Phase 6 exits and two consumers per graduation candidate | Acyclic dependency report and owner for every public resource boundary | High | Medium |
 | 7.2 — Scheduling-core extraction | Move table-independent graph scheduling directly to `@luma.gl/engine` | Tranche 7.1 | Engine builds without tables, gpgpu, or Arrow; all repository imports use the final owner | High | Large |
 | 7.3 — Adapter and algorithm migration | Keep table adapters in `@luma.gl/tables`; move optional workflows to `@luma.gl/gpgpu` | Tranche 7.2 | Package tests enforce dependency direction and examples use final owners | High | Large |
@@ -1074,12 +1077,14 @@ consumers.
 
 1. Add a conventional scene consumer (6.3a) to prove shared visibility, picking, generated draws,
    and renderer-owned resource groups without consumer-specific scene fields.
-2. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the
+2. Build on the implemented canonical trace-scene foundation (T.1) with GPU-native interaction
+   policies (T.2), then demonstrate them in a scene-backed trace showcase (T.3).
+3. Add partitioned topology (3.2) when a preserved-batch hierarchy or CSR consumer fixes the
    cross-chunk identity contract.
-3. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
+4. Reopen incremental grid maintenance, spatial BVH rebuild, or ray traversal only when the
    documented decision gate gains a requesting consumer and positive evidence.
-4. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
-5. Develop the larger compute vocabulary independently where contracts are already bounded:
+5. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
+6. Develop the larger compute vocabulary independently where contracts are already bounded:
    `GPUHashIndex` build/query, bounded many-to-one `GPUHashJoin`, and shared-right
    `GPUBatchHashJoin` are implemented; require consumers and measurements before adding mutable
    maintenance, partitioned-right routing, multi-match joins, sparse graph algorithms, or
@@ -1636,6 +1641,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [GPUScene adapters](/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters)
 - [`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-draw-generation)
 - [`GPUSceneResourceGroups`](/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups)
+- [`GPUTraceScene`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-index)
 - [`GPUHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-join)

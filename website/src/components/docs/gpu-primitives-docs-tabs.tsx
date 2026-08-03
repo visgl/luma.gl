@@ -28,6 +28,7 @@ export type GPUPrimitivesDocsTabId =
   | 'scene-adapters'
   | 'scene-draw-generation'
   | 'scene-resource-groups'
+  | 'trace-scene'
   | 'group-aggregation'
   | 'hash-index'
   | 'hash-join'
@@ -166,6 +167,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'scene-resource-groups',
     label: 'Scene Groups',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-scene-resource-groups'
+  },
+  {
+    id: 'trace-scene',
+    label: 'Trace Scene',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-trace-scene'
   },
   {
     id: 'group-aggregation',
