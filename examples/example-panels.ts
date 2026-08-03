@@ -20,6 +20,7 @@ import {
 } from '@deck.gl-community/panels';
 import {Fragment, h, render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
+import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from './example-theme';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
 const EXAMPLE_PANEL_HOST_ATTRIBUTE = 'data-example-panel-host';
@@ -34,21 +35,21 @@ const EXAMPLE_PANEL_STYLE = `
   display: none !important;
 }
 [data-example-panel-host][${EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE}='cinematic'] [data-panel-theme-mode] {
-  --button-background: rgba(15, 23, 42, 0.72) !important;
+  --button-background: var(--luma-example-surface-raised, rgba(15, 23, 42, 0.72)) !important;
   --button-icon-hover: rgb(240, 249, 255) !important;
-  --button-icon-idle: rgb(148, 163, 184) !important;
-  --button-stroke: rgba(148, 163, 184, 0.24) !important;
-  --button-text: rgb(226, 232, 240) !important;
+  --button-icon-idle: var(--luma-example-text-muted, rgb(148, 163, 184)) !important;
+  --button-stroke: var(--luma-example-border, rgba(148, 163, 184, 0.24)) !important;
+  --button-text: var(--luma-example-text, rgb(226, 232, 240)) !important;
   --menu-background: transparent !important;
   --menu-border-color: rgba(148, 163, 184, 0.2) !important;
   --menu-divider: rgba(148, 163, 184, 0.18) !important;
   --menu-item-hover: rgba(125, 211, 252, 0.12) !important;
-  --menu-text: rgb(226, 232, 240) !important;
+  --menu-text: var(--luma-example-text, rgb(226, 232, 240)) !important;
   --menu-weak-background: rgba(15, 23, 42, 0.48) !important;
-  --range-decoration-active-color: rgb(56, 189, 248) !important;
+  --range-decoration-active-color: var(--luma-example-accent, rgb(56, 189, 248)) !important;
   --range-thumb-color: rgb(125, 211, 252) !important;
   --range-track-color: rgba(71, 85, 105, 0.8) !important;
-  color: rgb(226, 232, 240);
+  color: var(--luma-example-text, rgb(226, 232, 240));
   color-scheme: dark;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] > label,
@@ -479,14 +480,15 @@ export function configurePanelHostElement(
   hostElement.style.minWidth = '0';
   hostElement.style.width = '100%';
   hostElement.setAttribute(EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE, resolvedAppearance);
+  if (resolvedAppearance === 'cinematic' || resolvedAppearance === 'light') {
+    applyExampleTheme(hostElement, resolvedAppearance);
+  }
   hostElement.style.setProperty('--menu-backdrop-filter', 'unset');
   hostElement.style.setProperty(
     '--menu-background',
-    resolvedAppearance === 'cinematic'
-      ? 'rgb(8, 15, 27)'
-      : resolvedAppearance === 'light'
-        ? 'rgb(255, 255, 255)'
-        : 'transparent'
+    resolvedAppearance === 'cinematic' || resolvedAppearance === 'light'
+      ? EXAMPLE_THEME_TOKENS[resolvedAppearance].surface
+      : 'transparent'
   );
   hostElement.style.setProperty('--menu-border', 'none');
   hostElement.style.setProperty('--menu-shadow', 'none');
