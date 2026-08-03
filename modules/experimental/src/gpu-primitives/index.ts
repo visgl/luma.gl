@@ -230,6 +230,9 @@ export type {
   GPUHashIndexView
 } from './gpu-hash-index';
 
+export {GPUHashJoin} from './gpu-hash-join';
+export type {GPUHashJoinProps, GPUHashJoinStats} from './gpu-hash-join';
+
 export {
   decodeGPUIndexPickInfo,
   decodeGPUIndexPickRegion,

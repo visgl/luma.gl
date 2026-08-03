@@ -30,6 +30,8 @@ type DispatchLayout = {x: number; y: number; z: number};
 export type GPUHashIndexView = {
   tableKeys: GraphDataView<'uint32'>;
   tableValues: GraphDataView<'uint32'>;
+  /** Optional six-row build statistics used by consumers that propagate source overflow. */
+  statistics?: GraphDataView<'uint32'>;
   maxProbeCount: number;
 };
 
