@@ -110,6 +110,12 @@ export type GPUSceneBuffers = {
   state: Buffer;
 };
 
+/** Independent ownership flags for adopted scene buffers. */
+export type GPUSceneBufferOwnership = {
+  records?: boolean;
+  state?: boolean;
+};
+
 /** Properties for one flat GPU scene database. */
 export type GPUSceneProps = {
   id?: string;
@@ -121,8 +127,8 @@ export type GPUSceneProps = {
   recordCount?: number;
   /** Optional compatible caller-owned record and state buffers. */
   buffers?: GPUSceneBuffers;
-  /** Whether `destroy()` owns supplied buffers. Defaults to `false`. */
-  ownsBuffers?: boolean;
+  /** Whether `destroy()` owns supplied buffers. Each adopted buffer may be selected independently. */
+  ownsBuffers?: boolean | GPUSceneBufferOwnership;
 };
 
 /** Typed graph views over one scene's fixed record and state layouts. */
@@ -164,7 +170,7 @@ export type GPUSceneStats = {
  * Owns or borrows a flat, fixed-capacity GPU draw database.
  *
  * The class defines storage and identity only. Mutation, compaction, visibility, draw-command
- * generation, and CPU-scene or table adapters are separate policies layered in later tranches.
+ * generation, and source adapters remain explicit policies layered around this storage owner.
  */
 export class GPUScene {
   readonly device: Device;
@@ -174,7 +180,8 @@ export class GPUScene {
   readonly stateBuffer: Buffer;
   /** Whether stable IDs and slots are known well enough for CPU-authored mutation. */
   readonly mutable: boolean;
-  private ownsBuffers: boolean;
+  private ownsRecordBuffer: boolean;
+  private ownsStateBuffer: boolean;
   private destroyed = false;
   private highWaterMark: number;
   private activeRecordCount: number;
@@ -228,7 +235,9 @@ export class GPUScene {
       validateBuffers(device, props.buffers, recordBufferByteLength);
       this.recordBuffer = props.buffers.records;
       this.stateBuffer = props.buffers.state;
-      this.ownsBuffers = props.ownsBuffers ?? false;
+      const ownership = getBufferOwnership(props.ownsBuffers);
+      this.ownsRecordBuffer = ownership.records;
+      this.ownsStateBuffer = ownership.state;
       if (records.length > 0) {
         this.recordBuffer.write(makeRecordData(records));
         this.stateBuffer.write(makeStateData(recordCount));
@@ -247,7 +256,8 @@ export class GPUScene {
         data: makeStateData(recordCount),
         usage: REQUIRED_BUFFER_USAGE
       });
-      this.ownsBuffers = true;
+      this.ownsRecordBuffer = true;
+      this.ownsStateBuffer = true;
     }
   }
 
@@ -447,14 +457,13 @@ export class GPUScene {
     };
   }
 
-  /** Releases record and state storage only when this scene owns it. */
+  /** Releases each record or state buffer only when this scene owns it. */
   destroy(): void {
     if (this.destroyed) return;
-    if (this.ownsBuffers) {
-      this.recordBuffer.destroy();
-      this.stateBuffer.destroy();
-      this.ownsBuffers = false;
-    }
+    if (this.ownsRecordBuffer) this.recordBuffer.destroy();
+    if (this.ownsStateBuffer) this.stateBuffer.destroy();
+    this.ownsRecordBuffer = false;
+    this.ownsStateBuffer = false;
     this.destroyed = true;
   }
 
@@ -502,6 +511,18 @@ export class GPUScene {
       throw new Error('GPUScene mutation requires CPU-known initial records');
     }
   }
+}
+
+function getBufferOwnership(
+  ownership: GPUSceneProps['ownsBuffers']
+): Required<GPUSceneBufferOwnership> {
+  if (typeof ownership === 'boolean') {
+    return {records: ownership, state: ownership};
+  }
+  return {
+    records: ownership?.records ?? false,
+    state: ownership?.state ?? false
+  };
 }
 
 function validateBuffers(device: Device, buffers: GPUSceneBuffers, recordByteLength: number): void {

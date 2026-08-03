@@ -90,8 +90,10 @@ package.
 Capacity is fixed when the scene is constructed. The `stats` property reports record and state
 allocation sizes before submission, and `getRecordByteOffset()` provides validated slot addressing.
 The default constructor owns its two buffers. Supplying `buffers` borrows them unless
-`ownsBuffers: true` is explicit; borrowed buffers must have storage, copy-source, and
-copy-destination usage and enough bytes for the declared capacity.
+`ownsBuffers: true` is explicit. An ownership object such as `{records: false, state: true}` may
+adopt the buffers independently, which lets a table adapter borrow record storage while owning its
+small state block. Borrowed buffers must have storage, copy-source, and copy-destination usage and
+enough bytes for the declared capacity.
 
 This first contract never grows storage implicitly. A caller can size for a known maximum or create
 a replacement scene deliberately when capacity changes, keeping allocation and lifetime costs
@@ -147,8 +149,8 @@ new GPUScene(device: Device, props: GPUSceneProps)
 ```
 
 Important properties include `capacity`, optional initial `records`, optional borrowed `buffers`,
-and `ownsBuffers`. When borrowed buffers are already populated, `recordCount` declares their active
-prefix.
+and boolean or per-buffer `ownsBuffers`. When borrowed buffers are already populated, `recordCount`
+declares their active prefix.
 
 ## Methods
 
@@ -179,7 +181,8 @@ Destroys owned buffers and leaves borrowed buffers untouched. Calling it repeate
 
 ## Current scope
 
-`GPUScene` now implements the Phase 6.1a storage and 6.1b CPU-authored mutation contracts. It does
-not yet provide CPU-scene or table adapters, GPU-authored record mutation, visibility policy,
-resource grouping, or indirect-command generation. Those policies build on this record layout in
-later tranches rather than being hidden inside the storage owner.
+`GPUScene` now implements the Phase 6.1a storage and 6.1b CPU-authored mutation contracts. The
+[scene adapters](/docs/api-reference/experimental/gpu-primitives/gpu-scene-adapters) add explicit
+CPU-hierarchy and zero-copy preserved-table boundaries without changing this core storage model.
+GPU-authored record mutation, visibility policy, resource grouping, and indirect-command
+generation remain later graph workflows rather than hidden behavior inside the storage owner.

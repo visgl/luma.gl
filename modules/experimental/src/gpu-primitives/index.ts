@@ -170,6 +170,7 @@ export {
   GPU_SCENE_STATE_BYTE_LENGTH
 } from './gpu-scene';
 export type {
+  GPUSceneBufferOwnership,
   GPUSceneBounds,
   GPUSceneBuffers,
   GPUSceneMove,
@@ -182,6 +183,20 @@ export type {
   GPUSceneStats,
   GPUSceneView
 } from './gpu-scene';
+
+export {
+  makeGPUSceneFromCPUScene,
+  makeGPUScenePartitionsFromGPUTable
+} from './gpu-scene-adapters';
+export type {
+  GPUSceneCPUAdapterContext,
+  GPUSceneCPUAdapterProps,
+  GPUSceneTableAdapterProps,
+  GPUSceneTableAdapterResult,
+  GPUSceneTableAdapterStats,
+  GPUSceneTableColumnNames,
+  GPUSceneTablePartition
+} from './gpu-scene-adapters';
 
 export {
   runGPUSpatialQueryBenchmark,
