@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {describe, expect, test} from 'vitest';
 import {
   getCrossfilterPreset,
@@ -120,5 +122,26 @@ describe('Crossfilter Supremacy linked-view coordinates', () => {
     expect(europePreset.mapBounds).toBeDefined();
     expect(europePreset.ranges?.hour?.[0]).toBeGreaterThanOrEqual(17);
     expect(getCrossfilterPreset('all').ranges).toBeUndefined();
+  });
+});
+
+describe('Crossfilter Supremacy visual smoke controls', () => {
+  test.each([
+    1, 127, 1_048_577
+  ])('rejects unsupported resident row count %i before starting the browser', rowCount => {
+    const smokeScriptPath = fileURLToPath(
+      new URL(
+        '../../examples/showcase/crossfilter-supremacy/scripts/visual-smoke.mjs',
+        import.meta.url
+      )
+    );
+    const result = spawnSync(process.execPath, [smokeScriptPath], {
+      encoding: 'utf8',
+      env: {...process.env, CROSSFILTER_SMOKE_ROWS: String(rowCount)},
+      timeout: 10_000
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('CROSSFILTER_SMOKE_ROWS must be between 128 and 1048576');
   });
 });

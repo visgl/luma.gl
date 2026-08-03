@@ -10,8 +10,51 @@ import {
   type CrossfilterDataset
 } from '../../examples/showcase/crossfilter-supremacy/crossfilter-data';
 import {CrossfilterEngine} from '../../examples/showcase/crossfilter-supremacy/crossfilter-engine';
+import {CrossfilterInterface} from '../../examples/showcase/crossfilter-supremacy/crossfilter-interface';
 
 describe('Crossfilter Supremacy GPU-resident dashboard', () => {
+  test('coalesces scrolling dashboard viewport updates and cancels them during cleanup', async () => {
+    const container = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    container.style.width = '320px';
+    container.style.height = '180px';
+    container.append(canvas);
+    document.body.append(container);
+
+    const onResize = vi.fn();
+    let dashboard: CrossfilterInterface | undefined;
+
+    try {
+      dashboard = new CrossfilterInterface(container, canvas, {onResize});
+      const overlay = container.querySelector<HTMLElement>('[data-crossfilter-dashboard]');
+      expect(overlay).not.toBeNull();
+      if (!overlay) return;
+
+      await waitForAnimationFrame();
+      await waitForAnimationFrame();
+      onResize.mockClear();
+
+      overlay.dispatchEvent(new Event('scroll'));
+      overlay.dispatchEvent(new Event('scroll'));
+      expect(onResize).not.toHaveBeenCalled();
+
+      await waitForAnimationFrame();
+      expect(onResize).toHaveBeenCalledTimes(1);
+
+      overlay.dispatchEvent(new Event('scroll'));
+      dashboard.destroy();
+      await waitForAnimationFrame();
+      expect(onResize).toHaveBeenCalledTimes(1);
+
+      overlay.dispatchEvent(new Event('scroll'));
+      await waitForAnimationFrame();
+      expect(onResize).toHaveBeenCalledTimes(1);
+    } finally {
+      dashboard?.destroy();
+      container.remove();
+    }
+  });
+
   test('updates linked histogram context, map and scatter brushes without rebuilding its graph', async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
@@ -165,6 +208,10 @@ describe('Crossfilter Supremacy GPU-resident dashboard', () => {
     }
   }, 30_000);
 });
+
+async function waitForAnimationFrame(): Promise<void> {
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+}
 
 function countMatchingRows(
   population: CrossfilterDataset,

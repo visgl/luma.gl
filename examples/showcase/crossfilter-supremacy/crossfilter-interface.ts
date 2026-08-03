@@ -564,6 +564,8 @@ export class CrossfilterInterface {
         if (!this.destroyed) this.callbacks.onResize?.();
       });
     };
+    // Narrow layouts scroll the overlay independently of its stationary GPU canvas.
+    this.listen(this.root, 'scroll', onResize);
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(onResize);
       this.resizeObserver.observe(this.container);

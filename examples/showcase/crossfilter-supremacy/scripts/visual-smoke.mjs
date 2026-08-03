@@ -12,6 +12,10 @@ import {createServer} from 'vite';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const requestedRowCount = readPositiveIntegerEnvironmentVariable('CROSSFILTER_SMOKE_ROWS');
+assert(
+  requestedRowCount === undefined || (requestedRowCount >= 128 && requestedRowCount <= 1_048_576),
+  'CROSSFILTER_SMOKE_ROWS must be between 128 and 1048576'
+);
 const timeoutMilliseconds =
   readPositiveIntegerEnvironmentVariable('CROSSFILTER_SMOKE_TIMEOUT_MS') ?? 45_000;
 const gpuBackend = process.env.CROSSFILTER_GPU_BACKEND ?? 'swiftshader';
