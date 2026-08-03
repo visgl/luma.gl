@@ -6,7 +6,8 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   mergeShaderPluginModules,
   resolveShaderPlugins,
-  ShaderAssembler,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler,
   type PlatformInfo,
   type ShaderModule
 } from '@luma.gl/shadertools';
@@ -243,7 +244,7 @@ test('ShaderPlugin#explicit modules win duplicate names', t => {
 });
 
 test('ShaderPlugin#WGSL main injections land in stage bodies', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const resolved = resolveShaderPlugins(
     [
       {
@@ -281,7 +282,7 @@ test('ShaderPlugin#WGSL main injections land in stage bodies', t => {
 });
 
 test('ShaderPlugin#WGSL fragment declarations enter unified shader source', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const resolved = resolveShaderPlugins(
     [
       {
@@ -316,7 +317,7 @@ test('ShaderPlugin#WGSL fragment declarations enter unified shader source', t =>
 });
 
 test('ShaderPlugin#GLSL vertex inputs are declared and conflicts are rejected', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new GLSLShaderAssembler();
   const shaders = shaderAssembler.assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: /* glsl */ `#version 300 es
@@ -351,7 +352,7 @@ void main() { fragmentColor = vec4(1.0); }`,
 });
 
 test('ShaderPlugin#WGSL vertex inputs support direct and struct entry-point inputs', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)');
 
   const assembled = shaderAssembler.assembleWGSLShader({
@@ -421,7 +422,7 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 });
 
 test('ShaderPlugin#WGSL vertex inputs support an entry point without parameters', t => {
-  const assembled = new ShaderAssembler().assembleWGSLShader({
+  const assembled = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
     source: WGSL_SOURCE,
     pluginVertexInputs: {filterValues: 'f32'}
@@ -439,7 +440,7 @@ test('ShaderPlugin#WGSL vertex inputs support an entry point without parameters'
 });
 
 test('ShaderPlugin#GLSL varyings generate matched stage interfaces', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new GLSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
   shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(inout vec4 color)');
   const shaders = shaderAssembler.assembleGLSLShaderPair({
@@ -500,7 +501,7 @@ void main() { fragmentColor = pluginColor; }`,
 });
 
 test('ShaderPlugin#WGSL varyings extend named stage structs', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
   shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(color: ptr<function, vec4<f32>>)');
   const source = /* wgsl */ `
@@ -601,7 +602,7 @@ fn selectedFragmentMain(inputs: FragmentInput, @builtin(front_facing) frontFacin
 });
 
 test('ShaderPlugin#WGSL varyings reject unsupported interfaces', t => {
-  const assembler = new ShaderAssembler();
+  const assembler = new WGSLShaderAssembler();
   t.throws(
     () =>
       assembler.assembleWGSLShader({

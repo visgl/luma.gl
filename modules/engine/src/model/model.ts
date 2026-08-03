@@ -32,6 +32,7 @@ import {
   PipelineFactory,
   ShaderFactory,
   UniformStore,
+  assert,
   log,
   dataTypeDecoder,
   getAttributeInfosFromLayouts,
@@ -47,7 +48,9 @@ import type {
 import {
   mergeShaderPluginModules,
   resolveShaderPlugins,
-  ShaderAssembler
+  ShaderAssembler,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
@@ -156,7 +159,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   pipelineFactory?: PipelineFactory;
   /** Factory used to create a {@link Shader}. Defaults to {@link Device} default factory. */
   shaderFactory?: ShaderFactory;
-  /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
+  /** Shader assembler. Defaults to the shared assembler for the device's shader language. */
   shaderAssembler?: ShaderAssembler;
 };
 
@@ -316,7 +319,16 @@ export class Model {
   }
 
   constructor(device: Device, props: ModelProps) {
-    this.props = {...Model.defaultProps, ...props};
+    const defaultShaderAssembler = Model.defaultProps.shaderAssembler;
+    this.props = {
+      ...Model.defaultProps,
+      ...props,
+      shaderAssembler:
+        props.shaderAssembler ??
+        (defaultShaderAssembler.shaderLanguage === device.info.shadingLanguage
+          ? defaultShaderAssembler
+          : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
+    };
     props = this.props;
     this.id = props.id || uid('model');
     this.device = device;
@@ -358,7 +370,10 @@ export class Model {
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
       // WGSL
-      const {source, getUniforms, bindingTable} = this.props.shaderAssembler.assembleWGSLShader({
+      const shaderAssembler = this.props.shaderAssembler;
+      // WGSL sources require an assembler with WGSL-specific hooks and binding state.
+      assert(shaderAssembler instanceof WGSLShaderAssembler);
+      const {source, getUniforms, bindingTable} = shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
         modules,
@@ -388,7 +403,10 @@ export class Model {
         mergeShaderModuleBindingsIntoLayout(shaderLayout || null, modules) || null;
     } else {
       // GLSL
-      const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
+      const shaderAssembler = this.props.shaderAssembler;
+      // GLSL shader pairs require an assembler with GLSL-specific hooks.
+      assert(shaderAssembler instanceof GLSLShaderAssembler);
+      const {vs, fs, getUniforms} = shaderAssembler.assembleGLSLShaderPair({
         platformInfo,
         ...this.props,
         modules,

@@ -4,10 +4,15 @@ import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-ta
 
 <ShadertoolsDocsTabs active="shader-assembler" />
 
-`ShaderAssembler` combines application shader source with shadertools modules,
-hook functions, and injections before luma.gl creates shader resources. Use
-`assembleGLSLShaderPair()` for WebGL/GLSL and `assembleWGSLShader()` for unified
-WGSL used by WebGPU.
+`ShaderAssembler` is the abstract base for stateful shader assembly. Its concrete
+subclasses combine application shader source with shadertools modules, hook
+functions, and injections before luma.gl creates shader resources:
+
+- `GLSLShaderAssembler` assembles GLSL vertex and fragment shaders for WebGL.
+- `WGSLShaderAssembler` assembles unified WGSL shaders for WebGPU.
+
+Each shader language has its own default assembler, keeping language-specific
+hooks, default modules, and other assembly state isolated.
 
 For the assembly model, see
 [Shader Assembly](/docs/api-guide/shaders/shader-assembly). For extension design,
@@ -18,17 +23,31 @@ For WGSL binding relocation and conditionals, see
 ## Usage
 
 ```typescript
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {
+  GLSLShaderAssembler,
+  ShaderAssembler,
+  WGSLShaderAssembler
+} from '@luma.gl/shadertools';
 
-const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
-shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
-const assembledShaders = shaderAssembler.assembleGLSLShaderPair({
-  platformInfo,
+const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
+  platformInfo: glslPlatformInfo,
   vs: vertexShaderSource,
   fs: fragmentShaderSource,
   modules: [offsetLeftModule]
 });
+
+const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+const assembledWGSLShader = wgslShaderAssembler.assembleWGSLShader({
+  platformInfo: wgslPlatformInfo,
+  source: wgslShaderSource,
+  modules: [offsetLeftModule]
+});
+
+const isolatedGLSLShaderAssembler = new GLSLShaderAssembler();
+const isolatedWGSLShaderAssembler = new WGSLShaderAssembler();
 ```
 
 ## Types
@@ -55,9 +74,15 @@ Common assembly props:
 
 ## Static Methods
 
-### `getDefaultShaderAssembler(): ShaderAssembler`
+### `getDefaultShaderAssembler(): GLSLShaderAssembler`
 
-Returns the shared assembler used by default by engine classes.
+### `getDefaultShaderAssembler('glsl'): GLSLShaderAssembler`
+
+### `getDefaultShaderAssembler('wgsl'): WGSLShaderAssembler`
+
+Returns the shared assembler for the requested shader language. Omitting the
+argument preserves the existing GLSL default. The WGSL default is a separate
+instance, so registering WGSL hooks cannot overwrite or remove GLSL hooks.
 
 ## Methods
 
@@ -77,12 +102,12 @@ hook signatures use GLSL syntax, for example
 `vs:OFFSET_POSITION(inout vec4 position)`. WGSL hook signatures use WGSL syntax,
 for example `vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)`.
 
-### `assembleGLSLShaderPair(props: AssembleShaderProps)`
+### `GLSLShaderAssembler.assembleGLSLShaderPair(props: AssembleShaderProps)`
 
 Assembles a GLSL vertex/fragment pair and returns `{vs, fs, getUniforms,
 modules}`.
 
-### `assembleWGSLShader(props: AssembleShaderProps)`
+### `WGSLShaderAssembler.assembleWGSLShader(props: AssembleShaderProps)`
 
 Assembles one unified WGSL source string and returns `{source, getUniforms,
 modules, bindingAssignments, bindingTable}`. Module WGSL source is prepended to
@@ -98,7 +123,7 @@ function, and lets modules or plugin contributions add ordered source by using
 the same stage-prefixed key without the function signature.
 
 ```typescript
-shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
 const offsetLeftModule = {
   name: 'offsetLeft',
@@ -119,7 +144,7 @@ If no module injects into a hook, the generated hook function is a no-op. WGSL
 uses the same flow with WGSL hook signatures and pointer arguments:
 
 ```typescript
-shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
+wgslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
 ```
 
 ```wgsl

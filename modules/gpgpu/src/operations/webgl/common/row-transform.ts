@@ -4,7 +4,7 @@
 
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
-import {ShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
 import {
@@ -16,7 +16,7 @@ import {
 
 const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const TRANSFORM_RUNS = 'Transform Runs';
-const GPGPU_SHADER_ASSEMBLER = new ShaderAssembler();
+const GPGPU_SHADER_ASSEMBLER = new GLSLShaderAssembler();
 
 export function runRowTransform({
   module,

@@ -3,7 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {ShaderAssembler, PlatformInfo, picking, dirlight} from '@luma.gl/shadertools';
+import {
+  GLSLShaderAssembler,
+  ShaderAssembler,
+  WGSLShaderAssembler,
+  type PlatformInfo,
+  picking,
+  dirlight
+} from '@luma.gl/shadertools';
 
 const platformInfo: PlatformInfo = {
   type: 'webgl',
@@ -27,6 +34,21 @@ precision highp float;
 out vec4 fragmentColor;
 void main(void) {
   fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+`;
+
+const wgslPlatformInfo: PlatformInfo = {
+  type: 'webgpu',
+  gpu: 'test-gpu',
+  shaderLanguage: 'wgsl',
+  shaderLanguageVersion: 300,
+  features: new Set()
+};
+
+const wgslSource = /* wgsl */ `\
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
 `;
 
@@ -61,7 +83,7 @@ const FS_300 = /* glsl *`\
 */
 
 test('ShaderAssembler#hooks', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new GLSLShaderAssembler();
 
   const preHookShaders = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
@@ -180,7 +202,7 @@ test('ShaderAssembler#hooks', t => {
 });
 
 test('ShaderAssembler#defaultModules', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new GLSLShaderAssembler();
 
   const program = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
@@ -228,6 +250,53 @@ test('ShaderAssembler#defaultModules', t => {
   // TODO - this deep equal thing doesn't make sense due to getUniforms
   t.notDeepEqual(defaultModuleProgram, uncachedProgram, 'Program is not cached');
   t.deepEqual(preDefaultModuleSource, defaultModuleSource, 'Default modules create correct source');
+
+  t.end();
+});
+
+test('ShaderAssembler#getDefaultShaderAssembler isolates shader language state', t => {
+  const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+  const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+
+  t.ok(glslShaderAssembler instanceof GLSLShaderAssembler, 'GLSL remains the default assembler');
+  t.ok(wgslShaderAssembler instanceof WGSLShaderAssembler, 'WGSL gets its own default assembler');
+  t.equal(
+    ShaderAssembler.getDefaultShaderAssembler('glsl'),
+    glslShaderAssembler,
+    'explicit GLSL requests reuse the default assembler'
+  );
+  t.equal(
+    ShaderAssembler.getDefaultShaderAssembler('wgsl'),
+    wgslShaderAssembler,
+    'WGSL requests reuse the WGSL default assembler'
+  );
+  t.notEqual(glslShaderAssembler, wgslShaderAssembler, 'shader languages never share an assembler');
+
+  const isolatedWGSLShaderAssembler = new WGSLShaderAssembler();
+  const initialGLSLSource = glslShaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs}).vs;
+  isolatedWGSLShaderAssembler.addShaderHook(
+    'vs:LUMAGL_isolatedDefaultHook(value: ptr<function, vec4<f32>>)'
+  );
+
+  const assembledWGSLSource = isolatedWGSLShaderAssembler.assembleWGSLShader({
+    platformInfo: wgslPlatformInfo,
+    source: wgslSource
+  }).source;
+  const retainedGLSLSource = glslShaderAssembler.assembleGLSLShaderPair({
+    platformInfo,
+    vs,
+    fs
+  }).vs;
+
+  t.ok(
+    assembledWGSLSource.includes('fn LUMAGL_isolatedDefaultHook('),
+    'WGSL hooks are installed on the WGSL assembler without mutating its shared default'
+  );
+  t.equal(retainedGLSLSource, initialGLSLSource, 'WGSL hooks never mutate the GLSL default');
+  t.notOk(
+    retainedGLSLSource.includes('LUMAGL_isolatedDefaultHook'),
+    'WGSL hooks are absent from GLSL source'
+  );
 
   t.end();
 });

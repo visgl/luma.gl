@@ -65,7 +65,7 @@ export {resolveModules as _resolveModules} from './lib/shader-module/shader-modu
 export {getDependencyGraph as _getDependencyGraph} from './lib/shader-module/shader-module-dependencies';
 
 // ShaderAssembler
-export {ShaderAssembler} from './lib/shader-assembler';
+export {ShaderAssembler, GLSLShaderAssembler, WGSLShaderAssembler} from './lib/shader-assembler';
 export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
 export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
 

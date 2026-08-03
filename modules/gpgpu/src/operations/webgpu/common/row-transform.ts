@@ -4,7 +4,7 @@
 
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {ShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
@@ -12,7 +12,7 @@ import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 const WORKGROUP_SIZE = 64;
 const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const COMPUTATION_RUNS = 'Computation Runs';
-const GPGPU_SHADER_ASSEMBLER = new ShaderAssembler();
+const GPGPU_SHADER_ASSEMBLER = new WGSLShaderAssembler();
 
 export function runRowComputation({
   module,

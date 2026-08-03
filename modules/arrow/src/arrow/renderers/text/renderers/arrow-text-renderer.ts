@@ -13,7 +13,7 @@ import {
   makeGPUTableFromArrowTable
 } from '../../../gpu/arrow-gpu-table-adapters';
 import {type ModelProps} from '@luma.gl/engine';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {GPURenderable, GPUVector, GPUTable, getRequiredGPUVector} from '@luma.gl/tables';
 import {GPUTextResources, TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
 import {
@@ -803,7 +803,11 @@ export class ArrowTextRenderer extends GPURenderable<
     const angle = props.angle ?? DEFAULT_TEXT_ANGLE;
     const size = props.size ?? DEFAULT_TEXT_SIZE;
     setArrowTextFontAtlasShaderProps(this.shaderInputs, props.fontAtlas);
-    const shaderAssembler = props.modelProps?.shaderAssembler ?? new ShaderAssembler();
+    const shaderAssembler =
+      props.modelProps?.shaderAssembler ??
+      (this.device.info.shadingLanguage === 'wgsl'
+        ? new WGSLShaderAssembler()
+        : new GLSLShaderAssembler());
     const usesCustomShaderSource =
       this.device.info.shadingLanguage === 'wgsl'
         ? Boolean(props.modelProps?.source)

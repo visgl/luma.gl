@@ -13,7 +13,7 @@ import {
   getShaderModuleUniforms,
   normalizeByteColor3,
   normalizeByteColor4,
-  ShaderAssembler,
+  WGSLShaderAssembler,
   STORAGE_COLOR_DEFAULT_BYTE_STRIDES,
   STORAGE_COLOR_FORMAT,
   storageColors,
@@ -185,7 +185,7 @@ void main(void) {
 });
 
 test('storageColors#assembledWGSLContract', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const baseColorsShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
     source: WGSL_COMPUTE_APP,

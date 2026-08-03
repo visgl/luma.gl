@@ -25,7 +25,11 @@ import {
   reflectiveMaterialPlugin,
   wboit
 } from '@luma.gl/experimental';
-import {getShaderModuleUniformLayoutValidationResult, ShaderAssembler} from '@luma.gl/shadertools';
+import {
+  getShaderModuleUniformLayoutValidationResult,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler
+} from '@luma.gl/shadertools';
 import {WgslReflect} from 'wgsl_reflect';
 
 const PLATFORM_INFO = {
@@ -872,7 +876,7 @@ test('optical materials expose matching WGSL and GLSL uniform layouts', testCase
 });
 
 test('rasterized glass transmission assembles portable optical and depth bindings', testCase => {
-  const assembler = new ShaderAssembler();
+  const assembler = new WGSLShaderAssembler();
   const transmissionShader = ILLUMINATED_OPTICAL_MATERIAL_SHADER.replace(
     'glassMaterial_getIlluminatedColor(',
     'glassTransmission_getIlluminatedColor('
@@ -914,7 +918,7 @@ test('rasterized glass transmission assembles portable optical and depth binding
 });
 
 test('existing optical materials compose without the optional point-light module', testCase => {
-  const assembler = new ShaderAssembler();
+  const assembler = new WGSLShaderAssembler();
   const assembledShader = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: OPTICAL_MATERIAL_SHADER,
@@ -970,7 +974,7 @@ test('existing optical materials compose without the optional point-light module
 });
 
 test('illuminated optical materials compose once with emission and transparency', testCase => {
-  const assembler = new ShaderAssembler();
+  const assembler = new WGSLShaderAssembler();
   const assembledShader = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: ILLUMINATED_OPTICAL_MATERIAL_SHADER,
@@ -1042,7 +1046,7 @@ test('illuminated optical materials compose once with emission and transparency'
 });
 
 test('illuminated optical helpers assemble for GLSL', testCase => {
-  const assembler = new ShaderAssembler();
+  const assembler = new GLSLShaderAssembler();
   const assembledShader = assembler.assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: `#version 300 es

@@ -4,7 +4,12 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {toneMapping} from '@luma.gl/effects';
-import {getShaderModuleUniforms, ShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
+import {
+  getShaderModuleUniforms,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler,
+  type PlatformInfo
+} from '@luma.gl/shadertools';
 import {WgslReflect} from 'wgsl_reflect';
 
 const WEBGL_PLATFORM_INFO: PlatformInfo = {
@@ -84,7 +89,7 @@ test('toneMapping#cross-backend shader sources', testCase => {
 });
 
 test('toneMapping#WGSL assembly', testCase => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WEBGPU_PLATFORM_INFO,
     source: FRAGMENT_SHADER_WGSL,
@@ -100,7 +105,7 @@ test('toneMapping#WGSL assembly', testCase => {
 });
 
 test('toneMapping#GLSL assembly', testCase => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new GLSLShaderAssembler();
   const assembledShaders = shaderAssembler.assembleGLSLShaderPair({
     platformInfo: WEBGL_PLATFORM_INFO,
     vs: VERTEX_SHADER_GLSL,

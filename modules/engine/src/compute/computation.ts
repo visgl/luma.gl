@@ -15,6 +15,7 @@ import {
   PipelineFactory,
   ShaderFactory,
   UniformStore,
+  assert,
   log,
   dataTypeDecoder
 } from '@luma.gl/core';
@@ -24,7 +25,8 @@ import {
   type PlatformInfo,
   mergeShaderPluginModules,
   resolveShaderPlugins,
-  ShaderAssembler
+  ShaderAssembler,
+  WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
@@ -62,7 +64,7 @@ export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
   pipelineFactory?: PipelineFactory;
   /** Factory used to create a {@link Shader}. Defaults to {@link Device} default factory. */
   shaderFactory?: ShaderFactory;
-  /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
+  /** WGSL shader assembler. Defaults to the shared WGSL shader assembler. */
   shaderAssembler?: ShaderAssembler;
 };
 
@@ -91,7 +93,7 @@ export class Computation {
 
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('wgsl'),
 
     debugShaders: undefined!
   };
@@ -173,7 +175,10 @@ export class Computation {
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
     this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
 
-    const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
+    const shaderAssembler = this.props.shaderAssembler;
+    // Compute shaders require an assembler with WGSL-specific hooks and binding state.
+    assert(shaderAssembler instanceof WGSLShaderAssembler);
+    const {source, getUniforms} = shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
       modules,

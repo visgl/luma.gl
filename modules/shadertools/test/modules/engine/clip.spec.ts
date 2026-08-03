@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, Device, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {clipShaderPlugin, ShaderAssembler} from '@luma.gl/shadertools';
+import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const WIDTH = 4;
@@ -14,7 +14,7 @@ const HEIGHT = 4;
 
 test('clipShaderPlugin#WebGL2 clips instances and geometry without rebuilding', async t => {
   const device = await getWebGLTestDevice();
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new GLSLShaderAssembler();
   shaderAssembler.addShaderHook(
     'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'
   );
@@ -60,7 +60,7 @@ test('clipShaderPlugin#WebGPU clips instances and geometry without rebuilding', 
     return;
   }
 
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook(
     'vs:CLIP_POSITION(position: ptr<function, vec4<f32>>, instanceCoordinates: vec2<f32>, geometryCoordinates: vec2<f32>)'
   );

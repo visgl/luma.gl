@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {WgslReflect} from 'wgsl_reflect';
 import {
   convertD65XYZToLinearSRGB,
@@ -84,7 +84,7 @@ test('spectral caustics clamp only negative final RGB and preserve HDR', testCas
 });
 
 test('spectral caustics assemble as a planar XYZ receiver module', testCase => {
-  const assembledShader = new ShaderAssembler().assembleWGSLShader({
+  const assembledShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: RECEIVER_SHADER,
     modules: [spectralCaustics]

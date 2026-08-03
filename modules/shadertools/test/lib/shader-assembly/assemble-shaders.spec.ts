@@ -11,7 +11,7 @@ import {
   fp64,
   pbrMaterial,
   PlatformInfo,
-  ShaderAssembler
+  WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
@@ -748,8 +748,8 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
   t.end();
 });
 
-test('ShaderAssembler#assembleWGSLShader supports hooks and named injections', t => {
-  const shaderAssembler = new ShaderAssembler();
+test('WGSLShaderAssembler#assembleWGSLShader supports hooks and named injections', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
   shaderAssembler.addShaderHook('fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)');
 
