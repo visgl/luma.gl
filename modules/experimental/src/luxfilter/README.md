@@ -117,3 +117,14 @@ repacked.
 Call `filter.destroy()` when the controller is no longer needed to release
 resources it owns. Imported source vectors, caller-owned outputs, command
 submission, and any optional readback remain under application control.
+
+## Flagship example
+
+[Crossfilter Supremacy](../../../../examples/showcase/crossfilter-supremacy)
+links a GPU-rendered map, scatterplot, three self-excluding histograms, and
+categorical cohorts across one million synthetic GPU-resident rows. Geographic
+brushes, scatterplot selections, histogram ranges, category filters, and
+multi-dimensional presets all reuse one compiled command graph without reading
+source rows back to the CPU. Displayed histogram bins, group counts, and the
+selected-row total share one small packed summary readback; static point clouds
+redraw only after a selection or layout changes.
