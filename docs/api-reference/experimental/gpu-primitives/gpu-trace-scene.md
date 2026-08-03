@@ -133,11 +133,14 @@ new GPUSceneDrawGeneration({
 
 Source views such as `source.startTimes`, `source.processIds`, `source.parents`, and
 `source.outgoingNeighbors` can feed independent filtering, layout, and graph traversal passes in
-the same graph.
+the same graph. [`GPUTraceInteraction`](/docs/api-reference/experimental/gpu-primitives/gpu-trace-interaction)
+composes those views into a reusable hierarchy, dependency-focus, visibility, and indirect-draw
+workflow.
 
 ## Current scope
 
 This tranche establishes canonical ingestion, stable trace-to-scene identity, preserved source
 partitions, bidirectional topology, explicit ownership, and compatibility with the existing
-indirect-rendering stack. Interactive process/thread expansion, linked-span selection, and a live
-scene-backed trace consumer are separate follow-up tranches.
+indirect-rendering stack. Interactive process/thread expansion, linked-span selection, and stable
+draw publication are provided by `GPUTraceInteraction`; a live scene-backed trace showcase remains
+a separate follow-up tranche.
