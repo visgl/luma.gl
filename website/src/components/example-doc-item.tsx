@@ -11,18 +11,23 @@ type ExampleDocItemProps = {
 
 export default function ExampleDocItem({content: Content, route}: ExampleDocItemProps) {
   const indexPath = useBaseUrl('/examples');
+  const isExamplesIndex = normalizeExampleRoute(route.path) === normalizeExampleRoute(indexPath);
 
-  if (route.path === indexPath) {
+  if (isExamplesIndex) {
     return (
-      <div key="index">
+      <div className={styles.catalogContainer} data-luma-example-route="catalog" key="index">
         <Content />
       </div>
     );
   }
 
   return (
-    <div className={styles.demoContainer} key="demo">
+    <div className={styles.demoContainer} data-luma-example-route="demo" key="demo">
       <Content />
     </div>
   );
+}
+
+function normalizeExampleRoute(routePath: string): string {
+  return routePath.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
 }

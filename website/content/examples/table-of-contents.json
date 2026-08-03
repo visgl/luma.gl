@@ -136,6 +136,7 @@
     "label": "Tutorials",
     "items": [
       "tutorials/hello-triangle",
+      "tutorials/hello-triangle-geometry",
       "tutorials/hello-cube",
       "tutorials/lighting",
       "tutorials/hello-gltf",
