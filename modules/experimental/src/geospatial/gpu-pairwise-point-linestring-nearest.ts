@@ -284,7 +284,9 @@ fn main(
 ) {
   ${getGeospatialInvocationIndexSource(dispatchLayout)}
   if (index >= ELEMENT_COUNT) { return; }
-  let nan = bitcast<f32>(0x7fc00000u);
+  // Keep the payload invocation-dependent so WGSL compilers do not try to represent NaN as a
+  // constant f32 while folding the bitcast.
+  let nan = bitcast<f32>(0x7fc00000u | (index & 0x003fffffu));
   let nearestPoint = vec2f(nan);
   let nearestLinestringIndex = ${NO_INDEX}u;
   let nearestSegmentIndex = ${NO_INDEX}u;
