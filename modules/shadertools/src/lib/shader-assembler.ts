@@ -16,6 +16,7 @@ import {
 } from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
 import {scanWGSLInterface} from './shader-assembly/wgsl-interface-scan';
+import {assert} from './utils/assert';
 import type {ShaderLayout} from '@luma.gl/core';
 
 /**
@@ -23,10 +24,11 @@ import type {ShaderLayout} from '@luma.gl/core';
  * Supports setting of default modules and hooks.
  */
 export abstract class ShaderAssembler {
-  /** Default GLSL assembler, retained for compatibility with existing applications. */
-  static defaultShaderAssembler: GLSLShaderAssembler;
-  /** Default WGSL assembler, isolated from GLSL modules and hooks. */
-  private static defaultWGSLShaderAssembler: WGSLShaderAssembler;
+  /** Shared assemblers, with independent module and hook state for each shader language. */
+  private static readonly defaultShaderAssemblers: {
+    glsl?: GLSLShaderAssembler;
+    wgsl?: WGSLShaderAssembler;
+  } = {};
   /** Shader language accepted by this assembler. */
   abstract readonly shaderLanguage: 'glsl' | 'wgsl';
   /** Hook functions */
@@ -39,24 +41,26 @@ export abstract class ShaderAssembler {
    * @param shaderLanguage Shader language whose shared assembler should be returned.
    * @returns Shared default shader assembler for the requested language.
    */
-  static getDefaultShaderAssembler(): GLSLShaderAssembler;
   static getDefaultShaderAssembler(shaderLanguage: 'glsl'): GLSLShaderAssembler;
   static getDefaultShaderAssembler(shaderLanguage: 'wgsl'): WGSLShaderAssembler;
   static getDefaultShaderAssembler(
     shaderLanguage: 'glsl' | 'wgsl'
   ): GLSLShaderAssembler | WGSLShaderAssembler;
   static getDefaultShaderAssembler(
-    shaderLanguage: 'glsl' | 'wgsl' = 'glsl'
+    shaderLanguage: 'glsl' | 'wgsl'
   ): GLSLShaderAssembler | WGSLShaderAssembler {
+    // Shader language must be explicit to avoid mixing GLSL and WGSL hooks.
+    assert(shaderLanguage === 'glsl' || shaderLanguage === 'wgsl');
+
     if (shaderLanguage === 'wgsl') {
-      ShaderAssembler.defaultWGSLShaderAssembler =
-        ShaderAssembler.defaultWGSLShaderAssembler || new WGSLShaderAssembler();
-      return ShaderAssembler.defaultWGSLShaderAssembler;
+      ShaderAssembler.defaultShaderAssemblers.wgsl =
+        ShaderAssembler.defaultShaderAssemblers.wgsl || new WGSLShaderAssembler();
+      return ShaderAssembler.defaultShaderAssemblers.wgsl;
     }
 
-    ShaderAssembler.defaultShaderAssembler =
-      ShaderAssembler.defaultShaderAssembler || new GLSLShaderAssembler();
-    return ShaderAssembler.defaultShaderAssembler;
+    ShaderAssembler.defaultShaderAssemblers.glsl =
+      ShaderAssembler.defaultShaderAssemblers.glsl || new GLSLShaderAssembler();
+    return ShaderAssembler.defaultShaderAssemblers.glsl;
   }
 
   /**
@@ -177,7 +181,7 @@ export class WGSLShaderAssembler extends ShaderAssembler {
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const defines = getShaderPreprocessorDefines(props, modules);
+    const defines = WGSLShaderAssembler.getShaderPreprocessorDefines(props, modules);
     const preprocessedApplicationSource =
       props.platformInfo.shaderLanguage === 'wgsl' && props.source
         ? preprocess(props.source, {defines})
@@ -211,33 +215,33 @@ export class WGSLShaderAssembler extends ShaderAssembler {
       })
     };
   }
-}
 
-function getShaderPreprocessorDefines(
-  props: AssembleShaderProps,
-  modules: ShaderModule[]
-): Record<string, boolean | number> {
-  return {
-    ...getPlatformPreprocessorDefines(props.platformInfo),
-    ...modules.reduce<Record<string, boolean | number>>((accumulator, module) => {
-      Object.assign(accumulator, module.defines);
-      return accumulator;
-    }, {}),
-    ...props.defines
-  };
-}
+  private static getShaderPreprocessorDefines(
+    props: AssembleShaderProps,
+    modules: ShaderModule[]
+  ): Record<string, boolean | number> {
+    return {
+      ...WGSLShaderAssembler.getPlatformPreprocessorDefines(props.platformInfo),
+      ...modules.reduce<Record<string, boolean | number>>((accumulator, module) => {
+        Object.assign(accumulator, module.defines);
+        return accumulator;
+      }, {}),
+      ...props.defines
+    };
+  }
 
-function getPlatformPreprocessorDefines(
-  platformInfo: AssembleShaderProps['platformInfo']
-): Record<string, boolean> {
-  const limits = platformInfo.limits || {};
-  return {
-    LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS:
-      platformInfo.type === 'webgpu' && (limits['maxStorageBuffersInVertexStage'] || 0) > 0,
-    // Metal may reassociate the floating-point transforms used by classic
-    // double-single arithmetic. The integer path makes each rounding point
-    // explicit while preserving the public vec2<f32> representation.
-    LUMA_FP64_INTEGER_ARITHMETIC:
-      platformInfo.type === 'webgpu' && platformInfo.gpu.toLowerCase() === 'apple'
-  };
+  private static getPlatformPreprocessorDefines(
+    platformInfo: AssembleShaderProps['platformInfo']
+  ): Record<string, boolean> {
+    const limits = platformInfo.limits || {};
+    return {
+      LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS:
+        platformInfo.type === 'webgpu' && (limits['maxStorageBuffersInVertexStage'] || 0) > 0,
+      // Metal may reassociate the floating-point transforms used by classic
+      // double-single arithmetic. The integer path makes each rounding point
+      // explicit while preserving the public vec2<f32> representation.
+      LUMA_FP64_INTEGER_ARITHMETIC:
+        platformInfo.type === 'webgpu' && platformInfo.gpu.toLowerCase() === 'apple'
+    };
+  }
 }

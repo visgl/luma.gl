@@ -210,7 +210,7 @@ export class Model {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
 
     debugShaders: undefined!,
     disableWarnings: undefined!

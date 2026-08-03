@@ -16,9 +16,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 - `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
   `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
-  `new WGSLShaderAssembler()` for WGSL. The default
-  `ShaderAssembler.getDefaultShaderAssembler()` remains the GLSL assembler; use
-  `ShaderAssembler.getDefaultShaderAssembler('wgsl')` for the separate WGSL assembler.
+  `new WGSLShaderAssembler()` for WGSL.
+- `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language.
+  Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')`
+  or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
 - `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and
   `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing
   `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or

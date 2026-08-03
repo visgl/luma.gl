@@ -29,7 +29,7 @@ import {
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 
-const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
 glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
 const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
@@ -74,15 +74,14 @@ Common assembly props:
 
 ## Static Methods
 
-### `getDefaultShaderAssembler(): GLSLShaderAssembler`
-
 ### `getDefaultShaderAssembler('glsl'): GLSLShaderAssembler`
 
 ### `getDefaultShaderAssembler('wgsl'): WGSLShaderAssembler`
 
-Returns the shared assembler for the requested shader language. Omitting the
-argument preserves the existing GLSL default. The WGSL default is a separate
-instance, so registering WGSL hooks cannot overwrite or remove GLSL hooks.
+Returns the shared assembler for the explicitly requested shader language. The
+language argument is required. GLSL and WGSL use separate instances, so
+registering hooks for one language cannot overwrite or remove hooks for the
+other.
 
 ## Methods
 
