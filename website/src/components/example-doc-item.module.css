@@ -1,3 +1,63 @@
+.catalogContainer {
+  width: 100%;
+  min-width: 0;
+}
+
+.catalogContainer :global(.luma-example-catalog-hero) {
+  position: relative;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto 1.5rem;
+  padding: 2.4rem 1rem 0.9rem;
+}
+
+.catalogContainer :global(.luma-example-catalog-eyebrow) {
+  margin: 0 0 0.85rem;
+  color: var(--ifm-color-primary-darkest, #1a8870);
+  font-size: 0.76rem;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.catalogContainer :global(.luma-example-catalog-title) {
+  max-width: 950px;
+  margin: 0;
+  color: var(--ifm-font-color-base);
+  font-size: clamp(2.55rem, 5.4vw, 4.55rem);
+  font-weight: 760;
+  letter-spacing: -0.065em;
+  line-height: 0.99;
+}
+
+.catalogContainer :global(.luma-example-catalog-description) {
+  max-width: 650px;
+  margin: 1.05rem 0 0;
+  color: var(--ifm-color-emphasis-700);
+  font-size: clamp(0.98rem, 1.55vw, 1.12rem);
+  line-height: 1.7;
+}
+
+.catalogContainer :global(.luma-example-catalog-capabilities) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.3rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.catalogContainer :global(.luma-example-catalog-capability) {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 999px;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.7rem;
+  font-weight: 640;
+  line-height: 1.1;
+  padding: 0.4rem 0.62rem;
+}
+
 .demoContainer {
   position: absolute;
   overflow: hidden !important;
@@ -9,4 +69,23 @@
 
 .demoContainer > h1 {
   display: none;
+}
+
+:global(html[data-theme="dark"]) .catalogContainer :global(.luma-example-catalog-eyebrow) {
+  color: #7dd3fc;
+}
+
+@media screen and (max-width: 640px) {
+  .catalogContainer :global(.luma-example-catalog-hero) {
+    margin-bottom: 1.1rem;
+    padding-top: 1.75rem;
+  }
+
+  .catalogContainer :global(.luma-example-catalog-title) {
+    font-size: clamp(2.2rem, 9vw, 3.1rem);
+  }
+
+  .catalogContainer :global(.luma-example-catalog-description) {
+    line-height: 1.58;
+  }
 }

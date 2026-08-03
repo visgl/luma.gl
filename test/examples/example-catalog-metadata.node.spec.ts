@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {parse} from 'yaml';
@@ -41,8 +42,48 @@ const WEBGL_ONLY_EXAMPLES = new Set([
   'experimental/webxr-kaleidoscope'
 ]);
 const LIVE_EXAMPLES = readLiveExamples();
+const requireCommonJSModule = createRequire(import.meta.url);
 
 describe('live example catalog metadata', () => {
+  test('discovers Triangle Geometry immediately after Hello Triangle with a real thumbnail', () => {
+    const tutorialExamples = LIVE_EXAMPLES.filter(({categories}) => categories[0] === 'Tutorials');
+    const helloTriangleIndex = tutorialExamples.findIndex(
+      ({id}) => id === 'tutorials/hello-triangle'
+    );
+    const triangleGeometryExample = tutorialExamples[helloTriangleIndex + 1];
+
+    expect(helloTriangleIndex).toBeGreaterThanOrEqual(0);
+    expect(triangleGeometryExample).toEqual({
+      id: 'tutorials/hello-triangle-geometry',
+      categories: ['Tutorials'],
+      metadata: {
+        backends: ['webgpu', 'webgl2'],
+        difficulty: 'tutorial',
+        maturity: 'stable',
+        topics: ['fundamentals', 'rendering', 'geometry', 'shaders']
+      }
+    });
+    expect(
+      existsSync(
+        path.join(
+          process.cwd(),
+          'website/static/images/examples/tutorials/hello-triangle-geometry.jpg'
+        )
+      )
+    ).toBe(true);
+  });
+
+  test('keeps the legacy sidebar synchronized with the authoritative example catalog', () => {
+    const tableOfContents = JSON.parse(
+      readFileSync(path.join(EXAMPLES_DIRECTORY, 'table-of-contents.json'), 'utf8')
+    ) as ExampleSidebarEntry[];
+    const legacySidebar = requireCommonJSModule(
+      path.join(process.cwd(), 'website/content/sidebar-examples.js')
+    ) as {examplesSidebar: ExampleSidebarEntry[]};
+
+    expect(legacySidebar.examplesSidebar).toEqual(tableOfContents);
+  });
+
   test('provides complete, curated filters for every sidebar example', () => {
     expect(LIVE_EXAMPLES.length).toBeGreaterThan(0);
 

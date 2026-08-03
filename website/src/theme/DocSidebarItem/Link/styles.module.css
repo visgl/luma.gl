@@ -40,3 +40,56 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.exampleCapabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+
+.exampleCapability {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.57rem;
+  font-weight: 690;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  padding: 0.22rem 0.38rem;
+}
+
+.webgpu {
+  border-color: rgba(14, 165, 233, 0.25);
+  background: rgba(14, 165, 233, 0.09);
+  color: #0369a1;
+}
+
+.webgl {
+  border-color: rgba(22, 163, 74, 0.23);
+  background: rgba(34, 197, 94, 0.09);
+  color: #15803d;
+}
+
+.hdr {
+  border-color: rgba(217, 119, 6, 0.25);
+  background: rgba(245, 158, 11, 0.1);
+  color: #a16207;
+}
+
+:global(html[data-theme="dark"]) .webgpu {
+  border-color: rgba(103, 232, 249, 0.26);
+  background: rgba(8, 145, 178, 0.16);
+  color: #a5f3fc;
+}
+
+:global(html[data-theme="dark"]) .webgl {
+  border-color: rgba(134, 239, 172, 0.24);
+  background: rgba(21, 128, 61, 0.18);
+  color: #bbf7d0;
+}
+
+:global(html[data-theme="dark"]) .hdr {
+  border-color: rgba(252, 211, 77, 0.28);
+  background: rgba(120, 53, 15, 0.35);
+  color: #fde68a;
+}
