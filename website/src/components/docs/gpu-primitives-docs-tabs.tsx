@@ -27,6 +27,7 @@ export type GPUPrimitivesDocsTabId =
   | 'scene'
   | 'group-aggregation'
   | 'hash-index'
+  | 'hash-join'
   | 'index-picking'
   | 'readback-ring'
   | 'draw-command-buffer';
@@ -156,6 +157,11 @@ const TABS: {id: GPUPrimitivesDocsTabId; label: string; href: string}[] = [
     id: 'hash-index',
     label: 'Hash Index',
     href: '/docs/api-reference/experimental/gpu-primitives/gpu-hash-index'
+  },
+  {
+    id: 'hash-join',
+    label: 'Hash Join',
+    href: '/docs/api-reference/experimental/gpu-primitives/gpu-hash-join'
   },
   {
     id: 'index-picking',

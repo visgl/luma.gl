@@ -970,7 +970,7 @@ The intended v10 layering is:
   GPUMask, GPUHierarchyLayout, GPUGraphTraversal, GPUAncestorProjection
   GPUReduction, GPUSort, GPUBatchSort, GPUHistogram, GPUGridBinning, GPUGridAggregation
   GPUGroupAggregation
-  GPUHashIndex and GPUHashIndexQuery
+  GPUHashIndex, GPUHashIndexQuery, and GPUHashJoin
   higher-level table algorithms
 
 @luma.gl/arrow
@@ -1039,8 +1039,10 @@ The first larger-compute slice can proceed independently of package graduation b
 existing table-independent graph contract. Tranche 8.1a is implemented: `GPUHashIndex` rebuilds a
 fixed-capacity sparse `uint32` identity map, and `GPUHashIndexQuery` performs bounded batch lookup
 with deterministic duplicate values, explicit invalid and overflow counts, and probe statistics.
-It intentionally stops before deletion, partitioning, and join materialization establish their own
-consumer-driven contracts.
+Tranche 8.2a is also implemented: `GPUHashJoin` composes lookup and stable scan into bounded
+many-to-one row-pair materialization with exact required-count and overflow reporting. It
+intentionally stops before deletion, partitioning, multi-match joins, and payload materialization
+establish their own consumer-driven contracts.
 
 The remaining work is divided into reviewable contracts. A tranche should land only when its entry
 dependency is present and its measurable exit evidence can be produced. Numbering groups related
@@ -1052,8 +1054,8 @@ consumers.
 | Tranche | Outcome | Entry dependency | Measurable exit | Impact | Cost |
 | --- | --- | --- | --- | :---: | :---: |
 | 8.1b — Mutable hash maintenance | Deletion and tombstone or rebuild-threshold policy grounded in a dynamic consumer | Implemented bounded `GPUHashIndex` build/query plus measured mutation workload | Lookup parity across deletion and reinsertion; bounded degradation and explicit rebuild trigger | Medium | Medium |
-| 8.2 — Sparse grouping and joins | Reuse hash lookup for sparse group IDs and bounded inner/left join materialization | `GPUHashIndex` in two exact-lookup consumers | CPU-oracle parity for duplicate, missing, overflow, and output-capacity cases | High | Large |
-| 8.3 — Partitioned hash topology | Preserve batch identity across independently built or globally addressed tables | Tranche 8.2 plus a preserved-batch consumer | Empty and uneven chunks retain identity without implicit packing | High | Large |
+| 8.2b — Sparse grouping and multi-match decision | Decide sparse aggregate rows, one-to-many storage, and payload materialization separately | Implemented bounded many-to-one `GPUHashJoin` plus two requesting consumers | Each expansion contract is accepted with output bounds and CPU-oracle evidence or explicitly deferred | High | Large |
+| 8.3 — Partitioned hash topology | Preserve batch identity across independently built or globally addressed tables | Implemented tranche 8.2a plus a preserved-batch consumer | Empty and uneven chunks retain identity without implicit packing | High | Large |
 | 8.4 — Sparse graph analytics | Frontier/visited representations and graph algorithms selected by demonstrated consumers | Partitioned identity contracts from 3.2 and 8.3 | Bounded CPU-oracle parity on disconnected, cyclic, and high-degree graphs | High | Large |
 | 8.5 — Field and solver composition | Reusable graph-native stencil, advection, and solver building blocks behind live simulations | Two existing simulation consumers agree on field and boundary contracts | Shared primitives replace consumer-local kernels without hidden submission | High | Large |
 | 3.2 — Partitioned topology | Global-ID and chunk-base contracts for hierarchy and CSR inputs without hidden packing | Implemented Phase 3 primitives plus a preserved-batch consumer | CPU-oracle parity across empty and uneven chunks; no implicit repack | High | Large |
@@ -1078,8 +1080,9 @@ consumers.
    documented decision gate gains a requesting consumer and positive evidence.
 4. Graduate packages only after both scene consumers prove the final APIs and dependency direction.
 5. Develop the larger compute vocabulary independently where contracts are already bounded:
-   `GPUHashIndex` build/query is implemented; require consumers and measurements before adding
-   mutable maintenance, joins, sparse graph algorithms, or generalized field solvers.
+   `GPUHashIndex` build/query and bounded many-to-one `GPUHashJoin` are implemented; require
+   consumers and measurements before adding mutable maintenance, multi-match joins, sparse graph
+   algorithms, or generalized field solvers.
 
 ### Phase 0 — Current foundation
 
@@ -1621,6 +1624,7 @@ close enough to WebGPU that developers can reason about cost, ordering, and owne
 - [`GPUScene`](/docs/api-reference/experimental/gpu-primitives/gpu-scene)
 - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation)
 - [`GPUHashIndex`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-index)
+- [`GPUHashJoin`](/docs/api-reference/experimental/gpu-primitives/gpu-hash-join)
 - [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target)
 - [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-primitives/gpu-readback-ring)
 - [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-primitives/draw-command-buffer)
