@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import {OperationHandler} from '../../operation/operation';
 import {compileExpression} from '../../utils/expression';
-import {ARITHMETIC_OPERATIONS, ArithmeticOperationInputs} from '../arithmetic-operation';
+import {ARITHMETIC_OPERATIONS, type ArithmeticOperationInputs} from '../arithmetic-expression';
 import {runRowComputation} from './common/row-transform';
 import {formatLiteralValue, getWGSLType, getZeroValue} from './common/helper';
 

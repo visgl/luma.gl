@@ -5,7 +5,7 @@
 import {fp32} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
 import {compileExpression} from '../../utils/expression';
-import {ARITHMETIC_OPERATIONS, ArithmeticOperationInputs} from '../arithmetic-operation';
+import {ARITHMETIC_OPERATIONS, type ArithmeticOperationInputs} from '../arithmetic-expression';
 import {runRowTransform} from './common/row-transform';
 import {formatLiteralValue, getAttributeType, getZeroLiteral} from './common/helper';
 

@@ -9,50 +9,19 @@ import {
   type GPUDataEvaluatorInput
 } from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
-import {
-  compileExpression,
-  type ExpressionLiteral,
-  Expression,
-  ExpressionOperations
-} from '../utils/expression';
+import {compileExpression, type ExpressionLiteral, Expression} from '../utils/expression';
 import {deduceOutputProps} from '../utils/output-props';
+import {
+  ARITHMETIC_OPERATIONS,
+  type ArithmeticOp,
+  type ArithmeticOperationInputs
+} from './arithmetic-expression';
 
-export type ArithmeticOp =
-  | 'add'
-  | 'subtract'
-  | 'multiply'
-  | 'divide'
-  | 'pow'
-  | 'sqrt'
-  | 'abs'
-  | 'sin'
-  | 'cos'
-  | 'tan'
-  | 'exp'
-  | 'log';
-
-export type ArithmeticOperationInputs = {
-  expression: Expression<ArithmeticOp>;
-  namedInputs: Record<string, GPUDataEvaluator>;
-};
+export {ARITHMETIC_OPERATIONS} from './arithmetic-expression';
+export type {ArithmeticOp, ArithmeticOperationInputs} from './arithmetic-expression';
 
 export type ArithmeticArgument = GPUDataEvaluatorInput | number | number[];
 type NormalizedArithmeticArgument = GPUDataEvaluator | number | number[];
-
-export const ARITHMETIC_OPERATIONS: ExpressionOperations<ArithmeticOp> = {
-  add: {arity: 2, symbol: 'arithmetic_add'},
-  subtract: {arity: 2, symbol: 'arithmetic_subtract'},
-  multiply: {arity: 2, symbol: 'arithmetic_multiply'},
-  divide: {arity: 2, symbol: 'arithmetic_divide'},
-  pow: {arity: 2, symbol: 'pow'},
-  sqrt: {arity: 1, symbol: 'sqrt'},
-  abs: {arity: 1, symbol: 'abs'},
-  sin: {arity: 1, symbol: 'sin'},
-  cos: {arity: 1, symbol: 'cos'},
-  tan: {arity: 1, symbol: 'arithmetic_tan'},
-  exp: {arity: 1, symbol: 'exp'},
-  log: {arity: 1, symbol: 'log'}
-};
 
 const FLOAT_OUTPUT_OPS = new Set<ArithmeticOp>(['pow', 'sqrt', 'sin', 'cos', 'tan', 'exp', 'log']);
 
