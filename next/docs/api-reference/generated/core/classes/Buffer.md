@@ -200,7 +200,7 @@ Max amount of debug data saved. Two vec4's
 
 > `static` **defaultProps**: `Required`<[`BufferProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BufferProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L155)
+Defined in: [modules/core/src/adapter/resources/buffer.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L159)
 
 Default properties for resource
 

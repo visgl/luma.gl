@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Upgrade Guide | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/next/docs/upgrade-guide"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Upgrade Guide | luma.gl"><meta data-rh="true" name="description" content="The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications."><meta data-rh="true" property="og:description" content="The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications."><link data-rh="true" rel="icon" href="/next/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/next/docs/upgrade-guide"><link data-rh="true" rel="alternate" href="https://luma.gl/next/docs/upgrade-guide" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/next/docs/upgrade-guide" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Upgrade Guide","item":"https://luma.gl/next/docs/upgrade-guide"}]}</script><link rel="stylesheet" href="/next/assets/css/styles.452bf92d.css">
-<script src="/next/assets/js/runtime~main.5236e748.js" defer="defer"></script>
-<script src="/next/assets/js/main.68cd959a.js" defer="defer"></script>
+<script src="/next/assets/js/runtime~main.67436b7c.js" defer="defer"></script>
+<script src="/next/assets/js/main.afbdee61.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -65,6 +65,13 @@ unnecessary attachment stores for transform-feedback-only workloads. Application
 framebuffer and consume rasterized fragment output must pass <code>discard: false</code> to <code>run()</code>.</li>
 <li class=""><code>Model.predraw(commandEncoder)</code> now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal <code>Model.draw(renderPass)</code> calls continue to perform their own pre-draw work.</li>
 <li class=""><code>makeGPUGeometry()</code> now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct <code>GPUGeometry</code> explicitly with the corresponding <code>bufferLayout</code>.</li>
+</ul>
+<p><strong>@luma.gl/arrow</strong></p>
+<ul>
+<li class="">Arrow 2D text clip rectangles now require <code>FixedSizeList&lt;Float32&gt;[4]</code> columns, and GPU-backed
+clip rectangles require <code>GPUVector&lt;&#x27;float32x4&#x27;&gt;</code>. Rebuild any previous
+<code>FixedSizeList&lt;Int16&gt;[4]</code> or <code>GPUVector&lt;&#x27;sint16x4&#x27;&gt;</code> inputs as 32-bit floats. Rectangle values are
+interpreted as <code>[x, y, width, height]</code> offsets in the text anchor&#x27;s world coordinate space.</li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_tleR" id="upgrading-to-v93">Upgrading to v9.3<a href="#upgrading-to-v93" class="hash-link" aria-label="Direct link to Upgrading to v9.3" title="Direct link to Upgrading to v9.3" translate="no">​</a></h2>
 <p><strong>Potentially breaking behavior</strong></p>

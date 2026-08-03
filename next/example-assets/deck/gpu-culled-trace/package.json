@@ -1,0 +1,27 @@
+{
+  "name": "luma.gl-examples-deck-gpu-culled-trace",
+  "version": "9.4.0-alpha.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@deck.gl-community/arrow-layers": "workspace:*",
+    "@deck.gl/core": "9.3.4",
+    "@luma.gl/arrow": "9.4.0-alpha.3",
+    "@luma.gl/core": "9.4.0-alpha.3",
+    "@luma.gl/engine": "9.4.0-alpha.3",
+    "@luma.gl/experimental": "9.4.0-alpha.3",
+    "@luma.gl/shadertools": "9.4.0-alpha.3",
+    "@luma.gl/text": "9.4.0-alpha.3",
+    "@luma.gl/webgpu": "9.4.0-alpha.3",
+    "apache-arrow": "^17.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}

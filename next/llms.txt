@@ -269,6 +269,7 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [GPU Primitives and Command Graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives.md): Overview
 - [DrawCommandBuffer](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/draw-command-buffer.md): Overview
 - [GPUAncestorProjection](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-ancestor-projection.md): Overview
+- [GPUBatchHashJoin](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-batch-hash-join.md): Overview
 - [GPUBVH](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh.md): Overview
 - [GPUBVHQuery](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-bvh-query.md): Overview
 - [GPUCommandGraph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md): Overview
@@ -280,6 +281,8 @@ The @luma.gl/engine module contains higher-level rendering and application frame
 - [GPUGridIndex](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md): Overview
 - [GPUGridIndexQuery](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index-query.md): Overview
 - [GPUGroupAggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-group-aggregation.md): Overview
+- [GPUHashIndex](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-index.md): Overview
+- [GPUHashJoin](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hash-join.md): Overview
 - [GPUHierarchyLayout](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-hierarchy-layout.md): Overview
 - [GPUHistogram](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-histogram.md): Overview
 - [GPUIndexPickingTarget](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-index-picking-target.md): Overview
@@ -609,9 +612,9 @@ This developer guide focuses on the practicalities of developing with the luma.g
 
 #### bundling
 
-Optimizing for Bundle Size
+luma.gl is published as tree-shakeable ES modules. Application bundle size depends on which
 
-- [Bundling](https://luma.gl/next/docs/developer-guide/bundling.md): Optimizing for Bundle Size
+- [Bundling](https://luma.gl/next/docs/developer-guide/bundling.md): luma.gl is published as tree-shakeable ES modules. Application bundle size depends on which
 
 #### contributing
 

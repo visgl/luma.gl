@@ -54,6 +54,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 * `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 * `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
 
+**@luma.gl/arrow**
+
+* Arrow 2D text clip rectangles now require `FixedSizeList<Float32>[4]` columns, and GPU-backed clip rectangles require `GPUVector<'float32x4'>`. Rebuild any previous `FixedSizeList<Int16>[4]` or `GPUVector<'sint16x4'>` inputs as 32-bit floats. Rectangle values are interpreted as `[x, y, width, height]` offsets in the text anchor's world coordinate space.
+
 ## Upgrading to v9.3[​](#upgrading-to-v93 "Direct link to Upgrading to v9.3")
 
 **Potentially breaking behavior**
