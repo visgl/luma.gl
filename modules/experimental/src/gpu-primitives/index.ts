@@ -69,6 +69,12 @@ export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
+export {GPUIndexedRangeCompaction} from './gpu-indexed-range-compaction';
+export type {
+  GPUIndexedRangeCompactionProps,
+  GPUIndexedRangeCompactionResult,
+  GPUIndexedRangeLayout
+} from './gpu-indexed-range-compaction';
 export {GPUTextSelection} from './gpu-text-selection';
 export type {GPUTextSelectionProps} from './gpu-text-selection';
 

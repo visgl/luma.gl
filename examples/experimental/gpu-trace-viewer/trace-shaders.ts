@@ -10,6 +10,7 @@ import {
   TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN,
   TRACE_FILTER_HIDE_RUNTIME_SPANS,
   TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS,
+  TRACE_LANE_COUNT,
   TRACE_LANES_PER_THREAD,
   TRACE_OVERLAPPING_CHILD_FLAG,
   TRACE_RUNTIME_SPAN_FLAG,
@@ -87,6 +88,35 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
     vec2<f32>(1.0, 1.0)
   );
   return corners[vertexIndex];
+}`;
+
+const TRACE_VISIBILITY_FILTER_DECLARATIONS = /* wgsl */ `
+const RUNTIME_SPAN_FLAG: u32 = ${TRACE_RUNTIME_SPAN_FLAG}u;
+const ERROR_SPAN_FLAG: u32 = ${TRACE_ERROR_SPAN_FLAG}u;
+const OVERLAPPING_CHILD_FLAG: u32 = ${TRACE_OVERLAPPING_CHILD_FLAG}u;
+const SIMILAR_DURATION_PARENT_FLAG: u32 = ${TRACE_SIMILAR_DURATION_PARENT_FLAG}u;
+
+fn isSpanSourceVisible(span: TraceSpan, lane: f32) -> bool {
+  let end = span.start + span.duration;
+  let timeVisible = end >= viewUniforms.timeMin && span.start <= viewUniforms.timeMax;
+  let laneVisible = lane >= viewUniforms.laneMin && lane < viewUniforms.laneMax;
+  let groupVisible = (viewUniforms.enabledMask & (1u << span.group)) != 0u;
+  let statusVisible = (viewUniforms.statusMask & (1u << (span.flags & 3u))) != 0u;
+  let runtimeVisible =
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_RUNTIME_SPANS}u) == 0u ||
+    (span.flags & RUNTIME_SPAN_FLAG) == 0u;
+  let errorVisible =
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_ERRORS_ONLY}u) == 0u ||
+    (span.flags & ERROR_SPAN_FLAG) != 0u;
+  let overlappingChildVisible =
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN}u) == 0u ||
+    (span.flags & OVERLAPPING_CHILD_FLAG) == 0u;
+  let similarParentVisible =
+    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS}u) == 0u ||
+    (span.flags & SIMILAR_DURATION_PARENT_FLAG) == 0u;
+  let durationVisible = span.duration >= viewUniforms.minimumDuration;
+  return timeVisible && laneVisible && groupVisible && statusVisible && runtimeVisible &&
+    errorVisible && overlappingChildVisible && similarParentVisible && durationVisible;
 }`;
 
 /** Indirect span renderer reading GPU-generated stable source IDs and thread layout. */
@@ -260,27 +290,6 @@ struct DensityVertexOutput {
   return input.color;
 }`;
 
-/** Turns a selected dependency-reachability mask into an optional all-span focus predicate. */
-export function getFocusMaskShader(spanCount: number): string {
-  return /* wgsl */ `
-${TRACE_SHADER_DECLARATIONS}
-const SPAN_COUNT: u32 = ${spanCount}u;
-@group(0) @binding(0) var<storage, read> reachedSpans: array<u32>;
-@group(0) @binding(1) var<storage, read> activeSeedCount: array<u32>;
-@group(0) @binding(2) var<storage, read_write> focusMask: array<u32>;
-@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
-
-@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let index = globalId.x;
-  if (index >= SPAN_COUNT) {
-    return;
-  }
-  let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
-  focusMask[index] = select(1u, select(0u, 1u, reachedSpans[index] != 0u), focusEnabled);
-}`;
-}
-
 /** Coarsely rejects immutable span batches that cannot contribute to the active view. */
 export function getBatchVisibilityShader(batchCount: number): string {
   return /* wgsl */ `
@@ -314,64 +323,174 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }`;
 }
 
-/** Tests view, process, thread, status, duration, and source filters for one stable draw group. */
-export function getVisibilityShader(
-  spanCount: number,
-  groupIndex: number,
-  firstSpanIndex = 0
-): string {
+/** Applies focus policy and publishes generation-tagged exact visibility for candidate spans. */
+export function getCandidateFocusShader(): string {
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
-const SPAN_COUNT: u32 = ${spanCount}u;
-const FIRST_SPAN_INDEX: u32 = ${firstSpanIndex}u;
-const GROUP_BIT: u32 = ${1 << groupIndex}u;
-const RUNTIME_SPAN_FLAG: u32 = ${TRACE_RUNTIME_SPAN_FLAG}u;
-const ERROR_SPAN_FLAG: u32 = ${TRACE_ERROR_SPAN_FLAG}u;
-const OVERLAPPING_CHILD_FLAG: u32 = ${TRACE_OVERLAPPING_CHILD_FLAG}u;
-const SIMILAR_DURATION_PARENT_FLAG: u32 = ${TRACE_SIMILAR_DURATION_PARENT_FLAG}u;
-@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
-@group(0) @binding(1) var<uniform> viewUniforms: ViewUniforms;
-@group(0) @binding(2) var<storage, read> processStates: array<u32>;
-@group(0) @binding(3) var<storage, read> threadOffsets: array<u32>;
-@group(0) @binding(4) var<storage, read> threadStates: array<u32>;
-@group(0) @binding(5) var<storage, read_write> visibilityFlags: array<u32>;
-@group(0) @binding(6) var<storage, read_write> pickResult: array<atomic<u32>>;
-@group(0) @binding(7) var<storage, read_write> densityKeys: array<u32>;
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(2) var<storage, read> baseVisibility: array<u32>;
+@group(0) @binding(3) var<storage, read> reachedSpans: array<u32>;
+@group(0) @binding(4) var<storage, read> activeSeedCount: array<u32>;
+@group(0) @binding(5) var<storage, read> visibilityGeneration: array<u32>;
+@group(0) @binding(6) var<storage, read_write> spanVisibility: array<u32>;
+@group(0) @binding(7) var<uniform> viewUniforms: ViewUniforms;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  let groupRowIndex = globalId.x;
-  if (groupRowIndex >= SPAN_COUNT) {
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
+  if (localId.x >= batch.spanCount) {
     return;
   }
-  let sourceIndex = FIRST_SPAN_INDEX + groupRowIndex;
+  let sourceIndex = batch.firstSpanIndex + localId.x;
+  let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
+  let focusVisible = !focusEnabled || reachedSpans[sourceIndex] != 0u;
+  let visible = baseVisibility[sourceIndex] != 0u && focusVisible;
+  spanVisibility[sourceIndex] = select(0u, visibilityGeneration[0], visible);
+}`;
+}
+
+/** Clears the fixed-size density target without touching source-aligned span storage. */
+export function getDensityClearShader(): string {
+  return /* wgsl */ `
+const DENSITY_BIN_COUNT: u32 = ${TRACE_LANE_COUNT * TRACE_DENSITY_BIN_COUNT}u;
+@group(0) @binding(0) var<storage, read_write> densityBins: array<u32>;
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  if (globalId.x < DENSITY_BIN_COUNT) {
+    densityBins[globalId.x] = 0u;
+  }
+}`;
+}
+
+/** Aggregates focused candidate density directly, avoiding a full-domain key scan. */
+export function getCandidateDensityShader(): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+@group(0) @binding(0) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(1) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(2) var<storage, read> densityKeys: array<u32>;
+@group(0) @binding(3) var<storage, read> reachedSpans: array<u32>;
+@group(0) @binding(4) var<storage, read> activeSeedCount: array<u32>;
+@group(0) @binding(5) var<storage, read_write> densityBins: array<atomic<u32>>;
+@group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(
+  @builtin(local_invocation_id) localId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
+  if (localId.x >= batch.spanCount) {
+    return;
+  }
+  let sourceIndex = batch.firstSpanIndex + localId.x;
+  let focusEnabled = viewUniforms.focusMode != 0u && activeSeedCount[0] != 0u;
+  let focusVisible = !focusEnabled || reachedSpans[sourceIndex] != 0u;
+  let densityKey = densityKeys[sourceIndex];
+  if (focusVisible && densityKey != 0xffffffffu) {
+    atomicAdd(&densityBins[densityKey], 1u);
+  }
+}`;
+}
+
+/** Publishes stable global visible-ID slices into the per-group indirect draw commands. */
+export function getTraceDrawCommandsShader(
+  groupBatchRanges: readonly {firstBatchIndex: number; batchCount: number}[]
+): string {
+  const firstBatchIndices = groupBatchRanges.map(range => `${range.firstBatchIndex}u`).join(', ');
+  const lastBatchIndices = groupBatchRanges
+    .map(range => `${range.firstBatchIndex + range.batchCount - 1}u`)
+    .join(', ');
+  return /* wgsl */ `
+const GROUP_COUNT: u32 = ${groupBatchRanges.length}u;
+const FIRST_BATCH_INDICES = array<u32, ${groupBatchRanges.length}>(${firstBatchIndices});
+const LAST_BATCH_INDICES = array<u32, ${groupBatchRanges.length}>(${lastBatchIndices});
+@group(0) @binding(0) var<storage, read> rangeCounts: array<u32>;
+@group(0) @binding(1) var<storage, read> rangeOffsets: array<u32>;
+@group(0) @binding(2) var<storage, read_write> drawCommands: array<u32>;
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
+  let groupIndex = globalId.x;
+  if (groupIndex >= GROUP_COUNT) {
+    return;
+  }
+  let firstBatchIndex = FIRST_BATCH_INDICES[groupIndex];
+  let lastBatchIndex = LAST_BATCH_INDICES[groupIndex];
+  let firstInstance = rangeOffsets[firstBatchIndex];
+  let endInstance = rangeOffsets[lastBatchIndex] + rangeCounts[lastBatchIndex];
+  let commandOffset = groupIndex * 4u;
+  drawCommands[commandOffset + 1u] = endInstance - firstInstance;
+  drawCommands[commandOffset + 3u] = firstInstance;
+}`;
+}
+
+/** Tests exact span predicates only inside the compacted list of candidate batches. */
+export function getCandidateVisibilityShader(): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+${TRACE_VISIBILITY_FILTER_DECLARATIONS}
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(6) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(7) var<storage, read_write> visibilityFlags: array<u32>;
+@group(0) @binding(8) var<storage, read_write> densityKeys: array<u32>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
+  let batchRowIndex = globalId.x;
+  if (batchRowIndex >= batch.spanCount) {
+    return;
+  }
+  let sourceIndex = batch.firstSpanIndex + batchRowIndex;
   let span = spans[sourceIndex];
-  let end = span.start + span.duration;
   let processExpanded = processStates[span.processIndex] != 0u;
   let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
   let expandedLane = threadOffsets[span.threadIndex] + localLane;
   let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
   let lane = f32(select(collapsedLane, expandedLane, processExpanded));
-  let timeVisible = end >= viewUniforms.timeMin && span.start <= viewUniforms.timeMax;
-  let laneVisible = lane >= viewUniforms.laneMin && lane < viewUniforms.laneMax;
-  let groupVisible = (viewUniforms.enabledMask & GROUP_BIT) != 0u;
-  let statusVisible = (viewUniforms.statusMask & (1u << (span.flags & 3u))) != 0u;
-  let runtimeVisible =
-    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_RUNTIME_SPANS}u) == 0u ||
-    (span.flags & RUNTIME_SPAN_FLAG) == 0u;
-  let errorVisible =
-    (viewUniforms.activeFilterMask & ${TRACE_FILTER_ERRORS_ONLY}u) == 0u ||
-    (span.flags & ERROR_SPAN_FLAG) != 0u;
-  let overlappingChildVisible =
-    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_OVERLAPPING_CHILDREN}u) == 0u ||
-    (span.flags & OVERLAPPING_CHILD_FLAG) == 0u;
-  let similarParentVisible =
-    (viewUniforms.activeFilterMask & ${TRACE_FILTER_HIDE_SIMILAR_DURATION_PARENTS}u) == 0u ||
-    (span.flags & SIMILAR_DURATION_PARENT_FLAG) == 0u;
-  let durationVisible = span.duration >= viewUniforms.minimumDuration;
-  let sourceVisible = timeVisible && laneVisible && groupVisible &&
-    statusVisible && runtimeVisible && errorVisible && overlappingChildVisible &&
-    similarParentVisible && durationVisible;
+  let sourceVisible = isSpanSourceVisible(span, lane);
   let densityMode = isDensityMode();
   let exactVisible = sourceVisible && processExpanded && !densityMode;
   visibilityFlags[sourceIndex] = select(0u, 1u, exactVisible);
@@ -381,11 +500,58 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let densityKey = u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin;
   let densityVisible = sourceVisible && (densityMode || !processExpanded);
   densityKeys[sourceIndex] = select(0xffffffffu, densityKey, densityVisible);
-  let pickRequested = viewUniforms.pickLane >= 0.0;
-  let timePicked = viewUniforms.pickTime >= span.start &&
-    viewUniforms.pickTime <= span.start + span.duration;
+}`;
+}
+
+/** Resolves explicit picking inside the same compacted candidate batches as classification. */
+export function getCandidatePickShader(): string {
+  return /* wgsl */ `
+${TRACE_SHADER_DECLARATIONS}
+struct TraceSpanBatch {
+  firstSpanIndex: u32,
+  spanCount: u32,
+  timeMin: f32,
+  timeMax: f32,
+  laneMin: u32,
+  laneMax: u32,
+  groupIndex: u32,
+  batchIndex: u32,
+};
+${TRACE_VISIBILITY_FILTER_DECLARATIONS}
+@group(0) @binding(0) var<storage, read> spans: array<TraceSpan>;
+@group(0) @binding(1) var<storage, read> spanBatches: array<TraceSpanBatch>;
+@group(0) @binding(2) var<storage, read> candidateBatchIds: array<u32>;
+@group(0) @binding(3) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(4) var<storage, read> processStates: array<u32>;
+@group(0) @binding(5) var<storage, read> threadOffsets: array<u32>;
+@group(0) @binding(6) var<storage, read> threadStates: array<u32>;
+@group(0) @binding(7) var<storage, read_write> pickResult: array<atomic<u32>>;
+
+@compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
+fn main(
+  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  if (viewUniforms.pickLane < 0.0) {
+    return;
+  }
+  let batch = spanBatches[candidateBatchIds[workgroupId.y]];
+  let batchRowIndex = globalId.x;
+  if (batchRowIndex >= batch.spanCount) {
+    return;
+  }
+  let sourceIndex = batch.firstSpanIndex + batchRowIndex;
+  let span = spans[sourceIndex];
+  let processExpanded = processStates[span.processIndex] != 0u;
+  let localLane = select(0u, span.lane % LANES_PER_THREAD, threadStates[span.threadIndex] != 0u);
+  let expandedLane = threadOffsets[span.threadIndex] + localLane;
+  let collapsedLane = threadOffsets[span.processIndex * THREADS_PER_PROCESS];
+  let lane = f32(select(collapsedLane, expandedLane, processExpanded));
+  let end = span.start + span.duration;
+  let sourceVisible = isSpanSourceVisible(span, lane);
+  let timePicked = viewUniforms.pickTime >= span.start && viewUniforms.pickTime <= end;
   let lanePicked = viewUniforms.pickLane >= lane && viewUniforms.pickLane < lane + 1.0;
-  if (sourceVisible && pickRequested && timePicked && lanePicked) {
+  if (sourceVisible && timePicked && lanePicked) {
     atomicMin(&pickResult[0], sourceIndex);
   }
 }`;
@@ -412,8 +578,9 @@ const DEPENDENCY_COUNT: u32 = ${dependencyCount}u;
 @group(0) @binding(2) var<storage, read> spanVisibility: array<u32>;
 @group(0) @binding(3) var<storage, read> processStates: array<u32>;
 @group(0) @binding(4) var<storage, read> visibleAncestors: array<u32>;
-@group(0) @binding(5) var<uniform> viewUniforms: ViewUniforms;
-@group(0) @binding(6) var<storage, read_write> dependencyFlags: array<u32>;
+@group(0) @binding(5) var<storage, read> visibilityGeneration: array<u32>;
+@group(0) @binding(6) var<uniform> viewUniforms: ViewUniforms;
+@group(0) @binding(7) var<storage, read_write> dependencyFlags: array<u32>;
 
 @compute @workgroup_size(${TRACE_WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -430,10 +597,10 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
   let destinationCollapsed = processStates[destination.processIndex] == 0u;
   let familyVisible = (viewUniforms.dependencyMask & (1u << dependency.family)) != 0u;
   let sourceVisible =
-    spanVisibility[dependency.sourceIndex] != 0u || sourceCollapsed ||
+    spanVisibility[dependency.sourceIndex] == visibilityGeneration[0] || sourceCollapsed ||
     projectedSource != 0xffffffffu;
   let destinationVisible =
-    spanVisibility[dependency.destinationIndex] != 0u ||
+    spanVisibility[dependency.destinationIndex] == visibilityGeneration[0] ||
     destinationCollapsed || projectedDestination != 0xffffffffu;
   let effectiveSource = select(projectedSource, dependency.sourceIndex, sourceCollapsed);
   let effectiveDestination = select(

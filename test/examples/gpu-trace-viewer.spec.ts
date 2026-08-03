@@ -42,6 +42,7 @@ describe('GPU hierarchical trace viewer', () => {
         resources: {
           candidateDispatchCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
           drawCommands: {buffer: {readAsync: () => Promise<Uint8Array>}};
+          visibleSpanIds: {readAsync: () => Promise<Uint8Array>};
           densityBins: {readAsync: () => Promise<Uint8Array>};
           reachedSpans: {
             readAsync: (byteOffset?: number, byteLength?: number) => Promise<Uint8Array>;
@@ -89,12 +90,28 @@ describe('GPU hierarchical trace viewer', () => {
       );
       expect(firstCounts[1] + firstCounts[5] + firstCounts[9]).toBeGreaterThan(0);
       expect(firstCounts[13]).toBeGreaterThan(0);
+      const visibleSpanBytes = await state.resources.visibleSpanIds.readAsync();
+      const visibleSpanIds = new Uint32Array(
+        visibleSpanBytes.buffer,
+        visibleSpanBytes.byteOffset,
+        visibleSpanBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+      );
+      for (let groupIndex = 0; groupIndex < 3; groupIndex++) {
+        const instanceCount = firstCounts[groupIndex * 4 + 1];
+        const firstInstance = firstCounts[groupIndex * 4 + 3];
+        const groupIds = Array.from(
+          visibleSpanIds.subarray(firstInstance, firstInstance + instanceCount)
+        );
+        expect(groupIds).toEqual([...groupIds].sort((left, right) => left - right));
+      }
       const candidateBytes = await state.resources.candidateDispatchCommands.buffer.readAsync();
-      const candidateCount = new Uint32Array(
+      const candidateDispatch = new Uint32Array(
         candidateBytes.buffer,
         candidateBytes.byteOffset,
-        1
-      )[0];
+        3
+      );
+      expect(candidateDispatch[0]).toBeGreaterThan(0);
+      const candidateCount = candidateDispatch[1];
       expect(candidateCount).toBeGreaterThan(0);
       expect(candidateCount).toBeLessThanOrEqual(state.resources.spanBatchCount);
 
@@ -107,7 +124,7 @@ describe('GPU hierarchical trace viewer', () => {
       const filteredCandidateBytes =
         await state.resources.candidateDispatchCommands.buffer.readAsync();
       expect(
-        new Uint32Array(filteredCandidateBytes.buffer, filteredCandidateBytes.byteOffset, 1)[0]
+        new Uint32Array(filteredCandidateBytes.buffer, filteredCandidateBytes.byteOffset, 3)[1]
       ).toBeLessThan(candidateCount);
       firstGroup!.checked = true;
       firstGroup!.dispatchEvent(new Event('change', {bubbles: true}));
