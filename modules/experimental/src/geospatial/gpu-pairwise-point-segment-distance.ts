@@ -29,20 +29,32 @@ import {
   validateSeparateBuffers
 } from './geospatial-utils';
 
-type GPUPairwisePointSegmentDistanceBaseProps = {id?: string};
+type GPUPairwisePointSegmentDistanceBaseProps = {
+  /** Prefix for generated graph-node IDs. */
+  id?: string;
+};
 
+/** Properties for point-to-segment distance over aligned rows. */
 export type GPUPairwisePointSegmentDistanceProps = GPUPairwisePointSegmentDistanceBaseProps &
   (
     | {
+        /** Local f32 point rows. */
         points: GPUFloat32Positions;
+        /** Local f32 segment-start rows. */
         segmentStarts: GPUFloat32Positions;
+        /** Local f32 segment-end rows. */
         segmentEnds: GPUFloat32Positions;
+        /** Caller-owned f32 distance rows. */
         output: GPUScalarRows;
       }
     | {
+        /** Raw binary64 point rows. */
         points: GPUFloat64Positions;
+        /** Raw binary64 segment-start rows. */
         segmentStarts: GPUFloat64Positions;
+        /** Raw binary64 segment-end rows. */
         segmentEnds: GPUFloat64Positions;
+        /** Caller-owned `[high, low]` double-single distance rows. */
         output: GPUPreciseScalarRows;
       }
   );
@@ -55,6 +67,7 @@ export class GPUPairwisePointSegmentDistance implements GPUCommandGraphContribut
   readonly segmentEnds: GPUFloat32Positions | GPUFloat64Positions;
   readonly output: GPUScalarRows | GPUPreciseScalarRows;
 
+  /** Creates a distance contributor without compiling or submitting GPU work. */
   constructor(props: GPUPairwisePointSegmentDistanceProps) {
     this.id = props.id ?? 'gpu-pairwise-point-segment-distance';
     this.points = props.points;
@@ -82,6 +95,7 @@ export class GPUPairwisePointSegmentDistance implements GPUCommandGraphContribut
     );
   }
 
+  /** Adds one distance node per non-empty input chunk to the target graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     assertGraphOwnership(
       graph,

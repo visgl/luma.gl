@@ -50,6 +50,18 @@ export type {
   GraphTextureViewProps
 } from './gpu-command-graph';
 export type {GPUCommandGraphContributor} from './gpu-command-graph';
+export {GPUCommandGraphInspector} from './gpu-command-graph-inspector';
+export type {
+  GPUCommandGraphInspectorDurationSnapshot,
+  GPUCommandGraphInspectorEncoding,
+  GPUCommandGraphInspectorGraph,
+  GPUCommandGraphInspectorGraphSnapshot,
+  GPUCommandGraphInspectorNodeIdentity,
+  GPUCommandGraphInspectorNodeSnapshot,
+  GPUCommandGraphInspectorProps,
+  GPUCommandGraphInspectorSnapshot,
+  GPUCommandGraphInspectorStatsSnapshot
+} from './gpu-command-graph-inspector';
 export {createTransientView, getViewBinding, getViewElementOffset} from './graph-data-view-utils';
 export type {GraphDataViewBinding} from './graph-data-view-utils';
 

@@ -25,16 +25,29 @@ import {
 } from './geospatial-utils';
 
 type GPUHaversineDistanceBaseProps = {
+  /** Prefix for generated graph-node IDs. */
   id?: string;
+  /** Caller-owned f32 distance rows. */
   output: GPUScalarRows;
   /** Sphere radius in output units. Defaults to 6371 kilometres. */
   radius?: number;
 };
 
+/** Properties for pairwise great-circle distance over aligned coordinate rows. */
 export type GPUHaversineDistanceProps = GPUHaversineDistanceBaseProps &
   (
-    | {left: GPUFloat32Positions; right: GPUFloat32Positions}
-    | {left: GPUFloat64Positions; right: GPUFloat64Positions}
+    | {
+        /** First longitude/latitude rows in degrees. */
+        left: GPUFloat32Positions;
+        /** Second longitude/latitude rows in degrees. */
+        right: GPUFloat32Positions;
+      }
+    | {
+        /** First raw binary64 longitude/latitude rows in degrees. */
+        left: GPUFloat64Positions;
+        /** Second raw binary64 longitude/latitude rows in degrees. */
+        right: GPUFloat64Positions;
+      }
   );
 
 /**
@@ -50,6 +63,7 @@ export class GPUHaversineDistance implements GPUCommandGraphContributor {
   readonly output: GPUScalarRows;
   readonly radius: number;
 
+  /** Creates a distance contributor without compiling or submitting GPU work. */
   constructor(props: GPUHaversineDistanceProps) {
     this.id = props.id ?? 'gpu-haversine-distance';
     this.left = props.left;
@@ -70,6 +84,7 @@ export class GPUHaversineDistance implements GPUCommandGraphContributor {
     }
   }
 
+  /** Adds one distance node per non-empty input chunk to the target graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     assertGraphOwnership(graph, [this.left, this.right, this.output], this.id);
     const leftChunks = getRowChunks(this.left);

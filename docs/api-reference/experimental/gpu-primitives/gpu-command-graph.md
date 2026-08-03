@@ -399,3 +399,38 @@ separate values and should not be collapsed into one score.
 
 Destroys compiled node resources, cached views/framebuffers, and physical transients. Imported
 buffers, textures, and external-image bindings remain caller-owned.
+
+## `GPUCommandGraphInspector`
+
+`GPUCommandGraphInspector` is a data-only collector for one or more compiled graphs. Register each
+compiled graph once, record synchronous CPU measurements immediately after `encode()`, and request
+optional GPU timestamp readback only after submitting the command buffer:
+
+```ts
+import {GPUCommandGraphInspector} from '@luma.gl/experimental';
+
+const inspector = new GPUCommandGraphInspector({maxSamples: 120});
+inspector.registerGraph(compiled);
+
+const commandEncoder = device.createCommandEncoder();
+const encoding = compiled.encode(commandEncoder, {parameters: {time}});
+inspector.recordEncoding(compiled.id, encoding);
+device.submit(commandEncoder.finish());
+
+if (encoding.canReadGPUTimings) {
+  await inspector.recordGPUTimings(compiled.id, encoding);
+}
+
+const snapshot = inspector.getSnapshot();
+```
+
+`getSnapshot()` returns an immutable view of every registered graph in registration order. Each
+graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read
+counts, bounded whole-graph CPU and GPU duration summaries, and per-node summaries in compiled
+schedule order. Duration summaries contain the retained sample count plus latest, p50, and p95
+milliseconds when samples exist. Pass `getNodeGroup` to the constructor to add application-specific
+semantic groups to node snapshots; pass `maxSamples` to bound each retained timing history.
+
+The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps
+automatically. `clear()` removes all registrations, while registering a new compiled graph with an
+existing ID replaces its captured metadata and resets its measurements.

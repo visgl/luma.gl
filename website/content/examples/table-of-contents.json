@@ -32,6 +32,12 @@
     "type": "category",
     "label": "WebGPU",
     "items": [
+      "showcase/billion-point-spatial-atlas",
+      {
+        "type": "doc",
+        "id": "deck/luspatial-taxi",
+        "label": "luSpatial Taxi Explorer"
+      },
       "showcase/lightstorm-megacity",
       "experimental/volumetric-fire-forge",
       {

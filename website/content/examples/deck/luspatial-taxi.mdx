@@ -1,0 +1,30 @@
+---
+title: luSpatial Taxi Explorer
+description: A deck.gl WebGPU map that queries one million resident taxi points on the GPU and renders the result indirectly.
+sidebar_custom_props:
+  description: Query a million resident taxi points through luSpatial and render the result over a basemap with deck.gl.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, data, geospatial, deck.gl]
+---
+
+import {DeckLuSpatialTaxiExample} from '@site/src/examples';
+
+<DeckLuSpatialTaxiExample />
+
+This focused integration keeps spatial compute and map rendering in their natural layers. The
+deck.gl `MapView` owns pan, zoom, picking, and the camera; MapLibre supplies a synchronized dark
+basemap; and `@luma.gl/experimental/geospatial` projects, indexes, and queries the resident points.
+
+Both the viewport and radius queries write source row IDs to GPU buffers. Their clamped counts
+alias `DrawCommandBuffer.instanceCount`, so the custom deck.gl layer consumes each result with an
+indirect draw and no CPU count synchronization in the render path. Click the map to move the radius
+query, choose a taxi-zone preset to recenter, and hover a point to inspect its source row and
+coordinates.
+
+The one-million-point browser fixture is a deterministic expansion of the same public sample used
+by the Billion-Point Spatial Atlas. The corpus counter preserves the 168,898,952-row target while
+the resident counter states what is actually allocated on the current GPU. Open the command-graph
+inspector in the control card to compare projection/index construction with the per-frame viewport
+and radius queries.

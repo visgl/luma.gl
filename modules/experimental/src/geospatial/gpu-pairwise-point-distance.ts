@@ -29,12 +29,30 @@ import {
   validateSeparateBuffers
 } from './geospatial-utils';
 
-type GPUPairwisePointDistanceBaseProps = {id?: string};
+type GPUPairwisePointDistanceBaseProps = {
+  /** Prefix for generated graph-node IDs. */
+  id?: string;
+};
 
+/** Properties for Euclidean distance over aligned point rows. */
 export type GPUPairwisePointDistanceProps = GPUPairwisePointDistanceBaseProps &
   (
-    | {left: GPUFloat32Positions; right: GPUFloat32Positions; output: GPUScalarRows}
-    | {left: GPUFloat64Positions; right: GPUFloat64Positions; output: GPUPreciseScalarRows}
+    | {
+        /** First local f32 point rows. */
+        left: GPUFloat32Positions;
+        /** Second local f32 point rows. */
+        right: GPUFloat32Positions;
+        /** Caller-owned f32 distance rows. */
+        output: GPUScalarRows;
+      }
+    | {
+        /** First raw binary64 point rows. */
+        left: GPUFloat64Positions;
+        /** Second raw binary64 point rows. */
+        right: GPUFloat64Positions;
+        /** Caller-owned `[high, low]` double-single distance rows. */
+        output: GPUPreciseScalarRows;
+      }
   );
 
 /** Computes pairwise Euclidean point distance without first subtracting on the CPU. */
@@ -44,6 +62,7 @@ export class GPUPairwisePointDistance implements GPUCommandGraphContributor {
   readonly right: GPUFloat32Positions | GPUFloat64Positions;
   readonly output: GPUScalarRows | GPUPreciseScalarRows;
 
+  /** Creates a distance contributor without compiling or submitting GPU work. */
   constructor(props: GPUPairwisePointDistanceProps) {
     this.id = props.id ?? 'gpu-pairwise-point-distance';
     this.left = props.left;
@@ -61,6 +80,7 @@ export class GPUPairwisePointDistance implements GPUCommandGraphContributor {
     validateSeparateBuffers(this.output, [this.left, this.right], this.id);
   }
 
+  /** Adds one distance node per non-empty input chunk to the target graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     assertGraphOwnership(graph, [this.left, this.right, this.output], this.id);
     const leftChunks = getRowChunks(this.left);

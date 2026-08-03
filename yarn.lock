@@ -4563,6 +4563,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@loaders.gl/las@npm:~4.4.2":
+  version: 4.4.3
+  resolution: "@loaders.gl/las@npm:4.4.3"
+  dependencies:
+    "@loaders.gl/loader-utils": "npm:4.4.3"
+    "@loaders.gl/schema": "npm:4.4.3"
+    "@loaders.gl/schema-utils": "npm:4.4.3"
+    laz-perf: "npm:^0.0.6"
+  peerDependencies:
+    "@loaders.gl/core": ~4.4.0
+  checksum: 10c0/75f6f4043cfe79fea55f4f249b4c3842a5add3a55dfaf070a5f867418da1bc2c6ca35fad78b52d94cda430e415193f35c1066bc2c94c240a5029dac03cc08d16
+  languageName: node
+  linkType: hard
+
 "@loaders.gl/loader-utils@npm:4.4.2":
   version: 4.4.2
   resolution: "@loaders.gl/loader-utils@npm:4.4.2"
@@ -16028,6 +16042,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"laz-perf@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "laz-perf@npm:0.0.6"
+  checksum: 10c0/c7ff934bc2d1df77ebb0b81043ccd5c65d9eec977a0bb6a5e25ab2e8759ad4292d14b65d3b34774d5ac9983adb49f21b6c863b76ac8439970c66758644539653
+  languageName: node
+  linkType: hard
+
 "lcov-parse@npm:^1.0.0":
   version: 1.0.0
   resolution: "lcov-parse@npm:1.0.0"
@@ -17065,6 +17086,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi"
+  dependencies:
+    "@deck.gl/core": "npm:9.3.4"
+    "@luma.gl/core": "npm:9.4.0-alpha.3"
+    "@luma.gl/engine": "npm:9.4.0-alpha.3"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.3"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.3"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.3"
+    maplibre-gl: "npm:^5.20.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-a-buffer@workspace:examples/experimental/a-buffer":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-a-buffer@workspace:examples/experimental/a-buffer"
@@ -17615,6 +17652,26 @@ __metadata:
     "@math.gl/core": "npm:^4.1.0"
     jsonc-parser: "npm:3.2.0"
     monaco-editor: "npm:^0.53.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-billion-point-spatial-atlas@workspace:examples/showcase/billion-point-spatial-atlas":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-billion-point-spatial-atlas@workspace:examples/showcase/billion-point-spatial-atlas"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@loaders.gl/core": "npm:~4.4.2"
+    "@loaders.gl/las": "npm:~4.4.2"
+    "@luma.gl/core": "npm:9.4.0-alpha.3"
+    "@luma.gl/effects": "npm:9.4.0-alpha.3"
+    "@luma.gl/engine": "npm:9.4.0-alpha.3"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.3"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.3"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.3"
+    apache-arrow: "npm:^17.0.0"
+    playwright: "npm:^1.56.1"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

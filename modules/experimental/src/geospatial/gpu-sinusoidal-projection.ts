@@ -28,11 +28,15 @@ import {
 const CUSPATIAL_EARTH_CIRCUMFERENCE_KILOMETRES = 40_000;
 const CUSPATIAL_KILOMETRES_PER_DEGREE = CUSPATIAL_EARTH_CIRCUMFERENCE_KILOMETRES / 360;
 
+/** Properties for a cuSpatial-compatible sinusoidal projection. */
 export type GPUSinusoidalProjectionProps = {
+  /** Prefix for generated graph-node IDs. */
   id?: string;
+  /** Longitude/latitude rows in degrees. */
   positions: GPUFloat32Positions | GPUFloat64Positions;
+  /** Caller-owned projected XY rows in kilometres. */
   output: GPUFloat32Positions;
-  /** Longitude and latitude origin in degrees. */
+  /** Longitude and latitude origin in degrees. Defaults to `[0, 0]`. */
   origin?: readonly [number, number];
 };
 
@@ -49,6 +53,7 @@ export class GPUSinusoidalProjection implements GPUCommandGraphContributor {
   readonly output: GPUFloat32Positions;
   readonly origin: readonly [number, number];
 
+  /** Creates a projection contributor without compiling or submitting GPU work. */
   constructor(props: GPUSinusoidalProjectionProps) {
     this.id = props.id ?? 'gpu-sinusoidal-projection';
     this.positions = props.positions;
@@ -71,6 +76,7 @@ export class GPUSinusoidalProjection implements GPUCommandGraphContributor {
     }
   }
 
+  /** Adds one projection node per non-empty input chunk to the target graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     assertGraphOwnership(graph, [this.positions, this.output], this.id);
     const inputChunks = getRowChunks(this.positions);

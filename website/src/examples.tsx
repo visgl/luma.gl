@@ -78,6 +78,7 @@ import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starf
 import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
+import BillionPointSpatialAtlasApp from '../../examples/showcase/billion-point-spatial-atlas/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
@@ -106,6 +107,7 @@ import {createArrowPathLayerDeck} from '../../examples/deck/arrow-path-layer/app
 import {createArrowPolygonLayerDeck} from '../../examples/deck/arrow-polygon-layer/app';
 import {createArrowTextLayerDeck} from '../../examples/deck/arrow-text-layer/app';
 import {createGPUCulledTraceDeck} from '../../examples/deck/gpu-culled-trace/app';
+import {createLuSpatialTaxiDeck} from '../../examples/deck/luspatial-taxi/app';
 
 const exampleConfig = {};
 
@@ -312,6 +314,24 @@ export const DeckGPUCulledTraceExample: React.FC<DeckArrowLayerExampleProps> = (
       panel: {
         id: 'gpu-culled-trace',
         title: 'GPU-Culled Trace with Arrow Text',
+        devices: ['webgpu']
+      }
+    }}
+    showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+  />
+);
+
+export const DeckLuSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
+  <ReactExample
+    component={DeckArrowLayerCanvas}
+    componentProps={{
+      createDeck: createLuSpatialTaxiDeck,
+      panel: {
+        id: 'luspatial-taxi',
+        title: 'luSpatial Taxi Explorer',
         devices: ['webgpu']
       }
     }}
@@ -599,6 +619,20 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
     directory="showcase"
     devices={['webgpu']}
     template={LightstormMegacityApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const BillionPointSpatialAtlasExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="billion-point-spatial-atlas"
+    title="Billion-Point Spatial Atlas"
+    subtitle="Indexed geospatial queries and indirect rendering at data scale"
+    directory="showcase"
+    devices={['webgpu']}
+    template={BillionPointSpatialAtlasApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}

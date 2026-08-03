@@ -1,0 +1,76 @@
+---
+title: Billion-Point Spatial Atlas
+description: Query and indirectly render massive NYC point corpora with graph-native WebGPU geospatial algorithms.
+sidebar_custom_props:
+  description: Query and indirectly render massive NYC point corpora with graph-native WebGPU geospatial algorithms.
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, data, geospatial]
+---
+
+import {BillionPointSpatialAtlasExample} from '@site/src/examples';
+
+<BillionPointSpatialAtlasExample />
+
+The Billion-Point Spatial Atlas demonstrates the optional
+`@luma.gl/experimental/geospatial` library in two linked New York City views. Both views keep
+their query result IDs and clamped result count on the GPU, so the same output can feed an indirect
+draw without synchronizing the CPU. The inspector reports corpus, downloaded, decoded,
+GPU-resident, candidate, matched, and rendered counts separately instead of presenting the corpus
+size as a per-frame draw count.
+
+The dim resident cloud stays visible as geographic context while query matches are drawn as a
+brighter indirect overlay. The compact canvas toolbar starts in **Navigate** mode: drag to pan the
+taxi atlas or orbit LiDAR, scroll to zoom, and double-click the canvas or press **Fit** to restore
+the overview. Switch to **Move query** to drag the bounds or radius footprint; Shift-scroll resizes
+it. Hovering a selected point shows its available row metadata without moving the active query.
+
+**NYC Taxi Atlas** targets the 168,898,952-record corpus used in Paul Taylor's original GPU point
+cloud demonstration. The website starts with a clearly labelled, deterministic expansion of a
+small [public 2015 TLC sample](https://gist.github.com/iantonios/0626717d831014db228d5e53b28152d3):
+the original 859 MB compressed Arrow object does not permit cross-origin browser reads. An included
+offline preprocessing command converts a local copy of that corpus into streamable binary shards
+and a manifest. Bounds, radius, and taxi-zone polygon tools compare a
+full scan with the uniform-grid candidate path before drawing the matching IDs indirectly.
+The original Arrow corpus contains only nullable `Float32` `x` and `y` columns, so its truthful
+tooltip fields are source row ID, coordinates, and derived query/zone membership—not fare,
+timestamp, passenger, or destination data.
+The zone menu uses a compact selection of simplified outlines from the official
+[NYC TLC Taxi Zones dataset](https://data.cityofnewyork.us/d/8meu-9t5y), rather than generated
+rectangles.
+
+```bash
+curl -LO https://node-rapids-data.s3.us-west-2.amazonaws.com/spatial/168898952_points.arrow.gz
+cd examples/showcase/billion-point-spatial-atlas
+yarn preprocess:taxi --input ./168898952_points.arrow.gz --output ./public/taxi-atlas
+```
+
+**NYC LiDAR** reads and retains nearby pages of the public USGS New York City EPT hierarchy. It
+selects LAZ nodes around the current query, renders each decoded tile progressively, and keeps the
+result in a point-capacity-bounded GPU LRU cache. Moving the query triggers periodic spatial
+refreshes: retained nodes are touched, newly selected nodes stream in, and older nodes are evicted.
+It supports 3D bounds and radius queries, classification or intensity colour, picking, and guided
+fly-throughs. The live network path is deliberately not part of CI; deterministic fixtures cover
+the query and rendering contracts.
+
+The default resident tier is one million points. Five- and ten-million-point stress tiers appear
+only when the adapter's storage-buffer limits can hold them. HDR colour, restrained bloom, and
+animated selection make the indexed results legible, while warm-up plus p50/p95 build, query,
+refinement, and render timings expose where each frame spends its work.
+The reproducible harness and dated software-reference result are kept in the demo's
+[benchmark record](https://github.com/visgl/luma.gl/blob/master/examples/showcase/billion-point-spatial-atlas/BENCHMARKS.md),
+separate from correctness tests.
+
+The library treats practical coordinate precision and robust topology as separate concerns. Local
+data uses `float32x2`; raw browser `Float64Array` rows use `uint32x4` word order and double-single
+subtraction for planar distance kernels. Portable WGSL does not provide binary64 trigonometry, so
+haversine distance and sinusoidal projection retain f32 transcendental steps. Polygon selection in
+this first tranche is an f32 even/odd predicate: boundary points are selected, but the API returns
+matching IDs rather than separate `inside`, `boundary`, and ambiguous classifications.
+
+Focused tests compare sinusoidal output within 20 metres for representative cases and haversine
+output within 2 kilometres for difficult finite cases such as antimeridian, near-polar, and nearly
+antipodal paths. Those thresholds are tested V1 envelopes, not a cross-adapter error bound or a
+claim of IEEE binary64 identity. Raw-coordinate planar subtraction and distance use the forced
+integer double-single path and include cancellation-oriented coverage.
