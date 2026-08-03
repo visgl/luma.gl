@@ -36,6 +36,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
   'experimental/antialiasing',
+  'showcase/anari',
   'showcase/dof',
   'showcase/billion-point-spatial-atlas',
   'showcase/lightstorm-megacity',
@@ -52,6 +53,8 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'tutorials/transform',
   'tutorials/transform-feedback'
 ]);
+
+const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set(['showcase/anari']);
 
 const SHARED_COMPILER_OPTIONS = {
   noEmit: true,
@@ -164,8 +167,10 @@ function createTempTypecheckConfig(workspacePath) {
   return {tempDirectory, tsconfigPath};
 }
 
-function typecheckWorkspace({name, workspacePath}) {
-  const {tempDirectory, tsconfigPath} = createTempTypecheckConfig(workspacePath);
+function typecheckWorkspace({name, workspaceId, workspacePath}) {
+  const {tempDirectory, tsconfigPath} = NATIVE_TYPESCRIPT_CONFIG_WORKSPACES.has(workspaceId)
+    ? {tempDirectory: null, tsconfigPath: join(workspacePath, 'tsconfig.json')}
+    : createTempTypecheckConfig(workspacePath);
 
   try {
     console.log(`Typechecking ${name}`);
@@ -183,7 +188,9 @@ function typecheckWorkspace({name, workspacePath}) {
 
     return true;
   } finally {
-    rmSync(tempDirectory, {recursive: true, force: true});
+    if (tempDirectory) {
+      rmSync(tempDirectory, {recursive: true, force: true});
+    }
   }
 }
 

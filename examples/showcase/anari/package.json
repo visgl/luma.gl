@@ -5,7 +5,7 @@
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",
-    "build:website": "tsc && vite build --emptyOutDir --outDir ../../../website/.generated/example-assets/standalone-examples/anari",
+    "build:website": "vite build --emptyOutDir --outDir ../../../website/.generated/example-assets/standalone-examples/anari",
     "serve": "vite preview"
   },
   "dependencies": {
