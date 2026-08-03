@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {describe, expect, test} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
   CROSS_FILTER_CATEGORY_NAMES,
@@ -38,22 +38,45 @@ describe('Crossfilter Supremacy GPU-resident dashboard', () => {
       expect(initialSummary.histograms.hour.bins).toHaveLength(12);
       expect(initialSummary.nodeCount).toBeGreaterThan(6);
 
+      const canvasWidth = 64;
+      const canvasHeight = 32;
       const canvasContext = device.getDefaultCanvasContext();
-      const [canvasWidth, canvasHeight] = canvasContext.getDrawingBufferSize();
-      const splitWidth = Math.max(1, Math.floor(canvasWidth / 2));
-      device.handle.pushErrorScope('validation');
-      engine.render({
-        canvasContext,
-        mapViewport: {x: 0, y: 0, width: splitWidth, height: canvasHeight},
-        scatterViewport: {
-          x: splitWidth,
-          y: 0,
-          width: Math.max(1, canvasWidth - splitWidth),
-          height: canvasHeight
-        }
+      const framebuffer = device.createFramebuffer({
+        id: 'crossfilter-supremacy-test-framebuffer',
+        width: canvasWidth,
+        height: canvasHeight,
+        colorAttachments: [device.preferredColorFormat],
+        depthStencilAttachment: 'depth24plus'
       });
-      await device.handle.queue.onSubmittedWorkDone();
-      expect(await device.handle.popErrorScope()).toBeNull();
+      // The complete SwiftShader suite can outlive Dawn's external presentation instance. Keep the
+      // real point pipelines, render pass, validation scope, and queue submission while routing
+      // this focused test through a test-owned offscreen framebuffer.
+      const drawingBufferSize = vi
+        .spyOn(canvasContext, 'getDrawingBufferSize')
+        .mockReturnValue([canvasWidth, canvasHeight]);
+      const currentFramebuffer = vi
+        .spyOn(canvasContext, 'getCurrentFramebuffer')
+        .mockReturnValue(framebuffer);
+      try {
+        const splitWidth = Math.floor(canvasWidth / 2);
+        device.handle.pushErrorScope('validation');
+        engine.render({
+          canvasContext,
+          mapViewport: {x: 0, y: 0, width: splitWidth, height: canvasHeight},
+          scatterViewport: {
+            x: splitWidth,
+            y: 0,
+            width: canvasWidth - splitWidth,
+            height: canvasHeight
+          }
+        });
+        await device.handle.queue.onSubmittedWorkDone();
+        expect(await device.handle.popErrorScope()).toBeNull();
+      } finally {
+        currentFramebuffer.mockRestore();
+        drawingBufferSize.mockRestore();
+        framebuffer.destroy();
+      }
 
       for (const dimension of ['value', 'risk', 'hour'] as const) {
         expect(sum(initialSummary.histograms[dimension].bins)).toBe(rowCount);
