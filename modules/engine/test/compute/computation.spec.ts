@@ -21,8 +21,22 @@ const source = /* WGSL*/ `\
 test('Computation#construct/delete', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
-    const computation = new Computation(webgpuDevice, {source});
+    let reflectionCount = 0;
+    const originalGetShaderLayout = webgpuDevice.getShaderLayout;
+    webgpuDevice.getShaderLayout = shaderSource => {
+      reflectionCount++;
+      return originalGetShaderLayout.call(webgpuDevice, shaderSource);
+    };
+
+    let computation: Computation;
+    try {
+      computation = new Computation(webgpuDevice, {source});
+    } finally {
+      webgpuDevice.getShaderLayout = originalGetShaderLayout;
+    }
+
     t.ok(computation instanceof Computation, 'ComputePipeline construction successful');
+    t.equal(reflectionCount, 0, 'computation uses the interface scanned during shader assembly');
     computation.destroy();
     t.ok(computation instanceof Computation, 'ComputePipeline delete successful');
     computation.destroy();
