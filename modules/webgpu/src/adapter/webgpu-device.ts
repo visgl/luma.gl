@@ -59,7 +59,10 @@ import {WebGPUQuerySet} from './resources/webgpu-query-set';
 import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 import {WebGPUFence} from './resources/webgpu-fence';
 
-import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
+import {
+  getShaderLayoutFromWGSL,
+  type ScanWGSLInterfaceOptions
+} from '../wgsl/get-shader-layout-wgsl';
 import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
 import {getBindGroup} from './helpers/get-bind-group';
 import {
@@ -163,8 +166,8 @@ export class WebGPUDevice extends Device {
     return this._isLost;
   }
 
-  getShaderLayout(source: string) {
-    return getShaderLayoutFromWGSL(source);
+  getShaderLayout(source: string, options?: ScanWGSLInterfaceOptions) {
+    return getShaderLayoutFromWGSL(source, options);
   }
 
   override isVertexFormatSupported(format: VertexFormat): boolean {

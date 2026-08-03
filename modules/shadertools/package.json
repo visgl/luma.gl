@@ -31,6 +31,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./wgsl": {
+      "types": "./dist/wgsl.d.ts",
+      "import": "./dist/wgsl.js",
+      "require": "./dist/wgsl.cjs"
     }
   },
   "files": [

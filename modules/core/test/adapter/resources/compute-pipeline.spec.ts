@@ -27,6 +27,11 @@ const source = /* WGSL*/ `\
 }
 `;
 
+const unsupportedSource = /* WGSL */ `\
+@group(0) @binding(0) var textures: binding_array<texture_2d<f32>>;
+@compute @workgroup_size(1) fn main() {}
+`;
+
 test('ComputePipeline#construct/delete', async t => {
   const webgpuDevices = await getWebGPUTestDevices();
 
@@ -38,6 +43,11 @@ test('ComputePipeline#construct/delete', async t => {
       computePipeline instanceof ComputePipeline,
       `${label}: ComputePipeline construction successful`
     );
+    t.deepEqual(
+      computePipeline.shaderLayout.bindings,
+      [{name: 'data', type: 'storage', group: 2, location: 0}],
+      `${label}: raw compute pipeline uses the lightweight WGSL scanner`
+    );
     computePipeline.destroy();
     t.ok(computePipeline instanceof ComputePipeline, `${label}: ComputePipeline delete successful`);
     computePipeline.destroy();
@@ -46,6 +56,26 @@ test('ComputePipeline#construct/delete', async t => {
       `${label}: ComputePipeline repeated delete successful`
     );
   }
+  t.end();
+});
+
+test('ComputePipeline requires a layout when lightweight WGSL scanning is unsafe', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const shader = webgpuDevice.createShader({source: unsupportedSource});
+  t.throws(
+    () => webgpuDevice.createComputePipeline({shader}),
+    /assertion failed/,
+    'raw compute pipeline rejects WGSL that cannot be scanned safely'
+  );
+
+  shader.destroy();
   t.end();
 });
 

@@ -4831,9 +4831,9 @@ __metadata:
   dependencies:
     "@probe.gl/env": "npm:^4.1.1"
     "@webgpu/types": "npm:^0.1.69"
-    wgsl_reflect: "npm:^1.2.3"
   peerDependencies:
     "@luma.gl/core": ~9.4.0-alpha.1
+    "@luma.gl/shadertools": ~9.4.0-alpha.1
   languageName: unknown
   linkType: soft
 
@@ -17229,6 +17229,7 @@ __metadata:
     preact: "npm:^10.17.0"
     vite: "npm:^8.0.0"
     vitest: "npm:^4.0.18"
+    wgsl_reflect: "npm:1.2.3"
     yaml: "npm:^2.8.1"
   languageName: unknown
   linkType: soft

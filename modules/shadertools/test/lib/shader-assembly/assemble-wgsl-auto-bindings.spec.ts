@@ -4,7 +4,6 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {ShaderAssembler, type PlatformInfo, type ShaderModule} from '@luma.gl/shadertools';
-import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu';
 import {skin} from '../../../src/modules/engine/skin/skin';
 import {ibl} from '../../../src/modules/lighting/ibl/ibl';
 import {lighting} from '../../../src/modules/lighting/lights/lighting';
@@ -473,7 +472,12 @@ test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
     'assembled WGSL includes relocation summary for skin'
   );
 
-  const shaderLayout = getShaderLayoutFromWGSL(assembledSource);
+  const shaderLayout = assembledShader.shaderLayout;
+  if (!shaderLayout) {
+    t.fail('assembled shader has a scanned layout');
+    t.end();
+    return;
+  }
   t.equal(
     shaderLayout.bindings.find(binding => binding.name === 'appFrame')?.location,
     0,
@@ -840,7 +844,12 @@ test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic 
     'assembled WGSL includes relocation summary for ibl'
   );
 
-  const shaderLayout = getShaderLayoutFromWGSL(assembledSource);
+  const shaderLayout = assembledShader.shaderLayout;
+  if (!shaderLayout) {
+    t.fail('assembled shader has a scanned layout');
+    t.end();
+    return;
+  }
   t.equal(
     shaderLayout.bindings.find(binding => binding.name === 'lighting')?.location,
     0,
